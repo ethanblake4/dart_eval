@@ -32,3 +32,13 @@ class EvalIntLiteral extends EvalExpression {
     return EvalInt(value);
   }
 }
+
+class EvalBoolLiteral extends EvalExpression {
+  EvalBoolLiteral(int offset, int length, this.value) : super(offset, length);
+  final bool value;
+
+  @override
+  EvalValue eval(EvalScope lexicalScope, EvalScope inheritedScope) {
+    return EvalBool(value);
+  }
+}

@@ -71,6 +71,8 @@ class EvalClass extends EvalAbstractClass implements EvalCallable {
     final newScope = EvalObjectScope();
 
     if(superclassName != null) {
+      //print('!!superclass!!!' + delegatedType.name);
+      //print(superclassName!);
       final superclass = lexicalScope.lookup(superclassName!.refName)!.value as EvalAbstractClass;
 
       if(superclass is EvalBridgeClass) {

@@ -3,6 +3,7 @@ import 'package:analyzer/dart/ast/token.dart';
 import 'package:dart_eval/src/eval/class.dart';
 import 'package:dart_eval/src/eval/functions.dart';
 import 'package:dart_eval/src/eval/primitives.dart';
+import 'package:dart_eval/src/eval/reference.dart';
 import 'package:dart_eval/src/eval/scope.dart';
 import 'package:dart_eval/src/eval/type.dart';
 import 'package:dart_eval/src/eval/value.dart';
@@ -14,6 +15,10 @@ abstract class EvalRunnable {
 
 abstract class EvalExpression extends DartSourceNode implements EvalRunnable {
   const EvalExpression(int offset, int length) : super(offset, length);
+}
+
+abstract class EvalReferenceExpression implements EvalExpression {
+  Reference evalReference(EvalScope lexicalScope, EvalScope inheritedScope);
 }
 
 /*class EvalDeclarationExpression extends EvalExpression {
@@ -83,9 +88,15 @@ class EvalFunctionExpression extends EvalExpression {
   }
 }
 
-class EvalIdentifierExpression extends EvalExpression {
+class EvalIdentifierExpression extends EvalExpression implements EvalReferenceExpression {
   EvalIdentifierExpression(int offset, int length, this.name) : super(offset, length);
   final String name;
+
+  @override
+  Reference evalReference(EvalScope lexicalScope, EvalScope inheritedScope) {
+    return (lexicalScope.lookup(name) ?? inheritedScope.lookup(name)) ??
+        (throw ArgumentError("Unknown identifier '$name'"));
+  }
 
   @override
   EvalValue eval(EvalScope lexicalScope, EvalScope inheritedScope) {
@@ -100,9 +111,35 @@ class EvalPrefixedIdentifierExpression extends EvalIdentifierExpression {
   final String prefix;
 
   @override
+  Reference evalReference(EvalScope lexicalScope, EvalScope inheritedScope) {
+    final pfx = (lexicalScope.lookup(prefix) ?? inheritedScope.lookup(prefix))?.value ?? (throw ArgumentError());
+    return FieldReference(pfx, name);
+  }
+
+  @override
   EvalValue eval(EvalScope lexicalScope, EvalScope inheritedScope) {
     final pfx = (lexicalScope.lookup(prefix) ?? inheritedScope.lookup(prefix))?.value ?? (throw ArgumentError());
     return pfx.getField(name);
+  }
+}
+
+class EvalAssignmentExpression extends EvalExpression {
+  EvalAssignmentExpression(int offset, int length, this.lhs, this.rhs, this.operator) : super(offset, length);
+
+  final EvalReferenceExpression lhs;
+  final EvalExpression rhs;
+  final TokenType operator;
+
+  @override
+  EvalValue eval(EvalScope lexicalScope, EvalScope inheritedScope) {
+    final ref = lhs.evalReference(lexicalScope, inheritedScope);
+    final val = rhs.eval(lexicalScope, inheritedScope);
+
+    if(operator == TokenType.EQ) {
+      return ref.value = val;
+    }
+
+    throw ArgumentError('Assignment expression: unknown operator $operator');
   }
 }
 

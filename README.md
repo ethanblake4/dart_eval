@@ -1,5 +1,5 @@
 `dart_eval` is an extensible interpreter for the Dart language, written in Dart. 
-It's poweredunder the hood by the Dart [analyzer](https://pub.dev/packages/analyzer),
+It's powered under the hood by the Dart [analyzer](https://pub.dev/packages/analyzer),
 so it achieves 100% correct parsing (although evaluation isn't quite there yet.)
 
 

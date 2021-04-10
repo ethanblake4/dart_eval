@@ -44,7 +44,7 @@ class EvalType {
     if (generics != null) {
       genericsString = '<${generics!.values.join(', ')}>';
     }
-    return name == refName ? '$name$genericsString' : '"$name" ($refName$genericsString)';
+    return 'type: ' + name == refName ? '$name$genericsString' : '"$name" ($refName$genericsString)';
   }
 
   @override

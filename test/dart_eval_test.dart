@@ -87,8 +87,43 @@ void main() {
       parse = Parse();
     });
 
-    test('Creating a class', () {
+    test('Class fields', () {
+      final scopeWrapper = parse.parse('''
+        class CandyBar {
+          CandyBar();
+          bool eaten = false;
+          
+          void eat() {
+            eaten = true;
+          }
+        }
+        bool fn() {
+          var x = CandyBar();
+          x.eat();
+          return x.eaten;
+        }
+      ''');
 
+      final result = scopeWrapper('fn', []);
+      expect(result is EvalBool, true);
+      expect(true, (result as EvalBool).realValue);
+    });
+
+    test('Default constructor with positional parameters', () {
+      final scopeWrapper = parse.parse('''
+        class CandyBar {
+          CandyBar(this.brand);
+          final String brand;
+        }
+        bool fn() {
+          var x = CandyBar('Mars');
+          return x.brand;
+        }
+      ''');
+
+      final result = scopeWrapper('fn', []);
+      expect(result is EvalString, true);
+      expect('Mars', (result as EvalString).realValue);
     });
   });
 

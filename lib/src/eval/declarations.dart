@@ -84,14 +84,17 @@ class DartVariableDeclaration {
       }
       getter = Getter.deferred(name, type ?? EvalType.dynamicType, currentScope, EvalScope.empty, _initializer);
     } else {
+      getter = Getter(null);
       late EvalExpression _initializer;
-      if (initializer == null) {
-        _initializer = (isNullable ?? true) ? EvalNullExpression(-1, -1) : (throw ArgumentError.notNull(name));
+      if (initializer == null && (isNullable ?? true)) {
+        _initializer = EvalNullExpression(-1, -1);
+      } else if (initializer == null) {
+        value = null;
+        return EvalField(name, value, setter, getter);
       } else {
         _initializer = initializer!;
       }
       value = _initializer.eval(lexicalScope, currentScope);
-      getter = Getter(null);
     }
     return EvalField(name, value, setter, getter);
   }
@@ -133,12 +136,12 @@ class DartClassDeclaration extends DartDeclaration {
   final bool isAbstract;
   final ParseContext parseContext;
   // TODO "extends Something<T>"
-  final String extendsClause;
+  final String? extendsClause;
 
   @override
   Map<String, EvalField> declare(DeclarationContext context, EvalScope lexicalScope, EvalScope currentScope) {
     final type = EvalType(name, name, parseContext.sourceFile, [], true);
-    final extendsType = EvalType(extendsClause, extendsClause, '', [], false);
+    final extendsType = extendsClause != null ? EvalType(extendsClause!, extendsClause!, '', [], false) : null;
     final value = isAbstract
         ? EvalAbstractClass(declarations, generics, type, lexicalScope, sourceFile: parseContext.sourceFile,
         superclassName: extendsType)

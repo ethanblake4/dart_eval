@@ -1,5 +1,7 @@
 import 'package:dart_eval/src/eval/expressions.dart';
 import 'package:dart_eval/src/eval/functions.dart';
+import 'package:dart_eval/src/eval/primitives.dart';
+import 'package:dart_eval/src/eval/reference.dart';
 import 'package:dart_eval/src/eval/scope.dart';
 import 'package:dart_eval/src/eval/type.dart';
 
@@ -18,6 +20,19 @@ abstract class EvalValue<R> {
   String toString() {
     return 'EvalValue{type: $evalType}';
   }
+}
+
+class FieldReference extends Reference {
+  FieldReference(this.v, this.name);
+
+  final EvalValue v;
+  final String name;
+
+  @override
+  EvalValue? get value => v.getField(name);
+
+  @override
+  set value(EvalValue? newValue) => v.setField(name, newValue ?? EvalNull());
 }
 
 class EvalReturn implements EvalValue {
@@ -82,7 +97,9 @@ class EvalValueImpl<R> extends EvalValue<R> {
       throw ArgumentError("Unknown field '$name'");
     }
     if (getter.get == null) {
-      return _fields[name]!;
+
+      return _fields[name] ?? (throw ArgumentError(_fields.containsKey(name) ?
+          ' Non-nullable field $name was not initialized' : 'Field $name does not exist'));
     } else {
       final thisScope = EvalScope(null, {'this': EvalField('this', this, null, Getter(null))});
       return getter.get!.call(thisScope, EvalScope.empty, [], []);

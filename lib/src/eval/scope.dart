@@ -1,6 +1,7 @@
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/src/eval/functions.dart';
 import 'package:dart_eval/src/eval/primitives.dart';
+import 'package:dart_eval/src/eval/reference.dart';
 
 import 'object.dart';
 
@@ -94,12 +95,15 @@ class EvalObjectScope implements EvalScope {
   EvalScope? get parent => throw UnimplementedError();
 }
 
-class ScopedReference {
+
+
+class ScopedReference implements Reference {
   ScopedReference(this._scope, this.name);
 
   final EvalScope _scope;
   final String name;
 
+  @override
   EvalValue? get value {
     final d = _scope.defines[name]!;
     final getter = d.getter!;
@@ -110,13 +114,14 @@ class ScopedReference {
     }
   }
 
+  @override
   set value(EvalValue? newValue) {
     final d = _scope.defines[name]!;
     final setter = d.setter!;
     if (setter.set != null) {
-      setter.set?.call(EvalScope.empty, EvalScope.empty, const [], [Parameter(newValue ?? EvalNull())]) ?? EvalNull();
+      setter.set!.call(EvalScope.empty, EvalScope.empty, const [], [Parameter(newValue ?? EvalNull())]);
     } else {
-      d.value = newValue;
+      d.value = newValue ?? EvalNull();
     }
   }
 
