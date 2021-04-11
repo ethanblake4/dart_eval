@@ -14,7 +14,7 @@ class EvalNull extends EvalValue<Null> with ValueInterop<Null> {
   }
 
   @override
-  void setField(String name, EvalValue value) {
+  void setField(String name, EvalValue value, {bool internalSet = false}) {
     throw UnimplementedError();
   }
 }
@@ -149,9 +149,14 @@ class EvalListClass extends EvalAbstractClass {
   static final instance = EvalListClass(EvalScope.empty);
 }
 
-/*class EvalList extends EvalObject {
-  EvalList(List value)
-    : super(EvalListClass.instance, realValue: value, fields: {
+class EvalList extends EvalObject<List<EvalValue>> {
+  EvalList(List<EvalValue> value)
+    : super(EvalListClass.instance, realValue: value, fields: {});
 
-  })
-}*/
+  @override
+  List<dynamic> reifyFull() {
+    return <dynamic>[
+      ...realValue!.map<dynamic>((e) => e.reifyFull())
+    ];
+  }
+}

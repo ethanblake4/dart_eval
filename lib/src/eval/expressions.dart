@@ -1,6 +1,7 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:dart_eval/src/eval/class.dart';
+import 'package:dart_eval/src/eval/collections.dart';
 import 'package:dart_eval/src/eval/functions.dart';
 import 'package:dart_eval/src/eval/primitives.dart';
 import 'package:dart_eval/src/eval/reference.dart';
@@ -13,7 +14,7 @@ abstract class EvalRunnable {
   EvalValue eval(EvalScope lexicalScope, EvalScope inheritedScope);
 }
 
-abstract class EvalExpression extends DartSourceNode implements EvalRunnable {
+abstract class EvalExpression extends DartSourceNode implements EvalRunnable, EvalCollectionElement {
   const EvalExpression(int offset, int length) : super(offset, length);
 }
 

@@ -12,9 +12,11 @@ abstract class EvalValue<R> {
   final String? sourceFile;
   final R? realValue;
 
+  dynamic reifyFull() => realValue;
+
   EvalValue getField(String name);
 
-  void setField(String name, EvalValue value);
+  void setField(String name, EvalValue value, {bool internalSet = false});
 
   @override
   String toString() {
@@ -50,19 +52,22 @@ class EvalReturn implements EvalValue {
   dynamic? get realValue => throw UnimplementedError();
 
   @override
+  dynamic reifyFull() => realValue;
+
+  @override
   EvalValue getField(String name) {
     throw UnimplementedError();
   }
 
   @override
-  void setField(String name, EvalValue value) {
+  void setField(String name, EvalValue value, {bool internalSet = false}) {
     throw UnimplementedError();
   }
 }
 
 mixin ValueInterop<T> {
-  @override
   T? get realValue;
+  dynamic reifyFull() => realValue;
 }
 
 class EvalValueImpl<R> extends EvalValue<R> {
@@ -97,9 +102,10 @@ class EvalValueImpl<R> extends EvalValue<R> {
       throw ArgumentError("Unknown field '$name'");
     }
     if (getter.get == null) {
-
-      return _fields[name] ?? (throw ArgumentError(_fields.containsKey(name) ?
-          ' Non-nullable field $name was not initialized' : 'Field $name does not exist'));
+      return _fields[name] ??
+          (throw ArgumentError(_fields.containsKey(name)
+              ? ' Non-nullable field $name was not initialized'
+              : 'Field $name does not exist'));
     } else {
       final thisScope = EvalScope(null, {'this': EvalField('this', this, null, Getter(null))});
       return getter.get!.call(thisScope, EvalScope.empty, [], []);
@@ -107,10 +113,13 @@ class EvalValueImpl<R> extends EvalValue<R> {
   }
 
   @override
-  EvalValue setField(String name, EvalValue value) {
+  EvalValue setField(String name, EvalValue value, {bool internalSet = false}) {
+    if (internalSet) {
+      return _fields[name] = value;
+    }
     final setter = _setters[name];
     if (setter == null) {
-      throw Error();
+      throw ArgumentError('No setter for field $name');
     }
     if (setter.set == null) {
       return _fields[name] = value;

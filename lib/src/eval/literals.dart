@@ -1,3 +1,4 @@
+import 'package:dart_eval/src/eval/collections.dart';
 import 'package:dart_eval/src/eval/expressions.dart';
 import 'package:dart_eval/src/eval/primitives.dart';
 import 'package:dart_eval/src/eval/scope.dart';
@@ -40,5 +41,20 @@ class EvalBoolLiteral extends EvalExpression {
   @override
   EvalValue eval(EvalScope lexicalScope, EvalScope inheritedScope) {
     return EvalBool(value);
+  }
+}
+
+class EvalListLiteral extends EvalExpression {
+  EvalListLiteral(int offset, int length, this.elements) : super(offset, length);
+
+  final List<EvalCollectionElement> elements;
+
+  @override
+  EvalValue eval(EvalScope lexicalScope, EvalScope inheritedScope) {
+    return EvalList(
+        elements.expand<EvalValue<dynamic>>((element) => element is EvalMultiValuedCollectionElement
+          ? element.evalMultiValue(lexicalScope, inheritedScope)
+          : [(element as EvalExpression).eval(lexicalScope, inheritedScope)]).toList()
+    );
   }
 }

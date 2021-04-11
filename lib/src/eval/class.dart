@@ -30,16 +30,16 @@ class EvalAbstractClass extends EvalValueImpl<Type> implements DartInterface, Ev
   @override
   final EvalType delegatedType;
 
-  List<DartDeclaration> getAllDeclarations() {
+  List<DartDeclaration> getAllDeclarations(EvalScope lexicalScope) {
     if (superclassName == null) {
       return declarations;
     }
     final superclass = lexicalScope.lookup(superclassName!.refName)!.value as EvalAbstractClass;
-    if(superclass is EvalBridgeAbstractClass) {
+    if (superclass is EvalBridgeAbstractClass) {
       return declarations;
     }
 
-    return superclass.getAllDeclarations().followedBy(declarations).toList();
+    return superclass.getAllDeclarations(lexicalScope).followedBy(declarations).toList();
   }
 }
 
@@ -66,43 +66,61 @@ class EvalClass extends EvalAbstractClass implements EvalCallable {
   /// Call the default constructor.
   /// If there is no default constructor, this method will throw an error.
   @override
-  EvalObject call(EvalScope lexicalScope, EvalScope inheritedScope, List<EvalType> generics, List<Parameter> args, {EvalValue? target}) {
+  EvalObject call(EvalScope lexicalScope, EvalScope inheritedScope, List<EvalType> generics, List<Parameter> args,
+      {EvalValue? target}) {
     //final f = EvalAbstractClass(declarations, generics, delegatedType, lexicalScope);
     final newScope = EvalObjectScope();
 
-    if(superclassName != null) {
+    if (superclassName != null) {
       //print('!!superclass!!!' + delegatedType.name);
       //print(superclassName!);
       final superclass = lexicalScope.lookup(superclassName!.refName)!.value as EvalAbstractClass;
 
-      if(superclass is EvalBridgeClass) {
+      if (superclass is EvalBridgeClass) {
         // TODO
 
         final me = superclass.instantiate('', [], {}) as BridgeRectifier;
         me.evalBridgeData = EvalBridgeData(this);
-        final _declarations = getAllDeclarations();
+        final _declarations = getAllDeclarations(lexicalScope);
         final entries = _declarations.where((declaration) => !declaration.isStatic).expand(
-                (declaration) => declaration.declare(DeclarationContext.CLASS_FIELD, this.lexicalScope, newScope).entries);
+            (declaration) => declaration.declare(DeclarationContext.CLASS_FIELD, this.lexicalScope, newScope).entries);
         me.evalBridgeData.fields..addAll(Map.fromEntries(entries));
+
+        final cstr = getField('');
+        if (!(cstr is EvalFunction)) {
+          throw ArgumentError('Default constructor is not a function');
+        }
+        cstr.call(lexicalScope, newScope, generics, args, target: me);
+        // ignore: empty_catches
+
+        newScope.object = me;
 
         return me;
       }
     }
-    final _declarations = getAllDeclarations();
+    final _declarations = getAllDeclarations(lexicalScope);
 
     final entries = _declarations.where((declaration) => !declaration.isStatic).expand(
         (declaration) => declaration.declare(DeclarationContext.CLASS_FIELD, this.lexicalScope, newScope).entries);
 
+    final entryMap = Map.fromEntries(entries);
+    final cstr = getField('');
+    if (!(cstr is EvalFunction)) {
+      throw ArgumentError('Default constructor is not a function');
+    }
+
     /// Map.fromEntries overwrites earlier occurrences with later ones
-    final o = EvalObject(this, sourceFile: sourceFile, fields: Map.fromEntries(entries));
+    final o = EvalObject(this, sourceFile: sourceFile, fields: entryMap);
     newScope.object = o;
+    cstr.call(lexicalScope, newScope, generics, args, target: o);
+
     return o;
   }
 }
 
 class EvalBridgeClass<D> extends EvalBridgeAbstractClass implements EvalClass {
-  EvalBridgeClass(List<DartDeclaration> declarations, EvalGenericsList generics, EvalType delegatedType, EvalScope lexicalScope,
-       Type realValue, this.instantiate, {EvalType? superclassName, String? sourceFile})
+  EvalBridgeClass(List<DartDeclaration> declarations, EvalGenericsList generics, EvalType delegatedType,
+      EvalScope lexicalScope, Type realValue, this.instantiate, {EvalType? superclassName, String? sourceFile})
       : super(declarations, generics, delegatedType, lexicalScope, realValue,
             superclassName: superclassName, sourceFile: sourceFile);
 
@@ -110,15 +128,19 @@ class EvalBridgeClass<D> extends EvalBridgeAbstractClass implements EvalClass {
 
   @override
   EvalBridgeObject<D> call(
-      EvalScope lexicalScope, EvalScope inheritedScope, List<EvalType> generics, List<Parameter> args, {EvalValue? target}) {
+      EvalScope lexicalScope, EvalScope inheritedScope, List<EvalType> generics, List<Parameter> args,
+      {EvalValue? target}) {
     final newScope = EvalObjectScope();
-    final _declarations = getAllDeclarations();
+    final _declarations = getAllDeclarations(lexicalScope);
 
     final entries = _declarations.where((declaration) => !declaration.isStatic).expand(
         (declaration) => declaration.declare(DeclarationContext.CLASS_FIELD, this.lexicalScope, newScope).entries);
 
-    final o = EvalBridgeObject<D>(this, fields: Map.fromEntries(entries), realValue: instantiate('', [], {}));
+    final spl = Parameter.coalesceNamed(args);
+    final o = EvalBridgeObject<D>(this, fields: Map.fromEntries(entries));
     newScope.object = o;
+    o.realValue = instantiate('', spl.positional.map((e) => e.value).toList(), spl.named);
+
     return o;
   }
 

@@ -31,7 +31,14 @@ void main() {
 
     test('Object toString', () {
       final scope = parse.parse('String main() { return 1.toString(); }');
-      expect(scope('main', []).realValue == '1', true);
+      expect('1', scope('main', []).realValue);
+    });
+
+    test('Simple list literal', () {
+      final scope = parse.parse('String main() { return ["Hello", "Sir"]; }');
+      final result = scope('main', []).reifyFull();
+      expect(result is List, true);
+      expect((result as List)[0], 'Hello');
     });
   });
 
@@ -125,6 +132,24 @@ void main() {
       expect(result is EvalString, true);
       expect('Mars', (result as EvalString).realValue);
     });
+
+    test('Default constructor with named parameters', () {
+      final scopeWrapper = parse.parse('''
+        class CandyBar {
+          CandyBar({this.brand, this.name});
+          final String brand;
+          final String name;
+        }
+        bool fn() {
+          var x = CandyBar(name: 'Bar', brand: 'Mars');
+          return x.brand + x.name;
+        }
+      ''');
+
+      final result = scopeWrapper('fn', []);
+      expect(result is EvalString, true);
+      expect('MarsBar', (result as EvalString).realValue);
+    });
   });
 
   group('Interop tests', () {
@@ -193,7 +218,7 @@ class EvalInteropTest1 extends InteropTest1
   String getData(int input) => bridgeCall('getData', [EvalInt(input)]);
 
   @override
-  EvalValue setField(String name, EvalValue value) {
+  EvalValue setField(String name, EvalValue value, {bool internalSet = false}) {
     throw ArgumentError();
   }
 }

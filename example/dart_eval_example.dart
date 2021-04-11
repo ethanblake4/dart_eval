@@ -20,7 +20,7 @@ class EvalMyClass extends MyClass
   String getData(int input) => bridgeCall('getData', [EvalInt(input)]);
 
   @override
-  EvalValue setField(String name, EvalValue value) {
+  EvalValue setField(String name, EvalValue value, {bool internalSet = false}) {
     throw ArgumentError();
   }
 }

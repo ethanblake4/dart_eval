@@ -91,11 +91,8 @@ class EvalObjectScope implements EvalScope {
   EvalValue<T> me<T>() => lookup('this')!.value! as EvalValue<T>;
 
   @override
-  // TODO: implement parent
   EvalScope? get parent => throw UnimplementedError();
 }
-
-
 
 class ScopedReference implements Reference {
   ScopedReference(this._scope, this.name);

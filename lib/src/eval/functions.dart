@@ -10,14 +10,34 @@ import '../../dart_eval.dart';
 import 'expressions.dart';
 
 typedef CallableFunc = EvalValue Function(
-    EvalScope lexicalScope, EvalScope inheritedScope, List<EvalType> generics, List<Parameter> args, {EvalValue? target});
+    EvalScope lexicalScope, EvalScope inheritedScope, List<EvalType> generics, List<Parameter> args,
+    {EvalValue? target});
 
-typedef BridgeMapper<T> = EvalValue<T> Function(T realValue);
+typedef BridgeMapper<T> = EvalValue Function(T? realValue);
 
 class Parameter {
   Parameter(this.value);
 
   final EvalValue value;
+
+  static SeparatedParameterList coalesceNamed(List<Parameter> args) {
+    final m = <String, EvalValue>{};
+    final p = <Parameter>[];
+    for (final a in args) {
+      if (a is NamedParameter) {
+        m[a.name] = a.value;
+      } else
+        p.add(a);
+    }
+    return SeparatedParameterList(p, m);
+  }
+}
+
+class SeparatedParameterList {
+  SeparatedParameterList(this.positional, this.named);
+
+  final List<Parameter> positional;
+  final Map<String, EvalValue> named;
 }
 
 class NamedParameter extends Parameter {
@@ -26,21 +46,33 @@ class NamedParameter extends Parameter {
 }
 
 class ParameterDefinition {
-  ParameterDefinition(this.name, this.type, this.nullable, this.optional, this.named, this.required, this.dfValue);
+  ParameterDefinition(this.name, this.type, this.nullable, this.optional, this.named, this.required, this.dfValue,
+      {this.isField = false});
 
   final String name;
-  EvalType type;
+  EvalType? type;
+  final bool isField;
   final bool optional;
   final bool named;
   final bool nullable;
   final bool required;
   final EvalExpression? dfValue;
+
+  EvalValue? extractFrom(List<Parameter> args, int i, [Map<String, EvalValue>? argMap]) {
+    final _argMap = argMap ?? Parameter.coalesceNamed(args).named;
+    if (named) {
+      return _argMap[name];
+    } else {
+      return args.length > i ? args[i].value : (required ? throw ArgumentError('Parameter $name required') : null);
+    }
+  }
 }
 
 abstract class EvalCallable {
   const EvalCallable();
 
-  EvalValue call(EvalScope lexicalScope, EvalScope inheritedScope, List<EvalType> generics, List<Parameter> args, {EvalValue? target});
+  EvalValue call(EvalScope lexicalScope, EvalScope inheritedScope, List<EvalType> generics, List<Parameter> args,
+      {EvalValue? target});
 }
 
 class EvalCallableImpl extends EvalCallable {
@@ -49,7 +81,8 @@ class EvalCallableImpl extends EvalCallable {
   final CallableFunc function;
 
   @override
-  EvalValue call(EvalScope lexicalScope, EvalScope inheritedScope, List<EvalType> generics, List<Parameter> args, {EvalValue? target}) {
+  EvalValue call(EvalScope lexicalScope, EvalScope inheritedScope, List<EvalType> generics, List<Parameter> args,
+      {EvalValue? target}) {
     return function(lexicalScope, inheritedScope, generics, args, target: target);
   }
 }
@@ -77,7 +110,8 @@ class EvalFunctionImpl<T> extends EvalObject<T> implements EvalFunction<T> {
   }
 
   @override
-  EvalValue call(EvalScope lexicalScope, EvalScope inheritedScope, List<EvalType> generics, List<Parameter> args, {EvalValue? target}) {
+  EvalValue call(EvalScope lexicalScope, EvalScope inheritedScope, List<EvalType> generics, List<Parameter> args,
+      {EvalValue? target}) {
     if (_function.block != null) {
       final functionScope = EvalScope(this.lexicalScope ?? lexicalScope, {});
       var lastPositional = false;
@@ -130,12 +164,14 @@ class EvalFunctionImpl<T> extends EvalObject<T> implements EvalFunction<T> {
 }
 
 class EvalBridgeFunction<T> extends EvalObject<Function> implements EvalFunctionImpl<Function>, ValueInterop<Function> {
-  EvalBridgeFunction(Function function, this.mapper) : super(EvalFunctionImpl.functionClass, fields: {});
+  EvalBridgeFunction(Function function, this.mapper)
+      : super(EvalFunctionImpl.functionClass, fields: {}, realValue: function);
 
   BridgeMapper<T> mapper;
 
   @override
-  EvalValue<T> call(EvalScope lexicalScope, EvalScope inheritedScope, List<EvalType> generics, List<Parameter> args, {EvalValue? target}) {
+  EvalValue call(EvalScope lexicalScope, EvalScope inheritedScope, List<EvalType> generics, List<Parameter> args,
+      {EvalValue? target}) {
     final named = <Symbol, dynamic>{};
     final pos = <dynamic>[];
 
@@ -146,7 +182,6 @@ class EvalBridgeFunction<T> extends EvalObject<Function> implements EvalFunction
         pos.add(ar.value.realValue);
       }
     }
-
     return mapper(Function.apply(realValue!, pos, named));
   }
 

@@ -127,7 +127,8 @@ class PlaceholderDeclaration extends DartDeclaration {
 }
 
 class DartClassDeclaration extends DartDeclaration {
-  DartClassDeclaration(this.name, this.generics, this.declarations, this.isAbstract, this.extendsClause, {required this.parseContext})
+  DartClassDeclaration(this.name, this.generics, this.declarations, this.isAbstract, this.extendsClause,
+      {required this.parseContext})
       : super(isStatic: true, visibility: DeclarationVisibility.UNSPECIFIED);
 
   final String name;
@@ -135,6 +136,7 @@ class DartClassDeclaration extends DartDeclaration {
   final List<DartDeclaration> declarations;
   final bool isAbstract;
   final ParseContext parseContext;
+
   // TODO "extends Something<T>"
   final String? extendsClause;
 
@@ -143,9 +145,10 @@ class DartClassDeclaration extends DartDeclaration {
     final type = EvalType(name, name, parseContext.sourceFile, [], true);
     final extendsType = extendsClause != null ? EvalType(extendsClause!, extendsClause!, '', [], false) : null;
     final value = isAbstract
-        ? EvalAbstractClass(declarations, generics, type, lexicalScope, sourceFile: parseContext.sourceFile,
-        superclassName: extendsType)
-        : EvalClass(declarations, type, lexicalScope, generics, sourceFile: parseContext.sourceFile, superclassName: extendsType);
+        ? EvalAbstractClass(declarations, generics, type, lexicalScope,
+            sourceFile: parseContext.sourceFile, superclassName: extendsType)
+        : EvalClass(declarations, type, lexicalScope, generics,
+            sourceFile: parseContext.sourceFile, superclassName: extendsType);
     return {name: EvalField(name, value, null, Getter(null))};
   }
 }
@@ -173,13 +176,28 @@ class DartMethodDeclaration extends DartDeclaration {
 }
 
 class DartConstructorDeclaration extends DartDeclaration {
-  DartConstructorDeclaration(this.name) : super(visibility: DeclarationVisibility.UNSPECIFIED, isStatic: true);
+  DartConstructorDeclaration(this.name, this.params)
+      : super(visibility: DeclarationVisibility.UNSPECIFIED, isStatic: true);
 
   final String name;
+  final List<ParameterDefinition> params;
 
   @override
   Map<String, EvalField> declare(DeclarationContext context, EvalScope lexicalScope, EvalScope currentScope) {
-    // TODO: implement declare
-    throw UnimplementedError();
+    final v = EvalFunctionImpl(DartMethodBody(callable:
+        (EvalScope lexicalScope, EvalScope inheritedScope, List<EvalType> generics, List<Parameter> args,
+            {EvalValue? target}) {
+      var i = 0;
+      final argMap = Parameter.coalesceNamed(args).named;
+      for (var param in params) {
+        final vl = param.extractFrom(args, i, argMap);
+        if (param.isField && vl != null) {
+          target!.setField(param.name, vl, internalSet: true);
+        }
+        i++;
+      }
+      return target!;
+    }), params);
+    return {name: EvalField(name, v, null, Getter(null))};
   }
 }
