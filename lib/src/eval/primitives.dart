@@ -1,21 +1,33 @@
 import 'package:dart_eval/src/eval/class.dart';
 import 'package:dart_eval/src/eval/functions.dart';
 import 'package:dart_eval/src/eval/generics.dart';
+import 'package:dart_eval/src/libs/dart_core.dart';
 
 import '../../dart_eval.dart';
 import 'object.dart';
 
-class EvalNull extends EvalValue<Null> with ValueInterop<Null> {
+final dartCoreScope = EvalScope(null, {});
+
+class EvalNull extends EvalValue with ValueInterop {
   EvalNull() : super(EvalType.nullType, realValue: null);
 
   @override
-  EvalValue getField(String name) {
+  EvalValue evalGetField(String name, {bool internalGet = false}) {
     throw UnimplementedError();
   }
 
   @override
-  void setField(String name, EvalValue value, {bool internalSet = false}) {
+  void evalSetField(String name, EvalValue value, {bool internalSet = false}) {
     throw UnimplementedError();
+  }
+
+  @override
+  EvalField evalGetFieldRaw(String name) {
+    throw UnimplementedError();
+  }
+
+  @override
+  void evalSetGetter(String name, Getter getter) {
   }
 }
 
@@ -23,9 +35,9 @@ class EvalObjectClass extends EvalBridgeAbstractClass {
   EvalObjectClass(EvalScope lexicalScope)
       : super([
           //DartFunctionDeclaration('toString', functionBody, isStatic: false, visibility: visibility)
-        ], EvalGenericsList([]), EvalType.objectType, lexicalScope, Object);
+        ], EvalType.objectType, lexicalScope, Object);
 
-  static final instance = EvalObjectClass(EvalScope.empty);
+  static final instance = EvalObjectClass(dartCoreScope);
 }
 
 class EvalRealObject<T extends Object> extends EvalBridgeObject<T> {
@@ -74,9 +86,9 @@ class EvalRealObject<T extends Object> extends EvalBridgeObject<T> {
 
 class EvalNumClass extends EvalBridgeAbstractClass {
   EvalNumClass(EvalScope lexicalScope)
-      : super([], EvalGenericsList([]), EvalType.numType, lexicalScope, num, superclassName: EvalType.objectType);
+      : super([], EvalType.numType, lexicalScope, num);
 
-  static final instance = EvalNumClass(EvalScope.empty);
+  static final instance = EvalNumClass(dartCoreScope);
 }
 
 class EvalNum<T extends num> extends EvalRealObject<T> {
@@ -95,9 +107,9 @@ class EvalNum<T extends num> extends EvalRealObject<T> {
 
 class EvalIntClass extends EvalBridgeAbstractClass {
   EvalIntClass(EvalScope lexicalScope)
-      : super([], EvalGenericsList([]), EvalType.intType, lexicalScope, int, superclassName: EvalType.numType);
+      : super([], EvalType.intType, lexicalScope, int);
 
-  static final instance = EvalIntClass(EvalScope.empty);
+  static final instance = EvalIntClass(dartCoreScope);
 }
 
 class EvalInt extends EvalNum<int> {
@@ -112,11 +124,10 @@ class EvalInt extends EvalNum<int> {
 
 class EvalBoolClass extends EvalBridgeAbstractClass {
   EvalBoolClass(EvalScope lexicalScope)
-      : super([], EvalGenericsList([]), EvalType.boolType, lexicalScope, bool, superclassName: EvalType.boolType);
+      : super([], EvalType.boolType, lexicalScope, bool);
 
-  static final instance = EvalBoolClass(EvalScope.empty);
+  static final instance = EvalBoolClass(dartCoreScope);
 }
-
 
 class EvalBool extends EvalBridgeObject<bool> {
   EvalBool(bool value)
@@ -128,9 +139,9 @@ class EvalBool extends EvalBridgeObject<bool> {
 
 class EvalStringClass extends EvalBridgeAbstractClass {
   EvalStringClass(EvalScope lexicalScope)
-      : super([], EvalGenericsList([]), EvalType.stringType, lexicalScope, String, superclassName: EvalType.objectType);
+      : super([], EvalType.stringType, lexicalScope, String);
 
-  static final instance = EvalStringClass(EvalScope.empty);
+  static final instance = EvalStringClass(dartCoreScope);
 }
 
 class EvalString extends EvalRealObject<String> {
@@ -146,17 +157,53 @@ class EvalListClass extends EvalAbstractClass {
       : super([], EvalGenericsList([EvalGenericParam('T')]), EvalType.listType, lexicalScope,
             superclassName: EvalType.objectType);
 
-  static final instance = EvalListClass(EvalScope.empty);
+  static final instance = EvalListClass(dartCoreScope);
 }
 
 class EvalList extends EvalObject<List<EvalValue>> {
   EvalList(List<EvalValue> value)
-    : super(EvalListClass.instance, realValue: value, fields: {});
+    : super(EvalListClass.instance, realValue: value, fields: {
+    '[]': EvalField(
+        '[]',
+        EvalFunctionImpl(DartMethodBody(callable: (lex, s2, gen, params, {EvalValue? target}) {
+          return target!.realValue![params[0].value];
+        }), []),
+        null,
+        Getter(null)),
+  });
 
   @override
-  List<dynamic> reifyFull() {
+  List<dynamic> evalReifyFull() {
     return <dynamic>[
-      ...realValue!.map<dynamic>((e) => e.reifyFull())
+      ...realValue!.map<dynamic>((e) => e.evalReifyFull())
     ];
   }
 }
+
+class EvalMapClass extends EvalAbstractClass {
+  EvalMapClass(EvalScope lexicalScope)
+      : super([], EvalGenericsList([EvalGenericParam('K'), EvalGenericParam('V')]), EvalType.listType, lexicalScope,
+      superclassName: EvalType.objectType);
+
+  static final instance = EvalMapClass(dartCoreScope);
+}
+
+class EvalMap extends EvalObject<Map<EvalValue, EvalValue>> {
+  EvalMap(Map<EvalValue, EvalValue> value)
+      : super(EvalMapClass.instance, realValue: value, fields: {
+    '[]': EvalField(
+        '[]',
+        EvalFunctionImpl(DartMethodBody(callable: (lex, s2, gen, params, {EvalValue? target}) {
+          return target!.realValue![params[0].value];
+        }), []),
+        null,
+        Getter(null)),
+  });
+
+  @override
+  Map<dynamic, dynamic> evalReifyFull() {
+    return realValue!.map((key, value) =>
+          MapEntry(key.evalReifyFull(), value.evalReifyFull()));
+  }
+}
+

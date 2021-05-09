@@ -21,6 +21,11 @@ class EvalObject<T> extends EvalValueImpl<T> implements EvalCallable {
     //if (getField('call') != null) {}
     throw UnimplementedError('Not a callable class');
   }
+
+  @override
+  String toString() {
+    return 'EvalObject{evalPrototype: $evalPrototype}';
+  }
 }
 
 mixin EvalBridgeObjectMixin<T> on ValueInterop<T> implements EvalObject<T> {
@@ -28,12 +33,12 @@ mixin EvalBridgeObjectMixin<T> on ValueInterop<T> implements EvalObject<T> {
   EvalAbstractClass get evalPrototype;
 
   @override
-  T? reifyFull() {
+  T? evalReifyFull() {
     return realValue;
   }
 
   @override
-  String? get sourceFile => evalPrototype.sourceFile;
+  String? get evalSourceFile => evalPrototype.evalSourceFile;
 
   @override
   EvalType get evalType => evalPrototype.delegatedType;
@@ -41,12 +46,18 @@ mixin EvalBridgeObjectMixin<T> on ValueInterop<T> implements EvalObject<T> {
   @override
   EvalValue call(EvalScope lexicalScope, EvalScope inheritedScope, List<EvalType> generics, List<Parameter> args,
       {EvalValue? target}) {
-    if (getField('call') != null) {}
+    if (evalGetField('call') != null) {}
     throw UnimplementedError('Not a callable class');
   }
 }
 
 mixin BridgeRectifier<T> on EvalBridgeObjectMixin<T> {
+
+  static EvalValue? evalMapNullable<T>(T? value) {
+    if(value == null) return EvalNull();
+    return null;
+  }
+
   @override
   T get realValue => this as T;
 
@@ -56,7 +67,7 @@ mixin BridgeRectifier<T> on EvalBridgeObjectMixin<T> {
   @override
   EvalAbstractClass get evalPrototype => evalBridgeData.prototype;
 
-  EvalValue? getFieldOrNull(String name) {
+  EvalValue? evalBridgeTryGetField(String name) {
     if (evalBridgeData.fields.containsKey(name)) {
       final field = evalBridgeData.fields[name]!;
       return field.getter?.get?.call(evalPrototype.lexicalScope, EvalScope.empty, [], [], target: field.value) ??
@@ -66,28 +77,55 @@ mixin BridgeRectifier<T> on EvalBridgeObjectMixin<T> {
     }
   }
 
-  /// Default implementation of [getField] for a bridge-rectified class
+  bool evalBridgeHasField(String name) => evalBridgeData.fields.containsKey(name);
+
+  EvalValue? evalBridgeTrySetField(String name, EvalValue value) {
+    if (evalBridgeData.fields.containsKey(name)) {
+      final field = evalBridgeData.fields[name]!;
+      return field.setter?.set?.call(evalPrototype.lexicalScope, EvalScope.empty, [], [], target: field.value) ??
+          field.value!;
+    } else {
+      return null;
+    }
+  }
+
+  /// Default implementation of [evalGetField] for a bridge-rectified class
   /// Override this for any fields or methods where the definition or implementation might NOT be provided by Eval code
   @override
-  EvalValue getField(String name) {
-    return getFieldOrNull(name) ?? (throw ArgumentError('No field named $name'));
+  EvalValue evalGetField(String name, {bool internalGet = false}) {
+    return evalBridgeTryGetField(name) ?? (throw ArgumentError('No field named $name'));
   }
 
   @override
-  EvalValue setField(String name, EvalValue value, {bool internalSet = false}) {
+  EvalValue evalSetField(String name, EvalValue value, {bool internalSet = false}) {
     return evalBridgeData.setField(name, value, internalSet: internalSet, source: this);
+  }
+
+  @override
+  EvalField evalGetFieldRaw(String name) {
+    return evalBridgeData.fields[name]!;
+  }
+
+  @override
+  void evalSetGetter(String name, Getter getter) {
+    evalBridgeData.fields[name]!.getter = getter;
+  }
+
+  @override
+  void addFields(EvalFieldListBreakout breakout) {
+    throw UnimplementedError();
   }
 
   dynamic bridgeCall(String name, [List<EvalValue> positional = const [], Map<String, EvalValue> named = const {}]) {
     final fields = evalBridgeData.fields;
     final objScope = EvalObjectScope()..object = this;
 
-    final func = fields.containsKey(name) ? (fields[name]!.value as EvalFunction) : getField(name) as EvalFunction;
+    final func = fields.containsKey(name) ? (fields[name]!.value as EvalFunction) : evalGetField(name) as EvalFunction;
     return func
         .call(EvalScope(null, {'this': EvalField('this', this, null, Getter(null))}), objScope, [],
             [for (final p in positional) Parameter(p), for (final n in named.entries) NamedParameter(n.key, n.value)],
             target: this)
-        .reifyFull();
+        .evalReifyFull();
   }
 }
 

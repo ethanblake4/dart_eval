@@ -20,6 +20,11 @@ void main() {
       final scope = parse.parse('class MyClass {}').scope;
       expect(scope.lookup('MyClass')?.value is EvalClass, true);
     });
+
+    test('Parse creates top-level variable', () {
+      final scope = parse.parse('String greeting = "Hello";').scope;
+      expect(scope.lookup('greeting')?.value!.realValue, 'Hello');
+    });
   });
 
   group('dart:core tests', () {
@@ -36,7 +41,7 @@ void main() {
 
     test('Simple list literal', () {
       final scope = parse.parse('String main() { return ["Hello", "Sir"]; }');
-      final result = scope('main', []).reifyFull();
+      final result = scope('main', []).evalReifyFull();
       expect(result is List, true);
       expect((result as List)[0], 'Hello');
     });
@@ -116,6 +121,65 @@ void main() {
       expect(true, (result as EvalBool).realValue);
     });
 
+    test('Class static methods', () {
+      final scopeWrapper = parse.parse('''
+        class CandyBar {
+          CandyBar();
+          static String isCandyGood() {
+            return 'Yes!';
+          }
+        }
+        bool fn() {
+          return CandyBar.isCandyGood();
+        }
+      ''');
+
+      final result = scopeWrapper('fn', []);
+      expect(result is EvalString, true);
+      expect((result as EvalString).realValue, 'Yes!');
+    });
+
+    test('Class static accessors', () {
+      final scopeWrapper = parse.parse('''
+        class CandyBar {
+          CandyBar();
+        
+          static String goodness = '100';
+          static String isCandyGood() {
+            return 'Yes! ' + goodness;
+          }
+        }
+        String fn() {
+          return CandyBar.isCandyGood();
+        }
+      ''');
+
+      final result = scopeWrapper('fn', []);
+      expect(result is EvalString, true);
+      expect((result as EvalString).realValue, 'Yes! 100');
+    });
+
+    test('Class static accessor scoping', () {
+      final scopeWrapper = parse.parse('''
+        String goodness = '0';
+        class CandyBar {
+          CandyBar();
+        
+          static String goodness = '100';
+          static String isCandyGood() {
+            return 'Yes! ' + goodness;
+          }
+        }
+        String fn() {
+          return CandyBar.isCandyGood();
+        }
+      ''');
+
+      final result = scopeWrapper('fn', []);
+      expect(result is EvalString, true);
+      expect((result as EvalString).realValue, 'Yes! 100');
+    });
+
     test('Default constructor with positional parameters', () {
       final scopeWrapper = parse.parse('''
         class CandyBar {
@@ -157,9 +221,7 @@ void main() {
 
     setUp(() {
       parse = Parse();
-      parse.additionalDefines.add({
-        _interopTest1Type.refName: EvalField(_interopTest1Type.refName, EvalInteropTest1.cls, null, Getter(null)),
-      });
+      parse.additionalDefines.add(EvalInteropTest1.declaration);
     });
 
     test('Rectified bridge class', () {
@@ -208,8 +270,17 @@ abstract class InteropTest1 {
 class EvalInteropTest1 extends InteropTest1
     with ValueInterop<InteropTest1>, EvalBridgeObjectMixin<InteropTest1>, BridgeRectifier<InteropTest1> {
 
-  static final cls = EvalBridgeClass([], EvalGenericsList([]), _interopTest1Type, EvalScope.empty, InteropTest1,
+  static final declaration = DartBridgeDeclaration(
+      visibility: DeclarationVisibility.PUBLIC,
+      declarator: (ctx, lex, cur) => {
+        _interopTest1Type.refName: EvalField(
+            _interopTest1Type.refName, cls = clsgen(lex), null, Getter(null))
+      });
+
+  static final clsgen = (lexicalScope) => EvalBridgeClass([], _interopTest1Type, EvalScope.empty, InteropTest1,
       (_1, _2, _3) => EvalInteropTest1());
+
+  static late EvalBridgeClass cls;
 
   @override
   EvalBridgeData evalBridgeData = EvalBridgeData(cls);
@@ -218,7 +289,7 @@ class EvalInteropTest1 extends InteropTest1
   String getData(int input) => bridgeCall('getData', [EvalInt(input)]);
 
   @override
-  EvalValue setField(String name, EvalValue value, {bool internalSet = false}) {
+  EvalValue evalSetField(String name, EvalValue value, {bool internalSet = false}) {
     throw ArgumentError();
   }
 }

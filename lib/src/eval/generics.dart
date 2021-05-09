@@ -8,4 +8,6 @@ class EvalGenericParam {
 class EvalGenericsList {
   const EvalGenericsList(this.generics);
   final List<EvalGenericParam> generics;
+
+  static const EvalGenericsList empty = EvalGenericsList([]);
 }

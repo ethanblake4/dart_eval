@@ -1,3 +1,4 @@
+import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/collections.dart';
 import 'package:dart_eval/src/eval/expressions.dart';
 import 'package:dart_eval/src/eval/primitives.dart';
@@ -51,10 +52,51 @@ class EvalListLiteral extends EvalExpression {
 
   @override
   EvalValue eval(EvalScope lexicalScope, EvalScope inheritedScope) {
-    return EvalList(
-        elements.expand<EvalValue<dynamic>>((element) => element is EvalMultiValuedCollectionElement
-          ? element.evalMultiValue(lexicalScope, inheritedScope)
-          : [(element as EvalExpression).eval(lexicalScope, inheritedScope)]).toList()
-    );
+    return EvalList(_expandList(lexicalScope, inheritedScope, elements));
+  }
+
+  static List<EvalValue> _expandList(EvalScope lexicalScope, EvalScope inheritedScope,
+      List<EvalCollectionElement> elements) {
+    return [
+      for (final e in elements)
+        if(e is EvalMultiValuedCollectionElement)
+          ..._expandList(lexicalScope, inheritedScope, e.evalMultiValue(lexicalScope, inheritedScope))
+        else
+          (e as EvalExpression).eval(lexicalScope, inheritedScope)
+    ];
+  }
+}
+
+class EvalMapLiteralEntry extends EvalCollectionElement {
+
+  EvalMapLiteralEntry(this.length, this.offset, this.key, this.value);
+
+  @override
+  final int length;
+  @override
+  final int offset;
+
+  final EvalExpression key;
+  final EvalExpression value;
+}
+
+class EvalMapLiteral extends EvalExpression {
+  EvalMapLiteral(int offset, int length, this.elements): super(offset, length);
+
+  final List<EvalCollectionElement> elements;
+
+  EvalValue eval(EvalScope lexicalScope, EvalScope inheritedScope) {
+    return EvalMap(_expandMap(lexicalScope, inheritedScope, elements));
+  }
+
+  static Map<EvalValue, EvalValue> _expandMap(EvalScope lexicalScope, EvalScope inheritedScope,
+      List<EvalCollectionElement> elements) {
+    return {
+      for (final e in elements)
+        if(e is EvalMultiValuedCollectionElement)
+          ..._expandMap(lexicalScope, inheritedScope, e.evalMultiValue(lexicalScope, inheritedScope))
+        else
+          (e as EvalMapLiteralEntry).key.eval(lexicalScope, inheritedScope): e.value.eval(lexicalScope, inheritedScope)
+    };
   }
 }

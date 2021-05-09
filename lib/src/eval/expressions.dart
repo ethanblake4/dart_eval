@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
+import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/src/eval/class.dart';
 import 'package:dart_eval/src/eval/collections.dart';
 import 'package:dart_eval/src/eval/functions.dart';
@@ -56,7 +57,7 @@ class EvalCallExpression extends EvalExpression {
   @override
   EvalValue eval(EvalScope lexicalScope, EvalScope inheritedScope) {
     final c = child?.eval(lexicalScope, inheritedScope);
-    final m = c?.getField(methodName);
+    final m = c?.evalGetField(methodName);
     final f = m ?? lexicalScope.lookup(methodName)?.value ?? inheritedScope.lookup(methodName)?.value;
     if (f is EvalCallable) {
       return (f as EvalCallable).call(
@@ -120,7 +121,7 @@ class EvalPrefixedIdentifierExpression extends EvalIdentifierExpression {
   @override
   EvalValue eval(EvalScope lexicalScope, EvalScope inheritedScope) {
     final pfx = (lexicalScope.lookup(prefix) ?? inheritedScope.lookup(prefix))?.value ?? (throw ArgumentError());
-    return pfx.getField(name);
+    return pfx.evalGetField(name);
   }
 }
 
@@ -136,7 +137,7 @@ class EvalAssignmentExpression extends EvalExpression {
     final ref = lhs.evalReference(lexicalScope, inheritedScope);
     final val = rhs.eval(lexicalScope, inheritedScope);
 
-    if(operator == TokenType.EQ) {
+    if (operator == TokenType.EQ) {
       return ref.value = val;
     }
 
@@ -152,7 +153,22 @@ class EvalPropertyAccessExpression extends EvalExpression {
 
   @override
   EvalValue eval(EvalScope lexicalScope, EvalScope inheritedScope) {
-    return target.eval(lexicalScope, inheritedScope).getField(name);
+    return target.eval(lexicalScope, inheritedScope).evalGetField(name);
+  }
+}
+
+class EvalIndexExpression extends EvalExpression {
+  EvalIndexExpression(int offset, int length, this.target, this.expression) : super(offset, length);
+
+  final EvalExpression target;
+  final EvalExpression expression;
+
+  @override
+  EvalValue eval(EvalScope lexicalScope, EvalScope inheritedScope) {
+    final _target = target.eval(lexicalScope, inheritedScope);
+    return (_target.evalGetField('[]') as EvalCallable).call(
+        lexicalScope, inheritedScope, [], [Parameter(expression.eval(lexicalScope, inheritedScope))],
+        target: _target);
   }
 }
 
@@ -191,7 +207,7 @@ class EvalInstanceCreationExpresion extends EvalExpression {
     if (constructorName.isEmpty) {
       constructor = on;
     } else {
-      constructor = on.getField(constructorName) as EvalCallable;
+      constructor = on.evalGetField(constructorName) as EvalCallable;
     }
     return constructor.call(lexicalScope, inheritedScope, [], []);
   }
@@ -222,10 +238,11 @@ class EvalBinaryExpression extends EvalExpression {
     final method = operator.lexeme;
 
     final l = leftOperand.eval(lexicalScope, inheritedScope);
-    final m = l.getField(method);
+    final m = l.evalGetField(method);
     if (!(m is EvalFunction)) {
       throw ArgumentError('No operator method $operator');
     }
-    return m.call(lexicalScope, inheritedScope, [], [Parameter(rightOperand.eval(lexicalScope, inheritedScope))], target: l);
+    return m.call(lexicalScope, inheritedScope, [], [Parameter(rightOperand.eval(lexicalScope, inheritedScope))],
+        target: l);
   }
 }

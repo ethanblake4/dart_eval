@@ -6,13 +6,8 @@ class EvalCompilationUnit {
   EvalCompilationUnit(this.declarations);
   final List<DartDeclaration> declarations;
   
-  EvalScope buildScope(List<Map<String, EvalField>> pFields) {
-
+  EvalScope buildScope() {
     final scope = EvalScope(null, {});
-
-    pFields.forEach((element) {
-      scope.defines.addAll(element);
-    });
 
     for (final d in declarations) {
       final dec = d.declare(DeclarationContext.TOPLEVEL, scope, scope);

@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/collections.dart';
@@ -13,12 +15,10 @@ import 'package:dart_eval/src/libs/dart_core.dart';
 import '../../dart_eval.dart';
 
 class Parse {
-  List<Map<String, EvalField>> additionalDefines = [];
+  List<DartDeclaration> additionalDefines = [];
 
-  void define(String name, EvalValue value) {
-    additionalDefines.add({
-      name: EvalField(name, value, null, Getter(null)),
-    });
+  void define(DartDeclaration value) {
+    additionalDefines.add(value);
   }
 
   ScopeWrapper parse(String content) {
@@ -36,9 +36,8 @@ class Parse {
       dd.add(parseDeclaration(ParseContext('main.dart'), declaration));
     }
 
-    final tlUnit = EvalCompilationUnit(dd);
-    final tlScope = tlUnit.buildScope([dartCore, ...additionalDefines]);
-    return ScopeWrapper(tlScope);
+    final tlUnit = EvalCompilationUnit([...dd, ...dartCore, ...additionalDefines]);
+    return ScopeWrapper(tlUnit.buildScope());
   }
 
   bool isNotNull(dynamic it) => it == null ? false : true;
@@ -63,6 +62,8 @@ class Parse {
       return DartFunctionDeclaration(
           declaration.name.name, parseFunctionExpression(context, declaration.functionExpression),
           isStatic: true, visibility: DeclarationVisibility.UNSPECIFIED);
+    } else if(declaration is TopLevelVariableDeclaration) {
+      return parseVariableDecList(context, declaration.variables, true, false);
     } else if (declaration is ConstructorDeclaration) {
       return DartConstructorDeclaration(declaration.name?.name ?? '', parseFPL(context, declaration.parameters));
     }
@@ -196,6 +197,10 @@ class Parse {
           parseExpression(context, expression.leftHandSide) as EvalReferenceExpression,
           parseExpression(context, expression.rightHandSide),
           expression.operator.type);
+    } else if (expression is IndexExpression) {
+      // TODO support cascades
+      return EvalIndexExpression(expression.offset, expression.length, parseExpression(context, expression.realTarget),
+          parseExpression(context, expression.index));
     }
     throw ArgumentError('Unknown expression found while parsing: ${expression.runtimeType}');
   }
@@ -227,6 +232,9 @@ class Parse {
     } else if (literal is ListLiteral) {
       return EvalListLiteral(
           literal.offset, literal.length, literal.elements.map((e) => parseCollectionElement(context, e)).toList());
+    } else if (literal is SetOrMapLiteral) {
+      return EvalMapLiteral(literal.offset, literal.length,
+          literal.elements.map((e) => parseCollectionElement(context, e)).toList());
     }
     throw ArgumentError('Unknown literal found while parsing: ${literal.runtimeType}');
   }
@@ -234,6 +242,9 @@ class Parse {
   EvalCollectionElement parseCollectionElement(ParseContext context, CollectionElement element) {
     if (element is Expression) {
       return parseExpression(context, element);
+    } else if (element is MapLiteralEntry) {
+      return EvalMapLiteralEntry(element.length, element.offset,
+          parseExpression(context, element.key), parseExpression(context, element.value));
     }
     throw ArgumentError('Unknown collection element found while parsing: ${element.runtimeType}');
   }

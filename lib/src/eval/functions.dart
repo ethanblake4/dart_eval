@@ -15,6 +15,18 @@ typedef CallableFunc = EvalValue Function(
 
 typedef BridgeMapper<T> = EvalValue Function(T? realValue);
 
+typedef EvalRunnableFunc = EvalValue Function(EvalScope lexicalScope, EvalScope inheritedScope);
+
+class EvalRunnableImpl implements EvalRunnable {
+  EvalRunnableImpl(this.func);
+  final EvalRunnableFunc func;
+
+  @override
+  EvalValue eval(EvalScope lexicalScope, EvalScope inheritedScope) {
+    return func(lexicalScope, inheritedScope);
+  }
+}
+
 class Parameter {
   Parameter(this.value);
 
@@ -56,7 +68,7 @@ class ParameterDefinition {
   final bool named;
   final bool nullable;
   final bool required;
-  final EvalExpression? dfValue;
+  final EvalRunnable? dfValue;
 
   EvalValue? extractFrom(List<Parameter> args, int i, [Map<String, EvalValue>? argMap]) {
     final _argMap = argMap ?? Parameter.coalesceNamed(args).named;
@@ -105,7 +117,7 @@ class EvalFunctionImpl<T> extends EvalObject<T> implements EvalFunction<T> {
   final List<ParameterDefinition> params;
 
   @override
-  EvalValue getField(String name) {
+  EvalValue evalGetField(String name, {bool internalGet = false}) {
     throw Error();
   }
 

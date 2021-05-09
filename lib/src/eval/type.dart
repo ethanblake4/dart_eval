@@ -20,6 +20,9 @@ class EvalType {
   static const EvalType boolType = EvalType('bool', 'bool', 'dart:core', [objectType],true);
   static const EvalType stringType = EvalType('String', 'String', 'dart:core', [objectType],true);
   static const EvalType listType = EvalType('List', 'List', 'dart:core', [objectType],true);
+  static const EvalType mapType = EvalType('Map', 'Map', 'dart:core', [objectType],true);
+
+  static const EvalType DateTimeType = EvalType('DateTime', 'DateTime', 'dart:core', [objectType], true);
 
   const EvalType(this.name, this.refName, this.refSourceFile, this.supertypes, this.resolved, {this.generics});
 

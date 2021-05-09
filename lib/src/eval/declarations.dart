@@ -7,13 +7,29 @@ import 'package:dart_eval/src/eval/primitives.dart';
 import '../../dart_eval.dart';
 import 'generics.dart';
 
+typedef DartDeclaratorFunc = Map<String, EvalField> Function(
+    DeclarationContext context, EvalScope lexicalScope, EvalScope currentScope);
+
 abstract class DartDeclaration {
   const DartDeclaration({required this.visibility, required this.isStatic});
 
   final DeclarationVisibility visibility;
   final bool isStatic;
 
+  /// Warning: [declare] is not allowed to have dependencies on other classes
   Map<String, EvalField> declare(DeclarationContext context, EvalScope lexicalScope, EvalScope currentScope);
+}
+
+class DartBridgeDeclaration extends DartDeclaration {
+  DartBridgeDeclaration({required DeclarationVisibility visibility, required this.declarator})
+      : super(visibility: visibility, isStatic: true);
+
+  final DartDeclaratorFunc declarator;
+
+  @override
+  Map<String, EvalField> declare(DeclarationContext context, EvalScope lexicalScope, EvalScope currentScope) {
+    return declarator(context, lexicalScope, currentScope);
+  }
 }
 
 enum DeclarationContext { TOPLEVEL, CLASS, CLASS_FIELD, STATEMENT }
@@ -54,7 +70,7 @@ class DartVariableDeclarationList extends DartDeclaration {
   Map<String, EvalField> declare(DeclarationContext context, EvalScope lexicalScope, EvalScope currentScope) {
     final m = <String, EvalField>{};
     for (final v in vars) {
-      final d = v.declaredVariable(context, type == null ? null : _resolveType(type!, lexicalScope), lexicalScope,
+      final d = v.declaredVariable(context, null, lexicalScope,
           currentScope, isStatic, isFinal, type == null ? null : type!.question != null);
       m[d.name] = d;
     }
@@ -75,14 +91,13 @@ class DartVariableDeclaration {
     Getter? getter;
     final setter = isFinal ? null : Setter(null);
     if (isStatic) {
-      assert(lexicalScope == currentScope, 'Current scope must be equal to lexical scope for statics');
       late EvalExpression _initializer;
       if (initializer == null) {
         _initializer = (isNullable ?? true) ? EvalNullExpression(-1, -1) : (throw ArgumentError.notNull(name));
       } else {
         _initializer = initializer!;
       }
-      getter = Getter.deferred(name, type ?? EvalType.dynamicType, currentScope, EvalScope.empty, _initializer);
+      getter = Getter.deferred(name, type ?? EvalType.dynamicType, lexicalScope, currentScope, _initializer);
     } else {
       getter = Getter(null);
       late EvalExpression _initializer;
@@ -166,10 +181,6 @@ class DartMethodDeclaration extends DartDeclaration {
       throw ArgumentError('Must override all methods of an abstract class: $name()');
     }
 
-    if (isStatic) {
-      assert(lexicalScope == currentScope, 'Current scope must be equal to lexical scope for statics');
-    }
-
     final v = EvalFunctionImpl(body!, params, inheritedScope: currentScope, lexicalScope: lexicalScope);
     return {name: EvalField(name, v, null, Getter(null))};
   }
@@ -185,14 +196,19 @@ class DartConstructorDeclaration extends DartDeclaration {
   @override
   Map<String, EvalField> declare(DeclarationContext context, EvalScope lexicalScope, EvalScope currentScope) {
     final v = EvalFunctionImpl(DartMethodBody(callable:
-        (EvalScope lexicalScope, EvalScope inheritedScope, List<EvalType> generics, List<Parameter> args,
+        (EvalScope lexicalScope2, EvalScope inheritedScope2, List<EvalType> generics, List<Parameter> args,
             {EvalValue? target}) {
+      if (target is EvalBridgeClass) {
+        return target.construct(name, lexicalScope, currentScope, generics, args);
+      }
       var i = 0;
       final argMap = Parameter.coalesceNamed(args).named;
       for (var param in params) {
         final vl = param.extractFrom(args, i, argMap);
         if (param.isField && vl != null) {
-          target!.setField(param.name, vl, internalSet: true);
+          target!.evalSetField(param.name, vl, internalSet: true);
+        } else if (vl == null && param.dfValue != null) {
+          target!.evalSetField(param.name, param.dfValue!.eval(lexicalScope, currentScope));
         }
         i++;
       }

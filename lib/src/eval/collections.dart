@@ -5,5 +5,5 @@ import '../../dart_eval.dart';
 abstract class EvalCollectionElement implements DartSourceNode {}
 
 abstract class EvalMultiValuedCollectionElement implements EvalCollectionElement {
-  List<EvalValue> evalMultiValue(EvalScope lexicalScope, EvalScope inheritedScope);
+  List<EvalCollectionElement> evalMultiValue(EvalScope lexicalScope, EvalScope inheritedScope);
 }

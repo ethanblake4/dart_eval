@@ -9,12 +9,15 @@ import 'object.dart';
 class EvalScope {
   const EvalScope(this.parent, this.defines);
 
-  static const EvalScope empty = EvalScope(null, {});
+  static final EvalScope empty = EvalScope(null, {});
 
   final EvalScope? parent;
   final Map<String, EvalField> defines;
 
+  EvalField? getFieldRaw(String name) => defines[name];
+
   EvalField define(String name, EvalField value) {
+    final v = value.value;
     return defines[name] = value;
   }
 
@@ -29,7 +32,7 @@ class EvalScope {
 
   @override
   String toString() {
-    return 'EvalScope{defines: $defines}';
+    return 'EvalScope{defines: $defines, parent: $parent}';
   }
 }
 
@@ -67,16 +70,73 @@ class EvalSequentialScope implements EvalScope {
 
   @override
   EvalValue<T> me<T>() => lookup('this')!.value! as EvalValue<T>;
+
+  @override
+  String toString() {
+    return 'EvalSequentialScope{scope1: $scope1, scope2: $scope2}';
+  }
+
+  @override
+  EvalField? getFieldRaw(String name) => scope1.getFieldRaw(name) ?? scope2.getFieldRaw(name);
+}
+
+// An object scope, prefixed by a lexical scope
+class EvalObjectLexicalScope implements EvalScope {
+  EvalObjectLexicalScope(this.parent);
+
+  @override
+  EvalScope? parent;
+
+  EvalValue? object;
+
+  @override
+  ScopedReference? lookup(String name) {
+    if (parent == null && object == null) {
+      return null;
+    } else if (parent == null) {
+      return ObjectScopedReference(object!, name);
+    } else if (object == null) {
+      return parent!.lookup(name);
+    }
+    return StaticLexicalObjectScopedReference(object!, parent!.lookup(name), name);
+  }
+
+  @override
+  EvalValue<T> me<T>() => lookup('this')!.value! as EvalValue<T>;
+
+  @override
+  EvalField define(String name, EvalField value) {
+    // TODO setSetter
+    object!.evalSetField(name, value.value!);
+    object!.evalSetGetter(name, value.getter!);
+    return value;
+  }
+
+  @override
+  Map<String, EvalField> get defines => throw UnimplementedError();
+
+  @override
+  String toString() {
+    return 'EvalObjectLexicalScope{object: $object, parent: $parent}';
+  }
+
+  @override
+  EvalField? getFieldRaw(String name) {
+    return object?.evalGetFieldRaw(name);
+  }
 }
 
 class EvalObjectScope implements EvalScope {
   EvalObjectScope();
 
-  late EvalObject object;
+  late EvalValue object;
 
   @override
   EvalField define(String name, EvalField value) {
-    throw UnimplementedError();
+    // TODO setSetter
+    object.evalSetField(name, value.value!);
+    object.evalSetGetter(name, value.getter!);
+    return value;
   }
 
   @override
@@ -92,6 +152,16 @@ class EvalObjectScope implements EvalScope {
 
   @override
   EvalScope? get parent => throw UnimplementedError();
+
+  @override
+  EvalField? getFieldRaw(String name) {
+    return object.evalGetFieldRaw(name);
+  }
+
+  @override
+  String toString() {
+    return 'EvalObjectScope{object: $object, parent: $parent}';
+  }
 }
 
 class ScopedReference implements Reference {
@@ -131,18 +201,18 @@ class ScopedReference implements Reference {
 class ObjectScopedReference implements ScopedReference {
   ObjectScopedReference(this.object, this.name);
 
-  final EvalObject object;
+  final EvalValue object;
   final String name;
 
   EvalValue? get value {
     try {
-      return object.getField(name);
+      return object.evalGetField(name);
     } catch (e) {
       return null;
     }
   }
 
-  set value(EvalValue? newValue) => object.setField(name, newValue ?? EvalNull());
+  set value(EvalValue? newValue) => object.evalSetField(name, newValue ?? EvalNull());
 
   @override
   EvalScope get _scope => throw UnimplementedError();
@@ -150,5 +220,30 @@ class ObjectScopedReference implements ScopedReference {
   @override
   void seti(EvalValue newValue) {
     throw UnimplementedError('seti on objectscopedref');
+  }
+}
+
+class StaticLexicalObjectScopedReference extends ObjectScopedReference {
+  StaticLexicalObjectScopedReference(EvalValue object, this.scopeRef, String name) : super(object, name);
+
+  final ScopedReference? scopeRef;
+
+  @override
+  EvalValue? get value {
+    final osr = super.value;
+    if(osr != null) return osr;
+
+    return scopeRef?.value;
+  }
+
+  @override
+  set value(EvalValue? newValue) {
+    try {
+      super.value = newValue;
+    } catch (e) {
+      print(e);
+      print(object);
+      scopeRef!.value = newValue;
+    }
   }
 }
