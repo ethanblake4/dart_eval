@@ -2,7 +2,6 @@
 It's powered under the hood by the Dart [analyzer](https://pub.dev/packages/analyzer),
 so it achieves 100% correct and up-to-date parsing (although evaluation isn't quite there yet.)
 
-
 The primary goal of `dart_eval` is to be interoperable with real Dart code.
 Classes created in 'real Dart' can be used inside the interpreter with a
 wrapper, and classes created in the interpreter can be used outside it by
@@ -75,62 +74,33 @@ The downside of bridge interop is that it's comparatively difficult to use, and
 it can't be used to wrap existing objects created in code you don't control. (For utmost
 flexibility at the expense of simplicity, you can use both bridge and wrapper interop.)
 
-An example featuring bridge interop:
+Since Bridge interop requires a lot of boilerplate code, in the future I will be creating
+a solution for code-generation of that boilerplate.
 
-```dart
-import 'package:dart_eval/dart_eval.dart';
+An example featuring bridge interop is available in the `example` directory.
 
-abstract class Cat {
-  void speakName();
-}
+## FAQ
 
-final catType = EvalType('Cat', 'Cat', 'example.dart', [EvalType.objectType], true);
+### How does it work?
 
-class EvalCat extends Cat with DartBridge<Cat>, EvalBridgeObjectMixin<Cat>, 
-    BridgeRectifier<Cat> {
+`dart_eval` is a fully Dart-based implementation of an interpreter. First, we use the Dart
+analyzer to parse the code into an AST (abstract syntax tree). Then, we map this to our
+own AST which is comprised of classes that 'understand' how to evaluate themselves.
 
-    static final cls = EvalBridgeAbstractClass([], EvalGenericsList([]), catType, EvalScope.empty, Cat);
-  
-    @override
-    final EvalBridgeData evalBridgeData = EvalBridgeData(cls);
-  
-    @override
-    EvalValue getField(String name) {
-      throw ArgumentError();
-    }
-  
-    @override
-    EvalValue setField(String name, EvalValue value) {
-      throw ArgumentError();
-    }
-  
-    @override
-    void speakName() => bridgeCall('speakName');
-}
+Evaluation has two main steps: first, we 'declare' everything, assigning the
+scope of every part of the code (basically, grouping all of the declarations into fancy Maps so
+they can be quickly accessed via a lookup, and then giving them references to those Maps so
+they too can lookup other classes). Then, we simply take a top-level node and execute it, which
+then calls all of the child nodes under it.
 
-main() {
+### Does it support Flutter?
 
-  final parser = Parse();
+Yes! Well, kind of. Support for Flutter is not built in but can be added via Bridge interop.
+I have done so to a very limited extent and it works. In the future this project will expand
+support for Flutter.
 
-  final scope = parser.parse('''
-      class Cat {
-        Cat();
-        void speak(String name) {
-          print('meow');
-          print(name);
-        }
-      }
-      void main() {
-        final cat = Cat();
-        cat.speak('Fluffy');
-      }
-  ''');
-
-  scope('main', []);
-}
-```
 ## Features and bugs
 
 Please file feature requests and bugs at the [issue tracker][tracker].
 
-[tracker]: http://example.com/issues/replaceme
+[tracker]: http://github.com/ethanblake4/dart_eval/issues
