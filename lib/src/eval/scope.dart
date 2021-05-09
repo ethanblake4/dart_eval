@@ -3,29 +3,36 @@ import 'package:dart_eval/src/eval/functions.dart';
 import 'package:dart_eval/src/eval/primitives.dart';
 import 'package:dart_eval/src/eval/reference.dart';
 
-import 'object.dart';
-
 /// A scope in which variables can be defined
 class EvalScope {
+
+  /// Create an [EvalScope]
   const EvalScope(this.parent, this.defines);
 
+  /// The empty scope. Should parent every other top-level scope.
   static final EvalScope empty = EvalScope(null, {});
 
+  /// The parent to look in if a value isn't found in this scope
   final EvalScope? parent;
+
+  /// This scope's set of definitions
   final Map<String, EvalField> defines;
 
+  /// Directly access one of this scope's fields
   EvalField? getFieldRaw(String name) => defines[name];
 
+  /// Define a field in this scope
   EvalField define(String name, EvalField value) {
-    final v = value.value;
     return defines[name] = value;
   }
 
+  /// Lookup a field in this scope and return its reference
   ScopedReference? lookup(String name) {
     final d = defines.containsKey(name) ? ScopedReference(this, name) : null;
     return d ?? parent?.lookup(name);
   }
 
+  /// Get a reference to `this` in the scope
   EvalValue<T> me<T>() {
     return lookup('this')!.value! as EvalValue<T>;
   }
@@ -36,11 +43,14 @@ class EvalScope {
   }
 }
 
+/// Convenience class for easy access to a scope's fields and methods
 class ScopeWrapper {
   const ScopeWrapper(this.scope);
 
+  /// The scope to wrap
   final EvalScope scope;
 
+  /// Call a method that exists in the scope
   EvalValue call(String name, List<Parameter> args) {
     return (scope.lookup(name)!.value! as EvalCallable).call(scope, scope, [], args);
   }
@@ -202,8 +212,10 @@ class ObjectScopedReference implements ScopedReference {
   ObjectScopedReference(this.object, this.name);
 
   final EvalValue object;
+  @override
   final String name;
 
+  @override
   EvalValue? get value {
     try {
       return object.evalGetField(name);
@@ -212,6 +224,7 @@ class ObjectScopedReference implements ScopedReference {
     }
   }
 
+  @override
   set value(EvalValue? newValue) => object.evalSetField(name, newValue ?? EvalNull());
 
   @override

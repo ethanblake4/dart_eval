@@ -1,4 +1,3 @@
-import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/collections.dart';
 import 'package:dart_eval/src/eval/expressions.dart';
 import 'package:dart_eval/src/eval/primitives.dart';
@@ -85,6 +84,7 @@ class EvalMapLiteral extends EvalExpression {
 
   final List<EvalCollectionElement> elements;
 
+  @override
   EvalValue eval(EvalScope lexicalScope, EvalScope inheritedScope) {
     return EvalMap(_expandMap(lexicalScope, inheritedScope, elements));
   }

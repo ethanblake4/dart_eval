@@ -103,4 +103,4 @@ support for Flutter.
 
 Please file feature requests and bugs at the [issue tracker][tracker].
 
-[tracker]: http://github.com/ethanblake4/dart_eval/issues
+[tracker]: https://github.com/ethanblake4/dart_eval/issues

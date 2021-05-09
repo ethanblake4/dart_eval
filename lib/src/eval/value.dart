@@ -233,7 +233,7 @@ class EvalValueFieldRef implements EvalField {
 
   @override
   String name;
-  EvalValue _value;
+  final EvalValue _value;
 
   @override
   Getter? get getter => _value.evalGetFieldRaw(name).getter;
@@ -247,6 +247,7 @@ class EvalValueFieldRef implements EvalField {
   @override
   EvalValue? get value => _value.evalGetFieldRaw(name).value;
 
+  @override
   set value(EvalValue? newValue) => _value.evalSetField(name, newValue!, internalSet: true);
 }
 

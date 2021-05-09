@@ -38,8 +38,9 @@ class Parameter {
     for (final a in args) {
       if (a is NamedParameter) {
         m[a.name] = a.value;
-      } else
+      } else {
         p.add(a);
+      }
     }
     return SeparatedParameterList(p, m);
   }

@@ -1,13 +1,14 @@
 import 'package:dart_eval/src/eval/class.dart';
 import 'package:dart_eval/src/eval/functions.dart';
 import 'package:dart_eval/src/eval/generics.dart';
-import 'package:dart_eval/src/libs/dart_core.dart';
 
 import '../../dart_eval.dart';
 import 'object.dart';
 
 final dartCoreScope = EvalScope(null, {});
 
+
+/// A Dart null value
 class EvalNull extends EvalValue with ValueInterop {
   EvalNull() : super(EvalType.nullType, realValue: null);
 
@@ -31,6 +32,7 @@ class EvalNull extends EvalValue with ValueInterop {
   }
 }
 
+/// The dart [Object] class
 class EvalObjectClass extends EvalBridgeAbstractClass {
   EvalObjectClass(EvalScope lexicalScope)
       : super([
@@ -40,6 +42,7 @@ class EvalObjectClass extends EvalBridgeAbstractClass {
   static final instance = EvalObjectClass(dartCoreScope);
 }
 
+/// An object in Dart
 class EvalRealObject<T extends Object> extends EvalBridgeObject<T> {
   EvalRealObject(T value, {EvalBridgeAbstractClass? cls, Map<String, EvalField>? fields})
       : super(cls ?? EvalObjectClass.instance, realValue: value, fields: {
@@ -84,6 +87,7 @@ class EvalRealObject<T extends Object> extends EvalBridgeObject<T> {
         });
 }
 
+/// The Dart [num] class
 class EvalNumClass extends EvalBridgeAbstractClass {
   EvalNumClass(EvalScope lexicalScope)
       : super([], EvalType.numType, lexicalScope, num);
@@ -91,6 +95,7 @@ class EvalNumClass extends EvalBridgeAbstractClass {
   static final instance = EvalNumClass(dartCoreScope);
 }
 
+/// A Dart [num] value
 class EvalNum<T extends num> extends EvalRealObject<T> {
   EvalNum(T value, {EvalBridgeAbstractClass? cls, Map<String, EvalField>? fields})
       : super(value, cls: cls ?? EvalNumClass.instance, fields: {
@@ -105,6 +110,7 @@ class EvalNum<T extends num> extends EvalRealObject<T> {
   T get realValue => super.realValue!;
 }
 
+/// The Dart [int] class
 class EvalIntClass extends EvalBridgeAbstractClass {
   EvalIntClass(EvalScope lexicalScope)
       : super([], EvalType.intType, lexicalScope, int);
@@ -112,6 +118,7 @@ class EvalIntClass extends EvalBridgeAbstractClass {
   static final instance = EvalIntClass(dartCoreScope);
 }
 
+/// A Dart [int] value
 class EvalInt extends EvalNum<int> {
   EvalInt(int value)
       : super(value, cls: EvalIntClass.instance, fields: {
@@ -122,6 +129,7 @@ class EvalInt extends EvalNum<int> {
         });
 }
 
+/// The Dart [bool] class
 class EvalBoolClass extends EvalBridgeAbstractClass {
   EvalBoolClass(EvalScope lexicalScope)
       : super([], EvalType.boolType, lexicalScope, bool);
@@ -129,6 +137,7 @@ class EvalBoolClass extends EvalBridgeAbstractClass {
   static final instance = EvalBoolClass(dartCoreScope);
 }
 
+/// A Dart [bool] value
 class EvalBool extends EvalBridgeObject<bool> {
   EvalBool(bool value)
       : super(EvalBoolClass.instance, realValue: value, fields: {
@@ -137,6 +146,7 @@ class EvalBool extends EvalBridgeObject<bool> {
         });
 }
 
+/// The Dart [String] class
 class EvalStringClass extends EvalBridgeAbstractClass {
   EvalStringClass(EvalScope lexicalScope)
       : super([], EvalType.stringType, lexicalScope, String);
@@ -144,6 +154,7 @@ class EvalStringClass extends EvalBridgeAbstractClass {
   static final instance = EvalStringClass(dartCoreScope);
 }
 
+/// A Dart [String] value
 class EvalString extends EvalRealObject<String> {
   EvalString(String value)
       : super(value, cls: EvalStringClass.instance, fields: {
@@ -152,6 +163,7 @@ class EvalString extends EvalRealObject<String> {
         });
 }
 
+/// The Dart [List] class
 class EvalListClass extends EvalAbstractClass {
   EvalListClass(EvalScope lexicalScope)
       : super([], EvalGenericsList([EvalGenericParam('T')]), EvalType.listType, lexicalScope,
@@ -160,6 +172,7 @@ class EvalListClass extends EvalAbstractClass {
   static final instance = EvalListClass(dartCoreScope);
 }
 
+/// A Dart [List] value
 class EvalList extends EvalObject<List<EvalValue>> {
   EvalList(List<EvalValue> value)
     : super(EvalListClass.instance, realValue: value, fields: {
@@ -180,6 +193,8 @@ class EvalList extends EvalObject<List<EvalValue>> {
   }
 }
 
+
+/// The Dart [Map] class
 class EvalMapClass extends EvalAbstractClass {
   EvalMapClass(EvalScope lexicalScope)
       : super([], EvalGenericsList([EvalGenericParam('K'), EvalGenericParam('V')]), EvalType.listType, lexicalScope,
@@ -188,6 +203,7 @@ class EvalMapClass extends EvalAbstractClass {
   static final instance = EvalMapClass(dartCoreScope);
 }
 
+/// A Dart [Map]
 class EvalMap extends EvalObject<Map<EvalValue, EvalValue>> {
   EvalMap(Map<EvalValue, EvalValue> value)
       : super(EvalMapClass.instance, realValue: value, fields: {

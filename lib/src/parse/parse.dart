@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/collections.dart';
@@ -14,17 +12,21 @@ import 'package:dart_eval/src/libs/dart_core.dart';
 
 import '../../dart_eval.dart';
 
+/// The parser class uses the Dart analyzer to parse Dart code and then transforms it into a Scope.
 class Parse {
-  List<DartDeclaration> additionalDefines = [];
+  final List<DartDeclaration> _additionalDefines = [];
 
+  /// Add a new [DartDeclaration] to this Parse instance's [EvalScope]
   void define(DartDeclaration value) {
-    additionalDefines.add(value);
+    _additionalDefines.add(value);
   }
 
+  /// Parse a string containing Dart code and return a [ScopeWrapper] with that code and
+  /// any
   ScopeWrapper parse(String content) {
     final d = parseString(content: content, throwIfDiagnostics: false);
 
-    if (d.errors != null && d.errors.isNotEmpty) {
+    if (d.errors.isNotEmpty) {
       d.errors.forEach((element) {
         print(element);
       });
@@ -33,48 +35,48 @@ class Parse {
 
     final dd = <DartDeclaration>[];
     for (final declaration in d.unit.declarations) {
-      dd.add(parseDeclaration(ParseContext('main.dart'), declaration));
+      dd.add(_parseDeclaration(ParseContext('main.dart'), declaration));
     }
 
-    final tlUnit = EvalCompilationUnit([...dd, ...dartCore, ...additionalDefines]);
+    final tlUnit = EvalCompilationUnit([...dd, ...dartCore, ..._additionalDefines]);
     return ScopeWrapper(tlUnit.buildScope());
   }
 
-  bool isNotNull(dynamic it) => it == null ? false : true;
+  bool _isNotNull(dynamic it) => it == null ? false : true;
 
-  DartDeclaration parseDeclaration(ParseContext context, Declaration declaration) {
+  DartDeclaration _parseDeclaration(ParseContext context, Declaration declaration) {
     if (declaration is ClassDeclaration) {
       return DartClassDeclaration(
           declaration.name.name,
-          parseTypeParameterList(context, declaration.typeParameters),
-          declaration.members.map((m) => parseDeclaration(context, m)).toList(),
+          _parseTypeParameterList(context, declaration.typeParameters),
+          declaration.members.map((m) => _parseDeclaration(context, m)).toList(),
           declaration.isAbstract,
           declaration.extendsClause?.superclass.name.name,
           parseContext: context);
     } else if (declaration is VariableDeclarationList) {
-      return parseVariableDecList(context, declaration as VariableDeclarationList, false, false);
+      return _parseVariableDecList(context, declaration as VariableDeclarationList, false, false);
     } else if (declaration is FieldDeclaration) {
-      return parseVariableDecList(
-          context, declaration.fields, declaration.isStatic, isNotNull(declaration.covariantKeyword));
+      return _parseVariableDecList(
+          context, declaration.fields, declaration.isStatic, _isNotNull(declaration.covariantKeyword));
     } else if (declaration is MethodDeclaration) {
-      return parseMethodDec(context, declaration);
+      return _parseMethodDec(context, declaration);
     } else if (declaration is FunctionDeclaration) {
       return DartFunctionDeclaration(
-          declaration.name.name, parseFunctionExpression(context, declaration.functionExpression),
+          declaration.name.name, _parseFunctionExpression(context, declaration.functionExpression),
           isStatic: true, visibility: DeclarationVisibility.UNSPECIFIED);
     } else if(declaration is TopLevelVariableDeclaration) {
-      return parseVariableDecList(context, declaration.variables, true, false);
+      return _parseVariableDecList(context, declaration.variables, true, false);
     } else if (declaration is ConstructorDeclaration) {
-      return DartConstructorDeclaration(declaration.name?.name ?? '', parseFPL(context, declaration.parameters));
+      return DartConstructorDeclaration(declaration.name?.name ?? '', _parseFPL(context, declaration.parameters));
     }
     throw ArgumentError('Unknown declaration type ${declaration.runtimeType}');
   }
 
-  DartVariableDeclarationList parseVariableDecList(
+  DartVariableDeclarationList _parseVariableDecList(
       ParseContext context, VariableDeclarationList list, bool isStatic, bool isCovariant) {
     final l = <DartVariableDeclaration>[];
     for (final v in list.variables) {
-      l.add(parseVariableDec(context, v));
+      l.add(_parseVariableDec(context, v));
     }
     return DartVariableDeclarationList(l,
         isLate: list.isLate,
@@ -85,13 +87,13 @@ class Parse {
   }
 
   // TODO getters
-  DartMethodDeclaration parseMethodDec(ParseContext context, MethodDeclaration declaration) {
-    final mb = parseFunctionBody(context, declaration.body);
+  DartMethodDeclaration _parseMethodDec(ParseContext context, MethodDeclaration declaration) {
+    final mb = _parseFunctionBody(context, declaration.body);
     return DartMethodDeclaration(
-        declaration.name.name, mb, parseFPL(context, declaration.parameters!), declaration.isStatic);
+        declaration.name.name, mb, _parseFPL(context, declaration.parameters!), declaration.isStatic);
   }
 
-  List<ParameterDefinition> parseFPL(ParseContext context, FormalParameterList list) {
+  List<ParameterDefinition> _parseFPL(ParseContext context, FormalParameterList list) {
     final lis = <ParameterDefinition>[];
     for (final param in list.parameters) {
       final nfp = (param is DefaultFormalParameter) ? param.parameter : param as NormalFormalParameter;
@@ -110,53 +112,53 @@ class Parse {
           nfp.isNamed,
           nfp.isRequired,
           param is DefaultFormalParameter && param.defaultValue != null
-              ? parseExpression(context, param.defaultValue!)
+              ? _parseExpression(context, param.defaultValue!)
               : null,
           isField: nfp is FieldFormalParameter));
     }
     return lis;
   }
 
-  DartMethodBody parseFunctionBody(ParseContext context, FunctionBody body) {
+  DartMethodBody _parseFunctionBody(ParseContext context, FunctionBody body) {
     DartBlockStatement? block;
     if (body is BlockFunctionBody) {
-      block = parseBlock(context, body.block);
+      block = _parseBlock(context, body.block);
     }
     return DartMethodBody(block: block);
   }
 
-  DartStatement parseStatement(ParseContext context, Statement statement) {
+  DartStatement _parseStatement(ParseContext context, Statement statement) {
     if (statement is Block) {
-      return parseBlock(context, statement);
+      return _parseBlock(context, statement);
     } else if (statement is VariableDeclarationStatement) {
-      return parseVariableDecStatement(context, statement);
+      return _parseVariableDecStatement(context, statement);
     } else if (statement is ExpressionStatement) {
-      return parseExpressionStatement(context, statement);
+      return _parseExpressionStatement(context, statement);
     } else if (statement is ReturnStatement) {
       return DartReturnStatement(statement.offset, statement.length,
-          statement.expression == null ? EvalNullExpression(-1, -1) : parseExpression(context, statement.expression!));
+          statement.expression == null ? EvalNullExpression(-1, -1) : _parseExpression(context, statement.expression!));
     }
     throw ArgumentError('Unknown statement type ${statement.runtimeType}');
   }
 
-  DartBlockStatement parseBlock(ParseContext context, Block block) =>
-      DartBlockStatement(block.offset, block.length, block.statements.map((s) => parseStatement(context, s)).toList());
+  DartBlockStatement _parseBlock(ParseContext context, Block block) =>
+      DartBlockStatement(block.offset, block.length, block.statements.map((s) => _parseStatement(context, s)).toList());
 
-  DartExpressionStatement parseExpressionStatement(ParseContext context, ExpressionStatement statement) =>
-      DartExpressionStatement(statement.offset, statement.length, parseExpression(context, statement.expression));
+  DartExpressionStatement _parseExpressionStatement(ParseContext context, ExpressionStatement statement) =>
+      DartExpressionStatement(statement.offset, statement.length, _parseExpression(context, statement.expression));
 
-  DartVariableDeclarationStatement parseVariableDecStatement(
+  DartVariableDeclarationStatement _parseVariableDecStatement(
           ParseContext context, VariableDeclarationStatement statement) =>
       DartVariableDeclarationStatement(
-          statement.offset, statement.length, parseVariableDecList(context, statement.variables, false, false));
+          statement.offset, statement.length, _parseVariableDecList(context, statement.variables, false, false));
 
-  DartVariableDeclaration parseVariableDec(ParseContext context, VariableDeclaration declaration) {
+  DartVariableDeclaration _parseVariableDec(ParseContext context, VariableDeclaration declaration) {
     return DartVariableDeclaration(declaration.name.name,
-        declaration.initializer == null ? null : parseExpression(context, declaration.initializer!),
+        declaration.initializer == null ? null : _parseExpression(context, declaration.initializer!),
         isLate: declaration.isLate);
   }
 
-  EvalExpression parseExpression(ParseContext context, Expression expression) {
+  EvalExpression _parseExpression(ParseContext context, Expression expression) {
     if (expression is SimpleIdentifier) {
       return EvalIdentifierExpression(expression.offset, expression.length, expression.name);
     } else if (expression is PrefixedIdentifier) {
@@ -166,50 +168,50 @@ class Parse {
       return EvalCallExpression(
           expression.offset,
           expression.length,
-          expression.target != null ? parseExpression(context, expression.target!) : null,
+          expression.target != null ? _parseExpression(context, expression.target!) : null,
           expression.methodName.name,
-          expression.argumentList.arguments.map((m) => parseExpression(context, m)).toList());
+          expression.argumentList.arguments.map((m) => _parseExpression(context, m)).toList());
     } else if (expression is Literal) {
-      return parseLiteral(context, expression);
+      return _parseLiteral(context, expression);
     } else if (expression is FunctionExpression) {
-      return parseFunctionExpression(context, expression);
+      return _parseFunctionExpression(context, expression);
     } else if (expression is InstanceCreationExpression) {
       return EvalInstanceCreationExpresion(expression.offset, expression.length,
-          parseIdentifier(expression.constructorName.type.name), expression.constructorName.name?.name ?? '');
+          _parseIdentifier(expression.constructorName.type.name), expression.constructorName.name?.name ?? '');
     } else if (expression is NamedExpression) {
       return EvalNamedExpression(expression.offset, expression.length, expression.name.label.name,
-          parseExpression(context, expression.expression));
+          _parseExpression(context, expression.expression));
     } else if (expression is BinaryExpression) {
       return EvalBinaryExpression(
           expression.offset,
           expression.length,
-          parseExpression(context, expression.leftOperand),
+          _parseExpression(context, expression.leftOperand),
           expression.operator.type,
-          parseExpression(context, expression.rightOperand));
+          _parseExpression(context, expression.rightOperand));
     } else if (expression is PropertyAccess) {
       // TODO support cascades
       return EvalPropertyAccessExpression(expression.offset, expression.length,
-          parseExpression(context, expression.realTarget), expression.propertyName.name);
+          _parseExpression(context, expression.realTarget), expression.propertyName.name);
     } else if (expression is AssignmentExpression) {
       return EvalAssignmentExpression(
           expression.offset,
           expression.length,
-          parseExpression(context, expression.leftHandSide) as EvalReferenceExpression,
-          parseExpression(context, expression.rightHandSide),
+          _parseExpression(context, expression.leftHandSide) as EvalReferenceExpression,
+          _parseExpression(context, expression.rightHandSide),
           expression.operator.type);
     } else if (expression is IndexExpression) {
       // TODO support cascades
-      return EvalIndexExpression(expression.offset, expression.length, parseExpression(context, expression.realTarget),
-          parseExpression(context, expression.index));
+      return EvalIndexExpression(expression.offset, expression.length, _parseExpression(context, expression.realTarget),
+          _parseExpression(context, expression.index));
     }
     throw ArgumentError('Unknown expression found while parsing: ${expression.runtimeType}');
   }
 
-  EvalFunctionExpression parseFunctionExpression(ParseContext context, FunctionExpression expression) =>
-      EvalFunctionExpression(expression.offset, expression.length, parseFunctionBody(context, expression.body),
-          parseFPL(context, expression.parameters!));
+  EvalFunctionExpression _parseFunctionExpression(ParseContext context, FunctionExpression expression) =>
+      EvalFunctionExpression(expression.offset, expression.length, _parseFunctionBody(context, expression.body),
+          _parseFPL(context, expression.parameters!));
 
-  EvalIdentifierExpression parseIdentifier(Identifier identifier) {
+  EvalIdentifierExpression _parseIdentifier(Identifier identifier) {
     if (identifier is SimpleIdentifier) {
       return EvalIdentifierExpression(identifier.offset, identifier.length, identifier.name);
     } else if (identifier is PrefixedIdentifier) {
@@ -219,7 +221,7 @@ class Parse {
     throw ArgumentError('Unknown identifier ${identifier.runtimeType}');
   }
 
-  EvalExpression parseLiteral(ParseContext context, Expression literal) {
+  EvalExpression _parseLiteral(ParseContext context, Expression literal) {
     if (literal is StringLiteral) {
       if (literal is SimpleStringLiteral) {
         return EvalStringLiteral(literal.offset, literal.length, literal.value);
@@ -231,36 +233,37 @@ class Parse {
       return EvalIntLiteral(literal.offset, literal.length, literal.value!);
     } else if (literal is ListLiteral) {
       return EvalListLiteral(
-          literal.offset, literal.length, literal.elements.map((e) => parseCollectionElement(context, e)).toList());
+          literal.offset, literal.length, literal.elements.map((e) => _parseCollectionElement(context, e)).toList());
     } else if (literal is SetOrMapLiteral) {
       return EvalMapLiteral(literal.offset, literal.length,
-          literal.elements.map((e) => parseCollectionElement(context, e)).toList());
+          literal.elements.map((e) => _parseCollectionElement(context, e)).toList());
     }
     throw ArgumentError('Unknown literal found while parsing: ${literal.runtimeType}');
   }
 
-  EvalCollectionElement parseCollectionElement(ParseContext context, CollectionElement element) {
+  EvalCollectionElement _parseCollectionElement(ParseContext context, CollectionElement element) {
     if (element is Expression) {
-      return parseExpression(context, element);
+      return _parseExpression(context, element);
     } else if (element is MapLiteralEntry) {
       return EvalMapLiteralEntry(element.length, element.offset,
-          parseExpression(context, element.key), parseExpression(context, element.value));
+          _parseExpression(context, element.key), _parseExpression(context, element.value));
     }
     throw ArgumentError('Unknown collection element found while parsing: ${element.runtimeType}');
   }
 
-  EvalGenericsList parseTypeParameterList(ParseContext context, TypeParameterList? list) {
+  EvalGenericsList _parseTypeParameterList(ParseContext context, TypeParameterList? list) {
     if (list == null) {
       return EvalGenericsList([]);
     }
-    return EvalGenericsList(list.typeParameters.map((e) => parseTypeParameter(context, e)).toList());
+    return EvalGenericsList(list.typeParameters.map((e) => _parseTypeParameter(context, e)).toList());
   }
 
-  EvalGenericParam parseTypeParameter(ParseContext context, TypeParameter param) {
+  EvalGenericParam _parseTypeParameter(ParseContext context, TypeParameter param) {
     return EvalGenericParam(param.name.name);
   }
 }
 
+/// The current parsing context
 class ParseContext {
   String sourceFile;
 

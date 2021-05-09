@@ -221,7 +221,7 @@ void main() {
 
     setUp(() {
       parse = Parse();
-      parse.additionalDefines.add(EvalInteropTest1.declaration);
+      parse.define(EvalInteropTest1.declaration);
     });
 
     test('Rectified bridge class', () {
@@ -268,7 +268,7 @@ abstract class InteropTest1 {
 }
 
 class EvalInteropTest1 extends InteropTest1
-    with ValueInterop<InteropTest1>, EvalBridgeObjectMixin<InteropTest1>, BridgeRectifier<InteropTest1> {
+    with ValueInterop<InteropTest1>, EvalBridgeObjectMixin, BridgeRectifier {
 
   static final declaration = DartBridgeDeclaration(
       visibility: DeclarationVisibility.PUBLIC,
@@ -277,7 +277,7 @@ class EvalInteropTest1 extends InteropTest1
             _interopTest1Type.refName, cls = clsgen(lex), null, Getter(null))
       });
 
-  static final clsgen = (lexicalScope) => EvalBridgeClass([], _interopTest1Type, EvalScope.empty, InteropTest1,
+  static Function(EvalScope) get clsgen => (lexicalScope) => EvalBridgeClass([], _interopTest1Type, EvalScope.empty, InteropTest1,
       (_1, _2, _3) => EvalInteropTest1());
 
   static late EvalBridgeClass cls;

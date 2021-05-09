@@ -2,28 +2,35 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/class.dart';
 import 'package:dart_eval/src/eval/expressions.dart';
 import 'package:dart_eval/src/eval/functions.dart';
-import 'package:dart_eval/src/eval/primitives.dart';
 
 import '../../dart_eval.dart';
 import 'generics.dart';
 
+/// A custom declaration function
 typedef DartDeclaratorFunc = Map<String, EvalField> Function(
     DeclarationContext context, EvalScope lexicalScope, EvalScope currentScope);
 
+/// A declaration declares one or more fields, and assigns them their lexical scope if one is needed
 abstract class DartDeclaration {
   const DartDeclaration({required this.visibility, required this.isStatic});
 
+  /// The visibility of this declaration. Not currently used and may be removed in the future.
   final DeclarationVisibility visibility;
+
+  /// Whether this declaration is static. Some declarations can only be static, like top-level fields.
   final bool isStatic;
 
+  /// Declare fields
   /// Warning: [declare] is not allowed to have dependencies on other classes
   Map<String, EvalField> declare(DeclarationContext context, EvalScope lexicalScope, EvalScope currentScope);
 }
 
+/// Custom declaration that takes a [DartDeclaratorFunc] to perform user-defined declaration
 class DartBridgeDeclaration extends DartDeclaration {
   DartBridgeDeclaration({required DeclarationVisibility visibility, required this.declarator})
       : super(visibility: visibility, isStatic: true);
 
+  /// The function that defines how this declaration will be declared
   final DartDeclaratorFunc declarator;
 
   @override
@@ -32,8 +39,10 @@ class DartBridgeDeclaration extends DartDeclaration {
   }
 }
 
+/// The context in which a declaration is declared
 enum DeclarationContext { TOPLEVEL, CLASS, CLASS_FIELD, STATEMENT }
 
+/// Visibility of a declaration. Not currently used and may be removed in the future.
 enum DeclarationVisibility { PRIVATE, PUBLIC, UNSPECIFIED }
 
 abstract class DartInterface {
@@ -42,16 +51,19 @@ abstract class DartInterface {
   final List<DartDeclaration> declarations;
 }
 
-EvalType _resolveType(TypeAnnotation type, EvalScope lexicalScope) {
+/* EvalType _resolveType(TypeAnnotation type, EvalScope lexicalScope) {
   if (type is NamedType) {
     final ref = lexicalScope.lookup(type.name.name);
     if (ref?.value is EvalAbstractClass) {
       return (ref!.value as EvalAbstractClass).delegatedType;
     }
   }
-  throw ArgumentError('Anonymous function types not supported yet ${type}');
-}
+  throw ArgumentError('Anonymous function types not supported yet $type');
+}*/
 
+/// A variable declaration list declares one or more variables of a specified type,
+/// with optional initial values.
+/// See [VariableDeclarationList]
 class DartVariableDeclarationList extends DartDeclaration {
   const DartVariableDeclarationList(this.vars,
       {required this.isLate,
@@ -61,9 +73,16 @@ class DartVariableDeclarationList extends DartDeclaration {
       required bool isStatic})
       : super(visibility: visibility, isStatic: isStatic);
 
+  /// Variables to be declared
   final List<DartVariableDeclaration> vars;
+
+  /// Whether this list is declared with the `late` keyword
   final bool isLate;
+
+  /// Whether this list is declared with the `final` keyword
   final bool isFinal;
+
+  /// The type annotation, if any
   final TypeAnnotation? type;
 
   @override
@@ -78,6 +97,8 @@ class DartVariableDeclarationList extends DartDeclaration {
   }
 }
 
+/// A variable declaration declares a single variable. Called by [DartVariableDeclarationList]
+/// See [VariableDeclaration]
 class DartVariableDeclaration {
   const DartVariableDeclaration(this.name, this.initializer, {required this.isLate});
 
@@ -115,12 +136,17 @@ class DartVariableDeclaration {
   }
 }
 
+/// Declares a function
+/// See [FunctionDeclaration]
 class DartFunctionDeclaration extends DartDeclaration {
   DartFunctionDeclaration(this.name, this.functionBody,
       {required bool isStatic, required DeclarationVisibility visibility})
       : super(isStatic: isStatic, visibility: visibility);
 
+  /// Name of the function
   final String name;
+
+  /// Body of the function
   EvalFunctionExpression functionBody;
 
   @override
@@ -130,31 +156,35 @@ class DartFunctionDeclaration extends DartDeclaration {
   }
 }
 
-class PlaceholderDeclaration extends DartDeclaration {
-  PlaceholderDeclaration(this.name) : super(visibility: DeclarationVisibility.UNSPECIFIED, isStatic: false);
-
-  final String name;
-
-  @override
-  Map<String, EvalField> declare(DeclarationContext context, EvalScope lexicalScope, EvalScope currentScope) {
-    return {name: EvalField(name, EvalNull(), null, null)};
-  }
-}
-
+/// Declares a class
+/// See [ClassDeclaration]
 class DartClassDeclaration extends DartDeclaration {
   DartClassDeclaration(this.name, this.generics, this.declarations, this.isAbstract, this.extendsClause,
       {required this.parseContext})
       : super(isStatic: true, visibility: DeclarationVisibility.UNSPECIFIED);
 
+  /// Name of this class
   final String name;
+
+  /// Generic type parameters supported by this class
   final EvalGenericsList generics;
+
+  /// Declarations inside this class
   final List<DartDeclaration> declarations;
+
+  /// Whether this class is an abstract class, and can't be instantiated
   final bool isAbstract;
+
+  /// The parse context of this class
   final ParseContext parseContext;
 
-  // TODO "extends Something<T>"
+  /// The extends clause of this class, or null
+  ///
+  /// TODO "extends Something<T>"
   final String? extendsClause;
 
+  /// Declaring a class creates a [EvalClass] or [EvalAbstractClass]
+  /// This is a static class reference, not an instance of the class
   @override
   Map<String, EvalField> declare(DeclarationContext context, EvalScope lexicalScope, EvalScope currentScope) {
     final type = EvalType(name, name, parseContext.sourceFile, [], true);
@@ -168,13 +198,22 @@ class DartClassDeclaration extends DartDeclaration {
   }
 }
 
+/// Declares a method
+/// See [MethodDeclaration]
 class DartMethodDeclaration extends DartDeclaration {
   DartMethodDeclaration(this.name, this.body, this.params, bool isStatic)
       : super(visibility: DeclarationVisibility.UNSPECIFIED, isStatic: isStatic);
+
+  /// Name of the method
   String name;
+
+  /// The method body
   DartMethodBody? body;
+
+  /// Parameters supported by this method
   List<ParameterDefinition> params;
 
+  /// Declaring a method creates an [EvalFunction] which runs [body]
   @override
   Map<String, EvalField> declare(DeclarationContext context, EvalScope lexicalScope, EvalScope currentScope) {
     if (body == null) {
@@ -186,13 +225,19 @@ class DartMethodDeclaration extends DartDeclaration {
   }
 }
 
+/// Declares a class constructor
+/// See [ConstructorDeclaration] for syntax
 class DartConstructorDeclaration extends DartDeclaration {
   DartConstructorDeclaration(this.name, this.params)
       : super(visibility: DeclarationVisibility.UNSPECIFIED, isStatic: true);
 
+  /// The constructor's name, or an empty string for the unnamed constructor
   final String name;
+
+  /// Parameters supported by this constructor
   final List<ParameterDefinition> params;
 
+  /// Declaring a constructor creates a [EvalFunction] which constructs an [EvalObject] when called
   @override
   Map<String, EvalField> declare(DeclarationContext context, EvalScope lexicalScope, EvalScope currentScope) {
     final v = EvalFunctionImpl(DartMethodBody(callable:

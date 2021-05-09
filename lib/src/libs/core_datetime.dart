@@ -1,5 +1,6 @@
 import '../../dart_eval.dart';
 
+/// Bridge wrapper for the Dart [DateTime] class
 class EvalDateTime extends DateTime
     with
         ValueInterop<DateTime>,
@@ -248,7 +249,6 @@ class EvalDateTime extends DateTime
         final _f = evalBridgeTryGetField('isUtc');
         if (_f != null) return _f;
         final _v = super.isUtc;
-        if (_v == null) return EvalNull();
         return EvalBool(_v);
       case 'isBefore':
         return evalBridgeTryGetField('isBefore') ??
@@ -270,7 +270,6 @@ class EvalDateTime extends DateTime
         final _f = evalBridgeTryGetField('hashCode');
         if (_f != null) return _f;
         final _v = super.hashCode;
-        if (_v == null) return EvalNull();
         return EvalInt(_v);
 
       case 'toUtc':
@@ -296,73 +295,61 @@ class EvalDateTime extends DateTime
         final _f = evalBridgeTryGetField('millisecondsSinceEpoch');
         if (_f != null) return _f;
         final _v = super.millisecondsSinceEpoch;
-        if (_v == null) return EvalNull();
         return EvalInt(_v);
       case 'microsecondsSinceEpoch':
         final _f = evalBridgeTryGetField('microsecondsSinceEpoch');
         if (_f != null) return _f;
         final _v = super.microsecondsSinceEpoch;
-        if (_v == null) return EvalNull();
         return EvalInt(_v);
       case 'timeZoneName':
         final _f = evalBridgeTryGetField('timeZoneName');
         if (_f != null) return _f;
         final _v = super.timeZoneName;
-        if (_v == null) return EvalNull();
         return EvalString(_v);
       case 'year':
         final _f = evalBridgeTryGetField('year');
         if (_f != null) return _f;
         final _v = super.year;
-        if (_v == null) return EvalNull();
         return EvalInt(_v);
       case 'month':
         final _f = evalBridgeTryGetField('month');
         if (_f != null) return _f;
         final _v = super.month;
-        if (_v == null) return EvalNull();
         return EvalInt(_v);
       case 'day':
         final _f = evalBridgeTryGetField('day');
         if (_f != null) return _f;
         final _v = super.day;
-        if (_v == null) return EvalNull();
         return EvalInt(_v);
       case 'hour':
         final _f = evalBridgeTryGetField('hour');
         if (_f != null) return _f;
         final _v = super.hour;
-        if (_v == null) return EvalNull();
         return EvalInt(_v);
       case 'minute':
         final _f = evalBridgeTryGetField('minute');
         if (_f != null) return _f;
         final _v = super.minute;
-        if (_v == null) return EvalNull();
         return EvalInt(_v);
       case 'second':
         final _f = evalBridgeTryGetField('second');
         if (_f != null) return _f;
         final _v = super.second;
-        if (_v == null) return EvalNull();
         return EvalInt(_v);
       case 'millisecond':
         final _f = evalBridgeTryGetField('millisecond');
         if (_f != null) return _f;
         final _v = super.millisecond;
-        if (_v == null) return EvalNull();
         return EvalInt(_v);
       case 'microsecond':
         final _f = evalBridgeTryGetField('microsecond');
         if (_f != null) return _f;
         final _v = super.microsecond;
-        if (_v == null) return EvalNull();
         return EvalInt(_v);
       case 'weekday':
         final _f = evalBridgeTryGetField('weekday');
         if (_f != null) return _f;
         final _v = super.weekday;
-        if (_v == null) return EvalNull();
         return EvalInt(_v);
       default:
         return super.evalGetField(name, internalGet: internalGet);

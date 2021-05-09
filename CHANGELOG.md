@@ -1,7 +1,14 @@
 ## 0.0.1
 
-- Initial version, created by Stagehand
+- Create parser and interpreter
+- Add interop
 
 ## 0.0.2
 
-- Added basic interpreter
+- Fix scoping
+- Add support for List and Map types
+
+## 0.0.3
+
+- Make the Pub analyzer happy
+- Add some Dartdoc comments

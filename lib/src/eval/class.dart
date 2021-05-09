@@ -30,12 +30,15 @@ class EvalAbstractClass extends EvalValueImpl<Type> implements DartInterface, Ev
   final EvalType? superclassName;
   late EvalObjectLexicalScope lexicalScope;
 
+  /// A list of declarations defined by this class
   @override
   final List<DartDeclaration> declarations;
 
+  /// The type of the [EvalObject] this class will create
   @override
   final EvalType delegatedType;
 
+  /// Gets all of the declarations of this class and those it inherits from
   List<DartDeclaration> getAllDeclarations(EvalScope lexicalScope) {
     if (superclassName == null) {
       return declarations;
@@ -76,9 +79,6 @@ class EvalClass extends EvalAbstractClass implements EvalCallable {
       {String? sourceFile, EvalType? superclassName, Type? realValue})
       : super(declarations, generics, delegatedType, lexicalScope,
             sourceFile: sourceFile, superclassName: superclassName, realValue: realValue);
-
-  @override
-  EvalType get returnType => delegatedType;
 
   /// Call the default constructor.
   /// If there is no default constructor, this method will throw an error.
@@ -188,9 +188,6 @@ class EvalBridgeClass<D> extends EvalBridgeAbstractClass implements EvalClass {
       {EvalValue? target}) {
     return construct('', this.lexicalScope, EvalScope.empty, generics, args);
   }
-
-  @override
-  EvalType get returnType => delegatedType;
 
   @override
   String toString() {

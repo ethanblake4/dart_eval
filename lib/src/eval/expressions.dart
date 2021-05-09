@@ -11,14 +11,20 @@ import 'package:dart_eval/src/eval/type.dart';
 import 'package:dart_eval/src/eval/value.dart';
 import 'package:dart_eval/src/parse/source.dart';
 
+
+/// A class that can be evaluated in Eval
 abstract class EvalRunnable {
+
+  /// Evaluate this function in the supplied scope
   EvalValue eval(EvalScope lexicalScope, EvalScope inheritedScope);
 }
 
+/// A Dart expression
 abstract class EvalExpression extends DartSourceNode implements EvalRunnable, EvalCollectionElement {
   const EvalExpression(int offset, int length) : super(offset, length);
 }
 
+/// A Dart expression that can return a reference to a value instead of the value itself
 abstract class EvalReferenceExpression implements EvalExpression {
   Reference evalReference(EvalScope lexicalScope, EvalScope inheritedScope);
 }
@@ -35,6 +41,9 @@ abstract class EvalReferenceExpression implements EvalExpression {
 
 }*/
 
+/// An expression representing the null literal
+///
+/// See [NullLiteral]
 class EvalNullExpression extends EvalExpression {
   EvalNullExpression(int offset, int length) : super(offset, length);
 
@@ -42,16 +51,23 @@ class EvalNullExpression extends EvalExpression {
   EvalValue eval(EvalScope lexicalScope, EvalScope inheritedScope) {
     return EvalNull();
   }
-
-  @override
-  EvalType get returnType => EvalType.nullType;
 }
 
+/// An expression that calls a method on a value
+///
+/// See [MethodInvocation]
 class EvalCallExpression extends EvalExpression {
+
+  /// Create an [EvalCallExpression]
   EvalCallExpression(int offset, int length, this.child, this.methodName, this.params) : super(offset, length);
 
+  /// The expression to call [methodName] on
   final EvalExpression? child;
+
+  /// The method to call on [child], or the function to lookup if no [child] is provided
   final String methodName;
+
+  /// Parameters to the method
   final List<EvalExpression> params;
 
   @override
@@ -78,6 +94,9 @@ class EvalCallExpression extends EvalExpression {
   }
 }
 
+/// Defines a expression function
+///
+/// See [FunctionExpression]
 class EvalFunctionExpression extends EvalExpression {
   EvalFunctionExpression(int offset, int length, this.body, this.params) : super(offset, length);
 
@@ -90,16 +109,21 @@ class EvalFunctionExpression extends EvalExpression {
   }
 }
 
+/// An identifier, such as a variable name
+///
+/// See [Identifier]
 class EvalIdentifierExpression extends EvalExpression implements EvalReferenceExpression {
   EvalIdentifierExpression(int offset, int length, this.name) : super(offset, length);
   final String name;
 
+  /// Lookup this identifier in the scope and return a [Reference]
   @override
   Reference evalReference(EvalScope lexicalScope, EvalScope inheritedScope) {
     return (lexicalScope.lookup(name) ?? inheritedScope.lookup(name)) ??
         (throw ArgumentError("Unknown identifier '$name'"));
   }
 
+  /// Lookup this identifier in the scope and return its value
   @override
   EvalValue eval(EvalScope lexicalScope, EvalScope inheritedScope) {
     return (lexicalScope.lookup(name) ?? inheritedScope.lookup(name))?.value ??
@@ -107,17 +131,22 @@ class EvalIdentifierExpression extends EvalExpression implements EvalReferenceEx
   }
 }
 
+/// An identifier with a prefix
+///
+/// See [PrefixedIdentifier]
 class EvalPrefixedIdentifierExpression extends EvalIdentifierExpression {
   EvalPrefixedIdentifierExpression(int offset, int length, this.prefix, String name) : super(offset, length, name);
 
   final String prefix;
 
+  /// Lookup this identifier in the scope and return a [Reference]
   @override
   Reference evalReference(EvalScope lexicalScope, EvalScope inheritedScope) {
     final pfx = (lexicalScope.lookup(prefix) ?? inheritedScope.lookup(prefix))?.value ?? (throw ArgumentError());
     return FieldReference(pfx, name);
   }
 
+  /// Lookup this identifier in the scope and return its value
   @override
   EvalValue eval(EvalScope lexicalScope, EvalScope inheritedScope) {
     final pfx = (lexicalScope.lookup(prefix) ?? inheritedScope.lookup(prefix))?.value ?? (throw ArgumentError());
@@ -125,11 +154,16 @@ class EvalPrefixedIdentifierExpression extends EvalIdentifierExpression {
   }
 }
 
+/// An expression that assigns a value to a reference
+///
+/// See [AssignmentExpression]
 class EvalAssignmentExpression extends EvalExpression {
   EvalAssignmentExpression(int offset, int length, this.lhs, this.rhs, this.operator) : super(offset, length);
 
   final EvalReferenceExpression lhs;
   final EvalExpression rhs;
+
+  /// The operator to use for assignment. Usually '='
   final TokenType operator;
 
   @override
@@ -145,6 +179,9 @@ class EvalAssignmentExpression extends EvalExpression {
   }
 }
 
+/// Access a property/field of a value
+///
+/// See [PropertyAccess]
 class EvalPropertyAccessExpression extends EvalExpression {
   EvalPropertyAccessExpression(int offset, int length, this.target, this.name) : super(offset, length);
 

@@ -46,7 +46,6 @@ mixin EvalBridgeObjectMixin<T> on ValueInterop<T> implements EvalObject<T> {
   @override
   EvalValue call(EvalScope lexicalScope, EvalScope inheritedScope, List<EvalType> generics, List<Parameter> args,
       {EvalValue? target}) {
-    if (evalGetField('call') != null) {}
     throw UnimplementedError('Not a callable class');
   }
 }
@@ -128,6 +127,7 @@ mixin BridgeRectifier<T> on EvalBridgeObjectMixin<T> {
         .evalReifyFull();
   }
 }
+
 
 class EvalBridgeData {
   EvalBridgeData(this.prototype);
