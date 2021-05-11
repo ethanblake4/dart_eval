@@ -3,29 +3,29 @@ import '../../dart_eval.dart';
 /// Bridge wrapper for the Dart [DateTime] class
 class EvalDateTime extends DateTime
     with
-        ValueInterop<DateTime>,
-        EvalBridgeObjectMixin<DateTime>,
-        BridgeRectifier<DateTime> {
+        ValueInterop<EvalDateTime>,
+        EvalBridgeObjectMixin<EvalDateTime>,
+        BridgeRectifier<EvalDateTime> {
   EvalDateTime(int year,
       [int month = 1,
-        int day = 1,
-        int hour = 0,
-        int minute = 0,
-        int second = 0,
-        int millisecond = 0,
-        int microsecond = 0])
+      int day = 1,
+      int hour = 0,
+      int minute = 0,
+      int second = 0,
+      int millisecond = 0,
+      int microsecond = 0])
       : super(year, month, day, hour, minute, second, millisecond, microsecond);
 
   EvalDateTime.utc(int year,
       [int month = 1,
-        int day = 1,
-        int hour = 0,
-        int minute = 0,
-        int second = 0,
-        int millisecond = 0,
-        int microsecond = 0])
+      int day = 1,
+      int hour = 0,
+      int minute = 0,
+      int second = 0,
+      int millisecond = 0,
+      int microsecond = 0])
       : super.utc(
-      year, month, day, hour, minute, second, millisecond, microsecond);
+            year, month, day, hour, minute, second, millisecond, microsecond);
 
   EvalDateTime.now() : super.now();
 
@@ -37,7 +37,7 @@ class EvalDateTime extends DateTime
       {bool isUtc = false})
       : super.fromMicrosecondsSinceEpoch(microsecondsSinceEpoch, isUtc: isUtc);
 
-  static final BridgeInstantiator<DateTime> _evalInstantiator =
+  static final BridgeInstantiator<EvalDateTime> _evalInstantiator =
       (String constructor, List<dynamic> pos, Map<String, dynamic> named) {
     switch (constructor) {
       case '':
@@ -74,115 +74,114 @@ class EvalDateTime extends DateTime
   };
 
   static final clsgen = (EvalScope lexicalScope) => EvalBridgeClass([
-    DartConstructorDeclaration('', [
-      ParameterDefinition(
-          'year', EvalType.intType, false, false, false, true, null,
-          isField: false),
-      ParameterDefinition(
-          'month', EvalType.intType, false, true, false, false, null,
-          isField: false),
-      ParameterDefinition(
-          'day', EvalType.intType, false, true, false, false, null,
-          isField: false),
-      ParameterDefinition(
-          'hour', EvalType.intType, false, true, false, false, null,
-          isField: false),
-      ParameterDefinition(
-          'minute', EvalType.intType, false, true, false, false, null,
-          isField: false),
-      ParameterDefinition(
-          'second', EvalType.intType, false, true, false, false, null,
-          isField: false),
-      ParameterDefinition(
-          'millisecond', EvalType.intType, false, true, false, false, null,
-          isField: false),
-      ParameterDefinition(
-          'microsecond', EvalType.intType, false, true, false, false, null,
-          isField: false)
-    ]),
-    DartConstructorDeclaration('utc', [
-      ParameterDefinition(
-          'year', EvalType.intType, false, false, false, true, null,
-          isField: false),
-      ParameterDefinition(
-          'month', EvalType.intType, false, true, false, false, null,
-          isField: false),
-      ParameterDefinition(
-          'day', EvalType.intType, false, true, false, false, null,
-          isField: false),
-      ParameterDefinition(
-          'hour', EvalType.intType, false, true, false, false, null,
-          isField: false),
-      ParameterDefinition(
-          'minute', EvalType.intType, false, true, false, false, null,
-          isField: false),
-      ParameterDefinition(
-          'second', EvalType.intType, false, true, false, false, null,
-          isField: false),
-      ParameterDefinition(
-          'millisecond', EvalType.intType, false, true, false, false, null,
-          isField: false),
-      ParameterDefinition(
-          'microsecond', EvalType.intType, false, true, false, false, null,
-          isField: false)
-    ]),
-    DartConstructorDeclaration('now', []),
-    DartConstructorDeclaration('fromMillisecondsSinceEpoch', [
-      ParameterDefinition('millisecondsSinceEpoch', EvalType.intType,
-          false, false, false, true, null,
-          isField: false),
-      ParameterDefinition(
-          'isUtc', EvalType.boolType, false, true, true, false, null,
-          isField: false)
-    ]),
-    DartConstructorDeclaration('fromMicrosecondsSinceEpoch', [
-      ParameterDefinition('microsecondsSinceEpoch', EvalType.intType,
-          false, false, false, true, null,
-          isField: false),
-      ParameterDefinition(
-          'isUtc', EvalType.boolType, false, true, true, false, null,
-          isField: false)
-    ]),
-    DartConstructorDeclaration('_withValue', [
-      ParameterDefinition(
-          '_value', EvalType.intType, false, false, false, true, null,
-          isField: true),
-      ParameterDefinition(
-          'isUtc', EvalType.boolType, false, false, true, true, null,
-          isField: false)
-    ]),
-    DartConstructorDeclaration('_internal', [
-      ParameterDefinition(
-          'year', EvalType.intType, false, false, false, true, null,
-          isField: false),
-      ParameterDefinition(
-          'month', EvalType.intType, false, false, false, true, null,
-          isField: false),
-      ParameterDefinition(
-          'day', EvalType.intType, false, false, false, true, null,
-          isField: false),
-      ParameterDefinition(
-          'hour', EvalType.intType, false, false, false, true, null,
-          isField: false),
-      ParameterDefinition(
-          'minute', EvalType.intType, false, false, false, true, null,
-          isField: false),
-      ParameterDefinition(
-          'second', EvalType.intType, false, false, false, true, null,
-          isField: false),
-      ParameterDefinition(
-          'millisecond', EvalType.intType, false, false, false, true, null,
-          isField: false),
-      ParameterDefinition(
-          'microsecond', EvalType.intType, false, false, false, true, null,
-          isField: false),
-      ParameterDefinition(
-          'isUtc', EvalType.boolType, false, false, false, true, null,
-          isField: false)
-    ]),
-    DartConstructorDeclaration('_now', [])
-  ], EvalType.DateTimeType, lexicalScope, DateTime,
-      _evalInstantiator);
+        DartConstructorDeclaration('', [
+          ParameterDefinition(
+              'year', EvalType.intType, false, false, false, true, null,
+              isField: false),
+          ParameterDefinition(
+              'month', EvalType.intType, false, true, false, false, null,
+              isField: false),
+          ParameterDefinition(
+              'day', EvalType.intType, false, true, false, false, null,
+              isField: false),
+          ParameterDefinition(
+              'hour', EvalType.intType, false, true, false, false, null,
+              isField: false),
+          ParameterDefinition(
+              'minute', EvalType.intType, false, true, false, false, null,
+              isField: false),
+          ParameterDefinition(
+              'second', EvalType.intType, false, true, false, false, null,
+              isField: false),
+          ParameterDefinition(
+              'millisecond', EvalType.intType, false, true, false, false, null,
+              isField: false),
+          ParameterDefinition(
+              'microsecond', EvalType.intType, false, true, false, false, null,
+              isField: false)
+        ]),
+        DartConstructorDeclaration('utc', [
+          ParameterDefinition(
+              'year', EvalType.intType, false, false, false, true, null,
+              isField: false),
+          ParameterDefinition(
+              'month', EvalType.intType, false, true, false, false, null,
+              isField: false),
+          ParameterDefinition(
+              'day', EvalType.intType, false, true, false, false, null,
+              isField: false),
+          ParameterDefinition(
+              'hour', EvalType.intType, false, true, false, false, null,
+              isField: false),
+          ParameterDefinition(
+              'minute', EvalType.intType, false, true, false, false, null,
+              isField: false),
+          ParameterDefinition(
+              'second', EvalType.intType, false, true, false, false, null,
+              isField: false),
+          ParameterDefinition(
+              'millisecond', EvalType.intType, false, true, false, false, null,
+              isField: false),
+          ParameterDefinition(
+              'microsecond', EvalType.intType, false, true, false, false, null,
+              isField: false)
+        ]),
+        DartConstructorDeclaration('now', []),
+        DartConstructorDeclaration('fromMillisecondsSinceEpoch', [
+          ParameterDefinition('millisecondsSinceEpoch', EvalType.intType, false,
+              false, false, true, null,
+              isField: false),
+          ParameterDefinition(
+              'isUtc', EvalType.boolType, false, true, true, false, null,
+              isField: false)
+        ]),
+        DartConstructorDeclaration('fromMicrosecondsSinceEpoch', [
+          ParameterDefinition('microsecondsSinceEpoch', EvalType.intType, false,
+              false, false, true, null,
+              isField: false),
+          ParameterDefinition(
+              'isUtc', EvalType.boolType, false, true, true, false, null,
+              isField: false)
+        ]),
+        DartConstructorDeclaration('_withValue', [
+          ParameterDefinition(
+              '_value', EvalType.intType, false, false, false, true, null,
+              isField: true),
+          ParameterDefinition(
+              'isUtc', EvalType.boolType, false, false, true, true, null,
+              isField: false)
+        ]),
+        DartConstructorDeclaration('_internal', [
+          ParameterDefinition(
+              'year', EvalType.intType, false, false, false, true, null,
+              isField: false),
+          ParameterDefinition(
+              'month', EvalType.intType, false, false, false, true, null,
+              isField: false),
+          ParameterDefinition(
+              'day', EvalType.intType, false, false, false, true, null,
+              isField: false),
+          ParameterDefinition(
+              'hour', EvalType.intType, false, false, false, true, null,
+              isField: false),
+          ParameterDefinition(
+              'minute', EvalType.intType, false, false, false, true, null,
+              isField: false),
+          ParameterDefinition(
+              'second', EvalType.intType, false, false, false, true, null,
+              isField: false),
+          ParameterDefinition(
+              'millisecond', EvalType.intType, false, false, false, true, null,
+              isField: false),
+          ParameterDefinition(
+              'microsecond', EvalType.intType, false, false, false, true, null,
+              isField: false),
+          ParameterDefinition(
+              'isUtc', EvalType.boolType, false, false, false, true, null,
+              isField: false)
+        ]),
+        DartConstructorDeclaration('_now', [])
+      ], EvalType.DateTimeType, lexicalScope, DateTime, _evalInstantiator);
 
   static late EvalBridgeClass cls;
 
@@ -190,7 +189,6 @@ class EvalDateTime extends DateTime
   EvalBridgeData evalBridgeData = EvalBridgeData(cls);
 
   static EvalValue evalMakeWrapper(DateTime? target) {
-
     if (target == null) {
       return EvalNull();
     }
@@ -200,14 +198,14 @@ class EvalDateTime extends DateTime
           null,
           null,
           Getter(EvalCallableImpl((lexical, inherited, generics, args,
-              {target}) =>
+                  {target}) =>
               EvalInt(target?.realValue!._value!)))),
       'isUtc': EvalField(
           'isUtc',
           null,
           null,
           Getter(EvalCallableImpl((lexical, inherited, generics, args,
-              {target}) =>
+                  {target}) =>
               EvalBool(target?.realValue!.isUtc!))))
     });
   }
@@ -222,26 +220,35 @@ class EvalDateTime extends DateTime
   @override
   bool isBefore(DateTime other) =>
       bridgeCall('isBefore', [evalMakeWrapper(other)]);
+
   @override
   bool isAfter(DateTime other) =>
       bridgeCall('isAfter', [evalMakeWrapper(other)]);
+
   @override
   bool isAtSameMomentAs(DateTime other) =>
       bridgeCall('isAtSameMomentAs', [evalMakeWrapper(other)]);
+
   @override
   int compareTo(DateTime other) =>
       bridgeCall('compareTo', [evalMakeWrapper(other)]);
+
   @override
   DateTime toLocal() => bridgeCall('toLocal');
+
   @override
   DateTime toUtc() => bridgeCall('toUtc');
+
   @override
   String toString() => bridgeCall('toString');
+
   @override
   String toIso8601String() => bridgeCall('toIso8601String');
+
   @override
   Duration difference(DateTime other) =>
       bridgeCall('difference', [evalMakeWrapper(other)]);
+
   @override
   EvalValue evalGetField(String name, {bool internalGet = false}) {
     switch (name) {
@@ -252,20 +259,17 @@ class EvalDateTime extends DateTime
         return EvalBool(_v);
       case 'isBefore':
         return evalBridgeTryGetField('isBefore') ??
-            EvalBridgeFunction(
-                super.isBefore, (_x) => EvalBool(_x as bool));
+            EvalBridgeFunction(super.isBefore, (_x) => EvalBool(_x as bool));
       case 'isAfter':
         return evalBridgeTryGetField('isAfter') ??
-            EvalBridgeFunction(
-                super.isAfter, (_x) => EvalBool(_x as bool));
+            EvalBridgeFunction(super.isAfter, (_x) => EvalBool(_x as bool));
       case 'isAtSameMomentAs':
         return evalBridgeTryGetField('isAtSameMomentAs') ??
             EvalBridgeFunction(
                 super.isAtSameMomentAs, (_x) => EvalBool(_x as bool));
       case 'compareTo':
         return evalBridgeTryGetField('compareTo') ??
-            EvalBridgeFunction(
-                super.compareTo, (_x) => EvalInt(_x as int));
+            EvalBridgeFunction(super.compareTo, (_x) => EvalInt(_x as int));
       case 'hashCode':
         final _f = evalBridgeTryGetField('hashCode');
         if (_f != null) return _f;
@@ -274,8 +278,7 @@ class EvalDateTime extends DateTime
 
       case 'toUtc':
         return evalBridgeTryGetField('toUtc') ??
-            EvalBridgeFunction(
-                super.toUtc, evalMakeWrapper);
+            EvalBridgeFunction(super.toUtc, evalMakeWrapper);
       case 'toString':
         return evalBridgeTryGetField('toString') ??
             EvalBridgeFunction(
@@ -289,8 +292,7 @@ class EvalDateTime extends DateTime
             EvalBridgeFunction(super.add, evalMakeWrapper);
       case 'subtract':
         return evalBridgeTryGetField('subtract') ??
-            EvalBridgeFunction(
-                super.subtract, evalMakeWrapper);
+            EvalBridgeFunction(super.subtract, evalMakeWrapper);
       case 'millisecondsSinceEpoch':
         final _f = evalBridgeTryGetField('millisecondsSinceEpoch');
         if (_f != null) return _f;

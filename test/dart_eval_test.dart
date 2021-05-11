@@ -27,6 +27,64 @@ void main() {
     });
   });
 
+  group('Statement tests', () {
+    late Parse parse;
+
+    setUp(() {
+      parse = Parse();
+    });
+
+    test('Simple if/else statement', () {
+      final scope = parse.parse('''
+      String main(bool x) {
+        if(x) {
+          return "yes";
+        } else {
+          return "no";
+        }
+      }
+      ''');
+      expect(scope('main', [Parameter(EvalBool(true))]).realValue, 'yes');
+      expect(scope('main', [Parameter(EvalBool(false))]).realValue, 'no');
+    });
+
+    test('Simple for loop (declaration variant)', () {
+      final iter = 1000;
+      final scope = parse.parse('''
+      String main(int iter) {
+        var q = '';
+        for(var i = 0; i < iter; i++) {
+          q = q + 'h';
+        }
+        return q;
+       }
+      ''');
+      var q = '';
+      for (var i = 0; i < iter; i++) {
+        q = q + 'h';
+      }
+      expect(scope('main', [Parameter(EvalInt(iter))]).realValue, q);
+    });
+  });
+
+  group('Expression tests', () {
+    late Parse parse;
+
+    setUp(() {
+      parse = Parse();
+    });
+
+    test('String == comparison', () {
+      final scope = parse.parse('''
+      bool main(String x) {
+        return x == 'yes';
+      }
+      ''');
+      expect(scope('main', [Parameter(EvalString('yes'))]).realValue, true);
+      expect(scope('main', [Parameter(EvalString('no'))]).realValue, false);
+    });
+  });
+
   group('dart:core tests', () {
     late Parse parse;
 
@@ -257,11 +315,11 @@ void main() {
       expect(result is InteropTest1, true);
       expect((result as InteropTest1).getData(1), 'Hello1');
     });
-
   });
 }
 
-const _interopTest1Type = EvalType('InteropTest1', 'InteropTest1', 'dart_eval_test.dart', [EvalType.objectType], true);
+const _interopTest1Type = EvalType('InteropTest1', 'InteropTest1',
+    'dart_eval_test.dart', [EvalType.objectType], true);
 
 abstract class InteropTest1 {
   String getData(int input);
@@ -269,15 +327,17 @@ abstract class InteropTest1 {
 
 class EvalInteropTest1 extends InteropTest1
     with ValueInterop<InteropTest1>, EvalBridgeObjectMixin, BridgeRectifier {
-
   static final declaration = DartBridgeDeclaration(
       visibility: DeclarationVisibility.PUBLIC,
       declarator: (ctx, lex, cur) => {
-        _interopTest1Type.refName: EvalField(
-            _interopTest1Type.refName, cls = clsgen(lex), null, Getter(null))
-      });
+            _interopTest1Type.refName: EvalField(_interopTest1Type.refName,
+                cls = clsgen(lex), null, Getter(null))
+          });
 
-  static Function(EvalScope) get clsgen => (lexicalScope) => EvalBridgeClass([], _interopTest1Type, EvalScope.empty, InteropTest1,
+  static Function(EvalScope) get clsgen => (lexicalScope) => EvalBridgeClass([],
+      _interopTest1Type,
+      EvalScope.empty,
+      InteropTest1,
       (_1, _2, _3) => EvalInteropTest1());
 
   static late EvalBridgeClass cls;
@@ -289,7 +349,8 @@ class EvalInteropTest1 extends InteropTest1
   String getData(int input) => bridgeCall('getData', [EvalInt(input)]);
 
   @override
-  EvalValue evalSetField(String name, EvalValue value, {bool internalSet = false}) {
+  EvalValue evalSetField(String name, EvalValue value,
+      {bool internalSet = false}) {
     throw ArgumentError();
   }
 }

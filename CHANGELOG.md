@@ -12,3 +12,9 @@
 
 - Make the Pub analyzer happy
 - Add some Dartdoc comments
+
+## 0.0.4
+
+- Add support for `if`, basic `for`, number comparison operators, and postfix `++`
+- Fix `+`, `-`, `*`, and `/` operators
+- Improve performance significantly

@@ -22,19 +22,22 @@ abstract class DartDeclaration {
 
   /// Declare fields
   /// Warning: [declare] is not allowed to have dependencies on other classes
-  Map<String, EvalField> declare(DeclarationContext context, EvalScope lexicalScope, EvalScope currentScope);
+  Map<String, EvalField> declare(DeclarationContext context,
+      EvalScope lexicalScope, EvalScope currentScope);
 }
 
 /// Custom declaration that takes a [DartDeclaratorFunc] to perform user-defined declaration
 class DartBridgeDeclaration extends DartDeclaration {
-  DartBridgeDeclaration({required DeclarationVisibility visibility, required this.declarator})
+  DartBridgeDeclaration(
+      {required DeclarationVisibility visibility, required this.declarator})
       : super(visibility: visibility, isStatic: true);
 
   /// The function that defines how this declaration will be declared
   final DartDeclaratorFunc declarator;
 
   @override
-  Map<String, EvalField> declare(DeclarationContext context, EvalScope lexicalScope, EvalScope currentScope) {
+  Map<String, EvalField> declare(DeclarationContext context,
+      EvalScope lexicalScope, EvalScope currentScope) {
     return declarator(context, lexicalScope, currentScope);
   }
 }
@@ -86,11 +89,12 @@ class DartVariableDeclarationList extends DartDeclaration {
   final TypeAnnotation? type;
 
   @override
-  Map<String, EvalField> declare(DeclarationContext context, EvalScope lexicalScope, EvalScope currentScope) {
+  Map<String, EvalField> declare(DeclarationContext context,
+      EvalScope lexicalScope, EvalScope currentScope) {
     final m = <String, EvalField>{};
     for (final v in vars) {
-      final d = v.declaredVariable(context, null, lexicalScope,
-          currentScope, isStatic, isFinal, type == null ? null : type!.question != null);
+      final d = v.declaredVariable(context, null, lexicalScope, currentScope,
+          isStatic, isFinal, type == null ? null : type!.question != null);
       m[d.name] = d;
     }
     return m;
@@ -100,25 +104,35 @@ class DartVariableDeclarationList extends DartDeclaration {
 /// A variable declaration declares a single variable. Called by [DartVariableDeclarationList]
 /// See [VariableDeclaration]
 class DartVariableDeclaration {
-  const DartVariableDeclaration(this.name, this.initializer, {required this.isLate});
+  const DartVariableDeclaration(this.name, this.initializer,
+      {required this.isLate});
 
   final String name;
   final EvalExpression? initializer;
   final bool isLate;
 
-  EvalField declaredVariable(DeclarationContext context, EvalType? type, EvalScope lexicalScope, EvalScope currentScope,
-      bool isStatic, bool isFinal, bool? isNullable) {
+  EvalField declaredVariable(
+      DeclarationContext context,
+      EvalType? type,
+      EvalScope lexicalScope,
+      EvalScope currentScope,
+      bool isStatic,
+      bool isFinal,
+      bool? isNullable) {
     EvalValue? value;
     Getter? getter;
     final setter = isFinal ? null : Setter(null);
     if (isStatic) {
       late EvalExpression _initializer;
       if (initializer == null) {
-        _initializer = (isNullable ?? true) ? EvalNullExpression(-1, -1) : (throw ArgumentError.notNull(name));
+        _initializer = (isNullable ?? true)
+            ? EvalNullExpression(-1, -1)
+            : (throw ArgumentError.notNull(name));
       } else {
         _initializer = initializer!;
       }
-      getter = Getter.deferred(name, type ?? EvalType.dynamicType, lexicalScope, currentScope, _initializer);
+      getter = Getter.deferred(name, type ?? EvalType.dynamicType, lexicalScope,
+          currentScope, _initializer);
     } else {
       getter = Getter(null);
       late EvalExpression _initializer;
@@ -150,7 +164,8 @@ class DartFunctionDeclaration extends DartDeclaration {
   EvalFunctionExpression functionBody;
 
   @override
-  Map<String, EvalField> declare(DeclarationContext context, EvalScope lexicalScope, EvalScope currentScope) {
+  Map<String, EvalField> declare(DeclarationContext context,
+      EvalScope lexicalScope, EvalScope currentScope) {
     final func = functionBody.eval(lexicalScope, currentScope);
     return {name: EvalField(name, func, null, Getter(null))};
   }
@@ -159,7 +174,8 @@ class DartFunctionDeclaration extends DartDeclaration {
 /// Declares a class
 /// See [ClassDeclaration]
 class DartClassDeclaration extends DartDeclaration {
-  DartClassDeclaration(this.name, this.generics, this.declarations, this.isAbstract, this.extendsClause,
+  DartClassDeclaration(this.name, this.generics, this.declarations,
+      this.isAbstract, this.extendsClause,
       {required this.parseContext})
       : super(isStatic: true, visibility: DeclarationVisibility.UNSPECIFIED);
 
@@ -186,9 +202,12 @@ class DartClassDeclaration extends DartDeclaration {
   /// Declaring a class creates a [EvalClass] or [EvalAbstractClass]
   /// This is a static class reference, not an instance of the class
   @override
-  Map<String, EvalField> declare(DeclarationContext context, EvalScope lexicalScope, EvalScope currentScope) {
+  Map<String, EvalField> declare(DeclarationContext context,
+      EvalScope lexicalScope, EvalScope currentScope) {
     final type = EvalType(name, name, parseContext.sourceFile, [], true);
-    final extendsType = extendsClause != null ? EvalType(extendsClause!, extendsClause!, '', [], false) : null;
+    final extendsType = extendsClause != null
+        ? EvalType(extendsClause!, extendsClause!, '', [], false)
+        : null;
     final value = isAbstract
         ? EvalAbstractClass(declarations, generics, type, lexicalScope,
             sourceFile: parseContext.sourceFile, superclassName: extendsType)
@@ -202,7 +221,8 @@ class DartClassDeclaration extends DartDeclaration {
 /// See [MethodDeclaration]
 class DartMethodDeclaration extends DartDeclaration {
   DartMethodDeclaration(this.name, this.body, this.params, bool isStatic)
-      : super(visibility: DeclarationVisibility.UNSPECIFIED, isStatic: isStatic);
+      : super(
+            visibility: DeclarationVisibility.UNSPECIFIED, isStatic: isStatic);
 
   /// Name of the method
   String name;
@@ -215,12 +235,15 @@ class DartMethodDeclaration extends DartDeclaration {
 
   /// Declaring a method creates an [EvalFunction] which runs [body]
   @override
-  Map<String, EvalField> declare(DeclarationContext context, EvalScope lexicalScope, EvalScope currentScope) {
+  Map<String, EvalField> declare(DeclarationContext context,
+      EvalScope lexicalScope, EvalScope currentScope) {
     if (body == null) {
-      throw ArgumentError('Must override all methods of an abstract class: $name()');
+      throw ArgumentError(
+          'Must override all methods of an abstract class: $name()');
     }
 
-    final v = EvalFunctionImpl(body!, params, inheritedScope: currentScope, lexicalScope: lexicalScope);
+    final v = EvalFunctionImpl(body!, params,
+        inheritedScope: currentScope, lexicalScope: lexicalScope);
     return {name: EvalField(name, v, null, Getter(null))};
   }
 }
@@ -239,12 +262,15 @@ class DartConstructorDeclaration extends DartDeclaration {
 
   /// Declaring a constructor creates a [EvalFunction] which constructs an [EvalObject] when called
   @override
-  Map<String, EvalField> declare(DeclarationContext context, EvalScope lexicalScope, EvalScope currentScope) {
+  Map<String, EvalField> declare(DeclarationContext context,
+      EvalScope lexicalScope, EvalScope currentScope) {
     final v = EvalFunctionImpl(DartMethodBody(callable:
-        (EvalScope lexicalScope2, EvalScope inheritedScope2, List<EvalType> generics, List<Parameter> args,
+        (EvalScope lexicalScope2, EvalScope inheritedScope2,
+            List<EvalType> generics, List<Parameter> args,
             {EvalValue? target}) {
       if (target is EvalBridgeClass) {
-        return target.construct(name, lexicalScope, currentScope, generics, args);
+        return target.construct(
+            name, lexicalScope, currentScope, generics, args);
       }
       var i = 0;
       final argMap = Parameter.coalesceNamed(args).named;
@@ -253,7 +279,8 @@ class DartConstructorDeclaration extends DartDeclaration {
         if (param.isField && vl != null) {
           target!.evalSetField(param.name, vl, internalSet: true);
         } else if (vl == null && param.dfValue != null) {
-          target!.evalSetField(param.name, param.dfValue!.eval(lexicalScope, currentScope));
+          target!.evalSetField(
+              param.name, param.dfValue!.eval(lexicalScope, currentScope));
         }
         i++;
       }

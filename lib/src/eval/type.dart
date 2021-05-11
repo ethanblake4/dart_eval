@@ -6,51 +6,66 @@ import 'value.dart';
 
 /// Represents the type of an [EvalValue]
 class EvalType {
-
   /// The [dynamic] type from dart:core
-  static const EvalType dynamicType = EvalType('dynamic', 'dynamic', 'dart:core', [], true);
+  static const EvalType dynamicType =
+      EvalType('dynamic', 'dynamic', 'dart:core', [], true);
 
   /// The [Object] type from dart:core
-  static const EvalType objectType = EvalType('Object', 'Object', 'dart:core', [dynamicType], true);
+  static const EvalType objectType =
+      EvalType('Object', 'Object', 'dart:core', [dynamicType], true);
 
   /// The [Null] type from dart:core
-  static const EvalType nullType = EvalType('Null', 'Null', 'dart:core', [dynamicType], true);
+  static const EvalType nullType =
+      EvalType('Null', 'Null', 'dart:core', [dynamicType], true);
 
   /// The [Type] type from dart:core
-  static const EvalType typeType = EvalType('Type', 'Type', 'dart:core', [objectType], true);
+  static const EvalType typeType =
+      EvalType('Type', 'Type', 'dart:core', [objectType], true);
 
   /// The [Function] type from dart:core
-  static const EvalType functionType = EvalType('Function', 'Function', 'dart:core', [objectType],true);
+  static const EvalType functionType =
+      EvalType('Function', 'Function', 'dart:core', [objectType], true);
 
   /// The [num] type from dart:core
-  static const EvalType numType = EvalType('num', 'num', 'dart:core', [objectType],true);
+  static const EvalType numType =
+      EvalType('num', 'num', 'dart:core', [objectType], true);
 
   /// The [int] type from dart:core
-  static const EvalType intType = EvalType('int', 'int', 'dart:core', [numType], true);
+  static const EvalType intType =
+      EvalType('int', 'int', 'dart:core', [numType], true);
 
   /// The [bool] type from dart:core
-  static const EvalType boolType = EvalType('bool', 'bool', 'dart:core', [objectType],true);
+  static const EvalType boolType =
+      EvalType('bool', 'bool', 'dart:core', [objectType], true);
 
   /// The [String] type from dart:core
-  static const EvalType stringType = EvalType('String', 'String', 'dart:core', [objectType],true);
+  static const EvalType stringType =
+      EvalType('String', 'String', 'dart:core', [objectType], true);
 
   /// The [List] type from dart:core
-  static const EvalType listType = EvalType('List', 'List', 'dart:core', [objectType],true);
+  static const EvalType listType =
+      EvalType('List', 'List', 'dart:core', [objectType], true);
 
   /// The [Map] type from dart:core
-  static const EvalType mapType = EvalType('Map', 'Map', 'dart:core', [objectType],true);
+  static const EvalType mapType =
+      EvalType('Map', 'Map', 'dart:core', [objectType], true);
 
   /// The [DateTime] type from dart:core
-  static const EvalType DateTimeType = EvalType('DateTime', 'DateTime', 'dart:core', [objectType], true);
+  static const EvalType DateTimeType =
+      EvalType('DateTime', 'DateTime', 'dart:core', [objectType], true);
 
   /// Create an [EvalType]
-  const EvalType(this.name, this.refName, this.refSourceFile, this.supertypes, this.resolved, {this.generics});
+  const EvalType(this.name, this.refName, this.refSourceFile, this.supertypes,
+      this.resolved,
+      {this.generics});
 
   /// Create an [EvalType] from an analyzer [TypeAnnotation]
-  factory EvalType.fromAnnotation(TypeAnnotation annotation, String sourceFile) {
+  factory EvalType.fromAnnotation(
+      TypeAnnotation annotation, String sourceFile) {
     // The annotation's type field does not provide any info with an unresolved AST
-    if(annotation is NamedType) {
-      return EvalType(annotation.name.name, annotation.name.name, sourceFile, [], false);
+    if (annotation is NamedType) {
+      return EvalType(
+          annotation.name.name, annotation.name.name, sourceFile, [], false);
     }
     throw ArgumentError('Anonymous function types not yet supported');
   }
@@ -80,7 +95,9 @@ class EvalType {
     if (generics != null) {
       genericsString = '<${generics!.values.join(', ')}>';
     }
-    return 'type: ' + name == refName ? '$name$genericsString' : '"$name" ($refName$genericsString)';
+    return 'type: ' + name == refName
+        ? '$name$genericsString'
+        : '"$name" ($refName$genericsString)';
   }
 
   @override
@@ -93,12 +110,13 @@ class EvalType {
           generics == other.generics;
 
   @override
-  int get hashCode => refName.hashCode ^ refSourceFile.hashCode ^ generics.hashCode;
+  int get hashCode =>
+      refName.hashCode ^ refSourceFile.hashCode ^ generics.hashCode;
 
   EvalType? resolve(EvalScope lexicalScope) {
-    if(resolved) return this;
+    if (resolved) return this;
     final f = lexicalScope.lookup(name)?.value;
-    if(f is EvalAbstractClass) {
+    if (f is EvalAbstractClass) {
       return f.delegatedType;
     }
     return null;

@@ -1,3 +1,6 @@
+[![Pub Version](https://img.shields.io/pub/v/dart_eval?color=teal)](https://pub.dev/packages/dart_eval)
+
+
 `dart_eval` is an extensible interpreter for the Dart language, written in Dart. 
 It's powered under the hood by the Dart [analyzer](https://pub.dev/packages/analyzer),
 so it achieves 100% correct and up-to-date parsing (although evaluation isn't quite there yet.)
@@ -96,8 +99,24 @@ then calls all of the child nodes under it.
 ### Does it support Flutter?
 
 Yes! Well, kind of. Support for Flutter is not built in but can be added via Bridge interop.
-I have done so to a very limited extent and it works. In the future this project will expand
+Testing has been done to a limited extent and it works. In the future this project will expand
 support for Flutter.
+
+### How fast is it?
+
+Preliminary testing shows that, for simple code, `dart_eval` running in AOT-compiled Dart 
+is around 11x slower than standard AOT Dart.
+For many use cases this actually doesn't matter too much, e.g. in the case of Flutter 
+where the app spends 99% of its performance budget in the Flutter framework itself.
+In the future you can expect this project to have somewhat better performance, although
+it will always be notably slower than native Dart code.
+
+### Potential design issues
+
+This project is somewhat of an abuse of the Dart compiler as, despite best efforts, a lot of
+code resorts to the use of the `dynamic` type. This could potentially cause long compile times
+and increased code size in large apps. Preliminary testing shows it's not an issue for smaller
+apps.
 
 ## Features and bugs
 

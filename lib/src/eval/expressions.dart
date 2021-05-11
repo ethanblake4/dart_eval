@@ -11,16 +11,15 @@ import 'package:dart_eval/src/eval/type.dart';
 import 'package:dart_eval/src/eval/value.dart';
 import 'package:dart_eval/src/parse/source.dart';
 
-
 /// A class that can be evaluated in Eval
 abstract class EvalRunnable {
-
   /// Evaluate this function in the supplied scope
   EvalValue eval(EvalScope lexicalScope, EvalScope inheritedScope);
 }
 
 /// A Dart expression
-abstract class EvalExpression extends DartSourceNode implements EvalRunnable, EvalCollectionElement {
+abstract class EvalExpression extends DartSourceNode
+    implements EvalRunnable, EvalCollectionElement {
   const EvalExpression(int offset, int length) : super(offset, length);
 }
 
@@ -57,9 +56,10 @@ class EvalNullExpression extends EvalExpression {
 ///
 /// See [MethodInvocation]
 class EvalCallExpression extends EvalExpression {
-
   /// Create an [EvalCallExpression]
-  EvalCallExpression(int offset, int length, this.child, this.methodName, this.params) : super(offset, length);
+  EvalCallExpression(
+      int offset, int length, this.child, this.methodName, this.params)
+      : super(offset, length);
 
   /// The expression to call [methodName] on
   final EvalExpression? child;
@@ -74,9 +74,14 @@ class EvalCallExpression extends EvalExpression {
   EvalValue eval(EvalScope lexicalScope, EvalScope inheritedScope) {
     final c = child?.eval(lexicalScope, inheritedScope);
     final m = c?.evalGetField(methodName);
-    final f = m ?? lexicalScope.lookup(methodName)?.value ?? inheritedScope.lookup(methodName)?.value;
+    final f = m ??
+        lexicalScope.lookup(methodName)?.value ??
+        inheritedScope.lookup(methodName)?.value;
+    if (f == null) {
+      throw ArgumentError('Method does not exist: $methodName');
+    }
     if (f is EvalCallable) {
-      return (f as EvalCallable).call(
+      return f.call(
           lexicalScope,
           inheritedScope,
           [],
@@ -87,9 +92,6 @@ class EvalCallExpression extends EvalExpression {
               .toList(),
           target: c);
     }
-    if (f == null) {
-      throw ArgumentError('Method does not exist: $methodName');
-    }
     throw ArgumentError('Cannot call a non-function/callable class');
   }
 }
@@ -98,7 +100,8 @@ class EvalCallExpression extends EvalExpression {
 ///
 /// See [FunctionExpression]
 class EvalFunctionExpression extends EvalExpression {
-  EvalFunctionExpression(int offset, int length, this.body, this.params) : super(offset, length);
+  EvalFunctionExpression(int offset, int length, this.body, this.params)
+      : super(offset, length);
 
   DartMethodBody body;
   List<ParameterDefinition> params;
@@ -112,8 +115,10 @@ class EvalFunctionExpression extends EvalExpression {
 /// An identifier, such as a variable name
 ///
 /// See [Identifier]
-class EvalIdentifierExpression extends EvalExpression implements EvalReferenceExpression {
-  EvalIdentifierExpression(int offset, int length, this.name) : super(offset, length);
+class EvalIdentifierExpression extends EvalExpression
+    implements EvalReferenceExpression {
+  EvalIdentifierExpression(int offset, int length, this.name)
+      : super(offset, length);
   final String name;
 
   /// Lookup this identifier in the scope and return a [Reference]
@@ -135,21 +140,27 @@ class EvalIdentifierExpression extends EvalExpression implements EvalReferenceEx
 ///
 /// See [PrefixedIdentifier]
 class EvalPrefixedIdentifierExpression extends EvalIdentifierExpression {
-  EvalPrefixedIdentifierExpression(int offset, int length, this.prefix, String name) : super(offset, length, name);
+  EvalPrefixedIdentifierExpression(
+      int offset, int length, this.prefix, String name)
+      : super(offset, length, name);
 
   final String prefix;
 
   /// Lookup this identifier in the scope and return a [Reference]
   @override
   Reference evalReference(EvalScope lexicalScope, EvalScope inheritedScope) {
-    final pfx = (lexicalScope.lookup(prefix) ?? inheritedScope.lookup(prefix))?.value ?? (throw ArgumentError());
+    final pfx =
+        (lexicalScope.lookup(prefix) ?? inheritedScope.lookup(prefix))?.value ??
+            (throw ArgumentError());
     return FieldReference(pfx, name);
   }
 
   /// Lookup this identifier in the scope and return its value
   @override
   EvalValue eval(EvalScope lexicalScope, EvalScope inheritedScope) {
-    final pfx = (lexicalScope.lookup(prefix) ?? inheritedScope.lookup(prefix))?.value ?? (throw ArgumentError());
+    final pfx =
+        (lexicalScope.lookup(prefix) ?? inheritedScope.lookup(prefix))?.value ??
+            (throw ArgumentError());
     return pfx.evalGetField(name);
   }
 }
@@ -158,7 +169,9 @@ class EvalPrefixedIdentifierExpression extends EvalIdentifierExpression {
 ///
 /// See [AssignmentExpression]
 class EvalAssignmentExpression extends EvalExpression {
-  EvalAssignmentExpression(int offset, int length, this.lhs, this.rhs, this.operator) : super(offset, length);
+  EvalAssignmentExpression(
+      int offset, int length, this.lhs, this.rhs, this.operator)
+      : super(offset, length);
 
   final EvalReferenceExpression lhs;
   final EvalExpression rhs;
@@ -183,7 +196,8 @@ class EvalAssignmentExpression extends EvalExpression {
 ///
 /// See [PropertyAccess]
 class EvalPropertyAccessExpression extends EvalExpression {
-  EvalPropertyAccessExpression(int offset, int length, this.target, this.name) : super(offset, length);
+  EvalPropertyAccessExpression(int offset, int length, this.target, this.name)
+      : super(offset, length);
 
   final EvalExpression target;
   final String name;
@@ -195,7 +209,8 @@ class EvalPropertyAccessExpression extends EvalExpression {
 }
 
 class EvalIndexExpression extends EvalExpression {
-  EvalIndexExpression(int offset, int length, this.target, this.expression) : super(offset, length);
+  EvalIndexExpression(int offset, int length, this.target, this.expression)
+      : super(offset, length);
 
   final EvalExpression target;
   final EvalExpression expression;
@@ -203,14 +218,15 @@ class EvalIndexExpression extends EvalExpression {
   @override
   EvalValue eval(EvalScope lexicalScope, EvalScope inheritedScope) {
     final _target = target.eval(lexicalScope, inheritedScope);
-    return (_target.evalGetField('[]') as EvalCallable).call(
-        lexicalScope, inheritedScope, [], [Parameter(expression.eval(lexicalScope, inheritedScope))],
+    return _target.evalGetField('[]').call(lexicalScope, inheritedScope, [],
+        [Parameter(expression.eval(lexicalScope, inheritedScope))],
         target: _target);
   }
 }
 
 class EvalIsExpression extends EvalExpression {
-  EvalIsExpression(int offset, int length, this.lhs, this.rhs) : super(offset, length);
+  EvalIsExpression(int offset, int length, this.lhs, this.rhs)
+      : super(offset, length);
 
   final EvalExpression lhs;
   final EvalExpression rhs;
@@ -229,7 +245,9 @@ class EvalIsExpression extends EvalExpression {
 }
 
 class EvalInstanceCreationExpresion extends EvalExpression {
-  EvalInstanceCreationExpresion(int offset, int length, this.identifier, this.constructorName) : super(offset, length);
+  EvalInstanceCreationExpresion(
+      int offset, int length, this.identifier, this.constructorName)
+      : super(offset, length);
 
   final EvalIdentifierExpression identifier;
   final String constructorName;
@@ -238,20 +256,22 @@ class EvalInstanceCreationExpresion extends EvalExpression {
   EvalValue eval(EvalScope lexicalScope, EvalScope inheritedScope) {
     final on = identifier.eval(lexicalScope, inheritedScope);
     if (!(on is EvalClass)) {
-      throw ArgumentError('Attempting to construct something that\'s not a class');
+      throw ArgumentError(
+          'Attempting to construct something that\'s not a class');
     }
     final EvalCallable constructor;
     if (constructorName.isEmpty) {
       constructor = on;
     } else {
-      constructor = on.evalGetField(constructorName) as EvalCallable;
+      constructor = on.evalGetField(constructorName);
     }
     return constructor.call(lexicalScope, inheritedScope, [], []);
   }
 }
 
 class EvalNamedExpression extends EvalExpression {
-  EvalNamedExpression(int offset, int length, this.name, this.expression) : super(offset, length);
+  EvalNamedExpression(int offset, int length, this.name, this.expression)
+      : super(offset, length);
 
   final EvalExpression expression;
   final String name;
@@ -263,7 +283,8 @@ class EvalNamedExpression extends EvalExpression {
 }
 
 class EvalBinaryExpression extends EvalExpression {
-  EvalBinaryExpression(int offset, int length, this.leftOperand, this.operator, this.rightOperand)
+  EvalBinaryExpression(int offset, int length, this.leftOperand, this.operator,
+      this.rightOperand)
       : super(offset, length);
 
   final EvalExpression leftOperand;
@@ -279,7 +300,36 @@ class EvalBinaryExpression extends EvalExpression {
     if (!(m is EvalFunction)) {
       throw ArgumentError('No operator method $operator');
     }
-    return m.call(lexicalScope, inheritedScope, [], [Parameter(rightOperand.eval(lexicalScope, inheritedScope))],
+    return m.call(lexicalScope, inheritedScope, [],
+        [Parameter(rightOperand.eval(lexicalScope, inheritedScope))],
         target: l);
+  }
+}
+
+class EvalPostfixExpression extends EvalExpression {
+  final EvalReferenceExpression operand;
+  final TokenType operator;
+
+  EvalPostfixExpression(int offset, int length, this.operand, this.operator)
+      : super(offset, length);
+
+  @override
+  EvalValue eval(EvalScope lexicalScope, EvalScope inheritedScope) {
+    final ref = operand.evalReference(lexicalScope, inheritedScope);
+    if (operator == TokenType.PLUS_PLUS) {
+      final v = ref.value!;
+      ref.value = v.evalGetField('+').call(
+          lexicalScope, inheritedScope, [], [Parameter(EvalInt(1))],
+          target: v);
+      return v;
+    } else if (operator == TokenType.MINUS_MINUS) {
+      final v = ref.value!;
+      ref.value = v.evalGetField('-').call(
+          lexicalScope, inheritedScope, [], [Parameter(EvalInt(1))],
+          target: v);
+      return v;
+    }
+    throw UnimplementedError(
+        'No implementation for postfix operator $operator');
   }
 }

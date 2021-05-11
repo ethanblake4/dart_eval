@@ -2,21 +2,27 @@ import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/src/eval/class.dart';
 import 'package:dart_eval/src/eval/functions.dart';
 
-typedef BridgeInstantiator<T> = T Function(
-    String constructorName, List<dynamic> positionalArgs, Map<String, dynamic> namedArgs);
+typedef BridgeInstantiator<T extends BridgeRectifier> = T Function(
+    String constructorName,
+    List<dynamic> positionalArgs,
+    Map<String, dynamic> namedArgs);
 
 /// Oops! We need classes that extend StatelessWidget to ACTUALLY extend StatelessWidget.
 /// So we can create a wrapper (easier, at least short term) or turn EvalObject into a mixin (oof)
 class EvalObject<T> extends EvalValueImpl<T> implements EvalCallable {
-  EvalObject(this.evalPrototype, {String? sourceFile, required Map<String, EvalField> fields, T? realValue})
+  EvalObject(this.evalPrototype,
+      {String? sourceFile,
+      required Map<String, EvalField> fields,
+      T? realValue})
       : super(evalPrototype.delegatedType,
-            sourceFile: sourceFile, realValue: realValue, fieldListBreakout: EvalFieldListBreakout.withFields(fields));
+            sourceFile: sourceFile, realValue: realValue, fields: fields);
 
   final EvalAbstractClass evalPrototype;
 
   /// For callable classes
   @override
-  EvalValue call(EvalScope lexicalScope, EvalScope inheritedScope, List<EvalType> generics, List<Parameter> args,
+  EvalValue call(EvalScope lexicalScope, EvalScope inheritedScope,
+      List<EvalType> generics, List<Parameter> args,
       {EvalValue? target}) {
     //if (getField('call') != null) {}
     throw UnimplementedError('Not a callable class');
@@ -44,16 +50,16 @@ mixin EvalBridgeObjectMixin<T> on ValueInterop<T> implements EvalObject<T> {
   EvalType get evalType => evalPrototype.delegatedType;
 
   @override
-  EvalValue call(EvalScope lexicalScope, EvalScope inheritedScope, List<EvalType> generics, List<Parameter> args,
+  EvalValue call(EvalScope lexicalScope, EvalScope inheritedScope,
+      List<EvalType> generics, List<Parameter> args,
       {EvalValue? target}) {
     throw UnimplementedError('Not a callable class');
   }
 }
 
 mixin BridgeRectifier<T> on EvalBridgeObjectMixin<T> {
-
   static EvalValue? evalMapNullable<T>(T? value) {
-    if(value == null) return EvalNull();
+    if (value == null) return EvalNull();
     return null;
   }
 
@@ -61,6 +67,7 @@ mixin BridgeRectifier<T> on EvalBridgeObjectMixin<T> {
   T get realValue => this as T;
 
   EvalBridgeData get evalBridgeData;
+
   set evalBridgeData(EvalBridgeData data);
 
   @override
@@ -69,19 +76,24 @@ mixin BridgeRectifier<T> on EvalBridgeObjectMixin<T> {
   EvalValue? evalBridgeTryGetField(String name) {
     if (evalBridgeData.fields.containsKey(name)) {
       final field = evalBridgeData.fields[name]!;
-      return field.getter?.get?.call(evalPrototype.lexicalScope, EvalScope.empty, [], [], target: field.value) ??
+      return field.getter?.get?.call(
+              evalPrototype.lexicalScope, EvalScope.empty, [], [],
+              target: field.value) ??
           field.value!;
     } else {
       return null;
     }
   }
 
-  bool evalBridgeHasField(String name) => evalBridgeData.fields.containsKey(name);
+  bool evalBridgeHasField(String name) =>
+      evalBridgeData.fields.containsKey(name);
 
   EvalValue? evalBridgeTrySetField(String name, EvalValue value) {
     if (evalBridgeData.fields.containsKey(name)) {
       final field = evalBridgeData.fields[name]!;
-      return field.setter?.set?.call(evalPrototype.lexicalScope, EvalScope.empty, [], [], target: field.value) ??
+      return field.setter?.set?.call(
+              evalPrototype.lexicalScope, EvalScope.empty, [], [],
+              target: field.value) ??
           field.value!;
     } else {
       return null;
@@ -92,12 +104,15 @@ mixin BridgeRectifier<T> on EvalBridgeObjectMixin<T> {
   /// Override this for any fields or methods where the definition or implementation might NOT be provided by Eval code
   @override
   EvalValue evalGetField(String name, {bool internalGet = false}) {
-    return evalBridgeTryGetField(name) ?? (throw ArgumentError('No field named $name'));
+    return evalBridgeTryGetField(name) ??
+        (throw ArgumentError('No field named $name'));
   }
 
   @override
-  EvalValue evalSetField(String name, EvalValue value, {bool internalSet = false}) {
-    return evalBridgeData.setField(name, value, internalSet: internalSet, source: this);
+  EvalValue evalSetField(String name, EvalValue value,
+      {bool internalSet = false}) {
+    return evalBridgeData.setField(name, value,
+        internalSet: internalSet, source: this);
   }
 
   @override
@@ -111,30 +126,41 @@ mixin BridgeRectifier<T> on EvalBridgeObjectMixin<T> {
   }
 
   @override
-  void addFields(EvalFieldListBreakout breakout) {
+  void addFields(Map<String, EvalField> fields) {
     throw UnimplementedError();
   }
 
-  dynamic bridgeCall(String name, [List<EvalValue> positional = const [], Map<String, EvalValue> named = const {}]) {
+  dynamic bridgeCall(String name,
+      [List<EvalValue> positional = const [],
+      Map<String, EvalValue> named = const {}]) {
     final fields = evalBridgeData.fields;
     final objScope = EvalObjectScope()..object = this;
 
-    final func = fields.containsKey(name) ? (fields[name]!.value as EvalFunction) : evalGetField(name) as EvalFunction;
+    final func =
+        fields.containsKey(name) ? fields[name]!.value! : evalGetField(name);
     return func
-        .call(EvalScope(null, {'this': EvalField('this', this, null, Getter(null))}), objScope, [],
-            [for (final p in positional) Parameter(p), for (final n in named.entries) NamedParameter(n.key, n.value)],
+        .call(
+            EvalScope(
+                null, {'this': EvalField('this', this, null, Getter(null))}),
+            objScope,
+            [],
+            [
+              for (final p in positional) Parameter(p),
+              for (final n in named.entries) NamedParameter(n.key, n.value)
+            ],
             target: this)
         .evalReifyFull();
   }
 }
 
-
 class EvalBridgeData {
   EvalBridgeData(this.prototype);
+
   final EvalAbstractClass prototype;
   final Map<String, EvalField> fields = {};
 
-  EvalValue setField(String name, EvalValue value, {required bool internalSet, required EvalValue source}) {
+  EvalValue setField(String name, EvalValue value,
+      {required bool internalSet, required EvalValue source}) {
     if (internalSet) {
       return fields[name]!.value = value;
     }
@@ -145,16 +171,22 @@ class EvalBridgeData {
     if (setter.set == null) {
       return fields[name]!.value = value;
     } else {
-      final thisScope = EvalScope(null, {'this': EvalField('this', source, null, Getter(null))});
-      return setter.set!.call(thisScope, EvalScope.empty, [], [Parameter(value)]);
+      final thisScope = EvalScope(
+          null, {'this': EvalField('this', source, null, Getter(null))});
+      return setter.set!
+          .call(thisScope, EvalScope.empty, [], [Parameter(value)]);
     }
   }
 }
 
-class EvalBridgeObject<T> extends EvalObject<T> with ValueInterop<T>, EvalBridgeObjectMixin<T> {
+class EvalBridgeObject<T> extends EvalObject<T>
+    with ValueInterop<T>, EvalBridgeObjectMixin<T> {
   EvalBridgeObject(EvalBridgeAbstractClass prototype,
-      {String? sourceFile, required Map<String, EvalField> fields, this.realValue})
-      : super(prototype, fields: fields, sourceFile: sourceFile, realValue: realValue);
+      {String? sourceFile,
+      required Map<String, EvalField> fields,
+      this.realValue})
+      : super(prototype,
+            fields: fields, sourceFile: sourceFile, realValue: realValue);
 
   @override
   T? realValue;

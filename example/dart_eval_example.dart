@@ -44,7 +44,7 @@ void main() {
         return TimestampedTime(DateTime.now().millisecondsSinceEpoch,
           timezoneOffset: offset);
       }
-      
+            
       @override
       TimestampedTime getTimeFor(String country) {
         return countries[country];
@@ -62,9 +62,12 @@ void main() {
     ''');
 
   // The returned scope is a callable class, so it's easy to call your method
-  final timeTracker = scope('fn', [Parameter(EvalString('USA'))]) as WorldTimeTracker;
+  final timeTracker =
+      scope('fn', [Parameter(EvalString('USA'))]) as WorldTimeTracker;
 
-  print('UK timezone offset: ' + timeTracker.getTimeFor('UK').timezoneOffset.toString() + ' (from outside Eval!)');
+  print('UK timezone offset: ' +
+      timeTracker.getTimeFor('UK').timezoneOffset.toString() +
+      ' (from outside Eval!)');
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -77,19 +80,23 @@ final _libraryLexicalScope = EvalScope(EvalScope.empty, {});
 
 // Define the type of the class, which includes its name, the library it's defined in, and
 // what it inherits from (Object in this case => EvalType.objectType)
-final timestampedTimeType = EvalType(
-    'TimestampedTime', 'TimestampedTime', 'package:dart_eval/dart_eval_example.dart', [EvalType.objectType], true);
+final timestampedTimeType = EvalType('TimestampedTime', 'TimestampedTime',
+    'package:dart_eval/dart_eval_example.dart', [EvalType.objectType], true);
 
 /// Extend the original class with the below mixins
 class EvalTimestampedTime extends TimestampedTime
-    with ValueInterop<TimestampedTime>, EvalBridgeObjectMixin<TimestampedTime>, BridgeRectifier<TimestampedTime> {
+    with
+        ValueInterop<EvalTimestampedTime>,
+        EvalBridgeObjectMixin<EvalTimestampedTime>,
+        BridgeRectifier<EvalTimestampedTime> {
   /// Create constructors for each of the original class's constructors
-  EvalTimestampedTime(int utcTime, {int timezoneOffset = 0}) : super(utcTime, timezoneOffset: timezoneOffset);
+  EvalTimestampedTime(int utcTime, {int timezoneOffset = 0})
+      : super(utcTime, timezoneOffset: timezoneOffset);
 
   /// Create a [BridgeInstantiator] to instantiate this class.
   /// If you had multiple constructors in your class you would use a switch statement
   /// on the constructor parameter to choose which one to call
-  static final BridgeInstantiator<TimestampedTime> _evalInstantiator =
+  static final BridgeInstantiator<EvalTimestampedTime> _evalInstantiator =
       (String constructor, List<dynamic> pos, Map<String, dynamic> named) {
     return EvalTimestampedTime(pos[0], timezoneOffset: named['timezoneOffset']);
   };
@@ -97,15 +104,21 @@ class EvalTimestampedTime extends TimestampedTime
   // Define the declaration, which creates the static class reference with the correct library lexical scope
   static final declaration = DartBridgeDeclaration(
       visibility: DeclarationVisibility.PUBLIC,
-      declarator: (ctx, lex, cur) =>
-          {'TimestampedTime': EvalField('TimestampedTime', cls = clsgen(lex), null, Getter(null))});
+      declarator: (ctx, lex, cur) => {
+            'TimestampedTime': EvalField(
+                'TimestampedTime', cls = clsgen(lex), null, Getter(null))
+          });
 
   /// Define the static class reference. This should include all static methods
   /// and fields, as well as constructors which are effectively static.
   static final clsgen = (lexicalScope) => EvalBridgeClass([
         DartConstructorDeclaration('', [
-          ParameterDefinition('utcTime', EvalType.intType, false, false, false, true, null, isField: true),
-          ParameterDefinition('timezoneOffset', EvalType.intType, false, true, true, false, null, isField: false)
+          ParameterDefinition(
+              'utcTime', EvalType.intType, false, false, false, true, null,
+              isField: true),
+          ParameterDefinition('timezoneOffset', EvalType.intType, false, true,
+              true, false, null,
+              isField: false)
         ])
       ], timestampedTimeType, lexicalScope, TimestampedTime, _evalInstantiator);
 
@@ -134,14 +147,16 @@ class EvalTimestampedTime extends TimestampedTime
           'utcTime',
           null,
           null,
-          Getter(EvalCallableImpl(
-              (lexical, inherited, generics, args, {target}) => EvalInt(target?.realValue!.utcTime!)))),
+          Getter(EvalCallableImpl((lexical, inherited, generics, args,
+                  {target}) =>
+              EvalInt(target?.realValue!.utcTime!)))),
       'timezoneOffset': EvalField(
           'timezoneOffset',
           null,
           null,
-          Getter(EvalCallableImpl(
-              (lexical, inherited, generics, args, {target}) => EvalInt(target?.realValue!.timezoneOffset!))))
+          Getter(EvalCallableImpl((lexical, inherited, generics, args,
+                  {target}) =>
+              EvalInt(target?.realValue!.timezoneOffset!))))
     });
   }
 
@@ -183,25 +198,34 @@ class EvalTimestampedTime extends TimestampedTime
   }
 }
 
-final worldTimeTrackerType = EvalType(
-    'WorldTimeTracker', 'WorldTimeTracker', 'package:dart_eval/dart_eval_example.dart', [EvalType.objectType], true);
+final worldTimeTrackerType = EvalType('WorldTimeTracker', 'WorldTimeTracker',
+    'package:dart_eval/dart_eval_example.dart', [EvalType.objectType], true);
 
 class EvalWorldTimeTracker extends WorldTimeTracker
-    with ValueInterop<WorldTimeTracker>, EvalBridgeObjectMixin<WorldTimeTracker>, BridgeRectifier<WorldTimeTracker> {
+    with
+        ValueInterop<EvalWorldTimeTracker>,
+        EvalBridgeObjectMixin<EvalWorldTimeTracker>,
+        BridgeRectifier<EvalWorldTimeTracker> {
   EvalWorldTimeTracker() : super();
 
-  static final BridgeInstantiator<WorldTimeTracker> _evalInstantiator =
+  static final BridgeInstantiator<EvalWorldTimeTracker> _evalInstantiator =
       (String constructor, List<dynamic> pos, Map<String, dynamic> named) {
     return EvalWorldTimeTracker();
   };
 
   static final declaration = DartBridgeDeclaration(
       visibility: DeclarationVisibility.PUBLIC,
-      declarator: (ctx, lex, cur) =>
-          {'WorldTimeTracker': EvalField('WorldTimeTracker', cls = clsgen(lex), null, Getter(null))});
+      declarator: (ctx, lex, cur) => {
+            'WorldTimeTracker': EvalField(
+                'WorldTimeTracker', cls = clsgen(lex), null, Getter(null))
+          });
 
-  static final clsgen = (lexicalScope) => EvalBridgeClass([DartConstructorDeclaration('', [])], worldTimeTrackerType,
-      _libraryLexicalScope, WorldTimeTracker, _evalInstantiator);
+  static final clsgen = (lexicalScope) => EvalBridgeClass(
+      [DartConstructorDeclaration('', [])],
+      worldTimeTrackerType,
+      _libraryLexicalScope,
+      WorldTimeTracker,
+      _evalInstantiator);
 
   static late EvalBridgeClass cls;
 
@@ -217,14 +241,16 @@ class EvalWorldTimeTracker extends WorldTimeTracker
 
   /// Use [bridgeCall] to override methods
   @override
-  TimestampedTime getTimeFor(String country) => bridgeCall('getTimeFor', [EvalString(country)]);
+  TimestampedTime getTimeFor(String country) =>
+      bridgeCall('getTimeFor', [EvalString(country)]);
 
   @override
   EvalValue evalGetField(String name, {bool internalGet = false}) {
     switch (name) {
       case 'getTimeFor':
         return evalBridgeTryGetField('getTimeFor') ??
-            (throw Exception('Cannot access method getTimeFor() of an abstract class'));
+            (throw Exception(
+                'Cannot access method getTimeFor() of an abstract class'));
       default:
         return super.evalGetField(name, internalGet: internalGet);
     }

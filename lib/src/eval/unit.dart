@@ -1,11 +1,11 @@
-
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/src/eval/declarations.dart';
 
 class EvalCompilationUnit {
   EvalCompilationUnit(this.declarations);
+
   final List<DartDeclaration> declarations;
-  
+
   EvalScope buildScope() {
     final scope = EvalScope(null, {});
 

@@ -9,16 +9,18 @@ import 'package:dart_eval/src/eval/value.dart';
 import '../../dart_eval.dart';
 import 'expressions.dart';
 
-typedef CallableFunc = EvalValue Function(
-    EvalScope lexicalScope, EvalScope inheritedScope, List<EvalType> generics, List<Parameter> args,
+typedef CallableFunc = EvalValue Function(EvalScope lexicalScope,
+    EvalScope inheritedScope, List<EvalType> generics, List<Parameter> args,
     {EvalValue? target});
 
 typedef BridgeMapper<T> = EvalValue Function(T? realValue);
 
-typedef EvalRunnableFunc = EvalValue Function(EvalScope lexicalScope, EvalScope inheritedScope);
+typedef EvalRunnableFunc = EvalValue Function(
+    EvalScope lexicalScope, EvalScope inheritedScope);
 
 class EvalRunnableImpl implements EvalRunnable {
   EvalRunnableImpl(this.func);
+
   final EvalRunnableFunc func;
 
   @override
@@ -59,7 +61,8 @@ class NamedParameter extends Parameter {
 }
 
 class ParameterDefinition {
-  ParameterDefinition(this.name, this.type, this.nullable, this.optional, this.named, this.required, this.dfValue,
+  ParameterDefinition(this.name, this.type, this.nullable, this.optional,
+      this.named, this.required, this.dfValue,
       {this.isField = false});
 
   final String name;
@@ -71,12 +74,15 @@ class ParameterDefinition {
   final bool required;
   final EvalRunnable? dfValue;
 
-  EvalValue? extractFrom(List<Parameter> args, int i, [Map<String, EvalValue>? argMap]) {
+  EvalValue? extractFrom(List<Parameter> args, int i,
+      [Map<String, EvalValue>? argMap]) {
     final _argMap = argMap ?? Parameter.coalesceNamed(args).named;
     if (named) {
       return _argMap[name];
     } else {
-      return args.length > i ? args[i].value : (required ? throw ArgumentError('Parameter $name required') : null);
+      return args.length > i
+          ? args[i].value
+          : (required ? throw ArgumentError('Parameter $name required') : null);
     }
   }
 }
@@ -84,7 +90,8 @@ class ParameterDefinition {
 abstract class EvalCallable {
   const EvalCallable();
 
-  EvalValue call(EvalScope lexicalScope, EvalScope inheritedScope, List<EvalType> generics, List<Parameter> args,
+  EvalValue call(EvalScope lexicalScope, EvalScope inheritedScope,
+      List<EvalType> generics, List<Parameter> args,
       {EvalValue? target});
 }
 
@@ -94,9 +101,11 @@ class EvalCallableImpl extends EvalCallable {
   final CallableFunc function;
 
   @override
-  EvalValue call(EvalScope lexicalScope, EvalScope inheritedScope, List<EvalType> generics, List<Parameter> args,
+  EvalValue call(EvalScope lexicalScope, EvalScope inheritedScope,
+      List<EvalType> generics, List<Parameter> args,
       {EvalValue? target}) {
-    return function(lexicalScope, inheritedScope, generics, args, target: target);
+    return function(lexicalScope, inheritedScope, generics, args,
+        target: target);
   }
 }
 
@@ -109,7 +118,8 @@ class EvalFunctionImpl<T> extends EvalObject<T> implements EvalFunction<T> {
     //DartFunctionDeclaration('apply', functionBody, isStatic: true, visibility: visibility)
   ], EvalGenericsList([]), EvalType.functionType, EvalScope.empty);
 
-  EvalFunctionImpl(this._function, this.params, {this.inheritedScope, this.lexicalScope})
+  EvalFunctionImpl(this._function, this.params,
+      {this.inheritedScope, this.lexicalScope})
       : super(functionClass, fields: {});
 
   final DartMethodBody _function;
@@ -123,7 +133,8 @@ class EvalFunctionImpl<T> extends EvalObject<T> implements EvalFunction<T> {
   }
 
   @override
-  EvalValue call(EvalScope lexicalScope, EvalScope inheritedScope, List<EvalType> generics, List<Parameter> args,
+  EvalValue call(EvalScope lexicalScope, EvalScope inheritedScope,
+      List<EvalType> generics, List<Parameter> args,
       {EvalValue? target}) {
     if (_function.block != null) {
       final functionScope = EvalScope(this.lexicalScope ?? lexicalScope, {});
@@ -147,43 +158,57 @@ class EvalFunctionImpl<T> extends EvalObject<T> implements EvalFunction<T> {
               EvalField(
                   param.name,
                   (args.length - 1 < i || args[i] is NamedParameter)
-                      ? (param.dfValue?.eval(EvalScope.empty, this.inheritedScope ?? EvalScope.empty) ?? EvalNull())
+                      ? (param.dfValue?.eval(EvalScope.empty,
+                              this.inheritedScope ?? EvalScope.empty) ??
+                          EvalNull())
                       : args[i].value,
                   Setter(null),
                   Getter(null)));
         } else {
           if (lastPositional || lastNonOptional) {
-            throw ArgumentError('Cannot have positional arguments after named/optional arguments');
+            throw ArgumentError(
+                'Cannot have positional arguments after named/optional arguments');
           }
           if (args.length - 1 < i) {
             throw ArgumentError('Not enough arguments');
           }
-          functionScope.define(params[i].name, EvalField(params[i].name, args[i].value, Setter(null), Getter(null)));
+          functionScope.define(
+              params[i].name,
+              EvalField(
+                  params[i].name, args[i].value, Setter(null), Getter(null)));
         }
       }
 
       for (final na in namedArgs) {
         if (!namedParams.containsKey(na.name)) {
-          throw ArgumentError('Named parameter ${na.name} doesn\'t exist on function');
+          throw ArgumentError(
+              'Named parameter ${na.name} doesn\'t exist on function');
         }
-        functionScope.define(na.name, EvalField(na.name, na.value, Setter(null), Getter(null)));
+        functionScope.define(
+            na.name, EvalField(na.name, na.value, Setter(null), Getter(null)));
       }
-      return _function.block!.eval(functionScope, this.inheritedScope ?? EvalScope.empty).value ?? EvalNull();
+      return _function.block!
+              .eval(functionScope, this.inheritedScope ?? EvalScope.empty)
+              .value ??
+          EvalNull();
     } else if (_function.callable != null) {
-      return _function.callable!(lexicalScope, inheritedScope, generics, args, target: target);
+      return _function.callable!(lexicalScope, inheritedScope, generics, args,
+          target: target);
     }
     throw ArgumentError('No function block or callable');
   }
 }
 
-class EvalBridgeFunction<T> extends EvalObject<Function> implements EvalFunctionImpl<Function>, ValueInterop<Function> {
+class EvalBridgeFunction<T> extends EvalObject<Function>
+    implements EvalFunctionImpl<Function>, ValueInterop<Function> {
   EvalBridgeFunction(Function function, this.mapper)
       : super(EvalFunctionImpl.functionClass, fields: {}, realValue: function);
 
   BridgeMapper<T> mapper;
 
   @override
-  EvalValue call(EvalScope lexicalScope, EvalScope inheritedScope, List<EvalType> generics, List<Parameter> args,
+  EvalValue call(EvalScope lexicalScope, EvalScope inheritedScope,
+      List<EvalType> generics, List<Parameter> args,
       {EvalValue? target}) {
     final named = <Symbol, dynamic>{};
     final pos = <dynamic>[];

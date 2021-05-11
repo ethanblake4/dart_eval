@@ -5,7 +5,6 @@ import 'package:dart_eval/src/eval/reference.dart';
 
 /// A scope in which variables can be defined
 class EvalScope {
-
   /// Create an [EvalScope]
   const EvalScope(this.parent, this.defines);
 
@@ -52,13 +51,14 @@ class ScopeWrapper {
 
   /// Call a method that exists in the scope
   EvalValue call(String name, List<Parameter> args) {
-    return (scope.lookup(name)!.value! as EvalCallable).call(scope, scope, [], args);
+    return scope.lookup(name)!.value!.call(scope, scope, [], args);
   }
 }
 
 /// A proxied combination of two [EvalScope]s
 class EvalSequentialScope implements EvalScope {
   EvalSequentialScope(this.scope1, this.scope2);
+
   EvalScope scope1;
   EvalScope scope2;
 
@@ -68,7 +68,8 @@ class EvalSequentialScope implements EvalScope {
   }
 
   @override
-  Map<String, EvalField> get defines => throw UnimplementedError('Cannot access defines of a SequentialScope');
+  Map<String, EvalField> get defines =>
+      throw UnimplementedError('Cannot access defines of a SequentialScope');
 
   @override
   ScopedReference? lookup(String name) {
@@ -87,7 +88,8 @@ class EvalSequentialScope implements EvalScope {
   }
 
   @override
-  EvalField? getFieldRaw(String name) => scope1.getFieldRaw(name) ?? scope2.getFieldRaw(name);
+  EvalField? getFieldRaw(String name) =>
+      scope1.getFieldRaw(name) ?? scope2.getFieldRaw(name);
 }
 
 // An object scope, prefixed by a lexical scope
@@ -108,7 +110,8 @@ class EvalObjectLexicalScope implements EvalScope {
     } else if (object == null) {
       return parent!.lookup(name);
     }
-    return StaticLexicalObjectScopedReference(object!, parent!.lookup(name), name);
+    return StaticLexicalObjectScopedReference(
+        object!, parent!.lookup(name), name);
   }
 
   @override
@@ -183,11 +186,11 @@ class ScopedReference implements Reference {
   @override
   EvalValue? get value {
     final d = _scope.defines[name]!;
-    final getter = d.getter!;
-    if (getter.get != null) {
-      return getter.get?.call(EvalScope.empty, EvalScope.empty, const [], const []);
-    } else {
+    final get = d.getter!.get;
+    if (get == null) {
       return d.value ?? EvalNull();
+    } else {
+      return get.call(EvalScope.empty, EvalScope.empty, const [], const []);
     }
   }
 
@@ -195,8 +198,10 @@ class ScopedReference implements Reference {
   set value(EvalValue? newValue) {
     final d = _scope.defines[name]!;
     final setter = d.setter!;
-    if (setter.set != null) {
-      setter.set!.call(EvalScope.empty, EvalScope.empty, const [], [Parameter(newValue ?? EvalNull())]);
+    final set = setter.set;
+    if (set != null) {
+      set.call(EvalScope.empty, EvalScope.empty, const [],
+          [Parameter(newValue ?? EvalNull())]);
     } else {
       d.value = newValue ?? EvalNull();
     }
@@ -225,7 +230,8 @@ class ObjectScopedReference implements ScopedReference {
   }
 
   @override
-  set value(EvalValue? newValue) => object.evalSetField(name, newValue ?? EvalNull());
+  set value(EvalValue? newValue) =>
+      object.evalSetField(name, newValue ?? EvalNull());
 
   @override
   EvalScope get _scope => throw UnimplementedError();
@@ -237,14 +243,16 @@ class ObjectScopedReference implements ScopedReference {
 }
 
 class StaticLexicalObjectScopedReference extends ObjectScopedReference {
-  StaticLexicalObjectScopedReference(EvalValue object, this.scopeRef, String name) : super(object, name);
+  StaticLexicalObjectScopedReference(
+      EvalValue object, this.scopeRef, String name)
+      : super(object, name);
 
   final ScopedReference? scopeRef;
 
   @override
   EvalValue? get value {
     final osr = super.value;
-    if(osr != null) return osr;
+    if (osr != null) return osr;
 
     return scopeRef?.value;
   }

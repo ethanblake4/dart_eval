@@ -45,7 +45,8 @@ class EvalBoolLiteral extends EvalExpression {
 }
 
 class EvalListLiteral extends EvalExpression {
-  EvalListLiteral(int offset, int length, this.elements) : super(offset, length);
+  EvalListLiteral(int offset, int length, this.elements)
+      : super(offset, length);
 
   final List<EvalCollectionElement> elements;
 
@@ -54,20 +55,20 @@ class EvalListLiteral extends EvalExpression {
     return EvalList(_expandList(lexicalScope, inheritedScope, elements));
   }
 
-  static List<EvalValue> _expandList(EvalScope lexicalScope, EvalScope inheritedScope,
-      List<EvalCollectionElement> elements) {
+  static List<EvalValue> _expandList(EvalScope lexicalScope,
+      EvalScope inheritedScope, List<EvalCollectionElement> elements) {
     return [
       for (final e in elements)
-        if(e is EvalMultiValuedCollectionElement)
-          ..._expandList(lexicalScope, inheritedScope, e.evalMultiValue(lexicalScope, inheritedScope))
-        else
-          (e as EvalExpression).eval(lexicalScope, inheritedScope)
+        if (e is EvalMultiValuedCollectionElement)
+          ..._expandList(lexicalScope, inheritedScope,
+              e.evalMultiValue(lexicalScope, inheritedScope))
+        else if (e is EvalExpression)
+          e.eval(lexicalScope, inheritedScope)
     ];
   }
 }
 
 class EvalMapLiteralEntry extends EvalCollectionElement {
-
   EvalMapLiteralEntry(this.length, this.offset, this.key, this.value);
 
   @override
@@ -80,7 +81,7 @@ class EvalMapLiteralEntry extends EvalCollectionElement {
 }
 
 class EvalMapLiteral extends EvalExpression {
-  EvalMapLiteral(int offset, int length, this.elements): super(offset, length);
+  EvalMapLiteral(int offset, int length, this.elements) : super(offset, length);
 
   final List<EvalCollectionElement> elements;
 
@@ -89,14 +90,16 @@ class EvalMapLiteral extends EvalExpression {
     return EvalMap(_expandMap(lexicalScope, inheritedScope, elements));
   }
 
-  static Map<EvalValue, EvalValue> _expandMap(EvalScope lexicalScope, EvalScope inheritedScope,
-      List<EvalCollectionElement> elements) {
+  static Map<EvalValue, EvalValue> _expandMap(EvalScope lexicalScope,
+      EvalScope inheritedScope, List<EvalCollectionElement> elements) {
     return {
       for (final e in elements)
-        if(e is EvalMultiValuedCollectionElement)
-          ..._expandMap(lexicalScope, inheritedScope, e.evalMultiValue(lexicalScope, inheritedScope))
-        else
-          (e as EvalMapLiteralEntry).key.eval(lexicalScope, inheritedScope): e.value.eval(lexicalScope, inheritedScope)
+        if (e is EvalMultiValuedCollectionElement)
+          ..._expandMap(lexicalScope, inheritedScope,
+              e.evalMultiValue(lexicalScope, inheritedScope))
+        else if (e is EvalMapLiteralEntry)
+          e.key.eval(lexicalScope, inheritedScope):
+              e.value.eval(lexicalScope, inheritedScope)
     };
   }
 }

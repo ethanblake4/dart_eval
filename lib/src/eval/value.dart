@@ -5,7 +5,7 @@ import 'package:dart_eval/src/eval/reference.dart';
 import 'package:dart_eval/src/eval/scope.dart';
 import 'package:dart_eval/src/eval/type.dart';
 
-abstract class EvalValue<R> {
+abstract class EvalValue<R> implements EvalCallable {
   EvalValue(this.evalType, {this.evalSourceFile, this.realValue});
 
   final EvalType evalType;
@@ -28,8 +28,18 @@ abstract class EvalValue<R> {
   }
 
   @override
+  EvalValue call(EvalScope lexicalScope, EvalScope inheritedScope,
+      List<EvalType> generics, List<Parameter> args,
+      {EvalValue? target}) {
+    throw UnimplementedError();
+  }
+
+  @override
   bool operator ==(Object other) =>
-      identical(this, other) || other is EvalValue && runtimeType == other.runtimeType && realValue == other.realValue;
+      identical(this, other) ||
+      other is EvalValue &&
+          runtimeType == other.runtimeType &&
+          realValue == other.realValue;
 
   @override
   int get hashCode => realValue.hashCode;
@@ -45,7 +55,8 @@ class FieldReference extends Reference {
   EvalValue? get value => v.evalGetField(name);
 
   @override
-  set value(EvalValue? newValue) => v.evalSetField(name, newValue ?? EvalNull());
+  set value(EvalValue? newValue) =>
+      v.evalSetField(name, newValue ?? EvalNull());
 }
 
 class EvalReturn implements EvalValue {
@@ -64,6 +75,13 @@ class EvalReturn implements EvalValue {
 
   @override
   dynamic evalReifyFull() => realValue;
+
+  @override
+  EvalValue call(EvalScope lexicalScope, EvalScope inheritedScope,
+      List<EvalType> generics, List<Parameter> args,
+      {EvalValue? target}) {
+    throw UnimplementedError();
+  }
 
   @override
   EvalValue evalGetField(String name) {
@@ -88,99 +106,95 @@ class EvalReturn implements EvalValue {
 
 mixin ValueInterop<T> {
   T? get realValue;
+
   dynamic evalReifyFull() => realValue;
 }
 
 class EvalValueImpl<R> extends EvalValue<R> {
   EvalValueImpl.withIndividual(EvalType type,
-      {String? sourceFile,
-      Map<String, EvalValue>? fields,
-      Map<String, Setter>? setters,
-      Map<String, Getter>? getters,
-      R? realValue})
+      {String? sourceFile, Map<String, EvalField>? fields, R? realValue})
       : super(type, evalSourceFile: sourceFile, realValue: realValue) {
-    _fields = fields ?? {};
-    _getters = getters ?? {};
-    _setters = setters ?? {};
+    _fields = {...fields ?? {}};
   }
 
   EvalValueImpl(EvalType type,
-      {String? sourceFile, required EvalFieldListBreakout fieldListBreakout, dynamic? realValue})
+      {String? sourceFile,
+      required Map<String, EvalField> fields,
+      dynamic? realValue})
       : super(type, evalSourceFile: sourceFile, realValue: realValue) {
-    _fields = fieldListBreakout.values;
-    _getters = fieldListBreakout.getters;
-    _setters = fieldListBreakout.setters;
+    _fields = {...fields};
   }
 
-  late Map<String, EvalValue> _fields;
-  late Map<String, Setter> _setters;
-  late Map<String, Getter> _getters;
+  late Map<String, EvalField> _fields;
 
-  void addFields(EvalFieldListBreakout breakout) {
-    _fields.addAll(breakout.values);
-    _getters.addAll(breakout.getters);
-    _setters.addAll(breakout.setters);
+  void addFields(Map<String, EvalField> fields) {
+    _fields.addAll(fields);
   }
 
   @override
   EvalValue evalGetField(String name, {bool internalGet = false}) {
-    if(internalGet) {
-      return _fields[name] ?? (throw ArgumentError(_fields.containsKey(name)
-          ? ' Non-nullable field $name was not initialized'
-          : 'Field $name does not exist'));
+    final field = _fields[name];
+
+    if (internalGet) {
+      return field?.value ??
+          (throw ArgumentError(_fields.containsKey(name)
+              ? ' Non-nullable field $name was not initialized'
+              : 'Field $name does not exist'));
     }
-    final getter = _getters[name];
+    final getter = field?.getter;
     if (getter == null) {
       throw ArgumentError("Unknown field '$name'");
     }
     if (getter.get == null) {
-      return _fields[name] ??
+      return field?.value ??
           (throw ArgumentError(_fields.containsKey(name)
               ? ' Non-nullable field $name was not initialized'
               : 'Field $name does not exist'));
     } else {
       try {
-        final thisScope = EvalScope(null, {'this': EvalField('this', this, null, Getter(null))});
+        final thisScope = EvalScope(
+            null, {'this': EvalField('this', this, null, Getter(null))});
         final r = getter.get!.call(thisScope, EvalScope.empty, [], []);
         return r;
       } catch (e) {
         print('getField exception $e');
-        if(e is Error) {
+        if (e is Error) {
           print(e.stackTrace);
         }
         rethrow;
       }
-
     }
   }
 
   @override
-  EvalValue evalSetField(String name, EvalValue value, {bool internalSet = false}) {
+  EvalValue evalSetField(String name, EvalValue value,
+      {bool internalSet = false}) {
     if (internalSet) {
-      return _fields[name] = value;
+      return _fields[name]!.value = value;
     }
-    final setter = _setters[name];
+    final setter = _fields[name]?.setter;
     if (setter == null) {
       throw ArgumentError('No setter for field $name');
     }
     if (setter.set == null) {
-      return _fields[name] = value;
+      return _fields[name]!.value = value;
     } else {
-      final thisScope = EvalScope(null, {'this': EvalField('this', this, null, Getter(null))});
-      return setter.set!.call(thisScope, EvalScope.empty, [], [Parameter(value)]);
+      final thisScope = EvalScope(
+          null, {'this': EvalField('this', this, null, Getter(null))});
+      return setter.set!
+          .call(thisScope, EvalScope.empty, [], [Parameter(value)]);
     }
   }
 
   @override
   EvalField evalGetFieldRaw(String name) {
-    return EvalField(name, _fields[name], _setters[name], _getters[name]);
+    return _fields[name]!;
   }
 
   @override
   void evalSetGetter(String name, Getter getter) {
-    _getters[name] = getter;
+    _fields[name]!.getter = getter;
   }
-
 }
 
 class Setter {
@@ -196,16 +210,23 @@ class Getter {
   /// If set to null, the default getter
   final EvalCallable? get;
 
-  factory Getter.deferred(String name, EvalType type, EvalScope lexicalScope, EvalScope inheritedScope,
-      EvalExpression deferredInitializer) {
-    return Getter(EvalCallableImpl((_lexicalScope, _inheritedScope, generics, params, {EvalValue? target}) {
+  factory Getter.deferred(String name, EvalType type, EvalScope lexicalScope,
+      EvalScope inheritedScope, EvalExpression deferredInitializer) {
+    return Getter(EvalCallableImpl(
+        (_lexicalScope, _inheritedScope, generics, params,
+            {EvalValue? target}) {
       final ref = lexicalScope.getFieldRaw(name);
       if (ref?.value != null) {
         return ref!.value!;
       } else {
         return lexicalScope
-            .define(name,
-                EvalField(name, deferredInitializer.eval(lexicalScope, inheritedScope), Setter(null), Getter(null)))
+            .define(
+                name,
+                EvalField(
+                    name,
+                    deferredInitializer.eval(lexicalScope, inheritedScope),
+                    Setter(null),
+                    Getter(null)))
             .value!;
       }
     }));
@@ -224,7 +245,7 @@ class EvalField {
 
   @override
   String toString() {
-    return "EvalField{$name, (${getter != null ? 'get' : ''}${setter != null ? 'set': ''}): $value}";
+    return "EvalField{$name, (${getter != null ? 'get' : ''}${setter != null ? 'set' : ''}): $value}";
   }
 }
 
@@ -248,25 +269,6 @@ class EvalValueFieldRef implements EvalField {
   EvalValue? get value => _value.evalGetFieldRaw(name).value;
 
   @override
-  set value(EvalValue? newValue) => _value.evalSetField(name, newValue!, internalSet: true);
-}
-
-class EvalFieldListBreakout {
-  EvalFieldListBreakout(this.values, this.getters, this.setters);
-
-  factory EvalFieldListBreakout.withFields(Map<String, EvalField> fields) {
-    final getters = <String, Getter>{};
-    final setters = <String, Setter>{};
-    final values = <String, EvalValue>{};
-    fields.forEach((key, value) {
-      if (value.getter != null) getters[key] = value.getter!;
-      if (value.setter != null) setters[key] = value.setter!;
-      if (value.value != null) values[key] = value.value!;
-    });
-    return EvalFieldListBreakout(values, getters, setters);
-  }
-
-  Map<String, EvalValue> values;
-  Map<String, Getter> getters;
-  Map<String, Setter> setters;
+  set value(EvalValue? newValue) =>
+      _value.evalSetField(name, newValue!, internalSet: true);
 }
