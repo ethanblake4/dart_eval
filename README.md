@@ -82,6 +82,10 @@ a solution for code-generation of that boilerplate.
 
 An example featuring bridge interop is available in the `example` directory.
 
+## Contributing
+
+See [Contributing](https://github.com/ethanblake4/dart_eval/blob/master/CONTRIBUTING.md).
+
 ## FAQ
 
 ### How does it work?
