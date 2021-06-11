@@ -22,7 +22,7 @@ abstract class WorldTimeTracker {
 
 void main() {
   // Setup a parser
-  final parser = Parse();
+  /*final parser = Parse();
 
   // Add our class definitions
   parser.define(EvalTimestampedTime.declaration);
@@ -30,8 +30,9 @@ void main() {
 
   // Parse the code we want to run. The scope variable now holds
   // all top-level declared classes and functions, ready to run
-  final scope = parser.parse('''
-    class MyWorldTimeTracker extends WorldTimeTracker {
+  final scope = parser.parse(
+      // language=dart
+      '''class MyWorldTimeTracker extends WorldTimeTracker {
     
       MyWorldTimeTracker();
       
@@ -67,7 +68,21 @@ void main() {
 
   print('UK timezone offset: ' +
       timeTracker.getTimeFor('UK').timezoneOffset.toString() +
-      ' (from outside Eval!)');
+      ' (from outside Eval!)');*/
+
+  final s2 = Parse().parse('''
+  void m() {
+    var a = 0;
+    for(var i = 0; i<983048; i++) {
+      a = a + 2;
+    }
+    print(a);
+  }
+  ''');
+
+  final dta = DateTime.now().millisecondsSinceEpoch;
+  s2.call('m', []);
+  print('xend ${DateTime.now().millisecondsSinceEpoch - dta}');
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////

@@ -73,7 +73,7 @@ class EvalDateTime extends DateTime
     }
   };
 
-  static final clsgen = (EvalScope lexicalScope) => EvalBridgeClass([
+  static EvalBridgeClass clsgen(EvalScope lexicalScope) => EvalBridgeClass([
         DartConstructorDeclaration('', [
           ParameterDefinition(
               'year', EvalType.intType, false, false, false, true, null,
@@ -183,7 +183,7 @@ class EvalDateTime extends DateTime
         DartConstructorDeclaration('_now', [])
       ], EvalType.DateTimeType, lexicalScope, DateTime, _evalInstantiator);
 
-  static late EvalBridgeClass cls;
+  static late final EvalBridgeClass cls;
 
   @override
   EvalBridgeData evalBridgeData = EvalBridgeData(cls);

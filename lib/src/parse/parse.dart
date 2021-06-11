@@ -21,6 +21,11 @@ class Parse {
     _additionalDefines.add(value);
   }
 
+  /// Add a new [DartDeclaration] to this Parse instance's [EvalScope]
+  void defineAll(List<DartDeclaration> values) {
+    _additionalDefines.addAll(values);
+  }
+
   /// Parse a string containing Dart code and return a [ScopeWrapper] with that code and
   /// any
   ScopeWrapper parse(String content) {
