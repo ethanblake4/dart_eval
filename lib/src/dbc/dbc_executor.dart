@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:dart_eval/dart_eval.dart';
+import 'dbc_class.dart';
 
 class ProgramExit implements Exception {
   final int exitCode;
@@ -12,34 +12,34 @@ class ProgramExit implements Exception {
 class Dbc {
   static const BASE_OPLEN = 1;
 
-  /// [Jmpc] Jump to constant position
+  /// [JumpConstant] Jump to constant position
   static const OP_JMPC = 0;
 
   /// [Exit] Exit program with value exit code
   static const OP_EXIT = 1;
 
-  /// [Cmpddi] Compare value with value -> return register
+  /// [CompareInt] Compare value with value -> return register
   static const OP_CMPDDI = 2;
 
-  /// [Setvr] Set value to return register
+  /// [PushReturnValue] Set value to return register
   static const OP_SETVR = 3;
 
-  /// [Addvv] Add value to value -> return register
+  /// [AddAndReturnInts] Add value to value -> return register
   static const OP_ADDVV = 4;
 
-  /// [Jnz] Jump to constant position if return register != 0
+  /// [JumpIfNonZero] Jump to constant position if return register != 0
   static const OP_JNZ = 5;
 
-  /// [Setvc] Set value to constant
+  /// [PushConstantInt] Set value to constant
   static const OP_SETVC = 6;
 
-  /// [Addvcs] Add constant to value and re-store
+  /// [AddConstantIntInPlace] Add constant to value and re-store
   static const OP_ADDVCS = 7;
 
-  /// [Subvcs] Subtract constant from value and re-store
+  /// [SubtractConstantInt] Subtract constant from value and re-store
   static const OP_SUBVCS = 8;
 
-  /// [Modvcs] Modulo value with constant and re-store
+  /// [ModuloConstantIntInPlace] Modulo value with constant and re-store
   static const OP_MODVCS = 9;
 
   /// [PushScope] Push stack frame
@@ -48,61 +48,84 @@ class Dbc {
   /// Set value to other value
   static const OP_SETVV = 11;
 
-  /// Set value to constant string
-  static const OP_SETVCSTR = 12;
+  /// Push constant string
+  static const OP_PUSH_CONST_STR = 12;
 
   /// [PopScope] Pop scope frame
   static const OP_POPSCOPE = 13;
 
-  /// [Setrv]
+  /// [SetReturnValue]
   static const OP_SETRV = 14;
+
+  /// [Return]
+  static const OP_RETURN = 15;
+
+  /// [Pop]
+  static const OP_POP = 16;
+
+  /// [Call]
+  static const OP_CALL = 17;
+
+  /// [PushObjectProperty]
+  static const OP_PUSH_OBJECT_PROP = 18;
 
   static List<int> opcodeFrom(DbcOp op) {
     switch (op.runtimeType) {
-      case Jmpc:
-        op as Jmpc;
+      case JumpConstant:
+        op as JumpConstant;
         return [OP_JMPC, ...i32b(op._offset)];
       case Exit:
         op as Exit;
         return [OP_EXIT, ...i16b(op._location)];
-      case Cmpddi:
-        op as Cmpddi;
+      case CompareInt:
+        op as CompareInt;
         return [OP_CMPDDI, ...i16b(op._location1), ...i16b(op._location2)];
-      case Setvr:
-        op as Setvr;
-        return [OP_SETVR, ...i16b(op._location)];
-      case Addvv:
-        op as Addvv;
+      case PushReturnValue:
+        op as PushReturnValue;
+        return [OP_SETVR];
+      case AddAndReturnInts:
+        op as AddAndReturnInts;
         return [OP_ADDVV, ...i16b(op._location1), ...i16b(op._location2)];
-      case Jnz:
-        op as Jnz;
+      case JumpIfNonZero:
+        op as JumpIfNonZero;
         return [OP_JNZ, ...i32b(op._offset)];
-      case Setvc:
-        op as Setvc;
-        return [OP_SETVC, ...i16b(op._location), ...i32b(op._value)];
-      case Addvcs:
-        op as Addvcs;
+      case PushConstantInt:
+        op as PushConstantInt;
+        return [OP_SETVC, ...i32b(op._value)];
+      case AddConstantIntInPlace:
+        op as AddConstantIntInPlace;
         return [OP_ADDVCS, ...i16b(op._location), ...i32b(op._value)];
-      case Subvcs:
-        op as Subvcs;
+      case SubtractConstantInt:
+        op as SubtractConstantInt;
         return [OP_ADDVCS, ...i16b(op._location), ...i32b(op._value)];
-      case Modvcs:
-        op as Modvcs;
+      case ModuloConstantIntInPlace:
+        op as ModuloConstantIntInPlace;
         return [OP_MODVCS, ...i16b(op._location), ...i32b(op._value)];
       case PushScope:
         op as PushScope;
         return [OP_PUSHSCOPE, ...i32b(op.sourceFile), ...i32b(op.sourceOffset), ...istr(op.frName)];
       case PopScope:
         return [OP_POPSCOPE];
-      case Setvv:
-        op as Setvv;
+      case CopyValue:
+        op as CopyValue;
         return [OP_SETVV, ...i16b(op._position1), ...i16b(op._position2)];
-      case Setvcstr:
-        op as Setvcstr;
-        return [OP_SETVCSTR, ...i16b(op._location), ...istr(op._value)];
-      case Setrv:
-        op as Setrv;
+      case PushConstantString:
+        op as PushConstantString;
+        return [OP_PUSH_CONST_STR, ...istr(op._value)];
+      case SetReturnValue:
+        op as SetReturnValue;
         return [OP_SETRV, ...i16b(op._location)];
+      case Return:
+        op as Return;
+        return [OP_RETURN, ...i16b(op._location)];
+      case Pop:
+        return [OP_POP];
+      case Call:
+        op as Call;
+        return [OP_CALL, ...i32b(op._offset)];
+      case PushObjectProperty:
+        op as PushObjectProperty;
+        return [OP_PUSH_OBJECT_PROP, ...i16b(op._location), ...istr(op._property)];
       default:
         throw ArgumentError('Not a valid op $op');
     }
@@ -140,64 +163,121 @@ class Dbc {
 typedef Opmake = DbcOp Function(DbcExecutor);
 
 List<Opmake> ops = [
-  (DbcExecutor ex) => Jmpc(ex), // 0
+  (DbcExecutor ex) => JumpConstant(ex), // 0
   (DbcExecutor ex) => Exit(ex), // 1
-  (DbcExecutor ex) => Cmpddi(ex), // 2
-  (DbcExecutor ex) => Setvr(ex), // 3
-  (DbcExecutor ex) => Addvv(ex), // 4
-  (DbcExecutor ex) => Jnz(ex), // 5
-  (DbcExecutor ex) => Setvc(ex), // 6
-  (DbcExecutor ex) => Addvcs(ex), // 7
-  (DbcExecutor ex) => Subvcs(ex), // 8
-  (DbcExecutor ex) => Modvcs(ex), // 9
+  (DbcExecutor ex) => CompareInt(ex), // 2
+  (DbcExecutor ex) => PushReturnValue(ex), // 3
+  (DbcExecutor ex) => AddAndReturnInts(ex), // 4
+  (DbcExecutor ex) => JumpIfNonZero(ex), // 5
+  (DbcExecutor ex) => PushConstantInt(ex), // 6
+  (DbcExecutor ex) => AddConstantIntInPlace(ex), // 7
+  (DbcExecutor ex) => SubtractConstantInt(ex), // 8
+  (DbcExecutor ex) => ModuloConstantIntInPlace(ex), // 9
   (DbcExecutor ex) => PushScope(ex), // 10
-  (DbcExecutor ex) => Setvv(ex), // 11
-  (DbcExecutor ex) => Setvcstr(ex), // 12
+  (DbcExecutor ex) => CopyValue(ex), // 11
+  (DbcExecutor ex) => PushConstantString(ex), // 12
   (DbcExecutor ex) => PopScope(ex), // 13
-  (DbcExecutor ex) => Setrv(ex), // 14
+  (DbcExecutor ex) => SetReturnValue(ex), // 14
+  (DbcExecutor ex) => Return(ex), // 15
+  (DbcExecutor ex) => Pop(ex), // 16
+  (DbcExecutor ex) => Call(ex), // 17
+  (DbcExecutor ex) => PushObjectProperty(ex) // 18
 ];
 
 class ScopeFrame {
-  final _vStack = ByteData(65535);
+  ScopeFrame(this.stackOffset, [this.entrypoint = false]);
+
+  final int stackOffset;
+  final bool entrypoint;
+}
+
+class BridgeScopeFrame extends ScopeFrame {
+  BridgeScopeFrame(int stackOffset) : super(stackOffset);
 }
 
 class DbcExecutor {
-  DbcExecutor(this._dbc);
+  DbcExecutor(this._dbc) : id = _id++;
+
+  static int _id = 0;
+  final int id;
+
+  static const MIN_DYNAMIC_REGISTER = 32;
 
   final ByteData _dbc;
-  final _vStack = List<Object>.filled(65535, 0);
-  var valueStack = <EvalValue>[];
-  var scopeStack = <ScopeFrame>[];
-  int _returnValue = 0;
+  final _vStack = List<Object?>.filled(65535, null);
+  final pr = <DbcOp>[];
+  Object? _returnValue = null;
+  var scopeStack = <ScopeFrame>[ScopeFrame(1)];
+  var scopeStackOffset = 0;
+  final callStack = <int>[0];
+  var declarations = <int, Map<String, int>>{};
+  int _stackOffset = 1;
   int _offset = 0;
   int _prOffset = 0;
 
   static const VTYPE_INT = 0;
   static const VTYPE_OBJECT = 1;
 
-  void execute() {
+  void loadProgram() {
+    final metaLength = _dbc.getInt32(0);
+    final metaStr = <int>[];
+    _offset = 4;
+    while (_offset < metaLength + 4) {
+      metaStr.add(_dbc.getUint8(_offset));
+      _offset++;
+    }
 
-    final pr = <DbcOp>[];
+    declarations = (json.decode(utf8.decode(metaStr))
+      .map((k, v) => MapEntry(int.parse(k), (v as Map).cast<String, int>())) as Map)
+      .cast<int, Map<String, int>>();
+
     while (_offset < _dbc.lengthInBytes) {
       final opId = _dbc.getUint8(_offset);
       _offset++;
       pr.add(ops[opId](this));
     }
+  }
+
+  void printOpcodes() {
     var i = 0;
     for (final oo in pr) {
       print('$i: $oo');
       i++;
     }
-    print('');
-    print('< exec >');
+  }
+
+  dynamic executeNamed(int file, String name) {
+    return execute(declarations[file]![name]!);
+  }
+
+  dynamic execute(int entrypoint) {
+    _prOffset = entrypoint;
+    final _pr = pr;
     try {
+      callStack.add(-1);
       while (true) {
-        pr[_prOffset++].run(this);
+        _pr[_prOffset++].run(this);
       }
-    } on ProgramExit catch (e) {
-      print('Program exit: ${e.exitCode}');
+    } on ProgramExit catch (_) {
+      return _returnValue;
     }
   }
+
+  void beginBridgedScope() {
+    scopeStack.add(BridgeScopeFrame(_stackOffset));
+    scopeStackOffset = _stackOffset;
+  }
+
+  void push(Object? _value) {
+    _vStack[_stackOffset++] = _value;
+  }
+
+  void popScope() {
+    final offset = scopeStack.removeLast().stackOffset;
+    scopeStackOffset = _stackOffset = offset;
+  }
+
+  get returnValue => _returnValue;
 
   @pragma('vm:always-inline')
   int _readInt32() {
@@ -225,10 +305,13 @@ class DbcExecutor {
     return utf8.decode(codeUnits);
   }
 
-  @pragma('vm:always-inline')
-  void _setString(int location, String str) {
-    _vStack[location] = str;
-  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || other is DbcExecutor && runtimeType == other.runtimeType && id == other.id;
+
+  @override
+  int get hashCode => id.hashCode;
 }
 
 abstract class DbcOp {
@@ -236,10 +319,47 @@ abstract class DbcOp {
 }
 
 // Move to constant position
-class Jmpc implements DbcOp {
-  Jmpc(DbcExecutor exec) : _offset = exec._readInt32();
+class Call implements DbcOp {
+  Call(DbcExecutor exec) : _offset = exec._readInt32();
 
-  Jmpc.make(this._offset);
+  Call.make(this._offset);
+
+  final int _offset;
+
+  static final int LEN = Dbc.BASE_OPLEN + Dbc.I32_LEN;
+
+  @override
+  void run(DbcExecutor exec) {
+    exec.callStack.add(exec._prOffset);
+    exec._prOffset = _offset;
+  }
+
+  @override
+  String toString() => 'Call (@$_offset)';
+}
+
+// Create a class
+class CreateClass implements DbcOp {
+  CreateClass(DbcExecutor exec) : _offset = exec._readInt32();
+
+  CreateClass.make(this._offset);
+
+  final int _offset;
+
+  @override
+  void run(DbcExecutor exec) {
+
+  }
+
+  @override
+  String toString() => 'CreateClass (@$_offset)';
+}
+
+// Move to constant position
+class JumpConstant implements DbcOp {
+  JumpConstant(DbcExecutor exec) : _offset = exec._readInt32();
+
+  JumpConstant.make(this._offset);
 
   final int _offset;
 
@@ -249,7 +369,7 @@ class Jmpc implements DbcOp {
   }
 
   @override
-  String toString() => 'Jmpc (L$_offset)';
+  String toString() => 'JumpConstant (@$_offset)';
 }
 
 // Exit program
@@ -264,36 +384,33 @@ class Exit implements DbcOp {
 
   @override
   void run(DbcExecutor exec) {
-    throw ProgramExit(exec._vStack[_location] as int);
+    throw ProgramExit(exec._vStack[exec.scopeStackOffset + _location] as int);
   }
 
   @override
   String toString() => 'Exit (L$_location)';
 }
 
-class Setvr implements DbcOp {
-  Setvr(DbcExecutor exec) : _location = exec._readInt16();
+class PushReturnValue implements DbcOp {
+  PushReturnValue(DbcExecutor exec);
 
-  Setvr.make(this._location);
+  PushReturnValue.make();
 
-  final int _location;
-
-  static const int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN;
-
+  static const int LEN = Dbc.BASE_OPLEN;
 
   @override
   void run(DbcExecutor exec) {
-    exec._vStack[_location] =  exec._returnValue;
+    exec._vStack[exec._stackOffset++] = exec._returnValue;
   }
 
   @override
-  String toString() => 'Setvr (L$_location = \$)';
+  String toString() => 'PushReturnValue ()';
 }
 
-class Setrv implements DbcOp {
-  Setrv(DbcExecutor exec) : _location = exec._readInt16();
+class SetReturnValue implements DbcOp {
+  SetReturnValue(DbcExecutor exec) : _location = exec._readInt16();
 
-  Setrv.make(this._location);
+  SetReturnValue.make(this._location);
 
   final int _location;
 
@@ -301,69 +418,127 @@ class Setrv implements DbcOp {
 
   @override
   void run(DbcExecutor exec) {
-    exec._returnValue = exec._vStack[_location] as int;
+    exec._returnValue = exec._vStack[exec.scopeStackOffset + _location] as int;
   }
 
   @override
-  String toString() => 'Setrv (\$ = L$_location)';
+  String toString() => 'SetReturnValue (\$ = L$_location)';
 }
 
-class Setvc implements DbcOp {
-  Setvc(DbcExecutor exec)
-      : _location = exec._readInt16(),
-        _value = exec._readInt32();
+class Return implements DbcOp {
+  Return(DbcExecutor exec) : _location = exec._readInt16();
 
-  Setvc.make(this._location, this._value);
+  Return.make(this._location);
 
   final int _location;
+
+  static const int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN;
+
+  @override
+  void run(DbcExecutor exec) {
+    if (_location == -1) {
+      exec._returnValue = null;
+    } else {
+      exec._returnValue = exec._vStack[exec.scopeStackOffset + _location];
+    }
+
+    final lastStack = exec.scopeStack.removeLast();
+    final offset = lastStack.stackOffset;
+    exec.scopeStackOffset = exec._stackOffset = offset;
+
+    final prOffset = exec.callStack.removeLast();
+    if (prOffset == -1) {
+      throw ProgramExit(0);
+    }
+    exec._prOffset = prOffset;
+  }
+
+  @override
+  String toString() => 'Return (L$_location)';
+}
+
+class PushConstantInt implements DbcOp {
+  PushConstantInt(DbcExecutor exec) : _value = exec._readInt32();
+
+  PushConstantInt.make(this._value);
+
   final int _value;
 
-  static const int LEN = 6;
+  static const int LEN = Dbc.BASE_OPLEN + Dbc.I32_LEN;
 
   // Set value at position to constant
   @override
   void run(DbcExecutor exec) {
-    exec._vStack[_location] = _value;
+    exec._vStack[exec._stackOffset++] = _value;
   }
 
   @override
-  String toString() => 'Setvc (L$_location = $_value)';
+  String toString() => 'PushConstantInt ($_value)';
 }
 
-class Setvcstr implements DbcOp {
-  Setvcstr(DbcExecutor exec)
-      : _location = exec._readInt16(),
-        _value = exec._readString();
-
-  Setvcstr.make(this._location, this._value);
+class PushObjectProperty implements DbcOp {
+  PushObjectProperty(DbcExecutor exec) : _location = exec._readInt16(), _property = exec._readString();
 
   final int _location;
-  final String _value;
+  final String _property;
 
-  static int len(Setvcstr s) {
-    return Dbc.BASE_OPLEN + Dbc.I32_LEN + Dbc.istr_len(s._value);
+  static int len(PushObjectProperty s) {
+    return Dbc.BASE_OPLEN + Dbc.I16_LEN + Dbc.istr_len(s._property);
   }
 
-  static int lenX(String s) {
-    return Dbc.BASE_OPLEN + Dbc.I32_LEN + Dbc.istr_len(s);
+  @override
+  void run(DbcExecutor exec) {
+    final object = exec._vStack[exec.scopeStackOffset + _location];
+    exec._vStack[exec._stackOffset++] = (object as DbcInstance).evalGetProperty(_property);
+  }
+
+  @override
+  String toString() => 'PushObjectProperty (L$_location.$_property)';
+}
+
+class Pop implements DbcOp {
+  Pop(DbcExecutor exec);
+
+  Pop.make();
+
+  static const int LEN = Dbc.BASE_OPLEN;
+
+  @override
+  void run(DbcExecutor exec) {
+    exec._stackOffset--;
+  }
+
+  @override
+  String toString() => 'Pop ()';
+}
+
+class PushConstantString implements DbcOp {
+  PushConstantString(DbcExecutor exec) : _value = exec._readString();
+
+  PushConstantString.make(this._value);
+
+  final String _value;
+
+  static int len(PushConstantString s) {
+    return Dbc.BASE_OPLEN + Dbc.istr_len(s._value);
   }
 
   // Set value at position to constant
   @override
   void run(DbcExecutor exec) {
-    exec._setString(_location, _value);
+    exec._vStack[exec._stackOffset++] = _value;
   }
 
   @override
-  String toString() => "Setvcstr (L$_location = '$_value')";
+  String toString() => "PushConstantString ('$_value')";
 }
 
-class Addvv implements DbcOp {
-  Addvv(DbcExecutor exec)
+class AddAndReturnInts implements DbcOp {
+  AddAndReturnInts(DbcExecutor exec)
       : _location1 = exec._readInt16(),
         _location2 = exec._readInt16();
 
-  Addvv.make(this._location1, this._location2);
+  AddAndReturnInts.make(this._location1, this._location2);
 
   final int _location1;
   final int _location2;
@@ -375,15 +550,15 @@ class Addvv implements DbcOp {
   }
 
   @override
-  String toString() => 'Addvv (L$_location1 + L$_location2 --> \$)';
+  String toString() => 'AddAndReturnInts (L$_location1 + L$_location2 --> \$)';
 }
 
-class Addvcs implements DbcOp {
-  Addvcs(DbcExecutor exec)
+class AddConstantIntInPlace implements DbcOp {
+  AddConstantIntInPlace(DbcExecutor exec)
       : _location = exec._readInt16(),
         _value = exec._readInt32();
 
-  Addvcs.make(this._location, this._value);
+  AddConstantIntInPlace.make(this._location, this._value);
 
   final int _location;
   final int _value;
@@ -391,19 +566,21 @@ class Addvcs implements DbcOp {
   // Add value A + @1, store
   @override
   void run(DbcExecutor exec) {
-    exec._vStack[_location] = (exec._vStack[_location] as int) + _value;
+    final vStack = exec._vStack;
+    final loc = exec.scopeStackOffset + _location;
+    vStack[loc] = (vStack[loc] as int) + _value;
   }
 
   @override
-  String toString() => 'Addvcs (L$_location += $_value)';
+  String toString() => 'AddConstantIntInPlace (L$_location += $_value)';
 }
 
-class Modvcs implements DbcOp {
-  Modvcs(DbcExecutor exec)
+class ModuloConstantIntInPlace implements DbcOp {
+  ModuloConstantIntInPlace(DbcExecutor exec)
       : _location = exec._readInt16(),
         _value = exec._readInt32();
 
-  Modvcs.make(this._location, this._value);
+  ModuloConstantIntInPlace.make(this._location, this._value);
 
   final int _location;
   final int _value;
@@ -411,19 +588,21 @@ class Modvcs implements DbcOp {
   // Add value A + @1, store
   @override
   void run(DbcExecutor exec) {
-    exec._vStack[_location] = (exec._vStack[_location] as int) % _value;
+    final vStack = exec._vStack;
+    final loc = exec.scopeStackOffset + _location;
+    vStack[loc] = (vStack[loc] as int) % _value;
   }
 
   @override
-  String toString() => 'Modvcs (L$_location %= $_value)';
+  String toString() => 'ModuloConstantIntInPlace (L$_location %= $_value)';
 }
 
-class Subvcs implements DbcOp {
-  Subvcs(DbcExecutor exec)
+class SubtractConstantInt implements DbcOp {
+  SubtractConstantInt(DbcExecutor exec)
       : _location = exec._readInt16(),
         _value = exec._readInt32();
 
-  Subvcs.make(this._location, this._value);
+  SubtractConstantInt.make(this._location, this._value);
 
   final int _location;
   final int _value;
@@ -431,19 +610,21 @@ class Subvcs implements DbcOp {
   // Subtract value A - @1, store
   @override
   void run(DbcExecutor exec) {
-    exec._vStack[_location] = (exec._vStack[_location] as int) - _value;
+    final vStack = exec._vStack;
+    final loc = exec.scopeStackOffset + _location;
+    vStack[loc] = (vStack[loc] as int) - _value;
   }
 
   @override
-  String toString() => 'Subvcs (L$_location -= $_value)';
+  String toString() => 'SubtractConstantInt (L$_location -= $_value)';
 }
 
-class Cmpddi implements DbcOp {
-  Cmpddi(DbcExecutor exec)
+class CompareInt implements DbcOp {
+  CompareInt(DbcExecutor exec)
       : _location1 = exec._readInt16(),
         _location2 = exec._readInt16();
 
-  Cmpddi.make(this._location1, this._location2);
+  CompareInt.make(this._location1, this._location2);
 
   final int _location1;
   final int _location2;
@@ -451,19 +632,21 @@ class Cmpddi implements DbcOp {
   // Compare 4-byte
   @override
   void run(DbcExecutor exec) {
-    final a = exec._vStack[_location1] as int;
-    final b = exec._vStack[_location2] as int;
+    final vStack = exec._vStack;
+    final scopeStackOffset = exec.scopeStackOffset;
+    final a = vStack[scopeStackOffset + _location1] as int;
+    final b = vStack[scopeStackOffset + _location2] as int;
     exec._returnValue = a - b;
   }
 
   @override
-  String toString() => 'Cmpddi (L$_location1 <> L$_location2 --> \$)';
+  String toString() => 'CompareInt (L$_location1 <> L$_location2 --> \$)';
 }
 
-class Jnz implements DbcOp {
-  Jnz(DbcExecutor exec) : _offset = exec._readInt32();
+class JumpIfNonZero implements DbcOp {
+  JumpIfNonZero(DbcExecutor exec) : _offset = exec._readInt32();
 
-  Jnz.make(this._offset);
+  JumpIfNonZero.make(this._offset);
 
   final int _offset;
 
@@ -476,15 +659,15 @@ class Jnz implements DbcOp {
   }
 
   @override
-  String toString() => 'Jnz (@$_offset if \$ != 0)';
+  String toString() => 'JumpNonZero (@$_offset if \$ != 0)';
 }
 
-class Setvv implements DbcOp {
-  Setvv(DbcExecutor exec)
+class CopyValue implements DbcOp {
+  CopyValue(DbcExecutor exec)
       : _position1 = exec._readInt16(),
         _position2 = exec._readInt16();
 
-  Setvv.make(this._position1, this._position2);
+  CopyValue.make(this._position1, this._position2);
 
   final int _position1;
   final int _position2;
@@ -494,11 +677,12 @@ class Setvv implements DbcOp {
   // Conditional move
   @override
   void run(DbcExecutor exec) {
-    exec._vStack[_position1] = exec._vStack[_position2];
+    exec._vStack[exec.scopeStackOffset + _position1] =
+        exec._vStack[exec.scopeStackOffset + _position2];
   }
 
   @override
-  String toString() => 'Setvv (L$_position1 <-- L$_position2)';
+  String toString() => 'CopyValue (L$_position1 <-- L$_position2)';
 }
 
 class PushScope implements DbcOp {
@@ -519,7 +703,8 @@ class PushScope implements DbcOp {
 
   @override
   void run(DbcExecutor exec) {
-    exec.scopeStack.add(ScopeFrame());
+    exec.scopeStack.add(ScopeFrame(exec._stackOffset));
+    exec.scopeStackOffset = exec._stackOffset;
   }
 
   @override
@@ -535,7 +720,9 @@ class PopScope implements DbcOp {
 
   @override
   void run(DbcExecutor exec) {
-    exec.scopeStack.removeLast();
+    final lastStack = exec.scopeStack.removeLast();
+    final offset = lastStack.stackOffset;
+    exec.scopeStackOffset = exec._stackOffset = offset;
   }
 
   @override

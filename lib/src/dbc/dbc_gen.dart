@@ -1,4 +1,3 @@
-
 import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/dbc/dbc_executor.dart';
@@ -7,7 +6,7 @@ import 'package:dart_eval/src/dbc/dbc_writer.dart';
 class DbcGen {
   final out = <DbcOp>[];
 
-  void generate(String source) {
+  DbcExecutor generate(String source) {
     final d = parseString(content: source, throwIfDiagnostics: false);
 
     if (d.errors.isNotEmpty) {
@@ -19,275 +18,297 @@ class DbcGen {
 
     final ctx = DbcGenContext(0);
 
+    final topLevelDeclarationsMap = <String, Declaration>{};
+
+    ctx.visibleTypes = _coreDeclarations;
+
     d.unit.declarations.forEach((d) {
-      _parseDeclaration(d, ctx);
+      if (d is NamedCompilationUnitMember) {
+        topLevelDeclarationsMap[d.name.name] = d;
+        if (d is ClassDeclaration) {
+          ctx.visibleTypes[d.name.name] = TypeRef(0, d.name.name);
+        }
+      } else {
+        throw ArgumentError('not a NamedCompilationUnitMember');
+      }
     });
 
-    final ob = DbcWriter().write(out);
+    ctx.topLevelDeclarationsMap = topLevelDeclarationsMap;
 
-    DbcExecutor(ob.buffer.asByteData()).execute();
+    topLevelDeclarationsMap.forEach((key, value) {
+      _parseDeclaration(value, ctx);
+      ctx.scopeFrameOffset = 0;
+      ctx.allocNest = [0];
+    });
+
+    final ob = DbcWriter().write(<int, Map<String, int>>{0: ctx.topLevelDeclarationPositions}, out);
+
+    return DbcExecutor(ob.buffer.asByteData())
+      ..loadProgram();
   }
 
-  void pushOp(DbcGenContext ctx, DbcOp op, int length) {
+  int pushOp(DbcGenContext ctx, DbcOp op, int length) {
     out.add(op);
     ctx.position += length;
+    return out.length - 1;
   }
 
-  void enterScope(DbcGenContext ctx, int offset, String name) {
+  int enterScope(DbcGenContext ctx, AstNode scopeHost, int offset, String name) {
+    final position = out.length;
     var op = PushScope.make(ctx.sourceFile, offset, name);
     pushOp(ctx, op, PushScope.len(op));
-    ctx.enterScope();
+    ctx.locals.add({});
+    return position;
   }
 
   void exitScope(DbcGenContext ctx) {
     pushOp(ctx, PopScope.make(), PopScope.LEN);
-    ctx.exitScope();
+    ctx.locals.removeLast();
   }
 
-  void _parseDeclaration(Declaration d, DbcGenContext ctx) {
+  int? _parseDeclaration(Declaration d, DbcGenContext ctx) {
     if (d is ClassDeclaration) {
       for (final m in d.members) {
-        _parseDeclaration(m, ctx);
+        _parseDeclaration(m, ctx)!;
       }
     } else if (d is MethodDeclaration) {
-      ctx.jumplist['${d.name.name}'] = ctx.position;
       ctx.functionName = d.name.name;
       final b = d.body;
+      int? pos;
       if (b is BlockFunctionBody) {
-        _parseBlock(b.block, ctx, name: d.name.name + '()');
+        pos = _parseBlock(b.block, ctx, name: d.name.name + '()').position;
+      } else {
+        throw ArgumentError('Unknown function body type ${b.runtimeType}');
       }
+
+      if (d.isStatic) {
+        ctx.topLevelDeclarationPositions[d.name.name] = pos;
+      }
+      return pos;
     } else if (d is FunctionDeclaration) {
-      ctx.jumplist['${d.name.name}'] = ctx.position;
       ctx.functionName = d.name.name;
+      ctx.topLevelDeclarationPositions[d.name.name] = enterScope(ctx, d, d.offset, d.name.name + '()');
       final b = d.functionExpression.body;
+      StatementInfo? stInfo;
       if (b is BlockFunctionBody) {
-        _parseBlock(b.block, ctx, name: d.name.name + '()');
+        stInfo = _parseBlock(b.block, ctx, name: d.name.name + '()');
       }
+      if (stInfo == null || !(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
+        pushOp(ctx, Return.make(-1), Return.LEN);
+      }
+      ctx.locals.removeLast();
     }
   }
 
-  void _parseStatement(Statement s, DbcGenContext ctx) {
+  StatementInfo _parseStatement(Statement s, DbcGenContext ctx) {
     if (s is Block) {
-      _parseBlock(s, ctx);
+      return _parseBlock(s, ctx);
     } else if (s is VariableDeclarationStatement) {
       _parseVariableDeclarationList(s.variables, ctx);
+      return StatementInfo(-1);
     } else if (s is ExpressionStatement) {
-      _parseExpression(s.expression, ctx, canReturnValue: true, forSet: false);
+      _parseExpression(s.expression, ctx);
+      return StatementInfo(-1);
     } else if (s is ReturnStatement) {
       _parseReturn(s, ctx);
+      return StatementInfo(-1, willAlwaysReturn: true);
     }
+    return StatementInfo(-1);
   }
 
-  void _parseReturn(ReturnStatement r, DbcGenContext ctx) {
-    int l;
-    if (r.expression == null) {
-      l = ctx.newRegister(Dbc.I32_LEN);
-      pushOp(ctx, Setvc.make(l, 0), Setvc.LEN);
-    } else {
-      l = _parseExpression(r.expression!, ctx).toRegister(false);
+  void _buildClassInstantiator(DbcGenContext ctx, ClassDeclaration cls) {
+    if (cls.isAbstract) {
+      throw ArgumentError('Cannot create instantiator for abstract class');
     }
-    if(ctx.functionName == 'main') {
-      pushOp(ctx, Exit.make(l), Exit.LEN);
-    } else {
-      pushOp(ctx, Setrv.make(l), Setrv.LEN);
-    }
+
+
+    //final j = pushOp(ctx, , length)
   }
 
-  void _parseBlock(Block b, DbcGenContext ctx, {String name = '<block>'}) {
-    enterScope(ctx, b.offset, name);
+  StatementInfo _parseBlock(Block b, DbcGenContext ctx, {String name = '<block>'}) {
+    final position = out.length;
+    ctx.allocNest.add(0);
+
+    var willAlwaysReturn = false;
+    var willAlwaysThrow = false;
+
     for (final s in b.statements) {
-      _parseStatement(s, ctx);
+      final stInfo = _parseStatement(s, ctx);
+
+      if (stInfo.willAlwaysThrow) {
+        willAlwaysThrow = true;
+        break;
+      }
+      if (stInfo.willAlwaysReturn) {
+        willAlwaysReturn = true;
+        break;
+      }
     }
-    exitScope(ctx);
+
+    if (!willAlwaysThrow && !willAlwaysReturn) {
+      final nestCount = ctx.allocNest.removeLast();
+
+      for (var i = 0; i < nestCount; i++) {
+        pushOp(ctx, Pop.make(), Pop.LEN);
+      }
+    }
+
+    return StatementInfo(position, willAlwaysReturn: willAlwaysReturn, willAlwaysThrow: willAlwaysThrow);
+  }
+
+  void _parseReturn(ReturnStatement s, DbcGenContext ctx) {
+    if (s.expression == null) {
+      pushOp(ctx, Return.make(-1), Return.LEN);
+    } else {
+      final value = _parseExpression(s.expression!, ctx);
+      pushOp(ctx, Return.make(value.scopeFrameOffset), Return.LEN);
+    }
+  }
+
+  Variable _parseExpression(Expression e, DbcGenContext ctx) {
+    if (e is Literal) {
+      final literalValue = _parseLiteral(e, ctx);
+      return _pushBuiltinValue(literalValue, ctx);
+    } else if (e is AssignmentExpression) {
+      final L = _parseExpression(e.leftHandSide, ctx);
+      final R = _parseExpression(e.rightHandSide, ctx);
+
+      if (!R.type.isAssignableTo(L.type)) {
+        throw ArgumentError('Syntax error: cannot assign value of type ${R.type} to ${L.type}');
+      }
+
+      pushOp(ctx, CopyValue.make(L.scopeFrameOffset, R.scopeFrameOffset), CopyValue.LEN);
+      return L;
+    } else if (e is Identifier) {
+      return _parseIdentifier(e, ctx);
+    } else if (e is MethodInvocation) {
+      final Variable? L;
+      if (e.target != null) {
+        L = _parseExpression(e.target!, ctx);
+        throw ArgumentError('Cannot method target');
+      }
+      final method = _parseIdentifier(e.methodName, ctx);
+      if (method.methodOffset == null) {
+        throw ArgumentError('Cannot call ${e.methodName.name} as it is not a valid method');
+      }
+      pushOp(ctx, Call.make(method.methodOffset!), Call.LEN);
+      pushOp(ctx, PushReturnValue.make(), PushReturnValue.LEN);
+      ctx.allocNest.last++;
+      return Variable(ctx.scopeFrameOffset++, method.methodReturnType ?? _dynamicType);
+    }
+    throw ArgumentError('Unknown expression type ${e.runtimeType}');
   }
 
   void _parseVariableDeclarationList(VariableDeclarationList l, DbcGenContext ctx) {
+    TypeRef? type;
+    if (l.type != null) {
+      type = getTypeRefFromAnnotation(ctx, l.type!);
+    }
+
     for (final li in l.variables) {
       final init = li.initializer;
-      if(init != null) {
-        final res = _parseExpression(init, ctx, canReturnValue: true);
-        if (res.type == ResultReference.TYPE_VALUE) {
-          final v = res.value!;
-          final _ol = v.toConstantStack(ctx);
-          pushOp(ctx, _ol.op, _ol.length);
-          ctx.scopeAdd(li.name.name, Variable(_ol.register, li.isFinal, v));
-        } else if (res.type == ResultReference.TYPE_VARIABLE) {
-          final r = ctx.newRegister();
-          pushOp(ctx, Setvv.make(r, res.toRegister(false)), Setvv.LEN);
-          ctx.scopeAdd(li.name.name, Variable(r, li.isFinal, res.variable!.value));
-        } else if (res.type == ResultReference.TYPE_REGISTER) {
-          final r = ctx.newRegister();
-          pushOp(ctx, Setvv.make(r, res.register!), Setvv.LEN);
-          ctx.scopeAdd(li.name.name, Variable(r, li.isFinal, null));
+      if (init != null) {
+        final res = _parseExpression(init, ctx);
+        if (ctx.locals.last.containsKey(li.name.name)) {
+          throw ArgumentError('Cannot declare variable ${li.name.name} multiple times in the same scope');
+        }
+        ctx.locals.last[li.name.name] = Variable(res.scopeFrameOffset, type ?? res.type);
+      }
+    }
+  }
+
+  TypeRef getTypeRefFromAnnotation(DbcGenContext ctx, TypeAnnotation typeAnnotation) {
+    if (!(typeAnnotation is NamedType)) {
+      throw ArgumentError('No support for generic function types yet');
+    }
+    return ctx.visibleTypes[typeAnnotation.name.name]!;
+  }
+
+  TypeRef getTypeRef(DbcGenContext ctx, String name) {
+    return ctx.visibleTypes[name]!;
+  }
+
+  Variable _pushBuiltinValue(BuiltinValue value, DbcGenContext ctx) {
+    if (value.type == BuiltinValueType.intType) {
+      pushOp(ctx, PushConstantInt.make(value.intval!), PushConstantInt.LEN);
+      ctx.allocNest.last++;
+      return Variable(ctx.scopeFrameOffset++, _intType);
+    } else if (value.type == BuiltinValueType.stringType) {
+      final op = PushConstantString.make(value.stringval!);
+      pushOp(ctx, op, PushConstantString.len(op));
+      ctx.allocNest.last++;
+      return Variable(ctx.scopeFrameOffset++, _stringType);;
+    } else {
+      throw ArgumentError('Cannot push unknown builtin value type ${value.type}');
+    }
+  }
+
+  BuiltinValue _parseLiteral(Literal l, DbcGenContext ctx) {
+    if (l is IntegerLiteral) {
+      return BuiltinValue(intval: l.value);
+    } else if (l is SimpleStringLiteral) {
+      return BuiltinValue(stringval: l.stringValue);
+    }
+    throw ArgumentError('Unknown literal type ${l.runtimeType}');
+  }
+
+  Variable _parseIdentifier(Identifier id, DbcGenContext ctx) {
+    if (id is SimpleIdentifier) {
+      for (var i = ctx.locals.length - 1; i >= 0; i--) {
+        if (ctx.locals[i].containsKey(id.name)) {
+          return ctx.locals[i][id.name]!;
         }
       }
+      if (ctx.topLevelDeclarationPositions.containsKey(id.name)) {
+        final declaration = ctx.topLevelDeclarationsMap[id.name];
+        if (!(declaration is FunctionDeclaration)) {
+          throw ArgumentError('No support for class identifiers');
+        }
+        TypeRef? returnType;
+        if (declaration.returnType != null) {
+          returnType = getTypeRefFromAnnotation(ctx, declaration.returnType!);
+        };
+        return Variable(
+            -1, _functionType, methodOffset: ctx.topLevelDeclarationPositions[id.name], methodReturnType: returnType);
+      }
     }
+    throw ArgumentError('Unknown identifier ${id.runtimeType}');
   }
-
-  ResultReference _parseExpression(Expression e, DbcGenContext ctx, {bool canReturnValue = false, bool forSet = false}) {
-
-    if (e is AssignmentExpression) {
-      final R = _parseExpression(e.rightHandSide, ctx, canReturnValue: true, forSet: false);
-      final L = _parseExpression(e.leftHandSide, ctx, canReturnValue: false, forSet: true);
-
-      if (L.type != ResultReference.TYPE_VARIABLE && L.type != ResultReference.TYPE_REGISTER) {
-        throw ParseError('Assignment: LHS is not a register');
-      }
-
-      if (R.type == ResultReference.TYPE_VALUE) {
-        final _ol = R.value!.toConstantStack(ctx, register: L.register);
-        pushOp(ctx, _ol.op, _ol.length);
-      } else if (R.type == ResultReference.TYPE_VARIABLE || R.type == ResultReference.TYPE_REGISTER) {
-        pushOp(ctx, Setvv.make(L.toRegister(true), R.toRegister(false)), Setvv.LEN);
-      } else {
-        throw ParseError('Cannot assign: unknown reference type');
-      }
-      return L;
-    } else if (e is Literal) {
-      return _parseLiteral(e, ctx, canReturnValue: canReturnValue, forSet: forSet);
-    } else if (e is Identifier) {
-      return _parseIdentifier(e, ctx, canReturnValue: canReturnValue, forSet: forSet);
-    }
-    throw ParseError('Unknown expression ${e.runtimeType}');
-  }
-
-  ResultReference _parseLiteral(Literal e, DbcGenContext ctx, {bool canReturnValue = false, bool forSet = false}) {
-    if (e is IntegerLiteral) {
-      final v = e.value;
-      if (v == null) {
-        throw ParseError('Not a valid int value');
-      }
-      if (canReturnValue) {
-        return BuiltinValue(intval: v).toResultRef();
-      }
-      final l = ctx.newRegister(Dbc.I32_LEN);
-      pushOp(ctx, Setvc.make(l, v), Setvc.LEN);
-      return ResultReference(ResultReference.TYPE_VARIABLE, register: l);
-    } else if (e is StringLiteral) {
-      final v = e.stringValue;
-      if (v == null) {
-        throw ParseError('Not a valid string value');
-      }
-      if (canReturnValue) {
-        return BuiltinValue(stringval: v).toResultRef();
-      }
-      final len = Dbc.istr_len(v);
-      final l = ctx.newRegister(len);
-      final op = Setvcstr.make(l, v);
-      pushOp(ctx, op, Setvcstr.len(op));
-
-      return ResultReference(ResultReference.TYPE_REGISTER, register: l);
-    }
-    throw ParseError('Unknown literal ${e.runtimeType}');
-  }
-
-  ResultReference _parseIdentifier(Identifier id, DbcGenContext ctx, {bool canReturnValue = false, bool forSet = false}) {
-    if (id is SimpleIdentifier) {
-      final v = ctx.scopeLookup(id.name);
-      if (v == null) {
-        throw ParseError('No variable in scope $v');
-      }
-      if(v.isFinal && forSet) {
-        throw ParseError('Cannot assign a value to a final variable ${id.name}');
-      }
-      if (canReturnValue && v.isFinal) {
-        return ResultReference(ResultReference.TYPE_VALUE, value: v.value);
-      }
-
-      return ResultReference(ResultReference.TYPE_VARIABLE, variable: v);
-    }
-    throw ParseError('Unknown identifier ${id.runtimeType}');
-  }
-}
-
-class ResultReference {
-  ResultReference(this.type, {this.variable, this.value, this.register});
-
-  static const int TYPE_VARIABLE = 0;
-  static const int TYPE_OBJECT_PROPERTYREF = 1;
-  static const int TYPE_VALUE = 2;
-  static const int TYPE_REGISTER = 3;
-
-  final int type;
-  final Variable? variable;
-  final BuiltinValue? value;
-  final int? register;
-
-  int toRegister(bool set) {
-    if (type == TYPE_REGISTER) {
-      return register!;
-    } else if (type == TYPE_VARIABLE) {
-      return set ? variable!.set() : variable!.get();
-    }
-    throw ParseError('Cannot convert reference to register');
-  }
-}
-
-class ParseError extends ArgumentError {
-  ParseError(String message) : super(message);
 }
 
 class DbcGenContext {
   DbcGenContext(this.sourceFile);
 
   int position = 0;
+  int scopeFrameOffset = 0;
   String functionName = '';
-  List<Map<String, Variable>> scopeStack = [];
-  int registerPos = 0;
-  Map<String, int> jumplist = {};
+  List<List<AstNode>> scopeNodes = [];
+  List<Map<String, Variable>> locals = [];
+  Map<String, Declaration> topLevelDeclarationsMap = {};
+  Map<String, TypeRef> visibleTypes = {};
+  Map<String, int> topLevelDeclarationPositions = {};
+  List<int> allocNest = [0];
   int sourceFile;
-
-  Variable? scopeLookup(String name) {
-    for(var frame = scopeStack.length; frame > 0; frame--) {
-      if (scopeStack[frame - 1].containsKey(name)) {
-        return scopeStack[frame - 1][name];
-      }
-    }
-  }
-
-  void enterScope() {
-    scopeStack.add(<String, Variable>{});
-  }
-
-  void exitScope() {
-    scopeStack.removeLast();
-  }
-
-  void scopeAdd(String name, Variable v) {
-    scopeStack.last[name] = v;
-  }
-
-  int newRegister([int len = 0]) {
-    final r = registerPos;
-    registerPos += 1;
-    return r;
-  }
 }
 
 class Variable {
-  Variable(this._register, this.isFinal, this.value) : _gets = 0, _sets = 0;
+  Variable(this.scopeFrameOffset, this.type, {this.methodOffset, this.methodReturnType});
 
-  final int _register;
+  final int scopeFrameOffset;
+  final TypeRef type;
+  final int? methodOffset;
+  final TypeRef? methodReturnType;
+}
 
-  bool isFinal;
-  BuiltinValue? value;
+class StatementInfo {
+  StatementInfo(this.position, {this.willAlwaysReturn = false, this.willAlwaysThrow = false});
 
-  int _gets;
-  int _sets;
-
-  int get() {
-    _gets++;
-    return _register;
-  }
-
-  int set() {
-    _sets++;
-    return _register;
-  }
+  final int position;
+  final bool willAlwaysReturn;
+  final bool willAlwaysThrow;
 }
 
 class BuiltinValue {
-
   BuiltinValue({this.intval, this.doubleval, this.stringval}) {
     if (intval != null) {
       type = BuiltinValueType.intType;
@@ -312,36 +333,83 @@ class BuiltinValue {
         return 1 + stringval!.length;
     }
   }
+}
 
-  ResultReference toResultRef() {
-    return ResultReference(ResultReference.TYPE_VALUE, value: this);
-  }
+enum BuiltinValueType { intType, stringType, doubleType }
 
-  OpAndLen toConstantStack(DbcGenContext ctx, {int? register}) {
-    switch (type) {
-      case BuiltinValueType.intType:
-        final reg = register ?? ctx.newRegister(Setvc.LEN);
-        return OpAndLen(Setvc.make(reg, intval!), Setvc.LEN, reg);
-      case BuiltinValueType.stringType:
-        final len = Setvcstr.lenX(stringval!);
-        final reg = register ?? ctx.newRegister(len);
-        return OpAndLen(Setvcstr.make(reg, stringval!), len, reg);
-      default:
-        throw ParseError('cannot generate constant for $type');
+class TypeRef {
+  const TypeRef(this.file, this.name,
+      {this.extendsType, this.implementsType = const [], this.withType = const [], this.genericParams = const [
+      ], this.specifiedTypeArgs = const []});
+
+  final int file;
+  final String name;
+  final TypeRef? extendsType;
+  final List<TypeRef> implementsType;
+  final List<TypeRef> withType;
+  final List<GenericParam> genericParams;
+  final List<TypeRef> specifiedTypeArgs;
+
+  List<TypeRef> get allSupertypes => [if (extendsType != null) extendsType!, ...implementsType, ...withType];
+
+  bool isAssignableTo(TypeRef slot, {List<TypeRef>? overrideGenerics}) {
+    final generics = overrideGenerics ?? specifiedTypeArgs;
+
+    if (this == slot) {
+      for (var i = 0; i < generics.length; i++) {
+        if (slot.specifiedTypeArgs.length >= i - 1) {
+          if (!generics[i].isAssignableTo(slot.specifiedTypeArgs[i])) {
+            return false;
+          }
+        }
+      }
+      return true;
+    };
+
+    for (final type in allSupertypes) {
+      if (type.isAssignableTo(slot, overrideGenerics: generics)) {
+        return true;
+      };
     }
+    return false;
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+          other is TypeRef && runtimeType == other.runtimeType && file == other.file && name == other.name;
+
+  @override
+  int get hashCode => file.hashCode ^ name.hashCode;
+
+  @override
+  String toString() {
+    return name;
   }
 }
 
-class OpAndLen {
-  const OpAndLen(this.op, this.length, this.register);
+class GenericParam {
+  const GenericParam(this.name, this.extendsType);
 
-  final DbcOp op;
-  final int length;
-  final int register;
+  final String name;
+  final TypeRef? extendsType;
 }
 
-enum BuiltinValueType {
-  intType,
-  stringType,
-  doubleType
-}
+const int _dartCoreFile = -1;
+const TypeRef _dynamicType = TypeRef(_dartCoreFile, 'dynamic');
+const TypeRef _objectType = TypeRef(_dartCoreFile, 'Object', extendsType: _dynamicType);
+const TypeRef _numType = TypeRef(_dartCoreFile, 'num', extendsType: _objectType);
+const TypeRef _intType = TypeRef(_dartCoreFile, 'int', extendsType: _numType);
+const TypeRef _doubleType = TypeRef(_dartCoreFile, 'double', extendsType: _numType);
+const TypeRef _stringType = TypeRef(_dartCoreFile, 'String', extendsType: _objectType);
+const TypeRef _mapType = TypeRef(_dartCoreFile, 'Map', extendsType: _objectType);
+const TypeRef _listType = TypeRef(_dartCoreFile, 'List', extendsType: _objectType);
+const TypeRef _functionType = TypeRef(_dartCoreFile, 'Function', extendsType: _objectType);
+
+const Map<String, TypeRef> _coreDeclarations = {
+  'String': _stringType,
+  'int': _intType,
+  'double': _doubleType,
+  'Map': _mapType,
+  'List': _listType
+};
