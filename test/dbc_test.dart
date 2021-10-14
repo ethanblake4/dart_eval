@@ -24,5 +24,21 @@ void main() {
 
       expect(3, exec.executeNamed(0, 'main'));
     });
+
+    test('Simple function call', () {
+      final exec = gen.generate('''
+     
+      int main() {
+        var i = x();
+        return i;
+      }
+      int x() {
+        return 7;
+      }
+     
+      ''');
+
+      expect(7, exec.executeNamed(0, 'main'));
+    });
   });
 }
