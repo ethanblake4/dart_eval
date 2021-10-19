@@ -11,7 +11,7 @@ void main() {
     });
 
     test('Local variable assignment with ints', () {
-      final exec = gen.generate('''
+      final exec = gen.generate({'dbc_test': {'main.dart': '''
       int main() {
         var i = 3;
         {
@@ -20,13 +20,13 @@ void main() {
           return k;
         }
       }
-      ''');
+      '''}});
 
       expect(3, exec.executeNamed(0, 'main'));
     });
 
     test('Simple function call', () {
-      final exec = gen.generate('''
+      final exec = gen.generate({'dbc_test': {'main.dart': '''
      
       int main() {
         var i = x();
@@ -36,7 +36,7 @@ void main() {
         return 7;
       }
      
-      ''');
+      '''}});
 
       expect(7, exec.executeNamed(0, 'main'));
     });

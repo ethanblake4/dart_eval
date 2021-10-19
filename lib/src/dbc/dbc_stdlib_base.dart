@@ -27,6 +27,82 @@ class DbcObject implements DbcInstance {
   }
 }
 
+class DbcNum<T extends num> implements DbcInstance {
+  DbcNum(this.evalValue);
+
+  @override
+  T evalValue;
+
+  @override
+  DbcValueInterface? evalGetProperty(String identifier) {
+    switch(identifier) {
+      case '+':
+        return __plus;
+      case '-':
+        return __minus;
+    }
+    return evalSuperclass.evalGetProperty(identifier);
+  }
+
+  @override
+  void evalSetProperty(String identifier, DbcValueInterface value) {
+
+  }
+
+  @override
+  DbcInstance evalSuperclass = DbcObject();
+
+  @override
+  num get reifiedValue => evalValue;
+
+  static final DbcFunctionImpl __plus = DbcFunctionImpl(_plus);
+  static DbcValueInterface? _plus(DbcVmInterface vm, DbcValueInterface? target,
+      List<DbcValueInterface?> positionalArgs, Map<String, DbcValueInterface?> namedArgs) {
+    final addend = positionalArgs[0];
+
+    if (target is DbcInt && addend is DbcInt) {
+      return DbcInt(target.evalValue + addend.evalValue);
+    }
+
+    throw UnimplementedError();
+  }
+
+  static final DbcFunctionImpl __minus = DbcFunctionImpl(_minus);
+  static DbcValueInterface? _minus(DbcVmInterface vm, DbcValueInterface? target,
+      List<DbcValueInterface?> positionalArgs, Map<String, DbcValueInterface?> namedArgs) {
+    final addend = positionalArgs[0];
+
+    if (target is DbcInt && addend is DbcInt) {
+      return DbcInt(target.evalValue - addend.evalValue);
+    }
+
+    throw UnimplementedError();
+  }
+
+
+}
+
+class DbcInt extends DbcNum<int> {
+
+  DbcInt(int evalValue) : super(evalValue);
+
+  @override
+  DbcValueInterface? evalGetProperty(String identifier) {
+    return super.evalGetProperty(identifier);
+  }
+
+  @override
+  void evalSetProperty(String identifier, DbcValueInterface value) {
+    return super.evalSetProperty(identifier, value);
+  }
+
+  @override
+  DbcInstance get evalSuperclass => throw UnimplementedError();
+
+  @override
+  int get reifiedValue => evalValue;
+}
+
 class DbcInvocation implements DbcInstance {
 
   DbcInvocation.getter(this.positionalArguments);

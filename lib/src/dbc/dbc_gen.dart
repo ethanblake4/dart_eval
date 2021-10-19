@@ -1,8 +1,8 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/token.dart';
 import 'package:dart_eval/src/dbc/dbc_executor.dart';
 import 'package:dart_eval/src/dbc/dbc_writer.dart';
 
@@ -144,6 +144,9 @@ class DbcGen {
             throw CompileError('Not a NamedCompilationUnitMember');
           }
         });
+
+        ctx.visibleDeclarations[myIndex]!.addAll(topLevelDeclarationsMap[myIndex]!
+            .map((key, value) => MapEntry(key, DeclarationOrPrefix(myIndex!, declaration: value))));
       });
     });
 
@@ -198,7 +201,7 @@ class DbcGen {
 
     final ob = DbcWriter().write(ctx.topLevelDeclarationPositions, out);
 
-    return DbcExecutor(ob.buffer.asByteData())..loadProgram();
+    return DbcExecutor(ob.buffer.asByteData());
   }
 
   CompilationUnit _parse(String source) {
@@ -240,8 +243,11 @@ class DbcGen {
       ctx.functionName = d.name.name;
       final b = d.body;
       int? pos;
+
       if (b is BlockFunctionBody) {
-        pos = _parseBlock(b.block, ctx, name: d.name.name + '()').position;
+        pos = _parseBlock(b.block, _returnTypeFromAnnotation(ctx, ctx.library, d.returnType), ctx,
+                name: d.name.name + '()')
+            .position;
       } else {
         throw CompileError('Unknown function body type ${b.runtimeType}');
       }
@@ -256,7 +262,8 @@ class DbcGen {
       final b = d.functionExpression.body;
       StatementInfo? stInfo;
       if (b is BlockFunctionBody) {
-        stInfo = _parseBlock(b.block, ctx, name: d.name.name + '()');
+        stInfo = _parseBlock(b.block, _returnTypeFromAnnotation(ctx, ctx.library, d.returnType), ctx,
+            name: d.name.name + '()');
       }
       if (stInfo == null || !(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
         pushOp(ctx, Return.make(-1), Return.LEN);
@@ -265,9 +272,9 @@ class DbcGen {
     }
   }
 
-  StatementInfo _parseStatement(Statement s, DbcGenContext ctx) {
+  StatementInfo _parseStatement(Statement s, AlwaysReturnType? expectedReturnType, DbcGenContext ctx) {
     if (s is Block) {
-      return _parseBlock(s, ctx);
+      return _parseBlock(s, expectedReturnType, ctx);
     } else if (s is VariableDeclarationStatement) {
       _parseVariableDeclarationList(s.variables, ctx);
       return StatementInfo(-1);
@@ -275,7 +282,7 @@ class DbcGen {
       _parseExpression(s.expression, ctx);
       return StatementInfo(-1);
     } else if (s is ReturnStatement) {
-      _parseReturn(s, ctx);
+      _parseReturn(s, expectedReturnType, ctx);
       return StatementInfo(-1, willAlwaysReturn: true);
     }
     return StatementInfo(-1);
@@ -289,7 +296,8 @@ class DbcGen {
     //final j = pushOp(ctx, , length)
   }
 
-  StatementInfo _parseBlock(Block b, DbcGenContext ctx, {String name = '<block>'}) {
+  StatementInfo _parseBlock(Block b, AlwaysReturnType? expectedReturnType, DbcGenContext ctx,
+      {String name = '<block>'}) {
     final position = out.length;
     ctx.allocNest.add(0);
 
@@ -297,7 +305,7 @@ class DbcGen {
     var willAlwaysThrow = false;
 
     for (final s in b.statements) {
-      final stInfo = _parseStatement(s, ctx);
+      final stInfo = _parseStatement(s, expectedReturnType, ctx);
 
       if (stInfo.willAlwaysThrow) {
         willAlwaysThrow = true;
@@ -320,11 +328,22 @@ class DbcGen {
     return StatementInfo(position, willAlwaysReturn: willAlwaysReturn, willAlwaysThrow: willAlwaysThrow);
   }
 
-  void _parseReturn(ReturnStatement s, DbcGenContext ctx) {
+  void _parseReturn(ReturnStatement s, AlwaysReturnType? expectedReturnType, DbcGenContext ctx) {
     if (s.expression == null) {
       pushOp(ctx, Return.make(-1), Return.LEN);
     } else {
-      final value = _parseExpression(s.expression!, ctx);
+      final expected = expectedReturnType?.type ?? _dynamicType;
+      var value = _parseExpression(s.expression!, ctx);
+      if (!value.type.isAssignableTo(expected)) {
+        throw CompileError('Cannot return ${value.type} (expected: $expected)');
+      }
+      if (_unboxedAcrossFunctionBoundaries.contains(expected)) {
+        if (value.boxed) {
+          value = _unbox(ctx, value);
+        }
+      } else if (!value.boxed) {
+        value = _box(ctx, value);
+      }
       pushOp(ctx, Return.make(value.scopeFrameOffset), Return.LEN);
     }
   }
@@ -347,37 +366,155 @@ class DbcGen {
       return _parseIdentifier(e, ctx);
     } else if (e is MethodInvocation) {
       return _parseMethodInvocation(ctx, e);
+    } else if (e is BinaryExpression) {
+      return _parseBinaryExpression(ctx, e);
     }
+
     throw CompileError('Unknown expression type ${e.runtimeType}');
   }
 
+  Variable _parseBinaryExpression(DbcGenContext ctx, BinaryExpression e) {
+    var L = _parseExpression(e.leftOperand, ctx);
+    var R = _parseExpression(e.rightOperand, ctx);
+
+    final supportedIntIntrinsicOps = {TokenType.PLUS};
+
+    if (L.type == _intType && supportedIntIntrinsicOps.contains(e.operator.type)) {
+      if (L.boxed) {
+        L = _unbox(ctx, L);
+      }
+      if (R.boxed) {
+        R = _unbox(ctx, R);
+      }
+      if (e.operator.type == TokenType.PLUS) {
+        // Integer intrinsic add
+        pushOp(ctx, AddInts.make(L.scopeFrameOffset, R.scopeFrameOffset), AddInts.LEN);
+        ctx.allocNest.last++;
+        return Variable(ctx.scopeFrameOffset++, _intType, null, boxed: false);
+      }
+      throw CompileError('Internal error: Invalid intrinsic int op ${e.operator.type}');
+    }
+
+    if (!L.boxed) {
+      L = _box(ctx, L);
+    }
+
+    if (!R.boxed) {
+      R = _box(ctx, R);
+    }
+
+    final opMap = {TokenType.PLUS: '+', TokenType.MINUS: '-', TokenType.SLASH: '/', TokenType.STAR: '*'};
+
+    var method = opMap[e.operator.type] ?? (throw CompileError('Unknown binary operator ${e.operator.type}'));
+
+    final addendOp = PushArg.make(R.scopeFrameOffset);
+    pushOp(ctx, addendOp, PushArg.LEN);
+
+    final op = InvokeDynamic.make(L.scopeFrameOffset, method);
+    pushOp(ctx, op, InvokeDynamic.len(op));
+
+    pushOp(ctx, PushReturnValue.make(), PushReturnValue.LEN);
+    ctx.allocNest.last++;
+
+    final returnType = _queryMethodReturnType(ctx, L.type, method, [R.type], {});
+
+    return Variable(ctx.scopeFrameOffset++, returnType?.type ?? _dynamicType, returnType?.nullable ?? true, boxed: true)
+      ..frameIndex = ctx.locals.length - 1;
+  }
+
+  Variable _unbox(DbcGenContext ctx, Variable V) {
+    assert(V.boxed);
+    pushOp(ctx, Unbox.make(V.scopeFrameOffset), Unbox.LEN);
+    ctx.allocNest.last++;
+    return ctx.locals[V.frameIndex!][V.name!] = Variable(ctx.scopeFrameOffset++, V.type, V.nullable, boxed: false)
+      ..name = V.name
+      ..frameIndex = V.frameIndex;
+  }
+
+  Variable _box(DbcGenContext ctx, Variable V) {
+    assert(!V.boxed);
+    if (V.type != _intType) {
+      throw CompileError('Can only box ints for now');
+    }
+    pushOp(ctx, BoxInt.make(V.scopeFrameOffset), BoxInt.LEN);
+    ctx.allocNest.last++;
+    final V2 = Variable(ctx.scopeFrameOffset++, _intType, V.nullable, boxed: true)
+      ..name = V.name
+      ..frameIndex = V.frameIndex;
+    if (V.name != null) {
+      ctx.locals[V.frameIndex!][V.name!] = V2;
+    }
+    return V2;
+  }
+
   Variable _parseMethodInvocation(DbcGenContext ctx, MethodInvocation e) {
-    final Variable? L;
+    Variable? L;
     if (e.target != null) {
       L = _parseExpression(e.target!, ctx);
-      throw CompileError('Cannot method target');
     }
-    final method = _parseIdentifier(e.methodName, ctx);
-    if (method.methodOffset == null) {
-      throw CompileError('Cannot call ${e.methodName.name} as it is not a valid method');
-    }
-    final offset = method.methodOffset!;
-    final loc = pushOp(ctx, Call.make(offset.offset ?? -1), Call.LEN);
 
-    if (offset.offset == null) {
-      ctx.deferredOffsets[loc] = offset;
+    final _args = <Variable>[];
+    final _namedArgs = <String, Variable>{};
+    var hasEncounteredNamedArg = false;
+
+    for (final arg in e.argumentList.arguments) {
+      if (arg is NamedExpression) {
+        _namedArgs[arg.name.label.name] = _parseExpression(arg.expression, ctx);
+        hasEncounteredNamedArg = true;
+      } else {
+        if (hasEncounteredNamedArg) {
+          throw CompileError('Positional arguments cannot occur after named arguments');
+        }
+        _args.add(_parseExpression(arg, ctx));
+      }
+    }
+
+    for (final arg in _args) {
+      final argOp = PushArg.make(arg.scopeFrameOffset);
+      pushOp(ctx, argOp, PushArg.LEN);
+    }
+
+    for (final arg in _namedArgs.entries) {
+      final argOp = PushNamedArg.make(arg.value.scopeFrameOffset, arg.key);
+      pushOp(ctx, argOp, PushNamedArg.len(argOp));
+    }
+
+    AlwaysReturnType? mReturnType;
+    final _argTypes = _args.map((e) => e.type).toList();
+    final _namedArgTypes = _namedArgs.map((key, value) => MapEntry(key, value.type));
+
+    if (L != null) {
+      final op = InvokeDynamic.make(L.scopeFrameOffset, e.methodName.name);
+      pushOp(ctx, op, InvokeDynamic.len(op));
+
+      mReturnType = _queryMethodReturnType(ctx, L.type, e.methodName.name, _argTypes, _namedArgTypes);
+    } else {
+      final method = _parseIdentifier(e.methodName, ctx);
+      if (method.methodOffset == null) {
+        throw CompileError('Cannot call ${e.methodName.name} as it is not a valid method');
+      }
+      final offset = method.methodOffset!;
+      final loc = pushOp(ctx, Call.make(offset.offset ?? -1), Call.LEN);
+      if (offset.offset == null) {
+        ctx.deferredOffsets[loc] = offset;
+      }
+      mReturnType = _returnTypeToAlwaysReturnType(
+          method.methodReturnType ?? AlwaysReturnType(_dynamicType, true), _argTypes, _namedArgTypes);
     }
 
     pushOp(ctx, PushReturnValue.make(), PushReturnValue.LEN);
     ctx.allocNest.last++;
-    return Variable(ctx.scopeFrameOffset++, method.methodReturnType ?? _dynamicType);
+
+    return Variable(ctx.scopeFrameOffset++, mReturnType?.type ?? _dynamicType, mReturnType?.nullable ?? true,
+        boxed: L == null && !_unboxedAcrossFunctionBoundaries.contains(mReturnType?.type));
   }
 
   void _parseVariableDeclarationList(VariableDeclarationList l, DbcGenContext ctx) {
     TypeRef? type;
     if (l.type != null) {
-      type = getTypeRefFromAnnotation(ctx, l.type!);
+      type = getTypeRefFromAnnotation(ctx, ctx.library, l.type!);
     }
+    final nullable = l.type?.question != null;
 
     for (final li in l.variables) {
       final init = li.initializer;
@@ -386,33 +523,79 @@ class DbcGen {
         if (ctx.locals.last.containsKey(li.name.name)) {
           throw CompileError('Cannot declare variable ${li.name.name} multiple times in the same scope');
         }
-        ctx.locals.last[li.name.name] = Variable(res.scopeFrameOffset, type ?? res.type);
+        ctx.locals.last[li.name.name] = Variable(res.scopeFrameOffset, type ?? res.type, nullable, boxed: res.boxed)
+          ..name = li.name.name
+          ..frameIndex = ctx.locals.length - 1;
       }
     }
   }
 
-  TypeRef getTypeRefFromAnnotation(DbcGenContext ctx, TypeAnnotation typeAnnotation) {
+  TypeRef getTypeRefFromAnnotation(DbcGenContext ctx, int library, TypeAnnotation typeAnnotation) {
     if (!(typeAnnotation is NamedType)) {
       throw CompileError('No support for generic function types yet');
     }
-    return ctx.visibleTypes[ctx.library]![typeAnnotation.name.name]!;
+    return ctx.visibleTypes[library]![typeAnnotation.name.name]!;
   }
 
   TypeRef getTypeRef(DbcGenContext ctx, String name) {
     return ctx.visibleTypes[ctx.library]![name]!;
   }
 
+  AlwaysReturnType _returnTypeFromAnnotation(DbcGenContext ctx, int library, TypeAnnotation? typeAnnotation) {
+    final AlwaysReturnType returnType;
+    final rt = typeAnnotation;
+    if (rt != null) {
+      return AlwaysReturnType(getTypeRefFromAnnotation(ctx, ctx.library, rt), rt.question != null);
+    } else {
+      return AlwaysReturnType(_dynamicType, true);
+    }
+  }
+
+  AlwaysReturnType? _queryMethodReturnType(
+      DbcGenContext ctx, TypeRef type, String method, List<TypeRef?> argTypes, Map<String, TypeRef?> namedArgTypes) {
+    if (_knownMethods[type] != null && _knownMethods[type]!.containsKey(method)) {
+      final knownMethod = _knownMethods[type]![method]!;
+      final returnType = knownMethod.returnType;
+      if (returnType == null) {
+        return null;
+      }
+      return _returnTypeToAlwaysReturnType(returnType, argTypes, namedArgTypes);
+    }
+
+    throw UnimplementedError();
+  }
+
+  AlwaysReturnType? _returnTypeToAlwaysReturnType(
+      ReturnType returnType, List<TypeRef?> argTypes, Map<String, TypeRef?> namedArgTypes) {
+    if (returnType is ParameterTypeDependentReturnType) {
+      final paramIndex = returnType.paramIndex;
+      final paramName = returnType.paramName;
+
+      AlwaysReturnType? resolvedType;
+      if (paramIndex != null) {
+        resolvedType = returnType.map[argTypes[paramIndex]];
+      } else if (paramName != null) {
+        resolvedType = returnType.map[namedArgTypes[paramName]];
+      }
+
+      if (resolvedType == null) {
+        return returnType.fallback;
+      }
+      return resolvedType;
+    }
+    return returnType as AlwaysReturnType;
+  }
+
   Variable _pushBuiltinValue(BuiltinValue value, DbcGenContext ctx) {
     if (value.type == BuiltinValueType.intType) {
       pushOp(ctx, PushConstantInt.make(value.intval!), PushConstantInt.LEN);
       ctx.allocNest.last++;
-      return Variable(ctx.scopeFrameOffset++, _intType);
+      return Variable(ctx.scopeFrameOffset++, _intType, null, boxed: false);
     } else if (value.type == BuiltinValueType.stringType) {
       final op = PushConstantString.make(value.stringval!);
       pushOp(ctx, op, PushConstantString.len(op));
       ctx.allocNest.last++;
-      return Variable(ctx.scopeFrameOffset++, _stringType);
-      ;
+      return Variable(ctx.scopeFrameOffset++, _stringType, null, boxed: false);
     } else {
       throw CompileError('Cannot push unknown builtin value type ${value.type}');
     }
@@ -431,10 +614,11 @@ class DbcGen {
     if (id is SimpleIdentifier) {
       for (var i = ctx.locals.length - 1; i >= 0; i--) {
         if (ctx.locals[i].containsKey(id.name)) {
-          return ctx.locals[i][id.name]!;
+          return ctx.locals[i][id.name]!..frameIndex = i;
         }
       }
 
+      //print(ctx.visibleDeclarations);
       final declaration = ctx.visibleDeclarations[ctx.library]![id.name]!;
       final decl = declaration.declaration!;
 
@@ -443,10 +627,11 @@ class DbcGen {
       }
 
       TypeRef? returnType;
+      var nullable = true;
       if (decl.returnType != null) {
-        returnType = getTypeRefFromAnnotation(ctx, decl.returnType!);
+        returnType = getTypeRefFromAnnotation(ctx, declaration.sourceLib, decl.returnType!);
+        nullable = decl.returnType!.question != null;
       }
-      ;
 
       final DeferredOrOffset offset;
       if (ctx.topLevelDeclarationPositions[declaration.sourceLib]?.containsKey(id.name) ?? false) {
@@ -456,7 +641,8 @@ class DbcGen {
         offset = DeferredOrOffset(file: declaration.sourceLib, name: id.name);
       }
 
-      return Variable(-1, _functionType, methodOffset: offset, methodReturnType: returnType);
+      return Variable(-1, _functionType, null,
+          methodOffset: offset, methodReturnType: AlwaysReturnType(returnType, nullable));
     }
     throw CompileError('Unknown identifier ${id.runtimeType}');
   }
@@ -489,12 +675,18 @@ class DeclarationOrPrefix {
 }
 
 class Variable {
-  Variable(this.scopeFrameOffset, this.type, {this.methodOffset, this.methodReturnType});
+  Variable(this.scopeFrameOffset, this.type, this.nullable,
+      {this.methodOffset, this.methodReturnType, this.boxed = true});
 
   final int scopeFrameOffset;
   final TypeRef type;
   final DeferredOrOffset? methodOffset;
-  final TypeRef? methodReturnType;
+  final ReturnType? methodReturnType;
+  final bool boxed;
+
+  bool? nullable;
+  String? name;
+  int? frameIndex;
 }
 
 class StatementInfo {
@@ -578,13 +770,11 @@ class TypeRef {
       }
       return true;
     }
-    ;
 
     for (final type in allSupertypes) {
       if (type.isAssignableTo(slot, overrideGenerics: generics)) {
         return true;
       }
-      ;
     }
     return false;
   }
@@ -603,6 +793,41 @@ class TypeRef {
   }
 }
 
+class KnownMethod {
+  const KnownMethod(this.returnType, this.args, this.namedArgs);
+
+  final ReturnType? returnType;
+  final List<KnownMethodArg> args;
+  final Map<String, KnownMethodArg> namedArgs;
+}
+
+class KnownMethodArg {
+  const KnownMethodArg(this.name, this.type, this.optional, this.nullable);
+
+  final String name;
+  final TypeRef? type;
+  final bool optional;
+  final bool nullable;
+}
+
+class ReturnType {}
+
+class AlwaysReturnType implements ReturnType {
+  const AlwaysReturnType(this.type, this.nullable);
+
+  final TypeRef? type;
+  final bool nullable;
+}
+
+class ParameterTypeDependentReturnType implements ReturnType {
+  const ParameterTypeDependentReturnType(this.map, {this.paramIndex, this.paramName, this.fallback});
+
+  final int? paramIndex;
+  final String? paramName;
+  final Map<TypeRef, AlwaysReturnType> map;
+  final AlwaysReturnType? fallback;
+}
+
 class GenericParam {
   const GenericParam(this.name, this.extendsType);
 
@@ -614,14 +839,14 @@ const int _dartCoreFile = -1;
 const TypeRef _dynamicType = TypeRef(_dartCoreFile, 'dynamic');
 const TypeRef _objectType = TypeRef(_dartCoreFile, 'Object', extendsType: _dynamicType);
 const TypeRef _numType = TypeRef(_dartCoreFile, 'num', extendsType: _objectType);
-const TypeRef _intType = TypeRef(_dartCoreFile, 'int', extendsType: _numType);
-const TypeRef _doubleType = TypeRef(_dartCoreFile, 'double', extendsType: _numType);
+final TypeRef _intType = TypeRef(_dartCoreFile, 'int', extendsType: _numType);
+final TypeRef _doubleType = TypeRef(_dartCoreFile, 'double', extendsType: _numType);
 const TypeRef _stringType = TypeRef(_dartCoreFile, 'String', extendsType: _objectType);
 const TypeRef _mapType = TypeRef(_dartCoreFile, 'Map', extendsType: _objectType);
 const TypeRef _listType = TypeRef(_dartCoreFile, 'List', extendsType: _objectType);
 const TypeRef _functionType = TypeRef(_dartCoreFile, 'Function', extendsType: _objectType);
 
-const Map<String, TypeRef> _coreDeclarations = {
+final Map<String, TypeRef> _coreDeclarations = {
   'dynamic': _dynamicType,
   'Object': _objectType,
   'num': _numType,
@@ -632,6 +857,48 @@ const Map<String, TypeRef> _coreDeclarations = {
   'List': _listType,
   'Function': _functionType
 };
+
+final _intBinaryOp = KnownMethod(
+    ParameterTypeDependentReturnType({
+      _doubleType: AlwaysReturnType(_doubleType, false),
+      _intType: AlwaysReturnType(_intType, false),
+      _numType: AlwaysReturnType(_numType, false)
+    }, paramIndex: 0, fallback: AlwaysReturnType(_numType, false)),
+    [KnownMethodArg('other', _numType, false, false)],
+    {});
+
+final _doubleBinaryOp =
+    KnownMethod(AlwaysReturnType(_doubleType, false), [KnownMethodArg('other', _numType, false, false)], {});
+
+final _numBinaryOp = KnownMethod(
+    ParameterTypeDependentReturnType({
+      _doubleType: AlwaysReturnType(_doubleType, false),
+    }, paramIndex: 0, fallback: AlwaysReturnType(_numType, false)),
+    [KnownMethodArg('other', _numType, false, false)],
+    {});
+
+final Map<TypeRef, Map<String, KnownMethod>> _knownMethods = {
+  _intType: {
+    '+': _intBinaryOp,
+    '-': _intBinaryOp,
+    '/': _intBinaryOp,
+    '%': _intBinaryOp,
+  },
+  _doubleType: {
+    '+': _doubleBinaryOp,
+    '-': _doubleBinaryOp,
+    '/': _doubleBinaryOp,
+    '%': _doubleBinaryOp,
+  },
+  _numType: {
+    '+': _numBinaryOp,
+    '-': _numBinaryOp,
+    '/': _numBinaryOp,
+    '%': _numBinaryOp,
+  }
+};
+
+final Set<TypeRef> _unboxedAcrossFunctionBoundaries = {_intType, _doubleType};
 
 class CompileError implements Exception {
   final String message;
