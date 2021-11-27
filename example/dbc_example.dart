@@ -3,41 +3,31 @@ import 'package:dart_eval/src/dbc/dbc_gen.dart';
 
 
 void main(List<String> args) {
-  final gen = DbcGen();
+  final compiler = DbcCompiler();
 
   final files = {
     'example': {
       'main.dart': '''
         import 'package:example/x.dart';
         num main() {
-          var i = x();
-          return i + 3;
-        }
-        num x() {
-          return x2();
+          var i = Vib();
+          return 7 + i.h();
         }
       ''',
       'x.dart': '''
-        int x2() {
-           var b = 4;
-           var a = r();
-           var c = 2;
-           c = b;
-           b = a;
-           b = c;
-           return b;
-        }
+      class Vib {
+        Vib();
         
-        int r() {
-          var ra = 99;
-          return ra;
+        int h() {
+          return 11;
         }
+      }
       '''
     }
   };
 
   final dt = DateTime.now().millisecondsSinceEpoch;
-  final exec = gen.generate(files);
+  final exec = compiler.compileWriteAndLoad(files);
   print('Generate: ${DateTime.now().millisecondsSinceEpoch - dt} ms');
 
 

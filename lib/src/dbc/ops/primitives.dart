@@ -19,6 +19,23 @@ class PushConstantInt implements DbcOp {
   String toString() => 'PushConstantInt ($_value)';
 }
 
+class PushNull implements DbcOp {
+  PushNull(DbcExecutor exec);
+
+  PushNull.make();
+
+  static const int LEN = Dbc.BASE_OPLEN;
+
+  // Set value at position to constant
+  @override
+  void run(DbcExecutor exec) {
+    exec._vStack[exec._stackOffset++] = null;
+  }
+
+  @override
+  String toString() => 'PushNull ()';
+}
+
 class AddInts implements DbcOp {
   AddInts(DbcExecutor exec)
       : _location1 = exec._readInt16(),

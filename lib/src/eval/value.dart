@@ -120,7 +120,7 @@ class EvalValueImpl<R> extends EvalValue<R> {
   EvalValueImpl(EvalType type,
       {String? sourceFile,
       required Map<String, EvalField> fields,
-      dynamic? realValue})
+      dynamic realValue})
       : super(type, evalSourceFile: sourceFile, realValue: realValue) {
     _fields = {...fields};
   }

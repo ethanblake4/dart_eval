@@ -6,10 +6,10 @@ import 'package:analyzer/dart/ast/token.dart';
 import 'package:dart_eval/src/dbc/dbc_executor.dart';
 import 'package:dart_eval/src/dbc/dbc_writer.dart';
 
-class DbcGen {
+class DbcCompiler {
   final out = <DbcOp>[];
 
-  DbcExecutor generate(Map<String, Map<String, String>> packages) {
+  DbcProgram compile(Map<String, Map<String, String>> packages) {
     final ctx = DbcGenContext(0);
 
     final packageMap = <String, Map<String, int>>{};
@@ -20,6 +20,7 @@ class DbcGen {
     final libraryMap = <String, int>{};
     final importMap = <int, List<ImportDirective>>{};
     final topLevelDeclarationsMap = <int, Map<String, Declaration>>{};
+    final instanceDeclarationsMap = <int, Map<String, Map<String, Declaration>>>{};
 
     var fileIndex = 0;
 
@@ -130,6 +131,7 @@ class DbcGen {
         ctx.visibleTypes[myIndex] ??= {..._coreDeclarations};
         ctx.visibleDeclarations[myIndex] ??= {};
         topLevelDeclarationsMap[myIndex] ??= {};
+        instanceDeclarationsMap[myIndex] ??= {};
 
         unit.declarations.forEach((d) {
           if (d is NamedCompilationUnitMember) {
@@ -138,7 +140,21 @@ class DbcGen {
             }
             topLevelDeclarationsMap[myIndex]![d.name.name] = d;
             if (d is ClassDeclaration) {
+              instanceDeclarationsMap[myIndex]![d.name.name] = {};
               ctx.visibleTypes[myIndex]![d.name.name] = TypeRef(myIndex!, d.name.name);
+              d.members.forEach((member) {
+                if (member is MethodDeclaration) {
+                  instanceDeclarationsMap[myIndex]![d.name.name]![member.name.name] = member;
+                } else if (member is FieldDeclaration) {
+                  member.fields.variables.forEach((field) {
+                    instanceDeclarationsMap[myIndex]![d.name.name]![field.name.name] = field;
+                  });
+                } else if (member is ConstructorDeclaration) {
+                  topLevelDeclarationsMap[myIndex]!['${d.name.name}.${member.name?.name ?? ""}'] = member;
+                } else {
+                  throw CompileError('Not a NamedCompilationUnitMember');
+                }
+              });
             }
           } else {
             throw CompileError('Not a NamedCompilationUnitMember');
@@ -178,11 +194,16 @@ class DbcGen {
     });
 
     ctx.topLevelDeclarationsMap = topLevelDeclarationsMap;
+    ctx.instanceDeclarationsMap = instanceDeclarationsMap;
 
     topLevelDeclarationsMap.forEach((key, value) {
       ctx.topLevelDeclarationPositions[key] = {};
+      ctx.instanceDeclarationPositions[key] = {};
       print('Generating package:${indexMap[key]!.join("/")}...');
       value.forEach((lib, declaration) {
+        if (declaration is ConstructorDeclaration || declaration is MethodDeclaration) {
+          return;
+        }
         ctx.library = key;
         _parseDeclaration(declaration, ctx);
         ctx.scopeFrameOffset = 0;
@@ -199,8 +220,13 @@ class DbcGen {
       }
     });
 
-    final ob = DbcWriter().write(ctx.topLevelDeclarationPositions, out);
+    return DbcProgram(ctx.topLevelDeclarationPositions, ctx.instanceDeclarationPositions, out);
+  }
 
+  DbcExecutor compileWriteAndLoad(Map<String, Map<String, String>> packages) {
+    final program = compile(packages);
+
+    final ob = DbcWriter().write(program);
     return DbcExecutor(ob.buffer.asByteData());
   }
 
@@ -234,30 +260,42 @@ class DbcGen {
     ctx.locals.removeLast();
   }
 
-  int? _parseDeclaration(Declaration d, DbcGenContext ctx) {
+  int? _parseDeclaration(Declaration d, DbcGenContext ctx, [Declaration? parent]) {
     if (d is ClassDeclaration) {
+      ctx.instanceDeclarationPositions[ctx.library]![d.name.name] = [{}, {}, {}];
       for (final m in d.members) {
-        _parseDeclaration(m, ctx)!;
+        _parseDeclaration(m, ctx, d);
+        ctx.scopeFrameOffset = 0;
+        ctx.allocNest = [0];
       }
     } else if (d is MethodDeclaration) {
-      ctx.functionName = d.name.name;
       final b = d.body;
-      int? pos;
+      if (!(parent is NamedCompilationUnitMember)) {
+        throw CompileError('Parent of a method declaration must be named');
+      }
+      final pos = enterScope(ctx, d, d.offset, parent.name.name + '.' + d.name.name + '()');
 
+      StatementInfo? stInfo;
       if (b is BlockFunctionBody) {
-        pos = _parseBlock(b.block, _returnTypeFromAnnotation(ctx, ctx.library, d.returnType), ctx,
-                name: d.name.name + '()')
-            .position;
+        stInfo = _parseBlock(b.block, _returnTypeFromAnnotation(ctx, ctx.library, d.returnType), ctx,
+                name: d.name.name + '()');
       } else {
         throw CompileError('Unknown function body type ${b.runtimeType}');
       }
 
+      if (stInfo == null || !(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
+        pushOp(ctx, Return.make(-1), Return.LEN);
+      }
+
+      ctx.locals.removeLast();
+
       if (d.isStatic) {
-        ctx.topLevelDeclarationPositions[ctx.library]![d.name.name] = pos;
+        ctx.topLevelDeclarationPositions[ctx.library]!['${parent.name.name}.${d.name.name}'] = pos;
+      } else {
+        ctx.instanceDeclarationPositions[ctx.library]![parent.name.name]![2][d.name.name] = pos;
       }
       return pos;
     } else if (d is FunctionDeclaration) {
-      ctx.functionName = d.name.name;
       ctx.topLevelDeclarationPositions[ctx.library]![d.name.name] = enterScope(ctx, d, d.offset, d.name.name + '()');
       final b = d.functionExpression.body;
       StatementInfo? stInfo;
@@ -269,6 +307,21 @@ class DbcGen {
         pushOp(ctx, Return.make(-1), Return.LEN);
       }
       ctx.locals.removeLast();
+    } else if (d is ConstructorDeclaration) {
+      parent as ClassDeclaration;
+
+      final n = '${parent.name.name}.${d.name?.name ?? ""}';
+
+      ctx.topLevelDeclarationPositions[ctx.library]![n] = enterScope(ctx, d, d.offset, '$n()');
+
+      final $null = _pushBuiltinValue(BuiltinValue(), ctx);
+
+      final op = CreateClass.make(ctx.library, $null.scopeFrameOffset, parent.name.name);
+      pushOp(ctx, op, CreateClass.len(op));
+      pushOp(ctx, Return.make(ctx.scopeFrameOffset++), Return.LEN);
+      ctx.locals.removeLast();
+    } else {
+      throw CompileError('No support for ${d.runtimeType}');
     }
   }
 
@@ -537,6 +590,10 @@ class DbcGen {
     return ctx.visibleTypes[library]![typeAnnotation.name.name]!;
   }
 
+  TypeRef getTypeRefFromClass(DbcGenContext ctx, int library, ClassDeclaration cls) {
+    return ctx.visibleTypes[library]![cls.name.name]!;
+  }
+
   TypeRef getTypeRef(DbcGenContext ctx, String name) {
     return ctx.visibleTypes[ctx.library]![name]!;
   }
@@ -560,6 +617,17 @@ class DbcGen {
         return null;
       }
       return _returnTypeToAlwaysReturnType(returnType, argTypes, namedArgTypes);
+    }
+
+    if (ctx.instanceDeclarationsMap[type.file]!.containsKey(type.name) &&
+        ctx.instanceDeclarationsMap[type.file]![type.name]!.containsKey(method)) {
+      final _m = ctx.instanceDeclarationsMap[type.file]![type.name]![method];
+      if (!(_m is MethodDeclaration)) {
+        throw CompileError(
+            'Cannot query method return type of F${type.file}:${type.name}.$method, which is not a method');
+      }
+      return _returnTypeToAlwaysReturnType(
+          _returnTypeFromAnnotation(ctx, type.file, _m.returnType), argTypes, namedArgTypes);
     }
 
     throw UnimplementedError();
@@ -596,6 +664,11 @@ class DbcGen {
       pushOp(ctx, op, PushConstantString.len(op));
       ctx.allocNest.last++;
       return Variable(ctx.scopeFrameOffset++, _stringType, null, boxed: false);
+    } else if (value.type == BuiltinValueType.nullType) {
+      final op = PushNull.make();
+      pushOp(ctx, op, PushNull.LEN);
+      ctx.allocNest.last++;
+      return Variable(ctx.scopeFrameOffset++, _nullType, true, boxed: false);
     } else {
       throw CompileError('Cannot push unknown builtin value type ${value.type}');
     }
@@ -606,6 +679,8 @@ class DbcGen {
       return BuiltinValue(intval: l.value);
     } else if (l is SimpleStringLiteral) {
       return BuiltinValue(stringval: l.stringValue);
+    } else if (l is NullLiteral) {
+      return BuiltinValue();
     }
     throw CompileError('Unknown literal type ${l.runtimeType}');
   }
@@ -623,7 +698,20 @@ class DbcGen {
       final decl = declaration.declaration!;
 
       if (!(decl is FunctionDeclaration)) {
-        throw CompileError('No support for class identifiers');
+        decl as ClassDeclaration;
+
+        final returnType = getTypeRefFromClass(ctx, declaration.sourceLib, decl);
+        final DeferredOrOffset offset;
+
+        if (ctx.topLevelDeclarationPositions[declaration.sourceLib]?.containsKey(id.name + '.') ?? false) {
+          offset = DeferredOrOffset(
+              file: declaration.sourceLib, offset: ctx.topLevelDeclarationPositions[ctx.library]![id.name + '.']);
+        } else {
+          offset = DeferredOrOffset(file: declaration.sourceLib, name: id.name + '.');
+        }
+
+        return Variable(-1, _functionType, null,
+            methodOffset: offset, methodReturnType: AlwaysReturnType(returnType, false));
       }
 
       TypeRef? returnType;
@@ -654,14 +742,15 @@ class DbcGenContext {
   int library = 0;
   int position = 0;
   int scopeFrameOffset = 0;
-  String functionName = '';
   List<List<AstNode>> scopeNodes = [];
   List<Map<String, Variable>> locals = [];
   Map<int, Map<String, Declaration>> topLevelDeclarationsMap = {};
+  Map<int, Map<String, Map<String, Declaration>>> instanceDeclarationsMap = {};
   Map<int, DeferredOrOffset> deferredOffsets = {};
   Map<int, Map<String, TypeRef>> visibleTypes = {};
   Map<int, Map<String, DeclarationOrPrefix>> visibleDeclarations = {};
   Map<int, Map<String, int>> topLevelDeclarationPositions = {};
+  Map<int, Map<String, List<Map<String, int>>>> instanceDeclarationPositions = {};
   List<int> allocNest = [0];
   int sourceFile;
 }
@@ -718,6 +807,8 @@ class BuiltinValue {
       type = BuiltinValueType.stringType;
     } else if (doubleval != null) {
       type = BuiltinValueType.doubleType;
+    } else {
+      type = BuiltinValueType.nullType;
     }
   }
 
@@ -725,19 +816,9 @@ class BuiltinValue {
   final int? intval;
   final double? doubleval;
   final String? stringval;
-
-  int get length {
-    switch (type) {
-      case BuiltinValueType.intType:
-      case BuiltinValueType.doubleType:
-        return 4;
-      case BuiltinValueType.stringType:
-        return 1 + stringval!.length;
-    }
-  }
 }
 
-enum BuiltinValueType { intType, stringType, doubleType }
+enum BuiltinValueType { intType, stringType, doubleType, nullType }
 
 class TypeRef {
   const TypeRef(this.file, this.name,
@@ -837,6 +918,7 @@ class GenericParam {
 
 const int _dartCoreFile = -1;
 const TypeRef _dynamicType = TypeRef(_dartCoreFile, 'dynamic');
+const TypeRef _nullType = TypeRef(_dartCoreFile, 'Null', extendsType: _dynamicType);
 const TypeRef _objectType = TypeRef(_dartCoreFile, 'Object', extendsType: _dynamicType);
 const TypeRef _numType = TypeRef(_dartCoreFile, 'num', extendsType: _objectType);
 final TypeRef _intType = TypeRef(_dartCoreFile, 'int', extendsType: _numType);
@@ -848,6 +930,7 @@ const TypeRef _functionType = TypeRef(_dartCoreFile, 'Function', extendsType: _o
 
 final Map<String, TypeRef> _coreDeclarations = {
   'dynamic': _dynamicType,
+  'Null': _nullType,
   'Object': _objectType,
   'num': _numType,
   'String': _stringType,
@@ -908,5 +991,22 @@ class CompileError implements Exception {
   @override
   String toString() {
     return 'CompileError: $message';
+  }
+}
+
+class LR {
+  LR(this.name);
+
+  final String name;
+}
+
+class LRA extends LR {
+  LRA(String name) : super(name);
+
+  String get name => "a";
+
+  v() {
+    final p = super.name;
+    final a = name;
   }
 }

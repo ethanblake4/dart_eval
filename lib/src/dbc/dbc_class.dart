@@ -36,30 +36,32 @@ abstract class DbcInstance implements DbcValueInterface {
 
 class DbcInstanceImpl with DbcValue implements DbcInstance {
 
-  static late final DbcClass evalClass;
+  final DbcClass _evalClass;
 
   @override
   final DbcInstance? evalSuperclass;
   final List<Object> values = [];
 
-  DbcInstanceImpl(this.evalSuperclass);
+  DbcInstanceImpl(this._evalClass, this.evalSuperclass);
+
+  DbcClass get evalClass => _evalClass;
 
   @override
   DbcValueInterface? evalGetProperty(String identifier) {
-    final exec = evalClass.evalVm.exec;
-    final getter = evalClass.getters[identifier];
+    final exec = _evalClass.evalVm.exec;
+    final getter = _evalClass.getters[identifier];
     if (getter == null) return evalSuperclass?.evalGetProperty(identifier);
     exec.beginBridgedScope();
     exec.push(this);
     exec.execute(getter);
     exec.popScope();
-    return exec.returnValue;
+    return exec.returnValue as DbcValueInterface;
   }
 
   @override
   void evalSetProperty(String identifier, DbcValueInterface value) {
-    final vm = evalClass.evalVm;
-    final setter = evalClass.setters[identifier];
+    final vm = _evalClass.evalVm;
+    final setter = _evalClass.setters[identifier];
     if (setter == null) {
       if (evalSuperclass != null) {
         return evalSuperclass!.evalSetProperty(identifier, value);
@@ -130,6 +132,13 @@ class DbcTypeClass implements DbcClass {
 
   @override
   DbcClass? get superclass => throw UnimplementedError();
+
+  @override
+  DbcClass get _evalClass => throw UnimplementedError();
+
+  @override
+  // TODO: implement evalClass
+  get evalClass => throw UnimplementedError();
 }
 
 class DbcBridgeData {

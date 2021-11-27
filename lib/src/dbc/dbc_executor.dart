@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:dart_eval/dart_eval.dart';
+
+import 'package:dart_eval/src/dbc/dbc_declaration.dart';
 
 import 'dbc_function.dart';
 import 'dbc_stdlib_base.dart';
@@ -77,6 +78,12 @@ class Dbc {
   /// [InvokeDynamic]
   static const OP_INVOKE_DYNAMIC = 19;
 
+  /// [PushNull]
+  static const OP_PUSH_NULL = 20;
+
+  /// [CreateClass]
+  static const OP_CREATE_CLASS = 21;
+
   static List<int> opcodeFrom(DbcOp op) {
     switch (op.runtimeType) {
       case JumpConstant:
@@ -137,6 +144,12 @@ class Dbc {
       case PushObjectProperty:
         op as PushObjectProperty;
         return [OP_PUSH_OBJECT_PROP, ...i16b(op._location), ...istr(op._property)];
+      case PushNull:
+        op as PushNull;
+        return [OP_PUSH_NULL];
+      case CreateClass:
+        op as CreateClass;
+        return [OP_CREATE_CLASS, ...i32b(op._library), ...i16b(op._super), ...istr(op._name)];
       default:
         throw ArgumentError('Not a valid op $op');
     }
@@ -194,17 +207,20 @@ final List<Opmake> ops = [
   (DbcExecutor ex) => Call(ex), // 17
   (DbcExecutor ex) => PushObjectProperty(ex), // 18
   (DbcExecutor ex) => InvokeDynamic(ex), // 19
+  (DbcExecutor ex) => PushNull(ex), // 20
+  (DbcExecutor ex) => CreateClass(ex) // 21
 ];
 
 class ScopeFrame {
-  ScopeFrame(this.stackOffset, [this.entrypoint = false]);
+  ScopeFrame(this.stackOffset, this.scopeStackOffset, [this.entrypoint = false]);
 
   final int stackOffset;
+  final int scopeStackOffset;
   final bool entrypoint;
 }
 
 class BridgeScopeFrame extends ScopeFrame {
-  BridgeScopeFrame(int stackOffset) : super(stackOffset);
+  BridgeScopeFrame(int stackOffset) : super(stackOffset,stackOffset);
 }
 
 class DbcExecutor {
@@ -221,10 +237,11 @@ class DbcExecutor {
   var _namedArgs = <String, Object?>{};
   final pr = <DbcOp>[];
   Object? _returnValue = null;
-  var scopeStack = <ScopeFrame>[ScopeFrame(0)];
+  var scopeStack = <ScopeFrame>[ScopeFrame(0, 0)];
   var scopeStackOffset = 0;
   final callStack = <int>[0];
   var declarations = <int, Map<String, int>>{};
+  final declaredClasses = <int, Map<String, DbcClass>>{};
   int _stackOffset = 0;
   int _argsOffset = 0;
   int _offset = 0;
@@ -242,9 +259,43 @@ class DbcExecutor {
       _offset++;
     }
 
+    final classesLength = _dbc.getInt32(_offset);
+    final classStr = <int>[];
+
+    _offset += 4;
+
+    final _startOffset = _offset;
+    while (_offset < classesLength + _startOffset) {
+      classStr.add(_dbc.getUint8(_offset));
+      _offset++;
+    }
+
     declarations =
         (json.decode(utf8.decode(metaStr)).map((k, v) => MapEntry(int.parse(k), (v as Map).cast<String, int>())) as Map)
             .cast<int, Map<String, int>>();
+
+    final classes =
+        (json.decode(utf8.decode(classStr)).map((k, v) => MapEntry(int.parse(k), (v as Map).cast<String, List>())) as Map)
+            .cast<int, Map<String, List>>();
+
+    final _vm = DbcVmInterface(this);
+
+    classes.forEach((file, classs) {
+      final decls = <String, DbcClass>{};
+
+      classs.forEach((name, declarations) {
+        final dc = declarations.cast<Map>();
+
+        final getters = (dc[0]).cast<String, int>();
+        final setters = (dc[1]).cast<String, int>();
+        final methods = (dc[2]).cast<String, int>();
+
+        final cls = DbcClass(_vm, null, [], getters, setters, methods);
+        decls[name] = cls;
+      });
+
+      declaredClasses[file] = decls;
+    });
 
     while (_offset < _dbc.lengthInBytes) {
       final opId = _dbc.getUint8(_offset);
@@ -272,8 +323,6 @@ class DbcExecutor {
       callStack.add(-1);
       while (true) {
         final op = _pr[_prOffset++];
-        print('$scopeStackOffset, $_stackOffset');
-        print(op);
         op.run(this);
       }
     } on ProgramExit catch (_) {
@@ -298,7 +347,7 @@ class DbcExecutor {
     scopeStackOffset = offset;
   }
 
-  get returnValue => _returnValue;
+  Object? get returnValue => _returnValue;
 
   @pragma('vm:always-inline')
   int _readInt32() {
@@ -419,10 +468,15 @@ class InvokeDynamic implements DbcOp {
   @override
   void run(DbcExecutor exec) {
     final object = exec._vStack[exec.scopeStackOffset + _location];
+    if (object is DbcInstanceImpl) {
+      final _offset = object.evalClass.methods[_method]!;
+      exec.callStack.add(exec._prOffset);
+      exec._prOffset = _offset;
+      return;
+    }
     final method = ((object as DbcInstance).evalGetProperty(_method) as DbcFunction);
-    print(exec._args.cast<DbcValueInterface>().map((e) => e.evalValue));
-    print(object.evalValue);
     if (method is DbcFunctionImpl) {
+
       exec._vStack[exec._stackOffset++] =
           method.call(DbcVmInterface(exec), object, exec._args.cast(), exec._namedArgs.cast());
     } else {
@@ -436,17 +490,29 @@ class InvokeDynamic implements DbcOp {
 
 // Create a class
 class CreateClass implements DbcOp {
-  CreateClass(DbcExecutor exec) : _offset = exec._readInt32();
+  CreateClass(DbcExecutor exec) : _library = exec._readInt32(), _super = exec._readInt16(), _name = exec._readString();
 
-  CreateClass.make(this._offset);
+  CreateClass.make(this._library, this._super, this._name);
 
-  final int _offset;
+  final int _library;
+  final String _name;
+  final int _super;
+
+  static int len(CreateClass s) {
+    return Dbc.BASE_OPLEN + Dbc.I32_LEN + Dbc.I16_LEN + Dbc.istr_len(s._name);
+  }
 
   @override
-  void run(DbcExecutor exec) {}
+  void run(DbcExecutor exec) {
+    final $super = exec._vStack[exec.scopeStackOffset + _super] as DbcInstanceImpl?;
+    final $cls = exec.declaredClasses[_library]![_name]!;
+
+    final instance = DbcInstanceImpl($cls, $super);
+    exec._vStack[exec._stackOffset++] = instance;
+  }
 
   @override
-  String toString() => 'CreateClass (@$_offset)';
+  String toString() => 'CreateClass (F$_library:"$_name", super L$_super)';
 }
 
 // Move to constant position
@@ -537,9 +603,8 @@ class Return implements DbcOp {
     }
 
     final lastStack = exec.scopeStack.removeLast();
-    final offset = lastStack.stackOffset;
-    exec._stackOffset = offset;
-    exec.scopeStackOffset = offset;
+    exec._stackOffset = lastStack.stackOffset;
+    exec.scopeStackOffset = lastStack.scopeStackOffset;
 
     final prOffset = exec.callStack.removeLast();
     if (prOffset == -1) {
@@ -648,9 +713,7 @@ class CopyValue implements DbcOp {
   @override
   void run(DbcExecutor exec) {
 
-    print('${exec.scopeStackOffset},${exec._stackOffset}');
     exec._vStack[exec.scopeStackOffset + _position1] = exec._vStack[exec.scopeStackOffset + _position2];
-    print(exec._vStack.take(12));
   }
 
   @override
@@ -675,7 +738,7 @@ class PushScope implements DbcOp {
 
   @override
   void run(DbcExecutor exec) {
-    exec.scopeStack.add(ScopeFrame(exec._stackOffset - 1));
+    exec.scopeStack.add(ScopeFrame(exec._stackOffset, exec.scopeStackOffset));
     exec.scopeStackOffset = exec._stackOffset;
     for (final arg in exec._args) {
       exec._vStack[exec._stackOffset++] = arg;

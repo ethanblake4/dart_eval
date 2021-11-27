@@ -4,6 +4,14 @@ import 'package:dart_eval/src/dbc/dbc_function.dart';
 import 'dbc_class.dart';
 import 'dbc_executor.dart';
 
+class DbcNull implements DbcValueInterface {
+  @override
+  Null get evalValue => null;
+
+  @override
+  Null get reifiedValue => null;
+}
+
 class DbcObject implements DbcInstance {
   DbcObject();
 
@@ -53,33 +61,46 @@ class DbcNum<T extends num> implements DbcInstance {
   DbcInstance evalSuperclass = DbcObject();
 
   @override
-  num get reifiedValue => evalValue;
+  T get reifiedValue => evalValue;
 
-  static final DbcFunctionImpl __plus = DbcFunctionImpl(_plus);
+  static const DbcFunctionImpl __plus = DbcFunctionImpl(_plus);
   static DbcValueInterface? _plus(DbcVmInterface vm, DbcValueInterface? target,
       List<DbcValueInterface?> positionalArgs, Map<String, DbcValueInterface?> namedArgs) {
-    final addend = positionalArgs[0];
+    final other = positionalArgs[0];
+    final _evalResult = target!.evalValue + other!.evalValue;
 
-    if (target is DbcInt && addend is DbcInt) {
-      return DbcInt(target.evalValue + addend.evalValue);
+    if (_evalResult is int) {
+      return DbcInt(_evalResult);
+    }
+    if (_evalResult is double) {
+      return DbcDouble(_evalResult);
     }
 
     throw UnimplementedError();
   }
 
-  static final DbcFunctionImpl __minus = DbcFunctionImpl(_minus);
+  static const DbcFunctionImpl __minus = DbcFunctionImpl(_minus);
   static DbcValueInterface? _minus(DbcVmInterface vm, DbcValueInterface? target,
       List<DbcValueInterface?> positionalArgs, Map<String, DbcValueInterface?> namedArgs) {
-    final addend = positionalArgs[0];
+    final other = positionalArgs[0];
+    final _evalResult = target!.evalValue - other!.evalValue;
 
-    if (target is DbcInt && addend is DbcInt) {
-      return DbcInt(target.evalValue - addend.evalValue);
+    if (_evalResult is int) {
+      return DbcInt(_evalResult);
+    }
+    if (_evalResult is double) {
+      return DbcDouble(_evalResult);
     }
 
     throw UnimplementedError();
   }
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || other is DbcNum && runtimeType == other.runtimeType && evalValue == other.evalValue;
 
+  @override
+  int get hashCode => evalValue.hashCode;
 }
 
 class DbcInt extends DbcNum<int> {
@@ -101,6 +122,27 @@ class DbcInt extends DbcNum<int> {
 
   @override
   int get reifiedValue => evalValue;
+}
+
+class DbcDouble extends DbcNum<double> {
+
+  DbcDouble(double evalValue) : super(evalValue);
+
+  @override
+  DbcValueInterface? evalGetProperty(String identifier) {
+    return super.evalGetProperty(identifier);
+  }
+
+  @override
+  void evalSetProperty(String identifier, DbcValueInterface value) {
+    return super.evalSetProperty(identifier, value);
+  }
+
+  @override
+  DbcInstance get evalSuperclass => throw UnimplementedError();
+
+  @override
+  double get reifiedValue => evalValue;
 }
 
 class DbcInvocation implements DbcInstance {
@@ -161,11 +203,4 @@ class DbcList2 implements DbcInstance {
 
   @override
   List get reifiedValue => evalValue.map((e) => e.reifiedValue).toList();
-}
-
-class DbcList extends DbcInstanceImpl {
-  DbcList(DbcExecutor exec, Map<String, int> lookupGetter, Map<String, int> lookupSetter)
-      : super(DbcObject()) {
-    evalValue = [];
-  }
 }

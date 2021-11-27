@@ -26,6 +26,9 @@ class DbcVmInterface {
 }
 
 abstract class DbcFunction implements DbcInstance, DbcCallable {
+
+  const DbcFunction();
+
   @override
   DbcValueInterface? evalGetProperty(String identifier) {
     switch (identifier) {
@@ -42,7 +45,7 @@ abstract class DbcFunction implements DbcInstance, DbcCallable {
   }
 
   @override
-  DbcInstance? evalSuperclass = DbcObject();
+  DbcInstance? get evalSuperclass => DbcObject();
 
   @override
   dynamic get evalValue => throw UnimplementedError();
@@ -65,9 +68,9 @@ class DbcFunctionPtr extends DbcFunction {
 }
 
 class DbcFunctionImpl extends DbcFunction {
-  DbcFunctionImpl(this.func);
+  const DbcFunctionImpl(this.func);
 
-  DbcCallableFunc func;
+  final DbcCallableFunc func;
 
   @override
   DbcValueInterface? call(DbcVmInterface vm, DbcValueInterface? target, List<DbcValueInterface?> positionalArgs,
