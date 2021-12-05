@@ -1,8 +1,7 @@
-import 'package:dart_eval/src/dbc/dbc_exception.dart';
-import 'package:dart_eval/src/dbc/dbc_function.dart';
+import 'package:dart_eval/src/eval/runtime/exception.dart';
+import 'package:dart_eval/src/eval/runtime/function.dart';
 
-import 'dbc_class.dart';
-import 'dbc_executor.dart';
+import 'class.dart';
 
 class DbcNull implements DbcValueInterface {
   @override

@@ -3,17 +3,26 @@ import 'dart:io';
 import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
-import 'package:dart_eval/src/dbc/dbc_executor.dart';
-import 'package:dart_eval/src/dbc/dbc_writer.dart';
+import 'package:dart_eval/src/eval/compiler/source.dart';
+import 'package:dart_eval/src/eval/compiler/type.dart';
+import 'package:dart_eval/src/eval/compiler/variable.dart';
+import 'package:dart_eval/src/eval/compiler/writer.dart';
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/runtime/ops/all_ops.dart';
+
+import 'context.dart';
+import 'errors.dart';
+import 'offset_tracker.dart';
+
+part 'compiler_builtins.dart';
 
 class DbcCompiler {
   final out = <DbcOp>[];
 
   DbcProgram compile(Map<String, Map<String, String>> packages) {
-    final ctx = DbcGenContext(0);
+    final ctx = CompilerContext(0);
 
     final packageMap = <String, Map<String, int>>{};
-    final namedLibraryMap = <int, String>{};
     final indexMap = <int, List<String>>{};
     final partMap = <int, List<String>>{};
     final partOfMap = <int, String>{};
@@ -211,23 +220,14 @@ class DbcCompiler {
       });
     });
 
-    ctx.deferredOffsets.forEach((pos, offset) {
-      final op = out[pos];
-      if (op is Call) {
-        final resolvedOffset = ctx.topLevelDeclarationPositions[offset.file!]![offset.name!]!;
-        final newOp = Call.make(resolvedOffset);
-        out[pos] = newOp;
-      }
-    });
-
-    return DbcProgram(ctx.topLevelDeclarationPositions, ctx.instanceDeclarationPositions, out);
+    return DbcProgram(ctx.topLevelDeclarationPositions, ctx.instanceDeclarationPositions, ctx.offsetTracker.apply(out));
   }
 
-  DbcExecutor compileWriteAndLoad(Map<String, Map<String, String>> packages) {
+  Runtime compileWriteAndLoad(Map<String, Map<String, String>> packages) {
     final program = compile(packages);
 
     final ob = DbcWriter().write(program);
-    return DbcExecutor(ob.buffer.asByteData());
+    return Runtime(ob.buffer.asByteData());
   }
 
   CompilationUnit _parse(String source) {
@@ -241,13 +241,13 @@ class DbcCompiler {
     return d.unit;
   }
 
-  int pushOp(DbcGenContext ctx, DbcOp op, int length) {
+  int pushOp(CompilerContext ctx, DbcOp op, int length) {
     out.add(op);
     ctx.position += length;
     return out.length - 1;
   }
 
-  int enterScope(DbcGenContext ctx, AstNode scopeHost, int offset, String name) {
+  int enterScope(CompilerContext ctx, AstNode scopeHost, int offset, String name) {
     final position = out.length;
     var op = PushScope.make(ctx.library, offset, name);
     pushOp(ctx, op, PushScope.len(op));
@@ -255,12 +255,12 @@ class DbcCompiler {
     return position;
   }
 
-  void exitScope(DbcGenContext ctx) {
+  void exitScope(CompilerContext ctx) {
     pushOp(ctx, PopScope.make(), PopScope.LEN);
     ctx.locals.removeLast();
   }
 
-  int? _parseDeclaration(Declaration d, DbcGenContext ctx, [Declaration? parent]) {
+  int? _parseDeclaration(Declaration d, CompilerContext ctx, [Declaration? parent]) {
     if (d is ClassDeclaration) {
       ctx.instanceDeclarationPositions[ctx.library]![d.name.name] = [{}, {}, {}];
       for (final m in d.members) {
@@ -277,8 +277,9 @@ class DbcCompiler {
 
       StatementInfo? stInfo;
       if (b is BlockFunctionBody) {
-        stInfo = _parseBlock(b.block, _returnTypeFromAnnotation(ctx, ctx.library, d.returnType), ctx,
-                name: d.name.name + '()');
+        stInfo = _parseBlock(
+            b.block, AlwaysReturnType.fromAnnotation(ctx, ctx.library, d.returnType, _dynamicType), ctx,
+            name: d.name.name + '()');
       } else {
         throw CompileError('Unknown function body type ${b.runtimeType}');
       }
@@ -300,7 +301,8 @@ class DbcCompiler {
       final b = d.functionExpression.body;
       StatementInfo? stInfo;
       if (b is BlockFunctionBody) {
-        stInfo = _parseBlock(b.block, _returnTypeFromAnnotation(ctx, ctx.library, d.returnType), ctx,
+        stInfo = _parseBlock(
+            b.block, AlwaysReturnType.fromAnnotation(ctx, ctx.library, d.returnType, _dynamicType), ctx,
             name: d.name.name + '()');
       }
       if (stInfo == null || !(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
@@ -325,7 +327,7 @@ class DbcCompiler {
     }
   }
 
-  StatementInfo _parseStatement(Statement s, AlwaysReturnType? expectedReturnType, DbcGenContext ctx) {
+  StatementInfo _parseStatement(Statement s, AlwaysReturnType? expectedReturnType, CompilerContext ctx) {
     if (s is Block) {
       return _parseBlock(s, expectedReturnType, ctx);
     } else if (s is VariableDeclarationStatement) {
@@ -341,15 +343,7 @@ class DbcCompiler {
     return StatementInfo(-1);
   }
 
-  void _buildClassInstantiator(DbcGenContext ctx, ClassDeclaration cls) {
-    if (cls.isAbstract) {
-      throw CompileError('Cannot create instantiator for abstract class');
-    }
-
-    //final j = pushOp(ctx, , length)
-  }
-
-  StatementInfo _parseBlock(Block b, AlwaysReturnType? expectedReturnType, DbcGenContext ctx,
+  StatementInfo _parseBlock(Block b, AlwaysReturnType? expectedReturnType, CompilerContext ctx,
       {String name = '<block>'}) {
     final position = out.length;
     ctx.allocNest.add(0);
@@ -381,7 +375,7 @@ class DbcCompiler {
     return StatementInfo(position, willAlwaysReturn: willAlwaysReturn, willAlwaysThrow: willAlwaysThrow);
   }
 
-  void _parseReturn(ReturnStatement s, AlwaysReturnType? expectedReturnType, DbcGenContext ctx) {
+  void _parseReturn(ReturnStatement s, AlwaysReturnType? expectedReturnType, CompilerContext ctx) {
     if (s.expression == null) {
       pushOp(ctx, Return.make(-1), Return.LEN);
     } else {
@@ -401,7 +395,7 @@ class DbcCompiler {
     }
   }
 
-  Variable _parseExpression(Expression e, DbcGenContext ctx) {
+  Variable _parseExpression(Expression e, CompilerContext ctx) {
     if (e is Literal) {
       final literalValue = _parseLiteral(e, ctx);
       return _pushBuiltinValue(literalValue, ctx);
@@ -426,7 +420,7 @@ class DbcCompiler {
     throw CompileError('Unknown expression type ${e.runtimeType}');
   }
 
-  Variable _parseBinaryExpression(DbcGenContext ctx, BinaryExpression e) {
+  Variable _parseBinaryExpression(CompilerContext ctx, BinaryExpression e) {
     var L = _parseExpression(e.leftOperand, ctx);
     var R = _parseExpression(e.rightOperand, ctx);
 
@@ -475,7 +469,7 @@ class DbcCompiler {
       ..frameIndex = ctx.locals.length - 1;
   }
 
-  Variable _unbox(DbcGenContext ctx, Variable V) {
+  Variable _unbox(CompilerContext ctx, Variable V) {
     assert(V.boxed);
     pushOp(ctx, Unbox.make(V.scopeFrameOffset), Unbox.LEN);
     ctx.allocNest.last++;
@@ -484,7 +478,7 @@ class DbcCompiler {
       ..frameIndex = V.frameIndex;
   }
 
-  Variable _box(DbcGenContext ctx, Variable V) {
+  Variable _box(CompilerContext ctx, Variable V) {
     assert(!V.boxed);
     if (V.type != _intType) {
       throw CompileError('Can only box ints for now');
@@ -500,7 +494,7 @@ class DbcCompiler {
     return V2;
   }
 
-  Variable _parseMethodInvocation(DbcGenContext ctx, MethodInvocation e) {
+  Variable _parseMethodInvocation(CompilerContext ctx, MethodInvocation e) {
     Variable? L;
     if (e.target != null) {
       L = _parseExpression(e.target!, ctx);
@@ -549,10 +543,10 @@ class DbcCompiler {
       final offset = method.methodOffset!;
       final loc = pushOp(ctx, Call.make(offset.offset ?? -1), Call.LEN);
       if (offset.offset == null) {
-        ctx.deferredOffsets[loc] = offset;
+        ctx.offsetTracker.setOffset(loc, offset);
       }
-      mReturnType = _returnTypeToAlwaysReturnType(
-          method.methodReturnType ?? AlwaysReturnType(_dynamicType, true), _argTypes, _namedArgTypes);
+      mReturnType = method.methodReturnType?.toAlwaysReturnType(_argTypes, _namedArgTypes) ??
+          AlwaysReturnType(_dynamicType, true);
     }
 
     pushOp(ctx, PushReturnValue.make(), PushReturnValue.LEN);
@@ -562,10 +556,10 @@ class DbcCompiler {
         boxed: L == null && !_unboxedAcrossFunctionBoundaries.contains(mReturnType?.type));
   }
 
-  void _parseVariableDeclarationList(VariableDeclarationList l, DbcGenContext ctx) {
+  void _parseVariableDeclarationList(VariableDeclarationList l, CompilerContext ctx) {
     TypeRef? type;
     if (l.type != null) {
-      type = getTypeRefFromAnnotation(ctx, ctx.library, l.type!);
+      type = TypeRef.fromAnnotation(ctx, ctx.library, l.type!);
     }
     final nullable = l.type?.question != null;
 
@@ -583,78 +577,29 @@ class DbcCompiler {
     }
   }
 
-  TypeRef getTypeRefFromAnnotation(DbcGenContext ctx, int library, TypeAnnotation typeAnnotation) {
-    if (!(typeAnnotation is NamedType)) {
-      throw CompileError('No support for generic function types yet');
-    }
-    return ctx.visibleTypes[library]![typeAnnotation.name.name]!;
-  }
-
-  TypeRef getTypeRefFromClass(DbcGenContext ctx, int library, ClassDeclaration cls) {
+  TypeRef getTypeRefFromClass(CompilerContext ctx, int library, ClassDeclaration cls) {
     return ctx.visibleTypes[library]![cls.name.name]!;
   }
 
-  TypeRef getTypeRef(DbcGenContext ctx, String name) {
+  TypeRef getTypeRef(CompilerContext ctx, String name) {
     return ctx.visibleTypes[ctx.library]![name]!;
   }
 
-  AlwaysReturnType _returnTypeFromAnnotation(DbcGenContext ctx, int library, TypeAnnotation? typeAnnotation) {
-    final AlwaysReturnType returnType;
-    final rt = typeAnnotation;
-    if (rt != null) {
-      return AlwaysReturnType(getTypeRefFromAnnotation(ctx, ctx.library, rt), rt.question != null);
-    } else {
-      return AlwaysReturnType(_dynamicType, true);
-    }
-  }
-
   AlwaysReturnType? _queryMethodReturnType(
-      DbcGenContext ctx, TypeRef type, String method, List<TypeRef?> argTypes, Map<String, TypeRef?> namedArgTypes) {
+      CompilerContext ctx, TypeRef type, String method, List<TypeRef?> argTypes, Map<String, TypeRef?> namedArgTypes) {
     if (_knownMethods[type] != null && _knownMethods[type]!.containsKey(method)) {
       final knownMethod = _knownMethods[type]![method]!;
       final returnType = knownMethod.returnType;
       if (returnType == null) {
         return null;
       }
-      return _returnTypeToAlwaysReturnType(returnType, argTypes, namedArgTypes);
+      return returnType.toAlwaysReturnType(argTypes, namedArgTypes);
     }
 
-    if (ctx.instanceDeclarationsMap[type.file]!.containsKey(type.name) &&
-        ctx.instanceDeclarationsMap[type.file]![type.name]!.containsKey(method)) {
-      final _m = ctx.instanceDeclarationsMap[type.file]![type.name]![method];
-      if (!(_m is MethodDeclaration)) {
-        throw CompileError(
-            'Cannot query method return type of F${type.file}:${type.name}.$method, which is not a method');
-      }
-      return _returnTypeToAlwaysReturnType(
-          _returnTypeFromAnnotation(ctx, type.file, _m.returnType), argTypes, namedArgTypes);
-    }
-
-    throw UnimplementedError();
+    return AlwaysReturnType.fromInstanceMethod(ctx, type, method, argTypes, namedArgTypes, _dynamicType);
   }
 
-  AlwaysReturnType? _returnTypeToAlwaysReturnType(
-      ReturnType returnType, List<TypeRef?> argTypes, Map<String, TypeRef?> namedArgTypes) {
-    if (returnType is ParameterTypeDependentReturnType) {
-      final paramIndex = returnType.paramIndex;
-      final paramName = returnType.paramName;
-
-      AlwaysReturnType? resolvedType;
-      if (paramIndex != null) {
-        resolvedType = returnType.map[argTypes[paramIndex]];
-      } else if (paramName != null) {
-        resolvedType = returnType.map[namedArgTypes[paramName]];
-      }
-
-      if (resolvedType == null) {
-        return returnType.fallback;
-      }
-      return resolvedType;
-    }
-    return returnType as AlwaysReturnType;
-  }
-
-  Variable _pushBuiltinValue(BuiltinValue value, DbcGenContext ctx) {
+  Variable _pushBuiltinValue(BuiltinValue value, CompilerContext ctx) {
     if (value.type == BuiltinValueType.intType) {
       pushOp(ctx, PushConstantInt.make(value.intval!), PushConstantInt.LEN);
       ctx.allocNest.last++;
@@ -674,7 +619,7 @@ class DbcCompiler {
     }
   }
 
-  BuiltinValue _parseLiteral(Literal l, DbcGenContext ctx) {
+  BuiltinValue _parseLiteral(Literal l, CompilerContext ctx) {
     if (l is IntegerLiteral) {
       return BuiltinValue(intval: l.value);
     } else if (l is SimpleStringLiteral) {
@@ -685,7 +630,7 @@ class DbcCompiler {
     throw CompileError('Unknown literal type ${l.runtimeType}');
   }
 
-  Variable _parseIdentifier(Identifier id, DbcGenContext ctx) {
+  Variable _parseIdentifier(Identifier id, CompilerContext ctx) {
     if (id is SimpleIdentifier) {
       for (var i = ctx.locals.length - 1; i >= 0; i--) {
         if (ctx.locals[i].containsKey(id.name)) {
@@ -717,7 +662,7 @@ class DbcCompiler {
       TypeRef? returnType;
       var nullable = true;
       if (decl.returnType != null) {
-        returnType = getTypeRefFromAnnotation(ctx, declaration.sourceLib, decl.returnType!);
+        returnType = TypeRef.fromAnnotation(ctx, declaration.sourceLib, decl.returnType!);
         nullable = decl.returnType!.question != null;
       }
 
@@ -736,48 +681,6 @@ class DbcCompiler {
   }
 }
 
-class DbcGenContext {
-  DbcGenContext(this.sourceFile);
-
-  int library = 0;
-  int position = 0;
-  int scopeFrameOffset = 0;
-  List<List<AstNode>> scopeNodes = [];
-  List<Map<String, Variable>> locals = [];
-  Map<int, Map<String, Declaration>> topLevelDeclarationsMap = {};
-  Map<int, Map<String, Map<String, Declaration>>> instanceDeclarationsMap = {};
-  Map<int, DeferredOrOffset> deferredOffsets = {};
-  Map<int, Map<String, TypeRef>> visibleTypes = {};
-  Map<int, Map<String, DeclarationOrPrefix>> visibleDeclarations = {};
-  Map<int, Map<String, int>> topLevelDeclarationPositions = {};
-  Map<int, Map<String, List<Map<String, int>>>> instanceDeclarationPositions = {};
-  List<int> allocNest = [0];
-  int sourceFile;
-}
-
-class DeclarationOrPrefix {
-  DeclarationOrPrefix(this.sourceLib, {this.declaration, this.children});
-
-  int sourceLib;
-  Declaration? declaration;
-  Map<String, Declaration>? children;
-}
-
-class Variable {
-  Variable(this.scopeFrameOffset, this.type, this.nullable,
-      {this.methodOffset, this.methodReturnType, this.boxed = true});
-
-  final int scopeFrameOffset;
-  final TypeRef type;
-  final DeferredOrOffset? methodOffset;
-  final ReturnType? methodReturnType;
-  final bool boxed;
-
-  bool? nullable;
-  String? name;
-  int? frameIndex;
-}
-
 class StatementInfo {
   StatementInfo(this.position, {this.willAlwaysReturn = false, this.willAlwaysThrow = false});
 
@@ -786,227 +689,4 @@ class StatementInfo {
   final bool willAlwaysThrow;
 }
 
-class DeferredOrOffset {
-  DeferredOrOffset({this.offset, this.file, this.name});
-
-  final int? offset;
-  final int? file;
-  final String? name;
-
-  @override
-  String toString() {
-    return 'DeferredOrOffset{offset: $offset, file: $file, name: $name}';
-  }
-}
-
-class BuiltinValue {
-  BuiltinValue({this.intval, this.doubleval, this.stringval}) {
-    if (intval != null) {
-      type = BuiltinValueType.intType;
-    } else if (stringval != null) {
-      type = BuiltinValueType.stringType;
-    } else if (doubleval != null) {
-      type = BuiltinValueType.doubleType;
-    } else {
-      type = BuiltinValueType.nullType;
-    }
-  }
-
-  late BuiltinValueType type;
-  final int? intval;
-  final double? doubleval;
-  final String? stringval;
-}
-
-enum BuiltinValueType { intType, stringType, doubleType, nullType }
-
-class TypeRef {
-  const TypeRef(this.file, this.name,
-      {this.extendsType,
-      this.implementsType = const [],
-      this.withType = const [],
-      this.genericParams = const [],
-      this.specifiedTypeArgs = const []});
-
-  final int file;
-  final String name;
-  final TypeRef? extendsType;
-  final List<TypeRef> implementsType;
-  final List<TypeRef> withType;
-  final List<GenericParam> genericParams;
-  final List<TypeRef> specifiedTypeArgs;
-
-  List<TypeRef> get allSupertypes => [if (extendsType != null) extendsType!, ...implementsType, ...withType];
-
-  bool isAssignableTo(TypeRef slot, {List<TypeRef>? overrideGenerics}) {
-    final generics = overrideGenerics ?? specifiedTypeArgs;
-
-    if (this == slot) {
-      for (var i = 0; i < generics.length; i++) {
-        if (slot.specifiedTypeArgs.length >= i - 1) {
-          if (!generics[i].isAssignableTo(slot.specifiedTypeArgs[i])) {
-            return false;
-          }
-        }
-      }
-      return true;
-    }
-
-    for (final type in allSupertypes) {
-      if (type.isAssignableTo(slot, overrideGenerics: generics)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is TypeRef && runtimeType == other.runtimeType && file == other.file && name == other.name;
-
-  @override
-  int get hashCode => file.hashCode ^ name.hashCode;
-
-  @override
-  String toString() {
-    return name;
-  }
-}
-
-class KnownMethod {
-  const KnownMethod(this.returnType, this.args, this.namedArgs);
-
-  final ReturnType? returnType;
-  final List<KnownMethodArg> args;
-  final Map<String, KnownMethodArg> namedArgs;
-}
-
-class KnownMethodArg {
-  const KnownMethodArg(this.name, this.type, this.optional, this.nullable);
-
-  final String name;
-  final TypeRef? type;
-  final bool optional;
-  final bool nullable;
-}
-
-class ReturnType {}
-
-class AlwaysReturnType implements ReturnType {
-  const AlwaysReturnType(this.type, this.nullable);
-
-  final TypeRef? type;
-  final bool nullable;
-}
-
-class ParameterTypeDependentReturnType implements ReturnType {
-  const ParameterTypeDependentReturnType(this.map, {this.paramIndex, this.paramName, this.fallback});
-
-  final int? paramIndex;
-  final String? paramName;
-  final Map<TypeRef, AlwaysReturnType> map;
-  final AlwaysReturnType? fallback;
-}
-
-class GenericParam {
-  const GenericParam(this.name, this.extendsType);
-
-  final String name;
-  final TypeRef? extendsType;
-}
-
 const int _dartCoreFile = -1;
-const TypeRef _dynamicType = TypeRef(_dartCoreFile, 'dynamic');
-const TypeRef _nullType = TypeRef(_dartCoreFile, 'Null', extendsType: _dynamicType);
-const TypeRef _objectType = TypeRef(_dartCoreFile, 'Object', extendsType: _dynamicType);
-const TypeRef _numType = TypeRef(_dartCoreFile, 'num', extendsType: _objectType);
-final TypeRef _intType = TypeRef(_dartCoreFile, 'int', extendsType: _numType);
-final TypeRef _doubleType = TypeRef(_dartCoreFile, 'double', extendsType: _numType);
-const TypeRef _stringType = TypeRef(_dartCoreFile, 'String', extendsType: _objectType);
-const TypeRef _mapType = TypeRef(_dartCoreFile, 'Map', extendsType: _objectType);
-const TypeRef _listType = TypeRef(_dartCoreFile, 'List', extendsType: _objectType);
-const TypeRef _functionType = TypeRef(_dartCoreFile, 'Function', extendsType: _objectType);
-
-final Map<String, TypeRef> _coreDeclarations = {
-  'dynamic': _dynamicType,
-  'Null': _nullType,
-  'Object': _objectType,
-  'num': _numType,
-  'String': _stringType,
-  'int': _intType,
-  'double': _doubleType,
-  'Map': _mapType,
-  'List': _listType,
-  'Function': _functionType
-};
-
-final _intBinaryOp = KnownMethod(
-    ParameterTypeDependentReturnType({
-      _doubleType: AlwaysReturnType(_doubleType, false),
-      _intType: AlwaysReturnType(_intType, false),
-      _numType: AlwaysReturnType(_numType, false)
-    }, paramIndex: 0, fallback: AlwaysReturnType(_numType, false)),
-    [KnownMethodArg('other', _numType, false, false)],
-    {});
-
-final _doubleBinaryOp =
-    KnownMethod(AlwaysReturnType(_doubleType, false), [KnownMethodArg('other', _numType, false, false)], {});
-
-final _numBinaryOp = KnownMethod(
-    ParameterTypeDependentReturnType({
-      _doubleType: AlwaysReturnType(_doubleType, false),
-    }, paramIndex: 0, fallback: AlwaysReturnType(_numType, false)),
-    [KnownMethodArg('other', _numType, false, false)],
-    {});
-
-final Map<TypeRef, Map<String, KnownMethod>> _knownMethods = {
-  _intType: {
-    '+': _intBinaryOp,
-    '-': _intBinaryOp,
-    '/': _intBinaryOp,
-    '%': _intBinaryOp,
-  },
-  _doubleType: {
-    '+': _doubleBinaryOp,
-    '-': _doubleBinaryOp,
-    '/': _doubleBinaryOp,
-    '%': _doubleBinaryOp,
-  },
-  _numType: {
-    '+': _numBinaryOp,
-    '-': _numBinaryOp,
-    '/': _numBinaryOp,
-    '%': _numBinaryOp,
-  }
-};
-
-final Set<TypeRef> _unboxedAcrossFunctionBoundaries = {_intType, _doubleType};
-
-class CompileError implements Exception {
-  final String message;
-
-  CompileError(this.message);
-
-  @override
-  String toString() {
-    return 'CompileError: $message';
-  }
-}
-
-class LR {
-  LR(this.name);
-
-  final String name;
-}
-
-class LRA extends LR {
-  LRA(String name) : super(name);
-
-  String get name => "a";
-
-  v() {
-    final p = super.name;
-    final a = name;
-  }
-}

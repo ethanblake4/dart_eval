@@ -1,8 +1,8 @@
-import 'package:dart_eval/src/dbc/dbc_exception.dart';
-import 'package:dart_eval/src/dbc/dbc_executor.dart';
-import 'package:dart_eval/src/dbc/dbc_stdlib_base.dart';
+import 'package:dart_eval/src/eval/runtime/exception.dart';
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/runtime/stdlib_base.dart';
 
-import 'dbc_class.dart';
+import 'class.dart';
 
 typedef DbcCallableFunc = DbcValueInterface? Function(DbcVmInterface vm, DbcValueInterface? target,
     List<DbcValueInterface?> positionalArgs, Map<String, DbcValueInterface?> namedArgs);
@@ -15,7 +15,7 @@ abstract class DbcCallable {
 class DbcVmInterface {
   DbcVmInterface(this.exec);
 
-  DbcExecutor exec;
+  Runtime exec;
 
   @override
   bool operator ==(Object other) =>

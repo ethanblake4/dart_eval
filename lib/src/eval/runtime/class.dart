@@ -1,7 +1,7 @@
-import 'package:dart_eval/src/dbc/dbc_declaration.dart';
-import 'package:dart_eval/src/dbc/dbc_exception.dart';
-import 'package:dart_eval/src/dbc/dbc_function.dart';
-import 'package:dart_eval/src/dbc/dbc_stdlib_base.dart';
+import 'package:dart_eval/src/eval/runtime/declaration.dart';
+import 'package:dart_eval/src/eval/runtime/exception.dart';
+import 'package:dart_eval/src/eval/runtime/function.dart';
+import 'package:dart_eval/src/eval/runtime/stdlib_base.dart';
 
 /// Interface for objects with a backing value
 abstract class DbcValueInterface {

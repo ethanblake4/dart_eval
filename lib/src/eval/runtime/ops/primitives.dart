@@ -1,7 +1,7 @@
-part of '../dbc_executor.dart';
+part of '../runtime.dart';
 
 class PushConstantInt implements DbcOp {
-  PushConstantInt(DbcExecutor exec) : _value = exec._readInt32();
+  PushConstantInt(Runtime exec) : _value = exec._readInt32();
 
   PushConstantInt.make(this._value);
 
@@ -11,7 +11,7 @@ class PushConstantInt implements DbcOp {
 
   // Set value at position to constant
   @override
-  void run(DbcExecutor exec) {
+  void run(Runtime exec) {
     exec._vStack[exec._stackOffset++] = _value;
   }
 
@@ -20,7 +20,7 @@ class PushConstantInt implements DbcOp {
 }
 
 class PushNull implements DbcOp {
-  PushNull(DbcExecutor exec);
+  PushNull(Runtime exec);
 
   PushNull.make();
 
@@ -28,7 +28,7 @@ class PushNull implements DbcOp {
 
   // Set value at position to constant
   @override
-  void run(DbcExecutor exec) {
+  void run(Runtime exec) {
     exec._vStack[exec._stackOffset++] = null;
   }
 
@@ -36,8 +36,29 @@ class PushNull implements DbcOp {
   String toString() => 'PushNull ()';
 }
 
+class PushConstantString implements DbcOp {
+  PushConstantString(Runtime exec) : _value = exec._readString();
+
+  PushConstantString.make(this._value);
+
+  final String _value;
+
+  static int len(PushConstantString s) {
+    return Dbc.BASE_OPLEN + Dbc.istr_len(s._value);
+  }
+
+  // Set value at position to constant
+  @override
+  void run(Runtime exec) {
+    exec._vStack[exec._stackOffset++] = _value;
+  }
+
+  @override
+  String toString() => "PushConstantString ('$_value')";
+}
+
 class AddInts implements DbcOp {
-  AddInts(DbcExecutor exec)
+  AddInts(Runtime exec)
       : _location1 = exec._readInt16(),
         _location2 = exec._readInt16();
 
@@ -50,7 +71,7 @@ class AddInts implements DbcOp {
 
   // Add value A + B
   @override
-  void run(DbcExecutor exec) {
+  void run(Runtime exec) {
     final scopeStackOffset = exec.scopeStackOffset;
     exec._vStack[exec._stackOffset++] =
         (exec._vStack[scopeStackOffset + _location1] as int) + (exec._vStack[scopeStackOffset + _location2] as int);
@@ -61,7 +82,7 @@ class AddInts implements DbcOp {
 }
 
 class BoxInt implements DbcOp {
-  BoxInt(DbcExecutor exec) : _position = exec._readInt16();
+  BoxInt(Runtime exec) : _position = exec._readInt16();
 
   BoxInt.make(this._position);
 
@@ -71,7 +92,7 @@ class BoxInt implements DbcOp {
 
   // Set value at position to constant
   @override
-  void run(DbcExecutor exec) {
+  void run(Runtime exec) {
     exec._vStack[exec._stackOffset++] = DbcInt(exec._vStack[exec.scopeStackOffset + _position] as int);
   }
 
@@ -80,7 +101,7 @@ class BoxInt implements DbcOp {
 }
 
 class Unbox implements DbcOp {
-  Unbox(DbcExecutor exec) : _position = exec._readInt16();
+  Unbox(Runtime exec) : _position = exec._readInt16();
 
   Unbox.make(this._position);
 
@@ -90,7 +111,7 @@ class Unbox implements DbcOp {
 
   // Set value at position to constant
   @override
-  void run(DbcExecutor exec) {
+  void run(Runtime exec) {
     exec._vStack[exec._stackOffset++] =
         (exec._vStack[exec.scopeStackOffset + _position] as DbcValueInterface).evalValue;
   }

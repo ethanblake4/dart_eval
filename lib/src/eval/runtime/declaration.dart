@@ -1,5 +1,5 @@
-import 'package:dart_eval/src/dbc/dbc_class.dart';
-import 'package:dart_eval/src/dbc/dbc_function.dart';
+import 'package:dart_eval/src/eval/runtime/class.dart';
+import 'package:dart_eval/src/eval/runtime/function.dart';
 
 abstract class DbcDeclaration {
   DbcVmInterface get evalVm;

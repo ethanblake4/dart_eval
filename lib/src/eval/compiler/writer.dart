@@ -3,7 +3,8 @@ import 'dart:io';
 
 import 'dart:typed_data';
 
-import 'package:dart_eval/src/dbc/dbc_executor.dart' hide ops;
+import 'package:dart_eval/src/eval/runtime/runtime.dart' show Runtime;
+import 'package:dart_eval/src/eval/runtime/ops/all_ops.dart';
 
 class DbcWriter {
 
@@ -21,7 +22,7 @@ class DbcWriter {
     b.add(iEncodedDeclarations);
 
     for (final op in program.ops) {
-      b.add(Dbc.opcodeFrom(op));
+      b.add(Runtime.opcodeFrom(op));
     }
     return b.takeBytes();
   }
