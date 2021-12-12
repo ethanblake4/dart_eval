@@ -8,7 +8,7 @@ abstract class DbcDeclaration {
 /// A class is an instance of [Type]
 class DbcClass extends DbcInstanceImpl implements DbcDeclaration {
   DbcClass(this.evalVm, this.superclass, this.mixins, this.getters, this.setters, this.methods)
-      : super(DbcClassClass.instance, DbcTypeClass(evalVm));
+      : super(DbcClassClass.instance, DbcTypeClass(evalVm), const []);
 
   @override
   final DbcVmInterface evalVm;
@@ -71,6 +71,9 @@ class DbcClassClass implements DbcClass {
   @override
   // TODO: implement values
   List<Object> get values => throw UnimplementedError();
+
+  @override
+  set values(List<Object?> _values) => throw UnimplementedError();
 
   @override
   // TODO: implement evalClass

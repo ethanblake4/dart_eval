@@ -1,22 +1,23 @@
 import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'package:dart_eval/src/eval/compiler/compiler.dart';
 
-
 void main(List<String> args) {
-  final compiler = DbcCompiler();
+  final compiler = Compiler();
 
   final files = {
     'example': {
       'main.dart': '''
         import 'package:example/x.dart';
         num main() {
-          var i = Vib();
+          var i = Vib(5);
           return 7 + i.h();
         }
       ''',
       'x.dart': '''
       class Vib {
-        Vib();
+        Vib({this.z = 3});
+        
+        int z;
         
         int h() {
           return 11;

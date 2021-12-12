@@ -4,6 +4,8 @@ import 'package:dart_eval/src/eval/runtime/function.dart';
 import 'class.dart';
 
 class DbcNull implements DbcValueInterface {
+  const DbcNull();
+
   @override
   Null get evalValue => null;
 

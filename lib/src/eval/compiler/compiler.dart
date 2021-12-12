@@ -6,7 +6,7 @@ import 'package:analyzer/dart/ast/token.dart';
 import 'package:dart_eval/src/eval/compiler/source.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/compiler/writer.dart';
+import 'package:dart_eval/src/eval/compiler/program.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/runtime/ops/all_ops.dart';
 
@@ -16,10 +16,11 @@ import 'offset_tracker.dart';
 
 part 'compiler_builtins.dart';
 
-class DbcCompiler {
+class Compiler {
   final out = <DbcOp>[];
 
-  DbcProgram compile(Map<String, Map<String, String>> packages) {
+  Program compile(Map<String, Map<String, String>> packages) {
+    var dartSourceSize = 0;
     final ctx = CompilerContext(0);
 
     final packageMap = <String, Map<String, int>>{};
@@ -60,6 +61,7 @@ class DbcCompiler {
       packageMap[package] = {};
 
       libraries.forEach((filename, source) {
+        dartSourceSize += source.length;
         final unit = _parse(source);
 
         final imports = <ImportDirective>[];
@@ -220,13 +222,16 @@ class DbcCompiler {
       });
     });
 
-    return DbcProgram(ctx.topLevelDeclarationPositions, ctx.instanceDeclarationPositions, ctx.offsetTracker.apply(out));
+    print('Compiled from $dartSourceSize characters Dart source');
+
+    return Program(ctx.topLevelDeclarationPositions, ctx.instanceDeclarationPositions, ctx.offsetTracker.apply(out));
   }
 
   Runtime compileWriteAndLoad(Map<String, Map<String, String>> packages) {
     final program = compile(packages);
 
-    final ob = DbcWriter().write(program);
+    final ob = program.write();
+
     return Runtime(ob.buffer.asByteData());
   }
 
@@ -247,6 +252,12 @@ class DbcCompiler {
     return out.length - 1;
   }
 
+  int rewriteOp(CompilerContext ctx, int where, DbcOp newOp, int lengthAdjust) {
+    out[where] = newOp;
+    ctx.position += lengthAdjust;
+    return where;
+  }
+
   int enterScope(CompilerContext ctx, AstNode scopeHost, int offset, String name) {
     final position = out.length;
     var op = PushScope.make(ctx.library, offset, name);
@@ -260,14 +271,36 @@ class DbcCompiler {
     ctx.locals.removeLast();
   }
 
-  int? _parseDeclaration(Declaration d, CompilerContext ctx, [Declaration? parent]) {
+  int? _parseDeclaration(Declaration d, CompilerContext ctx,
+      {Declaration? parent, int? fieldIndex, List<FieldDeclaration>? fields}) {
     if (d is ClassDeclaration) {
       ctx.instanceDeclarationPositions[ctx.library]![d.name.name] = [{}, {}, {}];
+      final constructors = <ConstructorDeclaration>[];
+      final fields = <FieldDeclaration>[];
+      final methods = <MethodDeclaration>[];
       for (final m in d.members) {
-        _parseDeclaration(m, ctx, d);
-        ctx.scopeFrameOffset = 0;
-        ctx.allocNest = [0];
+        if (m is ConstructorDeclaration) {
+          constructors.add(m);
+        } else if (m is FieldDeclaration) {
+          fields.add(m);
+        } else {
+          m as MethodDeclaration;
+          methods.add(m);
+        }
       }
+      var i = 0;
+      for (final m in <ClassMember>[...fields, ...methods, ...constructors]) {
+        final _a = m is ConstructorDeclaration ? 0 : 1;
+        ctx.scopeFrameOffset = _a;
+        ctx.allocNest = [_a];
+        _parseDeclaration(m, ctx, parent: d, fieldIndex: i, fields: fields);
+        if (m is FieldDeclaration) {
+          i += m.fields.length - 1;
+        }
+        i++;
+      }
+      ctx.scopeFrameOffset = 0;
+      ctx.allocNest = [0];
     } else if (d is MethodDeclaration) {
       final b = d.body;
       if (!(parent is NamedCompilationUnitMember)) {
@@ -309,22 +342,203 @@ class DbcCompiler {
         pushOp(ctx, Return.make(-1), Return.LEN);
       }
       ctx.locals.removeLast();
-    } else if (d is ConstructorDeclaration) {
+    } else if (d is FieldDeclaration) {
       parent as ClassDeclaration;
+      var _fieldIndex = fieldIndex!;
+      for (final field in d.fields.variables) {
+        final pos = enterScope(ctx, d, d.offset, parent.name.name + '.' + field.name.name + ' (get)');
+        pushOp(ctx, PushObjectPropertyImpl.make(0, _fieldIndex), PushObjectPropertyImpl.LEN);
+        pushOp(ctx, Return.make(1), Return.LEN);
+        ctx.instanceDeclarationPositions[ctx.library]![parent.name.name]![0][field.name.name] = pos;
 
-      final n = '${parent.name.name}.${d.name?.name ?? ""}';
+        if (!(field.isFinal || field.isConst)) {
+          final setterPos = enterScope(ctx, d, d.offset, parent.name.name + '.' + field.name.name + ' (set)');
+          pushOp(ctx, SetObjectPropertyImpl.make(0, _fieldIndex, 1), SetObjectPropertyImpl.LEN);
+          pushOp(ctx, Return.make(1), Return.LEN);
+          ctx.instanceDeclarationPositions[ctx.library]![parent.name.name]![1][field.name.name] = setterPos;
+        }
 
-      ctx.topLevelDeclarationPositions[ctx.library]![n] = enterScope(ctx, d, d.offset, '$n()');
-
-      final $null = _pushBuiltinValue(BuiltinValue(), ctx);
-
-      final op = CreateClass.make(ctx.library, $null.scopeFrameOffset, parent.name.name);
-      pushOp(ctx, op, CreateClass.len(op));
-      pushOp(ctx, Return.make(ctx.scopeFrameOffset++), Return.LEN);
-      ctx.locals.removeLast();
+        _fieldIndex++;
+      }
+    } else if (d is ConstructorDeclaration) {
+      _parseConstructorDeclaration(ctx, d, parent as ClassDeclaration, fields!);
     } else {
       throw CompileError('No support for ${d.runtimeType}');
     }
+  }
+
+  void _parseConstructorDeclaration(
+      CompilerContext ctx, ConstructorDeclaration d, ClassDeclaration parent, List<FieldDeclaration> fields) {
+    final n = '${parent.name.name}.${d.name?.name ?? ""}';
+
+    ctx.topLevelDeclarationPositions[ctx.library]![n] = enterScope(ctx, d, d.offset, '$n()');
+
+    ctx.allocNest.add(d.parameters.parameters.length);
+    ctx.scopeFrameOffset = d.parameters.parameters.length;
+
+    SuperConstructorInvocation? $superInitializer;
+    final otherInitializers = <ConstructorInitializer>[];
+    for (final initializer in d.initializers) {
+      if (initializer is SuperConstructorInvocation) {
+        $superInitializer = initializer;
+      } else if ($superInitializer != null) {
+        throw CompileError('Super constructor invocation must be last in the initializer list');
+      } else {
+        otherInitializers.add(initializer);
+      }
+    }
+
+    final fieldIndices = <String, int>{};
+    var i = 0;
+    for (final fd in fields) {
+      for (final field in fd.fields.variables) {
+        fieldIndices[field.name.name] = i;
+        i++;
+      }
+    }
+
+    final $extends = parent.extendsClause;
+    final Variable $super;
+
+    /*if ($extends == null) {
+      $super = _pushBuiltinValue(BuiltinValue(), ctx);
+    } else {
+      final extendsWhat = ctx.visibleDeclarations[ctx.library]![$extends.superclass.name]!;
+
+      if ($superInitializer != null) {
+        final argsPair = _parseArgumentList(ctx, $superInitializer.argumentList);
+        final _args = argsPair.first;
+        final _namedArgs = argsPair.second;
+
+        AlwaysReturnType? mReturnType;
+        final _argTypes = _args.map((e) => e.type).toList();
+        final _namedArgTypes = _namedArgs.map((key, value) => MapEntry(key, value.type));
+
+
+        //final method = _parseIdentifier($superInitializer.constructorName, ctx);
+        if (method.methodOffset == null) {
+          throw CompileError('Cannot call ${e.methodName.name} as it is not a valid method');
+        }
+        final offset = method.methodOffset!;
+        final loc = pushOp(ctx, Call.make(offset.offset ?? -1), Call.LEN);
+        if (offset.offset == null) {
+          ctx.offsetTracker.setOffset(loc, offset);
+        }
+        mReturnType = method.methodReturnType?.toAlwaysReturnType(_argTypes, _namedArgTypes) ??
+            AlwaysReturnType(_dynamicType, true);
+
+        pushOp(ctx, PushReturnValue.make(), PushReturnValue.LEN);
+        ctx.allocNest.last++;
+
+        return Variable(ctx.scopeFrameOffset++, mReturnType?.type ?? _dynamicType, mReturnType?.nullable ?? true,
+            boxed: L == null && !_unboxedAcrossFunctionBoundaries.contains(mReturnType?.type));
+      }
+    }*/
+
+    $super = _pushBuiltinValue(BuiltinValue(), ctx);
+
+    final op = CreateClass.make(ctx.library, $super.scopeFrameOffset, parent.name.name, i);
+    pushOp(ctx, op, CreateClass.len(op));
+    final instOffset = ctx.scopeFrameOffset++;
+    final resolvedParams = _resolveFPLDefaults(ctx, d.parameters, false);
+
+    i = 0;
+
+    for (final param in resolvedParams) {
+      if (param is FieldFormalParameter) {
+        pushOp(ctx, SetObjectPropertyImpl.make(instOffset, fieldIndices[param.identifier.name]!, i),
+            SetObjectPropertyImpl.LEN);
+      } else {
+        param as SimpleFormalParameter;
+        var type = _dynamicType;
+        if (param.type != null) {
+          type = TypeRef.fromAnnotation(ctx, ctx.library, param.type!);
+        }
+        ctx.locals.last[param.identifier!.name] = Variable(i, type, param.type?.question != null);
+      }
+
+      i++;
+    }
+
+    for (final init in otherInitializers) {
+      if (init is ConstructorFieldInitializer) {
+        final V = _parseExpression(init.expression, ctx);
+        pushOp(ctx, SetObjectPropertyImpl.make(instOffset, fieldIndices[init.fieldName.name]!, V.scopeFrameOffset),
+            SetObjectPropertyImpl.LEN);
+      } else {
+        throw CompileError('${init.runtimeType} initializer is not supported');
+      }
+    }
+
+    pushOp(ctx, Return.make(instOffset), Return.LEN);
+    ctx.locals.removeLast();
+  }
+
+  List<NormalFormalParameter> _resolveFPLDefaults(CompilerContext ctx, FormalParameterList fpl, bool isInstanceMethod) {
+    final normalized = <NormalFormalParameter>[];
+    var hasEncounteredOptionalPositionalParam = false;
+    var hasEncounteredNamedParam = false;
+    var _paramIndex = isInstanceMethod ? 1 : 0;
+    for (final param in fpl.parameters) {
+      if (param.isNamed) {
+        if (hasEncounteredOptionalPositionalParam) {
+          throw CompileError('Cannot mix named and optional positional parameters');
+        }
+        hasEncounteredNamedParam = true;
+      } else if (param.isOptionalPositional) {
+        if (hasEncounteredNamedParam) {
+          throw CompileError('Cannot mix named and optional positional parameters');
+        }
+        hasEncounteredOptionalPositionalParam = true;
+      }
+
+      if (param is DefaultFormalParameter) {
+        normalized.add(param.parameter);
+        if (param.defaultValue != null) {
+          final _reserve = JumpIfNonNull.make(_paramIndex, -1);
+          final _reserveOffset = pushOp(ctx, _reserve, JumpIfNonNull.LEN);
+          final V = _parseExpression(param.defaultValue!, ctx);
+          pushOp(ctx, CopyValue.make(_paramIndex, V.scopeFrameOffset), CopyValue.LEN);
+          rewriteOp(ctx, _reserveOffset, JumpIfNonNull.make(_paramIndex, out.length), 0);
+        }
+      } else {
+        param as NormalFormalParameter;
+        normalized.add(param);
+      }
+
+      _paramIndex++;
+    }
+    return normalized;
+  }
+
+  Pair<List<Variable>, Map<String, Variable>> _parseArgumentList(CompilerContext ctx, ArgumentList argumentList) {
+    final _args = <Variable>[];
+    final _namedArgs = <String, Variable>{};
+    var hasEncounteredNamedArg = false;
+
+    for (final arg in argumentList.arguments) {
+      if (arg is NamedExpression) {
+        _namedArgs[arg.name.label.name] = _parseExpression(arg.expression, ctx);
+        hasEncounteredNamedArg = true;
+      } else {
+        if (hasEncounteredNamedArg) {
+          throw CompileError('Positional arguments cannot occur after named arguments');
+        }
+        _args.add(_parseExpression(arg, ctx));
+      }
+    }
+
+    for (final arg in _args) {
+      final argOp = PushArg.make(arg.scopeFrameOffset);
+      pushOp(ctx, argOp, PushArg.LEN);
+    }
+
+    for (final arg in _namedArgs.entries) {
+      final argOp = PushNamedArg.make(arg.value.scopeFrameOffset, arg.key);
+      pushOp(ctx, argOp, PushNamedArg.len(argOp));
+    }
+
+    return Pair(_args, _namedArgs);
   }
 
   StatementInfo _parseStatement(Statement s, AlwaysReturnType? expectedReturnType, CompilerContext ctx) {
@@ -498,33 +712,13 @@ class DbcCompiler {
     Variable? L;
     if (e.target != null) {
       L = _parseExpression(e.target!, ctx);
+      // Push 'this'
+      pushOp(ctx, PushArg.make(L.scopeFrameOffset), PushArg.LEN);
     }
 
-    final _args = <Variable>[];
-    final _namedArgs = <String, Variable>{};
-    var hasEncounteredNamedArg = false;
-
-    for (final arg in e.argumentList.arguments) {
-      if (arg is NamedExpression) {
-        _namedArgs[arg.name.label.name] = _parseExpression(arg.expression, ctx);
-        hasEncounteredNamedArg = true;
-      } else {
-        if (hasEncounteredNamedArg) {
-          throw CompileError('Positional arguments cannot occur after named arguments');
-        }
-        _args.add(_parseExpression(arg, ctx));
-      }
-    }
-
-    for (final arg in _args) {
-      final argOp = PushArg.make(arg.scopeFrameOffset);
-      pushOp(ctx, argOp, PushArg.LEN);
-    }
-
-    for (final arg in _namedArgs.entries) {
-      final argOp = PushNamedArg.make(arg.value.scopeFrameOffset, arg.key);
-      pushOp(ctx, argOp, PushNamedArg.len(argOp));
-    }
+    final argsPair = _parseArgumentList(ctx, e.argumentList);
+    final _args = argsPair.first;
+    final _namedArgs = argsPair.second;
 
     AlwaysReturnType? mReturnType;
     final _argTypes = _args.map((e) => e.type).toList();
@@ -638,7 +832,6 @@ class DbcCompiler {
         }
       }
 
-      //print(ctx.visibleDeclarations);
       final declaration = ctx.visibleDeclarations[ctx.library]![id.name]!;
       final decl = declaration.declaration!;
 
@@ -690,3 +883,16 @@ class StatementInfo {
 }
 
 const int _dartCoreFile = -1;
+
+class Pair<T, T2> {
+  Pair(this.first, this.second);
+
+  T first;
+  T2 second;
+}
+
+class A {
+  A({this.q = "ada"});
+
+  final String q;
+}

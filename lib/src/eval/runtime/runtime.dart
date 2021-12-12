@@ -10,8 +10,11 @@ import 'exception.dart';
 import 'ops/all_ops.dart';
 
 part 'ops/primitives.dart';
+
 part 'ops/memory.dart';
+
 part 'ops/flow.dart';
+
 part 'ops/objects.dart';
 
 class ScopeFrame {
@@ -51,9 +54,9 @@ class Runtime {
       case PushNamedArg:
         op as PushNamedArg;
         return [Dbc.OP_PUSH_NAMED_ARG, ...Dbc.i16b(op._location), ...Dbc.istr(op._name)];
-      case JumpIfNonZero:
-        op as JumpIfNonZero;
-        return [Dbc.OP_JNZ, ...Dbc.i32b(op._offset)];
+      case JumpIfNonNull:
+        op as JumpIfNonNull;
+        return [Dbc.OP_JNZ, ...Dbc.i16b(op._location), ...Dbc.i32b(op._offset)];
       case PushConstantInt:
         op as PushConstantInt;
         return [Dbc.OP_SETVC, ...Dbc.i32b(op._value)];
@@ -85,12 +88,29 @@ class Runtime {
       case PushObjectProperty:
         op as PushObjectProperty;
         return [Dbc.OP_PUSH_OBJECT_PROP, ...Dbc.i16b(op._location), ...Dbc.istr(op._property)];
+      case PushObjectPropertyImpl:
+        op as PushObjectPropertyImpl;
+        return [Dbc.OP_PUSH_OBJECT_PROP_IMPL, ...Dbc.i16b(op._objectOffset), ...Dbc.i16b(op._propertyIndex)];
+      case SetObjectPropertyImpl:
+        op as SetObjectPropertyImpl;
+        return [
+          Dbc.OP_SET_OBJECT_PROP_IMPL,
+          ...Dbc.i16b(op._objectOffset),
+          ...Dbc.i16b(op._propertyIndex),
+          ...Dbc.i16b(op._valueOffset)
+        ];
       case PushNull:
         op as PushNull;
         return [Dbc.OP_PUSH_NULL];
       case CreateClass:
         op as CreateClass;
-        return [Dbc.OP_CREATE_CLASS, ...Dbc.i32b(op._library), ...Dbc.i16b(op._super), ...Dbc.istr(op._name)];
+        return [
+          Dbc.OP_CREATE_CLASS,
+          ...Dbc.i32b(op._library),
+          ...Dbc.i16b(op._super),
+          ...Dbc.istr(op._name),
+          ...Dbc.i16b(op._valuesLen)
+        ];
       default:
         throw ArgumentError('Not a valid op $op');
     }
@@ -144,9 +164,10 @@ class Runtime {
         (json.decode(utf8.decode(metaStr)).map((k, v) => MapEntry(int.parse(k), (v as Map).cast<String, int>())) as Map)
             .cast<int, Map<String, int>>();
 
-    final classes =
-        (json.decode(utf8.decode(classStr)).map((k, v) => MapEntry(int.parse(k), (v as Map).cast<String, List>())) as Map)
-            .cast<int, Map<String, List>>();
+    final classes = (json
+            .decode(utf8.decode(classStr))
+            .map((k, v) => MapEntry(int.parse(k), (v as Map).cast<String, List>())) as Map)
+        .cast<int, Map<String, List>>();
 
     final _vm = DbcVmInterface(this);
 

@@ -5,10 +5,10 @@ import 'package:test/test.dart';
 // Functional tests
 void main() {
   group('Function tests', () {
-    late DbcCompiler gen;
+    late Compiler gen;
 
     setUp(() {
-      gen = DbcCompiler();
+      gen = Compiler();
     });
 
     test('Local variable assignment with ints', () {
@@ -77,10 +77,10 @@ void main() {
     });
   });
   group('Class tests', () {
-    late DbcCompiler gen;
+    late Compiler gen;
 
     setUp(() {
-      gen = DbcCompiler();
+      gen = Compiler();
     });
 
     test('Default constructor, basic method', () {

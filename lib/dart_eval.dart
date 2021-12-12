@@ -2,4 +2,4 @@
 library dart_eval;
 
 export 'src/eval/runtime/runtime.dart';
-export 'src/eval/compiler/writer.dart';
+export 'src/eval/compiler/program.dart';

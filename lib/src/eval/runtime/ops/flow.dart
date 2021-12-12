@@ -55,7 +55,7 @@ class PopScope implements DbcOp {
 
   PopScope.make();
 
-  static int LEN = Dbc.BASE_OPLEN;
+  static const int LEN = Dbc.BASE_OPLEN;
 
   @override
   void run(Runtime exec) {
@@ -69,23 +69,26 @@ class PopScope implements DbcOp {
   String toString() => 'PopScope ()';
 }
 
-class JumpIfNonZero implements DbcOp {
-  JumpIfNonZero(Runtime exec) : _offset = exec._readInt32();
+class JumpIfNonNull implements DbcOp {
+  JumpIfNonNull(Runtime exec) : _location = exec._readInt16(), _offset = exec._readInt32();
 
-  JumpIfNonZero.make(this._offset);
+  JumpIfNonNull.make(this._location, this._offset);
 
+  final int _location;
   final int _offset;
+
+  static const int LEN = Dbc.I16_LEN + Dbc.I32_LEN;
 
   // Conditional move
   @override
   void run(Runtime exec) {
-    if (exec._returnValue != 0) {
+    if (exec._vStack[exec.scopeStackOffset + _location] != null) {
       exec._prOffset = _offset;
     }
   }
 
   @override
-  String toString() => 'JumpNonZero (@$_offset if \$ != 0)';
+  String toString() => 'JumpIfNonNull (@$_offset if L$_location != null)';
 }
 
 // Exit program

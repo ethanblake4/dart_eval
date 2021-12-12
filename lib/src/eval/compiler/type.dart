@@ -1,6 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
 
-import 'compiler.dart';
 import 'context.dart';
 import 'errors.dart';
 

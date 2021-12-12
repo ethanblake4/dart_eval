@@ -40,9 +40,9 @@ class DbcInstanceImpl with DbcValue implements DbcInstance {
 
   @override
   final DbcInstance? evalSuperclass;
-  final List<Object> values = [];
+  late final List<Object?> values;
 
-  DbcInstanceImpl(this._evalClass, this.evalSuperclass);
+  DbcInstanceImpl(this._evalClass, this.evalSuperclass, this.values);
 
   DbcClass get evalClass => _evalClass;
 
@@ -139,6 +139,10 @@ class DbcTypeClass implements DbcClass {
   @override
   // TODO: implement evalClass
   get evalClass => throw UnimplementedError();
+
+  @override
+  set values(List<Object?> _values) => throw UnimplementedError();
+
 }
 
 class DbcBridgeData {
