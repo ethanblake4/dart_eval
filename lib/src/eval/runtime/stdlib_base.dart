@@ -65,9 +65,8 @@ class DbcNum<T extends num> implements DbcInstance {
   T get reifiedValue => evalValue;
 
   static const DbcFunctionImpl __plus = DbcFunctionImpl(_plus);
-  static DbcValueInterface? _plus(DbcVmInterface vm, DbcValueInterface? target,
-      List<DbcValueInterface?> positionalArgs, Map<String, DbcValueInterface?> namedArgs) {
-    final other = positionalArgs[0];
+  static DbcValueInterface? _plus(DbcVmInterface vm, DbcValueInterface? target, List<DbcValueInterface?> args) {
+    final other = args[0];
     final _evalResult = target!.evalValue + other!.evalValue;
 
     if (_evalResult is int) {
@@ -81,9 +80,8 @@ class DbcNum<T extends num> implements DbcInstance {
   }
 
   static const DbcFunctionImpl __minus = DbcFunctionImpl(_minus);
-  static DbcValueInterface? _minus(DbcVmInterface vm, DbcValueInterface? target,
-      List<DbcValueInterface?> positionalArgs, Map<String, DbcValueInterface?> namedArgs) {
-    final other = positionalArgs[0];
+  static DbcValueInterface? _minus(DbcVmInterface vm, DbcValueInterface? target, List<DbcValueInterface?> args) {
+    final other = args[0];
     final _evalResult = target!.evalValue - other!.evalValue;
 
     if (_evalResult is int) {

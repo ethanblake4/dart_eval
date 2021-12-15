@@ -51,9 +51,6 @@ class Runtime {
       case PushArg:
         op as PushArg;
         return [Dbc.OP_PUSH_ARG, ...Dbc.i16b(op._location)];
-      case PushNamedArg:
-        op as PushNamedArg;
-        return [Dbc.OP_PUSH_NAMED_ARG, ...Dbc.i16b(op._location), ...Dbc.istr(op._name)];
       case JumpIfNonNull:
         op as JumpIfNonNull;
         return [Dbc.OP_JNZ, ...Dbc.i16b(op._location), ...Dbc.i32b(op._offset)];
@@ -130,7 +127,6 @@ class Runtime {
   final ByteData _dbc;
   final _vStack = List<Object?>.filled(65535, null);
   var _args = <Object?>[];
-  var _namedArgs = <String, Object?>{};
   final pr = <DbcOp>[];
   Object? _returnValue = null;
   var scopeStack = <ScopeFrame>[ScopeFrame(0, 0)];

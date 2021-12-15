@@ -20,30 +20,6 @@ class PushArg implements DbcOp {
   String toString() => 'PushArg (L$_location)';
 }
 
-class PushNamedArg implements DbcOp {
-  PushNamedArg(Runtime exec)
-      : _location = exec._readInt16(),
-        _name = exec._readString();
-
-  PushNamedArg.make(this._location, this._name);
-
-  final int _location;
-  final String _name;
-
-  static int len(PushNamedArg s) {
-    return Dbc.BASE_OPLEN + Dbc.I16_LEN + Dbc.istr_len(s._name);
-  }
-
-  // Set value at position to constant
-  @override
-  void run(Runtime exec) {
-    exec._namedArgs[_name] = exec._vStack[exec.scopeStackOffset + _location];
-  }
-
-  @override
-  String toString() => 'PushNamedArg ($_name: L$_location)';
-}
-
 class Pop implements DbcOp {
   Pop(Runtime exec);
 

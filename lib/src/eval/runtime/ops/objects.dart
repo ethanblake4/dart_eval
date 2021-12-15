@@ -26,7 +26,7 @@ class InvokeDynamic implements DbcOp {
     final method = ((object as DbcInstance).evalGetProperty(_method) as DbcFunction);
     if (method is DbcFunctionImpl) {
       exec._vStack[exec._stackOffset++] =
-          method.call(DbcVmInterface(exec), object, exec._args.cast(), exec._namedArgs.cast());
+          method.call(DbcVmInterface(exec), object, exec._args.cast());
     } else {
       throw UnimplementedError();
     }

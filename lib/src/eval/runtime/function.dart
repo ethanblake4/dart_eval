@@ -5,11 +5,10 @@ import 'package:dart_eval/src/eval/runtime/stdlib_base.dart';
 import 'class.dart';
 
 typedef DbcCallableFunc = DbcValueInterface? Function(DbcVmInterface vm, DbcValueInterface? target,
-    List<DbcValueInterface?> positionalArgs, Map<String, DbcValueInterface?> namedArgs);
+    List<DbcValueInterface?> args);
 
 abstract class DbcCallable {
-  DbcValueInterface? call(DbcVmInterface vm, DbcValueInterface? target, List<DbcValueInterface?> positionalArgs,
-      Map<String, DbcValueInterface?> namedArgs);
+  DbcValueInterface? call(DbcVmInterface vm, DbcValueInterface? target, List<DbcValueInterface?> args);
 }
 
 class DbcVmInterface {
@@ -60,8 +59,7 @@ class DbcFunctionPtr extends DbcFunction {
   final int offset;
 
   @override
-  DbcValueInterface? call(DbcVmInterface vm, DbcValueInterface? target, List<DbcValueInterface?> positionalArgs,
-      Map<String, DbcValueInterface?> namedArgs) {
+  DbcValueInterface? call(DbcVmInterface vm, DbcValueInterface? target, List<DbcValueInterface?> args) {
     final exec = vm.exec;
     exec.execute(offset);
   }
@@ -73,8 +71,7 @@ class DbcFunctionImpl extends DbcFunction {
   final DbcCallableFunc func;
 
   @override
-  DbcValueInterface? call(DbcVmInterface vm, DbcValueInterface? target, List<DbcValueInterface?> positionalArgs,
-      Map<String, DbcValueInterface?> namedArgs) {
-    return func(vm, target, positionalArgs, namedArgs);
+  DbcValueInterface? call(DbcVmInterface vm, DbcValueInterface? target, List<DbcValueInterface?> args) {
+    return func(vm, target, args);
   }
 }
