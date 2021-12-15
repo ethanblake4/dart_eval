@@ -107,7 +107,7 @@ void main() {
           'main.dart': '''
             import 'package:example/x.dart';
             num main() {
-              var i = Vib(5);
+              var i = Vib(z: 5);
               var m = Vib();
               return i.z + m.z + i.h();
             }
@@ -126,7 +126,7 @@ void main() {
         }
       })..loadProgram();
 
-      expect(exec.executeNamed(0, 'main'), DbcInt(16));
+      expect(exec.executeNamed(0, 'main'), DbcInt(19));
     });
   });
 }

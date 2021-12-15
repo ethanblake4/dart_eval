@@ -123,6 +123,11 @@ class DbcInt extends DbcNum<int> {
 
   @override
   int get reifiedValue => evalValue;
+
+  @override
+  String toString() {
+    return evalValue.toString();
+  }
 }
 
 class DbcDouble extends DbcNum<double> {
