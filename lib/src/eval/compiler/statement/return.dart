@@ -17,7 +17,7 @@ StatementInfo compileReturn(CompilerContext ctx, ReturnStatement s, AlwaysReturn
     if (!value.type.isAssignableTo(expected)) {
       throw CompileError('Cannot return ${value.type} (expected: $expected)');
     }
-    if (unboxedAcrossFunctionBoundaries.contains(expected) && !ctx.inInstanceCode) {
+    if (unboxedAcrossFunctionBoundaries.contains(expected) && ctx.currentClass == null) {
       value = value.unboxIfNeeded(ctx);
     } else {
       value = value.boxIfNeeded(ctx);

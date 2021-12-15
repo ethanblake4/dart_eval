@@ -45,8 +45,8 @@ class Dbc {
   /// Push constant string
   static const OP_PUSH_CONST_STR = 12;
 
-  /// [PopScope] Pop scope frame
-  static const OP_POPSCOPE = 13;
+  /// [SetObjectProperty] Set object property
+  static const OP_SET_OBJECT_PROP = 13;
 
   /// [SetReturnValue]
   static const OP_SETRV = 14;
@@ -127,7 +127,7 @@ final List<OpLoader> ops = [
       (Runtime ex) => PushScope(ex), // 10
       (Runtime ex) => CopyValue(ex), // 11
       (Runtime ex) => PushConstantString(ex), // 12
-      (Runtime ex) => throw UnimplementedError(), // 13
+      (Runtime ex) => SetObjectProperty(ex), // 13
       (Runtime ex) => SetReturnValue(ex), // 14
       (Runtime ex) => Return(ex), // 15
       (Runtime ex) => Pop(ex), // 16

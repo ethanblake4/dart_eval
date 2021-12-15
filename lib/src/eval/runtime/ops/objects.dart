@@ -38,7 +38,11 @@ class InvokeDynamic implements DbcOp {
 
 // Create a class
 class CreateClass implements DbcOp {
-  CreateClass(Runtime exec) : _library = exec._readInt32(), _super = exec._readInt16(), _name = exec._readString(), _valuesLen = exec._readInt16();
+  CreateClass(Runtime exec)
+      : _library = exec._readInt32(),
+        _super = exec._readInt16(),
+        _name = exec._readString(),
+        _valuesLen = exec._readInt16();
 
   CreateClass.make(this._library, this._super, this._name, this._valuesLen);
 
@@ -64,6 +68,32 @@ class CreateClass implements DbcOp {
   String toString() => 'CreateClass (F$_library:"$_name", super L$_super, vLen=$_valuesLen))';
 }
 
+class SetObjectProperty implements DbcOp {
+  SetObjectProperty(Runtime exec)
+      : _location = exec._readInt16(),
+        _property = exec._readString(),
+        _valueOffset = exec._readInt16();
+
+  SetObjectProperty.make(this._location, this._property, this._valueOffset);
+
+  final int _location;
+  final String _property;
+  final int _valueOffset;
+
+  static int len(SetObjectProperty s) {
+    return Dbc.BASE_OPLEN + Dbc.I16_LEN + Dbc.istr_len(s._property) + Dbc.I16_LEN;
+  }
+
+  @override
+  void run(Runtime exec) {
+    final object = exec._vStack[exec.scopeStackOffset + _location];
+    (object as DbcInstance)
+        .evalSetProperty(_property, exec._vStack[exec.scopeStackOffset + _valueOffset] as DbcValueInterface);
+  }
+
+  @override
+  String toString() => 'SetObjectProperty (L$_location.$_property = L$_valueOffset)';
+}
 
 class PushObjectProperty implements DbcOp {
   PushObjectProperty(Runtime exec)
@@ -113,9 +143,9 @@ class PushObjectPropertyImpl implements DbcOp {
 
 class SetObjectPropertyImpl implements DbcOp {
   SetObjectPropertyImpl(Runtime exec)
-    : _objectOffset = exec._readInt16(),
-      _propertyIndex = exec._readInt16(),
-      _valueOffset = exec._readInt16();
+      : _objectOffset = exec._readInt16(),
+        _propertyIndex = exec._readInt16(),
+        _valueOffset = exec._readInt16();
 
   final int _objectOffset;
   final int _propertyIndex;

@@ -11,6 +11,7 @@ void main(List<String> args) {
         num main() {
           var m = Vib();
           var m2 = Vib(z: 6);
+          m2.z = 65;
           return m.z + m.h() + m2.z;
         }
       ''',
@@ -21,7 +22,8 @@ void main(List<String> args) {
         int z;
         
         int h() {
-          return 11;
+          z = 20;
+          return this.z + 11;
         }
       }
       '''

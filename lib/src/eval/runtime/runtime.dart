@@ -83,6 +83,14 @@ class Runtime {
       case InvokeDynamic:
         op as InvokeDynamic;
         return [Dbc.OP_INVOKE_DYNAMIC, ...Dbc.i16b(op._location), ...Dbc.istr(op._method)];
+      case SetObjectProperty:
+        op as SetObjectProperty;
+        return [
+          Dbc.OP_SET_OBJECT_PROP,
+          ...Dbc.i16b(op._location),
+          ...Dbc.istr(op._property),
+          ...Dbc.i16b(op._valueOffset)
+        ];
       case PushObjectProperty:
         op as PushObjectProperty;
         return [Dbc.OP_PUSH_OBJECT_PROP, ...Dbc.i16b(op._location), ...Dbc.istr(op._property)];

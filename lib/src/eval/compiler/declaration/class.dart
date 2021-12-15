@@ -20,13 +20,13 @@ void compileClassDeclaration(CompilerContext ctx, ClassDeclaration d) {
   var i = 0;
   for (final m in <ClassMember>[...fields, ...methods, ...constructors]) {
     ctx.resetStack(position: m is ConstructorDeclaration ? 0 : 1);
-    ctx.inInstanceCode = !(m is ConstructorDeclaration);
+    ctx.currentClass = d;
     compileDeclaration(m, ctx, parent: d, fieldIndex: i, fields: fields);
     if (m is FieldDeclaration) {
       i += m.fields.length - 1;
     }
     i++;
   }
-  ctx.inInstanceCode = false;
+  ctx.currentClass = null;
   ctx.resetStack();
 }

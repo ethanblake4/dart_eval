@@ -14,7 +14,7 @@ class CompilerContext {
   int library = 0;
   int position = 0;
   int scopeFrameOffset = 0;
-  bool inInstanceCode = false;
+  ClassDeclaration? currentClass = null;
   List<List<AstNode>> scopeNodes = [];
   List<Map<String, Variable>> locals = [];
   Map<int, Map<String, Declaration>> topLevelDeclarationsMap = {};
@@ -49,6 +49,14 @@ class CompilerContext {
     for (var i = 0; i < nestCount; i++) {
       pushOp(Pop.make(), Pop.LEN);
       scopeFrameOffset--;
+    }
+  }
+
+  Variable? lookupLocal(String name) {
+    for (var i = locals.length - 1; i >= 0; i--) {
+      if (locals[i].containsKey(name)) {
+        return locals[i][name]!..frameIndex = i;
+      }
     }
   }
 }
