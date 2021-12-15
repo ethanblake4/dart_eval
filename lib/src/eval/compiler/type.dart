@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 
+import 'builtins.dart';
 import 'context.dart';
 import 'errors.dart';
 
@@ -16,6 +17,26 @@ class TypeRef {
       throw CompileError('No support for generic function types yet');
     }
     return ctx.visibleTypes[library]![typeAnnotation.name.name]!;
+  }
+
+  factory TypeRef.lookupClassDeclaration(CompilerContext ctx, int library, ClassDeclaration cls) {
+    return ctx.visibleTypes[library]![cls.name.name] ?? (throw CompileError('Class ${cls.name.name} not found'));
+  }
+
+  factory TypeRef.lookupFieldType(CompilerContext ctx, TypeRef $class, String field) {
+    if (ctx.instanceDeclarationsMap[$class.file]!.containsKey($class.name) &&
+        ctx.instanceDeclarationsMap[$class.file]![$class.name]!.containsKey(field)) {
+      final _f = ctx.instanceDeclarationsMap[$class.file]![$class.name]![field];
+      if (!(_f is VariableDeclaration)) {
+        throw CompileError('Cannot query field type of F${$class.file}:${$class.name}.$field, which is not a field');
+      }
+      final annotation = (_f.parent as VariableDeclarationList).type;
+      if (annotation == null) {
+        return dynamicType;
+      }
+      return TypeRef.fromAnnotation(ctx, $class.file, annotation);
+    }
+    throw CompileError('Field "$field" not found in class ${$class}');
   }
 
   final int file;
@@ -60,7 +81,7 @@ class TypeRef {
 
   @override
   String toString() {
-    return name;
+    return 'F$file:$name${extendsType != null ? ' extends ' + extendsType!.name : ''}';
   }
 }
 
@@ -93,7 +114,21 @@ class AlwaysReturnType implements ReturnType {
       return AlwaysReturnType.fromAnnotation(ctx, type.file, _m.returnType, fallback);
     }
 
-    throw CompileError("Type not found");
+    throw CompileError('Type not found');
+  }
+
+  static AlwaysReturnType? fromInstanceMethodOrBuiltin(
+      CompilerContext ctx, TypeRef type, String method, List<TypeRef?> argTypes, Map<String, TypeRef?> namedArgTypes) {
+    if (knownMethods[type] != null && knownMethods[type]!.containsKey(method)) {
+      final knownMethod = knownMethods[type]![method]!;
+      final returnType = knownMethod.returnType;
+      if (returnType == null) {
+        return null;
+      }
+      return returnType.toAlwaysReturnType(argTypes, namedArgTypes);
+    }
+
+    return AlwaysReturnType.fromInstanceMethod(ctx, type, method, argTypes, namedArgTypes, dynamicType);
   }
 
   final TypeRef? type;
@@ -135,4 +170,3 @@ class GenericParam {
   final String name;
   final TypeRef? extendsType;
 }
-

@@ -61,7 +61,7 @@ class CreateClass implements DbcOp {
   }
 
   @override
-  String toString() => 'CreateClass (F$_library:"$_name", super L$_super)';
+  String toString() => 'CreateClass (F$_library:"$_name", super L$_super, vLen=$_valuesLen))';
 }
 
 

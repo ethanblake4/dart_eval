@@ -63,8 +63,6 @@ class Runtime {
       case PushScope:
         op as PushScope;
         return [Dbc.OP_PUSHSCOPE, ...Dbc.i32b(op.sourceFile), ...Dbc.i32b(op.sourceOffset), ...Dbc.istr(op.frName)];
-      case PopScope:
-        return [Dbc.OP_POPSCOPE];
       case CopyValue:
         op as CopyValue;
         return [Dbc.OP_SETVV, ...Dbc.i16b(op._position1), ...Dbc.i16b(op._position2)];
@@ -209,11 +207,10 @@ class Runtime {
 
   dynamic execute(int entrypoint) {
     _prOffset = entrypoint;
-    final _pr = pr;
     try {
       callStack.add(-1);
       while (true) {
-        final op = _pr[_prOffset++];
+        final op = pr[_prOffset++];
         op.run(this);
       }
     } on ProgramExit catch (_) {
@@ -221,13 +218,25 @@ class Runtime {
     }
   }
 
-  void beginBridgedScope() {
-    throw UnimplementedError();
+  void bridgeCall(int $offset) {
+    final _savedOffset = _prOffset;
+    _prOffset = $offset;
+    callStack.add(-1);
+
+    try {
+      while (true) {
+        final op = pr[_prOffset++];
+        op.run(this);
+      }
+    } on ProgramExit catch (_) {
+      _prOffset = _savedOffset;
+      return;
+    }
   }
 
-  void push(Object? _value) {
-    throw UnimplementedError();
-    _vStack[_stackOffset++] = _value;
+  void pushArg(Object? _value) {
+    _args.add(_value);
+    _argsOffset++;
   }
 
   void popScope() {

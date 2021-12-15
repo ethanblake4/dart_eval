@@ -50,25 +50,6 @@ class PushScope implements DbcOp {
   String toString() => "PushScope (F$sourceFile:$sourceOffset, '$frName')";
 }
 
-class PopScope implements DbcOp {
-  PopScope(Runtime exec);
-
-  PopScope.make();
-
-  static const int LEN = Dbc.BASE_OPLEN;
-
-  @override
-  void run(Runtime exec) {
-    final lastStack = exec.scopeStack.removeLast();
-    final offset = lastStack.stackOffset;
-    exec._stackOffset = offset;
-    exec.scopeStackOffset = offset;
-  }
-
-  @override
-  String toString() => 'PopScope ()';
-}
-
 class JumpIfNonNull implements DbcOp {
   JumpIfNonNull(Runtime exec) : _location = exec._readInt16(), _offset = exec._readInt32();
 

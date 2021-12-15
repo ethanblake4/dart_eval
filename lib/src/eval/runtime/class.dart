@@ -51,16 +51,14 @@ class DbcInstanceImpl with DbcValue implements DbcInstance {
     final exec = _evalClass.evalVm.exec;
     final getter = _evalClass.getters[identifier];
     if (getter == null) return evalSuperclass?.evalGetProperty(identifier);
-    exec.beginBridgedScope();
-    exec.push(this);
-    exec.execute(getter);
-    exec.popScope();
+    exec.pushArg(this);
+    exec.bridgeCall(getter);
     return exec.returnValue as DbcValueInterface;
   }
 
   @override
   void evalSetProperty(String identifier, DbcValueInterface value) {
-    final vm = _evalClass.evalVm;
+    final exec = _evalClass.evalVm.exec;
     final setter = _evalClass.setters[identifier];
     if (setter == null) {
       if (evalSuperclass != null) {
@@ -70,11 +68,9 @@ class DbcInstanceImpl with DbcValue implements DbcInstance {
       }
     }
 
-    vm.exec.beginBridgedScope();
-    vm.exec.push(this);
-    vm.exec.push(value);
-    vm.exec.execute(setter);
-    vm.exec.popScope();
+    exec.pushArg(this);
+    exec.pushArg(value);
+    exec.bridgeCall(setter);
   }
 }
 

@@ -9,8 +9,9 @@ void main(List<String> args) {
       'main.dart': '''
         import 'package:example/x.dart';
         num main() {
-          var i = Vib(5);
-          return 7 + i.h();
+          var m = Vib();
+          var m2 = Vib(z: 6);
+          return m.z + m.h() + m2.z;
         }
       ''',
       'x.dart': '''

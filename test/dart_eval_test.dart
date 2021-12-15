@@ -100,5 +100,33 @@ void main() {
 
       expect(exec.executeNamed(0, 'main'), 10);
     });
+
+    test('Field formal parameters, external field access', () {
+      final exec = gen.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            import 'package:example/x.dart';
+            num main() {
+              var i = Vib(5);
+              var m = Vib();
+              return i.z + m.z + i.h();
+            }
+          ''',
+          'x.dart': '''
+            class Vib {
+              Vib({this.z = 3});
+              
+              int z;
+              
+              int h() {
+                return 11;
+              }
+            }
+          '''
+        }
+      })..loadProgram();
+
+      expect(exec.executeNamed(0, 'main'), DbcInt(16));
+    });
   });
 }
