@@ -8,7 +8,6 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 
 StatementInfo compileForStatement(ForStatement s, CompilerContext ctx, AlwaysReturnType? expectedReturnType) {
-
   final parts = s.forLoopParts;
 
   if (!(parts is ForParts)) {
@@ -31,7 +30,6 @@ StatementInfo compileForStatement(ForStatement s, CompilerContext ctx, AlwaysRet
   final loopStart = ctx.out.length;
 
   ctx.beginAllocScope(requireNonlinearAccess: true);
-
 
   if (parts.condition != null) {
     conditionResult = compileExpression(parts.condition!, ctx).unboxIfNeeded(ctx);

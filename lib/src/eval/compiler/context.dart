@@ -35,37 +35,16 @@ class CompilerContext {
     return out.length - 1;
   }
 
-  void beginAllocScope({int existingAllocLen = 0, bool requireNonlinearAccess = false}) {
-    allocNest.add(existingAllocLen);
-    locals.add({});
-    inNonlinearAccessContext.add(requireNonlinearAccess);
-  }
-
-  Variable setLocal(String name, Variable v) {
-    return locals.last[name] = v
-      ..name = name
-      ..frameIndex = locals.length - 1;
-  }
-
-  void resolveNonlinearity([int depth = 1]) {
-    for (var i = 0; i < depth; i++) {
-      <String, Variable>{...(locals[locals.length - depth])}.forEach((key, value) {
-        print('rsn: will unbox $value');
-        value.unboxIfNeeded(this);
-      });
-    }
-  }
-
   int rewriteOp(int where, DbcOp newOp, int lengthAdjust) {
     out[where] = newOp;
     position += lengthAdjust;
     return where;
   }
 
-  void resetStack({int position = 0}) {
-    allocNest = [position];
-    scopeFrameOffset = position;
-    inNonlinearAccessContext = [false];
+  void beginAllocScope({int existingAllocLen = 0, bool requireNonlinearAccess = false}) {
+    allocNest.add(existingAllocLen);
+    locals.add({});
+    inNonlinearAccessContext.add(requireNonlinearAccess);
   }
 
   int peekAllocPops({int popAdjust = 0}) {
@@ -87,11 +66,31 @@ class CompilerContext {
     pushOp(Pop.make(pops), Pop.LEN);
   }
 
+  void resetStack({int position = 0}) {
+    allocNest = [position];
+    scopeFrameOffset = position;
+    inNonlinearAccessContext = [false];
+  }
+
+  Variable setLocal(String name, Variable v) {
+    return locals.last[name] = v
+      ..name = name
+      ..frameIndex = locals.length - 1;
+  }
+
   Variable? lookupLocal(String name) {
     for (var i = locals.length - 1; i >= 0; i--) {
       if (locals[i].containsKey(name)) {
         return locals[i][name]!..frameIndex = i;
       }
+    }
+  }
+
+  void resolveNonlinearity([int depth = 1]) {
+    for (var i = 0; i < depth; i++) {
+      <String, Variable>{...(locals[locals.length - depth])}.forEach((key, value) {
+        value.unboxIfNeeded(this);
+      });
     }
   }
 }
