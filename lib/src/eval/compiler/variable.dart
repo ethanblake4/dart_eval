@@ -8,8 +8,7 @@ import 'errors.dart';
 import 'offset_tracker.dart';
 
 class Variable {
-  Variable(this.scopeFrameOffset, this.type,
-      {this.methodOffset, this.methodReturnType, this.boxed = true});
+  Variable(this.scopeFrameOffset, this.type, {this.methodOffset, this.methodReturnType, this.boxed = true});
 
   factory Variable.alloc(CompilerContext ctx, TypeRef type,
       {DeferredOrOffset? methodOffset, ReturnType? methodReturnType, bool boxed = true}) {
@@ -35,9 +34,23 @@ class Variable {
       throw CompileError('Can only box ints for now');
     }
     ctx.pushOp(BoxInt.make(scopeFrameOffset), BoxInt.LEN);
-    final V2 = Variable.alloc(ctx, intType, boxed: true)
+
+    /*var V2 = Variable.alloc(ctx, intType, boxed: true)
       ..name = name
       ..frameIndex = frameIndex;
+
+    if (ctx.inNonlinearAccessContext.last) {
+      ctx.pushOp(CopyValue.make(scopeFrameOffset, V2.scopeFrameOffset), CopyValue.LEN);
+      V2 = Variable(scopeFrameOffset, type, methodOffset: methodOffset, methodReturnType: methodReturnType, boxed: true)
+        ..name = name
+        ..frameIndex = frameIndex;
+    }*/
+
+    var V2 =
+        Variable(scopeFrameOffset, type, methodOffset: methodOffset, methodReturnType: methodReturnType, boxed: true)
+          ..name = name
+          ..frameIndex = frameIndex;
+
     if (name != null) {
       ctx.locals[frameIndex!][name!] = V2;
     }
@@ -49,9 +62,23 @@ class Variable {
       return this;
     }
     ctx.pushOp(Unbox.make(scopeFrameOffset), Unbox.LEN);
-    final uV = Variable.alloc(ctx, type, boxed: false)
+    /*var uV = Variable.alloc(ctx, type, boxed: false)
       ..name = name
       ..frameIndex = frameIndex;
+
+    if (ctx.inNonlinearAccessContext.last) {
+      ctx.pushOp(CopyValue.make(scopeFrameOffset, uV.scopeFrameOffset), CopyValue.LEN);
+      uV =
+          Variable(scopeFrameOffset, type, methodOffset: methodOffset, methodReturnType: methodReturnType, boxed: false)
+            ..name = name
+            ..frameIndex = frameIndex;
+    }*/
+
+    var uV =
+    Variable(scopeFrameOffset, type, methodOffset: methodOffset, methodReturnType: methodReturnType, boxed: false)
+      ..name = name
+      ..frameIndex = frameIndex;
+
     if (name != null) {
       ctx.locals[frameIndex!][name!] = uV;
     }

@@ -8,11 +8,11 @@ import '../variable.dart';
 import 'statement.dart';
 
 StatementInfo compileVariableDeclarationStatement(VariableDeclarationStatement s, CompilerContext ctx) {
-  _compileVariableDeclarationList(s.variables, ctx);
+  compileVariableDeclarationList(s.variables, ctx);
   return StatementInfo(-1);
 }
 
-void _compileVariableDeclarationList(VariableDeclarationList l, CompilerContext ctx) {
+void compileVariableDeclarationList(VariableDeclarationList l, CompilerContext ctx) {
   TypeRef? type;
   if (l.type != null) {
     type = TypeRef.fromAnnotation(ctx, ctx.library, l.type!);
@@ -25,9 +25,7 @@ void _compileVariableDeclarationList(VariableDeclarationList l, CompilerContext 
       if (ctx.locals.last.containsKey(li.name.name)) {
         throw CompileError('Cannot declare variable ${li.name.name} multiple times in the same scope');
       }
-      ctx.locals.last[li.name.name] = Variable(res.scopeFrameOffset, type ?? res.type, boxed: res.boxed)
-        ..name = li.name.name
-        ..frameIndex = ctx.locals.length - 1;
+      ctx.setLocal(li.name.name, Variable(res.scopeFrameOffset, type ?? res.type, boxed: res.boxed));
     }
   }
 }

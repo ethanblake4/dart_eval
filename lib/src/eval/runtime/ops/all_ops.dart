@@ -34,7 +34,7 @@ class Dbc {
   static const OP_PUSH_ARG = 8;
 
   /// [PushNamedArg]
-  static const OP_PUSH_NAMED_ARG = 9;
+  static const OP_JUMP_IF_FALSE = 9;
 
   /// [PushScope] Push stack frame
   static const OP_PUSHSCOPE = 10;
@@ -123,7 +123,7 @@ final List<OpLoader> ops = [
       (Runtime ex) => PushConstantInt(ex), // 6
       (Runtime ex) => BoxInt(ex), // 7
       (Runtime ex) => PushArg(ex), // 8
-      (Runtime ex) => throw UnimplementedError(), // 9
+      (Runtime ex) => JumpIfFalse(ex), // 9
       (Runtime ex) => PushScope(ex), // 10
       (Runtime ex) => CopyValue(ex), // 11
       (Runtime ex) => PushConstantString(ex), // 12

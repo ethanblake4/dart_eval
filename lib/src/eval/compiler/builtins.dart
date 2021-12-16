@@ -24,7 +24,7 @@ class BuiltinValue {
   final double? doubleval;
   final String? stringval;
 
-  Variable push(CompilerContext ctx) {
+  Variable _push(CompilerContext ctx) {
     if (type == BuiltinValueType.intType) {
       ctx.pushOp(PushConstantInt.make(intval!), PushConstantInt.LEN);
       return Variable.alloc(ctx, intType, boxed: false);
@@ -39,6 +39,14 @@ class BuiltinValue {
     } else {
       throw CompileError('Cannot push unknown builtin value type $type');
     }
+  }
+
+  Variable push(CompilerContext ctx) {
+    final V = _push(ctx);
+    if (ctx.inNonlinearAccessContext.last) {
+      return V.unboxIfNeeded(ctx);
+    }
+    return V;
   }
 }
 
@@ -64,6 +72,7 @@ class KnownMethodArg {
 const TypeRef dynamicType = TypeRef(dartCoreFile, 'dynamic');
 const TypeRef nullType = TypeRef(dartCoreFile, 'Null', extendsType: dynamicType);
 const TypeRef objectType = TypeRef(dartCoreFile, 'Object', extendsType: dynamicType);
+const TypeRef boolType = TypeRef(dartCoreFile, 'bool', extendsType: objectType);
 const TypeRef numType = TypeRef(dartCoreFile, 'num', extendsType: objectType);
 final TypeRef intType = TypeRef(dartCoreFile, 'int', extendsType: numType);
 final TypeRef doubleType = TypeRef(dartCoreFile, 'double', extendsType: numType);
@@ -76,6 +85,7 @@ final Map<String, TypeRef> coreDeclarations = {
   'dynamic': dynamicType,
   'Null': nullType,
   'Object': objectType,
+  'bool': boolType,
   'num': numType,
   'String': stringType,
   'int': intType,
@@ -94,8 +104,11 @@ final intBinaryOp = KnownMethod(
     [KnownMethodArg('other', numType, false, false)],
     {});
 
+final numComparisonOp =
+    KnownMethod(AlwaysReturnType(boolType, false), [KnownMethodArg('other', numType, false, false)], {});
+
 final doubleBinaryOp =
-KnownMethod(AlwaysReturnType(doubleType, false), [KnownMethodArg('other', numType, false, false)], {});
+    KnownMethod(AlwaysReturnType(doubleType, false), [KnownMethodArg('other', numType, false, false)], {});
 
 final numBinaryOp = KnownMethod(
     ParameterTypeDependentReturnType({
@@ -110,19 +123,25 @@ final Map<TypeRef, Map<String, KnownMethod>> knownMethods = {
     '-': intBinaryOp,
     '/': intBinaryOp,
     '%': intBinaryOp,
+    '<': numComparisonOp,
+    '>': numComparisonOp,
   },
   doubleType: {
     '+': doubleBinaryOp,
     '-': doubleBinaryOp,
     '/': doubleBinaryOp,
     '%': doubleBinaryOp,
+    '<': numComparisonOp,
+    '>': numComparisonOp,
   },
   numType: {
     '+': numBinaryOp,
     '-': numBinaryOp,
     '/': numBinaryOp,
     '%': numBinaryOp,
+    '<': numComparisonOp,
+    '>': numComparisonOp,
   }
 };
 
-final Set<TypeRef> unboxedAcrossFunctionBoundaries = {intType, doubleType};
+final Set<TypeRef> unboxedAcrossFunctionBoundaries = {intType, doubleType, boolType};

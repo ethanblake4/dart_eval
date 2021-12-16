@@ -36,6 +36,42 @@ class DbcObject implements DbcInstance {
   }
 }
 
+class DbcBool implements DbcInstance {
+  DbcBool(this.evalValue);
+
+  @override
+  bool evalValue;
+
+  @override
+  DbcValueInterface? evalGetProperty(String identifier) {
+    switch(identifier) {}
+    return evalSuperclass.evalGetProperty(identifier);
+  }
+
+  @override
+  void evalSetProperty(String identifier, DbcValueInterface value) {
+
+  }
+
+  @override
+  DbcInstance evalSuperclass = DbcObject();
+
+  @override
+  bool get reifiedValue => evalValue;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || other is DbcNum && runtimeType == other.runtimeType && evalValue == other.evalValue;
+
+  @override
+  int get hashCode => evalValue.hashCode;
+
+  @override
+  String toString() {
+    return 'DbcBool{$evalValue}';
+  }
+}
+
 class DbcNum<T extends num> implements DbcInstance {
   DbcNum(this.evalValue);
 
@@ -49,6 +85,8 @@ class DbcNum<T extends num> implements DbcInstance {
         return __plus;
       case '-':
         return __minus;
+      case '<':
+        return __lt;
     }
     return evalSuperclass.evalGetProperty(identifier);
   }
@@ -89,6 +127,18 @@ class DbcNum<T extends num> implements DbcInstance {
     }
     if (_evalResult is double) {
       return DbcDouble(_evalResult);
+    }
+
+    throw UnimplementedError();
+  }
+
+  static const DbcFunctionImpl __lt = DbcFunctionImpl(_lt);
+  static DbcValueInterface? _lt(DbcVmInterface vm, DbcValueInterface? target, List<DbcValueInterface?> args) {
+    final other = args[0];
+    final _evalResult = target!.evalValue < other!.evalValue;
+
+    if (_evalResult is bool) {
+      return DbcBool(_evalResult);
     }
 
     throw UnimplementedError();

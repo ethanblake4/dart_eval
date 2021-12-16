@@ -21,19 +21,21 @@ class PushArg implements DbcOp {
 }
 
 class Pop implements DbcOp {
-  Pop(Runtime exec);
+  Pop(Runtime exec) : _amount = exec._readUint8();
 
-  Pop.make();
+  Pop.make(this._amount);
+
+  final int _amount;
 
   static const int LEN = Dbc.BASE_OPLEN;
 
   @override
   void run(Runtime exec) {
-    exec._stackOffset--;
+    exec._stackOffset -= _amount;
   }
 
   @override
-  String toString() => 'Pop ()';
+  String toString() => 'Pop ($_amount)';
 }
 
 class PushReturnValue implements DbcOp {

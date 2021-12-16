@@ -8,7 +8,7 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
-  ctx.topLevelDeclarationPositions[ctx.library]![d.name.name] = enterScope(ctx, d, d.offset, d.name.name + '()');
+  ctx.topLevelDeclarationPositions[ctx.library]![d.name.name] = beginMethod(ctx, d, d.offset, d.name.name + '()');
   final b = d.functionExpression.body;
   StatementInfo? stInfo;
   if (b is BlockFunctionBody) {
@@ -18,5 +18,4 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   if (stInfo == null || !(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
     ctx.pushOp(Return.make(-1), Return.LEN);
   }
-  exitScope(ctx);
 }

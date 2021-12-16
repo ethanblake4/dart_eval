@@ -25,12 +25,35 @@ class CompilerContext {
   Map<int, Map<String, int>> topLevelDeclarationPositions = {};
   Map<int, Map<String, List<Map<String, int>>>> instanceDeclarationPositions = {};
   List<int> allocNest = [0];
+  List<bool> inNonlinearAccessContext = [false];
+
   int sourceFile;
 
   int pushOp(DbcOp op, int length) {
     out.add(op);
     position += length;
     return out.length - 1;
+  }
+
+  void beginAllocScope({int existingAllocLen = 0, bool requireNonlinearAccess = false}) {
+    allocNest.add(existingAllocLen);
+    locals.add({});
+    inNonlinearAccessContext.add(requireNonlinearAccess);
+  }
+
+  Variable setLocal(String name, Variable v) {
+    return locals.last[name] = v
+      ..name = name
+      ..frameIndex = locals.length - 1;
+  }
+
+  void resolveNonlinearity([int depth = 1]) {
+    for (var i = 0; i < depth; i++) {
+      <String, Variable>{...(locals[locals.length - depth])}.forEach((key, value) {
+        print('rsn: will unbox $value');
+        value.unboxIfNeeded(this);
+      });
+    }
   }
 
   int rewriteOp(int where, DbcOp newOp, int lengthAdjust) {
@@ -42,14 +65,26 @@ class CompilerContext {
   void resetStack({int position = 0}) {
     allocNest = [position];
     scopeFrameOffset = position;
+    inNonlinearAccessContext = [false];
   }
 
-  void popCurrentStack() {
+  int peekAllocPops({int popAdjust = 0}) {
+    return allocNest.last;
+  }
+
+  int endAllocScope({bool popValues = true, int popAdjust = 0}) {
+    inNonlinearAccessContext.removeLast();
+    locals.removeLast();
     final nestCount = allocNest.removeLast();
-    for (var i = 0; i < nestCount; i++) {
-      pushOp(Pop.make(), Pop.LEN);
-      scopeFrameOffset--;
+    if (popValues) {
+      popN(nestCount + popAdjust);
+      scopeFrameOffset -= nestCount;
     }
+    return nestCount;
+  }
+
+  void popN(int pops) {
+    pushOp(Pop.make(pops), Pop.LEN);
   }
 
   Variable? lookupLocal(String name) {

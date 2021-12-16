@@ -72,6 +72,28 @@ class JumpIfNonNull implements DbcOp {
   String toString() => 'JumpIfNonNull (@$_offset if L$_location != null)';
 }
 
+class JumpIfFalse implements DbcOp {
+  JumpIfFalse(Runtime exec) : _location = exec._readInt16(), _offset = exec._readInt32();
+
+  JumpIfFalse.make(this._location, this._offset);
+
+  final int _location;
+  final int _offset;
+
+  static const int LEN = Dbc.I16_LEN + Dbc.I32_LEN;
+
+  // Conditional move
+  @override
+  void run(Runtime exec) {
+    if (exec._vStack[exec.scopeStackOffset + _location] == false) {
+      exec._prOffset = _offset;
+    }
+  }
+
+  @override
+  String toString() => 'JumpIfFalse (@$_offset if L$_location == false)';
+}
+
 // Exit program
 class Exit implements DbcOp {
   Exit(Runtime exec) : _location = exec._readInt16();
@@ -128,6 +150,8 @@ class JumpConstant implements DbcOp {
   JumpConstant(Runtime exec) : _offset = exec._readInt32();
 
   JumpConstant.make(this._offset);
+
+  static const int LEN = Dbc.BASE_OPLEN + Dbc.I32_LEN;
 
   final int _offset;
 

@@ -13,9 +13,9 @@ void compileConstructorDeclaration(
     CompilerContext ctx, ConstructorDeclaration d, ClassDeclaration parent, List<FieldDeclaration> fields) {
   final n = '${parent.name.name}.${d.name?.name ?? ""}';
 
-  ctx.topLevelDeclarationPositions[ctx.library]![n] = enterScope(ctx, d, d.offset, '$n()');
+  ctx.topLevelDeclarationPositions[ctx.library]![n] = beginMethod(ctx, d, d.offset, '$n()');
 
-  ctx.allocNest.add(d.parameters.parameters.length);
+  ctx.beginAllocScope(existingAllocLen: d.parameters.parameters.length);
   ctx.scopeFrameOffset = d.parameters.parameters.length;
 
   SuperConstructorInvocation? $superInitializer;
@@ -107,7 +107,8 @@ void compileConstructorDeclaration(
       if (p.type != null) {
         type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
       }
-      ctx.locals.last[p.identifier!.name] = Variable(i, type);
+      ctx.locals.last[p.identifier!.name] = Variable(i, type)
+        ..name = p.identifier!.name;
     }
 
     i++;
@@ -124,7 +125,7 @@ void compileConstructorDeclaration(
   }
 
   ctx.pushOp(Return.make(instOffset), Return.LEN);
-  ctx.locals.removeLast();
+  ctx.endAllocScope(popValues: false);
 }
 
 List<PossiblyValuedParameter> _resolveFPLDefaults(CompilerContext ctx, FormalParameterList fpl, bool isInstanceMethod,
@@ -148,7 +149,7 @@ List<PossiblyValuedParameter> _resolveFPLDefaults(CompilerContext ctx, FormalPar
 
     if (param is DefaultFormalParameter) {
       if (param.defaultValue != null) {
-        ctx.allocNest.add(0);
+        ctx.beginAllocScope();
         final _reserve = JumpIfNonNull.make(_paramIndex, -1);
         final _reserveOffset = ctx.pushOp(_reserve, JumpIfNonNull.LEN);
         var V = compileExpression(param.defaultValue!, ctx);
@@ -156,7 +157,7 @@ List<PossiblyValuedParameter> _resolveFPLDefaults(CompilerContext ctx, FormalPar
           V = V.boxIfNeeded(ctx);
         }
         ctx.pushOp(CopyValue.make(_paramIndex, V.scopeFrameOffset), CopyValue.LEN);
-        ctx.popCurrentStack();
+        ctx.endAllocScope();
         ctx.rewriteOp(_reserveOffset, JumpIfNonNull.make(_paramIndex, ctx.out.length), 0);
         normalized.add(PossiblyValuedParameter(param.parameter, V));
       } else {

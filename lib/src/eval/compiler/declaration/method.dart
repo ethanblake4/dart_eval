@@ -10,7 +10,7 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx, NamedCompilationUnitMember parent) {
   final b = d.body;
-  final pos = enterScope(ctx, d, d.offset, parent.name.name + '.' + d.name.name + '()');
+  final pos = beginMethod(ctx, d, d.offset, parent.name.name + '.' + d.name.name + '()');
 
   StatementInfo? stInfo;
   if (b is BlockFunctionBody) {
@@ -23,8 +23,6 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx, NamedComp
   if (!(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
     ctx.pushOp(Return.make(-1), Return.LEN);
   }
-
-  exitScope(ctx);
 
   if (d.isStatic) {
     ctx.topLevelDeclarationPositions[ctx.library]!['${parent.name.name}.${d.name.name}'] = pos;

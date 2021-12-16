@@ -1,6 +1,8 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
+import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
+import 'package:dart_eval/src/eval/compiler/statement/for.dart';
 import 'package:dart_eval/src/eval/compiler/statement/return.dart';
 import 'package:dart_eval/src/eval/compiler/statement/variable_declaration.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -17,8 +19,11 @@ StatementInfo compileStatement(Statement s, AlwaysReturnType? expectedReturnType
     return StatementInfo(-1);
   } else if (s is ReturnStatement) {
     return compileReturn(ctx, s, expectedReturnType);
+  } else if (s is ForStatement) {
+    return compileForStatement(s, ctx, expectedReturnType);
+  } else {
+    throw CompileError('Unknown statement type ${s.runtimeType}');
   }
-  return StatementInfo(-1);
 }
 
 class StatementInfo {

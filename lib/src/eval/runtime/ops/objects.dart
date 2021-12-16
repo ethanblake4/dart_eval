@@ -25,8 +25,8 @@ class InvokeDynamic implements DbcOp {
     }
     final method = ((object as DbcInstance).evalGetProperty(_method) as DbcFunction);
     if (method is DbcFunctionImpl) {
-      exec._vStack[exec._stackOffset++] =
-          method.call(DbcVmInterface(exec), object, exec._args.cast());
+      exec._returnValue = method.call(DbcVmInterface(exec), object, exec._args.cast());
+      exec._args = [];
     } else {
       throw UnimplementedError();
     }
@@ -112,7 +112,8 @@ class PushObjectProperty implements DbcOp {
   @override
   void run(Runtime exec) {
     final object = exec._vStack[exec.scopeStackOffset + _location];
-    exec._vStack[exec._stackOffset++] = (object as DbcInstance).evalGetProperty(_property);
+    final _r = (object as DbcInstance).evalGetProperty(_property);;
+    exec._vStack[exec._stackOffset++] = _r;
   }
 
   @override

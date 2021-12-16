@@ -54,6 +54,9 @@ class Runtime {
       case JumpIfNonNull:
         op as JumpIfNonNull;
         return [Dbc.OP_JNZ, ...Dbc.i16b(op._location), ...Dbc.i32b(op._offset)];
+      case JumpIfFalse:
+        op as JumpIfFalse;
+        return [Dbc.OP_JUMP_IF_FALSE, ...Dbc.i16b(op._location), ...Dbc.i32b(op._offset)];
       case PushConstantInt:
         op as PushConstantInt;
         return [Dbc.OP_SETVC, ...Dbc.i32b(op._value)];
@@ -73,7 +76,8 @@ class Runtime {
         op as Return;
         return [Dbc.OP_RETURN, ...Dbc.i16b(op._location)];
       case Pop:
-        return [Dbc.OP_POP];
+        op as Pop;
+        return [Dbc.OP_POP, op._amount];
       case Call:
         op as Call;
         return [Dbc.OP_CALL, ...Dbc.i32b(op._offset)];
@@ -255,6 +259,13 @@ class Runtime {
   int _readInt32() {
     final i = _dbc.getInt32(_offset);
     _offset += 4;
+    return i;
+  }
+
+  @pragma('vm:always-inline')
+  int _readUint8() {
+    final i = _dbc.getUint8(_offset);
+    _offset += 1;
     return i;
   }
 

@@ -9,10 +9,12 @@ void main(List<String> args) {
       'main.dart': '''
         import 'package:example/x.dart';
         num main() {
-          var m = Vib();
           var m2 = Vib(z: 6);
-          m2.z = 65;
-          return m.z + m.h() + m2.z;
+          var n = 0;
+          for (var i = 1; i < 100000; i = i + 1) {
+            n = n + 1;
+          }
+          return m2.z;
         }
       ''',
       'x.dart': '''
@@ -22,8 +24,7 @@ void main(List<String> args) {
         int z;
         
         int h() {
-          z = 20;
-          return this.z + 11;
+          return 11;
         }
       }
       '''
@@ -41,11 +42,11 @@ void main(List<String> args) {
 
   exec.printOpcodes();
 
+  final dt3 = DateTime.now().millisecondsSinceEpoch;
   dynamic rv = exec.executeNamed(0, 'main');
   if (rv is DbcValueInterface) {
     rv = rv.evalValue;
   }
-  final dt3 = DateTime.now().millisecondsSinceEpoch;
   print('Output: $rv');
   print('Execute: ${DateTime.now().millisecondsSinceEpoch - dt3} ms');
 }

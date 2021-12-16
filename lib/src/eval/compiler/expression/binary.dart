@@ -38,7 +38,13 @@ Variable compileBinaryExpression(CompilerContext ctx, BinaryExpression e) {
   L = L.boxIfNeeded(ctx);
   R = R.boxIfNeeded(ctx);
 
-  final opMap = {TokenType.PLUS: '+', TokenType.MINUS: '-', TokenType.SLASH: '/', TokenType.STAR: '*'};
+  final opMap = {
+    TokenType.PLUS: '+',
+    TokenType.MINUS: '-',
+    TokenType.SLASH: '/',
+    TokenType.STAR: '*',
+    TokenType.LT: '<'
+  };
 
   var method = opMap[e.operator.type] ?? (throw CompileError('Unknown binary operator ${e.operator.type}'));
 
