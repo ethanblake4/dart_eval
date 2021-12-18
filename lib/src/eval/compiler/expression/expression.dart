@@ -26,6 +26,8 @@ Variable compileExpression(Expression e, CompilerContext ctx) {
     return compilePropertyAccess(e, ctx);
   } else if (e is ThisExpression) {
     return compileThisExpression(e, ctx);
+  } else if (e is SuperExpression) {
+    return compileSuperExpression(e, ctx);
   }
 
   throw CompileError('Unknown expression type ${e.runtimeType}');

@@ -177,3 +177,23 @@ class SetObjectPropertyImpl implements DbcOp {
   @override
   String toString() => 'SetObjectPropertyImpl (L$_objectOffset[$_propertyIndex] = L$_valueOffset)';
 }
+
+class PushSuper implements DbcOp {
+  PushSuper(Runtime exec)
+      : _objectOffset = exec._readInt16();
+
+  final int _objectOffset;
+
+  PushSuper.make(this._objectOffset);
+
+  static int LEN = Dbc.I16_LEN;
+
+  @override
+  void run(Runtime exec) {
+    final object = exec._vStack[exec.scopeStackOffset + _objectOffset] as DbcInstance;
+    exec._vStack[exec._stackOffset++] = object.evalSuperclass;
+  }
+
+  @override
+  String toString() => 'PushSuper (L$_objectOffset])';
+}

@@ -19,6 +19,10 @@ void main(List<String> args) {
         
         class Y extends X {
           Y(): super(1);
+          
+          int doThing() {
+            return super.doThing() + 2;
+          }
         }
         
         int main() {

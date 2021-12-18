@@ -84,6 +84,9 @@ class Dbc {
   /// [NumGt]
   static const OP_NUM_GT = 25;
 
+  /// [PushSuper]
+  static const OP_PUSH_SUPER = 26;
+
   static List<int> i16b(int i16) {
     final x = ByteData(2);
     x.setInt16(0, i16);
@@ -146,4 +149,5 @@ final List<OpLoader> ops = [
       (Runtime ex) => SetObjectPropertyImpl(ex), // 23
       (Runtime ex) => NumLt(ex), // 24
       (Runtime ex) => NumGt(ex), // 25
+      (Runtime ex) => PushSuper(ex) // 26
 ];

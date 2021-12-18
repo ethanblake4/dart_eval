@@ -124,6 +124,9 @@ class Runtime {
       case NumGt:
         op as NumGt;
         return [Dbc.OP_NUM_GT, ...Dbc.i16b(op._location1), ...Dbc.i16b(op._location2)];
+      case PushSuper:
+        op as PushSuper;
+        return [Dbc.OP_PUSH_SUPER, ...Dbc.i16b(op._objectOffset)];
       default:
         throw ArgumentError('Not a valid op $op');
     }
