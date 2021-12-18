@@ -21,7 +21,7 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
   AlwaysReturnType? mReturnType;
 
   if (L != null) {
-    final dec = ctx.instanceDeclarationsMap[L.type.file]![L.type.name]![e.methodName.name]! as MethodDeclaration;
+    final dec = resolveInstanceMethod(ctx, L.type, e.methodName.name);
     final fpl = dec.parameters?.parameters ?? <FormalParameter>[];
 
     final argsPair = compileArgumentList(ctx, e.argumentList, 1, fpl, dec);
@@ -80,6 +80,21 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
 
   return Variable(ctx.scopeFrameOffset++, mReturnType?.type ?? dynamicType,
       boxed: L != null || !unboxedAcrossFunctionBoundaries.contains(mReturnType?.type));
+}
+
+MethodDeclaration resolveInstanceMethod(CompilerContext ctx, TypeRef instanceType, String methodName) {
+  final dec = ctx.instanceDeclarationsMap[instanceType.file]![instanceType.name]![methodName];
+
+  if (dec != null) {
+    return dec as MethodDeclaration;
+  } else {
+    final $class = ctx.topLevelDeclarationsMap[instanceType.file]![instanceType.name] as ClassDeclaration;
+    if ($class.extendsClause == null) {
+      throw CompileError('Cannot resolve instance method');
+    }
+    final $supertype = ctx.visibleTypes[instanceType.file]![$class.extendsClause!.superclass.name.name]!;
+    return resolveInstanceMethod(ctx, $supertype, methodName);
+  }
 }
 
 Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext ctx, ArgumentList argumentList,

@@ -63,6 +63,9 @@ class CompilerContext {
   }
 
   void popN(int pops) {
+    if (pops == 0) {
+      return;
+    }
     pushOp(Pop.make(pops), Pop.LEN);
   }
 

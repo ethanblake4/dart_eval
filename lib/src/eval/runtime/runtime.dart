@@ -42,8 +42,8 @@ class Runtime {
       case PushReturnValue:
         op as PushReturnValue;
         return [Dbc.OP_SETVR];
-      case AddInts:
-        op as AddInts;
+      case NumAdd:
+        op as NumAdd;
         return [Dbc.OP_ADDVV, ...Dbc.i16b(op._location1), ...Dbc.i16b(op._location2)];
       case BoxInt:
         op as BoxInt;
@@ -118,6 +118,12 @@ class Runtime {
           ...Dbc.istr(op._name),
           ...Dbc.i16b(op._valuesLen)
         ];
+      case NumLt:
+        op as NumLt;
+        return [Dbc.OP_NUM_LT, ...Dbc.i16b(op._location1), ...Dbc.i16b(op._location2)];
+      case NumGt:
+        op as NumGt;
+        return [Dbc.OP_NUM_GT, ...Dbc.i16b(op._location1), ...Dbc.i16b(op._location2)];
       default:
         throw ArgumentError('Not a valid op $op');
     }

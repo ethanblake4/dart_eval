@@ -57,12 +57,12 @@ class PushConstantString implements DbcOp {
   String toString() => "PushConstantString ('$_value')";
 }
 
-class AddInts implements DbcOp {
-  AddInts(Runtime exec)
+class NumAdd implements DbcOp {
+  NumAdd(Runtime exec)
       : _location1 = exec._readInt16(),
         _location2 = exec._readInt16();
 
-  AddInts.make(this._location1, this._location2);
+  NumAdd.make(this._location1, this._location2);
 
   final int _location1;
   final int _location2;
@@ -74,11 +74,59 @@ class AddInts implements DbcOp {
   void run(Runtime exec) {
     final scopeStackOffset = exec.scopeStackOffset;
     exec._vStack[exec._stackOffset++] =
-        (exec._vStack[scopeStackOffset + _location1] as int) + (exec._vStack[scopeStackOffset + _location2] as int);
+        (exec._vStack[scopeStackOffset + _location1] as num) + (exec._vStack[scopeStackOffset + _location2] as num);
   }
 
   @override
-  String toString() => 'AddInts (L$_location1 + L$_location2)';
+  String toString() => 'NumAdd (L$_location1 + L$_location2)';
+}
+
+class NumLt implements DbcOp {
+  NumLt(Runtime exec)
+      : _location1 = exec._readInt16(),
+        _location2 = exec._readInt16();
+
+  NumLt.make(this._location1, this._location2);
+
+  final int _location1;
+  final int _location2;
+
+  static const int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN * 2;
+
+  // Add value A + B
+  @override
+  void run(Runtime exec) {
+    final scopeStackOffset = exec.scopeStackOffset;
+    exec._vStack[exec._stackOffset++] =
+        (exec._vStack[scopeStackOffset + _location1] as num) < (exec._vStack[scopeStackOffset + _location2] as num);
+  }
+
+  @override
+  String toString() => 'NumLt (L$_location1 + L$_location2)';
+}
+
+class NumGt implements DbcOp {
+  NumGt(Runtime exec)
+      : _location1 = exec._readInt16(),
+        _location2 = exec._readInt16();
+
+  NumGt.make(this._location1, this._location2);
+
+  final int _location1;
+  final int _location2;
+
+  static const int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN * 2;
+
+  // Add value A + B
+  @override
+  void run(Runtime exec) {
+    final scopeStackOffset = exec.scopeStackOffset;
+    exec._vStack[exec._stackOffset++] =
+        (exec._vStack[scopeStackOffset + _location1] as num) > (exec._vStack[scopeStackOffset + _location2] as num);
+  }
+
+  @override
+  String toString() => 'NumGt (L$_location1 + L$_location2)';
 }
 
 class BoxInt implements DbcOp {

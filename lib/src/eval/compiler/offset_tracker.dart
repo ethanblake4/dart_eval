@@ -33,6 +33,15 @@ class DeferredOrOffset {
   final int? file;
   final String? name;
 
+  factory DeferredOrOffset.lookupConstructor(CompilerContext ctx, int library, String parent, String name) {
+    if (ctx.topLevelDeclarationPositions[library]?.containsKey('$parent.$name') ?? false) {
+      return DeferredOrOffset(
+          file: library, offset: ctx.topLevelDeclarationPositions[library]!['$parent.$name']);
+    } else {
+      return DeferredOrOffset(file: library, name: '$parent.$name');
+    }
+  }
+
   @override
   String toString() {
     return 'DeferredOrOffset{offset: $offset, file: $file, name: $name}';

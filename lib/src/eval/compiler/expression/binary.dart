@@ -19,17 +19,25 @@ Variable compileBinaryExpression(CompilerContext ctx, BinaryExpression e) {
   // but opportunistically unboxing now means we won't have to unbox in the future.
   // For performance sensitive code (with a lot of math) this is probably a better choice.
 
-  // Fast path for basic int ops
-  final supportedIntIntrinsicOps = {TokenType.PLUS};
+  // Fast path for basic num ops
+  final supportedNumIntrinsicOps = {TokenType.PLUS, TokenType.LT, TokenType.GT};
 
-  if (L.type == intType && supportedIntIntrinsicOps.contains(e.operator.type)) {
+  if (L.type.isAssignableTo(numType) && supportedNumIntrinsicOps.contains(e.operator.type)) {
     L = L.unboxIfNeeded(ctx);
     R = R.unboxIfNeeded(ctx);
 
     if (e.operator.type == TokenType.PLUS) {
-      // Integer intrinsic add
-      ctx.pushOp(AddInts.make(L.scopeFrameOffset, R.scopeFrameOffset), AddInts.LEN);
+      // Num intrinsic add
+      ctx.pushOp(NumAdd.make(L.scopeFrameOffset, R.scopeFrameOffset), NumAdd.LEN);
       return Variable.alloc(ctx, intType, boxed: false);
+    } else if (e.operator.type == TokenType.LT) {
+      // Num intrinsic less than
+      ctx.pushOp(NumLt.make(L.scopeFrameOffset, R.scopeFrameOffset), NumLt.LEN);
+      return Variable.alloc(ctx, boolType, boxed: false);
+    } else if (e.operator.type == TokenType.GT) {
+      // Num intrinsic greater than
+      ctx.pushOp(NumGt.make(L.scopeFrameOffset, R.scopeFrameOffset), NumGt.LEN);
+      return Variable.alloc(ctx, boolType, boxed: false);
     }
     throw CompileError('Internal error: Invalid intrinsic int op ${e.operator.type}');
   }
@@ -43,7 +51,8 @@ Variable compileBinaryExpression(CompilerContext ctx, BinaryExpression e) {
     TokenType.MINUS: '-',
     TokenType.SLASH: '/',
     TokenType.STAR: '*',
-    TokenType.LT: '<'
+    TokenType.LT: '<',
+    TokenType.GT: '>'
   };
 
   var method = opMap[e.operator.type] ?? (throw CompileError('Unknown binary operator ${e.operator.type}'));

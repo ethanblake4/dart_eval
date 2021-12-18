@@ -16,7 +16,7 @@ class Reference {
 
   TypeRef resolveType(CompilerContext ctx) {
     if (object != null) {
-      return TypeRef.lookupFieldType(ctx, object!.type, name);
+      return TypeRef.lookupFieldType(ctx, object!.type, name) ?? dynamicType;
     }
 
     // Locals
@@ -30,7 +30,7 @@ class Reference {
       final instanceDeclaration = resolveInstanceDeclaration(ctx, ctx.library, ctx.currentClass!.name.name, name);
       if (instanceDeclaration != null) {
         final $type = instanceDeclaration.first;
-        return TypeRef.lookupFieldType(ctx, $type, name);
+        return TypeRef.lookupFieldType(ctx, $type, name) ?? dynamicType;
       }
     }
 
@@ -43,7 +43,7 @@ class Reference {
 
   void setValue(CompilerContext ctx, Variable value) {
     if (object != null) {
-      final fieldType = TypeRef.lookupFieldType(ctx, object!.type, name);
+      final fieldType = TypeRef.lookupFieldType(ctx, object!.type, name) ?? dynamicType;
       if (!value.type.isAssignableTo(fieldType)) {
         throw CompileError('Cannot assign value of type ${value.type} to field "$name" of type $fieldType');
       }
@@ -63,7 +63,7 @@ class Reference {
       final instanceDeclaration = resolveInstanceDeclaration(ctx, ctx.library, ctx.currentClass!.name.name, name);
       if (instanceDeclaration != null) {
         final $type = instanceDeclaration.first;
-        final fieldType = TypeRef.lookupFieldType(ctx, $type, name);
+        final fieldType = TypeRef.lookupFieldType(ctx, $type, name) ?? dynamicType;
         if (!value.type.isAssignableTo(fieldType)) {
           throw CompileError('Cannot assign value of type ${value.type} to field "$name" of type $fieldType');
         }
@@ -81,7 +81,7 @@ class Reference {
       final op = PushObjectProperty.make(object!.scopeFrameOffset, name);
       ctx.pushOp(op, PushObjectProperty.len(op));
 
-      return Variable.alloc(ctx, TypeRef.lookupFieldType(ctx, object!.type, name));
+      return Variable.alloc(ctx, TypeRef.lookupFieldType(ctx, object!.type, name) ?? dynamicType);
     }
 
     // First look at locals
@@ -100,14 +100,14 @@ class Reference {
         final op = PushObjectProperty.make(0 /* (this) */, name);
         ctx.pushOp(op, PushObjectProperty.len(op));
 
-        return Variable.alloc(ctx, TypeRef.lookupFieldType(ctx, $type, name));
+        return Variable.alloc(ctx, TypeRef.lookupFieldType(ctx, $type, name) ?? dynamicType);
       }
     }
 
     final declaration = ctx.visibleDeclarations[ctx.library]![name]!;
     final decl = declaration.declaration!;
 
-    if (!(decl is FunctionDeclaration)) {
+    if (!(decl is FunctionDeclaration) && !(decl is ConstructorDeclaration)) {
       decl as ClassDeclaration;
 
       final returnType = TypeRef.lookupClassDeclaration(ctx, declaration.sourceLib, decl);
@@ -125,9 +125,11 @@ class Reference {
 
     TypeRef? returnType;
     var nullable = true;
-    if (decl.returnType != null) {
+    if (decl is FunctionDeclaration && decl.returnType != null) {
       returnType = TypeRef.fromAnnotation(ctx, declaration.sourceLib, decl.returnType!);
       nullable = decl.returnType!.question != null;
+    } else {
+      returnType = TypeRef.lookupClassDeclaration(ctx, declaration.sourceLib, decl.parent as ClassDeclaration);
     }
 
     final DeferredOrOffset offset;

@@ -18,7 +18,7 @@ class Dbc {
   /// [PushReturnValue] Set value to return register
   static const OP_SETVR = 3;
 
-  /// [AddInts] Add value to value -> return register
+  /// [NumAdd] Add value to value -> return register
   static const OP_ADDVV = 4;
 
   /// [JumpIfNonNull] Jump to constant position if return register != 0
@@ -78,6 +78,12 @@ class Dbc {
   /// [PushObjectPropertyImpl]
   static const OP_SET_OBJECT_PROP_IMPL = 23;
 
+  /// [NumLt]
+  static const OP_NUM_LT = 24;
+
+  /// [NumGt]
+  static const OP_NUM_GT = 25;
+
   static List<int> i16b(int i16) {
     final x = ByteData(2);
     x.setInt16(0, i16);
@@ -118,7 +124,7 @@ final List<OpLoader> ops = [
       (Runtime ex) => Exit(ex), // 1
       (Runtime ex) => Unbox(ex), // 2
       (Runtime ex) => PushReturnValue(ex), // 3
-      (Runtime ex) => AddInts(ex), // 4
+      (Runtime ex) => NumAdd(ex), // 4
       (Runtime ex) => JumpIfNonNull(ex), // 5
       (Runtime ex) => PushConstantInt(ex), // 6
       (Runtime ex) => BoxInt(ex), // 7
@@ -137,5 +143,7 @@ final List<OpLoader> ops = [
       (Runtime ex) => PushNull(ex), // 20
       (Runtime ex) => CreateClass(ex), // 21
       (Runtime ex) => PushObjectPropertyImpl(ex), // 22
-      (Runtime ex) => SetObjectPropertyImpl(ex) // 23
+      (Runtime ex) => SetObjectPropertyImpl(ex), // 23
+      (Runtime ex) => NumLt(ex), // 24
+      (Runtime ex) => NumGt(ex), // 25
 ];

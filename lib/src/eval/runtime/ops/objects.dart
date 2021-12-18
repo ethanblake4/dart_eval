@@ -16,20 +16,31 @@ class InvokeDynamic implements DbcOp {
 
   @override
   void run(Runtime exec) {
-    final object = exec._vStack[exec.scopeStackOffset + _location];
-    if (object is DbcInstanceImpl) {
-      final _offset = object.evalClass.methods[_method]!;
-      exec.callStack.add(exec._prOffset);
-      exec._prOffset = _offset;
-      return;
+    var object = exec._vStack[exec.scopeStackOffset + _location];
+
+    while (true) {
+      if (object is DbcInstanceImpl) {
+        final methods = object.evalClass.methods;
+        if (!methods.containsKey(_method)) {
+          object = object.evalSuperclass;
+          continue;
+        }
+        final _offset = methods[_method]!;
+        exec.callStack.add(exec._prOffset);
+        exec._prOffset = _offset;
+        return;
+      }
+
+      final method = ((object as DbcInstance).evalGetProperty(_method) as DbcFunction);
+      if (method is DbcFunctionImpl) {
+        exec._returnValue = method.call(DbcVmInterface(exec), object, exec._args.cast());
+        exec._args = [];
+        return;
+      } else {
+        throw UnimplementedError();
+      }
     }
-    final method = ((object as DbcInstance).evalGetProperty(_method) as DbcFunction);
-    if (method is DbcFunctionImpl) {
-      exec._returnValue = method.call(DbcVmInterface(exec), object, exec._args.cast());
-      exec._args = [];
-    } else {
-      throw UnimplementedError();
-    }
+
   }
 
   @override

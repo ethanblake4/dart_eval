@@ -3,6 +3,9 @@ import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
+import 'package:dart_eval/src/eval/compiler/expression/identifier.dart';
+import 'package:dart_eval/src/eval/compiler/expression/invocation.dart';
+import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/scope.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
@@ -39,79 +42,97 @@ void compileConstructorDeclaration(
     }
   }
 
-  final $extends = parent.extendsClause;
-  final Variable $super;
-
-  /*if ($extends == null) {
-      $super = _pushBuiltinValue(BuiltinValue(), ctx);
-    } else {
-      final extendsWhat = ctx.visibleDeclarations[ctx.library]![$extends.superclass.name]!;
-
-      if ($superInitializer != null) {
-        final argsPair = _parseArgumentList(ctx, $superInitializer.argumentList);
-        final _args = argsPair.first;
-        final _namedArgs = argsPair.second;
-
-        AlwaysReturnType? mReturnType;
-        final _argTypes = _args.map((e) => e.type).toList();
-        final _namedArgTypes = _namedArgs.map((key, value) => MapEntry(key, value.type));
-
-
-        //final method = _parseIdentifier($superInitializer.constructorName, ctx);
-        if (method.methodOffset == null) {
-          throw CompileError('Cannot call ${e.methodName.name} as it is not a valid method');
-        }
-        final offset = method.methodOffset!;
-        final loc = pushOp(ctx, Call.make(offset.offset ?? -1), Call.LEN);
-        if (offset.offset == null) {
-          ctx.offsetTracker.setOffset(loc, offset);
-        }
-        mReturnType = method.methodReturnType?.toAlwaysReturnType(_argTypes, _namedArgTypes) ??
-            AlwaysReturnType(_dynamicType, true);
-
-        pushOp(ctx, PushReturnValue.make(), PushReturnValue.LEN);
-        ctx.allocNest.last++;
-
-        return Variable(ctx.scopeFrameOffset++, mReturnType?.type ?? _dynamicType, mReturnType?.nullable ?? true,
-            boxed: L == null && !_unboxedAcrossFunctionBoundaries.contains(mReturnType?.type));
-      }
-    }*/
-
-  $super = BuiltinValue().push(ctx);
-
-  final op = CreateClass.make(ctx.library, $super.scopeFrameOffset, parent.name.name, i);
-  ctx.pushOp(op, CreateClass.len(op));
-  final instOffset = ctx.scopeFrameOffset++;
+  final fieldFormalNames = <String>[];
   final resolvedParams = _resolveFPLDefaults(ctx, d.parameters, false, allowUnboxed: true);
-
   i = 0;
 
   for (final param in resolvedParams) {
     final p = param.parameter;
     final V = param.V;
+    Variable Vrep;
     if (p is FieldFormalParameter) {
       TypeRef? _type;
       if (p.type != null) {
         _type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
       }
+      _type ??=
+          TypeRef.lookupFieldType(ctx, TypeRef.lookupClassDeclaration(ctx, ctx.library, parent), p.identifier.name);
       _type ??= V?.type;
       _type ??= dynamicType;
 
-      var Vrep = Variable(i, _type, boxed: !unboxedAcrossFunctionBoundaries.contains(_type)).boxIfNeeded(ctx);
+      Vrep = Variable(i, _type, boxed: !unboxedAcrossFunctionBoundaries.contains(_type)).boxIfNeeded(ctx)
+        ..name = p.identifier.name;
 
-      ctx.pushOp(SetObjectPropertyImpl.make(instOffset, fieldIndices[p.identifier.name]!, Vrep.scopeFrameOffset),
-          SetObjectPropertyImpl.LEN);
+      fieldFormalNames.add(p.identifier.name);
     } else {
       p as SimpleFormalParameter;
       var type = dynamicType;
       if (p.type != null) {
         type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
       }
-      ctx.locals.last[p.identifier!.name] = Variable(i, type)
-        ..name = p.identifier!.name;
+      Vrep = Variable(i, type)..name = p.identifier!.name;
     }
 
+    ctx.setLocal(Vrep.name!, Vrep);
+
     i++;
+  }
+
+  final $extends = parent.extendsClause;
+  Variable $super;
+
+  if ($extends == null) {
+    $super = BuiltinValue().push(ctx);
+  } else {
+    print(ctx.visibleDeclarations[ctx.library]);
+    final extendsWhat = ctx.visibleDeclarations[ctx.library]![$extends.superclass.name.name]!;
+    final extendsType = TypeRef.lookupClassDeclaration(ctx, ctx.library, extendsWhat.declaration as ClassDeclaration);
+    String constructorName = '';
+
+    AlwaysReturnType? mReturnType;
+    final argTypes = <TypeRef?>[];
+    final namedArgTypes = <String, TypeRef?>{};
+
+    if ($superInitializer != null) {
+      constructorName = $superInitializer.constructorName?.name ?? '';
+      final constructor = ctx.topLevelDeclarationsMap[extendsWhat.sourceLib]!['${extendsType.name}.$constructorName']
+          as ConstructorDeclaration;
+      final argsPair = compileArgumentList(
+          ctx, $superInitializer.argumentList, extendsWhat.sourceLib, constructor.parameters.parameters, constructor);
+      final _args = argsPair.first;
+      final _namedArgs = argsPair.second;
+
+      argTypes.addAll(_args.map((e) => e.type).toList());
+      namedArgTypes.addAll(_namedArgs.map((key, value) => MapEntry(key, value.type)));
+    }
+
+    final method = Reference(null, '${extendsType.name}.$constructorName').getValue(ctx);
+    if (method.methodOffset == null) {
+      throw CompileError('Cannot call $constructorName as it is not a valid method');
+    }
+
+    final offset = method.methodOffset!;
+    final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.LEN);
+    if (offset.offset == null) {
+      ctx.offsetTracker.setOffset(loc, offset);
+    }
+    mReturnType =
+        method.methodReturnType?.toAlwaysReturnType(argTypes, namedArgTypes) ?? AlwaysReturnType(dynamicType, true);
+
+    ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
+
+    $super = Variable.alloc(ctx, mReturnType.type ?? dynamicType);
+  }
+
+  final op = CreateClass.make(ctx.library, $super.scopeFrameOffset, parent.name.name, i);
+  ctx.pushOp(op, CreateClass.len(op));
+  final instOffset = ctx.scopeFrameOffset++;
+
+  for (final fieldFormal in fieldFormalNames) {
+    ctx.pushOp(
+        SetObjectPropertyImpl.make(
+            instOffset, fieldIndices[fieldFormal]!, ctx.lookupLocal(fieldFormal)!.scopeFrameOffset),
+        SetObjectPropertyImpl.LEN);
   }
 
   for (final init in otherInitializers) {

@@ -129,4 +129,26 @@ void main() {
       expect(exec.executeNamed(0, 'main'), DbcInt(19));
     });
   });
+  group('Statement tests', () {
+    late Compiler gen;
+
+    setUp(() {
+      gen = Compiler();
+    });
+
+    test('For loop', () {
+      final exec = gen.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            num main() {
+              var i = 0;
+              for (; i < 555; i = i + 1) {}
+              return i;
+            }
+          ''',
+        }
+      })..loadProgram();
+      expect(exec.executeNamed(0, 'main'), DbcInt(555));
+    });
+  });
 }

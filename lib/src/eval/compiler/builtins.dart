@@ -69,6 +69,7 @@ class KnownMethodArg {
   final bool nullable;
 }
 
+const TypeRef voidType = TypeRef(dartCoreFile, 'void');
 const TypeRef dynamicType = TypeRef(dartCoreFile, 'dynamic');
 const TypeRef nullType = TypeRef(dartCoreFile, 'Null', extendsType: dynamicType);
 const TypeRef objectType = TypeRef(dartCoreFile, 'Object', extendsType: dynamicType);

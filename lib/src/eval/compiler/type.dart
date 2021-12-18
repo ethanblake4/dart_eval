@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/src/eval/compiler/expression/invocation.dart';
 
 import 'builtins.dart';
 import 'context.dart';
@@ -23,7 +24,7 @@ class TypeRef {
     return ctx.visibleTypes[library]![cls.name.name] ?? (throw CompileError('Class ${cls.name.name} not found'));
   }
 
-  factory TypeRef.lookupFieldType(CompilerContext ctx, TypeRef $class, String field) {
+  static TypeRef? lookupFieldType(CompilerContext ctx, TypeRef $class, String field) {
     if (ctx.instanceDeclarationsMap[$class.file]!.containsKey($class.name) &&
         ctx.instanceDeclarationsMap[$class.file]![$class.name]!.containsKey(field)) {
       final _f = ctx.instanceDeclarationsMap[$class.file]![$class.name]![field];
@@ -32,11 +33,18 @@ class TypeRef {
       }
       final annotation = (_f.parent as VariableDeclarationList).type;
       if (annotation == null) {
-        return dynamicType;
+        return null;
       }
       return TypeRef.fromAnnotation(ctx, $class.file, annotation);
     }
-    throw CompileError('Field "$field" not found in class ${$class}');
+    final dec = ctx.topLevelDeclarationsMap[$class.file]![$class.name] as ClassDeclaration;
+    final $extends = dec.extendsClause;
+    if ($extends == null) {
+      throw CompileError('Field "$field" not found in class ${$class}');
+    } else {
+      final $super = ctx.visibleTypes[$class.file]![$extends.superclass.name.name]!;
+      return TypeRef.lookupFieldType(ctx, $super, field);
+    }
   }
 
   final int file;
@@ -104,17 +112,8 @@ class AlwaysReturnType implements ReturnType {
 
   factory AlwaysReturnType.fromInstanceMethod(CompilerContext ctx, TypeRef type, String method, List<TypeRef?> argTypes,
       Map<String, TypeRef?> namedArgTypes, TypeRef? fallback) {
-    if (ctx.instanceDeclarationsMap[type.file]!.containsKey(type.name) &&
-        ctx.instanceDeclarationsMap[type.file]![type.name]!.containsKey(method)) {
-      final _m = ctx.instanceDeclarationsMap[type.file]![type.name]![method];
-      if (!(_m is MethodDeclaration)) {
-        throw CompileError(
-            'Cannot query method return type of F${type.file}:${type.name}.$method, which is not a method');
-      }
-      return AlwaysReturnType.fromAnnotation(ctx, type.file, _m.returnType, fallback);
-    }
-
-    throw CompileError('Type not found');
+    final _m = resolveInstanceMethod(ctx, type, method);
+    return AlwaysReturnType.fromAnnotation(ctx, type.file, _m.returnType, fallback);
   }
 
   static AlwaysReturnType? fromInstanceMethodOrBuiltin(
