@@ -6,7 +6,7 @@ import 'package:dart_eval/src/eval/compiler/declaration/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/source.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/program.dart';
-import 'package:dart_eval/src/eval/bridge/bridge.dart';
+import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 import 'context.dart';

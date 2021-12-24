@@ -2,7 +2,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/source.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/bridge/bridge.dart';
+import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'package:dart_eval/src/eval/runtime/ops/all_ops.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 

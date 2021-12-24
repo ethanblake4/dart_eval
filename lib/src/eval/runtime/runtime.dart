@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/runtime/declaration.dart';
+import 'package:dart_eval/src/eval/bridge/declaration.dart';
 
 import 'function.dart';
 import 'stdlib_base.dart';
