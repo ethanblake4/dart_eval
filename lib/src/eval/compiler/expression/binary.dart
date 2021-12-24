@@ -4,8 +4,8 @@ import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
-import '../../../../dart_eval.dart';
 import '../errors.dart';
 import 'expression.dart';
 
@@ -22,22 +22,22 @@ Variable compileBinaryExpression(CompilerContext ctx, BinaryExpression e) {
   // Fast path for basic num ops
   final supportedNumIntrinsicOps = {TokenType.PLUS, TokenType.LT, TokenType.GT};
 
-  if (L.type.isAssignableTo(numType) && supportedNumIntrinsicOps.contains(e.operator.type)) {
+  if (L.type.isAssignableTo(DbcTypes.numType) && supportedNumIntrinsicOps.contains(e.operator.type)) {
     L = L.unboxIfNeeded(ctx);
     R = R.unboxIfNeeded(ctx);
 
     if (e.operator.type == TokenType.PLUS) {
       // Num intrinsic add
       ctx.pushOp(NumAdd.make(L.scopeFrameOffset, R.scopeFrameOffset), NumAdd.LEN);
-      return Variable.alloc(ctx, intType, boxed: false);
+      return Variable.alloc(ctx, DbcTypes.intType, boxed: false);
     } else if (e.operator.type == TokenType.LT) {
       // Num intrinsic less than
       ctx.pushOp(NumLt.make(L.scopeFrameOffset, R.scopeFrameOffset), NumLt.LEN);
-      return Variable.alloc(ctx, boolType, boxed: false);
+      return Variable.alloc(ctx, DbcTypes.boolType, boxed: false);
     } else if (e.operator.type == TokenType.GT) {
       // Num intrinsic greater than
       ctx.pushOp(NumGt.make(L.scopeFrameOffset, R.scopeFrameOffset), NumGt.LEN);
-      return Variable.alloc(ctx, boolType, boxed: false);
+      return Variable.alloc(ctx, DbcTypes.boolType, boxed: false);
     }
     throw CompileError('Internal error: Invalid intrinsic int op ${e.operator.type}');
   }
@@ -66,5 +66,5 @@ Variable compileBinaryExpression(CompilerContext ctx, BinaryExpression e) {
   ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
   final returnType = AlwaysReturnType.fromInstanceMethodOrBuiltin(ctx, L.type, method, [R.type], {});
 
-  return Variable.alloc(ctx, returnType?.type ?? dynamicType)..frameIndex = ctx.locals.length - 1;
+  return Variable.alloc(ctx, returnType?.type ?? DbcTypes.dynamicType)..frameIndex = ctx.locals.length - 1;
 }

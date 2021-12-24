@@ -1,55 +1,56 @@
 import 'package:dart_eval/src/eval/runtime/exception.dart';
 import 'package:dart_eval/src/eval/runtime/function.dart';
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 import 'class.dart';
 
-class DbcNull implements DbcValueInterface {
+class DbcNull implements IDbcValue {
   const DbcNull();
 
   @override
-  Null get evalValue => null;
+  Null get $value => null;
 
   @override
-  Null get reifiedValue => null;
+  Null get $reified => null;
 }
 
 class DbcObject implements DbcInstance {
-  DbcObject();
+  const DbcObject();
 
   @override
-  dynamic get evalValue => null;
+  dynamic get $value => null;
 
   @override
-  dynamic get reifiedValue => evalValue;
+  dynamic get $reified => $value;
 
   @override
   DbcInstance? get evalSuperclass => null;
 
   @override
-  DbcValue? evalGetProperty(String identifier) {
+  DbcValue? $getProperty(Runtime runtime, String identifier) {
     throw UnimplementedError();
   }
 
   @override
-  void evalSetProperty(String identifier, DbcValueInterface value) {
+  void $setProperty(Runtime runtime, String identifier, IDbcValue value) {
     throw UnimplementedError();
   }
 }
 
 class DbcBool implements DbcInstance {
-  DbcBool(this.evalValue);
+  DbcBool(this.$value);
 
   @override
-  bool evalValue;
+  bool $value;
 
   @override
-  DbcValueInterface? evalGetProperty(String identifier) {
+  IDbcValue? $getProperty(Runtime runtime, String identifier) {
     switch(identifier) {}
-    return evalSuperclass.evalGetProperty(identifier);
+    return evalSuperclass.$getProperty(runtime, identifier);
   }
 
   @override
-  void evalSetProperty(String identifier, DbcValueInterface value) {
+  void $setProperty(Runtime runtime, String identifier, IDbcValue value) {
 
   }
 
@@ -57,29 +58,29 @@ class DbcBool implements DbcInstance {
   DbcInstance evalSuperclass = DbcObject();
 
   @override
-  bool get reifiedValue => evalValue;
+  bool get $reified => $value;
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) || other is DbcNum && runtimeType == other.runtimeType && evalValue == other.evalValue;
+      identical(this, other) || other is DbcNum && runtimeType == other.runtimeType && $value == other.$value;
 
   @override
-  int get hashCode => evalValue.hashCode;
+  int get hashCode => $value.hashCode;
 
   @override
   String toString() {
-    return 'DbcBool{$evalValue}';
+    return 'DbcBool{${$value}}';
   }
 }
 
 class DbcNum<T extends num> implements DbcInstance {
-  DbcNum(this.evalValue);
+  DbcNum(this.$value);
 
   @override
-  T evalValue;
+  T $value;
 
   @override
-  DbcValueInterface? evalGetProperty(String identifier) {
+  IDbcValue? $getProperty(Runtime runtime, String identifier) {
     switch(identifier) {
       case '+':
         return __plus;
@@ -88,24 +89,24 @@ class DbcNum<T extends num> implements DbcInstance {
       case '<':
         return __lt;
     }
-    return evalSuperclass.evalGetProperty(identifier);
+    return evalSuperclass.$getProperty(runtime, identifier);
   }
 
   @override
-  void evalSetProperty(String identifier, DbcValueInterface value) {
-
+  void $setProperty(Runtime runtime, String identifier, IDbcValue value) {
+    throw UnimplementedError();
   }
 
   @override
   DbcInstance evalSuperclass = DbcObject();
 
   @override
-  T get reifiedValue => evalValue;
+  T get $reified => $value;
 
   static const DbcFunctionImpl __plus = DbcFunctionImpl(_plus);
-  static DbcValueInterface? _plus(DbcVmInterface vm, DbcValueInterface? target, List<DbcValueInterface?> args) {
+  static IDbcValue? _plus(Runtime runtime, IDbcValue? target, List<IDbcValue?> args) {
     final other = args[0];
-    final _evalResult = target!.evalValue + other!.evalValue;
+    final _evalResult = target!.$value + other!.$value;
 
     if (_evalResult is int) {
       return DbcInt(_evalResult);
@@ -118,9 +119,9 @@ class DbcNum<T extends num> implements DbcInstance {
   }
 
   static const DbcFunctionImpl __minus = DbcFunctionImpl(_minus);
-  static DbcValueInterface? _minus(DbcVmInterface vm, DbcValueInterface? target, List<DbcValueInterface?> args) {
+  static IDbcValue? _minus(Runtime runtime, IDbcValue? target, List<IDbcValue?> args) {
     final other = args[0];
-    final _evalResult = target!.evalValue - other!.evalValue;
+    final _evalResult = target!.$value - other!.$value;
 
     if (_evalResult is int) {
       return DbcInt(_evalResult);
@@ -133,9 +134,9 @@ class DbcNum<T extends num> implements DbcInstance {
   }
 
   static const DbcFunctionImpl __lt = DbcFunctionImpl(_lt);
-  static DbcValueInterface? _lt(DbcVmInterface vm, DbcValueInterface? target, List<DbcValueInterface?> args) {
+  static IDbcValue? _lt(Runtime runtime, IDbcValue? target, List<IDbcValue?> args) {
     final other = args[0];
-    final _evalResult = target!.evalValue < other!.evalValue;
+    final _evalResult = target!.$value < other!.$value;
 
     if (_evalResult is bool) {
       return DbcBool(_evalResult);
@@ -146,10 +147,10 @@ class DbcNum<T extends num> implements DbcInstance {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) || other is DbcNum && runtimeType == other.runtimeType && evalValue == other.evalValue;
+      identical(this, other) || other is DbcNum && runtimeType == other.runtimeType && $value == other.$value;
 
   @override
-  int get hashCode => evalValue.hashCode;
+  int get hashCode => $value.hashCode;
 }
 
 class DbcInt extends DbcNum<int> {
@@ -157,24 +158,24 @@ class DbcInt extends DbcNum<int> {
   DbcInt(int evalValue) : super(evalValue);
 
   @override
-  DbcValueInterface? evalGetProperty(String identifier) {
-    return super.evalGetProperty(identifier);
+  IDbcValue? $getProperty(Runtime runtime, String identifier) {
+    return super.$getProperty(runtime, identifier);
   }
 
   @override
-  void evalSetProperty(String identifier, DbcValueInterface value) {
-    return super.evalSetProperty(identifier, value);
+  void $setProperty(Runtime runtime, String identifier, IDbcValue value) {
+    return super.$setProperty(runtime, identifier, value);
   }
 
   @override
   DbcInstance get evalSuperclass => throw UnimplementedError();
 
   @override
-  int get reifiedValue => evalValue;
+  int get $reified => $value;
 
   @override
   String toString() {
-    return evalValue.toString();
+    return $value.toString();
   }
 }
 
@@ -183,20 +184,20 @@ class DbcDouble extends DbcNum<double> {
   DbcDouble(double evalValue) : super(evalValue);
 
   @override
-  DbcValueInterface? evalGetProperty(String identifier) {
-    return super.evalGetProperty(identifier);
+  IDbcValue? $getProperty(Runtime runtime, String identifier) {
+    return super.$getProperty(runtime, identifier);
   }
 
   @override
-  void evalSetProperty(String identifier, DbcValueInterface value) {
-    return super.evalSetProperty(identifier, value);
+  void $setProperty(Runtime runtime, String identifier, IDbcValue value) {
+    return super.$setProperty(runtime, identifier, value);
   }
 
   @override
   DbcInstance get evalSuperclass => throw UnimplementedError();
 
   @override
-  double get reifiedValue => evalValue;
+  double get $reified => $value;
 }
 
 class DbcInvocation implements DbcInstance {
@@ -206,7 +207,7 @@ class DbcInvocation implements DbcInstance {
   final DbcList2? positionalArguments;
 
   @override
-  DbcValueInterface? evalGetProperty(String identifier) {
+  IDbcValue? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case 'positionalArguments':
         return positionalArguments;
@@ -214,7 +215,7 @@ class DbcInvocation implements DbcInstance {
   }
 
   @override
-  void evalSetProperty(String identifier, DbcValueInterface value) {
+  void $setProperty(Runtime runtime, String identifier, IDbcValue value) {
 
   }
 
@@ -222,26 +223,26 @@ class DbcInvocation implements DbcInstance {
   DbcInstance? get evalSuperclass => throw UnimplementedError();
 
   @override
-  dynamic get evalValue => throw UnimplementedError();
+  dynamic get $value => throw UnimplementedError();
 
   @override
-  dynamic get reifiedValue => throw UnimplementedError();
+  dynamic get $reified => throw UnimplementedError();
 
 }
 
 
 class DbcList2 implements DbcInstance {
 
-  DbcList2(this.evalValue);
+  DbcList2(this.$value);
 
   @override
-  final List<DbcValue> evalValue;
+  final List<DbcValue> $value;
 
   @override
   DbcInstance evalSuperclass = DbcObject();
 
   @override
-  DbcValueInterface? evalGetProperty(String identifier) {
+  IDbcValue? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case '[]':
 
@@ -249,12 +250,12 @@ class DbcList2 implements DbcInstance {
   }
 
   @override
-  void evalSetProperty(String identifier, DbcValueInterface value) {
+  void $setProperty(Runtime runtime, String identifier, IDbcValue value) {
     throw EvalUnknownPropertyException(identifier);
   }
 
 
 
   @override
-  List get reifiedValue => evalValue.map((e) => e.reifiedValue).toList();
+  List get $reified => $value.map((e) => e.$reified).toList();
 }

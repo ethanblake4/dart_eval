@@ -1,37 +1,32 @@
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/runtime/declaration.dart';
 import 'package:dart_eval/src/eval/runtime/exception.dart';
-import 'package:dart_eval/src/eval/runtime/function.dart';
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/runtime/stdlib_base.dart';
 
 /// Interface for objects with a backing value
-abstract class DbcValueInterface {
-  dynamic get evalValue;
-  dynamic get reifiedValue;
+abstract class IDbcValue {
+  dynamic get $value;
+  dynamic get $reified;
 }
 
 /// Implementation for objects with a backing value
-mixin DbcValue implements DbcValueInterface {
+mixin DbcValue implements IDbcValue {
   /// The backing Dart value
   @override
-  dynamic evalValue;
+  dynamic $value;
 
   /// Transform this value into a Dart value, fully usable outside Eval
   /// This includes recursively transforming values inside collections
   @override
-  dynamic get reifiedValue => evalValue;
+  dynamic get $reified => $value;
 }
 
 /// Instance
-abstract class DbcInstance implements DbcValueInterface {
-  static DbcClass get evalClass => throw UnimplementedError();
+abstract class DbcInstance implements IDbcValue {
+  IDbcValue? $getProperty(Runtime runtime, String identifier);
 
-  DbcInstance? get evalSuperclass;
-
-  DbcValueInterface? evalGetProperty(String identifier);
-
-  //DbcValueInterface? evalNoSuchMethod(Invocation invocation);
-
-  void evalSetProperty(String identifier, DbcValueInterface value);
+  void $setProperty(Runtime runtime, String identifier, IDbcValue value);
 }
 
 class DbcInstanceImpl with DbcValue implements DbcInstance {
@@ -47,61 +42,61 @@ class DbcInstanceImpl with DbcValue implements DbcInstance {
   DbcClass get evalClass => _evalClass;
 
   @override
-  DbcValueInterface? evalGetProperty(String identifier) {
-    final exec = _evalClass.evalVm.exec;
+  IDbcValue? $getProperty(Runtime runtime, String identifier) {
     final getter = _evalClass.getters[identifier];
-    if (getter == null) return evalSuperclass?.evalGetProperty(identifier);
-    exec.pushArg(this);
-    exec.bridgeCall(getter);
-    return exec.returnValue as DbcValueInterface;
+    if (getter == null) {
+      final method = _evalClass.methods[identifier];
+      if (method == null) {
+        return evalSuperclass?.$getProperty(runtime, identifier);
+      }
+      return DbcFunctionPtr(this, method);
+    }
+    runtime.pushArg(this);
+    runtime.bridgeCall(getter);
+    return runtime.returnValue as IDbcValue;
   }
 
   @override
-  void evalSetProperty(String identifier, DbcValueInterface value) {
-    final exec = _evalClass.evalVm.exec;
+  void $setProperty(Runtime runtime, String identifier, IDbcValue value) {
     final setter = _evalClass.setters[identifier];
     if (setter == null) {
       if (evalSuperclass != null) {
-        return evalSuperclass!.evalSetProperty(identifier, value);
+        return evalSuperclass!.$setProperty(runtime, identifier, value);
       } else {
         throw EvalUnknownPropertyException(identifier);
       }
     }
 
-    exec.pushArg(this);
-    exec.pushArg(value);
-    exec.bridgeCall(setter);
+    runtime.pushArg(this);
+    runtime.pushArg(value);
+    runtime.bridgeCall(setter);
   }
 }
 
 class DbcTypeClass implements DbcClass {
 
-  DbcTypeClass._internal(this.evalVm);
+  DbcTypeClass._internal();
 
-  factory DbcTypeClass(DbcVmInterface vm) {
-    return _cache[vm] ?? (_cache[vm] = DbcTypeClass._internal(vm));
+  factory DbcTypeClass() {
+    return DbcTypeClass._internal();
   }
 
-  static final Map<DbcVmInterface, DbcTypeClass> _cache = {};
 
   @override
-  final DbcVmInterface evalVm;
+  Never get $value => throw UnimplementedError();
 
   @override
-  Never get evalValue => throw UnimplementedError();
-
-  @override
-  set evalValue(_evalValue) {
+  set $value(_evalValue) {
     throw UnimplementedError();
   }
 
   @override
-  DbcValueInterface? evalGetProperty(String identifier) {
+  IDbcValue? $getProperty(Runtime runtime, String identifier) {
     throw UnimplementedError();
   }
 
   @override
-  void evalSetProperty(String identifier, DbcValueInterface value) {
+  void $setProperty(Runtime runtime, String identifier, IDbcValue value) {
     throw UnimplementedError();
   }
 
@@ -109,7 +104,7 @@ class DbcTypeClass implements DbcClass {
   DbcInstance? get evalSuperclass => throw UnimplementedError();
 
   @override
-  Never get reifiedValue => throw UnimplementedError();
+  Never get $reified => throw UnimplementedError();
 
   @override
   List<Object> get values => const [];
@@ -142,69 +137,8 @@ class DbcTypeClass implements DbcClass {
 }
 
 class DbcBridgeData {
-  final DbcVmInterface vm;
-  final DbcInstance? evalSuperclass;
-  final Map<String, int> lookupGetter;
-  final Map<String, int> lookupSetter;
+  final Runtime runtime;
+  final DbcInstance? subclass;
 
-  DbcBridgeData(this.vm, this.evalSuperclass, this.lookupGetter, this.lookupSetter);
-
-  DbcBridgeData.ofClass(DbcClass cls): this(cls.evalVm, DbcObject(), {}, {});
-}
-
-mixin DbcBridgeInstance on DbcValue implements DbcInstance {
-
-  DbcBridgeData get evalData;
-
-  @override
-  DbcInstance? get evalSuperclass => evalData.evalSuperclass;
-
-  DbcValueInterface? evalBridgeGetOverriddenProperty(String identifier) {
-    return evalSuperclass!.evalGetProperty(identifier);
-  }
-
-  bool evalBridgeSetOverriddenProperty(String identifier, DbcValueInterface value) {
-    try {
-      evalSuperclass!.evalSetProperty(identifier, value);
-      return true;
-    } on EvalUnknownPropertyException catch (_) {
-      return false;
-    }
-  }
-}
-
-class Dx with DbcValue, DbcBridgeInstance {
-
-  static late final DbcClass evalClass;
-
-  @override
-  DbcBridgeData evalData = DbcBridgeData.ofClass(evalClass);
-
-  @override
-  DbcValueInterface? evalGetProperty(String identifier) {
-
-    final overridden = evalBridgeGetOverriddenProperty(identifier);
-    if (overridden != null) {
-      return overridden;
-    }
-
-    switch (identifier) {
-      case 'someData':
-        return DbcObject();
-      //case 'noSuchMethod':
-      //  throw NoSuchMethodError.withInvocation(this, Invocation.method(memberName, positionalArguments))
-      default:
-
-    }
-  }
-
-  @override
-  void evalSetProperty(String identifier, DbcValueInterface value) {
-    if (evalBridgeSetOverriddenProperty(identifier, value)) {
-      return;
-    }
-    switch (identifier) {
-      default:
-    }
-  }
+  const DbcBridgeData(this.runtime, this.subclass);
 }

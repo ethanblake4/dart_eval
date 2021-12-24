@@ -1,5 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:dart_eval/dart_eval.dart';
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
@@ -17,7 +17,7 @@ Variable compileSuperExpression(SuperExpression e, CompilerContext ctx) {
     throw CompileError("Cannot use 'super' outside of a class context");
   }
 
-  var type = objectType;
+  var type = DbcTypes.objectType;
   final extendsClause = ctx.currentClass!.extendsClause;
   if (extendsClause != null) {
     type = ctx.visibleTypes[ctx.library]![extendsClause.superclass.name.name]!;

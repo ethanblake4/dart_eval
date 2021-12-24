@@ -4,11 +4,11 @@ import 'package:dart_eval/src/eval/runtime/stdlib_base.dart';
 
 import 'class.dart';
 
-typedef DbcCallableFunc = DbcValueInterface? Function(DbcVmInterface vm, DbcValueInterface? target,
-    List<DbcValueInterface?> args);
+typedef DbcCallableFunc = IDbcValue? Function(Runtime runtime, IDbcValue? target,
+    List<IDbcValue?> args);
 
 abstract class DbcCallable {
-  DbcValueInterface? call(DbcVmInterface vm, DbcValueInterface? target, List<DbcValueInterface?> args);
+  IDbcValue? call(Runtime runtime, IDbcValue? target, List<IDbcValue?> args);
 }
 
 class DbcVmInterface {
@@ -29,7 +29,7 @@ abstract class DbcFunction implements DbcInstance, DbcCallable {
   const DbcFunction();
 
   @override
-  DbcValueInterface? evalGetProperty(String identifier) {
+  IDbcValue? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case 'call':
         return this;
@@ -39,7 +39,7 @@ abstract class DbcFunction implements DbcInstance, DbcCallable {
   }
 
   @override
-  void evalSetProperty(String identifier, DbcValueInterface value) {
+  void $setProperty(Runtime runtime, String identifier, IDbcValue value) {
     throw EvalUnknownPropertyException(identifier);
   }
 
@@ -47,21 +47,23 @@ abstract class DbcFunction implements DbcInstance, DbcCallable {
   DbcInstance? get evalSuperclass => DbcObject();
 
   @override
-  dynamic get evalValue => throw UnimplementedError();
+  dynamic get $value => throw UnimplementedError();
 
   @override
-  dynamic get reifiedValue => throw UnimplementedError();
+  dynamic get $reified => throw UnimplementedError();
 }
 
 class DbcFunctionPtr extends DbcFunction {
-  DbcFunctionPtr(this.offset);
+  DbcFunctionPtr(this.$this, this.offset);
 
+  final DbcInstance $this;
   final int offset;
 
   @override
-  DbcValueInterface? call(DbcVmInterface vm, DbcValueInterface? target, List<DbcValueInterface?> args) {
-    final exec = vm.exec;
-    exec.execute(offset);
+  IDbcValue? call(Runtime runtime, IDbcValue? target, List<IDbcValue?> args) {
+    runtime.pushArg($this);
+    runtime.bridgeCall(offset);
+    return runtime.returnValue as IDbcValue?;
   }
 }
 
@@ -71,7 +73,7 @@ class DbcFunctionImpl extends DbcFunction {
   final DbcCallableFunc func;
 
   @override
-  DbcValueInterface? call(DbcVmInterface vm, DbcValueInterface? target, List<DbcValueInterface?> args) {
-    return func(vm, target, args);
+  IDbcValue? call(Runtime runtime, IDbcValue? target, List<IDbcValue?> args) {
+    return func(runtime, target, args);
   }
 }

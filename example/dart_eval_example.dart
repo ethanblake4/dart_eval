@@ -1,21 +1,62 @@
-import 'package:dart_eval/src/eval/runtime/class.dart';
-import 'package:dart_eval/src/eval/compiler/compiler.dart';
+import 'package:dart_eval/dart_eval.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
+
+class X {
+  const X(this.q);
+
+  final int q;
+
+  int doThing() {
+    return q + q;
+  }
+}
+
+class $X extends X with DbcBridgeInstance {
+  const $X(this.$evalId, int q) : super(q);
+
+  final int $evalId;
+
+  static const $type = DbcBridgeTypeDescriptor('package:flutter/src/main.dart', 'X');
+
+  static $X _$construct(int evalId, List<Object?> args) => $X(evalId, args[0] as int);
+
+  static const DbcBridgeClass<$X> $classDef = DbcBridgeClass($type, constructors: {
+    '': DbcBridgeConstructor(_$construct, [DbcBridgeParameter(type: DbcTypes.intType)])
+  }, methods: {
+    'doThing': DbcBridgeFunction([])
+  }, fields: {
+    'q': DbcBridgeField()
+  });
+
+  @override
+  IDbcValue? $bridgeGet(String identifier) {
+    switch (identifier) {
+      case 'q':
+        return DbcInt(super.q);
+      case 'doThing':
+        return DbcFunctionImpl((runtime, target, args) => DbcInt(super.doThing()));
+    }
+    throw UnimplementedError();
+  }
+
+  @override
+  void $bridgeSet(String identifier, IDbcValue value) {
+    throw UnimplementedError();
+  }
+
+  @override
+  int doThing() => $invoke('doThing', []);
+}
 
 void main(List<String> args) {
   final compiler = Compiler();
 
+  compiler.defineBridgeClass($X.$classDef);
+
   final files = {
     'example': {
       'main.dart': '''
-        class X {
-          X(this.q);
-          
-          final int q;
-          
-          int doThing() {
-            return q + q;
-          }
-        }
+        import 'package:flutter/src/main.dart';
         
         class Y extends X {
           Y(): super(1);
@@ -25,9 +66,9 @@ void main(List<String> args) {
           }
         }
         
-        int main() {
+        Y main() {
           final r = Y();
-          return r.doThing() + r.doThing();
+          return r;
         }
       ''',
     }
@@ -45,9 +86,10 @@ void main(List<String> args) {
 
   final dt3 = DateTime.now().millisecondsSinceEpoch;
   dynamic rv = exec.executeNamed(0, 'main');
-  if (rv is DbcValueInterface) {
-    rv = rv.evalValue;
+  if (rv is IDbcValue) {
+    rv = rv.$value;
   }
   print('Output: $rv');
+  print((rv as X).doThing());
   print('Execute: ${DateTime.now().millisecondsSinceEpoch - dt3} ms');
 }

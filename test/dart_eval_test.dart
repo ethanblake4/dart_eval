@@ -1,5 +1,4 @@
-import 'package:dart_eval/src/eval/compiler/compiler.dart';
-import 'package:dart_eval/src/eval/runtime/stdlib_base.dart';
+import 'package:dart_eval/dart_eval.dart';
 import 'package:test/test.dart';
 
 // Functional tests

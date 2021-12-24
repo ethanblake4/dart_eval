@@ -1,6 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 
-import '../../../dart_eval.dart';
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'context.dart';
 
 int beginMethod(CompilerContext ctx, AstNode scopeHost, int offset, String name) {

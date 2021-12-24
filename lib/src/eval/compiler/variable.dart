@@ -2,7 +2,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 
-import '../../../dart_eval.dart';
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'builtins.dart';
 import 'errors.dart';
 import 'offset_tracker.dart';
@@ -30,7 +30,7 @@ class Variable {
     if (boxed) {
       return this;
     }
-    if (type != intType) {
+    if (type != DbcTypes.intType) {
       throw CompileError('Can only box ints for now');
     }
     ctx.pushOp(BoxInt.make(scopeFrameOffset), BoxInt.LEN);

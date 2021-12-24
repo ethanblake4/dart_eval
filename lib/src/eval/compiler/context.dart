@@ -2,6 +2,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/source.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
+import 'package:dart_eval/src/eval/bridge/bridge.dart';
 import 'package:dart_eval/src/eval/runtime/ops/all_ops.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
@@ -17,7 +18,7 @@ class CompilerContext {
   ClassDeclaration? currentClass = null;
   List<List<AstNode>> scopeNodes = [];
   List<Map<String, Variable>> locals = [];
-  Map<int, Map<String, Declaration>> topLevelDeclarationsMap = {};
+  Map<int, Map<String, DeclarationOrBridge>> topLevelDeclarationsMap = {};
   Map<int, Map<String, Map<String, Declaration>>> instanceDeclarationsMap = {};
   late OffsetTracker offsetTracker = OffsetTracker(this);
   Map<int, Map<String, TypeRef>> visibleTypes = {};

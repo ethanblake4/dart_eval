@@ -12,7 +12,7 @@ StatementInfo compileReturn(CompilerContext ctx, ReturnStatement s, AlwaysReturn
   if (s.expression == null) {
     ctx.pushOp(Return.make(-1), Return.LEN);
   } else {
-    final expected = expectedReturnType?.type ?? dynamicType;
+    final expected = expectedReturnType?.type ?? DbcTypes.dynamicType;
     var value = compileExpression(s.expression!, ctx);
     if (!value.type.isAssignableTo(expected)) {
       throw CompileError('Cannot return ${value.type} (expected: $expected)');

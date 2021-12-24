@@ -1,10 +1,10 @@
 
-import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 
 class DeclarationOrPrefix {
   DeclarationOrPrefix(this.sourceLib, {this.declaration, this.children});
 
   int sourceLib;
-  Declaration? declaration;
-  Map<String, Declaration>? children;
+  DeclarationOrBridge? declaration;
+  Map<String, DeclarationOrBridge>? children;
 }

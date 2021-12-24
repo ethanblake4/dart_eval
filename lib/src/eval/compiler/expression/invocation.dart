@@ -4,6 +4,7 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
+import 'package:dart_eval/src/eval/bridge/bridge.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 import '../util.dart';
@@ -21,10 +22,20 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
   AlwaysReturnType? mReturnType;
 
   if (L != null) {
-    final dec = resolveInstanceMethod(ctx, L.type, e.methodName.name);
-    final fpl = dec.parameters?.parameters ?? <FormalParameter>[];
+    final _dec = resolveInstanceMethod(ctx, L.type, e.methodName.name);
 
-    final argsPair = compileArgumentList(ctx, e.argumentList, 1, fpl, dec);
+    Pair<List<Variable>, Map<String, Variable>> argsPair;
+
+    if (_dec.isBridge) {
+      final br = _dec.bridge!;
+      argsPair = compileArgumentListWithBridge(ctx, e.argumentList, br);
+    } else {
+      final dec = _dec.declaration!;
+      final fpl = dec.parameters?.parameters ?? <FormalParameter>[];
+
+      argsPair = compileArgumentList(ctx, e.argumentList, 1, fpl, dec);
+    }
+
     final _args = argsPair.first;
     final _namedArgs = argsPair.second;
 
@@ -43,11 +54,16 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
     }
 
     final offset = method.methodOffset!;
-    var dec = ctx.topLevelDeclarationsMap[offset.file]![e.methodName.name];
-
-    if (dec == null || dec is ClassDeclaration) {
-       dec = ctx.topLevelDeclarationsMap[offset.file]![e.methodName.name + '.']!;
+    var _dec = ctx.topLevelDeclarationsMap[offset.file]![e.methodName.name];
+    if (_dec == null || (!_dec.isBridge && _dec.declaration! is ClassDeclaration)) {
+      _dec = ctx.topLevelDeclarationsMap[offset.file]![e.methodName.name + '.']!;
     }
+
+    if (_dec.isBridge) {
+      throw CompileError('Bridge invocations are not supported');
+    }
+
+    final dec = _dec.declaration!;
 
     List<FormalParameter> fpl;
     if (dec is FunctionDeclaration) {
@@ -71,22 +87,28 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
     if (offset.offset == null) {
       ctx.offsetTracker.setOffset(loc, offset);
     }
-    mReturnType =
-        method.methodReturnType?.toAlwaysReturnType(_argTypes, _namedArgTypes) ?? AlwaysReturnType(dynamicType, true);
+    mReturnType = method.methodReturnType?.toAlwaysReturnType(_argTypes, _namedArgTypes) ??
+        AlwaysReturnType(DbcTypes.dynamicType, true);
   }
 
   ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
   ctx.allocNest.last++;
 
-  return Variable(ctx.scopeFrameOffset++, mReturnType?.type ?? dynamicType,
+  return Variable(ctx.scopeFrameOffset++, mReturnType?.type ?? DbcTypes.dynamicType,
       boxed: L != null || !unboxedAcrossFunctionBoundaries.contains(mReturnType?.type));
 }
 
-MethodDeclaration resolveInstanceMethod(CompilerContext ctx, TypeRef instanceType, String methodName) {
+DeclarationOrBridge<MethodDeclaration, DbcBridgeFunction> resolveInstanceMethod(
+    CompilerContext ctx, TypeRef instanceType, String methodName) {
+  if (instanceType.file < -1) {
+    // Bridge
+    final bridge = ctx.topLevelDeclarationsMap[instanceType.file]![instanceType.name]!.bridge! as DbcBridgeClass;
+    return DeclarationOrBridge(bridge: bridge.methods[methodName]!);
+  }
   final dec = ctx.instanceDeclarationsMap[instanceType.file]![instanceType.name]![methodName];
 
   if (dec != null) {
-    return dec as MethodDeclaration;
+    return DeclarationOrBridge(declaration: dec as MethodDeclaration);
   } else {
     final $class = ctx.topLevelDeclarationsMap[instanceType.file]![instanceType.name] as ClassDeclaration;
     if ($class.extendsClause == null) {
@@ -128,7 +150,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext 
         ctx.pushOp(argOp, PushArg.LEN);
       }
     } else {
-      var paramType = dynamicType;
+      var paramType = DbcTypes.dynamicType;
       if (param is SimpleFormalParameter) {
         if (param.type != null) {
           paramType = TypeRef.fromAnnotation(ctx, decLibrary, param.type!);
@@ -162,7 +184,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext 
 
   named.forEach((name, _param) {
     final param = (_param is DefaultFormalParameter ? _param.parameter : _param) as NormalFormalParameter;
-    var paramType = dynamicType;
+    var paramType = DbcTypes.dynamicType;
     if (param is SimpleFormalParameter) {
       if (param.type != null) {
         paramType = TypeRef.fromAnnotation(ctx, decLibrary, param.type!);
@@ -193,7 +215,74 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext 
   return Pair(_args, _namedArgs);
 }
 
-TypeRef _resolveFieldFormalType(CompilerContext ctx, int decLibrary, FieldFormalParameter param, Declaration parameterHost) {
+Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
+    CompilerContext ctx, ArgumentList argumentList, DbcBridgeFunction function) {
+  final _args = <Variable>[];
+  final _namedArgs = <String, Variable>{};
+  final namedExpr = <String, Expression>{};
+
+  var i = 0;
+  Variable? $null;
+
+  for (final param in function.positionalParams) {
+    final arg = argumentList.arguments[i];
+    if (arg is NamedExpression) {
+      if (!param.optional) {
+        throw CompileError('Not enough positional arguments');
+      } else {
+        $null ??= BuiltinValue().push(ctx);
+        final argOp = PushArg.make($null.scopeFrameOffset);
+        ctx.pushOp(argOp, PushArg.LEN);
+      }
+    } else {
+      var paramType = param.type ?? DbcTypes.dynamicType;
+
+      final _arg = compileExpression(arg, ctx).boxIfNeeded(ctx);
+      if (!_arg.type.isAssignableTo(paramType)) {
+        throw CompileError(
+            'Cannot assign argument of type ${_arg.type} to parameter of type $paramType');
+      }
+
+      _args.add(_arg);
+
+      final argOp = PushArg.make(_arg.scopeFrameOffset);
+      ctx.pushOp(argOp, PushArg.LEN);
+    }
+
+    i++;
+  }
+
+  for (final arg in argumentList.arguments) {
+    if (arg is NamedExpression) {
+      namedExpr[arg.name.label.name] = arg.expression;
+    }
+  }
+
+  function.namedParams.forEach((name, param) {
+    var paramType = param.type ?? DbcTypes.dynamicType;
+    if (namedExpr.containsKey(name)) {
+      final _arg = compileExpression(namedExpr[name]!, ctx);
+      if (!_arg.type.isAssignableTo(paramType)) {
+        throw CompileError(
+            'Cannot assign argument of type ${_arg.type} to parameter of type $paramType');
+      }
+
+      final argOp = PushArg.make(_arg.scopeFrameOffset);
+      ctx.pushOp(argOp, PushArg.LEN);
+
+      _namedArgs[name] = _arg;
+    } else {
+      $null ??= BuiltinValue().push(ctx);
+      final argOp = PushArg.make($null!.scopeFrameOffset);
+      ctx.pushOp(argOp, PushArg.LEN);
+    }
+  });
+
+  return Pair(_args, _namedArgs);
+}
+
+TypeRef _resolveFieldFormalType(
+    CompilerContext ctx, int decLibrary, FieldFormalParameter param, Declaration parameterHost) {
   if (!(parameterHost is ConstructorDeclaration)) {
     throw CompileError('Field formals can only occur in constructors');
   }
@@ -206,5 +295,5 @@ TypeRef _resolveFieldFormalType(CompilerContext ctx, int decLibrary, FieldFormal
   if (vdl.type != null) {
     return TypeRef.fromAnnotation(ctx, decLibrary, vdl.type!);
   }
-  return dynamicType;
+  return DbcTypes.dynamicType;
 }

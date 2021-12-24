@@ -12,7 +12,8 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   final b = d.functionExpression.body;
   StatementInfo? stInfo;
   if (b is BlockFunctionBody) {
-    stInfo = compileBlock(b.block, AlwaysReturnType.fromAnnotation(ctx, ctx.library, d.returnType, dynamicType), ctx,
+    stInfo = compileBlock(
+        b.block, AlwaysReturnType.fromAnnotation(ctx, ctx.library, d.returnType, DbcTypes.dynamicType), ctx,
         name: d.name.name + '()');
   }
   if (stInfo == null || !(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {

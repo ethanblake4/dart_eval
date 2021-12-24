@@ -14,7 +14,8 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx, NamedComp
 
   StatementInfo? stInfo;
   if (b is BlockFunctionBody) {
-    stInfo = compileBlock(b.block, AlwaysReturnType.fromAnnotation(ctx, ctx.library, d.returnType, dynamicType), ctx,
+    stInfo = compileBlock(
+        b.block, AlwaysReturnType.fromAnnotation(ctx, ctx.library, d.returnType, DbcTypes.dynamicType), ctx,
         name: d.name.name + '()');
   } else {
     throw CompileError('Unknown function body type ${b.runtimeType}');

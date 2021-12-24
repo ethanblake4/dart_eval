@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/runtime/declaration.dart';
 
 import 'function.dart';
@@ -17,6 +18,8 @@ part 'ops/flow.dart';
 
 part 'ops/objects.dart';
 
+part 'ops/bridge.dart';
+
 class ScopeFrame {
   ScopeFrame(this.stackOffset, this.scopeStackOffset, [this.entrypoint = false]);
 
@@ -27,6 +30,37 @@ class ScopeFrame {
 
 class Runtime {
   Runtime(this._dbc) : id = _id++;
+
+  var _bridgeLibraryIdx = -2;
+  var _bridgeLibraryMappings = <String, int>{};
+  var _bridgeClasses = <int, Map<String, DbcBridgeClass>>{};
+
+  int _libraryIndex(String libraryUri) {
+    if (!_bridgeLibraryMappings.containsKey(libraryUri)) {
+      _bridgeLibraryMappings[libraryUri] = _bridgeLibraryIdx--;
+    }
+    final _libraryIdx = _bridgeLibraryMappings[libraryUri]!;
+    if (!_bridgeClasses.containsKey(libraryUri)) {
+      _bridgeClasses[_libraryIdx] = <String, DbcBridgeClass>{};
+    }
+    return _libraryIdx;
+  }
+
+  void copyBridgeMappings(Map<String, int> libraries, Map<int, Map<String, DbcBridgeClass>> classes) {
+    _bridgeLibraryMappings = libraries;
+    _bridgeClasses = classes;
+  }
+
+  void defineBridgeClass(DbcBridgeClass classDef) {
+    final type = classDef.type;
+    _bridgeClasses[_libraryIndex(type.library!)]![type.name!] = classDef;
+  }
+
+  void defineBridgeClasses(List<DbcBridgeClass> classDefs) {
+    for (final classDef in classDefs) {
+      defineBridgeClass(classDef);
+    }
+  }
 
   static List<int> opcodeFrom(DbcOp op) {
     switch (op.runtimeType) {
@@ -127,6 +161,21 @@ class Runtime {
       case PushSuper:
         op as PushSuper;
         return [Dbc.OP_PUSH_SUPER, ...Dbc.i16b(op._objectOffset)];
+      case BridgeInstantiate:
+        op as BridgeInstantiate;
+        return [
+          Dbc.OP_BRIDGE_INSTANTIATE,
+          ...Dbc.i32b(op._library),
+          ...Dbc.i16b(op._subclass),
+          ...Dbc.istr(op._name),
+          ...Dbc.istr(op._constructor)
+        ];
+      case PushBridgeSuperShim:
+        op as PushBridgeSuperShim;
+        return [Dbc.OP_PUSH_SUPER_SHIM];
+      case ParentBridgeSuperShim:
+        op as ParentBridgeSuperShim;
+        return [Dbc.OP_PARENT_SUPER_SHIM, ...Dbc.i16b(op._shimOffset), ...Dbc.i16b(op._bridgeOffset)];
       default:
         throw ArgumentError('Not a valid op $op');
     }
@@ -137,6 +186,7 @@ class Runtime {
 
   static const MIN_DYNAMIC_REGISTER = 32;
 
+  static final bridgeData = Expando<DbcBridgeData>();
   final ByteData _dbc;
   final _vStack = List<Object?>.filled(65535, null);
   var _args = <Object?>[];
@@ -196,7 +246,7 @@ class Runtime {
         final setters = (dc[1]).cast<String, int>();
         final methods = (dc[2]).cast<String, int>();
 
-        final cls = DbcClass(_vm, null, [], getters, setters, methods);
+        final cls = DbcClass(null, [], getters, setters, methods);
         decls[name] = cls;
       });
 
@@ -251,7 +301,7 @@ class Runtime {
     }
   }
 
-  void pushArg(Object? _value) {
+  void pushArg(IDbcValue? _value) {
     _args.add(_value);
     _argsOffset++;
   }

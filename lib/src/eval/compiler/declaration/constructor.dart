@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
@@ -7,6 +8,7 @@ import 'package:dart_eval/src/eval/compiler/expression/identifier.dart';
 import 'package:dart_eval/src/eval/compiler/expression/invocation.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/scope.dart';
+import 'package:dart_eval/src/eval/compiler/source.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
@@ -58,7 +60,7 @@ void compileConstructorDeclaration(
       _type ??=
           TypeRef.lookupFieldType(ctx, TypeRef.lookupClassDeclaration(ctx, ctx.library, parent), p.identifier.name);
       _type ??= V?.type;
-      _type ??= dynamicType;
+      _type ??= DbcTypes.dynamicType;
 
       Vrep = Variable(i, _type, boxed: !unboxedAcrossFunctionBoundaries.contains(_type)).boxIfNeeded(ctx)
         ..name = p.identifier.name;
@@ -66,7 +68,7 @@ void compileConstructorDeclaration(
       fieldFormalNames.add(p.identifier.name);
     } else {
       p as SimpleFormalParameter;
-      var type = dynamicType;
+      var type = DbcTypes.dynamicType;
       if (p.type != null) {
         type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
       }
@@ -80,48 +82,58 @@ void compileConstructorDeclaration(
 
   final $extends = parent.extendsClause;
   Variable $super;
+  DeclarationOrPrefix? extendsWhat;
+
+  final argTypes = <TypeRef?>[];
+  final namedArgTypes = <String, TypeRef?>{};
+
+  var constructorName = $superInitializer?.constructorName?.name ?? '';;
 
   if ($extends == null) {
     $super = BuiltinValue().push(ctx);
   } else {
-    print(ctx.visibleDeclarations[ctx.library]);
-    final extendsWhat = ctx.visibleDeclarations[ctx.library]![$extends.superclass.name.name]!;
-    final extendsType = TypeRef.lookupClassDeclaration(ctx, ctx.library, extendsWhat.declaration as ClassDeclaration);
-    String constructorName = '';
+    extendsWhat = ctx.visibleDeclarations[ctx.library]![$extends.superclass.name.name]!;
 
-    AlwaysReturnType? mReturnType;
-    final argTypes = <TypeRef?>[];
-    final namedArgTypes = <String, TypeRef?>{};
+    if (extendsWhat.declaration!.isBridge) {
+      ctx.pushOp(PushBridgeSuperShim.make(), PushBridgeSuperShim.LEN);
+      $super = Variable.alloc(ctx, DbcTypes.dynamicType);
+    } else {
+      final extendsType =
+          TypeRef.lookupClassDeclaration(ctx, ctx.library, extendsWhat.declaration!.declaration as ClassDeclaration);
 
-    if ($superInitializer != null) {
-      constructorName = $superInitializer.constructorName?.name ?? '';
-      final constructor = ctx.topLevelDeclarationsMap[extendsWhat.sourceLib]!['${extendsType.name}.$constructorName']
-          as ConstructorDeclaration;
-      final argsPair = compileArgumentList(
-          ctx, $superInitializer.argumentList, extendsWhat.sourceLib, constructor.parameters.parameters, constructor);
-      final _args = argsPair.first;
-      final _namedArgs = argsPair.second;
+      AlwaysReturnType? mReturnType;
 
-      argTypes.addAll(_args.map((e) => e.type).toList());
-      namedArgTypes.addAll(_namedArgs.map((key, value) => MapEntry(key, value.type)));
+      if ($superInitializer != null) {
+        final _constructor =
+            ctx.topLevelDeclarationsMap[extendsWhat.sourceLib]!['${extendsType.name}.$constructorName']!;
+        final constructor = _constructor.declaration as ConstructorDeclaration;
+
+        final argsPair = compileArgumentList(
+            ctx, $superInitializer.argumentList, extendsWhat.sourceLib, constructor.parameters.parameters, constructor);
+        final _args = argsPair.first;
+        final _namedArgs = argsPair.second;
+
+        argTypes.addAll(_args.map((e) => e.type).toList());
+        namedArgTypes.addAll(_namedArgs.map((key, value) => MapEntry(key, value.type)));
+      }
+
+      final method = Reference(null, '${extendsType.name}.$constructorName').getValue(ctx);
+      if (method.methodOffset == null) {
+        throw CompileError('Cannot call $constructorName as it is not a valid method');
+      }
+
+      final offset = method.methodOffset!;
+      final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.LEN);
+      if (offset.offset == null) {
+        ctx.offsetTracker.setOffset(loc, offset);
+      }
+      mReturnType = method.methodReturnType?.toAlwaysReturnType(argTypes, namedArgTypes) ??
+          AlwaysReturnType(DbcTypes.dynamicType, true);
+
+      ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
+
+      $super = Variable.alloc(ctx, mReturnType.type ?? DbcTypes.dynamicType);
     }
-
-    final method = Reference(null, '${extendsType.name}.$constructorName').getValue(ctx);
-    if (method.methodOffset == null) {
-      throw CompileError('Cannot call $constructorName as it is not a valid method');
-    }
-
-    final offset = method.methodOffset!;
-    final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.LEN);
-    if (offset.offset == null) {
-      ctx.offsetTracker.setOffset(loc, offset);
-    }
-    mReturnType =
-        method.methodReturnType?.toAlwaysReturnType(argTypes, namedArgTypes) ?? AlwaysReturnType(dynamicType, true);
-
-    ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-
-    $super = Variable.alloc(ctx, mReturnType.type ?? dynamicType);
   }
 
   final op = CreateClass.make(ctx.library, $super.scopeFrameOffset, parent.name.name, i);
@@ -145,7 +157,31 @@ void compileConstructorDeclaration(
     }
   }
 
-  ctx.pushOp(Return.make(instOffset), Return.LEN);
+  if ($extends != null && extendsWhat!.declaration!.isBridge) {
+    final bridge = extendsWhat.declaration!.bridge! as DbcBridgeClass;
+
+    if ($superInitializer != null) {
+      final constructor = bridge.constructors[constructorName]!;
+      final argsPair = compileArgumentListWithBridge(ctx, $superInitializer.argumentList, constructor);
+      final _args = argsPair.first;
+      final _namedArgs = argsPair.second;
+      argTypes.addAll(_args.map((e) => e.type).toList());
+      namedArgTypes.addAll(_namedArgs.map((key, value) => MapEntry(key, value.type)));
+    }
+
+    final op =
+        BridgeInstantiate.make(extendsWhat.sourceLib, instOffset, $extends.superclass.name.name, constructorName);
+    ctx.pushOp(op, BridgeInstantiate.len(op));
+
+    final bridgeInst = Variable.alloc(ctx, DbcTypes.dynamicType);
+    ctx.pushOp(
+        ParentBridgeSuperShim.make($super.scopeFrameOffset, bridgeInst.scopeFrameOffset), ParentBridgeSuperShim.LEN);
+
+    ctx.pushOp(Return.make(bridgeInst.scopeFrameOffset), Return.LEN);
+  } else {
+    ctx.pushOp(Return.make(instOffset), Return.LEN);
+  }
+
   ctx.endAllocScope(popValues: false);
 }
 

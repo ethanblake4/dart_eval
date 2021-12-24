@@ -33,7 +33,7 @@ class Dbc {
   /// [PushArg]
   static const OP_PUSH_ARG = 8;
 
-  /// [PushNamedArg]
+  /// [JumpIfFalse]
   static const OP_JUMP_IF_FALSE = 9;
 
   /// [PushScope] Push stack frame
@@ -87,6 +87,15 @@ class Dbc {
   /// [PushSuper]
   static const OP_PUSH_SUPER = 26;
 
+  /// [BridgeInstantiate]
+  static const OP_BRIDGE_INSTANTIATE = 27;
+
+  /// [PushBridgeSuperShim]
+  static const OP_PUSH_SUPER_SHIM = 28;
+
+  /// [ParentBridgeSuperShim]
+  static const OP_PARENT_SUPER_SHIM = 29;
+
   static List<int> i16b(int i16) {
     final x = ByteData(2);
     x.setInt16(0, i16);
@@ -123,31 +132,34 @@ abstract class DbcOp {
 typedef OpLoader = DbcOp Function(Runtime);
 
 final List<OpLoader> ops = [
-      (Runtime ex) => JumpConstant(ex), // 0
-      (Runtime ex) => Exit(ex), // 1
-      (Runtime ex) => Unbox(ex), // 2
-      (Runtime ex) => PushReturnValue(ex), // 3
-      (Runtime ex) => NumAdd(ex), // 4
-      (Runtime ex) => JumpIfNonNull(ex), // 5
-      (Runtime ex) => PushConstantInt(ex), // 6
-      (Runtime ex) => BoxInt(ex), // 7
-      (Runtime ex) => PushArg(ex), // 8
-      (Runtime ex) => JumpIfFalse(ex), // 9
-      (Runtime ex) => PushScope(ex), // 10
-      (Runtime ex) => CopyValue(ex), // 11
-      (Runtime ex) => PushConstantString(ex), // 12
-      (Runtime ex) => SetObjectProperty(ex), // 13
-      (Runtime ex) => SetReturnValue(ex), // 14
-      (Runtime ex) => Return(ex), // 15
-      (Runtime ex) => Pop(ex), // 16
-      (Runtime ex) => Call(ex), // 17
-      (Runtime ex) => PushObjectProperty(ex), // 18
-      (Runtime ex) => InvokeDynamic(ex), // 19
-      (Runtime ex) => PushNull(ex), // 20
-      (Runtime ex) => CreateClass(ex), // 21
-      (Runtime ex) => PushObjectPropertyImpl(ex), // 22
-      (Runtime ex) => SetObjectPropertyImpl(ex), // 23
-      (Runtime ex) => NumLt(ex), // 24
-      (Runtime ex) => NumGt(ex), // 25
-      (Runtime ex) => PushSuper(ex) // 26
+  (Runtime ex) => JumpConstant(ex), // 0
+  (Runtime ex) => Exit(ex), // 1
+  (Runtime ex) => Unbox(ex), // 2
+  (Runtime ex) => PushReturnValue(ex), // 3
+  (Runtime ex) => NumAdd(ex), // 4
+  (Runtime ex) => JumpIfNonNull(ex), // 5
+  (Runtime ex) => PushConstantInt(ex), // 6
+  (Runtime ex) => BoxInt(ex), // 7
+  (Runtime ex) => PushArg(ex), // 8
+  (Runtime ex) => JumpIfFalse(ex), // 9
+  (Runtime ex) => PushScope(ex), // 10
+  (Runtime ex) => CopyValue(ex), // 11
+  (Runtime ex) => PushConstantString(ex), // 12
+  (Runtime ex) => SetObjectProperty(ex), // 13
+  (Runtime ex) => SetReturnValue(ex), // 14
+  (Runtime ex) => Return(ex), // 15
+  (Runtime ex) => Pop(ex), // 16
+  (Runtime ex) => Call(ex), // 17
+  (Runtime ex) => PushObjectProperty(ex), // 18
+  (Runtime ex) => InvokeDynamic(ex), // 19
+  (Runtime ex) => PushNull(ex), // 20
+  (Runtime ex) => CreateClass(ex), // 21
+  (Runtime ex) => PushObjectPropertyImpl(ex), // 22
+  (Runtime ex) => SetObjectPropertyImpl(ex), // 23
+  (Runtime ex) => NumLt(ex), // 24
+  (Runtime ex) => NumGt(ex), // 25
+  (Runtime ex) => PushSuper(ex), // 26
+  (Runtime ex) => BridgeInstantiate(ex), // 27
+  (Runtime ex) => PushBridgeSuperShim(ex), // 28
+  (Runtime ex) => ParentBridgeSuperShim(ex) // 29
 ];

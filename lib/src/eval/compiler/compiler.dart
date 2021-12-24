@@ -6,6 +6,7 @@ import 'package:dart_eval/src/eval/compiler/declaration/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/source.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/program.dart';
+import 'package:dart_eval/src/eval/bridge/bridge.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 import 'context.dart';
@@ -14,18 +15,71 @@ import 'errors.dart';
 import 'builtins.dart';
 
 class Compiler {
+  var _bridgeLibraryIdx = -2;
+  final _bridgeLibraryMappings = <String, int>{};
+  final _bridgeClasses = <int, Map<String, DbcBridgeClass>>{};
+
+  int _libraryIndex(String libraryUri) {
+    if (!_bridgeLibraryMappings.containsKey(libraryUri)) {
+      _bridgeLibraryMappings[libraryUri] = _bridgeLibraryIdx--;
+    }
+    final _libraryIdx = _bridgeLibraryMappings[libraryUri]!;
+    if (!_bridgeClasses.containsKey(libraryUri)) {
+      _bridgeClasses[_libraryIdx] = <String, DbcBridgeClass>{};
+    }
+    return _libraryIdx;
+  }
+
+  void defineBridgeClass(DbcBridgeClass classDef) {
+    final type = classDef.type;
+    _bridgeClasses[_libraryIndex(type.library!)]![type.name!] = classDef;
+  }
+
+  void defineBridgeClasses(List<DbcBridgeClass> classDefs) {
+    for (final classDef in classDefs) {
+      defineBridgeClass(classDef);
+    }
+  }
+
   Program compile(Map<String, Map<String, String>> packages) {
     var dartSourceSize = 0;
     final ctx = CompilerContext(0);
-
+    final typeResolvedBridgeClasses = <int, Map<String, DbcBridgeClass>>{};
     final packageMap = <String, Map<String, int>>{};
     final indexMap = <int, List<String>>{};
     final partMap = <int, List<String>>{};
     final partOfMap = <int, String>{};
-    final libraryMap = <String, int>{};
+    final libraryMap = <String, int>{..._bridgeLibraryMappings};
     final importMap = <int, List<ImportDirective>>{};
-    final topLevelDeclarationsMap = <int, Map<String, Declaration>>{};
+    final topLevelDeclarationsMap = <int, Map<String, DeclarationOrBridge>>{
+      for (final e in _bridgeClasses.entries)
+        e.key: {for (final v in e.value.entries) v.key: DeclarationOrBridge(bridge: v.value)}
+    };
     final instanceDeclarationsMap = <int, Map<String, Map<String, Declaration>>>{};
+
+    for (final _blm in _bridgeLibraryMappings.entries) {
+      final uri = _blm.key;
+      final content = uri.substring(8);
+      final package = content.substring(0, content.indexOf('/'));
+      final file = content.substring(content.indexOf('/') + 1);
+      if (!packageMap.containsKey(package)) {
+        packageMap[package] = {};
+      }
+      packageMap[package]![file] = _blm.value;
+      indexMap[_blm.value] = [package, file];
+      final _classes = _bridgeClasses[_blm.value]!;
+
+      typeResolvedBridgeClasses[_blm.value] = {
+        for (final _cls in _classes.entries)
+          _cls.key:
+              _cls.value.copyWith(type: DbcBridgeTypeDescriptor.builtin(TypeRef(_blm.value, _cls.value.type.name!)))
+      };
+
+      final types = Map.fromEntries(typeResolvedBridgeClasses.entries
+          .expand((element) => element.value.entries.map((e) => MapEntry(e.key, e.value.type.builtin!))));
+
+      ctx.visibleTypes[_blm.value] = {...coreDeclarations, ...types};
+    }
 
     var fileIndex = 0;
 
@@ -60,7 +114,7 @@ class Compiler {
         final unit = _parse(source);
 
         final imports = <ImportDirective>[];
-        var myIndex = libraryMap["'package:$package/$filename'"];
+        var myIndex = libraryMap['package:$package/$filename'];
 
         for (final directive in unit.directives) {
           if (directive is PartDirective) {
@@ -88,7 +142,7 @@ class Compiler {
                 partMap[idx]!.add(formattedUri);
               }
             }
-            libraryMap["'package:$package/$filename'"] = myIndex;
+            libraryMap['package:$package/$filename'] = myIndex;
             indexMap[myIndex] = [package, filename];
           } else if (directive is PartOfDirective) {
             if (unit.directives.length > 1) {
@@ -115,8 +169,8 @@ class Compiler {
                 partMap[file]!.remove(myFormattedUri);
                 myIndex = file;
               } else {
-                myIndex = libraryMap["'$formattedUri'"] ?? fileIndex++;
-                libraryMap["'$formattedUri'"] = myIndex;
+                myIndex = libraryMap['$formattedUri'] ?? fileIndex++;
+                libraryMap['$formattedUri'] = myIndex;
               }
               partOfMap[myIndex] = formattedUri;
             } else {
@@ -144,7 +198,7 @@ class Compiler {
             if (topLevelDeclarationsMap[myIndex]!.containsKey(d.name.name)) {
               throw CompileError('Cannot define "${d.name.name} twice in the same library"');
             }
-            topLevelDeclarationsMap[myIndex]![d.name.name] = d;
+            topLevelDeclarationsMap[myIndex]![d.name.name] = DeclarationOrBridge(declaration: d);
             if (d is ClassDeclaration) {
               instanceDeclarationsMap[myIndex]![d.name.name] = {};
               ctx.visibleTypes[myIndex]![d.name.name] = TypeRef(myIndex!, d.name.name);
@@ -156,7 +210,8 @@ class Compiler {
                     instanceDeclarationsMap[myIndex]![d.name.name]![field.name.name] = field;
                   });
                 } else if (member is ConstructorDeclaration) {
-                  topLevelDeclarationsMap[myIndex]!['${d.name.name}.${member.name?.name ?? ""}'] = member;
+                  topLevelDeclarationsMap[myIndex]!['${d.name.name}.${member.name?.name ?? ""}'] =
+                      DeclarationOrBridge(declaration: member);
                 } else {
                   throw CompileError('Not a NamedCompilationUnitMember');
                 }
@@ -206,7 +261,11 @@ class Compiler {
       ctx.topLevelDeclarationPositions[key] = {};
       ctx.instanceDeclarationPositions[key] = {};
       print('Generating package:${indexMap[key]!.join("/")}...');
-      value.forEach((lib, declaration) {
+      value.forEach((lib, _declaration) {
+        if (_declaration.isBridge) {
+          return;
+        }
+        final declaration = _declaration.declaration!;
         if (declaration is ConstructorDeclaration || declaration is MethodDeclaration) {
           return;
         }
@@ -227,7 +286,8 @@ class Compiler {
 
     final ob = program.write();
 
-    return Runtime(ob.buffer.asByteData());
+    return Runtime(ob.buffer.asByteData())
+        ..copyBridgeMappings(_bridgeLibraryMappings, _bridgeClasses);
   }
 
   CompilationUnit _parse(String source) {

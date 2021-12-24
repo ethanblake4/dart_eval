@@ -1,17 +1,14 @@
 import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'package:dart_eval/src/eval/runtime/function.dart';
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
-abstract class DbcDeclaration {
-  DbcVmInterface get evalVm;
-}
+
+abstract class DbcDeclaration {}
 
 /// A class is an instance of [Type]
 class DbcClass extends DbcInstanceImpl implements DbcDeclaration {
-  DbcClass(this.evalVm, this.superclass, this.mixins, this.getters, this.setters, this.methods)
-      : super(DbcClassClass.instance, DbcTypeClass(evalVm), const []);
-
-  @override
-  final DbcVmInterface evalVm;
+  DbcClass(this.superclass, this.mixins, this.getters, this.setters, this.methods)
+      : super(DbcClassClass.instance, DbcTypeClass(), const []);
 
   @override
   final List<Object> values = [];
@@ -29,17 +26,18 @@ class DbcClassClass implements DbcClass {
   static final instance = DbcClassClass();
 
   @override
-  var evalValue;
+  var $value;
 
   @override
-  DbcValueInterface? evalGetProperty(String identifier) {
+  IDbcValue? $getProperty(Runtime runtime, String identifier) {
     // TODO: implement evalGetProperty
     throw UnimplementedError();
   }
 
   @override
-  void evalSetProperty(String identifier, DbcValueInterface value) {
+  void $setProperty(Runtime runtime, String identifier, IDbcValue value) {
     // TODO: implement evalSetProperty
+    throw UnimplementedError();
   }
 
   @override
@@ -58,7 +56,7 @@ class DbcClassClass implements DbcClass {
   List<DbcClass?> get mixins => throw UnimplementedError();
 
   @override
-  get reifiedValue => throw UnimplementedError();
+  get $reified => throw UnimplementedError();
 
   @override
   // TODO: implement setters

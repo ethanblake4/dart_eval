@@ -1,5 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:dart_eval/dart_eval.dart';
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
@@ -16,7 +16,7 @@ class Reference {
 
   TypeRef resolveType(CompilerContext ctx) {
     if (object != null) {
-      return TypeRef.lookupFieldType(ctx, object!.type, name) ?? dynamicType;
+      return TypeRef.lookupFieldType(ctx, object!.type, name) ?? DbcTypes.dynamicType;
     }
 
     // Locals
@@ -30,7 +30,7 @@ class Reference {
       final instanceDeclaration = resolveInstanceDeclaration(ctx, ctx.library, ctx.currentClass!.name.name, name);
       if (instanceDeclaration != null) {
         final $type = instanceDeclaration.first;
-        return TypeRef.lookupFieldType(ctx, $type, name) ?? dynamicType;
+        return TypeRef.lookupFieldType(ctx, $type, name) ?? DbcTypes.dynamicType;
       }
     }
 
@@ -38,12 +38,12 @@ class Reference {
     final decl = declaration.declaration!;
 
     // TODO
-    return functionType;
+    return DbcTypes.functionType;
   }
 
   void setValue(CompilerContext ctx, Variable value) {
     if (object != null) {
-      final fieldType = TypeRef.lookupFieldType(ctx, object!.type, name) ?? dynamicType;
+      final fieldType = TypeRef.lookupFieldType(ctx, object!.type, name) ?? DbcTypes.dynamicType;
       if (!value.type.isAssignableTo(fieldType)) {
         throw CompileError('Cannot assign value of type ${value.type} to field "$name" of type $fieldType');
       }
@@ -63,7 +63,7 @@ class Reference {
       final instanceDeclaration = resolveInstanceDeclaration(ctx, ctx.library, ctx.currentClass!.name.name, name);
       if (instanceDeclaration != null) {
         final $type = instanceDeclaration.first;
-        final fieldType = TypeRef.lookupFieldType(ctx, $type, name) ?? dynamicType;
+        final fieldType = TypeRef.lookupFieldType(ctx, $type, name) ?? DbcTypes.dynamicType;
         if (!value.type.isAssignableTo(fieldType)) {
           throw CompileError('Cannot assign value of type ${value.type} to field "$name" of type $fieldType');
         }
@@ -81,7 +81,7 @@ class Reference {
       final op = PushObjectProperty.make(object!.scopeFrameOffset, name);
       ctx.pushOp(op, PushObjectProperty.len(op));
 
-      return Variable.alloc(ctx, TypeRef.lookupFieldType(ctx, object!.type, name) ?? dynamicType);
+      return Variable.alloc(ctx, TypeRef.lookupFieldType(ctx, object!.type, name) ?? DbcTypes.dynamicType);
     }
 
     // First look at locals
@@ -100,12 +100,18 @@ class Reference {
         final op = PushObjectProperty.make(0 /* (this) */, name);
         ctx.pushOp(op, PushObjectProperty.len(op));
 
-        return Variable.alloc(ctx, TypeRef.lookupFieldType(ctx, $type, name) ?? dynamicType);
+        return Variable.alloc(ctx, TypeRef.lookupFieldType(ctx, $type, name) ?? DbcTypes.dynamicType);
       }
     }
 
     final declaration = ctx.visibleDeclarations[ctx.library]![name]!;
-    final decl = declaration.declaration!;
+    final _decl = declaration.declaration!;
+
+    if (_decl.isBridge) {
+      throw CompileError('No support bridge declaration in Reference');
+    }
+
+    final decl = _decl.declaration!;
 
     if (!(decl is FunctionDeclaration) && !(decl is ConstructorDeclaration)) {
       decl as ClassDeclaration;
@@ -120,7 +126,7 @@ class Reference {
         offset = DeferredOrOffset(file: declaration.sourceLib, name: name + '.');
       }
 
-      return Variable(-1, functionType, methodOffset: offset, methodReturnType: AlwaysReturnType(returnType, false));
+      return Variable(-1, DbcTypes.functionType, methodOffset: offset, methodReturnType: AlwaysReturnType(returnType, false));
     }
 
     TypeRef? returnType;
@@ -140,6 +146,6 @@ class Reference {
       offset = DeferredOrOffset(file: declaration.sourceLib, name: name);
     }
 
-    return Variable(-1, functionType, methodOffset: offset, methodReturnType: AlwaysReturnType(returnType, nullable));
+    return Variable(-1, DbcTypes.functionType, methodOffset: offset, methodReturnType: AlwaysReturnType(returnType, nullable));
   }
 }

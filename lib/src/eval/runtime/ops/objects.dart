@@ -15,8 +15,8 @@ class InvokeDynamic implements DbcOp {
   }
 
   @override
-  void run(Runtime exec) {
-    var object = exec._vStack[exec.scopeStackOffset + _location];
+  void run(Runtime runtime) {
+    var object = runtime._vStack[runtime.scopeStackOffset + _location];
 
     while (true) {
       if (object is DbcInstanceImpl) {
@@ -26,15 +26,19 @@ class InvokeDynamic implements DbcOp {
           continue;
         }
         final _offset = methods[_method]!;
-        exec.callStack.add(exec._prOffset);
-        exec._prOffset = _offset;
+        runtime.callStack.add(runtime._prOffset);
+        runtime._prOffset = _offset;
         return;
       }
 
-      final method = ((object as DbcInstance).evalGetProperty(_method) as DbcFunction);
+      if (object is DbcBridgeInstance) {
+
+      }
+
+      final method = ((object as DbcInstance).$getProperty(runtime, _method) as DbcFunction);
       if (method is DbcFunctionImpl) {
-        exec._returnValue = method.call(DbcVmInterface(exec), object, exec._args.cast());
-        exec._args = [];
+        runtime._returnValue = method.call(runtime, object, runtime._args.cast());
+        runtime._args = [];
         return;
       } else {
         throw UnimplementedError();
@@ -68,7 +72,7 @@ class CreateClass implements DbcOp {
 
   @override
   void run(Runtime exec) {
-    final $super = exec._vStack[exec.scopeStackOffset + _super] as DbcInstanceImpl?;
+    final $super = exec._vStack[exec.scopeStackOffset + _super] as DbcInstance?;
     final $cls = exec.declaredClasses[_library]![_name]!;
 
     final instance = DbcInstanceImpl($cls, $super, List.filled(_valuesLen, null));
@@ -96,10 +100,10 @@ class SetObjectProperty implements DbcOp {
   }
 
   @override
-  void run(Runtime exec) {
-    final object = exec._vStack[exec.scopeStackOffset + _location];
+  void run(Runtime runtime) {
+    final object = runtime._vStack[runtime.scopeStackOffset + _location];
     (object as DbcInstance)
-        .evalSetProperty(_property, exec._vStack[exec.scopeStackOffset + _valueOffset] as DbcValueInterface);
+        .$setProperty(runtime, _property, runtime._vStack[runtime.scopeStackOffset + _valueOffset] as IDbcValue);
   }
 
   @override
@@ -121,10 +125,10 @@ class PushObjectProperty implements DbcOp {
   }
 
   @override
-  void run(Runtime exec) {
-    final object = exec._vStack[exec.scopeStackOffset + _location];
-    final _r = (object as DbcInstance).evalGetProperty(_property);;
-    exec._vStack[exec._stackOffset++] = _r;
+  void run(Runtime runtime) {
+    final object = runtime._vStack[runtime.scopeStackOffset + _location];
+    final _r = (object as DbcInstance).$getProperty(runtime, _property);;
+    runtime._vStack[runtime._stackOffset++] = _r;
   }
 
   @override
@@ -190,10 +194,10 @@ class PushSuper implements DbcOp {
 
   @override
   void run(Runtime exec) {
-    final object = exec._vStack[exec.scopeStackOffset + _objectOffset] as DbcInstance;
+    final object = exec._vStack[exec.scopeStackOffset + _objectOffset] as DbcInstanceImpl;
     exec._vStack[exec._stackOffset++] = object.evalSuperclass;
   }
 
   @override
-  String toString() => 'PushSuper (L$_objectOffset])';
+  String toString() => 'PushSuper (L$_objectOffset)';
 }

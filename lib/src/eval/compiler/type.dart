@@ -58,6 +58,10 @@ class TypeRef {
   List<TypeRef> get allSupertypes => [if (extendsType != null) extendsType!, ...implementsType, ...withType];
 
   bool isAssignableTo(TypeRef slot, {List<TypeRef>? overrideGenerics}) {
+    if (this == DbcTypes.dynamicType) {
+      return true;
+    }
+
     final generics = overrideGenerics ?? specifiedTypeArgs;
 
     if (this == slot) {
@@ -113,7 +117,10 @@ class AlwaysReturnType implements ReturnType {
   factory AlwaysReturnType.fromInstanceMethod(CompilerContext ctx, TypeRef type, String method, List<TypeRef?> argTypes,
       Map<String, TypeRef?> namedArgTypes, TypeRef? fallback) {
     final _m = resolveInstanceMethod(ctx, type, method);
-    return AlwaysReturnType.fromAnnotation(ctx, type.file, _m.returnType, fallback);
+    if (_m.isBridge) {
+      return AlwaysReturnType(DbcTypes.dynamicType, true);
+    }
+    return AlwaysReturnType.fromAnnotation(ctx, type.file, _m.declaration!.returnType, fallback);
   }
 
   static AlwaysReturnType? fromInstanceMethodOrBuiltin(
@@ -127,7 +134,11 @@ class AlwaysReturnType implements ReturnType {
       return returnType.toAlwaysReturnType(argTypes, namedArgTypes);
     }
 
-    return AlwaysReturnType.fromInstanceMethod(ctx, type, method, argTypes, namedArgTypes, dynamicType);
+    if (type == DbcTypes.dynamicType) {
+      return AlwaysReturnType(DbcTypes.dynamicType, true);
+    }
+
+    return AlwaysReturnType.fromInstanceMethod(ctx, type, method, argTypes, namedArgTypes, DbcTypes.dynamicType);
   }
 
   final TypeRef? type;
