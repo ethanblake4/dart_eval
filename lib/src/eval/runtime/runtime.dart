@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
+import 'package:dart_eval/src/eval/compiler/program.dart';
 
 import 'function.dart';
 import 'stdlib_base.dart';
@@ -29,11 +30,35 @@ class ScopeFrame {
 }
 
 class Runtime {
-  Runtime(this._dbc) : id = _id++;
+  Runtime(this._dbc) : id = _id++ {
+    loadProgram();
+  }
+
+  Runtime.ofProgram(Program program) : id = _id++ {
+    declarations = program.topLevelDeclarations;
+    program.instanceDeclarations.forEach((file, $class) {
+      final decls = <String, EvalClass>{};
+
+      $class.forEach((name, declarations) {
+        final dc = declarations.cast<Map>();
+
+        final getters = (dc[0]).cast<String, int>();
+        final setters = (dc[1]).cast<String, int>();
+        final methods = (dc[2]).cast<String, int>();
+
+        final cls = EvalClass(null, [], getters, setters, methods);
+        decls[name] = cls;
+      });
+
+      declaredClasses[file] = decls;
+    });
+
+    pr.addAll(program.ops);
+  }
 
   var _bridgeLibraryIdx = -2;
   var _bridgeLibraryMappings = <String, int>{};
-  var _bridgeClasses = <int, Map<String, DbcBridgeClass>>{};
+  var _bridgeClasses = <int, Map<String, BridgeClass>>{};
 
   int _libraryIndex(String libraryUri) {
     if (!_bridgeLibraryMappings.containsKey(libraryUri)) {
@@ -41,22 +66,22 @@ class Runtime {
     }
     final _libraryIdx = _bridgeLibraryMappings[libraryUri]!;
     if (!_bridgeClasses.containsKey(libraryUri)) {
-      _bridgeClasses[_libraryIdx] = <String, DbcBridgeClass>{};
+      _bridgeClasses[_libraryIdx] = <String, BridgeClass>{};
     }
     return _libraryIdx;
   }
 
-  void copyBridgeMappings(Map<String, int> libraries, Map<int, Map<String, DbcBridgeClass>> classes) {
+  void copyBridgeMappings(Map<String, int> libraries, Map<int, Map<String, BridgeClass>> classes) {
     _bridgeLibraryMappings = libraries;
     _bridgeClasses = classes;
   }
 
-  void defineBridgeClass(DbcBridgeClass classDef) {
+  void defineBridgeClass(BridgeClass classDef) {
     final type = classDef.type;
     _bridgeClasses[_libraryIndex(type.library!)]![type.name!] = classDef;
   }
 
-  void defineBridgeClasses(List<DbcBridgeClass> classDefs) {
+  void defineBridgeClasses(List<BridgeClass> classDefs) {
     for (final classDef in classDefs) {
       defineBridgeClass(classDef);
     }
@@ -186,8 +211,8 @@ class Runtime {
 
   static const MIN_DYNAMIC_REGISTER = 32;
 
-  static final bridgeData = Expando<DbcBridgeData>();
-  final ByteData _dbc;
+  static final bridgeData = Expando<BridgeData>();
+  late ByteData _dbc;
   final _vStack = List<Object?>.filled(65535, null);
   var _args = <Object?>[];
   final pr = <DbcOp>[];
@@ -196,7 +221,7 @@ class Runtime {
   var scopeStackOffset = 0;
   final callStack = <int>[0];
   var declarations = <int, Map<String, int>>{};
-  final declaredClasses = <int, Map<String, DbcClass>>{};
+  final declaredClasses = <int, Map<String, EvalClass>>{};
   int _stackOffset = 0;
   int _argsOffset = 0;
   int _offset = 0;
@@ -234,10 +259,8 @@ class Runtime {
             .map((k, v) => MapEntry(int.parse(k), (v as Map).cast<String, List>())) as Map)
         .cast<int, Map<String, List>>();
 
-    final _vm = DbcVmInterface(this);
-
     classes.forEach((file, classs) {
-      final decls = <String, DbcClass>{};
+      final decls = <String, EvalClass>{};
 
       classs.forEach((name, declarations) {
         final dc = declarations.cast<Map>();
@@ -246,7 +269,7 @@ class Runtime {
         final setters = (dc[1]).cast<String, int>();
         final methods = (dc[2]).cast<String, int>();
 
-        final cls = DbcClass(null, [], getters, setters, methods);
+        final cls = EvalClass(null, [], getters, setters, methods);
         decls[name] = cls;
       });
 
@@ -301,7 +324,7 @@ class Runtime {
     }
   }
 
-  void pushArg(IDbcValue? _value) {
+  void pushArg(EvalValue? _value) {
     _args.add(_value);
     _argsOffset++;
   }

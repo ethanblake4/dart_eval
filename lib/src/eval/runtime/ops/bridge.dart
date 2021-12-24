@@ -20,20 +20,20 @@ class BridgeInstantiate implements DbcOp {
 
   @override
   void run(Runtime runtime) {
-    final $subclass = runtime._vStack[runtime.scopeStackOffset + _subclass] as DbcInstance?;
+    final $subclass = runtime._vStack[runtime.scopeStackOffset + _subclass] as EvalInstance?;
     final $cls = runtime._bridgeClasses[_library]![_name]!;
     final _args = runtime._args;
     final _argsLen = _args.length;
     final _mappedArgs = List<Object?>.filled(_argsLen, null);
 
     for (var i = 0; i < _argsLen; i++) {
-      _mappedArgs[i] = (_args[i] as IDbcValue?)?.$reified;
+      _mappedArgs[i] = (_args[i] as EvalValue?)?.$reified;
     }
 
     runtime._args = [];
 
-    final instance = $cls.constructors[_constructor]!.instantiator(-1, _mappedArgs);
-    Runtime.bridgeData[instance] = DbcBridgeData(runtime, $subclass ?? BridgeDelegatingShim());
+    final instance = $cls.constructors[_constructor]!.instantiator(_mappedArgs);
+    Runtime.bridgeData[instance] = BridgeData(runtime, $subclass ?? BridgeDelegatingShim());
 
     runtime._vStack[runtime._stackOffset++] = instance;
   }
@@ -73,7 +73,7 @@ class ParentBridgeSuperShim extends DbcOp {
   @override
   void run(Runtime runtime) {
     final shim = runtime._vStack[runtime.scopeStackOffset + _shimOffset] as BridgeSuperShim;
-    shim.bridge = runtime._vStack[runtime.scopeStackOffset + _bridgeOffset] as DbcBridgeInstance;
+    shim.bridge = runtime._vStack[runtime.scopeStackOffset + _bridgeOffset] as BridgeInstance;
   }
 
   @override

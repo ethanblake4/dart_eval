@@ -17,10 +17,10 @@ Variable compileSuperExpression(SuperExpression e, CompilerContext ctx) {
     throw CompileError("Cannot use 'super' outside of a class context");
   }
 
-  var type = DbcTypes.objectType;
+  var type = EvalTypes.objectType;
   final extendsClause = ctx.currentClass!.extendsClause;
   if (extendsClause != null) {
-    type = ctx.visibleTypes[ctx.library]![extendsClause.superclass.name.name]!;
+    type = ctx.visibleTypes[ctx.library]![extendsClause.superclass2.name.name]!;
   }
 
   ctx.pushOp(PushSuper.make(0), PushSuper.LEN);

@@ -42,7 +42,7 @@ class TypeRef {
     if ($extends == null) {
       throw CompileError('Field "$field" not found in class ${$class}');
     } else {
-      final $super = ctx.visibleTypes[$class.file]![$extends.superclass.name.name]!;
+      final $super = ctx.visibleTypes[$class.file]![$extends.superclass2.name.name]!;
       return TypeRef.lookupFieldType(ctx, $super, field);
     }
   }
@@ -58,7 +58,7 @@ class TypeRef {
   List<TypeRef> get allSupertypes => [if (extendsType != null) extendsType!, ...implementsType, ...withType];
 
   bool isAssignableTo(TypeRef slot, {List<TypeRef>? overrideGenerics}) {
-    if (this == DbcTypes.dynamicType) {
+    if (this == EvalTypes.dynamicType) {
       return true;
     }
 
@@ -118,7 +118,7 @@ class AlwaysReturnType implements ReturnType {
       Map<String, TypeRef?> namedArgTypes, TypeRef? fallback) {
     final _m = resolveInstanceMethod(ctx, type, method);
     if (_m.isBridge) {
-      return AlwaysReturnType(DbcTypes.dynamicType, true);
+      return AlwaysReturnType(EvalTypes.dynamicType, true);
     }
     return AlwaysReturnType.fromAnnotation(ctx, type.file, _m.declaration!.returnType, fallback);
   }
@@ -134,11 +134,11 @@ class AlwaysReturnType implements ReturnType {
       return returnType.toAlwaysReturnType(argTypes, namedArgTypes);
     }
 
-    if (type == DbcTypes.dynamicType) {
-      return AlwaysReturnType(DbcTypes.dynamicType, true);
+    if (type == EvalTypes.dynamicType) {
+      return AlwaysReturnType(EvalTypes.dynamicType, true);
     }
 
-    return AlwaysReturnType.fromInstanceMethod(ctx, type, method, argTypes, namedArgTypes, DbcTypes.dynamicType);
+    return AlwaysReturnType.fromInstanceMethod(ctx, type, method, argTypes, namedArgTypes, EvalTypes.dynamicType);
   }
 
   final TypeRef? type;

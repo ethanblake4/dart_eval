@@ -30,7 +30,7 @@ class Variable {
     if (boxed) {
       return this;
     }
-    if (type != DbcTypes.intType) {
+    if (type != EvalTypes.intType) {
       throw CompileError('Can only box ints for now');
     }
     ctx.pushOp(BoxInt.make(scopeFrameOffset), BoxInt.LEN);

@@ -142,7 +142,7 @@ class BoxInt implements DbcOp {
   @override
   void run(Runtime exec) {
     final _p = exec.scopeStackOffset + _position;
-    exec._vStack[_p] = DbcInt(exec._vStack[_p] as int);
+    exec._vStack[_p] = EvalInt(exec._vStack[_p] as int);
   }
 
   @override
@@ -162,7 +162,7 @@ class Unbox implements DbcOp {
   @override
   void run(Runtime exec) {
     final _p = exec.scopeStackOffset + _position;
-    exec._vStack[_p] = (exec._vStack[_p] as IDbcValue).$value;
+    exec._vStack[_p] = (exec._vStack[_p] as EvalValue).$value;
   }
 
   @override

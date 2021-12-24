@@ -41,7 +41,7 @@ Pair<TypeRef, Declaration>? resolveInstanceDeclaration(
   }
   final $classDec = _$classDec.declaration! as ClassDeclaration;
   if ($classDec.withClause != null) {
-    for (final $mixin in $classDec.withClause!.mixinTypes) {
+    for (final $mixin in $classDec.withClause!.mixinTypes2) {
       final mixinType = ctx.visibleTypes[library]![$mixin.name.name]!;
       final result = resolveInstanceDeclaration(ctx, mixinType.file, mixinType.name, name);
       if (result != null) {
@@ -50,7 +50,7 @@ Pair<TypeRef, Declaration>? resolveInstanceDeclaration(
     }
   }
   if ($classDec.extendsClause != null) {
-    final extendsType = ctx.visibleTypes[library]![$classDec.extendsClause!.superclass.name.name]!;
+    final extendsType = ctx.visibleTypes[library]![$classDec.extendsClause!.superclass2.name.name]!;
     return resolveInstanceDeclaration(ctx, extendsType.file, extendsType.name, name);
   }
   return null;

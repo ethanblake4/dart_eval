@@ -3,14 +3,14 @@ import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'package:dart_eval/src/eval/runtime/function.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
-mixin DbcBridgeInstance on Object implements IDbcValue, DbcInstance {
+mixin BridgeInstance on Object implements EvalValue, EvalInstance {
 
-  IDbcValue? $bridgeGet(String identifier);
+  EvalValue? $bridgeGet(String identifier);
 
-  void $bridgeSet(String identifier, IDbcValue value);
+  void $bridgeSet(String identifier, EvalValue value);
 
   @override
-  IDbcValue? $getProperty(Runtime runtime, String identifier) {
+  EvalValue? $getProperty(Runtime runtime, String identifier) {
     try {
       return Runtime.bridgeData[this]!.subclass!.$getProperty(runtime, identifier);
     } on UnimplementedError catch (_) {
@@ -19,7 +19,7 @@ mixin DbcBridgeInstance on Object implements IDbcValue, DbcInstance {
   }
 
   @override
-  void $setProperty(Runtime runtime, String identifier, IDbcValue value) {
+  void $setProperty(Runtime runtime, String identifier, EvalValue value) {
     try {
       return Runtime.bridgeData[this]!.subclass!.$setProperty(runtime, identifier, value);
     } on UnimplementedError catch (_) {
@@ -27,48 +27,65 @@ mixin DbcBridgeInstance on Object implements IDbcValue, DbcInstance {
     }
   }
 
-  dynamic $invoke(String method, List<IDbcValue?> args) {
+  dynamic $_get(String prop) {
     final runtime = Runtime.bridgeData[this]!.runtime;
-    return ($getProperty(runtime, method) as DbcFunction).call(runtime, this, args)?.$reified;
+    return ($getProperty(runtime, prop) as EvalValue).$reified;
+  }
+
+  void $_set(String prop, EvalValue value) {
+    final runtime = Runtime.bridgeData[this]!.runtime;
+    $setProperty(runtime, prop, value);
+  }
+
+  dynamic $_invoke(String method, List<EvalValue?> args) {
+    final runtime = Runtime.bridgeData[this]!.runtime;
+    return ($getProperty(runtime, method) as EvalFunction).call(runtime, this, args)?.$reified;
   }
 
   @override
-  DbcBridgeInstance get $value => this;
+  BridgeInstance get $value => this;
 
   @override
-  DbcBridgeInstance get $reified => this;
+  BridgeInstance get $reified => this;
 }
 
-class BridgeSuperShim implements DbcInstance {
+class BridgeSuperShim implements EvalInstance {
   BridgeSuperShim();
 
-  late DbcBridgeInstance bridge;
+  late BridgeInstance bridge;
 
   @override
-  IDbcValue? $getProperty(Runtime runtime, String name) => bridge.$bridgeGet(name);
+  EvalValue? $getProperty(Runtime runtime, String name) => bridge.$bridgeGet(name);
 
   @override
-  void $setProperty(Runtime runtime, String name, IDbcValue value) => bridge.$bridgeSet(name, value);
+  void $setProperty(Runtime runtime, String name, EvalValue value) => bridge.$bridgeSet(name, value);
 
   @override
-  DbcBridgeInstance get $reified => bridge;
+  BridgeInstance get $reified => bridge;
 
   @override
-  DbcBridgeInstance get $value => bridge;
+  BridgeInstance get $value => bridge;
 }
 
-class BridgeDelegatingShim implements DbcInstance {
+class BridgeDelegatingShim implements EvalInstance {
   const BridgeDelegatingShim();
 
   @override
-  IDbcValue? $getProperty(Runtime runtime, String name) => throw UnimplementedError();
+  EvalValue? $getProperty(Runtime runtime, String name) => throw UnimplementedError();
 
   @override
-  void $setProperty(Runtime runtime, String name, IDbcValue value) => throw UnimplementedError();
+  void $setProperty(Runtime runtime, String name, EvalValue value) => throw UnimplementedError();
 
   @override
-  DbcBridgeInstance get $reified => throw UnimplementedError();
+  BridgeInstance get $reified => throw UnimplementedError();
 
   @override
-  DbcBridgeInstance get $value => throw UnimplementedError();
+  BridgeInstance get $value => throw UnimplementedError();
+}
+
+class BridgeData {
+  final Runtime runtime;
+  final EvalInstance? subclass;
+
+  const BridgeData(this.runtime, this.subclass);
 }

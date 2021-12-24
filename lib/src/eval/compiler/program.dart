@@ -40,10 +40,6 @@ class Program {
       b.add(Runtime.opcodeFrom(op));
     }
     final res = b.takeBytes();
-    print('Compiled to ${res.length} bytes DBC');
-
-    final f = File('out.dbc');
-    f.writeAsBytesSync(res);
 
     return res;
   }

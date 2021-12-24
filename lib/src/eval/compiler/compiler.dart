@@ -17,7 +17,7 @@ import 'builtins.dart';
 class Compiler {
   var _bridgeLibraryIdx = -2;
   final _bridgeLibraryMappings = <String, int>{};
-  final _bridgeClasses = <int, Map<String, DbcBridgeClass>>{};
+  final _bridgeClasses = <int, Map<String, BridgeClass>>{};
 
   int _libraryIndex(String libraryUri) {
     if (!_bridgeLibraryMappings.containsKey(libraryUri)) {
@@ -25,17 +25,17 @@ class Compiler {
     }
     final _libraryIdx = _bridgeLibraryMappings[libraryUri]!;
     if (!_bridgeClasses.containsKey(libraryUri)) {
-      _bridgeClasses[_libraryIdx] = <String, DbcBridgeClass>{};
+      _bridgeClasses[_libraryIdx] = <String, BridgeClass>{};
     }
     return _libraryIdx;
   }
 
-  void defineBridgeClass(DbcBridgeClass classDef) {
+  void defineBridgeClass(BridgeClass classDef) {
     final type = classDef.type;
     _bridgeClasses[_libraryIndex(type.library!)]![type.name!] = classDef;
   }
 
-  void defineBridgeClasses(List<DbcBridgeClass> classDefs) {
+  void defineBridgeClasses(List<BridgeClass> classDefs) {
     for (final classDef in classDefs) {
       defineBridgeClass(classDef);
     }
@@ -44,7 +44,7 @@ class Compiler {
   Program compile(Map<String, Map<String, String>> packages) {
     var dartSourceSize = 0;
     final ctx = CompilerContext(0);
-    final typeResolvedBridgeClasses = <int, Map<String, DbcBridgeClass>>{};
+    final typeResolvedBridgeClasses = <int, Map<String, BridgeClass>>{};
     final packageMap = <String, Map<String, int>>{};
     final indexMap = <int, List<String>>{};
     final partMap = <int, List<String>>{};
@@ -72,7 +72,7 @@ class Compiler {
       typeResolvedBridgeClasses[_blm.value] = {
         for (final _cls in _classes.entries)
           _cls.key:
-              _cls.value.copyWith(type: DbcBridgeTypeDescriptor.builtin(TypeRef(_blm.value, _cls.value.type.name!)))
+              _cls.value.copyWith(type: BridgeTypeDescriptor.builtin(TypeRef(_blm.value, _cls.value.type.name!)))
       };
 
       final types = Map.fromEntries(typeResolvedBridgeClasses.entries
@@ -260,7 +260,6 @@ class Compiler {
     topLevelDeclarationsMap.forEach((key, value) {
       ctx.topLevelDeclarationPositions[key] = {};
       ctx.instanceDeclarationPositions[key] = {};
-      print('Generating package:${indexMap[key]!.join("/")}...');
       value.forEach((lib, _declaration) {
         if (_declaration.isBridge) {
           return;
@@ -274,8 +273,6 @@ class Compiler {
         ctx.resetStack();
       });
     });
-
-    print('Compiled from $dartSourceSize characters Dart source');
 
     return Program(
         ctx.topLevelDeclarationPositions, ctx.instanceDeclarationPositions, ctx.offsetTracker.apply(ctx.out));
@@ -296,7 +293,8 @@ class Compiler {
       for (final error in d.errors) {
         stderr.addError(error);
       }
-      throw CompileError('Parsing error(s)');
+
+      throw CompileError('Parsing error(s): $source');
     }
     return d.unit;
   }

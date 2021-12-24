@@ -16,7 +16,7 @@ class Reference {
 
   TypeRef resolveType(CompilerContext ctx) {
     if (object != null) {
-      return TypeRef.lookupFieldType(ctx, object!.type, name) ?? DbcTypes.dynamicType;
+      return TypeRef.lookupFieldType(ctx, object!.type, name) ?? EvalTypes.dynamicType;
     }
 
     // Locals
@@ -30,7 +30,7 @@ class Reference {
       final instanceDeclaration = resolveInstanceDeclaration(ctx, ctx.library, ctx.currentClass!.name.name, name);
       if (instanceDeclaration != null) {
         final $type = instanceDeclaration.first;
-        return TypeRef.lookupFieldType(ctx, $type, name) ?? DbcTypes.dynamicType;
+        return TypeRef.lookupFieldType(ctx, $type, name) ?? EvalTypes.dynamicType;
       }
     }
 
@@ -38,12 +38,12 @@ class Reference {
     final decl = declaration.declaration!;
 
     // TODO
-    return DbcTypes.functionType;
+    return EvalTypes.functionType;
   }
 
   void setValue(CompilerContext ctx, Variable value) {
     if (object != null) {
-      final fieldType = TypeRef.lookupFieldType(ctx, object!.type, name) ?? DbcTypes.dynamicType;
+      final fieldType = TypeRef.lookupFieldType(ctx, object!.type, name) ?? EvalTypes.dynamicType;
       if (!value.type.isAssignableTo(fieldType)) {
         throw CompileError('Cannot assign value of type ${value.type} to field "$name" of type $fieldType');
       }
@@ -63,7 +63,7 @@ class Reference {
       final instanceDeclaration = resolveInstanceDeclaration(ctx, ctx.library, ctx.currentClass!.name.name, name);
       if (instanceDeclaration != null) {
         final $type = instanceDeclaration.first;
-        final fieldType = TypeRef.lookupFieldType(ctx, $type, name) ?? DbcTypes.dynamicType;
+        final fieldType = TypeRef.lookupFieldType(ctx, $type, name) ?? EvalTypes.dynamicType;
         if (!value.type.isAssignableTo(fieldType)) {
           throw CompileError('Cannot assign value of type ${value.type} to field "$name" of type $fieldType');
         }
@@ -81,7 +81,7 @@ class Reference {
       final op = PushObjectProperty.make(object!.scopeFrameOffset, name);
       ctx.pushOp(op, PushObjectProperty.len(op));
 
-      return Variable.alloc(ctx, TypeRef.lookupFieldType(ctx, object!.type, name) ?? DbcTypes.dynamicType);
+      return Variable.alloc(ctx, TypeRef.lookupFieldType(ctx, object!.type, name) ?? EvalTypes.dynamicType);
     }
 
     // First look at locals
@@ -100,7 +100,7 @@ class Reference {
         final op = PushObjectProperty.make(0 /* (this) */, name);
         ctx.pushOp(op, PushObjectProperty.len(op));
 
-        return Variable.alloc(ctx, TypeRef.lookupFieldType(ctx, $type, name) ?? DbcTypes.dynamicType);
+        return Variable.alloc(ctx, TypeRef.lookupFieldType(ctx, $type, name) ?? EvalTypes.dynamicType);
       }
     }
 
@@ -126,7 +126,7 @@ class Reference {
         offset = DeferredOrOffset(file: declaration.sourceLib, name: name + '.');
       }
 
-      return Variable(-1, DbcTypes.functionType, methodOffset: offset, methodReturnType: AlwaysReturnType(returnType, false));
+      return Variable(-1, EvalTypes.functionType, methodOffset: offset, methodReturnType: AlwaysReturnType(returnType, false));
     }
 
     TypeRef? returnType;
@@ -146,6 +146,6 @@ class Reference {
       offset = DeferredOrOffset(file: declaration.sourceLib, name: name);
     }
 
-    return Variable(-1, DbcTypes.functionType, methodOffset: offset, methodReturnType: AlwaysReturnType(returnType, nullable));
+    return Variable(-1, EvalTypes.functionType, methodOffset: offset, methodReturnType: AlwaysReturnType(returnType, nullable));
   }
 }

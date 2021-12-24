@@ -4,32 +4,19 @@ import 'package:dart_eval/src/eval/runtime/stdlib_base.dart';
 
 import 'class.dart';
 
-typedef DbcCallableFunc = IDbcValue? Function(Runtime runtime, IDbcValue? target,
-    List<IDbcValue?> args);
+typedef EvalCallableFunc = EvalValue? Function(Runtime runtime, EvalValue? target,
+    List<EvalValue?> args);
 
-abstract class DbcCallable {
-  IDbcValue? call(Runtime runtime, IDbcValue? target, List<IDbcValue?> args);
+abstract class EvalCallable {
+  EvalValue? call(Runtime runtime, EvalValue? target, List<EvalValue?> args);
 }
 
-class DbcVmInterface {
-  DbcVmInterface(this.exec);
+abstract class EvalFunction implements EvalInstance, EvalCallable {
 
-  Runtime exec;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) || other is DbcVmInterface && runtimeType == other.runtimeType && exec == other.exec;
+  const EvalFunction();
 
   @override
-  int get hashCode => exec.hashCode;
-}
-
-abstract class DbcFunction implements DbcInstance, DbcCallable {
-
-  const DbcFunction();
-
-  @override
-  IDbcValue? $getProperty(Runtime runtime, String identifier) {
+  EvalValue? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case 'call':
         return this;
@@ -39,12 +26,9 @@ abstract class DbcFunction implements DbcInstance, DbcCallable {
   }
 
   @override
-  void $setProperty(Runtime runtime, String identifier, IDbcValue value) {
+  void $setProperty(Runtime runtime, String identifier, EvalValue value) {
     throw EvalUnknownPropertyException(identifier);
   }
-
-  @override
-  DbcInstance? get evalSuperclass => DbcObject();
 
   @override
   dynamic get $value => throw UnimplementedError();
@@ -53,27 +37,27 @@ abstract class DbcFunction implements DbcInstance, DbcCallable {
   dynamic get $reified => throw UnimplementedError();
 }
 
-class DbcFunctionPtr extends DbcFunction {
-  DbcFunctionPtr(this.$this, this.offset);
+class EvalFunctionPtr extends EvalFunction {
+  EvalFunctionPtr(this.$this, this.offset);
 
-  final DbcInstance $this;
+  final EvalInstance $this;
   final int offset;
 
   @override
-  IDbcValue? call(Runtime runtime, IDbcValue? target, List<IDbcValue?> args) {
+  EvalValue? call(Runtime runtime, EvalValue? target, List<EvalValue?> args) {
     runtime.pushArg($this);
     runtime.bridgeCall(offset);
-    return runtime.returnValue as IDbcValue?;
+    return runtime.returnValue as EvalValue?;
   }
 }
 
-class DbcFunctionImpl extends DbcFunction {
-  const DbcFunctionImpl(this.func);
+class EvalFunctionImpl extends EvalFunction {
+  const EvalFunctionImpl(this.func);
 
-  final DbcCallableFunc func;
+  final EvalCallableFunc func;
 
   @override
-  IDbcValue? call(Runtime runtime, IDbcValue? target, List<IDbcValue?> args) {
+  EvalValue? call(Runtime runtime, EvalValue? target, List<EvalValue?> args) {
     return func(runtime, target, args);
   }
 }

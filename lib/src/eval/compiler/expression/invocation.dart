@@ -88,21 +88,21 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
       ctx.offsetTracker.setOffset(loc, offset);
     }
     mReturnType = method.methodReturnType?.toAlwaysReturnType(_argTypes, _namedArgTypes) ??
-        AlwaysReturnType(DbcTypes.dynamicType, true);
+        AlwaysReturnType(EvalTypes.dynamicType, true);
   }
 
   ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
   ctx.allocNest.last++;
 
-  return Variable(ctx.scopeFrameOffset++, mReturnType?.type ?? DbcTypes.dynamicType,
+  return Variable(ctx.scopeFrameOffset++, mReturnType?.type ?? EvalTypes.dynamicType,
       boxed: L != null || !unboxedAcrossFunctionBoundaries.contains(mReturnType?.type));
 }
 
-DeclarationOrBridge<MethodDeclaration, DbcBridgeFunction> resolveInstanceMethod(
+DeclarationOrBridge<MethodDeclaration, BridgeFunction> resolveInstanceMethod(
     CompilerContext ctx, TypeRef instanceType, String methodName) {
   if (instanceType.file < -1) {
     // Bridge
-    final bridge = ctx.topLevelDeclarationsMap[instanceType.file]![instanceType.name]!.bridge! as DbcBridgeClass;
+    final bridge = ctx.topLevelDeclarationsMap[instanceType.file]![instanceType.name]!.bridge! as BridgeClass;
     return DeclarationOrBridge(bridge: bridge.methods[methodName]!);
   }
   final dec = ctx.instanceDeclarationsMap[instanceType.file]![instanceType.name]![methodName];
@@ -114,7 +114,7 @@ DeclarationOrBridge<MethodDeclaration, DbcBridgeFunction> resolveInstanceMethod(
     if ($class.extendsClause == null) {
       throw CompileError('Cannot resolve instance method');
     }
-    final $supertype = ctx.visibleTypes[instanceType.file]![$class.extendsClause!.superclass.name.name]!;
+    final $supertype = ctx.visibleTypes[instanceType.file]![$class.extendsClause!.superclass2.name.name]!;
     return resolveInstanceMethod(ctx, $supertype, methodName);
   }
 }
@@ -150,7 +150,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext 
         ctx.pushOp(argOp, PushArg.LEN);
       }
     } else {
-      var paramType = DbcTypes.dynamicType;
+      var paramType = EvalTypes.dynamicType;
       if (param is SimpleFormalParameter) {
         if (param.type != null) {
           paramType = TypeRef.fromAnnotation(ctx, decLibrary, param.type!);
@@ -184,7 +184,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext 
 
   named.forEach((name, _param) {
     final param = (_param is DefaultFormalParameter ? _param.parameter : _param) as NormalFormalParameter;
-    var paramType = DbcTypes.dynamicType;
+    var paramType = EvalTypes.dynamicType;
     if (param is SimpleFormalParameter) {
       if (param.type != null) {
         paramType = TypeRef.fromAnnotation(ctx, decLibrary, param.type!);
@@ -216,7 +216,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext 
 }
 
 Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
-    CompilerContext ctx, ArgumentList argumentList, DbcBridgeFunction function) {
+    CompilerContext ctx, ArgumentList argumentList, BridgeFunction function) {
   final _args = <Variable>[];
   final _namedArgs = <String, Variable>{};
   final namedExpr = <String, Expression>{};
@@ -235,7 +235,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
         ctx.pushOp(argOp, PushArg.LEN);
       }
     } else {
-      var paramType = param.type ?? DbcTypes.dynamicType;
+      var paramType = param.type ?? EvalTypes.dynamicType;
 
       final _arg = compileExpression(arg, ctx).boxIfNeeded(ctx);
       if (!_arg.type.isAssignableTo(paramType)) {
@@ -259,7 +259,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
   }
 
   function.namedParams.forEach((name, param) {
-    var paramType = param.type ?? DbcTypes.dynamicType;
+    var paramType = param.type ?? EvalTypes.dynamicType;
     if (namedExpr.containsKey(name)) {
       final _arg = compileExpression(namedExpr[name]!, ctx);
       if (!_arg.type.isAssignableTo(paramType)) {
@@ -295,5 +295,5 @@ TypeRef _resolveFieldFormalType(
   if (vdl.type != null) {
     return TypeRef.fromAnnotation(ctx, decLibrary, vdl.type!);
   }
-  return DbcTypes.dynamicType;
+  return EvalTypes.dynamicType;
 }

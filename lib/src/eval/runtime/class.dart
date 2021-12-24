@@ -2,62 +2,61 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/runtime/declaration.dart';
 import 'package:dart_eval/src/eval/runtime/exception.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
-import 'package:dart_eval/src/eval/runtime/stdlib_base.dart';
 
 /// Interface for objects with a backing value
-abstract class IDbcValue {
+abstract class EvalValue {
   dynamic get $value;
   dynamic get $reified;
 }
 
 /// Implementation for objects with a backing value
-mixin DbcValue implements IDbcValue {
+mixin EvalValueImpl<T> implements EvalValue {
   /// The backing Dart value
   @override
-  dynamic $value;
+  late T $value;
 
   /// Transform this value into a Dart value, fully usable outside Eval
   /// This includes recursively transforming values inside collections
   @override
-  dynamic get $reified => $value;
+  T get $reified => $value;
 }
 
 /// Instance
-abstract class DbcInstance implements IDbcValue {
-  IDbcValue? $getProperty(Runtime runtime, String identifier);
+abstract class EvalInstance implements EvalValue {
+  EvalValue? $getProperty(Runtime runtime, String identifier);
 
-  void $setProperty(Runtime runtime, String identifier, IDbcValue value);
+  void $setProperty(Runtime runtime, String identifier, EvalValue value);
 }
 
-class DbcInstanceImpl with DbcValue implements DbcInstance {
+class EvalInstanceImpl implements EvalInstance {
 
-  final DbcClass _evalClass;
+  final EvalClass _evalClass;
 
   @override
-  final DbcInstance? evalSuperclass;
+  final EvalInstance? evalSuperclass;
   late final List<Object?> values;
 
-  DbcInstanceImpl(this._evalClass, this.evalSuperclass, this.values);
+  EvalInstanceImpl(this._evalClass, this.evalSuperclass, this.values);
 
-  DbcClass get evalClass => _evalClass;
+  EvalClass get evalClass => _evalClass;
 
   @override
-  IDbcValue? $getProperty(Runtime runtime, String identifier) {
+  EvalValue? $getProperty(Runtime runtime, String identifier) {
     final getter = _evalClass.getters[identifier];
     if (getter == null) {
       final method = _evalClass.methods[identifier];
       if (method == null) {
         return evalSuperclass?.$getProperty(runtime, identifier);
       }
-      return DbcFunctionPtr(this, method);
+      return EvalFunctionPtr(this, method);
     }
     runtime.pushArg(this);
     runtime.bridgeCall(getter);
-    return runtime.returnValue as IDbcValue;
+    return runtime.returnValue as EvalValue;
   }
 
   @override
-  void $setProperty(Runtime runtime, String identifier, IDbcValue value) {
+  void $setProperty(Runtime runtime, String identifier, EvalValue value) {
     final setter = _evalClass.setters[identifier];
     if (setter == null) {
       if (evalSuperclass != null) {
@@ -71,16 +70,17 @@ class DbcInstanceImpl with DbcValue implements DbcInstance {
     runtime.pushArg(value);
     runtime.bridgeCall(setter);
   }
+
+  @override
+  Never get $reified => throw UnimplementedError();
+
+  @override
+  Never get $value => throw UnimplementedError();
 }
 
-class DbcTypeClass implements DbcClass {
+class EvalTypeClass implements EvalClass {
 
-  DbcTypeClass._internal();
-
-  factory DbcTypeClass() {
-    return DbcTypeClass._internal();
-  }
-
+  EvalTypeClass();
 
   @override
   Never get $value => throw UnimplementedError();
@@ -91,17 +91,17 @@ class DbcTypeClass implements DbcClass {
   }
 
   @override
-  IDbcValue? $getProperty(Runtime runtime, String identifier) {
+  EvalValue? $getProperty(Runtime runtime, String identifier) {
     throw UnimplementedError();
   }
 
   @override
-  void $setProperty(Runtime runtime, String identifier, IDbcValue value) {
+  void $setProperty(Runtime runtime, String identifier, EvalValue value) {
     throw UnimplementedError();
   }
 
   @override
-  DbcInstance? get evalSuperclass => throw UnimplementedError();
+  EvalInstance? get evalSuperclass => throw UnimplementedError();
 
   @override
   Never get $reified => throw UnimplementedError();
@@ -116,16 +116,16 @@ class DbcTypeClass implements DbcClass {
   Map<String, int> get methods => throw UnimplementedError();
 
   @override
-  List<DbcClass?> get mixins => throw UnimplementedError();
+  List<EvalClass?> get mixins => throw UnimplementedError();
 
   @override
   Map<String, int> get setters => throw UnimplementedError();
 
   @override
-  DbcClass? get superclass => throw UnimplementedError();
+  EvalClass? get superclass => throw UnimplementedError();
 
   @override
-  DbcClass get _evalClass => throw UnimplementedError();
+  EvalClass get _evalClass => throw UnimplementedError();
 
   @override
   // TODO: implement evalClass
@@ -133,12 +133,4 @@ class DbcTypeClass implements DbcClass {
 
   @override
   set values(List<Object?> _values) => throw UnimplementedError();
-
-}
-
-class DbcBridgeData {
-  final Runtime runtime;
-  final DbcInstance? subclass;
-
-  const DbcBridgeData(this.runtime, this.subclass);
 }

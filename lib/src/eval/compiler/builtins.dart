@@ -27,15 +27,15 @@ class BuiltinValue {
   Variable _push(CompilerContext ctx) {
     if (type == BuiltinValueType.intType) {
       ctx.pushOp(PushConstantInt.make(intval!), PushConstantInt.LEN);
-      return Variable.alloc(ctx, DbcTypes.intType, boxed: false);
+      return Variable.alloc(ctx, EvalTypes.intType, boxed: false);
     } else if (type == BuiltinValueType.stringType) {
       final op = PushConstantString.make(stringval!);
       ctx.pushOp(op, PushConstantString.len(op));
-      return Variable.alloc(ctx, DbcTypes.stringType, boxed: false);
+      return Variable.alloc(ctx, EvalTypes.stringType, boxed: false);
     } else if (type == BuiltinValueType.nullType) {
       final op = PushNull.make();
       ctx.pushOp(op, PushNull.LEN);
-      return Variable.alloc(ctx, DbcTypes.nullType, boxed: false);
+      return Variable.alloc(ctx, EvalTypes.nullType, boxed: false);
     } else {
       throw CompileError('Cannot push unknown builtin value type $type');
     }
@@ -69,7 +69,7 @@ class KnownMethodArg {
   final bool nullable;
 }
 
-class DbcTypes {
+class EvalTypes {
   static const TypeRef voidType = TypeRef(dartCoreFile, 'void');
   static const TypeRef dynamicType = TypeRef(dartCoreFile, 'dynamic');
   static const TypeRef nullType = TypeRef(dartCoreFile, 'Null', extendsType: dynamicType);
@@ -85,43 +85,43 @@ class DbcTypes {
 }
 
 final Map<String, TypeRef> coreDeclarations = {
-  'dynamic': DbcTypes.dynamicType,
-  'Null': DbcTypes.nullType,
-  'Object': DbcTypes.objectType,
-  'bool': DbcTypes.boolType,
-  'num': DbcTypes.numType,
-  'String': DbcTypes.stringType,
-  'int': DbcTypes.intType,
-  'double': DbcTypes.doubleType,
-  'Map': DbcTypes.mapType,
-  'List': DbcTypes.listType,
-  'Function': DbcTypes.functionType
+  'dynamic': EvalTypes.dynamicType,
+  'Null': EvalTypes.nullType,
+  'Object': EvalTypes.objectType,
+  'bool': EvalTypes.boolType,
+  'num': EvalTypes.numType,
+  'String': EvalTypes.stringType,
+  'int': EvalTypes.intType,
+  'double': EvalTypes.doubleType,
+  'Map': EvalTypes.mapType,
+  'List': EvalTypes.listType,
+  'Function': EvalTypes.functionType
 };
 
 final intBinaryOp = KnownMethod(
     ParameterTypeDependentReturnType({
-      DbcTypes.doubleType: AlwaysReturnType(DbcTypes.doubleType, false),
-      DbcTypes.intType: AlwaysReturnType(DbcTypes.intType, false),
-      DbcTypes.numType: AlwaysReturnType(DbcTypes.numType, false)
-    }, paramIndex: 0, fallback: AlwaysReturnType(DbcTypes.numType, false)),
-    [KnownMethodArg('other', DbcTypes.numType, false, false)],
+      EvalTypes.doubleType: AlwaysReturnType(EvalTypes.doubleType, false),
+      EvalTypes.intType: AlwaysReturnType(EvalTypes.intType, false),
+      EvalTypes.numType: AlwaysReturnType(EvalTypes.numType, false)
+    }, paramIndex: 0, fallback: AlwaysReturnType(EvalTypes.numType, false)),
+    [KnownMethodArg('other', EvalTypes.numType, false, false)],
     {});
 
 final numComparisonOp =
-    KnownMethod(AlwaysReturnType(DbcTypes.boolType, false), [KnownMethodArg('other', DbcTypes.numType, false, false)], {});
+    KnownMethod(AlwaysReturnType(EvalTypes.boolType, false), [KnownMethodArg('other', EvalTypes.numType, false, false)], {});
 
 final doubleBinaryOp =
-    KnownMethod(AlwaysReturnType(DbcTypes.doubleType, false), [KnownMethodArg('other', DbcTypes.numType, false, false)], {});
+    KnownMethod(AlwaysReturnType(EvalTypes.doubleType, false), [KnownMethodArg('other', EvalTypes.numType, false, false)], {});
 
 final numBinaryOp = KnownMethod(
     ParameterTypeDependentReturnType({
-      DbcTypes.doubleType: AlwaysReturnType(DbcTypes.doubleType, false),
-    }, paramIndex: 0, fallback: AlwaysReturnType(DbcTypes.numType, false)),
-    [KnownMethodArg('other', DbcTypes.numType, false, false)],
+      EvalTypes.doubleType: AlwaysReturnType(EvalTypes.doubleType, false),
+    }, paramIndex: 0, fallback: AlwaysReturnType(EvalTypes.numType, false)),
+    [KnownMethodArg('other', EvalTypes.numType, false, false)],
     {});
 
 final Map<TypeRef, Map<String, KnownMethod>> knownMethods = {
-  DbcTypes.intType: {
+  EvalTypes.intType: {
     '+': intBinaryOp,
     '-': intBinaryOp,
     '/': intBinaryOp,
@@ -129,7 +129,7 @@ final Map<TypeRef, Map<String, KnownMethod>> knownMethods = {
     '<': numComparisonOp,
     '>': numComparisonOp,
   },
-  DbcTypes.doubleType: {
+  EvalTypes.doubleType: {
     '+': doubleBinaryOp,
     '-': doubleBinaryOp,
     '/': doubleBinaryOp,
@@ -137,7 +137,7 @@ final Map<TypeRef, Map<String, KnownMethod>> knownMethods = {
     '<': numComparisonOp,
     '>': numComparisonOp,
   },
-  DbcTypes.numType: {
+  EvalTypes.numType: {
     '+': numBinaryOp,
     '-': numBinaryOp,
     '/': numBinaryOp,
@@ -147,4 +147,4 @@ final Map<TypeRef, Map<String, KnownMethod>> knownMethods = {
   }
 };
 
-final Set<TypeRef> unboxedAcrossFunctionBoundaries = {DbcTypes.intType, DbcTypes.doubleType, DbcTypes.boolType};
+final Set<TypeRef> unboxedAcrossFunctionBoundaries = {EvalTypes.intType, EvalTypes.doubleType, EvalTypes.boolType};

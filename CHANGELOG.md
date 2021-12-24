@@ -18,3 +18,12 @@
 - Add support for `if`, basic `for`, number comparison operators, and postfix `++`
 - Fix `+`, `-`, `*`, and `/` operators
 - Improve performance significantly
+
+## 0.1.0
+
+- Rebuilt from the ground up around the new DBC bytecode compiler
+- Public API changes: see readme
+- Massive performance improvements, up to 350x
+- Support for the Dart type system (compile-time checks only)
+- Refactor class system to support `super`
+- New simpler Bridge interop that also allows const classes

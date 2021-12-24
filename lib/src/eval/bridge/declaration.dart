@@ -3,73 +3,73 @@ import 'package:dart_eval/src/eval/bridge/bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 
-class DbcBridgeTypeDescriptor {
-  const DbcBridgeTypeDescriptor(this.library, this.name,
-      {this.$extends = const DbcBridgeTypeDescriptor.builtin(DbcTypes.objectType),
-        this.$implements = const <DbcBridgeTypeDescriptor>[],
-        this.$with = const <DbcBridgeTypeDescriptor>[]})
+class BridgeTypeDescriptor {
+  const BridgeTypeDescriptor(this.library, this.name,
+      {this.$extends = const BridgeTypeDescriptor.builtin(EvalTypes.objectType),
+        this.$implements = const <BridgeTypeDescriptor>[],
+        this.$with = const <BridgeTypeDescriptor>[]})
       : builtin = null;
 
-  const DbcBridgeTypeDescriptor.builtin(this.builtin)
+  const BridgeTypeDescriptor.builtin(this.builtin)
       : library = null,
         name = null,
         $extends = null,
-        $implements = const <DbcBridgeTypeDescriptor>[],
-        $with = const <DbcBridgeTypeDescriptor>[];
+        $implements = const <BridgeTypeDescriptor>[],
+        $with = const <BridgeTypeDescriptor>[];
 
   final TypeRef? builtin;
   final String? library;
   final String? name;
-  final DbcBridgeTypeDescriptor? $extends;
-  final List<DbcBridgeTypeDescriptor> $implements;
-  final List<DbcBridgeTypeDescriptor> $with;
+  final BridgeTypeDescriptor? $extends;
+  final List<BridgeTypeDescriptor> $implements;
+  final List<BridgeTypeDescriptor> $with;
 }
 
-class DbcBridgeDeclaration {
-  const DbcBridgeDeclaration();
+class BridgeDeclaration {
+  const BridgeDeclaration();
 }
 
-class DbcBridgeClass<T extends DbcBridgeInstance> extends DbcBridgeDeclaration {
-  const DbcBridgeClass(this.type,
+class BridgeClass<T extends BridgeInstance> extends BridgeDeclaration {
+  const BridgeClass(this.type,
       {required this.constructors, required this.methods, required this.fields});
 
-  final DbcBridgeTypeDescriptor type;
-  final Map<String, DbcBridgeConstructor<T>> constructors;
-  final Map<String, DbcBridgeFunction> methods;
-  final Map<String, DbcBridgeField> fields;
+  final BridgeTypeDescriptor type;
+  final Map<String, BridgeConstructor<T>> constructors;
+  final Map<String, BridgeFunction> methods;
+  final Map<String, BridgeField> fields;
 
-  DbcBridgeClass copyWith({DbcBridgeTypeDescriptor? type}) {
-    return DbcBridgeClass(type ?? this.type, constructors: constructors, methods: methods, fields: fields);
+  BridgeClass copyWith({BridgeTypeDescriptor? type}) {
+    return BridgeClass(type ?? this.type, constructors: constructors, methods: methods, fields: fields);
   }
 }
 
-class DbcBridgeFunction extends DbcBridgeDeclaration {
-  const DbcBridgeFunction(this.positionalParams, [this.namedParams = const {}]);
+class BridgeFunction extends BridgeDeclaration {
+  const BridgeFunction(this.positionalParams, [this.namedParams = const {}]);
 
-  final List<DbcBridgeParameter> positionalParams;
-  final Map<String, DbcBridgeParameter> namedParams;
+  final List<BridgeParameter> positionalParams;
+  final Map<String, BridgeParameter> namedParams;
 }
 
-class DbcBridgeConstructor<T extends DbcBridgeInstance> extends DbcBridgeFunction {
-  const DbcBridgeConstructor(this.instantiator, List<DbcBridgeParameter> positionalParams,
-      [Map<String, DbcBridgeParameter> namedParams = const {}])
+class BridgeConstructor<T extends BridgeInstance> extends BridgeFunction {
+  const BridgeConstructor(this.instantiator, List<BridgeParameter> positionalParams,
+      [Map<String, BridgeParameter> namedParams = const {}])
       : super(positionalParams, namedParams);
 
-  final T Function(int evalId, List<Object?> args) instantiator;
+  final T Function(List<Object?> args) instantiator;
 }
 
-class DbcBridgeField {
-  const DbcBridgeField();
+class BridgeField {
+  const BridgeField();
 }
 
-class DbcBridgeParameter {
-  const DbcBridgeParameter({this.optional = false, this.type});
+class BridgeParameter {
+  const BridgeParameter({this.optional = false, this.type});
 
   final bool optional;
   final TypeRef? type;
 }
 
-class DeclarationOrBridge<T extends Declaration, R extends DbcBridgeDeclaration> {
+class DeclarationOrBridge<T extends Declaration, R extends BridgeDeclaration> {
   DeclarationOrBridge({this.declaration, this.bridge}) : assert(declaration != null || bridge != null);
 
   T? declaration;

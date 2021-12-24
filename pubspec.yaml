@@ -1,14 +1,14 @@
 name: dart_eval
-description: A flexible Dart interpreter written in Dart, enabling code push for AOT Dart apps.
-version: 0.0.4
+description: A flexible Dart bytecode compiler and runtime written in Dart, enabling code push for AOT Dart apps.
+version: 0.1.0
 homepage: https://github.com/ethanblake4/dart_eval
 
 environment:
   sdk: '>=2.12.3 <3.0.0'
 
 dependencies:
-   analyzer: ^1.5.0
-   pedantic: ^1.11.0
+   analyzer: ^3.0.0
+   pedantic: ^1.11.1
 
 dev_dependencies:
-  test: ^1.14.4
+  test: ^1.17.12

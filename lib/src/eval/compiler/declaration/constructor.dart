@@ -60,7 +60,7 @@ void compileConstructorDeclaration(
       _type ??=
           TypeRef.lookupFieldType(ctx, TypeRef.lookupClassDeclaration(ctx, ctx.library, parent), p.identifier.name);
       _type ??= V?.type;
-      _type ??= DbcTypes.dynamicType;
+      _type ??= EvalTypes.dynamicType;
 
       Vrep = Variable(i, _type, boxed: !unboxedAcrossFunctionBoundaries.contains(_type)).boxIfNeeded(ctx)
         ..name = p.identifier.name;
@@ -68,7 +68,7 @@ void compileConstructorDeclaration(
       fieldFormalNames.add(p.identifier.name);
     } else {
       p as SimpleFormalParameter;
-      var type = DbcTypes.dynamicType;
+      var type = EvalTypes.dynamicType;
       if (p.type != null) {
         type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
       }
@@ -92,11 +92,11 @@ void compileConstructorDeclaration(
   if ($extends == null) {
     $super = BuiltinValue().push(ctx);
   } else {
-    extendsWhat = ctx.visibleDeclarations[ctx.library]![$extends.superclass.name.name]!;
+    extendsWhat = ctx.visibleDeclarations[ctx.library]![$extends.superclass2.name.name]!;
 
     if (extendsWhat.declaration!.isBridge) {
       ctx.pushOp(PushBridgeSuperShim.make(), PushBridgeSuperShim.LEN);
-      $super = Variable.alloc(ctx, DbcTypes.dynamicType);
+      $super = Variable.alloc(ctx, EvalTypes.dynamicType);
     } else {
       final extendsType =
           TypeRef.lookupClassDeclaration(ctx, ctx.library, extendsWhat.declaration!.declaration as ClassDeclaration);
@@ -128,11 +128,11 @@ void compileConstructorDeclaration(
         ctx.offsetTracker.setOffset(loc, offset);
       }
       mReturnType = method.methodReturnType?.toAlwaysReturnType(argTypes, namedArgTypes) ??
-          AlwaysReturnType(DbcTypes.dynamicType, true);
+          AlwaysReturnType(EvalTypes.dynamicType, true);
 
       ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
 
-      $super = Variable.alloc(ctx, mReturnType.type ?? DbcTypes.dynamicType);
+      $super = Variable.alloc(ctx, mReturnType.type ?? EvalTypes.dynamicType);
     }
   }
 
@@ -158,7 +158,7 @@ void compileConstructorDeclaration(
   }
 
   if ($extends != null && extendsWhat!.declaration!.isBridge) {
-    final bridge = extendsWhat.declaration!.bridge! as DbcBridgeClass;
+    final bridge = extendsWhat.declaration!.bridge! as BridgeClass;
 
     if ($superInitializer != null) {
       final constructor = bridge.constructors[constructorName]!;
@@ -170,10 +170,10 @@ void compileConstructorDeclaration(
     }
 
     final op =
-        BridgeInstantiate.make(extendsWhat.sourceLib, instOffset, $extends.superclass.name.name, constructorName);
+        BridgeInstantiate.make(extendsWhat.sourceLib, instOffset, $extends.superclass2.name.name, constructorName);
     ctx.pushOp(op, BridgeInstantiate.len(op));
 
-    final bridgeInst = Variable.alloc(ctx, DbcTypes.dynamicType);
+    final bridgeInst = Variable.alloc(ctx, EvalTypes.dynamicType);
     ctx.pushOp(
         ParentBridgeSuperShim.make($super.scopeFrameOffset, bridgeInst.scopeFrameOffset), ParentBridgeSuperShim.LEN);
 

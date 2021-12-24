@@ -1,50 +1,38 @@
 import 'package:dart_eval/src/eval/runtime/class.dart';
-import 'package:dart_eval/src/eval/runtime/function.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
-
-abstract class DbcDeclaration {}
-
 /// A class is an instance of [Type]
-class DbcClass extends DbcInstanceImpl implements DbcDeclaration {
-  DbcClass(this.superclass, this.mixins, this.getters, this.setters, this.methods)
-      : super(DbcClassClass.instance, DbcTypeClass(), const []);
+class EvalClass extends EvalInstanceImpl {
+  EvalClass(this.superclass, this.mixins, this.getters, this.setters, this.methods)
+      : super(EvalClassClass.instance, EvalTypeClass(), const []);
 
   @override
   final List<Object> values = [];
 
-  final DbcClass? superclass;
-  final List<DbcClass?> mixins;
+  final EvalClass? superclass;
+  final List<EvalClass?> mixins;
 
   final Map<String, int> getters;
   final Map<String, int> setters;
   final Map<String, int> methods;
 }
 
-class DbcClassClass implements DbcClass {
+class EvalClassClass implements EvalClass {
 
-  static final instance = DbcClassClass();
-
-  @override
-  var $value;
+  static final instance = EvalClassClass();
 
   @override
-  IDbcValue? $getProperty(Runtime runtime, String identifier) {
-    // TODO: implement evalGetProperty
+  EvalValue? $getProperty(Runtime runtime, String identifier) {
     throw UnimplementedError();
   }
 
   @override
-  void $setProperty(Runtime runtime, String identifier, IDbcValue value) {
-    // TODO: implement evalSetProperty
+  void $setProperty(Runtime runtime, String identifier, EvalValue value) {
     throw UnimplementedError();
   }
 
   @override
-  DbcInstance? get evalSuperclass => throw UnimplementedError();
-
-  @override
-  DbcVmInterface get evalVm => throw UnimplementedError();
+  EvalInstance? get evalSuperclass => throw UnimplementedError();
 
   @override
   Map<String, int> get getters => throw UnimplementedError();
@@ -53,28 +41,26 @@ class DbcClassClass implements DbcClass {
   Map<String, int> get methods => throw UnimplementedError();
 
   @override
-  List<DbcClass?> get mixins => throw UnimplementedError();
+  List<EvalClass?> get mixins => throw UnimplementedError();
 
   @override
   get $reified => throw UnimplementedError();
 
   @override
-  // TODO: implement setters
   Map<String, int> get setters => throw UnimplementedError();
 
   @override
-  // TODO: implement superclass
-  DbcClass? get superclass => throw UnimplementedError();
+  EvalClass? get superclass => throw UnimplementedError();
 
   @override
-  // TODO: implement values
   List<Object> get values => throw UnimplementedError();
 
   @override
   set values(List<Object?> _values) => throw UnimplementedError();
 
   @override
-  // TODO: implement evalClass
-  get evalClass => throw UnimplementedError();
+  Never get evalClass => throw UnimplementedError();
 
+  @override
+  Never get $value => throw UnimplementedError();
 }

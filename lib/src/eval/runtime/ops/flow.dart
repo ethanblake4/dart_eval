@@ -40,7 +40,6 @@ class PushScope implements DbcOp {
   void run(Runtime exec) {
     exec.scopeStack.add(ScopeFrame(exec._stackOffset, exec.scopeStackOffset));
     exec.scopeStackOffset = exec._stackOffset;
-    print(exec._args);
     for (final arg in exec._args) {
       exec._vStack[exec._stackOffset++] = arg;
     }

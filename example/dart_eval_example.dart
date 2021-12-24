@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 
@@ -11,85 +13,68 @@ class X {
   }
 }
 
-class $X extends X with DbcBridgeInstance {
-  const $X(this.$evalId, int q) : super(q);
+void main(List<String> args) {
+  final source = '''
+    import 'package:flutter/src/main.dart';
+    
+    class Y extends X {
+      Y(): super(1);
+      
+      int doThing() {
+        var count = 0;
+        for (var i = 0; i < 1000; i = i + 1) {
+          count = count + i;
+        }
+        return count;
+      }
+    }
+    
+    Y main() {
+      final r = Y();
+      return r;
+    }
+  ''';
+  final timestamp = DateTime.now().millisecondsSinceEpoch;
+  final result = eval(source, bridgeClasses: [$X.$classDef]);
+  print('Output: $result');
+  print((result as X).doThing());
+  print('Execution time: ${DateTime.now().millisecondsSinceEpoch - timestamp} ms');
+}
 
-  final int $evalId;
+class $X extends X with BridgeInstance {
+  const $X(int q) : super(q);
 
-  static const $type = DbcBridgeTypeDescriptor('package:flutter/src/main.dart', 'X');
+  static const $type = BridgeTypeDescriptor('package:flutter/src/main.dart', 'X');
 
-  static $X _$construct(int evalId, List<Object?> args) => $X(evalId, args[0] as int);
+  static $X _$construct(List<Object?> args) => $X(args[0] as int);
 
-  static const DbcBridgeClass<$X> $classDef = DbcBridgeClass($type, constructors: {
-    '': DbcBridgeConstructor(_$construct, [DbcBridgeParameter(type: DbcTypes.intType)])
+  static const BridgeClass<$X> $classDef = BridgeClass($type, constructors: {
+    '': BridgeConstructor(_$construct, [BridgeParameter(type: EvalTypes.intType)])
   }, methods: {
-    'doThing': DbcBridgeFunction([])
+    'doThing': BridgeFunction([])
   }, fields: {
-    'q': DbcBridgeField()
+    'q': BridgeField()
   });
 
   @override
-  IDbcValue? $bridgeGet(String identifier) {
+  EvalValue? $bridgeGet(String identifier) {
     switch (identifier) {
       case 'q':
-        return DbcInt(super.q);
+        return EvalInt(super.q);
       case 'doThing':
-        return DbcFunctionImpl((runtime, target, args) => DbcInt(super.doThing()));
+        return EvalFunctionImpl((runtime, target, args) => EvalInt(super.doThing()));
     }
     throw UnimplementedError();
   }
 
   @override
-  void $bridgeSet(String identifier, IDbcValue value) {
+  void $bridgeSet(String identifier, EvalValue value) {
     throw UnimplementedError();
   }
 
   @override
-  int doThing() => $invoke('doThing', []);
-}
+  int get q => $_get('q');
 
-void main(List<String> args) {
-  final compiler = Compiler();
-
-  compiler.defineBridgeClass($X.$classDef);
-
-  final files = {
-    'example': {
-      'main.dart': '''
-        import 'package:flutter/src/main.dart';
-        
-        class Y extends X {
-          Y(): super(1);
-          
-          int doThing() {
-            return super.doThing() + 2;
-          }
-        }
-        
-        Y main() {
-          final r = Y();
-          return r;
-        }
-      ''',
-    }
-  };
-
-  final dt = DateTime.now().millisecondsSinceEpoch;
-  final exec = compiler.compileWriteAndLoad(files);
-  print('Generate: ${DateTime.now().millisecondsSinceEpoch - dt} ms');
-
-  final dt2 = DateTime.now().millisecondsSinceEpoch;
-  exec.loadProgram();
-  print('Load: ${DateTime.now().millisecondsSinceEpoch - dt2} ms\n');
-
-  exec.printOpcodes();
-
-  final dt3 = DateTime.now().millisecondsSinceEpoch;
-  dynamic rv = exec.executeNamed(0, 'main');
-  if (rv is IDbcValue) {
-    rv = rv.$value;
-  }
-  print('Output: $rv');
-  print((rv as X).doThing());
-  print('Execute: ${DateTime.now().millisecondsSinceEpoch - dt3} ms');
+  @override
+  int doThing() => $_invoke('doThing', []);
 }

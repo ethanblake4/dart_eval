@@ -20,7 +20,7 @@ void main() {
           return k;
         }
       }
-      '''}})..loadProgram();
+      '''}});
 
       expect(exec.executeNamed(0, 'main'), 3);
     });
@@ -36,7 +36,7 @@ void main() {
         return 7;
       }
      
-      '''}})..loadProgram();
+      '''}});
 
       expect(exec.executeNamed(0, 'main'), 7);
     });
@@ -70,9 +70,9 @@ void main() {
               return ra;
             }
       '''
-        }})..loadProgram();
+        }});
 
-      expect(exec.executeNamed(0, 'main'), DbcInt(7));
+      expect(exec.executeNamed(0, 'main'), EvalInt(7));
     });
   });
   group('Class tests', () {
@@ -95,7 +95,7 @@ void main() {
         final cls = MyClass();
         return cls.someMethod() + 2;
       }
-      '''}})..loadProgram();
+      '''}});
 
       expect(exec.executeNamed(0, 'main'), 10);
     });
@@ -123,9 +123,9 @@ void main() {
             }
           '''
         }
-      })..loadProgram();
+      });
 
-      expect(exec.executeNamed(0, 'main'), DbcInt(19));
+      expect(exec.executeNamed(0, 'main'), EvalInt(19));
     });
   });
   group('Statement tests', () {
@@ -146,8 +146,8 @@ void main() {
             }
           ''',
         }
-      })..loadProgram();
-      expect(exec.executeNamed(0, 'main'), DbcInt(555));
+      });
+      expect(exec.executeNamed(0, 'main'), EvalInt(555));
     });
   });
 }
