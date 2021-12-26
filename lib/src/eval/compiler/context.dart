@@ -28,6 +28,8 @@ class CompilerContext {
   List<int> allocNest = [0];
   List<bool> inNonlinearAccessContext = [false];
 
+  bool get requireNonlinearAccess => inNonlinearAccessContext.last;
+
   int sourceFile;
 
   int pushOp(DbcOp op, int length) {
@@ -85,7 +87,9 @@ class CompilerContext {
   Variable? lookupLocal(String name) {
     for (var i = locals.length - 1; i >= 0; i--) {
       if (locals[i].containsKey(name)) {
-        return locals[i][name]!..frameIndex = i;
+        return locals[i][name]!
+          ..name = name
+          ..frameIndex = i;
       }
     }
   }
@@ -93,8 +97,49 @@ class CompilerContext {
   void resolveNonlinearity([int depth = 1]) {
     for (var i = 0; i < depth; i++) {
       <String, Variable>{...(locals[locals.length - depth])}.forEach((key, value) {
-        value.unboxIfNeeded(this);
+        locals[locals.length - depth][key] = value.unboxIfNeeded(this);
       });
     }
   }
+
+  ContextSaveState saveStateForBranch() {
+    final _state = ContextSaveState.of(this);
+    return _state;
+  }
+
+  ContextSaveState restoreStateForBranch(ContextSaveState previous) {
+    final _current = ContextSaveState.of(this);
+    locals = previous.locals;
+    allocNest = previous.allocNest;
+    inNonlinearAccessContext = previous.inNonlinearAccessContext;
+    return _current;
+  }
+
+  void resolveBranchStateDiscontinuity(ContextSaveState initial) {
+    final _otherLocals = initial.locals;
+    final _myLocals = [...locals];
+    for (var i = 0; i < _otherLocals.length; i++) {
+      final _otherLocalsMap = _otherLocals[i];
+      final _myLocalsMap = _myLocals[i];
+
+      _otherLocalsMap.forEach((key, value) {
+        final myLocal = _myLocalsMap[key]!;
+        if (!myLocal.boxed && value.boxed) {
+          locals[i][key] = myLocal.boxIfNeeded(this);
+        } else if (myLocal.boxed && !value.boxed) {
+          locals[i][key] = myLocal.unboxIfNeeded(this);
+        }
+      });
+    }
+  }
+}
+
+class ContextSaveState {
+  ContextSaveState.of(CompilerContext context)
+      : locals = [...context.locals.map((e) => {...e})],
+        allocNest = [...context.allocNest],
+        inNonlinearAccessContext = [...context.inNonlinearAccessContext];
+  List<Map<String, Variable>> locals;
+  List<int> allocNest;
+  List<bool> inNonlinearAccessContext;
 }

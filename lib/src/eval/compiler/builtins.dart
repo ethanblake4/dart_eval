@@ -43,7 +43,7 @@ class BuiltinValue {
 
   Variable push(CompilerContext ctx) {
     final V = _push(ctx);
-    if (ctx.inNonlinearAccessContext.last) {
+    if (ctx.requireNonlinearAccess) {
       return V.unboxIfNeeded(ctx);
     }
     return V;

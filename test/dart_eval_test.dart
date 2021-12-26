@@ -149,5 +149,28 @@ void main() {
       });
       expect(exec.executeNamed(0, 'main'), EvalInt(555));
     });
+
+    test('For loop + branching', () {
+      final exec = gen.compileWriteAndLoad({
+        'example': { 'main.dart': '''
+          dynamic doThing() {
+            var count = 0;
+            for (var i = 0; i < 1000; i = i + 1) {
+              if (count < 500) {
+                count = count - 1;
+              } else if (count < 750) {
+                count = count + 1;
+              }
+              count = count + i;
+            }
+            
+            return count;
+          }
+        ''' }
+      });
+
+      expect(exec.executeNamed(0, 'doThing'), EvalInt(499472));
+    });
+
   });
 }

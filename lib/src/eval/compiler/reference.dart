@@ -52,7 +52,8 @@ class Reference {
       return;
     }
 
-    final local = ctx.lookupLocal(name);
+    var local = ctx.lookupLocal(name);
+
     if (local != null) {
       ctx.pushOp(CopyValue.make(local.scopeFrameOffset, value.scopeFrameOffset), CopyValue.LEN);
       return;

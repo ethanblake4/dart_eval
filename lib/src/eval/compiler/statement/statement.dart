@@ -3,6 +3,7 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/statement/for.dart';
+import 'package:dart_eval/src/eval/compiler/statement/if.dart';
 import 'package:dart_eval/src/eval/compiler/statement/return.dart';
 import 'package:dart_eval/src/eval/compiler/statement/variable_declaration.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -21,6 +22,8 @@ StatementInfo compileStatement(Statement s, AlwaysReturnType? expectedReturnType
     return compileReturn(ctx, s, expectedReturnType);
   } else if (s is ForStatement) {
     return compileForStatement(s, ctx, expectedReturnType);
+  } else if (s is IfStatement) {
+    return compileIfStatement(s, ctx, expectedReturnType);
   } else {
     throw CompileError('Unknown statement type ${s.runtimeType}');
   }
@@ -32,4 +35,10 @@ class StatementInfo {
   final int position;
   final bool willAlwaysReturn;
   final bool willAlwaysThrow;
+
+  StatementInfo operator |(StatementInfo other) {
+    return StatementInfo(position,
+        willAlwaysReturn: willAlwaysReturn && other.willAlwaysReturn,
+        willAlwaysThrow: willAlwaysThrow && other.willAlwaysThrow);
+  }
 }

@@ -93,7 +93,6 @@ class NumLt implements DbcOp {
 
   static const int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN * 2;
 
-  // Add value A + B
   @override
   void run(Runtime exec) {
     final scopeStackOffset = exec.scopeStackOffset;
@@ -102,7 +101,7 @@ class NumLt implements DbcOp {
   }
 
   @override
-  String toString() => 'NumLt (L$_location1 + L$_location2)';
+  String toString() => 'NumLt (L$_location1 < L$_location2)';
 }
 
 class NumGt implements DbcOp {
@@ -117,7 +116,6 @@ class NumGt implements DbcOp {
 
   static const int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN * 2;
 
-  // Add value A + B
   @override
   void run(Runtime exec) {
     final scopeStackOffset = exec.scopeStackOffset;
@@ -126,7 +124,7 @@ class NumGt implements DbcOp {
   }
 
   @override
-  String toString() => 'NumGt (L$_location1 + L$_location2)';
+  String toString() => 'NumGt (L$_location1 > L$_location2)';
 }
 
 class BoxInt implements DbcOp {
@@ -138,7 +136,6 @@ class BoxInt implements DbcOp {
 
   static const int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN;
 
-  // Set value at position to constant
   @override
   void run(Runtime exec) {
     final _p = exec.scopeStackOffset + _position;
@@ -158,7 +155,6 @@ class Unbox implements DbcOp {
 
   static const int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN;
 
-  // Set value at position to constant
   @override
   void run(Runtime exec) {
     final _p = exec.scopeStackOffset + _position;

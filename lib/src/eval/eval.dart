@@ -1,9 +1,6 @@
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 
-import 'compiler/compiler.dart';
-import 'bridge/declaration.dart';
-
 dynamic eval(String source, {String function = 'main', List<BridgeClass> bridgeClasses = const []}) {
   final compiler = Compiler();
   compiler.defineBridgeClasses(bridgeClasses);

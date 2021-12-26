@@ -31,10 +31,6 @@ class InvokeDynamic implements DbcOp {
         return;
       }
 
-      if (object is BridgeInstance) {
-
-      }
-
       final method = ((object as EvalInstance).$getProperty(runtime, _method) as EvalFunction);
       if (method is EvalFunctionImpl) {
         runtime._returnValue = method.call(runtime, object, runtime._args.cast());

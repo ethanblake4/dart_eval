@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 
@@ -23,8 +21,14 @@ void main(List<String> args) {
       int doThing() {
         var count = 0;
         for (var i = 0; i < 1000; i = i + 1) {
+          if (count < 500) {
+            count = count - 1;
+          } else if (count < 750) {
+            count = count + 1;
+          }
           count = count + i;
         }
+        
         return count;
       }
     }
