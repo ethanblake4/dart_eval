@@ -81,6 +81,30 @@ class NumAdd implements DbcOp {
   String toString() => 'NumAdd (L$_location1 + L$_location2)';
 }
 
+class NumSub implements DbcOp {
+  NumSub(Runtime exec)
+      : _location1 = exec._readInt16(),
+        _location2 = exec._readInt16();
+
+  NumSub.make(this._location1, this._location2);
+
+  final int _location1;
+  final int _location2;
+
+  static const int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN * 2;
+
+  // Add value A + B
+  @override
+  void run(Runtime exec) {
+    final scopeStackOffset = exec.scopeStackOffset;
+    exec._vStack[exec._stackOffset++] =
+        (exec._vStack[scopeStackOffset + _location1] as num) - (exec._vStack[scopeStackOffset + _location2] as num);
+  }
+
+  @override
+  String toString() => 'NumSub (L$_location1 + L$_location2)';
+}
+
 class NumLt implements DbcOp {
   NumLt(Runtime exec)
       : _location1 = exec._readInt16(),

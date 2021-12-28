@@ -44,7 +44,7 @@ class EvalClassClass implements EvalClass {
   List<EvalClass?> get mixins => throw UnimplementedError();
 
   @override
-  get $reified => throw UnimplementedError();
+  Never get $reified => throw UnimplementedError();
 
   @override
   Map<String, int> get setters => throw UnimplementedError();

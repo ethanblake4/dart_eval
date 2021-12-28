@@ -22,7 +22,7 @@ class BridgeInstantiate implements DbcOp {
   void run(Runtime runtime) {
     final $subclass = runtime._vStack[runtime.scopeStackOffset + _subclass] as EvalInstance?;
     final $cls = runtime._bridgeClasses[_library]![_name]!;
-    final _args = runtime._args;
+    final _args = runtime.args;
     final _argsLen = _args.length;
     final _mappedArgs = List<Object?>.filled(_argsLen, null);
 
@@ -30,7 +30,7 @@ class BridgeInstantiate implements DbcOp {
       _mappedArgs[i] = (_args[i] as EvalValue?)?.$reified;
     }
 
-    runtime._args = [];
+    runtime.args = [];
 
     final instance = $cls.constructors[_constructor]!.instantiator(_mappedArgs);
     Runtime.bridgeData[instance] = BridgeData(runtime, $subclass ?? BridgeDelegatingShim());

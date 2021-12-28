@@ -1,6 +1,7 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
+import 'package:dart_eval/src/eval/compiler/util.dart';
 
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'builtins.dart';
@@ -35,17 +36,6 @@ class Variable {
     }
     ctx.pushOp(BoxInt.make(scopeFrameOffset), BoxInt.LEN);
 
-    /*var V2 = Variable.alloc(ctx, intType, boxed: true)
-      ..name = name
-      ..frameIndex = frameIndex;
-
-    if (ctx.inNonlinearAccessContext.last) {
-      ctx.pushOp(CopyValue.make(scopeFrameOffset, V2.scopeFrameOffset), CopyValue.LEN);
-      V2 = Variable(scopeFrameOffset, type, methodOffset: methodOffset, methodReturnType: methodReturnType, boxed: true)
-        ..name = name
-        ..frameIndex = frameIndex;
-    }*/
-
     var V2 =
         Variable(scopeFrameOffset, type, methodOffset: methodOffset, methodReturnType: methodReturnType, boxed: true)
           ..name = name
@@ -62,27 +52,96 @@ class Variable {
       return this;
     }
     ctx.pushOp(Unbox.make(scopeFrameOffset), Unbox.LEN);
-    /*var uV = Variable.alloc(ctx, type, boxed: false)
-      ..name = name
-      ..frameIndex = frameIndex;
-
-    if (ctx.inNonlinearAccessContext.last) {
-      ctx.pushOp(CopyValue.make(scopeFrameOffset, uV.scopeFrameOffset), CopyValue.LEN);
-      uV =
-          Variable(scopeFrameOffset, type, methodOffset: methodOffset, methodReturnType: methodReturnType, boxed: false)
-            ..name = name
-            ..frameIndex = frameIndex;
-    }*/
 
     var uV =
-    Variable(scopeFrameOffset, type, methodOffset: methodOffset, methodReturnType: methodReturnType, boxed: false)
-      ..name = name
-      ..frameIndex = frameIndex;
+        Variable(scopeFrameOffset, type, methodOffset: methodOffset, methodReturnType: methodReturnType, boxed: false)
+          ..name = name
+          ..frameIndex = frameIndex;
 
     if (name != null) {
       ctx.locals[frameIndex!][name!] = uV;
     }
     return uV;
+  }
+
+  Pair<Variable, Variable> invoke(CompilerContext ctx, String method, List<Variable> args) {
+    var $this = this;
+
+    final supportedNumIntrinsicOps = {'+', '-', '<', '>'};
+    if (type.isAssignableTo(EvalTypes.numType) && supportedNumIntrinsicOps.contains(method)) {
+      $this = unboxIfNeeded(ctx);
+      if (args.length != 1) {
+        throw CompileError(
+            'Cannot invoke method "$method" on variable of type $type with args count: ${args.length} (required: 1)');
+      }
+      var R = args[0];
+      if (R.scopeFrameOffset == scopeFrameOffset) {
+        R = $this;
+      } else {
+        R = R.unboxIfNeeded(ctx);
+      }
+
+      Variable result;
+      switch (method) {
+        case '+':
+          // Num intrinsic add
+          ctx.pushOp(NumAdd.make($this.scopeFrameOffset, R.scopeFrameOffset), NumAdd.LEN);
+          result = Variable.alloc(ctx, EvalTypes.intType, boxed: false);
+          break;
+        case '-':
+          // Num intrinsic sub
+          ctx.pushOp(NumSub.make($this.scopeFrameOffset, R.scopeFrameOffset), NumSub.LEN);
+          result = Variable.alloc(ctx, EvalTypes.intType, boxed: false);
+          break;
+        case '<':
+          // Num intrinsic less than
+          ctx.pushOp(NumLt.make($this.scopeFrameOffset, R.scopeFrameOffset), NumLt.LEN);
+          result = Variable.alloc(ctx, EvalTypes.boolType, boxed: false);
+          break;
+        case '>':
+          // Num intrinsic greater than
+          ctx.pushOp(NumGt.make($this.scopeFrameOffset, R.scopeFrameOffset), NumGt.LEN);
+          result = Variable.alloc(ctx, EvalTypes.boolType, boxed: false);
+          break;
+        default:
+          throw CompileError('Unknown num intrinsic method "$method"');
+      }
+
+      return Pair($this, result);
+    }
+
+    final _boxed = boxUnboxMultiple(ctx, [$this, ...args], true);
+    $this = _boxed[0];
+    final _args = _boxed.sublist(1);
+    for (final _arg in _args) {
+      ctx.pushOp(PushArg.make(_arg.scopeFrameOffset), PushArg.LEN);
+    }
+    final invokeOp = InvokeDynamic.make($this.scopeFrameOffset, method);
+    ctx.pushOp(invokeOp, InvokeDynamic.len(invokeOp));
+    ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
+    final returnType =
+        AlwaysReturnType.fromInstanceMethodOrBuiltin(ctx, $this.type, method, [..._args.map((e) => e.type)], {});
+    return Pair($this, Variable.alloc(ctx, returnType?.type ?? EvalTypes.dynamicType, boxed: true));
+  }
+
+  static List<Variable> boxUnboxMultiple(CompilerContext ctx, List<Variable> variables, bool boxed) {
+    final vlist = [...variables];
+    final out = <Variable>[];
+
+    for (var i = 0; i < vlist.length; i++) {
+      final v = vlist[i];
+      final set = boxed ? v.boxIfNeeded(ctx) : v.unboxIfNeeded(ctx);
+      out.add(set);
+      for (var j = i + 1; j < vlist.length; j++) {
+        final v2 = vlist[j];
+        // not great for large variable lists, but since most variable lists are small...
+        if (v2.scopeFrameOffset == v.scopeFrameOffset) {
+          vlist[j] = set;
+        }
+      }
+    }
+
+    return out;
   }
 
   @override
@@ -92,8 +151,6 @@ class Variable {
         '${methodOffset == null ? '' : 'method: $methodReturnType $methodOffset, '}'
         '${boxed ? 'boxed' : 'unboxed'}, F[$frameIndex]}';
   }
-
-
 }
 
 class PossiblyValuedParameter {

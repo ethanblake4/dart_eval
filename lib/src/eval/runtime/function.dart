@@ -1,6 +1,5 @@
 import 'package:dart_eval/src/eval/runtime/exception.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
-import 'package:dart_eval/src/eval/runtime/stdlib_base.dart';
 
 import 'class.dart';
 
@@ -45,7 +44,7 @@ class EvalFunctionPtr extends EvalFunction {
 
   @override
   EvalValue? call(Runtime runtime, EvalValue? target, List<EvalValue?> args) {
-    runtime.pushArg($this);
+    runtime.args.add($this);
     runtime.bridgeCall(offset);
     return runtime.returnValue as EvalValue?;
   }

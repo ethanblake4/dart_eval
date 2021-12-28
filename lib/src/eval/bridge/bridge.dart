@@ -1,6 +1,4 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/runtime/class.dart';
-import 'package:dart_eval/src/eval/runtime/function.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 mixin BridgeInstance on Object implements EvalValue, EvalInstance {

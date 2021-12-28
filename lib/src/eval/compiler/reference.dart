@@ -34,8 +34,8 @@ class Reference {
       }
     }
 
-    final declaration = ctx.visibleDeclarations[ctx.library]![name]!;
-    final decl = declaration.declaration!;
+    //final declaration = ctx.visibleDeclarations[ctx.library]![name]!;
+    //final decl = declaration.declaration!;
 
     // TODO
     return EvalTypes.functionType;

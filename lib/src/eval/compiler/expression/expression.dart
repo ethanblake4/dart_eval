@@ -7,6 +7,7 @@ import 'package:dart_eval/src/eval/compiler/expression/identifier.dart';
 import 'package:dart_eval/src/eval/compiler/expression/invocation.dart';
 import 'package:dart_eval/src/eval/compiler/expression/keywords.dart';
 import 'package:dart_eval/src/eval/compiler/expression/literal.dart';
+import 'package:dart_eval/src/eval/compiler/expression/postfix.dart';
 import 'package:dart_eval/src/eval/compiler/expression/property_access.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
@@ -28,6 +29,8 @@ Variable compileExpression(Expression e, CompilerContext ctx) {
     return compileThisExpression(e, ctx);
   } else if (e is SuperExpression) {
     return compileSuperExpression(e, ctx);
+  } else if (e is PostfixExpression) {
+    return compilePostfixExpression(e, ctx);
   }
 
   throw CompileError('Unknown expression type ${e.runtimeType}');

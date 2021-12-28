@@ -12,8 +12,7 @@ class PushArg implements DbcOp {
   // Set value at position to constant
   @override
   void run(Runtime exec) {
-    exec._args.add(exec._vStack[exec.scopeStackOffset + _location]);
-    exec._argsOffset++;
+    exec.args.add(exec._vStack[exec.scopeStackOffset + _location]);
   }
 
   @override
@@ -47,7 +46,7 @@ class PushReturnValue implements DbcOp {
 
   @override
   void run(Runtime exec) {
-    exec._vStack[exec._stackOffset++] = exec._returnValue;
+    exec._vStack[exec._stackOffset++] = exec.returnValue;
   }
 
   @override
@@ -65,7 +64,7 @@ class SetReturnValue implements DbcOp {
 
   @override
   void run(Runtime exec) {
-    exec._returnValue = exec._vStack[exec.scopeStackOffset + _location] as int;
+    exec.returnValue = exec._vStack[exec.scopeStackOffset + _location] as int;
   }
 
   @override
@@ -74,13 +73,13 @@ class SetReturnValue implements DbcOp {
 
 class CopyValue implements DbcOp {
   CopyValue(Runtime exec)
-      : _position1 = exec._readInt16(),
-        _position2 = exec._readInt16();
+      : _to = exec._readInt16(),
+        _from = exec._readInt16();
 
-  CopyValue.make(this._position1, this._position2);
+  CopyValue.make(this._to, this._from);
 
-  final int _position1;
-  final int _position2;
+  final int _to;
+  final int _from;
 
   static const LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN * 2;
 
@@ -88,9 +87,9 @@ class CopyValue implements DbcOp {
   @override
   void run(Runtime exec) {
 
-    exec._vStack[exec.scopeStackOffset + _position1] = exec._vStack[exec.scopeStackOffset + _position2];
+    exec._vStack[exec.scopeStackOffset + _to] = exec._vStack[exec.scopeStackOffset + _from];
   }
 
   @override
-  String toString() => 'CopyValue (L$_position1 <-- L$_position2)';
+  String toString() => 'CopyValue (L$_to <-- L$_from)';
 }

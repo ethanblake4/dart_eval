@@ -42,7 +42,6 @@ class Compiler {
   }
 
   Program compile(Map<String, Map<String, String>> packages) {
-    var dartSourceSize = 0;
     final ctx = CompilerContext(0);
     final typeResolvedBridgeClasses = <int, Map<String, BridgeClass>>{};
     final packageMap = <String, Map<String, int>>{};
@@ -110,7 +109,6 @@ class Compiler {
       packageMap[package] = {};
 
       libraries.forEach((filename, source) {
-        dartSourceSize += source.length;
         final unit = _parse(source);
 
         final imports = <ImportDirective>[];

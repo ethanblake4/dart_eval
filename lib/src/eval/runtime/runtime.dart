@@ -3,12 +3,7 @@ import 'dart:typed_data';
 
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/bridge/declaration.dart';
-import 'package:dart_eval/src/eval/compiler/program.dart';
 
-import 'function.dart';
-import 'stdlib_base.dart';
-import 'class.dart';
 import 'exception.dart';
 import 'ops/all_ops.dart';
 
@@ -23,7 +18,7 @@ part 'ops/objects.dart';
 part 'ops/bridge.dart';
 
 class ScopeFrame {
-  ScopeFrame(this.stackOffset, this.scopeStackOffset, [this.entrypoint = false]);
+  const ScopeFrame(this.stackOffset, this.scopeStackOffset, [this.entrypoint = false]);
 
   final int stackOffset;
   final int scopeStackOffset;
@@ -105,6 +100,9 @@ class Runtime {
       case NumAdd:
         op as NumAdd;
         return [Dbc.OP_ADDVV, ...Dbc.i16b(op._location1), ...Dbc.i16b(op._location2)];
+      case NumSub:
+        op as NumSub;
+        return [Dbc.OP_NUM_SUB, ...Dbc.i16b(op._location1), ...Dbc.i16b(op._location2)];
       case BoxInt:
         op as BoxInt;
         return [Dbc.OP_BOXINT, ...Dbc.i16b(op._position)];
@@ -125,7 +123,7 @@ class Runtime {
         return [Dbc.OP_PUSHSCOPE, ...Dbc.i32b(op.sourceFile), ...Dbc.i32b(op.sourceOffset), ...Dbc.istr(op.frName)];
       case CopyValue:
         op as CopyValue;
-        return [Dbc.OP_SETVV, ...Dbc.i16b(op._position1), ...Dbc.i16b(op._position2)];
+        return [Dbc.OP_SETVV, ...Dbc.i16b(op._to), ...Dbc.i16b(op._from)];
       case PushConstantString:
         op as PushConstantString;
         return [Dbc.OP_PUSH_CONST_STR, ...Dbc.istr(op._value)];
@@ -210,26 +208,20 @@ class Runtime {
   static int _id = 0;
   final int id;
 
-  static const MIN_DYNAMIC_REGISTER = 32;
-
   static final bridgeData = Expando<BridgeData>();
   late ByteData _dbc;
   final _vStack = List<Object?>.filled(65535, null);
-  var _args = <Object?>[];
+  var args = <Object?>[];
   final pr = <DbcOp>[];
-  Object? _returnValue = null;
+  Object? returnValue;
   var scopeStack = <ScopeFrame>[ScopeFrame(0, 0)];
   var scopeStackOffset = 0;
   final callStack = <int>[0];
   var declarations = <int, Map<String, int>>{};
   final declaredClasses = <int, Map<String, EvalClass>>{};
   int _stackOffset = 0;
-  int _argsOffset = 0;
   int _offset = 0;
   int _prOffset = 0;
-
-  static const VTYPE_INT = 0;
-  static const VTYPE_OBJECT = 1;
 
   void loadProgram() {
     final metaLength = _dbc.getInt32(0);
@@ -305,7 +297,7 @@ class Runtime {
         op.run(this);
       }
     } on ProgramExit catch (_) {
-      return _returnValue;
+      return returnValue;
     }
   }
 
@@ -325,18 +317,6 @@ class Runtime {
     }
   }
 
-  void pushArg(EvalValue? _value) {
-    _args.add(_value);
-    _argsOffset++;
-  }
-
-  void popScope() {
-    final offset = scopeStack.removeLast().stackOffset;
-    _stackOffset = offset;
-    scopeStackOffset = offset;
-  }
-
-  Object? get returnValue => _returnValue;
 
   @pragma('vm:always-inline')
   int _readInt32() {

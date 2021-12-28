@@ -96,6 +96,9 @@ class Dbc {
   /// [ParentBridgeSuperShim]
   static const OP_PARENT_SUPER_SHIM = 29;
 
+  /// [NumSub]
+  static const OP_NUM_SUB = 30;
+
   static List<int> i16b(int i16) {
     final x = ByteData(2);
     x.setInt16(0, i16);
@@ -161,5 +164,6 @@ final List<OpLoader> ops = [
   (Runtime ex) => PushSuper(ex), // 26
   (Runtime ex) => BridgeInstantiate(ex), // 27
   (Runtime ex) => PushBridgeSuperShim(ex), // 28
-  (Runtime ex) => ParentBridgeSuperShim(ex) // 29
+  (Runtime ex) => ParentBridgeSuperShim(ex), // 29
+  (Runtime ex) => NumSub(ex) // 30
 ];

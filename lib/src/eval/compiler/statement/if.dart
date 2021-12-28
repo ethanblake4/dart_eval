@@ -42,10 +42,7 @@ StatementInfo compileIfStatement(IfStatement s, CompilerContext ctx, AlwaysRetur
     return thenResult | elseResult;
   }
 
-
-  //ctx.restoreStateForBranch(_initialState);
   ctx.endAllocScope();
-
 
   return thenResult;
 }

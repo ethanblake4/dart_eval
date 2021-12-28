@@ -15,7 +15,7 @@ class CompilerContext {
   int library = 0;
   int position = 0;
   int scopeFrameOffset = 0;
-  ClassDeclaration? currentClass = null;
+  ClassDeclaration? currentClass;
   List<List<AstNode>> scopeNodes = [];
   List<Map<String, Variable>> locals = [];
   Map<int, Map<String, DeclarationOrBridge>> topLevelDeclarationsMap = {};
@@ -107,14 +107,6 @@ class CompilerContext {
     return _state;
   }
 
-  ContextSaveState restoreStateForBranch(ContextSaveState previous) {
-    final _current = ContextSaveState.of(this);
-    locals = previous.locals;
-    allocNest = previous.allocNest;
-    inNonlinearAccessContext = previous.inNonlinearAccessContext;
-    return _current;
-  }
-
   void resolveBranchStateDiscontinuity(ContextSaveState initial) {
     final _otherLocals = initial.locals;
     final _myLocals = [...locals];
@@ -132,6 +124,7 @@ class CompilerContext {
       });
     }
   }
+
 }
 
 class ContextSaveState {

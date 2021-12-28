@@ -40,10 +40,10 @@ class PushScope implements DbcOp {
   void run(Runtime exec) {
     exec.scopeStack.add(ScopeFrame(exec._stackOffset, exec.scopeStackOffset));
     exec.scopeStackOffset = exec._stackOffset;
-    for (final arg in exec._args) {
+    for (final arg in exec.args) {
       exec._vStack[exec._stackOffset++] = arg;
     }
-    exec._args = [];
+    exec.args = [];
   }
 
   @override
@@ -125,9 +125,9 @@ class Return implements DbcOp {
   @override
   void run(Runtime exec) {
     if (_location == -1) {
-      exec._returnValue = null;
+      exec.returnValue = null;
     } else {
-      exec._returnValue = exec._vStack[exec.scopeStackOffset + _location];
+      exec.returnValue = exec._vStack[exec.scopeStackOffset + _location];
     }
 
     final lastStack = exec.scopeStack.removeLast();

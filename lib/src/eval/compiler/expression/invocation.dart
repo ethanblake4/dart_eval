@@ -26,12 +26,12 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
 
     if (_dec.isBridge) {
       final br = _dec.bridge!;
-      argsPair = compileArgumentListWithBridge(ctx, e.argumentList, br, before: L != null ? [L] : []);
+      argsPair = compileArgumentListWithBridge(ctx, e.argumentList, br, before: [L]);
     } else {
       final dec = _dec.declaration!;
       final fpl = dec.parameters?.parameters ?? <FormalParameter>[];
 
-      argsPair = compileArgumentList(ctx, e.argumentList, L.type.file, fpl, dec, before: L != null ? [L] : []);
+      argsPair = compileArgumentList(ctx, e.argumentList, L.type.file, fpl, dec, before: [L]);
     }
 
     final _args = argsPair.first;

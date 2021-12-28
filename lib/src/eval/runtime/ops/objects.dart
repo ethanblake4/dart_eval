@@ -33,8 +33,8 @@ class InvokeDynamic implements DbcOp {
 
       final method = ((object as EvalInstance).$getProperty(runtime, _method) as EvalFunction);
       if (method is EvalFunctionImpl) {
-        runtime._returnValue = method.call(runtime, object, runtime._args.cast());
-        runtime._args = [];
+        runtime.returnValue = method.call(runtime, object, runtime.args.cast());
+        runtime.args = [];
         return;
       } else {
         throw UnimplementedError();
@@ -134,19 +134,19 @@ class PushObjectProperty implements DbcOp {
             object = object.evalSuperclass;
             continue;
           }
-          runtime._returnValue = EvalFunctionPtr(object, method);
-          runtime._args = [];
+          runtime.returnValue = EvalFunctionPtr(object, method);
+          runtime.args = [];
           return;
         }
-        runtime._args.add(object);
+        runtime.args.add(object);
         runtime.callStack.add(runtime._prOffset);
         runtime._prOffset = _offset;
         return;
       }
 
       final result = ((object as EvalInstance).$getProperty(runtime, _property));
-      runtime._returnValue = result;
-      runtime._args = [];
+      runtime.returnValue = result;
+      runtime.args = [];
       return;
     }
   }

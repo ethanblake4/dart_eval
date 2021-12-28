@@ -1,5 +1,4 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/runtime/declaration.dart';
 import 'package:dart_eval/src/eval/runtime/exception.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
@@ -32,7 +31,6 @@ class EvalInstanceImpl implements EvalInstance {
 
   final EvalClass _evalClass;
 
-  @override
   final EvalInstance? evalSuperclass;
   late final List<Object?> values;
 
@@ -50,7 +48,7 @@ class EvalInstanceImpl implements EvalInstance {
       }
       return EvalFunctionPtr(this, method);
     }
-    runtime.pushArg(this);
+    runtime.args.add(this);
     runtime.bridgeCall(getter);
     return runtime.returnValue as EvalValue;
   }
@@ -66,8 +64,8 @@ class EvalInstanceImpl implements EvalInstance {
       }
     }
 
-    runtime.pushArg(this);
-    runtime.pushArg(value);
+    runtime.args.add(this);
+    runtime.args.add(value);
     runtime.bridgeCall(setter);
   }
 
@@ -84,11 +82,6 @@ class EvalTypeClass implements EvalClass {
 
   @override
   Never get $value => throw UnimplementedError();
-
-  @override
-  set $value(_evalValue) {
-    throw UnimplementedError();
-  }
 
   @override
   EvalValue? $getProperty(Runtime runtime, String identifier) {
@@ -128,8 +121,7 @@ class EvalTypeClass implements EvalClass {
   EvalClass get _evalClass => throw UnimplementedError();
 
   @override
-  // TODO: implement evalClass
-  get evalClass => throw UnimplementedError();
+  EvalClass get evalClass => throw UnimplementedError();
 
   @override
   set values(List<Object?> _values) => throw UnimplementedError();
