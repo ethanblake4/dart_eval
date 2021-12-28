@@ -31,21 +31,21 @@ StatementInfo compileIfStatement(IfStatement s, CompilerContext ctx, AlwaysRetur
 
   ctx.rewriteOp(rewritePos, JumpIfFalse.make(conditionResult.scopeFrameOffset, ctx.out.length), 0);
 
-
-
   if (elseStatement != null) {
-    ctx.restoreStateForBranch(_initialState);
     ctx.beginAllocScope();
     final elseResult = compileStatement(elseStatement, expectedReturnType, ctx);
     ctx.rewriteOp(rewriteOut!, JumpConstant.make(ctx.out.length), 0);
     ctx.endAllocScope();
     ctx.resolveBranchStateDiscontinuity(_initialState);
-    ctx.restoreStateForBranch(_initialState);
+
     ctx.endAllocScope();
     return thenResult | elseResult;
   }
 
+
+  //ctx.restoreStateForBranch(_initialState);
   ctx.endAllocScope();
-  ctx.restoreStateForBranch(_initialState);
+
+
   return thenResult;
 }

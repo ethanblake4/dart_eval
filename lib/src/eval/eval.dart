@@ -24,6 +24,8 @@ dynamic eval(String source, {String function = 'main', List<BridgeClass> bridgeC
   final runtime = Runtime.ofProgram(program);
   runtime.defineBridgeClasses(bridgeClasses);
 
+  runtime.printOpcodes();
+
   final result = runtime.executeNamed(0, function);
 
   if (result is EvalValue) {

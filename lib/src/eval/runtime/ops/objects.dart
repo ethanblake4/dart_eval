@@ -123,7 +123,7 @@ class PushObjectProperty implements DbcOp {
   @override
   void run(Runtime runtime) {
     final object = runtime._vStack[runtime.scopeStackOffset + _location];
-    final _r = (object as EvalInstance).$getProperty(runtime, _property);;
+    final _r = (object as EvalInstance).$getProperty(runtime, _property);
     runtime._vStack[runtime._stackOffset++] = _r;
   }
 

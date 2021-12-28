@@ -44,7 +44,7 @@ class Reference {
   void setValue(CompilerContext ctx, Variable value) {
     if (object != null) {
       final fieldType = TypeRef.lookupFieldType(ctx, object!.type, name) ?? EvalTypes.dynamicType;
-      if (!value.type.isAssignableTo(fieldType)) {
+      if (!value.type.resolveTypeChain(ctx).isAssignableTo(fieldType)) {
         throw CompileError('Cannot assign value of type ${value.type} to field "$name" of type $fieldType');
       }
       final op = SetObjectProperty.make(object!.scopeFrameOffset, name, value.boxIfNeeded(ctx).scopeFrameOffset);
@@ -65,7 +65,7 @@ class Reference {
       if (instanceDeclaration != null) {
         final $type = instanceDeclaration.first;
         final fieldType = TypeRef.lookupFieldType(ctx, $type, name) ?? EvalTypes.dynamicType;
-        if (!value.type.isAssignableTo(fieldType)) {
+        if (!value.type.resolveTypeChain(ctx).isAssignableTo(fieldType)) {
           throw CompileError('Cannot assign value of type ${value.type} to field "$name" of type $fieldType');
         }
         final op = SetObjectProperty.make(0, name, value.boxIfNeeded(ctx).scopeFrameOffset);

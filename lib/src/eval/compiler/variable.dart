@@ -87,10 +87,13 @@ class Variable {
 
   @override
   String toString() {
-    return 'Variable{"$name" at L$scopeFrameOffset, $type, '
+    final _name = name == null ? 'unnamed' : '"$name"';
+    return 'Variable{$_name at L$scopeFrameOffset, $type, '
         '${methodOffset == null ? '' : 'method: $methodReturnType $methodOffset, '}'
         '${boxed ? 'boxed' : 'unboxed'}, F[$frameIndex]}';
   }
+
+
 }
 
 class PossiblyValuedParameter {

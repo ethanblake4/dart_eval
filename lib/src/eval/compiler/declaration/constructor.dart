@@ -45,7 +45,7 @@ void compileConstructorDeclaration(
   }
 
   final fieldFormalNames = <String>[];
-  final resolvedParams = _resolveFPLDefaults(ctx, d.parameters, false, allowUnboxed: true);
+  final resolvedParams = resolveFPLDefaults(ctx, d.parameters, false, allowUnboxed: true);
   i = 0;
 
   for (final param in resolvedParams) {
@@ -185,7 +185,7 @@ void compileConstructorDeclaration(
   ctx.endAllocScope(popValues: false);
 }
 
-List<PossiblyValuedParameter> _resolveFPLDefaults(CompilerContext ctx, FormalParameterList fpl, bool isInstanceMethod,
+List<PossiblyValuedParameter> resolveFPLDefaults(CompilerContext ctx, FormalParameterList fpl, bool isInstanceMethod,
     {bool allowUnboxed = true}) {
   final normalized = <PossiblyValuedParameter>[];
   var hasEncounteredOptionalPositionalParam = false;

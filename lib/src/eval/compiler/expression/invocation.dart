@@ -15,8 +15,6 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
   Variable? L;
   if (e.target != null) {
     L = compileExpression(e.target!, ctx);
-    // Push 'this'
-    ctx.pushOp(PushArg.make(L.scopeFrameOffset), PushArg.LEN);
   }
 
   AlwaysReturnType? mReturnType;
@@ -28,12 +26,12 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
 
     if (_dec.isBridge) {
       final br = _dec.bridge!;
-      argsPair = compileArgumentListWithBridge(ctx, e.argumentList, br);
+      argsPair = compileArgumentListWithBridge(ctx, e.argumentList, br, before: L != null ? [L] : []);
     } else {
       final dec = _dec.declaration!;
       final fpl = dec.parameters?.parameters ?? <FormalParameter>[];
 
-      argsPair = compileArgumentList(ctx, e.argumentList, 1, fpl, dec);
+      argsPair = compileArgumentList(ctx, e.argumentList, L.type.file, fpl, dec, before: L != null ? [L] : []);
     }
 
     final _args = argsPair.first;
@@ -76,7 +74,7 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
       throw CompileError('Invalid declaration type ${dec.runtimeType}');
     }
 
-    final argsPair = compileArgumentList(ctx, e.argumentList, 1, fpl, dec);
+    final argsPair = compileArgumentList(ctx, e.argumentList, offset.file!, fpl, dec, before: L != null ? [L] : []);
     final _args = argsPair.first;
     final _namedArgs = argsPair.second;
 
@@ -120,8 +118,9 @@ DeclarationOrBridge<MethodDeclaration, BridgeFunction> resolveInstanceMethod(
 }
 
 Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext ctx, ArgumentList argumentList,
-    int decLibrary, List<FormalParameter> fpl, Declaration parameterHost) {
+    int decLibrary, List<FormalParameter> fpl, Declaration parameterHost, {List<Variable> before = const []}) {
   final _args = <Variable>[];
+  final _push = <Variable>[];
   final _namedArgs = <String, Variable>{};
 
   final positional = <FormalParameter>[];
@@ -146,8 +145,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext 
         throw CompileError('Not enough positional arguments');
       } else {
         $null ??= BuiltinValue().push(ctx);
-        final argOp = PushArg.make($null.scopeFrameOffset);
-        ctx.pushOp(argOp, PushArg.LEN);
+        _push.add($null);
       }
     } else {
       var paramType = EvalTypes.dynamicType;
@@ -161,16 +159,18 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext 
         throw CompileError('Unknown formal type ${param.runtimeType}');
       }
 
-      final _arg = compileExpression(arg, ctx);
-      if (!_arg.type.isAssignableTo(paramType)) {
+      var _arg = compileExpression(arg, ctx);
+      if (parameterHost is MethodDeclaration) {
+        _arg = _arg.boxIfNeeded(ctx);
+      }
+
+      if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(paramType)) {
         throw CompileError(
             'Cannot assign argument of type ${_arg.type} to parameter "${param.identifier}" of type $paramType');
       }
 
       _args.add(_arg);
-
-      final argOp = PushArg.make(_arg.scopeFrameOffset);
-      ctx.pushOp(argOp, PushArg.LEN);
+      _push.add(_arg);
     }
 
     i++;
@@ -195,29 +195,36 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext 
       throw CompileError('Unknown formal type ${param.runtimeType}');
     }
     if (namedExpr.containsKey(name)) {
-      final _arg = compileExpression(namedExpr[name]!, ctx);
-      if (!_arg.type.isAssignableTo(paramType)) {
+      var _arg = compileExpression(namedExpr[name]!, ctx);
+      if (parameterHost is MethodDeclaration) {
+        _arg = _arg.boxIfNeeded(ctx);
+      }
+      if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(paramType)) {
         throw CompileError(
             'Cannot assign argument of type ${_arg.type} to parameter "${param.identifier}" of type $paramType');
       }
 
-      final argOp = PushArg.make(_arg.scopeFrameOffset);
-      ctx.pushOp(argOp, PushArg.LEN);
+      _push.add(_arg);
 
       _namedArgs[name] = _arg;
     } else {
       $null ??= BuiltinValue().push(ctx);
-      final argOp = PushArg.make($null!.scopeFrameOffset);
-      ctx.pushOp(argOp, PushArg.LEN);
+      _push.add($null!);
     }
   });
+
+  for (final _arg in <Variable>[...before, ..._push]) {
+    final argOp = PushArg.make(_arg.scopeFrameOffset);
+    ctx.pushOp(argOp, PushArg.LEN);
+  }
 
   return Pair(_args, _namedArgs);
 }
 
 Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
-    CompilerContext ctx, ArgumentList argumentList, BridgeFunction function) {
+    CompilerContext ctx, ArgumentList argumentList, BridgeFunction function, {List<Variable> before = const []}) {
   final _args = <Variable>[];
+  final _push = <Variable>[];
   final _namedArgs = <String, Variable>{};
   final namedExpr = <String, Expression>{};
 
@@ -231,22 +238,18 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
         throw CompileError('Not enough positional arguments');
       } else {
         $null ??= BuiltinValue().push(ctx);
-        final argOp = PushArg.make($null.scopeFrameOffset);
-        ctx.pushOp(argOp, PushArg.LEN);
+        _push.add($null);
       }
     } else {
       var paramType = param.type ?? EvalTypes.dynamicType;
 
       final _arg = compileExpression(arg, ctx).boxIfNeeded(ctx);
-      if (!_arg.type.isAssignableTo(paramType)) {
+      if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(paramType)) {
         throw CompileError(
             'Cannot assign argument of type ${_arg.type} to parameter of type $paramType');
       }
-
       _args.add(_arg);
-
-      final argOp = PushArg.make(_arg.scopeFrameOffset);
-      ctx.pushOp(argOp, PushArg.LEN);
+      _push.add(_arg);
     }
 
     i++;
@@ -261,22 +264,23 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
   function.namedParams.forEach((name, param) {
     var paramType = param.type ?? EvalTypes.dynamicType;
     if (namedExpr.containsKey(name)) {
-      final _arg = compileExpression(namedExpr[name]!, ctx);
-      if (!_arg.type.isAssignableTo(paramType)) {
+      final _arg = compileExpression(namedExpr[name]!, ctx).boxIfNeeded(ctx);
+      if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(paramType)) {
         throw CompileError(
             'Cannot assign argument of type ${_arg.type} to parameter of type $paramType');
       }
-
-      final argOp = PushArg.make(_arg.scopeFrameOffset);
-      ctx.pushOp(argOp, PushArg.LEN);
-
+      _push.add(_arg);
       _namedArgs[name] = _arg;
     } else {
       $null ??= BuiltinValue().push(ctx);
-      final argOp = PushArg.make($null!.scopeFrameOffset);
-      ctx.pushOp(argOp, PushArg.LEN);
+      _push.add($null!);
     }
   });
+
+  for (final _arg in [...before, ..._push]) {
+    final argOp = PushArg.make(_arg.scopeFrameOffset);
+    ctx.pushOp(argOp, PushArg.LEN);
+  }
 
   return Pair(_args, _namedArgs);
 }

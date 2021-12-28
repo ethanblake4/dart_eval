@@ -72,7 +72,7 @@ class Compiler {
       typeResolvedBridgeClasses[_blm.value] = {
         for (final _cls in _classes.entries)
           _cls.key:
-              _cls.value.copyWith(type: BridgeTypeDescriptor.builtin(TypeRef(_blm.value, _cls.value.type.name!)))
+              _cls.value.copyWith(type: BridgeTypeDescriptor.builtin(TypeRef.cache(_blm.value, _cls.value.type.name!)))
       };
 
       final types = Map.fromEntries(typeResolvedBridgeClasses.entries
@@ -201,7 +201,7 @@ class Compiler {
             topLevelDeclarationsMap[myIndex]![d.name.name] = DeclarationOrBridge(declaration: d);
             if (d is ClassDeclaration) {
               instanceDeclarationsMap[myIndex]![d.name.name] = {};
-              ctx.visibleTypes[myIndex]![d.name.name] = TypeRef(myIndex!, d.name.name);
+              ctx.visibleTypes[myIndex]![d.name.name] = TypeRef.cache(myIndex!, d.name.name, fileRef: myIndex);
               d.members.forEach((member) {
                 if (member is MethodDeclaration) {
                   instanceDeclarationsMap[myIndex]![d.name.name]![member.name.name] = member;

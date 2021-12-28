@@ -14,8 +14,8 @@ Reference compileAssignmentExpressionAsReference(AssignmentExpression e, Compile
   final L = compileExpressionAsReference(e.leftHandSide, ctx);
   final R = compileExpression(e.rightHandSide, ctx);
 
-  final Ltype = L.resolveType(ctx);
-  if (!R.type.isAssignableTo(Ltype)) {
+  final Ltype = L.resolveType(ctx).resolveTypeChain(ctx);
+  if (!R.type.resolveTypeChain(ctx).isAssignableTo(Ltype)) {
     throw CompileError('Syntax error: cannot assign value of type ${R.type} to $Ltype');
   }
   L.setValue(ctx, R);

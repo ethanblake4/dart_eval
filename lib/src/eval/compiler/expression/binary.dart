@@ -22,9 +22,18 @@ Variable compileBinaryExpression(CompilerContext ctx, BinaryExpression e) {
   // Fast path for basic num ops
   final supportedNumIntrinsicOps = {TokenType.PLUS, TokenType.LT, TokenType.GT};
 
+  var LeqR = false;
+  if (R.scopeFrameOffset == L.scopeFrameOffset) {
+    LeqR = true;
+  }
+
   if (L.type.isAssignableTo(EvalTypes.numType) && supportedNumIntrinsicOps.contains(e.operator.type)) {
     L = L.unboxIfNeeded(ctx);
-    R = R.unboxIfNeeded(ctx);
+    if (LeqR) {
+      R = L;
+    } else {
+      R = R.unboxIfNeeded(ctx);
+    }
 
     if (e.operator.type == TokenType.PLUS) {
       // Num intrinsic add
@@ -44,7 +53,13 @@ Variable compileBinaryExpression(CompilerContext ctx, BinaryExpression e) {
 
   // Slow path (universal)
   L = L.boxIfNeeded(ctx);
-  R = R.boxIfNeeded(ctx);
+
+  if (LeqR) {
+    R = L;
+  } else {
+    R = R.boxIfNeeded(ctx);
+  }
+
 
   final opMap = {
     TokenType.PLUS: '+',

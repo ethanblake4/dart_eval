@@ -70,18 +70,18 @@ class KnownMethodArg {
 }
 
 class EvalTypes {
-  static const TypeRef voidType = TypeRef(dartCoreFile, 'void');
-  static const TypeRef dynamicType = TypeRef(dartCoreFile, 'dynamic');
-  static const TypeRef nullType = TypeRef(dartCoreFile, 'Null', extendsType: dynamicType);
-  static const TypeRef objectType = TypeRef(dartCoreFile, 'Object', extendsType: dynamicType);
-  static const TypeRef boolType = TypeRef(dartCoreFile, 'bool', extendsType: objectType);
-  static const TypeRef numType = TypeRef(dartCoreFile, 'num', extendsType: objectType);
-  static const TypeRef intType = TypeRef(dartCoreFile, 'int', extendsType: numType);
-  static const TypeRef doubleType = TypeRef(dartCoreFile, 'double', extendsType: numType);
-  static const TypeRef stringType = TypeRef(dartCoreFile, 'String', extendsType: objectType);
-  static const TypeRef mapType = TypeRef(dartCoreFile, 'Map', extendsType: objectType);
-  static const TypeRef listType = TypeRef(dartCoreFile, 'List', extendsType: objectType);
-  static const TypeRef functionType = TypeRef(dartCoreFile, 'Function', extendsType: objectType);
+  static const TypeRef voidType = TypeRef(dartCoreFile, 'void', resolved: true);
+  static const TypeRef dynamicType = TypeRef(dartCoreFile, 'dynamic', resolved: true);
+  static const TypeRef nullType = TypeRef(dartCoreFile, 'Null', extendsType: dynamicType, resolved: true);
+  static const TypeRef objectType = TypeRef(dartCoreFile, 'Object', extendsType: dynamicType, resolved: true);
+  static const TypeRef boolType = TypeRef(dartCoreFile, 'bool', extendsType: objectType, resolved: true);
+  static const TypeRef numType = TypeRef(dartCoreFile, 'num', extendsType: objectType, resolved: true);
+  static const TypeRef intType = TypeRef(dartCoreFile, 'int', extendsType: numType, resolved: true);
+  static const TypeRef doubleType = TypeRef(dartCoreFile, 'double', extendsType: numType, resolved: true);
+  static const TypeRef stringType = TypeRef(dartCoreFile, 'String', extendsType: objectType, resolved: true);
+  static const TypeRef mapType = TypeRef(dartCoreFile, 'Map', extendsType: objectType, resolved: true);
+  static const TypeRef listType = TypeRef(dartCoreFile, 'List', extendsType: objectType, resolved: true);
+  static const TypeRef functionType = TypeRef(dartCoreFile, 'Function', extendsType: objectType, resolved: true);
 }
 
 final Map<String, TypeRef> coreDeclarations = {

@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/expression/invocation.dart';
 
 import 'builtins.dart';
@@ -6,12 +7,42 @@ import 'context.dart';
 import 'errors.dart';
 
 class TypeRef {
-  const TypeRef(this.file, this.name,
-      {this.extendsType,
-      this.implementsType = const [],
-      this.withType = const [],
-      this.genericParams = const [],
-      this.specifiedTypeArgs = const []});
+  const TypeRef(
+    this.file,
+    this.name, {
+    this.extendsType,
+    this.implementsType = const [],
+    this.withType = const [],
+    this.genericParams = const [],
+    this.specifiedTypeArgs = const [],
+    this.resolved = false,
+  });
+
+  static final _cache = <int, Map<String, TypeRef>>{};
+  static final _inverseCache = <TypeRef, List<int>>{};
+
+  factory TypeRef.cache(int file, String name, {int? fileRef}) {
+    TypeRef $type;
+    if (!_cache.containsKey(file)) {
+      _cache[file] = {};
+    }
+
+    final _fileCache = _cache[file]!;
+    if (!_fileCache.containsKey(name)) {
+      $type = (_fileCache[name] = TypeRef(file, name));
+    } else {
+      $type = _fileCache[name]!;
+    }
+
+    if (fileRef != null) {
+      if (!_inverseCache.containsKey($type)) {
+        _inverseCache[$type] = [];
+      }
+      _inverseCache[$type]!.add(fileRef);
+    }
+
+    return $type;
+  }
 
   factory TypeRef.fromAnnotation(CompilerContext ctx, int library, TypeAnnotation typeAnnotation) {
     if (!(typeAnnotation is NamedType)) {
@@ -47,6 +78,84 @@ class TypeRef {
     }
   }
 
+  TypeRef resolveTypeChain(CompilerContext ctx) {
+    if (resolved) {
+      return this;
+    }
+
+    final $cached = _cache[file]![name]!;
+    if ($cached.resolved) {
+      return $cached;
+    }
+
+    TypeRef? $super;
+    final $with = <TypeRef>[];
+    final $implements = <TypeRef>[];
+
+    final declaration = ctx.topLevelDeclarationsMap[file]![name]!;
+
+    String? superName;
+    List<String> implementsNames;
+    List<String> withNames;
+
+    if (declaration.isBridge) {
+      final br = declaration.bridge as BridgeClass;
+      final type = br.type;
+
+      if (type.$extends?.builtin != null) {
+        $super = type.$extends!.builtin!.resolveTypeChain(ctx);
+      } else {
+        superName = type.$extends?.name;
+      }
+
+      implementsNames = [];
+      withNames = [];
+
+      for (final $i in type.$implements) {
+        if ($i.builtin != null) {
+          $implements.add($i.builtin!.resolveTypeChain(ctx));
+        } else {
+          implementsNames.add($i.name!);
+        }
+      }
+
+      for (final $i in type.$with) {
+        if ($i.builtin != null) {
+          $with.add($i.builtin!.resolveTypeChain(ctx));
+        } else {
+          withNames.add($i.name!);
+        }
+      }
+    } else {
+      final dec = declaration.declaration! as ClassDeclaration;
+      superName = dec.extendsClause?.superclass2.name.name;
+      withNames = dec.withClause?.mixinTypes2.map((e) => e.name.name).toList() ?? [];
+      implementsNames = dec.implementsClause?.interfaces2.map((e) => e.name.name).toList() ?? [];
+    }
+
+    if (superName != null) {
+      $super = ctx.visibleTypes[file]![superName]!.resolveTypeChain(ctx);
+    }
+
+    for (final withName in withNames) {
+      $with.add(ctx.visibleTypes[file]![withName]!.resolveTypeChain(ctx));
+    }
+
+    for (final implementsName in implementsNames) {
+      $implements.add(ctx.visibleTypes[file]![implementsName]!.resolveTypeChain(ctx));
+    }
+
+    final _resolved =
+        TypeRef(file, name, extendsType: $super, withType: $with, implementsType: $implements, resolved: true);
+
+    for (final $file in _inverseCache[this]!) {
+      ctx.visibleTypes[$file]![name] = _resolved;
+    }
+
+    _cache[file]![name] = _resolved;
+    return _resolved;
+  }
+
   final int file;
   final String name;
   final TypeRef? extendsType;
@@ -54,6 +163,7 @@ class TypeRef {
   final List<TypeRef> withType;
   final List<GenericParam> genericParams;
   final List<TypeRef> specifiedTypeArgs;
+  final bool resolved;
 
   List<TypeRef> get allSupertypes => [if (extendsType != null) extendsType!, ...implementsType, ...withType];
 

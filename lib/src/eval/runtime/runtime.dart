@@ -46,7 +46,7 @@ class Runtime {
         final setters = (dc[1]).cast<String, int>();
         final methods = (dc[2]).cast<String, int>();
 
-        final cls = EvalClass(null, [], getters, setters, methods);
+        final cls = EvalClass(null, [], {...getters}, {...setters}, {...methods});
         decls[name] = cls;
       });
 
@@ -269,7 +269,7 @@ class Runtime {
         final setters = (dc[1]).cast<String, int>();
         final methods = (dc[2]).cast<String, int>();
 
-        final cls = EvalClass(null, [], getters, setters, methods);
+        final cls = EvalClass(null, [], {...getters}, {...setters}, {...methods});
         decls[name] = cls;
       });
 
