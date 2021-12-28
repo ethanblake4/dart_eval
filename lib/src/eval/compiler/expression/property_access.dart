@@ -12,5 +12,7 @@ Variable compilePropertyAccess(PropertyAccess pa, CompilerContext ctx) {
   final op = PushObjectProperty.make(L.scopeFrameOffset, pa.propertyName.name);
   ctx.pushOp(op, PushObjectProperty.len(op));
 
+  ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
+
   return Variable.alloc(ctx, TypeRef.lookupFieldType(ctx, L.type, pa.propertyName.name) ?? EvalTypes.dynamicType);
 }

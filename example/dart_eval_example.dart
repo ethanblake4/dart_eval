@@ -11,13 +11,16 @@ class X {
   }
 }
 
-void main(List<String> args) {
+void main(List<String> args) async {
+
+  await Future.delayed(const Duration(seconds: 1));
+
   final source = '''
 dynamic main() {
   var someNumber = 19;
 
   var a = A(45);
-  for (var i = someNumber; i < 24; i = i + 1) {
+  for (var i = someNumber; i < 200; i = i + 1) {
     final n = a.calculate(i);
     if (n > someNumber) {
       a = B(555);
@@ -101,6 +104,8 @@ class D extends A {
   final result = eval(source);
   print('Output: $result');
   print('Execution time: ${DateTime.now().millisecondsSinceEpoch - timestamp} ms');
+
+  await Future.delayed(const Duration(seconds: 300));
 }
 
 class $X extends X with BridgeInstance {

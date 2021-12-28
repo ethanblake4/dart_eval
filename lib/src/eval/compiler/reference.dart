@@ -81,6 +81,7 @@ class Reference {
     if (object != null) {
       final op = PushObjectProperty.make(object!.scopeFrameOffset, name);
       ctx.pushOp(op, PushObjectProperty.len(op));
+      ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
 
       return Variable.alloc(ctx, TypeRef.lookupFieldType(ctx, object!.type, name) ?? EvalTypes.dynamicType);
     }
@@ -100,6 +101,8 @@ class Reference {
 
         final op = PushObjectProperty.make(0 /* (this) */, name);
         ctx.pushOp(op, PushObjectProperty.len(op));
+
+        ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
 
         return Variable.alloc(ctx, TypeRef.lookupFieldType(ctx, $type, name) ?? EvalTypes.dynamicType);
       }

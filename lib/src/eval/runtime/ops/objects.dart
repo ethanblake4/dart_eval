@@ -21,11 +21,11 @@ class InvokeDynamic implements DbcOp {
     while (true) {
       if (object is EvalInstanceImpl) {
         final methods = object.evalClass.methods;
-        if (!methods.containsKey(_method)) {
+        final _offset = methods[_method];
+        if (_offset == null) {
           object = object.evalSuperclass;
           continue;
         }
-        final _offset = methods[_method]!;
         runtime.callStack.add(runtime._prOffset);
         runtime._prOffset = _offset;
         return;
@@ -122,9 +122,33 @@ class PushObjectProperty implements DbcOp {
 
   @override
   void run(Runtime runtime) {
-    final object = runtime._vStack[runtime.scopeStackOffset + _location];
-    final _r = (object as EvalInstance).$getProperty(runtime, _property);
-    runtime._vStack[runtime._stackOffset++] = _r;
+    var object = runtime._vStack[runtime.scopeStackOffset + _location];
+
+    while (true) {
+      if (object is EvalInstanceImpl) {
+        final evalClass = object.evalClass;
+        final _offset = evalClass.getters[_property];
+        if (_offset == null) {
+          final method = evalClass.methods[_property];
+          if (method == null) {
+            object = object.evalSuperclass;
+            continue;
+          }
+          runtime._returnValue = EvalFunctionPtr(object, method);
+          runtime._args = [];
+          return;
+        }
+        runtime._args.add(object);
+        runtime.callStack.add(runtime._prOffset);
+        runtime._prOffset = _offset;
+        return;
+      }
+
+      final result = ((object as EvalInstance).$getProperty(runtime, _property));
+      runtime._returnValue = result;
+      runtime._args = [];
+      return;
+    }
   }
 
   @override
