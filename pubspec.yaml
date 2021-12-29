@@ -9,6 +9,7 @@ environment:
 dependencies:
    analyzer: ^3.0.0
    pedantic: ^1.11.1
+   dcli: ^1.15.5
 
 dev_dependencies:
   test: ^1.17.12

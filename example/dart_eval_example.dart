@@ -11,12 +11,15 @@ class X {
   }
 }
 
-void main(List<String> args) async {
+void main(List<String> args) {
   final source = '''
-    bool main() {
-      var i = 2;
-      
-      return i == 2;
+    int fib(int n) {
+      if (n < 2) return 1;
+      return fib(n - 1) + fib(n - 2);
+    }
+    
+    int main () {
+      return fib(36);
     }
   ''';
   final timestamp = DateTime.now().millisecondsSinceEpoch;

@@ -102,7 +102,7 @@ class NumSub implements DbcOp {
   }
 
   @override
-  String toString() => 'NumSub (L$_location1 + L$_location2)';
+  String toString() => 'NumSub (L$_location1 - L$_location2)';
 }
 
 class NumLt implements DbcOp {

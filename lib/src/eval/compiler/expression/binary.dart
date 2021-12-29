@@ -18,6 +18,8 @@ Variable compileBinaryExpression(CompilerContext ctx, BinaryExpression e) {
     TokenType.STAR: '*',
     TokenType.LT: '<',
     TokenType.GT: '>',
+    TokenType.LT_EQ: '<=',
+    TokenType.GT_EQ: '>=',
     TokenType.PERCENT: '%',
     TokenType.EQ_EQ: '=='
   };

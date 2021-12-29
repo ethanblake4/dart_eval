@@ -29,20 +29,18 @@ abstract class EvalInstance implements EvalValue {
 
 class EvalInstanceImpl implements EvalInstance {
 
-  final EvalClass _evalClass;
+  final EvalClass evalClass;
 
   final EvalInstance? evalSuperclass;
   late final List<Object?> values;
 
-  EvalInstanceImpl(this._evalClass, this.evalSuperclass, this.values);
-
-  EvalClass get evalClass => _evalClass;
+  EvalInstanceImpl(this.evalClass, this.evalSuperclass, this.values);
 
   @override
   EvalValue? $getProperty(Runtime runtime, String identifier) {
-    final getter = _evalClass.getters[identifier];
+    final getter = evalClass.getters[identifier];
     if (getter == null) {
-      final method = _evalClass.methods[identifier];
+      final method = evalClass.methods[identifier];
       if (method == null) {
         return evalSuperclass?.$getProperty(runtime, identifier);
       }
@@ -55,7 +53,7 @@ class EvalInstanceImpl implements EvalInstance {
 
   @override
   void $setProperty(Runtime runtime, String identifier, EvalValue value) {
-    final setter = _evalClass.setters[identifier];
+    final setter = evalClass.setters[identifier];
     if (setter == null) {
       if (evalSuperclass != null) {
         return evalSuperclass!.$setProperty(runtime, identifier, value);

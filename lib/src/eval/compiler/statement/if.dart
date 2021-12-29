@@ -44,5 +44,5 @@ StatementInfo compileIfStatement(IfStatement s, CompilerContext ctx, AlwaysRetur
 
   ctx.endAllocScope();
 
-  return thenResult;
+  return thenResult | StatementInfo(thenResult.position, willAlwaysThrow: false, willAlwaysReturn: false);
 }
