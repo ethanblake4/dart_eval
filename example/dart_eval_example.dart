@@ -14,12 +14,12 @@ class X {
 void main(List<String> args) {
   final source = '''
     int fib(int n) {
-      if (n < 2) return 1;
+      if (n <= 1) return 1;
       return fib(n - 1) + fib(n - 2);
     }
     
     int main () {
-      return fib(36);
+      return fib(24);
     }
   ''';
   final timestamp = DateTime.now().millisecondsSinceEpoch;

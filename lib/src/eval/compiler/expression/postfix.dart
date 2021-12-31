@@ -22,7 +22,7 @@ Variable compilePostfixExpression(PostfixExpression e, CompilerContext ctx) {
     TokenType.MINUS_MINUS: '-'
   };
 
-  L.invoke(ctx, opMap[e.operator.type]!, [BuiltinValue(intval: 1).push(ctx)]);
+  V.setValue(ctx, L.invoke(ctx, opMap[e.operator.type]!, [BuiltinValue(intval: 1).push(ctx)]).second);
 
   return out;
 }

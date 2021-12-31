@@ -41,6 +41,25 @@ void main() {
       expect(exec.executeNamed(0, 'main'), 7);
     });
 
+    test('Recursion (fibonacci)', () {
+      final exec = gen.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int fib(int n) {
+              if (n <= 1) return 1;
+              return fib(n - 1) + fib(n - 2);
+            }
+            
+            int main () {
+              return fib(24);
+            }
+          '''
+        }
+      });
+
+      expect(exec.executeNamed(0, 'main'), 75025);
+    });
+
     test('Multiple files, boxed ints and correct stack handling',() {
       final exec = gen.compileWriteAndLoad({
         'example': {
@@ -141,7 +160,7 @@ void main() {
           'main.dart': '''
             num main() {
               var i = 0;
-              for (; i < 555; i = i + 1) {}
+              for (; i < 555; i++) {}
               return i;
             }
           ''',
@@ -155,13 +174,13 @@ void main() {
         'example': { 'main.dart': '''
           dynamic doThing() {
             var count = 0;
-            for (var i = 0; i < 1000; i = i + 1) {
+            for (var i = 0; i < 1000; i++) {
               if (count < 500) {
-                count = count - 1;
+                count--;
               } else if (count < 750) {
-                count = count + 1;
+                count++;
               }
-              count = count + i;
+              count += i;
             }
             
             return count;
