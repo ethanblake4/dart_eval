@@ -125,7 +125,7 @@ class EvalTimestampedTime extends TimestampedTime
   static late EvalBridgeClass cls;
 
   /// Create an instance of [EvalBridgeData] so that dart_eval can store information
-  /// about any changes it's made to a psuedo-subclass of this class when extending it
+  /// about any changes it's made to a pseudo-subclass of this class when extending it
   @override
   EvalBridgeData evalBridgeData = EvalBridgeData(cls);
 
