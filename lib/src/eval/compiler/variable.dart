@@ -1,6 +1,7 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/collection/list.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
+import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
@@ -10,13 +11,25 @@ import 'offset_tracker.dart';
 
 class Variable {
   Variable(this.scopeFrameOffset, this.type,
-      {this.methodOffset, this.methodReturnType, this.isFinal = false, this.concreteTypes = const []});
+      {this.methodOffset,
+      this.methodReturnType,
+      this.isFinal = false,
+      this.concreteTypes = const [],
+      this.callingConvention = CallingConvention.static});
 
   factory Variable.alloc(ScopeContext ctx, TypeRef type,
-      {DeferredOrOffset? methodOffset, ReturnType? methodReturnType, bool isFinal = false, List<TypeRef> concreteTypes = const []}) {
+      {DeferredOrOffset? methodOffset,
+      ReturnType? methodReturnType,
+      bool isFinal = false,
+      List<TypeRef> concreteTypes = const [],
+      CallingConvention callingConvention = CallingConvention.static}) {
     ctx.allocNest.last++;
     return Variable(ctx.scopeFrameOffset++, type,
-        methodOffset: methodOffset, methodReturnType: methodReturnType, isFinal: isFinal, concreteTypes: concreteTypes);
+        methodOffset: methodOffset,
+        methodReturnType: methodReturnType,
+        isFinal: isFinal,
+        concreteTypes: concreteTypes,
+        callingConvention: callingConvention);
   }
 
   final int scopeFrameOffset;
@@ -25,6 +38,7 @@ class Variable {
   final DeferredOrOffset? methodOffset;
   final ReturnType? methodReturnType;
   final bool isFinal;
+  final CallingConvention callingConvention;
 
   bool get boxed => type.boxed;
 
@@ -139,12 +153,12 @@ class Variable {
           result = Variable.alloc(ctx, EvalTypes.boolType.copyWith(boxed: false));
           break;
         case '<=':
-        // Num intrinsic less than equal to
+          // Num intrinsic less than equal to
           ctx.pushOp(NumLtEq.make($this.scopeFrameOffset, R.scopeFrameOffset), NumLtEq.LEN);
           result = Variable.alloc(ctx, EvalTypes.boolType.copyWith(boxed: false));
           break;
         case '>=':
-        // Num intrinsic greater than equal to
+          // Num intrinsic greater than equal to
           ctx.pushOp(NumLt.make(R.scopeFrameOffset, $this.scopeFrameOffset), NumLt.LEN);
           result = Variable.alloc(ctx, EvalTypes.boolType.copyWith(boxed: false));
           break;

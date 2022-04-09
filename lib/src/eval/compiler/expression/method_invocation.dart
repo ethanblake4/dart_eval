@@ -4,6 +4,8 @@ import 'package:dart_eval/src/eval/bridge/declaration/function.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
+import 'package:dart_eval/src/eval/compiler/expression/funcexpr_invocation.dart';
+import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
@@ -48,9 +50,14 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
     mReturnType =
         AlwaysReturnType.fromInstanceMethodOrBuiltin(ctx, L.type, e.methodName.name, _argTypes, _namedArgTypes);
   } else {
+    //final methodRef = compileIdentifierAsReference(e.methodName, ctx);
     final method = compileIdentifier(e.methodName, ctx);
     if (method.methodOffset == null) {
       throw CompileError('Cannot call ${e.methodName.name} as it is not a valid method');
+    }
+
+    if (method.callingConvention == CallingConvention.dynamic) {
+      return invokeClosure(ctx, null, method, e.argumentList);
     }
 
     final offset = method.methodOffset!;

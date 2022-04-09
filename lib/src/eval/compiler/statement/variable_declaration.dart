@@ -27,13 +27,18 @@ void compileVariableDeclarationList(VariableDeclarationList l, CompilerContext c
         throw CompileError('Cannot declare variable ${li.name.name} multiple times in the same scope');
       }
       if (res.name != null) {
-        var _v = Variable.alloc(ctx, type?? res.type);
+        var _v = Variable.alloc(ctx, type ?? res.type);
         ctx.pushOp(PushNull.make(), PushNull.LEN);
         ctx.pushOp(CopyValue.make(_v.scopeFrameOffset, res.scopeFrameOffset), CopyValue.LEN);
         ctx.setLocal(li.name.name, _v);
       } else {
-        ctx.setLocal(li.name.name,
-            Variable(res.scopeFrameOffset, (type ?? res.type).copyWith(boxed: res.boxed), isFinal: l.isFinal));
+        ctx.setLocal(
+            li.name.name,
+            Variable(res.scopeFrameOffset, (type ?? res.type).copyWith(boxed: res.boxed),
+                isFinal: l.isFinal,
+                methodOffset: res.methodOffset,
+                methodReturnType: res.methodReturnType,
+                callingConvention: res.callingConvention));
       }
     }
   }

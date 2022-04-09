@@ -33,6 +33,7 @@ class IdentifierReference implements Reference {
   Variable? object;
   final String name;
 
+
   @override
   TypeRef resolveType(CompilerContext ctx) {
     if (object != null) {

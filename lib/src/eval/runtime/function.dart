@@ -53,8 +53,6 @@ class EvalFunctionPtr extends EvalFunction {
     final cpat = runtime.args[0] as List;
     final cnat = runtime.args[2] as List;
 
-    print(runtime.args[1]);
-
     final csPosArgTypes = [for (final a in cpat) runtime.runtimeTypes[a]];
     final csNamedArgs = runtime.args[1] as List;
     final csNamedArgTypes = [for (final a in cnat) runtime.runtimeTypes[a]];

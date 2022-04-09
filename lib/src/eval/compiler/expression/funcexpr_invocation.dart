@@ -19,9 +19,13 @@ Variable compileFunctionExpressionInvocation(FunctionExpressionInvocation e, Com
     fallback = compileExpression(e.function, ctx);
   }
 
+  return invokeClosure(ctx, target, fallback, e.argumentList);
+}
+
+Variable invokeClosure(CompilerContext ctx, Reference? closureRef, Variable? closureVar, ArgumentList argumentList) {
   var posArgCount = 0;
   final namedArgs = <String>[];
-  for (final arg in e.argumentList.arguments) {
+  for (final arg in argumentList.arguments) {
     if (arg is NamedExpression) {
       namedArgs.add(arg.name.label.name);
     } else {
@@ -30,7 +34,6 @@ Variable compileFunctionExpressionInvocation(FunctionExpressionInvocation e, Com
   }
 
   namedArgs.sort();
-
 
   ctx.pushOp(PushList.make(), PushList.LEN);
   final list = Variable.alloc(ctx, EvalTypes.listType);
@@ -42,7 +45,7 @@ Variable compileFunctionExpressionInvocation(FunctionExpressionInvocation e, Com
   ctx.pushOp(PushArg.make(alConstVar.scopeFrameOffset), PushArg.LEN);
   ctx.pushOp(PushArg.make(list.scopeFrameOffset), PushArg.LEN);
 
-  final sd = target?.getStaticDispatch(ctx);
+  final sd = closureRef?.getStaticDispatch(ctx);
   if (sd != null) {
     // Use static dispatch
     final loc = ctx.pushOp(Call.make(sd.offset.offset ?? -1), Call.LEN);
@@ -51,11 +54,9 @@ Variable compileFunctionExpressionInvocation(FunctionExpressionInvocation e, Com
     return Variable.alloc(ctx, EvalTypes.dynamicType.copyWith(boxed: true));
   } else {
     // Fallback to dynamic dispatch
-    final dd = target?.getValue(ctx) ?? fallback!;
-
+    final dd = closureRef?.getValue(ctx) ?? closureVar!;
 
     final res = dd.invoke(ctx, 'call', []);
     return res.result;
   }
-
 }

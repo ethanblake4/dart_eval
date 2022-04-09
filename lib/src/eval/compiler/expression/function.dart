@@ -10,6 +10,11 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
+enum CallingConvention {
+  static,
+  dynamic
+}
+
 Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
 
   final jumpOver = ctx.pushOp(JumpConstant.make(-1), JumpConstant.LEN);
@@ -92,5 +97,5 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
   ctx.pushOp(PushFunctionPtr.make(fnOffset), PushFunctionPtr.LEN);
 
   return Variable.alloc(ctx, EvalTypes.functionType, methodReturnType: AlwaysReturnType(EvalTypes.dynamicType, false),
-      methodOffset: DeferredOrOffset(offset: fnOffset));
+      methodOffset: DeferredOrOffset(offset: fnOffset), callingConvention: CallingConvention.dynamic);
 }

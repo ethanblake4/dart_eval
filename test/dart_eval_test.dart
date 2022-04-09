@@ -113,6 +113,23 @@ void main() {
 
       expect(exec.executeNamed(0, 'main'), 2);
     });
+
+    test('Basic inline anonymous function', () {
+      final exec = gen.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main () {
+              var r = () {
+                return 2;
+              };
+              return r();
+            }
+           '''
+        }
+      });
+
+      expect(exec.executeNamed(0, 'main'), 2);
+    });
   });
 
   group('Class tests', () {

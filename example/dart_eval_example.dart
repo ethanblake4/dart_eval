@@ -15,14 +15,13 @@ class X {
 
 void main(List<String> args) {
   final source = '''
-    Function r() {
-      return () {
-        return 2;
-      };
-    }
     
     int main () {
-      return r()();
+      var myfunc = () {
+        return 3;
+      };
+      
+      return myfunc();
     }
     
     /*
