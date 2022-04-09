@@ -1,4 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/src/eval/bridge/declaration/class.dart';
+import 'package:dart_eval/src/eval/bridge/declaration/function.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
@@ -26,7 +28,7 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
 
     if (_dec.isBridge) {
       final br = _dec.bridge!;
-      argsPair = compileArgumentListWithBridge(ctx, e.argumentList, br, before: [L]);
+      argsPair = compileArgumentListWithBridge(ctx, e.argumentList, br.functionDescriptor, before: [L]);
     } else {
       final dec = _dec.declaration!;
       final fpl = dec.parameters?.parameters ?? <FormalParameter>[];
@@ -85,22 +87,27 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
     if (offset.offset == null) {
       ctx.offsetTracker.setOffset(loc, offset);
     }
-    mReturnType = method.methodReturnType?.toAlwaysReturnType(_argTypes, _namedArgTypes) ??
+    TypeRef? thisType;
+    if (ctx.currentClass != null) {
+      thisType = ctx.visibleTypes[ctx.library]![ctx.currentClass!.name.name]!;
+    }
+    mReturnType = method.methodReturnType?.toAlwaysReturnType(thisType, _argTypes, _namedArgTypes) ??
         AlwaysReturnType(EvalTypes.dynamicType, true);
   }
 
   ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-  ctx.allocNest.last++;
+  final v = Variable.alloc(ctx,
+      mReturnType?.type?.copyWith(boxed: L != null || !unboxedAcrossFunctionBoundaries.contains(mReturnType.type)) ??
+          EvalTypes.dynamicType);
 
-  return Variable(ctx.scopeFrameOffset++, mReturnType?.type ?? EvalTypes.dynamicType,
-      boxed: L != null || !unboxedAcrossFunctionBoundaries.contains(mReturnType?.type));
+  return v;
 }
 
-DeclarationOrBridge<MethodDeclaration, BridgeFunction> resolveInstanceMethod(
+DeclarationOrBridge<MethodDeclaration, BridgeMethodDeclaration> resolveInstanceMethod(
     CompilerContext ctx, TypeRef instanceType, String methodName) {
   if (instanceType.file < -1) {
     // Bridge
-    final bridge = ctx.topLevelDeclarationsMap[instanceType.file]![instanceType.name]!.bridge! as BridgeClass;
+    final bridge = ctx.topLevelDeclarationsMap[instanceType.file]![instanceType.name]!.bridge! as BridgeClassDeclaration;
     return DeclarationOrBridge(bridge: bridge.methods[methodName]!);
   }
   final dec = ctx.instanceDeclarationsMap[instanceType.file]![instanceType.name]![methodName];
@@ -118,7 +125,8 @@ DeclarationOrBridge<MethodDeclaration, BridgeFunction> resolveInstanceMethod(
 }
 
 Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext ctx, ArgumentList argumentList,
-    int decLibrary, List<FormalParameter> fpl, Declaration parameterHost, {List<Variable> before = const []}) {
+    int decLibrary, List<FormalParameter> fpl, Declaration parameterHost,
+    {List<Variable> before = const []}) {
   final _args = <Variable>[];
   final _push = <Variable>[];
   final _namedArgs = <String, Variable>{};
@@ -222,7 +230,8 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext 
 }
 
 Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
-    CompilerContext ctx, ArgumentList argumentList, BridgeFunction function, {List<Variable> before = const []}) {
+    CompilerContext ctx, ArgumentList argumentList, BridgeFunctionDescriptor function,
+    {List<Variable> before = const []}) {
   final _args = <Variable>[];
   final _push = <Variable>[];
   final _namedArgs = <String, Variable>{};
@@ -241,12 +250,11 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
         _push.add($null);
       }
     } else {
-      var paramType = param.type ?? EvalTypes.dynamicType;
+      var paramType = TypeRef.fromBridgeAnnotation(ctx, param.typeAnnotation);
 
       final _arg = compileExpression(arg, ctx).boxIfNeeded(ctx);
       if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(paramType)) {
-        throw CompileError(
-            'Cannot assign argument of type ${_arg.type} to parameter of type $paramType');
+        throw CompileError('Cannot assign argument of type ${_arg.type} to parameter of type $paramType');
       }
       _args.add(_arg);
       _push.add(_arg);
@@ -262,12 +270,11 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
   }
 
   function.namedParams.forEach((name, param) {
-    var paramType = param.type ?? EvalTypes.dynamicType;
+    var paramType = TypeRef.fromBridgeAnnotation(ctx, param.typeAnnotation);
     if (namedExpr.containsKey(name)) {
       final _arg = compileExpression(namedExpr[name]!, ctx).boxIfNeeded(ctx);
       if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(paramType)) {
-        throw CompileError(
-            'Cannot assign argument of type ${_arg.type} to parameter of type $paramType');
+        throw CompileError('Cannot assign argument of type ${_arg.type} to parameter of type $paramType');
       }
       _push.add(_arg);
       _namedArgs[name] = _arg;

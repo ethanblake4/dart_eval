@@ -13,16 +13,15 @@ Variable compileIdentifier(Identifier id, CompilerContext ctx) {
 
 Reference compileIdentifierAsReference(Identifier id, CompilerContext ctx) {
   if (id is SimpleIdentifier) {
-    return Reference(null, id.name);
+    return IdentifierReference(null, id.name);
   } else if (id is PrefixedIdentifier) {
     final L = compileIdentifier(id.prefix, ctx);
-    if (!ctx.instanceDeclarationsMap.containsKey(L.type.file)) {
-      throw UnimplementedError('Internal file');
+    if (ctx.instanceDeclarationsMap.containsKey(L.type.file)) {
+      if (!ctx.instanceDeclarationsMap[L.type.file]!.containsKey(L.type.name)) {
+        throw UnimplementedError('Not a class');
+      }
     }
-    if (!ctx.instanceDeclarationsMap[L.type.file]!.containsKey(L.type.name)) {
-      throw UnimplementedError('Not a class');
-    }
-    return Reference(L, id.identifier.name);
+    return IdentifierReference(L, id.identifier.name);
   }
   throw CompileError('Unknown identifier ${id.runtimeType}');
 }

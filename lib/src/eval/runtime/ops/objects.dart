@@ -1,9 +1,9 @@
 part of '../runtime.dart';
 
 class InvokeDynamic implements DbcOp {
-  InvokeDynamic(Runtime exec)
-      : _location = exec._readInt16(),
-        _method = exec._readString();
+  InvokeDynamic(Runtime runtime)
+      : _location = runtime._readInt16(),
+        _method = runtime._readString();
 
   InvokeDynamic.make(this._location, this._method);
 
@@ -16,10 +16,10 @@ class InvokeDynamic implements DbcOp {
 
   @override
   void run(Runtime runtime) {
-    var object = runtime._vStack[runtime.scopeStackOffset + _location];
+    var object = runtime.frame[_location];
 
     while (true) {
-      if (object is EvalInstanceImpl) {
+      if (object is $InstanceImpl) {
         final methods = object.evalClass.methods;
         final _offset = methods[_method];
         if (_offset == null) {
@@ -31,13 +31,15 @@ class InvokeDynamic implements DbcOp {
         return;
       }
 
-      final method = ((object as EvalInstance).$getProperty(runtime, _method) as EvalFunction);
-      if (method is EvalFunctionImpl) {
+      final method = ((object as $Instance).$getProperty(runtime, _method) as EvalFunction);
+      if (method is $Function) {
         runtime.returnValue = method.call(runtime, object, runtime.args.cast());
         runtime.args = [];
         return;
       } else {
-        throw UnimplementedError();
+        runtime.returnValue = method.call(runtime, object, runtime.args.cast());
+        runtime.args = [];
+        return;
       }
     }
 
@@ -49,11 +51,11 @@ class InvokeDynamic implements DbcOp {
 
 // Create a class
 class CreateClass implements DbcOp {
-  CreateClass(Runtime exec)
-      : _library = exec._readInt32(),
-        _super = exec._readInt16(),
-        _name = exec._readString(),
-        _valuesLen = exec._readInt16();
+  CreateClass(Runtime runtime) :
+        _library = runtime._readInt32(),
+        _super = runtime._readInt16(),
+        _name = runtime._readString(),
+        _valuesLen = runtime._readInt16();
 
   CreateClass.make(this._library, this._super, this._name, this._valuesLen);
 
@@ -67,12 +69,12 @@ class CreateClass implements DbcOp {
   }
 
   @override
-  void run(Runtime exec) {
-    final $super = exec._vStack[exec.scopeStackOffset + _super] as EvalInstance?;
-    final $cls = exec.declaredClasses[_library]![_name]!;
+  void run(Runtime runtime) {
+    final $super = runtime.frame[_super] as $Instance?;
+    final $cls = runtime.declaredClasses[_library]![_name]!;
 
-    final instance = EvalInstanceImpl($cls, $super, List.filled(_valuesLen, null));
-    exec._vStack[exec._stackOffset++] = instance;
+    final instance = $InstanceImpl($cls, $super, List.filled(_valuesLen, null));
+    runtime.frame[runtime.frameOffset++] = instance;
   }
 
   @override
@@ -80,10 +82,10 @@ class CreateClass implements DbcOp {
 }
 
 class SetObjectProperty implements DbcOp {
-  SetObjectProperty(Runtime exec)
-      : _location = exec._readInt16(),
-        _property = exec._readString(),
-        _valueOffset = exec._readInt16();
+  SetObjectProperty(Runtime runtime)
+      : _location = runtime._readInt16(),
+        _property = runtime._readString(),
+        _valueOffset = runtime._readInt16();
 
   SetObjectProperty.make(this._location, this._property, this._valueOffset);
 
@@ -97,9 +99,9 @@ class SetObjectProperty implements DbcOp {
 
   @override
   void run(Runtime runtime) {
-    final object = runtime._vStack[runtime.scopeStackOffset + _location];
-    (object as EvalInstance)
-        .$setProperty(runtime, _property, runtime._vStack[runtime.scopeStackOffset + _valueOffset] as EvalValue);
+    final object = runtime.frame[_location];
+    (object as $Instance)
+        .$setProperty(runtime, _property, runtime.frame[_valueOffset] as $Value);
   }
 
   @override
@@ -107,9 +109,9 @@ class SetObjectProperty implements DbcOp {
 }
 
 class PushObjectProperty implements DbcOp {
-  PushObjectProperty(Runtime exec)
-      : _location = exec._readInt16(),
-        _property = exec._readString();
+  PushObjectProperty(Runtime runtime)
+      : _location = runtime._readInt16(),
+        _property = runtime._readString();
 
   PushObjectProperty.make(this._location, this._property);
 
@@ -122,10 +124,10 @@ class PushObjectProperty implements DbcOp {
 
   @override
   void run(Runtime runtime) {
-    var object = runtime._vStack[runtime.scopeStackOffset + _location];
+    var object = runtime.frame[_location];
 
     while (true) {
-      if (object is EvalInstanceImpl) {
+      if (object is $InstanceImpl) {
         final evalClass = object.evalClass;
         final _offset = evalClass.getters[_property];
         if (_offset == null) {
@@ -134,7 +136,7 @@ class PushObjectProperty implements DbcOp {
             object = object.evalSuperclass;
             continue;
           }
-          runtime.returnValue = EvalFunctionPtr(object, method);
+          runtime.returnValue = EvalFunctionPtr(object, method, 0, [], [], []);
           runtime.args = [];
           return;
         }
@@ -144,7 +146,7 @@ class PushObjectProperty implements DbcOp {
         return;
       }
 
-      final result = ((object as EvalInstance).$getProperty(runtime, _property));
+      final result = ((object as $Instance).$getProperty(runtime, _property));
       runtime.returnValue = result;
       runtime.args = [];
       return;
@@ -156,21 +158,21 @@ class PushObjectProperty implements DbcOp {
 }
 
 class PushObjectPropertyImpl implements DbcOp {
-  PushObjectPropertyImpl(Runtime exec)
-      : _objectOffset = exec._readInt16(),
-        _propertyIndex = exec._readInt16();
+  PushObjectPropertyImpl(Runtime runtime) :
+        _objectOffset = runtime._readInt16(),
+        _propertyIndex = runtime._readInt16();
 
   final int _objectOffset;
   final int _propertyIndex;
 
   PushObjectPropertyImpl.make(this._objectOffset, this._propertyIndex);
 
-  static int LEN = Dbc.I16_LEN * 2;
+  static int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN * 2;
 
   @override
-  void run(Runtime exec) {
-    final object = exec._vStack[exec.scopeStackOffset + _objectOffset] as EvalInstanceImpl;
-    exec._vStack[exec._stackOffset++] = object.values[_propertyIndex];
+  void run(Runtime runtime) {
+    final object = runtime.frame[_objectOffset] as $InstanceImpl;
+    runtime.frame[runtime.frameOffset++] = object.values[_propertyIndex];
   }
 
   @override
@@ -178,10 +180,10 @@ class PushObjectPropertyImpl implements DbcOp {
 }
 
 class SetObjectPropertyImpl implements DbcOp {
-  SetObjectPropertyImpl(Runtime exec)
-      : _objectOffset = exec._readInt16(),
-        _propertyIndex = exec._readInt16(),
-        _valueOffset = exec._readInt16();
+  SetObjectPropertyImpl(Runtime runtime)
+      : _objectOffset = runtime._readInt16(),
+        _propertyIndex = runtime._readInt16(),
+        _valueOffset = runtime._readInt16();
 
   final int _objectOffset;
   final int _propertyIndex;
@@ -189,12 +191,12 @@ class SetObjectPropertyImpl implements DbcOp {
 
   SetObjectPropertyImpl.make(this._objectOffset, this._propertyIndex, this._valueOffset);
 
-  static int LEN = Dbc.I16_LEN * 3;
+  static int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN * 3;
 
   @override
-  void run(Runtime exec) {
-    final object = exec._vStack[exec.scopeStackOffset + _objectOffset] as EvalInstanceImpl;
-    final value = exec._vStack[exec.scopeStackOffset + _valueOffset]!;
+  void run(Runtime runtime) {
+    final object = runtime.frame[_objectOffset] as $InstanceImpl;
+    final value = runtime.frame[_valueOffset]!;
     object.values[_propertyIndex] = value;
   }
 
@@ -203,21 +205,21 @@ class SetObjectPropertyImpl implements DbcOp {
 }
 
 class PushSuper implements DbcOp {
-  PushSuper(Runtime exec)
-      : _objectOffset = exec._readInt16();
+  PushSuper(Runtime runtime) :
+        _objectOffset = runtime._readInt16();
 
   final int _objectOffset;
 
   PushSuper.make(this._objectOffset);
 
-  static int LEN = Dbc.I16_LEN;
+  static int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN;
 
   @override
-  void run(Runtime exec) {
-    final object = exec._vStack[exec.scopeStackOffset + _objectOffset] as EvalInstanceImpl;
-    exec._vStack[exec._stackOffset++] = object.evalSuperclass;
+  void run(Runtime runtime) {
+    final object = runtime.frame[_objectOffset] as $InstanceImpl;
+    runtime.frame[runtime.frameOffset++] = object.evalSuperclass;
   }
 
   @override
-  String toString() => 'PushSuper (L$_objectOffset)';
+  String toString() => 'PushSuper (L$_objectOffset.super)';
 }

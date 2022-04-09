@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/src/eval/bridge/declaration/class.dart';
+import 'package:dart_eval/src/eval/bridge/declaration/type.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/source.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -15,40 +17,67 @@ import 'errors.dart';
 import 'builtins.dart';
 
 class Compiler {
-  var _bridgeLibraryIdx = -2;
+  var _bridgeLibraryIdx = 0;
+  var _bridgeStaticFunctionIdx = 0;
   final _bridgeLibraryMappings = <String, int>{};
-  final _bridgeClasses = <int, Map<String, BridgeClass>>{};
+  final _bridgeClasses = <int, Map<String, BridgeClassDeclaration>>{};
+  final ctx = CompilerContext(0);
 
   int _libraryIndex(String libraryUri) {
     if (!_bridgeLibraryMappings.containsKey(libraryUri)) {
-      _bridgeLibraryMappings[libraryUri] = _bridgeLibraryIdx--;
+      _bridgeLibraryMappings[libraryUri] = _bridgeLibraryIdx++;
     }
     final _libraryIdx = _bridgeLibraryMappings[libraryUri]!;
     if (!_bridgeClasses.containsKey(libraryUri)) {
-      _bridgeClasses[_libraryIdx] = <String, BridgeClass>{};
+      _bridgeClasses[_libraryIdx] = <String, BridgeClassDeclaration>{};
     }
     return _libraryIdx;
   }
 
-  void defineBridgeClass(BridgeClass classDef) {
+  // Manually define a (unresolved) bridge class
+  void defineBridgeClass(BridgeClassDeclaration classDef) {
     final type = classDef.type;
-    _bridgeClasses[_libraryIndex(type.library!)]![type.name!] = classDef;
+    final unresolved = type.unresolved;
+
+    if (unresolved != null) {
+      final lib = _libraryIndex(unresolved.library);
+      _bridgeClasses[lib]![unresolved.name] = classDef;
+
+      classDef.constructors.forEach((name, constructor) {
+        if (!ctx.bridgeStaticFunctionIndices.containsKey(lib)) {
+          ctx.bridgeStaticFunctionIndices[lib] = <String, int>{};
+        }
+        ctx.bridgeStaticFunctionIndices[lib]!['${unresolved.name}.$name'] = _bridgeStaticFunctionIdx++;
+      });
+
+      classDef.methods.forEach((name, method) {
+        if (!method.isStatic) return;
+        if (!ctx.bridgeStaticFunctionIndices.containsKey(lib)) {
+          ctx.bridgeStaticFunctionIndices[lib] = <String, int>{};
+        }
+        ctx.bridgeStaticFunctionIndices[lib]!['${unresolved.name}.$name'] = _bridgeStaticFunctionIdx++;
+      });
+
+      return;
+    }
+
+    throw CompileError('Cannot define a bridge class that\'s already resolved, a ref, or a generic function type');
   }
 
-  void defineBridgeClasses(List<BridgeClass> classDefs) {
+  void defineBridgeClasses(List<BridgeClassDeclaration> classDefs) {
     for (final classDef in classDefs) {
       defineBridgeClass(classDef);
     }
   }
 
+  /// Compile a set of Dart code into a program
+  /// TODO: Use graphs to compose imports
   Program compile(Map<String, Map<String, String>> packages) {
-    final ctx = CompilerContext(0);
-    final typeResolvedBridgeClasses = <int, Map<String, BridgeClass>>{};
+    final typeResolvedBridgeClasses = <int, Map<String, BridgeClassDeclaration>>{};
     final packageMap = <String, Map<String, int>>{};
     final indexMap = <int, List<String>>{};
     final partMap = <int, List<String>>{};
     final partOfMap = <int, String>{};
-    final libraryMap = <String, int>{..._bridgeLibraryMappings};
     final importMap = <int, List<ImportDirective>>{};
     final topLevelDeclarationsMap = <int, Map<String, DeclarationOrBridge>>{
       for (final e in _bridgeClasses.entries)
@@ -56,8 +85,13 @@ class Compiler {
     };
     final instanceDeclarationsMap = <int, Map<String, Map<String, Declaration>>>{};
 
+    ctx.libraryMap = <String, int>{..._bridgeLibraryMappings};
+
     for (final _blm in _bridgeLibraryMappings.entries) {
       final uri = _blm.key;
+
+      // Skip over 'package:' in the string
+      // TODO remove this when processing JSON
       final content = uri.substring(8);
       final package = content.substring(0, content.indexOf('/'));
       final file = content.substring(content.indexOf('/') + 1);
@@ -68,14 +102,18 @@ class Compiler {
       indexMap[_blm.value] = [package, file];
       final _classes = _bridgeClasses[_blm.value]!;
 
+      /// 1st-pass bridge class resolver: resolve all defined bridge classes to a type, but not their type args or
+      /// supers/implementations/mixins. Among other things, this ensures that bridge classes fill a contiguous block
+      /// of the lower indices of the compile-time type map, which allows us to map it directly to a runtime type map
       typeResolvedBridgeClasses[_blm.value] = {
         for (final _cls in _classes.entries)
-          _cls.key:
-              _cls.value.copyWith(type: BridgeTypeDescriptor.builtin(TypeRef.cache(_blm.value, _cls.value.type.name!)))
+          _cls.key: _cls.value.copyWith(
+              type: BridgeTypeReference.type(
+                  ctx.typeRefIndexMap[TypeRef.cache(ctx, _blm.value, _cls.key)]!, _cls.value.type.typeArgs))
       };
 
-      final types = Map.fromEntries(typeResolvedBridgeClasses.entries
-          .expand((element) => element.value.entries.map((e) => MapEntry(e.key, e.value.type.builtin!))));
+      final types = Map.fromEntries(typeResolvedBridgeClasses.entries.expand(
+          (element) => element.value.entries.map((e) => MapEntry(e.key, ctx.runtimeTypeList[e.value.type.cacheId!]))));
 
       ctx.visibleTypes[_blm.value] = {...coreDeclarations, ...types};
     }
@@ -112,7 +150,7 @@ class Compiler {
         final unit = _parse(source);
 
         final imports = <ImportDirective>[];
-        var myIndex = libraryMap['package:$package/$filename'];
+        var myIndex = ctx.libraryMap['package:$package/$filename'];
 
         for (final directive in unit.directives) {
           if (directive is PartDirective) {
@@ -140,7 +178,7 @@ class Compiler {
                 partMap[idx]!.add(formattedUri);
               }
             }
-            libraryMap['package:$package/$filename'] = myIndex;
+            ctx.libraryMap['package:$package/$filename'] = myIndex;
             indexMap[myIndex] = [package, filename];
           } else if (directive is PartOfDirective) {
             if (unit.directives.length > 1) {
@@ -167,8 +205,8 @@ class Compiler {
                 partMap[file]!.remove(myFormattedUri);
                 myIndex = file;
               } else {
-                myIndex = libraryMap['$formattedUri'] ?? fileIndex++;
-                libraryMap['$formattedUri'] = myIndex;
+                myIndex = ctx.libraryMap['$formattedUri'] ?? fileIndex++;
+                ctx.libraryMap['$formattedUri'] = myIndex;
               }
               partOfMap[myIndex] = formattedUri;
             } else {
@@ -199,7 +237,7 @@ class Compiler {
             topLevelDeclarationsMap[myIndex]![d.name.name] = DeclarationOrBridge(declaration: d);
             if (d is ClassDeclaration) {
               instanceDeclarationsMap[myIndex]![d.name.name] = {};
-              ctx.visibleTypes[myIndex]![d.name.name] = TypeRef.cache(myIndex!, d.name.name, fileRef: myIndex);
+              ctx.visibleTypes[myIndex]![d.name.name] = TypeRef.cache(ctx, myIndex!, d.name.name, fileRef: myIndex);
               d.members.forEach((member) {
                 if (member is MethodDeclaration) {
                   instanceDeclarationsMap[myIndex]![d.name.name]![member.name.name] = member;
@@ -272,8 +310,20 @@ class Compiler {
       });
     });
 
+    for (final type in ctx.runtimeTypeList) {
+      ctx.typeTypes.add(type.resolveTypeChain(ctx).getRuntimeIndices(ctx));
+    }
+
     return Program(
-        ctx.topLevelDeclarationPositions, ctx.instanceDeclarationPositions, ctx.offsetTracker.apply(ctx.out));
+        ctx.topLevelDeclarationPositions,
+        ctx.instanceDeclarationPositions,
+        ctx.typeNames,
+        ctx.typeTypes,
+        ctx.offsetTracker.apply(ctx.out),
+        _bridgeLibraryMappings,
+        ctx.bridgeStaticFunctionIndices,
+        ctx.constantPool.pool,
+        ctx.runtimeTypes.pool);
   }
 
   Runtime compileWriteAndLoad(Map<String, Map<String, String>> packages) {
@@ -281,8 +331,7 @@ class Compiler {
 
     final ob = program.write();
 
-    return Runtime(ob.buffer.asByteData())
-        ..copyBridgeMappings(_bridgeLibraryMappings, _bridgeClasses);
+    return Runtime(ob.buffer.asByteData());
   }
 
   CompilationUnit _parse(String source) {
@@ -292,7 +341,7 @@ class Compiler {
         stderr.addError(error);
       }
 
-      throw CompileError('Parsing error(s): $source');
+      throw CompileError('Parsing error(s): ${d.errors}');
     }
     return d.unit;
   }

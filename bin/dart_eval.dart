@@ -97,7 +97,7 @@ void main(List<String> args) {
     var result = runtime.executeNamed(0, 'main');
 
     if (result != null) {
-      if (result is EvalValue) {
+      if (result is $Value) {
         result = result.$reified;
       }
       print('\nProgram exited with result: $result');

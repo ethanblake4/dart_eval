@@ -10,6 +10,7 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
+  ctx.runPrescan(d);
   ctx.topLevelDeclarationPositions[ctx.library]![d.name.name] = beginMethod(ctx, d, d.offset, d.name.name + '()');
 
   final _existingAllocs = d.functionExpression.parameters?.parameters.length ?? 0;
@@ -28,7 +29,7 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
     if (p.type != null) {
       type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
     }
-    Vrep = Variable(i, type, boxed: !unboxedAcrossFunctionBoundaries.contains(type))..name = p.identifier!.name;
+    Vrep = Variable(i, type.copyWith(boxed: !unboxedAcrossFunctionBoundaries.contains(type)))..name = p.identifier!.name;
 
     ctx.setLocal(Vrep.name!, Vrep);
 
@@ -36,6 +37,7 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   }
 
   final b = d.functionExpression.body;
+
   StatementInfo? stInfo;
   if (b is BlockFunctionBody) {
     stInfo = compileBlock(
@@ -49,3 +51,4 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
     ctx.pushOp(Return.make(-1), Return.LEN);
   }
 }
+

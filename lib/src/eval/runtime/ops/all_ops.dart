@@ -39,11 +39,11 @@ class Dbc {
   /// [PushScope] Push stack frame
   static const OP_PUSHSCOPE = 10;
 
-  /// Set value to other value
+  /// [CopyValue] Set value to other value
   static const OP_SETVV = 11;
 
-  /// Push constant string
-  static const OP_PUSH_CONST_STR = 12;
+  /// [Pop] Push constant string
+  static const OP_POP = 12;
 
   /// [SetObjectProperty] Set object property
   static const OP_SET_OBJECT_PROP = 13;
@@ -54,8 +54,8 @@ class Dbc {
   /// [Return]
   static const OP_RETURN = 15;
 
-  /// [Pop]
-  static const OP_POP = 16;
+  /// [PopScope]
+  static const OP_POPSCOPE = 16;
 
   /// [Call]
   static const OP_CALL = 17;
@@ -81,8 +81,8 @@ class Dbc {
   /// [NumLt]
   static const OP_NUM_LT = 24;
 
-  /// [NumGt]
-  static const OP_NUM_GT = 25;
+  /// [NumLtEq]
+  static const OP_NUM_LT_EQ = 25;
 
   /// [PushSuper]
   static const OP_PUSH_SUPER = 26;
@@ -98,6 +98,36 @@ class Dbc {
 
   /// [NumSub]
   static const OP_NUM_SUB = 30;
+
+  /// [PushList]
+  static const OP_PUSH_LIST = 31;
+
+  /// [ListAppend]
+  static const OP_LIST_APPEND = 32;
+
+  /// [IndexList]
+  static const OP_INDEX_LIST = 33;
+
+  /// [PushIterableLength]
+  static const OP_ITER_LENGTH = 34;
+
+  /// [ListSetIndexed]
+  static const OP_LIST_SETINDEXED = 35;
+
+  /// [BoxString]
+  static const OP_BOXSTRING = 36;
+
+  /// [BoxList]
+  static const OP_BOXLIST = 37;
+
+  /// [PushCaptureScope]
+  static const OP_CAPTURE_SCOPE = 38;
+
+  /// [PushConstant]
+  static const OP_PUSH_CONST = 39;
+
+  /// [PushFunctionPtr]
+  static const OP_PUSH_FUNCTION_PTR = 40;
 
   static List<int> i16b(int i16) {
     final x = ByteData(2);
@@ -147,11 +177,11 @@ final List<OpLoader> ops = [
   (Runtime ex) => JumpIfFalse(ex), // 9
   (Runtime ex) => PushScope(ex), // 10
   (Runtime ex) => CopyValue(ex), // 11
-  (Runtime ex) => PushConstantString(ex), // 12
+  (Runtime ex) => Pop(ex), // 12
   (Runtime ex) => SetObjectProperty(ex), // 13
   (Runtime ex) => SetReturnValue(ex), // 14
   (Runtime ex) => Return(ex), // 15
-  (Runtime ex) => Pop(ex), // 16
+  (Runtime ex) => PopScope(ex), // 16
   (Runtime ex) => Call(ex), // 17
   (Runtime ex) => PushObjectProperty(ex), // 18
   (Runtime ex) => InvokeDynamic(ex), // 19
@@ -160,10 +190,20 @@ final List<OpLoader> ops = [
   (Runtime ex) => PushObjectPropertyImpl(ex), // 22
   (Runtime ex) => SetObjectPropertyImpl(ex), // 23
   (Runtime ex) => NumLt(ex), // 24
-  (Runtime ex) => NumGt(ex), // 25
+  (Runtime ex) => NumLtEq(ex), // 25
   (Runtime ex) => PushSuper(ex), // 26
   (Runtime ex) => BridgeInstantiate(ex), // 27
   (Runtime ex) => PushBridgeSuperShim(ex), // 28
   (Runtime ex) => ParentBridgeSuperShim(ex), // 29
-  (Runtime ex) => NumSub(ex) // 30
+  (Runtime ex) => NumSub(ex), // 30
+  (Runtime ex) => PushList(ex), // 31
+  (Runtime ex) => ListAppend(ex), // 32
+  (Runtime ex) => IndexList(ex), // 33
+  (Runtime ex) => PushIterableLength(ex), // 34
+  (Runtime ex) => ListSetIndexed(ex), // 35
+  (Runtime ex) => BoxString(ex), // 36
+  (Runtime ex) => BoxList(ex), // 37
+  (Runtime ex) => PushCaptureScope(ex), // 38
+  (Runtime ex) => PushConstant(ex), // 39
+  (Runtime ex) => PushFunctionPtr(ex) // 40
 ];

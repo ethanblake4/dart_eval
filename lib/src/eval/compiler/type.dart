@@ -1,6 +1,8 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
-import 'package:dart_eval/src/eval/compiler/expression/invocation.dart';
+import 'package:dart_eval/src/eval/bridge/declaration/type.dart';
+import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
+import 'package:dart_eval/src/eval/runtime/type.dart';
 
 import 'builtins.dart';
 import 'context.dart';
@@ -16,12 +18,13 @@ class TypeRef {
     this.genericParams = const [],
     this.specifiedTypeArgs = const [],
     this.resolved = false,
+    this.boxed = true,
   });
 
   static final _cache = <int, Map<String, TypeRef>>{};
   static final _inverseCache = <TypeRef, List<int>>{};
 
-  factory TypeRef.cache(int file, String name, {int? fileRef}) {
+  factory TypeRef.cache(CompilerContext ctx, int file, String name, {int? fileRef}) {
     TypeRef $type;
     if (!_cache.containsKey(file)) {
       _cache[file] = {};
@@ -41,14 +44,95 @@ class TypeRef {
       _inverseCache[$type]!.add(fileRef);
     }
 
+    ctx.typeRefIndexMap[$type] = ctx.typeNames.length;
+    ctx.runtimeTypeList.add($type);
+    ctx.typeNames.add(name);
+
     return $type;
+  }
+
+  factory TypeRef.commonBaseType(CompilerContext ctx, Set<TypeRef> types) {
+    final chains = types.map((e) => e.getTypeChain(ctx)).toList();
+
+    // Cross-level type deduplication
+    for (final chain in chains) {
+      final typeSet = <TypeRef>{};
+      for (final typeList in chain) {
+        for (final type in [...typeList]) {
+          if (!typeSet.contains(type)) {
+            typeSet.add(type);
+          } else {
+            typeList.remove(type);
+          }
+        }
+      }
+    }
+
+    final refCount = <TypeRef, int>{};
+    final layer = <TypeRef, int>{};
+    var i = 0;
+
+    var passes = 0;
+    t:
+    while (true) {
+      for (final chain in chains) {
+        if (i > chain.length - 1) {
+          passes++;
+          if (passes > chains.length - 1) {
+            break t;
+          }
+          continue;
+        }
+        final types = chain[i];
+        for (final type in types) {
+          if (refCount[type] == null) {
+            refCount[type] = 1;
+            layer[type] = i;
+          } else {
+            refCount[type] = refCount[type]! + 1;
+            layer[type] = layer[type]! + i;
+          }
+        }
+      }
+      passes = 0;
+      i++;
+    }
+
+    refCount.removeWhere((key, value) => value < types.length);
+
+    final sorted = refCount.keys.toList()..sort((k1, k2) => layer[k1]! - layer[k2]!);
+
+    return sorted[0];
   }
 
   factory TypeRef.fromAnnotation(CompilerContext ctx, int library, TypeAnnotation typeAnnotation) {
     if (!(typeAnnotation is NamedType)) {
       throw CompileError('No support for generic function types yet');
     }
-    return ctx.visibleTypes[library]![typeAnnotation.name.name]!;
+    final unspecifiedType = ctx.visibleTypes[library]![typeAnnotation.name.name]!;
+    final typeArgs = typeAnnotation.typeArguments;
+    if (typeArgs != null) {
+      final _resolved = <TypeRef>[];
+      for (final arg in typeArgs.arguments) {
+        _resolved.add(TypeRef.fromAnnotation(ctx, library, arg));
+      }
+      return unspecifiedType.copyWith(specifiedTypeArgs: _resolved);
+    }
+    return unspecifiedType;
+  }
+
+  factory TypeRef.fromBridgeAnnotation(CompilerContext ctx, BridgeTypeAnnotation typeAnnotation) {
+    final nullable = typeAnnotation.nullable;
+    final type = typeAnnotation.type;
+    final cacheId = type.cacheId;
+    if (cacheId != null) {
+      return ctx.runtimeTypeList[cacheId];
+    }
+    final unresolved = type.unresolved;
+    if (unresolved != null) {
+      return ctx.visibleTypes[ctx.libraryMap[unresolved.library]!]![unresolved.name]!;
+    }
+    throw CompileError('No support for looking up types by other bridge annotation types');
   }
 
   factory TypeRef.lookupClassDeclaration(CompilerContext ctx, int library, ClassDeclaration cls) {
@@ -56,6 +140,16 @@ class TypeRef {
   }
 
   static TypeRef? lookupFieldType(CompilerContext ctx, TypeRef $class, String field) {
+    if ($class.file == dartCoreFile) {
+      final _f = knownFields[$class];
+      if (_f != null) {
+        final _d = _f[field];
+        if (_d != null) {
+          return _d.fieldType?.toAlwaysReturnType($class, [], {})?.type ?? EvalTypes.dynamicType;
+        }
+      }
+      throw CompileError('Property does not exist: $field on ${$class}');
+    }
     if (ctx.instanceDeclarationsMap[$class.file]!.containsKey($class.name) &&
         ctx.instanceDeclarationsMap[$class.file]![$class.name]!.containsKey(field)) {
       final _f = ctx.instanceDeclarationsMap[$class.file]![$class.name]![field];
@@ -79,13 +173,14 @@ class TypeRef {
   }
 
   TypeRef resolveTypeChain(CompilerContext ctx) {
+    final _resolvedSpecifiedTypeArgs = specifiedTypeArgs.map((e) => e.resolveTypeChain(ctx)).toList();
     if (resolved) {
-      return this;
+      return copyWith(specifiedTypeArgs: _resolvedSpecifiedTypeArgs);
     }
 
     final $cached = _cache[file]![name]!;
     if ($cached.resolved) {
-      return $cached;
+      return $cached.copyWith(boxed: boxed, specifiedTypeArgs: _resolvedSpecifiedTypeArgs);
     }
 
     TypeRef? $super;
@@ -99,7 +194,10 @@ class TypeRef {
     List<String> withNames;
 
     if (declaration.isBridge) {
-      final br = declaration.bridge as BridgeClass;
+      implementsNames = [];
+      withNames = [];
+      /*
+      final br = declaration.bridge as BridgeClassDeclaration;
       final type = br.type;
 
       if (type.$extends?.builtin != null) {
@@ -108,8 +206,7 @@ class TypeRef {
         superName = type.$extends?.name;
       }
 
-      implementsNames = [];
-      withNames = [];
+
 
       for (final $i in type.$implements) {
         if ($i.builtin != null) {
@@ -125,7 +222,7 @@ class TypeRef {
         } else {
           withNames.add($i.name!);
         }
-      }
+      }*/
     } else {
       final dec = declaration.declaration! as ClassDeclaration;
       superName = dec.extendsClause?.superclass2.name.name;
@@ -145,8 +242,13 @@ class TypeRef {
       $implements.add(ctx.visibleTypes[file]![implementsName]!.resolveTypeChain(ctx));
     }
 
-    final _resolved =
-        TypeRef(file, name, extendsType: $super, withType: $with, implementsType: $implements, resolved: true);
+    final _resolved = TypeRef(file, name,
+        extendsType: $super,
+        withType: $with,
+        implementsType: $implements,
+        resolved: true,
+        boxed: boxed,
+        specifiedTypeArgs: _resolvedSpecifiedTypeArgs);
 
     for (final $file in _inverseCache[this]!) {
       ctx.visibleTypes[$file]![name] = _resolved;
@@ -154,6 +256,15 @@ class TypeRef {
 
     _cache[file]![name] = _resolved;
     return _resolved;
+  }
+
+  Set<int> getRuntimeIndices(CompilerContext ctx) {
+    return {ctx.typeRefIndexMap[this]!, for (final a in allSupertypes) ...a.getRuntimeIndices(ctx)};
+  }
+
+  RuntimeType toRuntimeType(CompilerContext ctx) {
+    final ta = [for (final t in specifiedTypeArgs) t.toRuntimeType(ctx)];
+    return RuntimeType(ctx.typeRefIndexMap[this]!, ta);
   }
 
   final int file;
@@ -164,11 +275,57 @@ class TypeRef {
   final List<GenericParam> genericParams;
   final List<TypeRef> specifiedTypeArgs;
   final bool resolved;
+  final bool boxed;
 
   List<TypeRef> get allSupertypes => [if (extendsType != null) extendsType!, ...implementsType, ...withType];
 
-  bool isAssignableTo(TypeRef slot, {List<TypeRef>? overrideGenerics}) {
-    if (this == EvalTypes.dynamicType) {
+  List<TypeRef> get extendsChain =>
+      [if (extendsType != null) extendsType!, if (extendsType != null) ...extendsType!.extendsChain];
+
+  List<List<TypeRef>> getTypeChain(CompilerContext ctx) {
+    final l1extends = extendsType;
+    final l2extends = extendsType?.resolveTypeChain(ctx).getTypeChain(ctx) ?? [];
+    final chain = <List<TypeRef>>[
+      if (l1extends != null) [l1extends],
+      ...l2extends
+    ];
+
+    for (final imp in implementsType.reversed) {
+      if (chain.isEmpty) {
+        chain.add([]);
+      }
+      chain[0].add(imp);
+      final tc = imp.resolveTypeChain(ctx).getTypeChain(ctx);
+      for (var i = 0; i < tc.length; i++) {
+        if (chain.length < i + 1) {
+          chain.add([]);
+        }
+        chain[i + 1].addAll(tc[i]);
+      }
+    }
+
+    for (final w in withType.reversed) {
+      if (chain.isEmpty) {
+        chain.add([]);
+      }
+      chain[0].add(w);
+      final tc = w.resolveTypeChain(ctx).getTypeChain(ctx);
+      for (var i = 0; i < tc.length; i++) {
+        if (chain.length < i + 1) {
+          chain.add([]);
+        }
+        chain[i + 1].addAll(tc[i]);
+      }
+    }
+
+    return [
+      [this],
+      ...chain
+    ];
+  }
+
+  bool isAssignableTo(TypeRef slot, {List<TypeRef>? overrideGenerics, bool forceAllowDynamic = true}) {
+    if (forceAllowDynamic && this == EvalTypes.dynamicType) {
       return true;
     }
 
@@ -176,7 +333,7 @@ class TypeRef {
 
     if (this == slot) {
       for (var i = 0; i < generics.length; i++) {
-        if (slot.specifiedTypeArgs.length >= i - 1) {
+        if (slot.specifiedTypeArgs.length - 1 > i) {
           if (!generics[i].isAssignableTo(slot.specifiedTypeArgs[i])) {
             return false;
           }
@@ -186,11 +343,31 @@ class TypeRef {
     }
 
     for (final type in allSupertypes) {
-      if (type.isAssignableTo(slot, overrideGenerics: generics)) {
+      if (type.isAssignableTo(slot, overrideGenerics: generics, forceAllowDynamic: false)) {
         return true;
       }
     }
     return false;
+  }
+
+  TypeRef copyWith(
+      {int? file,
+      String? name,
+      TypeRef? extendsType,
+      List<TypeRef>? implementsType,
+      List<TypeRef>? withType,
+      List<GenericParam>? genericParams,
+      List<TypeRef>? specifiedTypeArgs,
+      bool? boxed,
+      bool? resolved}) {
+    return TypeRef(file ?? this.file, name ?? this.name,
+        extendsType: extendsType ?? this.extendsType,
+        implementsType: implementsType ?? this.implementsType,
+        withType: withType ?? this.withType,
+        genericParams: genericParams ?? this.genericParams,
+        specifiedTypeArgs: specifiedTypeArgs ?? this.specifiedTypeArgs,
+        boxed: boxed ?? this.boxed,
+        resolved: resolved ?? this.resolved);
   }
 
   @override
@@ -208,7 +385,9 @@ class TypeRef {
 }
 
 abstract class ReturnType {
-  AlwaysReturnType? toAlwaysReturnType(List<TypeRef?> argTypes, Map<String, TypeRef?> namedArgTypes);
+  AlwaysReturnType? toAlwaysReturnType(
+      TypeRef? targetType, List<TypeRef?> argTypes, Map<String, TypeRef?> namedArgTypes,
+      {List<TypeRef> typeArgs = const []});
 }
 
 class AlwaysReturnType implements ReturnType {
@@ -224,8 +403,7 @@ class AlwaysReturnType implements ReturnType {
     }
   }
 
-  factory AlwaysReturnType.fromInstanceMethod(CompilerContext ctx, TypeRef type, String method, List<TypeRef?> argTypes,
-      Map<String, TypeRef?> namedArgTypes, TypeRef? fallback) {
+  factory AlwaysReturnType.fromInstanceMethod(CompilerContext ctx, TypeRef type, String method, TypeRef? fallback) {
     final _m = resolveInstanceMethod(ctx, type, method);
     if (_m.isBridge) {
       return AlwaysReturnType(EvalTypes.dynamicType, true);
@@ -234,28 +412,31 @@ class AlwaysReturnType implements ReturnType {
   }
 
   static AlwaysReturnType? fromInstanceMethodOrBuiltin(
-      CompilerContext ctx, TypeRef type, String method, List<TypeRef?> argTypes, Map<String, TypeRef?> namedArgTypes) {
+      CompilerContext ctx, TypeRef type, String method, List<TypeRef?> argTypes, Map<String, TypeRef?> namedArgTypes,
+      {List<TypeRef> typeArgs = const []}) {
     if (knownMethods[type] != null && knownMethods[type]!.containsKey(method)) {
       final knownMethod = knownMethods[type]![method]!;
       final returnType = knownMethod.returnType;
       if (returnType == null) {
         return null;
       }
-      return returnType.toAlwaysReturnType(argTypes, namedArgTypes);
+      return returnType.toAlwaysReturnType(type, argTypes, namedArgTypes, typeArgs: typeArgs);
     }
 
     if (type == EvalTypes.dynamicType) {
       return AlwaysReturnType(EvalTypes.dynamicType, true);
     }
 
-    return AlwaysReturnType.fromInstanceMethod(ctx, type, method, argTypes, namedArgTypes, EvalTypes.dynamicType);
+    return AlwaysReturnType.fromInstanceMethod(ctx, type, method, EvalTypes.dynamicType);
   }
 
   final TypeRef? type;
   final bool nullable;
 
   @override
-  AlwaysReturnType? toAlwaysReturnType(List<TypeRef?> argTypes, Map<String, TypeRef?> namedArgTypes) {
+  AlwaysReturnType? toAlwaysReturnType(
+      TypeRef? targetType, List<TypeRef?> argTypes, Map<String, TypeRef?> namedArgTypes,
+      {List<TypeRef> typeArgs = const []}) {
     return this;
   }
 }
@@ -269,7 +450,9 @@ class ParameterTypeDependentReturnType implements ReturnType {
   final AlwaysReturnType? fallback;
 
   @override
-  AlwaysReturnType? toAlwaysReturnType(List<TypeRef?> argTypes, Map<String, TypeRef?> namedArgTypes) {
+  AlwaysReturnType? toAlwaysReturnType(
+      TypeRef? targetType, List<TypeRef?> argTypes, Map<String, TypeRef?> namedArgTypes,
+      {List<TypeRef> typeArgs = const []}) {
     AlwaysReturnType? resolvedType;
     if (paramIndex != null) {
       resolvedType = map[argTypes[paramIndex!]];
@@ -281,6 +464,32 @@ class ParameterTypeDependentReturnType implements ReturnType {
       return fallback;
     }
     return resolvedType;
+  }
+}
+
+class TargetTypeArgDependentReturnType implements ReturnType {
+  const TargetTypeArgDependentReturnType(this.typeArgIndex);
+
+  final int typeArgIndex;
+
+  @override
+  AlwaysReturnType? toAlwaysReturnType(
+      TypeRef? targetType, List<TypeRef?> argTypes, Map<String, TypeRef?> namedArgTypes,
+      {List<TypeRef> typeArgs = const []}) {
+    return AlwaysReturnType(targetType!.specifiedTypeArgs[typeArgIndex], false);
+  }
+}
+
+class TypeArgDependentReturnType implements ReturnType {
+  const TypeArgDependentReturnType(this.typeArgIndex);
+
+  final int typeArgIndex;
+
+  @override
+  AlwaysReturnType? toAlwaysReturnType(
+      TypeRef? targetType, List<TypeRef?> argTypes, Map<String, TypeRef?> namedArgTypes,
+      {List<TypeRef> typeArgs = const []}) {
+    return AlwaysReturnType(typeArgs[typeArgIndex], false);
   }
 }
 

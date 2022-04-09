@@ -91,9 +91,30 @@ void main() {
       '''
         }});
 
-      expect(exec.executeNamed(0, 'main'), EvalInt(7));
+      expect(exec.executeNamed(0, 'main'), $int(7));
+    });
+
+    test('Basic anonymous function', () {
+      final exec = gen.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            Function r() {
+              return () {
+                return 2;
+              };
+            }
+            
+            int main () {
+              return r()();
+            }
+           '''
+        }
+      });
+
+      expect(exec.executeNamed(0, 'main'), 2);
     });
   });
+
   group('Class tests', () {
     late Compiler gen;
 
@@ -144,7 +165,7 @@ void main() {
         }
       });
 
-      expect(exec.executeNamed(0, 'main'), EvalInt(19));
+      expect(exec.executeNamed(0, 'main'), $int(19));
     });
   });
   group('Statement tests', () {
@@ -166,7 +187,7 @@ void main() {
           ''',
         }
       });
-      expect(exec.executeNamed(0, 'main'), EvalInt(555));
+      expect(exec.executeNamed(0, 'main'), $int(555));
     });
 
     test('For loop + branching', () {
@@ -188,7 +209,7 @@ void main() {
         ''' }
       });
 
-      expect(exec.executeNamed(0, 'doThing'), EvalInt(499472));
+      expect(exec.executeNamed(0, 'doThing'), $int(499472));
     });
 
   });
@@ -207,7 +228,7 @@ void main() {
         var someNumber = 19;
       
         var a = A(45);
-        for (var i = someNumber; i < 100; i = i + 1) {
+        for (var i = someNumber; i < 20; i = i + 1) {
           final n = a.calculate(i);
           if (n > someNumber) {
             a = B(555);
@@ -295,7 +316,7 @@ void main() {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
 
       final result = exec.executeNamed(0, 'main');
-      expect(result, EvalInt(555));
+      expect(result, $int(555));
       expect(DateTime.now().millisecondsSinceEpoch - timestamp, lessThan(100));
     });
 

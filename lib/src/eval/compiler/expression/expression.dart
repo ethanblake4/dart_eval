@@ -3,8 +3,11 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/assignment.dart';
 import 'package:dart_eval/src/eval/compiler/expression/binary.dart';
+import 'package:dart_eval/src/eval/compiler/expression/funcexpr_invocation.dart';
+import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/expression/identifier.dart';
-import 'package:dart_eval/src/eval/compiler/expression/invocation.dart';
+import 'package:dart_eval/src/eval/compiler/expression/index.dart';
+import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/compiler/expression/keywords.dart';
 import 'package:dart_eval/src/eval/compiler/expression/literal.dart';
 import 'package:dart_eval/src/eval/compiler/expression/postfix.dart';
@@ -14,7 +17,7 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 
 Variable compileExpression(Expression e, CompilerContext ctx) {
   if (e is Literal) {
-    return parseLiteral(e, ctx).push(ctx);
+    return parseLiteral(e, ctx);
   } else if (e is AssignmentExpression) {
     return compileAssignmentExpression(e, ctx);
   } else if (e is Identifier) {
@@ -31,6 +34,12 @@ Variable compileExpression(Expression e, CompilerContext ctx) {
     return compileSuperExpression(e, ctx);
   } else if (e is PostfixExpression) {
     return compilePostfixExpression(e, ctx);
+  } else if (e is IndexExpression) {
+    return compileIndexExpression(e, ctx);
+  } else if (e is FunctionExpression) {
+    return compileFunctionExpression(e, ctx);
+  } else if (e is FunctionExpressionInvocation) {
+    return compileFunctionExpressionInvocation(e, ctx);
   }
 
   throw CompileError('Unknown expression type ${e.runtimeType}');
@@ -41,7 +50,21 @@ Reference compileExpressionAsReference(Expression e, CompilerContext ctx) {
     return compileIdentifierAsReference(e, ctx);
   } else if (e is AssignmentExpression) {
     return compileAssignmentExpressionAsReference(e, ctx);
+  } else if (e is IndexExpression) {
+    return compileIndexExpressionAsReference(e, ctx);
   }
 
-  throw CompileError("Unknown expression type or can't reference ${e.runtimeType}");
+  throw NotReferencableError("Unknown expression type or can't reference ${e.runtimeType}");
+}
+
+bool canReference(Expression e) {
+  return e is Identifier || e is AssignmentExpression || e is IndexExpression;
+}
+
+void compileExpressionAndDiscardResult(Expression e, CompilerContext ctx) {
+  if (e is Identifier || e is AssignmentExpression || e is IndexExpression) {
+    compileExpressionAsReference(e, ctx);
+  } else {
+    compileExpression(e, ctx);
+  }
 }

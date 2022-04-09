@@ -1,48 +1,42 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/src/eval/compiler/constant_pool.dart';
+import 'package:dart_eval/src/eval/compiler/optimizer/prescan.dart';
 import 'package:dart_eval/src/eval/compiler/source.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
+import 'package:dart_eval/src/eval/compiler/util.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'package:dart_eval/src/eval/runtime/ops/all_ops.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/runtime/type.dart';
 
 import 'offset_tracker.dart';
 
-class CompilerContext {
-  CompilerContext(this.sourceFile);
+abstract class AbstractScopeContext {
+  int get scopeFrameOffset;
+  set scopeFrameOffset(int s);
 
-  final out = <DbcOp>[];
-  int library = 0;
-  int position = 0;
-  int scopeFrameOffset = 0;
-  ClassDeclaration? currentClass;
-  List<List<AstNode>> scopeNodes = [];
-  List<Map<String, Variable>> locals = [];
-  Map<int, Map<String, DeclarationOrBridge>> topLevelDeclarationsMap = {};
-  Map<int, Map<String, Map<String, Declaration>>> instanceDeclarationsMap = {};
-  late OffsetTracker offsetTracker = OffsetTracker(this);
-  Map<int, Map<String, TypeRef>> visibleTypes = {};
-  Map<int, Map<String, DeclarationOrPrefix>> visibleDeclarations = {};
-  Map<int, Map<String, int>> topLevelDeclarationPositions = {};
-  Map<int, Map<String, List<Map<String, int>>>> instanceDeclarationPositions = {};
-  List<int> allocNest = [0];
-  List<bool> inNonlinearAccessContext = [false];
+  List<Map<String, Variable>> get locals;
 
-  bool get requireNonlinearAccess => inNonlinearAccessContext.last;
+  List<int> get allocNest;
+  set allocNest(List<int> a);
 
-  int sourceFile;
+  List<bool> get inNonlinearAccessContext;
 
   int pushOp(DbcOp op, int length) {
-    out.add(op);
-    position += length;
-    return out.length - 1;
+    return 0;
   }
+}
 
-  int rewriteOp(int where, DbcOp newOp, int lengthAdjust) {
-    out[where] = newOp;
-    position += lengthAdjust;
-    return where;
-  }
+mixin ScopeContext on Object implements AbstractScopeContext  {
+  @override
+  int scopeFrameOffset = 0;
+  @override
+  List<Map<String, Variable>> locals = [];
+  @override
+  List<int> allocNest = [0];
+  @override
+  List<bool> inNonlinearAccessContext = [false];
 
   void beginAllocScope({int existingAllocLen = 0, bool requireNonlinearAccess = false}) {
     allocNest.add(existingAllocLen);
@@ -102,7 +96,7 @@ class CompilerContext {
     }
   }
 
-  ContextSaveState saveStateForBranch() {
+  ContextSaveState saveState() {
     final _state = ContextSaveState.of(this);
     return _state;
   }
@@ -124,11 +118,77 @@ class CompilerContext {
       });
     }
   }
+}
 
+class CompilerContext with ScopeContext {
+  CompilerContext(this.sourceFile);
+
+  final out = <DbcOp>[];
+  int library = 0;
+  int position = 0;
+  ClassDeclaration? currentClass;
+  Map<int, Map<String, DeclarationOrBridge>> topLevelDeclarationsMap = {};
+  Map<int, Map<String, Map<String, Declaration>>> instanceDeclarationsMap = {};
+  late OffsetTracker offsetTracker = OffsetTracker(this);
+  Map<int, Map<String, TypeRef>> visibleTypes = {};
+  Map<int, Map<String, DeclarationOrPrefix>> visibleDeclarations = {};
+  Map<int, Map<String, int>> topLevelDeclarationPositions = {};
+  Map<int, Map<String, int>> bridgeStaticFunctionIndices = {};
+  Map<int, Map<String, List>> instanceDeclarationPositions = {};
+  Map<TypeRef, int> typeRefIndexMap = {};
+  Map<String, int> libraryMap = {};
+  List<TypeRef> runtimeTypeList = [];
+  List<String> typeNames = [];
+  List<Set<int>> typeTypes = [];
+  PrescanContext? preScan;
+  final signaturePool = FunctionSignaturePool();
+  final constantPool = ConstantPool<Object>();
+  final runtimeTypes = ConstantPool<RuntimeTypeSet>();
+
+  bool get requireNonlinearAccess => inNonlinearAccessContext.last;
+
+  int sourceFile;
+
+  @override
+  int pushOp(DbcOp op, int length) {
+    out.add(op);
+    position += length;
+    return out.length - 1;
+  }
+
+  @override
+  void beginAllocScope({int existingAllocLen = 0, bool requireNonlinearAccess = false}) {
+    super.beginAllocScope(existingAllocLen: existingAllocLen, requireNonlinearAccess: requireNonlinearAccess);
+    if (preScan!.closedFrames.contains(locals.length - 1)) {
+      final ps = PushScope.make(sourceFile, -1, '#');
+      pushOp(ps, PushScope.len(ps));
+    }
+  }
+
+  @override
+  int endAllocScope({bool popValues = true, int popAdjust = 0}) {
+    if (preScan!.closedFrames.contains(locals.length - 1)) {
+      pushOp(PopScope.make(), PopScope.LEN);
+      popValues = false;
+    }
+    return super.endAllocScope(popValues: popValues, popAdjust: popAdjust);
+  }
+
+  int rewriteOp(int where, DbcOp newOp, int lengthAdjust) {
+    out[where] = newOp;
+    position += lengthAdjust;
+    return where;
+  }
+
+  void runPrescan(Declaration d) {
+    final preScanner = PrescanVisitor();
+    d.visitChildren(preScanner);
+    preScan = preScanner.ctx;
+  }
 }
 
 class ContextSaveState {
-  ContextSaveState.of(CompilerContext context)
+  ContextSaveState.of(AbstractScopeContext context)
       : locals = [...context.locals.map((e) => {...e})],
         allocNest = [...context.allocNest],
         inNonlinearAccessContext = [...context.inNonlinearAccessContext];

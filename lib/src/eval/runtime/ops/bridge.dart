@@ -1,49 +1,46 @@
 part of '../runtime.dart';
 
 class BridgeInstantiate implements DbcOp {
-  BridgeInstantiate(Runtime exec)
-      : _library = exec._readInt32(),
+  BridgeInstantiate(Runtime exec) :
         _subclass = exec._readInt16(),
-        _name = exec._readString(),
-        _constructor = exec._readString();
+        _constructor = exec._readInt32();
 
-  BridgeInstantiate.make(this._library, this._subclass, this._name, this._constructor);
+  BridgeInstantiate.make(this._subclass, this._constructor);
 
-  final int _library;
-  final String _name;
-  final String _constructor;
   final int _subclass;
+  final int _constructor;
 
   static int len(BridgeInstantiate s) {
-    return Dbc.BASE_OPLEN + Dbc.I32_LEN + Dbc.I16_LEN + Dbc.istr_len(s._name) + Dbc.istr_len(s._constructor);
+    return Dbc.BASE_OPLEN + Dbc.I16_LEN + Dbc.I32_LEN;
   }
 
   @override
   void run(Runtime runtime) {
-    final $subclass = runtime._vStack[runtime.scopeStackOffset + _subclass] as EvalInstance?;
-    final $cls = runtime._bridgeClasses[_library]![_name]!;
+    final $subclass = runtime.frame[_subclass] as $Instance?;
+
     final _args = runtime.args;
     final _argsLen = _args.length;
-    final _mappedArgs = List<Object?>.filled(_argsLen, null);
 
+    final _mappedArgs = List<$Value?>.filled(_argsLen, null);
     for (var i = 0; i < _argsLen; i++) {
-      _mappedArgs[i] = (_args[i] as EvalValue?)?.$reified;
+      _mappedArgs[i] = (_args[i] as $Value?);
     }
 
     runtime.args = [];
 
-    final instance = $cls.constructors[_constructor]!.instantiator(_mappedArgs);
-    Runtime.bridgeData[instance] = BridgeData(runtime, $subclass ?? BridgeDelegatingShim());
+    final $runtimeType = 1;
+    final instance = runtime._bridgeFunctions[_constructor].func(runtime, null, _mappedArgs) as $Instance;
+    Runtime.bridgeData[instance] = BridgeData(runtime, $runtimeType, $subclass ?? BridgeDelegatingShim());
 
-    runtime._vStack[runtime._stackOffset++] = instance;
+    runtime.frame[runtime.frameOffset++] = instance;
   }
 
   @override
-  String toString() => 'BridgeInstantiate (F$_library:"$_name", subclass L$_subclass, constructor=$_constructor))';
+  String toString() => 'BridgeInstantiate (subclass L$_subclass, fn=$_constructor))';
 }
 
 class PushBridgeSuperShim extends DbcOp {
-  PushBridgeSuperShim(Runtime exec);
+  PushBridgeSuperShim(Runtime runtime);
 
   PushBridgeSuperShim.make();
 
@@ -51,7 +48,7 @@ class PushBridgeSuperShim extends DbcOp {
 
   @override
   void run(Runtime runtime) {
-    runtime._vStack[runtime._stackOffset++] = BridgeSuperShim();
+    runtime.frame[runtime.frameOffset++] = BridgeSuperShim();
   }
 
   @override
@@ -72,8 +69,8 @@ class ParentBridgeSuperShim extends DbcOp {
 
   @override
   void run(Runtime runtime) {
-    final shim = runtime._vStack[runtime.scopeStackOffset + _shimOffset] as BridgeSuperShim;
-    shim.bridge = runtime._vStack[runtime.scopeStackOffset + _bridgeOffset] as BridgeInstance;
+    final shim = runtime.frame[_shimOffset] as BridgeSuperShim;
+    shim.bridge = runtime.frame[_bridgeOffset] as $Bridge;
   }
 
   @override

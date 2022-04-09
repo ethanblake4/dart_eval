@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/runtime/type.dart';
 
 import 'exception.dart';
 import 'ops/all_ops.dart';
@@ -23,6 +25,27 @@ class ScopeFrame {
   final int stackOffset;
   final int scopeStackOffset;
   final bool entrypoint;
+
+  @override
+  String toString() {
+    return '$stackOffset (scope $scopeStackOffset)';
+  }
+}
+
+class _UnloadedBridgeClass {
+  const _UnloadedBridgeClass(this.library, this.name, this.cls);
+
+  final String library;
+  final String name;
+  final $Bridge cls;
+}
+
+class _UnloadedBridgeFunction {
+  const _UnloadedBridgeFunction(this.library, this.name, this.func);
+
+  final String library;
+  final String name;
+  final $Function func;
 }
 
 class Runtime {
@@ -30,19 +53,23 @@ class Runtime {
     loadProgram();
   }
 
-  Runtime.ofProgram(Program program) : id = _id++ {
+  Runtime.ofProgram(Program program)
+      : id = _id++,
+        typeTypes = program.typeTypes,
+        typeNames = program.typeNames,
+        runtimeTypes = program.runtimeTypes {
     declarations = program.topLevelDeclarations;
+    constantPool.addAll(program.constantPool);
     program.instanceDeclarations.forEach((file, $class) {
       final decls = <String, EvalClass>{};
 
       $class.forEach((name, declarations) {
-        final dc = declarations.cast<Map>();
+        final getters = (declarations[0] as Map).cast<String, int>();
+        final setters = (declarations[1] as Map).cast<String, int>();
+        final methods = (declarations[2] as Map).cast<String, int>();
+        final type = (declarations[3] as int);
 
-        final getters = (dc[0]).cast<String, int>();
-        final setters = (dc[1]).cast<String, int>();
-        final methods = (dc[2]).cast<String, int>();
-
-        final cls = EvalClass(null, [], {...getters}, {...setters}, {...methods});
+        final cls = EvalClass(type, null, [], {...getters}, {...setters}, {...methods});
         decls[name] = cls;
       });
 
@@ -52,36 +79,63 @@ class Runtime {
     pr.addAll(program.ops);
   }
 
+  void loadProgram() {
+    final encodedToplevelDecs = _readString();
+    final encodedInstanceDecs = _readString();
+    final encodedTypeNames = _readString();
+    final encodedTypeTypes = _readString();
+    final encodedBridgeLibraryMappings = _readString();
+    final encodedBridgeFuncMappings = _readString();
+    final encodedConstantPool = _readString();
+    final encodedRuntimeTypes = _readString();
+
+    declarations =
+        (json.decode(encodedToplevelDecs).map((k, v) => MapEntry(int.parse(k), (v as Map).cast<String, int>())) as Map)
+            .cast<int, Map<String, int>>();
+
+    final classes =
+        (json.decode(encodedInstanceDecs).map((k, v) => MapEntry(int.parse(k), (v as Map).cast<String, List>())) as Map)
+            .cast<int, Map<String, List>>();
+
+    classes.forEach((file, $class) {
+      declaredClasses[file] = {for (final decl in $class.entries) decl.key: EvalClass.fromJson(decl.value)};
+    });
+
+    typeNames = (json.decode(encodedTypeNames) as List).cast();
+    typeTypes = [for (final s in (json.decode(encodedTypeTypes) as List)) (s as List).cast<int>().toSet()];
+
+    _bridgeLibraryMappings = (json.decode(encodedBridgeLibraryMappings) as Map).cast();
+
+    final bridgeFuncMappings = (json.decode(encodedBridgeFuncMappings) as Map).cast<String, Map>().map((key, value) =>
+        MapEntry(int.parse(key), value.cast<String, int>()));
+
+    constantPool.addAll((json.decode(encodedConstantPool) as List).cast());
+
+    runtimeTypes = [for (final s in (json.decode(encodedRuntimeTypes) as List)) RuntimeTypeSet.fromJson(s as List)];
+
+    for (final ulb in _unloadedBrFunc) {
+      final libIndex = _bridgeLibraryMappings[ulb.library]!;
+      _bridgeFunctions[bridgeFuncMappings[libIndex]![ulb.name]!] = ulb.func;
+    }
+
+    while (_offset < _dbc.lengthInBytes) {
+      final opId = _dbc.getUint8(_offset);
+      _offset++;
+      pr.add(ops[opId](this));
+    }
+  }
+
+  void registerBridgeClass(String library, String name, $Bridge cls) {
+    _unloadedBrClass.add(_UnloadedBridgeClass(library, name, cls));
+  }
+
   var _bridgeLibraryIdx = -2;
   var _bridgeLibraryMappings = <String, int>{};
-  var _bridgeClasses = <int, Map<String, BridgeClass>>{};
-
-  int _libraryIndex(String libraryUri) {
-    if (!_bridgeLibraryMappings.containsKey(libraryUri)) {
-      _bridgeLibraryMappings[libraryUri] = _bridgeLibraryIdx--;
-    }
-    final _libraryIdx = _bridgeLibraryMappings[libraryUri]!;
-    if (!_bridgeClasses.containsKey(libraryUri)) {
-      _bridgeClasses[_libraryIdx] = <String, BridgeClass>{};
-    }
-    return _libraryIdx;
-  }
-
-  void copyBridgeMappings(Map<String, int> libraries, Map<int, Map<String, BridgeClass>> classes) {
-    _bridgeLibraryMappings = libraries;
-    _bridgeClasses = classes;
-  }
-
-  void defineBridgeClass(BridgeClass classDef) {
-    final type = classDef.type;
-    _bridgeClasses[_libraryIndex(type.library!)]![type.name!] = classDef;
-  }
-
-  void defineBridgeClasses(List<BridgeClass> classDefs) {
-    for (final classDef in classDefs) {
-      defineBridgeClass(classDef);
-    }
-  }
+  var _bridgeFunctions = <$Function>[];
+  var _bridgeGlobals = <int, Map<String, $BridgeField>>{};
+  final _unloadedBrClass = <_UnloadedBridgeClass>[];
+  final _unloadedBrFunc = <_UnloadedBridgeFunction>[];
+  final constantPool = <Object>[];
 
   static List<int> opcodeFrom(DbcOp op) {
     switch (op.runtimeType) {
@@ -93,7 +147,7 @@ class Runtime {
         return [Dbc.OP_EXIT, ...Dbc.i16b(op._location)];
       case Unbox:
         op as Unbox;
-        return [Dbc.OP_UNBOX, ...Dbc.i16b(op._position)];
+        return [Dbc.OP_UNBOX, ...Dbc.i16b(op._reg)];
       case PushReturnValue:
         op as PushReturnValue;
         return [Dbc.OP_SETVR];
@@ -105,7 +159,7 @@ class Runtime {
         return [Dbc.OP_NUM_SUB, ...Dbc.i16b(op._location1), ...Dbc.i16b(op._location2)];
       case BoxInt:
         op as BoxInt;
-        return [Dbc.OP_BOXINT, ...Dbc.i16b(op._position)];
+        return [Dbc.OP_BOXINT, ...Dbc.i16b(op._reg)];
       case PushArg:
         op as PushArg;
         return [Dbc.OP_PUSH_ARG, ...Dbc.i16b(op._location)];
@@ -121,12 +175,12 @@ class Runtime {
       case PushScope:
         op as PushScope;
         return [Dbc.OP_PUSHSCOPE, ...Dbc.i32b(op.sourceFile), ...Dbc.i32b(op.sourceOffset), ...Dbc.istr(op.frName)];
+      case PopScope:
+        op as PopScope;
+        return [Dbc.OP_POPSCOPE];
       case CopyValue:
         op as CopyValue;
         return [Dbc.OP_SETVV, ...Dbc.i16b(op._to), ...Dbc.i16b(op._from)];
-      case PushConstantString:
-        op as PushConstantString;
-        return [Dbc.OP_PUSH_CONST_STR, ...Dbc.istr(op._value)];
       case SetReturnValue:
         op as SetReturnValue;
         return [Dbc.OP_SETRV, ...Dbc.i16b(op._location)];
@@ -179,9 +233,9 @@ class Runtime {
       case NumLt:
         op as NumLt;
         return [Dbc.OP_NUM_LT, ...Dbc.i16b(op._location1), ...Dbc.i16b(op._location2)];
-      case NumGt:
-        op as NumGt;
-        return [Dbc.OP_NUM_GT, ...Dbc.i16b(op._location1), ...Dbc.i16b(op._location2)];
+      case NumLtEq:
+        op as NumLtEq;
+        return [Dbc.OP_NUM_LT_EQ, ...Dbc.i16b(op._location1), ...Dbc.i16b(op._location2)];
       case PushSuper:
         op as PushSuper;
         return [Dbc.OP_PUSH_SUPER, ...Dbc.i16b(op._objectOffset)];
@@ -189,10 +243,8 @@ class Runtime {
         op as BridgeInstantiate;
         return [
           Dbc.OP_BRIDGE_INSTANTIATE,
-          ...Dbc.i32b(op._library),
           ...Dbc.i16b(op._subclass),
-          ...Dbc.istr(op._name),
-          ...Dbc.istr(op._constructor)
+          ...Dbc.i32b(op._constructor)
         ];
       case PushBridgeSuperShim:
         op as PushBridgeSuperShim;
@@ -200,6 +252,36 @@ class Runtime {
       case ParentBridgeSuperShim:
         op as ParentBridgeSuperShim;
         return [Dbc.OP_PARENT_SUPER_SHIM, ...Dbc.i16b(op._shimOffset), ...Dbc.i16b(op._bridgeOffset)];
+      case PushList:
+        op as PushList;
+        return [Dbc.OP_PUSH_LIST];
+      case ListAppend:
+        op as ListAppend;
+        return [Dbc.OP_LIST_APPEND, ...Dbc.i16b(op._reg), ...Dbc.i16b(op._value)];
+      case IndexList:
+        op as IndexList;
+        return [Dbc.OP_INDEX_LIST, ...Dbc.i16b(op._position), ...Dbc.i32b(op._index)];
+      case PushIterableLength:
+        op as PushIterableLength;
+        return [Dbc.OP_ITER_LENGTH, ...Dbc.i16b(op._position)];
+      case ListSetIndexed:
+        op as ListSetIndexed;
+        return [Dbc.OP_LIST_SETINDEXED, ...Dbc.i16b(op._position), ...Dbc.i32b(op._index), ...Dbc.i16b(op._value)];
+      case BoxString:
+        op as BoxString;
+        return [Dbc.OP_BOXSTRING, ...Dbc.i16b(op._reg)];
+      case BoxList:
+        op as BoxList;
+        return [Dbc.OP_BOXLIST, ...Dbc.i16b(op._reg)];
+      case PushCaptureScope:
+        op as PushCaptureScope;
+        return [Dbc.OP_CAPTURE_SCOPE];
+      case PushConstant:
+        op as PushConstant;
+        return [Dbc.OP_PUSH_CONST, ...Dbc.i32b(op._const)];
+      case PushFunctionPtr:
+        op as PushFunctionPtr;
+        return [Dbc.OP_PUSH_FUNCTION_PTR, ...Dbc.i32b(op._offset)];
       default:
         throw ArgumentError('Not a valid op $op');
     }
@@ -210,71 +292,22 @@ class Runtime {
 
   static final bridgeData = Expando<BridgeData>();
   late ByteData _dbc;
-  final _vStack = List<Object?>.filled(65535, null);
+  final stack = <List<Object?>>[];
+  List<Object?> frame = [];
   var args = <Object?>[];
   final pr = <DbcOp>[];
   Object? returnValue;
-  var scopeStack = <ScopeFrame>[ScopeFrame(0, 0)];
-  var scopeStackOffset = 0;
+  final frameOffsetStack = <int>[0];
   final callStack = <int>[0];
   var declarations = <int, Map<String, int>>{};
   final declaredClasses = <int, Map<String, EvalClass>>{};
-  int _stackOffset = 0;
+  late final List<String> typeNames;
+  late final List<Set<int>> typeTypes;
+  late final List<RuntimeTypeSet> runtimeTypes;
+
+  int frameOffset = 0;
   int _offset = 0;
   int _prOffset = 0;
-
-  void loadProgram() {
-    final metaLength = _dbc.getInt32(0);
-    final metaStr = <int>[];
-    _offset = 4;
-    while (_offset < metaLength + 4) {
-      metaStr.add(_dbc.getUint8(_offset));
-      _offset++;
-    }
-
-    final classesLength = _dbc.getInt32(_offset);
-    final classStr = <int>[];
-
-    _offset += 4;
-
-    final _startOffset = _offset;
-    while (_offset < classesLength + _startOffset) {
-      classStr.add(_dbc.getUint8(_offset));
-      _offset++;
-    }
-
-    declarations =
-        (json.decode(utf8.decode(metaStr)).map((k, v) => MapEntry(int.parse(k), (v as Map).cast<String, int>())) as Map)
-            .cast<int, Map<String, int>>();
-
-    final classes = (json
-            .decode(utf8.decode(classStr))
-            .map((k, v) => MapEntry(int.parse(k), (v as Map).cast<String, List>())) as Map)
-        .cast<int, Map<String, List>>();
-
-    classes.forEach((file, classs) {
-      final decls = <String, EvalClass>{};
-
-      classs.forEach((name, declarations) {
-        final dc = declarations.cast<Map>();
-
-        final getters = (dc[0]).cast<String, int>();
-        final setters = (dc[1]).cast<String, int>();
-        final methods = (dc[2]).cast<String, int>();
-
-        final cls = EvalClass(null, [], {...getters}, {...setters}, {...methods});
-        decls[name] = cls;
-      });
-
-      declaredClasses[file] = decls;
-    });
-
-    while (_offset < _dbc.lengthInBytes) {
-      final opId = _dbc.getUint8(_offset);
-      _offset++;
-      pr.add(ops[opId](this));
-    }
-  }
 
   void printOpcodes() {
     var i = 0;
@@ -298,9 +331,13 @@ class Runtime {
       }
     } on ProgramExit catch (_) {
       return returnValue;
+    } catch (e, stk) {
+      throw RuntimeException(this, e, stk);
     }
   }
 
+  /// Run the VM in a 'sub-state' of a parent invocation of the VM. Used for bridge calls.
+  /// For performance reasons, avoid making excessive use of this pattern, despite its convenience
   void bridgeCall(int $offset) {
     final _savedOffset = _prOffset;
     _prOffset = $offset;
@@ -316,7 +353,6 @@ class Runtime {
       return;
     }
   }
-
 
   @pragma('vm:always-inline')
   int _readInt32() {
@@ -357,4 +393,35 @@ class Runtime {
 
   @override
   int get hashCode => id.hashCode;
+}
+
+class RuntimeException implements Exception {
+  const RuntimeException(this.runtime, this.caughtException, this.stackTrace);
+
+  final Runtime runtime;
+  final Object caughtException;
+  final StackTrace stackTrace;
+
+  @override
+  String toString() {
+    var prStr = '';
+    final maxIdx = min(runtime.pr.length - 1, runtime._prOffset + 3);
+
+    for (var i = max(0, runtime._prOffset - 7); i < maxIdx; i++) {
+      prStr += '$i: ${runtime.pr[i]}';
+      if (i == runtime._prOffset - 1) {
+        prStr += '  <<< EXCEPTION';
+      }
+      prStr += '\n';
+    }
+
+    return 'dart_eval runtime exception: $caughtException\n'
+        '${stackTrace.toString().split("\n").take(2).join('\n')}\n\n'
+        'RUNTIME STATE\n'
+        '=============\n'
+        'Program offset: ${runtime._prOffset - 1}\n'
+        'Stack sample: ${runtime.stack.last.take(10).toList()}\n'
+        'Call stack: ${runtime.callStack}\n'
+        'TRACE:\n$prStr';
+  }
 }

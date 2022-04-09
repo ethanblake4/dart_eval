@@ -134,9 +134,8 @@ To support value interop, a class need simply to implement `EvalValue`, or mix-i
 Using a wrapper enables the Eval environment to access the functions and fields on
 a class created outside Eval. It's much more powerful than value interop, and
 simpler than bridge interop, making it a great choice for certain use cases. To use
-wrapper interop, create a class that implements `EvalInstance` and `EvalValueImpl<T>`
-where T is the wrapped type. Then, implement `$getProperty` / `$setProperty` to define
-your fields and methods.
+wrapper interop, create a class that implements `EvalInstance`. Then, implement 
+`$getProperty` / `$setProperty` to define your fields and methods.
 
 ### Bridge interop
 

@@ -3,16 +3,22 @@ import 'package:dart_eval/src/eval/runtime/exception.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 /// Interface for objects with a backing value
-abstract class EvalValue {
+abstract class $Value {
+  int get $runtimeType;
   dynamic get $value;
   dynamic get $reified;
 }
 
 /// Implementation for objects with a backing value
-mixin EvalValueImpl<T> implements EvalValue {
+class $ValueImpl<T> implements $Value {
+  const $ValueImpl(this.$runtimeType, this.$value);
+
+  @override
+  final int $runtimeType;
+
   /// The backing Dart value
   @override
-  late T $value;
+  final T $value;
 
   /// Transform this value into a Dart value, fully usable outside Eval
   /// This includes recursively transforming values inside collections
@@ -21,38 +27,42 @@ mixin EvalValueImpl<T> implements EvalValue {
 }
 
 /// Instance
-abstract class EvalInstance implements EvalValue {
-  EvalValue? $getProperty(Runtime runtime, String identifier);
+abstract class $Instance implements $Value {
+  $Value? $getProperty(Runtime runtime, String identifier);
 
-  void $setProperty(Runtime runtime, String identifier, EvalValue value);
+  void $setProperty(Runtime runtime, String identifier, $Value value);
 }
 
-class EvalInstanceImpl implements EvalInstance {
+class $InstanceImpl implements $Instance {
 
   final EvalClass evalClass;
-
-  final EvalInstance? evalSuperclass;
+  final $Instance? evalSuperclass;
   late final List<Object?> values;
 
-  EvalInstanceImpl(this.evalClass, this.evalSuperclass, this.values);
+  $InstanceImpl(this.evalClass, this.evalSuperclass, this.values);
 
   @override
-  EvalValue? $getProperty(Runtime runtime, String identifier) {
+  int get $runtimeType => evalClass.delegatedType;
+
+  @override
+  $Value? $getProperty(Runtime runtime, String identifier) {
     final getter = evalClass.getters[identifier];
     if (getter == null) {
       final method = evalClass.methods[identifier];
       if (method == null) {
         return evalSuperclass?.$getProperty(runtime, identifier);
       }
-      return EvalFunctionPtr(this, method);
+      // TODO
+      return null;
+      //return EvalFunctionPtr(this, method);
     }
     runtime.args.add(this);
     runtime.bridgeCall(getter);
-    return runtime.returnValue as EvalValue;
+    return runtime.returnValue as $Value;
   }
 
   @override
-  void $setProperty(Runtime runtime, String identifier, EvalValue value) {
+  void $setProperty(Runtime runtime, String identifier, $Value value) {
     final setter = evalClass.setters[identifier];
     if (setter == null) {
       if (evalSuperclass != null) {
@@ -82,17 +92,17 @@ class EvalTypeClass implements EvalClass {
   Never get $value => throw UnimplementedError();
 
   @override
-  EvalValue? $getProperty(Runtime runtime, String identifier) {
+  $Value? $getProperty(Runtime runtime, String identifier) {
     throw UnimplementedError();
   }
 
   @override
-  void $setProperty(Runtime runtime, String identifier, EvalValue value) {
+  void $setProperty(Runtime runtime, String identifier, $Value value) {
     throw UnimplementedError();
   }
 
   @override
-  EvalInstance? get evalSuperclass => throw UnimplementedError();
+  $Instance? get evalSuperclass => throw UnimplementedError();
 
   @override
   Never get $reified => throw UnimplementedError();
@@ -123,4 +133,10 @@ class EvalTypeClass implements EvalClass {
 
   @override
   set values(List<Object?> _values) => throw UnimplementedError();
+
+  @override
+  int get $runtimeType => throw UnimplementedError();
+
+  @override
+  int get delegatedType => throw UnimplementedError();
 }

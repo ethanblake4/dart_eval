@@ -12,7 +12,7 @@ Variable compilePostfixExpression(PostfixExpression e, CompilerContext ctx) {
   var out = L;
 
   if (L.name != null) {
-    out = Variable.alloc(ctx, L.type, boxed: L.boxed);
+    out = Variable.alloc(ctx, L.type);
     ctx.pushOp(PushNull.make(), PushNull.LEN);
     ctx.pushOp(CopyValue.make(out.scopeFrameOffset, L.scopeFrameOffset), CopyValue.LEN);
   }
@@ -22,7 +22,7 @@ Variable compilePostfixExpression(PostfixExpression e, CompilerContext ctx) {
     TokenType.MINUS_MINUS: '-'
   };
 
-  V.setValue(ctx, L.invoke(ctx, opMap[e.operator.type]!, [BuiltinValue(intval: 1).push(ctx)]).second);
+  V.setValue(ctx, L.invoke(ctx, opMap[e.operator.type]!, [BuiltinValue(intval: 1).push(ctx)]).result);
 
   return out;
 }

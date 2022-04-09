@@ -1,9 +1,11 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/declaration.dart';
+import 'package:dart_eval/src/eval/compiler/type.dart';
 
 void compileClassDeclaration(CompilerContext ctx, ClassDeclaration d) {
-  ctx.instanceDeclarationPositions[ctx.library]![d.name.name] = [{}, {}, {}];
+  final $runtimeType = ctx.typeRefIndexMap[TypeRef.lookupClassDeclaration(ctx, ctx.library, d)];
+  ctx.instanceDeclarationPositions[ctx.library]![d.name.name] = [{}, {}, {}, $runtimeType];
   final constructors = <ConstructorDeclaration>[];
   final fields = <FieldDeclaration>[];
   final methods = <MethodDeclaration>[];

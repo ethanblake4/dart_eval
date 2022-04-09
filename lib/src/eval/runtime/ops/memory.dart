@@ -12,7 +12,7 @@ class PushArg implements DbcOp {
   // Set value at position to constant
   @override
   void run(Runtime exec) {
-    exec.args.add(exec._vStack[exec.scopeStackOffset + _location]);
+    exec.args.add(exec.frame[_location]);
   }
 
   @override
@@ -30,7 +30,7 @@ class Pop implements DbcOp {
 
   @override
   void run(Runtime exec) {
-    exec._stackOffset -= _amount;
+    exec.frameOffset -= _amount;
   }
 
   @override
@@ -46,7 +46,7 @@ class PushReturnValue implements DbcOp {
 
   @override
   void run(Runtime exec) {
-    exec._vStack[exec._stackOffset++] = exec.returnValue;
+    exec.frame[exec.frameOffset++] = exec.returnValue;
   }
 
   @override
@@ -64,7 +64,7 @@ class SetReturnValue implements DbcOp {
 
   @override
   void run(Runtime exec) {
-    exec.returnValue = exec._vStack[exec.scopeStackOffset + _location] as int;
+    exec.returnValue = exec.frame[_location] as int;
   }
 
   @override
@@ -86,8 +86,7 @@ class CopyValue implements DbcOp {
   // Conditional move
   @override
   void run(Runtime exec) {
-
-    exec._vStack[exec.scopeStackOffset + _to] = exec._vStack[exec.scopeStackOffset + _from];
+    exec.frame[_to] = exec.frame[_from];
   }
 
   @override

@@ -24,5 +24,6 @@ Variable compileSuperExpression(SuperExpression e, CompilerContext ctx) {
   }
 
   ctx.pushOp(PushSuper.make(0), PushSuper.LEN);
-  return Variable.alloc(ctx, type);
+  final v = Variable.alloc(ctx, type);
+  return v;
 }

@@ -27,7 +27,7 @@ Reference compileAssignmentExpressionAsReference(AssignmentExpression e, Compile
       TokenType.MINUS_EQ: '-'
     };
     final method = opMap[e.operator.type]!;
-    L.setValue(ctx, L.getValue(ctx).invoke(ctx, method, [R]).second);
+    L.setValue(ctx, L.getValue(ctx).invoke(ctx, method, [R]).result);
   }
   return L;
 }

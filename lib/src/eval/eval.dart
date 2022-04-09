@@ -1,7 +1,9 @@
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 
-dynamic eval(String source, {String function = 'main', List<BridgeClass> bridgeClasses = const []}) {
+import 'bridge/declaration/class.dart';
+
+dynamic eval(String source, {String function = 'main', List<BridgeClassDeclaration> bridgeClasses = const []}) {
   final compiler = Compiler();
   compiler.defineBridgeClasses(bridgeClasses);
 
@@ -22,11 +24,13 @@ dynamic eval(String source, {String function = 'main', List<BridgeClass> bridgeC
   });
 
   final runtime = Runtime.ofProgram(program);
-  runtime.defineBridgeClasses(bridgeClasses);
-  
+
+  //runtime.defineBridgeClasses(bridgeClasses);
+  runtime.printOpcodes();
+
   final result = runtime.executeNamed(0, function);
 
-  if (result is EvalValue) {
+  if (result is $Value) {
     return result.$reified;
   }
   return result;

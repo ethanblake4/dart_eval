@@ -26,11 +26,15 @@ class OffsetTracker {
   }
 }
 
+/// An structure pointing to a function that may or may not have been generated already. If it hasn't, the exact program
+/// offset will be resolved later by the [OffsetTracker]
 class DeferredOrOffset {
-  DeferredOrOffset({this.offset, this.file, this.name});
+  DeferredOrOffset({this.offset, this.file, this.name, this.className, this.methodType});
 
   final int? offset;
   final int? file;
+  final String? className;
+  final int? methodType;
   final String? name;
 
   factory DeferredOrOffset.lookupConstructor(CompilerContext ctx, int library, String parent, String name) {

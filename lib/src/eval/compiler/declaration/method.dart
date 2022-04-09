@@ -11,6 +11,7 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx, NamedCompilationUnitMember parent) {
+  ctx.runPrescan(d);
   final b = d.body;
   final pos = beginMethod(ctx, d, d.offset, parent.name.name + '.' + d.name.name + '()');
 

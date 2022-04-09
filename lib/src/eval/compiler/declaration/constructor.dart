@@ -1,10 +1,11 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/bridge/declaration/class.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
-import 'package:dart_eval/src/eval/compiler/expression/invocation.dart';
+import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/scope.dart';
 import 'package:dart_eval/src/eval/compiler/source.dart';
@@ -61,7 +62,7 @@ void compileConstructorDeclaration(
       _type ??= V?.type;
       _type ??= EvalTypes.dynamicType;
 
-      Vrep = Variable(i, _type, boxed: !unboxedAcrossFunctionBoundaries.contains(_type)).boxIfNeeded(ctx)
+      Vrep = Variable(i, _type.copyWith(boxed: !unboxedAcrossFunctionBoundaries.contains(_type))).boxIfNeeded(ctx)
         ..name = p.identifier.name;
 
       fieldFormalNames.add(p.identifier.name);
@@ -86,7 +87,7 @@ void compileConstructorDeclaration(
   final argTypes = <TypeRef?>[];
   final namedArgTypes = <String, TypeRef?>{};
 
-  var constructorName = $superInitializer?.constructorName?.name ?? '';;
+  var constructorName = $superInitializer?.constructorName?.name ?? '';
 
   if ($extends == null) {
     $super = BuiltinValue().push(ctx);
@@ -116,7 +117,7 @@ void compileConstructorDeclaration(
         namedArgTypes.addAll(_namedArgs.map((key, value) => MapEntry(key, value.type)));
       }
 
-      final method = Reference(null, '${extendsType.name}.$constructorName').getValue(ctx);
+      final method = IdentifierReference(null, '${extendsType.name}.$constructorName').getValue(ctx);
       if (method.methodOffset == null) {
         throw CompileError('Cannot call $constructorName as it is not a valid method');
       }
@@ -126,11 +127,11 @@ void compileConstructorDeclaration(
       if (offset.offset == null) {
         ctx.offsetTracker.setOffset(loc, offset);
       }
-      mReturnType = method.methodReturnType?.toAlwaysReturnType(argTypes, namedArgTypes) ??
+      final clsType = TypeRef.lookupClassDeclaration(ctx, ctx.library, parent);
+      mReturnType = method.methodReturnType?.toAlwaysReturnType(clsType, argTypes, namedArgTypes) ??
           AlwaysReturnType(EvalTypes.dynamicType, true);
 
       ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-
       $super = Variable.alloc(ctx, mReturnType.type ?? EvalTypes.dynamicType);
     }
   }
@@ -157,22 +158,23 @@ void compileConstructorDeclaration(
   }
 
   if ($extends != null && extendsWhat!.declaration!.isBridge) {
-    final bridge = extendsWhat.declaration!.bridge! as BridgeClass;
+    final bridge = extendsWhat.declaration!.bridge! as BridgeClassDeclaration;
 
     if ($superInitializer != null) {
       final constructor = bridge.constructors[constructorName]!;
-      final argsPair = compileArgumentListWithBridge(ctx, $superInitializer.argumentList, constructor);
+      final argsPair =
+          compileArgumentListWithBridge(ctx, $superInitializer.argumentList, constructor.functionDescriptor);
       final _args = argsPair.first;
       final _namedArgs = argsPair.second;
       argTypes.addAll(_args.map((e) => e.type).toList());
       namedArgTypes.addAll(_namedArgs.map((key, value) => MapEntry(key, value.type)));
     }
 
-    final op =
-        BridgeInstantiate.make(extendsWhat.sourceLib, instOffset, $extends.superclass2.name.name, constructorName);
+    final op = BridgeInstantiate.make(instOffset,
+        ctx.bridgeStaticFunctionIndices[extendsWhat.sourceLib]!['${$extends.superclass2.name.name}.$constructorName']!);
     ctx.pushOp(op, BridgeInstantiate.len(op));
-
     final bridgeInst = Variable.alloc(ctx, EvalTypes.dynamicType);
+
     ctx.pushOp(
         ParentBridgeSuperShim.make($super.scopeFrameOffset, bridgeInst.scopeFrameOffset), ParentBridgeSuperShim.LEN);
 
