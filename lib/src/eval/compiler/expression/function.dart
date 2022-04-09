@@ -73,6 +73,7 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
 
   final positional = (e.parameters?.parameters.where((element) => element.isPositional) ?? []);
   final requiredPositionalArgCount = positional.where((element) => element.isRequired).length;
+
   final positionalArgTypes = positional.cast<SimpleFormalParameter>()
         .map((a) => a.type == null ? EvalTypes.dynamicType : TypeRef.fromAnnotation(ctx, ctx.library, a.type!))
         .map((t) => t.toRuntimeType(ctx))
@@ -81,7 +82,7 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
 
   final named = (e.parameters?.parameters.where((element) => element.isNamed) ?? []);
   final sortedNamedArgs = named.toList()..sort((e1, e2) => e1.identifier!.name.compareTo(e2.identifier!.name));
-  final sortedNamedArgNames = sortedNamedArgs.map((e) => e.identifier!.name);
+  final sortedNamedArgNames = sortedNamedArgs.map((e) => e.identifier!.name).toList();
   final sortedNamedArgTypes = sortedNamedArgs.cast<SimpleFormalParameter>()
       .map((a) => a.type == null ? EvalTypes.dynamicType : TypeRef.fromAnnotation(ctx, ctx.library, a.type!))
       .map((t) => t.toRuntimeType(ctx))

@@ -3,6 +3,7 @@ import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'package:dart_eval/src/eval/bridge/declaration/type.dart';
 import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/runtime/type.dart';
+import 'package:dart_eval/src/eval/shared/types.dart';
 
 import 'builtins.dart';
 import 'context.dart';
@@ -259,12 +260,15 @@ class TypeRef {
   }
 
   Set<int> getRuntimeIndices(CompilerContext ctx) {
-    return {ctx.typeRefIndexMap[this]!, for (final a in allSupertypes) ...a.getRuntimeIndices(ctx)};
+    return {
+      runtimeTypeMap[this] ?? ctx.typeRefIndexMap[this]!,
+      for (final a in allSupertypes) ...a.getRuntimeIndices(ctx)
+    };
   }
 
   RuntimeType toRuntimeType(CompilerContext ctx) {
     final ta = [for (final t in specifiedTypeArgs) t.toRuntimeType(ctx)];
-    return RuntimeType(ctx.typeRefIndexMap[this]!, ta);
+    return RuntimeType(runtimeTypeMap[this] ?? ctx.typeRefIndexMap[this]!, ta);
   }
 
   final int file;

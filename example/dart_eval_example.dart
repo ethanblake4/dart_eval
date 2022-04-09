@@ -17,11 +17,11 @@ void main(List<String> args) {
   final source = '''
     
     int main () {
-      var myfunc = () {
-        return 3;
+      var myfunc = (a) {
+        return a + 1;
       };
       
-      return myfunc();
+      return myfunc(2);
     }
     
     /*

@@ -130,6 +130,25 @@ void main() {
 
       expect(exec.executeNamed(0, 'main'), 2);
     });
+
+    test('Anonymous function with arg', () {
+      final exec = gen.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main () {
+              var myfunc = (a) {
+                return a + 1;
+              };
+              
+              return myfunc(2);
+            }
+           '''
+        }
+      });
+
+      expect(exec.executeNamed(0, 'main'), 3);
+    });
+
   });
 
   group('Class tests', () {
