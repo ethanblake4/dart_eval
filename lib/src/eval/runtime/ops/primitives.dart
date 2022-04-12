@@ -141,6 +141,7 @@ class NumLtEq implements DbcOp {
   @override
   String toString() => 'NumLtEq (L$_location1 <= L$_location2)';
 }
+
 class BoxInt implements DbcOp {
   BoxInt(Runtime runtime) : _reg = runtime._readInt16();
 
@@ -158,6 +159,44 @@ class BoxInt implements DbcOp {
 
   @override
   String toString() => 'BoxInt (L$_reg)';
+}
+
+class BoxDouble implements DbcOp {
+  BoxDouble(Runtime runtime) : _reg = runtime._readInt16();
+
+  BoxDouble.make(this._reg);
+
+  final int _reg;
+
+  static const int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN;
+
+  @override
+  void run(Runtime runtime) {
+    final reg = _reg;
+    runtime.frame[reg] = $double(runtime.frame[reg] as double);
+  }
+
+  @override
+  String toString() => 'BoxDouble (L$_reg)';
+}
+
+class BoxNum implements DbcOp {
+  BoxNum(Runtime runtime) : _reg = runtime._readInt16();
+
+  BoxNum.make(this._reg);
+
+  final int _reg;
+
+  static const int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN;
+
+  @override
+  void run(Runtime runtime) {
+    final reg = _reg;
+    runtime.frame[reg] = $num(runtime.frame[reg] as num);
+  }
+
+  @override
+  String toString() => 'BoxNum (L$_reg)';
 }
 
 class BoxString implements DbcOp {

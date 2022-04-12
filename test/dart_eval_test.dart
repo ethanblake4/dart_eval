@@ -91,7 +91,7 @@ void main() {
       '''
         }});
 
-      expect(exec.executeNamed(0, 'main'), $int(7));
+      expect(exec.executeNamed(0, 'main'), $num<num>(7));
     });
 
     test('Basic anonymous function', () {
@@ -147,6 +147,42 @@ void main() {
       });
 
       expect(exec.executeNamed(0, 'main'), 3);
+    });
+
+    test('Anonymous function with named args, same sorting as call site', () {
+      final exec = gen.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            num main () {
+              var myfunc = ({a, b}) {
+                return a / b + 1;
+              };
+              
+              return myfunc(a: 2, b: 4);
+            }
+          '''
+        }
+      });
+
+      expect(exec.executeNamed(0, 'main'), $double(1.5));
+    });
+
+    test('Anonymous function with named args, different sorting from call site', () {
+      final exec = gen.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            num main () {
+              var myfunc = ({b, a}) {
+                return a / b + 1;
+              };
+              
+              return myfunc(a: 2, b: 4);
+            }
+          '''
+        }
+      });
+
+      expect(exec.executeNamed(0, 'main'), $double(1.5));
     });
 
   });

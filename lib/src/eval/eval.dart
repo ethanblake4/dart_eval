@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 
@@ -23,10 +25,14 @@ dynamic eval(String source, {String function = 'main', List<BridgeClassDeclarati
     'default': {'main.dart': _source}
   });
 
+  File('out.dbc')..writeAsBytesSync(program.write());
+
   final runtime = Runtime.ofProgram(program);
 
   //runtime.defineBridgeClasses(bridgeClasses);
   runtime.printOpcodes();
+
+
 
   final result = runtime.executeNamed(0, function);
 

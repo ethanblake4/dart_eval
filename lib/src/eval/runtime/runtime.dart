@@ -160,6 +160,12 @@ class Runtime {
       case BoxInt:
         op as BoxInt;
         return [Dbc.OP_BOXINT, ...Dbc.i16b(op._reg)];
+      case BoxDouble:
+        op as BoxDouble;
+        return [Dbc.OP_BOXDOUBLE, ...Dbc.i16b(op._reg)];
+      case BoxNum:
+        op as BoxNum;
+        return [Dbc.OP_BOXNUM, ...Dbc.i16b(op._reg)];
       case PushArg:
         op as PushArg;
         return [Dbc.OP_PUSH_ARG, ...Dbc.i16b(op._location)];

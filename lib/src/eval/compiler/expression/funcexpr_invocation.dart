@@ -1,5 +1,4 @@
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
@@ -44,7 +43,7 @@ Variable invokeClosure(CompilerContext ctx, Reference? closureRef, Variable? clo
       final nName = arg.name.label.name;
       namedArgNames.add(nName);
 
-      var _arg = compileExpression(arg, ctx);
+      var _arg = compileExpression(arg.expression, ctx);
       _arg = _arg.boxIfNeeded(ctx);
 
       final type = _arg.type.resolveTypeChain(ctx);
@@ -75,7 +74,7 @@ Variable invokeClosure(CompilerContext ctx, Reference? closureRef, Variable? clo
 
   for (final name in namedArgNames) {
     final la = ListAppend.make(
-        csPosArgTypes.scopeFrameOffset, BuiltinValue(intval: namedArgsRttiMap[name]).push(ctx).scopeFrameOffset);
+        csNamedArgTypes.scopeFrameOffset, BuiltinValue(intval: namedArgsRttiMap[name]).push(ctx).scopeFrameOffset);
     ctx.pushOp(la, ListAppend.LEN);
   }
 

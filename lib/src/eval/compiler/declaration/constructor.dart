@@ -187,23 +187,38 @@ void compileConstructorDeclaration(
 }
 
 List<PossiblyValuedParameter> resolveFPLDefaults(CompilerContext ctx, FormalParameterList fpl, bool isInstanceMethod,
-    {bool allowUnboxed = true}) {
+    {bool allowUnboxed = true, bool sortNamed = false}) {
   final normalized = <PossiblyValuedParameter>[];
   var hasEncounteredOptionalPositionalParam = false;
   var hasEncounteredNamedParam = false;
   var _paramIndex = isInstanceMethod ? 1 : 0;
+
+  final named = <FormalParameter>[];
+  final positional = <FormalParameter>[];
+
   for (final param in fpl.parameters) {
     if (param.isNamed) {
       if (hasEncounteredOptionalPositionalParam) {
         throw CompileError('Cannot mix named and optional positional parameters');
       }
       hasEncounteredNamedParam = true;
-    } else if (param.isOptionalPositional) {
-      if (hasEncounteredNamedParam) {
-        throw CompileError('Cannot mix named and optional positional parameters');
+      named.add(param);
+    } else {
+      if (param.isOptionalPositional) {
+        if (hasEncounteredNamedParam) {
+          throw CompileError('Cannot mix named and optional positional parameters');
+        }
+        hasEncounteredOptionalPositionalParam = true;
       }
-      hasEncounteredOptionalPositionalParam = true;
+      positional.add(param);
     }
+  }
+
+  if (sortNamed) {
+    named.sort((a, b) => a.identifier!.name.compareTo(b.identifier!.name));
+  }
+
+  for (final param in [...positional, ...named]) {
 
     if (param is DefaultFormalParameter) {
       if (param.defaultValue != null) {

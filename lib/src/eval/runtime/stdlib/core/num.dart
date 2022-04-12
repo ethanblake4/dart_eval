@@ -15,6 +15,10 @@ class $num<T extends num> implements $Instance {
         return __plus;
       case '-':
         return __minus;
+      case '*':
+        return __mul;
+      case '/':
+        return __div;
       case '<':
         return __lt;
       case '>':
@@ -45,6 +49,7 @@ class $num<T extends num> implements $Instance {
     if (_evalResult is int) {
       return $int(_evalResult);
     }
+
     if (_evalResult is double) {
       return $double(_evalResult);
     }
@@ -60,6 +65,35 @@ class $num<T extends num> implements $Instance {
     if (_evalResult is int) {
       return $int(_evalResult);
     }
+
+    if (_evalResult is double) {
+      return $double(_evalResult);
+    }
+
+    throw UnimplementedError();
+  }
+
+  static const $Function __mul = $Function(_mul);
+  static $Value? _mul(Runtime runtime, $Value? target, List<$Value?> args) {
+    final other = args[0];
+    final _evalResult = target!.$value * other!.$value;
+
+    if (_evalResult is int) {
+      return $int(_evalResult);
+    }
+
+    if (_evalResult is double) {
+      return $double(_evalResult);
+    }
+
+    throw UnimplementedError();
+  }
+
+  static const $Function __div = $Function(_div);
+  static $Value? _div(Runtime runtime, $Value? target, List<$Value?> args) {
+    final other = args[0];
+    final _evalResult = target!.$value / other!.$value;
+
     if (_evalResult is double) {
       return $double(_evalResult);
     }

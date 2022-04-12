@@ -16,12 +16,12 @@ class X {
 void main(List<String> args) {
   final source = '''
     
-    int main () {
-      var myfunc = (a) {
-        return a + 1;
+    num main () {
+      var myfunc = ({b, a}) {
+        return a / b + 1;
       };
       
-      return myfunc(2);
+      return myfunc(a: 2, b: 4);
     }
     
     /*

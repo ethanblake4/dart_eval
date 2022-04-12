@@ -27,7 +27,7 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
   ctx.beginAllocScope(existingAllocLen: _existingAllocs);
 
   ctx.scopeFrameOffset += _existingAllocs;
-  final resolvedParams = resolveFPLDefaults(ctx, e.parameters!, false, allowUnboxed: true);
+  final resolvedParams = resolveFPLDefaults(ctx, e.parameters!, false, allowUnboxed: true, sortNamed: true);
 
   var i = 0;
 
@@ -83,12 +83,14 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
   final named = (e.parameters?.parameters.where((element) => element.isNamed) ?? []);
   final sortedNamedArgs = named.toList()..sort((e1, e2) => e1.identifier!.name.compareTo(e2.identifier!.name));
   final sortedNamedArgNames = sortedNamedArgs.map((e) => e.identifier!.name).toList();
-  final sortedNamedArgTypes = sortedNamedArgs.cast<SimpleFormalParameter>()
+
+  final sortedNamedArgTypes = sortedNamedArgs
+      .map((e) => e is DefaultFormalParameter ? e.parameter : e)
+      .cast<SimpleFormalParameter>()
       .map((a) => a.type == null ? EvalTypes.dynamicType : TypeRef.fromAnnotation(ctx, ctx.library, a.type!))
       .map((t) => t.toRuntimeType(ctx))
       .map((rt) => rt.toJson())
       .toList();
-
 
   BuiltinValue(intval: requiredPositionalArgCount).push(ctx).pushArg(ctx);
   BuiltinValue(intval: ctx.constantPool.addOrGet(positionalArgTypes)).push(ctx).pushArg(ctx);

@@ -59,7 +59,8 @@ class EvalFunctionPtr extends EvalFunction {
 
     if (csPosArgTypes.length < requiredPositionalArgCount || csPosArgTypes.length > positionalArgTypes.length) {
       throw ArgumentError(
-          'FunctionPtr: Cannot invoke function with the given arguments (unacceptable # of positional arguments)');
+          'FunctionPtr: Cannot invoke function with the given arguments (unacceptable # of positional arguments). '
+              '${positionalArgTypes.length} >= ${csPosArgTypes.length} >= $requiredPositionalArgCount');
     }
 
     var i = 0, j = 0;

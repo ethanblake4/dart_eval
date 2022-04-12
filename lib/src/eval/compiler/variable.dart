@@ -54,6 +54,10 @@ class Variable {
 
     if (type == EvalTypes.intType) {
       ctx.pushOp(BoxInt.make(scopeFrameOffset), BoxInt.LEN);
+    } else if (type == EvalTypes.numType) {
+      ctx.pushOp(BoxNum.make(scopeFrameOffset), BoxNum.LEN);
+    } else if (type == EvalTypes.doubleType) {
+      ctx.pushOp(BoxDouble.make(scopeFrameOffset), BoxDouble.LEN);
     } else if (type == EvalTypes.listType) {
       if (!type.specifiedTypeArgs[0].boxed && ctx is CompilerContext) {
         V2 = boxListContents(ctx, this);
@@ -117,7 +121,7 @@ class Variable {
     var $this = this;
 
     final supportedNumIntrinsicOps = {'+', '-', '<', '>', '<=', '>='};
-    if (type.isAssignableTo(EvalTypes.numType) && supportedNumIntrinsicOps.contains(method)) {
+    if (type.isAssignableTo(EvalTypes.numType, forceAllowDynamic: false) && supportedNumIntrinsicOps.contains(method)) {
       $this = unboxIfNeeded(ctx);
       if (args.length != 1) {
         throw CompileError(
@@ -135,12 +139,12 @@ class Variable {
         case '+':
           // Num intrinsic add
           ctx.pushOp(NumAdd.make($this.scopeFrameOffset, R.scopeFrameOffset), NumAdd.LEN);
-          result = Variable.alloc(ctx, EvalTypes.intType.copyWith(boxed: false));
+          result = Variable.alloc(ctx, TypeRef.commonBaseType(ctx, {$this.type, R.type}).copyWith(boxed: false));
           break;
         case '-':
           // Num intrinsic sub
           ctx.pushOp(NumSub.make($this.scopeFrameOffset, R.scopeFrameOffset), NumSub.LEN);
-          result = Variable.alloc(ctx, EvalTypes.intType.copyWith(boxed: false));
+          result = Variable.alloc(ctx, TypeRef.commonBaseType(ctx, {$this.type, R.type}).copyWith(boxed: false));
           break;
         case '<':
           // Num intrinsic less than

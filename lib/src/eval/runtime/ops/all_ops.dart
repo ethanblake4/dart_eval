@@ -129,6 +129,12 @@ class Dbc {
   /// [PushFunctionPtr]
   static const OP_PUSH_FUNCTION_PTR = 40;
 
+  /// [BoxNum]
+  static const OP_BOXNUM = 41;
+
+  /// [BoxDouble]
+  static const OP_BOXDOUBLE = 42;
+
   static List<int> i16b(int i16) {
     final x = ByteData(2);
     x.setInt16(0, i16);
@@ -205,5 +211,7 @@ final List<OpLoader> ops = [
   (Runtime ex) => BoxList(ex), // 37
   (Runtime ex) => PushCaptureScope(ex), // 38
   (Runtime ex) => PushConstant(ex), // 39
-  (Runtime ex) => PushFunctionPtr(ex) // 40
+  (Runtime ex) => PushFunctionPtr(ex), // 40
+  (Runtime ex) => BoxNum(ex), // 41
+  (Runtime ex) => BoxDouble(ex), // 42
 ];
