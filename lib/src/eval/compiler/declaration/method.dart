@@ -19,7 +19,7 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx, NamedComp
   ctx.scopeFrameOffset += d.parameters?.parameters.length ?? 0;
   final resolvedParams = resolveFPLDefaults(ctx, d.parameters!, true, allowUnboxed: true);
 
-  var i = 1;
+  var i = d.isStatic ? 0 : 1;;
 
   for (final param in resolvedParams) {
     final p = param.parameter;

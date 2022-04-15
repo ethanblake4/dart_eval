@@ -240,7 +240,12 @@ class Compiler {
               ctx.visibleTypes[myIndex]![d.name.name] = TypeRef.cache(ctx, myIndex!, d.name.name, fileRef: myIndex);
               d.members.forEach((member) {
                 if (member is MethodDeclaration) {
-                  instanceDeclarationsMap[myIndex]![d.name.name]![member.name.name] = member;
+                  if (member.isStatic) {
+                    topLevelDeclarationsMap[myIndex]![d.name.name + '.' + member.name.name] =
+                        DeclarationOrBridge(declaration: member);
+                  } else {
+                    instanceDeclarationsMap[myIndex]![d.name.name]![member.name.name] = member;
+                  }
                 } else if (member is FieldDeclaration) {
                   member.fields.variables.forEach((field) {
                     instanceDeclarationsMap[myIndex]![d.name.name]![field.name.name] = field;

@@ -415,10 +415,18 @@ class AlwaysReturnType implements ReturnType {
     return AlwaysReturnType.fromAnnotation(ctx, type.file, _m.declaration!.returnType, fallback);
   }
 
+  factory AlwaysReturnType.fromStaticMethod(CompilerContext ctx, TypeRef type, String method, TypeRef? fallback) {
+    final _m = resolveStaticMethod(ctx, type, method);
+    if (_m.isBridge) {
+      return AlwaysReturnType(EvalTypes.dynamicType, true);
+    }
+    return AlwaysReturnType.fromAnnotation(ctx, type.file, _m.declaration!.returnType, fallback);
+  }
+
   static AlwaysReturnType? fromInstanceMethodOrBuiltin(
       CompilerContext ctx, TypeRef type, String method, List<TypeRef?> argTypes, Map<String, TypeRef?> namedArgTypes,
-      {List<TypeRef> typeArgs = const []}) {
-    if (knownMethods[type] != null && knownMethods[type]!.containsKey(method)) {
+      {List<TypeRef> typeArgs = const [], bool $static = false}) {
+    if (!$static && knownMethods[type] != null && knownMethods[type]!.containsKey(method)) {
       final knownMethod = knownMethods[type]![method]!;
       final returnType = knownMethod.returnType;
       if (returnType == null) {
@@ -431,7 +439,9 @@ class AlwaysReturnType implements ReturnType {
       return AlwaysReturnType(EvalTypes.dynamicType, true);
     }
 
-    return AlwaysReturnType.fromInstanceMethod(ctx, type, method, EvalTypes.dynamicType);
+    return $static
+        ? AlwaysReturnType.fromStaticMethod(ctx, type, method, EvalTypes.dynamicType)
+        : AlwaysReturnType.fromInstanceMethod(ctx, type, method, EvalTypes.dynamicType);
   }
 
   final TypeRef? type;

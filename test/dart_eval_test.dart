@@ -239,6 +239,26 @@ void main() {
 
       expect(exec.executeNamed(0, 'main'), $int(19));
     });
+
+    test('Simple static method', () {
+      final exec = gen.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main () {
+              return M.getNum(4) + 2;
+            }
+            
+            class M {
+              static int getNum(int b) {
+                return 12 - b;
+              }
+            }
+          '''
+        }
+      });
+
+      expect(exec.executeNamed(0, 'main'), 10);
+    });
   });
   group('Statement tests', () {
     late Compiler gen;

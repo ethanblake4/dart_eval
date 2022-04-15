@@ -59,7 +59,7 @@ class IdentifierReference implements Reference {
     //final decl = declaration.declaration!;
 
     // TODO
-    return EvalTypes.functionType;
+    return EvalTypes.typeType;
   }
 
   @override
@@ -157,7 +157,7 @@ class IdentifierReference implements Reference {
         offset = DeferredOrOffset(file: declaration.sourceLib, name: name + '.');
       }
 
-      return Variable(-1, EvalTypes.functionType,
+      return Variable(-1, EvalTypes.typeType, concreteTypes: [returnType],
           methodOffset: offset, methodReturnType: AlwaysReturnType(returnType, false));
     }
 
@@ -178,7 +178,7 @@ class IdentifierReference implements Reference {
       offset = DeferredOrOffset(file: declaration.sourceLib, name: name);
     }
 
-    return Variable(-1, EvalTypes.functionType,
+    return Variable(-1, EvalTypes.typeType, concreteTypes: [returnType],
         methodOffset: offset, methodReturnType: AlwaysReturnType(returnType, nullable));
   }
 

@@ -16,45 +16,15 @@ class X {
 void main(List<String> args) {
   final source = '''
     
-    num main () {
-      var myfunc = ({b, a}) {
-        return a / b + 1;
-      };
-      
-      return myfunc(a: 2, b: 4);
+    int main () {
+      return M.getNum(4) + 2;
     }
     
-    /*
-    int main() {
-      final target = ['index', 'sequence'];
-      final targetTypes = [{1,3,6,9}, {5,4,0}];
-      final call = ['prop', 'index'];
-    
-      var i = 0;
-      var j = 0;
-      var cl = call.length;
-      var tl = target.length - 1;
-    
-      while(j < cl) {
-        if (i > tl) {
-          return 4;
-        }
-        if (target[i] == call[j]) {
-          j++;
-        }
-        i++;
+    class M {
+      static int getNum(int b) {
+        return 12 - b;
       }
-      return 7;
-    }*/
-    
-    /*int main () {
-      return fib(1);
     }
-    
-    int fib(int n) {
-      if (n <= 1) return 1;
-      return fib(n - 1) + fib(n - 2);
-    }*/
   ''';
   final timestamp = DateTime.now().millisecondsSinceEpoch;
 
