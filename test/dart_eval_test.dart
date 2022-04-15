@@ -259,6 +259,34 @@ void main() {
 
       expect(exec.executeNamed(0, 'main'), 10);
     });
+
+    test('Implicit static method scoping', () {
+      final exec = gen.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+          int main () {
+            return M(4).load();
+          }
+          
+          class M {
+            M(this.x);
+            
+            final int x;
+            
+            static int getNum(int b) {
+              return 12 - b;
+            }
+            
+            int load() {
+              return getNum(5 + x);
+            }
+          }
+          '''
+        }
+      });
+
+      expect(exec.executeNamed(0, 'main'), 3);
+    });
   });
   group('Statement tests', () {
     late Compiler gen;

@@ -133,6 +133,16 @@ class IdentifierReference implements Reference {
         ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
         return Variable.alloc(ctx, TypeRef.lookupFieldType(ctx, $type, name) ?? EvalTypes.dynamicType);
       }
+
+      final staticDeclaration = resolveStaticDeclaration(ctx, ctx.library, ctx.currentClass!.name.name, name);
+
+      if (staticDeclaration != null && staticDeclaration.declaration != null) {
+        final _dec = staticDeclaration.declaration!;
+        if (_dec is MethodDeclaration) {
+          return Variable(-1, EvalTypes.functionType, methodOffset:
+            DeferredOrOffset.lookupStatic(ctx, ctx.library, ctx.currentClass!.name.name, name));
+        }
+      }
     }
 
     final declaration = ctx.visibleDeclarations[ctx.library]![name]!;

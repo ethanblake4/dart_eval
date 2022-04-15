@@ -86,7 +86,8 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
     final offset = method.methodOffset!;
     var _dec = ctx.topLevelDeclarationsMap[offset.file]![e.methodName.name];
     if (_dec == null || (!_dec.isBridge && _dec.declaration! is ClassDeclaration)) {
-      _dec = ctx.topLevelDeclarationsMap[offset.file]![e.methodName.name + '.']!;
+      _dec = ctx.topLevelDeclarationsMap[offset.file]![offset.name ?? e.methodName.name + '.'] ??
+          (throw CompileError('Cannot instantiate: The class ${e.methodName.name} does not have a default constructor'));
     }
 
     if (_dec.isBridge) {

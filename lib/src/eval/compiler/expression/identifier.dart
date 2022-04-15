@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
@@ -26,8 +27,7 @@ Reference compileIdentifierAsReference(Identifier id, CompilerContext ctx) {
   throw CompileError('Unknown identifier ${id.runtimeType}');
 }
 
-Pair<TypeRef, Declaration>? resolveInstanceDeclaration(
-    CompilerContext ctx, int library, String $class, String name) {
+Pair<TypeRef, Declaration>? resolveInstanceDeclaration(CompilerContext ctx, int library, String $class, String name) {
   final dec = ctx.instanceDeclarationsMap[library]![$class]?[name];
   if (dec != null) {
     final $type = ctx.visibleTypes[library]![$class]!;
@@ -53,4 +53,9 @@ Pair<TypeRef, Declaration>? resolveInstanceDeclaration(
     return resolveInstanceDeclaration(ctx, extendsType.file, extendsType.name, name);
   }
   return null;
+}
+
+DeclarationOrBridge<Declaration, BridgeDeclaration>? resolveStaticDeclaration(
+    CompilerContext ctx, int library, String $class, String name) {
+  return ctx.topLevelDeclarationsMap[library]![$class + '.' + name];
 }

@@ -40,7 +40,7 @@ class DeferredOrOffset {
   factory DeferredOrOffset.lookupStatic(CompilerContext ctx, int library, String parent, String name) {
     if (ctx.topLevelDeclarationPositions[library]?.containsKey('$parent.$name') ?? false) {
       return DeferredOrOffset(
-          file: library, offset: ctx.topLevelDeclarationPositions[library]!['$parent.$name']);
+          file: library, offset: ctx.topLevelDeclarationPositions[library]!['$parent.$name'], name: '$parent.$name');
     } else {
       return DeferredOrOffset(file: library, name: '$parent.$name');
     }

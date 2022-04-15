@@ -17,12 +17,20 @@ void main(List<String> args) {
   final source = '''
     
     int main () {
-      return M.getNum(4) + 2;
+      return M(4).load();
     }
     
     class M {
+      M(this.x);
+      
+      final int x;
+      
       static int getNum(int b) {
         return 12 - b;
+      }
+      
+      int load() {
+        return getNum(5 + x);
       }
     }
   ''';
