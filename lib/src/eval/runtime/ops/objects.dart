@@ -31,6 +31,52 @@ class InvokeDynamic implements DbcOp {
         return;
       }
 
+      if (_method == 'call' && object is EvalFunctionPtr) {
+        final cpat = runtime.args[0] as List;
+        final cnat = runtime.args[2] as List;
+
+        final csPosArgTypes = [for (final a in cpat) runtime.runtimeTypes[a]];
+        final csNamedArgs = runtime.args[1] as List;
+        final csNamedArgTypes = [for (final a in cnat) runtime.runtimeTypes[a]];
+
+        if (csPosArgTypes.length < object.requiredPositionalArgCount || csPosArgTypes.length > object.positionalArgTypes.length) {
+          throw ArgumentError(
+              'FunctionPtr: Cannot invoke function with the given arguments (unacceptable # of positional arguments). '
+                  '${object.positionalArgTypes.length} >= ${csPosArgTypes.length} >= ${object.requiredPositionalArgCount}');
+        }
+
+        var i = 0, j = 0;
+        while (i < csPosArgTypes.length) {
+          if (!csPosArgTypes[i].isAssignableTo(object.positionalArgTypes[i])) {
+            throw ArgumentError('FunctionPtr: Cannot invoke function with the given arguments');
+          }
+          i++;
+        }
+
+        // Very efficient algorithm for checking that named args match
+        // Requires that the named arg arrays be sorted
+        i = 0;
+        var cl = csNamedArgs.length;
+        var tl = object.sortedNamedArgs.length - 1;
+        while (j < cl) {
+          if (i > tl) {
+            throw ArgumentError('FunctionPtr: Cannot invoke function with the given arguments');
+          }
+          final _t = csNamedArgTypes[j];
+          final _ti = object.sortedNamedArgTypes[i];
+          if (object.sortedNamedArgs[i] == csNamedArgs[j] && _t.isAssignableTo(_ti)) {
+            j++;
+          }
+          i++;
+        }
+
+        final al = runtime.args.length;
+        runtime.args = [for (i = 3; i < al; i++) runtime.args[i], object.$this];
+        runtime.callStack.add(runtime._prOffset);
+        runtime._prOffset = object.offset;
+        return;
+      }
+
       final method = ((object as $Instance).$getProperty(runtime, _method) as EvalFunction);
       if (method is $Function) {
         runtime.returnValue = method.call(runtime, object, runtime.args.cast());

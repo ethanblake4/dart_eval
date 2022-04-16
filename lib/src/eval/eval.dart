@@ -3,10 +3,11 @@ import 'dart:io';
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 
-import 'bridge/declaration/class.dart';
-
 dynamic eval(String source,
-    {String function = 'main', Function(Compiler)? compilerSettings, Function(Runtime)? runtimeSettings}) {
+    {String function = 'main',
+    List args = const [],
+    Function(Compiler)? compilerSettings,
+    Function(Runtime)? runtimeSettings}) {
   final compiler = Compiler();
   compilerSettings?.call(compiler);
 
@@ -35,6 +36,7 @@ dynamic eval(String source,
   runtime.printOpcodes();
 
   runtime.setup();
+  runtime.args = args;
   final result = runtime.executeNamed(0, function);
 
   if (result is $Value) {

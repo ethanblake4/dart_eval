@@ -20,8 +20,10 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
   final jumpOver = ctx.pushOp(JumpConstant.make(-1), JumpConstant.LEN);
 
   final fnOffset = ctx.out.length;
-
   beginMethod(ctx, e, e.offset, '<anonymous closure>');
+
+  final ctxSaveState = ctx.saveState();
+  final sfo = ctx.scopeFrameOffset;
 
   final _existingAllocs = 1 + (e.parameters?.parameters.length ?? 0);
   ctx.beginAllocScope(existingAllocLen: _existingAllocs);
@@ -64,12 +66,14 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
   }
 
   ctx.endAllocScope();
-  ctx.scopeFrameOffset -= _existingAllocs;
   if (stInfo == null || !(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
     ctx.pushOp(Return.make(-1), Return.LEN);
   }
 
   ctx.rewriteOp(jumpOver, JumpConstant.make(ctx.out.length), 0);
+
+  ctx.restoreState(ctxSaveState);
+  ctx.scopeFrameOffset = sfo;
 
   final positional = (e.parameters?.parameters.where((element) => element.isPositional) ?? []);
   final requiredPositionalArgCount = positional.where((element) => element.isRequired).length;

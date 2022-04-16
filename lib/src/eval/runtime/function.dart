@@ -50,46 +50,7 @@ class EvalFunctionPtr extends EvalFunction {
 
   @override
   $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
-    final cpat = runtime.args[0] as List;
-    final cnat = runtime.args[2] as List;
-
-    final csPosArgTypes = [for (final a in cpat) runtime.runtimeTypes[a]];
-    final csNamedArgs = runtime.args[1] as List;
-    final csNamedArgTypes = [for (final a in cnat) runtime.runtimeTypes[a]];
-
-    if (csPosArgTypes.length < requiredPositionalArgCount || csPosArgTypes.length > positionalArgTypes.length) {
-      throw ArgumentError(
-          'FunctionPtr: Cannot invoke function with the given arguments (unacceptable # of positional arguments). '
-              '${positionalArgTypes.length} >= ${csPosArgTypes.length} >= $requiredPositionalArgCount');
-    }
-
-    var i = 0, j = 0;
-    while (i < csPosArgTypes.length) {
-      if (!csPosArgTypes[i].isAssignableTo(positionalArgTypes[i])) {
-        throw ArgumentError('FunctionPtr: Cannot invoke function with the given arguments');
-      }
-      i++;
-    }
-
-    // Very efficient algorithm for checking that named args match
-    // Requires that the named arg arrays be sorted
-    i = 0;
-    var cl = csNamedArgs.length;
-    var tl = sortedNamedArgs.length - 1;
-    while (j < cl) {
-      if (i > tl) {
-        throw ArgumentError('FunctionPtr: Cannot invoke function with the given arguments');
-      }
-      final _t = csNamedArgTypes[j];
-      final _ti = sortedNamedArgTypes[i];
-      if (sortedNamedArgs[i] == csNamedArgs[j] && _t.isAssignableTo(_ti)) {
-        j++;
-      }
-      i++;
-    }
-
-    final al = runtime.args.length;
-    runtime.args = [for (i = 3; i < al; i++) runtime.args[i], $this];
+    runtime.args = [null, null, ...runtime.args, $this];
     runtime.bridgeCall(offset);
     return runtime.returnValue as $Value?;
   }

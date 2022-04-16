@@ -118,6 +118,12 @@ mixin ScopeContext on Object implements AbstractScopeContext  {
       });
     }
   }
+
+  void restoreState(ContextSaveState initial) {
+    allocNest = initial.allocNest;
+    locals = initial.locals;
+    inNonlinearAccessContext = initial.inNonlinearAccessContext;
+  }
 }
 
 class CompilerContext with ScopeContext {

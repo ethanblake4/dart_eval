@@ -2,6 +2,7 @@ import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bridge/declaration/class.dart';
 import 'package:dart_eval/src/eval/bridge/declaration/type.dart';
+import 'package:dart_eval/src/eval/runtime/stdlib/core/future.dart';
 
 class X {
   const X(this.q);
@@ -15,29 +16,16 @@ class X {
 
 void main(List<String> args) {
   final source = '''
-    
-    void main () {
-      print('OK!');
-      M(4).load();
-    }
-    
-    class M {
-      M(this.x);
-      
-      final int x;
-      
-      static int getNum(int b) {
-        return 12 - b;
-      }
-      
-      int load() {
-        return getNum(5 + x);
-      }
+    void main (Future future) {
+      future.then((dynamic _) {
+        print('This message will print 2 seconds later');
+      });
+      print('This message will print immediately');
     }
   ''';
   final timestamp = DateTime.now().millisecondsSinceEpoch;
 
-  final result = eval(source);
+  final result = eval(source, args: [$Future.wrap(Future.delayed(const Duration(seconds: 2)), (_) => $null())]);
 
   print('Output: $result');
   print('Execution time: ${DateTime.now().millisecondsSinceEpoch - timestamp} ms');

@@ -30,10 +30,10 @@ class Compiler {
       _bridgeLibraryMappings[libraryUri] = _bridgeLibraryIdx++;
     }
     final _libraryIdx = _bridgeLibraryMappings[libraryUri]!;
-    if (!_bridgeClasses.containsKey(libraryUri)) {
+    if (!_bridgeClasses.containsKey(_libraryIdx)) {
       _bridgeClasses[_libraryIdx] = <String, BridgeClassDeclaration>{};
     }
-    if (!_bridgeFunctions.containsKey(libraryUri)) {
+    if (!_bridgeFunctions.containsKey(_libraryIdx)) {
       _bridgeFunctions[_libraryIdx] = <String, BridgeFunctionDeclaration>{};
     }
     return _libraryIdx;
