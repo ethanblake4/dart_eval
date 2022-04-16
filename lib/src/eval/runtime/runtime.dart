@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/runtime/stdlib/core.dart';
 import 'package:dart_eval/src/eval/runtime/type.dart';
 
 import 'exception.dart';
@@ -145,6 +146,7 @@ class Runtime {
   }
 
   void setup() {
+    configureCoreForRuntime(this);
     if (_fromDbc) {
       _load();
     } else {

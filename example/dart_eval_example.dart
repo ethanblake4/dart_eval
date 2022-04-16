@@ -16,8 +16,9 @@ class X {
 void main(List<String> args) {
   final source = '''
     
-    int main () {
-      return M(4).load();
+    void main () {
+      print('OK!');
+      M(4).load();
     }
     
     class M {
@@ -37,6 +38,7 @@ void main(List<String> args) {
   final timestamp = DateTime.now().millisecondsSinceEpoch;
 
   final result = eval(source);
+
   print('Output: $result');
   print('Execution time: ${DateTime.now().millisecondsSinceEpoch - timestamp} ms');
 }

@@ -104,10 +104,12 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
     final Map<String, Variable> _namedArgs;
 
     if (_dec.isBridge) {
-      final cls = _dec.bridge as BridgeClassDeclaration;
+      final bridge = _dec.bridge;
+      final fnDescriptor = bridge is BridgeClassDeclaration
+          ? bridge.constructors['']!.functionDescriptor
+          : (bridge as BridgeFunctionDeclaration).function;
 
-      final argsPair = compileArgumentListWithBridge(ctx, e.argumentList, cls.constructors['']!.functionDescriptor,
-          before: L != null ? [L] : []);
+      final argsPair = compileArgumentListWithBridge(ctx, e.argumentList, fnDescriptor, before: L != null ? [L] : []);
 
       _args = argsPair.first;
       _namedArgs = argsPair.second;
@@ -134,13 +136,19 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
     final _namedArgTypes = _namedArgs.map((key, value) => MapEntry(key, value.type));
 
     if (_dec.isBridge) {
-      final cls = _dec.bridge as BridgeClassDeclaration;
-      final type = TypeRef.fromBridgeTypeReference(ctx, cls.type);
+      final bridge = _dec.bridge!;
+      if (bridge is BridgeClassDeclaration) {
+        final type = TypeRef.fromBridgeTypeReference(ctx, bridge.type);
 
-      final $null = BuiltinValue().push(ctx);
-      final op =
-          BridgeInstantiate.make($null.scopeFrameOffset, ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.']!);
-      ctx.pushOp(op, BridgeInstantiate.len(op));
+        final $null = BuiltinValue().push(ctx);
+        final op =
+        BridgeInstantiate.make($null.scopeFrameOffset, ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.']!);
+        ctx.pushOp(op, BridgeInstantiate.len(op));
+      } else {
+        final op = InvokeExternal.make(ctx.bridgeStaticFunctionIndices[offset.file]![offset.name]!);
+        ctx.pushOp(op, InvokeExternal.LEN);
+        ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
+      }
     } else {
       final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.LEN);
       if (offset.offset == null) {

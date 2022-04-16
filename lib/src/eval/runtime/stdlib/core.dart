@@ -1,23 +1,21 @@
+import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/bridge/declaration/function.dart';
 import 'package:dart_eval/src/eval/bridge/declaration/type.dart';
-import 'package:dart_eval/src/eval/runtime/stdlib/core/collection.dart';
-import 'package:dart_eval/src/eval/runtime/stdlib/core/iterator.dart';
-import 'package:dart_eval/src/eval/runtime/stdlib/core/pattern.dart';
+import 'package:dart_eval/src/eval/shared/types.dart';
 
-import 'core/print.dart';
-/*
-typedef _Fd = BridgeFieldDeclaration;
+void configureCoreForCompile(Compiler compiler) {
+  compiler.defineBridgeTopLevelFunction(BridgeFunctionDeclaration(
+      'dart:core',
+      'print',
+      BridgeFunctionDescriptor(BridgeTypeAnnotation(BridgeTypeReference.type(RuntimeTypes.voidType, []), false), {}, [
+        BridgeParameter(
+            'object', BridgeTypeAnnotation(BridgeTypeReference.type(RuntimeTypes.objectType, []), true), false)
+      ], {})));
+}
 
-const _functionTd = BridgeClassTypeDeclaration.builtin(EvalTypes.functionType);
-
-const dartCoreLib = {
-  'print': $BridgeField(_Fd(_functionTd, sets: false), get$print, null),
-  'List.filled': $BridgeField(_Fd(_functionTd, sets: false), get$List_filled, null),
-  'List.generate': $BridgeField(_Fd(_functionTd, sets: false), get$List_generate, null)
-};
-
-const dartCoreBridge = {
-  'Iterable': $Iterable$bridge.$classDef,
-  'Iterator': $Iterator$bridge.$classDef,
-  'Pattern': $Pattern$bridge.$classDef
-};*/
+void configureCoreForRuntime(Runtime runtime) {
+  runtime.registerBridgeFunc('dart:core', 'print', $Function((rt, target, args) {
+    print(args[0]!.$value);
+  }));
+}

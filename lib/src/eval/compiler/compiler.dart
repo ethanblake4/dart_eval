@@ -10,6 +10,7 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/program.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/runtime/stdlib/core.dart';
 
 import 'context.dart';
 import 'errors.dart';
@@ -21,6 +22,7 @@ class Compiler {
   var _bridgeStaticFunctionIdx = 0;
   final _bridgeLibraryMappings = <String, int>{};
   final _bridgeClasses = <int, Map<String, BridgeClassDeclaration>>{};
+  final _bridgeFunctions = <int, Map<String, BridgeFunctionDeclaration>>{};
   final ctx = CompilerContext(0);
 
   int _libraryIndex(String libraryUri) {
@@ -30,6 +32,9 @@ class Compiler {
     final _libraryIdx = _bridgeLibraryMappings[libraryUri]!;
     if (!_bridgeClasses.containsKey(libraryUri)) {
       _bridgeClasses[_libraryIdx] = <String, BridgeClassDeclaration>{};
+    }
+    if (!_bridgeFunctions.containsKey(libraryUri)) {
+      _bridgeFunctions[_libraryIdx] = <String, BridgeFunctionDeclaration>{};
     }
     return _libraryIdx;
   }
@@ -64,6 +69,15 @@ class Compiler {
     throw CompileError('Cannot define a bridge class that\'s already resolved, a ref, or a generic function type');
   }
 
+  void defineBridgeTopLevelFunction(BridgeFunctionDeclaration function) {
+    final lib = _libraryIndex(function.library);
+    _bridgeFunctions[lib]![function.name] = function;
+    if (!ctx.bridgeStaticFunctionIndices.containsKey(lib)) {
+      ctx.bridgeStaticFunctionIndices[lib] = <String, int>{};
+    }
+    ctx.bridgeStaticFunctionIndices[lib]![function.name] = _bridgeStaticFunctionIdx++;
+  }
+
   void defineBridgeClasses(List<BridgeClassDeclaration> classDefs) {
     for (final classDef in classDefs) {
       defineBridgeClass(classDef);
@@ -73,6 +87,9 @@ class Compiler {
   /// Compile a set of Dart code into a program
   /// TODO: Use graphs to compose imports
   Program compile(Map<String, Map<String, String>> packages) {
+
+    configureCoreForCompile(this);
+
     final typeResolvedBridgeClasses = <int, Map<String, BridgeClassDeclaration>>{};
     final packageMap = <String, Map<String, int>>{};
     final indexMap = <int, List<String>>{};
@@ -81,28 +98,35 @@ class Compiler {
     final importMap = <int, List<ImportDirective>>{};
     final topLevelDeclarationsMap = <int, Map<String, DeclarationOrBridge>>{};
     final instanceDeclarationsMap = <int, Map<String, Map<String, Declaration>>>{};
+    int? dartCoreFile;
 
     ctx.libraryMap = <String, int>{..._bridgeLibraryMappings};
 
     for (final _blm in _bridgeLibraryMappings.entries) {
       final uri = _blm.key;
 
+      if (uri == 'dart:core') {
+        dartCoreFile = _blm.value;
+      }
+
       // Skip over 'package:' in the string
       // TODO remove this when processing JSON
-      final content = uri.substring(8);
-      final package = content.substring(0, content.indexOf('/'));
-      final file = content.substring(content.indexOf('/') + 1);
+      final content = uri == 'dart:core' ? null : uri.substring(8);
+      final package = content?.substring(0, content.indexOf('/')) ?? 'dart:core';
+      final file = content?.substring(content.indexOf('/') + 1) ?? 'core';
       if (!packageMap.containsKey(package)) {
         packageMap[package] = {};
       }
       packageMap[package]![file] = _blm.value;
       indexMap[_blm.value] = [package, file];
       final _classes = _bridgeClasses[_blm.value]!;
+      final _functions = _bridgeFunctions[_blm.value]!;
 
       /// 1st-pass bridge class resolver: resolve all defined bridge classes to a type, but not their type args or
       /// supers/implementations/mixins. Among other things, this ensures that bridge classes fill a contiguous block
       /// of the lower indices of the compile-time type map, which allows us to map it directly to a runtime type map
-      typeResolvedBridgeClasses[_blm.value] = {
+
+      final resolved = {
         for (final _cls in _classes.entries)
           _cls.key: _cls.value.copyWith(
               type: BridgeTypeReference.type(
@@ -110,20 +134,20 @@ class Compiler {
                   _cls.value.type.typeArgs))
       };
 
-      topLevelDeclarationsMap.addAll(<int, Map<String, DeclarationOrBridge>>{
-        for (final e in typeResolvedBridgeClasses.entries)
-          e.key: {
-            for (final v in e.value.entries) v.key: DeclarationOrBridge(bridge: v.value),
-            for (final v in e.value.entries)
-              for (final m in v.value.methods.entries)
-                if (m.value.isStatic) '${v.key}.${m.key}': DeclarationOrBridge(bridge: m.value)
-          }
-      });
+      typeResolvedBridgeClasses[_blm.value] = resolved;
 
-      final types = Map.fromEntries(typeResolvedBridgeClasses.entries.expand(
-          (element) => element.value.entries.map((e) => MapEntry(e.key, ctx.runtimeTypeList[e.value.type.cacheId!]))));
+      final types =
+          Map.fromEntries(resolved.entries.map((e) => MapEntry(e.key, ctx.runtimeTypeList[e.value.type.cacheId!])));
 
       ctx.visibleTypes[_blm.value] = {...coreDeclarations, ...types};
+
+      topLevelDeclarationsMap[_blm.value] = {
+        for (final v in resolved.entries) v.key: DeclarationOrBridge(bridge: v.value),
+        for (final v in resolved.entries)
+          for (final m in v.value.methods.entries)
+            if (m.value.isStatic) '${v.key}.${m.key}': DeclarationOrBridge(bridge: m.value),
+        for (final f in _functions.entries) f.key: DeclarationOrBridge(bridge: f.value)
+      };
     }
 
     var fileIndex = 0;
@@ -232,8 +256,14 @@ class Compiler {
         indexMap[myIndex] ??= [package, filename];
         importMap[myIndex] = imports;
 
-        ctx.visibleTypes[myIndex] ??= {...coreDeclarations};
-        ctx.visibleDeclarations[myIndex] ??= {};
+        ctx.visibleTypes[myIndex] ??= {
+          ...coreDeclarations,
+          if (dartCoreFile != null) ...ctx.visibleTypes[dartCoreFile]!
+        };
+        ctx.visibleDeclarations[myIndex] ??= {
+          if (dartCoreFile != null) ...topLevelDeclarationsMap[dartCoreFile]!
+              .map((key, value) => MapEntry(key, DeclarationOrPrefix(dartCoreFile!, declaration: value)))
+        };
         topLevelDeclarationsMap[myIndex] ??= {};
         instanceDeclarationsMap[myIndex] ??= {};
 
@@ -284,8 +314,14 @@ class Compiler {
           throw CompileError('Import URI is not a string');
         }
         final resolvedLibrary = resolveUri(resolvedUriParts(myUri[0], myUri[1], uri))!;
-        ctx.visibleTypes[file] ??= {};
-        ctx.visibleDeclarations[file] ??= {};
+        ctx.visibleTypes[file] ??= {
+          ...coreDeclarations,
+          if (dartCoreFile != null) ...ctx.visibleTypes[dartCoreFile]!
+        };
+        ctx.visibleDeclarations[file] ??= {
+          if (dartCoreFile != null) ...topLevelDeclarationsMap[dartCoreFile]!
+              .map((key, value) => MapEntry(key, DeclarationOrPrefix(dartCoreFile!, declaration: value)))
+        };
         var prefix = imp.prefix?.name ?? '';
         if (prefix != '') {
           prefix = '$prefix.';

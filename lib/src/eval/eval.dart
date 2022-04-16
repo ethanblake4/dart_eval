@@ -5,9 +5,10 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 
 import 'bridge/declaration/class.dart';
 
-dynamic eval(String source, {String function = 'main', List<BridgeClassDeclaration> bridgeClasses = const []}) {
+dynamic eval(String source,
+    {String function = 'main', Function(Compiler)? compilerSettings, Function(Runtime)? runtimeSettings}) {
   final compiler = Compiler();
-  compiler.defineBridgeClasses(bridgeClasses);
+  compilerSettings?.call(compiler);
 
   var _source = source;
 
@@ -28,6 +29,8 @@ dynamic eval(String source, {String function = 'main', List<BridgeClassDeclarati
   File('out.dbc')..writeAsBytesSync(program.write());
 
   final runtime = Runtime.ofProgram(program);
+
+  runtimeSettings?.call(runtime);
 
   runtime.printOpcodes();
 

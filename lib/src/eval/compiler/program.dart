@@ -38,7 +38,7 @@ class Program {
     _writeMetaBlock(b, typeNames);
     _writeMetaBlock(b, [for (final t in typeTypes) t.toList()]);
     _writeMetaBlock(b, bridgeLibraryMappings);
-    _writeMetaBlock(b, bridgeFunctionMappings);
+    _writeMetaBlock(b, bridgeFunctionMappings.map((key, value) => MapEntry(key.toString(), value)));
     _writeMetaBlock(b, constantPool);
     _writeMetaBlock(b, [for (final rt in runtimeTypes) rt.toJson()]);
 

@@ -15,6 +15,6 @@ class NotReferencableError extends CompileError {
 
   @override
   String toString() {
-    return 'NotReferenceableError: $message';
+    return 'NotReferencableError: $message';
   }
 }

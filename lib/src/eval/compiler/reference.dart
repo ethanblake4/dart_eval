@@ -1,5 +1,7 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bridge/declaration/class.dart';
+import 'package:dart_eval/src/eval/bridge/declaration/function.dart';
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
@@ -70,7 +72,9 @@ class IdentifierReference implements Reference {
       if (!value.type.resolveTypeChain(ctx).isAssignableTo(fieldType)) {
         throw CompileError('Cannot assign value of type ${value.type} to field "$name" of type $fieldType');
       }
-      final op = SetObjectProperty.make(object!.scopeFrameOffset, name, value.boxIfNeeded(ctx).scopeFrameOffset);
+      final op = SetObjectProperty.make(object!.scopeFrameOffset, name, value
+          .boxIfNeeded(ctx)
+          .scopeFrameOffset);
       ctx.pushOp(op, SetObjectProperty.len(op));
       return;
     }
@@ -95,7 +99,9 @@ class IdentifierReference implements Reference {
         if (!value.type.resolveTypeChain(ctx).isAssignableTo(fieldType)) {
           throw CompileError('Cannot assign value of type ${value.type} to field "$name" of type $fieldType');
         }
-        final op = SetObjectProperty.make(0, name, value.boxIfNeeded(ctx).scopeFrameOffset);
+        final op = SetObjectProperty.make(0, name, value
+            .boxIfNeeded(ctx)
+            .scopeFrameOffset);
         ctx.pushOp(op, SetObjectProperty.len(op));
         return;
       }
@@ -158,6 +164,12 @@ class IdentifierReference implements Reference {
             concreteTypes: [type],
             methodOffset: DeferredOrOffset(file: type.file, name: type.name + '.'),
             methodReturnType: AlwaysReturnType(type, false));
+      }
+
+      if (bridge is BridgeFunctionDeclaration) {
+        final returnType = TypeRef.fromBridgeAnnotation(ctx, bridge.function.returnType);
+        return Variable(-1, EvalTypes.functionType, methodReturnType: AlwaysReturnType(returnType, false),
+            methodOffset: DeferredOrOffset(file: declaration.sourceLib, name: name));
       }
 
       throw CompileError('Cannot resolve bridged ${bridge.runtimeType} in reference');

@@ -98,7 +98,7 @@ class InvokeExternal implements DbcOp {
     }
 
     runtime.args = [];
-    runtime.returnValue = runtime._bridgeFunctions[_function].func(runtime, null, _mappedArgs) as $Instance;
+    runtime.returnValue = runtime._bridgeFunctions[_function].func(runtime, null, _mappedArgs);
   }
 
   @override
