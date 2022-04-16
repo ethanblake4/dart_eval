@@ -8,6 +8,10 @@ import 'package:dart_eval/src/eval/shared/types.dart';
 class TestClass {
   TestClass(this.someNumber);
 
+  static bool runStaticTest(String m) {
+    return m.length > 5;
+  }
+
   int someNumber;
 
   bool runTest(int a, {String b = 'hello'}) {
@@ -18,9 +22,10 @@ class TestClass {
 class $TestClass extends TestClass with $Bridge {
   $TestClass(int someNumber) : super(someNumber);
 
-  static $TestClass $construct(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $TestClass(args[0]!.$value);
-  }
+  static $TestClass $construct(Runtime runtime, $Value? target, List<$Value?> args) => $TestClass(args[0]!.$value);
+
+  static $bool $runStaticTest(Runtime runtime, $Value? target, List<$Value?> args) =>
+      $bool(TestClass.runStaticTest(args[0]!.$value));
 
   static const $type = BridgeTypeReference.unresolved(
       BridgeUnresolvedTypeReference('package:bridge_lib/bridge_lib.dart', 'TestClass'), []);
@@ -33,6 +38,12 @@ class $TestClass extends TestClass with $Bridge {
               'someNumber', BridgeTypeAnnotation(BridgeTypeReference.type(RuntimeTypes.intType, []), false), false),
         ], {}))
   }, methods: {
+    'runStaticTest': BridgeMethodDeclaration(
+        true,
+        BridgeFunctionDescriptor(BridgeTypeAnnotation(BridgeTypeReference.type(RuntimeTypes.boolType, []), false), {}, [
+          BridgeParameter(
+              'm', BridgeTypeAnnotation(BridgeTypeReference.type(RuntimeTypes.stringType, []), false), false),
+        ], {})),
     'runTest': BridgeMethodDeclaration(
         false,
         BridgeFunctionDescriptor(BridgeTypeAnnotation(BridgeTypeReference.type(RuntimeTypes.boolType, []), false), {}, [

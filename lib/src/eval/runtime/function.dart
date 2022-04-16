@@ -106,7 +106,7 @@ class EvalStaticFunctionPtr extends EvalFunction {
 
   @override
   $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
-    runtime.args = [...args];
+    runtime.args = args;
     runtime.bridgeCall(offset);
     return runtime.returnValue as $Value?;
   }

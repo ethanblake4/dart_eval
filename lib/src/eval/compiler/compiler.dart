@@ -106,12 +106,18 @@ class Compiler {
         for (final _cls in _classes.entries)
           _cls.key: _cls.value.copyWith(
               type: BridgeTypeReference.type(
-                  ctx.typeRefIndexMap[TypeRef.cache(ctx, _blm.value, _cls.key, fileRef: _blm.value)]!, _cls.value.type.typeArgs))
+                  ctx.typeRefIndexMap[TypeRef.cache(ctx, _blm.value, _cls.key, fileRef: _blm.value)]!,
+                  _cls.value.type.typeArgs))
       };
 
       topLevelDeclarationsMap.addAll(<int, Map<String, DeclarationOrBridge>>{
         for (final e in typeResolvedBridgeClasses.entries)
-          e.key: {for (final v in e.value.entries) v.key: DeclarationOrBridge(bridge: v.value)}
+          e.key: {
+            for (final v in e.value.entries) v.key: DeclarationOrBridge(bridge: v.value),
+            for (final v in e.value.entries)
+              for (final m in v.value.methods.entries)
+                if (m.value.isStatic) '${v.key}.${m.key}': DeclarationOrBridge(bridge: m.value)
+          }
       });
 
       final types = Map.fromEntries(typeResolvedBridgeClasses.entries.expand(

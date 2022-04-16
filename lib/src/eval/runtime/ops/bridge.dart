@@ -36,7 +36,7 @@ class BridgeInstantiate implements DbcOp {
   }
 
   @override
-  String toString() => 'BridgeInstantiate (subclass L$_subclass, fn=$_constructor))';
+  String toString() => 'BridgeInstantiate (subclass L$_subclass, Ex#$_constructor))';
 }
 
 class PushBridgeSuperShim extends DbcOp {
@@ -75,4 +75,32 @@ class ParentBridgeSuperShim extends DbcOp {
 
   @override
   String toString() => 'ParentBridgeSuperShim (shim L$_shimOffset, bridge L$_bridgeOffset)';
+}
+
+class InvokeExternal implements DbcOp {
+  InvokeExternal(Runtime runtime) : _function = runtime._readInt32();
+
+  InvokeExternal.make(this._function);
+
+  static const int LEN = Dbc.BASE_OPLEN + Dbc.I32_LEN;
+
+  final int _function;
+
+  @override
+  void run(Runtime runtime) {
+
+    final _args = runtime.args;
+    final _argsLen = _args.length;
+
+    final _mappedArgs = List<$Value?>.filled(_argsLen, null);
+    for (var i = 0; i < _argsLen; i++) {
+      _mappedArgs[i] = (_args[i] as $Value?);
+    }
+
+    runtime.args = [];
+    runtime.returnValue = runtime._bridgeFunctions[_function].func(runtime, null, _mappedArgs) as $Instance;
+  }
+
+  @override
+  String toString() => 'InvokeExternal (Ex#$_function)';
 }

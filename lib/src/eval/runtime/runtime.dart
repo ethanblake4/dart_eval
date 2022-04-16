@@ -311,6 +311,9 @@ class Runtime {
       case PushFunctionPtr:
         op as PushFunctionPtr;
         return [Dbc.OP_PUSH_FUNCTION_PTR, ...Dbc.i32b(op._offset)];
+      case InvokeExternal:
+        op as InvokeExternal;
+        return [Dbc.OP_INVOKE_EXTERNAL, ...Dbc.i32b(op._function)];
       default:
         throw ArgumentError('Not a valid op $op');
     }

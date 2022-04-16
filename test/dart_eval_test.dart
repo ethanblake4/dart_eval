@@ -449,6 +449,32 @@ void main() {
 
       expect(res is TestClass, true);
       expect((res as TestClass).runTest(4), true);
+      expect(res.runTest(2), false);
+    });
+
+    test('Using an external static method', () {
+      compiler.defineBridgeClasses([$TestClass.$declaration]);
+
+      final program = compiler.compile({
+        'example': {
+          'main.dart': '''
+            import 'package:bridge_lib/bridge_lib.dart';
+            
+            bool main() {
+              return TestClass.runStaticTest('Okay');
+            }
+          '''
+        }
+      });
+
+      final runtime = Runtime.ofProgram(program);
+
+      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart', 'TestClass.', $Function($TestClass.$construct));
+      runtime.registerBridgeFunc(
+          'package:bridge_lib/bridge_lib.dart', 'TestClass.runStaticTest', $Function($TestClass.$runStaticTest));
+
+      runtime.setup();
+      expect(runtime.executeNamed(0, 'main'), false);
     });
   });
 

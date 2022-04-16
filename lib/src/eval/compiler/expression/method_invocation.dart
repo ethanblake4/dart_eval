@@ -59,10 +59,16 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
     final _namedArgTypes = _namedArgs.map((key, value) => MapEntry(key, value.type));
 
     if (isStatic) {
-      final offset = DeferredOrOffset.lookupStatic(ctx, staticType!.file, staticType.name, e.methodName.name);
-      final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.LEN);
-      if (offset.offset == null) {
-        ctx.offsetTracker.setOffset(loc, offset);
+      if (_dec.isBridge) {
+        final ix = InvokeExternal.make(
+            ctx.bridgeStaticFunctionIndices[staticType!.file]!['${staticType.name}.${e.methodName.name}']!);
+        ctx.pushOp(ix, InvokeExternal.LEN);
+      } else {
+        final offset = DeferredOrOffset.lookupStatic(ctx, staticType!.file, staticType.name, e.methodName.name);
+        final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.LEN);
+        if (offset.offset == null) {
+          ctx.offsetTracker.setOffset(loc, offset);
+        }
       }
     } else {
       final op = InvokeDynamic.make(L.scopeFrameOffset, e.methodName.name);
@@ -74,7 +80,6 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
         $static: isStatic);
 
     ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-
   } else {
     //final methodRef = compileIdentifierAsReference(e.methodName, ctx);
     final method = compileIdentifier(e.methodName, ctx);
@@ -106,7 +111,6 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
 
       _args = argsPair.first;
       _namedArgs = argsPair.second;
-
     } else {
       final dec = _dec.declaration!;
 
@@ -134,8 +138,8 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
       final type = TypeRef.fromBridgeTypeReference(ctx, cls.type);
 
       final $null = BuiltinValue().push(ctx);
-      final op = BridgeInstantiate.make($null.scopeFrameOffset,
-          ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.']!);
+      final op =
+          BridgeInstantiate.make($null.scopeFrameOffset, ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.']!);
       ctx.pushOp(op, BridgeInstantiate.len(op));
     } else {
       final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.LEN);
@@ -163,7 +167,6 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
 
 DeclarationOrBridge<MethodDeclaration, BridgeMethodDeclaration> resolveInstanceMethod(
     CompilerContext ctx, TypeRef instanceType, String methodName) {
-
   final _dec = ctx.topLevelDeclarationsMap[instanceType.file]![instanceType.name]!;
   if (_dec.isBridge) {
     // Bridge
@@ -187,9 +190,12 @@ DeclarationOrBridge<MethodDeclaration, BridgeMethodDeclaration> resolveInstanceM
 
 DeclarationOrBridge<MethodDeclaration, BridgeMethodDeclaration> resolveStaticMethod(
     CompilerContext ctx, TypeRef classType, String methodName) {
-  return DeclarationOrBridge(
-      declaration: ctx.topLevelDeclarationsMap[classType.file]![classType.name + '.' + methodName]!.declaration!
-          as MethodDeclaration);
+  final method = ctx.topLevelDeclarationsMap[classType.file]![classType.name + '.' + methodName]!;
+  if (method.declaration != null) {
+    return DeclarationOrBridge(declaration: method.declaration! as MethodDeclaration);
+  } else {
+    return DeclarationOrBridge(bridge: method.bridge! as BridgeMethodDeclaration);
+  }
 }
 
 Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext ctx, ArgumentList argumentList,

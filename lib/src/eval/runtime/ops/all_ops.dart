@@ -135,6 +135,9 @@ class Dbc {
   /// [BoxDouble]
   static const OP_BOXDOUBLE = 42;
 
+  /// [InvokeExternal]
+  static const OP_INVOKE_EXTERNAL = 43;
+
   static List<int> i16b(int i16) {
     final x = ByteData(2);
     x.setInt16(0, i16);
@@ -171,47 +174,48 @@ abstract class DbcOp {
 typedef OpLoader = DbcOp Function(Runtime);
 
 final List<OpLoader> ops = [
-  (Runtime ex) => JumpConstant(ex), // 0
-  (Runtime ex) => Exit(ex), // 1
-  (Runtime ex) => Unbox(ex), // 2
-  (Runtime ex) => PushReturnValue(ex), // 3
-  (Runtime ex) => NumAdd(ex), // 4
-  (Runtime ex) => JumpIfNonNull(ex), // 5
-  (Runtime ex) => PushConstantInt(ex), // 6
-  (Runtime ex) => BoxInt(ex), // 7
-  (Runtime ex) => PushArg(ex), // 8
-  (Runtime ex) => JumpIfFalse(ex), // 9
-  (Runtime ex) => PushScope(ex), // 10
-  (Runtime ex) => CopyValue(ex), // 11
-  (Runtime ex) => Pop(ex), // 12
-  (Runtime ex) => SetObjectProperty(ex), // 13
-  (Runtime ex) => SetReturnValue(ex), // 14
-  (Runtime ex) => Return(ex), // 15
-  (Runtime ex) => PopScope(ex), // 16
-  (Runtime ex) => Call(ex), // 17
-  (Runtime ex) => PushObjectProperty(ex), // 18
-  (Runtime ex) => InvokeDynamic(ex), // 19
-  (Runtime ex) => PushNull(ex), // 20
-  (Runtime ex) => CreateClass(ex), // 21
-  (Runtime ex) => PushObjectPropertyImpl(ex), // 22
-  (Runtime ex) => SetObjectPropertyImpl(ex), // 23
-  (Runtime ex) => NumLt(ex), // 24
-  (Runtime ex) => NumLtEq(ex), // 25
-  (Runtime ex) => PushSuper(ex), // 26
-  (Runtime ex) => BridgeInstantiate(ex), // 27
-  (Runtime ex) => PushBridgeSuperShim(ex), // 28
-  (Runtime ex) => ParentBridgeSuperShim(ex), // 29
-  (Runtime ex) => NumSub(ex), // 30
-  (Runtime ex) => PushList(ex), // 31
-  (Runtime ex) => ListAppend(ex), // 32
-  (Runtime ex) => IndexList(ex), // 33
-  (Runtime ex) => PushIterableLength(ex), // 34
-  (Runtime ex) => ListSetIndexed(ex), // 35
-  (Runtime ex) => BoxString(ex), // 36
-  (Runtime ex) => BoxList(ex), // 37
-  (Runtime ex) => PushCaptureScope(ex), // 38
-  (Runtime ex) => PushConstant(ex), // 39
-  (Runtime ex) => PushFunctionPtr(ex), // 40
-  (Runtime ex) => BoxNum(ex), // 41
-  (Runtime ex) => BoxDouble(ex), // 42
+  (Runtime rt) => JumpConstant(rt), // 0
+  (Runtime rt) => Exit(rt), // 1
+  (Runtime rt) => Unbox(rt), // 2
+  (Runtime rt) => PushReturnValue(rt), // 3
+  (Runtime rt) => NumAdd(rt), // 4
+  (Runtime rt) => JumpIfNonNull(rt), // 5
+  (Runtime rt) => PushConstantInt(rt), // 6
+  (Runtime rt) => BoxInt(rt), // 7
+  (Runtime rt) => PushArg(rt), // 8
+  (Runtime rt) => JumpIfFalse(rt), // 9
+  (Runtime rt) => PushScope(rt), // 10
+  (Runtime rt) => CopyValue(rt), // 11
+  (Runtime rt) => Pop(rt), // 12
+  (Runtime rt) => SetObjectProperty(rt), // 13
+  (Runtime rt) => SetReturnValue(rt), // 14
+  (Runtime rt) => Return(rt), // 15
+  (Runtime rt) => PopScope(rt), // 16
+  (Runtime rt) => Call(rt), // 17
+  (Runtime rt) => PushObjectProperty(rt), // 18
+  (Runtime rt) => InvokeDynamic(rt), // 19
+  (Runtime rt) => PushNull(rt), // 20
+  (Runtime rt) => CreateClass(rt), // 21
+  (Runtime rt) => PushObjectPropertyImpl(rt), // 22
+  (Runtime rt) => SetObjectPropertyImpl(rt), // 23
+  (Runtime rt) => NumLt(rt), // 24
+  (Runtime rt) => NumLtEq(rt), // 25
+  (Runtime rt) => PushSuper(rt), // 26
+  (Runtime rt) => BridgeInstantiate(rt), // 27
+  (Runtime rt) => PushBridgeSuperShim(rt), // 28
+  (Runtime rt) => ParentBridgeSuperShim(rt), // 29
+  (Runtime rt) => NumSub(rt), // 30
+  (Runtime rt) => PushList(rt), // 31
+  (Runtime rt) => ListAppend(rt), // 32
+  (Runtime rt) => IndexList(rt), // 33
+  (Runtime rt) => PushIterableLength(rt), // 34
+  (Runtime rt) => ListSetIndexed(rt), // 35
+  (Runtime rt) => BoxString(rt), // 36
+  (Runtime rt) => BoxList(rt), // 37
+  (Runtime rt) => PushCaptureScope(rt), // 38
+  (Runtime rt) => PushConstant(rt), // 39
+  (Runtime rt) => PushFunctionPtr(rt), // 40
+  (Runtime rt) => BoxNum(rt), // 41
+  (Runtime rt) => BoxDouble(rt), // 42
+  (Runtime rt) => InvokeExternal(rt) // 43
 ];
