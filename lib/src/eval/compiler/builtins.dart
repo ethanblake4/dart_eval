@@ -143,6 +143,7 @@ final Map<TypeRef, Map<String, KnownMethod>> knownMethods = {
   EvalTypes.intType: {
     '+': intBinaryOp,
     '-': intBinaryOp,
+    '*': intBinaryOp,
     '/': intBinaryOp,
     '%': intBinaryOp,
     '<': numComparisonOp,
@@ -154,6 +155,7 @@ final Map<TypeRef, Map<String, KnownMethod>> knownMethods = {
   EvalTypes.doubleType: {
     '+': doubleBinaryOp,
     '-': doubleBinaryOp,
+    '*': doubleBinaryOp,
     '/': doubleBinaryOp,
     '%': doubleBinaryOp,
     '<': numComparisonOp,
@@ -165,6 +167,7 @@ final Map<TypeRef, Map<String, KnownMethod>> knownMethods = {
   EvalTypes.numType: {
     '+': numBinaryOp,
     '-': numBinaryOp,
+    '*': numBinaryOp,
     '/': numBinaryOp,
     '%': numBinaryOp,
     '<': numComparisonOp,

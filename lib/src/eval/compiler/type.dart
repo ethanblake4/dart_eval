@@ -127,10 +127,15 @@ class TypeRef {
     return TypeRef.fromBridgeTypeReference(ctx, typeAnnotation.type);
   }
 
-  factory TypeRef.fromBridgeTypeReference(CompilerContext ctx, BridgeTypeReference typeReference) {
+  factory TypeRef.fromBridgeTypeReference(CompilerContext ctx, BridgeTypeReference typeReference,
+      {bool staticSource = true}) {
     final cacheId = typeReference.cacheId;
     if (cacheId != null) {
-      return inverseRuntimeTypeMap[cacheId] ?? ctx.runtimeTypeList[cacheId];
+      final t = inverseRuntimeTypeMap[cacheId] ?? ctx.runtimeTypeList[cacheId];
+      if (staticSource) {
+        return unboxedAcrossFunctionBoundaries.contains(t) ? t.copyWith(boxed: false) : t.copyWith(boxed: true);
+      }
+      return t.copyWith(boxed: true);
     }
     final unresolved = typeReference.unresolved;
     if (unresolved != null) {

@@ -49,9 +49,11 @@ class $TestClass extends TestClass with $Bridge {
   $Value? $bridgeGet(String identifier) {
     switch (identifier) {
       case 'runTest':
-        return $Function(__runTest);
+        return $Function((Runtime rt, $Value? target, List<$Value?> args) {
+          return $bool(super.runTest(args[0]!.$value, b: args[1]!.$value ?? 'hello'));
+        });
       case 'someNumber':
-        return $int(someNumber);
+        return $int(super.someNumber);
     }
     throw UnimplementedError();
   }
@@ -60,15 +62,21 @@ class $TestClass extends TestClass with $Bridge {
   void $bridgeSet(String identifier, $Value value) {
     switch (identifier) {
       case 'someNumber':
-        someNumber = value.$value;
+        super.someNumber = value.$value;
         break;
       default:
         throw UnimplementedError();
     }
   }
 
-  static $Value? __runTest(Runtime rt, $Value? target, List<$Value?> args) {
-    final $target = target!.$value as TestClass;
-    return $bool($target.runTest(args[0]!.$value, b: args[1]!.$value ?? 'hello'));
+  @override
+  bool runTest(int a, {String b = 'hello'}) {
+    return $_invoke('runTest', [$int(a), $String(b)]);
   }
+
+  @override
+  int get someNumber => $_get('someNumber');
+
+  @override
+  set someNumber(int _someNumber) => $_set('someNumber', $int(_someNumber));
 }

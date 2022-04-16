@@ -320,7 +320,8 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
     } else {
       var paramType = TypeRef.fromBridgeAnnotation(ctx, param.typeAnnotation);
 
-      final _arg = compileExpression(arg, ctx).boxIfNeeded(ctx);
+      var _arg = compileExpression(arg, ctx);
+      _arg = _arg.boxIfNeeded(ctx);
       if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(paramType)) {
         throw CompileError('Cannot assign argument of type ${_arg.type} to parameter of type $paramType');
       }

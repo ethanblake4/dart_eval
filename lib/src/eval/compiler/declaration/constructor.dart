@@ -72,6 +72,7 @@ void compileConstructorDeclaration(
       if (p.type != null) {
         type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
       }
+      type = type.copyWith(boxed: !unboxedAcrossFunctionBoundaries.contains(type));
       Vrep = Variable(i, type)..name = p.identifier!.name;
     }
 

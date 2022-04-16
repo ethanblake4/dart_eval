@@ -381,6 +381,75 @@ void main() {
       runtime.setup();
       expect(runtime.executeNamed(0, 'main'), true);
     });
+
+    test('Using a subclassed bridge class inside the runtime', () {
+      compiler.defineBridgeClasses([$TestClass.$declaration]);
+
+      final program = compiler.compile({
+        'example': {
+          'main.dart': '''
+            import 'package:bridge_lib/bridge_lib.dart';
+            
+            class MyTestClass extends TestClass {
+              MyTestClass(int someNumber) : super(someNumber);
+            
+              @override
+              bool runTest(int a, {String b = 'wow'}) {
+                return super.runTest(a + 2, b: b);
+              }
+            }
+            
+            bool main() {
+              final test = MyTestClass(18);
+              return test.runTest(5, b: 'cool');
+            }
+          '''
+        }
+      });
+
+      final runtime = Runtime.ofProgram(program);
+
+      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart', 'TestClass.', $Function($TestClass.$construct));
+
+      runtime.setup();
+      expect(runtime.executeNamed(0, 'main'), true);
+    });
+
+    test('Using a subclassed bridge class outside the runtime', () {
+      compiler.defineBridgeClasses([$TestClass.$declaration]);
+
+      final program = compiler.compile({
+        'example': {
+          'main.dart': '''
+            import 'package:bridge_lib/bridge_lib.dart';
+            
+            class MyTestClass extends TestClass {
+              MyTestClass(int someNumber) : super(someNumber);
+            
+              @override
+              bool runTest(int a, {String b = 'wow'}) {
+                return super.runTest(a + 2, b: b);
+              }
+            }
+            
+            TestClass main() {
+              final test = MyTestClass(0, b: 'hello');
+              return test;
+            }
+          '''
+        }
+      });
+
+      final runtime = Runtime.ofProgram(program);
+
+      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart', 'TestClass.', $Function($TestClass.$construct));
+
+      runtime.setup();
+      final res = runtime.executeNamed(0, 'main');
+
+      expect(res is TestClass, true);
+      expect((res as TestClass).runTest(4), true);
+    });
   });
 
   group('Large functional tests', () {

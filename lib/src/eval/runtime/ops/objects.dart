@@ -216,8 +216,14 @@ class PushSuper implements DbcOp {
 
   @override
   void run(Runtime runtime) {
-    final object = runtime.frame[_objectOffset] as $InstanceImpl;
-    runtime.frame[runtime.frameOffset++] = object.evalSuperclass;
+    final object = runtime.frame[_objectOffset] as $Instance;
+    if (object is $InstanceImpl) {
+      runtime.frame[runtime.frameOffset++] = object.evalSuperclass;
+    } else if (object is $Bridge) {
+      runtime.frame[runtime.frameOffset++] = (Runtime.bridgeData[object]!.subclass as $InstanceImpl).evalSuperclass!;
+    } else {
+      throw UnimplementedError();
+    }
   }
 
   @override

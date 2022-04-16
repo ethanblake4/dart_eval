@@ -98,6 +98,23 @@ class EvalFunctionPtr extends EvalFunction {
   int get $runtimeType => RuntimeTypes.functionType;
 }
 
+class EvalStaticFunctionPtr extends EvalFunction {
+  EvalStaticFunctionPtr(this.$this, this.offset);
+
+  final int offset;
+  final $Instance? $this;
+
+  @override
+  $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
+    runtime.args = [...args];
+    runtime.bridgeCall(offset);
+    return runtime.returnValue as $Value?;
+  }
+
+  @override
+  int get $runtimeType => RuntimeTypes.functionType;
+}
+
 class $Function extends EvalFunction {
   const $Function(this.func);
 

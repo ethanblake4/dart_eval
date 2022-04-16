@@ -52,9 +52,7 @@ class $InstanceImpl implements $Instance {
       if (method == null) {
         return evalSuperclass?.$getProperty(runtime, identifier);
       }
-      // TODO
-      return null;
-      //return EvalFunctionPtr(this, method);
+      return EvalStaticFunctionPtr(this, method);
     }
     runtime.args.add(this);
     runtime.bridgeCall(getter);
