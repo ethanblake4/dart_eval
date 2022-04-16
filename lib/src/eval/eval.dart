@@ -29,11 +29,9 @@ dynamic eval(String source, {String function = 'main', List<BridgeClassDeclarati
 
   final runtime = Runtime.ofProgram(program);
 
-  //runtime.defineBridgeClasses(bridgeClasses);
   runtime.printOpcodes();
 
-
-
+  runtime.setup();
   final result = runtime.executeNamed(0, function);
 
   if (result is $Value) {

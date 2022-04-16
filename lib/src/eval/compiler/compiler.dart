@@ -79,10 +79,7 @@ class Compiler {
     final partMap = <int, List<String>>{};
     final partOfMap = <int, String>{};
     final importMap = <int, List<ImportDirective>>{};
-    final topLevelDeclarationsMap = <int, Map<String, DeclarationOrBridge>>{
-      for (final e in _bridgeClasses.entries)
-        e.key: {for (final v in e.value.entries) v.key: DeclarationOrBridge(bridge: v.value)}
-    };
+    final topLevelDeclarationsMap = <int, Map<String, DeclarationOrBridge>>{};
     final instanceDeclarationsMap = <int, Map<String, Map<String, Declaration>>>{};
 
     ctx.libraryMap = <String, int>{..._bridgeLibraryMappings};
@@ -109,8 +106,13 @@ class Compiler {
         for (final _cls in _classes.entries)
           _cls.key: _cls.value.copyWith(
               type: BridgeTypeReference.type(
-                  ctx.typeRefIndexMap[TypeRef.cache(ctx, _blm.value, _cls.key)]!, _cls.value.type.typeArgs))
+                  ctx.typeRefIndexMap[TypeRef.cache(ctx, _blm.value, _cls.key, fileRef: _blm.value)]!, _cls.value.type.typeArgs))
       };
+
+      topLevelDeclarationsMap.addAll(<int, Map<String, DeclarationOrBridge>>{
+        for (final e in typeResolvedBridgeClasses.entries)
+          e.key: {for (final v in e.value.entries) v.key: DeclarationOrBridge(bridge: v.value)}
+      });
 
       final types = Map.fromEntries(typeResolvedBridgeClasses.entries.expand(
           (element) => element.value.entries.map((e) => MapEntry(e.key, ctx.runtimeTypeList[e.value.type.cacheId!]))));
@@ -336,7 +338,7 @@ class Compiler {
 
     final ob = program.write();
 
-    return Runtime(ob.buffer.asByteData());
+    return Runtime(ob.buffer.asByteData())..setup();
   }
 
   CompilationUnit _parse(String source) {

@@ -35,6 +35,22 @@ final Map<TypeRef, int> runtimeTypeMap = {
   EvalTypes.typeType: RuntimeTypes.typeType
 };
 
+final Map<int, TypeRef> inverseRuntimeTypeMap = {
+  RuntimeTypes.voidType: EvalTypes.voidType,
+  RuntimeTypes.dynamicType: EvalTypes.dynamicType,
+  RuntimeTypes.nullType: EvalTypes.nullType,
+  RuntimeTypes.objectType: EvalTypes.objectType,
+  RuntimeTypes.boolType: EvalTypes.boolType,
+  RuntimeTypes.numType: EvalTypes.numType,
+  RuntimeTypes.stringType: EvalTypes.stringType,
+  RuntimeTypes.intType: EvalTypes.intType,
+  RuntimeTypes.doubleType: EvalTypes.doubleType,
+  RuntimeTypes.mapType: EvalTypes.mapType,
+  RuntimeTypes.listType: EvalTypes.listType,
+  RuntimeTypes.functionType: EvalTypes.functionType,
+  RuntimeTypes.typeType: EvalTypes.typeType
+};
+
 class RuntimeTypeFactory {
   RuntimeTypeFactory();
   int _typeIndex = 0;

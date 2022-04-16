@@ -94,6 +94,7 @@ void main(List<String> args) {
   } else if (command.name == 'run') {
     final dbc = File(command['path']!).readAsBytesSync();
     final runtime = Runtime(dbc.buffer.asByteData());
+    runtime.setup();
     var result = runtime.executeNamed(0, 'main');
 
     if (result != null) {
@@ -105,6 +106,7 @@ void main(List<String> args) {
   } else if (command.name == 'dump') {
     final dbc = File(command['path']!).readAsBytesSync();
     final runtime = Runtime(dbc.buffer.asByteData());
+    runtime.setup();
     runtime.printOpcodes();
   }
 }

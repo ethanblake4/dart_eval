@@ -124,12 +124,15 @@ class TypeRef {
 
   factory TypeRef.fromBridgeAnnotation(CompilerContext ctx, BridgeTypeAnnotation typeAnnotation) {
     final nullable = typeAnnotation.nullable;
-    final type = typeAnnotation.type;
-    final cacheId = type.cacheId;
+    return TypeRef.fromBridgeTypeReference(ctx, typeAnnotation.type);
+  }
+
+  factory TypeRef.fromBridgeTypeReference(CompilerContext ctx, BridgeTypeReference typeReference) {
+    final cacheId = typeReference.cacheId;
     if (cacheId != null) {
-      return ctx.runtimeTypeList[cacheId];
+      return inverseRuntimeTypeMap[cacheId] ?? ctx.runtimeTypeList[cacheId];
     }
-    final unresolved = type.unresolved;
+    final unresolved = typeReference.unresolved;
     if (unresolved != null) {
       return ctx.visibleTypes[ctx.libraryMap[unresolved.library]!]![unresolved.name]!;
     }

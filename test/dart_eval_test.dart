@@ -1,5 +1,8 @@
 import 'package:dart_eval/dart_eval.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:test/test.dart';
+
+import 'bridge_lib.dart';
 
 // Functional tests
 void main() {
@@ -288,6 +291,7 @@ void main() {
       expect(exec.executeNamed(0, 'main'), 3);
     });
   });
+
   group('Statement tests', () {
     late Compiler gen;
 
@@ -332,6 +336,42 @@ void main() {
       expect(exec.executeNamed(0, 'doThing'), $int(499472));
     });
 
+  });
+
+  group('Bridge tests', () {
+    late Compiler compiler;
+
+    setUp(() {
+      compiler = Compiler();
+    });
+
+    test('Using a bridge class', () {
+      compiler.defineBridgeClasses([
+        $TestClass.$declaration
+      ]);
+
+      final program = compiler.compile({
+        'example': {
+          'main.dart': '''
+            import 'package:bridge_lib/bridge_lib.dart';
+            
+            bool main() {
+              final test = TestClass(4);
+              return test.runTest(5, b: 'hi');
+            }
+          '''
+        }
+      });
+
+      final runtime = Runtime.ofProgram(program);
+
+      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart', 'TestClass.', $Function((rt, target, args) {
+        return $TestClass(args[0]!.$value);
+      }));
+
+      runtime.setup();
+      runtime.executeNamed(0, 'main');
+    });
   });
 
   group('Large functional tests', () {

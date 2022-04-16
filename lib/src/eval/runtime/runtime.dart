@@ -49,15 +49,22 @@ class _UnloadedBridgeFunction {
 }
 
 class Runtime {
-  Runtime(this._dbc) : id = _id++ {
-    loadProgram();
+  Runtime(this._dbc) : id = _id++, _fromDbc = true;
+
+  static $Value? _fn (Runtime rt, $Value? target, List<$Value?> args) {
+    throw UnimplementedError();
   }
+
+  static const _defaultFunction = $Function(_fn);
 
   Runtime.ofProgram(Program program)
       : id = _id++,
+        _fromDbc = false,
         typeTypes = program.typeTypes,
         typeNames = program.typeNames,
-        runtimeTypes = program.runtimeTypes {
+        runtimeTypes = program.runtimeTypes,
+        _bridgeLibraryMappings = program.bridgeLibraryMappings,
+        bridgeFuncMappings = program.bridgeFunctionMappings {
     declarations = program.topLevelDeclarations;
     constantPool.addAll(program.constantPool);
     program.instanceDeclarations.forEach((file, $class) {
@@ -79,7 +86,7 @@ class Runtime {
     pr.addAll(program.ops);
   }
 
-  void loadProgram() {
+  void _load() {
     final encodedToplevelDecs = _readString();
     final encodedInstanceDecs = _readString();
     final encodedTypeNames = _readString();
@@ -106,17 +113,14 @@ class Runtime {
 
     _bridgeLibraryMappings = (json.decode(encodedBridgeLibraryMappings) as Map).cast();
 
-    final bridgeFuncMappings = (json.decode(encodedBridgeFuncMappings) as Map).cast<String, Map>().map((key, value) =>
+    bridgeFuncMappings = (json.decode(encodedBridgeFuncMappings) as Map).cast<String, Map>().map((key, value) =>
         MapEntry(int.parse(key), value.cast<String, int>()));
 
     constantPool.addAll((json.decode(encodedConstantPool) as List).cast());
 
     runtimeTypes = [for (final s in (json.decode(encodedRuntimeTypes) as List)) RuntimeTypeSet.fromJson(s as List)];
 
-    for (final ulb in _unloadedBrFunc) {
-      final libIndex = _bridgeLibraryMappings[ulb.library]!;
-      _bridgeFunctions[bridgeFuncMappings[libIndex]![ulb.name]!] = ulb.func;
-    }
+    _setupBridging();
 
     while (_offset < _dbc.lengthInBytes) {
       final opId = _dbc.getUint8(_offset);
@@ -125,13 +129,32 @@ class Runtime {
     }
   }
 
+  void _setupBridging() {
+    for (final ulb in _unloadedBrFunc) {
+      final libIndex = _bridgeLibraryMappings[ulb.library]!;
+      _bridgeFunctions[bridgeFuncMappings[libIndex]![ulb.name]!] = ulb.func;
+    }
+  }
+
   void registerBridgeClass(String library, String name, $Bridge cls) {
     _unloadedBrClass.add(_UnloadedBridgeClass(library, name, cls));
   }
 
+  void registerBridgeFunc(String library, String name, $Function fn) {
+    _unloadedBrFunc.add(_UnloadedBridgeFunction(library, name, fn));
+  }
+
+  void setup() {
+    if (_fromDbc) {
+      _load();
+    } else {
+      _setupBridging();
+    }
+  }
+
   var _bridgeLibraryIdx = -2;
   var _bridgeLibraryMappings = <String, int>{};
-  var _bridgeFunctions = <$Function>[];
+  final _bridgeFunctions = List<$Function>.filled(1000, _defaultFunction);
   var _bridgeGlobals = <int, Map<String, $BridgeField>>{};
   final _unloadedBrClass = <_UnloadedBridgeClass>[];
   final _unloadedBrFunc = <_UnloadedBridgeFunction>[];
@@ -298,6 +321,7 @@ class Runtime {
 
   static final bridgeData = Expando<BridgeData>();
   late ByteData _dbc;
+  final bool _fromDbc;
   final stack = <List<Object?>>[];
   List<Object?> frame = [];
   var args = <Object?>[];
@@ -310,6 +334,7 @@ class Runtime {
   late final List<String> typeNames;
   late final List<Set<int>> typeTypes;
   late final List<RuntimeTypeSet> runtimeTypes;
+  late final Map<int, Map<String, int>> bridgeFuncMappings;
 
   int frameOffset = 0;
   int _offset = 0;

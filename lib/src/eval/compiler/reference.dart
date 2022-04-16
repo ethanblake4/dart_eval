@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/src/eval/bridge/declaration/class.dart';
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
@@ -32,7 +33,6 @@ class IdentifierReference implements Reference {
 
   Variable? object;
   final String name;
-
 
   @override
   TypeRef resolveType(CompilerContext ctx) {
@@ -139,8 +139,8 @@ class IdentifierReference implements Reference {
       if (staticDeclaration != null && staticDeclaration.declaration != null) {
         final _dec = staticDeclaration.declaration!;
         if (_dec is MethodDeclaration) {
-          return Variable(-1, EvalTypes.functionType, methodOffset:
-            DeferredOrOffset.lookupStatic(ctx, ctx.library, ctx.currentClass!.name.name, name));
+          return Variable(-1, EvalTypes.functionType,
+              methodOffset: DeferredOrOffset.lookupStatic(ctx, ctx.library, ctx.currentClass!.name.name, name));
         }
       }
     }
@@ -149,7 +149,18 @@ class IdentifierReference implements Reference {
     final _decl = declaration.declaration!;
 
     if (_decl.isBridge) {
-      throw CompileError('No support bridge declaration in Reference');
+      final bridge = _decl.bridge!;
+
+      if (bridge is BridgeClassDeclaration) {
+        final type = TypeRef.fromBridgeTypeReference(ctx, bridge.type);
+
+        return Variable(-1, EvalTypes.typeType,
+            concreteTypes: [type],
+            methodOffset: DeferredOrOffset(file: type.file, name: type.name + '.'),
+            methodReturnType: AlwaysReturnType(type, false));
+      }
+
+      throw CompileError('Cannot resolve bridged ${bridge.runtimeType} in reference');
     }
 
     final decl = _decl.declaration!;
@@ -167,8 +178,8 @@ class IdentifierReference implements Reference {
         offset = DeferredOrOffset(file: declaration.sourceLib, name: name + '.');
       }
 
-      return Variable(-1, EvalTypes.typeType, concreteTypes: [returnType],
-          methodOffset: offset, methodReturnType: AlwaysReturnType(returnType, false));
+      return Variable(-1, EvalTypes.typeType,
+          concreteTypes: [returnType], methodOffset: offset, methodReturnType: AlwaysReturnType(returnType, false));
     }
 
     TypeRef? returnType;
@@ -188,13 +199,12 @@ class IdentifierReference implements Reference {
       offset = DeferredOrOffset(file: declaration.sourceLib, name: name);
     }
 
-    return Variable(-1, EvalTypes.typeType, concreteTypes: [returnType],
-        methodOffset: offset, methodReturnType: AlwaysReturnType(returnType, nullable));
+    return Variable(-1, EvalTypes.typeType,
+        concreteTypes: [returnType], methodOffset: offset, methodReturnType: AlwaysReturnType(returnType, nullable));
   }
 
   @override
   StaticDispatch? getStaticDispatch(CompilerContext ctx) {
-
     if (object != null) {
       if (object!.concreteTypes.length == 1) {
         // If we know the concrete type of the object, we can easily optimize to a static call
@@ -205,8 +215,7 @@ class IdentifierReference implements Reference {
 
         final methodsMap = ctx.instanceDeclarationPositions[actualType.file]![actualType.name]![2];
         if (methodsMap.containsKey(name)) {
-          offset = DeferredOrOffset(
-              file: actualType.file, offset: methodsMap[name]);
+          offset = DeferredOrOffset(file: actualType.file, offset: methodsMap[name]);
         } else {
           offset = DeferredOrOffset(file: actualType.file, className: actualType.name, methodType: 2, name: name);
         }

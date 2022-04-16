@@ -43,7 +43,7 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
     int? offset;
     if (_dec.isBridge) {
       final br = _dec.bridge!;
-      argsPair = compileArgumentListWithBridge(ctx, e.argumentList, br.functionDescriptor, before: [if (!isStatic) L]);
+      argsPair = compileArgumentListWithBridge(ctx, e.argumentList, br.functionDescriptor, before: []);
     } else {
       final dec = _dec.declaration!;
       final fpl = dec.parameters?.parameters ?? <FormalParameter>[];
@@ -72,9 +72,13 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
     mReturnType = AlwaysReturnType.fromInstanceMethodOrBuiltin(
         ctx, isStatic ? staticType! : L.type, e.methodName.name, _argTypes, _namedArgTypes,
         $static: isStatic);
+
+    ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
+
   } else {
     //final methodRef = compileIdentifierAsReference(e.methodName, ctx);
     final method = compileIdentifier(e.methodName, ctx);
+
     if (method.methodOffset == null) {
       throw CompileError('Cannot call ${e.methodName.name} as it is not a valid method');
     }
@@ -87,37 +91,60 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
     var _dec = ctx.topLevelDeclarationsMap[offset.file]![e.methodName.name];
     if (_dec == null || (!_dec.isBridge && _dec.declaration! is ClassDeclaration)) {
       _dec = ctx.topLevelDeclarationsMap[offset.file]![offset.name ?? e.methodName.name + '.'] ??
-          (throw CompileError('Cannot instantiate: The class ${e.methodName.name} does not have a default constructor'));
+          (throw CompileError(
+              'Cannot instantiate: The class ${e.methodName.name} does not have a default constructor'));
     }
+
+    final List<Variable> _args;
+    final Map<String, Variable> _namedArgs;
 
     if (_dec.isBridge) {
-      throw CompileError('Bridge invocations are not supported');
-    }
+      final cls = _dec.bridge as BridgeClassDeclaration;
 
-    final dec = _dec.declaration!;
+      final argsPair = compileArgumentListWithBridge(ctx, e.argumentList, cls.constructors['']!.functionDescriptor,
+          before: L != null ? [L] : []);
 
-    List<FormalParameter> fpl;
-    if (dec is FunctionDeclaration) {
-      fpl = dec.functionExpression.parameters?.parameters ?? <FormalParameter>[];
-    } else if (dec is MethodDeclaration) {
-      fpl = dec.parameters?.parameters ?? <FormalParameter>[];
-    } else if (dec is ConstructorDeclaration) {
-      fpl = dec.parameters.parameters;
+      _args = argsPair.first;
+      _namedArgs = argsPair.second;
+
     } else {
-      throw CompileError('Invalid declaration type ${dec.runtimeType}');
-    }
+      final dec = _dec.declaration!;
 
-    final argsPair = compileArgumentList(ctx, e.argumentList, offset.file!, fpl, dec, before: L != null ? [L] : []);
-    final _args = argsPair.first;
-    final _namedArgs = argsPair.second;
+      List<FormalParameter> fpl;
+      if (dec is FunctionDeclaration) {
+        fpl = dec.functionExpression.parameters?.parameters ?? <FormalParameter>[];
+      } else if (dec is MethodDeclaration) {
+        fpl = dec.parameters?.parameters ?? <FormalParameter>[];
+      } else if (dec is ConstructorDeclaration) {
+        fpl = dec.parameters.parameters;
+      } else {
+        throw CompileError('Invalid declaration type ${dec.runtimeType}');
+      }
+
+      final argsPair = compileArgumentList(ctx, e.argumentList, offset.file!, fpl, dec, before: L != null ? [L] : []);
+      _args = argsPair.first;
+      _namedArgs = argsPair.second;
+    }
 
     final _argTypes = _args.map((e) => e.type).toList();
     final _namedArgTypes = _namedArgs.map((key, value) => MapEntry(key, value.type));
 
-    final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.LEN);
-    if (offset.offset == null) {
-      ctx.offsetTracker.setOffset(loc, offset);
+    if (_dec.isBridge) {
+      final cls = _dec.bridge as BridgeClassDeclaration;
+      final type = TypeRef.fromBridgeTypeReference(ctx, cls.type);
+
+      final $null = BuiltinValue().push(ctx);
+      final op = BridgeInstantiate.make($null.scopeFrameOffset,
+          ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.']!);
+      ctx.pushOp(op, BridgeInstantiate.len(op));
+    } else {
+      final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.LEN);
+      if (offset.offset == null) {
+        ctx.offsetTracker.setOffset(loc, offset);
+      }
+      ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
     }
+
     TypeRef? thisType;
     if (ctx.currentClass != null) {
       thisType = ctx.visibleTypes[ctx.library]![ctx.currentClass!.name.name]!;
@@ -126,7 +153,6 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
         AlwaysReturnType(EvalTypes.dynamicType, true);
   }
 
-  ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
   final v = Variable.alloc(
       ctx,
       mReturnType?.type?.copyWith(boxed: L != null || !unboxedAcrossFunctionBoundaries.contains(mReturnType.type)) ??
@@ -137,12 +163,14 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
 
 DeclarationOrBridge<MethodDeclaration, BridgeMethodDeclaration> resolveInstanceMethod(
     CompilerContext ctx, TypeRef instanceType, String methodName) {
-  if (instanceType.file < -1) {
+
+  final _dec = ctx.topLevelDeclarationsMap[instanceType.file]![instanceType.name]!;
+  if (_dec.isBridge) {
     // Bridge
-    final bridge =
-        ctx.topLevelDeclarationsMap[instanceType.file]![instanceType.name]!.bridge! as BridgeClassDeclaration;
+    final bridge = _dec.bridge! as BridgeClassDeclaration;
     return DeclarationOrBridge(bridge: bridge.methods[methodName]!);
   }
+
   final dec = ctx.instanceDeclarationsMap[instanceType.file]![instanceType.name]![methodName];
 
   if (dec != null) {
