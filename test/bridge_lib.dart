@@ -18,6 +18,10 @@ class TestClass {
 class $TestClass extends TestClass with $Bridge {
   $TestClass(int someNumber) : super(someNumber);
 
+  static $TestClass $construct(Runtime runtime, $Value? target, List<$Value?> args) {
+    return $TestClass(args[0]!.$value);
+  }
+
   static const $type = BridgeTypeReference.unresolved(
       BridgeUnresolvedTypeReference('package:bridge_lib/bridge_lib.dart', 'TestClass'), []);
 

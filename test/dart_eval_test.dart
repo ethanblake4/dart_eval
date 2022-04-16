@@ -14,7 +14,9 @@ void main() {
     });
 
     test('Local variable assignment with ints', () {
-      final exec = gen.compileWriteAndLoad({'dbc_test': {'main.dart': '''
+      final exec = gen.compileWriteAndLoad({
+        'dbc_test': {
+          'main.dart': '''
       int main() {
         var i = 3;
         {
@@ -23,13 +25,17 @@ void main() {
           return k;
         }
       }
-      '''}});
+      '''
+        }
+      });
 
       expect(exec.executeNamed(0, 'main'), 3);
     });
 
     test('Simple function call', () {
-      final exec = gen.compileWriteAndLoad({'dbc_test': {'main.dart': '''
+      final exec = gen.compileWriteAndLoad({
+        'dbc_test': {
+          'main.dart': '''
      
       int main() {
         var i = x();
@@ -39,7 +45,9 @@ void main() {
         return 7;
       }
      
-      '''}});
+      '''
+        }
+      });
 
       expect(exec.executeNamed(0, 'main'), 7);
     });
@@ -63,7 +71,7 @@ void main() {
       expect(exec.executeNamed(0, 'main'), 75025);
     });
 
-    test('Multiple files, boxed ints and correct stack handling',() {
+    test('Multiple files, boxed ints and correct stack handling', () {
       final exec = gen.compileWriteAndLoad({
         'example': {
           'main.dart': '''
@@ -92,7 +100,8 @@ void main() {
               return ra;
             }
       '''
-        }});
+        }
+      });
 
       expect(exec.executeNamed(0, 'main'), $num<num>(7));
     });
@@ -187,7 +196,6 @@ void main() {
 
       expect(exec.executeNamed(0, 'main'), $double(1.5));
     });
-
   });
 
   group('Class tests', () {
@@ -198,7 +206,9 @@ void main() {
     });
 
     test('Default constructor, basic method', () {
-      final exec = gen.compileWriteAndLoad({'dbc_test': {'main.dart': '''
+      final exec = gen.compileWriteAndLoad({
+        'dbc_test': {
+          'main.dart': '''
       class MyClass {
         MyClass();
         
@@ -210,7 +220,9 @@ void main() {
         final cls = MyClass();
         return cls.someMethod() + 2;
       }
-      '''}});
+      '''
+        }
+      });
 
       expect(exec.executeNamed(0, 'main'), 10);
     });
@@ -316,7 +328,8 @@ void main() {
 
     test('For loop + branching', () {
       final exec = gen.compileWriteAndLoad({
-        'example': { 'main.dart': '''
+        'example': {
+          'main.dart': '''
           dynamic doThing() {
             var count = 0;
             for (var i = 0; i < 1000; i++) {
@@ -330,12 +343,12 @@ void main() {
             
             return count;
           }
-        ''' }
+        '''
+        }
       });
 
       expect(exec.executeNamed(0, 'doThing'), $int(499472));
     });
-
   });
 
   group('Bridge tests', () {
@@ -346,9 +359,7 @@ void main() {
     });
 
     test('Using a bridge class', () {
-      compiler.defineBridgeClasses([
-        $TestClass.$declaration
-      ]);
+      compiler.defineBridgeClasses([$TestClass.$declaration]);
 
       final program = compiler.compile({
         'example': {
@@ -365,12 +376,10 @@ void main() {
 
       final runtime = Runtime.ofProgram(program);
 
-      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart', 'TestClass.', $Function((rt, target, args) {
-        return $TestClass(args[0]!.$value);
-      }));
+      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart', 'TestClass.', $Function($TestClass.$construct));
 
       runtime.setup();
-      runtime.executeNamed(0, 'main');
+      expect(runtime.executeNamed(0, 'main'), true);
     });
   });
 
@@ -382,7 +391,6 @@ void main() {
     });
 
     test('Functional test 1', () {
-
       final source = '''
       dynamic main() {
         var someNumber = 19;
@@ -469,9 +477,8 @@ void main() {
       }''';
 
       final exec = gen.compileWriteAndLoad({
-        'example': { 'main.dart': source }
+        'example': {'main.dart': source}
       });
-
 
       final timestamp = DateTime.now().millisecondsSinceEpoch;
 
@@ -479,6 +486,5 @@ void main() {
       expect(result, $int(555));
       expect(DateTime.now().millisecondsSinceEpoch - timestamp, lessThan(100));
     });
-
   });
 }
