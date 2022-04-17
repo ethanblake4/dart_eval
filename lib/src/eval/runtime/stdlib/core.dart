@@ -2,6 +2,7 @@ import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bridge/declaration/function.dart';
 import 'package:dart_eval/src/eval/bridge/declaration/type.dart';
+import 'package:dart_eval/src/eval/runtime/stdlib/core/duration.dart';
 import 'package:dart_eval/src/eval/runtime/stdlib/core/future.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
 
@@ -15,6 +16,7 @@ void configureCoreForCompile(Compiler compiler) {
       ], {})));
 
   $Future.configureForCompile(compiler);
+  $Duration.configureForCompile(compiler);
 }
 
 void configureCoreForRuntime(Runtime runtime) {
@@ -22,4 +24,6 @@ void configureCoreForRuntime(Runtime runtime) {
     print(args[0]!.$value);
   }));
 
+  $Duration.configureForRuntime(runtime);
+  $Future.configureForRuntime(runtime);
 }

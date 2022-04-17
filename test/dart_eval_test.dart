@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:test/test.dart';
@@ -348,6 +350,30 @@ void main() {
       });
 
       expect(exec.executeNamed(0, 'doThing'), $int(499472));
+    });
+  });
+
+  group('Standard library tests', () {
+    late Compiler compiler;
+
+    setUp(() {
+      compiler = Compiler();
+    });
+
+    test('Future.delayed()', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+          Future main(int seconds) {
+            return Future.delayed(Duration(seconds: seconds + 1));
+          }
+          '''
+        }
+      });
+
+      runtime.args = [1];
+      final future = runtime.executeNamed(0, 'main') as Future;
+      expect(future, completion(null));
     });
   });
 

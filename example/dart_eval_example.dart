@@ -23,12 +23,8 @@ void main(List<String> args) {
       print('This message will print immediately');
     }
   ''';
-  final timestamp = DateTime.now().millisecondsSinceEpoch;
 
-  final result = eval(source, args: [$Future.wrap(Future.delayed(const Duration(seconds: 2)), (_) => $null())]);
-
-  print('Output: $result');
-  print('Execution time: ${DateTime.now().millisecondsSinceEpoch - timestamp} ms');
+  eval(source, args: [$Future.wrap(Future.delayed(const Duration(seconds: 2)), (_) => $null())]);
 }
 
 class $X extends X with $Bridge {

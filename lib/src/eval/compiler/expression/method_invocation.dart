@@ -25,7 +25,7 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
   AlwaysReturnType? mReturnType;
 
   if (L != null) {
-    final DeclarationOrBridge<MethodDeclaration, BridgeMethodDeclaration> _dec;
+    final DeclarationOrBridge<MethodDeclaration, BridgeDeclaration> _dec;
     final bool isStatic;
     TypeRef? staticType;
     if (L.type == EvalTypes.typeType && L.concreteTypes.length == 1) {
@@ -43,7 +43,10 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
     int? offset;
     if (_dec.isBridge) {
       final br = _dec.bridge!;
-      argsPair = compileArgumentListWithBridge(ctx, e.argumentList, br.functionDescriptor, before: []);
+      final fd = br is BridgeMethodDeclaration
+          ? br.functionDescriptor
+          : (br as BridgeConstructorDeclaration).functionDescriptor;
+      argsPair = compileArgumentListWithBridge(ctx, e.argumentList, fd, before: []);
     } else {
       final dec = _dec.declaration!;
       final fpl = dec.parameters?.parameters ?? <FormalParameter>[];
@@ -141,8 +144,8 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
         final type = TypeRef.fromBridgeTypeReference(ctx, bridge.type);
 
         final $null = BuiltinValue().push(ctx);
-        final op =
-        BridgeInstantiate.make($null.scopeFrameOffset, ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.']!);
+        final op = BridgeInstantiate.make(
+            $null.scopeFrameOffset, ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.']!);
         ctx.pushOp(op, BridgeInstantiate.len(op));
       } else {
         final op = InvokeExternal.make(ctx.bridgeStaticFunctionIndices[offset.file]![offset.name]!);
@@ -196,14 +199,27 @@ DeclarationOrBridge<MethodDeclaration, BridgeMethodDeclaration> resolveInstanceM
   }
 }
 
-DeclarationOrBridge<MethodDeclaration, BridgeMethodDeclaration> resolveStaticMethod(
+DeclarationOrBridge<MethodDeclaration, BridgeDeclaration> resolveStaticMethod(
     CompilerContext ctx, TypeRef classType, String methodName) {
-  final method = ctx.topLevelDeclarationsMap[classType.file]![classType.name + '.' + methodName]!;
-  if (method.declaration != null) {
-    return DeclarationOrBridge(declaration: method.declaration! as MethodDeclaration);
-  } else {
-    return DeclarationOrBridge(bridge: method.bridge! as BridgeMethodDeclaration);
+  final method = ctx.topLevelDeclarationsMap[classType.file]![classType.name + '.' + methodName];
+  if (method != null) {
+    if (method.declaration != null) {
+      return DeclarationOrBridge(declaration: method.declaration! as MethodDeclaration);
+    } else {
+      return DeclarationOrBridge(bridge: method.bridge! as BridgeMethodDeclaration);
+    }
   }
+
+  final cls = ctx.topLevelDeclarationsMap[classType.file]![classType.name];
+
+  if (cls?.isBridge ?? false) {
+    final bridge = cls!.bridge!;
+    if (bridge is BridgeClassDeclaration) {
+      return DeclarationOrBridge(bridge: bridge.constructors[methodName]!);
+    }
+  }
+
+  throw UnimplementedError();
 }
 
 Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext ctx, ArgumentList argumentList,

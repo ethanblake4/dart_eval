@@ -53,7 +53,7 @@ class Runtime {
   Runtime(this._dbc) : id = _id++, _fromDbc = true;
 
   static $Value? _fn (Runtime rt, $Value? target, List<$Value?> args) {
-    throw UnimplementedError();
+    throw UnimplementedError('Tried to invoke a nonexistent external function');
   }
 
   static const _defaultFunction = $Function(_fn);

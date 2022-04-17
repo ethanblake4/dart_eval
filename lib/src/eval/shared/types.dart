@@ -18,6 +18,7 @@ class RuntimeTypes {
   static const int iteratorType = -14;
   static const int iterableType = -15;
   static const int futureType = -16;
+  static const int durationType = -17;
 }
 
 final Map<TypeRef, int> runtimeTypeMap = {
