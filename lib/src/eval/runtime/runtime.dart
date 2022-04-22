@@ -452,6 +452,8 @@ class Runtime {
       }
     } on ProgramExit catch (_) {
       return returnValue;
+    } on RuntimeException catch (_) {
+      rethrow;
     } catch (e, stk) {
       throw RuntimeException(this, e, stk);
     }
@@ -472,6 +474,10 @@ class Runtime {
     } on ProgramExit catch (_) {
       _prOffset = _savedOffset;
       return;
+    } on RuntimeException catch (_) {
+      rethrow;
+    } catch (e, stk) {
+      throw RuntimeException(this, e, stk);
     }
   }
 

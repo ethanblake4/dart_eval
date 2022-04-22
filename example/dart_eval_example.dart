@@ -18,15 +18,15 @@ void main(List<String> args) {
       future.then((dynamic _) {
         print('This message will print 2 seconds later');
       });
-      func().then((dynamic _) {
+      func('Whee').then((dynamic _) {
         print('did suspend');
       });
       print('This message will print immediately');
     }
     
-    Future func() async {
+    Future func(String str) async {
       await Future.delayed(Duration(seconds: 1));
-      print('Hi');
+      print(str);
       print(await l());
     }
     
