@@ -138,6 +138,9 @@ class Dbc {
   /// [InvokeExternal]
   static const OP_INVOKE_EXTERNAL = 43;
 
+  /// [Await]
+  static const OP_AWAIT = 44;
+
   static List<int> i16b(int i16) {
     final x = ByteData(2);
     x.setInt16(0, i16);
@@ -217,5 +220,6 @@ final List<OpLoader> ops = [
   (Runtime rt) => PushFunctionPtr(rt), // 40
   (Runtime rt) => BoxNum(rt), // 41
   (Runtime rt) => BoxDouble(rt), // 42
-  (Runtime rt) => InvokeExternal(rt) // 43
+  (Runtime rt) => InvokeExternal(rt), // 43
+  (Runtime rt) => Await(rt) // 44
 ];

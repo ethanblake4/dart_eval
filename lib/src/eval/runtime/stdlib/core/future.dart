@@ -2,9 +2,7 @@ import 'dart:async';
 
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/bridge/declaration/class.dart';
 import 'package:dart_eval/src/eval/bridge/declaration/function.dart';
-import 'package:dart_eval/src/eval/bridge/declaration/type.dart';
 import 'package:dart_eval/src/eval/runtime/stdlib/core/duration.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
 
@@ -14,9 +12,7 @@ class $Future<T> implements Future<T>, $Instance {
   }
 
   static void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFunc('dart:core', 'Future.delayed', $Function((runtime, target, args) {
-      return $Future.wrap(Future.delayed(args[0]!.$value), (value) => $null());
-    }));
+    runtime.registerBridgeFunc('dart:core', 'Future.delayed', const _$Future_delayed());
   }
 
   static const _$type = BridgeTypeReference.unresolved(BridgeUnresolvedTypeReference('dart:core', 'Future'), []);
@@ -86,4 +82,13 @@ class $Future<T> implements Future<T>, $Instance {
 
   @override
   Future<T> whenComplete(FutureOr<void> Function() action) => $value.whenComplete(action);
+}
+
+class _$Future_delayed implements EvalCallable {
+  const _$Future_delayed();
+
+  @override
+  $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
+    return $Future.wrap(Future.delayed(args[0]!.$value), (value) => $null());
+  }
 }

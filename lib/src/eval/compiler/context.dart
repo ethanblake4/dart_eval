@@ -72,7 +72,14 @@ mixin ScopeContext on Object implements AbstractScopeContext  {
     inNonlinearAccessContext = [false];
   }
 
-  Variable setLocal(String name, Variable v) {
+  Variable setLocal(String name, Variable v, {int? frame}) {
+
+    if (frame != null) {
+      return locals[frame][name] = v
+          ..name = name
+          ..frameIndex = frame;
+    }
+
     return locals.last[name] = v
       ..name = name
       ..frameIndex = locals.length - 1;
@@ -147,6 +154,8 @@ class CompilerContext with ScopeContext {
   List<String> typeNames = [];
   List<Set<int>> typeTypes = [];
   PrescanContext? preScan;
+  int nearestAsyncFrame = -1;
+
   final signaturePool = FunctionSignaturePool();
   final constantPool = ConstantPool<Object>();
   final runtimeTypes = ConstantPool<RuntimeTypeSet>();

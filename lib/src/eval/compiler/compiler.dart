@@ -10,6 +10,7 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/program.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/runtime/stdlib/async.dart';
 import 'package:dart_eval/src/eval/runtime/stdlib/core.dart';
 
 import 'context.dart';
@@ -89,6 +90,7 @@ class Compiler {
   Program compile(Map<String, Map<String, String>> packages) {
 
     configureCoreForCompile(this);
+    configureAsyncForCompile(this);
 
     final typeResolvedBridgeClasses = <int, Map<String, BridgeClassDeclaration>>{};
     final packageMap = <String, Map<String, int>>{};
@@ -111,9 +113,9 @@ class Compiler {
 
       // Skip over 'package:' in the string
       // TODO remove this when processing JSON
-      final content = uri == 'dart:core' ? null : uri.substring(8);
-      final package = content?.substring(0, content.indexOf('/')) ?? 'dart:core';
-      final file = content?.substring(content.indexOf('/') + 1) ?? 'core';
+      final content = uri.startsWith('dart:') ? null : uri.substring(8);
+      final package = content?.substring(0, content.indexOf('/')) ?? uri;
+      final file = content?.substring(content.indexOf('/') + 1) ?? uri.split(':')[1];
       if (!packageMap.containsKey(package)) {
         packageMap[package] = {};
       }

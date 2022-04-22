@@ -12,6 +12,28 @@ StatementInfo compileReturn(CompilerContext ctx, ReturnStatement s, AlwaysReturn
   if (s.expression == null) {
     ctx.pushOp(Return.make(-1), Return.LEN);
   } else {
+    AstNode? _e = s;
+    while (_e != null) {
+      if (_e is FunctionBody) {
+        break;
+      }
+      _e = _e.parent;
+    }
+
+    _e as FunctionBody;
+    if (_e.isAsynchronous) {
+      final ta = expectedReturnType?.type?.specifiedTypeArgs;
+      final expected = (ta?.isEmpty ?? true) ? EvalTypes.dynamicType : ta![0];
+      var value = compileExpression(s.expression!, ctx);
+      if (!value.type.isAssignableTo(expected)) {
+        throw CompileError('Cannot return ${value.type} (expected: $expected)');
+      }
+      final _completer = ctx.lookupLocal('#completer');
+      _completer!.invoke(ctx, 'complete', [value]);
+      ctx.pushOp(Return.make(-1), Return.LEN);
+      return StatementInfo(-1, willAlwaysReturn: true);
+    }
+
     final expected = expectedReturnType?.type ?? EvalTypes.dynamicType;
     var value = compileExpression(s.expression!, ctx);
     if (!value.type.isAssignableTo(expected)) {

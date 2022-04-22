@@ -46,7 +46,7 @@ class Variable {
   int? frameIndex;
 
   Variable boxIfNeeded(ScopeContext ctx) {
-    if (boxed) {
+    if (boxed || type == EvalTypes.nullType) {
       return this;
     }
 

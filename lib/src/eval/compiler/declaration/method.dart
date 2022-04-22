@@ -7,6 +7,7 @@ import 'package:dart_eval/src/eval/compiler/scope.dart';
 import 'package:dart_eval/src/eval/compiler/statement/block.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
+import 'package:dart_eval/src/eval/compiler/util.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
@@ -19,7 +20,11 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx, NamedComp
   ctx.scopeFrameOffset += d.parameters?.parameters.length ?? 0;
   final resolvedParams = resolveFPLDefaults(ctx, d.parameters!, true, allowUnboxed: true);
 
-  var i = d.isStatic ? 0 : 1;;
+  if (b.isAsynchronous) {
+    setupAsyncFunction(ctx);
+  }
+
+  var i = d.isStatic ? 0 : 1;
 
   for (final param in resolvedParams) {
     final p = param.parameter;
@@ -49,6 +54,9 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx, NamedComp
   ctx.endAllocScope();
 
   if (!(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
+    if (b.isAsynchronous) {
+      asyncComplete(ctx);
+    }
     ctx.pushOp(Return.make(-1), Return.LEN);
   }
 

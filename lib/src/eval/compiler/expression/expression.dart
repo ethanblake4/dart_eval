@@ -2,6 +2,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/assignment.dart';
+import 'package:dart_eval/src/eval/compiler/expression/await.dart';
 import 'package:dart_eval/src/eval/compiler/expression/binary.dart';
 import 'package:dart_eval/src/eval/compiler/expression/funcexpr_invocation.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
@@ -40,6 +41,8 @@ Variable compileExpression(Expression e, CompilerContext ctx) {
     return compileFunctionExpression(e, ctx);
   } else if (e is FunctionExpressionInvocation) {
     return compileFunctionExpressionInvocation(e, ctx);
+  } else if (e is AwaitExpression) {
+    return compileAwaitExpression(e, ctx);
   }
 
   throw CompileError('Unknown expression type ${e.runtimeType}');
@@ -62,7 +65,7 @@ bool canReference(Expression e) {
 }
 
 void compileExpressionAndDiscardResult(Expression e, CompilerContext ctx) {
-  if (e is Identifier || e is AssignmentExpression || e is IndexExpression) {
+  if (canReference(e)) {
     compileExpressionAsReference(e, ctx);
   } else {
     compileExpression(e, ctx);

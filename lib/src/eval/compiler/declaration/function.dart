@@ -6,6 +6,7 @@ import 'package:dart_eval/src/eval/compiler/scope.dart';
 import 'package:dart_eval/src/eval/compiler/statement/block.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
+import 'package:dart_eval/src/eval/compiler/util.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
@@ -38,11 +39,21 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
 
   final b = d.functionExpression.body;
 
+  if (b.isAsynchronous) {
+    setupAsyncFunction(ctx);
+  }
+
   StatementInfo? stInfo;
   if (b is BlockFunctionBody) {
     stInfo = compileBlock(
         b.block, AlwaysReturnType.fromAnnotation(ctx, ctx.library, d.returnType, EvalTypes.dynamicType), ctx,
         name: d.name.name + '()');
+  }
+
+  if (stInfo == null || !(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
+    if (b.isAsynchronous) {
+      asyncComplete(ctx);
+    }
   }
 
   ctx.endAllocScope();

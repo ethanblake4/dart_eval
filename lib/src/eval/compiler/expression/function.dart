@@ -7,6 +7,7 @@ import 'package:dart_eval/src/eval/compiler/scope.dart';
 import 'package:dart_eval/src/eval/compiler/statement/block.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
+import 'package:dart_eval/src/eval/compiler/util.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
@@ -24,6 +25,7 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
 
   final ctxSaveState = ctx.saveState();
   final sfo = ctx.scopeFrameOffset;
+  ctx.resetStack();
 
   final _existingAllocs = 1 + (e.parameters?.parameters.length ?? 0);
   ctx.beginAllocScope(existingAllocLen: _existingAllocs);
@@ -55,6 +57,10 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
 
   final b = e.body;
 
+  if (b.isAsynchronous) {
+    setupAsyncFunction(ctx);
+  }
+
   StatementInfo? stInfo;
   if (b is BlockFunctionBody) {
     stInfo = compileBlock(
@@ -67,6 +73,9 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
 
   ctx.endAllocScope();
   if (stInfo == null || !(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
+    if (b.isAsynchronous) {
+      asyncComplete(ctx);
+    }
     ctx.pushOp(Return.make(-1), Return.LEN);
   }
 

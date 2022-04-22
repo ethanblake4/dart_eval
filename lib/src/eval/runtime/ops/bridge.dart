@@ -1,8 +1,8 @@
 part of '../runtime.dart';
 
 class BridgeInstantiate implements DbcOp {
-  BridgeInstantiate(Runtime exec) :
-        _subclass = exec._readInt16(),
+  BridgeInstantiate(Runtime exec)
+      : _subclass = exec._readInt16(),
         _constructor = exec._readInt32();
 
   BridgeInstantiate.make(this._subclass, this._constructor);
@@ -29,7 +29,7 @@ class BridgeInstantiate implements DbcOp {
     runtime.args = [];
 
     final $runtimeType = 1;
-    final instance = runtime._bridgeFunctions[_constructor].func(runtime, null, _mappedArgs) as $Instance;
+    final instance = runtime._bridgeFunctions[_constructor](runtime, null, _mappedArgs) as $Instance;
     Runtime.bridgeData[instance] = BridgeData(runtime, $runtimeType, $subclass ?? BridgeDelegatingShim());
 
     runtime.frame[runtime.frameOffset++] = instance;
@@ -88,7 +88,6 @@ class InvokeExternal implements DbcOp {
 
   @override
   void run(Runtime runtime) {
-
     final _args = runtime.args;
     final _argsLen = _args.length;
 
@@ -98,9 +97,87 @@ class InvokeExternal implements DbcOp {
     }
 
     runtime.args = [];
-    runtime.returnValue = runtime._bridgeFunctions[_function].func(runtime, null, _mappedArgs);
+    runtime.returnValue = runtime._bridgeFunctions[_function](runtime, null, _mappedArgs);
   }
 
   @override
   String toString() => 'InvokeExternal (Ex#$_function)';
+}
+
+class Await implements DbcOp {
+  Await(Runtime runtime): _completerOffset = runtime._readInt16(), _futureOffset = runtime._readInt16();
+
+  Await.make(this._completerOffset, this._futureOffset);
+
+  final int _completerOffset;
+  final int _futureOffset;
+
+  static const int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN * 2;
+
+  @override
+  void run(Runtime runtime) {
+
+    final Completer completer;
+    final completerOffset = _completerOffset;
+
+    // If this is the first await call in a function, _completerOffset will be -1 and we'll create a new
+    // completer and push it onto the stack
+    if (completerOffset == -1) {
+      completer = $Completer.wrap(Completer());
+      runtime.frame[runtime.frameOffset++] = completer;
+    } else {
+      completer = runtime.frame[completerOffset] as Completer;
+    }
+
+    // Create a continuation that holds the current program state, allowing us to resume this function after we've
+    // finished awaiting the future
+    final continuation = Continuation(
+        programOffset: runtime._prOffset,
+        frame: runtime.frame,
+        frameOffset: runtime.frameOffset,
+        args: []);
+
+    final future = runtime.frame[_futureOffset] as $Future;
+    _suspend(runtime, continuation, future);
+
+    // Return with the completer as the result (the following lines are a copy of the Return op code)
+    runtime.returnValue = $Future.wrap(completer.future, (value) => value as $Value?);
+    runtime.stack.removeLast();
+    if (runtime.stack.isNotEmpty) {
+      runtime.frame = runtime.stack.last;
+      runtime.frameOffset = runtime.frameOffsetStack.removeLast();
+    }
+
+    final prOffset = runtime.callStack.removeLast();
+    if (prOffset == -1) {
+      throw ProgramExit(0);
+    }
+    runtime._prOffset = prOffset;
+  }
+
+  void _suspend(Runtime runtime, Continuation continuation, $Future future) async {
+    final result = await future.$value;
+    runtime.returnValue = result;
+    runtime.frameOffset = continuation.frameOffset;
+    runtime.frame = continuation.frame;
+    runtime.stack.add(continuation.frame);
+    runtime.bridgeCall(continuation.programOffset);
+  }
+
+  @override
+  String toString() => 'Await (comp L$_completerOffset, L$_futureOffset)';
+}
+
+class Complete implements DbcOp {
+  Complete(this._offset);
+
+  final int _offset;
+
+  @override
+  void run(Runtime runtime) {
+    (runtime.frame[runtime.frameOffset + _offset] as Completer).complete();
+  }
+
+  @override
+  String toString() => 'Complete (L$_offset)';
 }

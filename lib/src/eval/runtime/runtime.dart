@@ -1,10 +1,15 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/runtime/continuation.dart';
+import 'package:dart_eval/src/eval/runtime/stdlib/async.dart';
+import 'package:dart_eval/src/eval/runtime/stdlib/async/future.dart';
 import 'package:dart_eval/src/eval/runtime/stdlib/core.dart';
+import 'package:dart_eval/src/eval/runtime/stdlib/core/future.dart';
 import 'package:dart_eval/src/eval/runtime/type.dart';
 
 import 'exception.dart';
@@ -46,7 +51,7 @@ class _UnloadedBridgeFunction {
 
   final String library;
   final String name;
-  final $Function func;
+  final EvalCallableFunc func;
 }
 
 class Runtime {
@@ -141,12 +146,13 @@ class Runtime {
     _unloadedBrClass.add(_UnloadedBridgeClass(library, name, cls));
   }
 
-  void registerBridgeFunc(String library, String name, $Function fn) {
+  void registerBridgeFunc(String library, String name, EvalCallableFunc fn) {
     _unloadedBrFunc.add(_UnloadedBridgeFunction(library, name, fn));
   }
 
   void setup() {
     configureCoreForRuntime(this);
+    configureAsyncForRuntime(this);
     if (_fromDbc) {
       _load();
     } else {
@@ -156,7 +162,7 @@ class Runtime {
 
   var _bridgeLibraryIdx = -2;
   var _bridgeLibraryMappings = <String, int>{};
-  final _bridgeFunctions = List<$Function>.filled(1000, _defaultFunction);
+  final _bridgeFunctions = List<EvalCallableFunc>.filled(1000, _defaultFunction);
   var _bridgeGlobals = <int, Map<String, $BridgeField>>{};
   final _unloadedBrClass = <_UnloadedBridgeClass>[];
   final _unloadedBrFunc = <_UnloadedBridgeFunction>[];
@@ -316,6 +322,9 @@ class Runtime {
       case InvokeExternal:
         op as InvokeExternal;
         return [Dbc.OP_INVOKE_EXTERNAL, ...Dbc.i32b(op._function)];
+      case Await:
+        op as Await;
+        return [Dbc.OP_AWAIT, ...Dbc.i16b(op._completerOffset), ...Dbc.i16b(op._futureOffset)];
       default:
         throw ArgumentError('Not a valid op $op');
     }

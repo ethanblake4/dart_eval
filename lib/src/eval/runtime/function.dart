@@ -50,7 +50,7 @@ class EvalFunctionPtr extends EvalFunction {
 
   @override
   $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
-    runtime.args = [null, null, ...runtime.args, $this];
+    runtime.args = [null, ...runtime.args, $this];
     runtime.bridgeCall(offset);
     return runtime.returnValue as $Value?;
   }

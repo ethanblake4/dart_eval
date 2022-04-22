@@ -1,7 +1,5 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/bridge/declaration/class.dart';
 import 'package:dart_eval/src/eval/bridge/declaration/function.dart';
-import 'package:dart_eval/src/eval/bridge/declaration/type.dart';
 import 'package:dart_eval/src/eval/compiler/compiler.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
@@ -12,15 +10,7 @@ class $Duration implements Duration, $Instance {
   }
 
   static void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFunc('dart:core', 'Duration.', $Function((_runtime, target, args) {
-      return $Duration.wrap(Duration(
-          days: args[0]?.$value ?? 0,
-          hours: args[1]?.$value ?? 0,
-          minutes: args[2]?.$value ?? 0,
-          seconds: args[3]?.$value ?? 0,
-          milliseconds: args[4]?.$value ?? 0,
-          microseconds: args[5]?.$value ?? 0));
-    }));
+    runtime.registerBridgeFunc('dart:core', 'Duration.', const _$Duration_new());
   }
 
   static const $type = BridgeTypeReference.unresolved(BridgeUnresolvedTypeReference('dart:core', 'Duration'), []);
@@ -125,4 +115,19 @@ class $Duration implements Duration, $Instance {
 
   @override
   Duration operator ~/(int quotient) => $value ~/ quotient;
+}
+
+class _$Duration_new implements EvalCallable {
+  const _$Duration_new();
+
+  @override
+  $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
+    return $Duration.wrap(Duration(
+        days: args[0]?.$value ?? 0,
+        hours: args[1]?.$value ?? 0,
+        minutes: args[2]?.$value ?? 0,
+        seconds: args[3]?.$value ?? 0,
+        milliseconds: args[4]?.$value ?? 0,
+        microseconds: args[5]?.$value ?? 0));
+  }
 }

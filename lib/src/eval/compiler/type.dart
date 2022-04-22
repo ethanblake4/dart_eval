@@ -1,5 +1,4 @@
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'package:dart_eval/src/eval/bridge/declaration/type.dart';
 import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/runtime/type.dart';
@@ -142,6 +141,11 @@ class TypeRef {
       return ctx.visibleTypes[ctx.libraryMap[unresolved.library]!]![unresolved.name]!;
     }
     throw CompileError('No support for looking up types by other bridge annotation types');
+  }
+
+  factory TypeRef.stdlib(CompilerContext ctx, String library, String name) {
+    return TypeRef.fromBridgeTypeReference(
+        ctx, BridgeTypeReference.unresolved(BridgeUnresolvedTypeReference(library, name), []));
   }
 
   factory TypeRef.lookupClassDeclaration(CompilerContext ctx, int library, ClassDeclaration cls) {
