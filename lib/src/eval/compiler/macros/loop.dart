@@ -26,7 +26,6 @@ StatementInfo macroLoop(
   Variable? conditionResult;
   final loopStart = ctx.out.length;
 
-
   ctx.beginAllocScope(requireNonlinearAccess: true);
 
   if (!alwaysLoopOnce && condition != null) {
@@ -57,7 +56,8 @@ StatementInfo macroLoop(
   }
 
   if (rewritePos != null) {
-    ctx.rewriteOp(rewritePos, JumpIfFalse.make(conditionResult!.scopeFrameOffset, ctx.out.length), 0);
+    ctx.rewriteOp(rewritePos,
+        JumpIfFalse.make(conditionResult!.scopeFrameOffset, ctx.out.length), 0);
   }
 
   if (after != null) {

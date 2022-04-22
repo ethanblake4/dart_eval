@@ -12,7 +12,8 @@ int? compileDeclaration(Declaration d, CompilerContext ctx,
   if (d is ClassDeclaration) {
     compileClassDeclaration(ctx, d);
   } else if (d is MethodDeclaration) {
-    return compileMethodDeclaration(d, ctx, parent as NamedCompilationUnitMember);
+    return compileMethodDeclaration(
+        d, ctx, parent as NamedCompilationUnitMember);
   } else if (d is FunctionDeclaration) {
     compileFunctionDeclaration(d, ctx);
   } else if (d is FieldDeclaration) {

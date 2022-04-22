@@ -1,6 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/bridge/declaration/class.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
@@ -15,10 +14,14 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import '../variable.dart';
 
 void compileConstructorDeclaration(
-    CompilerContext ctx, ConstructorDeclaration d, ClassDeclaration parent, List<FieldDeclaration> fields) {
+    CompilerContext ctx,
+    ConstructorDeclaration d,
+    ClassDeclaration parent,
+    List<FieldDeclaration> fields) {
   final n = '${parent.name.name}.${d.name?.name ?? ""}';
 
-  ctx.topLevelDeclarationPositions[ctx.library]![n] = beginMethod(ctx, d, d.offset, '$n()');
+  ctx.topLevelDeclarationPositions[ctx.library]![n] =
+      beginMethod(ctx, d, d.offset, '$n()');
 
   ctx.beginAllocScope(existingAllocLen: d.parameters.parameters.length);
   ctx.scopeFrameOffset = d.parameters.parameters.length;
@@ -29,7 +32,8 @@ void compileConstructorDeclaration(
     if (initializer is SuperConstructorInvocation) {
       $superInitializer = initializer;
     } else if ($superInitializer != null) {
-      throw CompileError('Super constructor invocation must be last in the initializer list');
+      throw CompileError(
+          'Super constructor invocation must be last in the initializer list');
     } else {
       otherInitializers.add(initializer);
     }
@@ -45,7 +49,8 @@ void compileConstructorDeclaration(
   }
 
   final fieldFormalNames = <String>[];
-  final resolvedParams = resolveFPLDefaults(ctx, d.parameters, false, allowUnboxed: true);
+  final resolvedParams =
+      resolveFPLDefaults(ctx, d.parameters, false, allowUnboxed: true);
   i = 0;
 
   for (final param in resolvedParams) {
@@ -57,12 +62,18 @@ void compileConstructorDeclaration(
       if (p.type != null) {
         _type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
       }
-      _type ??=
-          TypeRef.lookupFieldType(ctx, TypeRef.lookupClassDeclaration(ctx, ctx.library, parent), p.identifier.name);
+      _type ??= TypeRef.lookupFieldType(
+          ctx,
+          TypeRef.lookupClassDeclaration(ctx, ctx.library, parent),
+          p.identifier.name);
       _type ??= V?.type;
       _type ??= EvalTypes.dynamicType;
 
-      Vrep = Variable(i, _type.copyWith(boxed: !unboxedAcrossFunctionBoundaries.contains(_type))).boxIfNeeded(ctx)
+      Vrep = Variable(
+              i,
+              _type.copyWith(
+                  boxed: !unboxedAcrossFunctionBoundaries.contains(_type)))
+          .boxIfNeeded(ctx)
         ..name = p.identifier.name;
 
       fieldFormalNames.add(p.identifier.name);
@@ -72,7 +83,8 @@ void compileConstructorDeclaration(
       if (p.type != null) {
         type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
       }
-      type = type.copyWith(boxed: !unboxedAcrossFunctionBoundaries.contains(type));
+      type =
+          type.copyWith(boxed: !unboxedAcrossFunctionBoundaries.contains(type));
       Vrep = Variable(i, type)..name = p.identifier!.name;
     }
 
@@ -93,34 +105,43 @@ void compileConstructorDeclaration(
   if ($extends == null) {
     $super = BuiltinValue().push(ctx);
   } else {
-    extendsWhat = ctx.visibleDeclarations[ctx.library]![$extends.superclass2.name.name]!;
+    extendsWhat =
+        ctx.visibleDeclarations[ctx.library]![$extends.superclass2.name.name]!;
 
     if (extendsWhat.declaration!.isBridge) {
       ctx.pushOp(PushBridgeSuperShim.make(), PushBridgeSuperShim.LEN);
       $super = Variable.alloc(ctx, EvalTypes.dynamicType);
     } else {
-      final extendsType =
-          TypeRef.lookupClassDeclaration(ctx, ctx.library, extendsWhat.declaration!.declaration as ClassDeclaration);
+      final extendsType = TypeRef.lookupClassDeclaration(ctx, ctx.library,
+          extendsWhat.declaration!.declaration as ClassDeclaration);
 
       AlwaysReturnType? mReturnType;
 
       if ($superInitializer != null) {
-        final _constructor =
-            ctx.topLevelDeclarationsMap[extendsWhat.sourceLib]!['${extendsType.name}.$constructorName']!;
+        final _constructor = ctx.topLevelDeclarationsMap[
+            extendsWhat.sourceLib]!['${extendsType.name}.$constructorName']!;
         final constructor = _constructor.declaration as ConstructorDeclaration;
 
         final argsPair = compileArgumentList(
-            ctx, $superInitializer.argumentList, extendsWhat.sourceLib, constructor.parameters.parameters, constructor);
+            ctx,
+            $superInitializer.argumentList,
+            extendsWhat.sourceLib,
+            constructor.parameters.parameters,
+            constructor);
         final _args = argsPair.first;
         final _namedArgs = argsPair.second;
 
         argTypes.addAll(_args.map((e) => e.type).toList());
-        namedArgTypes.addAll(_namedArgs.map((key, value) => MapEntry(key, value.type)));
+        namedArgTypes
+            .addAll(_namedArgs.map((key, value) => MapEntry(key, value.type)));
       }
 
-      final method = IdentifierReference(null, '${extendsType.name}.$constructorName').getValue(ctx);
+      final method =
+          IdentifierReference(null, '${extendsType.name}.$constructorName')
+              .getValue(ctx);
       if (method.methodOffset == null) {
-        throw CompileError('Cannot call $constructorName as it is not a valid method');
+        throw CompileError(
+            'Cannot call $constructorName as it is not a valid method');
       }
 
       final offset = method.methodOffset!;
@@ -129,7 +150,8 @@ void compileConstructorDeclaration(
         ctx.offsetTracker.setOffset(loc, offset);
       }
       final clsType = TypeRef.lookupClassDeclaration(ctx, ctx.library, parent);
-      mReturnType = method.methodReturnType?.toAlwaysReturnType(clsType, argTypes, namedArgTypes) ??
+      mReturnType = method.methodReturnType
+              ?.toAlwaysReturnType(clsType, argTypes, namedArgTypes) ??
           AlwaysReturnType(EvalTypes.dynamicType, true);
 
       ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
@@ -137,21 +159,24 @@ void compileConstructorDeclaration(
     }
   }
 
-  final op = CreateClass.make(ctx.library, $super.scopeFrameOffset, parent.name.name, i);
+  final op = CreateClass.make(
+      ctx.library, $super.scopeFrameOffset, parent.name.name, i);
   ctx.pushOp(op, CreateClass.len(op));
   final instOffset = ctx.scopeFrameOffset++;
 
   for (final fieldFormal in fieldFormalNames) {
     ctx.pushOp(
-        SetObjectPropertyImpl.make(
-            instOffset, fieldIndices[fieldFormal]!, ctx.lookupLocal(fieldFormal)!.scopeFrameOffset),
+        SetObjectPropertyImpl.make(instOffset, fieldIndices[fieldFormal]!,
+            ctx.lookupLocal(fieldFormal)!.scopeFrameOffset),
         SetObjectPropertyImpl.LEN);
   }
 
   for (final init in otherInitializers) {
     if (init is ConstructorFieldInitializer) {
       final V = compileExpression(init.expression, ctx);
-      ctx.pushOp(SetObjectPropertyImpl.make(instOffset, fieldIndices[init.fieldName.name]!, V.scopeFrameOffset),
+      ctx.pushOp(
+          SetObjectPropertyImpl.make(instOffset,
+              fieldIndices[init.fieldName.name]!, V.scopeFrameOffset),
           SetObjectPropertyImpl.LEN);
     } else {
       throw CompileError('${init.runtimeType} initializer is not supported');
@@ -163,21 +188,26 @@ void compileConstructorDeclaration(
 
     if ($superInitializer != null) {
       final constructor = bridge.constructors[constructorName]!;
-      final argsPair =
-          compileArgumentListWithBridge(ctx, $superInitializer.argumentList, constructor.functionDescriptor);
+      final argsPair = compileArgumentListWithBridge(
+          ctx, $superInitializer.argumentList, constructor.functionDescriptor);
       final _args = argsPair.first;
       final _namedArgs = argsPair.second;
       argTypes.addAll(_args.map((e) => e.type).toList());
-      namedArgTypes.addAll(_namedArgs.map((key, value) => MapEntry(key, value.type)));
+      namedArgTypes
+          .addAll(_namedArgs.map((key, value) => MapEntry(key, value.type)));
     }
 
-    final op = BridgeInstantiate.make(instOffset,
-        ctx.bridgeStaticFunctionIndices[extendsWhat.sourceLib]!['${$extends.superclass2.name.name}.$constructorName']!);
+    final op = BridgeInstantiate.make(
+        instOffset,
+        ctx.bridgeStaticFunctionIndices[extendsWhat.sourceLib]![
+            '${$extends.superclass2.name.name}.$constructorName']!);
     ctx.pushOp(op, BridgeInstantiate.len(op));
     final bridgeInst = Variable.alloc(ctx, EvalTypes.dynamicType);
 
     ctx.pushOp(
-        ParentBridgeSuperShim.make($super.scopeFrameOffset, bridgeInst.scopeFrameOffset), ParentBridgeSuperShim.LEN);
+        ParentBridgeSuperShim.make(
+            $super.scopeFrameOffset, bridgeInst.scopeFrameOffset),
+        ParentBridgeSuperShim.LEN);
 
     ctx.pushOp(Return.make(bridgeInst.scopeFrameOffset), Return.LEN);
   } else {
@@ -187,7 +217,8 @@ void compileConstructorDeclaration(
   ctx.endAllocScope(popValues: false);
 }
 
-List<PossiblyValuedParameter> resolveFPLDefaults(CompilerContext ctx, FormalParameterList fpl, bool isInstanceMethod,
+List<PossiblyValuedParameter> resolveFPLDefaults(
+    CompilerContext ctx, FormalParameterList fpl, bool isInstanceMethod,
     {bool allowUnboxed = true, bool sortNamed = false}) {
   final normalized = <PossiblyValuedParameter>[];
   var hasEncounteredOptionalPositionalParam = false;
@@ -200,14 +231,16 @@ List<PossiblyValuedParameter> resolveFPLDefaults(CompilerContext ctx, FormalPara
   for (final param in fpl.parameters) {
     if (param.isNamed) {
       if (hasEncounteredOptionalPositionalParam) {
-        throw CompileError('Cannot mix named and optional positional parameters');
+        throw CompileError(
+            'Cannot mix named and optional positional parameters');
       }
       hasEncounteredNamedParam = true;
       named.add(param);
     } else {
       if (param.isOptionalPositional) {
         if (hasEncounteredNamedParam) {
-          throw CompileError('Cannot mix named and optional positional parameters');
+          throw CompileError(
+              'Cannot mix named and optional positional parameters');
         }
         hasEncounteredOptionalPositionalParam = true;
       }
@@ -220,7 +253,6 @@ List<PossiblyValuedParameter> resolveFPLDefaults(CompilerContext ctx, FormalPara
   }
 
   for (final param in [...positional, ...named]) {
-
     if (param is DefaultFormalParameter) {
       if (param.defaultValue != null) {
         ctx.beginAllocScope();
@@ -230,9 +262,11 @@ List<PossiblyValuedParameter> resolveFPLDefaults(CompilerContext ctx, FormalPara
         if (!allowUnboxed) {
           V = V.boxIfNeeded(ctx);
         }
-        ctx.pushOp(CopyValue.make(_paramIndex, V.scopeFrameOffset), CopyValue.LEN);
+        ctx.pushOp(
+            CopyValue.make(_paramIndex, V.scopeFrameOffset), CopyValue.LEN);
         ctx.endAllocScope();
-        ctx.rewriteOp(_reserveOffset, JumpIfNonNull.make(_paramIndex, ctx.out.length), 0);
+        ctx.rewriteOp(
+            _reserveOffset, JumpIfNonNull.make(_paramIndex, ctx.out.length), 0);
         normalized.add(PossiblyValuedParameter(param.parameter, V));
       } else {
         normalized.add(PossiblyValuedParameter(param.parameter, null));

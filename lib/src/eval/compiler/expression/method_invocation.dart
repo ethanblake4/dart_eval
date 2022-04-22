@@ -40,18 +40,19 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
 
     Pair<List<Variable>, Map<String, Variable>> argsPair;
 
-    int? offset;
     if (_dec.isBridge) {
       final br = _dec.bridge!;
       final fd = br is BridgeMethodDeclaration
           ? br.functionDescriptor
           : (br as BridgeConstructorDeclaration).functionDescriptor;
-      argsPair = compileArgumentListWithBridge(ctx, e.argumentList, fd, before: []);
+      argsPair =
+          compileArgumentListWithBridge(ctx, e.argumentList, fd, before: []);
     } else {
       final dec = _dec.declaration!;
       final fpl = dec.parameters?.parameters ?? <FormalParameter>[];
 
-      argsPair = compileArgumentList(ctx, e.argumentList, (isStatic ? staticType! : L.type).file, fpl, dec,
+      argsPair = compileArgumentList(
+          ctx, e.argumentList, (isStatic ? staticType! : L.type).file, fpl, dec,
           before: [if (!isStatic) L]);
     }
 
@@ -59,15 +60,17 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
     final _namedArgs = argsPair.second;
 
     final _argTypes = _args.map((e) => e.type).toList();
-    final _namedArgTypes = _namedArgs.map((key, value) => MapEntry(key, value.type));
+    final _namedArgTypes =
+        _namedArgs.map((key, value) => MapEntry(key, value.type));
 
     if (isStatic) {
       if (_dec.isBridge) {
-        final ix = InvokeExternal.make(
-            ctx.bridgeStaticFunctionIndices[staticType!.file]!['${staticType.name}.${e.methodName.name}']!);
+        final ix = InvokeExternal.make(ctx.bridgeStaticFunctionIndices[
+            staticType!.file]!['${staticType.name}.${e.methodName.name}']!);
         ctx.pushOp(ix, InvokeExternal.LEN);
       } else {
-        final offset = DeferredOrOffset.lookupStatic(ctx, staticType!.file, staticType.name, e.methodName.name);
+        final offset = DeferredOrOffset.lookupStatic(
+            ctx, staticType!.file, staticType.name, e.methodName.name);
         final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.LEN);
         if (offset.offset == null) {
           ctx.offsetTracker.setOffset(loc, offset);
@@ -79,7 +82,11 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
     }
 
     mReturnType = AlwaysReturnType.fromInstanceMethodOrBuiltin(
-        ctx, isStatic ? staticType! : L.type, e.methodName.name, _argTypes, _namedArgTypes,
+        ctx,
+        isStatic ? staticType! : L.type,
+        e.methodName.name,
+        _argTypes,
+        _namedArgTypes,
         $static: isStatic);
 
     ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
@@ -88,7 +95,8 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
     final method = compileIdentifier(e.methodName, ctx);
 
     if (method.methodOffset == null) {
-      throw CompileError('Cannot call ${e.methodName.name} as it is not a valid method');
+      throw CompileError(
+          'Cannot call ${e.methodName.name} as it is not a valid method');
     }
 
     if (method.callingConvention == CallingConvention.dynamic) {
@@ -97,8 +105,10 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
 
     final offset = method.methodOffset!;
     var _dec = ctx.topLevelDeclarationsMap[offset.file]![e.methodName.name];
-    if (_dec == null || (!_dec.isBridge && _dec.declaration! is ClassDeclaration)) {
-      _dec = ctx.topLevelDeclarationsMap[offset.file]![offset.name ?? e.methodName.name + '.'] ??
+    if (_dec == null ||
+        (!_dec.isBridge && _dec.declaration! is ClassDeclaration)) {
+      _dec = ctx.topLevelDeclarationsMap[offset.file]![
+              offset.name ?? e.methodName.name + '.'] ??
           (throw CompileError(
               'Cannot instantiate: The class ${e.methodName.name} does not have a default constructor'));
     }
@@ -112,7 +122,9 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
           ? bridge.constructors['']!.functionDescriptor
           : (bridge as BridgeFunctionDeclaration).function;
 
-      final argsPair = compileArgumentListWithBridge(ctx, e.argumentList, fnDescriptor, before: L != null ? [L] : []);
+      final argsPair = compileArgumentListWithBridge(
+          ctx, e.argumentList, fnDescriptor,
+          before: L != null ? [L] : []);
 
       _args = argsPair.first;
       _namedArgs = argsPair.second;
@@ -121,7 +133,8 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
 
       List<FormalParameter> fpl;
       if (dec is FunctionDeclaration) {
-        fpl = dec.functionExpression.parameters?.parameters ?? <FormalParameter>[];
+        fpl = dec.functionExpression.parameters?.parameters ??
+            <FormalParameter>[];
       } else if (dec is MethodDeclaration) {
         fpl = dec.parameters?.parameters ?? <FormalParameter>[];
       } else if (dec is ConstructorDeclaration) {
@@ -130,13 +143,16 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
         throw CompileError('Invalid declaration type ${dec.runtimeType}');
       }
 
-      final argsPair = compileArgumentList(ctx, e.argumentList, offset.file!, fpl, dec, before: L != null ? [L] : []);
+      final argsPair = compileArgumentList(
+          ctx, e.argumentList, offset.file!, fpl, dec,
+          before: L != null ? [L] : []);
       _args = argsPair.first;
       _namedArgs = argsPair.second;
     }
 
     final _argTypes = _args.map((e) => e.type).toList();
-    final _namedArgTypes = _namedArgs.map((key, value) => MapEntry(key, value.type));
+    final _namedArgTypes =
+        _namedArgs.map((key, value) => MapEntry(key, value.type));
 
     if (_dec.isBridge) {
       final bridge = _dec.bridge!;
@@ -144,11 +160,12 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
         final type = TypeRef.fromBridgeTypeReference(ctx, bridge.type);
 
         final $null = BuiltinValue().push(ctx);
-        final op = BridgeInstantiate.make(
-            $null.scopeFrameOffset, ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.']!);
+        final op = BridgeInstantiate.make($null.scopeFrameOffset,
+            ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.']!);
         ctx.pushOp(op, BridgeInstantiate.len(op));
       } else {
-        final op = InvokeExternal.make(ctx.bridgeStaticFunctionIndices[offset.file]![offset.name]!);
+        final op = InvokeExternal.make(
+            ctx.bridgeStaticFunctionIndices[offset.file]![offset.name]!);
         ctx.pushOp(op, InvokeExternal.LEN);
         ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
       }
@@ -164,49 +181,62 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
     if (ctx.currentClass != null) {
       thisType = ctx.visibleTypes[ctx.library]![ctx.currentClass!.name.name]!;
     }
-    mReturnType = method.methodReturnType?.toAlwaysReturnType(thisType, _argTypes, _namedArgTypes) ??
+    mReturnType = method.methodReturnType
+            ?.toAlwaysReturnType(thisType, _argTypes, _namedArgTypes) ??
         AlwaysReturnType(EvalTypes.dynamicType, true);
   }
 
   final v = Variable.alloc(
       ctx,
-      mReturnType?.type?.copyWith(boxed: L != null || !unboxedAcrossFunctionBoundaries.contains(mReturnType.type)) ??
+      mReturnType?.type?.copyWith(
+              boxed: L != null ||
+                  !unboxedAcrossFunctionBoundaries
+                      .contains(mReturnType.type)) ??
           EvalTypes.dynamicType);
 
   return v;
 }
 
-DeclarationOrBridge<MethodDeclaration, BridgeMethodDeclaration> resolveInstanceMethod(
-    CompilerContext ctx, TypeRef instanceType, String methodName) {
-  final _dec = ctx.topLevelDeclarationsMap[instanceType.file]![instanceType.name]!;
+DeclarationOrBridge<MethodDeclaration, BridgeMethodDeclaration>
+    resolveInstanceMethod(
+        CompilerContext ctx, TypeRef instanceType, String methodName) {
+  final _dec =
+      ctx.topLevelDeclarationsMap[instanceType.file]![instanceType.name]!;
   if (_dec.isBridge) {
     // Bridge
     final bridge = _dec.bridge! as BridgeClassDeclaration;
     return DeclarationOrBridge(bridge: bridge.methods[methodName]!);
   }
 
-  final dec = ctx.instanceDeclarationsMap[instanceType.file]![instanceType.name]![methodName];
+  final dec = ctx.instanceDeclarationsMap[instanceType.file]![
+      instanceType.name]![methodName];
 
   if (dec != null) {
     return DeclarationOrBridge(declaration: dec as MethodDeclaration);
   } else {
-    final $class = ctx.topLevelDeclarationsMap[instanceType.file]![instanceType.name] as ClassDeclaration;
+    final $class =
+        ctx.topLevelDeclarationsMap[instanceType.file]![instanceType.name]
+            as ClassDeclaration;
     if ($class.extendsClause == null) {
       throw CompileError('Cannot resolve instance method');
     }
-    final $supertype = ctx.visibleTypes[instanceType.file]![$class.extendsClause!.superclass2.name.name]!;
+    final $supertype = ctx.visibleTypes[instanceType.file]![
+        $class.extendsClause!.superclass2.name.name]!;
     return resolveInstanceMethod(ctx, $supertype, methodName);
   }
 }
 
 DeclarationOrBridge<MethodDeclaration, BridgeDeclaration> resolveStaticMethod(
     CompilerContext ctx, TypeRef classType, String methodName) {
-  final method = ctx.topLevelDeclarationsMap[classType.file]![classType.name + '.' + methodName];
+  final method = ctx.topLevelDeclarationsMap[classType.file]![
+      classType.name + '.' + methodName];
   if (method != null) {
     if (method.declaration != null) {
-      return DeclarationOrBridge(declaration: method.declaration! as MethodDeclaration);
+      return DeclarationOrBridge(
+          declaration: method.declaration! as MethodDeclaration);
     } else {
-      return DeclarationOrBridge(bridge: method.bridge! as BridgeMethodDeclaration);
+      return DeclarationOrBridge(
+          bridge: method.bridge! as BridgeMethodDeclaration);
     }
   }
 
@@ -222,8 +252,12 @@ DeclarationOrBridge<MethodDeclaration, BridgeDeclaration> resolveStaticMethod(
   throw UnimplementedError();
 }
 
-Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext ctx, ArgumentList argumentList,
-    int decLibrary, List<FormalParameter> fpl, Declaration parameterHost,
+Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
+    CompilerContext ctx,
+    ArgumentList argumentList,
+    int decLibrary,
+    List<FormalParameter> fpl,
+    Declaration parameterHost,
     {List<Variable> before = const []}) {
   final _args = <Variable>[];
   final _push = <Variable>[];
@@ -260,7 +294,8 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext 
           paramType = TypeRef.fromAnnotation(ctx, decLibrary, param.type!);
         }
       } else if (param is FieldFormalParameter) {
-        paramType = _resolveFieldFormalType(ctx, decLibrary, param, parameterHost);
+        paramType =
+            _resolveFieldFormalType(ctx, decLibrary, param, parameterHost);
       } else {
         throw CompileError('Unknown formal type ${param.runtimeType}');
       }
@@ -289,14 +324,16 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext 
   }
 
   named.forEach((name, _param) {
-    final param = (_param is DefaultFormalParameter ? _param.parameter : _param) as NormalFormalParameter;
+    final param = (_param is DefaultFormalParameter ? _param.parameter : _param)
+        as NormalFormalParameter;
     var paramType = EvalTypes.dynamicType;
     if (param is SimpleFormalParameter) {
       if (param.type != null) {
         paramType = TypeRef.fromAnnotation(ctx, decLibrary, param.type!);
       }
     } else if (param is FieldFormalParameter) {
-      paramType = _resolveFieldFormalType(ctx, decLibrary, param, parameterHost);
+      paramType =
+          _resolveFieldFormalType(ctx, decLibrary, param, parameterHost);
     } else {
       throw CompileError('Unknown formal type ${param.runtimeType}');
     }
@@ -328,7 +365,9 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext 
 }
 
 Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
-    CompilerContext ctx, ArgumentList argumentList, BridgeFunctionDescriptor function,
+    CompilerContext ctx,
+    ArgumentList argumentList,
+    BridgeFunctionDescriptor function,
     {List<Variable> before = const []}) {
   final _args = <Variable>[];
   final _push = <Variable>[];
@@ -353,7 +392,8 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
       var _arg = compileExpression(arg, ctx);
       _arg = _arg.boxIfNeeded(ctx);
       if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(paramType)) {
-        throw CompileError('Cannot assign argument of type ${_arg.type} to parameter of type $paramType');
+        throw CompileError(
+            'Cannot assign argument of type ${_arg.type} to parameter of type $paramType');
       }
       _args.add(_arg);
       _push.add(_arg);
@@ -373,7 +413,8 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
     if (namedExpr.containsKey(name)) {
       final _arg = compileExpression(namedExpr[name]!, ctx).boxIfNeeded(ctx);
       if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(paramType)) {
-        throw CompileError('Cannot assign argument of type ${_arg.type} to parameter of type $paramType');
+        throw CompileError(
+            'Cannot assign argument of type ${_arg.type} to parameter of type $paramType');
       }
       _push.add(_arg);
       _namedArgs[name] = _arg;
@@ -391,13 +432,14 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
   return Pair(_args, _namedArgs);
 }
 
-TypeRef _resolveFieldFormalType(
-    CompilerContext ctx, int decLibrary, FieldFormalParameter param, Declaration parameterHost) {
+TypeRef _resolveFieldFormalType(CompilerContext ctx, int decLibrary,
+    FieldFormalParameter param, Declaration parameterHost) {
   if (!(parameterHost is ConstructorDeclaration)) {
     throw CompileError('Field formals can only occur in constructors');
   }
   final $class = parameterHost.parent as ClassDeclaration;
-  final field = ctx.instanceDeclarationsMap[decLibrary]![$class.name.name]![param.identifier.name]!;
+  final field = ctx.instanceDeclarationsMap[decLibrary]![$class.name.name]![
+      param.identifier.name]!;
   if (!(field is VariableDeclaration)) {
     throw CompileError('Resolved field is not a FieldDeclaration');
   }

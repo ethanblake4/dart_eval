@@ -52,10 +52,3 @@ final Map<int, TypeRef> inverseRuntimeTypeMap = {
   RuntimeTypes.functionType: EvalTypes.functionType,
   RuntimeTypes.typeType: EvalTypes.typeType
 };
-
-class RuntimeTypeFactory {
-  RuntimeTypeFactory();
-  int _typeIndex = 0;
-
-  int next() => _typeIndex++;
-}

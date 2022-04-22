@@ -96,7 +96,9 @@ class PopScope implements DbcOp {
 
 /// Jump to constant program offset if [_location] is not null
 class JumpIfNonNull implements DbcOp {
-  JumpIfNonNull(Runtime exec) : _location = exec._readInt16(), _offset = exec._readInt32();
+  JumpIfNonNull(Runtime exec)
+      : _location = exec._readInt16(),
+        _offset = exec._readInt32();
 
   JumpIfNonNull.make(this._location, this._offset);
 
@@ -119,7 +121,9 @@ class JumpIfNonNull implements DbcOp {
 
 /// Jump to constant program offset if [_location] is false
 class JumpIfFalse implements DbcOp {
-  JumpIfFalse(Runtime exec) : _location = exec._readInt16(), _offset = exec._readInt32();
+  JumpIfFalse(Runtime exec)
+      : _location = exec._readInt16(),
+        _offset = exec._readInt32();
 
   JumpIfFalse.make(this._location, this._offset);
 
@@ -231,10 +235,16 @@ class PushFunctionPtr implements DbcOp {
     final pAT = runtime.constantPool[args[1] as int] as List;
     final posArgTypes = [for (final json in pAT) RuntimeType.fromJson(json)];
     final snAT = runtime.constantPool[args[3] as int] as List;
-    final sortedNamedArgTypes = [for (final json in snAT) RuntimeType.fromJson(json)];
+    final sortedNamedArgTypes = [
+      for (final json in snAT) RuntimeType.fromJson(json)
+    ];
 
     runtime.frame[runtime.frameOffset++] = EvalFunctionPtr(
-        null, _offset, args[0] as int, posArgTypes, (runtime.constantPool[args[2] as int] as List).cast(),
+        null,
+        _offset,
+        args[0] as int,
+        posArgTypes,
+        (runtime.constantPool[args[2] as int] as List).cast(),
         sortedNamedArgTypes);
 
     runtime.args = [];

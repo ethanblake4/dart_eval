@@ -1,7 +1,5 @@
-import 'dart:io';
-
 import 'package:dart_eval/dart_eval.dart';
-import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/stdlib/core.dart';
 import 'package:test/test.dart';
 
 import 'bridge_lib.dart';
@@ -181,7 +179,8 @@ void main() {
       expect(exec.executeNamed(0, 'main'), $double(1.5));
     });
 
-    test('Anonymous function with named args, different sorting from call site', () {
+    test('Anonymous function with named args, different sorting from call site',
+        () {
       final exec = gen.compileWriteAndLoad({
         'example': {
           'main.dart': '''
@@ -402,7 +401,8 @@ void main() {
 
       final runtime = Runtime.ofProgram(program);
 
-      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart', 'TestClass.', $TestClass.$construct);
+      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart',
+          'TestClass.', $TestClass.$construct);
 
       runtime.setup();
       expect(runtime.executeNamed(0, 'main'), true);
@@ -435,7 +435,8 @@ void main() {
 
       final runtime = Runtime.ofProgram(program);
 
-      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart', 'TestClass.', $TestClass.$construct);
+      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart',
+          'TestClass.', $TestClass.$construct);
 
       runtime.setup();
       expect(runtime.executeNamed(0, 'main'), true);
@@ -468,7 +469,8 @@ void main() {
 
       final runtime = Runtime.ofProgram(program);
 
-      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart', 'TestClass.', $TestClass.$construct);
+      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart',
+          'TestClass.', $TestClass.$construct);
 
       runtime.setup();
       final res = runtime.executeNamed(0, 'main');
@@ -495,9 +497,10 @@ void main() {
 
       final runtime = Runtime.ofProgram(program);
 
-      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart', 'TestClass.', $TestClass.$construct);
-      runtime.registerBridgeFunc(
-          'package:bridge_lib/bridge_lib.dart', 'TestClass.runStaticTest', $TestClass.$runStaticTest);
+      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart',
+          'TestClass.', $TestClass.$construct);
+      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart',
+          'TestClass.runStaticTest', $TestClass.$runStaticTest);
 
       runtime.setup();
       expect(runtime.executeNamed(0, 'main'), false);

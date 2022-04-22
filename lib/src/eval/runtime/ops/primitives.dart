@@ -1,8 +1,7 @@
 part of '../runtime.dart';
 
 class PushConstant implements DbcOp {
-  PushConstant(Runtime runtime) :
-        _const = runtime._readInt32();
+  PushConstant(Runtime runtime) : _const = runtime._readInt32();
 
   PushConstant.make(this._const);
 
@@ -57,8 +56,8 @@ class PushNull implements DbcOp {
 }
 
 class NumAdd implements DbcOp {
-  NumAdd(Runtime runtime) :
-        _location1 = runtime._readInt16(),
+  NumAdd(Runtime runtime)
+      : _location1 = runtime._readInt16(),
         _location2 = runtime._readInt16();
 
   NumAdd.make(this._location1, this._location2);
@@ -71,7 +70,8 @@ class NumAdd implements DbcOp {
   // Add value A + B
   @override
   void run(Runtime runtime) {
-    runtime.frame[runtime.frameOffset++] = (runtime.frame[_location1] as num) + (runtime.frame[_location2] as num);
+    runtime.frame[runtime.frameOffset++] =
+        (runtime.frame[_location1] as num) + (runtime.frame[_location2] as num);
   }
 
   @override
@@ -79,8 +79,8 @@ class NumAdd implements DbcOp {
 }
 
 class NumSub implements DbcOp {
-  NumSub(Runtime runtime) :
-        _location1 = runtime._readInt16(),
+  NumSub(Runtime runtime)
+      : _location1 = runtime._readInt16(),
         _location2 = runtime._readInt16();
 
   NumSub.make(this._location1, this._location2);
@@ -93,7 +93,8 @@ class NumSub implements DbcOp {
   // Add value A + B
   @override
   void run(Runtime runtime) {
-    runtime.frame[runtime.frameOffset++] = (runtime.frame[_location1] as num) - (runtime.frame[_location2] as num);
+    runtime.frame[runtime.frameOffset++] =
+        (runtime.frame[_location1] as num) - (runtime.frame[_location2] as num);
   }
 
   @override
@@ -114,7 +115,8 @@ class NumLt implements DbcOp {
 
   @override
   void run(Runtime runtime) {
-    runtime.frame[runtime.frameOffset++] = (runtime.frame[_location1] as num) < (runtime.frame[_location2] as num);
+    runtime.frame[runtime.frameOffset++] =
+        (runtime.frame[_location1] as num) < (runtime.frame[_location2] as num);
   }
 
   @override
@@ -135,7 +137,8 @@ class NumLtEq implements DbcOp {
 
   @override
   void run(Runtime runtime) {
-    runtime.frame[runtime.frameOffset++] = (runtime.frame[_location1] as num) <= (runtime.frame[_location2] as num);
+    runtime.frame[runtime.frameOffset++] = (runtime.frame[_location1] as num) <=
+        (runtime.frame[_location2] as num);
   }
 
   @override
@@ -293,8 +296,8 @@ class ListAppend extends DbcOp {
 }
 
 class IndexList extends DbcOp {
-  IndexList(Runtime runtime) :
-        _position = runtime._readInt16(),
+  IndexList(Runtime runtime)
+      : _position = runtime._readInt16(),
         _index = runtime._readInt32();
 
   IndexList.make(this._position, this._index);
@@ -306,7 +309,8 @@ class IndexList extends DbcOp {
 
   @override
   void run(Runtime runtime) {
-    runtime.frame[runtime.frameOffset++] = (runtime.frame[_position] as List)[runtime.frame[_index] as int];
+    runtime.frame[runtime.frameOffset++] =
+        (runtime.frame[_position] as List)[runtime.frame[_index] as int];
   }
 
   @override
@@ -348,7 +352,8 @@ class PushIterableLength extends DbcOp {
 
   @override
   void run(Runtime runtime) {
-    runtime.frame[runtime.frameOffset++] = (runtime.frame[_position] as Iterable).length;
+    runtime.frame[runtime.frameOffset++] =
+        (runtime.frame[_position] as Iterable).length;
   }
 
   @override

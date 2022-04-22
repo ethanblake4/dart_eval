@@ -7,8 +7,16 @@ import 'package:dart_eval/src/eval/runtime/ops/all_ops.dart';
 import 'package:dart_eval/src/eval/runtime/type.dart';
 
 class Program {
-  Program(this.topLevelDeclarations, this.instanceDeclarations, this.typeNames, this.typeTypes, this.ops,
-      this.bridgeLibraryMappings, this.bridgeFunctionMappings, this.constantPool, this.runtimeTypes);
+  Program(
+      this.topLevelDeclarations,
+      this.instanceDeclarations,
+      this.typeNames,
+      this.typeTypes,
+      this.ops,
+      this.bridgeLibraryMappings,
+      this.bridgeFunctionMappings,
+      this.constantPool,
+      this.runtimeTypes);
 
   Map<int, Map<String, int>> topLevelDeclarations;
 
@@ -33,12 +41,21 @@ class Program {
   Uint8List write() {
     final b = BytesBuilder(copy: false);
 
-    _writeMetaBlock(b, topLevelDeclarations.map((key, value) => MapEntry(key.toString(), value)));
-    _writeMetaBlock(b, instanceDeclarations.map((key, value) => MapEntry(key.toString(), value)));
+    _writeMetaBlock(
+        b,
+        topLevelDeclarations
+            .map((key, value) => MapEntry(key.toString(), value)));
+    _writeMetaBlock(
+        b,
+        instanceDeclarations
+            .map((key, value) => MapEntry(key.toString(), value)));
     _writeMetaBlock(b, typeNames);
     _writeMetaBlock(b, [for (final t in typeTypes) t.toList()]);
     _writeMetaBlock(b, bridgeLibraryMappings);
-    _writeMetaBlock(b, bridgeFunctionMappings.map((key, value) => MapEntry(key.toString(), value)));
+    _writeMetaBlock(
+        b,
+        bridgeFunctionMappings
+            .map((key, value) => MapEntry(key.toString(), value)));
     _writeMetaBlock(b, constantPool);
     _writeMetaBlock(b, [for (final rt in runtimeTypes) rt.toJson()]);
 

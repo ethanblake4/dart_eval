@@ -3,7 +3,6 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/runtime/ops/all_ops.dart';
 
 class OffsetTracker {
-
   OffsetTracker(this.context);
 
   final Map<int, DeferredOrOffset> _deferredOffsets = {};
@@ -17,7 +16,8 @@ class OffsetTracker {
     _deferredOffsets.forEach((pos, offset) {
       final op = source[pos];
       if (op is Call) {
-        final resolvedOffset = context.topLevelDeclarationPositions[offset.file!]![offset.name!]!;
+        final resolvedOffset =
+            context.topLevelDeclarationPositions[offset.file!]![offset.name!]!;
         final newOp = Call.make(resolvedOffset);
         source[pos] = newOp;
       }
@@ -29,7 +29,8 @@ class OffsetTracker {
 /// An structure pointing to a function that may or may not have been generated already. If it hasn't, the exact program
 /// offset will be resolved later by the [OffsetTracker]
 class DeferredOrOffset {
-  DeferredOrOffset({this.offset, this.file, this.name, this.className, this.methodType});
+  DeferredOrOffset(
+      {this.offset, this.file, this.name, this.className, this.methodType});
 
   final int? offset;
   final int? file;
@@ -37,10 +38,15 @@ class DeferredOrOffset {
   final int? methodType;
   final String? name;
 
-  factory DeferredOrOffset.lookupStatic(CompilerContext ctx, int library, String parent, String name) {
-    if (ctx.topLevelDeclarationPositions[library]?.containsKey('$parent.$name') ?? false) {
+  factory DeferredOrOffset.lookupStatic(
+      CompilerContext ctx, int library, String parent, String name) {
+    if (ctx.topLevelDeclarationPositions[library]
+            ?.containsKey('$parent.$name') ??
+        false) {
       return DeferredOrOffset(
-          file: library, offset: ctx.topLevelDeclarationPositions[library]!['$parent.$name'], name: '$parent.$name');
+          file: library,
+          offset: ctx.topLevelDeclarationPositions[library]!['$parent.$name'],
+          name: '$parent.$name');
     } else {
       return DeferredOrOffset(file: library, name: '$parent.$name');
     }

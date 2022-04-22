@@ -5,7 +5,8 @@ import 'package:dart_eval/src/eval/compiler/reference.dart';
 
 import '../variable.dart';
 
-Reference compileIndexExpressionAsReference(IndexExpression e, CompilerContext ctx) {
+Reference compileIndexExpressionAsReference(
+    IndexExpression e, CompilerContext ctx) {
   final value = compileExpression(e.realTarget, ctx);
   final index = compileExpression(e.index, ctx);
   return IndexedReference(value, index);

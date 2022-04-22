@@ -28,7 +28,7 @@ abstract class AbstractScopeContext {
   }
 }
 
-mixin ScopeContext on Object implements AbstractScopeContext  {
+mixin ScopeContext on Object implements AbstractScopeContext {
   @override
   int scopeFrameOffset = 0;
   @override
@@ -38,7 +38,8 @@ mixin ScopeContext on Object implements AbstractScopeContext  {
   @override
   List<bool> inNonlinearAccessContext = [false];
 
-  void beginAllocScope({int existingAllocLen = 0, bool requireNonlinearAccess = false}) {
+  void beginAllocScope(
+      {int existingAllocLen = 0, bool requireNonlinearAccess = false}) {
     allocNest.add(existingAllocLen);
     locals.add({});
     inNonlinearAccessContext.add(requireNonlinearAccess);
@@ -73,11 +74,10 @@ mixin ScopeContext on Object implements AbstractScopeContext  {
   }
 
   Variable setLocal(String name, Variable v, {int? frame}) {
-
     if (frame != null) {
       return locals[frame][name] = v
-          ..name = name
-          ..frameIndex = frame;
+        ..name = name
+        ..frameIndex = frame;
     }
 
     return locals.last[name] = v
@@ -97,7 +97,8 @@ mixin ScopeContext on Object implements AbstractScopeContext  {
 
   void resolveNonlinearity([int depth = 1]) {
     for (var i = 0; i < depth; i++) {
-      <String, Variable>{...(locals[locals.length - depth])}.forEach((key, value) {
+      <String, Variable>{...(locals[locals.length - depth])}
+          .forEach((key, value) {
         locals[locals.length - depth][key] = value.unboxIfNeeded(this);
       });
     }
@@ -172,8 +173,11 @@ class CompilerContext with ScopeContext {
   }
 
   @override
-  void beginAllocScope({int existingAllocLen = 0, bool requireNonlinearAccess = false}) {
-    super.beginAllocScope(existingAllocLen: existingAllocLen, requireNonlinearAccess: requireNonlinearAccess);
+  void beginAllocScope(
+      {int existingAllocLen = 0, bool requireNonlinearAccess = false}) {
+    super.beginAllocScope(
+        existingAllocLen: existingAllocLen,
+        requireNonlinearAccess: requireNonlinearAccess);
     if (preScan!.closedFrames.contains(locals.length - 1)) {
       final ps = PushScope.make(sourceFile, -1, '#');
       pushOp(ps, PushScope.len(ps));
@@ -204,7 +208,9 @@ class CompilerContext with ScopeContext {
 
 class ContextSaveState {
   ContextSaveState.of(AbstractScopeContext context)
-      : locals = [...context.locals.map((e) => {...e})],
+      : locals = [
+          ...context.locals.map((e) => {...e})
+        ],
         allocNest = [...context.allocNest],
         inNonlinearAccessContext = [...context.inNonlinearAccessContext];
   List<Map<String, Variable>> locals;

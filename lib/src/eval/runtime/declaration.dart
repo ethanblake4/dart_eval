@@ -1,14 +1,16 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
-import 'package:dart_eval/src/eval/shared/types.dart';
 
 /// A class is an instance of [Type]
 class EvalClass extends $InstanceImpl {
-  EvalClass(this.delegatedType, this.superclass, this.mixins, this.getters, this.setters, this.methods)
+  EvalClass(this.delegatedType, this.superclass, this.mixins, this.getters,
+      this.setters, this.methods)
       : super(EvalClassClass.instance, EvalTypeClass(), const []);
 
   factory EvalClass.fromJson(List def) {
-    return EvalClass(def[3] as int, null, [], (def[0] as Map).cast(), (def[1] as Map).cast(), (def[2] as Map).cast());
+    return EvalClass(def[3] as int, null, [], (def[0] as Map).cast(),
+        (def[1] as Map).cast(), (def[2] as Map).cast());
   }
 
   final int delegatedType;
@@ -78,5 +80,5 @@ class EvalClassClass implements EvalClass {
   Never get $value => throw UnimplementedError();
 
   @override
-  int get delegatedType => runtimeTypeMap[EvalTypes.typeType]!;
+  int get delegatedType => RuntimeTypes.typeType;
 }

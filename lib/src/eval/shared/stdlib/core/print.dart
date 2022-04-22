@@ -1,16 +1,23 @@
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/bridge/declaration/function.dart';
-import 'package:dart_eval/src/eval/shared/types.dart';
 
 void configurePrintForCompile(Compiler compiler) {
   compiler.defineBridgeTopLevelFunction(BridgeFunctionDeclaration(
       'dart:core',
       'print',
-      BridgeFunctionDescriptor(BridgeTypeAnnotation(BridgeTypeReference.type(RuntimeTypes.voidType, []), false), {}, [
-        BridgeParameter(
-            'object', BridgeTypeAnnotation(BridgeTypeReference.type(RuntimeTypes.objectType, []), true), false)
-      ], {})));
+      BridgeFunctionDescriptor(
+          BridgeTypeAnnotation(
+              BridgeTypeReference.type(RuntimeTypes.voidType, []), false),
+          {},
+          [
+            BridgeParameter(
+                'object',
+                BridgeTypeAnnotation(
+                    BridgeTypeReference.type(RuntimeTypes.objectType, []),
+                    true),
+                false)
+          ],
+          {})));
 }
 
 void configurePrintForRuntime(Runtime runtime) {

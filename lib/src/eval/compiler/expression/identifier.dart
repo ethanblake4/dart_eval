@@ -1,5 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
@@ -27,7 +27,8 @@ Reference compileIdentifierAsReference(Identifier id, CompilerContext ctx) {
   throw CompileError('Unknown identifier ${id.runtimeType}');
 }
 
-Pair<TypeRef, Declaration>? resolveInstanceDeclaration(CompilerContext ctx, int library, String $class, String name) {
+Pair<TypeRef, Declaration>? resolveInstanceDeclaration(
+    CompilerContext ctx, int library, String $class, String name) {
   final dec = ctx.instanceDeclarationsMap[library]![$class]?[name];
   if (dec != null) {
     final $type = ctx.visibleTypes[library]![$class]!;
@@ -42,15 +43,18 @@ Pair<TypeRef, Declaration>? resolveInstanceDeclaration(CompilerContext ctx, int 
   if ($classDec.withClause != null) {
     for (final $mixin in $classDec.withClause!.mixinTypes2) {
       final mixinType = ctx.visibleTypes[library]![$mixin.name.name]!;
-      final result = resolveInstanceDeclaration(ctx, mixinType.file, mixinType.name, name);
+      final result =
+          resolveInstanceDeclaration(ctx, mixinType.file, mixinType.name, name);
       if (result != null) {
         return result;
       }
     }
   }
   if ($classDec.extendsClause != null) {
-    final extendsType = ctx.visibleTypes[library]![$classDec.extendsClause!.superclass2.name.name]!;
-    return resolveInstanceDeclaration(ctx, extendsType.file, extendsType.name, name);
+    final extendsType = ctx.visibleTypes[library]![
+        $classDec.extendsClause!.superclass2.name.name]!;
+    return resolveInstanceDeclaration(
+        ctx, extendsType.file, extendsType.name, name);
   }
   return null;
 }

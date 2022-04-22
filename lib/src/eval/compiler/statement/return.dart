@@ -8,7 +8,8 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 import 'statement.dart';
 
-StatementInfo compileReturn(CompilerContext ctx, ReturnStatement s, AlwaysReturnType? expectedReturnType) {
+StatementInfo compileReturn(CompilerContext ctx, ReturnStatement s,
+    AlwaysReturnType? expectedReturnType) {
   if (s.expression == null) {
     ctx.pushOp(Return.make(-1), Return.LEN);
   } else {
@@ -39,7 +40,8 @@ StatementInfo compileReturn(CompilerContext ctx, ReturnStatement s, AlwaysReturn
     if (!value.type.isAssignableTo(expected)) {
       throw CompileError('Cannot return ${value.type} (expected: $expected)');
     }
-    if (unboxedAcrossFunctionBoundaries.contains(expected) && ctx.currentClass == null) {
+    if (unboxedAcrossFunctionBoundaries.contains(expected) &&
+        ctx.currentClass == null) {
       value = value.unboxIfNeeded(ctx);
     } else {
       value = value.boxIfNeeded(ctx);

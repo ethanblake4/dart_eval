@@ -13,7 +13,10 @@ Variable compilePropertyAccess(PropertyAccess pa, CompilerContext ctx) {
   ctx.pushOp(op, PushObjectProperty.len(op));
 
   ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-  final v = Variable.alloc(ctx, TypeRef.lookupFieldType(ctx, L.type, pa.propertyName.name) ?? EvalTypes.dynamicType);
+  final v = Variable.alloc(
+      ctx,
+      TypeRef.lookupFieldType(ctx, L.type, pa.propertyName.name) ??
+          EvalTypes.dynamicType);
 
   return v;
 }

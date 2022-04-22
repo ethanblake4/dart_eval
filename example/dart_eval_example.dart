@@ -1,8 +1,6 @@
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/bridge/declaration/class.dart';
-import 'package:dart_eval/src/eval/bridge/declaration/type.dart';
-import 'package:dart_eval/src/eval/runtime/stdlib/core/future.dart';
+import 'package:dart_eval/stdlib/core.dart';
 
 class X {
   const X(this.q);
@@ -38,7 +36,9 @@ void main(List<String> args) {
     }
   ''';
 
-  eval(source, args: [$Future.wrap(Future.delayed(const Duration(seconds: 2)), (_) => $null())]);
+  eval(source, args: [
+    $Future.wrap(Future.delayed(const Duration(seconds: 2)), (_) => $null())
+  ]);
 }
 
 class $X extends X with $Bridge {
@@ -46,10 +46,13 @@ class $X extends X with $Bridge {
 
   $X._construct(List<Object?> args) : this(args[0] as int);
 
-  static const $type = BridgeClassTypeDeclaration('package:flutter/src/main.dart', 'X');
+  static const $type =
+      BridgeClassTypeDeclaration('package:flutter/src/main.dart', 'X');
 
   static const BridgeClassDeclaration $classDef = BridgeClassDeclaration(
-      BridgeTypeReference.unresolved(BridgeUnresolvedTypeReference('package:flutter/src/main.dart', 'X'), []),
+      BridgeTypeReference.unresolved(
+          BridgeUnresolvedTypeReference('package:flutter/src/main.dart', 'X'),
+          []),
       isAbstract: false,
       constructors: {},
       methods: {},

@@ -57,7 +57,8 @@ Reference compileExpressionAsReference(Expression e, CompilerContext ctx) {
     return compileIndexExpressionAsReference(e, ctx);
   }
 
-  throw NotReferencableError("Unknown expression type or can't reference ${e.runtimeType}");
+  throw NotReferencableError(
+      "Unknown expression type or can't reference ${e.runtimeType}");
 }
 
 bool canReference(Expression e) {

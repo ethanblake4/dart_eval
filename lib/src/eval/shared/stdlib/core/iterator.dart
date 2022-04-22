@@ -1,7 +1,6 @@
-import 'package:dart_eval/src/eval/bridge/declaration/type.dart';
-
-import '../../../../../dart_eval.dart';
-import '../../../../../dart_eval_bridge.dart';
+import 'package:dart_eval/dart_eval.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/stdlib/core.dart';
 
 class $Iterator<E> implements Iterator, $Instance {
   const $Iterator.wrap(this.$value);
@@ -31,7 +30,8 @@ class $Iterator<E> implements Iterator, $Instance {
 
   static const $Function __moveNext = $Function(_moveNext);
 
-  static $Value? _moveNext(final Runtime runtime, final $Value? target, final List<$Value?> args) {
+  static $Value? _moveNext(
+      final Runtime runtime, final $Value? target, final List<$Value?> args) {
     return $bool(((target as $Value).$value as Iterator).moveNext());
   }
 
@@ -48,10 +48,8 @@ class $Iterator<E> implements Iterator, $Instance {
 class $Iterator$bridge<E> with $Bridge implements Iterator<E> {
   const $Iterator$bridge(List<Object?> _);
 
-  static const $type =
-      BridgeClassTypeDeclaration('dart:core', 'Iterator', isAbstract: true, generics: {
-        'E': BridgeGenericParam()
-      });
+  static const $type = BridgeClassTypeDeclaration('dart:core', 'Iterator',
+      isAbstract: true, generics: {'E': BridgeGenericParam()});
 
   @override
   $Value? $bridgeGet(String identifier) {

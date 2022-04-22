@@ -1,5 +1,6 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/runtime/exception.dart';
+import 'package:dart_eval/src/eval/runtime/function.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 /// Interface for objects with a backing value
@@ -34,7 +35,6 @@ abstract class $Instance implements $Value {
 }
 
 class $InstanceImpl implements $Instance {
-
   final EvalClass evalClass;
   final $Instance? evalSuperclass;
   late final List<Object?> values;
@@ -83,7 +83,6 @@ class $InstanceImpl implements $Instance {
 }
 
 class EvalTypeClass implements EvalClass {
-
   EvalTypeClass();
 
   @override
@@ -122,9 +121,6 @@ class EvalTypeClass implements EvalClass {
 
   @override
   EvalClass? get superclass => throw UnimplementedError();
-
-  @override
-  EvalClass get _evalClass => throw UnimplementedError();
 
   @override
   EvalClass get evalClass => throw UnimplementedError();

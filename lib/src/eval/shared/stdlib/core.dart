@@ -1,7 +1,7 @@
 import 'package:dart_eval/dart_eval.dart';
-import 'package:dart_eval/src/eval/runtime/stdlib/core/duration.dart';
-import 'package:dart_eval/src/eval/runtime/stdlib/core/future.dart';
-import 'package:dart_eval/src/eval/runtime/stdlib/core/print.dart';
+import 'core/duration.dart';
+import 'core/future.dart';
+import 'core/print.dart';
 
 void configureCoreForCompile(Compiler compiler) {
   configurePrintForCompile(compiler);

@@ -12,7 +12,8 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 
 import 'block.dart';
 
-StatementInfo compileStatement(Statement s, AlwaysReturnType? expectedReturnType, CompilerContext ctx) {
+StatementInfo compileStatement(
+    Statement s, AlwaysReturnType? expectedReturnType, CompilerContext ctx) {
   if (s is Block) {
     return compileBlock(s, expectedReturnType, ctx);
   } else if (s is VariableDeclarationStatement) {
@@ -36,7 +37,8 @@ StatementInfo compileStatement(Statement s, AlwaysReturnType? expectedReturnType
 }
 
 class StatementInfo {
-  StatementInfo(this.position, {this.willAlwaysReturn = false, this.willAlwaysThrow = false});
+  StatementInfo(this.position,
+      {this.willAlwaysReturn = false, this.willAlwaysThrow = false});
 
   final int position;
   final bool willAlwaysReturn;

@@ -10,7 +10,6 @@ class CompileError implements Exception {
 }
 
 class NotReferencableError extends CompileError {
-
   const NotReferencableError(String message) : super(message);
 
   @override

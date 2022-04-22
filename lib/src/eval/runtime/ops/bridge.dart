@@ -29,14 +29,18 @@ class BridgeInstantiate implements DbcOp {
     runtime.args = [];
 
     final $runtimeType = 1;
-    final instance = runtime._bridgeFunctions[_constructor](runtime, null, _mappedArgs) as $Instance;
-    Runtime.bridgeData[instance] = BridgeData(runtime, $runtimeType, $subclass ?? BridgeDelegatingShim());
+    final instance =
+        runtime._bridgeFunctions[_constructor](runtime, null, _mappedArgs)
+            as $Instance;
+    Runtime.bridgeData[instance] =
+        BridgeData(runtime, $runtimeType, $subclass ?? BridgeDelegatingShim());
 
     runtime.frame[runtime.frameOffset++] = instance;
   }
 
   @override
-  String toString() => 'BridgeInstantiate (subclass L$_subclass, Ex#$_constructor))';
+  String toString() =>
+      'BridgeInstantiate (subclass L$_subclass, Ex#$_constructor))';
 }
 
 class PushBridgeSuperShim extends DbcOp {
@@ -74,7 +78,8 @@ class ParentBridgeSuperShim extends DbcOp {
   }
 
   @override
-  String toString() => 'ParentBridgeSuperShim (shim L$_shimOffset, bridge L$_bridgeOffset)';
+  String toString() =>
+      'ParentBridgeSuperShim (shim L$_shimOffset, bridge L$_bridgeOffset)';
 }
 
 class InvokeExternal implements DbcOp {
@@ -97,7 +102,8 @@ class InvokeExternal implements DbcOp {
     }
 
     runtime.args = [];
-    runtime.returnValue = runtime._bridgeFunctions[_function](runtime, null, _mappedArgs);
+    runtime.returnValue =
+        runtime._bridgeFunctions[_function](runtime, null, _mappedArgs);
   }
 
   @override
@@ -105,7 +111,9 @@ class InvokeExternal implements DbcOp {
 }
 
 class Await implements DbcOp {
-  Await(Runtime runtime): _completerOffset = runtime._readInt16(), _futureOffset = runtime._readInt16();
+  Await(Runtime runtime)
+      : _completerOffset = runtime._readInt16(),
+        _futureOffset = runtime._readInt16();
 
   Await.make(this._completerOffset, this._futureOffset);
 
@@ -116,7 +124,6 @@ class Await implements DbcOp {
 
   @override
   void run(Runtime runtime) {
-
     final Completer completer;
     final completerOffset = _completerOffset;
 
@@ -141,7 +148,8 @@ class Await implements DbcOp {
     _suspend(runtime, continuation, future);
 
     // Return with the completer as the result (the following lines are a copy of the Return op code)
-    runtime.returnValue = $Future.wrap(completer.future, (value) => value as $Value?);
+    runtime.returnValue =
+        $Future.wrap(completer.future, (value) => value as $Value?);
     runtime.stack.removeLast();
     if (runtime.stack.isNotEmpty) {
       runtime.frame = runtime.stack.last;
@@ -155,7 +163,8 @@ class Await implements DbcOp {
     runtime._prOffset = prOffset;
   }
 
-  void _suspend(Runtime runtime, Continuation continuation, $Future future) async {
+  void _suspend(
+      Runtime runtime, Continuation continuation, $Future future) async {
     final result = await future.$value;
     runtime.returnValue = result;
     runtime.frameOffset = continuation.frameOffset;

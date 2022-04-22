@@ -1,12 +1,11 @@
 import 'package:dart_eval/src/eval/runtime/exception.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/runtime/type.dart';
-import 'package:dart_eval/src/eval/shared/types.dart';
 
 import '../../../dart_eval_bridge.dart';
-import 'class.dart';
 
-typedef EvalCallableFunc = $Value? Function(Runtime runtime, $Value? target, List<$Value?> args);
+typedef EvalCallableFunc = $Value? Function(
+    Runtime runtime, $Value? target, List<$Value?> args);
 
 abstract class EvalCallable {
   $Value? call(Runtime runtime, $Value? target, List<$Value?> args);
@@ -38,8 +37,8 @@ abstract class EvalFunction implements $Instance, EvalCallable {
 }
 
 class EvalFunctionPtr extends EvalFunction {
-  EvalFunctionPtr(this.$this, this.offset, this.requiredPositionalArgCount, this.positionalArgTypes, this.sortedNamedArgs,
-      this.sortedNamedArgTypes);
+  EvalFunctionPtr(this.$this, this.offset, this.requiredPositionalArgCount,
+      this.positionalArgTypes, this.sortedNamedArgs, this.sortedNamedArgTypes);
 
   final int offset;
   final $Instance? $this;

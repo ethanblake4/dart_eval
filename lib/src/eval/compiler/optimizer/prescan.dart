@@ -6,7 +6,6 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/runtime/ops/all_ops.dart';
 
 class PrescanVisitor extends RecursiveAstVisitor<PrescanContext?> {
-
   final PrescanContext ctx = PrescanContext();
 
   @override
@@ -22,7 +21,6 @@ class PrescanVisitor extends RecursiveAstVisitor<PrescanContext?> {
     super.visitMethodDeclaration(node);
     ctx.endAllocScope();
   }
-
 
   @override
   PrescanContext? visitVariableDeclaration(VariableDeclaration node) {
@@ -76,7 +74,6 @@ class PrescanVisitor extends RecursiveAstVisitor<PrescanContext?> {
     }
     node.visitChildren(this);
   }
-
 }
 
 class PrescanContext with ScopeContext {

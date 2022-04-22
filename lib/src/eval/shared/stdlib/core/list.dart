@@ -1,7 +1,8 @@
 part of 'collection.dart';
 
 class $List<E> implements List<E>, $Instance {
-  $List(String id, List<E> value) : $value = runtimeOverride(id) as List<E>? ?? value;
+  $List(String id, List<E> value)
+      : $value = runtimeOverride(id) as List<E>? ?? value;
 
   $List.wrap(this.$value);
 
@@ -30,21 +31,24 @@ class $List<E> implements List<E>, $Instance {
 
   static const $Function __indexGet = $Function(_indexGet);
 
-  static $Value? _indexGet(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _indexGet(
+      Runtime runtime, $Value? target, List<$Value?> args) {
     final idx = args[0]!;
     return (target!.$value as List)[idx.$value];
   }
 
   static const $Function __indexSet = $Function(_indexSet);
 
-  static $Value? _indexSet(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _indexSet(
+      Runtime runtime, $Value? target, List<$Value?> args) {
     final idx = args[0]!;
     final value = args[1]!;
     return (target!.$value as List)[idx.$value] = value;
   }
 
   @override
-  List get $reified => $value.map((e) => e is $Value ? e.$reified : e).toList().cast();
+  List get $reified =>
+      $value.map((e) => e is $Value ? e.$reified : e).toList().cast();
 
   @override
   bool any(bool Function(E element) test) => $value.any(test);
@@ -62,16 +66,19 @@ class $List<E> implements List<E>, $Instance {
   bool every(bool Function(E element) test) => $value.every(test);
 
   @override
-  Iterable<T> expand<T>(Iterable<T> Function(E element) toElements) => $value.expand<T>(toElements);
+  Iterable<T> expand<T>(Iterable<T> Function(E element) toElements) =>
+      $value.expand<T>(toElements);
 
   @override
   E get first => $value.first;
 
   @override
-  E firstWhere(bool Function(E element) test, {E Function()? orElse}) => $value.firstWhere(test, orElse: orElse);
+  E firstWhere(bool Function(E element) test, {E Function()? orElse}) =>
+      $value.firstWhere(test, orElse: orElse);
 
   @override
-  T fold<T>(T initialValue, T Function(T previousValue, E element) combine) => $value.fold(initialValue, combine);
+  T fold<T>(T initialValue, T Function(T previousValue, E element) combine) =>
+      $value.fold(initialValue, combine);
 
   @override
   Iterable<E> followedBy(Iterable<E> other) => $value.followedBy(other);
@@ -95,7 +102,8 @@ class $List<E> implements List<E>, $Instance {
   E get last => $value.last;
 
   @override
-  E lastWhere(bool Function(E element) test, {E Function()? orElse}) => $value.lastWhere(test, orElse: orElse);
+  E lastWhere(bool Function(E element) test, {E Function()? orElse}) =>
+      $value.lastWhere(test, orElse: orElse);
 
   @override
   int get length => $value.length;
@@ -110,7 +118,8 @@ class $List<E> implements List<E>, $Instance {
   E get single => $value.single;
 
   @override
-  E singleWhere(bool Function(E element) test, {E Function()? orElse}) => $value.singleWhere(test, orElse: orElse);
+  E singleWhere(bool Function(E element) test, {E Function()? orElse}) =>
+      $value.singleWhere(test, orElse: orElse);
 
   @override
   Iterable<E> skip(int count) => $value.skip(count);
@@ -140,16 +149,19 @@ class $List<E> implements List<E>, $Instance {
   Map<int, E> asMap() => $value.asMap();
 
   @override
-  void replaceRange(int start, int end, Iterable<E> replacements) => $value.replaceRange(start, end, replacements);
+  void replaceRange(int start, int end, Iterable<E> replacements) =>
+      $value.replaceRange(start, end, replacements);
 
   @override
-  void fillRange(int start, int end, [E? fillValue]) => $value.fillRange(start, end, fillValue);
+  void fillRange(int start, int end, [E? fillValue]) =>
+      $value.fillRange(start, end, fillValue);
 
   @override
   void removeRange(int start, int end) => $value.removeRange(start, end);
 
   @override
-  void setRange(int start, int end, Iterable<E> iterable, [int skipCount = 0]) =>
+  void setRange(int start, int end, Iterable<E> iterable,
+          [int skipCount = 0]) =>
       $value.setRange(start, end, iterable, skipCount);
 
   @override
@@ -177,10 +189,12 @@ class $List<E> implements List<E>, $Instance {
   bool remove(Object? value) => $value.remove(value);
 
   @override
-  void setAll(int index, Iterable<E> iterable) => $value.setAll(index, iterable);
+  void setAll(int index, Iterable<E> iterable) =>
+      $value.setAll(index, iterable);
 
   @override
-  void insertAll(int index, Iterable<E> iterable) => $value.insertAll(index, iterable);
+  void insertAll(int index, Iterable<E> iterable) =>
+      $value.insertAll(index, iterable);
 
   @override
   void insert(int index, E element) => $value.insert(index, element);
@@ -189,13 +203,16 @@ class $List<E> implements List<E>, $Instance {
   void clear() => $value.clear();
 
   @override
-  int lastIndexOf(E element, [int? start]) => $value.lastIndexOf(element, start);
+  int lastIndexOf(E element, [int? start]) =>
+      $value.lastIndexOf(element, start);
 
   @override
-  int lastIndexWhere(bool Function(E element) test, [int? start]) => $value.lastIndexWhere(test, start);
+  int lastIndexWhere(bool Function(E element) test, [int? start]) =>
+      $value.lastIndexWhere(test, start);
 
   @override
-  int indexWhere(bool Function(E element) test, [int start = 0]) => $value.indexWhere(test, start);
+  int indexWhere(bool Function(E element) test, [int start = 0]) =>
+      $value.indexWhere(test, start);
 
   @override
   int indexOf(E element, [int start = 0]) => $value.indexOf(element, start);
@@ -247,5 +264,6 @@ $Function get$List_generate(Runtime _) => _$List_generate;
 const _$List_generate = $Function(_List_generate);
 
 $Value? _List_generate(Runtime runtime, $Value? target, List<$Value?> args) {
-  return $List.wrap(List.generate(args[0]!.$value, args[1]!.$value, growable: args[2]?.$value ?? true));
+  return $List.wrap(List.generate(args[0]!.$value, args[1]!.$value,
+      growable: args[2]?.$value ?? true));
 }

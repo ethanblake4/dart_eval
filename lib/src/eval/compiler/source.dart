@@ -1,5 +1,4 @@
-
-import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/bridge/declaration.dart';
 
 class DeclarationOrPrefix {
   DeclarationOrPrefix(this.sourceLib, {this.declaration, this.children});

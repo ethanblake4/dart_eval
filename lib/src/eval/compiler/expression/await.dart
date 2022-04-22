@@ -8,7 +8,6 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 Variable compileAwaitExpression(AwaitExpression e, CompilerContext ctx) {
-
   AstNode? _e = e;
   while (_e != null) {
     if (_e is FunctionBody) {
@@ -21,17 +20,21 @@ Variable compileAwaitExpression(AwaitExpression e, CompilerContext ctx) {
 
   final subject = compileExpression(e.expression, ctx);
 
-  if (!subject.type.isAssignableTo(TypeRef.stdlib(ctx, 'dart:core', 'Future'))) {
+  if (!subject.type
+      .isAssignableTo(TypeRef.stdlib(ctx, 'dart:core', 'Future'))) {
     throw CompileError("Cannot await something that isn't a Future");
-  };
+  }
+  ;
 
   var _completer = ctx.lookupLocal('#completer');
 
-  final awaitOp = Await.make(_completer?.scopeFrameOffset ?? -1, subject.scopeFrameOffset);
+  final awaitOp =
+      Await.make(_completer?.scopeFrameOffset ?? -1, subject.scopeFrameOffset);
   ctx.pushOp(awaitOp, Await.LEN);
 
   if (_completer == null) {
-    _completer = Variable.alloc(ctx, TypeRef.stdlib(ctx, 'dart:async', 'Completer'));
+    _completer =
+        Variable.alloc(ctx, TypeRef.stdlib(ctx, 'dart:async', 'Completer'));
     ctx.setLocal('#completer', _completer, frame: ctx.nearestAsyncFrame);
   }
 

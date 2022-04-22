@@ -1,8 +1,7 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/runtime/exception.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
-import 'package:dart_eval/src/eval/runtime/stdlib/core/num.dart';
-import 'package:dart_eval/src/eval/shared/types.dart';
+import 'num.dart';
 
 class $null implements $Value {
   const $null();
@@ -75,7 +74,10 @@ class $bool implements $Instance {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) || other is $bool && runtimeType == other.runtimeType && $value == other.$value;
+      identical(this, other) ||
+      other is $bool &&
+          runtimeType == other.runtimeType &&
+          $value == other.$value;
 
   @override
   int get hashCode => $value.hashCode;
@@ -149,7 +151,8 @@ class $String implements $Instance {
 
   static const $Function __concat = $Function(_concat);
 
-  static $Value? _concat(final Runtime runtime, final $Value? target, final List<$Value?> args) {
+  static $Value? _concat(
+      final Runtime runtime, final $Value? target, final List<$Value?> args) {
     target as $String;
     final other = args[0] as $String;
     return $String(target.$value + other.$value);
@@ -157,13 +160,15 @@ class $String implements $Instance {
 
   static const $Function __toLowerCase = $Function(_toLowerCase);
 
-  static $Value? _toLowerCase(final Runtime runtime, final $Value? target, final List<$Value?> args) {
+  static $Value? _toLowerCase(
+      final Runtime runtime, final $Value? target, final List<$Value?> args) {
     return $String((target!.$value as String).toLowerCase());
   }
 
   static const $Function __toUpperCase = $Function(_toUpperCase);
 
-  static $Value? _toUpperCase(final Runtime runtime, final $Value? target, final List<$Value?> args) {
+  static $Value? _toUpperCase(
+      final Runtime runtime, final $Value? target, final List<$Value?> args) {
     return $String((target!.$value as String).toUpperCase());
   }
 

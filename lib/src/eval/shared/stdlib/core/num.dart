@@ -1,6 +1,6 @@
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/shared/types.dart';
+import 'package:dart_eval/stdlib/core.dart';
 
 class $num<T extends num> implements $Instance {
   $num(this.$value);
@@ -10,7 +10,7 @@ class $num<T extends num> implements $Instance {
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
-    switch(identifier) {
+    switch (identifier) {
       case '+':
         return __plus;
       case '-':
@@ -151,7 +151,10 @@ class $num<T extends num> implements $Instance {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) || other is $num && runtimeType == other.runtimeType && $value == other.$value;
+      identical(this, other) ||
+      other is $num &&
+          runtimeType == other.runtimeType &&
+          $value == other.$value;
 
   @override
   int get hashCode => $value.hashCode;
@@ -161,7 +164,6 @@ class $num<T extends num> implements $Instance {
 }
 
 class $int extends $num<int> {
-
   $int(int evalValue) : super(evalValue);
 
   @override
@@ -187,7 +189,6 @@ class $int extends $num<int> {
 }
 
 class $double extends $num<double> {
-
   $double(double evalValue) : super(evalValue);
 
   @override

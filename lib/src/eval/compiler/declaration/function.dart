@@ -12,12 +12,16 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   ctx.runPrescan(d);
-  ctx.topLevelDeclarationPositions[ctx.library]![d.name.name] = beginMethod(ctx, d, d.offset, d.name.name + '()');
+  ctx.topLevelDeclarationPositions[ctx.library]![d.name.name] =
+      beginMethod(ctx, d, d.offset, d.name.name + '()');
 
-  final _existingAllocs = d.functionExpression.parameters?.parameters.length ?? 0;
+  final _existingAllocs =
+      d.functionExpression.parameters?.parameters.length ?? 0;
   ctx.beginAllocScope(existingAllocLen: _existingAllocs);
   ctx.scopeFrameOffset += _existingAllocs;
-  final resolvedParams = resolveFPLDefaults(ctx, d.functionExpression.parameters!, false, allowUnboxed: true);
+  final resolvedParams = resolveFPLDefaults(
+      ctx, d.functionExpression.parameters!, false,
+      allowUnboxed: true);
 
   var i = 0;
 
@@ -30,7 +34,9 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
     if (p.type != null) {
       type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
     }
-    Vrep = Variable(i, type.copyWith(boxed: !unboxedAcrossFunctionBoundaries.contains(type)))..name = p.identifier!.name;
+    Vrep = Variable(i,
+        type.copyWith(boxed: !unboxedAcrossFunctionBoundaries.contains(type)))
+      ..name = p.identifier!.name;
 
     ctx.setLocal(Vrep.name!, Vrep);
 
@@ -46,7 +52,10 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   StatementInfo? stInfo;
   if (b is BlockFunctionBody) {
     stInfo = compileBlock(
-        b.block, AlwaysReturnType.fromAnnotation(ctx, ctx.library, d.returnType, EvalTypes.dynamicType), ctx,
+        b.block,
+        AlwaysReturnType.fromAnnotation(
+            ctx, ctx.library, d.returnType, EvalTypes.dynamicType),
+        ctx,
         name: d.name.name + '()');
   }
 
@@ -62,4 +71,3 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
     ctx.pushOp(Return.make(-1), Return.LEN);
   }
 }
-
