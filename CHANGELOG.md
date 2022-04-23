@@ -27,3 +27,12 @@
 - Support for the Dart type system (compile-time checks only)
 - Refactor class system to support `super`
 - New simpler Bridge interop that also allows const classes
+
+## 0.2.0
+
+- Partial support for anonymous functions and the Dart runtime type system
+- New serializable interop descriptor classes to allow for code push in the future
+- Runtime overrides
+- Implement collection `if` for Lists
+- Support for `async`/`await` via continuations, as well as `Future.then()`
+- Basic CLI
