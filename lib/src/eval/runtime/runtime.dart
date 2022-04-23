@@ -401,6 +401,15 @@ class Runtime {
           ...Dbc.i16b(op._completerOffset),
           ...Dbc.i16b(op._futureOffset)
         ];
+      case PushMap:
+        op as PushMap;
+        return [Dbc.OP_PUSH_MAP];
+      case MapSet:
+        op as MapSet;
+        return [Dbc.OP_MAP_SET, ...Dbc.i16b(op._map), ...Dbc.i16b(op._index), ...Dbc.i16b(op._value)];
+      case IndexMap:
+        op as IndexMap;
+        return [Dbc.OP_INDEX_MAP, ...Dbc.i16b(op._map), ...Dbc.i16b(op._index)];
       default:
         throw ArgumentError('Not a valid op $op');
     }

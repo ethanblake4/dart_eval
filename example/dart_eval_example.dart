@@ -15,10 +15,11 @@ class X {
 void main(List<String> args) {
   final source = '''
     void main (Future future) {
+      final m = {'h': 'wow', 'b': 'oh!'};
       future.then((dynamic _) {
         print('This message will print 2 seconds later');
       });
-      func('Whee').then((dynamic _) {
+      func(m['b']).then((dynamic _) {
         print('did suspend');
       });
       print('This message will print immediately');

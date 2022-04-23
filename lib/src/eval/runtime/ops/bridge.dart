@@ -124,17 +124,7 @@ class Await implements DbcOp {
 
   @override
   void run(Runtime runtime) {
-    final Completer completer;
-    final completerOffset = _completerOffset;
-
-    // If this is the first await call in a function, _completerOffset will be -1 and we'll create a new
-    // completer and push it onto the stack
-    if (completerOffset == -1) {
-      completer = $Completer.wrap(Completer());
-      runtime.frame[runtime.frameOffset++] = completer;
-    } else {
-      completer = runtime.frame[completerOffset] as Completer;
-    }
+    final completer = runtime.frame[_completerOffset] as Completer;
 
     // Create a continuation that holds the current program state, allowing us to resume this function after we've
     // finished awaiting the future

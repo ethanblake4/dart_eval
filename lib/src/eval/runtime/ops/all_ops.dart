@@ -141,6 +141,15 @@ class Dbc {
   /// [Await]
   static const OP_AWAIT = 44;
 
+  /// [PushMap]
+  static const OP_PUSH_MAP = 45;
+
+  /// [MapSet]
+  static const OP_MAP_SET = 46;
+
+  /// [IndexMap]
+  static const OP_INDEX_MAP = 47;
+
   static List<int> i16b(int i16) {
     final x = ByteData(2);
     x.setInt16(0, i16);
@@ -221,5 +230,8 @@ final List<OpLoader> ops = [
   (Runtime rt) => BoxNum(rt), // 41
   (Runtime rt) => BoxDouble(rt), // 42
   (Runtime rt) => InvokeExternal(rt), // 43
-  (Runtime rt) => Await(rt) // 44
+  (Runtime rt) => Await(rt), // 44
+  (Runtime rt) => PushMap(rt), // 45
+  (Runtime rt) => MapSet(rt), // 46
+  (Runtime rt) => IndexMap(rt) // 47
 ];

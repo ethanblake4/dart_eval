@@ -70,8 +70,7 @@ class NumAdd implements DbcOp {
   // Add value A + B
   @override
   void run(Runtime runtime) {
-    runtime.frame[runtime.frameOffset++] =
-        (runtime.frame[_location1] as num) + (runtime.frame[_location2] as num);
+    runtime.frame[runtime.frameOffset++] = (runtime.frame[_location1] as num) + (runtime.frame[_location2] as num);
   }
 
   @override
@@ -93,8 +92,7 @@ class NumSub implements DbcOp {
   // Add value A + B
   @override
   void run(Runtime runtime) {
-    runtime.frame[runtime.frameOffset++] =
-        (runtime.frame[_location1] as num) - (runtime.frame[_location2] as num);
+    runtime.frame[runtime.frameOffset++] = (runtime.frame[_location1] as num) - (runtime.frame[_location2] as num);
   }
 
   @override
@@ -115,8 +113,7 @@ class NumLt implements DbcOp {
 
   @override
   void run(Runtime runtime) {
-    runtime.frame[runtime.frameOffset++] =
-        (runtime.frame[_location1] as num) < (runtime.frame[_location2] as num);
+    runtime.frame[runtime.frameOffset++] = (runtime.frame[_location1] as num) < (runtime.frame[_location2] as num);
   }
 
   @override
@@ -137,8 +134,7 @@ class NumLtEq implements DbcOp {
 
   @override
   void run(Runtime runtime) {
-    runtime.frame[runtime.frameOffset++] = (runtime.frame[_location1] as num) <=
-        (runtime.frame[_location2] as num);
+    runtime.frame[runtime.frameOffset++] = (runtime.frame[_location1] as num) <= (runtime.frame[_location2] as num);
   }
 
   @override
@@ -309,8 +305,7 @@ class IndexList extends DbcOp {
 
   @override
   void run(Runtime runtime) {
-    runtime.frame[runtime.frameOffset++] =
-        (runtime.frame[_position] as List)[runtime.frame[_index] as int];
+    runtime.frame[runtime.frameOffset++] = (runtime.frame[_position] as List)[runtime.frame[_index] as int];
   }
 
   @override
@@ -352,10 +347,71 @@ class PushIterableLength extends DbcOp {
 
   @override
   void run(Runtime runtime) {
-    runtime.frame[runtime.frameOffset++] =
-        (runtime.frame[_position] as Iterable).length;
+    runtime.frame[runtime.frameOffset++] = (runtime.frame[_position] as Iterable).length;
   }
 
   @override
   String toString() => 'PushIterableLength (L$_position)';
+}
+
+class PushMap extends DbcOp {
+  PushMap(Runtime runtime);
+
+  PushMap.make();
+
+  static const int LEN = Dbc.BASE_OPLEN;
+
+  @override
+  void run(Runtime runtime) {
+    runtime.frame[runtime.frameOffset++] = <Object?, Object?>{};
+  }
+
+  @override
+  String toString() => 'PushMap ()';
+}
+
+class MapSet extends DbcOp {
+  MapSet(Runtime runtime)
+      : _map = runtime._readInt16(),
+        _index = runtime._readInt16(),
+        _value = runtime._readInt16();
+
+  MapSet.make(this._map, this._index, this._value);
+
+  final int _map;
+  final int _index;
+  final int _value;
+
+  static const int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN * 3;
+
+  @override
+  void run(Runtime runtime) {
+    final frame = runtime.frame;
+    (frame[_map] as Map)[frame[_index]] = frame[_value];
+  }
+
+  @override
+  String toString() => 'MapSet (L$_map[L$_index] = L$_value)';
+}
+
+class IndexMap extends DbcOp {
+  IndexMap(Runtime runtime)
+      : _map = runtime._readInt16(),
+        _index = runtime._readInt16();
+
+  IndexMap.make(this._map, this._index);
+
+  final int _map;
+  final int _index;
+
+  static const int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN * 2;
+
+  @override
+  void run(Runtime runtime) {
+    final frame = runtime.frame;
+    frame[runtime.frameOffset++] = (frame[_map] as Map)[frame[_index]];
+  }
+
+  @override
+  String toString() => 'IndexMap (L$_map[L$_index])';
 }
