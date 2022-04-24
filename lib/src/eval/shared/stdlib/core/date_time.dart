@@ -1,0 +1,145 @@
+import 'package:dart_eval/dart_eval.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/base.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
+
+class $DateTime implements DateTime, $Instance {
+  static void configureForCompile(Compiler compiler) {
+    compiler.defineBridgeClass($declaration);
+  }
+
+  static void configureForRuntime(Runtime runtime) {
+    runtime.registerBridgeFunc('dart:core', 'DateTime.now', (runtime, target, args) => $DateTime.wrap(DateTime.now()));
+  }
+
+  static const $type = BridgeTypeReference.unresolved(BridgeUnresolvedTypeReference('dart:core', 'DateTime'), []);
+
+  static const _dtIntGetter = BridgeMethodDeclaration(
+      false,
+      BridgeFunctionDescriptor(
+          BridgeTypeAnnotation(BridgeTypeReference.type(RuntimeTypes.intType, []), false), {}, [], {}));
+
+  static const $declaration = BridgeClassDeclaration($type, isAbstract: false, constructors: {
+    'now': BridgeConstructorDeclaration(false, BridgeFunctionDescriptor(BridgeTypeAnnotation($type, false), {}, [], {}))
+  }, methods: {}, getters: {
+    'day': _dtIntGetter,
+    'hour': _dtIntGetter,
+    'minute': _dtIntGetter,
+    'second': _dtIntGetter,
+    'millisecondsSinceEpoch': _dtIntGetter,
+  }, setters: {}, fields: {});
+
+  $DateTime.wrap(this.$value) : _superclass = $Object($value);
+
+  @override
+  final DateTime $value;
+
+  @override
+  DateTime get $reified => $value;
+
+  final $Instance _superclass;
+
+  @override
+  $Value? $getProperty(Runtime runtime, String identifier) {
+    switch (identifier) {
+      case 'day':
+        return $int($value.day);
+      case 'hour':
+        return $int($value.hour);
+      case 'minute':
+        return $int($value.minute);
+      case 'second':
+        return $int($value.second);
+      case 'millisecondsSinceEpoch':
+        return $int($value.millisecondsSinceEpoch);
+      default:
+        return _superclass.$getProperty(runtime, identifier);
+    }
+  }
+
+  @override
+  void $setProperty(Runtime runtime, String identifier, $Value value) {
+    return _superclass.$setProperty(runtime, identifier, value);
+  }
+
+  @override
+  int get $runtimeType => throw UnimplementedError();
+
+  @override
+  DateTime add(Duration duration) => $value.add(duration);
+
+  @override
+  int compareTo(DateTime other) => $value.compareTo(other);
+
+  @override
+  int get day => $value.day;
+
+  @override
+  Duration difference(DateTime other) => $value.difference(other);
+
+  @override
+  int get hour => $value.hour;
+
+  @override
+  bool isAfter(DateTime other) => $value.isAfter(other);
+
+  @override
+  bool isAtSameMomentAs(DateTime other) => $value.isAtSameMomentAs(other);
+
+  @override
+  bool isBefore(DateTime other) => $value.isBefore(other);
+
+  @override
+  bool get isUtc => $value.isUtc;
+
+  @override
+  int get microsecond => $value.microsecond;
+
+  @override
+  int get microsecondsSinceEpoch => $value.microsecondsSinceEpoch;
+
+  @override
+  int get millisecond => $value.millisecond;
+
+  @override
+  int get millisecondsSinceEpoch => $value.millisecondsSinceEpoch;
+
+  @override
+  int get minute => $value.minute;
+
+  @override
+  int get month => $value.month;
+
+  @override
+  int get second => $value.second;
+
+  @override
+  DateTime subtract(Duration duration) => $value.subtract(duration);
+
+  @override
+  String get timeZoneName => $value.timeZoneName;
+
+  @override
+  Duration get timeZoneOffset => $value.timeZoneOffset;
+
+  @override
+  String toIso8601String() => $value.toIso8601String();
+
+  @override
+  DateTime toLocal() => $value.toLocal();
+
+  @override
+  DateTime toUtc() => $value.toUtc();
+
+  @override
+  int get weekday => $value.weekday;
+
+  @override
+  int get year => $value.year;
+
+  @override
+  int get hashCode => $value.hashCode;
+
+  @override
+  bool operator ==(Object other) => $value == other;
+}

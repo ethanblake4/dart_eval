@@ -3,7 +3,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/stdlib/core.dart';
 
 class $Iterator<E> implements Iterator, $Instance {
-  const $Iterator.wrap(this.$value);
+  $Iterator.wrap(this.$value) : _superclass = $Object($value);
 
   @override
   final Iterator<E> $value;
@@ -11,7 +11,7 @@ class $Iterator<E> implements Iterator, $Instance {
   @override
   Iterator<E> get $reified => $value;
 
-  final $Instance evalSuperclass = const $Object();
+  final $Instance _superclass;
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {

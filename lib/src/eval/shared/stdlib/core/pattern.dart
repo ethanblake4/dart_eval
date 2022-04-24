@@ -7,7 +7,7 @@ extension $PatternExtension on Pattern {
 }
 
 class $Pattern implements Pattern, $Instance {
-  $Pattern.wrap(this.$value);
+  $Pattern.wrap(this.$value) : _superclass = $Object($value);
 
   @override
   final Pattern $value;
@@ -15,13 +15,15 @@ class $Pattern implements Pattern, $Instance {
   @override
   Pattern get $reified => $value;
 
-  final $Instance evalSuperclass = const $Object();
+  final $Instance _superclass;
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case 'allMatches':
         return $Function(__allMatches);
+      default:
+        return _superclass.$getProperty(runtime, identifier);
     }
   }
 

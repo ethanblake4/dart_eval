@@ -155,6 +155,12 @@ const listIndexOp = KnownMethod(TargetTypeArgDependentReturnType(0),
 const listIndexAssignOp = KnownMethod(TargetTypeArgDependentReturnType(0),
     [KnownMethodArg('index', EvalTypes.intType, false, false)], {});
 
+const toStringOp = KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [], {});
+
+final _knownObject = <String, KnownMethod>{
+  'toString': toStringOp,
+};
+
 final Map<TypeRef, Map<String, KnownMethod>> knownMethods = {
   EvalTypes.intType: {
     '+': intBinaryOp,
@@ -166,7 +172,8 @@ final Map<TypeRef, Map<String, KnownMethod>> knownMethods = {
     '>': numComparisonOp,
     '<=': numComparisonOp,
     '>=': numComparisonOp,
-    '==': numComparisonOp
+    '==': numComparisonOp,
+    ..._knownObject
   },
   EvalTypes.doubleType: {
     '+': doubleBinaryOp,
@@ -178,7 +185,8 @@ final Map<TypeRef, Map<String, KnownMethod>> knownMethods = {
     '>': numComparisonOp,
     '<=': numComparisonOp,
     '>=': numComparisonOp,
-    '==': numComparisonOp
+    '==': numComparisonOp,
+    ..._knownObject
   },
   EvalTypes.numType: {
     '+': numBinaryOp,
@@ -190,9 +198,10 @@ final Map<TypeRef, Map<String, KnownMethod>> knownMethods = {
     '>': numComparisonOp,
     '<=': numComparisonOp,
     '>=': numComparisonOp,
-    '==': numComparisonOp
+    '==': numComparisonOp,
+    ..._knownObject
   },
-  EvalTypes.stringType: const {
+  EvalTypes.stringType: {
     '+': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false),
         [KnownMethodArg('other', EvalTypes.stringType, false, false)], {}),
     '==': KnownMethod(AlwaysReturnType(EvalTypes.boolType, false),
@@ -200,17 +209,20 @@ final Map<TypeRef, Map<String, KnownMethod>> knownMethods = {
     'toLowerCase':
         KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [], {}),
     'toUpperCase':
-        KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [], {})
+        KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [], {}),
+    ..._knownObject
   },
-  EvalTypes.iterableType: const {
+  EvalTypes.iterableType: {
     'join': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false),
-        [KnownMethodArg('separator', EvalTypes.stringType, true, false)], {})
+        [KnownMethodArg('separator', EvalTypes.stringType, true, false)], {}),
+    ..._knownObject
   },
-  EvalTypes.listType: const {
+  EvalTypes.listType: {
     '[]': listIndexOp,
     '[]=': listIndexAssignOp,
     'join': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false),
-        [KnownMethodArg('separator', EvalTypes.stringType, true, false)], {})
+        [KnownMethodArg('separator', EvalTypes.stringType, true, false)], {}),
+    ..._knownObject
   }
 };
 

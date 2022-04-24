@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bridge/declaration/type.dart';
 import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/runtime/type.dart';
@@ -167,6 +168,9 @@ class TypeRef {
 
   static TypeRef? lookupFieldType(
       CompilerContext ctx, TypeRef $class, String field) {
+    if ($class == EvalTypes.dynamicType) {
+      return null;
+    }
     if ($class.file == dartCoreFile) {
       final _f = knownFields[$class];
       if (_f != null) {
@@ -176,7 +180,6 @@ class TypeRef {
               EvalTypes.dynamicType;
         }
       }
-      throw CompileError('Property does not exist: $field on ${$class}');
     }
     if (ctx.instanceDeclarationsMap[$class.file]!.containsKey($class.name) &&
         ctx.instanceDeclarationsMap[$class.file]![$class.name]!
@@ -192,16 +195,36 @@ class TypeRef {
       }
       return TypeRef.fromAnnotation(ctx, $class.file, annotation);
     }
-    final dec = ctx.topLevelDeclarationsMap[$class.file]![$class.name]
-        as ClassDeclaration;
-    final $extends = dec.extendsClause;
-    if ($extends == null) {
-      throw CompileError('Field "$field" not found in class ${$class}');
+    final dec = ctx.topLevelDeclarationsMap[$class.file]![$class.name]!;
+
+    if (dec.isBridge) {
+      final br = dec.bridge as BridgeClassDeclaration;
+      final fd = br.fields[field];
+      if (fd != null) {
+        return TypeRef.fromBridgeTypeReference(ctx, fd.type);
+      }
+      final get = br.getters[field];
+      if (get != null) {
+        return TypeRef.fromBridgeAnnotation(ctx, get.functionDescriptor.returnType);
+      }
+      final set = br.getters[field];
+      if (set != null) {
+        return TypeRef.fromBridgeAnnotation(ctx, set.functionDescriptor.returnType);
+      }
+      throw CompileError('Field $field not found in bridge class ${$class}');
     } else {
-      final $super =
-          ctx.visibleTypes[$class.file]![$extends.superclass2.name.name]!;
-      return TypeRef.lookupFieldType(ctx, $super, field);
+      final _dec = dec.declaration as ClassDeclaration;
+      final $extends = _dec.extendsClause;
+      if ($extends == null) {
+        throw CompileError('Field "$field" not found in class ${$class}');
+      } else {
+        final $super =
+        ctx.visibleTypes[$class.file]![$extends.superclass2.name.name]!;
+        return TypeRef.lookupFieldType(ctx, $super, field);
+      }
     }
+
+
   }
 
   TypeRef resolveTypeChain(CompilerContext ctx) {

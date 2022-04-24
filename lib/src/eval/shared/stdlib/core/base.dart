@@ -17,10 +17,10 @@ class $null implements $Value {
 }
 
 class $Object implements $Instance {
-  const $Object();
+  $Object(this.$value);
 
   @override
-  dynamic get $value => null;
+  final Object $value;
 
   @override
   dynamic get $reified => $value;
@@ -30,6 +30,8 @@ class $Object implements $Instance {
     switch (identifier) {
       case '==':
         return __equals;
+      case 'toString':
+        return __toString;
     }
 
     throw UnimplementedError();
@@ -42,6 +44,12 @@ class $Object implements $Instance {
     return $bool(target!.$value == other!.$value);
   }
 
+  static const $Function __toString = $Function(_toString);
+
+  static $Value? _toString(Runtime runtime, $Value? target, List<$Value?> args) {
+    return $String(target!.$value.toString());
+  }
+
   @override
   void $setProperty(Runtime runtime, String identifier, $Value value) {
     throw UnimplementedError();
@@ -52,9 +60,9 @@ class $Object implements $Instance {
 }
 
 class $bool implements $Instance {
-  $bool(this.$value);
+  $bool(this.$value) : _superclass = $Object($value);
 
-  final $Instance $super = $Object();
+  final $Instance _superclass;
 
   @override
   bool $value;
@@ -63,7 +71,7 @@ class $bool implements $Instance {
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
     }
-    return $super.$getProperty(runtime, identifier);
+    return _superclass.$getProperty(runtime, identifier);
   }
 
   @override
@@ -117,12 +125,12 @@ class $bool implements $Instance {
 }*/
 
 class $String implements $Instance {
-  const $String(this.$value);
+  $String(this.$value) : _superclass = $Object($value);
 
   @override
   final String $value;
 
-  final $Instance $super = const $Object();
+  final $Instance _superclass;
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
@@ -141,7 +149,7 @@ class $String implements $Instance {
         return __toUpperCase;
     }
 
-    return $super.$getProperty(runtime, identifier);
+    return _superclass.$getProperty(runtime, identifier);
   }
 
   @override

@@ -40,7 +40,7 @@ class $Future<T> implements Future<T>, $Instance {
         ], {}))
   }, getters: {}, setters: {}, fields: {});
 
-  $Future.wrap(this.$value, this.$typeMapper);
+  $Future.wrap(this.$value, this.$typeMapper) : _superclass = $Object($value);
 
   @override
   final Future<T> $value;
@@ -50,13 +50,15 @@ class $Future<T> implements Future<T>, $Instance {
   @override
   Future<T> get $reified => $value;
 
-  final $Instance $super = const $Object();
+  final $Instance _superclass;
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case 'then':
         return __then;
+      default:
+        return _superclass.$getProperty(runtime, identifier);
     }
   }
 

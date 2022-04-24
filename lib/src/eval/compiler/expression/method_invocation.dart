@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bridge/declaration/class.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
@@ -28,6 +29,11 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
     final DeclarationOrBridge<MethodDeclaration, BridgeDeclaration> _dec;
     final bool isStatic;
     TypeRef? staticType;
+
+    if (L.type.file == -1 && L.type != EvalTypes.typeType) {
+      return L.invoke(ctx, e.methodName.name, []).result;
+    }
+
     if (L.type == EvalTypes.typeType && L.concreteTypes.length == 1) {
       // Static method
       staticType = L.concreteTypes[0];
@@ -83,7 +89,6 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
 
     ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
   } else {
-    //final methodRef = compileIdentifierAsReference(e.methodName, ctx);
     final method = compileIdentifier(e.methodName, ctx);
 
     if (method.methodOffset == null) {

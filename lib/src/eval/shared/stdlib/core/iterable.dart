@@ -222,13 +222,15 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   @override
   Iterable<E> get $reified => $value;
 
-  final $Instance $super = const $Object();
+  late final $Instance _superclass = $Object($value);
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case 'join':
         return $Function(__join);
+      default:
+        return _superclass.$getProperty(runtime, identifier);
     }
   }
 

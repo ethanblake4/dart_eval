@@ -3,7 +3,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/stdlib/core.dart';
 
 class $num<T extends num> implements $Instance {
-  $num(this.$value);
+  $num(this.$value) : _superclass = $Object($value);
 
   @override
   T $value;
@@ -28,7 +28,7 @@ class $num<T extends num> implements $Instance {
       case '>=':
         return __gteq;
     }
-    return $super.$getProperty(runtime, identifier);
+    return _superclass.$getProperty(runtime, identifier);
   }
 
   @override
@@ -36,7 +36,7 @@ class $num<T extends num> implements $Instance {
     throw UnimplementedError();
   }
 
-  final $Instance $super = $Object();
+  final $Instance _superclass;
 
   @override
   T get $reified => $value;
