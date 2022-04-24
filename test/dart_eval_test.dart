@@ -1,356 +1,614 @@
 import 'package:dart_eval/dart_eval.dart';
-import 'package:dart_eval/src/eval/primitives.dart';
+import 'package:dart_eval/stdlib/core.dart';
 import 'package:test/test.dart';
+
+import 'bridge_lib.dart';
 
 // Functional tests
 void main() {
-  group('Parsing tests', () {
-    late Parse parse;
-
-    setUp(() {
-      parse = Parse();
-    });
-
-    test('Parse creates function', () {
-      final scope = parse.parse('void main() {}').scope;
-      expect(scope.lookup('main')?.value is EvalFunction, true);
-    });
-
-    test('Parse creates class', () {
-      final scope = parse.parse('class MyClass {}').scope;
-      expect(scope.lookup('MyClass')?.value is EvalClass, true);
-    });
-
-    test('Parse creates top-level variable', () {
-      final scope = parse.parse('String greeting = "Hello";').scope;
-      expect(scope.lookup('greeting')?.value!.realValue, 'Hello');
-    });
-  });
-
-  group('Statement tests', () {
-    late Parse parse;
-
-    setUp(() {
-      parse = Parse();
-    });
-
-    test('Simple if/else statement', () {
-      final scope = parse.parse('''
-      String main(bool x) {
-        if(x) {
-          return "yes";
-        } else {
-          return "no";
-        }
-      }
-      ''');
-      expect(scope('main', [Parameter(EvalBool(true))]).realValue, 'yes');
-      expect(scope('main', [Parameter(EvalBool(false))]).realValue, 'no');
-    });
-
-    test('Simple for loop (declaration variant)', () {
-      final iter = 1000;
-      final scope = parse.parse('''
-      String main(int iter) {
-        var q = '';
-        for(var i = 0; i < iter; i++) {
-          q = q + 'h';
-        }
-        return q;
-       }
-      ''');
-      var q = '';
-      for (var i = 0; i < iter; i++) {
-        q = q + 'h';
-      }
-      expect(scope('main', [Parameter(EvalInt(iter))]).realValue, q);
-    });
-  });
-
-  group('Expression tests', () {
-    late Parse parse;
-
-    setUp(() {
-      parse = Parse();
-    });
-
-    test('String == comparison', () {
-      final scope = parse.parse('''
-      bool main(String x) {
-        return x == 'yes';
-      }
-      ''');
-      expect(scope('main', [Parameter(EvalString('yes'))]).realValue, true);
-      expect(scope('main', [Parameter(EvalString('no'))]).realValue, false);
-    });
-  });
-
-  group('dart:core tests', () {
-    late Parse parse;
-
-    setUp(() {
-      parse = Parse();
-    });
-
-    test('Object toString', () {
-      final scope = parse.parse('String main() { return 1.toString(); }');
-      expect('1', scope('main', []).realValue);
-    });
-
-    test('Simple list literal', () {
-      final scope = parse.parse('String main() { return ["Hello", "Sir"]; }');
-      final result = scope('main', []).evalReifyFull();
-      expect(result is List, true);
-      expect((result as List)[0], 'Hello');
-    });
-  });
-
   group('Function tests', () {
-    late Parse parse;
+    late Compiler gen;
 
     setUp(() {
-      parse = Parse();
+      gen = Compiler();
     });
 
-    test('Returning a value', () {
-      final scopeWrapper = parse.parse('String xyz() { return "success"; }');
-      final result = scopeWrapper('xyz', []);
-      expect(result is EvalString, true);
-      expect((result as EvalString).realValue == 'success', true);
+    test('Local variable assignment with ints', () {
+      final exec = gen.compileWriteAndLoad({
+        'dbc_test': {
+          'main.dart': '''
+      int main() {
+        var i = 3;
+        {
+          var k = 2;
+          k = i;
+          return k;
+        }
+      }
+      '''
+        }
+      });
+
+      expect(exec.executeNamed(0, 'main'), 3);
     });
 
-    test('Calling a function', () {
-      final scopeWrapper = parse.parse('''
-      String xyz() { return second();  }
-      String second() { return "success"; }
-      ''');
-      final result = scopeWrapper('xyz', []);
-      expect(result is EvalString, true);
-      expect((result as EvalString).realValue == 'success', true);
+    test('Simple function call', () {
+      final exec = gen.compileWriteAndLoad({
+        'dbc_test': {
+          'main.dart': '''
+     
+      int main() {
+        var i = x();
+        return i;
+      }
+      int x() {
+        return 7;
+      }
+     
+      '''
+        }
+      });
+
+      expect(exec.executeNamed(0, 'main'), 7);
     });
 
-    test('Calling a function with parameters', () {
-      final scopeWrapper = parse.parse('''
-        String xyz(int y) { return second(y);  }
-        String second(int x) { return x.toString(); }
-      ''');
-      final result = scopeWrapper('xyz', [Parameter(EvalInt(32))]);
-      expect(result is EvalString, true);
-      expect((result as EvalString).realValue == '32', true);
+    test('Recursion (fibonacci)', () {
+      final exec = gen.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int fib(int n) {
+              if (n <= 1) return 1;
+              return fib(n - 1) + fib(n - 2);
+            }
+            
+            int main () {
+              return fib(24);
+            }
+          '''
+        }
+      });
+
+      expect(exec.executeNamed(0, 'main'), 75025);
     });
 
-    test('Named parameters', () {
-      final scopeWrapper = parse.parse('''
-        String xyz() { return second(x: 5); }
-        String second({int x}) { return x.toString(); }
-      ''');
-      final result = scopeWrapper('xyz', []);
-      expect(result is EvalString, true);
-      expect((result as EvalString).realValue == '5', true);
+    test('Multiple files, boxed ints and correct stack handling', () {
+      final exec = gen.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            import 'package:example/x.dart';
+            num main() {
+              var i = x();
+              return i + 3;
+            }
+            num x() {
+              return x2();
+            }
+      ''',
+          'x.dart': '''
+            int x2() {
+               var b = 4;
+               var q = r();
+               var c = 2;
+               c = b;
+               b = q;
+               b = c;
+               return b;
+            }
+        
+            int r() {
+              var ra = 99;
+              return ra;
+            }
+      '''
+        }
+      });
+
+      expect(exec.executeNamed(0, 'main'), $num<num>(7));
+    });
+
+    test('Basic anonymous function', () {
+      final exec = gen.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            Function r() {
+              return () {
+                return 2;
+              };
+            }
+            
+            int main () {
+              return r()();
+            }
+           '''
+        }
+      });
+
+      expect(exec.executeNamed(0, 'main'), 2);
+    });
+
+    test('Basic inline anonymous function', () {
+      final exec = gen.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main () {
+              var r = () {
+                return 2;
+              };
+              return r();
+            }
+           '''
+        }
+      });
+
+      expect(exec.executeNamed(0, 'main'), 2);
+    });
+
+    test('Anonymous function with arg', () {
+      final exec = gen.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main () {
+              var myfunc = (a) {
+                return a + 1;
+              };
+              
+              return myfunc(2);
+            }
+           '''
+        }
+      });
+
+      expect(exec.executeNamed(0, 'main'), 3);
+    });
+
+    test('Anonymous function with named args, same sorting as call site', () {
+      final exec = gen.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            num main () {
+              var myfunc = ({a, b}) {
+                return a / b + 1;
+              };
+              
+              return myfunc(a: 2, b: 4);
+            }
+          '''
+        }
+      });
+
+      expect(exec.executeNamed(0, 'main'), $double(1.5));
+    });
+
+    test('Anonymous function with named args, different sorting from call site',
+        () {
+      final exec = gen.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            num main () {
+              var myfunc = ({b, a}) {
+                return a / b + 1;
+              };
+              
+              return myfunc(a: 2, b: 4);
+            }
+          '''
+        }
+      });
+
+      expect(exec.executeNamed(0, 'main'), $double(1.5));
     });
   });
 
   group('Class tests', () {
-    late Parse parse;
+    late Compiler gen;
 
     setUp(() {
-      parse = Parse();
+      gen = Compiler();
     });
 
-    test('Class fields', () {
-      final scopeWrapper = parse.parse('''
-        class CandyBar {
-          CandyBar();
-          bool eaten = false;
+    test('Default constructor, basic method', () {
+      final exec = gen.compileWriteAndLoad({
+        'dbc_test': {
+          'main.dart': '''
+      class MyClass {
+        MyClass();
+        
+        int someMethod() {
+          return 4 + 4;
+        }
+      }
+      int main() {
+        final cls = MyClass();
+        return cls.someMethod() + 2;
+      }
+      '''
+        }
+      });
+
+      expect(exec.executeNamed(0, 'main'), 10);
+    });
+
+    test('Field formal parameters, external field access', () {
+      final exec = gen.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            import 'package:example/x.dart';
+            num main() {
+              var i = Vib(z: 5);
+              var m = Vib();
+              return i.z + m.z + i.h();
+            }
+          ''',
+          'x.dart': '''
+            class Vib {
+              Vib({this.z = 3});
+              
+              int z;
+              
+              int h() {
+                return 11;
+              }
+            }
+          '''
+        }
+      });
+
+      expect(exec.executeNamed(0, 'main'), $int(19));
+    });
+
+    test('Simple static method', () {
+      final exec = gen.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main () {
+              return M.getNum(4) + 2;
+            }
+            
+            class M {
+              static int getNum(int b) {
+                return 12 - b;
+              }
+            }
+          '''
+        }
+      });
+
+      expect(exec.executeNamed(0, 'main'), 10);
+    });
+
+    test('Implicit static method scoping', () {
+      final exec = gen.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+          int main () {
+            return M(4).load();
+          }
           
-          void eat() {
-            eaten = true;
+          class M {
+            M(this.x);
+            
+            final int x;
+            
+            static int getNum(int b) {
+              return 12 - b;
+            }
+            
+            int load() {
+              return getNum(5 + x);
+            }
           }
+          '''
         }
-        bool fn() {
-          var x = CandyBar();
-          x.eat();
-          return x.eaten;
-        }
-      ''');
+      });
 
-      final result = scopeWrapper('fn', []);
-      expect(result is EvalBool, true);
-      expect(true, (result as EvalBool).realValue);
-    });
-
-    test('Class static methods', () {
-      final scopeWrapper = parse.parse('''
-        class CandyBar {
-          CandyBar();
-          static String isCandyGood() {
-            return 'Yes!';
-          }
-        }
-        bool fn() {
-          return CandyBar.isCandyGood();
-        }
-      ''');
-
-      final result = scopeWrapper('fn', []);
-      expect(result is EvalString, true);
-      expect((result as EvalString).realValue, 'Yes!');
-    });
-
-    test('Class static accessors', () {
-      final scopeWrapper = parse.parse('''
-        class CandyBar {
-          CandyBar();
-        
-          static String goodness = '100';
-          static String isCandyGood() {
-            return 'Yes! ' + goodness;
-          }
-        }
-        String fn() {
-          return CandyBar.isCandyGood();
-        }
-      ''');
-
-      final result = scopeWrapper('fn', []);
-      expect(result is EvalString, true);
-      expect((result as EvalString).realValue, 'Yes! 100');
-    });
-
-    test('Class static accessor scoping', () {
-      final scopeWrapper = parse.parse('''
-        String goodness = '0';
-        class CandyBar {
-          CandyBar();
-        
-          static String goodness = '100';
-          static String isCandyGood() {
-            return 'Yes! ' + goodness;
-          }
-        }
-        String fn() {
-          return CandyBar.isCandyGood();
-        }
-      ''');
-
-      final result = scopeWrapper('fn', []);
-      expect(result is EvalString, true);
-      expect((result as EvalString).realValue, 'Yes! 100');
-    });
-
-    test('Default constructor with positional parameters', () {
-      final scopeWrapper = parse.parse('''
-        class CandyBar {
-          CandyBar(this.brand);
-          final String brand;
-        }
-        bool fn() {
-          var x = CandyBar('Mars');
-          return x.brand;
-        }
-      ''');
-
-      final result = scopeWrapper('fn', []);
-      expect(result is EvalString, true);
-      expect('Mars', (result as EvalString).realValue);
-    });
-
-    test('Default constructor with named parameters', () {
-      final scopeWrapper = parse.parse('''
-        class CandyBar {
-          CandyBar({this.brand, this.name});
-          final String brand;
-          final String name;
-        }
-        bool fn() {
-          var x = CandyBar(name: 'Bar', brand: 'Mars');
-          return x.brand + x.name;
-        }
-      ''');
-
-      final result = scopeWrapper('fn', []);
-      expect(result is EvalString, true);
-      expect('MarsBar', (result as EvalString).realValue);
+      expect(exec.executeNamed(0, 'main'), 3);
     });
   });
 
-  group('Interop tests', () {
-    late Parse parse;
+  group('Statement tests', () {
+    late Compiler gen;
 
     setUp(() {
-      parse = Parse();
-      parse.define(EvalInteropTest1.declaration);
+      gen = Compiler();
     });
 
-    test('Rectified bridge class', () {
-      final scopeWrapper = parse.parse('''
-        class MyInteropTest1 extends InteropTest1 {
-          @override
-          String getData(int input) {
-            return "Hello";
-          }
+    test('For loop', () {
+      final exec = gen.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            num main() {
+              var i = 0;
+              for (; i < 555; i++) {}
+              return i;
+            }
+          ''',
         }
-        String fn() {
-          return MyInteropTest1().getData(1);
-        }
-      ''');
-      final result = scopeWrapper('fn', []);
-      expect(result is EvalString, true);
-      expect((result as EvalString).realValue == 'Hello', true);
+      });
+      expect(exec.executeNamed(0, 'main'), $int(555));
     });
 
-    test('Exporting rectified bridge class', () {
-      final scopeWrapper = parse.parse('''
-        class MyInteropTest1 extends InteropTest1 {
-          @override
-          String getData(int input) {
-            return "Hello" + 1.toString();
+    test('For loop + branching', () {
+      final exec = gen.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+          dynamic doThing() {
+            var count = 0;
+            for (var i = 0; i < 1000; i++) {
+              if (count < 500) {
+                count--;
+              } else if (count < 750) {
+                count++;
+              }
+              count += i;
+            }
+            
+            return count;
           }
+        '''
         }
-        String fn() {
-          return MyInteropTest1();
-        }
-      ''');
-      final result = scopeWrapper('fn', []);
-      expect(result is InteropTest1, true);
-      expect((result as InteropTest1).getData(1), 'Hello1');
+      });
+
+      expect(exec.executeNamed(0, 'doThing'), $int(499472));
     });
   });
-}
 
-const _interopTest1Type = EvalType('InteropTest1', 'InteropTest1',
-    'dart_eval_test.dart', [EvalType.objectType], true);
+  group('Standard library tests', () {
+    late Compiler compiler;
 
-abstract class InteropTest1 {
-  String getData(int input);
-}
+    setUp(() {
+      compiler = Compiler();
+    });
 
-class EvalInteropTest1 extends InteropTest1
-    with ValueInterop<InteropTest1>, EvalBridgeObjectMixin, BridgeRectifier {
-  static final declaration = DartBridgeDeclaration(
-      visibility: DeclarationVisibility.PUBLIC,
-      declarator: (ctx, lex, cur) => {
-            _interopTest1Type.refName: EvalField(_interopTest1Type.refName,
-                cls = clsgen(lex), null, Getter(null))
-          });
+    test('Future.delayed()', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+          Future main(int seconds) {
+            return Future.delayed(Duration(seconds: seconds + 1));
+          }
+          '''
+        }
+      });
 
-  static Function(EvalScope) get clsgen => (lexicalScope) => EvalBridgeClass([],
-      _interopTest1Type,
-      EvalScope.empty,
-      InteropTest1,
-      (_1, _2, _3) => EvalInteropTest1());
+      runtime.args = [1];
+      final future = runtime.executeNamed(0, 'main') as Future;
+      expect(future, completion(null));
+    });
+  });
 
-  static late EvalBridgeClass cls;
+  group('Bridge tests', () {
+    late Compiler compiler;
 
-  @override
-  EvalBridgeData evalBridgeData = EvalBridgeData(cls);
+    setUp(() {
+      compiler = Compiler();
+    });
 
-  @override
-  String getData(int input) => bridgeCall('getData', [EvalInt(input)]);
+    test('Using a bridge class', () {
+      compiler.defineBridgeClasses([$TestClass.$declaration]);
 
-  @override
-  EvalValue evalSetField(String name, EvalValue value,
-      {bool internalSet = false}) {
-    throw ArgumentError();
-  }
+      final program = compiler.compile({
+        'example': {
+          'main.dart': '''
+            import 'package:bridge_lib/bridge_lib.dart';
+            
+            bool main() {
+              final test = TestClass(4);
+              return test.runTest(5, b: 'hi');
+            }
+          '''
+        }
+      });
+
+      final runtime = Runtime.ofProgram(program);
+
+      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart',
+          'TestClass.', $TestClass.$construct);
+
+      runtime.setup();
+      expect(runtime.executeNamed(0, 'main'), true);
+    });
+
+    test('Using a subclassed bridge class inside the runtime', () {
+      compiler.defineBridgeClasses([$TestClass.$declaration]);
+
+      final program = compiler.compile({
+        'example': {
+          'main.dart': '''
+            import 'package:bridge_lib/bridge_lib.dart';
+            
+            class MyTestClass extends TestClass {
+              MyTestClass(int someNumber) : super(someNumber);
+            
+              @override
+              bool runTest(int a, {String b = 'wow'}) {
+                return super.runTest(a + 2, b: b);
+              }
+            }
+            
+            bool main() {
+              final test = MyTestClass(18);
+              return test.runTest(5, b: 'cool');
+            }
+          '''
+        }
+      });
+
+      final runtime = Runtime.ofProgram(program);
+
+      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart',
+          'TestClass.', $TestClass.$construct);
+
+      runtime.setup();
+      expect(runtime.executeNamed(0, 'main'), true);
+    });
+
+    test('Using a subclassed bridge class outside the runtime', () {
+      compiler.defineBridgeClasses([$TestClass.$declaration]);
+
+      final program = compiler.compile({
+        'example': {
+          'main.dart': '''
+            import 'package:bridge_lib/bridge_lib.dart';
+            
+            class MyTestClass extends TestClass {
+              MyTestClass(int someNumber) : super(someNumber);
+            
+              @override
+              bool runTest(int a, {String b = 'wow'}) {
+                return super.runTest(a + 2, b: b);
+              }
+            }
+            
+            TestClass main() {
+              final test = MyTestClass(0, b: 'hello');
+              return test;
+            }
+          '''
+        }
+      });
+
+      final runtime = Runtime.ofProgram(program);
+
+      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart',
+          'TestClass.', $TestClass.$construct);
+
+      runtime.setup();
+      final res = runtime.executeNamed(0, 'main');
+
+      expect(res is TestClass, true);
+      expect((res as TestClass).runTest(4), true);
+      expect(res.runTest(2), false);
+    });
+
+    test('Using an external static method', () {
+      compiler.defineBridgeClasses([$TestClass.$declaration]);
+
+      final program = compiler.compile({
+        'example': {
+          'main.dart': '''
+            import 'package:bridge_lib/bridge_lib.dart';
+            
+            bool main() {
+              return TestClass.runStaticTest('Okay');
+            }
+          '''
+        }
+      });
+
+      final runtime = Runtime.ofProgram(program);
+
+      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart',
+          'TestClass.', $TestClass.$construct);
+      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart',
+          'TestClass.runStaticTest', $TestClass.$runStaticTest);
+
+      runtime.setup();
+      expect(runtime.executeNamed(0, 'main'), false);
+    });
+  });
+
+  group('Large functional tests', () {
+    late Compiler gen;
+
+    setUp(() {
+      gen = Compiler();
+    });
+
+    test('Functional test 1', () {
+      final source = '''
+      dynamic main() {
+        var someNumber = 19;
+      
+        var a = A(45);
+        for (var i = someNumber; i < 20; i = i + 1) {
+          final n = a.calculate(i);
+          if (n > someNumber) {
+            a = B(555);
+          } else {
+            if (a.number > B(a.number).calculate(2)) {
+              a = C(888 + a.number);
+            }
+            someNumber = someNumber + 1;
+          }
+      
+          if (n > a.calculate(a.number - i)) {
+            a = D(21 + n);
+            someNumber = someNumber - 1;
+          }
+        }
+      
+        return a.number;
+      }
+      
+      class A {
+        final int number;
+      
+        A(this.number);
+      
+        int calculate(int other) {
+          return number + other;
+        }
+      }
+      
+      class B extends A {
+        B(int number) : super(number);
+      
+        @override
+        int calculate(int other) {
+          var d = 1334;
+          for (var i = 0; i < 15 + number; i = i + 1) {
+            if (d > 4000) {
+              d = d - 14;
+            }
+            d += i;
+          }
+          return d;
+        }
+      }
+      
+      class C extends A {
+        C(int number) : super(number);
+      
+        @override
+        int calculate(int other) {
+          var d = 1556;
+          for (var i = 0; i < 24 - number; i = i + 1) {
+            if (d > 4000) {
+              d = d - 14;
+            } else if (d < 299) {
+              d = d + 5 + 5;
+            }
+            d += i;
+          }
+          return d;
+        }
+      }
+      
+      class D extends A {
+        D(int number) : super(number);
+      
+        @override
+        int calculate(int other) {
+          var d = 1334;
+          for (var i = 0; i < 15 + number; i = i + 1) {
+            if (d > 4000) {
+              d = d - 14;
+            }
+            d += super.number;
+          }
+          return d;
+        }
+      }''';
+
+      final exec = gen.compileWriteAndLoad({
+        'example': {'main.dart': source}
+      });
+
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+
+      final result = exec.executeNamed(0, 'main');
+      expect(result, $int(555));
+      expect(DateTime.now().millisecondsSinceEpoch - timestamp, lessThan(100));
+    });
+  });
 }

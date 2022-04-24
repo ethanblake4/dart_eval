@@ -1,0 +1,50 @@
+import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/src/eval/compiler/context.dart';
+import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
+
+import '../errors.dart';
+import '../type.dart';
+import '../variable.dart';
+import 'statement.dart';
+
+StatementInfo compileVariableDeclarationStatement(
+    VariableDeclarationStatement s, CompilerContext ctx) {
+  compileVariableDeclarationList(s.variables, ctx);
+  return StatementInfo(-1);
+}
+
+void compileVariableDeclarationList(
+    VariableDeclarationList l, CompilerContext ctx) {
+  TypeRef? type;
+  if (l.type != null) {
+    type = TypeRef.fromAnnotation(ctx, ctx.library, l.type!);
+  }
+
+  for (final li in l.variables) {
+    final init = li.initializer;
+    if (init != null) {
+      final res = compileExpression(init, ctx);
+      if (ctx.locals.last.containsKey(li.name.name)) {
+        throw CompileError(
+            'Cannot declare variable ${li.name.name} multiple times in the same scope');
+      }
+      if (res.name != null) {
+        var _v = Variable.alloc(ctx, type ?? res.type);
+        ctx.pushOp(PushNull.make(), PushNull.LEN);
+        ctx.pushOp(CopyValue.make(_v.scopeFrameOffset, res.scopeFrameOffset),
+            CopyValue.LEN);
+        ctx.setLocal(li.name.name, _v);
+      } else {
+        ctx.setLocal(
+            li.name.name,
+            Variable(res.scopeFrameOffset,
+                (type ?? res.type).copyWith(boxed: res.boxed),
+                isFinal: l.isFinal,
+                methodOffset: res.methodOffset,
+                methodReturnType: res.methodReturnType,
+                callingConvention: res.callingConvention));
+      }
+    }
+  }
+}

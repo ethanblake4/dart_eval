@@ -1,0 +1,84 @@
+import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/runtime/class.dart';
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
+
+/// A class is an instance of [Type]
+class EvalClass extends $InstanceImpl {
+  EvalClass(this.delegatedType, this.superclass, this.mixins, this.getters,
+      this.setters, this.methods)
+      : super(EvalClassClass.instance, EvalTypeClass(), const []);
+
+  factory EvalClass.fromJson(List def) {
+    return EvalClass(def[3] as int, null, [], (def[0] as Map).cast(),
+        (def[1] as Map).cast(), (def[2] as Map).cast());
+  }
+
+  final int delegatedType;
+
+  @override
+  int get $runtimeType => RuntimeTypes.typeType;
+
+  @override
+  final List<Object> values = [];
+
+  final EvalClass? superclass;
+  final List<EvalClass?> mixins;
+
+  final Map<String, int> getters;
+  final Map<String, int> setters;
+  final Map<String, int> methods;
+}
+
+class EvalClassClass implements EvalClass {
+  static final instance = EvalClassClass();
+
+  @override
+  // TODO: implement $type
+  int get $runtimeType => throw UnimplementedError();
+
+  @override
+  $Value? $getProperty(Runtime runtime, String identifier) {
+    throw UnimplementedError();
+  }
+
+  @override
+  void $setProperty(Runtime runtime, String identifier, $Value value) {
+    throw UnimplementedError();
+  }
+
+  @override
+  $Instance? get evalSuperclass => throw UnimplementedError();
+
+  @override
+  Map<String, int> get getters => throw UnimplementedError();
+
+  @override
+  Map<String, int> get methods => throw UnimplementedError();
+
+  @override
+  List<EvalClass?> get mixins => throw UnimplementedError();
+
+  @override
+  Never get $reified => throw UnimplementedError();
+
+  @override
+  Map<String, int> get setters => throw UnimplementedError();
+
+  @override
+  EvalClass? get superclass => throw UnimplementedError();
+
+  @override
+  List<Object> get values => throw UnimplementedError();
+
+  @override
+  set values(List<Object?> _values) => throw UnimplementedError();
+
+  @override
+  Never get evalClass => throw UnimplementedError();
+
+  @override
+  Never get $value => throw UnimplementedError();
+
+  @override
+  int get delegatedType => RuntimeTypes.typeType;
+}

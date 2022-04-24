@@ -1,4 +1,6 @@
 import 'package:dart_eval/dart_eval.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/stdlib/core.dart';
 
 // *** Class definitions. ***                                                            //
 //
@@ -20,33 +22,26 @@ abstract class WorldTimeTracker {
 
 // *** Main code *** //
 
-void main() {
-  // Setup a parser
-  final parser = Parse();
-
-  // Add our class definitions
-  parser.define(EvalTimestampedTime.declaration);
-  parser.define(EvalWorldTimeTracker.declaration);
-
-  // Parse the code we want to run. The scope variable now holds
-  // all top-level declared classes and functions, ready to run
-  final scope = parser.parse('''
+void main(List<String> args) {
+  final source = '''
+    import 'package:example/bridge.dart';
+    
     class MyWorldTimeTracker extends WorldTimeTracker {
     
       MyWorldTimeTracker();
-      
-      final countries = <String, TimestampedTime> {
-        'USA': _currentTimeWithOffset(4),
-        'UK': _currentTimeWithOffset(6),
-      };
       
       static TimestampedTime _currentTimeWithOffset(int offset) {
         return TimestampedTime(DateTime.now().millisecondsSinceEpoch,
           timezoneOffset: offset);
       }
-            
+      
       @override
       TimestampedTime getTimeFor(String country) {
+        final countries = <String, TimestampedTime> {
+          'USA': _currentTimeWithOffset(4),
+          'UK': _currentTimeWithOffset(6),
+        };
+      
         return countries[country];
       }
     }
@@ -59,11 +54,23 @@ void main() {
       
       return timeTracker;
     }
-    ''');
+  ''';
 
-  // The returned scope is a callable class, so it's easy to call your method
-  final timeTracker =
-      scope('fn', [Parameter(EvalString('USA'))]) as WorldTimeTracker;
+  final compiler = Compiler();
+  compiler.defineBridgeClasses([$TimestampedTime.$declaration, $WorldTimeTracker$bridge.$declaration]);
+
+  final program = compiler.compile({
+    'package:example': {'main.dart': source}
+  });
+
+  final runtime = Runtime.ofProgram(program);
+  runtime.registerBridgeFunc('package:example/bridge.dart', 'TimestampedTime.', $TimestampedTime.$new);
+  runtime.registerBridgeFunc('package:example/bridge.dart', 'WorldTimeTracker.', $WorldTimeTracker$bridge.$new);
+
+  runtime.setup();
+
+  runtime.args = [$String('USA')];
+  final timeTracker = runtime.executeNamed(0, 'fn') as WorldTimeTracker;
 
   print('UK timezone offset: ' +
       timeTracker.getTimeFor('UK').timezoneOffset.toString() +
@@ -74,185 +81,142 @@ void main() {
 // *** Start of required boilerplate code. This can be auto-generated in the future. *** //
 ///////////////////////////////////////////////////////////////////////////////////////////
 
-// Create a library-local lexical scope so that all classes and functions within
-// a library can always access each other. Inherit from the empty scope.
-final _libraryLexicalScope = EvalScope(EvalScope.empty, {});
+/// Create a wrapper for [TimestampedTime]. A wrapper is a performant interop solution
+/// when you *don't* need the ability to override the class within the dart_eval VM.
+class $TimestampedTime implements TimestampedTime, $Instance {
+  /// Create a wrap constructor. We're not implementing the default constructor here, but if you
+  /// were to it'd typically be a runtimeOverride() constructor. You can read more details
+  /// about runtime overrides on dart_eval's GitHub wiki page for wrappers. The wrap constructor
+  /// wraps an underlying instance and inherits from [$Object].
+  $TimestampedTime.wrap(this.$value) : _superclass = $Object($value);
 
-// Define the type of the class, which includes its name, the library it's defined in, and
-// what it inherits from (Object in this case => EvalType.objectType)
-final timestampedTimeType = EvalType('TimestampedTime', 'TimestampedTime',
-    'package:dart_eval/dart_eval_example.dart', [EvalType.objectType], true);
+  /// Define the compile-time type descriptor as an unresolved type
+  static const $type = BridgeTypeReference.unresolved(
+      BridgeUnresolvedTypeReference('package:example/bridge.dart', 'TimestampedTime'), []);
 
-/// Extend the original class with the below mixins
-class EvalTimestampedTime extends TimestampedTime
-    with
-        ValueInterop<EvalTimestampedTime>,
-        EvalBridgeObjectMixin<EvalTimestampedTime>,
-        BridgeRectifier<EvalTimestampedTime> {
-  /// Create constructors for each of the original class's constructors
-  EvalTimestampedTime(int utcTime, {int timezoneOffset = 0})
-      : super(utcTime, timezoneOffset: timezoneOffset);
+  /// Define the compile-time class declaration and map out all the fields and methods for the compiler.
+  static const $declaration = BridgeClassDeclaration($type, isAbstract: false, constructors: {
+    // Define the default constructor with an empty string
+    '': BridgeConstructorDeclaration(
+        false,
+        BridgeFunctionDescriptor(BridgeTypeAnnotation($type, false), {}, [
+          // Parameters using built-in types can use [RuntimeTypes] for the most common types. Others, like
+          // Future, may need to use an unresolved type reference for 'dart:core'.
+          BridgeParameter(
+              'utcTime', BridgeTypeAnnotation(BridgeTypeReference.type(RuntimeTypes.intType, []), false), false)
+        ], {
+          'timezoneOffset': BridgeParameter(
+              'timezoneOffset', BridgeTypeAnnotation(BridgeTypeReference.type(RuntimeTypes.intType, []), false), true)
+        }))
+  }, methods: {}, getters: {}, setters: {}, fields: {
+    'utcTime': BridgeFieldDeclaration(false, false, BridgeTypeReference.type(RuntimeTypes.intType, [])),
+    'timezoneOffset': BridgeFieldDeclaration(false, false, BridgeTypeReference.type(RuntimeTypes.intType, []))
+  });
 
-  /// Create a [BridgeInstantiator] to instantiate this class.
-  /// If you had multiple constructors in your class you would use a switch statement
-  /// on the constructor parameter to choose which one to call
-  static final BridgeInstantiator<EvalTimestampedTime> _evalInstantiator =
-      (String constructor, List<dynamic> pos, Map<String, dynamic> named) {
-    return EvalTimestampedTime(pos[0], timezoneOffset: named['timezoneOffset']);
-  };
-
-  // Define the declaration, which creates the static class reference with the correct library lexical scope
-  static final declaration = DartBridgeDeclaration(
-      visibility: DeclarationVisibility.PUBLIC,
-      declarator: (ctx, lex, cur) => {
-            'TimestampedTime': EvalField(
-                'TimestampedTime', cls = clsgen(lex), null, Getter(null))
-          });
-
-  /// Define the static class reference. This should include all static methods
-  /// and fields, as well as constructors which are effectively static.
-  static final clsgen = (lexicalScope) => EvalBridgeClass([
-        DartConstructorDeclaration('', [
-          ParameterDefinition(
-              'utcTime', EvalType.intType, false, false, false, true, null,
-              isField: true),
-          ParameterDefinition('timezoneOffset', EvalType.intType, false, true,
-              true, false, null,
-              isField: false)
-        ])
-      ], timestampedTimeType, lexicalScope, TimestampedTime, _evalInstantiator);
-
-  static late EvalBridgeClass cls;
-
-  /// Create an instance of [EvalBridgeData] so that dart_eval can store information
-  /// about any changes it's made to a pseudo-subclass of this class when extending it
-  @override
-  EvalBridgeData evalBridgeData = EvalBridgeData(cls);
-
-  /// Not required, but recommended: create a utility method for wrapping an existing,
-  /// external instance of the original class in an Eval-friendly wrapper.
-  ///
-  /// If another class "Class A" in your app - outside of Eval - returns an instance
-  /// of the original class "Class B" in a method or getter, and then make
-  /// Class A Bridge-compatible, you will have to wrap that return value.
-  ///
-  /// Doing it in the source class is the best way to ensure code reuse and ease of
-  /// future updates.
-  static EvalValue evalMakeWrapper(TimestampedTime? target) {
-    if (target == null) {
-      return EvalNull();
-    }
-    return EvalRealObject(target, cls: cls, fields: {
-      'utcTime': EvalField(
-          'utcTime',
-          null,
-          null,
-          Getter(EvalCallableImpl((lexical, inherited, generics, args,
-                  {target}) =>
-              EvalInt(target?.realValue!.utcTime!)))),
-      'timezoneOffset': EvalField(
-          'timezoneOffset',
-          null,
-          null,
-          Getter(EvalCallableImpl((lexical, inherited, generics, args,
-                  {target}) =>
-              EvalInt(target?.realValue!.timezoneOffset!))))
-    });
+  /// Define static [EvalCallableFunc] functions for all static methods and constructors. This is for the
+  /// default constructor and is what the runtime will use to create an instance of this class.
+  static $Value? $new(Runtime runtime, $Value? target, List<$Value?> args) {
+    return $TimestampedTime.wrap(TimestampedTime(args[0]!.$value, timezoneOffset: args[1]?.$value ?? 0));
   }
 
-  /// For each getter and setter: attempt to set/get the property
-  /// using [evalBridgeTryGetField] first.
+  /// The underlying Dart instance that this wrapper wraps
   @override
-  int get utcTime {
-    final _f = evalBridgeTryGetField('utcTime');
-    if (_f != null) return _f.evalReifyFull();
-    return super.utcTime;
-  }
+  final TimestampedTime $value;
 
+  /// In most cases [$reified] should just return [$value]. However, classes with generics may use
+  /// it to fully reify any properties they contain. For example, a dart_eval List will typically be
+  /// filled with [$Value] objects, but using [$reified] will convert it to a List of Dart values.
   @override
-  int get timezoneOffset {
-    final _f = evalBridgeTryGetField('timezoneOffset');
-    if (_f != null) return _f.evalReifyFull();
-    return super.timezoneOffset;
-  }
+  TimestampedTime get $reified => $value;
 
-  /// Override the [evalGetField] method to give Eval access to your class's base
-  /// fields and methods.
-  /// You'll have to wrap the return values in an Eval class - these are defined
-  /// for built-in Dart types (e.g. [EvalInt], [EvalString]) - but for your own
-  /// classes you'll want to use static definitions of [evalMakeWrapper].
+  /// Although not required, creating a superclass field allows you to inherit basic properties from
+  /// [$Object], such as == and hashCode.
+  final $Instance _superclass;
+
+  /// [$getProperty] is how dart_eval accesses a wrapper's properties and methods, so map them out here. In
+  /// the default case, fall back to our [_superclass] implementation. For methods, you would return
+  /// a [$Function] with a closure (for simplicity) or a custom [EvalFunction] subclass (for maximum performance).
   @override
-  EvalValue evalGetField(String name, {bool internalGet = false}) {
-    switch (name) {
+  $Value? $getProperty(Runtime runtime, String identifier) {
+    switch (identifier) {
       case 'utcTime':
-        final _f = evalBridgeTryGetField('utcTime');
-        if (_f != null) return _f;
-        return EvalInt(super.utcTime);
+        return $int($value.utcTime);
       case 'timezoneOffset':
-        final _f = evalBridgeTryGetField('timezoneOffset');
-        if (_f != null) return _f;
-        return EvalInt(super.timezoneOffset);
+        return $int($value.timezoneOffset);
       default:
-        return super.evalGetField(name, internalGet: internalGet);
+        return _superclass.$getProperty(runtime, identifier);
     }
   }
+
+  /// Don't worry about [$runtimeType] for now, it's not currently used and may be removed.
+  @override
+  int get $runtimeType => throw UnimplementedError();
+
+  /// Map out non-final fields with [$setProperty]. We don't have any here, so just fallback to the Object
+  /// implementation. (Although there are no settable fields on Object, in the future it will invoke
+  /// noSuchMethod() where appropriate).
+  @override
+  void $setProperty(Runtime runtime, String identifier, $Value value) {
+    return _superclass.$setProperty(runtime, identifier, value);
+  }
+
+  /// Finally, our standard [TimestampedTime] implementations! Redirect to the wrapped [$value]'s implementation
+  /// for all properties and methods.
+  @override
+  int get timezoneOffset => $value.timezoneOffset;
+
+  @override
+  int get utcTime => $value.utcTime;
 }
 
-final worldTimeTrackerType = EvalType('WorldTimeTracker', 'WorldTimeTracker',
-    'package:dart_eval/dart_eval_example.dart', [EvalType.objectType], true);
+/// Unlike [TimestampedTime], we need to subclass [WorldTimeTracker]. For that, we can use a bridge class!
+/// Bridge classes are flexible and in some ways simpler than wrappers, but they have a lot of overhead. Avoid
+/// them if possible in performance-sensitive situations.
+///
+/// Because [WorldTimeTracker] is abstract, we can implement it here. If it were a concrete class you would instead
+/// extend it.
+class $WorldTimeTracker$bridge with $Bridge<WorldTimeTracker> implements WorldTimeTracker {
+  static const _$type = BridgeTypeReference.unresolved(
+      BridgeUnresolvedTypeReference('package:example/bridge.dart', 'WorldTimeTracker'), []);
 
-class EvalWorldTimeTracker extends WorldTimeTracker
-    with
-        ValueInterop<EvalWorldTimeTracker>,
-        EvalBridgeObjectMixin<EvalWorldTimeTracker>,
-        BridgeRectifier<EvalWorldTimeTracker> {
-  EvalWorldTimeTracker() : super();
+  /// Define the compile-time class declaration and map out all the fields and methods for the compiler.
+  static const $declaration = BridgeClassDeclaration(_$type, isAbstract: true, constructors: {
+    // Even though this class is abstract, we currently need to define the default constructor anyway. This
+    // may change in the future.
+    '': BridgeConstructorDeclaration(false, BridgeFunctionDescriptor(BridgeTypeAnnotation(_$type, false), {}, [], {}))
+  }, methods: {
+    'getTimeFor': BridgeMethodDeclaration(
+        false,
+        BridgeFunctionDescriptor(BridgeTypeAnnotation($TimestampedTime.$type, false), {}, [
+          BridgeParameter(
+              'country', BridgeTypeAnnotation(BridgeTypeReference.type(RuntimeTypes.stringType, []), false), false)
+        ], {}))
+  }, getters: {}, setters: {}, fields: {});
 
-  static final BridgeInstantiator<EvalWorldTimeTracker> _evalInstantiator =
-      (String constructor, List<dynamic> pos, Map<String, dynamic> named) {
-    return EvalWorldTimeTracker();
-  };
-
-  static final declaration = DartBridgeDeclaration(
-      visibility: DeclarationVisibility.PUBLIC,
-      declarator: (ctx, lex, cur) => {
-            'WorldTimeTracker': EvalField(
-                'WorldTimeTracker', cls = clsgen(lex), null, Getter(null))
-          });
-
-  static final clsgen = (lexicalScope) => EvalBridgeClass(
-      [DartConstructorDeclaration('', [])],
-      worldTimeTrackerType,
-      _libraryLexicalScope,
-      WorldTimeTracker,
-      _evalInstantiator);
-
-  static late EvalBridgeClass cls;
-
-  @override
-  EvalBridgeData evalBridgeData = EvalBridgeData(cls);
-
-  static EvalValue evalMakeWrapper(WorldTimeTracker? target) {
-    if (target == null) {
-      return EvalNull();
-    }
-    return EvalRealObject(target, cls: cls);
+  /// Define static [EvalCallableFunc] functions for all static methods and constructors. This is for the
+  /// default constructor and is what the runtime will use to create an instance of this class.
+  static $Value? $new(Runtime runtime, $Value? target, List<$Value?> args) {
+    return $WorldTimeTracker$bridge();
   }
 
-  /// Use [bridgeCall] to override methods
+  /// [$bridgeGet] works differently than [$getProperty] - it's only called if the Eval subclass hasn't provided
+  /// an override implementation.
   @override
-  TimestampedTime getTimeFor(String country) =>
-      bridgeCall('getTimeFor', [EvalString(country)]);
+  $Value? $bridgeGet(String identifier) {
+    // [WorldTimeTracker] is abstract, so if we haven't overridden all of it's methods that's an error.
+    // If it were concrete, this implementation would look like [$getProperty] except you'd access fields
+    // and invoke methods on 'super'.
+    throw UnimplementedError('Cannot get property "$identifier" on abstract class WorldTimeTracker');
+  }
 
   @override
-  EvalValue evalGetField(String name, {bool internalGet = false}) {
-    switch (name) {
-      case 'getTimeFor':
-        return evalBridgeTryGetField('getTimeFor') ??
-            (throw Exception(
-                'Cannot access method getTimeFor() of an abstract class'));
-      default:
-        return super.evalGetField(name, internalGet: internalGet);
-    }
+  void $bridgeSet(String identifier, $Value value) {
+    /// Same idea here.
+    throw UnimplementedError('Cannot set property "$identifier" on abstract class WorldTimeTracker');
   }
+
+  /// In a bridge class, override all fields and methods with [$_invoke], [$_get], and [$_set]. This
+  /// is necessary since we may use the overridden VM implementation outside the VM.
+  @override
+  TimestampedTime getTimeFor(String country) => $_invoke('getTimeFor', [$String(country)]);
 }
