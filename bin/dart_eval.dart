@@ -29,15 +29,13 @@ void main(List<String> args) {
     var projectRoot = commandRoot;
     while (true) {
       final files = projectRoot.listSync();
-      if (files.any(
-          (file) => (file is File && file.path.endsWith('pubspec.yaml')))) {
+      if (files.any((file) => (file is File && file.path.endsWith('pubspec.yaml')))) {
         break;
       }
       projectRoot = projectRoot.parent;
     }
 
-    final pubspec =
-        cli.PubSpec.fromFile(projectRoot.uri.resolve('pubspec.yaml').path);
+    final pubspec = cli.PubSpec.fromFile(projectRoot.uri.resolve('pubspec.yaml').path);
     final packageName = pubspec.name;
 
     final filePaths = cli.find('*.dart').toList();
@@ -53,8 +51,7 @@ void main(List<String> args) {
       sourceLength += _data.length;
 
       final p = cli.relative(path, from: projectRoot.path);
-      if (cli.canonicalize(cli.join(commandRoot.path, command['path'])) ==
-          cli.canonicalize(path)) {
+      if (cli.canonicalize(cli.join(commandRoot.path, command['path'])) == cli.canonicalize(path)) {
         firstFile = p;
         firstData = _data;
       } else {
@@ -93,8 +90,7 @@ void main(List<String> args) {
     File(outputName).writeAsBytesSync(_out);
 
     final timeElapsed = DateTime.now().millisecondsSinceEpoch - ts;
-    print(
-        'Compiled $sourceLength characters Dart to ${_out.length} bytes DBC in $timeElapsed ms: $outputName');
+    print('Compiled $sourceLength characters Dart to ${_out.length} bytes DBC in $timeElapsed ms: $outputName');
   } else if (command.name == 'run') {
     final dbc = File(command['path']!).readAsBytesSync();
     final runtime = Runtime(dbc.buffer.asByteData());

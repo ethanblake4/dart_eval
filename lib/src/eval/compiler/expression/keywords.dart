@@ -9,8 +9,7 @@ Variable compileThisExpression(ThisExpression e, CompilerContext ctx) {
   if (ctx.currentClass == null) {
     throw CompileError("Cannot use 'this' outside of a class context");
   }
-  return Variable(
-      0, ctx.visibleTypes[ctx.library]![ctx.currentClass!.name.name]!);
+  return Variable(0, ctx.visibleTypes[ctx.library]![ctx.currentClass!.name.name]!);
 }
 
 Variable compileSuperExpression(SuperExpression e, CompilerContext ctx) {

@@ -34,20 +34,17 @@ class $Pattern implements Pattern, $Instance {
 
   static const $Function __allMatches = $Function(_allMatches);
 
-  static $Value? _allMatches(
-      final Runtime runtime, final $Value? target, final List<$Value?> args) {
+  static $Value? _allMatches(final Runtime runtime, final $Value? target, final List<$Value?> args) {
     target as $Value;
     final string = (args[0] as $String).$value;
     return $Iterable<Match>.wrap((target.$value as Pattern).allMatches(string));
   }
 
   @override
-  Iterable<Match> allMatches(String string, [int start = 0]) =>
-      $value.allMatches(string, start);
+  Iterable<Match> allMatches(String string, [int start = 0]) => $value.allMatches(string, start);
 
   @override
-  Match? matchAsPrefix(String string, [int start = 0]) =>
-      $value.matchAsPrefix(string, start);
+  Match? matchAsPrefix(String string, [int start = 0]) => $value.matchAsPrefix(string, start);
 
   @override
   int get $runtimeType => throw UnimplementedError();
@@ -56,8 +53,7 @@ class $Pattern implements Pattern, $Instance {
 class $Pattern$bridge with $Bridge implements Pattern {
   const $Pattern$bridge(List<Object?> _);
 
-  static const $type =
-      BridgeClassTypeDeclaration('dart:core', 'Pattern', isAbstract: true);
+  static const $type = BridgeClassTypeDeclaration('dart:core', 'Pattern', isAbstract: true);
 
   @override
   $Value? $bridgeGet(String identifier) {
@@ -72,12 +68,10 @@ class $Pattern$bridge with $Bridge implements Pattern {
   }
 
   @override
-  Iterable<Match> allMatches(String string, [int start = 0]) =>
-      $_invoke('allMatches', [$String(string), $int(start)]);
+  Iterable<Match> allMatches(String string, [int start = 0]) => $_invoke('allMatches', [$String(string), $int(start)]);
 
   @override
-  Match? matchAsPrefix(String string, [int start = 0]) =>
-      $_invoke('matchAsPrefix', [$String(string), $int(start)]);
+  Match? matchAsPrefix(String string, [int start = 0]) => $_invoke('matchAsPrefix', [$String(string), $int(start)]);
 
   @override
   // TODO: implement $runtimeType

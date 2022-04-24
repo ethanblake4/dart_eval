@@ -16,8 +16,7 @@ dynamic eval(String source,
 
   var _source = source;
 
-  if (!RegExp(r'(?:\w* )?' + function + r'\s?\([\s\S]*?\)\s?{')
-      .hasMatch(_source)) {
+  if (!RegExp(r'(?:\w* )?' + function + r'\s?\([\s\S]*?\)\s?{').hasMatch(_source)) {
     if (!_source.contains(';')) {
       _source = '$_source;';
       if (!_source.contains('return')) {

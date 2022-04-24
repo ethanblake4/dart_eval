@@ -53,8 +53,7 @@ class Compiler {
         if (!ctx.bridgeStaticFunctionIndices.containsKey(lib)) {
           ctx.bridgeStaticFunctionIndices[lib] = <String, int>{};
         }
-        ctx.bridgeStaticFunctionIndices[lib]!['${unresolved.name}.$name'] =
-            _bridgeStaticFunctionIdx++;
+        ctx.bridgeStaticFunctionIndices[lib]!['${unresolved.name}.$name'] = _bridgeStaticFunctionIdx++;
       });
 
       classDef.methods.forEach((name, method) {
@@ -62,15 +61,13 @@ class Compiler {
         if (!ctx.bridgeStaticFunctionIndices.containsKey(lib)) {
           ctx.bridgeStaticFunctionIndices[lib] = <String, int>{};
         }
-        ctx.bridgeStaticFunctionIndices[lib]!['${unresolved.name}.$name'] =
-            _bridgeStaticFunctionIdx++;
+        ctx.bridgeStaticFunctionIndices[lib]!['${unresolved.name}.$name'] = _bridgeStaticFunctionIdx++;
       });
 
       return;
     }
 
-    throw CompileError(
-        'Cannot define a bridge class that\'s already resolved, a ref, or a generic function type');
+    throw CompileError('Cannot define a bridge class that\'s already resolved, a ref, or a generic function type');
   }
 
   void defineBridgeTopLevelFunction(BridgeFunctionDeclaration function) {
@@ -79,8 +76,7 @@ class Compiler {
     if (!ctx.bridgeStaticFunctionIndices.containsKey(lib)) {
       ctx.bridgeStaticFunctionIndices[lib] = <String, int>{};
     }
-    ctx.bridgeStaticFunctionIndices[lib]![function.name] =
-        _bridgeStaticFunctionIdx++;
+    ctx.bridgeStaticFunctionIndices[lib]![function.name] = _bridgeStaticFunctionIdx++;
   }
 
   void defineBridgeClasses(List<BridgeClassDeclaration> classDefs) {
@@ -95,16 +91,14 @@ class Compiler {
     configureCoreForCompile(this);
     configureAsyncForCompile(this);
 
-    final typeResolvedBridgeClasses =
-        <int, Map<String, BridgeClassDeclaration>>{};
+    final typeResolvedBridgeClasses = <int, Map<String, BridgeClassDeclaration>>{};
     final packageMap = <String, Map<String, int>>{};
     final indexMap = <int, List<String>>{};
     final partMap = <int, List<String>>{};
     final partOfMap = <int, String>{};
     final importMap = <int, List<ImportDirective>>{};
     final topLevelDeclarationsMap = <int, Map<String, DeclarationOrBridge>>{};
-    final instanceDeclarationsMap =
-        <int, Map<String, Map<String, Declaration>>>{};
+    final instanceDeclarationsMap = <int, Map<String, Map<String, Declaration>>>{};
     int? dartCoreFile;
 
     ctx.libraryMap = <String, int>{..._bridgeLibraryMappings};
@@ -120,8 +114,7 @@ class Compiler {
       // TODO remove this when processing JSON
       final content = uri.startsWith('dart:') ? null : uri.substring(8);
       final package = content?.substring(0, content.indexOf('/')) ?? uri;
-      final file =
-          content?.substring(content.indexOf('/') + 1) ?? uri.split(':')[1];
+      final file = content?.substring(content.indexOf('/') + 1) ?? uri.split(':')[1];
       if (!packageMap.containsKey(package)) {
         packageMap[package] = {};
       }
@@ -138,27 +131,23 @@ class Compiler {
         for (final _cls in _classes.entries)
           _cls.key: _cls.value.copyWith(
               type: BridgeTypeReference.type(
-                  ctx.typeRefIndexMap[TypeRef.cache(ctx, _blm.value, _cls.key,
-                      fileRef: _blm.value)]!,
+                  ctx.typeRefIndexMap[TypeRef.cache(ctx, _blm.value, _cls.key, fileRef: _blm.value)]!,
                   _cls.value.type.typeArgs))
       };
 
       typeResolvedBridgeClasses[_blm.value] = resolved;
 
-      final types = Map.fromEntries(resolved.entries.map(
-          (e) => MapEntry(e.key, ctx.runtimeTypeList[e.value.type.cacheId!])));
+      final types =
+          Map.fromEntries(resolved.entries.map((e) => MapEntry(e.key, ctx.runtimeTypeList[e.value.type.cacheId!])));
 
       ctx.visibleTypes[_blm.value] = {...coreDeclarations, ...types};
 
       topLevelDeclarationsMap[_blm.value] = {
-        for (final v in resolved.entries)
-          v.key: DeclarationOrBridge(bridge: v.value),
+        for (final v in resolved.entries) v.key: DeclarationOrBridge(bridge: v.value),
         for (final v in resolved.entries)
           for (final m in v.value.methods.entries)
-            if (m.value.isStatic)
-              '${v.key}.${m.key}': DeclarationOrBridge(bridge: m.value),
-        for (final f in _functions.entries)
-          f.key: DeclarationOrBridge(bridge: f.value)
+            if (m.value.isStatic) '${v.key}.${m.key}': DeclarationOrBridge(bridge: m.value),
+        for (final f in _functions.entries) f.key: DeclarationOrBridge(bridge: f.value)
       };
     }
 
@@ -168,8 +157,7 @@ class Compiler {
       return packageMap[resolvedUriParts[0]]?[resolvedUriParts[1]];
     }
 
-    List<String> resolvedUriParts(
-        String currentPackage, String currentFile, String uri) {
+    List<String> resolvedUriParts(String currentPackage, String currentFile, String uri) {
       String package = currentPackage, file, targetFile;
       if (uri.startsWith('package:')) {
         final content = uri.substring(8);
@@ -182,10 +170,7 @@ class Compiler {
           targetFile = file;
         } else {
           final currentFileNest = currentFile.split('/');
-          targetFile = [
-            ...currentFileNest.take(currentFileNest.length - 1),
-            ...file.split('/')
-          ].join('/');
+          targetFile = [...currentFileNest.take(currentFileNest.length - 1), ...file.split('/')].join('/');
         }
       }
       return [package, targetFile];
@@ -207,15 +192,13 @@ class Compiler {
               throw CompileError('Part URIs cannot use string interpolation');
             }
             if (!uri.startsWith('package:') && uri.contains(':')) {
-              throw CompileError(
-                  'Invalid URI in part directive: starts with ${uri.split(':')[0]}:');
+              throw CompileError('Invalid URI in part directive: starts with ${uri.split(':')[0]}:');
             }
             final uriParts = resolvedUriParts(package, filename, uri);
             final file = resolveUri(uriParts);
             if (file != null) {
               if (partOfMap[file] != "'$filename'") {
-                throw CompileError(
-                    '$package/$filename contains a part directive for $uri, '
+                throw CompileError('$package/$filename contains a part directive for $uri, '
                     'but there is no corresponding part of directive');
               }
               myIndex = file;
@@ -232,8 +215,7 @@ class Compiler {
             indexMap[myIndex] = [package, filename];
           } else if (directive is PartOfDirective) {
             if (unit.directives.length > 1) {
-              throw CompileError(
-                  '"part of" when included must be the only directive in a part');
+              throw CompileError('"part of" when included must be the only directive in a part');
             }
             final uri = directive.uri?.stringValue;
             final library = directive.libraryName;
@@ -242,18 +224,15 @@ class Compiler {
             }
             if (uri != null) {
               if (!uri.startsWith('package:') && uri.contains(':')) {
-                throw CompileError(
-                    'Invalid URI in part of directive: starts with ${uri.split(':')[0]}:');
+                throw CompileError('Invalid URI in part of directive: starts with ${uri.split(':')[0]}:');
               }
               final uriParts = resolvedUriParts(package, filename, uri);
               final file = resolveUri(uriParts);
               final formattedUri = 'package:${uriParts[0]}/${uriParts[1]}';
               final myFormattedUri = 'package:$package/$filename';
               if (file != null) {
-                if (partMap[file] == null ||
-                    !partMap[file]!.contains(myFormattedUri)) {
-                  throw CompileError(
-                      '$package/$filename contains a part of directive for $uri, '
+                if (partMap[file] == null || !partMap[file]!.contains(myFormattedUri)) {
+                  throw CompileError('$package/$filename contains a part of directive for $uri, '
                       'but there is no corresponding part directive');
                 }
                 partMap[file]!.remove(myFormattedUri);
@@ -269,8 +248,7 @@ class Compiler {
           } else if (directive is ImportDirective) {
             imports.add(directive);
           } else {
-            throw CompileError(
-                'Unknown directive type ${directive.runtimeType}');
+            throw CompileError('Unknown directive type ${directive.runtimeType}');
           }
         }
 
@@ -285,9 +263,8 @@ class Compiler {
         };
         ctx.visibleDeclarations[myIndex] ??= {
           if (dartCoreFile != null)
-            ...topLevelDeclarationsMap[dartCoreFile]!.map((key, value) =>
-                MapEntry(key,
-                    DeclarationOrPrefix(dartCoreFile!, declaration: value)))
+            ...topLevelDeclarationsMap[dartCoreFile]!
+                .map((key, value) => MapEntry(key, DeclarationOrPrefix(dartCoreFile!, declaration: value)))
         };
         topLevelDeclarationsMap[myIndex] ??= {};
         instanceDeclarationsMap[myIndex] ??= {};
@@ -295,33 +272,26 @@ class Compiler {
         unit.declarations.forEach((d) {
           if (d is NamedCompilationUnitMember) {
             if (topLevelDeclarationsMap[myIndex]!.containsKey(d.name.name)) {
-              throw CompileError(
-                  'Cannot define "${d.name.name} twice in the same library"');
+              throw CompileError('Cannot define "${d.name.name} twice in the same library"');
             }
-            topLevelDeclarationsMap[myIndex]![d.name.name] =
-                DeclarationOrBridge(declaration: d);
+            topLevelDeclarationsMap[myIndex]![d.name.name] = DeclarationOrBridge(declaration: d);
             if (d is ClassDeclaration) {
               instanceDeclarationsMap[myIndex]![d.name.name] = {};
-              ctx.visibleTypes[myIndex]![d.name.name] =
-                  TypeRef.cache(ctx, myIndex!, d.name.name, fileRef: myIndex);
+              ctx.visibleTypes[myIndex]![d.name.name] = TypeRef.cache(ctx, myIndex!, d.name.name, fileRef: myIndex);
               d.members.forEach((member) {
                 if (member is MethodDeclaration) {
                   if (member.isStatic) {
-                    topLevelDeclarationsMap[myIndex]![
-                            d.name.name + '.' + member.name.name] =
+                    topLevelDeclarationsMap[myIndex]![d.name.name + '.' + member.name.name] =
                         DeclarationOrBridge(declaration: member);
                   } else {
-                    instanceDeclarationsMap[myIndex]![d.name.name]![
-                        member.name.name] = member;
+                    instanceDeclarationsMap[myIndex]![d.name.name]![member.name.name] = member;
                   }
                 } else if (member is FieldDeclaration) {
                   member.fields.variables.forEach((field) {
-                    instanceDeclarationsMap[myIndex]![d.name.name]![
-                        field.name.name] = field;
+                    instanceDeclarationsMap[myIndex]![d.name.name]![field.name.name] = field;
                   });
                 } else if (member is ConstructorDeclaration) {
-                  topLevelDeclarationsMap[myIndex]![
-                          '${d.name.name}.${member.name?.name ?? ""}'] =
+                  topLevelDeclarationsMap[myIndex]!['${d.name.name}.${member.name?.name ?? ""}'] =
                       DeclarationOrBridge(declaration: member);
                 } else {
                   throw CompileError('Not a NamedCompilationUnitMember');
@@ -333,9 +303,8 @@ class Compiler {
           }
         });
 
-        ctx.visibleDeclarations[myIndex]!.addAll(
-            topLevelDeclarationsMap[myIndex]!.map((key, value) => MapEntry(
-                key, DeclarationOrPrefix(myIndex!, declaration: value))));
+        ctx.visibleDeclarations[myIndex]!.addAll(topLevelDeclarationsMap[myIndex]!
+            .map((key, value) => MapEntry(key, DeclarationOrPrefix(myIndex!, declaration: value))));
       });
     });
 
@@ -346,17 +315,12 @@ class Compiler {
         if (uri == null) {
           throw CompileError('Import URI is not a string');
         }
-        final resolvedLibrary =
-            resolveUri(resolvedUriParts(myUri[0], myUri[1], uri))!;
-        ctx.visibleTypes[file] ??= {
-          ...coreDeclarations,
-          if (dartCoreFile != null) ...ctx.visibleTypes[dartCoreFile]!
-        };
+        final resolvedLibrary = resolveUri(resolvedUriParts(myUri[0], myUri[1], uri))!;
+        ctx.visibleTypes[file] ??= {...coreDeclarations, if (dartCoreFile != null) ...ctx.visibleTypes[dartCoreFile]!};
         ctx.visibleDeclarations[file] ??= {
           if (dartCoreFile != null)
-            ...topLevelDeclarationsMap[dartCoreFile]!.map((key, value) =>
-                MapEntry(key,
-                    DeclarationOrPrefix(dartCoreFile!, declaration: value)))
+            ...topLevelDeclarationsMap[dartCoreFile]!
+                .map((key, value) => MapEntry(key, DeclarationOrPrefix(dartCoreFile!, declaration: value)))
         };
         var prefix = imp.prefix?.name ?? '';
         if (prefix != '') {
@@ -366,16 +330,11 @@ class Compiler {
           ctx.visibleTypes[file]!['$prefix$key'] = value;
         });
         if (prefix == '') {
-          ctx.visibleDeclarations[file]!.addAll(
-              topLevelDeclarationsMap[resolvedLibrary]!.map((key, value) =>
-                  MapEntry(
-                      key,
-                      DeclarationOrPrefix(resolvedLibrary,
-                          declaration: value))));
+          ctx.visibleDeclarations[file]!.addAll(topLevelDeclarationsMap[resolvedLibrary]!
+              .map((key, value) => MapEntry(key, DeclarationOrPrefix(resolvedLibrary, declaration: value))));
         } else {
-          ctx.visibleDeclarations[file]![prefix] = DeclarationOrPrefix(
-              resolvedLibrary,
-              children: topLevelDeclarationsMap[resolvedLibrary]);
+          ctx.visibleDeclarations[file]![prefix] =
+              DeclarationOrPrefix(resolvedLibrary, children: topLevelDeclarationsMap[resolvedLibrary]);
         }
       }
     });
@@ -391,8 +350,7 @@ class Compiler {
           return;
         }
         final declaration = _declaration.declaration!;
-        if (declaration is ConstructorDeclaration ||
-            declaration is MethodDeclaration) {
+        if (declaration is ConstructorDeclaration || declaration is MethodDeclaration) {
           return;
         }
         ctx.library = key;

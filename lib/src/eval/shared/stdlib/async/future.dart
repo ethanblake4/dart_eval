@@ -9,37 +9,22 @@ class $Completer<T> implements Completer<T>, $Instance {
   }
 
   static void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFunc(
-        'dart:async', 'Completer.', const _$Completer_new());
+    runtime.registerBridgeFunc('dart:async', 'Completer.', const _$Completer_new());
   }
 
   $Completer.wrap(this.$value);
 
-  static const _$type = BridgeTypeReference.unresolved(
-      BridgeUnresolvedTypeReference('dart:async', 'Completer'), []);
+  static const _$type = BridgeTypeReference.unresolved(BridgeUnresolvedTypeReference('dart:async', 'Completer'), []);
 
-  static const $declaration =
-      BridgeClassDeclaration(_$type, isAbstract: false, constructors: {
-    '': BridgeConstructorDeclaration(
-        false,
-        BridgeFunctionDescriptor(
-            BridgeTypeAnnotation(_$type, false), {}, [], {}))
+  static const $declaration = BridgeClassDeclaration(_$type, isAbstract: false, constructors: {
+    '': BridgeConstructorDeclaration(false, BridgeFunctionDescriptor(BridgeTypeAnnotation(_$type, false), {}, [], {}))
   }, methods: {
     'complete': BridgeMethodDeclaration(
         false,
-        BridgeFunctionDescriptor(
-            BridgeTypeAnnotation(
-                BridgeTypeReference.type(RuntimeTypes.voidType, []), false),
-            {},
-            [
-              BridgeParameter(
-                  'value',
-                  BridgeTypeAnnotation(
-                      BridgeTypeReference.type(RuntimeTypes.dynamicType, []),
-                      false),
-                  false)
-            ],
-            {}))
+        BridgeFunctionDescriptor(BridgeTypeAnnotation(BridgeTypeReference.type(RuntimeTypes.voidType, []), false), {}, [
+          BridgeParameter(
+              'value', BridgeTypeAnnotation(BridgeTypeReference.type(RuntimeTypes.dynamicType, []), false), false)
+        ], {}))
   }, getters: {}, setters: {}, fields: {});
 
   @override
@@ -68,8 +53,7 @@ class $Completer<T> implements Completer<T>, $Instance {
   void complete([FutureOr<T>? value]) => $value.complete(value);
 
   @override
-  void completeError(Object error, [StackTrace? stackTrace]) =>
-      $value.completeError(error, stackTrace);
+  void completeError(Object error, [StackTrace? stackTrace]) => $value.completeError(error, stackTrace);
 
   @override
   Future<T> get future => $value.future;

@@ -6,8 +6,7 @@ class BridgeDeclaration {
 }
 
 class DeclarationOrBridge<T extends Declaration, R extends BridgeDeclaration> {
-  DeclarationOrBridge({this.declaration, this.bridge})
-      : assert(declaration != null || bridge != null);
+  DeclarationOrBridge({this.declaration, this.bridge}) : assert(declaration != null || bridge != null);
 
   T? declaration;
   R? bridge;

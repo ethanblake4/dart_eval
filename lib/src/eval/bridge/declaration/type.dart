@@ -15,8 +15,7 @@ class BridgeTypeAnnotation {
 
   /// Connect the generated [_$BridgeTypeAnnotationFromJson] function to the `fromJson`
   /// factory.
-  factory BridgeTypeAnnotation.fromJson(Map<String, dynamic> json) =>
-      _$BridgeTypeAnnotationFromJson(json);
+  factory BridgeTypeAnnotation.fromJson(Map<String, dynamic> json) => _$BridgeTypeAnnotationFromJson(json);
 
   /// Connect the generated [_$BridgeTypeAnnotationToJson] function to the `toJson` method.
   Map<String, dynamic> toJson() => _$BridgeTypeAnnotationToJson(this);
@@ -101,9 +100,7 @@ class BridgeTypeReference {
 
   factory BridgeTypeReference.fromJson(Map<String, dynamic> json) {
     final id = json['id'];
-    final ta = [
-      for (final arg in json['typeArgs']) BridgeTypeReference.fromJson(arg)
-    ];
+    final ta = [for (final arg in json['typeArgs']) BridgeTypeReference.fromJson(arg)];
     if (id != null) {
       return BridgeTypeReference.type(id, ta);
     }
@@ -113,8 +110,7 @@ class BridgeTypeReference {
     }
     final unresolved = json['unresolved'];
     if (unresolved != null) {
-      return BridgeTypeReference.unresolved(
-          BridgeUnresolvedTypeReference.fromJson(json['unresolved']), ta);
+      return BridgeTypeReference.unresolved(BridgeUnresolvedTypeReference.fromJson(json['unresolved']), ta);
     }
     return BridgeTypeReference.ref(json['ref'], ta);
   }
@@ -161,6 +157,5 @@ class BridgeGenericParam {
 
   final BridgeTypeReference? $extends;
 
-  Map<String, dynamic> toJson() =>
-      {if ($extends != null) 'extends': $extends!.toJson()};
+  Map<String, dynamic> toJson() => {if ($extends != null) 'extends': $extends!.toJson()};
 }

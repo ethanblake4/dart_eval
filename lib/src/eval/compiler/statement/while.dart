@@ -5,8 +5,7 @@ import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 
-StatementInfo compileWhileStatement(WhileStatement s, CompilerContext ctx,
-    AlwaysReturnType? expectedReturnType) {
+StatementInfo compileWhileStatement(WhileStatement s, CompilerContext ctx, AlwaysReturnType? expectedReturnType) {
   return macroLoop(
     ctx,
     expectedReturnType,

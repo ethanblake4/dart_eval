@@ -72,9 +72,7 @@ void main(List<String> args) {
   runtime.args = [$String('USA')];
   final timeTracker = runtime.executeNamed(0, 'fn') as WorldTimeTracker;
 
-  print('UK timezone offset: ' +
-      timeTracker.getTimeFor('UK').timezoneOffset.toString() +
-      ' (from outside Eval!)');
+  print('UK timezone offset: ' + timeTracker.getTimeFor('UK').timezoneOffset.toString() + ' (from outside Eval!)');
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////

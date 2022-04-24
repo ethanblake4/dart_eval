@@ -20,15 +20,13 @@ Variable compileAwaitExpression(AwaitExpression e, CompilerContext ctx) {
 
   final subject = compileExpression(e.expression, ctx);
 
-  if (!subject.type
-      .isAssignableTo(TypeRef.stdlib(ctx, 'dart:core', 'Future'))) {
+  if (!subject.type.isAssignableTo(TypeRef.stdlib(ctx, 'dart:core', 'Future'))) {
     throw CompileError("Cannot await something that isn't a Future");
   }
 
   var _completer = ctx.lookupLocal('#completer');
 
-  final awaitOp =
-      Await.make(_completer!.scopeFrameOffset, subject.scopeFrameOffset);
+  final awaitOp = Await.make(_completer!.scopeFrameOffset, subject.scopeFrameOffset);
   ctx.pushOp(awaitOp, Await.LEN);
 
   ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);

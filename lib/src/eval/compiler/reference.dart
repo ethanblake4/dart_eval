@@ -109,7 +109,8 @@ class IdentifierReference implements Reference {
       final op = PushObjectProperty.make(object!.scopeFrameOffset, name);
       ctx.pushOp(op, PushObjectProperty.len(op));
       ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-      return Variable.alloc(ctx, TypeRef.lookupFieldType(ctx, object!.type, name)?.copyWith(boxed: true) ?? EvalTypes.dynamicType);
+      return Variable.alloc(
+          ctx, TypeRef.lookupFieldType(ctx, object!.type, name)?.copyWith(boxed: true) ?? EvalTypes.dynamicType);
     }
 
     // First look at locals
@@ -327,9 +328,8 @@ class IndexedReference implements Reference {
 
     if (_variable.type.isAssignableTo(EvalTypes.mapType)) {
       if (!_index.type.isAssignableTo(_variable.type.specifiedTypeArgs[0])) {
-        throw CompileError(
-            'TypeError: Cannot use variable of type ${_index.type} as index to map of type '
-                '<${_variable.type.specifiedTypeArgs[0]}, ${_variable.type.specifiedTypeArgs[1]}>');
+        throw CompileError('TypeError: Cannot use variable of type ${_index.type} as index to map of type '
+            '<${_variable.type.specifiedTypeArgs[0]}, ${_variable.type.specifiedTypeArgs[1]}>');
       }
 
       final map = _variable.unboxIfNeeded(ctx);

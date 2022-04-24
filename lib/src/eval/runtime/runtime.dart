@@ -29,8 +29,7 @@ part 'ops/objects.dart';
 part 'ops/bridge.dart';
 
 class ScopeFrame {
-  const ScopeFrame(this.stackOffset, this.scopeStackOffset,
-      [this.entrypoint = false]);
+  const ScopeFrame(this.stackOffset, this.scopeStackOffset, [this.entrypoint = false]);
 
   final int stackOffset;
   final int scopeStackOffset;
@@ -88,8 +87,7 @@ class Runtime {
         final methods = (declarations[2] as Map).cast<String, int>();
         final type = (declarations[3] as int);
 
-        final cls =
-            EvalClass(type, null, [], {...getters}, {...setters}, {...methods});
+        final cls = EvalClass(type, null, [], {...getters}, {...setters}, {...methods});
         decls[name] = cls;
       });
 
@@ -109,41 +107,30 @@ class Runtime {
     final encodedConstantPool = _readString();
     final encodedRuntimeTypes = _readString();
 
-    declarations = (json.decode(encodedToplevelDecs).map((k, v) =>
-            MapEntry(int.parse(k), (v as Map).cast<String, int>())) as Map)
-        .cast<int, Map<String, int>>();
+    declarations =
+        (json.decode(encodedToplevelDecs).map((k, v) => MapEntry(int.parse(k), (v as Map).cast<String, int>())) as Map)
+            .cast<int, Map<String, int>>();
 
-    final classes = (json.decode(encodedInstanceDecs).map((k, v) =>
-            MapEntry(int.parse(k), (v as Map).cast<String, List>())) as Map)
-        .cast<int, Map<String, List>>();
+    final classes =
+        (json.decode(encodedInstanceDecs).map((k, v) => MapEntry(int.parse(k), (v as Map).cast<String, List>())) as Map)
+            .cast<int, Map<String, List>>();
 
     classes.forEach((file, $class) {
-      declaredClasses[file] = {
-        for (final decl in $class.entries)
-          decl.key: EvalClass.fromJson(decl.value)
-      };
+      declaredClasses[file] = {for (final decl in $class.entries) decl.key: EvalClass.fromJson(decl.value)};
     });
 
     typeNames = (json.decode(encodedTypeNames) as List).cast();
-    typeTypes = [
-      for (final s in (json.decode(encodedTypeTypes) as List))
-        (s as List).cast<int>().toSet()
-    ];
+    typeTypes = [for (final s in (json.decode(encodedTypeTypes) as List)) (s as List).cast<int>().toSet()];
 
-    _bridgeLibraryMappings =
-        (json.decode(encodedBridgeLibraryMappings) as Map).cast();
+    _bridgeLibraryMappings = (json.decode(encodedBridgeLibraryMappings) as Map).cast();
 
     bridgeFuncMappings = (json.decode(encodedBridgeFuncMappings) as Map)
         .cast<String, Map>()
-        .map((key, value) =>
-            MapEntry(int.parse(key), value.cast<String, int>()));
+        .map((key, value) => MapEntry(int.parse(key), value.cast<String, int>()));
 
     constantPool.addAll((json.decode(encodedConstantPool) as List).cast());
 
-    runtimeTypes = [
-      for (final s in (json.decode(encodedRuntimeTypes) as List))
-        RuntimeTypeSet.fromJson(s as List)
-    ];
+    runtimeTypes = [for (final s in (json.decode(encodedRuntimeTypes) as List)) RuntimeTypeSet.fromJson(s as List)];
 
     _setupBridging();
 
@@ -180,8 +167,7 @@ class Runtime {
   }
 
   var _bridgeLibraryMappings = <String, int>{};
-  final _bridgeFunctions =
-      List<EvalCallableFunc>.filled(1000, _defaultFunction);
+  final _bridgeFunctions = List<EvalCallableFunc>.filled(1000, _defaultFunction);
   final _unloadedBrClass = <_UnloadedBridgeClass>[];
   final _unloadedBrFunc = <_UnloadedBridgeFunction>[];
   final constantPool = <Object>[];
@@ -202,18 +188,10 @@ class Runtime {
         return [Dbc.OP_SETVR];
       case NumAdd:
         op as NumAdd;
-        return [
-          Dbc.OP_ADDVV,
-          ...Dbc.i16b(op._location1),
-          ...Dbc.i16b(op._location2)
-        ];
+        return [Dbc.OP_ADDVV, ...Dbc.i16b(op._location1), ...Dbc.i16b(op._location2)];
       case NumSub:
         op as NumSub;
-        return [
-          Dbc.OP_NUM_SUB,
-          ...Dbc.i16b(op._location1),
-          ...Dbc.i16b(op._location2)
-        ];
+        return [Dbc.OP_NUM_SUB, ...Dbc.i16b(op._location1), ...Dbc.i16b(op._location2)];
       case BoxInt:
         op as BoxInt;
         return [Dbc.OP_BOXINT, ...Dbc.i16b(op._reg)];
@@ -231,22 +209,13 @@ class Runtime {
         return [Dbc.OP_JNZ, ...Dbc.i16b(op._location), ...Dbc.i32b(op._offset)];
       case JumpIfFalse:
         op as JumpIfFalse;
-        return [
-          Dbc.OP_JUMP_IF_FALSE,
-          ...Dbc.i16b(op._location),
-          ...Dbc.i32b(op._offset)
-        ];
+        return [Dbc.OP_JUMP_IF_FALSE, ...Dbc.i16b(op._location), ...Dbc.i32b(op._offset)];
       case PushConstantInt:
         op as PushConstantInt;
         return [Dbc.OP_SETVC, ...Dbc.i32b(op._value)];
       case PushScope:
         op as PushScope;
-        return [
-          Dbc.OP_PUSHSCOPE,
-          ...Dbc.i32b(op.sourceFile),
-          ...Dbc.i32b(op.sourceOffset),
-          ...Dbc.istr(op.frName)
-        ];
+        return [Dbc.OP_PUSHSCOPE, ...Dbc.i32b(op.sourceFile), ...Dbc.i32b(op.sourceOffset), ...Dbc.istr(op.frName)];
       case PopScope:
         op as PopScope;
         return [Dbc.OP_POPSCOPE];
@@ -267,11 +236,7 @@ class Runtime {
         return [Dbc.OP_CALL, ...Dbc.i32b(op._offset)];
       case InvokeDynamic:
         op as InvokeDynamic;
-        return [
-          Dbc.OP_INVOKE_DYNAMIC,
-          ...Dbc.i16b(op._location),
-          ...Dbc.istr(op._method)
-        ];
+        return [Dbc.OP_INVOKE_DYNAMIC, ...Dbc.i16b(op._location), ...Dbc.istr(op._method)];
       case SetObjectProperty:
         op as SetObjectProperty;
         return [
@@ -282,18 +247,10 @@ class Runtime {
         ];
       case PushObjectProperty:
         op as PushObjectProperty;
-        return [
-          Dbc.OP_PUSH_OBJECT_PROP,
-          ...Dbc.i16b(op._location),
-          ...Dbc.istr(op._property)
-        ];
+        return [Dbc.OP_PUSH_OBJECT_PROP, ...Dbc.i16b(op._location), ...Dbc.istr(op._property)];
       case PushObjectPropertyImpl:
         op as PushObjectPropertyImpl;
-        return [
-          Dbc.OP_PUSH_OBJECT_PROP_IMPL,
-          ...Dbc.i16b(op._objectOffset),
-          ...Dbc.i16b(op._propertyIndex)
-        ];
+        return [Dbc.OP_PUSH_OBJECT_PROP_IMPL, ...Dbc.i16b(op._objectOffset), ...Dbc.i16b(op._propertyIndex)];
       case SetObjectPropertyImpl:
         op as SetObjectPropertyImpl;
         return [
@@ -316,66 +273,37 @@ class Runtime {
         ];
       case NumLt:
         op as NumLt;
-        return [
-          Dbc.OP_NUM_LT,
-          ...Dbc.i16b(op._location1),
-          ...Dbc.i16b(op._location2)
-        ];
+        return [Dbc.OP_NUM_LT, ...Dbc.i16b(op._location1), ...Dbc.i16b(op._location2)];
       case NumLtEq:
         op as NumLtEq;
-        return [
-          Dbc.OP_NUM_LT_EQ,
-          ...Dbc.i16b(op._location1),
-          ...Dbc.i16b(op._location2)
-        ];
+        return [Dbc.OP_NUM_LT_EQ, ...Dbc.i16b(op._location1), ...Dbc.i16b(op._location2)];
       case PushSuper:
         op as PushSuper;
         return [Dbc.OP_PUSH_SUPER, ...Dbc.i16b(op._objectOffset)];
       case BridgeInstantiate:
         op as BridgeInstantiate;
-        return [
-          Dbc.OP_BRIDGE_INSTANTIATE,
-          ...Dbc.i16b(op._subclass),
-          ...Dbc.i32b(op._constructor)
-        ];
+        return [Dbc.OP_BRIDGE_INSTANTIATE, ...Dbc.i16b(op._subclass), ...Dbc.i32b(op._constructor)];
       case PushBridgeSuperShim:
         op as PushBridgeSuperShim;
         return [Dbc.OP_PUSH_SUPER_SHIM];
       case ParentBridgeSuperShim:
         op as ParentBridgeSuperShim;
-        return [
-          Dbc.OP_PARENT_SUPER_SHIM,
-          ...Dbc.i16b(op._shimOffset),
-          ...Dbc.i16b(op._bridgeOffset)
-        ];
+        return [Dbc.OP_PARENT_SUPER_SHIM, ...Dbc.i16b(op._shimOffset), ...Dbc.i16b(op._bridgeOffset)];
       case PushList:
         op as PushList;
         return [Dbc.OP_PUSH_LIST];
       case ListAppend:
         op as ListAppend;
-        return [
-          Dbc.OP_LIST_APPEND,
-          ...Dbc.i16b(op._reg),
-          ...Dbc.i16b(op._value)
-        ];
+        return [Dbc.OP_LIST_APPEND, ...Dbc.i16b(op._reg), ...Dbc.i16b(op._value)];
       case IndexList:
         op as IndexList;
-        return [
-          Dbc.OP_INDEX_LIST,
-          ...Dbc.i16b(op._position),
-          ...Dbc.i32b(op._index)
-        ];
+        return [Dbc.OP_INDEX_LIST, ...Dbc.i16b(op._position), ...Dbc.i32b(op._index)];
       case PushIterableLength:
         op as PushIterableLength;
         return [Dbc.OP_ITER_LENGTH, ...Dbc.i16b(op._position)];
       case ListSetIndexed:
         op as ListSetIndexed;
-        return [
-          Dbc.OP_LIST_SETINDEXED,
-          ...Dbc.i16b(op._position),
-          ...Dbc.i32b(op._index),
-          ...Dbc.i16b(op._value)
-        ];
+        return [Dbc.OP_LIST_SETINDEXED, ...Dbc.i16b(op._position), ...Dbc.i32b(op._index), ...Dbc.i16b(op._value)];
       case BoxString:
         op as BoxString;
         return [Dbc.OP_BOXSTRING, ...Dbc.i16b(op._reg)];
@@ -396,11 +324,7 @@ class Runtime {
         return [Dbc.OP_INVOKE_EXTERNAL, ...Dbc.i32b(op._function)];
       case Await:
         op as Await;
-        return [
-          Dbc.OP_AWAIT,
-          ...Dbc.i16b(op._completerOffset),
-          ...Dbc.i16b(op._futureOffset)
-        ];
+        return [Dbc.OP_AWAIT, ...Dbc.i16b(op._completerOffset), ...Dbc.i16b(op._futureOffset)];
       case PushMap:
         op as PushMap;
         return [Dbc.OP_PUSH_MAP];
@@ -525,8 +449,7 @@ class Runtime {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is Runtime && runtimeType == other.runtimeType && id == other.id;
+      identical(this, other) || other is Runtime && runtimeType == other.runtimeType && id == other.id;
 
   @override
   int get hashCode => id.hashCode;
