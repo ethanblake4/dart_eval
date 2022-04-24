@@ -12,8 +12,7 @@ class BridgeParameter {
 
   /// Connect the generated [_$BridgeParameterFromJson] function to the `fromJson`
   /// factory.
-  factory BridgeParameter.fromJson(Map<String, dynamic> json) =>
-      _$BridgeParameterFromJson(json);
+  factory BridgeParameter.fromJson(Map<String, dynamic> json) => _$BridgeParameterFromJson(json);
 
   /// Connect the generated [_$BridgeParameterToJson] function to the `toJson` method.
   Map<String, dynamic> toJson() => _$BridgeParameterToJson(this);
@@ -21,8 +20,7 @@ class BridgeParameter {
 
 @JsonSerializable()
 class BridgeFunctionDescriptor {
-  const BridgeFunctionDescriptor(
-      this.returnType, this.generics, this.positionalParams, this.namedParams);
+  const BridgeFunctionDescriptor(this.returnType, this.generics, this.positionalParams, this.namedParams);
 
   final BridgeTypeAnnotation returnType;
   final Map<String, BridgeGenericParam> generics;
@@ -31,8 +29,7 @@ class BridgeFunctionDescriptor {
 
   /// Connect the generated [_$BridgeFunctionDescriptorFromJson] function to the `fromJson`
   /// factory.
-  factory BridgeFunctionDescriptor.fromJson(Map<String, dynamic> json) =>
-      _$BridgeFunctionDescriptorFromJson(json);
+  factory BridgeFunctionDescriptor.fromJson(Map<String, dynamic> json) => _$BridgeFunctionDescriptorFromJson(json);
 
   /// Connect the generated [_$BridgeFunctionDescriptorToJson] function to the `toJson` method.
   Map<String, dynamic> toJson() => _$BridgeFunctionDescriptorToJson(this);

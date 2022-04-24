@@ -24,8 +24,7 @@ Variable compileBinaryExpression(CompilerContext ctx, BinaryExpression e) {
     TokenType.EQ_EQ: '=='
   };
 
-  var method = opMap[e.operator.type] ??
-      (throw CompileError('Unknown binary operator ${e.operator.type}'));
+  var method = opMap[e.operator.type] ?? (throw CompileError('Unknown binary operator ${e.operator.type}'));
 
   return L.invoke(ctx, method, [R]).result;
 }

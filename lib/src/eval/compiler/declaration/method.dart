@@ -11,17 +11,14 @@ import 'package:dart_eval/src/eval/compiler/util.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
-int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx,
-    NamedCompilationUnitMember parent) {
+int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx, NamedCompilationUnitMember parent) {
   ctx.runPrescan(d);
   final b = d.body;
-  final pos = beginMethod(
-      ctx, d, d.offset, parent.name.name + '.' + d.name.name + '()');
+  final pos = beginMethod(ctx, d, d.offset, parent.name.name + '.' + d.name.name + '()');
 
   ctx.beginAllocScope(existingAllocLen: (d.parameters?.parameters.length ?? 0));
   ctx.scopeFrameOffset += d.parameters?.parameters.length ?? 0;
-  final resolvedParams =
-      resolveFPLDefaults(ctx, d.parameters!, true, allowUnboxed: true);
+  final resolvedParams = resolveFPLDefaults(ctx, d.parameters!, true, allowUnboxed: true);
 
   if (b.isAsynchronous) {
     setupAsyncFunction(ctx);
@@ -48,10 +45,7 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx,
   StatementInfo? stInfo;
   if (b is BlockFunctionBody) {
     stInfo = compileBlock(
-        b.block,
-        AlwaysReturnType.fromAnnotation(
-            ctx, ctx.library, d.returnType, EvalTypes.dynamicType),
-        ctx,
+        b.block, AlwaysReturnType.fromAnnotation(ctx, ctx.library, d.returnType, EvalTypes.dynamicType), ctx,
         name: d.name.name + '()');
   } else {
     throw CompileError('Unknown function body type ${b.runtimeType}');
@@ -67,11 +61,9 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx,
   }
 
   if (d.isStatic) {
-    ctx.topLevelDeclarationPositions[ctx.library]![
-        '${parent.name.name}.${d.name.name}'] = pos;
+    ctx.topLevelDeclarationPositions[ctx.library]!['${parent.name.name}.${d.name.name}'] = pos;
   } else {
-    ctx.instanceDeclarationPositions[ctx.library]![parent.name.name]![2]
-        [d.name.name] = pos;
+    ctx.instanceDeclarationPositions[ctx.library]![parent.name.name]![2][d.name.name] = pos;
   }
 
   return pos;

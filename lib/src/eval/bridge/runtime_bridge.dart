@@ -10,8 +10,7 @@ mixin $Bridge<T> on Object implements $Value, $Instance {
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
     try {
-      return Runtime.bridgeData[this]!.subclass!
-          .$getProperty(runtime, identifier);
+      return Runtime.bridgeData[this]!.subclass!.$getProperty(runtime, identifier);
     } on UnimplementedError catch (_) {
       return $bridgeGet(identifier);
     }
@@ -20,8 +19,7 @@ mixin $Bridge<T> on Object implements $Value, $Instance {
   @override
   void $setProperty(Runtime runtime, String identifier, $Value value) {
     try {
-      return Runtime.bridgeData[this]!.subclass!
-          .$setProperty(runtime, identifier, value);
+      return Runtime.bridgeData[this]!.subclass!.$setProperty(runtime, identifier, value);
     } on UnimplementedError catch (_) {
       $bridgeSet(identifier, value);
     }
@@ -39,8 +37,7 @@ mixin $Bridge<T> on Object implements $Value, $Instance {
 
   dynamic $_invoke(String method, List<$Value?> args) {
     final runtime = Runtime.bridgeData[this]!.runtime;
-    return ($getProperty(runtime, method) as EvalFunction)
-        .call(runtime, this, [this, ...args])?.$reified;
+    return ($getProperty(runtime, method) as EvalFunction).call(runtime, this, [this, ...args])?.$reified;
   }
 
   @override
@@ -65,8 +62,7 @@ class BridgeSuperShim implements $Instance {
   $Value? $getProperty(Runtime runtime, String name) => bridge.$bridgeGet(name);
 
   @override
-  void $setProperty(Runtime runtime, String name, $Value value) =>
-      bridge.$bridgeSet(name, value);
+  void $setProperty(Runtime runtime, String name, $Value value) => bridge.$bridgeSet(name, value);
 
   @override
   $Bridge get $reified => bridge;
@@ -82,12 +78,10 @@ class BridgeDelegatingShim implements $Instance {
   const BridgeDelegatingShim();
 
   @override
-  $Value? $getProperty(Runtime runtime, String name) =>
-      throw UnimplementedError();
+  $Value? $getProperty(Runtime runtime, String name) => throw UnimplementedError();
 
   @override
-  void $setProperty(Runtime runtime, String name, $Value value) =>
-      throw UnimplementedError();
+  void $setProperty(Runtime runtime, String name, $Value value) => throw UnimplementedError();
 
   @override
   $Bridge get $reified => throw UnimplementedError();

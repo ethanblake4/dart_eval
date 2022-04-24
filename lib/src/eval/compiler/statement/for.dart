@@ -6,8 +6,7 @@ import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/statement/variable_declaration.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 
-StatementInfo compileForStatement(
-    ForStatement s, CompilerContext ctx, AlwaysReturnType? expectedReturnType) {
+StatementInfo compileForStatement(ForStatement s, CompilerContext ctx, AlwaysReturnType? expectedReturnType) {
   final parts = s.forLoopParts;
 
   if (!(parts is ForParts)) {
@@ -24,9 +23,7 @@ StatementInfo compileForStatement(
           }
         }
       },
-      condition: parts.condition == null
-          ? null
-          : (_ctx) => compileExpression(parts.condition!, _ctx),
+      condition: parts.condition == null ? null : (_ctx) => compileExpression(parts.condition!, _ctx),
       body: (_ctx, ert) => compileStatement(s.body, ert, _ctx),
       update: (_ctx) {
         for (final u in parts.updaters) {

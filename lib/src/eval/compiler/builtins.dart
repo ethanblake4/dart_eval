@@ -80,34 +80,20 @@ class KnownMethodArg {
 class EvalTypes {
   static const TypeRef typeType = TypeRef(dartCoreFile, 'Type', resolved: true);
   static const TypeRef voidType = TypeRef(dartCoreFile, 'void', resolved: true);
-  static const TypeRef dynamicType =
-      TypeRef(dartCoreFile, 'dynamic', resolved: true);
-  static const TypeRef nullType =
-      TypeRef(dartCoreFile, 'Null', extendsType: dynamicType, resolved: true);
-  static const TypeRef objectType =
-      TypeRef(dartCoreFile, 'Object', extendsType: dynamicType, resolved: true);
-  static const TypeRef boolType =
-      TypeRef(dartCoreFile, 'bool', extendsType: objectType, resolved: true);
-  static const TypeRef numType =
-      TypeRef(dartCoreFile, 'num', extendsType: objectType, resolved: true);
-  static const TypeRef intType =
-      TypeRef(dartCoreFile, 'int', extendsType: numType, resolved: true);
-  static const TypeRef doubleType =
-      TypeRef(dartCoreFile, 'double', extendsType: numType, resolved: true);
-  static const TypeRef stringType =
-      TypeRef(dartCoreFile, 'String', extendsType: objectType, resolved: true);
-  static const TypeRef mapType =
-      TypeRef(dartCoreFile, 'Map', extendsType: objectType, resolved: true);
+  static const TypeRef dynamicType = TypeRef(dartCoreFile, 'dynamic', resolved: true);
+  static const TypeRef nullType = TypeRef(dartCoreFile, 'Null', extendsType: dynamicType, resolved: true);
+  static const TypeRef objectType = TypeRef(dartCoreFile, 'Object', extendsType: dynamicType, resolved: true);
+  static const TypeRef boolType = TypeRef(dartCoreFile, 'bool', extendsType: objectType, resolved: true);
+  static const TypeRef numType = TypeRef(dartCoreFile, 'num', extendsType: objectType, resolved: true);
+  static const TypeRef intType = TypeRef(dartCoreFile, 'int', extendsType: numType, resolved: true);
+  static const TypeRef doubleType = TypeRef(dartCoreFile, 'double', extendsType: numType, resolved: true);
+  static const TypeRef stringType = TypeRef(dartCoreFile, 'String', extendsType: objectType, resolved: true);
+  static const TypeRef mapType = TypeRef(dartCoreFile, 'Map', extendsType: objectType, resolved: true);
   static const TypeRef iterableType = TypeRef(dartCoreFile, 'Iterable',
-      extendsType: objectType,
-      genericParams: [GenericParam('T', null)],
-      resolved: true);
+      extendsType: objectType, genericParams: [GenericParam('T', null)], resolved: true);
   static const TypeRef listType = TypeRef(dartCoreFile, 'List',
-      extendsType: iterableType,
-      genericParams: [GenericParam('T', null)],
-      resolved: true);
-  static const TypeRef functionType = TypeRef(dartCoreFile, 'Function',
-      extendsType: objectType, resolved: true);
+      extendsType: iterableType, genericParams: [GenericParam('T', null)], resolved: true);
+  static const TypeRef functionType = TypeRef(dartCoreFile, 'Function', extendsType: objectType, resolved: true);
 }
 
 final Map<String, TypeRef> coreDeclarations = {
@@ -134,13 +120,11 @@ final intBinaryOp = KnownMethod(
     [KnownMethodArg('other', EvalTypes.numType, false, false)],
     {});
 
-const numComparisonOp = KnownMethod(AlwaysReturnType(EvalTypes.boolType, false),
-    [KnownMethodArg('other', EvalTypes.numType, false, false)], {});
+const numComparisonOp = KnownMethod(
+    AlwaysReturnType(EvalTypes.boolType, false), [KnownMethodArg('other', EvalTypes.numType, false, false)], {});
 
 const doubleBinaryOp = KnownMethod(
-    AlwaysReturnType(EvalTypes.doubleType, false),
-    [KnownMethodArg('other', EvalTypes.numType, false, false)],
-    {});
+    AlwaysReturnType(EvalTypes.doubleType, false), [KnownMethodArg('other', EvalTypes.numType, false, false)], {});
 
 final numBinaryOp = KnownMethod(
     ParameterTypeDependentReturnType({
@@ -149,11 +133,11 @@ final numBinaryOp = KnownMethod(
     [KnownMethodArg('other', EvalTypes.numType, false, false)],
     {});
 
-const listIndexOp = KnownMethod(TargetTypeArgDependentReturnType(0),
-    [KnownMethodArg('index', EvalTypes.intType, false, false)], {});
+const listIndexOp =
+    KnownMethod(TargetTypeArgDependentReturnType(0), [KnownMethodArg('index', EvalTypes.intType, false, false)], {});
 
-const listIndexAssignOp = KnownMethod(TargetTypeArgDependentReturnType(0),
-    [KnownMethodArg('index', EvalTypes.intType, false, false)], {});
+const listIndexAssignOp =
+    KnownMethod(TargetTypeArgDependentReturnType(0), [KnownMethodArg('index', EvalTypes.intType, false, false)], {});
 
 const toStringOp = KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [], {});
 
@@ -204,12 +188,10 @@ final Map<TypeRef, Map<String, KnownMethod>> knownMethods = {
   EvalTypes.stringType: {
     '+': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false),
         [KnownMethodArg('other', EvalTypes.stringType, false, false)], {}),
-    '==': KnownMethod(AlwaysReturnType(EvalTypes.boolType, false),
-        [KnownMethodArg('other', EvalTypes.stringType, false, false)], {}),
-    'toLowerCase':
-        KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [], {}),
-    'toUpperCase':
-        KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [], {}),
+    '==': KnownMethod(
+        AlwaysReturnType(EvalTypes.boolType, false), [KnownMethodArg('other', EvalTypes.stringType, false, false)], {}),
+    'toLowerCase': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [], {}),
+    'toUpperCase': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [], {}),
     ..._knownObject
   },
   EvalTypes.iterableType: {
@@ -228,20 +210,13 @@ final Map<TypeRef, Map<String, KnownMethod>> knownMethods = {
 
 final Map<TypeRef, Map<String, KnownField>> knownFields = {
   EvalTypes.iterableType: {
-    'length':
-        KnownField(AlwaysReturnType(EvalTypes.intType, false), true, false),
+    'length': KnownField(AlwaysReturnType(EvalTypes.intType, false), true, false),
   },
-  EvalTypes.listType: {
-    'length':
-        KnownField(AlwaysReturnType(EvalTypes.intType, false), true, false)
-  },
+  EvalTypes.listType: {'length': KnownField(AlwaysReturnType(EvalTypes.intType, false), true, false)},
   EvalTypes.stringType: {
-    'length':
-        KnownField(AlwaysReturnType(EvalTypes.intType, false), true, false),
-    'isEmpty':
-        KnownField(AlwaysReturnType(EvalTypes.boolType, false), true, false),
-    'isNotEmpty':
-        KnownField(AlwaysReturnType(EvalTypes.boolType, false), true, false)
+    'length': KnownField(AlwaysReturnType(EvalTypes.intType, false), true, false),
+    'isEmpty': KnownField(AlwaysReturnType(EvalTypes.boolType, false), true, false),
+    'isNotEmpty': KnownField(AlwaysReturnType(EvalTypes.boolType, false), true, false)
   }
 };
 

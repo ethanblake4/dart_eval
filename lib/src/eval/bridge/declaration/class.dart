@@ -25,20 +25,18 @@ class BridgeClassDeclaration implements BridgeDeclaration {
 
   /// Connect the generated [_$BridgeClassDeclarationFromJson] function to the `fromJson`
   /// factory.
-  factory BridgeClassDeclaration.fromJson(Map<String, dynamic> json) =>
-      _$BridgeClassDeclarationFromJson(json);
+  factory BridgeClassDeclaration.fromJson(Map<String, dynamic> json) => _$BridgeClassDeclarationFromJson(json);
 
   /// Connect the generated [_$BridgeClassDeclarationToJson] function to the `toJson` method.
   Map<String, dynamic> toJson() => _$BridgeClassDeclarationToJson(this);
 
-  BridgeClassDeclaration copyWith({BridgeTypeReference? type}) =>
-      BridgeClassDeclaration(type ?? this.type,
-          isAbstract: isAbstract,
-          constructors: constructors,
-          methods: methods,
-          getters: getters,
-          setters: setters,
-          fields: fields);
+  BridgeClassDeclaration copyWith({BridgeTypeReference? type}) => BridgeClassDeclaration(type ?? this.type,
+      isAbstract: isAbstract,
+      constructors: constructors,
+      methods: methods,
+      getters: getters,
+      setters: setters,
+      fields: fields);
 }
 
 @JsonSerializable()
@@ -50,8 +48,7 @@ class BridgeMethodDeclaration implements BridgeDeclaration {
 
   /// Connect the generated [_$BridgeMethodDeclarationFromJson] function to the `fromJson`
   /// factory.
-  factory BridgeMethodDeclaration.fromJson(Map<String, dynamic> json) =>
-      _$BridgeMethodDeclarationFromJson(json);
+  factory BridgeMethodDeclaration.fromJson(Map<String, dynamic> json) => _$BridgeMethodDeclarationFromJson(json);
 
   /// Connect the generated [_$BridgeMethodDeclarationToJson] function to the `toJson` method.
   Map<String, dynamic> toJson() => _$BridgeMethodDeclarationToJson(this);
@@ -83,8 +80,7 @@ class BridgeFieldDeclaration {
 
   /// Connect the generated [_$BridgeFieldDeclarationFromJson] function to the `fromJson`
   /// factory.
-  factory BridgeFieldDeclaration.fromJson(Map<String, dynamic> json) =>
-      _$BridgeFieldDeclarationFromJson(json);
+  factory BridgeFieldDeclaration.fromJson(Map<String, dynamic> json) => _$BridgeFieldDeclarationFromJson(json);
 
   /// Connect the generated [_$BridgeFieldDeclarationToJson] function to the `toJson` method.
   Map<String, dynamic> toJson() => _$BridgeFieldDeclarationToJson(this);

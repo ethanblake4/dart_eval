@@ -38,8 +38,7 @@ mixin ScopeContext on Object implements AbstractScopeContext {
   @override
   List<bool> inNonlinearAccessContext = [false];
 
-  void beginAllocScope(
-      {int existingAllocLen = 0, bool requireNonlinearAccess = false}) {
+  void beginAllocScope({int existingAllocLen = 0, bool requireNonlinearAccess = false}) {
     allocNest.add(existingAllocLen);
     locals.add({});
     inNonlinearAccessContext.add(requireNonlinearAccess);
@@ -97,8 +96,7 @@ mixin ScopeContext on Object implements AbstractScopeContext {
 
   void resolveNonlinearity([int depth = 1]) {
     for (var i = 0; i < depth; i++) {
-      <String, Variable>{...(locals[locals.length - depth])}
-          .forEach((key, value) {
+      <String, Variable>{...(locals[locals.length - depth])}.forEach((key, value) {
         locals[locals.length - depth][key] = value.unboxIfNeeded(this);
       });
     }
@@ -173,11 +171,8 @@ class CompilerContext with ScopeContext {
   }
 
   @override
-  void beginAllocScope(
-      {int existingAllocLen = 0, bool requireNonlinearAccess = false}) {
-    super.beginAllocScope(
-        existingAllocLen: existingAllocLen,
-        requireNonlinearAccess: requireNonlinearAccess);
+  void beginAllocScope({int existingAllocLen = 0, bool requireNonlinearAccess = false}) {
+    super.beginAllocScope(existingAllocLen: existingAllocLen, requireNonlinearAccess: requireNonlinearAccess);
     if (preScan!.closedFrames.contains(locals.length - 1)) {
       final ps = PushScope.make(sourceFile, -1, '#');
       pushOp(ps, PushScope.len(ps));

@@ -4,16 +4,13 @@ class $Iterable$bridge<E> with $Bridge<Iterable<E>> implements Iterable<E> {
   const $Iterable$bridge(List<Object?> _);
 
   @override
-  Iterable<E> get $reified =>
-      ($value as $Iterable$bridge).map((e) => e.$reified);
+  Iterable<E> get $reified => ($value as $Iterable$bridge).map((e) => e.$reified);
 
   static const $type = BridgeClassTypeDeclaration('dart:core', 'Iterable',
-      $extends: BridgeTypeReference.type(RuntimeTypes.objectType, []),
-      isAbstract: true);
+      $extends: BridgeTypeReference.type(RuntimeTypes.objectType, []), isAbstract: true);
 
   static const $classDef = BridgeClassDeclaration(
-      BridgeTypeReference.unresolved(
-          BridgeUnresolvedTypeReference('dart:core', 'Iterable'), []),
+      BridgeTypeReference.unresolved(BridgeUnresolvedTypeReference('dart:core', 'Iterable'), []),
       isAbstract: true,
       constructors: {},
       methods: {},
@@ -21,11 +18,7 @@ class $Iterable$bridge<E> with $Bridge<Iterable<E>> implements Iterable<E> {
         'length': BridgeMethodDeclaration(
             false,
             BridgeFunctionDescriptor(
-                BridgeTypeAnnotation(
-                    BridgeTypeReference.type(RuntimeTypes.intType, []), false),
-                {},
-                [],
-                {}))
+                BridgeTypeAnnotation(BridgeTypeReference.type(RuntimeTypes.intType, []), false), {}, [], {}))
       },
       setters: {},
       fields: {});
@@ -53,30 +46,26 @@ class $Iterable$bridge<E> with $Bridge<Iterable<E>> implements Iterable<E> {
   }
 
   @override
-  bool any(bool Function(E element) test) => $_invoke(
-      'any', [$Function((_, __, args) => $bool(test(args[0]!.$value)))]);
+  bool any(bool Function(E element) test) =>
+      $_invoke('any', [$Function((_, __, args) => $bool(test(args[0]!.$value)))]);
 
   @override
   Iterable<R> cast<R>() => Iterable.castFrom<E, R>(this);
 
   @override
-  bool contains(Object? element) => $_invoke('contains', [
-        element == null ? $null() : $ValueImpl(RuntimeTypes.objectType, element)
-      ]);
+  bool contains(Object? element) =>
+      $_invoke('contains', [element == null ? $null() : $ValueImpl(RuntimeTypes.objectType, element)]);
 
   @override
   E elementAt(int index) => $_invoke('elementAt', [$int(index)]);
 
   @override
-  bool every(bool Function(E element) test) => $_invoke(
-      'every', [$Function((_, __, args) => $bool(test(args[0]!.$value)))]);
+  bool every(bool Function(E element) test) =>
+      $_invoke('every', [$Function((_, __, args) => $bool(test(args[0]!.$value)))]);
 
   @override
   Iterable<T> expand<T>(Iterable<T> Function(E element) toElements) =>
-      $_invoke('expand', [
-        $Function((runtime, target, args) =>
-            $Iterable.wrap(toElements(args[0]!.$value)))
-      ]);
+      $_invoke('expand', [$Function((runtime, target, args) => $Iterable.wrap(toElements(args[0]!.$value)))]);
 
   @override
   E get first => $_get('first');
@@ -211,8 +200,7 @@ class $Iterable$bridge<E> with $Bridge<Iterable<E>> implements Iterable<E> {
 }
 
 class $Iterable<E> implements Iterable<E>, $Instance {
-  $Iterable(String id, Iterable<E> value)
-      : $value = runtimeOverride(id) as Iterable<E>? ?? value;
+  $Iterable(String id, Iterable<E> value) : $value = runtimeOverride(id) as Iterable<E>? ?? value;
 
   $Iterable.wrap(this.$value);
 
@@ -262,19 +250,16 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   bool every(bool Function(E element) test) => $value.every(test);
 
   @override
-  Iterable<T> expand<T>(Iterable<T> Function(E element) toElements) =>
-      $value.expand<T>(toElements);
+  Iterable<T> expand<T>(Iterable<T> Function(E element) toElements) => $value.expand<T>(toElements);
 
   @override
   E get first => $value.first;
 
   @override
-  E firstWhere(bool Function(E element) test, {E Function()? orElse}) =>
-      $value.firstWhere(test, orElse: orElse);
+  E firstWhere(bool Function(E element) test, {E Function()? orElse}) => $value.firstWhere(test, orElse: orElse);
 
   @override
-  T fold<T>(T initialValue, T Function(T previousValue, E element) combine) =>
-      $value.fold(initialValue, combine);
+  T fold<T>(T initialValue, T Function(T previousValue, E element) combine) => $value.fold(initialValue, combine);
 
   @override
   Iterable<E> followedBy(Iterable<E> other) => $value.followedBy(other);
@@ -298,8 +283,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   E get last => $value.last;
 
   @override
-  E lastWhere(bool Function(E element) test, {E Function()? orElse}) =>
-      $value.lastWhere(test, orElse: orElse);
+  E lastWhere(bool Function(E element) test, {E Function()? orElse}) => $value.lastWhere(test, orElse: orElse);
 
   @override
   int get length => $value.length;
@@ -314,8 +298,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   E get single => $value.single;
 
   @override
-  E singleWhere(bool Function(E element) test, {E Function()? orElse}) =>
-      $value.singleWhere(test, orElse: orElse);
+  E singleWhere(bool Function(E element) test, {E Function()? orElse}) => $value.singleWhere(test, orElse: orElse);
 
   @override
   Iterable<E> skip(int count) => $value.skip(count);

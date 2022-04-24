@@ -151,10 +151,7 @@ class $num<T extends num> implements $Instance {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is $num &&
-          runtimeType == other.runtimeType &&
-          $value == other.$value;
+      identical(this, other) || other is $num && runtimeType == other.runtimeType && $value == other.$value;
 
   @override
   int get hashCode => $value.hashCode;
