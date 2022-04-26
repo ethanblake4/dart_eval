@@ -20,7 +20,7 @@ Variable compileAwaitExpression(AwaitExpression e, CompilerContext ctx) {
 
   final subject = compileExpression(e.expression, ctx);
 
-  if (!subject.type.isAssignableTo(TypeRef.stdlib(ctx, 'dart:core', 'Future'))) {
+  if (!subject.type.resolveTypeChain(ctx).isAssignableTo(ctx, TypeRef.stdlib(ctx, 'dart:core', 'Future'))) {
     throw CompileError("Cannot await something that isn't a Future");
   }
 

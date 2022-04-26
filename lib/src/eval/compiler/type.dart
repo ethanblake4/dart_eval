@@ -361,7 +361,7 @@ class TypeRef {
     ];
   }
 
-  bool isAssignableTo(TypeRef slot, {List<TypeRef>? overrideGenerics, bool forceAllowDynamic = true}) {
+  bool isAssignableTo(CompilerContext ctx, TypeRef slot, {List<TypeRef>? overrideGenerics, bool forceAllowDynamic = true}) {
     if (forceAllowDynamic && this == EvalTypes.dynamicType) {
       return true;
     }
@@ -371,7 +371,7 @@ class TypeRef {
     if (this == slot) {
       for (var i = 0; i < generics.length; i++) {
         if (slot.specifiedTypeArgs.length - 1 > i) {
-          if (!generics[i].isAssignableTo(slot.specifiedTypeArgs[i])) {
+          if (!generics[i].isAssignableTo(ctx, slot.specifiedTypeArgs[i])) {
             return false;
           }
         }
@@ -379,8 +379,8 @@ class TypeRef {
       return true;
     }
 
-    for (final type in allSupertypes) {
-      if (type.isAssignableTo(slot, overrideGenerics: generics, forceAllowDynamic: false)) {
+    for (final type in resolveTypeChain(ctx).allSupertypes) {
+      if (type.isAssignableTo(ctx, slot, overrideGenerics: generics, forceAllowDynamic: false)) {
         return true;
       }
     }

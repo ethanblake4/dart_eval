@@ -121,7 +121,7 @@ class Variable {
     var $this = this;
 
     final supportedNumIntrinsicOps = {'+', '-', '<', '>', '<=', '>='};
-    if (type.isAssignableTo(EvalTypes.numType, forceAllowDynamic: false) && supportedNumIntrinsicOps.contains(method)) {
+    if (type.isAssignableTo(ctx, EvalTypes.numType, forceAllowDynamic: false) && supportedNumIntrinsicOps.contains(method)) {
       $this = unboxIfNeeded(ctx);
       if (args.length != 1) {
         throw CompileError(

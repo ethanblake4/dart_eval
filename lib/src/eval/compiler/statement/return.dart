@@ -25,7 +25,7 @@ StatementInfo compileReturn(CompilerContext ctx, ReturnStatement s, AlwaysReturn
       final ta = expectedReturnType?.type?.specifiedTypeArgs;
       final expected = (ta?.isEmpty ?? true) ? EvalTypes.dynamicType : ta![0];
       var value = compileExpression(s.expression!, ctx);
-      if (!value.type.isAssignableTo(expected)) {
+      if (!value.type.isAssignableTo(ctx, expected)) {
         throw CompileError('Cannot return ${value.type} (expected: $expected)');
       }
       final _completer = ctx.lookupLocal('#completer');
@@ -36,7 +36,7 @@ StatementInfo compileReturn(CompilerContext ctx, ReturnStatement s, AlwaysReturn
 
     final expected = expectedReturnType?.type ?? EvalTypes.dynamicType;
     var value = compileExpression(s.expression!, ctx);
-    if (!value.type.isAssignableTo(expected)) {
+    if (!value.type.isAssignableTo(ctx, expected)) {
       throw CompileError('Cannot return ${value.type} (expected: $expected)');
     }
     if (unboxedAcrossFunctionBoundaries.contains(expected) && ctx.currentClass == null) {

@@ -17,7 +17,7 @@ Reference compileAssignmentExpressionAsReference(AssignmentExpression e, Compile
 
   if (e.operator.type == TokenType.EQ) {
     final Ltype = L.resolveType(ctx).resolveTypeChain(ctx);
-    if (!R.type.resolveTypeChain(ctx).isAssignableTo(Ltype)) {
+    if (!R.type.resolveTypeChain(ctx).isAssignableTo(ctx, Ltype)) {
       throw CompileError('Syntax error: cannot assign value of type ${R.type} to $Ltype');
     }
     L.setValue(ctx, R);

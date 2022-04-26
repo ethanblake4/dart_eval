@@ -53,7 +53,7 @@ Variable compileSetOrMapLiteral(SetOrMapLiteral l, CompilerContext ctx) {
 
 Pair<Variable, List<Pair<TypeRef, TypeRef>>> compileSetOrMapElement(CollectionElement e, Variable? setOrMap,
     CompilerContext ctx, TypeRef? specifiedKeyType, TypeRef? specifiedValueType, bool box) {
-  final isMap = setOrMap?.type.isAssignableTo(EvalTypes.mapType);
+  final isMap = setOrMap?.type.resolveTypeChain(ctx).isAssignableTo(ctx, EvalTypes.mapType);
 
   if (e is Expression) {
     throw CompileError('Sets are not currently supported');
@@ -70,13 +70,13 @@ Pair<Variable, List<Pair<TypeRef, TypeRef>>> compileSetOrMapElement(CollectionEl
 
     var _key = compileExpression(e.key, ctx);
 
-    if (specifiedKeyType != null && !_key.type.isAssignableTo(specifiedKeyType)) {
+    if (specifiedKeyType != null && !_key.type.isAssignableTo(ctx, specifiedKeyType)) {
       throw CompileError('Cannot use key of type ${_key.type} in map of type <$specifiedKeyType, $specifiedValueType>');
     }
 
     var _value = compileExpression(e.value, ctx);
 
-    if (specifiedValueType != null && !_value.type.isAssignableTo(specifiedValueType)) {
+    if (specifiedValueType != null && !_value.type.isAssignableTo(ctx, specifiedValueType)) {
       throw CompileError(
           'Cannot use value of type ${_value.type} in map of type <$specifiedKeyType, $specifiedValueType>');
     }

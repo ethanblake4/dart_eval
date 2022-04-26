@@ -65,7 +65,7 @@ class IdentifierReference implements Reference {
     if (object != null) {
       object = object!.boxIfNeeded(ctx);
       final fieldType = TypeRef.lookupFieldType(ctx, object!.type, name) ?? EvalTypes.dynamicType;
-      if (!value.type.resolveTypeChain(ctx).isAssignableTo(fieldType)) {
+      if (!value.type.resolveTypeChain(ctx).isAssignableTo(ctx, fieldType)) {
         throw CompileError('Cannot assign value of type ${value.type} to field "$name" of type $fieldType');
       }
       final op = SetObjectProperty.make(object!.scopeFrameOffset, name, value.boxIfNeeded(ctx).scopeFrameOffset);
@@ -90,7 +90,7 @@ class IdentifierReference implements Reference {
       if (instanceDeclaration != null) {
         final $type = instanceDeclaration.first;
         final fieldType = TypeRef.lookupFieldType(ctx, $type, name) ?? EvalTypes.dynamicType;
-        if (!value.type.resolveTypeChain(ctx).isAssignableTo(fieldType)) {
+        if (!value.type.resolveTypeChain(ctx).isAssignableTo(ctx, fieldType)) {
           throw CompileError('Cannot assign value of type ${value.type} to field "$name" of type $fieldType');
         }
         final op = SetObjectProperty.make(0, name, value.boxIfNeeded(ctx).scopeFrameOffset);
@@ -144,7 +144,8 @@ class IdentifierReference implements Reference {
       }
     }
 
-    final declaration = ctx.visibleDeclarations[ctx.library]![name]!;
+    final declaration =
+        ctx.visibleDeclarations[ctx.library]![name] ?? (throw CompileError('Could not find declaration "$name"'));
     final _decl = declaration.declaration!;
 
     if (_decl.isBridge) {
@@ -304,7 +305,7 @@ class IndexedReference implements Reference {
 
   @override
   TypeRef resolveType(CompilerContext ctx) {
-    if (_variable.type.isAssignableTo(EvalTypes.listType)) {
+    if (_variable.type.isAssignableTo(ctx, EvalTypes.listType)) {
       return _variable.type.specifiedTypeArgs[0];
     }
     return getValue(ctx).type;
@@ -315,8 +316,8 @@ class IndexedReference implements Reference {
     _variable = _variable.updated(ctx);
     _index = _index.updated(ctx);
 
-    if (_variable.type.isAssignableTo(EvalTypes.listType)) {
-      if (!_index.type.isAssignableTo(EvalTypes.intType)) {
+    if (_variable.type.isAssignableTo(ctx, EvalTypes.listType)) {
+      if (!_index.type.isAssignableTo(ctx, EvalTypes.intType)) {
         throw CompileError('TypeError: Cannot use variable of type ${_index.type} as list index');
       }
 
@@ -326,8 +327,8 @@ class IndexedReference implements Reference {
       return Variable.alloc(ctx, _variable.type.specifiedTypeArgs[0]);
     }
 
-    if (_variable.type.isAssignableTo(EvalTypes.mapType)) {
-      if (!_index.type.isAssignableTo(_variable.type.specifiedTypeArgs[0])) {
+    if (_variable.type.isAssignableTo(ctx, EvalTypes.mapType)) {
+      if (!_index.type.isAssignableTo(ctx, _variable.type.specifiedTypeArgs[0])) {
         throw CompileError('TypeError: Cannot use variable of type ${_index.type} as index to map of type '
             '<${_variable.type.specifiedTypeArgs[0]}, ${_variable.type.specifiedTypeArgs[1]}>');
       }
@@ -349,8 +350,8 @@ class IndexedReference implements Reference {
     _variable = _variable.updated(ctx);
     _index = _index.updated(ctx);
 
-    if (_variable.type.isAssignableTo(EvalTypes.listType)) {
-      if (!_index.type.isAssignableTo(EvalTypes.intType)) {
+    if (_variable.type.isAssignableTo(ctx, EvalTypes.listType)) {
+      if (!_index.type.isAssignableTo(ctx, EvalTypes.intType)) {
         throw CompileError('TypeError: Cannot use variable of type ${_index.type} as list index');
       }
 

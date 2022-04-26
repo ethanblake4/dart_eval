@@ -93,7 +93,7 @@ List<TypeRef> compileListElement(CollectionElement e, Variable list, CompilerCon
   final listType = list.type.specifiedTypeArgs[0];
   if (e is Expression) {
     var _result = compileExpression(e, ctx);
-    if (!_result.type.isAssignableTo(listType)) {
+    if (!_result.type.resolveTypeChain(ctx).isAssignableTo(ctx, listType)) {
       throw CompileError('Cannot use expression of type ${_result.type} in list of type $listType');
     }
     if (box) {

@@ -47,6 +47,8 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx, NamedComp
     stInfo = compileBlock(
         b.block, AlwaysReturnType.fromAnnotation(ctx, ctx.library, d.returnType, EvalTypes.dynamicType), ctx,
         name: d.name.name + '()');
+  } else if (b is EmptyFunctionBody) {
+    return -1;
   } else {
     throw CompileError('Unknown function body type ${b.runtimeType}');
   }

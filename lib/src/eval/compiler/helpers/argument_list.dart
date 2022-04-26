@@ -60,7 +60,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext 
         _arg = _arg.unboxIfNeeded(ctx);
       }
 
-      if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(paramType)) {
+      if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
         throw CompileError(
             'Cannot assign argument of type ${_arg.type} to parameter "${param.identifier}" of type $paramType');
       }
@@ -97,7 +97,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext 
       } else if (unboxedAcrossFunctionBoundaries.contains(_arg.type)) {
         _arg = _arg.unboxIfNeeded(ctx);
       }
-      if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(paramType)) {
+      if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
         throw CompileError(
             'Cannot assign argument of type ${_arg.type} to parameter "${param.identifier}" of type $paramType');
       }
@@ -144,7 +144,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
 
       var _arg = compileExpression(arg, ctx);
       _arg = _arg.boxIfNeeded(ctx);
-      if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(paramType)) {
+      if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
         throw CompileError('Cannot assign argument of type ${_arg.type} to parameter of type $paramType');
       }
       _args.add(_arg);
@@ -164,7 +164,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
     var paramType = TypeRef.fromBridgeAnnotation(ctx, param.typeAnnotation);
     if (namedExpr.containsKey(name)) {
       final _arg = compileExpression(namedExpr[name]!, ctx).boxIfNeeded(ctx);
-      if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(paramType)) {
+      if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
         throw CompileError('Cannot assign argument of type ${_arg.type} to parameter of type $paramType');
       }
       _push.add(_arg);

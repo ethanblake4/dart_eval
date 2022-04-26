@@ -26,6 +26,10 @@ void compileVariableDeclarationList(VariableDeclarationList l, CompilerContext c
       if (ctx.locals.last.containsKey(li.name.name)) {
         throw CompileError('Cannot declare variable ${li.name.name} multiple times in the same scope');
       }
+      if (type != null && !res.type.resolveTypeChain(ctx).isAssignableTo(ctx, type)) {
+        throw CompileError('Type mismatch: variable "${li.name.name}" is specified as type $type, but is initialized '
+            'to an incompatible value of type ${res.type}');
+      }
       if (res.name != null) {
         var _v = Variable.alloc(ctx, type ?? res.type);
         ctx.pushOp(PushNull.make(), PushNull.LEN);
