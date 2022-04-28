@@ -22,7 +22,7 @@ class Compiler {
   var _bridgeLibraryIdx = 0;
   var _bridgeStaticFunctionIdx = 0;
   final _bridgeLibraryMappings = <String, int>{};
-  final _bridgeClasses = <int, Map<String, BridgeClassDeclaration>>{};
+  final _bridgeClasses = <int, Map<String, BridgeClassDef>>{};
   final _bridgeFunctions = <int, Map<String, BridgeFunctionDeclaration>>{};
   final ctx = CompilerContext(0);
 
@@ -32,7 +32,7 @@ class Compiler {
     }
     final _libraryIdx = _bridgeLibraryMappings[libraryUri]!;
     if (!_bridgeClasses.containsKey(_libraryIdx)) {
-      _bridgeClasses[_libraryIdx] = <String, BridgeClassDeclaration>{};
+      _bridgeClasses[_libraryIdx] = <String, BridgeClassDef>{};
     }
     if (!_bridgeFunctions.containsKey(_libraryIdx)) {
       _bridgeFunctions[_libraryIdx] = <String, BridgeFunctionDeclaration>{};
@@ -41,19 +41,19 @@ class Compiler {
   }
 
   // Manually define a (unresolved) bridge class
-  void defineBridgeClass(BridgeClassDeclaration classDef) {
+  void defineBridgeClass(BridgeClassDef classDef) {
     final type = classDef.type;
-    final unresolved = type.unresolved;
+    final spec = type.type.spec;
 
-    if (unresolved != null) {
-      final lib = _libraryIndex(unresolved.library);
-      _bridgeClasses[lib]![unresolved.name] = classDef;
+    if (spec != null) {
+      final lib = _libraryIndex(spec.library);
+      _bridgeClasses[lib]![spec.name] = classDef;
 
       classDef.constructors.forEach((name, constructor) {
         if (!ctx.bridgeStaticFunctionIndices.containsKey(lib)) {
           ctx.bridgeStaticFunctionIndices[lib] = <String, int>{};
         }
-        ctx.bridgeStaticFunctionIndices[lib]!['${unresolved.name}.$name'] = _bridgeStaticFunctionIdx++;
+        ctx.bridgeStaticFunctionIndices[lib]!['${spec.name}.$name'] = _bridgeStaticFunctionIdx++;
       });
 
       classDef.methods.forEach((name, method) {
@@ -61,7 +61,7 @@ class Compiler {
         if (!ctx.bridgeStaticFunctionIndices.containsKey(lib)) {
           ctx.bridgeStaticFunctionIndices[lib] = <String, int>{};
         }
-        ctx.bridgeStaticFunctionIndices[lib]!['${unresolved.name}.$name'] = _bridgeStaticFunctionIdx++;
+        ctx.bridgeStaticFunctionIndices[lib]!['${spec.name}.$name'] = _bridgeStaticFunctionIdx++;
       });
 
       return;
@@ -79,7 +79,7 @@ class Compiler {
     ctx.bridgeStaticFunctionIndices[lib]![function.name] = _bridgeStaticFunctionIdx++;
   }
 
-  void defineBridgeClasses(List<BridgeClassDeclaration> classDefs) {
+  void defineBridgeClasses(List<BridgeClassDef> classDefs) {
     for (final classDef in classDefs) {
       defineBridgeClass(classDef);
     }
@@ -91,7 +91,7 @@ class Compiler {
     configureCoreForCompile(this);
     configureAsyncForCompile(this);
 
-    final typeResolvedBridgeClasses = <int, Map<String, BridgeClassDeclaration>>{};
+    final typeResolvedBridgeClasses = <int, Map<String, BridgeClassDef>>{};
     final packageMap = <String, Map<String, int>>{};
     final indexMap = <int, List<String>>{};
     final partMap = <int, List<String>>{};
@@ -130,15 +130,16 @@ class Compiler {
       final resolved = {
         for (final _cls in _classes.entries)
           _cls.key: _cls.value.copyWith(
-              type: BridgeTypeReference.type(
-                  ctx.typeRefIndexMap[TypeRef.cache(ctx, _blm.value, _cls.key, fileRef: _blm.value)]!,
-                  _cls.value.type.typeArgs))
+              type: _cls.value.type.copyWith(
+                  type: BridgeTypeRef.type(
+                      ctx.typeRefIndexMap[TypeRef.cache(ctx, _blm.value, _cls.key, fileRef: _blm.value)]!,
+                      _cls.value.type.type.typeArgs)))
       };
 
       typeResolvedBridgeClasses[_blm.value] = resolved;
 
-      final types =
-          Map.fromEntries(resolved.entries.map((e) => MapEntry(e.key, ctx.runtimeTypeList[e.value.type.cacheId!])));
+      final types = Map.fromEntries(
+          resolved.entries.map((e) => MapEntry(e.key, ctx.runtimeTypeList[e.value.type.type.cacheId!])));
 
       ctx.visibleTypes[_blm.value] = {...coreDeclarations, ...types};
 

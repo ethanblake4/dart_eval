@@ -89,26 +89,21 @@ class $TimestampedTime implements TimestampedTime, $Instance {
   $TimestampedTime.wrap(this.$value) : _superclass = $Object($value);
 
   /// Define the compile-time type descriptor as an unresolved type
-  static const $type = BridgeTypeReference.unresolved(
-      BridgeUnresolvedTypeReference('package:example/bridge.dart', 'TimestampedTime'), []);
+  static const $type = BridgeTypeRef.spec(BridgeTypeSpec('package:example/bridge.dart', 'TimestampedTime'));
 
   /// Define the compile-time class declaration and map out all the fields and methods for the compiler.
-  static const $declaration = BridgeClassDeclaration($type, isAbstract: false, constructors: {
+  static const $declaration = BridgeClassDef(BridgeClassType($type), constructors: {
     // Define the default constructor with an empty string
-    '': BridgeConstructorDeclaration(
-        false,
-        BridgeFunctionDescriptor(BridgeTypeAnnotation($type, false), {}, [
-          // Parameters using built-in types can use [RuntimeTypes] for the most common types. Others, like
-          // Future, may need to use an unresolved type reference for 'dart:core'.
-          BridgeParameter(
-              'utcTime', BridgeTypeAnnotation(BridgeTypeReference.type(RuntimeTypes.intType, []), false), false)
-        ], {
-          'timezoneOffset': BridgeParameter(
-              'timezoneOffset', BridgeTypeAnnotation(BridgeTypeReference.type(RuntimeTypes.intType, []), false), true)
-        }))
+    '': BridgeConstructorDef(BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [
+      // Parameters using built-in types can use [RuntimeTypes] for the most common types. Others, like
+      // Future, may need to use a type spec for 'dart:core'.
+      BridgeParameter('utcTime', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType)), false)
+    ], namedParams: [
+      BridgeParameter('timezoneOffset', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType)), true)
+    ]))
   }, methods: {}, getters: {}, setters: {}, fields: {
-    'utcTime': BridgeFieldDeclaration(false, false, BridgeTypeReference.type(RuntimeTypes.intType, [])),
-    'timezoneOffset': BridgeFieldDeclaration(false, false, BridgeTypeReference.type(RuntimeTypes.intType, []))
+    'utcTime': BridgeFieldDef(false, false, BridgeTypeRef.type(RuntimeTypes.intType)),
+    'timezoneOffset': BridgeFieldDef(false, false, BridgeTypeRef.type(RuntimeTypes.intType))
   });
 
   /// Define static [EvalCallableFunc] functions for all static methods and constructors. This is for the
@@ -174,21 +169,18 @@ class $TimestampedTime implements TimestampedTime, $Instance {
 /// Because [WorldTimeTracker] is abstract, we can implement it here. If it were a concrete class you would instead
 /// extend it.
 class $WorldTimeTracker$bridge with $Bridge<WorldTimeTracker> implements WorldTimeTracker {
-  static const _$type = BridgeTypeReference.unresolved(
-      BridgeUnresolvedTypeReference('package:example/bridge.dart', 'WorldTimeTracker'), []);
+  static const _$type = BridgeTypeRef.spec(BridgeTypeSpec('package:example/bridge.dart', 'WorldTimeTracker'));
 
   /// Define the compile-time class declaration and map out all the fields and methods for the compiler.
-  static const $declaration = BridgeClassDeclaration(_$type, isAbstract: true, constructors: {
+  static const $declaration = BridgeClassDef(BridgeClassType(_$type, isAbstract: true), constructors: {
     // Even though this class is abstract, we currently need to define the default constructor anyway. This
     // may change in the future.
-    '': BridgeConstructorDeclaration(false, BridgeFunctionDescriptor(BridgeTypeAnnotation(_$type, false), {}, [], {}))
+    '': BridgeConstructorDef(BridgeFunctionDef(returns: BridgeTypeAnnotation(_$type), params: [], namedParams: []))
   }, methods: {
-    'getTimeFor': BridgeMethodDeclaration(
-        false,
-        BridgeFunctionDescriptor(BridgeTypeAnnotation($TimestampedTime.$type, false), {}, [
-          BridgeParameter(
-              'country', BridgeTypeAnnotation(BridgeTypeReference.type(RuntimeTypes.stringType, []), false), false)
-        ], {}))
+    'getTimeFor': BridgeMethodDef(BridgeFunctionDef(
+        returns: BridgeTypeAnnotation($TimestampedTime.$type),
+        params: [BridgeParameter('country', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.stringType)), false)],
+        namedParams: []))
   }, getters: {}, setters: {}, fields: {});
 
   /// Define static [EvalCallableFunc] functions for all static methods and constructors. This is for the

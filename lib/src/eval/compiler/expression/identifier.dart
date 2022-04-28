@@ -22,10 +22,10 @@ Reference compileIdentifierAsReference(Identifier id, CompilerContext ctx) {
       if (!ctx.instanceDeclarationsMap[L.type.file]!.containsKey(L.type.name)) {
         final idn = id.identifier.name;
         final tl = ctx.topLevelDeclarationsMap[L.type.file]![L.type.name]!;
-        if (!tl.isBridge || !(tl.bridge is BridgeClassDeclaration)) {
+        if (!tl.isBridge || !(tl.bridge is BridgeClassDef)) {
           throw UnimplementedError('Trying to access ${id.prefix}.$idn on ${L.type}, which is not a class');
         }
-        final cls = tl.bridge as BridgeClassDeclaration;
+        final cls = tl.bridge as BridgeClassDef;
         if (!cls.fields.containsKey(idn) &&
             !cls.methods.containsKey(idn) &&
             !cls.getters.containsKey(idn) &&

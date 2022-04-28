@@ -8,9 +8,9 @@ part 'type.g.dart';
 
 @JsonSerializable()
 class BridgeTypeAnnotation {
-  const BridgeTypeAnnotation(this.type, this.nullable);
+  const BridgeTypeAnnotation(this.type, {this.nullable = false});
 
-  final BridgeTypeReference type;
+  final BridgeTypeRef type;
   final bool nullable;
 
   /// Connect the generated [_$BridgeTypeAnnotationFromJson] function to the `fromJson`
@@ -21,131 +21,106 @@ class BridgeTypeAnnotation {
   Map<String, dynamic> toJson() => _$BridgeTypeAnnotationToJson(this);
 }
 
-class BridgeClassTypeDeclaration {
-  static const int typeBridge = 0;
-  static const int typeBuiltin = 1;
-
-  const BridgeClassTypeDeclaration(
-    this.library,
-    this.name, {
-    this.$extends = const BridgeTypeReference.type(RuntimeTypes.objectType, []),
-    this.$implements = const <BridgeTypeReference>[],
-    this.$with = const <BridgeTypeReference>[],
+@JsonSerializable()
+class BridgeClassType {
+  const BridgeClassType(
+    this.type, {
+    this.$extends = const BridgeTypeRef.type(RuntimeTypes.objectType, []),
+    this.$implements = const <BridgeTypeRef>[],
+    this.$with = const <BridgeTypeRef>[],
     this.isAbstract = false,
     this.generics = const <String, BridgeGenericParam>{},
-  }) : builtin = null;
+  });
 
-  const BridgeClassTypeDeclaration.builtin(this.builtin)
-      : library = null,
-        name = null,
-        isAbstract = false,
-        $extends = const BridgeTypeReference.type(RuntimeTypes.objectType, []),
-        generics = const <String, BridgeGenericParam>{},
-        $implements = const <BridgeTypeReference>[],
-        $with = const <BridgeTypeReference>[];
-
+  final BridgeTypeRef type;
   final bool isAbstract;
-  final TypeRef? builtin;
-  final String? library;
-  final String? name;
-  final BridgeTypeReference? $extends;
-  final List<BridgeTypeReference> $implements;
-  final List<BridgeTypeReference> $with;
+  final BridgeTypeRef? $extends;
+  final List<BridgeTypeRef> $implements;
+  final List<BridgeTypeRef> $with;
   final Map<String, BridgeGenericParam> generics;
+
+  /// Connect the generated [_$BridgeTypeAnnotationFromJson] function to the `fromJson`
+  /// factory.
+  factory BridgeClassType.fromJson(Map<String, dynamic> json) => _$BridgeClassTypeFromJson(json);
+
+  /// Connect the generated [_$BridgeTypeAnnotationToJson] function to the `toJson` method.
+  Map<String, dynamic> toJson() => _$BridgeClassTypeToJson(this);
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is BridgeClassTypeDeclaration &&
-          runtimeType == other.runtimeType &&
-          builtin == other.builtin &&
-          library == other.library &&
-          name == other.name;
+      identical(this, other) || other is BridgeClassType && runtimeType == other.runtimeType && type == other.type;
 
   @override
-  int get hashCode => builtin.hashCode ^ library.hashCode ^ name.hashCode;
+  int get hashCode => type.hashCode;
 
-  Map<String, dynamic> toJson() {
-    return {
-      'type': builtin == null ? typeBridge : typeBuiltin,
-      'extends': $extends?.toJson(),
-      'implements': [for (final $i in $implements) $i.toJson()],
-      'with': [for (final $w in $implements) $w.toJson()],
-      'generics': generics.map((key, value) => MapEntry(key, value.toJson()))
-    };
-  }
+  BridgeClassType copyWith({BridgeTypeRef? type}) => BridgeClassType(type ?? this.type,
+      isAbstract: isAbstract, $extends: $extends, $implements: $implements, $with: $with, generics: generics);
 }
 
-class BridgeTypeReference {
-  const BridgeTypeReference.unresolved(this.unresolved, this.typeArgs)
+class BridgeTypeRef {
+  const BridgeTypeRef.spec(this.spec, [this.typeArgs = const []])
       : cacheId = null,
         gft = null,
         ref = null;
 
-  const BridgeTypeReference.ref(this.ref, this.typeArgs)
+  const BridgeTypeRef.ref(this.ref, [this.typeArgs = const []])
       : cacheId = null,
         gft = null,
-        unresolved = null;
+        spec = null;
 
-  const BridgeTypeReference.type(this.cacheId, this.typeArgs)
+  const BridgeTypeRef.type(this.cacheId, [this.typeArgs = const []])
       : ref = null,
         gft = null,
-        unresolved = null;
+        spec = null;
 
-  const BridgeTypeReference.genericFunction(this.gft)
+  const BridgeTypeRef.genericFunction(this.gft)
       : typeArgs = const [],
         ref = null,
         cacheId = null,
-        unresolved = null;
+        spec = null;
 
-  factory BridgeTypeReference.fromJson(Map<String, dynamic> json) {
+  factory BridgeTypeRef.fromJson(Map<String, dynamic> json) {
     final id = json['id'];
-    final ta = [for (final arg in json['typeArgs']) BridgeTypeReference.fromJson(arg)];
+    final ta = [for (final arg in json['typeArgs']) BridgeTypeRef.fromJson(arg)];
     if (id != null) {
-      return BridgeTypeReference.type(id, ta);
+      return BridgeTypeRef.type(id, ta);
     }
     final gft = json['gft'];
     if (gft != null) {
-      return BridgeTypeReference.genericFunction(gft);
+      return BridgeTypeRef.genericFunction(gft);
     }
     final unresolved = json['unresolved'];
     if (unresolved != null) {
-      return BridgeTypeReference.unresolved(BridgeUnresolvedTypeReference.fromJson(json['unresolved']), ta);
+      return BridgeTypeRef.spec(BridgeTypeSpec.fromJson(json['unresolved']), ta);
     }
-    return BridgeTypeReference.ref(json['ref'], ta);
+    return BridgeTypeRef.ref(json['ref'], ta);
   }
 
   final int? cacheId;
   final String? ref;
-  final BridgeFunctionDescriptor? gft;
-  final BridgeUnresolvedTypeReference? unresolved;
-  final List<BridgeTypeReference> typeArgs;
+  final BridgeFunctionDef? gft;
+  final BridgeTypeSpec? spec;
+  final List<BridgeTypeRef> typeArgs;
 
   Map<String, dynamic> toJson() => {
-        if (cacheId != null)
-          'id': cacheId!
-        else if (unresolved != null)
-          'unresolved': unresolved!.toJson()
-        else
-          'ref': ref!,
+        if (cacheId != null) 'id': cacheId! else if (spec != null) 'unresolved': spec!.toJson() else 'ref': ref!,
         'typeArgs': [for (final t in typeArgs) t.toJson()]
       };
 }
 
 @JsonSerializable()
-class BridgeUnresolvedTypeReference {
-  const BridgeUnresolvedTypeReference(this.library, this.name);
+class BridgeTypeSpec {
+  const BridgeTypeSpec(this.library, this.name);
 
   final String library;
   final String name;
 
   /// Connect the generated [_$BridgeUnresolvedTypeReferenceFromJson] function to the `fromJson`
   /// factory.
-  factory BridgeUnresolvedTypeReference.fromJson(Map<String, dynamic> json) =>
-      _$BridgeUnresolvedTypeReferenceFromJson(json);
+  factory BridgeTypeSpec.fromJson(Map<String, dynamic> json) => _$BridgeTypeSpecFromJson(json);
 
   /// Connect the generated [_$BridgeUnresolvedTypeReferenceToJson] function to the `toJson` method.
-  Map<String, dynamic> toJson() => _$BridgeUnresolvedTypeReferenceToJson(this);
+  Map<String, dynamic> toJson() => _$BridgeTypeSpecToJson(this);
 }
 
 class BridgeGenericParam {
@@ -155,7 +130,7 @@ class BridgeGenericParam {
     return BridgeGenericParam($extends: json['extends']);
   }
 
-  final BridgeTypeReference? $extends;
+  final BridgeTypeRef? $extends;
 
   Map<String, dynamic> toJson() => {if ($extends != null) 'extends': $extends!.toJson()};
 }

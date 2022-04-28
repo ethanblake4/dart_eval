@@ -5,10 +5,10 @@ void configurePrintForCompile(Compiler compiler) {
   compiler.defineBridgeTopLevelFunction(BridgeFunctionDeclaration(
       'dart:core',
       'print',
-      BridgeFunctionDescriptor(BridgeTypeAnnotation(BridgeTypeReference.type(RuntimeTypes.voidType, []), false), {}, [
-        BridgeParameter(
-            'object', BridgeTypeAnnotation(BridgeTypeReference.type(RuntimeTypes.objectType, []), true), false)
-      ], {})));
+      BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.voidType)),
+          params: [BridgeParameter('object', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.objectType)), false)],
+          namedParams: [])));
 }
 
 void configurePrintForRuntime(Runtime runtime) {

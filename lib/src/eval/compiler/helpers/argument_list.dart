@@ -120,7 +120,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext 
 }
 
 Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
-    CompilerContext ctx, ArgumentList argumentList, BridgeFunctionDescriptor function,
+    CompilerContext ctx, ArgumentList argumentList, BridgeFunctionDef function,
     {List<Variable> before = const []}) {
   final _args = <Variable>[];
   final _push = <Variable>[];
@@ -130,7 +130,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
   var i = 0;
   Variable? $null;
 
-  for (final param in function.positionalParams) {
+  for (final param in function.params) {
     final arg = argumentList.arguments[i];
     if (arg is NamedExpression) {
       if (!param.optional) {
@@ -140,7 +140,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
         _push.add($null);
       }
     } else {
-      var paramType = TypeRef.fromBridgeAnnotation(ctx, param.typeAnnotation);
+      var paramType = TypeRef.fromBridgeAnnotation(ctx, param.type);
 
       var _arg = compileExpression(arg, ctx);
       _arg = _arg.boxIfNeeded(ctx);
@@ -160,20 +160,20 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
     }
   }
 
-  function.namedParams.forEach((name, param) {
-    var paramType = TypeRef.fromBridgeAnnotation(ctx, param.typeAnnotation);
-    if (namedExpr.containsKey(name)) {
-      final _arg = compileExpression(namedExpr[name]!, ctx).boxIfNeeded(ctx);
+  for (final param in function.namedParams) {
+    var paramType = TypeRef.fromBridgeAnnotation(ctx, param.type);
+    if (namedExpr.containsKey(param.name)) {
+      final _arg = compileExpression(namedExpr[param.name]!, ctx).boxIfNeeded(ctx);
       if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
         throw CompileError('Cannot assign argument of type ${_arg.type} to parameter of type $paramType');
       }
       _push.add(_arg);
-      _namedArgs[name] = _arg;
+      _namedArgs[param.name] = _arg;
     } else {
       $null ??= BuiltinValue().push(ctx);
-      _push.add($null!);
+      _push.add($null);
     }
-  });
+  }
 
   for (final _arg in [...before, ..._push]) {
     final argOp = PushArg.make(_arg.scopeFrameOffset);

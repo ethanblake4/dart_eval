@@ -15,20 +15,17 @@ class $Future<T> implements Future<T>, $Instance {
     runtime.registerBridgeFunc('dart:core', 'Future.delayed', const _$Future_delayed());
   }
 
-  static const _$type = BridgeTypeReference.unresolved(BridgeUnresolvedTypeReference('dart:core', 'Future'), []);
+  static const _$type = BridgeTypeRef.spec(BridgeTypeSpec('dart:core', 'Future'));
 
-  static const $declaration = BridgeClassDeclaration(_$type, isAbstract: true, constructors: {
-    'delayed': BridgeConstructorDeclaration(
-        false,
-        BridgeFunctionDescriptor(BridgeTypeAnnotation(_$type, false), {},
-            [BridgeParameter('duration', BridgeTypeAnnotation($Duration.$type, false), false)], {}))
+  static const $declaration = BridgeClassDef(BridgeClassType(_$type, isAbstract: true), constructors: {
+    'delayed': BridgeConstructorDef(BridgeFunctionDef(
+        returns: BridgeTypeAnnotation(_$type),
+        params: [BridgeParameter('duration', BridgeTypeAnnotation($Duration.$type), false)],
+        namedParams: []))
   }, methods: {
-    'then': BridgeMethodDeclaration(
-        false,
-        BridgeFunctionDescriptor(BridgeTypeAnnotation(_$type, false), {}, [
-          BridgeParameter(
-              'onValue', BridgeTypeAnnotation(BridgeTypeReference.type(RuntimeTypes.functionType, []), false), false)
-        ], {}))
+    'then': BridgeMethodDef(BridgeFunctionDef(returns: BridgeTypeAnnotation(_$type), params: [
+      BridgeParameter('onValue', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.functionType)), false)
+    ], namedParams: []))
   }, getters: {}, setters: {}, fields: {});
 
   $Future.wrap(this.$value, this.$typeMapper) : _superclass = $Object($value);

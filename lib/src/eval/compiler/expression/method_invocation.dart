@@ -48,9 +48,9 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
 
     if (_dec.isBridge) {
       final br = _dec.bridge!;
-      final fd = br is BridgeMethodDeclaration
+      final fd = br is BridgeMethodDef
           ? br.functionDescriptor
-          : (br as BridgeConstructorDeclaration).functionDescriptor;
+          : (br as BridgeConstructorDef).functionDescriptor;
       argsPair = compileArgumentListWithBridge(ctx, e.argumentList, fd, before: []);
     } else {
       final dec = _dec.declaration!;
@@ -112,7 +112,7 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
 
     if (_dec.isBridge) {
       final bridge = _dec.bridge;
-      final fnDescriptor = bridge is BridgeClassDeclaration
+      final fnDescriptor = bridge is BridgeClassDef
           ? bridge.constructors['']!.functionDescriptor
           : (bridge as BridgeFunctionDeclaration).function;
 
@@ -144,8 +144,8 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
 
     if (_dec.isBridge) {
       final bridge = _dec.bridge!;
-      if (bridge is BridgeClassDeclaration) {
-        final type = TypeRef.fromBridgeTypeReference(ctx, bridge.type);
+      if (bridge is BridgeClassDef) {
+        final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type.type);
 
         final $null = BuiltinValue().push(ctx);
         final op = BridgeInstantiate.make(
@@ -180,12 +180,12 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
   return v;
 }
 
-DeclarationOrBridge<MethodDeclaration, BridgeMethodDeclaration> resolveInstanceMethod(
+DeclarationOrBridge<MethodDeclaration, BridgeMethodDef> resolveInstanceMethod(
     CompilerContext ctx, TypeRef instanceType, String methodName) {
   final _dec = ctx.topLevelDeclarationsMap[instanceType.file]![instanceType.name]!;
   if (_dec.isBridge) {
     // Bridge
-    final bridge = _dec.bridge! as BridgeClassDeclaration;
+    final bridge = _dec.bridge! as BridgeClassDef;
     return DeclarationOrBridge(bridge: bridge.methods[methodName]!);
   }
 
@@ -210,7 +210,7 @@ DeclarationOrBridge<MethodDeclaration, BridgeDeclaration> resolveStaticMethod(
     if (method.declaration != null) {
       return DeclarationOrBridge(declaration: method.declaration! as MethodDeclaration);
     } else {
-      return DeclarationOrBridge(bridge: method.bridge! as BridgeMethodDeclaration);
+      return DeclarationOrBridge(bridge: method.bridge! as BridgeMethodDef);
     }
   }
 
@@ -218,7 +218,7 @@ DeclarationOrBridge<MethodDeclaration, BridgeDeclaration> resolveStaticMethod(
 
   if (cls?.isBridge ?? false) {
     final bridge = cls!.bridge!;
-    if (bridge is BridgeClassDeclaration) {
+    if (bridge is BridgeClassDef) {
       return DeclarationOrBridge(bridge: bridge.constructors[methodName]!);
     }
   }

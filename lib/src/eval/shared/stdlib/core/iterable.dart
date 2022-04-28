@@ -6,22 +6,13 @@ class $Iterable$bridge<E> with $Bridge<Iterable<E>> implements Iterable<E> {
   @override
   Iterable<E> get $reified => ($value as $Iterable$bridge).map((e) => e.$reified);
 
-  static const $type = BridgeClassTypeDeclaration('dart:core', 'Iterable',
-      $extends: BridgeTypeReference.type(RuntimeTypes.objectType, []), isAbstract: true);
+  static const $type = BridgeTypeRef.spec(BridgeTypeSpec('dart:core', 'Iterable'));
 
-  static const $classDef = BridgeClassDeclaration(
-      BridgeTypeReference.unresolved(BridgeUnresolvedTypeReference('dart:core', 'Iterable'), []),
-      isAbstract: true,
-      constructors: {},
-      methods: {},
-      getters: {
-        'length': BridgeMethodDeclaration(
-            false,
-            BridgeFunctionDescriptor(
-                BridgeTypeAnnotation(BridgeTypeReference.type(RuntimeTypes.intType, []), false), {}, [], {}))
-      },
-      setters: {},
-      fields: {});
+  static const $classDef =
+      BridgeClassDef(BridgeClassType($type, isAbstract: true), constructors: {}, methods: {}, getters: {
+    'length': BridgeMethodDef(BridgeFunctionDef(
+        returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType)), params: [], namedParams: []))
+  }, setters: {}, fields: {});
 
   static const runtime$fields = <String, $BridgeField>{
     'length': $BridgeField(_length, null),

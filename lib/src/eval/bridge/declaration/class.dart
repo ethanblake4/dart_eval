@@ -6,82 +6,74 @@ import 'package:json_annotation/json_annotation.dart';
 part 'class.g.dart';
 
 @JsonSerializable()
-class BridgeClassDeclaration implements BridgeDeclaration {
-  const BridgeClassDeclaration(this.type,
-      {required this.isAbstract,
-      required this.constructors,
+class BridgeClassDef implements BridgeDeclaration {
+  const BridgeClassDef(this.type,
+      {required this.constructors,
       required this.methods,
       required this.getters,
       required this.setters,
       required this.fields});
 
-  final bool isAbstract;
-  final BridgeTypeReference type;
-  final Map<String, BridgeConstructorDeclaration> constructors;
-  final Map<String, BridgeMethodDeclaration> methods;
-  final Map<String, BridgeMethodDeclaration> getters;
-  final Map<String, BridgeMethodDeclaration> setters;
-  final Map<String, BridgeFieldDeclaration> fields;
+  final BridgeClassType type;
+  final Map<String, BridgeConstructorDef> constructors;
+  final Map<String, BridgeMethodDef> methods;
+  final Map<String, BridgeMethodDef> getters;
+  final Map<String, BridgeMethodDef> setters;
+  final Map<String, BridgeFieldDef> fields;
 
   /// Connect the generated [_$BridgeClassDeclarationFromJson] function to the `fromJson`
   /// factory.
-  factory BridgeClassDeclaration.fromJson(Map<String, dynamic> json) => _$BridgeClassDeclarationFromJson(json);
+  factory BridgeClassDef.fromJson(Map<String, dynamic> json) => _$BridgeClassDefFromJson(json);
 
   /// Connect the generated [_$BridgeClassDeclarationToJson] function to the `toJson` method.
-  Map<String, dynamic> toJson() => _$BridgeClassDeclarationToJson(this);
+  Map<String, dynamic> toJson() => _$BridgeClassDefToJson(this);
 
-  BridgeClassDeclaration copyWith({BridgeTypeReference? type}) => BridgeClassDeclaration(type ?? this.type,
-      isAbstract: isAbstract,
-      constructors: constructors,
-      methods: methods,
-      getters: getters,
-      setters: setters,
-      fields: fields);
+  BridgeClassDef copyWith({BridgeClassType? type}) => BridgeClassDef(type ?? this.type,
+      constructors: constructors, methods: methods, getters: getters, setters: setters, fields: fields);
 }
 
 @JsonSerializable()
-class BridgeMethodDeclaration implements BridgeDeclaration {
-  const BridgeMethodDeclaration(this.isStatic, this.functionDescriptor);
+class BridgeMethodDef implements BridgeDeclaration {
+  const BridgeMethodDef(this.functionDescriptor, {this.isStatic = false});
 
+  final BridgeFunctionDef functionDescriptor;
   final bool isStatic;
-  final BridgeFunctionDescriptor functionDescriptor;
 
   /// Connect the generated [_$BridgeMethodDeclarationFromJson] function to the `fromJson`
   /// factory.
-  factory BridgeMethodDeclaration.fromJson(Map<String, dynamic> json) => _$BridgeMethodDeclarationFromJson(json);
+  factory BridgeMethodDef.fromJson(Map<String, dynamic> json) => _$BridgeMethodDefFromJson(json);
 
   /// Connect the generated [_$BridgeMethodDeclarationToJson] function to the `toJson` method.
-  Map<String, dynamic> toJson() => _$BridgeMethodDeclarationToJson(this);
+  Map<String, dynamic> toJson() => _$BridgeMethodDefToJson(this);
 }
 
 @JsonSerializable()
-class BridgeConstructorDeclaration implements BridgeDeclaration {
-  const BridgeConstructorDeclaration(this.isFactory, this.functionDescriptor);
+class BridgeConstructorDef implements BridgeDeclaration {
+  const BridgeConstructorDef(this.functionDescriptor, {this.isFactory = false});
 
+  final BridgeFunctionDef functionDescriptor;
   final bool isFactory;
-  final BridgeFunctionDescriptor functionDescriptor;
 
   /// Connect the generated [_$BridgeMethodDeclarationFromJson] function to the `fromJson`
   /// factory.
-  factory BridgeConstructorDeclaration.fromJson(Map<String, dynamic> json) =>
-      _$BridgeConstructorDeclarationFromJson(json);
+  factory BridgeConstructorDef.fromJson(Map<String, dynamic> json) => _$BridgeConstructorDefFromJson(json);
 
   /// Connect the generated [_$BridgeMethodDeclarationToJson] function to the `toJson` method.
-  Map<String, dynamic> toJson() => _$BridgeConstructorDeclarationToJson(this);
+  Map<String, dynamic> toJson() => _$BridgeConstructorDefToJson(this);
 }
 
 @JsonSerializable()
-class BridgeFieldDeclaration {
-  const BridgeFieldDeclaration(this.isStatic, this.nullable, this.type);
+class BridgeFieldDef {
+  const BridgeFieldDef(this.isStatic, this.nullable, this.type);
 
   final bool isStatic;
   final bool nullable;
-  final BridgeTypeReference type;
+  final BridgeTypeRef type;
 
   /// Connect the generated [_$BridgeFieldDeclarationFromJson] function to the `fromJson`
   /// factory.
-  factory BridgeFieldDeclaration.fromJson(Map<String, dynamic> json) => _$BridgeFieldDeclarationFromJson(json);
+  factory BridgeFieldDef.fromJson(Map<String, dynamic> json) => _$BridgeFieldDefFromJson(json);
 
   /// Connect the generated [_$BridgeFieldDeclarationToJson] function to the `toJson` method.
-  Map<String, dynamic> toJson() => _$BridgeFieldDeclarationToJson(this);
+  Map<String, dynamic> toJson() => _$BridgeFieldDefToJson(this);
 }

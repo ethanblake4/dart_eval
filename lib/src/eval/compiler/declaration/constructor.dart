@@ -158,7 +158,7 @@ void compileConstructorDeclaration(
   }
 
   if ($extends != null && extendsWhat!.declaration!.isBridge) {
-    final bridge = extendsWhat.declaration!.bridge! as BridgeClassDeclaration;
+    final bridge = extendsWhat.declaration!.bridge! as BridgeClassDef;
 
     if ($superInitializer != null) {
       final constructor = bridge.constructors[constructorName]!;

@@ -12,15 +12,13 @@ class $DateTime implements DateTime, $Instance {
     runtime.registerBridgeFunc('dart:core', 'DateTime.now', (runtime, target, args) => $DateTime.wrap(DateTime.now()));
   }
 
-  static const $type = BridgeTypeReference.unresolved(BridgeUnresolvedTypeReference('dart:core', 'DateTime'), []);
+  static const $type = BridgeTypeRef.spec(BridgeTypeSpec('dart:core', 'DateTime'), []);
 
-  static const _dtIntGetter = BridgeMethodDeclaration(
-      false,
-      BridgeFunctionDescriptor(
-          BridgeTypeAnnotation(BridgeTypeReference.type(RuntimeTypes.intType, []), false), {}, [], {}));
+  static const _dtIntGetter = BridgeMethodDef(BridgeFunctionDef(
+      returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType)), params: [], namedParams: []));
 
-  static const $declaration = BridgeClassDeclaration($type, isAbstract: false, constructors: {
-    'now': BridgeConstructorDeclaration(false, BridgeFunctionDescriptor(BridgeTypeAnnotation($type, false), {}, [], {}))
+  static const $declaration = BridgeClassDef(BridgeClassType($type), constructors: {
+    'now': BridgeConstructorDef(BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [], namedParams: []))
   }, methods: {}, getters: {
     'day': _dtIntGetter,
     'hour': _dtIntGetter,

@@ -123,10 +123,10 @@ class TypeRef {
   }
 
   factory TypeRef.fromBridgeAnnotation(CompilerContext ctx, BridgeTypeAnnotation typeAnnotation) {
-    return TypeRef.fromBridgeTypeReference(ctx, typeAnnotation.type);
+    return TypeRef.fromBridgeTypeRef(ctx, typeAnnotation.type);
   }
 
-  factory TypeRef.fromBridgeTypeReference(CompilerContext ctx, BridgeTypeReference typeReference,
+  factory TypeRef.fromBridgeTypeRef(CompilerContext ctx, BridgeTypeRef typeReference,
       {bool staticSource = true}) {
     final cacheId = typeReference.cacheId;
     if (cacheId != null) {
@@ -136,16 +136,16 @@ class TypeRef {
       }
       return t.copyWith(boxed: true);
     }
-    final unresolved = typeReference.unresolved;
-    if (unresolved != null) {
-      return ctx.visibleTypes[ctx.libraryMap[unresolved.library]!]![unresolved.name]!;
+    final spec = typeReference.spec;
+    if (spec != null) {
+      return ctx.visibleTypes[ctx.libraryMap[spec.library]!]![spec.name]!;
     }
     throw CompileError('No support for looking up types by other bridge annotation types');
   }
 
   factory TypeRef.stdlib(CompilerContext ctx, String library, String name) {
-    return TypeRef.fromBridgeTypeReference(
-        ctx, BridgeTypeReference.unresolved(BridgeUnresolvedTypeReference(library, name), []));
+    return TypeRef.fromBridgeTypeRef(
+        ctx, BridgeTypeRef.spec(BridgeTypeSpec(library, name), []));
   }
 
   factory TypeRef.lookupClassDeclaration(CompilerContext ctx, int library, ClassDeclaration cls) {
@@ -180,18 +180,18 @@ class TypeRef {
     final dec = ctx.topLevelDeclarationsMap[$class.file]![$class.name]!;
 
     if (dec.isBridge) {
-      final br = dec.bridge as BridgeClassDeclaration;
+      final br = dec.bridge as BridgeClassDef;
       final fd = br.fields[field];
       if (fd != null) {
-        return TypeRef.fromBridgeTypeReference(ctx, fd.type);
+        return TypeRef.fromBridgeTypeRef(ctx, fd.type);
       }
       final get = br.getters[field];
       if (get != null) {
-        return TypeRef.fromBridgeAnnotation(ctx, get.functionDescriptor.returnType);
+        return TypeRef.fromBridgeAnnotation(ctx, get.functionDescriptor.returns);
       }
       final set = br.getters[field];
       if (set != null) {
-        return TypeRef.fromBridgeAnnotation(ctx, set.functionDescriptor.returnType);
+        return TypeRef.fromBridgeAnnotation(ctx, set.functionDescriptor.returns);
       }
       throw CompileError('Field $field not found in bridge class ${$class}');
     } else {

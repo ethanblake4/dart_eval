@@ -6,28 +6,33 @@ part of 'class.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-BridgeClassDeclaration _$BridgeClassDeclarationFromJson(Map<String, dynamic> json) => BridgeClassDeclaration(
-      BridgeTypeReference.fromJson(json['type'] as Map<String, dynamic>),
-      isAbstract: json['isAbstract'] as bool,
+BridgeClassDef _$BridgeClassDefFromJson(Map<String, dynamic> json) =>
+    BridgeClassDef(
+      BridgeClassType.fromJson(json['type'] as Map<String, dynamic>),
       constructors: (json['constructors'] as Map<String, dynamic>).map(
-        (k, e) => MapEntry(k, BridgeConstructorDeclaration.fromJson(e as Map<String, dynamic>)),
+        (k, e) => MapEntry(
+            k, BridgeConstructorDef.fromJson(e as Map<String, dynamic>)),
       ),
       methods: (json['methods'] as Map<String, dynamic>).map(
-        (k, e) => MapEntry(k, BridgeMethodDeclaration.fromJson(e as Map<String, dynamic>)),
+        (k, e) =>
+            MapEntry(k, BridgeMethodDef.fromJson(e as Map<String, dynamic>)),
       ),
       getters: (json['getters'] as Map<String, dynamic>).map(
-        (k, e) => MapEntry(k, BridgeMethodDeclaration.fromJson(e as Map<String, dynamic>)),
+        (k, e) =>
+            MapEntry(k, BridgeMethodDef.fromJson(e as Map<String, dynamic>)),
       ),
       setters: (json['setters'] as Map<String, dynamic>).map(
-        (k, e) => MapEntry(k, BridgeMethodDeclaration.fromJson(e as Map<String, dynamic>)),
+        (k, e) =>
+            MapEntry(k, BridgeMethodDef.fromJson(e as Map<String, dynamic>)),
       ),
       fields: (json['fields'] as Map<String, dynamic>).map(
-        (k, e) => MapEntry(k, BridgeFieldDeclaration.fromJson(e as Map<String, dynamic>)),
+        (k, e) =>
+            MapEntry(k, BridgeFieldDef.fromJson(e as Map<String, dynamic>)),
       ),
     );
 
-Map<String, dynamic> _$BridgeClassDeclarationToJson(BridgeClassDeclaration instance) => <String, dynamic>{
-      'isAbstract': instance.isAbstract,
+Map<String, dynamic> _$BridgeClassDefToJson(BridgeClassDef instance) =>
+    <String, dynamic>{
       'type': instance.type,
       'constructors': instance.constructors,
       'methods': instance.methods,
@@ -36,34 +41,43 @@ Map<String, dynamic> _$BridgeClassDeclarationToJson(BridgeClassDeclaration insta
       'fields': instance.fields,
     };
 
-BridgeMethodDeclaration _$BridgeMethodDeclarationFromJson(Map<String, dynamic> json) => BridgeMethodDeclaration(
-      json['isStatic'] as bool,
-      BridgeFunctionDescriptor.fromJson(json['functionDescriptor'] as Map<String, dynamic>),
+BridgeMethodDef _$BridgeMethodDefFromJson(Map<String, dynamic> json) =>
+    BridgeMethodDef(
+      BridgeFunctionDef.fromJson(
+          json['functionDescriptor'] as Map<String, dynamic>),
+      isStatic: json['isStatic'] as bool? ?? false,
     );
 
-Map<String, dynamic> _$BridgeMethodDeclarationToJson(BridgeMethodDeclaration instance) => <String, dynamic>{
+Map<String, dynamic> _$BridgeMethodDefToJson(BridgeMethodDef instance) =>
+    <String, dynamic>{
+      'functionDescriptor': instance.functionDescriptor,
       'isStatic': instance.isStatic,
-      'functionDescriptor': instance.functionDescriptor,
     };
 
-BridgeConstructorDeclaration _$BridgeConstructorDeclarationFromJson(Map<String, dynamic> json) =>
-    BridgeConstructorDeclaration(
-      json['isFactory'] as bool,
-      BridgeFunctionDescriptor.fromJson(json['functionDescriptor'] as Map<String, dynamic>),
+BridgeConstructorDef _$BridgeConstructorDefFromJson(
+        Map<String, dynamic> json) =>
+    BridgeConstructorDef(
+      BridgeFunctionDef.fromJson(
+          json['functionDescriptor'] as Map<String, dynamic>),
+      isFactory: json['isFactory'] as bool? ?? false,
     );
 
-Map<String, dynamic> _$BridgeConstructorDeclarationToJson(BridgeConstructorDeclaration instance) => <String, dynamic>{
-      'isFactory': instance.isFactory,
+Map<String, dynamic> _$BridgeConstructorDefToJson(
+        BridgeConstructorDef instance) =>
+    <String, dynamic>{
       'functionDescriptor': instance.functionDescriptor,
+      'isFactory': instance.isFactory,
     };
 
-BridgeFieldDeclaration _$BridgeFieldDeclarationFromJson(Map<String, dynamic> json) => BridgeFieldDeclaration(
+BridgeFieldDef _$BridgeFieldDefFromJson(Map<String, dynamic> json) =>
+    BridgeFieldDef(
       json['isStatic'] as bool,
       json['nullable'] as bool,
-      BridgeTypeReference.fromJson(json['type'] as Map<String, dynamic>),
+      BridgeTypeRef.fromJson(json['type'] as Map<String, dynamic>),
     );
 
-Map<String, dynamic> _$BridgeFieldDeclarationToJson(BridgeFieldDeclaration instance) => <String, dynamic>{
+Map<String, dynamic> _$BridgeFieldDefToJson(BridgeFieldDef instance) =>
+    <String, dynamic>{
       'isStatic': instance.isStatic,
       'nullable': instance.nullable,
       'type': instance.type,

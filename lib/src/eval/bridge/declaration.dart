@@ -17,7 +17,7 @@ class DeclarationOrBridge<T extends Declaration, R extends BridgeDeclaration> {
 class BridgeFunctionDeclaration extends BridgeDeclaration {
   const BridgeFunctionDeclaration(this.library, this.name, this.function);
 
-  final BridgeFunctionDescriptor function;
+  final BridgeFunctionDef function;
   final String library;
   final String name;
 }

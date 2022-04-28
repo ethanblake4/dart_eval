@@ -47,8 +47,7 @@ class $Iterator<E> implements Iterator, $Instance {
 class $Iterator$bridge<E> with $Bridge implements Iterator<E> {
   const $Iterator$bridge(List<Object?> _);
 
-  static const $type =
-      BridgeClassTypeDeclaration('dart:core', 'Iterator', isAbstract: true, generics: {'E': BridgeGenericParam()});
+  static const $type = BridgeTypeRef.spec(BridgeTypeSpec('dart:core', 'Iterator'));
 
   @override
   $Value? $bridgeGet(String identifier) {

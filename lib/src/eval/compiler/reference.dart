@@ -151,8 +151,8 @@ class IdentifierReference implements Reference {
     if (_decl.isBridge) {
       final bridge = _decl.bridge!;
 
-      if (bridge is BridgeClassDeclaration) {
-        final type = TypeRef.fromBridgeTypeReference(ctx, bridge.type);
+      if (bridge is BridgeClassDef) {
+        final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type.type);
 
         return Variable(-1, EvalTypes.typeType,
             concreteTypes: [type],
@@ -161,7 +161,7 @@ class IdentifierReference implements Reference {
       }
 
       if (bridge is BridgeFunctionDeclaration) {
-        final returnType = TypeRef.fromBridgeAnnotation(ctx, bridge.function.returnType);
+        final returnType = TypeRef.fromBridgeAnnotation(ctx, bridge.function.returns);
         return Variable(-1, EvalTypes.functionType,
             methodReturnType: AlwaysReturnType(returnType, false),
             methodOffset: DeferredOrOffset(file: declaration.sourceLib, name: name));

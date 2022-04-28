@@ -14,17 +14,15 @@ class $Completer<T> implements Completer<T>, $Instance {
 
   $Completer.wrap(this.$value);
 
-  static const _$type = BridgeTypeReference.unresolved(BridgeUnresolvedTypeReference('dart:async', 'Completer'), []);
+  static const _$type = BridgeTypeRef.spec(BridgeTypeSpec('dart:async', 'Completer'), []);
 
-  static const $declaration = BridgeClassDeclaration(_$type, isAbstract: false, constructors: {
-    '': BridgeConstructorDeclaration(false, BridgeFunctionDescriptor(BridgeTypeAnnotation(_$type, false), {}, [], {}))
+  static const $declaration = BridgeClassDef(BridgeClassType(_$type), constructors: {
+    '': BridgeConstructorDef(BridgeFunctionDef(returns: BridgeTypeAnnotation(_$type), params: [], namedParams: []))
   }, methods: {
-    'complete': BridgeMethodDeclaration(
-        false,
-        BridgeFunctionDescriptor(BridgeTypeAnnotation(BridgeTypeReference.type(RuntimeTypes.voidType, []), false), {}, [
-          BridgeParameter(
-              'value', BridgeTypeAnnotation(BridgeTypeReference.type(RuntimeTypes.dynamicType, []), false), false)
-        ], {}))
+    'complete': BridgeMethodDef(BridgeFunctionDef(
+        returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.voidType)),
+        params: [BridgeParameter('value', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.dynamicType)), false)],
+        namedParams: []))
   }, getters: {}, setters: {}, fields: {});
 
   @override

@@ -24,33 +24,26 @@ class $TestClass extends TestClass with $Bridge {
   static $bool $runStaticTest(Runtime runtime, $Value? target, List<$Value?> args) =>
       $bool(TestClass.runStaticTest(args[0]!.$value));
 
-  static const $type = BridgeTypeReference.unresolved(
-      BridgeUnresolvedTypeReference('package:bridge_lib/bridge_lib.dart', 'TestClass'), []);
+  static const $type = BridgeTypeRef.spec(BridgeTypeSpec('package:bridge_lib/bridge_lib.dart', 'TestClass'));
 
-  static const $declaration = BridgeClassDeclaration($type, isAbstract: false, constructors: {
-    '': BridgeConstructorDeclaration(
-        false,
-        BridgeFunctionDescriptor(BridgeTypeAnnotation($type, false), {}, [
-          BridgeParameter(
-              'someNumber', BridgeTypeAnnotation(BridgeTypeReference.type(RuntimeTypes.intType, []), false), false),
-        ], {}))
+  static const $declaration = BridgeClassDef(BridgeClassType($type), constructors: {
+    '': BridgeConstructorDef(BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [
+      BridgeParameter('someNumber', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType)), false),
+    ], namedParams: []))
   }, methods: {
-    'runStaticTest': BridgeMethodDeclaration(
-        true,
-        BridgeFunctionDescriptor(BridgeTypeAnnotation(BridgeTypeReference.type(RuntimeTypes.boolType, []), false), {}, [
-          BridgeParameter(
-              'm', BridgeTypeAnnotation(BridgeTypeReference.type(RuntimeTypes.stringType, []), false), false),
-        ], {})),
-    'runTest': BridgeMethodDeclaration(
-        false,
-        BridgeFunctionDescriptor(BridgeTypeAnnotation(BridgeTypeReference.type(RuntimeTypes.boolType, []), false), {}, [
-          BridgeParameter('a', BridgeTypeAnnotation(BridgeTypeReference.type(RuntimeTypes.intType, []), false), false),
-        ], {
-          'b': BridgeParameter(
-              'b', BridgeTypeAnnotation(BridgeTypeReference.type(RuntimeTypes.stringType, []), false), false),
-        }))
+    'runStaticTest': BridgeMethodDef(
+        BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)), params: [
+          BridgeParameter('m', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.stringType)), false),
+        ], namedParams: []),
+        isStatic: true),
+    'runTest': BridgeMethodDef(
+        BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)), params: [
+      BridgeParameter('a', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType)), false),
+    ], namedParams: [
+      BridgeParameter('b', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.stringType)), false),
+    ]))
   }, getters: {}, setters: {}, fields: {
-    'someNumber': BridgeFieldDeclaration(false, false, BridgeTypeReference.type(RuntimeTypes.intType, [])),
+    'someNumber': BridgeFieldDef(false, false, BridgeTypeRef.type(RuntimeTypes.intType, [])),
   });
 
   @override

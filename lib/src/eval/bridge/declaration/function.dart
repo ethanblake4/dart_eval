@@ -1,13 +1,14 @@
 import 'package:dart_eval/src/eval/bridge/declaration/type.dart';
 import 'package:json_annotation/json_annotation.dart';
+
 part 'function.g.dart';
 
 @JsonSerializable()
 class BridgeParameter {
-  const BridgeParameter(this.name, this.typeAnnotation, this.optional);
+  const BridgeParameter(this.name, this.type, this.optional);
 
   final String name;
-  final BridgeTypeAnnotation typeAnnotation;
+  final BridgeTypeAnnotation type;
   final bool optional;
 
   /// Connect the generated [_$BridgeParameterFromJson] function to the `fromJson`
@@ -19,18 +20,19 @@ class BridgeParameter {
 }
 
 @JsonSerializable()
-class BridgeFunctionDescriptor {
-  const BridgeFunctionDescriptor(this.returnType, this.generics, this.positionalParams, this.namedParams);
+class BridgeFunctionDef {
+  const BridgeFunctionDef(
+      {required this.returns, required this.params, required this.namedParams, this.generics = const {}});
 
-  final BridgeTypeAnnotation returnType;
+  final BridgeTypeAnnotation returns;
   final Map<String, BridgeGenericParam> generics;
-  final List<BridgeParameter> positionalParams;
-  final Map<String, BridgeParameter> namedParams;
+  final List<BridgeParameter> params;
+  final List<BridgeParameter> namedParams;
 
   /// Connect the generated [_$BridgeFunctionDescriptorFromJson] function to the `fromJson`
   /// factory.
-  factory BridgeFunctionDescriptor.fromJson(Map<String, dynamic> json) => _$BridgeFunctionDescriptorFromJson(json);
+  factory BridgeFunctionDef.fromJson(Map<String, dynamic> json) => _$BridgeFunctionDefFromJson(json);
 
   /// Connect the generated [_$BridgeFunctionDescriptorToJson] function to the `toJson` method.
-  Map<String, dynamic> toJson() => _$BridgeFunctionDescriptorToJson(this);
+  Map<String, dynamic> toJson() => _$BridgeFunctionDefToJson(this);
 }
