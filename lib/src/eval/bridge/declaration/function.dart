@@ -22,7 +22,7 @@ class BridgeParameter {
 @JsonSerializable()
 class BridgeFunctionDef {
   const BridgeFunctionDef(
-      {required this.returns, required this.params, required this.namedParams, this.generics = const {}});
+      {required this.returns, this.params = const [], this.namedParams = const [], this.generics = const {}});
 
   final BridgeTypeAnnotation returns;
   final Map<String, BridgeGenericParam> generics;

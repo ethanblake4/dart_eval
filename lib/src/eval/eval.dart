@@ -40,7 +40,7 @@ dynamic eval(String source,
 
   runtime.setup();
   runtime.args = args;
-  final result = runtime.executeNamed(0, function);
+  final result = runtime.executeLib('package:default/main.dart', function);
 
   if (result is $Value) {
     return result.$reified;

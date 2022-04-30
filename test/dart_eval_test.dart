@@ -29,7 +29,7 @@ void main() {
         }
       });
 
-      expect(exec.executeNamed(0, 'main'), 3);
+      expect(exec.executeLib('package:dbc_test/main.dart', 'main'), 3);
     });
 
     test('Simple function call', () {
@@ -49,7 +49,7 @@ void main() {
         }
       });
 
-      expect(exec.executeNamed(0, 'main'), 7);
+      expect(exec.executeLib('package:dbc_test/main.dart', 'main'), 7);
     });
 
     test('Recursion (fibonacci)', () {
@@ -68,7 +68,7 @@ void main() {
         }
       });
 
-      expect(exec.executeNamed(0, 'main'), 75025);
+      expect(exec.executeLib('package:example/main.dart', 'main'), 75025);
     });
 
     test('Multiple files, boxed ints and correct stack handling', () {
@@ -103,7 +103,7 @@ void main() {
         }
       });
 
-      expect(exec.executeNamed(0, 'main'), $num<num>(7));
+      expect(exec.executeLib('package:example/main.dart', 'main'), $num<num>(7));
     });
 
     test('Basic anonymous function', () {
@@ -123,7 +123,7 @@ void main() {
         }
       });
 
-      expect(exec.executeNamed(0, 'main'), 2);
+      expect(exec.executeLib('package:example/main.dart', 'main'), 2);
     });
 
     test('Basic inline anonymous function', () {
@@ -140,7 +140,7 @@ void main() {
         }
       });
 
-      expect(exec.executeNamed(0, 'main'), 2);
+      expect(exec.executeLib('package:example/main.dart', 'main'), 2);
     });
 
     test('Anonymous function with arg', () {
@@ -158,7 +158,7 @@ void main() {
         }
       });
 
-      expect(exec.executeNamed(0, 'main'), 3);
+      expect(exec.executeLib('package:example/main.dart', 'main'), 3);
     });
 
     test('Anonymous function with named args, same sorting as call site', () {
@@ -176,7 +176,7 @@ void main() {
         }
       });
 
-      expect(exec.executeNamed(0, 'main'), $double(1.5));
+      expect(exec.executeLib('package:example/main.dart', 'main'), $double(1.5));
     });
 
     test('Anonymous function with named args, different sorting from call site', () {
@@ -194,7 +194,7 @@ void main() {
         }
       });
 
-      expect(exec.executeNamed(0, 'main'), $double(1.5));
+      expect(exec.executeLib('package:example/main.dart', 'main'), $double(1.5));
     });
   });
 
@@ -224,7 +224,7 @@ void main() {
         }
       });
 
-      expect(exec.executeNamed(0, 'main'), 10);
+      expect(exec.executeLib('package:dbc_test/main.dart', 'main'), 10);
     });
 
     test('Field formal parameters, external field access', () {
@@ -252,7 +252,7 @@ void main() {
         }
       });
 
-      expect(exec.executeNamed(0, 'main'), $int(19));
+      expect(exec.executeLib('package:example/main.dart', 'main'), $int(19));
     });
 
     test('Simple static method', () {
@@ -272,7 +272,7 @@ void main() {
         }
       });
 
-      expect(exec.executeNamed(0, 'main'), 10);
+      expect(exec.executeLib('package:example/main.dart', 'main'), 10);
     });
 
     test('Implicit static method scoping', () {
@@ -300,7 +300,7 @@ void main() {
         }
       });
 
-      expect(exec.executeNamed(0, 'main'), 3);
+      expect(exec.executeLib('package:example/main.dart', 'main'), 3);
     });
   });
 
@@ -323,7 +323,7 @@ void main() {
           ''',
         }
       });
-      expect(exec.executeNamed(0, 'main'), $int(555));
+      expect(exec.executeLib('package:example/main.dart', 'main'), $int(555));
     });
 
     test('For loop + branching', () {
@@ -347,7 +347,7 @@ void main() {
         }
       });
 
-      expect(exec.executeNamed(0, 'doThing'), $int(499472));
+      expect(exec.executeLib('package:example/main.dart', 'doThing'), $int(499472));
     });
   });
 
@@ -370,7 +370,7 @@ void main() {
       });
 
       runtime.args = [1];
-      final future = runtime.executeNamed(0, 'main') as Future;
+      final future = runtime.executeLib('package:example/main.dart', 'main') as Future;
       expect(future, completion(null));
     });
   });
@@ -403,7 +403,7 @@ void main() {
       runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart', 'TestClass.', $TestClass.$construct);
 
       runtime.setup();
-      expect(runtime.executeNamed(0, 'main'), true);
+      expect(runtime.executeLib('package:example/main.dart', 'main'), true);
     });
 
     test('Using a subclassed bridge class inside the runtime', () {
@@ -436,7 +436,7 @@ void main() {
       runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart', 'TestClass.', $TestClass.$construct);
 
       runtime.setup();
-      expect(runtime.executeNamed(0, 'main'), true);
+      expect(runtime.executeLib('package:example/main.dart', 'main'), true);
     });
 
     test('Using a subclassed bridge class outside the runtime', () {
@@ -469,7 +469,7 @@ void main() {
       runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart', 'TestClass.', $TestClass.$construct);
 
       runtime.setup();
-      final res = runtime.executeNamed(0, 'main');
+      final res = runtime.executeLib('package:example/main.dart', 'main');
 
       expect(res is TestClass, true);
       expect((res as TestClass).runTest(4), true);
@@ -498,7 +498,77 @@ void main() {
           'package:bridge_lib/bridge_lib.dart', 'TestClass.runStaticTest', $TestClass.$runStaticTest);
 
       runtime.setup();
-      expect(runtime.executeNamed(0, 'main'), false);
+      expect(runtime.executeLib('package:example/main.dart', 'main'), false);
+    });
+  });
+
+  group('File and library composition', () {
+    late Compiler compiler;
+
+    setUp(() {
+      compiler = Compiler();
+    });
+
+    test('Import hiding', () {
+      final program = compiler.compile({
+        'example': {
+          'main.dart': '''
+            import 'package:example/b1.dart';
+            import 'package:example/b2.dart' hide ClassB;
+            int main() {
+              final b = ClassB();
+              return b.number();
+            }
+          ''',
+          'b1.dart': '''
+            class ClassB {
+              ClassB();
+              int number() { return 4; }
+            }
+          ''',
+          'b2.dart': '''
+            class ClassB {
+              ClassB();
+              int number() { return 8; }
+            }
+          '''
+        }
+      });
+
+      final runtime = Runtime.ofProgram(program);
+      final result = runtime.executeLib('package:example/main.dart', 'main');
+      expect(result, 4);
+    });
+
+    test('Export chains', () {
+      final program = compiler.compile({
+        'example': {
+          'main.dart': '''
+            import 'package:example/b1.dart';
+            int main() {
+              final b = ClassB();
+              return b.number();
+            }
+          ''',
+          'b1.dart': '''
+            library b1;
+            export 'package:example/b2.dart';
+          ''',
+          'b2.dart': '''
+            export 'package:example/b3.dart';
+          ''',
+          'b3.dart': '''
+            class ClassB {
+              ClassB();
+              int number() { return 8; }
+            }
+          '''
+        }
+      });
+
+      final runtime = Runtime.ofProgram(program);
+      final result = runtime.executeLib('package:example/main.dart', 'main');
+      expect(result, 8);
     });
   });
 
@@ -601,7 +671,7 @@ void main() {
 
       final timestamp = DateTime.now().millisecondsSinceEpoch;
 
-      final result = exec.executeNamed(0, 'main');
+      final result = exec.executeLib('package:example/main.dart', 'main');
       expect(result, $int(555));
       expect(DateTime.now().millisecondsSinceEpoch - timestamp, lessThan(100));
     });

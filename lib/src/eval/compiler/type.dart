@@ -126,8 +126,7 @@ class TypeRef {
     return TypeRef.fromBridgeTypeRef(ctx, typeAnnotation.type);
   }
 
-  factory TypeRef.fromBridgeTypeRef(CompilerContext ctx, BridgeTypeRef typeReference,
-      {bool staticSource = true}) {
+  factory TypeRef.fromBridgeTypeRef(CompilerContext ctx, BridgeTypeRef typeReference, {bool staticSource = true}) {
     final cacheId = typeReference.cacheId;
     if (cacheId != null) {
       final t = inverseRuntimeTypeMap[cacheId] ?? ctx.runtimeTypeList[cacheId];
@@ -144,8 +143,7 @@ class TypeRef {
   }
 
   factory TypeRef.stdlib(CompilerContext ctx, String library, String name) {
-    return TypeRef.fromBridgeTypeRef(
-        ctx, BridgeTypeRef.spec(BridgeTypeSpec(library, name), []));
+    return TypeRef.fromBridgeTypeRef(ctx, BridgeTypeRef.spec(BridgeTypeSpec(library, name), []));
   }
 
   factory TypeRef.lookupClassDeclaration(CompilerContext ctx, int library, ClassDeclaration cls) {
@@ -206,8 +204,14 @@ class TypeRef {
     }
   }
 
-  TypeRef resolveTypeChain(CompilerContext ctx) {
-    final _resolvedSpecifiedTypeArgs = specifiedTypeArgs.map((e) => e.resolveTypeChain(ctx)).toList();
+  TypeRef resolveTypeChain(CompilerContext ctx, {int recursionGuard = 0}) {
+    if (recursionGuard > 500) {
+      throw CompileError(
+          'Reached max limit on recursion while resolving types. Your type hierarchy is probably recursive (caught while resolving $this)');
+    }
+    final rg = recursionGuard + 1;
+    final _resolvedSpecifiedTypeArgs =
+        specifiedTypeArgs.map((e) => e.resolveTypeChain(ctx, recursionGuard: rg)).toList();
     if (resolved) {
       return copyWith(specifiedTypeArgs: _resolvedSpecifiedTypeArgs);
     }
@@ -230,33 +234,21 @@ class TypeRef {
     if (declaration.isBridge) {
       implementsNames = [];
       withNames = [];
-      /*
-      final br = declaration.bridge as BridgeClassDeclaration;
+
+      final br = declaration.bridge as BridgeClassDef;
       final type = br.type;
 
-      if (type.$extends?.builtin != null) {
-        $super = type.$extends!.builtin!.resolveTypeChain(ctx);
-      } else {
-        superName = type.$extends?.name;
+      if (type.$extends != null) {
+        $super = TypeRef.fromBridgeTypeRef(ctx, type.$extends!).resolveTypeChain(ctx, recursionGuard: rg);
       }
 
-
-
       for (final $i in type.$implements) {
-        if ($i.builtin != null) {
-          $implements.add($i.builtin!.resolveTypeChain(ctx));
-        } else {
-          implementsNames.add($i.name!);
-        }
+        $implements.add(TypeRef.fromBridgeTypeRef(ctx, $i).resolveTypeChain(ctx, recursionGuard: rg));
       }
 
       for (final $i in type.$with) {
-        if ($i.builtin != null) {
-          $with.add($i.builtin!.resolveTypeChain(ctx));
-        } else {
-          withNames.add($i.name!);
-        }
-      }*/
+        $with.add(TypeRef.fromBridgeTypeRef(ctx, $i).resolveTypeChain(ctx, recursionGuard: rg));
+      }
     } else {
       final dec = declaration.declaration! as ClassDeclaration;
       superName = dec.extendsClause?.superclass2.name.name;
@@ -265,15 +257,15 @@ class TypeRef {
     }
 
     if (superName != null) {
-      $super = ctx.visibleTypes[file]![superName]!.resolveTypeChain(ctx);
+      $super = ctx.visibleTypes[file]![superName]!.resolveTypeChain(ctx, recursionGuard: rg);
     }
 
     for (final withName in withNames) {
-      $with.add(ctx.visibleTypes[file]![withName]!.resolveTypeChain(ctx));
+      $with.add(ctx.visibleTypes[file]![withName]!.resolveTypeChain(ctx, recursionGuard: rg));
     }
 
     for (final implementsName in implementsNames) {
-      $implements.add(ctx.visibleTypes[file]![implementsName]!.resolveTypeChain(ctx));
+      $implements.add(ctx.visibleTypes[file]![implementsName]!.resolveTypeChain(ctx, recursionGuard: rg));
     }
 
     final _resolved = TypeRef(file, name,
@@ -361,7 +353,8 @@ class TypeRef {
     ];
   }
 
-  bool isAssignableTo(CompilerContext ctx, TypeRef slot, {List<TypeRef>? overrideGenerics, bool forceAllowDynamic = true}) {
+  bool isAssignableTo(CompilerContext ctx, TypeRef slot,
+      {List<TypeRef>? overrideGenerics, bool forceAllowDynamic = true}) {
     if (forceAllowDynamic && this == EvalTypes.dynamicType) {
       return true;
     }

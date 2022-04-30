@@ -10,7 +10,6 @@ import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'package:dart_eval/src/eval/runtime/function.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core.dart';
-import 'package:dart_eval/stdlib/async.dart';
 import 'package:dart_eval/stdlib/core.dart';
 import 'package:dart_eval/src/eval/runtime/continuation.dart';
 import 'package:dart_eval/src/eval/runtime/type.dart';
@@ -371,6 +370,11 @@ class Runtime {
     }
   }
 
+  dynamic executeLib(String library, String name) {
+    return executeNamed(_bridgeLibraryMappings[library]!, name);
+  }
+
+  @Deprecated('Use executeLib() instead')
   dynamic executeNamed(int file, String name) {
     return execute(declarations[file]![name]!);
   }

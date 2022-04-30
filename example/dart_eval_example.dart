@@ -56,22 +56,34 @@ void main(List<String> args) {
     }
   ''';
 
+  // Create a compiler and define the classes' bridge declarations so it knows their structure
   final compiler = Compiler();
   compiler.defineBridgeClasses([$TimestampedTime.$declaration, $WorldTimeTracker$bridge.$declaration]);
 
+  // Compile the source code into a Program containing metadata and bytecode. In a real app, you would likely
+  // compile the Eval code separately and output it to a file using program.write(), sharing only bridge classes
+  // with a local shared library
   final program = compiler.compile({
-    'package:example': {'main.dart': source}
+    'example': {'main.dart': source}
   });
 
-  final runtime = Runtime.ofProgram(program);
-  runtime.registerBridgeFunc('package:example/bridge.dart', 'TimestampedTime.', $TimestampedTime.$new);
-  runtime.registerBridgeFunc('package:example/bridge.dart', 'WorldTimeTracker.', $WorldTimeTracker$bridge.$new);
+  // Create a runtime from the compiled program, and register bridge functions for all static methods and constructors.
+  // Default constructors use "ClassName." syntax.
+  final runtime = Runtime.ofProgram(program)
+    ..registerBridgeFunc('package:example/bridge.dart', 'TimestampedTime.', $TimestampedTime.$new)
+    ..registerBridgeFunc('package:example/bridge.dart', 'WorldTimeTracker.', $WorldTimeTracker$bridge.$new);
 
+  // Call runtime.setup() after registering all bridge functions
   runtime.setup();
 
+  // Specify some args for the function we're about to call. Except for [int]s, [double]s, [bool]s, and [List]s, use
+  // [$Value] wrappers. For named args, specify them in order using null to represent an unspecified arg.
   runtime.args = [$String('USA')];
-  final timeTracker = runtime.executeNamed(0, 'fn') as WorldTimeTracker;
 
+  // Call the function and cast the result to the desired type
+  final timeTracker = runtime.executeLib('package:example/main.dart', 'fn') as WorldTimeTracker;
+
+  // We can now utilize the returned bridge class
   print('UK timezone offset: ' + timeTracker.getTimeFor('UK').timezoneOffset.toString() + ' (from outside Eval!)');
 }
 

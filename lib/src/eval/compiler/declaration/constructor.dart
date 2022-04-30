@@ -94,22 +94,22 @@ void compileConstructorDeclaration(
   } else {
     extendsWhat = ctx.visibleDeclarations[ctx.library]![$extends.superclass2.name.name]!;
 
-    if (extendsWhat.declaration!.isBridge) {
+    final decl = extendsWhat.declaration!;
+
+    if (decl.isBridge) {
       ctx.pushOp(PushBridgeSuperShim.make(), PushBridgeSuperShim.LEN);
       $super = Variable.alloc(ctx, EvalTypes.dynamicType);
     } else {
-      final extendsType =
-          TypeRef.lookupClassDeclaration(ctx, ctx.library, extendsWhat.declaration!.declaration as ClassDeclaration);
+      final extendsType = TypeRef.lookupClassDeclaration(ctx, ctx.library, decl.declaration as ClassDeclaration);
 
       AlwaysReturnType? mReturnType;
 
       if ($superInitializer != null) {
-        final _constructor =
-            ctx.topLevelDeclarationsMap[extendsWhat.sourceLib]!['${extendsType.name}.$constructorName']!;
+        final _constructor = ctx.topLevelDeclarationsMap[decl.sourceLib]!['${extendsType.name}.$constructorName']!;
         final constructor = _constructor.declaration as ConstructorDeclaration;
 
         final argsPair = compileArgumentList(
-            ctx, $superInitializer.argumentList, extendsWhat.sourceLib, constructor.parameters.parameters, constructor);
+            ctx, $superInitializer.argumentList, decl.sourceLib, constructor.parameters.parameters, constructor);
         final _args = argsPair.first;
         final _namedArgs = argsPair.second;
 
@@ -158,7 +158,8 @@ void compileConstructorDeclaration(
   }
 
   if ($extends != null && extendsWhat!.declaration!.isBridge) {
-    final bridge = extendsWhat.declaration!.bridge! as BridgeClassDef;
+    final decl = extendsWhat.declaration!;
+    final bridge = decl.bridge! as BridgeClassDef;
 
     if ($superInitializer != null) {
       final constructor = bridge.constructors[constructorName]!;
@@ -171,7 +172,7 @@ void compileConstructorDeclaration(
     }
 
     final op = BridgeInstantiate.make(instOffset,
-        ctx.bridgeStaticFunctionIndices[extendsWhat.sourceLib]!['${$extends.superclass2.name.name}.$constructorName']!);
+        ctx.bridgeStaticFunctionIndices[decl.sourceLib]!['${$extends.superclass2.name.name}.$constructorName']!);
     ctx.pushOp(op, BridgeInstantiate.len(op));
     final bridgeInst = Variable.alloc(ctx, EvalTypes.dynamicType);
 

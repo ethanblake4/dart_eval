@@ -164,7 +164,7 @@ class IdentifierReference implements Reference {
         final returnType = TypeRef.fromBridgeAnnotation(ctx, bridge.function.returns);
         return Variable(-1, EvalTypes.functionType,
             methodReturnType: AlwaysReturnType(returnType, false),
-            methodOffset: DeferredOrOffset(file: declaration.sourceLib, name: name));
+            methodOffset: DeferredOrOffset(file: _decl.sourceLib, name: name));
       }
 
       throw CompileError('Cannot resolve bridged ${bridge.runtimeType} in reference');
@@ -175,14 +175,14 @@ class IdentifierReference implements Reference {
     if (!(decl is FunctionDeclaration) && !(decl is ConstructorDeclaration)) {
       decl as ClassDeclaration;
 
-      final returnType = TypeRef.lookupClassDeclaration(ctx, declaration.sourceLib, decl);
+      final returnType = TypeRef.lookupClassDeclaration(ctx, _decl.sourceLib, decl);
       final DeferredOrOffset offset;
 
-      if (ctx.topLevelDeclarationPositions[declaration.sourceLib]?.containsKey(name + '.') ?? false) {
-        offset = DeferredOrOffset(
-            file: declaration.sourceLib, offset: ctx.topLevelDeclarationPositions[ctx.library]![name + '.']);
+      if (ctx.topLevelDeclarationPositions[_decl.sourceLib]?.containsKey(name + '.') ?? false) {
+        offset =
+            DeferredOrOffset(file: _decl.sourceLib, offset: ctx.topLevelDeclarationPositions[ctx.library]![name + '.']);
       } else {
-        offset = DeferredOrOffset(file: declaration.sourceLib, name: name + '.');
+        offset = DeferredOrOffset(file: _decl.sourceLib, name: name + '.');
       }
 
       return Variable(-1, EvalTypes.typeType,
@@ -192,18 +192,17 @@ class IdentifierReference implements Reference {
     TypeRef? returnType;
     var nullable = true;
     if (decl is FunctionDeclaration && decl.returnType != null) {
-      returnType = TypeRef.fromAnnotation(ctx, declaration.sourceLib, decl.returnType!);
+      returnType = TypeRef.fromAnnotation(ctx, _decl.sourceLib, decl.returnType!);
       nullable = decl.returnType!.question != null;
     } else {
-      returnType = TypeRef.lookupClassDeclaration(ctx, declaration.sourceLib, decl.parent as ClassDeclaration);
+      returnType = TypeRef.lookupClassDeclaration(ctx, _decl.sourceLib, decl.parent as ClassDeclaration);
     }
 
     final DeferredOrOffset offset;
-    if (ctx.topLevelDeclarationPositions[declaration.sourceLib]?.containsKey(name) ?? false) {
-      offset =
-          DeferredOrOffset(file: declaration.sourceLib, offset: ctx.topLevelDeclarationPositions[ctx.library]![name]);
+    if (ctx.topLevelDeclarationPositions[_decl.sourceLib]?.containsKey(name) ?? false) {
+      offset = DeferredOrOffset(file: _decl.sourceLib, offset: ctx.topLevelDeclarationPositions[ctx.library]![name]);
     } else {
-      offset = DeferredOrOffset(file: declaration.sourceLib, name: name);
+      offset = DeferredOrOffset(file: _decl.sourceLib, name: name);
     }
 
     return Variable(-1, EvalTypes.typeType,
@@ -262,14 +261,14 @@ class IdentifierReference implements Reference {
 
       final DeferredOrOffset offset;
 
-      if (ctx.topLevelDeclarationPositions[declaration.sourceLib]?.containsKey(name + '.') ?? false) {
-        offset = DeferredOrOffset(
-            file: declaration.sourceLib, offset: ctx.topLevelDeclarationPositions[ctx.library]![name + '.']);
+      if (ctx.topLevelDeclarationPositions[_decl.sourceLib]?.containsKey(name + '.') ?? false) {
+        offset =
+            DeferredOrOffset(file: _decl.sourceLib, offset: ctx.topLevelDeclarationPositions[ctx.library]![name + '.']);
       } else {
-        offset = DeferredOrOffset(file: declaration.sourceLib, name: name + '.');
+        offset = DeferredOrOffset(file: _decl.sourceLib, name: name + '.');
       }
 
-      final rt = AlwaysReturnType(TypeRef.lookupClassDeclaration(ctx, declaration.sourceLib, decl), false);
+      final rt = AlwaysReturnType(TypeRef.lookupClassDeclaration(ctx, _decl.sourceLib, decl), false);
 
       return StaticDispatch(offset, rt);
     }
@@ -277,18 +276,17 @@ class IdentifierReference implements Reference {
     TypeRef? returnType;
     var nullable = true;
     if (decl is FunctionDeclaration && decl.returnType != null) {
-      returnType = TypeRef.fromAnnotation(ctx, declaration.sourceLib, decl.returnType!);
+      returnType = TypeRef.fromAnnotation(ctx, _decl.sourceLib, decl.returnType!);
       nullable = decl.returnType!.question != null;
     } else {
-      returnType = TypeRef.lookupClassDeclaration(ctx, declaration.sourceLib, decl.parent as ClassDeclaration);
+      returnType = TypeRef.lookupClassDeclaration(ctx, _decl.sourceLib, decl.parent as ClassDeclaration);
     }
 
     final DeferredOrOffset offset;
-    if (ctx.topLevelDeclarationPositions[declaration.sourceLib]?.containsKey(name) ?? false) {
-      offset =
-          DeferredOrOffset(file: declaration.sourceLib, offset: ctx.topLevelDeclarationPositions[ctx.library]![name]);
+    if (ctx.topLevelDeclarationPositions[_decl.sourceLib]?.containsKey(name) ?? false) {
+      offset = DeferredOrOffset(file: _decl.sourceLib, offset: ctx.topLevelDeclarationPositions[ctx.library]![name]);
     } else {
-      offset = DeferredOrOffset(file: declaration.sourceLib, name: name);
+      offset = DeferredOrOffset(file: _decl.sourceLib, name: name);
     }
 
     return StaticDispatch(offset, AlwaysReturnType(returnType, nullable));

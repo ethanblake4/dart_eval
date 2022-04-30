@@ -90,7 +90,7 @@ void main() {
       .asByteData();
   
   final runtime = Runtime(bytecode);
-  print(runtime.executeNamed(0, 'main')); // -> 499500
+  print(runtime.executeLib('package:my_package/main.dart', 'main')); // -> 499500
 }
 ```
 
