@@ -11,7 +11,8 @@ wrapper, and classes created in the interpreter can be used outside it by
 creating an interface and bridge class.
 
 Currently dart_eval implements the basics of the Dart spec, but there are
-still core features missing such as async/await, generics, and generators.
+still missing features like generators and Sets. In addition, much of the
+standard library hasn't been implemented.
 
 ## Usage
 
@@ -96,9 +97,9 @@ void main() {
 
 ## Return values
 
-In most cases, dart_eval will return a subclass of `EvalValue` such as `EvalInt`
-or `EvalString`. These 'boxed types' have information about what they are and 
-how to modify them, and like all `EvalValue`s you can access their underlying
+In most cases, dart_eval will return a subclass of `$Value` such as `$int`
+or `$String`. These 'boxed types' have information about what they are and 
+how to modify them, and like all `$Value`s you can access their underlying
 value with the `$value` property. 
 
 However, when working with primitive value types  (int, string etc.) you may find 
@@ -122,19 +123,19 @@ There are three main levels of interop:
 Value interop is the most basic form, and happens automatically whenever the Eval
 environment is working with an object backed by a real Dart value. (Therefore, an
 int and a string are value interop enabled, but a class created inside Eval isn't.)
-To access the backing object of an `EvalValue`, use its `$value` property. If the
+To access the backing object of an `$Value`, use its `$value` property. If the
 value is a collection like a Map or a List, you can use its `$reified` property
 to resolve the values it contains.
 
-To support value interop, a class need simply to implement `EvalValue`, or mix-in
-`EvalValueImpl`.
+To support value interop, a class need simply to implement `$Value`, or extend
+`$Value<T>`.
 
 ### Wrapper interop
 
 Using a wrapper enables the Eval environment to access the functions and fields on
 a class created outside Eval. It's much more powerful than value interop, and
 simpler than bridge interop, making it a great choice for certain use cases. To use
-wrapper interop, create a class that implements `EvalInstance`. Then, implement 
+wrapper interop, create a class that implements `$Instance`. Then, override 
 `$getProperty` / `$setProperty` to define your fields and methods.
 
 ### Bridge interop
