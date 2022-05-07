@@ -20,4 +20,9 @@ class Library {
 
   @override
   int get hashCode => uri.hashCode;
+
+  Library copyWith({List<DeclarationOrBridge>? declarations}) {
+    return Library(uri,
+        library: library, imports: imports, exports: exports, declarations: declarations ?? this.declarations);
+  }
 }

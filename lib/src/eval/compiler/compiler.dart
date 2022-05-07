@@ -81,14 +81,38 @@ class Compiler {
 
     final units = sources.followedBy(additionalSources).map((source) => source.load());
 
-    final libraries = {
+    final unitLibraries = {
       ..._buildLibraries(units),
-      for (final bridgeLibrary in _bridgeDeclarations.keys)
-        Library(Uri.parse(bridgeLibrary), imports: [], exports: [], declarations: [
+    };
+
+    final unitLibraryUriMap = {for (final library in unitLibraries) library.uri: library};
+    final libraries = <Library>{};
+    final mergedLibraryUris = <Uri>{};
+
+    for (final bridgeLibrary in _bridgeDeclarations.keys) {
+      final bridgeLibDeclarations = [
+        for (final bridgeDeclaration in _bridgeDeclarations[bridgeLibrary]!)
+          DeclarationOrBridge(-1, bridge: bridgeDeclaration)
+      ];
+
+      final uri = Uri.parse(bridgeLibrary);
+      final unitLibrary = unitLibraryUriMap[uri];
+      if (unitLibrary != null) {
+        libraries.add(unitLibrary.copyWith(declarations: [...unitLibrary.declarations, ...bridgeLibDeclarations]));
+        mergedLibraryUris.add(uri);
+      } else {
+        libraries.add(Library(Uri.parse(bridgeLibrary), imports: [], exports: [], declarations: [
           for (final bridgeDeclaration in _bridgeDeclarations[bridgeLibrary]!)
             DeclarationOrBridge(-1, bridge: bridgeDeclaration)
-        ])
-    };
+        ]));
+      }
+    }
+
+    unitLibraryUriMap.forEach((uri, library) {
+      if (!mergedLibraryUris.contains(uri)) {
+        libraries.add(library);
+      }
+    });
 
     var i = 0;
     final libraryIndexMap = <Library, int>{};
@@ -394,7 +418,7 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
       if (!isDartCore) _Import(dartCoreUri, null)
     ]) {
       final tree = exportGraph.crawler.tree(import.uri);
-      final importedLibs = [...tree.expand((e) => e), import.uri].map((e) => uriMap[e]!).toList();
+      final importedLibs = [...tree.expand((e) => e), import.uri].map((e) => uriMap[e]!).toSet();
       final importedExports = importedLibs.map((e) => e.exports).expand((e) => e);
 
       final exportsPerUri = <Uri, List<ExportDirective>>{};
@@ -436,7 +460,7 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
             for (final export in exportsPerUri[lib.uri] ?? [])
               if (export.combinators.isEmpty)
                 declaration
-              else if (declaration is NamedCompilationUnitMember)
+              else
                 for (final combinator in export.combinators)
                   if (combinator is ShowCombinator) ...{
                     if ({for (final n in combinator.shownNames) n.name}.contains(declaration.first)) declaration
