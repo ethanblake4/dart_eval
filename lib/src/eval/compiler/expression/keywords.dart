@@ -9,7 +9,7 @@ Variable compileThisExpression(ThisExpression e, CompilerContext ctx) {
   if (ctx.currentClass == null) {
     throw CompileError("Cannot use 'this' outside of a class context");
   }
-  return Variable(0, ctx.visibleTypes[ctx.library]![ctx.currentClass!.name.name]!);
+  return ctx.lookupLocal('#this')!;
 }
 
 Variable compileSuperExpression(SuperExpression e, CompilerContext ctx) {
@@ -23,7 +23,8 @@ Variable compileSuperExpression(SuperExpression e, CompilerContext ctx) {
     type = ctx.visibleTypes[ctx.library]![extendsClause.superclass2.name.name]!;
   }
 
-  ctx.pushOp(PushSuper.make(0), PushSuper.LEN);
+  final $this = ctx.lookupLocal('#this')!;
+  ctx.pushOp(PushSuper.make($this.scopeFrameOffset), PushSuper.LEN);
   final v = Variable.alloc(ctx, type);
   return v;
 }

@@ -93,7 +93,8 @@ class IdentifierReference implements Reference {
         if (!value.type.resolveTypeChain(ctx).isAssignableTo(ctx, fieldType)) {
           throw CompileError('Cannot assign value of type ${value.type} to field "$name" of type $fieldType');
         }
-        final op = SetObjectProperty.make(0, name, value.boxIfNeeded(ctx).scopeFrameOffset);
+        final $this = ctx.lookupLocal('#this')!;
+        final op = SetObjectProperty.make($this.scopeFrameOffset, name, value.boxIfNeeded(ctx).scopeFrameOffset);
         ctx.pushOp(op, SetObjectProperty.len(op));
         return;
       }
@@ -126,7 +127,9 @@ class IdentifierReference implements Reference {
         final $type = instanceDeclaration.first;
         // TODO access super
 
-        final op = PushObjectProperty.make(0 /* (this) */, name);
+        final $this = ctx.lookupLocal('#this')!;
+
+        final op = PushObjectProperty.make($this.scopeFrameOffset, name);
         ctx.pushOp(op, PushObjectProperty.len(op));
 
         ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);

@@ -18,6 +18,7 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx, NamedComp
 
   ctx.beginAllocScope(existingAllocLen: (d.parameters?.parameters.length ?? 0));
   ctx.scopeFrameOffset += d.parameters?.parameters.length ?? 0;
+  ctx.setLocal('#this', Variable(0, ctx.visibleTypes[ctx.library]![ctx.currentClass!.name.name]!));
   final resolvedParams = resolveFPLDefaults(ctx, d.parameters!, true, allowUnboxed: true);
 
   if (b.isAsynchronous) {
