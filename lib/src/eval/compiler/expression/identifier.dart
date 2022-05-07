@@ -39,16 +39,30 @@ Reference compileIdentifierAsReference(Identifier id, CompilerContext ctx) {
   throw CompileError('Unknown identifier ${id.runtimeType}');
 }
 
-Pair<TypeRef, Declaration>? resolveInstanceDeclaration(CompilerContext ctx, int library, String $class, String name) {
+Pair<TypeRef, DeclarationOrBridge>? resolveInstanceDeclaration(
+    CompilerContext ctx, int library, String $class, String name) {
   final dec = ctx.instanceDeclarationsMap[library]![$class]?[name];
   if (dec != null) {
     final $type = ctx.visibleTypes[library]![$class]!;
-    return Pair($type, dec);
+    return Pair($type, DeclarationOrBridge(-1, declaration: dec));
   }
   final _$classDec = ctx.topLevelDeclarationsMap[library]![$class]!;
 
   if (_$classDec.isBridge) {
-    return null;
+    final bridge = _$classDec.bridge as BridgeClassDef;
+    final method = bridge.methods[name];
+    if (method != null) {
+      final $type = ctx.visibleTypes[library]![$class]!;
+      return Pair($type, DeclarationOrBridge(-1, bridge: method));
+    }
+    final $extends = bridge.type.$extends;
+    if ($extends != null) {
+      final _type = TypeRef.fromBridgeTypeRef(ctx, $extends);
+      if (_type.file < 0) {
+        return null;
+      }
+      return resolveInstanceDeclaration(ctx, _type.file, _type.name, name);
+    }
     throw CompileError('Bridge declaration not supported in instance: trying to lookup "$name" in "${$class}"');
   }
   final $classDec = _$classDec.declaration! as ClassDeclaration;

@@ -23,7 +23,7 @@ class $Completer<T> implements Completer<T>, $Instance {
         returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.voidType)),
         params: [BridgeParameter('value', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.dynamicType)), false)],
         namedParams: []))
-  }, getters: {}, setters: {}, fields: {});
+  }, getters: {}, setters: {}, fields: {}, wrap: true);
 
   @override
   final Completer<T> $value;

@@ -12,7 +12,9 @@ class BridgeClassDef implements BridgeDeclaration {
       required this.methods,
       required this.getters,
       required this.setters,
-      required this.fields});
+      required this.fields,
+      this.bridge = false,
+      this.wrap = false});
 
   final BridgeClassType type;
   final Map<String, BridgeConstructorDef> constructors;
@@ -20,6 +22,8 @@ class BridgeClassDef implements BridgeDeclaration {
   final Map<String, BridgeMethodDef> getters;
   final Map<String, BridgeMethodDef> setters;
   final Map<String, BridgeFieldDef> fields;
+  final bool bridge;
+  final bool wrap;
 
   /// Connect the generated [_$BridgeClassDeclarationFromJson] function to the `fromJson`
   /// factory.
@@ -29,7 +33,13 @@ class BridgeClassDef implements BridgeDeclaration {
   Map<String, dynamic> toJson() => _$BridgeClassDefToJson(this);
 
   BridgeClassDef copyWith({BridgeClassType? type}) => BridgeClassDef(type ?? this.type,
-      constructors: constructors, methods: methods, getters: getters, setters: setters, fields: fields);
+      constructors: constructors,
+      methods: methods,
+      getters: getters,
+      setters: setters,
+      fields: fields,
+      bridge: bridge,
+      wrap: wrap);
 }
 
 @JsonSerializable()

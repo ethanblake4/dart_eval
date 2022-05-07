@@ -151,8 +151,8 @@ class Runtime {
     _unloadedBrClass.add(_UnloadedBridgeClass(library, name, cls));
   }
 
-  void registerBridgeFunc(String library, String name, EvalCallableFunc fn) {
-    _unloadedBrFunc.add(_UnloadedBridgeFunction(library, name, fn));
+  void registerBridgeFunc(String library, String name, EvalCallableFunc fn, {bool isBridge = false}) {
+    _unloadedBrFunc.add(_UnloadedBridgeFunction(library, isBridge ? '#$name' : name, fn));
   }
 
   void setup() {

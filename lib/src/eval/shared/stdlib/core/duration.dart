@@ -29,7 +29,7 @@ class $Duration implements Duration, $Instance {
         returns: BridgeTypeAnnotation($type),
         params: [BridgeParameter('factor', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.numType)), false)],
         namedParams: []))
-  }, getters: {}, setters: {}, fields: {});
+  }, getters: {}, setters: {}, fields: {}, wrap: true);
 
   $Duration.wrap(this.$value);
 

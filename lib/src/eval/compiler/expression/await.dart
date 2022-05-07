@@ -13,6 +13,8 @@ Variable compileAwaitExpression(AwaitExpression e, CompilerContext ctx) {
     if (_e is FunctionBody) {
       if (!_e.isAsynchronous) {
         throw CompileError('Cannot use await in a non-async context');
+      } else {
+        break;
       }
     }
     _e = _e.parent;

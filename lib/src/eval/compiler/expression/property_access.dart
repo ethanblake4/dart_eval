@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
@@ -16,4 +17,9 @@ Variable compilePropertyAccess(PropertyAccess pa, CompilerContext ctx) {
   final v = Variable.alloc(ctx, TypeRef.lookupFieldType(ctx, L.type, pa.propertyName.name) ?? EvalTypes.dynamicType);
 
   return v;
+}
+
+Reference compilePropertyAccessAsReference(PropertyAccess pa, CompilerContext ctx) {
+  final L = compileExpression(pa.realTarget, ctx);
+  return IdentifierReference(L, pa.propertyName.name);
 }

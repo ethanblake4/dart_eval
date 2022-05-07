@@ -26,7 +26,7 @@ class $Future<T> implements Future<T>, $Instance {
     'then': BridgeMethodDef(BridgeFunctionDef(returns: BridgeTypeAnnotation(_$type), params: [
       BridgeParameter('onValue', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.functionType)), false)
     ], namedParams: []))
-  }, getters: {}, setters: {}, fields: {});
+  }, getters: {}, setters: {}, fields: {}, wrap: true);
 
   $Future.wrap(this.$value, this.$typeMapper) : _superclass = $Object($value);
 

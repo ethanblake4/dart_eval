@@ -35,6 +35,9 @@ class Compiler {
 
   // Manually define a (unresolved) bridge class
   void defineBridgeClass(BridgeClassDef classDef) {
+    if (!classDef.bridge && !classDef.wrap) {
+      throw CompileError('Cannot define a bridge class that\'s not either bridge or wrap');
+    }
     final type = classDef.type;
     final spec = type.type.spec;
 
@@ -219,6 +222,17 @@ class Compiler {
       });
     });
 
+    for (final library in libraries) {
+      for (final dec in library.declarations) {
+        if (dec.isBridge) {
+          final bridge = dec.bridge;
+          if (bridge is BridgeClassDef && bridge.bridge) {
+            _reassignBridgeStaticFunctionIndicesForClass(bridge);
+          }
+        }
+      }
+    }
+
     for (final type in ctx.runtimeTypeList) {
       ctx.typeTypes.add(type.resolveTypeChain(ctx).getRuntimeIndices(ctx));
     }
@@ -349,6 +363,18 @@ class Compiler {
         ctx.bridgeStaticFunctionIndices[lib] = <String, int>{};
       }
       ctx.bridgeStaticFunctionIndices[lib]!['${type.name}.$name'] = _bridgeStaticFunctionIdx++;
+    });
+  }
+
+  void _reassignBridgeStaticFunctionIndicesForClass(BridgeClassDef classDef) {
+    final type = TypeRef.fromBridgeTypeRef(ctx, classDef.type.type);
+    final lib = type.file;
+
+    classDef.constructors.forEach((name, constructor) {
+      final idc = ctx.bridgeStaticFunctionIndices[lib]!;
+      final id = '${type.name}.$name';
+      final prev = classDef.wrap ? idc[id]! : idc.remove(id)!;
+      ctx.bridgeStaticFunctionIndices[lib]!['#${type.name}.$name'] = prev;
     });
   }
 

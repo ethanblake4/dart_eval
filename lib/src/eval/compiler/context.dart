@@ -188,14 +188,23 @@ class CompilerContext with ScopeContext {
 
   @override
   Variable? lookupLocal(String name) {
-    Variable? frameRef;
+    final frameRef = <Variable>[];
     for (var i = locals.length - 1; i >= 0; i--) {
       if (locals[i].containsKey(name)) {
         final v = locals[i][name]!;
-        if (frameRef != null) {
+        if (frameRef.isNotEmpty) {
+          var frOffset = frameRef[0].scopeFrameOffset;
+          for (var i = 0; i < frameRef.length - 1; i++) {
+            final _index = BuiltinValue(intval: frameRef[i + 1].scopeFrameOffset).push(this);
+            pushOp(IndexList.make(frOffset, _index.scopeFrameOffset), IndexList.LEN);
+            frOffset = scopeFrameOffset++;
+            allocNest.last++;
+          }
+
           final _index = BuiltinValue(intval: v.scopeFrameOffset).push(this);
-          pushOp(IndexList.make(frameRef.scopeFrameOffset, _index.scopeFrameOffset), IndexList.LEN);
+          pushOp(IndexList.make(frOffset, _index.scopeFrameOffset), IndexList.LEN);
           allocNest.last++;
+
           return v.copyWith(scopeFrameOffset: scopeFrameOffset++);
         }
         return v
@@ -203,7 +212,7 @@ class CompilerContext with ScopeContext {
           ..frameIndex = i;
       }
       if (scopeDoesClose[i]) {
-        frameRef = locals[i]['#prev'];
+        frameRef.add(locals[i]['#prev']!);
       }
     }
   }

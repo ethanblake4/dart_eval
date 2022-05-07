@@ -35,17 +35,17 @@ void compileConstructorDeclaration(
   }
 
   final fieldIndices = <String, int>{};
-  var i = 0;
+  var fieldIdx = 0;
   for (final fd in fields) {
     for (final field in fd.fields.variables) {
-      fieldIndices[field.name.name] = i;
-      i++;
+      fieldIndices[field.name.name] = fieldIdx;
+      fieldIdx++;
     }
   }
 
   final fieldFormalNames = <String>[];
   final resolvedParams = resolveFPLDefaults(ctx, d.parameters, false, allowUnboxed: true);
-  i = 0;
+  var i = 0;
 
   for (final param in resolvedParams) {
     final p = param.parameter;
@@ -136,7 +136,7 @@ void compileConstructorDeclaration(
     }
   }
 
-  final op = CreateClass.make(ctx.library, $super.scopeFrameOffset, parent.name.name, i);
+  final op = CreateClass.make(ctx.library, $super.scopeFrameOffset, parent.name.name, fieldIdx);
   ctx.pushOp(op, CreateClass.len(op));
   final instOffset = ctx.scopeFrameOffset++;
 
@@ -147,19 +147,38 @@ void compileConstructorDeclaration(
         SetObjectPropertyImpl.LEN);
   }
 
+  final usedNames = {...fieldFormalNames};
+
   for (final init in otherInitializers) {
     if (init is ConstructorFieldInitializer) {
       final V = compileExpression(init.expression, ctx);
       ctx.pushOp(SetObjectPropertyImpl.make(instOffset, fieldIndices[init.fieldName.name]!, V.scopeFrameOffset),
           SetObjectPropertyImpl.LEN);
+      usedNames.add(init.fieldName.name);
     } else {
       throw CompileError('${init.runtimeType} initializer is not supported');
+    }
+  }
+
+  var _fieldIdx = 0;
+  for (final fd in fields) {
+    for (final field in fd.fields.variables) {
+      if (!usedNames.contains(field.name.name) && field.initializer != null) {
+        final V = compileExpression(field.initializer!, ctx).boxIfNeeded(ctx);
+        ctx.pushOp(SetObjectPropertyImpl.make(instOffset, _fieldIdx, V.scopeFrameOffset),
+            SetObjectPropertyImpl.LEN);
+      }
+      _fieldIdx++;
     }
   }
 
   if ($extends != null && extendsWhat!.declaration!.isBridge) {
     final decl = extendsWhat.declaration!;
     final bridge = decl.bridge! as BridgeClassDef;
+
+    if (!bridge.bridge) {
+      throw CompileError('Bridge class ${$extends.superclass2} is a wrapper, not a bridge, so you can\'t extend it');
+    }
 
     if ($superInitializer != null) {
       final constructor = bridge.constructors[constructorName]!;

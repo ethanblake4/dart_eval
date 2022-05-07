@@ -25,9 +25,8 @@ void compileClassDeclaration(CompilerContext ctx, ClassDeclaration d) {
     ctx.currentClass = d;
     compileDeclaration(m, ctx, parent: d, fieldIndex: i, fields: fields);
     if (m is FieldDeclaration) {
-      i += m.fields.length - 1;
+      i += m.fields.variables.length;
     }
-    i++;
   }
   ctx.currentClass = null;
   ctx.resetStack();

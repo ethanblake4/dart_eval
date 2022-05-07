@@ -125,14 +125,22 @@ class IdentifierReference implements Reference {
       final instanceDeclaration = resolveInstanceDeclaration(ctx, ctx.library, ctx.currentClass!.name.name, name);
       if (instanceDeclaration != null) {
         final $type = instanceDeclaration.first;
-        // TODO access super
 
         final $this = ctx.lookupLocal('#this')!;
 
         final op = PushObjectProperty.make($this.scopeFrameOffset, name);
         ctx.pushOp(op, PushObjectProperty.len(op));
-
         ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
+
+        final _dec = instanceDeclaration.second;
+        if (_dec.isBridge) {
+          final bridge = _dec.bridge!;
+          if (bridge is BridgeMethodDef) {
+            return Variable.alloc(ctx, EvalTypes.functionType,
+                methodOffset: DeferredOrOffset(file: ctx.library, className: ctx.currentClass!.name.name, name: name));
+          }
+        }
+
         return Variable.alloc(ctx, TypeRef.lookupFieldType(ctx, $type, name) ?? EvalTypes.dynamicType);
       }
 

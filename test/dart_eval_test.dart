@@ -522,7 +522,8 @@ void main() {
 
       final runtime = Runtime.ofProgram(program);
 
-      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart', 'TestClass.', $TestClass.$construct);
+      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart', 'TestClass.', $TestClass.$construct,
+          isBridge: true);
 
       runtime.setup();
       expect(runtime.executeLib('package:example/main.dart', 'main'), true);
@@ -555,7 +556,8 @@ void main() {
 
       final runtime = Runtime.ofProgram(program);
 
-      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart', 'TestClass.', $TestClass.$construct);
+      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart', 'TestClass.', $TestClass.$construct,
+          isBridge: true);
 
       runtime.setup();
       expect(runtime.executeLib('package:example/main.dart', 'main'), true);
@@ -588,7 +590,8 @@ void main() {
 
       final runtime = Runtime.ofProgram(program);
 
-      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart', 'TestClass.', $TestClass.$construct);
+      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart', 'TestClass.', $TestClass.$construct,
+          isBridge: true);
 
       runtime.setup();
       final res = runtime.executeLib('package:example/main.dart', 'main');
@@ -615,7 +618,8 @@ void main() {
 
       final runtime = Runtime.ofProgram(program);
 
-      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart', 'TestClass.', $TestClass.$construct);
+      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart', 'TestClass.', $TestClass.$construct,
+          isBridge: true);
       runtime.registerBridgeFunc(
           'package:bridge_lib/bridge_lib.dart', 'TestClass.runStaticTest', $TestClass.$runStaticTest);
 

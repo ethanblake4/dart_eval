@@ -25,7 +25,7 @@ class $DateTime implements DateTime, $Instance {
     'minute': _dtIntGetter,
     'second': _dtIntGetter,
     'millisecondsSinceEpoch': _dtIntGetter,
-  }, setters: {}, fields: {});
+  }, setters: {}, fields: {}, wrap: true);
 
   $DateTime.wrap(this.$value) : _superclass = $Object($value);
 

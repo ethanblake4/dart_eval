@@ -55,13 +55,15 @@ Reference compileExpressionAsReference(Expression e, CompilerContext ctx) {
     return compileAssignmentExpressionAsReference(e, ctx);
   } else if (e is IndexExpression) {
     return compileIndexExpressionAsReference(e, ctx);
+  } else if (e is PropertyAccess) {
+    return compilePropertyAccessAsReference(e, ctx);
   }
 
   throw NotReferencableError("Unknown expression type or can't reference ${e.runtimeType}");
 }
 
 bool canReference(Expression e) {
-  return e is Identifier || e is AssignmentExpression || e is IndexExpression;
+  return e is Identifier || e is AssignmentExpression || e is IndexExpression || e is PropertyAccess;
 }
 
 void compileExpressionAndDiscardResult(Expression e, CompilerContext ctx) {

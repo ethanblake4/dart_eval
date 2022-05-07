@@ -44,7 +44,7 @@ class $TestClass extends TestClass with $Bridge {
     ]))
   }, getters: {}, setters: {}, fields: {
     'someNumber': BridgeFieldDef(false, false, BridgeTypeRef.type(RuntimeTypes.intType, [])),
-  });
+  }, bridge: true);
 
   @override
   $Value? $bridgeGet(String identifier) {
