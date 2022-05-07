@@ -327,6 +327,37 @@ void main() {
       expect(exec.executeLib('package:example/main.dart', 'main'), 8);
     });
 
+    test('Implicit and "this" field access from closure', () {
+      final exec = gen.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main () {
+              return M(2).load();
+            }
+                    
+            class M {
+              M(this.number);
+              int number;
+              
+              int load() {
+                return this._loadInternal(4);
+              }
+              
+              _loadInternal(int times) {
+                final f = (t) {
+                  number++;
+                  return this.number * t;
+                };
+                return f(times);
+              }
+            }
+          '''
+        }
+      });
+
+      expect(exec.executeLib('package:example/main.dart', 'main'), 12);
+    });
+
     test('Simple static method', () {
       final exec = gen.compileWriteAndLoad({
         'example': {
