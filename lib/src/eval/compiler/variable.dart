@@ -93,6 +93,22 @@ class Variable {
 
   void pushArg(CompilerContext ctx) => ctx.pushOp(PushArg.make(scopeFrameOffset), PushArg.LEN);
 
+  Variable copyWith(
+      {int? scopeFrameOffset,
+        TypeRef? type,
+        DeferredOrOffset? methodOffset,
+        ReturnType? methodReturnType,
+        String? name,
+        int? frameIndex,
+        List<TypeRef>? concreteTypes}) {
+    return Variable(scopeFrameOffset ?? this.scopeFrameOffset, type ?? this.type,
+        methodOffset: methodOffset ?? this.methodOffset,
+        methodReturnType: methodReturnType ?? this.methodReturnType,
+        concreteTypes: concreteTypes ?? this.concreteTypes)
+      ..name = name ?? this.name
+      ..frameIndex = frameIndex ?? this.frameIndex;
+  }
+
   Variable copyWithUpdate(ScopeContext? ctx,
       {int? scopeFrameOffset,
       TypeRef? type,

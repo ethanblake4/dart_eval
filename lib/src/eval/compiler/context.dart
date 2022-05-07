@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/source_node_wrapper.dart';
 import 'package:dart_eval/src/eval/compiler/constant_pool.dart';
 import 'package:dart_eval/src/eval/compiler/optimizer/prescan.dart';
 import 'package:dart_eval/src/eval/compiler/source.dart';
@@ -14,11 +15,13 @@ import 'offset_tracker.dart';
 
 abstract class AbstractScopeContext {
   int get scopeFrameOffset;
+
   set scopeFrameOffset(int s);
 
   List<Map<String, Variable>> get locals;
 
   List<int> get allocNest;
+
   set allocNest(List<int> a);
 
   List<bool> get inNonlinearAccessContext;
@@ -152,6 +155,7 @@ class CompilerContext with ScopeContext {
   List<TypeRef> runtimeTypeList = [];
   List<String> typeNames = [];
   List<Set<int>> typeTypes = [];
+  List<bool> scopeDoesClose = [];
   PrescanContext? preScan;
   int nearestAsyncFrame = -1;
 
@@ -171,11 +175,36 @@ class CompilerContext with ScopeContext {
   }
 
   @override
-  void beginAllocScope({int existingAllocLen = 0, bool requireNonlinearAccess = false}) {
+  void beginAllocScope({int existingAllocLen = 0, bool requireNonlinearAccess = false, bool closure = false}) {
     super.beginAllocScope(existingAllocLen: existingAllocLen, requireNonlinearAccess: requireNonlinearAccess);
     if (preScan!.closedFrames.contains(locals.length - 1)) {
       final ps = PushScope.make(sourceFile, -1, '#');
       pushOp(ps, PushScope.len(ps));
+      scopeDoesClose.add(true);
+    } else {
+      scopeDoesClose.add(closure);
+    }
+  }
+
+  @override
+  Variable? lookupLocal(String name) {
+    Variable? frameRef;
+    for (var i = locals.length - 1; i >= 0; i--) {
+      if (locals[i].containsKey(name)) {
+        final v = locals[i][name]!;
+        if (frameRef != null) {
+          final _index = BuiltinValue(intval: v.scopeFrameOffset).push(this);
+          pushOp(IndexList.make(frameRef.scopeFrameOffset, _index.scopeFrameOffset), IndexList.LEN);
+          allocNest.last++;
+          return v.copyWith(scopeFrameOffset: scopeFrameOffset++);
+        }
+        return v
+          ..name = name
+          ..frameIndex = i;
+      }
+      if (scopeDoesClose[i]) {
+        frameRef = locals[i]['#prev'];
+      }
     }
   }
 
@@ -185,7 +214,13 @@ class CompilerContext with ScopeContext {
       pushOp(PopScope.make(), PopScope.LEN);
       popValues = false;
     }
+    scopeDoesClose.removeLast();
     return super.endAllocScope(popValues: popValues, popAdjust: popAdjust);
+  }
+
+  @override
+  void resetStack({int position = 0}) {
+    super.resetStack(position: position);
   }
 
   int rewriteOp(int where, DbcOp newOp, int lengthAdjust) {
@@ -199,6 +234,12 @@ class CompilerContext with ScopeContext {
     d.visitChildren(preScanner);
     preScan = preScanner.ctx;
   }
+
+  @override
+  void restoreState(ContextSaveState initial) {
+    super.restoreState(initial);
+    scopeDoesClose = initial.scopeDoesClose;
+  }
 }
 
 class ContextSaveState {
@@ -206,9 +247,11 @@ class ContextSaveState {
       : locals = [
           ...context.locals.map((e) => {...e})
         ],
+        scopeDoesClose = context is CompilerContext ? [...context.scopeDoesClose] : [],
         allocNest = [...context.allocNest],
         inNonlinearAccessContext = [...context.inNonlinearAccessContext];
   List<Map<String, Variable>> locals;
+  List<bool> scopeDoesClose;
   List<int> allocNest;
   List<bool> inNonlinearAccessContext;
 }

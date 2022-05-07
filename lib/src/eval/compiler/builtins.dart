@@ -28,6 +28,9 @@ class BuiltinValue {
     if (type == BuiltinValueType.intType) {
       ctx.pushOp(PushConstantInt.make(intval!), PushConstantInt.LEN);
       return Variable.alloc(ctx, EvalTypes.intType.copyWith(boxed: false));
+    } else if (type == BuiltinValueType.doubleType) {
+      ctx.pushOp(PushConstantDouble.make(doubleval!), PushConstantDouble.LEN);
+      return Variable.alloc(ctx, EvalTypes.doubleType.copyWith(boxed: false));
     } else if (type == BuiltinValueType.stringType) {
       final op = PushConstant.make(ctx.constantPool.addOrGet(stringval!));
       ctx.pushOp(op, PushConstant.LEN);

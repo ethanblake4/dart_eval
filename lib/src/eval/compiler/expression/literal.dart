@@ -10,6 +10,8 @@ import '../variable.dart';
 BuiltinValue parseConstLiteral(Literal l, CompilerContext ctx) {
   if (l is IntegerLiteral) {
     return BuiltinValue(intval: l.value);
+  } else if (l is DoubleLiteral) {
+    return BuiltinValue(doubleval: l.value);
   } else if (l is SimpleStringLiteral) {
     return BuiltinValue(stringval: l.stringValue);
   } else if (l is NullLiteral) {
@@ -19,7 +21,7 @@ BuiltinValue parseConstLiteral(Literal l, CompilerContext ctx) {
 }
 
 Variable parseLiteral(Literal l, CompilerContext ctx) {
-  if (l is IntegerLiteral || l is SimpleStringLiteral || l is NullLiteral) {
+  if (l is IntegerLiteral || l is DoubleLiteral || l is SimpleStringLiteral || l is NullLiteral) {
     return parseConstLiteral(l, ctx).push(ctx);
   }
   if (l is ListLiteral) {

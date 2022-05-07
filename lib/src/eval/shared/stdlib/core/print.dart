@@ -20,6 +20,6 @@ class _$print implements EvalCallable {
 
   @override
   $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
-    print(args[0]!.$value);
+    print(args[0]?.$value);
   }
 }

@@ -38,6 +38,25 @@ class PushConstantInt implements DbcOp {
   String toString() => 'PushConstantInt ($_value)';
 }
 
+class PushConstantDouble implements DbcOp {
+  PushConstantDouble(Runtime exec) : _value = exec._readFloat32();
+
+  PushConstantDouble.make(this._value);
+
+  final double _value;
+
+  static const int LEN = Dbc.BASE_OPLEN + Dbc.F32_LEN;
+
+  // Set value at position to constant
+  @override
+  void run(Runtime exec) {
+    exec.frame[exec.frameOffset++] = _value;
+  }
+
+  @override
+  String toString() => 'PushConstantDouble ($_value)';
+}
+
 class PushNull implements DbcOp {
   PushNull(Runtime exec);
 

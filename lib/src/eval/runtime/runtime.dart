@@ -62,7 +62,7 @@ class Runtime {
         _fromDbc = true;
 
   static $Value? _fn(Runtime rt, $Value? target, List<$Value?> args) {
-    throw UnimplementedError('Tried to invoke a nonexistent external function');
+    throw UnimplementedError('Tried to invoke a nonexistent external function; did you forget to add it with registerBridgeFunc()?');
   }
 
   static const _defaultFunction = $Function(_fn);
@@ -143,7 +143,7 @@ class Runtime {
   void _setupBridging() {
     for (final ulb in _unloadedBrFunc) {
       final libIndex = _bridgeLibraryMappings[ulb.library]!;
-      _bridgeFunctions[bridgeFuncMappings[libIndex]![ulb.name]!] = ulb.func;
+      _bridgeFunctions[bridgeFuncMappings[libIndex]![ulb.name] ?? (throw ArgumentError('Could not find ${ulb.name}'))] = ulb.func;
     }
   }
 
@@ -333,6 +333,9 @@ class Runtime {
       case IndexMap:
         op as IndexMap;
         return [Dbc.OP_INDEX_MAP, ...Dbc.i16b(op._map), ...Dbc.i16b(op._index)];
+      case PushConstantDouble:
+        op as PushConstantDouble;
+        return [Dbc.OP_PUSH_DOUBLE, ...Dbc.f32b(op._value)];
       default:
         throw ArgumentError('Not a valid op $op');
     }
@@ -370,7 +373,10 @@ class Runtime {
     }
   }
 
-  dynamic executeLib(String library, String name) {
+  dynamic executeLib(String library, String name, [List? args]) {
+    if (args != null) {
+      this.args = args;
+    }
     return executeNamed(_bridgeLibraryMappings[library]!, name);
   }
 
@@ -421,6 +427,13 @@ class Runtime {
   @pragma('vm:always-inline')
   int _readInt32() {
     final i = _dbc.getInt32(_offset);
+    _offset += 4;
+    return i;
+  }
+
+  @pragma('vm:always-inline')
+  double _readFloat32() {
+    final i = _dbc.getFloat32(_offset);
     _offset += 4;
     return i;
   }

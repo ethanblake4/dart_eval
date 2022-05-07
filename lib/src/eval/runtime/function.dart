@@ -36,11 +36,11 @@ abstract class EvalFunction implements $Instance, EvalCallable {
 }
 
 class EvalFunctionPtr extends EvalFunction {
-  EvalFunctionPtr(this.$this, this.offset, this.requiredPositionalArgCount, this.positionalArgTypes,
+  EvalFunctionPtr(this.$prev, this.offset, this.requiredPositionalArgCount, this.positionalArgTypes,
       this.sortedNamedArgs, this.sortedNamedArgTypes);
 
   final int offset;
-  final $Instance? $this;
+  final List<Object?>? $prev;
   final int requiredPositionalArgCount;
   final List<RuntimeType> positionalArgTypes;
   final List<String> sortedNamedArgs;
@@ -48,13 +48,22 @@ class EvalFunctionPtr extends EvalFunction {
 
   @override
   $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
-    runtime.args = [null, ...runtime.args, $this];
+    runtime.args = [if ($prev != null) $prev, ...args];
     runtime.bridgeCall(offset);
     return runtime.returnValue as $Value?;
   }
 
   @override
   int get $runtimeType => RuntimeTypes.functionType;
+
+  @override
+  String toString() {
+    return 'EvalFunctionPtr{offset: $offset, prev: ${$prev}, '
+        'requiredPositionalArgCount: $requiredPositionalArgCount, '
+        'positionalArgTypes: $positionalArgTypes, '
+        'sortedNamedArgs: $sortedNamedArgs, '
+        'sortedNamedArgTypes: $sortedNamedArgTypes}';
+  }
 }
 
 class EvalStaticFunctionPtr extends EvalFunction {

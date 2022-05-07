@@ -24,12 +24,16 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
   ctx.resetStack();
 
   final _existingAllocs = 1 + (e.parameters?.parameters.length ?? 0);
-  ctx.beginAllocScope(existingAllocLen: _existingAllocs);
+  ctx.beginAllocScope(existingAllocLen: _existingAllocs, closure: true);
+
+  final $prev = Variable(0, EvalTypes.listType, isFinal: true);
+
+  ctx.setLocal('#prev', $prev);
 
   ctx.scopeFrameOffset += _existingAllocs;
   final resolvedParams = resolveFPLDefaults(ctx, e.parameters!, false, allowUnboxed: true, sortNamed: true);
 
-  var i = 0;
+  var i = 1;
 
   for (final param in resolvedParams) {
     final p = param.parameter;
@@ -47,9 +51,6 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
 
     i++;
   }
-
-  //ctx.pushOp(PushCaptureScope.make(), PushCaptureScope.LEN);
-  //final $prev = Variable.alloc(ctx, EvalTypes.listType, isFinal: true);
 
   final b = e.body;
 

@@ -1,4 +1,5 @@
 import 'package:dart_eval/dart_eval.dart';
+import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/stdlib/core.dart';
 import 'package:test/test.dart';
 
@@ -196,6 +197,50 @@ void main() {
 
       expect(exec.executeLib('package:example/main.dart', 'main'), $double(1.5));
     });
+
+    test('Simple async/await', () async {
+      final runtime = gen.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+          Future main(int milliseconds) async {
+            await Future.delayed(Duration(milliseconds: milliseconds));
+            return 3;
+          }
+          '''
+        }
+      });
+
+      final startTime = DateTime.now().millisecondsSinceEpoch;
+      final future = runtime.executeLib('package:example/main.dart', 'main', [150]) as Future;
+      await expectLater(future, completion($int(3)));
+      final endTime = DateTime.now().millisecondsSinceEpoch;
+      expect(endTime - startTime, greaterThan(100));
+      expect(endTime - startTime, lessThan(200));
+    });
+
+    test('Closure with arg', () {
+      final exec = gen.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main() {
+              return q()(6);
+            }
+            
+            Function q() {
+              final b = 12;
+              
+              var myfunc = (a) {
+                return a + b;
+              };
+              
+              return myfunc;
+            }
+           '''
+        }
+      });
+
+      expect(exec.executeLib('package:example/main.dart', 'main'), 18);
+    });
   });
 
   group('Class tests', () {
@@ -253,6 +298,33 @@ void main() {
       });
 
       expect(exec.executeLib('package:example/main.dart', 'main'), $int(19));
+    });
+
+    test('"this" keyword', () {
+      final exec = gen.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main () {
+              return M(2).load();
+            }
+            
+            class M {
+              M(this.number);
+              final int number;
+              
+              int load() {
+                return this._loadInternal(4);
+              }
+              
+              _loadInternal(int times) {
+                return this.number * times;
+              }
+            }
+          '''
+        }
+      });
+
+      expect(exec.executeLib('package:example/main.dart', 'main'), 8);
     });
 
     test('Simple static method', () {
@@ -358,20 +430,39 @@ void main() {
       compiler = Compiler();
     });
 
-    test('Future.delayed()', () {
+    test('Future.delayed()', () async {
       final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
-          Future main(int seconds) {
-            return Future.delayed(Duration(seconds: seconds + 1));
+          Future main(int milliseconds) {
+            return Future.delayed(Duration(milliseconds: milliseconds));
           }
           '''
         }
       });
 
-      runtime.args = [1];
-      final future = runtime.executeLib('package:example/main.dart', 'main') as Future;
-      expect(future, completion(null));
+      final startTime = DateTime.now().millisecondsSinceEpoch;
+      final future = runtime.executeLib('package:example/main.dart', 'main', [150]) as Future;
+      await expectLater(future, completion(null));
+      final endTime = DateTime.now().millisecondsSinceEpoch;
+      expect(endTime - startTime, greaterThan(100));
+      expect(endTime - startTime, lessThan(200));
+    });
+
+    test('print()', () async {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+          void main(int whatToSay) {
+            print(whatToSay);
+          }
+          '''
+        }
+      });
+
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main', [56890]);
+      }, prints('56890\n'));
     });
   });
 
@@ -552,7 +643,7 @@ void main() {
           ''',
           'b1.dart': '''
             library b1;
-            export 'package:example/b2.dart';
+            export 'package:example/b2.dart' show ClassB;
           ''',
           'b2.dart': '''
             export 'package:example/b3.dart';
@@ -569,6 +660,54 @@ void main() {
       final runtime = Runtime.ofProgram(program);
       final result = runtime.executeLib('package:example/main.dart', 'main');
       expect(result, 8);
+    });
+
+    test('Library composition with parts', () {
+      final program = compiler.compile({
+        'example': {
+          'main.dart': '''
+            library my_lib;
+            part 'package:example/b1.dart';
+            part 'package:example/b2.dart';
+          ''',
+          'b1.dart': '''
+            part of 'package:example/main.dart';
+            int main(String arg) {
+              return _countChars(arg);
+            }
+          ''',
+          'b2.dart': '''
+            part of my_lib;
+            int _countChars(String str) {
+              return str.length;
+            }
+          ''',
+        }
+      });
+
+      final runtime = Runtime.ofProgram(program);
+      final result = runtime.executeLib('package:example/main.dart', 'main', [$String('Test45678')]);
+      expect(result, 9);
+    });
+
+    test('Top-level private access with underscore prefixing', () {
+      final packages = {
+        'example': {
+          'main.dart': '''
+            import 'package:example/b2.dart';
+            int main(String arg) {
+              return _countChars(arg);
+            }
+          ''',
+          'b2.dart': '''
+            int _countChars(String str) {
+              return str.length;
+            }
+          ''',
+        }
+      };
+
+      expect(() => compiler.compile(packages), throwsA(isA<CompileError>()));
     });
   });
 

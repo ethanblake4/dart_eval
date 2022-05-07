@@ -72,7 +72,7 @@ class InvokeDynamic implements DbcOp {
         }
 
         final al = runtime.args.length;
-        runtime.args = [for (i = 3; i < al; i++) runtime.args[i], object.$this];
+        runtime.args = [if (object.$prev != null) object.$prev, for (i = 3; i < al; i++) runtime.args[i]];
         runtime.callStack.add(runtime._prOffset);
         runtime._prOffset = object.offset;
         return;
@@ -181,7 +181,7 @@ class PushObjectProperty implements DbcOp {
             object = object.evalSuperclass;
             continue;
           }
-          runtime.returnValue = EvalFunctionPtr(object, method, 0, [], [], []);
+          runtime.returnValue = EvalStaticFunctionPtr(object, method);
           runtime.args = [];
           return;
         }

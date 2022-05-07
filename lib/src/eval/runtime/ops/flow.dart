@@ -237,7 +237,7 @@ class PushFunctionPtr implements DbcOp {
     final snAT = runtime.constantPool[args[3] as int] as List;
     final sortedNamedArgTypes = [for (final json in snAT) RuntimeType.fromJson(json)];
 
-    runtime.frame[runtime.frameOffset++] = EvalFunctionPtr(null, _offset, args[0] as int, posArgTypes,
+    runtime.frame[runtime.frameOffset++] = EvalFunctionPtr(runtime.frame, _offset, args[0] as int, posArgTypes,
         (runtime.constantPool[args[2] as int] as List).cast(), sortedNamedArgTypes);
 
     runtime.args = [];

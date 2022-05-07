@@ -44,7 +44,7 @@ class $List<E> implements List<E>, $Instance {
   }
 
   @override
-  List get $reified => $value.map((e) => e is $Value ? e.$reified : e).toList().cast();
+  List get $reified => $value.map((e) => e is $Value ? e.$reified : e).toList();
 
   @override
   bool any(bool Function(E element) test) => $value.any(test);
