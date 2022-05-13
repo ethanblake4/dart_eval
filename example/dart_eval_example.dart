@@ -114,8 +114,8 @@ class $TimestampedTime implements TimestampedTime, $Instance {
       BridgeParameter('timezoneOffset', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType)), true)
     ]))
   }, methods: {}, getters: {}, setters: {}, fields: {
-    'utcTime': BridgeFieldDef(false, false, BridgeTypeRef.type(RuntimeTypes.intType)),
-    'timezoneOffset': BridgeFieldDef(false, false, BridgeTypeRef.type(RuntimeTypes.intType))
+    'utcTime': BridgeFieldDef(BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType))),
+    'timezoneOffset': BridgeFieldDef(BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType)))
   });
 
   /// Define static [EvalCallableFunc] functions for all static methods and constructors. This is for the

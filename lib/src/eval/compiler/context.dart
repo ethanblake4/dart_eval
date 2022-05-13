@@ -150,6 +150,10 @@ class CompilerContext with ScopeContext {
   Map<int, Map<String, int>> topLevelDeclarationPositions = {};
   Map<int, Map<String, int>> bridgeStaticFunctionIndices = {};
   Map<int, Map<String, List>> instanceDeclarationPositions = {};
+  Map<int, Map<String, int>> topLevelGlobalIndices = {};
+  Map<int, Map<String, int>> topLevelGlobalInitializers = {};
+  Map<int, int> runtimeGlobalInitializerMap = {};
+  Map<int, Map<String, TypeRef>> topLevelVariableInferredTypes = {};
   Map<TypeRef, int> typeRefIndexMap = {};
   Map<String, int> libraryMap = {};
   List<TypeRef> runtimeTypeList = [];
@@ -158,6 +162,7 @@ class CompilerContext with ScopeContext {
   List<bool> scopeDoesClose = [];
   PrescanContext? preScan;
   int nearestAsyncFrame = -1;
+  int globalIndex = 0;
 
   final signaturePool = FunctionSignaturePool();
   final constantPool = ConstantPool<Object>();

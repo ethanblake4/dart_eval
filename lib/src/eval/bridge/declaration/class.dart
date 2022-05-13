@@ -74,11 +74,10 @@ class BridgeConstructorDef implements BridgeDeclaration {
 
 @JsonSerializable()
 class BridgeFieldDef {
-  const BridgeFieldDef(this.isStatic, this.nullable, this.type);
+  const BridgeFieldDef(this.type, {this.isStatic = false});
 
+  final BridgeTypeAnnotation type;
   final bool isStatic;
-  final bool nullable;
-  final BridgeTypeRef type;
 
   /// Connect the generated [_$BridgeFieldDeclarationFromJson] function to the `fromJson`
   /// factory.

@@ -43,7 +43,7 @@ class $TestClass extends TestClass with $Bridge {
       BridgeParameter('b', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.stringType)), false),
     ]))
   }, getters: {}, setters: {}, fields: {
-    'someNumber': BridgeFieldDef(false, false, BridgeTypeRef.type(RuntimeTypes.intType, [])),
+    'someNumber': BridgeFieldDef(BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType, []))),
   }, bridge: true);
 
   @override

@@ -153,6 +153,12 @@ class Dbc {
   /// [PushConstantDouble]
   static const OP_PUSH_DOUBLE = 48;
 
+  /// [SetGlobal]
+  static const OP_SET_GLOBAL = 49;
+
+  /// [LoadGlobal]
+  static const OP_LOAD_GLOBAL = 50;
+
   static List<int> i16b(int i16) {
     final x = ByteData(2);
     x.setInt16(0, i16);
@@ -243,5 +249,8 @@ final List<OpLoader> ops = [
   (Runtime rt) => Await(rt), // 44
   (Runtime rt) => PushMap(rt), // 45
   (Runtime rt) => MapSet(rt), // 46
-  (Runtime rt) => IndexMap(rt) // 47
+  (Runtime rt) => IndexMap(rt), // 47
+  (Runtime rt) => PushConstantDouble(rt), // 48
+  (Runtime rt) => SetGlobal(rt), // 49
+  (Runtime rt) => LoadGlobal(rt) // 50
 ];

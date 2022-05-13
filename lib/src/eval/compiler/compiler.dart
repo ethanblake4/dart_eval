@@ -27,6 +27,7 @@ class Compiler {
   final _bridgeDeclarations = <String, List<BridgeDeclaration>>{};
 
   final _topLevelDeclarationsMap = <int, Map<String, DeclarationOrBridge>>{};
+  final _topLevelGlobalIndices = <int, Map<String, int>>{};
   final _instanceDeclarationsMap = <int, Map<String, Map<String, Declaration>>>{};
 
   final ctx = CompilerContext(0);
@@ -205,6 +206,25 @@ class Compiler {
       }
     }
 
+    ctx.topLevelGlobalIndices = _topLevelGlobalIndices;
+
+    /// Compile top-level variables first so we can infer their type
+    _topLevelDeclarationsMap.forEach((key, value) {
+      value.forEach((lib, _declaration) {
+        if (_declaration.isBridge) {
+          return;
+        }
+        final declaration = _declaration.declaration!;
+        if (!(declaration is VariableDeclaration)) {
+          return;
+        }
+        ctx.library = key;
+        compileDeclaration(declaration, ctx);
+        ctx.resetStack();
+      });
+    });
+
+    /// Compile the rest of the declarations
     _topLevelDeclarationsMap.forEach((key, value) {
       ctx.topLevelDeclarationPositions[key] = {};
       ctx.instanceDeclarationPositions[key] = {};
@@ -213,7 +233,9 @@ class Compiler {
           return;
         }
         final declaration = _declaration.declaration!;
-        if (declaration is ConstructorDeclaration || declaration is MethodDeclaration) {
+        if (declaration is ConstructorDeclaration ||
+            declaration is MethodDeclaration ||
+            declaration is VariableDeclaration) {
           return;
         }
         ctx.library = key;
@@ -237,6 +259,12 @@ class Compiler {
       ctx.typeTypes.add(type.resolveTypeChain(ctx).getRuntimeIndices(ctx));
     }
 
+    final globalInitializers = List<int>.filled(ctx.globalIndex, 0);
+
+    for (final gi in ctx.runtimeGlobalInitializerMap.entries) {
+      globalInitializers[gi.key] = gi.value;
+    }
+
     return Program(
         ctx.topLevelDeclarationPositions,
         ctx.instanceDeclarationPositions,
@@ -246,7 +274,8 @@ class Compiler {
         libraryMapString,
         ctx.bridgeStaticFunctionIndices,
         ctx.constantPool.pool,
-        ctx.runtimeTypes.pool);
+        ctx.runtimeTypes.pool,
+        globalInitializers);
   }
 
   Runtime compileWriteAndLoad(Map<String, Map<String, String>> packages) {
@@ -285,18 +314,34 @@ class Compiler {
 
     final declaration = declarationOrBridge.declaration!;
 
-    if (declaration is VariableDeclaration) {
-      throw CompileError('Cannot compile top-level variable declaration "${declaration.name.name}"');
+    if (declaration is TopLevelVariableDeclaration) {
+      final vlist = declaration.variables;
+
+      if (!_topLevelGlobalIndices.containsKey(libraryIndex)) {
+        _topLevelGlobalIndices[libraryIndex] = {};
+        ctx.topLevelGlobalInitializers[libraryIndex] = {};
+        ctx.topLevelVariableInferredTypes[libraryIndex] = {};
+      }
+
+      for (final variable in vlist.variables) {
+        final name = variable.name.name;
+
+        if (_topLevelDeclarationsMap[libraryIndex]!.containsKey(name)) {
+          throw CompileError('Cannot define "$name twice in the same library"');
+        }
+
+        _topLevelDeclarationsMap[libraryIndex]![name] = DeclarationOrBridge(libraryIndex, declaration: variable);
+        _topLevelGlobalIndices[libraryIndex]![name] = ctx.globalIndex++;
+      }
     } else {
       declaration as NamedCompilationUnitMember;
       final name = declaration.name.name;
 
-      if (_topLevelDeclarationsMap[libraryIndex]!.containsKey(declaration.name.name)) {
-        throw CompileError('Cannot define "${declaration.name.name} twice in the same library"');
+      if (_topLevelDeclarationsMap[libraryIndex]!.containsKey(name)) {
+        throw CompileError('Cannot define "$name twice in the same library"');
       }
 
-      _topLevelDeclarationsMap[libraryIndex]![declaration.name.name] =
-          DeclarationOrBridge(libraryIndex, declaration: declaration);
+      _topLevelDeclarationsMap[libraryIndex]![name] = DeclarationOrBridge(libraryIndex, declaration: declaration);
 
       if (declaration is ClassDeclaration) {
         _instanceDeclarationsMap[libraryIndex]![name] = {};

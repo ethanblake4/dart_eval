@@ -5,6 +5,7 @@ import 'package:dart_eval/src/eval/compiler/declaration/constructor.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/field.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/function.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/method.dart';
+import 'package:dart_eval/src/eval/compiler/declaration/variable.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 
 int? compileDeclaration(Declaration d, CompilerContext ctx,
@@ -19,6 +20,8 @@ int? compileDeclaration(Declaration d, CompilerContext ctx,
     compileFieldDeclaration(fieldIndex!, d, ctx, parent as ClassDeclaration);
   } else if (d is ConstructorDeclaration) {
     compileConstructorDeclaration(ctx, d, parent as ClassDeclaration, fields!);
+  } else if (d is VariableDeclaration) {
+    compileTopLevelVariableDeclaration(d, ctx);
   } else {
     throw CompileError('No support for ${d.runtimeType}');
   }

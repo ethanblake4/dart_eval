@@ -183,6 +183,15 @@ class IdentifierReference implements Reference {
 
     final decl = _decl.declaration!;
 
+    if (decl is VariableDeclaration) {
+      final type = ctx.topLevelVariableInferredTypes[_decl.sourceLib]![decl.name.name]!;
+      final gIndex = ctx.topLevelGlobalIndices[_decl.sourceLib]![decl.name.name]!;
+      ctx.pushOp(LoadGlobal.make(gIndex), LoadGlobal.LEN);
+      ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
+
+      return Variable.alloc(ctx, type);
+    }
+
     if (!(decl is FunctionDeclaration) && !(decl is ConstructorDeclaration)) {
       decl as ClassDeclaration;
 

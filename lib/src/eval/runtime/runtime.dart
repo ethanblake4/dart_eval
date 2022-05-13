@@ -62,7 +62,8 @@ class Runtime {
         _fromDbc = true;
 
   static $Value? _fn(Runtime rt, $Value? target, List<$Value?> args) {
-    throw UnimplementedError('Tried to invoke a nonexistent external function; did you forget to add it with registerBridgeFunc()?');
+    throw UnimplementedError(
+        'Tried to invoke a nonexistent external function; did you forget to add it with registerBridgeFunc()?');
   }
 
   static const _defaultFunction = $Function(_fn);
@@ -74,7 +75,8 @@ class Runtime {
         typeNames = program.typeNames,
         runtimeTypes = program.runtimeTypes,
         _bridgeLibraryMappings = program.bridgeLibraryMappings,
-        bridgeFuncMappings = program.bridgeFunctionMappings {
+        bridgeFuncMappings = program.bridgeFunctionMappings,
+        globalInitializers = program.globalInitializers {
     declarations = program.topLevelDeclarations;
     constantPool.addAll(program.constantPool);
     program.instanceDeclarations.forEach((file, $class) {
@@ -105,6 +107,7 @@ class Runtime {
     final encodedBridgeFuncMappings = _readString();
     final encodedConstantPool = _readString();
     final encodedRuntimeTypes = _readString();
+    final encodedGlobalInitializers = _readString();
 
     declarations =
         (json.decode(encodedToplevelDecs).map((k, v) => MapEntry(int.parse(k), (v as Map).cast<String, int>())) as Map)
@@ -131,6 +134,8 @@ class Runtime {
 
     runtimeTypes = [for (final s in (json.decode(encodedRuntimeTypes) as List)) RuntimeTypeSet.fromJson(s as List)];
 
+    globalInitializers = [for (final i in json.decode(encodedGlobalInitializers) as List) i as int];
+
     _setupBridging();
 
     while (_offset < _dbc.lengthInBytes) {
@@ -143,7 +148,8 @@ class Runtime {
   void _setupBridging() {
     for (final ulb in _unloadedBrFunc) {
       final libIndex = _bridgeLibraryMappings[ulb.library]!;
-      _bridgeFunctions[bridgeFuncMappings[libIndex]![ulb.name] ?? (throw ArgumentError('Could not find ${ulb.name}'))] = ulb.func;
+      _bridgeFunctions[bridgeFuncMappings[libIndex]![ulb.name] ?? (throw ArgumentError('Could not find ${ulb.name}'))] =
+          ulb.func;
     }
   }
 
@@ -170,6 +176,8 @@ class Runtime {
   final _unloadedBrClass = <_UnloadedBridgeClass>[];
   final _unloadedBrFunc = <_UnloadedBridgeFunction>[];
   final constantPool = <Object>[];
+  final globals = List<Object?>.filled(4000, null);
+  var globalInitializers = <int>[];
 
   static List<int> opcodeFrom(DbcOp op) {
     switch (op.runtimeType) {
@@ -336,6 +344,12 @@ class Runtime {
       case PushConstantDouble:
         op as PushConstantDouble;
         return [Dbc.OP_PUSH_DOUBLE, ...Dbc.f32b(op._value)];
+      case SetGlobal:
+        op as SetGlobal;
+        return [Dbc.OP_SET_GLOBAL, ...Dbc.i32b(op._index), ...Dbc.i16b(op._value)];
+      case LoadGlobal:
+        op as LoadGlobal;
+        return [Dbc.OP_LOAD_GLOBAL, ...Dbc.i32b(op._index)];
       default:
         throw ArgumentError('Not a valid op $op');
     }

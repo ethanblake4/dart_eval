@@ -181,7 +181,7 @@ class TypeRef {
       final br = dec.bridge as BridgeClassDef;
       final fd = br.fields[field];
       if (fd != null) {
-        return TypeRef.fromBridgeTypeRef(ctx, fd.type);
+        return TypeRef.fromBridgeAnnotation(ctx, fd.type);
       }
       final get = br.getters[field];
       if (get != null) {
