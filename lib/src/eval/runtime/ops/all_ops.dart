@@ -159,6 +159,9 @@ class Dbc {
   /// [LoadGlobal]
   static const OP_LOAD_GLOBAL = 50;
 
+  /// [BoxMap]
+  static const OP_BOXMAP = 51;
+
   static List<int> i16b(int i16) {
     final x = ByteData(2);
     x.setInt16(0, i16);
@@ -252,5 +255,6 @@ final List<OpLoader> ops = [
   (Runtime rt) => IndexMap(rt), // 47
   (Runtime rt) => PushConstantDouble(rt), // 48
   (Runtime rt) => SetGlobal(rt), // 49
-  (Runtime rt) => LoadGlobal(rt) // 50
+  (Runtime rt) => LoadGlobal(rt), // 50
+  (Runtime rt) => BoxMap(rt), // 37
 ];

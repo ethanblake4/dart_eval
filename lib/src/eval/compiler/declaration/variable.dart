@@ -27,6 +27,9 @@ void compileTopLevelVariableDeclaration(VariableDeclaration v, CompilerContext c
     if (!unboxedAcrossFunctionBoundaries.contains(type)) {
       V = V.boxIfNeeded(ctx);
       type = type.copyWith(boxed: true);
+    } else {
+      V = V.unboxIfNeeded(ctx);
+      type = type.copyWith(boxed: false);
     }
     final _index = ctx.topLevelGlobalIndices[ctx.library]![v.name.name]!;
     ctx.pushOp(SetGlobal.make(_index, V.scopeFrameOffset), SetGlobal.LEN);

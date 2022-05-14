@@ -182,7 +182,7 @@ class CompilerContext with ScopeContext {
   @override
   void beginAllocScope({int existingAllocLen = 0, bool requireNonlinearAccess = false, bool closure = false}) {
     super.beginAllocScope(existingAllocLen: existingAllocLen, requireNonlinearAccess: requireNonlinearAccess);
-    if (preScan!.closedFrames.contains(locals.length - 1)) {
+    if (preScan?.closedFrames.contains(locals.length - 1) ?? false) {
       final ps = PushScope.make(sourceFile, -1, '#');
       pushOp(ps, PushScope.len(ps));
       scopeDoesClose.add(true);
@@ -224,7 +224,7 @@ class CompilerContext with ScopeContext {
 
   @override
   int endAllocScope({bool popValues = true, int popAdjust = 0}) {
-    if (preScan!.closedFrames.contains(locals.length - 1)) {
+    if (preScan?.closedFrames.contains(locals.length - 1) ?? false) {
       pushOp(PopScope.make(), PopScope.LEN);
       popValues = false;
     }

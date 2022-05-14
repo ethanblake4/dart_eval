@@ -255,6 +255,26 @@ class BoxList implements DbcOp {
   String toString() => 'BoxList (L$_reg)';
 }
 
+class BoxMap implements DbcOp {
+  BoxMap(Runtime runtime) : _reg = runtime._readInt16();
+
+  BoxMap.make(this._reg);
+
+  final int _reg;
+
+  static const int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN;
+
+  @override
+  void run(Runtime runtime) {
+    final reg = _reg;
+    runtime.frame[reg] = $Map.wrap(<$Value, $Value>{...(runtime.frame[reg] as Map)});
+  }
+
+  @override
+  String toString() => 'BoxMap (L$_reg)';
+}
+
+
 class Unbox implements DbcOp {
   Unbox(Runtime runtime) : _reg = runtime._readInt16();
 

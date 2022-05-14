@@ -3,6 +3,7 @@ import 'package:dart_eval/src/eval/bridge/declaration/class.dart';
 import 'package:dart_eval/src/eval/bridge/declaration/type.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/declaration.dart';
+import 'package:dart_eval/src/eval/compiler/declaration/field.dart';
 import 'package:dart_eval/src/eval/compiler/model/library.dart';
 import 'package:dart_eval/src/eval/compiler/source.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -208,19 +209,24 @@ class Compiler {
 
     ctx.topLevelGlobalIndices = _topLevelGlobalIndices;
 
-    /// Compile top-level variables first so we can infer their type
+    /// Compile statics first so we can infer their type
     _topLevelDeclarationsMap.forEach((key, value) {
       value.forEach((lib, _declaration) {
         if (_declaration.isBridge) {
           return;
         }
         final declaration = _declaration.declaration!;
-        if (!(declaration is VariableDeclaration)) {
-          return;
-        }
         ctx.library = key;
-        compileDeclaration(declaration, ctx);
-        ctx.resetStack();
+        if (declaration is VariableDeclaration && declaration.parent!.parent is TopLevelVariableDeclaration) {
+          compileDeclaration(declaration, ctx);
+          ctx.resetStack();
+        } else if (declaration is ClassDeclaration) {
+          ctx.currentClass = declaration;
+          for (final d in declaration.members.whereType<FieldDeclaration>().where((e) => e.isStatic)) {
+            compileFieldDeclaration(-1, d, ctx, declaration);
+            ctx.resetStack();
+          }
+        }
       });
     });
 
@@ -355,9 +361,28 @@ class Compiler {
               _instanceDeclarationsMap[libraryIndex]![name]![member.name.name] = member;
             }
           } else if (member is FieldDeclaration) {
-            member.fields.variables.forEach((field) {
-              _instanceDeclarationsMap[libraryIndex]![name]![field.name.name] = field;
-            });
+            if (member.isStatic) {
+              if (!_topLevelGlobalIndices.containsKey(libraryIndex)) {
+                _topLevelGlobalIndices[libraryIndex] = {};
+                ctx.topLevelGlobalInitializers[libraryIndex] = {};
+                ctx.topLevelVariableInferredTypes[libraryIndex] = {};
+              }
+
+              for (final field in member.fields.variables) {
+                final name = declaration.name.name + '.' + field.name.name;
+
+                if (_topLevelDeclarationsMap[libraryIndex]!.containsKey(name)) {
+                  throw CompileError('Cannot define "$name twice in the same library"');
+                }
+
+                _topLevelDeclarationsMap[libraryIndex]![name] = DeclarationOrBridge(libraryIndex, declaration: field);
+                _topLevelGlobalIndices[libraryIndex]![name] = ctx.globalIndex++;
+              }
+            } else {
+              for (final field in member.fields.variables) {
+                _instanceDeclarationsMap[libraryIndex]![name]![field.name.name] = field;
+              }
+            }
           } else if (member is ConstructorDeclaration) {
             _topLevelDeclarationsMap[libraryIndex]!['$name.${member.name?.name ?? ""}'] =
                 DeclarationOrBridge(libraryIndex, declaration: member);

@@ -8,3 +8,4 @@ import 'package:dart_eval/src/eval/runtime/override.dart';
 
 part 'iterable.dart';
 part 'list.dart';
+part 'map.dart';

@@ -106,6 +106,15 @@ class IdentifierReference implements Reference {
   @override
   Variable getValue(CompilerContext ctx) {
     if (object != null) {
+      if (object!.type == EvalTypes.typeType) {
+        final classType = object!.concreteTypes[0];
+        final _name = classType.name + '.' + name;
+        final type = ctx.topLevelVariableInferredTypes[classType.file]![_name]!;
+        final gIndex = ctx.topLevelGlobalIndices[classType.file]![_name]!;
+        ctx.pushOp(LoadGlobal.make(gIndex), LoadGlobal.LEN);
+        ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
+        return Variable.alloc(ctx, type);
+      }
       object = object!.boxIfNeeded(ctx);
       final op = PushObjectProperty.make(object!.scopeFrameOffset, name);
       ctx.pushOp(op, PushObjectProperty.len(op));
@@ -151,6 +160,14 @@ class IdentifierReference implements Reference {
         if (_dec is MethodDeclaration) {
           return Variable(-1, EvalTypes.functionType,
               methodOffset: DeferredOrOffset.lookupStatic(ctx, ctx.library, ctx.currentClass!.name.name, name));
+        } else if (_dec is VariableDeclaration) {
+          final name = ctx.currentClass!.name.name + '.' + _dec.name.name;
+          final type = ctx.topLevelVariableInferredTypes[ctx.library]![name]!;
+          final gIndex = ctx.topLevelGlobalIndices[ctx.library]![name]!;
+          ctx.pushOp(LoadGlobal.make(gIndex), LoadGlobal.LEN);
+          ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
+
+          return Variable.alloc(ctx, type);
         }
       }
     }

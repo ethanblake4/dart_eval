@@ -137,7 +137,8 @@ class TypeRef {
     }
     final spec = typeReference.spec;
     if (spec != null) {
-      return ctx.visibleTypes[ctx.libraryMap[spec.library]!]![spec.name]!;
+      final lib = ctx.libraryMap[spec.library] ?? (throw CompileError('Bridge: cannot find library ${spec.library}'));
+      return ctx.visibleTypes[lib]![spec.name]!;
     }
     throw CompileError('No support for looking up types by other bridge annotation types');
   }

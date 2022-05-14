@@ -317,6 +317,9 @@ class Runtime {
       case BoxList:
         op as BoxList;
         return [Dbc.OP_BOXLIST, ...Dbc.i16b(op._reg)];
+      case BoxMap:
+        op as BoxMap;
+        return [Dbc.OP_BOXMAP, ...Dbc.i16b(op._reg)];
       case PushCaptureScope:
         op as PushCaptureScope;
         return [Dbc.OP_CAPTURE_SCOPE];
