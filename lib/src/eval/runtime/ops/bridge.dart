@@ -1,6 +1,6 @@
 part of '../runtime.dart';
 
-class BridgeInstantiate implements DbcOp {
+class BridgeInstantiate implements EvcOp {
   BridgeInstantiate(Runtime exec)
       : _subclass = exec._readInt16(),
         _constructor = exec._readInt32();
@@ -11,7 +11,7 @@ class BridgeInstantiate implements DbcOp {
   final int _constructor;
 
   static int len(BridgeInstantiate s) {
-    return Dbc.BASE_OPLEN + Dbc.I16_LEN + Dbc.I32_LEN;
+    return Evc.BASE_OPLEN + Evc.I16_LEN + Evc.I32_LEN;
   }
 
   @override
@@ -39,12 +39,12 @@ class BridgeInstantiate implements DbcOp {
   String toString() => 'BridgeInstantiate (subclass L$_subclass, Ex#$_constructor))';
 }
 
-class PushBridgeSuperShim extends DbcOp {
+class PushBridgeSuperShim extends EvcOp {
   PushBridgeSuperShim(Runtime runtime);
 
   PushBridgeSuperShim.make();
 
-  static int LEN = Dbc.BASE_OPLEN;
+  static int LEN = Evc.BASE_OPLEN;
 
   @override
   void run(Runtime runtime) {
@@ -55,14 +55,14 @@ class PushBridgeSuperShim extends DbcOp {
   String toString() => 'PushBridgeSuperShim ()';
 }
 
-class ParentBridgeSuperShim extends DbcOp {
+class ParentBridgeSuperShim extends EvcOp {
   ParentBridgeSuperShim(Runtime exec)
       : _shimOffset = exec._readInt16(),
         _bridgeOffset = exec._readInt16();
 
   ParentBridgeSuperShim.make(this._shimOffset, this._bridgeOffset);
 
-  static const int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN * 2;
+  static const int LEN = Evc.BASE_OPLEN + Evc.I16_LEN * 2;
 
   final int _shimOffset;
   final int _bridgeOffset;
@@ -77,12 +77,12 @@ class ParentBridgeSuperShim extends DbcOp {
   String toString() => 'ParentBridgeSuperShim (shim L$_shimOffset, bridge L$_bridgeOffset)';
 }
 
-class InvokeExternal implements DbcOp {
+class InvokeExternal implements EvcOp {
   InvokeExternal(Runtime runtime) : _function = runtime._readInt32();
 
   InvokeExternal.make(this._function);
 
-  static const int LEN = Dbc.BASE_OPLEN + Dbc.I32_LEN;
+  static const int LEN = Evc.BASE_OPLEN + Evc.I32_LEN;
 
   final int _function;
 
@@ -104,7 +104,7 @@ class InvokeExternal implements DbcOp {
   String toString() => 'InvokeExternal (Ex#$_function)';
 }
 
-class Await implements DbcOp {
+class Await implements EvcOp {
   Await(Runtime runtime)
       : _completerOffset = runtime._readInt16(),
         _futureOffset = runtime._readInt16();
@@ -114,7 +114,7 @@ class Await implements DbcOp {
   final int _completerOffset;
   final int _futureOffset;
 
-  static const int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN * 2;
+  static const int LEN = Evc.BASE_OPLEN + Evc.I16_LEN * 2;
 
   @override
   void run(Runtime runtime) {
@@ -156,7 +156,7 @@ class Await implements DbcOp {
   String toString() => 'Await (comp L$_completerOffset, L$_futureOffset)';
 }
 
-class Complete implements DbcOp {
+class Complete implements EvcOp {
   Complete(this._offset);
 
   final int _offset;

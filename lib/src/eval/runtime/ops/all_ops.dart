@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 import '../runtime.dart';
 
-class Dbc {
+class Evc {
   static const BASE_OPLEN = 1;
 
   /// [JumpConstant] Jump to constant position
@@ -198,11 +198,11 @@ class Dbc {
   }
 }
 
-abstract class DbcOp {
+abstract class EvcOp {
   void run(Runtime exec);
 }
 
-typedef OpLoader = DbcOp Function(Runtime);
+typedef OpLoader = EvcOp Function(Runtime);
 
 final List<OpLoader> ops = [
   (Runtime rt) => JumpConstant(rt), // 0

@@ -57,9 +57,9 @@ class _UnloadedBridgeFunction {
 }
 
 class Runtime {
-  Runtime(this._dbc)
+  Runtime(this._evc)
       : id = _id++,
-        _fromDbc = true;
+        _fromEvc = true;
 
   static $Value? _fn(Runtime rt, $Value? target, List<$Value?> args) {
     throw UnimplementedError(
@@ -70,7 +70,7 @@ class Runtime {
 
   Runtime.ofProgram(Program program)
       : id = _id++,
-        _fromDbc = false,
+        _fromEvc = false,
         typeTypes = program.typeTypes,
         typeNames = program.typeNames,
         runtimeTypes = program.runtimeTypes,
@@ -138,8 +138,8 @@ class Runtime {
 
     _setupBridging();
 
-    while (_offset < _dbc.lengthInBytes) {
-      final opId = _dbc.getUint8(_offset);
+    while (_offset < _evc.lengthInBytes) {
+      final opId = _evc.getUint8(_offset);
       _offset++;
       pr.add(ops[opId](this));
     }
@@ -164,7 +164,7 @@ class Runtime {
   void setup() {
     configureCoreForRuntime(this);
     configureAsyncForRuntime(this);
-    if (_fromDbc) {
+    if (_fromEvc) {
       _load();
     } else {
       _setupBridging();
@@ -179,180 +179,180 @@ class Runtime {
   final globals = List<Object?>.filled(4000, null);
   var globalInitializers = <int>[];
 
-  static List<int> opcodeFrom(DbcOp op) {
+  static List<int> opcodeFrom(EvcOp op) {
     switch (op.runtimeType) {
       case JumpConstant:
         op as JumpConstant;
-        return [Dbc.OP_JMPC, ...Dbc.i32b(op._offset)];
+        return [Evc.OP_JMPC, ...Evc.i32b(op._offset)];
       case Exit:
         op as Exit;
-        return [Dbc.OP_EXIT, ...Dbc.i16b(op._location)];
+        return [Evc.OP_EXIT, ...Evc.i16b(op._location)];
       case Unbox:
         op as Unbox;
-        return [Dbc.OP_UNBOX, ...Dbc.i16b(op._reg)];
+        return [Evc.OP_UNBOX, ...Evc.i16b(op._reg)];
       case PushReturnValue:
         op as PushReturnValue;
-        return [Dbc.OP_SETVR];
+        return [Evc.OP_SETVR];
       case NumAdd:
         op as NumAdd;
-        return [Dbc.OP_ADDVV, ...Dbc.i16b(op._location1), ...Dbc.i16b(op._location2)];
+        return [Evc.OP_ADDVV, ...Evc.i16b(op._location1), ...Evc.i16b(op._location2)];
       case NumSub:
         op as NumSub;
-        return [Dbc.OP_NUM_SUB, ...Dbc.i16b(op._location1), ...Dbc.i16b(op._location2)];
+        return [Evc.OP_NUM_SUB, ...Evc.i16b(op._location1), ...Evc.i16b(op._location2)];
       case BoxInt:
         op as BoxInt;
-        return [Dbc.OP_BOXINT, ...Dbc.i16b(op._reg)];
+        return [Evc.OP_BOXINT, ...Evc.i16b(op._reg)];
       case BoxDouble:
         op as BoxDouble;
-        return [Dbc.OP_BOXDOUBLE, ...Dbc.i16b(op._reg)];
+        return [Evc.OP_BOXDOUBLE, ...Evc.i16b(op._reg)];
       case BoxNum:
         op as BoxNum;
-        return [Dbc.OP_BOXNUM, ...Dbc.i16b(op._reg)];
+        return [Evc.OP_BOXNUM, ...Evc.i16b(op._reg)];
       case PushArg:
         op as PushArg;
-        return [Dbc.OP_PUSH_ARG, ...Dbc.i16b(op._location)];
+        return [Evc.OP_PUSH_ARG, ...Evc.i16b(op._location)];
       case JumpIfNonNull:
         op as JumpIfNonNull;
-        return [Dbc.OP_JNZ, ...Dbc.i16b(op._location), ...Dbc.i32b(op._offset)];
+        return [Evc.OP_JNZ, ...Evc.i16b(op._location), ...Evc.i32b(op._offset)];
       case JumpIfFalse:
         op as JumpIfFalse;
-        return [Dbc.OP_JUMP_IF_FALSE, ...Dbc.i16b(op._location), ...Dbc.i32b(op._offset)];
+        return [Evc.OP_JUMP_IF_FALSE, ...Evc.i16b(op._location), ...Evc.i32b(op._offset)];
       case PushConstantInt:
         op as PushConstantInt;
-        return [Dbc.OP_SETVC, ...Dbc.i32b(op._value)];
+        return [Evc.OP_SETVC, ...Evc.i32b(op._value)];
       case PushScope:
         op as PushScope;
-        return [Dbc.OP_PUSHSCOPE, ...Dbc.i32b(op.sourceFile), ...Dbc.i32b(op.sourceOffset), ...Dbc.istr(op.frName)];
+        return [Evc.OP_PUSHSCOPE, ...Evc.i32b(op.sourceFile), ...Evc.i32b(op.sourceOffset), ...Evc.istr(op.frName)];
       case PopScope:
         op as PopScope;
-        return [Dbc.OP_POPSCOPE];
+        return [Evc.OP_POPSCOPE];
       case CopyValue:
         op as CopyValue;
-        return [Dbc.OP_SETVV, ...Dbc.i16b(op._to), ...Dbc.i16b(op._from)];
+        return [Evc.OP_SETVV, ...Evc.i16b(op._to), ...Evc.i16b(op._from)];
       case SetReturnValue:
         op as SetReturnValue;
-        return [Dbc.OP_SETRV, ...Dbc.i16b(op._location)];
+        return [Evc.OP_SETRV, ...Evc.i16b(op._location)];
       case Return:
         op as Return;
-        return [Dbc.OP_RETURN, ...Dbc.i16b(op._location)];
+        return [Evc.OP_RETURN, ...Evc.i16b(op._location)];
       case Pop:
         op as Pop;
-        return [Dbc.OP_POP, op._amount];
+        return [Evc.OP_POP, op._amount];
       case Call:
         op as Call;
-        return [Dbc.OP_CALL, ...Dbc.i32b(op._offset)];
+        return [Evc.OP_CALL, ...Evc.i32b(op._offset)];
       case InvokeDynamic:
         op as InvokeDynamic;
-        return [Dbc.OP_INVOKE_DYNAMIC, ...Dbc.i16b(op._location), ...Dbc.istr(op._method)];
+        return [Evc.OP_INVOKE_DYNAMIC, ...Evc.i16b(op._location), ...Evc.istr(op._method)];
       case SetObjectProperty:
         op as SetObjectProperty;
         return [
-          Dbc.OP_SET_OBJECT_PROP,
-          ...Dbc.i16b(op._location),
-          ...Dbc.istr(op._property),
-          ...Dbc.i16b(op._valueOffset)
+          Evc.OP_SET_OBJECT_PROP,
+          ...Evc.i16b(op._location),
+          ...Evc.istr(op._property),
+          ...Evc.i16b(op._valueOffset)
         ];
       case PushObjectProperty:
         op as PushObjectProperty;
-        return [Dbc.OP_PUSH_OBJECT_PROP, ...Dbc.i16b(op._location), ...Dbc.istr(op._property)];
+        return [Evc.OP_PUSH_OBJECT_PROP, ...Evc.i16b(op._location), ...Evc.istr(op._property)];
       case PushObjectPropertyImpl:
         op as PushObjectPropertyImpl;
-        return [Dbc.OP_PUSH_OBJECT_PROP_IMPL, ...Dbc.i16b(op._objectOffset), ...Dbc.i16b(op._propertyIndex)];
+        return [Evc.OP_PUSH_OBJECT_PROP_IMPL, ...Evc.i16b(op._objectOffset), ...Evc.i16b(op._propertyIndex)];
       case SetObjectPropertyImpl:
         op as SetObjectPropertyImpl;
         return [
-          Dbc.OP_SET_OBJECT_PROP_IMPL,
-          ...Dbc.i16b(op._objectOffset),
-          ...Dbc.i16b(op._propertyIndex),
-          ...Dbc.i16b(op._valueOffset)
+          Evc.OP_SET_OBJECT_PROP_IMPL,
+          ...Evc.i16b(op._objectOffset),
+          ...Evc.i16b(op._propertyIndex),
+          ...Evc.i16b(op._valueOffset)
         ];
       case PushNull:
         op as PushNull;
-        return [Dbc.OP_PUSH_NULL];
+        return [Evc.OP_PUSH_NULL];
       case CreateClass:
         op as CreateClass;
         return [
-          Dbc.OP_CREATE_CLASS,
-          ...Dbc.i32b(op._library),
-          ...Dbc.i16b(op._super),
-          ...Dbc.istr(op._name),
-          ...Dbc.i16b(op._valuesLen)
+          Evc.OP_CREATE_CLASS,
+          ...Evc.i32b(op._library),
+          ...Evc.i16b(op._super),
+          ...Evc.istr(op._name),
+          ...Evc.i16b(op._valuesLen)
         ];
       case NumLt:
         op as NumLt;
-        return [Dbc.OP_NUM_LT, ...Dbc.i16b(op._location1), ...Dbc.i16b(op._location2)];
+        return [Evc.OP_NUM_LT, ...Evc.i16b(op._location1), ...Evc.i16b(op._location2)];
       case NumLtEq:
         op as NumLtEq;
-        return [Dbc.OP_NUM_LT_EQ, ...Dbc.i16b(op._location1), ...Dbc.i16b(op._location2)];
+        return [Evc.OP_NUM_LT_EQ, ...Evc.i16b(op._location1), ...Evc.i16b(op._location2)];
       case PushSuper:
         op as PushSuper;
-        return [Dbc.OP_PUSH_SUPER, ...Dbc.i16b(op._objectOffset)];
+        return [Evc.OP_PUSH_SUPER, ...Evc.i16b(op._objectOffset)];
       case BridgeInstantiate:
         op as BridgeInstantiate;
-        return [Dbc.OP_BRIDGE_INSTANTIATE, ...Dbc.i16b(op._subclass), ...Dbc.i32b(op._constructor)];
+        return [Evc.OP_BRIDGE_INSTANTIATE, ...Evc.i16b(op._subclass), ...Evc.i32b(op._constructor)];
       case PushBridgeSuperShim:
         op as PushBridgeSuperShim;
-        return [Dbc.OP_PUSH_SUPER_SHIM];
+        return [Evc.OP_PUSH_SUPER_SHIM];
       case ParentBridgeSuperShim:
         op as ParentBridgeSuperShim;
-        return [Dbc.OP_PARENT_SUPER_SHIM, ...Dbc.i16b(op._shimOffset), ...Dbc.i16b(op._bridgeOffset)];
+        return [Evc.OP_PARENT_SUPER_SHIM, ...Evc.i16b(op._shimOffset), ...Evc.i16b(op._bridgeOffset)];
       case PushList:
         op as PushList;
-        return [Dbc.OP_PUSH_LIST];
+        return [Evc.OP_PUSH_LIST];
       case ListAppend:
         op as ListAppend;
-        return [Dbc.OP_LIST_APPEND, ...Dbc.i16b(op._reg), ...Dbc.i16b(op._value)];
+        return [Evc.OP_LIST_APPEND, ...Evc.i16b(op._reg), ...Evc.i16b(op._value)];
       case IndexList:
         op as IndexList;
-        return [Dbc.OP_INDEX_LIST, ...Dbc.i16b(op._position), ...Dbc.i32b(op._index)];
+        return [Evc.OP_INDEX_LIST, ...Evc.i16b(op._position), ...Evc.i32b(op._index)];
       case PushIterableLength:
         op as PushIterableLength;
-        return [Dbc.OP_ITER_LENGTH, ...Dbc.i16b(op._position)];
+        return [Evc.OP_ITER_LENGTH, ...Evc.i16b(op._position)];
       case ListSetIndexed:
         op as ListSetIndexed;
-        return [Dbc.OP_LIST_SETINDEXED, ...Dbc.i16b(op._position), ...Dbc.i32b(op._index), ...Dbc.i16b(op._value)];
+        return [Evc.OP_LIST_SETINDEXED, ...Evc.i16b(op._position), ...Evc.i32b(op._index), ...Evc.i16b(op._value)];
       case BoxString:
         op as BoxString;
-        return [Dbc.OP_BOXSTRING, ...Dbc.i16b(op._reg)];
+        return [Evc.OP_BOXSTRING, ...Evc.i16b(op._reg)];
       case BoxList:
         op as BoxList;
-        return [Dbc.OP_BOXLIST, ...Dbc.i16b(op._reg)];
+        return [Evc.OP_BOXLIST, ...Evc.i16b(op._reg)];
       case BoxMap:
         op as BoxMap;
-        return [Dbc.OP_BOXMAP, ...Dbc.i16b(op._reg)];
+        return [Evc.OP_BOXMAP, ...Evc.i16b(op._reg)];
       case PushCaptureScope:
         op as PushCaptureScope;
-        return [Dbc.OP_CAPTURE_SCOPE];
+        return [Evc.OP_CAPTURE_SCOPE];
       case PushConstant:
         op as PushConstant;
-        return [Dbc.OP_PUSH_CONST, ...Dbc.i32b(op._const)];
+        return [Evc.OP_PUSH_CONST, ...Evc.i32b(op._const)];
       case PushFunctionPtr:
         op as PushFunctionPtr;
-        return [Dbc.OP_PUSH_FUNCTION_PTR, ...Dbc.i32b(op._offset)];
+        return [Evc.OP_PUSH_FUNCTION_PTR, ...Evc.i32b(op._offset)];
       case InvokeExternal:
         op as InvokeExternal;
-        return [Dbc.OP_INVOKE_EXTERNAL, ...Dbc.i32b(op._function)];
+        return [Evc.OP_INVOKE_EXTERNAL, ...Evc.i32b(op._function)];
       case Await:
         op as Await;
-        return [Dbc.OP_AWAIT, ...Dbc.i16b(op._completerOffset), ...Dbc.i16b(op._futureOffset)];
+        return [Evc.OP_AWAIT, ...Evc.i16b(op._completerOffset), ...Evc.i16b(op._futureOffset)];
       case PushMap:
         op as PushMap;
-        return [Dbc.OP_PUSH_MAP];
+        return [Evc.OP_PUSH_MAP];
       case MapSet:
         op as MapSet;
-        return [Dbc.OP_MAP_SET, ...Dbc.i16b(op._map), ...Dbc.i16b(op._index), ...Dbc.i16b(op._value)];
+        return [Evc.OP_MAP_SET, ...Evc.i16b(op._map), ...Evc.i16b(op._index), ...Evc.i16b(op._value)];
       case IndexMap:
         op as IndexMap;
-        return [Dbc.OP_INDEX_MAP, ...Dbc.i16b(op._map), ...Dbc.i16b(op._index)];
+        return [Evc.OP_INDEX_MAP, ...Evc.i16b(op._map), ...Evc.i16b(op._index)];
       case PushConstantDouble:
         op as PushConstantDouble;
-        return [Dbc.OP_PUSH_DOUBLE, ...Dbc.f32b(op._value)];
+        return [Evc.OP_PUSH_DOUBLE, ...Evc.f32b(op._value)];
       case SetGlobal:
         op as SetGlobal;
-        return [Dbc.OP_SET_GLOBAL, ...Dbc.i32b(op._index), ...Dbc.i16b(op._value)];
+        return [Evc.OP_SET_GLOBAL, ...Evc.i32b(op._index), ...Evc.i16b(op._value)];
       case LoadGlobal:
         op as LoadGlobal;
-        return [Dbc.OP_LOAD_GLOBAL, ...Dbc.i32b(op._index)];
+        return [Evc.OP_LOAD_GLOBAL, ...Evc.i32b(op._index)];
       default:
         throw ArgumentError('Not a valid op $op');
     }
@@ -362,12 +362,12 @@ class Runtime {
   final int id;
 
   static final bridgeData = Expando<BridgeData>();
-  late ByteData _dbc;
-  final bool _fromDbc;
+  late ByteData _evc;
+  final bool _fromEvc;
   final stack = <List<Object?>>[];
   List<Object?> frame = [];
   var args = <Object?>[];
-  final pr = <DbcOp>[];
+  final pr = <EvcOp>[];
   Object? returnValue;
   final frameOffsetStack = <int>[0];
   final callStack = <int>[0];
@@ -443,39 +443,39 @@ class Runtime {
 
   @pragma('vm:always-inline')
   int _readInt32() {
-    final i = _dbc.getInt32(_offset);
+    final i = _evc.getInt32(_offset);
     _offset += 4;
     return i;
   }
 
   @pragma('vm:always-inline')
   double _readFloat32() {
-    final i = _dbc.getFloat32(_offset);
+    final i = _evc.getFloat32(_offset);
     _offset += 4;
     return i;
   }
 
   @pragma('vm:always-inline')
   int _readUint8() {
-    final i = _dbc.getUint8(_offset);
+    final i = _evc.getUint8(_offset);
     _offset += 1;
     return i;
   }
 
   @pragma('vm:always-inline')
   int _readInt16() {
-    final i = _dbc.getInt16(_offset);
+    final i = _evc.getInt16(_offset);
     _offset += 2;
     return i;
   }
 
   @pragma('vm:always-inline')
   String _readString() {
-    final len = _dbc.getInt32(_offset);
+    final len = _evc.getInt32(_offset);
     _offset += 4;
     final codeUnits = List.filled(len, 0);
     for (var i = 0; i < len; i++) {
-      codeUnits[i] = _dbc.getUint8(_offset + i);
+      codeUnits[i] = _evc.getUint8(_offset + i);
     }
     _offset += len;
     return utf8.decode(codeUnits);

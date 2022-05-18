@@ -1,14 +1,14 @@
 part of '../runtime.dart';
 
 /// Static call opcode that jumps to another location in the program and adds the prior location to the call stack.
-class Call implements DbcOp {
+class Call implements EvcOp {
   Call(Runtime exec) : _offset = exec._readInt32();
 
   Call.make(this._offset);
 
   final int _offset;
 
-  static final int LEN = Dbc.BASE_OPLEN + Dbc.I32_LEN;
+  static final int LEN = Evc.BASE_OPLEN + Evc.I32_LEN;
 
   @override
   void run(Runtime exec) {
@@ -21,7 +21,7 @@ class Call implements DbcOp {
 }
 
 /// Push a new frame onto the stack, populated with any current args
-class PushScope implements DbcOp {
+class PushScope implements EvcOp {
   PushScope(Runtime exec)
       : sourceFile = exec._readInt32(),
         sourceOffset = exec._readInt32(),
@@ -34,7 +34,7 @@ class PushScope implements DbcOp {
   final String frName;
 
   static int len(PushScope s) {
-    return Dbc.BASE_OPLEN + Dbc.I32_LEN * 2 + Dbc.istr_len(s.frName);
+    return Evc.BASE_OPLEN + Evc.I32_LEN * 2 + Evc.istr_len(s.frName);
   }
 
   @override
@@ -57,12 +57,12 @@ class PushScope implements DbcOp {
 
 /// Capture a reference to the previous stack frame (as a List) into the specified register of the current stack frame.
 /// Typically used to implement closures
-class PushCaptureScope implements DbcOp {
+class PushCaptureScope implements EvcOp {
   PushCaptureScope(Runtime exec);
 
   PushCaptureScope.make();
 
-  static int LEN = Dbc.BASE_OPLEN;
+  static int LEN = Evc.BASE_OPLEN;
 
   @override
   void run(Runtime exec) {
@@ -74,12 +74,12 @@ class PushCaptureScope implements DbcOp {
 }
 
 /// Pop the current frame off the stack
-class PopScope implements DbcOp {
+class PopScope implements EvcOp {
   PopScope(Runtime runtime);
 
   PopScope.make();
 
-  static const int LEN = Dbc.BASE_OPLEN;
+  static const int LEN = Evc.BASE_OPLEN;
 
   @override
   void run(Runtime runtime) {
@@ -95,7 +95,7 @@ class PopScope implements DbcOp {
 }
 
 /// Jump to constant program offset if [_location] is not null
-class JumpIfNonNull implements DbcOp {
+class JumpIfNonNull implements EvcOp {
   JumpIfNonNull(Runtime exec)
       : _location = exec._readInt16(),
         _offset = exec._readInt32();
@@ -105,7 +105,7 @@ class JumpIfNonNull implements DbcOp {
   final int _location;
   final int _offset;
 
-  static const int LEN = Dbc.I16_LEN + Dbc.I32_LEN;
+  static const int LEN = Evc.I16_LEN + Evc.I32_LEN;
 
   // Conditional move
   @override
@@ -120,7 +120,7 @@ class JumpIfNonNull implements DbcOp {
 }
 
 /// Jump to constant program offset if [_location] is false
-class JumpIfFalse implements DbcOp {
+class JumpIfFalse implements EvcOp {
   JumpIfFalse(Runtime exec)
       : _location = exec._readInt16(),
         _offset = exec._readInt32();
@@ -130,7 +130,7 @@ class JumpIfFalse implements DbcOp {
   final int _location;
   final int _offset;
 
-  static const int LEN = Dbc.I16_LEN + Dbc.I32_LEN;
+  static const int LEN = Evc.I16_LEN + Evc.I32_LEN;
 
   // Conditional move
   @override
@@ -145,14 +145,14 @@ class JumpIfFalse implements DbcOp {
 }
 
 // Exit program
-class Exit implements DbcOp {
+class Exit implements EvcOp {
   Exit(Runtime exec) : _location = exec._readInt16();
 
   Exit.make(this._location);
 
   final int _location;
 
-  static const int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN;
+  static const int LEN = Evc.BASE_OPLEN + Evc.I16_LEN;
 
   @override
   void run(Runtime exec) {
@@ -167,14 +167,14 @@ class Exit implements DbcOp {
 /// 1. Sets the program's return value to the value at [_location], or null if [_location] is -1
 /// 2. Pops the current frame off the stack, just like [PopScope]
 /// 3. Pops the last offset from the call stack and jumps to it, unless it is -1 in which case [Exit] is mimicked
-class Return implements DbcOp {
+class Return implements EvcOp {
   Return(Runtime exec) : _location = exec._readInt16();
 
   Return.make(this._location);
 
   final int _location;
 
-  static const int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN;
+  static const int LEN = Evc.BASE_OPLEN + Evc.I16_LEN;
 
   @override
   void run(Runtime runtime) {
@@ -202,12 +202,12 @@ class Return implements DbcOp {
 }
 
 // Jump to constant program offset
-class JumpConstant implements DbcOp {
+class JumpConstant implements EvcOp {
   JumpConstant(Runtime exec) : _offset = exec._readInt32();
 
   JumpConstant.make(this._offset);
 
-  static const int LEN = Dbc.BASE_OPLEN + Dbc.I32_LEN;
+  static const int LEN = Evc.BASE_OPLEN + Evc.I32_LEN;
 
   final int _offset;
 
@@ -220,12 +220,12 @@ class JumpConstant implements DbcOp {
   String toString() => 'JumpConstant (@$_offset)';
 }
 
-class PushFunctionPtr implements DbcOp {
+class PushFunctionPtr implements EvcOp {
   PushFunctionPtr(Runtime exec) : _offset = exec._readInt32();
 
   PushFunctionPtr.make(this._offset);
 
-  static const int LEN = Dbc.BASE_OPLEN + Dbc.I32_LEN;
+  static const int LEN = Evc.BASE_OPLEN + Evc.I32_LEN;
 
   final int _offset;
 

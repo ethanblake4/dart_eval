@@ -26,7 +26,7 @@ abstract class AbstractScopeContext {
 
   List<bool> get inNonlinearAccessContext;
 
-  int pushOp(DbcOp op, int length) {
+  int pushOp(EvcOp op, int length) {
     return 0;
   }
 }
@@ -138,7 +138,7 @@ mixin ScopeContext on Object implements AbstractScopeContext {
 class CompilerContext with ScopeContext {
   CompilerContext(this.sourceFile);
 
-  final out = <DbcOp>[];
+  final out = <EvcOp>[];
   int library = 0;
   int position = 0;
   ClassDeclaration? currentClass;
@@ -173,7 +173,7 @@ class CompilerContext with ScopeContext {
   int sourceFile;
 
   @override
-  int pushOp(DbcOp op, int length) {
+  int pushOp(EvcOp op, int length) {
     out.add(op);
     position += length;
     return out.length - 1;
@@ -237,7 +237,7 @@ class CompilerContext with ScopeContext {
     super.resetStack(position: position);
   }
 
-  int rewriteOp(int where, DbcOp newOp, int lengthAdjust) {
+  int rewriteOp(int where, EvcOp newOp, int lengthAdjust) {
     out[where] = newOp;
     position += lengthAdjust;
     return where;

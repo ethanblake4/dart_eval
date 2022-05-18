@@ -38,7 +38,7 @@ class Program {
   List<RuntimeTypeSet> runtimeTypes;
   List<int> globalInitializers;
 
-  List<DbcOp> ops;
+  List<EvcOp> ops;
 
   Uint8List write() {
     final b = BytesBuilder(copy: false);
@@ -63,7 +63,7 @@ class Program {
 
   void _writeMetaBlock(BytesBuilder builder, Object block) {
     final encodedBlock = utf8.encode(json.encode(block));
-    builder.add(Dbc.i32b(encodedBlock.length));
+    builder.add(Evc.i32b(encodedBlock.length));
     builder.add(encodedBlock);
   }
 }

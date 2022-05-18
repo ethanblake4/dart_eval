@@ -84,7 +84,7 @@ class PrescanContext with ScopeContext {
   Set<int> closedFrames = {};
 
   @override
-  int pushOp(DbcOp op, int length) {
+  int pushOp(EvcOp op, int length) {
     return 0;
   }
 }

@@ -12,7 +12,7 @@ class OffsetTracker {
     _deferredOffsets[location] = offset;
   }
 
-  List<DbcOp> apply(List<DbcOp> source) {
+  List<EvcOp> apply(List<EvcOp> source) {
     _deferredOffsets.forEach((pos, offset) {
       final op = source[pos];
       if (op is Call) {

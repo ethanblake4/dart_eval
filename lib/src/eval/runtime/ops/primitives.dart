@@ -1,13 +1,13 @@
 part of '../runtime.dart';
 
-class PushConstant implements DbcOp {
+class PushConstant implements EvcOp {
   PushConstant(Runtime runtime) : _const = runtime._readInt32();
 
   PushConstant.make(this._const);
 
   final int _const;
 
-  static const int LEN = Dbc.BASE_OPLEN + Dbc.I32_LEN;
+  static const int LEN = Evc.BASE_OPLEN + Evc.I32_LEN;
 
   // Set value at position to constant
   @override
@@ -19,14 +19,14 @@ class PushConstant implements DbcOp {
   String toString() => 'PushConstant (C$_const)';
 }
 
-class PushConstantInt implements DbcOp {
+class PushConstantInt implements EvcOp {
   PushConstantInt(Runtime exec) : _value = exec._readInt32();
 
   PushConstantInt.make(this._value);
 
   final int _value;
 
-  static const int LEN = Dbc.BASE_OPLEN + Dbc.I32_LEN;
+  static const int LEN = Evc.BASE_OPLEN + Evc.I32_LEN;
 
   // Set value at position to constant
   @override
@@ -38,14 +38,14 @@ class PushConstantInt implements DbcOp {
   String toString() => 'PushConstantInt ($_value)';
 }
 
-class PushConstantDouble implements DbcOp {
+class PushConstantDouble implements EvcOp {
   PushConstantDouble(Runtime exec) : _value = exec._readFloat32();
 
   PushConstantDouble.make(this._value);
 
   final double _value;
 
-  static const int LEN = Dbc.BASE_OPLEN + Dbc.F32_LEN;
+  static const int LEN = Evc.BASE_OPLEN + Evc.F32_LEN;
 
   // Set value at position to constant
   @override
@@ -57,12 +57,12 @@ class PushConstantDouble implements DbcOp {
   String toString() => 'PushConstantDouble ($_value)';
 }
 
-class PushNull implements DbcOp {
+class PushNull implements EvcOp {
   PushNull(Runtime exec);
 
   PushNull.make();
 
-  static const int LEN = Dbc.BASE_OPLEN;
+  static const int LEN = Evc.BASE_OPLEN;
 
   // Set value at position to constant
   @override
@@ -74,7 +74,7 @@ class PushNull implements DbcOp {
   String toString() => 'PushNull ()';
 }
 
-class NumAdd implements DbcOp {
+class NumAdd implements EvcOp {
   NumAdd(Runtime runtime)
       : _location1 = runtime._readInt16(),
         _location2 = runtime._readInt16();
@@ -84,7 +84,7 @@ class NumAdd implements DbcOp {
   final int _location1;
   final int _location2;
 
-  static const int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN * 2;
+  static const int LEN = Evc.BASE_OPLEN + Evc.I16_LEN * 2;
 
   // Add value A + B
   @override
@@ -96,7 +96,7 @@ class NumAdd implements DbcOp {
   String toString() => 'NumAdd (L$_location1 + L$_location2)';
 }
 
-class NumSub implements DbcOp {
+class NumSub implements EvcOp {
   NumSub(Runtime runtime)
       : _location1 = runtime._readInt16(),
         _location2 = runtime._readInt16();
@@ -106,7 +106,7 @@ class NumSub implements DbcOp {
   final int _location1;
   final int _location2;
 
-  static const int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN * 2;
+  static const int LEN = Evc.BASE_OPLEN + Evc.I16_LEN * 2;
 
   // Add value A + B
   @override
@@ -118,7 +118,7 @@ class NumSub implements DbcOp {
   String toString() => 'NumSub (L$_location1 - L$_location2)';
 }
 
-class NumLt implements DbcOp {
+class NumLt implements EvcOp {
   NumLt(Runtime runtime)
       : _location1 = runtime._readInt16(),
         _location2 = runtime._readInt16();
@@ -128,7 +128,7 @@ class NumLt implements DbcOp {
   final int _location1;
   final int _location2;
 
-  static const int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN * 2;
+  static const int LEN = Evc.BASE_OPLEN + Evc.I16_LEN * 2;
 
   @override
   void run(Runtime runtime) {
@@ -139,7 +139,7 @@ class NumLt implements DbcOp {
   String toString() => 'NumLt (L$_location1 < L$_location2)';
 }
 
-class NumLtEq implements DbcOp {
+class NumLtEq implements EvcOp {
   NumLtEq(Runtime runtime)
       : _location1 = runtime._readInt16(),
         _location2 = runtime._readInt16();
@@ -149,7 +149,7 @@ class NumLtEq implements DbcOp {
   final int _location1;
   final int _location2;
 
-  static const int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN * 2;
+  static const int LEN = Evc.BASE_OPLEN + Evc.I16_LEN * 2;
 
   @override
   void run(Runtime runtime) {
@@ -160,14 +160,14 @@ class NumLtEq implements DbcOp {
   String toString() => 'NumLtEq (L$_location1 <= L$_location2)';
 }
 
-class BoxInt implements DbcOp {
+class BoxInt implements EvcOp {
   BoxInt(Runtime runtime) : _reg = runtime._readInt16();
 
   BoxInt.make(this._reg);
 
   final int _reg;
 
-  static const int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN;
+  static const int LEN = Evc.BASE_OPLEN + Evc.I16_LEN;
 
   @override
   void run(Runtime runtime) {
@@ -179,14 +179,14 @@ class BoxInt implements DbcOp {
   String toString() => 'BoxInt (L$_reg)';
 }
 
-class BoxDouble implements DbcOp {
+class BoxDouble implements EvcOp {
   BoxDouble(Runtime runtime) : _reg = runtime._readInt16();
 
   BoxDouble.make(this._reg);
 
   final int _reg;
 
-  static const int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN;
+  static const int LEN = Evc.BASE_OPLEN + Evc.I16_LEN;
 
   @override
   void run(Runtime runtime) {
@@ -198,14 +198,14 @@ class BoxDouble implements DbcOp {
   String toString() => 'BoxDouble (L$_reg)';
 }
 
-class BoxNum implements DbcOp {
+class BoxNum implements EvcOp {
   BoxNum(Runtime runtime) : _reg = runtime._readInt16();
 
   BoxNum.make(this._reg);
 
   final int _reg;
 
-  static const int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN;
+  static const int LEN = Evc.BASE_OPLEN + Evc.I16_LEN;
 
   @override
   void run(Runtime runtime) {
@@ -217,14 +217,14 @@ class BoxNum implements DbcOp {
   String toString() => 'BoxNum (L$_reg)';
 }
 
-class BoxString implements DbcOp {
+class BoxString implements EvcOp {
   BoxString(Runtime runtime) : _reg = runtime._readInt16();
 
   BoxString.make(this._reg);
 
   final int _reg;
 
-  static const int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN;
+  static const int LEN = Evc.BASE_OPLEN + Evc.I16_LEN;
 
   @override
   void run(Runtime runtime) {
@@ -236,14 +236,14 @@ class BoxString implements DbcOp {
   String toString() => 'BoxString (L$_reg)';
 }
 
-class BoxList implements DbcOp {
+class BoxList implements EvcOp {
   BoxList(Runtime runtime) : _reg = runtime._readInt16();
 
   BoxList.make(this._reg);
 
   final int _reg;
 
-  static const int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN;
+  static const int LEN = Evc.BASE_OPLEN + Evc.I16_LEN;
 
   @override
   void run(Runtime runtime) {
@@ -255,14 +255,14 @@ class BoxList implements DbcOp {
   String toString() => 'BoxList (L$_reg)';
 }
 
-class BoxMap implements DbcOp {
+class BoxMap implements EvcOp {
   BoxMap(Runtime runtime) : _reg = runtime._readInt16();
 
   BoxMap.make(this._reg);
 
   final int _reg;
 
-  static const int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN;
+  static const int LEN = Evc.BASE_OPLEN + Evc.I16_LEN;
 
   @override
   void run(Runtime runtime) {
@@ -275,14 +275,14 @@ class BoxMap implements DbcOp {
 }
 
 
-class Unbox implements DbcOp {
+class Unbox implements EvcOp {
   Unbox(Runtime runtime) : _reg = runtime._readInt16();
 
   Unbox.make(this._reg);
 
   final int _reg;
 
-  static const int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN;
+  static const int LEN = Evc.BASE_OPLEN + Evc.I16_LEN;
 
   @override
   void run(Runtime runtime) {
@@ -293,12 +293,12 @@ class Unbox implements DbcOp {
   String toString() => 'Unbox (L$_reg)';
 }
 
-class PushList extends DbcOp {
+class PushList extends EvcOp {
   PushList(Runtime runtime);
 
   PushList.make();
 
-  static const int LEN = Dbc.BASE_OPLEN;
+  static const int LEN = Evc.BASE_OPLEN;
 
   @override
   void run(Runtime runtime) {
@@ -309,7 +309,7 @@ class PushList extends DbcOp {
   String toString() => 'PushList ()';
 }
 
-class ListAppend extends DbcOp {
+class ListAppend extends EvcOp {
   ListAppend(Runtime runtime)
       : _reg = runtime._readInt16(),
         _value = runtime._readInt16();
@@ -319,7 +319,7 @@ class ListAppend extends DbcOp {
   final int _reg;
   final int _value;
 
-  static const int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN * 2;
+  static const int LEN = Evc.BASE_OPLEN + Evc.I16_LEN * 2;
 
   @override
   void run(Runtime runtime) {
@@ -330,7 +330,7 @@ class ListAppend extends DbcOp {
   String toString() => 'ListAppend (L$_reg[] = L$_value)';
 }
 
-class IndexList extends DbcOp {
+class IndexList extends EvcOp {
   IndexList(Runtime runtime)
       : _position = runtime._readInt16(),
         _index = runtime._readInt32();
@@ -340,7 +340,7 @@ class IndexList extends DbcOp {
   final int _position;
   final int _index;
 
-  static const int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN + Dbc.I32_LEN;
+  static const int LEN = Evc.BASE_OPLEN + Evc.I16_LEN + Evc.I32_LEN;
 
   @override
   void run(Runtime runtime) {
@@ -351,7 +351,7 @@ class IndexList extends DbcOp {
   String toString() => 'IndexList (L$_position[L$_index])';
 }
 
-class ListSetIndexed extends DbcOp {
+class ListSetIndexed extends EvcOp {
   ListSetIndexed(Runtime runtime)
       : _position = runtime._readInt16(),
         _index = runtime._readInt32(),
@@ -363,7 +363,7 @@ class ListSetIndexed extends DbcOp {
   final int _index;
   final int _value;
 
-  static const int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN * 2 + Dbc.I32_LEN;
+  static const int LEN = Evc.BASE_OPLEN + Evc.I16_LEN * 2 + Evc.I32_LEN;
 
   @override
   void run(Runtime runtime) {
@@ -375,14 +375,14 @@ class ListSetIndexed extends DbcOp {
   String toString() => 'ListSetIndexed (L$_position[L$_index] = L$_value)';
 }
 
-class PushIterableLength extends DbcOp {
+class PushIterableLength extends EvcOp {
   PushIterableLength(Runtime runtime) : _position = runtime._readInt16();
 
   PushIterableLength.make(this._position);
 
   final int _position;
 
-  static const int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN + Dbc.I32_LEN;
+  static const int LEN = Evc.BASE_OPLEN + Evc.I16_LEN + Evc.I32_LEN;
 
   @override
   void run(Runtime runtime) {
@@ -393,12 +393,12 @@ class PushIterableLength extends DbcOp {
   String toString() => 'PushIterableLength (L$_position)';
 }
 
-class PushMap extends DbcOp {
+class PushMap extends EvcOp {
   PushMap(Runtime runtime);
 
   PushMap.make();
 
-  static const int LEN = Dbc.BASE_OPLEN;
+  static const int LEN = Evc.BASE_OPLEN;
 
   @override
   void run(Runtime runtime) {
@@ -409,7 +409,7 @@ class PushMap extends DbcOp {
   String toString() => 'PushMap ()';
 }
 
-class MapSet extends DbcOp {
+class MapSet extends EvcOp {
   MapSet(Runtime runtime)
       : _map = runtime._readInt16(),
         _index = runtime._readInt16(),
@@ -421,7 +421,7 @@ class MapSet extends DbcOp {
   final int _index;
   final int _value;
 
-  static const int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN * 3;
+  static const int LEN = Evc.BASE_OPLEN + Evc.I16_LEN * 3;
 
   @override
   void run(Runtime runtime) {
@@ -433,7 +433,7 @@ class MapSet extends DbcOp {
   String toString() => 'MapSet (L$_map[L$_index] = L$_value)';
 }
 
-class IndexMap extends DbcOp {
+class IndexMap extends EvcOp {
   IndexMap(Runtime runtime)
       : _map = runtime._readInt16(),
         _index = runtime._readInt16();
@@ -443,7 +443,7 @@ class IndexMap extends DbcOp {
   final int _map;
   final int _index;
 
-  static const int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN * 2;
+  static const int LEN = Evc.BASE_OPLEN + Evc.I16_LEN * 2;
 
   @override
   void run(Runtime runtime) {

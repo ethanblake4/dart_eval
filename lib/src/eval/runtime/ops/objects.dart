@@ -1,6 +1,6 @@
 part of '../runtime.dart';
 
-class InvokeDynamic implements DbcOp {
+class InvokeDynamic implements EvcOp {
   InvokeDynamic(Runtime runtime)
       : _location = runtime._readInt16(),
         _method = runtime._readString();
@@ -11,7 +11,7 @@ class InvokeDynamic implements DbcOp {
   final String _method;
 
   static int len(InvokeDynamic s) {
-    return Dbc.BASE_OPLEN + Dbc.I16_LEN + Dbc.istr_len(s._method);
+    return Evc.BASE_OPLEN + Evc.I16_LEN + Evc.istr_len(s._method);
   }
 
   @override
@@ -96,7 +96,7 @@ class InvokeDynamic implements DbcOp {
 }
 
 // Create a class
-class CreateClass implements DbcOp {
+class CreateClass implements EvcOp {
   CreateClass(Runtime runtime)
       : _library = runtime._readInt32(),
         _super = runtime._readInt16(),
@@ -111,7 +111,7 @@ class CreateClass implements DbcOp {
   final int _valuesLen;
 
   static int len(CreateClass s) {
-    return Dbc.BASE_OPLEN + Dbc.I32_LEN + Dbc.I16_LEN * 2 + Dbc.istr_len(s._name);
+    return Evc.BASE_OPLEN + Evc.I32_LEN + Evc.I16_LEN * 2 + Evc.istr_len(s._name);
   }
 
   @override
@@ -127,7 +127,7 @@ class CreateClass implements DbcOp {
   String toString() => 'CreateClass (F$_library:"$_name", super L$_super, vLen=$_valuesLen))';
 }
 
-class SetObjectProperty implements DbcOp {
+class SetObjectProperty implements EvcOp {
   SetObjectProperty(Runtime runtime)
       : _location = runtime._readInt16(),
         _property = runtime._readString(),
@@ -140,7 +140,7 @@ class SetObjectProperty implements DbcOp {
   final int _valueOffset;
 
   static int len(SetObjectProperty s) {
-    return Dbc.BASE_OPLEN + Dbc.I16_LEN + Dbc.istr_len(s._property) + Dbc.I16_LEN;
+    return Evc.BASE_OPLEN + Evc.I16_LEN + Evc.istr_len(s._property) + Evc.I16_LEN;
   }
 
   @override
@@ -153,7 +153,7 @@ class SetObjectProperty implements DbcOp {
   String toString() => 'SetObjectProperty (L$_location.$_property = L$_valueOffset)';
 }
 
-class PushObjectProperty implements DbcOp {
+class PushObjectProperty implements EvcOp {
   PushObjectProperty(Runtime runtime)
       : _location = runtime._readInt16(),
         _property = runtime._readString();
@@ -164,7 +164,7 @@ class PushObjectProperty implements DbcOp {
   final String _property;
 
   static int len(PushObjectProperty s) {
-    return Dbc.BASE_OPLEN + Dbc.I16_LEN + Dbc.istr_len(s._property);
+    return Evc.BASE_OPLEN + Evc.I16_LEN + Evc.istr_len(s._property);
   }
 
   @override
@@ -202,7 +202,7 @@ class PushObjectProperty implements DbcOp {
   String toString() => 'PushObjectProperty (L$_location.$_property)';
 }
 
-class PushObjectPropertyImpl implements DbcOp {
+class PushObjectPropertyImpl implements EvcOp {
   PushObjectPropertyImpl(Runtime runtime)
       : _objectOffset = runtime._readInt16(),
         _propertyIndex = runtime._readInt16();
@@ -212,7 +212,7 @@ class PushObjectPropertyImpl implements DbcOp {
 
   PushObjectPropertyImpl.make(this._objectOffset, this._propertyIndex);
 
-  static int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN * 2;
+  static int LEN = Evc.BASE_OPLEN + Evc.I16_LEN * 2;
 
   @override
   void run(Runtime runtime) {
@@ -224,7 +224,7 @@ class PushObjectPropertyImpl implements DbcOp {
   String toString() => 'PushObjectPropertyImpl (L$_objectOffset[$_propertyIndex])';
 }
 
-class SetObjectPropertyImpl implements DbcOp {
+class SetObjectPropertyImpl implements EvcOp {
   SetObjectPropertyImpl(Runtime runtime)
       : _objectOffset = runtime._readInt16(),
         _propertyIndex = runtime._readInt16(),
@@ -236,7 +236,7 @@ class SetObjectPropertyImpl implements DbcOp {
 
   SetObjectPropertyImpl.make(this._objectOffset, this._propertyIndex, this._valueOffset);
 
-  static int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN * 3;
+  static int LEN = Evc.BASE_OPLEN + Evc.I16_LEN * 3;
 
   @override
   void run(Runtime runtime) {
@@ -249,14 +249,14 @@ class SetObjectPropertyImpl implements DbcOp {
   String toString() => 'SetObjectPropertyImpl (L$_objectOffset[$_propertyIndex] = L$_valueOffset)';
 }
 
-class PushSuper implements DbcOp {
+class PushSuper implements EvcOp {
   PushSuper(Runtime runtime) : _objectOffset = runtime._readInt16();
 
   final int _objectOffset;
 
   PushSuper.make(this._objectOffset);
 
-  static int LEN = Dbc.BASE_OPLEN + Dbc.I16_LEN;
+  static int LEN = Evc.BASE_OPLEN + Evc.I16_LEN;
 
   @override
   void run(Runtime runtime) {
