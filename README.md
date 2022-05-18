@@ -45,7 +45,7 @@ void main() {
 
 ## Compiling to a file
 
-For most use-cases, it's recommended to pre-compile your Dart code to DBC bytecode,
+For most use-cases, it's recommended to pre-compile your Dart code to EVC bytecode,
 to avoid runtime compilation overhead. (This is still runtime code execution, it's
 just executing a more efficient code format.)
 
@@ -72,7 +72,7 @@ void main() {
   
   final bytecode = program.write();
   
-  final file = File('program.dbc');
+  final file = File('program.evc');
   file.writeAsBytesSync(bytecode);
 }
 ```
@@ -84,7 +84,7 @@ import 'dart:io';
 import 'package:dart_eval/dart_eval.dart';
 
 void main() {
-  final file = File('program.dbc');
+  final file = File('program.evc');
   final bytecode = file
       .readAsBytesSync()
       .buffer
@@ -171,7 +171,7 @@ Then, the compiler looks at each of the declarations in turn, and recursively co
 to a linear bytecode format.
 
 For evaluation dart_eval uses Dart's optimized dynamic dispatch. This means each bytecode
-is actually a class implementing `DbcOp` and we call its `run()` method to execute it.
+is actually a class implementing `EvcOp` and we call its `run()` method to execute it.
 Bytecodes can do things like push and pop values on the stack, add numbers, and jump to 
 other places in the program, as well as more complex Dart-specific operations like 
 create a class.
