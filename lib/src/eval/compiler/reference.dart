@@ -209,7 +209,7 @@ class IdentifierReference implements Reference {
       return Variable.alloc(ctx, type);
     }
 
-    if (!(decl is FunctionDeclaration) && !(decl is ConstructorDeclaration)) {
+    if (decl is! FunctionDeclaration && decl is! ConstructorDeclaration) {
       decl as ClassDeclaration;
 
       final returnType = TypeRef.lookupClassDeclaration(ctx, _decl.sourceLib, decl);
@@ -293,7 +293,7 @@ class IdentifierReference implements Reference {
 
     final decl = _decl.declaration!;
 
-    if (!(decl is FunctionDeclaration) && !(decl is ConstructorDeclaration)) {
+    if (decl is! FunctionDeclaration && decl is! ConstructorDeclaration) {
       decl as ClassDeclaration;
 
       final DeferredOrOffset offset;

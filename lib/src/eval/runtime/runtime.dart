@@ -394,6 +394,7 @@ class Runtime {
     if (args != null) {
       this.args = args;
     }
+    // ignore: deprecated_member_use_from_same_package
     return executeNamed(_bridgeLibraryMappings[library]!, name);
   }
 

@@ -95,6 +95,7 @@ void main(List<String> args) {
     final dbc = File(command['path']!).readAsBytesSync();
     final runtime = Runtime(dbc.buffer.asByteData());
     runtime.setup();
+    // ignore: deprecated_member_use_from_same_package
     var result = runtime.executeNamed(0, 'main');
 
     if (result != null) {

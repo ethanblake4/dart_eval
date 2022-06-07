@@ -9,7 +9,7 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 StatementInfo compileForStatement(ForStatement s, CompilerContext ctx, AlwaysReturnType? expectedReturnType) {
   final parts = s.forLoopParts;
 
-  if (!(parts is ForParts)) {
+  if (parts is! ForParts) {
     throw UnimplementedError('For-each is not supported yet');
   }
 

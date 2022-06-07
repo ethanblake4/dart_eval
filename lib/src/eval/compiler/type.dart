@@ -1,6 +1,7 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/bridge/declaration/type.dart';
 import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/runtime/type.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
@@ -107,7 +108,7 @@ class TypeRef {
   }
 
   factory TypeRef.fromAnnotation(CompilerContext ctx, int library, TypeAnnotation typeAnnotation) {
-    if (!(typeAnnotation is NamedType)) {
+    if (typeAnnotation is! NamedType) {
       throw CompileError('No support for generic function types yet');
     }
     final unspecifiedType = ctx.visibleTypes[library]![typeAnnotation.name.name]!;
@@ -167,7 +168,7 @@ class TypeRef {
     if (ctx.instanceDeclarationsMap[$class.file]!.containsKey($class.name) &&
         ctx.instanceDeclarationsMap[$class.file]![$class.name]!.containsKey(field)) {
       final _f = ctx.instanceDeclarationsMap[$class.file]![$class.name]![field];
-      if (!(_f is VariableDeclaration)) {
+      if (_f is! VariableDeclaration) {
         throw CompileError('Cannot query field type of F${$class.file}:${$class.name}.$field, which is not a field');
       }
       final annotation = (_f.parent as VariableDeclarationList).type;

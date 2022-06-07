@@ -50,7 +50,7 @@ class Variable {
       return this;
     }
 
-    var V2 = this;
+    Variable V2 = this;
 
     if (type == EvalTypes.intType) {
       ctx.pushOp(BoxInt.make(scopeFrameOffset), BoxInt.LEN);
@@ -97,12 +97,12 @@ class Variable {
 
   Variable copyWith(
       {int? scopeFrameOffset,
-        TypeRef? type,
-        DeferredOrOffset? methodOffset,
-        ReturnType? methodReturnType,
-        String? name,
-        int? frameIndex,
-        List<TypeRef>? concreteTypes}) {
+      TypeRef? type,
+      DeferredOrOffset? methodOffset,
+      ReturnType? methodReturnType,
+      String? name,
+      int? frameIndex,
+      List<TypeRef>? concreteTypes}) {
     return Variable(scopeFrameOffset ?? this.scopeFrameOffset, type ?? this.type,
         methodOffset: methodOffset ?? this.methodOffset,
         methodReturnType: methodReturnType ?? this.methodReturnType,

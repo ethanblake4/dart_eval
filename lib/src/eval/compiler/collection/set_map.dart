@@ -53,8 +53,6 @@ Variable compileSetOrMapLiteral(SetOrMapLiteral l, CompilerContext ctx) {
 
 Pair<Variable, List<Pair<TypeRef, TypeRef>>> compileSetOrMapElement(CollectionElement e, Variable? setOrMap,
     CompilerContext ctx, TypeRef? specifiedKeyType, TypeRef? specifiedValueType, bool box) {
-  final isMap = setOrMap?.type.resolveTypeChain(ctx).isAssignableTo(ctx, EvalTypes.mapType);
-
   if (e is Expression) {
     throw CompileError('Sets are not currently supported');
   } else if (e is MapLiteralEntry) {

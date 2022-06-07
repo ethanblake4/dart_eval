@@ -17,6 +17,7 @@ class EvalClass extends $InstanceImpl {
   int get $runtimeType => RuntimeTypes.typeType;
 
   @override
+  // ignore: overridden_fields
   final List<Object> values = [];
 
   final EvalClass? superclass;

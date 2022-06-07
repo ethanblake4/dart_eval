@@ -185,12 +185,12 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
 
 TypeRef _resolveFieldFormalType(
     CompilerContext ctx, int decLibrary, FieldFormalParameter param, Declaration parameterHost) {
-  if (!(parameterHost is ConstructorDeclaration)) {
+  if (parameterHost is! ConstructorDeclaration) {
     throw CompileError('Field formals can only occur in constructors');
   }
   final $class = parameterHost.parent as ClassDeclaration;
   final field = ctx.instanceDeclarationsMap[decLibrary]![$class.name.name]![param.identifier.name]!;
-  if (!(field is VariableDeclaration)) {
+  if (field is! VariableDeclaration) {
     throw CompileError('Resolved field is not a FieldDeclaration');
   }
   final vdl = field.parent as VariableDeclarationList;

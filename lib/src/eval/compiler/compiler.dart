@@ -397,7 +397,7 @@ class Compiler {
   TypeRef? _cacheTypeRef(int libraryIndex, DeclarationOrBridge declarationOrBridge) {
     if (declarationOrBridge.isBridge) {
       final bridge = declarationOrBridge.bridge;
-      if (!(bridge is BridgeClassDef)) {
+      if (bridge is! BridgeClassDef) {
         return null;
       }
       if (bridge.type.type.cacheId != null) {
@@ -407,7 +407,7 @@ class Compiler {
       return TypeRef.cache(ctx, libraryIndex, spec.name, fileRef: libraryIndex);
     } else {
       final declaration = declarationOrBridge.declaration!;
-      if (!(declaration is ClassDeclaration)) {
+      if (declaration is! ClassDeclaration) {
         return null;
       }
       return TypeRef.cache(ctx, libraryIndex, declaration.name.name, fileRef: libraryIndex);
@@ -452,7 +452,7 @@ class Compiler {
     if (!ctx.bridgeStaticFunctionIndices.containsKey(libraryIndex)) {
       ctx.bridgeStaticFunctionIndices[libraryIndex] = <String, int>{};
     }
-    ctx.bridgeStaticFunctionIndices[libraryIndex]!['${functionDef.name}'] = _bridgeStaticFunctionIdx++;
+    ctx.bridgeStaticFunctionIndices[libraryIndex]![functionDef.name] = _bridgeStaticFunctionIdx++;
   }
 }
 
