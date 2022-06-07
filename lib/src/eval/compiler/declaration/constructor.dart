@@ -92,6 +92,7 @@ void compileConstructorDeclaration(
   if ($extends == null) {
     $super = BuiltinValue().push(ctx);
   } else {
+    // ignore: deprecated_member_use
     extendsWhat = ctx.visibleDeclarations[ctx.library]![$extends.superclass2.name.name]!;
 
     final decl = extendsWhat.declaration!;
@@ -165,8 +166,7 @@ void compileConstructorDeclaration(
     for (final field in fd.fields.variables) {
       if (!usedNames.contains(field.name.name) && field.initializer != null) {
         final V = compileExpression(field.initializer!, ctx).boxIfNeeded(ctx);
-        ctx.pushOp(SetObjectPropertyImpl.make(instOffset, _fieldIdx, V.scopeFrameOffset),
-            SetObjectPropertyImpl.LEN);
+        ctx.pushOp(SetObjectPropertyImpl.make(instOffset, _fieldIdx, V.scopeFrameOffset), SetObjectPropertyImpl.LEN);
       }
       _fieldIdx++;
     }
@@ -177,6 +177,7 @@ void compileConstructorDeclaration(
     final bridge = decl.bridge! as BridgeClassDef;
 
     if (!bridge.bridge) {
+      // ignore: deprecated_member_use
       throw CompileError('Bridge class ${$extends.superclass2} is a wrapper, not a bridge, so you can\'t extend it');
     }
 
@@ -190,7 +191,9 @@ void compileConstructorDeclaration(
       namedArgTypes.addAll(_namedArgs.map((key, value) => MapEntry(key, value.type)));
     }
 
-    final op = BridgeInstantiate.make(instOffset,
+    final op = BridgeInstantiate.make(
+        instOffset,
+        // ignore: deprecated_member_use
         ctx.bridgeStaticFunctionIndices[decl.sourceLib]!['${$extends.superclass2.name.name}.$constructorName']!);
     ctx.pushOp(op, BridgeInstantiate.len(op));
     final bridgeInst = Variable.alloc(ctx, EvalTypes.dynamicType);

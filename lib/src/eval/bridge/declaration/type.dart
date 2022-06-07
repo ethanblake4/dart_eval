@@ -1,4 +1,3 @@
-import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
 import 'package:json_annotation/json_annotation.dart';
 

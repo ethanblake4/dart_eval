@@ -1,3 +1,5 @@
+// ignore_for_file: body_might_complete_normally_nullable
+
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/source_node_wrapper.dart';
 import 'package:dart_eval/src/eval/compiler/constant_pool.dart';
@@ -230,11 +232,6 @@ class CompilerContext with ScopeContext {
     }
     scopeDoesClose.removeLast();
     return super.endAllocScope(popValues: popValues, popAdjust: popAdjust);
-  }
-
-  @override
-  void resetStack({int position = 0}) {
-    super.resetStack(position: position);
   }
 
   int rewriteOp(int where, EvcOp newOp, int lengthAdjust) {

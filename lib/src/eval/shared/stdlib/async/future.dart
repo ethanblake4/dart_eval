@@ -1,3 +1,5 @@
+// ignore_for_file: body_might_complete_normally_nullable
+
 import 'dart:async';
 
 import 'package:dart_eval/dart_eval.dart';
@@ -16,14 +18,22 @@ class $Completer<T> implements Completer<T>, $Instance {
 
   static const _$type = BridgeTypeRef.spec(BridgeTypeSpec('dart:async', 'Completer'), []);
 
-  static const $declaration = BridgeClassDef(BridgeClassType(_$type), constructors: {
-    '': BridgeConstructorDef(BridgeFunctionDef(returns: BridgeTypeAnnotation(_$type), params: [], namedParams: []))
-  }, methods: {
-    'complete': BridgeMethodDef(BridgeFunctionDef(
-        returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.voidType)),
-        params: [BridgeParameter('value', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.dynamicType)), false)],
-        namedParams: []))
-  }, getters: {}, setters: {}, fields: {}, wrap: true);
+  static const $declaration = BridgeClassDef(BridgeClassType(_$type),
+      constructors: {
+        '': BridgeConstructorDef(BridgeFunctionDef(returns: BridgeTypeAnnotation(_$type), params: [], namedParams: []))
+      },
+      methods: {
+        'complete': BridgeMethodDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.voidType)),
+            params: [
+              BridgeParameter('value', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.dynamicType)), false)
+            ],
+            namedParams: []))
+      },
+      getters: {},
+      setters: {},
+      fields: {},
+      wrap: true);
 
   @override
   final Completer<T> $value;

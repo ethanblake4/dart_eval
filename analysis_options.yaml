@@ -1,14 +1,26 @@
-# Defines a default set of lint rules enforced for
-# projects at Google. For details and rationale,
-# see https://github.com/dart-lang/pedantic#enabled-lints.
-include: package:pedantic/analysis_options.yaml
-
-# For lint rules and documentation, see http://dart-lang.github.io/linter/lints.
-# Uncomment to specify additional rules.
-# linter:
-#   rules:
-#     - camel_case_types
+include: package:lints/recommended.yaml
 
 analyzer:
-  enable-experiment:
-    - non-nullable
+  language:
+    # would be good to turn these on in future
+    strict-inference: false
+    strict-casts: false
+    strict-raw-types: false
+  errors:
+    todo: ignore
+
+linter:
+  rules:
+    camel_case_types: false
+    non_constant_identifier_names: false
+    always_put_control_body_on_new_line: false
+    curly_braces_in_flow_control_structures: false
+    prefer_final_locals: false
+    constant_identifier_names: false
+    avoid_renaming_method_parameters: false
+    prefer_function_declarations_over_variables: false
+    avoid_function_literals_in_foreach_calls: false
+
+
+
+   

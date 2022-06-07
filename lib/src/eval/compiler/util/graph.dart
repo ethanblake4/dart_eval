@@ -17,7 +17,7 @@ List<List<T>> computeStrongComponents<T>(Graph<T> graph) {
   Map<T, int> preorderNumbers = <T, int>{};
   List<T> unassigned = <T>[];
   List<T> candidates = <T>[];
-  Set<T> assigned = new Set<T>();
+  Set<T> assigned = <T>{};
 
   void recursivelySearch(T vertex) {
     // Step 1: Set the preorder number of [vertex] to [count], and increment
@@ -145,7 +145,7 @@ int _topologicalSortInternal<T>(Graph<T> graph, TopologicalSortResult<T> result,
 /// Perform a topological sorting of the vertices in [graph], returning a
 /// [TopologicalSortResult] object with the result.
 TopologicalSortResult<T> topologicalSort<T>(Graph<T> graph) {
-  TopologicalSortResult<T> result = new TopologicalSortResult();
+  TopologicalSortResult<T> result = TopologicalSortResult();
 
   for (T vertex in graph.vertices) {
     _topologicalSortInternal(graph, result, vertex);
@@ -185,14 +185,14 @@ Set<T> calculateTransitiveDependenciesOf<T>(Graph<T> graph, Set<T> vertices) {
     for (T vertex in graph.vertices) {
       if (vertices.contains(vertex)) workList.add(vertex);
       for (T neighbor in graph.neighborsOf(vertex)) {
-        (directDependencies[neighbor] ??= new Set<T>()).add(vertex);
+        (directDependencies[neighbor] ??= <T>{}).add(vertex);
         if (vertices.contains(neighbor)) workList.add(vertex);
       }
     }
   }
 
   // Collect and remove all dependencies.
-  Set<T> left = new Set<T>.of(graph.vertices);
+  Set<T> left = Set<T>.of(graph.vertices);
   Set<T> transitive = {};
   while (workList.isNotEmpty) {
     T removed = workList.removeLast();

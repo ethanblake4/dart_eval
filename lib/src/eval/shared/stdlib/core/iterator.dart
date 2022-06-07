@@ -11,6 +11,7 @@ class $Iterator<E> implements Iterator, $Instance {
   @override
   Iterator<E> get $reified => $value;
 
+  // ignore: unused_field
   final $Instance _superclass;
 
   @override
@@ -20,6 +21,8 @@ class $Iterator<E> implements Iterator, $Instance {
         return $value.current as $Value;
       case 'moveNext':
         return __moveNext;
+      default:
+        return null;
     }
   }
 

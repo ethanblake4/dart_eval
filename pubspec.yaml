@@ -9,7 +9,6 @@ environment:
 dependencies:
    args: ^2.3.0
    analyzer: ^3.0.0
-   pedantic: ^1.11.1
    collection: ^1.15.0
    dcli: ^1.15.5
    json_annotation: ^4.4.0
@@ -19,3 +18,4 @@ dev_dependencies:
   test: ^1.17.12
   build_runner: ^2.0.0
   json_serializable: ^6.0.0
+  lints: ^1.0.0

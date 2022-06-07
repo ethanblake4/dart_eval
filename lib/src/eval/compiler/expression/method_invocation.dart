@@ -1,6 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/bridge/declaration/class.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
@@ -188,10 +187,7 @@ Variable _invokeWithTarget(CompilerContext ctx, Variable L, MethodInvocation e) 
 
   ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
 
-  final v = Variable.alloc(
-      ctx,
-      mReturnType?.type?.copyWith(boxed: true) ??
-          EvalTypes.dynamicType);
+  final v = Variable.alloc(ctx, mReturnType?.type?.copyWith(boxed: true) ?? EvalTypes.dynamicType);
 
   return v;
 }
@@ -214,6 +210,7 @@ DeclarationOrBridge<MethodDeclaration, BridgeMethodDef> resolveInstanceMethod(
     if ($class.extendsClause == null) {
       throw CompileError('Cannot resolve instance method');
     }
+    // ignore: deprecated_member_use
     final $supertype = ctx.visibleTypes[instanceType.file]![$class.extendsClause!.superclass2.name.name]!;
     return resolveInstanceMethod(ctx, $supertype, methodName);
   }
