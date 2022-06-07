@@ -226,6 +226,7 @@ class Compiler {
             compileFieldDeclaration(-1, d, ctx, declaration);
             ctx.resetStack();
           }
+          ctx.currentClass = null;
         }
       });
     });
