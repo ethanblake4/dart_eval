@@ -130,7 +130,12 @@ Variable _invokeWithTarget(CompilerContext ctx, Variable L, MethodInvocation e) 
   final bool isStatic;
   TypeRef? staticType;
 
+  Pair<List<Variable>, Map<String, Variable>> argsPair;
+
   if (L.type.file == -1 && L.type != EvalTypes.typeType) {
+    final knownMethod = knownMethods[L.type]![e.methodName.name] ??
+        (throw CompileError('Method not found ${e.methodName} on ${L.type}'));
+    argsPair = compileArgumentListWithKnownMethodArgs(ctx, e.argumentList, knownMethod.args, knownMethod.namedArgs);
     return L.invoke(ctx, e.methodName.name, []).result;
   }
 
@@ -143,8 +148,6 @@ Variable _invokeWithTarget(CompilerContext ctx, Variable L, MethodInvocation e) 
     _dec = resolveInstanceMethod(ctx, L.type, e.methodName.name);
     isStatic = false;
   }
-
-  Pair<List<Variable>, Map<String, Variable>> argsPair;
 
   if (_dec.isBridge) {
     final br = _dec.bridge!;

@@ -119,6 +119,70 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext 
   return Pair(_args, _namedArgs);
 }
 
+Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithKnownMethodArgs(CompilerContext ctx,
+    ArgumentList argumentList, List<KnownMethodArg> params, Map<String, KnownMethodArg> namedParams,
+    {List<Variable> before = const []}) {
+  final _args = <Variable>[];
+  final _push = <Variable>[];
+  final _namedArgs = <String, Variable>{};
+  final namedExpr = <String, Expression>{};
+
+  var i = 0;
+  Variable? $null;
+
+  for (final param in params) {
+    final arg = argumentList.arguments[i];
+    if (arg is NamedExpression) {
+      if (!param.optional) {
+        throw CompileError('Not enough positional arguments');
+      } else {
+        $null ??= BuiltinValue().push(ctx);
+        _push.add($null);
+      }
+    } else {
+      var paramType = param.type ?? EvalTypes.dynamicType;
+
+      var _arg = compileExpression(arg, ctx);
+      _arg = _arg.boxIfNeeded(ctx);
+      if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
+        throw CompileError('Cannot assign argument of type ${_arg.type} to parameter of type $paramType');
+      }
+      _args.add(_arg);
+      _push.add(_arg);
+    }
+
+    i++;
+  }
+
+  for (final arg in argumentList.arguments) {
+    if (arg is NamedExpression) {
+      namedExpr[arg.name.label.name] = arg.expression;
+    }
+  }
+
+  for (final param in namedParams.values) {
+    var paramType = param.type ?? EvalTypes.dynamicType;
+    if (namedExpr.containsKey(param.name)) {
+      final _arg = compileExpression(namedExpr[param.name]!, ctx).boxIfNeeded(ctx);
+      if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
+        throw CompileError('Cannot assign argument of type ${_arg.type} to parameter of type $paramType');
+      }
+      _push.add(_arg);
+      _namedArgs[param.name] = _arg;
+    } else {
+      $null ??= BuiltinValue().push(ctx);
+      _push.add($null);
+    }
+  }
+
+  for (final _arg in [...before, ..._push]) {
+    final argOp = PushArg.make(_arg.scopeFrameOffset);
+    ctx.pushOp(argOp, PushArg.LEN);
+  }
+
+  return Pair(_args, _namedArgs);
+}
+
 Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
     CompilerContext ctx, ArgumentList argumentList, BridgeFunctionDef function,
     {List<Variable> before = const []}) {
