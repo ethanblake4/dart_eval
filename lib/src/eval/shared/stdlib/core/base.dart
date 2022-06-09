@@ -144,6 +144,8 @@ class $String implements $Instance {
         return __toLowerCase;
       case 'toUpperCase':
         return __toUpperCase;
+      case 'substring':
+        return __substring;
     }
 
     return _superclass.$getProperty(runtime, identifier);
@@ -172,6 +174,15 @@ class $String implements $Instance {
 
   static $Value? _toUpperCase(final Runtime runtime, final $Value? target, final List<$Value?> args) {
     return $String((target!.$value as String).toUpperCase());
+  }
+
+  static const $Function __substring = $Function(_substring);
+
+  static $Value? _substring(final Runtime runtime, final $Value? target, final List<$Value?> args) {
+    target as $String;
+    final start = args[0] as $int;
+    final end = args[1] as $int;
+    return $String(target.$value.substring(start.$value, end.$value));
   }
 
   @override
