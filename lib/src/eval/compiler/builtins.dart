@@ -209,12 +209,18 @@ final Map<TypeRef, Map<String, KnownMethod>> knownMethods = {
         [KnownMethodArg('other', EvalTypes.stringType, false, false)], {}),
     '==': KnownMethod(
         AlwaysReturnType(EvalTypes.boolType, false), [KnownMethodArg('other', EvalTypes.stringType, false, false)], {}),
-    'toLowerCase': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [], {}),
-    'toUpperCase': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [], {}),
+    'codeUnitAt': KnownMethod(
+        AlwaysReturnType(EvalTypes.intType, false), [KnownMethodArg('index', EvalTypes.intType, false, false)], {}),
+    'compareTo': KnownMethod(
+        AlwaysReturnType(EvalTypes.intType, false), [KnownMethodArg('other', EvalTypes.stringType, false, false)], {}),
+    'endsWith': KnownMethod(
+        AlwaysReturnType(EvalTypes.boolType, false), [KnownMethodArg('other', EvalTypes.stringType, false, false)], {}),
     'substring': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [
       KnownMethodArg('start', EvalTypes.intType, false, false),
       KnownMethodArg('end', EvalTypes.intType, true, true)
     ], {}),
+    'toLowerCase': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [], {}),
+    'toUpperCase': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [], {}),
     ..._knownObject
   },
   EvalTypes.iterableType: {

@@ -876,6 +876,47 @@ void main() {
         expect(exec.executeLib('package:example/main.dart', 'main'), $null());
       }, prints('null\n'));
     });
+    test('String has compareTo method', () {
+      final exec = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main() {
+              String cat = "Fluffy";
+              String cat2 = "Fluffz";
+              return cat.compareTo(cat2);
+            }
+          ''',
+        }
+      });
+      expect(exec.executeLib('package:example/main.dart', 'main'), -1);
+    });
+    test('String has endsWith method', () {
+      final exec = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main() {
+              String cat = "Fluffy";
+              String fin = "fy";
+              if (cat.endsWith(fin)) return 1; else return 0;
+            }
+          ''',
+        }
+      });
+      expect(exec.executeLib('package:example/main.dart', 'main'), 1);
+    });
+    test('String has codeUnitAt method', () {
+      final exec = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main() {
+              String cat = "Fluffy";
+              return cat.codeUnitAt(3);
+            }
+          ''',
+        }
+      });
+      expect(exec.executeLib('package:example/main.dart', 'main'), 102);
+    });
   });
 
   group('Bridge tests', () {

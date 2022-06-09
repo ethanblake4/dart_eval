@@ -168,12 +168,18 @@ class $String implements $Instance {
         return $bool($value.isNotEmpty);
       case '+':
         return __concat;
+      case 'codeUnitAt':
+        return __codeUnitAt;
+      case 'compareTo':
+        return __compareTo;
+      case 'endsWith':
+        return __endsWith;
+      case 'substring':
+        return __substring;
       case 'toLowerCase':
         return __toLowerCase;
       case 'toUpperCase':
         return __toUpperCase;
-      case 'substring':
-        return __substring;
     }
 
     return _superclass.$getProperty(runtime, identifier);
@@ -197,6 +203,39 @@ class $String implements $Instance {
     return $String(target.$value + other.$value);
   }
 
+  static const $Function __codeUnitAt = $Function(_codeUnitAt);
+
+  static $Value? _codeUnitAt(final Runtime runtime, final $Value? target, final List<$Value?> args) {
+    target as $String;
+    final index = args[0] as $int;
+    return $int(target.$value.codeUnitAt(index.$value));
+  }
+
+  static const $Function __compareTo = $Function(_compareTo);
+
+  static $Value? _compareTo(final Runtime runtime, final $Value? target, final List<$Value?> args) {
+    target as $String;
+    final other = args[0] as $String;
+    return $int(target.$value.compareTo(other.$value));
+  }
+
+  static const $Function __endsWith = $Function(_endsWith);
+
+  static $Value? _endsWith(final Runtime runtime, final $Value? target, final List<$Value?> args) {
+    target as $String;
+    final other = args[0] as $String;
+    return $bool(target.$value.endsWith(other.$value));
+  }
+
+  static const $Function __substring = $Function(_substring);
+
+  static $Value? _substring(final Runtime runtime, final $Value? target, final List<$Value?> args) {
+    target as $String;
+    final start = args[0] as $int;
+    final end = args.length > 1 ? args[1] as $int : null;
+    return $String(target.$value.substring(start.$value, end?.$value));
+  }
+
   static const $Function __toLowerCase = $Function(_toLowerCase);
 
   static $Value? _toLowerCase(final Runtime runtime, final $Value? target, final List<$Value?> args) {
@@ -207,15 +246,6 @@ class $String implements $Instance {
 
   static $Value? _toUpperCase(final Runtime runtime, final $Value? target, final List<$Value?> args) {
     return $String((target!.$value as String).toUpperCase());
-  }
-
-  static const $Function __substring = $Function(_substring);
-
-  static $Value? _substring(final Runtime runtime, final $Value? target, final List<$Value?> args) {
-    target as $String;
-    final start = args[0] as $int;
-    final end = args.length > 1 ? args[1] as $int : null;
-    return $String(target.$value.substring(start.$value, end?.$value));
   }
 
   @override
