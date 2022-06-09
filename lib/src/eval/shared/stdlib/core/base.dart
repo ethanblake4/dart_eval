@@ -181,8 +181,8 @@ class $String implements $Instance {
   static $Value? _substring(final Runtime runtime, final $Value? target, final List<$Value?> args) {
     target as $String;
     final start = args[0] as $int;
-    final end = args[1] as $int;
-    return $String(target.$value.substring(start.$value, end.$value));
+    final end = args.length > 1 ? args[1] as $int : null;
+    return $String(target.$value.substring(start.$value, end?.$value));
   }
 
   @override

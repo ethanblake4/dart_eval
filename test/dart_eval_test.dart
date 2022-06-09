@@ -540,6 +540,22 @@ void main() {
         exec.executeLib('package:example/main.dart', 'main');
       }, prints('Flu\n'));
     });
+    test('String substring method works with only 1 parameter', () {
+      final exec = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main() {
+              String cat = "Fluffy";
+              String sub = cat.substring(3);
+              print(sub);
+            }
+          ''',
+        }
+      });
+      expect(() {
+        exec.executeLib('package:example/main.dart', 'main');
+      }, prints('ffy\n'));
+    });
   });
 
   group('Bridge tests', () {
