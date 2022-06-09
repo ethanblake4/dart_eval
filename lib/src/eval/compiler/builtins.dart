@@ -195,6 +195,10 @@ final Map<TypeRef, Map<String, KnownMethod>> knownMethods = {
         AlwaysReturnType(EvalTypes.boolType, false), [KnownMethodArg('other', EvalTypes.stringType, false, false)], {}),
     'toLowerCase': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [], {}),
     'toUpperCase': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [], {}),
+    'substring': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [
+      KnownMethodArg('start', EvalTypes.intType, false, false),
+      KnownMethodArg('end', EvalTypes.intType, true, true)
+    ], {}),
     ..._knownObject
   },
   EvalTypes.iterableType: {

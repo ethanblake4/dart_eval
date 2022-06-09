@@ -131,6 +131,9 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithKnownMethodAr
   Variable? $null;
 
   for (final param in params) {
+    if (param.optional && argumentList.arguments.length <= i) {
+      break;
+    }
     final arg = argumentList.arguments[i];
     if (arg is NamedExpression) {
       if (!param.optional) {
