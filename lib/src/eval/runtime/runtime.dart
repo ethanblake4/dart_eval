@@ -511,7 +511,7 @@ class RuntimeException implements Exception {
     }
 
     return 'dart_eval runtime exception: $caughtException\n'
-        '${stackTrace.toString().split("\n").take(2).join('\n')}\n\n'
+        '${stackTrace.toString().split("\n").take(3).join('\n')}\n\n'
         'RUNTIME STATE\n'
         '=============\n'
         'Program offset: ${runtime._prOffset - 1}\n'
