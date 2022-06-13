@@ -556,6 +556,45 @@ void main() {
         exec.executeLib('package:example/main.dart', 'main');
       }, prints('ffy\n'));
     });
+
+    test('Boolean literals', () {
+      final exec = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            bool main() {
+              final a = true;
+              final b = false;
+              print(a);
+              print(b);
+              return b;
+            }
+          ''',
+        }
+      });
+      expect(() {
+        final a = exec.executeLib('package:example/main.dart', 'main');
+        expect(a, equals(false));
+      }, prints('true\nfalse\n'));
+    });
+
+    test('Boxed bools, logical && and ||', () {
+      final exec = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            dynamic main() {
+              final a = true;
+              final b = false;
+              print(a && b);
+              print(a || b);
+              return b && a;
+            }
+          ''',
+        }
+      });
+      expect(() {
+        expect(exec.executeLib('package:example/main.dart', 'main'), $bool(false));
+      }, prints('false\ntrue\n'));
+    });
   });
 
   group('Bridge tests', () {

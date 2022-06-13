@@ -454,3 +454,58 @@ class IndexMap extends EvcOp {
   @override
   String toString() => 'IndexMap (L$_map[L$_index])';
 }
+
+class PushTrue extends EvcOp {
+  PushTrue(Runtime runtime);
+
+  PushTrue.make();
+
+  static const int LEN = Evc.BASE_OPLEN;
+
+  @override
+  void run(Runtime runtime) {
+    final frame = runtime.frame;
+    frame[runtime.frameOffset++] = true;
+  }
+
+  @override
+  String toString() => 'PushTrue ()';
+}
+
+class LogicalNot extends EvcOp {
+  LogicalNot(Runtime runtime): _index = runtime._readInt16();
+
+  LogicalNot.make(this._index);
+
+  final int _index;
+
+  static const int LEN = Evc.BASE_OPLEN + Evc.I16_LEN;
+
+  @override
+  void run(Runtime runtime) {
+    final frame = runtime.frame;
+    frame[runtime.frameOffset++] = !(frame[_index] as bool);
+  }
+
+  @override
+  String toString() => 'LogicalNot (L$_index)';
+}
+
+class BoxBool implements EvcOp {
+  BoxBool(Runtime runtime) : _reg = runtime._readInt16();
+
+  BoxBool.make(this._reg);
+
+  final int _reg;
+
+  static const int LEN = Evc.BASE_OPLEN + Evc.I16_LEN;
+
+  @override
+  void run(Runtime runtime) {
+    final reg = _reg;
+    runtime.frame[reg] = $bool(runtime.frame[reg] as bool);
+  }
+
+  @override
+  String toString() => 'BoxBool (L$_reg)';
+}

@@ -70,12 +70,30 @@ class $bool implements $Instance {
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
+      case '&&':
+        return __and;
+      case '||':
+        return __or;
     }
     return _superclass.$getProperty(runtime, identifier);
   }
 
   @override
   void $setProperty(Runtime runtime, String identifier, $Value value) {}
+
+  static const $Function __and = $Function(_and);
+
+  static $Value? _and(Runtime runtime, $Value? target, List<$Value?> args) {
+    final other = args[0];
+    return $bool(target!.$value && other!.$value);
+  }
+
+  static const $Function __or = $Function(_or);
+
+  static $Value? _or(Runtime runtime, $Value? target, List<$Value?> args) {
+    final other = args[0];
+    return $bool(target!.$value || other!.$value);
+  }
 
   @override
   bool get $reified => $value;

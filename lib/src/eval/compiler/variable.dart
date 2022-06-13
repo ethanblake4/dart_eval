@@ -58,6 +58,8 @@ class Variable {
       ctx.pushOp(BoxNum.make(scopeFrameOffset), BoxNum.LEN);
     } else if (type == EvalTypes.doubleType) {
       ctx.pushOp(BoxDouble.make(scopeFrameOffset), BoxDouble.LEN);
+    } else if (type == EvalTypes.boolType) {
+      ctx.pushOp(BoxBool.make(scopeFrameOffset), BoxBool.LEN);
     } else if (type == EvalTypes.listType) {
       if (!type.specifiedTypeArgs[0].boxed && ctx is CompilerContext) {
         V2 = boxListContents(ctx, this);
