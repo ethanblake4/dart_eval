@@ -1,3 +1,5 @@
+import 'dart:ffi';
+
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/collection/list.dart';
 import 'package:dart_eval/src/eval/compiler/collection/set_map.dart';
@@ -14,6 +16,8 @@ BuiltinValue parseConstLiteral(Literal l, CompilerContext ctx) {
     return BuiltinValue(doubleval: l.value);
   } else if (l is SimpleStringLiteral) {
     return BuiltinValue(stringval: l.stringValue);
+  } else if (l is BooleanLiteral) {
+    return BuiltinValue(boolval: l.value);
   } else if (l is NullLiteral) {
     return BuiltinValue();
   }
@@ -21,7 +25,7 @@ BuiltinValue parseConstLiteral(Literal l, CompilerContext ctx) {
 }
 
 Variable parseLiteral(Literal l, CompilerContext ctx) {
-  if (l is IntegerLiteral || l is DoubleLiteral || l is SimpleStringLiteral || l is NullLiteral) {
+  if (l is IntegerLiteral || l is DoubleLiteral || l is SimpleStringLiteral || l is NullLiteral || l is BooleanLiteral) {
     return parseConstLiteral(l, ctx).push(ctx);
   }
   if (l is ListLiteral) {

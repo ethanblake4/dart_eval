@@ -7,13 +7,15 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 const int dartCoreFile = -1;
 
 class BuiltinValue {
-  BuiltinValue({this.intval, this.doubleval, this.stringval}) {
+  BuiltinValue({this.intval, this.doubleval, this.stringval, this.boolval}) {
     if (intval != null) {
       type = BuiltinValueType.intType;
     } else if (stringval != null) {
       type = BuiltinValueType.stringType;
     } else if (doubleval != null) {
       type = BuiltinValueType.doubleType;
+    } else if (boolval != null) {
+      type = BuiltinValueType.boolType;
     } else {
       type = BuiltinValueType.nullType;
     }
@@ -23,6 +25,7 @@ class BuiltinValue {
   final int? intval;
   final double? doubleval;
   final String? stringval;
+  final bool? boolval;
 
   Variable _push(CompilerContext ctx) {
     if (type == BuiltinValueType.intType) {
@@ -35,6 +38,14 @@ class BuiltinValue {
       final op = PushConstant.make(ctx.constantPool.addOrGet(stringval!));
       ctx.pushOp(op, PushConstant.LEN);
       return Variable.alloc(ctx, EvalTypes.stringType.copyWith(boxed: false));
+    } else if (type == BuiltinValueType.boolType) {
+      ctx.pushOp(PushTrue.make(), PushTrue.LEN);
+      var value = Variable.alloc(ctx, EvalTypes.boolType.copyWith(boxed: false));
+      if (!boolval!) {
+        ctx.pushOp(LogicalNot.make(value.scopeFrameOffset), LogicalNot.LEN);
+        value = Variable.alloc(ctx, EvalTypes.boolType.copyWith(boxed: false));
+      }
+      return value;
     } else if (type == BuiltinValueType.nullType) {
       final op = PushNull.make();
       ctx.pushOp(op, PushNull.LEN);
@@ -53,7 +64,7 @@ class BuiltinValue {
   }
 }
 
-enum BuiltinValueType { intType, stringType, doubleType, nullType }
+enum BuiltinValueType { intType, stringType, doubleType, boolType, nullType }
 
 class KnownMethod {
   const KnownMethod(this.returnType, this.args, this.namedArgs);
@@ -136,6 +147,9 @@ final numBinaryOp = KnownMethod(
     [KnownMethodArg('other', EvalTypes.numType, false, false)],
     {});
 
+final boolBinaryOp = KnownMethod(
+    AlwaysReturnType(EvalTypes.boolType, false), [KnownMethodArg('other', EvalTypes.boolType, false, false)], {});
+
 const listIndexOp =
     KnownMethod(TargetTypeArgDependentReturnType(0), [KnownMethodArg('index', EvalTypes.intType, false, false)], {});
 
@@ -187,6 +201,10 @@ final Map<TypeRef, Map<String, KnownMethod>> knownMethods = {
     '>=': numComparisonOp,
     '==': numComparisonOp,
     ..._knownObject
+  },
+  EvalTypes.boolType: {
+    '&&': boolBinaryOp,
+    '||': boolBinaryOp
   },
   EvalTypes.stringType: {
     '+': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false),

@@ -162,6 +162,15 @@ class Evc {
   /// [BoxMap]
   static const OP_BOXMAP = 51;
 
+  /// [PushTrue]
+  static const OP_PUSH_TRUE = 52;
+
+  /// [LogicalNot]
+  static const OP_LOGICAL_NOT = 53;
+
+  /// [BoxBool]
+  static const OP_BOXBOOL = 54;
+
   static List<int> i16b(int i16) {
     final x = ByteData(2);
     x.setInt16(0, i16);
@@ -256,5 +265,8 @@ final List<OpLoader> ops = [
   (Runtime rt) => PushConstantDouble(rt), // 48
   (Runtime rt) => SetGlobal(rt), // 49
   (Runtime rt) => LoadGlobal(rt), // 50
-  (Runtime rt) => BoxMap(rt), // 37
+  (Runtime rt) => BoxMap(rt), // 51
+  (Runtime rt) => PushTrue(rt), // 52
+  (Runtime rt) => LogicalNot(rt), // 53
+  (Runtime rt) => BoxBool(rt), // 54
 ];

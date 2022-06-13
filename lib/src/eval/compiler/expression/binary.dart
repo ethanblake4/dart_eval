@@ -21,7 +21,9 @@ Variable compileBinaryExpression(CompilerContext ctx, BinaryExpression e) {
     TokenType.LT_EQ: '<=',
     TokenType.GT_EQ: '>=',
     TokenType.PERCENT: '%',
-    TokenType.EQ_EQ: '=='
+    TokenType.EQ_EQ: '==',
+    TokenType.AMPERSAND_AMPERSAND: '&&',
+    TokenType.BAR_BAR: '||'
   };
 
   var method = opMap[e.operator.type] ?? (throw CompileError('Unknown binary operator ${e.operator.type}'));

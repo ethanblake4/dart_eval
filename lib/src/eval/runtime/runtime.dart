@@ -320,6 +320,9 @@ class Runtime {
       case BoxMap:
         op as BoxMap;
         return [Evc.OP_BOXMAP, ...Evc.i16b(op._reg)];
+      case BoxBool:
+        op as BoxBool;
+        return [Evc.OP_BOXBOOL, ...Evc.i16b(op._reg)];
       case PushCaptureScope:
         op as PushCaptureScope;
         return [Evc.OP_CAPTURE_SCOPE];
@@ -353,6 +356,12 @@ class Runtime {
       case LoadGlobal:
         op as LoadGlobal;
         return [Evc.OP_LOAD_GLOBAL, ...Evc.i32b(op._index)];
+      case PushTrue:
+        op as PushTrue;
+        return [Evc.OP_PUSH_TRUE];
+      case LogicalNot:
+        op as LogicalNot;
+        return [Evc.OP_LOGICAL_NOT, ...Evc.i16b(op._index)];
       default:
         throw ArgumentError('Not a valid op $op');
     }
