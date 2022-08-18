@@ -56,6 +56,13 @@ class _UnloadedBridgeFunction {
   final EvalCallableFunc func;
 }
 
+class _UnloadedEnumValues {
+  const _UnloadedEnumValues(this.library, this.name, this.values);
+  final String library;
+  final String name;
+  final Map<String, Enum> values;
+}
+
 class Runtime {
   Runtime(this._evc)
       : id = _id++,
@@ -76,6 +83,7 @@ class Runtime {
         runtimeTypes = program.runtimeTypes,
         _bridgeLibraryMappings = program.bridgeLibraryMappings,
         bridgeFuncMappings = program.bridgeFunctionMappings,
+        bridgeEnumMappings = program.enumMappings,
         globalInitializers = program.globalInitializers {
     declarations = program.topLevelDeclarations;
     constantPool.addAll(program.constantPool);
@@ -108,6 +116,7 @@ class Runtime {
     final encodedConstantPool = _readString();
     final encodedRuntimeTypes = _readString();
     final encodedGlobalInitializers = _readString();
+    final encodedBridgeEnumMappings = _readString();
 
     declarations =
         (json.decode(encodedToplevelDecs).map((k, v) => MapEntry(int.parse(k), (v as Map).cast<String, int>())) as Map)
@@ -116,6 +125,12 @@ class Runtime {
     final classes =
         (json.decode(encodedInstanceDecs).map((k, v) => MapEntry(int.parse(k), (v as Map).cast<String, List>())) as Map)
             .cast<int, Map<String, List>>();
+
+    bridgeEnumMappings = (json.decode(encodedBridgeEnumMappings) as Map).map((k, v) => MapEntry(
+        int.parse(k),
+        (v as Map)
+            .map((key, value) => MapEntry(key, (value as Map).cast<String, int>()))
+            .cast<String, Map<String, int>>()));
 
     classes.forEach((file, $class) {
       declaredClasses[file] = {for (final decl in $class.entries) decl.key: EvalClass.fromJson(decl.value)};
@@ -151,6 +166,14 @@ class Runtime {
       _bridgeFunctions[bridgeFuncMappings[libIndex]![ulb.name] ?? (throw ArgumentError('Could not find ${ulb.name}'))] =
           ulb.func;
     }
+
+    for (final ule in _unloadedEnumValues) {
+      final libIndex = _bridgeLibraryMappings[ule.library]!;
+      final mapping = bridgeEnumMappings[libIndex]![ule.name]!;
+      for (final value in ule.values.entries) {
+        globals[mapping[value.key]!] = value.value;
+      }
+    }
   }
 
   void registerBridgeClass(String library, String name, $Bridge cls) {
@@ -159,6 +182,10 @@ class Runtime {
 
   void registerBridgeFunc(String library, String name, EvalCallableFunc fn, {bool isBridge = false}) {
     _unloadedBrFunc.add(_UnloadedBridgeFunction(library, isBridge ? '#$name' : name, fn));
+  }
+
+  void registerBridgeEnumValues(String library, String name, Map<String, Enum> values) {
+    _unloadedEnumValues.add(_UnloadedEnumValues(library, name, values));
   }
 
   void setup() {
@@ -175,8 +202,9 @@ class Runtime {
   final _bridgeFunctions = List<EvalCallableFunc>.filled(1000, _defaultFunction);
   final _unloadedBrClass = <_UnloadedBridgeClass>[];
   final _unloadedBrFunc = <_UnloadedBridgeFunction>[];
+  final _unloadedEnumValues = <_UnloadedEnumValues>[];
   final constantPool = <Object>[];
-  final globals = List<Object?>.filled(4000, null);
+  final globals = List<Object?>.filled(20000, null);
   var globalInitializers = <int>[];
 
   static List<int> opcodeFrom(EvcOp op) {
@@ -386,6 +414,7 @@ class Runtime {
   late final List<Set<int>> typeTypes;
   late final List<RuntimeTypeSet> runtimeTypes;
   late final Map<int, Map<String, int>> bridgeFuncMappings;
+  late final Map<int, Map<String, Map<String, int>>> bridgeEnumMappings;
 
   int frameOffset = 0;
   int _offset = 0;

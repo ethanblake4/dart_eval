@@ -97,6 +97,7 @@ class EvalTypes {
   static const TypeRef dynamicType = TypeRef(dartCoreFile, 'dynamic', resolved: true);
   static const TypeRef nullType = TypeRef(dartCoreFile, 'Null', extendsType: dynamicType, resolved: true);
   static const TypeRef objectType = TypeRef(dartCoreFile, 'Object', extendsType: dynamicType, resolved: true);
+  static const TypeRef enumType = TypeRef(dartCoreFile, 'Enum', extendsType: objectType, resolved: true);
   static const TypeRef boolType = TypeRef(dartCoreFile, 'bool', extendsType: objectType, resolved: true);
   static const TypeRef numType = TypeRef(dartCoreFile, 'num', extendsType: objectType, resolved: true);
   static const TypeRef intType = TypeRef(dartCoreFile, 'int', extendsType: numType, resolved: true);
@@ -202,10 +203,7 @@ final Map<TypeRef, Map<String, KnownMethod>> knownMethods = {
     '==': numComparisonOp,
     ..._knownObject
   },
-  EvalTypes.boolType: {
-    '&&': boolBinaryOp,
-    '||': boolBinaryOp
-  },
+  EvalTypes.boolType: {'&&': boolBinaryOp, '||': boolBinaryOp},
   EvalTypes.stringType: {
     '+': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false),
         [KnownMethodArg('other', EvalTypes.stringType, false, false)], {}),

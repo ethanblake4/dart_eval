@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/bridge/declaration/class.dart';
+import 'package:dart_eval/src/eval/bridge/declaration/enum.dart';
 import 'package:dart_eval/src/eval/bridge/declaration/type.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/declaration.dart';
@@ -52,6 +53,20 @@ class Compiler {
       _bridgeDeclarations[spec.library] = [classDef];
     } else {
       libraryDeclarations.add(classDef);
+    }
+  }
+
+  void defineBridgeEnum(BridgeEnumDef enumDef) {
+    final spec = enumDef.type.spec;
+    if (spec == null) {
+      throw CompileError('Cannot define a bridge enum that\'s already resolved, a ref, or a generic function type');
+    }
+
+    final libraryDeclarations = _bridgeDeclarations[spec.library];
+    if (libraryDeclarations == null) {
+      _bridgeDeclarations[spec.library] = [enumDef];
+    } else {
+      libraryDeclarations.add(enumDef);
     }
   }
 
@@ -166,9 +181,15 @@ class Compiler {
             if (_cached == null) continue;
             res['$name.$childName'] = _cached;
             if (child.isBridge) {
-              final bridge = child.bridge! as BridgeClassDef;
-              child.bridge =
-                  bridge.copyWith(type: bridge.type.copyWith(type: BridgeTypeRef.type(ctx.typeRefIndexMap[_cached])));
+              final bridge = child.bridge!;
+              if (bridge is BridgeClassDef) {
+                child.bridge =
+                    bridge.copyWith(type: bridge.type.copyWith(type: BridgeTypeRef.type(ctx.typeRefIndexMap[_cached])));
+              } else if (bridge is BridgeEnumDef) {
+                child.bridge = bridge.copyWith(type: BridgeTypeRef.type(ctx.typeRefIndexMap[_cached]));
+              } else {
+                assert(false);
+              }
             }
           }
           visibleTypesByIndex[libraryIndex] ??= {...coreDeclarations};
@@ -180,9 +201,15 @@ class Compiler {
         final type = declarationTypes[declarationOrBridge];
         if (type == null) continue;
         if (declarationOrBridge.isBridge) {
-          final bridge = declarationOrBridge.bridge! as BridgeClassDef;
-          declarationOrBridge.bridge =
-              bridge.copyWith(type: bridge.type.copyWith(type: BridgeTypeRef.type(ctx.typeRefIndexMap[type])));
+          final bridge = declarationOrBridge.bridge!;
+          if (bridge is BridgeClassDef) {
+            declarationOrBridge.bridge =
+                bridge.copyWith(type: bridge.type.copyWith(type: BridgeTypeRef.type(ctx.typeRefIndexMap[type])));
+          } else if (bridge is BridgeEnumDef) {
+            declarationOrBridge.bridge = bridge.copyWith(type: BridgeTypeRef.type(ctx.typeRefIndexMap[type]));
+          } else {
+            assert(false);
+          }
         }
         visibleTypesByIndex[libraryIndex]![name] = type;
       }
@@ -200,6 +227,8 @@ class Compiler {
           final bridge = dec.bridge;
           if (bridge is BridgeClassDef) {
             _assignBridgeStaticFunctionIndicesForClass(bridge);
+          } else if (bridge is BridgeEnumDef) {
+            _assignBridgeGlobalValueIndicesForEnum(bridge);
           } else if (bridge is BridgeFunctionDeclaration) {
             _assignBridgeStaticFunctionIndicesForFunction(libraryIndex, bridge);
           }
@@ -282,7 +311,8 @@ class Compiler {
         ctx.bridgeStaticFunctionIndices,
         ctx.constantPool.pool,
         ctx.runtimeTypes.pool,
-        globalInitializers);
+        globalInitializers,
+        ctx.enumValueIndices);
   }
 
   Runtime compileWriteAndLoad(Map<String, Map<String, String>> packages) {
@@ -313,6 +343,9 @@ class Compiler {
                 DeclarationOrBridge(libraryIndex, bridge: method.value);
           }
         }
+      } else if (bridge is BridgeEnumDef) {
+        final spec = bridge.type.spec!;
+        _topLevelDeclarationsMap[libraryIndex]![spec.name] = DeclarationOrBridge(libraryIndex, bridge: bridge);
       } else if (bridge is BridgeFunctionDeclaration) {
         _topLevelDeclarationsMap[libraryIndex]![bridge.name] = DeclarationOrBridge(libraryIndex, bridge: bridge);
       }
@@ -398,13 +431,14 @@ class Compiler {
   TypeRef? _cacheTypeRef(int libraryIndex, DeclarationOrBridge declarationOrBridge) {
     if (declarationOrBridge.isBridge) {
       final bridge = declarationOrBridge.bridge;
-      if (bridge is! BridgeClassDef) {
+      if (bridge is! BridgeClassDef && bridge is! BridgeEnumDef) {
         return null;
       }
-      if (bridge.type.type.cacheId != null) {
-        return TypeRef.fromBridgeTypeRef(ctx, bridge.type.type);
+      final type = bridge is BridgeClassDef ? bridge.type.type : (bridge as BridgeEnumDef).type;
+      if (type.cacheId != null) {
+        return TypeRef.fromBridgeTypeRef(ctx, type);
       }
-      final spec = bridge.type.type.spec!;
+      final spec = type.spec!;
       return TypeRef.cache(ctx, libraryIndex, spec.name, fileRef: libraryIndex);
     } else {
       final declaration = declarationOrBridge.declaration!;
@@ -447,6 +481,15 @@ class Compiler {
       final prev = classDef.wrap ? idc[id]! : idc.remove(id)!;
       ctx.bridgeStaticFunctionIndices[lib]!['#${type.name}.$name'] = prev;
     });
+  }
+
+  void _assignBridgeGlobalValueIndicesForEnum(BridgeEnumDef enumDef) {
+    final type = TypeRef.fromBridgeTypeRef(ctx, enumDef.type);
+    final lib = type.file;
+    if (!ctx.enumValueIndices.containsKey(lib)) {
+      ctx.enumValueIndices[lib] = {};
+    }
+    ctx.enumValueIndices[lib]![type.name] = {for (final value in enumDef.values) value: ctx.globalIndex++};
   }
 
   void _assignBridgeStaticFunctionIndicesForFunction(int libraryIndex, BridgeFunctionDeclaration functionDef) {
@@ -589,6 +632,9 @@ Iterable<Pair<String, DeclarationOrBridge>> _expandDeclarations(List<Declaration
       final bridge = d.bridge as BridgeDeclaration;
       if (bridge is BridgeClassDef) {
         final name = bridge.type.type.spec!.name;
+        yield Pair(name, d);
+      } else if (bridge is BridgeEnumDef) {
+        final name = bridge.type.spec!.name;
         yield Pair(name, d);
       } else if (bridge is BridgeFunctionDeclaration) {
         yield Pair(bridge.name, d);

@@ -726,6 +726,33 @@ void main() {
       runtime.setup();
       expect(runtime.executeLib('package:example/main.dart', 'main'), false);
     });
+
+    test('Using a bridged enum', () {
+      compiler.defineBridgeEnum($TestEnum.$declaration);
+      final program = compiler.compile({
+        'example': {
+          'main.dart': '''
+            import 'package:bridge_lib/bridge_lib.dart';
+            
+            TestEnum main() {
+              final map = {
+                'one': TestEnum.one,
+                'two': TestEnum.two,
+              };
+
+              return map['two'];
+            }
+          '''
+        }
+      });
+
+      final runtime = Runtime.ofProgram(program);
+
+      runtime.registerBridgeEnumValues('package:bridge_lib/bridge_lib.dart', 'TestEnum', $TestEnum.$values);
+      runtime.setup();
+
+      expect(runtime.executeLib('package:example/main.dart', 'main'), TestEnum.two);
+    });
   });
 
   group('File and library composition', () {

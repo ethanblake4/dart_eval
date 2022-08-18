@@ -17,7 +17,8 @@ class Program {
       this.bridgeFunctionMappings,
       this.constantPool,
       this.runtimeTypes,
-      this.globalInitializers);
+      this.globalInitializers,
+      this.enumMappings);
 
   Map<int, Map<String, int>> topLevelDeclarations;
 
@@ -37,6 +38,7 @@ class Program {
   List<Object> constantPool;
   List<RuntimeTypeSet> runtimeTypes;
   List<int> globalInitializers;
+  Map<int, Map<String, Map<String, int>>> enumMappings;
 
   List<EvcOp> ops;
 
@@ -52,6 +54,7 @@ class Program {
     _writeMetaBlock(b, constantPool);
     _writeMetaBlock(b, [for (final rt in runtimeTypes) rt.toJson()]);
     _writeMetaBlock(b, globalInitializers);
+    _writeMetaBlock(b, enumMappings);
 
     for (final op in ops) {
       b.add(Runtime.opcodeFrom(op));

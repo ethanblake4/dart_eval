@@ -237,19 +237,23 @@ class TypeRef {
       implementsNames = [];
       withNames = [];
 
-      final br = declaration.bridge as BridgeClassDef;
-      final type = br.type;
+      if (declaration.bridge is BridgeEnumDef) {
+        $super = EvalTypes.enumType;
+      } else {
+        final br = declaration.bridge as BridgeClassDef;
+        final type = br.type;
 
-      if (type.$extends != null) {
-        $super = TypeRef.fromBridgeTypeRef(ctx, type.$extends!).resolveTypeChain(ctx, recursionGuard: rg);
-      }
+        if (type.$extends != null) {
+          $super = TypeRef.fromBridgeTypeRef(ctx, type.$extends!).resolveTypeChain(ctx, recursionGuard: rg);
+        }
 
-      for (final $i in type.$implements) {
-        $implements.add(TypeRef.fromBridgeTypeRef(ctx, $i).resolveTypeChain(ctx, recursionGuard: rg));
-      }
+        for (final $i in type.$implements) {
+          $implements.add(TypeRef.fromBridgeTypeRef(ctx, $i).resolveTypeChain(ctx, recursionGuard: rg));
+        }
 
-      for (final $i in type.$with) {
-        $with.add(TypeRef.fromBridgeTypeRef(ctx, $i).resolveTypeChain(ctx, recursionGuard: rg));
+        for (final $i in type.$with) {
+          $with.add(TypeRef.fromBridgeTypeRef(ctx, $i).resolveTypeChain(ctx, recursionGuard: rg));
+        }
       }
     } else {
       final dec = declaration.declaration! as ClassDeclaration;
@@ -271,7 +275,7 @@ class TypeRef {
     }
 
     final _resolved = TypeRef(file, name,
-        extendsType: $super,
+        extendsType: $super ?? EvalTypes.objectType,
         withType: $with,
         implementsType: $implements,
         resolved: true,

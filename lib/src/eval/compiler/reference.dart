@@ -107,7 +107,14 @@ class IdentifierReference implements Reference {
   Variable getValue(CompilerContext ctx) {
     if (object != null) {
       if (object!.type == EvalTypes.typeType) {
-        final classType = object!.concreteTypes[0];
+        final classType = object!.concreteTypes[0].resolveTypeChain(ctx);
+        if (classType.extendsType == EvalTypes.enumType) {
+          final type = classType;
+          final gIndex = ctx.enumValueIndices[classType.file]![type.name]![name]!;
+          ctx.pushOp(LoadGlobal.make(gIndex), LoadGlobal.LEN);
+          ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
+          return Variable.alloc(ctx, type);
+        }
         final _name = classType.name + '.' + name;
         final type = ctx.topLevelVariableInferredTypes[classType.file]![_name]!;
         final gIndex = ctx.topLevelGlobalIndices[classType.file]![_name]!;
@@ -185,6 +192,14 @@ class IdentifierReference implements Reference {
         return Variable(-1, EvalTypes.typeType,
             concreteTypes: [type],
             methodOffset: DeferredOrOffset(file: type.file, name: type.name + '.'),
+            methodReturnType: AlwaysReturnType(type, false));
+      }
+
+      if (bridge is BridgeEnumDef) {
+        final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type);
+        return Variable(-1, EvalTypes.typeType,
+            concreteTypes: [type],
+            methodOffset: DeferredOrOffset(file: type.file, name: type.name + '#wrap'),
             methodReturnType: AlwaysReturnType(type, false));
       }
 

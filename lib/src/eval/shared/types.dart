@@ -19,6 +19,7 @@ class RuntimeTypes {
   static const int iterableType = -15;
   static const int futureType = -16;
   static const int durationType = -17;
+  static const int enumType = -18;
 }
 
 final Map<TypeRef, int> runtimeTypeMap = {
@@ -34,7 +35,8 @@ final Map<TypeRef, int> runtimeTypeMap = {
   EvalTypes.mapType: RuntimeTypes.mapType,
   EvalTypes.listType: RuntimeTypes.listType,
   EvalTypes.functionType: RuntimeTypes.functionType,
-  EvalTypes.typeType: RuntimeTypes.typeType
+  EvalTypes.typeType: RuntimeTypes.typeType,
+  EvalTypes.enumType: RuntimeTypes.enumType
 };
 
 final Map<int, TypeRef> inverseRuntimeTypeMap = {

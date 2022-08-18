@@ -154,6 +154,7 @@ class CompilerContext with ScopeContext {
   Map<int, Map<String, List>> instanceDeclarationPositions = {};
   Map<int, Map<String, int>> topLevelGlobalIndices = {};
   Map<int, Map<String, int>> topLevelGlobalInitializers = {};
+  Map<int, Map<String, Map<String, int>>> enumValueIndices = {};
   Map<int, int> runtimeGlobalInitializerMap = {};
   Map<int, Map<String, TypeRef>> topLevelVariableInferredTypes = {};
   Map<TypeRef, int> typeRefIndexMap = {};
