@@ -54,7 +54,7 @@ class Program {
     _writeMetaBlock(b, constantPool);
     _writeMetaBlock(b, [for (final rt in runtimeTypes) rt.toJson()]);
     _writeMetaBlock(b, globalInitializers);
-    _writeMetaBlock(b, enumMappings);
+    _writeMetaBlock(b, enumMappings.map((key, value) => MapEntry(key.toString(), value)));
 
     for (final op in ops) {
       b.add(Runtime.opcodeFrom(op));

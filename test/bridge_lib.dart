@@ -99,7 +99,9 @@ class $TestEnum implements $Instance {
   static const $type = BridgeTypeRef.spec(BridgeTypeSpec('package:bridge_lib/bridge_lib.dart', 'TestEnum'));
   static const $declaration =
       BridgeEnumDef($type, values: ['one', 'two', 'three'], methods: {}, getters: {}, setters: {}, fields: {});
-  static final $values = TestEnum.values.asNameMap();
+  static final $values = TestEnum.values.asNameMap().map(
+        (key, value) => MapEntry(key, $TestEnum.wrap(value)),
+      );
   const $TestEnum.wrap(this.$value);
 
   @override

@@ -60,7 +60,7 @@ class _UnloadedEnumValues {
   const _UnloadedEnumValues(this.library, this.name, this.values);
   final String library;
   final String name;
-  final Map<String, Enum> values;
+  final Map<String, $Value> values;
 }
 
 class Runtime {
@@ -184,7 +184,7 @@ class Runtime {
     _unloadedBrFunc.add(_UnloadedBridgeFunction(library, isBridge ? '#$name' : name, fn));
   }
 
-  void registerBridgeEnumValues(String library, String name, Map<String, Enum> values) {
+  void registerBridgeEnumValues(String library, String name, Map<String, $Value> values) {
     _unloadedEnumValues.add(_UnloadedEnumValues(library, name, values));
   }
 

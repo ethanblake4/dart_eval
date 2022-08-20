@@ -751,7 +751,7 @@ void main() {
       runtime.registerBridgeEnumValues('package:bridge_lib/bridge_lib.dart', 'TestEnum', $TestEnum.$values);
       runtime.setup();
 
-      expect(runtime.executeLib('package:example/main.dart', 'main'), TestEnum.two);
+      expect(runtime.executeLib('package:example/main.dart', 'main').$value, TestEnum.two);
     });
   });
 
