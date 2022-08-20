@@ -15,7 +15,9 @@ import '../variable.dart';
 
 void compileConstructorDeclaration(
     CompilerContext ctx, ConstructorDeclaration d, ClassDeclaration parent, List<FieldDeclaration> fields) {
-  final n = '${parent.name.name}.${d.name?.name ?? ""}';
+  final parentName = parent.name2.value() as String;
+  final dName = (d.name2?.value() as String?) ?? "";
+  final n = '$parentName.$dName';
 
   ctx.topLevelDeclarationPositions[ctx.library]![n] = beginMethod(ctx, d, d.offset, '$n()');
 
@@ -38,7 +40,7 @@ void compileConstructorDeclaration(
   var fieldIdx = 0;
   for (final fd in fields) {
     for (final field in fd.fields.variables) {
-      fieldIndices[field.name.name] = fieldIdx;
+      fieldIndices[field.name2.value() as String] = fieldIdx;
       fieldIdx++;
     }
   }
@@ -56,15 +58,15 @@ void compileConstructorDeclaration(
       if (p.type != null) {
         _type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
       }
-      _type ??=
-          TypeRef.lookupFieldType(ctx, TypeRef.lookupClassDeclaration(ctx, ctx.library, parent), p.identifier.name);
+      _type ??= TypeRef.lookupFieldType(
+          ctx, TypeRef.lookupClassDeclaration(ctx, ctx.library, parent), p.name.value() as String);
       _type ??= V?.type;
       _type ??= EvalTypes.dynamicType;
 
       Vrep = Variable(i, _type.copyWith(boxed: !unboxedAcrossFunctionBoundaries.contains(_type))).boxIfNeeded(ctx)
-        ..name = p.identifier.name;
+        ..name = p.name.value() as String;
 
-      fieldFormalNames.add(p.identifier.name);
+      fieldFormalNames.add(p.name.value() as String);
     } else {
       p as SimpleFormalParameter;
       var type = EvalTypes.dynamicType;
@@ -72,7 +74,7 @@ void compileConstructorDeclaration(
         type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
       }
       type = type.copyWith(boxed: !unboxedAcrossFunctionBoundaries.contains(type));
-      Vrep = Variable(i, type)..name = p.identifier!.name;
+      Vrep = Variable(i, type)..name = p.name!.value() as String;
     }
 
     ctx.setLocal(Vrep.name!, Vrep);
@@ -137,7 +139,7 @@ void compileConstructorDeclaration(
     }
   }
 
-  final op = CreateClass.make(ctx.library, $super.scopeFrameOffset, parent.name.name, fieldIdx);
+  final op = CreateClass.make(ctx.library, $super.scopeFrameOffset, parent.name2.value() as String, fieldIdx);
   ctx.pushOp(op, CreateClass.len(op));
   final instOffset = ctx.scopeFrameOffset++;
 
@@ -164,7 +166,7 @@ void compileConstructorDeclaration(
   var _fieldIdx = 0;
   for (final fd in fields) {
     for (final field in fd.fields.variables) {
-      if (!usedNames.contains(field.name.name) && field.initializer != null) {
+      if (!usedNames.contains(field.name2.value() as String) && field.initializer != null) {
         final V = compileExpression(field.initializer!, ctx).boxIfNeeded(ctx);
         ctx.pushOp(SetObjectPropertyImpl.make(instOffset, _fieldIdx, V.scopeFrameOffset), SetObjectPropertyImpl.LEN);
       }
@@ -238,7 +240,7 @@ List<PossiblyValuedParameter> resolveFPLDefaults(CompilerContext ctx, FormalPara
   }
 
   if (sortNamed) {
-    named.sort((a, b) => a.identifier!.name.compareTo(b.identifier!.name));
+    named.sort((a, b) => (a.name!.value() as String).compareTo(b.name!.value() as String));
   }
 
   for (final param in [...positional, ...named]) {

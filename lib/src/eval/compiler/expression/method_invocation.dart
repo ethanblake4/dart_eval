@@ -38,7 +38,9 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
     }
 
     final offset = method.methodOffset!;
-    if (offset.file == ctx.library && offset.className != null && offset.className == ctx.currentClass?.name.name) {
+    if (offset.file == ctx.library &&
+        offset.className != null &&
+        offset.className == (ctx.currentClass?.name2.value() as String)) {
       final $this = ctx.lookupLocal('#this')!;
       return _invokeWithTarget(ctx, $this, e);
     }
@@ -109,7 +111,7 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
 
     TypeRef? thisType;
     if (ctx.currentClass != null) {
-      thisType = ctx.visibleTypes[ctx.library]![ctx.currentClass!.name.name]!;
+      thisType = ctx.visibleTypes[ctx.library]![ctx.currentClass!.name2.value() as String]!;
     }
     mReturnType = method.methodReturnType?.toAlwaysReturnType(thisType, _argTypes, _namedArgTypes) ??
         AlwaysReturnType(EvalTypes.dynamicType, true);

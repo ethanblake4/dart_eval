@@ -14,11 +14,13 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx, NamedCompilationUnitMember parent) {
   ctx.runPrescan(d);
   final b = d.body;
-  final pos = beginMethod(ctx, d, d.offset, parent.name.name + '.' + d.name.name + '()');
+  final parentName = parent.name2.value() as String;
+  final methodName = d.name2.value() as String;
+  final pos = beginMethod(ctx, d, d.offset, parentName + '.' + methodName + '()');
 
   ctx.beginAllocScope(existingAllocLen: (d.parameters?.parameters.length ?? 0));
   ctx.scopeFrameOffset += d.parameters?.parameters.length ?? 0;
-  ctx.setLocal('#this', Variable(0, ctx.visibleTypes[ctx.library]![ctx.currentClass!.name.name]!));
+  ctx.setLocal('#this', Variable(0, ctx.visibleTypes[ctx.library]![ctx.currentClass!.name2.value() as String]!));
   final resolvedParams = resolveFPLDefaults(ctx, d.parameters!, true, allowUnboxed: true);
 
   if (b.isAsynchronous) {
@@ -36,7 +38,7 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx, NamedComp
     if (p.type != null) {
       type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
     }
-    Vrep = Variable(i, type)..name = p.identifier!.name;
+    Vrep = Variable(i, type)..name = p.name!.value() as String;
 
     ctx.setLocal(Vrep.name!, Vrep);
 
@@ -47,7 +49,7 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx, NamedComp
   if (b is BlockFunctionBody) {
     stInfo = compileBlock(
         b.block, AlwaysReturnType.fromAnnotation(ctx, ctx.library, d.returnType, EvalTypes.dynamicType), ctx,
-        name: d.name.name + '()');
+        name: methodName + '()');
   } else if (b is EmptyFunctionBody) {
     return -1;
   } else {
@@ -64,9 +66,9 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx, NamedComp
   }
 
   if (d.isStatic) {
-    ctx.topLevelDeclarationPositions[ctx.library]!['${parent.name.name}.${d.name.name}'] = pos;
+    ctx.topLevelDeclarationPositions[ctx.library]!['$parentName.$methodName'] = pos;
   } else {
-    ctx.instanceDeclarationPositions[ctx.library]![parent.name.name]![2][d.name.name] = pos;
+    ctx.instanceDeclarationPositions[ctx.library]![parentName]![2][methodName] = pos;
   }
 
   return pos;

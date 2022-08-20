@@ -23,21 +23,22 @@ void compileVariableDeclarationList(VariableDeclarationList l, CompilerContext c
     final init = li.initializer;
     if (init != null) {
       final res = compileExpression(init, ctx);
-      if (ctx.locals.last.containsKey(li.name.name)) {
-        throw CompileError('Cannot declare variable ${li.name.name} multiple times in the same scope');
+      if (ctx.locals.last.containsKey(li.name2.value() as String)) {
+        throw CompileError('Cannot declare variable ${li.name2.value() as String} multiple times in the same scope');
       }
       if (type != null && !res.type.resolveTypeChain(ctx).isAssignableTo(ctx, type)) {
-        throw CompileError('Type mismatch: variable "${li.name.name}" is specified as type $type, but is initialized '
+        throw CompileError(
+            'Type mismatch: variable "${li.name2.value() as String}" is specified as type $type, but is initialized '
             'to an incompatible value of type ${res.type}');
       }
       if (res.name != null) {
         var _v = Variable.alloc(ctx, type ?? res.type);
         ctx.pushOp(PushNull.make(), PushNull.LEN);
         ctx.pushOp(CopyValue.make(_v.scopeFrameOffset, res.scopeFrameOffset), CopyValue.LEN);
-        ctx.setLocal(li.name.name, _v);
+        ctx.setLocal(li.name2.value() as String, _v);
       } else {
         ctx.setLocal(
-            li.name.name,
+            li.name2.value() as String,
             Variable(res.scopeFrameOffset, (type ?? res.type).copyWith(boxed: res.boxed),
                 isFinal: l.isFinal,
                 methodOffset: res.methodOffset,

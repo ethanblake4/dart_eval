@@ -46,7 +46,8 @@ class IdentifierReference implements Reference {
 
     // Instance
     if (ctx.currentClass != null) {
-      final instanceDeclaration = resolveInstanceDeclaration(ctx, ctx.library, ctx.currentClass!.name.name, name);
+      final instanceDeclaration =
+          resolveInstanceDeclaration(ctx, ctx.library, ctx.currentClass!.name2.value() as String, name);
       if (instanceDeclaration != null) {
         final $type = instanceDeclaration.first;
         return TypeRef.lookupFieldType(ctx, $type, name) ?? EvalTypes.dynamicType;
@@ -86,7 +87,8 @@ class IdentifierReference implements Reference {
 
     // Instance
     if (ctx.currentClass != null) {
-      final instanceDeclaration = resolveInstanceDeclaration(ctx, ctx.library, ctx.currentClass!.name.name, name);
+      final instanceDeclaration =
+          resolveInstanceDeclaration(ctx, ctx.library, ctx.currentClass!.name2.value() as String, name);
       if (instanceDeclaration != null) {
         final $type = instanceDeclaration.first;
         final fieldType = TypeRef.lookupFieldType(ctx, $type, name) ?? EvalTypes.dynamicType;
@@ -138,7 +140,8 @@ class IdentifierReference implements Reference {
 
     // Next, the instance (if available)
     if (ctx.currentClass != null) {
-      final instanceDeclaration = resolveInstanceDeclaration(ctx, ctx.library, ctx.currentClass!.name.name, name);
+      final instanceDeclaration =
+          resolveInstanceDeclaration(ctx, ctx.library, ctx.currentClass!.name2.value() as String, name);
       if (instanceDeclaration != null) {
         final $type = instanceDeclaration.first;
 
@@ -153,22 +156,25 @@ class IdentifierReference implements Reference {
           final bridge = _dec.bridge!;
           if (bridge is BridgeMethodDef) {
             return Variable.alloc(ctx, EvalTypes.functionType,
-                methodOffset: DeferredOrOffset(file: ctx.library, className: ctx.currentClass!.name.name, name: name));
+                methodOffset: DeferredOrOffset(
+                    file: ctx.library, className: ctx.currentClass!.name2.value() as String, name: name));
           }
         }
 
         return Variable.alloc(ctx, TypeRef.lookupFieldType(ctx, $type, name) ?? EvalTypes.dynamicType);
       }
 
-      final staticDeclaration = resolveStaticDeclaration(ctx, ctx.library, ctx.currentClass!.name.name, name);
+      final staticDeclaration =
+          resolveStaticDeclaration(ctx, ctx.library, ctx.currentClass!.name2.value() as String, name);
 
       if (staticDeclaration != null && staticDeclaration.declaration != null) {
         final _dec = staticDeclaration.declaration!;
         if (_dec is MethodDeclaration) {
           return Variable(-1, EvalTypes.functionType,
-              methodOffset: DeferredOrOffset.lookupStatic(ctx, ctx.library, ctx.currentClass!.name.name, name));
+              methodOffset:
+                  DeferredOrOffset.lookupStatic(ctx, ctx.library, ctx.currentClass!.name2.value() as String, name));
         } else if (_dec is VariableDeclaration) {
-          final name = ctx.currentClass!.name.name + '.' + _dec.name.name;
+          final name = (ctx.currentClass!.name2.value() as String) + '.' + (_dec.name2.value() as String);
           final type = ctx.topLevelVariableInferredTypes[ctx.library]![name]!;
           final gIndex = ctx.topLevelGlobalIndices[ctx.library]![name]!;
           ctx.pushOp(LoadGlobal.make(gIndex), LoadGlobal.LEN);
@@ -216,8 +222,8 @@ class IdentifierReference implements Reference {
     final decl = _decl.declaration!;
 
     if (decl is VariableDeclaration) {
-      final type = ctx.topLevelVariableInferredTypes[_decl.sourceLib]![decl.name.name]!;
-      final gIndex = ctx.topLevelGlobalIndices[_decl.sourceLib]![decl.name.name]!;
+      final type = ctx.topLevelVariableInferredTypes[_decl.sourceLib]![decl.name2.value() as String]!;
+      final gIndex = ctx.topLevelGlobalIndices[_decl.sourceLib]![decl.name2.value() as String]!;
       ctx.pushOp(LoadGlobal.make(gIndex), LoadGlobal.LEN);
       ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
 

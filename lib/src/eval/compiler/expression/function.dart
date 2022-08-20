@@ -45,7 +45,7 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
       type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
     }
     Vrep = Variable(i, type.copyWith(boxed: !unboxedAcrossFunctionBoundaries.contains(type)))
-      ..name = p.identifier!.name;
+      ..name = p.name!.value() as String;
 
     ctx.setLocal(Vrep.name!, Vrep);
 
@@ -92,8 +92,9 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
       .toList();
 
   final named = (e.parameters?.parameters.where((element) => element.isNamed) ?? []);
-  final sortedNamedArgs = named.toList()..sort((e1, e2) => e1.identifier!.name.compareTo(e2.identifier!.name));
-  final sortedNamedArgNames = sortedNamedArgs.map((e) => e.identifier!.name).toList();
+  final sortedNamedArgs = named.toList()
+    ..sort((e1, e2) => (e1.name!.value() as String).compareTo((e2.name!.value() as String)));
+  final sortedNamedArgNames = sortedNamedArgs.map((e) => e.name!.value() as String).toList();
 
   final sortedNamedArgTypes = sortedNamedArgs
       .map((e) => e is DefaultFormalParameter ? e.parameter : e)

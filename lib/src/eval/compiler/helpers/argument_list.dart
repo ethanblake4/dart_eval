@@ -23,7 +23,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext 
 
   for (final param in fpl) {
     if (param.isNamed) {
-      named[param.identifier!.name] = param;
+      named[param.name!.value() as String] = param;
     } else {
       positional.add(param);
     }
@@ -62,7 +62,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext 
 
       if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
         throw CompileError(
-            'Cannot assign argument of type ${_arg.type} to parameter "${param.identifier}" of type $paramType');
+            'Cannot assign argument of type ${_arg.type} to parameter "${param.name!.value() as String}" of type $paramType');
       }
 
       _args.add(_arg);
@@ -99,7 +99,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext 
       }
       if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
         throw CompileError(
-            'Cannot assign argument of type ${_arg.type} to parameter "${param.identifier}" of type $paramType');
+            'Cannot assign argument of type ${_arg.type} to parameter "${param.name!.value() as String}" of type $paramType');
       }
 
       _push.add(_arg);
@@ -256,7 +256,8 @@ TypeRef _resolveFieldFormalType(
     throw CompileError('Field formals can only occur in constructors');
   }
   final $class = parameterHost.parent as ClassDeclaration;
-  final field = ctx.instanceDeclarationsMap[decLibrary]![$class.name.name]![param.identifier.name]!;
+  final field =
+      ctx.instanceDeclarationsMap[decLibrary]![$class.name2.value() as String]![param.name.value() as String]!;
   if (field is! VariableDeclaration) {
     throw CompileError('Resolved field is not a FieldDeclaration');
   }

@@ -12,7 +12,8 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   ctx.runPrescan(d);
-  ctx.topLevelDeclarationPositions[ctx.library]![d.name.name] = beginMethod(ctx, d, d.offset, d.name.name + '()');
+  ctx.topLevelDeclarationPositions[ctx.library]![d.name2.value() as String] =
+      beginMethod(ctx, d, d.offset, (d.name2.value() as String) + '()');
 
   final _existingAllocs = d.functionExpression.parameters?.parameters.length ?? 0;
   ctx.beginAllocScope(existingAllocLen: _existingAllocs);
@@ -31,7 +32,7 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
       type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
     }
     Vrep = Variable(i, type.copyWith(boxed: !unboxedAcrossFunctionBoundaries.contains(type)))
-      ..name = p.identifier!.name;
+      ..name = p.name!.value() as String;
 
     ctx.setLocal(Vrep.name!, Vrep);
 
@@ -48,7 +49,7 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   if (b is BlockFunctionBody) {
     stInfo = compileBlock(
         b.block, AlwaysReturnType.fromAnnotation(ctx, ctx.library, d.returnType, EvalTypes.dynamicType), ctx,
-        name: d.name.name + '()');
+        name: (d.name2.value() as String) + '()');
   }
 
   if (stInfo == null || !(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {

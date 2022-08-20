@@ -1,3 +1,20 @@
+## 0.4.0
+- (Breaking) You must now specify the `bridge` or `wrap` parameter in a
+  `BridgeClassDef`
+- (Breaking) You must now specify `isBridge: true` when registering a bridge
+  class constructor with `runtime.registerBridgeFunc()`
+- Support for bridged (only) enums
+- Support for variable captures inside closures
+- Support for implicit class field accesses including `this` and `super` in 
+  closures
+- Bridge declarations are now merged with a Dart source file of the same URI, if
+  one exists
+- Basic support for top-level variables and static fields
+- Support for bool literals and logical and/or
+- Support `String.substring()` (thanks to @maks)
+- Now using continuous integration (thanks to @maks)
+- Various bug fixes and code cleanups
+
 ## 0.3.0
 - (Breaking) Modified public API for defining bridge classes. See Pub example.
 - (Breaking) Relative import URIs may no longer work (it's unclear whether they

@@ -1,19 +1,27 @@
-[![Pub Version](https://img.shields.io/pub/v/dart_eval?color=teal)](https://pub.dev/packages/dart_eval)
+[![Build status](https://img.shields.io/github/workflow/status/ethanblake4/dart_eval/Dart)](https://github.com/ethanblake4/dart_eval/actions/workflows/dart.yml)
+[![Star on Github](https://img.shields.io/github/stars/ethanblake4/dart_eval?logo=github&colorB=orange&label=stars)](https://github.com/ethanblake4/dart_eval)
+[![License: BSD-3](https://img.shields.io/badge/license-BSD3-purple.svg)](https://opensource.org/licenses/BSD-3-Clause)
+
 
 `dart_eval` is an extensible bytecode compiler and runtime for the Dart language, 
-written in Dart. The compiler is powered under the hood by the Dart 
+written in Dart, enabling dynamic codepush for Flutter and Dart AOT.
+
+| dart_eval    | [![pub package](https://img.shields.io/pub/v/dart_eval.svg?label=dart_eval&color=teal)](https://pub.dev/packages/dart_eval)          |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| flutter_eval | [![pub package](https://img.shields.io/pub/v/flutter_eval.svg?label=flutter_eval&color=blue)](https://pub.dev/packages/flutter_eval) |
+
+The primary aspect of `dart_eval`'s goal is to be interoperable with real 
+Dart code. Classes created in 'real Dart' can be used inside the interpreter 
+with a wrapper, and classes created in the interpreter can be used outside it 
+bycreating an interface and bridge class.
+
+dart_eval's compiler is powered under the hood by the Dart 
 [analyzer](https://pub.dev/packages/analyzer), so it achieves 100% correct and 
 up-to-date parsing (although compilation and evaluation aren't quite there yet.)
 
-The primary goal of `dart_eval` is to be interoperable with real Dart code.
-Classes created in 'real Dart' can be used inside the interpreter with a
-wrapper, and classes created in the interpreter can be used outside it by
-creating an interface and bridge class.
-
-Currently dart_eval implements the basics of the Dart spec, but there are
-still missing features like generators and Sets. In addition, much of the
-standard library hasn't been implemented.
-
+Currently dart_eval implements a decent amount of the Dart spec, but there 
+are still missing features like generators, Sets and extension methods.
+In addition, much of the standard library hasn't been implemented.
 ## Usage
 
 A basic usage example of the `eval` method, which is a simple shorthand to
@@ -178,9 +186,7 @@ create a class.
 
 ### Does it support Flutter?
 
-Yes! Well, kind of. Support for Flutter is not built in but can be added via Bridge interop.
-Testing has been done to a limited extent and it works. In the future this project will expand
-support for Flutter.
+Yes! Check out [flutter_eval](https://pub.dev/packages/flutter_eval).
 
 ### How fast is it?
 

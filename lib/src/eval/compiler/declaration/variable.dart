@@ -9,17 +9,18 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 void compileTopLevelVariableDeclaration(VariableDeclaration v, CompilerContext ctx) {
   final parent = v.parent!.parent! as TopLevelVariableDeclaration;
+  final varName = v.name2.value() as String;
 
   final initializer = v.initializer;
   if (initializer != null) {
-    final pos = beginMethod(ctx, v, v.offset, v.name.name + ' (init)');
+    final pos = beginMethod(ctx, v, v.offset, varName + ' (init)');
     var V = compileExpression(initializer, ctx);
     TypeRef type;
     final specifiedType = parent.variables.type;
     if (specifiedType != null) {
       type = TypeRef.fromAnnotation(ctx, ctx.library, specifiedType);
       if (!V.type.isAssignableTo(ctx, type)) {
-        throw CompileError('Variable ${v.name.name} of inferred type ${V.type} does not conform to type $type');
+        throw CompileError('Variable $varName of inferred type ${V.type} does not conform to type $type');
       }
     } else {
       type = V.type;
@@ -31,10 +32,10 @@ void compileTopLevelVariableDeclaration(VariableDeclaration v, CompilerContext c
       V = V.unboxIfNeeded(ctx);
       type = type.copyWith(boxed: false);
     }
-    final _index = ctx.topLevelGlobalIndices[ctx.library]![v.name.name]!;
+    final _index = ctx.topLevelGlobalIndices[ctx.library]![varName]!;
     ctx.pushOp(SetGlobal.make(_index, V.scopeFrameOffset), SetGlobal.LEN);
-    ctx.topLevelVariableInferredTypes[ctx.library]![v.name.name] = type;
-    ctx.topLevelGlobalInitializers[ctx.library]![v.name.name] = pos;
+    ctx.topLevelVariableInferredTypes[ctx.library]![varName] = type;
+    ctx.topLevelGlobalInitializers[ctx.library]![varName] = pos;
     ctx.runtimeGlobalInitializerMap[_index] = pos;
     ctx.pushOp(Return.make(V.scopeFrameOffset), Return.LEN);
   }
