@@ -6,6 +6,7 @@ export 'src/eval/bridge/declaration/class.dart';
 export 'src/eval/bridge/declaration/enum.dart';
 export 'src/eval/bridge/declaration/type.dart';
 export 'src/eval/bridge/declaration/function.dart';
+export 'src/eval/compiler/model/source.dart';
 export 'src/eval/shared/types.dart' show RuntimeTypes;
 export 'src/eval/runtime/function.dart' hide EvalFunctionPtr, EvalStaticFunctionPtr;
 export 'src/eval/bridge/runtime_bridge.dart' show $Bridge, $BridgeField;
