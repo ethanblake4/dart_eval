@@ -274,7 +274,6 @@ class BoxMap implements EvcOp {
   String toString() => 'BoxMap (L$_reg)';
 }
 
-
 class Unbox implements EvcOp {
   Unbox(Runtime runtime) : _reg = runtime._readInt16();
 
@@ -473,7 +472,7 @@ class PushTrue extends EvcOp {
 }
 
 class LogicalNot extends EvcOp {
-  LogicalNot(Runtime runtime): _index = runtime._readInt16();
+  LogicalNot(Runtime runtime) : _index = runtime._readInt16();
 
   LogicalNot.make(this._index);
 

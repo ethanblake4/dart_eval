@@ -13,23 +13,32 @@ class $Duration implements Duration, $Instance {
 
   static const $type = BridgeTypeRef.spec(BridgeTypeSpec('dart:core', 'Duration'));
 
-  static const $declaration = BridgeClassDef(BridgeClassType($type), constructors: {
-    '': BridgeConstructorDef(BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [], namedParams: [
-      BridgeParameter('days', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType), nullable: true), true),
-      BridgeParameter('hours', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType), nullable: true), true),
-      BridgeParameter('minutes', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType), nullable: true), true),
-      BridgeParameter('seconds', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType), nullable: true), true),
-      BridgeParameter(
-          'milliseconds', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType), nullable: true), true),
-      BridgeParameter(
-          'microseconds', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType), nullable: true), true),
-    ]))
-  }, methods: {
-    '*': BridgeMethodDef(BridgeFunctionDef(
-        returns: BridgeTypeAnnotation($type),
-        params: [BridgeParameter('factor', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.numType)), false)],
-        namedParams: []))
-  }, getters: {}, setters: {}, fields: {}, wrap: true);
+  static const $declaration = BridgeClassDef(BridgeClassType($type),
+      constructors: {
+        '': BridgeConstructorDef(BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [], namedParams: [
+          BridgeParameter('days', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType), nullable: true), true),
+          BridgeParameter(
+              'hours', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType), nullable: true), true),
+          BridgeParameter(
+              'minutes', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType), nullable: true), true),
+          BridgeParameter(
+              'seconds', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType), nullable: true), true),
+          BridgeParameter(
+              'milliseconds', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType), nullable: true), true),
+          BridgeParameter(
+              'microseconds', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType), nullable: true), true),
+        ]))
+      },
+      methods: {
+        '*': BridgeMethodDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation($type),
+            params: [BridgeParameter('factor', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.numType)), false)],
+            namedParams: []))
+      },
+      getters: {},
+      setters: {},
+      fields: {},
+      wrap: true);
 
   $Duration.wrap(this.$value);
 

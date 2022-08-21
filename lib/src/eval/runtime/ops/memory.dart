@@ -94,7 +94,7 @@ class CopyValue implements EvcOp {
 }
 
 class LoadGlobal implements EvcOp {
-  LoadGlobal(Runtime runtime): _index = runtime._readInt32();
+  LoadGlobal(Runtime runtime) : _index = runtime._readInt32();
 
   final int _index;
 
@@ -118,7 +118,9 @@ class LoadGlobal implements EvcOp {
 }
 
 class SetGlobal implements EvcOp {
-  SetGlobal(Runtime runtime): _index = runtime._readInt32(), _value = runtime._readInt16();
+  SetGlobal(Runtime runtime)
+      : _index = runtime._readInt32(),
+        _value = runtime._readInt16();
 
   final int _index;
   final int _value;

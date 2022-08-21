@@ -17,16 +17,22 @@ class $Future<T> implements Future<T>, $Instance {
 
   static const _$type = BridgeTypeRef.spec(BridgeTypeSpec('dart:core', 'Future'));
 
-  static const $declaration = BridgeClassDef(BridgeClassType(_$type, isAbstract: true), constructors: {
-    'delayed': BridgeConstructorDef(BridgeFunctionDef(
-        returns: BridgeTypeAnnotation(_$type),
-        params: [BridgeParameter('duration', BridgeTypeAnnotation($Duration.$type), false)],
-        namedParams: []))
-  }, methods: {
-    'then': BridgeMethodDef(BridgeFunctionDef(returns: BridgeTypeAnnotation(_$type), params: [
-      BridgeParameter('onValue', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.functionType)), false)
-    ], namedParams: []))
-  }, getters: {}, setters: {}, fields: {}, wrap: true);
+  static const $declaration = BridgeClassDef(BridgeClassType(_$type, isAbstract: true),
+      constructors: {
+        'delayed': BridgeConstructorDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation(_$type),
+            params: [BridgeParameter('duration', BridgeTypeAnnotation($Duration.$type), false)],
+            namedParams: []))
+      },
+      methods: {
+        'then': BridgeMethodDef(BridgeFunctionDef(returns: BridgeTypeAnnotation(_$type), params: [
+          BridgeParameter('onValue', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.functionType)), false)
+        ], namedParams: []))
+      },
+      getters: {},
+      setters: {},
+      fields: {},
+      wrap: true);
 
   $Future.wrap(this.$value, this.$typeMapper) : _superclass = $Object($value);
 

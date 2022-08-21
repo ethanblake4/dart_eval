@@ -12,6 +12,7 @@ class SourceNodeWrapper {
   final BridgeTypeRef listenType;
   final BridgeTypeRef wrapperType;
   final String constructor;
+
   /// Return a list of (positional only) arguments. Use null to indicate the child.
   final List<BuiltinValue> Function(AstNode node) buildArguments;
 }
