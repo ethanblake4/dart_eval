@@ -6,7 +6,13 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 /// Interface for objects with a backing value
 abstract class $Value {
   int get $runtimeType;
+
+  /// The backing Dart value of this [$Value]
   dynamic get $value;
+
+  /// Fully reify the underlying value so it can be used in a Dart context.
+  /// For example, recursively transform collections into their underlying
+  /// [$value]s.
   dynamic get $reified;
 }
 
@@ -29,8 +35,10 @@ class $ValueImpl<T> implements $Value {
 
 /// Instance
 abstract class $Instance implements $Value {
+  /// Get a property by [identifier] on this instance
   $Value? $getProperty(Runtime runtime, String identifier);
 
+  /// Set a property by [identifier] on this instance to [value]
   void $setProperty(Runtime runtime, String identifier, $Value value);
 }
 

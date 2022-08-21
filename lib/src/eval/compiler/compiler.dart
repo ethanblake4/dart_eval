@@ -24,6 +24,14 @@ import 'errors.dart';
 
 import 'model/source.dart';
 
+/// Compiles Dart source code into EVC bytecode, outputting a [Program].
+///
+/// To use, call [compile] or [compileSources].
+///
+/// You may define bridge libraries using a combination of [defineBridgeClass],
+/// [defineBridgeTopLevelFunction], and [defineBridgeEnum].
+///
+/// Additional sources can be added with [addSource].
 class Compiler {
   var _bridgeStaticFunctionIdx = 0;
   final _bridgeDeclarations = <String, List<BridgeDeclaration>>{};
@@ -56,6 +64,7 @@ class Compiler {
     }
   }
 
+  /// Define a bridged enum definition to be used when compiling.
   void defineBridgeEnum(BridgeEnumDef enumDef) {
     final spec = enumDef.type.spec;
     if (spec == null) {
@@ -70,8 +79,11 @@ class Compiler {
     }
   }
 
+  /// Add a unit source to the list of additional sources which will be compiled
+  /// alongside the packages specified in [compile].
   void addSource(DartSource source) => additionalSources.add(source);
 
+  /// Define a bridged top-level function declaration.
   void defineBridgeTopLevelFunction(BridgeFunctionDeclaration function) {
     final libraryDeclarations = _bridgeDeclarations[function.library];
     if (libraryDeclarations == null) {
@@ -81,13 +93,23 @@ class Compiler {
     }
   }
 
+  /// Define a set of unresolved bridge classes
   void defineBridgeClasses(List<BridgeClassDef> classDefs) {
     for (final classDef in classDefs) {
       defineBridgeClass(classDef);
     }
   }
 
-  /// Compile a set of Dart code into a program
+  /// Compile a set of Dart code into a program. Shorthand for
+  /// [compileSources]. Code should be specified in a map as such:
+  /// ```
+  /// {
+  ///   'package_name': {
+  ///     'file_name1.dart': '''code''',
+  ///     'file_name2.dart': '''code'''
+  ///   }
+  /// }
+  ///
   Program compile(Map<String, Map<String, String>> packages) {
     final sources = packages.entries.expand((packageEntry) => packageEntry.value.entries
         .map((library) => DartSource('package:${packageEntry.key}/${library.key}', library.value)));
@@ -95,6 +117,7 @@ class Compiler {
     return compileSources(sources);
   }
 
+  /// Compile a unit set of Dart code into a program
   Program compileSources([Iterable<DartSource> sources = const []]) {
     configureCoreForCompile(this);
     configureAsyncForCompile(this);
@@ -315,6 +338,8 @@ class Compiler {
         ctx.enumValueIndices);
   }
 
+  /// For testing purposes. Compile code, write it to a byte stream, load it,
+  /// and run it.
   Runtime compileWriteAndLoad(Map<String, Map<String, String>> packages) {
     final program = compile(packages);
 

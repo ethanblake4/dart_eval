@@ -6,7 +6,10 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart' show Runtime;
 import 'package:dart_eval/src/eval/runtime/ops/all_ops.dart';
 import 'package:dart_eval/src/eval/runtime/type.dart';
 
+/// A Program is a compiled EVC bytecode program that can be executed using
+/// a [Runtime].
 class Program {
+  /// Construct a [Program] with bytecode and metadata.
   Program(
       this.topLevelDeclarations,
       this.instanceDeclarations,
@@ -20,8 +23,11 @@ class Program {
       this.globalInitializers,
       this.enumMappings);
 
+  /// Global bytecode offsets of the program's top-level declarations.
   Map<int, Map<String, int>> topLevelDeclarations;
 
+  /// Global bytecode offsets of the program's instance-level declarations.
+  ///
   /// Example instance declaration:
   /// 1: { // file
   ///    "SomeClass": [
@@ -31,17 +37,35 @@ class Program {
   ///    ]
   /// }
   Map<int, Map<String, List>> instanceDeclarations;
+
+  /// The ordered list of type names used in the program, with the index
+  /// corresponding to the type ID.
   List<String> typeNames;
+
+  /// The ordered list of type supertype sets used in the program, with the index
+  /// corresponding to the type ID.
   List<Set<int>> typeTypes;
+
+  /// Mappings from library URIs to internal library IDs.
   Map<String, int> bridgeLibraryMappings;
+
+  /// Mappings from bridge function names to internal InvokeExternal IDs.
   Map<int, Map<String, int>> bridgeFunctionMappings;
+
+  /// The program's constant pool.
   List<Object> constantPool;
   List<RuntimeTypeSet> runtimeTypes;
+
+  /// Bytecode offsets to initializers for global variables.
   List<int> globalInitializers;
+
+  /// Mappings from enums to globals.
   Map<int, Map<String, Map<String, int>>> enumMappings;
 
+  /// The program's bytecode.
   List<EvcOp> ops;
 
+  /// Write the program to a [Uint8List], to be loaded by a [Runtime].
   Uint8List write() {
     final b = BytesBuilder(copy: false);
 

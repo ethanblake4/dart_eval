@@ -5,6 +5,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/model/compilation_unit.dart';
 
+/// A unit of Dart source code, from a file or String.
 class DartSource {
   DartSource(String _uri, String source)
       : uri = Uri.parse(_uri),

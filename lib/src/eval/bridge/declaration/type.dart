@@ -5,6 +5,7 @@ import 'function.dart';
 
 part 'type.g.dart';
 
+/// A bridged type annotation contains a type and an optional nullable flag.
 @JsonSerializable()
 class BridgeTypeAnnotation {
   const BridgeTypeAnnotation(this.type, {this.nullable = false});
@@ -20,6 +21,8 @@ class BridgeTypeAnnotation {
   Map<String, dynamic> toJson() => _$BridgeTypeAnnotationToJson(this);
 }
 
+/// A bridged class type informs the dart_eval compiler about a class's header
+/// including superclass, mixins and interfaces.
 @JsonSerializable()
 class BridgeClassType {
   const BridgeClassType(
@@ -56,28 +59,37 @@ class BridgeClassType {
       isAbstract: isAbstract, $extends: $extends, $implements: $implements, $with: $with, generics: generics);
 }
 
+/// A bridge type ref is a reference to a type used by the dart_eval compiler.
 class BridgeTypeRef {
+  /// Reference a type by its spec (library URI and name)
   const BridgeTypeRef.spec(this.spec, [this.typeArgs = const []])
       : cacheId = null,
         gft = null,
         ref = null;
 
+  /// Reference a type by its local in-context name
+  /// (e.g. a type parameter name such as T)
   const BridgeTypeRef.ref(this.ref, [this.typeArgs = const []])
       : cacheId = null,
         gft = null,
         spec = null;
 
+  /// Reference a type by its predefined type ID, for builtin types.
+  /// See [RuntimeTypes] for the list of predefined type IDs.
   const BridgeTypeRef.type(this.cacheId, [this.typeArgs = const []])
       : ref = null,
         gft = null,
         spec = null;
 
+  /// Reference a generic function type.
+  /// Currently unsupported.
   const BridgeTypeRef.genericFunction(this.gft)
       : typeArgs = const [],
         ref = null,
         cacheId = null,
         spec = null;
 
+  /// Load a type ref from its JSON representation.
   factory BridgeTypeRef.fromJson(Map<String, dynamic> json) {
     final id = json['id'];
     final ta = [for (final arg in json['typeArgs']) BridgeTypeRef.fromJson(arg)];
@@ -101,12 +113,15 @@ class BridgeTypeRef {
   final BridgeTypeSpec? spec;
   final List<BridgeTypeRef> typeArgs;
 
+  /// Convert the type ref to its JSON representation.
   Map<String, dynamic> toJson() => {
         if (cacheId != null) 'id': cacheId! else if (spec != null) 'unresolved': spec!.toJson() else 'ref': ref!,
         'typeArgs': [for (final t in typeArgs) t.toJson()]
       };
 }
 
+/// A type spec is a type reference that is not yet resolved, comprised of
+/// a library URI and a name.
 @JsonSerializable()
 class BridgeTypeSpec {
   const BridgeTypeSpec(this.library, this.name);

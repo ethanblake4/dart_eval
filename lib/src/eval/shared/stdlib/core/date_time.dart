@@ -3,11 +3,14 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/base.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
 
+/// dart_eval [$Instance] wrapper of a [DateTime]
 class $DateTime implements DateTime, $Instance {
+  /// Configure the [$DateTime] class for compilation with a [Compiler]
   static void configureForCompile(Compiler compiler) {
     compiler.defineBridgeClass($declaration);
   }
 
+  /// Configure the [$DateTime] class for runtime with a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFunc('dart:core', 'DateTime.now', (runtime, target, args) => $DateTime.wrap(DateTime.now()));
   }
@@ -17,16 +20,24 @@ class $DateTime implements DateTime, $Instance {
   static const _dtIntGetter = BridgeMethodDef(BridgeFunctionDef(
       returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType)), params: [], namedParams: []));
 
-  static const $declaration = BridgeClassDef(BridgeClassType($type), constructors: {
-    'now': BridgeConstructorDef(BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [], namedParams: []))
-  }, methods: {}, getters: {
-    'day': _dtIntGetter,
-    'hour': _dtIntGetter,
-    'minute': _dtIntGetter,
-    'second': _dtIntGetter,
-    'millisecondsSinceEpoch': _dtIntGetter,
-  }, setters: {}, fields: {}, wrap: true);
+  static const $declaration = BridgeClassDef(BridgeClassType($type),
+      constructors: {
+        'now':
+            BridgeConstructorDef(BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [], namedParams: []))
+      },
+      methods: {},
+      getters: {
+        'day': _dtIntGetter,
+        'hour': _dtIntGetter,
+        'minute': _dtIntGetter,
+        'second': _dtIntGetter,
+        'millisecondsSinceEpoch': _dtIntGetter,
+      },
+      setters: {},
+      fields: {},
+      wrap: true);
 
+  /// Wrap an existing [DateTime] instance
   $DateTime.wrap(this.$value) : _superclass = $Object($value);
 
   @override

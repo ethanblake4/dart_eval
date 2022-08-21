@@ -1,3 +1,9 @@
+## 0.4.1
+- Fix a potential crash when resolving common base types.
+- Support for calling methods on a bridge class's supertype without having to
+  declare the method on the subtype's declaration.
+- Documentation improvements
+
 ## 0.4.0
 - (Breaking) You must now specify the `bridge` or `wrap` parameter in a
   `BridgeClassDef`

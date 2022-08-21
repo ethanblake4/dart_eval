@@ -203,6 +203,15 @@ DeclarationOrBridge<MethodDeclaration, BridgeMethodDef> resolveInstanceMethod(
   if (_dec.isBridge) {
     // Bridge
     final bridge = _dec.bridge! as BridgeClassDef;
+    final method = bridge.methods[methodName];
+    if (method == null) {
+      final $extendsBridgeType = bridge.type.$extends;
+      if ($extendsBridgeType == null) {
+        throw CompileError('Method not found $methodName on ${instanceType}');
+      }
+      final $extendsType = TypeRef.fromBridgeTypeRef(ctx, $extendsBridgeType);
+      return resolveInstanceMethod(ctx, $extendsType, methodName);
+    }
     return DeclarationOrBridge(instanceType.file, bridge: bridge.methods[methodName]!);
   }
 

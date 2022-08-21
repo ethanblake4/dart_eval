@@ -3,6 +3,7 @@ import 'package:dart_eval/src/eval/runtime/exception.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'num.dart';
 
+/// dart_eval [$Value] representation of [null]
 class $null implements $Value {
   const $null();
 
@@ -16,6 +17,7 @@ class $null implements $Value {
   int get $runtimeType => RuntimeTypes.nullType;
 }
 
+/// dart_eval [$Instance] representation of an [Object]
 class $Object implements $Instance {
   $Object(this.$value);
 
@@ -59,6 +61,7 @@ class $Object implements $Instance {
   int get $runtimeType => RuntimeTypes.objectType;
 }
 
+/// dart_eval [$Instance] representation of a [bool]
 class $bool implements $Instance {
   $bool(this.$value) : _superclass = $Object($value);
 
@@ -139,6 +142,7 @@ class $bool implements $Instance {
   dynamic get $reified => throw UnimplementedError();
 }*/
 
+/// dart_eval [$Instance] representation of a [String]
 class $String implements $Instance {
   $String(this.$value) : _superclass = $Object($value);
 

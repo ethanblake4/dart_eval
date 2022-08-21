@@ -4,6 +4,7 @@ import 'core/duration.dart';
 import 'core/future.dart';
 import 'core/print.dart';
 
+/// Configure dart:core classes and functions for compilation.
 void configureCoreForCompile(Compiler compiler) {
   configurePrintForCompile(compiler);
   $Future.configureForCompile(compiler);
@@ -11,6 +12,7 @@ void configureCoreForCompile(Compiler compiler) {
   $DateTime.configureForCompile(compiler);
 }
 
+/// Configure dart:core classes and functions for runtime in the dart_eval VM.
 void configureCoreForRuntime(Runtime runtime) {
   configurePrintForRuntime(runtime);
   $Duration.configureForRuntime(runtime);

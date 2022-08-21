@@ -64,6 +64,8 @@ class _UnloadedEnumValues {
 }
 
 class Runtime {
+  /// Construct a runtime from EVC bytecode. When possible, use the
+  /// [Runtime.ofProgram] constructor instead to reduce loading time.
   Runtime(this._evc)
       : id = _id++,
         _fromEvc = true;
@@ -75,6 +77,8 @@ class Runtime {
 
   static const _defaultFunction = $Function(_fn);
 
+  /// Create a [Runtime] from a [Program]. This constructor should be preferred
+  /// where possible as it avoids overhead of loading bytecode.
   Runtime.ofProgram(Program program)
       : id = _id++,
         _fromEvc = false,
@@ -176,18 +180,18 @@ class Runtime {
     }
   }
 
-  void registerBridgeClass(String library, String name, $Bridge cls) {
-    _unloadedBrClass.add(_UnloadedBridgeClass(library, name, cls));
-  }
-
+  /// Register a bridged runtime top-level/static function or class constructor.
   void registerBridgeFunc(String library, String name, EvalCallableFunc fn, {bool isBridge = false}) {
     _unloadedBrFunc.add(_UnloadedBridgeFunction(library, isBridge ? '#$name' : name, fn));
   }
 
+  /// Register bridged runtime enum values.
   void registerBridgeEnumValues(String library, String name, Map<String, $Value> values) {
     _unloadedEnumValues.add(_UnloadedEnumValues(library, name, values));
   }
 
+  /// Setup bridged runtime functions and classes. Must be called before running
+  /// the program and after registering all bridged functions and classes.
   void setup() {
     configureCoreForRuntime(this);
     configureAsyncForRuntime(this);
@@ -207,6 +211,7 @@ class Runtime {
   final globals = List<Object?>.filled(20000, null);
   var globalInitializers = <int>[];
 
+  /// Write an [EvcOp] bytecode to a list of bytes.
   static List<int> opcodeFrom(EvcOp op) {
     switch (op.runtimeType) {
       case JumpConstant:
@@ -428,6 +433,8 @@ class Runtime {
     }
   }
 
+  /// Execute a function in the current runtime, from a passed [library] URI
+  /// and function [name], with optional [args].
   dynamic executeLib(String library, String name, [List? args]) {
     if (args != null) {
       this.args = args;
