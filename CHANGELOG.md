@@ -1,3 +1,6 @@
+## 0.4.2
+- Fix analyzer version constraint
+
 ## 0.4.1
 - Fix a potential crash when resolving common base types.
 - Support for calling methods on a bridge class's supertype without having to

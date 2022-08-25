@@ -13,7 +13,7 @@ written in Dart, enabling dynamic codepush for Flutter and Dart AOT.
 The primary aspect of `dart_eval`'s goal is to be interoperable with real 
 Dart code. Classes created in 'real Dart' can be used inside the interpreter 
 with a wrapper, and classes created in the interpreter can be used outside it 
-bycreating an interface and bridge class.
+by creating an interface and bridge class.
 
 dart_eval's compiler is powered under the hood by the Dart 
 [analyzer](https://pub.dev/packages/analyzer), so it achieves 100% correct and 
