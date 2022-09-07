@@ -104,6 +104,47 @@ void main() {
 }
 ```
 
+## Using the CLI
+The dart_eval CLI allows you to compile existing Dart projects to EVC bytecode,
+as well as run and inspect EVC bytecode files.
+
+To enable the CLI globally, run:
+
+> `dart pub global activate dart_eval`
+
+### Compiling a project
+
+The CLI supports compiling standard Dart projects, although installed packages
+in `pubspec.yaml` are not currently supported. To compile a project, run:
+
+```bash
+cd my_project
+dart_eval compile -o program.evc
+```
+
+This will generate an EVC file in the current directory called `program.evc`.
+
+The compiler also supports compiling with JSON-encoded bridge bindings. To add
+these, create a folder in your project root called `.dart_eval`, add a
+`bindings` subfolder, and place JSON binding files there. The compiler will
+automatically load these bindings and make them available to your project.
+
+### Running a program
+
+To run the generated EVC file, use:
+
+`dart_eval run program.evc -p package:my_package/main.dart -f main`
+
+Note that the run command does *not* support bindings, so any file compiled
+with bindings will need to be run in a specialized runner that includes the
+necessary runtime bindings.
+
+### Inspecting an EVC file
+
+You can dump the op codes of an EVC file using:
+
+`dart_eval dump program.evc`
+
 ## Return values
 
 In most cases, dart_eval will return a subclass of `$Value` such as `$int`

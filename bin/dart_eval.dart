@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:args/args.dart';
@@ -9,23 +10,46 @@ void main(List<String> args) {
   final parser = ArgParser();
 
   final compileCmd = parser.addCommand('compile');
-  compileCmd.addOption('path', mandatory: true);
   compileCmd.addOption('out', abbr: 'o');
+  compileCmd.addFlag('help', abbr: 'h');
 
   final runCmd = parser.addCommand('run');
-  runCmd.addOption('path', abbr: 'p', mandatory: true);
+  runCmd.addOption('library', abbr: 'l');
+  runCmd.addOption('function', abbr: 'f', defaultsTo: 'main');
+  runCmd.addFlag('help', abbr: 'h');
 
   final dumpCmd = parser.addCommand('dump');
-  dumpCmd.addOption('path', abbr: 'p', mandatory: true);
+  dumpCmd.addFlag('help', abbr: 'h');
+
+  final helpCmd = parser.addCommand('help');
 
   final result = parser.parse(args);
-  final command = result.command!;
+  final command = result.command;
+
+  if (command == null || command.name == 'help') {
+    print('The dart_eval CLI tool.');
+    print('Available commands:');
+    print('   compile Compile a Dart project to EVC bytecode.');
+    print('   run Run EVC bytecode in the dart_eval VM.');
+    print('   dump Dump op codes from an EVC file.');
+    print('   help Print this help message.');
+    print('');
+    print('For more information, use dart_eval <command> --help on an individual command.');
+    exit(1);
+  }
 
   if (command.name == 'compile') {
+    if (command['help']!) {
+      print('compile: Compile a Dart project to EVC bytecode.');
+      print('Usage:');
+      print('   dart_eval compile [-o, --out <outfile>] [-h, --help]');
+      exit(0);
+    }
+
     final compiler = Compiler();
 
     print('Loading files...');
-    var commandRoot = Directory(cli.absolute('.'));
+    var commandRoot = Directory('.');
     var projectRoot = commandRoot;
     while (true) {
       final files = projectRoot.listSync();
@@ -35,14 +59,32 @@ void main(List<String> args) {
       projectRoot = projectRoot.parent;
     }
 
-    final pubspec = cli.PubSpec.fromFile(projectRoot.uri.resolve('pubspec.yaml').path);
+    if (cli.isDirectory('./.dart_eval/bindings')) {
+      final paths = cli.find('*.json', workingDirectory: './.dart_eval/bindings').toList();
+      for (final path in paths) {
+        print('Found binding file: ${cli.relative(path, from: projectRoot.path)}');
+        final _data = File(path).readAsStringSync();
+        final decoded = (json.decode(_data) as Map).cast<String, dynamic>();
+        final classList = (decoded['classes'] as List);
+        for (final $class in classList.cast<Map>()) {
+          compiler.defineBridgeClass(BridgeClassDef.fromJson($class.cast()));
+        }
+        for (final $enum in (decoded['enums'] as List).cast<Map>()) {
+          compiler.defineBridgeEnum(BridgeEnumDef.fromJson($enum.cast()));
+        }
+        for (final $source in (decoded['sources'] as List).cast<Map>()) {
+          compiler.addSource(DartSource($source['uri'], $source['source']));
+        }
+      }
+    }
+
+    final pubspecUri = cli.join(projectRoot.uri.path, 'pubspec.yaml');
+
+    final pubspec = cli.PubSpec.fromFile(pubspecUri);
     final packageName = pubspec.name;
 
-    final filePaths = cli.find('*.dart').toList();
+    final filePaths = cli.find('*.dart', workingDirectory: cli.join(projectRoot.path, 'lib')).toList();
     final data = <String, String>{};
-
-    String? firstFile;
-    String? firstData;
 
     var sourceLength = 0;
 
@@ -50,38 +92,26 @@ void main(List<String> args) {
       final _data = File(path).readAsStringSync();
       sourceLength += _data.length;
 
-      final p = cli.relative(path, from: projectRoot.path);
-      if (cli.canonicalize(cli.join(commandRoot.path, command['path'])) == cli.canonicalize(path)) {
-        firstFile = p;
-        firstData = _data;
-      } else {
-        data[p] = _data;
-      }
+      final p = cli.relative(path, from: cli.join(projectRoot.path, 'lib')).replaceAll('\\', '/');
+      data[p] = _data;
     }
 
-    if (firstFile == null) {
-      throw ArgumentError('Unable to find the specified file');
-    }
-
-    print('Compiling program...');
+    print('Compiling package $packageName...');
 
     final ts = DateTime.now().millisecondsSinceEpoch;
 
-    final compileData = <String, String>{};
-    compileData[firstFile] = firstData!;
-
-    final programSource = compiler.compile({packageName!: compileData});
+    final programSource = compiler.compile({packageName!: data});
     var outputName = command['out'];
     if (outputName == null) {
-      var _path = command['path'] as String?;
-      if (_path == null) {
-        outputName = 'program.dbc';
+      if (!command.options.contains('path')) {
+        outputName = 'program.evc';
       } else {
+        var _path = command['path'] as String;
         final _filename = _path.split('.')[0];
         if (_filename.isEmpty) {
-          outputName = 'program.dbc';
+          outputName = 'program.evc';
         }
-        outputName = _filename + '.dbc';
+        outputName = _filename + '.evc';
       }
     }
 
@@ -90,13 +120,29 @@ void main(List<String> args) {
     File(outputName).writeAsBytesSync(_out);
 
     final timeElapsed = DateTime.now().millisecondsSinceEpoch - ts;
-    print('Compiled $sourceLength characters Dart to ${_out.length} bytes DBC in $timeElapsed ms: $outputName');
+    print('Compiled $sourceLength characters Dart to ${_out.length} bytes EVC in $timeElapsed ms: $outputName');
   } else if (command.name == 'run') {
-    final dbc = File(command['path']!).readAsBytesSync();
-    final runtime = Runtime(dbc.buffer.asByteData());
+    if (command['help']! || command.rest.length != 1) {
+      if (command['help']) {
+        print('run: Run EVC bytecode in the dart_eval VM.');
+      } else {
+        print('You must pass the name of the EVC file to run.');
+      }
+
+      print('Usage:');
+      print('   dart_eval run <file> [-l, --library <library>] [-f, --function <function>] [-h, --help]');
+      if (command['help']) print('\nNote that bindings are not supported in the run command.');
+      exit(command['help'] ? 0 : 1);
+    }
+    if (command['library'] == null) {
+      print('You must pass the library parameter with the name of the library to run.');
+      print('Example: dart_eval run program.evc --library package:my_package/main.dart');
+      exit(1);
+    }
+    final evc = File(command.rest[0]).readAsBytesSync();
+    final runtime = Runtime(evc.buffer.asByteData());
     runtime.setup();
-    // ignore: deprecated_member_use_from_same_package
-    var result = runtime.executeNamed(0, 'main');
+    var result = runtime.executeLib(command['library']!, command['function']!);
 
     if (result != null) {
       if (result is $Value) {
@@ -105,8 +151,19 @@ void main(List<String> args) {
       print('\nProgram exited with result: $result');
     }
   } else if (command.name == 'dump') {
-    final dbc = File(command['path']!).readAsBytesSync();
-    final runtime = Runtime(dbc.buffer.asByteData());
+    if (command['help']! || command.rest.length != 1) {
+      if (command['help']) {
+        print('dump: Dump op codes from an EVC file.');
+      } else {
+        print('You must pass the name of the EVC file to dump.');
+      }
+
+      print('Usage:');
+      print('   dart_eval dump <file> [-h, --help]');
+      exit(command['help'] ? 0 : 1);
+    }
+    final evc = File(command.rest[0]).readAsBytesSync();
+    final runtime = Runtime(evc.buffer.asByteData());
     runtime.setup();
     runtime.printOpcodes();
   }
