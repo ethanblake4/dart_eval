@@ -1,3 +1,6 @@
+## 0.4.4
+- CLI: allow invoking without `dart pub global run`
+
 ## 0.4.3
 - CLI: Improved ease of use and documentation
 - CLI: Added support for JSON bindings
