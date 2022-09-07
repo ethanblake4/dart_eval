@@ -141,7 +141,7 @@ class BridgeGenericParam {
   const BridgeGenericParam({this.$extends});
 
   factory BridgeGenericParam.fromJson(Map<String, dynamic> json) {
-    return BridgeGenericParam($extends: json['extends']);
+    return BridgeGenericParam($extends: json.containsKey('extends') ? BridgeTypeRef.fromJson(json['extends']) : null);
   }
 
   final BridgeTypeRef? $extends;

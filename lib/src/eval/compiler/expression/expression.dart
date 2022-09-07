@@ -8,6 +8,7 @@ import 'package:dart_eval/src/eval/compiler/expression/funcexpr_invocation.dart'
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/expression/identifier.dart';
 import 'package:dart_eval/src/eval/compiler/expression/index.dart';
+import 'package:dart_eval/src/eval/compiler/expression/instance_creation.dart';
 import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/compiler/expression/keywords.dart';
 import 'package:dart_eval/src/eval/compiler/expression/literal.dart';
@@ -43,6 +44,8 @@ Variable compileExpression(Expression e, CompilerContext ctx) {
     return compileFunctionExpressionInvocation(e, ctx);
   } else if (e is AwaitExpression) {
     return compileAwaitExpression(e, ctx);
+  } else if (e is InstanceCreationExpression) {
+    return compileInstanceCreation(ctx, e);
   }
 
   throw CompileError('Unknown expression type ${e.runtimeType}');

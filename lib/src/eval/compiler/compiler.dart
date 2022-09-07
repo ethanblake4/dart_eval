@@ -362,6 +362,10 @@ class Compiler {
       if (bridge is BridgeClassDef) {
         final spec = bridge.type.type.spec!;
         _topLevelDeclarationsMap[libraryIndex]![spec.name] = DeclarationOrBridge(libraryIndex, bridge: bridge);
+        for (final constructor in bridge.constructors.entries) {
+          _topLevelDeclarationsMap[libraryIndex]!['${spec.name}.${constructor.key}'] =
+              DeclarationOrBridge(libraryIndex, bridge: constructor.value);
+        }
         for (final method in bridge.methods.entries) {
           if (method.value.isStatic) {
             _topLevelDeclarationsMap[libraryIndex]!['${spec.name}.${method.key}'] =

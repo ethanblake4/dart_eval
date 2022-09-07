@@ -55,6 +55,12 @@ Pair<TypeRef, DeclarationOrBridge>? resolveInstanceDeclaration(
       final $type = ctx.visibleTypes[library]![$class]!;
       return Pair($type, DeclarationOrBridge(-1, bridge: method));
     }
+    final getter = bridge.getters[name];
+    final setter = bridge.setters[name];
+    if (getter != null || setter != null) {
+      final $type = ctx.visibleTypes[library]![$class]!;
+      return Pair($type, DeclarationOrBridge(-1, bridge: BridgeGetSet(getter, setter)));
+    }
     final $extends = bridge.type.$extends;
     if ($extends != null) {
       final _type = TypeRef.fromBridgeTypeRef(ctx, $extends);
@@ -82,6 +88,12 @@ Pair<TypeRef, DeclarationOrBridge>? resolveInstanceDeclaration(
     return resolveInstanceDeclaration(ctx, extendsType.file, extendsType.name, name);
   }
   return null;
+}
+
+class BridgeGetSet extends BridgeDeclaration {
+  const BridgeGetSet(this.getter, this.setter);
+  final BridgeMethodDef? getter;
+  final BridgeMethodDef? setter;
 }
 
 DeclarationOrBridge<Declaration, BridgeDeclaration>? resolveStaticDeclaration(

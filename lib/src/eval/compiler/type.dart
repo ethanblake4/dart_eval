@@ -123,11 +123,14 @@ class TypeRef {
     return unspecifiedType;
   }
 
-  factory TypeRef.fromBridgeAnnotation(CompilerContext ctx, BridgeTypeAnnotation typeAnnotation) {
-    return TypeRef.fromBridgeTypeRef(ctx, typeAnnotation.type);
+  factory TypeRef.fromBridgeAnnotation(CompilerContext ctx, BridgeTypeAnnotation typeAnnotation,
+      {TypeRef? specifyingType, TypeRef? specifiedType}) {
+    return TypeRef.fromBridgeTypeRef(ctx, typeAnnotation.type,
+        specifyingType: specifyingType, specifiedType: specifiedType);
   }
 
-  factory TypeRef.fromBridgeTypeRef(CompilerContext ctx, BridgeTypeRef typeReference, {bool staticSource = true}) {
+  factory TypeRef.fromBridgeTypeRef(CompilerContext ctx, BridgeTypeRef typeReference,
+      {bool staticSource = true, TypeRef? specifyingType, TypeRef? specifiedType}) {
     final cacheId = typeReference.cacheId;
     if (cacheId != null) {
       final t = inverseRuntimeTypeMap[cacheId] ?? ctx.runtimeTypeList[cacheId];
@@ -140,6 +143,49 @@ class TypeRef {
     if (spec != null) {
       final lib = ctx.libraryMap[spec.library] ?? (throw CompileError('Bridge: cannot find library ${spec.library}'));
       return ctx.visibleTypes[lib]![spec.name]!;
+    }
+    final ref = typeReference.ref;
+    if (ref != null) {
+      specifiedType ??= ctx.visibleTypes[ctx.library]![ctx.currentClass?.name2.stringValue]!;
+
+      final declaration = ctx.topLevelDeclarationsMap[specifiedType.file]![specifiedType.name]!;
+      if (!declaration.isBridge) {
+        throw CompileError(
+            'Trying to resolve bridged generic type $ref on $specifiedType, which is not a bridge class');
+      }
+      final _dec = declaration.bridge!;
+      if (_dec is! BridgeClassDef) {
+        throw CompileError(
+            'Trying to resolve bridged generic type $ref on $specifiedType, which is not a bridge class');
+      }
+
+      final genericIndex = _dec.type.generics.keys.toList().indexWhere((key) => key == ref);
+      final generic = _dec.type.generics[ref]!;
+      final $extends = generic.$extends;
+      final boundType = $extends == null ? EvalTypes.dynamicType : TypeRef.fromBridgeTypeRef(ctx, $extends);
+
+      if (specifyingType != null) {
+        final syDeclaration = ctx.topLevelDeclarationsMap[specifyingType.file]![specifyingType.name]!;
+        final syDec = syDeclaration.declaration!;
+
+        if (syDec is! ClassDeclaration) {
+          throw CompileError('Specifying types from bridge is not supported');
+        }
+        final syExtends = syDec.extendsClause;
+        if (syExtends != null && syExtends.superclass.name.name == specifiedType.name) {
+          final declaredType = syExtends.superclass.typeArguments?.arguments[genericIndex];
+          if (declaredType != null) {
+            final resolvedDeclaredType = TypeRef.fromAnnotation(ctx, specifyingType.file, declaredType);
+            if (!resolvedDeclaredType.isAssignableTo(ctx, boundType)) {
+              throw CompileError("Type argument $resolvedDeclaredType does not conform to type parameter $ref's"
+                  "bound ($boundType)");
+            }
+            return resolvedDeclaredType;
+          }
+        }
+      }
+
+      return boundType;
     }
     throw CompileError('No support for looking up types by other bridge annotation types');
   }
@@ -229,13 +275,15 @@ class TypeRef {
 
     final declaration = ctx.topLevelDeclarationsMap[file]![name]!;
 
-    String? superName;
-    List<String> implementsNames;
-    List<String> withNames;
+    NamedType? superName;
+    List<NamedType> implementsNames;
+    List<NamedType> withNames;
+    List<GenericParam> generics;
 
     if (declaration.isBridge) {
       implementsNames = [];
       withNames = [];
+      generics = [];
 
       if (declaration.bridge is BridgeEnumDef) {
         $super = EvalTypes.enumType;
@@ -244,40 +292,72 @@ class TypeRef {
         final type = br.type;
 
         if (type.$extends != null) {
-          $super = TypeRef.fromBridgeTypeRef(ctx, type.$extends!).resolveTypeChain(ctx, recursionGuard: rg);
+          $super = TypeRef.fromBridgeTypeRef(ctx, type.$extends!, specifiedType: this)
+              .resolveTypeChain(ctx, recursionGuard: rg);
         }
 
         for (final $i in type.$implements) {
-          $implements.add(TypeRef.fromBridgeTypeRef(ctx, $i).resolveTypeChain(ctx, recursionGuard: rg));
+          $implements
+              .add(TypeRef.fromBridgeTypeRef(ctx, $i, specifiedType: this).resolveTypeChain(ctx, recursionGuard: rg));
         }
 
         for (final $i in type.$with) {
-          $with.add(TypeRef.fromBridgeTypeRef(ctx, $i).resolveTypeChain(ctx, recursionGuard: rg));
+          $with.add(TypeRef.fromBridgeTypeRef(ctx, $i, specifiedType: this).resolveTypeChain(ctx, recursionGuard: rg));
+        }
+
+        for (final $g in type.generics.entries) {
+          final _extends = $g.value.$extends;
+          final _type = _extends == null ? null : TypeRef.fromBridgeTypeRef(ctx, _extends);
+          generics.add(GenericParam($g.key, _type?.resolveTypeChain(ctx, recursionGuard: rg)));
         }
       }
     } else {
       final dec = declaration.declaration! as ClassDeclaration;
-      superName = dec.extendsClause?.superclass2.name.name;
-      withNames = dec.withClause?.mixinTypes2.map((e) => e.name.name).toList() ?? [];
-      implementsNames = dec.implementsClause?.interfaces2.map((e) => e.name.name).toList() ?? [];
+      superName = dec.extendsClause?.superclass;
+      withNames = dec.withClause?.mixinTypes.toList() ?? [];
+      implementsNames = dec.implementsClause?.interfaces.toList() ?? [];
+      generics = dec.typeParameters?.typeParameters
+              .map((t) =>
+                  GenericParam(t.name.name, t.bound == null ? null : TypeRef.fromAnnotation(ctx, file, t.bound!)))
+              .toList() ??
+          [];
     }
 
     if (superName != null) {
-      $super = ctx.visibleTypes[file]![superName]!.resolveTypeChain(ctx, recursionGuard: rg);
+      final typeParams = superName.typeArguments?.arguments
+              .map((a) => TypeRef.fromAnnotation(ctx, file, a).resolveTypeChain(ctx))
+              .toList() ??
+          [];
+      $super = ctx.visibleTypes[file]![superName.name.name]!
+          .copyWith(specifiedTypeArgs: typeParams)
+          .resolveTypeChain(ctx, recursionGuard: rg);
     }
 
     for (final withName in withNames) {
-      $with.add(ctx.visibleTypes[file]![withName]!.resolveTypeChain(ctx, recursionGuard: rg));
+      final typeParams = withName.typeArguments?.arguments
+              .map((a) => TypeRef.fromAnnotation(ctx, file, a).resolveTypeChain(ctx))
+              .toList() ??
+          [];
+      $with.add(ctx.visibleTypes[file]![withName]!
+          .copyWith(specifiedTypeArgs: typeParams)
+          .resolveTypeChain(ctx, recursionGuard: rg));
     }
 
     for (final implementsName in implementsNames) {
-      $implements.add(ctx.visibleTypes[file]![implementsName]!.resolveTypeChain(ctx, recursionGuard: rg));
+      final typeParams = implementsName.typeArguments?.arguments
+              .map((a) => TypeRef.fromAnnotation(ctx, file, a).resolveTypeChain(ctx))
+              .toList() ??
+          [];
+      $implements.add(ctx.visibleTypes[file]![implementsName]!
+          .copyWith(specifiedTypeArgs: typeParams)
+          .resolveTypeChain(ctx, recursionGuard: rg));
     }
 
     final _resolved = TypeRef(file, name,
         extendsType: $super ?? EvalTypes.objectType,
         withType: $with,
         implementsType: $implements,
+        genericParams: generics,
         resolved: true,
         boxed: boxed,
         specifiedTypeArgs: _resolvedSpecifiedTypeArgs);
@@ -544,4 +624,8 @@ class GenericParam {
 
   final String name;
   final TypeRef? extendsType;
+}
+
+class C<T extends R, R extends int> {
+  const C();
 }

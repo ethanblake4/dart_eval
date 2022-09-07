@@ -237,16 +237,7 @@ DeclarationOrBridge<MethodDeclaration, BridgeDeclaration> resolveStaticMethod(
     if (method.declaration != null) {
       return DeclarationOrBridge(classType.file, declaration: method.declaration! as MethodDeclaration);
     } else {
-      return DeclarationOrBridge(classType.file, bridge: method.bridge! as BridgeMethodDef);
-    }
-  }
-
-  final cls = ctx.topLevelDeclarationsMap[classType.file]![classType.name];
-
-  if (cls?.isBridge ?? false) {
-    final bridge = cls!.bridge!;
-    if (bridge is BridgeClassDef) {
-      return DeclarationOrBridge(classType.file, bridge: bridge.constructors[methodName]!);
+      return DeclarationOrBridge(classType.file, bridge: method.bridge!);
     }
   }
 

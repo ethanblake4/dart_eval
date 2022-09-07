@@ -405,6 +405,30 @@ void main() {
 
       expect(exec.executeLib('package:example/main.dart', 'main'), 3);
     });
+    test('"new" keyword', () {
+      final exec = gen.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main () {
+              return new M(4).load();
+            }
+            
+            class M {
+              M(this.x);
+              
+              final int x;
+              
+              int load() {
+                return 5 + x;
+              }
+            }
+            
+          '''
+        }
+      });
+
+      expect(exec.executeLib('package:example/main.dart', 'main'), 9);
+    });
   });
 
   group('Statement tests', () {

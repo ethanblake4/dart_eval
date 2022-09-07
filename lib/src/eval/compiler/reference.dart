@@ -158,7 +158,17 @@ class IdentifierReference implements Reference {
             return Variable.alloc(ctx, EvalTypes.functionType,
                 methodOffset: DeferredOrOffset(
                     file: ctx.library, className: ctx.currentClass!.name2.value() as String, name: name));
+          } else if (bridge is BridgeGetSet) {
+            final getter = bridge.getter ??
+                (throw CompileError('Property "$name" has a setter but no getter, so it cannot be accessed'));
+            return Variable.alloc(
+                ctx,
+                TypeRef.fromBridgeAnnotation(ctx, getter.functionDescriptor.returns,
+                    specifiedType: $type, specifyingType: $this.type),
+                methodOffset: DeferredOrOffset(
+                    file: ctx.library, className: ctx.currentClass!.name2.value() as String, name: name));
           }
+          throw CompileError('Ref: cannot resolve bridge declaration "$name" of type ${_dec.runtimeType}');
         }
 
         return Variable.alloc(ctx, TypeRef.lookupFieldType(ctx, $type, name) ?? EvalTypes.dynamicType);

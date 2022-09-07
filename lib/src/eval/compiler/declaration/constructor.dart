@@ -179,8 +179,7 @@ void compileConstructorDeclaration(
     final bridge = decl.bridge! as BridgeClassDef;
 
     if (!bridge.bridge) {
-      // ignore: deprecated_member_use
-      throw CompileError('Bridge class ${$extends.superclass2} is a wrapper, not a bridge, so you can\'t extend it');
+      throw CompileError('Bridge class ${$extends.superclass} is a wrapper, not a bridge, so you can\'t extend it');
     }
 
     if ($superInitializer != null) {
@@ -193,10 +192,8 @@ void compileConstructorDeclaration(
       namedArgTypes.addAll(_namedArgs.map((key, value) => MapEntry(key, value.type)));
     }
 
-    final op = BridgeInstantiate.make(
-        instOffset,
-        // ignore: deprecated_member_use
-        ctx.bridgeStaticFunctionIndices[decl.sourceLib]!['${$extends.superclass2.name.name}.$constructorName']!);
+    final op = BridgeInstantiate.make(instOffset,
+        ctx.bridgeStaticFunctionIndices[decl.sourceLib]!['${$extends.superclass.name.name}.$constructorName']!);
     ctx.pushOp(op, BridgeInstantiate.len(op));
     final bridgeInst = Variable.alloc(ctx, EvalTypes.dynamicType);
 
