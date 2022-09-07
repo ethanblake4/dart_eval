@@ -1,3 +1,17 @@
+## 0.4.3
+- CLI: Improved ease of use and documentation
+- CLI: Added support for JSON bindings
+- Type arguments are now applied when extending a bridge class
+  that declares a generic type parameter
+- `BridgeTypeRef.ref` is now supported in limited cases for
+  referencing generic class type parameters
+- Support for bridged getters
+- Support for string interpolation
+- The `eval()` method now lets you specify an output file
+  path and does not automatically output a file if left
+  unspecified
+- Fix broken sample in README (thanks @g123k)
+
 ## 0.4.2
 - Fix analyzer version constraint
 

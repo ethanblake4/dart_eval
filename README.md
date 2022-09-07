@@ -110,7 +110,7 @@ as well as run and inspect EVC bytecode files.
 
 To enable the CLI globally, run:
 
-> `dart pub global activate dart_eval`
+`dart pub global activate dart_eval`
 
 ### Compiling a project
 
