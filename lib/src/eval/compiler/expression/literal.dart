@@ -1,6 +1,7 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/collection/list.dart';
 import 'package:dart_eval/src/eval/compiler/collection/set_map.dart';
+import 'package:dart_eval/src/eval/compiler/expression/string_interpolation.dart';
 
 import '../builtins.dart';
 import '../context.dart';
@@ -35,6 +36,9 @@ Variable parseLiteral(Literal l, CompilerContext ctx) {
   }
   if (l is SetOrMapLiteral) {
     return compileSetOrMapLiteral(l, ctx);
+  }
+  if (l is StringInterpolation) {
+    return compileStringInterpolation(ctx, l);
   }
   throw CompileError('Unknown literal type ${l.runtimeType}');
 }

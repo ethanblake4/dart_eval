@@ -405,6 +405,7 @@ void main() {
 
       expect(exec.executeLib('package:example/main.dart', 'main'), 3);
     });
+
     test('"new" keyword', () {
       final exec = gen.compileWriteAndLoad({
         'example': {
@@ -618,6 +619,23 @@ void main() {
       expect(() {
         expect(exec.executeLib('package:example/main.dart', 'main'), $bool(false));
       }, prints('false\ntrue\n'));
+    });
+    test('String interpolation', () {
+      final exec = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main() {
+              final a = "Hello";
+              final b = 2;
+              print("Fluffy\$a\$b, says the cat");
+              return 2;
+            }
+          ''',
+        }
+      });
+      expect(() {
+        exec.executeLib('package:example/main.dart', 'main');
+      }, prints('FluffyHello2, says the cat\n'));
     });
   });
 
