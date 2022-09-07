@@ -241,6 +241,21 @@ void main() {
 
       expect(exec.executeLib('package:example/main.dart', 'main'), 18);
     });
+
+    test('Arrow function', () {
+      final exec = gen.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main () {
+              var fn = (a) => a + 1;
+              return fn(4);
+            }
+           '''
+        }
+      });
+
+      expect(exec.executeLib('package:example/main.dart', 'main'), 5);
+    });
   });
 
   group('Class tests', () {
