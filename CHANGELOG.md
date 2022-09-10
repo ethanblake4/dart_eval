@@ -1,5 +1,9 @@
+## 0.4.6
+- Support for bridged static getters
+- Support for top-level and class arrow functions
+
 ## 0.4.5
-- Support for arrow functions
+- Support for arrow function expressions
 
 ## 0.4.4
 - CLI: allow invoking without `dart pub global run`

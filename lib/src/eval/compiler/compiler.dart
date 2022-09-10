@@ -501,6 +501,31 @@ class Compiler {
       }
       ctx.bridgeStaticFunctionIndices[lib]!['${type.name}.$name'] = _bridgeStaticFunctionIdx++;
     });
+
+    classDef.getters.forEach((name, getter) {
+      if (!getter.isStatic) return;
+      if (!ctx.bridgeStaticFunctionIndices.containsKey(lib)) {
+        ctx.bridgeStaticFunctionIndices[lib] = <String, int>{};
+      }
+      ctx.bridgeStaticFunctionIndices[lib]!['${type.name}.$name*g'] = _bridgeStaticFunctionIdx++;
+    });
+
+    classDef.setters.forEach((name, setter) {
+      if (!setter.isStatic) return;
+      if (!ctx.bridgeStaticFunctionIndices.containsKey(lib)) {
+        ctx.bridgeStaticFunctionIndices[lib] = <String, int>{};
+      }
+      ctx.bridgeStaticFunctionIndices[lib]!['${type.name}.$name*s'] = _bridgeStaticFunctionIdx++;
+    });
+
+    classDef.fields.forEach((name, field) {
+      if (!field.isStatic) return;
+      if (!ctx.bridgeStaticFunctionIndices.containsKey(lib)) {
+        ctx.bridgeStaticFunctionIndices[lib] = <String, int>{};
+      }
+      ctx.bridgeStaticFunctionIndices[lib]!['${type.name}.$name*g'] = _bridgeStaticFunctionIdx++;
+      ctx.bridgeStaticFunctionIndices[lib]!['${type.name}.$name*s'] = _bridgeStaticFunctionIdx++;
+    });
   }
 
   void _reassignBridgeStaticFunctionIndicesForClass(BridgeClassDef classDef) {

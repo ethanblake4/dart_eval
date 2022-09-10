@@ -246,6 +246,18 @@ void main() {
       final exec = gen.compileWriteAndLoad({
         'example': {
           'main.dart': '''
+            int main (int y) => 2 + y;
+           '''
+        }
+      });
+
+      expect(exec.executeLib('package:example/main.dart', 'main', [4]), 6);
+    });
+
+    test('Arrow function expression', () {
+      final exec = gen.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
             int main () {
               var fn = (a) => a + 1;
               return fn(4);

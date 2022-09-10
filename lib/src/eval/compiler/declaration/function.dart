@@ -2,6 +2,8 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/constructor.dart';
+import 'package:dart_eval/src/eval/compiler/errors.dart';
+import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/scope.dart';
 import 'package:dart_eval/src/eval/compiler/statement/block.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
@@ -50,6 +52,13 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
     stInfo = compileBlock(
         b.block, AlwaysReturnType.fromAnnotation(ctx, ctx.library, d.returnType, EvalTypes.dynamicType), ctx,
         name: (d.name2.value() as String) + '()');
+  } else if (b is ExpressionFunctionBody) {
+    ctx.beginAllocScope();
+    final V = compileExpression(b.expression, ctx);
+    ctx.pushOp(Return.make(V.scopeFrameOffset), Return.LEN);
+    ctx.endAllocScope();
+  } else {
+    throw CompileError('Unsupported function body type: ${b.runtimeType}');
   }
 
   if (stInfo == null || !(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {

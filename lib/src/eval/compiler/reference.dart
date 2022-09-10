@@ -117,6 +117,32 @@ class IdentifierReference implements Reference {
           ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
           return Variable.alloc(ctx, type);
         }
+        final _dec = ctx.topLevelDeclarationsMap[classType.file]![classType.name]!;
+        if (_dec.isBridge) {
+          final br = _dec.bridge;
+          if (br is BridgeClassDef) {
+            final getter = br.getters[name];
+            if (getter != null) {
+              final getterType = TypeRef.fromBridgeAnnotation(ctx, getter.functionDescriptor.returns);
+              ctx.pushOp(
+                  InvokeExternal.make(ctx.bridgeStaticFunctionIndices[classType.file]!['${classType.name}.$name*g']!),
+                  InvokeExternal.LEN);
+              ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
+              return Variable.alloc(ctx, getterType);
+            }
+            final field = br.fields[name];
+            if (field != null) {
+              final fieldType = TypeRef.fromBridgeAnnotation(ctx, field.type);
+              ctx.pushOp(
+                  InvokeExternal.make(ctx.bridgeStaticFunctionIndices[classType.file]!['${classType.name}.$name*g']!),
+                  InvokeExternal.LEN);
+              ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
+              return Variable.alloc(ctx, fieldType);
+            }
+
+            throw CompileError('Cannot find external getter or field: $name on ${classType}');
+          }
+        }
         final _name = classType.name + '.' + name;
         final type = ctx.topLevelVariableInferredTypes[classType.file]![_name]!;
         final gIndex = ctx.topLevelGlobalIndices[classType.file]![_name]!;
