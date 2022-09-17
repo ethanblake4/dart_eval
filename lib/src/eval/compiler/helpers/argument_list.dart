@@ -198,6 +198,9 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
   Variable? $null;
 
   for (final param in function.params) {
+    if (param.optional && argumentList.arguments.length <= i) {
+      break;
+    }
     final arg = argumentList.arguments[i];
     if (arg is NamedExpression) {
       if (!param.optional) {

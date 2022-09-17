@@ -513,6 +513,20 @@ void main() {
       compiler = Compiler();
     });
 
+    test('Int unary -', () {
+      final exec = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main() {
+              return -5;
+            }
+          '''
+        }
+      });
+
+      expect(exec.executeLib('package:example/main.dart', 'main'), -5);
+    });
+
     test('Future.delayed()', () async {
       final runtime = compiler.compileWriteAndLoad({
         'example': {
@@ -530,6 +544,28 @@ void main() {
       final endTime = DateTime.now().millisecondsSinceEpoch;
       expect(endTime - startTime, greaterThan(100));
       expect(endTime - startTime, lessThan(200));
+    });
+
+    test('Using a Future result', () async {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+          import 'dart:math';
+          Future<int> main(int milliseconds) async {
+            final result = await getPoint(milliseconds);
+            return result.x + result.y;
+          }
+
+          Future<Point> getPoint(int milliseconds) async {
+            await Future.delayed(Duration(milliseconds: milliseconds));
+            return Point(5, 5);
+          }
+          '''
+        }
+      });
+
+      final future = runtime.executeLib('package:example/main.dart', 'main', [150]) as Future;
+      await expectLater(future, completion($int(10)));
     });
 
     test('print()', () async {
@@ -663,6 +699,24 @@ void main() {
       expect(() {
         exec.executeLib('package:example/main.dart', 'main');
       }, prints('FluffyHello2, says the cat\n'));
+    });
+
+    test('dart:math Point', () {
+      final exec = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            import 'dart:math';
+            void main() {
+              final a = Point(1, 2);
+              final b = Point(3, 4);
+              print(a.distanceTo(b));
+            }
+          ''',
+        }
+      });
+      expect(() {
+        exec.executeLib('package:example/main.dart', 'main');
+      }, prints('2.8284271247461903\n'));
     });
   });
 

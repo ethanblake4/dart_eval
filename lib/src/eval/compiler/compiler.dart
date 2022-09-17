@@ -17,6 +17,7 @@ import 'package:dart_eval/src/eval/compiler/util/library_graph.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/math.dart';
 import 'package:directed_graph/directed_graph.dart';
 
 import 'context.dart';
@@ -121,6 +122,7 @@ class Compiler {
   Program compileSources([Iterable<DartSource> sources = const []]) {
     configureCoreForCompile(this);
     configureAsyncForCompile(this);
+    configureMathForCompile(this);
 
     final units = sources.followedBy(additionalSources).map((source) => source.load());
 

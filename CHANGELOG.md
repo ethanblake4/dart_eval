@@ -1,3 +1,9 @@
+## 0.4.7
+- Add bindings for the dart:math Point class
+- Add Duration.zero and some other Duration static getters
+- Support unary minus on ints and doubles
+- Support for optional positional parameters on bridge classes
+
 ## 0.4.6
 - Support for bridged static getters
 - Support for top-level and class arrow functions

@@ -10,6 +10,7 @@ import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'package:dart_eval/src/eval/runtime/function.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/math.dart';
 import 'package:dart_eval/stdlib/core.dart';
 import 'package:dart_eval/src/eval/runtime/continuation.dart';
 import 'package:dart_eval/src/eval/runtime/type.dart';
@@ -195,6 +196,7 @@ class Runtime {
   void setup() {
     configureCoreForRuntime(this);
     configureAsyncForRuntime(this);
+    configureMathForRuntime(this);
     if (_fromEvc) {
       _load();
     } else {

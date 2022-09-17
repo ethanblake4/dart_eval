@@ -13,6 +13,7 @@ import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/compiler/expression/keywords.dart';
 import 'package:dart_eval/src/eval/compiler/expression/literal.dart';
 import 'package:dart_eval/src/eval/compiler/expression/postfix.dart';
+import 'package:dart_eval/src/eval/compiler/expression/prefix.dart';
 import 'package:dart_eval/src/eval/compiler/expression/property_access.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
@@ -28,6 +29,8 @@ Variable compileExpression(Expression e, CompilerContext ctx) {
     return compileMethodInvocation(ctx, e);
   } else if (e is BinaryExpression) {
     return compileBinaryExpression(ctx, e);
+  } else if (e is PrefixExpression) {
+    return compilePrefixExpression(ctx, e);
   } else if (e is PropertyAccess) {
     return compilePropertyAccess(e, ctx);
   } else if (e is ThisExpression) {

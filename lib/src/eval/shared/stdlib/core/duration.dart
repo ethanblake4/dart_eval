@@ -1,6 +1,7 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/compiler.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
 
 class $Duration implements Duration, $Instance {
   static void configureForCompile(Compiler compiler) {
@@ -9,6 +10,17 @@ class $Duration implements Duration, $Instance {
 
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFunc('dart:core', 'Duration.', const _$Duration_new());
+    runtime.registerBridgeFunc('dart:core', 'Duration.zero*g', const _$Duration_zero());
+    runtime.registerBridgeFunc('dart:core', 'Duration.microsecondsPerMillisecond*g',
+        (runtime, target, args) => $int(Duration.microsecondsPerMillisecond));
+    runtime.registerBridgeFunc('dart:core', 'Duration.millisecondsPerSecond*g',
+        (runtime, target, args) => $int(Duration.millisecondsPerSecond));
+    runtime.registerBridgeFunc(
+        'dart:core', 'Duration.secondsPerMinute*g', (runtime, target, args) => $int(Duration.secondsPerMinute));
+    runtime.registerBridgeFunc(
+        'dart:core', 'Duration.minutesPerHour*g', (runtime, target, args) => $int(Duration.minutesPerHour));
+    runtime.registerBridgeFunc(
+        'dart:core', 'Duration.hoursPerDay*g', (runtime, target, args) => $int(Duration.hoursPerDay));
   }
 
   static const $type = BridgeTypeRef.spec(BridgeTypeSpec('dart:core', 'Duration'));
@@ -35,7 +47,24 @@ class $Duration implements Duration, $Instance {
             params: [BridgeParameter('factor', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.numType)), false)],
             namedParams: []))
       },
-      getters: {},
+      getters: {
+        'zero': BridgeMethodDef(BridgeFunctionDef(returns: BridgeTypeAnnotation($type)), isStatic: true),
+        'microsecondsPerMillisecond': BridgeMethodDef(
+            BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType))),
+            isStatic: true),
+        'millisecondsPerSecond': BridgeMethodDef(
+            BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType))),
+            isStatic: true),
+        'secondsPerMinute': BridgeMethodDef(
+            BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType))),
+            isStatic: true),
+        'minutesPerHour': BridgeMethodDef(
+            BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType))),
+            isStatic: true),
+        'hoursPerDay': BridgeMethodDef(
+            BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType))),
+            isStatic: true),
+      },
       setters: {},
       fields: {},
       wrap: true);
@@ -128,5 +157,14 @@ class _$Duration_new implements EvalCallable {
         seconds: args[3]?.$value ?? 0,
         milliseconds: args[4]?.$value ?? 0,
         microseconds: args[5]?.$value ?? 0));
+  }
+}
+
+class _$Duration_zero implements EvalCallable {
+  const _$Duration_zero();
+
+  @override
+  $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
+    return $Duration.wrap(Duration.zero);
   }
 }
