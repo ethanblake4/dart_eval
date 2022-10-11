@@ -23,7 +23,7 @@ dependencies:
    dcli: ^1.34.0
    json_annotation: ^4.4.0
    directed_graph: ^0.3.7
-   _fe_analyzer_shared: 46.0.0
+   _fe_analyzer_shared: '<47.0.0'
 
 dev_dependencies:
   test: ^1.17.12
