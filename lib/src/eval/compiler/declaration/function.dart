@@ -63,7 +63,8 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
 
   if (stInfo == null || !(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
     if (b.isAsynchronous) {
-      asyncComplete(ctx);
+      asyncComplete(ctx, -1);
+      return;
     }
   }
 

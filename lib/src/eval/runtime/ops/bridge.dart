@@ -125,7 +125,7 @@ class Await implements EvcOp {
     final continuation = Continuation(
         programOffset: runtime._prOffset, frame: runtime.frame, frameOffset: runtime.frameOffset, args: []);
 
-    final future = runtime.frame[_futureOffset] as $Future;
+    var future = runtime.frame[_futureOffset] as $Future;
     _suspend(runtime, continuation, future);
 
     // Return with the completer as the result (the following lines are a copy of the Return op code)

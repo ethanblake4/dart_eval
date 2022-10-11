@@ -12,6 +12,7 @@ import 'package:dart_eval/src/eval/compiler/expression/instance_creation.dart';
 import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/compiler/expression/keywords.dart';
 import 'package:dart_eval/src/eval/compiler/expression/literal.dart';
+import 'package:dart_eval/src/eval/compiler/expression/parenthesized.dart';
 import 'package:dart_eval/src/eval/compiler/expression/postfix.dart';
 import 'package:dart_eval/src/eval/compiler/expression/prefix.dart';
 import 'package:dart_eval/src/eval/compiler/expression/property_access.dart';
@@ -49,6 +50,8 @@ Variable compileExpression(Expression e, CompilerContext ctx) {
     return compileAwaitExpression(e, ctx);
   } else if (e is InstanceCreationExpression) {
     return compileInstanceCreation(ctx, e);
+  } else if (e is ParenthesizedExpression) {
+    return compileParenthesizedExpression(e, ctx);
   }
 
   throw CompileError('Unknown expression type ${e.runtimeType}');

@@ -4,6 +4,7 @@ import 'dart:async';
 
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/future.dart';
 
 class $Completer<T> implements Completer<T>, $Instance {
   static void configureForCompile(Compiler compiler) {
@@ -30,7 +31,10 @@ class $Completer<T> implements Completer<T>, $Instance {
             ],
             namedParams: []))
       },
-      getters: {},
+      getters: {
+        'future': BridgeMethodDef(
+            BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.spec(BridgeTypeSpec('dart:core', 'Future')))))
+      },
       setters: {},
       fields: {},
       wrap: true);
@@ -46,6 +50,8 @@ class $Completer<T> implements Completer<T>, $Instance {
     switch (identifier) {
       case 'complete':
         return const _$Completer_complete();
+      case 'future':
+        return const _$Completer_future();
     }
   }
 
@@ -85,6 +91,18 @@ class _$Completer_complete extends EvalFunction {
   @override
   $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
     (target as $Completer).complete(args[0]);
+  }
+
+  @override
+  int get $runtimeType => RuntimeTypes.functionType;
+}
+
+class _$Completer_future extends EvalFunction {
+  const _$Completer_future() : super();
+
+  @override
+  $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
+    return $Future.wrap((target as $Completer).future, ((value) => value as $Value));
   }
 
   @override

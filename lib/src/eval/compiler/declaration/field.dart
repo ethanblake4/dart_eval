@@ -11,11 +11,11 @@ void compileFieldDeclaration(int fieldIndex, FieldDeclaration d, CompilerContext
   final parentName = parent.name2.value() as String;
   var _fieldIndex = fieldIndex;
   for (final field in d.fields.variables) {
-    final fieldName = field.name2.value() as String;
+    final fieldName = field.name2.value().toString();
     if (d.isStatic) {
       final initializer = field.initializer;
       if (initializer != null) {
-        final pos = beginMethod(ctx, field, field.offset, parentName + '.' + fieldName + ' (init)');
+        final pos = beginMethod(ctx, field, field.offset, fieldName + '*i');
         var V = compileExpression(initializer, ctx);
         TypeRef type;
         final specifiedType = d.fields.type;

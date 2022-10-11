@@ -1,7 +1,7 @@
 [![Build status](https://img.shields.io/github/workflow/status/ethanblake4/dart_eval/Dart)](https://github.com/ethanblake4/dart_eval/actions/workflows/dart.yml)
 [![Star on Github](https://img.shields.io/github/stars/ethanblake4/dart_eval?logo=github&colorB=orange&label=stars)](https://github.com/ethanblake4/dart_eval)
 [![License: BSD-3](https://img.shields.io/badge/license-BSD3-purple.svg)](https://opensource.org/licenses/BSD-3-Clause)
-
+[![Web example](https://img.shields.io/badge/web-example-blue.svg)](https://ethanblake.xyz/evalpad)
 
 `dart_eval` is an extensible bytecode compiler and runtime for the Dart language, 
 written in Dart, enabling dynamic codepush for Flutter and Dart AOT.
@@ -207,6 +207,37 @@ this.)
 
 An example featuring bridge interop is available in the `example` directory.
 
+## Plugins
+
+To configure interop for compilation and runtime, it's recommended to create an
+`EvalPlugin` which enables reuse of Compiler instances. Basic example:
+  
+```dart
+class MyAppPlugin implements EvalPlugin {
+  @override
+  String get identifier => 'package:myapp';
+
+  @override
+  void configureForCompile(Compiler compiler) {
+    compiler.defineBridgeTopLevelFunction(BridgeFunctionDeclaration(
+      'package:myapp/functions.dart',
+      'loadData',
+      BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.objectType)), params: [])
+    ));
+    compiler.defineBridgeClass($CoolWidget.$declaration);
+  }
+
+  @override
+  void configureForRuntime(Runtime runtime) {
+    runtime.registerBridgeFunc('package:myapp/functions.dart', 'loadData', 
+        (runtime, target, args) => $Object(loadData()));
+    runtime.registerBridgeFunc('package:myapp/classes.dart', 'CoolWidget.', $CoolWidget.$new);
+  }
+}
+```
+
+You can then use this plugin with `Compiler.addPlugin` and `Runtime.addPlugin`.
 ## Contributing
 
 See [Contributing](https://github.com/ethanblake4/dart_eval/blob/master/CONTRIBUTING.md).

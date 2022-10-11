@@ -5,7 +5,7 @@ import 'package:dart_eval/src/eval/compiler/util/graph.dart';
 /// A [Graph] where strongly-connected components representing libraries can be formed from part/part of relationships
 class CompilationUnitGraph implements Graph<int> {
   final Map<int, DartCompilationUnit> compilationUnits;
-  final Map<Uri, int> uriMap;
+  final Map<String, int> uriMap;
   final Map<String, int> libraryIdMap;
 
   CompilationUnitGraph(this.compilationUnits, this.uriMap, this.libraryIdMap);
@@ -21,8 +21,7 @@ class CompilationUnitGraph implements Graph<int> {
     }
 
     for (final part in cu.parts) {
-      final uri = Uri.parse(part.uri.stringValue!);
-      final id = uriMap[uri];
+      final id = uriMap[part.uri.stringValue!];
       if (id != null && compilationUnits.containsKey(id)) {
         yield id;
       }
@@ -32,8 +31,7 @@ class CompilationUnitGraph implements Graph<int> {
     if (partOf != null) {
       final uriStr = partOf.uri?.stringValue, libId = partOf.libraryName?.name;
       if (uriStr != null) {
-        final uri = Uri.parse(uriStr);
-        final id = uriMap[uri];
+        final id = uriMap[uriStr];
         if (id != null && compilationUnits.containsKey(id)) {
           yield id;
         }

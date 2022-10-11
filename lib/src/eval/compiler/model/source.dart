@@ -78,15 +78,22 @@ class DartSource {
         library: libraryDirective,
         partOf: partOfDirective);
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (other is DartSource) {
+      return uri == other.uri && stringSource == other.stringSource && fileSource == other.fileSource;
+    }
+    return false;
+  }
+
+  @override
+  int get hashCode => Object.hash(uri, stringSource, fileSource);
 }
 
 CompilationUnit _parse(String source) {
   final d = parseString(content: source, throwIfDiagnostics: false);
   if (d.errors.isNotEmpty) {
-    for (final error in d.errors) {
-      stderr.addError(error);
-    }
-
     throw CompileError('Parsing error(s): ${d.errors}');
   }
   return d.unit;

@@ -13,7 +13,7 @@ void compileTopLevelVariableDeclaration(VariableDeclaration v, CompilerContext c
 
   final initializer = v.initializer;
   if (initializer != null) {
-    final pos = beginMethod(ctx, v, v.offset, varName + ' (init)');
+    final pos = beginMethod(ctx, v, v.offset, varName + '*i');
     var V = compileExpression(initializer, ctx);
     TypeRef type;
     final specifiedType = parent.variables.type;

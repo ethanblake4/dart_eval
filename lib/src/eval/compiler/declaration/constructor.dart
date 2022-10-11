@@ -209,7 +209,7 @@ void compileConstructorDeclaration(
 }
 
 List<PossiblyValuedParameter> resolveFPLDefaults(CompilerContext ctx, FormalParameterList fpl, bool isInstanceMethod,
-    {bool allowUnboxed = true, bool sortNamed = false}) {
+    {bool allowUnboxed = true, bool sortNamed = false, bool ignoreDefaults = false}) {
   final normalized = <PossiblyValuedParameter>[];
   var hasEncounteredOptionalPositionalParam = false;
   var hasEncounteredNamedParam = false;
@@ -242,7 +242,7 @@ List<PossiblyValuedParameter> resolveFPLDefaults(CompilerContext ctx, FormalPara
 
   for (final param in [...positional, ...named]) {
     if (param is DefaultFormalParameter) {
-      if (param.defaultValue != null) {
+      if (param.defaultValue != null && !ignoreDefaults) {
         ctx.beginAllocScope();
         final _reserve = JumpIfNonNull.make(_paramIndex, -1);
         final _reserveOffset = ctx.pushOp(_reserve, JumpIfNonNull.LEN);

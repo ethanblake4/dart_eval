@@ -1,6 +1,7 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
+import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
@@ -170,14 +171,24 @@ class IdentifierReference implements Reference {
           resolveInstanceDeclaration(ctx, ctx.library, ctx.currentClass!.name2.value() as String, name);
       if (instanceDeclaration != null) {
         final $type = instanceDeclaration.first;
+        final _dec = instanceDeclaration.second;
 
         final $this = ctx.lookupLocal('#this')!;
+
+        if (!_dec.isBridge && _dec.declaration is MethodDeclaration) {
+          return Variable(-1, EvalTypes.functionType,
+              methodOffset: DeferredOrOffset(
+                  file: ctx.library,
+                  className: ctx.currentClass!.name2.value() as String,
+                  name: name,
+                  targetScopeFrameOffset: $this.scopeFrameOffset),
+              callingConvention: CallingConvention.static);
+        }
 
         final op = PushObjectProperty.make($this.scopeFrameOffset, name);
         ctx.pushOp(op, PushObjectProperty.len(op));
         ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
 
-        final _dec = instanceDeclaration.second;
         if (_dec.isBridge) {
           final bridge = _dec.bridge!;
           if (bridge is BridgeMethodDef) {
@@ -294,12 +305,13 @@ class IdentifierReference implements Reference {
 
     final DeferredOrOffset offset;
     if (ctx.topLevelDeclarationPositions[_decl.sourceLib]?.containsKey(name) ?? false) {
-      offset = DeferredOrOffset(file: _decl.sourceLib, offset: ctx.topLevelDeclarationPositions[ctx.library]![name]);
+      offset = DeferredOrOffset(
+          file: _decl.sourceLib, offset: ctx.topLevelDeclarationPositions[ctx.library]![name], name: name);
     } else {
       offset = DeferredOrOffset(file: _decl.sourceLib, name: name);
     }
 
-    return Variable(-1, EvalTypes.typeType,
+    return Variable(-1, decl is FunctionDeclaration ? EvalTypes.functionType : EvalTypes.typeType,
         concreteTypes: [returnType], methodOffset: offset, methodReturnType: AlwaysReturnType(returnType, nullable));
   }
 

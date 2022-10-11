@@ -211,6 +211,7 @@ void main() {
       });
 
       final startTime = DateTime.now().millisecondsSinceEpoch;
+      runtime.printOpcodes();
       final future = runtime.executeLib('package:example/main.dart', 'main', [150]) as Future;
       await expectLater(future, completion($int(3)));
       final endTime = DateTime.now().millisecondsSinceEpoch;
@@ -267,6 +268,67 @@ void main() {
       });
 
       expect(exec.executeLib('package:example/main.dart', 'main'), 5);
+    });
+
+    test('Chained async/await', () async {
+      final runtime = gen.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+          Future main() async {
+            return await fun();
+          }
+          Future fun() async {
+            return 3;
+          }
+          '''
+        }
+      });
+
+      runtime.printOpcodes();
+
+      final future = runtime.executeLib('package:example/main.dart', 'main') as Future;
+      await expectLater(future, completion($int(3)));
+    });
+
+    test('Simple tearoff', () {
+      final exec = gen.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main () {
+              var fn = fun;
+              return fn(4);
+            }
+            
+            int fun(int a) {
+              return a + 1;
+            }
+           '''
+        }
+      });
+
+      expect(exec.executeLib('package:example/main.dart', 'main'), 5);
+    });
+
+    test('Tearoff as argument', () {
+      final exec = gen.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main () {
+              return fun(4, fun2);
+            }
+            
+            int fun(int a, Function fn) {
+              return fn(a) + 1;
+            }
+
+            int fun2(int a) {
+              return a + 2;
+            }
+           '''
+        }
+      });
+
+      expect(exec.executeLib('package:example/main.dart', 'main'), 7);
     });
   });
 
@@ -456,6 +518,39 @@ void main() {
       });
 
       expect(exec.executeLib('package:example/main.dart', 'main'), 9);
+    });
+
+    test('Method tearoffs', () {
+      final exec = gen.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main () {
+              return M(4).run();
+            }
+            
+            class M {
+              M(this.x);
+              
+              final int x;
+              
+              int run() {
+                return load(x, add);
+              }
+
+              int load(int y, Function op) {
+                return op(y) + 1;
+              }
+
+              int add(int y) {
+                return y + 5;
+              }
+            }
+            
+          '''
+        }
+      });
+
+      expect(exec.executeLib('package:example/main.dart', 'main'), 10);
     });
   });
 

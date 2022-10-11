@@ -14,6 +14,7 @@ import 'package:dart_eval/src/eval/compiler/model/compilation_unit.dart';
 import 'package:dart_eval/src/eval/compiler/util.dart';
 import 'package:dart_eval/src/eval/compiler/util/graph.dart';
 import 'package:dart_eval/src/eval/compiler/util/library_graph.dart';
+import 'package:dart_eval/src/eval/plugin.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core.dart';
@@ -37,13 +38,25 @@ class Compiler {
   var _bridgeStaticFunctionIdx = 0;
   final _bridgeDeclarations = <String, List<BridgeDeclaration>>{};
 
-  final _topLevelDeclarationsMap = <int, Map<String, DeclarationOrBridge>>{};
-  final _topLevelGlobalIndices = <int, Map<String, int>>{};
-  final _instanceDeclarationsMap = <int, Map<String, Map<String, Declaration>>>{};
+  var _topLevelDeclarationsMap = <int, Map<String, DeclarationOrBridge>>{};
+  var _topLevelGlobalIndices = <int, Map<String, int>>{};
+  var _instanceDeclarationsMap = <int, Map<String, Map<String, Declaration>>>{};
 
-  final ctx = CompilerContext(0);
+  var ctx = CompilerContext(0);
 
   final additionalSources = <DartSource>[];
+  final cachedParsedSources = <DartSource, DartCompilationUnit>{};
+  final plugins = <EvalPlugin>[
+    DartCorePlugin(),
+    DartMathPlugin(),
+    DartAsyncPlugin(),
+  ];
+  final appliedPlugins = <String>[];
+
+  // Add a plugin, which will only be run once.
+  void addPlugin(EvalPlugin plugin) {
+    plugins.add(plugin);
+  }
 
   // Manually define a (unresolved) bridge class
   void defineBridgeClass(BridgeClassDef classDef) {
@@ -119,12 +132,34 @@ class Compiler {
   }
 
   /// Compile a unit set of Dart code into a program
-  Program compileSources([Iterable<DartSource> sources = const []]) {
-    configureCoreForCompile(this);
-    configureAsyncForCompile(this);
-    configureMathForCompile(this);
+  Program compileSources([Iterable<DartSource> sources = const [], bool debugPerf = true]) {
+    _topLevelDeclarationsMap = <int, Map<String, DeclarationOrBridge>>{};
+    _topLevelGlobalIndices = <int, Map<String, int>>{};
+    _instanceDeclarationsMap = <int, Map<String, Map<String, Declaration>>>{};
+    ctx = CompilerContext(0);
 
-    final units = sources.followedBy(additionalSources).map((source) => source.load());
+    for (final plugin in plugins) {
+      if (!appliedPlugins.contains(plugin.identifier)) {
+        plugin.configureForCompile(this);
+        appliedPlugins.add(plugin.identifier);
+      }
+    }
+
+    final cleanupList = cachedParsedSources.keys.toSet();
+
+    final units = sources.followedBy(additionalSources).map((source) {
+      cleanupList.remove(source);
+      final cached = cachedParsedSources[source];
+      if (cached != null) {
+        return cached;
+      }
+      final parsed = cachedParsedSources[source] = source.load();
+      return parsed;
+    }).toList();
+
+    for (final source in cleanupList) {
+      cachedParsedSources.remove(source);
+    }
 
     final unitLibraries = {
       ..._buildLibraries(units),
@@ -398,7 +433,7 @@ class Compiler {
         final name = variable.name2.value() as String;
 
         if (_topLevelDeclarationsMap[libraryIndex]!.containsKey(name)) {
-          throw CompileError('Cannot define "$name twice in the same library"');
+          throw CompileError('Cannot define "$name" twice in the same library');
         }
 
         _topLevelDeclarationsMap[libraryIndex]![name] = DeclarationOrBridge(libraryIndex, declaration: variable);
@@ -409,7 +444,7 @@ class Compiler {
       final name = declaration.name2.value() as String;
 
       if (_topLevelDeclarationsMap[libraryIndex]!.containsKey(name)) {
-        throw CompileError('Cannot define "$name twice in the same library"');
+        throw CompileError('Cannot define "$name" twice in the same library');
       }
 
       _topLevelDeclarationsMap[libraryIndex]![name] = DeclarationOrBridge(libraryIndex, declaration: declaration);
@@ -435,10 +470,10 @@ class Compiler {
               }
 
               for (final field in member.fields.variables) {
-                final name = (declaration.name2.value() as String) + '.' + (field.name2.value() as String);
+                final name = (declaration.name2.value() as String) + '.' + (field.name2.value().toString());
 
                 if (_topLevelDeclarationsMap[libraryIndex]!.containsKey(name)) {
-                  throw CompileError('Cannot define "$name twice in the same library"');
+                  throw CompileError('Cannot define "$name" twice in the same library');
                 }
 
                 _topLevelDeclarationsMap[libraryIndex]![name] = DeclarationOrBridge(libraryIndex, declaration: field);
@@ -562,12 +597,12 @@ class Compiler {
 List<Library> _buildLibraries(Iterable<DartCompilationUnit> units) {
   var i = 0;
   final compilationUnitMap = <int, DartCompilationUnit>{};
-  final uriMap = <Uri, int>{};
+  final uriMap = <String, int>{};
   final libraryIdMap = <String, int>{};
 
   for (final unit in units) {
     compilationUnitMap[i] = unit;
-    uriMap[unit.uri] = i;
+    uriMap[unit.uri.toString()] = i;
     if (unit.library != null) {
       libraryIdMap[unit.library!.name.name] = i;
     }
@@ -617,7 +652,9 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
       if (!isDartCore) _Import(dartCoreUri, null)
     ]) {
       final tree = exportGraph.crawler.tree(import.uri);
-      final importedLibs = [...tree.expand((e) => e), import.uri].map((e) => uriMap[e]!).toSet();
+      final importedLibs = [...tree.expand((e) => e), import.uri]
+          .map((e) => uriMap[e] ?? (throw CompileError("Cannot find import '$e' (while parsing '${l.uri}')")))
+          .toSet();
       final importedExports = importedLibs.map((e) => e.exports).expand((e) => e);
 
       final exportsPerUri = <Uri, List<ExportDirective>>{};

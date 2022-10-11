@@ -28,13 +28,14 @@ class OffsetTracker {
 /// An structure pointing to a function that may or may not have been generated already. If it hasn't, the exact program
 /// offset will be resolved later by the [OffsetTracker]
 class DeferredOrOffset {
-  DeferredOrOffset({this.offset, this.file, this.name, this.className, this.methodType});
+  DeferredOrOffset({this.offset, this.file, this.name, this.className, this.methodType, this.targetScopeFrameOffset});
 
   final int? offset;
   final int? file;
   final String? className;
   final int? methodType;
   final String? name;
+  final int? targetScopeFrameOffset;
 
   factory DeferredOrOffset.lookupStatic(CompilerContext ctx, int library, String parent, String name) {
     if (ctx.topLevelDeclarationPositions[library]?.containsKey('$parent.$name') ?? false) {

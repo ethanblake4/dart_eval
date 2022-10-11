@@ -29,12 +29,12 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
   } else {
     final method = compileIdentifier(e.methodName, ctx);
 
-    if (method.methodOffset == null) {
-      throw CompileError('Cannot call ${e.methodName.name} as it is not a valid method');
-    }
-
     if (method.callingConvention == CallingConvention.dynamic) {
       return invokeClosure(ctx, null, method, e.argumentList);
+    }
+
+    if (method.methodOffset == null) {
+      throw CompileError('Cannot call ${e.methodName.name} as it is not a valid method');
     }
 
     final offset = method.methodOffset!;

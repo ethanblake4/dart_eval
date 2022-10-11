@@ -1,6 +1,7 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
 
 import '../../../../dart_eval_bridge.dart';
 import '../builtins.dart';
@@ -60,6 +61,10 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext 
         _arg = _arg.unboxIfNeeded(ctx);
       }
 
+      if (_arg.type == EvalTypes.functionType && _arg.scopeFrameOffset == -1) {
+        _arg = _arg.tearOff(ctx);
+      }
+
       if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
         throw CompileError(
             'Cannot assign argument of type ${_arg.type} to parameter "${param.name!.value() as String}" of type $paramType');
@@ -97,6 +102,11 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext 
       } else if (unboxedAcrossFunctionBoundaries.contains(_arg.type)) {
         _arg = _arg.unboxIfNeeded(ctx);
       }
+
+      if (_arg.type == EvalTypes.functionType && _arg.scopeFrameOffset == -1) {
+        _arg = _arg.tearOff(ctx);
+      }
+
       if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
         throw CompileError(
             'Cannot assign argument of type ${_arg.type} to parameter "${param.name!.value() as String}" of type $paramType');
@@ -147,6 +157,11 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithKnownMethodAr
 
       var _arg = compileExpression(arg, ctx);
       _arg = _arg.boxIfNeeded(ctx);
+
+      if (_arg.type == EvalTypes.functionType && _arg.scopeFrameOffset == -1) {
+        _arg = _arg.tearOff(ctx);
+      }
+
       if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
         throw CompileError('Cannot assign argument of type ${_arg.type} to parameter of type $paramType');
       }
@@ -214,6 +229,9 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
 
       var _arg = compileExpression(arg, ctx);
       _arg = _arg.boxIfNeeded(ctx);
+      if (_arg.type == EvalTypes.functionType && _arg.scopeFrameOffset == -1) {
+        _arg = _arg.tearOff(ctx);
+      }
       if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
         throw CompileError('Cannot assign argument of type ${_arg.type} to parameter of type $paramType');
       }
@@ -233,7 +251,10 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
   for (final param in function.namedParams) {
     var paramType = TypeRef.fromBridgeAnnotation(ctx, param.type);
     if (namedExpr.containsKey(param.name)) {
-      final _arg = compileExpression(namedExpr[param.name]!, ctx).boxIfNeeded(ctx);
+      var _arg = compileExpression(namedExpr[param.name]!, ctx).boxIfNeeded(ctx);
+      if (_arg.type == EvalTypes.functionType && _arg.scopeFrameOffset == -1) {
+        _arg = _arg.tearOff(ctx);
+      }
       if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
         throw CompileError('Cannot assign argument of type ${_arg.type} to parameter of type $paramType');
       }

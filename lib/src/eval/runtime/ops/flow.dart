@@ -201,6 +201,52 @@ class Return implements EvcOp {
   String toString() => 'Return (L$_location)';
 }
 
+class ReturnAsync implements EvcOp {
+  ReturnAsync(Runtime exec)
+      : _location = exec._readInt16(),
+        _completerOffset = exec._readInt16();
+
+  ReturnAsync.make(this._location, this._completerOffset);
+
+  final int _location;
+  final int _completerOffset;
+
+  static const int LEN = Evc.BASE_OPLEN + Evc.I16_LEN * 2;
+
+  @override
+  void run(Runtime runtime) {
+    final completer = runtime.frame[_completerOffset] as Completer;
+    final rv = _location == -1 ? null : runtime.frame[_location];
+    runtime.returnValue = $Future.wrap(completer.future, (value) => value as $Value?);
+
+    runtime.stack.removeLast();
+    if (runtime.stack.isNotEmpty) {
+      runtime.frame = runtime.stack.last;
+      runtime.frameOffset = runtime.frameOffsetStack.removeLast();
+    }
+
+    _suspend(completer, rv);
+
+    final prOffset = runtime.callStack.removeLast();
+    if (prOffset == -1) {
+      throw ProgramExit(0);
+    }
+    runtime._prOffset = prOffset;
+  }
+
+  void _suspend(Completer completer, dynamic value) async {
+    // create an async gap
+    await Future.value(null);
+
+    if (!completer.isCompleted) {
+      completer.complete(value);
+    }
+  }
+
+  @override
+  String toString() => 'ReturnAsync (L$_location, completer L$_completerOffset)';
+}
+
 // Jump to constant program offset
 class JumpConstant implements EvcOp {
   JumpConstant(Runtime exec) : _offset = exec._readInt32();

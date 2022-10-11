@@ -77,12 +77,14 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
     throw CompileError('Unsupported function body type: ${b.runtimeType}');
   }
 
-  ctx.endAllocScope();
   if (stInfo == null || !(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
     if (b.isAsynchronous) {
-      asyncComplete(ctx);
+      asyncComplete(ctx, -1);
+      ctx.endAllocScope(popValues: false);
+    } else {
+      ctx.endAllocScope();
+      ctx.pushOp(Return.make(-1), Return.LEN);
     }
-    ctx.pushOp(Return.make(-1), Return.LEN);
   }
 
   ctx.rewriteOp(jumpOver, JumpConstant.make(ctx.out.length), 0);

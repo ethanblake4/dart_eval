@@ -174,6 +174,11 @@ class $String implements $Instance {
   }
 
   @override
+  String toString() {
+    return '\$"${$value}"';
+  }
+
+  @override
   void $setProperty(Runtime runtime, String identifier, $Value value) {
     throw EvalUnknownPropertyException(identifier);
   }

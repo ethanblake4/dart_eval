@@ -29,11 +29,11 @@ class FunctionSignaturePool {
   }
 }
 
-void asyncComplete(CompilerContext ctx) {
+void asyncComplete(CompilerContext ctx, int valueOffset) {
   var _completer = ctx.lookupLocal('#completer');
   if (_completer == null) {
     InvokeExternal.make(ctx.bridgeStaticFunctionIndices[ctx.libraryMap['dart:async']!]!['Completer.']!);
     _completer = Variable.alloc(ctx, TypeRef.stdlib(ctx, 'dart:async', 'Completer'));
   }
-  _completer.invoke(ctx, 'complete', [BuiltinValue().push(ctx)]);
+  ctx.pushOp(ReturnAsync.make(valueOffset, _completer.scopeFrameOffset), Return.LEN);
 }

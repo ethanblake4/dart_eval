@@ -3,6 +3,7 @@ import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/constructor.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
+import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/scope.dart';
 import 'package:dart_eval/src/eval/compiler/statement/block.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
@@ -50,6 +51,17 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx, NamedComp
     stInfo = compileBlock(
         b.block, AlwaysReturnType.fromAnnotation(ctx, ctx.library, d.returnType, EvalTypes.dynamicType), ctx,
         name: methodName + '()');
+  } else if (b is ExpressionFunctionBody) {
+    ctx.beginAllocScope();
+    final V = compileExpression(b.expression, ctx);
+    if (b.isAsynchronous) {
+      ctx.pushOp(
+          ReturnAsync.make(V.scopeFrameOffset, ctx.lookupLocal('#completer')!.scopeFrameOffset), ReturnAsync.LEN);
+    } else {
+      ctx.pushOp(Return.make(V.scopeFrameOffset), Return.LEN);
+    }
+    ctx.endAllocScope();
+    stInfo = StatementInfo(-1, willAlwaysReturn: true);
   } else if (b is EmptyFunctionBody) {
     return -1;
   } else {
@@ -60,9 +72,10 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx, NamedComp
 
   if (!(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
     if (b.isAsynchronous) {
-      asyncComplete(ctx);
+      asyncComplete(ctx, -1);
+    } else {
+      ctx.pushOp(Return.make(-1), Return.LEN);
     }
-    ctx.pushOp(Return.make(-1), Return.LEN);
   }
 
   if (d.isStatic) {

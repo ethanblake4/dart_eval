@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bridge/runtime_bridge.dart';
+import 'package:dart_eval/src/eval/plugin.dart';
 import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'package:dart_eval/src/eval/runtime/function.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async.dart';
@@ -181,6 +182,10 @@ class Runtime {
     }
   }
 
+  void addPlugin(EvalPlugin plugin) {
+    _plugins.add(plugin);
+  }
+
   /// Register a bridged runtime top-level/static function or class constructor.
   void registerBridgeFunc(String library, String name, EvalCallableFunc fn, {bool isBridge = false}) {
     _unloadedBrFunc.add(_UnloadedBridgeFunction(library, isBridge ? '#$name' : name, fn));
@@ -194,9 +199,9 @@ class Runtime {
   /// Setup bridged runtime functions and classes. Must be called before running
   /// the program and after registering all bridged functions and classes.
   void setup() {
-    configureCoreForRuntime(this);
-    configureAsyncForRuntime(this);
-    configureMathForRuntime(this);
+    for (final plugin in _plugins) {
+      plugin.configureForRuntime(this);
+    }
     if (_fromEvc) {
       _load();
     } else {
@@ -209,6 +214,11 @@ class Runtime {
   final _unloadedBrClass = <_UnloadedBridgeClass>[];
   final _unloadedBrFunc = <_UnloadedBridgeFunction>[];
   final _unloadedEnumValues = <_UnloadedEnumValues>[];
+  final _plugins = <EvalPlugin>[
+    DartCorePlugin(),
+    DartMathPlugin(),
+    DartAsyncPlugin(),
+  ];
   final constantPool = <Object>[];
   final globals = List<Object?>.filled(20000, null);
   var globalInitializers = <int>[];
@@ -270,6 +280,9 @@ class Runtime {
       case Return:
         op as Return;
         return [Evc.OP_RETURN, ...Evc.i16b(op._location)];
+      case ReturnAsync:
+        op as ReturnAsync;
+        return [Evc.OP_RETURN_ASYNC, ...Evc.i16b(op._location), ...Evc.i16b(op._completerOffset)];
       case Pop:
         op as Pop;
         return [Evc.OP_POP, op._amount];
@@ -562,8 +575,28 @@ class RuntimeException implements Exception {
         'RUNTIME STATE\n'
         '=============\n'
         'Program offset: ${runtime._prOffset - 1}\n'
-        'Stack sample: ${runtime.stack.last.take(10).toList()}\n'
+        'Stack sample: ${_stack(runtime.stack.last.take(10).toList(), 10)}\n'
         'Call stack: ${runtime.callStack}\n'
         'TRACE:\n$prStr';
+  }
+
+  String _stack(List st, int size) {
+    final sb = StringBuffer('[');
+    for (var i = 0; i < size; i++) {
+      final s = st[i];
+      sb.write('L$i: ');
+      if (s is List) {
+        sb.write(_stack(s, 3));
+      } else if (s is String) {
+        sb.write('"$s"');
+      } else {
+        sb.write('$s');
+      }
+      if (i < size - 1) {
+        sb.write(', ');
+      }
+    }
+    sb.write(']');
+    return sb.toString();
   }
 }

@@ -15,7 +15,12 @@ class Variable {
       this.methodReturnType,
       this.isFinal = false,
       this.concreteTypes = const [],
-      this.callingConvention = CallingConvention.static});
+      CallingConvention? callingConvention})
+      // ignore: unnecessary_this
+      : this.callingConvention = callingConvention ??
+            ((type == EvalTypes.functionType && methodOffset == null)
+                ? CallingConvention.dynamic
+                : CallingConvention.static);
 
   factory Variable.alloc(ScopeContext ctx, TypeRef type,
       {DeferredOrOffset? methodOffset,
@@ -174,7 +179,7 @@ class Variable {
           break;
         case '>':
           // Num intrinsic greater than
-          ctx.pushOp(NumLtEq.make(R.scopeFrameOffset, $this.scopeFrameOffset), NumLtEq.LEN);
+          ctx.pushOp(NumLt.make(R.scopeFrameOffset, $this.scopeFrameOffset), NumLtEq.LEN);
           result = Variable.alloc(ctx, EvalTypes.boolType.copyWith(boxed: false));
           break;
         case '<=':
@@ -184,7 +189,7 @@ class Variable {
           break;
         case '>=':
           // Num intrinsic greater than equal to
-          ctx.pushOp(NumLt.make(R.scopeFrameOffset, $this.scopeFrameOffset), NumLt.LEN);
+          ctx.pushOp(NumLtEq.make(R.scopeFrameOffset, $this.scopeFrameOffset), NumLt.LEN);
           result = Variable.alloc(ctx, EvalTypes.boolType.copyWith(boxed: false));
           break;
         default:
@@ -214,6 +219,16 @@ class Variable {
 
     final v = Variable.alloc(ctx, (returnType?.type ?? EvalTypes.dynamicType).copyWith(boxed: true));
     return InvokeResult($this, v, _args);
+  }
+
+  Variable getProperty(CompilerContext ctx, String name) {
+    final op = PushObjectProperty.make(scopeFrameOffset, name);
+    ctx.pushOp(op, PushObjectProperty.len(op));
+
+    ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
+    final prop = Variable.alloc(ctx, TypeRef.lookupFieldType(ctx, type, name) ?? EvalTypes.dynamicType);
+
+    return prop;
   }
 
   static List<Variable> boxUnboxMultiple(CompilerContext ctx, List<Variable> variables, bool boxed) {
