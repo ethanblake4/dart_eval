@@ -18,15 +18,15 @@ void main() {
       final exec = gen.compileWriteAndLoad({
         'dbc_test': {
           'main.dart': '''
-      int main() {
-        var i = 3;
-        {
-          var k = 2;
-          k = i;
-          return k;
-        }
-      }
-      '''
+            int main() {
+              var i = 3;
+              {
+                var k = 2;
+                k = i;
+                return k;
+              }
+            }
+          '''
         }
       });
 
@@ -37,16 +37,14 @@ void main() {
       final exec = gen.compileWriteAndLoad({
         'dbc_test': {
           'main.dart': '''
-     
-      int main() {
-        var i = x();
-        return i;
-      }
-      int x() {
-        return 7;
-      }
-     
-      '''
+            int main() {
+              var i = x();
+              return i;
+            }
+            int x() {
+              return 7;
+            }
+          '''
         }
       });
 
@@ -84,7 +82,7 @@ void main() {
             num x() {
               return x2();
             }
-      ''',
+          ''',
           'x.dart': '''
             int x2() {
                var b = 4;
@@ -100,7 +98,7 @@ void main() {
               var ra = 99;
               return ra;
             }
-      '''
+          '''
         }
       });
 
@@ -343,18 +341,18 @@ void main() {
       final exec = gen.compileWriteAndLoad({
         'dbc_test': {
           'main.dart': '''
-      class MyClass {
-        MyClass();
-        
-        int someMethod() {
-          return 4 + 4;
-        }
-      }
-      int main() {
-        final cls = MyClass();
-        return cls.someMethod() + 2;
-      }
-      '''
+            class MyClass {
+              MyClass();
+              
+              int someMethod() {
+                return 4 + 4;
+              }
+            }
+            int main() {
+              final cls = MyClass();
+              return cls.someMethod() + 2;
+            }
+          '''
         }
       });
 
@@ -812,6 +810,24 @@ void main() {
       expect(() {
         exec.executeLib('package:example/main.dart', 'main');
       }, prints('2.8284271247461903\n'));
+    });
+
+    test('Specifying doubles with int literals', () {
+      final exec = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            double main() {
+              final a = abc(3);
+              return 4 + a + abc(3);
+            }
+
+            double abc(double x) {
+              return x + 2.0;
+            }
+          ''',
+        }
+      });
+      expect(exec.executeLib('package:example/main.dart', 'main'), 14.0);
     });
   });
 

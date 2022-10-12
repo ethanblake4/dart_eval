@@ -575,24 +575,25 @@ class RuntimeException implements Exception {
         'RUNTIME STATE\n'
         '=============\n'
         'Program offset: ${runtime._prOffset - 1}\n'
-        'Stack sample: ${_stack(runtime.stack.last.take(10).toList(), 10)}\n'
+        'Stack sample: ${formatStackSample(runtime.stack.last.take(10).toList(), 10)}\n'
         'Call stack: ${runtime.callStack}\n'
         'TRACE:\n$prStr';
   }
 
-  String _stack(List st, int size) {
+  static String formatStackSample(List st, int size) {
     final sb = StringBuffer('[');
-    for (var i = 0; i < size; i++) {
+    final _size = min(size, st.length);
+    for (var i = 0; i < _size; i++) {
       final s = st[i];
       sb.write('L$i: ');
       if (s is List) {
-        sb.write(_stack(s, 3));
+        sb.write(formatStackSample(s, 3));
       } else if (s is String) {
         sb.write('"$s"');
       } else {
         sb.write('$s');
       }
-      if (i < size - 1) {
+      if (i < _size - 1) {
         sb.write(', ');
       }
     }

@@ -8,6 +8,8 @@ import '../type.dart';
 import '../variable.dart';
 import 'statement.dart';
 
+final r = RegExp(r'^[a-zA-Z_][a-zA-Z0-9_]*\$');
+
 StatementInfo compileVariableDeclarationStatement(VariableDeclarationStatement s, CompilerContext ctx) {
   compileVariableDeclarationList(s.variables, ctx);
   return StatementInfo(-1);
@@ -22,7 +24,7 @@ void compileVariableDeclarationList(VariableDeclarationList l, CompilerContext c
   for (final li in l.variables) {
     final init = li.initializer;
     if (init != null) {
-      final res = compileExpression(init, ctx);
+      final res = compileExpression(init, ctx, type);
       if (ctx.locals.last.containsKey(li.name2.value() as String)) {
         throw CompileError('Cannot declare variable ${li.name2.value() as String} multiple times in the same scope');
       }

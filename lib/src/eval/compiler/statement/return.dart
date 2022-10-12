@@ -30,7 +30,7 @@ StatementInfo compileReturn(CompilerContext ctx, ReturnStatement s, AlwaysReturn
     if (_e.isAsynchronous) {
       final ta = expectedReturnType?.type?.specifiedTypeArgs;
       final expected = (ta?.isEmpty ?? true) ? EvalTypes.dynamicType : ta![0];
-      var value = compileExpression(s.expression!, ctx).boxIfNeeded(ctx);
+      var value = compileExpression(s.expression!, ctx, expectedReturnType?.type).boxIfNeeded(ctx);
       if (!value.type.isAssignableTo(ctx, expected)) {
         throw CompileError('Cannot return ${value.type} (expected: $expected)');
       }
@@ -40,7 +40,7 @@ StatementInfo compileReturn(CompilerContext ctx, ReturnStatement s, AlwaysReturn
     }
 
     final expected = expectedReturnType?.type ?? EvalTypes.dynamicType;
-    var value = compileExpression(s.expression!, ctx);
+    var value = compileExpression(s.expression!, ctx, expectedReturnType?.type);
     if (!value.type.isAssignableTo(ctx, expected)) {
       throw CompileError('Cannot return ${value.type} (expected: $expected)');
     }

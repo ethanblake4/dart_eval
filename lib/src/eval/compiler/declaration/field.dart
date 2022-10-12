@@ -16,11 +16,13 @@ void compileFieldDeclaration(int fieldIndex, FieldDeclaration d, CompilerContext
       final initializer = field.initializer;
       if (initializer != null) {
         final pos = beginMethod(ctx, field, field.offset, fieldName + '*i');
-        var V = compileExpression(initializer, ctx);
-        TypeRef type;
+        TypeRef? type;
         final specifiedType = d.fields.type;
         if (specifiedType != null) {
           type = TypeRef.fromAnnotation(ctx, ctx.library, specifiedType);
+        }
+        var V = compileExpression(initializer, ctx, type);
+        if (type != null) {
           if (!V.type.isAssignableTo(ctx, type)) {
             throw CompileError('Static field $parentName.$fieldName of inferred type ${V.type} '
                 'does not conform to type $type');

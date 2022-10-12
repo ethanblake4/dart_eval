@@ -2,14 +2,18 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/collection/list.dart';
 import 'package:dart_eval/src/eval/compiler/collection/set_map.dart';
 import 'package:dart_eval/src/eval/compiler/expression/string_interpolation.dart';
+import 'package:dart_eval/src/eval/compiler/type.dart';
 
 import '../builtins.dart';
 import '../context.dart';
 import '../errors.dart';
 import '../variable.dart';
 
-BuiltinValue parseConstLiteral(Literal l, CompilerContext ctx) {
+BuiltinValue parseConstLiteral(Literal l, CompilerContext ctx, [TypeRef? bound]) {
   if (l is IntegerLiteral) {
+    if (bound != null && bound == EvalTypes.doubleType) {
+      return BuiltinValue(doubleval: l.value!.toDouble());
+    }
     return BuiltinValue(intval: l.value);
   } else if (l is DoubleLiteral) {
     return BuiltinValue(doubleval: l.value);
@@ -23,13 +27,13 @@ BuiltinValue parseConstLiteral(Literal l, CompilerContext ctx) {
   throw CompileError('Unknown constant literal type ${l.runtimeType}');
 }
 
-Variable parseLiteral(Literal l, CompilerContext ctx) {
+Variable parseLiteral(Literal l, CompilerContext ctx, [TypeRef? bound]) {
   if (l is IntegerLiteral ||
       l is DoubleLiteral ||
       l is SimpleStringLiteral ||
       l is NullLiteral ||
       l is BooleanLiteral) {
-    return parseConstLiteral(l, ctx).push(ctx);
+    return parseConstLiteral(l, ctx, bound).push(ctx);
   }
   if (l is ListLiteral) {
     return compileListLiteral(l, ctx);

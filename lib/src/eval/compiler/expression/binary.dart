@@ -1,15 +1,16 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
+import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 
 import '../errors.dart';
 import 'expression.dart';
 
 /// Compile a [BinaryExpression] to DBC bytecode
-Variable compileBinaryExpression(CompilerContext ctx, BinaryExpression e) {
-  var L = compileExpression(e.leftOperand, ctx);
-  var R = compileExpression(e.rightOperand, ctx);
+Variable compileBinaryExpression(CompilerContext ctx, BinaryExpression e, [TypeRef? boundType]) {
+  var L = compileExpression(e.leftOperand, ctx, boundType);
+  var R = compileExpression(e.rightOperand, ctx, boundType);
 
   final opMap = {
     TokenType.PLUS: '+',

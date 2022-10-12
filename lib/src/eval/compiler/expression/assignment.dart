@@ -22,8 +22,7 @@ Reference compileAssignmentExpressionAsReference(AssignmentExpression e, Compile
     }
     L.setValue(ctx, R);
   } else {
-    final opMap = {TokenType.PLUS_EQ: '+', TokenType.MINUS_EQ: '-'};
-    final method = opMap[e.operator.type]!;
+    final method = e.operator.type.binaryOperatorOfCompoundAssignment!.lexeme;
     L.setValue(ctx, L.getValue(ctx).invoke(ctx, method, [R]).result);
   }
   return L;

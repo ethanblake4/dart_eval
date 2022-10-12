@@ -12,13 +12,25 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 const _boxListElements = true;
 
-Variable compileListLiteral(ListLiteral l, CompilerContext ctx) {
+Variable compileListLiteral(ListLiteral l, CompilerContext ctx, [TypeRef? bound]) {
   final elements = l.elements;
 
+  TypeRef? boundType;
+  if (bound != null && bound.specifiedTypeArgs.isNotEmpty) {
+    if (bound.specifiedTypeArgs.length > 1) {
+      throw CompileError('Lists can only have one type argument');
+    }
+    boundType = bound.specifiedTypeArgs.first;
+  }
   TypeRef? listSpecifiedType;
   final typeArgs = l.typeArguments;
   if (typeArgs != null) {
     listSpecifiedType = TypeRef.fromAnnotation(ctx, ctx.library, typeArgs.arguments[0]);
+    if (boundType != null && !listSpecifiedType.isAssignableTo(ctx, boundType)) {
+      throw CompileError('List of type $listSpecifiedType is not assignable to List of type $boundType');
+    }
+  } else {
+    listSpecifiedType = boundType;
   }
 
   ctx.pushOp(PushList.make(), PushList.LEN);
@@ -92,7 +104,7 @@ Variable boxListContents(CompilerContext ctx, Variable list) {
 List<TypeRef> compileListElement(CollectionElement e, Variable list, CompilerContext ctx, bool box) {
   final listType = list.type.specifiedTypeArgs[0];
   if (e is Expression) {
-    var _result = compileExpression(e, ctx);
+    var _result = compileExpression(e, ctx, listType);
     if (!_result.type.resolveTypeChain(ctx).isAssignableTo(ctx, listType)) {
       throw CompileError('Cannot use expression of type ${_result.type} in list of type $listType');
     }

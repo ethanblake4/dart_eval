@@ -530,7 +530,11 @@ class AlwaysReturnType implements ReturnType {
   factory AlwaysReturnType.fromStaticMethod(CompilerContext ctx, TypeRef type, String method, TypeRef? fallback) {
     final _m = resolveStaticMethod(ctx, type, method);
     if (_m.isBridge) {
-      return AlwaysReturnType(EvalTypes.dynamicType, true);
+      if (!(_m.bridge is BridgeMethodDef)) {
+        return AlwaysReturnType(EvalTypes.dynamicType, true);
+      }
+      final fn = (_m.bridge as BridgeMethodDef).functionDescriptor;
+      return AlwaysReturnType(TypeRef.fromBridgeAnnotation(ctx, fn.returns), fn.returns.nullable);
     }
     return AlwaysReturnType.fromAnnotation(ctx, type.file, _m.declaration!.returnType, fallback);
   }

@@ -17,11 +17,12 @@ import 'package:dart_eval/src/eval/compiler/expression/postfix.dart';
 import 'package:dart_eval/src/eval/compiler/expression/prefix.dart';
 import 'package:dart_eval/src/eval/compiler/expression/property_access.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
+import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 
-Variable compileExpression(Expression e, CompilerContext ctx) {
+Variable compileExpression(Expression e, CompilerContext ctx, [TypeRef? bound]) {
   if (e is Literal) {
-    return parseLiteral(e, ctx);
+    return parseLiteral(e, ctx, bound);
   } else if (e is AssignmentExpression) {
     return compileAssignmentExpression(e, ctx);
   } else if (e is Identifier) {
@@ -29,7 +30,7 @@ Variable compileExpression(Expression e, CompilerContext ctx) {
   } else if (e is MethodInvocation) {
     return compileMethodInvocation(ctx, e);
   } else if (e is BinaryExpression) {
-    return compileBinaryExpression(ctx, e);
+    return compileBinaryExpression(ctx, e, bound);
   } else if (e is PrefixExpression) {
     return compilePrefixExpression(ctx, e);
   } else if (e is PropertyAccess) {
@@ -75,10 +76,10 @@ bool canReference(Expression e) {
   return e is Identifier || e is AssignmentExpression || e is IndexExpression || e is PropertyAccess;
 }
 
-void compileExpressionAndDiscardResult(Expression e, CompilerContext ctx) {
+void compileExpressionAndDiscardResult(Expression e, CompilerContext ctx, [TypeRef? bound]) {
   if (canReference(e)) {
     compileExpressionAsReference(e, ctx);
   } else {
-    compileExpression(e, ctx);
+    compileExpression(e, ctx, bound);
   }
 }

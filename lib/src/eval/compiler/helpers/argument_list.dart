@@ -54,7 +54,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext 
         throw CompileError('Unknown formal type ${param.runtimeType}');
       }
 
-      var _arg = compileExpression(arg, ctx);
+      var _arg = compileExpression(arg, ctx, paramType);
       if (parameterHost is MethodDeclaration || !unboxedAcrossFunctionBoundaries.contains(_arg.type)) {
         _arg = _arg.boxIfNeeded(ctx);
       } else if (unboxedAcrossFunctionBoundaries.contains(_arg.type)) {
@@ -96,7 +96,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext 
       throw CompileError('Unknown formal type ${param.runtimeType}');
     }
     if (namedExpr.containsKey(name)) {
-      var _arg = compileExpression(namedExpr[name]!, ctx);
+      var _arg = compileExpression(namedExpr[name]!, ctx, paramType);
       if (parameterHost is MethodDeclaration || !unboxedAcrossFunctionBoundaries.contains(_arg.type)) {
         _arg = _arg.boxIfNeeded(ctx);
       } else if (unboxedAcrossFunctionBoundaries.contains(_arg.type)) {
@@ -155,7 +155,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithKnownMethodAr
     } else {
       var paramType = param.type ?? EvalTypes.dynamicType;
 
-      var _arg = compileExpression(arg, ctx);
+      var _arg = compileExpression(arg, ctx, paramType);
       _arg = _arg.boxIfNeeded(ctx);
 
       if (_arg.type == EvalTypes.functionType && _arg.scopeFrameOffset == -1) {
@@ -181,7 +181,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithKnownMethodAr
   for (final param in namedParams.values) {
     var paramType = param.type ?? EvalTypes.dynamicType;
     if (namedExpr.containsKey(param.name)) {
-      final _arg = compileExpression(namedExpr[param.name]!, ctx).boxIfNeeded(ctx);
+      final _arg = compileExpression(namedExpr[param.name]!, ctx, paramType).boxIfNeeded(ctx);
       if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
         throw CompileError('Cannot assign argument of type ${_arg.type} to parameter of type $paramType');
       }
@@ -227,7 +227,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
     } else {
       var paramType = TypeRef.fromBridgeAnnotation(ctx, param.type);
 
-      var _arg = compileExpression(arg, ctx);
+      var _arg = compileExpression(arg, ctx, paramType);
       _arg = _arg.boxIfNeeded(ctx);
       if (_arg.type == EvalTypes.functionType && _arg.scopeFrameOffset == -1) {
         _arg = _arg.tearOff(ctx);
@@ -251,7 +251,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
   for (final param in function.namedParams) {
     var paramType = TypeRef.fromBridgeAnnotation(ctx, param.type);
     if (namedExpr.containsKey(param.name)) {
-      var _arg = compileExpression(namedExpr[param.name]!, ctx).boxIfNeeded(ctx);
+      var _arg = compileExpression(namedExpr[param.name]!, ctx, paramType).boxIfNeeded(ctx);
       if (_arg.type == EvalTypes.functionType && _arg.scopeFrameOffset == -1) {
         _arg = _arg.tearOff(ctx);
       }

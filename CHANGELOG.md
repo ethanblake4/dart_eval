@@ -1,3 +1,10 @@
+## 0.5.1
+- Propagate expected types from variable declarations and 
+  argument lists to the expressions they contain.
+- Allow specifying doubles with int literals when the expected 
+  type is known
+- Fix static bridge method return types being null
+
 ## 0.5.0
 Note: EVC bytecode generated with this version may not be compatible
 with previous versions.

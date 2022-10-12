@@ -58,11 +58,11 @@ class EvalFunctionPtr extends EvalFunction {
 
   @override
   String toString() {
-    return 'EvalFunctionPtr{offset: $offset, prev: ${$prev}, '
-        'requiredPositionalArgCount: $requiredPositionalArgCount, '
-        'positionalArgTypes: $positionalArgTypes, '
-        'sortedNamedArgs: $sortedNamedArgs, '
-        'sortedNamedArgTypes: $sortedNamedArgTypes}';
+    return 'EvalFunctionPtr{offset: $offset, prev: ${$prev == null ? 'null' : RuntimeException.formatStackSample($prev!, 4)}, '
+        'rPAC: $requiredPositionalArgCount, '
+        'pAT: $positionalArgTypes, '
+        'sNA: $sortedNamedArgs, '
+        'sNAT: $sortedNamedArgTypes}';
   }
 }
 
