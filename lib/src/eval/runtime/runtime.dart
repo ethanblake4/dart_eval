@@ -371,6 +371,9 @@ class Runtime {
       case BoxBool:
         op as BoxBool;
         return [Evc.OP_BOXBOOL, ...Evc.i16b(op._reg)];
+      case BoxNull:
+        op as BoxNull;
+        return [Evc.OP_BOX_NULL, ...Evc.i16b(op._reg)];
       case PushCaptureScope:
         op as PushCaptureScope;
         return [Evc.OP_CAPTURE_SCOPE];

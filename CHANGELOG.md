@@ -1,3 +1,8 @@
+## 0.5.2
+- Allow null to be boxed
+- Fix Maps without explicit type parameters
+- Other bug fixes
+
 ## 0.5.1
 - Propagate expected types from variable declarations and 
   argument lists to the expressions they contain.

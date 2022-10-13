@@ -51,7 +51,7 @@ class Variable {
   int? frameIndex;
 
   Variable boxIfNeeded(ScopeContext ctx) {
-    if (boxed || type == EvalTypes.nullType) {
+    if (boxed) {
       return this;
     }
 
@@ -74,6 +74,8 @@ class Variable {
       ctx.pushOp(BoxMap.make(scopeFrameOffset), BoxMap.LEN);
     } else if (type == EvalTypes.stringType) {
       ctx.pushOp(BoxString.make(scopeFrameOffset), BoxInt.LEN);
+    } else if (type == EvalTypes.nullType) {
+      ctx.pushOp(BoxNull.make(scopeFrameOffset), BoxNull.LEN);
     } else {
       throw CompileError('Cannot box $type');
     }

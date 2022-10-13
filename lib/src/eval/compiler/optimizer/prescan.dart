@@ -69,7 +69,7 @@ class PrescanVisitor extends RecursiveAstVisitor<PrescanContext?> {
   PrescanContext? visitSimpleIdentifier(SimpleIdentifier node) {
     if (ctx.inClosure) {
       final l = ctx.lookupLocal(node.name);
-      if (l != null) {
+      if (l != null && l.frameIndex != ctx.locals.length - 1) {
         ctx.localsReferencedFromClosure.add(l);
         ctx.closedFrames.add(l.frameIndex!);
       }

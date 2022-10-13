@@ -829,6 +829,29 @@ void main() {
       });
       expect(exec.executeLib('package:example/main.dart', 'main'), 14.0);
     });
+
+    test('Boxed null', () {
+      final exec = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            dynamic main() {
+              final a = abc();
+              print(a['hello']);
+              return a['hello'];
+            }
+
+            Map abc() {
+              return {
+                'hello': null
+              };
+            }
+          ''',
+        }
+      });
+      expect(() {
+        expect(exec.executeLib('package:example/main.dart', 'main'), $null());
+      }, prints('null\n'));
+    });
   });
 
   group('Bridge tests', () {

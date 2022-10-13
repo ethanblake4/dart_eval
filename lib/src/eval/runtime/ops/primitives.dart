@@ -255,6 +255,25 @@ class BoxList implements EvcOp {
   String toString() => 'BoxList (L$_reg)';
 }
 
+class BoxNull implements EvcOp {
+  BoxNull(Runtime runtime) : _reg = runtime._readInt16();
+
+  BoxNull.make(this._reg);
+
+  final int _reg;
+
+  static const int LEN = Evc.BASE_OPLEN + Evc.I16_LEN;
+
+  @override
+  void run(Runtime runtime) {
+    final reg = _reg;
+    runtime.frame[reg] = $null();
+  }
+
+  @override
+  String toString() => 'BoxNull (L$_reg)';
+}
+
 class BoxMap implements EvcOp {
   BoxMap(Runtime runtime) : _reg = runtime._readInt16();
 

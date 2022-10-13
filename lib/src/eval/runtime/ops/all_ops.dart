@@ -174,6 +174,9 @@ class Evc {
   /// [Return]
   static const OP_RETURN_ASYNC = 55;
 
+  /// [BoxNull]
+  static const OP_BOX_NULL = 56;
+
   static List<int> i16b(int i16) {
     final x = ByteData(2);
     x.setInt16(0, i16);
@@ -273,4 +276,5 @@ final List<OpLoader> ops = [
   (Runtime rt) => LogicalNot(rt), // 53
   (Runtime rt) => BoxBool(rt), // 54
   (Runtime rt) => ReturnAsync(rt), // 55
+  (Runtime rt) => BoxNull(rt), // 56
 ];

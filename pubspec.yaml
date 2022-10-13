@@ -1,6 +1,6 @@
 name: dart_eval
 description: A flexible Dart bytecode compiler and runtime written in Dart, enabling code push for AOT Dart apps.
-version: 0.5.1
+version: 0.5.2
 homepage: https://github.com/ethanblake4/dart_eval
 platforms:
   android:

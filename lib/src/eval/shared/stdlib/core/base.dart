@@ -15,6 +15,12 @@ class $null implements $Value {
 
   @override
   int get $runtimeType => RuntimeTypes.nullType;
+
+  @override
+  bool operator ==(Object other) => other is $null;
+
+  @override
+  int get hashCode => -12121212;
 }
 
 /// dart_eval [$Instance] representation of an [Object]

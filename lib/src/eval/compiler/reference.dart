@@ -432,15 +432,19 @@ class IndexedReference implements Reference {
     }
 
     if (_variable.type.isAssignableTo(ctx, EvalTypes.mapType)) {
-      if (!_index.type.isAssignableTo(ctx, _variable.type.specifiedTypeArgs[0])) {
+      if (_variable.type.specifiedTypeArgs.isNotEmpty &&
+          !_index.type.isAssignableTo(ctx, _variable.type.specifiedTypeArgs[0])) {
         throw CompileError('TypeError: Cannot use variable of type ${_index.type} as index to map of type '
             '<${_variable.type.specifiedTypeArgs[0]}, ${_variable.type.specifiedTypeArgs[1]}>');
       }
 
       final map = _variable.unboxIfNeeded(ctx);
-      _index = _variable.type.specifiedTypeArgs[0].boxed ? _index.boxIfNeeded(ctx) : _index.unboxIfNeeded(ctx);
+      _index = (_variable.type.specifiedTypeArgs.isEmpty || _variable.type.specifiedTypeArgs[0].boxed)
+          ? _index.boxIfNeeded(ctx)
+          : _index.unboxIfNeeded(ctx);
       ctx.pushOp(IndexMap.make(map.scopeFrameOffset, _index.scopeFrameOffset), IndexMap.LEN);
-      return Variable.alloc(ctx, _variable.type.specifiedTypeArgs[1]);
+      return Variable.alloc(ctx,
+          _variable.type.specifiedTypeArgs.length < 2 ? EvalTypes.dynamicType : _variable.type.specifiedTypeArgs[1]);
     }
 
     final result = _variable.invoke(ctx, '[]', [_index]);
