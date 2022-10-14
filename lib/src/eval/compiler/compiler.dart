@@ -253,7 +253,7 @@ class Compiler {
             }
           }
           visibleTypesByIndex[libraryIndex] ??= {...coreDeclarations};
-          visibleTypesByIndex[libraryIndex] = res;
+          visibleTypesByIndex[libraryIndex]!.addAll(res);
           continue;
         }
         visibleTypesByIndex[libraryIndex] ??= {...coreDeclarations};
@@ -454,11 +454,16 @@ class Compiler {
 
         declaration.members.forEach((member) {
           if (member is MethodDeclaration) {
-            final mName = member.name2.value() as String;
+            var mName = member.name2.value() as String;
             if (member.isStatic) {
               _topLevelDeclarationsMap[libraryIndex]![name + '.' + mName] =
                   DeclarationOrBridge(libraryIndex, declaration: member);
             } else {
+              if (member.isGetter) {
+                mName += '*g';
+              } else if (member.isSetter) {
+                mName += '*s';
+              }
               _instanceDeclarationsMap[libraryIndex]![name]![mName] = member;
             }
           } else if (member is FieldDeclaration) {

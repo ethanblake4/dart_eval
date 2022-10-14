@@ -47,9 +47,28 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
 
     var _dec = ctx.topLevelDeclarationsMap[offset.file]![e.methodName.name];
     if (_dec == null || (!_dec.isBridge && _dec.declaration! is ClassDeclaration)) {
-      _dec = ctx.topLevelDeclarationsMap[offset.file]![offset.name ?? e.methodName.name + '.'] ??
-          (throw CompileError(
-              'Cannot instantiate: The class ${e.methodName.name} does not have a default constructor'));
+      _dec = ctx.topLevelDeclarationsMap[offset.file]![offset.name ?? e.methodName.name + '.'];
+      if (_dec == null) {
+        // Call to default constructor
+        final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.LEN);
+        if (offset.offset == null) {
+          ctx.offsetTracker.setOffset(loc, offset);
+        }
+        ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
+        TypeRef? thisType;
+        if (ctx.currentClass != null) {
+          thisType = ctx.visibleTypes[ctx.library]![ctx.currentClass!.name2.value() as String]!;
+        }
+        mReturnType = method.methodReturnType?.toAlwaysReturnType(thisType, [], {}) ??
+            AlwaysReturnType(EvalTypes.dynamicType, true);
+        final v = Variable.alloc(
+            ctx,
+            mReturnType.type
+                    ?.copyWith(boxed: L != null || !unboxedAcrossFunctionBoundaries.contains(mReturnType.type)) ??
+                EvalTypes.dynamicType);
+
+        return v;
+      }
     }
 
     final List<Variable> _args;

@@ -59,7 +59,8 @@ Pair<TypeRef, DeclarationOrBridge>? resolveInstanceDeclaration(
     final setter = bridge.setters[name];
     if (getter != null || setter != null) {
       final $type = ctx.visibleTypes[library]![$class]!;
-      return Pair($type, DeclarationOrBridge(-1, bridge: BridgeGetSet(getter, setter)));
+      return Pair(
+          $type, GetSet(-1, bridge: getter, setter: setter == null ? null : DeclarationOrBridge(-1, bridge: setter)));
     }
     final $extends = bridge.type.$extends;
     if ($extends != null) {
@@ -70,6 +71,16 @@ Pair<TypeRef, DeclarationOrBridge>? resolveInstanceDeclaration(
       return resolveInstanceDeclaration(ctx, _type.file, _type.name, name);
     }
     throw CompileError('Bridge declaration not supported in instance: trying to lookup "$name" in "${$class}"');
+  } else {
+    final getter = ctx.instanceDeclarationsMap[library]![$class]?['$name*g'];
+    final setter = ctx.instanceDeclarationsMap[library]![$class]?['$name*s'];
+    if (getter != null || setter != null) {
+      final $type = ctx.visibleTypes[library]![$class]!;
+      final getset = GetSet(-1,
+          declaration: getter as MethodDeclaration,
+          setter: setter == null ? null : DeclarationOrBridge(-1, declaration: setter as MethodDeclaration));
+      return Pair($type, getset);
+    }
   }
   final $classDec = _$classDec.declaration! as ClassDeclaration;
   if ($classDec.withClause != null) {
@@ -90,10 +101,11 @@ Pair<TypeRef, DeclarationOrBridge>? resolveInstanceDeclaration(
   return null;
 }
 
-class BridgeGetSet extends BridgeDeclaration {
-  const BridgeGetSet(this.getter, this.setter);
-  final BridgeMethodDef? getter;
-  final BridgeMethodDef? setter;
+class GetSet extends DeclarationOrBridge<MethodDeclaration, BridgeMethodDef> {
+  GetSet(int sourceLib, {this.setter, MethodDeclaration? declaration, BridgeMethodDef? bridge})
+      : super(sourceLib, declaration: declaration, bridge: bridge);
+
+  DeclarationOrBridge<MethodDeclaration, BridgeMethodDef>? setter;
 }
 
 DeclarationOrBridge<Declaration, BridgeDeclaration>? resolveStaticDeclaration(

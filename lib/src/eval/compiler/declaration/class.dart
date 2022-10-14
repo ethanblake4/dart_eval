@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
+import 'package:dart_eval/src/eval/compiler/declaration/constructor.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 
@@ -30,6 +31,11 @@ void compileClassDeclaration(CompilerContext ctx, ClassDeclaration d, {bool stat
     if (m is FieldDeclaration) {
       i += m.fields.variables.length;
     }
+  }
+  if (constructors.isEmpty) {
+    ctx.resetStack(position: 0);
+    ctx.currentClass = d;
+    compileDefaultConstructor(ctx, d, fields);
   }
   ctx.currentClass = null;
   ctx.resetStack();

@@ -211,17 +211,29 @@ class TypeRef {
         }
       }
     }
-    if (ctx.instanceDeclarationsMap[$class.file]!.containsKey($class.name) &&
-        ctx.instanceDeclarationsMap[$class.file]![$class.name]!.containsKey(field)) {
-      final _f = ctx.instanceDeclarationsMap[$class.file]![$class.name]![field];
-      if (_f is! VariableDeclaration) {
-        throw CompileError('Cannot query field type of F${$class.file}:${$class.name}.$field, which is not a field');
+    if (ctx.instanceDeclarationsMap[$class.file]!.containsKey($class.name)) {
+      if (ctx.instanceDeclarationsMap[$class.file]![$class.name]!.containsKey(field)) {
+        final _f = ctx.instanceDeclarationsMap[$class.file]![$class.name]![field];
+        if (_f is! VariableDeclaration) {
+          throw CompileError('Cannot query field type of F${$class.file}:${$class.name}.$field, which is not a field');
+        }
+        final annotation = (_f.parent as VariableDeclarationList).type;
+        if (annotation == null) {
+          return null;
+        }
+        return TypeRef.fromAnnotation(ctx, $class.file, annotation);
+      } else if (ctx.instanceDeclarationsMap[$class.file]![$class.name]!.containsKey(field + '*g')) {
+        final _f = ctx.instanceDeclarationsMap[$class.file]![$class.name]![field + '*g'];
+        if (_f is! MethodDeclaration) {
+          throw CompileError(
+              'Cannot query getter type of F${$class.file}:${$class.name}.$field, which is not a method');
+        }
+        final annotation = _f.returnType;
+        if (annotation == null) {
+          return null;
+        }
+        return TypeRef.fromAnnotation(ctx, $class.file, annotation);
       }
-      final annotation = (_f.parent as VariableDeclarationList).type;
-      if (annotation == null) {
-        return null;
-      }
-      return TypeRef.fromAnnotation(ctx, $class.file, annotation);
     }
     final dec = ctx.topLevelDeclarationsMap[$class.file]![$class.name]!;
 

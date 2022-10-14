@@ -22,7 +22,9 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx, NamedComp
   ctx.beginAllocScope(existingAllocLen: (d.parameters?.parameters.length ?? 0));
   ctx.scopeFrameOffset += d.parameters?.parameters.length ?? 0;
   ctx.setLocal('#this', Variable(0, ctx.visibleTypes[ctx.library]![ctx.currentClass!.name2.value() as String]!));
-  final resolvedParams = resolveFPLDefaults(ctx, d.parameters!, true, allowUnboxed: true);
+  final resolvedParams = d.parameters == null
+      ? <PossiblyValuedParameter>[]
+      : resolveFPLDefaults(ctx, d.parameters!, true, allowUnboxed: true);
 
   if (b.isAsynchronous) {
     setupAsyncFunction(ctx);
@@ -81,7 +83,12 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx, NamedComp
   if (d.isStatic) {
     ctx.topLevelDeclarationPositions[ctx.library]!['$parentName.$methodName'] = pos;
   } else {
-    ctx.instanceDeclarationPositions[ctx.library]![parentName]![2][methodName] = pos;
+    final mapIndex = d.isGetter
+        ? 0
+        : d.isSetter
+            ? 1
+            : 2;
+    ctx.instanceDeclarationPositions[ctx.library]![parentName]![mapIndex][methodName] = pos;
   }
 
   return pos;

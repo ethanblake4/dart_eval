@@ -190,18 +190,19 @@ class IdentifierReference implements Reference {
         ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
 
         if (_dec.isBridge) {
-          final bridge = _dec.bridge!;
-          if (bridge is BridgeMethodDef) {
-            return Variable.alloc(ctx, EvalTypes.functionType,
-                methodOffset: DeferredOrOffset(
-                    file: ctx.library, className: ctx.currentClass!.name2.value() as String, name: name));
-          } else if (bridge is BridgeGetSet) {
-            final getter = bridge.getter ??
+          if (_dec is GetSet) {
+            final getter = _dec.bridge ??
                 (throw CompileError('Property "$name" has a setter but no getter, so it cannot be accessed'));
             return Variable.alloc(
                 ctx,
                 TypeRef.fromBridgeAnnotation(ctx, getter.functionDescriptor.returns,
                     specifiedType: $type, specifyingType: $this.type),
+                methodOffset: DeferredOrOffset(
+                    file: ctx.library, className: ctx.currentClass!.name2.value() as String, name: name));
+          }
+          final bridge = _dec.bridge!;
+          if (bridge is BridgeMethodDef) {
+            return Variable.alloc(ctx, EvalTypes.functionType,
                 methodOffset: DeferredOrOffset(
                     file: ctx.library, className: ctx.currentClass!.name2.value() as String, name: name));
           }

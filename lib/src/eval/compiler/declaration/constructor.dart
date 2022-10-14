@@ -36,14 +36,8 @@ void compileConstructorDeclaration(
     }
   }
 
-  final fieldIndices = <String, int>{};
-  var fieldIdx = 0;
-  for (final fd in fields) {
-    for (final field in fd.fields.variables) {
-      fieldIndices[field.name2.value() as String] = fieldIdx;
-      fieldIdx++;
-    }
-  }
+  final fieldIndices = _getFieldIndices(fields);
+  final fieldIdx = fieldIndices.length;
 
   final fieldFormalNames = <String>[];
   final resolvedParams = resolveFPLDefaults(ctx, d.parameters, false, allowUnboxed: true);
@@ -163,16 +157,7 @@ void compileConstructorDeclaration(
     }
   }
 
-  var _fieldIdx = 0;
-  for (final fd in fields) {
-    for (final field in fd.fields.variables) {
-      if (!usedNames.contains(field.name2.value() as String) && field.initializer != null) {
-        final V = compileExpression(field.initializer!, ctx).boxIfNeeded(ctx);
-        ctx.pushOp(SetObjectPropertyImpl.make(instOffset, _fieldIdx, V.scopeFrameOffset), SetObjectPropertyImpl.LEN);
-      }
-      _fieldIdx++;
-    }
-  }
+  _compileUnusedFields(ctx, fields, {}, instOffset);
 
   if ($extends != null && extendsWhat!.declaration!.isBridge) {
     final decl = extendsWhat.declaration!;
@@ -206,6 +191,116 @@ void compileConstructorDeclaration(
   }
 
   ctx.endAllocScope(popValues: false);
+}
+
+void compileDefaultConstructor(CompilerContext ctx, ClassDeclaration parent, List<FieldDeclaration> fields) {
+  final parentName = parent.name2.value() as String;
+  final n = '$parentName.';
+
+  ctx.topLevelDeclarationPositions[ctx.library]![n] = beginMethod(ctx, parent, parent.offset, '$n()');
+
+  ctx.beginAllocScope();
+
+  final fieldIndices = _getFieldIndices(fields);
+  final fieldIdx = fieldIndices.length;
+
+  final $extends = parent.extendsClause;
+  Variable $super;
+  DeclarationOrPrefix? extendsWhat;
+
+  final argTypes = <TypeRef?>[];
+  final namedArgTypes = <String, TypeRef?>{};
+
+  final constructorName = '';
+
+  if ($extends == null) {
+    $super = BuiltinValue().push(ctx);
+  } else {
+    // ignore: deprecated_member_use
+    extendsWhat = ctx.visibleDeclarations[ctx.library]![$extends.superclass2.name.name]!;
+
+    final decl = extendsWhat.declaration!;
+
+    if (decl.isBridge) {
+      ctx.pushOp(PushBridgeSuperShim.make(), PushBridgeSuperShim.LEN);
+      $super = Variable.alloc(ctx, EvalTypes.dynamicType);
+    } else {
+      final extendsType = TypeRef.lookupClassDeclaration(ctx, ctx.library, decl.declaration as ClassDeclaration);
+
+      AlwaysReturnType? mReturnType;
+
+      final method = IdentifierReference(null, '${extendsType.name}.$constructorName').getValue(ctx);
+      if (method.methodOffset == null) {
+        throw CompileError('Cannot call $constructorName as it is not a valid method');
+      }
+
+      final offset = method.methodOffset!;
+      final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.LEN);
+      if (offset.offset == null) {
+        ctx.offsetTracker.setOffset(loc, offset);
+      }
+      final clsType = TypeRef.lookupClassDeclaration(ctx, ctx.library, parent);
+      mReturnType = method.methodReturnType?.toAlwaysReturnType(clsType, argTypes, namedArgTypes) ??
+          AlwaysReturnType(EvalTypes.dynamicType, true);
+
+      ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
+      $super = Variable.alloc(ctx, mReturnType.type ?? EvalTypes.dynamicType);
+    }
+  }
+
+  final op = CreateClass.make(ctx.library, $super.scopeFrameOffset, parent.name2.value() as String, fieldIdx);
+  ctx.pushOp(op, CreateClass.len(op));
+  final instOffset = ctx.scopeFrameOffset++;
+
+  _compileUnusedFields(ctx, fields, {}, instOffset);
+
+  if ($extends != null && extendsWhat!.declaration!.isBridge) {
+    final decl = extendsWhat.declaration!;
+    final bridge = decl.bridge! as BridgeClassDef;
+
+    if (!bridge.bridge) {
+      throw CompileError('Bridge class ${$extends.superclass} is a wrapper, not a bridge, so you can\'t extend it');
+    }
+
+    final op = BridgeInstantiate.make(instOffset,
+        ctx.bridgeStaticFunctionIndices[decl.sourceLib]!['${$extends.superclass.name.name}.$constructorName']!);
+    ctx.pushOp(op, BridgeInstantiate.len(op));
+    final bridgeInst = Variable.alloc(ctx, EvalTypes.dynamicType);
+
+    ctx.pushOp(
+        ParentBridgeSuperShim.make($super.scopeFrameOffset, bridgeInst.scopeFrameOffset), ParentBridgeSuperShim.LEN);
+
+    ctx.pushOp(Return.make(bridgeInst.scopeFrameOffset), Return.LEN);
+  } else {
+    ctx.pushOp(Return.make(instOffset), Return.LEN);
+  }
+
+  ctx.endAllocScope(popValues: false);
+}
+
+Map<String, int> _getFieldIndices(List<FieldDeclaration> fields) {
+  final fieldIndices = <String, int>{};
+  var fieldIdx = 0;
+  for (final fd in fields) {
+    for (final field in fd.fields.variables) {
+      fieldIndices[field.name2.value() as String] = fieldIdx;
+      fieldIdx++;
+    }
+  }
+  return fieldIndices;
+}
+
+void _compileUnusedFields(CompilerContext ctx, List<FieldDeclaration> fields, Set<String> usedNames, int instOffset) {
+  var _fieldIdx = 0;
+  for (final fd in fields) {
+    for (final field in fd.fields.variables) {
+      if (!usedNames.contains(field.name2.value() as String) && field.initializer != null) {
+        final V = compileExpression(field.initializer!, ctx).boxIfNeeded(ctx);
+        ctx.pushOp(SetObjectPropertyImpl.make(instOffset, _fieldIdx, V.scopeFrameOffset), SetObjectPropertyImpl.LEN);
+      }
+      _fieldIdx++;
+    }
+  }
 }
 
 List<PossiblyValuedParameter> resolveFPLDefaults(CompilerContext ctx, FormalParameterList fpl, bool isInstanceMethod,

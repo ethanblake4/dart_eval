@@ -1,3 +1,8 @@
+## 0.5.3
+- Support for class getters and setters
+- Automatic default constructor when none is specified
+- Fix prefixed imports causing other types to be unresolvable
+
 ## 0.5.2
 - Allow null to be boxed
 - Fix Maps without explicit type parameters

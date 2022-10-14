@@ -550,6 +550,30 @@ void main() {
 
       expect(exec.executeLib('package:example/main.dart', 'main'), 10);
     });
+
+    test('Getters and setters', () {
+      final exec = gen.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main () {
+              final m = M();
+              m.x = 5;
+              return m.x + 1;
+            }
+            
+            class M {
+              int _x = 0;
+              
+              int get x => _x;
+              set x(int value) => _x = value;
+            }
+            
+          '''
+        }
+      });
+
+      expect(exec.executeLib('package:example/main.dart', 'main'), 6);
+    });
   });
 
   group('Statement tests', () {
