@@ -198,7 +198,7 @@ class TypeRef {
     return ctx.visibleTypes[library]![cls.name.name] ?? (throw CompileError('Class ${cls.name.name} not found'));
   }
 
-  static TypeRef? lookupFieldType(CompilerContext ctx, TypeRef $class, String field) {
+  static TypeRef? lookupFieldType(CompilerContext ctx, TypeRef $class, String field, {bool forFieldFormal = false}) {
     if ($class == EvalTypes.dynamicType) {
       return null;
     }
@@ -222,7 +222,7 @@ class TypeRef {
           return null;
         }
         return TypeRef.fromAnnotation(ctx, $class.file, annotation);
-      } else if (ctx.instanceDeclarationsMap[$class.file]![$class.name]!.containsKey(field + '*g')) {
+      } else if (!forFieldFormal && ctx.instanceDeclarationsMap[$class.file]![$class.name]!.containsKey(field + '*g')) {
         final _f = ctx.instanceDeclarationsMap[$class.file]![$class.name]![field + '*g'];
         if (_f is! MethodDeclaration) {
           throw CompileError(
@@ -253,6 +253,9 @@ class TypeRef {
       }
       throw CompileError('Field $field not found in bridge class ${$class}');
     } else {
+      if (forFieldFormal) {
+        throw CompileError('Field formals did not find field $field in class ${$class}');
+      }
       final _dec = dec.declaration as ClassDeclaration;
       final $extends = _dec.extendsClause;
       if ($extends == null) {
