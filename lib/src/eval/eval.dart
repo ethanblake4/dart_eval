@@ -5,15 +5,19 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 
 /// Evaluate the Dart [source] code. If the source is a raw expression such as "2 + 2" it will be evaluated directly
 /// and the result will be returned; otherwise, the function [function] will be called with arguments specified
-/// by [args]. You can use the [compilerSettings] and [runtimeSettings] callbacks to configure bridge classes.
+/// by [args]. You can use [plugins] to configure bridge classes.
 /// You can also specify [outputFile] to write the generated EVC bytecode to a file.
 dynamic eval(String source,
     {String function = 'main',
     List args = const [],
-    Function(Compiler)? compilerSettings,
-    Function(Runtime)? runtimeSettings,
+    List<EvalPlugin> plugins = const [],
+    @Deprecated('Use plugins instead') Function(Compiler)? compilerSettings,
+    @Deprecated('Use plugins instead') Function(Runtime)? runtimeSettings,
     String? outputFile}) {
   final compiler = Compiler();
+  for (final plugin in plugins) {
+    plugin.configureForCompile(compiler);
+  }
   compilerSettings?.call(compiler);
 
   var _source = source;
@@ -37,7 +41,9 @@ dynamic eval(String source,
   }
 
   final runtime = Runtime.ofProgram(program);
-
+  for (final plugin in plugins) {
+    plugin.configureForRuntime(runtime);
+  }
   runtimeSettings?.call(runtime);
 
   runtime.setup();
