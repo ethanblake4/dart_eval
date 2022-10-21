@@ -298,47 +298,51 @@ class Compiler {
 
     ctx.topLevelGlobalIndices = _topLevelGlobalIndices;
 
-    /// Compile statics first so we can infer their type
-    _topLevelDeclarationsMap.forEach((key, value) {
-      value.forEach((lib, _declaration) {
-        if (_declaration.isBridge) {
-          return;
-        }
-        final declaration = _declaration.declaration!;
-        ctx.library = key;
-        if (declaration is VariableDeclaration && declaration.parent!.parent is TopLevelVariableDeclaration) {
+    try {
+      /// Compile statics first so we can infer their type
+      _topLevelDeclarationsMap.forEach((key, value) {
+        value.forEach((lib, _declaration) {
+          if (_declaration.isBridge) {
+            return;
+          }
+          final declaration = _declaration.declaration!;
+          ctx.library = key;
+          if (declaration is VariableDeclaration && declaration.parent!.parent is TopLevelVariableDeclaration) {
+            compileDeclaration(declaration, ctx);
+            ctx.resetStack();
+          } else if (declaration is ClassDeclaration) {
+            ctx.currentClass = declaration;
+            for (final d in declaration.members.whereType<FieldDeclaration>().where((e) => e.isStatic)) {
+              compileFieldDeclaration(-1, d, ctx, declaration);
+              ctx.resetStack();
+            }
+            ctx.currentClass = null;
+          }
+        });
+      });
+
+      /// Compile the rest of the declarations
+      _topLevelDeclarationsMap.forEach((key, value) {
+        ctx.topLevelDeclarationPositions[key] = {};
+        ctx.instanceDeclarationPositions[key] = {};
+        value.forEach((lib, _declaration) {
+          if (_declaration.isBridge) {
+            return;
+          }
+          final declaration = _declaration.declaration!;
+          if (declaration is ConstructorDeclaration ||
+              declaration is MethodDeclaration ||
+              declaration is VariableDeclaration) {
+            return;
+          }
+          ctx.library = key;
           compileDeclaration(declaration, ctx);
           ctx.resetStack();
-        } else if (declaration is ClassDeclaration) {
-          ctx.currentClass = declaration;
-          for (final d in declaration.members.whereType<FieldDeclaration>().where((e) => e.isStatic)) {
-            compileFieldDeclaration(-1, d, ctx, declaration);
-            ctx.resetStack();
-          }
-          ctx.currentClass = null;
-        }
+        });
       });
-    });
-
-    /// Compile the rest of the declarations
-    _topLevelDeclarationsMap.forEach((key, value) {
-      ctx.topLevelDeclarationPositions[key] = {};
-      ctx.instanceDeclarationPositions[key] = {};
-      value.forEach((lib, _declaration) {
-        if (_declaration.isBridge) {
-          return;
-        }
-        final declaration = _declaration.declaration!;
-        if (declaration is ConstructorDeclaration ||
-            declaration is MethodDeclaration ||
-            declaration is VariableDeclaration) {
-          return;
-        }
-        ctx.library = key;
-        compileDeclaration(declaration, ctx);
-        ctx.resetStack();
-      });
-    });
+    } on CompileError catch (e) {
+      throw e.copyWithContext(ctx);
+    }
 
     for (final library in libraries) {
       for (final dec in library.declarations) {
@@ -433,7 +437,7 @@ class Compiler {
         final name = variable.name2.value() as String;
 
         if (_topLevelDeclarationsMap[libraryIndex]!.containsKey(name)) {
-          throw CompileError('Cannot define "$name" twice in the same library');
+          throw CompileError('Cannot define "$name" twice in the same library', variable, libraryIndex);
         }
 
         _topLevelDeclarationsMap[libraryIndex]![name] = DeclarationOrBridge(libraryIndex, declaration: variable);
@@ -444,7 +448,7 @@ class Compiler {
       final name = declaration.name2.value() as String;
 
       if (_topLevelDeclarationsMap[libraryIndex]!.containsKey(name)) {
-        throw CompileError('Cannot define "$name" twice in the same library');
+        throw CompileError('Cannot define "$name" twice in the same library', declaration, libraryIndex);
       }
 
       _topLevelDeclarationsMap[libraryIndex]![name] = DeclarationOrBridge(libraryIndex, declaration: declaration);
@@ -478,7 +482,7 @@ class Compiler {
                 final name = (declaration.name2.value() as String) + '.' + (field.name2.value().toString());
 
                 if (_topLevelDeclarationsMap[libraryIndex]!.containsKey(name)) {
-                  throw CompileError('Cannot define "$name" twice in the same library');
+                  throw CompileError('Cannot define "$name" twice in the same library', field, libraryIndex);
                 }
 
                 _topLevelDeclarationsMap[libraryIndex]![name] = DeclarationOrBridge(libraryIndex, declaration: field);
@@ -495,7 +499,7 @@ class Compiler {
             _topLevelDeclarationsMap[libraryIndex]!['$name.$mName'] =
                 DeclarationOrBridge(libraryIndex, declaration: member);
           } else {
-            throw CompileError('Not a NamedCompilationUnitMember');
+            throw CompileError('Not a NamedCompilationUnitMember', member, libraryIndex);
           }
         });
       }
@@ -689,7 +693,7 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
             }
             return true;
           }
-          throw CompileError('Unsupported import combinator ${combinator.runtimeType}');
+          throw CompileError('Unsupported import combinator ${combinator.runtimeType} (while parsing ${l.uri})');
         }
         return false;
       };

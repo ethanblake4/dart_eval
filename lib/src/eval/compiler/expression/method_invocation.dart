@@ -166,7 +166,7 @@ Variable _invokeWithTarget(CompilerContext ctx, Variable L, MethodInvocation e) 
     _dec = resolveStaticMethod(ctx, staticType, e.methodName.name);
     isStatic = true;
   } else {
-    _dec = resolveInstanceMethod(ctx, L.type, e.methodName.name);
+    _dec = resolveInstanceMethod(ctx, L.type, e.methodName.name, e);
     isStatic = false;
   }
 
@@ -217,7 +217,8 @@ Variable _invokeWithTarget(CompilerContext ctx, Variable L, MethodInvocation e) 
 }
 
 DeclarationOrBridge<MethodDeclaration, BridgeMethodDef> resolveInstanceMethod(
-    CompilerContext ctx, TypeRef instanceType, String methodName) {
+    CompilerContext ctx, TypeRef instanceType, String methodName,
+    [AstNode? source]) {
   final _dec = ctx.topLevelDeclarationsMap[instanceType.file]![instanceType.name]!;
   if (_dec.isBridge) {
     // Bridge
@@ -226,10 +227,10 @@ DeclarationOrBridge<MethodDeclaration, BridgeMethodDef> resolveInstanceMethod(
     if (method == null) {
       final $extendsBridgeType = bridge.type.$extends;
       if ($extendsBridgeType == null) {
-        throw CompileError('Method not found $methodName on ${instanceType}');
+        throw CompileError('Method not found $methodName on $instanceType');
       }
       final $extendsType = TypeRef.fromBridgeTypeRef(ctx, $extendsBridgeType);
-      return resolveInstanceMethod(ctx, $extendsType, methodName);
+      return resolveInstanceMethod(ctx, $extendsType, methodName, source);
     }
     return DeclarationOrBridge(instanceType.file, bridge: bridge.methods[methodName]!);
   }
@@ -241,11 +242,11 @@ DeclarationOrBridge<MethodDeclaration, BridgeMethodDef> resolveInstanceMethod(
   } else {
     final $class = _dec.declaration as ClassDeclaration;
     if ($class.extendsClause == null) {
-      throw CompileError('Cannot resolve instance method');
+      throw CompileError('Cannot resolve instance method', source);
     }
     // ignore: deprecated_member_use
     final $supertype = ctx.visibleTypes[instanceType.file]![$class.extendsClause!.superclass2.name.name]!;
-    return resolveInstanceMethod(ctx, $supertype, methodName);
+    return resolveInstanceMethod(ctx, $supertype, methodName, source);
   }
 }
 

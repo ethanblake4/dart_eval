@@ -16,13 +16,13 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 /// Using References can help prevent unnecessary bytecode generation, but be careful! Some Dart structures
 /// may rely on side-effects from accessing a variable.
 abstract class Reference {
-  TypeRef resolveType(CompilerContext ctx);
+  TypeRef resolveType(CompilerContext ctx, [AstNode? source]);
 
-  void setValue(CompilerContext ctx, Variable value);
+  void setValue(CompilerContext ctx, Variable value, [AstNode? source]);
 
-  Variable getValue(CompilerContext ctx);
+  Variable getValue(CompilerContext ctx, [AstNode? source]);
 
-  StaticDispatch? getStaticDispatch(CompilerContext ctx);
+  StaticDispatch? getStaticDispatch(CompilerContext ctx, [AstNode? source]);
 }
 
 /// A [Reference] with a String identifier and optional target object. Accessing its value may, depending on state and
@@ -34,7 +34,7 @@ class IdentifierReference implements Reference {
   final String name;
 
   @override
-  TypeRef resolveType(CompilerContext ctx) {
+  TypeRef resolveType(CompilerContext ctx, [AstNode? source]) {
     if (object != null) {
       return TypeRef.lookupFieldType(ctx, object!.type, name) ?? EvalTypes.dynamicType;
     }
@@ -63,12 +63,12 @@ class IdentifierReference implements Reference {
   }
 
   @override
-  void setValue(CompilerContext ctx, Variable value) {
+  void setValue(CompilerContext ctx, Variable value, [AstNode? source]) {
     if (object != null) {
       object = object!.boxIfNeeded(ctx);
       final fieldType = TypeRef.lookupFieldType(ctx, object!.type, name) ?? EvalTypes.dynamicType;
       if (!value.type.resolveTypeChain(ctx).isAssignableTo(ctx, fieldType)) {
-        throw CompileError('Cannot assign value of type ${value.type} to field "$name" of type $fieldType');
+        throw CompileError('Cannot assign value of type ${value.type} to field "$name" of type $fieldType', source);
       }
       final op = SetObjectProperty.make(object!.scopeFrameOffset, name, value.boxIfNeeded(ctx).scopeFrameOffset);
       ctx.pushOp(op, SetObjectProperty.len(op));
@@ -79,7 +79,7 @@ class IdentifierReference implements Reference {
 
     if (local != null) {
       if (local.isFinal && local.concreteTypes.isNotEmpty) {
-        throw CompileError('Cannot change value of a final variable');
+        throw CompileError('Cannot change value of a final variable', source);
       }
 
       ctx.pushOp(CopyValue.make(local.scopeFrameOffset, value.scopeFrameOffset), CopyValue.LEN);
@@ -94,7 +94,7 @@ class IdentifierReference implements Reference {
         final $type = instanceDeclaration.first;
         final fieldType = TypeRef.lookupFieldType(ctx, $type, name) ?? EvalTypes.dynamicType;
         if (!value.type.resolveTypeChain(ctx).isAssignableTo(ctx, fieldType)) {
-          throw CompileError('Cannot assign value of type ${value.type} to field "$name" of type $fieldType');
+          throw CompileError('Cannot assign value of type ${value.type} to field "$name" of type $fieldType', source);
         }
         final $this = ctx.lookupLocal('#this')!;
         final op = SetObjectProperty.make($this.scopeFrameOffset, name, value.boxIfNeeded(ctx).scopeFrameOffset);
@@ -103,11 +103,11 @@ class IdentifierReference implements Reference {
       }
     }
 
-    throw CompileError('Cannot find value to set: ${object != null ? object!.toString() + '.' : ''}$name');
+    throw CompileError('Cannot find value to set: ${object != null ? object!.toString() + '.' : ''}$name', source);
   }
 
   @override
-  Variable getValue(CompilerContext ctx) {
+  Variable getValue(CompilerContext ctx, [AstNode? source]) {
     if (object != null) {
       if (object!.type == EvalTypes.typeType) {
         final classType = object!.concreteTypes[0].resolveTypeChain(ctx);
@@ -141,7 +141,7 @@ class IdentifierReference implements Reference {
               return Variable.alloc(ctx, fieldType);
             }
 
-            throw CompileError('Cannot find external getter or field: $name on ${classType}');
+            throw CompileError('Cannot find external getter or field: $name on $classType', source);
           }
         }
         final _name = classType.name + '.' + name;
@@ -192,7 +192,7 @@ class IdentifierReference implements Reference {
         if (_dec.isBridge) {
           if (_dec is GetSet) {
             final getter = _dec.bridge ??
-                (throw CompileError('Property "$name" has a setter but no getter, so it cannot be accessed'));
+                (throw CompileError('Property "$name" has a setter but no getter, so it cannot be accessed', source));
             return Variable.alloc(
                 ctx,
                 TypeRef.fromBridgeAnnotation(ctx, getter.functionDescriptor.returns,
@@ -206,7 +206,7 @@ class IdentifierReference implements Reference {
                 methodOffset: DeferredOrOffset(
                     file: ctx.library, className: ctx.currentClass!.name2.value() as String, name: name));
           }
-          throw CompileError('Ref: cannot resolve bridge declaration "$name" of type ${_dec.runtimeType}');
+          throw CompileError('Ref: cannot resolve bridge declaration "$name" of type ${_dec.runtimeType}', source);
         }
 
         return Variable.alloc(ctx, TypeRef.lookupFieldType(ctx, $type, name) ?? EvalTypes.dynamicType);
@@ -233,8 +233,8 @@ class IdentifierReference implements Reference {
       }
     }
 
-    final declaration =
-        ctx.visibleDeclarations[ctx.library]![name] ?? (throw CompileError('Could not find declaration "$name"'));
+    final declaration = ctx.visibleDeclarations[ctx.library]![name] ??
+        (throw CompileError('Could not find declaration "$name"', source));
     final _decl = declaration.declaration!;
 
     if (_decl.isBridge) {
@@ -264,7 +264,7 @@ class IdentifierReference implements Reference {
             methodOffset: DeferredOrOffset(file: _decl.sourceLib, name: name));
       }
 
-      throw CompileError('Cannot resolve bridged ${bridge.runtimeType} in reference');
+      throw CompileError('Cannot resolve bridged ${bridge.runtimeType} in reference', source);
     }
 
     final decl = _decl.declaration!;
@@ -317,7 +317,7 @@ class IdentifierReference implements Reference {
   }
 
   @override
-  StaticDispatch? getStaticDispatch(CompilerContext ctx) {
+  StaticDispatch? getStaticDispatch(CompilerContext ctx, [AstNode? source]) {
     if (object != null) {
       if (object!.concreteTypes.length == 1) {
         // If we know the concrete type of the object, we can easily optimize to a static call
@@ -409,7 +409,7 @@ class IndexedReference implements Reference {
   Variable _index;
 
   @override
-  TypeRef resolveType(CompilerContext ctx) {
+  TypeRef resolveType(CompilerContext ctx, [AstNode? source]) {
     if (_variable.type.isAssignableTo(ctx, EvalTypes.listType)) {
       return _variable.type.specifiedTypeArgs[0];
     }
@@ -417,7 +417,7 @@ class IndexedReference implements Reference {
   }
 
   @override
-  Variable getValue(CompilerContext ctx) {
+  Variable getValue(CompilerContext ctx, [AstNode? source]) {
     _variable = _variable.updated(ctx);
     _index = _index.updated(ctx);
 
@@ -455,13 +455,13 @@ class IndexedReference implements Reference {
   }
 
   @override
-  void setValue(CompilerContext ctx, Variable value) {
+  void setValue(CompilerContext ctx, Variable value, [AstNode? source]) {
     _variable = _variable.updated(ctx);
     _index = _index.updated(ctx);
 
     if (_variable.type.isAssignableTo(ctx, EvalTypes.listType)) {
       if (!_index.type.isAssignableTo(ctx, EvalTypes.intType)) {
-        throw CompileError('TypeError: Cannot use variable of type ${_index.type} as list index');
+        throw CompileError('TypeError: Cannot use variable of type ${_index.type} as list index', source);
       }
 
       final list = _variable.unboxIfNeeded(ctx);
@@ -477,7 +477,7 @@ class IndexedReference implements Reference {
   }
 
   @override
-  StaticDispatch? getStaticDispatch(CompilerContext ctx) {
+  StaticDispatch? getStaticDispatch(CompilerContext ctx, [AstNode? source]) {
     return null;
   }
 }
