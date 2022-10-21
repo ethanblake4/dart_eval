@@ -917,6 +917,260 @@ void main() {
       });
       expect(exec.executeLib('package:example/main.dart', 'main'), 102);
     });
+    test('String has contains method', () {
+      final exec = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main() {
+              String cat = "Fluffy";
+              return cat.contains("fy");
+            }
+          ''',
+        }
+      });
+      expect(exec.executeLib('package:example/main.dart', 'main'), true);
+    });
+    test('String has indexOf method', () {
+      final exec = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main() {
+              String cat = "Fluffy";
+              return cat.indexOf("uf");
+            }
+          ''',
+        }
+      });
+      expect(exec.executeLib('package:example/main.dart', 'main'), 2);
+    });
+    test('String indexOf method uses start optional parameter', () {
+      final exec = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main() {
+              String cat = "Fluffy";
+              return cat.indexOf("uf", 3);
+            }
+          ''',
+        }
+      });
+      expect(exec.executeLib('package:example/main.dart', 'main'), -1);
+    });
+    test('String has lastIndexOf method', () {
+      final exec = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main() {
+              String cat = "Fluffy";
+              return cat.lastIndexOf("f");
+            }
+          ''',
+        }
+      });
+      expect(exec.executeLib('package:example/main.dart', 'main'), 4);
+    });
+    test('String lastIndexOf method uses start optional parameter', () {
+      final exec = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main() {
+              String cat = "Fluffy";
+              return cat.lastIndexOf("f", 2);
+            }
+          ''',
+        }
+      });
+      expect(exec.executeLib('package:example/main.dart', 'main'), -1);
+    });
+    test('String padLeft method formats with default padding', () {
+      final exec = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            String test() {
+              const str = "D";
+              return str.padLeft(4);
+            }
+          ''',
+        }
+      });
+      expect((exec.executeLib('package:example/main.dart', 'test') as $String).$value, '   D');
+    });
+    test('String padLeft method formats with given padding', () {
+      final exec = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            String test() {
+              const str = "D";
+              return str.padLeft(4, "y");
+            }
+          ''',
+        }
+      });
+      expect((exec.executeLib('package:example/main.dart', 'test') as $String).$value, 'yyyD');
+    });
+    test('String padRight method formats with default padding', () {
+      final exec = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            String test() {
+              const str = "D";
+              return str.padRight(4);
+            }
+          ''',
+        }
+      });
+      expect((exec.executeLib('package:example/main.dart', 'test') as $String).$value, 'D   ');
+    });
+    test('String padRight method formats with given padding', () {
+      final exec = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            String test() {
+              const str = "D";
+              return str.padRight(4, "y");
+            }
+          ''',
+        }
+      });
+      expect((exec.executeLib('package:example/main.dart', 'test') as $String).$value, 'Dyyy');
+    });
+    test('String replaceAll method replaces text', () {
+      final exec = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            String test() {
+              const cat = "Fluffy";
+              return cat.replaceAll("f", "z");
+            }
+          ''',
+        }
+      });
+      expect((exec.executeLib('package:example/main.dart', 'test') as $String).$value, 'Fluzzy');
+    });
+    test('String replaceFirst method replaces with default start index', () {
+      final exec = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            String test() {
+              const cat = "Fluffy";
+              return cat.replaceFirst('f', 'z');
+            }
+          ''',
+        }
+      });
+      expect((exec.executeLib('package:example/main.dart', 'test') as $String).$value, 'Fluzfy');
+    });
+    test('String replaceFirst method replaces with given start index', () {
+      final exec = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            String test() {
+              const cat = "Fluffy";
+              return cat.replaceFirst('f', 'z', 4);
+            }
+          ''',
+        }
+      });
+      expect((exec.executeLib('package:example/main.dart', 'test') as $String).$value, 'Flufzy');
+    });
+    test('String toString method returns same string', () {
+      final exec = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            String test() {
+              const cat = "Fluffy";
+              return cat.toString();
+            }
+          ''',
+        }
+      });
+      expect((exec.executeLib('package:example/main.dart', 'test') as $String).$value, 'Fluffy');
+    });
+
+// Doesn't work right now, seems to ignore that KnownMethodArg has nullable set to true and get this error:
+// CompileError: Cannot assign argument of type F-1:Null extends dynamic to parameter of type F-1:int extends num
+// package:dart_eval/src/eval/compiler/helpers/argument_list.dart 166:9          compileArgumentListWithKnownMethodArgs
+    
+    // test('String replaceRange method replaces default range', () {
+    //   final exec = compiler.compileWriteAndLoad({
+    //     'example': {
+    //       'main.dart': '''
+    //         String test() {
+    //           const cat = "Fluffy";
+    //           return cat.replaceRange(4, null, 'z');
+    //         }
+    //       ''',
+    //     }
+    //   });
+    //   expect((exec.executeLib('package:example/main.dart', 'test') as $String).$value, 'Fluffz');
+    // });
+    test('String replaceRange method replaces given range', () {
+      final exec = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            String test() {
+              const cat = "Fluffy";
+              return cat.replaceRange(4, 6, 'z');
+            }
+          ''',
+        }
+      });
+      expect((exec.executeLib('package:example/main.dart', 'test') as $String).$value, 'Flufz');
+    });
+    test('String startsWith method finds match', () {
+      final exec = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            bool test() {
+              const cat = "Fluffy";
+              return cat.startsWith('Flu');
+            }
+          ''',
+        }
+      });
+      expect((exec.executeLib('package:example/main.dart', 'test') as bool), true);
+    });
+    test('String trimLeft method trims whitespace', () {
+      final exec = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            String test() {
+              const cat = "  Fluffy ";
+              return cat.trimLeft();
+            }
+          ''',
+        }
+      });
+      expect((exec.executeLib('package:example/main.dart', 'test') as $String).$value, "Fluffy ");
+    });
+    test('String split splits on given pattern', () {
+      final exec = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            List<String> test() {
+              const cat = "Fluffy";
+              return cat.split("ff");
+            }
+          ''',
+        }
+      });
+      expect((exec.executeLib('package:example/main.dart', 'test')).length, 2);
+      expect((exec.executeLib('package:example/main.dart', 'test'))[0], "Flu");
+      expect((exec.executeLib('package:example/main.dart', 'test'))[1], "y");
+    });
+    test('String trimRight method trims whitespace', () {
+      final exec = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            String test() {
+              const cat = "  Fluffy   ";
+              return cat.trimRight();
+            }
+          ''',
+        }
+      });
+      expect((exec.executeLib('package:example/main.dart', 'test') as $String).$value, "  Fluffy");
+    });
   });
 
   group('Bridge tests', () {
