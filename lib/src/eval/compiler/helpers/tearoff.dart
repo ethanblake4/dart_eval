@@ -90,7 +90,7 @@ extension TearOff on Variable {
       }
       Vrep = Variable(i, type.copyWith(boxed: true));
       Vrep = ctx.setLocal(p.name!.value() as String, Vrep);
-      if (unboxedAcrossFunctionBoundaries.contains(type) && dec is! MethodDeclaration) {
+      if (type.isUnboxedAcrossFunctionBoundaries && dec is! MethodDeclaration) {
         Vrep = Vrep.unboxIfNeeded(ctx);
       }
 
@@ -120,7 +120,7 @@ extension TearOff on Variable {
     if (methodReturnType != null) {
       returnType = TypeRef.fromAnnotation(ctx, ctx.library, methodReturnType);
       returnType =
-          returnType.copyWith(boxed: dec is MethodDeclaration || !unboxedAcrossFunctionBoundaries.contains(returnType));
+          returnType.copyWith(boxed: dec is MethodDeclaration || !returnType.isUnboxedAcrossFunctionBoundaries);
     }
     var rV = Variable.alloc(ctx, returnType);
     rV = rV.boxIfNeeded(ctx);

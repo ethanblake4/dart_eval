@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:dart_eval/source_node_wrapper.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 
@@ -22,7 +24,8 @@ class CompileError implements Exception {
   }
 
   String _toString() {
-    return 'CompileError: $message at ${node == null ? "unknown" : '"' + node!.toSource().substring(0, 20) + '..."'}';
+    final src = node?.toSource();
+    return 'CompileError: $message at ${src == null ? "unknown" : '"' + src.substring(0, min(20, src.length)) + (src.length > 20 ? '..."' : '"')}';
   }
 
   String _toStringWithContext(CompilerContext ctx) {

@@ -413,6 +413,9 @@ class Runtime {
       case LogicalNot:
         op as LogicalNot;
         return [Evc.OP_LOGICAL_NOT, ...Evc.i16b(op._index)];
+      case CheckEq:
+        op as CheckEq;
+        return [Evc.OP_CHECK_EQ, ...Evc.i16b(op._value1), ...Evc.i16b(op._value2)];
       default:
         throw ArgumentError('Not a valid op $op');
     }

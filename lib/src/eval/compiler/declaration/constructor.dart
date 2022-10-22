@@ -59,13 +59,13 @@ void compileConstructorDeclaration(
       _type ??= V?.type;
       _type ??= EvalTypes.dynamicType;
 
-      Vrep = Variable(i, _type.copyWith(boxed: !unboxedAcrossFunctionBoundaries.contains(_type))).boxIfNeeded(ctx)
+      Vrep = Variable(i, _type.copyWith(boxed: !_type.isUnboxedAcrossFunctionBoundaries)).boxIfNeeded(ctx)
         ..name = p.name.value() as String;
 
       fieldFormalNames.add(p.name.value() as String);
     } else if (p is SuperFormalParameter) {
       final type = resolveSuperFormalType(ctx, ctx.library, p, d);
-      Vrep = Variable(i, type.copyWith(boxed: !unboxedAcrossFunctionBoundaries.contains(type))).boxIfNeeded(ctx)
+      Vrep = Variable(i, type.copyWith(boxed: !type.isUnboxedAcrossFunctionBoundaries)).boxIfNeeded(ctx)
         ..name = p.name.value() as String;
       superParams.add(p.name.value() as String);
     } else {
@@ -114,7 +114,7 @@ void compileConstructorDeclaration(
 
         final argsPair = compileArgumentList(
             ctx, $superInitializer.argumentList, decl.sourceLib, constructor.parameters.parameters, constructor,
-            superParams: superParams);
+            superParams: superParams, source: $superInitializer);
         final _args = argsPair.first;
         final _namedArgs = argsPair.second;
 

@@ -64,7 +64,7 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
         final v = Variable.alloc(
             ctx,
             mReturnType.type
-                    ?.copyWith(boxed: L != null || !unboxedAcrossFunctionBoundaries.contains(mReturnType.type)) ??
+                    ?.copyWith(boxed: L != null || !(mReturnType.type?.isUnboxedAcrossFunctionBoundaries ?? false)) ??
                 EvalTypes.dynamicType);
 
         return v;
@@ -98,7 +98,8 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
         throw CompileError('Invalid declaration type ${dec.runtimeType}');
       }
 
-      final argsPair = compileArgumentList(ctx, e.argumentList, offset.file!, fpl, dec, before: L != null ? [L] : []);
+      final argsPair =
+          compileArgumentList(ctx, e.argumentList, offset.file!, fpl, dec, before: L != null ? [L] : [], source: e);
       _args = argsPair.first;
       _namedArgs = argsPair.second;
     }
@@ -138,7 +139,7 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
 
   final v = Variable.alloc(
       ctx,
-      mReturnType.type?.copyWith(boxed: L != null || !unboxedAcrossFunctionBoundaries.contains(mReturnType.type)) ??
+      mReturnType.type?.copyWith(boxed: L != null || !(mReturnType.type?.isUnboxedAcrossFunctionBoundaries ?? false)) ??
           EvalTypes.dynamicType);
 
   return v;
@@ -179,7 +180,7 @@ Variable _invokeWithTarget(CompilerContext ctx, Variable L, MethodInvocation e) 
     final fpl = dec.parameters?.parameters ?? <FormalParameter>[];
 
     argsPair = compileArgumentList(ctx, e.argumentList, (isStatic ? staticType! : L.type).file, fpl, dec,
-        before: [if (!isStatic) L]);
+        before: [if (!isStatic) L], source: e);
   }
 
   final _args = argsPair.first;

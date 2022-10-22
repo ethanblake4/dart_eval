@@ -13,7 +13,7 @@ import '../variable.dart';
 
 Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext ctx, ArgumentList argumentList,
     int decLibrary, List<FormalParameter> fpl, Declaration parameterHost,
-    {List<Variable> before = const [], List<String> superParams = const []}) {
+    {List<Variable> before = const [], List<String> superParams = const [], AstNode? source}) {
   final _args = <Variable>[];
   final _push = <Variable>[];
   final _namedArgs = <String, Variable>{};
@@ -52,9 +52,11 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext 
       }
     } else {
       var paramType = EvalTypes.dynamicType;
+      var isNullable = false;
       if (param is SimpleFormalParameter) {
         if (param.type != null) {
           paramType = TypeRef.fromAnnotation(ctx, decLibrary, param.type!);
+          isNullable = param.type!.question != null;
         }
       } else if (param is FieldFormalParameter) {
         paramType = _resolveFieldFormalType(ctx, decLibrary, param, parameterHost);
@@ -65,9 +67,9 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext 
       }
 
       var _arg = compileExpression(arg, ctx, paramType);
-      if (parameterHost is MethodDeclaration || !unboxedAcrossFunctionBoundaries.contains(_arg.type)) {
+      if (parameterHost is MethodDeclaration || !_arg.type.isUnboxedAcrossFunctionBoundaries) {
         _arg = _arg.boxIfNeeded(ctx);
-      } else if (unboxedAcrossFunctionBoundaries.contains(_arg.type)) {
+      } else if (_arg.type.isUnboxedAcrossFunctionBoundaries) {
         _arg = _arg.unboxIfNeeded(ctx);
       }
 
@@ -75,9 +77,12 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext 
         _arg = _arg.tearOff(ctx);
       }
 
-      if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
+      if (!(isNullable && _arg.type == EvalTypes.nullType) &&
+          !_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
         throw CompileError(
-            'Cannot assign argument of type ${_arg.type} to parameter "${param.name!.value() as String}" of type $paramType');
+            'Cannot assign argument of type ${_arg.type.toStringClear(ctx, paramType)} '
+            'to parameter "${param.name!.value() as String}" of type ${paramType.toStringClear(ctx, _arg.type)}',
+            source ?? parameterHost);
       }
 
       _args.add(_arg);
@@ -102,9 +107,11 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext 
     }
     final param = (_param is DefaultFormalParameter ? _param.parameter : _param) as NormalFormalParameter;
     var paramType = EvalTypes.dynamicType;
+    var isNullable = false;
     if (param is SimpleFormalParameter) {
       if (param.type != null) {
         paramType = TypeRef.fromAnnotation(ctx, decLibrary, param.type!);
+        isNullable = param.type!.question != null;
       }
     } else if (param is FieldFormalParameter) {
       paramType = _resolveFieldFormalType(ctx, decLibrary, param, parameterHost);
@@ -115,9 +122,9 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext 
     }
     if (namedExpr.containsKey(name)) {
       var _arg = compileExpression(namedExpr[name]!, ctx, paramType);
-      if (parameterHost is MethodDeclaration || !unboxedAcrossFunctionBoundaries.contains(_arg.type)) {
+      if (parameterHost is MethodDeclaration || !_arg.type.isUnboxedAcrossFunctionBoundaries) {
         _arg = _arg.boxIfNeeded(ctx);
-      } else if (unboxedAcrossFunctionBoundaries.contains(_arg.type)) {
+      } else if (_arg.type.isUnboxedAcrossFunctionBoundaries) {
         _arg = _arg.unboxIfNeeded(ctx);
       }
 
@@ -125,9 +132,10 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext 
         _arg = _arg.tearOff(ctx);
       }
 
-      if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
-        throw CompileError(
-            'Cannot assign argument of type ${_arg.type} to parameter "${param.name!.value() as String}" of type $paramType');
+      if (!(isNullable && _arg.type == EvalTypes.nullType) &&
+          !_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
+        throw CompileError('Cannot assign argument of type ${_arg.type.toStringClear(ctx, paramType)}'
+            ' to parameter "${param.name!.value() as String}" of type ${paramType.toStringClear(ctx, _arg.type)}');
       }
 
       _push.add(_arg);
@@ -180,8 +188,9 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithKnownMethodAr
         _arg = _arg.tearOff(ctx);
       }
 
-      if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
-        throw CompileError('Cannot assign argument of type ${_arg.type} to parameter of type $paramType');
+      if (!(param.nullable && _arg.type == EvalTypes.nullType) &&
+          !_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
+        throw CompileError('Cannot assign argument of type ${_arg.type} to parameter of type $paramType', argumentList);
       }
       _args.add(_arg);
       _push.add(_arg);
@@ -257,8 +266,9 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
       if (_arg.type == EvalTypes.functionType && _arg.scopeFrameOffset == -1) {
         _arg = _arg.tearOff(ctx);
       }
-      if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
-        throw CompileError('Cannot assign argument of type ${_arg.type} to parameter of type $paramType');
+      if (!(param.type.nullable && _arg.type == EvalTypes.nullType) &&
+          !_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
+        throw CompileError('Cannot assign argument of type ${_arg.type} to parameter of type $paramType', argumentList);
       }
       _args.add(_arg);
       _push.add(_arg);

@@ -11,17 +11,15 @@ import 'context.dart';
 import 'errors.dart';
 
 class TypeRef {
-  const TypeRef(
-    this.file,
-    this.name, {
-    this.extendsType,
-    this.implementsType = const [],
-    this.withType = const [],
-    this.genericParams = const [],
-    this.specifiedTypeArgs = const [],
-    this.resolved = false,
-    this.boxed = true,
-  });
+  const TypeRef(this.file, this.name,
+      {this.extendsType,
+      this.implementsType = const [],
+      this.withType = const [],
+      this.genericParams = const [],
+      this.specifiedTypeArgs = const [],
+      this.resolved = false,
+      this.boxed = true,
+      this.nullable = false});
 
   static final _cache = <int, Map<String, TypeRef>>{};
   static final _inverseCache = <TypeRef, List<int>>{};
@@ -118,9 +116,9 @@ class TypeRef {
       for (final arg in typeArgs.arguments) {
         _resolved.add(TypeRef.fromAnnotation(ctx, library, arg));
       }
-      return unspecifiedType.copyWith(specifiedTypeArgs: _resolved);
+      return unspecifiedType.copyWith(specifiedTypeArgs: _resolved, nullable: typeAnnotation.question != null);
     }
-    return unspecifiedType;
+    return unspecifiedType.copyWith(nullable: typeAnnotation.question != null);
   }
 
   factory TypeRef.fromBridgeAnnotation(CompilerContext ctx, BridgeTypeAnnotation typeAnnotation,
@@ -135,7 +133,7 @@ class TypeRef {
     if (cacheId != null) {
       final t = inverseRuntimeTypeMap[cacheId] ?? ctx.runtimeTypeList[cacheId];
       if (staticSource) {
-        return unboxedAcrossFunctionBoundaries.contains(t) ? t.copyWith(boxed: false) : t.copyWith(boxed: true);
+        return t.isUnboxedAcrossFunctionBoundaries ? t.copyWith(boxed: false) : t.copyWith(boxed: true);
       }
       return t.copyWith(boxed: true);
     }
@@ -406,6 +404,7 @@ class TypeRef {
   final List<TypeRef> specifiedTypeArgs;
   final bool resolved;
   final bool boxed;
+  final bool nullable;
 
   List<TypeRef> get allSupertypes => [if (extendsType != null) extendsType!, ...implementsType, ...withType];
 
@@ -454,6 +453,8 @@ class TypeRef {
     ];
   }
 
+  bool get isUnboxedAcrossFunctionBoundaries => unboxedAcrossFunctionBoundaries.contains(this) && !nullable;
+
   bool isAssignableTo(CompilerContext ctx, TypeRef slot,
       {List<TypeRef>? overrideGenerics, bool forceAllowDynamic = true}) {
     if (forceAllowDynamic && this == EvalTypes.dynamicType) {
@@ -490,7 +491,8 @@ class TypeRef {
       List<GenericParam>? genericParams,
       List<TypeRef>? specifiedTypeArgs,
       bool? boxed,
-      bool? resolved}) {
+      bool? resolved,
+      bool? nullable}) {
     return TypeRef(file ?? this.file, name ?? this.name,
         extendsType: extendsType ?? this.extendsType,
         implementsType: implementsType ?? this.implementsType,
@@ -498,7 +500,8 @@ class TypeRef {
         genericParams: genericParams ?? this.genericParams,
         specifiedTypeArgs: specifiedTypeArgs ?? this.specifiedTypeArgs,
         boxed: boxed ?? this.boxed,
-        resolved: resolved ?? this.resolved);
+        resolved: resolved ?? this.resolved,
+        nullable: nullable ?? this.nullable);
   }
 
   @override
@@ -511,7 +514,23 @@ class TypeRef {
 
   @override
   String toString() {
-    return 'F$file:$name${extendsType != null ? ' extends ' + extendsType!.name : ''}';
+    return name;
+  }
+
+  /// Convert to string while clarifying the source file if the name is the same
+  /// as another type being printed.
+  String toStringClear(CompilerContext ctx, TypeRef other) {
+    if (name == other.name) {
+      String? _library;
+      for (final entry in ctx.libraryMap.entries) {
+        if (entry.value == file) {
+          _library = entry.key;
+        }
+      }
+      return '$name (from "$_library")';
+    } else {
+      return name;
+    }
   }
 }
 
