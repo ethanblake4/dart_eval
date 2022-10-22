@@ -461,6 +461,10 @@ class TypeRef {
       return true;
     }
 
+    if (this == EvalTypes.nullType) {
+      return slot.nullable || slot == EvalTypes.nullType;
+    }
+
     final generics = overrideGenerics ?? specifiedTypeArgs;
 
     if (this == slot) {
