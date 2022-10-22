@@ -79,20 +79,61 @@ class InvokeDynamic implements EvcOp {
       }
 
       final method = ((object as $Instance).$getProperty(runtime, _method) as EvalFunction);
-      if (method is $Function) {
-        runtime.returnValue = method.call(runtime, object, runtime.args.cast());
-        runtime.args = [];
-        return;
-      } else {
-        runtime.returnValue = method.call(runtime, object, runtime.args.cast());
-        runtime.args = [];
-        return;
-      }
+      runtime.returnValue = method.call(runtime, object, runtime.args.cast());
+      runtime.args = [];
+      return;
     }
   }
 
   @override
   String toString() => 'InvokeDynamic (L$_location.$_method)';
+}
+
+class CheckEq implements EvcOp {
+  CheckEq(Runtime runtime)
+      : _value1 = runtime._readInt16(),
+        _value2 = runtime._readInt16();
+
+  CheckEq.make(this._value1, this._value2);
+
+  final int _value1;
+  final int _value2;
+
+  static const int LEN = Evc.BASE_OPLEN + Evc.I16_LEN * 2;
+
+  @override
+  void run(Runtime runtime) {
+    var v1 = runtime.frame[_value1];
+    final v2 = runtime.frame[_value2];
+
+    while (true) {
+      if (v1 is $InstanceImpl) {
+        final methods = v1.evalClass.methods;
+        final _offset = methods['=='];
+        if (_offset == null) {
+          v1 = v1.evalSuperclass;
+          continue;
+        }
+        runtime.args = [v2];
+        runtime.callStack.add(runtime._prOffset);
+        runtime._prOffset = _offset;
+        return;
+      }
+
+      if (v1 is $Instance) {
+        final method = v1.$getProperty(runtime, '==') as EvalFunction;
+        runtime.returnValue = method.call(runtime, v1, [v2 == null ? null : v2 as $Value]);
+        runtime.args = [];
+        return;
+      }
+
+      runtime.returnValue = v1 == v2;
+      return;
+    }
+  }
+
+  @override
+  String toString() => 'CheckEq (L$_value1 == L$_value2)';
 }
 
 // Create a class

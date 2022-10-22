@@ -25,7 +25,7 @@ void compileTopLevelVariableDeclaration(VariableDeclaration v, CompilerContext c
     } else {
       type = V.type;
     }
-    if (!unboxedAcrossFunctionBoundaries.contains(type)) {
+    if (!type.isUnboxedAcrossFunctionBoundaries) {
       V = V.boxIfNeeded(ctx);
       type = type.copyWith(boxed: true);
     } else {

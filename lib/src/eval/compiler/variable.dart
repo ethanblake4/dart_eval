@@ -204,11 +204,18 @@ class Variable {
     final _boxed = boxUnboxMultiple(ctx, [$this, ...args], true);
     $this = _boxed[0];
     final _args = _boxed.sublist(1);
-    for (final _arg in _args) {
-      ctx.pushOp(PushArg.make(_arg.scopeFrameOffset), PushArg.LEN);
+    final checkEq = method == '==' && _args.length == 1;
+    if (checkEq) {
+      ctx.pushOp(CheckEq.make($this.scopeFrameOffset, _args[0].scopeFrameOffset), CheckEq.LEN);
+    } else {
+      for (final _arg in _args) {
+        ctx.pushOp(PushArg.make(_arg.scopeFrameOffset), PushArg.LEN);
+      }
+
+      final invokeOp = InvokeDynamic.make($this.scopeFrameOffset, method);
+      ctx.pushOp(invokeOp, InvokeDynamic.len(invokeOp));
     }
-    final invokeOp = InvokeDynamic.make($this.scopeFrameOffset, method);
-    ctx.pushOp(invokeOp, InvokeDynamic.len(invokeOp));
+
     ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
 
     final AlwaysReturnType? returnType;
@@ -219,7 +226,7 @@ class Variable {
           AlwaysReturnType.fromInstanceMethodOrBuiltin(ctx, $this.type, method, [..._args.map((e) => e.type)], {});
     }
 
-    final v = Variable.alloc(ctx, (returnType?.type ?? EvalTypes.dynamicType).copyWith(boxed: true));
+    final v = Variable.alloc(ctx, (returnType?.type ?? EvalTypes.dynamicType).copyWith(boxed: !checkEq));
     return InvokeResult($this, v, _args);
   }
 

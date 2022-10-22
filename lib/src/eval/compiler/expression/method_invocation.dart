@@ -64,7 +64,7 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
         final v = Variable.alloc(
             ctx,
             mReturnType.type
-                    ?.copyWith(boxed: L != null || !unboxedAcrossFunctionBoundaries.contains(mReturnType.type)) ??
+                    ?.copyWith(boxed: L != null || !(mReturnType.type?.isUnboxedAcrossFunctionBoundaries ?? false)) ??
                 EvalTypes.dynamicType);
 
         return v;
@@ -98,7 +98,8 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
         throw CompileError('Invalid declaration type ${dec.runtimeType}');
       }
 
-      final argsPair = compileArgumentList(ctx, e.argumentList, offset.file!, fpl, dec, before: L != null ? [L] : []);
+      final argsPair =
+          compileArgumentList(ctx, e.argumentList, offset.file!, fpl, dec, before: L != null ? [L] : [], source: e);
       _args = argsPair.first;
       _namedArgs = argsPair.second;
     }
@@ -138,7 +139,7 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
 
   final v = Variable.alloc(
       ctx,
-      mReturnType.type?.copyWith(boxed: L != null || !unboxedAcrossFunctionBoundaries.contains(mReturnType.type)) ??
+      mReturnType.type?.copyWith(boxed: L != null || !(mReturnType.type?.isUnboxedAcrossFunctionBoundaries ?? false)) ??
           EvalTypes.dynamicType);
 
   return v;
@@ -166,7 +167,7 @@ Variable _invokeWithTarget(CompilerContext ctx, Variable L, MethodInvocation e) 
     _dec = resolveStaticMethod(ctx, staticType, e.methodName.name);
     isStatic = true;
   } else {
-    _dec = resolveInstanceMethod(ctx, L.type, e.methodName.name);
+    _dec = resolveInstanceMethod(ctx, L.type, e.methodName.name, e);
     isStatic = false;
   }
 
@@ -179,7 +180,7 @@ Variable _invokeWithTarget(CompilerContext ctx, Variable L, MethodInvocation e) 
     final fpl = dec.parameters?.parameters ?? <FormalParameter>[];
 
     argsPair = compileArgumentList(ctx, e.argumentList, (isStatic ? staticType! : L.type).file, fpl, dec,
-        before: [if (!isStatic) L]);
+        before: [if (!isStatic) L], source: e);
   }
 
   final _args = argsPair.first;
@@ -217,7 +218,8 @@ Variable _invokeWithTarget(CompilerContext ctx, Variable L, MethodInvocation e) 
 }
 
 DeclarationOrBridge<MethodDeclaration, BridgeMethodDef> resolveInstanceMethod(
-    CompilerContext ctx, TypeRef instanceType, String methodName) {
+    CompilerContext ctx, TypeRef instanceType, String methodName,
+    [AstNode? source]) {
   final _dec = ctx.topLevelDeclarationsMap[instanceType.file]![instanceType.name]!;
   if (_dec.isBridge) {
     // Bridge
@@ -226,10 +228,10 @@ DeclarationOrBridge<MethodDeclaration, BridgeMethodDef> resolveInstanceMethod(
     if (method == null) {
       final $extendsBridgeType = bridge.type.$extends;
       if ($extendsBridgeType == null) {
-        throw CompileError('Method not found $methodName on ${instanceType}');
+        throw CompileError('Method not found $methodName on $instanceType');
       }
       final $extendsType = TypeRef.fromBridgeTypeRef(ctx, $extendsBridgeType);
-      return resolveInstanceMethod(ctx, $extendsType, methodName);
+      return resolveInstanceMethod(ctx, $extendsType, methodName, source);
     }
     return DeclarationOrBridge(instanceType.file, bridge: bridge.methods[methodName]!);
   }
@@ -241,11 +243,11 @@ DeclarationOrBridge<MethodDeclaration, BridgeMethodDef> resolveInstanceMethod(
   } else {
     final $class = _dec.declaration as ClassDeclaration;
     if ($class.extendsClause == null) {
-      throw CompileError('Cannot resolve instance method');
+      throw CompileError('Cannot resolve instance method', source);
     }
     // ignore: deprecated_member_use
     final $supertype = ctx.visibleTypes[instanceType.file]![$class.extendsClause!.superclass2.name.name]!;
-    return resolveInstanceMethod(ctx, $supertype, methodName);
+    return resolveInstanceMethod(ctx, $supertype, methodName, source);
   }
 }
 

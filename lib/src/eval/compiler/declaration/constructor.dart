@@ -41,6 +41,8 @@ void compileConstructorDeclaration(
 
   final fieldFormalNames = <String>[];
   final resolvedParams = resolveFPLDefaults(ctx, d.parameters, false, allowUnboxed: true);
+
+  final superParams = <String>[];
   var i = 0;
 
   for (final param in resolvedParams) {
@@ -57,10 +59,15 @@ void compileConstructorDeclaration(
       _type ??= V?.type;
       _type ??= EvalTypes.dynamicType;
 
-      Vrep = Variable(i, _type.copyWith(boxed: !unboxedAcrossFunctionBoundaries.contains(_type))).boxIfNeeded(ctx)
+      Vrep = Variable(i, _type.copyWith(boxed: !_type.isUnboxedAcrossFunctionBoundaries)).boxIfNeeded(ctx)
         ..name = p.name.value() as String;
 
       fieldFormalNames.add(p.name.value() as String);
+    } else if (p is SuperFormalParameter) {
+      final type = resolveSuperFormalType(ctx, ctx.library, p, d);
+      Vrep = Variable(i, type.copyWith(boxed: !type.isUnboxedAcrossFunctionBoundaries)).boxIfNeeded(ctx)
+        ..name = p.name.value() as String;
+      superParams.add(p.name.value() as String);
     } else {
       p as SimpleFormalParameter;
       var type = EvalTypes.dynamicType;
@@ -106,7 +113,8 @@ void compileConstructorDeclaration(
         final constructor = _constructor.declaration as ConstructorDeclaration;
 
         final argsPair = compileArgumentList(
-            ctx, $superInitializer.argumentList, decl.sourceLib, constructor.parameters.parameters, constructor);
+            ctx, $superInitializer.argumentList, decl.sourceLib, constructor.parameters.parameters, constructor,
+            superParams: superParams, source: $superInitializer);
         final _args = argsPair.first;
         final _namedArgs = argsPair.second;
 

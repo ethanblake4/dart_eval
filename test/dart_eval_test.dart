@@ -328,6 +328,27 @@ void main() {
 
       expect(exec.executeLib('package:example/main.dart', 'main'), 7);
     });
+
+    test('Nullable arg', () {
+      final exec = gen.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main () {
+              return fun(null);
+            }
+            
+            int fun(int? a) {
+              if (a == null) {
+                return 2;
+              }
+              return a;
+            }
+           '''
+        }
+      });
+
+      expect(exec.executeLib('package:example/main.dart', 'main'), 2);
+    });
   });
 
   group('Class tests', () {
