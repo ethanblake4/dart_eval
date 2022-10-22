@@ -248,7 +248,7 @@ final Map<TypeRef, Map<String, KnownMethod>> knownMethods = {
     ], {}),
     'replaceRange': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [
       KnownMethodArg('start', EvalTypes.intType, false, false),
-      KnownMethodArg('end', EvalTypes.intType, false, true),
+      KnownMethodArg('end', EvalTypes.intType.copyWith(nullable: true), false, true),
       KnownMethodArg('replacement', EvalTypes.stringType, false, false),
     ], {}),
     //TODO: needs to be fixed to not use stringType but instead EvalTypes.patternType once its available

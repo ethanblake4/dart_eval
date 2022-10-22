@@ -1118,7 +1118,7 @@ void main() {
           ''',
         }
       });
-      expect((exec.executeLib('package:example/main.dart', 'test') as $String).$value, 'Fluffz');
+      expect((exec.executeLib('package:example/main.dart', 'test') as $String).$value, 'Flufz');
     });
     test('String replaceRange method replaces given range', () {
       final exec = compiler.compileWriteAndLoad({
