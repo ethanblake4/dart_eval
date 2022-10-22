@@ -1086,24 +1086,19 @@ void main() {
       });
       expect((exec.executeLib('package:example/main.dart', 'test') as $String).$value, 'Fluffy');
     });
-
-// Doesn't work right now, seems to ignore that KnownMethodArg has nullable set to true and get this error:
-// CompileError: Cannot assign argument of type F-1:Null extends dynamic to parameter of type F-1:int extends num
-// package:dart_eval/src/eval/compiler/helpers/argument_list.dart 166:9          compileArgumentListWithKnownMethodArgs
-    
-    // test('String replaceRange method replaces default range', () {
-    //   final exec = compiler.compileWriteAndLoad({
-    //     'example': {
-    //       'main.dart': '''
-    //         String test() {
-    //           const cat = "Fluffy";
-    //           return cat.replaceRange(4, null, 'z');
-    //         }
-    //       ''',
-    //     }
-    //   });
-    //   expect((exec.executeLib('package:example/main.dart', 'test') as $String).$value, 'Fluffz');
-    // });
+    test('String replaceRange method replaces default range', () {
+      final exec = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            String test() {
+              const cat = "Fluffy";
+              return cat.replaceRange(4, null, 'z');
+            }
+          ''',
+        }
+      });
+      expect((exec.executeLib('package:example/main.dart', 'test') as $String).$value, 'Fluffz');
+    });
     test('String replaceRange method replaces given range', () {
       final exec = compiler.compileWriteAndLoad({
         'example': {
