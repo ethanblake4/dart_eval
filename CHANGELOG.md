@@ -1,3 +1,16 @@
+## 0.5.4
+- Bindings for most String methods (thanks to @maks)
+- Support for super constructor params
+- Support for plugins in the `eval()` method
+- Deprecated compilerSettings and runtimeSettings in `eval()`
+  in favor of plugins
+- Support for nullable type annotations in argument lists
+- Removed the `nullable` param from KnownMethodArg in favor
+  of the new `nullable` param in TypeRef
+- Improved many error messages to display filename and a code
+  snippet
+- Error messages about type assignments now disambuigate between
+  types if they have the same name
 ## 0.5.3
 - Support for class getters and setters
 - Automatic default constructor when none is specified

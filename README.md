@@ -3,7 +3,7 @@
 [![License: BSD-3](https://img.shields.io/badge/license-BSD3-purple.svg)](https://opensource.org/licenses/BSD-3-Clause)
 [![Web example](https://img.shields.io/badge/web-example-blue.svg)](https://ethanblake.xyz/evalpad)
 
-`dart_eval` is an extensible bytecode compiler and runtime for the Dart language, 
+`dart_eval` is an extensible bytecode compiler and interpreter for the Dart language, 
 written in Dart, enabling dynamic codepush for Flutter and Dart AOT.
 
 | dart_eval    | [![pub package](https://img.shields.io/pub/v/dart_eval.svg?label=dart_eval&color=teal)](https://pub.dev/packages/dart_eval)          |
