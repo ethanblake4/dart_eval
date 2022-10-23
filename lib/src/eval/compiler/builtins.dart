@@ -209,12 +209,65 @@ final Map<TypeRef, Map<String, KnownMethod>> knownMethods = {
         [KnownMethodArg('other', EvalTypes.stringType, false, false)], {}),
     '==': KnownMethod(
         AlwaysReturnType(EvalTypes.boolType, false), [KnownMethodArg('other', EvalTypes.stringType, false, false)], {}),
-    'toLowerCase': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [], {}),
-    'toUpperCase': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [], {}),
+    'codeUnitAt': KnownMethod(
+        AlwaysReturnType(EvalTypes.intType, false), [KnownMethodArg('index', EvalTypes.intType, false, false)], {}),
+    'compareTo': KnownMethod(
+        AlwaysReturnType(EvalTypes.intType, false), [KnownMethodArg('other', EvalTypes.stringType, false, false)], {}),
+    'contains': KnownMethod(
+        AlwaysReturnType(EvalTypes.intType, false), [KnownMethodArg('other', EvalTypes.stringType, false, false)], {}),
+    'endsWith': KnownMethod(
+        AlwaysReturnType(EvalTypes.boolType, false), [KnownMethodArg('other', EvalTypes.stringType, false, false)], {}),
+    //TODO: needs to be fixed to not use stringType but instead EvalTypes.patternType once its available
+    'indexOf': KnownMethod(AlwaysReturnType(EvalTypes.intType, false), [
+      KnownMethodArg('pattern', EvalTypes.stringType, false, false),
+      KnownMethodArg('start', EvalTypes.intType, true, false),
+    ], {}),
+    //TODO: needs to be fixed to not use stringType but instead EvalTypes.patternType once its available
+    'lastIndexOf': KnownMethod(AlwaysReturnType(EvalTypes.intType, false), [
+      KnownMethodArg('pattern', EvalTypes.stringType, false, false),
+      KnownMethodArg('start', EvalTypes.intType, true, false),
+    ], {}),
+    'padLeft': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [
+      KnownMethodArg('width', EvalTypes.intType, false, false),
+      KnownMethodArg('padding', EvalTypes.stringType, true, false),
+    ], {}),
+    'padRight': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [
+      KnownMethodArg('width', EvalTypes.intType, false, false),
+      KnownMethodArg('padding', EvalTypes.stringType, true, false),
+    ], {}),
+    //TODO: needs to be fixed to not use stringType but instead EvalTypes.patternType once its available
+    'replaceAll': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [
+      KnownMethodArg('pattern', EvalTypes.stringType, false, false),
+      KnownMethodArg('replace', EvalTypes.stringType, false, false),
+    ], {}),
+    //TODO: needs to be fixed to not use stringType but instead EvalTypes.patternType once its available
+    'replaceFirst': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [
+      KnownMethodArg('from', EvalTypes.stringType, false, false),
+      KnownMethodArg('to', EvalTypes.stringType, false, false),
+      KnownMethodArg('startIndex', EvalTypes.intType, true, false),
+    ], {}),
+    'replaceRange': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [
+      KnownMethodArg('start', EvalTypes.intType, false, false),
+      KnownMethodArg('end', EvalTypes.intType.copyWith(nullable: true), false, true),
+      KnownMethodArg('replacement', EvalTypes.stringType, false, false),
+    ], {}),
+    //TODO: needs to be fixed to not use stringType but instead EvalTypes.patternType once its available
+    'split': KnownMethod(AlwaysReturnType(EvalTypes.listType, false), [
+      KnownMethodArg('pattern', EvalTypes.stringType, false, false),
+    ], {}),
+    //TODO: needs to be fixed to not use stringType but instead EvalTypes.patternType once its available
+    'startsWith': KnownMethod(AlwaysReturnType(EvalTypes.boolType, false), [
+      KnownMethodArg('pattern', EvalTypes.stringType, false, false),
+      KnownMethodArg('index', EvalTypes.intType, true, false),
+    ], {}),
     'substring': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [
       KnownMethodArg('start', EvalTypes.intType, false, false),
       KnownMethodArg('end', EvalTypes.intType, true, true)
     ], {}),
+    'toLowerCase': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [], {}),
+    'toUpperCase': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [], {}),
+    'trimLeft': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [], {}),
+    'trimRight': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [], {}),
     ..._knownObject
   },
   EvalTypes.iterableType: {

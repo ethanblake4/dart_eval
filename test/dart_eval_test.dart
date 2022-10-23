@@ -721,68 +721,7 @@ void main() {
         runtime.executeLib('package:example/main.dart', 'main', [56890]);
       }, prints('56890\n'));
     });
-
-    test('String has length getter', () {
-      final exec = compiler.compileWriteAndLoad({
-        'example': {
-          'main.dart': '''
-            int main() {
-              String cat = "Fluffy";
-              return cat.length;
-            }
-          ''',
-        }
-      });
-      expect(exec.executeLib('package:example/main.dart', 'main'), 6);
-    });
-
-    test('String has isEmpty getter', () {
-      final exec = compiler.compileWriteAndLoad({
-        'example': {
-          'main.dart': '''
-            int main() {
-              String cat = "Fluffy";
-              if (cat.isNotEmpty) return 1;
-            }
-          ''',
-        }
-      });
-      expect(exec.executeLib('package:example/main.dart', 'main'), 1);
-    });
-
-    test('String has substring method', () {
-      final exec = compiler.compileWriteAndLoad({
-        'example': {
-          'main.dart': '''
-            int main() {
-              String cat = "Fluffy";
-              String sub = cat.substring(0,3);
-              print(sub);
-            }
-          ''',
-        }
-      });
-      expect(() {
-        exec.executeLib('package:example/main.dart', 'main');
-      }, prints('Flu\n'));
-    });
-    test('String substring method works with only 1 parameter', () {
-      final exec = compiler.compileWriteAndLoad({
-        'example': {
-          'main.dart': '''
-            int main() {
-              String cat = "Fluffy";
-              String sub = cat.substring(3);
-              print(sub);
-            }
-          ''',
-        }
-      });
-      expect(() {
-        exec.executeLib('package:example/main.dart', 'main');
-      }, prints('ffy\n'));
-    });
-
+   
     test('Boolean literals', () {
       final exec = compiler.compileWriteAndLoad({
         'example': {
@@ -896,7 +835,8 @@ void main() {
       expect(() {
         expect(exec.executeLib('package:example/main.dart', 'main'), $null());
       }, prints('null\n'));
-    });
+    });       
+ 
   });
 
   group('Bridge tests', () {
