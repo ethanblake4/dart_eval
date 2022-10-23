@@ -83,12 +83,11 @@ class KnownField {
 }
 
 class KnownMethodArg {
-  const KnownMethodArg(this.name, this.type, this.optional, this.nullable);
+  const KnownMethodArg(this.name, this.type, this.optional);
 
   final String name;
   final TypeRef? type;
   final bool optional;
-  final bool nullable;
 }
 
 class EvalTypes {
@@ -132,30 +131,30 @@ final intBinaryOp = KnownMethod(
       EvalTypes.intType: AlwaysReturnType(EvalTypes.intType, false),
       EvalTypes.numType: AlwaysReturnType(EvalTypes.numType, false)
     }, paramIndex: 0, fallback: AlwaysReturnType(EvalTypes.numType, false)),
-    [KnownMethodArg('other', EvalTypes.numType, false, false)],
+    [KnownMethodArg('other', EvalTypes.numType, false)],
     {});
 
-const numComparisonOp = KnownMethod(
-    AlwaysReturnType(EvalTypes.boolType, false), [KnownMethodArg('other', EvalTypes.numType, false, false)], {});
+const numComparisonOp =
+    KnownMethod(AlwaysReturnType(EvalTypes.boolType, false), [KnownMethodArg('other', EvalTypes.numType, false)], {});
 
-const doubleBinaryOp = KnownMethod(
-    AlwaysReturnType(EvalTypes.doubleType, false), [KnownMethodArg('other', EvalTypes.numType, false, false)], {});
+const doubleBinaryOp =
+    KnownMethod(AlwaysReturnType(EvalTypes.doubleType, false), [KnownMethodArg('other', EvalTypes.numType, false)], {});
 
 final numBinaryOp = KnownMethod(
     ParameterTypeDependentReturnType({
       EvalTypes.doubleType: AlwaysReturnType(EvalTypes.doubleType, false),
     }, paramIndex: 0, fallback: AlwaysReturnType(EvalTypes.numType, false)),
-    [KnownMethodArg('other', EvalTypes.numType, false, false)],
+    [KnownMethodArg('other', EvalTypes.numType, false)],
     {});
 
-final boolBinaryOp = KnownMethod(
-    AlwaysReturnType(EvalTypes.boolType, false), [KnownMethodArg('other', EvalTypes.boolType, false, false)], {});
+final boolBinaryOp =
+    KnownMethod(AlwaysReturnType(EvalTypes.boolType, false), [KnownMethodArg('other', EvalTypes.boolType, false)], {});
 
 const listIndexOp =
-    KnownMethod(TargetTypeArgDependentReturnType(0), [KnownMethodArg('index', EvalTypes.intType, false, false)], {});
+    KnownMethod(TargetTypeArgDependentReturnType(0), [KnownMethodArg('index', EvalTypes.intType, false)], {});
 
 const listIndexAssignOp =
-    KnownMethod(TargetTypeArgDependentReturnType(0), [KnownMethodArg('index', EvalTypes.intType, false, false)], {});
+    KnownMethod(TargetTypeArgDependentReturnType(0), [KnownMethodArg('index', EvalTypes.intType, false)], {});
 
 const toStringOp = KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [], {});
 
@@ -205,64 +204,64 @@ final Map<TypeRef, Map<String, KnownMethod>> knownMethods = {
   },
   EvalTypes.boolType: {'&&': boolBinaryOp, '||': boolBinaryOp},
   EvalTypes.stringType: {
-    '+': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false),
-        [KnownMethodArg('other', EvalTypes.stringType, false, false)], {}),
+    '+': KnownMethod(
+        AlwaysReturnType(EvalTypes.stringType, false), [KnownMethodArg('other', EvalTypes.stringType, false)], {}),
     '==': KnownMethod(
-        AlwaysReturnType(EvalTypes.boolType, false), [KnownMethodArg('other', EvalTypes.stringType, false, false)], {}),
+        AlwaysReturnType(EvalTypes.boolType, false), [KnownMethodArg('other', EvalTypes.stringType, false)], {}),
     'codeUnitAt': KnownMethod(
-        AlwaysReturnType(EvalTypes.intType, false), [KnownMethodArg('index', EvalTypes.intType, false, false)], {}),
+        AlwaysReturnType(EvalTypes.intType, false), [KnownMethodArg('index', EvalTypes.intType, false)], {}),
     'compareTo': KnownMethod(
-        AlwaysReturnType(EvalTypes.intType, false), [KnownMethodArg('other', EvalTypes.stringType, false, false)], {}),
+        AlwaysReturnType(EvalTypes.intType, false), [KnownMethodArg('other', EvalTypes.stringType, false)], {}),
     'contains': KnownMethod(
-        AlwaysReturnType(EvalTypes.intType, false), [KnownMethodArg('other', EvalTypes.stringType, false, false)], {}),
+        AlwaysReturnType(EvalTypes.intType, false), [KnownMethodArg('other', EvalTypes.stringType, false)], {}),
     'endsWith': KnownMethod(
-        AlwaysReturnType(EvalTypes.boolType, false), [KnownMethodArg('other', EvalTypes.stringType, false, false)], {}),
+        AlwaysReturnType(EvalTypes.boolType, false), [KnownMethodArg('other', EvalTypes.stringType, false)], {}),
     //TODO: needs to be fixed to not use stringType but instead EvalTypes.patternType once its available
     'indexOf': KnownMethod(AlwaysReturnType(EvalTypes.intType, false), [
-      KnownMethodArg('pattern', EvalTypes.stringType, false, false),
-      KnownMethodArg('start', EvalTypes.intType, true, false),
+      KnownMethodArg('pattern', EvalTypes.stringType, false),
+      KnownMethodArg('start', EvalTypes.intType, true),
     ], {}),
     //TODO: needs to be fixed to not use stringType but instead EvalTypes.patternType once its available
     'lastIndexOf': KnownMethod(AlwaysReturnType(EvalTypes.intType, false), [
-      KnownMethodArg('pattern', EvalTypes.stringType, false, false),
-      KnownMethodArg('start', EvalTypes.intType, true, false),
+      KnownMethodArg('pattern', EvalTypes.stringType, false),
+      KnownMethodArg('start', EvalTypes.intType, true),
     ], {}),
     'padLeft': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [
-      KnownMethodArg('width', EvalTypes.intType, false, false),
-      KnownMethodArg('padding', EvalTypes.stringType, true, false),
+      KnownMethodArg('width', EvalTypes.intType, false),
+      KnownMethodArg('padding', EvalTypes.stringType, true),
     ], {}),
     'padRight': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [
-      KnownMethodArg('width', EvalTypes.intType, false, false),
-      KnownMethodArg('padding', EvalTypes.stringType, true, false),
+      KnownMethodArg('width', EvalTypes.intType, false),
+      KnownMethodArg('padding', EvalTypes.stringType, true),
     ], {}),
     //TODO: needs to be fixed to not use stringType but instead EvalTypes.patternType once its available
     'replaceAll': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [
-      KnownMethodArg('pattern', EvalTypes.stringType, false, false),
-      KnownMethodArg('replace', EvalTypes.stringType, false, false),
+      KnownMethodArg('pattern', EvalTypes.stringType, false),
+      KnownMethodArg('replace', EvalTypes.stringType, false),
     ], {}),
     //TODO: needs to be fixed to not use stringType but instead EvalTypes.patternType once its available
     'replaceFirst': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [
-      KnownMethodArg('from', EvalTypes.stringType, false, false),
-      KnownMethodArg('to', EvalTypes.stringType, false, false),
-      KnownMethodArg('startIndex', EvalTypes.intType, true, false),
+      KnownMethodArg('from', EvalTypes.stringType, false),
+      KnownMethodArg('to', EvalTypes.stringType, false),
+      KnownMethodArg('startIndex', EvalTypes.intType, true),
     ], {}),
     'replaceRange': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [
-      KnownMethodArg('start', EvalTypes.intType, false, false),
-      KnownMethodArg('end', EvalTypes.intType.copyWith(nullable: true), false, true),
-      KnownMethodArg('replacement', EvalTypes.stringType, false, false),
+      KnownMethodArg('start', EvalTypes.intType, false),
+      KnownMethodArg('end', EvalTypes.intType.copyWith(nullable: true), false),
+      KnownMethodArg('replacement', EvalTypes.stringType, false),
     ], {}),
     //TODO: needs to be fixed to not use stringType but instead EvalTypes.patternType once its available
     'split': KnownMethod(AlwaysReturnType(EvalTypes.listType, false), [
-      KnownMethodArg('pattern', EvalTypes.stringType, false, false),
+      KnownMethodArg('pattern', EvalTypes.stringType, false),
     ], {}),
     //TODO: needs to be fixed to not use stringType but instead EvalTypes.patternType once its available
     'startsWith': KnownMethod(AlwaysReturnType(EvalTypes.boolType, false), [
-      KnownMethodArg('pattern', EvalTypes.stringType, false, false),
-      KnownMethodArg('index', EvalTypes.intType, true, false),
+      KnownMethodArg('pattern', EvalTypes.stringType, false),
+      KnownMethodArg('index', EvalTypes.intType, true),
     ], {}),
     'substring': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [
-      KnownMethodArg('start', EvalTypes.intType, false, false),
-      KnownMethodArg('end', EvalTypes.intType, true, true)
+      KnownMethodArg('start', EvalTypes.intType, false),
+      KnownMethodArg('end', EvalTypes.intType.copyWith(nullable: true), true)
     ], {}),
     'toLowerCase': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [], {}),
     'toUpperCase': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [], {}),
@@ -271,15 +270,15 @@ final Map<TypeRef, Map<String, KnownMethod>> knownMethods = {
     ..._knownObject
   },
   EvalTypes.iterableType: {
-    'join': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false),
-        [KnownMethodArg('separator', EvalTypes.stringType, true, false)], {}),
+    'join': KnownMethod(
+        AlwaysReturnType(EvalTypes.stringType, false), [KnownMethodArg('separator', EvalTypes.stringType, true)], {}),
     ..._knownObject
   },
   EvalTypes.listType: {
     '[]': listIndexOp,
     '[]=': listIndexAssignOp,
-    'join': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false),
-        [KnownMethodArg('separator', EvalTypes.stringType, true, false)], {}),
+    'join': KnownMethod(
+        AlwaysReturnType(EvalTypes.stringType, false), [KnownMethodArg('separator', EvalTypes.stringType, true)], {}),
     ..._knownObject
   }
 };
