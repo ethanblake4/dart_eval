@@ -41,6 +41,8 @@ class $Object implements $Instance {
         return __equals;
       case 'toString':
         return __toString;
+      case 'hashCode':
+        return __hashCode;
     }
 
     throw UnimplementedError();
@@ -57,6 +59,12 @@ class $Object implements $Instance {
 
   static $Value? _toString(Runtime runtime, $Value? target, List<$Value?> args) {
     return $String(target!.$value.toString());
+  }
+
+  static const $Function __hashCode = $Function(_hashCode);
+
+  static $Value? _hashCode(Runtime runtime, $Value? target, List<$Value?> args) {
+    return $int(target!.$value.hashCode);
   }
 
   @override
