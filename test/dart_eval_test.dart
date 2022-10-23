@@ -408,6 +408,31 @@ void main() {
       expect(exec.executeLib('package:example/main.dart', 'main'), $int(19));
     });
 
+    test('Trying to access nonexistent method throws error', () {
+      final packages = {
+        'example': {
+          'main.dart': '''
+            class MyClass {
+              MyClass();
+              
+              int someMethod() {
+                return 4 + 4;
+              }
+            }
+            int main() {
+              final cls = MyClass();
+              return cls.someMethod() + cls.someOtherMethod();
+            }
+          '''
+        }
+      };
+
+      expect(() => gen.compileWriteAndLoad(packages), throwsA(isA<CompileError>()));
+      expect(() => gen.compileWriteAndLoad(packages), throwsA(predicate((CompileError e) {
+        return e.toString().contains('someOtherMethod') && e.toString().contains('file package:example/main.dart');
+      })));
+    });
+
     test('"this" keyword', () {
       final exec = gen.compileWriteAndLoad({
         'example': {
@@ -594,6 +619,31 @@ void main() {
       });
 
       expect(exec.executeLib('package:example/main.dart', 'main'), 6);
+    });
+
+    test('New-style super constructor parameters', () {
+      final exec = gen.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main () {
+              final c = OldCat('Julian');
+              return c.age + c.name.length;
+            }
+            
+            class Cat {
+              Cat(this.name, {required this.age});
+              final String name;
+              final int age;
+            }
+
+            class OldCat extends Cat {
+              OldCat(super.name) : super(age: 10);
+            }
+          '''
+        }
+      });
+
+      expect(exec.executeLib('package:example/main.dart', 'main'), 16);
     });
   });
 
