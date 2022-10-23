@@ -69,8 +69,6 @@ extension TearOff on Variable {
 
     ctx.beginAllocScope();
 
-    final argList = <Variable>[];
-
     Variable? $target;
     if (dec is MethodDeclaration) {
       final targetOffset = BuiltinValue(intval: methodOffset!.targetScopeFrameOffset!).push(ctx);

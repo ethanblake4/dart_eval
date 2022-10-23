@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/runtime/exception.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
@@ -176,7 +174,7 @@ class $String implements $Instance {
       case 'compareTo':
         return __compareTo;
       case 'contains':
-        return __contains;    
+        return __contains;
       case 'endsWith':
         return __endsWith;
       case 'indexOf':
@@ -184,19 +182,19 @@ class $String implements $Instance {
       case 'lastIndexOf':
         return __lastIndexOf;
       case 'padLeft':
-        return __padLeft;  
+        return __padLeft;
       case 'padRight':
         return __padRight;
       case 'replaceAll':
-        return __replaceAll;  
+        return __replaceAll;
       case 'replaceFirst':
-        return __replaceFirst; 
+        return __replaceFirst;
       case 'replaceRange':
-        return __replaceRange;  
+        return __replaceRange;
       case 'startsWith':
-        return __startsWith;  
+        return __startsWith;
       case 'split':
-        return __split;  
+        return __split;
       case 'substring':
         return __substring;
       case 'toLowerCase':
@@ -206,7 +204,7 @@ class $String implements $Instance {
       case 'trimLeft':
         return __trimLeft;
       case 'trimRight':
-        return __trimRight;  
+        return __trimRight;
     }
 
     return _superclass.$getProperty(runtime, identifier);
@@ -321,7 +319,7 @@ class $String implements $Instance {
     final from = args[0] as $String;
     final replace = args[1] as $String;
     return $String(target.$value.replaceAll(from.$value, replace.$value));
-  }  
+  }
 
   static const $Function __replaceFirst = $Function(_replaceFirst);
 
@@ -335,7 +333,7 @@ class $String implements $Instance {
     } else {
       return $String(target.$value.replaceFirst(from.$value, to.$value));
     }
-  }  
+  }
 
   static const $Function __replaceRange = $Function(_replaceRange);
 
@@ -345,7 +343,7 @@ class $String implements $Instance {
     final end = args[1] is $int ? args[1] as $int : $null();
     final replacement = args[2] as $String;
     return $String(target.$value.replaceRange(start.$value, end.$value, replacement.$value));
-  }  
+  }
 
   static const $Function __startsWith = $Function(_startsWith);
 

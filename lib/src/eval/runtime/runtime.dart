@@ -6,7 +6,6 @@ import 'dart:typed_data';
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bridge/runtime_bridge.dart';
-import 'package:dart_eval/src/eval/plugin.dart';
 import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'package:dart_eval/src/eval/runtime/function.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async.dart';
@@ -40,14 +39,6 @@ class ScopeFrame {
   String toString() {
     return '$stackOffset (scope $scopeStackOffset)';
   }
-}
-
-class _UnloadedBridgeClass {
-  const _UnloadedBridgeClass(this.library, this.name, this.cls);
-
-  final String library;
-  final String name;
-  final $Bridge cls;
 }
 
 class _UnloadedBridgeFunction {
@@ -211,7 +202,6 @@ class Runtime {
 
   var _bridgeLibraryMappings = <String, int>{};
   final _bridgeFunctions = List<EvalCallableFunc>.filled(1000, _defaultFunction);
-  final _unloadedBrClass = <_UnloadedBridgeClass>[];
   final _unloadedBrFunc = <_UnloadedBridgeFunction>[];
   final _unloadedEnumValues = <_UnloadedEnumValues>[];
   final _plugins = <EvalPlugin>[
