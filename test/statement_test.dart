@@ -11,7 +11,7 @@ void main() {
     });
 
     test('For loop', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             num main() {
@@ -22,11 +22,11 @@ void main() {
           ''',
         }
       });
-      expect(exec.executeLib('package:example/main.dart', 'main'), $int(555));
+      expect(runtime.executeLib('package:example/main.dart', 'main'), $int(555));
     });
 
     test('For loop + branching', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
           dynamic doThing() {
@@ -46,7 +46,7 @@ void main() {
         }
       });
 
-      expect(exec.executeLib('package:example/main.dart', 'doThing'), $int(499472));
+      expect(runtime.executeLib('package:example/main.dart', 'doThing'), $int(499472));
     });
   });
 }

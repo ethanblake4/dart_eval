@@ -96,13 +96,13 @@ void main() {
         }
       }''';
 
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {'main.dart': source}
       });
 
       final timestamp = DateTime.now().millisecondsSinceEpoch;
 
-      final result = exec.executeLib('package:example/main.dart', 'main');
+      final result = runtime.executeLib('package:example/main.dart', 'main');
       expect(result, $int(555));
       expect(DateTime.now().millisecondsSinceEpoch - timestamp, lessThan(100));
     });

@@ -11,7 +11,7 @@ void main() {
     });
 
     test('Int unary -', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             int main() {
@@ -21,7 +21,7 @@ void main() {
         }
       });
 
-      expect(exec.executeLib('package:example/main.dart', 'main'), -5);
+      expect(runtime.executeLib('package:example/main.dart', 'main'), -5);
     });
 
     test('Future.delayed()', () async {
@@ -82,7 +82,7 @@ void main() {
     });
 
     test('Boolean literals', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             bool main() {
@@ -96,13 +96,13 @@ void main() {
         }
       });
       expect(() {
-        final a = exec.executeLib('package:example/main.dart', 'main');
+        final a = runtime.executeLib('package:example/main.dart', 'main');
         expect(a, equals(false));
       }, prints('true\nfalse\n'));
     });
 
     test('Boxed bools, logical && and ||', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             dynamic main() {
@@ -116,11 +116,11 @@ void main() {
         }
       });
       expect(() {
-        expect(exec.executeLib('package:example/main.dart', 'main'), $bool(false));
+        expect(runtime.executeLib('package:example/main.dart', 'main'), $bool(false));
       }, prints('false\ntrue\n'));
     });
     test('String interpolation', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             int main() {
@@ -133,12 +133,12 @@ void main() {
         }
       });
       expect(() {
-        exec.executeLib('package:example/main.dart', 'main');
+        runtime.executeLib('package:example/main.dart', 'main');
       }, prints('FluffyHello2, says the cat\n'));
     });
 
     test('dart:math Point', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             import 'dart:math';
@@ -151,12 +151,12 @@ void main() {
         }
       });
       expect(() {
-        exec.executeLib('package:example/main.dart', 'main');
+        runtime.executeLib('package:example/main.dart', 'main');
       }, prints('2.8284271247461903\n'));
     });
 
     test('Specifying doubles with int literals', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             double main() {
@@ -170,11 +170,11 @@ void main() {
           ''',
         }
       });
-      expect(exec.executeLib('package:example/main.dart', 'main'), 14.0);
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 14.0);
     });
 
     test('Boxed null', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             dynamic main() {
@@ -192,7 +192,7 @@ void main() {
         }
       });
       expect(() {
-        expect(exec.executeLib('package:example/main.dart', 'main'), $null());
+        expect(runtime.executeLib('package:example/main.dart', 'main'), $null());
       }, prints('null\n'));
     });
   });

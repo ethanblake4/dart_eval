@@ -10,7 +10,7 @@ void main() {
   });
   group('String Class method tests', () {
     test('String has isEmpty getter', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             int main() {
@@ -20,10 +20,10 @@ void main() {
           ''',
         }
       });
-      expect(exec.executeLib('package:example/main.dart', 'main'), 1);
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 1);
     });
     test('String has length getter', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             int main() {
@@ -33,10 +33,10 @@ void main() {
           ''',
         }
       });
-      expect(exec.executeLib('package:example/main.dart', 'main'), 6);
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 6);
     });
     test('String substring method works with only 1 parameter', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             int main() {
@@ -48,11 +48,11 @@ void main() {
         }
       });
       expect(() {
-        exec.executeLib('package:example/main.dart', 'main');
+        runtime.executeLib('package:example/main.dart', 'main');
       }, prints('ffy\n'));
     });
     test('String has substring method', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             int main() {
@@ -64,11 +64,11 @@ void main() {
         }
       });
       expect(() {
-        exec.executeLib('package:example/main.dart', 'main');
+        runtime.executeLib('package:example/main.dart', 'main');
       }, prints('Flu\n'));
     });
     test('String has compareTo method', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             int main() {
@@ -79,10 +79,10 @@ void main() {
           ''',
         }
       });
-      expect(exec.executeLib('package:example/main.dart', 'main'), -1);
+      expect(runtime.executeLib('package:example/main.dart', 'main'), -1);
     });
     test('String has endsWith method', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             int main() {
@@ -93,10 +93,10 @@ void main() {
           ''',
         }
       });
-      expect(exec.executeLib('package:example/main.dart', 'main'), 1);
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 1);
     });
     test('String has codeUnitAt method', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             int main() {
@@ -106,11 +106,11 @@ void main() {
           ''',
         }
       });
-      expect(exec.executeLib('package:example/main.dart', 'main'), 102);
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 102);
     });
 
     test('String has contains method', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             int main() {
@@ -120,10 +120,10 @@ void main() {
           ''',
         }
       });
-      expect(exec.executeLib('package:example/main.dart', 'main'), true);
+      expect(runtime.executeLib('package:example/main.dart', 'main'), true);
     });
     test('String has indexOf method', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             int main() {
@@ -133,10 +133,10 @@ void main() {
           ''',
         }
       });
-      expect(exec.executeLib('package:example/main.dart', 'main'), 2);
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 2);
     });
     test('String indexOf method uses start optional parameter', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             int main() {
@@ -146,10 +146,10 @@ void main() {
           ''',
         }
       });
-      expect(exec.executeLib('package:example/main.dart', 'main'), -1);
+      expect(runtime.executeLib('package:example/main.dart', 'main'), -1);
     });
     test('String has lastIndexOf method', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             int main() {
@@ -159,10 +159,10 @@ void main() {
           ''',
         }
       });
-      expect(exec.executeLib('package:example/main.dart', 'main'), 4);
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 4);
     });
     test('String lastIndexOf method uses start optional parameter', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             int main() {
@@ -172,10 +172,10 @@ void main() {
           ''',
         }
       });
-      expect(exec.executeLib('package:example/main.dart', 'main'), -1);
+      expect(runtime.executeLib('package:example/main.dart', 'main'), -1);
     });
     test('String padLeft method formats with default padding', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             String test() {
@@ -185,10 +185,10 @@ void main() {
           ''',
         }
       });
-      expect((exec.executeLib('package:example/main.dart', 'test') as $String).$value, '   D');
+      expect((runtime.executeLib('package:example/main.dart', 'test') as $String).$value, '   D');
     });
     test('String padLeft method formats with given padding', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             String test() {
@@ -198,10 +198,10 @@ void main() {
           ''',
         }
       });
-      expect((exec.executeLib('package:example/main.dart', 'test') as $String).$value, 'yyyD');
+      expect((runtime.executeLib('package:example/main.dart', 'test') as $String).$value, 'yyyD');
     });
     test('String padRight method formats with default padding', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             String test() {
@@ -211,10 +211,10 @@ void main() {
           ''',
         }
       });
-      expect((exec.executeLib('package:example/main.dart', 'test') as $String).$value, 'D   ');
+      expect((runtime.executeLib('package:example/main.dart', 'test') as $String).$value, 'D   ');
     });
     test('String padRight method formats with given padding', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             String test() {
@@ -224,10 +224,10 @@ void main() {
           ''',
         }
       });
-      expect((exec.executeLib('package:example/main.dart', 'test') as $String).$value, 'Dyyy');
+      expect((runtime.executeLib('package:example/main.dart', 'test') as $String).$value, 'Dyyy');
     });
     test('String replaceAll method replaces text', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             String test() {
@@ -237,10 +237,10 @@ void main() {
           ''',
         }
       });
-      expect((exec.executeLib('package:example/main.dart', 'test') as $String).$value, 'Fluzzy');
+      expect((runtime.executeLib('package:example/main.dart', 'test') as $String).$value, 'Fluzzy');
     });
     test('String replaceFirst method replaces with default start index', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             String test() {
@@ -250,10 +250,10 @@ void main() {
           ''',
         }
       });
-      expect((exec.executeLib('package:example/main.dart', 'test') as $String).$value, 'Fluzfy');
+      expect((runtime.executeLib('package:example/main.dart', 'test') as $String).$value, 'Fluzfy');
     });
     test('String replaceFirst method replaces with given start index', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             String test() {
@@ -263,10 +263,10 @@ void main() {
           ''',
         }
       });
-      expect((exec.executeLib('package:example/main.dart', 'test') as $String).$value, 'Flufzy');
+      expect((runtime.executeLib('package:example/main.dart', 'test') as $String).$value, 'Flufzy');
     });
     test('String toString method returns same string', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             String test() {
@@ -276,10 +276,10 @@ void main() {
           ''',
         }
       });
-      expect((exec.executeLib('package:example/main.dart', 'test') as $String).$value, 'Fluffy');
+      expect((runtime.executeLib('package:example/main.dart', 'test') as $String).$value, 'Fluffy');
     });
     test('String replaceRange method replaces default range', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             String test() {
@@ -289,10 +289,10 @@ void main() {
           ''',
         }
       });
-      expect((exec.executeLib('package:example/main.dart', 'test') as $String).$value, 'Flufz');
+      expect((runtime.executeLib('package:example/main.dart', 'test') as $String).$value, 'Flufz');
     });
     test('String replaceRange method replaces given range', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             String test() {
@@ -302,10 +302,10 @@ void main() {
           ''',
         }
       });
-      expect((exec.executeLib('package:example/main.dart', 'test') as $String).$value, 'Flufz');
+      expect((runtime.executeLib('package:example/main.dart', 'test') as $String).$value, 'Flufz');
     });
     test('String startsWith method finds match', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             bool test() {
@@ -315,10 +315,10 @@ void main() {
           ''',
         }
       });
-      expect((exec.executeLib('package:example/main.dart', 'test') as bool), true);
+      expect((runtime.executeLib('package:example/main.dart', 'test') as bool), true);
     });
     test('String trimLeft method trims whitespace', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             String test() {
@@ -328,10 +328,10 @@ void main() {
           ''',
         }
       });
-      expect((exec.executeLib('package:example/main.dart', 'test') as $String).$value, "Fluffy ");
+      expect((runtime.executeLib('package:example/main.dart', 'test') as $String).$value, "Fluffy ");
     });
     test('String split splits on given pattern', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             List<String> test() {
@@ -341,12 +341,12 @@ void main() {
           ''',
         }
       });
-      expect((exec.executeLib('package:example/main.dart', 'test')).length, 2);
-      expect((exec.executeLib('package:example/main.dart', 'test'))[0], "Flu");
-      expect((exec.executeLib('package:example/main.dart', 'test'))[1], "y");
+      expect((runtime.executeLib('package:example/main.dart', 'test')).length, 2);
+      expect((runtime.executeLib('package:example/main.dart', 'test'))[0], "Flu");
+      expect((runtime.executeLib('package:example/main.dart', 'test'))[1], "y");
     });
     test('String trimRight method trims whitespace', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             String test() {
@@ -356,7 +356,7 @@ void main() {
           ''',
         }
       });
-      expect((exec.executeLib('package:example/main.dart', 'test') as $String).$value, "  Fluffy");
+      expect((runtime.executeLib('package:example/main.dart', 'test') as $String).$value, "  Fluffy");
     });
   });
 }

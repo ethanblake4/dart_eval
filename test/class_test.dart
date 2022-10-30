@@ -12,7 +12,7 @@ void main() {
     });
 
     test('Default constructor, basic method', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'dbc_test': {
           'main.dart': '''
             class MyClass {
@@ -30,11 +30,11 @@ void main() {
         }
       });
 
-      expect(exec.executeLib('package:dbc_test/main.dart', 'main'), 10);
+      expect(runtime.executeLib('package:dbc_test/main.dart', 'main'), 10);
     });
 
     test('Field formal parameters, external field access', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             import 'package:example/x.dart';
@@ -58,7 +58,7 @@ void main() {
         }
       });
 
-      expect(exec.executeLib('package:example/main.dart', 'main'), $int(19));
+      expect(runtime.executeLib('package:example/main.dart', 'main'), $int(19));
     });
 
     test('Trying to access nonexistent method throws error', () {
@@ -87,7 +87,7 @@ void main() {
     });
 
     test('"this" keyword', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             int main () {
@@ -110,11 +110,11 @@ void main() {
         }
       });
 
-      expect(exec.executeLib('package:example/main.dart', 'main'), 8);
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 8);
     });
 
     test('Implicit and "this" field access from closure', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             int main () {
@@ -141,11 +141,11 @@ void main() {
         }
       });
 
-      expect(exec.executeLib('package:example/main.dart', 'main'), 12);
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 12);
     });
 
     test('Simple static method', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             int main () {
@@ -161,11 +161,11 @@ void main() {
         }
       });
 
-      expect(exec.executeLib('package:example/main.dart', 'main'), 10);
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 10);
     });
 
     test('Implicit static method scoping', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
           int main () {
@@ -189,11 +189,11 @@ void main() {
         }
       });
 
-      expect(exec.executeLib('package:example/main.dart', 'main'), 3);
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 3);
     });
 
     test('"new" keyword', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             int main () {
@@ -214,11 +214,11 @@ void main() {
         }
       });
 
-      expect(exec.executeLib('package:example/main.dart', 'main'), 9);
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 9);
     });
 
     test('Method tearoffs', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             int main () {
@@ -247,11 +247,11 @@ void main() {
         }
       });
 
-      expect(exec.executeLib('package:example/main.dart', 'main'), 10);
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 10);
     });
 
     test('Getters and setters', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             int main () {
@@ -271,11 +271,11 @@ void main() {
         }
       });
 
-      expect(exec.executeLib('package:example/main.dart', 'main'), 6);
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 6);
     });
 
     test('New-style super constructor parameters', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             int main () {
@@ -296,7 +296,7 @@ void main() {
         }
       });
 
-      expect(exec.executeLib('package:example/main.dart', 'main'), 16);
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 16);
     });
   });
 }
