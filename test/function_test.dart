@@ -11,7 +11,7 @@ void main() {
     });
 
     test('Local variable assignment with ints', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'eval_test': {
           'main.dart': '''
             int main() {
@@ -26,11 +26,11 @@ void main() {
         }
       });
 
-      expect(exec.executeLib('package:eval_test/main.dart', 'main'), 3);
+      expect(runtime.executeLib('package:eval_test/main.dart', 'main'), 3);
     });
 
     test('Simple function call', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'eval_test': {
           'main.dart': '''
             int main() {
@@ -44,11 +44,11 @@ void main() {
         }
       });
 
-      expect(exec.executeLib('package:eval_test/main.dart', 'main'), 7);
+      expect(runtime.executeLib('package:eval_test/main.dart', 'main'), 7);
     });
 
     test('Recursion (fibonacci)', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             int fib(int n) {
@@ -63,11 +63,11 @@ void main() {
         }
       });
 
-      expect(exec.executeLib('package:example/main.dart', 'main'), 75025);
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 75025);
     });
 
     test('Multiple files, boxed ints and correct stack handling', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             import 'package:example/x.dart';
@@ -98,11 +98,11 @@ void main() {
         }
       });
 
-      expect(exec.executeLib('package:example/main.dart', 'main'), $num<num>(7));
+      expect(runtime.executeLib('package:example/main.dart', 'main'), $num<num>(7));
     });
 
     test('Basic anonymous function', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             Function r() {
@@ -118,11 +118,11 @@ void main() {
         }
       });
 
-      expect(exec.executeLib('package:example/main.dart', 'main'), 2);
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 2);
     });
 
     test('Basic inline anonymous function', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             int main () {
@@ -135,11 +135,11 @@ void main() {
         }
       });
 
-      expect(exec.executeLib('package:example/main.dart', 'main'), 2);
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 2);
     });
 
     test('Anonymous function with arg', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             int main () {
@@ -153,11 +153,11 @@ void main() {
         }
       });
 
-      expect(exec.executeLib('package:example/main.dart', 'main'), 3);
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 3);
     });
 
     test('Anonymous function with named args, same sorting as call site', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             num main () {
@@ -171,11 +171,11 @@ void main() {
         }
       });
 
-      expect(exec.executeLib('package:example/main.dart', 'main'), $double(1.5));
+      expect(runtime.executeLib('package:example/main.dart', 'main'), $double(1.5));
     });
 
     test('Anonymous function with named args, different sorting from call site', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             num main () {
@@ -189,7 +189,7 @@ void main() {
         }
       });
 
-      expect(exec.executeLib('package:example/main.dart', 'main'), $double(1.5));
+      expect(runtime.executeLib('package:example/main.dart', 'main'), $double(1.5));
     });
 
     test('Simple async/await', () async {
@@ -214,7 +214,7 @@ void main() {
     });
 
     test('Closure with arg', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             int main() {
@@ -234,11 +234,11 @@ void main() {
         }
       });
 
-      expect(exec.executeLib('package:example/main.dart', 'main'), 18);
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 18);
     });
 
     test('Arrow function', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             int main (int y) => 2 + y;
@@ -246,11 +246,11 @@ void main() {
         }
       });
 
-      expect(exec.executeLib('package:example/main.dart', 'main', [4]), 6);
+      expect(runtime.executeLib('package:example/main.dart', 'main', [4]), 6);
     });
 
     test('Arrow function expression', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             int main () {
@@ -261,7 +261,7 @@ void main() {
         }
       });
 
-      expect(exec.executeLib('package:example/main.dart', 'main'), 5);
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 5);
     });
 
     test('Chained async/await', () async {
@@ -285,7 +285,7 @@ void main() {
     });
 
     test('Simple tearoff', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             int main () {
@@ -300,11 +300,11 @@ void main() {
         }
       });
 
-      expect(exec.executeLib('package:example/main.dart', 'main'), 5);
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 5);
     });
 
     test('Tearoff as argument', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             int main () {
@@ -322,11 +322,11 @@ void main() {
         }
       });
 
-      expect(exec.executeLib('package:example/main.dart', 'main'), 7);
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 7);
     });
 
     test('Nullable arg', () {
-      final exec = compiler.compileWriteAndLoad({
+      final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             int main () {
@@ -343,7 +343,24 @@ void main() {
         }
       });
 
-      expect(exec.executeLib('package:example/main.dart', 'main'), 2);
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 2);
+    });
+
+    // https://github.com/ethanblake4/dart_eval/issues/74#issuecomment-1289275224
+    test('Arrow function return value boxing', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            String main () {
+              return fun() + 'd';
+            }
+            
+            String fun() => 'Hello Worl';
+           '''
+        }
+      });
+
+      expect(runtime.executeLib('package:example/main.dart', 'main'), $String('Hello World'));
     });
   });
 }

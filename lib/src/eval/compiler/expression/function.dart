@@ -4,6 +4,7 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/constructor.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/return.dart';
 import 'package:dart_eval/src/eval/compiler/offset_tracker.dart';
 import 'package:dart_eval/src/eval/compiler/scope.dart';
 import 'package:dart_eval/src/eval/compiler/statement/block.dart';
@@ -71,7 +72,7 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
   } else if (b is ExpressionFunctionBody) {
     ctx.beginAllocScope();
     final V = compileExpression(b.expression, ctx);
-    ctx.pushOp(Return.make(V.scopeFrameOffset), Return.LEN);
+    stInfo = doReturn(ctx, AlwaysReturnType(EvalTypes.dynamicType, true), V, isAsync: b.isAsynchronous);
     ctx.endAllocScope();
   } else {
     throw CompileError('Unsupported function body type: ${b.runtimeType}');

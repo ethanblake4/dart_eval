@@ -4,6 +4,7 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/constructor.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/return.dart';
 import 'package:dart_eval/src/eval/compiler/scope.dart';
 import 'package:dart_eval/src/eval/compiler/statement/block.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
@@ -46,16 +47,15 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
     setupAsyncFunction(ctx);
   }
 
+  final expectedReturnType = AlwaysReturnType.fromAnnotation(ctx, ctx.library, d.returnType, EvalTypes.dynamicType);
   StatementInfo? stInfo;
   if (b is BlockFunctionBody) {
-    stInfo = compileBlock(
-        b.block, AlwaysReturnType.fromAnnotation(ctx, ctx.library, d.returnType, EvalTypes.dynamicType), ctx,
-        name: (d.name2.value() as String) + '()');
+    stInfo = compileBlock(b.block, expectedReturnType, ctx, name: (d.name2.value() as String) + '()');
   } else if (b is ExpressionFunctionBody) {
     ctx.beginAllocScope();
-    final V = compileExpression(b.expression, ctx);
-    ctx.pushOp(Return.make(V.scopeFrameOffset), Return.LEN);
-    ctx.endAllocScope();
+    stInfo = doReturn(ctx, expectedReturnType, compileExpression(b.expression, ctx, expectedReturnType.type),
+        isAsync: b.isAsynchronous);
+    stInfo = StatementInfo(-1, willAlwaysReturn: true);
   } else {
     throw CompileError('Unsupported function body type: ${b.runtimeType}');
   }
