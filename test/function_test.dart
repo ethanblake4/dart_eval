@@ -205,7 +205,6 @@ void main() {
       });
 
       final startTime = DateTime.now().millisecondsSinceEpoch;
-      runtime.printOpcodes();
       final future = runtime.executeLib('package:example/main.dart', 'main', [150]) as Future;
       await expectLater(future, completion($int(3)));
       final endTime = DateTime.now().millisecondsSinceEpoch;
@@ -277,8 +276,6 @@ void main() {
           '''
         }
       });
-
-      runtime.printOpcodes();
 
       final future = runtime.executeLib('package:example/main.dart', 'main') as Future;
       await expectLater(future, completion($int(3)));

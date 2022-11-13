@@ -193,7 +193,7 @@ class TypeRef {
   }
 
   factory TypeRef.lookupClassDeclaration(CompilerContext ctx, int library, ClassDeclaration cls) {
-    return ctx.visibleTypes[library]![cls.name.name] ?? (throw CompileError('Class ${cls.name.name} not found'));
+    return ctx.visibleTypes[library]![cls.name.value()] ?? (throw CompileError('Class ${cls.name.value()} not found'));
   }
 
   static TypeRef? lookupFieldType(CompilerContext ctx, TypeRef $class, String field, {bool forFieldFormal = false}) {
@@ -259,7 +259,7 @@ class TypeRef {
       if ($extends == null) {
         throw CompileError('Field "$field" not found in class ${$class}');
       } else {
-        final $super = ctx.visibleTypes[$class.file]![$extends.superclass2.name.name]!;
+        final $super = ctx.visibleTypes[$class.file]![$extends.superclass.name.name]!;
         return TypeRef.lookupFieldType(ctx, $super, field);
       }
     }
@@ -330,8 +330,8 @@ class TypeRef {
       withNames = dec.withClause?.mixinTypes.toList() ?? [];
       implementsNames = dec.implementsClause?.interfaces.toList() ?? [];
       generics = dec.typeParameters?.typeParameters
-              .map((t) =>
-                  GenericParam(t.name.name, t.bound == null ? null : TypeRef.fromAnnotation(ctx, file, t.bound!)))
+              .map((t) => GenericParam(
+                  t.name.value() as String, t.bound == null ? null : TypeRef.fromAnnotation(ctx, file, t.bound!)))
               .toList() ??
           [];
     }

@@ -15,8 +15,8 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   ctx.runPrescan(d);
-  ctx.topLevelDeclarationPositions[ctx.library]![d.name2.value() as String] =
-      beginMethod(ctx, d, d.offset, (d.name2.value() as String) + '()');
+  ctx.topLevelDeclarationPositions[ctx.library]![d.name.value() as String] =
+      beginMethod(ctx, d, d.offset, (d.name.value() as String) + '()');
 
   final _existingAllocs = d.functionExpression.parameters?.parameters.length ?? 0;
   ctx.beginAllocScope(existingAllocLen: _existingAllocs);
@@ -50,7 +50,7 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   final expectedReturnType = AlwaysReturnType.fromAnnotation(ctx, ctx.library, d.returnType, EvalTypes.dynamicType);
   StatementInfo? stInfo;
   if (b is BlockFunctionBody) {
-    stInfo = compileBlock(b.block, expectedReturnType, ctx, name: (d.name2.value() as String) + '()');
+    stInfo = compileBlock(b.block, expectedReturnType, ctx, name: (d.name.value() as String) + '()');
   } else if (b is ExpressionFunctionBody) {
     ctx.beginAllocScope();
     stInfo = doReturn(ctx, expectedReturnType, compileExpression(b.expression, ctx, expectedReturnType.type),

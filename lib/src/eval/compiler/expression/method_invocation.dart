@@ -40,7 +40,7 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
     final offset = method.methodOffset!;
     if (offset.file == ctx.library &&
         offset.className != null &&
-        offset.className == (ctx.currentClass?.name2.value() as String)) {
+        offset.className == (ctx.currentClass?.name.value() as String)) {
       final $this = ctx.lookupLocal('#this')!;
       return _invokeWithTarget(ctx, $this, e);
     }
@@ -57,7 +57,7 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
         ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
         TypeRef? thisType;
         if (ctx.currentClass != null) {
-          thisType = ctx.visibleTypes[ctx.library]![ctx.currentClass!.name2.value() as String]!;
+          thisType = ctx.visibleTypes[ctx.library]![ctx.currentClass!.name.value() as String]!;
         }
         mReturnType = method.methodReturnType?.toAlwaysReturnType(thisType, [], {}) ??
             AlwaysReturnType(EvalTypes.dynamicType, true);
@@ -131,7 +131,7 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
 
     TypeRef? thisType;
     if (ctx.currentClass != null) {
-      thisType = ctx.visibleTypes[ctx.library]![ctx.currentClass!.name2.value() as String]!;
+      thisType = ctx.visibleTypes[ctx.library]![ctx.currentClass!.name.value() as String]!;
     }
     mReturnType = method.methodReturnType?.toAlwaysReturnType(thisType, _argTypes, _namedArgTypes) ??
         AlwaysReturnType(EvalTypes.dynamicType, true);
@@ -246,7 +246,7 @@ DeclarationOrBridge<MethodDeclaration, BridgeMethodDef> resolveInstanceMethod(
       throw CompileError('Cannot resolve instance method', source);
     }
     // ignore: deprecated_member_use
-    final $supertype = ctx.visibleTypes[instanceType.file]![$class.extendsClause!.superclass2.name.name]!;
+    final $supertype = ctx.visibleTypes[instanceType.file]![$class.extendsClause!.superclass.name.name]!;
     return resolveInstanceMethod(ctx, $supertype, methodName, source);
   }
 }

@@ -48,7 +48,7 @@ class IdentifierReference implements Reference {
     // Instance
     if (ctx.currentClass != null) {
       final instanceDeclaration =
-          resolveInstanceDeclaration(ctx, ctx.library, ctx.currentClass!.name2.value() as String, name);
+          resolveInstanceDeclaration(ctx, ctx.library, ctx.currentClass!.name.value() as String, name);
       if (instanceDeclaration != null) {
         final $type = instanceDeclaration.first;
         return TypeRef.lookupFieldType(ctx, $type, name) ?? EvalTypes.dynamicType;
@@ -89,7 +89,7 @@ class IdentifierReference implements Reference {
     // Instance
     if (ctx.currentClass != null) {
       final instanceDeclaration =
-          resolveInstanceDeclaration(ctx, ctx.library, ctx.currentClass!.name2.value() as String, name);
+          resolveInstanceDeclaration(ctx, ctx.library, ctx.currentClass!.name.value() as String, name);
       if (instanceDeclaration != null) {
         final $type = instanceDeclaration.first;
         final fieldType = TypeRef.lookupFieldType(ctx, $type, name) ?? EvalTypes.dynamicType;
@@ -168,7 +168,7 @@ class IdentifierReference implements Reference {
     // Next, the instance (if available)
     if (ctx.currentClass != null) {
       final instanceDeclaration =
-          resolveInstanceDeclaration(ctx, ctx.library, ctx.currentClass!.name2.value() as String, name);
+          resolveInstanceDeclaration(ctx, ctx.library, ctx.currentClass!.name.value() as String, name);
       if (instanceDeclaration != null) {
         final $type = instanceDeclaration.first;
         final _dec = instanceDeclaration.second;
@@ -179,7 +179,7 @@ class IdentifierReference implements Reference {
           return Variable(-1, EvalTypes.functionType,
               methodOffset: DeferredOrOffset(
                   file: ctx.library,
-                  className: ctx.currentClass!.name2.value() as String,
+                  className: ctx.currentClass!.name.value() as String,
                   name: name,
                   targetScopeFrameOffset: $this.scopeFrameOffset),
               callingConvention: CallingConvention.static);
@@ -198,13 +198,13 @@ class IdentifierReference implements Reference {
                 TypeRef.fromBridgeAnnotation(ctx, getter.functionDescriptor.returns,
                     specifiedType: $type, specifyingType: $this.type),
                 methodOffset: DeferredOrOffset(
-                    file: ctx.library, className: ctx.currentClass!.name2.value() as String, name: name));
+                    file: ctx.library, className: ctx.currentClass!.name.value() as String, name: name));
           }
           final bridge = _dec.bridge!;
           if (bridge is BridgeMethodDef) {
             return Variable.alloc(ctx, EvalTypes.functionType,
                 methodOffset: DeferredOrOffset(
-                    file: ctx.library, className: ctx.currentClass!.name2.value() as String, name: name));
+                    file: ctx.library, className: ctx.currentClass!.name.value() as String, name: name));
           }
           throw CompileError('Ref: cannot resolve bridge declaration "$name" of type ${_dec.runtimeType}', source);
         }
@@ -213,16 +213,16 @@ class IdentifierReference implements Reference {
       }
 
       final staticDeclaration =
-          resolveStaticDeclaration(ctx, ctx.library, ctx.currentClass!.name2.value() as String, name);
+          resolveStaticDeclaration(ctx, ctx.library, ctx.currentClass!.name.value() as String, name);
 
       if (staticDeclaration != null && staticDeclaration.declaration != null) {
         final _dec = staticDeclaration.declaration!;
         if (_dec is MethodDeclaration) {
           return Variable(-1, EvalTypes.functionType,
               methodOffset:
-                  DeferredOrOffset.lookupStatic(ctx, ctx.library, ctx.currentClass!.name2.value() as String, name));
+                  DeferredOrOffset.lookupStatic(ctx, ctx.library, ctx.currentClass!.name.value() as String, name));
         } else if (_dec is VariableDeclaration) {
-          final name = (ctx.currentClass!.name2.value() as String) + '.' + (_dec.name2.value() as String);
+          final name = (ctx.currentClass!.name.value() as String) + '.' + (_dec.name.value() as String);
           final type = ctx.topLevelVariableInferredTypes[ctx.library]![name]!;
           final gIndex = ctx.topLevelGlobalIndices[ctx.library]![name]!;
           ctx.pushOp(LoadGlobal.make(gIndex), LoadGlobal.LEN);
@@ -270,8 +270,8 @@ class IdentifierReference implements Reference {
     final decl = _decl.declaration!;
 
     if (decl is VariableDeclaration) {
-      final type = ctx.topLevelVariableInferredTypes[_decl.sourceLib]![decl.name2.value() as String]!;
-      final gIndex = ctx.topLevelGlobalIndices[_decl.sourceLib]![decl.name2.value() as String]!;
+      final type = ctx.topLevelVariableInferredTypes[_decl.sourceLib]![decl.name.value() as String]!;
+      final gIndex = ctx.topLevelGlobalIndices[_decl.sourceLib]![decl.name.value() as String]!;
       ctx.pushOp(LoadGlobal.make(gIndex), LoadGlobal.LEN);
       ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
 

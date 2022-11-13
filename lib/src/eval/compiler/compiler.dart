@@ -434,7 +434,7 @@ class Compiler {
       }
 
       for (final variable in vlist.variables) {
-        final name = variable.name2.value() as String;
+        final name = variable.name.value() as String;
 
         if (_topLevelDeclarationsMap[libraryIndex]!.containsKey(name)) {
           throw CompileError('Cannot define "$name" twice in the same library', variable, libraryIndex);
@@ -445,7 +445,7 @@ class Compiler {
       }
     } else {
       declaration as NamedCompilationUnitMember;
-      final name = declaration.name2.value() as String;
+      final name = declaration.name.value() as String;
 
       if (_topLevelDeclarationsMap[libraryIndex]!.containsKey(name)) {
         throw CompileError('Cannot define "$name" twice in the same library', declaration, libraryIndex);
@@ -458,7 +458,7 @@ class Compiler {
 
         declaration.members.forEach((member) {
           if (member is MethodDeclaration) {
-            var mName = member.name2.value() as String;
+            var mName = member.name.value() as String;
             if (member.isStatic) {
               _topLevelDeclarationsMap[libraryIndex]![name + '.' + mName] =
                   DeclarationOrBridge(libraryIndex, declaration: member);
@@ -479,7 +479,7 @@ class Compiler {
               }
 
               for (final field in member.fields.variables) {
-                final name = (declaration.name2.value() as String) + '.' + (field.name2.value().toString());
+                final name = (declaration.name.value() as String) + '.' + (field.name.value().toString());
 
                 if (_topLevelDeclarationsMap[libraryIndex]!.containsKey(name)) {
                   throw CompileError('Cannot define "$name" twice in the same library', field, libraryIndex);
@@ -490,12 +490,12 @@ class Compiler {
               }
             } else {
               for (final field in member.fields.variables) {
-                final fName = field.name2.value() as String;
+                final fName = field.name.value() as String;
                 _instanceDeclarationsMap[libraryIndex]![name]![fName] = field;
               }
             }
           } else if (member is ConstructorDeclaration) {
-            final mName = (member.name2?.value() as String?) ?? "";
+            final mName = (member.name?.value() as String?) ?? "";
             _topLevelDeclarationsMap[libraryIndex]!['$name.$mName'] =
                 DeclarationOrBridge(libraryIndex, declaration: member);
           } else {
@@ -523,7 +523,7 @@ class Compiler {
       if (declaration is! ClassDeclaration) {
         return null;
       }
-      return TypeRef.cache(ctx, libraryIndex, declaration.name2.value() as String, fileRef: libraryIndex);
+      return TypeRef.cache(ctx, libraryIndex, declaration.name.value() as String, fileRef: libraryIndex);
     }
   }
 
@@ -612,8 +612,8 @@ List<Library> _buildLibraries(Iterable<DartCompilationUnit> units) {
   for (final unit in units) {
     compilationUnitMap[i] = unit;
     uriMap[unit.uri.toString()] = i;
-    if (unit.library != null) {
-      libraryIdMap[unit.library!.name.name] = i;
+    if (unit.library != null && unit.library!.name2 != null) {
+      libraryIdMap[unit.library!.name2!.name] = i;
     }
     i++;
   }
@@ -626,7 +626,7 @@ List<Library> _buildLibraries(Iterable<DartCompilationUnit> units) {
     final primaryId = group.length == 1 ? group[0] : group.firstWhere((e) => compilationUnitMap[e]!.partOf == null);
     final primary = compilationUnitMap[primaryId]!;
     final library = Library(primary.uri,
-        library: primary.library?.name.name,
+        library: primary.library?.name2?.name,
         imports: primary.imports,
         exports: primary.exports,
         declarations: group.map((e) => compilationUnitMap[e]!).fold(
@@ -747,22 +747,22 @@ Iterable<Pair<String, DeclarationOrBridge>> _expandDeclarations(List<Declaration
     } else {
       final declaration = d.declaration!;
       if (declaration is NamedCompilationUnitMember) {
-        final dName = declaration.name2.value() as String;
+        final dName = declaration.name.value() as String;
         yield Pair(dName, d);
         if (declaration is ClassDeclaration) {
           for (final member in declaration.members) {
             if (member is ConstructorDeclaration) {
-              yield Pair('$dName.${member.name2?.value() ?? ""}', DeclarationOrBridge(-1, declaration: member));
+              yield Pair('$dName.${member.name?.value() ?? ""}', DeclarationOrBridge(-1, declaration: member));
             } else if (member is MethodDeclaration && member.isStatic) {
-              yield Pair('$dName.${member.name2.value()}', DeclarationOrBridge(-1, declaration: member));
+              yield Pair('$dName.${member.name.value()}', DeclarationOrBridge(-1, declaration: member));
             } else if (member is MethodDeclaration && member.isStatic) {
-              yield Pair('$dName.${member.name2.value()}', DeclarationOrBridge(-1, declaration: member));
+              yield Pair('$dName.${member.name.value()}', DeclarationOrBridge(-1, declaration: member));
             }
           }
         }
       } else if (declaration is TopLevelVariableDeclaration) {
         for (final v in declaration.variables.variables) {
-          yield Pair(v.name2.value() as String, DeclarationOrBridge(-1, declaration: v));
+          yield Pair(v.name.value() as String, DeclarationOrBridge(-1, declaration: v));
         }
       }
     }

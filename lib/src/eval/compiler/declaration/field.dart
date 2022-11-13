@@ -7,10 +7,10 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 void compileFieldDeclaration(int fieldIndex, FieldDeclaration d, CompilerContext ctx, ClassDeclaration parent) {
-  final parentName = parent.name2.value() as String;
+  final parentName = parent.name.value() as String;
   var _fieldIndex = fieldIndex;
   for (final field in d.fields.variables) {
-    final fieldName = field.name2.value().toString();
+    final fieldName = field.name.value().toString();
     if (d.isStatic) {
       final initializer = field.initializer;
       if (initializer != null) {

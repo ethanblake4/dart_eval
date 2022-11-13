@@ -15,8 +15,8 @@ import '../variable.dart';
 
 void compileConstructorDeclaration(
     CompilerContext ctx, ConstructorDeclaration d, ClassDeclaration parent, List<FieldDeclaration> fields) {
-  final parentName = parent.name2.value() as String;
-  final dName = (d.name2?.value() as String?) ?? "";
+  final parentName = parent.name.value() as String;
+  final dName = (d.name?.value() as String?) ?? "";
   final n = '$parentName.$dName';
 
   ctx.topLevelDeclarationPositions[ctx.library]![n] = beginMethod(ctx, d, d.offset, '$n()');
@@ -95,8 +95,7 @@ void compileConstructorDeclaration(
   if ($extends == null) {
     $super = BuiltinValue().push(ctx);
   } else {
-    // ignore: deprecated_member_use
-    extendsWhat = ctx.visibleDeclarations[ctx.library]![$extends.superclass2.name.name]!;
+    extendsWhat = ctx.visibleDeclarations[ctx.library]![$extends.superclass.name.name]!;
 
     final decl = extendsWhat.declaration!;
 
@@ -141,7 +140,7 @@ void compileConstructorDeclaration(
     }
   }
 
-  final op = CreateClass.make(ctx.library, $super.scopeFrameOffset, parent.name2.value() as String, fieldIdx);
+  final op = CreateClass.make(ctx.library, $super.scopeFrameOffset, parent.name.value() as String, fieldIdx);
   ctx.pushOp(op, CreateClass.len(op));
   final instOffset = ctx.scopeFrameOffset++;
 
@@ -202,7 +201,7 @@ void compileConstructorDeclaration(
 }
 
 void compileDefaultConstructor(CompilerContext ctx, ClassDeclaration parent, List<FieldDeclaration> fields) {
-  final parentName = parent.name2.value() as String;
+  final parentName = parent.name.value() as String;
   final n = '$parentName.';
 
   ctx.topLevelDeclarationPositions[ctx.library]![n] = beginMethod(ctx, parent, parent.offset, '$n()');
@@ -224,8 +223,7 @@ void compileDefaultConstructor(CompilerContext ctx, ClassDeclaration parent, Lis
   if ($extends == null) {
     $super = BuiltinValue().push(ctx);
   } else {
-    // ignore: deprecated_member_use
-    extendsWhat = ctx.visibleDeclarations[ctx.library]![$extends.superclass2.name.name]!;
+    extendsWhat = ctx.visibleDeclarations[ctx.library]![$extends.superclass.name.name]!;
 
     final decl = extendsWhat.declaration!;
 
@@ -256,7 +254,7 @@ void compileDefaultConstructor(CompilerContext ctx, ClassDeclaration parent, Lis
     }
   }
 
-  final op = CreateClass.make(ctx.library, $super.scopeFrameOffset, parent.name2.value() as String, fieldIdx);
+  final op = CreateClass.make(ctx.library, $super.scopeFrameOffset, parent.name.value() as String, fieldIdx);
   ctx.pushOp(op, CreateClass.len(op));
   final instOffset = ctx.scopeFrameOffset++;
 
@@ -291,7 +289,7 @@ Map<String, int> _getFieldIndices(List<FieldDeclaration> fields) {
   var fieldIdx = 0;
   for (final fd in fields) {
     for (final field in fd.fields.variables) {
-      fieldIndices[field.name2.value() as String] = fieldIdx;
+      fieldIndices[field.name.value() as String] = fieldIdx;
       fieldIdx++;
     }
   }
@@ -302,7 +300,7 @@ void _compileUnusedFields(CompilerContext ctx, List<FieldDeclaration> fields, Se
   var _fieldIdx = 0;
   for (final fd in fields) {
     for (final field in fd.fields.variables) {
-      if (!usedNames.contains(field.name2.value() as String) && field.initializer != null) {
+      if (!usedNames.contains(field.name.value() as String) && field.initializer != null) {
         final V = compileExpression(field.initializer!, ctx).boxIfNeeded(ctx);
         ctx.pushOp(SetObjectPropertyImpl.make(instOffset, _fieldIdx, V.scopeFrameOffset), SetObjectPropertyImpl.LEN);
       }

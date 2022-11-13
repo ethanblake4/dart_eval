@@ -37,12 +37,12 @@ extension TearOff on Variable {
     final TypeAnnotation? methodReturnType;
     if (dec is MethodDeclaration) {
       parameters = dec.parameters;
-      methodName = dec.name2.value() as String;
+      methodName = dec.name.value() as String;
       methodReturnType = dec.returnType;
     } else {
       final e = (dec as FunctionDeclaration).functionExpression;
       parameters = e.parameters;
-      methodName = dec.name2.value() as String;
+      methodName = dec.name.value() as String;
       methodReturnType = dec.returnType;
     }
 

@@ -6,7 +6,7 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 
 void compileClassDeclaration(CompilerContext ctx, ClassDeclaration d, {bool statics = false}) {
   final $runtimeType = ctx.typeRefIndexMap[TypeRef.lookupClassDeclaration(ctx, ctx.library, d)];
-  final clsName = d.name2.value() as String;
+  final clsName = d.name.value() as String;
   ctx.instanceDeclarationPositions[ctx.library]![clsName] = [{}, {}, {}, $runtimeType];
   final constructors = <ConstructorDeclaration>[];
   final fields = <FieldDeclaration>[];

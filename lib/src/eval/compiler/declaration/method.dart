@@ -16,13 +16,13 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx, NamedCompilationUnitMember parent) {
   ctx.runPrescan(d);
   final b = d.body;
-  final parentName = parent.name2.value() as String;
-  final methodName = d.name2.value() as String;
+  final parentName = parent.name.value() as String;
+  final methodName = d.name.value() as String;
   final pos = beginMethod(ctx, d, d.offset, parentName + '.' + methodName + '()');
 
   ctx.beginAllocScope(existingAllocLen: (d.parameters?.parameters.length ?? 0));
   ctx.scopeFrameOffset += d.parameters?.parameters.length ?? 0;
-  ctx.setLocal('#this', Variable(0, ctx.visibleTypes[ctx.library]![ctx.currentClass!.name2.value() as String]!));
+  ctx.setLocal('#this', Variable(0, ctx.visibleTypes[ctx.library]![ctx.currentClass!.name.value() as String]!));
   final resolvedParams = d.parameters == null
       ? <PossiblyValuedParameter>[]
       : resolveFPLDefaults(ctx, d.parameters!, true, allowUnboxed: true);

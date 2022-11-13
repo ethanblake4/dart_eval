@@ -11,22 +11,22 @@ platforms:
   windows:
 
 environment:
-  sdk: '>=2.15.0 <3.0.0'
+  sdk: '>=2.17.0 <3.0.0'
 
 executables:
   dart_eval:
 
 dependencies:
    args: ^2.3.0
-   analyzer: ^4.4.0
+   analyzer: ^5.0.0
    collection: ^1.15.0
    dcli: ^1.34.0
    json_annotation: ^4.4.0
    directed_graph: ^0.3.7
-   _fe_analyzer_shared: '>43.0.0 <47.0.0'
+   _fe_analyzer_shared: '>=50.0.0'
 
 dev_dependencies:
-  test: ^1.17.12
+  test: ^1.21.0
   build_runner: ^2.0.0
   json_serializable: ^6.0.0
   lints: ^1.0.0

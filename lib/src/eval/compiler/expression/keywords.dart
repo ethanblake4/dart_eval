@@ -21,7 +21,7 @@ Variable compileSuperExpression(SuperExpression e, CompilerContext ctx) {
   final extendsClause = ctx.currentClass!.extendsClause;
   if (extendsClause != null) {
     // ignore: deprecated_member_use
-    type = ctx.visibleTypes[ctx.library]![extendsClause.superclass2.name.name]!;
+    type = ctx.visibleTypes[ctx.library]![extendsClause.superclass.name.name]!;
   }
 
   final $this = ctx.lookupLocal('#this')!;
