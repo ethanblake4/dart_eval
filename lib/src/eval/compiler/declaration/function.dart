@@ -60,7 +60,7 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
     throw CompileError('Unsupported function body type: ${b.runtimeType}');
   }
 
-  if (stInfo == null || !(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
+  if (!(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
     if (b.isAsynchronous) {
       asyncComplete(ctx, -1);
       return;
@@ -69,7 +69,7 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
 
   ctx.endAllocScope();
 
-  if (stInfo == null || !(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
+  if (!(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
     ctx.pushOp(Return.make(-1), Return.LEN);
   }
 }

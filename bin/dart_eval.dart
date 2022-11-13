@@ -4,7 +4,8 @@ import 'dart:io';
 import 'package:args/args.dart';
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dcli/dcli.dart' as cli;
+import 'package:path/path.dart';
+import 'package:pubspec2/pubspec2.dart';
 
 void main(List<String> args) {
   final parser = ArgParser();
@@ -21,6 +22,7 @@ void main(List<String> args) {
   final dumpCmd = parser.addCommand('dump');
   dumpCmd.addFlag('help', abbr: 'h');
 
+  // ignore: unused_local_variable
   final helpCmd = parser.addCommand('help');
 
   final result = parser.parse(args);
@@ -59,11 +61,15 @@ void main(List<String> args) {
       projectRoot = projectRoot.parent;
     }
 
-    if (cli.isDirectory('./.dart_eval/bindings')) {
-      final paths = cli.find('*.json', workingDirectory: './.dart_eval/bindings').toList();
-      for (final path in paths) {
-        print('Found binding file: ${cli.relative(path, from: projectRoot.path)}');
-        final _data = File(path).readAsStringSync();
+    if (FileSystemEntity.typeSync('./.dart_eval/bindings') == FileSystemEntityType.directory) {
+      final files = Directory('./.dart_eval/bindings')
+          .listSync()
+          .where((entity) => entity is File && entity.path.endsWith('.json'))
+          .cast<File>();
+
+      for (final file in files) {
+        print('Found binding file: ${relative(file.path, from: projectRoot.path)}');
+        final _data = file.readAsStringSync();
         final decoded = (json.decode(_data) as Map).cast<String, dynamic>();
         final classList = (decoded['classes'] as List);
         for (final $class in classList.cast<Map>()) {
@@ -78,21 +84,37 @@ void main(List<String> args) {
       }
     }
 
-    final pubspecUri = cli.join(projectRoot.uri.path, 'pubspec.yaml');
+    final pubspecFile = File(join(projectRoot.uri.path, 'pubspec.yaml'));
+    final pubspec = PubSpec.fromYamlString(pubspecFile.readAsStringSync());
 
-    final pubspec = cli.PubSpec.fromFile(pubspecUri);
     final packageName = pubspec.name;
 
-    final filePaths = cli.find('*.dart', workingDirectory: cli.join(projectRoot.path, 'lib')).toList();
+    final files = <File>[];
+
+    // Recursively add dart files in the lib directory
+    final libDir = Directory(join(projectRoot.path, 'lib'));
+
+    void addFiles(Directory dir) {
+      for (final file in dir.listSync()) {
+        if (file is File && file.path.endsWith('.dart')) {
+          files.add(file);
+        } else if (file is Directory) {
+          addFiles(file);
+        }
+      }
+    }
+
+    addFiles(libDir);
+
     final data = <String, String>{};
 
     var sourceLength = 0;
 
-    for (final path in filePaths) {
-      final _data = File(path).readAsStringSync();
+    for (final file in files) {
+      final _data = file.readAsStringSync();
       sourceLength += _data.length;
 
-      final p = cli.relative(path, from: cli.join(projectRoot.path, 'lib')).replaceAll('\\', '/');
+      final p = relative(file.path, from: join(projectRoot.path, 'lib')).replaceAll('\\', '/');
       data[p] = _data;
     }
 

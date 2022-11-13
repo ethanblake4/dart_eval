@@ -63,8 +63,8 @@ Variable compileInstanceCreation(CompilerContext ctx, InstanceCreationExpression
     _namedArgs = argsPair.second;
   }
 
-  final _argTypes = _args.map((e) => e.type).toList();
-  final _namedArgTypes = _namedArgs.map((key, value) => MapEntry(key, value.type));
+  //final _argTypes = _args.map((e) => e.type).toList();
+  //final _namedArgTypes = _namedArgs.map((key, value) => MapEntry(key, value.type));
 
   if (_dec.isBridge) {
     final bridge = _dec.bridge!;

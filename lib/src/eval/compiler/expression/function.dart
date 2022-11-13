@@ -78,7 +78,7 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
     throw CompileError('Unsupported function body type: ${b.runtimeType}');
   }
 
-  if (stInfo == null || !(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
+  if (!(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
     if (b.isAsynchronous) {
       asyncComplete(ctx, -1);
       ctx.endAllocScope(popValues: false);
