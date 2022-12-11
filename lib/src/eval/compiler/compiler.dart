@@ -123,7 +123,7 @@ class Compiler {
   ///     'file_name2.dart': '''code'''
   ///   }
   /// }
-  ///
+  ///```
   Program compile(Map<String, Map<String, String>> packages) {
     final sources = packages.entries.expand((packageEntry) => packageEntry.value.entries
         .map((library) => DartSource('package:${packageEntry.key}/${library.key}', library.value)));
