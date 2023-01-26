@@ -19,7 +19,7 @@ extension BridgeParameterExt on String {
   /////Without Extension method
   ///final keyUnwrapped = BridgeParameter('icon', BridgeTypeAnnotation($IconData.$type), true);
   /////With Extension method you can write
-  ///final keyWrapped = 'icon'.wrappedOptional($IconData.$type);
+  ///final keyWrapped = 'icon'.paramOptional($IconData.$type);
   ///```
   ///See [wrappedOptional] for optional named param
   ///See [wrappedOptionalNullable] for nullable param

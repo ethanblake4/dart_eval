@@ -13,3 +13,4 @@ export 'src/eval/runtime/function.dart' hide EvalFunctionPtr, EvalStaticFunction
 export 'src/eval/bridge/runtime_bridge.dart' show $Bridge, $BridgeField;
 export 'src/eval/bridge/declaration.dart' show BridgeDeclaration, BridgeFunctionDeclaration;
 export 'src/eval/compiler/builtins.dart' show EvalTypes;
+export 'src/eval/bridge/extensions/extensions.dart';
