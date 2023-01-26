@@ -755,8 +755,6 @@ Iterable<Pair<String, DeclarationOrBridge>> _expandDeclarations(List<Declaration
               yield Pair('$dName.${member.name?.value() ?? ""}', DeclarationOrBridge(-1, declaration: member));
             } else if (member is MethodDeclaration && member.isStatic) {
               yield Pair('$dName.${member.name.value()}', DeclarationOrBridge(-1, declaration: member));
-            } else if (member is MethodDeclaration && member.isStatic) {
-              yield Pair('$dName.${member.name.value()}', DeclarationOrBridge(-1, declaration: member));
             }
           }
         }
