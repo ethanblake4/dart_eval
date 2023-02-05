@@ -17,7 +17,8 @@ class $Iterator<E> implements Iterator<E>, $Instance {
   static const $declaration = BridgeClassDef(BridgeClassType($type, generics: {'E': BridgeGenericParam()}),
       constructors: {},
       methods: {
-        'moveNext': BridgeMethodDef(BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.ref('bool'))))
+        'moveNext':
+            BridgeMethodDef(BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType))))
       },
       getters: {'current': BridgeMethodDef(BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.ref('E'))))},
       setters: {},
