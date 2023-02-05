@@ -1,4 +1,4 @@
-## 0.5.5
+## 0.5.6
 - (Breaking) Use DartTypes.list instead of RuntimeTypes.listType in bridge
   class definitions.
 - Support for Iterable and for-each
