@@ -132,7 +132,7 @@ void compileConstructorDeclaration(
         ctx.offsetTracker.setOffset(loc, offset);
       }
       final clsType = TypeRef.lookupClassDeclaration(ctx, ctx.library, parent);
-      mReturnType = method.methodReturnType?.toAlwaysReturnType(clsType, argTypes, namedArgTypes) ??
+      mReturnType = method.methodReturnType?.toAlwaysReturnType(ctx, clsType, argTypes, namedArgTypes) ??
           AlwaysReturnType(EvalTypes.dynamicType, true);
 
       ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
@@ -246,7 +246,7 @@ void compileDefaultConstructor(CompilerContext ctx, ClassDeclaration parent, Lis
         ctx.offsetTracker.setOffset(loc, offset);
       }
       final clsType = TypeRef.lookupClassDeclaration(ctx, ctx.library, parent);
-      mReturnType = method.methodReturnType?.toAlwaysReturnType(clsType, argTypes, namedArgTypes) ??
+      mReturnType = method.methodReturnType?.toAlwaysReturnType(ctx, clsType, argTypes, namedArgTypes) ??
           AlwaysReturnType(EvalTypes.dynamicType, true);
 
       ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);

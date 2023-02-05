@@ -37,7 +37,7 @@ Variable compileListLiteral(ListLiteral l, CompilerContext ctx, [TypeRef? bound]
 
   var _list = Variable.alloc(
     ctx,
-    EvalTypes.listType.copyWith(specifiedTypeArgs: [listSpecifiedType ?? EvalTypes.dynamicType], boxed: false),
+    EvalTypes.getListType(ctx).copyWith(specifiedTypeArgs: [listSpecifiedType ?? EvalTypes.dynamicType], boxed: false),
   );
 
   ctx.beginAllocScope();
@@ -50,7 +50,7 @@ Variable compileListLiteral(ListLiteral l, CompilerContext ctx, [TypeRef? bound]
   if (listSpecifiedType == null) {
     return Variable(
         _list.scopeFrameOffset,
-        EvalTypes.listType
+        EvalTypes.getListType(ctx)
             .copyWith(boxed: false, specifiedTypeArgs: [TypeRef.commonBaseType(ctx, resultTypes.toSet())]));
   }
 
@@ -73,7 +73,7 @@ Variable boxListContents(CompilerContext ctx, Variable list) {
 
     newList = Variable.alloc(
         _ctx,
-        EvalTypes.listType
+        EvalTypes.getListType(ctx)
             .copyWith(boxed: true, specifiedTypeArgs: [list.type.specifiedTypeArgs[0].copyWith(boxed: true)]));
   }, condition: (_ctx) {
     // i < len

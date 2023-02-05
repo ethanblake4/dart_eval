@@ -1,4 +1,7 @@
 import 'package:dart_eval/dart_eval.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/base.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/collection.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
 import 'package:test/test.dart';
 
 import 'bridge_lib.dart';
@@ -159,6 +162,27 @@ void main() {
       runtime.setup();
 
       expect(runtime.executeLib('package:example/main.dart', 'main').$value, TestEnum.two);
+    });
+
+    test('Passing a map to a function externally', () {
+      final program = compiler.compile({
+        'example': {
+          'main.dart': '''            
+            int main(Map<String, int> map) {
+              return map['hi'];
+            }
+          '''
+        }
+      });
+
+      final runtime = Runtime.ofProgram(program);
+
+      runtime.setup();
+      expect(
+          runtime.executeLib('package:example/main.dart', 'main', [
+            $Map<$String, $int>.wrap({$String('hi'): $int(5)})
+          ]),
+          5);
     });
   });
 }

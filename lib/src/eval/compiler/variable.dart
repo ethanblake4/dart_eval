@@ -65,8 +65,8 @@ class Variable {
       ctx.pushOp(BoxDouble.make(scopeFrameOffset), BoxDouble.LEN);
     } else if (type == EvalTypes.boolType) {
       ctx.pushOp(BoxBool.make(scopeFrameOffset), BoxBool.LEN);
-    } else if (type == EvalTypes.listType) {
-      if (!type.specifiedTypeArgs[0].boxed && ctx is CompilerContext) {
+    } else if (ctx is CompilerContext && type == EvalTypes.getListType(ctx)) {
+      if (!type.specifiedTypeArgs[0].boxed) {
         V2 = boxListContents(ctx, this);
       }
       ctx.pushOp(BoxList.make(V2.scopeFrameOffset), BoxList.LEN);
@@ -235,7 +235,8 @@ class Variable {
     ctx.pushOp(op, PushObjectProperty.len(op));
 
     ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-    final prop = Variable.alloc(ctx, TypeRef.lookupFieldType(ctx, type, name) ?? EvalTypes.dynamicType);
+    final prop =
+        Variable.alloc(ctx, TypeRef.lookupFieldType(ctx, type, name)?.resolveTypeChain(ctx) ?? EvalTypes.dynamicType);
 
     return prop;
   }

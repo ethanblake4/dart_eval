@@ -280,6 +280,13 @@ class Compiler {
     ctx.visibleDeclarations = visibleDeclarationsByIndex;
     ctx.visibleTypes = visibleTypesByIndex;
 
+    unboxedAcrossFunctionBoundaries = {
+      EvalTypes.intType,
+      EvalTypes.doubleType,
+      EvalTypes.boolType,
+      EvalTypes.getListType(ctx)
+    };
+
     for (final library in libraries) {
       final libraryIndex = libraryIndexMap[library]!;
       for (final dec in library.declarations) {

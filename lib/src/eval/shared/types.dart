@@ -33,20 +33,11 @@ class RuntimeTypes {
   /// Bridged runtime type for [Map]
   static const int mapType = -10;
 
-  /// Bridged runtime type for [List]
-  static const int listType = -11;
-
   /// Bridged runtime type for [Function]
   static const int functionType = -12;
 
   /// Bridged runtime type for [Type]
   static const int typeType = -13;
-
-  /// Bridged runtime type for [Iterator]
-  static const int iteratorType = -14;
-
-  /// Bridged runtime type for [Iterable]
-  static const int iterableType = -15;
 
   /// Bridged runtime type for [Future]
   static const int futureType = -16;
@@ -70,7 +61,6 @@ final Map<TypeRef, int> runtimeTypeMap = {
   EvalTypes.intType: RuntimeTypes.intType,
   EvalTypes.doubleType: RuntimeTypes.doubleType,
   EvalTypes.mapType: RuntimeTypes.mapType,
-  EvalTypes.listType: RuntimeTypes.listType,
   EvalTypes.functionType: RuntimeTypes.functionType,
   EvalTypes.typeType: RuntimeTypes.typeType,
   EvalTypes.enumType: RuntimeTypes.enumType
@@ -88,7 +78,12 @@ final Map<int, TypeRef> inverseRuntimeTypeMap = {
   RuntimeTypes.intType: EvalTypes.intType,
   RuntimeTypes.doubleType: EvalTypes.doubleType,
   RuntimeTypes.mapType: EvalTypes.mapType,
-  RuntimeTypes.listType: EvalTypes.listType,
   RuntimeTypes.functionType: EvalTypes.functionType,
   RuntimeTypes.typeType: EvalTypes.typeType
 };
+
+class DartTypes {
+  static const list = BridgeTypeSpec('dart:core', 'List');
+  static const iterator = BridgeTypeSpec('dart:core', 'Iterator');
+  static const iterable = BridgeTypeSpec('dart:core', 'Iterable');
+}

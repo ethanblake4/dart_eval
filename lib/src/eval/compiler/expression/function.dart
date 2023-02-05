@@ -29,7 +29,7 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
   final _existingAllocs = 1 + (e.parameters?.parameters.length ?? 0);
   ctx.beginAllocScope(existingAllocLen: _existingAllocs, closure: true);
 
-  final $prev = Variable(0, EvalTypes.listType, isFinal: true);
+  final $prev = Variable(0, EvalTypes.getListType(ctx), isFinal: true);
 
   ctx.setLocal('#prev', $prev);
 

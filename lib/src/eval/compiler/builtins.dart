@@ -1,3 +1,4 @@
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
@@ -103,11 +104,16 @@ class EvalTypes {
   static const TypeRef doubleType = TypeRef(dartCoreFile, 'double', extendsType: numType, resolved: true);
   static const TypeRef stringType = TypeRef(dartCoreFile, 'String', extendsType: objectType, resolved: true);
   static const TypeRef mapType = TypeRef(dartCoreFile, 'Map', extendsType: objectType, resolved: true);
-  static const TypeRef iterableType = TypeRef(dartCoreFile, 'Iterable',
-      extendsType: objectType, genericParams: [GenericParam('T', null)], resolved: true);
-  static const TypeRef listType = TypeRef(dartCoreFile, 'List',
-      extendsType: iterableType, genericParams: [GenericParam('T', null)], resolved: true);
   static const TypeRef functionType = TypeRef(dartCoreFile, 'Function', extendsType: objectType, resolved: true);
+
+  static TypeRef getListType(CompilerContext ctx) =>
+      TypeRef.fromBridgeTypeRef(ctx, BridgeTypeRef.spec(BridgeTypeSpec('dart:core', 'List')));
+
+  static TypeRef getIterableType(CompilerContext ctx) =>
+      TypeRef.fromBridgeTypeRef(ctx, BridgeTypeRef.spec(BridgeTypeSpec('dart:core', 'Iterable')));
+
+  static TypeRef getIteratorType(CompilerContext ctx) =>
+      TypeRef.fromBridgeTypeRef(ctx, BridgeTypeRef.spec(BridgeTypeSpec('dart:core', 'Iterator')));
 }
 
 final Map<String, TypeRef> coreDeclarations = {
@@ -121,7 +127,6 @@ final Map<String, TypeRef> coreDeclarations = {
   'int': EvalTypes.intType,
   'double': EvalTypes.doubleType,
   'Map': EvalTypes.mapType,
-  'List': EvalTypes.listType,
   'Function': EvalTypes.functionType
 };
 
@@ -251,7 +256,7 @@ final Map<TypeRef, Map<String, KnownMethod>> knownMethods = {
       KnownMethodArg('replacement', EvalTypes.stringType, false),
     ], {}),
     //TODO: needs to be fixed to not use stringType but instead EvalTypes.patternType once its available
-    'split': KnownMethod(AlwaysReturnType(EvalTypes.listType, false), [
+    'split': KnownMethod(BridgedReturnType(BridgeTypeSpec('dart:core', 'List'), false), [
       KnownMethodArg('pattern', EvalTypes.stringType, false),
     ], {}),
     //TODO: needs to be fixed to not use stringType but instead EvalTypes.patternType once its available
@@ -269,25 +274,9 @@ final Map<TypeRef, Map<String, KnownMethod>> knownMethods = {
     'trimRight': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [], {}),
     ..._knownObject
   },
-  EvalTypes.iterableType: {
-    'join': KnownMethod(
-        AlwaysReturnType(EvalTypes.stringType, false), [KnownMethodArg('separator', EvalTypes.stringType, true)], {}),
-    ..._knownObject
-  },
-  EvalTypes.listType: {
-    '[]': listIndexOp,
-    '[]=': listIndexAssignOp,
-    'join': KnownMethod(
-        AlwaysReturnType(EvalTypes.stringType, false), [KnownMethodArg('separator', EvalTypes.stringType, true)], {}),
-    ..._knownObject
-  }
 };
 
 final Map<TypeRef, Map<String, KnownField>> knownFields = {
-  EvalTypes.iterableType: {
-    'length': KnownField(AlwaysReturnType(EvalTypes.intType, false), true, false),
-  },
-  EvalTypes.listType: {'length': KnownField(AlwaysReturnType(EvalTypes.intType, false), true, false)},
   EvalTypes.stringType: {
     'length': KnownField(AlwaysReturnType(EvalTypes.intType, false), true, false),
     'isEmpty': KnownField(AlwaysReturnType(EvalTypes.boolType, false), true, false),
@@ -295,9 +284,4 @@ final Map<TypeRef, Map<String, KnownField>> knownFields = {
   }
 };
 
-final Set<TypeRef> unboxedAcrossFunctionBoundaries = {
-  EvalTypes.intType,
-  EvalTypes.doubleType,
-  EvalTypes.boolType,
-  EvalTypes.listType
-};
+late Set<TypeRef> unboxedAcrossFunctionBoundaries;

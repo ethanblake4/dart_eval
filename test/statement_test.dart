@@ -48,5 +48,22 @@ void main() {
 
       expect(runtime.executeLib('package:example/main.dart', 'doThing'), $int(499472));
     });
+
+    test('Simple foreach', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            num main() {
+              var i = 0;
+              for (var x in [1, 2, 3, 4, 5]) {
+                i += x;
+              }
+              return i;
+            }
+          ''',
+        }
+      });
+      expect(runtime.executeLib('package:example/main.dart', 'main'), $int(15));
+    });
   });
 }

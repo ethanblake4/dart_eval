@@ -187,10 +187,42 @@ class $Iterable$bridge<E> with $Bridge<Iterable<E>> implements Iterable<E> {
   }
 
   @override
-  int get $runtimeType => RuntimeTypes.iterableType;
+  int get $runtimeType => throw UnimplementedError();
 }
 
 class $Iterable<E> implements Iterable<E>, $Instance {
+  static void configureForCompile(Compiler compiler) {
+    compiler.defineBridgeClass($declaration);
+  }
+
+  static void configureForRuntime(Runtime runtime) {
+    //runtime.registerBridgeFunc('dart:core', 'Future.delayed', const _$Future_delayed());
+  }
+
+  static const $type = BridgeTypeRef.spec(BridgeTypeSpec('dart:core', 'Iterable'));
+
+  static const $declaration = BridgeClassDef(BridgeClassType($type, generics: {'E': BridgeGenericParam()}),
+      constructors: {},
+      methods: {
+        'join': BridgeMethodDef(
+            BridgeFunctionDef(params: [
+              BridgeParameter('separator', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.stringType)), true),
+            ], returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.stringType))),
+            isStatic: false),
+      },
+      getters: {
+        'iterator': BridgeMethodDef(
+            BridgeFunctionDef(
+                params: [],
+                returns: BridgeTypeAnnotation(BridgeTypeRef.spec(BridgeTypeSpec('dart:core', 'Iterator'), [
+                  BridgeTypeRef.ref('E'),
+                ]))),
+            isStatic: false),
+      },
+      setters: {},
+      fields: {},
+      wrap: true);
+
   $Iterable(String id, Iterable<E> value) : $value = runtimeOverride(id) as Iterable<E>? ?? value;
 
   $Iterable.wrap(this.$value);
@@ -208,6 +240,8 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     switch (identifier) {
       case 'join':
         return $Function(__join);
+      case 'iterator':
+        return $Iterator.wrap($value.iterator);
       default:
         return _superclass.$getProperty(runtime, identifier);
     }
@@ -316,5 +350,5 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   Iterable<T> whereType<T>() => $value.whereType<T>();
 
   @override
-  int get $runtimeType => RuntimeTypes.iterableType;
+  int get $runtimeType => throw UnimplementedError();
 }

@@ -1,6 +1,58 @@
 part of 'collection.dart';
 
 class $List<E> implements List<E>, $Instance {
+  static void configureForCompile(Compiler compiler) {
+    compiler.defineBridgeClass($declaration);
+  }
+
+  static void configureForRuntime(Runtime runtime) {
+    runtime.registerBridgeFunc('dart:core', 'List.filled', _$List_filled);
+    runtime.registerBridgeFunc('dart:core', 'List.generate', _$List_generate);
+  }
+
+  static const _$spec = BridgeTypeSpec('dart:core', 'List');
+  static const $type = BridgeTypeRef.spec(_$spec);
+
+  static const $declaration = BridgeClassDef(
+      BridgeClassType($type, $extends: $Iterable.$type, generics: {'E': BridgeGenericParam()}),
+      constructors: {
+        'filled': BridgeConstructorDef(BridgeFunctionDef(
+            params: [
+              BridgeParameter('length', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType)), false),
+              BridgeParameter('fill', BridgeTypeAnnotation(BridgeTypeRef.ref('E')), false),
+            ],
+            namedParams: [
+              BridgeParameter('growable', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)), true),
+            ],
+            returns: BridgeTypeAnnotation(BridgeTypeRef.spec(_$spec, [BridgeTypeRef.ref('E')])),
+            generics: {'E': BridgeGenericParam()})),
+        'generate': BridgeConstructorDef(BridgeFunctionDef(
+            params: [
+              BridgeParameter('length', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType)), false),
+              BridgeParameter('generator', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.functionType)), false),
+            ],
+            namedParams: [
+              BridgeParameter('growable', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)), true),
+            ],
+            returns: BridgeTypeAnnotation(BridgeTypeRef.spec(_$spec, [BridgeTypeRef.ref('E')])),
+            generics: {'E': BridgeGenericParam()})),
+      },
+      methods: {
+        '[]': BridgeMethodDef(BridgeFunctionDef(params: [
+          BridgeParameter('index', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType)), false),
+        ], returns: BridgeTypeAnnotation(BridgeTypeRef.ref('E')))),
+        '[]=': BridgeMethodDef(BridgeFunctionDef(params: [
+          BridgeParameter('index', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType)), false),
+          BridgeParameter('value', BridgeTypeAnnotation(BridgeTypeRef.ref('E')), false),
+        ], returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.voidType)))),
+        'length':
+            BridgeMethodDef(BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType)))),
+      },
+      getters: {},
+      setters: {},
+      fields: {},
+      wrap: true);
+
   $List(String id, List<E> value) : $value = runtimeOverride(id) as List<E>? ?? value;
 
   $List.wrap(this.$value);
@@ -231,7 +283,7 @@ class $List<E> implements List<E>, $Instance {
   E operator [](int index) => $value[index];
 
   @override
-  int get $runtimeType => RuntimeTypes.listType;
+  int get $runtimeType => throw UnimplementedError();
 }
 
 $Function get$List_filled(Runtime _) => _$List_filled;

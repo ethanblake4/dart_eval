@@ -36,6 +36,9 @@ class IdentifierReference implements Reference {
   @override
   TypeRef resolveType(CompilerContext ctx, [AstNode? source]) {
     if (object != null) {
+      if (object!.type == EvalTypes.typeType) {
+        return object!.concreteTypes[0].resolveTypeChain(ctx);
+      }
       return TypeRef.lookupFieldType(ctx, object!.type, name) ?? EvalTypes.dynamicType;
     }
 
@@ -55,10 +58,19 @@ class IdentifierReference implements Reference {
       }
     }
 
-    //final declaration = ctx.visibleDeclarations[ctx.library]![name]!;
-    //final decl = declaration.declaration!;
+    final staticDeclaration =
+        resolveStaticDeclaration(ctx, ctx.library, ctx.currentClass!.name.value() as String, name);
 
-    // TODO
+    if (staticDeclaration != null && staticDeclaration.declaration != null) {
+      final _dec = staticDeclaration.declaration!;
+      if (_dec is MethodDeclaration) {
+        return EvalTypes.functionType;
+      } else if (_dec is VariableDeclaration) {
+        final name = (ctx.currentClass!.name.value() as String) + '.' + (_dec.name.value() as String);
+        return ctx.topLevelVariableInferredTypes[ctx.library]![name]!;
+      }
+    }
+
     return EvalTypes.typeType;
   }
 
@@ -410,7 +422,7 @@ class IndexedReference implements Reference {
 
   @override
   TypeRef resolveType(CompilerContext ctx, [AstNode? source]) {
-    if (_variable.type.isAssignableTo(ctx, EvalTypes.listType)) {
+    if (_variable.type.isAssignableTo(ctx, EvalTypes.getListType(ctx))) {
       return _variable.type.specifiedTypeArgs[0];
     }
     return getValue(ctx).type;
@@ -421,7 +433,7 @@ class IndexedReference implements Reference {
     _variable = _variable.updated(ctx);
     _index = _index.updated(ctx);
 
-    if (_variable.type.isAssignableTo(ctx, EvalTypes.listType)) {
+    if (_variable.type.isAssignableTo(ctx, EvalTypes.getListType(ctx))) {
       if (!_index.type.isAssignableTo(ctx, EvalTypes.intType)) {
         throw CompileError('TypeError: Cannot use variable of type ${_index.type} as list index');
       }
@@ -459,7 +471,7 @@ class IndexedReference implements Reference {
     _variable = _variable.updated(ctx);
     _index = _index.updated(ctx);
 
-    if (_variable.type.isAssignableTo(ctx, EvalTypes.listType)) {
+    if (_variable.type.isAssignableTo(ctx, EvalTypes.getListType(ctx))) {
       if (!_index.type.isAssignableTo(ctx, EvalTypes.intType)) {
         throw CompileError('TypeError: Cannot use variable of type ${_index.type} as list index', source);
       }

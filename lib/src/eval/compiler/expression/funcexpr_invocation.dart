@@ -25,12 +25,14 @@ Variable compileFunctionExpressionInvocation(FunctionExpressionInvocation e, Com
 
 Variable invokeClosure(CompilerContext ctx, Reference? closureRef, Variable? closureVar, ArgumentList argumentList) {
   ctx.pushOp(PushList.make(), PushList.LEN);
-  final csPosArgTypes = Variable.alloc(ctx, EvalTypes.listType.copyWith(specifiedTypeArgs: [EvalTypes.intType]));
+  final csPosArgTypes =
+      Variable.alloc(ctx, EvalTypes.getListType(ctx).copyWith(specifiedTypeArgs: [EvalTypes.intType]));
 
   final positionalArgs = <Variable>[];
 
   ctx.pushOp(PushList.make(), PushList.LEN);
-  final csNamedArgTypes = Variable.alloc(ctx, EvalTypes.listType.copyWith(specifiedTypeArgs: [EvalTypes.intType]));
+  final csNamedArgTypes =
+      Variable.alloc(ctx, EvalTypes.getListType(ctx).copyWith(specifiedTypeArgs: [EvalTypes.intType]));
 
   final namedArgs = <String, Variable>{};
   final namedArgsRttiMap = <String, int>{};
@@ -76,7 +78,8 @@ Variable invokeClosure(CompilerContext ctx, Reference? closureRef, Variable? clo
   }
 
   ctx.pushOp(PushConstant.make(ctx.constantPool.addOrGet(namedArgNames)), PushConstant.LEN);
-  final alConstVar = Variable.alloc(ctx, EvalTypes.listType.copyWith(specifiedTypeArgs: [EvalTypes.stringType]));
+  final alConstVar =
+      Variable.alloc(ctx, EvalTypes.getListType(ctx).copyWith(specifiedTypeArgs: [EvalTypes.stringType]));
 
   ctx.pushOp(PushArg.make(csPosArgTypes.scopeFrameOffset), PushArg.LEN);
   ctx.pushOp(PushArg.make(alConstVar.scopeFrameOffset), PushArg.LEN);

@@ -1,7 +1,11 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/source_node_wrapper.dart';
+import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/macros/loop.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
+import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/statement/variable_declaration.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -9,9 +13,43 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 StatementInfo compileForStatement(ForStatement s, CompilerContext ctx, AlwaysReturnType? expectedReturnType) {
   final parts = s.forLoopParts;
 
-  if (parts is! ForParts) {
-    throw UnimplementedError('For-each is not supported yet');
+  if (parts is ForEachParts) {
+    final iterable = compileExpression(parts.iterable, ctx).boxIfNeeded(ctx);
+    if (!iterable.type.isAssignableTo(ctx, EvalTypes.getIterableType(ctx))) {
+      throw CompileError('Cannot iterate over ${iterable.type}', parts, ctx.library, ctx);
+    }
+
+    final elementType =
+        iterable.type.specifiedTypeArgs.isEmpty ? EvalTypes.dynamicType : iterable.type.specifiedTypeArgs[0];
+
+    final iterator = iterable.getProperty(ctx, 'iterator');
+    late Reference loopVariable;
+
+    return macroLoop(ctx, expectedReturnType,
+        initialization: (_ctx) {
+          if (parts is ForEachPartsWithDeclaration) {
+            if (parts.loopVariable.type != null &&
+                !elementType.isAssignableTo(ctx, TypeRef.fromAnnotation(ctx, ctx.library, parts.loopVariable.type!))) {
+              throw CompileError('Cannot assign $elementType to ${parts.loopVariable.type}', parts, ctx.library, ctx);
+            }
+            final name = parts.loopVariable.name.value() as String;
+            ctx.setLocal(name, BuiltinValue().push(ctx).copyWith(type: elementType));
+            loopVariable = IdentifierReference(null, name);
+          } else if (parts is ForEachPartsWithIdentifier) {
+            final ref = compileExpressionAsReference(parts.identifier, ctx);
+            final type = ref.resolveType(ctx);
+            if (!elementType.isAssignableTo(_ctx, type)) {
+              throw CompileError('Cannot assign $elementType to $type', parts, ctx.library, ctx);
+            }
+          }
+        },
+        condition: (_ctx) => iterator.invoke(_ctx, 'moveNext', []).result,
+        body: (_ctx, ert) => compileStatement(s.body, ert, _ctx),
+        update: (ctx) => loopVariable.setValue(ctx, iterator.getProperty(ctx, 'current')),
+        updateBeforeBody: true);
   }
+
+  parts as ForParts;
 
   return macroLoop(ctx, expectedReturnType,
       initialization: (_ctx) {

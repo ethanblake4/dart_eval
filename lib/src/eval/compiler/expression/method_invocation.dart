@@ -59,7 +59,7 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
         if (ctx.currentClass != null) {
           thisType = ctx.visibleTypes[ctx.library]![ctx.currentClass!.name.value() as String]!;
         }
-        mReturnType = method.methodReturnType?.toAlwaysReturnType(thisType, [], {}) ??
+        mReturnType = method.methodReturnType?.toAlwaysReturnType(ctx, thisType, [], {}) ??
             AlwaysReturnType(EvalTypes.dynamicType, true);
         final v = Variable.alloc(
             ctx,
@@ -133,7 +133,7 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
     if (ctx.currentClass != null) {
       thisType = ctx.visibleTypes[ctx.library]![ctx.currentClass!.name.value() as String]!;
     }
-    mReturnType = method.methodReturnType?.toAlwaysReturnType(thisType, _argTypes, _namedArgTypes) ??
+    mReturnType = method.methodReturnType?.toAlwaysReturnType(ctx, thisType, _argTypes, _namedArgTypes) ??
         AlwaysReturnType(EvalTypes.dynamicType, true);
   }
 

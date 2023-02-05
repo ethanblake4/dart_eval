@@ -139,8 +139,13 @@ class TypeRef {
     }
     final spec = typeReference.spec;
     if (spec != null) {
+      final specifiedTypeArgs = <TypeRef>[];
+      for (final arg in typeReference.typeArgs) {
+        specifiedTypeArgs
+            .add(TypeRef.fromBridgeTypeRef(ctx, arg, staticSource: staticSource, specifiedType: specifiedType));
+      }
       final lib = ctx.libraryMap[spec.library] ?? (throw CompileError('Bridge: cannot find library ${spec.library}'));
-      return ctx.visibleTypes[lib]![spec.name]!;
+      return ctx.visibleTypes[lib]![spec.name]!.copyWith(specifiedTypeArgs: specifiedTypeArgs);
     }
     final ref = typeReference.ref;
     if (ref != null) {
@@ -158,6 +163,9 @@ class TypeRef {
       }
 
       final genericIndex = _dec.type.generics.keys.toList().indexWhere((key) => key == ref);
+      if (specifiedType.specifiedTypeArgs.isNotEmpty) {
+        return specifiedType.specifiedTypeArgs[genericIndex];
+      }
       final generic = _dec.type.generics[ref]!;
       final $extends = generic.$extends;
       final boundType = $extends == null ? EvalTypes.dynamicType : TypeRef.fromBridgeTypeRef(ctx, $extends);
@@ -205,7 +213,7 @@ class TypeRef {
       if (_f != null) {
         final _d = _f[field];
         if (_d != null) {
-          return _d.fieldType?.toAlwaysReturnType($class, [], {})?.type ?? EvalTypes.dynamicType;
+          return _d.fieldType?.toAlwaysReturnType(ctx, $class, [], {})?.type ?? EvalTypes.dynamicType;
         }
       }
     }
@@ -239,17 +247,23 @@ class TypeRef {
       final br = dec.bridge as BridgeClassDef;
       final fd = br.fields[field];
       if (fd != null) {
-        return TypeRef.fromBridgeAnnotation(ctx, fd.type);
+        return TypeRef.fromBridgeAnnotation(ctx, fd.type, specifiedType: $class);
       }
       final get = br.getters[field];
       if (get != null) {
-        return TypeRef.fromBridgeAnnotation(ctx, get.functionDescriptor.returns);
+        return TypeRef.fromBridgeAnnotation(ctx, get.functionDescriptor.returns, specifiedType: $class);
       }
       final set = br.getters[field];
       if (set != null) {
-        return TypeRef.fromBridgeAnnotation(ctx, set.functionDescriptor.returns);
+        return TypeRef.fromBridgeAnnotation(ctx, set.functionDescriptor.returns, specifiedType: $class);
       }
-      throw CompileError('Field $field not found in bridge class ${$class}');
+      final $extends = br.type.$extends;
+      if ($extends == null) {
+        throw CompileError('Field $field not found in bridge class ${$class}');
+      } else {
+        final $super = TypeRef.fromBridgeTypeRef(ctx, $extends);
+        return TypeRef.lookupFieldType(ctx, $super.inheritTypeArgsFrom(ctx, $class), field);
+      }
     } else {
       if (forFieldFormal) {
         throw CompileError('Field formals did not find field $field in class ${$class}');
@@ -260,7 +274,7 @@ class TypeRef {
         throw CompileError('Field "$field" not found in class ${$class}');
       } else {
         final $super = ctx.visibleTypes[$class.file]![$extends.superclass.name.name]!;
-        return TypeRef.lookupFieldType(ctx, $super, field);
+        return TypeRef.lookupFieldType(ctx, $super.inheritTypeArgsFrom(ctx, $class), field);
       }
     }
   }
@@ -486,6 +500,25 @@ class TypeRef {
     return false;
   }
 
+  TypeRef inheritTypeArgsFrom(CompilerContext ctx, TypeRef prototype) {
+    final _prototype = prototype.resolveTypeChain(ctx);
+    var i = 0;
+    var gmap = <String, int>{};
+    for (final generic in genericParams) {
+      gmap[generic.name] = i;
+      i++;
+    }
+    var j = 0;
+    var resolvedGenerics = List<TypeRef>.filled(i, EvalTypes.dynamicType);
+    for (final generic in _prototype.genericParams) {
+      if (gmap.containsKey(generic.name)) {
+        resolvedGenerics[gmap[generic.name]!] = _prototype.specifiedTypeArgs[j];
+      }
+      j++;
+    }
+    return resolveTypeChain(ctx).copyWith(specifiedTypeArgs: resolvedGenerics);
+  }
+
   TypeRef copyWith(
       {int? file,
       String? name,
@@ -540,8 +573,23 @@ class TypeRef {
 
 abstract class ReturnType {
   AlwaysReturnType? toAlwaysReturnType(
-      TypeRef? targetType, List<TypeRef?> argTypes, Map<String, TypeRef?> namedArgTypes,
+      CompilerContext ctx, TypeRef? targetType, List<TypeRef?> argTypes, Map<String, TypeRef?> namedArgTypes,
       {List<TypeRef> typeArgs = const []});
+}
+
+class BridgedReturnType implements ReturnType {
+  final BridgeTypeSpec spec;
+  final bool nullable;
+
+  BridgedReturnType(this.spec, this.nullable);
+
+  @override
+  AlwaysReturnType? toAlwaysReturnType(
+      CompilerContext ctx, TypeRef? targetType, List<TypeRef?> argTypes, Map<String, TypeRef?> namedArgTypes,
+      {List<TypeRef> typeArgs = const []}) {
+    final rt = TypeRef.fromBridgeTypeRef(ctx, BridgeTypeRef.spec(spec));
+    return AlwaysReturnType(rt, nullable);
+  }
 }
 
 class AlwaysReturnType implements ReturnType {
@@ -586,7 +634,7 @@ class AlwaysReturnType implements ReturnType {
       if (returnType == null) {
         return null;
       }
-      return returnType.toAlwaysReturnType(type, argTypes, namedArgTypes, typeArgs: typeArgs);
+      return returnType.toAlwaysReturnType(ctx, type, argTypes, namedArgTypes, typeArgs: typeArgs);
     }
 
     if (type == EvalTypes.dynamicType) {
@@ -603,7 +651,7 @@ class AlwaysReturnType implements ReturnType {
 
   @override
   AlwaysReturnType? toAlwaysReturnType(
-      TypeRef? targetType, List<TypeRef?> argTypes, Map<String, TypeRef?> namedArgTypes,
+      CompilerContext ctx, TypeRef? targetType, List<TypeRef?> argTypes, Map<String, TypeRef?> namedArgTypes,
       {List<TypeRef> typeArgs = const []}) {
     return this;
   }
@@ -619,7 +667,7 @@ class ParameterTypeDependentReturnType implements ReturnType {
 
   @override
   AlwaysReturnType? toAlwaysReturnType(
-      TypeRef? targetType, List<TypeRef?> argTypes, Map<String, TypeRef?> namedArgTypes,
+      CompilerContext ctx, TypeRef? targetType, List<TypeRef?> argTypes, Map<String, TypeRef?> namedArgTypes,
       {List<TypeRef> typeArgs = const []}) {
     AlwaysReturnType? resolvedType;
     if (paramIndex != null) {
@@ -642,7 +690,7 @@ class TargetTypeArgDependentReturnType implements ReturnType {
 
   @override
   AlwaysReturnType? toAlwaysReturnType(
-      TypeRef? targetType, List<TypeRef?> argTypes, Map<String, TypeRef?> namedArgTypes,
+      CompilerContext ctx, TypeRef? targetType, List<TypeRef?> argTypes, Map<String, TypeRef?> namedArgTypes,
       {List<TypeRef> typeArgs = const []}) {
     return AlwaysReturnType(targetType!.specifiedTypeArgs[typeArgIndex], false);
   }
@@ -655,7 +703,7 @@ class TypeArgDependentReturnType implements ReturnType {
 
   @override
   AlwaysReturnType? toAlwaysReturnType(
-      TypeRef? targetType, List<TypeRef?> argTypes, Map<String, TypeRef?> namedArgTypes,
+      CompilerContext ctx, TypeRef? targetType, List<TypeRef?> argTypes, Map<String, TypeRef?> namedArgTypes,
       {List<TypeRef> typeArgs = const []}) {
     return AlwaysReturnType(typeArgs[typeArgIndex], false);
   }

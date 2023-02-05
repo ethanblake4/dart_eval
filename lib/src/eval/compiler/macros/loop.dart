@@ -14,6 +14,7 @@ StatementInfo macroLoop(
   MacroClosure? update,
   MacroClosure? after,
   bool alwaysLoopOnce = false,
+  bool updateBeforeBody = false,
 }) {
   ctx.beginAllocScope(requireNonlinearAccess: true);
 
@@ -36,9 +37,13 @@ StatementInfo macroLoop(
 
   var pops = ctx.peekAllocPops();
 
+  if (update != null && updateBeforeBody) {
+    update(ctx);
+  }
+
   final statementResult = body(ctx, expectedReturnType);
   if (!(statementResult.willAlwaysThrow || statementResult.willAlwaysReturn)) {
-    if (update != null) {
+    if (update != null && !updateBeforeBody) {
       update(ctx);
     }
     ctx.resolveNonlinearity(2);

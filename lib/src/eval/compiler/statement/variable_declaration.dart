@@ -8,8 +8,6 @@ import '../type.dart';
 import '../variable.dart';
 import 'statement.dart';
 
-final r = RegExp(r'^[a-zA-Z_][a-zA-Z0-9_]*\$');
-
 StatementInfo compileVariableDeclarationStatement(VariableDeclarationStatement s, CompilerContext ctx) {
   compileVariableDeclarationList(s.variables, ctx);
   return StatementInfo(-1);

@@ -58,7 +58,7 @@ extension TearOff on Variable {
     final _existingAllocs = 1 + (parameters?.parameters.length ?? 0);
     ctx.beginAllocScope(existingAllocLen: _existingAllocs, closure: true);
 
-    final $prev = Variable(0, EvalTypes.listType, isFinal: true);
+    final $prev = Variable(0, EvalTypes.getListType(ctx), isFinal: true);
     ctx.setLocal('#prev', $prev);
 
     ctx.scopeFrameOffset += _existingAllocs;

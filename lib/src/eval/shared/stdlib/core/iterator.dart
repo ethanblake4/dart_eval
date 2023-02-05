@@ -1,76 +1,73 @@
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/runtime/override.dart';
 import 'package:dart_eval/stdlib/core.dart';
 
-class $Iterator<E> implements Iterator, $Instance {
-  $Iterator.wrap(this.$value) : _superclass = $Object($value);
+class $Iterator<E> implements Iterator<E>, $Instance {
+  static void configureForCompile(Compiler compiler) {
+    compiler.defineBridgeClass($declaration);
+  }
+
+  static void configureForRuntime(Runtime runtime) {
+    //runtime.registerBridgeFunc('dart:core', 'Future.delayed', const _$Future_delayed());
+  }
+
+  static const $type = BridgeTypeRef.spec(BridgeTypeSpec('dart:core', 'Iterator'));
+
+  static const $declaration = BridgeClassDef(BridgeClassType($type, generics: {'E': BridgeGenericParam()}),
+      constructors: {},
+      methods: {
+        'moveNext': BridgeMethodDef(BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.ref('bool'))))
+      },
+      getters: {'current': BridgeMethodDef(BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.ref('E'))))},
+      setters: {},
+      fields: {},
+      wrap: true);
+  $Iterator(String id, Iterator<E> value) : $value = runtimeOverride(id) as Iterator<E>? ?? value;
+
+  $Iterator.wrap(this.$value);
 
   @override
   final Iterator<E> $value;
 
   @override
-  Iterator<E> get $reified => $value;
+  Iterator<E> get $reified {
+    // iterate through the iterator and map to $value
+    final values = <E>[];
+    while ($value.moveNext()) {
+      values.add(($value.current as $Value).$value);
+    }
+    return values.iterator;
+  }
 
-  // ignore: unused_field
-  final $Instance _superclass;
+  late final $Instance _superclass = $Object($value);
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
-      case 'current':
-        return $value.current as $Value;
       case 'moveNext':
         return __moveNext;
+      case 'current':
+        return $value.current as $Value?;
       default:
-        return null;
+        return _superclass.$getProperty(runtime, identifier);
     }
-  }
-
-  @override
-  void $setProperty(Runtime runtime, String identifier, $Value value) {
-    throw UnimplementedError();
   }
 
   static const $Function __moveNext = $Function(_moveNext);
 
-  static $Value? _moveNext(final Runtime runtime, final $Value? target, final List<$Value?> args) {
-    return $bool(((target as $Value).$value as Iterator).moveNext());
+  static $Value? _moveNext(Runtime runtime, $Value? target, List<$Value?> args) {
+    return $bool((target!.$value as Iterator).moveNext());
   }
+
+  @override
+  void $setProperty(Runtime runtime, String identifier, $Value value) {}
 
   @override
   E get current => $value.current;
 
   @override
   bool moveNext() => $value.moveNext();
-
-  @override
-  int get $runtimeType => throw UnimplementedError();
-}
-
-class $Iterator$bridge<E> with $Bridge implements Iterator<E> {
-  const $Iterator$bridge(List<Object?> _);
-
-  static const $type = BridgeTypeRef.spec(BridgeTypeSpec('dart:core', 'Iterator'));
-
-  @override
-  $Value? $bridgeGet(String identifier) {
-    switch (identifier) {
-      case 'current':
-        throw UnimplementedError();
-    }
-    throw UnimplementedError();
-  }
-
-  @override
-  bool moveNext() => $_invoke('moveNext', []);
-
-  @override
-  E get current => $_get('current');
-
-  @override
-  void $bridgeSet(String identifier, $Value value) {
-    throw UnimplementedError();
-  }
 
   @override
   int get $runtimeType => throw UnimplementedError();
