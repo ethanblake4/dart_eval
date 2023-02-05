@@ -164,16 +164,6 @@ class $int extends $num<int> {
   $int(int evalValue) : super(evalValue);
 
   @override
-  $Value? $getProperty(Runtime runtime, String identifier) {
-    return super.$getProperty(runtime, identifier);
-  }
-
-  @override
-  void $setProperty(Runtime runtime, String identifier, $Value value) {
-    return super.$setProperty(runtime, identifier, value);
-  }
-
-  @override
   int get $reified => $value;
 
   @override
@@ -187,16 +177,6 @@ class $int extends $num<int> {
 
 class $double extends $num<double> {
   $double(double evalValue) : super(evalValue);
-
-  @override
-  $Value? $getProperty(Runtime runtime, String identifier) {
-    return super.$getProperty(runtime, identifier);
-  }
-
-  @override
-  void $setProperty(Runtime runtime, String identifier, $Value value) {
-    return super.$setProperty(runtime, identifier, value);
-  }
 
   @override
   double get $reified => $value;
