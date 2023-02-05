@@ -1,3 +1,15 @@
+## 0.5.5
+- (Breaking) Use DartTypes.list instead of RuntimeTypes.listType in bridge
+  class definitions.
+- Support for Iterable and for-each
+- Support for collection `for`
+- Fixes to branching logic
+- Improved generic type inference
+- Fix return value boxing in arrow functions
+- Allow arrow function entrypoints in `eval()`
+- Remove dcli to eliminate many extraneous dependencies
+- Improved documentation
+
 ## 0.5.4
 - Bindings for most String methods (thanks to @maks)
 - Support for super constructor params
