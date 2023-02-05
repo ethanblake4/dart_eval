@@ -33,9 +33,9 @@ StatementInfo macroBranch(CompilerContext ctx, AlwaysReturnType? expectedReturnT
   if (elseBranch != null) {
     ctx.beginAllocScope();
     final elseResult = elseBranch(ctx, expectedReturnType);
-    ctx.rewriteOp(rewriteOut!, JumpConstant.make(ctx.out.length), 0);
     ctx.endAllocScope();
     ctx.resolveBranchStateDiscontinuity(_initialState);
+    ctx.rewriteOp(rewriteOut!, JumpConstant.make(ctx.out.length), 0);
     ctx.endAllocScope();
     return thenResult | elseResult;
   }

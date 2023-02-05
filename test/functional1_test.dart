@@ -16,7 +16,7 @@ void main() {
         var someNumber = 19;
       
         var a = A(45);
-        for (var i = someNumber; i < 20; i = i + 1) {
+        for (var i = someNumber; i < 200; i = i + 1) {
           final n = a.calculate(i);
           if (n > someNumber) {
             a = B(555);

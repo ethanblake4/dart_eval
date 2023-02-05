@@ -241,6 +241,8 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
       continue;
     }
     if (param.optional && argumentList.arguments.length <= i) {
+      $null ??= BuiltinValue().push(ctx);
+      _push.add($null);
       break;
     }
     final arg = argumentList.arguments[i];

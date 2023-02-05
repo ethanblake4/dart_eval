@@ -202,7 +202,7 @@ Variable _invokeWithTarget(CompilerContext ctx, Variable L, MethodInvocation e) 
       }
     }
   } else {
-    final op = InvokeDynamic.make(L.scopeFrameOffset, e.methodName.name);
+    final op = InvokeDynamic.make(L.boxIfNeeded(ctx).scopeFrameOffset, e.methodName.name);
     ctx.pushOp(op, InvokeDynamic.len(op));
   }
 

@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
+import 'package:dart_eval/src/eval/compiler/collection/for.dart';
 import 'package:dart_eval/src/eval/compiler/collection/if.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
@@ -115,6 +116,8 @@ List<TypeRef> compileListElement(CollectionElement e, Variable list, CompilerCon
     return [_result.type];
   } else if (e is IfElement) {
     return compileIfElementForList(e, list, ctx, box);
+  } else if (e is ForElement) {
+    return compileForElementForList(e, list, ctx, box);
   }
   throw CompileError('Unknown list collection element ${e.runtimeType}');
 }
