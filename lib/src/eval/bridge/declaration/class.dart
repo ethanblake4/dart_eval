@@ -1,6 +1,4 @@
-import 'package:dart_eval/src/eval/bridge/declaration.dart';
-import 'package:dart_eval/src/eval/bridge/declaration/function.dart';
-import 'package:dart_eval/src/eval/bridge/declaration/type.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'class.g.dart';
@@ -8,6 +6,13 @@ part 'class.g.dart';
 /// A bridged class definition, used to inform the dart_eval compiler of
 /// a class's structure, properties, and methods when it is defined outside
 /// of dart_eval.
+///
+/// You must specify either [bridge] or [wrap] as true (but not both) depending
+/// on the runtime implementation: Use [bridge] if you're using the [$Bridge]
+/// mixin to create a bridge class, and [wrap] if the class manually implements
+/// [$Instance] (i.e. a wrapper). You can learn about the difference between
+/// these [on the wiki](https://github.com/ethanblake4/dart_eval/wiki/Wrappers).
+///
 @JsonSerializable()
 class BridgeClassDef implements BridgeDeclaration {
   const BridgeClassDef(this.type,
