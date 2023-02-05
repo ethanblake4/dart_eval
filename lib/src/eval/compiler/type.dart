@@ -608,7 +608,7 @@ class AlwaysReturnType implements ReturnType {
   factory AlwaysReturnType.fromInstanceMethod(CompilerContext ctx, TypeRef type, String method, TypeRef? fallback) {
     final _m = resolveInstanceMethod(ctx, type, method);
     if (_m.isBridge) {
-      return AlwaysReturnType(EvalTypes.dynamicType, true);
+      return AlwaysReturnType(TypeRef.fromBridgeAnnotation(ctx, _m.bridge!.functionDescriptor.returns), true);
     }
     return AlwaysReturnType.fromAnnotation(ctx, type.file, _m.declaration!.returnType, fallback);
   }

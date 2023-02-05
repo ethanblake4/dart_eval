@@ -4,6 +4,44 @@ import 'package:test/expect.dart';
 import 'package:test/scaffolding.dart';
 
 void main() {
+  group('Iterable tests', () {
+    late Compiler compiler;
+
+    setUp(() {
+      compiler = Compiler();
+    });
+
+    test('Iterable.join()', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'eval_test': {
+          'main.dart': '''
+            String main() {
+              final list = [1, 2, 3, 4, 5];
+              return list.join();
+            }
+          '''
+        }
+      });
+
+      expect(runtime.executeLib('package:eval_test/main.dart', 'main'), $String('12345'));
+    });
+
+    test('Iterable.map()', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'eval_test': {
+          'main.dart': '''
+            String main() {
+              final list = [1, 2, 3, 4, 5];
+              return list.map((e) => e * 2).join();
+            }
+          '''
+        }
+      });
+
+      expect(runtime.executeLib('package:eval_test/main.dart', 'main'), $String('246810'));
+    });
+  });
+
   group('Collection tests', () {
     late Compiler compiler;
 

@@ -154,7 +154,7 @@ Variable _invokeWithTarget(CompilerContext ctx, Variable L, MethodInvocation e) 
 
   Pair<List<Variable>, Map<String, Variable>> argsPair;
 
-  if (L.type.file == -1 && L.type != EvalTypes.typeType) {
+  if (L.type.file == -1 && L.type != EvalTypes.typeType && L.type != EvalTypes.dynamicType) {
     final knownMethod = knownMethods[L.type]![e.methodName.name] ??
         (throw CompileError('Method not found ${e.methodName} on ${L.type}'));
     argsPair = compileArgumentListWithKnownMethodArgs(ctx, e.argumentList, knownMethod.args, knownMethod.namedArgs);
