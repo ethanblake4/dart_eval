@@ -47,7 +47,7 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
 
     var _dec = ctx.topLevelDeclarationsMap[offset.file]![e.methodName.name];
     if (_dec == null || (!_dec.isBridge && _dec.declaration! is ClassDeclaration)) {
-      _dec = ctx.topLevelDeclarationsMap[offset.file]![offset.name ?? e.methodName.name + '.'];
+      _dec = ctx.topLevelDeclarationsMap[offset.file]![offset.name ?? '${e.methodName.name}.'];
       if (_dec == null) {
         // Call to default constructor
         final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.LEN);
@@ -253,7 +253,7 @@ DeclarationOrBridge<MethodDeclaration, BridgeMethodDef> resolveInstanceMethod(
 
 DeclarationOrBridge<MethodDeclaration, BridgeDeclaration> resolveStaticMethod(
     CompilerContext ctx, TypeRef classType, String methodName) {
-  final method = ctx.topLevelDeclarationsMap[classType.file]![classType.name + '.' + methodName];
+  final method = ctx.topLevelDeclarationsMap[classType.file]!['${classType.name}.$methodName'];
   if (method != null) {
     if (method.declaration != null) {
       return DeclarationOrBridge(classType.file, declaration: method.declaration! as MethodDeclaration);

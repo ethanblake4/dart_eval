@@ -228,8 +228,8 @@ class TypeRef {
           return null;
         }
         return TypeRef.fromAnnotation(ctx, $class.file, annotation);
-      } else if (!forFieldFormal && ctx.instanceDeclarationsMap[$class.file]![$class.name]!.containsKey(field + '*g')) {
-        final _f = ctx.instanceDeclarationsMap[$class.file]![$class.name]![field + '*g'];
+      } else if (!forFieldFormal && ctx.instanceDeclarationsMap[$class.file]![$class.name]!.containsKey('$field*g')) {
+        final _f = ctx.instanceDeclarationsMap[$class.file]![$class.name]!['$field*g'];
         if (_f is! MethodDeclaration) {
           throw CompileError(
               'Cannot query getter type of F${$class.file}:${$class.name}.$field, which is not a method');

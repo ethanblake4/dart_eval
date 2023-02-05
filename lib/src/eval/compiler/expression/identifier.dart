@@ -110,5 +110,5 @@ class GetSet extends DeclarationOrBridge<MethodDeclaration, BridgeMethodDef> {
 
 DeclarationOrBridge<Declaration, BridgeDeclaration>? resolveStaticDeclaration(
     CompilerContext ctx, int library, String $class, String name) {
-  return ctx.topLevelDeclarationsMap[library]![$class + '.' + name];
+  return ctx.topLevelDeclarationsMap[library]!['${$class}.$name'];
 }

@@ -467,7 +467,7 @@ class Compiler {
           if (member is MethodDeclaration) {
             var mName = member.name.value() as String;
             if (member.isStatic) {
-              _topLevelDeclarationsMap[libraryIndex]![name + '.' + mName] =
+              _topLevelDeclarationsMap[libraryIndex]!['$name.$mName'] =
                   DeclarationOrBridge(libraryIndex, declaration: member);
             } else {
               if (member.isGetter) {
@@ -486,7 +486,7 @@ class Compiler {
               }
 
               for (final field in member.fields.variables) {
-                final name = (declaration.name.value() as String) + '.' + (field.name.value().toString());
+                final name = '${declaration.name.value() as String}.${field.name.value()}';
 
                 if (_topLevelDeclarationsMap[libraryIndex]!.containsKey(name)) {
                   throw CompileError('Cannot define "$name" twice in the same library', field, libraryIndex);

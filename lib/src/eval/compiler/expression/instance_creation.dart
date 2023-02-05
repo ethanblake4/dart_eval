@@ -33,34 +33,34 @@ Variable compileInstanceCreation(CompilerContext ctx, InstanceCreationExpression
 
     _dec = ctx.topLevelDeclarationsMap[offset.file]![type];
     if (_dec == null || (!_dec.isBridge && _dec.declaration! is ClassDeclaration)) {
-      _dec = ctx.topLevelDeclarationsMap[offset.file]![offset.name ?? type.name.name + '.'] ??
+      _dec = ctx.topLevelDeclarationsMap[offset.file]![offset.name ?? '${type.name.name}.'] ??
           (throw CompileError('Cannot instantiate: The class $type does not have a default constructor'));
     }
   } else {
     method = IdentifierReference($resolved, name.name).getValue(ctx);
     offset = method.methodOffset ?? (throw CompileError('Trying to instantiate $type, which is not a class'));
 
-    _dec = ctx.topLevelDeclarationsMap[offset.file]![type.name.name + '.${name.name}'] ??
+    _dec = ctx.topLevelDeclarationsMap[offset.file]!['${type.name.name}.${name.name}'] ??
         (throw CompileError('Cannot instantiate: The class $type does not have constructor ${name.name}'));
   }
 
-  final List<Variable> _args;
-  final Map<String, Variable> _namedArgs;
+  //final List<Variable> _args;
+  //final Map<String, Variable> _namedArgs;
 
   if (_dec.isBridge) {
     final bridge = _dec.bridge;
     final fnDescriptor = (bridge as BridgeConstructorDef).functionDescriptor;
-    final argsPair = compileArgumentListWithBridge(ctx, e.argumentList, fnDescriptor);
+    compileArgumentListWithBridge(ctx, e.argumentList, fnDescriptor);
 
-    _args = argsPair.first;
-    _namedArgs = argsPair.second;
+    //_args = argsPair.first;
+    //_namedArgs = argsPair.second;
   } else {
     final dec = _dec.declaration!;
     final fpl = (dec as ConstructorDeclaration).parameters.parameters;
 
-    final argsPair = compileArgumentList(ctx, e.argumentList, file, fpl, dec, source: e);
-    _args = argsPair.first;
-    _namedArgs = argsPair.second;
+    compileArgumentList(ctx, e.argumentList, file, fpl, dec, source: e);
+    //_args = argsPair.first;
+    //_namedArgs = argsPair.second;
   }
 
   //final _argTypes = _args.map((e) => e.type).toList();

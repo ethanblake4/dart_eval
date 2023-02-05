@@ -14,7 +14,7 @@ void compileFieldDeclaration(int fieldIndex, FieldDeclaration d, CompilerContext
     if (d.isStatic) {
       final initializer = field.initializer;
       if (initializer != null) {
-        final pos = beginMethod(ctx, field, field.offset, fieldName + '*i');
+        final pos = beginMethod(ctx, field, field.offset, '$fieldName*i');
         TypeRef? type;
         final specifiedType = d.fields.type;
         if (specifiedType != null) {
@@ -45,13 +45,13 @@ void compileFieldDeclaration(int fieldIndex, FieldDeclaration d, CompilerContext
         ctx.pushOp(Return.make(V.scopeFrameOffset), Return.LEN);
       }
     } else {
-      final pos = beginMethod(ctx, d, d.offset, parentName + '.' + fieldName + ' (get)');
+      final pos = beginMethod(ctx, d, d.offset, '$parentName.$fieldName (get)');
       ctx.pushOp(PushObjectPropertyImpl.make(0, _fieldIndex), PushObjectPropertyImpl.LEN);
       ctx.pushOp(Return.make(1), Return.LEN);
       ctx.instanceDeclarationPositions[ctx.library]![parentName]![0][fieldName] = pos;
 
       if (!(field.isFinal || field.isConst)) {
-        final setterPos = beginMethod(ctx, d, d.offset, parentName + '.' + fieldName + ' (set)');
+        final setterPos = beginMethod(ctx, d, d.offset, '$parentName.$fieldName (set)');
         ctx.pushOp(SetObjectPropertyImpl.make(0, _fieldIndex, 1), SetObjectPropertyImpl.LEN);
         ctx.pushOp(Return.make(1), Return.LEN);
         ctx.instanceDeclarationPositions[ctx.library]![parentName]![1][fieldName] = setterPos;

@@ -66,7 +66,7 @@ class IdentifierReference implements Reference {
       if (_dec is MethodDeclaration) {
         return EvalTypes.functionType;
       } else if (_dec is VariableDeclaration) {
-        final name = (ctx.currentClass!.name.value() as String) + '.' + (_dec.name.value() as String);
+        final name = '${ctx.currentClass!.name.value() as String}.${_dec.name.value() as String}';
         return ctx.topLevelVariableInferredTypes[ctx.library]![name]!;
       }
     }
@@ -115,7 +115,7 @@ class IdentifierReference implements Reference {
       }
     }
 
-    throw CompileError('Cannot find value to set: ${object != null ? object!.toString() + '.' : ''}$name', source);
+    throw CompileError('Cannot find value to set: ${object != null ? '${object!}.' : ''}$name', source);
   }
 
   @override
@@ -156,7 +156,7 @@ class IdentifierReference implements Reference {
             throw CompileError('Cannot find external getter or field: $name on $classType', source);
           }
         }
-        final _name = classType.name + '.' + name;
+        final _name = '${classType.name}.$name';
         final type = ctx.topLevelVariableInferredTypes[classType.file]![_name]!;
         final gIndex = ctx.topLevelGlobalIndices[classType.file]![_name]!;
         ctx.pushOp(LoadGlobal.make(gIndex), LoadGlobal.LEN);
@@ -234,7 +234,7 @@ class IdentifierReference implements Reference {
               methodOffset:
                   DeferredOrOffset.lookupStatic(ctx, ctx.library, ctx.currentClass!.name.value() as String, name));
         } else if (_dec is VariableDeclaration) {
-          final name = (ctx.currentClass!.name.value() as String) + '.' + (_dec.name.value() as String);
+          final name = '${ctx.currentClass!.name.value() as String}.${_dec.name.value() as String}';
           final type = ctx.topLevelVariableInferredTypes[ctx.library]![name]!;
           final gIndex = ctx.topLevelGlobalIndices[ctx.library]![name]!;
           ctx.pushOp(LoadGlobal.make(gIndex), LoadGlobal.LEN);
@@ -257,7 +257,7 @@ class IdentifierReference implements Reference {
 
         return Variable(-1, EvalTypes.typeType,
             concreteTypes: [type],
-            methodOffset: DeferredOrOffset(file: type.file, name: type.name + '.'),
+            methodOffset: DeferredOrOffset(file: type.file, name: '${type.name}.'),
             methodReturnType: AlwaysReturnType(type, false));
       }
 
@@ -265,7 +265,7 @@ class IdentifierReference implements Reference {
         final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type);
         return Variable(-1, EvalTypes.typeType,
             concreteTypes: [type],
-            methodOffset: DeferredOrOffset(file: type.file, name: type.name + '#wrap'),
+            methodOffset: DeferredOrOffset(file: type.file, name: '${type.name}#wrap'),
             methodReturnType: AlwaysReturnType(type, false));
       }
 
@@ -296,11 +296,11 @@ class IdentifierReference implements Reference {
       final returnType = TypeRef.lookupClassDeclaration(ctx, _decl.sourceLib, decl);
       final DeferredOrOffset offset;
 
-      if (ctx.topLevelDeclarationPositions[_decl.sourceLib]?.containsKey(name + '.') ?? false) {
+      if (ctx.topLevelDeclarationPositions[_decl.sourceLib]?.containsKey('$name.') ?? false) {
         offset =
-            DeferredOrOffset(file: _decl.sourceLib, offset: ctx.topLevelDeclarationPositions[ctx.library]![name + '.']);
+            DeferredOrOffset(file: _decl.sourceLib, offset: ctx.topLevelDeclarationPositions[ctx.library]!['$name.']);
       } else {
-        offset = DeferredOrOffset(file: _decl.sourceLib, name: name + '.');
+        offset = DeferredOrOffset(file: _decl.sourceLib, name: '$name.');
       }
 
       return Variable(-1, EvalTypes.typeType,
@@ -380,11 +380,11 @@ class IdentifierReference implements Reference {
 
       final DeferredOrOffset offset;
 
-      if (ctx.topLevelDeclarationPositions[_decl.sourceLib]?.containsKey(name + '.') ?? false) {
+      if (ctx.topLevelDeclarationPositions[_decl.sourceLib]?.containsKey('$name.') ?? false) {
         offset =
-            DeferredOrOffset(file: _decl.sourceLib, offset: ctx.topLevelDeclarationPositions[ctx.library]![name + '.']);
+            DeferredOrOffset(file: _decl.sourceLib, offset: ctx.topLevelDeclarationPositions[ctx.library]!['$name.']);
       } else {
-        offset = DeferredOrOffset(file: _decl.sourceLib, name: name + '.');
+        offset = DeferredOrOffset(file: _decl.sourceLib, name: '$name.');
       }
 
       final rt = AlwaysReturnType(TypeRef.lookupClassDeclaration(ctx, _decl.sourceLib, decl), false);

@@ -18,7 +18,7 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx, NamedComp
   final b = d.body;
   final parentName = parent.name.value() as String;
   final methodName = d.name.value() as String;
-  final pos = beginMethod(ctx, d, d.offset, parentName + '.' + methodName + '()');
+  final pos = beginMethod(ctx, d, d.offset, '$parentName.$methodName()');
 
   ctx.beginAllocScope(existingAllocLen: (d.parameters?.parameters.length ?? 0));
   ctx.scopeFrameOffset += d.parameters?.parameters.length ?? 0;
@@ -53,7 +53,7 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx, NamedComp
   if (b is BlockFunctionBody) {
     stInfo = compileBlock(
         b.block, AlwaysReturnType.fromAnnotation(ctx, ctx.library, d.returnType, EvalTypes.dynamicType), ctx,
-        name: methodName + '()');
+        name: '$methodName()');
   } else if (b is ExpressionFunctionBody) {
     ctx.beginAllocScope();
     final V = compileExpression(b.expression, ctx);

@@ -333,7 +333,7 @@ TypeRef resolveSuperFormalType(
   final type = TypeRef.lookupClassDeclaration(ctx, decLibrary, $class);
   final $super = type.resolveTypeChain(ctx).extendsType ??
       (throw CompileError('Class $type has no super class, so cannot use super formals', param));
-  final superCstr = ctx.topLevelDeclarationsMap[$super.file]![$super.name + '.$superConstructorName']!;
+  final superCstr = ctx.topLevelDeclarationsMap[$super.file]!['${$super.name}.$superConstructorName']!;
   if (superCstr.isBridge) {
     final fd = (superCstr.bridge as BridgeConstructorDef).functionDescriptor;
     for (final _param in (param.isNamed ? fd.namedParams : fd.params)) {

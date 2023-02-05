@@ -133,7 +133,7 @@ void main(List<String> args) {
         if (_filename.isEmpty) {
           outputName = 'program.evc';
         }
-        outputName = _filename + '.evc';
+        outputName = '$_filename.evc';
       }
     }
 

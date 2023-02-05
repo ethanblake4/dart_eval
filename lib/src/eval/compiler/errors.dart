@@ -25,7 +25,7 @@ class CompileError implements Exception {
 
   String _toString() {
     final src = node?.toSource();
-    return 'CompileError: $message at ${src == null ? "unknown" : '"' + src.substring(0, min(20, src.length)) + (src.length > 20 ? '..."' : '"')}';
+    return 'CompileError: $message at ${src == null ? "unknown" : '"${src.substring(0, min(20, src.length))}${src.length > 20 ? '..."' : '"'}'}';
   }
 
   String _toStringWithContext(CompilerContext ctx) {
