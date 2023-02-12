@@ -144,7 +144,12 @@ class CompilerContext with ScopeContext {
   int library = 0;
   int position = 0;
   ClassDeclaration? currentClass;
+
+  /// A map of library IDs / indexes to a map of String declaration names to
+  /// [DeclarationOrBridge]s. See [Compiler._topLevelDeclarationsMap] from which
+  /// this is copied.
   Map<int, Map<String, DeclarationOrBridge>> topLevelDeclarationsMap = {};
+
   Map<int, Map<String, Map<String, Declaration>>> instanceDeclarationsMap = {};
   late OffsetTracker offsetTracker = OffsetTracker(this);
   Map<int, Map<String, TypeRef>> visibleTypes = {};

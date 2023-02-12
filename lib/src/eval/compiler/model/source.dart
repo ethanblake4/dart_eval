@@ -22,6 +22,8 @@ class DartSource {
   final String? stringSource;
   final File? fileSource;
 
+  /// Load the source code from the filesystem or a String and parse it
+  /// (internally using [parseString] from the Dart analyzer) into an AST
   DartCompilationUnit load() {
     final String _source;
     if (stringSource != null) {

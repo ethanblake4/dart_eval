@@ -38,6 +38,9 @@ class Compiler {
   var _bridgeStaticFunctionIdx = 0;
   final _bridgeDeclarations = <String, List<BridgeDeclaration>>{};
 
+  /// A map of library IDs / indexes to a map of String declaration names to
+  /// [DeclarationOrBridge]s. Populated in [_populateLookupTablesForDeclaration]
+  /// and copied to [CompilerContext.topLevelDeclarationsMap].
   var _topLevelDeclarationsMap = <int, Map<String, DeclarationOrBridge>>{};
   var _topLevelGlobalIndices = <int, Map<String, int>>{};
   var _instanceDeclarationsMap = <int, Map<String, Map<String, Declaration>>>{};
@@ -136,6 +139,8 @@ class Compiler {
     _topLevelDeclarationsMap = <int, Map<String, DeclarationOrBridge>>{};
     _topLevelGlobalIndices = <int, Map<String, int>>{};
     _instanceDeclarationsMap = <int, Map<String, Map<String, Declaration>>>{};
+
+    // Create a compilation context
     ctx = CompilerContext(0);
 
     for (final plugin in plugins) {
@@ -147,12 +152,18 @@ class Compiler {
 
     final cleanupList = cachedParsedSources.keys.toSet();
 
+    // Generate the parsed AST for all sources. [units] will be a List of
+    // [DartCompilationUnit]s. Avoids re-parsing a source if it has already been
+    // parsed and is stored in [cachedParsedSources].
     final units = sources.followedBy(additionalSources).map((source) {
       cleanupList.remove(source);
       final cached = cachedParsedSources[source];
       if (cached != null) {
         return cached;
       }
+
+      // Load the source code from the filesystem or a String and parse it
+      // (internally using the Dart analyzer) into an AST
       final parsed = cachedParsedSources[source] = source.load();
       return parsed;
     }).toList();
@@ -161,26 +172,40 @@ class Compiler {
       cachedParsedSources.remove(source);
     }
 
+    // Map unit sources into a Set of [Library]s using [_buildLibraries].
     final unitLibraries = {
       ..._buildLibraries(units),
     };
 
+    // Establish a mapping relationship from URI to Library
     final unitLibraryUriMap = {for (final library in unitLibraries) library.uri: library};
+
+    // Merge bridge libraries with unit libraries that share an identical URI
     final libraries = <Library>{};
     final mergedLibraryUris = <Uri>{};
 
+    // Iterate over bridge libraries
     for (final bridgeLibrary in _bridgeDeclarations.keys) {
+      // Wrap bridge declarations in this library as [DeclarationOrBridge]s
       final bridgeLibDeclarations = [
         for (final bridgeDeclaration in _bridgeDeclarations[bridgeLibrary]!)
           DeclarationOrBridge(-1, bridge: bridgeDeclaration)
       ];
 
       final uri = Uri.parse(bridgeLibrary);
+
+      // See if there is already a unit library with an identical URI
+      // If the two overlap, perform a merge operation
       final unitLibrary = unitLibraryUriMap[uri];
       if (unitLibrary != null) {
+        /// Merge source code declarations from the unit library with the bridge
         libraries.add(unitLibrary.copyWith(declarations: [...unitLibrary.declarations, ...bridgeLibDeclarations]));
+
+        /// Document this is a merged library
         mergedLibraryUris.add(uri);
       } else {
+        // If there is no existing unit library with an identical URI, create
+        // a new [Library] with the bridge declarations
         libraries.add(Library(Uri.parse(bridgeLibrary), imports: [], exports: [], declarations: [
           for (final bridgeDeclaration in _bridgeDeclarations[bridgeLibrary]!)
             DeclarationOrBridge(-1, bridge: bridgeDeclaration)
@@ -188,6 +213,8 @@ class Compiler {
       }
     }
 
+    // At this point bridge libraries and merged libraries are already in the
+    // [libraries] Set. Add the rest of the unit libraries that were not merged.
     unitLibraryUriMap.forEach((uri, library) {
       if (!mergedLibraryUris.contains(uri)) {
         libraries.add(library);
@@ -196,9 +223,15 @@ class Compiler {
 
     var i = 0;
     final libraryIndexMap = <Library, int>{};
+
+    // Resolve the export and import relationship of the libraries, while
+    // generating library IDs
     final visibleDeclarations =
         _resolveImportsAndExports(libraries, (library) => libraryIndexMap[library] ?? (libraryIndexMap[library] = i++));
 
+    // Populate lookup tables [_topLevelDeclarationsMap],
+    // [_instanceDeclarationsMap], and [_topLevelGlobalIndices], and generate
+    // remaining library IDs
     for (final library in libraries) {
       final libraryIndex = libraryIndexMap[library] ?? (libraryIndexMap[library] = i++);
       for (final declarationOrBridge in library.declarations) {
@@ -206,6 +239,7 @@ class Compiler {
       }
     }
 
+    // Pass a mapping of library URI to integer index into the context
     final libraryMapString = {for (final entry in libraryIndexMap.entries) entry.key.uri.toString(): entry.value};
     ctx.libraryMap = libraryMapString;
 
@@ -611,21 +645,41 @@ class Compiler {
 }
 
 List<Library> _buildLibraries(Iterable<DartCompilationUnit> units) {
+  /// Self-incrementing ID generator, each [DartCompilationUnit] has a unique
+  /// integer ID that identifies it. These IDs are local to this function, since
+  /// they are only used to build the [Library]s which will be later associated
+  /// with their own IDs.
   var i = 0;
+
+  /// ID to [DartCompilationUnit] mapping
   final compilationUnitMap = <int, DartCompilationUnit>{};
+
+  /// URI to ID mapping
   final uriMap = <String, int>{};
+
+  /// Library name to ID mapping
   final libraryIdMap = <String, int>{};
 
   for (final unit in units) {
+    /// Establish a mapping relationship
     compilationUnitMap[i] = unit;
     uriMap[unit.uri.toString()] = i;
     if (unit.library != null && unit.library!.name2 != null) {
+      /// Library instruction for source files that start with "library *****"
       libraryIdMap[unit.library!.name2!.name] = i;
     }
     i++;
   }
 
+  /// CompilationUnit graph structure
   final cuGraph = CompilationUnitGraph(compilationUnitMap, uriMap, libraryIdMap);
+
+  // Calculate strong link components using the Dijkstra path-based strong
+  // component algorithm.
+  // Accounting for `library` directives and `part` / `part of` relationships,
+  // the algorithm will group source files into libraries.
+  // Return type is List<List<int>> where each inner list is a list of source
+  // file IDs that should be joined into a single library
   final libGroups = computeStrongComponents(cuGraph);
 
   final libraries = <Library>[];
@@ -644,19 +698,37 @@ List<Library> _buildLibraries(Iterable<DartCompilationUnit> units) {
   return libraries;
 }
 
+/// Analyze the import and export relationships of the library, and return a
+/// mapping of library to its visible declarations.
+/// The visible declarations of a library are the declarations of the library
+/// itself, as well as the declarations of the libraries it imports, including
+/// declarations exported by another imported library. A graph is used to
+/// resolve long export chains.
 Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
     Iterable<Library> libraries, int Function(Library) resolveLibraryId) {
+  /// URI-Library mapping
   final uriMap = {for (final l in libraries) l.uri: l};
 
+  /// A directed graph based on library exports, allowing the resolution of
+  /// export chains.
+  /// See test/lib_composition_test.dart "Export chains" for an example of how
+  /// this is used.
   final exportGraph = DirectedGraph<Uri>({
+    // Pass in a Map representing edges in the graph.
+    // Each edge represents a library, with the key being the library's URI
+    // and the value being a set of its exports.
     for (final l in libraries) l.uri: {for (final export in l.exports) Uri.parse(export.uri.stringValue!)}
   });
 
   final result = <Library, Map<String, DeclarationOrPrefix>>{};
 
+  // Traversing libraries
   for (final l in libraries) {
+    // All visible declarations under this Library
     final _visibleDeclarations = <String, DeclarationOrPrefix>{
       for (final d in _expandDeclarations(l.declarations))
+        // Key: the expanded name of the declaration (see [_expandDeclarations])
+        // Value: DeclarationOrPrefix (declaration content, and store the ID of the containing library)
         d.first: DeclarationOrPrefix(declaration: d.second..sourceLib = resolveLibraryId(l)),
     };
 
@@ -664,15 +736,29 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
     final isDartCore = l.uri == dartCoreUri;
 
     for (final import in [
+      /// Iterate over the library's imports including the implicit import of
+      /// dart:core.
       ...l.imports.map((e) => _Import(Uri.parse(e.uri.stringValue!), e.prefix?.name, e.combinators)),
       if (!isDartCore) _Import(dartCoreUri, null)
     ]) {
+      /// Use the export graph to find all declarations that become visible
+      /// through this import.
+      /// directed_graph returns a tree structure with import.uri as the root
+      /// and exported libraries as leaves.
       final tree = exportGraph.crawler.tree(import.uri);
+
+      /// Flatten and deduplicate the tree to get a list of all libraries that
+      /// are visible through this import.
       final importedLibs = [...tree.expand((e) => e), import.uri]
           .map((e) => uriMap[e] ?? (throw CompileError("Cannot find import '$e' (while parsing '${l.uri}')")))
           .toSet();
-      final importedExports = importedLibs.map((e) => e.exports).expand((e) => e);
 
+      /// Get all the [ExportDirective]s of the imported library tree. While
+      /// we've already found all of the libraries that are visible through
+      /// this import, we still need access to the raw [ExportDirective]s to
+      /// identify which declarations are visible (since some exports may use
+      /// `show` or `hide`).
+      final importedExports = importedLibs.map((e) => e.exports).expand((e) => e);
       final exportsPerUri = <Uri, List<ExportDirective>>{};
       for (final export in importedExports) {
         final uriList = exportsPerUri[export.uri.stringValue!];
@@ -738,25 +824,40 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
   return result;
 }
 
+/// Flatten static nested declarations into an iterable of pairs of compound name to declaration
+/// For example, for a class `A` with a static method `foo`, this will return `['A', A]` and `['A.foo', foo]`
 Iterable<Pair<String, DeclarationOrBridge>> _expandDeclarations(List<DeclarationOrBridge> declarations) sync* {
+  /// Traverse declarations
   for (final d in declarations) {
     if (d.isBridge) {
+      /// Process bridge declaration
       final bridge = d.bridge as BridgeDeclaration;
+
+      /// Find the declaration name according to its specific type
       if (bridge is BridgeClassDef) {
+        /// Bridge class name
         final name = bridge.type.type.spec!.name;
         yield Pair(name, d);
       } else if (bridge is BridgeEnumDef) {
+        /// Bridge enumeration name
         final name = bridge.type.spec!.name;
         yield Pair(name, d);
       } else if (bridge is BridgeFunctionDeclaration) {
+        /// This is simple, directly yield the function name
         yield Pair(bridge.name, d);
       }
     } else {
+      // If it is a source code declaration
       final declaration = d.declaration!;
       if (declaration is NamedCompilationUnitMember) {
         final dName = declaration.name.value() as String;
+
+        /// First yield the declaration itself
         yield Pair(dName, d);
+
+        /// If it is a class declaration
         if (declaration is ClassDeclaration) {
+          /// Then also yield the static class members
           for (final member in declaration.members) {
             if (member is ConstructorDeclaration) {
               yield Pair('$dName.${member.name?.value() ?? ""}', DeclarationOrBridge(-1, declaration: member));
@@ -766,6 +867,7 @@ Iterable<Pair<String, DeclarationOrBridge>> _expandDeclarations(List<Declaration
           }
         }
       } else if (declaration is TopLevelVariableDeclaration) {
+        /// Top-level variable declaration
         for (final v in declaration.variables.variables) {
           yield Pair(v.name.value() as String, DeclarationOrBridge(-1, declaration: v));
         }

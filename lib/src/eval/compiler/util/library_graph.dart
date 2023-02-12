@@ -2,7 +2,8 @@ import 'package:dart_eval/src/eval/compiler/model/compilation_unit.dart';
 import 'package:dart_eval/src/eval/compiler/model/library.dart';
 import 'package:dart_eval/src/eval/compiler/util/graph.dart';
 
-/// A [Graph] where strongly-connected components representing libraries can be formed from part/part of relationships
+/// A [Graph] where strongly-connected components representing libraries can be
+/// formed from part/part of relationships
 class CompilationUnitGraph implements Graph<int> {
   final Map<int, DartCompilationUnit> compilationUnits;
   final Map<String, int> uriMap;
