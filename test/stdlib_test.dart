@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/stdlib/core.dart';
 import 'package:test/test.dart';
@@ -48,7 +50,7 @@ void main() {
         'example': {
           'main.dart': '''
           import 'dart:math';
-          Future<int> main(int milliseconds) async {
+          Future<num> main(int milliseconds) async {
             final result = await getPoint(milliseconds);
             return result.x + result.y;
           }
@@ -62,7 +64,7 @@ void main() {
       });
 
       final future = runtime.executeLib('package:example/main.dart', 'main', [150]) as Future;
-      await expectLater(future, completion($int(10)));
+      await expectLater(future, completion($num<num>(10)));
     });
 
     test('print()', () async {
@@ -194,6 +196,29 @@ void main() {
       expect(() {
         expect(runtime.executeLib('package:example/main.dart', 'main'), $null());
       }, prints('null\n'));
+    });
+
+    test('StreamController and Stream.listen()', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            import 'dart:async';
+            Future main() async {
+              final controller = StreamController<int>();
+              controller.stream.listen((event) {
+                print(event);
+              });
+              controller.add(1);
+              controller.add(2);
+              controller.add(3);
+              await controller.close();
+            }
+          ''',
+        }
+      });
+      expect(() async {
+        await runtime.executeLib('package:example/main.dart', 'main').$value;
+      }, prints('1\n2\n3\n'));
     });
   });
 }

@@ -53,11 +53,12 @@ class $Pattern implements Pattern, $Instance {
 class $Pattern$bridge with $Bridge implements Pattern {
   const $Pattern$bridge(List<Object?> _);
 
-  static const $type = BridgeTypeRef.spec(BridgeTypeSpec('dart:core', 'Pattern'));
+  static const $type = BridgeTypeRef(BridgeTypeSpec('dart:core', 'Pattern'));
 
   @override
   $Value? $bridgeGet(String identifier) {
     switch (identifier) {
+      
     }
     throw UnimplementedError();
   }

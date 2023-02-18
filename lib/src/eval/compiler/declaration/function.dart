@@ -1,10 +1,12 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:collection/collection.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/constructor.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/return.dart';
+import 'package:dart_eval/src/eval/compiler/model/override_spec.dart';
 import 'package:dart_eval/src/eval/compiler/scope.dart';
 import 'package:dart_eval/src/eval/compiler/statement/block.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
@@ -15,8 +17,25 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   ctx.runPrescan(d);
-  ctx.topLevelDeclarationPositions[ctx.library]![d.name.value() as String] =
-      beginMethod(ctx, d, d.offset, '${d.name.value() as String}()');
+  final pos = beginMethod(ctx, d, d.offset, '${d.name.value() as String}()');
+  ctx.topLevelDeclarationPositions[ctx.library]![d.name.value() as String] = pos;
+
+  final overrideAnno = d.metadata.firstWhereOrNull((element) => element.name.name == 'RuntimeOverride');
+  if (overrideAnno != null) {
+    final oArgs = overrideAnno.arguments!.arguments;
+    final name = oArgs.first as StringLiteral;
+    String? version;
+    if (oArgs.length == 2) {
+      final exp = (oArgs[1] as NamedExpression);
+      if (exp.name.label.name != 'version') {
+        throw CompileError('Invalid @RuntimeOverride annotation', d, ctx.library, ctx);
+      }
+      final _version = exp.expression as StringLiteral;
+      version = _version.stringValue;
+    }
+    final overrideName = name.stringValue!;
+    ctx.runtimeOverrideMap[overrideName] = OverrideSpec(pos, version ?? '<${ctx.version}');
+  }
 
   final _existingAllocs = d.functionExpression.parameters?.parameters.length ?? 0;
   ctx.beginAllocScope(existingAllocLen: _existingAllocs);

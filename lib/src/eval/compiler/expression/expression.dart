@@ -16,6 +16,7 @@ import 'package:dart_eval/src/eval/compiler/expression/parenthesized.dart';
 import 'package:dart_eval/src/eval/compiler/expression/postfix.dart';
 import 'package:dart_eval/src/eval/compiler/expression/prefix.dart';
 import 'package:dart_eval/src/eval/compiler/expression/property_access.dart';
+import 'package:dart_eval/src/eval/compiler/expression/throw.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
@@ -53,6 +54,8 @@ Variable compileExpression(Expression e, CompilerContext ctx, [TypeRef? bound]) 
     return compileInstanceCreation(ctx, e);
   } else if (e is ParenthesizedExpression) {
     return compileParenthesizedExpression(e, ctx);
+  } else if (e is ThrowExpression) {
+    return compileThrowExpression(ctx, e);
   }
 
   throw CompileError('Unknown expression type ${e.runtimeType}');
@@ -76,10 +79,11 @@ bool canReference(Expression e) {
   return e is Identifier || e is AssignmentExpression || e is IndexExpression || e is PropertyAccess;
 }
 
-void compileExpressionAndDiscardResult(Expression e, CompilerContext ctx, [TypeRef? bound]) {
+Variable? compileExpressionAndDiscardResult(Expression e, CompilerContext ctx, [TypeRef? bound]) {
   if (canReference(e)) {
     compileExpressionAsReference(e, ctx);
+    return null;
   } else {
-    compileExpression(e, ctx, bound);
+    return compileExpression(e, ctx, bound);
   }
 }

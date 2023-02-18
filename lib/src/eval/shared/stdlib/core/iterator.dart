@@ -4,17 +4,8 @@ import 'package:dart_eval/src/eval/runtime/override.dart';
 import 'package:dart_eval/stdlib/core.dart';
 
 class $Iterator<E> implements Iterator<E>, $Instance {
-  static void configureForCompile(Compiler compiler) {
-    compiler.defineBridgeClass($declaration);
-  }
-
-  static void configureForRuntime(Runtime runtime) {
-    //runtime.registerBridgeFunc('dart:core', 'Future.delayed', const _$Future_delayed());
-  }
-
-  static const $type = BridgeTypeRef.spec(BridgeTypeSpec('dart:core', 'Iterator'));
-
-  static const $declaration = BridgeClassDef(BridgeClassType($type, generics: {'E': BridgeGenericParam()}),
+  static const $declaration = BridgeClassDef(
+      BridgeClassType(BridgeTypeRef(CoreTypes.iterator), generics: {'E': BridgeGenericParam()}),
       constructors: {},
       methods: {
         'moveNext':

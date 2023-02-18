@@ -180,6 +180,15 @@ class Evc {
   /// [CheckEq]
   static const OP_CHECK_EQ = 57;
 
+  /// [Try]
+  static const OP_TRY = 58;
+
+  /// [Throw]
+  static const OP_THROW = 59;
+
+  /// [PopCatch]
+  static const OP_POP_CATCH = 60;
+
   static List<int> i16b(int i16) {
     final x = ByteData(2);
     x.setInt16(0, i16);
@@ -281,4 +290,7 @@ final List<OpLoader> ops = [
   (Runtime rt) => ReturnAsync(rt), // 55
   (Runtime rt) => BoxNull(rt), // 56
   (Runtime rt) => CheckEq(rt), // 57
+  (Runtime rt) => Try(rt), // 58
+  (Runtime rt) => Throw(rt), // 59
+  (Runtime rt) => PopCatch(rt) // 60
 ];

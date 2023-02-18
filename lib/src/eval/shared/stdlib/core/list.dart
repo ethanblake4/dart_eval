@@ -1,20 +1,17 @@
 part of 'collection.dart';
 
+/// dart_eval wrapper for [List]
 class $List<E> implements List<E>, $Instance {
-  static void configureForCompile(Compiler compiler) {
-    compiler.defineBridgeClass($declaration);
-  }
-
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFunc('dart:core', 'List.filled', _$List_filled);
     runtime.registerBridgeFunc('dart:core', 'List.generate', _$List_generate);
   }
 
   static const _$spec = BridgeTypeSpec('dart:core', 'List');
-  static const $type = BridgeTypeRef.spec(_$spec);
+  static const $type = BridgeTypeRef(_$spec);
 
   static const $declaration = BridgeClassDef(
-      BridgeClassType($type, $extends: $Iterable.$type, generics: {'E': BridgeGenericParam()}),
+      BridgeClassType($type, $extends: BridgeTypeRef(CoreTypes.iterable), generics: {'E': BridgeGenericParam()}),
       constructors: {
         'filled': BridgeConstructorDef(BridgeFunctionDef(
             params: [
@@ -24,7 +21,7 @@ class $List<E> implements List<E>, $Instance {
             namedParams: [
               BridgeParameter('growable', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)), true),
             ],
-            returns: BridgeTypeAnnotation(BridgeTypeRef.spec(_$spec, [BridgeTypeRef.ref('E')])),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(_$spec, [BridgeTypeRef.ref('E')])),
             generics: {'E': BridgeGenericParam()})),
         'generate': BridgeConstructorDef(BridgeFunctionDef(
             params: [
@@ -34,7 +31,7 @@ class $List<E> implements List<E>, $Instance {
             namedParams: [
               BridgeParameter('growable', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)), true),
             ],
-            returns: BridgeTypeAnnotation(BridgeTypeRef.spec(_$spec, [BridgeTypeRef.ref('E')])),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(_$spec, [BridgeTypeRef.ref('E')])),
             generics: {'E': BridgeGenericParam()})),
       },
       methods: {

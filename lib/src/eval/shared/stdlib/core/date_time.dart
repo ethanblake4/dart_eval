@@ -5,25 +5,18 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
 
 /// dart_eval [$Instance] wrapper of a [DateTime]
 class $DateTime implements DateTime, $Instance {
-  /// Configure the [$DateTime] class for compilation with a [Compiler]
-  static void configureForCompile(Compiler compiler) {
-    compiler.defineBridgeClass($declaration);
-  }
-
   /// Configure the [$DateTime] class for runtime with a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFunc('dart:core', 'DateTime.now', (runtime, target, args) => $DateTime.wrap(DateTime.now()));
   }
 
-  static const $type = BridgeTypeRef.spec(BridgeTypeSpec('dart:core', 'DateTime'), []);
-
   static const _dtIntGetter = BridgeMethodDef(BridgeFunctionDef(
       returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType)), params: [], namedParams: []));
 
-  static const $declaration = BridgeClassDef(BridgeClassType($type),
+  static const $declaration = BridgeClassDef(BridgeClassType(BridgeTypeRef(CoreTypes.dateTime)),
       constructors: {
-        'now':
-            BridgeConstructorDef(BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [], namedParams: []))
+        'now': BridgeConstructorDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dateTime)), params: [], namedParams: []))
       },
       methods: {},
       getters: {
@@ -37,7 +30,7 @@ class $DateTime implements DateTime, $Instance {
       fields: {},
       wrap: true);
 
-  /// Wrap an existing [DateTime] instance
+  /// Wrap a [DateTime] in a [$DateTime]
   $DateTime.wrap(this.$value) : _superclass = $Object($value);
 
   @override

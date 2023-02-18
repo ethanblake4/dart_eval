@@ -3,6 +3,7 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/source_node_wrapper.dart';
 import 'package:dart_eval/src/eval/compiler/constant_pool.dart';
+import 'package:dart_eval/src/eval/compiler/model/override_spec.dart';
 import 'package:dart_eval/src/eval/compiler/optimizer/prescan.dart';
 import 'package:dart_eval/src/eval/compiler/source.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -59,8 +60,8 @@ mixin ScopeContext on Object implements AbstractScopeContext {
     final nestCount = allocNest.removeLast();
     if (popValues) {
       popN(nestCount + popAdjust);
-      scopeFrameOffset -= nestCount;
     }
+    scopeFrameOffset -= nestCount;
     return nestCount;
   }
 
@@ -138,7 +139,7 @@ mixin ScopeContext on Object implements AbstractScopeContext {
 }
 
 class CompilerContext with ScopeContext {
-  CompilerContext(this.sourceFile);
+  CompilerContext(this.sourceFile, {this.version});
 
   final out = <EvcOp>[];
   int library = 0;
@@ -171,10 +172,14 @@ class CompilerContext with ScopeContext {
   PrescanContext? preScan;
   int nearestAsyncFrame = -1;
   int globalIndex = 0;
+  String? version;
 
   final signaturePool = FunctionSignaturePool();
   final constantPool = ConstantPool<Object>();
   final runtimeTypes = ConstantPool<RuntimeTypeSet>();
+
+  /// A map of String IDs to bytecode offsets used for runtime overrides
+  Map<String, OverrideSpec> runtimeOverrideMap = {};
 
   bool get requireNonlinearAccess => inNonlinearAccessContext.last;
 

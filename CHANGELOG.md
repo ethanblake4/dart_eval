@@ -1,3 +1,29 @@
+## 0.6.0
+- (Deprecated) `BridgeTypeRef.spec`, use the default constructor instead
+- (Breaking) Many bridge types now use CoreTypes/AsyncTypes etc
+  instead of RuntimeTypes. This allows specifying generic type
+  arguments.
+- (Breaking) EvalPlugin now uses the supertype `BridgeDeclarationRegistry`
+  instead of Compiler in configureForCompile().
+- (Breaking) Removed the typeMapper parameter from $Future. It was mostly
+  useless and didn't support async/await. Use bimodal wrappers instead.
+- Support for Streams and StreamController
+- Basic support for try/catch and throw. Only 1 untyped catch clause is 
+  supported for now, and finally is unsupported.
+- Add a runtime permissions system to control access to dart:io. 
+  See the README for details.
+- @RuntimeOverride annotations are now parsed at compile-time
+  to create dynamic runtime overrides consumed by the runtime.
+  See README for details.
+- Support for HttpClient (permission-gated) and Utf8Decoder
+- Add BridgeSerializer, a class that can serialize bridge classes to 
+  JSON for use in the dart_eval CLI.
+- Add $Closure for an easier way to pass external functions as arguments
+- Improved code documentation (thanks @maxiee)
+- Fix type inference using `await`
+- Fix method resolution on top-level variables
+- Add a feature support table to the README
+
 ## 0.5.6
 - (Breaking) Use DartTypes.list instead of RuntimeTypes.listType in bridge
   class definitions.

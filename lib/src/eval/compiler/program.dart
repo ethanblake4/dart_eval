@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'dart:typed_data';
 
+import 'package:dart_eval/src/eval/compiler/model/override_spec.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart' show Runtime;
 import 'package:dart_eval/src/eval/runtime/ops/all_ops.dart';
 import 'package:dart_eval/src/eval/runtime/type.dart';
@@ -21,7 +22,8 @@ class Program {
       this.constantPool,
       this.runtimeTypes,
       this.globalInitializers,
-      this.enumMappings);
+      this.enumMappings,
+      this.overrideMap);
 
   /// Global bytecode offsets of the program's top-level declarations.
   Map<int, Map<String, int>> topLevelDeclarations;
@@ -62,6 +64,9 @@ class Program {
   /// Mappings from enums to globals.
   Map<int, Map<String, Map<String, int>>> enumMappings;
 
+  /// Runtime override map
+  Map<String, OverrideSpec> overrideMap;
+
   /// The program's bytecode.
   List<EvcOp> ops;
 
@@ -79,6 +84,7 @@ class Program {
     _writeMetaBlock(b, [for (final rt in runtimeTypes) rt.toJson()]);
     _writeMetaBlock(b, globalInitializers);
     _writeMetaBlock(b, enumMappings.map((key, value) => MapEntry(key.toString(), value)));
+    _writeMetaBlock(b, overrideMap.map((key, value) => MapEntry(key, [value.offset, value.versionConstraint])));
 
     for (final op in ops) {
       b.add(Runtime.opcodeFrom(op));

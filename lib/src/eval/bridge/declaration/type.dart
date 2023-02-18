@@ -62,6 +62,13 @@ class BridgeClassType {
 /// A bridge type ref is a reference to a type used by the dart_eval compiler.
 class BridgeTypeRef {
   /// Reference a type by its spec (library URI and name)
+  const BridgeTypeRef(this.spec, [this.typeArgs = const []])
+      : cacheId = null,
+        gft = null,
+        ref = null;
+
+  /// Reference a type by its spec (library URI and name)
+  @Deprecated("Use the default constructor")
   const BridgeTypeRef.spec(this.spec, [this.typeArgs = const []])
       : cacheId = null,
         gft = null,
@@ -102,7 +109,7 @@ class BridgeTypeRef {
     }
     final unresolved = json['unresolved'];
     if (unresolved != null) {
-      return BridgeTypeRef.spec(BridgeTypeSpec.fromJson(json['unresolved']), ta);
+      return BridgeTypeRef(BridgeTypeSpec.fromJson(json['unresolved']), ta);
     }
     return BridgeTypeRef.ref(json['ref'], ta);
   }

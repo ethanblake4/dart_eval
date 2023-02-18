@@ -1,7 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:dart_eval/src/eval/bridge/declaration/class.dart';
-import 'package:dart_eval/src/eval/bridge/declaration/enum.dart';
-import 'package:dart_eval/src/eval/bridge/declaration/type.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/field.dart';
@@ -14,17 +12,16 @@ import 'package:dart_eval/src/eval/compiler/model/compilation_unit.dart';
 import 'package:dart_eval/src/eval/compiler/util.dart';
 import 'package:dart_eval/src/eval/compiler/util/graph.dart';
 import 'package:dart_eval/src/eval/compiler/util/library_graph.dart';
-import 'package:dart_eval/src/eval/plugin.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/convert.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/io.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/math.dart';
 import 'package:directed_graph/directed_graph.dart';
 
 import 'context.dart';
 import 'errors.dart';
-
-import 'model/source.dart';
 
 /// Compiles Dart source code into EVC bytecode, outputting a [Program].
 ///
@@ -34,7 +31,7 @@ import 'model/source.dart';
 /// [defineBridgeTopLevelFunction], and [defineBridgeEnum].
 ///
 /// Additional sources can be added with [addSource].
-class Compiler {
+class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
   var _bridgeStaticFunctionIdx = 0;
   final _bridgeDeclarations = <String, List<BridgeDeclaration>>{};
 
@@ -45,23 +42,30 @@ class Compiler {
   var _topLevelGlobalIndices = <int, Map<String, int>>{};
   var _instanceDeclarationsMap = <int, Map<String, Map<String, Declaration>>>{};
 
+  /// The semantic version of the compiled code, for runtime overrides
+  String? version = null;
+
   var ctx = CompilerContext(0);
 
   final additionalSources = <DartSource>[];
   final cachedParsedSources = <DartSource, DartCompilationUnit>{};
   final plugins = <EvalPlugin>[
-    DartCorePlugin(),
-    DartMathPlugin(),
     DartAsyncPlugin(),
+    DartCorePlugin(),
+    DartConvertPlugin(),
+    DartIoPlugin(),
+    DartMathPlugin(),
   ];
   final appliedPlugins = <String>[];
 
   // Add a plugin, which will only be run once.
+  @override
   void addPlugin(EvalPlugin plugin) {
     plugins.add(plugin);
   }
 
   // Manually define a (unresolved) bridge class
+  @override
   void defineBridgeClass(BridgeClassDef classDef) {
     if (!classDef.bridge && !classDef.wrap) {
       throw CompileError('Cannot define a bridge class that\'s not either bridge or wrap');
@@ -82,6 +86,7 @@ class Compiler {
   }
 
   /// Define a bridged enum definition to be used when compiling.
+  @override
   void defineBridgeEnum(BridgeEnumDef enumDef) {
     final spec = enumDef.type.spec;
     if (spec == null) {
@@ -98,9 +103,11 @@ class Compiler {
 
   /// Add a unit source to the list of additional sources which will be compiled
   /// alongside the packages specified in [compile].
+  @override
   void addSource(DartSource source) => additionalSources.add(source);
 
   /// Define a bridged top-level function declaration.
+  @override
   void defineBridgeTopLevelFunction(BridgeFunctionDeclaration function) {
     final libraryDeclarations = _bridgeDeclarations[function.library];
     if (libraryDeclarations == null) {
@@ -141,7 +148,7 @@ class Compiler {
     _instanceDeclarationsMap = <int, Map<String, Map<String, Declaration>>>{};
 
     // Create a compilation context
-    ctx = CompilerContext(0);
+    ctx = CompilerContext(0, version: version);
 
     for (final plugin in plugins) {
       if (!appliedPlugins.contains(plugin.identifier)) {
@@ -417,7 +424,8 @@ class Compiler {
         ctx.constantPool.pool,
         ctx.runtimeTypes.pool,
         globalInitializers,
-        ctx.enumValueIndices);
+        ctx.enumValueIndices,
+        ctx.runtimeOverrideMap);
   }
 
   /// For testing purposes. Compile code, write it to a byte stream, load it,
@@ -741,6 +749,11 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
       ...l.imports.map((e) => _Import(Uri.parse(e.uri.stringValue!), e.prefix?.name, e.combinators)),
       if (!isDartCore) _Import(dartCoreUri, null)
     ]) {
+      /// Skip eval_annotation imports if present
+      if (import.uri.toString().startsWith('package:eval_annotation')) {
+        continue;
+      }
+
       /// Use the export graph to find all declarations that become visible
       /// through this import.
       /// directed_graph returns a tree structure with import.uri as the root
@@ -794,16 +807,18 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
       final visibleDeclarations = {
         for (final lib in importedLibs)
           for (final declaration in _expandDeclarations(lib.declarations).where((e) => validImport(e.first))) ...{
-            if (lib.uri == import.uri) declaration,
+            if (lib.uri == import.uri) declaration..second.sourceLib = resolveLibraryId(lib),
             for (final export in exportsPerUri[lib.uri] ?? [])
               if (export.combinators.isEmpty)
-                declaration
+                declaration..second.sourceLib = resolveLibraryId(lib)
               else
                 for (final combinator in export.combinators)
                   if (combinator is ShowCombinator) ...{
-                    if ({for (final n in combinator.shownNames) n.name}.contains(declaration.first)) declaration
+                    if ({for (final n in combinator.shownNames) n.name}.contains(declaration.first))
+                      declaration..second.sourceLib = resolveLibraryId(lib)
                   } else if (combinator is HideCombinator) ...{
-                    if (!({for (final n in (combinator).hiddenNames) n.name}.contains(declaration.first))) declaration
+                    if (!({for (final n in (combinator).hiddenNames) n.name}.contains(declaration.first)))
+                      declaration..second.sourceLib = resolveLibraryId(lib)
                   }
           }
       };

@@ -149,7 +149,11 @@ class TypeRef {
     }
     final ref = typeReference.ref;
     if (ref != null) {
-      specifiedType ??= ctx.visibleTypes[ctx.library]![ctx.currentClass?.name2.stringValue]!;
+      specifiedType ??= ctx.visibleTypes[ctx.library]![ctx.currentClass?.name2.stringValue];
+
+      if (specifiedType == null) {
+        return EvalTypes.dynamicType;
+      }
 
       final declaration = ctx.topLevelDeclarationsMap[specifiedType.file]![specifiedType.name]!;
       if (!declaration.isBridge) {
@@ -197,7 +201,7 @@ class TypeRef {
   }
 
   factory TypeRef.stdlib(CompilerContext ctx, String library, String name) {
-    return TypeRef.fromBridgeTypeRef(ctx, BridgeTypeRef.spec(BridgeTypeSpec(library, name), []));
+    return TypeRef.fromBridgeTypeRef(ctx, BridgeTypeRef(BridgeTypeSpec(library, name), []));
   }
 
   factory TypeRef.lookupClassDeclaration(CompilerContext ctx, int library, ClassDeclaration cls) {
@@ -587,7 +591,7 @@ class BridgedReturnType implements ReturnType {
   AlwaysReturnType? toAlwaysReturnType(
       CompilerContext ctx, TypeRef? targetType, List<TypeRef?> argTypes, Map<String, TypeRef?> namedArgTypes,
       {List<TypeRef> typeArgs = const []}) {
-    final rt = TypeRef.fromBridgeTypeRef(ctx, BridgeTypeRef.spec(spec));
+    final rt = TypeRef.fromBridgeTypeRef(ctx, BridgeTypeRef(spec));
     return AlwaysReturnType(rt, nullable);
   }
 }

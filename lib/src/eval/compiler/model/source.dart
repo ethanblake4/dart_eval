@@ -25,13 +25,6 @@ class DartSource {
   /// Load the source code from the filesystem or a String and parse it
   /// (internally using [parseString] from the Dart analyzer) into an AST
   DartCompilationUnit load() {
-    final String _source;
-    if (stringSource != null) {
-      _source = stringSource!;
-    } else {
-      _source = fileSource!.readAsStringSync();
-    }
-
     LibraryDirective? libraryDirective;
     PartOfDirective? partOfDirective;
 
@@ -39,7 +32,7 @@ class DartSource {
     final exports = <ExportDirective>[];
     final parts = <PartDirective>[];
 
-    final unit = _parse(_source);
+    final unit = _parse(toString());
     for (final directive in unit.directives) {
       if (directive is ImportDirective) {
         imports.add(directive);
@@ -91,6 +84,17 @@ class DartSource {
 
   @override
   int get hashCode => Object.hash(uri, stringSource, fileSource);
+
+  @override
+  String toString() {
+    final String _source;
+    if (stringSource != null) {
+      _source = stringSource!;
+    } else {
+      _source = fileSource!.readAsStringSync();
+    }
+    return _source;
+  }
 }
 
 CompilationUnit _parse(String source) {

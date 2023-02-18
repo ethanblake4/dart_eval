@@ -120,5 +120,25 @@ void main() {
 
       expect(() => compiler.compile(packages), throwsA(isA<CompileError>()));
     });
+
+    test('Ignore package:eval_annotation imports', () {
+      final packages = {
+        'example': {
+          'main.dart': '''
+          import 'package:eval_annotation/eval_annotation.dart';
+
+          int main(String arg) {
+            return arg.length;
+          }
+          ''',
+        }
+      };
+
+      final program = compiler.compile(packages);
+      final runtime = Runtime.ofProgram(program);
+
+      final result = runtime.executeLib('package:example/main.dart', 'main', [$String('Test45678')]);
+      expect(result, 9);
+    });
   });
 }

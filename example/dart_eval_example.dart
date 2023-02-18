@@ -102,7 +102,7 @@ class $TimestampedTime implements TimestampedTime, $Instance {
   $TimestampedTime.wrap(this.$value) : _superclass = $Object($value);
 
   /// Define the compile-time type descriptor as an unresolved type
-  static const $type = BridgeTypeRef.spec(BridgeTypeSpec('package:example/bridge.dart', 'TimestampedTime'));
+  static const $type = BridgeTypeRef(BridgeTypeSpec('package:example/bridge.dart', 'TimestampedTime'));
 
   /// Define the compile-time class declaration and map out all the fields and methods for the compiler.
   static const $declaration = BridgeClassDef(BridgeClassType($type),
@@ -188,7 +188,7 @@ class $TimestampedTime implements TimestampedTime, $Instance {
 /// Because [WorldTimeTracker] is abstract, we can implement it here. If it were a concrete class you would instead
 /// extend it.
 class $WorldTimeTracker$bridge with $Bridge<WorldTimeTracker> implements WorldTimeTracker {
-  static const _$type = BridgeTypeRef.spec(BridgeTypeSpec('package:example/bridge.dart', 'WorldTimeTracker'));
+  static const _$type = BridgeTypeRef(BridgeTypeSpec('package:example/bridge.dart', 'WorldTimeTracker'));
 
   /// Define the compile-time class declaration and map out all the fields and methods for the compiler.
   static const $declaration = BridgeClassDef(BridgeClassType(_$type, isAbstract: true),

@@ -58,7 +58,7 @@ class EvalFunctionPtr extends EvalFunction {
 
   @override
   String toString() {
-    return 'EvalFunctionPtr{offset: $offset, prev: ${$prev == null ? 'null' : RuntimeException.formatStackSample($prev!, 4)}, '
+    return 'EvalFunctionPtr{offset: $offset, prev: ${$prev == null ? 'null' : formatStackSample($prev!, 4)}, '
         'rPAC: $requiredPositionalArgCount, '
         'pAT: $positionalArgTypes, '
         'sNA: $sortedNamedArgs, '
@@ -91,6 +91,21 @@ class $Function extends EvalFunction {
   @override
   $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
     return func(runtime, target, args);
+  }
+
+  @override
+  int get $runtimeType => RuntimeTypes.functionType;
+}
+
+class $Closure extends EvalFunction {
+  const $Closure(this.func, [this.$this]);
+
+  final EvalCallableFunc func;
+  final $Instance? $this;
+
+  @override
+  $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
+    return func(runtime, $this ?? target, args.sublist(3));
   }
 
   @override

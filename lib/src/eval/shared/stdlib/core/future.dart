@@ -7,39 +7,35 @@ import 'duration.dart';
 
 /// Wrapper for [Future]
 class $Future<T> implements Future<T>, $Instance {
-  static void configureForCompile(Compiler compiler) {
-    compiler.defineBridgeClass($declaration);
-  }
-
+  /// Configure [$Future] for runtime in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFunc('dart:core', 'Future.delayed', const _$Future_delayed());
   }
 
-  static const _$type = BridgeTypeRef.spec(BridgeTypeSpec('dart:core', 'Future'));
-
-  static const $declaration = BridgeClassDef(BridgeClassType(_$type, isAbstract: true),
+  static const $declaration = BridgeClassDef(BridgeClassType(BridgeTypeRef(CoreTypes.future), isAbstract: true),
       constructors: {
         'delayed': BridgeConstructorDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(_$type),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future)),
             params: [BridgeParameter('duration', BridgeTypeAnnotation($Duration.$type), false)],
             namedParams: []))
       },
       methods: {
-        'then': BridgeMethodDef(BridgeFunctionDef(returns: BridgeTypeAnnotation(_$type), params: [
-          BridgeParameter('onValue', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.functionType)), false)
-        ], namedParams: []))
+        'then': BridgeMethodDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future)),
+            params: [
+              BridgeParameter('onValue', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.functionType)), false)
+            ],
+            namedParams: []))
       },
       getters: {},
       setters: {},
       fields: {},
       wrap: true);
 
-  $Future.wrap(this.$value, this.$typeMapper) : _superclass = $Object($value);
+  $Future.wrap(this.$value) : _superclass = $Object($value);
 
   @override
   final Future<T> $value;
-
-  final $Value? Function(T value) $typeMapper;
 
   @override
   Future<T> get $reified => $value;
@@ -72,9 +68,7 @@ class $Future<T> implements Future<T>, $Instance {
 
   static $Value? _then(Runtime runtime, $Value? target, List<$Value?> args) {
     final $t = target as $Future;
-    return $Future.wrap(
-        ($t.$value).then((value) => (args[0] as EvalFunction)(runtime, target, [$t.$typeMapper(value)])),
-        $t.$typeMapper);
+    return $Future.wrap(($t.$value).then((value) => (args[0] as EvalFunction)(runtime, target, [runtime.wrap($t)])));
   }
 
   @override
@@ -94,6 +88,6 @@ class _$Future_delayed implements EvalCallable {
 
   @override
   $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $Future.wrap(Future.delayed(args[0]!.$value), (value) => $null());
+    return $Future.wrap(Future.delayed(args[0]!.$value));
   }
 }

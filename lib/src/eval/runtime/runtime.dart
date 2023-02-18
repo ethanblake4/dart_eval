@@ -6,10 +6,14 @@ import 'dart:typed_data';
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bridge/runtime_bridge.dart';
+import 'package:dart_eval/src/eval/compiler/model/override_spec.dart';
 import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'package:dart_eval/src/eval/runtime/function.dart';
+import 'package:dart_eval/src/eval/runtime/security/permission.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/convert.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/io.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/math.dart';
 import 'package:dart_eval/stdlib/core.dart';
 import 'package:dart_eval/src/eval/runtime/continuation.dart';
@@ -56,6 +60,26 @@ class _UnloadedEnumValues {
   final Map<String, $Value> values;
 }
 
+/// A [Runtime] is a virtual machine instance that executes EVC bytecode.
+///
+/// It can be created from a [Program] or from EVC bytecode, using the
+/// [Runtime.ofProgram] constructor or the [Runtime] constructor respectively.
+/// When possible, the [Runtime.ofProgram] constructor should be preferred as it
+/// avoids overhead of loading bytecode.
+///
+/// After creating a Runtime, register bridge functions using
+/// [registerBridgeFunc] or [addPlugin], and call [setup] which loads the
+/// byecode and associates the registered bridge functions with the bytecode
+/// program.
+///
+/// Once setup is complete, call [executeLib] to execute a function in the
+/// program.
+///
+/// By default, a Runtime has no permissions to access resources like the file
+/// system or network. Permissions can be granted using [grant] and revoked
+/// using [revoke]. Clients of the permission system such as bridge classes
+/// should check permissions using [checkPermission] or [assertPermission].
+///
 class Runtime {
   /// Construct a runtime from EVC bytecode. When possible, use the
   /// [Runtime.ofProgram] constructor instead to reduce loading time.
@@ -81,7 +105,8 @@ class Runtime {
         _bridgeLibraryMappings = program.bridgeLibraryMappings,
         bridgeFuncMappings = program.bridgeFunctionMappings,
         bridgeEnumMappings = program.enumMappings,
-        globalInitializers = program.globalInitializers {
+        globalInitializers = program.globalInitializers,
+        overrideMap = program.overrideMap {
     declarations = program.topLevelDeclarations;
     constantPool.addAll(program.constantPool);
     program.instanceDeclarations.forEach((file, $class) {
@@ -114,6 +139,7 @@ class Runtime {
     final encodedRuntimeTypes = _readString();
     final encodedGlobalInitializers = _readString();
     final encodedBridgeEnumMappings = _readString();
+    final encodedOverrideMap = _readString();
 
     declarations =
         (json.decode(encodedToplevelDecs).map((k, v) => MapEntry(int.parse(k), (v as Map).cast<String, int>())) as Map)
@@ -148,6 +174,10 @@ class Runtime {
 
     globalInitializers = [for (final i in json.decode(encodedGlobalInitializers) as List) i as int];
 
+    overrideMap = (json.decode(encodedOverrideMap) as Map)
+        .cast<String, List>()
+        .map((key, value) => MapEntry(key, OverrideSpec(value[0], value[1])));
+
     _setupBridging();
 
     while (_offset < _evc.lengthInBytes) {
@@ -173,6 +203,7 @@ class Runtime {
     }
   }
 
+  /// Add a plugin to the runtime, which can register bridge functions.
   void addPlugin(EvalPlugin plugin) {
     _plugins.add(plugin);
   }
@@ -200,18 +231,80 @@ class Runtime {
     }
   }
 
+  /// Sets this runtime as the global runtime, and loads its overrides globally.
+  /// Must be called after setup() but before running the program.
+  void loadGlobalOverrides() {
+    globalRuntime = this;
+    runtimeOverrides = overrideMap;
+  }
+
+  /// Grant a permission to the runtime.
+  void grant(Permission permission) {
+    _permissions.putIfAbsent(permission.domain, () => []).add(permission);
+  }
+
+  /// Revoke a permission from the runtime.
+  void revoke(Permission permission) {
+    _permissions[permission.domain]?.remove(permission);
+  }
+
+  /// Check if a permission is granted.
+  bool checkPermission(String domain, [Object? data]) {
+    return _permissions[domain]?.any((element) => element.match(data)) ?? false;
+  }
+
+  /// Check if a permission is granted, otherwise throw an exception.
+  void assertPermission(String domain, [Object? data]) {
+    if (!checkPermission(domain, data)) {
+      throw Exception("Permission '$domain' denied${data == null ? '' : ' for $data'}.\n"
+          "To grant permissions, use Runtime.grant().");
+    }
+  }
+
+  /// Attempt to wrap a Dart primitive value into a [$Value].
+  /// This is needed because Dart primitives cannot be implemented or extended,
+  /// so creating a [bimodal wrapper](https://github.com/ethanblake4/dart_eval/wiki/Wrappers#bimodal-wrappers)
+  /// is impossible.
+  $Value? wrapPrimitive(dynamic value) {
+    switch (value.runtimeType) {
+      case int:
+        return $int(value);
+      case double:
+        return $double(value);
+      case String:
+        return $String(value);
+      case bool:
+        return $bool(value);
+      case Null:
+        return $null();
+    }
+    return null;
+  }
+
+  /// Attempt to wrap a Dart value into a [$Value], and throw if unsuccessful.
+  $Value? wrap(dynamic value) {
+    if (value is $Value) {
+      return value;
+    }
+    return wrapPrimitive(value) ?? (throw Exception('Cannot wrap $value'));
+  }
+
   var _bridgeLibraryMappings = <String, int>{};
   final _bridgeFunctions = List<EvalCallableFunc>.filled(1000, _defaultFunction);
   final _unloadedBrFunc = <_UnloadedBridgeFunction>[];
   final _unloadedEnumValues = <_UnloadedEnumValues>[];
   final _plugins = <EvalPlugin>[
-    DartCorePlugin(),
-    DartMathPlugin(),
     DartAsyncPlugin(),
+    DartCorePlugin(),
+    DartConvertPlugin(),
+    DartIoPlugin(),
+    DartMathPlugin(),
   ];
   final constantPool = <Object>[];
   final globals = List<Object?>.filled(20000, null);
   var globalInitializers = <int>[];
+  var overrideMap = <String, OverrideSpec>{};
+  final _permissions = <String, List<Permission>>{};
 
   /// Write an [EvcOp] bytecode to a list of bytes.
   static List<int> opcodeFrom(EvcOp op) {
@@ -406,6 +499,15 @@ class Runtime {
       case CheckEq:
         op as CheckEq;
         return [Evc.OP_CHECK_EQ, ...Evc.i16b(op._value1), ...Evc.i16b(op._value2)];
+      case Try:
+        op as Try;
+        return [Evc.OP_TRY, ...Evc.i32b(op._catchOffset)];
+      case Throw:
+        op as Throw;
+        return [Evc.OP_THROW, ...Evc.i16b(op._location)];
+      case PopCatch:
+        op as PopCatch;
+        return [Evc.OP_POP_CATCH];
       default:
         throw ArgumentError('Not a valid op $op');
     }
@@ -414,16 +516,42 @@ class Runtime {
   static int _id = 0;
   final int id;
 
+  /// Stores the [BridgeData] for each bridge class in the program.
   static final bridgeData = Expando<BridgeData>();
+
+  /// Binary EVC bytecode
   late ByteData _evc;
+
+  /// Whether the program is loaded from binary EVC rather than from a
+  /// [Program].
   final bool _fromEvc;
+
+  /// The program's value stack
   final stack = <List<Object?>>[];
+
+  /// The current frame (usually stack.last)
   List<Object?> frame = [];
+
+  /// Arguments to the current function.
   var args = <Object?>[];
+
+  /// The decoded program bytecode
   final pr = <EvcOp>[];
+
+  /// The most recent return value
   Object? returnValue;
+
+  /// [frameOffset]s for each stack frame
   final frameOffsetStack = <int>[0];
+
+  /// The program's call stack. If a function returns it will pop the last
+  /// element from this stack and set [_prOffset] to the popped value.
   final callStack = <int>[0];
+
+  /// The program's catch stack. If a function throws it will pop the last
+  /// element from this stack and set [_prOffset] to the popped value.
+  final catchStack = <List<int>>[];
+
   var declarations = <int, Map<String, int>>{};
   final declaredClasses = <int, Map<String, EvalClass>>{};
   late final List<String> typeNames;
@@ -432,10 +560,16 @@ class Runtime {
   late final Map<int, Map<String, int>> bridgeFuncMappings;
   late final Map<int, Map<String, Map<String, int>>> bridgeEnumMappings;
 
+  /// Offset in the current stack frame
   int frameOffset = 0;
+
+  /// Binary file read offset, only used when loading
   int _offset = 0;
+
+  /// The current bytecode program offset
   int _prOffset = 0;
 
+  /// Print the program's bytecode in a readable format
   void printOpcodes() {
     var i = 0;
     for (final oo in pr) {
@@ -450,19 +584,16 @@ class Runtime {
     if (args != null) {
       this.args = args;
     }
-    // ignore: deprecated_member_use_from_same_package
-    return executeNamed(_bridgeLibraryMappings[library]!, name);
+    return execute(declarations[_bridgeLibraryMappings[library]!]![name]!);
   }
 
-  @Deprecated('Use executeLib() instead')
-  dynamic executeNamed(int file, String name) {
-    return execute(declarations[file]![name]!);
-  }
-
+  /// Start program execution at a specific bytecode offset.
+  /// Users should use [executeLib] instead.
   dynamic execute(int entrypoint) {
     _prOffset = entrypoint;
     try {
       callStack.add(-1);
+      catchStack.add([]);
       while (true) {
         final op = pr[_prOffset++];
         op.run(this);
@@ -471,6 +602,8 @@ class Runtime {
       return returnValue;
     } on RuntimeException catch (_) {
       rethrow;
+    } on WrappedException catch (e) {
+      throw e.exception;
     } catch (e, stk) {
       throw RuntimeException(this, e, stk);
     }
@@ -482,6 +615,7 @@ class Runtime {
     final _savedOffset = _prOffset;
     _prOffset = $offset;
     callStack.add(-1);
+    catchStack.add([]);
 
     try {
       while (true) {
@@ -493,9 +627,36 @@ class Runtime {
       return;
     } on RuntimeException catch (_) {
       rethrow;
+    } on WrappedException catch (e) {
+      throw e.exception;
     } catch (e, stk) {
       throw RuntimeException(this, e, stk);
     }
+  }
+
+  /// Throw an exception from the VM. This will unwind the stack until a
+  /// catch block is found.
+  void $throw(dynamic exception) {
+    while (true) {
+      final catchFrame = catchStack.last;
+      if (catchFrame.isNotEmpty) {
+        break;
+      }
+      stack.removeLast();
+      if (stack.isNotEmpty) {
+        frame = stack.last;
+        frameOffset = frameOffsetStack.removeLast();
+      }
+
+      catchStack.removeLast();
+      if (callStack.removeLast() == -1) {
+        throw exception is WrappedException ? exception : WrappedException(exception);
+      }
+    }
+    final catchOffset = catchStack.last.removeLast();
+    frameOffset = frameOffsetStack.last;
+    returnValue = exception is WrappedException ? exception.exception : exception;
+    _prOffset = catchOffset;
   }
 
   @pragma('vm:always-inline')
@@ -546,11 +707,17 @@ class Runtime {
   int get hashCode => id.hashCode;
 }
 
+/// An internal exception thrown while executing code in a [Runtime].
 class RuntimeException implements Exception {
   const RuntimeException(this.runtime, this.caughtException, this.stackTrace);
 
+  /// The runtime that threw the exception.
   final Runtime runtime;
+
+  /// The exception that was thrown.
   final Object caughtException;
+
+  /// The stack trace of the exception.
   final StackTrace stackTrace;
 
   @override
@@ -575,25 +742,18 @@ class RuntimeException implements Exception {
         'Call stack: ${runtime.callStack}\n'
         'TRACE:\n$prStr';
   }
+}
 
-  static String formatStackSample(List st, int size) {
-    final sb = StringBuffer('[');
-    final _size = min(size, st.length);
-    for (var i = 0; i < _size; i++) {
-      final s = st[i];
-      sb.write('L$i: ');
-      if (s is List) {
-        sb.write(formatStackSample(s, 3));
-      } else if (s is String) {
-        sb.write('"$s"');
-      } else {
-        sb.write('$s');
-      }
-      if (i < _size - 1) {
-        sb.write(', ');
-      }
-    }
-    sb.write(']');
-    return sb.toString();
+/// Wraps an exception thrown by bytecode inside a Runtime. Signals to the
+/// bridge to rethrow the underlying exception directly rather than
+/// wrapping it in a [RuntimeException].
+class WrappedException implements Exception {
+  const WrappedException(this.exception);
+
+  final Object exception;
+
+  @override
+  String toString() {
+    return 'WrappedException: $exception';
   }
 }

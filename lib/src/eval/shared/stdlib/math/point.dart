@@ -8,8 +8,8 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
 /// dart_eval wrapper for [Point]
 class $Point implements Point, $Instance {
   /// Configure this class for compilation in a [Compiler].
-  static void configureForCompile(Compiler compiler) {
-    compiler.defineBridgeClass($declaration);
+  static void configureForCompile(BridgeDeclarationRegistry registry) {
+    registry.defineBridgeClass($declaration);
   }
 
   /// Configure this class for runtime in a [Runtime].
@@ -17,7 +17,7 @@ class $Point implements Point, $Instance {
     runtime.registerBridgeFunc('dart:math', 'Point.', const _$Point_new());
   }
 
-  static const _$type = BridgeTypeRef.spec(BridgeTypeSpec('dart:math', 'Point'));
+  static const _$type = BridgeTypeRef(BridgeTypeSpec('dart:math', 'Point'));
 
   /// The bridge class definition for this class.
   static const $declaration = BridgeClassDef(BridgeClassType(_$type, isAbstract: true),

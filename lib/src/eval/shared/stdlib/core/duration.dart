@@ -1,13 +1,8 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/compiler/compiler.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
 
 class $Duration implements Duration, $Instance {
-  static void configureForCompile(Compiler compiler) {
-    compiler.defineBridgeClass($declaration);
-  }
-
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFunc('dart:core', 'Duration.', const _$Duration_new());
     runtime.registerBridgeFunc('dart:core', 'Duration.zero*g', const _$Duration_zero());
@@ -23,7 +18,7 @@ class $Duration implements Duration, $Instance {
         'dart:core', 'Duration.hoursPerDay*g', (runtime, target, args) => $int(Duration.hoursPerDay));
   }
 
-  static const $type = BridgeTypeRef.spec(BridgeTypeSpec('dart:core', 'Duration'));
+  static const $type = BridgeTypeRef(BridgeTypeSpec('dart:core', 'Duration'));
 
   static const $declaration = BridgeClassDef(BridgeClassType($type),
       constructors: {

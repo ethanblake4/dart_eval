@@ -65,5 +65,84 @@ void main() {
       });
       expect(runtime.executeLib('package:example/main.dart', 'main'), $int(15));
     });
+
+    test('Basic try/catch', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            num main() {
+              try {
+                throw 'error';
+              } catch (e) {
+                return 5;
+              }
+              return 2;
+            }
+          ''',
+        }
+      });
+      expect(runtime.executeLib('package:example/main.dart', 'main'), $int(5));
+    });
+
+    test('Try/catch no error', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            num main() {
+              try {
+                print('hello');
+              } catch (e) {
+                return 4;
+              }
+              return 2;
+            }
+          ''',
+        }
+      });
+      expect(runtime.executeLib('package:example/main.dart', 'main'), $int(2));
+    });
+
+    test('Nested try/catch', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            String main() {
+              try {
+                try {
+                  throw 'error';
+                } catch (e) {
+                  throw 'error2';
+                }
+              } catch (e) {
+                return e;
+              }
+              return 'error3';
+            }
+          ''',
+        }
+      });
+      expect(runtime.executeLib('package:example/main.dart', 'main').$value, 'error2');
+    });
+
+    test('Try/catch across function boundaries', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            String main() {
+              try {
+                return doThing();
+              } catch (e) {
+                return e + 'no';
+              }
+            }
+            
+            String doThing() {
+              throw 'error';
+            }
+          ''',
+        }
+      });
+      expect(runtime.executeLib('package:example/main.dart', 'main').$value, 'errorno');
+    });
   });
 }

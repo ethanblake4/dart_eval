@@ -81,6 +81,9 @@ void main(List<String> args) {
         for (final $source in (decoded['sources'] as List).cast<Map>()) {
           compiler.addSource(DartSource($source['uri'], $source['source']));
         }
+        for (final $function in (decoded['functions'] as List).cast<Map>()) {
+          compiler.defineBridgeTopLevelFunction(BridgeFunctionDeclaration.fromJson($function.cast()));
+        }
       }
     }
 
@@ -88,6 +91,7 @@ void main(List<String> args) {
     final pubspec = PubSpec.fromYamlString(pubspecFile.readAsStringSync());
 
     final packageName = pubspec.name;
+    compiler.version = pubspec.version?.canonicalizedVersion;
 
     final files = <File>[];
 

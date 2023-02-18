@@ -27,6 +27,7 @@ class InvokeDynamic implements EvcOp {
           continue;
         }
         runtime.callStack.add(runtime._prOffset);
+        runtime.catchStack.add([]);
         runtime._prOffset = _offset;
         return;
       }
@@ -74,12 +75,17 @@ class InvokeDynamic implements EvcOp {
         final al = runtime.args.length;
         runtime.args = [if (object.$prev != null) object.$prev, for (i = 3; i < al; i++) runtime.args[i]];
         runtime.callStack.add(runtime._prOffset);
+        runtime.catchStack.add([]);
         runtime._prOffset = object.offset;
         return;
       }
 
       final method = ((object as $Instance).$getProperty(runtime, _method) as EvalFunction);
-      runtime.returnValue = method.call(runtime, object, runtime.args.cast());
+      try {
+        runtime.returnValue = method.call(runtime, object, runtime.args.cast());
+      } catch (e) {
+        runtime.$throw(e);
+      }
       runtime.args = [];
       return;
     }
@@ -116,6 +122,7 @@ class CheckEq implements EvcOp {
         }
         runtime.args = [v2];
         runtime.callStack.add(runtime._prOffset);
+        runtime.catchStack.add([]);
         runtime._prOffset = _offset;
         return;
       }
@@ -228,6 +235,7 @@ class PushObjectProperty implements EvcOp {
         }
         runtime.args.add(object);
         runtime.callStack.add(runtime._prOffset);
+        runtime.catchStack.add([]);
         runtime._prOffset = _offset;
         return;
       }
