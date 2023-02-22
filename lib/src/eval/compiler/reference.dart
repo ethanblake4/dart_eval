@@ -298,7 +298,7 @@ class IdentifierReference implements Reference {
 
       if (ctx.topLevelDeclarationPositions[_decl.sourceLib]?.containsKey('$name.') ?? false) {
         offset =
-            DeferredOrOffset(file: _decl.sourceLib, offset: ctx.topLevelDeclarationPositions[ctx.library]!['$name.'], name: '$name.');
+            DeferredOrOffset(file: _decl.sourceLib, offset: ctx.topLevelDeclarationPositions[ctx.library]!['$name.']);
       } else {
         offset = DeferredOrOffset(file: _decl.sourceLib, name: '$name.');
       }
