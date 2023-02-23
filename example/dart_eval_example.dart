@@ -94,6 +94,10 @@ void main(List<String> args) {
 
 /// Create a wrapper for [TimestampedTime]. A wrapper is a performant interop solution
 /// when you *don't* need the ability to override the class within the dart_eval VM.
+///
+/// This is a bimodal wrapper as it implements both [TimestampedTime] and [$Instance].
+/// Bimodal wrappers can be used as a type argument for eg. a Future, but if you don't need
+/// this it may be simpler to implement only [$Instance].
 class $TimestampedTime implements TimestampedTime, $Instance {
   /// Create a wrap constructor. We're not implementing the default constructor here, but if you
   /// were to it'd typically be a runtimeOverride() constructor. You can read more details
@@ -106,6 +110,7 @@ class $TimestampedTime implements TimestampedTime, $Instance {
 
   /// Define the compile-time class declaration and map out all the fields and methods for the compiler.
   static const $declaration = BridgeClassDef(BridgeClassType($type),
+      // Specify class constrctors
       constructors: {
         // Define the default constructor with an empty string
         '': BridgeConstructorDef(BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [
@@ -116,13 +121,14 @@ class $TimestampedTime implements TimestampedTime, $Instance {
           BridgeParameter('timezoneOffset', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType)), true)
         ]))
       },
-      methods: {},
-      getters: {},
-      setters: {},
+      // Specify class fields
       fields: {
         'utcTime': BridgeFieldDef(BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType))),
         'timezoneOffset': BridgeFieldDef(BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType)))
       },
+      // You can also specify methods, getters, and setters here if present.
+
+      // Inform the compiler that this is a wrapper, not a bridge.
       wrap: true);
 
   /// Define static [EvalCallableFunc] functions for all static methods and constructors. This is for the
@@ -173,7 +179,7 @@ class $TimestampedTime implements TimestampedTime, $Instance {
   }
 
   /// Finally, our standard [TimestampedTime] implementations! Redirect to the wrapped [$value]'s implementation
-  /// for all properties and methods.
+  /// for all properties and methods. This is only necessary if using a bimodal wrapper.
   @override
   int get timezoneOffset => $value.timezoneOffset;
 
@@ -202,9 +208,7 @@ class $WorldTimeTracker$bridge with $Bridge<WorldTimeTracker> implements WorldTi
           BridgeParameter('country', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.stringType)), false)
         ], namedParams: []))
       },
-      getters: {},
-      setters: {},
-      fields: {},
+      // Inform the compiler that this is a bridge, not a wrapper.
       bridge: true);
 
   /// Define static [EvalCallableFunc] functions for all static methods and constructors. This is for the

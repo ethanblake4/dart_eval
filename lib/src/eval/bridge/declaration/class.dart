@@ -17,10 +17,10 @@ part 'class.g.dart';
 class BridgeClassDef implements BridgeDeclaration {
   const BridgeClassDef(this.type,
       {required this.constructors,
-      required this.methods,
-      required this.getters,
-      required this.setters,
-      required this.fields,
+      this.methods = const {},
+      this.getters = const {},
+      this.setters = const {},
+      this.fields = const {},
       this.bridge = false,
       this.wrap = false});
 
