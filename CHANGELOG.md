@@ -18,6 +18,8 @@
 - Support for HttpClient (permission-gated) and Utf8Decoder
 - Add BridgeSerializer, a class that can serialize bridge classes to 
   JSON for use in the dart_eval CLI.
+- Add an optional extensions syntax to make writing bridge classes
+  easier (thanks @canewsin). See `examples/dart_eval_extensions_syntax.dart`.
 - Add $Closure for an easier way to pass external functions as arguments
 - Improved code documentation (thanks @maxiee)
 - Fix type inference using `await`
