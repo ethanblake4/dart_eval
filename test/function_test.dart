@@ -359,5 +359,23 @@ void main() {
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), $String('Hello World'));
     });
+
+    test('Basic generic function type', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main () {
+              return fun(() => 3);
+            }
+            
+            int fun(void Function() a) {
+              return a();
+            }
+           '''
+        }
+      });
+
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 3);
+    });
   });
 }

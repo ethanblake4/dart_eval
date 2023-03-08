@@ -7,6 +7,7 @@
   instead of Compiler in configureForCompile().
 - (Breaking) Removed the typeMapper parameter from $Future. It was mostly
   useless and didn't support async/await. Use bimodal wrappers instead.
+- Support for relative imports and exports
 - Support for Streams and StreamController
 - Basic support for try/catch and throw. Only 1 untyped catch clause is 
   supported for now, and finally is unsupported.
@@ -27,6 +28,9 @@
 - Fixed an bug where compilation could fail due to a null function
   offset (thanks @maxiee)
 - Support modulo operator on numbers
+- Very basic support for generic function types that simply resolves
+  them to `Function`
+- Support for prefixed imports of top-level functions and constructors
 - Add a feature support table to the README
 
 ## 0.5.6

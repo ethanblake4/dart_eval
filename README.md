@@ -389,8 +389,8 @@ may vary when bridging.
 
 | Feature | Support level | Tests |
 | ------- | ------------- | ----- |
-| Imports | Partial | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/statement_test.dart#L14) |
-| Exports | Partial | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/statement_test.dart#L45) |
+| Imports | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/lib_composition_test.dart#L14), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/lib_composition_test.dart#L144), [[3]](https://github.com/ethanblake4/dart_eval/blob/master/test/lib_composition_test.dart#L176)  |
+| Exports | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/lib_composition_test.dart#L45), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/lib_composition_test.dart#L200) |
 | `part` / `part of` | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/statement_test.dart#L76) |
 | `show` and `hide` | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/statement_test.dart#L14) |
 | Conditional imports | ❌ | N/A |
@@ -434,7 +434,7 @@ may vary when bridging.
 | Streams | Partial | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/stdlib_test.dart#L199) |
 | String interpolation | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/stdlib_test.dart#L122) |
 | Enums | ❌ | N/A |
-| Generic function types | ❌ | N/A |
+| Generic function types | Partial | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L363) |
 | Typedefs | ❌ | N/A |
 | Generic classes | Partial | ❌ |
 | `is` and `as` | ❌ | N/A |

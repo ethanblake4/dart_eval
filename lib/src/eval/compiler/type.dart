@@ -1,6 +1,7 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/element/type.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/runtime/type.dart';
@@ -106,9 +107,13 @@ class TypeRef {
   }
 
   factory TypeRef.fromAnnotation(CompilerContext ctx, int library, TypeAnnotation typeAnnotation) {
-    if (typeAnnotation is! NamedType) {
-      throw CompileError('No support for generic function types yet');
+    if (typeAnnotation is GenericFunctionType) {
+      return EvalTypes.functionType;
     }
+    if (typeAnnotation is RecordType) {
+      throw CompileError('No support for record types yet', typeAnnotation.parent, library, ctx);
+    }
+    typeAnnotation as NamedType;
     final unspecifiedType = ctx.visibleTypes[library]![typeAnnotation.name.name]!;
     final typeArgs = typeAnnotation.typeArguments;
     if (typeArgs != null) {

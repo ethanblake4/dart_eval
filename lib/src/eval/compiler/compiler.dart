@@ -43,7 +43,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
   var _instanceDeclarationsMap = <int, Map<String, Map<String, Declaration>>>{};
 
   /// The semantic version of the compiled code, for runtime overrides
-  String? version = null;
+  String? version;
 
   var ctx = CompilerContext(0);
 
@@ -725,7 +725,7 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
     // Pass in a Map representing edges in the graph.
     // Each edge represents a library, with the key being the library's URI
     // and the value being a set of its exports.
-    for (final l in libraries) l.uri: {for (final export in l.exports) Uri.parse(export.uri.stringValue!)}
+    for (final l in libraries) l.uri: {for (final export in l.exports) l.uri.resolve(export.uri.stringValue!)}
   });
 
   final result = <Library, Map<String, DeclarationOrPrefix>>{};
@@ -746,7 +746,7 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
     for (final import in [
       /// Iterate over the library's imports including the implicit import of
       /// dart:core.
-      ...l.imports.map((e) => _Import(Uri.parse(e.uri.stringValue!), e.prefix?.name, e.combinators)),
+      ...l.imports.map((e) => _Import.resolve(e, l.uri, e.prefix?.name, e.combinators)),
       if (!isDartCore) _Import(dartCoreUri, null)
     ]) {
       /// Skip eval_annotation imports if present
@@ -771,14 +771,16 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
       /// this import, we still need access to the raw [ExportDirective]s to
       /// identify which declarations are visible (since some exports may use
       /// `show` or `hide`).
-      final importedExports = importedLibs.map((e) => e.exports).expand((e) => e);
       final exportsPerUri = <Uri, List<ExportDirective>>{};
-      for (final export in importedExports) {
-        final uriList = exportsPerUri[export.uri.stringValue!];
-        if (uriList != null) {
-          uriList.add(export);
-        } else {
-          exportsPerUri[Uri.parse(export.uri.stringValue!)] = [export];
+      for (final lib in importedLibs) {
+        for (final export in lib.exports) {
+          final _uri = lib.uri.resolve(export.uri.stringValue!);
+          final uriList = exportsPerUri[_uri];
+          if (uriList != null) {
+            uriList.add(export);
+          } else {
+            exportsPerUri[_uri] = [export];
+          }
         }
       }
 
@@ -897,4 +899,9 @@ class _Import {
   final List<Combinator> combinators;
 
   _Import(this.uri, this.prefix, [this.combinators = const []]);
+
+  factory _Import.resolve(ImportDirective import, Uri base, String? prefix, [List<Combinator> combinators = const []]) {
+    final uri = Uri.parse(import.uri.stringValue!);
+    return _Import(base.resolveUri(uri), import.prefix?.name, import.combinators);
+  }
 }

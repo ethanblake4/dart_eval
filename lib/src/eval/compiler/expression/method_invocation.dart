@@ -18,8 +18,13 @@ import 'identifier.dart';
 
 Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
   Variable? L;
+  var isPrefix = false;
   if (e.target != null) {
-    L = compileExpression(e.target!, ctx);
+    try {
+      L = compileExpression(e.target!, ctx);
+    } on PrefixError {
+      isPrefix = true;
+    }
   }
 
   AlwaysReturnType? mReturnType;
@@ -27,7 +32,9 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
   if (L != null) {
     return _invokeWithTarget(ctx, L, e);
   } else {
-    final method = compileIdentifier(e.methodName, ctx);
+    final method = isPrefix
+        ? compilePrefixedIdentifier((e.target as Identifier).name, e.methodName.name, ctx)
+        : compileIdentifier(e.methodName, ctx);
 
     if (method.callingConvention == CallingConvention.dynamic) {
       return invokeClosure(ctx, null, method, e.argumentList);
