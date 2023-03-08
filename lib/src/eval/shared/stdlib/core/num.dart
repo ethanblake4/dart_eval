@@ -19,6 +19,8 @@ class $num<T extends num> implements $Instance {
         return __mul;
       case '/':
         return __div;
+      case '%':
+        return __mod;
       case '<':
         return __lt;
       case '>':
@@ -93,6 +95,23 @@ class $num<T extends num> implements $Instance {
   static $Value? _div(Runtime runtime, $Value? target, List<$Value?> args) {
     final other = args[0];
     final _evalResult = target!.$value / other!.$value;
+
+    if (_evalResult is double) {
+      return $double(_evalResult);
+    }
+
+    throw UnimplementedError();
+  }
+
+  static const $Function __mod = $Function(_mod);
+
+  static $Value? _mod(Runtime runtime, $Value? target, List<$Value?> args) {
+    final other = args[0];
+    final _evalResult = target!.$value % other!.$value;
+
+    if (_evalResult is int) {
+      return $int(_evalResult);
+    }
 
     if (_evalResult is double) {
       return $double(_evalResult);

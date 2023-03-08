@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/stdlib/core.dart';
 import 'package:test/test.dart';
@@ -24,6 +22,20 @@ void main() {
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), -5);
+    });
+
+    test('% operator', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            double main() {
+              return 4.5 % 2;
+            }
+          '''
+        }
+      });
+
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 0.5);
     });
 
     test('Future.delayed()', () async {

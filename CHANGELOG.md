@@ -26,6 +26,7 @@
 - Fix method resolution on top-level variables
 - Fixed an bug where compilation could fail due to a null function
   offset (thanks @maxiee)
+- Support modulo operator on numbers
 - Add a feature support table to the README
 
 ## 0.5.6
