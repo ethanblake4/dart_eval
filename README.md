@@ -441,10 +441,10 @@ may vary when bridging.
 | `assert` | ❌ | N/A |
 | Null safety | Partial | ❌ |
 | Late initialization | ❌ | N/A |
-| Cascades | Partial | ❌ |
-| Ternary expressions | ❌ | N/A |
+| Cascades | ❌ | ❌ |
+| Ternary expressions | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L381) |
 | Extension methods | ❌ | N/A |
-| Const expressions | ❌ | N/A |
+| Const expressions | Partial | N/A |
 | Isolates | ❌ | N/A |
 
 ## Features and bugs

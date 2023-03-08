@@ -11,6 +11,7 @@
 - Support for Streams and StreamController
 - Basic support for try/catch and throw. Only 1 untyped catch clause is 
   supported for now, and finally is unsupported.
+- Support for ternary expressions
 - Add a runtime permissions system to control access to dart:io. 
   See the README for details.
 - @RuntimeOverride annotations are now parsed at compile-time
@@ -22,15 +23,18 @@
 - Add an optional extensions syntax to make writing bridge classes
   easier (thanks @canewsin). See `examples/dart_eval_extensions_syntax.dart`.
 - Add $Closure for an easier way to pass external functions as arguments
+- Support modulo operator on numbers
+- Add dart:math functions and constants
+- Support for prefixed imports of top-level functions and constructors
+- Very basic support for generic function types that simply resolves
+  them to `Function`
 - Improved code documentation (thanks @maxiee)
 - Fix type inference using `await`
 - Fix method resolution on top-level variables
 - Fixed an bug where compilation could fail due to a null function
   offset (thanks @maxiee)
-- Support modulo operator on numbers
-- Very basic support for generic function types that simply resolves
-  them to `Function`
-- Support for prefixed imports of top-level functions and constructors
+- Fixed a type inference error where bridged functions could resolve
+  incorrectly to a unboxed return type
 - Add a feature support table to the README
 
 ## 0.5.6

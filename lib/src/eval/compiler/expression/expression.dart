@@ -4,6 +4,7 @@ import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/assignment.dart';
 import 'package:dart_eval/src/eval/compiler/expression/await.dart';
 import 'package:dart_eval/src/eval/compiler/expression/binary.dart';
+import 'package:dart_eval/src/eval/compiler/expression/conditional.dart';
 import 'package:dart_eval/src/eval/compiler/expression/funcexpr_invocation.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/expression/identifier.dart';
@@ -56,6 +57,8 @@ Variable compileExpression(Expression e, CompilerContext ctx, [TypeRef? bound]) 
     return compileParenthesizedExpression(e, ctx);
   } else if (e is ThrowExpression) {
     return compileThrowExpression(ctx, e);
+  } else if (e is ConditionalExpression) {
+    return compileConditionalExpression(ctx, e);
   }
 
   throw CompileError('Unknown expression type ${e.runtimeType}');

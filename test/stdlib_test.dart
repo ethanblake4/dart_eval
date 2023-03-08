@@ -232,5 +232,25 @@ void main() {
         await runtime.executeLib('package:example/main.dart', 'main').$value;
       }, prints('1\n2\n3\n'));
     });
+
+    test('dart:math', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            import 'dart:math';
+            void main() {
+              print(pi.toString().substring(0, 8));
+              print(pow(2, 3));
+              print(sin(0));
+              print(cos(0));
+              print(tan(0));
+            }
+          ''',
+        }
+      });
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('3.141592\n8\n0.0\n1.0\n0.0\n'));
+    });
   });
 }

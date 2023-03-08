@@ -7,7 +7,7 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import '../errors.dart';
 import 'expression.dart';
 
-/// Compile a [BinaryExpression] to DBC bytecode
+/// Compile a [BinaryExpression] to EVC bytecode
 Variable compileBinaryExpression(CompilerContext ctx, BinaryExpression e, [TypeRef? boundType]) {
   var L = compileExpression(e.leftOperand, ctx, boundType);
   var R = compileExpression(e.rightOperand, ctx, boundType);
