@@ -86,7 +86,7 @@ void main(List<String> args) {
   final timeTracker = runtime.executeLib('package:example/main.dart', 'fn') as WorldTimeTracker;
 
   // We can now utilize the returned bridge class
-  print('UK timezone offset: ' + timeTracker.getTimeFor('UK').timezoneOffset.toString() + ' (from outside Eval!)');
+  print('UK timezone offset: ${timeTracker.getTimeFor('UK').timezoneOffset} (from outside Eval!)');
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////

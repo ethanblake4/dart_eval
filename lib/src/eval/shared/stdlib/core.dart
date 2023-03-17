@@ -3,6 +3,8 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/collection.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/date_time.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/iterator.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/pattern.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/regexp.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/uri.dart';
 import 'core/duration.dart';
 import 'core/future.dart';
@@ -23,6 +25,9 @@ class DartCorePlugin implements EvalPlugin {
     registry.defineBridgeClass($Future.$declaration);
     registry.defineBridgeClass($DateTime.$declaration);
     registry.defineBridgeClass($Uri.$declaration);
+    registry.defineBridgeClass($Pattern.$declaration);
+    registry.defineBridgeClass($Match.$declaration);
+    registry.defineBridgeClass($RegExp.$declaration);
   }
 
   @override
@@ -33,5 +38,6 @@ class DartCorePlugin implements EvalPlugin {
     $Future.configureForRuntime(runtime);
     $DateTime.configureForRuntime(runtime);
     $Uri.configureForRuntime(runtime);
+    runtime.registerBridgeFunc('dart:core', 'RegExp.', $RegExp.$new);
   }
 }

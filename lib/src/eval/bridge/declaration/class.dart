@@ -22,7 +22,8 @@ class BridgeClassDef implements BridgeDeclaration {
       this.setters = const {},
       this.fields = const {},
       this.bridge = false,
-      this.wrap = false});
+      this.wrap = false})
+      : assert(bridge != wrap, 'You must specify either bridge or wrap as true (but not both)');
 
   final BridgeClassType type;
   final Map<String, BridgeConstructorDef> constructors;

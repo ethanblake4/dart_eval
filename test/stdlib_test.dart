@@ -252,5 +252,60 @@ void main() {
         runtime.executeLib('package:example/main.dart', 'main');
       }, prints('3.141592\n8\n0.0\n1.0\n0.0\n'));
     });
+
+    test('RegExp hasMatch()', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              final rg = RegExp(r'..s');
+              print(rg.hasMatch('snakes'));
+              print(rg.hasMatch('moon'));
+            }
+          ''',
+        }
+      });
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('true\nfalse\n'));
+    });
+
+    test('RegExp hasMatch()', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              final rg = RegExp(r'..s');
+              print(rg.hasMatch('snakes'));
+              print(rg.hasMatch('moon'));
+            }
+          ''',
+        }
+      });
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('true\nfalse\n'));
+    });
+
+    test('Pattern allMatches() with RegExp', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              final exp = RegExp(r'(\\w+)');
+              var str = 'Dash is a bird';
+              final matches = exp.allMatches(str, 8);
+              for (final Match m in matches) {
+                final match = m[0];
+                print(match);
+              }
+            }
+          ''',
+        }
+      });
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('a\nbird\n'));
+    });
   });
 }

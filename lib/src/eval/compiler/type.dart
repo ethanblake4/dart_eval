@@ -202,6 +202,10 @@ class TypeRef {
 
       return boundType;
     }
+    final gft = typeReference.gft;
+    if (gft != null) {
+      return EvalTypes.functionType;
+    }
     throw CompileError('No support for looking up types by other bridge annotation types');
   }
 

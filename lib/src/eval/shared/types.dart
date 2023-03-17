@@ -6,6 +6,9 @@ import 'package:dart_eval/src/eval/shared/stdlib/convert/converter.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/date_time.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/duration.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/iterator.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/pattern.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/regexp.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/uri.dart';
 import 'package:dart_eval/stdlib/core.dart';
 
 /// Bridged runtime type IDs for core Dart types.
@@ -111,6 +114,15 @@ class CoreTypes {
 
   /// Bridge type spec for [$Uri]
   static const uri = BridgeTypeSpec('dart:core', 'Uri');
+
+  /// Bridge type spec for [$Pattern]
+  static const pattern = BridgeTypeSpec('dart:core', 'Pattern');
+
+  /// Bridge type spec for [$Match]
+  static const match = BridgeTypeSpec('dart:core', 'Match');
+
+  /// Bridge type spec for [$RegExp]
+  static const regExp = BridgeTypeSpec('dart:core', 'RegExp');
 }
 
 /// This class contains dart:async bridge type specs for convenience

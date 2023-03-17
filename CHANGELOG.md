@@ -12,6 +12,7 @@
 - Basic support for try/catch and throw. Only 1 untyped catch clause is 
   supported for now, and finally is unsupported.
 - Support for ternary expressions
+- Basic support for RegExp
 - Add a runtime permissions system to control access to dart:io. 
   See the README for details.
 - @RuntimeOverride annotations are now parsed at compile-time
