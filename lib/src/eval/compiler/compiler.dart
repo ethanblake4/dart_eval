@@ -18,6 +18,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/convert.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/math.dart';
+import 'package:dart_eval/src/eval/shared/types.dart';
 import 'package:directed_graph/directed_graph.dart';
 
 import 'context.dart';
@@ -413,10 +414,18 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       globalInitializers[gi.key] = gi.value;
     }
 
+    final typeIds = <int, Map<String, int>>{};
+
+    for (final t in {...runtimeTypeMap, ...ctx.typeRefIndexMap}.entries) {
+      final type = t.key;
+      typeIds.putIfAbsent(type.file, () => {})[type.name] = t.value;
+    }
+
     return Program(
         ctx.topLevelDeclarationPositions,
         ctx.instanceDeclarationPositions,
-        ctx.typeNames,
+        typeIds,
+        //ctx.typeNames,
         ctx.typeTypes,
         ctx.offsetTracker.apply(ctx.out),
         libraryMapString,

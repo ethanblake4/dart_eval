@@ -186,7 +186,8 @@ Permissions can also be revoked using `runtime.revoke`.
 When writing bindings that access sensitive resources, you can check whether a 
 permission is enabled using `runtime.checkPermission`, or assert using
 `runtime.assertPermission`. Out of the box, dart_eval includes the FilesystemPermission
-and NetworkPermission classes ('filesystem' and 'network' domains, respectively), but 
+and NetworkPermission classes ('filesystem' and 'network' domains, respectively)
+as well as read/write only variations of FilesystemPermission, but 
 you can also create your own custom permissions by implementing the Permission
 interface.
 
@@ -437,7 +438,8 @@ may vary when bridging.
 | Generic function types | Partial | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L363) |
 | Typedefs | ❌ | N/A |
 | Generic classes | Partial | ❌ |
-| `is` and `as` | ❌ | N/A |
+| Type tests (`is`) | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/expression_test.dart#L12) |
+| Casting (`as`) | ❌ | N/A |
 | `assert` | ❌ | N/A |
 | Null safety | Partial | ❌ |
 | Late initialization | ❌ | N/A |

@@ -5,7 +5,7 @@ import 'package:dart_eval/dart_eval.dart';
 abstract class Permission {
   /// The domain specifies the type of resource, such as 'network' or
   /// 'filesystem'.
-  String get domain;
+  List<String> get domains;
 
   /// Returns true if the permission allows access to the specified resource.
   /// If the permission is granular, the [data] parameter may be used to
@@ -14,10 +14,10 @@ abstract class Permission {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) || other is Permission && runtimeType == other.runtimeType && domain == other.domain;
+      identical(this, other) || other is Permission && runtimeType == other.runtimeType && domains == other.domains;
 
   @override
-  int get hashCode => domain.hashCode;
+  int get hashCode => domains.hashCode;
 }
 
 /// A permission that allows access to a network resource.
@@ -48,7 +48,7 @@ class NetworkPermission implements Permission {
   static final NetworkPermission any = NetworkPermission(RegExp('.*'));
 
   @override
-  String get domain => 'network';
+  List<String> get domains => ['network'];
 
   @override
   bool match([Object? data]) {
@@ -61,16 +61,16 @@ class NetworkPermission implements Permission {
   @override
   bool operator ==(Object other) {
     if (other is NetworkPermission) {
-      return other.matchPattern == matchPattern && other.domain == domain;
+      return other.matchPattern == matchPattern && other.domains == domains;
     }
     return false;
   }
 
   @override
-  int get hashCode => matchPattern.hashCode ^ domain.hashCode;
+  int get hashCode => matchPattern.hashCode ^ domains.hashCode;
 }
 
-/// A permission that allows access to a file system resource.
+/// A permission that allows access to read and write a file system resource.
 class FilesystemPermission implements Permission {
   /// The pattern that will be matched against the path.
   final Pattern matchPattern;
@@ -95,7 +95,7 @@ class FilesystemPermission implements Permission {
   }
 
   @override
-  String get domain => 'filesystem';
+  List<String> get domains => ['filesystem:read', 'filesystem:write'];
 
   @override
   bool match([Object? data]) {
@@ -107,12 +107,100 @@ class FilesystemPermission implements Permission {
 
   @override
   bool operator ==(Object other) {
-    if (other is NetworkPermission) {
-      return other.matchPattern == matchPattern && other.domain == domain;
+    if (other is FilesystemPermission) {
+      return other.matchPattern == matchPattern && other.domains == domains;
     }
     return false;
   }
 
   @override
-  int get hashCode => matchPattern.hashCode ^ domain.hashCode;
+  int get hashCode => matchPattern.hashCode ^ domains.hashCode;
+}
+
+/// A permission that allows access to read a file system resource.
+class FilesystemReadPermission extends FilesystemPermission {
+  /// Create a new filesystem permission that matches a [Pattern].
+  const FilesystemReadPermission(Pattern matchPattern) : super(matchPattern);
+
+  /// A permission that allows access to any file system resource.
+  static final FilesystemReadPermission any = FilesystemReadPermission(RegExp('.*'));
+
+  /// Create a new filesystem permission that matches any file in a directory
+  /// or one of its subdirectories.
+  factory FilesystemReadPermission.directory(String dir) {
+    final escaped = dir.replaceAll(r'\', r'\\').replaceAll(r'/', r'\/');
+    return FilesystemReadPermission(RegExp('^$escaped.*'));
+  }
+
+  /// Create a new filesystem permission that matches a specific file.
+  factory FilesystemReadPermission.file(String file) {
+    final escaped = file.replaceAll(r'\', r'\\').replaceAll(r'/', r'\/');
+    return FilesystemReadPermission(RegExp('^$escaped\$'));
+  }
+
+  @override
+  List<String> get domains => ['filesystem:read'];
+
+  @override
+  bool match([Object? data]) {
+    if (data is String) {
+      return matchPattern.matchAsPrefix(data) != null;
+    }
+    return false;
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (other is FilesystemReadPermission) {
+      return other.matchPattern == matchPattern && other.domains == domains;
+    }
+    return false;
+  }
+
+  @override
+  int get hashCode => matchPattern.hashCode ^ domains.hashCode;
+}
+
+/// A permission that allows access to write a file system resource.
+class FilesystemWritePermission extends FilesystemPermission {
+  /// Create a new filesystem permission that matches a [Pattern].
+  const FilesystemWritePermission(Pattern matchPattern) : super(matchPattern);
+
+  /// A permission that allows access to any file system resource.
+  static final FilesystemWritePermission any = FilesystemWritePermission(RegExp('.*'));
+
+  /// Create a new filesystem permission that matches any file in a directory
+  /// or one of its subdirectories.
+  factory FilesystemWritePermission.directory(String dir) {
+    final escaped = dir.replaceAll(r'\', r'\\').replaceAll(r'/', r'\/');
+    return FilesystemWritePermission(RegExp('^$escaped.*'));
+  }
+
+  /// Create a new filesystem permission that matches a specific file.
+  factory FilesystemWritePermission.file(String file) {
+    final escaped = file.replaceAll(r'\', r'\\').replaceAll(r'/', r'\/');
+    return FilesystemWritePermission(RegExp('^$escaped\$'));
+  }
+
+  @override
+  List<String> get domains => ['filesystem:write'];
+
+  @override
+  bool match([Object? data]) {
+    if (data is String) {
+      return matchPattern.matchAsPrefix(data) != null;
+    }
+    return false;
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (other is FilesystemWritePermission) {
+      return other.matchPattern == matchPattern && other.domains == domains;
+    }
+    return false;
+  }
+
+  @override
+  int get hashCode => matchPattern.hashCode ^ domains.hashCode;
 }

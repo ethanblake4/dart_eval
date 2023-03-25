@@ -128,7 +128,7 @@ class $StreamSubscription implements $Instance {
   get $reified => throw UnimplementedError();
 
   @override
-  int get $runtimeType => throw UnimplementedError();
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType($type.spec!);
 }
 
 /// dart_eval wrapper for [StreamTransformer]
@@ -187,7 +187,7 @@ class $StreamTransformer implements $Instance {
   }
 
   @override
-  int get $runtimeType => throw UnimplementedError();
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType($type.spec!);
 }
 
 ///// dart_eval wrapper for [Stream]
@@ -734,7 +734,7 @@ class $Stream implements $Instance {
   get $reified => $value;
 
   @override
-  int get $runtimeType => throw UnimplementedError();
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType($type.spec!);
 
   @override
   void $setProperty(Runtime runtime, String identifier, $Value value) {}
@@ -771,7 +771,7 @@ class $StreamSink implements $Instance {
   get $reified => $value;
 
   @override
-  int get $runtimeType => throw UnimplementedError();
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType($type.spec!);
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {

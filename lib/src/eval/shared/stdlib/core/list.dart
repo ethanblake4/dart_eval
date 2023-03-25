@@ -280,7 +280,7 @@ class $List<E> implements List<E>, $Instance {
   E operator [](int index) => $value[index];
 
   @override
-  int get $runtimeType => throw UnimplementedError();
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType($type.spec!);
 }
 
 $Function get$List_filled(Runtime _) => _$List_filled;

@@ -176,7 +176,7 @@ class $num<T extends num> implements $Instance {
   int get hashCode => $value.hashCode;
 
   @override
-  int get $runtimeType => RuntimeTypes.numType;
+  int $getRuntimeType(Runtime runtime) => RuntimeTypes.numType;
 }
 
 class $int extends $num<int> {
@@ -191,7 +191,7 @@ class $int extends $num<int> {
   }
 
   @override
-  int get $runtimeType => RuntimeTypes.intType;
+  int $getRuntimeType(Runtime runtime) => RuntimeTypes.intType;
 }
 
 class $double extends $num<double> {
@@ -201,5 +201,5 @@ class $double extends $num<double> {
   double get $reified => $value;
 
   @override
-  int get $runtimeType => RuntimeTypes.doubleType;
+  int $getRuntimeType(Runtime runtime) => RuntimeTypes.doubleType;
 }

@@ -53,6 +53,7 @@ class TypeRef {
   }
 
   factory TypeRef.commonBaseType(CompilerContext ctx, Set<TypeRef> types) {
+    assert(types.isNotEmpty);
     final chains = types.map((e) => e.resolveTypeChain(ctx).getTypeChain(ctx)).toList();
 
     // Cross-level type deduplication

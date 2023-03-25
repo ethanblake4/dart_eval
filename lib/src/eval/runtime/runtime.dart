@@ -5,11 +5,11 @@ import 'dart:typed_data';
 
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/dart_eval_security.dart';
 import 'package:dart_eval/src/eval/bridge/runtime_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/model/override_spec.dart';
 import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'package:dart_eval/src/eval/runtime/function.dart';
-import 'package:dart_eval/src/eval/runtime/security/permission.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core.dart';
@@ -100,7 +100,8 @@ class Runtime {
       : id = _id++,
         _fromEvc = false,
         typeTypes = program.typeTypes,
-        typeNames = program.typeNames,
+        //typeNames = program.typeNames,
+        typeIds = program.typeIds,
         runtimeTypes = program.runtimeTypes,
         _bridgeLibraryMappings = program.bridgeLibraryMappings,
         bridgeFuncMappings = program.bridgeFunctionMappings,
@@ -131,8 +132,9 @@ class Runtime {
   void _load() {
     final encodedToplevelDecs = _readString();
     final encodedInstanceDecs = _readString();
-    final encodedTypeNames = _readString();
+    //final encodedTypeNames = _readString();
     final encodedTypeTypes = _readString();
+    final encodedTypeIds = _readString();
     final encodedBridgeLibraryMappings = _readString();
     final encodedBridgeFuncMappings = _readString();
     final encodedConstantPool = _readString();
@@ -159,8 +161,12 @@ class Runtime {
       declaredClasses[file] = {for (final decl in $class.entries) decl.key: EvalClass.fromJson(decl.value)};
     });
 
-    typeNames = (json.decode(encodedTypeNames) as List).cast();
+    //typeNames = (json.decode(encodedTypeNames) as List).cast();
     typeTypes = [for (final s in (json.decode(encodedTypeTypes) as List)) (s as List).cast<int>().toSet()];
+
+    typeIds = (json.decode(encodedTypeIds) as Map)
+        .cast<String, Map>()
+        .map((key, value) => MapEntry(int.parse(key), value.cast<String, int>()));
 
     _bridgeLibraryMappings = (json.decode(encodedBridgeLibraryMappings) as Map).cast();
 
@@ -240,12 +246,16 @@ class Runtime {
 
   /// Grant a permission to the runtime.
   void grant(Permission permission) {
-    _permissions.putIfAbsent(permission.domain, () => []).add(permission);
+    for (final domain in permission.domains) {
+      _permissions.putIfAbsent(domain, () => []).add(permission);
+    }
   }
 
   /// Revoke a permission from the runtime.
   void revoke(Permission permission) {
-    _permissions[permission.domain]?.remove(permission);
+    for (final domain in permission.domains) {
+      _permissions[domain]?.remove(permission);
+    }
   }
 
   /// Check if a permission is granted.
@@ -508,6 +518,9 @@ class Runtime {
       case PopCatch:
         op as PopCatch;
         return [Evc.OP_POP_CATCH];
+      case IsType:
+        op as IsType;
+        return [Evc.OP_IS_TYPE, ...Evc.i16b(op._objectOffset), ...Evc.i32b(op._type), op._not ? 1 : 0];
       default:
         throw ArgumentError('Not a valid op $op');
     }
@@ -554,11 +567,18 @@ class Runtime {
 
   var declarations = <int, Map<String, int>>{};
   final declaredClasses = <int, Map<String, EvalClass>>{};
-  late final List<String> typeNames;
+  //late final List<String> typeNames;
   late final List<Set<int>> typeTypes;
+  late final Map<int, Map<String, int>> typeIds;
   late final List<RuntimeTypeSet> runtimeTypes;
   late final Map<int, Map<String, int>> bridgeFuncMappings;
   late final Map<int, Map<String, Map<String, int>>> bridgeEnumMappings;
+
+  /// Lookup a type ID from a [BridgeTypeSpec]
+  int lookupType(BridgeTypeSpec spec) {
+    final libIndex = _bridgeLibraryMappings[spec.library]!;
+    return typeIds[libIndex]![spec.name]!;
+  }
 
   /// Offset in the current stack frame
   int frameOffset = 0;

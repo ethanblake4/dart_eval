@@ -166,9 +166,9 @@ class $TimestampedTime implements TimestampedTime, $Instance {
     }
   }
 
-  /// Don't worry about [$runtimeType] for now, it's not currently used and may be removed.
+  /// Lookup the runtime type ID
   @override
-  int get $runtimeType => throw UnimplementedError();
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType($type.spec!);
 
   /// Map out non-final fields with [$setProperty]. We don't have any here, so just fallback to the Object
   /// implementation. (Although there are no settable fields on Object, in the future it will invoke

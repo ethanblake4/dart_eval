@@ -135,7 +135,7 @@ class $Point implements Point, $Instance {
   }
 
   @override
-  int get $runtimeType => throw UnimplementedError();
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType(_$type.spec!);
 
   @override
   Point<num> operator *(num factor) => $value * factor;

@@ -58,7 +58,7 @@ class $Utf8Decoder implements $Instance {
   }
 
   @override
-  int get $runtimeType => throw UnimplementedError();
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType($type.spec!);
 }
 
 /// dart_eval wrapper for [Utf8Codec]
@@ -125,5 +125,5 @@ class $Utf8Codec implements $Instance {
   }
 
   @override
-  int get $runtimeType => throw UnimplementedError();
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType($type.spec!);
 }

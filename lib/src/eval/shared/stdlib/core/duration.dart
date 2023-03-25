@@ -83,7 +83,7 @@ class $Duration implements Duration, $Instance {
   }
 
   @override
-  int get $runtimeType => RuntimeTypes.durationType;
+  int $getRuntimeType(Runtime runtime) => RuntimeTypes.durationType;
 
   @override
   Duration operator *(num factor) => $value * factor;

@@ -1,5 +1,7 @@
 ## 0.6.0
 - (Deprecated) `BridgeTypeRef.spec`, use the default constructor instead
+- (Breaking) The $runtimeType getter on $Value has been replaced with
+  a $getRuntimeType method that accepts a Runtime argument.
 - (Breaking) Many bridge types now use CoreTypes/AsyncTypes etc
   instead of RuntimeTypes. This allows specifying generic type
   arguments.
@@ -9,16 +11,18 @@
   useless and didn't support async/await. Use bimodal wrappers instead.
 - Support for relative imports and exports
 - Support for Streams and StreamController
+- Support for dart:io filesystem and HTTP classes
 - Basic support for try/catch and throw. Only 1 untyped catch clause is 
   supported for now, and finally is unsupported.
 - Support for ternary expressions
+- Support for `is` type-test expressions
 - Basic support for RegExp
 - Add a runtime permissions system to control access to dart:io. 
   See the README for details.
 - @RuntimeOverride annotations are now parsed at compile-time
   to create dynamic runtime overrides consumed by the runtime.
   See README for details.
-- Support for HttpClient (permission-gated) and Utf8Decoder
+- Support for Utf8Decoder
 - Add BridgeSerializer, a class that can serialize bridge classes to 
   JSON for use in the dart_eval CLI.
 - Add an optional extensions syntax to make writing bridge classes
@@ -36,6 +40,7 @@
   offset (thanks @maxiee)
 - Fixed a type inference error where bridged functions could resolve
   incorrectly to a unboxed return type
+- Fixed empty list literals causing the compiler to stall
 - Add a feature support table to the README
 
 ## 0.5.6

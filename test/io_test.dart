@@ -1,7 +1,7 @@
 @TestOn('vm')
 
 import 'package:dart_eval/dart_eval.dart';
-import 'package:dart_eval/src/eval/runtime/security/permission.dart';
+import 'package:dart_eval/dart_eval_security.dart';
 import 'package:test/test.dart';
 
 void main() {

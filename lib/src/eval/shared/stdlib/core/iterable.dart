@@ -169,5 +169,5 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   Iterable<T> whereType<T>() => $value.whereType<T>();
 
   @override
-  int get $runtimeType => throw UnimplementedError();
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType(CoreTypes.iterable);
 }

@@ -10,6 +10,7 @@ import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/expression/identifier.dart';
 import 'package:dart_eval/src/eval/compiler/expression/index.dart';
 import 'package:dart_eval/src/eval/compiler/expression/instance_creation.dart';
+import 'package:dart_eval/src/eval/compiler/expression/is.dart';
 import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/compiler/expression/keywords.dart';
 import 'package:dart_eval/src/eval/compiler/expression/literal.dart';
@@ -59,6 +60,8 @@ Variable compileExpression(Expression e, CompilerContext ctx, [TypeRef? bound]) 
     return compileThrowExpression(ctx, e);
   } else if (e is ConditionalExpression) {
     return compileConditionalExpression(ctx, e);
+  } else if (e is IsExpression) {
+    return compileIsExpression(e, ctx);
   }
 
   throw CompileError('Unknown expression type ${e.runtimeType}');

@@ -47,5 +47,5 @@ class $Map<K, V> implements $Instance {
   Map get $reified => $value.map((k, v) => MapEntry(k is $Value ? k.$reified : k, v is $Value ? v.$reified : v));
 
   @override
-  int get $runtimeType => RuntimeTypes.mapType;
+  int $getRuntimeType(Runtime runtime) => RuntimeTypes.mapType;
 }

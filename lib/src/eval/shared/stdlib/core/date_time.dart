@@ -65,7 +65,7 @@ class $DateTime implements DateTime, $Instance {
   }
 
   @override
-  int get $runtimeType => throw UnimplementedError();
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType(CoreTypes.dateTime);
 
   @override
   DateTime add(Duration duration) => $value.add(duration);

@@ -10,7 +10,7 @@ class $IOSink implements $Instance {
   $IOSink.wrap(this.$value);
 
   /// Compile-time bridged type reference for [$IOSink]
-  static const $type = BridgeTypeRef(BridgeTypeSpec('dart:io', 'IOSink'));
+  static const $type = BridgeTypeRef(IoTypes.ioSink);
 
   /// Compile-time bridged class declaration for [$IOSink]
   static const $declaration = BridgeClassDef(
@@ -40,7 +40,7 @@ class $IOSink implements $Instance {
   get $reified => $value;
 
   @override
-  int get $runtimeType => throw UnimplementedError();
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType($type.spec!);
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {

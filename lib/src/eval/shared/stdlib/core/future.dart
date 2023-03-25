@@ -56,7 +56,7 @@ class $Future<T> implements Future<T>, $Instance {
   void $setProperty(Runtime runtime, String identifier, $Value value) {}
 
   @override
-  int get $runtimeType => RuntimeTypes.futureType;
+  int $getRuntimeType(Runtime runtime) => RuntimeTypes.futureType;
 
   @override
   Stream<T> asStream() => $value.asStream();

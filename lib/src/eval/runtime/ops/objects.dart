@@ -322,3 +322,35 @@ class PushSuper implements EvcOp {
   @override
   String toString() => 'PushSuper (L$_objectOffset.super)';
 }
+
+class IsType implements EvcOp {
+  IsType(Runtime runtime)
+      : _objectOffset = runtime._readInt16(),
+        _type = runtime._readInt32(),
+        _not = runtime._readUint8() > 0;
+
+  final int _objectOffset;
+  final int _type;
+  final bool _not;
+
+  IsType.make(this._objectOffset, this._type, this._not);
+
+  static int LEN = Evc.BASE_OPLEN + Evc.I16_LEN + Evc.I32_LEN + Evc.I8_LEN;
+
+  @override
+  void run(Runtime runtime) {
+    final value = runtime.frame[_objectOffset] as $Value;
+    final type = value.$getRuntimeType(runtime);
+    if (type < 0) {
+      final result = type == _type;
+      runtime.frame[runtime.frameOffset++] = _not ? !result : result;
+      return;
+    }
+    final typeSet = runtime.typeTypes[type];
+    final result = typeSet.contains(_type);
+    runtime.frame[runtime.frameOffset++] = _not ? !result : result;
+  }
+
+  @override
+  String toString() => 'IsType (L$_objectOffset is${_not ? '!' : ''} $_type)';
+}

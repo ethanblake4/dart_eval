@@ -58,7 +58,7 @@ class $Uri implements $Instance {
   }
 
   @override
-  int get $runtimeType => throw UnimplementedError();
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType($type.spec!);
 
   @override
   String toString() => $value.toString();

@@ -49,7 +49,7 @@ class $Completer<T> implements Completer<T>, $Instance {
   }
 
   @override
-  int get $runtimeType => throw UnimplementedError();
+  int $getRuntimeType(Runtime runtime) => throw UnimplementedError();
 
   @override
   void $setProperty(Runtime runtime, String identifier, $Value value) {
@@ -87,7 +87,7 @@ class _$Completer_complete extends EvalFunction {
   }
 
   @override
-  int get $runtimeType => RuntimeTypes.functionType;
+  int $getRuntimeType(Runtime runtime) => RuntimeTypes.functionType;
 }
 
 class _$Completer_future extends EvalFunction {
@@ -99,5 +99,5 @@ class _$Completer_future extends EvalFunction {
   }
 
   @override
-  int get $runtimeType => RuntimeTypes.functionType;
+  int $getRuntimeType(Runtime runtime) => RuntimeTypes.functionType;
 }

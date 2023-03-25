@@ -7,7 +7,7 @@ import 'package:pub_semver/pub_semver.dart';
 Map<String, OverrideSpec>? runtimeOverrides;
 Version? runtimeOverrideVersion;
 
-late Runtime globalRuntime;
+Runtime? globalRuntime;
 
 Object? runtimeOverride(String id, [Iterable<Object?> args = const []]) {
   final spec = runtimeOverrides?[id];
@@ -22,8 +22,8 @@ Object? runtimeOverride(String id, [Iterable<Object?> args = const []]) {
     }
   }
 
-  globalRuntime.args.addAll(args);
-  final result = globalRuntime.execute(spec.offset);
+  globalRuntime!.args.addAll(args);
+  final result = globalRuntime!.execute(spec.offset);
   if (result == null) {
     return $null();
   }

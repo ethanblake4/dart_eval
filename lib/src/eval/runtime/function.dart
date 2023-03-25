@@ -54,7 +54,7 @@ class EvalFunctionPtr extends EvalFunction {
   }
 
   @override
-  int get $runtimeType => RuntimeTypes.functionType;
+  int $getRuntimeType(Runtime runtime) => RuntimeTypes.functionType;
 
   @override
   String toString() {
@@ -80,7 +80,7 @@ class EvalStaticFunctionPtr extends EvalFunction {
   }
 
   @override
-  int get $runtimeType => RuntimeTypes.functionType;
+  int $getRuntimeType(Runtime runtime) => RuntimeTypes.functionType;
 }
 
 class $Function extends EvalFunction {
@@ -94,7 +94,7 @@ class $Function extends EvalFunction {
   }
 
   @override
-  int get $runtimeType => RuntimeTypes.functionType;
+  int $getRuntimeType(Runtime runtime) => RuntimeTypes.functionType;
 }
 
 class $Closure extends EvalFunction {
@@ -109,5 +109,5 @@ class $Closure extends EvalFunction {
   }
 
   @override
-  int get $runtimeType => RuntimeTypes.functionType;
+  int $getRuntimeType(Runtime runtime) => RuntimeTypes.functionType;
 }

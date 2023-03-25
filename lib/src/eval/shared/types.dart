@@ -190,6 +190,9 @@ class IoTypes {
   /// Bridge type spec for [$FileMode]
   static const fileMode = BridgeTypeSpec('dart:io', 'FileMode');
 
+  /// Bridge type spec for [$IOSink]
+  static const ioSink = BridgeTypeSpec('dart:io', 'IOSink');
+
   /// Bridge type spec for [$HttpClient]
   static const httpClient = BridgeTypeSpec('dart:io', 'HttpClient');
 

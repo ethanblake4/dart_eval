@@ -63,7 +63,7 @@ class $Match implements $Instance {
   }
 
   @override
-  int get $runtimeType => throw UnimplementedError();
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType($type.spec!);
 }
 
 class $Pattern implements Pattern, $Instance {
@@ -140,7 +140,7 @@ class $Pattern implements Pattern, $Instance {
   Match? matchAsPrefix(String string, [int start = 0]) => $value.matchAsPrefix(string, start);
 
   @override
-  int get $runtimeType => throw UnimplementedError();
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType($type.spec!);
 }
 
 class $Pattern$bridge with $Bridge implements Pattern {
@@ -169,5 +169,5 @@ class $Pattern$bridge with $Bridge implements Pattern {
 
   @override
   // TODO: implement $runtimeType
-  int get $runtimeType => throw UnimplementedError();
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType($type.spec!);
 }

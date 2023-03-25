@@ -14,7 +14,8 @@ class Program {
   Program(
       this.topLevelDeclarations,
       this.instanceDeclarations,
-      this.typeNames,
+      this.typeIds,
+      //this.typeNames,
       this.typeTypes,
       this.ops,
       this.bridgeLibraryMappings,
@@ -42,11 +43,14 @@ class Program {
 
   /// The ordered list of type names used in the program, with the index
   /// corresponding to the type ID.
-  List<String> typeNames;
+  //List<String> typeNames;
 
   /// The ordered list of type supertype sets used in the program, with the index
   /// corresponding to the type ID.
   List<Set<int>> typeTypes;
+
+  /// Mappings from type specs to IDs.
+  Map<int, Map<String, int>> typeIds;
 
   /// Mappings from library URIs to internal library IDs.
   Map<String, int> bridgeLibraryMappings;
@@ -76,8 +80,9 @@ class Program {
 
     _writeMetaBlock(b, topLevelDeclarations.map((key, value) => MapEntry(key.toString(), value)));
     _writeMetaBlock(b, instanceDeclarations.map((key, value) => MapEntry(key.toString(), value)));
-    _writeMetaBlock(b, typeNames);
+    //_writeMetaBlock(b, typeNames);
     _writeMetaBlock(b, [for (final t in typeTypes) t.toList()]);
+    _writeMetaBlock(b, typeIds.map((key, value) => MapEntry(key.toString(), value)));
     _writeMetaBlock(b, bridgeLibraryMappings);
     _writeMetaBlock(b, bridgeFunctionMappings.map((key, value) => MapEntry(key.toString(), value)));
     _writeMetaBlock(b, constantPool);

@@ -61,5 +61,5 @@ class $Iterator<E> implements Iterator<E>, $Instance {
   bool moveNext() => $value.moveNext();
 
   @override
-  int get $runtimeType => throw UnimplementedError();
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType(CoreTypes.iterator);
 }

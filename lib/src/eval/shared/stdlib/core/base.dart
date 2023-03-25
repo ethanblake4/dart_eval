@@ -15,7 +15,7 @@ class $null implements $Value {
   Null get $reified => null;
 
   @override
-  int get $runtimeType => RuntimeTypes.nullType;
+  int $getRuntimeType(Runtime runtime) => RuntimeTypes.nullType;
 
   @override
   bool operator ==(Object other) => other is $null;
@@ -73,7 +73,7 @@ class $Object implements $Instance {
   }
 
   @override
-  int get $runtimeType => RuntimeTypes.objectType;
+  int $getRuntimeType(Runtime runtime) => RuntimeTypes.objectType;
 }
 
 /// dart_eval [$Instance] representation of a [bool]
@@ -129,7 +129,7 @@ class $bool implements $Instance {
   }
 
   @override
-  int get $runtimeType => RuntimeTypes.boolType;
+  int $getRuntimeType(Runtime runtime) => RuntimeTypes.boolType;
 }
 
 /*class EvalInvocation implements EvalInstance {
@@ -411,7 +411,7 @@ class $String implements $Instance {
   String get $reified => $value;
 
   @override
-  int get $runtimeType => RuntimeTypes.stringType;
+  int $getRuntimeType(Runtime runtime) => RuntimeTypes.stringType;
 
   @override
   bool operator ==(Object other) =>
