@@ -34,7 +34,7 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
   ctx.setLocal('#prev', $prev);
 
   ctx.scopeFrameOffset += _existingAllocs;
-  final resolvedParams = resolveFPLDefaults(ctx, e.parameters!, false, allowUnboxed: true, sortNamed: true);
+  final resolvedParams = resolveFPLDefaults(ctx, e.parameters!, false, allowUnboxed: false, sortNamed: true);
 
   var i = 1;
 
@@ -47,8 +47,7 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
     if (p.type != null) {
       type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
     }
-    Vrep = Variable(i, type.copyWith(boxed: !unboxedAcrossFunctionBoundaries.contains(type)))
-      ..name = p.name!.value() as String;
+    Vrep = Variable(i, type.copyWith(boxed: true))..name = p.name!.value() as String;
 
     ctx.setLocal(Vrep.name!, Vrep);
 

@@ -347,7 +347,7 @@ class IndexedReference implements Reference {
   @override
   TypeRef resolveType(CompilerContext ctx, [AstNode? source]) {
     if (_variable.type.isAssignableTo(ctx, EvalTypes.getListType(ctx))) {
-      return _variable.type.specifiedTypeArgs[0];
+      return _variable.type.specifiedTypeArgs.isNotEmpty ? _variable.type.specifiedTypeArgs[0] : EvalTypes.dynamicType;
     }
     return getValue(ctx).type;
   }
@@ -365,7 +365,9 @@ class IndexedReference implements Reference {
       final list = _variable.unboxIfNeeded(ctx);
       _index = _index.unboxIfNeeded(ctx);
       ctx.pushOp(IndexList.make(list.scopeFrameOffset, _index.scopeFrameOffset), IndexList.LEN);
-      return Variable.alloc(ctx, _variable.type.specifiedTypeArgs[0]);
+      final listElementType =
+          _variable.type.specifiedTypeArgs.isNotEmpty ? _variable.type.specifiedTypeArgs[0] : EvalTypes.dynamicType;
+      return Variable.alloc(ctx, listElementType);
     }
 
     if (_variable.type.isAssignableTo(ctx, EvalTypes.mapType)) {

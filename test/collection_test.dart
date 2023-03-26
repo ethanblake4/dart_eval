@@ -40,6 +40,37 @@ void main() {
 
       expect(runtime.executeLib('package:eval_test/main.dart', 'main'), $String('246810'));
     });
+
+    test('List.length', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'eval_test': {
+          'main.dart': '''
+            String main() {
+              final list = [1, 2, 3, 4, 5];
+              return list.length.toString();
+            }
+          '''
+        }
+      });
+
+      expect(runtime.executeLib('package:eval_test/main.dart', 'main'), $String('5'));
+    });
+
+    test('List.add()', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'eval_test': {
+          'main.dart': '''
+            String main() {
+              final list = [1, 2, 3, 4, 5];
+              list.add(6);
+              return list.join();
+            }
+          '''
+        }
+      });
+
+      expect(runtime.executeLib('package:eval_test/main.dart', 'main'), $String('123456'));
+    });
   });
 
   group('Collection tests', () {

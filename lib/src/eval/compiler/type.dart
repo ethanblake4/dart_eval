@@ -239,6 +239,11 @@ class TypeRef {
         }
         final annotation = (_f.parent as VariableDeclarationList).type;
         if (annotation == null) {
+          if (ctx.inferredFieldTypes.containsKey($class.file) &&
+              ctx.inferredFieldTypes[$class.file]!.containsKey($class.name) &&
+              ctx.inferredFieldTypes[$class.file]![$class.name]!.containsKey(field)) {
+            return ctx.inferredFieldTypes[$class.file]![$class.name]![field]!;
+          }
           return null;
         }
         return TypeRef.fromAnnotation(ctx, $class.file, annotation);
@@ -485,7 +490,7 @@ class TypeRef {
 
   bool isAssignableTo(CompilerContext ctx, TypeRef slot,
       {List<TypeRef>? overrideGenerics, bool forceAllowDynamic = true}) {
-    if (forceAllowDynamic && this == EvalTypes.dynamicType) {
+    if (forceAllowDynamic && (this == EvalTypes.dynamicType || slot == EvalTypes.dynamicType)) {
       return true;
     }
 

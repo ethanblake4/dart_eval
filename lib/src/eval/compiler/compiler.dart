@@ -147,6 +147,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     _topLevelDeclarationsMap = <int, Map<String, DeclarationOrBridge>>{};
     _topLevelGlobalIndices = <int, Map<String, int>>{};
     _instanceDeclarationsMap = <int, Map<String, Map<String, Declaration>>>{};
+    _bridgeStaticFunctionIdx = 0;
 
     // Create a compilation context
     ctx = CompilerContext(0, version: version);

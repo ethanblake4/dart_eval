@@ -35,12 +35,15 @@
   them to `Function`
 - Improved code documentation (thanks @maxiee)
 - Fix type inference using `await`
+- Added type inference for class fields
 - Fix method resolution on top-level variables
 - Fixed an bug where compilation could fail due to a null function
   offset (thanks @maxiee)
 - Fixed a type inference error where bridged functions could resolve
   incorrectly to a unboxed return type
 - Fixed empty list literals causing the compiler to stall
+- Fixed bugs when accessing list elements from class methods and/or
+  closures
 - Add a feature support table to the README
 
 ## 0.5.6

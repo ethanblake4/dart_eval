@@ -55,6 +55,10 @@ class Variable {
       return this;
     }
 
+    if (type == EvalTypes.dynamicType) {
+      return copyWith(type: type.copyWith(boxed: true));
+    }
+
     Variable V2 = this;
 
     if (type == EvalTypes.intType) {
@@ -95,11 +99,7 @@ class Variable {
     if (name == null) {
       return this;
     }
-    final _frameIndex = frameIndex;
-    if (_frameIndex == null) {
-      return ctx.lookupLocal(name!) ?? this;
-    }
-    return ctx.locals[_frameIndex][name!]!;
+    return ctx.lookupLocal(name!) ?? this;
   }
 
   void pushArg(CompilerContext ctx) => ctx.pushOp(PushArg.make(scopeFrameOffset), PushArg.LEN);

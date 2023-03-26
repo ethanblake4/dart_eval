@@ -302,6 +302,9 @@ void _compileUnusedFields(CompilerContext ctx, List<FieldDeclaration> fields, Se
     for (final field in fd.fields.variables) {
       if (!usedNames.contains(field.name.value() as String) && field.initializer != null) {
         final V = compileExpression(field.initializer!, ctx).boxIfNeeded(ctx);
+        ctx.inferredFieldTypes
+            .putIfAbsent(ctx.library, () => {})
+            .putIfAbsent(ctx.currentClass!.name.lexeme, () => {})[field.name.value() as String] = V.type;
         ctx.pushOp(SetObjectPropertyImpl.make(instOffset, _fieldIdx, V.scopeFrameOffset), SetObjectPropertyImpl.LEN);
       }
       _fieldIdx++;

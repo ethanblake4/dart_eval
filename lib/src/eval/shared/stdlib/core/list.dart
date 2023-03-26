@@ -42,10 +42,14 @@ class $List<E> implements List<E>, $Instance {
           BridgeParameter('index', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType)), false),
           BridgeParameter('value', BridgeTypeAnnotation(BridgeTypeRef.ref('E')), false),
         ], returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.voidType)))),
+        'add': BridgeMethodDef(BridgeFunctionDef(params: [
+          BridgeParameter('value', BridgeTypeAnnotation(BridgeTypeRef.ref('E')), false),
+        ], returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.voidType)))),
+      },
+      getters: {
         'length':
             BridgeMethodDef(BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType)))),
       },
-      getters: {},
       setters: {},
       fields: {},
       wrap: true);
@@ -66,6 +70,8 @@ class $List<E> implements List<E>, $Instance {
         return __indexGet;
       case '[]=':
         return __indexSet;
+      case 'add':
+        return __add;
       case 'length':
         return $int($value.length);
     }
@@ -90,6 +96,14 @@ class $List<E> implements List<E>, $Instance {
     final idx = args[0]!;
     final value = args[1]!;
     return (target!.$value as List)[idx.$value] = value;
+  }
+
+  static const $Function __add = $Function(_add);
+
+  static $Value? _add(Runtime runtime, $Value? target, List<$Value?> args) {
+    final value = args[0]!;
+    (target!.$value as List).add(value);
+    return null;
   }
 
   @override
