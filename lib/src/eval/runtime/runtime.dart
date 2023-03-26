@@ -276,17 +276,18 @@ class Runtime {
   /// so creating a [bimodal wrapper](https://github.com/ethanblake4/dart_eval/wiki/Wrappers#bimodal-wrappers)
   /// is impossible.
   $Value? wrapPrimitive(dynamic value) {
-    switch (value.runtimeType) {
-      case int:
-        return $int(value);
-      case double:
-        return $double(value);
-      case String:
-        return $String(value);
-      case bool:
-        return $bool(value);
-      case Null:
-        return $null();
+    if (value is int) {
+      return $int(value);
+    } else if (value is double) {
+      return $double(value);
+    } else if (value is String) {
+      return $String(value);
+    } else if (value is bool) {
+      return $bool(value);
+    } else if (value is Map) {
+      return $Map.wrap(value);
+    } else if (value == null) {
+      return $null();
     }
     return null;
   }

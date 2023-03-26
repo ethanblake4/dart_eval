@@ -62,7 +62,7 @@ class $RegExp implements $Instance {
 
   @override
   void $setProperty(Runtime runtime, String identifier, $Value value) {
-    // TODO: implement $setProperty
+    return _superclass.$setProperty(runtime, identifier, value);
   }
 
   @override

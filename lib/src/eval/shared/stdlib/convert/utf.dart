@@ -6,8 +6,10 @@ import 'package:dart_eval/stdlib/core.dart';
 
 /// dart_eval wrapper for [Utf8Decoder]
 class $Utf8Decoder implements $Instance {
+  /// Compile-time bridge type reference for [$Utf8Decoder]
   static const $type = BridgeTypeRef(BridgeTypeSpec('dart:convert', 'Utf8Decoder'));
 
+  /// Compile-time bridge class declaration for [$Utf8Decoder]
   static const $declaration = BridgeClassDef(
       BridgeClassType($type,
           $extends: BridgeTypeRef(ConvertTypes.converter, [
@@ -63,16 +65,11 @@ class $Utf8Decoder implements $Instance {
 
 /// dart_eval wrapper for [Utf8Codec]
 class $Utf8Codec implements $Instance {
+  /// Compile-time bridge type reference for [$Utf8Codec]
   static const $type = BridgeTypeRef(ConvertTypes.utf8Codec);
 
-  static const $declaration = BridgeClassDef(
-      BridgeClassType(
-        $type,
-        /*$extends: BridgeTypeRef(ConvertTypes.codec, [
-            BridgeTypeRef(CoreTypes.list, [BridgeTypeRef.type(RuntimeTypes.intType)]),
-            BridgeTypeRef.type(RuntimeTypes.stringType),
-          ])*/
-      ),
+  /// Compile-time bridge class declaration for [$Utf8Codec]
+  static const $declaration = BridgeClassDef(BridgeClassType($type, $extends: BridgeTypeRef(ConvertTypes.encoding)),
       constructors: {
         '': BridgeConstructorDef(BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [], namedParams: [
           BridgeParameter('allowMalformed', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)), true)

@@ -2,7 +2,9 @@ import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/stdlib/core.dart';
 
+/// dart_eval bridge wrapper for [num]
 class $num<T extends num> implements $Instance {
+  /// Wrap a [num] in a [$num].
   $num(this.$value) : _superclass = $Object($value);
 
   @override
@@ -35,7 +37,7 @@ class $num<T extends num> implements $Instance {
 
   @override
   void $setProperty(Runtime runtime, String identifier, $Value value) {
-    throw UnimplementedError();
+    return _superclass.$setProperty(runtime, identifier, value);
   }
 
   final $Instance _superclass;
@@ -179,8 +181,10 @@ class $num<T extends num> implements $Instance {
   int $getRuntimeType(Runtime runtime) => RuntimeTypes.numType;
 }
 
+/// dart_eval wrapper for [int]
 class $int extends $num<int> {
-  $int(int evalValue) : super(evalValue);
+  /// Wrap an [int] in a [$int].
+  $int(int $value) : super($value);
 
   @override
   int get $reified => $value;
@@ -194,8 +198,10 @@ class $int extends $num<int> {
   int $getRuntimeType(Runtime runtime) => RuntimeTypes.intType;
 }
 
+/// dart_eval wrapper for [double]
 class $double extends $num<double> {
-  $double(double evalValue) : super(evalValue);
+  /// Wrap a [double] in a [$double].
+  $double(double $value) : super($value);
 
   @override
   double get $reified => $value;

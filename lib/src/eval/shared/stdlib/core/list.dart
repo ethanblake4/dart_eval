@@ -1,17 +1,17 @@
 part of 'collection.dart';
 
-/// dart_eval wrapper for [List]
+/// dart_eval bimodal bridge wrapper for [List]
 class $List<E> implements List<E>, $Instance {
+  /// Configure the [$List] wrapper for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFunc('dart:core', 'List.filled', _$List_filled);
     runtime.registerBridgeFunc('dart:core', 'List.generate', _$List_generate);
   }
 
-  static const _$spec = BridgeTypeSpec('dart:core', 'List');
-  static const $type = BridgeTypeRef(_$spec);
-
+  /// Bridge class declaration for [$List]
   static const $declaration = BridgeClassDef(
-      BridgeClassType($type, $extends: BridgeTypeRef(CoreTypes.iterable), generics: {'E': BridgeGenericParam()}),
+      BridgeClassType(BridgeTypeRef(CoreTypes.list),
+          $extends: BridgeTypeRef(CoreTypes.iterable), generics: {'E': BridgeGenericParam()}),
       constructors: {
         'filled': BridgeConstructorDef(BridgeFunctionDef(
             params: [
@@ -21,7 +21,7 @@ class $List<E> implements List<E>, $Instance {
             namedParams: [
               BridgeParameter('growable', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)), true),
             ],
-            returns: BridgeTypeAnnotation(BridgeTypeRef(_$spec, [BridgeTypeRef.ref('E')])),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list, [BridgeTypeRef.ref('E')])),
             generics: {'E': BridgeGenericParam()})),
         'generate': BridgeConstructorDef(BridgeFunctionDef(
             params: [
@@ -31,7 +31,7 @@ class $List<E> implements List<E>, $Instance {
             namedParams: [
               BridgeParameter('growable', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)), true),
             ],
-            returns: BridgeTypeAnnotation(BridgeTypeRef(_$spec, [BridgeTypeRef.ref('E')])),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list, [BridgeTypeRef.ref('E')])),
             generics: {'E': BridgeGenericParam()})),
       },
       methods: {
@@ -294,7 +294,7 @@ class $List<E> implements List<E>, $Instance {
   E operator [](int index) => $value[index];
 
   @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType($type.spec!);
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType(CoreTypes.list);
 }
 
 $Function get$List_filled(Runtime _) => _$List_filled;

@@ -3,8 +3,6 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async/stream.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async/stream_controller.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert/converter.dart';
-import 'package:dart_eval/src/eval/shared/stdlib/core/date_time.dart';
-import 'package:dart_eval/src/eval/shared/stdlib/core/duration.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/iterator.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/pattern.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/regexp.dart';
@@ -145,6 +143,15 @@ class AsyncTypes {
 
 /// This class contains dart:convert bridge type specs for convenience
 class ConvertTypes {
+  /// Bridge type spec for [$Converter]
+  static const converter = BridgeTypeSpec('dart:convert', 'Converter');
+
+  /// Bridge type spec for [$Codec]
+  static const codec = BridgeTypeSpec('dart:convert', 'Codec');
+
+  /// Bridge type spec for [$Encoding]
+  static const encoding = BridgeTypeSpec('dart:convert', 'Encoding');
+
   /// Bridge type spec for [$JsonEncoder]
   static const jsonEncoder = BridgeTypeSpec('dart:convert', 'JsonEncoder');
 
@@ -162,9 +169,6 @@ class ConvertTypes {
 
   /// Bridge type spec for [$Utf8Codec]
   static const utf8Codec = BridgeTypeSpec('dart:convert', 'Utf8Codec');
-
-  /// Bridge type spec for [$Converter]
-  static const converter = BridgeTypeSpec('dart:convert', 'Converter');
 }
 
 /// This class contains dart:io bridge type specs for convenience

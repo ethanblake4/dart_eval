@@ -1,7 +1,9 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/base.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
 
+/// dart_eval bimodal bridge wrapper for [Duration]
 class $Duration implements Duration, $Instance {
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFunc('dart:core', 'Duration.', const _$Duration_new());
@@ -18,8 +20,10 @@ class $Duration implements Duration, $Instance {
         'dart:core', 'Duration.hoursPerDay*g', (runtime, target, args) => $int(Duration.hoursPerDay));
   }
 
+  /// Compile-time type definition for [$Duration]
   static const $type = BridgeTypeRef(BridgeTypeSpec('dart:core', 'Duration'));
 
+  /// Compile-time class declaration for [$Duration]
   static const $declaration = BridgeClassDef(BridgeClassType($type),
       constructors: {
         '': BridgeConstructorDef(BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [], namedParams: [
@@ -64,6 +68,9 @@ class $Duration implements Duration, $Instance {
       fields: {},
       wrap: true);
 
+  late final $Instance _superclass = $Object($value);
+
+  /// Wrap a [Duration] in a [$Duration]
   $Duration.wrap(this.$value);
 
   @override
@@ -74,12 +81,12 @@ class $Duration implements Duration, $Instance {
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
-    throw UnimplementedError();
+    return _superclass.$getProperty(runtime, identifier);
   }
 
   @override
   void $setProperty(Runtime runtime, String identifier, $Value value) {
-    throw UnimplementedError();
+    return _superclass.$setProperty(runtime, identifier, value);
   }
 
   @override

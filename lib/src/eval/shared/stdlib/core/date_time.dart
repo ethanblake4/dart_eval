@@ -13,6 +13,7 @@ class $DateTime implements DateTime, $Instance {
   static const _dtIntGetter = BridgeMethodDef(BridgeFunctionDef(
       returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType)), params: [], namedParams: []));
 
+  /// Compile-time class declaration for [$DateTime]
   static const $declaration = BridgeClassDef(BridgeClassType(BridgeTypeRef(CoreTypes.dateTime)),
       constructors: {
         'now': BridgeConstructorDef(BridgeFunctionDef(

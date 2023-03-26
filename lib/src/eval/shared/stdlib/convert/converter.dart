@@ -11,8 +11,10 @@ class $Converter implements $Instance {
   /// Wrap a [Converter] in a [$Converter].
   $Converter.wrap(this.$value);
 
+  /// Bridge type reference for [$Converter].
   static const $type = BridgeTypeRef(BridgeTypeSpec('dart:convert', 'Converter'));
 
+  /// Bridge class definition for [$Converter].
   static const $declaration = BridgeClassDef(BridgeClassType($type),
       constructors: {
         '': BridgeConstructorDef(BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [], namedParams: []))

@@ -22,7 +22,7 @@
 - @RuntimeOverride annotations are now parsed at compile-time
   to create dynamic runtime overrides consumed by the runtime.
   See README for details.
-- Support for Utf8Decoder
+- Support for Utf8Codec and JsonCodec
 - Add BridgeSerializer, a class that can serialize bridge classes to 
   JSON for use in the dart_eval CLI.
 - Add an optional extensions syntax to make writing bridge classes

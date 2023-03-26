@@ -36,7 +36,7 @@ class $Uri implements $Instance {
   @override
   Uri get $reified => $value;
 
-  /// Creates a new [Uri] wrapper
+  /// Wrap a [Uri] in a [$Uri]
   $Uri.wrap(this.$value);
 
   @override

@@ -1,6 +1,6 @@
 part of 'collection.dart';
 
-/// dart_eval bimodal hot wrapper for [Iterable]
+/// dart_eval bimodal wrapper for [Iterable]
 class $Iterable<E> implements Iterable<E>, $Instance {
   /// Compile-time class definition for [$Iterable]
   static const $declaration = BridgeClassDef(
@@ -31,9 +31,6 @@ class $Iterable<E> implements Iterable<E>, $Instance {
       fields: {},
       wrap: true);
 
-  /// Hot wrapper constructor for [$Iterable]
-  $Iterable(String id, Iterable<E> Function() value) : $value = (runtimeOverride(id) as Iterable?)?.cast() ?? value();
-
   /// Wrap an [Iterable] in an [$Iterable]
   $Iterable.wrap(this.$value);
 
@@ -61,7 +58,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
 
   @override
   void $setProperty(Runtime runtime, String identifier, $Value value) {
-    // TODO: implement $setProperty
+    return _superclass.$setProperty(runtime, identifier, value);
   }
 
   static const $Function __join = $Function(_join);

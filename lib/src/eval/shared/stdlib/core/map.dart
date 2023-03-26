@@ -1,14 +1,14 @@
 part of 'collection.dart';
 
+/// dart_eval wrapper for [Map]
 class $Map<K, V> implements $Instance {
-  $Map(String id, Map<K, V> value) : $value = runtimeOverride(id) as Map<K, V>? ?? value;
-
+  /// Wrap a [Map] in a [$Map]
   $Map.wrap(this.$value);
 
   @override
   final Map<K, V> $value;
 
-  late final $Object $super = $Object($value);
+  late final $Instance _superclass = $Object($value);
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
@@ -20,12 +20,12 @@ class $Map<K, V> implements $Instance {
       case 'length':
         return $int($value.length);
     }
-    return $super.$getProperty(runtime, identifier);
+    return _superclass.$getProperty(runtime, identifier);
   }
 
   @override
   void $setProperty(Runtime runtime, String identifier, $Value value) {
-    throw EvalUnknownPropertyException(identifier);
+    return _superclass.$setProperty(runtime, identifier, value);
   }
 
   static const $Function __indexGet = $Function(_indexGet);

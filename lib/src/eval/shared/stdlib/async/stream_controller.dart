@@ -13,6 +13,7 @@ class $StreamController implements $Instance {
   /// Compile-time bridged type reference for [$StreamController]
   static const $type = BridgeTypeRef(BridgeTypeSpec('dart:async', 'StreamController'));
 
+  /// Compile-time bridged class declaration for [$StreamController]
   static const $declaration = BridgeClassDef(
       BridgeClassType($type, isAbstract: true, generics: {
         'T': BridgeGenericParam()

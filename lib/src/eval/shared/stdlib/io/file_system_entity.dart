@@ -7,6 +7,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/future.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/uri.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io/directory.dart';
 
+/// dart_eval bridge wrapper for [FileSystemEntity]
 class $FileSystemEntity implements $Instance {
   /// Wrap a [FileSystemEntity] in a [$FileSystemEntity]
   $FileSystemEntity.wrap(this.$value);
