@@ -51,8 +51,9 @@ Variable compileListLiteral(ListLiteral l, CompilerContext ctx, [TypeRef? bound]
   if (listSpecifiedType == null) {
     return Variable(
         _list.scopeFrameOffset,
-        EvalTypes.getListType(ctx)
-            .copyWith(boxed: false, specifiedTypeArgs: [TypeRef.commonBaseType(ctx, resultTypes.toSet())]));
+        EvalTypes.getListType(ctx).copyWith(boxed: false, specifiedTypeArgs: [
+          resultTypes.isEmpty ? EvalTypes.dynamicType : TypeRef.commonBaseType(ctx, resultTypes.toSet())
+        ]));
   }
 
   return _list;

@@ -54,11 +54,11 @@ class EvalFunctionPtr extends EvalFunction {
   }
 
   @override
-  int get $runtimeType => RuntimeTypes.functionType;
+  int $getRuntimeType(Runtime runtime) => RuntimeTypes.functionType;
 
   @override
   String toString() {
-    return 'EvalFunctionPtr{offset: $offset, prev: ${$prev == null ? 'null' : RuntimeException.formatStackSample($prev!, 4)}, '
+    return 'EvalFunctionPtr{offset: $offset, prev: ${$prev == null ? 'null' : formatStackSample($prev!, 4)}, '
         'rPAC: $requiredPositionalArgCount, '
         'pAT: $positionalArgTypes, '
         'sNA: $sortedNamedArgs, '
@@ -80,7 +80,7 @@ class EvalStaticFunctionPtr extends EvalFunction {
   }
 
   @override
-  int get $runtimeType => RuntimeTypes.functionType;
+  int $getRuntimeType(Runtime runtime) => RuntimeTypes.functionType;
 }
 
 class $Function extends EvalFunction {
@@ -94,5 +94,20 @@ class $Function extends EvalFunction {
   }
 
   @override
-  int get $runtimeType => RuntimeTypes.functionType;
+  int $getRuntimeType(Runtime runtime) => RuntimeTypes.functionType;
+}
+
+class $Closure extends EvalFunction {
+  const $Closure(this.func, [this.$this]);
+
+  final EvalCallableFunc func;
+  final $Instance? $this;
+
+  @override
+  $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
+    return func(runtime, $this ?? target, args.sublist(3));
+  }
+
+  @override
+  int $getRuntimeType(Runtime runtime) => RuntimeTypes.functionType;
 }

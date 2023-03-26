@@ -6,18 +6,11 @@ import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/future.dart';
 
+/// dart_eval wrapper for [Completer]
 class $Completer<T> implements Completer<T>, $Instance {
-  static void configureForCompile(Compiler compiler) {
-    compiler.defineBridgeClass($declaration);
-  }
-
-  static void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFunc('dart:async', 'Completer.', const _$Completer_new());
-  }
-
   $Completer.wrap(this.$value);
 
-  static const _$type = BridgeTypeRef.spec(BridgeTypeSpec('dart:async', 'Completer'), []);
+  static const _$type = BridgeTypeRef(BridgeTypeSpec('dart:async', 'Completer'), []);
 
   static const $declaration = BridgeClassDef(BridgeClassType(_$type),
       constructors: {
@@ -33,7 +26,7 @@ class $Completer<T> implements Completer<T>, $Instance {
       },
       getters: {
         'future': BridgeMethodDef(
-            BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.spec(BridgeTypeSpec('dart:core', 'Future')))))
+            BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef(BridgeTypeSpec('dart:core', 'Future')))))
       },
       setters: {},
       fields: {},
@@ -56,7 +49,7 @@ class $Completer<T> implements Completer<T>, $Instance {
   }
 
   @override
-  int get $runtimeType => throw UnimplementedError();
+  int $getRuntimeType(Runtime runtime) => throw UnimplementedError();
 
   @override
   void $setProperty(Runtime runtime, String identifier, $Value value) {
@@ -76,8 +69,8 @@ class $Completer<T> implements Completer<T>, $Instance {
   bool get isCompleted => $value.isCompleted;
 }
 
-class _$Completer_new implements EvalCallable {
-  const _$Completer_new();
+class $Completer_new implements EvalCallable {
+  const $Completer_new();
 
   @override
   $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
@@ -94,7 +87,7 @@ class _$Completer_complete extends EvalFunction {
   }
 
   @override
-  int get $runtimeType => RuntimeTypes.functionType;
+  int $getRuntimeType(Runtime runtime) => RuntimeTypes.functionType;
 }
 
 class _$Completer_future extends EvalFunction {
@@ -102,9 +95,9 @@ class _$Completer_future extends EvalFunction {
 
   @override
   $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $Future.wrap((target as $Completer).future, ((value) => value as $Value));
+    return $Future.wrap((target as $Completer).future);
   }
 
   @override
-  int get $runtimeType => RuntimeTypes.functionType;
+  int $getRuntimeType(Runtime runtime) => RuntimeTypes.functionType;
 }

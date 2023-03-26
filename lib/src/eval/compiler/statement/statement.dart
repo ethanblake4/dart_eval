@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
@@ -6,6 +7,7 @@ import 'package:dart_eval/src/eval/compiler/statement/do.dart';
 import 'package:dart_eval/src/eval/compiler/statement/for.dart';
 import 'package:dart_eval/src/eval/compiler/statement/if.dart';
 import 'package:dart_eval/src/eval/compiler/statement/return.dart';
+import 'package:dart_eval/src/eval/compiler/statement/try.dart';
 import 'package:dart_eval/src/eval/compiler/statement/variable_declaration.dart';
 import 'package:dart_eval/src/eval/compiler/statement/while.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -18,7 +20,10 @@ StatementInfo compileStatement(Statement s, AlwaysReturnType? expectedReturnType
   } else if (s is VariableDeclarationStatement) {
     return compileVariableDeclarationStatement(s, ctx);
   } else if (s is ExpressionStatement) {
-    compileExpressionAndDiscardResult(s.expression, ctx);
+    final V = compileExpressionAndDiscardResult(s.expression, ctx);
+    if (V != null && V.type == EvalTypes.neverType) {
+      return StatementInfo(-1, willAlwaysThrow: true);
+    }
     return StatementInfo(-1);
   } else if (s is ReturnStatement) {
     return compileReturn(ctx, s, expectedReturnType);
@@ -30,6 +35,8 @@ StatementInfo compileStatement(Statement s, AlwaysReturnType? expectedReturnType
     return compileDoStatement(s, ctx, expectedReturnType);
   } else if (s is IfStatement) {
     return compileIfStatement(s, ctx, expectedReturnType);
+  } else if (s is TryStatement) {
+    return compileTryStatement(s, ctx, expectedReturnType);
   } else {
     throw CompileError('Unknown statement type ${s.runtimeType}');
   }
@@ -46,5 +53,11 @@ class StatementInfo {
     return StatementInfo(position,
         willAlwaysReturn: willAlwaysReturn && other.willAlwaysReturn,
         willAlwaysThrow: willAlwaysThrow && other.willAlwaysThrow);
+  }
+
+  StatementInfo copyWith({int? position, bool? willAlwaysReturn, bool? willAlwaysThrow}) {
+    return StatementInfo(position ?? this.position,
+        willAlwaysReturn: willAlwaysReturn ?? this.willAlwaysReturn,
+        willAlwaysThrow: willAlwaysThrow ?? this.willAlwaysThrow);
   }
 }

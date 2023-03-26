@@ -1,7 +1,9 @@
 import 'package:dart_eval/dart_eval.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/base.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/collection.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
+import 'package:pub_semver/pub_semver.dart';
 import 'package:test/test.dart';
 
 import 'bridge_lib.dart';
@@ -183,6 +185,42 @@ void main() {
             $Map<$String, $int>.wrap({$String('hi'): $int(5)})
           ]),
           5);
+    });
+
+    test('Runtime overrides', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            @RuntimeOverride('#get_list')
+            List<int> getList() {
+              return [1, 2, 3];
+            }
+          '''
+        }
+      });
+
+      runtime.loadGlobalOverrides();
+      expect(runtimeOverride('#get_list'), [1, 2, 3]);
+    });
+
+    test('Versioned runtime overrides', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            @RuntimeOverride('#get_list', version: '<1.4.0')
+            List<int> getList() {
+              return [1, 2, 3];
+            }
+          '''
+        }
+      });
+
+      runtime.loadGlobalOverrides();
+      runtimeOverrideVersion = Version.parse('1.3.0');
+      expect(runtimeOverride('#get_list'), [1, 2, 3]);
+
+      runtimeOverrideVersion = Version.parse('1.4.0');
+      expect(runtimeOverride('#get_list'), null);
     });
   });
 }

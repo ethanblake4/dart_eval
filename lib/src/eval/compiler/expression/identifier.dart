@@ -39,6 +39,14 @@ Reference compileIdentifierAsReference(Identifier id, CompilerContext ctx) {
   throw CompileError('Unknown identifier ${id.runtimeType}');
 }
 
+Variable compilePrefixedIdentifier(String prefix, String name, CompilerContext ctx) {
+  return compilePrefixedIdentifierAsReference(prefix, name).getValue(ctx);
+}
+
+Reference compilePrefixedIdentifierAsReference(String prefix, String identifier) {
+  return PrefixedIdentifierReference(prefix, identifier);
+}
+
 Pair<TypeRef, DeclarationOrBridge>? resolveInstanceDeclaration(
     CompilerContext ctx, int library, String $class, String name) {
   final dec = ctx.instanceDeclarationsMap[library]![$class]?[name];

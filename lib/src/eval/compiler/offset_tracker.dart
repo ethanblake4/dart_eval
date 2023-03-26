@@ -28,7 +28,8 @@ class OffsetTracker {
 /// An structure pointing to a function that may or may not have been generated already. If it hasn't, the exact program
 /// offset will be resolved later by the [OffsetTracker]
 class DeferredOrOffset {
-  DeferredOrOffset({this.offset, this.file, this.name, this.className, this.methodType, this.targetScopeFrameOffset});
+  DeferredOrOffset({this.offset, this.file, this.name, this.className, this.methodType, this.targetScopeFrameOffset})
+      : assert(offset != null || name != null);
 
   final int? offset;
   final int? file;

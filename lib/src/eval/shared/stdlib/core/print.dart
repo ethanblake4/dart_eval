@@ -3,8 +3,8 @@
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 
-void configurePrintForCompile(Compiler compiler) {
-  compiler.defineBridgeTopLevelFunction(BridgeFunctionDeclaration(
+void configurePrintForCompile(BridgeDeclarationRegistry registry) {
+  registry.defineBridgeTopLevelFunction(BridgeFunctionDeclaration(
       'dart:core',
       'print',
       BridgeFunctionDef(

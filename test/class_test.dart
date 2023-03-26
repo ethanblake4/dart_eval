@@ -298,5 +298,55 @@ void main() {
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 16);
     });
+
+    test('Accessing list element from instance method', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main () {
+              final c = Cat();
+              return c.load();
+            }
+            
+            class Cat {
+              final _list = [1, 2, 3];
+              List<int> _list2 = [4, 5, 6];
+              
+              int load() {
+                return _list[1] + _list2[1];
+              }
+            }
+          '''
+        }
+      });
+
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 7);
+    });
+
+    test('Method call on field with inferred type from closure', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            String main () {
+              final c = Cat();
+              c.load()();
+              return c.list[3];
+            }
+            
+            class Cat {
+              final list = ['a', 'b', 'c'];
+              
+              Function load() {
+                return () {
+                  list.add('d');
+                };
+              }
+            }
+          '''
+        }
+      });
+
+      expect(runtime.executeLib('package:example/main.dart', 'main'), $String('d'));
+    });
   });
 }

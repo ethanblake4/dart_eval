@@ -21,8 +21,9 @@ Variable compileAwaitExpression(AwaitExpression e, CompilerContext ctx) {
   }
 
   final subject = compileExpression(e.expression, ctx);
+  final type = subject.type.resolveTypeChain(ctx);
 
-  if (!subject.type.resolveTypeChain(ctx).isAssignableTo(ctx, TypeRef.stdlib(ctx, 'dart:core', 'Future'))) {
+  if (!type.isAssignableTo(ctx, TypeRef.stdlib(ctx, 'dart:core', 'Future'))) {
     throw CompileError("Cannot await something that isn't a Future");
   }
 
@@ -33,5 +34,5 @@ Variable compileAwaitExpression(AwaitExpression e, CompilerContext ctx) {
 
   ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
 
-  return Variable.alloc(ctx, EvalTypes.dynamicType);
+  return Variable.alloc(ctx, type.specifiedTypeArgs.isNotEmpty ? type.specifiedTypeArgs[0] : EvalTypes.dynamicType);
 }

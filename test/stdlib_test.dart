@@ -24,6 +24,20 @@ void main() {
       expect(runtime.executeLib('package:example/main.dart', 'main'), -5);
     });
 
+    test('% operator', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            double main() {
+              return 4.5 % 2;
+            }
+          '''
+        }
+      });
+
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 0.5);
+    });
+
     test('Future.delayed()', () async {
       final runtime = compiler.compileWriteAndLoad({
         'example': {
@@ -48,7 +62,7 @@ void main() {
         'example': {
           'main.dart': '''
           import 'dart:math';
-          Future<int> main(int milliseconds) async {
+          Future<num> main(int milliseconds) async {
             final result = await getPoint(milliseconds);
             return result.x + result.y;
           }
@@ -62,7 +76,7 @@ void main() {
       });
 
       final future = runtime.executeLib('package:example/main.dart', 'main', [150]) as Future;
-      await expectLater(future, completion($int(10)));
+      await expectLater(future, completion($num<num>(10)));
     });
 
     test('print()', () async {
@@ -194,6 +208,104 @@ void main() {
       expect(() {
         expect(runtime.executeLib('package:example/main.dart', 'main'), $null());
       }, prints('null\n'));
+    });
+
+    test('StreamController and Stream.listen()', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            import 'dart:async';
+            Future main() async {
+              final controller = StreamController<int>();
+              controller.stream.listen((event) {
+                print(event);
+              });
+              controller.add(1);
+              controller.add(2);
+              controller.add(3);
+              await controller.close();
+            }
+          ''',
+        }
+      });
+      expect(() async {
+        await runtime.executeLib('package:example/main.dart', 'main').$value;
+      }, prints('1\n2\n3\n'));
+    });
+
+    test('dart:math', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            import 'dart:math';
+            void main() {
+              print(pi.toString().substring(0, 8));
+              print(pow(2, 3));
+              print(sin(0));
+              print(cos(0));
+              print(tan(0));
+            }
+          ''',
+        }
+      });
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('3.141592\n8\n0.0\n1.0\n0.0\n'));
+    });
+
+    test('RegExp hasMatch()', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              final rg = RegExp(r'..s');
+              print(rg.hasMatch('snakes'));
+              print(rg.hasMatch('moon'));
+            }
+          ''',
+        }
+      });
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('true\nfalse\n'));
+    });
+
+    test('RegExp hasMatch()', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              final rg = RegExp(r'..s');
+              print(rg.hasMatch('snakes'));
+              print(rg.hasMatch('moon'));
+            }
+          ''',
+        }
+      });
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('true\nfalse\n'));
+    });
+
+    test('Pattern allMatches() with RegExp', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              final exp = RegExp(r'(\\w+)');
+              var str = 'Dash is a bird';
+              final matches = exp.allMatches(str, 8);
+              for (final Match m in matches) {
+                final match = m[0];
+                print(match);
+              }
+            }
+          ''',
+        }
+      });
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('a\nbird\n'));
     });
   });
 }

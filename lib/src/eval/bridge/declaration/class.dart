@@ -17,12 +17,13 @@ part 'class.g.dart';
 class BridgeClassDef implements BridgeDeclaration {
   const BridgeClassDef(this.type,
       {required this.constructors,
-      required this.methods,
-      required this.getters,
-      required this.setters,
-      required this.fields,
+      this.methods = const {},
+      this.getters = const {},
+      this.setters = const {},
+      this.fields = const {},
       this.bridge = false,
-      this.wrap = false});
+      this.wrap = false})
+      : assert(bridge != wrap, 'You must specify either bridge or wrap as true (but not both)');
 
   final BridgeClassType type;
   final Map<String, BridgeConstructorDef> constructors;

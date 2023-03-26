@@ -1,20 +1,34 @@
 import 'package:dart_eval/dart_eval.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/compiler/model/override_spec.dart';
 import 'package:dart_eval/stdlib/core.dart';
+import 'package:pub_semver/pub_semver.dart';
 
-Map<String, int>? runtimeOverrides;
+Map<String, OverrideSpec>? runtimeOverrides;
+Version? runtimeOverrideVersion;
 
-late final Runtime globalRuntime;
+Runtime? globalRuntime;
 
 Object? runtimeOverride(String id, [Iterable<Object?> args = const []]) {
-  final _fn = runtimeOverrides?[id];
+  final spec = runtimeOverrides?[id];
 
-  if (_fn == null) {
+  if (spec == null) {
     return null;
   }
-  globalRuntime.args.addAll(args);
-  final result = globalRuntime.execute(_fn);
+
+  if (runtimeOverrideVersion != null && spec.versionConstraint != null) {
+    if (!VersionConstraint.parse(spec.versionConstraint!).allows(runtimeOverrideVersion!)) {
+      return null;
+    }
+  }
+
+  globalRuntime!.args.addAll(args);
+  final result = globalRuntime!.execute(spec.offset);
   if (result == null) {
     return $null();
   }
-  return result;
+  if (result is List && result is! $List) {
+    return $List.wrap(result).$reified;
+  }
+  return result is $Value ? result.$reified : result;
 }

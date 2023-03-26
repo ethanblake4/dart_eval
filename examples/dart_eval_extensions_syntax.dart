@@ -59,8 +59,7 @@ void main(List<String> args) {
 
   // Create a compiler and define the classes' bridge declarations so it knows their structure
   final compiler = Compiler();
-  compiler.defineBridgeClasses(
-      [$TimestampedTime.$declaration, $WorldTimeTracker$bridge.$declaration]);
+  compiler.defineBridgeClasses([$TimestampedTime.$declaration, $WorldTimeTracker$bridge.$declaration]);
 
   // Compile the source code into a Program containing metadata and bytecode. In a real app, you would likely
   // compile the Eval code separately and output it to a file using program.write(), sharing only bridge classes
@@ -72,10 +71,8 @@ void main(List<String> args) {
   // Create a runtime from the compiled program, and register bridge functions for all static methods and constructors.
   // Default constructors use "ClassName." syntax.
   final runtime = Runtime.ofProgram(program)
-    ..registerBridgeFunc('package:example/bridge.dart', 'TimestampedTime.',
-        $TimestampedTime.$new)
-    ..registerBridgeFunc('package:example/bridge.dart', 'WorldTimeTracker.',
-        $WorldTimeTracker$bridge.$new,
+    ..registerBridgeFunc('package:example/bridge.dart', 'TimestampedTime.', $TimestampedTime.$new)
+    ..registerBridgeFunc('package:example/bridge.dart', 'WorldTimeTracker.', $WorldTimeTracker$bridge.$new,
         isBridge: true);
 
   // Call runtime.setup() after registering all bridge functions
@@ -86,13 +83,10 @@ void main(List<String> args) {
   runtime.args = [$String('USA')];
 
   // Call the function and cast the result to the desired type
-  final timeTracker =
-      runtime.executeLib('package:example/main.dart', 'fn') as WorldTimeTracker;
+  final timeTracker = runtime.executeLib('package:example/main.dart', 'fn') as WorldTimeTracker;
 
   // We can now utilize the returned bridge class
-  print('UK timezone offset: ' +
-      timeTracker.getTimeFor('UK').timezoneOffset.toString() +
-      ' (from outside Eval!)');
+  print('UK timezone offset: ${timeTracker.getTimeFor('UK').timezoneOffset} (from outside Eval!)');
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -109,7 +103,7 @@ class $TimestampedTime implements TimestampedTime, $Instance {
   $TimestampedTime.wrap(this.$value) : _superclass = $Object($value);
 
   /// Define the compile-time type descriptor as an unresolved type
-  static const $type = BridgeTypeRef.spec(BridgeTypeSpec(
+  static const $type = BridgeTypeRef(BridgeTypeSpec(
     'package:example/bridge.dart',
     'TimestampedTime',
   ));
@@ -119,8 +113,7 @@ class $TimestampedTime implements TimestampedTime, $Instance {
     BridgeClassType($type),
     constructors: {
       // Define the default constructor with an empty string
-      '': BridgeConstructorDef(
-          BridgeFunctionDef(returns: $type.annotate, params: [
+      '': BridgeConstructorDef(BridgeFunctionDef(returns: $type.annotate, params: [
         // Parameters using built-in types can use [RuntimeTypes] for the most common types. Others, like
         // Future, may need to use a type spec for 'dart:core'.
         'utcTime'.param(RuntimeTypes.intType.bridged)
@@ -176,9 +169,9 @@ class $TimestampedTime implements TimestampedTime, $Instance {
     }
   }
 
-  /// Don't worry about [$runtimeType] for now, it's not currently used and may be removed.
+  /// Lookup the runtime type ID
   @override
-  int get $runtimeType => throw UnimplementedError();
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType($type.spec!);
 
   /// Map out non-final fields with [$setProperty]. We don't have any here, so just fallback to the Object
   /// implementation. (Although there are no settable fields on Object, in the future it will invoke
@@ -203,10 +196,8 @@ class $TimestampedTime implements TimestampedTime, $Instance {
 ///
 /// Because [WorldTimeTracker] is abstract, we can implement it here. If it were a concrete class you would instead
 /// extend it.
-class $WorldTimeTracker$bridge
-    with $Bridge<WorldTimeTracker>
-    implements WorldTimeTracker {
-  static const _$type = BridgeTypeRef.spec(
+class $WorldTimeTracker$bridge with $Bridge<WorldTimeTracker> implements WorldTimeTracker {
+  static const _$type = BridgeTypeRef(
     BridgeTypeSpec(
       'package:example/bridge.dart',
       'WorldTimeTracker',

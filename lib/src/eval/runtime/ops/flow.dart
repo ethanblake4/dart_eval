@@ -2,7 +2,7 @@ part of '../runtime.dart';
 
 /// Static call opcode that jumps to another location in the program and adds the prior location to the call stack.
 class Call implements EvcOp {
-  Call(Runtime exec) : _offset = exec._readInt32();
+  Call(Runtime runtime) : _offset = runtime._readInt32();
 
   Call.make(this._offset);
 
@@ -11,9 +11,10 @@ class Call implements EvcOp {
   static final int LEN = Evc.BASE_OPLEN + Evc.I32_LEN;
 
   @override
-  void run(Runtime exec) {
-    exec.callStack.add(exec._prOffset);
-    exec._prOffset = _offset;
+  void run(Runtime runtime) {
+    runtime.callStack.add(runtime._prOffset);
+    runtime.catchStack.add([]);
+    runtime._prOffset = _offset;
   }
 
   @override
@@ -22,10 +23,10 @@ class Call implements EvcOp {
 
 /// Push a new frame onto the stack, populated with any current args
 class PushScope implements EvcOp {
-  PushScope(Runtime exec)
-      : sourceFile = exec._readInt32(),
-        sourceOffset = exec._readInt32(),
-        frName = exec._readString();
+  PushScope(Runtime runtime)
+      : sourceFile = runtime._readInt32(),
+        sourceOffset = runtime._readInt32(),
+        frName = runtime._readString();
 
   PushScope.make(this.sourceFile, this.sourceOffset, this.frName);
 
@@ -38,17 +39,17 @@ class PushScope implements EvcOp {
   }
 
   @override
-  void run(Runtime exec) {
+  void run(Runtime runtime) {
     final frame = List<Object?>.filled(255, null);
-    exec.stack.add(frame);
-    exec.frame = frame;
-    exec.frameOffsetStack.add(exec.frameOffset);
-    exec.frameOffset = exec.args.length;
-    final args = exec.args;
+    runtime.stack.add(frame);
+    runtime.frame = frame;
+    runtime.frameOffsetStack.add(runtime.frameOffset);
+    runtime.frameOffset = runtime.args.length;
+    final args = runtime.args;
     for (var i = 0; i < args.length; i++) {
       frame[i] = args[i];
     }
-    exec.args = [];
+    runtime.args = [];
   }
 
   @override
@@ -190,6 +191,7 @@ class Return implements EvcOp {
       runtime.frameOffset = runtime.frameOffsetStack.removeLast();
     }
 
+    runtime.catchStack.removeLast();
     final prOffset = runtime.callStack.removeLast();
     if (prOffset == -1) {
       throw ProgramExit(0);
@@ -217,7 +219,7 @@ class ReturnAsync implements EvcOp {
   void run(Runtime runtime) {
     final completer = runtime.frame[_completerOffset] as Completer;
     final rv = _location == -1 ? null : runtime.frame[_location];
-    runtime.returnValue = $Future.wrap(completer.future, (value) => value as $Value?);
+    runtime.returnValue = $Future.wrap(completer.future);
 
     runtime.stack.removeLast();
     if (runtime.stack.isNotEmpty) {
@@ -228,6 +230,7 @@ class ReturnAsync implements EvcOp {
     _suspend(completer, rv);
 
     final prOffset = runtime.callStack.removeLast();
+    runtime.catchStack.removeLast();
     if (prOffset == -1) {
       throw ProgramExit(0);
     }
@@ -291,4 +294,54 @@ class PushFunctionPtr implements EvcOp {
 
   @override
   String toString() => 'PushFunctionPtr (@$_offset)';
+}
+
+class Try implements EvcOp {
+  Try(Runtime exec) : _catchOffset = exec._readInt32();
+
+  Try.make(this._catchOffset);
+
+  static const int LEN = Evc.BASE_OPLEN + Evc.I32_LEN;
+
+  final int _catchOffset;
+
+  @override
+  void run(Runtime runtime) {
+    runtime.catchStack.last.add(_catchOffset);
+  }
+
+  @override
+  String toString() => 'Try (catch: @$_catchOffset)';
+}
+
+class Throw implements EvcOp {
+  Throw(Runtime exec) : _location = exec._readInt16();
+
+  Throw.make(this._location);
+
+  static const int LEN = Evc.BASE_OPLEN + Evc.I16_LEN;
+
+  final int _location;
+
+  @override
+  void run(Runtime runtime) => runtime.$throw(runtime.frame[_location]);
+
+  @override
+  String toString() => 'Throw (L$_location)';
+}
+
+class PopCatch implements EvcOp {
+  PopCatch(Runtime exec);
+
+  PopCatch.make();
+
+  static const int LEN = Evc.BASE_OPLEN;
+
+  @override
+  void run(Runtime runtime) {
+    runtime.catchStack.last.removeLast();
+  }
+
+  @override
+  String toString() => 'PopCatch()';
 }

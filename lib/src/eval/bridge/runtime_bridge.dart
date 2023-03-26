@@ -47,9 +47,9 @@ mixin $Bridge<T> on Object implements $Value, $Instance {
   T get $reified => this as T;
 
   @override
-  int get $runtimeType {
+  int $getRuntimeType(Runtime runtime) {
     final data = Runtime.bridgeData[this]!;
-    return data.subclass?.$runtimeType ?? data.$runtimeType;
+    return data.subclass?.$getRuntimeType(runtime) ?? data.$runtimeType;
   }
 }
 
@@ -71,7 +71,7 @@ class BridgeSuperShim implements $Instance {
   $Bridge get $value => bridge;
 
   @override
-  int get $runtimeType => bridge.$runtimeType;
+  int $getRuntimeType(Runtime runtime) => bridge.$getRuntimeType(runtime);
 }
 
 class BridgeDelegatingShim implements $Instance {
@@ -90,7 +90,7 @@ class BridgeDelegatingShim implements $Instance {
   $Bridge get $value => throw UnimplementedError();
 
   @override
-  int get $runtimeType => throw UnimplementedError();
+  int $getRuntimeType(Runtime runtime) => throw UnimplementedError();
 }
 
 class $BridgeField {

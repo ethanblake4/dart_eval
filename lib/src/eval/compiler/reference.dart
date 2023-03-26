@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
@@ -247,85 +248,9 @@ class IdentifierReference implements Reference {
 
     final declaration = ctx.visibleDeclarations[ctx.library]![name] ??
         (throw CompileError('Could not find declaration "$name"', source));
-    final _decl = declaration.declaration!;
+    final _decl = declaration.declaration ?? (throw PrefixError());
 
-    if (_decl.isBridge) {
-      final bridge = _decl.bridge!;
-
-      if (bridge is BridgeClassDef) {
-        final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type.type);
-
-        return Variable(-1, EvalTypes.typeType,
-            concreteTypes: [type],
-            methodOffset: DeferredOrOffset(file: type.file, name: '${type.name}.'),
-            methodReturnType: AlwaysReturnType(type, false));
-      }
-
-      if (bridge is BridgeEnumDef) {
-        final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type);
-        return Variable(-1, EvalTypes.typeType,
-            concreteTypes: [type],
-            methodOffset: DeferredOrOffset(file: type.file, name: '${type.name}#wrap'),
-            methodReturnType: AlwaysReturnType(type, false));
-      }
-
-      if (bridge is BridgeFunctionDeclaration) {
-        final returnType = TypeRef.fromBridgeAnnotation(ctx, bridge.function.returns);
-        return Variable(-1, EvalTypes.functionType,
-            methodReturnType: AlwaysReturnType(returnType, false),
-            methodOffset: DeferredOrOffset(file: _decl.sourceLib, name: name));
-      }
-
-      throw CompileError('Cannot resolve bridged ${bridge.runtimeType} in reference', source);
-    }
-
-    final decl = _decl.declaration!;
-
-    if (decl is VariableDeclaration) {
-      final type = ctx.topLevelVariableInferredTypes[_decl.sourceLib]![decl.name.value() as String]!;
-      final gIndex = ctx.topLevelGlobalIndices[_decl.sourceLib]![decl.name.value() as String]!;
-      ctx.pushOp(LoadGlobal.make(gIndex), LoadGlobal.LEN);
-      ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-
-      return Variable.alloc(ctx, type);
-    }
-
-    if (decl is! FunctionDeclaration && decl is! ConstructorDeclaration) {
-      decl as ClassDeclaration;
-
-      final returnType = TypeRef.lookupClassDeclaration(ctx, _decl.sourceLib, decl);
-      final DeferredOrOffset offset;
-
-      if (ctx.topLevelDeclarationPositions[_decl.sourceLib]?.containsKey('$name.') ?? false) {
-        offset =
-            DeferredOrOffset(file: _decl.sourceLib, offset: ctx.topLevelDeclarationPositions[_decl.sourceLib]!['$name.']);
-      } else {
-        offset = DeferredOrOffset(file: _decl.sourceLib, name: '$name.');
-      }
-
-      return Variable(-1, EvalTypes.typeType,
-          concreteTypes: [returnType], methodOffset: offset, methodReturnType: AlwaysReturnType(returnType, false));
-    }
-
-    TypeRef? returnType;
-    var nullable = true;
-    if (decl is FunctionDeclaration && decl.returnType != null) {
-      returnType = TypeRef.fromAnnotation(ctx, _decl.sourceLib, decl.returnType!);
-      nullable = decl.returnType!.question != null;
-    } else {
-      returnType = TypeRef.lookupClassDeclaration(ctx, _decl.sourceLib, decl.parent as ClassDeclaration);
-    }
-
-    final DeferredOrOffset offset;
-    if (ctx.topLevelDeclarationPositions[_decl.sourceLib]?.containsKey(name) ?? false) {
-      offset = DeferredOrOffset(
-          file: _decl.sourceLib, offset: ctx.topLevelDeclarationPositions[ctx.library]![name], name: name);
-    } else {
-      offset = DeferredOrOffset(file: _decl.sourceLib, name: name);
-    }
-
-    return Variable(-1, decl is FunctionDeclaration ? EvalTypes.functionType : EvalTypes.typeType,
-        concreteTypes: [returnType], methodOffset: offset, methodReturnType: AlwaysReturnType(returnType, nullable));
+    return _declarationToVariable(_decl, name, ctx, source);
   }
 
   @override
@@ -367,48 +292,47 @@ class IdentifierReference implements Reference {
 
     final declaration = ctx.visibleDeclarations[ctx.library]![name]!;
     final _decl = declaration.declaration!;
+    return _declarationToStaticDispatch(_decl, name, ctx, source);
+  }
+}
 
-    if (_decl.isBridge) {
-      // No static dispatch for bridge
-      return null;
+/// A [Reference] with a prefixed String identifier, for accessing prefixed imports.
+class PrefixedIdentifierReference implements Reference {
+  final String prefix;
+  final String identifier;
+
+  const PrefixedIdentifierReference(this.prefix, this.identifier);
+
+  @override
+  StaticDispatch? getStaticDispatch(CompilerContext ctx, [AstNode? source]) {
+    final dec =
+        ctx.visibleDeclarations[ctx.library]![prefix] ?? (throw CompileError('Cannot find prefix $prefix', source));
+    if (dec.declaration != null) {
+      throw CompileError('Cannot use a declaration as a prefix', source);
     }
+    final children = dec.children!;
+    return _declarationToStaticDispatch(children[identifier]!, identifier, ctx, source);
+  }
 
-    final decl = _decl.declaration!;
-
-    if (decl is! FunctionDeclaration && decl is! ConstructorDeclaration) {
-      decl as ClassDeclaration;
-
-      final DeferredOrOffset offset;
-
-      if (ctx.topLevelDeclarationPositions[_decl.sourceLib]?.containsKey('$name.') ?? false) {
-        offset =
-            DeferredOrOffset(file: _decl.sourceLib, offset: ctx.topLevelDeclarationPositions[_decl.sourceLib]!['$name.']);
-      } else {
-        offset = DeferredOrOffset(file: _decl.sourceLib, name: '$name.');
-      }
-
-      final rt = AlwaysReturnType(TypeRef.lookupClassDeclaration(ctx, _decl.sourceLib, decl), false);
-
-      return StaticDispatch(offset, rt);
+  @override
+  Variable getValue(CompilerContext ctx, [AstNode? source]) {
+    final dec =
+        ctx.visibleDeclarations[ctx.library]![prefix] ?? (throw CompileError('Cannot find prefix $prefix', source));
+    if (dec.declaration != null) {
+      throw CompileError('Cannot use a declaration as a prefix', source);
     }
+    final children = dec.children!;
+    return _declarationToVariable(children[identifier]!, identifier, ctx, source);
+  }
 
-    TypeRef? returnType;
-    var nullable = true;
-    if (decl is FunctionDeclaration && decl.returnType != null) {
-      returnType = TypeRef.fromAnnotation(ctx, _decl.sourceLib, decl.returnType!);
-      nullable = decl.returnType!.question != null;
-    } else {
-      returnType = TypeRef.lookupClassDeclaration(ctx, _decl.sourceLib, decl.parent as ClassDeclaration);
-    }
+  @override
+  TypeRef resolveType(CompilerContext ctx, [AstNode? source]) {
+    return EvalTypes.typeType;
+  }
 
-    final DeferredOrOffset offset;
-    if (ctx.topLevelDeclarationPositions[_decl.sourceLib]?.containsKey(name) ?? false) {
-      offset = DeferredOrOffset(file: _decl.sourceLib, offset: ctx.topLevelDeclarationPositions[ctx.library]![name]);
-    } else {
-      offset = DeferredOrOffset(file: _decl.sourceLib, name: name);
-    }
-
-    return StaticDispatch(offset, AlwaysReturnType(returnType, nullable));
+  @override
+  void setValue(CompilerContext ctx, Variable value, [AstNode? source]) {
+    throw CompileError('Cannot set value on prefixed identifier', source);
   }
 }
 
@@ -423,7 +347,7 @@ class IndexedReference implements Reference {
   @override
   TypeRef resolveType(CompilerContext ctx, [AstNode? source]) {
     if (_variable.type.isAssignableTo(ctx, EvalTypes.getListType(ctx))) {
-      return _variable.type.specifiedTypeArgs[0];
+      return _variable.type.specifiedTypeArgs.isNotEmpty ? _variable.type.specifiedTypeArgs[0] : EvalTypes.dynamicType;
     }
     return getValue(ctx).type;
   }
@@ -441,7 +365,9 @@ class IndexedReference implements Reference {
       final list = _variable.unboxIfNeeded(ctx);
       _index = _index.unboxIfNeeded(ctx);
       ctx.pushOp(IndexList.make(list.scopeFrameOffset, _index.scopeFrameOffset), IndexList.LEN);
-      return Variable.alloc(ctx, _variable.type.specifiedTypeArgs[0]);
+      final listElementType =
+          _variable.type.specifiedTypeArgs.isNotEmpty ? _variable.type.specifiedTypeArgs[0] : EvalTypes.dynamicType;
+      return Variable.alloc(ctx, listElementType);
     }
 
     if (_variable.type.isAssignableTo(ctx, EvalTypes.mapType)) {
@@ -492,4 +418,129 @@ class IndexedReference implements Reference {
   StaticDispatch? getStaticDispatch(CompilerContext ctx, [AstNode? source]) {
     return null;
   }
+}
+
+Variable _declarationToVariable(DeclarationOrBridge _decl, String name, CompilerContext ctx, [AstNode? source]) {
+  if (_decl.isBridge) {
+    final bridge = _decl.bridge!;
+
+    if (bridge is BridgeClassDef) {
+      final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type.type);
+
+      return Variable(-1, EvalTypes.typeType,
+          concreteTypes: [type],
+          methodOffset: DeferredOrOffset(file: type.file, name: '${type.name}.'),
+          methodReturnType: AlwaysReturnType(type, false));
+    }
+
+    if (bridge is BridgeEnumDef) {
+      final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type);
+      return Variable(-1, EvalTypes.typeType,
+          concreteTypes: [type],
+          methodOffset: DeferredOrOffset(file: type.file, name: '${type.name}#wrap'),
+          methodReturnType: AlwaysReturnType(type, false));
+    }
+
+    if (bridge is BridgeFunctionDeclaration) {
+      final returnType = TypeRef.fromBridgeAnnotation(ctx, bridge.function.returns);
+      return Variable(-1, EvalTypes.functionType,
+          methodReturnType: AlwaysReturnType(returnType, false),
+          methodOffset: DeferredOrOffset(file: _decl.sourceLib, name: name));
+    }
+
+    throw CompileError('Cannot resolve bridged ${bridge.runtimeType} in reference', source);
+  }
+
+  final decl = _decl.declaration!;
+
+  if (decl is VariableDeclaration) {
+    final type = ctx.topLevelVariableInferredTypes[_decl.sourceLib]![decl.name.value() as String]!;
+    final gIndex = ctx.topLevelGlobalIndices[_decl.sourceLib]![decl.name.value() as String]!;
+    ctx.pushOp(LoadGlobal.make(gIndex), LoadGlobal.LEN);
+    ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
+
+    return Variable.alloc(ctx, type);
+  }
+
+  if (decl is! FunctionDeclaration && decl is! ConstructorDeclaration) {
+    decl as ClassDeclaration;
+
+    final returnType = TypeRef.lookupClassDeclaration(ctx, _decl.sourceLib, decl);
+    final DeferredOrOffset offset;
+
+    if (ctx.topLevelDeclarationPositions[_decl.sourceLib]?.containsKey('$name.') ?? false) {
+      offset =
+          DeferredOrOffset(file: _decl.sourceLib, offset: ctx.topLevelDeclarationPositions[_decl.sourceLib]!['$name.']);
+    } else {
+      offset = DeferredOrOffset(file: _decl.sourceLib, name: '$name.');
+    }
+
+    return Variable(-1, EvalTypes.typeType,
+        concreteTypes: [returnType], methodOffset: offset, methodReturnType: AlwaysReturnType(returnType, false));
+  }
+
+  TypeRef? returnType;
+  var nullable = true;
+  if (decl is FunctionDeclaration && decl.returnType != null) {
+    returnType = TypeRef.fromAnnotation(ctx, _decl.sourceLib, decl.returnType!);
+    nullable = decl.returnType!.question != null;
+  } else {
+    returnType = TypeRef.lookupClassDeclaration(ctx, _decl.sourceLib, decl.parent as ClassDeclaration);
+  }
+
+  final DeferredOrOffset offset;
+  if (ctx.topLevelDeclarationPositions[_decl.sourceLib]?.containsKey(name) ?? false) {
+    offset = DeferredOrOffset(
+        file: _decl.sourceLib, offset: ctx.topLevelDeclarationPositions[ctx.library]![name], name: name);
+  } else {
+    offset = DeferredOrOffset(file: _decl.sourceLib, name: name);
+  }
+
+  return Variable(-1, decl is FunctionDeclaration ? EvalTypes.functionType : EvalTypes.typeType,
+      concreteTypes: [returnType], methodOffset: offset, methodReturnType: AlwaysReturnType(returnType, nullable));
+}
+
+StaticDispatch? _declarationToStaticDispatch(DeclarationOrBridge _decl, String name, CompilerContext ctx,
+    [AstNode? source]) {
+  if (_decl.isBridge) {
+    // No static dispatch for bridge
+    return null;
+  }
+
+  final decl = _decl.declaration!;
+
+  if (decl is! FunctionDeclaration && decl is! ConstructorDeclaration) {
+    decl as ClassDeclaration;
+
+    final DeferredOrOffset offset;
+
+    if (ctx.topLevelDeclarationPositions[_decl.sourceLib]?.containsKey('$name.') ?? false) {
+      offset =
+          DeferredOrOffset(file: _decl.sourceLib, offset: ctx.topLevelDeclarationPositions[_decl.sourceLib]!['$name.']);
+    } else {
+      offset = DeferredOrOffset(file: _decl.sourceLib, name: '$name.');
+    }
+
+    final rt = AlwaysReturnType(TypeRef.lookupClassDeclaration(ctx, _decl.sourceLib, decl), false);
+
+    return StaticDispatch(offset, rt);
+  }
+
+  TypeRef? returnType;
+  var nullable = true;
+  if (decl is FunctionDeclaration && decl.returnType != null) {
+    returnType = TypeRef.fromAnnotation(ctx, _decl.sourceLib, decl.returnType!);
+    nullable = decl.returnType!.question != null;
+  } else {
+    returnType = TypeRef.lookupClassDeclaration(ctx, _decl.sourceLib, decl.parent as ClassDeclaration);
+  }
+
+  final DeferredOrOffset offset;
+  if (ctx.topLevelDeclarationPositions[_decl.sourceLib]?.containsKey(name) ?? false) {
+    offset = DeferredOrOffset(file: _decl.sourceLib, offset: ctx.topLevelDeclarationPositions[ctx.library]![name]);
+  } else {
+    offset = DeferredOrOffset(file: _decl.sourceLib, name: name);
+  }
+
+  return StaticDispatch(offset, AlwaysReturnType(returnType, nullable));
 }

@@ -120,5 +120,108 @@ void main() {
 
       expect(() => compiler.compile(packages), throwsA(isA<CompileError>()));
     });
+
+    test('Ignore package:eval_annotation imports', () {
+      final packages = {
+        'example': {
+          'main.dart': '''
+          import 'package:eval_annotation/eval_annotation.dart';
+
+          int main(String arg) {
+            return arg.length;
+          }
+          ''',
+        }
+      };
+
+      final program = compiler.compile(packages);
+      final runtime = Runtime.ofProgram(program);
+
+      final result = runtime.executeLib('package:example/main.dart', 'main', [$String('Test45678')]);
+      expect(result, 9);
+    });
+
+    test('Relative imports', () {
+      final program = compiler.compile({
+        'example': {
+          'main.dart': '''
+            import 'b1.dart';
+            import 'models/data/c3.dart';
+            int main() {
+              final b = ClassB();
+              final c = ClassC();
+              return b.number() + c.number();
+            }
+          ''',
+          'b1.dart': '''
+            class ClassB {
+              ClassB();
+              int number() { return 4; }
+            }
+          ''',
+          'models/data/c3.dart': '''
+            class ClassC {
+              ClassC();
+              int number() { return 6; }
+            }
+          '''
+        }
+      });
+
+      final runtime = Runtime.ofProgram(program);
+      final result = runtime.executeLib('package:example/main.dart', 'main');
+      expect(result, 10);
+    });
+
+    test('Prefixed import in constructor call', () {
+      final program = compiler.compile({
+        'example': {
+          'main.dart': '''
+            import 'package:example/b1.dart' as b1;
+            int main() {
+              final b = b1.ClassB();
+              return b.number();
+            }
+          ''',
+          'b1.dart': '''
+            class ClassB {
+              ClassB();
+              int number() { return 4; }
+            }
+          ''',
+        }
+      });
+
+      final runtime = Runtime.ofProgram(program);
+      final result = runtime.executeLib('package:example/main.dart', 'main');
+      expect(result, 4);
+    });
+
+    test('Relative exports', () {
+      final program = compiler.compile({
+        'example': {
+          'main.dart': '''
+            import 'b1.dart';
+            int main() {
+              final b = ClassB();
+              return b.number();
+            }
+          ''',
+          'b1.dart': '''
+            export 'b2.dart';
+          ''',
+          'b2.dart': '''
+            class ClassB {
+              ClassB();
+              int number() { return 4; }
+            }
+          ''',
+        }
+      });
+
+      final runtime = Runtime.ofProgram(program);
+      final result = runtime.executeLib('package:example/main.dart', 'main');
+      expect(result, 4);
+    });
   });
 }

@@ -24,7 +24,7 @@ class $TestClass extends TestClass with $Bridge {
   static $bool $runStaticTest(Runtime runtime, $Value? target, List<$Value?> args) =>
       $bool(TestClass.runStaticTest(args[0]!.$value));
 
-  static const $type = BridgeTypeRef.spec(BridgeTypeSpec('package:bridge_lib/bridge_lib.dart', 'TestClass'));
+  static const $type = BridgeTypeRef(BridgeTypeSpec('package:bridge_lib/bridge_lib.dart', 'TestClass'));
 
   static const $declaration = BridgeClassDef(BridgeClassType($type),
       constructors: {
@@ -96,7 +96,7 @@ enum TestEnum {
 
 class $TestEnum implements $Instance {
   static $TestEnum $wrap(Runtime runtime, $Value? target, List<$Value?> args) => $TestEnum.wrap(args[0]!.$value);
-  static const $type = BridgeTypeRef.spec(BridgeTypeSpec('package:bridge_lib/bridge_lib.dart', 'TestEnum'));
+  static const $type = BridgeTypeRef(BridgeTypeSpec('package:bridge_lib/bridge_lib.dart', 'TestEnum'));
   static const $declaration =
       BridgeEnumDef($type, values: ['one', 'two', 'three'], methods: {}, getters: {}, setters: {}, fields: {});
   static final $values = TestEnum.values.asNameMap().map(
@@ -129,5 +129,5 @@ class $TestEnum implements $Instance {
   get $reified => $value;
 
   @override
-  int get $runtimeType => throw UnimplementedError();
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType($type.spec!);
 }

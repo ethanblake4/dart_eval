@@ -5,7 +5,7 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 /// Interface for objects with a backing value
 abstract class $Value {
-  int get $runtimeType;
+  int $getRuntimeType(Runtime runtime);
 
   /// The backing Dart value of this [$Value]
   dynamic get $value;
@@ -14,23 +14,6 @@ abstract class $Value {
   /// For example, recursively transform collections into their underlying
   /// [$value]s.
   dynamic get $reified;
-}
-
-/// Implementation for objects with a backing value
-class $ValueImpl<T> implements $Value {
-  const $ValueImpl(this.$runtimeType, this.$value);
-
-  @override
-  final int $runtimeType;
-
-  /// The backing Dart value
-  @override
-  final T $value;
-
-  /// Transform this value into a Dart value, fully usable outside Eval
-  /// This includes recursively transforming values inside collections
-  @override
-  T get $reified => $value;
 }
 
 /// Instance
@@ -50,7 +33,7 @@ class $InstanceImpl implements $Instance {
   $InstanceImpl(this.evalClass, this.evalSuperclass, this.values);
 
   @override
-  int get $runtimeType => evalClass.delegatedType;
+  int $getRuntimeType(Runtime runtime) => evalClass.delegatedType;
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
@@ -137,7 +120,7 @@ class EvalTypeClass implements EvalClass {
   set values(List<Object?> _values) => throw UnimplementedError();
 
   @override
-  int get $runtimeType => throw UnimplementedError();
+  int $getRuntimeType(Runtime runtime) => throw UnimplementedError();
 
   @override
   int get delegatedType => throw UnimplementedError();

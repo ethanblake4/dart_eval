@@ -47,3 +47,12 @@ class NotReferencableError extends CompileError {
     return 'NotReferencableError: $message';
   }
 }
+
+class PrefixError extends CompileError {
+  const PrefixError() : super("Prefix");
+
+  @override
+  String toString() {
+    return 'PrefixError: $message';
+  }
+}

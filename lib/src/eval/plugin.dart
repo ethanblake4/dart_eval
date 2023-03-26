@@ -1,4 +1,5 @@
 import 'package:dart_eval/dart_eval.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 
 /// A plugin that can configure compile-time and runtime code / bindings
 /// for dart_eval.
@@ -11,9 +12,16 @@ abstract class EvalPlugin {
   /// package name.
   String get identifier;
 
-  /// Configure this plugin for use in a dart_eval [Compiler].
-  void configureForCompile(Compiler compiler);
+  /// Configure this plugin for use in a dart_eval [Compiler] or
+  /// [BridgeSerializer].
+  void configureForCompile(BridgeDeclarationRegistry registry);
 
   /// Configure this plugin for use in a dart_eval [Runtime].
   void configureForRuntime(Runtime runtime);
+}
+
+/// A registry of [EvalPlugin]s.
+abstract class EvalPluginRegistry {
+  /// Register a plugin with this registry.
+  void addPlugin(EvalPlugin plugin);
 }

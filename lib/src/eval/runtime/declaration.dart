@@ -14,7 +14,7 @@ class EvalClass extends $InstanceImpl {
   final int delegatedType;
 
   @override
-  int get $runtimeType => RuntimeTypes.typeType;
+  int $getRuntimeType(Runtime runtime) => RuntimeTypes.typeType;
 
   @override
   // ignore: overridden_fields
@@ -33,7 +33,7 @@ class EvalClassClass implements EvalClass {
 
   @override
   // TODO: implement $type
-  int get $runtimeType => throw UnimplementedError();
+  int $getRuntimeType(Runtime runtime) => throw UnimplementedError();
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {

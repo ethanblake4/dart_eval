@@ -1,3 +1,51 @@
+## 0.6.0
+- (Deprecated) `BridgeTypeRef.spec`, use the default constructor instead
+- (Breaking) The $runtimeType getter on $Value has been replaced with
+  a $getRuntimeType method that accepts a Runtime argument.
+- (Breaking) Many bridge types now use CoreTypes/AsyncTypes etc
+  instead of RuntimeTypes. This allows specifying generic type
+  arguments.
+- (Breaking) EvalPlugin now uses the supertype `BridgeDeclarationRegistry`
+  instead of Compiler in configureForCompile().
+- (Breaking) Removed the typeMapper parameter from $Future. It was mostly
+  useless and didn't support async/await. Use bimodal wrappers instead.
+- Support for relative imports and exports
+- Support for Streams and StreamController
+- Support for dart:io filesystem and HTTP classes
+- Basic support for try/catch and throw. Only 1 untyped catch clause is 
+  supported for now, and finally is unsupported.
+- Support for ternary expressions
+- Support for `is` type-test expressions
+- Basic support for RegExp
+- Add a runtime permissions system to control access to dart:io. 
+  See the README for details.
+- @RuntimeOverride annotations are now parsed at compile-time
+  to create dynamic runtime overrides consumed by the runtime.
+  See README for details.
+- Support for Utf8Codec and JsonCodec
+- Add BridgeSerializer, a class that can serialize bridge classes to 
+  JSON for use in the dart_eval CLI.
+- Add an optional extensions syntax to make writing bridge classes
+  easier (thanks @canewsin). See `examples/dart_eval_extensions_syntax.dart`.
+- Add $Closure for an easier way to pass external functions as arguments
+- Support modulo operator on numbers
+- Add dart:math functions and constants
+- Support for prefixed imports of top-level functions and constructors
+- Very basic support for generic function types that simply resolves
+  them to `Function`
+- Improved code documentation (thanks @maxiee)
+- Fix type inference using `await`
+- Added type inference for class fields
+- Fix method resolution on top-level variables
+- Fixed an bug where compilation could fail due to a null function
+  offset (thanks @maxiee)
+- Fixed a type inference error where bridged functions could resolve
+  incorrectly to a unboxed return type
+- Fixed empty list literals causing the compiler to stall
+- Fixed bugs when accessing list elements from class methods and/or
+  closures
+- Add a feature support table to the README
+
 ## 0.5.6
 - (Breaking) Use DartTypes.list instead of RuntimeTypes.listType in bridge
   class definitions.

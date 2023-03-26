@@ -1,6 +1,7 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/element/type.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/runtime/type.dart';
@@ -52,6 +53,7 @@ class TypeRef {
   }
 
   factory TypeRef.commonBaseType(CompilerContext ctx, Set<TypeRef> types) {
+    assert(types.isNotEmpty);
     final chains = types.map((e) => e.resolveTypeChain(ctx).getTypeChain(ctx)).toList();
 
     // Cross-level type deduplication
@@ -106,9 +108,13 @@ class TypeRef {
   }
 
   factory TypeRef.fromAnnotation(CompilerContext ctx, int library, TypeAnnotation typeAnnotation) {
-    if (typeAnnotation is! NamedType) {
-      throw CompileError('No support for generic function types yet');
+    if (typeAnnotation is GenericFunctionType) {
+      return EvalTypes.functionType;
     }
+    if (typeAnnotation is RecordType) {
+      throw CompileError('No support for record types yet', typeAnnotation.parent, library, ctx);
+    }
+    typeAnnotation as NamedType;
     final unspecifiedType = ctx.visibleTypes[library]![typeAnnotation.name.name]!;
     final typeArgs = typeAnnotation.typeArguments;
     if (typeArgs != null) {
@@ -149,7 +155,11 @@ class TypeRef {
     }
     final ref = typeReference.ref;
     if (ref != null) {
-      specifiedType ??= ctx.visibleTypes[ctx.library]![ctx.currentClass?.name2.stringValue]!;
+      specifiedType ??= ctx.visibleTypes[ctx.library]![ctx.currentClass?.name2.stringValue];
+
+      if (specifiedType == null) {
+        return EvalTypes.dynamicType;
+      }
 
       final declaration = ctx.topLevelDeclarationsMap[specifiedType.file]![specifiedType.name]!;
       if (!declaration.isBridge) {
@@ -193,11 +203,15 @@ class TypeRef {
 
       return boundType;
     }
+    final gft = typeReference.gft;
+    if (gft != null) {
+      return EvalTypes.functionType;
+    }
     throw CompileError('No support for looking up types by other bridge annotation types');
   }
 
   factory TypeRef.stdlib(CompilerContext ctx, String library, String name) {
-    return TypeRef.fromBridgeTypeRef(ctx, BridgeTypeRef.spec(BridgeTypeSpec(library, name), []));
+    return TypeRef.fromBridgeTypeRef(ctx, BridgeTypeRef(BridgeTypeSpec(library, name), []));
   }
 
   factory TypeRef.lookupClassDeclaration(CompilerContext ctx, int library, ClassDeclaration cls) {
@@ -225,6 +239,11 @@ class TypeRef {
         }
         final annotation = (_f.parent as VariableDeclarationList).type;
         if (annotation == null) {
+          if (ctx.inferredFieldTypes.containsKey($class.file) &&
+              ctx.inferredFieldTypes[$class.file]!.containsKey($class.name) &&
+              ctx.inferredFieldTypes[$class.file]![$class.name]!.containsKey(field)) {
+            return ctx.inferredFieldTypes[$class.file]![$class.name]![field]!;
+          }
           return null;
         }
         return TypeRef.fromAnnotation(ctx, $class.file, annotation);
@@ -471,7 +490,7 @@ class TypeRef {
 
   bool isAssignableTo(CompilerContext ctx, TypeRef slot,
       {List<TypeRef>? overrideGenerics, bool forceAllowDynamic = true}) {
-    if (forceAllowDynamic && this == EvalTypes.dynamicType) {
+    if (forceAllowDynamic && (this == EvalTypes.dynamicType || slot == EvalTypes.dynamicType)) {
       return true;
     }
 
@@ -587,7 +606,7 @@ class BridgedReturnType implements ReturnType {
   AlwaysReturnType? toAlwaysReturnType(
       CompilerContext ctx, TypeRef? targetType, List<TypeRef?> argTypes, Map<String, TypeRef?> namedArgTypes,
       {List<TypeRef> typeArgs = const []}) {
-    final rt = TypeRef.fromBridgeTypeRef(ctx, BridgeTypeRef.spec(spec));
+    final rt = TypeRef.fromBridgeTypeRef(ctx, BridgeTypeRef(spec));
     return AlwaysReturnType(rt, nullable);
   }
 }

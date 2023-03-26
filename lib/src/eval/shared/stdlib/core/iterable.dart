@@ -1,17 +1,10 @@
 part of 'collection.dart';
 
+/// dart_eval bimodal wrapper for [Iterable]
 class $Iterable<E> implements Iterable<E>, $Instance {
-  static void configureForCompile(Compiler compiler) {
-    compiler.defineBridgeClass($declaration);
-  }
-
-  static void configureForRuntime(Runtime runtime) {
-    //runtime.registerBridgeFunc('dart:core', 'Future.delayed', const _$Future_delayed());
-  }
-
-  static const $type = BridgeTypeRef.spec(BridgeTypeSpec('dart:core', 'Iterable'));
-
-  static const $declaration = BridgeClassDef(BridgeClassType($type, generics: {'E': BridgeGenericParam()}),
+  /// Compile-time class definition for [$Iterable]
+  static const $declaration = BridgeClassDef(
+      BridgeClassType(BridgeTypeRef(CoreTypes.iterable), generics: {'E': BridgeGenericParam()}),
       constructors: {},
       methods: {
         'join': BridgeMethodDef(
@@ -22,14 +15,14 @@ class $Iterable<E> implements Iterable<E>, $Instance {
         'map': BridgeMethodDef(
             BridgeFunctionDef(params: [
               BridgeParameter('toElement', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.functionType)), false),
-            ], returns: BridgeTypeAnnotation(BridgeTypeRef.spec(BridgeTypeSpec('dart:core', 'Iterable')))),
+            ], returns: BridgeTypeAnnotation(BridgeTypeRef(BridgeTypeSpec('dart:core', 'Iterable')))),
             isStatic: false),
       },
       getters: {
         'iterator': BridgeMethodDef(
             BridgeFunctionDef(
                 params: [],
-                returns: BridgeTypeAnnotation(BridgeTypeRef.spec(BridgeTypeSpec('dart:core', 'Iterator'), [
+                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.iterator, [
                   BridgeTypeRef.ref('E'),
                 ]))),
             isStatic: false),
@@ -38,8 +31,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
       fields: {},
       wrap: true);
 
-  $Iterable(String id, Iterable<E> value) : $value = runtimeOverride(id) as Iterable<E>? ?? value;
-
+  /// Wrap an [Iterable] in an [$Iterable]
   $Iterable.wrap(this.$value);
 
   @override
@@ -66,7 +58,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
 
   @override
   void $setProperty(Runtime runtime, String identifier, $Value value) {
-    // TODO: implement $setProperty
+    return _superclass.$setProperty(runtime, identifier, value);
   }
 
   static const $Function __join = $Function(_join);
@@ -174,5 +166,5 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   Iterable<T> whereType<T>() => $value.whereType<T>();
 
   @override
-  int get $runtimeType => throw UnimplementedError();
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType(CoreTypes.iterable);
 }

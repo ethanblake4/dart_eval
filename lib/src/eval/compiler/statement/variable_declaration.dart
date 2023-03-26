@@ -40,7 +40,7 @@ void compileVariableDeclarationList(VariableDeclarationList l, CompilerContext c
         ctx.setLocal(
             li.name.value() as String,
             Variable(res.scopeFrameOffset, (type ?? res.type).copyWith(boxed: res.boxed),
-                isFinal: l.isFinal,
+                isFinal: l.isFinal || l.isConst,
                 methodOffset: res.methodOffset,
                 methodReturnType: res.methodReturnType,
                 callingConvention: res.callingConvention));

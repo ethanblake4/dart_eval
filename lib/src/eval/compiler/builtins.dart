@@ -95,6 +95,7 @@ class EvalTypes {
   static const TypeRef typeType = TypeRef(dartCoreFile, 'Type', resolved: true);
   static const TypeRef voidType = TypeRef(dartCoreFile, 'void', resolved: true);
   static const TypeRef dynamicType = TypeRef(dartCoreFile, 'dynamic', resolved: true);
+  static const TypeRef neverType = TypeRef(dartCoreFile, 'Never', extendsType: dynamicType, resolved: true);
   static const TypeRef nullType = TypeRef(dartCoreFile, 'Null', extendsType: dynamicType, resolved: true);
   static const TypeRef objectType = TypeRef(dartCoreFile, 'Object', extendsType: dynamicType, resolved: true);
   static const TypeRef enumType = TypeRef(dartCoreFile, 'Enum', extendsType: objectType, resolved: true);
@@ -106,14 +107,13 @@ class EvalTypes {
   static const TypeRef mapType = TypeRef(dartCoreFile, 'Map', extendsType: objectType, resolved: true);
   static const TypeRef functionType = TypeRef(dartCoreFile, 'Function', extendsType: objectType, resolved: true);
 
-  static TypeRef getListType(CompilerContext ctx) =>
-      TypeRef.fromBridgeTypeRef(ctx, BridgeTypeRef.spec(BridgeTypeSpec('dart:core', 'List')));
+  static TypeRef getListType(CompilerContext ctx) => TypeRef.fromBridgeTypeRef(ctx, BridgeTypeRef(CoreTypes.list));
 
   static TypeRef getIterableType(CompilerContext ctx) =>
-      TypeRef.fromBridgeTypeRef(ctx, BridgeTypeRef.spec(BridgeTypeSpec('dart:core', 'Iterable')));
+      TypeRef.fromBridgeTypeRef(ctx, BridgeTypeRef(CoreTypes.iterable));
 
   static TypeRef getIteratorType(CompilerContext ctx) =>
-      TypeRef.fromBridgeTypeRef(ctx, BridgeTypeRef.spec(BridgeTypeSpec('dart:core', 'Iterator')));
+      TypeRef.fromBridgeTypeRef(ctx, BridgeTypeRef(CoreTypes.iterator));
 }
 
 final Map<String, TypeRef> coreDeclarations = {

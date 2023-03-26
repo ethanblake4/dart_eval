@@ -129,7 +129,7 @@ class Await implements EvcOp {
     _suspend(runtime, continuation, future);
 
     // Return with the completer as the result (the following lines are a copy of the Return op code)
-    runtime.returnValue = $Future.wrap(completer.future, (value) => value as $Value?);
+    runtime.returnValue = $Future.wrap(completer.future);
     runtime.stack.removeLast();
     if (runtime.stack.isNotEmpty) {
       runtime.frame = runtime.stack.last;
@@ -137,6 +137,7 @@ class Await implements EvcOp {
     }
 
     final prOffset = runtime.callStack.removeLast();
+    runtime.catchStack.removeLast();
     if (prOffset == -1) {
       throw ProgramExit(0);
     }

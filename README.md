@@ -9,6 +9,7 @@ written in Dart, enabling dynamic codepush for Flutter and Dart AOT.
 | dart_eval    | [![pub package](https://img.shields.io/pub/v/dart_eval.svg?label=dart_eval&color=teal)](https://pub.dev/packages/dart_eval)          |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
 | flutter_eval | [![pub package](https://img.shields.io/pub/v/flutter_eval.svg?label=flutter_eval&color=blue)](https://pub.dev/packages/flutter_eval) |
+| eval_annotation | [![pub package](https://img.shields.io/pub/v/eval_annotation.svg?label=eval_annotation&color=orange)](https://pub.dev/packages/eval_annotation) |
 
 The primary aspect of `dart_eval`'s goal is to be interoperable with real 
 Dart code. Classes created in 'real Dart' can be used inside the interpreter 
@@ -70,7 +71,7 @@ void main() {
     'main.dart': '''
       int main() {
         var count = 0;
-        for (var i = 0; i < 1000; i = i + 1) {
+        for (var i = 0; i < 1000; i++) {
           count = count + i;
         }
         return count;
@@ -158,6 +159,38 @@ internal performance optimization. If you don't like the inconsistency, you can
 change the return type on the function signature to `dynamic` which will force 
 dart_eval to always box the value before it's returned.
 
+## Security and permissions
+
+dart_eval is designed to be secure. The dart_eval runtime functions like a virtual
+machine, effectively sandboxing the code it executes. By default, the runtime will
+not allow running programs to access the file system, network, or other system 
+resources, but these permissions can be enabled on a granular basis using 
+`runtime.grant`:
+
+```dart
+final runtime = Runtime(bytecode);
+runtime.setup();
+
+// Allow full access to the file system
+runtime.grant(FilesystemPermission.any);
+
+// Allow access to a specific network domain
+runtime.grant(NetworkPermission.url('example.com'));
+
+// Allow access to a specific network resource
+runtime.grant(NetworkPermission.url('https://dart.dev/api/users.json'));
+```
+
+Permissions can also be revoked using `runtime.revoke`.
+
+When writing bindings that access sensitive resources, you can check whether a 
+permission is enabled using `runtime.checkPermission`, or assert using
+`runtime.assertPermission`. Out of the box, dart_eval includes the FilesystemPermission
+and NetworkPermission classes ('filesystem' and 'network' domains, respectively)
+as well as read/write only variations of FilesystemPermission, but 
+you can also create your own custom permissions by implementing the Permission
+interface.
+
 ## Interop
 
 Interop is a general term for methods in which we can access, use, and modify data
@@ -187,6 +220,87 @@ a class created outside Eval. It's much more powerful than value interop, and
 simpler than bridge interop, making it a great choice for certain use cases. To use
 wrapper interop, create a class that implements `$Instance`. Then, override 
 `$getProperty` / `$setProperty` to define your fields and methods.
+
+#### Hot wrappers and runtime overrides
+
+dart_eval includes a runtime overrides system that allows you to dynamically replace
+the implementation of a constructor. To get started, first create a 
+[hot wrapper](https://github.com/ethanblake4/dart_eval/wiki/Wrappers#hot-wrappers)
+for the class you want to substitute, and replace instantiations of this class with
+the hot wrapper constructor throughout your program, using a unique ID for each.:
+
+```dart
+// Create a hot wrapper for the class you want to substitute
+class $ListView extends $Instance {
+  static const $type = ...;
+  static const $declaration = ...;
+
+  @override
+  final ListView $value;
+
+  $ListView(String id, ListView Function() value) : 
+    $value = runtimeOverride(id) as ListView? ?? value();
+  
+  /// etc...
+}
+
+// Replace instantiations of the class with the hot wrapper constructor
+Widget build(BuildContext context) {
+  return $ListView('#login_page_list_view', () => ListView(children: [
+    Text('Login'),
+    TextField(),
+  ]));
+}
+```
+
+Note that in some cases you may have to cast the return value of `runtimeOverride`
+as dart_eval is unable to specify generic parameters to the Dart type system:
+  
+```dart
+$Iterable(String id, Iterable<E> Function() value) : 
+  $value = (runtimeOverride(id) as Iterable?)?.cast() ?? value();
+```
+
+Next, mark a function in the eval code with the @RuntimeOverride annotation:
+
+```dart
+@RuntimeOverride('#login_page_list_view')
+ListView loginPageListView() {
+  return ListView(children: [
+    Text('Updated Login Experience'),
+    TextField(),
+    FlatButton()
+  ]);
+}
+```
+
+Finally, follow the normal instructions to compile and run the program, but
+call `loadGlobalOverrides` on the Runtime after calling `setup()`.
+This will set the runtime as the single global runtime for the program, and 
+load its overrides to be accessible by hot wrappers.
+
+When the program is run, the runtime will automatically replace the instantiation
+of the hot wrapper with the return value of the function marked with the
+`@RuntimeOverride` annotation.
+
+Overrides can also be versioned, allowing you to roll out updates to a function
+immediately using dart_eval and revert to a new native implementation after
+an official update is released. To version an override, simply add a semver
+version constraint to the `@RuntimeOverride` annotation:
+
+```dart
+@RuntimeOverride('#login_page_list_view', version: '<1.4.0')
+```
+
+When running the program, specify its current version by setting the value of
+the `runtimeOverrideVersion` global property:
+
+```dart
+runtimeOverrideVersion = '1.3.0';
+```
+
+Now, when the program is run, the runtime will automatically replace the instantiation
+only if the app version is less than 1.4.0.
 
 ### Bridge interop
 
@@ -268,6 +382,72 @@ is around 12x slower than standard AOT Dart and is approximately on par with a l
 Ruby.
 For many use cases this actually doesn't matter too much, e.g. in the case of Flutter 
 where the app spends 99% of its performance budget in the Flutter framework itself.
+
+## Language feature support table
+
+The following table details the language features supported by dart_eval with native Dart code. Feature support
+may vary when bridging.
+
+| Feature | Support level | Tests |
+| ------- | ------------- | ----- |
+| Imports | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/lib_composition_test.dart#L14), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/lib_composition_test.dart#L144), [[3]](https://github.com/ethanblake4/dart_eval/blob/master/test/lib_composition_test.dart#L176)  |
+| Exports | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/lib_composition_test.dart#L45), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/lib_composition_test.dart#L200) |
+| `part` / `part of` | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/statement_test.dart#L76) |
+| `show` and `hide` | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/statement_test.dart#L14) |
+| Conditional imports | ❌ | N/A |
+| Deferred imports | ❌ | N/A |
+| Functions | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L36) |
+| Anonymous functions | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L108), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L128), [[3]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L145), [[4]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L163), [[5]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L181) |
+| Arrow functions | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L243), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L255) |
+| Sync generators | ❌ | N/A |
+| Async generators | ❌ | N/A |
+| Tear-offs | Partial | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L288), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L307) |
+| For loops | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/statement_test.dart#L13), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/statement_test.dart#L28) |
+| While loops | ✅ | ❌ |
+| Do-while loops | ✅ | ❌ |
+| For-each loops | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/statement_test.dart#L52) |
+| Async for-each | ❌ | N/A |
+| Switch statements | ❌ | N/A |
+| Labels and `break` | ❌ | N/A |
+| If statements | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/statement_test.dart#L28) |
+| Try-catch | Partial | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/statement_test.dart#L69), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/statement_test.dart#L87) |
+| Try-catch-finally | ❌ | N/A |
+| Lists | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart) |
+| Iterable | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L14), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L29) |
+| Maps | Partial | ❌ |
+| Sets | ❌ | N/A |
+| Collection `for` | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L14), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L76) |
+| Collection `if` | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L14), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L52) |
+| Spreads | ❌ | N/A |
+| Classes | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/class_test.dart) |
+| Class static methods | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/class_test.dart#L147), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/class_test.dart#L167) |
+| Getters and setters | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/class_test.dart#L253) |
+| Factory constructors | ❌ | N/A |
+| `new` keyword | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/class_test.dart#L195) |
+| Class inheritance | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/functional1_test.dart) |
+| Abstract and `implements` | Partial | ❌ |
+| `this` keyword | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/class_test.dart#L89), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/class_test.dart#L116) |
+| `super` keyword | ✅ | ❌ |
+| Super constructor params | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/class_test.dart#L277) |
+| Mixins | ❌ | N/A |
+| Futures | Partial | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/stdlib_test.dart#L27), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/stdlib_test.dart#L46) |
+| Async/await | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L199), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L270), [[3]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L367) |
+| Streams | Partial | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/stdlib_test.dart#L199) |
+| String interpolation | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/stdlib_test.dart#L122) |
+| Enums | ❌ | N/A |
+| Generic function types | Partial | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L363) |
+| Typedefs | ❌ | N/A |
+| Generic classes | Partial | ❌ |
+| Type tests (`is`) | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/expression_test.dart#L12) |
+| Casting (`as`) | ❌ | N/A |
+| `assert` | ❌ | N/A |
+| Null safety | Partial | ❌ |
+| Late initialization | ❌ | N/A |
+| Cascades | ❌ | ❌ |
+| Ternary expressions | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L381) |
+| Extension methods | ❌ | N/A |
+| Const expressions | Partial | N/A |
+| Isolates | ❌ | N/A |
 
 ## Features and bugs
 

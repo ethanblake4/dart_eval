@@ -1,7 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:dart_eval/src/eval/bridge/declaration/class.dart';
-import 'package:dart_eval/src/eval/bridge/declaration/enum.dart';
-import 'package:dart_eval/src/eval/bridge/declaration/type.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/field.dart';
@@ -14,17 +12,17 @@ import 'package:dart_eval/src/eval/compiler/model/compilation_unit.dart';
 import 'package:dart_eval/src/eval/compiler/util.dart';
 import 'package:dart_eval/src/eval/compiler/util/graph.dart';
 import 'package:dart_eval/src/eval/compiler/util/library_graph.dart';
-import 'package:dart_eval/src/eval/plugin.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/convert.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/io.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/math.dart';
+import 'package:dart_eval/src/eval/shared/types.dart';
 import 'package:directed_graph/directed_graph.dart';
 
 import 'context.dart';
 import 'errors.dart';
-
-import 'model/source.dart';
 
 /// Compiles Dart source code into EVC bytecode, outputting a [Program].
 ///
@@ -34,7 +32,7 @@ import 'model/source.dart';
 /// [defineBridgeTopLevelFunction], and [defineBridgeEnum].
 ///
 /// Additional sources can be added with [addSource].
-class Compiler {
+class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
   var _bridgeStaticFunctionIdx = 0;
   final _bridgeDeclarations = <String, List<BridgeDeclaration>>{};
 
@@ -45,23 +43,30 @@ class Compiler {
   var _topLevelGlobalIndices = <int, Map<String, int>>{};
   var _instanceDeclarationsMap = <int, Map<String, Map<String, Declaration>>>{};
 
+  /// The semantic version of the compiled code, for runtime overrides
+  String? version;
+
   var ctx = CompilerContext(0);
 
   final additionalSources = <DartSource>[];
   final cachedParsedSources = <DartSource, DartCompilationUnit>{};
   final plugins = <EvalPlugin>[
-    DartCorePlugin(),
-    DartMathPlugin(),
     DartAsyncPlugin(),
+    DartCorePlugin(),
+    DartConvertPlugin(),
+    DartIoPlugin(),
+    DartMathPlugin(),
   ];
   final appliedPlugins = <String>[];
 
   // Add a plugin, which will only be run once.
+  @override
   void addPlugin(EvalPlugin plugin) {
     plugins.add(plugin);
   }
 
   // Manually define a (unresolved) bridge class
+  @override
   void defineBridgeClass(BridgeClassDef classDef) {
     if (!classDef.bridge && !classDef.wrap) {
       throw CompileError('Cannot define a bridge class that\'s not either bridge or wrap');
@@ -82,6 +87,7 @@ class Compiler {
   }
 
   /// Define a bridged enum definition to be used when compiling.
+  @override
   void defineBridgeEnum(BridgeEnumDef enumDef) {
     final spec = enumDef.type.spec;
     if (spec == null) {
@@ -98,9 +104,11 @@ class Compiler {
 
   /// Add a unit source to the list of additional sources which will be compiled
   /// alongside the packages specified in [compile].
+  @override
   void addSource(DartSource source) => additionalSources.add(source);
 
   /// Define a bridged top-level function declaration.
+  @override
   void defineBridgeTopLevelFunction(BridgeFunctionDeclaration function) {
     final libraryDeclarations = _bridgeDeclarations[function.library];
     if (libraryDeclarations == null) {
@@ -139,9 +147,10 @@ class Compiler {
     _topLevelDeclarationsMap = <int, Map<String, DeclarationOrBridge>>{};
     _topLevelGlobalIndices = <int, Map<String, int>>{};
     _instanceDeclarationsMap = <int, Map<String, Map<String, Declaration>>>{};
+    _bridgeStaticFunctionIdx = 0;
 
     // Create a compilation context
-    ctx = CompilerContext(0);
+    ctx = CompilerContext(0, version: version);
 
     for (final plugin in plugins) {
       if (!appliedPlugins.contains(plugin.identifier)) {
@@ -406,10 +415,18 @@ class Compiler {
       globalInitializers[gi.key] = gi.value;
     }
 
+    final typeIds = <int, Map<String, int>>{};
+
+    for (final t in {...runtimeTypeMap, ...ctx.typeRefIndexMap}.entries) {
+      final type = t.key;
+      typeIds.putIfAbsent(type.file, () => {})[type.name] = t.value;
+    }
+
     return Program(
         ctx.topLevelDeclarationPositions,
         ctx.instanceDeclarationPositions,
-        ctx.typeNames,
+        typeIds,
+        //ctx.typeNames,
         ctx.typeTypes,
         ctx.offsetTracker.apply(ctx.out),
         libraryMapString,
@@ -417,7 +434,8 @@ class Compiler {
         ctx.constantPool.pool,
         ctx.runtimeTypes.pool,
         globalInitializers,
-        ctx.enumValueIndices);
+        ctx.enumValueIndices,
+        ctx.runtimeOverrideMap);
   }
 
   /// For testing purposes. Compile code, write it to a byte stream, load it,
@@ -717,7 +735,7 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
     // Pass in a Map representing edges in the graph.
     // Each edge represents a library, with the key being the library's URI
     // and the value being a set of its exports.
-    for (final l in libraries) l.uri: {for (final export in l.exports) Uri.parse(export.uri.stringValue!)}
+    for (final l in libraries) l.uri: {for (final export in l.exports) l.uri.resolve(export.uri.stringValue!)}
   });
 
   final result = <Library, Map<String, DeclarationOrPrefix>>{};
@@ -738,9 +756,14 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
     for (final import in [
       /// Iterate over the library's imports including the implicit import of
       /// dart:core.
-      ...l.imports.map((e) => _Import(Uri.parse(e.uri.stringValue!), e.prefix?.name, e.combinators)),
+      ...l.imports.map((e) => _Import.resolve(e, l.uri, e.prefix?.name, e.combinators)),
       if (!isDartCore) _Import(dartCoreUri, null)
     ]) {
+      /// Skip eval_annotation imports if present
+      if (import.uri.toString().startsWith('package:eval_annotation')) {
+        continue;
+      }
+
       /// Use the export graph to find all declarations that become visible
       /// through this import.
       /// directed_graph returns a tree structure with import.uri as the root
@@ -758,14 +781,16 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
       /// this import, we still need access to the raw [ExportDirective]s to
       /// identify which declarations are visible (since some exports may use
       /// `show` or `hide`).
-      final importedExports = importedLibs.map((e) => e.exports).expand((e) => e);
       final exportsPerUri = <Uri, List<ExportDirective>>{};
-      for (final export in importedExports) {
-        final uriList = exportsPerUri[export.uri.stringValue!];
-        if (uriList != null) {
-          uriList.add(export);
-        } else {
-          exportsPerUri[Uri.parse(export.uri.stringValue!)] = [export];
+      for (final lib in importedLibs) {
+        for (final export in lib.exports) {
+          final _uri = lib.uri.resolve(export.uri.stringValue!);
+          final uriList = exportsPerUri[_uri];
+          if (uriList != null) {
+            uriList.add(export);
+          } else {
+            exportsPerUri[_uri] = [export];
+          }
         }
       }
 
@@ -794,16 +819,18 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
       final visibleDeclarations = {
         for (final lib in importedLibs)
           for (final declaration in _expandDeclarations(lib.declarations).where((e) => validImport(e.first))) ...{
-            if (lib.uri == import.uri) declaration,
+            if (lib.uri == import.uri) declaration..second.sourceLib = resolveLibraryId(lib),
             for (final export in exportsPerUri[lib.uri] ?? [])
               if (export.combinators.isEmpty)
-                declaration
+                declaration..second.sourceLib = resolveLibraryId(lib)
               else
                 for (final combinator in export.combinators)
                   if (combinator is ShowCombinator) ...{
-                    if ({for (final n in combinator.shownNames) n.name}.contains(declaration.first)) declaration
+                    if ({for (final n in combinator.shownNames) n.name}.contains(declaration.first))
+                      declaration..second.sourceLib = resolveLibraryId(lib)
                   } else if (combinator is HideCombinator) ...{
-                    if (!({for (final n in (combinator).hiddenNames) n.name}.contains(declaration.first))) declaration
+                    if (!({for (final n in (combinator).hiddenNames) n.name}.contains(declaration.first)))
+                      declaration..second.sourceLib = resolveLibraryId(lib)
                   }
           }
       };
@@ -882,4 +909,9 @@ class _Import {
   final List<Combinator> combinators;
 
   _Import(this.uri, this.prefix, [this.combinators = const []]);
+
+  factory _Import.resolve(ImportDirective import, Uri base, String? prefix, [List<Combinator> combinators = const []]) {
+    final uri = Uri.parse(import.uri.stringValue!);
+    return _Import(base.resolveUri(uri), import.prefix?.name, import.combinators);
+  }
 }
