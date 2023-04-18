@@ -50,7 +50,8 @@ class InvokeDynamic implements EvcOp {
         var i = 0, j = 0;
         while (i < csPosArgTypes.length) {
           if (!csPosArgTypes[i].isAssignableTo(object.positionalArgTypes[i])) {
-            throw ArgumentError('FunctionPtr: Cannot invoke function with the given arguments');
+            throw ArgumentError(
+                'FunctionPtr: Cannot invoke function with the given arguments');
           }
           i++;
         }
@@ -62,25 +63,31 @@ class InvokeDynamic implements EvcOp {
         var tl = object.sortedNamedArgs.length - 1;
         while (j < cl) {
           if (i > tl) {
-            throw ArgumentError('FunctionPtr: Cannot invoke function with the given arguments');
+            throw ArgumentError(
+                'FunctionPtr: Cannot invoke function with the given arguments');
           }
           final _t = csNamedArgTypes[j];
           final _ti = object.sortedNamedArgTypes[i];
-          if (object.sortedNamedArgs[i] == csNamedArgs[j] && _t.isAssignableTo(_ti)) {
+          if (object.sortedNamedArgs[i] == csNamedArgs[j] &&
+              _t.isAssignableTo(_ti)) {
             j++;
           }
           i++;
         }
 
         final al = runtime.args.length;
-        runtime.args = [if (object.$prev != null) object.$prev, for (i = 3; i < al; i++) runtime.args[i]];
+        runtime.args = [
+          if (object.$prev != null) object.$prev,
+          for (i = 3; i < al; i++) runtime.args[i]
+        ];
         runtime.callStack.add(runtime._prOffset);
         runtime.catchStack.add([]);
         runtime._prOffset = object.offset;
         return;
       }
 
-      final method = ((object as $Instance).$getProperty(runtime, _method) as EvalFunction);
+      final method = ((object as $Instance).$getProperty(runtime, _method)
+          as EvalFunction);
       try {
         runtime.returnValue = method.call(runtime, object, runtime.args.cast());
       } catch (e) {
@@ -129,7 +136,8 @@ class CheckEq implements EvcOp {
 
       if (v1 is $Instance) {
         final method = v1.$getProperty(runtime, '==') as EvalFunction;
-        runtime.returnValue = method.call(runtime, v1, [v2 == null ? null : v2 as $Value])!.$value;
+        runtime.returnValue = method
+            .call(runtime, v1, [v2 == null ? null : v2 as $Value])!.$value;
         runtime.args = [];
         return;
       }
@@ -159,7 +167,10 @@ class CreateClass implements EvcOp {
   final int _valuesLen;
 
   static int len(CreateClass s) {
-    return Evc.BASE_OPLEN + Evc.I32_LEN + Evc.I16_LEN * 2 + Evc.istr_len(s._name);
+    return Evc.BASE_OPLEN +
+        Evc.I32_LEN +
+        Evc.I16_LEN * 2 +
+        Evc.istr_len(s._name);
   }
 
   @override
@@ -172,7 +183,8 @@ class CreateClass implements EvcOp {
   }
 
   @override
-  String toString() => 'CreateClass (F$_library:"$_name", super L$_super, vLen=$_valuesLen))';
+  String toString() =>
+      'CreateClass (F$_library:"$_name", super L$_super, vLen=$_valuesLen))';
 }
 
 class SetObjectProperty implements EvcOp {
@@ -188,17 +200,22 @@ class SetObjectProperty implements EvcOp {
   final int _valueOffset;
 
   static int len(SetObjectProperty s) {
-    return Evc.BASE_OPLEN + Evc.I16_LEN + Evc.istr_len(s._property) + Evc.I16_LEN;
+    return Evc.BASE_OPLEN +
+        Evc.I16_LEN +
+        Evc.istr_len(s._property) +
+        Evc.I16_LEN;
   }
 
   @override
   void run(Runtime runtime) {
     final object = runtime.frame[_location];
-    (object as $Instance).$setProperty(runtime, _property, runtime.frame[_valueOffset] as $Value);
+    (object as $Instance).$setProperty(
+        runtime, _property, runtime.frame[_valueOffset] as $Value);
   }
 
   @override
-  String toString() => 'SetObjectProperty (L$_location.$_property = L$_valueOffset)';
+  String toString() =>
+      'SetObjectProperty (L$_location.$_property = L$_valueOffset)';
 }
 
 class PushObjectProperty implements EvcOp {
@@ -270,7 +287,8 @@ class PushObjectPropertyImpl implements EvcOp {
   }
 
   @override
-  String toString() => 'PushObjectPropertyImpl (L$_objectOffset[$_propertyIndex])';
+  String toString() =>
+      'PushObjectPropertyImpl (L$_objectOffset[$_propertyIndex])';
 }
 
 class SetObjectPropertyImpl implements EvcOp {
@@ -283,7 +301,8 @@ class SetObjectPropertyImpl implements EvcOp {
   final int _propertyIndex;
   final int _valueOffset;
 
-  SetObjectPropertyImpl.make(this._objectOffset, this._propertyIndex, this._valueOffset);
+  SetObjectPropertyImpl.make(
+      this._objectOffset, this._propertyIndex, this._valueOffset);
 
   static int LEN = Evc.BASE_OPLEN + Evc.I16_LEN * 3;
 
@@ -295,7 +314,8 @@ class SetObjectPropertyImpl implements EvcOp {
   }
 
   @override
-  String toString() => 'SetObjectPropertyImpl (L$_objectOffset[$_propertyIndex] = L$_valueOffset)';
+  String toString() =>
+      'SetObjectPropertyImpl (L$_objectOffset[$_propertyIndex] = L$_valueOffset)';
 }
 
 class PushSuper implements EvcOp {
@@ -313,7 +333,9 @@ class PushSuper implements EvcOp {
     if (object is $InstanceImpl) {
       runtime.frame[runtime.frameOffset++] = object.evalSuperclass;
     } else if (object is $Bridge) {
-      runtime.frame[runtime.frameOffset++] = (Runtime.bridgeData[object]!.subclass as $InstanceImpl).evalSuperclass!;
+      runtime.frame[runtime.frameOffset++] =
+          (Runtime.bridgeData[object]!.subclass as $InstanceImpl)
+              .evalSuperclass!;
     } else {
       throw UnimplementedError();
     }
@@ -353,4 +375,53 @@ class IsType implements EvcOp {
 
   @override
   String toString() => 'IsType (L$_objectOffset is${_not ? '!' : ''} $_type)';
+}
+
+class CheckNotEq implements EvcOp {
+  CheckNotEq(Runtime runtime)
+      : _value1 = runtime._readInt16(),
+        _value2 = runtime._readInt16();
+
+  CheckNotEq.make(this._value1, this._value2);
+
+  final int _value1;
+  final int _value2;
+
+  static const int LEN = Evc.BASE_OPLEN + Evc.I16_LEN * 2;
+
+  @override
+  void run(Runtime runtime) {
+    var v1 = runtime.frame[_value1];
+    final v2 = runtime.frame[_value2];
+
+    while (true) {
+      if (v1 is $InstanceImpl) {
+        final methods = v1.evalClass.methods;
+        final _offset = methods['!='];
+        if (_offset == null) {
+          v1 = v1.evalSuperclass;
+          continue;
+        }
+        runtime.args = [v2];
+        runtime.callStack.add(runtime._prOffset);
+        runtime.catchStack.add([]);
+        runtime._prOffset = _offset;
+        return;
+      }
+
+      if (v1 is $Instance) {
+        final method = v1.$getProperty(runtime, '!=') as EvalFunction;
+        runtime.returnValue = method
+            .call(runtime, v1, [v2 == null ? null : v2 as $Value])!.$value;
+        runtime.args = [];
+        return;
+      }
+
+      runtime.returnValue = v1 != v2;
+      return;
+    }
+  }
+
+  @override
+  String toString() => 'CheckNotEq (L$_value1 == L$_value2)';
 }

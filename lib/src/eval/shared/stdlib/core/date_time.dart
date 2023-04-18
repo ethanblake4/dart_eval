@@ -7,17 +7,34 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
 class $DateTime implements DateTime, $Instance {
   /// Configure the [$DateTime] class for runtime with a [Runtime]
   static void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFunc('dart:core', 'DateTime.now', (runtime, target, args) => $DateTime.wrap(DateTime.now()));
+    runtime.registerBridgeFunc('dart:core', 'DateTime.now',
+        (runtime, target, args) => $DateTime.wrap(DateTime.now()));
+    runtime.registerBridgeFunc('dart:core', 'DateTime.parse', $parse);
   }
 
   static const _dtIntGetter = BridgeMethodDef(BridgeFunctionDef(
-      returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType)), params: [], namedParams: []));
+      returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType)),
+      params: [],
+      namedParams: []));
 
   /// Compile-time class declaration for [$DateTime]
-  static const $declaration = BridgeClassDef(BridgeClassType(BridgeTypeRef(CoreTypes.dateTime)),
+  static const $declaration = BridgeClassDef(
+      BridgeClassType(BridgeTypeRef(CoreTypes.dateTime)),
       constructors: {
         'now': BridgeConstructorDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dateTime)), params: [], namedParams: []))
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dateTime)),
+            params: [],
+            namedParams: [])),
+        'parse': BridgeConstructorDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dateTime)),
+            params: [
+              BridgeParameter(
+                  'formattedString',
+                  BridgeTypeAnnotation(
+                      BridgeTypeRef.type(RuntimeTypes.stringType)),
+                  false)
+            ],
+            namedParams: []))
       },
       methods: {},
       getters: {
@@ -55,6 +72,22 @@ class $DateTime implements DateTime, $Instance {
         return $int($value.second);
       case 'millisecondsSinceEpoch':
         return $int($value.millisecondsSinceEpoch);
+      //
+      case 'isUtc':
+        return $bool($value.isUtc);
+      case 'year':
+        return $int($value.year);
+      case 'month':
+        return $int($value.month);
+      case 'millisecond':
+        return $int($value.millisecond);
+      case 'microsecond':
+        return $int($value.microsecond);
+      case 'microsecondsSinceEpoch':
+        return $int($value.microsecondsSinceEpoch);
+      case 'weekday':
+        return $int($value.weekday);
+
       default:
         return _superclass.$getProperty(runtime, identifier);
     }
@@ -66,7 +99,8 @@ class $DateTime implements DateTime, $Instance {
   }
 
   @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType(CoreTypes.dateTime);
+  int $getRuntimeType(Runtime runtime) =>
+      runtime.lookupType(CoreTypes.dateTime);
 
   @override
   DateTime add(Duration duration) => $value.add(duration);
@@ -145,4 +179,9 @@ class $DateTime implements DateTime, $Instance {
 
   @override
   bool operator ==(Object other) => $value == other;
+
+  static $Value? $parse(Runtime runtime, $Value? target, List<$Value?> args) {
+    final formattedString = args[0]!.$value as String;
+    return $DateTime.wrap(DateTime.parse(formattedString));
+  }
 }

@@ -4,13 +4,14 @@ import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
-StatementInfo macroBranch(CompilerContext ctx, AlwaysReturnType? expectedReturnType,
+StatementInfo macroBranch(
+    CompilerContext ctx, AlwaysReturnType? expectedReturnType,
     {required MacroVariableClosure condition,
     required MacroStatementClosure thenBranch,
     MacroStatementClosure? elseBranch}) {
   ctx.beginAllocScope();
-
-  final conditionResult = condition(ctx).unboxIfNeeded(ctx);
+  final condi = condition(ctx);
+  final conditionResult = condi.unboxIfNeeded(ctx);
 
   final rewriteCond = JumpIfFalse.make(conditionResult.scopeFrameOffset, -1);
   final rewritePos = ctx.pushOp(rewriteCond, JumpIfFalse.LEN);
@@ -28,7 +29,8 @@ StatementInfo macroBranch(CompilerContext ctx, AlwaysReturnType? expectedReturnT
     rewriteOut = ctx.pushOp(JumpConstant.make(-1), JumpConstant.LEN);
   }
 
-  ctx.rewriteOp(rewritePos, JumpIfFalse.make(conditionResult.scopeFrameOffset, ctx.out.length), 0);
+  ctx.rewriteOp(rewritePos,
+      JumpIfFalse.make(conditionResult.scopeFrameOffset, ctx.out.length), 0);
 
   if (elseBranch != null) {
     ctx.beginAllocScope();
@@ -42,5 +44,7 @@ StatementInfo macroBranch(CompilerContext ctx, AlwaysReturnType? expectedReturnT
 
   ctx.endAllocScope();
 
-  return thenResult | StatementInfo(thenResult.position, willAlwaysThrow: false, willAlwaysReturn: false);
+  return thenResult |
+      StatementInfo(thenResult.position,
+          willAlwaysThrow: false, willAlwaysReturn: false);
 }
