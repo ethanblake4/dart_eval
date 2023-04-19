@@ -54,4 +54,38 @@ void main() {
     );
     assert(result);
   });
+
+  test('not equal for bool', () async {
+    //if (true) {}
+    //DateTime x = DateTime.now();
+    //x.month
+    final source = '''
+      bool fn(){ 
+        bool x = !false; 
+        if(x != true){
+          return false;
+        }
+        if(!x){
+          return false;
+        }
+        if(!x != false){
+          return false;
+        }
+        return true;
+      }
+      ''';
+    final compiler = Compiler();
+    final program = compiler.compile({
+      'my_package': {
+        'code.dart': source,
+      }
+    });
+    var runtime = Runtime.ofProgram(program);
+    runtime.setup();
+    var result = runtime.executeLib(
+      "package:my_package/code.dart",
+      "fn",
+    );
+    assert(result);
+  });
 }

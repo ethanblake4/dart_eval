@@ -12,6 +12,11 @@ class $DateTime implements DateTime, $Instance {
     runtime.registerBridgeFunc('dart:core', 'DateTime.parse', $parse);
   }
 
+  static const _dtBoolGetter = BridgeMethodDef(BridgeFunctionDef(
+      returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)),
+      params: [],
+      namedParams: []));
+
   static const _dtIntGetter = BridgeMethodDef(BridgeFunctionDef(
       returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType)),
       params: [],
@@ -25,24 +30,53 @@ class $DateTime implements DateTime, $Instance {
             returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dateTime)),
             params: [],
             namedParams: [])),
-        'parse': BridgeConstructorDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dateTime)),
+      },
+      methods: {
+        'parse': BridgeMethodDef(
+            BridgeFunctionDef(
+                returns:
+                    BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dateTime)),
+                params: [
+                  BridgeParameter(
+                      'formattedString',
+                      BridgeTypeAnnotation(
+                          BridgeTypeRef.type(RuntimeTypes.stringType)),
+                      false)
+                ],
+                namedParams: []),
+            isStatic: true),
+        'isAfter': BridgeMethodDef(BridgeFunctionDef(
+            returns:
+                BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)),
             params: [
               BridgeParameter(
-                  'formattedString',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.stringType)),
-                  false)
-            ],
-            namedParams: []))
+                  'other',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dateTime)),
+                  false),
+            ])),
+        'isBefore': BridgeMethodDef(BridgeFunctionDef(
+            returns:
+                BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)),
+            params: [
+              BridgeParameter(
+                  'other',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dateTime)),
+                  false),
+            ])),
       },
-      methods: {},
       getters: {
         'day': _dtIntGetter,
         'hour': _dtIntGetter,
         'minute': _dtIntGetter,
         'second': _dtIntGetter,
         'millisecondsSinceEpoch': _dtIntGetter,
+        'month': _dtIntGetter,
+        'year': _dtIntGetter,
+        'isUtc': _dtBoolGetter,
+        'millisecond': _dtIntGetter,
+        'microsecond': _dtIntGetter,
+        'microsecondsSinceEpoch': _dtIntGetter,
+        'weekday': _dtIntGetter,
       },
       setters: {},
       fields: {},
@@ -87,10 +121,27 @@ class $DateTime implements DateTime, $Instance {
         return $int($value.microsecondsSinceEpoch);
       case 'weekday':
         return $int($value.weekday);
-
+      case 'isAfter':
+        return $Function(_isAfter);
+      case 'isBefore':
+        return $Function(_isBefore);
       default:
         return _superclass.$getProperty(runtime, identifier);
     }
+  }
+
+  static $Value? _isAfter(
+      final Runtime runtime, final $Value? target, final List<$Value?> args) {
+    var a = target!.$value as DateTime;
+    var other = args[0]!.$value as DateTime;
+    return $bool(a.isAfter(other));
+  }
+
+  static $Value? _isBefore(
+      final Runtime runtime, final $Value? target, final List<$Value?> args) {
+    var a = target!.$value as DateTime;
+    var other = args[0]!.$value as DateTime;
+    return $bool(a.isBefore(other));
   }
 
   @override

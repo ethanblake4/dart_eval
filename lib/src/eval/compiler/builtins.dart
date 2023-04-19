@@ -227,7 +227,12 @@ final Map<TypeRef, Map<String, KnownMethod>> knownMethods = {
     '!=': numComparisonOp,
     ..._knownObject
   },
-  EvalTypes.boolType: {'&&': boolBinaryOp, '||': boolBinaryOp},
+  EvalTypes.boolType: {
+    '&&': boolBinaryOp,
+    '||': boolBinaryOp,
+    '==': boolBinaryOp,
+    '!=': boolBinaryOp
+  },
   EvalTypes.stringType: {
     '+': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false),
         [KnownMethodArg('other', EvalTypes.stringType, false)], {}),

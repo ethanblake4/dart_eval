@@ -151,6 +151,7 @@ class Variable {
     var $this = this;
 
     final supportedNumIntrinsicOps = {'+', '-', '<', '>', '<=', '>='};
+    final supportedBoolIntrinsicOps = {'!'};
     if (type.isAssignableTo(ctx, EvalTypes.numType, forceAllowDynamic: false) &&
         supportedNumIntrinsicOps.contains(method)) {
       $this = unboxIfNeeded(ctx);
@@ -217,6 +218,23 @@ class Variable {
           throw CompileError('Unknown num intrinsic method "$method"');
       }
 
+      return InvokeResult($this, result, [R]);
+    } else if (type.isAssignableTo(ctx, EvalTypes.boolType,
+            forceAllowDynamic: false) &&
+        supportedBoolIntrinsicOps.contains(method)) {
+      var R = args[0];
+      if (R.scopeFrameOffset == scopeFrameOffset) {
+        R = $this;
+      } else {
+        R = R.unboxIfNeeded(ctx);
+      }
+      //ctx.pushOp(
+      //    NumSub.make($this.scopeFrameOffset, R.scopeFrameOffset), NumSub.LEN);
+      ctx.pushOp(LogicalNot.make(R.scopeFrameOffset), LogicalNot.LEN);
+      var result = Variable.alloc(
+          ctx,
+          TypeRef.commonBaseType(ctx, {$this.type, R.type})
+              .copyWith(boxed: false));
       return InvokeResult($this, result, [R]);
     }
 

@@ -69,13 +69,15 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
   @override
   void defineBridgeClass(BridgeClassDef classDef) {
     if (!classDef.bridge && !classDef.wrap) {
-      throw CompileError('Cannot define a bridge class that\'s not either bridge or wrap');
+      throw CompileError(
+          'Cannot define a bridge class that\'s not either bridge or wrap');
     }
     final type = classDef.type;
     final spec = type.type.spec;
 
     if (spec == null) {
-      throw CompileError('Cannot define a bridge class that\'s already resolved, a ref, or a generic function type');
+      throw CompileError(
+          'Cannot define a bridge class that\'s already resolved, a ref, or a generic function type');
     }
 
     final libraryDeclarations = _bridgeDeclarations[spec.library];
@@ -91,7 +93,8 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
   void defineBridgeEnum(BridgeEnumDef enumDef) {
     final spec = enumDef.type.spec;
     if (spec == null) {
-      throw CompileError('Cannot define a bridge enum that\'s already resolved, a ref, or a generic function type');
+      throw CompileError(
+          'Cannot define a bridge enum that\'s already resolved, a ref, or a generic function type');
     }
 
     final libraryDeclarations = _bridgeDeclarations[spec.library];
@@ -136,14 +139,16 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
   /// }
   ///```
   Program compile(Map<String, Map<String, String>> packages) {
-    final sources = packages.entries.expand((packageEntry) => packageEntry.value.entries
-        .map((library) => DartSource('package:${packageEntry.key}/${library.key}', library.value)));
+    final sources = packages.entries.expand((packageEntry) =>
+        packageEntry.value.entries.map((library) => DartSource(
+            'package:${packageEntry.key}/${library.key}', library.value)));
 
     return compileSources(sources);
   }
 
   /// Compile a unit set of Dart code into a program
-  Program compileSources([Iterable<DartSource> sources = const [], bool debugPerf = true]) {
+  Program compileSources(
+      [Iterable<DartSource> sources = const [], bool debugPerf = true]) {
     _topLevelDeclarationsMap = <int, Map<String, DeclarationOrBridge>>{};
     _topLevelGlobalIndices = <int, Map<String, int>>{};
     _instanceDeclarationsMap = <int, Map<String, Map<String, Declaration>>>{};
@@ -187,7 +192,9 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     };
 
     // Establish a mapping relationship from URI to Library
-    final unitLibraryUriMap = {for (final library in unitLibraries) library.uri: library};
+    final unitLibraryUriMap = {
+      for (final library in unitLibraries) library.uri: library
+    };
 
     // Merge bridge libraries with unit libraries that share an identical URI
     final libraries = <Library>{};
@@ -208,17 +215,24 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       final unitLibrary = unitLibraryUriMap[uri];
       if (unitLibrary != null) {
         /// Merge source code declarations from the unit library with the bridge
-        libraries.add(unitLibrary.copyWith(declarations: [...unitLibrary.declarations, ...bridgeLibDeclarations]));
+        libraries.add(unitLibrary.copyWith(declarations: [
+          ...unitLibrary.declarations,
+          ...bridgeLibDeclarations
+        ]));
 
         /// Document this is a merged library
         mergedLibraryUris.add(uri);
       } else {
         // If there is no existing unit library with an identical URI, create
         // a new [Library] with the bridge declarations
-        libraries.add(Library(Uri.parse(bridgeLibrary), imports: [], exports: [], declarations: [
-          for (final bridgeDeclaration in _bridgeDeclarations[bridgeLibrary]!)
-            DeclarationOrBridge(-1, bridge: bridgeDeclaration)
-        ]));
+        libraries.add(Library(Uri.parse(bridgeLibrary),
+            imports: [],
+            exports: [],
+            declarations: [
+              for (final bridgeDeclaration
+                  in _bridgeDeclarations[bridgeLibrary]!)
+                DeclarationOrBridge(-1, bridge: bridgeDeclaration)
+            ]));
       }
     }
 
@@ -235,25 +249,32 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
 
     // Resolve the export and import relationship of the libraries, while
     // generating library IDs
-    final visibleDeclarations =
-        _resolveImportsAndExports(libraries, (library) => libraryIndexMap[library] ?? (libraryIndexMap[library] = i++));
+    final visibleDeclarations = _resolveImportsAndExports(
+        libraries,
+        (library) =>
+            libraryIndexMap[library] ?? (libraryIndexMap[library] = i++));
 
     // Populate lookup tables [_topLevelDeclarationsMap],
     // [_instanceDeclarationsMap], and [_topLevelGlobalIndices], and generate
     // remaining library IDs
     for (final library in libraries) {
-      final libraryIndex = libraryIndexMap[library] ?? (libraryIndexMap[library] = i++);
+      final libraryIndex =
+          libraryIndexMap[library] ?? (libraryIndexMap[library] = i++);
       for (final declarationOrBridge in library.declarations) {
         _populateLookupTablesForDeclaration(libraryIndex, declarationOrBridge);
       }
     }
 
     // Pass a mapping of library URI to integer index into the context
-    final libraryMapString = {for (final entry in libraryIndexMap.entries) entry.key.uri.toString(): entry.value};
+    final libraryMapString = {
+      for (final entry in libraryIndexMap.entries)
+        entry.key.uri.toString(): entry.value
+    };
     ctx.libraryMap = libraryMapString;
 
     final visibleDeclarationsByIndex = {
-      for (final lib in libraries) libraryIndexMap[lib]!: {...visibleDeclarations[lib]!}
+      for (final lib in libraries)
+        libraryIndexMap[lib]!: {...visibleDeclarations[lib]!}
     };
 
     final declarationTypes = <DeclarationOrBridge, TypeRef>{};
@@ -286,10 +307,13 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
             if (child.isBridge) {
               final bridge = child.bridge!;
               if (bridge is BridgeClassDef) {
-                child.bridge =
-                    bridge.copyWith(type: bridge.type.copyWith(type: BridgeTypeRef.type(ctx.typeRefIndexMap[_cached])));
+                child.bridge = bridge.copyWith(
+                    type: bridge.type.copyWith(
+                        type:
+                            BridgeTypeRef.type(ctx.typeRefIndexMap[_cached])));
               } else if (bridge is BridgeEnumDef) {
-                child.bridge = bridge.copyWith(type: BridgeTypeRef.type(ctx.typeRefIndexMap[_cached]));
+                child.bridge = bridge.copyWith(
+                    type: BridgeTypeRef.type(ctx.typeRefIndexMap[_cached]));
               } else {
                 assert(false);
               }
@@ -306,10 +330,12 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
         if (declarationOrBridge.isBridge) {
           final bridge = declarationOrBridge.bridge!;
           if (bridge is BridgeClassDef) {
-            declarationOrBridge.bridge =
-                bridge.copyWith(type: bridge.type.copyWith(type: BridgeTypeRef.type(ctx.typeRefIndexMap[type])));
+            declarationOrBridge.bridge = bridge.copyWith(
+                type: bridge.type.copyWith(
+                    type: BridgeTypeRef.type(ctx.typeRefIndexMap[type])));
           } else if (bridge is BridgeEnumDef) {
-            declarationOrBridge.bridge = bridge.copyWith(type: BridgeTypeRef.type(ctx.typeRefIndexMap[type]));
+            declarationOrBridge.bridge = bridge.copyWith(
+                type: BridgeTypeRef.type(ctx.typeRefIndexMap[type]));
           } else {
             assert(false);
           }
@@ -357,12 +383,15 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
           }
           final declaration = _declaration.declaration!;
           ctx.library = key;
-          if (declaration is VariableDeclaration && declaration.parent!.parent is TopLevelVariableDeclaration) {
+          if (declaration is VariableDeclaration &&
+              declaration.parent!.parent is TopLevelVariableDeclaration) {
             compileDeclaration(declaration, ctx);
             ctx.resetStack();
           } else if (declaration is ClassDeclaration) {
             ctx.currentClass = declaration;
-            for (final d in declaration.members.whereType<FieldDeclaration>().where((e) => e.isStatic)) {
+            for (final d in declaration.members
+                .whereType<FieldDeclaration>()
+                .where((e) => e.isStatic)) {
               compileFieldDeclaration(-1, d, ctx, declaration);
               ctx.resetStack();
             }
@@ -448,7 +477,8 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     return Runtime(ob.buffer.asByteData())..setup();
   }
 
-  void _populateLookupTablesForDeclaration(int libraryIndex, DeclarationOrBridge declarationOrBridge) {
+  void _populateLookupTablesForDeclaration(
+      int libraryIndex, DeclarationOrBridge declarationOrBridge) {
     if (!_topLevelDeclarationsMap.containsKey(libraryIndex)) {
       _topLevelDeclarationsMap[libraryIndex] = {};
     }
@@ -461,22 +491,27 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       final bridge = declarationOrBridge.bridge!;
       if (bridge is BridgeClassDef) {
         final spec = bridge.type.type.spec!;
-        _topLevelDeclarationsMap[libraryIndex]![spec.name] = DeclarationOrBridge(libraryIndex, bridge: bridge);
+        _topLevelDeclarationsMap[libraryIndex]![spec.name] =
+            DeclarationOrBridge(libraryIndex, bridge: bridge);
         for (final constructor in bridge.constructors.entries) {
-          _topLevelDeclarationsMap[libraryIndex]!['${spec.name}.${constructor.key}'] =
+          _topLevelDeclarationsMap[libraryIndex]![
+                  '${spec.name}.${constructor.key}'] =
               DeclarationOrBridge(libraryIndex, bridge: constructor.value);
         }
         for (final method in bridge.methods.entries) {
           if (method.value.isStatic) {
-            _topLevelDeclarationsMap[libraryIndex]!['${spec.name}.${method.key}'] =
+            _topLevelDeclarationsMap[libraryIndex]![
+                    '${spec.name}.${method.key}'] =
                 DeclarationOrBridge(libraryIndex, bridge: method.value);
           }
         }
       } else if (bridge is BridgeEnumDef) {
         final spec = bridge.type.spec!;
-        _topLevelDeclarationsMap[libraryIndex]![spec.name] = DeclarationOrBridge(libraryIndex, bridge: bridge);
+        _topLevelDeclarationsMap[libraryIndex]![spec.name] =
+            DeclarationOrBridge(libraryIndex, bridge: bridge);
       } else if (bridge is BridgeFunctionDeclaration) {
-        _topLevelDeclarationsMap[libraryIndex]![bridge.name] = DeclarationOrBridge(libraryIndex, bridge: bridge);
+        _topLevelDeclarationsMap[libraryIndex]![bridge.name] =
+            DeclarationOrBridge(libraryIndex, bridge: bridge);
       }
       return;
     }
@@ -496,10 +531,12 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
         final name = variable.name.value() as String;
 
         if (_topLevelDeclarationsMap[libraryIndex]!.containsKey(name)) {
-          throw CompileError('Cannot define "$name" twice in the same library', variable, libraryIndex);
+          throw CompileError('Cannot define "$name" twice in the same library',
+              variable, libraryIndex);
         }
 
-        _topLevelDeclarationsMap[libraryIndex]![name] = DeclarationOrBridge(libraryIndex, declaration: variable);
+        _topLevelDeclarationsMap[libraryIndex]![name] =
+            DeclarationOrBridge(libraryIndex, declaration: variable);
         _topLevelGlobalIndices[libraryIndex]![name] = ctx.globalIndex++;
       }
     } else {
@@ -507,10 +544,12 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       final name = declaration.name.value() as String;
 
       if (_topLevelDeclarationsMap[libraryIndex]!.containsKey(name)) {
-        throw CompileError('Cannot define "$name" twice in the same library', declaration, libraryIndex);
+        throw CompileError('Cannot define "$name" twice in the same library',
+            declaration, libraryIndex);
       }
 
-      _topLevelDeclarationsMap[libraryIndex]![name] = DeclarationOrBridge(libraryIndex, declaration: declaration);
+      _topLevelDeclarationsMap[libraryIndex]![name] =
+          DeclarationOrBridge(libraryIndex, declaration: declaration);
 
       if (declaration is ClassDeclaration) {
         _instanceDeclarationsMap[libraryIndex]![name] = {};
@@ -538,13 +577,18 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
               }
 
               for (final field in member.fields.variables) {
-                final name = '${declaration.name.value() as String}.${field.name.value()}';
+                final name =
+                    '${declaration.name.value() as String}.${field.name.value()}';
 
                 if (_topLevelDeclarationsMap[libraryIndex]!.containsKey(name)) {
-                  throw CompileError('Cannot define "$name" twice in the same library', field, libraryIndex);
+                  throw CompileError(
+                      'Cannot define "$name" twice in the same library',
+                      field,
+                      libraryIndex);
                 }
 
-                _topLevelDeclarationsMap[libraryIndex]![name] = DeclarationOrBridge(libraryIndex, declaration: field);
+                _topLevelDeclarationsMap[libraryIndex]![name] =
+                    DeclarationOrBridge(libraryIndex, declaration: field);
                 _topLevelGlobalIndices[libraryIndex]![name] = ctx.globalIndex++;
               }
             } else {
@@ -558,20 +602,24 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
             _topLevelDeclarationsMap[libraryIndex]!['$name.$mName'] =
                 DeclarationOrBridge(libraryIndex, declaration: member);
           } else {
-            throw CompileError('Not a NamedCompilationUnitMember', member, libraryIndex);
+            throw CompileError(
+                'Not a NamedCompilationUnitMember', member, libraryIndex);
           }
         });
       }
     }
   }
 
-  TypeRef? _cacheTypeRef(int libraryIndex, DeclarationOrBridge declarationOrBridge) {
+  TypeRef? _cacheTypeRef(
+      int libraryIndex, DeclarationOrBridge declarationOrBridge) {
     if (declarationOrBridge.isBridge) {
       final bridge = declarationOrBridge.bridge;
       if (bridge is! BridgeClassDef && bridge is! BridgeEnumDef) {
         return null;
       }
-      final type = bridge is BridgeClassDef ? bridge.type.type : (bridge as BridgeEnumDef).type;
+      final type = bridge is BridgeClassDef
+          ? bridge.type.type
+          : (bridge as BridgeEnumDef).type;
       if (type.cacheId != null) {
         return TypeRef.fromBridgeTypeRef(ctx, type);
       }
@@ -582,7 +630,9 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       if (declaration is! ClassDeclaration) {
         return null;
       }
-      return TypeRef.cache(ctx, libraryIndex, declaration.name.value() as String, fileRef: libraryIndex);
+      return TypeRef.cache(
+          ctx, libraryIndex, declaration.name.value() as String,
+          fileRef: libraryIndex);
     }
   }
 
@@ -596,7 +646,8 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       if (!ctx.bridgeStaticFunctionIndices.containsKey(lib)) {
         ctx.bridgeStaticFunctionIndices[lib] = <String, int>{};
       }
-      ctx.bridgeStaticFunctionIndices[lib]!['${type.name}.$name'] = _bridgeStaticFunctionIdx++;
+      ctx.bridgeStaticFunctionIndices[lib]!['${type.name}.$name'] =
+          _bridgeStaticFunctionIdx++;
     });
 
     classDef.methods.forEach((name, method) {
@@ -604,7 +655,8 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       if (!ctx.bridgeStaticFunctionIndices.containsKey(lib)) {
         ctx.bridgeStaticFunctionIndices[lib] = <String, int>{};
       }
-      ctx.bridgeStaticFunctionIndices[lib]!['${type.name}.$name'] = _bridgeStaticFunctionIdx++;
+      ctx.bridgeStaticFunctionIndices[lib]!['${type.name}.$name'] =
+          _bridgeStaticFunctionIdx++;
     });
 
     classDef.getters.forEach((name, getter) {
@@ -612,7 +664,8 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       if (!ctx.bridgeStaticFunctionIndices.containsKey(lib)) {
         ctx.bridgeStaticFunctionIndices[lib] = <String, int>{};
       }
-      ctx.bridgeStaticFunctionIndices[lib]!['${type.name}.$name*g'] = _bridgeStaticFunctionIdx++;
+      ctx.bridgeStaticFunctionIndices[lib]!['${type.name}.$name*g'] =
+          _bridgeStaticFunctionIdx++;
     });
 
     classDef.setters.forEach((name, setter) {
@@ -620,7 +673,8 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       if (!ctx.bridgeStaticFunctionIndices.containsKey(lib)) {
         ctx.bridgeStaticFunctionIndices[lib] = <String, int>{};
       }
-      ctx.bridgeStaticFunctionIndices[lib]!['${type.name}.$name*s'] = _bridgeStaticFunctionIdx++;
+      ctx.bridgeStaticFunctionIndices[lib]!['${type.name}.$name*s'] =
+          _bridgeStaticFunctionIdx++;
     });
 
     classDef.fields.forEach((name, field) {
@@ -628,8 +682,10 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       if (!ctx.bridgeStaticFunctionIndices.containsKey(lib)) {
         ctx.bridgeStaticFunctionIndices[lib] = <String, int>{};
       }
-      ctx.bridgeStaticFunctionIndices[lib]!['${type.name}.$name*g'] = _bridgeStaticFunctionIdx++;
-      ctx.bridgeStaticFunctionIndices[lib]!['${type.name}.$name*s'] = _bridgeStaticFunctionIdx++;
+      ctx.bridgeStaticFunctionIndices[lib]!['${type.name}.$name*g'] =
+          _bridgeStaticFunctionIdx++;
+      ctx.bridgeStaticFunctionIndices[lib]!['${type.name}.$name*s'] =
+          _bridgeStaticFunctionIdx++;
     });
   }
 
@@ -651,14 +707,18 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     if (!ctx.enumValueIndices.containsKey(lib)) {
       ctx.enumValueIndices[lib] = {};
     }
-    ctx.enumValueIndices[lib]![type.name] = {for (final value in enumDef.values) value: ctx.globalIndex++};
+    ctx.enumValueIndices[lib]![type.name] = {
+      for (final value in enumDef.values) value: ctx.globalIndex++
+    };
   }
 
-  void _assignBridgeStaticFunctionIndicesForFunction(int libraryIndex, BridgeFunctionDeclaration functionDef) {
+  void _assignBridgeStaticFunctionIndicesForFunction(
+      int libraryIndex, BridgeFunctionDeclaration functionDef) {
     if (!ctx.bridgeStaticFunctionIndices.containsKey(libraryIndex)) {
       ctx.bridgeStaticFunctionIndices[libraryIndex] = <String, int>{};
     }
-    ctx.bridgeStaticFunctionIndices[libraryIndex]![functionDef.name] = _bridgeStaticFunctionIdx++;
+    ctx.bridgeStaticFunctionIndices[libraryIndex]![functionDef.name] =
+        _bridgeStaticFunctionIdx++;
   }
 }
 
@@ -690,7 +750,8 @@ List<Library> _buildLibraries(Iterable<DartCompilationUnit> units) {
   }
 
   /// CompilationUnit graph structure
-  final cuGraph = CompilationUnitGraph(compilationUnitMap, uriMap, libraryIdMap);
+  final cuGraph =
+      CompilationUnitGraph(compilationUnitMap, uriMap, libraryIdMap);
 
   // Calculate strong link components using the Dijkstra path-based strong
   // component algorithm.
@@ -702,14 +763,19 @@ List<Library> _buildLibraries(Iterable<DartCompilationUnit> units) {
 
   final libraries = <Library>[];
   for (final group in libGroups) {
-    final primaryId = group.length == 1 ? group[0] : group.firstWhere((e) => compilationUnitMap[e]!.partOf == null);
+    final primaryId = group.length == 1
+        ? group[0]
+        : group.firstWhere((e) => compilationUnitMap[e]!.partOf == null);
     final primary = compilationUnitMap[primaryId]!;
     final library = Library(primary.uri,
         library: primary.library?.name2?.name,
         imports: primary.imports,
         exports: primary.exports,
         declarations: group.map((e) => compilationUnitMap[e]!).fold(
-            [], (pv, element) => pv..addAll(element.declarations.map((d) => DeclarationOrBridge(-1, declaration: d)))));
+            [],
+            (pv, element) => pv
+              ..addAll(element.declarations
+                  .map((d) => DeclarationOrBridge(-1, declaration: d)))));
     libraries.add(library);
   }
 
@@ -735,7 +801,10 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
     // Pass in a Map representing edges in the graph.
     // Each edge represents a library, with the key being the library's URI
     // and the value being a set of its exports.
-    for (final l in libraries) l.uri: {for (final export in l.exports) l.uri.resolve(export.uri.stringValue!)}
+    for (final l in libraries)
+      l.uri: {
+        for (final export in l.exports) l.uri.resolve(export.uri.stringValue!)
+      }
   });
 
   final result = <Library, Map<String, DeclarationOrPrefix>>{};
@@ -747,7 +816,8 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
       for (final d in _expandDeclarations(l.declarations))
         // Key: the expanded name of the declaration (see [_expandDeclarations])
         // Value: DeclarationOrPrefix (declaration content, and store the ID of the containing library)
-        d.first: DeclarationOrPrefix(declaration: d.second..sourceLib = resolveLibraryId(l)),
+        d.first: DeclarationOrPrefix(
+            declaration: d.second..sourceLib = resolveLibraryId(l)),
     };
 
     final dartCoreUri = Uri.parse('dart:core');
@@ -756,7 +826,8 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
     for (final import in [
       /// Iterate over the library's imports including the implicit import of
       /// dart:core.
-      ...l.imports.map((e) => _Import.resolve(e, l.uri, e.prefix?.name, e.combinators)),
+      ...l.imports
+          .map((e) => _Import.resolve(e, l.uri, e.prefix?.name, e.combinators)),
       if (!isDartCore) _Import(dartCoreUri, null)
     ]) {
       /// Skip eval_annotation imports if present
@@ -773,7 +844,10 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
       /// Flatten and deduplicate the tree to get a list of all libraries that
       /// are visible through this import.
       final importedLibs = [...tree.expand((e) => e), import.uri]
-          .map((e) => uriMap[e] ?? (throw CompileError("Cannot find import '$e' (while parsing '${l.uri}')")))
+          .map((e) =>
+              uriMap[e] ??
+              (throw CompileError(
+                  "Cannot find import '$e' (while parsing '${l.uri}')")))
           .toSet();
 
       /// Get all the [ExportDirective]s of the imported library tree. While
@@ -801,35 +875,42 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
         }
         for (final combinator in import.combinators) {
           if (combinator is ShowCombinator) {
-            if ({for (final n in combinator.shownNames) n.name}.contains(name)) {
+            if ({for (final n in combinator.shownNames) n.name}
+                .contains(name)) {
               return true;
             }
             return false;
           } else if (combinator is HideCombinator) {
-            if ({for (final n in combinator.hiddenNames) n.name}.contains(name)) {
+            if ({for (final n in combinator.hiddenNames) n.name}
+                .contains(name)) {
               return false;
             }
             return true;
           }
-          throw CompileError('Unsupported import combinator ${combinator.runtimeType} (while parsing ${l.uri})');
+          throw CompileError(
+              'Unsupported import combinator ${combinator.runtimeType} (while parsing ${l.uri})');
         }
         return false;
       };
 
       final visibleDeclarations = {
         for (final lib in importedLibs)
-          for (final declaration in _expandDeclarations(lib.declarations).where((e) => validImport(e.first))) ...{
-            if (lib.uri == import.uri) declaration..second.sourceLib = resolveLibraryId(lib),
+          for (final declaration in _expandDeclarations(lib.declarations)
+              .where((e) => validImport(e.first))) ...{
+            if (lib.uri == import.uri)
+              declaration..second.sourceLib = resolveLibraryId(lib),
             for (final export in exportsPerUri[lib.uri] ?? [])
               if (export.combinators.isEmpty)
                 declaration..second.sourceLib = resolveLibraryId(lib)
               else
                 for (final combinator in export.combinators)
                   if (combinator is ShowCombinator) ...{
-                    if ({for (final n in combinator.shownNames) n.name}.contains(declaration.first))
+                    if ({for (final n in combinator.shownNames) n.name}
+                        .contains(declaration.first))
                       declaration..second.sourceLib = resolveLibraryId(lib)
                   } else if (combinator is HideCombinator) ...{
-                    if (!({for (final n in (combinator).hiddenNames) n.name}.contains(declaration.first)))
+                    if (!({for (final n in (combinator).hiddenNames) n.name}
+                        .contains(declaration.first)))
                       declaration..second.sourceLib = resolveLibraryId(lib)
                   }
           }
@@ -837,9 +918,12 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
 
       final mappedVisibleDeclarations = {
         if (import.prefix != null)
-          import.prefix!: DeclarationOrPrefix(children: {for (final d in visibleDeclarations) d.first: d.second})
+          import.prefix!: DeclarationOrPrefix(children: {
+            for (final d in visibleDeclarations) d.first: d.second
+          })
         else
-          for (final d in visibleDeclarations) d.first: DeclarationOrPrefix(declaration: d.second)
+          for (final d in visibleDeclarations)
+            d.first: DeclarationOrPrefix(declaration: d.second)
       };
 
       _visibleDeclarations.addAll(mappedVisibleDeclarations);
@@ -853,7 +937,8 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
 
 /// Flatten static nested declarations into an iterable of pairs of compound name to declaration
 /// For example, for a class `A` with a static method `foo`, this will return `['A', A]` and `['A.foo', foo]`
-Iterable<Pair<String, DeclarationOrBridge>> _expandDeclarations(List<DeclarationOrBridge> declarations) sync* {
+Iterable<Pair<String, DeclarationOrBridge>> _expandDeclarations(
+    List<DeclarationOrBridge> declarations) sync* {
   /// Traverse declarations
   for (final d in declarations) {
     if (d.isBridge) {
@@ -887,16 +972,19 @@ Iterable<Pair<String, DeclarationOrBridge>> _expandDeclarations(List<Declaration
           /// Then also yield the static class members
           for (final member in declaration.members) {
             if (member is ConstructorDeclaration) {
-              yield Pair('$dName.${member.name?.value() ?? ""}', DeclarationOrBridge(-1, declaration: member));
+              yield Pair('$dName.${member.name?.value() ?? ""}',
+                  DeclarationOrBridge(-1, declaration: member));
             } else if (member is MethodDeclaration && member.isStatic) {
-              yield Pair('$dName.${member.name.value()}', DeclarationOrBridge(-1, declaration: member));
+              yield Pair('$dName.${member.name.value()}',
+                  DeclarationOrBridge(-1, declaration: member));
             }
           }
         }
       } else if (declaration is TopLevelVariableDeclaration) {
         /// Top-level variable declaration
         for (final v in declaration.variables.variables) {
-          yield Pair(v.name.value() as String, DeclarationOrBridge(-1, declaration: v));
+          yield Pair(v.name.value() as String,
+              DeclarationOrBridge(-1, declaration: v));
         }
       }
     }
@@ -910,8 +998,10 @@ class _Import {
 
   _Import(this.uri, this.prefix, [this.combinators = const []]);
 
-  factory _Import.resolve(ImportDirective import, Uri base, String? prefix, [List<Combinator> combinators = const []]) {
+  factory _Import.resolve(ImportDirective import, Uri base, String? prefix,
+      [List<Combinator> combinators = const []]) {
     final uri = Uri.parse(import.uri.stringValue!);
-    return _Import(base.resolveUri(uri), import.prefix?.name, import.combinators);
+    return _Import(
+        base.resolveUri(uri), import.prefix?.name, import.combinators);
   }
 }
