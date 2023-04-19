@@ -2,6 +2,7 @@ import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/base.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
+import 'package:dart_eval/stdlib/core.dart';
 
 /// dart_eval [$Instance] wrapper of a [DateTime]
 class $DateTime implements DateTime, $Instance {
@@ -10,7 +11,13 @@ class $DateTime implements DateTime, $Instance {
     runtime.registerBridgeFunc('dart:core', 'DateTime.now',
         (runtime, target, args) => $DateTime.wrap(DateTime.now()));
     runtime.registerBridgeFunc('dart:core', 'DateTime.parse', $parse);
+    runtime.registerBridgeFunc('dart:core', 'DateTime.tryParse', $tryParse);
   }
+
+  static const _dtDurationGetter = BridgeMethodDef(BridgeFunctionDef(
+      returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.duration)),
+      params: [],
+      namedParams: []));
 
   static const _dtBoolGetter = BridgeMethodDef(BridgeFunctionDef(
       returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)),
@@ -45,6 +52,19 @@ class $DateTime implements DateTime, $Instance {
                 ],
                 namedParams: []),
             isStatic: true),
+        'tryParse': BridgeMethodDef(
+            BridgeFunctionDef(
+                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dateTime),
+                    nullable: true),
+                params: [
+                  BridgeParameter(
+                      'formattedString',
+                      BridgeTypeAnnotation(
+                          BridgeTypeRef.type(RuntimeTypes.stringType)),
+                      false)
+                ],
+                namedParams: []),
+            isStatic: true),
         'isAfter': BridgeMethodDef(BridgeFunctionDef(
             returns:
                 BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)),
@@ -63,6 +83,58 @@ class $DateTime implements DateTime, $Instance {
                   BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dateTime)),
                   false),
             ])),
+        'isAtSameMomentAs': BridgeMethodDef(BridgeFunctionDef(
+            returns:
+                BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)),
+            params: [
+              BridgeParameter(
+                  'other',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dateTime)),
+                  false),
+            ])),
+        'compareTo': BridgeMethodDef(BridgeFunctionDef(
+            returns:
+                BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType)),
+            params: [
+              BridgeParameter(
+                  'other',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dateTime)),
+                  false),
+            ])),
+        'toLocal': BridgeMethodDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dateTime)),
+            params: [])),
+        'toUtc': BridgeMethodDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dateTime)),
+            params: [])),
+        'toIso8601String': BridgeMethodDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation(
+                BridgeTypeRef.type(RuntimeTypes.stringType)),
+            params: [])),
+        'add': BridgeMethodDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dateTime)),
+            params: [
+              BridgeParameter(
+                  'duration',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.duration)),
+                  false)
+            ])),
+        'subtract': BridgeMethodDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dateTime)),
+            params: [
+              BridgeParameter(
+                  'duration',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.duration)),
+                  false)
+            ])),
+        'difference': BridgeMethodDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.duration)),
+            params: [
+              BridgeParameter(
+                  'other',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dateTime)),
+                  false)
+            ])),
       },
       getters: {
         'day': _dtIntGetter,
@@ -77,6 +149,7 @@ class $DateTime implements DateTime, $Instance {
         'microsecond': _dtIntGetter,
         'microsecondsSinceEpoch': _dtIntGetter,
         'weekday': _dtIntGetter,
+        'timeZoneOffset': _dtDurationGetter,
       },
       setters: {},
       fields: {},
@@ -125,9 +198,66 @@ class $DateTime implements DateTime, $Instance {
         return $Function(_isAfter);
       case 'isBefore':
         return $Function(_isBefore);
+      case 'isAtSameMomentAs':
+        return $Function(_isAtSameMomentAs);
+      case 'compareTo':
+        return $Function(_compareTo);
+      case 'toLocal':
+        return $Function(_toLocal);
+      case 'toUtc':
+        return $Function(_toUtc);
+      case 'toIso8601String':
+        return $Function(_toIso8601String);
+      case 'add':
+        return $Function(_add);
+      case 'subtract':
+        return $Function(_subtract);
+      case 'difference':
+        return $Function(_difference);
+      case 'timeZoneOffset':
+        return $Duration.wrap($value.timeZoneOffset);
       default:
         return _superclass.$getProperty(runtime, identifier);
     }
+  }
+
+  static $Value? _difference(
+      final Runtime runtime, final $Value? target, final List<$Value?> args) {
+    var a = target!.$value as DateTime;
+    var other = args[0]!.$value as DateTime;
+    return $Duration.wrap(a.difference(other));
+  }
+
+  static $Value? _subtract(
+      final Runtime runtime, final $Value? target, final List<$Value?> args) {
+    var a = target!.$value as DateTime;
+    var duration = args[0]!.$value as Duration;
+    return $DateTime.wrap(a.subtract(duration));
+  }
+
+  static $Value? _add(
+      final Runtime runtime, final $Value? target, final List<$Value?> args) {
+    var a = target!.$value as DateTime;
+    var duration = args[0]!.$value as Duration;
+    return $DateTime.wrap(a.add(duration));
+  }
+
+  static $Value? _toIso8601String(
+      final Runtime runtime, final $Value? target, final List<$Value?> args) {
+    var a = target!.$value as DateTime;
+    return $String(a.toIso8601String());
+  }
+
+  static $Value? _toUtc(
+      final Runtime runtime, final $Value? target, final List<$Value?> args) {
+    var a = target!.$value as DateTime;
+    return $DateTime.wrap(a.toUtc());
+  }
+
+  static $Value? _toLocal(
+      final Runtime runtime, final $Value? target, final List<$Value?> args) {
+    var a = target!.$value as DateTime;
+    return $DateTime.wrap(a.toLocal());
   }
 
   static $Value? _isAfter(
@@ -142,6 +272,20 @@ class $DateTime implements DateTime, $Instance {
     var a = target!.$value as DateTime;
     var other = args[0]!.$value as DateTime;
     return $bool(a.isBefore(other));
+  }
+
+  static $Value? _isAtSameMomentAs(
+      final Runtime runtime, final $Value? target, final List<$Value?> args) {
+    var a = target!.$value as DateTime;
+    var other = args[0]!.$value as DateTime;
+    return $bool(a.isAtSameMomentAs(other));
+  }
+
+  static $Value? _compareTo(
+      final Runtime runtime, final $Value? target, final List<$Value?> args) {
+    var a = target!.$value as DateTime;
+    var other = args[0]!.$value as DateTime;
+    return $int(a.compareTo(other));
   }
 
   @override
@@ -234,5 +378,12 @@ class $DateTime implements DateTime, $Instance {
   static $Value? $parse(Runtime runtime, $Value? target, List<$Value?> args) {
     final formattedString = args[0]!.$value as String;
     return $DateTime.wrap(DateTime.parse(formattedString));
+  }
+
+  static $Value? $tryParse(
+      Runtime runtime, $Value? target, List<$Value?> args) {
+    final formattedString = args[0]!.$value as String;
+    final result = DateTime.tryParse(formattedString);
+    return result == null ? $null() : $DateTime.wrap(result);
   }
 }

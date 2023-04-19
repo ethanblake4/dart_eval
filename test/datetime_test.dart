@@ -97,4 +97,74 @@ void main() {
     );
     assert(result);
   });
+
+  test('datetime add subtract', () async {
+    final source = '''
+      bool fn(){ 
+        final a = DateTime.parse('2011-10-22 00:00:00');
+        final dur = Duration(days: 1);
+        final b = a.add(dur);
+        final c = a.subtract(dur);
+        if(b is! DateTime){
+          return false;
+        }
+        if(c is! DateTime){
+          return false;
+        }
+        if(!(b.year == 2011 && b.month == 10 && b.day == 23)){
+          return false;
+        }
+        if(!(c.year == 2011 && c.month == 10 && c.day == 21)){
+          return false;
+        }
+        return true;
+      }
+      ''';
+    final compiler = Compiler();
+    final program = compiler.compile({
+      'my_package': {
+        'code.dart': source,
+      }
+    });
+    var runtime = Runtime.ofProgram(program);
+    runtime.setup();
+    var result = runtime.executeLib(
+      "package:my_package/code.dart",
+      "fn",
+    );
+    assert(result);
+  });
+
+  test('datetime difference', () async {
+    final source = '''
+      bool fn(){ 
+        final a = DateTime.parse('2011-10-22 00:00:00');
+        final b = DateTime.parse('2011-10-21 00:00:00');
+        final diff = a.difference(b);
+        if(diff is! Duration){
+          return false;
+        } 
+        if(diff.inDays != 1){
+          return false;
+        }
+        if(diff.inHours != 24){
+          return false;
+        }
+        return true;
+      }
+      ''';
+    final compiler = Compiler();
+    final program = compiler.compile({
+      'my_package': {
+        'code.dart': source,
+      }
+    });
+    var runtime = Runtime.ofProgram(program);
+    runtime.setup();
+    var result = runtime.executeLib(
+      "package:my_package/code.dart",
+      "fn",
+    );
+    assert(result);
+  });
 }
