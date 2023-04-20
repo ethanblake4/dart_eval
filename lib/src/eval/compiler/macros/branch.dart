@@ -9,8 +9,7 @@ StatementInfo macroBranch(CompilerContext ctx, AlwaysReturnType? expectedReturnT
     required MacroStatementClosure thenBranch,
     MacroStatementClosure? elseBranch}) {
   ctx.beginAllocScope();
-  final condi = condition(ctx);
-  final conditionResult = condi.unboxIfNeeded(ctx);
+  final conditionResult = condition(ctx).unboxIfNeeded(ctx);
 
   final rewriteCond = JumpIfFalse.make(conditionResult.scopeFrameOffset, -1);
   final rewritePos = ctx.pushOp(rewriteCond, JumpIfFalse.LEN);
