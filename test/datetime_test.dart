@@ -29,7 +29,7 @@ void main() {
       "package:my_package/code.dart",
       "fn",
     );
-    //assert(result);
+    assert(result);
   });
 
   test('datetime year month day', () async {
