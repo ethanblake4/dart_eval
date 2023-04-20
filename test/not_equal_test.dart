@@ -3,8 +3,6 @@ import 'package:test/scaffolding.dart';
 
 void main() {
   test('not equal for int', () async {
-    //DateTime x = DateTime.now();
-    //x.month
     final source = '''
       bool fn(){ 
         int x = 1;
@@ -29,8 +27,6 @@ void main() {
     assert(result);
   });
   test('not equal for strng', () async {
-    //DateTime x = DateTime.now();
-    //x.month
     final source = '''
       bool fn(){ 
         String x = "a";
@@ -56,9 +52,6 @@ void main() {
   });
 
   test('not equal for bool', () async {
-    //if (true) {}
-    //DateTime x = DateTime.now();
-    //x.month
     final source = '''
       bool fn(){ 
         bool x = !false; 

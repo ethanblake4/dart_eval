@@ -167,4 +167,33 @@ void main() {
     );
     assert(result);
   });
+
+  test('datetime compareTo', () async {
+    final source = '''
+      bool fn(){ 
+        final a = DateTime.parse('2011-10-22 00:00:00');
+        final b = DateTime.parse('2011-10-21 00:00:00');
+        if(a.compareTo(b) == 0){
+          return false;
+        }
+        if(!(a.compareTo(b) == 1)){
+          return false;
+        }
+        return true;
+      }
+      ''';
+    final compiler = Compiler();
+    final program = compiler.compile({
+      'my_package': {
+        'code.dart': source,
+      }
+    });
+    var runtime = Runtime.ofProgram(program);
+    runtime.setup();
+    var result = runtime.executeLib(
+      "package:my_package/code.dart",
+      "fn",
+    );
+    assert(result);
+  });
 }
