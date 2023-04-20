@@ -6,22 +6,18 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
 /// dart_eval bimodal bridge wrapper for [Duration]
 class $Duration implements Duration, $Instance {
   static void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFunc(
-        'dart:core', 'Duration.', const _$Duration_new());
-    runtime.registerBridgeFunc(
-        'dart:core', 'Duration.zero*g', const _$Duration_zero());
-    runtime.registerBridgeFunc(
-        'dart:core',
-        'Duration.microsecondsPerMillisecond*g',
+    runtime.registerBridgeFunc('dart:core', 'Duration.', const _$Duration_new());
+    runtime.registerBridgeFunc('dart:core', 'Duration.zero*g', const _$Duration_zero());
+    runtime.registerBridgeFunc('dart:core', 'Duration.microsecondsPerMillisecond*g',
         (runtime, target, args) => $int(Duration.microsecondsPerMillisecond));
     runtime.registerBridgeFunc('dart:core', 'Duration.millisecondsPerSecond*g',
         (runtime, target, args) => $int(Duration.millisecondsPerSecond));
-    runtime.registerBridgeFunc('dart:core', 'Duration.secondsPerMinute*g',
-        (runtime, target, args) => $int(Duration.secondsPerMinute));
-    runtime.registerBridgeFunc('dart:core', 'Duration.minutesPerHour*g',
-        (runtime, target, args) => $int(Duration.minutesPerHour));
-    runtime.registerBridgeFunc('dart:core', 'Duration.hoursPerDay*g',
-        (runtime, target, args) => $int(Duration.hoursPerDay));
+    runtime.registerBridgeFunc(
+        'dart:core', 'Duration.secondsPerMinute*g', (runtime, target, args) => $int(Duration.secondsPerMinute));
+    runtime.registerBridgeFunc(
+        'dart:core', 'Duration.minutesPerHour*g', (runtime, target, args) => $int(Duration.minutesPerHour));
+    runtime.registerBridgeFunc(
+        'dart:core', 'Duration.hoursPerDay*g', (runtime, target, args) => $int(Duration.hoursPerDay));
   }
 
   /// Compile-time type definition for [$Duration]
@@ -30,131 +26,71 @@ class $Duration implements Duration, $Instance {
   /// Compile-time class declaration for [$Duration]
   static const $declaration = BridgeClassDef(BridgeClassType($type),
       constructors: {
-        '': BridgeConstructorDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation($type),
-            params: [],
-            namedParams: [
-              BridgeParameter(
-                  'days',
-                  BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType),
-                      nullable: true),
-                  true),
-              BridgeParameter(
-                  'hours',
-                  BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType),
-                      nullable: true),
-                  true),
-              BridgeParameter(
-                  'minutes',
-                  BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType),
-                      nullable: true),
-                  true),
-              BridgeParameter(
-                  'seconds',
-                  BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType),
-                      nullable: true),
-                  true),
-              BridgeParameter(
-                  'milliseconds',
-                  BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType),
-                      nullable: true),
-                  true),
-              BridgeParameter(
-                  'microseconds',
-                  BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType),
-                      nullable: true),
-                  true),
-            ]))
+        '': BridgeConstructorDef(BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [], namedParams: [
+          BridgeParameter('days', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType), nullable: true), true),
+          BridgeParameter(
+              'hours', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType), nullable: true), true),
+          BridgeParameter(
+              'minutes', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType), nullable: true), true),
+          BridgeParameter(
+              'seconds', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType), nullable: true), true),
+          BridgeParameter(
+              'milliseconds', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType), nullable: true), true),
+          BridgeParameter(
+              'microseconds', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType), nullable: true), true),
+        ]))
       },
       methods: {
-        '*': BridgeMethodDef(
-            BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [
-          BridgeParameter(
-              'factor',
-              BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.numType)),
-              false)
-        ], namedParams: []))
+        '*': BridgeMethodDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation($type),
+            params: [BridgeParameter('factor', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.numType)), false)],
+            namedParams: []))
       },
       getters: {
-        'zero': BridgeMethodDef(
-            BridgeFunctionDef(returns: BridgeTypeAnnotation($type)),
-            isStatic: true),
+        'zero': BridgeMethodDef(BridgeFunctionDef(returns: BridgeTypeAnnotation($type)), isStatic: true),
         'microsecondsPerMillisecond': BridgeMethodDef(
-            BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(
-                    BridgeTypeRef.type(RuntimeTypes.intType))),
+            BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType))),
             isStatic: true),
         'millisecondsPerSecond': BridgeMethodDef(
-            BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(
-                    BridgeTypeRef.type(RuntimeTypes.intType))),
+            BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType))),
             isStatic: true),
         'secondsPerMinute': BridgeMethodDef(
-            BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(
-                    BridgeTypeRef.type(RuntimeTypes.intType))),
+            BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType))),
             isStatic: true),
         'minutesPerHour': BridgeMethodDef(
-            BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(
-                    BridgeTypeRef.type(RuntimeTypes.intType))),
+            BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType))),
             isStatic: true),
         'hoursPerDay': BridgeMethodDef(
-            BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(
-                    BridgeTypeRef.type(RuntimeTypes.intType))),
+            BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType))),
             isStatic: true),
         'inDays': BridgeMethodDef(
-            BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(
-                    BridgeTypeRef.type(RuntimeTypes.intType))),
+            BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType))),
             isStatic: false),
         'inHours': BridgeMethodDef(
-            BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(
-                    BridgeTypeRef.type(RuntimeTypes.intType))),
+            BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType))),
             isStatic: false),
         'inMinutes': BridgeMethodDef(
-            BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(
-                    BridgeTypeRef.type(RuntimeTypes.intType))),
+            BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType))),
             isStatic: false),
         'inSeconds': BridgeMethodDef(
-            BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(
-                    BridgeTypeRef.type(RuntimeTypes.intType))),
+            BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType))),
             isStatic: false),
         'inMilliseconds': BridgeMethodDef(
-            BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(
-                    BridgeTypeRef.type(RuntimeTypes.intType))),
+            BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType))),
             isStatic: false),
         'inMicroseconds': BridgeMethodDef(
-            BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(
-                    BridgeTypeRef.type(RuntimeTypes.intType))),
+            BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType))),
             isStatic: false),
         'compareTo': BridgeMethodDef(
             BridgeFunctionDef(
-                params: [
-                  BridgeParameter(
-                      'other',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.duration)),
-                      false)
-                ],
-                returns: BridgeTypeAnnotation(
-                    BridgeTypeRef.type(RuntimeTypes.intType))),
+                params: [BridgeParameter('other', BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.duration)), false)],
+                returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType))),
             isStatic: false),
         'isNegative': BridgeMethodDef(
-            BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(
-                    BridgeTypeRef.type(RuntimeTypes.boolType))),
+            BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType))),
             isStatic: false),
         'abs': BridgeMethodDef(
-            BridgeFunctionDef(
-                params: [],
-                returns:
-                    BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.duration))),
+            BridgeFunctionDef(params: [], returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.duration))),
             isStatic: false),
       },
       setters: {},
@@ -197,15 +133,13 @@ class $Duration implements Duration, $Instance {
     return _superclass.$getProperty(runtime, identifier);
   }
 
-  static $Value? _compareTo(
-      final Runtime runtime, final $Value? target, final List<$Value?> args) {
+  static $Value? _compareTo(final Runtime runtime, final $Value? target, final List<$Value?> args) {
     var a = target!.$value as Duration;
     var other = args[0]!.$value as Duration;
     return $int(a.compareTo(other));
   }
 
-  static $Value? _abs(
-      final Runtime runtime, final $Value? target, final List<$Value?> args) {
+  static $Value? _abs(final Runtime runtime, final $Value? target, final List<$Value?> args) {
     var a = target!.$value as Duration;
     return $Duration.wrap(a.abs());
   }

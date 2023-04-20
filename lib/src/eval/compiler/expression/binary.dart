@@ -8,8 +8,7 @@ import '../errors.dart';
 import 'expression.dart';
 
 /// Compile a [BinaryExpression] to EVC bytecode
-Variable compileBinaryExpression(CompilerContext ctx, BinaryExpression e,
-    [TypeRef? boundType]) {
+Variable compileBinaryExpression(CompilerContext ctx, BinaryExpression e, [TypeRef? boundType]) {
   var L = compileExpression(e.leftOperand, ctx, boundType);
   var R = compileExpression(e.rightOperand, ctx, boundType);
 
@@ -29,8 +28,7 @@ Variable compileBinaryExpression(CompilerContext ctx, BinaryExpression e,
     TokenType.BANG_EQ: '!='
   };
 
-  var method = opMap[e.operator.type] ??
-      (throw CompileError('Unknown binary operator ${e.operator.type}'));
+  var method = opMap[e.operator.type] ?? (throw CompileError('Unknown binary operator ${e.operator.type}'));
 
   return L.invoke(ctx, method, [R]).result;
 }

@@ -44,8 +44,7 @@ mixin ScopeContext on Object implements AbstractScopeContext {
   @override
   List<bool> inNonlinearAccessContext = [false];
 
-  void beginAllocScope(
-      {int existingAllocLen = 0, bool requireNonlinearAccess = false}) {
+  void beginAllocScope({int existingAllocLen = 0, bool requireNonlinearAccess = false}) {
     allocNest.add(existingAllocLen);
     locals.add({});
     inNonlinearAccessContext.add(requireNonlinearAccess);
@@ -103,8 +102,7 @@ mixin ScopeContext on Object implements AbstractScopeContext {
 
   void resolveNonlinearity([int depth = 1]) {
     for (var i = 0; i < depth; i++) {
-      <String, Variable>{...(locals[locals.length - depth])}
-          .forEach((key, value) {
+      <String, Variable>{...(locals[locals.length - depth])}.forEach((key, value) {
         locals[locals.length - depth][key] = value.unboxIfNeeded(this);
       });
     }
@@ -197,13 +195,8 @@ class CompilerContext with ScopeContext {
   }
 
   @override
-  void beginAllocScope(
-      {int existingAllocLen = 0,
-      bool requireNonlinearAccess = false,
-      bool closure = false}) {
-    super.beginAllocScope(
-        existingAllocLen: existingAllocLen,
-        requireNonlinearAccess: requireNonlinearAccess);
+  void beginAllocScope({int existingAllocLen = 0, bool requireNonlinearAccess = false, bool closure = false}) {
+    super.beginAllocScope(existingAllocLen: existingAllocLen, requireNonlinearAccess: requireNonlinearAccess);
     if (preScan?.closedFrames.contains(locals.length - 1) ?? false) {
       final ps = PushScope.make(sourceFile, -1, '#');
       pushOp(ps, PushScope.len(ps));
@@ -222,18 +215,14 @@ class CompilerContext with ScopeContext {
         if (frameRef.isNotEmpty) {
           var frOffset = frameRef[0].scopeFrameOffset;
           for (var i = 0; i < frameRef.length - 1; i++) {
-            final _index =
-                BuiltinValue(intval: frameRef[i + 1].scopeFrameOffset)
-                    .push(this);
-            pushOp(IndexList.make(frOffset, _index.scopeFrameOffset),
-                IndexList.LEN);
+            final _index = BuiltinValue(intval: frameRef[i + 1].scopeFrameOffset).push(this);
+            pushOp(IndexList.make(frOffset, _index.scopeFrameOffset), IndexList.LEN);
             frOffset = scopeFrameOffset++;
             allocNest.last++;
           }
 
           final _index = BuiltinValue(intval: v.scopeFrameOffset).push(this);
-          pushOp(
-              IndexList.make(frOffset, _index.scopeFrameOffset), IndexList.LEN);
+          pushOp(IndexList.make(frOffset, _index.scopeFrameOffset), IndexList.LEN);
           allocNest.last++;
 
           return v.copyWith(scopeFrameOffset: scopeFrameOffset++);
@@ -282,8 +271,7 @@ class ContextSaveState {
       : locals = [
           ...context.locals.map((e) => {...e})
         ],
-        scopeDoesClose =
-            context is CompilerContext ? [...context.scopeDoesClose] : [],
+        scopeDoesClose = context is CompilerContext ? [...context.scopeDoesClose] : [],
         allocNest = [...context.allocNest],
         inNonlinearAccessContext = [...context.inNonlinearAccessContext];
   List<Map<String, Variable>> locals;
