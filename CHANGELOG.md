@@ -1,3 +1,9 @@
+## 0.6.1
+- Support for multiple catch clauses and `on`
+- $Map is now bimodal
+- Fix for error when accessing values on a map returned from
+  json.decode()
+
 ## 0.6.0
 - (Deprecated) `BridgeTypeRef.spec`, use the default constructor instead
 - (Breaking) The $runtimeType getter on $Value has been replaced with

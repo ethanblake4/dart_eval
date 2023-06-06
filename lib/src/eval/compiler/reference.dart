@@ -357,7 +357,7 @@ class IndexedReference implements Reference {
     _variable = _variable.updated(ctx);
     _index = _index.updated(ctx);
 
-    if (_variable.type.isAssignableTo(ctx, EvalTypes.getListType(ctx))) {
+    if (_variable.type.isAssignableTo(ctx, EvalTypes.getListType(ctx), forceAllowDynamic: false)) {
       if (!_index.type.isAssignableTo(ctx, EvalTypes.intType)) {
         throw CompileError('TypeError: Cannot use variable of type ${_index.type} as list index');
       }
@@ -370,7 +370,7 @@ class IndexedReference implements Reference {
       return Variable.alloc(ctx, listElementType);
     }
 
-    if (_variable.type.isAssignableTo(ctx, EvalTypes.mapType)) {
+    if (_variable.type.isAssignableTo(ctx, EvalTypes.mapType, forceAllowDynamic: false)) {
       if (_variable.type.specifiedTypeArgs.isNotEmpty &&
           !_index.type.isAssignableTo(ctx, _variable.type.specifiedTypeArgs[0])) {
         throw CompileError('TypeError: Cannot use variable of type ${_index.type} as index to map of type '

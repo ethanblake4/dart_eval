@@ -56,5 +56,27 @@ void main() {
               .$reified,
           {'a': 1, 'b': 2});
     });
+
+    test('Accessing results of json.decode()', () async {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            import 'dart:convert';
+
+            int main() {
+              final map = json.decode('{"a":1,"b":2}');
+              return map['a'];
+            }
+          '''
+        }
+      });
+
+      expect(
+          runtime.executeLib(
+            'package:example/main.dart',
+            'main',
+          ),
+          1);
+    });
   });
 }

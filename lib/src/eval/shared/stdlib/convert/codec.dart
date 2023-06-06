@@ -69,7 +69,7 @@ class $Codec implements $Instance {
   static $Value? _encode(Runtime runtime, $Value? target, List<$Value?> args) {
     final input = args[0]!.$reified;
     final result = (target!.$value as Codec).encode(input);
-    return result is $Value ? result : runtime.wrapPrimitive(result);
+    return runtime.wrap(result);
   }
 
   static const $Function __decode = $Function(_decode);
@@ -77,7 +77,7 @@ class $Codec implements $Instance {
   static $Value? _decode(Runtime runtime, $Value? target, List<$Value?> args) {
     final encoded = args[0]!.$value;
     final result = (target!.$value as Codec).decode(encoded);
-    return runtime.wrapPrimitive(result) ?? result as $Value?;
+    return runtime.wrapRecursive(result);
   }
 
   @override

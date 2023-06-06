@@ -1,8 +1,12 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
+import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
+import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
+import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 import '../errors.dart';
 import 'expression.dart';
@@ -11,6 +15,20 @@ import 'expression.dart';
 Variable compileBinaryExpression(CompilerContext ctx, BinaryExpression e, [TypeRef? boundType]) {
   var L = compileExpression(e.leftOperand, ctx, boundType);
   var R = compileExpression(e.rightOperand, ctx, boundType);
+
+  if (e.operator.type == TokenType.QUESTION_QUESTION) {
+    final outVar = Variable.alloc(ctx, TypeRef.commonBaseType(ctx, {L.type.copyWith(nullable: false), R.type}));
+    ctx.pushOp(CopyValue.make(outVar.scopeFrameOffset, L.scopeFrameOffset), CopyValue.LEN);
+    macroBranch(ctx, null, condition: (_ctx) {
+      final $null = BuiltinValue().push(ctx);
+      ctx.pushOp(CheckEq.make(L.scopeFrameOffset, $null.scopeFrameOffset), CheckEq.LEN);
+      return Variable.alloc(ctx, EvalTypes.boolType.copyWith(boxed: false));
+    }, thenBranch: (_ctx, rt) {
+      ctx.pushOp(CopyValue.make(outVar.scopeFrameOffset, R.scopeFrameOffset), CopyValue.LEN);
+      return StatementInfo(-1);
+    });
+    return outVar;
+  }
 
   final opMap = {
     TokenType.PLUS: '+',
@@ -24,7 +42,11 @@ Variable compileBinaryExpression(CompilerContext ctx, BinaryExpression e, [TypeR
     TokenType.PERCENT: '%',
     TokenType.EQ_EQ: '==',
     TokenType.AMPERSAND_AMPERSAND: '&&',
-    TokenType.BAR_BAR: '||'
+    TokenType.BAR_BAR: '||',
+    TokenType.BAR: '|',
+    TokenType.AMPERSAND: '&',
+    TokenType.LT_LT: '<<',
+    TokenType.GT_GT: '>>',
   };
 
   var method = opMap[e.operator.type] ?? (throw CompileError('Unknown binary operator ${e.operator.type}'));

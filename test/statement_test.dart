@@ -144,5 +144,28 @@ void main() {
       });
       expect(runtime.executeLib('package:example/main.dart', 'main').$value, 'errorno');
     });
+
+    test('Try/catch with on', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            String main() {
+              try {
+                return doThing();
+              } on int catch (e) {
+                return e.toString() + '2';
+              } on String catch (e) {
+                return e + 'no';
+              }
+            }
+            
+            String doThing() {
+              throw 'error';
+            }
+          ''',
+        }
+      });
+      expect(runtime.executeLib('package:example/main.dart', 'main').$value, 'errorno');
+    });
   });
 }

@@ -342,7 +342,16 @@ class IsType implements EvcOp {
     final value = runtime.frame[_objectOffset] as $Value;
     final type = value.$getRuntimeType(runtime);
     if (type < 0) {
-      final result = type == _type;
+      final bool result;
+      if (_type == -2) {
+        //dynamic
+        result = true;
+      } else if (_type == -6) {
+        // num
+        result = type == -6 || type == -8 || type == -9;
+      } else {
+        result = type == _type;
+      }
       runtime.frame[runtime.frameOffset++] = _not ? !result : result;
       return;
     }

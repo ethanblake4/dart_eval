@@ -196,6 +196,69 @@ class $int extends $num<int> {
 
   @override
   int $getRuntimeType(Runtime runtime) => RuntimeTypes.intType;
+
+  @override
+  $Value? $getProperty(Runtime runtime, String identifier) {
+    switch (identifier) {
+      case '|':
+        return __bitwiseOr;
+      case '&':
+        return __bitwiseAnd;
+      case '<<':
+        return __shiftLeft;
+      case '>>':
+        return __shiftRight;
+    }
+    return super.$getProperty(runtime, identifier);
+  }
+
+  static const $Function __bitwiseOr = $Function(_bitwiseOr);
+  static $Value? _bitwiseOr(Runtime runtime, $Value? target, List<$Value?> args) {
+    final other = args[0];
+    final _evalResult = target!.$value | other!.$value;
+
+    if (_evalResult is int) {
+      return $int(_evalResult);
+    }
+
+    throw UnimplementedError();
+  }
+
+  static const $Function __bitwiseAnd = $Function(_bitwiseAnd);
+  static $Value? _bitwiseAnd(Runtime runtime, $Value? target, List<$Value?> args) {
+    final other = args[0];
+    final _evalResult = target!.$value & other!.$value;
+
+    if (_evalResult is int) {
+      return $int(_evalResult);
+    }
+
+    throw UnimplementedError();
+  }
+
+  static const $Function __shiftLeft = $Function(_shiftLeft);
+  static $Value? _shiftLeft(Runtime runtime, $Value? target, List<$Value?> args) {
+    final other = args[0];
+    final _evalResult = target!.$value << other!.$value;
+
+    if (_evalResult is int) {
+      return $int(_evalResult);
+    }
+
+    throw UnimplementedError();
+  }
+
+  static const $Function __shiftRight = $Function(_shiftRight);
+  static $Value? _shiftRight(Runtime runtime, $Value? target, List<$Value?> args) {
+    final other = args[0];
+    final _evalResult = target!.$value >> other!.$value;
+
+    if (_evalResult is int) {
+      return $int(_evalResult);
+    }
+
+    throw UnimplementedError();
+  }
 }
 
 /// dart_eval wrapper for [double]

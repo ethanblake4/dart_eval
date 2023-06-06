@@ -284,8 +284,6 @@ class Runtime {
       return $String(value);
     } else if (value is bool) {
       return $bool(value);
-    } else if (value is Map) {
-      return $Map.wrap(value);
     } else if (value == null) {
       return $null();
     }
@@ -296,6 +294,18 @@ class Runtime {
   $Value? wrap(dynamic value) {
     if (value is $Value) {
       return value;
+    }
+    return wrapPrimitive(value) ?? (throw Exception('Cannot wrap $value'));
+  }
+
+  $Value? wrapRecursive(dynamic value) {
+    if (value is $Value) {
+      return value;
+    }
+    if (value is List) {
+      return $List.wrap(value.map(wrapRecursive).toList());
+    } else if (value is Map) {
+      return $Map.wrap(value.map((key, value) => MapEntry(wrapRecursive(key), wrapRecursive(value))));
     }
     return wrapPrimitive(value) ?? (throw Exception('Cannot wrap $value'));
   }

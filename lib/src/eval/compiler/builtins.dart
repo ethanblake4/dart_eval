@@ -139,6 +139,9 @@ final intBinaryOp = KnownMethod(
     [KnownMethodArg('other', EvalTypes.numType, false)],
     {});
 
+final intBitwiseOp =
+    KnownMethod(AlwaysReturnType(EvalTypes.intType, false), [KnownMethodArg('other', EvalTypes.intType, false)], {});
+
 const numComparisonOp =
     KnownMethod(AlwaysReturnType(EvalTypes.boolType, false), [KnownMethodArg('other', EvalTypes.numType, false)], {});
 
@@ -174,6 +177,10 @@ final Map<TypeRef, Map<String, KnownMethod>> knownMethods = {
     '*': intBinaryOp,
     '/': intBinaryOp,
     '%': intBinaryOp,
+    '|': intBitwiseOp,
+    '&': intBitwiseOp,
+    '<<': intBitwiseOp,
+    '>>': intBitwiseOp,
     '<': numComparisonOp,
     '>': numComparisonOp,
     '<=': numComparisonOp,

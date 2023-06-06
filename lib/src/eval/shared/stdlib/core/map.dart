@@ -1,7 +1,7 @@
 part of 'collection.dart';
 
-/// dart_eval wrapper for [Map]
-class $Map<K, V> implements $Instance {
+/// dart_eval bimodal wrapper for [Map]
+class $Map<K, V> implements Map<K, V>, $Instance {
   /// Wrap a [Map] in a [$Map]
   $Map.wrap(this.$value);
 
@@ -32,7 +32,11 @@ class $Map<K, V> implements $Instance {
 
   static $Value? _indexGet(Runtime runtime, $Value? target, List<$Value?> args) {
     final idx = args[0]!;
-    return (target!.$value as Map)[idx.$value];
+    final map = target!.$value as Map;
+    if (map.values.first is $Value) {
+      return map[idx];
+    }
+    return map[idx.$value];
   }
 
   static const $Function __indexSet = $Function(_indexSet);
@@ -48,4 +52,84 @@ class $Map<K, V> implements $Instance {
 
   @override
   int $getRuntimeType(Runtime runtime) => RuntimeTypes.mapType;
+
+  @override
+  V? operator [](Object? key) {
+    return $value[key];
+  }
+
+  @override
+  void operator []=(K key, V value) {
+    $value[key] = value;
+  }
+
+  @override
+  void addAll(Map<K, V> other) => $value.addAll(other);
+
+  @override
+  void addEntries(Iterable<MapEntry<K, V>> newEntries) => $value.addEntries(newEntries);
+
+  @override
+  Map<RK, RV> cast<RK, RV>() => $value.cast<RK, RV>();
+
+  @override
+  void clear() {
+    return $value.clear();
+  }
+
+  @override
+  bool containsKey(Object? key) {
+    return $value.containsKey(key);
+  }
+
+  @override
+  bool containsValue(Object? value) {
+    return $value.containsValue(value);
+  }
+
+  @override
+  Iterable<MapEntry<K, V>> get entries => $value.entries;
+
+  @override
+  void forEach(void Function(K key, V value) action) {
+    return $value.forEach(action);
+  }
+
+  @override
+  bool get isEmpty => $value.isEmpty;
+
+  @override
+  bool get isNotEmpty => $value.isNotEmpty;
+
+  @override
+  Iterable<K> get keys => $value.keys;
+
+  @override
+  int get length => $value.length;
+
+  @override
+  Map<K2, V2> map<K2, V2>(MapEntry<K2, V2> Function(K key, V value) convert) {
+    return $value.map(convert);
+  }
+
+  @override
+  V putIfAbsent(K key, V Function() ifAbsent) {
+    return $value.putIfAbsent(key, ifAbsent);
+  }
+
+  @override
+  V? remove(Object? key) => $value.remove(key);
+
+  @override
+  void removeWhere(bool Function(K key, V value) test) => $value.removeWhere(test);
+
+  @override
+  V update(K key, V Function(V value) update, {V Function()? ifAbsent}) =>
+      $value.update(key, update, ifAbsent: ifAbsent);
+
+  @override
+  void updateAll(V Function(K key, V value) update) => $value.updateAll(update);
+
+  @override
+  Iterable<V> get values => $value.values;
 }
