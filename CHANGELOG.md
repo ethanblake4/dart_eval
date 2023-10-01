@@ -3,6 +3,8 @@
 - $Map is now bimodal
 - Fix for error when accessing values on a map returned from
   json.decode()
+- Fix loops causing errors by attempting to repeatedly unbox 
+  variables declared outside the loop on each iteration
 
 ## 0.6.0
 - (Deprecated) `BridgeTypeRef.spec`, use the default constructor instead

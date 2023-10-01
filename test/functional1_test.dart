@@ -106,5 +106,32 @@ void main() {
       expect(result, $int(555));
       expect(DateTime.now().millisecondsSinceEpoch - timestamp, lessThan(100));
     });
+
+    test('Sum to', () {
+      final source = '''
+      void main() {
+        print(calc(50));
+      }
+
+      int calc(int sumTo) {
+        if (sumTo == 13) {
+          print("unlucky number!");
+        }
+        int accum = 0;
+        for (int i = 0; i < sumTo; i++) {
+          final b = i < sumTo;
+          accum = accum + i;
+        }
+        return accum;
+      }''';
+
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {'main.dart': source}
+      });
+
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('1225\n'));
+    });
   });
 }

@@ -16,6 +16,10 @@ StatementInfo macroLoop(
   bool alwaysLoopOnce = false,
   bool updateBeforeBody = false,
 }) {
+  /// Make a save-state of the box/unbox status of all locals
+  final save = ctx.saveState();
+
+  /// Create a nonlinear access context (all new variables will be unboxed)
   ctx.beginAllocScope(requireNonlinearAccess: true);
 
   if (initialization != null) {
@@ -25,7 +29,7 @@ StatementInfo macroLoop(
   JumpIfFalse? rewriteCond;
   int? rewritePos;
   Variable? conditionResult;
-  final loopStart = ctx.out.length;
+  var loopStart = ctx.out.length;
 
   ctx.beginAllocScope(requireNonlinearAccess: true);
 
@@ -46,14 +50,22 @@ StatementInfo macroLoop(
     if (update != null && !updateBeforeBody) {
       update(ctx);
     }
+
+    /// Re-unbox any variables declared in the loop or initializer
+    /// that were boxed in the loop body
     ctx.resolveNonlinearity(2);
     ctx.endAllocScope();
 
+    /// For do-while type loops, execute the condition check after the body
     if (alwaysLoopOnce && condition != null) {
       conditionResult = condition(ctx).unboxIfNeeded(ctx);
       rewriteCond = JumpIfFalse.make(conditionResult.scopeFrameOffset, -1);
       rewritePos = ctx.pushOp(rewriteCond, JumpIfFalse.LEN);
     }
+
+    /// Box/unbox variables that were declared outside the loop and changed in
+    /// the loop body to match the save state
+    ctx.resolveBranchStateDiscontinuity(save);
 
     ctx.pushOp(JumpConstant.make(loopStart), JumpConstant.LEN);
   } else {
