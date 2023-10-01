@@ -9,7 +9,6 @@ StatementInfo macroBranch(CompilerContext ctx, AlwaysReturnType? expectedReturnT
     required MacroStatementClosure thenBranch,
     MacroStatementClosure? elseBranch}) {
   ctx.beginAllocScope();
-
   final conditionResult = condition(ctx).unboxIfNeeded(ctx);
 
   final rewriteCond = JumpIfFalse.make(conditionResult.scopeFrameOffset, -1);
