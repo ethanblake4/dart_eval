@@ -39,6 +39,8 @@ class $Object implements $Instance {
     switch (identifier) {
       case '==':
         return __equals;
+      case '!=':
+        return __not_equals;
       case 'toString':
         return __toString;
       case 'hashCode':
@@ -53,6 +55,13 @@ class $Object implements $Instance {
   static $Value? _equals(Runtime runtime, $Value? target, List<$Value?> args) {
     final other = args[0];
     return $bool(target!.$value == other!.$value);
+  }
+
+  static const $Function __not_equals = $Function(_not_equals);
+
+  static $Value? _not_equals(Runtime runtime, $Value? target, List<$Value?> args) {
+    final other = args[0];
+    return $bool(target!.$value != other!.$value);
   }
 
   static const $Function __toString = $Function(_toString);
@@ -92,6 +101,8 @@ class $bool implements $Instance {
         return __and;
       case '||':
         return __or;
+      case '!':
+        return __not;
     }
     return _superclass.$getProperty(runtime, identifier);
   }
@@ -111,6 +122,12 @@ class $bool implements $Instance {
   static $Value? _or(Runtime runtime, $Value? target, List<$Value?> args) {
     final other = args[0];
     return $bool(target!.$value || other!.$value);
+  }
+
+  static const $Function __not = $Function(_not);
+
+  static $Value? _not(Runtime runtime, $Value? target, List<$Value?> args) {
+    return $bool(!target!.$value);
   }
 
   @override

@@ -63,6 +63,35 @@ class $Duration implements Duration, $Instance {
         'hoursPerDay': BridgeMethodDef(
             BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType))),
             isStatic: true),
+        'inDays': BridgeMethodDef(
+            BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType))),
+            isStatic: false),
+        'inHours': BridgeMethodDef(
+            BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType))),
+            isStatic: false),
+        'inMinutes': BridgeMethodDef(
+            BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType))),
+            isStatic: false),
+        'inSeconds': BridgeMethodDef(
+            BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType))),
+            isStatic: false),
+        'inMilliseconds': BridgeMethodDef(
+            BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType))),
+            isStatic: false),
+        'inMicroseconds': BridgeMethodDef(
+            BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType))),
+            isStatic: false),
+        'compareTo': BridgeMethodDef(
+            BridgeFunctionDef(
+                params: [BridgeParameter('other', BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.duration)), false)],
+                returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType))),
+            isStatic: false),
+        'isNegative': BridgeMethodDef(
+            BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType))),
+            isStatic: false),
+        'abs': BridgeMethodDef(
+            BridgeFunctionDef(params: [], returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.duration))),
+            isStatic: false),
       },
       setters: {},
       fields: {},
@@ -81,7 +110,38 @@ class $Duration implements Duration, $Instance {
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
+    switch (identifier) {
+      case 'inDays':
+        return $int($value.inDays);
+      case 'inHours':
+        return $int($value.inHours);
+      case 'inMinutes':
+        return $int($value.inMinutes);
+      case 'inSeconds':
+        return $int($value.inSeconds);
+      case 'inMilliseconds':
+        return $int($value.inMilliseconds);
+      case 'inMicroseconds':
+        return $int($value.inMicroseconds);
+      case 'compareTo':
+        return $Function(_compareTo);
+      case 'isNegative':
+        return $bool($value.isNegative);
+      case 'abs':
+        return $Function(_abs);
+    }
     return _superclass.$getProperty(runtime, identifier);
+  }
+
+  static $Value? _compareTo(final Runtime runtime, final $Value? target, final List<$Value?> args) {
+    var a = target!.$value as Duration;
+    var other = args[0]!.$value as Duration;
+    return $int(a.compareTo(other));
+  }
+
+  static $Value? _abs(final Runtime runtime, final $Value? target, final List<$Value?> args) {
+    var a = target!.$value as Duration;
+    return $Duration.wrap(a.abs());
   }
 
   @override

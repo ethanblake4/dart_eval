@@ -192,6 +192,9 @@ class Evc {
   /// [IsType]
   static const OP_IS_TYPE = 61;
 
+  /// [CheckNotEq]
+  static const OP_CHECK_NOT_EQ = 62;
+
   static List<int> i16b(int i16) {
     final x = ByteData(2);
     x.setInt16(0, i16);
@@ -297,4 +300,5 @@ final List<OpLoader> ops = [
   (Runtime rt) => Throw(rt), // 59
   (Runtime rt) => PopCatch(rt), // 60
   (Runtime rt) => IsType(rt), // 61
+  (Runtime rt) => CheckNotEq(rt), // 62
 ];

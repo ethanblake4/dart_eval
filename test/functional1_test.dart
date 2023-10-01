@@ -179,5 +179,30 @@ void main() {
         expect(await runtime.executeLib('package:example/main.dart', 'main'), $int(1));
       }, prints('func3\nfunc2\nfunc1\ncomplete\nfunc4 start\nfunc4 end\n'));
     });
+
+    test('String split loop', () {
+      final source = r'''
+      List<String> test() {
+        const cat = "Fluffy";
+        var list = cat.split("ff");
+        ///  ------  add Code Start ---------
+        int length = list.length;
+        print('length -> $length');
+        for(var i = 0 ; i < length; i ++){
+            print('i => $i');
+        }
+        ///  ------  add Code End ---------
+        return list;
+      }
+      ''';
+
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {'main.dart': source}
+      });
+
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'test');
+      }, prints('length -> 2\ni => 0\ni => 1\n'));
+    });
   });
 }

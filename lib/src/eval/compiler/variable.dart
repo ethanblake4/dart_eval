@@ -148,6 +148,7 @@ class Variable {
     var $this = this;
 
     final supportedNumIntrinsicOps = {'+', '-', '<', '>', '<=', '>='};
+    final supportedBoolIntrinsicOps = {'!'};
     if (type.isAssignableTo(ctx, EvalTypes.numType, forceAllowDynamic: false) &&
         supportedNumIntrinsicOps.contains(method)) {
       $this = unboxIfNeeded(ctx);
@@ -199,14 +200,23 @@ class Variable {
       }
 
       return InvokeResult($this, result, [R]);
+    } else if (type.isAssignableTo(ctx, EvalTypes.boolType, forceAllowDynamic: false) &&
+        supportedBoolIntrinsicOps.contains(method)) {
+      $this = unboxIfNeeded(ctx);
+      ctx.pushOp(LogicalNot.make($this.scopeFrameOffset), LogicalNot.LEN);
+      var result = Variable.alloc(ctx, EvalTypes.boolType.copyWith(boxed: false));
+      return InvokeResult($this, result, []);
     }
 
     final _boxed = boxUnboxMultiple(ctx, [$this, ...args], true);
     $this = _boxed[0];
     final _args = _boxed.sublist(1);
     final checkEq = method == '==' && _args.length == 1;
+    final checkNotEq = method == '!=' && _args.length == 1;
     if (checkEq) {
       ctx.pushOp(CheckEq.make($this.scopeFrameOffset, _args[0].scopeFrameOffset), CheckEq.LEN);
+    } else if (checkNotEq) {
+      ctx.pushOp(CheckNotEq.make($this.scopeFrameOffset, _args[0].scopeFrameOffset), CheckNotEq.LEN);
     } else {
       for (final _arg in _args) {
         ctx.pushOp(PushArg.make(_arg.scopeFrameOffset), PushArg.LEN);
@@ -226,7 +236,8 @@ class Variable {
           AlwaysReturnType.fromInstanceMethodOrBuiltin(ctx, $this.type, method, [..._args.map((e) => e.type)], {});
     }
 
-    final v = Variable.alloc(ctx, (returnType?.type ?? EvalTypes.dynamicType).copyWith(boxed: !checkEq));
+    final v =
+        Variable.alloc(ctx, (returnType?.type ?? EvalTypes.dynamicType).copyWith(boxed: !(checkEq || checkNotEq)));
     return InvokeResult($this, v, _args);
   }
 

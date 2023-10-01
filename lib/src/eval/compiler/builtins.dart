@@ -186,6 +186,7 @@ final Map<TypeRef, Map<String, KnownMethod>> knownMethods = {
     '<=': numComparisonOp,
     '>=': numComparisonOp,
     '==': numComparisonOp,
+    '!=': numComparisonOp,
     ..._knownObject
   },
   EvalTypes.doubleType: {
@@ -199,6 +200,7 @@ final Map<TypeRef, Map<String, KnownMethod>> knownMethods = {
     '<=': numComparisonOp,
     '>=': numComparisonOp,
     '==': numComparisonOp,
+    '!=': numComparisonOp,
     ..._knownObject
   },
   EvalTypes.numType: {
@@ -212,13 +214,16 @@ final Map<TypeRef, Map<String, KnownMethod>> knownMethods = {
     '<=': numComparisonOp,
     '>=': numComparisonOp,
     '==': numComparisonOp,
+    '!=': numComparisonOp,
     ..._knownObject
   },
-  EvalTypes.boolType: {'&&': boolBinaryOp, '||': boolBinaryOp},
+  EvalTypes.boolType: {'&&': boolBinaryOp, '||': boolBinaryOp, '==': boolBinaryOp, '!=': boolBinaryOp},
   EvalTypes.stringType: {
     '+': KnownMethod(
         AlwaysReturnType(EvalTypes.stringType, false), [KnownMethodArg('other', EvalTypes.stringType, false)], {}),
     '==': KnownMethod(
+        AlwaysReturnType(EvalTypes.boolType, false), [KnownMethodArg('other', EvalTypes.stringType, false)], {}),
+    '!=': KnownMethod(
         AlwaysReturnType(EvalTypes.boolType, false), [KnownMethodArg('other', EvalTypes.stringType, false)], {}),
     'codeUnitAt': KnownMethod(
         AlwaysReturnType(EvalTypes.intType, false), [KnownMethodArg('index', EvalTypes.intType, false)], {}),

@@ -188,6 +188,7 @@ class CompilerContext with ScopeContext {
 
   @override
   int pushOp(EvcOp op, int length) {
+    //print('#: ${op.toString()}');
     out.add(op);
     position += length;
     return out.length - 1;

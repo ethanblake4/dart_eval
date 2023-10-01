@@ -39,5 +39,22 @@ void main() {
         runtime.executeLib('package:eval_test/main.dart', 'main');
       }, prints('true\ntrue\ntrue\ntrue\nfalse\nfalse\ntrue\nfalse\n'));
     });
+
+    test("Not expression", () {
+      final runtime = compiler.compileWriteAndLoad({
+        'eval_test': {
+          'main.dart': '''
+            void main() {
+              print(!true);
+              print(!false);
+            }
+          '''
+        }
+      });
+
+      expect(() {
+        runtime.executeLib('package:eval_test/main.dart', 'main');
+      }, prints('false\ntrue\n'));
+    });
   });
 }

@@ -520,6 +520,9 @@ class Runtime {
       case CheckEq:
         op as CheckEq;
         return [Evc.OP_CHECK_EQ, ...Evc.i16b(op._value1), ...Evc.i16b(op._value2)];
+      case CheckNotEq:
+        op as CheckNotEq;
+        return [Evc.OP_CHECK_NOT_EQ, ...Evc.i16b(op._value1), ...Evc.i16b(op._value2)];
       case Try:
         op as Try;
         return [Evc.OP_TRY, ...Evc.i32b(op._catchOffset)];

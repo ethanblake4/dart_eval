@@ -14,12 +14,19 @@ Variable compilePrefixExpression(CompilerContext ctx, PrefixExpression e) {
 
   final opMap = {
     TokenType.MINUS: '-',
+    TokenType.BANG: '!',
   };
 
   var method = opMap[e.operator.type] ?? (throw CompileError('Unknown unary operator ${e.operator.type}'));
 
-  if (V.type != EvalTypes.intType && V.type != EvalTypes.doubleType) {
-    throw CompileError('Unary operator $method is currently only supported for ints and doubles');
+  if (method == '-' && V.type != EvalTypes.intType && V.type != EvalTypes.doubleType) {
+    throw CompileError('Unary operator "-" is currently only supported for ints and doubles');
+  } else if (method == '!' && V.type != EvalTypes.boolType) {
+    throw CompileError('Unary operator "!" is currently only supported for bools');
+  }
+
+  if (method == "!") {
+    return V.invoke(ctx, method, []).result;
   }
   final zero = V.type == EvalTypes.intType ? BuiltinValue(intval: 0) : BuiltinValue(doubleval: 0.0);
   return zero.push(ctx).invoke(ctx, method, [V]).result;

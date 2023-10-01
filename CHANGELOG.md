@@ -6,6 +6,10 @@
 - Fix loops causing errors by attempting to repeatedly unbox 
   variables declared outside the loop on each iteration
 - Support for bitwise int operators `|`, `&`, `<<`, and `>>`
+- Support for most DateTime functions, getters, and
+  `parse` / `tryParse` constructors (thanks @oneplus1000)
+- Support for ! and != operators (thanks @oneplus1000)
+- Support for most Duration getters (thanks @oneplus1000)
 - Support automatic await of Future return values in async
   functions
 - Upgrade to analyzer v6
