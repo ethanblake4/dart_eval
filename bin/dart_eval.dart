@@ -5,7 +5,7 @@ import 'package:args/args.dart';
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:path/path.dart';
-import 'package:pubspec2/pubspec2.dart';
+import 'package:pubspec_parse/pubspec_parse.dart';
 
 void main(List<String> args) {
   final parser = ArgParser();
@@ -88,7 +88,7 @@ void main(List<String> args) {
     }
 
     final pubspecFile = File(join(projectRoot.uri.path, 'pubspec.yaml'));
-    final pubspec = PubSpec.fromYamlString(pubspecFile.readAsStringSync());
+    final pubspec = Pubspec.parse(pubspecFile.readAsStringSync());
 
     final packageName = pubspec.name;
     compiler.version = pubspec.version?.canonicalizedVersion;
