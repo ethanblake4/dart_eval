@@ -4,7 +4,6 @@ import 'package:dart_eval/source_node_wrapper.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
-import 'package:dart_eval/src/eval/compiler/expression/identifier.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/offset_tracker.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
@@ -15,10 +14,11 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 Variable compileInstanceCreation(CompilerContext ctx, InstanceCreationExpression e) {
   final type = e.constructorName.type;
   final name = e.constructorName.name;
-  final $resolved = compileIdentifier(type.name, ctx);
+  final typeName = type.name2.value() as String;
+  final $resolved = IdentifierReference(null, typeName).getValue(ctx);
 
   if ($resolved.concreteTypes.isEmpty) {
-    throw CompileError('Cannot create instance of a non-type ${type.name.name}');
+    throw CompileError('Cannot create instance of a non-type $typeName');
   }
 
   final file = $resolved.concreteTypes.first.file;
@@ -33,14 +33,14 @@ Variable compileInstanceCreation(CompilerContext ctx, InstanceCreationExpression
 
     _dec = ctx.topLevelDeclarationsMap[offset.file]![type];
     if (_dec == null || (!_dec.isBridge && _dec.declaration! is ClassDeclaration)) {
-      _dec = ctx.topLevelDeclarationsMap[offset.file]![offset.name ?? '${type.name.name}.'] ??
+      _dec = ctx.topLevelDeclarationsMap[offset.file]![offset.name ?? '$typeName.'] ??
           (throw CompileError('Cannot instantiate: The class $type does not have a default constructor'));
     }
   } else {
     method = IdentifierReference($resolved, name.name).getValue(ctx);
     offset = method.methodOffset ?? (throw CompileError('Trying to instantiate $type, which is not a class'));
 
-    _dec = ctx.topLevelDeclarationsMap[offset.file]!['${type.name.name}.${name.name}'] ??
+    _dec = ctx.topLevelDeclarationsMap[offset.file]!['$typeName.${name.name}'] ??
         (throw CompileError('Cannot instantiate: The class $type does not have constructor ${name.name}'));
   }
 

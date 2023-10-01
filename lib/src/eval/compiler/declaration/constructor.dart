@@ -95,7 +95,8 @@ void compileConstructorDeclaration(
   if ($extends == null) {
     $super = BuiltinValue().push(ctx);
   } else {
-    extendsWhat = ctx.visibleDeclarations[ctx.library]![$extends.superclass.name.name]!;
+    extendsWhat = ctx
+        .visibleDeclarations[ctx.library]![$extends.superclass.name2.stringValue ?? $extends.superclass.name2.value()]!;
 
     final decl = extendsWhat.declaration!;
 
@@ -185,7 +186,7 @@ void compileConstructorDeclaration(
     }
 
     final op = BridgeInstantiate.make(instOffset,
-        ctx.bridgeStaticFunctionIndices[decl.sourceLib]!['${$extends.superclass.name.name}.$constructorName']!);
+        ctx.bridgeStaticFunctionIndices[decl.sourceLib]!['${$extends.superclass.name2.value()}.$constructorName']!);
     ctx.pushOp(op, BridgeInstantiate.len(op));
     final bridgeInst = Variable.alloc(ctx, EvalTypes.dynamicType);
 
@@ -223,7 +224,7 @@ void compileDefaultConstructor(CompilerContext ctx, ClassDeclaration parent, Lis
   if ($extends == null) {
     $super = BuiltinValue().push(ctx);
   } else {
-    extendsWhat = ctx.visibleDeclarations[ctx.library]![$extends.superclass.name.name]!;
+    extendsWhat = ctx.visibleDeclarations[ctx.library]![$extends.superclass.name2.stringValue!]!;
 
     final decl = extendsWhat.declaration!;
 
@@ -268,8 +269,10 @@ void compileDefaultConstructor(CompilerContext ctx, ClassDeclaration parent, Lis
       throw CompileError('Bridge class ${$extends.superclass} is a wrapper, not a bridge, so you can\'t extend it');
     }
 
-    final op = BridgeInstantiate.make(instOffset,
-        ctx.bridgeStaticFunctionIndices[decl.sourceLib]!['${$extends.superclass.name.name}.$constructorName']!);
+    final op = BridgeInstantiate.make(
+        instOffset,
+        ctx.bridgeStaticFunctionIndices[decl.sourceLib]![
+            '${$extends.superclass.name2.stringValue!}.$constructorName']!);
     ctx.pushOp(op, BridgeInstantiate.len(op));
     final bridgeInst = Variable.alloc(ctx, EvalTypes.dynamicType);
 

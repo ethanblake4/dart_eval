@@ -12,7 +12,7 @@ List<TypeRef> compileIfElementForList(IfElement e, Variable list, CompilerContex
   final elseElement = e.elseElement;
 
   macroBranch(ctx, null,
-      condition: (_ctx) => compileExpression(e.condition, _ctx),
+      condition: (_ctx) => compileExpression(e.expression, _ctx),
       thenBranch: (_ctx, _) {
         potentialReturnTypes.addAll(compileListElement(e.thenElement, list, _ctx, box));
         return StatementInfo(-1);

@@ -10,7 +10,7 @@ StatementInfo compileIfStatement(IfStatement s, CompilerContext ctx, AlwaysRetur
   return macroBranch(
     ctx,
     expectedReturnType,
-    condition: (_ctx) => compileExpression(s.condition, _ctx),
+    condition: (_ctx) => compileExpression(s.expression, _ctx),
     thenBranch: (_ctx, expectedReturnType) => compileStatement(s.thenStatement, expectedReturnType, _ctx),
     elseBranch: elseStatement == null
         ? null

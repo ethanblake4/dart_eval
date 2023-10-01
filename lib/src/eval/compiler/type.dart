@@ -115,7 +115,8 @@ class TypeRef {
       throw CompileError('No support for record types yet', typeAnnotation.parent, library, ctx);
     }
     typeAnnotation as NamedType;
-    final unspecifiedType = ctx.visibleTypes[library]![typeAnnotation.name.name]!;
+    final n = typeAnnotation.name2.stringValue ?? typeAnnotation.name2.value();
+    final unspecifiedType = ctx.visibleTypes[library]![n]!;
     final typeArgs = typeAnnotation.typeArguments;
     if (typeArgs != null) {
       final _resolved = <TypeRef>[];
@@ -155,7 +156,7 @@ class TypeRef {
     }
     final ref = typeReference.ref;
     if (ref != null) {
-      specifiedType ??= ctx.visibleTypes[ctx.library]![ctx.currentClass?.name2.stringValue];
+      specifiedType ??= ctx.visibleTypes[ctx.library]![ctx.currentClass?.name.stringValue];
 
       if (specifiedType == null) {
         return EvalTypes.dynamicType;
@@ -188,7 +189,7 @@ class TypeRef {
           throw CompileError('Specifying types from bridge is not supported');
         }
         final syExtends = syDec.extendsClause;
-        if (syExtends != null && syExtends.superclass.name.name == specifiedType.name) {
+        if (syExtends != null && syExtends.superclass.name2.stringValue == specifiedType.name) {
           final declaredType = syExtends.superclass.typeArguments?.arguments[genericIndex];
           if (declaredType != null) {
             final resolvedDeclaredType = TypeRef.fromAnnotation(ctx, specifyingType.file, declaredType);
@@ -292,7 +293,8 @@ class TypeRef {
       if ($extends == null) {
         throw CompileError('Field "$field" not found in class ${$class}');
       } else {
-        final $super = ctx.visibleTypes[$class.file]![$extends.superclass.name.name]!;
+        final $super =
+            ctx.visibleTypes[$class.file]![$extends.superclass.name2.stringValue ?? $extends.superclass.name2.value()]!;
         return TypeRef.lookupFieldType(ctx, $super.inheritTypeArgsFrom(ctx, $class), field);
       }
     }
@@ -374,7 +376,7 @@ class TypeRef {
               .map((a) => TypeRef.fromAnnotation(ctx, file, a).resolveTypeChain(ctx))
               .toList() ??
           [];
-      $super = ctx.visibleTypes[file]![superName.name.name]!
+      $super = ctx.visibleTypes[file]![superName.name2.stringValue ?? superName.name2.value()]!
           .copyWith(specifiedTypeArgs: typeParams)
           .resolveTypeChain(ctx, recursionGuard: rg);
     }

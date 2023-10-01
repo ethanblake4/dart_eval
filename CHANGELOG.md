@@ -5,6 +5,8 @@
   json.decode()
 - Fix loops causing errors by attempting to repeatedly unbox 
   variables declared outside the loop on each iteration
+- Upgrade to analyzer v6
+- Support Dart 3
 
 ## 0.6.0
 - (Deprecated) `BridgeTypeRef.spec`, use the default constructor instead

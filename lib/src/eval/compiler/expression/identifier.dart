@@ -94,7 +94,7 @@ Pair<TypeRef, DeclarationOrBridge>? resolveInstanceDeclaration(
   if ($classDec.withClause != null) {
     // ignore: deprecated_member_use
     for (final $mixin in $classDec.withClause!.mixinTypes) {
-      final mixinType = ctx.visibleTypes[library]![$mixin.name.name]!;
+      final mixinType = ctx.visibleTypes[library]![$mixin.name2.stringValue!]!;
       final result = resolveInstanceDeclaration(ctx, mixinType.file, mixinType.name, name);
       if (result != null) {
         return result;
@@ -103,7 +103,8 @@ Pair<TypeRef, DeclarationOrBridge>? resolveInstanceDeclaration(
   }
   if ($classDec.extendsClause != null) {
     // ignore: deprecated_member_use
-    final extendsType = ctx.visibleTypes[library]![$classDec.extendsClause!.superclass.name.name]!;
+    final extendsType = ctx.visibleTypes[library]![
+        $classDec.extendsClause!.superclass.name2.stringValue ?? $classDec.extendsClause!.superclass.name2.value()]!;
     return resolveInstanceDeclaration(ctx, extendsType.file, extendsType.name, name);
   }
   return null;

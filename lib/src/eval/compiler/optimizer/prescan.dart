@@ -40,7 +40,7 @@ class PrescanVisitor extends RecursiveAstVisitor<PrescanContext?> {
   @override
   PrescanContext? visitIfStatement(IfStatement node) {
     ctx.beginAllocScope();
-    node.condition.accept(this);
+    node.expression.accept(this);
     final _initialState = ctx.saveState();
     ctx.beginAllocScope();
     node.thenStatement.accept(this);

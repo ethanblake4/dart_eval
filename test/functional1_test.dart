@@ -3,7 +3,7 @@ import 'package:dart_eval/stdlib/core.dart';
 import 'package:test/test.dart';
 
 void main() {
-  group('Large functional tests', () {
+  group('Functional tests', () {
     late Compiler compiler;
 
     setUp(() {
