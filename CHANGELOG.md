@@ -5,6 +5,9 @@
   json.decode()
 - Fix loops causing errors by attempting to repeatedly unbox 
   variables declared outside the loop on each iteration
+- Support for bitwise int operators `|`, `&`, `<<`, and `>>`
+- Support automatic await of Future return values in async
+  functions
 - Upgrade to analyzer v6
 - Support Dart 3
 

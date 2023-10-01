@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/stdlib/core.dart';
 import 'package:test/test.dart';
@@ -132,6 +134,50 @@ void main() {
       expect(() {
         runtime.executeLib('package:example/main.dart', 'main');
       }, prints('1225\n'));
+    });
+
+    test('Await chain', () async {
+      final source = '''
+        import 'dart:async';
+
+        Future<int> main() async {
+          func1();
+          func2();
+          func3();
+          await Future.delayed(Duration(microseconds: 5000));
+          print("complete");
+          return func4();
+        }
+
+        void func1() async {
+          await Future.delayed(Duration(microseconds: 3500));
+          print("func1");
+        }
+
+        void func2() async {
+          await Future.delayed(Duration(microseconds: 200));
+          print("func2");
+        }
+
+        void func3() async {
+          print("func3");
+        }
+
+        Future<int> func4() async {
+          print("func4 start");
+          await Future.delayed(Duration(milliseconds: 20));
+          print("func4 end");
+          return 1;
+        }
+      ''';
+
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {'main.dart': source}
+      });
+
+      expect(() async {
+        expect(await runtime.executeLib('package:example/main.dart', 'main'), $int(1));
+      }, prints('func3\nfunc2\nfunc1\ncomplete\nfunc4 start\nfunc4 end\n'));
     });
   });
 }
