@@ -126,7 +126,7 @@ void main(List<String> args) {
 
     final ts = DateTime.now().millisecondsSinceEpoch;
 
-    final programSource = compiler.compile({packageName!: data});
+    final programSource = compiler.compile({packageName: data});
     var outputName = command['out'];
     if (outputName == null) {
       if (!command.options.contains('path')) {
