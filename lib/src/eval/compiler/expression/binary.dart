@@ -17,16 +17,21 @@ Variable compileBinaryExpression(CompilerContext ctx, BinaryExpression e, [TypeR
   var R = compileExpression(e.rightOperand, ctx, boundType);
 
   if (e.operator.type == TokenType.QUESTION_QUESTION) {
-    final outVar = Variable.alloc(ctx, TypeRef.commonBaseType(ctx, {L.type.copyWith(nullable: false), R.type}));
+    final outType = TypeRef.commonBaseType(ctx, {L.type.copyWith(nullable: false), R.type}).copyWith(boxed: true);
+    var outVar = BuiltinValue().push(ctx).copyWith(type: outType);
+    L = L.boxIfNeeded(ctx);
     ctx.pushOp(CopyValue.make(outVar.scopeFrameOffset, L.scopeFrameOffset), CopyValue.LEN);
     macroBranch(ctx, null, condition: (_ctx) {
-      final $null = BuiltinValue().push(ctx);
+      final $null = BuiltinValue().push(ctx).boxIfNeeded(ctx);
       ctx.pushOp(CheckEq.make(L.scopeFrameOffset, $null.scopeFrameOffset), CheckEq.LEN);
+      ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
       return Variable.alloc(ctx, EvalTypes.boolType.copyWith(boxed: false));
     }, thenBranch: (_ctx, rt) {
+      R = R.boxIfNeeded(ctx);
       ctx.pushOp(CopyValue.make(outVar.scopeFrameOffset, R.scopeFrameOffset), CopyValue.LEN);
       return StatementInfo(-1);
     });
+
     return outVar;
   }
 
