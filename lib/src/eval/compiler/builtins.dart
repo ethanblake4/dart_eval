@@ -145,6 +145,9 @@ final intBitwiseOp =
 const numComparisonOp =
     KnownMethod(AlwaysReturnType(EvalTypes.boolType, false), [KnownMethodArg('other', EvalTypes.numType, false)], {});
 
+const objectComparisonOp = KnownMethod(
+    AlwaysReturnType(EvalTypes.boolType, false), [KnownMethodArg('other', EvalTypes.objectType, false)], {});
+
 const doubleBinaryOp =
     KnownMethod(AlwaysReturnType(EvalTypes.doubleType, false), [KnownMethodArg('other', EvalTypes.numType, false)], {});
 
@@ -181,6 +184,7 @@ final Map<TypeRef, Map<String, KnownMethod>> knownMethods = {
     '&': intBitwiseOp,
     '<<': intBitwiseOp,
     '>>': intBitwiseOp,
+    '^': intBitwiseOp,
     '<': numComparisonOp,
     '>': numComparisonOp,
     '<=': numComparisonOp,
@@ -286,6 +290,7 @@ final Map<TypeRef, Map<String, KnownMethod>> knownMethods = {
     'trimRight': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [], {}),
     ..._knownObject
   },
+  EvalTypes.enumType: {'==': objectComparisonOp}
 };
 
 final Map<TypeRef, Map<String, KnownField>> knownFields = {

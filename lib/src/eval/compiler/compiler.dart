@@ -367,6 +367,13 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
               ctx.resetStack();
             }
             ctx.currentClass = null;
+          } else if (declaration is EnumDeclaration) {
+            ctx.currentClass = declaration;
+            for (final d in declaration.members.whereType<FieldDeclaration>().where((e) => e.isStatic)) {
+              compileFieldDeclaration(-1, d, ctx, declaration);
+              ctx.resetStack();
+            }
+            ctx.currentClass = null;
           }
         });
       });
@@ -512,10 +519,30 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
 
       _topLevelDeclarationsMap[libraryIndex]![name] = DeclarationOrBridge(libraryIndex, declaration: declaration);
 
-      if (declaration is ClassDeclaration) {
+      if (declaration is ClassDeclaration || declaration is EnumDeclaration) {
         _instanceDeclarationsMap[libraryIndex]![name] = {};
+        final members =
+            declaration is ClassDeclaration ? declaration.members : (declaration as EnumDeclaration).members;
 
-        declaration.members.forEach((member) {
+        if (declaration is EnumDeclaration) {
+          for (final constant in declaration.constants) {
+            if (!_topLevelGlobalIndices.containsKey(libraryIndex)) {
+              _topLevelGlobalIndices[libraryIndex] = {};
+              ctx.topLevelGlobalInitializers[libraryIndex] = {};
+              ctx.topLevelVariableInferredTypes[libraryIndex] = {};
+            }
+
+            final name = '${declaration.name.value() as String}.${constant.name.value()}';
+            if (_topLevelDeclarationsMap[libraryIndex]!.containsKey(name)) {
+              throw CompileError('Cannot define "$name" twice in the same library', constant, libraryIndex);
+            }
+
+            _topLevelDeclarationsMap[libraryIndex]![name] = DeclarationOrBridge(libraryIndex, declaration: constant);
+            _topLevelGlobalIndices[libraryIndex]![name] = ctx.globalIndex++;
+          }
+        }
+
+        members.forEach((member) {
           if (member is MethodDeclaration) {
             var mName = member.name.value() as String;
             if (member.isStatic) {
@@ -579,10 +606,11 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       return TypeRef.cache(ctx, libraryIndex, spec.name, fileRef: libraryIndex);
     } else {
       final declaration = declarationOrBridge.declaration!;
-      if (declaration is! ClassDeclaration) {
+      if (declaration is! ClassDeclaration && declaration is! EnumDeclaration) {
         return null;
       }
-      return TypeRef.cache(ctx, libraryIndex, declaration.name.value() as String, fileRef: libraryIndex);
+      final name = (declaration as NamedCompilationUnitMember).name.value() as String;
+      return TypeRef.cache(ctx, libraryIndex, name, fileRef: libraryIndex);
     }
   }
 
@@ -883,9 +911,10 @@ Iterable<Pair<String, DeclarationOrBridge>> _expandDeclarations(List<Declaration
         yield Pair(dName, d);
 
         /// If it is a class declaration
-        if (declaration is ClassDeclaration) {
+        if (declaration is ClassDeclaration || declaration is EnumDeclaration) {
           /// Then also yield the static class members
-          for (final member in declaration.members) {
+          for (final member
+              in (declaration is ClassDeclaration ? declaration.members : (declaration as EnumDeclaration).members)) {
             if (member is ConstructorDeclaration) {
               yield Pair('$dName.${member.name?.value() ?? ""}', DeclarationOrBridge(-1, declaration: member));
             } else if (member is MethodDeclaration && member.isStatic) {

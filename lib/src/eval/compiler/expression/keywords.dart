@@ -13,12 +13,12 @@ Variable compileThisExpression(ThisExpression e, CompilerContext ctx) {
 }
 
 Variable compileSuperExpression(SuperExpression e, CompilerContext ctx) {
-  if (ctx.currentClass == null) {
+  if (ctx.currentClass == null || ctx.currentClass is! ClassDeclaration) {
     throw CompileError("Cannot use 'super' outside of a class context");
   }
 
   var type = EvalTypes.objectType;
-  final extendsClause = ctx.currentClass!.extendsClause;
+  final extendsClause = (ctx.currentClass as ClassDeclaration).extendsClause;
   if (extendsClause != null) {
     // ignore: deprecated_member_use
     type = ctx.visibleTypes[ctx.library]![extendsClause.superclass.name2.value()]!;

@@ -1,3 +1,10 @@
+## 0.6.2
+- Initial support for enums
+- Fix null coalescing expression
+- Support for bitwise int xor operator
+- Support for optional positional and unspecified
+  named parameters in function expressions and tearoffs
+
 ## 0.6.1
 - Support for multiple catch clauses and `on`
 - $Map is now bimodal

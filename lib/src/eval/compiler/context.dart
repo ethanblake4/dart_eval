@@ -144,7 +144,7 @@ class CompilerContext with ScopeContext {
   final out = <EvcOp>[];
   int library = 0;
   int position = 0;
-  ClassDeclaration? currentClass;
+  NamedCompilationUnitMember? currentClass;
 
   /// A map of library IDs / indexes to a map of String declaration names to
   /// [DeclarationOrBridge]s. See [Compiler._topLevelDeclarationsMap] from which

@@ -215,8 +215,9 @@ class TypeRef {
     return TypeRef.fromBridgeTypeRef(ctx, BridgeTypeRef(BridgeTypeSpec(library, name), []));
   }
 
-  factory TypeRef.lookupClassDeclaration(CompilerContext ctx, int library, ClassDeclaration cls) {
-    return ctx.visibleTypes[library]![cls.name.value()] ?? (throw CompileError('Class ${cls.name.value()} not found'));
+  factory TypeRef.lookupDeclaration(CompilerContext ctx, int library, NamedCompilationUnitMember dec) {
+    return ctx.visibleTypes[library]![dec.name.value()] ??
+        (throw CompileError('Class/enum ${dec.name.value()} not found'));
   }
 
   static TypeRef? lookupFieldType(CompilerContext ctx, TypeRef $class, String field, {bool forFieldFormal = false}) {
@@ -284,12 +285,14 @@ class TypeRef {
         final $super = TypeRef.fromBridgeTypeRef(ctx, $extends);
         return TypeRef.lookupFieldType(ctx, $super.inheritTypeArgsFrom(ctx, $class), field);
       }
+    } else if (dec.declaration is EnumDeclaration && field == 'index') {
+      return EvalTypes.intType;
     } else {
       if (forFieldFormal) {
         throw CompileError('Field formals did not find field $field in class ${$class}');
       }
-      final _dec = dec.declaration as ClassDeclaration;
-      final $extends = _dec.extendsClause;
+      final _dec = dec.declaration as NamedCompilationUnitMember;
+      final $extends = _dec is ClassDeclaration ? _dec.extendsClause : null;
       if ($extends == null) {
         throw CompileError('Field "$field" not found in class ${$class}');
       } else {
@@ -360,11 +363,16 @@ class TypeRef {
         }
       }
     } else {
-      final dec = declaration.declaration! as ClassDeclaration;
-      superName = dec.extendsClause?.superclass;
-      withNames = dec.withClause?.mixinTypes.toList() ?? [];
-      implementsNames = dec.implementsClause?.interfaces.toList() ?? [];
-      generics = dec.typeParameters?.typeParameters
+      final dec = declaration.declaration!;
+      final extendsClause = dec is ClassDeclaration ? dec.extendsClause : null;
+      final withClause = dec is ClassDeclaration ? dec.withClause : (dec as EnumDeclaration).withClause;
+      final implementsClause =
+          dec is ClassDeclaration ? dec.implementsClause : (dec as EnumDeclaration).implementsClause;
+      final typeParameters = dec is ClassDeclaration ? dec.typeParameters : (dec as EnumDeclaration).typeParameters;
+      superName = extendsClause?.superclass;
+      withNames = withClause?.mixinTypes.toList() ?? [];
+      implementsNames = implementsClause?.interfaces.toList() ?? [];
+      generics = typeParameters?.typeParameters
               .map((t) => GenericParam(
                   t.name.value() as String, t.bound == null ? null : TypeRef.fromAnnotation(ctx, file, t.bound!)))
               .toList() ??
@@ -379,6 +387,8 @@ class TypeRef {
       $super = ctx.visibleTypes[file]![superName.name2.stringValue ?? superName.name2.value()]!
           .copyWith(specifiedTypeArgs: typeParams)
           .resolveTypeChain(ctx, recursionGuard: rg);
+    } else if (declaration.declaration is EnumDeclaration) {
+      $super = EvalTypes.enumType;
     }
 
     for (final withName in withNames) {
@@ -649,13 +659,15 @@ class AlwaysReturnType implements ReturnType {
   static AlwaysReturnType? fromInstanceMethodOrBuiltin(
       CompilerContext ctx, TypeRef type, String method, List<TypeRef?> argTypes, Map<String, TypeRef?> namedArgTypes,
       {List<TypeRef> typeArgs = const [], bool $static = false}) {
-    if (!$static && knownMethods[type] != null && knownMethods[type]!.containsKey(method)) {
-      final knownMethod = knownMethods[type]![method]!;
+    final resolvedType = type.resolveTypeChain(ctx);
+    final knownType = resolvedType.extendsType == EvalTypes.enumType ? EvalTypes.enumType : resolvedType;
+    if (!$static && knownMethods[knownType] != null && knownMethods[knownType]!.containsKey(method)) {
+      final knownMethod = knownMethods[knownType]![method]!;
       final returnType = knownMethod.returnType;
       if (returnType == null) {
         return null;
       }
-      return returnType.toAlwaysReturnType(ctx, type, argTypes, namedArgTypes, typeArgs: typeArgs);
+      return returnType.toAlwaysReturnType(ctx, knownType, argTypes, namedArgTypes, typeArgs: typeArgs);
     }
 
     if (type == EvalTypes.dynamicType) {

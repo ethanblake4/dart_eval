@@ -96,6 +96,7 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
   final requiredPositionalArgCount = positional.where((element) => element.isRequired).length;
 
   final positionalArgTypes = positional
+      .map((a) => a is NormalFormalParameter ? a : (a as DefaultFormalParameter).parameter)
       .cast<SimpleFormalParameter>()
       .map((a) => a.type == null ? EvalTypes.dynamicType : TypeRef.fromAnnotation(ctx, ctx.library, a.type!))
       .map((t) => t.toRuntimeType(ctx))

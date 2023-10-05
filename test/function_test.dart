@@ -192,6 +192,24 @@ void main() {
       expect(runtime.executeLib('package:example/main.dart', 'main'), $double(1.5));
     });
 
+    test('Anonymous function with named args, one unspecified', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            num main () {
+              var myfunc = ({a, b}) {
+                return a + 1;
+              };
+              
+              return myfunc(a: 2);
+            }
+          '''
+        }
+      });
+
+      expect(runtime.executeLib('package:example/main.dart', 'main'), $int(3));
+    });
+
     test('Simple async/await', () async {
       final runtime = compiler.compileWriteAndLoad({
         'example': {

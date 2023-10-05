@@ -322,7 +322,7 @@ class Runtime {
     DartMathPlugin(),
   ];
   final constantPool = <Object>[];
-  final globals = List<Object?>.filled(20000, null);
+  final globals = List<Object?>.filled(100, null);
   var globalInitializers = <int>[];
   var overrideMap = <String, OverrideSpec>{};
   final _permissions = <String, List<Permission>>{};

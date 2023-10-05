@@ -314,9 +314,8 @@ TypeRef _resolveFieldFormalType(
   if (parameterHost is! ConstructorDeclaration) {
     throw CompileError('Field formals can only occur in constructors');
   }
-  final $class = parameterHost.parent as ClassDeclaration;
-  return TypeRef.lookupFieldType(
-          ctx, TypeRef.lookupClassDeclaration(ctx, decLibrary, $class), param.name.value() as String,
+  final $class = parameterHost.parent as NamedCompilationUnitMember;
+  return TypeRef.lookupFieldType(ctx, TypeRef.lookupDeclaration(ctx, decLibrary, $class), param.name.value() as String,
           forFieldFormal: true) ??
       EvalTypes.dynamicType;
 }
@@ -332,7 +331,7 @@ TypeRef resolveSuperFormalType(
     superConstructorName = lastInit.constructorName?.name ?? '';
   }
   final $class = parameterHost.parent as ClassDeclaration;
-  final type = TypeRef.lookupClassDeclaration(ctx, decLibrary, $class);
+  final type = TypeRef.lookupDeclaration(ctx, decLibrary, $class);
   final $super = type.resolveTypeChain(ctx).extendsType ??
       (throw CompileError('Class $type has no super class, so cannot use super formals', param));
   final superCstr = ctx.topLevelDeclarationsMap[$super.file]!['${$super.name}.$superConstructorName']!;

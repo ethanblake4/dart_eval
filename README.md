@@ -410,7 +410,7 @@ may vary when bridging.
 | Switch statements | ❌ | N/A |
 | Labels and `break` | ❌ | N/A |
 | If statements | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/statement_test.dart#L28) |
-| Try-catch | Partial | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/statement_test.dart#L69), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/statement_test.dart#L87) |
+| Try-catch | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/statement_test.dart#L69), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/statement_test.dart#L87) |
 | Try-catch-finally | ❌ | N/A |
 | Lists | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart) |
 | Iterable | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L14), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L29) |
@@ -434,17 +434,18 @@ may vary when bridging.
 | Async/await | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L199), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L270), [[3]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L367) |
 | Streams | Partial | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/stdlib_test.dart#L199) |
 | String interpolation | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/stdlib_test.dart#L122) |
-| Enums | ❌ | N/A |
+| Enums | Partial | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/enum_test.dart#L12), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/enum_test.dart#L29), [[3]](https://github.com/ethanblake4/dart_eval/blob/master/test/enum_test.dart#L48) |
 | Generic function types | Partial | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L363) |
 | Typedefs | ❌ | N/A |
 | Generic classes | Partial | ❌ |
-| Type tests (`is`) | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/expression_test.dart#L12) |
+| Type tests (`is`) | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/expression_test.dart#L12), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/expression_test.dart#L44) |
 | Casting (`as`) | ❌ | N/A |
 | `assert` | ❌ | N/A |
 | Null safety | Partial | ❌ |
 | Late initialization | ❌ | N/A |
 | Cascades | ❌ | ❌ |
 | Ternary expressions | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L381) |
+| Null coalescing expressions | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/expression_test.dart#L64) |
 | Extension methods | ❌ | N/A |
 | Const expressions | Partial | N/A |
 | Isolates | ❌ | N/A |
