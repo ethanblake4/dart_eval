@@ -1,3 +1,6 @@
+## 0.6.2+1
+- Hotfix to increase size of globals array in runtime
+
 ## 0.6.2
 - Initial support for enums
 - Fix null coalescing expression
