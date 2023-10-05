@@ -17,6 +17,12 @@ class $Iterable<E> implements Iterable<E>, $Instance {
               BridgeParameter('toElement', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.functionType)), false),
             ], returns: BridgeTypeAnnotation(BridgeTypeRef(BridgeTypeSpec('dart:core', 'Iterable')))),
             isStatic: false),
+        'toList': BridgeMethodDef(
+            BridgeFunctionDef(
+                params: [
+                  BridgeParameter('growable', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType),), true),
+                ], returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list, [BridgeTypeRef.type(RuntimeTypes.dynamicType)]))),
+            isStatic: false),
       },
       getters: {
         'iterator': BridgeMethodDef(
@@ -51,6 +57,8 @@ class $Iterable<E> implements Iterable<E>, $Instance {
         return $Function(__map);
       case 'iterator':
         return $Iterator.wrap($value.iterator);
+      case 'toList':
+        return __toList;
       default:
         return _superclass.$getProperty(runtime, identifier);
     }
@@ -73,6 +81,13 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   static $Value? _map(Runtime runtime, $Value? target, List<$Value?> args) {
     final toElement = args[0] as EvalCallable;
     return $Iterable.wrap((target!.$value as Iterable).map((e) => toElement.call(runtime, null, [e])!.$value));
+  }
+
+  static const $Function __toList = $Function(_toList);
+
+  static $Value? _toList(Runtime runtime, $Value? target, List<$Value?> args) {
+    return $List.wrap(
+        (target!.$value as Iterable).toList(growable: args[0]?.$value ?? true));
   }
 
   @override
