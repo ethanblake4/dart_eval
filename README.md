@@ -4,7 +4,7 @@
 [![Web example](https://img.shields.io/badge/web-example-blue.svg)](https://ethanblake.xyz/evalpad)
 
 `dart_eval` is an extensible bytecode compiler and interpreter for the Dart language, 
-written in Dart, enabling dynamic codepush for Flutter and Dart AOT.
+written in Dart, enabling dynamic execution and codepush for Flutter and Dart AOT.
 
 | dart_eval    | [![pub package](https://img.shields.io/pub/v/dart_eval.svg?label=dart_eval&color=teal)](https://pub.dev/packages/dart_eval)          |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
@@ -397,20 +397,20 @@ may vary when bridging.
 | Conditional imports | ❌ | N/A |
 | Deferred imports | ❌ | N/A |
 | Functions | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L36) |
-| Anonymous functions | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L108), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L128), [[3]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L145), [[4]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L163), [[5]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L181) |
-| Arrow functions | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L243), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L255) |
+| Anonymous functions | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L104), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L124), [[3]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L141), [[4]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L159), [[5]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L177), [[6]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L195) |
+| Arrow functions | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L237), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L249) |
 | Sync generators | ❌ | N/A |
 | Async generators | ❌ | N/A |
-| Tear-offs | Partial | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L288), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L307) |
-| For loops | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/statement_test.dart#L13), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/statement_test.dart#L28) |
-| While loops | ✅ | ❌ |
-| Do-while loops | ✅ | ❌ |
+| Tear-offs | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/tearoff_test.dart#L12), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/tearoff_test.dart#L31), [[3]](https://github.com/ethanblake4/dart_eval/blob/master/test/tearoff_test.dart#L53) |
+| For loops | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/loop_test.dart#L13), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/loop_test.dart#L28) |
+| While loops | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/loop_test.dart#L69) |
+| Do-while loops | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/loop_test.dart#L86) |
 | For-each loops | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/statement_test.dart#L52) |
 | Async for-each | ❌ | N/A |
 | Switch statements | ❌ | N/A |
 | Labels and `break` | ❌ | N/A |
-| If statements | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/statement_test.dart#L28) |
-| Try-catch | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/statement_test.dart#L69), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/statement_test.dart#L87) |
+| If statements | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/loop_test.dart#L28) |
+| Try-catch | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#L13), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#31), [[3]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#49), [[4]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#71), [[5]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#92) |
 | Try-catch-finally | ❌ | N/A |
 | Lists | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart) |
 | Iterable | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L14), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L29) |
@@ -427,15 +427,15 @@ may vary when bridging.
 | Class inheritance | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/functional1_test.dart) |
 | Abstract and `implements` | Partial | ❌ |
 | `this` keyword | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/class_test.dart#L89), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/class_test.dart#L116) |
-| `super` keyword | ✅ | ❌ |
+| `super` keyword | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/class_test.dart#L319) |
 | Super constructor params | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/class_test.dart#L277) |
 | Mixins | ❌ | N/A |
-| Futures | Partial | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/stdlib_test.dart#L27), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/stdlib_test.dart#L46) |
-| Async/await | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L199), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L270), [[3]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L367) |
-| Streams | Partial | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/stdlib_test.dart#L199) |
-| String interpolation | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/stdlib_test.dart#L122) |
+| Futures | Partial | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/async_test.dart#L69), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/async_test.dart#L88) |
+| Async/await | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/async_test.dart#L13), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/async_test.dart#L33), [[3]](https://github.com/ethanblake4/dart_eval/blob/master/test/async_test.dart#L51) |
+| Streams | Partial | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/stdlib_test.dart#L172) |
+| String interpolation | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/stdlib_test.dart#L95) |
 | Enums | Partial | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/enum_test.dart#L12), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/enum_test.dart#L29), [[3]](https://github.com/ethanblake4/dart_eval/blob/master/test/enum_test.dart#L48) |
-| Generic function types | Partial | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L363) |
+| Generic function types | Partial | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L302) |
 | Typedefs | ❌ | N/A |
 | Generic classes | Partial | ❌ |
 | Type tests (`is`) | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/expression_test.dart#L12), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/expression_test.dart#L44) |
@@ -444,7 +444,7 @@ may vary when bridging.
 | Null safety | Partial | ❌ |
 | Late initialization | ❌ | N/A |
 | Cascades | ❌ | ❌ |
-| Ternary expressions | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L381) |
+| Ternary expressions | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/expression_test.dart#L118) |
 | Null coalescing expressions | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/expression_test.dart#L64) |
 | Extension methods | ❌ | N/A |
 | Const expressions | Partial | N/A |

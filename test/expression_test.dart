@@ -114,5 +114,23 @@ void main() {
         runtime.executeLib('package:eval_test/main.dart', 'main');
       }, prints('0\n3\n4\n0\n3\n'));
     });
+
+    test('Conditional expression', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main () {
+              return fun(3);
+            }
+            
+            int fun(int a) {
+              return a > 2 ? 1 : 2;
+            }
+           '''
+        }
+      });
+
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 1);
+    });
   });
 }

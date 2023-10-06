@@ -217,39 +217,6 @@ void main() {
       expect(runtime.executeLib('package:example/main.dart', 'main'), 9);
     });
 
-    test('Method tearoffs', () {
-      final runtime = compiler.compileWriteAndLoad({
-        'example': {
-          'main.dart': '''
-            int main () {
-              return M(4).run();
-            }
-            
-            class M {
-              M(this.x);
-              
-              final int x;
-              
-              int run() {
-                return load(x, add);
-              }
-
-              int load(int y, Function op) {
-                return op(y) + 1;
-              }
-
-              int add(int y) {
-                return y + 5;
-              }
-            }
-            
-          '''
-        }
-      });
-
-      expect(runtime.executeLib('package:example/main.dart', 'main'), 10);
-    });
-
     test('Getters and setters', () {
       final runtime = compiler.compileWriteAndLoad({
         'example': {
@@ -347,6 +314,38 @@ void main() {
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), $String('d'));
+    });
+
+    test('Accessing methods and fields on super', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            class Animal {
+              Animal(this.name);
+              final String name;
+              
+              String getLabel() {
+                return name + ' the animal';
+              }
+            }
+
+            class Cat extends Animal {
+              Cat(String name) : super(name);
+              
+              String getLabel() {
+                return super.getLabel() + ' (cat)';
+              }
+            }
+
+            String main () {
+              final c = Cat('Julian');
+              return c.getLabel();
+            }
+          '''
+        }
+      });
+
+      expect(runtime.executeLib('package:example/main.dart', 'main'), $String('Julian the animal (cat)'));
     });
   });
 }
