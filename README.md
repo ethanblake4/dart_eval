@@ -13,8 +13,8 @@ written in Dart, enabling dynamic execution and codepush for Flutter and Dart AO
 
 The primary aspect of `dart_eval`'s goal is to be interoperable with real 
 Dart code. Classes created in 'real Dart' can be used inside the interpreter 
-with a wrapper, and classes created in the interpreter can be used outside it 
-by creating an interface and bridge class.
+with a [wrapper](#wrapper-interop), and classes created in the interpreter 
+can be used outside it by creating an interface and [bridge class](#bridge-interop).
 
 dart_eval's compiler is powered under the hood by the Dart 
 [analyzer](https://pub.dev/packages/analyzer), so it achieves 100% correct and 
@@ -22,8 +22,13 @@ up-to-date parsing (although compilation and evaluation aren't quite there yet.)
 
 Currently dart_eval implements a decent amount of the Dart spec, but there 
 are still missing features like generators, Sets and extension methods.
-In addition, much of the standard library hasn't been implemented.
+In addition, parts of the standard library haven't been implemented. See the
+[language feature support table](#language-feature-support-table) for details.
+
 ## Usage
+
+> **Note**: See the README for [flutter_eval](https://pub.dev/packages/flutter_eval) for
+information on setting up Flutter code push.
 
 A basic usage example of the `eval` method, which is a simple shorthand to
 execute Dart code at runtime:
@@ -219,7 +224,8 @@ Using a wrapper enables the Eval environment to access the functions and fields 
 a class created outside Eval. It's much more powerful than value interop, and
 simpler than bridge interop, making it a great choice for certain use cases. To use
 wrapper interop, create a class that implements `$Instance`. Then, override 
-`$getProperty` / `$setProperty` to define your fields and methods.
+`$getProperty` / `$setProperty` to define your fields and methods. For more information,
+see the [wrapper interop wiki page](https://github.com/ethanblake4/dart_eval/wiki/Wrappers).
 
 #### Hot wrappers and runtime overrides
 
@@ -306,8 +312,8 @@ only if the app version is less than 1.4.0.
 
 Bridge interop enables the most functionality: Not only can Eval access the fields
 of an object, but it can also be extended, allowing you to create subclasses within Eval
-and use them outside of Eval. For example, bridge interop is used by 
-Flightstream to enable the creation of custom Flutter widgets. 
+and use them outside of Eval. For example, this can be used to create custom
+Flutter widgets that can be dynamically updated at runtime.
 
 However, it is also somewhat difficult to use, and it can't be used to wrap existing 
 objects created in code you don't control. (For utmost flexibility at the expense of 
@@ -319,7 +325,8 @@ Bridge interop also requires that the class definitions be available at both com
 and runtime. (If you're just using the `eval` method, you don't have to worry about
 this.)
 
-An example featuring bridge interop is available in the `example` directory.
+An example featuring bridge interop is available in the `example` directory. For more
+information, see the [wiki page on bridge classes](https://github.com/ethanblake4/dart_eval/wiki/Bridge-classes).
 
 ## Plugins
 
@@ -371,6 +378,8 @@ Bytecodes can do things like push and pop values on the stack, add numbers, and 
 other places in the program, as well as more complex Dart-specific operations like 
 create a class.
 
+See the [in-depth overview wiki page](https://github.com/ethanblake4/dart_eval/wiki/In-depth-overview) for more information.
+
 ### Does it support Flutter?
 
 Yes! Check out [flutter_eval](https://pub.dev/packages/flutter_eval).
@@ -378,10 +387,12 @@ Yes! Check out [flutter_eval](https://pub.dev/packages/flutter_eval).
 ### How fast is it?
 
 Preliminary testing shows that, for simple code, `dart_eval` running in AOT-compiled Dart 
-is around 12x slower than standard AOT Dart and is approximately on par with a language like 
-Ruby.
-For many use cases this actually doesn't matter too much, e.g. in the case of Flutter 
-where the app spends 99% of its performance budget in the Flutter framework itself.
+is around 12x slower than standard AOT Dart and is approximately on par with a 
+language like Ruby.
+However, it's important to remember this only applies to code running directly in the 
+dart_eval VM, and not any code it interacts with. For example, most Flutter apps spend 
+the vast majority of their performance budget in the Flutter framework itself, so the
+speed impact of dart_eval is usually negligible.
 
 ## Language feature support table
 
@@ -414,7 +425,7 @@ may vary when bridging.
 | Try-catch-finally | ❌ | N/A |
 | Lists | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart) |
 | Iterable | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L14), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L29) |
-| Maps | Partial | ❌ |
+| Maps | Partial | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/convert_test.dart#L60) |
 | Sets | ❌ | N/A |
 | Collection `for` | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L14), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L76) |
 | Collection `if` | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L14), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L52) |
@@ -443,7 +454,7 @@ may vary when bridging.
 | `assert` | ❌ | N/A |
 | Null safety | Partial | ❌ |
 | Late initialization | ❌ | N/A |
-| Cascades | ❌ | ❌ |
+| Cascades | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/expression_test.dart#L136), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/expression_test.dart#L160) |
 | Ternary expressions | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/expression_test.dart#L118) |
 | Null coalescing expressions | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/expression_test.dart#L64) |
 | Extension methods | ❌ | N/A |
@@ -452,6 +463,8 @@ may vary when bridging.
 
 ## Features and bugs
 
-Please file feature requests and bugs at the [issue tracker][tracker].
+Please file feature requests and bugs at the [issue tracker][tracker]. If you need help,
+use the [discussion board][discussion].
 
 [tracker]: https://github.com/ethanblake4/dart_eval/issues
+[discussion]: https://github.com/ethanblake4/dart_eval/discussions

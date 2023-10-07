@@ -16,6 +16,7 @@ void compileFieldDeclaration(
       final initializer = field.initializer;
       if (initializer != null) {
         final pos = beginMethod(ctx, field, field.offset, '$fieldName*i');
+        ctx.beginAllocScope();
         TypeRef? type;
         final specifiedType = d.fields.type;
         if (specifiedType != null) {
@@ -44,6 +45,7 @@ void compileFieldDeclaration(
         ctx.topLevelGlobalInitializers[ctx.library]![_name] = pos;
         ctx.runtimeGlobalInitializerMap[_index] = pos;
         ctx.pushOp(Return.make(V.scopeFrameOffset), Return.LEN);
+        ctx.endAllocScope(popValues: false);
       }
     } else {
       final pos = beginMethod(ctx, d, d.offset, '$parentName.$fieldName (get)');

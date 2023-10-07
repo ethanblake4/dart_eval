@@ -132,5 +132,55 @@ void main() {
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 1);
     });
+
+    test('Simple cascade', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              var x = X();
+              x..a = 1..b = 2;
+              print(x.a);
+              print(x.b);
+            }
+            
+            class X {
+              int a = 0;
+              int b = 0;
+            }
+           '''
+        }
+      });
+
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('1\n2\n'));
+    });
+
+    test('Cascade with method call', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              var x = X();
+              x..a = 1..b = 2..printValues();
+            }
+            
+            class X {
+              int a = 0;
+              int b = 0;
+              void printValues() {
+                print(a);
+                print(b);
+              }
+            }
+           '''
+        }
+      });
+
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('1\n2\n'));
+    });
   });
 }

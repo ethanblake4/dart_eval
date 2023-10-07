@@ -16,10 +16,10 @@ import '../util.dart';
 import 'expression.dart';
 import 'identifier.dart';
 
-Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e) {
-  Variable? L;
+Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e, {Variable? cascadeTarget}) {
+  Variable? L = cascadeTarget;
   var isPrefix = false;
-  if (e.target != null) {
+  if (e.target != null && cascadeTarget == null) {
     try {
       L = compileExpression(e.target!, ctx);
     } on PrefixError {

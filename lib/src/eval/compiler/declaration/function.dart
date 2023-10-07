@@ -75,6 +75,7 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
     stInfo = doReturn(ctx, expectedReturnType, compileExpression(b.expression, ctx, expectedReturnType.type),
         isAsync: b.isAsynchronous);
     stInfo = StatementInfo(-1, willAlwaysReturn: true);
+    ctx.endAllocScope(popValues: false);
   } else {
     throw CompileError('Unsupported function body type: ${b.runtimeType}');
   }
