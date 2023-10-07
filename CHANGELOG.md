@@ -1,3 +1,15 @@
+## 0.6.3
+- Support for cascades
+- Support for null coalescing assignment operator `??=`
+- Support for many `List` and `Iterable` methods (thanks @kodjodevf)
+- Fix error with do-while loops
+- Fix scope leak when using arrow functions
+- Fix properties not being properly boxed/unboxed when passed to
+  a function
+- Fix constructor field initializer boxing
+- Improve test coverage
+- Add topics to pubspec
+
 ## 0.6.2+1
 - Hotfix to increase size of globals array in runtime
 

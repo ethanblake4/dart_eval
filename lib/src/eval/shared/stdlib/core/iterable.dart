@@ -53,12 +53,28 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
-      case 'join':
-        return $Function(__join);
-      case 'map':
-        return $Function(__map);
+      case 'any':
+        return __any;
+      case 'elementAt':
+        return __elementAt;
+      case 'every':
+        return __every;
       case 'iterator':
         return $Iterator.wrap($value.iterator);
+      case 'followedBy':
+        return __followedBy;
+      case 'skip':
+        return __skip;
+      case 'skipWhile':
+        return __skipWhile;
+      case 'join':
+        return __join;
+      case 'map':
+        return __map;
+      case 'take':
+        return __take;
+      case 'toSet':
+        return __toSet;
       case 'toList':
         return __toList;
       default:
@@ -89,6 +105,57 @@ class $Iterable<E> implements Iterable<E>, $Instance {
 
   static $Value? _toList(Runtime runtime, $Value? target, List<$Value?> args) {
     return $List.wrap((target!.$value as Iterable).toList(growable: args[0]?.$value ?? true));
+  }
+
+  static const $Function __any = $Function(_any);
+
+  static $Value? _any(Runtime runtime, $Value? target, List<$Value?> args) {
+    final test = args[0] as EvalCallable;
+    return $bool((target!.$value as Iterable).any((e) => test.call(runtime, null, [e])!.$value as bool));
+  }
+
+  static const $Function __every = $Function(_every);
+
+  static $Value? _every(Runtime runtime, $Value? target, List<$Value?> args) {
+    final test = args[0] as EvalCallable;
+    return $bool((target!.$value as Iterable).every((e) => test.call(runtime, null, [e])!.$value as bool));
+  }
+
+  static const $Function __elementAt = $Function(_elementAt);
+
+  static $Value? _elementAt(Runtime runtime, $Value? target, List<$Value?> args) {
+    return (target!.$value as List).elementAt(args[0]!.$value);
+  }
+
+  static const $Function __followedBy = $Function(_followedBy);
+
+  static $Value? _followedBy(Runtime runtime, $Value? target, List<$Value?> args) {
+    return $Iterable.wrap((target!.$value as Iterable).followedBy(args[0]!.$value as Iterable));
+  }
+
+  static const $Function __skip = $Function(_skip);
+
+  static $Value? _skip(Runtime runtime, $Value? target, List<$Value?> args) {
+    return $Iterable.wrap((target!.$value as Iterable).skip(args[0]!.$value));
+  }
+
+  static const $Function __skipWhile = $Function(_skipWhile);
+
+  static $Value? _skipWhile(Runtime runtime, $Value? target, List<$Value?> args) {
+    final test = args[0] as EvalCallable;
+    return $Iterable.wrap((target!.$value as List).skipWhile((e) => test.call(runtime, null, [e])!.$value as bool));
+  }
+
+  static const $Function __take = $Function(_take);
+
+  static $Value? _take(Runtime runtime, $Value? target, List<$Value?> args) {
+    return $Iterable.wrap((target!.$value as Iterable).take(args[0]!.$value));
+  }
+
+  static const $Function __toSet = $Function(_toSet);
+
+  static $Value? _toSet(Runtime runtime, $Value? target, List<$Value?> args) {
+    return $List.wrap((target!.$value as Iterable).toSet().toList());
   }
 
   @override

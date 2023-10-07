@@ -456,7 +456,7 @@ may vary when bridging.
 | Late initialization | ❌ | N/A |
 | Cascades | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/expression_test.dart#L136), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/expression_test.dart#L160) |
 | Ternary expressions | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/expression_test.dart#L118) |
-| Null coalescing expressions | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/expression_test.dart#L64) |
+| Null coalescing expressions | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/expression_test.dart#L64), [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/expression_test.dart#L186) |
 | Extension methods | ❌ | N/A |
 | Const expressions | Partial | N/A |
 | Isolates | ❌ | N/A |

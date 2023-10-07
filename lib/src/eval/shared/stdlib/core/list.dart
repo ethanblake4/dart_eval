@@ -236,8 +236,6 @@ class $List<E> implements List<E>, $Instance {
         return $super.first;
       case 'contains':
         return __listContains;
-      case 'map':
-        return __map;
       case 'where':
         return __where;
       case 'isEmpty':
@@ -248,8 +246,6 @@ class $List<E> implements List<E>, $Instance {
         return $super.last;
       case 'reversed':
         return $Iterable.wrap($value.reversed);
-      case 'toSet':
-        return __toSet;
       case 'iterator':
         return $Iterator.wrap($value.iterator);
       case 'insert':
@@ -258,8 +254,6 @@ class $List<E> implements List<E>, $Instance {
         return __insertAll;
       case 'remove':
         return __remove;
-      case 'any':
-        return __any;
       case 'asMap':
         return __asMap;
       case 'hashCode':
@@ -268,38 +262,22 @@ class $List<E> implements List<E>, $Instance {
         return __lastIndexOf;
       case 'indexOf':
         return __indexOf;
-      case 'elementAt':
-        return __elementAt;
-      case 'every':
-        return __every;
       case 'retainWhere':
         return __retainWhere;
       case 'replaceRange':
         return __replaceRange;
-      case 'followedBy':
-        return __followedBy;
       case 'getRange':
         return __getRange;
-      case 'join':
-        return __join;
       case 'sort':
         return __sort;
       case 'removeAt':
         return __removeAt;
       case 'removeLast':
         return __removeLast;
-      case 'skip':
-        return __skip;
-      case 'skipWhile':
-        return __skipWhile;
       case 'sublist':
         return __sublist;
-      case 'take':
-        return __take;
       case 'takeWhile':
         return __takeWhile;
-      case 'toString':
-        return __toString;
       case 'clear':
         return __clear;
     }
@@ -309,19 +287,6 @@ class $List<E> implements List<E>, $Instance {
   @override
   void $setProperty(Runtime runtime, String identifier, $Value value) {
     throw EvalUnknownPropertyException(identifier);
-  }
-
-  static const $Function __map = $Function(_map);
-
-  static $Value? _map(Runtime runtime, $Value? target, List<$Value?> args) {
-    final toElement = args[0] as EvalCallable;
-    return $Iterable.wrap((target!.$value as Iterable).map((e) => toElement.call(runtime, null, [e])!.$value));
-  }
-
-  static const $Function __followedBy = $Function(_followedBy);
-
-  static $Value? _followedBy(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $Iterable.wrap((target!.$value as Iterable).followedBy(args[0]!.$value as Iterable));
   }
 
   static const $Function __getRange = $Function(_getRange);
@@ -337,24 +302,11 @@ class $List<E> implements List<E>, $Instance {
     return $Iterable.wrap((target!.$value as Iterable).where((e) => test.call(runtime, null, [e])!.$value as bool));
   }
 
-  static const $Function __skipWhile = $Function(_skipWhile);
-
-  static $Value? _skipWhile(Runtime runtime, $Value? target, List<$Value?> args) {
-    final test = args[0] as EvalCallable;
-    return $Iterable.wrap((target!.$value as List).skipWhile((e) => test.call(runtime, null, [e])!.$value as bool));
-  }
-
   static const $Function __takeWhile = $Function(_takeWhile);
 
   static $Value? _takeWhile(Runtime runtime, $Value? target, List<$Value?> args) {
     final test = args[0] as EvalCallable;
     return $Iterable.wrap((target!.$value as List).takeWhile((e) => test.call(runtime, null, [e])!.$value as bool));
-  }
-
-  static const $Function __toString = $Function(_toString);
-
-  static $Value? _toString(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $String((target!.$value as List).toString());
   }
 
   static const $Function __clear = $Function(_clear);
@@ -391,26 +343,6 @@ class $List<E> implements List<E>, $Instance {
     return $int((target!.$value as List).indexOf(args[0], args[1]?.$value ?? 0));
   }
 
-  static const $Function __elementAt = $Function(_elementAt);
-
-  static $Value? _elementAt(Runtime runtime, $Value? target, List<$Value?> args) {
-    return (target!.$value as List).elementAt(args[0]!.$value);
-  }
-
-  static const $Function __any = $Function(_any);
-
-  static $Value? _any(Runtime runtime, $Value? target, List<$Value?> args) {
-    final test = args[0] as EvalCallable;
-    return $bool((target!.$value as List).any((e) => test.call(runtime, null, [e])!.$value as bool));
-  }
-
-  static const $Function __every = $Function(_every);
-
-  static $Value? _every(Runtime runtime, $Value? target, List<$Value?> args) {
-    final test = args[0] as EvalCallable;
-    return $bool((target!.$value as List).every((e) => test.call(runtime, null, [e])!.$value as bool));
-  }
-
   static const $Function __sort = $Function(_sort);
 
   static $Value? _sort(Runtime runtime, $Value? target, List<$Value?> args) {
@@ -443,29 +375,10 @@ class $List<E> implements List<E>, $Instance {
     return (target!.$value as List)[idx.$value];
   }
 
-  static const $Function __join = $Function(_join);
-
-  static $Value? _join(Runtime runtime, $Value? target, List<$Value?> args) {
-    final separator = args[0]?.$value ?? '';
-    return $String((target!.$value as List).join(separator));
-  }
-
   static const $Function __sublist = $Function(_sublist);
 
   static $Value? _sublist(Runtime runtime, $Value? target, List<$Value?> args) {
     return $List.wrap((target!.$value as List).sublist(args[0]!.$value, args[1]?.$value));
-  }
-
-  static const $Function __skip = $Function(_skip);
-
-  static $Value? _skip(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $Iterable.wrap((target!.$value as List).skip(args[0]!.$value));
-  }
-
-  static const $Function __take = $Function(_take);
-
-  static $Value? _take(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $Iterable.wrap((target!.$value as List).take(args[0]!.$value));
   }
 
   static const $Function __listContains = $Function(_listContains);
@@ -521,12 +434,6 @@ class $List<E> implements List<E>, $Instance {
 
   static $Value? _asMap(Runtime runtime, $Value? target, List<$Value?> args) {
     return $Map.wrap((target!.$value as List).asMap());
-  }
-
-  static const $Function __toSet = $Function(_toSet);
-
-  static $Value? _toSet(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $List.wrap((target!.$value as List).toSet().toList());
   }
 
   @override
