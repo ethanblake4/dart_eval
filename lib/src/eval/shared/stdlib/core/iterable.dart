@@ -20,8 +20,10 @@ class $Iterable<E> implements Iterable<E>, $Instance {
         'toList': BridgeMethodDef(
             BridgeFunctionDef(
                 params: [
-                  BridgeParameter('growable', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType),), true),
-                ], returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list, [BridgeTypeRef.type(RuntimeTypes.dynamicType)]))),
+                  BridgeParameter('growable', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)), true),
+                ],
+                returns: BridgeTypeAnnotation(
+                    BridgeTypeRef(CoreTypes.list, [BridgeTypeRef.type(RuntimeTypes.dynamicType)]))),
             isStatic: false),
       },
       getters: {
@@ -86,8 +88,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   static const $Function __toList = $Function(_toList);
 
   static $Value? _toList(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $List.wrap(
-        (target!.$value as Iterable).toList(growable: args[0]?.$value ?? true));
+    return $List.wrap((target!.$value as Iterable).toList(growable: args[0]?.$value ?? true));
   }
 
   @override
