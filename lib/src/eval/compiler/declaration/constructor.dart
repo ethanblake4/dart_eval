@@ -5,6 +5,7 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/fpl.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/scope.dart';
 import 'package:dart_eval/src/eval/compiler/source.dart';
@@ -14,15 +15,16 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import '../variable.dart';
 
 void compileConstructorDeclaration(
-    CompilerContext ctx, ConstructorDeclaration d, ClassDeclaration parent, List<FieldDeclaration> fields) {
+    CompilerContext ctx, ConstructorDeclaration d, NamedCompilationUnitMember parent, List<FieldDeclaration> fields) {
   final parentName = parent.name.value() as String;
   final dName = (d.name?.value() as String?) ?? "";
   final n = '$parentName.$dName';
+  final isEnum = parent is EnumDeclaration;
 
   ctx.topLevelDeclarationPositions[ctx.library]![n] = beginMethod(ctx, d, d.offset, '$n()');
 
-  ctx.beginAllocScope(existingAllocLen: d.parameters.parameters.length);
-  ctx.scopeFrameOffset = d.parameters.parameters.length;
+  ctx.beginAllocScope(existingAllocLen: d.parameters.parameters.length + (isEnum ? 2 : 0));
+  ctx.scopeFrameOffset = d.parameters.parameters.length + (isEnum ? 2 : 0);
 
   SuperConstructorInvocation? $superInitializer;
   final otherInitializers = <ConstructorInitializer>[];
@@ -36,14 +38,19 @@ void compileConstructorDeclaration(
     }
   }
 
-  final fieldIndices = _getFieldIndices(fields);
+  final fieldIndices = {
+    if (parent is EnumDeclaration) ...{'index': 0, 'name': 1},
+    ..._getFieldIndices(fields, parent is EnumDeclaration ? 2 : 0)
+  };
+
   final fieldIdx = fieldIndices.length;
 
   final fieldFormalNames = <String>[];
-  final resolvedParams = resolveFPLDefaults(ctx, d.parameters, false, allowUnboxed: true);
+  final resolvedParams =
+      resolveFPLDefaults(ctx, d.parameters, false, allowUnboxed: true, isEnum: parent is EnumDeclaration);
 
   final superParams = <String>[];
-  var i = 0;
+  var i = parent is EnumDeclaration ? 2 : 0;
 
   for (final param in resolvedParams) {
     final p = param.parameter;
@@ -54,8 +61,8 @@ void compileConstructorDeclaration(
       if (p.type != null) {
         _type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
       }
-      _type ??= TypeRef.lookupFieldType(
-          ctx, TypeRef.lookupClassDeclaration(ctx, ctx.library, parent), p.name.value() as String);
+      _type ??=
+          TypeRef.lookupFieldType(ctx, TypeRef.lookupDeclaration(ctx, ctx.library, parent), p.name.value() as String);
       _type ??= V?.type;
       _type ??= EvalTypes.dynamicType;
 
@@ -83,7 +90,7 @@ void compileConstructorDeclaration(
     i++;
   }
 
-  final $extends = parent.extendsClause;
+  final $extends = parent is EnumDeclaration ? null : (parent as ClassDeclaration).extendsClause;
   Variable $super;
   DeclarationOrPrefix? extendsWhat;
 
@@ -104,7 +111,7 @@ void compileConstructorDeclaration(
       ctx.pushOp(PushBridgeSuperShim.make(), PushBridgeSuperShim.LEN);
       $super = Variable.alloc(ctx, EvalTypes.dynamicType);
     } else {
-      final extendsType = TypeRef.lookupClassDeclaration(ctx, ctx.library, decl.declaration as ClassDeclaration);
+      final extendsType = TypeRef.lookupDeclaration(ctx, ctx.library, decl.declaration as ClassDeclaration);
 
       AlwaysReturnType? mReturnType;
 
@@ -132,7 +139,7 @@ void compileConstructorDeclaration(
       if (offset.offset == null) {
         ctx.offsetTracker.setOffset(loc, offset);
       }
-      final clsType = TypeRef.lookupClassDeclaration(ctx, ctx.library, parent);
+      final clsType = TypeRef.lookupDeclaration(ctx, ctx.library, parent);
       mReturnType = method.methodReturnType?.toAlwaysReturnType(ctx, clsType, argTypes, namedArgTypes) ??
           AlwaysReturnType(EvalTypes.dynamicType, true);
 
@@ -141,9 +148,22 @@ void compileConstructorDeclaration(
     }
   }
 
-  final op = CreateClass.make(ctx.library, $super.scopeFrameOffset, parent.name.value() as String, fieldIdx);
+  final op = CreateClass.make(
+      ctx.library, $super.scopeFrameOffset, parent.name.value() as String, fieldIdx + (isEnum ? 2 : 0));
   ctx.pushOp(op, CreateClass.len(op));
   final instOffset = ctx.scopeFrameOffset++;
+
+  if (parent is EnumDeclaration) {
+    /// Add implicit index and name fields
+    ctx.inferredFieldTypes.putIfAbsent(ctx.library, () => {}).putIfAbsent(ctx.currentClass!.name.lexeme, () => {})
+      ..['index'] = EvalTypes.intType
+      ..['name'] = EvalTypes.stringType;
+  }
+
+  if (parent is EnumDeclaration) {
+    ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 0, 0), SetObjectPropertyImpl.LEN);
+    ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 1, 1), SetObjectPropertyImpl.LEN);
+  }
 
   for (final fieldFormal in fieldFormalNames) {
     ctx.pushOp(
@@ -201,18 +221,20 @@ void compileConstructorDeclaration(
   ctx.endAllocScope(popValues: false);
 }
 
-void compileDefaultConstructor(CompilerContext ctx, ClassDeclaration parent, List<FieldDeclaration> fields) {
+void compileDefaultConstructor(CompilerContext ctx, NamedCompilationUnitMember parent, List<FieldDeclaration> fields) {
   final parentName = parent.name.value() as String;
   final n = '$parentName.';
 
   ctx.topLevelDeclarationPositions[ctx.library]![n] = beginMethod(ctx, parent, parent.offset, '$n()');
 
-  ctx.beginAllocScope();
+  final isEnum = parent is EnumDeclaration;
+  ctx.beginAllocScope(existingAllocLen: isEnum ? 2 : 0);
+  ctx.scopeFrameOffset += isEnum ? 2 : 0;
 
   final fieldIndices = _getFieldIndices(fields);
   final fieldIdx = fieldIndices.length;
 
-  final $extends = parent.extendsClause;
+  final $extends = parent is EnumDeclaration ? null : (parent as ClassDeclaration).extendsClause;
   Variable $super;
   DeclarationOrPrefix? extendsWhat;
 
@@ -232,7 +254,7 @@ void compileDefaultConstructor(CompilerContext ctx, ClassDeclaration parent, Lis
       ctx.pushOp(PushBridgeSuperShim.make(), PushBridgeSuperShim.LEN);
       $super = Variable.alloc(ctx, EvalTypes.dynamicType);
     } else {
-      final extendsType = TypeRef.lookupClassDeclaration(ctx, ctx.library, decl.declaration as ClassDeclaration);
+      final extendsType = TypeRef.lookupDeclaration(ctx, ctx.library, decl.declaration as ClassDeclaration);
 
       AlwaysReturnType? mReturnType;
 
@@ -246,7 +268,7 @@ void compileDefaultConstructor(CompilerContext ctx, ClassDeclaration parent, Lis
       if (offset.offset == null) {
         ctx.offsetTracker.setOffset(loc, offset);
       }
-      final clsType = TypeRef.lookupClassDeclaration(ctx, ctx.library, parent);
+      final clsType = TypeRef.lookupDeclaration(ctx, ctx.library, parent);
       mReturnType = method.methodReturnType?.toAlwaysReturnType(ctx, clsType, argTypes, namedArgTypes) ??
           AlwaysReturnType(EvalTypes.dynamicType, true);
 
@@ -255,11 +277,25 @@ void compileDefaultConstructor(CompilerContext ctx, ClassDeclaration parent, Lis
     }
   }
 
-  final op = CreateClass.make(ctx.library, $super.scopeFrameOffset, parent.name.value() as String, fieldIdx);
+  final op = CreateClass.make(
+      ctx.library, $super.scopeFrameOffset, parent.name.value() as String, fieldIdx + (isEnum ? 2 : 0));
   ctx.pushOp(op, CreateClass.len(op));
   final instOffset = ctx.scopeFrameOffset++;
 
-  _compileUnusedFields(ctx, fields, {}, instOffset);
+  if (parent is EnumDeclaration) {
+    /// Add implicit index and name fields
+    ctx.inferredFieldTypes.putIfAbsent(ctx.library, () => {}).putIfAbsent(ctx.currentClass!.name.lexeme, () => {})
+      ..['index'] = EvalTypes.intType
+      ..['name'] = EvalTypes.stringType;
+  }
+
+  if (parent is EnumDeclaration) {
+    ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 0, 0), SetObjectPropertyImpl.LEN);
+    ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 1, 1), SetObjectPropertyImpl.LEN);
+  }
+
+  _compileUnusedFields(
+      ctx, fields, parent is EnumDeclaration ? {'index', 'name'} : {}, instOffset, parent is EnumDeclaration ? 2 : 0);
 
   if ($extends != null && extendsWhat!.declaration!.isBridge) {
     final decl = extendsWhat.declaration!;
@@ -287,20 +323,21 @@ void compileDefaultConstructor(CompilerContext ctx, ClassDeclaration parent, Lis
   ctx.endAllocScope(popValues: false);
 }
 
-Map<String, int> _getFieldIndices(List<FieldDeclaration> fields) {
+Map<String, int> _getFieldIndices(List<FieldDeclaration> fields, [int fieldIdx = 0]) {
   final fieldIndices = <String, int>{};
-  var fieldIdx = 0;
+  var _fieldIdx = fieldIdx;
   for (final fd in fields) {
     for (final field in fd.fields.variables) {
-      fieldIndices[field.name.value() as String] = fieldIdx;
-      fieldIdx++;
+      fieldIndices[field.name.value() as String] = _fieldIdx;
+      _fieldIdx++;
     }
   }
   return fieldIndices;
 }
 
-void _compileUnusedFields(CompilerContext ctx, List<FieldDeclaration> fields, Set<String> usedNames, int instOffset) {
-  var _fieldIdx = 0;
+void _compileUnusedFields(CompilerContext ctx, List<FieldDeclaration> fields, Set<String> usedNames, int instOffset,
+    [int fieldIdx = 0]) {
+  var _fieldIdx = fieldIdx;
   for (final fd in fields) {
     for (final field in fd.fields.variables) {
       if (!usedNames.contains(field.name.value() as String) && field.initializer != null) {
@@ -313,63 +350,4 @@ void _compileUnusedFields(CompilerContext ctx, List<FieldDeclaration> fields, Se
       _fieldIdx++;
     }
   }
-}
-
-List<PossiblyValuedParameter> resolveFPLDefaults(CompilerContext ctx, FormalParameterList fpl, bool isInstanceMethod,
-    {bool allowUnboxed = true, bool sortNamed = false, bool ignoreDefaults = false}) {
-  final normalized = <PossiblyValuedParameter>[];
-  var hasEncounteredOptionalPositionalParam = false;
-  var hasEncounteredNamedParam = false;
-  var _paramIndex = isInstanceMethod ? 1 : 0;
-
-  final named = <FormalParameter>[];
-  final positional = <FormalParameter>[];
-
-  for (final param in fpl.parameters) {
-    if (param.isNamed) {
-      if (hasEncounteredOptionalPositionalParam) {
-        throw CompileError('Cannot mix named and optional positional parameters');
-      }
-      hasEncounteredNamedParam = true;
-      named.add(param);
-    } else {
-      if (param.isOptionalPositional) {
-        if (hasEncounteredNamedParam) {
-          throw CompileError('Cannot mix named and optional positional parameters');
-        }
-        hasEncounteredOptionalPositionalParam = true;
-      }
-      positional.add(param);
-    }
-  }
-
-  if (sortNamed) {
-    named.sort((a, b) => (a.name!.value() as String).compareTo(b.name!.value() as String));
-  }
-
-  for (final param in [...positional, ...named]) {
-    if (param is DefaultFormalParameter) {
-      if (param.defaultValue != null && !ignoreDefaults) {
-        ctx.beginAllocScope();
-        final _reserve = JumpIfNonNull.make(_paramIndex, -1);
-        final _reserveOffset = ctx.pushOp(_reserve, JumpIfNonNull.LEN);
-        var V = compileExpression(param.defaultValue!, ctx);
-        if (!allowUnboxed) {
-          V = V.boxIfNeeded(ctx);
-        }
-        ctx.pushOp(CopyValue.make(_paramIndex, V.scopeFrameOffset), CopyValue.LEN);
-        ctx.endAllocScope();
-        ctx.rewriteOp(_reserveOffset, JumpIfNonNull.make(_paramIndex, ctx.out.length), 0);
-        normalized.add(PossiblyValuedParameter(param.parameter, V));
-      } else {
-        normalized.add(PossiblyValuedParameter(param.parameter, null));
-      }
-    } else {
-      param as NormalFormalParameter;
-      normalized.add(PossiblyValuedParameter(param, null));
-    }
-
-    _paramIndex++;
-  }
-  return normalized;
 }

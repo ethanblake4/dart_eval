@@ -132,7 +132,8 @@ class SetGlobal implements EvcOp {
 
   @override
   void run(Runtime runtime) {
-    runtime.globals[_index] = runtime.frame[_value];
+    final value = runtime.frame[_value];
+    runtime.globals[_index] = value;
   }
 
   @override

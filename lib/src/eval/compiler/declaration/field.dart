@@ -6,7 +6,8 @@ import 'package:dart_eval/src/eval/compiler/scope.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
-void compileFieldDeclaration(int fieldIndex, FieldDeclaration d, CompilerContext ctx, ClassDeclaration parent) {
+void compileFieldDeclaration(
+    int fieldIndex, FieldDeclaration d, CompilerContext ctx, NamedCompilationUnitMember parent) {
   final parentName = parent.name.value() as String;
   var _fieldIndex = fieldIndex;
   for (final field in d.fields.variables) {
@@ -15,6 +16,7 @@ void compileFieldDeclaration(int fieldIndex, FieldDeclaration d, CompilerContext
       final initializer = field.initializer;
       if (initializer != null) {
         final pos = beginMethod(ctx, field, field.offset, '$fieldName*i');
+        ctx.beginAllocScope();
         TypeRef? type;
         final specifiedType = d.fields.type;
         if (specifiedType != null) {
@@ -43,6 +45,7 @@ void compileFieldDeclaration(int fieldIndex, FieldDeclaration d, CompilerContext
         ctx.topLevelGlobalInitializers[ctx.library]![_name] = pos;
         ctx.runtimeGlobalInitializerMap[_index] = pos;
         ctx.pushOp(Return.make(V.scopeFrameOffset), Return.LEN);
+        ctx.endAllocScope(popValues: false);
       }
     } else {
       final pos = beginMethod(ctx, d, d.offset, '$parentName.$fieldName (get)');

@@ -90,10 +90,13 @@ Pair<TypeRef, DeclarationOrBridge>? resolveInstanceDeclaration(
       return Pair($type, getset);
     }
   }
-  final $classDec = _$classDec.declaration! as ClassDeclaration;
-  if ($classDec.withClause != null) {
+  final _$dec = _$classDec.declaration!;
+  final $withClause =
+      _$dec is ClassDeclaration ? _$dec.withClause : (_$dec is EnumDeclaration ? _$dec.withClause : null);
+  final $extendsClause = _$dec is ClassDeclaration ? _$dec.extendsClause : null;
+  if ($withClause != null) {
     // ignore: deprecated_member_use
-    for (final $mixin in $classDec.withClause!.mixinTypes) {
+    for (final $mixin in $withClause.mixinTypes) {
       final mixinType = ctx.visibleTypes[library]![$mixin.name2.stringValue!]!;
       final result = resolveInstanceDeclaration(ctx, mixinType.file, mixinType.name, name);
       if (result != null) {
@@ -101,10 +104,10 @@ Pair<TypeRef, DeclarationOrBridge>? resolveInstanceDeclaration(
       }
     }
   }
-  if ($classDec.extendsClause != null) {
+  if ($extendsClause != null) {
     // ignore: deprecated_member_use
     final extendsType = ctx.visibleTypes[library]![
-        $classDec.extendsClause!.superclass.name2.stringValue ?? $classDec.extendsClause!.superclass.name2.value()]!;
+        $extendsClause.superclass.name2.stringValue ?? $extendsClause.superclass.name2.value()]!;
     return resolveInstanceDeclaration(ctx, extendsType.file, extendsType.name, name);
   }
   return null;

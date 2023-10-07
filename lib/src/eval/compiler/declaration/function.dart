@@ -2,9 +2,9 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:collection/collection.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
-import 'package:dart_eval/src/eval/compiler/declaration/constructor.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/fpl.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/return.dart';
 import 'package:dart_eval/src/eval/compiler/model/override_spec.dart';
 import 'package:dart_eval/src/eval/compiler/scope.dart';
@@ -75,6 +75,7 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
     stInfo = doReturn(ctx, expectedReturnType, compileExpression(b.expression, ctx, expectedReturnType.type),
         isAsync: b.isAsynchronous);
     stInfo = StatementInfo(-1, willAlwaysReturn: true);
+    ctx.endAllocScope(popValues: false);
   } else {
     throw CompileError('Unsupported function body type: ${b.runtimeType}');
   }

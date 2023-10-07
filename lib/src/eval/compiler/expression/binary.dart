@@ -52,7 +52,8 @@ Variable compileBinaryExpression(CompilerContext ctx, BinaryExpression e, [TypeR
     TokenType.AMPERSAND: '&',
     TokenType.LT_LT: '<<',
     TokenType.GT_GT: '>>',
-    TokenType.BANG_EQ: '!='
+    TokenType.BANG_EQ: '!=',
+    TokenType.CARET: '^',
   };
 
   var method = opMap[e.operator.type] ?? (throw CompileError('Unknown binary operator ${e.operator.type}'));

@@ -208,6 +208,8 @@ class $int extends $num<int> {
         return __shiftLeft;
       case '>>':
         return __shiftRight;
+      case '^':
+        return __bitwiseXor;
     }
     return super.$getProperty(runtime, identifier);
   }
@@ -252,6 +254,19 @@ class $int extends $num<int> {
   static $Value? _shiftRight(Runtime runtime, $Value? target, List<$Value?> args) {
     final other = args[0];
     final _evalResult = target!.$value >> other!.$value;
+
+    if (_evalResult is int) {
+      return $int(_evalResult);
+    }
+
+    throw UnimplementedError();
+  }
+
+  static const $Function __bitwiseXor = $Function(_bitwiseXor);
+
+  static $Value? _bitwiseXor(Runtime runtime, $Value? target, List<$Value?> args) {
+    final other = args[0];
+    final _evalResult = target!.$value ^ other!.$value;
 
     if (_evalResult is int) {
       return $int(_evalResult);

@@ -126,10 +126,12 @@ class IdentifierReference implements Reference {
         final classType = object!.concreteTypes[0].resolveTypeChain(ctx);
         if (classType.extendsType == EvalTypes.enumType) {
           final type = classType;
-          final gIndex = ctx.enumValueIndices[classType.file]![type.name]![name]!;
-          ctx.pushOp(LoadGlobal.make(gIndex), LoadGlobal.LEN);
-          ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-          return Variable.alloc(ctx, type);
+          final gIndex = ctx.enumValueIndices[classType.file]?[type.name]?[name];
+          if (gIndex != null) {
+            ctx.pushOp(LoadGlobal.make(gIndex), LoadGlobal.LEN);
+            ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
+            return Variable.alloc(ctx, type);
+          }
         }
         final _dec = ctx.topLevelDeclarationsMap[classType.file]![classType.name]!;
         if (_dec.isBridge) {
@@ -463,9 +465,9 @@ Variable _declarationToVariable(DeclarationOrBridge _decl, String name, Compiler
   }
 
   if (decl is! FunctionDeclaration && decl is! ConstructorDeclaration) {
-    decl as ClassDeclaration;
+    decl as NamedCompilationUnitMember;
 
-    final returnType = TypeRef.lookupClassDeclaration(ctx, _decl.sourceLib, decl);
+    final returnType = TypeRef.lookupDeclaration(ctx, _decl.sourceLib, decl);
     final DeferredOrOffset offset;
 
     if (ctx.topLevelDeclarationPositions[_decl.sourceLib]?.containsKey('$name.') ?? false) {
@@ -485,7 +487,7 @@ Variable _declarationToVariable(DeclarationOrBridge _decl, String name, Compiler
     returnType = TypeRef.fromAnnotation(ctx, _decl.sourceLib, decl.returnType!);
     nullable = decl.returnType!.question != null;
   } else {
-    returnType = TypeRef.lookupClassDeclaration(ctx, _decl.sourceLib, decl.parent as ClassDeclaration);
+    returnType = TypeRef.lookupDeclaration(ctx, _decl.sourceLib, decl.parent as ClassDeclaration);
   }
 
   final DeferredOrOffset offset;
@@ -521,7 +523,7 @@ StaticDispatch? _declarationToStaticDispatch(DeclarationOrBridge _decl, String n
       offset = DeferredOrOffset(file: _decl.sourceLib, name: '$name.');
     }
 
-    final rt = AlwaysReturnType(TypeRef.lookupClassDeclaration(ctx, _decl.sourceLib, decl), false);
+    final rt = AlwaysReturnType(TypeRef.lookupDeclaration(ctx, _decl.sourceLib, decl), false);
 
     return StaticDispatch(offset, rt);
   }
@@ -532,7 +534,7 @@ StaticDispatch? _declarationToStaticDispatch(DeclarationOrBridge _decl, String n
     returnType = TypeRef.fromAnnotation(ctx, _decl.sourceLib, decl.returnType!);
     nullable = decl.returnType!.question != null;
   } else {
-    returnType = TypeRef.lookupClassDeclaration(ctx, _decl.sourceLib, decl.parent as ClassDeclaration);
+    returnType = TypeRef.lookupDeclaration(ctx, _decl.sourceLib, decl.parent as ClassDeclaration);
   }
 
   final DeferredOrOffset offset;

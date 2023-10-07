@@ -1,4 +1,5 @@
 import 'package:dart_eval/dart_eval.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -45,19 +46,19 @@ void main() {
         'eval_test': {
           'main.dart': '''
             num main () {
-              var myfunc = ([dynamic a, dynamic b, dynamic c]) {
+              var myfunc = ([dynamic a, dynamic b = 4]) {
                 if(a is num && b is num){
                   return a + b;
                 }
                 return 0;
               };
-              return myfunc(2, 4);
+              return myfunc(2);
             }
           '''
         }
       });
 
-      expect(runtime.executeLib('package:eval_test/main.dart', 'main'), 6);
+      expect(runtime.executeLib('package:eval_test/main.dart', 'main'), $int(6));
     });
 
     test('Null coalescing operator', () {
@@ -103,6 +104,7 @@ void main() {
               print(1 | 2);
               print(1 << 2);
               print(1 >> 2);
+              print(1 ^ 2);
             }
           '''
         }
@@ -110,7 +112,75 @@ void main() {
 
       expect(() {
         runtime.executeLib('package:eval_test/main.dart', 'main');
-      }, prints('0\n3\n4\n0\n'));
+      }, prints('0\n3\n4\n0\n3\n'));
+    });
+
+    test('Conditional expression', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main () {
+              return fun(3);
+            }
+            
+            int fun(int a) {
+              return a > 2 ? 1 : 2;
+            }
+           '''
+        }
+      });
+
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 1);
+    });
+
+    test('Simple cascade', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              var x = X();
+              x..a = 1..b = 2;
+              print(x.a);
+              print(x.b);
+            }
+            
+            class X {
+              int a = 0;
+              int b = 0;
+            }
+           '''
+        }
+      });
+
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('1\n2\n'));
+    });
+
+    test('Cascade with method call', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              var x = X();
+              x..a = 1..b = 2..printValues();
+            }
+            
+            class X {
+              int a = 0;
+              int b = 0;
+              void printValues() {
+                print(a);
+                print(b);
+              }
+            }
+           '''
+        }
+      });
+
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('1\n2\n'));
     });
   });
 }

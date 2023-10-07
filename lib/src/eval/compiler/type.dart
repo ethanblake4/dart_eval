@@ -11,6 +11,10 @@ import 'builtins.dart';
 import 'context.dart';
 import 'errors.dart';
 
+/// Reference to a type in the compiler. Types are initially created
+/// with a [file] and [name], and resolved lazily with [resolveTypeChain]
+/// to fill in information such as [extendsType], [implementsType], and
+/// [withType].
 class TypeRef {
   const TypeRef(this.file, this.name,
       {this.extendsType,
@@ -22,9 +26,25 @@ class TypeRef {
       this.boxed = true,
       this.nullable = false});
 
+  /// Cache mapping file/library IDs to type names to [TypeRef]s.
   static final _cache = <int, Map<String, TypeRef>>{};
+
+  /// Cache mapping [TypeRef]s to file/library IDs.
   static final _inverseCache = <TypeRef, List<int>>{};
 
+  final int file;
+  final String name;
+  final TypeRef? extendsType;
+  final List<TypeRef> implementsType;
+  final List<TypeRef> withType;
+  final List<GenericParam> genericParams;
+  final List<TypeRef> specifiedTypeArgs;
+  final bool resolved;
+  final bool boxed;
+  final bool nullable;
+
+  /// Create and cache a [TypeRef] given a [file] and [name].
+  /// This type ref contains only basic info and can be resolved later.
   factory TypeRef.cache(CompilerContext ctx, int file, String name, {int? fileRef}) {
     TypeRef $type;
     if (!_cache.containsKey(file)) {
@@ -52,6 +72,7 @@ class TypeRef {
     return $type;
   }
 
+  /// Given a set of [TypeRef]s, find their closest common ancestor type.
   factory TypeRef.commonBaseType(CompilerContext ctx, Set<TypeRef> types) {
     assert(types.isNotEmpty);
     final chains = types.map((e) => e.resolveTypeChain(ctx).getTypeChain(ctx)).toList();
@@ -107,6 +128,7 @@ class TypeRef {
     return sorted[0];
   }
 
+  /// Create a [TypeRef] from a [TypeAnnotation] and library ID.
   factory TypeRef.fromAnnotation(CompilerContext ctx, int library, TypeAnnotation typeAnnotation) {
     if (typeAnnotation is GenericFunctionType) {
       return EvalTypes.functionType;
@@ -128,6 +150,7 @@ class TypeRef {
     return unspecifiedType.copyWith(nullable: typeAnnotation.question != null);
   }
 
+  /// Create a [TypeRef] from a [BridgeTypeAnnotation].
   factory TypeRef.fromBridgeAnnotation(CompilerContext ctx, BridgeTypeAnnotation typeAnnotation,
       {TypeRef? specifyingType, TypeRef? specifiedType}) {
     return TypeRef.fromBridgeTypeRef(ctx, typeAnnotation.type,
@@ -215,8 +238,9 @@ class TypeRef {
     return TypeRef.fromBridgeTypeRef(ctx, BridgeTypeRef(BridgeTypeSpec(library, name), []));
   }
 
-  factory TypeRef.lookupClassDeclaration(CompilerContext ctx, int library, ClassDeclaration cls) {
-    return ctx.visibleTypes[library]![cls.name.value()] ?? (throw CompileError('Class ${cls.name.value()} not found'));
+  factory TypeRef.lookupDeclaration(CompilerContext ctx, int library, NamedCompilationUnitMember dec) {
+    return ctx.visibleTypes[library]![dec.name.value()] ??
+        (throw CompileError('Class/enum ${dec.name.value()} not found'));
   }
 
   static TypeRef? lookupFieldType(CompilerContext ctx, TypeRef $class, String field, {bool forFieldFormal = false}) {
@@ -284,12 +308,14 @@ class TypeRef {
         final $super = TypeRef.fromBridgeTypeRef(ctx, $extends);
         return TypeRef.lookupFieldType(ctx, $super.inheritTypeArgsFrom(ctx, $class), field);
       }
+    } else if (dec.declaration is EnumDeclaration && field == 'index') {
+      return EvalTypes.intType;
     } else {
       if (forFieldFormal) {
         throw CompileError('Field formals did not find field $field in class ${$class}');
       }
-      final _dec = dec.declaration as ClassDeclaration;
-      final $extends = _dec.extendsClause;
+      final _dec = dec.declaration as NamedCompilationUnitMember;
+      final $extends = _dec is ClassDeclaration ? _dec.extendsClause : null;
       if ($extends == null) {
         throw CompileError('Field "$field" not found in class ${$class}');
       } else {
@@ -360,11 +386,16 @@ class TypeRef {
         }
       }
     } else {
-      final dec = declaration.declaration! as ClassDeclaration;
-      superName = dec.extendsClause?.superclass;
-      withNames = dec.withClause?.mixinTypes.toList() ?? [];
-      implementsNames = dec.implementsClause?.interfaces.toList() ?? [];
-      generics = dec.typeParameters?.typeParameters
+      final dec = declaration.declaration!;
+      final extendsClause = dec is ClassDeclaration ? dec.extendsClause : null;
+      final withClause = dec is ClassDeclaration ? dec.withClause : (dec as EnumDeclaration).withClause;
+      final implementsClause =
+          dec is ClassDeclaration ? dec.implementsClause : (dec as EnumDeclaration).implementsClause;
+      final typeParameters = dec is ClassDeclaration ? dec.typeParameters : (dec as EnumDeclaration).typeParameters;
+      superName = extendsClause?.superclass;
+      withNames = withClause?.mixinTypes.toList() ?? [];
+      implementsNames = implementsClause?.interfaces.toList() ?? [];
+      generics = typeParameters?.typeParameters
               .map((t) => GenericParam(
                   t.name.value() as String, t.bound == null ? null : TypeRef.fromAnnotation(ctx, file, t.bound!)))
               .toList() ??
@@ -379,6 +410,8 @@ class TypeRef {
       $super = ctx.visibleTypes[file]![superName.name2.stringValue ?? superName.name2.value()]!
           .copyWith(specifiedTypeArgs: typeParams)
           .resolveTypeChain(ctx, recursionGuard: rg);
+    } else if (declaration.declaration is EnumDeclaration) {
+      $super = EvalTypes.enumType;
     }
 
     for (final withName in withNames) {
@@ -429,17 +462,6 @@ class TypeRef {
     final ta = [for (final t in specifiedTypeArgs) t.toRuntimeType(ctx)];
     return RuntimeType(runtimeTypeMap[this] ?? ctx.typeRefIndexMap[this]!, ta);
   }
-
-  final int file;
-  final String name;
-  final TypeRef? extendsType;
-  final List<TypeRef> implementsType;
-  final List<TypeRef> withType;
-  final List<GenericParam> genericParams;
-  final List<TypeRef> specifiedTypeArgs;
-  final bool resolved;
-  final bool boxed;
-  final bool nullable;
 
   List<TypeRef> get allSupertypes => [if (extendsType != null) extendsType!, ...implementsType, ...withType];
 
@@ -649,13 +671,15 @@ class AlwaysReturnType implements ReturnType {
   static AlwaysReturnType? fromInstanceMethodOrBuiltin(
       CompilerContext ctx, TypeRef type, String method, List<TypeRef?> argTypes, Map<String, TypeRef?> namedArgTypes,
       {List<TypeRef> typeArgs = const [], bool $static = false}) {
-    if (!$static && knownMethods[type] != null && knownMethods[type]!.containsKey(method)) {
-      final knownMethod = knownMethods[type]![method]!;
+    final resolvedType = type.resolveTypeChain(ctx);
+    final knownType = resolvedType.extendsType == EvalTypes.enumType ? EvalTypes.enumType : resolvedType;
+    if (!$static && knownMethods[knownType] != null && knownMethods[knownType]!.containsKey(method)) {
+      final knownMethod = knownMethods[knownType]![method]!;
       final returnType = knownMethod.returnType;
       if (returnType == null) {
         return null;
       }
-      return returnType.toAlwaysReturnType(ctx, type, argTypes, namedArgTypes, typeArgs: typeArgs);
+      return returnType.toAlwaysReturnType(ctx, knownType, argTypes, namedArgTypes, typeArgs: typeArgs);
     }
 
     if (type == EvalTypes.dynamicType) {

@@ -4,6 +4,7 @@ import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/assignment.dart';
 import 'package:dart_eval/src/eval/compiler/expression/await.dart';
 import 'package:dart_eval/src/eval/compiler/expression/binary.dart';
+import 'package:dart_eval/src/eval/compiler/expression/cascade.dart';
 import 'package:dart_eval/src/eval/compiler/expression/conditional.dart';
 import 'package:dart_eval/src/eval/compiler/expression/funcexpr_invocation.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
@@ -62,20 +63,22 @@ Variable compileExpression(Expression e, CompilerContext ctx, [TypeRef? bound]) 
     return compileConditionalExpression(ctx, e);
   } else if (e is IsExpression) {
     return compileIsExpression(e, ctx);
+  } else if (e is CascadeExpression) {
+    return compileCascadeExpression(e, ctx);
   }
 
   throw CompileError('Unknown expression type ${e.runtimeType}');
 }
 
-Reference compileExpressionAsReference(Expression e, CompilerContext ctx) {
+Reference compileExpressionAsReference(Expression e, CompilerContext ctx, {Variable? cascadeTarget}) {
   if (e is Identifier) {
     return compileIdentifierAsReference(e, ctx);
   } else if (e is AssignmentExpression) {
     return compileAssignmentExpressionAsReference(e, ctx);
   } else if (e is IndexExpression) {
-    return compileIndexExpressionAsReference(e, ctx);
+    return compileIndexExpressionAsReference(e, ctx, cascadeTarget: cascadeTarget);
   } else if (e is PropertyAccess) {
-    return compilePropertyAccessAsReference(e, ctx);
+    return compilePropertyAccessAsReference(e, ctx, cascadeTarget: cascadeTarget);
   }
 
   throw NotReferencableError("Unknown expression type or can't reference ${e.runtimeType}");
@@ -85,9 +88,10 @@ bool canReference(Expression e) {
   return e is Identifier || e is AssignmentExpression || e is IndexExpression || e is PropertyAccess;
 }
 
-Variable? compileExpressionAndDiscardResult(Expression e, CompilerContext ctx, [TypeRef? bound]) {
+Variable? compileExpressionAndDiscardResult(Expression e, CompilerContext ctx,
+    {TypeRef? bound, Variable? cascadeTarget}) {
   if (canReference(e)) {
-    compileExpressionAsReference(e, ctx);
+    compileExpressionAsReference(e, ctx, cascadeTarget: cascadeTarget);
     return null;
   } else {
     return compileExpression(e, ctx, bound);

@@ -192,24 +192,22 @@ void main() {
       expect(runtime.executeLib('package:example/main.dart', 'main'), $double(1.5));
     });
 
-    test('Simple async/await', () async {
+    test('Anonymous function with named args, one unspecified', () {
       final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
-          Future main(int milliseconds) async {
-            await Future.delayed(Duration(milliseconds: milliseconds));
-            return 3;
-          }
+            num main () {
+              var myfunc = ({a, b}) {
+                return a + 1;
+              };
+              
+              return myfunc(a: 2);
+            }
           '''
         }
       });
 
-      final startTime = DateTime.now().millisecondsSinceEpoch;
-      final future = runtime.executeLib('package:example/main.dart', 'main', [150]) as Future;
-      await expectLater(future, completion($int(3)));
-      final endTime = DateTime.now().millisecondsSinceEpoch;
-      expect(endTime - startTime, greaterThan(100));
-      expect(endTime - startTime, lessThan(200));
+      expect(runtime.executeLib('package:example/main.dart', 'main'), $int(3));
     });
 
     test('Closure with arg', () {
@@ -261,65 +259,6 @@ void main() {
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 5);
-    });
-
-    test('Chained async/await', () async {
-      final runtime = compiler.compileWriteAndLoad({
-        'example': {
-          'main.dart': '''
-          Future main() async {
-            return await fun();
-          }
-          Future fun() async {
-            return 3;
-          }
-          '''
-        }
-      });
-
-      final future = runtime.executeLib('package:example/main.dart', 'main') as Future;
-      await expectLater(future, completion($int(3)));
-    });
-
-    test('Simple tearoff', () {
-      final runtime = compiler.compileWriteAndLoad({
-        'example': {
-          'main.dart': '''
-            int main () {
-              var fn = fun;
-              return fn(4);
-            }
-            
-            int fun(int a) {
-              return a + 1;
-            }
-           '''
-        }
-      });
-
-      expect(runtime.executeLib('package:example/main.dart', 'main'), 5);
-    });
-
-    test('Tearoff as argument', () {
-      final runtime = compiler.compileWriteAndLoad({
-        'example': {
-          'main.dart': '''
-            int main () {
-              return fun(4, fun2);
-            }
-            
-            int fun(int a, Function fn) {
-              return fn(a) + 1;
-            }
-
-            int fun2(int a) {
-              return a + 2;
-            }
-           '''
-        }
-      });
-
-      expect(runtime.executeLib('package:example/main.dart', 'main'), 7);
     });
 
     test('Nullable arg', () {
@@ -376,24 +315,6 @@ void main() {
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 3);
-    });
-
-    test('Conditional expression', () {
-      final runtime = compiler.compileWriteAndLoad({
-        'example': {
-          'main.dart': '''
-            int main () {
-              return fun(3);
-            }
-            
-            int fun(int a) {
-              return a > 2 ? 1 : 2;
-            }
-           '''
-        }
-      });
-
-      expect(runtime.executeLib('package:example/main.dart', 'main'), 1);
     });
 
     test('Indexing outer list from a closure', () {

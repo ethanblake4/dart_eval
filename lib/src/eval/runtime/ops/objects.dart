@@ -40,11 +40,14 @@ class InvokeDynamic implements EvcOp {
         final csNamedArgs = runtime.args[1] as List;
         final csNamedArgTypes = [for (final a in cnat) runtime.runtimeTypes[a]];
 
+        final totalPositionalArgCount = object.positionalArgTypes.length;
+        final totalNamedArgCount = object.sortedNamedArgs.length;
+
         if (csPosArgTypes.length < object.requiredPositionalArgCount ||
-            csPosArgTypes.length > object.positionalArgTypes.length) {
+            csPosArgTypes.length > totalPositionalArgCount) {
           throw ArgumentError(
               'FunctionPtr: Cannot invoke function with the given arguments (unacceptable # of positional arguments). '
-              '${object.positionalArgTypes.length} >= ${csPosArgTypes.length} >= ${object.requiredPositionalArgCount}');
+              '$totalPositionalArgCount >= ${csPosArgTypes.length} >= ${object.requiredPositionalArgCount}');
         }
 
         var i = 0, j = 0;
@@ -58,8 +61,8 @@ class InvokeDynamic implements EvcOp {
         // Very efficient algorithm for checking that named args match
         // Requires that the named arg arrays be sorted
         i = 0;
-        var cl = csNamedArgs.length;
-        var tl = object.sortedNamedArgs.length - 1;
+        final cl = csNamedArgs.length, cp = csPosArgTypes.length;
+        final tl = totalNamedArgCount - 1;
         while (j < cl) {
           if (i > tl) {
             throw ArgumentError('FunctionPtr: Cannot invoke function with the given arguments');
@@ -72,8 +75,14 @@ class InvokeDynamic implements EvcOp {
           i++;
         }
 
-        final al = runtime.args.length;
-        runtime.args = [if (object.$prev != null) object.$prev, for (i = 3; i < al; i++) runtime.args[i]];
+        runtime.args = [
+          if (object.$prev != null) object.$prev,
+          for (i = 0; i < object.requiredPositionalArgCount; i++) runtime.args[i + 3],
+          for (i = object.requiredPositionalArgCount; i < totalPositionalArgCount; i++)
+            if (cp > i) runtime.args[i + 3] else null,
+          for (i = 0; i < object.sortedNamedArgs.length; i++)
+            if (cl > i) runtime.args[i + 3 + totalPositionalArgCount] else null
+        ];
         runtime.callStack.add(runtime._prOffset);
         runtime.catchStack.add([]);
         runtime._prOffset = object.offset;
@@ -109,15 +118,17 @@ class CheckEq implements EvcOp {
 
   @override
   void run(Runtime runtime) {
-    var v1 = runtime.frame[_value1];
+    final v1 = runtime.frame[_value1];
     final v2 = runtime.frame[_value2];
 
+    var vx = v1;
+
     while (true) {
-      if (v1 is $InstanceImpl) {
-        final methods = v1.evalClass.methods;
+      if (vx is $InstanceImpl) {
+        final methods = vx.evalClass.methods;
         final _offset = methods['=='];
         if (_offset == null) {
-          v1 = v1.evalSuperclass;
+          vx = vx.evalSuperclass;
           continue;
         }
         runtime.args = [v2];
@@ -127,9 +138,9 @@ class CheckEq implements EvcOp {
         return;
       }
 
-      if (v1 is $Instance) {
-        final method = v1.$getProperty(runtime, '==') as EvalFunction;
-        runtime.returnValue = method.call(runtime, v1, [v2 == null ? null : v2 as $Value])!.$value;
+      if (vx is $Instance) {
+        final method = vx.$getProperty(runtime, '==') as EvalFunction;
+        runtime.returnValue = method.call(runtime, vx, [v2 == null ? null : v2 as $Value])!.$value;
         runtime.args = [];
         return;
       }
