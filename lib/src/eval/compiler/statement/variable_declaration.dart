@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/source_node_wrapper.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
@@ -20,12 +21,12 @@ void compileVariableDeclarationList(VariableDeclarationList l, CompilerContext c
   }
 
   for (final li in l.variables) {
+    if (ctx.locals.last.containsKey(li.name.value() as String)) {
+      throw CompileError('Cannot declare variable ${li.name.value() as String} multiple times in the same scope');
+    }
     final init = li.initializer;
     if (init != null) {
       final res = compileExpression(init, ctx, type);
-      if (ctx.locals.last.containsKey(li.name.value() as String)) {
-        throw CompileError('Cannot declare variable ${li.name.value() as String} multiple times in the same scope');
-      }
       if (type != null && !res.type.resolveTypeChain(ctx).isAssignableTo(ctx, type)) {
         throw CompileError(
             'Type mismatch: variable "${li.name.value() as String}" is specified as type $type, but is initialized '
@@ -45,6 +46,8 @@ void compileVariableDeclarationList(VariableDeclarationList l, CompilerContext c
                 methodReturnType: res.methodReturnType,
                 callingConvention: res.callingConvention));
       }
+    } else {
+      ctx.setLocal(li.name.value() as String, BuiltinValue().push(ctx));
     }
   }
 }

@@ -347,5 +347,29 @@ void main() {
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), $String('Julian the animal (cat)'));
     });
+
+    test('Constructor field initializers', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              var x = X("Hi");
+              x.printValues();
+            }
+
+            class X {
+              X(String s) : _a = 1, this._b = s + "!";
+              final int _a;
+              final String _b;
+              void printValues() => print(_a + _b.length);
+            }
+          '''
+        }
+      });
+
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('4\n'));
+    });
   });
 }

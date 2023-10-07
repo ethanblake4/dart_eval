@@ -7,10 +7,10 @@ void configurePrintForCompile(BridgeDeclarationRegistry registry) {
   registry.defineBridgeTopLevelFunction(BridgeFunctionDeclaration(
       'dart:core',
       'print',
-      BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.voidType)),
-          params: [BridgeParameter('object', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.objectType)), false)],
-          namedParams: [])));
+      BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.voidType)), params: [
+        BridgeParameter(
+            'object', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.objectType), nullable: true), false)
+      ], namedParams: [])));
 }
 
 void configurePrintForRuntime(Runtime runtime) {

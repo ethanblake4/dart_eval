@@ -75,6 +75,10 @@ class TypeRef {
   /// Given a set of [TypeRef]s, find their closest common ancestor type.
   factory TypeRef.commonBaseType(CompilerContext ctx, Set<TypeRef> types) {
     assert(types.isNotEmpty);
+    var makeNullable = types.remove(EvalTypes.nullType);
+    if (types.isEmpty) {
+      return EvalTypes.nullType;
+    }
     final chains = types.map((e) => e.resolveTypeChain(ctx).getTypeChain(ctx)).toList();
 
     // Cross-level type deduplication
@@ -125,7 +129,7 @@ class TypeRef {
 
     final sorted = refCount.keys.toList()..sort((k1, k2) => layer[k1]! - layer[k2]!);
 
-    return sorted[0];
+    return makeNullable ? sorted[0].copyWith(nullable: true) : sorted[0];
   }
 
   /// Create a [TypeRef] from a [TypeAnnotation] and library ID.

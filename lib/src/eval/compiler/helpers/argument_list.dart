@@ -65,9 +65,9 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext 
       }
 
       var _arg = compileExpression(arg, ctx, paramType);
-      if (parameterHost is MethodDeclaration || !_arg.type.isUnboxedAcrossFunctionBoundaries) {
+      if (parameterHost is MethodDeclaration || !paramType.isUnboxedAcrossFunctionBoundaries) {
         _arg = _arg.boxIfNeeded(ctx);
-      } else if (_arg.type.isUnboxedAcrossFunctionBoundaries) {
+      } else if (paramType.isUnboxedAcrossFunctionBoundaries) {
         _arg = _arg.unboxIfNeeded(ctx);
       }
 
@@ -117,9 +117,9 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext 
     }
     if (namedExpr.containsKey(name)) {
       var _arg = compileExpression(namedExpr[name]!, ctx, paramType);
-      if (parameterHost is MethodDeclaration || !_arg.type.isUnboxedAcrossFunctionBoundaries) {
+      if (parameterHost is MethodDeclaration || !paramType.isUnboxedAcrossFunctionBoundaries) {
         _arg = _arg.boxIfNeeded(ctx);
-      } else if (_arg.type.isUnboxedAcrossFunctionBoundaries) {
+      } else if (paramType.isUnboxedAcrossFunctionBoundaries) {
         _arg = _arg.unboxIfNeeded(ctx);
       }
 

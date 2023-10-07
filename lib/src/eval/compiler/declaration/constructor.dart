@@ -176,7 +176,7 @@ void compileConstructorDeclaration(
 
   for (final init in otherInitializers) {
     if (init is ConstructorFieldInitializer) {
-      final V = compileExpression(init.expression, ctx);
+      final V = compileExpression(init.expression, ctx).boxIfNeeded(ctx);
       ctx.pushOp(SetObjectPropertyImpl.make(instOffset, fieldIndices[init.fieldName.name]!, V.scopeFrameOffset),
           SetObjectPropertyImpl.LEN);
       usedNames.add(init.fieldName.name);

@@ -182,5 +182,25 @@ void main() {
         runtime.executeLib('package:example/main.dart', 'main');
       }, prints('1\n2\n'));
     });
+
+    test('Null coalescing assignment', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              var x;
+              x ??= 1;
+              print(x);
+              x ??= 2;
+              print(x);
+            }
+           '''
+        }
+      });
+
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('1\n1\n'));
+    });
   });
 }

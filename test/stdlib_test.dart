@@ -266,5 +266,23 @@ void main() {
         runtime.executeLib('package:example/main.dart', 'main');
       }, prints('a\nbird\n'));
     });
+
+    test('Num add', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            num ADD(num a, num b){
+              return a + b;
+            }
+            void main() {
+              print(ADD(3,4));
+            }
+          ''',
+        }
+      });
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('7\n'));
+    });
   });
 }

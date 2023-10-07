@@ -96,6 +96,8 @@ class IdentifierReference implements Reference {
       }
 
       ctx.pushOp(CopyValue.make(local.scopeFrameOffset, value.scopeFrameOffset), CopyValue.LEN);
+      final type = TypeRef.commonBaseType(ctx, {local.type, value.type});
+      local.copyWithUpdate(ctx, type: type);
       return;
     }
 

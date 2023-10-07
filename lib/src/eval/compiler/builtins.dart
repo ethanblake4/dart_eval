@@ -170,11 +170,14 @@ const listIndexAssignOp =
 const toStringOp = KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [], {});
 
 final _knownObject = <String, KnownMethod>{
+  '==': objectComparisonOp,
   'toString': toStringOp,
 };
 
 final Map<TypeRef, Map<String, KnownMethod>> knownMethods = {
+  EvalTypes.nullType: {..._knownObject},
   EvalTypes.intType: {
+    ..._knownObject,
     '+': intBinaryOp,
     '-': intBinaryOp,
     '*': intBinaryOp,
@@ -191,9 +194,9 @@ final Map<TypeRef, Map<String, KnownMethod>> knownMethods = {
     '>=': numComparisonOp,
     '==': numComparisonOp,
     '!=': numComparisonOp,
-    ..._knownObject
   },
   EvalTypes.doubleType: {
+    ..._knownObject,
     '+': doubleBinaryOp,
     '-': doubleBinaryOp,
     '*': doubleBinaryOp,
@@ -205,9 +208,9 @@ final Map<TypeRef, Map<String, KnownMethod>> knownMethods = {
     '>=': numComparisonOp,
     '==': numComparisonOp,
     '!=': numComparisonOp,
-    ..._knownObject
   },
   EvalTypes.numType: {
+    ..._knownObject,
     '+': numBinaryOp,
     '-': numBinaryOp,
     '*': numBinaryOp,
@@ -219,10 +222,10 @@ final Map<TypeRef, Map<String, KnownMethod>> knownMethods = {
     '>=': numComparisonOp,
     '==': numComparisonOp,
     '!=': numComparisonOp,
-    ..._knownObject
   },
   EvalTypes.boolType: {'&&': boolBinaryOp, '||': boolBinaryOp, '==': boolBinaryOp, '!=': boolBinaryOp},
   EvalTypes.stringType: {
+    ..._knownObject,
     '+': KnownMethod(
         AlwaysReturnType(EvalTypes.stringType, false), [KnownMethodArg('other', EvalTypes.stringType, false)], {}),
     '==': KnownMethod(
@@ -288,9 +291,8 @@ final Map<TypeRef, Map<String, KnownMethod>> knownMethods = {
     'toUpperCase': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [], {}),
     'trimLeft': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [], {}),
     'trimRight': KnownMethod(AlwaysReturnType(EvalTypes.stringType, false), [], {}),
-    ..._knownObject
   },
-  EvalTypes.enumType: {'==': objectComparisonOp}
+  EvalTypes.enumType: {..._knownObject}
 };
 
 final Map<TypeRef, Map<String, KnownField>> knownFields = {
