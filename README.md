@@ -433,7 +433,7 @@ may vary when bridging.
 | Classes | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/class_test.dart) |
 | Class static methods | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/class_test.dart#L147), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/class_test.dart#L167) |
 | Getters and setters | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/class_test.dart#L253) |
-| Factory constructors | ❌ | N/A |
+| Factory constructors | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/class_test.dart#L375) |
 | `new` keyword | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/class_test.dart#L195) |
 | Class inheritance | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/functional1_test.dart) |
 | Abstract and `implements` | Partial | ❌ |
@@ -456,7 +456,7 @@ may vary when bridging.
 | Late initialization | ❌ | N/A |
 | Cascades | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/expression_test.dart#L136), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/expression_test.dart#L160) |
 | Ternary expressions | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/expression_test.dart#L118) |
-| Null coalescing expressions | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/expression_test.dart#L64), [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/expression_test.dart#L186) |
+| Null coalescing expressions | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/expression_test.dart#L64), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/expression_test.dart#L186) |
 | Extension methods | ❌ | N/A |
 | Const expressions | Partial | N/A |
 | Isolates | ❌ | N/A |

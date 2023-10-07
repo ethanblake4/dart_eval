@@ -371,5 +371,32 @@ void main() {
         runtime.executeLib('package:example/main.dart', 'main');
       }, prints('4\n'));
     });
+
+    test('Factory constructor', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              var x = X("Hi");
+              x.printValues();
+            }
+
+            class X {
+              factory X(String s) {
+                return X._(s + "!");
+              }
+              X._(this._b) : _a = 1;
+              final int _a;
+              final String _b;
+              void printValues() => print(_a + _b.length);
+            }
+          '''
+        }
+      });
+
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('4\n'));
+    });
   });
 }

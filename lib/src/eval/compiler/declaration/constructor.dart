@@ -6,9 +6,12 @@ import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/fpl.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/return.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/scope.dart';
 import 'package:dart_eval/src/eval/compiler/source.dart';
+import 'package:dart_eval/src/eval/compiler/statement/block.dart';
+import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
@@ -21,6 +24,10 @@ void compileConstructorDeclaration(
   final n = '$parentName.$dName';
   final isEnum = parent is EnumDeclaration;
 
+  if (d.factoryKeyword != null && d.initializers.isNotEmpty) {
+    throw CompileError('Factory constructors cannot have initializers', d);
+  }
+
   ctx.topLevelDeclarationPositions[ctx.library]![n] = beginMethod(ctx, d, d.offset, '$n()');
 
   ctx.beginAllocScope(existingAllocLen: d.parameters.parameters.length + (isEnum ? 2 : 0));
@@ -32,7 +39,7 @@ void compileConstructorDeclaration(
     if (initializer is SuperConstructorInvocation) {
       $superInitializer = initializer;
     } else if ($superInitializer != null) {
-      throw CompileError('Super constructor invocation must be last in the initializer list');
+      throw CompileError('Super constructor invocation must be last in the initializer list', d);
     } else {
       otherInitializers.add(initializer);
     }
@@ -90,6 +97,36 @@ void compileConstructorDeclaration(
     i++;
   }
 
+  final clsType = TypeRef.lookupDeclaration(ctx, ctx.library, parent);
+
+  if (d.factoryKeyword != null) {
+    final b = d.body;
+
+    if (b.isAsynchronous || b.isGenerator) {
+      throw CompileError('Factory constructors cannot be async and/or generators', d);
+    }
+
+    StatementInfo? stInfo;
+
+    if (b is BlockFunctionBody) {
+      stInfo = compileBlock(b.block, AlwaysReturnType(clsType, false), ctx, name: '$n()');
+    } else if (b is ExpressionFunctionBody) {
+      ctx.beginAllocScope();
+      final V = compileExpression(b.expression, ctx);
+      stInfo = doReturn(ctx, AlwaysReturnType(clsType, false), V, isAsync: b.isAsynchronous);
+      ctx.endAllocScope();
+    } else {
+      throw CompileError('Unknown function body type ${b.runtimeType}', d);
+    }
+
+    if (!(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
+      throw CompileError('Factory constructor must always return a value or throw', d);
+    }
+
+    ctx.endAllocScope(popValues: false);
+    return;
+  }
+
   final $extends = parent is EnumDeclaration ? null : (parent as ClassDeclaration).extendsClause;
   Variable $super;
   DeclarationOrPrefix? extendsWhat;
@@ -139,7 +176,7 @@ void compileConstructorDeclaration(
       if (offset.offset == null) {
         ctx.offsetTracker.setOffset(loc, offset);
       }
-      final clsType = TypeRef.lookupDeclaration(ctx, ctx.library, parent);
+
       mReturnType = method.methodReturnType?.toAlwaysReturnType(ctx, clsType, argTypes, namedArgTypes) ??
           AlwaysReturnType(EvalTypes.dynamicType, true);
 

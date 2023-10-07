@@ -155,7 +155,7 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e, {Varia
 Variable _invokeWithTarget(CompilerContext ctx, Variable L, MethodInvocation e) {
   AlwaysReturnType? mReturnType;
 
-  final DeclarationOrBridge<MethodDeclaration, BridgeDeclaration> _dec;
+  final DeclarationOrBridge<ClassMember, BridgeDeclaration> _dec;
   final bool isStatic;
   TypeRef? staticType;
 
@@ -184,7 +184,10 @@ Variable _invokeWithTarget(CompilerContext ctx, Variable L, MethodInvocation e) 
     argsPair = compileArgumentListWithBridge(ctx, e.argumentList, fd, before: []);
   } else {
     final dec = _dec.declaration!;
-    final fpl = dec.parameters?.parameters ?? <FormalParameter>[];
+    final fpl = (dec is MethodDeclaration
+            ? dec.parameters?.parameters
+            : (dec as ConstructorDeclaration).parameters.parameters) ??
+        <FormalParameter>[];
 
     argsPair = compileArgumentList(ctx, e.argumentList, (isStatic ? staticType! : L.type).file, fpl, dec,
         before: [if (!isStatic) L], source: e);
@@ -258,12 +261,12 @@ DeclarationOrBridge<MethodDeclaration, BridgeMethodDef> resolveInstanceMethod(
   }
 }
 
-DeclarationOrBridge<MethodDeclaration, BridgeDeclaration> resolveStaticMethod(
+DeclarationOrBridge<ClassMember, BridgeDeclaration> resolveStaticMethod(
     CompilerContext ctx, TypeRef classType, String methodName) {
   final method = ctx.topLevelDeclarationsMap[classType.file]!['${classType.name}.$methodName'];
   if (method != null) {
     if (method.declaration != null) {
-      return DeclarationOrBridge(classType.file, declaration: method.declaration! as MethodDeclaration);
+      return DeclarationOrBridge(classType.file, declaration: method.declaration! as ClassMember);
     } else {
       return DeclarationOrBridge(classType.file, bridge: method.bridge!);
     }

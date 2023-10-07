@@ -669,7 +669,11 @@ class AlwaysReturnType implements ReturnType {
       final fn = (_m.bridge as BridgeMethodDef).functionDescriptor;
       return AlwaysReturnType(TypeRef.fromBridgeAnnotation(ctx, fn.returns), fn.returns.nullable);
     }
-    return AlwaysReturnType.fromAnnotation(ctx, type.file, _m.declaration!.returnType, fallback);
+    final d = _m.declaration!;
+    if (d is ConstructorDeclaration) {
+      return AlwaysReturnType(type, false);
+    }
+    return AlwaysReturnType.fromAnnotation(ctx, type.file, (d as MethodDeclaration).returnType, fallback);
   }
 
   static AlwaysReturnType? fromInstanceMethodOrBuiltin(
