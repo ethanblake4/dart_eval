@@ -1,6 +1,7 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
+import 'package:dart_eval/src/eval/compiler/expression/as.dart';
 import 'package:dart_eval/src/eval/compiler/expression/assignment.dart';
 import 'package:dart_eval/src/eval/compiler/expression/await.dart';
 import 'package:dart_eval/src/eval/compiler/expression/binary.dart';
@@ -65,6 +66,8 @@ Variable compileExpression(Expression e, CompilerContext ctx, [TypeRef? bound]) 
     return compileIsExpression(e, ctx);
   } else if (e is CascadeExpression) {
     return compileCascadeExpression(e, ctx);
+  } else if (e is AsExpression) {
+    return compileAsExpression(e, ctx);
   }
 
   throw CompileError('Unknown expression type ${e.runtimeType}');

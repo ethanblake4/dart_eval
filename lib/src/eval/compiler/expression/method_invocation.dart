@@ -255,8 +255,7 @@ DeclarationOrBridge<MethodDeclaration, BridgeMethodDef> resolveInstanceMethod(
     if ($class.extendsClause == null) {
       throw CompileError('Cannot resolve instance method', source);
     }
-    // ignore: deprecated_member_use
-    final $supertype = ctx.visibleTypes[instanceType.file]![$class.extendsClause!.superclass.name2.stringValue]!;
+    final $supertype = ctx.visibleTypes[instanceType.file]![$class.extendsClause!.superclass.name2.value()]!;
     return resolveInstanceMethod(ctx, $supertype, methodName, source);
   }
 }

@@ -202,5 +202,63 @@ void main() {
         runtime.executeLib('package:example/main.dart', 'main');
       }, prints('1\n1\n'));
     });
+
+    test('Class cast', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              dynamic x = X();
+              print((x as X).getName());
+            }
+            
+            class X {
+              String getName() => 'X class';
+            }
+           '''
+        }
+      });
+
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('X class\n'));
+    });
+
+    test('Num cast', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              num x = 1;
+              print((x as int) + 1);
+            }
+           '''
+        }
+      });
+
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('2\n'));
+    });
+
+    test('Failing cast', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              dynamic x = X();
+              print((x as Y).getName());
+            }
+            
+            class X { String getName() => 'X class'; }
+            class Y { String getName() => 'Y class'; }
+           '''
+        }
+      });
+
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, throwsA(anything));
+    });
   });
 }

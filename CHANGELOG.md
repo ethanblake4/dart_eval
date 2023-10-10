@@ -1,3 +1,10 @@
+## 0.6.4
+- Support for casting (`as`)
+- Support for asserts and `AssertionError`
+- Add magic constant and version to EVC bytecode to prevent
+  errors.
+- Fix for error when extending a bridge class
+
 ## 0.6.3
 - Support for cascades
 - Support for null coalescing assignment operator `??=`

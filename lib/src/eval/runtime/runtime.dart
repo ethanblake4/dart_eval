@@ -130,6 +130,19 @@ class Runtime {
   }
 
   void _load() {
+    final m1 = _readUint8(), m2 = _readUint8(), m3 = _readUint8(), m4 = _readUint8();
+    final version = _readInt32();
+    if (m1 != 0x45 || m2 != 0x56 || m3 != 0x43 || m4 != 0x00) {
+      throw Exception('dart_eval runtime error: Not an EVC file or bytecode version older than 064');
+    }
+    if (version != 64) {
+      var vstr = version.toString();
+      if (vstr.length < 3) {
+        vstr = '0$vstr';
+      }
+      throw Exception('dart_eval runtime error: EVC bytecode is version $vstr, but runtime supports version 064.\n'
+          'Try using the same version of dart_eval for compiling as the version in your application.');
+    }
     final encodedToplevelDecs = _readString();
     final encodedInstanceDecs = _readString();
     //final encodedTypeNames = _readString();
@@ -161,7 +174,6 @@ class Runtime {
       declaredClasses[file] = {for (final decl in $class.entries) decl.key: EvalClass.fromJson(decl.value)};
     });
 
-    //typeNames = (json.decode(encodedTypeNames) as List).cast();
     typeTypes = [for (final s in (json.decode(encodedTypeTypes) as List)) (s as List).cast<int>().toSet()];
 
     typeIds = (json.decode(encodedTypeIds) as Map)
@@ -535,6 +547,9 @@ class Runtime {
       case IsType:
         op as IsType;
         return [Evc.OP_IS_TYPE, ...Evc.i16b(op._objectOffset), ...Evc.i32b(op._type), op._not ? 1 : 0];
+      case Assert:
+        op as Assert;
+        return [Evc.OP_ASSERT, ...Evc.i16b(op._valueOffset), ...Evc.i16b(op._exceptionOffset)];
       default:
         throw ArgumentError('Not a valid op $op');
     }

@@ -195,6 +195,9 @@ class Evc {
   /// [CheckNotEq]
   static const OP_CHECK_NOT_EQ = 62;
 
+  /// [Assert]
+  static const OP_ASSERT = 63;
+
   static List<int> i16b(int i16) {
     final x = ByteData(2);
     x.setInt16(0, i16);
@@ -301,4 +304,5 @@ final List<OpLoader> ops = [
   (Runtime rt) => PopCatch(rt), // 60
   (Runtime rt) => IsType(rt), // 61
   (Runtime rt) => CheckNotEq(rt), // 62
+  (Runtime rt) => Assert(rt), // 63
 ];

@@ -3,6 +3,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
+import 'package:dart_eval/src/eval/compiler/statement/assert.dart';
 import 'package:dart_eval/src/eval/compiler/statement/do.dart';
 import 'package:dart_eval/src/eval/compiler/statement/for.dart';
 import 'package:dart_eval/src/eval/compiler/statement/if.dart';
@@ -37,6 +38,8 @@ StatementInfo compileStatement(Statement s, AlwaysReturnType? expectedReturnType
     return compileIfStatement(s, ctx, expectedReturnType);
   } else if (s is TryStatement) {
     return compileTryStatement(s, ctx, expectedReturnType);
+  } else if (s is AssertStatement) {
+    return compileAssertStatement(s, ctx, expectedReturnType);
   } else {
     throw CompileError('Unknown statement type ${s.runtimeType}');
   }

@@ -354,8 +354,8 @@ class IsType implements EvcOp {
     final type = value.$getRuntimeType(runtime);
     if (type < 0) {
       final bool result;
-      if (_type == -2) {
-        //dynamic
+      if (_type == -2 || (_type == -4 && type != -3 /* null */)) {
+        //dynamic and Object
         result = true;
       } else if (_type == -6) {
         // num
@@ -374,6 +374,30 @@ class IsType implements EvcOp {
   @override
   String toString() => 'IsType (L$_objectOffset is${_not ? '!' : ''} $_type)';
 }
+
+/*/// Cast is a no-op unless the value being cast is a bridge class
+class Cast implements EvcOp {
+  Cast(Runtime runtime)
+      : _value = runtime._readInt16(),
+        _type = runtime._readInt32();
+
+  final int _value;
+  final int _type;
+
+  Cast.make(this._value, this._type);
+
+  static int LEN = Evc.BASE_OPLEN + Evc.I16_LEN + Evc.I32_LEN;
+
+  @override
+  void run(Runtime runtime) {
+    final value = runtime.frame[_value];
+
+    if (value is $Bridge) {
+      final data = Runtime.bridgeData[value];
+
+    }
+  }
+}*/
 
 class CheckNotEq implements EvcOp {
   CheckNotEq(Runtime runtime)

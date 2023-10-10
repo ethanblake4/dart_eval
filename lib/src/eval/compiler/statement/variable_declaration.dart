@@ -26,11 +26,14 @@ void compileVariableDeclarationList(VariableDeclarationList l, CompilerContext c
     }
     final init = li.initializer;
     if (init != null) {
-      final res = compileExpression(init, ctx, type);
+      var res = compileExpression(init, ctx, type);
       if (type != null && !res.type.resolveTypeChain(ctx).isAssignableTo(ctx, type)) {
         throw CompileError(
             'Type mismatch: variable "${li.name.value() as String}" is specified as type $type, but is initialized '
             'to an incompatible value of type ${res.type}');
+      }
+      if (!(type?.isUnboxedAcrossFunctionBoundaries ?? true)) {
+        res = res.boxIfNeeded(ctx);
       }
       if (res.name != null) {
         var _v = Variable.alloc(ctx, type ?? res.type);

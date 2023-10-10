@@ -120,6 +120,12 @@ class CoreTypes {
 
   /// Bridge type spec for [$RegExp]
   static const regExp = BridgeTypeSpec('dart:core', 'RegExp');
+
+  /// Bridge type spec for [Error]
+  static const error = BridgeTypeSpec('dart:core', 'Error');
+
+  /// Bridge type spec for [AssertionError]
+  static const assertionError = BridgeTypeSpec('dart:core', 'AssertionError');
 }
 
 /// This class contains dart:async bridge type specs for convenience

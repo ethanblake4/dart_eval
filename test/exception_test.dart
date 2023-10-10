@@ -111,5 +111,18 @@ void main() {
       });
       expect(runtime.executeLib('package:example/main.dart', 'main').$value, 'errorno');
     });
+
+    test('Simple assert', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              assert(false);
+            }
+          ''',
+        }
+      });
+      expect(() => runtime.executeLib('package:example/main.dart', 'main'), throwsA(isA<AssertionError>()));
+    });
   });
 }

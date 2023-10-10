@@ -345,3 +345,26 @@ class PopCatch implements EvcOp {
   @override
   String toString() => 'PopCatch()';
 }
+
+class Assert implements EvcOp {
+  Assert(Runtime exec)
+      : _valueOffset = exec._readInt16(),
+        _exceptionOffset = exec._readInt16();
+
+  Assert.make(this._valueOffset, this._exceptionOffset);
+
+  static const int LEN = Evc.BASE_OPLEN + Evc.I16_LEN * 2;
+
+  final int _valueOffset;
+  final int _exceptionOffset;
+
+  @override
+  void run(Runtime runtime) {
+    if (!(runtime.frame[_valueOffset] as bool)) {
+      runtime.$throw(runtime.frame[_exceptionOffset]);
+    }
+  }
+
+  @override
+  String toString() => 'Assert (!L$_valueOffset, L$_exceptionOffset)';
+}

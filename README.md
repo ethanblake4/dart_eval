@@ -450,8 +450,8 @@ may vary when bridging.
 | Typedefs | ❌ | N/A |
 | Generic classes | Partial | ❌ |
 | Type tests (`is`) | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/expression_test.dart#L12), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/expression_test.dart#L44) |
-| Casting (`as`) | ❌ | N/A |
-| `assert` | ❌ | N/A |
+| Casting (`as`) | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#L206), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#L227), [[3]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#L244) |
+| `assert` | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#L115) |
 | Null safety | Partial | ❌ |
 | Late initialization | ❌ | N/A |
 | Cascades | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/expression_test.dart#L136), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/expression_test.dart#L160) |
@@ -460,6 +460,8 @@ may vary when bridging.
 | Extension methods | ❌ | N/A |
 | Const expressions | Partial | N/A |
 | Isolates | ❌ | N/A |
+| Record types | ❌ | N/A |
+| Patterns | ❌ | N/A |
 
 ## Features and bugs
 
