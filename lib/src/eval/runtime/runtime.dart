@@ -81,6 +81,9 @@ class _UnloadedEnumValues {
 /// should check permissions using [checkPermission] or [assertPermission].
 ///
 class Runtime {
+  /// The current runtime version code
+  static const int versionCode = 65;
+
   /// Construct a runtime from EVC bytecode. When possible, use the
   /// [Runtime.ofProgram] constructor instead to reduce loading time.
   Runtime(this._evc)
@@ -135,12 +138,13 @@ class Runtime {
     if (m1 != 0x45 || m2 != 0x56 || m3 != 0x43 || m4 != 0x00) {
       throw Exception('dart_eval runtime error: Not an EVC file or bytecode version older than 064');
     }
-    if (version != 64) {
+    if (version != versionCode) {
       var vstr = version.toString();
       if (vstr.length < 3) {
         vstr = '0$vstr';
       }
-      throw Exception('dart_eval runtime error: EVC bytecode is version $vstr, but runtime supports version 064.\n'
+      throw Exception(
+          'dart_eval runtime error: EVC bytecode is version $vstr, but runtime supports version $versionCode.\n'
           'Try using the same version of dart_eval for compiling as the version in your application.');
     }
     final encodedToplevelDecs = _readString();
@@ -550,6 +554,12 @@ class Runtime {
       case Assert:
         op as Assert;
         return [Evc.OP_ASSERT, ...Evc.i16b(op._valueOffset), ...Evc.i16b(op._exceptionOffset)];
+      case PushFinally:
+        op as PushFinally;
+        return [Evc.OP_PUSH_FINALLY, ...Evc.i32b(op._tryOffset)];
+      case PushReturnFromCatch:
+        op as PushReturnFromCatch;
+        return [Evc.OP_PUSH_RETURN_FROM_CATCH];
       default:
         throw ArgumentError('Not a valid op $op');
     }
@@ -582,6 +592,17 @@ class Runtime {
 
   /// The most recent return value
   Object? returnValue;
+
+  bool inCatch = false;
+
+  /// 0 = throw, 1 = return, 2 = break, 3 = continue
+  int catchControlFlowOutcome = -1;
+
+  /// The exception to be rethrown
+  Object? rethrowException;
+
+  /// Last return value from a catch block
+  Object? returnFromCatch;
 
   /// [frameOffset]s for each stack frame
   final frameOffsetStack = <int>[0];
@@ -686,8 +707,9 @@ class Runtime {
   /// Throw an exception from the VM. This will unwind the stack until a
   /// catch block is found.
   void $throw(dynamic exception) {
+    List<int> catchFrame;
     while (true) {
-      final catchFrame = catchStack.last;
+      catchFrame = catchStack.last;
       if (catchFrame.isNotEmpty) {
         break;
       }
@@ -702,7 +724,13 @@ class Runtime {
         throw exception is WrappedException ? exception : WrappedException(exception);
       }
     }
-    final catchOffset = catchStack.last.removeLast();
+    var catchOffset = catchFrame.removeLast();
+    if (catchOffset < 0) {
+      rethrowException = exception;
+      catchOffset = -catchOffset;
+    } else {
+      inCatch = true;
+    }
     frameOffset = frameOffsetStack.last;
     returnValue = exception is WrappedException ? exception.exception : exception;
     _prOffset = catchOffset;
@@ -787,7 +815,7 @@ class RuntimeException implements Exception {
         'RUNTIME STATE\n'
         '=============\n'
         'Program offset: ${runtime._prOffset - 1}\n'
-        'Stack sample: ${formatStackSample(runtime.stack.last.take(10).toList(), 10)}\n'
+        'Stack sample: ${formatStackSample(runtime.stack.last.take(10).toList(), 10, runtime.frameOffset)}\n'
         'Call stack: ${runtime.callStack}\n'
         'TRACE:\n$prStr';
   }

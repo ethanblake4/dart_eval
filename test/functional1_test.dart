@@ -142,13 +142,13 @@ void main() {
           func1();
           func2();
           func3();
-          await Future.delayed(Duration(microseconds: 5000));
+          await Future.delayed(Duration(microseconds: 6500));
           print("complete");
           return func4();
         }
 
         void func1() async {
-          await Future.delayed(Duration(microseconds: 3500));
+          await Future.delayed(Duration(microseconds: 4500));
           print("func1");
         }
 

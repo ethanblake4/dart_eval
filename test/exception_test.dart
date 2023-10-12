@@ -112,6 +112,150 @@ void main() {
       expect(runtime.executeLib('package:example/main.dart', 'main').$value, 'errorno');
     });
 
+    test('Return from finally precedes error', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            String main() {
+              try {
+                throw 'error';
+              } finally {
+                return 'finally';
+              }
+            }
+          ''',
+        }
+      });
+      expect(runtime.executeLib('package:example/main.dart', 'main').$value, 'finally');
+    });
+
+    test('Error propagates through empty finally', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            String main() {
+              try {
+                throw 'error';
+              } finally {}
+            }
+          ''',
+        }
+      });
+      expect(() => runtime.executeLib('package:example/main.dart', 'main'), throwsA($String('error')));
+    });
+
+    test('Return from catch is preceded by finally return', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            String main() {
+              try {
+                throw 'error';
+              } catch (e) {
+                return 'catch';
+              } finally {
+                return 'finally';
+              }
+            }
+          ''',
+        }
+      });
+      expect(runtime.executeLib('package:example/main.dart', 'main').$value, 'finally');
+    });
+
+    test('Finally can do work and return value from catch', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            String main() {
+              try {
+                throw 'error';
+              } catch (e) {
+                return 'catch';
+              } finally {
+                print('finally');
+              }
+              print('should not print');
+            }
+          ''',
+        }
+      });
+      expect(
+          () => expect(runtime.executeLib('package:example/main.dart', 'main').$value, 'catch'), prints('finally\n'));
+    });
+
+    test('Manipulating local variables in catch and finally', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main() {
+              var i = 0;
+              try {
+                throw 'error';
+              } catch (e) {
+                i++;
+              } finally {
+                i+=3;
+              }
+              return i;
+            }
+          ''',
+        }
+      });
+
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 4);
+    });
+
+    test('Try without throw skips catch but executes finally', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main() {
+              var i = 0;
+              try {
+                i++;
+              } catch (e) {
+                i+=2;
+              } finally {
+                i+=3;
+              }
+              return i;
+            }
+          ''',
+        }
+      });
+
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 4);
+    });
+
+    test('Nested try/catch/finally', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main() {
+              var i = 0;
+              try {
+                try {
+                  throw 'error';
+                } catch (e) {
+                  i++;
+                } finally {
+                  i+=3;
+                }
+              } catch (e) {
+                i+=5; // should not execute
+              } finally {
+                i+=7;
+              }
+              return i;
+            }
+          ''',
+        }
+      });
+
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 11);
+    });
+
     test('Simple assert', () {
       final runtime = compiler.compileWriteAndLoad({
         'example': {

@@ -6,7 +6,6 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 Variable compileThrowExpression(CompilerContext ctx, ThrowExpression e) {
-  ctx.endAllocScope();
   final V = compileExpression(e.expression, ctx).boxIfNeeded(ctx);
   ctx.pushOp(Throw.make(V.scopeFrameOffset), Throw.LEN);
   return Variable(-1, EvalTypes.neverType);

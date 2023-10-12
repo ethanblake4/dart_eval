@@ -179,10 +179,19 @@ class Return implements EvcOp {
 
   @override
   void run(Runtime runtime) {
-    if (_location == -1) {
+    if (_location > -1) {
+      runtime.returnValue = runtime.frame[_location];
+    } else if (_location == -1 || _location == -3) {
       runtime.returnValue = null;
     } else {
-      runtime.returnValue = runtime.frame[_location];
+      if (runtime.rethrowException != null) {
+        runtime.$throw(runtime.rethrowException!);
+        return;
+      }
+      if (runtime.catchControlFlowOutcome != 1) {
+        return;
+      }
+      runtime.returnValue = runtime.returnFromCatch;
     }
 
     runtime.stack.removeLast();
@@ -192,6 +201,13 @@ class Return implements EvcOp {
     }
 
     runtime.catchStack.removeLast();
+    if (runtime.inCatch) {
+      if (_location != -3) {
+        runtime.catchControlFlowOutcome = 1;
+      }
+      runtime.inCatch = false;
+    }
+
     final prOffset = runtime.callStack.removeLast();
     if (prOffset == -1) {
       throw ProgramExit(0);
@@ -231,6 +247,12 @@ class ReturnAsync implements EvcOp {
 
     final prOffset = runtime.callStack.removeLast();
     runtime.catchStack.removeLast();
+    if (runtime.inCatch) {
+      if (_location != -3) {
+        runtime.catchControlFlowOutcome = 1;
+      }
+      runtime.inCatch = false;
+    }
     if (prOffset == -1) {
       throw ProgramExit(0);
     }
@@ -307,7 +329,11 @@ class Try implements EvcOp {
 
   @override
   void run(Runtime runtime) {
-    runtime.catchStack.last.add(_catchOffset);
+    runtime.catchControlFlowOutcome = -1;
+    runtime.frameOffsetStack.add(runtime.frameOffset);
+    if (_catchOffset > -1) {
+      runtime.catchStack.last.add(_catchOffset);
+    }
   }
 
   @override
@@ -367,4 +393,43 @@ class Assert implements EvcOp {
 
   @override
   String toString() => 'Assert (!L$_valueOffset, L$_exceptionOffset)';
+}
+
+class PushFinally implements EvcOp {
+  PushFinally(Runtime exec) : _tryOffset = exec._readInt32();
+
+  PushFinally.make(this._tryOffset);
+
+  static const int LEN = Evc.BASE_OPLEN + Evc.I32_LEN;
+
+  final int _tryOffset;
+
+  @override
+  void run(Runtime runtime) {
+    runtime.catchStack.last.add(-runtime._prOffset);
+    runtime.callStack.add(runtime._prOffset);
+    runtime.catchStack.add([]);
+    runtime.stack.add(runtime.stack.last);
+    runtime.frameOffsetStack.add(runtime.frameOffsetStack.last);
+    runtime._prOffset = _tryOffset;
+  }
+
+  @override
+  String toString() => 'PushFinally (try @$_tryOffset)';
+}
+
+class PushReturnFromCatch implements EvcOp {
+  PushReturnFromCatch(Runtime exec);
+
+  PushReturnFromCatch.make();
+
+  static const int LEN = Evc.BASE_OPLEN;
+
+  @override
+  void run(Runtime runtime) {
+    runtime.returnFromCatch = runtime.returnValue;
+  }
+
+  @override
+  String toString() => 'PushReturnFromCatch ()';
 }

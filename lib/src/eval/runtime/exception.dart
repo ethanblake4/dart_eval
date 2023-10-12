@@ -1,16 +1,23 @@
 import 'dart:math';
 
+import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
+
 /// Format a dart_eval stack sample for printing.
-String formatStackSample(List st, int size) {
+String formatStackSample(List st, int size, [int? frameOffset]) {
   final sb = StringBuffer('[');
   final _size = min(size, st.length);
   for (var i = 0; i < _size; i++) {
     final s = st[i];
+    if (i == frameOffset) {
+      sb.write('*');
+    }
     sb.write('L$i: ');
     if (s is List) {
       sb.write(formatStackSample(s, 3));
     } else if (s is String) {
       sb.write('"$s"');
+    } else if (s is $num) {
+      sb.write('\$$s');
     } else {
       sb.write('$s');
     }

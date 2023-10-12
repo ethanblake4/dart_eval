@@ -20,7 +20,7 @@ dart_eval's compiler is powered under the hood by the Dart
 [analyzer](https://pub.dev/packages/analyzer), so it achieves 100% correct and 
 up-to-date parsing (although compilation and evaluation aren't quite there yet.)
 
-Currently dart_eval implements a decent amount of the Dart spec, but there 
+Currently dart_eval implements a majority of the Dart spec, but there 
 are still missing features like generators, Sets and extension methods.
 In addition, parts of the standard library haven't been implemented. See the
 [language feature support table](#language-feature-support-table) for details.
@@ -422,7 +422,7 @@ may vary when bridging.
 | Labels and `break` | ❌ | N/A |
 | If statements | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/loop_test.dart#L28) |
 | Try-catch | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#L13), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#31), [[3]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#49), [[4]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#71), [[5]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#92) |
-| Try-catch-finally | ❌ | N/A |
+| Try-catch-finally | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#L132), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#147), [[3]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#187), [[4]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#209), [[5]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#231) |
 | Lists | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart) |
 | Iterable | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L14), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L29) |
 | Maps | Partial | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/convert_test.dart#L60) |
@@ -451,7 +451,7 @@ may vary when bridging.
 | Generic classes | Partial | ❌ |
 | Type tests (`is`) | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/expression_test.dart#L12), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/expression_test.dart#L44) |
 | Casting (`as`) | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#L206), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#L227), [[3]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#L244) |
-| `assert` | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#L115) |
+| `assert` | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#L259) |
 | Null safety | Partial | ❌ |
 | Late initialization | ❌ | N/A |
 | Cascades | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/expression_test.dart#L136), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/expression_test.dart#L160) |

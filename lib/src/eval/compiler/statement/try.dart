@@ -1,8 +1,8 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
-import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
+import 'package:dart_eval/src/eval/compiler/statement/block.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
@@ -11,43 +11,67 @@ import 'package:dart_eval/src/eval/shared/types.dart';
 import '../variable.dart';
 
 StatementInfo compileTryStatement(TryStatement s, CompilerContext ctx, AlwaysReturnType? expectedReturnType) {
+  int jumpOver = -1;
+  if (s.finallyBlock != null) {
+    final loc = ctx.pushOp(PushFinally.make(-1), PushFinally.LEN);
+    ctx.pushOp(PushReturnFromCatch.make(), PushReturnFromCatch.LEN);
+    ctx.beginAllocScope();
+    final bodyInfo = compileBlock(s.finallyBlock!, expectedReturnType, ctx);
+    if (!bodyInfo.willAlwaysReturn && !bodyInfo.willAlwaysThrow) {
+      /// If the finally block doesn't return, we may need to return the value from the try block
+      ctx.pushOp(Return.make(-2), Return.LEN);
+    }
+    ctx.endAllocScope(popValues: true);
+    jumpOver = ctx.pushOp(JumpConstant.make(-1), JumpConstant.LEN);
+    ctx.rewriteOp(loc, PushFinally.make(ctx.out.length), 0);
+  }
+
   final tryOp = ctx.pushOp(Try.make(-1), Try.LEN);
 
   final _initialState = ctx.saveState();
-  ctx.beginAllocScope();
-  final bodyInfo = compileStatement(s.body, expectedReturnType, ctx);
-  ctx.resolveBranchStateDiscontinuity(_initialState);
-  ctx.pushOp(PopCatch.make(), PopCatch.LEN);
-
-  if (s.catchClauses.isEmpty) {
-    throw CompileError('Try statements must have at least one catch clause');
-  }
-
-  final jumpOver = ctx.pushOp(JumpConstant.make(-1), JumpConstant.LEN);
-  ctx.rewriteOp(tryOp, Try.make(ctx.out.length), 0);
 
   ctx.beginAllocScope();
-  ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-  final v = Variable.alloc(ctx, EvalTypes.dynamicType);
-  final catchInfo = _compileCatchClause(ctx, s.catchClauses, 0, v, expectedReturnType);
+  final bodyInfo = compileBlock(s.body, expectedReturnType, ctx);
   ctx.endAllocScope();
 
-  ctx.rewriteOp(jumpOver, JumpConstant.make(ctx.out.length), 0);
+  ctx.resolveBranchStateDiscontinuity(_initialState);
 
-  if (s.finallyBlock != null) {
-    throw CompileError('Finally blocks are not supported yet');
+  ctx.pushOp(PopCatch.make(), PopCatch.LEN);
+
+  if (s.finallyBlock == null) {
+    jumpOver = ctx.pushOp(JumpConstant.make(-1), JumpConstant.LEN);
+  } else {
+    ctx.pushOp(Return.make(-3), JumpConstant.LEN);
   }
+
+  ctx.rewriteOp(tryOp, Try.make(s.catchClauses.isNotEmpty ? ctx.out.length : -1), 0);
+
+  var catchInfo = StatementInfo(-1);
+  if (s.catchClauses.isNotEmpty) {
+    final _state = ctx.saveState();
+    ctx.beginAllocScope();
+    ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
+    final v = Variable.alloc(ctx, EvalTypes.dynamicType);
+    catchInfo = _compileCatchClause(ctx, s.catchClauses, 0, v, expectedReturnType);
+    ctx.endAllocScope();
+    ctx.resolveBranchStateDiscontinuity(_state);
+    ctx.pushOp(Return.make(-3), Return.LEN);
+  }
+
+  ctx.rewriteOp(jumpOver, JumpConstant.make(ctx.out.length), 0);
 
   return bodyInfo | catchInfo.copyWith(willAlwaysThrow: false);
 }
 
+// Catch clauses are compiled into a single effective catch clause
+// with a series of branches to check types for 'on' clauses.
 StatementInfo _compileCatchClause(CompilerContext ctx, List<CatchClause> clauses, int index, Variable exceptionVar,
     AlwaysReturnType? expectedReturnType) {
   final catchClause = clauses[index];
   final exceptionType = catchClause.exceptionType;
   if (exceptionType == null) {
     ctx.setLocal(catchClause.exceptionParameter!.name.value() as String, exceptionVar);
-    return compileStatement(catchClause.body, expectedReturnType, ctx);
+    return compileBlock(catchClause.body, expectedReturnType, ctx);
   }
   final slot = TypeRef.fromAnnotation(ctx, ctx.library, exceptionType);
   return macroBranch(
@@ -60,7 +84,7 @@ StatementInfo _compileCatchClause(CompilerContext ctx, List<CatchClause> clauses
     },
     thenBranch: (_ctx, _expectedReturnType) {
       ctx.setLocal(catchClause.exceptionParameter!.name.value() as String, exceptionVar.copyWith(type: slot));
-      return compileStatement(catchClause.body, expectedReturnType, ctx);
+      return compileBlock(catchClause.body, expectedReturnType, ctx);
     },
     elseBranch: clauses.length <= index + 1
         ? null

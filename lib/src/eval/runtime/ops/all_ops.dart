@@ -198,6 +198,12 @@ class Evc {
   /// [Assert]
   static const OP_ASSERT = 63;
 
+  /// [PushFinally]
+  static const OP_PUSH_FINALLY = 64;
+
+  /// [PushReturnFromCatch]
+  static const OP_PUSH_RETURN_FROM_CATCH = 65;
+
   static List<int> i16b(int i16) {
     final x = ByteData(2);
     x.setInt16(0, i16);
@@ -305,4 +311,6 @@ final List<OpLoader> ops = [
   (Runtime rt) => IsType(rt), // 61
   (Runtime rt) => CheckNotEq(rt), // 62
   (Runtime rt) => Assert(rt), // 63
+  (Runtime rt) => PushFinally(rt), // 64
+  (Runtime rt) => PushReturnFromCatch(rt), // 65
 ];

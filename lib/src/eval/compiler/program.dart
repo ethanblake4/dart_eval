@@ -79,7 +79,7 @@ class Program {
     final b = BytesBuilder(copy: false);
 
     b.add([0x45, 0x56, 0x43, 0x00]); // EVC\0
-    b.add(Evc.i32b(64)); // version
+    b.add(Evc.i32b(Runtime.versionCode)); // version
 
     _writeMetaBlock(b, topLevelDeclarations.map((key, value) => MapEntry(key.toString(), value)));
     _writeMetaBlock(b, instanceDeclarations.map((key, value) => MapEntry(key.toString(), value)));

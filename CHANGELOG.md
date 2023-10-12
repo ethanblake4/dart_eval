@@ -1,3 +1,7 @@
+## 0.6.5
+- Support for try/finally and try/catch/finally
+- Fix numerous bugs related to exception handling
+
 ## 0.6.4
 - Support for casting (`as`)
 - Support for asserts and `AssertionError`
