@@ -8,7 +8,7 @@ part 'enum.g.dart';
 @JsonSerializable()
 class BridgeEnumDef implements BridgeDeclaration {
   const BridgeEnumDef(this.type,
-      {this.values = const {},
+      {this.values = const [],
       this.methods = const {},
       this.getters = const {},
       this.setters = const {},
