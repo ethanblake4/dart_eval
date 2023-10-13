@@ -640,5 +640,10 @@ $Function get$List_generate(Runtime _) => _$List_generate;
 const _$List_generate = $Function(_List_generate);
 
 $Value? _List_generate(Runtime runtime, $Value? target, List<$Value?> args) {
-  return $List.wrap(List.generate(args[0]!.$value, args[1]!.$value, growable: args[2]?.$value ?? true));
+  final generator = args[1] as EvalFunction;
+  return $List.wrap(
+      List.generate(args[0]!.$value,
+      (i) => generator(runtime, target, [$int(i)]),
+      growable: args[2]?.$value ?? true),
+  );
 }

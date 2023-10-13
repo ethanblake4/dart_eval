@@ -2,10 +2,23 @@ part of 'collection.dart';
 
 /// dart_eval bimodal wrapper for [Iterable]
 class $Iterable<E> implements Iterable<E>, $Instance {
+  /// Configure the [$Iterable] wrapper for use in a [Runtime]
+  static void configureForRuntime(Runtime runtime) {
+    runtime.registerBridgeFunc('dart:core', 'Iterable.generate', _$Iterable_generate);
+  }
+
   /// Compile-time class definition for [$Iterable]
   static const $declaration = BridgeClassDef(
       BridgeClassType(BridgeTypeRef(CoreTypes.iterable), generics: {'E': BridgeGenericParam()}),
-      constructors: {},
+      constructors: {
+        'generate': BridgeConstructorDef(BridgeFunctionDef(
+            params: [
+              BridgeParameter('count', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType)), false),
+              BridgeParameter('generator', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.functionType)), true),
+            ],
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.iterable, [BridgeTypeRef.ref('E')])),
+            generics: {'E': BridgeGenericParam()})),
+      },
       methods: {
         'join': BridgeMethodDef(
             BridgeFunctionDef(params: [
@@ -250,4 +263,15 @@ class $Iterable<E> implements Iterable<E>, $Instance {
 
   @override
   int $getRuntimeType(Runtime runtime) => runtime.lookupType(CoreTypes.iterable);
+}
+
+$Function get$Iterable_generate(Runtime _) => _$Iterable_generate;
+
+const _$Iterable_generate = $Function(_Iterable_generate);
+
+final _defaultIterableGenerator = $Function((runtime, target, args) => args[0]);
+$Value? _Iterable_generate(Runtime runtime, $Value? target, List<$Value?> args) {
+  var generator = args[1] as EvalFunction?;
+  generator ??= _defaultIterableGenerator;
+  return $Iterable.wrap(Iterable.generate(args[0]!.$value, (i) => generator!(runtime, target, [$int(i)])));
 }
