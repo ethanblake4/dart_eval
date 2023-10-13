@@ -18,7 +18,6 @@ import 'package:dart_eval/src/eval/shared/stdlib/convert.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/math.dart';
-import 'package:dart_eval/src/eval/shared/types.dart';
 import 'package:directed_graph/directed_graph.dart';
 
 import 'context.dart';
@@ -320,11 +319,11 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
               }
             }
           }
-          visibleTypesByIndex[libraryIndex] ??= {...coreDeclarations};
+          visibleTypesByIndex[libraryIndex] ??= {};
           visibleTypesByIndex[libraryIndex]!.addAll(res);
           continue;
         }
-        visibleTypesByIndex[libraryIndex] ??= {...coreDeclarations};
+        visibleTypesByIndex[libraryIndex] ??= {};
         final declarationOrBridge = dop.declaration!;
         final type = declarationTypes[declarationOrBridge];
         if (type == null) continue;
@@ -350,10 +349,10 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     ctx.visibleTypes = visibleTypesByIndex;
 
     unboxedAcrossFunctionBoundaries = {
-      EvalTypes.getIntType(ctx),
-      EvalTypes.getDoubleType(ctx),
-      EvalTypes.boolType,
-      EvalTypes.getListType(ctx)
+      CoreTypes.int.ref(ctx),
+      CoreTypes.double.ref(ctx),
+      CoreTypes.bool.ref(ctx),
+      CoreTypes.list.ref(ctx)
     };
 
     for (final library in libraries) {
@@ -455,7 +454,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
 
     final typeIds = <int, Map<String, int>>{};
 
-    for (final t in {...runtimeTypeMap, ...ctx.typeRefIndexMap}.entries) {
+    for (final t in ctx.typeRefIndexMap.entries) {
       final type = t.key;
       typeIds.putIfAbsent(type.file, () => {})[type.name] = t.value;
     }

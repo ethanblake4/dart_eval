@@ -35,35 +35,22 @@ class $File implements $Instance {
       methods: {
         'create': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(
-                CoreTypes.future, [BridgeTypeRef.type(RuntimeTypes.voidType)])),
+                CoreTypes.future, [BridgeTypeRef(CoreTypes.voidType)])),
             params: [],
             namedParams: [
-              BridgeParameter(
-                  'recursive',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.boolType)),
-                  true),
-              BridgeParameter(
-                  'exclusive',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.boolType)),
-                  true),
+              BridgeParameter('recursive',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true),
+              BridgeParameter('exclusive',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true),
             ])),
         'createSync': BridgeMethodDef(BridgeFunctionDef(
-            returns:
-                BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.voidType)),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
             params: [],
             namedParams: [
-              BridgeParameter(
-                  'recursive',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.boolType)),
-                  true),
-              BridgeParameter(
-                  'exclusive',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.boolType)),
-                  true),
+              BridgeParameter('recursive',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true),
+              BridgeParameter('exclusive',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true),
             ])),
         'rename': BridgeMethodDef(BridgeFunctionDef(
             returns:
@@ -138,7 +125,7 @@ class $File implements $Instance {
         'setLastAccessed': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(
               CoreTypes.future,
-              [BridgeTypeRef.type(RuntimeTypes.voidType)],
+              [BridgeTypeRef(CoreTypes.voidType)],
             )),
             params: [
               BridgeParameter(
@@ -148,8 +135,7 @@ class $File implements $Instance {
             ],
             namedParams: [])),
         'setLastAccessedSync': BridgeMethodDef(BridgeFunctionDef(
-            returns:
-                BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.voidType)),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
             params: [
               BridgeParameter(
                   'time',
@@ -160,7 +146,7 @@ class $File implements $Instance {
         'setLastModified': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(
               CoreTypes.future,
-              [BridgeTypeRef.type(RuntimeTypes.voidType)],
+              [BridgeTypeRef(CoreTypes.voidType)],
             )),
             params: [
               BridgeParameter(
@@ -170,8 +156,7 @@ class $File implements $Instance {
             ],
             namedParams: [])),
         'setLastModifiedSync': BridgeMethodDef(BridgeFunctionDef(
-            returns:
-                BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.voidType)),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
             params: [
               BridgeParameter(
                   'time',
@@ -211,7 +196,7 @@ class $File implements $Instance {
         'writeAsString': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(
               CoreTypes.future,
-              [BridgeTypeRef.type(RuntimeTypes.voidType)],
+              [BridgeTypeRef(CoreTypes.voidType)],
             )),
             params: [
               BridgeParameter('contents',
@@ -220,15 +205,11 @@ class $File implements $Instance {
             namedParams: [
               //BridgeParameter('encoding', BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.encodingType)), true),
               //BridgeParameter('mode', BridgeTypeAnnotation(BridgeTypeRef(IoTypes.fileModeType)), true),
-              BridgeParameter(
-                  'flush',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.boolType)),
-                  true),
+              BridgeParameter('flush',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true),
             ])),
         'writeAsStringSync': BridgeMethodDef(BridgeFunctionDef(
-            returns:
-                BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.voidType)),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
             params: [
               BridgeParameter('contents',
                   BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false)
@@ -236,16 +217,13 @@ class $File implements $Instance {
             namedParams: [
               //BridgeParameter('encoding', BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.encodingType)), true),
               //BridgeParameter('mode', BridgeTypeAnnotation(BridgeTypeRef(IoTypes.fileModeType)), true),
-              BridgeParameter(
-                  'flush',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.boolType)),
-                  true),
+              BridgeParameter('flush',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true),
             ])),
         'writeAsBytes': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(
               CoreTypes.future,
-              [BridgeTypeRef.type(RuntimeTypes.voidType)],
+              [BridgeTypeRef(CoreTypes.voidType)],
             )),
             params: [
               BridgeParameter(
@@ -256,15 +234,11 @@ class $File implements $Instance {
             ],
             namedParams: [
               //BridgeParameter('mode', BridgeTypeAnnotation(BridgeTypeRef(IoTypes.fileModeType)), true),
-              BridgeParameter(
-                  'flush',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.boolType)),
-                  true),
+              BridgeParameter('flush',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true),
             ])),
         'writeAsBytesSync': BridgeMethodDef(BridgeFunctionDef(
-            returns:
-                BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.voidType)),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
             params: [
               BridgeParameter(
                   'bytes',
@@ -274,11 +248,8 @@ class $File implements $Instance {
             ],
             namedParams: [
               //BridgeParameter('mode', BridgeTypeAnnotation(BridgeTypeRef(IoTypes.fileModeType)), true),
-              BridgeParameter(
-                  'flush',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.boolType)),
-                  true),
+              BridgeParameter('flush',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true),
             ])),
         'readAsLines': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(

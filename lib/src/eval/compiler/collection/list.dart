@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/collection/for.dart';
 import 'package:dart_eval/src/eval/compiler/collection/if.dart';
@@ -42,8 +43,8 @@ Variable compileListLiteral(ListLiteral l, CompilerContext ctx,
 
   var _list = Variable.alloc(
     ctx,
-    EvalTypes.getListType(ctx).copyWith(
-        specifiedTypeArgs: [listSpecifiedType ?? EvalTypes.dynamicType],
+    CoreTypes.list.ref(ctx).copyWith(
+        specifiedTypeArgs: [listSpecifiedType ?? CoreTypes.dynamic.ref(ctx)],
         boxed: false),
   );
 
@@ -57,9 +58,9 @@ Variable compileListLiteral(ListLiteral l, CompilerContext ctx,
   if (listSpecifiedType == null) {
     return Variable(
         _list.scopeFrameOffset,
-        EvalTypes.getListType(ctx).copyWith(boxed: false, specifiedTypeArgs: [
+        CoreTypes.list.ref(ctx).copyWith(boxed: false, specifiedTypeArgs: [
           resultTypes.isEmpty
-              ? EvalTypes.dynamicType
+              ? CoreTypes.dynamic.ref(ctx)
               : TypeRef.commonBaseType(ctx, resultTypes.toSet())
         ]));
   }
@@ -70,14 +71,13 @@ Variable compileListLiteral(ListLiteral l, CompilerContext ctx,
 Variable boxListContents(CompilerContext ctx, Variable list) {
   late Variable $i, $1, len, newList;
 
-  macroLoop(ctx, AlwaysReturnType(EvalTypes.dynamicType, true),
+  macroLoop(ctx, AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true),
       initialization: (_ctx) {
     $i = BuiltinValue(intval: 0).push(_ctx);
     $1 = BuiltinValue(intval: 1).push(_ctx);
 
     // final len = list.length;
-    len =
-        Variable.alloc(_ctx, EvalTypes.getIntType(ctx).copyWith(boxed: false));
+    len = Variable.alloc(_ctx, CoreTypes.int.ref(ctx).copyWith(boxed: false));
     _ctx.pushOp(
         PushIterableLength.make(list.scopeFrameOffset), PushIterableLength.LEN);
 
@@ -86,12 +86,13 @@ Variable boxListContents(CompilerContext ctx, Variable list) {
 
     newList = Variable.alloc(
         _ctx,
-        EvalTypes.getListType(ctx).copyWith(boxed: true, specifiedTypeArgs: [
+        CoreTypes.list.ref(ctx).copyWith(boxed: true, specifiedTypeArgs: [
           list.type.specifiedTypeArgs[0].copyWith(boxed: true)
         ]));
   }, condition: (_ctx) {
     // i < len
-    final v = Variable.alloc(_ctx, EvalTypes.boolType.copyWith(boxed: false));
+    final v =
+        Variable.alloc(_ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
     _ctx.pushOp(
         NumLt.make($i.scopeFrameOffset, len.scopeFrameOffset), NumLt.LEN);
     return v;
@@ -106,7 +107,7 @@ Variable boxListContents(CompilerContext ctx, Variable list) {
     return StatementInfo(-1);
   }, update: (_ctx) {
     final ip1 =
-        Variable.alloc(_ctx, EvalTypes.getIntType(ctx).copyWith(boxed: false));
+        Variable.alloc(_ctx, CoreTypes.int.ref(ctx).copyWith(boxed: false));
     _ctx.pushOp(
         NumAdd.make($i.scopeFrameOffset, $1.scopeFrameOffset), NumAdd.LEN);
     _ctx.pushOp(CopyValue.make($i.scopeFrameOffset, ip1.scopeFrameOffset),

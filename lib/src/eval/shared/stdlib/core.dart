@@ -4,6 +4,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/base.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/collection.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/comparable.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/date_time.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/enum.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/errors.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/iterator.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
@@ -23,6 +24,15 @@ class DartCorePlugin implements EvalPlugin {
   @override
   void configureForCompile(BridgeDeclarationRegistry registry) {
     configurePrintForCompile(registry);
+    registry.defineBridgeClass($dynamicCls);
+    registry.defineBridgeClass($voidCls);
+    registry.defineBridgeClass($neverCls);
+    registry.defineBridgeClass($typeCls);
+    registry.defineBridgeClass($null.$declaration);
+    registry.defineBridgeClass($Object.$declaration);
+    registry.defineBridgeClass($enumDeclaration);
+    registry.defineBridgeClass($bool.$declaration);
+    registry.defineBridgeClass($Function.$declaration);
     registry.defineBridgeClass($num.$declaration);
     registry.defineBridgeClass($int.$declaration);
     registry.defineBridgeClass($double.$declaration);
@@ -30,6 +40,7 @@ class DartCorePlugin implements EvalPlugin {
     registry.defineBridgeClass($Iterable.$declaration);
     registry.defineBridgeClass($Iterator.$declaration);
     registry.defineBridgeClass($List.$declaration);
+    registry.defineBridgeClass($Map.$declaration);
     registry.defineBridgeClass($Duration.$declaration);
     registry.defineBridgeClass($Future.$declaration);
     registry.defineBridgeClass($DateTime.$declaration);

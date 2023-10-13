@@ -22,11 +22,8 @@ class $List<E> implements List<E>, $Instance {
                   'fill', BridgeTypeAnnotation(BridgeTypeRef.ref('E')), false),
             ],
             namedParams: [
-              BridgeParameter(
-                  'growable',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.boolType)),
-                  true),
+              BridgeParameter('growable',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true),
             ],
             returns: BridgeTypeAnnotation(
                 BridgeTypeRef(CoreTypes.list, [BridgeTypeRef.ref('E')])),
@@ -37,16 +34,12 @@ class $List<E> implements List<E>, $Instance {
                   BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), false),
               BridgeParameter(
                   'generator',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.functionType)),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
                   false),
             ],
             namedParams: [
-              BridgeParameter(
-                  'growable',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.boolType)),
-                  true),
+              BridgeParameter('growable',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true),
             ],
             returns: BridgeTypeAnnotation(
                 BridgeTypeRef(CoreTypes.list, [BridgeTypeRef.ref('E')])),
@@ -57,29 +50,20 @@ class $List<E> implements List<E>, $Instance {
           BridgeParameter('index',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), false),
         ], returns: BridgeTypeAnnotation(BridgeTypeRef.ref('E')))),
-        'contains': BridgeMethodDef(BridgeFunctionDef(
-            params: [
-              BridgeParameter('element',
-                  BridgeTypeAnnotation(BridgeTypeRef.ref('E')), false),
-            ],
-            returns: BridgeTypeAnnotation(
-                BridgeTypeRef.type(RuntimeTypes.boolType)))),
-        '[]=': BridgeMethodDef(BridgeFunctionDef(
-            params: [
-              BridgeParameter('index',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), false),
-              BridgeParameter(
-                  'value', BridgeTypeAnnotation(BridgeTypeRef.ref('E')), false),
-            ],
-            returns: BridgeTypeAnnotation(
-                BridgeTypeRef.type(RuntimeTypes.voidType)))),
-        'add': BridgeMethodDef(BridgeFunctionDef(
-            params: [
-              BridgeParameter(
-                  'value', BridgeTypeAnnotation(BridgeTypeRef.ref('E')), false),
-            ],
-            returns: BridgeTypeAnnotation(
-                BridgeTypeRef.type(RuntimeTypes.voidType)))),
+        'contains': BridgeMethodDef(BridgeFunctionDef(params: [
+          BridgeParameter(
+              'element', BridgeTypeAnnotation(BridgeTypeRef.ref('E')), false),
+        ], returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)))),
+        '[]=': BridgeMethodDef(BridgeFunctionDef(params: [
+          BridgeParameter('index',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), false),
+          BridgeParameter(
+              'value', BridgeTypeAnnotation(BridgeTypeRef.ref('E')), false),
+        ], returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)))),
+        'add': BridgeMethodDef(BridgeFunctionDef(params: [
+          BridgeParameter(
+              'value', BridgeTypeAnnotation(BridgeTypeRef.ref('E')), false),
+        ], returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)))),
         'lastIndexOf': BridgeMethodDef(BridgeFunctionDef(params: [
           BridgeParameter(
               'element', BridgeTypeAnnotation(BridgeTypeRef.ref('E')), false),
@@ -108,13 +92,10 @@ class $List<E> implements List<E>, $Instance {
           BridgeParameter('index',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), false),
         ], returns: BridgeTypeAnnotation(BridgeTypeRef.ref('E')))),
-        'remove': BridgeMethodDef(BridgeFunctionDef(
-            params: [
-              BridgeParameter(
-                  'value', BridgeTypeAnnotation(BridgeTypeRef.ref('E')), false),
-            ],
-            returns: BridgeTypeAnnotation(
-                BridgeTypeRef.type(RuntimeTypes.boolType)))),
+        'remove': BridgeMethodDef(BridgeFunctionDef(params: [
+          BridgeParameter(
+              'value', BridgeTypeAnnotation(BridgeTypeRef.ref('E')), false),
+        ], returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)))),
         'removeAt': BridgeMethodDef(BridgeFunctionDef(
           params: [
             BridgeParameter('index',
@@ -125,15 +106,12 @@ class $List<E> implements List<E>, $Instance {
         'removeLast': BridgeMethodDef(BridgeFunctionDef(
           returns: BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
         )),
-        'insert': BridgeMethodDef(BridgeFunctionDef(
-            params: [
-              BridgeParameter('index',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), false),
-              BridgeParameter('element',
-                  BridgeTypeAnnotation(BridgeTypeRef.ref('E')), false),
-            ],
-            returns: BridgeTypeAnnotation(
-                BridgeTypeRef.type(RuntimeTypes.voidType)))),
+        'insert': BridgeMethodDef(BridgeFunctionDef(params: [
+          BridgeParameter('index',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), false),
+          BridgeParameter(
+              'element', BridgeTypeAnnotation(BridgeTypeRef.ref('E')), false),
+        ], returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)))),
         'toSet': BridgeMethodDef(BridgeFunctionDef(
             params: [],
             returns: BridgeTypeAnnotation(
@@ -143,8 +121,7 @@ class $List<E> implements List<E>, $Instance {
                 params: [
                   BridgeParameter(
                       'toElement',
-                      BridgeTypeAnnotation(
-                          BridgeTypeRef.type(RuntimeTypes.functionType)),
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
                       false),
                 ],
                 returns: BridgeTypeAnnotation(
@@ -182,8 +159,7 @@ class $List<E> implements List<E>, $Instance {
                 params: [
                   BridgeParameter(
                       'test',
-                      BridgeTypeAnnotation(
-                          BridgeTypeRef.type(RuntimeTypes.functionType)),
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
                       false),
                 ],
                 returns: BridgeTypeAnnotation(
@@ -194,8 +170,7 @@ class $List<E> implements List<E>, $Instance {
                 params: [
                   BridgeParameter(
                       'test',
-                      BridgeTypeAnnotation(
-                          BridgeTypeRef.type(RuntimeTypes.functionType)),
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
                       false),
                 ],
                 returns: BridgeTypeAnnotation(
@@ -206,8 +181,7 @@ class $List<E> implements List<E>, $Instance {
                 params: [
                   BridgeParameter(
                       'test',
-                      BridgeTypeAnnotation(
-                          BridgeTypeRef.type(RuntimeTypes.functionType)),
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
                       false),
                 ],
                 returns: BridgeTypeAnnotation(
@@ -218,24 +192,22 @@ class $List<E> implements List<E>, $Instance {
                 params: [
                   BridgeParameter(
                       'compare',
-                      BridgeTypeAnnotation(
-                          BridgeTypeRef.type(RuntimeTypes.functionType)),
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
                       false),
                 ],
-                returns: BridgeTypeAnnotation(
-                    BridgeTypeRef.type(RuntimeTypes.voidType))),
+                returns:
+                    BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType))),
             isStatic: false),
         'retainWhere': BridgeMethodDef(
             BridgeFunctionDef(
                 params: [
                   BridgeParameter(
                       'test',
-                      BridgeTypeAnnotation(
-                          BridgeTypeRef.type(RuntimeTypes.functionType)),
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
                       false),
                 ],
-                returns: BridgeTypeAnnotation(
-                    BridgeTypeRef.type(RuntimeTypes.voidType))),
+                returns:
+                    BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType))),
             isStatic: false),
         'replaceRange': BridgeMethodDef(
             BridgeFunctionDef(
@@ -254,8 +226,8 @@ class $List<E> implements List<E>, $Instance {
                           BridgeTypeSpec('dart:core', 'Iterable'))),
                       false),
                 ],
-                returns: BridgeTypeAnnotation(
-                    BridgeTypeRef.type(RuntimeTypes.voidType))),
+                returns:
+                    BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType))),
             isStatic: false),
         'sublist': BridgeMethodDef(
             BridgeFunctionDef(
@@ -275,28 +247,20 @@ class $List<E> implements List<E>, $Instance {
                 ]))),
             isStatic: false),
         'any': BridgeMethodDef(
-            BridgeFunctionDef(
-                params: [
-                  BridgeParameter(
-                      'test',
-                      BridgeTypeAnnotation(
-                          BridgeTypeRef.type(RuntimeTypes.functionType)),
-                      false),
-                ],
-                returns: BridgeTypeAnnotation(
-                    BridgeTypeRef.type(RuntimeTypes.boolType))),
+            BridgeFunctionDef(params: [
+              BridgeParameter(
+                  'test',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
+                  false),
+            ], returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool))),
             isStatic: false),
         'every': BridgeMethodDef(
-            BridgeFunctionDef(
-                params: [
-                  BridgeParameter(
-                      'test',
-                      BridgeTypeAnnotation(
-                          BridgeTypeRef.type(RuntimeTypes.functionType)),
-                      false),
-                ],
-                returns: BridgeTypeAnnotation(
-                    BridgeTypeRef.type(RuntimeTypes.boolType))),
+            BridgeFunctionDef(params: [
+              BridgeParameter(
+                  'test',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
+                  false),
+            ], returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool))),
             isStatic: false),
         'skip': BridgeMethodDef(
             BridgeFunctionDef(
@@ -322,8 +286,7 @@ class $List<E> implements List<E>, $Instance {
             isStatic: false),
         'asMap': BridgeMethodDef(
             BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(
-                    BridgeTypeRef.type(RuntimeTypes.mapType))),
+                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.map))),
             isStatic: false),
         'toString': BridgeMethodDef(
             BridgeFunctionDef(
@@ -331,31 +294,25 @@ class $List<E> implements List<E>, $Instance {
             isStatic: false),
         'clear': BridgeMethodDef(
             BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(
-                    BridgeTypeRef.type(RuntimeTypes.voidType))),
+                returns:
+                    BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType))),
             isStatic: false),
-        'addAll': BridgeMethodDef(BridgeFunctionDef(
-            params: [
-              BridgeParameter(
-                  'iterable',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef(BridgeTypeSpec('dart:core', 'Iterable'))),
-                  false),
-            ],
-            returns: BridgeTypeAnnotation(
-                BridgeTypeRef.type(RuntimeTypes.voidType)))),
-        'insertAll': BridgeMethodDef(BridgeFunctionDef(
-            params: [
-              BridgeParameter('index',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), false),
-              BridgeParameter(
-                  'iterable',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef(BridgeTypeSpec('dart:core', 'Iterable'))),
-                  false),
-            ],
-            returns: BridgeTypeAnnotation(
-                BridgeTypeRef.type(RuntimeTypes.voidType)))),
+        'addAll': BridgeMethodDef(BridgeFunctionDef(params: [
+          BridgeParameter(
+              'iterable',
+              BridgeTypeAnnotation(
+                  BridgeTypeRef(BridgeTypeSpec('dart:core', 'Iterable'))),
+              false),
+        ], returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)))),
+        'insertAll': BridgeMethodDef(BridgeFunctionDef(params: [
+          BridgeParameter('index',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), false),
+          BridgeParameter(
+              'iterable',
+              BridgeTypeAnnotation(
+                  BridgeTypeRef(BridgeTypeSpec('dart:core', 'Iterable'))),
+              false),
+        ], returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)))),
       },
       getters: {
         'length': BridgeMethodDef(BridgeFunctionDef(
@@ -380,11 +337,9 @@ class $List<E> implements List<E>, $Instance {
         'last': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef.ref('E')))),
         'isEmpty': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(
-                BridgeTypeRef.type(RuntimeTypes.boolType)))),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)))),
         'isNotEmpty': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(
-                BridgeTypeRef.type(RuntimeTypes.boolType)))),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)))),
       },
       setters: {},
       fields: {},

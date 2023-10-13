@@ -14,8 +14,7 @@ class $AssertionError implements AssertionError, $Instance {
             params: [
               BridgeParameter(
                   'message',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.objectType),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
                       nullable: true),
                   true)
             ]))
@@ -25,8 +24,7 @@ class $AssertionError implements AssertionError, $Instance {
         'message': BridgeMethodDef(
             BridgeFunctionDef(
                 params: [],
-                returns: BridgeTypeAnnotation(
-                    BridgeTypeRef.type(RuntimeTypes.objectType),
+                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
                     nullable: true)),
             isStatic: false),
       },

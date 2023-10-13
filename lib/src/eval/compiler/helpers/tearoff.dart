@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
@@ -12,7 +13,7 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 extension TearOff on Variable {
   Variable tearOff(CompilerContext ctx) {
-    if (type != EvalTypes.functionType) {
+    if (type != CoreTypes.function.ref(ctx)) {
       throw CompileError('Cannot tear off non-function');
     }
     if (methodOffset == null) {
@@ -60,7 +61,7 @@ extension TearOff on Variable {
     final _existingAllocs = 1 + (parameters?.parameters.length ?? 0);
     ctx.beginAllocScope(existingAllocLen: _existingAllocs, closure: true);
 
-    final $prev = Variable(0, EvalTypes.getListType(ctx), isFinal: true);
+    final $prev = Variable(0, CoreTypes.list.ref(ctx), isFinal: true);
     ctx.setLocal('#prev', $prev);
 
     ctx.scopeFrameOffset += _existingAllocs;
@@ -86,7 +87,7 @@ extension TearOff on Variable {
       Variable Vrep;
 
       p as SimpleFormalParameter;
-      var type = EvalTypes.dynamicType;
+      var type = CoreTypes.dynamic.ref(ctx);
       if (p.type != null) {
         type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
       }
@@ -120,7 +121,7 @@ extension TearOff on Variable {
 
     ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
 
-    var returnType = EvalTypes.dynamicType;
+    var returnType = CoreTypes.dynamic.ref(ctx);
     if (methodReturnType != null) {
       returnType = TypeRef.fromAnnotation(ctx, ctx.library, methodReturnType);
       returnType = returnType.copyWith(
@@ -149,7 +150,7 @@ extension TearOff on Variable {
             : (a as DefaultFormalParameter).parameter)
         .cast<SimpleFormalParameter>()
         .map((a) => a.type == null
-            ? EvalTypes.dynamicType
+            ? CoreTypes.dynamic.ref(ctx)
             : TypeRef.fromAnnotation(ctx, ctx.library, a.type!))
         .map((t) => t.toRuntimeType(ctx))
         .map((rt) => rt.toJson())
@@ -166,7 +167,7 @@ extension TearOff on Variable {
         .map((e) => e is DefaultFormalParameter ? e.parameter : e)
         .cast<SimpleFormalParameter>()
         .map((a) => a.type == null
-            ? EvalTypes.dynamicType
+            ? CoreTypes.dynamic.ref(ctx)
             : TypeRef.fromAnnotation(ctx, ctx.library, a.type!))
         .map((t) => t.toRuntimeType(ctx))
         .map((rt) => rt.toJson())
@@ -185,8 +186,8 @@ extension TearOff on Variable {
 
     ctx.pushOp(PushFunctionPtr.make(fnOffset), PushFunctionPtr.LEN);
 
-    return Variable.alloc(ctx, EvalTypes.functionType,
-        methodReturnType: AlwaysReturnType(EvalTypes.dynamicType, false),
+    return Variable.alloc(ctx, CoreTypes.function.ref(ctx),
+        methodReturnType: AlwaysReturnType(CoreTypes.dynamic.ref(ctx), false),
         methodOffset: DeferredOrOffset(offset: fnOffset),
         callingConvention: CallingConvention.dynamic);
   }

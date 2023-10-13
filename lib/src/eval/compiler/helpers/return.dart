@@ -19,21 +19,22 @@ StatementInfo doReturn(
   } else {
     if (isAsync) {
       final ta = expectedReturnType.type?.specifiedTypeArgs;
-      final expected = (ta?.isEmpty ?? true) ? EvalTypes.dynamicType : ta![0];
+      final expected =
+          (ta?.isEmpty ?? true) ? CoreTypes.dynamic.ref(ctx) : ta![0];
       var _value = value.boxIfNeeded(ctx);
 
       if (!_value.type.isAssignableTo(ctx, expected)) {
         if (_value.type
             .isAssignableTo(ctx, TypeRef.stdlib(ctx, 'dart:core', 'Future'))) {
           final vta = _value.type.specifiedTypeArgs;
-          final vtype = vta.isEmpty ? EvalTypes.dynamicType : vta[0];
+          final vtype = vta.isEmpty ? CoreTypes.dynamic.ref(ctx) : vta[0];
           if (vtype.isAssignableTo(ctx, expected)) {
             final _completer = ctx.lookupLocal('#completer')!;
             final awaitOp = Await.make(
                 _completer.scopeFrameOffset, _value.scopeFrameOffset);
             ctx.pushOp(awaitOp, Await.LEN);
             ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-            final result = Variable.alloc(ctx, EvalTypes.dynamicType);
+            final result = Variable.alloc(ctx, CoreTypes.dynamic.ref(ctx));
             ctx.pushOp(
                 ReturnAsync.make(
                     result.scopeFrameOffset, _completer.scopeFrameOffset),
@@ -52,7 +53,7 @@ StatementInfo doReturn(
       return StatementInfo(-1, willAlwaysReturn: true);
     }
 
-    final expected = expectedReturnType.type ?? EvalTypes.dynamicType;
+    final expected = expectedReturnType.type ?? CoreTypes.dynamic.ref(ctx);
     var _value = value;
     if (!_value.type.isAssignableTo(ctx, expected)) {
       throw CompileError('Cannot return ${_value.type} (expected: $expected)');

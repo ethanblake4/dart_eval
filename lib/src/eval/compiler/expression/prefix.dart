@@ -3,6 +3,7 @@ import 'package:analyzer/dart/ast/token.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/source_node_wrapper.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
+import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 
 import '../errors.dart';
@@ -21,11 +22,11 @@ Variable compilePrefixExpression(CompilerContext ctx, PrefixExpression e) {
       (throw CompileError('Unknown unary operator ${e.operator.type}'));
 
   if (method == '-' &&
-      V.type != EvalTypes.getIntType(ctx) &&
-      V.type != EvalTypes.getDoubleType(ctx)) {
+      V.type != CoreTypes.int.ref(ctx) &&
+      V.type != CoreTypes.double.ref(ctx)) {
     throw CompileError(
         'Unary operator "-" is currently only supported for ints and doubles');
-  } else if (method == '!' && V.type != EvalTypes.boolType) {
+  } else if (method == '!' && V.type != CoreTypes.bool.ref(ctx)) {
     throw CompileError(
         'Unary operator "!" is currently only supported for bools');
   }
@@ -33,7 +34,7 @@ Variable compilePrefixExpression(CompilerContext ctx, PrefixExpression e) {
   if (method == "!") {
     return V.invoke(ctx, method, []).result;
   }
-  final zero = V.type == EvalTypes.getIntType(ctx)
+  final zero = V.type == CoreTypes.int.ref(ctx)
       ? BuiltinValue(intval: 0)
       : BuiltinValue(doubleval: 0.0);
   return zero.push(ctx).invoke(ctx, method, [V]).result;

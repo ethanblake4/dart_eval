@@ -8,13 +8,11 @@ void configurePrintForCompile(BridgeDeclarationRegistry registry) {
       'dart:core',
       'print',
       BridgeFunctionDef(
-          returns:
-              BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.voidType)),
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
           params: [
             BridgeParameter(
                 'object',
-                BridgeTypeAnnotation(
-                    BridgeTypeRef.type(RuntimeTypes.objectType),
+                BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
                     nullable: true),
                 false)
           ],

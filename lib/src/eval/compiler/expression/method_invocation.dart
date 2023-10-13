@@ -74,14 +74,14 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
       }
       mReturnType =
           method.methodReturnType?.toAlwaysReturnType(ctx, thisType, [], {}) ??
-              AlwaysReturnType(EvalTypes.dynamicType, true);
+              AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
       final v = Variable.alloc(
           ctx,
           mReturnType.type?.copyWith(
                   boxed: L != null ||
                       !(mReturnType.type?.isUnboxedAcrossFunctionBoundaries ??
                           false)) ??
-              EvalTypes.dynamicType);
+              CoreTypes.dynamic.ref(ctx));
 
       return v;
     }
@@ -158,7 +158,7 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
   }
   mReturnType = method.methodReturnType
           ?.toAlwaysReturnType(ctx, thisType, _argTypes, _namedArgTypes) ??
-      AlwaysReturnType(EvalTypes.dynamicType, true);
+      AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
 
   final v = Variable.alloc(
       ctx,
@@ -166,7 +166,7 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
               boxed: _dec.isBridge ||
                   !(mReturnType.type?.isUnboxedAcrossFunctionBoundaries ??
                       false)) ??
-          EvalTypes.dynamicType);
+          CoreTypes.dynamic.ref(ctx));
 
   return v;
 }
@@ -184,14 +184,14 @@ Variable _invokeWithTarget(
   final knownMethod = getKnownMethods(ctx)[L.type]?[e.methodName.name];
 
   if (knownMethod != null &&
-      L.type != EvalTypes.typeType &&
-      L.type != EvalTypes.dynamicType) {
+      L.type != CoreTypes.type.ref(ctx) &&
+      L.type != CoreTypes.dynamic.ref(ctx)) {
     argsPair = compileArgumentListWithKnownMethodArgs(
         ctx, e.argumentList, knownMethod.args, knownMethod.namedArgs);
     return L.invoke(ctx, e.methodName.name, []).result;
   }
 
-  if (L.type == EvalTypes.typeType && L.concreteTypes.length == 1) {
+  if (L.type == CoreTypes.type.ref(ctx) && L.concreteTypes.length == 1) {
     // Static method
     staticType = L.concreteTypes[0];
     _dec = resolveStaticMethod(ctx, staticType, e.methodName.name);
@@ -256,8 +256,8 @@ Variable _invokeWithTarget(
 
   ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
 
-  final v = Variable.alloc(
-      ctx, mReturnType?.type?.copyWith(boxed: true) ?? EvalTypes.dynamicType);
+  final v = Variable.alloc(ctx,
+      mReturnType?.type?.copyWith(boxed: true) ?? CoreTypes.dynamic.ref(ctx));
 
   return v;
 }

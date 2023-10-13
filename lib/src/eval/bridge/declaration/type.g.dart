@@ -24,7 +24,7 @@ BridgeClassType _$BridgeClassTypeFromJson(Map<String, dynamic> json) =>
     BridgeClassType(
       BridgeTypeRef.fromJson(json['type'] as Map<String, dynamic>),
       $extends: json[r'$extends'] == null
-          ? const BridgeTypeRef.type(RuntimeTypes.objectType, [])
+          ? const BridgeTypeRef(CoreTypes.object, [])
           : BridgeTypeRef.fromJson(json[r'$extends'] as Map<String, dynamic>),
       $implements: (json[r'$implements'] as List<dynamic>?)
               ?.map((e) => BridgeTypeRef.fromJson(e as Map<String, dynamic>))

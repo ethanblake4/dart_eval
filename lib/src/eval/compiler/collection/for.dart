@@ -20,13 +20,13 @@ List<TypeRef> compileForElementForList(
   if (parts is ForEachParts) {
     final iterable = compileExpression(parts.iterable, ctx).boxIfNeeded(ctx);
     final itype = iterable.type;
-    if (!itype.isAssignableTo(ctx, EvalTypes.getIterableType(ctx))) {
+    if (!itype.isAssignableTo(ctx, CoreTypes.iterable.ref(ctx))) {
       throw CompileError(
           'Cannot iterate over ${iterable.type}', parts, ctx.library, ctx);
     }
 
     final elementType = itype.specifiedTypeArgs.isEmpty
-        ? EvalTypes.dynamicType
+        ? CoreTypes.dynamic.ref(ctx)
         : itype.specifiedTypeArgs[0];
 
     final iterator = iterable.getProperty(ctx, 'iterator');

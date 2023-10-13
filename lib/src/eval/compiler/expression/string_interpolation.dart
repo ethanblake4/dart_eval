@@ -3,6 +3,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/source_node_wrapper.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
+import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 
 Variable compileStringInterpolation(
@@ -15,7 +16,7 @@ Variable compileStringInterpolation(
     } else if (element is InterpolationExpression) {
       final V = compileExpression(element.expression, ctx);
       Variable Vstr;
-      if (V.type == EvalTypes.getStringType(ctx)) {
+      if (V.type == CoreTypes.string.ref(ctx)) {
         Vstr = V;
       } else {
         Vstr = V.invoke(ctx, 'toString', []).result;

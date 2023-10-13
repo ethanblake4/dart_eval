@@ -2,13 +2,14 @@
 
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
-import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/runtime/ops/all_ops.dart';
 
 class PrescanVisitor extends RecursiveAstVisitor<PrescanContext?> {
   final PrescanContext ctx = PrescanContext();
+  late final TypeRef dynamicType;
 
   @override
   PrescanContext? visitFunctionDeclaration(FunctionDeclaration node) {
@@ -27,8 +28,7 @@ class PrescanVisitor extends RecursiveAstVisitor<PrescanContext?> {
   @override
   PrescanContext? visitVariableDeclaration(VariableDeclaration node) {
     node.initializer?.accept(this);
-    ctx.setLocal(node.name.value() as String,
-        Variable.alloc(ctx, EvalTypes.dynamicType));
+    ctx.setLocal(node.name.value() as String, Variable.alloc(ctx, dynamicType));
   }
 
   @override

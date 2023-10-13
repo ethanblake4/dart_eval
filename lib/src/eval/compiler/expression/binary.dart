@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
@@ -30,7 +31,8 @@ Variable compileBinaryExpression(CompilerContext ctx, BinaryExpression e,
       ctx.pushOp(CheckEq.make(L.scopeFrameOffset, $null.scopeFrameOffset),
           CheckEq.LEN);
       ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-      return Variable.alloc(ctx, EvalTypes.boolType.copyWith(boxed: false));
+      return Variable.alloc(
+          ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
     }, thenBranch: (_ctx, rt) {
       R = R.boxIfNeeded(ctx);
       ctx.pushOp(CopyValue.make(outVar.scopeFrameOffset, R.scopeFrameOffset),

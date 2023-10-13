@@ -55,7 +55,8 @@ class EvalFunctionPtr extends EvalFunction {
   }
 
   @override
-  int $getRuntimeType(Runtime runtime) => RuntimeTypes.functionType;
+  int $getRuntimeType(Runtime runtime) =>
+      runtime.lookupType(CoreTypes.function);
 
   @override
   String toString() {
@@ -81,11 +82,17 @@ class EvalStaticFunctionPtr extends EvalFunction {
   }
 
   @override
-  int $getRuntimeType(Runtime runtime) => RuntimeTypes.functionType;
+  int $getRuntimeType(Runtime runtime) =>
+      runtime.lookupType(CoreTypes.function);
 }
 
 class $Function extends EvalFunction {
   const $Function(this.func);
+
+  static const $declaration = BridgeClassDef(
+      BridgeClassType(BridgeTypeRef(CoreTypes.function)),
+      constructors: {},
+      wrap: true);
 
   final EvalCallableFunc func;
 
@@ -95,7 +102,8 @@ class $Function extends EvalFunction {
   }
 
   @override
-  int $getRuntimeType(Runtime runtime) => RuntimeTypes.functionType;
+  int $getRuntimeType(Runtime runtime) =>
+      runtime.lookupType(CoreTypes.function);
 }
 
 class $Closure extends EvalFunction {
@@ -110,5 +118,6 @@ class $Closure extends EvalFunction {
   }
 
   @override
-  int $getRuntimeType(Runtime runtime) => RuntimeTypes.functionType;
+  int $getRuntimeType(Runtime runtime) =>
+      runtime.lookupType(CoreTypes.function);
 }

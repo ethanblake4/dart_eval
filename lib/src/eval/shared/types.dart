@@ -1,5 +1,4 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async/stream.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async/stream_controller.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert/converter.dart';
@@ -8,69 +7,20 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/pattern.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/regexp.dart';
 import 'package:dart_eval/stdlib/core.dart';
 
-/// Bridged runtime type IDs for core Dart types.
-class RuntimeTypes {
-  /// Bridged runtime type for [void]
-  static const int voidType = -1;
-
-  /// Bridged runtime type for [dynamic]
-  static const int dynamicType = -2;
-
-  /// Bridged runtime type for [null]
-  static const int nullType = -3;
-
-  /// Bridged runtime type for [Object]
-  static const int objectType = -4;
-
-  /// Bridged runtime type for [bool]
-  static const int boolType = -5;
-
-  /// Bridged runtime type for [Map]
-  static const int mapType = -10;
-
-  /// Bridged runtime type for [Function]
-  static const int functionType = -12;
-
-  /// Bridged runtime type for [Type]
-  static const int typeType = -13;
-
-  /// Bridged runtime type for [Future]
-  static const int futureType = -16;
-
-  /// Bridged runtime type for [Duration]
-  static const int durationType = -17;
-
-  /// Bridged runtime type for [Enum]
-  static const int enumType = -18;
-}
-
-/// A map of dart_eval compile-time types to runtime type IDs
-final Map<TypeRef, int> runtimeTypeMap = {
-  EvalTypes.voidType: RuntimeTypes.voidType,
-  EvalTypes.dynamicType: RuntimeTypes.dynamicType,
-  EvalTypes.nullType: RuntimeTypes.nullType,
-  EvalTypes.objectType: RuntimeTypes.objectType,
-  EvalTypes.boolType: RuntimeTypes.boolType,
-  EvalTypes.mapType: RuntimeTypes.mapType,
-  EvalTypes.functionType: RuntimeTypes.functionType,
-  EvalTypes.typeType: RuntimeTypes.typeType,
-  EvalTypes.enumType: RuntimeTypes.enumType
-};
-
-/// A map of runtime type IDs to dart_eval compile-time types
-final Map<int, TypeRef> inverseRuntimeTypeMap = {
-  RuntimeTypes.voidType: EvalTypes.voidType,
-  RuntimeTypes.dynamicType: EvalTypes.dynamicType,
-  RuntimeTypes.nullType: EvalTypes.nullType,
-  RuntimeTypes.objectType: EvalTypes.objectType,
-  RuntimeTypes.boolType: EvalTypes.boolType,
-  RuntimeTypes.mapType: EvalTypes.mapType,
-  RuntimeTypes.functionType: EvalTypes.functionType,
-  RuntimeTypes.typeType: EvalTypes.typeType
-};
-
 /// This class contains dart:core bridge type specs for convenience
 class CoreTypes {
+  /// Bridge type spec for [dynamic]
+  static const dynamic = BridgeTypeSpec('dart:core', 'dynamic');
+
+  /// Bridge type spec for [void]
+  static const voidType = BridgeTypeSpec('dart:core', 'void');
+
+  /// Bridge type spec for [Never]
+  static const never = BridgeTypeSpec('dart:core', 'Never');
+
+  /// Bridge type spec for [Null]
+  static const nullType = BridgeTypeSpec('dart:core', 'Null');
+
   /// Bridge type spec for [num]
   static const num = BridgeTypeSpec('dart:core', 'num');
 
@@ -80,8 +30,23 @@ class CoreTypes {
   /// Bridge type spec for [double]
   static const double = BridgeTypeSpec('dart:core', 'double');
 
+  /// Bridge type spec for [bool]
+  static const bool = BridgeTypeSpec('dart:core', 'bool');
+
   /// Bridge type spec for [String]
   static const string = BridgeTypeSpec('dart:core', 'String');
+
+  /// Bridge type spec for [Object]
+  static const object = BridgeTypeSpec('dart:core', 'Object');
+
+  /// Bridge type spec for [Function]
+  static const function = BridgeTypeSpec('dart:core', 'Function');
+
+  /// Bridge type spec for [Enum]
+  static const enumType = BridgeTypeSpec('dart:core', 'Enum');
+
+  /// Bridge type spec for [Type]
+  static const type = BridgeTypeSpec('dart:core', 'Type');
 
   /// Bridge type spec for [$Duration]
   static const duration = BridgeTypeSpec('dart:core', 'Duration');
@@ -91,6 +56,9 @@ class CoreTypes {
 
   /// Bridge type spec for [$List]
   static const list = BridgeTypeSpec('dart:core', 'List');
+
+  /// Bridge type spec for [$Map]
+  static const map = BridgeTypeSpec('dart:core', 'Map');
 
   /// Bridge type spec for [$Iterator]
   static const iterator = BridgeTypeSpec('dart:core', 'Iterator');

@@ -1,8 +1,9 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
-import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
+import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 
 Variable compileThisExpression(ThisExpression e, CompilerContext ctx) {
@@ -17,7 +18,7 @@ Variable compileSuperExpression(SuperExpression e, CompilerContext ctx) {
     throw CompileError("Cannot use 'super' outside of a class context");
   }
 
-  var type = EvalTypes.objectType;
+  var type = CoreTypes.object.ref(ctx);
   final extendsClause = (ctx.currentClass as ClassDeclaration).extendsClause;
   if (extendsClause != null) {
     // ignore: deprecated_member_use

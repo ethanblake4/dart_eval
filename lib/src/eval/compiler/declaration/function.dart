@@ -1,6 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:collection/collection.dart';
-import 'package:dart_eval/src/eval/compiler/builtins.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
@@ -56,7 +56,7 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
     Variable Vrep;
 
     p as SimpleFormalParameter;
-    var type = EvalTypes.dynamicType;
+    var type = CoreTypes.dynamic.ref(ctx);
     if (p.type != null) {
       type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
     }
@@ -76,7 +76,7 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   }
 
   final expectedReturnType = AlwaysReturnType.fromAnnotation(
-      ctx, ctx.library, d.returnType, EvalTypes.dynamicType);
+      ctx, ctx.library, d.returnType, CoreTypes.dynamic.ref(ctx));
   StatementInfo? stInfo;
   if (b is BlockFunctionBody) {
     stInfo = compileBlock(b.block, expectedReturnType, ctx,

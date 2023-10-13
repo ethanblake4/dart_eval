@@ -20,14 +20,10 @@ class $Completer<T> implements Completer<T>, $Instance {
       },
       methods: {
         'complete': BridgeMethodDef(BridgeFunctionDef(
-            returns:
-                BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.voidType)),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
             params: [
-              BridgeParameter(
-                  'value',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.dynamicType)),
-                  false)
+              BridgeParameter('value',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)), false)
             ],
             namedParams: []))
       },
@@ -96,7 +92,8 @@ class _$Completer_complete extends EvalFunction {
   }
 
   @override
-  int $getRuntimeType(Runtime runtime) => RuntimeTypes.functionType;
+  int $getRuntimeType(Runtime runtime) =>
+      runtime.lookupType(CoreTypes.function);
 }
 
 class _$Completer_future extends EvalFunction {
@@ -108,5 +105,6 @@ class _$Completer_future extends EvalFunction {
   }
 
   @override
-  int $getRuntimeType(Runtime runtime) => RuntimeTypes.functionType;
+  int $getRuntimeType(Runtime runtime) =>
+      runtime.lookupType(CoreTypes.function);
 }

@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
@@ -29,7 +30,7 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
   final _existingAllocs = 1 + (e.parameters?.parameters.length ?? 0);
   ctx.beginAllocScope(existingAllocLen: _existingAllocs, closure: true);
 
-  final $prev = Variable(0, EvalTypes.getListType(ctx), isFinal: true);
+  final $prev = Variable(0, CoreTypes.list.ref(ctx), isFinal: true);
 
   ctx.setLocal('#prev', $prev);
 
@@ -44,7 +45,7 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
     Variable Vrep;
 
     p as SimpleFormalParameter;
-    var type = EvalTypes.dynamicType;
+    var type = CoreTypes.dynamic.ref(ctx);
     if (p.type != null) {
       type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
     }
@@ -66,14 +67,15 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
   if (b is BlockFunctionBody) {
     stInfo = compileBlock(
         b.block,
-        /*AlwaysReturnType.fromAnnotation(ctx, ctx.library, d.returnType, EvalTypes.dynamicType)*/
-        AlwaysReturnType(EvalTypes.dynamicType, false),
+        /*AlwaysReturnType.fromAnnotation(ctx, ctx.library, d.returnType, CoreTypes.dynamic.ref(ctx))*/
+        AlwaysReturnType(CoreTypes.dynamic.ref(ctx), false),
         ctx,
         name: '(closure)');
   } else if (b is ExpressionFunctionBody) {
     ctx.beginAllocScope();
     final V = compileExpression(b.expression, ctx);
-    stInfo = doReturn(ctx, AlwaysReturnType(EvalTypes.dynamicType, true), V,
+    stInfo = doReturn(
+        ctx, AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true), V,
         isAsync: b.isAsynchronous);
     ctx.endAllocScope();
   } else {
@@ -106,7 +108,7 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
           : (a as DefaultFormalParameter).parameter)
       .cast<SimpleFormalParameter>()
       .map((a) => a.type == null
-          ? EvalTypes.dynamicType
+          ? CoreTypes.dynamic.ref(ctx)
           : TypeRef.fromAnnotation(ctx, ctx.library, a.type!))
       .map((t) => t.toRuntimeType(ctx))
       .map((rt) => rt.toJson())
@@ -124,7 +126,7 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
       .map((e) => e is DefaultFormalParameter ? e.parameter : e)
       .cast<SimpleFormalParameter>()
       .map((a) => a.type == null
-          ? EvalTypes.dynamicType
+          ? CoreTypes.dynamic.ref(ctx)
           : TypeRef.fromAnnotation(ctx, ctx.library, a.type!))
       .map((t) => t.toRuntimeType(ctx))
       .map((rt) => rt.toJson())
@@ -143,8 +145,8 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
 
   ctx.pushOp(PushFunctionPtr.make(fnOffset), PushFunctionPtr.LEN);
 
-  return Variable.alloc(ctx, EvalTypes.functionType,
-      methodReturnType: AlwaysReturnType(EvalTypes.dynamicType, false),
+  return Variable.alloc(ctx, CoreTypes.function.ref(ctx),
+      methodReturnType: AlwaysReturnType(CoreTypes.dynamic.ref(ctx), false),
       methodOffset: DeferredOrOffset(offset: fnOffset),
       callingConvention: CallingConvention.dynamic);
 }

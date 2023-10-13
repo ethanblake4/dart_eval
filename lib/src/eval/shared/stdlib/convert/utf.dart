@@ -22,11 +22,8 @@ class $Utf8Decoder implements $Instance {
             returns: BridgeTypeAnnotation($type),
             params: [],
             namedParams: [
-              BridgeParameter(
-                  'allowMalformed',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.boolType)),
-                  true)
+              BridgeParameter('allowMalformed',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true)
             ]))
       },
       methods: {},
@@ -85,11 +82,8 @@ class $Utf8Codec implements $Instance {
             returns: BridgeTypeAnnotation($type),
             params: [],
             namedParams: [
-              BridgeParameter(
-                  'allowMalformed',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.boolType)),
-                  true)
+              BridgeParameter('allowMalformed',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true)
             ]))
       },
       methods: {},

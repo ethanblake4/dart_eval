@@ -1,5 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:dart_eval/src/eval/compiler/builtins.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
@@ -44,7 +44,7 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx,
     Variable Vrep;
 
     p as SimpleFormalParameter;
-    var type = EvalTypes.dynamicType;
+    var type = CoreTypes.dynamic.ref(ctx);
     if (p.type != null) {
       type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!)
           .copyWith(boxed: true);
@@ -61,7 +61,7 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx,
     stInfo = compileBlock(
         b.block,
         AlwaysReturnType.fromAnnotation(
-            ctx, ctx.library, d.returnType, EvalTypes.dynamicType),
+            ctx, ctx.library, d.returnType, CoreTypes.dynamic.ref(ctx)),
         ctx,
         name: '$methodName()');
   } else if (b is ExpressionFunctionBody) {
@@ -70,7 +70,7 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx,
     stInfo = doReturn(
         ctx,
         AlwaysReturnType.fromAnnotation(
-            ctx, ctx.library, d.returnType, EvalTypes.dynamicType),
+            ctx, ctx.library, d.returnType, CoreTypes.dynamic.ref(ctx)),
         V,
         isAsync: b.isAsynchronous);
     ctx.endAllocScope();

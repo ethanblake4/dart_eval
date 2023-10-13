@@ -18,20 +18,17 @@ class $StringSink implements $Instance {
       },
       methods: {
         'write': BridgeMethodDef(BridgeFunctionDef(
-            returns:
-                BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.voidType)),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
             params: [
               BridgeParameter(
                   'object',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.objectType),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
                       nullable: true),
                   false),
             ],
             namedParams: [])),
         'writeAll': BridgeMethodDef(BridgeFunctionDef(
-            returns:
-                BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.voidType)),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
             params: [
               BridgeParameter(
                   'objects',
@@ -45,20 +42,17 @@ class $StringSink implements $Instance {
             ],
             namedParams: [])),
         'writeln': BridgeMethodDef(BridgeFunctionDef(
-            returns:
-                BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.voidType)),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
             params: [
               BridgeParameter(
                   'object',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.objectType),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
                       nullable: true),
                   true),
             ],
             namedParams: [])),
         'writeCharCode': BridgeMethodDef(BridgeFunctionDef(
-            returns:
-                BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.voidType)),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
             params: [
               BridgeParameter('charCode',
                   BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), false),

@@ -13,28 +13,19 @@ class $RegExp implements $Instance {
           BridgeParameter('source',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false),
         ], namedParams: [
-          BridgeParameter(
-              'multiLine',
-              BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)),
-              false),
-          BridgeParameter(
-              'caseSensitive',
-              BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)),
-              false),
-          BridgeParameter(
-              'unicode',
-              BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)),
-              false),
-          BridgeParameter(
-              'dotAll',
-              BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)),
-              false),
+          BridgeParameter('multiLine',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), false),
+          BridgeParameter('caseSensitive',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), false),
+          BridgeParameter('unicode',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), false),
+          BridgeParameter('dotAll',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), false),
         ]))
       },
       methods: {
         'hasMatch': BridgeMethodDef(BridgeFunctionDef(
-            returns:
-                BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
             params: [
               BridgeParameter('input',
                   BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false),

@@ -24,8 +24,7 @@ class $num<T extends num> implements $Instance {
                       false),
                   BridgeParameter(
                       'onError',
-                      BridgeTypeAnnotation(
-                          BridgeTypeRef.type(RuntimeTypes.functionType),
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function),
                           nullable: true),
                       true),
                 ]),
@@ -451,8 +450,7 @@ class $double extends $num<double> {
                       false),
                   BridgeParameter(
                       'onError',
-                      BridgeTypeAnnotation(
-                          BridgeTypeRef.type(RuntimeTypes.functionType),
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function),
                           nullable: true),
                       true),
                 ],

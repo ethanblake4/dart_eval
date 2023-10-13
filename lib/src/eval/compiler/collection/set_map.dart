@@ -67,9 +67,9 @@ Pair<Variable, List<Pair<TypeRef, TypeRef>>> compileSetOrMapElement(
       ctx.pushOp(PushMap.make(), PushMap.LEN);
       setOrMap = Variable.alloc(
           ctx,
-          EvalTypes.mapType.copyWith(specifiedTypeArgs: [
-            specifiedKeyType ?? EvalTypes.dynamicType,
-            specifiedValueType ?? EvalTypes.dynamicType,
+          CoreTypes.map.ref(ctx).copyWith(specifiedTypeArgs: [
+            specifiedKeyType ?? CoreTypes.dynamic.ref(ctx),
+            specifiedValueType ?? CoreTypes.dynamic.ref(ctx),
           ], boxed: false));
     }
 

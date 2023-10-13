@@ -14,16 +14,13 @@ class $JsonDecoder implements $Instance {
       BridgeClassType($type,
           $extends: BridgeTypeRef(ConvertTypes.converter, [
             BridgeTypeRef(CoreTypes.string),
-            BridgeTypeRef.type(RuntimeTypes.objectType),
+            BridgeTypeRef(CoreTypes.object),
           ])),
       constructors: {
         '': BridgeConstructorDef(
             BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [
-          BridgeParameter(
-              'reviver',
-              BridgeTypeAnnotation(
-                  BridgeTypeRef.type(RuntimeTypes.functionType)),
-              true)
+          BridgeParameter('reviver',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)), true)
         ]))
       },
       methods: {},
@@ -85,17 +82,14 @@ class $JsonEncoder implements $Instance {
   static const $declaration = BridgeClassDef(
       BridgeClassType($type,
           $extends: BridgeTypeRef(ConvertTypes.converter, [
-            BridgeTypeRef.type(RuntimeTypes.objectType),
+            BridgeTypeRef(CoreTypes.object),
             BridgeTypeRef(CoreTypes.string),
           ])),
       constructors: {
         '': BridgeConstructorDef(
             BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [
-          BridgeParameter(
-              'toEncodable',
-              BridgeTypeAnnotation(
-                  BridgeTypeRef.type(RuntimeTypes.functionType)),
-              true)
+          BridgeParameter('toEncodable',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)), true)
         ]))
       },
       methods: {},
@@ -159,11 +153,8 @@ class $JsonCodec implements $Instance {
             returns: BridgeTypeAnnotation($type),
             params: [],
             namedParams: [
-              BridgeParameter(
-                  'reviver',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.functionType)),
-                  true)
+              BridgeParameter('reviver',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)), true)
             ]))
       },
       methods: {},

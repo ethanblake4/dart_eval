@@ -1,6 +1,7 @@
 // ignore_for_file: body_might_complete_normally_nullable
 
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/source_node_wrapper.dart';
 import 'package:dart_eval/src/eval/compiler/constant_pool.dart';
 import 'package:dart_eval/src/eval/compiler/model/override_spec.dart';
@@ -266,6 +267,7 @@ class CompilerContext with ScopeContext {
 
   void runPrescan(Declaration d) {
     final preScanner = PrescanVisitor();
+    preScanner.dynamicType = CoreTypes.dynamic.ref(this);
     d.visitChildren(preScanner);
     preScan = preScanner.ctx;
   }

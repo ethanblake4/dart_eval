@@ -41,8 +41,7 @@ class $TestClass extends TestClass with $Bridge {
       methods: {
         'runStaticTest': BridgeMethodDef(
             BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(
-                    BridgeTypeRef.type(RuntimeTypes.boolType)),
+                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
                 params: [
                   BridgeParameter(
                       'm',
@@ -52,8 +51,7 @@ class $TestClass extends TestClass with $Bridge {
                 namedParams: []),
             isStatic: true),
         'runTest': BridgeMethodDef(BridgeFunctionDef(
-            returns:
-                BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
             params: [
               BridgeParameter('a',
                   BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), false),

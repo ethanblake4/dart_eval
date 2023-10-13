@@ -39,5 +39,5 @@ Variable compileAwaitExpression(AwaitExpression e, CompilerContext ctx) {
       ctx,
       type.specifiedTypeArgs.isNotEmpty
           ? type.specifiedTypeArgs[0]
-          : EvalTypes.dynamicType);
+          : CoreTypes.dynamic.ref(ctx));
 }

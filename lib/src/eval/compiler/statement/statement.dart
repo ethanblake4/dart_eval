@@ -23,7 +23,7 @@ StatementInfo compileStatement(
     return compileVariableDeclarationStatement(s, ctx);
   } else if (s is ExpressionStatement) {
     final V = compileExpressionAndDiscardResult(s.expression, ctx);
-    if (V != null && V.type == EvalTypes.neverType) {
+    if (V != null && V.type == CoreTypes.never.ref(ctx)) {
       return StatementInfo(-1, willAlwaysThrow: true);
     }
     return StatementInfo(-1);

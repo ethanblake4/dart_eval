@@ -23,7 +23,7 @@ Variable compileConditionalExpression(
       ctx, boundType == null ? null : AlwaysReturnType(boundType, false),
       condition: (_ctx) {
     var c = compileExpression(e.condition, _ctx);
-    if (!c.type.isAssignableTo(ctx, EvalTypes.boolType)) {
+    if (!c.type.isAssignableTo(ctx, CoreTypes.bool.ref(ctx))) {
       throw CompileError('Condition must be a boolean');
     }
 

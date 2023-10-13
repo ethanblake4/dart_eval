@@ -9,8 +9,7 @@ class $Iterator<E> implements Iterator<E>, $Instance {
       constructors: {},
       methods: {
         'moveNext': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(
-                BridgeTypeRef.type(RuntimeTypes.boolType))))
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool))))
       },
       getters: {
         'current': BridgeMethodDef(BridgeFunctionDef(

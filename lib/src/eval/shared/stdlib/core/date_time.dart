@@ -20,7 +20,7 @@ class $DateTime implements DateTime, $Instance {
       namedParams: []));
 
   static const _dtBoolGetter = BridgeMethodDef(BridgeFunctionDef(
-      returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)),
+      returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
       params: [],
       namedParams: []));
 
@@ -64,8 +64,7 @@ class $DateTime implements DateTime, $Instance {
                 namedParams: []),
             isStatic: true),
         'isAfter': BridgeMethodDef(BridgeFunctionDef(
-            returns:
-                BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
             params: [
               BridgeParameter(
                   'other',
@@ -73,8 +72,7 @@ class $DateTime implements DateTime, $Instance {
                   false),
             ])),
         'isBefore': BridgeMethodDef(BridgeFunctionDef(
-            returns:
-                BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
             params: [
               BridgeParameter(
                   'other',
@@ -82,8 +80,7 @@ class $DateTime implements DateTime, $Instance {
                   false),
             ])),
         'isAtSameMomentAs': BridgeMethodDef(BridgeFunctionDef(
-            returns:
-                BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
             params: [
               BridgeParameter(
                   'other',

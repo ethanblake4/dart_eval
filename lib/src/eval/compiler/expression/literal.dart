@@ -3,6 +3,7 @@ import 'package:dart_eval/src/eval/compiler/collection/list.dart';
 import 'package:dart_eval/src/eval/compiler/collection/set_map.dart';
 import 'package:dart_eval/src/eval/compiler/expression/string_interpolation.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
+import 'package:dart_eval/src/eval/shared/types.dart';
 
 import '../builtins.dart';
 import '../context.dart';
@@ -12,7 +13,7 @@ import '../variable.dart';
 BuiltinValue parseConstLiteral(Literal l, CompilerContext ctx,
     [TypeRef? bound]) {
   if (l is IntegerLiteral) {
-    if (bound != null && bound == EvalTypes.getDoubleType(ctx)) {
+    if (bound != null && bound == CoreTypes.double.ref(ctx)) {
       return BuiltinValue(doubleval: l.value!.toDouble());
     }
     return BuiltinValue(intval: l.value);

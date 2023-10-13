@@ -1,9 +1,11 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
+import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/runtime/type.dart';
 
@@ -29,16 +31,18 @@ Variable invokeClosure(CompilerContext ctx, Reference? closureRef,
   ctx.pushOp(PushList.make(), PushList.LEN);
   final csPosArgTypes = Variable.alloc(
       ctx,
-      EvalTypes.getListType(ctx)
-          .copyWith(specifiedTypeArgs: [EvalTypes.getIntType(ctx)]));
+      CoreTypes.list
+          .ref(ctx)
+          .copyWith(specifiedTypeArgs: [CoreTypes.int.ref(ctx)]));
 
   final positionalArgs = <Variable>[];
 
   ctx.pushOp(PushList.make(), PushList.LEN);
   final csNamedArgTypes = Variable.alloc(
       ctx,
-      EvalTypes.getListType(ctx)
-          .copyWith(specifiedTypeArgs: [EvalTypes.getIntType(ctx)]));
+      CoreTypes.list
+          .ref(ctx)
+          .copyWith(specifiedTypeArgs: [CoreTypes.int.ref(ctx)]));
 
   final namedArgs = <String, Variable>{};
   final namedArgsRttiMap = <String, int>{};
@@ -92,8 +96,9 @@ Variable invokeClosure(CompilerContext ctx, Reference? closureRef,
       PushConstant.LEN);
   final alConstVar = Variable.alloc(
       ctx,
-      EvalTypes.getListType(ctx)
-          .copyWith(specifiedTypeArgs: [EvalTypes.getStringType(ctx)]));
+      CoreTypes.list
+          .ref(ctx)
+          .copyWith(specifiedTypeArgs: [CoreTypes.string.ref(ctx)]));
 
   ctx.pushOp(PushArg.make(csPosArgTypes.scopeFrameOffset), PushArg.LEN);
   ctx.pushOp(PushArg.make(alConstVar.scopeFrameOffset), PushArg.LEN);
@@ -113,7 +118,8 @@ Variable invokeClosure(CompilerContext ctx, Reference? closureRef,
     final loc = ctx.pushOp(Call.make(sd.offset.offset ?? -1), Call.LEN);
     ctx.offsetTracker.setOffset(loc, sd.offset);
     ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-    return Variable.alloc(ctx, EvalTypes.dynamicType.copyWith(boxed: true));
+    return Variable.alloc(
+        ctx, CoreTypes.dynamic.ref(ctx).copyWith(boxed: true));
   } else {
     // Fallback to dynamic dispatch
     final dd = closureRef?.getValue(ctx) ?? closureVar!;

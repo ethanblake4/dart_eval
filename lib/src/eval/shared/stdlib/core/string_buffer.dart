@@ -21,20 +21,17 @@ class $StringBuffer implements StringBuffer, $Instance {
       },
       methods: {
         'write': BridgeMethodDef(BridgeFunctionDef(
-            returns:
-                BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.voidType)),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
             params: [
               BridgeParameter(
                   'object',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.objectType),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
                       nullable: true),
                   false),
             ],
             namedParams: [])),
         'writeAll': BridgeMethodDef(BridgeFunctionDef(
-            returns:
-                BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.voidType)),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
             params: [
               BridgeParameter(
                   'objects',
@@ -48,28 +45,24 @@ class $StringBuffer implements StringBuffer, $Instance {
             ],
             namedParams: [])),
         'writeln': BridgeMethodDef(BridgeFunctionDef(
-            returns:
-                BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.voidType)),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
             params: [
               BridgeParameter(
                   'object',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.objectType),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
                       nullable: true),
                   true),
             ],
             namedParams: [])),
         'writeCharCode': BridgeMethodDef(BridgeFunctionDef(
-            returns:
-                BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.voidType)),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
             params: [
               BridgeParameter('charCode',
                   BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), false),
             ],
             namedParams: [])),
         'clear': BridgeMethodDef(BridgeFunctionDef(
-            returns:
-                BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.voidType)),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
             params: [])),
       },
       getters: {
@@ -77,12 +70,10 @@ class $StringBuffer implements StringBuffer, $Instance {
             returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
             params: [])),
         'isEmpty': BridgeMethodDef(BridgeFunctionDef(
-            returns:
-                BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
             params: [])),
         'isNotEmpty': BridgeMethodDef(BridgeFunctionDef(
-            returns:
-                BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
             params: [])),
       },
       wrap: true);

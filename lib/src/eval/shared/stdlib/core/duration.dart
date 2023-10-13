@@ -131,8 +131,7 @@ class $Duration implements Duration, $Instance {
             isStatic: false),
         'isNegative': BridgeMethodDef(
             BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(
-                    BridgeTypeRef.type(RuntimeTypes.boolType))),
+                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool))),
             isStatic: false),
         'abs': BridgeMethodDef(
             BridgeFunctionDef(
@@ -200,7 +199,8 @@ class $Duration implements Duration, $Instance {
   }
 
   @override
-  int $getRuntimeType(Runtime runtime) => RuntimeTypes.durationType;
+  int $getRuntimeType(Runtime runtime) =>
+      runtime.lookupType(CoreTypes.duration);
 
   @override
   Duration operator *(num factor) => $value * factor;

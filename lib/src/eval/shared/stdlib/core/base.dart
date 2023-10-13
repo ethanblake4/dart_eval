@@ -4,9 +4,35 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/collection.dart';
 import 'num.dart';
 
+const $dynamicCls = BridgeClassDef(
+    BridgeClassType(BridgeTypeRef(CoreTypes.dynamic),
+        isAbstract: true, $extends: null),
+    constructors: {},
+    wrap: true);
+
+const $voidCls = BridgeClassDef(
+    BridgeClassType(BridgeTypeRef(CoreTypes.voidType), isAbstract: true),
+    constructors: {},
+    wrap: true);
+
+const $neverCls = BridgeClassDef(
+    BridgeClassType(BridgeTypeRef(CoreTypes.never), isAbstract: true),
+    constructors: {},
+    wrap: true);
+
+const $typeCls = BridgeClassDef(
+    BridgeClassType(BridgeTypeRef(CoreTypes.type), isAbstract: true),
+    constructors: {},
+    wrap: true);
+
 /// dart_eval [$Value] representation of [null]
 class $null implements $Value {
   const $null();
+
+  static const $declaration = BridgeClassDef(
+      BridgeClassType(BridgeTypeRef(CoreTypes.nullType), isAbstract: true),
+      constructors: {},
+      wrap: true);
 
   @override
   Null get $value => null;
@@ -15,7 +41,8 @@ class $null implements $Value {
   Null get $reified => null;
 
   @override
-  int $getRuntimeType(Runtime runtime) => RuntimeTypes.nullType;
+  int $getRuntimeType(Runtime runtime) =>
+      runtime.lookupType(CoreTypes.nullType);
 
   @override
   bool operator ==(Object other) => other is $null;
@@ -27,6 +54,12 @@ class $null implements $Value {
 /// dart_eval [$Instance] representation of an [Object]
 class $Object implements $Instance {
   $Object(this.$value);
+
+  static const $declaration = BridgeClassDef(
+      BridgeClassType(BridgeTypeRef(CoreTypes.object),
+          $extends: BridgeTypeRef(CoreTypes.dynamic), isAbstract: true),
+      constructors: {},
+      wrap: true);
 
   @override
   final Object $value;
@@ -85,12 +118,20 @@ class $Object implements $Instance {
   }
 
   @override
-  int $getRuntimeType(Runtime runtime) => RuntimeTypes.objectType;
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType(CoreTypes.object);
 }
 
 /// dart_eval [$Instance] representation of a [bool]
 class $bool implements $Instance {
   $bool(this.$value) : _superclass = $Object($value);
+
+  static const $declaration = BridgeClassDef(
+      BridgeClassType(BridgeTypeRef(CoreTypes.bool), isAbstract: true),
+      constructors: {},
+      methods: {
+        // Other bool methods defined in builtins.dart
+      },
+      wrap: true);
 
   final $Instance _superclass;
 
@@ -148,11 +189,11 @@ class $bool implements $Instance {
 
   @override
   String toString() {
-    return 'EvalBool{${$value}}';
+    return '\${${$value}}';
   }
 
   @override
-  int $getRuntimeType(Runtime runtime) => RuntimeTypes.boolType;
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType(CoreTypes.bool);
 }
 
 /// dart_eval [$Instance] representation of a [String]

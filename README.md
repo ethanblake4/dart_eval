@@ -347,7 +347,7 @@ class MyAppPlugin implements EvalPlugin {
       'package:myapp/functions.dart',
       'loadData',
       BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.objectType)), params: [])
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object)), params: [])
     ));
     compiler.defineBridgeClass($CoolWidget.$declaration);
   }

@@ -18,11 +18,10 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
   }
 
   // Otherwise type-test
-  ctx.pushOp(
-      IsType.make(V.scopeFrameOffset,
-          runtimeTypeMap[slot] ?? ctx.typeRefIndexMap[slot]!, false),
+  ctx.pushOp(IsType.make(V.scopeFrameOffset, ctx.typeRefIndexMap[slot]!, false),
       IsType.LEN);
-  final Vis = Variable.alloc(ctx, EvalTypes.boolType.copyWith(boxed: false));
+  final Vis =
+      Variable.alloc(ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
 
   // And assert
   final errMsg =
@@ -32,10 +31,10 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
       Assert.make(Vis.scopeFrameOffset, errMsg.scopeFrameOffset), Assert.LEN);
 
   // If the type changes between num and int/double, unbox/box
-  if (slot == EvalTypes.getNumType(ctx)) {
+  if (slot == CoreTypes.num.ref(ctx)) {
     V = V.boxIfNeeded(ctx);
-  } else if (slot == EvalTypes.getIntType(ctx) ||
-      slot == EvalTypes.getDoubleType(ctx)) {
+  } else if (slot == CoreTypes.int.ref(ctx) ||
+      slot == CoreTypes.double.ref(ctx)) {
     V = V.unboxIfNeeded(ctx);
   }
 

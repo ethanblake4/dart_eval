@@ -30,8 +30,7 @@ class $Future<T> implements Future<T>, $Instance {
             params: [
               BridgeParameter(
                   'onValue',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.functionType)),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
                   false)
             ],
             namedParams: []))
@@ -65,7 +64,7 @@ class $Future<T> implements Future<T>, $Instance {
   void $setProperty(Runtime runtime, String identifier, $Value value) {}
 
   @override
-  int $getRuntimeType(Runtime runtime) => RuntimeTypes.futureType;
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType(CoreTypes.future);
 
   @override
   Stream<T> asStream() => $value.asStream();

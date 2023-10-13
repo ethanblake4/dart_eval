@@ -33,25 +33,18 @@ class $Directory implements $Instance {
       methods: {
         'create': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(
-                CoreTypes.future, [BridgeTypeRef.type(RuntimeTypes.voidType)])),
+                CoreTypes.future, [BridgeTypeRef(CoreTypes.voidType)])),
             params: [],
             namedParams: [
-              BridgeParameter(
-                  'recursive',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.boolType)),
-                  true),
+              BridgeParameter('recursive',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true),
             ])),
         'createSync': BridgeMethodDef(BridgeFunctionDef(
-            returns:
-                BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.voidType)),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
             params: [],
             namedParams: [
-              BridgeParameter(
-                  'recursive',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.boolType)),
-                  true),
+              BridgeParameter('recursive',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true),
             ])),
         'rename': BridgeMethodDef(BridgeFunctionDef(
             returns:
@@ -72,31 +65,19 @@ class $Directory implements $Instance {
                   AsyncTypes.stream, [BridgeTypeRef(IoTypes.fileSystemEntity)]),
             ),
             namedParams: [
-              BridgeParameter(
-                  'recursive',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.boolType)),
-                  true),
-              BridgeParameter(
-                  'followLinks',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.boolType)),
-                  true),
+              BridgeParameter('recursive',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true),
+              BridgeParameter('followLinks',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true),
             ])),
         'listSync': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(
                 CoreTypes.list, [BridgeTypeRef(IoTypes.fileSystemEntity)])),
             namedParams: [
-              BridgeParameter(
-                  'recursive',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.boolType)),
-                  true),
-              BridgeParameter(
-                  'followLinks',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.boolType)),
-                  true),
+              BridgeParameter('recursive',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true),
+              BridgeParameter('followLinks',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true),
             ])),
       },
       wrap: true);

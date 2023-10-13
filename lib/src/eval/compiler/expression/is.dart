@@ -1,5 +1,4 @@
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/source_node_wrapper.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
@@ -21,9 +20,7 @@ Variable compileIsExpression(IsExpression e, CompilerContext ctx) {
   V = V.boxIfNeeded(ctx);
 
   /// Otherwise do a runtime test
-  ctx.pushOp(
-      IsType.make(V.scopeFrameOffset,
-          runtimeTypeMap[slot] ?? ctx.typeRefIndexMap[slot]!, not),
+  ctx.pushOp(IsType.make(V.scopeFrameOffset, ctx.typeRefIndexMap[slot]!, not),
       IsType.LEN);
-  return Variable.alloc(ctx, EvalTypes.boolType.copyWith(boxed: false));
+  return Variable.alloc(ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
 }

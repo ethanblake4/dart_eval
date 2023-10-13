@@ -1,5 +1,4 @@
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/statement/block.dart';
@@ -53,7 +52,7 @@ StatementInfo compileTryStatement(
     final _state = ctx.saveState();
     ctx.beginAllocScope();
     ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-    final v = Variable.alloc(ctx, EvalTypes.dynamicType);
+    final v = Variable.alloc(ctx, CoreTypes.dynamic.ref(ctx));
     catchInfo =
         _compileCatchClause(ctx, s.catchClauses, 0, v, expectedReturnType);
     ctx.endAllocScope();
@@ -87,10 +86,11 @@ StatementInfo _compileCatchClause(
     expectedReturnType,
     condition: (_ctx) {
       ctx.pushOp(
-          IsType.make(exceptionVar.scopeFrameOffset,
-              runtimeTypeMap[slot] ?? ctx.typeRefIndexMap[slot]!, false),
+          IsType.make(
+              exceptionVar.scopeFrameOffset, ctx.typeRefIndexMap[slot]!, false),
           IsType.LEN);
-      return Variable.alloc(ctx, EvalTypes.boolType.copyWith(boxed: false));
+      return Variable.alloc(
+          ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
     },
     thenBranch: (_ctx, _expectedReturnType) {
       ctx.setLocal(catchClause.exceptionParameter!.name.value() as String,

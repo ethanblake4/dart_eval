@@ -19,8 +19,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
                 params: [
                   BridgeParameter(
                       'toElement',
-                      BridgeTypeAnnotation(
-                          BridgeTypeRef.type(RuntimeTypes.functionType)),
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
                       false),
                 ],
                 returns: BridgeTypeAnnotation(
@@ -31,12 +30,11 @@ class $Iterable<E> implements Iterable<E>, $Instance {
                 params: [
                   BridgeParameter(
                       'growable',
-                      BridgeTypeAnnotation(
-                          BridgeTypeRef.type(RuntimeTypes.boolType)),
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
                       true),
                 ],
-                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list,
-                    [BridgeTypeRef.type(RuntimeTypes.dynamicType)]))),
+                returns: BridgeTypeAnnotation(BridgeTypeRef(
+                    CoreTypes.list, [BridgeTypeRef(CoreTypes.dynamic)]))),
             isStatic: false),
       },
       getters: {

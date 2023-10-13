@@ -27,15 +27,13 @@ class $StreamController implements $Instance {
       },
       methods: {
         'add': BridgeMethodDef(BridgeFunctionDef(
-            returns:
-                BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.voidType)),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
             params: [
               BridgeParameter(
                   'event', BridgeTypeAnnotation(BridgeTypeRef.ref('T')), false)
             ])),
         'addError': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(
-                BridgeTypeRef.type(RuntimeTypes.voidType)))),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)))),
         'close': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future)))),
       },

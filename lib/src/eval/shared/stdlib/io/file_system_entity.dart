@@ -29,35 +29,27 @@ class $FileSystemEntity implements $Instance {
       methods: {
         'exists': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(
-                CoreTypes.future, [BridgeTypeRef.type(RuntimeTypes.boolType)])),
+                CoreTypes.future, [BridgeTypeRef(CoreTypes.bool)])),
             params: [],
             namedParams: [])),
         'existsSync': BridgeMethodDef(BridgeFunctionDef(
-            returns:
-                BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
             params: [],
             namedParams: [])),
         'delete': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(
-                CoreTypes.future, [BridgeTypeRef.type(RuntimeTypes.voidType)])),
+                CoreTypes.future, [BridgeTypeRef(CoreTypes.voidType)])),
             params: [],
             namedParams: [
-              BridgeParameter(
-                  'recursive',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.boolType)),
-                  true)
+              BridgeParameter('recursive',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true)
             ])),
         'deleteSync': BridgeMethodDef(BridgeFunctionDef(
-            returns:
-                BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.voidType)),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
             params: [],
             namedParams: [
-              BridgeParameter(
-                  'recursive',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.boolType)),
-                  true)
+              BridgeParameter('recursive',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true)
             ])),
         'rename': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(

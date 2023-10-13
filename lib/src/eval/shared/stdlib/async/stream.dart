@@ -35,42 +35,35 @@ class $StreamSubscription implements $Instance {
                   true)
             ])),
         'pause': BridgeMethodDef(BridgeFunctionDef(
-            returns:
-                BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.voidType)),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
             params: [
               BridgeParameter('resumeSignal',
                   BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future)), true)
             ])),
         'resume': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(
-                BridgeTypeRef.type(RuntimeTypes.voidType)))),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)))),
         'onDone': BridgeMethodDef(BridgeFunctionDef(
-            returns:
-                BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.voidType)),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
             params: [
               BridgeParameter(
                   'handleDone',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.functionType),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function),
                       nullable: true),
                   false)
             ])),
         'onError': BridgeMethodDef(BridgeFunctionDef(
-            returns:
-                BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.voidType)),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
             params: [
               BridgeParameter(
                   'handleError',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.functionType),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function),
                       nullable: true),
                   false)
             ])),
       },
       getters: {
         'isPaused': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(
-                BridgeTypeRef.type(RuntimeTypes.boolType)))),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)))),
       },
       setters: {},
       fields: {},
@@ -254,11 +247,8 @@ class $Stream implements $Instance {
             returns: BridgeTypeAnnotation(
                 BridgeTypeRef(AsyncTypes.stream, [BridgeTypeRef.ref('T')])),
             params: [
-              BridgeParameter(
-                  'error',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.objectType)),
-                  false)
+              BridgeParameter('error',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object)), false)
             ])),
         'fromFuture': BridgeConstructorDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(
@@ -301,8 +291,7 @@ class $Stream implements $Instance {
                   false),
               BridgeParameter(
                   'computation',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.functionType)),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
                   true),
             ])),
       },
@@ -313,13 +302,11 @@ class $Stream implements $Instance {
             params: [
               BridgeParameter(
                   'onListen',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.functionType)),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
                   true),
               BridgeParameter(
                   'onCancel',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.functionType)),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
                   true),
             ])),
         'asyncExpand': BridgeMethodDef(BridgeFunctionDef(
@@ -328,8 +315,7 @@ class $Stream implements $Instance {
             params: [
               BridgeParameter(
                   'convert',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.functionType)),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
                   false),
             ])),
         'asyncMap': BridgeMethodDef(BridgeFunctionDef(
@@ -338,13 +324,12 @@ class $Stream implements $Instance {
             params: [
               BridgeParameter(
                   'convert',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.functionType)),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
                   false),
             ])),
         'contains': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(
-                CoreTypes.future, [BridgeTypeRef.type(RuntimeTypes.boolType)])),
+                CoreTypes.future, [BridgeTypeRef(CoreTypes.bool)])),
             params: [
               BridgeParameter(
                   'needle',
@@ -357,8 +342,7 @@ class $Stream implements $Instance {
             params: [
               BridgeParameter(
                   'equals',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.functionType),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function),
                       nullable: true),
                   true),
             ])),
@@ -371,12 +355,11 @@ class $Stream implements $Instance {
             ])),
         'every': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(
-                CoreTypes.future, [BridgeTypeRef.type(RuntimeTypes.boolType)])),
+                CoreTypes.future, [BridgeTypeRef(CoreTypes.bool)])),
             params: [
               BridgeParameter(
                   'test',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.functionType)),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
                   false),
             ])),
         'expand': BridgeMethodDef(BridgeFunctionDef(
@@ -385,8 +368,7 @@ class $Stream implements $Instance {
             params: [
               BridgeParameter(
                   'convert',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.functionType)),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
                   false),
             ])),
         'first': BridgeMethodDef(BridgeFunctionDef(
@@ -395,8 +377,7 @@ class $Stream implements $Instance {
             params: [
               BridgeParameter(
                   'test',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.functionType)),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
                   true),
             ])),
         'firstWhere': BridgeMethodDef(BridgeFunctionDef(
@@ -405,13 +386,11 @@ class $Stream implements $Instance {
             params: [
               BridgeParameter(
                   'test',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.functionType)),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
                   false),
               BridgeParameter(
                   'orElse',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.functionType)),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
                   true),
             ])),
         'fold': BridgeMethodDef(BridgeFunctionDef(
@@ -422,18 +401,16 @@ class $Stream implements $Instance {
                   BridgeTypeAnnotation(BridgeTypeRef.ref('T')), false),
               BridgeParameter(
                   'combine',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.functionType)),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
                   false),
             ])),
         'forEach': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(
-                CoreTypes.future, [BridgeTypeRef.type(RuntimeTypes.voidType)])),
+                CoreTypes.future, [BridgeTypeRef(CoreTypes.voidType)])),
             params: [
               BridgeParameter(
                   'action',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.functionType)),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
                   false),
             ])),
         'handleError': BridgeMethodDef(BridgeFunctionDef(
@@ -442,13 +419,11 @@ class $Stream implements $Instance {
             params: [
               BridgeParameter(
                   'onError',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.functionType)),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
                   false),
               BridgeParameter(
                   'test',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.functionType)),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
                   true),
             ])),
         'join': BridgeMethodDef(BridgeFunctionDef(
@@ -464,41 +439,33 @@ class $Stream implements $Instance {
             params: [
               BridgeParameter(
                   'test',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.functionType)),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
                   false),
               BridgeParameter(
                   'orElse',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.functionType)),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
                   true),
             ])),
         'listen': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(
-                CoreTypes.future, [BridgeTypeRef.type(RuntimeTypes.voidType)])),
+                CoreTypes.future, [BridgeTypeRef(CoreTypes.voidType)])),
             params: [
               BridgeParameter(
                   'onData',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.functionType)),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
                   false),
             ],
             namedParams: [
               BridgeParameter(
                   'onError',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.functionType)),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
                   true),
               BridgeParameter(
                   'onDone',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.functionType)),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
                   true),
-              BridgeParameter(
-                  'cancelOnError',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.boolType)),
-                  true),
+              BridgeParameter('cancelOnError',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true),
             ])),
         'map': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(
@@ -506,19 +473,15 @@ class $Stream implements $Instance {
             params: [
               BridgeParameter(
                   'convert',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.functionType)),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
                   false),
             ])),
         'pipe': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(
-                CoreTypes.future, [BridgeTypeRef.type(RuntimeTypes.voidType)])),
+                CoreTypes.future, [BridgeTypeRef(CoreTypes.voidType)])),
             params: [
-              BridgeParameter(
-                  'sink',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.objectType)),
-                  false),
+              BridgeParameter('sink',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object)), false),
             ])),
         'reduce': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(
@@ -526,8 +489,7 @@ class $Stream implements $Instance {
             params: [
               BridgeParameter(
                   'combine',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.functionType)),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
                   false),
             ])),
         'singleWhere': BridgeMethodDef(BridgeFunctionDef(
@@ -536,13 +498,11 @@ class $Stream implements $Instance {
             params: [
               BridgeParameter(
                   'test',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.functionType)),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
                   false),
               BridgeParameter(
                   'orElse',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.functionType)),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
                   true),
             ])),
         'skip': BridgeMethodDef(BridgeFunctionDef(
@@ -558,8 +518,7 @@ class $Stream implements $Instance {
             params: [
               BridgeParameter(
                   'test',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.functionType)),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
                   false),
             ])),
         'take': BridgeMethodDef(BridgeFunctionDef(
@@ -575,8 +534,7 @@ class $Stream implements $Instance {
             params: [
               BridgeParameter(
                   'test',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.functionType)),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
                   false),
             ])),
         'timeout': BridgeMethodDef(BridgeFunctionDef(
@@ -585,13 +543,11 @@ class $Stream implements $Instance {
             params: [
               BridgeParameter(
                   'timeLimit',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.durationType)),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.duration)),
                   false),
               BridgeParameter(
                   'onTimeout',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.functionType)),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
                   true),
             ])),
         'toList': BridgeMethodDef(BridgeFunctionDef(
@@ -599,21 +555,15 @@ class $Stream implements $Instance {
               BridgeTypeRef(CoreTypes.list, [BridgeTypeRef.ref('T')])
             ])),
             params: [
-              BridgeParameter(
-                  'growable',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.boolType)),
-                  true),
+              BridgeParameter('growable',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true),
             ])),
         'transform': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(
                 BridgeTypeRef(AsyncTypes.stream, [BridgeTypeRef.ref('T')])),
             params: [
-              BridgeParameter(
-                  'streamTransformer',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.objectType)),
-                  false),
+              BridgeParameter('streamTransformer',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object)), false),
             ])),
         'where': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(
@@ -621,8 +571,7 @@ class $Stream implements $Instance {
             params: [
               BridgeParameter(
                   'test',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.functionType)),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
                   false),
             ])),
       },
@@ -640,11 +589,9 @@ class $Stream implements $Instance {
             returns: BridgeTypeAnnotation(
                 BridgeTypeRef(CoreTypes.future, [BridgeTypeRef.ref('T')])))),
         'isBroadcast': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(
-                BridgeTypeRef.type(RuntimeTypes.boolType)))),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)))),
         'isClosed': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(
-                BridgeTypeRef.type(RuntimeTypes.boolType)))),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)))),
       },
       setters: {},
       fields: {},

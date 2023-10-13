@@ -57,7 +57,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
         _push.add($null);
       }
     } else {
-      var paramType = EvalTypes.dynamicType;
+      var paramType = CoreTypes.dynamic.ref(ctx);
       if (param is SimpleFormalParameter) {
         if (param.type != null) {
           paramType = TypeRef.fromAnnotation(ctx, decLibrary, param.type!);
@@ -80,7 +80,8 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
         _arg = _arg.unboxIfNeeded(ctx);
       }
 
-      if (_arg.type == EvalTypes.functionType && _arg.scopeFrameOffset == -1) {
+      if (_arg.type == CoreTypes.function.ref(ctx) &&
+          _arg.scopeFrameOffset == -1) {
         _arg = _arg.tearOff(ctx);
       }
 
@@ -113,7 +114,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
     }
     final param = (_param is DefaultFormalParameter ? _param.parameter : _param)
         as NormalFormalParameter;
-    var paramType = EvalTypes.dynamicType;
+    var paramType = CoreTypes.dynamic.ref(ctx);
     if (param is SimpleFormalParameter) {
       if (param.type != null) {
         paramType = TypeRef.fromAnnotation(ctx, decLibrary, param.type!);
@@ -135,7 +136,8 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
         _arg = _arg.unboxIfNeeded(ctx);
       }
 
-      if (_arg.type == EvalTypes.functionType && _arg.scopeFrameOffset == -1) {
+      if (_arg.type == CoreTypes.function.ref(ctx) &&
+          _arg.scopeFrameOffset == -1) {
         _arg = _arg.tearOff(ctx);
       }
 
@@ -190,12 +192,13 @@ Pair<List<Variable>, Map<String, Variable>>
         _push.add($null);
       }
     } else {
-      var paramType = param.type ?? EvalTypes.dynamicType;
+      var paramType = param.type ?? CoreTypes.dynamic.ref(ctx);
 
       var _arg = compileExpression(arg, ctx, paramType);
       _arg = _arg.boxIfNeeded(ctx);
 
-      if (_arg.type == EvalTypes.functionType && _arg.scopeFrameOffset == -1) {
+      if (_arg.type == CoreTypes.function.ref(ctx) &&
+          _arg.scopeFrameOffset == -1) {
         _arg = _arg.tearOff(ctx);
       }
 
@@ -218,7 +221,7 @@ Pair<List<Variable>, Map<String, Variable>>
   }
 
   for (final param in namedParams.values) {
-    var paramType = param.type ?? EvalTypes.dynamicType;
+    var paramType = param.type ?? CoreTypes.dynamic.ref(ctx);
     if (namedExpr.containsKey(param.name)) {
       final _arg = compileExpression(namedExpr[param.name]!, ctx, paramType)
           .boxIfNeeded(ctx);
@@ -279,10 +282,11 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
 
       var _arg = compileExpression(arg, ctx, paramType);
       _arg = _arg.boxIfNeeded(ctx);
-      if (_arg.type == EvalTypes.functionType && _arg.scopeFrameOffset == -1) {
+      if (_arg.type == CoreTypes.function.ref(ctx) &&
+          _arg.scopeFrameOffset == -1) {
         _arg = _arg.tearOff(ctx);
       }
-      if (!(param.type.nullable && _arg.type == EvalTypes.nullType) &&
+      if (!(param.type.nullable && _arg.type == CoreTypes.nullType.ref(ctx)) &&
           !_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
         throw CompileError(
             'Cannot assign argument of type ${_arg.type} to parameter of type $paramType',
@@ -311,7 +315,8 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
     if (namedExpr.containsKey(param.name)) {
       var _arg = compileExpression(namedExpr[param.name]!, ctx, paramType)
           .boxIfNeeded(ctx);
-      if (_arg.type == EvalTypes.functionType && _arg.scopeFrameOffset == -1) {
+      if (_arg.type == CoreTypes.function.ref(ctx) &&
+          _arg.scopeFrameOffset == -1) {
         _arg = _arg.tearOff(ctx);
       }
       if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
@@ -345,7 +350,7 @@ TypeRef _resolveFieldFormalType(CompilerContext ctx, int decLibrary,
           TypeRef.lookupDeclaration(ctx, decLibrary, $class),
           param.name.value() as String,
           forFieldFormal: true) ??
-      EvalTypes.dynamicType;
+      CoreTypes.dynamic.ref(ctx);
 }
 
 TypeRef resolveSuperFormalType(CompilerContext ctx, int decLibrary,
@@ -382,7 +387,7 @@ TypeRef resolveSuperFormalType(CompilerContext ctx, int decLibrary,
           _param.name!.stringValue == param.name.stringValue) {
         final _type = _param.type;
         if (_type == null) {
-          return EvalTypes.dynamicType;
+          return CoreTypes.dynamic.ref(ctx);
         }
         return TypeRef.fromAnnotation(ctx, $super.file, _type);
       } else if (_param is FieldFormalParameter) {

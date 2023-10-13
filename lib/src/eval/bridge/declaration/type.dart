@@ -28,7 +28,7 @@ class BridgeTypeAnnotation {
 class BridgeClassType {
   const BridgeClassType(
     this.type, {
-    this.$extends = const BridgeTypeRef.type(RuntimeTypes.objectType, []),
+    this.$extends = const BridgeTypeRef(CoreTypes.object, []),
     this.$implements = const <BridgeTypeRef>[],
     this.$with = const <BridgeTypeRef>[],
     this.isAbstract = false,

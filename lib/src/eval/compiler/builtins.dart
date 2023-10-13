@@ -5,7 +5,7 @@ import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 
-const int dartCoreFile = -1;
+var dartCoreFile = -1;
 
 class BuiltinValue {
   BuiltinValue({this.intval, this.doubleval, this.stringval, this.boolval}) {
@@ -31,30 +31,31 @@ class BuiltinValue {
   Variable _push(CompilerContext ctx) {
     if (type == BuiltinValueType.intType) {
       ctx.pushOp(PushConstantInt.make(intval!), PushConstantInt.LEN);
-      return Variable.alloc(
-          ctx, EvalTypes.getIntType(ctx).copyWith(boxed: false));
+      return Variable.alloc(ctx, CoreTypes.int.ref(ctx).copyWith(boxed: false));
     } else if (type == BuiltinValueType.doubleType) {
       ctx.pushOp(PushConstantDouble.make(doubleval!), PushConstantDouble.LEN);
       return Variable.alloc(
-          ctx, EvalTypes.getDoubleType(ctx).copyWith(boxed: false));
+          ctx, CoreTypes.double.ref(ctx).copyWith(boxed: false));
     } else if (type == BuiltinValueType.stringType) {
       final op = PushConstant.make(ctx.constantPool.addOrGet(stringval!));
       ctx.pushOp(op, PushConstant.LEN);
       return Variable.alloc(
-          ctx, EvalTypes.getStringType(ctx).copyWith(boxed: false));
+          ctx, CoreTypes.string.ref(ctx).copyWith(boxed: false));
     } else if (type == BuiltinValueType.boolType) {
       ctx.pushOp(PushTrue.make(), PushTrue.LEN);
       var value =
-          Variable.alloc(ctx, EvalTypes.boolType.copyWith(boxed: false));
+          Variable.alloc(ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
       if (!boolval!) {
         ctx.pushOp(LogicalNot.make(value.scopeFrameOffset), LogicalNot.LEN);
-        value = Variable.alloc(ctx, EvalTypes.boolType.copyWith(boxed: false));
+        value =
+            Variable.alloc(ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
       }
       return value;
     } else if (type == BuiltinValueType.nullType) {
       final op = PushNull.make();
       ctx.pushOp(op, PushNull.LEN);
-      return Variable.alloc(ctx, EvalTypes.nullType.copyWith(boxed: false));
+      return Variable.alloc(
+          ctx, CoreTypes.nullType.ref(ctx).copyWith(boxed: false));
     } else {
       throw CompileError('Cannot push unknown builtin value type $type');
     }
@@ -95,72 +96,6 @@ class KnownMethodArg {
   final bool optional;
 }
 
-class EvalTypes {
-  static const TypeRef typeType = TypeRef(dartCoreFile, 'Type', resolved: true);
-  static const TypeRef voidType = TypeRef(dartCoreFile, 'void', resolved: true);
-  static const TypeRef dynamicType =
-      TypeRef(dartCoreFile, 'dynamic', resolved: true);
-  static const TypeRef neverType =
-      TypeRef(dartCoreFile, 'Never', extendsType: dynamicType, resolved: true);
-  static const TypeRef nullType =
-      TypeRef(dartCoreFile, 'Null', extendsType: dynamicType, resolved: true);
-  static const TypeRef objectType =
-      TypeRef(dartCoreFile, 'Object', extendsType: dynamicType, resolved: true);
-  static const TypeRef enumType =
-      TypeRef(dartCoreFile, 'Enum', extendsType: objectType, resolved: true);
-  static const TypeRef boolType =
-      TypeRef(dartCoreFile, 'bool', extendsType: objectType, resolved: true);
-  static const TypeRef mapType =
-      TypeRef(dartCoreFile, 'Map', extendsType: objectType, resolved: true);
-  static const TypeRef functionType = TypeRef(dartCoreFile, 'Function',
-      extendsType: objectType, resolved: true);
-
-  static TypeRef getNumType(CompilerContext ctx) =>
-      TypeRef.fromBridgeTypeRef(ctx, BridgeTypeRef(CoreTypes.num));
-  static TypeRef getIntType(CompilerContext ctx) =>
-      TypeRef.fromBridgeTypeRef(ctx, BridgeTypeRef(CoreTypes.int));
-  static TypeRef getDoubleType(CompilerContext ctx) =>
-      TypeRef.fromBridgeTypeRef(ctx, BridgeTypeRef(CoreTypes.double));
-  static TypeRef getStringType(CompilerContext ctx) =>
-      TypeRef.fromBridgeTypeRef(ctx, BridgeTypeRef(CoreTypes.string));
-  static TypeRef getListType(CompilerContext ctx) =>
-      TypeRef.fromBridgeTypeRef(ctx, BridgeTypeRef(CoreTypes.list));
-
-  static TypeRef getIterableType(CompilerContext ctx) =>
-      TypeRef.fromBridgeTypeRef(ctx, BridgeTypeRef(CoreTypes.iterable));
-
-  static TypeRef getIteratorType(CompilerContext ctx) =>
-      TypeRef.fromBridgeTypeRef(ctx, BridgeTypeRef(CoreTypes.iterator));
-}
-
-final Map<String, TypeRef> coreDeclarations = {
-  'void': EvalTypes.voidType,
-  'dynamic': EvalTypes.dynamicType,
-  'Null': EvalTypes.nullType,
-  'Object': EvalTypes.objectType,
-  'bool': EvalTypes.boolType,
-  'Map': EvalTypes.mapType,
-  'Function': EvalTypes.functionType
-};
-
-const objectComparisonOp = KnownMethod(
-    AlwaysReturnType(EvalTypes.boolType, false),
-    [KnownMethodArg('other', EvalTypes.objectType, false)],
-    {});
-
-final boolBinaryOp = KnownMethod(AlwaysReturnType(EvalTypes.boolType, false),
-    [KnownMethodArg('other', EvalTypes.boolType, false)], {});
-
-const listIndexOp = KnownMethod(TargetTypeArgDependentReturnType(0), [
-  KnownMethodArg(
-      'index', /*EvalTypes.getIntType(ctx)*/ EvalTypes.dynamicType, false)
-], {});
-
-const listIndexAssignOp = KnownMethod(TargetTypeArgDependentReturnType(0), [
-  KnownMethodArg(
-      'index', /*EvalTypes.getIntType(ctx)*/ EvalTypes.dynamicType, false)
-], {});
-
 Map<TypeRef, Map<String, KnownMethod>>? _knownMethods;
 
 Map<TypeRef, Map<String, KnownMethod>> getKnownMethods(ctx) {
@@ -168,8 +103,18 @@ Map<TypeRef, Map<String, KnownMethod>> getKnownMethods(ctx) {
     return _knownMethods!;
   }
 
-  final toStringOp = KnownMethod(
-      AlwaysReturnType(EvalTypes.getStringType(ctx), false), [], {});
+  final boolBinaryOp = KnownMethod(
+      AlwaysReturnType(CoreTypes.bool.ref(ctx), false),
+      [KnownMethodArg('other', CoreTypes.bool.ref(ctx), false)],
+      {});
+
+  final objectComparisonOp = KnownMethod(
+      AlwaysReturnType(CoreTypes.bool.ref(ctx), false),
+      [KnownMethodArg('other', CoreTypes.object.ref(ctx), false)],
+      {});
+
+  final toStringOp =
+      KnownMethod(AlwaysReturnType(CoreTypes.string.ref(ctx), false), [], {});
 
   final _knownObject = <String, KnownMethod>{
     '==': objectComparisonOp,
@@ -178,51 +123,49 @@ Map<TypeRef, Map<String, KnownMethod>> getKnownMethods(ctx) {
 
   final intBinaryOp = KnownMethod(
       ParameterTypeDependentReturnType({
-        EvalTypes.getDoubleType(ctx):
-            AlwaysReturnType(EvalTypes.getDoubleType(ctx), false),
-        EvalTypes.getIntType(ctx):
-            AlwaysReturnType(EvalTypes.getIntType(ctx), false),
-        EvalTypes.getNumType(ctx):
-            AlwaysReturnType(EvalTypes.getNumType(ctx), false)
+        CoreTypes.double.ref(ctx):
+            AlwaysReturnType(CoreTypes.double.ref(ctx), false),
+        CoreTypes.int.ref(ctx): AlwaysReturnType(CoreTypes.int.ref(ctx), false),
+        CoreTypes.num.ref(ctx): AlwaysReturnType(CoreTypes.num.ref(ctx), false)
       },
           paramIndex: 0,
-          fallback: AlwaysReturnType(EvalTypes.getNumType(ctx), false)),
-      [KnownMethodArg('other', EvalTypes.getNumType(ctx), false)],
+          fallback: AlwaysReturnType(CoreTypes.num.ref(ctx), false)),
+      [KnownMethodArg('other', CoreTypes.num.ref(ctx), false)],
       {});
 
   final intBitwiseOp = KnownMethod(
-      AlwaysReturnType(EvalTypes.getIntType(ctx), false),
-      [KnownMethodArg('other', EvalTypes.getIntType(ctx), false)],
+      AlwaysReturnType(CoreTypes.int.ref(ctx), false),
+      [KnownMethodArg('other', CoreTypes.int.ref(ctx), false)],
       {});
 
   final numComparisonOp = KnownMethod(
-      AlwaysReturnType(EvalTypes.boolType, false),
-      [KnownMethodArg('other', EvalTypes.getNumType(ctx), false)],
+      AlwaysReturnType(CoreTypes.bool.ref(ctx), false),
+      [KnownMethodArg('other', CoreTypes.num.ref(ctx), false)],
       {});
 
   final numCompareToOp = KnownMethod(
-      AlwaysReturnType(EvalTypes.getIntType(ctx), false),
-      [KnownMethodArg('other', EvalTypes.getNumType(ctx), false)],
+      AlwaysReturnType(CoreTypes.int.ref(ctx), false),
+      [KnownMethodArg('other', CoreTypes.num.ref(ctx), false)],
       {});
 
   final doubleBinaryOp = KnownMethod(
-      AlwaysReturnType(EvalTypes.getDoubleType(ctx), false),
-      [KnownMethodArg('other', EvalTypes.getNumType(ctx), false)],
+      AlwaysReturnType(CoreTypes.double.ref(ctx), false),
+      [KnownMethodArg('other', CoreTypes.num.ref(ctx), false)],
       {});
 
   final numBinaryOp = KnownMethod(
       ParameterTypeDependentReturnType({
-        EvalTypes.getDoubleType(ctx):
-            AlwaysReturnType(EvalTypes.getDoubleType(ctx), false),
+        CoreTypes.double.ref(ctx):
+            AlwaysReturnType(CoreTypes.double.ref(ctx), false),
       },
           paramIndex: 0,
-          fallback: AlwaysReturnType(EvalTypes.getNumType(ctx), false)),
-      [KnownMethodArg('other', EvalTypes.getNumType(ctx), false)],
+          fallback: AlwaysReturnType(CoreTypes.num.ref(ctx), false)),
+      [KnownMethodArg('other', CoreTypes.num.ref(ctx), false)],
       {});
 
   return _knownMethods = {
-    EvalTypes.nullType: {..._knownObject},
-    EvalTypes.getIntType(ctx): {
+    CoreTypes.nullType.ref(ctx): {..._knownObject},
+    CoreTypes.int.ref(ctx): {
       ..._knownObject,
       '+': intBinaryOp,
       '-': intBinaryOp,
@@ -242,7 +185,7 @@ Map<TypeRef, Map<String, KnownMethod>> getKnownMethods(ctx) {
       '!=': numComparisonOp,
       'compareTo': numCompareToOp
     },
-    EvalTypes.getDoubleType(ctx): {
+    CoreTypes.double.ref(ctx): {
       ..._knownObject,
       '+': doubleBinaryOp,
       '-': doubleBinaryOp,
@@ -257,7 +200,7 @@ Map<TypeRef, Map<String, KnownMethod>> getKnownMethods(ctx) {
       '!=': numComparisonOp,
       'compareTo': numCompareToOp
     },
-    EvalTypes.getNumType(ctx): {
+    CoreTypes.num.ref(ctx): {
       ..._knownObject,
       '+': numBinaryOp,
       '-': numBinaryOp,
@@ -272,113 +215,107 @@ Map<TypeRef, Map<String, KnownMethod>> getKnownMethods(ctx) {
       '!=': numComparisonOp,
       'compareTo': numCompareToOp
     },
-    EvalTypes.boolType: {
+    CoreTypes.bool.ref(ctx): {
       '&&': boolBinaryOp,
       '||': boolBinaryOp,
       '==': boolBinaryOp,
       '!=': boolBinaryOp
     },
-    EvalTypes.getStringType(ctx): {
+    CoreTypes.string.ref(ctx): {
       ..._knownObject,
-      '+': KnownMethod(AlwaysReturnType(EvalTypes.getStringType(ctx), false),
-          [KnownMethodArg('other', EvalTypes.getStringType(ctx), false)], {}),
-      '==': KnownMethod(AlwaysReturnType(EvalTypes.boolType, false),
-          [KnownMethodArg('other', EvalTypes.getStringType(ctx), false)], {}),
-      '!=': KnownMethod(AlwaysReturnType(EvalTypes.boolType, false),
-          [KnownMethodArg('other', EvalTypes.getStringType(ctx), false)], {}),
-      'codeUnitAt': KnownMethod(
-          AlwaysReturnType(EvalTypes.getIntType(ctx), false),
-          [KnownMethodArg('index', EvalTypes.getIntType(ctx), false)],
-          {}),
-      'compareTo': KnownMethod(
-          AlwaysReturnType(EvalTypes.getIntType(ctx), false),
-          [KnownMethodArg('other', EvalTypes.getStringType(ctx), false)],
-          {}),
-      'contains': KnownMethod(
-          AlwaysReturnType(EvalTypes.getIntType(ctx), false),
-          [KnownMethodArg('other', EvalTypes.getStringType(ctx), false)],
-          {}),
-      'endsWith': KnownMethod(AlwaysReturnType(EvalTypes.boolType, false),
-          [KnownMethodArg('other', EvalTypes.getStringType(ctx), false)], {}),
+      '+': KnownMethod(AlwaysReturnType(CoreTypes.string.ref(ctx), false),
+          [KnownMethodArg('other', CoreTypes.string.ref(ctx), false)], {}),
+      '==': KnownMethod(AlwaysReturnType(CoreTypes.bool.ref(ctx), false),
+          [KnownMethodArg('other', CoreTypes.string.ref(ctx), false)], {}),
+      '!=': KnownMethod(AlwaysReturnType(CoreTypes.bool.ref(ctx), false),
+          [KnownMethodArg('other', CoreTypes.string.ref(ctx), false)], {}),
+      'codeUnitAt': KnownMethod(AlwaysReturnType(CoreTypes.int.ref(ctx), false),
+          [KnownMethodArg('index', CoreTypes.int.ref(ctx), false)], {}),
+      'compareTo': KnownMethod(AlwaysReturnType(CoreTypes.int.ref(ctx), false),
+          [KnownMethodArg('other', CoreTypes.string.ref(ctx), false)], {}),
+      'contains': KnownMethod(AlwaysReturnType(CoreTypes.int.ref(ctx), false),
+          [KnownMethodArg('other', CoreTypes.string.ref(ctx), false)], {}),
+      'endsWith': KnownMethod(AlwaysReturnType(CoreTypes.bool.ref(ctx), false),
+          [KnownMethodArg('other', CoreTypes.string.ref(ctx), false)], {}),
       //TODO: needs to be fixed to not use stringType but instead EvalTypes.patternType once its available
-      'indexOf':
-          KnownMethod(AlwaysReturnType(EvalTypes.getIntType(ctx), false), [
-        KnownMethodArg('pattern', EvalTypes.getStringType(ctx), false),
-        KnownMethodArg('start', EvalTypes.getIntType(ctx), true),
+      'indexOf': KnownMethod(AlwaysReturnType(CoreTypes.int.ref(ctx), false), [
+        KnownMethodArg('pattern', CoreTypes.string.ref(ctx), false),
+        KnownMethodArg('start', CoreTypes.int.ref(ctx), true),
       ], {}),
       //TODO: needs to be fixed to not use stringType but instead EvalTypes.patternType once its available
       'lastIndexOf':
-          KnownMethod(AlwaysReturnType(EvalTypes.getIntType(ctx), false), [
-        KnownMethodArg('pattern', EvalTypes.getStringType(ctx), false),
-        KnownMethodArg('start', EvalTypes.getIntType(ctx), true),
+          KnownMethod(AlwaysReturnType(CoreTypes.int.ref(ctx), false), [
+        KnownMethodArg('pattern', CoreTypes.string.ref(ctx), false),
+        KnownMethodArg('start', CoreTypes.int.ref(ctx), true),
       ], {}),
       'padLeft':
-          KnownMethod(AlwaysReturnType(EvalTypes.getStringType(ctx), false), [
-        KnownMethodArg('width', EvalTypes.getIntType(ctx), false),
-        KnownMethodArg('padding', EvalTypes.getStringType(ctx), true),
+          KnownMethod(AlwaysReturnType(CoreTypes.string.ref(ctx), false), [
+        KnownMethodArg('width', CoreTypes.int.ref(ctx), false),
+        KnownMethodArg('padding', CoreTypes.string.ref(ctx), true),
       ], {}),
       'padRight':
-          KnownMethod(AlwaysReturnType(EvalTypes.getStringType(ctx), false), [
-        KnownMethodArg('width', EvalTypes.getIntType(ctx), false),
-        KnownMethodArg('padding', EvalTypes.getStringType(ctx), true),
+          KnownMethod(AlwaysReturnType(CoreTypes.string.ref(ctx), false), [
+        KnownMethodArg('width', CoreTypes.int.ref(ctx), false),
+        KnownMethodArg('padding', CoreTypes.string.ref(ctx), true),
       ], {}),
       //TODO: needs to be fixed to not use stringType but instead EvalTypes.patternType once its available
       'replaceAll':
-          KnownMethod(AlwaysReturnType(EvalTypes.getStringType(ctx), false), [
-        KnownMethodArg('pattern', EvalTypes.getStringType(ctx), false),
-        KnownMethodArg('replace', EvalTypes.getStringType(ctx), false),
+          KnownMethod(AlwaysReturnType(CoreTypes.string.ref(ctx), false), [
+        KnownMethodArg('pattern', CoreTypes.string.ref(ctx), false),
+        KnownMethodArg('replace', CoreTypes.string.ref(ctx), false),
       ], {}),
       //TODO: needs to be fixed to not use stringType but instead EvalTypes.patternType once its available
       'replaceFirst':
-          KnownMethod(AlwaysReturnType(EvalTypes.getStringType(ctx), false), [
-        KnownMethodArg('from', EvalTypes.getStringType(ctx), false),
-        KnownMethodArg('to', EvalTypes.getStringType(ctx), false),
-        KnownMethodArg('startIndex', EvalTypes.getIntType(ctx), true),
+          KnownMethod(AlwaysReturnType(CoreTypes.string.ref(ctx), false), [
+        KnownMethodArg('from', CoreTypes.string.ref(ctx), false),
+        KnownMethodArg('to', CoreTypes.string.ref(ctx), false),
+        KnownMethodArg('startIndex', CoreTypes.int.ref(ctx), true),
       ], {}),
       'replaceRange':
-          KnownMethod(AlwaysReturnType(EvalTypes.getStringType(ctx), false), [
-        KnownMethodArg('start', EvalTypes.getIntType(ctx), false),
+          KnownMethod(AlwaysReturnType(CoreTypes.string.ref(ctx), false), [
+        KnownMethodArg('start', CoreTypes.int.ref(ctx), false),
         KnownMethodArg(
-            'end', EvalTypes.getIntType(ctx).copyWith(nullable: true), false),
-        KnownMethodArg('replacement', EvalTypes.getStringType(ctx), false),
+            'end', CoreTypes.int.ref(ctx).copyWith(nullable: true), false),
+        KnownMethodArg('replacement', CoreTypes.string.ref(ctx), false),
       ], {}),
       //TODO: needs to be fixed to not use stringType but instead EvalTypes.patternType once its available
       'split': KnownMethod(
           BridgedReturnType(BridgeTypeSpec('dart:core', 'List'), false), [
-        KnownMethodArg('pattern', EvalTypes.getStringType(ctx), false),
+        KnownMethodArg('pattern', CoreTypes.string.ref(ctx), false),
       ], {}),
       //TODO: needs to be fixed to not use stringType but instead EvalTypes.patternType once its available
-      'startsWith': KnownMethod(AlwaysReturnType(EvalTypes.boolType, false), [
-        KnownMethodArg('pattern', EvalTypes.getStringType(ctx), false),
-        KnownMethodArg('index', EvalTypes.getIntType(ctx), true),
+      'startsWith':
+          KnownMethod(AlwaysReturnType(CoreTypes.bool.ref(ctx), false), [
+        KnownMethodArg('pattern', CoreTypes.string.ref(ctx), false),
+        KnownMethodArg('index', CoreTypes.int.ref(ctx), true),
       ], {}),
       'substring':
-          KnownMethod(AlwaysReturnType(EvalTypes.getStringType(ctx), false), [
-        KnownMethodArg('start', EvalTypes.getIntType(ctx), false),
+          KnownMethod(AlwaysReturnType(CoreTypes.string.ref(ctx), false), [
+        KnownMethodArg('start', CoreTypes.int.ref(ctx), false),
         KnownMethodArg(
-            'end', EvalTypes.getIntType(ctx).copyWith(nullable: true), true)
+            'end', CoreTypes.int.ref(ctx).copyWith(nullable: true), true)
       ], {}),
       'toLowerCase': KnownMethod(
-          AlwaysReturnType(EvalTypes.getStringType(ctx), false), [], {}),
+          AlwaysReturnType(CoreTypes.string.ref(ctx), false), [], {}),
       'toUpperCase': KnownMethod(
-          AlwaysReturnType(EvalTypes.getStringType(ctx), false), [], {}),
+          AlwaysReturnType(CoreTypes.string.ref(ctx), false), [], {}),
       'trimLeft': KnownMethod(
-          AlwaysReturnType(EvalTypes.getStringType(ctx), false), [], {}),
+          AlwaysReturnType(CoreTypes.string.ref(ctx), false), [], {}),
       'trimRight': KnownMethod(
-          AlwaysReturnType(EvalTypes.getStringType(ctx), false), [], {}),
+          AlwaysReturnType(CoreTypes.string.ref(ctx), false), [], {}),
     },
-    EvalTypes.enumType: {..._knownObject}
+    CoreTypes.enumType.ref(ctx): {..._knownObject}
   };
 }
 
 Map<TypeRef, Map<String, KnownField>> getKnownFields(CompilerContext ctx) => {
-      EvalTypes.getStringType(ctx): {
+      CoreTypes.string.ref(ctx): {
         'length': KnownField(
-            AlwaysReturnType(EvalTypes.getIntType(ctx), false), true, false),
+            AlwaysReturnType(CoreTypes.int.ref(ctx), false), true, false),
         'isEmpty': KnownField(
-            AlwaysReturnType(EvalTypes.boolType, false), true, false),
-        'isNotEmpty':
-            KnownField(AlwaysReturnType(EvalTypes.boolType, false), true, false)
+            AlwaysReturnType(CoreTypes.bool.ref(ctx), false), true, false),
+        'isNotEmpty': KnownField(
+            AlwaysReturnType(CoreTypes.bool.ref(ctx), false), true, false)
       }
     };
 

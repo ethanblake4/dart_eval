@@ -1,5 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:dart_eval/src/eval/compiler/builtins.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/return.dart';
@@ -20,7 +20,7 @@ StatementInfo compileReturn(CompilerContext ctx, ReturnStatement s,
   final value = compileExpression(s.expression!, ctx, expectedReturnType?.type);
   return doReturn(
       ctx,
-      expectedReturnType ?? AlwaysReturnType(EvalTypes.dynamicType, true),
+      expectedReturnType ?? AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true),
       value,
       isAsync: (_e as FunctionBody).isAsynchronous);
 }

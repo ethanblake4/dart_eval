@@ -5,7 +5,6 @@ import 'package:analyzer/dart/element/type.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/runtime/type.dart';
-import 'package:dart_eval/src/eval/shared/types.dart';
 
 import 'builtins.dart';
 import 'context.dart';
@@ -76,9 +75,9 @@ class TypeRef {
   /// Given a set of [TypeRef]s, find their closest common ancestor type.
   factory TypeRef.commonBaseType(CompilerContext ctx, Set<TypeRef> types) {
     assert(types.isNotEmpty);
-    var makeNullable = types.remove(EvalTypes.nullType);
+    var makeNullable = types.remove(CoreTypes.nullType.ref(ctx));
     if (types.isEmpty) {
-      return EvalTypes.nullType;
+      return CoreTypes.nullType.ref(ctx);
     }
     final chains =
         types.map((e) => e.resolveTypeChain(ctx).getTypeChain(ctx)).toList();
@@ -139,7 +138,7 @@ class TypeRef {
   factory TypeRef.fromAnnotation(
       CompilerContext ctx, int library, TypeAnnotation typeAnnotation) {
     if (typeAnnotation is GenericFunctionType) {
-      return EvalTypes.functionType;
+      return CoreTypes.function.ref(ctx);
     }
     if (typeAnnotation is RecordType) {
       throw CompileError('No support for record types yet',
@@ -176,7 +175,7 @@ class TypeRef {
       TypeRef? specifiedType}) {
     final cacheId = typeReference.cacheId;
     if (cacheId != null) {
-      final t = inverseRuntimeTypeMap[cacheId] ?? ctx.runtimeTypeList[cacheId];
+      final t = ctx.runtimeTypeList[cacheId];
       if (staticSource) {
         return t.isUnboxedAcrossFunctionBoundaries
             ? t.copyWith(boxed: false)
@@ -202,7 +201,7 @@ class TypeRef {
           ctx.visibleTypes[ctx.library]![ctx.currentClass?.name.stringValue];
 
       if (specifiedType == null) {
-        return EvalTypes.dynamicType;
+        return CoreTypes.dynamic.ref(ctx);
       }
 
       final declaration =
@@ -225,7 +224,7 @@ class TypeRef {
       final generic = _dec.type.generics[ref]!;
       final $extends = generic.$extends;
       final boundType = $extends == null
-          ? EvalTypes.dynamicType
+          ? CoreTypes.dynamic.ref(ctx)
           : TypeRef.fromBridgeTypeRef(ctx, $extends);
 
       if (specifyingType != null) {
@@ -258,7 +257,7 @@ class TypeRef {
     }
     final gft = typeReference.gft;
     if (gft != null) {
-      return EvalTypes.functionType;
+      return CoreTypes.function.ref(ctx);
     }
     throw CompileError(
         'No support for looking up types by other bridge annotation types');
@@ -278,7 +277,7 @@ class TypeRef {
   static TypeRef? lookupFieldType(
       CompilerContext ctx, TypeRef $class, String field,
       {bool forFieldFormal = false}) {
-    if ($class == EvalTypes.dynamicType) {
+    if ($class == CoreTypes.dynamic.ref(ctx)) {
       return null;
     }
     final _f = getKnownFields(ctx)[$class];
@@ -286,7 +285,7 @@ class TypeRef {
       final _d = _f[field];
       if (_d != null) {
         return _d.fieldType?.toAlwaysReturnType(ctx, $class, [], {})?.type ??
-            EvalTypes.dynamicType;
+            CoreTypes.dynamic.ref(ctx);
       }
     }
     if (ctx.instanceDeclarationsMap[$class.file]!.containsKey($class.name)) {
@@ -354,7 +353,7 @@ class TypeRef {
             ctx, $super.inheritTypeArgsFrom(ctx, $class), field);
       }
     } else if (dec.declaration is EnumDeclaration && field == 'index') {
-      return EvalTypes.getIntType(ctx);
+      return CoreTypes.int.ref(ctx);
     } else {
       if (forFieldFormal) {
         throw CompileError(
@@ -410,7 +409,7 @@ class TypeRef {
       generics = [];
 
       if (declaration.bridge is BridgeEnumDef) {
-        $super = EvalTypes.enumType;
+        $super = CoreTypes.enumType.ref(ctx);
       } else {
         final br = declaration.bridge as BridgeClassDef;
         final type = br.type;
@@ -477,7 +476,7 @@ class TypeRef {
           .copyWith(specifiedTypeArgs: typeParams)
           .resolveTypeChain(ctx, recursionGuard: rg);
     } else if (declaration.declaration is EnumDeclaration) {
-      $super = EvalTypes.enumType;
+      $super = CoreTypes.enumType.ref(ctx);
     }
 
     for (final withName in withNames) {
@@ -503,7 +502,7 @@ class TypeRef {
     }
 
     final _resolved = TypeRef(file, name,
-        extendsType: $super ?? EvalTypes.objectType,
+        extendsType: $super,
         withType: $with,
         implementsType: $implements,
         genericParams: generics,
@@ -521,14 +520,14 @@ class TypeRef {
 
   Set<int> getRuntimeIndices(CompilerContext ctx) {
     return {
-      runtimeTypeMap[this] ?? ctx.typeRefIndexMap[this]!,
+      ctx.typeRefIndexMap[this]!,
       for (final a in allSupertypes) ...a.getRuntimeIndices(ctx)
     };
   }
 
   RuntimeType toRuntimeType(CompilerContext ctx) {
     final ta = [for (final t in specifiedTypeArgs) t.toRuntimeType(ctx)];
-    return RuntimeType(runtimeTypeMap[this] ?? ctx.typeRefIndexMap[this]!, ta);
+    return RuntimeType(ctx.typeRefIndexMap[this]!, ta);
   }
 
   List<TypeRef> get allSupertypes =>
@@ -588,12 +587,13 @@ class TypeRef {
   bool isAssignableTo(CompilerContext ctx, TypeRef slot,
       {List<TypeRef>? overrideGenerics, bool forceAllowDynamic = true}) {
     if (forceAllowDynamic &&
-        (this == EvalTypes.dynamicType || slot == EvalTypes.dynamicType)) {
+        (this == CoreTypes.dynamic.ref(ctx) ||
+            slot == CoreTypes.dynamic.ref(ctx))) {
       return true;
     }
 
-    if (this == EvalTypes.nullType) {
-      return slot.nullable || slot == EvalTypes.nullType;
+    if (this == CoreTypes.nullType.ref(ctx)) {
+      return slot.nullable || slot == CoreTypes.nullType.ref(ctx);
     }
 
     final generics = overrideGenerics ?? specifiedTypeArgs;
@@ -627,7 +627,7 @@ class TypeRef {
       i++;
     }
     var j = 0;
-    var resolvedGenerics = List<TypeRef>.filled(i, EvalTypes.dynamicType);
+    var resolvedGenerics = List<TypeRef>.filled(i, CoreTypes.dynamic.ref(ctx));
     for (final generic in _prototype.genericParams) {
       if (gmap.containsKey(generic.name)) {
         resolvedGenerics[gmap[generic.name]!] = _prototype.specifiedTypeArgs[j];
@@ -745,7 +745,7 @@ class AlwaysReturnType implements ReturnType {
     final _m = resolveStaticMethod(ctx, type, method);
     if (_m.isBridge) {
       if (_m.bridge is! BridgeMethodDef) {
-        return AlwaysReturnType(EvalTypes.dynamicType, true);
+        return AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
       }
       final fn = (_m.bridge as BridgeMethodDef).functionDescriptor;
       return AlwaysReturnType(
@@ -768,8 +768,8 @@ class AlwaysReturnType implements ReturnType {
       {List<TypeRef> typeArgs = const [],
       bool $static = false}) {
     final resolvedType = type.resolveTypeChain(ctx);
-    final knownType = resolvedType.extendsType == EvalTypes.enumType
-        ? EvalTypes.enumType
+    final knownType = resolvedType.extendsType == CoreTypes.enumType.ref(ctx)
+        ? CoreTypes.enumType.ref(ctx)
         : resolvedType;
     if (!$static &&
         getKnownMethods(ctx)[knownType] != null &&
@@ -784,15 +784,15 @@ class AlwaysReturnType implements ReturnType {
           typeArgs: typeArgs);
     }
 
-    if (type == EvalTypes.dynamicType) {
-      return AlwaysReturnType(EvalTypes.dynamicType, true);
+    if (type == CoreTypes.dynamic.ref(ctx)) {
+      return AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
     }
 
     return $static
         ? AlwaysReturnType.fromStaticMethod(
-            ctx, type, method, EvalTypes.dynamicType)
+            ctx, type, method, CoreTypes.dynamic.ref(ctx))
         : AlwaysReturnType.fromInstanceMethod(
-            ctx, type, method, EvalTypes.dynamicType);
+            ctx, type, method, CoreTypes.dynamic.ref(ctx));
   }
 
   final TypeRef? type;
@@ -868,4 +868,14 @@ class GenericParam {
 
 class C<T extends R, R extends int> {
   const C();
+}
+
+extension Refify on BridgeTypeSpec {
+  TypeRef ref(CompilerContext ctx, [List<BridgeTypeRef> typeArgs = const []]) {
+    final res = TypeRef.fromBridgeTypeRef(ctx, BridgeTypeRef(this, typeArgs));
+    if (library == 'dart:core') {
+      dartCoreFile = res.file;
+    }
+    return res;
+  }
 }

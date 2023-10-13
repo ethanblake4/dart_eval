@@ -37,11 +37,11 @@ class IdentifierReference implements Reference {
   @override
   TypeRef resolveType(CompilerContext ctx, [AstNode? source]) {
     if (object != null) {
-      if (object!.type == EvalTypes.typeType) {
+      if (object!.type == CoreTypes.type.ref(ctx)) {
         return object!.concreteTypes[0].resolveTypeChain(ctx);
       }
       return TypeRef.lookupFieldType(ctx, object!.type, name) ??
-          EvalTypes.dynamicType;
+          CoreTypes.dynamic.ref(ctx);
     }
 
     // Locals
@@ -57,7 +57,7 @@ class IdentifierReference implements Reference {
       if (instanceDeclaration != null) {
         final $type = instanceDeclaration.first;
         return TypeRef.lookupFieldType(ctx, $type, name) ??
-            EvalTypes.dynamicType;
+            CoreTypes.dynamic.ref(ctx);
       }
     }
 
@@ -67,7 +67,7 @@ class IdentifierReference implements Reference {
     if (staticDeclaration != null && staticDeclaration.declaration != null) {
       final _dec = staticDeclaration.declaration!;
       if (_dec is MethodDeclaration) {
-        return EvalTypes.functionType;
+        return CoreTypes.function.ref(ctx);
       } else if (_dec is VariableDeclaration) {
         final name =
             '${ctx.currentClass!.name.value() as String}.${_dec.name.value() as String}';
@@ -75,7 +75,7 @@ class IdentifierReference implements Reference {
       }
     }
 
-    return EvalTypes.typeType;
+    return CoreTypes.type.ref(ctx);
   }
 
   @override
@@ -83,7 +83,7 @@ class IdentifierReference implements Reference {
     if (object != null) {
       object = object!.boxIfNeeded(ctx);
       final fieldType = TypeRef.lookupFieldType(ctx, object!.type, name) ??
-          EvalTypes.dynamicType;
+          CoreTypes.dynamic.ref(ctx);
       if (!value.type.resolveTypeChain(ctx).isAssignableTo(ctx, fieldType)) {
         throw CompileError(
             'Cannot assign value of type ${value.type} to field "$name" of type $fieldType',
@@ -115,8 +115,8 @@ class IdentifierReference implements Reference {
           ctx, ctx.library, ctx.currentClass!.name.value() as String, name);
       if (instanceDeclaration != null) {
         final $type = instanceDeclaration.first;
-        final fieldType =
-            TypeRef.lookupFieldType(ctx, $type, name) ?? EvalTypes.dynamicType;
+        final fieldType = TypeRef.lookupFieldType(ctx, $type, name) ??
+            CoreTypes.dynamic.ref(ctx);
         if (!value.type.resolveTypeChain(ctx).isAssignableTo(ctx, fieldType)) {
           throw CompileError(
               'Cannot assign value of type ${value.type} to field "$name" of type $fieldType',
@@ -138,9 +138,9 @@ class IdentifierReference implements Reference {
   @override
   Variable getValue(CompilerContext ctx, [AstNode? source]) {
     if (object != null) {
-      if (object!.type == EvalTypes.typeType) {
+      if (object!.type == CoreTypes.type.ref(ctx)) {
         final classType = object!.concreteTypes[0].resolveTypeChain(ctx);
-        if (classType.extendsType == EvalTypes.enumType) {
+        if (classType.extendsType == CoreTypes.enumType.ref(ctx)) {
           final type = classType;
           final gIndex =
               ctx.enumValueIndices[classType.file]?[type.name]?[name];
@@ -197,7 +197,7 @@ class IdentifierReference implements Reference {
           ctx,
           TypeRef.lookupFieldType(ctx, object!.type, name)
                   ?.copyWith(boxed: true) ??
-              EvalTypes.dynamicType);
+              CoreTypes.dynamic.ref(ctx));
     }
 
     // First look at locals
@@ -217,7 +217,7 @@ class IdentifierReference implements Reference {
         final $this = ctx.lookupLocal('#this')!;
 
         if (!_dec.isBridge && _dec.declaration is MethodDeclaration) {
-          return Variable(-1, EvalTypes.functionType,
+          return Variable(-1, CoreTypes.function.ref(ctx),
               methodOffset: DeferredOrOffset(
                   file: ctx.library,
                   className: ctx.currentClass!.name.value() as String,
@@ -248,7 +248,7 @@ class IdentifierReference implements Reference {
           }
           final bridge = _dec.bridge!;
           if (bridge is BridgeMethodDef) {
-            return Variable.alloc(ctx, EvalTypes.functionType,
+            return Variable.alloc(ctx, CoreTypes.function.ref(ctx),
                 methodOffset: DeferredOrOffset(
                     file: ctx.library,
                     className: ctx.currentClass!.name.value() as String,
@@ -259,8 +259,10 @@ class IdentifierReference implements Reference {
               source);
         }
 
-        return Variable.alloc(ctx,
-            TypeRef.lookupFieldType(ctx, $type, name) ?? EvalTypes.dynamicType);
+        return Variable.alloc(
+            ctx,
+            TypeRef.lookupFieldType(ctx, $type, name) ??
+                CoreTypes.dynamic.ref(ctx));
       }
 
       final staticDeclaration = resolveStaticDeclaration(
@@ -269,7 +271,7 @@ class IdentifierReference implements Reference {
       if (staticDeclaration != null && staticDeclaration.declaration != null) {
         final _dec = staticDeclaration.declaration!;
         if (_dec is MethodDeclaration) {
-          return Variable(-1, EvalTypes.functionType,
+          return Variable(-1, CoreTypes.function.ref(ctx),
               methodOffset: DeferredOrOffset.lookupStatic(ctx, ctx.library,
                   ctx.currentClass!.name.value() as String, name));
         } else if (_dec is VariableDeclaration) {
@@ -301,7 +303,7 @@ class IdentifierReference implements Reference {
         DeferredOrOffset offset;
 
         final returnType = AlwaysReturnType.fromInstanceMethod(
-            ctx, actualType, name, EvalTypes.dynamicType);
+            ctx, actualType, name, CoreTypes.dynamic.ref(ctx));
 
         final methodsMap = ctx.instanceDeclarationPositions[actualType.file]![
             actualType.name]![2];
@@ -375,7 +377,7 @@ class PrefixedIdentifierReference implements Reference {
 
   @override
   TypeRef resolveType(CompilerContext ctx, [AstNode? source]) {
-    return EvalTypes.typeType;
+    return CoreTypes.type.ref(ctx);
   }
 
   @override
@@ -394,10 +396,10 @@ class IndexedReference implements Reference {
 
   @override
   TypeRef resolveType(CompilerContext ctx, [AstNode? source]) {
-    if (_variable.type.isAssignableTo(ctx, EvalTypes.getListType(ctx))) {
+    if (_variable.type.isAssignableTo(ctx, CoreTypes.list.ref(ctx))) {
       return _variable.type.specifiedTypeArgs.isNotEmpty
           ? _variable.type.specifiedTypeArgs[0]
-          : EvalTypes.dynamicType;
+          : CoreTypes.dynamic.ref(ctx);
     }
     return getValue(ctx).type;
   }
@@ -407,9 +409,9 @@ class IndexedReference implements Reference {
     _variable = _variable.updated(ctx);
     _index = _index.updated(ctx);
 
-    if (_variable.type.isAssignableTo(ctx, EvalTypes.getListType(ctx),
+    if (_variable.type.isAssignableTo(ctx, CoreTypes.list.ref(ctx),
         forceAllowDynamic: false)) {
-      if (!_index.type.isAssignableTo(ctx, EvalTypes.getIntType(ctx))) {
+      if (!_index.type.isAssignableTo(ctx, CoreTypes.int.ref(ctx))) {
         throw CompileError(
             'TypeError: Cannot use variable of type ${_index.type} as list index');
       }
@@ -420,12 +422,12 @@ class IndexedReference implements Reference {
           IndexList.LEN);
       final listElementType = _variable.type.specifiedTypeArgs.isNotEmpty
           ? _variable.type.specifiedTypeArgs[0]
-          : EvalTypes.dynamicType;
+          : CoreTypes.dynamic.ref(ctx);
       return Variable.alloc(ctx, listElementType);
     }
 
-    if (_variable.type
-        .isAssignableTo(ctx, EvalTypes.mapType, forceAllowDynamic: false)) {
+    if (_variable.type.isAssignableTo(ctx, CoreTypes.map.ref(ctx),
+        forceAllowDynamic: false)) {
       if (_variable.type.specifiedTypeArgs.isNotEmpty &&
           !_index.type
               .isAssignableTo(ctx, _variable.type.specifiedTypeArgs[0])) {
@@ -444,7 +446,7 @@ class IndexedReference implements Reference {
       return Variable.alloc(
           ctx,
           _variable.type.specifiedTypeArgs.length < 2
-              ? EvalTypes.dynamicType
+              ? CoreTypes.dynamic.ref(ctx)
               : _variable.type.specifiedTypeArgs[1]);
     }
 
@@ -459,8 +461,8 @@ class IndexedReference implements Reference {
     _variable = _variable.updated(ctx);
     _index = _index.updated(ctx);
 
-    if (_variable.type.isAssignableTo(ctx, EvalTypes.getListType(ctx))) {
-      if (!_index.type.isAssignableTo(ctx, EvalTypes.getIntType(ctx))) {
+    if (_variable.type.isAssignableTo(ctx, CoreTypes.list.ref(ctx))) {
+      if (!_index.type.isAssignableTo(ctx, CoreTypes.int.ref(ctx))) {
         throw CompileError(
             'TypeError: Cannot use variable of type ${_index.type} as list index',
             source);
@@ -495,7 +497,7 @@ Variable _declarationToVariable(
     if (bridge is BridgeClassDef) {
       final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type.type);
 
-      return Variable(-1, EvalTypes.typeType,
+      return Variable(-1, CoreTypes.type.ref(ctx),
           concreteTypes: [type],
           methodOffset:
               DeferredOrOffset(file: type.file, name: '${type.name}.'),
@@ -504,7 +506,7 @@ Variable _declarationToVariable(
 
     if (bridge is BridgeEnumDef) {
       final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type);
-      return Variable(-1, EvalTypes.typeType,
+      return Variable(-1, CoreTypes.type.ref(ctx),
           concreteTypes: [type],
           methodOffset:
               DeferredOrOffset(file: type.file, name: '${type.name}#wrap'),
@@ -514,7 +516,7 @@ Variable _declarationToVariable(
     if (bridge is BridgeFunctionDeclaration) {
       final returnType =
           TypeRef.fromBridgeAnnotation(ctx, bridge.function.returns);
-      return Variable(-1, EvalTypes.functionType,
+      return Variable(-1, CoreTypes.function.ref(ctx),
           methodReturnType: AlwaysReturnType(returnType, false),
           methodOffset: DeferredOrOffset(file: _decl.sourceLib, name: name));
     }
@@ -552,7 +554,7 @@ Variable _declarationToVariable(
       offset = DeferredOrOffset(file: _decl.sourceLib, name: '$name.');
     }
 
-    return Variable(-1, EvalTypes.typeType,
+    return Variable(-1, CoreTypes.type.ref(ctx),
         concreteTypes: [returnType],
         methodOffset: offset,
         methodReturnType: AlwaysReturnType(returnType, false));
@@ -579,8 +581,11 @@ Variable _declarationToVariable(
     offset = DeferredOrOffset(file: _decl.sourceLib, name: name);
   }
 
-  return Variable(-1,
-      decl is FunctionDeclaration ? EvalTypes.functionType : EvalTypes.typeType,
+  return Variable(
+      -1,
+      decl is FunctionDeclaration
+          ? CoreTypes.function.ref(ctx)
+          : CoreTypes.type.ref(ctx),
       concreteTypes: [returnType],
       methodOffset: offset,
       methodReturnType: AlwaysReturnType(returnType, nullable));

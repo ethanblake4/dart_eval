@@ -5,6 +5,52 @@ class $Map<K, V> implements Map<K, V>, $Instance {
   /// Wrap a [Map] in a [$Map]
   $Map.wrap(this.$value);
 
+  static const $declaration = BridgeClassDef(
+      BridgeClassType(BridgeTypeRef(CoreTypes.map),
+          generics: {'K': BridgeGenericParam(), 'V': BridgeGenericParam()}),
+      constructors: {},
+      methods: {
+        /*'[]': BridgeMethodDef(
+            BridgeFunctionDef(
+                params: [
+                  BridgeParameter(
+                      'key',
+                      BridgeTypeAnnotation(
+                          BridgeTypeRef(CoreTypes.dynamic)), // TODO: K
+                      false),
+                ],
+                returns: BridgeTypeAnnotation(
+                    BridgeTypeRef(CoreTypes.dynamic))), // TODO: V
+            isStatic: false),
+        '[]=': BridgeMethodDef(
+            BridgeFunctionDef(
+                params: [
+                  BridgeParameter(
+                      'key',
+                      BridgeTypeAnnotation(
+                          BridgeTypeRef(CoreTypes.dynamic)), // TODO: K
+                      false),
+                  BridgeParameter(
+                      'value',
+                      BridgeTypeAnnotation(
+                          BridgeTypeRef(CoreTypes.dynamic)), // TODO: V
+                      false),
+                ],
+                returns: BridgeTypeAnnotation(
+                    BridgeTypeRef(CoreTypes.dynamic))), // TODO: V
+            isStatic: false),
+        'length': BridgeMethodDef(
+            BridgeFunctionDef(
+                params: [],
+                returns: BridgeTypeAnnotation(
+                    BridgeTypeRef(CoreTypes.intType))), // TODO: int
+            isStatic: false),*/
+      },
+      getters: {},
+      setters: {},
+      fields: {},
+      wrap: true);
+
   @override
   final Map<K, V> $value;
 
@@ -54,7 +100,7 @@ class $Map<K, V> implements Map<K, V>, $Instance {
       MapEntry(k is $Value ? k.$reified : k, v is $Value ? v.$reified : v));
 
   @override
-  int $getRuntimeType(Runtime runtime) => RuntimeTypes.mapType;
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType(CoreTypes.map);
 
   @override
   V? operator [](Object? key) {

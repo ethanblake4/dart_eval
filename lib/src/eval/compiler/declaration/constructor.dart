@@ -80,7 +80,7 @@ void compileConstructorDeclaration(
           TypeRef.lookupDeclaration(ctx, ctx.library, parent),
           p.name.value() as String);
       _type ??= V?.type;
-      _type ??= EvalTypes.dynamicType;
+      _type ??= CoreTypes.dynamic.ref(ctx);
 
       Vrep = Variable(i,
               _type.copyWith(boxed: !_type.isUnboxedAcrossFunctionBoundaries))
@@ -97,7 +97,7 @@ void compileConstructorDeclaration(
       superParams.add(p.name.value() as String);
     } else {
       p as SimpleFormalParameter;
-      var type = EvalTypes.dynamicType;
+      var type = CoreTypes.dynamic.ref(ctx);
       if (p.type != null) {
         type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
       }
@@ -167,7 +167,7 @@ void compileConstructorDeclaration(
 
     if (decl.isBridge) {
       ctx.pushOp(PushBridgeSuperShim.make(), PushBridgeSuperShim.LEN);
-      $super = Variable.alloc(ctx, EvalTypes.dynamicType);
+      $super = Variable.alloc(ctx, CoreTypes.dynamic.ref(ctx));
     } else {
       final extendsType = TypeRef.lookupDeclaration(
           ctx, ctx.library, decl.declaration as ClassDeclaration);
@@ -211,10 +211,11 @@ void compileConstructorDeclaration(
 
       mReturnType = method.methodReturnType
               ?.toAlwaysReturnType(ctx, clsType, argTypes, namedArgTypes) ??
-          AlwaysReturnType(EvalTypes.dynamicType, true);
+          AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
 
       ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-      $super = Variable.alloc(ctx, mReturnType.type ?? EvalTypes.dynamicType);
+      $super =
+          Variable.alloc(ctx, mReturnType.type ?? CoreTypes.dynamic.ref(ctx));
     }
   }
 
@@ -228,8 +229,8 @@ void compileConstructorDeclaration(
     ctx.inferredFieldTypes
         .putIfAbsent(ctx.library, () => {})
         .putIfAbsent(ctx.currentClass!.name.lexeme, () => {})
-      ..['index'] = EvalTypes.getIntType(ctx)
-      ..['name'] = EvalTypes.getStringType(ctx);
+      ..['index'] = CoreTypes.int.ref(ctx)
+      ..['name'] = CoreTypes.string.ref(ctx);
   }
 
   if (parent is EnumDeclaration) {
@@ -288,7 +289,7 @@ void compileConstructorDeclaration(
         ctx.bridgeStaticFunctionIndices[decl.sourceLib]![
             '${$extends.superclass.name2.value()}.$constructorName']!);
     ctx.pushOp(op, BridgeInstantiate.len(op));
-    final bridgeInst = Variable.alloc(ctx, EvalTypes.dynamicType);
+    final bridgeInst = Variable.alloc(ctx, CoreTypes.dynamic.ref(ctx));
 
     ctx.pushOp(
         ParentBridgeSuperShim.make(
@@ -339,7 +340,7 @@ void compileDefaultConstructor(CompilerContext ctx,
 
     if (decl.isBridge) {
       ctx.pushOp(PushBridgeSuperShim.make(), PushBridgeSuperShim.LEN);
-      $super = Variable.alloc(ctx, EvalTypes.dynamicType);
+      $super = Variable.alloc(ctx, CoreTypes.dynamic.ref(ctx));
     } else {
       final extendsType = TypeRef.lookupDeclaration(
           ctx, ctx.library, decl.declaration as ClassDeclaration);
@@ -362,10 +363,11 @@ void compileDefaultConstructor(CompilerContext ctx,
       final clsType = TypeRef.lookupDeclaration(ctx, ctx.library, parent);
       mReturnType = method.methodReturnType
               ?.toAlwaysReturnType(ctx, clsType, argTypes, namedArgTypes) ??
-          AlwaysReturnType(EvalTypes.dynamicType, true);
+          AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
 
       ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-      $super = Variable.alloc(ctx, mReturnType.type ?? EvalTypes.dynamicType);
+      $super =
+          Variable.alloc(ctx, mReturnType.type ?? CoreTypes.dynamic.ref(ctx));
     }
   }
 
@@ -379,8 +381,8 @@ void compileDefaultConstructor(CompilerContext ctx,
     ctx.inferredFieldTypes
         .putIfAbsent(ctx.library, () => {})
         .putIfAbsent(ctx.currentClass!.name.lexeme, () => {})
-      ..['index'] = EvalTypes.getIntType(ctx)
-      ..['name'] = EvalTypes.getStringType(ctx);
+      ..['index'] = CoreTypes.int.ref(ctx)
+      ..['name'] = CoreTypes.string.ref(ctx);
   }
 
   if (parent is EnumDeclaration) {
@@ -411,7 +413,7 @@ void compileDefaultConstructor(CompilerContext ctx,
         ctx.bridgeStaticFunctionIndices[decl.sourceLib]![
             '${$extends.superclass.name2.stringValue!}.$constructorName']!);
     ctx.pushOp(op, BridgeInstantiate.len(op));
-    final bridgeInst = Variable.alloc(ctx, EvalTypes.dynamicType);
+    final bridgeInst = Variable.alloc(ctx, CoreTypes.dynamic.ref(ctx));
 
     ctx.pushOp(
         ParentBridgeSuperShim.make(
