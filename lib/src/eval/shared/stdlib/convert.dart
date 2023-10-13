@@ -31,10 +31,13 @@ class DartConvertPlugin implements EvalPlugin {
 
   @override
   void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFunc('dart:convert', 'Utf8Decoder.', $Utf8Decoder.$new);
+    runtime.registerBridgeFunc(
+        'dart:convert', 'Utf8Decoder.', $Utf8Decoder.$new);
     runtime.registerBridgeFunc('dart:convert', 'Utf8Codec.', $Utf8Codec.$new);
-    runtime.registerBridgeFunc('dart:convert', 'JsonDecoder.', $JsonDecoder.$new);
-    runtime.registerBridgeFunc('dart:convert', 'JsonEncoder.', $JsonEncoder.$new);
+    runtime.registerBridgeFunc(
+        'dart:convert', 'JsonDecoder.', $JsonDecoder.$new);
+    runtime.registerBridgeFunc(
+        'dart:convert', 'JsonEncoder.', $JsonEncoder.$new);
     runtime.registerBridgeFunc('dart:convert', 'JsonCodec.', $JsonCodec.$new);
   }
 }

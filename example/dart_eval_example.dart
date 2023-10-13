@@ -58,7 +58,8 @@ void main(List<String> args) {
 
   // Create a compiler and define the classes' bridge declarations so it knows their structure
   final compiler = Compiler();
-  compiler.defineBridgeClasses([$TimestampedTime.$declaration, $WorldTimeTracker$bridge.$declaration]);
+  compiler.defineBridgeClasses(
+      [$TimestampedTime.$declaration, $WorldTimeTracker$bridge.$declaration]);
 
   // Compile the source code into a Program containing metadata and bytecode. In a real app, you would likely
   // compile the Eval code separately and output it to a file using program.write(), sharing only bridge classes
@@ -70,8 +71,10 @@ void main(List<String> args) {
   // Create a runtime from the compiled program, and register bridge functions for all static methods and constructors.
   // Default constructors use "ClassName." syntax.
   final runtime = Runtime.ofProgram(program)
-    ..registerBridgeFunc('package:example/bridge.dart', 'TimestampedTime.', $TimestampedTime.$new)
-    ..registerBridgeFunc('package:example/bridge.dart', 'WorldTimeTracker.', $WorldTimeTracker$bridge.$new,
+    ..registerBridgeFunc('package:example/bridge.dart', 'TimestampedTime.',
+        $TimestampedTime.$new)
+    ..registerBridgeFunc('package:example/bridge.dart', 'WorldTimeTracker.',
+        $WorldTimeTracker$bridge.$new,
         isBridge: true);
 
   // Call runtime.setup() after registering all bridge functions
@@ -82,10 +85,12 @@ void main(List<String> args) {
   runtime.args = [$String('USA')];
 
   // Call the function and cast the result to the desired type
-  final timeTracker = runtime.executeLib('package:example/main.dart', 'fn') as WorldTimeTracker;
+  final timeTracker =
+      runtime.executeLib('package:example/main.dart', 'fn') as WorldTimeTracker;
 
   // We can now utilize the returned bridge class
-  print('UK timezone offset: ${timeTracker.getTimeFor('UK').timezoneOffset} (from outside Eval!)');
+  print(
+      'UK timezone offset: ${timeTracker.getTimeFor('UK').timezoneOffset} (from outside Eval!)');
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -106,25 +111,31 @@ class $TimestampedTime implements TimestampedTime, $Instance {
   $TimestampedTime.wrap(this.$value) : _superclass = $Object($value);
 
   /// Define the compile-time type descriptor as an unresolved type
-  static const $type = BridgeTypeRef(BridgeTypeSpec('package:example/bridge.dart', 'TimestampedTime'));
+  static const $type = BridgeTypeRef(
+      BridgeTypeSpec('package:example/bridge.dart', 'TimestampedTime'));
 
   /// Define the compile-time class declaration and map out all the fields and methods for the compiler.
   static const $declaration = BridgeClassDef(BridgeClassType($type),
       // Specify class constrctors
       constructors: {
         // Define the default constructor with an empty string
-        '': BridgeConstructorDef(BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [
+        '': BridgeConstructorDef(
+            BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [
           // Parameters using built-in types can use [RuntimeTypes] for the most common types. Others, like
           // Future, may need to use a type spec for 'dart:core'.
-          BridgeParameter('utcTime', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType)), false)
+          BridgeParameter('utcTime',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), false)
         ], namedParams: [
-          BridgeParameter('timezoneOffset', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType)), true)
+          BridgeParameter('timezoneOffset',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), true)
         ]))
       },
       // Specify class fields
       fields: {
-        'utcTime': BridgeFieldDef(BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType))),
-        'timezoneOffset': BridgeFieldDef(BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType)))
+        'utcTime':
+            BridgeFieldDef(BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int))),
+        'timezoneOffset':
+            BridgeFieldDef(BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)))
       },
       // You can also specify methods, getters, and setters here if present.
 
@@ -134,7 +145,8 @@ class $TimestampedTime implements TimestampedTime, $Instance {
   /// Define static [EvalCallableFunc] functions for all static methods and constructors. This is for the
   /// default constructor and is what the runtime will use to create an instance of this class.
   static $Value? $new(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $TimestampedTime.wrap(TimestampedTime(args[0]!.$value, timezoneOffset: args[1]?.$value ?? 0));
+    return $TimestampedTime.wrap(
+        TimestampedTime(args[0]!.$value, timezoneOffset: args[1]?.$value ?? 0));
   }
 
   /// The underlying Dart instance that this wrapper wraps
@@ -193,23 +205,37 @@ class $TimestampedTime implements TimestampedTime, $Instance {
 ///
 /// Because [WorldTimeTracker] is abstract, we can implement it here. If it were a concrete class you would instead
 /// extend it.
-class $WorldTimeTracker$bridge with $Bridge<WorldTimeTracker> implements WorldTimeTracker {
-  static const _$type = BridgeTypeRef(BridgeTypeSpec('package:example/bridge.dart', 'WorldTimeTracker'));
+class $WorldTimeTracker$bridge
+    with $Bridge<WorldTimeTracker>
+    implements WorldTimeTracker {
+  static const _$type = BridgeTypeRef(
+      BridgeTypeSpec('package:example/bridge.dart', 'WorldTimeTracker'));
 
   /// Define the compile-time class declaration and map out all the fields and methods for the compiler.
-  static const $declaration = BridgeClassDef(BridgeClassType(_$type, isAbstract: true),
-      constructors: {
-        // Even though this class is abstract, we currently need to define the default constructor anyway. This
-        // may change in the future.
-        '': BridgeConstructorDef(BridgeFunctionDef(returns: BridgeTypeAnnotation(_$type), params: [], namedParams: []))
-      },
-      methods: {
-        'getTimeFor': BridgeMethodDef(BridgeFunctionDef(returns: BridgeTypeAnnotation($TimestampedTime.$type), params: [
-          BridgeParameter('country', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.stringType)), false)
-        ], namedParams: []))
-      },
-      // Inform the compiler that this is a bridge, not a wrapper.
-      bridge: true);
+  static const $declaration =
+      BridgeClassDef(BridgeClassType(_$type, isAbstract: true),
+          constructors: {
+            // Even though this class is abstract, we currently need to define the default constructor anyway. This
+            // may change in the future.
+            '': BridgeConstructorDef(BridgeFunctionDef(
+                returns: BridgeTypeAnnotation(_$type),
+                params: [],
+                namedParams: []))
+          },
+          methods: {
+            'getTimeFor': BridgeMethodDef(BridgeFunctionDef(
+                returns: BridgeTypeAnnotation($TimestampedTime.$type),
+                params: [
+                  BridgeParameter(
+                      'country',
+                      BridgeTypeAnnotation(
+                          BridgeTypeRef.type(RuntimeTypes.stringType)),
+                      false)
+                ],
+                namedParams: []))
+          },
+          // Inform the compiler that this is a bridge, not a wrapper.
+          bridge: true);
 
   /// Define static [EvalCallableFunc] functions for all static methods and constructors. This is for the
   /// default constructor and is what the runtime will use to create an instance of this class.
@@ -224,17 +250,20 @@ class $WorldTimeTracker$bridge with $Bridge<WorldTimeTracker> implements WorldTi
     // [WorldTimeTracker] is abstract, so if we haven't overridden all of it's methods that's an error.
     // If it were concrete, this implementation would look like [$getProperty] except you'd access fields
     // and invoke methods on 'super'.
-    throw UnimplementedError('Cannot get property "$identifier" on abstract class WorldTimeTracker');
+    throw UnimplementedError(
+        'Cannot get property "$identifier" on abstract class WorldTimeTracker');
   }
 
   @override
   void $bridgeSet(String identifier, $Value value) {
     /// Same idea here.
-    throw UnimplementedError('Cannot set property "$identifier" on abstract class WorldTimeTracker');
+    throw UnimplementedError(
+        'Cannot set property "$identifier" on abstract class WorldTimeTracker');
   }
 
   /// In a bridge class, override all fields and methods with [$_invoke], [$_get], and [$_set]. This
   /// is necessary since we may use the overridden VM implementation outside the VM.
   @override
-  TimestampedTime getTimeFor(String country) => $_invoke('getTimeFor', [$String(country)]);
+  TimestampedTime getTimeFor(String country) =>
+      $_invoke('getTimeFor', [$String(country)]);
 }

@@ -23,7 +23,8 @@ void main() {
         }
       });
 
-      expect(runtime.executeLib('package:eval_test/main.dart', 'main'), $String('12345'));
+      expect(runtime.executeLib('package:eval_test/main.dart', 'main'),
+          $String('12345'));
     });
 
     test('Iterable.map()', () {
@@ -38,7 +39,8 @@ void main() {
         }
       });
 
-      expect(runtime.executeLib('package:eval_test/main.dart', 'main'), $String('246810'));
+      expect(runtime.executeLib('package:eval_test/main.dart', 'main'),
+          $String('246810'));
     });
 
     test('List.length', () {
@@ -53,7 +55,8 @@ void main() {
         }
       });
 
-      expect(runtime.executeLib('package:eval_test/main.dart', 'main'), $String('5'));
+      expect(runtime.executeLib('package:eval_test/main.dart', 'main'),
+          $String('5'));
     });
 
     test('List.add()', () {
@@ -69,7 +72,8 @@ void main() {
         }
       });
 
-      expect(runtime.executeLib('package:eval_test/main.dart', 'main'), $String('123456'));
+      expect(runtime.executeLib('package:eval_test/main.dart', 'main'),
+          $String('123456'));
     });
   });
 
@@ -101,7 +105,8 @@ void main() {
         }
       });
 
-      expect(runtime.executeLib('package:eval_test/main.dart', 'main'), $String('12368'));
+      expect(runtime.executeLib('package:eval_test/main.dart', 'main'),
+          $String('12368'));
     });
 
     test('Collection for', () {
@@ -125,7 +130,8 @@ void main() {
         }
       });
 
-      expect(runtime.executeLib('package:eval_test/main.dart', 'main'), $String('012103223312'));
+      expect(runtime.executeLib('package:eval_test/main.dart', 'main'),
+          $String('012103223312'));
     });
   });
 }

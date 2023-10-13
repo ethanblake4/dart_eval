@@ -164,6 +164,9 @@ internal performance optimization. If you don't like the inconsistency, you can
 change the return type on the function signature to `dynamic` which will force 
 dart_eval to always box the value before it's returned.
 
+> Note that this does not apply to the `eval()` method, which automatically
+unboxes all return values for convenience.
+
 ## Security and permissions
 
 dart_eval is designed to be secure. The dart_eval runtime functions like a virtual
@@ -386,10 +389,10 @@ Yes! Check out [flutter_eval](https://pub.dev/packages/flutter_eval).
 
 ### How fast is it?
 
-Preliminary testing shows that, for simple code, `dart_eval` running in AOT-compiled Dart 
-is around 12x slower than standard AOT Dart and is approximately on par with a 
+Preliminary testing shows that `dart_eval` running in AOT-compiled Dart 
+is 10-50x slower than standard AOT Dart and is approximately on par with a 
 language like Ruby.
-However, it's important to remember this only applies to code running directly in the 
+It's important to remember this only applies to code running directly in the 
 dart_eval VM, and not any code it interacts with. For example, most Flutter apps spend 
 the vast majority of their performance budget in the Flutter framework itself, so the
 speed impact of dart_eval is usually negligible.

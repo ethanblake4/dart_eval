@@ -22,7 +22,8 @@ void main() {
           ''',
         }
       });
-      expect(runtime.executeLib('package:example/main.dart', 'main'), $int(555));
+      expect(
+          runtime.executeLib('package:example/main.dart', 'main'), $int(555));
     });
 
     test('For loop + branching', () {
@@ -46,7 +47,8 @@ void main() {
         }
       });
 
-      expect(runtime.executeLib('package:example/main.dart', 'doThing'), $int(499472));
+      expect(runtime.executeLib('package:example/main.dart', 'doThing'),
+          $int(499472));
     });
 
     test('Simple foreach', () {
@@ -80,7 +82,8 @@ void main() {
           ''',
         }
       });
-      expect(runtime.executeLib('package:example/main.dart', 'main'), $int(555));
+      expect(
+          runtime.executeLib('package:example/main.dart', 'main'), $int(555));
     });
 
     test('Simple do-while loop', () {
@@ -97,7 +100,8 @@ void main() {
           ''',
         }
       });
-      expect(runtime.executeLib('package:example/main.dart', 'main'), $int(555));
+      expect(
+          runtime.executeLib('package:example/main.dart', 'main'), $int(555));
     });
   });
 }

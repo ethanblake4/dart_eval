@@ -12,23 +12,33 @@ class $Converter implements $Instance {
   $Converter.wrap(this.$value);
 
   /// Bridge type reference for [$Converter].
-  static const $type = BridgeTypeRef(BridgeTypeSpec('dart:convert', 'Converter'));
+  static const $type =
+      BridgeTypeRef(BridgeTypeSpec('dart:convert', 'Converter'));
 
   /// Bridge class definition for [$Converter].
   static const $declaration = BridgeClassDef(BridgeClassType($type),
       constructors: {
-        '': BridgeConstructorDef(BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [], namedParams: []))
+        '': BridgeConstructorDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation($type), params: [], namedParams: []))
       },
       methods: {
         'bind': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(AsyncTypes.stream)),
-            params: [BridgeParameter('stream', BridgeTypeAnnotation(BridgeTypeRef(AsyncTypes.stream)), false)],
+            params: [
+              BridgeParameter('stream',
+                  BridgeTypeAnnotation(BridgeTypeRef(AsyncTypes.stream)), false)
+            ],
             namedParams: []))
       },
       getters: {
         'startChunkedConversion': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(AsyncTypes.streamSink)),
-            params: [BridgeParameter('sink', BridgeTypeAnnotation(BridgeTypeRef(AsyncTypes.streamSink)), false)],
+            params: [
+              BridgeParameter(
+                  'sink',
+                  BridgeTypeAnnotation(BridgeTypeRef(AsyncTypes.streamSink)),
+                  false)
+            ],
             namedParams: []))
       },
       setters: {},
@@ -55,11 +65,14 @@ class $Converter implements $Instance {
     }
   }
 
-  static const $Function __startChunkedConversion = $Function(_startChunkedConversion);
+  static const $Function __startChunkedConversion =
+      $Function(_startChunkedConversion);
 
-  static $Value _startChunkedConversion(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value _startChunkedConversion(
+      Runtime runtime, $Value? target, List<$Value?> args) {
     final sink = args[0]!.$value as StreamSink;
-    return $StreamSink.wrap((target!.$value as Converter).startChunkedConversion(sink) as StreamSink);
+    return $StreamSink.wrap((target!.$value as Converter)
+        .startChunkedConversion(sink) as StreamSink);
   }
 
   static const $Function __bind = $Function(_bind);

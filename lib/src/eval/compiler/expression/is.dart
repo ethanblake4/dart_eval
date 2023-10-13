@@ -21,6 +21,9 @@ Variable compileIsExpression(IsExpression e, CompilerContext ctx) {
   V = V.boxIfNeeded(ctx);
 
   /// Otherwise do a runtime test
-  ctx.pushOp(IsType.make(V.scopeFrameOffset, runtimeTypeMap[slot] ?? ctx.typeRefIndexMap[slot]!, not), IsType.LEN);
+  ctx.pushOp(
+      IsType.make(V.scopeFrameOffset,
+          runtimeTypeMap[slot] ?? ctx.typeRefIndexMap[slot]!, not),
+      IsType.LEN);
   return Variable.alloc(ctx, EvalTypes.boolType.copyWith(boxed: false));
 }

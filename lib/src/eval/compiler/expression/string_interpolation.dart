@@ -5,7 +5,8 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 
-Variable compileStringInterpolation(CompilerContext ctx, StringInterpolation str) {
+Variable compileStringInterpolation(
+    CompilerContext ctx, StringInterpolation str) {
   Variable? build;
   for (final element in str.elements) {
     if (element is InterpolationString) {

@@ -12,23 +12,29 @@ import '../errors.dart';
 import 'expression.dart';
 
 /// Compile a [BinaryExpression] to EVC bytecode
-Variable compileBinaryExpression(CompilerContext ctx, BinaryExpression e, [TypeRef? boundType]) {
+Variable compileBinaryExpression(CompilerContext ctx, BinaryExpression e,
+    [TypeRef? boundType]) {
   var L = compileExpression(e.leftOperand, ctx, boundType);
   var R = compileExpression(e.rightOperand, ctx, boundType);
 
   if (e.operator.type == TokenType.QUESTION_QUESTION) {
-    final outType = TypeRef.commonBaseType(ctx, {L.type.copyWith(nullable: false), R.type}).copyWith(boxed: true);
+    final outType =
+        TypeRef.commonBaseType(ctx, {L.type.copyWith(nullable: false), R.type})
+            .copyWith(boxed: true);
     var outVar = BuiltinValue().push(ctx).copyWith(type: outType);
     L = L.boxIfNeeded(ctx);
-    ctx.pushOp(CopyValue.make(outVar.scopeFrameOffset, L.scopeFrameOffset), CopyValue.LEN);
+    ctx.pushOp(CopyValue.make(outVar.scopeFrameOffset, L.scopeFrameOffset),
+        CopyValue.LEN);
     macroBranch(ctx, null, condition: (_ctx) {
       final $null = BuiltinValue().push(ctx).boxIfNeeded(ctx);
-      ctx.pushOp(CheckEq.make(L.scopeFrameOffset, $null.scopeFrameOffset), CheckEq.LEN);
+      ctx.pushOp(CheckEq.make(L.scopeFrameOffset, $null.scopeFrameOffset),
+          CheckEq.LEN);
       ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
       return Variable.alloc(ctx, EvalTypes.boolType.copyWith(boxed: false));
     }, thenBranch: (_ctx, rt) {
       R = R.boxIfNeeded(ctx);
-      ctx.pushOp(CopyValue.make(outVar.scopeFrameOffset, R.scopeFrameOffset), CopyValue.LEN);
+      ctx.pushOp(CopyValue.make(outVar.scopeFrameOffset, R.scopeFrameOffset),
+          CopyValue.LEN);
       return StatementInfo(-1);
     });
 
@@ -56,7 +62,8 @@ Variable compileBinaryExpression(CompilerContext ctx, BinaryExpression e, [TypeR
     TokenType.CARET: '^',
   };
 
-  var method = opMap[e.operator.type] ?? (throw CompileError('Unknown binary operator ${e.operator.type}'));
+  var method = opMap[e.operator.type] ??
+      (throw CompileError('Unknown binary operator ${e.operator.type}'));
 
   return L.invoke(ctx, method, [R]).result;
 }

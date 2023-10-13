@@ -7,22 +7,22 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 /// and the result will be returned; otherwise, the function [function] will be called with arguments specified
 /// by [args]. You can use [plugins] to configure bridge classes.
 /// You can also specify [outputFile] to write the generated EVC bytecode to a file.
+///
+/// The eval() method automatically unboxes return values for convenience.
 dynamic eval(String source,
     {String function = 'main',
     List args = const [],
     List<EvalPlugin> plugins = const [],
-    @Deprecated('Use plugins instead') Function(Compiler)? compilerSettings,
-    @Deprecated('Use plugins instead') Function(Runtime)? runtimeSettings,
     String? outputFile}) {
   final compiler = Compiler();
   for (final plugin in plugins) {
     plugin.configureForCompile(compiler);
   }
-  compilerSettings?.call(compiler);
 
   var _source = source;
 
-  if (!RegExp(r'(?:\w* )?' + function + r'\s?\([\s\S]*?\)\s?({|=>)').hasMatch(_source)) {
+  if (!RegExp(r'(?:\w* )?' + function + r'\s?\([\s\S]*?\)\s?({|=>)')
+      .hasMatch(_source)) {
     if (!_source.contains(';')) {
       _source = '$_source;';
       if (!_source.contains('return')) {
@@ -44,7 +44,6 @@ dynamic eval(String source,
   for (final plugin in plugins) {
     plugin.configureForRuntime(runtime);
   }
-  runtimeSettings?.call(runtime);
 
   runtime.setup();
   runtime.args = args;

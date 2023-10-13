@@ -9,9 +9,10 @@ import '../context.dart';
 import '../errors.dart';
 import '../variable.dart';
 
-BuiltinValue parseConstLiteral(Literal l, CompilerContext ctx, [TypeRef? bound]) {
+BuiltinValue parseConstLiteral(Literal l, CompilerContext ctx,
+    [TypeRef? bound]) {
   if (l is IntegerLiteral) {
-    if (bound != null && bound == EvalTypes.doubleType) {
+    if (bound != null && bound == EvalTypes.getDoubleType(ctx)) {
       return BuiltinValue(doubleval: l.value!.toDouble());
     }
     return BuiltinValue(intval: l.value);

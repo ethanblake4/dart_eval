@@ -29,10 +29,15 @@ Variable compileAwaitExpression(AwaitExpression e, CompilerContext ctx) {
 
   var _completer = ctx.lookupLocal('#completer');
 
-  final awaitOp = Await.make(_completer!.scopeFrameOffset, subject.scopeFrameOffset);
+  final awaitOp =
+      Await.make(_completer!.scopeFrameOffset, subject.scopeFrameOffset);
   ctx.pushOp(awaitOp, Await.LEN);
 
   ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
 
-  return Variable.alloc(ctx, type.specifiedTypeArgs.isNotEmpty ? type.specifiedTypeArgs[0] : EvalTypes.dynamicType);
+  return Variable.alloc(
+      ctx,
+      type.specifiedTypeArgs.isNotEmpty
+          ? type.specifiedTypeArgs[0]
+          : EvalTypes.dynamicType);
 }

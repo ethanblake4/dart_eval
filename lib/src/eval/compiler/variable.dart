@@ -61,15 +61,15 @@ class Variable {
 
     Variable V2 = this;
 
-    if (type == EvalTypes.intType) {
+    if (type == EvalTypes.getIntType(ctx as CompilerContext)) {
       ctx.pushOp(BoxInt.make(scopeFrameOffset), BoxInt.LEN);
-    } else if (type == EvalTypes.numType) {
+    } else if (type == EvalTypes.getNumType(ctx)) {
       ctx.pushOp(BoxNum.make(scopeFrameOffset), BoxNum.LEN);
-    } else if (type == EvalTypes.doubleType) {
+    } else if (type == EvalTypes.getDoubleType(ctx)) {
       ctx.pushOp(BoxDouble.make(scopeFrameOffset), BoxDouble.LEN);
     } else if (type == EvalTypes.boolType) {
       ctx.pushOp(BoxBool.make(scopeFrameOffset), BoxBool.LEN);
-    } else if (ctx is CompilerContext && type == EvalTypes.getListType(ctx)) {
+    } else if (type == EvalTypes.getListType(ctx)) {
       if (!type.specifiedTypeArgs[0].boxed) {
         V2 = boxListContents(ctx, this);
       }
@@ -102,7 +102,8 @@ class Variable {
     return ctx.lookupLocal(name!) ?? this;
   }
 
-  void pushArg(CompilerContext ctx) => ctx.pushOp(PushArg.make(scopeFrameOffset), PushArg.LEN);
+  void pushArg(CompilerContext ctx) =>
+      ctx.pushOp(PushArg.make(scopeFrameOffset), PushArg.LEN);
 
   Variable copyWith(
       {int? scopeFrameOffset,
@@ -112,7 +113,8 @@ class Variable {
       String? name,
       int? frameIndex,
       List<TypeRef>? concreteTypes}) {
-    return Variable(scopeFrameOffset ?? this.scopeFrameOffset, type ?? this.type,
+    return Variable(
+        scopeFrameOffset ?? this.scopeFrameOffset, type ?? this.type,
         methodOffset: methodOffset ?? this.methodOffset,
         methodReturnType: methodReturnType ?? this.methodReturnType,
         concreteTypes: concreteTypes ?? this.concreteTypes)
@@ -128,7 +130,8 @@ class Variable {
       String? name,
       int? frameIndex,
       List<TypeRef>? concreteTypes}) {
-    var uV = Variable(scopeFrameOffset ?? this.scopeFrameOffset, type ?? this.type,
+    var uV = Variable(
+        scopeFrameOffset ?? this.scopeFrameOffset, type ?? this.type,
         methodOffset: methodOffset ?? this.methodOffset,
         methodReturnType: methodReturnType ?? this.methodReturnType,
         concreteTypes: concreteTypes ?? this.concreteTypes)
@@ -149,7 +152,8 @@ class Variable {
 
     final supportedNumIntrinsicOps = {'+', '-', '<', '>', '<=', '>='};
     final supportedBoolIntrinsicOps = {'!'};
-    if (type.isAssignableTo(ctx, EvalTypes.numType, forceAllowDynamic: false) &&
+    if (type.isAssignableTo(ctx, EvalTypes.getNumType(ctx),
+            forceAllowDynamic: false) &&
         supportedNumIntrinsicOps.contains(method)) {
       $this = unboxIfNeeded(ctx);
       if (args.length != 1) {
@@ -167,44 +171,62 @@ class Variable {
       switch (method) {
         case '+':
           // Num intrinsic add
-          ctx.pushOp(NumAdd.make($this.scopeFrameOffset, R.scopeFrameOffset), NumAdd.LEN);
-          result = Variable.alloc(ctx, TypeRef.commonBaseType(ctx, {$this.type, R.type}).copyWith(boxed: false));
+          ctx.pushOp(NumAdd.make($this.scopeFrameOffset, R.scopeFrameOffset),
+              NumAdd.LEN);
+          result = Variable.alloc(
+              ctx,
+              TypeRef.commonBaseType(ctx, {$this.type, R.type})
+                  .copyWith(boxed: false));
           break;
         case '-':
           // Num intrinsic sub
-          ctx.pushOp(NumSub.make($this.scopeFrameOffset, R.scopeFrameOffset), NumSub.LEN);
-          result = Variable.alloc(ctx, TypeRef.commonBaseType(ctx, {$this.type, R.type}).copyWith(boxed: false));
+          ctx.pushOp(NumSub.make($this.scopeFrameOffset, R.scopeFrameOffset),
+              NumSub.LEN);
+          result = Variable.alloc(
+              ctx,
+              TypeRef.commonBaseType(ctx, {$this.type, R.type})
+                  .copyWith(boxed: false));
           break;
         case '<':
           // Num intrinsic less than
-          ctx.pushOp(NumLt.make($this.scopeFrameOffset, R.scopeFrameOffset), NumLt.LEN);
-          result = Variable.alloc(ctx, EvalTypes.boolType.copyWith(boxed: false));
+          ctx.pushOp(NumLt.make($this.scopeFrameOffset, R.scopeFrameOffset),
+              NumLt.LEN);
+          result =
+              Variable.alloc(ctx, EvalTypes.boolType.copyWith(boxed: false));
           break;
         case '>':
           // Num intrinsic greater than
-          ctx.pushOp(NumLt.make(R.scopeFrameOffset, $this.scopeFrameOffset), NumLtEq.LEN);
-          result = Variable.alloc(ctx, EvalTypes.boolType.copyWith(boxed: false));
+          ctx.pushOp(NumLt.make(R.scopeFrameOffset, $this.scopeFrameOffset),
+              NumLtEq.LEN);
+          result =
+              Variable.alloc(ctx, EvalTypes.boolType.copyWith(boxed: false));
           break;
         case '<=':
           // Num intrinsic less than equal to
-          ctx.pushOp(NumLtEq.make($this.scopeFrameOffset, R.scopeFrameOffset), NumLtEq.LEN);
-          result = Variable.alloc(ctx, EvalTypes.boolType.copyWith(boxed: false));
+          ctx.pushOp(NumLtEq.make($this.scopeFrameOffset, R.scopeFrameOffset),
+              NumLtEq.LEN);
+          result =
+              Variable.alloc(ctx, EvalTypes.boolType.copyWith(boxed: false));
           break;
         case '>=':
           // Num intrinsic greater than equal to
-          ctx.pushOp(NumLtEq.make(R.scopeFrameOffset, $this.scopeFrameOffset), NumLt.LEN);
-          result = Variable.alloc(ctx, EvalTypes.boolType.copyWith(boxed: false));
+          ctx.pushOp(NumLtEq.make(R.scopeFrameOffset, $this.scopeFrameOffset),
+              NumLt.LEN);
+          result =
+              Variable.alloc(ctx, EvalTypes.boolType.copyWith(boxed: false));
           break;
         default:
           throw CompileError('Unknown num intrinsic method "$method"');
       }
 
       return InvokeResult($this, result, [R]);
-    } else if (type.isAssignableTo(ctx, EvalTypes.boolType, forceAllowDynamic: false) &&
+    } else if (type.isAssignableTo(ctx, EvalTypes.boolType,
+            forceAllowDynamic: false) &&
         supportedBoolIntrinsicOps.contains(method)) {
       $this = unboxIfNeeded(ctx);
       ctx.pushOp(LogicalNot.make($this.scopeFrameOffset), LogicalNot.LEN);
-      var result = Variable.alloc(ctx, EvalTypes.boolType.copyWith(boxed: false));
+      var result =
+          Variable.alloc(ctx, EvalTypes.boolType.copyWith(boxed: false));
       return InvokeResult($this, result, []);
     }
 
@@ -214,9 +236,13 @@ class Variable {
     final checkEq = method == '==' && _args.length == 1;
     final checkNotEq = method == '!=' && _args.length == 1;
     if (checkEq) {
-      ctx.pushOp(CheckEq.make($this.scopeFrameOffset, _args[0].scopeFrameOffset), CheckEq.LEN);
+      ctx.pushOp(
+          CheckEq.make($this.scopeFrameOffset, _args[0].scopeFrameOffset),
+          CheckEq.LEN);
     } else if (checkNotEq) {
-      ctx.pushOp(CheckNotEq.make($this.scopeFrameOffset, _args[0].scopeFrameOffset), CheckNotEq.LEN);
+      ctx.pushOp(
+          CheckNotEq.make($this.scopeFrameOffset, _args[0].scopeFrameOffset),
+          CheckNotEq.LEN);
     } else {
       for (final _arg in _args) {
         ctx.pushOp(PushArg.make(_arg.scopeFrameOffset), PushArg.LEN);
@@ -232,12 +258,14 @@ class Variable {
     if ($this.type == EvalTypes.functionType && method == 'call') {
       returnType = null;
     } else {
-      returnType =
-          AlwaysReturnType.fromInstanceMethodOrBuiltin(ctx, $this.type, method, [..._args.map((e) => e.type)], {});
+      returnType = AlwaysReturnType.fromInstanceMethodOrBuiltin(
+          ctx, $this.type, method, [..._args.map((e) => e.type)], {});
     }
 
-    final v =
-        Variable.alloc(ctx, (returnType?.type ?? EvalTypes.dynamicType).copyWith(boxed: !(checkEq || checkNotEq)));
+    final v = Variable.alloc(
+        ctx,
+        (returnType?.type ?? EvalTypes.dynamicType)
+            .copyWith(boxed: !(checkEq || checkNotEq)));
     return InvokeResult($this, v, _args);
   }
 
@@ -246,13 +274,16 @@ class Variable {
     ctx.pushOp(op, PushObjectProperty.len(op));
 
     ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-    final prop =
-        Variable.alloc(ctx, TypeRef.lookupFieldType(ctx, type, name)?.resolveTypeChain(ctx) ?? EvalTypes.dynamicType);
+    final prop = Variable.alloc(
+        ctx,
+        TypeRef.lookupFieldType(ctx, type, name)?.resolveTypeChain(ctx) ??
+            EvalTypes.dynamicType);
 
     return prop;
   }
 
-  static List<Variable> boxUnboxMultiple(CompilerContext ctx, List<Variable> variables, bool boxed) {
+  static List<Variable> boxUnboxMultiple(
+      CompilerContext ctx, List<Variable> variables, bool boxed) {
     final vlist = [...variables];
     final out = <Variable>[];
 

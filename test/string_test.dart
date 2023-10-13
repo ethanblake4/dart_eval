@@ -185,7 +185,10 @@ void main() {
           ''',
         }
       });
-      expect((runtime.executeLib('package:example/main.dart', 'test') as $String).$value, '   D');
+      expect(
+          (runtime.executeLib('package:example/main.dart', 'test') as $String)
+              .$value,
+          '   D');
     });
     test('String padLeft method formats with given padding', () {
       final runtime = compiler.compileWriteAndLoad({
@@ -198,7 +201,10 @@ void main() {
           ''',
         }
       });
-      expect((runtime.executeLib('package:example/main.dart', 'test') as $String).$value, 'yyyD');
+      expect(
+          (runtime.executeLib('package:example/main.dart', 'test') as $String)
+              .$value,
+          'yyyD');
     });
     test('String padRight method formats with default padding', () {
       final runtime = compiler.compileWriteAndLoad({
@@ -211,7 +217,10 @@ void main() {
           ''',
         }
       });
-      expect((runtime.executeLib('package:example/main.dart', 'test') as $String).$value, 'D   ');
+      expect(
+          (runtime.executeLib('package:example/main.dart', 'test') as $String)
+              .$value,
+          'D   ');
     });
     test('String padRight method formats with given padding', () {
       final runtime = compiler.compileWriteAndLoad({
@@ -224,7 +233,10 @@ void main() {
           ''',
         }
       });
-      expect((runtime.executeLib('package:example/main.dart', 'test') as $String).$value, 'Dyyy');
+      expect(
+          (runtime.executeLib('package:example/main.dart', 'test') as $String)
+              .$value,
+          'Dyyy');
     });
     test('String replaceAll method replaces text', () {
       final runtime = compiler.compileWriteAndLoad({
@@ -237,7 +249,10 @@ void main() {
           ''',
         }
       });
-      expect((runtime.executeLib('package:example/main.dart', 'test') as $String).$value, 'Fluzzy');
+      expect(
+          (runtime.executeLib('package:example/main.dart', 'test') as $String)
+              .$value,
+          'Fluzzy');
     });
     test('String replaceFirst method replaces with default start index', () {
       final runtime = compiler.compileWriteAndLoad({
@@ -250,7 +265,10 @@ void main() {
           ''',
         }
       });
-      expect((runtime.executeLib('package:example/main.dart', 'test') as $String).$value, 'Fluzfy');
+      expect(
+          (runtime.executeLib('package:example/main.dart', 'test') as $String)
+              .$value,
+          'Fluzfy');
     });
     test('String replaceFirst method replaces with given start index', () {
       final runtime = compiler.compileWriteAndLoad({
@@ -263,7 +281,10 @@ void main() {
           ''',
         }
       });
-      expect((runtime.executeLib('package:example/main.dart', 'test') as $String).$value, 'Flufzy');
+      expect(
+          (runtime.executeLib('package:example/main.dart', 'test') as $String)
+              .$value,
+          'Flufzy');
     });
     test('String toString method returns same string', () {
       final runtime = compiler.compileWriteAndLoad({
@@ -276,7 +297,10 @@ void main() {
           ''',
         }
       });
-      expect((runtime.executeLib('package:example/main.dart', 'test') as $String).$value, 'Fluffy');
+      expect(
+          (runtime.executeLib('package:example/main.dart', 'test') as $String)
+              .$value,
+          'Fluffy');
     });
     test('String replaceRange method replaces default range', () {
       final runtime = compiler.compileWriteAndLoad({
@@ -289,7 +313,10 @@ void main() {
           ''',
         }
       });
-      expect((runtime.executeLib('package:example/main.dart', 'test') as $String).$value, 'Flufz');
+      expect(
+          (runtime.executeLib('package:example/main.dart', 'test') as $String)
+              .$value,
+          'Flufz');
     });
     test('String replaceRange method replaces given range', () {
       final runtime = compiler.compileWriteAndLoad({
@@ -302,7 +329,10 @@ void main() {
           ''',
         }
       });
-      expect((runtime.executeLib('package:example/main.dart', 'test') as $String).$value, 'Flufz');
+      expect(
+          (runtime.executeLib('package:example/main.dart', 'test') as $String)
+              .$value,
+          'Flufz');
     });
     test('String startsWith method finds match', () {
       final runtime = compiler.compileWriteAndLoad({
@@ -315,7 +345,8 @@ void main() {
           ''',
         }
       });
-      expect((runtime.executeLib('package:example/main.dart', 'test') as bool), true);
+      expect((runtime.executeLib('package:example/main.dart', 'test') as bool),
+          true);
     });
     test('String trimLeft method trims whitespace', () {
       final runtime = compiler.compileWriteAndLoad({
@@ -328,7 +359,10 @@ void main() {
           ''',
         }
       });
-      expect((runtime.executeLib('package:example/main.dart', 'test') as $String).$value, "Fluffy ");
+      expect(
+          (runtime.executeLib('package:example/main.dart', 'test') as $String)
+              .$value,
+          "Fluffy ");
     });
     test('String split splits on given pattern', () {
       final runtime = compiler.compileWriteAndLoad({
@@ -341,8 +375,10 @@ void main() {
           ''',
         }
       });
-      expect((runtime.executeLib('package:example/main.dart', 'test')).length, 2);
-      expect((runtime.executeLib('package:example/main.dart', 'test'))[0], "Flu");
+      expect(
+          (runtime.executeLib('package:example/main.dart', 'test')).length, 2);
+      expect(
+          (runtime.executeLib('package:example/main.dart', 'test'))[0], "Flu");
       expect((runtime.executeLib('package:example/main.dart', 'test'))[1], "y");
     });
     test('String trimRight method trims whitespace', () {
@@ -356,7 +392,10 @@ void main() {
           ''',
         }
       });
-      expect((runtime.executeLib('package:example/main.dart', 'test') as $String).$value, "  Fluffy");
+      expect(
+          (runtime.executeLib('package:example/main.dart', 'test') as $String)
+              .$value,
+          "  Fluffy");
     });
   });
 }

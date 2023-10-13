@@ -1,11 +1,14 @@
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/collection.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/comparable.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/date_time.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/errors.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/iterator.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/pattern.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/regexp.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/string_buffer.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/uri.dart';
 import 'core/duration.dart';
 import 'core/future.dart';
@@ -30,6 +33,11 @@ class DartCorePlugin implements EvalPlugin {
     registry.defineBridgeClass($Match.$declaration);
     registry.defineBridgeClass($RegExp.$declaration);
     registry.defineBridgeClass($AssertionError.$declaration);
+    registry.defineBridgeClass($Comparable.$declaration);
+    registry.defineBridgeClass($StringBuffer.$declaration);
+    registry.defineBridgeClass($num.$declaration);
+    registry.defineBridgeClass($int.$declaration);
+    registry.defineBridgeClass($double.$declaration);
   }
 
   @override
@@ -41,6 +49,9 @@ class DartCorePlugin implements EvalPlugin {
     $DateTime.configureForRuntime(runtime);
     $Uri.configureForRuntime(runtime);
     runtime.registerBridgeFunc('dart:core', 'RegExp.', $RegExp.$new);
-    runtime.registerBridgeFunc('dart:core', 'AssertionError.', $AssertionError.$new);
+    runtime.registerBridgeFunc(
+        'dart:core', 'AssertionError.', $AssertionError.$new);
+    runtime.registerBridgeFunc(
+        'dart:core', 'StringBuffer.', $StringBuffer.$new);
   }
 }

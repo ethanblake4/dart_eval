@@ -65,7 +65,8 @@ void main() {
           ''',
         }
       });
-      expect(runtime.executeLib('package:example/main.dart', 'main').$value, 'error2');
+      expect(runtime.executeLib('package:example/main.dart', 'main').$value,
+          'error2');
     });
 
     test('Try/catch across function boundaries', () {
@@ -86,7 +87,8 @@ void main() {
           ''',
         }
       });
-      expect(runtime.executeLib('package:example/main.dart', 'main').$value, 'errorno');
+      expect(runtime.executeLib('package:example/main.dart', 'main').$value,
+          'errorno');
     });
 
     test('Try/catch with on', () {
@@ -109,7 +111,8 @@ void main() {
           ''',
         }
       });
-      expect(runtime.executeLib('package:example/main.dart', 'main').$value, 'errorno');
+      expect(runtime.executeLib('package:example/main.dart', 'main').$value,
+          'errorno');
     });
 
     test('Return from finally precedes error', () {
@@ -126,7 +129,8 @@ void main() {
           ''',
         }
       });
-      expect(runtime.executeLib('package:example/main.dart', 'main').$value, 'finally');
+      expect(runtime.executeLib('package:example/main.dart', 'main').$value,
+          'finally');
     });
 
     test('Error propagates through empty finally', () {
@@ -141,7 +145,8 @@ void main() {
           ''',
         }
       });
-      expect(() => runtime.executeLib('package:example/main.dart', 'main'), throwsA($String('error')));
+      expect(() => runtime.executeLib('package:example/main.dart', 'main'),
+          throwsA($String('error')));
     });
 
     test('Return from catch is preceded by finally return', () {
@@ -160,7 +165,8 @@ void main() {
           ''',
         }
       });
-      expect(runtime.executeLib('package:example/main.dart', 'main').$value, 'finally');
+      expect(runtime.executeLib('package:example/main.dart', 'main').$value,
+          'finally');
     });
 
     test('Finally can do work and return value from catch', () {
@@ -181,7 +187,10 @@ void main() {
         }
       });
       expect(
-          () => expect(runtime.executeLib('package:example/main.dart', 'main').$value, 'catch'), prints('finally\n'));
+          () => expect(
+              runtime.executeLib('package:example/main.dart', 'main').$value,
+              'catch'),
+          prints('finally\n'));
     });
 
     test('Manipulating local variables in catch and finally', () {
@@ -266,7 +275,8 @@ void main() {
           ''',
         }
       });
-      expect(() => runtime.executeLib('package:example/main.dart', 'main'), throwsA(isA<AssertionError>()));
+      expect(() => runtime.executeLib('package:example/main.dart', 'main'),
+          throwsA(isA<AssertionError>()));
     });
   });
 }

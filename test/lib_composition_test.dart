@@ -97,7 +97,8 @@ void main() {
       });
 
       final runtime = Runtime.ofProgram(program);
-      final result = runtime.executeLib('package:example/main.dart', 'main', [$String('Test45678')]);
+      final result = runtime.executeLib(
+          'package:example/main.dart', 'main', [$String('Test45678')]);
       expect(result, 9);
     });
 
@@ -137,7 +138,8 @@ void main() {
       final program = compiler.compile(packages);
       final runtime = Runtime.ofProgram(program);
 
-      final result = runtime.executeLib('package:example/main.dart', 'main', [$String('Test45678')]);
+      final result = runtime.executeLib(
+          'package:example/main.dart', 'main', [$String('Test45678')]);
       expect(result, 9);
     });
 

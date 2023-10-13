@@ -34,7 +34,8 @@ void main() {
 
       final runtime = Runtime.ofProgram(program);
 
-      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart', 'TestClass.', $TestClass.$construct,
+      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart',
+          'TestClass.', $TestClass.$construct,
           isBridge: true);
 
       runtime.setup();
@@ -68,7 +69,8 @@ void main() {
 
       final runtime = Runtime.ofProgram(program);
 
-      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart', 'TestClass.', $TestClass.$construct,
+      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart',
+          'TestClass.', $TestClass.$construct,
           isBridge: true);
 
       runtime.setup();
@@ -102,7 +104,8 @@ void main() {
 
       final runtime = Runtime.ofProgram(program);
 
-      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart', 'TestClass.', $TestClass.$construct,
+      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart',
+          'TestClass.', $TestClass.$construct,
           isBridge: true);
 
       runtime.setup();
@@ -130,10 +133,11 @@ void main() {
 
       final runtime = Runtime.ofProgram(program);
 
-      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart', 'TestClass.', $TestClass.$construct,
+      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart',
+          'TestClass.', $TestClass.$construct,
           isBridge: true);
-      runtime.registerBridgeFunc(
-          'package:bridge_lib/bridge_lib.dart', 'TestClass.runStaticTest', $TestClass.$runStaticTest);
+      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart',
+          'TestClass.runStaticTest', $TestClass.$runStaticTest);
 
       runtime.setup();
       expect(runtime.executeLib('package:example/main.dart', 'main'), false);
@@ -160,10 +164,12 @@ void main() {
 
       final runtime = Runtime.ofProgram(program);
 
-      runtime.registerBridgeEnumValues('package:bridge_lib/bridge_lib.dart', 'TestEnum', $TestEnum.$values);
+      runtime.registerBridgeEnumValues(
+          'package:bridge_lib/bridge_lib.dart', 'TestEnum', $TestEnum.$values);
       runtime.setup();
 
-      expect(runtime.executeLib('package:example/main.dart', 'main').$value, TestEnum.two);
+      expect(runtime.executeLib('package:example/main.dart', 'main').$value,
+          TestEnum.two);
     });
 
     test('Passing a map to a function externally', () {

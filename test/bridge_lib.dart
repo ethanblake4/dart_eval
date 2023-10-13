@@ -19,36 +19,59 @@ class TestClass {
 class $TestClass extends TestClass with $Bridge {
   $TestClass(int someNumber) : super(someNumber);
 
-  static $TestClass $construct(Runtime runtime, $Value? target, List<$Value?> args) => $TestClass(args[0]!.$value);
+  static $TestClass $construct(
+          Runtime runtime, $Value? target, List<$Value?> args) =>
+      $TestClass(args[0]!.$value);
 
-  static $bool $runStaticTest(Runtime runtime, $Value? target, List<$Value?> args) =>
+  static $bool $runStaticTest(
+          Runtime runtime, $Value? target, List<$Value?> args) =>
       $bool(TestClass.runStaticTest(args[0]!.$value));
 
-  static const $type = BridgeTypeRef(BridgeTypeSpec('package:bridge_lib/bridge_lib.dart', 'TestClass'));
+  static const $type = BridgeTypeRef(
+      BridgeTypeSpec('package:bridge_lib/bridge_lib.dart', 'TestClass'));
 
   static const $declaration = BridgeClassDef(BridgeClassType($type),
       constructors: {
-        '': BridgeConstructorDef(BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [
-          BridgeParameter('someNumber', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType)), false),
+        '': BridgeConstructorDef(
+            BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [
+          BridgeParameter('someNumber',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), false),
         ], namedParams: []))
       },
       methods: {
         'runStaticTest': BridgeMethodDef(
-            BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)), params: [
-              BridgeParameter('m', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.stringType)), false),
-            ], namedParams: []),
+            BridgeFunctionDef(
+                returns: BridgeTypeAnnotation(
+                    BridgeTypeRef.type(RuntimeTypes.boolType)),
+                params: [
+                  BridgeParameter(
+                      'm',
+                      BridgeTypeAnnotation(
+                          BridgeTypeRef.type(RuntimeTypes.stringType)),
+                      false),
+                ],
+                namedParams: []),
             isStatic: true),
-        'runTest': BridgeMethodDef(
-            BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)), params: [
-          BridgeParameter('a', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType)), false),
-        ], namedParams: [
-          BridgeParameter('b', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.stringType)), false),
-        ]))
+        'runTest': BridgeMethodDef(BridgeFunctionDef(
+            returns:
+                BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)),
+            params: [
+              BridgeParameter('a',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), false),
+            ],
+            namedParams: [
+              BridgeParameter(
+                  'b',
+                  BridgeTypeAnnotation(
+                      BridgeTypeRef.type(RuntimeTypes.stringType)),
+                  false),
+            ]))
       },
       getters: {},
       setters: {},
       fields: {
-        'someNumber': BridgeFieldDef(BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.intType, []))),
+        'someNumber':
+            BridgeFieldDef(BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int))),
       },
       bridge: true);
 
@@ -57,7 +80,8 @@ class $TestClass extends TestClass with $Bridge {
     switch (identifier) {
       case 'runTest':
         return $Function((Runtime rt, $Value? target, List<$Value?> args) {
-          return $bool(super.runTest(args[0]!.$value, b: args[1]!.$value ?? 'hello'));
+          return $bool(
+              super.runTest(args[0]!.$value, b: args[1]!.$value ?? 'hello'));
         });
       case 'someNumber':
         return $int(super.someNumber);
@@ -95,10 +119,16 @@ enum TestEnum {
 }
 
 class $TestEnum implements $Instance {
-  static $TestEnum $wrap(Runtime runtime, $Value? target, List<$Value?> args) => $TestEnum.wrap(args[0]!.$value);
-  static const $type = BridgeTypeRef(BridgeTypeSpec('package:bridge_lib/bridge_lib.dart', 'TestEnum'));
-  static const $declaration =
-      BridgeEnumDef($type, values: ['one', 'two', 'three'], methods: {}, getters: {}, setters: {}, fields: {});
+  static $TestEnum $wrap(Runtime runtime, $Value? target, List<$Value?> args) =>
+      $TestEnum.wrap(args[0]!.$value);
+  static const $type = BridgeTypeRef(
+      BridgeTypeSpec('package:bridge_lib/bridge_lib.dart', 'TestEnum'));
+  static const $declaration = BridgeEnumDef($type,
+      values: ['one', 'two', 'three'],
+      methods: {},
+      getters: {},
+      setters: {},
+      fields: {});
   static final $values = TestEnum.values.asNameMap().map(
         (key, value) => MapEntry(key, $TestEnum.wrap(value)),
       );

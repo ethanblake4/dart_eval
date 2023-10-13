@@ -11,7 +11,8 @@ class $StreamController implements $Instance {
   $StreamController.wrap(this.$value);
 
   /// Compile-time bridged type reference for [$StreamController]
-  static const $type = BridgeTypeRef(BridgeTypeSpec('dart:async', 'StreamController'));
+  static const $type =
+      BridgeTypeRef(BridgeTypeSpec('dart:async', 'StreamController'));
 
   /// Compile-time bridged class declaration for [$StreamController]
   static const $declaration = BridgeClassDef(
@@ -20,20 +21,33 @@ class $StreamController implements $Instance {
       }, $implements: [
         BridgeTypeRef(AsyncTypes.streamSink, [BridgeTypeRef.ref('T')])
       ]),
-      constructors: {'': BridgeConstructorDef(BridgeFunctionDef(returns: BridgeTypeAnnotation($type)))},
+      constructors: {
+        '': BridgeConstructorDef(
+            BridgeFunctionDef(returns: BridgeTypeAnnotation($type)))
+      },
       methods: {
         'add': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.voidType)),
-            params: [BridgeParameter('event', BridgeTypeAnnotation(BridgeTypeRef.ref('T')), false)])),
-        'addError': BridgeMethodDef(
-            BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.voidType)))),
-        'close': BridgeMethodDef(BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future)))),
+            returns:
+                BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.voidType)),
+            params: [
+              BridgeParameter(
+                  'event', BridgeTypeAnnotation(BridgeTypeRef.ref('T')), false)
+            ])),
+        'addError': BridgeMethodDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation(
+                BridgeTypeRef.type(RuntimeTypes.voidType)))),
+        'close': BridgeMethodDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future)))),
       },
       getters: {
-        'done': BridgeMethodDef(BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future)))),
-        'sink': BridgeMethodDef(BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef(AsyncTypes.streamSink)))),
+        'done': BridgeMethodDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future)))),
+        'sink': BridgeMethodDef(BridgeFunctionDef(
+            returns:
+                BridgeTypeAnnotation(BridgeTypeRef(AsyncTypes.streamSink)))),
         'stream': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(AsyncTypes.stream, [BridgeTypeRef.ref('T')])))),
+            returns: BridgeTypeAnnotation(
+                BridgeTypeRef(AsyncTypes.stream, [BridgeTypeRef.ref('T')])))),
       },
       setters: {},
       fields: {},
@@ -84,7 +98,8 @@ class $StreamController implements $Instance {
 
   static const $Function __addError = $Function(_addError);
 
-  static $Value? _addError(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _addError(
+      Runtime runtime, $Value? target, List<$Value?> args) {
     final $StreamController $target = target as $StreamController;
     final $Value $event = args[0]!;
     final $Value? $stackTrace = args[1];

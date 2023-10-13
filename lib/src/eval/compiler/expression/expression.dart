@@ -25,7 +25,8 @@ import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 
-Variable compileExpression(Expression e, CompilerContext ctx, [TypeRef? bound]) {
+Variable compileExpression(Expression e, CompilerContext ctx,
+    [TypeRef? bound]) {
   if (e is Literal) {
     return parseLiteral(e, ctx, bound);
   } else if (e is AssignmentExpression) {
@@ -73,22 +74,29 @@ Variable compileExpression(Expression e, CompilerContext ctx, [TypeRef? bound]) 
   throw CompileError('Unknown expression type ${e.runtimeType}');
 }
 
-Reference compileExpressionAsReference(Expression e, CompilerContext ctx, {Variable? cascadeTarget}) {
+Reference compileExpressionAsReference(Expression e, CompilerContext ctx,
+    {Variable? cascadeTarget}) {
   if (e is Identifier) {
     return compileIdentifierAsReference(e, ctx);
   } else if (e is AssignmentExpression) {
     return compileAssignmentExpressionAsReference(e, ctx);
   } else if (e is IndexExpression) {
-    return compileIndexExpressionAsReference(e, ctx, cascadeTarget: cascadeTarget);
+    return compileIndexExpressionAsReference(e, ctx,
+        cascadeTarget: cascadeTarget);
   } else if (e is PropertyAccess) {
-    return compilePropertyAccessAsReference(e, ctx, cascadeTarget: cascadeTarget);
+    return compilePropertyAccessAsReference(e, ctx,
+        cascadeTarget: cascadeTarget);
   }
 
-  throw NotReferencableError("Unknown expression type or can't reference ${e.runtimeType}");
+  throw NotReferencableError(
+      "Unknown expression type or can't reference ${e.runtimeType}");
 }
 
 bool canReference(Expression e) {
-  return e is Identifier || e is AssignmentExpression || e is IndexExpression || e is PropertyAccess;
+  return e is Identifier ||
+      e is AssignmentExpression ||
+      e is IndexExpression ||
+      e is PropertyAccess;
 }
 
 Variable? compileExpressionAndDiscardResult(Expression e, CompilerContext ctx,

@@ -12,11 +12,15 @@ import '../errors.dart';
 import 'expression.dart';
 
 /// Compile a [ConditionalExpression] to EVC bytecode
-Variable compileConditionalExpression(CompilerContext ctx, ConditionalExpression e, [TypeRef? boundType]) {
+Variable compileConditionalExpression(
+    CompilerContext ctx, ConditionalExpression e,
+    [TypeRef? boundType]) {
   final Variable V = ctx.setLocal('#conditional', BuiltinValue().push(ctx));
   final Vref = IdentifierReference(null, '#conditional');
   final types = <TypeRef>{if (boundType != null) boundType};
-  macroBranch(ctx, boundType == null ? null : AlwaysReturnType(boundType, false), condition: (_ctx) {
+  macroBranch(
+      ctx, boundType == null ? null : AlwaysReturnType(boundType, false),
+      condition: (_ctx) {
     var c = compileExpression(e.condition, _ctx);
     if (!c.type.isAssignableTo(ctx, EvalTypes.boolType)) {
       throw CompileError('Condition must be a boolean');

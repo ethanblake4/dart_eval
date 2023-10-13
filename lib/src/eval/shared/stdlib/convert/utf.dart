@@ -7,19 +7,27 @@ import 'package:dart_eval/stdlib/core.dart';
 /// dart_eval wrapper for [Utf8Decoder]
 class $Utf8Decoder implements $Instance {
   /// Compile-time bridge type reference for [$Utf8Decoder]
-  static const $type = BridgeTypeRef(BridgeTypeSpec('dart:convert', 'Utf8Decoder'));
+  static const $type =
+      BridgeTypeRef(BridgeTypeSpec('dart:convert', 'Utf8Decoder'));
 
   /// Compile-time bridge class declaration for [$Utf8Decoder]
   static const $declaration = BridgeClassDef(
       BridgeClassType($type,
           $extends: BridgeTypeRef(ConvertTypes.converter, [
-            BridgeTypeRef(CoreTypes.list, [BridgeTypeRef.type(RuntimeTypes.intType)]),
+            BridgeTypeRef(CoreTypes.list, [BridgeTypeRef(CoreTypes.int)]),
             BridgeTypeRef.type(RuntimeTypes.stringType),
           ])),
       constructors: {
-        '': BridgeConstructorDef(BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [], namedParams: [
-          BridgeParameter('allowMalformed', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)), true)
-        ]))
+        '': BridgeConstructorDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation($type),
+            params: [],
+            namedParams: [
+              BridgeParameter(
+                  'allowMalformed',
+                  BridgeTypeAnnotation(
+                      BridgeTypeRef.type(RuntimeTypes.boolType)),
+                  true)
+            ]))
       },
       methods: {},
       getters: {},
@@ -30,7 +38,8 @@ class $Utf8Decoder implements $Instance {
   /// Wrap a [Utf8Decoder] in a [$Utf8Decoder].
   $Utf8Decoder.wrap(this.$value);
 
-  static $Utf8Decoder $new(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Utf8Decoder $new(
+      Runtime runtime, $Value? target, List<$Value?> args) {
     final allowMalformed = args[0]?.$value as bool? ?? false;
     return $Utf8Decoder.wrap(Utf8Decoder(allowMalformed: allowMalformed));
   }
@@ -69,17 +78,26 @@ class $Utf8Codec implements $Instance {
   static const $type = BridgeTypeRef(ConvertTypes.utf8Codec);
 
   /// Compile-time bridge class declaration for [$Utf8Codec]
-  static const $declaration = BridgeClassDef(BridgeClassType($type, $extends: BridgeTypeRef(ConvertTypes.encoding)),
+  static const $declaration = BridgeClassDef(
+      BridgeClassType($type, $extends: BridgeTypeRef(ConvertTypes.encoding)),
       constructors: {
-        '': BridgeConstructorDef(BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [], namedParams: [
-          BridgeParameter('allowMalformed', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)), true)
-        ]))
+        '': BridgeConstructorDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation($type),
+            params: [],
+            namedParams: [
+              BridgeParameter(
+                  'allowMalformed',
+                  BridgeTypeAnnotation(
+                      BridgeTypeRef.type(RuntimeTypes.boolType)),
+                  true)
+            ]))
       },
       methods: {},
       getters: {
         'decoder': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.utf8Decoder, [
-          BridgeTypeRef(CoreTypes.list, [BridgeTypeRef.type(RuntimeTypes.intType)]),
+            returns:
+                BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.utf8Decoder, [
+          BridgeTypeRef(CoreTypes.list, [BridgeTypeRef(CoreTypes.int)]),
           BridgeTypeRef.type(RuntimeTypes.stringType),
         ])))),
       },

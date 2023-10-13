@@ -34,7 +34,8 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
   ctx.setLocal('#prev', $prev);
 
   ctx.scopeFrameOffset += _existingAllocs;
-  final resolvedParams = resolveFPLDefaults(ctx, e.parameters!, false, allowUnboxed: false, sortNamed: true);
+  final resolvedParams = resolveFPLDefaults(ctx, e.parameters!, false,
+      allowUnboxed: false, sortNamed: true);
 
   var i = 1;
 
@@ -47,7 +48,8 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
     if (p.type != null) {
       type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
     }
-    Vrep = Variable(i, type.copyWith(boxed: true))..name = p.name!.value() as String;
+    Vrep = Variable(i, type.copyWith(boxed: true))
+      ..name = p.name!.value() as String;
 
     ctx.setLocal(Vrep.name!, Vrep);
 
@@ -71,7 +73,8 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
   } else if (b is ExpressionFunctionBody) {
     ctx.beginAllocScope();
     final V = compileExpression(b.expression, ctx);
-    stInfo = doReturn(ctx, AlwaysReturnType(EvalTypes.dynamicType, true), V, isAsync: b.isAsynchronous);
+    stInfo = doReturn(ctx, AlwaysReturnType(EvalTypes.dynamicType, true), V,
+        isAsync: b.isAsynchronous);
     ctx.endAllocScope();
   } else {
     throw CompileError('Unsupported function body type: ${b.runtimeType}');
@@ -92,34 +95,51 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
   ctx.restoreState(ctxSaveState);
   ctx.scopeFrameOffset = sfo;
 
-  final positional = (e.parameters?.parameters.where((element) => element.isPositional) ?? []);
-  final requiredPositionalArgCount = positional.where((element) => element.isRequired).length;
+  final positional =
+      (e.parameters?.parameters.where((element) => element.isPositional) ?? []);
+  final requiredPositionalArgCount =
+      positional.where((element) => element.isRequired).length;
 
   final positionalArgTypes = positional
-      .map((a) => a is NormalFormalParameter ? a : (a as DefaultFormalParameter).parameter)
+      .map((a) => a is NormalFormalParameter
+          ? a
+          : (a as DefaultFormalParameter).parameter)
       .cast<SimpleFormalParameter>()
-      .map((a) => a.type == null ? EvalTypes.dynamicType : TypeRef.fromAnnotation(ctx, ctx.library, a.type!))
+      .map((a) => a.type == null
+          ? EvalTypes.dynamicType
+          : TypeRef.fromAnnotation(ctx, ctx.library, a.type!))
       .map((t) => t.toRuntimeType(ctx))
       .map((rt) => rt.toJson())
       .toList();
 
-  final named = (e.parameters?.parameters.where((element) => element.isNamed) ?? []);
+  final named =
+      (e.parameters?.parameters.where((element) => element.isNamed) ?? []);
   final sortedNamedArgs = named.toList()
-    ..sort((e1, e2) => (e1.name!.value() as String).compareTo((e2.name!.value() as String)));
-  final sortedNamedArgNames = sortedNamedArgs.map((e) => e.name!.value() as String).toList();
+    ..sort((e1, e2) =>
+        (e1.name!.value() as String).compareTo((e2.name!.value() as String)));
+  final sortedNamedArgNames =
+      sortedNamedArgs.map((e) => e.name!.value() as String).toList();
 
   final sortedNamedArgTypes = sortedNamedArgs
       .map((e) => e is DefaultFormalParameter ? e.parameter : e)
       .cast<SimpleFormalParameter>()
-      .map((a) => a.type == null ? EvalTypes.dynamicType : TypeRef.fromAnnotation(ctx, ctx.library, a.type!))
+      .map((a) => a.type == null
+          ? EvalTypes.dynamicType
+          : TypeRef.fromAnnotation(ctx, ctx.library, a.type!))
       .map((t) => t.toRuntimeType(ctx))
       .map((rt) => rt.toJson())
       .toList();
 
   BuiltinValue(intval: requiredPositionalArgCount).push(ctx).pushArg(ctx);
-  BuiltinValue(intval: ctx.constantPool.addOrGet(positionalArgTypes)).push(ctx).pushArg(ctx);
-  BuiltinValue(intval: ctx.constantPool.addOrGet(sortedNamedArgNames)).push(ctx).pushArg(ctx);
-  BuiltinValue(intval: ctx.constantPool.addOrGet(sortedNamedArgTypes)).push(ctx).pushArg(ctx);
+  BuiltinValue(intval: ctx.constantPool.addOrGet(positionalArgTypes))
+      .push(ctx)
+      .pushArg(ctx);
+  BuiltinValue(intval: ctx.constantPool.addOrGet(sortedNamedArgNames))
+      .push(ctx)
+      .pushArg(ctx);
+  BuiltinValue(intval: ctx.constantPool.addOrGet(sortedNamedArgTypes))
+      .push(ctx)
+      .pushArg(ctx);
 
   ctx.pushOp(PushFunctionPtr.make(fnOffset), PushFunctionPtr.LEN);
 

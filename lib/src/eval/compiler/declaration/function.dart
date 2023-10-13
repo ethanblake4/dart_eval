@@ -18,9 +18,11 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   ctx.runPrescan(d);
   final pos = beginMethod(ctx, d, d.offset, '${d.name.value() as String}()');
-  ctx.topLevelDeclarationPositions[ctx.library]![d.name.value() as String] = pos;
+  ctx.topLevelDeclarationPositions[ctx.library]![d.name.value() as String] =
+      pos;
 
-  final overrideAnno = d.metadata.firstWhereOrNull((element) => element.name.name == 'RuntimeOverride');
+  final overrideAnno = d.metadata
+      .firstWhereOrNull((element) => element.name.name == 'RuntimeOverride');
   if (overrideAnno != null) {
     final oArgs = overrideAnno.arguments!.arguments;
     final name = oArgs.first as StringLiteral;
@@ -28,19 +30,24 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
     if (oArgs.length == 2) {
       final exp = (oArgs[1] as NamedExpression);
       if (exp.name.label.name != 'version') {
-        throw CompileError('Invalid @RuntimeOverride annotation', d, ctx.library, ctx);
+        throw CompileError(
+            'Invalid @RuntimeOverride annotation', d, ctx.library, ctx);
       }
       final _version = exp.expression as StringLiteral;
       version = _version.stringValue;
     }
     final overrideName = name.stringValue!;
-    ctx.runtimeOverrideMap[overrideName] = OverrideSpec(pos, version ?? '<${ctx.version}');
+    ctx.runtimeOverrideMap[overrideName] =
+        OverrideSpec(pos, version ?? '<${ctx.version}');
   }
 
-  final _existingAllocs = d.functionExpression.parameters?.parameters.length ?? 0;
+  final _existingAllocs =
+      d.functionExpression.parameters?.parameters.length ?? 0;
   ctx.beginAllocScope(existingAllocLen: _existingAllocs);
   ctx.scopeFrameOffset += _existingAllocs;
-  final resolvedParams = resolveFPLDefaults(ctx, d.functionExpression.parameters!, false, allowUnboxed: true);
+  final resolvedParams = resolveFPLDefaults(
+      ctx, d.functionExpression.parameters!, false,
+      allowUnboxed: true);
 
   var i = 0;
 
@@ -53,7 +60,9 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
     if (p.type != null) {
       type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
     }
-    Vrep = Variable(i, type.copyWith(boxed: !type.isUnboxedAcrossFunctionBoundaries))..name = p.name!.value() as String;
+    Vrep = Variable(
+        i, type.copyWith(boxed: !type.isUnboxedAcrossFunctionBoundaries))
+      ..name = p.name!.value() as String;
 
     ctx.setLocal(Vrep.name!, Vrep);
 
@@ -66,13 +75,16 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
     setupAsyncFunction(ctx);
   }
 
-  final expectedReturnType = AlwaysReturnType.fromAnnotation(ctx, ctx.library, d.returnType, EvalTypes.dynamicType);
+  final expectedReturnType = AlwaysReturnType.fromAnnotation(
+      ctx, ctx.library, d.returnType, EvalTypes.dynamicType);
   StatementInfo? stInfo;
   if (b is BlockFunctionBody) {
-    stInfo = compileBlock(b.block, expectedReturnType, ctx, name: '${d.name.value() as String}()');
+    stInfo = compileBlock(b.block, expectedReturnType, ctx,
+        name: '${d.name.value() as String}()');
   } else if (b is ExpressionFunctionBody) {
     ctx.beginAllocScope();
-    stInfo = doReturn(ctx, expectedReturnType, compileExpression(b.expression, ctx, expectedReturnType.type),
+    stInfo = doReturn(ctx, expectedReturnType,
+        compileExpression(b.expression, ctx, expectedReturnType.type),
         isAsync: b.isAsynchronous);
     stInfo = StatementInfo(-1, willAlwaysReturn: true);
     ctx.endAllocScope(popValues: false);

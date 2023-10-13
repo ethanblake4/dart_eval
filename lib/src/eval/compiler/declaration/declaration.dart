@@ -18,13 +18,16 @@ int? compileDeclaration(Declaration d, CompilerContext ctx,
   } else if (d is EnumDeclaration) {
     compileEnumDeclaration(ctx, d);
   } else if (d is MethodDeclaration) {
-    return compileMethodDeclaration(d, ctx, parent as NamedCompilationUnitMember);
+    return compileMethodDeclaration(
+        d, ctx, parent as NamedCompilationUnitMember);
   } else if (d is FunctionDeclaration) {
     compileFunctionDeclaration(d, ctx);
   } else if (d is FieldDeclaration) {
-    compileFieldDeclaration(fieldIndex!, d, ctx, parent as NamedCompilationUnitMember);
+    compileFieldDeclaration(
+        fieldIndex!, d, ctx, parent as NamedCompilationUnitMember);
   } else if (d is ConstructorDeclaration) {
-    compileConstructorDeclaration(ctx, d, parent as NamedCompilationUnitMember, fields!);
+    compileConstructorDeclaration(
+        ctx, d, parent as NamedCompilationUnitMember, fields!);
   } else if (d is VariableDeclaration) {
     compileTopLevelVariableDeclaration(d, ctx);
   } else if (d is EnumConstantDeclaration) {

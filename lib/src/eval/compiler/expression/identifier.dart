@@ -23,14 +23,16 @@ Reference compileIdentifierAsReference(Identifier id, CompilerContext ctx) {
         final idn = id.identifier.name;
         final tl = ctx.topLevelDeclarationsMap[L.type.file]![L.type.name]!;
         if (!tl.isBridge || tl.bridge is! BridgeClassDef) {
-          throw UnimplementedError('Trying to access ${id.prefix}.$idn on ${L.type}, which is not a class');
+          throw UnimplementedError(
+              'Trying to access ${id.prefix}.$idn on ${L.type}, which is not a class');
         }
         final cls = tl.bridge as BridgeClassDef;
         if (!cls.fields.containsKey(idn) &&
             !cls.methods.containsKey(idn) &&
             !cls.getters.containsKey(idn) &&
             !cls.setters.containsKey(idn)) {
-          throw CompileError('Bridge class ${L.type} does not have method/field/getter/setter "$idn"');
+          throw CompileError(
+              'Bridge class ${L.type} does not have method/field/getter/setter "$idn"');
         }
       }
     }
@@ -39,11 +41,13 @@ Reference compileIdentifierAsReference(Identifier id, CompilerContext ctx) {
   throw CompileError('Unknown identifier ${id.runtimeType}');
 }
 
-Variable compilePrefixedIdentifier(String prefix, String name, CompilerContext ctx) {
+Variable compilePrefixedIdentifier(
+    String prefix, String name, CompilerContext ctx) {
   return compilePrefixedIdentifierAsReference(prefix, name).getValue(ctx);
 }
 
-Reference compilePrefixedIdentifierAsReference(String prefix, String identifier) {
+Reference compilePrefixedIdentifierAsReference(
+    String prefix, String identifier) {
   return PrefixedIdentifierReference(prefix, identifier);
 }
 
@@ -68,7 +72,12 @@ Pair<TypeRef, DeclarationOrBridge>? resolveInstanceDeclaration(
     if (getter != null || setter != null) {
       final $type = ctx.visibleTypes[library]![$class]!;
       return Pair(
-          $type, GetSet(-1, bridge: getter, setter: setter == null ? null : DeclarationOrBridge(-1, bridge: setter)));
+          $type,
+          GetSet(-1,
+              bridge: getter,
+              setter: setter == null
+                  ? null
+                  : DeclarationOrBridge(-1, bridge: setter)));
     }
     final $extends = bridge.type.$extends;
     if ($extends != null) {
@@ -78,7 +87,8 @@ Pair<TypeRef, DeclarationOrBridge>? resolveInstanceDeclaration(
       }
       return resolveInstanceDeclaration(ctx, _type.file, _type.name, name);
     }
-    throw CompileError('Bridge declaration not supported in instance: trying to lookup "$name" in "${$class}"');
+    throw CompileError(
+        'Bridge declaration not supported in instance: trying to lookup "$name" in "${$class}"');
   } else {
     final getter = ctx.instanceDeclarationsMap[library]![$class]?['$name*g'];
     final setter = ctx.instanceDeclarationsMap[library]![$class]?['$name*s'];
@@ -86,19 +96,24 @@ Pair<TypeRef, DeclarationOrBridge>? resolveInstanceDeclaration(
       final $type = ctx.visibleTypes[library]![$class]!;
       final getset = GetSet(-1,
           declaration: getter as MethodDeclaration,
-          setter: setter == null ? null : DeclarationOrBridge(-1, declaration: setter as MethodDeclaration));
+          setter: setter == null
+              ? null
+              : DeclarationOrBridge(-1,
+                  declaration: setter as MethodDeclaration));
       return Pair($type, getset);
     }
   }
   final _$dec = _$classDec.declaration!;
-  final $withClause =
-      _$dec is ClassDeclaration ? _$dec.withClause : (_$dec is EnumDeclaration ? _$dec.withClause : null);
+  final $withClause = _$dec is ClassDeclaration
+      ? _$dec.withClause
+      : (_$dec is EnumDeclaration ? _$dec.withClause : null);
   final $extendsClause = _$dec is ClassDeclaration ? _$dec.extendsClause : null;
   if ($withClause != null) {
     // ignore: deprecated_member_use
     for (final $mixin in $withClause.mixinTypes) {
       final mixinType = ctx.visibleTypes[library]![$mixin.name2.stringValue!]!;
-      final result = resolveInstanceDeclaration(ctx, mixinType.file, mixinType.name, name);
+      final result =
+          resolveInstanceDeclaration(ctx, mixinType.file, mixinType.name, name);
       if (result != null) {
         return result;
       }
@@ -107,14 +122,17 @@ Pair<TypeRef, DeclarationOrBridge>? resolveInstanceDeclaration(
   if ($extendsClause != null) {
     // ignore: deprecated_member_use
     final extendsType = ctx.visibleTypes[library]![
-        $extendsClause.superclass.name2.stringValue ?? $extendsClause.superclass.name2.value()]!;
-    return resolveInstanceDeclaration(ctx, extendsType.file, extendsType.name, name);
+        $extendsClause.superclass.name2.stringValue ??
+            $extendsClause.superclass.name2.value()]!;
+    return resolveInstanceDeclaration(
+        ctx, extendsType.file, extendsType.name, name);
   }
   return null;
 }
 
 class GetSet extends DeclarationOrBridge<MethodDeclaration, BridgeMethodDef> {
-  GetSet(int sourceLib, {this.setter, MethodDeclaration? declaration, BridgeMethodDef? bridge})
+  GetSet(int sourceLib,
+      {this.setter, MethodDeclaration? declaration, BridgeMethodDef? bridge})
       : super(sourceLib, declaration: declaration, bridge: bridge);
 
   DeclarationOrBridge<MethodDeclaration, BridgeMethodDef>? setter;

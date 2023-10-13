@@ -17,11 +17,12 @@ class $IOSink implements $Instance {
       BridgeClassType($type, isAbstract: true, $implements: [
         $StringSink.$type,
         BridgeTypeRef(AsyncTypes.streamSink, [
-          BridgeTypeRef(CoreTypes.list, [BridgeTypeRef.type(RuntimeTypes.intType)])
+          BridgeTypeRef(CoreTypes.list, [BridgeTypeRef(CoreTypes.int)])
         ])
       ]),
       constructors: {
-        '': BridgeConstructorDef(BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [], namedParams: []))
+        '': BridgeConstructorDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation($type), params: [], namedParams: []))
       },
       methods: {},
       getters: {},

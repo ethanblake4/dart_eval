@@ -13,7 +13,8 @@ import 'package:dart_eval/src/eval/compiler/util.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
-int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx, NamedCompilationUnitMember parent) {
+int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx,
+    NamedCompilationUnitMember parent) {
   ctx.runPrescan(d);
   final b = d.body;
   final parentName = parent.name.value() as String;
@@ -22,7 +23,12 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx, NamedComp
 
   ctx.beginAllocScope(existingAllocLen: (d.parameters?.parameters.length ?? 0));
   ctx.scopeFrameOffset += d.parameters?.parameters.length ?? 0;
-  ctx.setLocal('#this', Variable(0, ctx.visibleTypes[ctx.library]![ctx.currentClass!.name.value() as String]!));
+  ctx.setLocal(
+      '#this',
+      Variable(
+          0,
+          ctx.visibleTypes[ctx.library]![
+              ctx.currentClass!.name.value() as String]!));
   final resolvedParams = d.parameters == null
       ? <PossiblyValuedParameter>[]
       : resolveFPLDefaults(ctx, d.parameters!, true, allowUnboxed: true);
@@ -40,7 +46,8 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx, NamedComp
     p as SimpleFormalParameter;
     var type = EvalTypes.dynamicType;
     if (p.type != null) {
-      type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
+      type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!)
+          .copyWith(boxed: true);
     }
     Vrep = Variable(i, type)..name = p.name!.value() as String;
 
@@ -52,12 +59,19 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx, NamedComp
   StatementInfo? stInfo;
   if (b is BlockFunctionBody) {
     stInfo = compileBlock(
-        b.block, AlwaysReturnType.fromAnnotation(ctx, ctx.library, d.returnType, EvalTypes.dynamicType), ctx,
+        b.block,
+        AlwaysReturnType.fromAnnotation(
+            ctx, ctx.library, d.returnType, EvalTypes.dynamicType),
+        ctx,
         name: '$methodName()');
   } else if (b is ExpressionFunctionBody) {
     ctx.beginAllocScope();
     final V = compileExpression(b.expression, ctx);
-    stInfo = doReturn(ctx, AlwaysReturnType.fromAnnotation(ctx, ctx.library, d.returnType, EvalTypes.dynamicType), V,
+    stInfo = doReturn(
+        ctx,
+        AlwaysReturnType.fromAnnotation(
+            ctx, ctx.library, d.returnType, EvalTypes.dynamicType),
+        V,
         isAsync: b.isAsynchronous);
     ctx.endAllocScope();
   } else if (b is EmptyFunctionBody) {
@@ -77,14 +91,16 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx, NamedComp
   }
 
   if (d.isStatic) {
-    ctx.topLevelDeclarationPositions[ctx.library]!['$parentName.$methodName'] = pos;
+    ctx.topLevelDeclarationPositions[ctx.library]!['$parentName.$methodName'] =
+        pos;
   } else {
     final mapIndex = d.isGetter
         ? 0
         : d.isSetter
             ? 1
             : 2;
-    ctx.instanceDeclarationPositions[ctx.library]![parentName]![mapIndex][methodName] = pos;
+    ctx.instanceDeclarationPositions[ctx.library]![parentName]![mapIndex]
+        [methodName] = pos;
   }
 
   return pos;

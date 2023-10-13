@@ -11,9 +11,15 @@ import '../type.dart';
 import '../util.dart';
 import '../variable.dart';
 
-Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext ctx, ArgumentList argumentList,
-    int decLibrary, List<FormalParameter> fpl, Declaration parameterHost,
-    {List<Variable> before = const [], List<String> superParams = const [], AstNode? source}) {
+Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
+    CompilerContext ctx,
+    ArgumentList argumentList,
+    int decLibrary,
+    List<FormalParameter> fpl,
+    Declaration parameterHost,
+    {List<Variable> before = const [],
+    List<String> superParams = const [],
+    AstNode? source}) {
   final _args = <Variable>[];
   final _push = <Variable>[];
   final _namedArgs = <String, Variable>{};
@@ -57,15 +63,18 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext 
           paramType = TypeRef.fromAnnotation(ctx, decLibrary, param.type!);
         }
       } else if (param is FieldFormalParameter) {
-        paramType = _resolveFieldFormalType(ctx, decLibrary, param, parameterHost);
+        paramType =
+            _resolveFieldFormalType(ctx, decLibrary, param, parameterHost);
       } else if (param is SuperFormalParameter) {
-        paramType = resolveSuperFormalType(ctx, decLibrary, param, parameterHost);
+        paramType =
+            resolveSuperFormalType(ctx, decLibrary, param, parameterHost);
       } else {
         throw CompileError('Unknown formal type ${param.runtimeType}');
       }
 
       var _arg = compileExpression(arg, ctx, paramType);
-      if (parameterHost is MethodDeclaration || !paramType.isUnboxedAcrossFunctionBoundaries) {
+      if (parameterHost is MethodDeclaration ||
+          !paramType.isUnboxedAcrossFunctionBoundaries) {
         _arg = _arg.boxIfNeeded(ctx);
       } else if (paramType.isUnboxedAcrossFunctionBoundaries) {
         _arg = _arg.unboxIfNeeded(ctx);
@@ -102,14 +111,16 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext 
       _namedArgs[name] = V;
       return;
     }
-    final param = (_param is DefaultFormalParameter ? _param.parameter : _param) as NormalFormalParameter;
+    final param = (_param is DefaultFormalParameter ? _param.parameter : _param)
+        as NormalFormalParameter;
     var paramType = EvalTypes.dynamicType;
     if (param is SimpleFormalParameter) {
       if (param.type != null) {
         paramType = TypeRef.fromAnnotation(ctx, decLibrary, param.type!);
       }
     } else if (param is FieldFormalParameter) {
-      paramType = _resolveFieldFormalType(ctx, decLibrary, param, parameterHost);
+      paramType =
+          _resolveFieldFormalType(ctx, decLibrary, param, parameterHost);
     } else if (param is SuperFormalParameter) {
       paramType = resolveSuperFormalType(ctx, decLibrary, param, parameterHost);
     } else {
@@ -117,7 +128,8 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext 
     }
     if (namedExpr.containsKey(name)) {
       var _arg = compileExpression(namedExpr[name]!, ctx, paramType);
-      if (parameterHost is MethodDeclaration || !paramType.isUnboxedAcrossFunctionBoundaries) {
+      if (parameterHost is MethodDeclaration ||
+          !paramType.isUnboxedAcrossFunctionBoundaries) {
         _arg = _arg.boxIfNeeded(ctx);
       } else if (paramType.isUnboxedAcrossFunctionBoundaries) {
         _arg = _arg.unboxIfNeeded(ctx);
@@ -128,7 +140,8 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext 
       }
 
       if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
-        throw CompileError('Cannot assign argument of type ${_arg.type.toStringClear(ctx, paramType)}'
+        throw CompileError(
+            'Cannot assign argument of type ${_arg.type.toStringClear(ctx, paramType)}'
             ' to parameter "${param.name!.value() as String}" of type ${paramType.toStringClear(ctx, _arg.type)}');
       }
 
@@ -149,9 +162,13 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(CompilerContext 
   return Pair(_args, _namedArgs);
 }
 
-Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithKnownMethodArgs(CompilerContext ctx,
-    ArgumentList argumentList, List<KnownMethodArg> params, Map<String, KnownMethodArg> namedParams,
-    {List<Variable> before = const []}) {
+Pair<List<Variable>, Map<String, Variable>>
+    compileArgumentListWithKnownMethodArgs(
+        CompilerContext ctx,
+        ArgumentList argumentList,
+        List<KnownMethodArg> params,
+        Map<String, KnownMethodArg> namedParams,
+        {List<Variable> before = const []}) {
   final _args = <Variable>[];
   final _push = <Variable>[];
   final _namedArgs = <String, Variable>{};
@@ -183,7 +200,9 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithKnownMethodAr
       }
 
       if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
-        throw CompileError('Cannot assign argument of type ${_arg.type} to parameter of type $paramType', argumentList);
+        throw CompileError(
+            'Cannot assign argument of type ${_arg.type} to parameter of type $paramType',
+            argumentList);
       }
       _args.add(_arg);
       _push.add(_arg);
@@ -201,9 +220,11 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithKnownMethodAr
   for (final param in namedParams.values) {
     var paramType = param.type ?? EvalTypes.dynamicType;
     if (namedExpr.containsKey(param.name)) {
-      final _arg = compileExpression(namedExpr[param.name]!, ctx, paramType).boxIfNeeded(ctx);
+      final _arg = compileExpression(namedExpr[param.name]!, ctx, paramType)
+          .boxIfNeeded(ctx);
       if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
-        throw CompileError('Cannot assign argument of type ${_arg.type} to parameter of type $paramType');
+        throw CompileError(
+            'Cannot assign argument of type ${_arg.type} to parameter of type $paramType');
       }
       _push.add(_arg);
       _namedArgs[param.name] = _arg;
@@ -263,7 +284,9 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
       }
       if (!(param.type.nullable && _arg.type == EvalTypes.nullType) &&
           !_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
-        throw CompileError('Cannot assign argument of type ${_arg.type} to parameter of type $paramType', argumentList);
+        throw CompileError(
+            'Cannot assign argument of type ${_arg.type} to parameter of type $paramType',
+            argumentList);
       }
       _args.add(_arg);
       _push.add(_arg);
@@ -286,12 +309,14 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
     }
     var paramType = TypeRef.fromBridgeAnnotation(ctx, param.type);
     if (namedExpr.containsKey(param.name)) {
-      var _arg = compileExpression(namedExpr[param.name]!, ctx, paramType).boxIfNeeded(ctx);
+      var _arg = compileExpression(namedExpr[param.name]!, ctx, paramType)
+          .boxIfNeeded(ctx);
       if (_arg.type == EvalTypes.functionType && _arg.scopeFrameOffset == -1) {
         _arg = _arg.tearOff(ctx);
       }
       if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
-        throw CompileError('Cannot assign argument of type ${_arg.type} to parameter of type $paramType');
+        throw CompileError(
+            'Cannot assign argument of type ${_arg.type} to parameter of type $paramType');
       }
       _push.add(_arg);
       _namedArgs[param.name] = _arg;
@@ -309,32 +334,40 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
   return Pair(_args, _namedArgs);
 }
 
-TypeRef _resolveFieldFormalType(
-    CompilerContext ctx, int decLibrary, FieldFormalParameter param, Declaration parameterHost) {
+TypeRef _resolveFieldFormalType(CompilerContext ctx, int decLibrary,
+    FieldFormalParameter param, Declaration parameterHost) {
   if (parameterHost is! ConstructorDeclaration) {
     throw CompileError('Field formals can only occur in constructors');
   }
   final $class = parameterHost.parent as NamedCompilationUnitMember;
-  return TypeRef.lookupFieldType(ctx, TypeRef.lookupDeclaration(ctx, decLibrary, $class), param.name.value() as String,
+  return TypeRef.lookupFieldType(
+          ctx,
+          TypeRef.lookupDeclaration(ctx, decLibrary, $class),
+          param.name.value() as String,
           forFieldFormal: true) ??
       EvalTypes.dynamicType;
 }
 
-TypeRef resolveSuperFormalType(
-    CompilerContext ctx, int decLibrary, SuperFormalParameter param, Declaration parameterHost) {
+TypeRef resolveSuperFormalType(CompilerContext ctx, int decLibrary,
+    SuperFormalParameter param, Declaration parameterHost) {
   if (parameterHost is! ConstructorDeclaration) {
     throw CompileError('Super formals can only occur in constructors');
   }
   var superConstructorName = '';
-  final lastInit = parameterHost.initializers.isEmpty ? null : parameterHost.initializers.last;
+  final lastInit = parameterHost.initializers.isEmpty
+      ? null
+      : parameterHost.initializers.last;
   if (lastInit is SuperConstructorInvocation) {
     superConstructorName = lastInit.constructorName?.name ?? '';
   }
   final $class = parameterHost.parent as ClassDeclaration;
   final type = TypeRef.lookupDeclaration(ctx, decLibrary, $class);
   final $super = type.resolveTypeChain(ctx).extendsType ??
-      (throw CompileError('Class $type has no super class, so cannot use super formals', param));
-  final superCstr = ctx.topLevelDeclarationsMap[$super.file]!['${$super.name}.$superConstructorName']!;
+      (throw CompileError(
+          'Class $type has no super class, so cannot use super formals',
+          param));
+  final superCstr = ctx.topLevelDeclarationsMap[$super.file]![
+      '${$super.name}.$superConstructorName']!;
   if (superCstr.isBridge) {
     final fd = (superCstr.bridge as BridgeConstructorDef).functionDescriptor;
     for (final _param in (param.isNamed ? fd.namedParams : fd.params)) {
@@ -345,7 +378,8 @@ TypeRef resolveSuperFormalType(
   } else {
     final cstr = superCstr.declaration as ConstructorDeclaration;
     for (final _param in cstr.parameters.parameters) {
-      if (_param is SimpleFormalParameter && _param.name!.stringValue == param.name.stringValue) {
+      if (_param is SimpleFormalParameter &&
+          _param.name!.stringValue == param.name.stringValue) {
         final _type = _param.type;
         if (_type == null) {
           return EvalTypes.dynamicType;
@@ -359,5 +393,7 @@ TypeRef resolveSuperFormalType(
     }
   }
 
-  throw CompileError('Could not find parameter ${param.name.value()} in the referenced superclass constructor', param);
+  throw CompileError(
+      'Could not find parameter ${param.name.value()} in the referenced superclass constructor',
+      param);
 }

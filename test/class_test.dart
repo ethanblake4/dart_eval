@@ -80,9 +80,12 @@ void main() {
         }
       };
 
-      expect(() => compiler.compileWriteAndLoad(packages), throwsA(isA<CompileError>()));
-      expect(() => compiler.compileWriteAndLoad(packages), throwsA(predicate((CompileError e) {
-        return e.toString().contains('someOtherMethod') && e.toString().contains('file package:example/main.dart');
+      expect(() => compiler.compileWriteAndLoad(packages),
+          throwsA(isA<CompileError>()));
+      expect(() => compiler.compileWriteAndLoad(packages),
+          throwsA(predicate((CompileError e) {
+        return e.toString().contains('someOtherMethod') &&
+            e.toString().contains('file package:example/main.dart');
       })));
     });
 
@@ -313,7 +316,8 @@ void main() {
         }
       });
 
-      expect(runtime.executeLib('package:example/main.dart', 'main'), $String('d'));
+      expect(runtime.executeLib('package:example/main.dart', 'main'),
+          $String('d'));
     });
 
     test('Accessing methods and fields on super', () {
@@ -345,7 +349,8 @@ void main() {
         }
       });
 
-      expect(runtime.executeLib('package:example/main.dart', 'main'), $String('Julian the animal (cat)'));
+      expect(runtime.executeLib('package:example/main.dart', 'main'),
+          $String('Julian the animal (cat)'));
     });
 
     test('Constructor field initializers', () {

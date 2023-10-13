@@ -17,8 +17,13 @@ class $JsonDecoder implements $Instance {
             BridgeTypeRef.type(RuntimeTypes.objectType),
           ])),
       constructors: {
-        '': BridgeConstructorDef(BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [
-          BridgeParameter('reviver', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.functionType)), true)
+        '': BridgeConstructorDef(
+            BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [
+          BridgeParameter(
+              'reviver',
+              BridgeTypeAnnotation(
+                  BridgeTypeRef.type(RuntimeTypes.functionType)),
+              true)
         ]))
       },
       methods: {},
@@ -30,7 +35,8 @@ class $JsonDecoder implements $Instance {
   /// Wrap a [Utf8Decoder] in a [$Utf8Decoder].
   $JsonDecoder.wrap(this.$value);
 
-  static $JsonDecoder $new(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $JsonDecoder $new(
+      Runtime runtime, $Value? target, List<$Value?> args) {
     final reviver = args[0]?.$value as EvalCallable?;
     return $JsonDecoder.wrap(JsonDecoder(reviver == null
         ? null
@@ -83,8 +89,13 @@ class $JsonEncoder implements $Instance {
             BridgeTypeRef.type(RuntimeTypes.stringType),
           ])),
       constructors: {
-        '': BridgeConstructorDef(BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [
-          BridgeParameter('toEncodable', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.functionType)), true)
+        '': BridgeConstructorDef(
+            BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [
+          BridgeParameter(
+              'toEncodable',
+              BridgeTypeAnnotation(
+                  BridgeTypeRef.type(RuntimeTypes.functionType)),
+              true)
         ]))
       },
       methods: {},
@@ -96,12 +107,14 @@ class $JsonEncoder implements $Instance {
   /// Wrap a [Utf8Encoder] in a [$Utf8Encoder].
   $JsonEncoder.wrap(this.$value);
 
-  static $JsonEncoder $new(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $JsonEncoder $new(
+      Runtime runtime, $Value? target, List<$Value?> args) {
     final toEncodable = args[0]?.$value as EvalCallable?;
     return $JsonEncoder.wrap(JsonEncoder(toEncodable == null
         ? null
         : (object) {
-            return toEncodable.call(runtime, null, [runtime.wrapPrimitive(object) ?? object as $Value?])?.$value;
+            return toEncodable.call(runtime, null,
+                [runtime.wrapPrimitive(object) ?? object as $Value?])?.$value;
           }));
   }
 
@@ -139,18 +152,28 @@ class $JsonCodec implements $Instance {
   static const $type = BridgeTypeRef(ConvertTypes.jsonCodec);
 
   /// Compile-time bridge class declaration for [$JsonCodec]
-  static const $declaration = BridgeClassDef(BridgeClassType($type, $extends: BridgeTypeRef(ConvertTypes.encoding)),
+  static const $declaration = BridgeClassDef(
+      BridgeClassType($type, $extends: BridgeTypeRef(ConvertTypes.encoding)),
       constructors: {
-        '': BridgeConstructorDef(BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [], namedParams: [
-          BridgeParameter('reviver', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.functionType)), true)
-        ]))
+        '': BridgeConstructorDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation($type),
+            params: [],
+            namedParams: [
+              BridgeParameter(
+                  'reviver',
+                  BridgeTypeAnnotation(
+                      BridgeTypeRef.type(RuntimeTypes.functionType)),
+                  true)
+            ]))
       },
       methods: {},
       getters: {
-        'decoder':
-            BridgeMethodDef(BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.jsonDecoder)))),
-        'encoder':
-            BridgeMethodDef(BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.jsonEncoder)))),
+        'decoder': BridgeMethodDef(BridgeFunctionDef(
+            returns:
+                BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.jsonDecoder)))),
+        'encoder': BridgeMethodDef(BridgeFunctionDef(
+            returns:
+                BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.jsonEncoder)))),
       },
       setters: {},
       fields: {},
@@ -201,5 +224,6 @@ class $JsonCodec implements $Instance {
   }
 
   @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType(ConvertTypes.jsonCodec);
+  int $getRuntimeType(Runtime runtime) =>
+      runtime.lookupType(ConvertTypes.jsonCodec);
 }

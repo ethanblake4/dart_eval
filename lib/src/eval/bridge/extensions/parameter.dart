@@ -10,8 +10,8 @@ extension BridgeParameterExt on String {
   /// ```
   /// See [paramOptional] for optional named param
   /// See [paramNullable] for nullable param
-  BridgeParameter param(BridgeTypeRef ref) {
-    return BridgeParameter(this, BridgeTypeAnnotation(ref), false);
+  BridgeParameter param(BridgeTypeAnnotation type) {
+    return BridgeParameter(this, type, false);
   }
 
   /// Extension to wrap 'key' with [BridgeParameter]()
@@ -23,28 +23,10 @@ extension BridgeParameterExt on String {
   /// ```
   /// See [paramOptional] for optional named param
   /// See [paramOptionalNullable] for nullable param
-  BridgeParameter paramOptional(BridgeTypeRef ref) {
+  BridgeParameter paramOptional(BridgeTypeAnnotation type) {
     return BridgeParameter(
       this,
-      BridgeTypeAnnotation(ref),
-      true,
-    );
-  }
-
-  /// See [param] docs for usage
-  BridgeParameter paramNullable(BridgeTypeRef ref) {
-    return BridgeParameter(
-      this,
-      BridgeTypeAnnotation(ref, nullable: true),
-      false,
-    );
-  }
-
-  /// Same as [paramOptional], See [paramOptional] docs for usage
-  BridgeParameter paramOptionalNullable(BridgeTypeRef ref) {
-    return BridgeParameter(
-      this,
-      BridgeTypeAnnotation(ref, nullable: true),
+      type,
       true,
     );
   }

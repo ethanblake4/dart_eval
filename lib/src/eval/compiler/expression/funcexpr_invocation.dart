@@ -8,7 +8,8 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/runtime/type.dart';
 
 /// Compile a [FunctionExpressionInvocation]
-Variable compileFunctionExpressionInvocation(FunctionExpressionInvocation e, CompilerContext ctx) {
+Variable compileFunctionExpressionInvocation(
+    FunctionExpressionInvocation e, CompilerContext ctx) {
   Reference? target;
   Variable? fallback;
 
@@ -23,16 +24,21 @@ Variable compileFunctionExpressionInvocation(FunctionExpressionInvocation e, Com
   return invokeClosure(ctx, target, fallback, e.argumentList);
 }
 
-Variable invokeClosure(CompilerContext ctx, Reference? closureRef, Variable? closureVar, ArgumentList argumentList) {
+Variable invokeClosure(CompilerContext ctx, Reference? closureRef,
+    Variable? closureVar, ArgumentList argumentList) {
   ctx.pushOp(PushList.make(), PushList.LEN);
-  final csPosArgTypes =
-      Variable.alloc(ctx, EvalTypes.getListType(ctx).copyWith(specifiedTypeArgs: [EvalTypes.intType]));
+  final csPosArgTypes = Variable.alloc(
+      ctx,
+      EvalTypes.getListType(ctx)
+          .copyWith(specifiedTypeArgs: [EvalTypes.getIntType(ctx)]));
 
   final positionalArgs = <Variable>[];
 
   ctx.pushOp(PushList.make(), PushList.LEN);
-  final csNamedArgTypes =
-      Variable.alloc(ctx, EvalTypes.getListType(ctx).copyWith(specifiedTypeArgs: [EvalTypes.intType]));
+  final csNamedArgTypes = Variable.alloc(
+      ctx,
+      EvalTypes.getListType(ctx)
+          .copyWith(specifiedTypeArgs: [EvalTypes.getIntType(ctx)]));
 
   final namedArgs = <String, Variable>{};
   final namedArgsRttiMap = <String, int>{};
@@ -49,7 +55,8 @@ Variable invokeClosure(CompilerContext ctx, Reference? closureRef, Variable? clo
       final type = _arg.type.resolveTypeChain(ctx);
       final rtti = type.getRuntimeIndices(ctx);
 
-      final rttiIndex = ctx.runtimeTypes.addOrGet(RuntimeTypeSet(type.toRuntimeType(ctx).type, rtti, []));
+      final rttiIndex = ctx.runtimeTypes
+          .addOrGet(RuntimeTypeSet(type.toRuntimeType(ctx).type, rtti, []));
       namedArgsRttiMap[nName] = rttiIndex;
       namedArgs[nName] = _arg;
     } else {
@@ -59,9 +66,10 @@ Variable invokeClosure(CompilerContext ctx, Reference? closureRef, Variable? clo
       final type = _arg.type.resolveTypeChain(ctx);
       final rtti = type.getRuntimeIndices(ctx);
 
-      final rttiIndex = ctx.runtimeTypes.addOrGet(RuntimeTypeSet(type.toRuntimeType(ctx).type, rtti, []));
-      final la =
-          ListAppend.make(csPosArgTypes.scopeFrameOffset, BuiltinValue(intval: rttiIndex).push(ctx).scopeFrameOffset);
+      final rttiIndex = ctx.runtimeTypes
+          .addOrGet(RuntimeTypeSet(type.toRuntimeType(ctx).type, rtti, []));
+      final la = ListAppend.make(csPosArgTypes.scopeFrameOffset,
+          BuiltinValue(intval: rttiIndex).push(ctx).scopeFrameOffset);
 
       ctx.pushOp(la, ListAppend.LEN);
 
@@ -73,13 +81,19 @@ Variable invokeClosure(CompilerContext ctx, Reference? closureRef, Variable? clo
 
   for (final name in namedArgNames) {
     final la = ListAppend.make(
-        csNamedArgTypes.scopeFrameOffset, BuiltinValue(intval: namedArgsRttiMap[name]).push(ctx).scopeFrameOffset);
+        csNamedArgTypes.scopeFrameOffset,
+        BuiltinValue(intval: namedArgsRttiMap[name])
+            .push(ctx)
+            .scopeFrameOffset);
     ctx.pushOp(la, ListAppend.LEN);
   }
 
-  ctx.pushOp(PushConstant.make(ctx.constantPool.addOrGet(namedArgNames)), PushConstant.LEN);
-  final alConstVar =
-      Variable.alloc(ctx, EvalTypes.getListType(ctx).copyWith(specifiedTypeArgs: [EvalTypes.stringType]));
+  ctx.pushOp(PushConstant.make(ctx.constantPool.addOrGet(namedArgNames)),
+      PushConstant.LEN);
+  final alConstVar = Variable.alloc(
+      ctx,
+      EvalTypes.getListType(ctx)
+          .copyWith(specifiedTypeArgs: [EvalTypes.stringType]));
 
   ctx.pushOp(PushArg.make(csPosArgTypes.scopeFrameOffset), PushArg.LEN);
   ctx.pushOp(PushArg.make(alConstVar.scopeFrameOffset), PushArg.LEN);

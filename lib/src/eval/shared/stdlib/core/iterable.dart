@@ -4,33 +4,53 @@ part of 'collection.dart';
 class $Iterable<E> implements Iterable<E>, $Instance {
   /// Compile-time class definition for [$Iterable]
   static const $declaration = BridgeClassDef(
-      BridgeClassType(BridgeTypeRef(CoreTypes.iterable), generics: {'E': BridgeGenericParam()}),
+      BridgeClassType(BridgeTypeRef(CoreTypes.iterable),
+          generics: {'E': BridgeGenericParam()}),
       constructors: {},
       methods: {
         'join': BridgeMethodDef(
-            BridgeFunctionDef(params: [
-              BridgeParameter('separator', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.stringType)), true),
-            ], returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.stringType))),
+            BridgeFunctionDef(
+                params: [
+                  BridgeParameter(
+                      'separator',
+                      BridgeTypeAnnotation(
+                          BridgeTypeRef.type(RuntimeTypes.stringType)),
+                      true),
+                ],
+                returns: BridgeTypeAnnotation(
+                    BridgeTypeRef.type(RuntimeTypes.stringType))),
             isStatic: false),
         'map': BridgeMethodDef(
-            BridgeFunctionDef(params: [
-              BridgeParameter('toElement', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.functionType)), false),
-            ], returns: BridgeTypeAnnotation(BridgeTypeRef(BridgeTypeSpec('dart:core', 'Iterable')))),
+            BridgeFunctionDef(
+                params: [
+                  BridgeParameter(
+                      'toElement',
+                      BridgeTypeAnnotation(
+                          BridgeTypeRef.type(RuntimeTypes.functionType)),
+                      false),
+                ],
+                returns: BridgeTypeAnnotation(
+                    BridgeTypeRef(BridgeTypeSpec('dart:core', 'Iterable')))),
             isStatic: false),
         'toList': BridgeMethodDef(
             BridgeFunctionDef(
                 params: [
-                  BridgeParameter('growable', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)), true),
+                  BridgeParameter(
+                      'growable',
+                      BridgeTypeAnnotation(
+                          BridgeTypeRef.type(RuntimeTypes.boolType)),
+                      true),
                 ],
-                returns: BridgeTypeAnnotation(
-                    BridgeTypeRef(CoreTypes.list, [BridgeTypeRef.type(RuntimeTypes.dynamicType)]))),
+                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list,
+                    [BridgeTypeRef.type(RuntimeTypes.dynamicType)]))),
             isStatic: false),
       },
       getters: {
         'iterator': BridgeMethodDef(
             BridgeFunctionDef(
                 params: [],
-                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.iterator, [
+                returns:
+                    BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.iterator, [
                   BridgeTypeRef.ref('E'),
                 ]))),
             isStatic: false),
@@ -98,39 +118,46 @@ class $Iterable<E> implements Iterable<E>, $Instance {
 
   static $Value? _map(Runtime runtime, $Value? target, List<$Value?> args) {
     final toElement = args[0] as EvalCallable;
-    return $Iterable.wrap((target!.$value as Iterable).map((e) => toElement.call(runtime, null, [e])!.$value));
+    return $Iterable.wrap((target!.$value as Iterable)
+        .map((e) => toElement.call(runtime, null, [e])!.$value));
   }
 
   static const $Function __toList = $Function(_toList);
 
   static $Value? _toList(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $List.wrap((target!.$value as Iterable).toList(growable: args[0]?.$value ?? true));
+    return $List.wrap(
+        (target!.$value as Iterable).toList(growable: args[0]?.$value ?? true));
   }
 
   static const $Function __any = $Function(_any);
 
   static $Value? _any(Runtime runtime, $Value? target, List<$Value?> args) {
     final test = args[0] as EvalCallable;
-    return $bool((target!.$value as Iterable).any((e) => test.call(runtime, null, [e])!.$value as bool));
+    return $bool((target!.$value as Iterable)
+        .any((e) => test.call(runtime, null, [e])!.$value as bool));
   }
 
   static const $Function __every = $Function(_every);
 
   static $Value? _every(Runtime runtime, $Value? target, List<$Value?> args) {
     final test = args[0] as EvalCallable;
-    return $bool((target!.$value as Iterable).every((e) => test.call(runtime, null, [e])!.$value as bool));
+    return $bool((target!.$value as Iterable)
+        .every((e) => test.call(runtime, null, [e])!.$value as bool));
   }
 
   static const $Function __elementAt = $Function(_elementAt);
 
-  static $Value? _elementAt(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _elementAt(
+      Runtime runtime, $Value? target, List<$Value?> args) {
     return (target!.$value as List).elementAt(args[0]!.$value);
   }
 
   static const $Function __followedBy = $Function(_followedBy);
 
-  static $Value? _followedBy(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $Iterable.wrap((target!.$value as Iterable).followedBy(args[0]!.$value as Iterable));
+  static $Value? _followedBy(
+      Runtime runtime, $Value? target, List<$Value?> args) {
+    return $Iterable.wrap(
+        (target!.$value as Iterable).followedBy(args[0]!.$value as Iterable));
   }
 
   static const $Function __skip = $Function(_skip);
@@ -141,9 +168,11 @@ class $Iterable<E> implements Iterable<E>, $Instance {
 
   static const $Function __skipWhile = $Function(_skipWhile);
 
-  static $Value? _skipWhile(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _skipWhile(
+      Runtime runtime, $Value? target, List<$Value?> args) {
     final test = args[0] as EvalCallable;
-    return $Iterable.wrap((target!.$value as List).skipWhile((e) => test.call(runtime, null, [e])!.$value as bool));
+    return $Iterable.wrap((target!.$value as List)
+        .skipWhile((e) => test.call(runtime, null, [e])!.$value as bool));
   }
 
   static const $Function __take = $Function(_take);
@@ -174,16 +203,19 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   bool every(bool Function(E element) test) => $value.every(test);
 
   @override
-  Iterable<T> expand<T>(Iterable<T> Function(E element) toElements) => $value.expand<T>(toElements);
+  Iterable<T> expand<T>(Iterable<T> Function(E element) toElements) =>
+      $value.expand<T>(toElements);
 
   @override
   E get first => $value.first;
 
   @override
-  E firstWhere(bool Function(E element) test, {E Function()? orElse}) => $value.firstWhere(test, orElse: orElse);
+  E firstWhere(bool Function(E element) test, {E Function()? orElse}) =>
+      $value.firstWhere(test, orElse: orElse);
 
   @override
-  T fold<T>(T initialValue, T Function(T previousValue, E element) combine) => $value.fold(initialValue, combine);
+  T fold<T>(T initialValue, T Function(T previousValue, E element) combine) =>
+      $value.fold(initialValue, combine);
 
   @override
   Iterable<E> followedBy(Iterable<E> other) => $value.followedBy(other);
@@ -207,7 +239,8 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   E get last => $value.last;
 
   @override
-  E lastWhere(bool Function(E element) test, {E Function()? orElse}) => $value.lastWhere(test, orElse: orElse);
+  E lastWhere(bool Function(E element) test, {E Function()? orElse}) =>
+      $value.lastWhere(test, orElse: orElse);
 
   @override
   int get length => $value.length;
@@ -222,7 +255,8 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   E get single => $value.single;
 
   @override
-  E singleWhere(bool Function(E element) test, {E Function()? orElse}) => $value.singleWhere(test, orElse: orElse);
+  E singleWhere(bool Function(E element) test, {E Function()? orElse}) =>
+      $value.singleWhere(test, orElse: orElse);
 
   @override
   Iterable<E> skip(int count) => $value.skip(count);
@@ -249,5 +283,6 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   Iterable<T> whereType<T>() => $value.whereType<T>();
 
   @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType(CoreTypes.iterable);
+  int $getRuntimeType(Runtime runtime) =>
+      runtime.lookupType(CoreTypes.iterable);
 }

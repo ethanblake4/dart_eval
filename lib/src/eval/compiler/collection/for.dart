@@ -12,7 +12,8 @@ import 'package:dart_eval/src/eval/compiler/statement/variable_declaration.dart'
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 
-List<TypeRef> compileForElementForList(ForElement e, Variable list, CompilerContext ctx, bool box) {
+List<TypeRef> compileForElementForList(
+    ForElement e, Variable list, CompilerContext ctx, bool box) {
   final potentialReturnTypes = <TypeRef>[];
   final parts = e.forLoopParts;
 
@@ -20,10 +21,13 @@ List<TypeRef> compileForElementForList(ForElement e, Variable list, CompilerCont
     final iterable = compileExpression(parts.iterable, ctx).boxIfNeeded(ctx);
     final itype = iterable.type;
     if (!itype.isAssignableTo(ctx, EvalTypes.getIterableType(ctx))) {
-      throw CompileError('Cannot iterate over ${iterable.type}', parts, ctx.library, ctx);
+      throw CompileError(
+          'Cannot iterate over ${iterable.type}', parts, ctx.library, ctx);
     }
 
-    final elementType = itype.specifiedTypeArgs.isEmpty ? EvalTypes.dynamicType : itype.specifiedTypeArgs[0];
+    final elementType = itype.specifiedTypeArgs.isEmpty
+        ? EvalTypes.dynamicType
+        : itype.specifiedTypeArgs[0];
 
     final iterator = iterable.getProperty(ctx, 'iterator');
     late Reference loopVariable;
@@ -32,26 +36,37 @@ List<TypeRef> compileForElementForList(ForElement e, Variable list, CompilerCont
         initialization: (_ctx) {
           if (parts is ForEachPartsWithDeclaration) {
             if (parts.loopVariable.type != null &&
-                !elementType.isAssignableTo(ctx, TypeRef.fromAnnotation(ctx, ctx.library, parts.loopVariable.type!))) {
-              throw CompileError('Cannot assign $elementType to ${parts.loopVariable.type}', parts, ctx.library, ctx);
+                !elementType.isAssignableTo(
+                    ctx,
+                    TypeRef.fromAnnotation(
+                        ctx, ctx.library, parts.loopVariable.type!))) {
+              throw CompileError(
+                  'Cannot assign $elementType to ${parts.loopVariable.type}',
+                  parts,
+                  ctx.library,
+                  ctx);
             }
             final name = parts.loopVariable.name.value() as String;
-            ctx.setLocal(name, BuiltinValue().push(ctx).copyWith(type: elementType));
+            ctx.setLocal(
+                name, BuiltinValue().push(ctx).copyWith(type: elementType));
             loopVariable = IdentifierReference(null, name);
           } else if (parts is ForEachPartsWithIdentifier) {
             loopVariable = compileExpressionAsReference(parts.identifier, ctx);
             final type = loopVariable.resolveType(ctx);
             if (!elementType.isAssignableTo(_ctx, type)) {
-              throw CompileError('Cannot assign $elementType to $type', parts, ctx.library, ctx);
+              throw CompileError('Cannot assign $elementType to $type', parts,
+                  ctx.library, ctx);
             }
           }
         },
         condition: (_ctx) => iterator.invoke(_ctx, 'moveNext', []).result,
         body: (_ctx, ert) {
-          potentialReturnTypes.addAll(compileListElement(e.body, list, _ctx, box));
+          potentialReturnTypes
+              .addAll(compileListElement(e.body, list, _ctx, box));
           return StatementInfo(-1);
         },
-        update: (ctx) => loopVariable.setValue(ctx, iterator.getProperty(ctx, 'current')),
+        update: (ctx) =>
+            loopVariable.setValue(ctx, iterator.getProperty(ctx, 'current')),
         updateBeforeBody: true);
   }
 
@@ -67,9 +82,12 @@ List<TypeRef> compileForElementForList(ForElement e, Variable list, CompilerCont
           }
         }
       },
-      condition: parts.condition == null ? null : (_ctx) => compileExpression(parts.condition!, _ctx),
+      condition: parts.condition == null
+          ? null
+          : (_ctx) => compileExpression(parts.condition!, _ctx),
       body: (_ctx, ert) {
-        potentialReturnTypes.addAll(compileListElement(e.body, list, _ctx, box));
+        potentialReturnTypes
+            .addAll(compileListElement(e.body, list, _ctx, box));
         return StatementInfo(-1);
       },
       update: (_ctx) {

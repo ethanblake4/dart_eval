@@ -30,7 +30,8 @@ class $Map<K, V> implements Map<K, V>, $Instance {
 
   static const $Function __indexGet = $Function(_indexGet);
 
-  static $Value? _indexGet(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _indexGet(
+      Runtime runtime, $Value? target, List<$Value?> args) {
     final idx = args[0]!;
     final map = target!.$value as Map;
     if (map.values.first is $Value) {
@@ -41,14 +42,16 @@ class $Map<K, V> implements Map<K, V>, $Instance {
 
   static const $Function __indexSet = $Function(_indexSet);
 
-  static $Value? _indexSet(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _indexSet(
+      Runtime runtime, $Value? target, List<$Value?> args) {
     final idx = args[0]!;
     final value = args[1]!;
     return (target!.$value as Map)[idx.$value] = value;
   }
 
   @override
-  Map get $reified => $value.map((k, v) => MapEntry(k is $Value ? k.$reified : k, v is $Value ? v.$reified : v));
+  Map get $reified => $value.map((k, v) =>
+      MapEntry(k is $Value ? k.$reified : k, v is $Value ? v.$reified : v));
 
   @override
   int $getRuntimeType(Runtime runtime) => RuntimeTypes.mapType;
@@ -67,7 +70,8 @@ class $Map<K, V> implements Map<K, V>, $Instance {
   void addAll(Map<K, V> other) => $value.addAll(other);
 
   @override
-  void addEntries(Iterable<MapEntry<K, V>> newEntries) => $value.addEntries(newEntries);
+  void addEntries(Iterable<MapEntry<K, V>> newEntries) =>
+      $value.addEntries(newEntries);
 
   @override
   Map<RK, RV> cast<RK, RV>() => $value.cast<RK, RV>();
@@ -121,7 +125,8 @@ class $Map<K, V> implements Map<K, V>, $Instance {
   V? remove(Object? key) => $value.remove(key);
 
   @override
-  void removeWhere(bool Function(K key, V value) test) => $value.removeWhere(test);
+  void removeWhere(bool Function(K key, V value) test) =>
+      $value.removeWhere(test);
 
   @override
   V update(K key, V Function(V value) update, {V Function()? ifAbsent}) =>

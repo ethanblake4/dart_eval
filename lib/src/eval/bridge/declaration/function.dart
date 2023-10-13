@@ -19,7 +19,8 @@ class BridgeParameter {
 
   /// Connect the generated [_$BridgeParameterFromJson] function to the `fromJson`
   /// factory.
-  factory BridgeParameter.fromJson(Map<String, dynamic> json) => _$BridgeParameterFromJson(json);
+  factory BridgeParameter.fromJson(Map<String, dynamic> json) =>
+      _$BridgeParameterFromJson(json);
 
   /// Connect the generated [_$BridgeParameterToJson] function to the `toJson` method.
   Map<String, dynamic> toJson() => _$BridgeParameterToJson(this);
@@ -29,7 +30,10 @@ class BridgeParameter {
 @JsonSerializable()
 class BridgeFunctionDef {
   const BridgeFunctionDef(
-      {required this.returns, this.params = const [], this.namedParams = const [], this.generics = const {}});
+      {required this.returns,
+      this.params = const [],
+      this.namedParams = const [],
+      this.generics = const {}});
 
   /// The return type of the function.
   final BridgeTypeAnnotation returns;
@@ -45,7 +49,8 @@ class BridgeFunctionDef {
 
   /// Connect the generated [_$BridgeFunctionDescriptorFromJson] function to the `fromJson`
   /// factory.
-  factory BridgeFunctionDef.fromJson(Map<String, dynamic> json) => _$BridgeFunctionDefFromJson(json);
+  factory BridgeFunctionDef.fromJson(Map<String, dynamic> json) =>
+      _$BridgeFunctionDefFromJson(json);
 
   /// Connect the generated [_$BridgeFunctionDescriptorToJson] function to the `toJson` method.
   Map<String, dynamic> toJson() => _$BridgeFunctionDefToJson(this);
@@ -67,7 +72,8 @@ class BridgeFunctionDeclaration implements BridgeDeclaration {
 
   /// Connect the generated [_$BridgeFunctionDeclarationFromJson] function to the `fromJson`
   /// factory.
-  factory BridgeFunctionDeclaration.fromJson(Map<String, dynamic> json) => _$BridgeFunctionDeclarationFromJson(json);
+  factory BridgeFunctionDeclaration.fromJson(Map<String, dynamic> json) =>
+      _$BridgeFunctionDeclarationFromJson(json);
 
   /// Connect the generated [_$BridgeFunctionDeclarationToJson] function to the `toJson` method.
   Map<String, dynamic> toJson() => _$BridgeFunctionDeclarationToJson(this);

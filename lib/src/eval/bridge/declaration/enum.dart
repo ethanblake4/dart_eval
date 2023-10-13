@@ -8,11 +8,11 @@ part 'enum.g.dart';
 @JsonSerializable()
 class BridgeEnumDef implements BridgeDeclaration {
   const BridgeEnumDef(this.type,
-      {required this.values,
-      required this.methods,
-      required this.getters,
-      required this.setters,
-      required this.fields});
+      {this.values = const {},
+      this.methods = const {},
+      this.getters = const {},
+      this.setters = const {},
+      this.fields = const {}});
 
   final BridgeTypeRef type;
   final List<String> values;
@@ -23,11 +23,17 @@ class BridgeEnumDef implements BridgeDeclaration {
 
   /// Connect the generated [_$BridgeClassDeclarationFromJson] function to the `fromJson`
   /// factory.
-  factory BridgeEnumDef.fromJson(Map<String, dynamic> json) => _$BridgeEnumDefFromJson(json);
+  factory BridgeEnumDef.fromJson(Map<String, dynamic> json) =>
+      _$BridgeEnumDefFromJson(json);
 
   /// Connect the generated [_$BridgeClassDeclarationToJson] function to the `toJson` method.
   Map<String, dynamic> toJson() => _$BridgeEnumDefToJson(this);
 
-  BridgeEnumDef copyWith({BridgeTypeRef? type}) => BridgeEnumDef(type ?? this.type,
-      values: values, methods: methods, getters: getters, setters: setters, fields: fields);
+  BridgeEnumDef copyWith({BridgeTypeRef? type}) =>
+      BridgeEnumDef(type ?? this.type,
+          values: values,
+          methods: methods,
+          getters: getters,
+          setters: setters,
+          fields: fields);
 }

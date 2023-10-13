@@ -21,7 +21,8 @@ class DartAsyncPlugin implements EvalPlugin {
   @override
   void configureForRuntime(Runtime runtime) {
     // Register Completer
-    runtime.registerBridgeFunc('dart:async', 'Completer.', const $Completer_new());
+    runtime.registerBridgeFunc(
+        'dart:async', 'Completer.', const $Completer_new());
 
     // Register StreamSubscription
 
@@ -32,10 +33,13 @@ class DartAsyncPlugin implements EvalPlugin {
     runtime.registerBridgeFunc('dart:async', 'Stream.value', $Stream.$_value);
     //runtime.registerBridgeFunc('dart:async', 'Stream.error', $Stream.$error);
     //runtime.registerBridgeFunc('dart:async', 'Stream.fromFuture', $Stream.$fromFuture);
-    runtime.registerBridgeFunc('dart:async', 'Stream.fromIterable', $Stream.$fromIterable);
-    runtime.registerBridgeFunc('dart:async', 'Stream.periodic', $Stream.$periodic);
+    runtime.registerBridgeFunc(
+        'dart:async', 'Stream.fromIterable', $Stream.$fromIterable);
+    runtime.registerBridgeFunc(
+        'dart:async', 'Stream.periodic', $Stream.$periodic);
 
     // Register StreamController
-    runtime.registerBridgeFunc('dart:async', 'StreamController.', $StreamController.$new);
+    runtime.registerBridgeFunc(
+        'dart:async', 'StreamController.', $StreamController.$new);
   }
 }

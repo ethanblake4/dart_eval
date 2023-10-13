@@ -17,8 +17,10 @@ Variable compileSetOrMapLiteral(SetOrMapLiteral l, CompilerContext ctx) {
     if (typeArgs.length == 1) {
       throw CompileError('Sets are not currently supported');
     }
-    specifiedKeyType = TypeRef.fromAnnotation(ctx, ctx.library, typeArgs.arguments[0]);
-    specifiedValueType = TypeRef.fromAnnotation(ctx, ctx.library, typeArgs.arguments[1]);
+    specifiedKeyType =
+        TypeRef.fromAnnotation(ctx, ctx.library, typeArgs.arguments[0]);
+    specifiedValueType =
+        TypeRef.fromAnnotation(ctx, ctx.library, typeArgs.arguments[1]);
   }
 
   Variable? _collection;
@@ -29,8 +31,8 @@ Variable compileSetOrMapLiteral(SetOrMapLiteral l, CompilerContext ctx) {
   final keyResultTypes = <TypeRef>[];
   final valueResultTypes = <TypeRef>[];
   for (final e in elements) {
-    final _result =
-        compileSetOrMapElement(e, _collection, ctx, specifiedKeyType, specifiedValueType, _boxSetOrMapElements);
+    final _result = compileSetOrMapElement(e, _collection, ctx,
+        specifiedKeyType, specifiedValueType, _boxSetOrMapElements);
     _collection = _result.first;
     keyResultTypes.addAll(_result.second.map((e) => e.first));
     valueResultTypes.addAll(_result.second.map((e) => e.second));
@@ -51,8 +53,13 @@ Variable compileSetOrMapLiteral(SetOrMapLiteral l, CompilerContext ctx) {
   return _collection!;
 }
 
-Pair<Variable, List<Pair<TypeRef, TypeRef>>> compileSetOrMapElement(CollectionElement e, Variable? setOrMap,
-    CompilerContext ctx, TypeRef? specifiedKeyType, TypeRef? specifiedValueType, bool box) {
+Pair<Variable, List<Pair<TypeRef, TypeRef>>> compileSetOrMapElement(
+    CollectionElement e,
+    Variable? setOrMap,
+    CompilerContext ctx,
+    TypeRef? specifiedKeyType,
+    TypeRef? specifiedValueType,
+    bool box) {
   if (e is Expression) {
     throw CompileError('Sets are not currently supported');
   } else if (e is MapLiteralEntry) {
@@ -68,13 +75,16 @@ Pair<Variable, List<Pair<TypeRef, TypeRef>>> compileSetOrMapElement(CollectionEl
 
     var _key = compileExpression(e.key, ctx);
 
-    if (specifiedKeyType != null && !_key.type.isAssignableTo(ctx, specifiedKeyType)) {
-      throw CompileError('Cannot use key of type ${_key.type} in map of type <$specifiedKeyType, $specifiedValueType>');
+    if (specifiedKeyType != null &&
+        !_key.type.isAssignableTo(ctx, specifiedKeyType)) {
+      throw CompileError(
+          'Cannot use key of type ${_key.type} in map of type <$specifiedKeyType, $specifiedValueType>');
     }
 
     var _value = compileExpression(e.value, ctx);
 
-    if (specifiedValueType != null && !_value.type.isAssignableTo(ctx, specifiedValueType)) {
+    if (specifiedValueType != null &&
+        !_value.type.isAssignableTo(ctx, specifiedValueType)) {
       throw CompileError(
           'Cannot use value of type ${_value.type} in map of type <$specifiedKeyType, $specifiedValueType>');
     }
@@ -84,7 +94,10 @@ Pair<Variable, List<Pair<TypeRef, TypeRef>>> compileSetOrMapElement(CollectionEl
       _value = _value.boxIfNeeded(ctx);
     }
 
-    ctx.pushOp(MapSet.make(setOrMap.scopeFrameOffset, _key.scopeFrameOffset, _value.scopeFrameOffset), MapSet.LEN);
+    ctx.pushOp(
+        MapSet.make(setOrMap.scopeFrameOffset, _key.scopeFrameOffset,
+            _value.scopeFrameOffset),
+        MapSet.LEN);
 
     return Pair(setOrMap, [Pair(_key.type, _value.type)]);
   }

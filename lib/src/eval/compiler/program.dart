@@ -81,18 +81,32 @@ class Program {
     b.add([0x45, 0x56, 0x43, 0x00]); // EVC\0
     b.add(Evc.i32b(Runtime.versionCode)); // version
 
-    _writeMetaBlock(b, topLevelDeclarations.map((key, value) => MapEntry(key.toString(), value)));
-    _writeMetaBlock(b, instanceDeclarations.map((key, value) => MapEntry(key.toString(), value)));
+    _writeMetaBlock(
+        b,
+        topLevelDeclarations
+            .map((key, value) => MapEntry(key.toString(), value)));
+    _writeMetaBlock(
+        b,
+        instanceDeclarations
+            .map((key, value) => MapEntry(key.toString(), value)));
     //_writeMetaBlock(b, typeNames);
     _writeMetaBlock(b, [for (final t in typeTypes) t.toList()]);
-    _writeMetaBlock(b, typeIds.map((key, value) => MapEntry(key.toString(), value)));
+    _writeMetaBlock(
+        b, typeIds.map((key, value) => MapEntry(key.toString(), value)));
     _writeMetaBlock(b, bridgeLibraryMappings);
-    _writeMetaBlock(b, bridgeFunctionMappings.map((key, value) => MapEntry(key.toString(), value)));
+    _writeMetaBlock(
+        b,
+        bridgeFunctionMappings
+            .map((key, value) => MapEntry(key.toString(), value)));
     _writeMetaBlock(b, constantPool);
     _writeMetaBlock(b, [for (final rt in runtimeTypes) rt.toJson()]);
     _writeMetaBlock(b, globalInitializers);
-    _writeMetaBlock(b, enumMappings.map((key, value) => MapEntry(key.toString(), value)));
-    _writeMetaBlock(b, overrideMap.map((key, value) => MapEntry(key, [value.offset, value.versionConstraint])));
+    _writeMetaBlock(
+        b, enumMappings.map((key, value) => MapEntry(key.toString(), value)));
+    _writeMetaBlock(
+        b,
+        overrideMap.map((key, value) =>
+            MapEntry(key, [value.offset, value.versionConstraint])));
 
     for (final op in ops) {
       b.add(Runtime.opcodeFrom(op));

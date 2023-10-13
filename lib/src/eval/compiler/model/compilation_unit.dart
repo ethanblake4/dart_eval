@@ -42,7 +42,10 @@ class DartCompilationUnit {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) || other is DartCompilationUnit && runtimeType == other.runtimeType && uri == other.uri;
+      identical(this, other) ||
+      other is DartCompilationUnit &&
+          runtimeType == other.runtimeType &&
+          uri == other.uri;
 
   @override
   int get hashCode => uri.hashCode;

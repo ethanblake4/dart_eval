@@ -25,17 +25,8 @@ class RuntimeTypes {
   /// Bridged runtime type for [bool]
   static const int boolType = -5;
 
-  /// Bridged runtime type for [num]
-  static const int numType = -6;
-
   /// Bridged runtime type for [String]
   static const int stringType = -7;
-
-  /// Bridged runtime type for [int]
-  static const int intType = -8;
-
-  /// Bridged runtime type for [double]
-  static const int doubleType = -9;
 
   /// Bridged runtime type for [Map]
   static const int mapType = -10;
@@ -63,10 +54,7 @@ final Map<TypeRef, int> runtimeTypeMap = {
   EvalTypes.nullType: RuntimeTypes.nullType,
   EvalTypes.objectType: RuntimeTypes.objectType,
   EvalTypes.boolType: RuntimeTypes.boolType,
-  EvalTypes.numType: RuntimeTypes.numType,
   EvalTypes.stringType: RuntimeTypes.stringType,
-  EvalTypes.intType: RuntimeTypes.intType,
-  EvalTypes.doubleType: RuntimeTypes.doubleType,
   EvalTypes.mapType: RuntimeTypes.mapType,
   EvalTypes.functionType: RuntimeTypes.functionType,
   EvalTypes.typeType: RuntimeTypes.typeType,
@@ -80,10 +68,7 @@ final Map<int, TypeRef> inverseRuntimeTypeMap = {
   RuntimeTypes.nullType: EvalTypes.nullType,
   RuntimeTypes.objectType: EvalTypes.objectType,
   RuntimeTypes.boolType: EvalTypes.boolType,
-  RuntimeTypes.numType: EvalTypes.numType,
   RuntimeTypes.stringType: EvalTypes.stringType,
-  RuntimeTypes.intType: EvalTypes.intType,
-  RuntimeTypes.doubleType: EvalTypes.doubleType,
   RuntimeTypes.mapType: EvalTypes.mapType,
   RuntimeTypes.functionType: EvalTypes.functionType,
   RuntimeTypes.typeType: EvalTypes.typeType
@@ -91,6 +76,15 @@ final Map<int, TypeRef> inverseRuntimeTypeMap = {
 
 /// This class contains dart:core bridge type specs for convenience
 class CoreTypes {
+  /// Bridge type spec for [num]
+  static const num = BridgeTypeSpec('dart:core', 'num');
+
+  /// Bridge type spec for [int]
+  static const int = BridgeTypeSpec('dart:core', 'int');
+
+  /// Bridge type spec for [double]
+  static const double = BridgeTypeSpec('dart:core', 'double');
+
   /// Bridge type spec for [$Duration]
   static const duration = BridgeTypeSpec('dart:core', 'Duration');
 
@@ -126,6 +120,12 @@ class CoreTypes {
 
   /// Bridge type spec for [AssertionError]
   static const assertionError = BridgeTypeSpec('dart:core', 'AssertionError');
+
+  /// Bridge type spec for [Comparable]
+  static const comparable = BridgeTypeSpec('dart:core', 'Comparable');
+
+  /// Bridge type spec for [StringBuffer]
+  static const stringBuffer = BridgeTypeSpec('dart:core', 'StringBuffer');
 }
 
 /// This class contains dart:async bridge type specs for convenience
@@ -134,13 +134,16 @@ class AsyncTypes {
   static const stream = BridgeTypeSpec('dart:async', 'Stream');
 
   /// Bridge type spec for [$StreamTransformer]
-  static const streamTransformer = BridgeTypeSpec('dart:async', 'StreamTransformer');
+  static const streamTransformer =
+      BridgeTypeSpec('dart:async', 'StreamTransformer');
 
   /// Bridge type spec for [$StreamController]
-  static const streamController = BridgeTypeSpec('dart:async', 'StreamController');
+  static const streamController =
+      BridgeTypeSpec('dart:async', 'StreamController');
 
   /// Bridge type spec for [$StreamSubscription]
-  static const streamSubscription = BridgeTypeSpec('dart:async', 'StreamSubscription');
+  static const streamSubscription =
+      BridgeTypeSpec('dart:async', 'StreamSubscription');
 
   /// Bridge type spec for [$StreamSink]
   static const streamSink = BridgeTypeSpec('dart:async', 'StreamSink');
@@ -188,13 +191,15 @@ class IoTypes {
   static const fileSystemEntity = BridgeTypeSpec('dart:io', 'FileSystemEntity');
 
   /// Bridge type spec for [$FileSystemEntityType]
-  static const fileSystemEntityType = BridgeTypeSpec('dart:io', 'FileSystemEntityType');
+  static const fileSystemEntityType =
+      BridgeTypeSpec('dart:io', 'FileSystemEntityType');
 
   /// Bridge type spec for [$FileStat]
   static const fileStat = BridgeTypeSpec('dart:io', 'FileStat');
 
   /// Bridge type spec for [$FileSystemException]
-  static const fileSystemException = BridgeTypeSpec('dart:io', 'FileSystemException');
+  static const fileSystemException =
+      BridgeTypeSpec('dart:io', 'FileSystemException');
 
   /// Bridge type spec for [$FileMode]
   static const fileMode = BridgeTypeSpec('dart:io', 'FileMode');
@@ -202,12 +207,17 @@ class IoTypes {
   /// Bridge type spec for [$IOSink]
   static const ioSink = BridgeTypeSpec('dart:io', 'IOSink');
 
+  /// Bridge type spec for [StringSink]
+  static const stringSink = BridgeTypeSpec('dart:io', 'StringSink');
+
   /// Bridge type spec for [$HttpClient]
   static const httpClient = BridgeTypeSpec('dart:io', 'HttpClient');
 
   /// Bridge type spec for [$HttpClientRequest]
-  static const httpClientRequest = BridgeTypeSpec('dart:io', 'HttpClientRequest');
+  static const httpClientRequest =
+      BridgeTypeSpec('dart:io', 'HttpClientRequest');
 
   /// Bridge type spec for [$HttpClientResponse]
-  static const httpClientResponse = BridgeTypeSpec('dart:io', 'HttpClientResponse');
+  static const httpClientResponse =
+      BridgeTypeSpec('dart:io', 'HttpClientResponse');
 }

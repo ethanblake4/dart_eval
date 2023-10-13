@@ -21,11 +21,13 @@ extension TearOff on Variable {
     final Declaration dec;
     TypeRef? targetType;
     if (methodOffset!.className != null) {
-      dec = ctx.instanceDeclarationsMap[methodOffset!.file]![methodOffset!.className!]![methodOffset!.name]!
-          as MethodDeclaration;
-      targetType = ctx.visibleTypes[methodOffset!.file!]![methodOffset!.className!]!;
+      dec = ctx.instanceDeclarationsMap[methodOffset!.file]![
+          methodOffset!.className!]![methodOffset!.name]! as MethodDeclaration;
+      targetType =
+          ctx.visibleTypes[methodOffset!.file!]![methodOffset!.className!]!;
     } else {
-      final _dec = ctx.topLevelDeclarationsMap[methodOffset!.file]![methodOffset!.name]!;
+      final _dec =
+          ctx.topLevelDeclarationsMap[methodOffset!.file]![methodOffset!.name]!;
       if (_dec.isBridge) {
         throw CompileError('Cannot tear off bridged function');
       }
@@ -62,8 +64,8 @@ extension TearOff on Variable {
     ctx.setLocal('#prev', $prev);
 
     ctx.scopeFrameOffset += _existingAllocs;
-    final resolvedParams =
-        resolveFPLDefaults(ctx, parameters!, false, allowUnboxed: true, sortNamed: true, ignoreDefaults: true);
+    final resolvedParams = resolveFPLDefaults(ctx, parameters!, false,
+        allowUnboxed: true, sortNamed: true, ignoreDefaults: true);
 
     var i = 1;
 
@@ -71,8 +73,10 @@ extension TearOff on Variable {
 
     Variable? $target;
     if (dec is MethodDeclaration) {
-      final targetOffset = BuiltinValue(intval: methodOffset!.targetScopeFrameOffset!).push(ctx);
-      ctx.pushOp(IndexList.make(0, targetOffset.scopeFrameOffset), IndexList.LEN);
+      final targetOffset =
+          BuiltinValue(intval: methodOffset!.targetScopeFrameOffset!).push(ctx);
+      ctx.pushOp(
+          IndexList.make(0, targetOffset.scopeFrameOffset), IndexList.LEN);
       $target = Variable.alloc(ctx, targetType!);
       ctx.pushOp(PushArg.make($target.scopeFrameOffset), PushArg.LEN);
     }
@@ -100,8 +104,10 @@ extension TearOff on Variable {
     }
 
     if (dec is MethodDeclaration) {
-      final targetOffset = BuiltinValue(intval: methodOffset!.targetScopeFrameOffset!).push(ctx);
-      ctx.pushOp(IndexList.make(0, targetOffset.scopeFrameOffset), IndexList.LEN);
+      final targetOffset =
+          BuiltinValue(intval: methodOffset!.targetScopeFrameOffset!).push(ctx);
+      ctx.pushOp(
+          IndexList.make(0, targetOffset.scopeFrameOffset), IndexList.LEN);
       final $target = Variable.alloc(ctx, targetType!);
       final invokeOp = InvokeDynamic.make($target.scopeFrameOffset, methodName);
       ctx.pushOp(invokeOp, InvokeDynamic.len(invokeOp));
@@ -117,8 +123,9 @@ extension TearOff on Variable {
     var returnType = EvalTypes.dynamicType;
     if (methodReturnType != null) {
       returnType = TypeRef.fromAnnotation(ctx, ctx.library, methodReturnType);
-      returnType =
-          returnType.copyWith(boxed: dec is MethodDeclaration || !returnType.isUnboxedAcrossFunctionBoundaries);
+      returnType = returnType.copyWith(
+          boxed: dec is MethodDeclaration ||
+              !returnType.isUnboxedAcrossFunctionBoundaries);
     }
     var rV = Variable.alloc(ctx, returnType);
     rV = rV.boxIfNeeded(ctx);
@@ -131,34 +138,50 @@ extension TearOff on Variable {
     ctx.restoreState(ctxSaveState);
     ctx.scopeFrameOffset = sfo;
 
-    final positional = (parameters.parameters.where((element) => element.isPositional));
-    final requiredPositionalArgCount = positional.where((element) => element.isRequired).length;
+    final positional =
+        (parameters.parameters.where((element) => element.isPositional));
+    final requiredPositionalArgCount =
+        positional.where((element) => element.isRequired).length;
 
     final positionalArgTypes = positional
-        .map((a) => a is NormalFormalParameter ? a : (a as DefaultFormalParameter).parameter)
+        .map((a) => a is NormalFormalParameter
+            ? a
+            : (a as DefaultFormalParameter).parameter)
         .cast<SimpleFormalParameter>()
-        .map((a) => a.type == null ? EvalTypes.dynamicType : TypeRef.fromAnnotation(ctx, ctx.library, a.type!))
+        .map((a) => a.type == null
+            ? EvalTypes.dynamicType
+            : TypeRef.fromAnnotation(ctx, ctx.library, a.type!))
         .map((t) => t.toRuntimeType(ctx))
         .map((rt) => rt.toJson())
         .toList();
 
     final named = (parameters.parameters.where((element) => element.isNamed));
     final sortedNamedArgs = named.toList()
-      ..sort((e1, e2) => (e1.name!.value() as String).compareTo((e2.name!.value() as String)));
-    final sortedNamedArgNames = sortedNamedArgs.map((e) => e.name!.value() as String).toList();
+      ..sort((e1, e2) =>
+          (e1.name!.value() as String).compareTo((e2.name!.value() as String)));
+    final sortedNamedArgNames =
+        sortedNamedArgs.map((e) => e.name!.value() as String).toList();
 
     final sortedNamedArgTypes = sortedNamedArgs
         .map((e) => e is DefaultFormalParameter ? e.parameter : e)
         .cast<SimpleFormalParameter>()
-        .map((a) => a.type == null ? EvalTypes.dynamicType : TypeRef.fromAnnotation(ctx, ctx.library, a.type!))
+        .map((a) => a.type == null
+            ? EvalTypes.dynamicType
+            : TypeRef.fromAnnotation(ctx, ctx.library, a.type!))
         .map((t) => t.toRuntimeType(ctx))
         .map((rt) => rt.toJson())
         .toList();
 
     BuiltinValue(intval: requiredPositionalArgCount).push(ctx).pushArg(ctx);
-    BuiltinValue(intval: ctx.constantPool.addOrGet(positionalArgTypes)).push(ctx).pushArg(ctx);
-    BuiltinValue(intval: ctx.constantPool.addOrGet(sortedNamedArgNames)).push(ctx).pushArg(ctx);
-    BuiltinValue(intval: ctx.constantPool.addOrGet(sortedNamedArgTypes)).push(ctx).pushArg(ctx);
+    BuiltinValue(intval: ctx.constantPool.addOrGet(positionalArgTypes))
+        .push(ctx)
+        .pushArg(ctx);
+    BuiltinValue(intval: ctx.constantPool.addOrGet(sortedNamedArgNames))
+        .push(ctx)
+        .pushArg(ctx);
+    BuiltinValue(intval: ctx.constantPool.addOrGet(sortedNamedArgTypes))
+        .push(ctx)
+        .pushArg(ctx);
 
     ctx.pushOp(PushFunctionPtr.make(fnOffset), PushFunctionPtr.LEN);
 

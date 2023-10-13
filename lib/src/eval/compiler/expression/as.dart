@@ -18,17 +18,24 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
   }
 
   // Otherwise type-test
-  ctx.pushOp(IsType.make(V.scopeFrameOffset, runtimeTypeMap[slot] ?? ctx.typeRefIndexMap[slot]!, false), IsType.LEN);
+  ctx.pushOp(
+      IsType.make(V.scopeFrameOffset,
+          runtimeTypeMap[slot] ?? ctx.typeRefIndexMap[slot]!, false),
+      IsType.LEN);
   final Vis = Variable.alloc(ctx, EvalTypes.boolType.copyWith(boxed: false));
 
   // And assert
-  final errMsg = BuiltinValue(stringval: "TypeError: Not a subtype of type TYPE").push(ctx);
-  ctx.pushOp(Assert.make(Vis.scopeFrameOffset, errMsg.scopeFrameOffset), Assert.LEN);
+  final errMsg =
+      BuiltinValue(stringval: "TypeError: Not a subtype of type TYPE")
+          .push(ctx);
+  ctx.pushOp(
+      Assert.make(Vis.scopeFrameOffset, errMsg.scopeFrameOffset), Assert.LEN);
 
   // If the type changes between num and int/double, unbox/box
-  if (slot == EvalTypes.numType) {
+  if (slot == EvalTypes.getNumType(ctx)) {
     V = V.boxIfNeeded(ctx);
-  } else if (slot == EvalTypes.intType || slot == EvalTypes.doubleType) {
+  } else if (slot == EvalTypes.getIntType(ctx) ||
+      slot == EvalTypes.getDoubleType(ctx)) {
     V = V.unboxIfNeeded(ctx);
   }
 

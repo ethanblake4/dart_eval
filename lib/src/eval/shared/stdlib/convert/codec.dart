@@ -20,19 +20,25 @@ class $Codec implements $Instance {
       methods: {
         'encode': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
-            params: [BridgeParameter('input', BridgeTypeAnnotation(BridgeTypeRef.ref('S')), false)])),
+            params: [
+              BridgeParameter(
+                  'input', BridgeTypeAnnotation(BridgeTypeRef.ref('S')), false)
+            ])),
         'decode': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef.ref('S')),
-            params: [BridgeParameter('encoded', BridgeTypeAnnotation(BridgeTypeRef.ref('T')), false)])),
+            params: [
+              BridgeParameter('encoded',
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('T')), false)
+            ])),
       },
       getters: {
         'encoder': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(
-                BridgeTypeRef(ConvertTypes.converter, [BridgeTypeRef.ref('S'), BridgeTypeRef.ref('T')])),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.converter,
+                [BridgeTypeRef.ref('S'), BridgeTypeRef.ref('T')])),
             params: [])),
         'decoder': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(
-                BridgeTypeRef(ConvertTypes.converter, [BridgeTypeRef.ref('T'), BridgeTypeRef.ref('S')])),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.converter,
+                [BridgeTypeRef.ref('T'), BridgeTypeRef.ref('S')])),
             params: [])),
       },
       wrap: true);
@@ -81,7 +87,8 @@ class $Codec implements $Instance {
   }
 
   @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType(ConvertTypes.codec);
+  int $getRuntimeType(Runtime runtime) =>
+      runtime.lookupType(ConvertTypes.codec);
 
   @override
   void $setProperty(Runtime runtime, String identifier, $Value value) {

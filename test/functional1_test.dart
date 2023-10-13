@@ -14,26 +14,24 @@ void main() {
       final source = '''
       dynamic main() {
         var someNumber = 19;
+        var result = 0;
       
         var a = A(45);
-        for (var i = someNumber; i < 20; i = i + 1) {
+        for (var i = someNumber; i < 45; i++) {
           final n = a.calculate(i);
-          if (n > someNumber) {
-            a = B(555);
+          result += n;
+          if ((n % i) > a.number + 18) {
+            a = B(58);
           } else {
-            if (a.number > B(a.number).calculate(2)) {
-              a = C(888 + a.number);
+            if (a.number * i * 2 > B(a.number).calculate(2)) {
+              a = C(13 + a.number);
             }
             someNumber = someNumber + 1;
           }
-      
-          if (n > a.calculate(a.number - i)) {
-            a = D(21 + n);
-            someNumber = someNumber - 1;
-          }
         }
+        result += D(21 + a.number).calculate(45);
       
-        return a.number;
+        return result;
       }
       
       class A {
@@ -103,8 +101,9 @@ void main() {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
 
       final result = runtime.executeLib('package:example/main.dart', 'main');
-      expect(result, $int(555));
-      expect(DateTime.now().millisecondsSinceEpoch - timestamp, lessThan(100));
+      expect(result, $int(45646));
+      print(DateTime.now().millisecondsSinceEpoch - timestamp);
+      expect(DateTime.now().millisecondsSinceEpoch - timestamp, lessThan(150));
     });
 
     test('Sum to', () {
@@ -174,7 +173,8 @@ void main() {
       });
 
       expect(() async {
-        expect(await runtime.executeLib('package:example/main.dart', 'main'), $int(1));
+        expect(await runtime.executeLib('package:example/main.dart', 'main'),
+            $int(1));
       }, prints('func3\nfunc2\nfunc1\ncomplete\nfunc4 start\nfunc4 end\n'));
     });
 

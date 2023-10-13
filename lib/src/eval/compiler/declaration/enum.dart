@@ -11,11 +11,17 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
-void compileEnumDeclaration(CompilerContext ctx, EnumDeclaration d, {bool statics = false}) {
+void compileEnumDeclaration(CompilerContext ctx, EnumDeclaration d,
+    {bool statics = false}) {
   final type = TypeRef.lookupDeclaration(ctx, ctx.library, d);
   final $runtimeType = ctx.typeRefIndexMap[type];
   final clsName = d.name.value() as String;
-  ctx.instanceDeclarationPositions[ctx.library]![clsName] = [{}, {}, {}, $runtimeType];
+  ctx.instanceDeclarationPositions[ctx.library]![clsName] = [
+    {},
+    {},
+    {},
+    $runtimeType
+  ];
   final constructors = <ConstructorDeclaration>[];
   final fields = <FieldDeclaration>[];
   final methods = <MethodDeclaration>[];
@@ -47,7 +53,11 @@ void compileEnumDeclaration(CompilerContext ctx, EnumDeclaration d, {bool static
   i++;
 
   for (final m in <ClassMember>[...fields, ...methods, ...constructors]) {
-    ctx.resetStack(position: m is ConstructorDeclaration || (m is MethodDeclaration && m.isStatic) ? 0 : 1);
+    ctx.resetStack(
+        position: m is ConstructorDeclaration ||
+                (m is MethodDeclaration && m.isStatic)
+            ? 0
+            : 1);
     ctx.currentClass = d;
     compileDeclaration(m, ctx, parent: d, fieldIndex: i, fields: fields);
     if (m is FieldDeclaration) {
@@ -61,11 +71,14 @@ void compileEnumDeclaration(CompilerContext ctx, EnumDeclaration d, {bool static
     ctx.resetStack(position: 0);
     final pos = beginMethod(ctx, constant, constant.offset, '$cName*i');
     final cstrName = constant.arguments?.constructorSelector?.name.name ?? '';
-    final method = IdentifierReference(null, d.name.value() as String).getValue(ctx);
+    final method =
+        IdentifierReference(null, d.name.value() as String).getValue(ctx);
     final offset = method.methodOffset ??
-        (throw CompileError('Cannot instantiate enum $clsName (no valid constructor $cstrName)'));
+        (throw CompileError(
+            'Cannot instantiate enum $clsName (no valid constructor $cstrName)'));
 
-    final cstr = ctx.topLevelDeclarationsMap[offset.file]![offset.name ?? '$clsName.'];
+    final cstr =
+        ctx.topLevelDeclarationsMap[offset.file]![offset.name ?? '$clsName.'];
 
     final Vindex = BuiltinValue(intval: idx).push(ctx).boxIfNeeded(ctx);
     final Vname = BuiltinValue(stringval: cName).push(ctx);
@@ -76,7 +89,9 @@ void compileEnumDeclaration(CompilerContext ctx, EnumDeclaration d, {bool static
     final dec = cstr?.declaration;
     if (constant.arguments != null && dec != null) {
       final fpl = (dec as ConstructorDeclaration).parameters.parameters;
-      compileArgumentList(ctx, constant.arguments!.argumentList, ctx.library, fpl, dec, source: constant);
+      compileArgumentList(
+          ctx, constant.arguments!.argumentList, ctx.library, fpl, dec,
+          source: constant);
     }
 
     final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.LEN);

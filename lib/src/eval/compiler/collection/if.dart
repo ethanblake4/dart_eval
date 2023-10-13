@@ -7,20 +7,23 @@ import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 
-List<TypeRef> compileIfElementForList(IfElement e, Variable list, CompilerContext ctx, bool box) {
+List<TypeRef> compileIfElementForList(
+    IfElement e, Variable list, CompilerContext ctx, bool box) {
   final potentialReturnTypes = <TypeRef>[];
   final elseElement = e.elseElement;
 
   macroBranch(ctx, null,
       condition: (_ctx) => compileExpression(e.expression, _ctx),
       thenBranch: (_ctx, _) {
-        potentialReturnTypes.addAll(compileListElement(e.thenElement, list, _ctx, box));
+        potentialReturnTypes
+            .addAll(compileListElement(e.thenElement, list, _ctx, box));
         return StatementInfo(-1);
       },
       elseBranch: elseElement == null
           ? null
           : (_ctx, _) {
-              potentialReturnTypes.addAll(compileListElement(elseElement, list, _ctx, box));
+              potentialReturnTypes
+                  .addAll(compileListElement(elseElement, list, _ctx, box));
               return StatementInfo(-1);
             });
 

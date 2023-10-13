@@ -15,7 +15,8 @@ class BridgeTypeAnnotation {
 
   /// Connect the generated [_$BridgeTypeAnnotationFromJson] function to the `fromJson`
   /// factory.
-  factory BridgeTypeAnnotation.fromJson(Map<String, dynamic> json) => _$BridgeTypeAnnotationFromJson(json);
+  factory BridgeTypeAnnotation.fromJson(Map<String, dynamic> json) =>
+      _$BridgeTypeAnnotationFromJson(json);
 
   /// Connect the generated [_$BridgeTypeAnnotationToJson] function to the `toJson` method.
   Map<String, dynamic> toJson() => _$BridgeTypeAnnotationToJson(this);
@@ -43,20 +44,29 @@ class BridgeClassType {
 
   /// Connect the generated [_$BridgeTypeAnnotationFromJson] function to the `fromJson`
   /// factory.
-  factory BridgeClassType.fromJson(Map<String, dynamic> json) => _$BridgeClassTypeFromJson(json);
+  factory BridgeClassType.fromJson(Map<String, dynamic> json) =>
+      _$BridgeClassTypeFromJson(json);
 
   /// Connect the generated [_$BridgeTypeAnnotationToJson] function to the `toJson` method.
   Map<String, dynamic> toJson() => _$BridgeClassTypeToJson(this);
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) || other is BridgeClassType && runtimeType == other.runtimeType && type == other.type;
+      identical(this, other) ||
+      other is BridgeClassType &&
+          runtimeType == other.runtimeType &&
+          type == other.type;
 
   @override
   int get hashCode => type.hashCode;
 
-  BridgeClassType copyWith({BridgeTypeRef? type}) => BridgeClassType(type ?? this.type,
-      isAbstract: isAbstract, $extends: $extends, $implements: $implements, $with: $with, generics: generics);
+  BridgeClassType copyWith({BridgeTypeRef? type}) =>
+      BridgeClassType(type ?? this.type,
+          isAbstract: isAbstract,
+          $extends: $extends,
+          $implements: $implements,
+          $with: $with,
+          generics: generics);
 }
 
 /// A bridge type ref is a reference to a type used by the dart_eval compiler.
@@ -99,7 +109,9 @@ class BridgeTypeRef {
   /// Load a type ref from its JSON representation.
   factory BridgeTypeRef.fromJson(Map<String, dynamic> json) {
     final id = json['id'];
-    final ta = [for (final arg in json['typeArgs']) BridgeTypeRef.fromJson(arg)];
+    final ta = [
+      for (final arg in json['typeArgs']) BridgeTypeRef.fromJson(arg)
+    ];
     if (id != null) {
       return BridgeTypeRef.type(id, ta);
     }
@@ -122,7 +134,12 @@ class BridgeTypeRef {
 
   /// Convert the type ref to its JSON representation.
   Map<String, dynamic> toJson() => {
-        if (cacheId != null) 'id': cacheId! else if (spec != null) 'unresolved': spec!.toJson() else 'ref': ref!,
+        if (cacheId != null)
+          'id': cacheId!
+        else if (spec != null)
+          'unresolved': spec!.toJson()
+        else
+          'ref': ref!,
         'typeArgs': [for (final t in typeArgs) t.toJson()]
       };
 }
@@ -138,7 +155,8 @@ class BridgeTypeSpec {
 
   /// Connect the generated [_$BridgeUnresolvedTypeReferenceFromJson] function to the `fromJson`
   /// factory.
-  factory BridgeTypeSpec.fromJson(Map<String, dynamic> json) => _$BridgeTypeSpecFromJson(json);
+  factory BridgeTypeSpec.fromJson(Map<String, dynamic> json) =>
+      _$BridgeTypeSpecFromJson(json);
 
   /// Connect the generated [_$BridgeUnresolvedTypeReferenceToJson] function to the `toJson` method.
   Map<String, dynamic> toJson() => _$BridgeTypeSpecToJson(this);
@@ -148,10 +166,14 @@ class BridgeGenericParam {
   const BridgeGenericParam({this.$extends});
 
   factory BridgeGenericParam.fromJson(Map<String, dynamic> json) {
-    return BridgeGenericParam($extends: json.containsKey('extends') ? BridgeTypeRef.fromJson(json['extends']) : null);
+    return BridgeGenericParam(
+        $extends: json.containsKey('extends')
+            ? BridgeTypeRef.fromJson(json['extends'])
+            : null);
   }
 
   final BridgeTypeRef? $extends;
 
-  Map<String, dynamic> toJson() => {if ($extends != null) 'extends': $extends!.toJson()};
+  Map<String, dynamic> toJson() =>
+      {if ($extends != null) 'extends': $extends!.toJson()};
 }

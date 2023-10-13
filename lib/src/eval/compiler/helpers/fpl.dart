@@ -5,8 +5,12 @@ import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
-List<PossiblyValuedParameter> resolveFPLDefaults(CompilerContext ctx, FormalParameterList fpl, bool isInstanceMethod,
-    {bool allowUnboxed = true, bool sortNamed = false, bool ignoreDefaults = false, bool isEnum = false}) {
+List<PossiblyValuedParameter> resolveFPLDefaults(
+    CompilerContext ctx, FormalParameterList fpl, bool isInstanceMethod,
+    {bool allowUnboxed = true,
+    bool sortNamed = false,
+    bool ignoreDefaults = false,
+    bool isEnum = false}) {
   final normalized = <PossiblyValuedParameter>[];
   var hasEncounteredOptionalPositionalParam = false;
   var hasEncounteredNamedParam = false;
@@ -18,14 +22,16 @@ List<PossiblyValuedParameter> resolveFPLDefaults(CompilerContext ctx, FormalPara
   for (final param in fpl.parameters) {
     if (param.isNamed) {
       if (hasEncounteredOptionalPositionalParam) {
-        throw CompileError('Cannot mix named and optional positional parameters');
+        throw CompileError(
+            'Cannot mix named and optional positional parameters');
       }
       hasEncounteredNamedParam = true;
       named.add(param);
     } else {
       if (param.isOptionalPositional) {
         if (hasEncounteredNamedParam) {
-          throw CompileError('Cannot mix named and optional positional parameters');
+          throw CompileError(
+              'Cannot mix named and optional positional parameters');
         }
         hasEncounteredOptionalPositionalParam = true;
       }
@@ -34,7 +40,8 @@ List<PossiblyValuedParameter> resolveFPLDefaults(CompilerContext ctx, FormalPara
   }
 
   if (sortNamed) {
-    named.sort((a, b) => (a.name!.value() as String).compareTo(b.name!.value() as String));
+    named.sort((a, b) =>
+        (a.name!.value() as String).compareTo(b.name!.value() as String));
   }
 
   for (final param in [...positional, ...named]) {
@@ -47,9 +54,11 @@ List<PossiblyValuedParameter> resolveFPLDefaults(CompilerContext ctx, FormalPara
         if (!allowUnboxed) {
           V = V.boxIfNeeded(ctx);
         }
-        ctx.pushOp(CopyValue.make(_paramIndex, V.scopeFrameOffset), CopyValue.LEN);
+        ctx.pushOp(
+            CopyValue.make(_paramIndex, V.scopeFrameOffset), CopyValue.LEN);
         ctx.endAllocScope();
-        ctx.rewriteOp(_reserveOffset, JumpIfNonNull.make(_paramIndex, ctx.out.length), 0);
+        ctx.rewriteOp(
+            _reserveOffset, JumpIfNonNull.make(_paramIndex, ctx.out.length), 0);
         normalized.add(PossiblyValuedParameter(param.parameter, V));
       } else {
         normalized.add(PossiblyValuedParameter(param.parameter, null));

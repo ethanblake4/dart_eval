@@ -2,7 +2,8 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 
 /// A [BridgeDeclarationRegistry] which serializes registered declarations to a
 /// JSON object. Serialized declarations can be loaded with the dart_eval CLI.
-class BridgeSerializer implements BridgeDeclarationRegistry, EvalPluginRegistry {
+class BridgeSerializer
+    implements BridgeDeclarationRegistry, EvalPluginRegistry {
   final List<BridgeClassDef> _classes = [];
   final List<BridgeEnumDef> _enums = [];
   final List<BridgeFunctionDeclaration> _functions = [];
@@ -39,7 +40,9 @@ class BridgeSerializer implements BridgeDeclarationRegistry, EvalPluginRegistry 
       'classes': _classes.map((e) => e.toJson()).toList(),
       'enums': _enums.map((e) => e.toJson()).toList(),
       'functions': _functions.map((e) => e.toJson()).toList(),
-      'sources': _sources.map((e) => {'uri': e.uri.toString(), 'source': e.toString()}).toList(),
+      'sources': _sources
+          .map((e) => {'uri': e.uri.toString(), 'source': e.toString()})
+          .toList(),
     };
   }
 }

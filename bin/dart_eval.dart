@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:args/args.dart';
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:package_config/package_config.dart';
 import 'package:path/path.dart';
 import 'package:pubspec_parse/pubspec_parse.dart';
 
@@ -36,7 +37,8 @@ void main(List<String> args) {
     print('   dump Dump op codes from an EVC file.');
     print('   help Print this help message.');
     print('');
-    print('For more information, use dart_eval <command> --help on an individual command.');
+    print(
+        'For more information, use dart_eval <command> --help on an individual command.');
     exit(1);
   }
 
@@ -55,20 +57,25 @@ void main(List<String> args) {
     var projectRoot = commandRoot;
     while (true) {
       final files = projectRoot.listSync();
-      if (files.any((file) => (file is File && file.path.endsWith('pubspec.yaml')))) {
+      if (files.any(
+          (file) => (file is File && file.path.endsWith('pubspec.yaml')))) {
         break;
       }
       projectRoot = projectRoot.parent;
     }
 
-    if (FileSystemEntity.typeSync('./.dart_eval/bindings') == FileSystemEntityType.directory) {
+    final bridgedPackages = <String>[];
+
+    if (FileSystemEntity.typeSync('./.dart_eval/bindings') ==
+        FileSystemEntityType.directory) {
       final files = Directory('./.dart_eval/bindings')
           .listSync()
           .where((entity) => entity is File && entity.path.endsWith('.json'))
           .cast<File>();
 
       for (final file in files) {
-        print('Found binding file: ${relative(file.path, from: projectRoot.path)}');
+        print(
+            'Found binding file: ${relative(file.path, from: projectRoot.path)}');
         final _data = file.readAsStringSync();
         final decoded = (json.decode(_data) as Map).cast<String, dynamic>();
         final classList = (decoded['classes'] as List);
@@ -82,7 +89,17 @@ void main(List<String> args) {
           compiler.addSource(DartSource($source['uri'], $source['source']));
         }
         for (final $function in (decoded['functions'] as List).cast<Map>()) {
-          compiler.defineBridgeTopLevelFunction(BridgeFunctionDeclaration.fromJson($function.cast()));
+          compiler.defineBridgeTopLevelFunction(
+              BridgeFunctionDeclaration.fromJson($function.cast()));
+        }
+      }
+
+      for (final lib in compiler.bridgedLibraries) {
+        if (lib.startsWith('package:')) {
+          final packageName = lib.split('/')[0].substring(8);
+          if (!bridgedPackages.contains(packageName)) {
+            bridgedPackages.add(packageName);
+          }
         }
       }
     }
@@ -93,40 +110,54 @@ void main(List<String> args) {
     final packageName = pubspec.name;
     compiler.version = pubspec.version?.canonicalizedVersion;
 
-    final files = <File>[];
+    final data = <String, Map<String, String>>{};
+    var sourceLength = 0;
 
     // Recursively add dart files in the lib directory
     final libDir = Directory(join(projectRoot.path, 'lib'));
 
-    void addFiles(Directory dir) {
+    void addFiles(String pkg, Directory dir, String root) {
+      if (!data.containsKey(pkg)) {
+        data[pkg] = {};
+      }
       for (final file in dir.listSync()) {
         if (file is File && file.path.endsWith('.dart')) {
-          files.add(file);
+          final _data = file.readAsStringSync();
+          sourceLength += _data.length;
+
+          final p = relative(file.path, from: root).replaceAll('\\', '/');
+          data[pkg]![p] = _data;
         } else if (file is Directory) {
-          addFiles(file);
+          addFiles(pkg, file, root);
         }
       }
     }
 
-    addFiles(libDir);
+    addFiles(packageName, libDir, libDir.path);
 
-    final data = <String, String>{};
+    final packageConfigFile =
+        File(join(projectRoot.uri.path, '.dart_tool', 'package_config.json'))
+            .readAsStringSync();
+    final packageConfig = PackageConfig.parseString(
+        packageConfigFile, Uri.parse(join(projectRoot.uri.path, '.dart_tool')));
 
-    var sourceLength = 0;
+    for (final package in packageConfig.packages) {
+      if (bridgedPackages.contains(package.name)) {
+        print('Skipped package ${package.name} because it is bridged.');
+        continue;
+      }
 
-    for (final file in files) {
-      final _data = file.readAsStringSync();
-      sourceLength += _data.length;
+      print('Adding package ${package.name} from pubspec...');
 
-      final p = relative(file.path, from: join(projectRoot.path, 'lib')).replaceAll('\\', '/');
-      data[p] = _data;
+      final pkgDir = Directory(package.packageUriRoot.path);
+      addFiles(package.name, pkgDir, pkgDir.path);
     }
 
     print('Compiling package $packageName...');
 
     final ts = DateTime.now().millisecondsSinceEpoch;
 
-    final programSource = compiler.compile({packageName: data});
+    final programSource = compiler.compile(data);
     var outputName = command['out'];
     if (outputName == null) {
       if (!command.options.contains('path')) {
@@ -146,7 +177,8 @@ void main(List<String> args) {
     File(outputName).writeAsBytesSync(_out);
 
     final timeElapsed = DateTime.now().millisecondsSinceEpoch - ts;
-    print('Compiled $sourceLength characters Dart to ${_out.length} bytes EVC in $timeElapsed ms: $outputName');
+    print(
+        'Compiled $sourceLength characters Dart to ${_out.length} bytes EVC in $timeElapsed ms: $outputName');
   } else if (command.name == 'run') {
     if (command['help']! || command.rest.length != 1) {
       if (command['help']) {
@@ -156,13 +188,17 @@ void main(List<String> args) {
       }
 
       print('Usage:');
-      print('   dart_eval run <file> [-l, --library <library>] [-f, --function <function>] [-h, --help]');
-      if (command['help']) print('\nNote that bindings are not supported in the run command.');
+      print(
+          '   dart_eval run <file> [-l, --library <library>] [-f, --function <function>] [-h, --help]');
+      if (command['help'])
+        print('\nNote that bindings are not supported in the run command.');
       exit(command['help'] ? 0 : 1);
     }
     if (command['library'] == null) {
-      print('You must pass the library parameter with the name of the library to run.');
-      print('Example: dart_eval run program.evc --library package:my_package/main.dart');
+      print(
+          'You must pass the library parameter with the name of the library to run.');
+      print(
+          'Example: dart_eval run program.evc --library package:my_package/main.dart');
       exit(1);
     }
     final evc = File(command.rest[0]).readAsBytesSync();

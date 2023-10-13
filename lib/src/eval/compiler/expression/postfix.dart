@@ -14,12 +14,16 @@ Variable compilePostfixExpression(PostfixExpression e, CompilerContext ctx) {
   if (L.name != null) {
     out = Variable.alloc(ctx, L.type);
     ctx.pushOp(PushNull.make(), PushNull.LEN);
-    ctx.pushOp(CopyValue.make(out.scopeFrameOffset, L.scopeFrameOffset), CopyValue.LEN);
+    ctx.pushOp(CopyValue.make(out.scopeFrameOffset, L.scopeFrameOffset),
+        CopyValue.LEN);
   }
 
   final opMap = {TokenType.PLUS_PLUS: '+', TokenType.MINUS_MINUS: '-'};
 
-  V.setValue(ctx, L.invoke(ctx, opMap[e.operator.type]!, [BuiltinValue(intval: 1).push(ctx)]).result);
+  V.setValue(
+      ctx,
+      L.invoke(ctx, opMap[e.operator.type]!,
+          [BuiltinValue(intval: 1).push(ctx)]).result);
 
   return out;
 }

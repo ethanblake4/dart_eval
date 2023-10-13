@@ -16,7 +16,8 @@ import '../util.dart';
 import 'expression.dart';
 import 'identifier.dart';
 
-Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e, {Variable? cascadeTarget}) {
+Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
+    {Variable? cascadeTarget}) {
   Variable? L = cascadeTarget;
   var isPrefix = false;
   if (e.target != null && cascadeTarget == null) {
@@ -33,7 +34,8 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e, {Varia
     return _invokeWithTarget(ctx, L, e);
   }
   final method = isPrefix
-      ? compilePrefixedIdentifier((e.target as Identifier).name, e.methodName.name, ctx)
+      ? compilePrefixedIdentifier(
+          (e.target as Identifier).name, e.methodName.name, ctx)
       : compileIdentifier(e.methodName, ctx);
 
   if (method.callingConvention == CallingConvention.dynamic) {
@@ -41,7 +43,8 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e, {Varia
   }
 
   if (method.methodOffset == null) {
-    throw CompileError('Cannot call ${e.methodName.name} as it is not a valid method');
+    throw CompileError(
+        'Cannot call ${e.methodName.name} as it is not a valid method');
   }
 
   final offset = method.methodOffset!;
@@ -53,8 +56,10 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e, {Varia
   }
 
   var _dec = ctx.topLevelDeclarationsMap[offset.file]![e.methodName.name];
-  if (_dec == null || (!_dec.isBridge && _dec.declaration! is ClassDeclaration)) {
-    _dec = ctx.topLevelDeclarationsMap[offset.file]![offset.name ?? '${e.methodName.name}.'];
+  if (_dec == null ||
+      (!_dec.isBridge && _dec.declaration! is ClassDeclaration)) {
+    _dec = ctx.topLevelDeclarationsMap[offset.file]![
+        offset.name ?? '${e.methodName.name}.'];
     if (_dec == null) {
       // Call to default constructor
       final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.LEN);
@@ -64,14 +69,18 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e, {Varia
       ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
       TypeRef? thisType;
       if (ctx.currentClass != null) {
-        thisType = ctx.visibleTypes[ctx.library]![ctx.currentClass!.name.value() as String]!;
+        thisType = ctx.visibleTypes[ctx.library]![
+            ctx.currentClass!.name.value() as String]!;
       }
-      mReturnType = method.methodReturnType?.toAlwaysReturnType(ctx, thisType, [], {}) ??
-          AlwaysReturnType(EvalTypes.dynamicType, true);
+      mReturnType =
+          method.methodReturnType?.toAlwaysReturnType(ctx, thisType, [], {}) ??
+              AlwaysReturnType(EvalTypes.dynamicType, true);
       final v = Variable.alloc(
           ctx,
-          mReturnType.type
-                  ?.copyWith(boxed: L != null || !(mReturnType.type?.isUnboxedAcrossFunctionBoundaries ?? false)) ??
+          mReturnType.type?.copyWith(
+                  boxed: L != null ||
+                      !(mReturnType.type?.isUnboxedAcrossFunctionBoundaries ??
+                          false)) ??
               EvalTypes.dynamicType);
 
       return v;
@@ -87,7 +96,9 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e, {Varia
         ? bridge.constructors['']!.functionDescriptor
         : (bridge as BridgeFunctionDeclaration).function;
 
-    final argsPair = compileArgumentListWithBridge(ctx, e.argumentList, fnDescriptor, before: L != null ? [L] : []);
+    final argsPair = compileArgumentListWithBridge(
+        ctx, e.argumentList, fnDescriptor,
+        before: L != null ? [L] : []);
 
     _args = argsPair.first;
     _namedArgs = argsPair.second;
@@ -96,7 +107,8 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e, {Varia
 
     List<FormalParameter> fpl;
     if (dec is FunctionDeclaration) {
-      fpl = dec.functionExpression.parameters?.parameters ?? <FormalParameter>[];
+      fpl =
+          dec.functionExpression.parameters?.parameters ?? <FormalParameter>[];
     } else if (dec is MethodDeclaration) {
       fpl = dec.parameters?.parameters ?? <FormalParameter>[];
     } else if (dec is ConstructorDeclaration) {
@@ -105,14 +117,16 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e, {Varia
       throw CompileError('Invalid declaration type ${dec.runtimeType}');
     }
 
-    final argsPair =
-        compileArgumentList(ctx, e.argumentList, offset.file!, fpl, dec, before: L != null ? [L] : [], source: e);
+    final argsPair = compileArgumentList(
+        ctx, e.argumentList, offset.file!, fpl, dec,
+        before: L != null ? [L] : [], source: e);
     _args = argsPair.first;
     _namedArgs = argsPair.second;
   }
 
   final _argTypes = _args.map((e) => e.type).toList();
-  final _namedArgTypes = _namedArgs.map((key, value) => MapEntry(key, value.type));
+  final _namedArgTypes =
+      _namedArgs.map((key, value) => MapEntry(key, value.type));
 
   if (_dec.isBridge) {
     final bridge = _dec.bridge!;
@@ -120,11 +134,12 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e, {Varia
       final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type.type);
 
       final $null = BuiltinValue().push(ctx);
-      final op =
-          BridgeInstantiate.make($null.scopeFrameOffset, ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.']!);
+      final op = BridgeInstantiate.make($null.scopeFrameOffset,
+          ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.']!);
       ctx.pushOp(op, BridgeInstantiate.len(op));
     } else {
-      final op = InvokeExternal.make(ctx.bridgeStaticFunctionIndices[offset.file]![offset.name]!);
+      final op = InvokeExternal.make(
+          ctx.bridgeStaticFunctionIndices[offset.file]![offset.name]!);
       ctx.pushOp(op, InvokeExternal.LEN);
       ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
     }
@@ -138,21 +153,26 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e, {Varia
 
   TypeRef? thisType;
   if (ctx.currentClass != null) {
-    thisType = ctx.visibleTypes[ctx.library]![ctx.currentClass!.name.value() as String]!;
+    thisType = ctx
+        .visibleTypes[ctx.library]![ctx.currentClass!.name.value() as String]!;
   }
-  mReturnType = method.methodReturnType?.toAlwaysReturnType(ctx, thisType, _argTypes, _namedArgTypes) ??
+  mReturnType = method.methodReturnType
+          ?.toAlwaysReturnType(ctx, thisType, _argTypes, _namedArgTypes) ??
       AlwaysReturnType(EvalTypes.dynamicType, true);
 
   final v = Variable.alloc(
       ctx,
-      mReturnType.type
-              ?.copyWith(boxed: _dec.isBridge || !(mReturnType.type?.isUnboxedAcrossFunctionBoundaries ?? false)) ??
+      mReturnType.type?.copyWith(
+              boxed: _dec.isBridge ||
+                  !(mReturnType.type?.isUnboxedAcrossFunctionBoundaries ??
+                      false)) ??
           EvalTypes.dynamicType);
 
   return v;
 }
 
-Variable _invokeWithTarget(CompilerContext ctx, Variable L, MethodInvocation e) {
+Variable _invokeWithTarget(
+    CompilerContext ctx, Variable L, MethodInvocation e) {
   AlwaysReturnType? mReturnType;
 
   final DeclarationOrBridge<ClassMember, BridgeDeclaration> _dec;
@@ -161,10 +181,13 @@ Variable _invokeWithTarget(CompilerContext ctx, Variable L, MethodInvocation e) 
 
   Pair<List<Variable>, Map<String, Variable>> argsPair;
 
-  if (L.type.file == -1 && L.type != EvalTypes.typeType && L.type != EvalTypes.dynamicType) {
-    final knownMethod = knownMethods[L.type]![e.methodName.name] ??
-        (throw CompileError('Method not found ${e.methodName} on ${L.type}'));
-    argsPair = compileArgumentListWithKnownMethodArgs(ctx, e.argumentList, knownMethod.args, knownMethod.namedArgs);
+  final knownMethod = getKnownMethods(ctx)[L.type]?[e.methodName.name];
+
+  if (knownMethod != null &&
+      L.type != EvalTypes.typeType &&
+      L.type != EvalTypes.dynamicType) {
+    argsPair = compileArgumentListWithKnownMethodArgs(
+        ctx, e.argumentList, knownMethod.args, knownMethod.namedArgs);
     return L.invoke(ctx, e.methodName.name, []).result;
   }
 
@@ -180,8 +203,11 @@ Variable _invokeWithTarget(CompilerContext ctx, Variable L, MethodInvocation e) 
 
   if (_dec.isBridge) {
     final br = _dec.bridge!;
-    final fd = br is BridgeMethodDef ? br.functionDescriptor : (br as BridgeConstructorDef).functionDescriptor;
-    argsPair = compileArgumentListWithBridge(ctx, e.argumentList, fd, before: []);
+    final fd = br is BridgeMethodDef
+        ? br.functionDescriptor
+        : (br as BridgeConstructorDef).functionDescriptor;
+    argsPair =
+        compileArgumentListWithBridge(ctx, e.argumentList, fd, before: []);
   } else {
     final dec = _dec.declaration!;
     final fpl = (dec is MethodDeclaration
@@ -189,7 +215,8 @@ Variable _invokeWithTarget(CompilerContext ctx, Variable L, MethodInvocation e) 
             : (dec as ConstructorDeclaration).parameters.parameters) ??
         <FormalParameter>[];
 
-    argsPair = compileArgumentList(ctx, e.argumentList, (isStatic ? staticType! : L.type).file, fpl, dec,
+    argsPair = compileArgumentList(
+        ctx, e.argumentList, (isStatic ? staticType! : L.type).file, fpl, dec,
         before: [if (!isStatic) L], source: e);
   }
 
@@ -197,32 +224,40 @@ Variable _invokeWithTarget(CompilerContext ctx, Variable L, MethodInvocation e) 
   final _namedArgs = argsPair.second;
 
   final _argTypes = _args.map((e) => e.type).toList();
-  final _namedArgTypes = _namedArgs.map((key, value) => MapEntry(key, value.type));
+  final _namedArgTypes =
+      _namedArgs.map((key, value) => MapEntry(key, value.type));
 
   if (isStatic) {
     if (_dec.isBridge) {
-      final ix = InvokeExternal.make(
-          ctx.bridgeStaticFunctionIndices[staticType!.file]!['${staticType.name}.${e.methodName.name}']!);
+      final ix = InvokeExternal.make(ctx.bridgeStaticFunctionIndices[
+          staticType!.file]!['${staticType.name}.${e.methodName.name}']!);
       ctx.pushOp(ix, InvokeExternal.LEN);
     } else {
-      final offset = DeferredOrOffset.lookupStatic(ctx, staticType!.file, staticType.name, e.methodName.name);
+      final offset = DeferredOrOffset.lookupStatic(
+          ctx, staticType!.file, staticType.name, e.methodName.name);
       final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.LEN);
       if (offset.offset == null) {
         ctx.offsetTracker.setOffset(loc, offset);
       }
     }
   } else {
-    final op = InvokeDynamic.make(L.boxIfNeeded(ctx).scopeFrameOffset, e.methodName.name);
+    final op = InvokeDynamic.make(
+        L.boxIfNeeded(ctx).scopeFrameOffset, e.methodName.name);
     ctx.pushOp(op, InvokeDynamic.len(op));
   }
 
   mReturnType = AlwaysReturnType.fromInstanceMethodOrBuiltin(
-      ctx, isStatic ? staticType! : L.type, e.methodName.name, _argTypes, _namedArgTypes,
+      ctx,
+      isStatic ? staticType! : L.type,
+      e.methodName.name,
+      _argTypes,
+      _namedArgTypes,
       $static: isStatic);
 
   ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
 
-  final v = Variable.alloc(ctx, mReturnType?.type?.copyWith(boxed: true) ?? EvalTypes.dynamicType);
+  final v = Variable.alloc(
+      ctx, mReturnType?.type?.copyWith(boxed: true) ?? EvalTypes.dynamicType);
 
   return v;
 }
@@ -230,7 +265,8 @@ Variable _invokeWithTarget(CompilerContext ctx, Variable L, MethodInvocation e) 
 DeclarationOrBridge<MethodDeclaration, BridgeMethodDef> resolveInstanceMethod(
     CompilerContext ctx, TypeRef instanceType, String methodName,
     [AstNode? source]) {
-  final _dec = ctx.topLevelDeclarationsMap[instanceType.file]![instanceType.name]!;
+  final _dec =
+      ctx.topLevelDeclarationsMap[instanceType.file]![instanceType.name]!;
   if (_dec.isBridge) {
     // Bridge
     final bridge = _dec.bridge! as BridgeClassDef;
@@ -243,29 +279,35 @@ DeclarationOrBridge<MethodDeclaration, BridgeMethodDef> resolveInstanceMethod(
       final $extendsType = TypeRef.fromBridgeTypeRef(ctx, $extendsBridgeType);
       return resolveInstanceMethod(ctx, $extendsType, methodName, source);
     }
-    return DeclarationOrBridge(instanceType.file, bridge: bridge.methods[methodName]!);
+    return DeclarationOrBridge(instanceType.file,
+        bridge: bridge.methods[methodName]!);
   }
 
-  final dec = ctx.instanceDeclarationsMap[instanceType.file]![instanceType.name]![methodName];
+  final dec = ctx.instanceDeclarationsMap[instanceType.file]![
+      instanceType.name]![methodName];
 
   if (dec != null) {
-    return DeclarationOrBridge(instanceType.file, declaration: dec as MethodDeclaration);
+    return DeclarationOrBridge(instanceType.file,
+        declaration: dec as MethodDeclaration);
   } else {
     final $class = _dec.declaration as ClassDeclaration;
     if ($class.extendsClause == null) {
       throw CompileError('Cannot resolve instance method', source);
     }
-    final $supertype = ctx.visibleTypes[instanceType.file]![$class.extendsClause!.superclass.name2.value()]!;
+    final $supertype = ctx.visibleTypes[instanceType.file]![
+        $class.extendsClause!.superclass.name2.value()]!;
     return resolveInstanceMethod(ctx, $supertype, methodName, source);
   }
 }
 
 DeclarationOrBridge<ClassMember, BridgeDeclaration> resolveStaticMethod(
     CompilerContext ctx, TypeRef classType, String methodName) {
-  final method = ctx.topLevelDeclarationsMap[classType.file]!['${classType.name}.$methodName'];
+  final method = ctx.topLevelDeclarationsMap[classType.file]![
+      '${classType.name}.$methodName'];
   if (method != null) {
     if (method.declaration != null) {
-      return DeclarationOrBridge(classType.file, declaration: method.declaration! as ClassMember);
+      return DeclarationOrBridge(classType.file,
+          declaration: method.declaration! as ClassMember);
     } else {
       return DeclarationOrBridge(classType.file, bridge: method.bridge!);
     }

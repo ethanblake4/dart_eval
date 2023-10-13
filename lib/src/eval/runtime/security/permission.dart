@@ -14,7 +14,10 @@ abstract class Permission {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) || other is Permission && runtimeType == other.runtimeType && domains == other.domains;
+      identical(this, other) ||
+      other is Permission &&
+          runtimeType == other.runtimeType &&
+          domains == other.domains;
 
   @override
   int get hashCode => domains.hashCode;
@@ -35,12 +38,18 @@ class NetworkPermission implements Permission {
   /// RegExp [Pattern] directly.
   factory NetworkPermission.url(String url) {
     final uri = Uri.parse(url);
-    final schemePattern = uri.scheme == '' ? r'[-a-zA-Z0-9@:%._\+~#=]{0,256}' : uri.scheme;
-    final hostPattern = uri.host == '' ? r'[-a-zA-Z0-9@:%._\+~#=]{1,256}' : uri.host;
-    final pathPattern = uri.path == '' ? r'[-a-zA-Z0-9@:%_\+.~&//=]*' : uri.path;
-    final queryPattern = uri.query == '' ? r'[-a-zA-Z0-9@:%_\+.~?&//=]*' : uri.query;
-    final fragmentPattern = uri.fragment == '' ? r'[-a-zA-Z0-9@:%_\+.~#?&//=]*' : uri.fragment;
-    final pattern = '^$schemePattern:?\\/*$hostPattern\\/?$pathPattern\\??$queryPattern\\#?$fragmentPattern\$';
+    final schemePattern =
+        uri.scheme == '' ? r'[-a-zA-Z0-9@:%._\+~#=]{0,256}' : uri.scheme;
+    final hostPattern =
+        uri.host == '' ? r'[-a-zA-Z0-9@:%._\+~#=]{1,256}' : uri.host;
+    final pathPattern =
+        uri.path == '' ? r'[-a-zA-Z0-9@:%_\+.~&//=]*' : uri.path;
+    final queryPattern =
+        uri.query == '' ? r'[-a-zA-Z0-9@:%_\+.~?&//=]*' : uri.query;
+    final fragmentPattern =
+        uri.fragment == '' ? r'[-a-zA-Z0-9@:%_\+.~#?&//=]*' : uri.fragment;
+    final pattern =
+        '^$schemePattern:?\\/*$hostPattern\\/?$pathPattern\\??$queryPattern\\#?$fragmentPattern\$';
     return NetworkPermission(RegExp(pattern));
   }
 
@@ -123,7 +132,8 @@ class FilesystemReadPermission extends FilesystemPermission {
   const FilesystemReadPermission(Pattern matchPattern) : super(matchPattern);
 
   /// A permission that allows access to any file system resource.
-  static final FilesystemReadPermission any = FilesystemReadPermission(RegExp('.*'));
+  static final FilesystemReadPermission any =
+      FilesystemReadPermission(RegExp('.*'));
 
   /// Create a new filesystem permission that matches any file in a directory
   /// or one of its subdirectories.
@@ -167,7 +177,8 @@ class FilesystemWritePermission extends FilesystemPermission {
   const FilesystemWritePermission(Pattern matchPattern) : super(matchPattern);
 
   /// A permission that allows access to any file system resource.
-  static final FilesystemWritePermission any = FilesystemWritePermission(RegExp('.*'));
+  static final FilesystemWritePermission any =
+      FilesystemWritePermission(RegExp('.*'));
 
   /// Create a new filesystem permission that matches any file in a directory
   /// or one of its subdirectories.

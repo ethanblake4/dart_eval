@@ -10,23 +10,31 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/future.dart';
 class $Completer<T> implements Completer<T>, $Instance {
   $Completer.wrap(this.$value);
 
-  static const _$type = BridgeTypeRef(BridgeTypeSpec('dart:async', 'Completer'), []);
+  static const _$type =
+      BridgeTypeRef(BridgeTypeSpec('dart:async', 'Completer'), []);
 
   static const $declaration = BridgeClassDef(BridgeClassType(_$type),
       constructors: {
-        '': BridgeConstructorDef(BridgeFunctionDef(returns: BridgeTypeAnnotation(_$type), params: [], namedParams: []))
+        '': BridgeConstructorDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation(_$type), params: [], namedParams: []))
       },
       methods: {
         'complete': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.voidType)),
+            returns:
+                BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.voidType)),
             params: [
-              BridgeParameter('value', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.dynamicType)), false)
+              BridgeParameter(
+                  'value',
+                  BridgeTypeAnnotation(
+                      BridgeTypeRef.type(RuntimeTypes.dynamicType)),
+                  false)
             ],
             namedParams: []))
       },
       getters: {
-        'future': BridgeMethodDef(
-            BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef(BridgeTypeSpec('dart:core', 'Future')))))
+        'future': BridgeMethodDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation(
+                BridgeTypeRef(BridgeTypeSpec('dart:core', 'Future')))))
       },
       setters: {},
       fields: {},
@@ -60,7 +68,8 @@ class $Completer<T> implements Completer<T>, $Instance {
   void complete([FutureOr<T>? value]) => $value.complete(value);
 
   @override
-  void completeError(Object error, [StackTrace? stackTrace]) => $value.completeError(error, stackTrace);
+  void completeError(Object error, [StackTrace? stackTrace]) =>
+      $value.completeError(error, stackTrace);
 
   @override
   Future<T> get future => $value.future;

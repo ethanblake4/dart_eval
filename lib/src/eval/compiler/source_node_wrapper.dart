@@ -7,7 +7,10 @@ import 'package:dart_eval/src/eval/compiler/builtins.dart';
 /// child parameter as well as parameters derived from the original invocation's [AstNode]
 class SourceNodeWrapper {
   SourceNodeWrapper(
-      {required this.listenType, required this.wrapperType, required this.constructor, required this.buildArguments});
+      {required this.listenType,
+      required this.wrapperType,
+      required this.constructor,
+      required this.buildArguments});
 
   final BridgeTypeRef listenType;
   final BridgeTypeRef wrapperType;

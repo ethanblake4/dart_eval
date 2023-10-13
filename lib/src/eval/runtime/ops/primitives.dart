@@ -89,7 +89,8 @@ class NumAdd implements EvcOp {
   // Add value A + B
   @override
   void run(Runtime runtime) {
-    runtime.frame[runtime.frameOffset++] = (runtime.frame[_location1] as num) + (runtime.frame[_location2] as num);
+    runtime.frame[runtime.frameOffset++] =
+        (runtime.frame[_location1] as num) + (runtime.frame[_location2] as num);
   }
 
   @override
@@ -111,7 +112,8 @@ class NumSub implements EvcOp {
   // Add value A + B
   @override
   void run(Runtime runtime) {
-    runtime.frame[runtime.frameOffset++] = (runtime.frame[_location1] as num) - (runtime.frame[_location2] as num);
+    runtime.frame[runtime.frameOffset++] =
+        (runtime.frame[_location1] as num) - (runtime.frame[_location2] as num);
   }
 
   @override
@@ -132,7 +134,8 @@ class NumLt implements EvcOp {
 
   @override
   void run(Runtime runtime) {
-    runtime.frame[runtime.frameOffset++] = (runtime.frame[_location1] as num) < (runtime.frame[_location2] as num);
+    runtime.frame[runtime.frameOffset++] =
+        (runtime.frame[_location1] as num) < (runtime.frame[_location2] as num);
   }
 
   @override
@@ -153,7 +156,8 @@ class NumLtEq implements EvcOp {
 
   @override
   void run(Runtime runtime) {
-    runtime.frame[runtime.frameOffset++] = (runtime.frame[_location1] as num) <= (runtime.frame[_location2] as num);
+    runtime.frame[runtime.frameOffset++] = (runtime.frame[_location1] as num) <=
+        (runtime.frame[_location2] as num);
   }
 
   @override
@@ -286,7 +290,8 @@ class BoxMap implements EvcOp {
   @override
   void run(Runtime runtime) {
     final reg = _reg;
-    runtime.frame[reg] = $Map.wrap(<$Value, $Value>{...(runtime.frame[reg] as Map)});
+    runtime.frame[reg] =
+        $Map.wrap(<$Value, $Value>{...(runtime.frame[reg] as Map)});
   }
 
   @override
@@ -362,7 +367,8 @@ class IndexList extends EvcOp {
 
   @override
   void run(Runtime runtime) {
-    runtime.frame[runtime.frameOffset++] = (runtime.frame[_position] as List)[runtime.frame[_index] as int];
+    runtime.frame[runtime.frameOffset++] =
+        (runtime.frame[_position] as List)[runtime.frame[_index] as int];
   }
 
   @override
@@ -404,7 +410,8 @@ class PushIterableLength extends EvcOp {
 
   @override
   void run(Runtime runtime) {
-    runtime.frame[runtime.frameOffset++] = (runtime.frame[_position] as Iterable).length;
+    runtime.frame[runtime.frameOffset++] =
+        (runtime.frame[_position] as Iterable).length;
   }
 
   @override

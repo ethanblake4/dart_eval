@@ -31,6 +31,7 @@ dependencies:
   pubspec_parse: ^1.2.0
   path: ^1.8.0
   pub_semver: ^2.1.0
+  package_config: ^2.1.0
 
 dev_dependencies:
   test: ^1.21.0

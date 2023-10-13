@@ -10,7 +10,8 @@ import 'package:dart_eval/src/eval/shared/types.dart';
 
 import '../variable.dart';
 
-StatementInfo compileTryStatement(TryStatement s, CompilerContext ctx, AlwaysReturnType? expectedReturnType) {
+StatementInfo compileTryStatement(
+    TryStatement s, CompilerContext ctx, AlwaysReturnType? expectedReturnType) {
   int jumpOver = -1;
   if (s.finallyBlock != null) {
     final loc = ctx.pushOp(PushFinally.make(-1), PushFinally.LEN);
@@ -44,7 +45,8 @@ StatementInfo compileTryStatement(TryStatement s, CompilerContext ctx, AlwaysRet
     ctx.pushOp(Return.make(-3), JumpConstant.LEN);
   }
 
-  ctx.rewriteOp(tryOp, Try.make(s.catchClauses.isNotEmpty ? ctx.out.length : -1), 0);
+  ctx.rewriteOp(
+      tryOp, Try.make(s.catchClauses.isNotEmpty ? ctx.out.length : -1), 0);
 
   var catchInfo = StatementInfo(-1);
   if (s.catchClauses.isNotEmpty) {
@@ -52,7 +54,8 @@ StatementInfo compileTryStatement(TryStatement s, CompilerContext ctx, AlwaysRet
     ctx.beginAllocScope();
     ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
     final v = Variable.alloc(ctx, EvalTypes.dynamicType);
-    catchInfo = _compileCatchClause(ctx, s.catchClauses, 0, v, expectedReturnType);
+    catchInfo =
+        _compileCatchClause(ctx, s.catchClauses, 0, v, expectedReturnType);
     ctx.endAllocScope();
     ctx.resolveBranchStateDiscontinuity(_state);
     ctx.pushOp(Return.make(-3), Return.LEN);
@@ -65,12 +68,17 @@ StatementInfo compileTryStatement(TryStatement s, CompilerContext ctx, AlwaysRet
 
 // Catch clauses are compiled into a single effective catch clause
 // with a series of branches to check types for 'on' clauses.
-StatementInfo _compileCatchClause(CompilerContext ctx, List<CatchClause> clauses, int index, Variable exceptionVar,
+StatementInfo _compileCatchClause(
+    CompilerContext ctx,
+    List<CatchClause> clauses,
+    int index,
+    Variable exceptionVar,
     AlwaysReturnType? expectedReturnType) {
   final catchClause = clauses[index];
   final exceptionType = catchClause.exceptionType;
   if (exceptionType == null) {
-    ctx.setLocal(catchClause.exceptionParameter!.name.value() as String, exceptionVar);
+    ctx.setLocal(
+        catchClause.exceptionParameter!.name.value() as String, exceptionVar);
     return compileBlock(catchClause.body, expectedReturnType, ctx);
   }
   final slot = TypeRef.fromAnnotation(ctx, ctx.library, exceptionType);
@@ -78,20 +86,24 @@ StatementInfo _compileCatchClause(CompilerContext ctx, List<CatchClause> clauses
     ctx,
     expectedReturnType,
     condition: (_ctx) {
-      ctx.pushOp(IsType.make(exceptionVar.scopeFrameOffset, runtimeTypeMap[slot] ?? ctx.typeRefIndexMap[slot]!, false),
+      ctx.pushOp(
+          IsType.make(exceptionVar.scopeFrameOffset,
+              runtimeTypeMap[slot] ?? ctx.typeRefIndexMap[slot]!, false),
           IsType.LEN);
       return Variable.alloc(ctx, EvalTypes.boolType.copyWith(boxed: false));
     },
     thenBranch: (_ctx, _expectedReturnType) {
-      ctx.setLocal(catchClause.exceptionParameter!.name.value() as String, exceptionVar.copyWith(type: slot));
+      ctx.setLocal(catchClause.exceptionParameter!.name.value() as String,
+          exceptionVar.copyWith(type: slot));
       return compileBlock(catchClause.body, expectedReturnType, ctx);
     },
     elseBranch: clauses.length <= index + 1
         ? null
         : (ctx, expectedReturnType) {
-            return _compileCatchClause(ctx, clauses, index + 1, exceptionVar, expectedReturnType);
+            return _compileCatchClause(
+                ctx, clauses, index + 1, exceptionVar, expectedReturnType);
           },
   );
 }
 
-/// 
+///

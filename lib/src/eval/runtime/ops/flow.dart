@@ -269,7 +269,8 @@ class ReturnAsync implements EvcOp {
   }
 
   @override
-  String toString() => 'ReturnAsync (L$_location, completer L$_completerOffset)';
+  String toString() =>
+      'ReturnAsync (L$_location, completer L$_completerOffset)';
 }
 
 // Jump to constant program offset
@@ -306,10 +307,17 @@ class PushFunctionPtr implements EvcOp {
     final pAT = runtime.constantPool[args[1] as int] as List;
     final posArgTypes = [for (final json in pAT) RuntimeType.fromJson(json)];
     final snAT = runtime.constantPool[args[3] as int] as List;
-    final sortedNamedArgTypes = [for (final json in snAT) RuntimeType.fromJson(json)];
+    final sortedNamedArgTypes = [
+      for (final json in snAT) RuntimeType.fromJson(json)
+    ];
 
-    runtime.frame[runtime.frameOffset++] = EvalFunctionPtr(runtime.frame, _offset, args[0] as int, posArgTypes,
-        (runtime.constantPool[args[2] as int] as List).cast(), sortedNamedArgTypes);
+    runtime.frame[runtime.frameOffset++] = EvalFunctionPtr(
+        runtime.frame,
+        _offset,
+        args[0] as int,
+        posArgTypes,
+        (runtime.constantPool[args[2] as int] as List).cast(),
+        sortedNamedArgTypes);
 
     runtime.args = [];
   }

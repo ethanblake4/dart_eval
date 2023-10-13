@@ -20,42 +20,55 @@ class $Point implements Point, $Instance {
   static const _$type = BridgeTypeRef(BridgeTypeSpec('dart:math', 'Point'));
 
   /// The bridge class definition for this class.
-  static const $declaration = BridgeClassDef(BridgeClassType(_$type, isAbstract: true),
+  static const $declaration = BridgeClassDef(
+      BridgeClassType(_$type, isAbstract: true),
       constructors: {
-        '': BridgeConstructorDef(BridgeFunctionDef(returns: BridgeTypeAnnotation(_$type), params: [
-          BridgeParameter('x', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.numType)), false),
-          BridgeParameter('y', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.numType)), false)
+        '': BridgeConstructorDef(
+            BridgeFunctionDef(returns: BridgeTypeAnnotation(_$type), params: [
+          BridgeParameter(
+              'x', BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)), false),
+          BridgeParameter(
+              'y', BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)), false)
         ], namedParams: []))
       },
       methods: {
-        '*': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(_$type),
-            params: [BridgeParameter('factor', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.numType)), false)],
-            namedParams: [])),
+        '*': BridgeMethodDef(
+            BridgeFunctionDef(returns: BridgeTypeAnnotation(_$type), params: [
+          BridgeParameter('factor',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)), false)
+        ], namedParams: [])),
         '+': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(_$type),
-            params: [BridgeParameter('other', BridgeTypeAnnotation(_$type), false)],
+            params: [
+              BridgeParameter('other', BridgeTypeAnnotation(_$type), false)
+            ],
             namedParams: [])),
         '-': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(_$type),
-            params: [BridgeParameter('other', BridgeTypeAnnotation(_$type), false)],
+            params: [
+              BridgeParameter('other', BridgeTypeAnnotation(_$type), false)
+            ],
             namedParams: [])),
         'squaredDistanceTo': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.numType)),
-            params: [BridgeParameter('other', BridgeTypeAnnotation(_$type), false)],
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+            params: [
+              BridgeParameter('other', BridgeTypeAnnotation(_$type), false)
+            ],
             namedParams: [])),
         'distanceTo': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.doubleType)),
-            params: [BridgeParameter('other', BridgeTypeAnnotation(_$type), false)],
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
+            params: [
+              BridgeParameter('other', BridgeTypeAnnotation(_$type), false)
+            ],
             namedParams: [])),
       },
       getters: {
-        'x':
-            BridgeMethodDef(BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.numType)))),
-        'y':
-            BridgeMethodDef(BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.numType)))),
-        'magnitude': BridgeMethodDef(
-            BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.doubleType)))),
+        'x': BridgeMethodDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)))),
+        'y': BridgeMethodDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)))),
+        'magnitude': BridgeMethodDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)))),
       },
       setters: {},
       fields: {},
@@ -108,28 +121,32 @@ class $Point implements Point, $Instance {
 
   static const $Function __squaredDistanceTo = $Function(_squaredDistanceTo);
 
-  static $Value? _squaredDistanceTo(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _squaredDistanceTo(
+      Runtime runtime, $Value? target, List<$Value?> args) {
     final $t = target as $Point;
     return $num(($t.$value).squaredDistanceTo((args[0] as $Point).$value));
   }
 
   static const $Function __multiply = $Function(_multiply);
 
-  static $Value? _multiply(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _multiply(
+      Runtime runtime, $Value? target, List<$Value?> args) {
     final $t = target as $Point;
     return $Point.wrap(($t.$value) * (args[0] as $num).$value);
   }
 
   static const $Function __subtract = $Function(_subtract);
 
-  static $Value? _subtract(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _subtract(
+      Runtime runtime, $Value? target, List<$Value?> args) {
     final $t = target as $Point;
     return $Point.wrap(($t.$value) - (args[0] as $Point).$value);
   }
 
   static const $Function __distanceTo = $Function(_distanceTo);
 
-  static $Value? _distanceTo(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _distanceTo(
+      Runtime runtime, $Value? target, List<$Value?> args) {
     final $t = target as $Point;
     return $double(($t.$value).distanceTo((args[0] as $Point).$value));
   }

@@ -98,7 +98,8 @@ void main() {
         }
       });
 
-      expect(runtime.executeLib('package:example/main.dart', 'main'), $num<num>(7));
+      expect(runtime.executeLib('package:example/main.dart', 'main'),
+          $num<num>(7));
     });
 
     test('Basic anonymous function', () {
@@ -171,10 +172,12 @@ void main() {
         }
       });
 
-      expect(runtime.executeLib('package:example/main.dart', 'main'), $double(1.5));
+      expect(runtime.executeLib('package:example/main.dart', 'main'),
+          $double(1.5));
     });
 
-    test('Anonymous function with named args, different sorting from call site', () {
+    test('Anonymous function with named args, different sorting from call site',
+        () {
       final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
@@ -189,7 +192,8 @@ void main() {
         }
       });
 
-      expect(runtime.executeLib('package:example/main.dart', 'main'), $double(1.5));
+      expect(runtime.executeLib('package:example/main.dart', 'main'),
+          $double(1.5));
     });
 
     test('Anonymous function with named args, one unspecified', () {
@@ -296,7 +300,8 @@ void main() {
         }
       });
 
-      expect(runtime.executeLib('package:example/main.dart', 'main'), $String('Hello World'));
+      expect(runtime.executeLib('package:example/main.dart', 'main'),
+          $String('Hello World'));
     });
 
     test('Basic generic function type', () {

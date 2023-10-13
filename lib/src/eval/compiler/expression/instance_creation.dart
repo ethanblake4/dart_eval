@@ -11,7 +11,8 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
-Variable compileInstanceCreation(CompilerContext ctx, InstanceCreationExpression e) {
+Variable compileInstanceCreation(
+    CompilerContext ctx, InstanceCreationExpression e) {
   final type = e.constructorName.type;
   final name = e.constructorName.name;
   final typeName = type.name2.value() as String;
@@ -29,19 +30,28 @@ Variable compileInstanceCreation(CompilerContext ctx, InstanceCreationExpression
 
   if (name == null) {
     method = $resolved;
-    offset = method.methodOffset ?? (throw CompileError('Trying to instantiate $type, which is not a class'));
+    offset = method.methodOffset ??
+        (throw CompileError(
+            'Trying to instantiate $type, which is not a class'));
 
     _dec = ctx.topLevelDeclarationsMap[offset.file]![type];
-    if (_dec == null || (!_dec.isBridge && _dec.declaration! is ClassDeclaration)) {
-      _dec = ctx.topLevelDeclarationsMap[offset.file]![offset.name ?? '$typeName.'] ??
-          (throw CompileError('Cannot instantiate: The class $type does not have a default constructor'));
+    if (_dec == null ||
+        (!_dec.isBridge && _dec.declaration! is ClassDeclaration)) {
+      _dec = ctx.topLevelDeclarationsMap[offset.file]![
+              offset.name ?? '$typeName.'] ??
+          (throw CompileError(
+              'Cannot instantiate: The class $type does not have a default constructor'));
     }
   } else {
     method = IdentifierReference($resolved, name.name).getValue(ctx);
-    offset = method.methodOffset ?? (throw CompileError('Trying to instantiate $type, which is not a class'));
+    offset = method.methodOffset ??
+        (throw CompileError(
+            'Trying to instantiate $type, which is not a class'));
 
-    _dec = ctx.topLevelDeclarationsMap[offset.file]!['$typeName.${name.name}'] ??
-        (throw CompileError('Cannot instantiate: The class $type does not have constructor ${name.name}'));
+    _dec = ctx
+            .topLevelDeclarationsMap[offset.file]!['$typeName.${name.name}'] ??
+        (throw CompileError(
+            'Cannot instantiate: The class $type does not have constructor ${name.name}'));
   }
 
   //final List<Variable> _args;
@@ -72,11 +82,12 @@ Variable compileInstanceCreation(CompilerContext ctx, InstanceCreationExpression
       final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type.type);
 
       final $null = BuiltinValue().push(ctx);
-      final op =
-          BridgeInstantiate.make($null.scopeFrameOffset, ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.']!);
+      final op = BridgeInstantiate.make($null.scopeFrameOffset,
+          ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.']!);
       ctx.pushOp(op, BridgeInstantiate.len(op));
     } else {
-      final op = InvokeExternal.make(ctx.bridgeStaticFunctionIndices[offset.file]![offset.name]!);
+      final op = InvokeExternal.make(
+          ctx.bridgeStaticFunctionIndices[offset.file]![offset.name]!);
       ctx.pushOp(op, InvokeExternal.LEN);
       ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
     }
@@ -88,5 +99,6 @@ Variable compileInstanceCreation(CompilerContext ctx, InstanceCreationExpression
     ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
   }
 
-  return Variable.alloc(ctx, $resolved.concreteTypes.first.copyWith(boxed: true));
+  return Variable.alloc(
+      ctx, $resolved.concreteTypes.first.copyWith(boxed: true));
 }

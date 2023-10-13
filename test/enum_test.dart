@@ -60,7 +60,8 @@ void main() {
         }
       });
 
-      expect(() => runtime.executeLib('package:example/main.dart', 'main'), prints('false\ntrue\n'));
+      expect(() => runtime.executeLib('package:example/main.dart', 'main'),
+          prints('false\ntrue\n'));
     });
   });
 }

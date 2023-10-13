@@ -16,13 +16,15 @@ class $Encoding implements $Instance {
           isAbstract: true,
           $extends: BridgeTypeRef(ConvertTypes.codec, [
             BridgeTypeRef.type(RuntimeTypes.stringType),
-            BridgeTypeRef(CoreTypes.list, [BridgeTypeRef.type(RuntimeTypes.intType)]),
+            BridgeTypeRef(CoreTypes.list, [BridgeTypeRef(CoreTypes.int)]),
           ])),
       constructors: {},
       methods: {},
       getters: {
-        'name': BridgeMethodDef(
-            BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.stringType)), params: [])),
+        'name': BridgeMethodDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation(
+                BridgeTypeRef.type(RuntimeTypes.stringType)),
+            params: [])),
       },
       wrap: true);
 
@@ -48,7 +50,8 @@ class $Encoding implements $Instance {
   }
 
   @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType(ConvertTypes.encoding);
+  int $getRuntimeType(Runtime runtime) =>
+      runtime.lookupType(ConvertTypes.encoding);
 
   @override
   void $setProperty(Runtime runtime, String identifier, $Value value) {

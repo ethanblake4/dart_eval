@@ -18,11 +18,12 @@ class FunctionSignaturePool {
   final Map<String, int> signatures = {};
 
   int getSignature(FormalParameterList p) {
-    final countPos = p.parameters.where((element) => element.isPositional).length;
+    final countPos =
+        p.parameters.where((element) => element.isPositional).length;
 
-    final sig = p.parameters
-        .where((element) => element.isNamed)
-        .fold('$countPos#', (previousValue, element) => '${element.name!.value() as String}#');
+    final sig = p.parameters.where((element) => element.isNamed).fold(
+        '$countPos#',
+        (previousValue, element) => '${element.name!.value() as String}#');
 
     return signatures[sig] ?? (signatures[sig] = _idx++);
   }
@@ -31,8 +32,11 @@ class FunctionSignaturePool {
 void asyncComplete(CompilerContext ctx, int valueOffset) {
   var _completer = ctx.lookupLocal('#completer');
   if (_completer == null) {
-    InvokeExternal.make(ctx.bridgeStaticFunctionIndices[ctx.libraryMap['dart:async']!]!['Completer.']!);
-    _completer = Variable.alloc(ctx, TypeRef.stdlib(ctx, 'dart:async', 'Completer'));
+    InvokeExternal.make(ctx.bridgeStaticFunctionIndices[
+        ctx.libraryMap['dart:async']!]!['Completer.']!);
+    _completer =
+        Variable.alloc(ctx, TypeRef.stdlib(ctx, 'dart:async', 'Completer'));
   }
-  ctx.pushOp(ReturnAsync.make(valueOffset, _completer.scopeFrameOffset), Return.LEN);
+  ctx.pushOp(
+      ReturnAsync.make(valueOffset, _completer.scopeFrameOffset), Return.LEN);
 }

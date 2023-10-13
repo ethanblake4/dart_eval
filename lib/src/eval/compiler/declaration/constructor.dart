@@ -18,7 +18,10 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import '../variable.dart';
 
 void compileConstructorDeclaration(
-    CompilerContext ctx, ConstructorDeclaration d, NamedCompilationUnitMember parent, List<FieldDeclaration> fields) {
+    CompilerContext ctx,
+    ConstructorDeclaration d,
+    NamedCompilationUnitMember parent,
+    List<FieldDeclaration> fields) {
   final parentName = parent.name.value() as String;
   final dName = (d.name?.value() as String?) ?? "";
   final n = '$parentName.$dName';
@@ -28,9 +31,11 @@ void compileConstructorDeclaration(
     throw CompileError('Factory constructors cannot have initializers', d);
   }
 
-  ctx.topLevelDeclarationPositions[ctx.library]![n] = beginMethod(ctx, d, d.offset, '$n()');
+  ctx.topLevelDeclarationPositions[ctx.library]![n] =
+      beginMethod(ctx, d, d.offset, '$n()');
 
-  ctx.beginAllocScope(existingAllocLen: d.parameters.parameters.length + (isEnum ? 2 : 0));
+  ctx.beginAllocScope(
+      existingAllocLen: d.parameters.parameters.length + (isEnum ? 2 : 0));
   ctx.scopeFrameOffset = d.parameters.parameters.length + (isEnum ? 2 : 0);
 
   SuperConstructorInvocation? $superInitializer;
@@ -39,7 +44,9 @@ void compileConstructorDeclaration(
     if (initializer is SuperConstructorInvocation) {
       $superInitializer = initializer;
     } else if ($superInitializer != null) {
-      throw CompileError('Super constructor invocation must be last in the initializer list', d);
+      throw CompileError(
+          'Super constructor invocation must be last in the initializer list',
+          d);
     } else {
       otherInitializers.add(initializer);
     }
@@ -53,8 +60,8 @@ void compileConstructorDeclaration(
   final fieldIdx = fieldIndices.length;
 
   final fieldFormalNames = <String>[];
-  final resolvedParams =
-      resolveFPLDefaults(ctx, d.parameters, false, allowUnboxed: true, isEnum: parent is EnumDeclaration);
+  final resolvedParams = resolveFPLDefaults(ctx, d.parameters, false,
+      allowUnboxed: true, isEnum: parent is EnumDeclaration);
 
   final superParams = <String>[];
   var i = parent is EnumDeclaration ? 2 : 0;
@@ -68,18 +75,24 @@ void compileConstructorDeclaration(
       if (p.type != null) {
         _type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
       }
-      _type ??=
-          TypeRef.lookupFieldType(ctx, TypeRef.lookupDeclaration(ctx, ctx.library, parent), p.name.value() as String);
+      _type ??= TypeRef.lookupFieldType(
+          ctx,
+          TypeRef.lookupDeclaration(ctx, ctx.library, parent),
+          p.name.value() as String);
       _type ??= V?.type;
       _type ??= EvalTypes.dynamicType;
 
-      Vrep = Variable(i, _type.copyWith(boxed: !_type.isUnboxedAcrossFunctionBoundaries)).boxIfNeeded(ctx)
+      Vrep = Variable(i,
+              _type.copyWith(boxed: !_type.isUnboxedAcrossFunctionBoundaries))
+          .boxIfNeeded(ctx)
         ..name = p.name.value() as String;
 
       fieldFormalNames.add(p.name.value() as String);
     } else if (p is SuperFormalParameter) {
       final type = resolveSuperFormalType(ctx, ctx.library, p, d);
-      Vrep = Variable(i, type.copyWith(boxed: !type.isUnboxedAcrossFunctionBoundaries)).boxIfNeeded(ctx)
+      Vrep = Variable(
+              i, type.copyWith(boxed: !type.isUnboxedAcrossFunctionBoundaries))
+          .boxIfNeeded(ctx)
         ..name = p.name.value() as String;
       superParams.add(p.name.value() as String);
     } else {
@@ -88,7 +101,8 @@ void compileConstructorDeclaration(
       if (p.type != null) {
         type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
       }
-      type = type.copyWith(boxed: !unboxedAcrossFunctionBoundaries.contains(type));
+      type =
+          type.copyWith(boxed: !unboxedAcrossFunctionBoundaries.contains(type));
       Vrep = Variable(i, type)..name = p.name!.value() as String;
     }
 
@@ -103,31 +117,37 @@ void compileConstructorDeclaration(
     final b = d.body;
 
     if (b.isAsynchronous || b.isGenerator) {
-      throw CompileError('Factory constructors cannot be async and/or generators', d);
+      throw CompileError(
+          'Factory constructors cannot be async and/or generators', d);
     }
 
     StatementInfo? stInfo;
 
     if (b is BlockFunctionBody) {
-      stInfo = compileBlock(b.block, AlwaysReturnType(clsType, false), ctx, name: '$n()');
+      stInfo = compileBlock(b.block, AlwaysReturnType(clsType, false), ctx,
+          name: '$n()');
     } else if (b is ExpressionFunctionBody) {
       ctx.beginAllocScope();
       final V = compileExpression(b.expression, ctx);
-      stInfo = doReturn(ctx, AlwaysReturnType(clsType, false), V, isAsync: b.isAsynchronous);
+      stInfo = doReturn(ctx, AlwaysReturnType(clsType, false), V,
+          isAsync: b.isAsynchronous);
       ctx.endAllocScope();
     } else {
       throw CompileError('Unknown function body type ${b.runtimeType}', d);
     }
 
     if (!(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
-      throw CompileError('Factory constructor must always return a value or throw', d);
+      throw CompileError(
+          'Factory constructor must always return a value or throw', d);
     }
 
     ctx.endAllocScope(popValues: false);
     return;
   }
 
-  final $extends = parent is EnumDeclaration ? null : (parent as ClassDeclaration).extendsClause;
+  final $extends = parent is EnumDeclaration
+      ? null
+      : (parent as ClassDeclaration).extendsClause;
   Variable $super;
   DeclarationOrPrefix? extendsWhat;
 
@@ -139,8 +159,9 @@ void compileConstructorDeclaration(
   if ($extends == null) {
     $super = BuiltinValue().push(ctx);
   } else {
-    extendsWhat = ctx
-        .visibleDeclarations[ctx.library]![$extends.superclass.name2.stringValue ?? $extends.superclass.name2.value()]!;
+    extendsWhat = ctx.visibleDeclarations[ctx.library]![
+        $extends.superclass.name2.stringValue ??
+            $extends.superclass.name2.value()]!;
 
     final decl = extendsWhat.declaration!;
 
@@ -148,27 +169,38 @@ void compileConstructorDeclaration(
       ctx.pushOp(PushBridgeSuperShim.make(), PushBridgeSuperShim.LEN);
       $super = Variable.alloc(ctx, EvalTypes.dynamicType);
     } else {
-      final extendsType = TypeRef.lookupDeclaration(ctx, ctx.library, decl.declaration as ClassDeclaration);
+      final extendsType = TypeRef.lookupDeclaration(
+          ctx, ctx.library, decl.declaration as ClassDeclaration);
 
       AlwaysReturnType? mReturnType;
 
       if ($superInitializer != null) {
-        final _constructor = ctx.topLevelDeclarationsMap[decl.sourceLib]!['${extendsType.name}.$constructorName']!;
+        final _constructor = ctx.topLevelDeclarationsMap[decl.sourceLib]![
+            '${extendsType.name}.$constructorName']!;
         final constructor = _constructor.declaration as ConstructorDeclaration;
 
         final argsPair = compileArgumentList(
-            ctx, $superInitializer.argumentList, decl.sourceLib, constructor.parameters.parameters, constructor,
-            superParams: superParams, source: $superInitializer);
+            ctx,
+            $superInitializer.argumentList,
+            decl.sourceLib,
+            constructor.parameters.parameters,
+            constructor,
+            superParams: superParams,
+            source: $superInitializer);
         final _args = argsPair.first;
         final _namedArgs = argsPair.second;
 
         argTypes.addAll(_args.map((e) => e.type).toList());
-        namedArgTypes.addAll(_namedArgs.map((key, value) => MapEntry(key, value.type)));
+        namedArgTypes
+            .addAll(_namedArgs.map((key, value) => MapEntry(key, value.type)));
       }
 
-      final method = IdentifierReference(null, '${extendsType.name}.$constructorName').getValue(ctx);
+      final method =
+          IdentifierReference(null, '${extendsType.name}.$constructorName')
+              .getValue(ctx);
       if (method.methodOffset == null) {
-        throw CompileError('Cannot call $constructorName as it is not a valid method');
+        throw CompileError(
+            'Cannot call $constructorName as it is not a valid method');
       }
 
       final offset = method.methodOffset!;
@@ -177,7 +209,8 @@ void compileConstructorDeclaration(
         ctx.offsetTracker.setOffset(loc, offset);
       }
 
-      mReturnType = method.methodReturnType?.toAlwaysReturnType(ctx, clsType, argTypes, namedArgTypes) ??
+      mReturnType = method.methodReturnType
+              ?.toAlwaysReturnType(ctx, clsType, argTypes, namedArgTypes) ??
           AlwaysReturnType(EvalTypes.dynamicType, true);
 
       ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
@@ -185,27 +218,31 @@ void compileConstructorDeclaration(
     }
   }
 
-  final op = CreateClass.make(
-      ctx.library, $super.scopeFrameOffset, parent.name.value() as String, fieldIdx + (isEnum ? 2 : 0));
+  final op = CreateClass.make(ctx.library, $super.scopeFrameOffset,
+      parent.name.value() as String, fieldIdx + (isEnum ? 2 : 0));
   ctx.pushOp(op, CreateClass.len(op));
   final instOffset = ctx.scopeFrameOffset++;
 
   if (parent is EnumDeclaration) {
     /// Add implicit index and name fields
-    ctx.inferredFieldTypes.putIfAbsent(ctx.library, () => {}).putIfAbsent(ctx.currentClass!.name.lexeme, () => {})
-      ..['index'] = EvalTypes.intType
+    ctx.inferredFieldTypes
+        .putIfAbsent(ctx.library, () => {})
+        .putIfAbsent(ctx.currentClass!.name.lexeme, () => {})
+      ..['index'] = EvalTypes.getIntType(ctx)
       ..['name'] = EvalTypes.stringType;
   }
 
   if (parent is EnumDeclaration) {
-    ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 0, 0), SetObjectPropertyImpl.LEN);
-    ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 1, 1), SetObjectPropertyImpl.LEN);
+    ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 0, 0),
+        SetObjectPropertyImpl.LEN);
+    ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 1, 1),
+        SetObjectPropertyImpl.LEN);
   }
 
   for (final fieldFormal in fieldFormalNames) {
     ctx.pushOp(
-        SetObjectPropertyImpl.make(
-            instOffset, fieldIndices[fieldFormal]!, ctx.lookupLocal(fieldFormal)!.scopeFrameOffset),
+        SetObjectPropertyImpl.make(instOffset, fieldIndices[fieldFormal]!,
+            ctx.lookupLocal(fieldFormal)!.scopeFrameOffset),
         SetObjectPropertyImpl.LEN);
   }
 
@@ -214,7 +251,9 @@ void compileConstructorDeclaration(
   for (final init in otherInitializers) {
     if (init is ConstructorFieldInitializer) {
       final V = compileExpression(init.expression, ctx).boxIfNeeded(ctx);
-      ctx.pushOp(SetObjectPropertyImpl.make(instOffset, fieldIndices[init.fieldName.name]!, V.scopeFrameOffset),
+      ctx.pushOp(
+          SetObjectPropertyImpl.make(instOffset,
+              fieldIndices[init.fieldName.name]!, V.scopeFrameOffset),
           SetObjectPropertyImpl.LEN);
       usedNames.add(init.fieldName.name);
     } else {
@@ -229,26 +268,32 @@ void compileConstructorDeclaration(
     final bridge = decl.bridge! as BridgeClassDef;
 
     if (!bridge.bridge) {
-      throw CompileError('Bridge class ${$extends.superclass} is a wrapper, not a bridge, so you can\'t extend it');
+      throw CompileError(
+          'Bridge class ${$extends.superclass} is a wrapper, not a bridge, so you can\'t extend it');
     }
 
     if ($superInitializer != null) {
       final constructor = bridge.constructors[constructorName]!;
-      final argsPair =
-          compileArgumentListWithBridge(ctx, $superInitializer.argumentList, constructor.functionDescriptor);
+      final argsPair = compileArgumentListWithBridge(
+          ctx, $superInitializer.argumentList, constructor.functionDescriptor);
       final _args = argsPair.first;
       final _namedArgs = argsPair.second;
       argTypes.addAll(_args.map((e) => e.type).toList());
-      namedArgTypes.addAll(_namedArgs.map((key, value) => MapEntry(key, value.type)));
+      namedArgTypes
+          .addAll(_namedArgs.map((key, value) => MapEntry(key, value.type)));
     }
 
-    final op = BridgeInstantiate.make(instOffset,
-        ctx.bridgeStaticFunctionIndices[decl.sourceLib]!['${$extends.superclass.name2.value()}.$constructorName']!);
+    final op = BridgeInstantiate.make(
+        instOffset,
+        ctx.bridgeStaticFunctionIndices[decl.sourceLib]![
+            '${$extends.superclass.name2.value()}.$constructorName']!);
     ctx.pushOp(op, BridgeInstantiate.len(op));
     final bridgeInst = Variable.alloc(ctx, EvalTypes.dynamicType);
 
     ctx.pushOp(
-        ParentBridgeSuperShim.make($super.scopeFrameOffset, bridgeInst.scopeFrameOffset), ParentBridgeSuperShim.LEN);
+        ParentBridgeSuperShim.make(
+            $super.scopeFrameOffset, bridgeInst.scopeFrameOffset),
+        ParentBridgeSuperShim.LEN);
 
     ctx.pushOp(Return.make(bridgeInst.scopeFrameOffset), Return.LEN);
   } else {
@@ -258,11 +303,13 @@ void compileConstructorDeclaration(
   ctx.endAllocScope(popValues: false);
 }
 
-void compileDefaultConstructor(CompilerContext ctx, NamedCompilationUnitMember parent, List<FieldDeclaration> fields) {
+void compileDefaultConstructor(CompilerContext ctx,
+    NamedCompilationUnitMember parent, List<FieldDeclaration> fields) {
   final parentName = parent.name.value() as String;
   final n = '$parentName.';
 
-  ctx.topLevelDeclarationPositions[ctx.library]![n] = beginMethod(ctx, parent, parent.offset, '$n()');
+  ctx.topLevelDeclarationPositions[ctx.library]![n] =
+      beginMethod(ctx, parent, parent.offset, '$n()');
 
   final isEnum = parent is EnumDeclaration;
   ctx.beginAllocScope(existingAllocLen: isEnum ? 2 : 0);
@@ -271,7 +318,9 @@ void compileDefaultConstructor(CompilerContext ctx, NamedCompilationUnitMember p
   final fieldIndices = _getFieldIndices(fields);
   final fieldIdx = fieldIndices.length;
 
-  final $extends = parent is EnumDeclaration ? null : (parent as ClassDeclaration).extendsClause;
+  final $extends = parent is EnumDeclaration
+      ? null
+      : (parent as ClassDeclaration).extendsClause;
   Variable $super;
   DeclarationOrPrefix? extendsWhat;
 
@@ -283,7 +332,8 @@ void compileDefaultConstructor(CompilerContext ctx, NamedCompilationUnitMember p
   if ($extends == null) {
     $super = BuiltinValue().push(ctx);
   } else {
-    extendsWhat = ctx.visibleDeclarations[ctx.library]![$extends.superclass.name2.stringValue!]!;
+    extendsWhat = ctx.visibleDeclarations[ctx.library]![
+        $extends.superclass.name2.stringValue!]!;
 
     final decl = extendsWhat.declaration!;
 
@@ -291,13 +341,17 @@ void compileDefaultConstructor(CompilerContext ctx, NamedCompilationUnitMember p
       ctx.pushOp(PushBridgeSuperShim.make(), PushBridgeSuperShim.LEN);
       $super = Variable.alloc(ctx, EvalTypes.dynamicType);
     } else {
-      final extendsType = TypeRef.lookupDeclaration(ctx, ctx.library, decl.declaration as ClassDeclaration);
+      final extendsType = TypeRef.lookupDeclaration(
+          ctx, ctx.library, decl.declaration as ClassDeclaration);
 
       AlwaysReturnType? mReturnType;
 
-      final method = IdentifierReference(null, '${extendsType.name}.$constructorName').getValue(ctx);
+      final method =
+          IdentifierReference(null, '${extendsType.name}.$constructorName')
+              .getValue(ctx);
       if (method.methodOffset == null) {
-        throw CompileError('Cannot call $constructorName as it is not a valid method');
+        throw CompileError(
+            'Cannot call $constructorName as it is not a valid method');
       }
 
       final offset = method.methodOffset!;
@@ -306,7 +360,8 @@ void compileDefaultConstructor(CompilerContext ctx, NamedCompilationUnitMember p
         ctx.offsetTracker.setOffset(loc, offset);
       }
       final clsType = TypeRef.lookupDeclaration(ctx, ctx.library, parent);
-      mReturnType = method.methodReturnType?.toAlwaysReturnType(ctx, clsType, argTypes, namedArgTypes) ??
+      mReturnType = method.methodReturnType
+              ?.toAlwaysReturnType(ctx, clsType, argTypes, namedArgTypes) ??
           AlwaysReturnType(EvalTypes.dynamicType, true);
 
       ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
@@ -314,32 +369,41 @@ void compileDefaultConstructor(CompilerContext ctx, NamedCompilationUnitMember p
     }
   }
 
-  final op = CreateClass.make(
-      ctx.library, $super.scopeFrameOffset, parent.name.value() as String, fieldIdx + (isEnum ? 2 : 0));
+  final op = CreateClass.make(ctx.library, $super.scopeFrameOffset,
+      parent.name.value() as String, fieldIdx + (isEnum ? 2 : 0));
   ctx.pushOp(op, CreateClass.len(op));
   final instOffset = ctx.scopeFrameOffset++;
 
   if (parent is EnumDeclaration) {
     /// Add implicit index and name fields
-    ctx.inferredFieldTypes.putIfAbsent(ctx.library, () => {}).putIfAbsent(ctx.currentClass!.name.lexeme, () => {})
-      ..['index'] = EvalTypes.intType
+    ctx.inferredFieldTypes
+        .putIfAbsent(ctx.library, () => {})
+        .putIfAbsent(ctx.currentClass!.name.lexeme, () => {})
+      ..['index'] = EvalTypes.getIntType(ctx)
       ..['name'] = EvalTypes.stringType;
   }
 
   if (parent is EnumDeclaration) {
-    ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 0, 0), SetObjectPropertyImpl.LEN);
-    ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 1, 1), SetObjectPropertyImpl.LEN);
+    ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 0, 0),
+        SetObjectPropertyImpl.LEN);
+    ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 1, 1),
+        SetObjectPropertyImpl.LEN);
   }
 
   _compileUnusedFields(
-      ctx, fields, parent is EnumDeclaration ? {'index', 'name'} : {}, instOffset, parent is EnumDeclaration ? 2 : 0);
+      ctx,
+      fields,
+      parent is EnumDeclaration ? {'index', 'name'} : {},
+      instOffset,
+      parent is EnumDeclaration ? 2 : 0);
 
   if ($extends != null && extendsWhat!.declaration!.isBridge) {
     final decl = extendsWhat.declaration!;
     final bridge = decl.bridge! as BridgeClassDef;
 
     if (!bridge.bridge) {
-      throw CompileError('Bridge class ${$extends.superclass} is a wrapper, not a bridge, so you can\'t extend it');
+      throw CompileError(
+          'Bridge class ${$extends.superclass} is a wrapper, not a bridge, so you can\'t extend it');
     }
 
     final op = BridgeInstantiate.make(
@@ -350,7 +414,9 @@ void compileDefaultConstructor(CompilerContext ctx, NamedCompilationUnitMember p
     final bridgeInst = Variable.alloc(ctx, EvalTypes.dynamicType);
 
     ctx.pushOp(
-        ParentBridgeSuperShim.make($super.scopeFrameOffset, bridgeInst.scopeFrameOffset), ParentBridgeSuperShim.LEN);
+        ParentBridgeSuperShim.make(
+            $super.scopeFrameOffset, bridgeInst.scopeFrameOffset),
+        ParentBridgeSuperShim.LEN);
 
     ctx.pushOp(Return.make(bridgeInst.scopeFrameOffset), Return.LEN);
   } else {
@@ -360,7 +426,8 @@ void compileDefaultConstructor(CompilerContext ctx, NamedCompilationUnitMember p
   ctx.endAllocScope(popValues: false);
 }
 
-Map<String, int> _getFieldIndices(List<FieldDeclaration> fields, [int fieldIdx = 0]) {
+Map<String, int> _getFieldIndices(List<FieldDeclaration> fields,
+    [int fieldIdx = 0]) {
   final fieldIndices = <String, int>{};
   var _fieldIdx = fieldIdx;
   for (final fd in fields) {
@@ -372,17 +439,22 @@ Map<String, int> _getFieldIndices(List<FieldDeclaration> fields, [int fieldIdx =
   return fieldIndices;
 }
 
-void _compileUnusedFields(CompilerContext ctx, List<FieldDeclaration> fields, Set<String> usedNames, int instOffset,
+void _compileUnusedFields(CompilerContext ctx, List<FieldDeclaration> fields,
+    Set<String> usedNames, int instOffset,
     [int fieldIdx = 0]) {
   var _fieldIdx = fieldIdx;
   for (final fd in fields) {
     for (final field in fd.fields.variables) {
-      if (!usedNames.contains(field.name.value() as String) && field.initializer != null) {
+      if (!usedNames.contains(field.name.value() as String) &&
+          field.initializer != null) {
         final V = compileExpression(field.initializer!, ctx).boxIfNeeded(ctx);
-        ctx.inferredFieldTypes
-            .putIfAbsent(ctx.library, () => {})
-            .putIfAbsent(ctx.currentClass!.name.lexeme, () => {})[field.name.value() as String] = V.type;
-        ctx.pushOp(SetObjectPropertyImpl.make(instOffset, _fieldIdx, V.scopeFrameOffset), SetObjectPropertyImpl.LEN);
+        ctx.inferredFieldTypes.putIfAbsent(ctx.library, () => {}).putIfAbsent(
+            ctx.currentClass!.name.lexeme,
+            () => {})[field.name.value() as String] = V.type;
+        ctx.pushOp(
+            SetObjectPropertyImpl.make(
+                instOffset, _fieldIdx, V.scopeFrameOffset),
+            SetObjectPropertyImpl.LEN);
       }
       _fieldIdx++;
     }

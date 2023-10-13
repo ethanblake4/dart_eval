@@ -6,7 +6,8 @@ import 'package:dart_eval/src/eval/compiler/scope.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
-void compileTopLevelVariableDeclaration(VariableDeclaration v, CompilerContext ctx) {
+void compileTopLevelVariableDeclaration(
+    VariableDeclaration v, CompilerContext ctx) {
   final parent = v.parent!.parent! as TopLevelVariableDeclaration;
   final varName = v.name.value() as String;
 
@@ -19,7 +20,8 @@ void compileTopLevelVariableDeclaration(VariableDeclaration v, CompilerContext c
     if (specifiedType != null) {
       type = TypeRef.fromAnnotation(ctx, ctx.library, specifiedType);
       if (!V.type.isAssignableTo(ctx, type)) {
-        throw CompileError('Variable $varName of inferred type ${V.type} does not conform to type $type');
+        throw CompileError(
+            'Variable $varName of inferred type ${V.type} does not conform to type $type');
       }
     } else {
       type = V.type;

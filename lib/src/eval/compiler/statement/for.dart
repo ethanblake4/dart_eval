@@ -10,17 +10,21 @@ import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/statement/variable_declaration.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 
-StatementInfo compileForStatement(ForStatement s, CompilerContext ctx, AlwaysReturnType? expectedReturnType) {
+StatementInfo compileForStatement(
+    ForStatement s, CompilerContext ctx, AlwaysReturnType? expectedReturnType) {
   final parts = s.forLoopParts;
 
   if (parts is ForEachParts) {
     final iterable = compileExpression(parts.iterable, ctx).boxIfNeeded(ctx);
     final itype = iterable.type;
     if (!itype.isAssignableTo(ctx, EvalTypes.getIterableType(ctx))) {
-      throw CompileError('Cannot iterate over ${iterable.type}', parts, ctx.library, ctx);
+      throw CompileError(
+          'Cannot iterate over ${iterable.type}', parts, ctx.library, ctx);
     }
 
-    final elementType = itype.specifiedTypeArgs.isEmpty ? EvalTypes.dynamicType : itype.specifiedTypeArgs[0];
+    final elementType = itype.specifiedTypeArgs.isEmpty
+        ? EvalTypes.dynamicType
+        : itype.specifiedTypeArgs[0];
 
     final iterator = iterable.getProperty(ctx, 'iterator');
     late Reference loopVariable;
@@ -29,23 +33,33 @@ StatementInfo compileForStatement(ForStatement s, CompilerContext ctx, AlwaysRet
         initialization: (_ctx) {
           if (parts is ForEachPartsWithDeclaration) {
             if (parts.loopVariable.type != null &&
-                !elementType.isAssignableTo(ctx, TypeRef.fromAnnotation(ctx, ctx.library, parts.loopVariable.type!))) {
-              throw CompileError('Cannot assign $elementType to ${parts.loopVariable.type}', parts, ctx.library, ctx);
+                !elementType.isAssignableTo(
+                    ctx,
+                    TypeRef.fromAnnotation(
+                        ctx, ctx.library, parts.loopVariable.type!))) {
+              throw CompileError(
+                  'Cannot assign $elementType to ${parts.loopVariable.type}',
+                  parts,
+                  ctx.library,
+                  ctx);
             }
             final name = parts.loopVariable.name.value() as String;
-            ctx.setLocal(name, BuiltinValue().push(ctx).copyWith(type: elementType));
+            ctx.setLocal(
+                name, BuiltinValue().push(ctx).copyWith(type: elementType));
             loopVariable = IdentifierReference(null, name);
           } else if (parts is ForEachPartsWithIdentifier) {
             loopVariable = compileExpressionAsReference(parts.identifier, ctx);
             final type = loopVariable.resolveType(ctx);
             if (!elementType.isAssignableTo(_ctx, type)) {
-              throw CompileError('Cannot assign $elementType to $type', parts, ctx.library, ctx);
+              throw CompileError('Cannot assign $elementType to $type', parts,
+                  ctx.library, ctx);
             }
           }
         },
         condition: (_ctx) => iterator.invoke(_ctx, 'moveNext', []).result,
         body: (_ctx, ert) => compileStatement(s.body, ert, _ctx),
-        update: (ctx) => loopVariable.setValue(ctx, iterator.getProperty(ctx, 'current')),
+        update: (ctx) =>
+            loopVariable.setValue(ctx, iterator.getProperty(ctx, 'current')),
         updateBeforeBody: true);
   }
 
@@ -61,7 +75,9 @@ StatementInfo compileForStatement(ForStatement s, CompilerContext ctx, AlwaysRet
           }
         }
       },
-      condition: parts.condition == null ? null : (_ctx) => compileExpression(parts.condition!, _ctx),
+      condition: parts.condition == null
+          ? null
+          : (_ctx) => compileExpression(parts.condition!, _ctx),
       body: (_ctx, ert) => compileStatement(s.body, ert, _ctx),
       update: (_ctx) {
         for (final u in parts.updaters) {

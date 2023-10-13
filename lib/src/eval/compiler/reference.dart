@@ -40,7 +40,8 @@ class IdentifierReference implements Reference {
       if (object!.type == EvalTypes.typeType) {
         return object!.concreteTypes[0].resolveTypeChain(ctx);
       }
-      return TypeRef.lookupFieldType(ctx, object!.type, name) ?? EvalTypes.dynamicType;
+      return TypeRef.lookupFieldType(ctx, object!.type, name) ??
+          EvalTypes.dynamicType;
     }
 
     // Locals
@@ -51,23 +52,25 @@ class IdentifierReference implements Reference {
 
     // Instance
     if (ctx.currentClass != null) {
-      final instanceDeclaration =
-          resolveInstanceDeclaration(ctx, ctx.library, ctx.currentClass!.name.value() as String, name);
+      final instanceDeclaration = resolveInstanceDeclaration(
+          ctx, ctx.library, ctx.currentClass!.name.value() as String, name);
       if (instanceDeclaration != null) {
         final $type = instanceDeclaration.first;
-        return TypeRef.lookupFieldType(ctx, $type, name) ?? EvalTypes.dynamicType;
+        return TypeRef.lookupFieldType(ctx, $type, name) ??
+            EvalTypes.dynamicType;
       }
     }
 
-    final staticDeclaration =
-        resolveStaticDeclaration(ctx, ctx.library, ctx.currentClass!.name.value() as String, name);
+    final staticDeclaration = resolveStaticDeclaration(
+        ctx, ctx.library, ctx.currentClass!.name.value() as String, name);
 
     if (staticDeclaration != null && staticDeclaration.declaration != null) {
       final _dec = staticDeclaration.declaration!;
       if (_dec is MethodDeclaration) {
         return EvalTypes.functionType;
       } else if (_dec is VariableDeclaration) {
-        final name = '${ctx.currentClass!.name.value() as String}.${_dec.name.value() as String}';
+        final name =
+            '${ctx.currentClass!.name.value() as String}.${_dec.name.value() as String}';
         return ctx.topLevelVariableInferredTypes[ctx.library]![name]!;
       }
     }
@@ -79,11 +82,15 @@ class IdentifierReference implements Reference {
   void setValue(CompilerContext ctx, Variable value, [AstNode? source]) {
     if (object != null) {
       object = object!.boxIfNeeded(ctx);
-      final fieldType = TypeRef.lookupFieldType(ctx, object!.type, name) ?? EvalTypes.dynamicType;
+      final fieldType = TypeRef.lookupFieldType(ctx, object!.type, name) ??
+          EvalTypes.dynamicType;
       if (!value.type.resolveTypeChain(ctx).isAssignableTo(ctx, fieldType)) {
-        throw CompileError('Cannot assign value of type ${value.type} to field "$name" of type $fieldType', source);
+        throw CompileError(
+            'Cannot assign value of type ${value.type} to field "$name" of type $fieldType',
+            source);
       }
-      final op = SetObjectProperty.make(object!.scopeFrameOffset, name, value.boxIfNeeded(ctx).scopeFrameOffset);
+      final op = SetObjectProperty.make(object!.scopeFrameOffset, name,
+          value.boxIfNeeded(ctx).scopeFrameOffset);
       ctx.pushOp(op, SetObjectProperty.len(op));
       return;
     }
@@ -95,7 +102,8 @@ class IdentifierReference implements Reference {
         throw CompileError('Cannot change value of a final variable', source);
       }
 
-      ctx.pushOp(CopyValue.make(local.scopeFrameOffset, value.scopeFrameOffset), CopyValue.LEN);
+      ctx.pushOp(CopyValue.make(local.scopeFrameOffset, value.scopeFrameOffset),
+          CopyValue.LEN);
       final type = TypeRef.commonBaseType(ctx, {local.type, value.type});
       local.copyWithUpdate(ctx, type: type);
       return;
@@ -103,22 +111,28 @@ class IdentifierReference implements Reference {
 
     // Instance
     if (ctx.currentClass != null) {
-      final instanceDeclaration =
-          resolveInstanceDeclaration(ctx, ctx.library, ctx.currentClass!.name.value() as String, name);
+      final instanceDeclaration = resolveInstanceDeclaration(
+          ctx, ctx.library, ctx.currentClass!.name.value() as String, name);
       if (instanceDeclaration != null) {
         final $type = instanceDeclaration.first;
-        final fieldType = TypeRef.lookupFieldType(ctx, $type, name) ?? EvalTypes.dynamicType;
+        final fieldType =
+            TypeRef.lookupFieldType(ctx, $type, name) ?? EvalTypes.dynamicType;
         if (!value.type.resolveTypeChain(ctx).isAssignableTo(ctx, fieldType)) {
-          throw CompileError('Cannot assign value of type ${value.type} to field "$name" of type $fieldType', source);
+          throw CompileError(
+              'Cannot assign value of type ${value.type} to field "$name" of type $fieldType',
+              source);
         }
         final $this = ctx.lookupLocal('#this')!;
-        final op = SetObjectProperty.make($this.scopeFrameOffset, name, value.boxIfNeeded(ctx).scopeFrameOffset);
+        final op = SetObjectProperty.make($this.scopeFrameOffset, name,
+            value.boxIfNeeded(ctx).scopeFrameOffset);
         ctx.pushOp(op, SetObjectProperty.len(op));
         return;
       }
     }
 
-    throw CompileError('Cannot find value to set: ${object != null ? '${object!}.' : ''}$name', source);
+    throw CompileError(
+        'Cannot find value to set: ${object != null ? '${object!}.' : ''}$name',
+        source);
   }
 
   @override
@@ -128,22 +142,26 @@ class IdentifierReference implements Reference {
         final classType = object!.concreteTypes[0].resolveTypeChain(ctx);
         if (classType.extendsType == EvalTypes.enumType) {
           final type = classType;
-          final gIndex = ctx.enumValueIndices[classType.file]?[type.name]?[name];
+          final gIndex =
+              ctx.enumValueIndices[classType.file]?[type.name]?[name];
           if (gIndex != null) {
             ctx.pushOp(LoadGlobal.make(gIndex), LoadGlobal.LEN);
             ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
             return Variable.alloc(ctx, type);
           }
         }
-        final _dec = ctx.topLevelDeclarationsMap[classType.file]![classType.name]!;
+        final _dec =
+            ctx.topLevelDeclarationsMap[classType.file]![classType.name]!;
         if (_dec.isBridge) {
           final br = _dec.bridge;
           if (br is BridgeClassDef) {
             final getter = br.getters[name];
             if (getter != null) {
-              final getterType = TypeRef.fromBridgeAnnotation(ctx, getter.functionDescriptor.returns);
+              final getterType = TypeRef.fromBridgeAnnotation(
+                  ctx, getter.functionDescriptor.returns);
               ctx.pushOp(
-                  InvokeExternal.make(ctx.bridgeStaticFunctionIndices[classType.file]!['${classType.name}.$name*g']!),
+                  InvokeExternal.make(ctx.bridgeStaticFunctionIndices[
+                      classType.file]!['${classType.name}.$name*g']!),
                   InvokeExternal.LEN);
               ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
               return Variable.alloc(ctx, getterType);
@@ -152,13 +170,16 @@ class IdentifierReference implements Reference {
             if (field != null) {
               final fieldType = TypeRef.fromBridgeAnnotation(ctx, field.type);
               ctx.pushOp(
-                  InvokeExternal.make(ctx.bridgeStaticFunctionIndices[classType.file]!['${classType.name}.$name*g']!),
+                  InvokeExternal.make(ctx.bridgeStaticFunctionIndices[
+                      classType.file]!['${classType.name}.$name*g']!),
                   InvokeExternal.LEN);
               ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
               return Variable.alloc(ctx, fieldType);
             }
 
-            throw CompileError('Cannot find external getter or field: $name on $classType', source);
+            throw CompileError(
+                'Cannot find external getter or field: $name on $classType',
+                source);
           }
         }
         final _name = '${classType.name}.$name';
@@ -173,7 +194,10 @@ class IdentifierReference implements Reference {
       ctx.pushOp(op, PushObjectProperty.len(op));
       ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
       return Variable.alloc(
-          ctx, TypeRef.lookupFieldType(ctx, object!.type, name)?.copyWith(boxed: true) ?? EvalTypes.dynamicType);
+          ctx,
+          TypeRef.lookupFieldType(ctx, object!.type, name)
+                  ?.copyWith(boxed: true) ??
+              EvalTypes.dynamicType);
     }
 
     // First look at locals
@@ -184,8 +208,8 @@ class IdentifierReference implements Reference {
 
     // Next, the instance (if available)
     if (ctx.currentClass != null) {
-      final instanceDeclaration =
-          resolveInstanceDeclaration(ctx, ctx.library, ctx.currentClass!.name.value() as String, name);
+      final instanceDeclaration = resolveInstanceDeclaration(
+          ctx, ctx.library, ctx.currentClass!.name.value() as String, name);
       if (instanceDeclaration != null) {
         final $type = instanceDeclaration.first;
         final _dec = instanceDeclaration.second;
@@ -209,37 +233,48 @@ class IdentifierReference implements Reference {
         if (_dec.isBridge) {
           if (_dec is GetSet) {
             final getter = _dec.bridge ??
-                (throw CompileError('Property "$name" has a setter but no getter, so it cannot be accessed', source));
+                (throw CompileError(
+                    'Property "$name" has a setter but no getter, so it cannot be accessed',
+                    source));
             return Variable.alloc(
                 ctx,
-                TypeRef.fromBridgeAnnotation(ctx, getter.functionDescriptor.returns,
+                TypeRef.fromBridgeAnnotation(
+                    ctx, getter.functionDescriptor.returns,
                     specifiedType: $type, specifyingType: $this.type),
                 methodOffset: DeferredOrOffset(
-                    file: ctx.library, className: ctx.currentClass!.name.value() as String, name: name));
+                    file: ctx.library,
+                    className: ctx.currentClass!.name.value() as String,
+                    name: name));
           }
           final bridge = _dec.bridge!;
           if (bridge is BridgeMethodDef) {
             return Variable.alloc(ctx, EvalTypes.functionType,
                 methodOffset: DeferredOrOffset(
-                    file: ctx.library, className: ctx.currentClass!.name.value() as String, name: name));
+                    file: ctx.library,
+                    className: ctx.currentClass!.name.value() as String,
+                    name: name));
           }
-          throw CompileError('Ref: cannot resolve bridge declaration "$name" of type ${_dec.runtimeType}', source);
+          throw CompileError(
+              'Ref: cannot resolve bridge declaration "$name" of type ${_dec.runtimeType}',
+              source);
         }
 
-        return Variable.alloc(ctx, TypeRef.lookupFieldType(ctx, $type, name) ?? EvalTypes.dynamicType);
+        return Variable.alloc(ctx,
+            TypeRef.lookupFieldType(ctx, $type, name) ?? EvalTypes.dynamicType);
       }
 
-      final staticDeclaration =
-          resolveStaticDeclaration(ctx, ctx.library, ctx.currentClass!.name.value() as String, name);
+      final staticDeclaration = resolveStaticDeclaration(
+          ctx, ctx.library, ctx.currentClass!.name.value() as String, name);
 
       if (staticDeclaration != null && staticDeclaration.declaration != null) {
         final _dec = staticDeclaration.declaration!;
         if (_dec is MethodDeclaration) {
           return Variable(-1, EvalTypes.functionType,
-              methodOffset:
-                  DeferredOrOffset.lookupStatic(ctx, ctx.library, ctx.currentClass!.name.value() as String, name));
+              methodOffset: DeferredOrOffset.lookupStatic(ctx, ctx.library,
+                  ctx.currentClass!.name.value() as String, name));
         } else if (_dec is VariableDeclaration) {
-          final name = '${ctx.currentClass!.name.value() as String}.${_dec.name.value() as String}';
+          final name =
+              '${ctx.currentClass!.name.value() as String}.${_dec.name.value() as String}';
           final type = ctx.topLevelVariableInferredTypes[ctx.library]![name]!;
           final gIndex = ctx.topLevelGlobalIndices[ctx.library]![name]!;
           ctx.pushOp(LoadGlobal.make(gIndex), LoadGlobal.LEN);
@@ -265,13 +300,20 @@ class IdentifierReference implements Reference {
         final actualType = object!.concreteTypes[0];
         DeferredOrOffset offset;
 
-        final returnType = AlwaysReturnType.fromInstanceMethod(ctx, actualType, name, EvalTypes.dynamicType);
+        final returnType = AlwaysReturnType.fromInstanceMethod(
+            ctx, actualType, name, EvalTypes.dynamicType);
 
-        final methodsMap = ctx.instanceDeclarationPositions[actualType.file]![actualType.name]![2];
+        final methodsMap = ctx.instanceDeclarationPositions[actualType.file]![
+            actualType.name]![2];
         if (methodsMap.containsKey(name)) {
-          offset = DeferredOrOffset(file: actualType.file, offset: methodsMap[name]);
+          offset =
+              DeferredOrOffset(file: actualType.file, offset: methodsMap[name]);
         } else {
-          offset = DeferredOrOffset(file: actualType.file, className: actualType.name, methodType: 2, name: name);
+          offset = DeferredOrOffset(
+              file: actualType.file,
+              className: actualType.name,
+              methodType: 2,
+              name: name);
         }
 
         return StaticDispatch(offset, returnType);
@@ -309,24 +351,26 @@ class PrefixedIdentifierReference implements Reference {
 
   @override
   StaticDispatch? getStaticDispatch(CompilerContext ctx, [AstNode? source]) {
-    final dec =
-        ctx.visibleDeclarations[ctx.library]![prefix] ?? (throw CompileError('Cannot find prefix $prefix', source));
+    final dec = ctx.visibleDeclarations[ctx.library]![prefix] ??
+        (throw CompileError('Cannot find prefix $prefix', source));
     if (dec.declaration != null) {
       throw CompileError('Cannot use a declaration as a prefix', source);
     }
     final children = dec.children!;
-    return _declarationToStaticDispatch(children[identifier]!, identifier, ctx, source);
+    return _declarationToStaticDispatch(
+        children[identifier]!, identifier, ctx, source);
   }
 
   @override
   Variable getValue(CompilerContext ctx, [AstNode? source]) {
-    final dec =
-        ctx.visibleDeclarations[ctx.library]![prefix] ?? (throw CompileError('Cannot find prefix $prefix', source));
+    final dec = ctx.visibleDeclarations[ctx.library]![prefix] ??
+        (throw CompileError('Cannot find prefix $prefix', source));
     if (dec.declaration != null) {
       throw CompileError('Cannot use a declaration as a prefix', source);
     }
     final children = dec.children!;
-    return _declarationToVariable(children[identifier]!, identifier, ctx, source);
+    return _declarationToVariable(
+        children[identifier]!, identifier, ctx, source);
   }
 
   @override
@@ -351,7 +395,9 @@ class IndexedReference implements Reference {
   @override
   TypeRef resolveType(CompilerContext ctx, [AstNode? source]) {
     if (_variable.type.isAssignableTo(ctx, EvalTypes.getListType(ctx))) {
-      return _variable.type.specifiedTypeArgs.isNotEmpty ? _variable.type.specifiedTypeArgs[0] : EvalTypes.dynamicType;
+      return _variable.type.specifiedTypeArgs.isNotEmpty
+          ? _variable.type.specifiedTypeArgs[0]
+          : EvalTypes.dynamicType;
     }
     return getValue(ctx).type;
   }
@@ -361,33 +407,45 @@ class IndexedReference implements Reference {
     _variable = _variable.updated(ctx);
     _index = _index.updated(ctx);
 
-    if (_variable.type.isAssignableTo(ctx, EvalTypes.getListType(ctx), forceAllowDynamic: false)) {
-      if (!_index.type.isAssignableTo(ctx, EvalTypes.intType)) {
-        throw CompileError('TypeError: Cannot use variable of type ${_index.type} as list index');
+    if (_variable.type.isAssignableTo(ctx, EvalTypes.getListType(ctx),
+        forceAllowDynamic: false)) {
+      if (!_index.type.isAssignableTo(ctx, EvalTypes.getIntType(ctx))) {
+        throw CompileError(
+            'TypeError: Cannot use variable of type ${_index.type} as list index');
       }
 
       final list = _variable.unboxIfNeeded(ctx);
       _index = _index.unboxIfNeeded(ctx);
-      ctx.pushOp(IndexList.make(list.scopeFrameOffset, _index.scopeFrameOffset), IndexList.LEN);
-      final listElementType =
-          _variable.type.specifiedTypeArgs.isNotEmpty ? _variable.type.specifiedTypeArgs[0] : EvalTypes.dynamicType;
+      ctx.pushOp(IndexList.make(list.scopeFrameOffset, _index.scopeFrameOffset),
+          IndexList.LEN);
+      final listElementType = _variable.type.specifiedTypeArgs.isNotEmpty
+          ? _variable.type.specifiedTypeArgs[0]
+          : EvalTypes.dynamicType;
       return Variable.alloc(ctx, listElementType);
     }
 
-    if (_variable.type.isAssignableTo(ctx, EvalTypes.mapType, forceAllowDynamic: false)) {
+    if (_variable.type
+        .isAssignableTo(ctx, EvalTypes.mapType, forceAllowDynamic: false)) {
       if (_variable.type.specifiedTypeArgs.isNotEmpty &&
-          !_index.type.isAssignableTo(ctx, _variable.type.specifiedTypeArgs[0])) {
-        throw CompileError('TypeError: Cannot use variable of type ${_index.type} as index to map of type '
+          !_index.type
+              .isAssignableTo(ctx, _variable.type.specifiedTypeArgs[0])) {
+        throw CompileError(
+            'TypeError: Cannot use variable of type ${_index.type} as index to map of type '
             '<${_variable.type.specifiedTypeArgs[0]}, ${_variable.type.specifiedTypeArgs[1]}>');
       }
 
       final map = _variable.unboxIfNeeded(ctx);
-      _index = (_variable.type.specifiedTypeArgs.isEmpty || _variable.type.specifiedTypeArgs[0].boxed)
+      _index = (_variable.type.specifiedTypeArgs.isEmpty ||
+              _variable.type.specifiedTypeArgs[0].boxed)
           ? _index.boxIfNeeded(ctx)
           : _index.unboxIfNeeded(ctx);
-      ctx.pushOp(IndexMap.make(map.scopeFrameOffset, _index.scopeFrameOffset), IndexMap.LEN);
-      return Variable.alloc(ctx,
-          _variable.type.specifiedTypeArgs.length < 2 ? EvalTypes.dynamicType : _variable.type.specifiedTypeArgs[1]);
+      ctx.pushOp(IndexMap.make(map.scopeFrameOffset, _index.scopeFrameOffset),
+          IndexMap.LEN);
+      return Variable.alloc(
+          ctx,
+          _variable.type.specifiedTypeArgs.length < 2
+              ? EvalTypes.dynamicType
+              : _variable.type.specifiedTypeArgs[1]);
     }
 
     final result = _variable.invoke(ctx, '[]', [_index]);
@@ -402,14 +460,18 @@ class IndexedReference implements Reference {
     _index = _index.updated(ctx);
 
     if (_variable.type.isAssignableTo(ctx, EvalTypes.getListType(ctx))) {
-      if (!_index.type.isAssignableTo(ctx, EvalTypes.intType)) {
-        throw CompileError('TypeError: Cannot use variable of type ${_index.type} as list index', source);
+      if (!_index.type.isAssignableTo(ctx, EvalTypes.getIntType(ctx))) {
+        throw CompileError(
+            'TypeError: Cannot use variable of type ${_index.type} as list index',
+            source);
       }
 
       final list = _variable.unboxIfNeeded(ctx);
       _index = _index.unboxIfNeeded(ctx);
       ctx.pushOp(
-          ListSetIndexed.make(list.scopeFrameOffset, _index.scopeFrameOffset, value.scopeFrameOffset), IndexList.LEN);
+          ListSetIndexed.make(list.scopeFrameOffset, _index.scopeFrameOffset,
+              value.scopeFrameOffset),
+          IndexList.LEN);
       return;
     }
 
@@ -424,7 +486,9 @@ class IndexedReference implements Reference {
   }
 }
 
-Variable _declarationToVariable(DeclarationOrBridge _decl, String name, CompilerContext ctx, [AstNode? source]) {
+Variable _declarationToVariable(
+    DeclarationOrBridge _decl, String name, CompilerContext ctx,
+    [AstNode? source]) {
   if (_decl.isBridge) {
     final bridge = _decl.bridge!;
 
@@ -433,7 +497,8 @@ Variable _declarationToVariable(DeclarationOrBridge _decl, String name, Compiler
 
       return Variable(-1, EvalTypes.typeType,
           concreteTypes: [type],
-          methodOffset: DeferredOrOffset(file: type.file, name: '${type.name}.'),
+          methodOffset:
+              DeferredOrOffset(file: type.file, name: '${type.name}.'),
           methodReturnType: AlwaysReturnType(type, false));
     }
 
@@ -441,25 +506,30 @@ Variable _declarationToVariable(DeclarationOrBridge _decl, String name, Compiler
       final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type);
       return Variable(-1, EvalTypes.typeType,
           concreteTypes: [type],
-          methodOffset: DeferredOrOffset(file: type.file, name: '${type.name}#wrap'),
+          methodOffset:
+              DeferredOrOffset(file: type.file, name: '${type.name}#wrap'),
           methodReturnType: AlwaysReturnType(type, false));
     }
 
     if (bridge is BridgeFunctionDeclaration) {
-      final returnType = TypeRef.fromBridgeAnnotation(ctx, bridge.function.returns);
+      final returnType =
+          TypeRef.fromBridgeAnnotation(ctx, bridge.function.returns);
       return Variable(-1, EvalTypes.functionType,
           methodReturnType: AlwaysReturnType(returnType, false),
           methodOffset: DeferredOrOffset(file: _decl.sourceLib, name: name));
     }
 
-    throw CompileError('Cannot resolve bridged ${bridge.runtimeType} in reference', source);
+    throw CompileError(
+        'Cannot resolve bridged ${bridge.runtimeType} in reference', source);
   }
 
   final decl = _decl.declaration!;
 
   if (decl is VariableDeclaration) {
-    final type = ctx.topLevelVariableInferredTypes[_decl.sourceLib]![decl.name.value() as String]!;
-    final gIndex = ctx.topLevelGlobalIndices[_decl.sourceLib]![decl.name.value() as String]!;
+    final type = ctx.topLevelVariableInferredTypes[_decl.sourceLib]![
+        decl.name.value() as String]!;
+    final gIndex = ctx
+        .topLevelGlobalIndices[_decl.sourceLib]![decl.name.value() as String]!;
     ctx.pushOp(LoadGlobal.make(gIndex), LoadGlobal.LEN);
     ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
 
@@ -472,15 +542,20 @@ Variable _declarationToVariable(DeclarationOrBridge _decl, String name, Compiler
     final returnType = TypeRef.lookupDeclaration(ctx, _decl.sourceLib, decl);
     final DeferredOrOffset offset;
 
-    if (ctx.topLevelDeclarationPositions[_decl.sourceLib]?.containsKey('$name.') ?? false) {
-      offset =
-          DeferredOrOffset(file: _decl.sourceLib, offset: ctx.topLevelDeclarationPositions[_decl.sourceLib]!['$name.']);
+    if (ctx.topLevelDeclarationPositions[_decl.sourceLib]
+            ?.containsKey('$name.') ??
+        false) {
+      offset = DeferredOrOffset(
+          file: _decl.sourceLib,
+          offset: ctx.topLevelDeclarationPositions[_decl.sourceLib]!['$name.']);
     } else {
       offset = DeferredOrOffset(file: _decl.sourceLib, name: '$name.');
     }
 
     return Variable(-1, EvalTypes.typeType,
-        concreteTypes: [returnType], methodOffset: offset, methodReturnType: AlwaysReturnType(returnType, false));
+        concreteTypes: [returnType],
+        methodOffset: offset,
+        methodReturnType: AlwaysReturnType(returnType, false));
   }
 
   TypeRef? returnType;
@@ -489,22 +564,30 @@ Variable _declarationToVariable(DeclarationOrBridge _decl, String name, Compiler
     returnType = TypeRef.fromAnnotation(ctx, _decl.sourceLib, decl.returnType!);
     nullable = decl.returnType!.question != null;
   } else {
-    returnType = TypeRef.lookupDeclaration(ctx, _decl.sourceLib, decl.parent as ClassDeclaration);
+    returnType = TypeRef.lookupDeclaration(
+        ctx, _decl.sourceLib, decl.parent as ClassDeclaration);
   }
 
   final DeferredOrOffset offset;
-  if (ctx.topLevelDeclarationPositions[_decl.sourceLib]?.containsKey(name) ?? false) {
+  if (ctx.topLevelDeclarationPositions[_decl.sourceLib]?.containsKey(name) ??
+      false) {
     offset = DeferredOrOffset(
-        file: _decl.sourceLib, offset: ctx.topLevelDeclarationPositions[ctx.library]![name], name: name);
+        file: _decl.sourceLib,
+        offset: ctx.topLevelDeclarationPositions[ctx.library]![name],
+        name: name);
   } else {
     offset = DeferredOrOffset(file: _decl.sourceLib, name: name);
   }
 
-  return Variable(-1, decl is FunctionDeclaration ? EvalTypes.functionType : EvalTypes.typeType,
-      concreteTypes: [returnType], methodOffset: offset, methodReturnType: AlwaysReturnType(returnType, nullable));
+  return Variable(-1,
+      decl is FunctionDeclaration ? EvalTypes.functionType : EvalTypes.typeType,
+      concreteTypes: [returnType],
+      methodOffset: offset,
+      methodReturnType: AlwaysReturnType(returnType, nullable));
 }
 
-StaticDispatch? _declarationToStaticDispatch(DeclarationOrBridge _decl, String name, CompilerContext ctx,
+StaticDispatch? _declarationToStaticDispatch(
+    DeclarationOrBridge _decl, String name, CompilerContext ctx,
     [AstNode? source]) {
   if (_decl.isBridge) {
     // No static dispatch for bridge
@@ -518,14 +601,18 @@ StaticDispatch? _declarationToStaticDispatch(DeclarationOrBridge _decl, String n
 
     final DeferredOrOffset offset;
 
-    if (ctx.topLevelDeclarationPositions[_decl.sourceLib]?.containsKey('$name.') ?? false) {
-      offset =
-          DeferredOrOffset(file: _decl.sourceLib, offset: ctx.topLevelDeclarationPositions[_decl.sourceLib]!['$name.']);
+    if (ctx.topLevelDeclarationPositions[_decl.sourceLib]
+            ?.containsKey('$name.') ??
+        false) {
+      offset = DeferredOrOffset(
+          file: _decl.sourceLib,
+          offset: ctx.topLevelDeclarationPositions[_decl.sourceLib]!['$name.']);
     } else {
       offset = DeferredOrOffset(file: _decl.sourceLib, name: '$name.');
     }
 
-    final rt = AlwaysReturnType(TypeRef.lookupDeclaration(ctx, _decl.sourceLib, decl), false);
+    final rt = AlwaysReturnType(
+        TypeRef.lookupDeclaration(ctx, _decl.sourceLib, decl), false);
 
     return StaticDispatch(offset, rt);
   }
@@ -536,12 +623,16 @@ StaticDispatch? _declarationToStaticDispatch(DeclarationOrBridge _decl, String n
     returnType = TypeRef.fromAnnotation(ctx, _decl.sourceLib, decl.returnType!);
     nullable = decl.returnType!.question != null;
   } else {
-    returnType = TypeRef.lookupDeclaration(ctx, _decl.sourceLib, decl.parent as ClassDeclaration);
+    returnType = TypeRef.lookupDeclaration(
+        ctx, _decl.sourceLib, decl.parent as ClassDeclaration);
   }
 
   final DeferredOrOffset offset;
-  if (ctx.topLevelDeclarationPositions[_decl.sourceLib]?.containsKey(name) ?? false) {
-    offset = DeferredOrOffset(file: _decl.sourceLib, offset: ctx.topLevelDeclarationPositions[ctx.library]![name]);
+  if (ctx.topLevelDeclarationPositions[_decl.sourceLib]?.containsKey(name) ??
+      false) {
+    offset = DeferredOrOffset(
+        file: _decl.sourceLib,
+        offset: ctx.topLevelDeclarationPositions[ctx.library]![name]);
   } else {
     offset = DeferredOrOffset(file: _decl.sourceLib, name: name);
   }

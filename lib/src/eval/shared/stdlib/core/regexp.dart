@@ -5,22 +5,45 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/pattern.dart';
 
 class $RegExp implements $Instance {
   static const $type = BridgeTypeRef(BridgeTypeSpec('dart:core', 'RegExp'));
-  static const $declaration = BridgeClassDef(BridgeClassType($type, isAbstract: true, $extends: $Pattern.$type),
+  static const $declaration = BridgeClassDef(
+      BridgeClassType($type, isAbstract: true, $extends: $Pattern.$type),
       constructors: {
-        '': BridgeConstructorDef(BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [
-          BridgeParameter('source', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.stringType)), false),
+        '': BridgeConstructorDef(
+            BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [
+          BridgeParameter(
+              'source',
+              BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.stringType)),
+              false),
         ], namedParams: [
-          BridgeParameter('multiLine', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)), false),
-          BridgeParameter('caseSensitive', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)), false),
-          BridgeParameter('unicode', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)), false),
-          BridgeParameter('dotAll', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)), false),
+          BridgeParameter(
+              'multiLine',
+              BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)),
+              false),
+          BridgeParameter(
+              'caseSensitive',
+              BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)),
+              false),
+          BridgeParameter(
+              'unicode',
+              BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)),
+              false),
+          BridgeParameter(
+              'dotAll',
+              BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)),
+              false),
         ]))
       },
       methods: {
-        'hasMatch': BridgeMethodDef(
-            BridgeFunctionDef(returns: BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)), params: [
-          BridgeParameter('input', BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.stringType)), false),
-        ])),
+        'hasMatch': BridgeMethodDef(BridgeFunctionDef(
+            returns:
+                BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)),
+            params: [
+              BridgeParameter(
+                  'input',
+                  BridgeTypeAnnotation(
+                      BridgeTypeRef.type(RuntimeTypes.stringType)),
+                  false),
+            ])),
       },
       wrap: true);
 
@@ -54,7 +77,8 @@ class $RegExp implements $Instance {
 
   static const $Function __hasMatch = $Function(_hasMatch);
 
-  static $Value? _hasMatch(final Runtime runtime, final $Value? target, final List<$Value?> args) {
+  static $Value? _hasMatch(
+      final Runtime runtime, final $Value? target, final List<$Value?> args) {
     target as $Value;
     final input = (args[0] as $String).$value;
     return $bool((target.$value as RegExp).hasMatch(input));

@@ -42,27 +42,32 @@ class DartSource {
         parts.add(directive);
       } else if (directive is PartOfDirective) {
         if (partOfDirective != null) {
-          throw CompileError('Library $uri must not contain multiple "part of" directives');
+          throw CompileError(
+              'Library $uri must not contain multiple "part of" directives');
         }
         partOfDirective = directive;
       } else if (directive is LibraryDirective) {
         if (libraryDirective != null) {
-          throw CompileError('Library $uri must not contain multiple "library" directives');
+          throw CompileError(
+              'Library $uri must not contain multiple "library" directives');
         }
         libraryDirective = directive;
       }
     }
 
     if (partOfDirective != null && imports.isNotEmpty) {
-      throw CompileError("Library $uri is a part, so it can't have 'import' directives");
+      throw CompileError(
+          "Library $uri is a part, so it can't have 'import' directives");
     }
 
     if (partOfDirective != null && exports.isNotEmpty) {
-      throw CompileError("Library $uri is a part, so it can't have 'export' directives");
+      throw CompileError(
+          "Library $uri is a part, so it can't have 'export' directives");
     }
 
     if (partOfDirective != null && parts.isNotEmpty) {
-      throw CompileError("Library $uri is a part, so it can't have 'part' directives");
+      throw CompileError(
+          "Library $uri is a part, so it can't have 'part' directives");
     }
 
     return DartCompilationUnit(uri,
@@ -77,7 +82,9 @@ class DartSource {
   @override
   bool operator ==(Object other) {
     if (other is DartSource) {
-      return uri == other.uri && stringSource == other.stringSource && fileSource == other.fileSource;
+      return uri == other.uri &&
+          stringSource == other.stringSource &&
+          fileSource == other.fileSource;
     }
     return false;
   }

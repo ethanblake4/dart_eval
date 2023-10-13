@@ -89,7 +89,8 @@ void main() {
         }
       });
       expect(() {
-        expect(runtime.executeLib('package:example/main.dart', 'main'), $bool(false));
+        expect(runtime.executeLib('package:example/main.dart', 'main'),
+            $bool(false));
       }, prints('false\ntrue\n'));
     });
     test('String interpolation', () {
@@ -165,7 +166,8 @@ void main() {
         }
       });
       expect(() {
-        expect(runtime.executeLib('package:example/main.dart', 'main'), $null());
+        expect(
+            runtime.executeLib('package:example/main.dart', 'main'), $null());
       }, prints('null\n'));
     });
 

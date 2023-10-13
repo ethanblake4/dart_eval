@@ -33,7 +33,8 @@ part 'ops/objects.dart';
 part 'ops/bridge.dart';
 
 class ScopeFrame {
-  const ScopeFrame(this.stackOffset, this.scopeStackOffset, [this.entrypoint = false]);
+  const ScopeFrame(this.stackOffset, this.scopeStackOffset,
+      [this.entrypoint = false]);
 
   final int stackOffset;
   final int scopeStackOffset;
@@ -122,7 +123,8 @@ class Runtime {
         final methods = (declarations[2] as Map).cast<String, int>();
         final type = (declarations[3] as int);
 
-        final cls = EvalClass(type, null, [], {...getters}, {...setters}, {...methods});
+        final cls =
+            EvalClass(type, null, [], {...getters}, {...setters}, {...methods});
         decls[name] = cls;
       });
 
@@ -133,10 +135,14 @@ class Runtime {
   }
 
   void _load() {
-    final m1 = _readUint8(), m2 = _readUint8(), m3 = _readUint8(), m4 = _readUint8();
+    final m1 = _readUint8(),
+        m2 = _readUint8(),
+        m3 = _readUint8(),
+        m4 = _readUint8();
     final version = _readInt32();
     if (m1 != 0x45 || m2 != 0x56 || m3 != 0x43 || m4 != 0x00) {
-      throw Exception('dart_eval runtime error: Not an EVC file or bytecode version older than 064');
+      throw Exception(
+          'dart_eval runtime error: Not an EVC file or bytecode version older than 064');
     }
     if (version != versionCode) {
       var vstr = version.toString();
@@ -160,41 +166,55 @@ class Runtime {
     final encodedBridgeEnumMappings = _readString();
     final encodedOverrideMap = _readString();
 
-    declarations =
-        (json.decode(encodedToplevelDecs).map((k, v) => MapEntry(int.parse(k), (v as Map).cast<String, int>())) as Map)
-            .cast<int, Map<String, int>>();
+    declarations = (json.decode(encodedToplevelDecs).map((k, v) =>
+            MapEntry(int.parse(k), (v as Map).cast<String, int>())) as Map)
+        .cast<int, Map<String, int>>();
 
-    final classes =
-        (json.decode(encodedInstanceDecs).map((k, v) => MapEntry(int.parse(k), (v as Map).cast<String, List>())) as Map)
-            .cast<int, Map<String, List>>();
+    final classes = (json.decode(encodedInstanceDecs).map((k, v) =>
+            MapEntry(int.parse(k), (v as Map).cast<String, List>())) as Map)
+        .cast<int, Map<String, List>>();
 
-    bridgeEnumMappings = (json.decode(encodedBridgeEnumMappings) as Map).map((k, v) => MapEntry(
-        int.parse(k),
-        (v as Map)
-            .map((key, value) => MapEntry(key, (value as Map).cast<String, int>()))
-            .cast<String, Map<String, int>>()));
+    bridgeEnumMappings = (json.decode(encodedBridgeEnumMappings) as Map).map(
+        (k, v) => MapEntry(
+            int.parse(k),
+            (v as Map)
+                .map((key, value) =>
+                    MapEntry(key, (value as Map).cast<String, int>()))
+                .cast<String, Map<String, int>>()));
 
     classes.forEach((file, $class) {
-      declaredClasses[file] = {for (final decl in $class.entries) decl.key: EvalClass.fromJson(decl.value)};
+      declaredClasses[file] = {
+        for (final decl in $class.entries)
+          decl.key: EvalClass.fromJson(decl.value)
+      };
     });
 
-    typeTypes = [for (final s in (json.decode(encodedTypeTypes) as List)) (s as List).cast<int>().toSet()];
+    typeTypes = [
+      for (final s in (json.decode(encodedTypeTypes) as List))
+        (s as List).cast<int>().toSet()
+    ];
 
-    typeIds = (json.decode(encodedTypeIds) as Map)
-        .cast<String, Map>()
-        .map((key, value) => MapEntry(int.parse(key), value.cast<String, int>()));
+    typeIds = (json.decode(encodedTypeIds) as Map).cast<String, Map>().map(
+        (key, value) => MapEntry(int.parse(key), value.cast<String, int>()));
 
-    _bridgeLibraryMappings = (json.decode(encodedBridgeLibraryMappings) as Map).cast();
+    _bridgeLibraryMappings =
+        (json.decode(encodedBridgeLibraryMappings) as Map).cast();
 
     bridgeFuncMappings = (json.decode(encodedBridgeFuncMappings) as Map)
         .cast<String, Map>()
-        .map((key, value) => MapEntry(int.parse(key), value.cast<String, int>()));
+        .map((key, value) =>
+            MapEntry(int.parse(key), value.cast<String, int>()));
 
     constantPool.addAll((json.decode(encodedConstantPool) as List).cast());
 
-    runtimeTypes = [for (final s in (json.decode(encodedRuntimeTypes) as List)) RuntimeTypeSet.fromJson(s as List)];
+    runtimeTypes = [
+      for (final s in (json.decode(encodedRuntimeTypes) as List))
+        RuntimeTypeSet.fromJson(s as List)
+    ];
 
-    globalInitializers = [for (final i in json.decode(encodedGlobalInitializers) as List) i as int];
+    globalInitializers = [
+      for (final i in json.decode(encodedGlobalInitializers) as List) i as int
+    ];
 
     overrideMap = (json.decode(encodedOverrideMap) as Map)
         .cast<String, List>()
@@ -212,8 +232,8 @@ class Runtime {
   void _setupBridging() {
     for (final ulb in _unloadedBrFunc) {
       final libIndex = _bridgeLibraryMappings[ulb.library]!;
-      _bridgeFunctions[bridgeFuncMappings[libIndex]![ulb.name] ?? (throw ArgumentError('Could not find ${ulb.name}'))] =
-          ulb.func;
+      _bridgeFunctions[bridgeFuncMappings[libIndex]![ulb.name] ??
+          (throw ArgumentError('Could not find ${ulb.name}'))] = ulb.func;
     }
 
     for (final ule in _unloadedEnumValues) {
@@ -231,12 +251,15 @@ class Runtime {
   }
 
   /// Register a bridged runtime top-level/static function or class constructor.
-  void registerBridgeFunc(String library, String name, EvalCallableFunc fn, {bool isBridge = false}) {
-    _unloadedBrFunc.add(_UnloadedBridgeFunction(library, isBridge ? '#$name' : name, fn));
+  void registerBridgeFunc(String library, String name, EvalCallableFunc fn,
+      {bool isBridge = false}) {
+    _unloadedBrFunc
+        .add(_UnloadedBridgeFunction(library, isBridge ? '#$name' : name, fn));
   }
 
   /// Register bridged runtime enum values.
-  void registerBridgeEnumValues(String library, String name, Map<String, $Value> values) {
+  void registerBridgeEnumValues(
+      String library, String name, Map<String, $Value> values) {
     _unloadedEnumValues.add(_UnloadedEnumValues(library, name, values));
   }
 
@@ -282,7 +305,8 @@ class Runtime {
   /// Check if a permission is granted, otherwise throw an exception.
   void assertPermission(String domain, [Object? data]) {
     if (!checkPermission(domain, data)) {
-      throw Exception("Permission '$domain' denied${data == null ? '' : ' for $data'}.\n"
+      throw Exception(
+          "Permission '$domain' denied${data == null ? '' : ' for $data'}.\n"
           "To grant permissions, use Runtime.grant().");
     }
   }
@@ -321,13 +345,15 @@ class Runtime {
     if (value is List) {
       return $List.wrap(value.map(wrapRecursive).toList());
     } else if (value is Map) {
-      return $Map.wrap(value.map((key, value) => MapEntry(wrapRecursive(key), wrapRecursive(value))));
+      return $Map.wrap(value.map(
+          (key, value) => MapEntry(wrapRecursive(key), wrapRecursive(value))));
     }
     return wrapPrimitive(value) ?? (throw Exception('Cannot wrap $value'));
   }
 
   var _bridgeLibraryMappings = <String, int>{};
-  final _bridgeFunctions = List<EvalCallableFunc>.filled(1000, _defaultFunction);
+  final _bridgeFunctions =
+      List<EvalCallableFunc>.filled(1000, _defaultFunction);
   final _unloadedBrFunc = <_UnloadedBridgeFunction>[];
   final _unloadedEnumValues = <_UnloadedEnumValues>[];
   final _plugins = <EvalPlugin>[
@@ -360,10 +386,18 @@ class Runtime {
         return [Evc.OP_SETVR];
       case NumAdd:
         op as NumAdd;
-        return [Evc.OP_ADDVV, ...Evc.i16b(op._location1), ...Evc.i16b(op._location2)];
+        return [
+          Evc.OP_ADDVV,
+          ...Evc.i16b(op._location1),
+          ...Evc.i16b(op._location2)
+        ];
       case NumSub:
         op as NumSub;
-        return [Evc.OP_NUM_SUB, ...Evc.i16b(op._location1), ...Evc.i16b(op._location2)];
+        return [
+          Evc.OP_NUM_SUB,
+          ...Evc.i16b(op._location1),
+          ...Evc.i16b(op._location2)
+        ];
       case BoxInt:
         op as BoxInt;
         return [Evc.OP_BOXINT, ...Evc.i16b(op._reg)];
@@ -381,13 +415,22 @@ class Runtime {
         return [Evc.OP_JNZ, ...Evc.i16b(op._location), ...Evc.i32b(op._offset)];
       case JumpIfFalse:
         op as JumpIfFalse;
-        return [Evc.OP_JUMP_IF_FALSE, ...Evc.i16b(op._location), ...Evc.i32b(op._offset)];
+        return [
+          Evc.OP_JUMP_IF_FALSE,
+          ...Evc.i16b(op._location),
+          ...Evc.i32b(op._offset)
+        ];
       case PushConstantInt:
         op as PushConstantInt;
         return [Evc.OP_SETVC, ...Evc.i32b(op._value)];
       case PushScope:
         op as PushScope;
-        return [Evc.OP_PUSHSCOPE, ...Evc.i32b(op.sourceFile), ...Evc.i32b(op.sourceOffset), ...Evc.istr(op.frName)];
+        return [
+          Evc.OP_PUSHSCOPE,
+          ...Evc.i32b(op.sourceFile),
+          ...Evc.i32b(op.sourceOffset),
+          ...Evc.istr(op.frName)
+        ];
       case PopScope:
         op as PopScope;
         return [Evc.OP_POPSCOPE];
@@ -402,7 +445,11 @@ class Runtime {
         return [Evc.OP_RETURN, ...Evc.i16b(op._location)];
       case ReturnAsync:
         op as ReturnAsync;
-        return [Evc.OP_RETURN_ASYNC, ...Evc.i16b(op._location), ...Evc.i16b(op._completerOffset)];
+        return [
+          Evc.OP_RETURN_ASYNC,
+          ...Evc.i16b(op._location),
+          ...Evc.i16b(op._completerOffset)
+        ];
       case Pop:
         op as Pop;
         return [Evc.OP_POP, op._amount];
@@ -411,7 +458,11 @@ class Runtime {
         return [Evc.OP_CALL, ...Evc.i32b(op._offset)];
       case InvokeDynamic:
         op as InvokeDynamic;
-        return [Evc.OP_INVOKE_DYNAMIC, ...Evc.i16b(op._location), ...Evc.istr(op._method)];
+        return [
+          Evc.OP_INVOKE_DYNAMIC,
+          ...Evc.i16b(op._location),
+          ...Evc.istr(op._method)
+        ];
       case SetObjectProperty:
         op as SetObjectProperty;
         return [
@@ -422,10 +473,18 @@ class Runtime {
         ];
       case PushObjectProperty:
         op as PushObjectProperty;
-        return [Evc.OP_PUSH_OBJECT_PROP, ...Evc.i16b(op._location), ...Evc.istr(op._property)];
+        return [
+          Evc.OP_PUSH_OBJECT_PROP,
+          ...Evc.i16b(op._location),
+          ...Evc.istr(op._property)
+        ];
       case PushObjectPropertyImpl:
         op as PushObjectPropertyImpl;
-        return [Evc.OP_PUSH_OBJECT_PROP_IMPL, ...Evc.i16b(op._objectOffset), ...Evc.i16b(op._propertyIndex)];
+        return [
+          Evc.OP_PUSH_OBJECT_PROP_IMPL,
+          ...Evc.i16b(op._objectOffset),
+          ...Evc.i16b(op._propertyIndex)
+        ];
       case SetObjectPropertyImpl:
         op as SetObjectPropertyImpl;
         return [
@@ -448,37 +507,66 @@ class Runtime {
         ];
       case NumLt:
         op as NumLt;
-        return [Evc.OP_NUM_LT, ...Evc.i16b(op._location1), ...Evc.i16b(op._location2)];
+        return [
+          Evc.OP_NUM_LT,
+          ...Evc.i16b(op._location1),
+          ...Evc.i16b(op._location2)
+        ];
       case NumLtEq:
         op as NumLtEq;
-        return [Evc.OP_NUM_LT_EQ, ...Evc.i16b(op._location1), ...Evc.i16b(op._location2)];
+        return [
+          Evc.OP_NUM_LT_EQ,
+          ...Evc.i16b(op._location1),
+          ...Evc.i16b(op._location2)
+        ];
       case PushSuper:
         op as PushSuper;
         return [Evc.OP_PUSH_SUPER, ...Evc.i16b(op._objectOffset)];
       case BridgeInstantiate:
         op as BridgeInstantiate;
-        return [Evc.OP_BRIDGE_INSTANTIATE, ...Evc.i16b(op._subclass), ...Evc.i32b(op._constructor)];
+        return [
+          Evc.OP_BRIDGE_INSTANTIATE,
+          ...Evc.i16b(op._subclass),
+          ...Evc.i32b(op._constructor)
+        ];
       case PushBridgeSuperShim:
         op as PushBridgeSuperShim;
         return [Evc.OP_PUSH_SUPER_SHIM];
       case ParentBridgeSuperShim:
         op as ParentBridgeSuperShim;
-        return [Evc.OP_PARENT_SUPER_SHIM, ...Evc.i16b(op._shimOffset), ...Evc.i16b(op._bridgeOffset)];
+        return [
+          Evc.OP_PARENT_SUPER_SHIM,
+          ...Evc.i16b(op._shimOffset),
+          ...Evc.i16b(op._bridgeOffset)
+        ];
       case PushList:
         op as PushList;
         return [Evc.OP_PUSH_LIST];
       case ListAppend:
         op as ListAppend;
-        return [Evc.OP_LIST_APPEND, ...Evc.i16b(op._reg), ...Evc.i16b(op._value)];
+        return [
+          Evc.OP_LIST_APPEND,
+          ...Evc.i16b(op._reg),
+          ...Evc.i16b(op._value)
+        ];
       case IndexList:
         op as IndexList;
-        return [Evc.OP_INDEX_LIST, ...Evc.i16b(op._position), ...Evc.i32b(op._index)];
+        return [
+          Evc.OP_INDEX_LIST,
+          ...Evc.i16b(op._position),
+          ...Evc.i32b(op._index)
+        ];
       case PushIterableLength:
         op as PushIterableLength;
         return [Evc.OP_ITER_LENGTH, ...Evc.i16b(op._position)];
       case ListSetIndexed:
         op as ListSetIndexed;
-        return [Evc.OP_LIST_SETINDEXED, ...Evc.i16b(op._position), ...Evc.i32b(op._index), ...Evc.i16b(op._value)];
+        return [
+          Evc.OP_LIST_SETINDEXED,
+          ...Evc.i16b(op._position),
+          ...Evc.i32b(op._index),
+          ...Evc.i16b(op._value)
+        ];
       case BoxString:
         op as BoxString;
         return [Evc.OP_BOXSTRING, ...Evc.i16b(op._reg)];
@@ -508,13 +596,22 @@ class Runtime {
         return [Evc.OP_INVOKE_EXTERNAL, ...Evc.i32b(op._function)];
       case Await:
         op as Await;
-        return [Evc.OP_AWAIT, ...Evc.i16b(op._completerOffset), ...Evc.i16b(op._futureOffset)];
+        return [
+          Evc.OP_AWAIT,
+          ...Evc.i16b(op._completerOffset),
+          ...Evc.i16b(op._futureOffset)
+        ];
       case PushMap:
         op as PushMap;
         return [Evc.OP_PUSH_MAP];
       case MapSet:
         op as MapSet;
-        return [Evc.OP_MAP_SET, ...Evc.i16b(op._map), ...Evc.i16b(op._index), ...Evc.i16b(op._value)];
+        return [
+          Evc.OP_MAP_SET,
+          ...Evc.i16b(op._map),
+          ...Evc.i16b(op._index),
+          ...Evc.i16b(op._value)
+        ];
       case IndexMap:
         op as IndexMap;
         return [Evc.OP_INDEX_MAP, ...Evc.i16b(op._map), ...Evc.i16b(op._index)];
@@ -523,7 +620,11 @@ class Runtime {
         return [Evc.OP_PUSH_DOUBLE, ...Evc.f32b(op._value)];
       case SetGlobal:
         op as SetGlobal;
-        return [Evc.OP_SET_GLOBAL, ...Evc.i32b(op._index), ...Evc.i16b(op._value)];
+        return [
+          Evc.OP_SET_GLOBAL,
+          ...Evc.i32b(op._index),
+          ...Evc.i16b(op._value)
+        ];
       case LoadGlobal:
         op as LoadGlobal;
         return [Evc.OP_LOAD_GLOBAL, ...Evc.i32b(op._index)];
@@ -535,10 +636,18 @@ class Runtime {
         return [Evc.OP_LOGICAL_NOT, ...Evc.i16b(op._index)];
       case CheckEq:
         op as CheckEq;
-        return [Evc.OP_CHECK_EQ, ...Evc.i16b(op._value1), ...Evc.i16b(op._value2)];
+        return [
+          Evc.OP_CHECK_EQ,
+          ...Evc.i16b(op._value1),
+          ...Evc.i16b(op._value2)
+        ];
       case CheckNotEq:
         op as CheckNotEq;
-        return [Evc.OP_CHECK_NOT_EQ, ...Evc.i16b(op._value1), ...Evc.i16b(op._value2)];
+        return [
+          Evc.OP_CHECK_NOT_EQ,
+          ...Evc.i16b(op._value1),
+          ...Evc.i16b(op._value2)
+        ];
       case Try:
         op as Try;
         return [Evc.OP_TRY, ...Evc.i32b(op._catchOffset)];
@@ -550,10 +659,19 @@ class Runtime {
         return [Evc.OP_POP_CATCH];
       case IsType:
         op as IsType;
-        return [Evc.OP_IS_TYPE, ...Evc.i16b(op._objectOffset), ...Evc.i32b(op._type), op._not ? 1 : 0];
+        return [
+          Evc.OP_IS_TYPE,
+          ...Evc.i16b(op._objectOffset),
+          ...Evc.i32b(op._type),
+          op._not ? 1 : 0
+        ];
       case Assert:
         op as Assert;
-        return [Evc.OP_ASSERT, ...Evc.i16b(op._valueOffset), ...Evc.i16b(op._exceptionOffset)];
+        return [
+          Evc.OP_ASSERT,
+          ...Evc.i16b(op._valueOffset),
+          ...Evc.i16b(op._exceptionOffset)
+        ];
       case PushFinally:
         op as PushFinally;
         return [Evc.OP_PUSH_FINALLY, ...Evc.i32b(op._tryOffset)];
@@ -721,7 +839,9 @@ class Runtime {
 
       catchStack.removeLast();
       if (callStack.removeLast() == -1) {
-        throw exception is WrappedException ? exception : WrappedException(exception);
+        throw exception is WrappedException
+            ? exception
+            : WrappedException(exception);
       }
     }
     var catchOffset = catchFrame.removeLast();
@@ -732,7 +852,8 @@ class Runtime {
       inCatch = true;
     }
     frameOffset = frameOffsetStack.last;
-    returnValue = exception is WrappedException ? exception.exception : exception;
+    returnValue =
+        exception is WrappedException ? exception.exception : exception;
     _prOffset = catchOffset;
   }
 
@@ -778,7 +899,8 @@ class Runtime {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) || other is Runtime && runtimeType == other.runtimeType && id == other.id;
+      identical(this, other) ||
+      other is Runtime && runtimeType == other.runtimeType && id == other.id;
 
   @override
   int get hashCode => id.hashCode;

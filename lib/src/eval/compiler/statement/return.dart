@@ -7,7 +7,8 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 
 import 'statement.dart';
 
-StatementInfo compileReturn(CompilerContext ctx, ReturnStatement s, AlwaysReturnType? expectedReturnType) {
+StatementInfo compileReturn(CompilerContext ctx, ReturnStatement s,
+    AlwaysReturnType? expectedReturnType) {
   AstNode? _e = s;
   while (_e != null) {
     if (_e is FunctionBody) {
@@ -17,6 +18,9 @@ StatementInfo compileReturn(CompilerContext ctx, ReturnStatement s, AlwaysReturn
   }
 
   final value = compileExpression(s.expression!, ctx, expectedReturnType?.type);
-  return doReturn(ctx, expectedReturnType ?? AlwaysReturnType(EvalTypes.dynamicType, true), value,
+  return doReturn(
+      ctx,
+      expectedReturnType ?? AlwaysReturnType(EvalTypes.dynamicType, true),
+      value,
       isAsync: (_e as FunctionBody).isAsynchronous);
 }
