@@ -10,8 +10,7 @@ class $Match implements $Instance {
           constructors: {},
           methods: {
             'group': BridgeMethodDef(BridgeFunctionDef(
-              returns: BridgeTypeAnnotation(
-                  BridgeTypeRef.type(RuntimeTypes.stringType),
+              returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string),
                   nullable: true),
               params: [
                 BridgeParameter('group',
@@ -19,8 +18,7 @@ class $Match implements $Instance {
               ],
             )),
             '[]': BridgeMethodDef(BridgeFunctionDef(
-              returns: BridgeTypeAnnotation(
-                  BridgeTypeRef.type(RuntimeTypes.stringType),
+              returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string),
                   nullable: true),
               params: [
                 BridgeParameter('group',
@@ -91,8 +89,7 @@ class $Pattern implements Pattern, $Instance {
                 params: [
                   BridgeParameter(
                       'string',
-                      BridgeTypeAnnotation(
-                          BridgeTypeRef.type(RuntimeTypes.stringType)),
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
                       false),
                   BridgeParameter('start',
                       BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), true),
@@ -102,8 +99,7 @@ class $Pattern implements Pattern, $Instance {
                 params: [
                   BridgeParameter(
                       'string',
-                      BridgeTypeAnnotation(
-                          BridgeTypeRef.type(RuntimeTypes.stringType)),
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
                       false),
                   BridgeParameter('start',
                       BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), true),

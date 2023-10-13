@@ -452,14 +452,11 @@ class $Stream implements $Instance {
                   true),
             ])),
         'join': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future,
-                [BridgeTypeRef.type(RuntimeTypes.stringType)])),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(
+                CoreTypes.future, [BridgeTypeRef(CoreTypes.string)])),
             params: [
-              BridgeParameter(
-                  'separator',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.stringType)),
-                  true),
+              BridgeParameter('separator',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), true),
             ])),
         'lastWhere': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(

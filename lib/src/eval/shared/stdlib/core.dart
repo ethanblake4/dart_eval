@@ -1,5 +1,6 @@
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/base.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/collection.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/comparable.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/date_time.dart';
@@ -22,6 +23,10 @@ class DartCorePlugin implements EvalPlugin {
   @override
   void configureForCompile(BridgeDeclarationRegistry registry) {
     configurePrintForCompile(registry);
+    registry.defineBridgeClass($num.$declaration);
+    registry.defineBridgeClass($int.$declaration);
+    registry.defineBridgeClass($double.$declaration);
+    registry.defineBridgeClass($String.$declaration);
     registry.defineBridgeClass($Iterable.$declaration);
     registry.defineBridgeClass($Iterator.$declaration);
     registry.defineBridgeClass($List.$declaration);
@@ -35,9 +40,6 @@ class DartCorePlugin implements EvalPlugin {
     registry.defineBridgeClass($AssertionError.$declaration);
     registry.defineBridgeClass($Comparable.$declaration);
     registry.defineBridgeClass($StringBuffer.$declaration);
-    registry.defineBridgeClass($num.$declaration);
-    registry.defineBridgeClass($int.$declaration);
-    registry.defineBridgeClass($double.$declaration);
   }
 
   @override
@@ -53,5 +55,9 @@ class DartCorePlugin implements EvalPlugin {
         'dart:core', 'AssertionError.', $AssertionError.$new);
     runtime.registerBridgeFunc(
         'dart:core', 'StringBuffer.', $StringBuffer.$new);
+    runtime.registerBridgeFunc('dart:core', 'num.parse', $num.$parse);
+    runtime.registerBridgeFunc('dart:core', 'num.tryParse', $num.$tryParse);
+    runtime.registerBridgeFunc('dart:core', 'int.parse', $int.$parse);
+    runtime.registerBridgeFunc('dart:core', 'int.tryParse', $int.$tryParse);
   }
 }

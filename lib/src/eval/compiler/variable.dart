@@ -76,7 +76,7 @@ class Variable {
       ctx.pushOp(BoxList.make(V2.scopeFrameOffset), BoxList.LEN);
     } else if (type == EvalTypes.mapType) {
       ctx.pushOp(BoxMap.make(scopeFrameOffset), BoxMap.LEN);
-    } else if (type == EvalTypes.stringType) {
+    } else if (type == EvalTypes.getStringType(ctx)) {
       ctx.pushOp(BoxString.make(scopeFrameOffset), BoxInt.LEN);
     } else if (type == EvalTypes.nullType) {
       ctx.pushOp(BoxNull.make(scopeFrameOffset), BoxNull.LEN);

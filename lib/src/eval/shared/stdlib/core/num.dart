@@ -20,8 +20,7 @@ class $num<T extends num> implements $Instance {
                 params: [
                   BridgeParameter(
                       'source',
-                      BridgeTypeAnnotation(
-                          BridgeTypeRef.type(RuntimeTypes.stringType)),
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
                       false),
                   BridgeParameter(
                       'onError',
@@ -29,8 +28,7 @@ class $num<T extends num> implements $Instance {
                           BridgeTypeRef.type(RuntimeTypes.functionType),
                           nullable: true),
                       true),
-                ],
-                namedParams: []),
+                ]),
             isStatic: true),
         'tryParse': BridgeMethodDef(
             BridgeFunctionDef(
@@ -39,17 +37,49 @@ class $num<T extends num> implements $Instance {
                 params: [
                   BridgeParameter(
                       'source',
-                      BridgeTypeAnnotation(
-                          BridgeTypeRef.type(RuntimeTypes.stringType)),
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
                       false),
-                ],
-                namedParams: []),
+                ]),
             isStatic: true),
       },
       getters: {},
       setters: {},
       fields: {},
       wrap: true);
+
+  static $num $parse(Runtime runtime, $Value? target, List<$Value?> args) {
+    final source = args[0]!.$value as String;
+    final onError = args[1]?.$value as EvalCallable?;
+    final result = num.parse(
+        source,
+        // ignore: deprecated_member_use
+        onError == null
+            ? null
+            : (source) =>
+                onError.call(runtime, null, [$String(source)])?.$value);
+    if (result is int) {
+      return $int(result);
+    }
+    if (result is double) {
+      return $double(result);
+    }
+    throw UnimplementedError();
+  }
+
+  static $Value $tryParse(Runtime runtime, $Value? target, List<$Value?> args) {
+    final source = args[0]!.$value as String;
+    final result = num.tryParse(source);
+    if (result == null) {
+      return $null();
+    }
+    if (result is int) {
+      return $int(result);
+    }
+    if (result is double) {
+      return $double(result);
+    }
+    throw UnimplementedError();
+  }
 
   @override
   T $value;
@@ -255,17 +285,13 @@ class $int extends $num<int> {
                 params: [
                   BridgeParameter(
                       'source',
-                      BridgeTypeAnnotation(
-                          BridgeTypeRef.type(RuntimeTypes.stringType)),
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
                       false),
-                  BridgeParameter(
-                      'onError',
-                      BridgeTypeAnnotation(
-                          BridgeTypeRef.type(RuntimeTypes.functionType),
-                          nullable: true),
-                      true),
                 ],
-                namedParams: []),
+                namedParams: [
+                  BridgeParameter('radix',
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), true),
+                ]),
             isStatic: true),
         'tryParse': BridgeMethodDef(
             BridgeFunctionDef(
@@ -274,17 +300,41 @@ class $int extends $num<int> {
                 params: [
                   BridgeParameter(
                       'source',
-                      BridgeTypeAnnotation(
-                          BridgeTypeRef.type(RuntimeTypes.stringType)),
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
                       false),
                 ],
-                namedParams: []),
+                namedParams: [
+                  BridgeParameter('radix',
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), true),
+                ]),
             isStatic: true),
       },
       getters: {},
       setters: {},
       fields: {},
       wrap: true);
+
+  static $int $parse(Runtime runtime, $Value? target, List<$Value?> args) {
+    final source = args[0]!.$value as String;
+    final radix = args[1]?.$value as int?;
+
+    final result = int.parse(source, radix: radix);
+
+    return $int(result);
+  }
+
+  static $Value $tryParse(Runtime runtime, $Value? target, List<$Value?> args) {
+    final source = args[0]!.$value as String;
+    final radix = args[1]?.$value as int?;
+
+    final result = int.tryParse(source, radix: radix);
+
+    if (result == null) {
+      return $null();
+    }
+
+    return $int(result);
+  }
 
   @override
   int get $reified => $value;
@@ -397,8 +447,7 @@ class $double extends $num<double> {
                 params: [
                   BridgeParameter(
                       'source',
-                      BridgeTypeAnnotation(
-                          BridgeTypeRef.type(RuntimeTypes.stringType)),
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
                       false),
                   BridgeParameter(
                       'onError',
@@ -416,8 +465,7 @@ class $double extends $num<double> {
                 params: [
                   BridgeParameter(
                       'source',
-                      BridgeTypeAnnotation(
-                          BridgeTypeRef.type(RuntimeTypes.stringType)),
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
                       false),
                 ],
                 namedParams: []),

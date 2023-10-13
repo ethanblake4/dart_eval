@@ -15,7 +15,7 @@ Variable compileStringInterpolation(
     } else if (element is InterpolationExpression) {
       final V = compileExpression(element.expression, ctx);
       Variable Vstr;
-      if (V.type == EvalTypes.stringType) {
+      if (V.type == EvalTypes.getStringType(ctx)) {
         Vstr = V;
       } else {
         Vstr = V.invoke(ctx, 'toString', []).result;

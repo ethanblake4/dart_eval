@@ -75,8 +75,7 @@ class $FileSystemEntity implements $Instance {
       },
       getters: {
         'path': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(
-                BridgeTypeRef.type(RuntimeTypes.stringType)),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
             params: [],
             namedParams: [])),
         'absolute': BridgeMethodDef(BridgeFunctionDef(

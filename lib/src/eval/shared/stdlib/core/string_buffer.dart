@@ -14,11 +14,8 @@ class $StringBuffer implements StringBuffer, $Instance {
             returns:
                 BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.stringBuffer)),
             params: [
-              BridgeParameter(
-                  'content',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.stringType)),
-                  true),
+              BridgeParameter('content',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), true),
             ],
             namedParams: []))
       },
@@ -45,8 +42,7 @@ class $StringBuffer implements StringBuffer, $Instance {
                   false),
               BridgeParameter(
                   'separator',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.stringType),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string),
                       nullable: true),
                   true),
             ],

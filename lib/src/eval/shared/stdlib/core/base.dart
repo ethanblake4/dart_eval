@@ -155,34 +155,17 @@ class $bool implements $Instance {
   int $getRuntimeType(Runtime runtime) => RuntimeTypes.boolType;
 }
 
-/*class EvalInvocation implements EvalInstance {
-  EvalInvocation.getter(this.positionalArguments);
-
-  final EvalInstance $super = EvalObject();
-
-  final $List? positionalArguments;
-
-  @override
-  EvalValue? $getProperty(Runtime runtime, String identifier) {
-    switch (identifier) {
-      case 'positionalArguments':
-        return positionalArguments;
-    }
-  }
-
-  @override
-  void $setProperty(Runtime runtime, String identifier, EvalValue value) {}
-
-  @override
-  dynamic get $value => throw UnimplementedError();
-
-  @override
-  dynamic get $reified => throw UnimplementedError();
-}*/
-
 /// dart_eval [$Instance] representation of a [String]
 class $String implements $Instance {
   $String(this.$value) : _superclass = $Object($value);
+
+  static const $declaration = BridgeClassDef(
+      BridgeClassType(BridgeTypeRef(CoreTypes.string), isAbstract: true),
+      constructors: {},
+      methods: {
+        // Other string methods defined in builtins.dart
+      },
+      wrap: true);
 
   @override
   final String $value;
@@ -455,7 +438,7 @@ class $String implements $Instance {
   String get $reified => $value;
 
   @override
-  int $getRuntimeType(Runtime runtime) => RuntimeTypes.stringType;
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType(CoreTypes.string);
 
   @override
   bool operator ==(Object other) =>

@@ -229,7 +229,7 @@ void compileConstructorDeclaration(
         .putIfAbsent(ctx.library, () => {})
         .putIfAbsent(ctx.currentClass!.name.lexeme, () => {})
       ..['index'] = EvalTypes.getIntType(ctx)
-      ..['name'] = EvalTypes.stringType;
+      ..['name'] = EvalTypes.getStringType(ctx);
   }
 
   if (parent is EnumDeclaration) {
@@ -380,7 +380,7 @@ void compileDefaultConstructor(CompilerContext ctx,
         .putIfAbsent(ctx.library, () => {})
         .putIfAbsent(ctx.currentClass!.name.lexeme, () => {})
       ..['index'] = EvalTypes.getIntType(ctx)
-      ..['name'] = EvalTypes.stringType;
+      ..['name'] = EvalTypes.getStringType(ctx);
   }
 
   if (parent is EnumDeclaration) {

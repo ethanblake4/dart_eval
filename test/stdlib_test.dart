@@ -286,5 +286,28 @@ void main() {
         runtime.executeLib('package:example/main.dart', 'main');
       }, prints('7\n'));
     });
+
+    test('Num/int parse and tryParse', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              print(num.parse('3'));
+              print(num.tryParse('3'));
+              print(num.tryParse('3.5'));
+              print(num.tryParse('3.5a'));
+              print(int.parse('3'));
+              print(int.tryParse('3'));
+              print(int.tryParse('3.5'));
+              print(int.tryParse('3.5a'));
+              print(int.parse('11', radix: 2));
+            }
+          ''',
+        }
+      });
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('3\n3\n3.5\nnull\n3\n3\nnull\nnull\n3\n'));
+    });
   });
 }

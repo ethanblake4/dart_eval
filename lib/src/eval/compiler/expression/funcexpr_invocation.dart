@@ -93,7 +93,7 @@ Variable invokeClosure(CompilerContext ctx, Reference? closureRef,
   final alConstVar = Variable.alloc(
       ctx,
       EvalTypes.getListType(ctx)
-          .copyWith(specifiedTypeArgs: [EvalTypes.stringType]));
+          .copyWith(specifiedTypeArgs: [EvalTypes.getStringType(ctx)]));
 
   ctx.pushOp(PushArg.make(csPosArgTypes.scopeFrameOffset), PushArg.LEN);
   ctx.pushOp(PushArg.make(alConstVar.scopeFrameOffset), PushArg.LEN);

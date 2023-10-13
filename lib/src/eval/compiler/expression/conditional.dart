@@ -18,6 +18,7 @@ Variable compileConditionalExpression(
   final Variable V = ctx.setLocal('#conditional', BuiltinValue().push(ctx));
   final Vref = IdentifierReference(null, '#conditional');
   final types = <TypeRef>{if (boundType != null) boundType};
+
   macroBranch(
       ctx, boundType == null ? null : AlwaysReturnType(boundType, false),
       condition: (_ctx) {

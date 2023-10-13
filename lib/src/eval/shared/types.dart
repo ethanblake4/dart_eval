@@ -25,9 +25,6 @@ class RuntimeTypes {
   /// Bridged runtime type for [bool]
   static const int boolType = -5;
 
-  /// Bridged runtime type for [String]
-  static const int stringType = -7;
-
   /// Bridged runtime type for [Map]
   static const int mapType = -10;
 
@@ -54,7 +51,6 @@ final Map<TypeRef, int> runtimeTypeMap = {
   EvalTypes.nullType: RuntimeTypes.nullType,
   EvalTypes.objectType: RuntimeTypes.objectType,
   EvalTypes.boolType: RuntimeTypes.boolType,
-  EvalTypes.stringType: RuntimeTypes.stringType,
   EvalTypes.mapType: RuntimeTypes.mapType,
   EvalTypes.functionType: RuntimeTypes.functionType,
   EvalTypes.typeType: RuntimeTypes.typeType,
@@ -68,7 +64,6 @@ final Map<int, TypeRef> inverseRuntimeTypeMap = {
   RuntimeTypes.nullType: EvalTypes.nullType,
   RuntimeTypes.objectType: EvalTypes.objectType,
   RuntimeTypes.boolType: EvalTypes.boolType,
-  RuntimeTypes.stringType: EvalTypes.stringType,
   RuntimeTypes.mapType: EvalTypes.mapType,
   RuntimeTypes.functionType: EvalTypes.functionType,
   RuntimeTypes.typeType: EvalTypes.typeType
@@ -84,6 +79,9 @@ class CoreTypes {
 
   /// Bridge type spec for [double]
   static const double = BridgeTypeSpec('dart:core', 'double');
+
+  /// Bridge type spec for [String]
+  static const string = BridgeTypeSpec('dart:core', 'String');
 
   /// Bridge type spec for [$Duration]
   static const duration = BridgeTypeSpec('dart:core', 'Duration');

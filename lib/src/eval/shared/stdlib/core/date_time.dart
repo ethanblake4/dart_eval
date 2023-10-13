@@ -46,8 +46,7 @@ class $DateTime implements DateTime, $Instance {
                 params: [
                   BridgeParameter(
                       'formattedString',
-                      BridgeTypeAnnotation(
-                          BridgeTypeRef.type(RuntimeTypes.stringType)),
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
                       false)
                 ],
                 namedParams: []),
@@ -59,8 +58,7 @@ class $DateTime implements DateTime, $Instance {
                 params: [
                   BridgeParameter(
                       'formattedString',
-                      BridgeTypeAnnotation(
-                          BridgeTypeRef.type(RuntimeTypes.stringType)),
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
                       false)
                 ],
                 namedParams: []),
@@ -107,8 +105,7 @@ class $DateTime implements DateTime, $Instance {
             returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dateTime)),
             params: [])),
         'toIso8601String': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(
-                BridgeTypeRef.type(RuntimeTypes.stringType)),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
             params: [])),
         'add': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dateTime)),

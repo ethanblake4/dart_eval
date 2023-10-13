@@ -209,7 +209,7 @@ class $WorldTimeTracker$bridge
     methods: {
       'getTimeFor': BridgeFunctionDef(
         returns: $TimestampedTime.$type.annotate,
-        params: ['country'.param(RuntimeTypes.stringType.bridged.annotate)],
+        params: ['country'.param(CoreTypes.string.ref.annotate)],
       ).asMethod
     },
     bridge: true,

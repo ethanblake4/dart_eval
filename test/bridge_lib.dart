@@ -46,8 +46,7 @@ class $TestClass extends TestClass with $Bridge {
                 params: [
                   BridgeParameter(
                       'm',
-                      BridgeTypeAnnotation(
-                          BridgeTypeRef.type(RuntimeTypes.stringType)),
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
                       false),
                 ],
                 namedParams: []),
@@ -60,11 +59,8 @@ class $TestClass extends TestClass with $Bridge {
                   BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), false),
             ],
             namedParams: [
-              BridgeParameter(
-                  'b',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.stringType)),
-                  false),
+              BridgeParameter('b',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false),
             ]))
       },
       getters: {},

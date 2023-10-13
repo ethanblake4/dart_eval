@@ -15,15 +15,14 @@ class $Encoding implements $Instance {
       BridgeClassType($type,
           isAbstract: true,
           $extends: BridgeTypeRef(ConvertTypes.codec, [
-            BridgeTypeRef.type(RuntimeTypes.stringType),
+            BridgeTypeRef(CoreTypes.string),
             BridgeTypeRef(CoreTypes.list, [BridgeTypeRef(CoreTypes.int)]),
           ])),
       constructors: {},
       methods: {},
       getters: {
         'name': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(
-                BridgeTypeRef.type(RuntimeTypes.stringType)),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
             params: [])),
       },
       wrap: true);

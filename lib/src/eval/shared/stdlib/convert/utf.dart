@@ -15,7 +15,7 @@ class $Utf8Decoder implements $Instance {
       BridgeClassType($type,
           $extends: BridgeTypeRef(ConvertTypes.converter, [
             BridgeTypeRef(CoreTypes.list, [BridgeTypeRef(CoreTypes.int)]),
-            BridgeTypeRef.type(RuntimeTypes.stringType),
+            BridgeTypeRef(CoreTypes.string),
           ])),
       constructors: {
         '': BridgeConstructorDef(BridgeFunctionDef(
@@ -98,7 +98,7 @@ class $Utf8Codec implements $Instance {
             returns:
                 BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.utf8Decoder, [
           BridgeTypeRef(CoreTypes.list, [BridgeTypeRef(CoreTypes.int)]),
-          BridgeTypeRef.type(RuntimeTypes.stringType),
+          BridgeTypeRef(CoreTypes.string),
         ])))),
       },
       setters: {},

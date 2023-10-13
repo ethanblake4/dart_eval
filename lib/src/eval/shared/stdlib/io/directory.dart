@@ -57,19 +57,14 @@ class $Directory implements $Instance {
             returns:
                 BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future, [$type])),
             params: [
-              BridgeParameter(
-                  'newPath',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.stringType)),
-                  false)
+              BridgeParameter('newPath',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false)
             ],
             namedParams: [])),
         'renameSync': BridgeMethodDef(
             BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [
-          BridgeParameter(
-              'newPath',
-              BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.stringType)),
-              false)
+          BridgeParameter('newPath',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false)
         ], namedParams: [])),
         'list': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(

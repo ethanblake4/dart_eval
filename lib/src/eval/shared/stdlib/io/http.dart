@@ -29,54 +29,36 @@ class $HttpClient implements $Instance {
             returns: BridgeTypeAnnotation(BridgeTypeRef(
                 CoreTypes.future, [BridgeTypeRef(IoTypes.httpClientRequest)])),
             params: [
-              BridgeParameter(
-                  'url',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.stringType)),
-                  false),
+              BridgeParameter('url',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false),
               BridgeParameter('port',
                   BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), false),
-              BridgeParameter(
-                  'path',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.stringType)),
-                  false)
+              BridgeParameter('path',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false)
             ],
             namedParams: [])),
         'post': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(
                 CoreTypes.future, [BridgeTypeRef(IoTypes.httpClientRequest)])),
             params: [
-              BridgeParameter(
-                  'url',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.stringType)),
-                  false),
+              BridgeParameter('url',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false),
               BridgeParameter('port',
                   BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), false),
-              BridgeParameter(
-                  'path',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.stringType)),
-                  false)
+              BridgeParameter('path',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false)
             ],
             namedParams: [])),
         'put': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(
                 CoreTypes.future, [BridgeTypeRef(IoTypes.httpClientRequest)])),
             params: [
-              BridgeParameter(
-                  'url',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.stringType)),
-                  false),
+              BridgeParameter('url',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false),
               BridgeParameter('port',
                   BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), false),
-              BridgeParameter(
-                  'path',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.stringType)),
-                  false)
+              BridgeParameter('path',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false)
             ],
             namedParams: [])),
         'getUrl': BridgeMethodDef(BridgeFunctionDef(

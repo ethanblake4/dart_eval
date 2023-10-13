@@ -10,10 +10,8 @@ class $RegExp implements $Instance {
       constructors: {
         '': BridgeConstructorDef(
             BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [
-          BridgeParameter(
-              'source',
-              BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.stringType)),
-              false),
+          BridgeParameter('source',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false),
         ], namedParams: [
           BridgeParameter(
               'multiLine',
@@ -38,11 +36,8 @@ class $RegExp implements $Instance {
             returns:
                 BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.boolType)),
             params: [
-              BridgeParameter(
-                  'input',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.stringType)),
-                  false),
+              BridgeParameter('input',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false),
             ])),
       },
       wrap: true);

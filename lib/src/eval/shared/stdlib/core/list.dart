@@ -90,16 +90,10 @@ class $List<E> implements List<E>, $Instance {
               true),
         ], returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)))),
         'join': BridgeMethodDef(
-            BridgeFunctionDef(
-                params: [
-                  BridgeParameter(
-                      'separator',
-                      BridgeTypeAnnotation(
-                          BridgeTypeRef.type(RuntimeTypes.stringType)),
-                      true),
-                ],
-                returns: BridgeTypeAnnotation(
-                    BridgeTypeRef.type(RuntimeTypes.stringType))),
+            BridgeFunctionDef(params: [
+              BridgeParameter('separator',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), true),
+            ], returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string))),
             isStatic: false),
         'indexOf': BridgeMethodDef(BridgeFunctionDef(params: [
           BridgeParameter(
@@ -333,8 +327,7 @@ class $List<E> implements List<E>, $Instance {
             isStatic: false),
         'toString': BridgeMethodDef(
             BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(
-                    BridgeTypeRef.type(RuntimeTypes.stringType))),
+                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string))),
             isStatic: false),
         'clear': BridgeMethodDef(
             BridgeFunctionDef(

@@ -39,8 +39,7 @@ class $StringSink implements $Instance {
                   false),
               BridgeParameter(
                   'separator',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.stringType),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string),
                       nullable: true),
                   true),
             ],

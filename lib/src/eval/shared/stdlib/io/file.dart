@@ -182,15 +182,14 @@ class $File implements $Instance {
         'readAsString': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(
               CoreTypes.future,
-              [BridgeTypeRef.type(RuntimeTypes.stringType)],
+              [BridgeTypeRef(CoreTypes.string)],
             )),
             params: [],
             namedParams: [
               //BridgeParameter('encoding', BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.encodingType)), true),
             ])),
         'readAsStringSync': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(
-                BridgeTypeRef.type(RuntimeTypes.stringType)),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
             params: [],
             namedParams: [
               //BridgeParameter('encoding', BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.encodingType)), true),
@@ -215,11 +214,8 @@ class $File implements $Instance {
               [BridgeTypeRef.type(RuntimeTypes.voidType)],
             )),
             params: [
-              BridgeParameter(
-                  'contents',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.stringType)),
-                  false)
+              BridgeParameter('contents',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false)
             ],
             namedParams: [
               //BridgeParameter('encoding', BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.encodingType)), true),
@@ -234,11 +230,8 @@ class $File implements $Instance {
             returns:
                 BridgeTypeAnnotation(BridgeTypeRef.type(RuntimeTypes.voidType)),
             params: [
-              BridgeParameter(
-                  'contents',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.stringType)),
-                  false)
+              BridgeParameter('contents',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false)
             ],
             namedParams: [
               //BridgeParameter('encoding', BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.encodingType)), true),
@@ -291,8 +284,7 @@ class $File implements $Instance {
             returns: BridgeTypeAnnotation(BridgeTypeRef(
               CoreTypes.future,
               [
-                BridgeTypeRef(CoreTypes.list,
-                    [BridgeTypeRef.type(RuntimeTypes.stringType)])
+                BridgeTypeRef(CoreTypes.list, [BridgeTypeRef(CoreTypes.string)])
               ],
             )),
             params: [],
@@ -301,7 +293,7 @@ class $File implements $Instance {
             ])),
         'readAsLinesSync': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(
-                CoreTypes.list, [BridgeTypeRef.type(RuntimeTypes.stringType)])),
+                CoreTypes.list, [BridgeTypeRef(CoreTypes.string)])),
             params: [],
             namedParams: [
               //BridgeParameter('encoding', BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.encodingType)), true),

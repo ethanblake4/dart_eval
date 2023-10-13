@@ -309,14 +309,12 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
             res['$name.$childName'] = _cached;
             if (child.isBridge) {
               final bridge = child.bridge!;
+              final _type = BridgeTypeRef.type(ctx.typeRefIndexMap[_cached]);
               if (bridge is BridgeClassDef) {
-                child.bridge = bridge.copyWith(
-                    type: bridge.type.copyWith(
-                        type:
-                            BridgeTypeRef.type(ctx.typeRefIndexMap[_cached])));
+                child.bridge =
+                    bridge.copyWith(type: bridge.type.copyWith(type: _type));
               } else if (bridge is BridgeEnumDef) {
-                child.bridge = bridge.copyWith(
-                    type: BridgeTypeRef.type(ctx.typeRefIndexMap[_cached]));
+                child.bridge = bridge.copyWith(type: _type);
               } else {
                 assert(false);
               }
@@ -332,13 +330,12 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
         if (type == null) continue;
         if (declarationOrBridge.isBridge) {
           final bridge = declarationOrBridge.bridge!;
+          final _type = BridgeTypeRef.type(ctx.typeRefIndexMap[type]);
           if (bridge is BridgeClassDef) {
-            declarationOrBridge.bridge = bridge.copyWith(
-                type: bridge.type.copyWith(
-                    type: BridgeTypeRef.type(ctx.typeRefIndexMap[type])));
+            declarationOrBridge.bridge =
+                bridge.copyWith(type: bridge.type.copyWith(type: _type));
           } else if (bridge is BridgeEnumDef) {
-            declarationOrBridge.bridge = bridge.copyWith(
-                type: BridgeTypeRef.type(ctx.typeRefIndexMap[type]));
+            declarationOrBridge.bridge = bridge.copyWith(type: _type);
           } else {
             assert(false);
           }
@@ -853,7 +850,8 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
     final _visibleDeclarations = <String, DeclarationOrPrefix>{
       for (final d in _expandDeclarations(l.declarations))
         // Key: the expanded name of the declaration (see [_expandDeclarations])
-        // Value: DeclarationOrPrefix (declaration content, and store the ID of the containing library)
+        // Value: DeclarationOrPrefix (declaration content, and store the ID
+        // of the containing library)
         d.first: DeclarationOrPrefix(
             declaration: d.second..sourceLib = resolveLibraryId(l)),
     };
@@ -913,20 +911,15 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
         }
         for (final combinator in import.combinators) {
           if (combinator is ShowCombinator) {
-            if ({for (final n in combinator.shownNames) n.name}
-                .contains(name)) {
-              return true;
-            }
-            return false;
+            final shown = {for (final n in combinator.shownNames) n.name};
+            return shown.contains(name);
           } else if (combinator is HideCombinator) {
-            if ({for (final n in combinator.hiddenNames) n.name}
-                .contains(name)) {
-              return false;
-            }
-            return true;
+            final hidden = {for (final n in combinator.hiddenNames) n.name};
+            return !hidden.contains(name);
           }
           throw CompileError(
-              'Unsupported import combinator ${combinator.runtimeType} (while parsing ${l.uri})');
+              'Unsupported import combinator ${combinator.runtimeType}'
+              '(while parsing ${l.uri})');
         }
         return false;
       };
@@ -937,7 +930,7 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
               .where((e) => validImport(e.first))) ...{
             if (lib.uri == import.uri)
               declaration..second.sourceLib = resolveLibraryId(lib),
-            for (final export in exportsPerUri[lib.uri] ?? [])
+            for (final export in exportsPerUri[lib.uri] ?? <ExportDirective>[])
               if (export.combinators.isEmpty)
                 declaration..second.sourceLib = resolveLibraryId(lib)
               else

@@ -228,8 +228,7 @@ class $WorldTimeTracker$bridge
                 params: [
                   BridgeParameter(
                       'country',
-                      BridgeTypeAnnotation(
-                          BridgeTypeRef.type(RuntimeTypes.stringType)),
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
                       false)
                 ],
                 namedParams: []))

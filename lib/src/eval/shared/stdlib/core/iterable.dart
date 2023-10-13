@@ -9,16 +9,10 @@ class $Iterable<E> implements Iterable<E>, $Instance {
       constructors: {},
       methods: {
         'join': BridgeMethodDef(
-            BridgeFunctionDef(
-                params: [
-                  BridgeParameter(
-                      'separator',
-                      BridgeTypeAnnotation(
-                          BridgeTypeRef.type(RuntimeTypes.stringType)),
-                      true),
-                ],
-                returns: BridgeTypeAnnotation(
-                    BridgeTypeRef.type(RuntimeTypes.stringType))),
+            BridgeFunctionDef(params: [
+              BridgeParameter('separator',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), true),
+            ], returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string))),
             isStatic: false),
         'map': BridgeMethodDef(
             BridgeFunctionDef(

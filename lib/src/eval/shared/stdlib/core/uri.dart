@@ -18,11 +18,8 @@ class $Uri implements $Instance {
       methods: {
         'parse': BridgeMethodDef(
             BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [
-              BridgeParameter(
-                  'uri',
-                  BridgeTypeAnnotation(
-                      BridgeTypeRef.type(RuntimeTypes.stringType)),
-                  false)
+              BridgeParameter('uri',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false)
             ], namedParams: []),
             isStatic: true)
       },
