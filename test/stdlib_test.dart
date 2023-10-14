@@ -284,5 +284,52 @@ void main() {
         runtime.executeLib('package:example/main.dart', 'main');
       }, prints('7\n'));
     });
+
+    test('Iterable.generate', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              print(Iterable.generate(3, (i) => i)); 
+              // check if works for non-integers
+              print(Iterable.generate(2, (i) => 'test'));
+            }
+          ''',
+        }
+      });
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('(0, 1, 2)\n(\$"test", \$"test")\n'));
+    });
+
+    test('Iterable.generate without generator', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              print(Iterable.generate(3));
+            }
+          ''',
+        }
+      });
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('(0, 1, 2)\n'));
+    });
+
+    test('List.generate', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              print(List.generate(3, (i) => i));
+            }
+          ''',
+        }
+      });
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('[0, 1, 2]\n'));
+    });
   });
 }
