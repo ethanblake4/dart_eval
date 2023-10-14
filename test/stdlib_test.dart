@@ -300,14 +300,61 @@ void main() {
               print(int.tryParse('3'));
               print(int.tryParse('3.5'));
               print(int.tryParse('3.5a'));
-              print(int.parse('11', radix: 2));
+              print(int.tryParse('11', radix: 2));
+            }
+          '''
+        }
+      });
+
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('3\n3\n3.5\nnull\n3\n3\nnull\nnull\n3\n'));
+    });
+    test('Iterable.generate', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              print(Iterable.generate(3, (i) => i)); 
+              // check if works for non-integers
+              print(Iterable.generate(2, (i) => 'test'));
             }
           ''',
         }
       });
       expect(() {
         runtime.executeLib('package:example/main.dart', 'main');
-      }, prints('3\n3\n3.5\nnull\n3\n3\nnull\nnull\n3\n'));
+      }, prints('(0, 1, 2)\n(\$"test", \$"test")\n'));
+    });
+
+    test('Iterable.generate without generator', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              print(Iterable.generate(3));
+            }
+          ''',
+        }
+      });
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('(0, 1, 2)\n'));
+    });
+
+    test('List.generate', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              print(List.generate(3, (i) => i));
+            }
+          ''',
+        }
+      });
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('[0, 1, 2]\n'));
     });
   });
 }
