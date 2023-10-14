@@ -1,3 +1,14 @@
+## 0.7.0
+- (Breaking) Removed RuntimeTypes. All builtin types are referenced 
+  with CoreTypes/AsyncTypes etc now.
+- (Breaking) Improve extension method syntax and make it the default
+  for examples
+- Support for compiling Pub packages in the CLI
+- Support tryParse() and parse() for `num` and `int`
+- Support Iterable.generate() and List.generate() (thanks @wrbl606)
+- Support for Comparable
+- Reformat line length to 80 for standardization with Dart ecosystem
+
 ## 0.6.5
 - Support for try/finally and try/catch/finally
 - Fix numerous bugs related to exception handling

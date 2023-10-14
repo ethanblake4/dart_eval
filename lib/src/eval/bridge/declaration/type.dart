@@ -77,13 +77,6 @@ class BridgeTypeRef {
         gft = null,
         ref = null;
 
-  /// Reference a type by its spec (library URI and name)
-  @Deprecated("Use the default constructor")
-  const BridgeTypeRef.spec(this.spec, [this.typeArgs = const []])
-      : cacheId = null,
-        gft = null,
-        ref = null;
-
   /// Reference a type by its local in-context name
   /// (e.g. a type parameter name such as T)
   const BridgeTypeRef.ref(this.ref, [this.typeArgs = const []])
@@ -91,8 +84,7 @@ class BridgeTypeRef {
         gft = null,
         spec = null;
 
-  /// Reference a type by its predefined type ID, for builtin types.
-  /// See [RuntimeTypes] for the list of predefined type IDs.
+  /// Internal use only.
   const BridgeTypeRef.type(this.cacheId, [this.typeArgs = const []])
       : ref = null,
         gft = null,
