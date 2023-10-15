@@ -9,7 +9,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/future.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io/file_system_entity.dart';
 
-/// dart_eval bridge wrapper for [File]
+/// dart_eval wrapper for [File]
 class $File implements $Instance {
   /// Wrap a [File] in a [$File]
   $File.wrap(this.$value);

@@ -4,8 +4,9 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io/string_sink.dart';
 import 'base.dart';
 
-/// Wrapper for [StringBuffer]
+/// dart_eval wrapper for [StringBuffer]
 class $StringBuffer implements StringBuffer, $Instance {
+  /// Compile-time bridge declaration of [$StringBuffer]
   static const $declaration = BridgeClassDef(
       BridgeClassType(BridgeTypeRef(CoreTypes.stringBuffer),
           isAbstract: false, $implements: [BridgeTypeRef(IoTypes.stringSink)]),
@@ -78,7 +79,7 @@ class $StringBuffer implements StringBuffer, $Instance {
       },
       wrap: true);
 
-  /// Wrap a [Comparable] in a [$Comparable].
+  /// Wrap a [StringBuffer] in a [$StringBuffer].
   $StringBuffer.wrap(this.$value) : _superclass = $StringSink.wrap($value);
 
   /// Create a new [$StringBuffer] with the given content.

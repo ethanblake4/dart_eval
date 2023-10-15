@@ -3,8 +3,6 @@ import 'package:dart_eval/src/eval/shared/stdlib/async/stream.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async/stream_controller.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert/converter.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/iterator.dart';
-import 'package:dart_eval/src/eval/shared/stdlib/core/pattern.dart';
-import 'package:dart_eval/src/eval/shared/stdlib/core/regexp.dart';
 import 'package:dart_eval/stdlib/core.dart';
 
 /// This class contains dart:core bridge type specs for convenience

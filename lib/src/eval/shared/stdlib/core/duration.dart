@@ -3,7 +3,7 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/base.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
 
-/// dart_eval bimodal bridge wrapper for [Duration]
+/// dart_eval bimodal wrapper for [Duration]
 class $Duration implements Duration, $Instance {
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFunc(

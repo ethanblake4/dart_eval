@@ -218,9 +218,9 @@ class $StreamTransformer implements $Instance {
   int $getRuntimeType(Runtime runtime) => runtime.lookupType($type.spec!);
 }
 
-///// dart_eval wrapper for [Stream]
+/// dart_eval wrapper for [Stream]
 class $Stream implements $Instance {
-  /// Wrap a [Stream] jn a [$Stream]
+  /// Wrap a [Stream] in a [$Stream]
   $Stream.wrap(this.$value);
 
   /// Compile-time bridged type reference for [$Stream]

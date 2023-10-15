@@ -57,13 +57,88 @@ void main() {
 }
 ```
 
+## Passing arguments
+In most cases, you should wrap arguments you pass to dart_eval in `$Value`
+wrappers, such as `$String` or `$Map`. These 'boxed types' have information 
+about what they are and how to modify them, and you can access their underlying
+value with the `$value` property. However, ints, doubles, bools, 
+and Lists are treated as primitives and should be passed without wrapping
+when their exact type is specified in the function signature:
+
+```dart
+final program = '''
+  int main(int count, String str) {
+    return count + str.length;
+  }
+''';
+
+print(eval(program, function: 'main', args: [1, $String('Hi!')])); // -> 4
+```
+
+When calling a function or constructor externally, you must specify all arguments - even optional and named ones - in order, using null to indicate the absence of an argument (whereas $null() indicates a null value).
+
+## Passing callbacks
+You can pass callbacks as arguments to dart_eval using `$Closure`:
+  
+```dart
+import 'package:dart_eval/dart_eval.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
+
+void main() {
+  final program = '''
+    void main(Function callback) {
+      callback('Hello');
+    }
+  ''';
+
+  eval(program, function: 'main', args: [
+    $Closure((runtime, target, args) {
+      print(args[0]!.$value + '!');
+      return null;
+    })
+  ]); // -> prints 'Hello!'
+}
+```
+
+## Advanced usage
+For more advanced usage, you can use the Compiler and Runtime classes directly,
+which will allow you to use multiple 'files' and customize how the program is run:
+
+```dart
+import 'package:dart_eval/dart_eval.dart';
+
+void main() {
+  final compiler = Compiler();
+  
+  final program = compiler.compile({'my_package': {
+    'main.dart': '''
+      import 'package:my_package/finder.dart';
+      void main() {
+        final parentheses = findParentheses('Hello (world)');
+        print(parentheses); 
+      }
+    ''',
+    'finder.dart': r'''
+      List<int> findParentheses(string) {
+        final regex = RegExp(r'\((.*?)\)');
+        final matches = regex.allMatches(string);
+        return matches.map((match) => match.start).toList();
+      }
+    '''
+  }});
+  
+  final runtime = Runtime(program);
+  runtime.setup();
+  print(runtime.executeLib('package:my_package/main.dart', 'main')); // -> [6]
+}
+```
+
 ## Compiling to a file
 
-For most use-cases, it's recommended to pre-compile your Dart code to EVC bytecode,
+For many use-cases, it's recommended to pre-compile your Dart code to EVC bytecode,
 to avoid runtime compilation overhead. (This is still runtime code execution, it's
-just executing a more efficient code format.)
-
-This also allows you to compile multiple files into a single bytecode block.
+just executing a more efficient code format.) Multiple files will be compiled to a
+single bytecode block.
 
 ```dart
 import 'dart:io';
@@ -77,7 +152,7 @@ void main() {
       int main() {
         var count = 0;
         for (var i = 0; i < 1000; i++) {
-          count = count + i;
+          count += i;
         }
         return count;
       }
@@ -153,16 +228,10 @@ You can dump the op codes of an EVC file using:
 
 ## Return values
 
-In most cases, dart_eval will return a subclass of `$Value` such as `$int`
-or `$String`. These 'boxed types' have information about what they are and 
-how to modify them, and like all `$Value`s you can access their underlying
-value with the `$value` property. 
-
-However, when working with primitive value types  (int, string etc.) you may find 
-that dart_eval returns the underlying primitive directly. This is due to an 
-internal performance optimization. If you don't like the inconsistency, you can
-change the return type on the function signature to `dynamic` which will force 
-dart_eval to always box the value before it's returned.
+Like with arguments, dart_eval will return a `$Value` wrapper for most values
+except ints, doubles, bools, and Lists. If you don't like this inconsistency,
+specifying a function's return value as `dynamic` will force dart_eval to
+always box the return value in a `$Value` wrapper.
 
 > Note that this does not apply to the `eval()` method, which automatically
 unboxes all return values for convenience.
@@ -187,6 +256,12 @@ runtime.grant(NetworkPermission.url('example.com'));
 
 // Allow access to a specific network resource
 runtime.grant(NetworkPermission.url('https://dart.dev/api/users.json'));
+
+// Using the eval() method
+eval(source, permissions: [
+  NetworkPermission.any,
+  FilesystemReadPermission.directory('/home/user/mydata'), 
+]);
 ```
 
 Permissions can also be revoked using `runtime.revoke`.
@@ -305,7 +380,7 @@ When running the program, specify its current version by setting the value of
 the `runtimeOverrideVersion` global property:
 
 ```dart
-runtimeOverrideVersion = '1.3.0';
+runtimeOverrideVersion = Version.parse('1.3.0');
 ```
 
 Now, when the program is run, the runtime will automatically replace the instantiation

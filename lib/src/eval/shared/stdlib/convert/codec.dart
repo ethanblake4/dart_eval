@@ -5,7 +5,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert/converter.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/base.dart';
 
-/// dart_eval bridge wrapper for [Codec]
+/// dart_eval wrapper for [Codec]
 class $Codec implements $Instance {
   /// Compile-type type definition for [$Codec]
   static const $type = BridgeTypeRef(ConvertTypes.codec);

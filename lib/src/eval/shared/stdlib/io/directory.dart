@@ -7,7 +7,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/collection.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/future.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io/file_system_entity.dart';
 
-/// dart_eval bridge wrapper for [File]
+/// dart_eval wrapper for [File]
 class $Directory implements $Instance {
   /// Wrap a [Directory] in a [$Directory]
   $Directory.wrap(this.$value);

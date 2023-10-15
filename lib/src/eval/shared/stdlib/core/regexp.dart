@@ -3,8 +3,12 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/base.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/pattern.dart';
 
+/// dart_eval wrapper for [RegExp]
 class $RegExp implements $Instance {
+  /// Compile-time type reference to [RegExp]
   static const $type = BridgeTypeRef(BridgeTypeSpec('dart:core', 'RegExp'));
+
+  /// Compile-time bridge declaration of [RegExp]
   static const $declaration = BridgeClassDef(
       BridgeClassType($type, isAbstract: true, $extends: $Pattern.$type),
       constructors: {
@@ -33,6 +37,7 @@ class $RegExp implements $Instance {
       },
       wrap: true);
 
+  /// Wrap a [RegExp] in a [$RegExp]
   $RegExp.wrap(this.$value) : _superclass = $Pattern.wrap($value);
 
   static $Value? $new(Runtime runtime, $Value? target, List<$Value?> args) {

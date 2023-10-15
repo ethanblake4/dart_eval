@@ -2,9 +2,12 @@ import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/stdlib/core.dart';
 
+/// dart_eval wrapper for [Match]
 class $Match implements $Instance {
+  /// Compile-time type reference to [Match]
   static const $type = BridgeTypeRef(BridgeTypeSpec('dart:core', 'Match'));
 
+  /// Compile-time bridge declaration of [Match]
   static const $declaration =
       BridgeClassDef(BridgeClassType($type, isAbstract: true),
           constructors: {},
@@ -33,6 +36,8 @@ class $Match implements $Instance {
                 returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)))),
           },
           wrap: true);
+
+  /// Wrap a [Match] in a [$Match]
   $Match.wrap(this.$value) : _superclass = $Object($value);
 
   @override
@@ -76,9 +81,12 @@ class $Match implements $Instance {
   int $getRuntimeType(Runtime runtime) => runtime.lookupType($type.spec!);
 }
 
+/// dart_eval wrapper for [Pattern]
 class $Pattern implements Pattern, $Instance {
+  /// Compile-time type reference to [Pattern]
   static const $type = BridgeTypeRef(BridgeTypeSpec('dart:core', 'Pattern'));
 
+  /// Compile-time bridge declaration of [Pattern]
   static const $declaration =
       BridgeClassDef(BridgeClassType($type, isAbstract: true),
           constructors: {},
@@ -106,6 +114,8 @@ class $Pattern implements Pattern, $Instance {
                 ])),
           },
           wrap: true);
+
+  /// Wrap a [Pattern] in a [$Pattern]
   $Pattern.wrap(this.$value) : _superclass = $Object($value);
 
   @override

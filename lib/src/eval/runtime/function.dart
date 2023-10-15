@@ -4,13 +4,19 @@ import 'package:dart_eval/src/eval/runtime/type.dart';
 
 import '../../../dart_eval_bridge.dart';
 
+/// Typedef of a function that can be called by dart_eval.
 typedef EvalCallableFunc = $Value? Function(
     Runtime runtime, $Value? target, List<$Value?> args);
 
+/// Abstract supertype for values representing a callable in dart_eval.
 abstract class EvalCallable {
   $Value? call(Runtime runtime, $Value? target, List<$Value?> args);
 }
 
+/// Abstract supertype for values representing a [Function] in dart_eval.
+///
+/// See [$Function] or [$Closure] to wrap an existing Dart function as a
+/// [EvalFunction].
 abstract class EvalFunction implements $Instance, EvalCallable {
   const EvalFunction();
 
@@ -86,6 +92,21 @@ class EvalStaticFunctionPtr extends EvalFunction {
       runtime.lookupType(CoreTypes.function);
 }
 
+/// An implementation of [EvalFunction] that wraps an existing Dart function for
+/// use in dart_eval.
+///
+/// The wrapped function should be of the type
+/// ```dart
+/// $Value? Function(Runtime runtime, $Value? target, List<$Value?> args)
+/// ```
+///
+/// The target is the object that the function is being called on, or null if
+/// the function is being called statically.
+///
+/// The args are the arguments passed to the function.
+///
+/// In dynamic invocation / closure contexts such as when passing a function
+/// as an argument, use [$Closure] instead.
 class $Function extends EvalFunction {
   const $Function(this.func);
 
@@ -106,6 +127,8 @@ class $Function extends EvalFunction {
       runtime.lookupType(CoreTypes.function);
 }
 
+/// Variant of [$Function] for use in a dynamic invocation / closure context,
+/// such as when passing a function as an argument.
 class $Closure extends EvalFunction {
   const $Closure(this.func, [this.$this]);
 

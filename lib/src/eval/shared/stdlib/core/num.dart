@@ -2,7 +2,7 @@ import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/stdlib/core.dart';
 
-/// dart_eval bridge wrapper for [num]
+/// dart_eval wrapper for [num]
 class $num<T extends num> implements $Instance {
   /// Wrap a [num] in a [$num].
   $num(this.$value) : _superclass = $Object($value);

@@ -1,7 +1,8 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
-/// A bridge class can be extended inside the dart_eval VM and used both in and outside of it.
+/// A bridge class can be extended inside the dart_eval VM and used both in
+/// and outside of it.
 mixin $Bridge<T> on Object implements $Value, $Instance {
   $Value? $bridgeGet(String identifier);
 
@@ -97,13 +98,6 @@ class BridgeDelegatingShim implements $Instance {
 
   @override
   int $getRuntimeType(Runtime runtime) => throw UnimplementedError();
-}
-
-class $BridgeField {
-  const $BridgeField(this.$get, this.$set);
-
-  final EvalFunction? $get;
-  final EvalFunction? $set;
 }
 
 class BridgeData {

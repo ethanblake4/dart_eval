@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import 'package:dart_eval/source_node_wrapper.dart';
+import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 
 class CompileError implements Exception {

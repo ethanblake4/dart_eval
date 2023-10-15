@@ -16,7 +16,7 @@ abstract class $Value {
   dynamic get $reified;
 }
 
-/// Instance
+/// Interface for objects with properties and methods
 abstract class $Instance implements $Value {
   /// Get a property by [identifier] on this instance
   $Value? $getProperty(Runtime runtime, String identifier);

@@ -1,5 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:dart_eval/source_node_wrapper.dart';
+import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
@@ -24,8 +24,8 @@ void compileVariableDeclarationList(
 
   for (final li in l.variables) {
     if (ctx.locals.last.containsKey(li.name.value() as String)) {
-      throw CompileError(
-          'Cannot declare variable ${li.name.value() as String} multiple times in the same scope');
+      throw CompileError('Cannot declare variable ${li.name.value() as String}'
+          ' multiple times in the same scope');
     }
     final init = li.initializer;
     if (init != null) {
@@ -33,8 +33,8 @@ void compileVariableDeclarationList(
       if (type != null &&
           !res.type.resolveTypeChain(ctx).isAssignableTo(ctx, type)) {
         throw CompileError(
-            'Type mismatch: variable "${li.name.value() as String}" is specified as type $type, but is initialized '
-            'to an incompatible value of type ${res.type}');
+            'Type mismatch: variable "${li.name.value() as String} is specified'
+            ' as type $type, but is initialized to an incompatible value of type ${res.type}');
       }
       if (!(type?.isUnboxedAcrossFunctionBoundaries ?? true)) {
         res = res.boxIfNeeded(ctx);
