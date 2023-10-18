@@ -19,7 +19,7 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 abstract class Reference {
   TypeRef resolveType(CompilerContext ctx, [AstNode? source]);
 
-  void setValue(CompilerContext ctx, Variable value, [AstNode? source]);
+  Variable setValue(CompilerContext ctx, Variable value, [AstNode? source]);
 
   Variable getValue(CompilerContext ctx, [AstNode? source]);
 
@@ -79,7 +79,7 @@ class IdentifierReference implements Reference {
   }
 
   @override
-  void setValue(CompilerContext ctx, Variable value, [AstNode? source]) {
+  Variable setValue(CompilerContext ctx, Variable value, [AstNode? source]) {
     if (object != null) {
       object = object!.boxIfNeeded(ctx);
       final fieldType = TypeRef.lookupFieldType(ctx, object!.type, name) ??
@@ -92,7 +92,7 @@ class IdentifierReference implements Reference {
       final op = SetObjectProperty.make(object!.scopeFrameOffset, name,
           value.boxIfNeeded(ctx).scopeFrameOffset);
       ctx.pushOp(op, SetObjectProperty.len(op));
-      return;
+      return value;
     }
 
     var local = ctx.lookupLocal(name);
@@ -105,8 +105,8 @@ class IdentifierReference implements Reference {
       ctx.pushOp(CopyValue.make(local.scopeFrameOffset, value.scopeFrameOffset),
           CopyValue.LEN);
       final type = TypeRef.commonBaseType(ctx, {local.type, value.type});
-      local.copyWithUpdate(ctx, type: type);
-      return;
+      local.copyWithUpdate(ctx, type: type.copyWith(boxed: value.type.boxed));
+      return value;
     }
 
     // Instance
@@ -126,7 +126,7 @@ class IdentifierReference implements Reference {
         final op = SetObjectProperty.make($this.scopeFrameOffset, name,
             value.boxIfNeeded(ctx).scopeFrameOffset);
         ctx.pushOp(op, SetObjectProperty.len(op));
-        return;
+        return value;
       }
     }
 
@@ -381,7 +381,7 @@ class PrefixedIdentifierReference implements Reference {
   }
 
   @override
-  void setValue(CompilerContext ctx, Variable value, [AstNode? source]) {
+  Variable setValue(CompilerContext ctx, Variable value, [AstNode? source]) {
     throw CompileError('Cannot set value on prefixed identifier', source);
   }
 }
@@ -457,7 +457,7 @@ class IndexedReference implements Reference {
   }
 
   @override
-  void setValue(CompilerContext ctx, Variable value, [AstNode? source]) {
+  Variable setValue(CompilerContext ctx, Variable value, [AstNode? source]) {
     _variable = _variable.updated(ctx);
     _index = _index.updated(ctx);
 
@@ -469,17 +469,24 @@ class IndexedReference implements Reference {
       }
 
       final list = _variable.unboxIfNeeded(ctx);
-      _index = _index.unboxIfNeeded(ctx);
+      final elementType = list.type.specifiedTypeArgs[0];
+      var _value = value;
+      if (elementType.boxed) {
+        _value = _value.boxIfNeeded(ctx);
+      } else {
+        _value = _value.unboxIfNeeded(ctx);
+      }
       ctx.pushOp(
           ListSetIndexed.make(list.scopeFrameOffset, _index.scopeFrameOffset,
               value.scopeFrameOffset),
           IndexList.LEN);
-      return;
+      return _value;
     }
 
     final result = _variable.invoke(ctx, '[]=', [_index, value]);
     _variable = result.target!;
     _index = result.args[0];
+    return result.args[1];
   }
 
   @override
