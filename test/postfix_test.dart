@@ -25,7 +25,7 @@ void main() {
               print(i);
               List<int> list = [0];
               print(list[0]++);
-              print(list.first);
+              print(list[0]);
             }
           '''
         }
