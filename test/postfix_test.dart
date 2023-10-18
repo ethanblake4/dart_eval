@@ -23,6 +23,9 @@ void main() {
               int ii = i++;
               print(ii);
               print(i);
+              List<int> list = [0];
+              print(list[0]++);
+              print(list.first);
             }
           '''
         }
@@ -32,7 +35,7 @@ void main() {
         () {
           runtime.executeLib('package:eval_test/main.dart', 'main');
         },
-        prints('0.0\n1.0\n0\n1\n'),
+        prints('0.0\n1.0\n0\n1\n0\n1\n'),
       );
     });
 
@@ -49,6 +52,8 @@ void main() {
               int ii = i--;
               print(ii);
               print(i);
+              List<int> list = [1];
+              print(list[0]--);
             }
           '''
         }
@@ -58,7 +63,7 @@ void main() {
         () {
           runtime.executeLib('package:eval_test/main.dart', 'main');
         },
-        prints('1.0\n0.0\n1\n0\n'),
+        prints('1.0\n0.0\n1\n0\n1\n'),
       );
     });
   });

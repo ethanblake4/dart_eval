@@ -11,12 +11,10 @@ Variable compilePostfixExpression(PostfixExpression e, CompilerContext ctx) {
   final L = V.getValue(ctx);
   var out = L;
 
-  if (L.name != null) {
-    out = Variable.alloc(ctx, L.type);
-    ctx.pushOp(PushNull.make(), PushNull.LEN);
-    ctx.pushOp(CopyValue.make(out.scopeFrameOffset, L.scopeFrameOffset),
-        CopyValue.LEN);
-  }
+  out = Variable.alloc(ctx, L.type);
+  ctx.pushOp(PushNull.make(), PushNull.LEN);
+  ctx.pushOp(
+      CopyValue.make(out.scopeFrameOffset, L.scopeFrameOffset), CopyValue.LEN);
 
   const opMap = {TokenType.PLUS_PLUS: '+', TokenType.MINUS_MINUS: '-'};
 

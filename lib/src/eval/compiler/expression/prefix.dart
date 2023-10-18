@@ -26,8 +26,7 @@ Variable compilePrefixExpression(CompilerContext ctx, PrefixExpression e) {
   if ([TokenType.PLUS_PLUS, TokenType.MINUS_MINUS].contains(e.operator.type)) {
     final V = compileExpressionAsReference(e.operand, ctx);
     final L = V.getValue(ctx);
-    final type = V.resolveType(ctx);
-    return _handleDoubleOperands(e, ctx, V, type, L);
+    return _handleDoubleOperands(e, ctx, V, L);
   }
 
   final V = compileExpression(e.operand, ctx);
@@ -63,24 +62,21 @@ Variable _handleDoubleOperands(
   PrefixExpression e,
   CompilerContext ctx,
   Reference V,
-  TypeRef type,
   Variable L,
 ) {
-  var out = L;
+  var l = L;
 
-  if (L.name != null) {
-    out = Variable.alloc(ctx, L.type);
-    ctx.pushOp(PushNull.make(), PushNull.LEN);
-    ctx.pushOp(
-      CopyValue.make(out.scopeFrameOffset, L.scopeFrameOffset),
-      CopyValue.LEN,
-    );
-  }
+  l = Variable.alloc(ctx, L.type);
+  ctx.pushOp(PushNull.make(), PushNull.LEN);
+  ctx.pushOp(
+    CopyValue.make(l.scopeFrameOffset, L.scopeFrameOffset),
+    CopyValue.LEN,
+  );
 
-  final result = out.invoke(
+  final result = l.invoke(
     ctx,
     _opMap[e.operator.type]!,
-    [_oneForType(type, ctx).push(ctx)],
+    [_oneForType(l.type, ctx).push(ctx)],
   ).result;
 
   V.setValue(ctx, result);
