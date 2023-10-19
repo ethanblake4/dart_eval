@@ -146,7 +146,7 @@ class $StreamSubscription implements $Instance {
   }
 
   @override
-  get $reified => throw UnimplementedError();
+  get $reified => $value;
 
   @override
   int $getRuntimeType(Runtime runtime) => runtime.lookupType($type.spec!);
