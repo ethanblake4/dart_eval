@@ -8,22 +8,24 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 Variable compilePostfixExpression(PostfixExpression e, CompilerContext ctx) {
   final V = compileExpressionAsReference(e.operand, ctx);
-  var L = V.getValue(ctx);
+  final L = V.getValue(ctx);
   var out = L;
 
-  if (L.name != null) {
-    out = Variable.alloc(ctx, L.type);
-    ctx.pushOp(PushNull.make(), PushNull.LEN);
-    ctx.pushOp(CopyValue.make(out.scopeFrameOffset, L.scopeFrameOffset),
-        CopyValue.LEN);
-  }
+  out = Variable.alloc(ctx, L.type);
+  ctx.pushOp(PushNull.make(), PushNull.LEN);
+  ctx.pushOp(
+      CopyValue.make(out.scopeFrameOffset, L.scopeFrameOffset), CopyValue.LEN);
 
-  final opMap = {TokenType.PLUS_PLUS: '+', TokenType.MINUS_MINUS: '-'};
+  const opMap = {TokenType.PLUS_PLUS: '+', TokenType.MINUS_MINUS: '-'};
 
   V.setValue(
+    ctx,
+    L.invoke(
       ctx,
-      L.invoke(ctx, opMap[e.operator.type]!,
-          [BuiltinValue(intval: 1).push(ctx)]).result);
+      opMap[e.operator.type]!,
+      [BuiltinValue(intval: 1).push(ctx)],
+    ).result,
+  );
 
   return out;
 }
