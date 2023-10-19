@@ -79,6 +79,5 @@ Variable _handleDoubleOperands(
     [_oneForType(l.type, ctx).push(ctx)],
   ).result;
 
-  V.setValue(ctx, result);
-  return result;
+  return V.setValue(ctx, result);
 }
