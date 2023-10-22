@@ -10,7 +10,7 @@ void main() {
     final runtime = compiler.compileWriteAndLoad({
       'hlc': {
         'hlc.dart': r'''
-  import 'dart:math';
+import 'dart:math';
 
 /// A hybrid logical clock implementation with string-based nodes.
 class HLC implements Comparable<HLC> {
@@ -121,7 +121,7 @@ class HLC implements Comparable<HLC> {
   @override
   bool operator ==(dynamic other) {
     return identical(this, other) ||
-        (
+        (other.runtimeType == runtimeType &&
             other is HLC &&
             timestamp == other.timestamp &&
             count == other.count &&
@@ -130,6 +130,7 @@ class HLC implements Comparable<HLC> {
 
   @override
   int get hashCode => Object.hash(
+        runtimeType,
         timestamp.hashCode,
         count.hashCode,
         node.hashCode,
@@ -174,7 +175,8 @@ class TimeDriftException implements Exception {
     required this.maximumDrift,
   });
 
-  String get message => 'TimeDriftException: The received clock\'s time drift exceeds the maximum.';
+  String get message =>
+      'TimeDriftException: The received clock\'s time drift exceeds the maximum.';
 }
           '''
       },

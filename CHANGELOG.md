@@ -13,6 +13,7 @@
   types based on argument types
 - Support for Comparable
 - Add `identical` and `Object.hash` functions
+- Basic support for `runtimeType`
 - Add Runtime.valueToString helper for converting a $Value to a string
   correctly
 - Use short-circuit evaluation for null coalescing operator `??`

@@ -403,5 +403,30 @@ void main() {
         runtime.executeLib('package:example/main.dart', 'main');
       }, prints('4\n'));
     });
+
+    test('runtimeType', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              var x = X();
+              var x2 = X();
+
+              print(x.runtimeType == x2.runtimeType);
+              print(x.runtimeType == 1.runtimeType);
+              print(1.runtimeType == 2.runtimeType);
+            }
+
+            class X {
+              X();
+            }
+          '''
+        }
+      });
+
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('true\nfalse\ntrue\n'));
+    });
   });
 }

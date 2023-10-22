@@ -21,11 +21,6 @@ const $neverCls = BridgeClassDef(
     constructors: {},
     wrap: true);
 
-const $typeCls = BridgeClassDef(
-    BridgeClassType(BridgeTypeRef(CoreTypes.type), isAbstract: true),
-    constructors: {},
-    wrap: true);
-
 /// dart_eval [$Value] representation of [null]
 class $null implements $Value {
   const $null();

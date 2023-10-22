@@ -207,6 +207,12 @@ class Evc {
   /// [MaybeBoxNull]
   static const OP_MAYBE_BOX_NULL = 66;
 
+  /// [PushRuntimeType]
+  static const OP_PUSH_RUNTIME_TYPE = 67;
+
+  /// [PushConstantType]
+  static const OP_PUSH_CONSTANT_TYPE = 68;
+
   static List<int> i16b(int i16) {
     final x = ByteData(2);
     x.setInt16(0, i16);
@@ -316,5 +322,7 @@ final List<OpLoader> ops = [
   (Runtime rt) => Assert(rt), // 63
   (Runtime rt) => PushFinally(rt), // 64
   (Runtime rt) => PushReturnFromCatch(rt), // 65
-  (Runtime rt) => MaybeBoxNull(rt) // 66
+  (Runtime rt) => MaybeBoxNull(rt), // 66
+  (Runtime rt) => PushRuntimeType(rt), // 67
+  (Runtime rt) => PushConstantType(rt), // 68
 ];

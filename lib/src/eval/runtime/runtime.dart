@@ -13,6 +13,7 @@ import 'package:dart_eval/src/eval/runtime/function.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/type.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/math.dart';
 import 'package:dart_eval/stdlib/core.dart';
@@ -692,6 +693,12 @@ class Runtime {
       case MaybeBoxNull:
         op as MaybeBoxNull;
         return [Evc.OP_MAYBE_BOX_NULL, ...Evc.i16b(op._reg)];
+      case PushRuntimeType:
+        op as PushRuntimeType;
+        return [Evc.OP_PUSH_RUNTIME_TYPE, ...Evc.i16b(op._value)];
+      case PushConstantType:
+        op as PushConstantType;
+        return [Evc.OP_PUSH_CONSTANT_TYPE, ...Evc.i32b(op._typeId)];
       default:
         throw ArgumentError('Not a valid op $op');
     }

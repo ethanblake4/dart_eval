@@ -72,8 +72,7 @@ Pair<TypeRef, DeclarationOrBridge>? resolveInstanceDeclaration(
       return resolveInstanceDeclaration(ctx, _type.file, _type.name, name);
     }
 
-    throw CompileError(
-        'Bridge declaration not supported in instance: trying to lookup "$name" in "${$class}"');
+    return null;
   } else {
     final getter = ctx.instanceDeclarationsMap[library]![$class]?['$name*g'];
     final setter = ctx.instanceDeclarationsMap[library]![$class]?['$name*s'];
@@ -109,6 +108,12 @@ Pair<TypeRef, DeclarationOrBridge>? resolveInstanceDeclaration(
             $extendsClause.superclass.name2.value()]!;
     return resolveInstanceDeclaration(
         ctx, extendsType.file, extendsType.name, name);
+  } else {
+    final $type = ctx.visibleTypes[library]![$class]!;
+    final objectType = CoreTypes.object.ref(ctx);
+    if ($type != objectType) {
+      return resolveInstanceDeclaration(ctx, objectType.file, 'Object', name);
+    }
   }
   return null;
 }

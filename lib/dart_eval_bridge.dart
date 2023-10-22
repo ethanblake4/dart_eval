@@ -1,6 +1,6 @@
 library dart_eval.bridge;
 
-export 'src/eval/runtime/class.dart' hide $InstanceImpl, EvalTypeClass;
+export 'src/eval/runtime/class.dart' hide $InstanceImpl;
 export 'src/eval/runtime/declaration.dart' hide EvalClassClass;
 export 'src/eval/bridge/declaration/class.dart';
 export 'src/eval/bridge/declaration/enum.dart';

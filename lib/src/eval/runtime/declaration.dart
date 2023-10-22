@@ -6,7 +6,7 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 class EvalClass extends $InstanceImpl {
   EvalClass(this.delegatedType, this.superclass, this.mixins, this.getters,
       this.setters, this.methods)
-      : super(EvalClassClass.instance, EvalTypeClass(), const []);
+      : super(EvalClassClass.instance, null, const []);
 
   factory EvalClass.fromJson(List def) {
     return EvalClass(def[3] as int, null, [], (def[0] as Map).cast(),

@@ -375,16 +375,7 @@ class IsType implements EvcOp {
     final value = runtime.frame[_objectOffset] as $Value;
     final type = value.$getRuntimeType(runtime);
     if (type < 0) {
-      final bool result;
-      if (_type == -2 || (_type == -4 && type != -3 /* null */)) {
-        //dynamic and Object
-        result = true;
-      } else if (_type == -6) {
-        // num
-        result = type == -6 || type == -8 || type == -9;
-      } else {
-        result = type == _type;
-      }
+      final result = type == _type;
       runtime.frame[runtime.frameOffset++] = _not ? !result : result;
       return;
     }
@@ -468,4 +459,42 @@ class CheckNotEq implements EvcOp {
 
   @override
   String toString() => 'CheckNotEq (L$_value1 != L$_value2)';
+}
+
+class PushRuntimeType implements EvcOp {
+  PushRuntimeType(Runtime runtime) : _value = runtime._readInt16();
+
+  final int _value;
+
+  PushRuntimeType.make(this._value);
+
+  static const int LEN = Evc.BASE_OPLEN + Evc.I16_LEN;
+
+  @override
+  void run(Runtime runtime) {
+    final value = runtime.frame[_value] as $Value;
+    runtime.frame[runtime.frameOffset++] =
+        $TypeImpl(value.$getRuntimeType(runtime));
+  }
+
+  @override
+  String toString() => 'PushRuntimeType (L$_value)';
+}
+
+class PushConstantType implements EvcOp {
+  PushConstantType(Runtime runtime) : _typeId = runtime._readInt32();
+
+  final int _typeId;
+
+  PushConstantType.make(this._typeId);
+
+  static const int LEN = Evc.BASE_OPLEN + Evc.I32_LEN;
+
+  @override
+  void run(Runtime runtime) {
+    runtime.frame[runtime.frameOffset++] = $TypeImpl(_typeId);
+  }
+
+  @override
+  String toString() => 'PushConstantType (ID $_typeId)';
 }

@@ -276,6 +276,16 @@ class Variable {
   }
 
   Variable getProperty(CompilerContext ctx, String name) {
+    if (name == 'runtimeType') {
+      if (concreteTypes.isNotEmpty) {
+        final concrete = concreteTypes[0];
+        ctx.pushOp(PushConstantType.make(concrete.toRuntimeType(ctx).type),
+            PushConstantType.LEN);
+        return Variable.alloc(ctx, CoreTypes.type.ref(ctx));
+      }
+      ctx.pushOp(PushRuntimeType.make(scopeFrameOffset), PushRuntimeType.LEN);
+      return Variable.alloc(ctx, CoreTypes.type.ref(ctx));
+    }
     final op = PushObjectProperty.make(scopeFrameOffset, name);
     ctx.pushOp(op, PushObjectProperty.len(op));
 

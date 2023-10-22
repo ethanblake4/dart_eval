@@ -190,14 +190,7 @@ class IdentifierReference implements Reference {
         return Variable.alloc(ctx, type);
       }
       object = object!.boxIfNeeded(ctx);
-      final op = PushObjectProperty.make(object!.scopeFrameOffset, name);
-      ctx.pushOp(op, PushObjectProperty.len(op));
-      ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-      return Variable.alloc(
-          ctx,
-          TypeRef.lookupFieldType(ctx, object!.type, name)
-                  ?.copyWith(boxed: true) ??
-              CoreTypes.dynamic.ref(ctx));
+      return object!.getProperty(ctx, name);
     }
 
     // First look at locals

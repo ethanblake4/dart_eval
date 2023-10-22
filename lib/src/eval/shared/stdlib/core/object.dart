@@ -108,7 +108,10 @@ class $Object implements $Instance {
       getters: {
         'hashCode': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
-            params: []))
+            params: [])),
+        'runtimeType': BridgeMethodDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.type)),
+            params: [])),
       },
       wrap: true);
 

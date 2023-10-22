@@ -323,7 +323,8 @@ DeclarationOrBridge<MethodDeclaration, BridgeMethodDef> resolveInstanceMethod(
   } else {
     final $class = _dec.declaration as ClassDeclaration;
     if ($class.extendsClause == null) {
-      throw CompileError('Cannot resolve instance method', source);
+      return resolveInstanceMethod(
+          ctx, CoreTypes.object.ref(ctx), methodName, source);
     }
     final $supertype = ctx.visibleTypes[instanceType.file]![
         $class.extendsClause!.superclass.name2.value()]!;

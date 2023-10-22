@@ -366,7 +366,11 @@ class TypeRef {
       final _dec = dec.declaration as NamedCompilationUnitMember;
       final $extends = _dec is ClassDeclaration ? _dec.extendsClause : null;
       if ($extends == null) {
-        throw CompileError('Field "$field" not found in class ${$class}');
+        if ($class == CoreTypes.object.ref(ctx)) {
+          throw CompileError(
+              'Field $field not found in class ${$class} or its superclasses');
+        }
+        return TypeRef.lookupFieldType(ctx, CoreTypes.object.ref(ctx), field);
       } else {
         final $super = ctx.visibleTypes[$class.file]![
             $extends.superclass.name2.stringValue ??
