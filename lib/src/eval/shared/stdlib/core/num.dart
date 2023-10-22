@@ -307,6 +307,13 @@ class $int extends $num<int> {
                       BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), true),
                 ]),
             isStatic: true),
+        'toRadixString': BridgeMethodDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+            params: [
+              BridgeParameter('radix',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), false),
+            ],
+            namedParams: [])),
       },
       getters: {},
       setters: {},
@@ -349,6 +356,8 @@ class $int extends $num<int> {
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
+      case 'toRadixString':
+        return __toRadixString;
       case '|':
         return __bitwiseOr;
       case '&':
@@ -361,6 +370,16 @@ class $int extends $num<int> {
         return __bitwiseXor;
     }
     return super.$getProperty(runtime, identifier);
+  }
+
+  static const $Function __toRadixString = $Function(_toRadixString);
+
+  static $Value? _toRadixString(
+      Runtime runtime, $Value? target, List<$Value?> args) {
+    final radix = args[0];
+    final _evalResult = (target!.$value as int).toRadixString(radix!.$value);
+
+    return $String(_evalResult);
   }
 
   static const $Function __bitwiseOr = $Function(_bitwiseOr);

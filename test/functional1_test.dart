@@ -202,5 +202,35 @@ void main() {
         runtime.executeLib('package:example/main.dart', 'test');
       }, prints('length -> 2\ni => 0\ni => 1\n'));
     });
+
+    test('Matches test from Readme', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'my_package': {
+          'main.dart': '''
+            import 'package:my_package/finder.dart';
+            void main() {
+              final finder = Finder('Hello (world)');
+              final parentheses = finder.findParentheses();
+              if (parentheses.isNotEmpty) print(parentheses);
+            }
+          ''',
+          'finder.dart': r'''
+            class Finder {
+              final String string;
+              Finder(this.string);
+
+              List<int> findParentheses() {
+                final regex = RegExp(r'\((.*?)\)');
+                final matches = regex.allMatches(string);
+                return matches.map((match) => match.start).toList();
+              }
+            }
+        '''
+        }
+      });
+      expect(() {
+        runtime.executeLib('package:my_package/main.dart', 'main');
+      }, prints('[6]\n'));
+    });
   });
 }

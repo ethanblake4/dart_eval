@@ -86,7 +86,8 @@ class CopyValue implements EvcOp {
   // Conditional move
   @override
   void run(Runtime runtime) {
-    runtime.frame[_to] = runtime.frame[_from];
+    final from = runtime.frame[_from];
+    runtime.frame[_to] = from;
   }
 
   @override

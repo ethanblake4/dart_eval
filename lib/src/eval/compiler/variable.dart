@@ -21,7 +21,10 @@ class Variable {
       : this.callingConvention = callingConvention ??
             ((type == TypeRef(dartCoreFile, 'Function') && methodOffset == null)
                 ? CallingConvention.dynamic
-                : CallingConvention.static);
+                : CallingConvention
+                    .static) /*,
+        TODO: assert(!type.nullable || type.boxed)*/
+  ;
 
   factory Variable.alloc(ScopeContext ctx, TypeRef type,
       {DeferredOrOffset? methodOffset,

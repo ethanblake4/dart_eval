@@ -310,6 +310,24 @@ void main() {
         runtime.executeLib('package:example/main.dart', 'main');
       }, prints('3\n3\n3.5\nnull\n3\n3\nnull\nnull\n3\n'));
     });
+
+    test('int.parse value from String.split', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              final a = '3:4';
+              final b = a.split(':');
+              print(int.parse(b[0]));
+            }
+          '''
+        }
+      });
+
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('3\n'));
+    });
     test('Iterable.generate', () {
       final runtime = compiler.compileWriteAndLoad({
         'example': {
@@ -357,34 +375,39 @@ void main() {
       }, prints('[0, 1, 2]\n'));
     });
 
-    test('Matches test from Readme', () {
+    test('Object.hash', () {
       final runtime = compiler.compileWriteAndLoad({
-        'my_package': {
+        'example': {
           'main.dart': '''
-            import 'package:my_package/finder.dart';
             void main() {
-              final finder = Finder('Hello (world)');
-              final parentheses = finder.findParentheses();
-              print(parentheses);
+              print(Object.hash(1, 2, 3));
+              print(Object.hash(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, null));
             }
           ''',
-          'finder.dart': r'''
-            class Finder {
-              final String string;
-              Finder(this.string);
-
-              List<int> findParentheses() {
-                final regex = RegExp(r'\((.*?)\)');
-                final matches = regex.allMatches(string);
-                return matches.map((match) => match.start).toList();
-              }
-            }
-        '''
         }
       });
       expect(() {
-        runtime.executeLib('package:my_package/main.dart', 'main');
-      }, prints('[6]\n'));
+        runtime.executeLib('package:example/main.dart', 'main');
+      },
+          prints('${Object.hash(1, 2, 3)}\n'
+              '${Object.hash(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, null)}\n'));
+    });
+
+    test('int.compareTo', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              print(1.compareTo(2));
+              print(2.compareTo(1));
+              print(1.compareTo(1));
+            }
+          ''',
+        }
+      });
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('-1\n1\n0\n'));
     });
   });
 }

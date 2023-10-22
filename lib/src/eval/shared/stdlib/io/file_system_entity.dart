@@ -2,10 +2,8 @@ import 'dart:io';
 
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
-import 'package:dart_eval/src/eval/shared/stdlib/core/base.dart';
-import 'package:dart_eval/src/eval/shared/stdlib/core/future.dart';
-import 'package:dart_eval/src/eval/shared/stdlib/core/uri.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io/directory.dart';
+import 'package:dart_eval/stdlib/core.dart';
 
 /// dart_eval wrapper for [FileSystemEntity]
 class $FileSystemEntity implements $Instance {

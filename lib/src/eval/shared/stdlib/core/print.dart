@@ -1,7 +1,6 @@
-// ignore_for_file: body_might_complete_normally_nullable
-
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/runtime/class.dart';
 
 void configurePrintForCompile(BridgeDeclarationRegistry registry) {
   registry.defineBridgeTopLevelFunction(BridgeFunctionDeclaration(
@@ -28,6 +27,7 @@ class _$print implements EvalCallable {
 
   @override
   $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
-    print(args[0]?.$value);
+    print(runtime.valueToString(args[0]));
+    return null;
   }
 }

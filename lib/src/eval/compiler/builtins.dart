@@ -279,11 +279,6 @@ Map<TypeRef, Map<String, KnownMethod>> getKnownMethods(ctx) {
         KnownMethodArg('replacement', CoreTypes.string.ref(ctx), false),
       ], {}),
       //TODO: needs to be fixed to not use stringType but instead EvalTypes.patternType once its available
-      'split': KnownMethod(
-          BridgedReturnType(BridgeTypeSpec('dart:core', 'List'), false), [
-        KnownMethodArg('pattern', CoreTypes.string.ref(ctx), false),
-      ], {}),
-      //TODO: needs to be fixed to not use stringType but instead EvalTypes.patternType once its available
       'startsWith':
           KnownMethod(AlwaysReturnType(CoreTypes.bool.ref(ctx), false), [
         KnownMethodArg('pattern', CoreTypes.string.ref(ctx), false),

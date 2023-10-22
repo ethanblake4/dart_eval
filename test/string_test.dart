@@ -377,9 +377,10 @@ void main() {
       });
       expect(
           (runtime.executeLib('package:example/main.dart', 'test')).length, 2);
-      expect(
-          (runtime.executeLib('package:example/main.dart', 'test'))[0], "Flu");
-      expect((runtime.executeLib('package:example/main.dart', 'test'))[1], "y");
+      expect((runtime.executeLib('package:example/main.dart', 'test'))[0],
+          $String("Flu"));
+      expect((runtime.executeLib('package:example/main.dart', 'test'))[1],
+          $String("y"));
     });
     test('String trimRight method trims whitespace', () {
       final runtime = compiler.compileWriteAndLoad({

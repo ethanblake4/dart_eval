@@ -51,6 +51,9 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
 
   var i = 0;
 
+  TypeRef.loadTemporaryTypes(
+      ctx, d.functionExpression.typeParameters?.typeParameters);
+
   for (final param in resolvedParams) {
     final p = param.parameter;
     Variable Vrep;
@@ -91,6 +94,8 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   } else {
     throw CompileError('Unsupported function body type: ${b.runtimeType}');
   }
+
+  ctx.temporaryTypes[ctx.library]?.clear();
 
   if (!(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
     if (b.isAsynchronous) {

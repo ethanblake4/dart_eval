@@ -2,6 +2,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/base.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/object.dart';
 
 /// dart_eval bimodal wrapper for [Duration]
 class $Duration implements Duration, $Instance {
@@ -71,7 +72,35 @@ class $Duration implements Duration, $Instance {
             BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [
           BridgeParameter('factor',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)), false)
-        ], namedParams: []))
+        ], namedParams: [])),
+        '>': BridgeMethodDef(
+          BridgeFunctionDef(
+              returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+              params: [
+                BridgeParameter('other', BridgeTypeAnnotation($type), false)
+              ]),
+        ),
+        '>=': BridgeMethodDef(
+          BridgeFunctionDef(
+              returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+              params: [
+                BridgeParameter('other', BridgeTypeAnnotation($type), false)
+              ]),
+        ),
+        '<': BridgeMethodDef(
+          BridgeFunctionDef(
+              returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+              params: [
+                BridgeParameter('other', BridgeTypeAnnotation($type), false)
+              ]),
+        ),
+        '<=': BridgeMethodDef(
+          BridgeFunctionDef(
+              returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+              params: [
+                BridgeParameter('other', BridgeTypeAnnotation($type), false)
+              ]),
+        ),
       },
       getters: {
         'zero': BridgeMethodDef(
@@ -176,6 +205,14 @@ class $Duration implements Duration, $Instance {
         return $bool($value.isNegative);
       case 'abs':
         return $Function(_abs);
+      case '<':
+        return $Function(_lessThan);
+      case '<=':
+        return $Function(_lessThanOrEqual);
+      case '>':
+        return $Function(_greaterThan);
+      case '>=':
+        return $Function(_greaterThanOrEqual);
     }
     return _superclass.$getProperty(runtime, identifier);
   }
@@ -191,6 +228,34 @@ class $Duration implements Duration, $Instance {
       final Runtime runtime, final $Value? target, final List<$Value?> args) {
     var a = target!.$value as Duration;
     return $Duration.wrap(a.abs());
+  }
+
+  static $Value? _lessThan(
+      final Runtime runtime, final $Value? target, final List<$Value?> args) {
+    var a = target!.$value as Duration;
+    var other = args[0]!.$value as Duration;
+    return $bool(a < other);
+  }
+
+  static $Value? _lessThanOrEqual(
+      final Runtime runtime, final $Value? target, final List<$Value?> args) {
+    var a = target!.$value as Duration;
+    var other = args[0]!.$value as Duration;
+    return $bool(a <= other);
+  }
+
+  static $Value? _greaterThan(
+      final Runtime runtime, final $Value? target, final List<$Value?> args) {
+    var a = target!.$value as Duration;
+    var other = args[0]!.$value as Duration;
+    return $bool(a > other);
+  }
+
+  static $Value? _greaterThanOrEqual(
+      final Runtime runtime, final $Value? target, final List<$Value?> args) {
+    var a = target!.$value as Duration;
+    var other = args[0]!.$value as Duration;
+    return $bool(a >= other);
   }
 
   @override

@@ -6,8 +6,11 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/comparable.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/date_time.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/enum.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/errors.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/exceptions.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/identical.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/iterator.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/object.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/pattern.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/regexp.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/string_buffer.dart';
@@ -24,6 +27,7 @@ class DartCorePlugin implements EvalPlugin {
   @override
   void configureForCompile(BridgeDeclarationRegistry registry) {
     configurePrintForCompile(registry);
+    configureIdenticalForCompile(registry);
     registry.defineBridgeClass($dynamicCls);
     registry.defineBridgeClass($voidCls);
     registry.defineBridgeClass($neverCls);
@@ -51,11 +55,13 @@ class DartCorePlugin implements EvalPlugin {
     registry.defineBridgeClass($AssertionError.$declaration);
     registry.defineBridgeClass($Comparable.$declaration);
     registry.defineBridgeClass($StringBuffer.$declaration);
+    registry.defineBridgeClass($Exception.$declaration);
   }
 
   @override
   void configureForRuntime(Runtime runtime) {
     configurePrintForRuntime(runtime);
+    configureIdenticalForRuntime(runtime);
     $List.configureForRuntime(runtime);
     $Iterable.configureForRuntime(runtime);
     $Duration.configureForRuntime(runtime);
@@ -71,5 +77,6 @@ class DartCorePlugin implements EvalPlugin {
     runtime.registerBridgeFunc('dart:core', 'num.tryParse', $num.$tryParse);
     runtime.registerBridgeFunc('dart:core', 'int.parse', $int.$parse);
     runtime.registerBridgeFunc('dart:core', 'int.tryParse', $int.$tryParse);
+    runtime.registerBridgeFunc('dart:core', 'Object.hash', $Object.$hash);
   }
 }

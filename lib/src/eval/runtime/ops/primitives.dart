@@ -298,6 +298,29 @@ class BoxMap implements EvcOp {
   String toString() => 'BoxMap (L$_reg)';
 }
 
+class MaybeBoxNull implements EvcOp {
+  MaybeBoxNull(Runtime runtime) : _reg = runtime._readInt16();
+
+  MaybeBoxNull.make(this._reg);
+
+  final int _reg;
+
+  static const int LEN = Evc.BASE_OPLEN + Evc.I16_LEN;
+
+  // Set value at position to constant
+  @override
+  void run(Runtime runtime) {
+    final reg = _reg;
+    final value = runtime.frame[reg];
+    if (value == null) {
+      runtime.frame[reg] = const $null();
+    }
+  }
+
+  @override
+  String toString() => 'MaybeBoxNull (L$_reg)';
+}
+
 class Unbox implements EvcOp {
   Unbox(Runtime runtime) : _reg = runtime._readInt16();
 

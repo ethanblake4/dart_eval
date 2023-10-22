@@ -570,8 +570,13 @@ Variable _declarationToVariable(
   TypeRef? returnType;
   var nullable = true;
   if (decl is FunctionDeclaration && decl.returnType != null) {
+    TypeRef.loadTemporaryTypes(
+        ctx,
+        decl.functionExpression.typeParameters?.typeParameters,
+        _decl.sourceLib);
     returnType = TypeRef.fromAnnotation(ctx, _decl.sourceLib, decl.returnType!);
     nullable = decl.returnType!.question != null;
+    ctx.temporaryTypes[ctx.library]?.clear();
   } else {
     returnType = TypeRef.lookupDeclaration(
         ctx, _decl.sourceLib, decl.parent as ClassDeclaration);

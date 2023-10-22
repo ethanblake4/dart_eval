@@ -2,6 +2,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/runtime/exception.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/collection.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/object.dart';
 import 'num.dart';
 
 const $dynamicCls = BridgeClassDef(
@@ -49,76 +50,6 @@ class $null implements $Value {
 
   @override
   int get hashCode => -12121212;
-}
-
-/// dart_eval [$Instance] representation of an [Object]
-class $Object implements $Instance {
-  $Object(this.$value);
-
-  static const $declaration = BridgeClassDef(
-      BridgeClassType(BridgeTypeRef(CoreTypes.object),
-          $extends: BridgeTypeRef(CoreTypes.dynamic), isAbstract: true),
-      constructors: {},
-      wrap: true);
-
-  @override
-  final Object $value;
-
-  @override
-  dynamic get $reified => $value;
-
-  @override
-  $Value? $getProperty(Runtime runtime, String identifier) {
-    switch (identifier) {
-      case '==':
-        return __equals;
-      case '!=':
-        return __not_equals;
-      case 'toString':
-        return __toString;
-      case 'hashCode':
-        return __hashCode;
-    }
-
-    throw UnimplementedError();
-  }
-
-  static const $Function __equals = $Function(_equals);
-
-  static $Value? _equals(Runtime runtime, $Value? target, List<$Value?> args) {
-    final other = args[0];
-    return $bool(target!.$value == other!.$value);
-  }
-
-  static const $Function __not_equals = $Function(_not_equals);
-
-  static $Value? _not_equals(
-      Runtime runtime, $Value? target, List<$Value?> args) {
-    final other = args[0];
-    return $bool(target!.$value != other!.$value);
-  }
-
-  static const $Function __toString = $Function(_toString);
-
-  static $Value? _toString(
-      Runtime runtime, $Value? target, List<$Value?> args) {
-    return $String(target!.$value.toString());
-  }
-
-  static const $Function __hashCode = $Function(_hashCode);
-
-  static $Value? _hashCode(
-      Runtime runtime, $Value? target, List<$Value?> args) {
-    return $int(target!.$value.hashCode);
-  }
-
-  @override
-  void $setProperty(Runtime runtime, String identifier, $Value value) {
-    throw UnimplementedError();
-  }
-
-  @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType(CoreTypes.object);
 }
 
 /// dart_eval [$Instance] representation of a [bool]
@@ -201,10 +132,19 @@ class $String implements $Instance {
   $String(this.$value) : _superclass = $Object($value);
 
   static const $declaration = BridgeClassDef(
-      BridgeClassType(BridgeTypeRef(CoreTypes.string), isAbstract: true),
+      BridgeClassType(BridgeTypeRef(CoreTypes.string),
+          $implements: [BridgeTypeRef(CoreTypes.pattern)], isAbstract: true),
       constructors: {},
       methods: {
         // Other string methods defined in builtins.dart
+        'split': BridgeMethodDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation(BridgeTypeRef(
+                CoreTypes.list, [BridgeTypeRef(CoreTypes.string)])),
+            params: [
+              BridgeParameter('pattern',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.pattern)), false)
+            ],
+            namedParams: []))
       },
       wrap: true);
 
@@ -434,7 +374,8 @@ class $String implements $Instance {
       final Runtime runtime, final $Value? target, final List<$Value?> args) {
     target as $String;
     final pattern = args[0] as $String;
-    return $List.wrap(target.$value.split(pattern.$value));
+    return $List.wrap(
+        target.$value.split(pattern.$value).map((e) => $String(e)).toList());
   }
 
   static const $Function __substring = $Function(_substring);

@@ -3,6 +3,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/base.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/duration.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/object.dart';
 
 /// dart_eval [$Instance] wrapper of a [DateTime]
 class $DateTime implements DateTime, $Instance {

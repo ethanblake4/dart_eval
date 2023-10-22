@@ -18,6 +18,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
     List<FormalParameter> fpl,
     Declaration parameterHost,
     {List<Variable> before = const [],
+    Map<String, TypeRef> resolveGenerics = const {},
     List<String> superParams = const [],
     AstNode? source}) {
   final _args = <Variable>[];
@@ -39,6 +40,8 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
   var i = 0;
   Variable? $null;
 
+  final resolveGenericsMap = <String, Set<TypeRef>>{};
+
   for (final param in positional) {
     // First check super params. Super params do not contain an expression.
     if (superParams.contains(param.name!.value() as String)) {
@@ -58,9 +61,11 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
       }
     } else {
       var paramType = CoreTypes.dynamic.ref(ctx);
+      TypeAnnotation? typeAnnotation;
       if (param is SimpleFormalParameter) {
-        if (param.type != null) {
-          paramType = TypeRef.fromAnnotation(ctx, decLibrary, param.type!);
+        typeAnnotation = param.type;
+        if (typeAnnotation != null) {
+          paramType = TypeRef.fromAnnotation(ctx, decLibrary, typeAnnotation);
         }
       } else if (param is FieldFormalParameter) {
         paramType =
@@ -92,6 +97,17 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
             source ?? parameterHost);
       }
 
+      if (typeAnnotation != null) {
+        final n = typeAnnotation is NamedType
+            ? (typeAnnotation.name2.stringValue ??
+                typeAnnotation.name2.value() as String)
+            : null;
+        if (n != null && resolveGenerics.containsKey(n)) {
+          resolveGenericsMap[n] ??= {};
+          resolveGenericsMap[n]!.add(_arg.type);
+        }
+      }
+
       _args.add(_arg);
       _push.add(_arg);
     }
@@ -105,19 +121,23 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
     }
   }
 
-  named.forEach((name, _param) {
+  for (final n in named.entries) {
+    final name = n.key;
+    final _param = n.value;
     if (superParams.contains(name)) {
       final V = ctx.lookupLocal(name)!;
       _push.add(V);
       _namedArgs[name] = V;
-      return;
+      continue;
     }
     final param = (_param is DefaultFormalParameter ? _param.parameter : _param)
         as NormalFormalParameter;
     var paramType = CoreTypes.dynamic.ref(ctx);
+    TypeAnnotation? typeAnnotation;
     if (param is SimpleFormalParameter) {
-      if (param.type != null) {
-        paramType = TypeRef.fromAnnotation(ctx, decLibrary, param.type!);
+      typeAnnotation = param.type;
+      if (typeAnnotation != null) {
+        paramType = TypeRef.fromAnnotation(ctx, decLibrary, typeAnnotation);
       }
     } else if (param is FieldFormalParameter) {
       paramType =
@@ -127,6 +147,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
     } else {
       throw CompileError('Unknown formal type ${param.runtimeType}');
     }
+
     if (namedExpr.containsKey(name)) {
       var _arg = compileExpression(namedExpr[name]!, ctx, paramType);
       if (parameterHost is MethodDeclaration ||
@@ -147,14 +168,29 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
             ' to parameter "${param.name!.value() as String}" of type ${paramType.toStringClear(ctx, _arg.type)}');
       }
 
-      _push.add(_arg);
+      if (typeAnnotation != null) {
+        final n = typeAnnotation is NamedType
+            ? (typeAnnotation.name2.stringValue ??
+                typeAnnotation.name2.value() as String)
+            : null;
+        if (n != null && resolveGenerics.containsKey(n)) {
+          resolveGenericsMap[n] ??= {};
+          resolveGenericsMap[n]!.add(_arg.type);
+        }
+      }
 
+      _push.add(_arg);
       _namedArgs[name] = _arg;
     } else {
       $null ??= BuiltinValue().push(ctx);
-      _push.add($null!);
+      _push.add($null);
     }
-  });
+  }
+
+  for (final generic in resolveGenericsMap.keys) {
+    resolveGenerics[generic] =
+        TypeRef.commonBaseType(ctx, resolveGenericsMap[generic]!);
+  }
 
   for (final _arg in <Variable>[...before, ..._push]) {
     final argOp = PushArg.make(_arg.scopeFrameOffset);

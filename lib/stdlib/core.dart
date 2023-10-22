@@ -9,6 +9,7 @@ export '../src/eval/shared/stdlib/core/duration.dart';
 export '../src/eval/shared/stdlib/core/errors.dart';
 export '../src/eval/shared/stdlib/core/future.dart';
 export '../src/eval/shared/stdlib/core/num.dart';
+export '../src/eval/shared/stdlib/core/object.dart';
 export '../src/eval/shared/stdlib/core/pattern.dart';
 export '../src/eval/shared/stdlib/core/regexp.dart';
 export '../src/eval/shared/stdlib/core/string_buffer.dart';

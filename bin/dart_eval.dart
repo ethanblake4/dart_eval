@@ -53,7 +53,7 @@ void main(List<String> args) {
     final compiler = Compiler();
 
     print('Loading files...');
-    var commandRoot = Directory('.');
+    var commandRoot = Directory(current);
     var projectRoot = commandRoot;
     while (true) {
       final files = projectRoot.listSync();
@@ -104,7 +104,7 @@ void main(List<String> args) {
       }
     }
 
-    final pubspecFile = File(join(projectRoot.uri.path, 'pubspec.yaml'));
+    final pubspecFile = File(join(projectRoot.path, 'pubspec.yaml'));
     final pubspec = Pubspec.parse(pubspecFile.readAsStringSync());
 
     final packageName = pubspec.name;
@@ -113,10 +113,12 @@ void main(List<String> args) {
     final data = <String, Map<String, String>>{};
     var sourceLength = 0;
 
-    // Recursively add dart files in the lib directory
+    // Recursively add dart files in the lib and bin directory
     final libDir = Directory(join(projectRoot.path, 'lib'));
+    final binDir = Directory(join(projectRoot.path, 'bin'));
 
     void addFiles(String pkg, Directory dir, String root) {
+      if (!dir.existsSync()) return;
       if (!data.containsKey(pkg)) {
         data[pkg] = {};
       }
@@ -134,12 +136,13 @@ void main(List<String> args) {
     }
 
     addFiles(packageName, libDir, libDir.path);
+    addFiles(packageName, binDir, libDir.path);
 
     final packageConfigFile =
-        File(join(projectRoot.uri.path, '.dart_tool', 'package_config.json'))
+        File(join(projectRoot.path, '.dart_tool', 'package_config.json'))
             .readAsStringSync();
     final packageConfig = PackageConfig.parseString(
-        packageConfigFile, Uri.parse(join(projectRoot.uri.path, '.dart_tool')));
+        packageConfigFile, Uri.parse(join(projectRoot.path, '.dart_tool')));
 
     for (final package in packageConfig.packages) {
       if (bridgedPackages.contains(package.name)) {
@@ -147,9 +150,15 @@ void main(List<String> args) {
         continue;
       }
 
+      if (packageName == package.name) {
+        print(
+            'Skipped package ${package.name} because it is the main package.');
+        continue;
+      }
+
       print('Adding package ${package.name} from pubspec...');
 
-      final pkgDir = Directory(package.packageUriRoot.path);
+      final pkgDir = Directory(package.packageUriRoot.toFilePath());
       addFiles(package.name, pkgDir, pkgDir.path);
     }
 

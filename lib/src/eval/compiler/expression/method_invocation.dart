@@ -90,6 +90,8 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
   final List<Variable> _args;
   final Map<String, Variable> _namedArgs;
 
+  final resolveGenerics = <String, TypeRef>{};
+
   if (_dec.isBridge) {
     final bridge = _dec.bridge;
     final fnDescriptor = bridge is BridgeClassDef
@@ -106,20 +108,48 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
     final dec = _dec.declaration!;
 
     List<FormalParameter> fpl;
+    List<TypeParameter>? typeParams;
+    TypeAnnotation? returnAnnotation;
     if (dec is FunctionDeclaration) {
       fpl =
           dec.functionExpression.parameters?.parameters ?? <FormalParameter>[];
+      typeParams = dec.functionExpression.typeParameters?.typeParameters;
+      returnAnnotation = dec.returnType;
     } else if (dec is MethodDeclaration) {
       fpl = dec.parameters?.parameters ?? <FormalParameter>[];
+      typeParams = dec.typeParameters?.typeParameters;
+      returnAnnotation = dec.returnType;
     } else if (dec is ConstructorDeclaration) {
       fpl = dec.parameters.parameters;
     } else {
       throw CompileError('Invalid declaration type ${dec.runtimeType}');
     }
 
+    if (typeParams != null) {
+      for (final param in typeParams) {
+        final bound = param.bound;
+        final name = param.name.value() as String;
+        if (bound != null) {
+          resolveGenerics[name] =
+              TypeRef.fromAnnotation(ctx, ctx.library, bound);
+        } else {
+          resolveGenerics[name] = CoreTypes.dynamic.ref(ctx);
+        }
+      }
+    }
+
     final argsPair = compileArgumentList(
         ctx, e.argumentList, offset.file!, fpl, dec,
-        before: L != null ? [L] : [], source: e);
+        before: L != null ? [L] : [],
+        source: e,
+        resolveGenerics: resolveGenerics);
+
+    if (returnAnnotation != null && returnAnnotation is NamedType) {
+      final g = resolveGenerics[returnAnnotation.name2.value()];
+      if (g != null) {
+        mReturnType = AlwaysReturnType(g, returnAnnotation.question != null);
+      }
+    }
     _args = argsPair.first;
     _namedArgs = argsPair.second;
   }
@@ -156,7 +186,8 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
     thisType = ctx
         .visibleTypes[ctx.library]![ctx.currentClass!.name.value() as String]!;
   }
-  mReturnType = method.methodReturnType
+
+  mReturnType ??= method.methodReturnType
           ?.toAlwaysReturnType(ctx, thisType, _argTypes, _namedArgTypes) ??
       AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
 

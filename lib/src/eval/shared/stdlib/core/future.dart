@@ -2,8 +2,7 @@ import 'dart:async';
 
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'base.dart';
-import 'duration.dart';
+import 'package:dart_eval/stdlib/core.dart';
 
 /// Wrapper for [Future]
 class $Future<T> implements Future<T>, $Instance {

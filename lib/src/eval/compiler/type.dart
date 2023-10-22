@@ -79,6 +79,9 @@ class TypeRef {
     if (types.isEmpty) {
       return CoreTypes.nullType.ref(ctx);
     }
+    if (types.length == 1) {
+      return types.first;
+    }
     final chains =
         types.map((e) => e.resolveTypeChain(ctx).getTypeChain(ctx)).toList();
 
@@ -146,7 +149,8 @@ class TypeRef {
     }
     typeAnnotation as NamedType;
     final n = typeAnnotation.name2.stringValue ?? typeAnnotation.name2.value();
-    final unspecifiedType = ctx.visibleTypes[library]![n]!;
+    final unspecifiedType =
+        ctx.temporaryTypes[library]?[n] ?? ctx.visibleTypes[library]![n]!;
     final typeArgs = typeAnnotation.typeArguments;
     if (typeArgs != null) {
       final _resolved = <TypeRef>[];
@@ -373,14 +377,19 @@ class TypeRef {
     }
   }
 
-  TypeRef resolveTypeChain(CompilerContext ctx, {int recursionGuard = 0}) {
+  TypeRef resolveTypeChain(CompilerContext ctx,
+      {int recursionGuard = 0, Set<TypeRef> stack = const {}}) {
     if (recursionGuard > 500) {
       throw CompileError(
-          'Reached max limit on recursion while resolving types. Your type hierarchy is probably recursive (caught while resolving $this)');
+          'Reached max limit on recursion while resolving types. '
+          'Your type hierarchy is probably recursive (caught while resolving $this)');
     }
+    final _stack = {...stack, this};
     final rg = recursionGuard + 1;
     final _resolvedSpecifiedTypeArgs = specifiedTypeArgs
-        .map((e) => e.resolveTypeChain(ctx, recursionGuard: rg))
+        .map((e) => stack.contains(e)
+            ? e
+            : e.resolveTypeChain(ctx, recursionGuard: rg, stack: _stack))
         .toList();
     if (resolved) {
       return copyWith(specifiedTypeArgs: _resolvedSpecifiedTypeArgs);
@@ -417,18 +426,18 @@ class TypeRef {
         if (type.$extends != null) {
           $super = TypeRef.fromBridgeTypeRef(ctx, type.$extends!,
                   specifiedType: this)
-              .resolveTypeChain(ctx, recursionGuard: rg);
+              .resolveTypeChain(ctx, recursionGuard: rg, stack: _stack);
         }
 
         for (final $i in type.$implements) {
           $implements.add(
               TypeRef.fromBridgeTypeRef(ctx, $i, specifiedType: this)
-                  .resolveTypeChain(ctx, recursionGuard: rg));
+                  .resolveTypeChain(ctx, recursionGuard: rg, stack: _stack));
         }
 
         for (final $i in type.$with) {
           $with.add(TypeRef.fromBridgeTypeRef(ctx, $i, specifiedType: this)
-              .resolveTypeChain(ctx, recursionGuard: rg));
+              .resolveTypeChain(ctx, recursionGuard: rg, stack: _stack));
         }
 
         for (final $g in type.generics.entries) {
@@ -436,8 +445,8 @@ class TypeRef {
           final _type = _extends == null
               ? null
               : TypeRef.fromBridgeTypeRef(ctx, _extends);
-          generics.add(GenericParam(
-              $g.key, _type?.resolveTypeChain(ctx, recursionGuard: rg)));
+          generics.add(GenericParam($g.key,
+              _type?.resolveTypeChain(ctx, recursionGuard: rg, stack: _stack)));
         }
       }
     } else {
@@ -467,38 +476,46 @@ class TypeRef {
 
     if (superName != null) {
       final typeParams = superName.typeArguments?.arguments
-              .map((a) =>
-                  TypeRef.fromAnnotation(ctx, file, a).resolveTypeChain(ctx))
+              .map((a) => TypeRef.fromAnnotation(ctx, file, a))
+              .map((a) => stack.contains(a)
+                  ? a
+                  : a.resolveTypeChain(ctx, recursionGuard: rg, stack: _stack))
               .toList() ??
           [];
       $super = ctx.visibleTypes[file]![
               superName.name2.stringValue ?? superName.name2.value()]!
           .copyWith(specifiedTypeArgs: typeParams)
-          .resolveTypeChain(ctx, recursionGuard: rg);
+          .resolveTypeChain(ctx, recursionGuard: rg, stack: _stack);
     } else if (declaration.declaration is EnumDeclaration) {
       $super = CoreTypes.enumType.ref(ctx);
+    } else if (!declaration.isBridge) {
+      $super = CoreTypes.object.ref(ctx);
     }
 
     for (final withName in withNames) {
       final typeParams = withName.typeArguments?.arguments
-              .map((a) =>
-                  TypeRef.fromAnnotation(ctx, file, a).resolveTypeChain(ctx))
+              .map((a) => TypeRef.fromAnnotation(ctx, file, a))
+              .map((a) => stack.contains(a)
+                  ? a
+                  : a.resolveTypeChain(ctx, recursionGuard: rg, stack: _stack))
               .toList() ??
           [];
-      $with.add(ctx.visibleTypes[file]![withName]!
+      $with.add(ctx.visibleTypes[file]![withName.name2.value()]!
           .copyWith(specifiedTypeArgs: typeParams)
-          .resolveTypeChain(ctx, recursionGuard: rg));
+          .resolveTypeChain(ctx, recursionGuard: rg, stack: _stack));
     }
 
     for (final implementsName in implementsNames) {
       final typeParams = implementsName.typeArguments?.arguments
-              .map((a) =>
-                  TypeRef.fromAnnotation(ctx, file, a).resolveTypeChain(ctx))
+              .map((a) => TypeRef.fromAnnotation(ctx, file, a))
+              .map((a) => stack.contains(a)
+                  ? a
+                  : a.resolveTypeChain(ctx, recursionGuard: rg, stack: _stack))
               .toList() ??
           [];
-      $implements.add(ctx.visibleTypes[file]![implementsName]!
+      $implements.add(ctx.visibleTypes[file]![implementsName.name2.value()]!
           .copyWith(specifiedTypeArgs: typeParams)
-          .resolveTypeChain(ctx, recursionGuard: rg));
+          .resolveTypeChain(ctx, recursionGuard: rg, stack: _stack));
     }
 
     final _resolved = TypeRef(file, name,
@@ -688,6 +705,25 @@ class TypeRef {
       return '$name (from "$_library")';
     } else {
       return name;
+    }
+  }
+
+  static loadTemporaryTypes(
+      CompilerContext ctx, List<TypeParameter>? typeParams,
+      [int? library]) {
+    if (typeParams != null) {
+      for (final param in typeParams) {
+        ctx.temporaryTypes[library ?? ctx.library] ??= {};
+        final bound = param.bound;
+        final name = param.name.value() as String;
+        if (bound != null) {
+          ctx.temporaryTypes[library ?? ctx.library]![name] =
+              TypeRef.fromAnnotation(ctx, ctx.library, bound);
+        } else {
+          ctx.temporaryTypes[library ?? ctx.library]![name] =
+              CoreTypes.dynamic.ref(ctx);
+        }
+      }
     }
   }
 }

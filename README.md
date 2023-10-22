@@ -43,9 +43,7 @@ void main() {
       class Cat {
         Cat(this.name);
         final String name;
-        String speak() {
-          return name;
-        }
+        String speak() => "I'm $name!';
       }
       String main() {
         final cat = Cat('Fluffy');
@@ -53,7 +51,7 @@ void main() {
       }
   ''';
   
-  print(eval(program, function: 'main')); // -> 'Fluffy'
+  print(eval(program, function: 'main')); // prints 'I'm Fluffy!'
 }
 ```
 
@@ -115,7 +113,7 @@ void main() {
       import 'package:my_package/finder.dart';
       void main() {
         final parentheses = findParentheses('Hello (world)');
-        print(parentheses); 
+        if (parentheses.isNotEmpty) print(parentheses); 
       }
     ''',
     'finder.dart': r'''
@@ -129,13 +127,14 @@ void main() {
   
   final runtime = Runtime(program);
   runtime.setup();
-  print(runtime.executeLib('package:my_package/main.dart', 'main')); // -> [6]
+  print(runtime.executeLib(
+    'package:my_package/main.dart', 'main')); // prints '[6]'
 }
 ```
 
 ## Compiling to a file
 
-For many use-cases, it's recommended to pre-compile your Dart code to EVC bytecode,
+If possible, it's recommended to pre-compile your Dart code to EVC bytecode,
 to avoid runtime compilation overhead. (This is still runtime code execution, it's
 just executing a more efficient code format.) Multiple files will be compiled to a
 single bytecode block.
@@ -181,7 +180,8 @@ void main() {
   
   final runtime = Runtime(bytecode);
   runtime.setup();
-  print(runtime.executeLib('package:my_package/main.dart', 'main')); // -> 499500
+  print(runtime.executeLib(
+    'package:my_package/main.dart', 'main')); // prints '499500'
 }
 ```
 
@@ -300,111 +300,191 @@ To support value interop, a class need simply to implement `$Value`, or extend
 
 Using a wrapper enables the Eval environment to access the functions and fields on
 a class created outside Eval. It's much more powerful than value interop, and
-simpler than bridge interop, making it a great choice for certain use cases. To use
-wrapper interop, create a class that implements `$Instance`. Then, override 
-`$getProperty` / `$setProperty` to define your fields and methods. For more information,
-see the [wrapper interop wiki page](https://github.com/ethanblake4/dart_eval/wiki/Wrappers).
-
-#### Hot wrappers and runtime overrides
-
-dart_eval includes a runtime overrides system that allows you to dynamically replace
-the implementation of a constructor. To get started, first create a 
-[hot wrapper](https://github.com/ethanblake4/dart_eval/wiki/Wrappers#hot-wrappers)
-for the class you want to substitute, and replace instantiations of this class with
-the hot wrapper constructor throughout your program, using a unique ID for each.:
+more performant than bridge interop, making it a great choice for certain use 
+cases. To use wrapper interop, create a class that implements `$Instance`, and
+a compile-time class definition. Then, override `$getProperty`, `$setProperty`
+and `$getRuntimeType` to enable the Eval environment to access the class's
+properties and methods:
 
 ```dart
-// Create a hot wrapper for the class you want to substitute
-class $ListView extends $Instance {
-  static const $type = ...;
-  static const $declaration = ...;
+import 'package:dart_eval/dart_eval.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/dart_eval_extensions.dart';
+
+/// An example class we want to wrap
+class Book {
+  Book(this.pages);
+  final List<String> pages;
+  
+  String getPage(int index) => pages[index];
+}
+
+/// This is our wrapper class
+class $Book implements $Instance {
+  /// Create a type specification for the dart_eval compiler
+  static final $type = BridgeTypeSpec('package:hello/book.dart', 'Book').ref;
+
+  /// Create a class declaration for the dart_eval compiler
+  static final $declaration = BridgeClassDef(BridgeClassType($type),
+    constructors: {
+      // Define the default constructor with an empty string
+      '': BridgeFunctionDef(returns: $type.annotate, params: [
+        'pages'.param(CoreTypes.string.ref.annotate)
+      ]).asConstructor
+    },
+    methods: {
+      'getPage': BridgeFunctionDef(
+        returns: CoreTypes.string.ref.annotate,
+        params: ['index'.param(CoreTypes.int.ref.annotate)],
+      ).asMethod,
+    }, wrap: true);
+
+  /// Override $value and $reified to return the value
+  @override
+  final Book $value;
 
   @override
-  final ListView $value;
-
-  $ListView(String id, ListView Function() value) : 
-    $value = runtimeOverride(id) as ListView? ?? value();
+  get $reified => $value;
   
-  /// etc...
-}
-
-// Replace instantiations of the class with the hot wrapper constructor
-Widget build(BuildContext context) {
-  return $ListView('#login_page_list_view', () => ListView(children: [
-    Text('Login'),
-    TextField(),
-  ]));
-}
-```
-
-Note that in some cases you may have to cast the return value of `runtimeOverride`
-as dart_eval is unable to specify generic parameters to the Dart type system:
+  /// Create a constructor that wraps the Book class
+  $Book.wrap(this.$value);
   
-```dart
-$Iterable(String id, Iterable<E> Function() value) : 
-  $value = (runtimeOverride(id) as Iterable?)?.cast() ?? value();
-```
+  static $Value? $new(
+    Runtime runtime, $Value? target, List<$Value?> args) {
+    return $Book.wrap(Book(args[0]!.$value));
+  }
 
-Next, mark a function in the eval code with the @RuntimeOverride annotation:
+  /// Create a wrapper for property and method getters
+  @override
+  $Value? $getProperty(Runtime runtime, String identifier) {
+    if (identifier == 'getPage') {
+      return $Function((_, target, args) {
+        return $String($value.getPage(args[0]!.$value));
+      });
+    }
+    return $Object(this).$getProperty(runtime, identifier);
+  }
 
-```dart
-@RuntimeOverride('#login_page_list_view')
-ListView loginPageListView() {
-  return ListView(children: [
-    Text('Updated Login Experience'),
-    TextField(),
-    FlatButton()
-  ]);
+  /// Create a wrapper for property setters
+  @override
+  void $setProperty(Runtime runtime, String identifier, $Value value) {
+    return $Object(this).$setProperty(runtime, identifier, value);
+  }
+
+  /// Allow runtime type lookup
+  @override
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType($type.spec!);
+}
+
+/// Now we can use it in dart_eval!
+void main() {
+  final compiler = Compiler();
+  compiler.defineBridgeClass($Book.$declaration);
+  
+  final program = compiler.compile({'hello' : { 
+    'main.dart': '''
+      import 'book.dart';
+      void main() {
+        final book = Book(['Hello world!', 'Hello again!']);
+        print(book.getPage(1));
+      }
+    '''
+  }});
+
+  final runtime = Runtime.ofProgram(program);
+  // Register static methods and constructors with the runtime
+  runtime.registerBridgeFunc('package:hello/book.dart', 'Book.', $Book.$new);
+  runtime.setup();
+
+  runtime.executeLib('package:hello/main.dart', 'main'); // -> 'Hello again!'
 }
 ```
 
-Finally, follow the normal instructions to compile and run the program, but
-call `loadGlobalOverrides` on the Runtime after calling `setup()`.
-This will set the runtime as the single global runtime for the program, and 
-load its overrides to be accessible by hot wrappers.
-
-When the program is run, the runtime will automatically replace the instantiation
-of the hot wrapper with the return value of the function marked with the
-`@RuntimeOverride` annotation.
-
-Overrides can also be versioned, allowing you to roll out updates to a function
-immediately using dart_eval and revert to a new native implementation after
-an official update is released. To version an override, simply add a semver
-version constraint to the `@RuntimeOverride` annotation:
-
-```dart
-@RuntimeOverride('#login_page_list_view', version: '<1.4.0')
-```
-
-When running the program, specify its current version by setting the value of
-the `runtimeOverrideVersion` global property:
-
-```dart
-runtimeOverrideVersion = Version.parse('1.3.0');
-```
-
-Now, when the program is run, the runtime will automatically replace the instantiation
-only if the app version is less than 1.4.0.
+For more information,
+see the [wrapper interop wiki page](https://github.com/ethanblake4/dart_eval/wiki/Wrappers).
 
 ### Bridge interop
 
 Bridge interop enables the most functionality: Not only can Eval access the fields
 of an object, but it can also be extended, allowing you to create subclasses within Eval
 and use them outside of Eval. For example, this can be used to create custom
-Flutter widgets that can be dynamically updated at runtime.
+Flutter widgets that can be dynamically updated at runtime. Bridge interop is also in 
+some ways simpler than creating a wrapper, but it comes at a performance cost, so should
+be avoided in performance-sensitive situations. To use bridge interop, extend the original
+class and mixin `$Bridge`:
 
-However, it is also somewhat difficult to use, and it can't be used to wrap existing 
-objects created in code you don't control. (For utmost flexibility at the expense of 
-simplicity, you can use both bridge and wrapper interop.) Since Bridge interop requires
-a lot of boilerplate code, in the future I will be creating a solution for 
-code-generation of that boilerplate.
+```dart
+// ** See previous example for the original class and imports **
 
-Bridge interop also requires that the class definitions be available at both compile-time 
-and runtime. (If you're just using the `eval` method, you don't have to worry about
-this.)
+/// This is our bridge class
+class $Book$bridge extends Book with $Bridge<Book> {
+  static final $type = ...; // See previous example
+  static final $declaration = ...; // Previous example, but use bridge: true instead of wrap
 
-An example featuring bridge interop is available in the `example` directory. For more
-information, see the [wiki page on bridge classes](https://github.com/ethanblake4/dart_eval/wiki/Bridge-classes).
+  /// Recreate the original constructor
+  $Book$bridge(super.pages);
+
+  static $Value? $new(
+    Runtime runtime, $Value? target, List<$Value?> args) {
+    return $Book$bridge(args[0]!.$value);
+  }
+
+  @override
+  $Value? $bridgeGet(String identifier) {
+    if (identifier == 'getPage') {
+      return $Function((_, target, args) {
+        return $String(getPage(args[0]!.$value));
+      });
+    } 
+    throw UnimplementedError('Unknown property $identifier');
+  }
+
+  @override
+  $Value? $bridgeSet(String identifier) => 
+    throw UnimplementedError('Unknown property $identifier');
+
+  /// Override the original class' properties and methods
+  @override
+  String getPage(int index) => $_invoke('getPage', [$int(index)]);
+
+  @override
+  List<String> get pages => $_get('pages');
+}
+
+void main() {
+  final compiler = Compiler();
+  compiler.defineBridgeClass($Book$bridge.$declaration);
+  
+  final program = compiler.compile({'hello' : { 
+    'main.dart': '''
+      import 'book.dart';
+      class MyBook extends Book {
+        MyBook(List<String> pages) : super(pages);
+        String getPage(int index) => 'Hello world!';
+      }
+
+      Book main() {
+        final book = MyBook(['Hello world!', 'Hello again!']);
+        return book;
+      }
+    '''
+  }});
+
+  final runtime = Runtime.ofProgram(program);
+  runtime.registerBridgeFunc(
+    'package:hello/book.dart', 'Book.', $Book$bridge.$new, bridge: true);
+  runtime.setup();
+
+  // Now we can use the new book class outside dart_eval!
+  final book = runtime.executeLib('package:hello/main.dart', 'main') 
+    as Book;
+  print(book.getPage(1)); // -> 'Hello world!'
+}
+```
+
+A full example featuring both bridge and wrapper interop is available in the 
+`example` directory. For more information, see the 
+[wiki page on bridge classes](https://github.com/ethanblake4/dart_eval/wiki/Bridge-classes).
 
 ## Plugins
 
@@ -437,6 +517,61 @@ class MyAppPlugin implements EvalPlugin {
 ```
 
 You can then use this plugin with `Compiler.addPlugin` and `Runtime.addPlugin`.
+
+## Runtime overrides
+
+dart_eval includes a runtime overrides system that allows you to dynamically 
+swap in new implementations of functions and constructors at runtime.
+To use it, add a null-coalescing call to the `runtimeOverride()` method
+at every spot you want to be able to swap:
+
+```dart
+void main() {
+  // Give the override a unique ID
+  final result = runtimeOverride('#myFunction') ?? myFunction();
+  print(result);
+}
+
+String myFunction() => 'Original version of string';
+```
+
+Note that in some cases you may have to cast the return value of `runtimeOverride`
+as dart_eval is unable to specify generic parameters to the Dart type system.
+
+Next, mark a function in the eval code with the @RuntimeOverride annotation:
+
+```dart
+@RuntimeOverride('#myFunction')
+String myFunction() => 'Updated version of string'
+```
+
+Finally, follow the normal instructions to compile and run the program, but
+call `loadGlobalOverrides` on the Runtime after calling `setup()`.
+This will set the runtime as the single global runtime for the program, and 
+load its overrides to be accessible by hot wrappers.
+
+When the program is run, the runtime will automatically replace the
+function call with the new implementation.
+
+Overrides can also be versioned, allowing you to roll out updates to a function
+immediately using dart_eval and revert to a new native implementation after
+an official update is released. To version an override, simply add a semver
+version constraint to the `@RuntimeOverride` annotation:
+
+```dart
+@RuntimeOverride('#login_page_get_data', version: '<1.4.0')
+```
+
+When running the program, specify its current version by setting the value of
+the `runtimeOverrideVersion` global property:
+
+```dart
+runtimeOverrideVersion = Version.parse('1.3.0');
+```
+
+Now, when the program is run, the runtime will automatically replace the instantiation
+only if the app version is less than 1.4.0.
+
 ## Contributing
 
 See [Contributing](https://github.com/ethanblake4/dart_eval/blob/master/CONTRIBUTING.md).

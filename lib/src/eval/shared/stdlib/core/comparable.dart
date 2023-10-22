@@ -1,7 +1,7 @@
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
-import 'base.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/object.dart';
 
 /// Wrapper for [Comparable]
 class $Comparable<T> implements Comparable<T>, $Instance {

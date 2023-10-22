@@ -1,6 +1,6 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
-import 'package:dart_eval/src/eval/shared/stdlib/core/base.dart';
+import 'package:dart_eval/stdlib/core.dart';
 
 /// dart_eval wrapper for [StringSink]
 class $StringSink implements $Instance {
@@ -94,7 +94,7 @@ class $StringSink implements $Instance {
 
   static $Value? _write(Runtime runtime, $Value? target, List<$Value?> args) {
     final object = args[0];
-    target!.$value.write(object!.$value);
+    target!.$value.write(runtime.valueToString(object));
     return null;
   }
 

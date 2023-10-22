@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async/stream.dart';
-import 'package:dart_eval/stdlib/core.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/object.dart';
 
 /// dart_eval wrapper for [Converter].
 class $Converter implements $Instance {

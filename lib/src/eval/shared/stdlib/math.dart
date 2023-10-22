@@ -14,7 +14,7 @@ const double pi = 3.1415926535897932;
 const double sqrt1_2 = 0.7071067811865476;
 const double sqrt2 = 1.4142135623730951;
 num min(num a, num b) => a < b ? a : b;
-num max(num a, num b) => a > b ? a : b;
+T max<T extends num>(T a, T b) => a > b ? a : b;
 ''';
 
 /// [EvalPlugin] for the dart:math library

@@ -157,6 +157,7 @@ class CompilerContext with ScopeContext {
   Map<int, Map<String, Map<String, Declaration>>> instanceDeclarationsMap = {};
   late OffsetTracker offsetTracker = OffsetTracker(this);
   Map<int, Map<String, TypeRef>> visibleTypes = {};
+  Map<int, Map<String, TypeRef>> temporaryTypes = {};
   Map<int, Map<String, DeclarationOrPrefix>> visibleDeclarations = {};
   Map<int, Map<String, int>> topLevelDeclarationPositions = {};
   Map<int, Map<String, int>> bridgeStaticFunctionIndices = {};

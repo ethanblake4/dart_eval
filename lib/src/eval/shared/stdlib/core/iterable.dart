@@ -121,8 +121,10 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   static const $Function __join = $Function(_join);
 
   static $Value? _join(Runtime runtime, $Value? target, List<$Value?> args) {
-    final separator = (args[0] as String?) ?? '';
-    return $String((target!.$value as Iterable).join(separator));
+    final separator = (args[0]?.$value as String?) ?? '';
+    return $String((target!.$value as Iterable)
+        .map((v) => v is $Value ? runtime.valueToString(v) : v)
+        .join(separator));
   }
 
   static const $Function __map = $Function(_map);

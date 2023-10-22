@@ -79,6 +79,39 @@ void main() {
       }, prints('1\n2\n'));
     });
 
+    test('Null coalescing copy method', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'eval_test': {
+          'main.dart': '''
+            class X {
+              X({required this.a, required this.b});
+
+              final int a;
+              final int b;
+              X copy({
+                int? a,
+                int? b,
+              }) {
+                return X(a: a ?? this.a, b: b ?? this.b);
+              }
+
+              toString() => 'X(a: \$a, b: \$b)';
+            }
+
+            void main() {
+              print(X(a: 1, b: 2).copy(a: 3));
+              print(X(a: 1, b: 2).copy(b: 3));
+              print(X(a: 1, b: 2).copy(a: 3, b: 4));
+            }
+          '''
+        }
+      });
+
+      expect(() {
+        runtime.executeLib('package:eval_test/main.dart', 'main');
+      }, prints('X(a: 3, b: 2)\nX(a: 1, b: 3)\nX(a: 3, b: 4)\n'));
+    });
+
     test("Not expression", () {
       final runtime = compiler.compileWriteAndLoad({
         'eval_test': {

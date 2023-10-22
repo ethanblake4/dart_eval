@@ -351,6 +351,17 @@ class Runtime {
     return wrapPrimitive(value) ?? (throw Exception('Cannot wrap $value'));
   }
 
+  String valueToString($Value? value) {
+    if (value is $Instance) {
+      final toString = value.$getProperty(this, 'toString');
+      if (toString != null) {
+        final result = (toString as EvalCallable).call(this, value, [value]);
+        return result?.$value;
+      }
+    }
+    return (value?.$value).toString();
+  }
+
   var _bridgeLibraryMappings = <String, int>{};
   final _bridgeFunctions =
       List<EvalCallableFunc>.filled(1000, _defaultFunction);
@@ -678,6 +689,9 @@ class Runtime {
       case PushReturnFromCatch:
         op as PushReturnFromCatch;
         return [Evc.OP_PUSH_RETURN_FROM_CATCH];
+      case MaybeBoxNull:
+        op as MaybeBoxNull;
+        return [Evc.OP_MAYBE_BOX_NULL, ...Evc.i16b(op._reg)];
       default:
         throw ArgumentError('Not a valid op $op');
     }

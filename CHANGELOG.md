@@ -6,8 +6,21 @@
 - Support for compiling Pub packages in the CLI
 - Support tryParse() and parse() for `num` and `int`
 - Support Iterable.generate() and List.generate() (thanks @wrbl606)
+- Support for ++i and --i prefix operators (thanks @wrbl606)
+- Fix increment and decrement operations on list elements (thanks 
+  @wrbl606)
+- Support for function type arguments and inferring generic return 
+  types based on argument types
 - Support for Comparable
+- Add `identical` and `Object.hash` functions
+- Add Runtime.valueToString helper for converting a $Value to a string
+  correctly
+- Use short-circuit evaluation for null coalescing operator `??`
+- Fix type resolution with self-referential generic types such as
+  `class T implements Comparable<T>`
+- Add binding for `Exception`
 - Reformat line length to 80 for standardization with Dart ecosystem
+- Documentation improvements
 
 ## 0.6.5
 - Support for try/finally and try/catch/finally

@@ -1,10 +1,11 @@
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/base.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/object.dart';
 
 /// dart_eval wrapper for [AssertionError]
 class $AssertionError implements AssertionError, $Instance {
-  /// Compile-time class definition for [$Iterable]
+  /// Compile-time class definition for [$AssertionError]
   static const $declaration = BridgeClassDef(
       BridgeClassType(BridgeTypeRef(CoreTypes.assertionError)),
       constructors: {
