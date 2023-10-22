@@ -20,6 +20,7 @@
 - Fix type resolution with self-referential generic types such as
   `class T implements Comparable<T>`
 - Add binding for `Exception`
+- Runtime errors now print out the scope stack for easier debugging
 - Reformat line length to 80 for standardization with Dart ecosystem
 - Documentation improvements
 

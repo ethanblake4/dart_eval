@@ -140,6 +140,7 @@ class Await implements EvcOp {
     // Return with the completer as the result (the following lines are a copy of the Return op code)
     runtime.returnValue = $Future.wrap(completer.future);
     runtime.stack.removeLast();
+    runtime.scopeNameStack.removeLast();
     if (runtime.stack.isNotEmpty) {
       runtime.frame = runtime.stack.last;
       runtime.frameOffset = runtime.frameOffsetStack.removeLast();
@@ -160,6 +161,7 @@ class Await implements EvcOp {
     runtime.frameOffset = continuation.frameOffset;
     runtime.frame = continuation.frame;
     runtime.stack.add(continuation.frame);
+    runtime.scopeNameStack.add('<asynchronous gap>');
     runtime.bridgeCall(continuation.programOffset);
   }
 

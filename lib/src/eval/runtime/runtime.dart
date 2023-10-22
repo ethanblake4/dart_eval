@@ -720,6 +720,9 @@ class Runtime {
   /// The program's value stack
   final stack = <List<Object?>>[];
 
+  /// Scope name stack
+  final scopeNameStack = <String>[];
+
   /// The current frame (usually stack.last)
   List<Object?> frame = [];
 
@@ -952,9 +955,29 @@ class RuntimeException implements Exception {
       }
       prStr += '\n';
     }
+    var scopeNames = '';
+    var scopes = runtime.scopeNameStack.reversed.toList();
+    // Print out up to 4 scope names from the end and 4 from the start, skipping
+    // those in the middle
+    int numScopes = scopes.length <= 8 ? scopes.length : 4;
+
+    for (int i = 0; i < numScopes && i < 4; i++) {
+      scopeNames += 'at ${scopes[i]}\n';
+    }
+
+    if (scopes.length > 8) {
+      scopeNames += '...';
+    }
+
+    if (scopes.length > 4) {
+      for (int i = scopes.length - numScopes; i < scopes.length; i++) {
+        scopeNames += 'at ${scopes[i]}\n';
+      }
+    }
 
     return 'dart_eval runtime exception: $caughtException\n'
-        '${stackTrace.toString().split("\n").take(3).join('\n')}\n\n'
+        '${stackTrace.toString().split("\n").take(3).join('\n')}\n'
+        '$scopeNames\n'
         'RUNTIME STATE\n'
         '=============\n'
         'Program offset: ${runtime._prOffset - 1}\n'
