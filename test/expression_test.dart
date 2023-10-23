@@ -294,5 +294,51 @@ void main() {
         runtime.executeLib('package:example/main.dart', 'main');
       }, throwsA(anything));
     });
+
+    test('Null-shorted property access', () {
+      final runtime = Compiler().compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+          void main() {
+            X? x;
+            print(x?.a);
+            x = X();
+            print(x?.a);
+          }
+          
+          class X {
+            int a = 1;
+          }
+         '''
+        }
+      });
+
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('null\n1\n'));
+    });
+
+    test('Null-shorted method call', () {
+      final runtime = Compiler().compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+          void main() {
+            X x;
+            print(x?.a());
+            x = X();
+            print(x?.a());
+          }
+
+          class X {
+            int a() => 1;
+          }
+         '''
+        }
+      });
+
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('null\n1\n'));
+    });
   });
 }

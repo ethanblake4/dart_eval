@@ -17,6 +17,7 @@
 - Add Runtime.valueToString helper for converting a $Value to a string
   correctly
 - Use short-circuit evaluation for null coalescing operator `??`
+- Support for null-shorted method calls and property access
 - Fix type resolution with self-referential generic types such as
   `class T implements Comparable<T>`
 - Add binding for `Exception`

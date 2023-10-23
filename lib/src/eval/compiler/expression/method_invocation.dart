@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/token.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
@@ -6,7 +7,9 @@ import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/funcexpr_invocation.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
+import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/offset_tracker.dart';
+import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
@@ -31,6 +34,23 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
   AlwaysReturnType? mReturnType;
 
   if (L != null) {
+    if (e.operator?.type == TokenType.QUESTION_PERIOD) {
+      var out = BuiltinValue().push(ctx).boxIfNeeded(ctx);
+      macroBranch(ctx, null, condition: (_ctx) {
+        ctx.pushOp(CheckNotEq.make(L!.scopeFrameOffset, out.scopeFrameOffset),
+            CheckEq.LEN);
+        ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
+        return Variable.alloc(
+            ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
+      }, thenBranch: (_ctx, rt) {
+        final V = _invokeWithTarget(ctx, L!, e);
+        out = out.copyWith(type: V.type.copyWith(nullable: true));
+        ctx.pushOp(CopyValue.make(out.scopeFrameOffset, V.scopeFrameOffset),
+            CopyValue.LEN);
+        return StatementInfo(-1);
+      });
+      return out;
+    }
     return _invokeWithTarget(ctx, L, e);
   }
   final method = isPrefix
