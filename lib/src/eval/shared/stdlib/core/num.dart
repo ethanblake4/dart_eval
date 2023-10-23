@@ -46,6 +46,7 @@ class $num<T extends num> implements $Instance {
       fields: {},
       wrap: true);
 
+  /// Wrapper of [num.parse]
   static $num $parse(Runtime runtime, $Value? target, List<$Value?> args) {
     final source = args[0]!.$value as String;
     final onError = args[1]?.$value as EvalCallable?;
@@ -65,6 +66,7 @@ class $num<T extends num> implements $Instance {
     throw UnimplementedError();
   }
 
+  /// Wrapper of [num.tryParse]
   static $Value $tryParse(Runtime runtime, $Value? target, List<$Value?> args) {
     final source = args[0]!.$value as String;
     final result = num.tryParse(source);

@@ -26,6 +26,7 @@ class $Exception implements Exception, $Instance {
   /// Wrap a [Exception] in a [$Exception]
   $Exception.wrap(this.$value) : _superclass = $Object($value);
 
+  /// Create a new [$Exception] wrapping [Exception.new]
   static $Exception $new(Runtime runtime, $Value? target, List<$Value?> args) {
     return $Exception.wrap(Exception(args[0]?.$value));
   }

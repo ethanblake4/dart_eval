@@ -17,11 +17,15 @@
 - Add Runtime.valueToString helper for converting a $Value to a string
   correctly
 - Use short-circuit evaluation for null coalescing operator `??`
-- Support for null-shorted method calls and property access
+- Support for null-shorted method calls and property access 
+  using `?.`
+- Support null assertion operator `!`
 - Fix type resolution with self-referential generic types such as
   `class T implements Comparable<T>`
 - Support for `rethrow`
 - Add binding for `Exception` and `RangeError`
+- Add bindings for `ByteBuffer`, `TypedData`, `ByteData`, 
+  and `Uint8List` from dart:typed_data
 - Runtime errors now print out the scope stack for easier debugging
 - Reformat line length to 80 for standardization with Dart ecosystem
 - Documentation improvements

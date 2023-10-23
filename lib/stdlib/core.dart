@@ -7,6 +7,7 @@ export '../src/eval/shared/stdlib/core/comparable.dart';
 export '../src/eval/shared/stdlib/core/date_time.dart';
 export '../src/eval/shared/stdlib/core/duration.dart';
 export '../src/eval/shared/stdlib/core/errors.dart';
+export '../src/eval/shared/stdlib/core/exceptions.dart';
 export '../src/eval/shared/stdlib/core/future.dart';
 export '../src/eval/shared/stdlib/core/num.dart';
 export '../src/eval/shared/stdlib/core/object.dart';

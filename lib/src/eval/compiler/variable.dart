@@ -241,14 +241,10 @@ class Variable {
     final _args = _boxed.sublist(1);
     final checkEq = method == '==' && _args.length == 1;
     final checkNotEq = method == '!=' && _args.length == 1;
-    if (checkEq) {
+    if (checkEq || checkNotEq) {
       ctx.pushOp(
           CheckEq.make($this.scopeFrameOffset, _args[0].scopeFrameOffset),
           CheckEq.LEN);
-    } else if (checkNotEq) {
-      ctx.pushOp(
-          CheckNotEq.make($this.scopeFrameOffset, _args[0].scopeFrameOffset),
-          CheckNotEq.LEN);
     } else {
       for (final _arg in _args) {
         ctx.pushOp(PushArg.make(_arg.scopeFrameOffset), PushArg.LEN);
@@ -259,6 +255,11 @@ class Variable {
     }
 
     ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
+
+    if (checkNotEq) {
+      final res = Variable.alloc(ctx, CoreTypes.bool.ref(ctx));
+      ctx.pushOp(LogicalNot.make(res.scopeFrameOffset), LogicalNot.LEN);
+    }
 
     final AlwaysReturnType? returnType;
     if ($this.type == CoreTypes.function.ref(ctx) && method == 'call') {

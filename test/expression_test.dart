@@ -340,5 +340,27 @@ void main() {
         runtime.executeLib('package:example/main.dart', 'main');
       }, prints('null\n1\n'));
     });
+
+    test('Null assertion', () {
+      final runtime = Compiler().compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+          void main() {
+            X? x;
+            x = X();
+            print(x!.a);
+          }
+
+          class X {
+            int a = 1;
+          }
+         '''
+        }
+      });
+
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('1\n'));
+    });
   });
 }

@@ -18,6 +18,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/convert.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/math.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/typed_data.dart';
 import 'package:directed_graph/directed_graph.dart';
 
 import 'context.dart';
@@ -55,6 +56,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     DartConvertPlugin(),
     DartIoPlugin(),
     DartMathPlugin(),
+    DartTypedDataPlugin()
   ];
   final appliedPlugins = <String>[];
 

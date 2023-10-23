@@ -39,6 +39,7 @@ class $AssertionError implements AssertionError, $Instance {
   /// Wrap a [AssertionError] in a [$AssertionError]
   $AssertionError.wrap(this.$value) : _superclass = $Object($value);
 
+  /// Create a new [$AssertionError] wrapping [AssertionError.new]
   static $AssertionError $new(
       Runtime runtime, $Value? target, List<$Value?> args) {
     return $AssertionError.wrap(AssertionError(args[0]?.$value));

@@ -7,6 +7,7 @@ import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/funcexpr_invocation.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/equality.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/offset_tracker.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
@@ -37,11 +38,7 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
     if (e.operator?.type == TokenType.QUESTION_PERIOD) {
       var out = BuiltinValue().push(ctx).boxIfNeeded(ctx);
       macroBranch(ctx, null, condition: (_ctx) {
-        ctx.pushOp(CheckNotEq.make(L!.scopeFrameOffset, out.scopeFrameOffset),
-            CheckEq.LEN);
-        ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-        return Variable.alloc(
-            ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
+        return checkNotEqual(ctx, L!, out);
       }, thenBranch: (_ctx, rt) {
         final V = _invokeWithTarget(ctx, L!, e);
         out = out.copyWith(type: V.type.copyWith(nullable: true));

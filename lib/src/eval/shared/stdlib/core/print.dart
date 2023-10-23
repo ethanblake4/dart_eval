@@ -1,6 +1,5 @@
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/runtime/class.dart';
 
 void configurePrintForCompile(BridgeDeclarationRegistry registry) {
   registry.defineBridgeTopLevelFunction(BridgeFunctionDeclaration(

@@ -191,3 +191,17 @@ class IoTypes {
   static const httpClientResponse =
       BridgeTypeSpec('dart:io', 'HttpClientResponse');
 }
+
+class TypedDataTypes {
+  /// Bridge type spec for [$ByteBuffer]
+  static const byteBuffer = BridgeTypeSpec('dart:typed_data', 'ByteBuffer');
+
+  /// Bridge type spec for [$TypedData]
+  static const typedData = BridgeTypeSpec('dart:typed_data', 'TypedData');
+
+  /// Bridge type spec for [$ByteData]
+  static const byteData = BridgeTypeSpec('dart:typed_data', 'ByteData');
+
+  /// Bridge type spec for [$Uint8List]
+  static const uint8List = BridgeTypeSpec('dart:typed_data', 'Uint8List');
+}

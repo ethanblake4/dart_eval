@@ -16,6 +16,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/core.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/type.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/math.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/typed_data.dart';
 import 'package:dart_eval/stdlib/core.dart';
 import 'package:dart_eval/src/eval/runtime/continuation.dart';
 import 'package:dart_eval/src/eval/runtime/type.dart';
@@ -374,6 +375,7 @@ class Runtime {
     DartConvertPlugin(),
     DartIoPlugin(),
     DartMathPlugin(),
+    DartTypedDataPlugin(),
   ];
   final constantPool = <Object>[];
   final globals = List<Object?>.filled(20000, null);
@@ -650,13 +652,6 @@ class Runtime {
         op as CheckEq;
         return [
           Evc.OP_CHECK_EQ,
-          ...Evc.i16b(op._value1),
-          ...Evc.i16b(op._value2)
-        ];
-      case CheckNotEq:
-        op as CheckNotEq;
-        return [
-          Evc.OP_CHECK_NOT_EQ,
           ...Evc.i16b(op._value1),
           ...Evc.i16b(op._value2)
         ];
