@@ -54,6 +54,7 @@ class DartCorePlugin implements EvalPlugin {
     registry.defineBridgeClass($Match.$declaration);
     registry.defineBridgeClass($RegExp.$declaration);
     registry.defineBridgeClass($AssertionError.$declaration);
+    registry.defineBridgeClass($RangeError.$declaration);
     registry.defineBridgeClass($Comparable.$declaration);
     registry.defineBridgeClass($StringBuffer.$declaration);
     registry.defineBridgeClass($Exception.$declaration);
@@ -79,5 +80,16 @@ class DartCorePlugin implements EvalPlugin {
     runtime.registerBridgeFunc('dart:core', 'int.parse', $int.$parse);
     runtime.registerBridgeFunc('dart:core', 'int.tryParse', $int.$tryParse);
     runtime.registerBridgeFunc('dart:core', 'Object.hash', $Object.$hash);
+    runtime.registerBridgeFunc('dart:core', 'RangeError.', $RangeError.$new);
+    runtime.registerBridgeFunc(
+        'dart:core', 'RangeError.value', $RangeError.$_value);
+    runtime.registerBridgeFunc(
+        'dart:core', 'RangeError.range', $RangeError.$_range);
+    runtime.registerBridgeFunc('dart:core', 'RangeError.checkValidIndex',
+        $RangeError.$checkValidIndex);
+    runtime.registerBridgeFunc('dart:core', 'RangeError.checkValidRange',
+        $RangeError.$checkValidRange);
+    runtime.registerBridgeFunc('dart:core', 'RangeError.checkNotNegative',
+        $RangeError.$checkNotNegative);
   }
 }

@@ -174,6 +174,7 @@ class CompilerContext with ScopeContext {
   List<String> typeNames = [];
   List<Set<int>> typeTypes = [];
   List<bool> scopeDoesClose = [];
+  final List<Variable> caughtExceptions = [];
   PrescanContext? preScan;
   int nearestAsyncFrame = -1;
   int globalIndex = 0;

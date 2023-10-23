@@ -53,8 +53,10 @@ StatementInfo compileTryStatement(
     ctx.beginAllocScope();
     ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
     final v = Variable.alloc(ctx, CoreTypes.dynamic.ref(ctx));
+    ctx.caughtExceptions.add(v);
     catchInfo =
         _compileCatchClause(ctx, s.catchClauses, 0, v, expectedReturnType);
+    ctx.caughtExceptions.removeLast();
     ctx.endAllocScope();
     ctx.resolveBranchStateDiscontinuity(_state);
     ctx.pushOp(Return.make(-3), Return.LEN);
@@ -75,6 +77,7 @@ StatementInfo _compileCatchClause(
     AlwaysReturnType? expectedReturnType) {
   final catchClause = clauses[index];
   final exceptionType = catchClause.exceptionType;
+
   if (exceptionType == null) {
     ctx.setLocal(
         catchClause.exceptionParameter!.name.value() as String, exceptionVar);

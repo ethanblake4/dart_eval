@@ -82,6 +82,9 @@ class CoreTypes {
   /// Bridge type spec for [Error]
   static const error = BridgeTypeSpec('dart:core', 'Error');
 
+  /// Bridge type spec for [RangeError]
+  static const rangeError = BridgeTypeSpec('dart:core', 'RangeError');
+
   /// Bridge type spec for [Exception]
   static const exception = BridgeTypeSpec('dart:core', 'Exception');
 

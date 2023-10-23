@@ -265,6 +265,25 @@ void main() {
       expect(runtime.executeLib('package:example/main.dart', 'main'), 11);
     });
 
+    test('Rethrow', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main() {
+              try {
+                throw 'error';
+              } catch (e) {
+                rethrow;
+              }
+              return 2;
+            }
+          ''',
+        }
+      });
+      expect(() => runtime.executeLib('package:example/main.dart', 'main'),
+          throwsA($String('error')));
+    });
+
     test('Simple assert', () {
       final runtime = compiler.compileWriteAndLoad({
         'example': {
