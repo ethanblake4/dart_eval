@@ -22,6 +22,7 @@ void compileEnumDeclaration(CompilerContext ctx, EnumDeclaration d,
     {},
     $runtimeType
   ];
+  ctx.instanceGetterIndices[ctx.library]![clsName] = {};
   final constructors = <ConstructorDeclaration>[];
   final fields = <FieldDeclaration>[];
   final methods = <MethodDeclaration>[];

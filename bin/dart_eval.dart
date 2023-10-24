@@ -144,6 +144,9 @@ void main(List<String> args) {
     final packageConfig = PackageConfig.parseString(
         packageConfigFile, Uri.parse(join(projectRoot.path, '.dart_tool')));
 
+    if (packageConfig.packages.length > 1) {
+      print('Adding packages from package config:');
+    }
     for (final package in packageConfig.packages) {
       if (bridgedPackages.contains(package.name)) {
         print('Skipped package ${package.name} because it is bridged.');
@@ -151,18 +154,16 @@ void main(List<String> args) {
       }
 
       if (packageName == package.name) {
-        print(
-            'Skipped package ${package.name} because it is the main package.');
         continue;
       }
 
-      print('Adding package ${package.name} from pubspec...');
+      stdout.write(' ${package.name}');
 
       final pkgDir = Directory(package.packageUriRoot.toFilePath());
       addFiles(package.name, pkgDir, pkgDir.path);
     }
 
-    print('Compiling package $packageName...');
+    print('\nCompiling package $packageName...');
 
     final ts = DateTime.now().millisecondsSinceEpoch;
 

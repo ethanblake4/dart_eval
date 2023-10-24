@@ -37,6 +37,10 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
   if (L != null) {
     if (e.operator?.type == TokenType.QUESTION_PERIOD) {
       var out = BuiltinValue().push(ctx).boxIfNeeded(ctx);
+      if (L.concreteTypes.length == 1 &&
+          L.concreteTypes[0] == CoreTypes.nullType.ref(ctx)) {
+        return out;
+      }
       macroBranch(ctx, null, condition: (_ctx) {
         return checkNotEqual(ctx, L!, out);
       }, thenBranch: (_ctx, rt) {
@@ -92,13 +96,17 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
       mReturnType =
           method.methodReturnType?.toAlwaysReturnType(ctx, thisType, [], {}) ??
               AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
+      final _returnType = mReturnType.type?.copyWith(
+          boxed: L != null ||
+              !(mReturnType.type?.isUnboxedAcrossFunctionBoundaries ?? false));
       final v = Variable.alloc(
           ctx,
           mReturnType.type?.copyWith(
                   boxed: L != null ||
                       !(mReturnType.type?.isUnboxedAcrossFunctionBoundaries ??
                           false)) ??
-              CoreTypes.dynamic.ref(ctx));
+              CoreTypes.dynamic.ref(ctx),
+          concreteTypes: _returnType == null ? [] : [_returnType]);
 
       return v;
     }
@@ -108,6 +116,7 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
   final Map<String, Variable> _namedArgs;
 
   final resolveGenerics = <String, TypeRef>{};
+  var isConstructor = false;
 
   if (_dec.isBridge) {
     final bridge = _dec.bridge;
@@ -121,6 +130,7 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
 
     _args = argsPair.first;
     _namedArgs = argsPair.second;
+    isConstructor = bridge is BridgeClassDef;
   } else {
     final dec = _dec.declaration!;
 
@@ -138,6 +148,7 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
       returnAnnotation = dec.returnType;
     } else if (dec is ConstructorDeclaration) {
       fpl = dec.parameters.parameters;
+      isConstructor = true;
     } else {
       throw CompileError('Invalid declaration type ${dec.runtimeType}');
     }
@@ -148,7 +159,7 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
         final name = param.name.value() as String;
         if (bound != null) {
           resolveGenerics[name] =
-              TypeRef.fromAnnotation(ctx, ctx.library, bound);
+              TypeRef.fromAnnotation(ctx, offset.file!, bound);
         } else {
           resolveGenerics[name] = CoreTypes.dynamic.ref(ctx);
         }
@@ -207,14 +218,12 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
   mReturnType ??= method.methodReturnType
           ?.toAlwaysReturnType(ctx, thisType, _argTypes, _namedArgTypes) ??
       AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
+  final _returnType = mReturnType.type?.copyWith(
+      boxed: _dec.isBridge ||
+          !(mReturnType.type?.isUnboxedAcrossFunctionBoundaries ?? false));
 
-  final v = Variable.alloc(
-      ctx,
-      mReturnType.type?.copyWith(
-              boxed: _dec.isBridge ||
-                  !(mReturnType.type?.isUnboxedAcrossFunctionBoundaries ??
-                      false)) ??
-          CoreTypes.dynamic.ref(ctx));
+  final v = Variable.alloc(ctx, _returnType ?? CoreTypes.dynamic.ref(ctx),
+      concreteTypes: [if (isConstructor && _returnType != null) _returnType]);
 
   return v;
 }
@@ -288,9 +297,19 @@ Variable _invokeWithTarget(
         ctx.offsetTracker.setOffset(loc, offset);
       }
     }
+  } else if (L.concreteTypes.length == 1) {
+    // If the concrete type is known we can use a static call
+    final actualType = L.concreteTypes[0];
+    final offset = DeferredOrOffset(
+        file: actualType.file,
+        className: actualType.name,
+        methodType: 2,
+        name: e.methodName.name);
+    final loc = ctx.pushOp(Call.make(-1), Call.LEN);
+    ctx.offsetTracker.setOffset(loc, offset);
   } else {
-    final op = InvokeDynamic.make(
-        L.boxIfNeeded(ctx).scopeFrameOffset, e.methodName.name);
+    final op = InvokeDynamic.make(L.boxIfNeeded(ctx).scopeFrameOffset,
+        ctx.constantPool.addOrGet(e.methodName.name));
     ctx.pushOp(op, InvokeDynamic.len(op));
   }
 

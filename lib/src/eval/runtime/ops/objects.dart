@@ -3,19 +3,20 @@ part of '../runtime.dart';
 class InvokeDynamic implements EvcOp {
   InvokeDynamic(Runtime runtime)
       : _location = runtime._readInt16(),
-        _method = runtime._readString();
+        _methodIdx = runtime._readInt32();
 
-  InvokeDynamic.make(this._location, this._method);
+  InvokeDynamic.make(this._location, this._methodIdx);
 
   final int _location;
-  final String _method;
+  final int _methodIdx;
 
   static int len(InvokeDynamic s) {
-    return Evc.BASE_OPLEN + Evc.I16_LEN + Evc.istr_len(s._method);
+    return Evc.BASE_OPLEN + Evc.I16_LEN + Evc.I32_LEN;
   }
 
   @override
   void run(Runtime runtime) {
+    final _method = runtime.constantPool[_methodIdx] as String;
     var object = runtime.frame[_location];
 
     while (true) {
@@ -108,7 +109,7 @@ class InvokeDynamic implements EvcOp {
   }
 
   @override
-  String toString() => 'InvokeDynamic (L$_location.$_method)';
+  String toString() => 'InvokeDynamic (L$_location.C$_methodIdx)';
 }
 
 class CheckEq implements EvcOp {
@@ -232,19 +233,20 @@ class SetObjectProperty implements EvcOp {
 class PushObjectProperty implements EvcOp {
   PushObjectProperty(Runtime runtime)
       : _location = runtime._readInt16(),
-        _property = runtime._readString();
+        _propertyIdx = runtime._readInt32();
 
-  PushObjectProperty.make(this._location, this._property);
+  PushObjectProperty.make(this._location, this._propertyIdx);
 
   final int _location;
-  final String _property;
+  final int _propertyIdx;
 
   static int len(PushObjectProperty s) {
-    return Evc.BASE_OPLEN + Evc.I16_LEN + Evc.istr_len(s._property);
+    return Evc.BASE_OPLEN + Evc.I16_LEN + Evc.I32_LEN;
   }
 
   @override
   void run(Runtime runtime) {
+    final _property = runtime.constantPool[_propertyIdx] as String;
     var object = runtime.frame[_location];
 
     while (true) {
@@ -276,30 +278,30 @@ class PushObjectProperty implements EvcOp {
   }
 
   @override
-  String toString() => 'PushObjectProperty (L$_location.$_property)';
+  String toString() => 'PushObjectProperty (L$_location.C$_propertyIdx)';
 }
 
 class PushObjectPropertyImpl implements EvcOp {
   PushObjectPropertyImpl(Runtime runtime)
-      : _objectOffset = runtime._readInt16(),
+      : objectOffset = runtime._readInt16(),
         _propertyIndex = runtime._readInt16();
 
-  final int _objectOffset;
+  final int objectOffset;
   final int _propertyIndex;
 
-  PushObjectPropertyImpl.make(this._objectOffset, this._propertyIndex);
+  PushObjectPropertyImpl.make(this.objectOffset, this._propertyIndex);
 
   static int LEN = Evc.BASE_OPLEN + Evc.I16_LEN * 2;
 
   @override
   void run(Runtime runtime) {
-    final object = runtime.frame[_objectOffset] as $InstanceImpl;
+    final object = runtime.frame[objectOffset] as $InstanceImpl;
     runtime.frame[runtime.frameOffset++] = object.values[_propertyIndex];
   }
 
   @override
   String toString() =>
-      'PushObjectPropertyImpl (L$_objectOffset[$_propertyIndex])';
+      'PushObjectPropertyImpl (L$objectOffset[$_propertyIndex])';
 }
 
 class SetObjectPropertyImpl implements EvcOp {

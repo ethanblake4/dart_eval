@@ -110,7 +110,8 @@ extension TearOff on Variable {
       ctx.pushOp(
           IndexList.make(0, targetOffset.scopeFrameOffset), IndexList.LEN);
       final $target = Variable.alloc(ctx, targetType!);
-      final invokeOp = InvokeDynamic.make($target.scopeFrameOffset, methodName);
+      final invokeOp = InvokeDynamic.make(
+          $target.scopeFrameOffset, ctx.constantPool.addOrGet(methodName));
       ctx.pushOp(invokeOp, InvokeDynamic.len(invokeOp));
     } else {
       final loc = ctx.pushOp(Call.make(methodOffset!.offset ?? -1), Call.LEN);

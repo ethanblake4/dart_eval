@@ -225,5 +225,38 @@ void main() {
       final result = runtime.executeLib('package:example/main.dart', 'main');
       expect(result, 4);
     });
+
+    test('Cyclic imports', () {
+      final program = compiler.compile({
+        'example': {
+          'main.dart': '''
+            import 'b1.dart';
+            int main() {
+              final b = ClassB();
+              return b.number();
+            }
+          ''',
+          'b1.dart': '''
+            import 'b2.dart';
+            class ClassB {
+              ClassB();
+              static int constant = 4;
+              int number() { return 4 + ClassC().number(); }
+            }
+          ''',
+          'b2.dart': '''
+            import 'b1.dart';
+            class ClassC {
+              ClassC();
+              int number() { return 8 + ClassB.constant; }
+            }
+          ''',
+        }
+      });
+
+      final runtime = Runtime.ofProgram(program);
+      final result = runtime.executeLib('package:example/main.dart', 'main');
+      expect(result, 16);
+    });
   });
 }

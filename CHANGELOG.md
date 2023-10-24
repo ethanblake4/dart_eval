@@ -3,6 +3,9 @@
   with CoreTypes/AsyncTypes etc now.
 - (Breaking) Improve extension method syntax and make it the default
   for examples
+- (Breaking) Added tree-shaking for dead code elimination. To ensure
+  a file is compiled you must add it as an entrypoint to the Compiler.
+  `main.dart` is always an entrypoint. See README for details.
 - Support for compiling Pub packages in the CLI
 - Support tryParse() and parse() for `num` and `int`
 - Support Iterable.generate() and List.generate() (thanks @wrbl606)
@@ -26,6 +29,8 @@
 - Add binding for `Exception` and `RangeError`
 - Add bindings for `ByteBuffer`, `TypedData`, `ByteData`, 
   and `Uint8List` from dart:typed_data
+- Improved performance by optimizing to static method calls and
+  field accesses when the concrete type of a variable is known
 - Runtime errors now print out the scope stack for easier debugging
 - Reformat line length to 80 for standardization with Dart ecosystem
 - Documentation improvements

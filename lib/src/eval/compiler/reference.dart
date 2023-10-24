@@ -105,7 +105,9 @@ class IdentifierReference implements Reference {
       ctx.pushOp(CopyValue.make(local.scopeFrameOffset, value.scopeFrameOffset),
           CopyValue.LEN);
       final type = TypeRef.commonBaseType(ctx, {local.type, value.type});
-      local.copyWithUpdate(ctx, type: type.copyWith(boxed: value.type.boxed));
+      local.copyWithUpdate(ctx,
+          type: type.copyWith(boxed: value.type.boxed),
+          concreteTypes: value.concreteTypes);
       return value;
     }
 
@@ -219,7 +221,8 @@ class IdentifierReference implements Reference {
               callingConvention: CallingConvention.static);
         }
 
-        final op = PushObjectProperty.make($this.scopeFrameOffset, name);
+        final op = PushObjectProperty.make(
+            $this.scopeFrameOffset, ctx.constantPool.addOrGet(name));
         ctx.pushOp(op, PushObjectProperty.len(op));
         ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
 

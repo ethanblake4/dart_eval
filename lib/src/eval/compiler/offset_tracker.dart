@@ -16,9 +16,21 @@ class OffsetTracker {
     _deferredOffsets.forEach((pos, offset) {
       final op = source[pos];
       if (op is Call) {
-        final resolvedOffset =
-            context.topLevelDeclarationPositions[offset.file!]![offset.name!]!;
+        int resolvedOffset;
+        if (offset.methodType == 2) {
+          resolvedOffset = context.instanceDeclarationPositions[offset.file!]![
+              offset.className!]![2]![offset.name!]!;
+        } else {
+          resolvedOffset = context
+              .topLevelDeclarationPositions[offset.file!]![offset.name!]!;
+        }
         final newOp = Call.make(resolvedOffset);
+        source[pos] = newOp;
+      } else if (op is PushObjectPropertyImpl) {
+        final resolvedOffset = context.instanceGetterIndices[offset.file!]![
+            offset.className!]![offset.name!]!;
+        final newOp =
+            PushObjectPropertyImpl.make(op.objectOffset, resolvedOffset);
         source[pos] = newOp;
       }
     });

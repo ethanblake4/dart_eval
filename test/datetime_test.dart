@@ -21,11 +21,11 @@ void main() {
       ''';
     final runtime = compiler.compileWriteAndLoad({
       'my_package': {
-        'code.dart': source,
+        'main.dart': source,
       }
     });
     var result = runtime.executeLib(
-      "package:my_package/code.dart",
+      "package:my_package/main.dart",
       "fn",
     );
     assert(result);
@@ -49,11 +49,11 @@ void main() {
       ''';
     final runtime = compiler.compileWriteAndLoad({
       'my_package': {
-        'code.dart': source,
+        'main.dart': source,
       }
     });
     var result = runtime.executeLib(
-      "package:my_package/code.dart",
+      "package:my_package/main.dart",
       "fn",
     );
     assert(result);
@@ -81,11 +81,11 @@ void main() {
       ''';
     final runtime = compiler.compileWriteAndLoad({
       'my_package': {
-        'code.dart': source,
+        'main.dart': source,
       }
     });
     var result = runtime.executeLib(
-      "package:my_package/code.dart",
+      "package:my_package/main.dart",
       "fn",
     );
     assert(result);
@@ -115,11 +115,11 @@ void main() {
       ''';
     final runtime = compiler.compileWriteAndLoad({
       'my_package': {
-        'code.dart': source,
+        'main.dart': source,
       }
     });
     var result = runtime.executeLib(
-      "package:my_package/code.dart",
+      "package:my_package/main.dart",
       "fn",
     );
     assert(result);
@@ -145,11 +145,11 @@ void main() {
       ''';
     final runtime = compiler.compileWriteAndLoad({
       'my_package': {
-        'code.dart': source,
+        'main.dart': source,
       }
     });
     var result = runtime.executeLib(
-      "package:my_package/code.dart",
+      "package:my_package/main.dart",
       "fn",
     );
     assert(result);
@@ -171,11 +171,11 @@ void main() {
       ''';
     final runtime = compiler.compileWriteAndLoad({
       'my_package': {
-        'code.dart': source,
+        'main.dart': source,
       }
     });
     var result = runtime.executeLib(
-      "package:my_package/code.dart",
+      "package:my_package/main.dart",
       "fn",
     );
     assert(result);

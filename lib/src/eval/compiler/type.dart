@@ -722,7 +722,7 @@ class TypeRef {
         final name = param.name.value() as String;
         if (bound != null) {
           ctx.temporaryTypes[library ?? ctx.library]![name] =
-              TypeRef.fromAnnotation(ctx, ctx.library, bound);
+              TypeRef.fromAnnotation(ctx, library ?? ctx.library, bound);
         } else {
           ctx.temporaryTypes[library ?? ctx.library]![name] =
               CoreTypes.dynamic.ref(ctx);
@@ -761,7 +761,7 @@ class AlwaysReturnType implements ReturnType {
     final rt = typeAnnotation;
     if (rt != null) {
       return AlwaysReturnType(
-          TypeRef.fromAnnotation(ctx, ctx.library, rt), rt.question != null);
+          TypeRef.fromAnnotation(ctx, library, rt), rt.question != null);
     } else {
       return AlwaysReturnType(fallback, true);
     }

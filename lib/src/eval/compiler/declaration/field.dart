@@ -55,6 +55,8 @@ void compileFieldDeclaration(int fieldIndex, FieldDeclaration d,
       ctx.pushOp(Return.make(1), Return.LEN);
       ctx.instanceDeclarationPositions[ctx.library]![parentName]![0]
           [fieldName] = pos;
+      ctx.instanceGetterIndices[ctx.library]![parentName]![fieldName] =
+          _fieldIndex;
 
       if (!(field.isFinal || field.isConst)) {
         final setterPos =

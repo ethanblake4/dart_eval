@@ -15,6 +15,7 @@ void compileClassDeclaration(CompilerContext ctx, ClassDeclaration d,
     {},
     $runtimeType
   ];
+  ctx.instanceGetterIndices[ctx.library]![clsName] = {};
   final constructors = <ConstructorDeclaration>[];
   final fields = <FieldDeclaration>[];
   final methods = <MethodDeclaration>[];

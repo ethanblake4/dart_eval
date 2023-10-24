@@ -132,6 +132,18 @@ void main() {
 }
 ```
 
+## Entrypoints and tree-shaking
+
+dart_eval uses tree-shaking to avoid compiling unused code. By default, 
+any file named `main.dart` or that contains [runtime overrides](#runtime-overrides) will be treated as an entrypoint and guaranteed to be compiled in its entirety. To add additional entrypoints, append URIs to the
+`Compiler.entrypoints` array:
+
+```dart
+final compiler = Compiler();
+compiler.entrypoints.add('package:my_package/some_file.dart');
+compiler.compile(...);
+```
+
 ## Compiling to a file
 
 If possible, it's recommended to pre-compile your Dart code to EVC bytecode,
@@ -195,8 +207,7 @@ To enable the CLI globally, run:
 
 ### Compiling a project
 
-The CLI supports compiling standard Dart projects, although installed packages
-in `pubspec.yaml` are not currently supported. To compile a project, run:
+The CLI supports compiling standard Dart projects. To compile a project, run:
 
 ```bash
 cd my_project
@@ -204,6 +215,8 @@ dart_eval compile -o program.evc
 ```
 
 This will generate an EVC file in the current directory called `program.evc`.
+dart_eval will attempt to compile Pub packages, but it's recommended to
+avoid them as they may use features that dart_eval doesn't support yet.
 
 The compiler also supports compiling with JSON-encoded bridge bindings. To add
 these, create a folder in your project root called `.dart_eval`, add a
@@ -286,15 +299,12 @@ There are three main levels of interop:
 
 ### Value interop
 
-Value interop is the most basic form, and happens automatically whenever the Eval
-environment is working with an object backed by a real Dart value. (Therefore, an
-int and a string are value interop enabled, but a class created inside Eval isn't.)
-To access the backing object of an `$Value`, use its `$value` property. If the
+Value interop happens automatically whenever dart_eval is working
+with an object backed by a real Dart value. (Therefore, an int and a string
+are value interop enabled, but a class created inside Eval isn't.)
+To access the backing object of a `$Value`, use its `$value` property. If the
 value is a collection like a Map or a List, you can use its `$reified` property
-to resolve the values it contains.
-
-To support value interop, a class need simply to implement `$Value`, or extend
-`$Value<T>`.
+to also unwrap the values it contains.
 
 ### Wrapper interop
 
@@ -405,9 +415,9 @@ see the [wrapper interop wiki page](https://github.com/ethanblake4/dart_eval/wik
 
 ### Bridge interop
 
-Bridge interop enables the most functionality: Not only can Eval access the fields
+Bridge interop enables the most functionality: Not only can dart_eval access the fields
 of an object, but it can also be extended, allowing you to create subclasses within Eval
-and use them outside of Eval. For example, this can be used to create custom
+and use them outside of dart_eval. For example, this can be used to create custom
 Flutter widgets that can be dynamically updated at runtime. Bridge interop is also in 
 some ways simpler than creating a wrapper, but it comes at a performance cost, so should
 be avoided in performance-sensitive situations. To use bridge interop, extend the original
@@ -482,7 +492,7 @@ void main() {
 }
 ```
 
-A full example featuring both bridge and wrapper interop is available in the 
+An example featuring both bridge and wrapper interop is available in the 
 `example` directory. For more information, see the 
 [wiki page on bridge classes](https://github.com/ethanblake4/dart_eval/wiki/Bridge-classes).
 

@@ -16,7 +16,7 @@ class Library {
   final List<ImportDirective> imports;
   final List<ExportDirective> exports;
 
-  final List<DeclarationOrBridge> declarations;
+  List<DeclarationOrBridge> declarations;
 
   @override
   bool operator ==(Object other) =>

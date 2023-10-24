@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/equality.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
@@ -8,6 +9,8 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
+import 'package:dart_eval/src/eval/compiler/type.dart';
+
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 Variable compilePropertyAccess(PropertyAccess pa, CompilerContext ctx,
@@ -16,6 +19,10 @@ Variable compilePropertyAccess(PropertyAccess pa, CompilerContext ctx,
 
   if (pa.operator.type == TokenType.QUESTION_PERIOD) {
     var out = BuiltinValue().push(ctx).boxIfNeeded(ctx);
+    if (L.concreteTypes.length == 1 &&
+        L.concreteTypes[0] == CoreTypes.nullType.ref(ctx)) {
+      return out;
+    }
     macroBranch(ctx, null, condition: (_ctx) {
       return checkNotEqual(ctx, L, out);
     }, thenBranch: (_ctx, rt) {

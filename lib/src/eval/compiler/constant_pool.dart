@@ -7,8 +7,10 @@ class ConstantPool<T> {
   final Map<int, int> _map = {};
 
   int addOrGet(T p) {
-    final hash =
-        const DeepCollectionEquality().hash(p) + p.runtimeType.hashCode;
+    var hash = const DeepCollectionEquality().hash(p) + p.runtimeType.hashCode;
+    if (p is List) {
+      hash ^= p.length;
+    }
     final existing = _map[hash];
     if (existing != null) return existing;
     pool.add(p);

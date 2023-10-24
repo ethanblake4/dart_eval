@@ -233,9 +233,11 @@ class Runtime {
 
   void _setupBridging() {
     for (final ulb in _unloadedBrFunc) {
-      final libIndex = _bridgeLibraryMappings[ulb.library]!;
-      _bridgeFunctions[bridgeFuncMappings[libIndex]![ulb.name] ??
-          (throw ArgumentError('Could not find ${ulb.name}'))] = ulb.func;
+      final libIndex = _bridgeLibraryMappings[ulb.library];
+      if (libIndex == null || bridgeFuncMappings[libIndex]?[ulb.name] == null) {
+        continue;
+      }
+      _bridgeFunctions[bridgeFuncMappings[libIndex]![ulb.name]!] = ulb.func;
     }
 
     for (final ule in _unloadedEnumValues) {
@@ -475,7 +477,7 @@ class Runtime {
         return [
           Evc.OP_INVOKE_DYNAMIC,
           ...Evc.i16b(op._location),
-          ...Evc.istr(op._method)
+          ...Evc.i32b(op._methodIdx)
         ];
       case SetObjectProperty:
         op as SetObjectProperty;
@@ -490,13 +492,13 @@ class Runtime {
         return [
           Evc.OP_PUSH_OBJECT_PROP,
           ...Evc.i16b(op._location),
-          ...Evc.istr(op._property)
+          ...Evc.i32b(op._propertyIdx)
         ];
       case PushObjectPropertyImpl:
         op as PushObjectPropertyImpl;
         return [
           Evc.OP_PUSH_OBJECT_PROP_IMPL,
-          ...Evc.i16b(op._objectOffset),
+          ...Evc.i16b(op.objectOffset),
           ...Evc.i16b(op._propertyIndex)
         ];
       case SetObjectPropertyImpl:
@@ -790,6 +792,10 @@ class Runtime {
   dynamic executeLib(String library, String name, [List? args]) {
     if (args != null) {
       this.args = args;
+    }
+    if (declarations[_bridgeLibraryMappings[library]] == null) {
+      throw ArgumentError('Cannot find $library, maybe it wasn\'t declared as'
+          ' an entrypoint?');
     }
     return execute(declarations[_bridgeLibraryMappings[library]!]![name]!);
   }

@@ -250,7 +250,8 @@ class Variable {
         ctx.pushOp(PushArg.make(_arg.scopeFrameOffset), PushArg.LEN);
       }
 
-      final invokeOp = InvokeDynamic.make($this.scopeFrameOffset, method);
+      final invokeOp = InvokeDynamic.make(
+          $this.scopeFrameOffset, ctx.constantPool.addOrGet(method));
       ctx.pushOp(invokeOp, InvokeDynamic.len(invokeOp));
     }
 
@@ -287,16 +288,34 @@ class Variable {
       ctx.pushOp(PushRuntimeType.make(scopeFrameOffset), PushRuntimeType.LEN);
       return Variable.alloc(ctx, CoreTypes.type.ref(ctx));
     }
-    final op = PushObjectProperty.make(scopeFrameOffset, name);
+    final _type =
+        TypeRef.lookupFieldType(ctx, type, name)?.resolveTypeChain(ctx) ??
+            CoreTypes.dynamic.ref(ctx);
+    if (concreteTypes.length == 1) {
+      // If the concrete type is known we can access the field directly by
+      // its index
+      final actualType = concreteTypes[0];
+      final declaration =
+          ctx.topLevelDeclarationsMap[actualType.file]?[actualType.name];
+      final fieldDeclaration =
+          ctx.instanceDeclarationsMap[actualType.file]?[actualType.name]?[name];
+      final isBridge = declaration?.isBridge ?? true;
+      if (!isBridge && fieldDeclaration != null) {
+        final offset = DeferredOrOffset(
+            file: actualType.file, className: actualType.name, name: name);
+        final op =
+            PushObjectPropertyImpl.make(scopeFrameOffset, offset.offset ?? -1);
+        final loc = ctx.pushOp(op, PushObjectPropertyImpl.LEN);
+        ctx.offsetTracker.setOffset(loc, offset);
+        return Variable.alloc(ctx, _type);
+      }
+    }
+    final op = PushObjectProperty.make(
+        scopeFrameOffset, ctx.constantPool.addOrGet(name));
     ctx.pushOp(op, PushObjectProperty.len(op));
 
     ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-    final prop = Variable.alloc(
-        ctx,
-        TypeRef.lookupFieldType(ctx, type, name)?.resolveTypeChain(ctx) ??
-            CoreTypes.dynamic.ref(ctx));
-
-    return prop;
+    return Variable.alloc(ctx, _type);
   }
 
   static List<Variable> boxUnboxMultiple(
