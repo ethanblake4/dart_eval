@@ -199,6 +199,36 @@ void main() {
       expect(result, 4);
     });
 
+    test('Tree shaking', () {
+      final program = compiler.compile({
+        'example': {
+          'main.dart': '''
+            import 'package:example/b1.dart';
+            int main() {
+              final b = ClassB();
+              return b.number();
+            }
+          ''',
+          'b1.dart': '''
+            class ClassB {
+              ClassB();
+              int number() { return 4; }
+            }
+            class ClassC {
+              ClassC();
+              int number() { 
+                invalidVariable.makeError(); // Should not be compiled
+              }
+            }
+          '''
+        }
+      });
+
+      final runtime = Runtime.ofProgram(program);
+      final result = runtime.executeLib('package:example/main.dart', 'main');
+      expect(result, 4);
+    });
+
     test('Relative exports', () {
       final program = compiler.compile({
         'example': {

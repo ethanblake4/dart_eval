@@ -298,17 +298,21 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     final reachableLibraries =
         _discoverReachableLibraries(libraries, _entrypoints).toSet();
 
-    final discoveredIdentifiers = <Library, Set<String>>{};
+    final discoveredIdentifiers = <Library, Map<String, Set<String>>>{};
 
     for (final lib in reachableLibraries) {
       final treeShaker = TreeShakeVisitor();
+      discoveredIdentifiers[lib] = {};
       for (final decl in lib.declarations) {
         final d = decl.declaration;
+        final names = DeclarationOrBridge.nameOf(decl);
         if (d != null) {
           d.visitChildren(treeShaker);
         }
+        for (final name in names) {
+          discoveredIdentifiers[lib]![name] = treeShaker.ctx.identifiers;
+        }
       }
-      discoveredIdentifiers[lib] = treeShaker.ctx.identifiers;
     }
 
     // Resolve the export and import relationship of the libraries
@@ -885,7 +889,7 @@ List<Library> _buildLibraries(Iterable<DartCompilationUnit> units) {
 /// resolve long export chains.
 Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
     Iterable<Library> libraries,
-    Map<Library, Set<String>> usedIdentifiers,
+    Map<Library, Map<String, Set<String>>> usedIdentifiers,
     Set<Uri> entrypoints,
     Map<Library, int> libraryIds) {
   /// URI-Library mapping
@@ -905,8 +909,15 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
       }
   });
 
+  final crawler = CachedFastCrawler(exportGraph.edges);
+
   final result = <Library, Map<String, DeclarationOrPrefix>>{};
   final usedDeclarationsForLibrary = <Library, Set<String>>{};
+
+  final worklist = <Library>[];
+  final importMap = <Library, List<_Import>>{};
+  final importedDeclarationsMap =
+      <Library, Map<Library, Iterable<Pair<String, DeclarationOrBridge>>>>{};
 
   // Traversing libraries
   for (final l in libraries) {
@@ -920,28 +931,35 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
             declaration: d.second..sourceLib = libraryIds[l]!),
     };
 
-    final _usedIdentifiers = usedIdentifiers[l]!;
-
     final dartCoreUri = Uri.parse('dart:core');
     final isDartCore = l.uri == dartCoreUri;
 
-    for (final import in [
-      /// Iterate over the library's imports including the implicit import of
-      /// dart:core.
-      ...l.imports
-          .map((e) => _Import.resolve(e, l.uri, e.prefix?.name, e.combinators)),
-      if (!isDartCore) _Import(dartCoreUri, null)
-    ]) {
-      /// Skip eval_annotation imports if present
-      if (import.uri.toString().startsWith('package:eval_annotation')) {
-        continue;
-      }
+    final isEntrypoint = entrypoints.contains(l.uri);
+    final ids = isEntrypoint
+        ? usedIdentifiers[l]?.values.expand((e) => e).toSet()
+        : null;
 
+    final imports = [
+      ...l.imports
+          .map((e) => _Import.resolve(e, l.uri, e.prefix?.name, e.combinators))
+          .whereNot((import) =>
+              import.uri.toString().startsWith('package:eval_annotation')),
+      if (!isDartCore) _Import(dartCoreUri, null)
+    ];
+
+    importMap[l] = imports;
+    importedDeclarationsMap[l] = {
+      l: DeclarationOrBridge.expand(l.declarations)
+    };
+
+    /// Iterate over the library's imports including the implicit import of
+    /// dart:core.
+    for (final import in imports) {
       /// Use the export graph to find all declarations that become visible
       /// through this import.
       /// directed_graph returns a tree structure with import.uri as the root
       /// and exported libraries as leaves.
-      final tree = CustomCrawler(exportGraph.edges).tree(import.uri);
+      final tree = crawler.tree(import.uri);
 
       /// Flatten and deduplicate the tree to get a list of all libraries that
       /// are visible through this import.
@@ -977,25 +995,29 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
         final expandedDeclarations =
             DeclarationOrBridge.expand(lib.declarations);
         final importedDeclarations = expandedDeclarations
-            .where((element) => _usedIdentifiers.contains(element.first))
-            .where((element) => _combinatorListAccepts(
-                import.combinators, element.first, true));
+            .where((element) =>
+                _combinatorListAccepts(import.combinators, element.first, true))
+            .toList();
+        importedDeclarationsMap[l]![lib] = importedDeclarations;
 
         final result = <Pair<String, DeclarationOrBridge>>{};
 
         for (final declaration in importedDeclarations) {
           if (lib.uri == import.uri) {
             result.add(declaration..second.sourceLib = libId);
-            usedDeclarationsForLibrary[lib] ??= {'main'};
-            usedDeclarationsForLibrary[lib]!.add(declaration.first);
           }
           final exports = exportsPerUri[lib.uri] ?? <ExportDirective>[];
           for (final export in exports) {
             final combinators = export.combinators;
             if (_combinatorListAccepts(combinators, declaration.first, false)) {
               result.add(declaration..second.sourceLib = libId);
-              usedDeclarationsForLibrary[lib] ??= {'main'};
-              usedDeclarationsForLibrary[lib]!.add(declaration.first);
+            }
+          }
+          if (isEntrypoint && ids!.contains(declaration.first)) {
+            usedDeclarationsForLibrary[lib] ??= {'main'};
+            usedDeclarationsForLibrary[lib]!.add(declaration.first);
+            if (!worklist.contains(lib)) {
+              worklist.add(lib);
             }
           }
         }
@@ -1019,6 +1041,45 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
     result[l] = _visibleDeclarations;
   }
 
+  final processedImports = <String>{};
+
+  /// Run tree-shaking
+  while (worklist.isNotEmpty) {
+    final library = worklist.removeLast();
+    Map<Library, Set<String>> applyUsedDeclarations = {};
+    for (final dec in usedDeclarationsForLibrary[library]!) {
+      final ids = usedIdentifiers[library]?[dec];
+      if (ids == null) continue;
+      final importsWithImplicitSelf = [
+        ...importMap[library]!,
+        _Import(library.uri, null)
+      ];
+      for (final import in importsWithImplicitSelf) {
+        final iid = '${library.uri}:${import.uri}';
+        if (processedImports.contains(iid)) {
+          continue;
+        }
+        processedImports.add(iid);
+        final lib = uriMap[import.uri]!;
+        final decs = importedDeclarationsMap[library]?[lib];
+        if (decs == null) continue;
+        for (final declaration in decs) {
+          if (ids.contains(declaration.first)) {
+            applyUsedDeclarations[lib] ??= {'main'};
+            applyUsedDeclarations[lib]!.add(declaration.first);
+            if (!worklist.contains(lib)) {
+              worklist.add(lib);
+            }
+          }
+        }
+      }
+    }
+    for (final lib in applyUsedDeclarations.keys) {
+      usedDeclarationsForLibrary[lib] ??= {};
+      usedDeclarationsForLibrary[lib]!.addAll(applyUsedDeclarations[lib]!);
+    }
+  }
+
   for (final l in libraries) {
     if (entrypoints.contains(l.uri)) {
       continue;
@@ -1026,10 +1087,8 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
     l.declarations = l.declarations
         .where((declaration) =>
             declaration.isBridge ||
-            DeclarationOrBridge.nameOf(declaration).any((name) => {
-                  ...?usedIdentifiers[l],
-                  ...?usedDeclarationsForLibrary[l]
-                }.contains(name)))
+            DeclarationOrBridge.nameOf(declaration).any(
+                (name) => {...?usedDeclarationsForLibrary[l]}.contains(name)))
         .toList();
   }
 
@@ -1082,7 +1141,7 @@ Iterable<Library> _discoverReachableLibraries(
 
   for (final entrypoint in entrypoints) {
     yield uriMap[entrypoint]!;
-    final tree = CustomCrawler(libraryGraph.edges).tree(entrypoint);
+    final tree = FastCrawler(libraryGraph.edges).tree(entrypoint);
     yield* tree
         .map((branch) => branch.last)
         .whereNot((e) => e.toString().startsWith('package:eval_annotation'))

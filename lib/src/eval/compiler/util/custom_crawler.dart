@@ -1,8 +1,8 @@
 import 'package:directed_graph/directed_graph.dart';
 
 /// Custom graph crawler with vastly better performance than the original.
-class CustomCrawler<T extends Object> extends GraphCrawler<T> {
-  CustomCrawler(super.edges);
+class FastCrawler<T extends Object> extends GraphCrawler<T> {
+  FastCrawler(super.edges);
 
   @override
   List<Set<T>> tree(T start, [T? target]) {
@@ -36,5 +36,18 @@ class CustomCrawler<T extends Object> extends GraphCrawler<T> {
       startIndexOld = startIndexNew;
     } while (startIndexNew < result.length);
     return result;
+  }
+}
+
+/// Caching version of the above
+class CachedFastCrawler<T extends Object> extends GraphCrawler<T> {
+  CachedFastCrawler(super.edges);
+
+  final _cache = <T, List<Set<T>>>{};
+
+  @override
+  List<Set<T>> tree(T start, [T? target]) {
+    if (_cache.containsKey(start)) return _cache[start]!;
+    return _cache[start] = super.tree(start, target);
   }
 }

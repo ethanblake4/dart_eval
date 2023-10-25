@@ -136,7 +136,7 @@ void main(List<String> args) {
     }
 
     addFiles(packageName, libDir, libDir.path);
-    addFiles(packageName, binDir, libDir.path);
+    addFiles(packageName, binDir, binDir.path);
 
     final packageConfigFile =
         File(join(projectRoot.path, '.dart_tool', 'package_config.json'))
