@@ -312,6 +312,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
         for (final name in names) {
           discoveredIdentifiers[lib]![name] = treeShaker.ctx.identifiers;
         }
+        treeShaker.ctx.identifiers = {};
       }
     }
 
