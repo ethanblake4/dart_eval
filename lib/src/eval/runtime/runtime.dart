@@ -11,6 +11,7 @@ import 'package:dart_eval/src/eval/compiler/model/override_spec.dart';
 import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'package:dart_eval/src/eval/runtime/function.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/collection.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/type.dart';
@@ -373,8 +374,9 @@ class Runtime {
   final _unloadedEnumValues = <_UnloadedEnumValues>[];
   final _plugins = <EvalPlugin>[
     DartAsyncPlugin(),
-    DartCorePlugin(),
+    DartCollectionPlugin(),
     DartConvertPlugin(),
+    DartCorePlugin(),
     DartIoPlugin(),
     DartMathPlugin(),
     DartTypedDataPlugin(),

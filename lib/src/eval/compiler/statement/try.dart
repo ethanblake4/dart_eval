@@ -79,8 +79,7 @@ StatementInfo _compileCatchClause(
   final exceptionType = catchClause.exceptionType;
 
   if (exceptionType == null) {
-    ctx.setLocal(
-        catchClause.exceptionParameter!.name.value() as String, exceptionVar);
+    ctx.setLocal(catchClause.exceptionParameter!.name.lexeme, exceptionVar);
     return compileBlock(catchClause.body, expectedReturnType, ctx);
   }
   final slot = TypeRef.fromAnnotation(ctx, ctx.library, exceptionType);
@@ -96,7 +95,7 @@ StatementInfo _compileCatchClause(
           ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
     },
     thenBranch: (_ctx, _expectedReturnType) {
-      ctx.setLocal(catchClause.exceptionParameter!.name.value() as String,
+      ctx.setLocal(catchClause.exceptionParameter!.name.lexeme,
           exceptionVar.copyWith(type: slot));
       return compileBlock(catchClause.body, expectedReturnType, ctx);
     },

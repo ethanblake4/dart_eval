@@ -43,7 +43,7 @@ StatementInfo compileForStatement(
                   ctx.library,
                   ctx);
             }
-            final name = parts.loopVariable.name.value() as String;
+            final name = parts.loopVariable.name.lexeme;
             ctx.setLocal(
                 name, BuiltinValue().push(ctx).copyWith(type: elementType));
             loopVariable = IdentifierReference(null, name);

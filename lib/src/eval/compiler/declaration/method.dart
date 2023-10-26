@@ -17,8 +17,8 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx,
     NamedCompilationUnitMember parent) {
   ctx.runPrescan(d);
   final b = d.body;
-  final parentName = parent.name.value() as String;
-  final methodName = d.name.value() as String;
+  final parentName = parent.name.lexeme;
+  final methodName = d.name.lexeme;
   final pos = beginMethod(ctx, d, d.offset, '$parentName.$methodName()');
 
   ctx.beginAllocScope(existingAllocLen: (d.parameters?.parameters.length ?? 0));
@@ -26,9 +26,7 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx,
   ctx.setLocal(
       '#this',
       Variable(
-          0,
-          ctx.visibleTypes[ctx.library]![
-              ctx.currentClass!.name.value() as String]!));
+          0, ctx.visibleTypes[ctx.library]![ctx.currentClass!.name.lexeme]!));
   final resolvedParams = d.parameters == null
       ? <PossiblyValuedParameter>[]
       : resolveFPLDefaults(ctx, d.parameters!, true, allowUnboxed: true);
@@ -49,7 +47,7 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx,
       type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!)
           .copyWith(boxed: true);
     }
-    Vrep = Variable(i, type)..name = p.name!.value() as String;
+    Vrep = Variable(i, type)..name = p.name!.lexeme;
 
     ctx.setLocal(Vrep.name!, Vrep);
 

@@ -31,7 +31,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
 
   for (final param in fpl) {
     if (param.isNamed) {
-      named[param.name!.value() as String] = param;
+      named[param.name!.lexeme] = param;
     } else {
       positional.add(param);
     }
@@ -44,8 +44,8 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
 
   for (final param in positional) {
     // First check super params. Super params do not contain an expression.
-    if (superParams.contains(param.name!.value() as String)) {
-      final V = ctx.lookupLocal(param.name!.value() as String)!;
+    if (superParams.contains(param.name!.lexeme)) {
+      final V = ctx.lookupLocal(param.name!.lexeme)!;
       _push.add(V);
       _args.add(V);
       i++;
@@ -93,14 +93,13 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
       if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
         throw CompileError(
             'Cannot assign argument of type ${_arg.type.toStringClear(ctx, paramType)} '
-            'to parameter "${param.name!.value() as String}" of type ${paramType.toStringClear(ctx, _arg.type)}',
+            'to parameter "${param.name!.lexeme}" of type ${paramType.toStringClear(ctx, _arg.type)}',
             source ?? parameterHost);
       }
 
       if (typeAnnotation != null) {
         final n = typeAnnotation is NamedType
-            ? (typeAnnotation.name2.stringValue ??
-                typeAnnotation.name2.value() as String)
+            ? (typeAnnotation.name2.stringValue ?? typeAnnotation.name2.lexeme)
             : null;
         if (n != null && resolveGenerics.containsKey(n)) {
           resolveGenericsMap[n] ??= {};
@@ -165,13 +164,12 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
       if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
         throw CompileError(
             'Cannot assign argument of type ${_arg.type.toStringClear(ctx, paramType)}'
-            ' to parameter "${param.name!.value() as String}" of type ${paramType.toStringClear(ctx, _arg.type)}');
+            ' to parameter "${param.name!.lexeme}" of type ${paramType.toStringClear(ctx, _arg.type)}');
       }
 
       if (typeAnnotation != null) {
         final n = typeAnnotation is NamedType
-            ? (typeAnnotation.name2.stringValue ??
-                typeAnnotation.name2.value() as String)
+            ? (typeAnnotation.name2.stringValue ?? typeAnnotation.name2.lexeme)
             : null;
         if (n != null && resolveGenerics.containsKey(n)) {
           resolveGenericsMap[n] ??= {};
@@ -381,10 +379,8 @@ TypeRef _resolveFieldFormalType(CompilerContext ctx, int decLibrary,
     throw CompileError('Field formals can only occur in constructors');
   }
   final $class = parameterHost.parent as NamedCompilationUnitMember;
-  return TypeRef.lookupFieldType(
-          ctx,
-          TypeRef.lookupDeclaration(ctx, decLibrary, $class),
-          param.name.value() as String,
+  return TypeRef.lookupFieldType(ctx,
+          TypeRef.lookupDeclaration(ctx, decLibrary, $class), param.name.lexeme,
           forFieldFormal: true) ??
       CoreTypes.dynamic.ref(ctx);
 }
@@ -412,7 +408,7 @@ TypeRef resolveSuperFormalType(CompilerContext ctx, int decLibrary,
   if (superCstr.isBridge) {
     final fd = (superCstr.bridge as BridgeConstructorDef).functionDescriptor;
     for (final _param in (param.isNamed ? fd.namedParams : fd.params)) {
-      if (_param.name == param.name.value() as String) {
+      if (_param.name == param.name.lexeme) {
         return TypeRef.fromBridgeAnnotation(ctx, _param.type);
       }
     }

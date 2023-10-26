@@ -40,12 +40,12 @@ extension TearOff on Variable {
     final TypeAnnotation? methodReturnType;
     if (dec is MethodDeclaration) {
       parameters = dec.parameters;
-      methodName = dec.name.value() as String;
+      methodName = dec.name.lexeme;
       methodReturnType = dec.returnType;
     } else {
       final e = (dec as FunctionDeclaration).functionExpression;
       parameters = e.parameters;
-      methodName = dec.name.value() as String;
+      methodName = dec.name.lexeme;
       methodReturnType = dec.returnType;
     }
 
@@ -92,7 +92,7 @@ extension TearOff on Variable {
         type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
       }
       Vrep = Variable(i, type.copyWith(boxed: true));
-      Vrep = ctx.setLocal(p.name!.value() as String, Vrep);
+      Vrep = ctx.setLocal(p.name!.lexeme, Vrep);
       if (type.isUnboxedAcrossFunctionBoundaries && dec is! MethodDeclaration) {
         Vrep = Vrep.unboxIfNeeded(ctx);
       }
@@ -159,10 +159,9 @@ extension TearOff on Variable {
 
     final named = (parameters.parameters.where((element) => element.isNamed));
     final sortedNamedArgs = named.toList()
-      ..sort((e1, e2) =>
-          (e1.name!.value() as String).compareTo((e2.name!.value() as String)));
+      ..sort((e1, e2) => (e1.name!.lexeme).compareTo((e2.name!.lexeme)));
     final sortedNamedArgNames =
-        sortedNamedArgs.map((e) => e.name!.value() as String).toList();
+        sortedNamedArgs.map((e) => e.name!.lexeme).toList();
 
     final sortedNamedArgTypes = sortedNamedArgs
         .map((e) => e is DefaultFormalParameter ? e.parameter : e)

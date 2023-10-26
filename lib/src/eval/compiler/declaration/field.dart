@@ -8,7 +8,7 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 void compileFieldDeclaration(int fieldIndex, FieldDeclaration d,
     CompilerContext ctx, NamedCompilationUnitMember parent) {
-  final parentName = parent.name.value() as String;
+  final parentName = parent.name.lexeme;
   var _fieldIndex = fieldIndex;
   for (final field in d.fields.variables) {
     final fieldName = field.name.value().toString();

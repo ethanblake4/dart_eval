@@ -22,8 +22,8 @@ void compileConstructorDeclaration(
     ConstructorDeclaration d,
     NamedCompilationUnitMember parent,
     List<FieldDeclaration> fields) {
-  final parentName = parent.name.value() as String;
-  final dName = (d.name?.value() as String?) ?? "";
+  final parentName = parent.name.lexeme;
+  final dName = (d.name?.lexeme) ?? "";
   final n = '$parentName.$dName';
   final isEnum = parent is EnumDeclaration;
 
@@ -75,26 +75,24 @@ void compileConstructorDeclaration(
       if (p.type != null) {
         _type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
       }
-      _type ??= TypeRef.lookupFieldType(
-          ctx,
-          TypeRef.lookupDeclaration(ctx, ctx.library, parent),
-          p.name.value() as String);
+      _type ??= TypeRef.lookupFieldType(ctx,
+          TypeRef.lookupDeclaration(ctx, ctx.library, parent), p.name.lexeme);
       _type ??= V?.type;
       _type ??= CoreTypes.dynamic.ref(ctx);
 
       Vrep = Variable(i,
               _type.copyWith(boxed: !_type.isUnboxedAcrossFunctionBoundaries))
           .boxIfNeeded(ctx)
-        ..name = p.name.value() as String;
+        ..name = p.name.lexeme;
 
-      fieldFormalNames.add(p.name.value() as String);
+      fieldFormalNames.add(p.name.lexeme);
     } else if (p is SuperFormalParameter) {
       final type = resolveSuperFormalType(ctx, ctx.library, p, d);
       Vrep = Variable(
               i, type.copyWith(boxed: !type.isUnboxedAcrossFunctionBoundaries))
           .boxIfNeeded(ctx)
-        ..name = p.name.value() as String;
-      superParams.add(p.name.value() as String);
+        ..name = p.name.lexeme;
+      superParams.add(p.name.lexeme);
     } else {
       p as SimpleFormalParameter;
       var type = CoreTypes.dynamic.ref(ctx);
@@ -103,7 +101,7 @@ void compileConstructorDeclaration(
       }
       type =
           type.copyWith(boxed: !unboxedAcrossFunctionBoundaries.contains(type));
-      Vrep = Variable(i, type)..name = p.name!.value() as String;
+      Vrep = Variable(i, type)..name = p.name!.lexeme;
     }
 
     ctx.setLocal(Vrep.name!, Vrep);
@@ -220,7 +218,7 @@ void compileConstructorDeclaration(
   }
 
   final op = CreateClass.make(ctx.library, $super.scopeFrameOffset,
-      parent.name.value() as String, fieldIdx + (isEnum ? 2 : 0));
+      parent.name.lexeme, fieldIdx + (isEnum ? 2 : 0));
   ctx.pushOp(op, CreateClass.len(op));
   final instOffset = ctx.scopeFrameOffset++;
 
@@ -306,7 +304,7 @@ void compileConstructorDeclaration(
 
 void compileDefaultConstructor(CompilerContext ctx,
     NamedCompilationUnitMember parent, List<FieldDeclaration> fields) {
-  final parentName = parent.name.value() as String;
+  final parentName = parent.name.lexeme;
   final n = '$parentName.';
 
   ctx.topLevelDeclarationPositions[ctx.library]![n] =
@@ -372,7 +370,7 @@ void compileDefaultConstructor(CompilerContext ctx,
   }
 
   final op = CreateClass.make(ctx.library, $super.scopeFrameOffset,
-      parent.name.value() as String, fieldIdx + (isEnum ? 2 : 0));
+      parent.name.lexeme, fieldIdx + (isEnum ? 2 : 0));
   ctx.pushOp(op, CreateClass.len(op));
   final instOffset = ctx.scopeFrameOffset++;
 
@@ -434,7 +432,7 @@ Map<String, int> _getFieldIndices(List<FieldDeclaration> fields,
   var _fieldIdx = fieldIdx;
   for (final fd in fields) {
     for (final field in fd.fields.variables) {
-      fieldIndices[field.name.value() as String] = _fieldIdx;
+      fieldIndices[field.name.lexeme] = _fieldIdx;
       _fieldIdx++;
     }
   }
@@ -447,12 +445,11 @@ void _compileUnusedFields(CompilerContext ctx, List<FieldDeclaration> fields,
   var _fieldIdx = fieldIdx;
   for (final fd in fields) {
     for (final field in fd.fields.variables) {
-      if (!usedNames.contains(field.name.value() as String) &&
-          field.initializer != null) {
+      if (!usedNames.contains(field.name.lexeme) && field.initializer != null) {
         final V = compileExpression(field.initializer!, ctx).boxIfNeeded(ctx);
         ctx.inferredFieldTypes.putIfAbsent(ctx.library, () => {}).putIfAbsent(
-            ctx.currentClass!.name.lexeme,
-            () => {})[field.name.value() as String] = V.type;
+                ctx.currentClass!.name.lexeme, () => {})[field.name.lexeme] =
+            V.type;
         ctx.pushOp(
             SetObjectPropertyImpl.make(
                 instOffset, _fieldIdx, V.scopeFrameOffset),

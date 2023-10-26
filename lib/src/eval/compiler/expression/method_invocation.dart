@@ -71,7 +71,7 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
   final offset = method.methodOffset!;
   if (offset.file == ctx.library &&
       offset.className != null &&
-      offset.className == (ctx.currentClass?.name.value() as String)) {
+      offset.className == (ctx.currentClass?.name.lexeme)) {
     final $this = ctx.lookupLocal('#this')!;
     return _invokeWithTarget(ctx, $this, e);
   }
@@ -90,8 +90,8 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
       ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
       TypeRef? thisType;
       if (ctx.currentClass != null) {
-        thisType = ctx.visibleTypes[ctx.library]![
-            ctx.currentClass!.name.value() as String]!;
+        thisType =
+            ctx.visibleTypes[ctx.library]![ctx.currentClass!.name.lexeme]!;
       }
       mReturnType =
           method.methodReturnType?.toAlwaysReturnType(ctx, thisType, [], {}) ??
@@ -156,7 +156,7 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
     if (typeParams != null) {
       for (final param in typeParams) {
         final bound = param.bound;
-        final name = param.name.value() as String;
+        final name = param.name.lexeme;
         if (bound != null) {
           resolveGenerics[name] =
               TypeRef.fromAnnotation(ctx, offset.file!, bound);
@@ -211,8 +211,7 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
 
   TypeRef? thisType;
   if (ctx.currentClass != null) {
-    thisType = ctx
-        .visibleTypes[ctx.library]![ctx.currentClass!.name.value() as String]!;
+    thisType = ctx.visibleTypes[ctx.library]![ctx.currentClass!.name.lexeme]!;
   }
 
   mReturnType ??= method.methodReturnType

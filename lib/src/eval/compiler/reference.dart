@@ -53,7 +53,7 @@ class IdentifierReference implements Reference {
     // Instance
     if (ctx.currentClass != null) {
       final instanceDeclaration = resolveInstanceDeclaration(
-          ctx, ctx.library, ctx.currentClass!.name.value() as String, name);
+          ctx, ctx.library, ctx.currentClass!.name.lexeme, name);
       if (instanceDeclaration != null) {
         final $type = instanceDeclaration.first;
         return TypeRef.lookupFieldType(ctx, $type, name) ??
@@ -62,15 +62,14 @@ class IdentifierReference implements Reference {
     }
 
     final staticDeclaration = resolveStaticDeclaration(
-        ctx, ctx.library, ctx.currentClass!.name.value() as String, name);
+        ctx, ctx.library, ctx.currentClass!.name.lexeme, name);
 
     if (staticDeclaration != null && staticDeclaration.declaration != null) {
       final _dec = staticDeclaration.declaration!;
       if (_dec is MethodDeclaration) {
         return CoreTypes.function.ref(ctx);
       } else if (_dec is VariableDeclaration) {
-        final name =
-            '${ctx.currentClass!.name.value() as String}.${_dec.name.value() as String}';
+        final name = '${ctx.currentClass!.name.lexeme}.${_dec.name.lexeme}';
         return ctx.topLevelVariableInferredTypes[ctx.library]![name]!;
       }
     }
@@ -114,7 +113,7 @@ class IdentifierReference implements Reference {
     // Instance
     if (ctx.currentClass != null) {
       final instanceDeclaration = resolveInstanceDeclaration(
-          ctx, ctx.library, ctx.currentClass!.name.value() as String, name);
+          ctx, ctx.library, ctx.currentClass!.name.lexeme, name);
       if (instanceDeclaration != null) {
         final $type = instanceDeclaration.first;
         final fieldType = TypeRef.lookupFieldType(ctx, $type, name) ??
@@ -204,7 +203,7 @@ class IdentifierReference implements Reference {
     // Next, the instance (if available)
     if (ctx.currentClass != null) {
       final instanceDeclaration = resolveInstanceDeclaration(
-          ctx, ctx.library, ctx.currentClass!.name.value() as String, name);
+          ctx, ctx.library, ctx.currentClass!.name.lexeme, name);
       if (instanceDeclaration != null) {
         final $type = instanceDeclaration.first;
         final _dec = instanceDeclaration.second;
@@ -215,7 +214,7 @@ class IdentifierReference implements Reference {
           return Variable(-1, CoreTypes.function.ref(ctx),
               methodOffset: DeferredOrOffset(
                   file: ctx.library,
-                  className: ctx.currentClass!.name.value() as String,
+                  className: ctx.currentClass!.name.lexeme,
                   name: name,
                   targetScopeFrameOffset: $this.scopeFrameOffset),
               callingConvention: CallingConvention.static);
@@ -239,7 +238,7 @@ class IdentifierReference implements Reference {
                     specifiedType: $type, specifyingType: $this.type),
                 methodOffset: DeferredOrOffset(
                     file: ctx.library,
-                    className: ctx.currentClass!.name.value() as String,
+                    className: ctx.currentClass!.name.lexeme,
                     name: name));
           }
           final bridge = _dec.bridge!;
@@ -247,7 +246,7 @@ class IdentifierReference implements Reference {
             return Variable.alloc(ctx, CoreTypes.function.ref(ctx),
                 methodOffset: DeferredOrOffset(
                     file: ctx.library,
-                    className: ctx.currentClass!.name.value() as String,
+                    className: ctx.currentClass!.name.lexeme,
                     name: name));
           }
           throw CompileError(
@@ -262,17 +261,16 @@ class IdentifierReference implements Reference {
       }
 
       final staticDeclaration = resolveStaticDeclaration(
-          ctx, ctx.library, ctx.currentClass!.name.value() as String, name);
+          ctx, ctx.library, ctx.currentClass!.name.lexeme, name);
 
       if (staticDeclaration != null && staticDeclaration.declaration != null) {
         final _dec = staticDeclaration.declaration!;
         if (_dec is MethodDeclaration) {
           return Variable(-1, CoreTypes.function.ref(ctx),
-              methodOffset: DeferredOrOffset.lookupStatic(ctx, ctx.library,
-                  ctx.currentClass!.name.value() as String, name));
+              methodOffset: DeferredOrOffset.lookupStatic(
+                  ctx, ctx.library, ctx.currentClass!.name.lexeme, name));
         } else if (_dec is VariableDeclaration) {
-          final name =
-              '${ctx.currentClass!.name.value() as String}.${_dec.name.value() as String}';
+          final name = '${ctx.currentClass!.name.lexeme}.${_dec.name.lexeme}';
           final type = ctx.topLevelVariableInferredTypes[ctx.library]![name]!;
           final gIndex = ctx.topLevelGlobalIndices[ctx.library]![name]!;
           ctx.pushOp(LoadGlobal.make(gIndex), LoadGlobal.LEN);
@@ -531,10 +529,10 @@ Variable _declarationToVariable(
   final decl = _decl.declaration!;
 
   if (decl is VariableDeclaration) {
-    final type = ctx.topLevelVariableInferredTypes[_decl.sourceLib]![
-        decl.name.value() as String]!;
-    final gIndex = ctx
-        .topLevelGlobalIndices[_decl.sourceLib]![decl.name.value() as String]!;
+    final type =
+        ctx.topLevelVariableInferredTypes[_decl.sourceLib]![decl.name.lexeme]!;
+    final gIndex =
+        ctx.topLevelGlobalIndices[_decl.sourceLib]![decl.name.lexeme]!;
     ctx.pushOp(LoadGlobal.make(gIndex), LoadGlobal.LEN);
     ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
 

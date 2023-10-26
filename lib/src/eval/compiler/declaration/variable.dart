@@ -9,7 +9,7 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 void compileTopLevelVariableDeclaration(
     VariableDeclaration v, CompilerContext ctx) {
   final parent = v.parent!.parent! as TopLevelVariableDeclaration;
-  final varName = v.name.value() as String;
+  final varName = v.name.lexeme;
 
   final initializer = v.initializer;
   if (initializer != null) {

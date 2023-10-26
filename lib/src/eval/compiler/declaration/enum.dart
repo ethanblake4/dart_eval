@@ -15,7 +15,7 @@ void compileEnumDeclaration(CompilerContext ctx, EnumDeclaration d,
     {bool statics = false}) {
   final type = TypeRef.lookupDeclaration(ctx, ctx.library, d);
   final $runtimeType = ctx.typeRefIndexMap[type];
-  final clsName = d.name.value() as String;
+  final clsName = d.name.lexeme;
   ctx.instanceDeclarationPositions[ctx.library]![clsName] = [
     {},
     {},
@@ -68,12 +68,11 @@ void compileEnumDeclaration(CompilerContext ctx, EnumDeclaration d,
 
   var idx = 0;
   for (final constant in d.constants) {
-    final cName = constant.name.value() as String;
+    final cName = constant.name.lexeme;
     ctx.resetStack(position: 0);
     final pos = beginMethod(ctx, constant, constant.offset, '$cName*i');
     final cstrName = constant.arguments?.constructorSelector?.name.name ?? '';
-    final method =
-        IdentifierReference(null, d.name.value() as String).getValue(ctx);
+    final method = IdentifierReference(null, d.name.lexeme).getValue(ctx);
     final offset = method.methodOffset ??
         (throw CompileError(
             'Cannot instantiate enum $clsName (no valid constructor $cstrName)'));

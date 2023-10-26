@@ -40,8 +40,7 @@ List<PossiblyValuedParameter> resolveFPLDefaults(
   }
 
   if (sortNamed) {
-    named.sort((a, b) =>
-        (a.name!.value() as String).compareTo(b.name!.value() as String));
+    named.sort((a, b) => (a.name!.lexeme).compareTo(b.name!.lexeme));
   }
 
   for (final param in [...positional, ...named]) {

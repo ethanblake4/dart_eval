@@ -8,7 +8,7 @@ void compileClassDeclaration(CompilerContext ctx, ClassDeclaration d,
     {bool statics = false}) {
   final $runtimeType =
       ctx.typeRefIndexMap[TypeRef.lookupDeclaration(ctx, ctx.library, d)];
-  final clsName = d.name.value() as String;
+  final clsName = d.name.lexeme;
   ctx.instanceDeclarationPositions[ctx.library]![clsName] = [
     {},
     {},

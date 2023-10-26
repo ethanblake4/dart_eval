@@ -15,7 +15,7 @@ Variable compileInstanceCreation(
     CompilerContext ctx, InstanceCreationExpression e) {
   final type = e.constructorName.type;
   final name = e.constructorName.name;
-  final typeName = type.name2.value() as String;
+  final typeName = type.name2.lexeme;
   final $resolved = IdentifierReference(null, typeName).getValue(ctx);
 
   if ($resolved.concreteTypes.isEmpty) {

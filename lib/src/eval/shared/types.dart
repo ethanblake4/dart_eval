@@ -119,6 +119,49 @@ class AsyncTypes {
   static const streamSink = BridgeTypeSpec('dart:async', 'StreamSink');
 }
 
+/// This class contains dart:collection bridge type specs for convenience
+class CollectionTypes {
+  /// Bridge type spec for [$IterableBase]
+  static const iterableBase = BridgeTypeSpec('dart:collection', 'IterableBase');
+
+  /// Bridge type spec for [$ListBase]
+  static const listBase = BridgeTypeSpec('dart:collection', 'ListBase');
+
+  /// Bridge type spec for [$MapBase]
+  static const mapBase = BridgeTypeSpec('dart:collection', 'MapBase');
+
+  /// Bridge type spec for [$Queue]
+  static const queue = BridgeTypeSpec('dart:collection', 'Queue');
+
+  /// Bridge type spec for [$SetBase]
+  static const setBase = BridgeTypeSpec('dart:collection', 'SetBase');
+
+  /// Bridge type spec for [$LinkedHashMap]
+  static const linkedHashMap =
+      BridgeTypeSpec('dart:collection', 'LinkedHashMap');
+
+  /// Bridge type spec for [$LinkedHashSet]
+  static const linkedHashSet =
+      BridgeTypeSpec('dart:collection', 'LinkedHashSet');
+
+  /// Bridge type spec for [$DoubleLinkedQueue]
+  static const doubleLinkedQueue =
+      BridgeTypeSpec('dart:collection', 'DoubleLinkedQueue');
+
+  /// Bridge type spec for [$DoubleLinkedQueueEntry]
+  static const doubleLinkedQueueEntry =
+      BridgeTypeSpec('dart:collection', 'DoubleLinkedQueueEntry');
+
+  /// Bridge type spec for [$HashMap]
+  static const hashMap = BridgeTypeSpec('dart:collection', 'HashMap');
+
+  /// Bridge type spec for [$HashSet]
+  static const hashSet = BridgeTypeSpec('dart:collection', 'HashSet');
+
+  /// Bridge type spec for [$ListMixin]
+  static const listMixin = BridgeTypeSpec('dart:collection', 'ListMixin');
+}
+
 /// This class contains dart:convert bridge type specs for convenience
 class ConvertTypes {
   /// Bridge type spec for [$Converter]

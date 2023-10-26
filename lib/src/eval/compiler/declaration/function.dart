@@ -17,9 +17,8 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   ctx.runPrescan(d);
-  final pos = beginMethod(ctx, d, d.offset, '${d.name.value() as String}()');
-  ctx.topLevelDeclarationPositions[ctx.library]![d.name.value() as String] =
-      pos;
+  final pos = beginMethod(ctx, d, d.offset, '${d.name.lexeme}()');
+  ctx.topLevelDeclarationPositions[ctx.library]![d.name.lexeme] = pos;
 
   final overrideAnno = d.metadata
       .firstWhereOrNull((element) => element.name.name == 'RuntimeOverride');
@@ -65,7 +64,7 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
     }
     Vrep = Variable(
         i, type.copyWith(boxed: !type.isUnboxedAcrossFunctionBoundaries))
-      ..name = p.name!.value() as String;
+      ..name = p.name!.lexeme;
 
     ctx.setLocal(Vrep.name!, Vrep);
 
@@ -83,7 +82,7 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   StatementInfo? stInfo;
   if (b is BlockFunctionBody) {
     stInfo = compileBlock(b.block, expectedReturnType, ctx,
-        name: '${d.name.value() as String}()');
+        name: '${d.name.lexeme}()');
   } else if (b is ExpressionFunctionBody) {
     ctx.beginAllocScope();
     stInfo = doReturn(ctx, expectedReturnType,

@@ -24,8 +24,8 @@ void compileVariableDeclarationList(
   }
 
   for (final li in l.variables) {
-    if (ctx.locals.last.containsKey(li.name.value() as String)) {
-      throw CompileError('Cannot declare variable ${li.name.value() as String}'
+    if (ctx.locals.last.containsKey(li.name.lexeme)) {
+      throw CompileError('Cannot declare variable ${li.name.lexeme}'
           ' multiple times in the same scope');
     }
     final init = li.initializer;
@@ -34,7 +34,7 @@ void compileVariableDeclarationList(
       if (type != null &&
           !res.type.resolveTypeChain(ctx).isAssignableTo(ctx, type)) {
         throw CompileError(
-            'Type mismatch: variable "${li.name.value() as String} is specified'
+            'Type mismatch: variable "${li.name.lexeme} is specified'
             ' as type $type, but is initialized to an incompatible value of type ${res.type}');
       }
       if (!(type?.isUnboxedAcrossFunctionBoundaries ?? true)) {
@@ -45,10 +45,10 @@ void compileVariableDeclarationList(
         ctx.pushOp(PushNull.make(), PushNull.LEN);
         ctx.pushOp(CopyValue.make(_v.scopeFrameOffset, res.scopeFrameOffset),
             CopyValue.LEN);
-        ctx.setLocal(li.name.value() as String, _v);
+        ctx.setLocal(li.name.lexeme, _v);
       } else {
         ctx.setLocal(
-            li.name.value() as String,
+            li.name.lexeme,
             Variable(res.scopeFrameOffset,
                 (type ?? res.type).copyWith(boxed: res.boxed),
                 isFinal: l.isFinal || l.isConst,
@@ -58,7 +58,7 @@ void compileVariableDeclarationList(
       }
     } else {
       ctx.setLocal(
-          li.name.value() as String,
+          li.name.lexeme,
           BuiltinValue()
               .push(ctx)
               .boxIfNeeded(ctx)

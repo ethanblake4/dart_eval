@@ -49,8 +49,7 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
     if (p.type != null) {
       type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
     }
-    Vrep = Variable(i, type.copyWith(boxed: true))
-      ..name = p.name!.value() as String;
+    Vrep = Variable(i, type.copyWith(boxed: true))..name = p.name!.lexeme;
 
     ctx.setLocal(Vrep.name!, Vrep);
 
@@ -117,10 +116,9 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
   final named =
       (e.parameters?.parameters.where((element) => element.isNamed) ?? []);
   final sortedNamedArgs = named.toList()
-    ..sort((e1, e2) =>
-        (e1.name!.value() as String).compareTo((e2.name!.value() as String)));
+    ..sort((e1, e2) => (e1.name!.lexeme).compareTo((e2.name!.lexeme)));
   final sortedNamedArgNames =
-      sortedNamedArgs.map((e) => e.name!.value() as String).toList();
+      sortedNamedArgs.map((e) => e.name!.lexeme).toList();
 
   final sortedNamedArgTypes = sortedNamedArgs
       .map((e) => e is DefaultFormalParameter ? e.parameter : e)

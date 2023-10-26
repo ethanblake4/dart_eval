@@ -17,6 +17,7 @@ import 'package:dart_eval/src/eval/compiler/util/library_graph.dart';
 import 'package:dart_eval/src/eval/compiler/util/tree_shake.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/collection.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io.dart';
@@ -58,8 +59,9 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
   /// [EvalPlugin]s that will be applied to the compiler
   final _plugins = <EvalPlugin>[
     DartAsyncPlugin(),
-    DartCorePlugin(),
+    DartCollectionPlugin(),
     DartConvertPlugin(),
+    DartCorePlugin(),
     DartIoPlugin(),
     DartMathPlugin(),
     DartTypedDataPlugin()
@@ -600,7 +602,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       }
 
       for (final variable in vlist.variables) {
-        final name = variable.name.value() as String;
+        final name = variable.name.lexeme;
 
         if (_topLevelDeclarationsMap[libraryIndex]!.containsKey(name)) {
           throw CompileError('Cannot define "$name" twice in the same library',
@@ -613,7 +615,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       }
     } else {
       declaration as NamedCompilationUnitMember;
-      final name = declaration.name.value() as String;
+      final name = declaration.name.lexeme;
 
       if (_topLevelDeclarationsMap[libraryIndex]!.containsKey(name)) {
         throw CompileError('Cannot define "$name" twice in the same library',
@@ -637,8 +639,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
               _ctx.topLevelVariableInferredTypes[libraryIndex] = {};
             }
 
-            final name =
-                '${declaration.name.value() as String}.${constant.name.value()}';
+            final name = '${declaration.name.lexeme}.${constant.name.lexeme}';
             if (_topLevelDeclarationsMap[libraryIndex]!.containsKey(name)) {
               throw CompileError(
                   'Cannot define "$name" twice in the same library',
@@ -654,7 +655,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
 
         members.forEach((member) {
           if (member is MethodDeclaration) {
-            var mName = member.name.value() as String;
+            var mName = member.name.lexeme;
             if (member.isStatic) {
               _topLevelDeclarationsMap[libraryIndex]!['$name.$mName'] =
                   DeclarationOrBridge(libraryIndex, declaration: member);
@@ -675,8 +676,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
               }
 
               for (final field in member.fields.variables) {
-                final name =
-                    '${declaration.name.value() as String}.${field.name.value()}';
+                final name = '${declaration.name.lexeme}.${field.name.lexeme}';
 
                 if (_topLevelDeclarationsMap[libraryIndex]!.containsKey(name)) {
                   throw CompileError(
@@ -692,12 +692,12 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
               }
             } else {
               for (final field in member.fields.variables) {
-                final fName = field.name.value() as String;
+                final fName = field.name.lexeme;
                 _instanceDeclarationsMap[libraryIndex]![name]![fName] = field;
               }
             }
           } else if (member is ConstructorDeclaration) {
-            final mName = (member.name?.value() as String?) ?? "";
+            final mName = (member.name?.lexeme) ?? "";
             _topLevelDeclarationsMap[libraryIndex]!['$name.$mName'] =
                 DeclarationOrBridge(libraryIndex, declaration: member);
           } else {
@@ -730,8 +730,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       if (declaration is! ClassDeclaration && declaration is! EnumDeclaration) {
         return null;
       }
-      final name =
-          (declaration as NamedCompilationUnitMember).name.value() as String;
+      final name = (declaration as NamedCompilationUnitMember).name.lexeme;
       return TypeRef.cache(_ctx, libraryIndex, name, fileRef: libraryIndex);
     }
   }

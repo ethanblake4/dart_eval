@@ -22,8 +22,7 @@ class FunctionSignaturePool {
         p.parameters.where((element) => element.isPositional).length;
 
     final sig = p.parameters.where((element) => element.isNamed).fold(
-        '$countPos#',
-        (previousValue, element) => '${element.name!.value() as String}#');
+        '$countPos#', (previousValue, element) => '${element.name!.lexeme}#');
 
     return signatures[sig] ?? (signatures[sig] = _idx++);
   }

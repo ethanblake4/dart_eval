@@ -470,7 +470,7 @@ class TypeRef {
       implementsNames = implementsClause?.interfaces.toList() ?? [];
       generics = typeParameters?.typeParameters
               .map((t) => GenericParam(
-                  t.name.value() as String,
+                  t.name.lexeme,
                   t.bound == null
                       ? null
                       : TypeRef.fromAnnotation(ctx, file, t.bound!)))
@@ -719,7 +719,7 @@ class TypeRef {
       for (final param in typeParams) {
         ctx.temporaryTypes[library ?? ctx.library] ??= {};
         final bound = param.bound;
-        final name = param.name.value() as String;
+        final name = param.name.lexeme;
         if (bound != null) {
           ctx.temporaryTypes[library ?? ctx.library]![name] =
               TypeRef.fromAnnotation(ctx, library ?? ctx.library, bound);

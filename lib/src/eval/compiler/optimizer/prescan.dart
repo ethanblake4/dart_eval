@@ -28,7 +28,7 @@ class PrescanVisitor extends RecursiveAstVisitor<PrescanContext?> {
   @override
   PrescanContext? visitVariableDeclaration(VariableDeclaration node) {
     node.initializer?.accept(this);
-    ctx.setLocal(node.name.value() as String, Variable.alloc(ctx, dynamicType));
+    ctx.setLocal(node.name.lexeme, Variable.alloc(ctx, dynamicType));
   }
 
   @override
