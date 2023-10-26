@@ -237,7 +237,7 @@ Map<TypeRef, Map<String, KnownMethod>> getKnownMethods(ctx) {
           [KnownMethodArg('index', CoreTypes.int.ref(ctx), false)], {}),
       'compareTo': KnownMethod(AlwaysReturnType(CoreTypes.int.ref(ctx), false),
           [KnownMethodArg('other', CoreTypes.string.ref(ctx), false)], {}),
-      'contains': KnownMethod(AlwaysReturnType(CoreTypes.int.ref(ctx), false),
+      'contains': KnownMethod(AlwaysReturnType(CoreTypes.bool.ref(ctx), false),
           [KnownMethodArg('other', CoreTypes.string.ref(ctx), false)], {}),
       'endsWith': KnownMethod(AlwaysReturnType(CoreTypes.bool.ref(ctx), false),
           [KnownMethodArg('other', CoreTypes.string.ref(ctx), false)], {}),

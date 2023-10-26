@@ -34,6 +34,7 @@
   field accesses when the concrete type of a variable is known
 - Fix various errors when using non-reserved language keywords as 
   the name of a variable or function
+- Fix incorrect type hint for String.contains()
 - Runtime errors now print out the scope stack for easier debugging
 - Reformat line length to 80 for standardization with Dart ecosystem
 - Documentation improvements

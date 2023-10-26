@@ -113,7 +113,7 @@ void main() {
       final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
-            int main() {
+            bool main() {
               String cat = "Fluffy";
               return cat.contains("fy");
             }
