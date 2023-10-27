@@ -14,7 +14,6 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/object.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/pattern.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/regexp.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/string_buffer.dart';
-import 'package:dart_eval/src/eval/shared/stdlib/core/symbol.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/type.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/uri.dart';
 import 'core/duration.dart';
@@ -39,7 +38,6 @@ class DartCorePlugin implements EvalPlugin {
     registry.defineBridgeClass($enumDeclaration);
     registry.defineBridgeClass($bool.$declaration);
     registry.defineBridgeClass($Function.$declaration);
-    registry.defineBridgeClass($Symbol.$declaration);
     registry.defineBridgeClass($num.$declaration);
     registry.defineBridgeClass($int.$declaration);
     registry.defineBridgeClass($double.$declaration);
@@ -54,6 +52,7 @@ class DartCorePlugin implements EvalPlugin {
     registry.defineBridgeClass($Uri.$declaration);
     registry.defineBridgeClass($Pattern.$declaration);
     registry.defineBridgeClass($Match.$declaration);
+    registry.defineBridgeClass($RegExpMatch.$declaration);
     registry.defineBridgeClass($RegExp.$declaration);
     registry.defineBridgeClass($AssertionError.$declaration);
     registry.defineBridgeClass($RangeError.$declaration);
@@ -93,6 +92,5 @@ class DartCorePlugin implements EvalPlugin {
         $RangeError.$checkValidRange);
     runtime.registerBridgeFunc('dart:core', 'RangeError.checkNotNegative',
         $RangeError.$checkNotNegative);
-    runtime.registerBridgeFunc('dart:core', 'Symbol.', $Symbol.$new);
   }
 }
