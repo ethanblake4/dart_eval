@@ -29,7 +29,7 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx,
           0, ctx.visibleTypes[ctx.library]![ctx.currentClass!.name.lexeme]!));
   final resolvedParams = d.parameters == null
       ? <PossiblyValuedParameter>[]
-      : resolveFPLDefaults(ctx, d.parameters!, true, allowUnboxed: true);
+      : resolveFPLDefaults(ctx, d.parameters, true, allowUnboxed: true);
 
   if (b.isAsynchronous) {
     setupAsyncFunction(ctx);

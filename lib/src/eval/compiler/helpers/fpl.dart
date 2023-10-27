@@ -6,7 +6,7 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 List<PossiblyValuedParameter> resolveFPLDefaults(
-    CompilerContext ctx, FormalParameterList fpl, bool isInstanceMethod,
+    CompilerContext ctx, FormalParameterList? fpl, bool isInstanceMethod,
     {bool allowUnboxed = true,
     bool sortNamed = false,
     bool ignoreDefaults = false,
@@ -19,7 +19,7 @@ List<PossiblyValuedParameter> resolveFPLDefaults(
   final named = <FormalParameter>[];
   final positional = <FormalParameter>[];
 
-  for (final param in fpl.parameters) {
+  for (final param in fpl?.parameters ?? <FormalParameter>[]) {
     if (param.isNamed) {
       if (hasEncounteredOptionalPositionalParam) {
         throw CompileError(

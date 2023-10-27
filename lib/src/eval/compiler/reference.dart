@@ -571,6 +571,9 @@ Variable _declarationToVariable(
     returnType = TypeRef.fromAnnotation(ctx, _decl.sourceLib, decl.returnType!);
     nullable = decl.returnType!.question != null;
     ctx.temporaryTypes[ctx.library]?.clear();
+    if (decl.isGetter) {
+      return Variable(-1, returnType);
+    }
   } else {
     returnType = TypeRef.lookupDeclaration(
         ctx, _decl.sourceLib, decl.parent as ClassDeclaration);

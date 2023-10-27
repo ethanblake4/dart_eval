@@ -65,7 +65,7 @@ extension TearOff on Variable {
     ctx.setLocal('#prev', $prev);
 
     ctx.scopeFrameOffset += _existingAllocs;
-    final resolvedParams = resolveFPLDefaults(ctx, parameters!, false,
+    final resolvedParams = resolveFPLDefaults(ctx, parameters, false,
         allowUnboxed: true, sortNamed: true, ignoreDefaults: true);
 
     var i = 1;
@@ -140,8 +140,8 @@ extension TearOff on Variable {
     ctx.restoreState(ctxSaveState);
     ctx.scopeFrameOffset = sfo;
 
-    final positional =
-        (parameters.parameters.where((element) => element.isPositional));
+    final positional = ((parameters?.parameters ?? [])
+        .where((element) => element.isPositional));
     final requiredPositionalArgCount =
         positional.where((element) => element.isRequired).length;
 
@@ -157,7 +157,8 @@ extension TearOff on Variable {
         .map((rt) => rt.toJson())
         .toList();
 
-    final named = (parameters.parameters.where((element) => element.isNamed));
+    final named =
+        ((parameters?.parameters ?? []).where((element) => element.isNamed));
     final sortedNamedArgs = named.toList()
       ..sort((e1, e2) => (e1.name!.lexeme).compareTo((e2.name!.lexeme)));
     final sortedNamedArgNames =

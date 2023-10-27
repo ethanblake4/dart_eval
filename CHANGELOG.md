@@ -35,6 +35,7 @@
 - Fix various errors when using non-reserved language keywords as 
   the name of a variable or function
 - Fix incorrect type hint for String.contains()
+- Fix top-level getters
 - Runtime errors now print out the scope stack for easier debugging
 - Reformat line length to 80 for standardization with Dart ecosystem
 - Documentation improvements

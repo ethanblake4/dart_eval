@@ -45,7 +45,7 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   ctx.beginAllocScope(existingAllocLen: _existingAllocs);
   ctx.scopeFrameOffset += _existingAllocs;
   final resolvedParams = resolveFPLDefaults(
-      ctx, d.functionExpression.parameters!, false,
+      ctx, d.functionExpression.parameters, false,
       allowUnboxed: true);
 
   var i = 0;

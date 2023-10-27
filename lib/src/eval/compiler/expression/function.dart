@@ -35,7 +35,7 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
   ctx.setLocal('#prev', $prev);
 
   ctx.scopeFrameOffset += _existingAllocs;
-  final resolvedParams = resolveFPLDefaults(ctx, e.parameters!, false,
+  final resolvedParams = resolveFPLDefaults(ctx, e.parameters, false,
       allowUnboxed: false, sortNamed: true);
 
   var i = 1;

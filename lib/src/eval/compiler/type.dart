@@ -564,7 +564,7 @@ class TypeRef {
     final l2extends =
         extendsType?.resolveTypeChain(ctx).getTypeChain(ctx) ?? [];
     final chain = <List<TypeRef>>[
-      if (l1extends != null) [l1extends],
+      if (l1extends != null && l2extends.isEmpty) [l1extends],
       ...l2extends
     ];
 
@@ -575,7 +575,7 @@ class TypeRef {
       chain[0].add(imp);
       final tc = imp.resolveTypeChain(ctx).getTypeChain(ctx);
       for (var i = 0; i < tc.length; i++) {
-        if (chain.length < i + 1) {
+        if (chain.length < i + 2) {
           chain.add([]);
         }
         chain[i + 1].addAll(tc[i]);
