@@ -297,5 +297,29 @@ void main() {
       expect(() => runtime.executeLib('package:example/main.dart', 'main'),
           throwsA(isA<AssertionError>()));
     });
+
+    test('DateTime.parse throwing exception', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              final a = tryCatch();
+              print(a);
+            }
+
+            DateTime? tryCatch() {
+              try {
+                return DateTime.parse('please fail');
+              } on FormatException catch (e) {
+                print(e);
+                return null;
+              }
+            }
+          '''
+        }
+      });
+      expect(() => runtime.executeLib('package:example/main.dart', 'main'),
+          prints('FormatException: Invalid date format\nplease fail\nnull\n'));
+    });
   });
 }

@@ -47,16 +47,22 @@ class $num<T extends num> implements $Instance {
       wrap: true);
 
   /// Wrapper of [num.parse]
-  static $num $parse(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $num? $parse(Runtime runtime, $Value? target, List<$Value?> args) {
     final source = args[0]!.$value as String;
     final onError = args[1]?.$value as EvalCallable?;
-    final result = num.parse(
-        source,
-        // ignore: deprecated_member_use
-        onError == null
-            ? null
-            : (source) =>
-                onError.call(runtime, null, [$String(source)])?.$value);
+    final num result;
+    try {
+      result = num.parse(
+          source,
+          // ignore: deprecated_member_use
+          onError == null
+              ? null
+              : (source) =>
+                  onError.call(runtime, null, [$String(source)])?.$value);
+    } on FormatException catch (e) {
+      runtime.$throw($FormatException.wrap(e));
+      return null;
+    }
     if (result is int) {
       return $int(result);
     }
@@ -322,11 +328,17 @@ class $int extends $num<int> {
       fields: {},
       wrap: true);
 
-  static $int $parse(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $int? $parse(Runtime runtime, $Value? target, List<$Value?> args) {
     final source = args[0]!.$value as String;
     final radix = args[1]?.$value as int?;
+    final int result;
 
-    final result = int.parse(source, radix: radix);
+    try {
+      result = int.parse(source, radix: radix);
+    } on FormatException catch (e) {
+      runtime.$throw($FormatException.wrap(e));
+      return null;
+    }
 
     return $int(result);
   }

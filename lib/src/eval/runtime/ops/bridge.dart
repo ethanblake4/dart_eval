@@ -102,8 +102,12 @@ class InvokeExternal implements EvcOp {
     }
 
     runtime.args = [];
-    runtime.returnValue =
+    runtime.returnValue = null;
+    final result =
         runtime._bridgeFunctions[_function](runtime, null, _mappedArgs);
+    if (result != null) {
+      runtime.returnValue = result;
+    }
   }
 
   @override

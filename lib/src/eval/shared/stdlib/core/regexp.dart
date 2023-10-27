@@ -1,7 +1,5 @@
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/shared/stdlib/core/base.dart';
-import 'package:dart_eval/src/eval/shared/stdlib/core/pattern.dart';
 import 'package:dart_eval/stdlib/core.dart';
 
 /// dart_eval wrapper for [RegExp]

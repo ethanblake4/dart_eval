@@ -12,6 +12,7 @@
 - Support for ++i and --i prefix operators (thanks @wrbl606)
 - Fix increment and decrement operations on list elements (thanks 
   @wrbl606)
+- Support for `RegExpMatch` and most RegExp methods (thanks @Noobware1)
 - Support for function type arguments and inferring generic return 
   types based on argument types
 - Support for Comparable
@@ -28,7 +29,8 @@
   `class T implements Comparable<T>`
 - Support for `rethrow`
 - Support for symbol literals
-- Add binding for `Exception`, `RangeError`, `Symbol`, and `Zone`
+- Add bindings for `Exception`, `RangeError`, and `FormatException`
+- Add bindings for `Symbol` and `Zone`
 - Add bindings for `ByteBuffer`, `TypedData`, `ByteData`, 
   and `Uint8List` from dart:typed_data
 - Add binding for `LinkedHashMap` from dart:collection

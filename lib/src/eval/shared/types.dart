@@ -92,6 +92,9 @@ class CoreTypes {
   /// Bridge type spec for [Exception]
   static const exception = BridgeTypeSpec('dart:core', 'Exception');
 
+  /// Bridge type spec for [Exception]
+  static const formatException = BridgeTypeSpec('dart:core', 'FormatException');
+
   /// Bridge type spec for [AssertionError]
   static const assertionError = BridgeTypeSpec('dart:core', 'AssertionError');
 

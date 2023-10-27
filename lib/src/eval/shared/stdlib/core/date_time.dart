@@ -1,9 +1,8 @@
+// ignore_for_file: body_might_complete_normally_nullable
+
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/shared/stdlib/core/base.dart';
-import 'package:dart_eval/src/eval/shared/stdlib/core/duration.dart';
-import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
-import 'package:dart_eval/src/eval/shared/stdlib/core/object.dart';
+import 'package:dart_eval/stdlib/core.dart';
 
 /// dart_eval [$Instance] wrapper of a [DateTime]
 class $DateTime implements DateTime, $Instance {
@@ -371,7 +370,11 @@ class $DateTime implements DateTime, $Instance {
 
   static $Value? $parse(Runtime runtime, $Value? target, List<$Value?> args) {
     final formattedString = args[0]!.$value as String;
-    return $DateTime.wrap(DateTime.parse(formattedString));
+    try {
+      return $DateTime.wrap(DateTime.parse(formattedString));
+    } on FormatException catch (e) {
+      runtime.$throw($FormatException.wrap(e));
+    }
   }
 
   static $Value? $tryParse(

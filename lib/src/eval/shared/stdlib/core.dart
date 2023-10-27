@@ -61,6 +61,7 @@ class DartCorePlugin implements EvalPlugin {
     registry.defineBridgeClass($Comparable.$declaration);
     registry.defineBridgeClass($StringBuffer.$declaration);
     registry.defineBridgeClass($Exception.$declaration);
+    registry.defineBridgeClass($FormatException.$declaration);
   }
 
   @override
@@ -95,5 +96,7 @@ class DartCorePlugin implements EvalPlugin {
     runtime.registerBridgeFunc('dart:core', 'RangeError.checkNotNegative',
         $RangeError.$checkNotNegative);
     runtime.registerBridgeFunc('dart:core', 'Symbol.', $Symbol.$new);
+    runtime.registerBridgeFunc(
+        'dart:core', 'FormatException.', $FormatException.$new);
   }
 }
