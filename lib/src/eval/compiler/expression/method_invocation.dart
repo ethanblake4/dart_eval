@@ -330,9 +330,10 @@ Variable _invokeWithTarget(
 
 DeclarationOrBridge<MethodDeclaration, BridgeMethodDef> resolveInstanceMethod(
     CompilerContext ctx, TypeRef instanceType, String methodName,
-    [AstNode? source]) {
+    [AstNode? source, TypeRef? bottomType]) {
   final _dec =
       ctx.topLevelDeclarationsMap[instanceType.file]![instanceType.name]!;
+  final _bottomType = bottomType ?? instanceType;
   if (_dec.isBridge) {
     // Bridge
     final bridge = _dec.bridge! as BridgeClassDef;
@@ -340,10 +341,12 @@ DeclarationOrBridge<MethodDeclaration, BridgeMethodDef> resolveInstanceMethod(
     if (method == null) {
       final $extendsBridgeType = bridge.type.$extends;
       if ($extendsBridgeType == null) {
-        throw CompileError('Method not found $methodName on $instanceType');
+        throw CompileError(
+            'Method not found $methodName on $_bottomType', source);
       }
       final $extendsType = TypeRef.fromBridgeTypeRef(ctx, $extendsBridgeType);
-      return resolveInstanceMethod(ctx, $extendsType, methodName, source);
+      return resolveInstanceMethod(
+          ctx, $extendsType, methodName, source, _bottomType);
     }
     return DeclarationOrBridge(instanceType.file,
         bridge: bridge.methods[methodName]!);
@@ -359,11 +362,12 @@ DeclarationOrBridge<MethodDeclaration, BridgeMethodDef> resolveInstanceMethod(
     final $class = _dec.declaration as ClassDeclaration;
     if ($class.extendsClause == null) {
       return resolveInstanceMethod(
-          ctx, CoreTypes.object.ref(ctx), methodName, source);
+          ctx, CoreTypes.object.ref(ctx), methodName, source, _bottomType);
     }
     final $supertype = ctx.visibleTypes[instanceType.file]![
         $class.extendsClause!.superclass.name2.value()]!;
-    return resolveInstanceMethod(ctx, $supertype, methodName, source);
+    return resolveInstanceMethod(
+        ctx, $supertype, methodName, source, _bottomType);
   }
 }
 

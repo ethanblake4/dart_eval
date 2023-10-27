@@ -337,5 +337,23 @@ void main() {
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 2);
     });
+
+    test('Default positional args', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main () {
+              return fun(1);
+            }
+            
+            int fun(int a, [int b = 2]) {
+              return a + b;
+            }
+           '''
+        }
+      });
+
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 3);
+    });
   });
 }

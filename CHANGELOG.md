@@ -19,6 +19,7 @@
 - Basic support for `runtimeType`
 - Add Runtime.valueToString helper for converting a $Value to a string
   correctly
+- Support for default positional parameters
 - Use short-circuit evaluation for null coalescing operator `??`
 - Support for null-shorted method calls and property access 
   using `?.`
@@ -26,12 +27,14 @@
 - Fix type resolution with self-referential generic types such as
   `class T implements Comparable<T>`
 - Support for `rethrow`
-- Add binding for `Exception` and `RangeError`
+- Support for symbol literals
+- Add binding for `Exception`, `RangeError`, `Symbol`, and `Zone`
 - Add bindings for `ByteBuffer`, `TypedData`, `ByteData`, 
   and `Uint8List` from dart:typed_data
 - Add binding for `LinkedHashMap` from dart:collection
 - Improved performance by optimizing to static method calls and
   field accesses when the concrete type of a variable is known
+- Fix super constructor parameter type resolution
 - Fix various errors when using non-reserved language keywords as 
   the name of a variable or function
 - Fix incorrect type hint for String.contains()

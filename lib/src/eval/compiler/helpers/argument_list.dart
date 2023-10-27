@@ -51,10 +51,26 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
       i++;
       continue;
     }
-    final arg = argumentList.arguments[i];
+    final arg =
+        argumentList.arguments.length <= i ? null : argumentList.arguments[i];
     if (arg is NamedExpression) {
       if (param.isRequired) {
         throw CompileError('Not enough positional arguments');
+      } else {
+        $null ??= BuiltinValue().push(ctx);
+        _push.add($null);
+      }
+    } else if (arg == null) {
+      if (param.isRequired) {
+        throw CompileError('Not enough positional arguments');
+      } else if (param is DefaultFormalParameter) {
+        if (param.defaultValue == null) {
+          $null ??= BuiltinValue().push(ctx);
+          _push.add($null);
+        } else {
+          final _arg = compileExpression(param.defaultValue!, ctx);
+          _push.add(_arg);
+        }
       } else {
         $null ??= BuiltinValue().push(ctx);
         _push.add($null);
@@ -64,17 +80,21 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
       TypeAnnotation? typeAnnotation;
       if (param is SimpleFormalParameter) {
         typeAnnotation = param.type;
-        if (typeAnnotation != null) {
-          paramType = TypeRef.fromAnnotation(ctx, decLibrary, typeAnnotation);
-        }
       } else if (param is FieldFormalParameter) {
         paramType =
             _resolveFieldFormalType(ctx, decLibrary, param, parameterHost);
       } else if (param is SuperFormalParameter) {
         paramType =
             resolveSuperFormalType(ctx, decLibrary, param, parameterHost);
+      } else if (param is DefaultFormalParameter) {
+        final p = param.parameter;
+        typeAnnotation = p is SimpleFormalParameter ? p.type : null;
       } else {
         throw CompileError('Unknown formal type ${param.runtimeType}');
+      }
+
+      if (typeAnnotation != null) {
+        paramType = TypeRef.fromAnnotation(ctx, decLibrary, typeAnnotation);
       }
 
       var _arg = compileExpression(arg, ctx, paramType);
@@ -416,7 +436,7 @@ TypeRef resolveSuperFormalType(CompilerContext ctx, int decLibrary,
     final cstr = superCstr.declaration as ConstructorDeclaration;
     for (final _param in cstr.parameters.parameters) {
       if (_param is SimpleFormalParameter &&
-          _param.name!.stringValue == param.name.stringValue) {
+          _param.name!.lexeme == param.name.lexeme) {
         final _type = _param.type;
         if (_type == null) {
           return CoreTypes.dynamic.ref(ctx);

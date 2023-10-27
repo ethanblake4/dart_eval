@@ -18,6 +18,12 @@ class TreeShakeVisitor extends RecursiveAstVisitor<TreeShakeContext?> {
     return ctx;
   }
 
+  @override
+  TreeShakeContext? visitComment(Comment node) {
+    // Ignore comments
+    return ctx;
+  }
+
   void output(String? s) {
     if (s == null) return;
     ctx.identifiers.add(s);

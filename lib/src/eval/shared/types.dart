@@ -1,4 +1,5 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/async/future.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async/stream.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async/stream_controller.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert/converter.dart';
@@ -45,6 +46,9 @@ class CoreTypes {
 
   /// Bridge type spec for [Type]
   static const type = BridgeTypeSpec('dart:core', 'Type');
+
+  /// Bridge type spec for [Symbol]
+  static const symbol = BridgeTypeSpec('dart:core', 'Symbol');
 
   /// Bridge type spec for [$Duration]
   static const duration = BridgeTypeSpec('dart:core', 'Duration');
@@ -103,6 +107,9 @@ class AsyncTypes {
   /// Bridge type spec for [$Stream]
   static const stream = BridgeTypeSpec('dart:async', 'Stream');
 
+  /// Bridge type spec for [$Completer]
+  static const completer = BridgeTypeSpec('dart:async', 'Completer');
+
   /// Bridge type spec for [$StreamTransformer]
   static const streamTransformer =
       BridgeTypeSpec('dart:async', 'StreamTransformer');
@@ -117,6 +124,9 @@ class AsyncTypes {
 
   /// Bridge type spec for [$StreamSink]
   static const streamSink = BridgeTypeSpec('dart:async', 'StreamSink');
+
+  /// Bridge type spec for [$Zone]
+  static const zone = BridgeTypeSpec('dart:async', 'Zone');
 }
 
 /// This class contains dart:collection bridge type specs for convenience

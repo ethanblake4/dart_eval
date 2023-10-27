@@ -10,8 +10,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/future.dart';
 class $Completer<T> implements Completer<T>, $Instance {
   $Completer.wrap(this.$value);
 
-  static const _$type =
-      BridgeTypeRef(BridgeTypeSpec('dart:async', 'Completer'), []);
+  static const _$type = BridgeTypeRef(AsyncTypes.completer, []);
 
   static const $declaration = BridgeClassDef(BridgeClassType(_$type),
       constructors: {
@@ -53,7 +52,8 @@ class $Completer<T> implements Completer<T>, $Instance {
   }
 
   @override
-  int $getRuntimeType(Runtime runtime) => throw UnimplementedError();
+  int $getRuntimeType(Runtime runtime) =>
+      runtime.lookupType(AsyncTypes.completer);
 
   @override
   void $setProperty(Runtime runtime, String identifier, $Value value) {
