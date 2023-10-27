@@ -20,6 +20,17 @@ class $Match implements $Instance {
                     BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), false)
               ],
             )),
+            'groups': BridgeMethodDef(BridgeFunctionDef(
+              returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list),
+                  nullable: false),
+              params: [
+                BridgeParameter(
+                    'groupIndices',
+                    BridgeTypeAnnotation(BridgeTypeRef(
+                        CoreTypes.list, [BridgeTypeRef(CoreTypes.int)])),
+                    false)
+              ],
+            )),
             '[]': BridgeMethodDef(BridgeFunctionDef(
               returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string),
                   nullable: true),
@@ -30,9 +41,14 @@ class $Match implements $Instance {
             )),
           },
           getters: {
+            'input': BridgeMethodDef(BridgeFunctionDef(
+                returns:
+                    BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)))),
             'start': BridgeMethodDef(BridgeFunctionDef(
                 returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)))),
             'end': BridgeMethodDef(BridgeFunctionDef(
+                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)))),
+            'groupCount': BridgeMethodDef(BridgeFunctionDef(
                 returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)))),
           },
           wrap: true);
@@ -51,12 +67,23 @@ class $Match implements $Instance {
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
+      case 'input':
+        return $String($value.input);
+
       case 'start':
         return $int($value.start);
+
       case 'end':
         return $int($value.end);
+
+      case 'groupCount':
+        return $int($value.groupCount);
+
       case 'group':
         return $Function(__group);
+      case 'groups':
+        return $Function(__groups);
+
       case '[]':
         return $Function(__group);
     }
@@ -70,6 +97,17 @@ class $Match implements $Instance {
     final group = (args[0] as $int).$value;
     final $result = (target!.$value as Match).group(group);
     return $result == null ? $null() : $String($result);
+  }
+
+  static const $Function __groups = $Function(_groups);
+
+  static $Value _groups(
+      final Runtime runtime, final $Value? target, final List<$Value?> args) {
+    final list = (args[0] as $List).$value;
+    final groups = [for ($int i in list) i.$value];
+    final $result = (target!.$value as Match).groups(groups);
+    return $List.wrap(
+        [for (String? str in $result) str == null ? $null() : $String(str)]);
   }
 
   @override

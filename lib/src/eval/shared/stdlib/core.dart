@@ -55,6 +55,7 @@ class DartCorePlugin implements EvalPlugin {
     registry.defineBridgeClass($Pattern.$declaration);
     registry.defineBridgeClass($Match.$declaration);
     registry.defineBridgeClass($RegExp.$declaration);
+    registry.defineBridgeClass($RegExpMatch.$declaration);
     registry.defineBridgeClass($AssertionError.$declaration);
     registry.defineBridgeClass($RangeError.$declaration);
     registry.defineBridgeClass($Comparable.$declaration);

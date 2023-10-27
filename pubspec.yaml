@@ -10,14 +10,14 @@ platforms:
   web:
   windows:
 topics:
- - vm
- - compiler
- - interpreter
- - dart
- - codepush
+  - vm
+  - compiler
+  - interpreter
+  - dart
+  - codepush
 
 environment:
-  sdk: '>=2.17.0 <4.0.0'
+  sdk: ">=2.17.0 <4.0.0"
 
 executables:
   dart_eval:
