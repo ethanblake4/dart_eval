@@ -27,7 +27,7 @@ Variable compilePropertyAccess(PropertyAccess pa, CompilerContext ctx,
       return checkNotEqual(ctx, L, out);
     }, thenBranch: (_ctx, rt) {
       final V = L.getProperty(ctx, pa.propertyName.name).boxIfNeeded(ctx);
-      out = out.copyWith(type: L.type.copyWith(nullable: true));
+      out = out.copyWith(type: V.type.copyWith(nullable: true));
       ctx.pushOp(CopyValue.make(out.scopeFrameOffset, V.scopeFrameOffset),
           CopyValue.LEN);
       return StatementInfo(-1);
