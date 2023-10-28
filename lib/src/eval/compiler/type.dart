@@ -150,7 +150,11 @@ class TypeRef {
     typeAnnotation as NamedType;
     final n = typeAnnotation.name2.stringValue ?? typeAnnotation.name2.value();
     final unspecifiedType =
-        ctx.temporaryTypes[library]?[n] ?? ctx.visibleTypes[library]![n]!;
+        ctx.temporaryTypes[library]?[n] ?? ctx.visibleTypes[library]?[n];
+    if (unspecifiedType == null) {
+      throw CompileError(
+          'Unknown type $n', typeAnnotation.parent, library, ctx);
+    }
     final typeArgs = typeAnnotation.typeArguments;
     if (typeArgs != null) {
       final _resolved = <TypeRef>[];
@@ -535,7 +539,11 @@ class TypeRef {
       ctx.visibleTypes[$file]![name] ??= _resolved;
     }
 
-    _cache[file]![name] ??= _resolved;
+    final fileCache = _cache[file]!;
+    if (fileCache[name] == null || !fileCache[name]!.resolved) {
+      fileCache[name] = _resolved.copyWith(boxed: true);
+    }
+
     return _resolved;
   }
 

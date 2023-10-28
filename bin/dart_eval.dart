@@ -147,9 +147,10 @@ void main(List<String> args) {
     if (packageConfig.packages.length > 1) {
       print('Adding packages from package config:');
     }
+    var skips = '';
     for (final package in packageConfig.packages) {
       if (bridgedPackages.contains(package.name)) {
-        print('Skipped package ${package.name} because it is bridged.');
+        skips += 'Skipped package ${package.name} because it is bridged.\n';
         continue;
       }
 
@@ -157,11 +158,13 @@ void main(List<String> args) {
         continue;
       }
 
-      stdout.write(' ${package.name}');
+      stdout.write('${package.name} ');
 
       final pkgDir = Directory(package.packageUriRoot.toFilePath());
       addFiles(package.name, pkgDir, pkgDir.path);
     }
+
+    stdout.write('\n$skips');
 
     print('\nCompiling package $packageName...');
 

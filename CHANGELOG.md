@@ -16,6 +16,7 @@
 - Support for function type arguments and inferring generic return 
   types based on argument types
 - Support for Comparable
+- Support invoking functions stored as fields in a class
 - Add `identical` and `Object.hash` functions
 - Basic support for `runtimeType`
 - Add Runtime.valueToString helper for converting a $Value to a string
@@ -41,6 +42,7 @@
   the name of a variable or function
 - Fix incorrect type hint for String.contains()
 - Fix top-level getters
+- Fix named constructor calls using "new" or "const" 
 - Runtime errors now print out the scope stack for easier debugging
 - Reformat line length to 80 for standardization with Dart ecosystem
 - Documentation improvements

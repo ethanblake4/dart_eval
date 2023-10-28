@@ -59,7 +59,9 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
           (e.target as Identifier).name, e.methodName.name, ctx)
       : compileIdentifier(e.methodName, ctx);
 
-  if (method.callingConvention == CallingConvention.dynamic) {
+  if (method.callingConvention == CallingConvention.dynamic ||
+      (method.type == CoreTypes.function.ref(ctx) &&
+          method.methodOffset == null)) {
     return invokeClosure(ctx, null, method, e.argumentList);
   }
 
@@ -384,5 +386,5 @@ DeclarationOrBridge<ClassMember, BridgeDeclaration> resolveStaticMethod(
     }
   }
 
-  throw UnimplementedError();
+  throw CompileError('Cannot find static method $classType.$methodName');
 }

@@ -1,9 +1,9 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
+import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/offset_tracker.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
@@ -14,45 +14,18 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 Variable compileInstanceCreation(
     CompilerContext ctx, InstanceCreationExpression e) {
   final type = e.constructorName.type;
-  final name = e.constructorName.name;
-  final typeName = type.name2.lexeme;
+  final name = type.importPrefix == null
+      ? (e.constructorName.name?.name ?? '')
+      : type.name2.lexeme;
+  final typeName = type.importPrefix?.name.lexeme ?? type.name2.lexeme;
   final $resolved = IdentifierReference(null, typeName).getValue(ctx);
 
   if ($resolved.concreteTypes.isEmpty) {
     throw CompileError('Cannot create instance of a non-type $typeName');
   }
 
-  final file = $resolved.concreteTypes.first.file;
-
-  final Variable method;
-  final DeferredOrOffset? offset;
-  DeclarationOrBridge? _dec;
-
-  if (name == null) {
-    method = $resolved;
-    offset = method.methodOffset ??
-        (throw CompileError(
-            'Trying to instantiate $type, which is not a class'));
-
-    _dec = ctx.topLevelDeclarationsMap[offset.file]![type];
-    if (_dec == null ||
-        (!_dec.isBridge && _dec.declaration! is ClassDeclaration)) {
-      _dec = ctx.topLevelDeclarationsMap[offset.file]![
-              offset.name ?? '$typeName.'] ??
-          (throw CompileError(
-              'Cannot instantiate: The class $type does not have a default constructor'));
-    }
-  } else {
-    method = IdentifierReference($resolved, name.name).getValue(ctx);
-    offset = method.methodOffset ??
-        (throw CompileError(
-            'Trying to instantiate $type, which is not a class'));
-
-    _dec = ctx
-            .topLevelDeclarationsMap[offset.file]!['$typeName.${name.name}'] ??
-        (throw CompileError(
-            'Cannot instantiate: The class $type does not have constructor ${name.name}'));
-  }
+  final staticType = $resolved.concreteTypes.first;
+  final _dec = resolveStaticMethod(ctx, staticType, name);
 
   //final List<Variable> _args;
   //final Map<String, Variable> _namedArgs;
@@ -68,7 +41,8 @@ Variable compileInstanceCreation(
     final dec = _dec.declaration!;
     final fpl = (dec as ConstructorDeclaration).parameters.parameters;
 
-    compileArgumentList(ctx, e.argumentList, file, fpl, dec, source: e);
+    compileArgumentList(ctx, e.argumentList, staticType.file, fpl, dec,
+        source: e);
     //_args = argsPair.first;
     //_namedArgs = argsPair.second;
   }
@@ -86,12 +60,14 @@ Variable compileInstanceCreation(
           ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.']!);
       ctx.pushOp(op, BridgeInstantiate.len(op));
     } else {
-      final op = InvokeExternal.make(
-          ctx.bridgeStaticFunctionIndices[offset.file]![offset.name]!);
+      final op = InvokeExternal.make(ctx.bridgeStaticFunctionIndices[
+          staticType.file]!['${staticType.name}.$name']!);
       ctx.pushOp(op, InvokeExternal.LEN);
       ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
     }
   } else {
+    final offset = DeferredOrOffset.lookupStatic(
+        ctx, staticType.file, staticType.name, name);
     final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.LEN);
     if (offset.offset == null) {
       ctx.offsetTracker.setOffset(loc, offset);

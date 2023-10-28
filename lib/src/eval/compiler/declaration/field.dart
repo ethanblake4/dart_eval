@@ -11,7 +11,7 @@ void compileFieldDeclaration(int fieldIndex, FieldDeclaration d,
   final parentName = parent.name.lexeme;
   var _fieldIndex = fieldIndex;
   for (final field in d.fields.variables) {
-    final fieldName = field.name.value().toString();
+    final fieldName = field.name.lexeme;
     if (d.isStatic) {
       final initializer = field.initializer;
       if (initializer != null) {
