@@ -27,7 +27,7 @@ Variable compileSuperExpression(SuperExpression e, CompilerContext ctx) {
   }
 
   final $this = ctx.lookupLocal('#this')!;
-  ctx.pushOp(PushSuper.make($this.scopeFrameOffset), PushSuper.LEN);
+  ctx.pushOp(PushSuper.make($this.scopeFrameOffset), PushSuper.length);
   final v = Variable.alloc(ctx, type);
   return v;
 }

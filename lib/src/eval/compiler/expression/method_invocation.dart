@@ -85,7 +85,7 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
         offset.name ?? '${e.methodName.name}.'];
     if (_dec == null) {
       // Call to default constructor
-      final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.LEN);
+      final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.length);
       if (offset.offset == null) {
         ctx.offsetTracker.setOffset(loc, offset);
       }
@@ -204,7 +204,7 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
       ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
     }
   } else {
-    final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.LEN);
+    final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.length);
     if (offset.offset == null) {
       ctx.offsetTracker.setOffset(loc, offset);
     }
@@ -293,7 +293,7 @@ Variable _invokeWithTarget(
     } else {
       final offset = DeferredOrOffset.lookupStatic(
           ctx, staticType!.file, staticType.name, e.methodName.name);
-      final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.LEN);
+      final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.length);
       if (offset.offset == null) {
         ctx.offsetTracker.setOffset(loc, offset);
       }
@@ -306,7 +306,7 @@ Variable _invokeWithTarget(
         className: actualType.name,
         methodType: 2,
         name: e.methodName.name);
-    final loc = ctx.pushOp(Call.make(-1), Call.LEN);
+    final loc = ctx.pushOp(Call.make(-1), Call.length);
     ctx.offsetTracker.setOffset(loc, offset);
   } else {
     final op = InvokeDynamic.make(L.boxIfNeeded(ctx).scopeFrameOffset,

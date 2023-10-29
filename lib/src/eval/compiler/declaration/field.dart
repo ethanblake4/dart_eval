@@ -51,7 +51,7 @@ void compileFieldDeclaration(int fieldIndex, FieldDeclaration d,
     } else {
       final pos = beginMethod(ctx, d, d.offset, '$parentName.$fieldName (get)');
       ctx.pushOp(PushObjectPropertyImpl.make(0, _fieldIndex),
-          PushObjectPropertyImpl.LEN);
+          PushObjectPropertyImpl.length);
       ctx.pushOp(Return.make(1), Return.LEN);
       ctx.instanceDeclarationPositions[ctx.library]![parentName]![0]
           [fieldName] = pos;
@@ -62,7 +62,7 @@ void compileFieldDeclaration(int fieldIndex, FieldDeclaration d,
         final setterPos =
             beginMethod(ctx, d, d.offset, '$parentName.$fieldName (set)');
         ctx.pushOp(SetObjectPropertyImpl.make(0, _fieldIndex, 1),
-            SetObjectPropertyImpl.LEN);
+            SetObjectPropertyImpl.length);
         ctx.pushOp(Return.make(1), Return.LEN);
         ctx.instanceDeclarationPositions[ctx.library]![parentName]![1]
             [fieldName] = setterPos;

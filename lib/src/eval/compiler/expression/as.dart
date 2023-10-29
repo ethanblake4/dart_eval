@@ -19,8 +19,8 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
 
   // Otherwise type-test
   ctx.pushOp(IsType.make(V.scopeFrameOffset, ctx.typeRefIndexMap[slot]!, false),
-      IsType.LEN);
-  final Vis =
+      IsType.length);
+  final vIs =
       Variable.alloc(ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
 
   // And assert
@@ -28,7 +28,7 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
       BuiltinValue(stringval: "TypeError: Not a subtype of type TYPE")
           .push(ctx);
   ctx.pushOp(
-      Assert.make(Vis.scopeFrameOffset, errMsg.scopeFrameOffset), Assert.LEN);
+      Assert.make(vIs.scopeFrameOffset, errMsg.scopeFrameOffset), Assert.LEN);
 
   // If the type changes between num and int/double, unbox/box
   if (slot == CoreTypes.num.ref(ctx)) {
@@ -39,6 +39,6 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
   }
 
   // For all other types, just inform the compiler
-  // TODO: mixins may need different behavior
+  // (todo) Mixins may need different behavior
   return V.copyWithUpdate(ctx, type: slot.copyWith(boxed: V.type.boxed));
 }

@@ -182,7 +182,7 @@ class CreateClass implements EvcOp {
     return Evc.BASE_OPLEN +
         Evc.I32_LEN +
         Evc.I16_LEN * 2 +
-        Evc.istr_len(s._name);
+        Evc.istrLen(s._name);
   }
 
   @override
@@ -214,7 +214,7 @@ class SetObjectProperty implements EvcOp {
   static int len(SetObjectProperty s) {
     return Evc.BASE_OPLEN +
         Evc.I16_LEN +
-        Evc.istr_len(s._property) +
+        Evc.istrLen(s._property) +
         Evc.I16_LEN;
   }
 
@@ -291,7 +291,7 @@ class PushObjectPropertyImpl implements EvcOp {
 
   PushObjectPropertyImpl.make(this.objectOffset, this._propertyIndex);
 
-  static int LEN = Evc.BASE_OPLEN + Evc.I16_LEN * 2;
+  static int length = Evc.BASE_OPLEN + Evc.I16_LEN * 2;
 
   @override
   void run(Runtime runtime) {
@@ -317,7 +317,7 @@ class SetObjectPropertyImpl implements EvcOp {
   SetObjectPropertyImpl.make(
       this._objectOffset, this._propertyIndex, this._valueOffset);
 
-  static int LEN = Evc.BASE_OPLEN + Evc.I16_LEN * 3;
+  static int length = Evc.BASE_OPLEN + Evc.I16_LEN * 3;
 
   @override
   void run(Runtime runtime) {
@@ -338,7 +338,7 @@ class PushSuper implements EvcOp {
 
   PushSuper.make(this._objectOffset);
 
-  static int LEN = Evc.BASE_OPLEN + Evc.I16_LEN;
+  static int length = Evc.BASE_OPLEN + Evc.I16_LEN;
 
   @override
   void run(Runtime runtime) {
@@ -370,7 +370,7 @@ class IsType implements EvcOp {
 
   IsType.make(this._objectOffset, this._type, this._not);
 
-  static int LEN = Evc.BASE_OPLEN + Evc.I16_LEN + Evc.I32_LEN + Evc.I8_LEN;
+  static int length = Evc.BASE_OPLEN + Evc.I16_LEN + Evc.I32_LEN + Evc.I8_LEN;
 
   @override
   void run(Runtime runtime) {

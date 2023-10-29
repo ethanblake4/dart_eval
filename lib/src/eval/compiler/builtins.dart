@@ -241,15 +241,13 @@ Map<TypeRef, Map<String, KnownMethod>> getKnownMethods(ctx) {
           [KnownMethodArg('other', CoreTypes.string.ref(ctx), false)], {}),
       'endsWith': KnownMethod(AlwaysReturnType(CoreTypes.bool.ref(ctx), false),
           [KnownMethodArg('other', CoreTypes.string.ref(ctx), false)], {}),
-      //TODO: needs to be fixed to not use stringType but instead EvalTypes.patternType once its available
       'indexOf': KnownMethod(AlwaysReturnType(CoreTypes.int.ref(ctx), false), [
-        KnownMethodArg('pattern', CoreTypes.string.ref(ctx), false),
+        KnownMethodArg('pattern', CoreTypes.pattern.ref(ctx), false),
         KnownMethodArg('start', CoreTypes.int.ref(ctx), true),
       ], {}),
-      //TODO: needs to be fixed to not use stringType but instead EvalTypes.patternType once its available
       'lastIndexOf':
           KnownMethod(AlwaysReturnType(CoreTypes.int.ref(ctx), false), [
-        KnownMethodArg('pattern', CoreTypes.string.ref(ctx), false),
+        KnownMethodArg('pattern', CoreTypes.pattern.ref(ctx), false),
         KnownMethodArg('start', CoreTypes.int.ref(ctx), true),
       ], {}),
       'padLeft':
@@ -262,17 +260,15 @@ Map<TypeRef, Map<String, KnownMethod>> getKnownMethods(ctx) {
         KnownMethodArg('width', CoreTypes.int.ref(ctx), false),
         KnownMethodArg('padding', CoreTypes.string.ref(ctx), true),
       ], {}),
-      //TODO: needs to be fixed to not use stringType but instead EvalTypes.patternType once its available
       'replaceAll':
           KnownMethod(AlwaysReturnType(CoreTypes.string.ref(ctx), false), [
         KnownMethodArg('pattern', CoreTypes.string.ref(ctx), false),
         KnownMethodArg('replace', CoreTypes.string.ref(ctx), false),
       ], {}),
-      //TODO: needs to be fixed to not use stringType but instead EvalTypes.patternType once its available
       'replaceFirst':
           KnownMethod(AlwaysReturnType(CoreTypes.string.ref(ctx), false), [
-        KnownMethodArg('from', CoreTypes.string.ref(ctx), false),
-        KnownMethodArg('to', CoreTypes.string.ref(ctx), false),
+        KnownMethodArg('from', CoreTypes.pattern.ref(ctx), false),
+        KnownMethodArg('to', CoreTypes.pattern.ref(ctx), false),
         KnownMethodArg('startIndex', CoreTypes.int.ref(ctx), true),
       ], {}),
       'replaceRange':
@@ -282,10 +278,9 @@ Map<TypeRef, Map<String, KnownMethod>> getKnownMethods(ctx) {
             'end', CoreTypes.int.ref(ctx).copyWith(nullable: true), false),
         KnownMethodArg('replacement', CoreTypes.string.ref(ctx), false),
       ], {}),
-      //TODO: needs to be fixed to not use stringType but instead EvalTypes.patternType once its available
       'startsWith':
           KnownMethod(AlwaysReturnType(CoreTypes.bool.ref(ctx), false), [
-        KnownMethodArg('pattern', CoreTypes.string.ref(ctx), false),
+        KnownMethodArg('pattern', CoreTypes.pattern.ref(ctx), false),
         KnownMethodArg('index', CoreTypes.int.ref(ctx), true),
       ], {}),
       'substring':

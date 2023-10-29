@@ -196,7 +196,7 @@ class $RegExpMatch implements $Instance {
         return $Iterable.wrap($value.groupNames.map((e) => $String(e)));
 
       case 'namedGroup':
-        return $Function(__namedGroup);
+        return $Function(__namedGroup.call);
     }
     return _superclass.$getProperty(runtime, identifier);
   }

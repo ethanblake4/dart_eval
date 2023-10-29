@@ -8,7 +8,7 @@ class Call implements EvcOp {
 
   final int _offset;
 
-  static final int LEN = Evc.BASE_OPLEN + Evc.I32_LEN;
+  static final int length = Evc.BASE_OPLEN + Evc.I32_LEN;
 
   @override
   void run(Runtime runtime) {
@@ -35,7 +35,7 @@ class PushScope implements EvcOp {
   final String frName;
 
   static int len(PushScope s) {
-    return Evc.BASE_OPLEN + Evc.I32_LEN * 2 + Evc.istr_len(s.frName);
+    return Evc.BASE_OPLEN + Evc.I32_LEN * 2 + Evc.istrLen(s.frName);
   }
 
   @override
@@ -64,7 +64,7 @@ class PushCaptureScope implements EvcOp {
 
   PushCaptureScope.make();
 
-  static int LEN = Evc.BASE_OPLEN;
+  static int length = Evc.BASE_OPLEN;
 
   @override
   void run(Runtime exec) {

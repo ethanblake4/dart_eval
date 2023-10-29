@@ -39,7 +39,7 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx,
 
   for (final param in resolvedParams) {
     final p = param.parameter;
-    Variable Vrep;
+    Variable vRep;
 
     p as SimpleFormalParameter;
     var type = CoreTypes.dynamic.ref(ctx);
@@ -47,9 +47,9 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx,
       type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!)
           .copyWith(boxed: true);
     }
-    Vrep = Variable(i, type)..name = p.name!.lexeme;
+    vRep = Variable(i, type)..name = p.name!.lexeme;
 
-    ctx.setLocal(Vrep.name!, Vrep);
+    ctx.setLocal(vRep.name!, vRep);
 
     i++;
   }

@@ -129,7 +129,7 @@ class FilesystemPermission implements Permission {
 /// A permission that allows access to read a file system resource.
 class FilesystemReadPermission extends FilesystemPermission {
   /// Create a new filesystem permission that matches a [Pattern].
-  const FilesystemReadPermission(Pattern matchPattern) : super(matchPattern);
+  const FilesystemReadPermission(super.matchPattern);
 
   /// A permission that allows access to any file system resource.
   static final FilesystemReadPermission any =
@@ -174,7 +174,7 @@ class FilesystemReadPermission extends FilesystemPermission {
 /// A permission that allows access to write a file system resource.
 class FilesystemWritePermission extends FilesystemPermission {
   /// Create a new filesystem permission that matches a [Pattern].
-  const FilesystemWritePermission(Pattern matchPattern) : super(matchPattern);
+  const FilesystemWritePermission(super.matchPattern);
 
   /// A permission that allows access to any file system resource.
   static final FilesystemWritePermission any =

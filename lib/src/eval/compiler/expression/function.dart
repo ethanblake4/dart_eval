@@ -42,16 +42,16 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
 
   for (final param in resolvedParams) {
     final p = param.parameter;
-    Variable Vrep;
+    Variable vRep;
 
     p as SimpleFormalParameter;
     var type = CoreTypes.dynamic.ref(ctx);
     if (p.type != null) {
       type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
     }
-    Vrep = Variable(i, type.copyWith(boxed: true))..name = p.name!.lexeme;
+    vRep = Variable(i, type.copyWith(boxed: true))..name = p.name!.lexeme;
 
-    ctx.setLocal(Vrep.name!, Vrep);
+    ctx.setLocal(vRep.name!, vRep);
 
     i++;
   }

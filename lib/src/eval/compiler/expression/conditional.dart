@@ -16,7 +16,7 @@ Variable compileConditionalExpression(
     CompilerContext ctx, ConditionalExpression e,
     [TypeRef? boundType]) {
   final Variable V = ctx.setLocal('#conditional', BuiltinValue().push(ctx));
-  final Vref = IdentifierReference(null, '#conditional');
+  final vRef = IdentifierReference(null, '#conditional');
   final types = <TypeRef>{if (boundType != null) boundType};
 
   macroBranch(
@@ -29,14 +29,14 @@ Variable compileConditionalExpression(
 
     return c;
   }, thenBranch: (_ctx, rt) {
-    final _V = compileExpression(e.thenExpression, ctx, boundType);
-    types.add(_V.type);
-    Vref.setValue(ctx, _V);
+    final v = compileExpression(e.thenExpression, ctx, boundType);
+    types.add(v.type);
+    vRef.setValue(ctx, v);
     return StatementInfo(-1);
   }, elseBranch: (_ctx, rt) {
-    final _V = compileExpression(e.elseExpression, ctx, boundType);
-    types.add(_V.type);
-    Vref.setValue(ctx, _V);
+    final v = compileExpression(e.elseExpression, ctx, boundType);
+    types.add(v.type);
+    vRef.setValue(ctx, v);
     return StatementInfo(-1);
   });
 

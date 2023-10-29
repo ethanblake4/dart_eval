@@ -69,7 +69,7 @@ void compileConstructorDeclaration(
   for (final param in resolvedParams) {
     final p = param.parameter;
     final V = param.V;
-    Variable Vrep;
+    Variable vrep;
     if (p is FieldFormalParameter) {
       TypeRef? _type;
       if (p.type != null) {
@@ -80,7 +80,7 @@ void compileConstructorDeclaration(
       _type ??= V?.type;
       _type ??= CoreTypes.dynamic.ref(ctx);
 
-      Vrep = Variable(i,
+      vrep = Variable(i,
               _type.copyWith(boxed: !_type.isUnboxedAcrossFunctionBoundaries))
           .boxIfNeeded(ctx)
         ..name = p.name.lexeme;
@@ -88,7 +88,7 @@ void compileConstructorDeclaration(
       fieldFormalNames.add(p.name.lexeme);
     } else if (p is SuperFormalParameter) {
       final type = resolveSuperFormalType(ctx, ctx.library, p, d);
-      Vrep = Variable(
+      vrep = Variable(
               i, type.copyWith(boxed: !type.isUnboxedAcrossFunctionBoundaries))
           .boxIfNeeded(ctx)
         ..name = p.name.lexeme;
@@ -101,10 +101,10 @@ void compileConstructorDeclaration(
       }
       type =
           type.copyWith(boxed: !unboxedAcrossFunctionBoundaries.contains(type));
-      Vrep = Variable(i, type)..name = p.name!.lexeme;
+      vrep = Variable(i, type)..name = p.name!.lexeme;
     }
 
-    ctx.setLocal(Vrep.name!, Vrep);
+    ctx.setLocal(vrep.name!, vrep);
 
     i++;
   }
@@ -163,7 +163,7 @@ void compileConstructorDeclaration(
     final decl = extendsWhat.declaration!;
 
     if (decl.isBridge) {
-      ctx.pushOp(PushBridgeSuperShim.make(), PushBridgeSuperShim.LEN);
+      ctx.pushOp(PushBridgeSuperShim.make(), PushBridgeSuperShim.length);
       $super = Variable.alloc(ctx, CoreTypes.dynamic.ref(ctx));
     } else {
       final extendsType = TypeRef.lookupDeclaration(
@@ -201,7 +201,7 @@ void compileConstructorDeclaration(
       }
 
       final offset = method.methodOffset!;
-      final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.LEN);
+      final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.length);
       if (offset.offset == null) {
         ctx.offsetTracker.setOffset(loc, offset);
       }
@@ -232,16 +232,16 @@ void compileConstructorDeclaration(
 
   if (parent is EnumDeclaration) {
     ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 0, 0),
-        SetObjectPropertyImpl.LEN);
+        SetObjectPropertyImpl.length);
     ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 1, 1),
-        SetObjectPropertyImpl.LEN);
+        SetObjectPropertyImpl.length);
   }
 
   for (final fieldFormal in fieldFormalNames) {
     ctx.pushOp(
         SetObjectPropertyImpl.make(instOffset, fieldIndices[fieldFormal]!,
             ctx.lookupLocal(fieldFormal)!.scopeFrameOffset),
-        SetObjectPropertyImpl.LEN);
+        SetObjectPropertyImpl.length);
   }
 
   final usedNames = {...fieldFormalNames};
@@ -252,7 +252,7 @@ void compileConstructorDeclaration(
       ctx.pushOp(
           SetObjectPropertyImpl.make(instOffset,
               fieldIndices[init.fieldName.name]!, V.scopeFrameOffset),
-          SetObjectPropertyImpl.LEN);
+          SetObjectPropertyImpl.length);
       usedNames.add(init.fieldName.name);
     } else {
       throw CompileError('${init.runtimeType} initializer is not supported');
@@ -336,7 +336,7 @@ void compileDefaultConstructor(CompilerContext ctx,
     final decl = extendsWhat.declaration!;
 
     if (decl.isBridge) {
-      ctx.pushOp(PushBridgeSuperShim.make(), PushBridgeSuperShim.LEN);
+      ctx.pushOp(PushBridgeSuperShim.make(), PushBridgeSuperShim.length);
       $super = Variable.alloc(ctx, CoreTypes.dynamic.ref(ctx));
     } else {
       final extendsType = TypeRef.lookupDeclaration(
@@ -353,7 +353,7 @@ void compileDefaultConstructor(CompilerContext ctx,
       }
 
       final offset = method.methodOffset!;
-      final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.LEN);
+      final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.length);
       if (offset.offset == null) {
         ctx.offsetTracker.setOffset(loc, offset);
       }
@@ -384,9 +384,9 @@ void compileDefaultConstructor(CompilerContext ctx,
 
   if (parent is EnumDeclaration) {
     ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 0, 0),
-        SetObjectPropertyImpl.LEN);
+        SetObjectPropertyImpl.length);
     ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 1, 1),
-        SetObjectPropertyImpl.LEN);
+        SetObjectPropertyImpl.length);
   }
 
   _compileUnusedFields(
@@ -452,7 +452,7 @@ void _compileUnusedFields(CompilerContext ctx, List<FieldDeclaration> fields,
         ctx.pushOp(
             SetObjectPropertyImpl.make(
                 instOffset, _fieldIdx, V.scopeFrameOffset),
-            SetObjectPropertyImpl.LEN);
+            SetObjectPropertyImpl.length);
       }
       _fieldIdx++;
     }

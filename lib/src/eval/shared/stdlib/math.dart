@@ -134,17 +134,17 @@ class DartMathPlugin implements EvalPlugin {
   @override
   void configureForRuntime(Runtime runtime) {
     $Point.configureForRuntime(runtime);
-    runtime.registerBridgeFunc('dart:math', 'atan2', const _$atan2());
-    runtime.registerBridgeFunc('dart:math', 'pow', const _$pow());
-    runtime.registerBridgeFunc('dart:math', 'cos', const _$cos());
-    runtime.registerBridgeFunc('dart:math', 'sin', const _$sin());
-    runtime.registerBridgeFunc('dart:math', 'tan', const _$tan());
-    runtime.registerBridgeFunc('dart:math', 'acos', const _$acos());
-    runtime.registerBridgeFunc('dart:math', 'asin', const _$asin());
-    runtime.registerBridgeFunc('dart:math', 'atan', const _$atan());
-    runtime.registerBridgeFunc('dart:math', 'sqrt', const _$sqrt());
-    runtime.registerBridgeFunc('dart:math', 'exp', const _$exp());
-    runtime.registerBridgeFunc('dart:math', 'log', const _$log());
+    runtime.registerBridgeFunc('dart:math', 'atan2', const _$atan2().call);
+    runtime.registerBridgeFunc('dart:math', 'pow', const _$pow().call);
+    runtime.registerBridgeFunc('dart:math', 'cos', const _$cos().call);
+    runtime.registerBridgeFunc('dart:math', 'sin', const _$sin().call);
+    runtime.registerBridgeFunc('dart:math', 'tan', const _$tan().call);
+    runtime.registerBridgeFunc('dart:math', 'acos', const _$acos().call);
+    runtime.registerBridgeFunc('dart:math', 'asin', const _$asin().call);
+    runtime.registerBridgeFunc('dart:math', 'atan', const _$atan().call);
+    runtime.registerBridgeFunc('dart:math', 'sqrt', const _$sqrt().call);
+    runtime.registerBridgeFunc('dart:math', 'exp', const _$exp().call);
+    runtime.registerBridgeFunc('dart:math', 'log', const _$log().call);
   }
 }
 

@@ -84,22 +84,22 @@ extension TearOff on Variable {
 
     for (final param in resolvedParams) {
       final p = param.parameter;
-      Variable Vrep;
+      Variable vRep;
 
       p as SimpleFormalParameter;
       var type = CoreTypes.dynamic.ref(ctx);
       if (p.type != null) {
         type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
       }
-      Vrep = Variable(i, type.copyWith(boxed: true));
-      Vrep = ctx.setLocal(p.name!.lexeme, Vrep);
+      vRep = Variable(i, type.copyWith(boxed: true));
+      vRep = ctx.setLocal(p.name!.lexeme, vRep);
       if (type.isUnboxedAcrossFunctionBoundaries && dec is! MethodDeclaration) {
-        Vrep = Vrep.unboxIfNeeded(ctx);
+        vRep = vRep.unboxIfNeeded(ctx);
       }
 
-      ctx.pushOp(PushArg.make(Vrep.scopeFrameOffset), PushArg.LEN);
+      ctx.pushOp(PushArg.make(vRep.scopeFrameOffset), PushArg.LEN);
 
-      ctx.setLocal(Vrep.name!, Vrep);
+      ctx.setLocal(vRep.name!, vRep);
 
       i++;
     }
@@ -114,7 +114,8 @@ extension TearOff on Variable {
           $target.scopeFrameOffset, ctx.constantPool.addOrGet(methodName));
       ctx.pushOp(invokeOp, InvokeDynamic.len(invokeOp));
     } else {
-      final loc = ctx.pushOp(Call.make(methodOffset!.offset ?? -1), Call.LEN);
+      final loc =
+          ctx.pushOp(Call.make(methodOffset!.offset ?? -1), Call.length);
       if (methodOffset!.offset == null) {
         ctx.offsetTracker.setOffset(loc, methodOffset!);
       }

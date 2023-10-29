@@ -21,10 +21,10 @@ Reference compileAssignmentExpressionAsReference(
   final R = compileExpression(e.rightHandSide, ctx);
 
   if (e.operator.type == TokenType.EQ) {
-    final Ltype = L.resolveType(ctx).resolveTypeChain(ctx);
-    if (!R.type.resolveTypeChain(ctx).isAssignableTo(ctx, Ltype)) {
+    final lType = L.resolveType(ctx).resolveTypeChain(ctx);
+    if (!R.type.resolveTypeChain(ctx).isAssignableTo(ctx, lType)) {
       throw CompileError(
-          'Syntax error: cannot assign value of type ${R.type} to $Ltype');
+          'Syntax error: cannot assign value of type ${R.type} to $lType');
     }
     L.setValue(ctx, R);
   } else if (e.operator.type.binaryOperatorOfCompoundAssignment ==

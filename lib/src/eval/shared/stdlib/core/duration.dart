@@ -1,3 +1,5 @@
+// ignore_for_file: camel_case_types
+
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/base.dart';
@@ -8,9 +10,9 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/object.dart';
 class $Duration implements Duration, $Instance {
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFunc(
-        'dart:core', 'Duration.', const _$Duration_new());
+        'dart:core', 'Duration.', const _$Duration_new().call);
     runtime.registerBridgeFunc(
-        'dart:core', 'Duration.zero*g', const _$Duration_zero());
+        'dart:core', 'Duration.zero*g', const _$Duration_zero().call);
     runtime.registerBridgeFunc(
         'dart:core',
         'Duration.microsecondsPerMillisecond*g',

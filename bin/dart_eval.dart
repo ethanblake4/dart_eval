@@ -160,7 +160,14 @@ void main(List<String> args) {
 
       stdout.write('${package.name} ');
 
-      final pkgDir = Directory(package.packageUriRoot.toFilePath());
+      String filepath;
+      try {
+        filepath = package.packageUriRoot.toFilePath();
+      } catch (e) {
+        filepath = package.packageUriRoot.toString();
+      }
+
+      final pkgDir = Directory(filepath);
       addFiles(package.name, pkgDir, pkgDir.path);
     }
 
@@ -203,8 +210,9 @@ void main(List<String> args) {
       print('Usage:');
       print(
           '   dart_eval run <file> [-l, --library <library>] [-f, --function <function>] [-h, --help]');
-      if (command['help'])
+      if (command['help']) {
         print('\nNote that bindings are not supported in the run command.');
+      }
       exit(command['help'] ? 0 : 1);
     }
     if (command['library'] == null) {

@@ -68,7 +68,7 @@ Variable compileInstanceCreation(
   } else {
     final offset = DeferredOrOffset.lookupStatic(
         ctx, staticType.file, staticType.name, name);
-    final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.LEN);
+    final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.length);
     if (offset.offset == null) {
       ctx.offsetTracker.setOffset(loc, offset);
     }

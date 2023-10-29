@@ -1,3 +1,5 @@
+// ignore_for_file: camel_case_types
+
 import 'dart:math';
 
 import 'package:dart_eval/dart_eval.dart';
@@ -13,7 +15,7 @@ class $Point implements Point, $Instance {
 
   /// Configure this class for runtime in a [Runtime].
   static void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFunc('dart:math', 'Point.', const _$Point_new());
+    runtime.registerBridgeFunc('dart:math', 'Point.', const _$Point_new().call);
   }
 
   static const _$type = BridgeTypeRef(BridgeTypeSpec('dart:math', 'Point'));

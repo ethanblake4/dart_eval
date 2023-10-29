@@ -15,13 +15,13 @@ Variable compileStringInterpolation(
       build = build == null ? _el : build.invoke(ctx, '+', [_el]).result;
     } else if (element is InterpolationExpression) {
       final V = compileExpression(element.expression, ctx);
-      Variable Vstr;
+      Variable vStr;
       if (V.type == CoreTypes.string.ref(ctx)) {
-        Vstr = V;
+        vStr = V;
       } else {
-        Vstr = V.invoke(ctx, 'toString', []).result;
+        vStr = V.invoke(ctx, 'toString', []).result;
       }
-      build = build == null ? Vstr : build.invoke(ctx, '+', [Vstr]).result;
+      build = build == null ? vStr : build.invoke(ctx, '+', [vStr]).result;
     }
   }
 

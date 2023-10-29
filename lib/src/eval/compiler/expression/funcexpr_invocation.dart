@@ -115,7 +115,7 @@ Variable invokeClosure(CompilerContext ctx, Reference? closureRef,
   final sd = closureRef?.getStaticDispatch(ctx);
   if (sd != null) {
     // Use static dispatch
-    final loc = ctx.pushOp(Call.make(sd.offset.offset ?? -1), Call.LEN);
+    final loc = ctx.pushOp(Call.make(sd.offset.offset ?? -1), Call.length);
     ctx.offsetTracker.setOffset(loc, sd.offset);
     ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
     return Variable.alloc(

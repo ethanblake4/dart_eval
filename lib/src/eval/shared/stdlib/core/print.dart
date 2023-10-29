@@ -18,7 +18,7 @@ void configurePrintForCompile(BridgeDeclarationRegistry registry) {
 }
 
 void configurePrintForRuntime(Runtime runtime) {
-  runtime.registerBridgeFunc('dart:core', 'print', const _$print());
+  runtime.registerBridgeFunc('dart:core', 'print', const _$print().call);
 }
 
 class _$print implements EvalCallable {

@@ -16,11 +16,11 @@ class $Map<K, V> implements Map<K, V>, $Instance {
                   BridgeParameter(
                       'key',
                       BridgeTypeAnnotation(
-                          BridgeTypeRef(CoreTypes.dynamic)), // TODO: K
+                          BridgeTypeRef(CoreTypes.dynamic)), 
                       false),
                 ],
                 returns: BridgeTypeAnnotation(
-                    BridgeTypeRef(CoreTypes.dynamic))), // TODO: V
+                    BridgeTypeRef(CoreTypes.dynamic))), 
             isStatic: false),
         '[]=': BridgeMethodDef(
             BridgeFunctionDef(
@@ -28,22 +28,22 @@ class $Map<K, V> implements Map<K, V>, $Instance {
                   BridgeParameter(
                       'key',
                       BridgeTypeAnnotation(
-                          BridgeTypeRef(CoreTypes.dynamic)), // TODO: K
+                          BridgeTypeRef(CoreTypes.dynamic)),
                       false),
                   BridgeParameter(
                       'value',
                       BridgeTypeAnnotation(
-                          BridgeTypeRef(CoreTypes.dynamic)), // TODO: V
+                          BridgeTypeRef(CoreTypes.dynamic)),
                       false),
                 ],
                 returns: BridgeTypeAnnotation(
-                    BridgeTypeRef(CoreTypes.dynamic))), // TODO: V
+                    BridgeTypeRef(CoreTypes.dynamic))),
             isStatic: false),
         'length': BridgeMethodDef(
             BridgeFunctionDef(
                 params: [],
                 returns: BridgeTypeAnnotation(
-                    BridgeTypeRef(CoreTypes.intType))), // TODO: int
+                    BridgeTypeRef(CoreTypes.intType))),
             isStatic: false),*/
       },
       getters: {},

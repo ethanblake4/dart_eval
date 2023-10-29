@@ -17,7 +17,7 @@ class TestClass {
 }
 
 class $TestClass extends TestClass with $Bridge {
-  $TestClass(int someNumber) : super(someNumber);
+  $TestClass(super.someNumber);
 
   static $TestClass $construct(
           Runtime runtime, $Value? target, List<$Value?> args) =>

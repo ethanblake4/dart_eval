@@ -1,11 +1,14 @@
+// ignore_for_file: non_constant_identifier_names
+
 part of 'collection.dart';
 
 /// dart_eval bimodal wrapper for [List]
 class $List<E> implements List<E>, $Instance {
   /// Configure the [$List] wrapper for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFunc('dart:core', 'List.filled', _$List_filled);
-    runtime.registerBridgeFunc('dart:core', 'List.generate', _$List_generate);
+    runtime.registerBridgeFunc('dart:core', 'List.filled', _$List_filled.call);
+    runtime.registerBridgeFunc(
+        'dart:core', 'List.generate', _$List_generate.call);
   }
 
   /// Bridge class declaration for [$List]

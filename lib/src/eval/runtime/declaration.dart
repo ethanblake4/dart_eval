@@ -34,7 +34,6 @@ class EvalClassClass implements EvalClass {
   static final instance = EvalClassClass();
 
   @override
-  // TODO: implement $type
   int $getRuntimeType(Runtime runtime) => throw UnimplementedError();
 
   @override

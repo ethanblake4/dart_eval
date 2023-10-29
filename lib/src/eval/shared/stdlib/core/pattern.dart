@@ -80,12 +80,12 @@ class $Match implements $Instance {
         return $int($value.groupCount);
 
       case 'group':
-        return $Function(__group);
+        return $Function(__group.call);
       case 'groups':
-        return $Function(__groups);
+        return $Function(__groups.call);
 
       case '[]':
-        return $Function(__group);
+        return $Function(__group.call);
     }
     return _superclass.$getProperty(runtime, identifier);
   }
@@ -168,9 +168,9 @@ class $Pattern implements Pattern, $Instance {
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case 'allMatches':
-        return $Function(__allMatches);
+        return $Function(__allMatches.call);
       case 'matchAsPrefix':
-        return $Function(__matchAsPrefix);
+        return $Function(__matchAsPrefix.call);
       default:
         return _superclass.$getProperty(runtime, identifier);
     }
@@ -244,6 +244,5 @@ class $Pattern$bridge with $Bridge implements Pattern {
       $_invoke('matchAsPrefix', [$String(string), $int(start)]);
 
   @override
-  // TODO: implement $runtimeType
   int $getRuntimeType(Runtime runtime) => runtime.lookupType($type.spec!);
 }

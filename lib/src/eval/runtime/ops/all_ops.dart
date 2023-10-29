@@ -244,7 +244,7 @@ class Evc {
   static const int F32_LEN = 4;
   static const int I64_LEN = 8;
 
-  static int istr_len(String str) {
+  static int istrLen(String str) {
     return I32_LEN + utf8.encode(str).length;
   }
 }

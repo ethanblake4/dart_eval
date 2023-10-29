@@ -1,3 +1,5 @@
+// ignore_for_file: non_constant_identifier_names
+
 part of 'collection.dart';
 
 /// dart_eval bimodal wrapper for [Iterable]
@@ -5,7 +7,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   /// Configure the [$Iterable] wrapper for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFunc(
-        'dart:core', 'Iterable.generate', _$Iterable_generate);
+        'dart:core', 'Iterable.generate', _$Iterable_generate.call);
   }
 
   /// Compile-time class definition for [$Iterable]

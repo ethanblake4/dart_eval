@@ -90,7 +90,7 @@ StatementInfo _compileCatchClause(
       ctx.pushOp(
           IsType.make(
               exceptionVar.scopeFrameOffset, ctx.typeRefIndexMap[slot]!, false),
-          IsType.LEN);
+          IsType.length);
       return Variable.alloc(
           ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
     },

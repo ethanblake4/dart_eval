@@ -60,7 +60,7 @@ List<PossiblyValuedParameter> resolveFPLDefaults(
             _reserveOffset, JumpIfNonNull.make(_paramIndex, ctx.out.length), 0);
         normalized.add(PossiblyValuedParameter(param.parameter, V));
       } else {
-        if (param.defaultValue == null /* TODO && param.type.nullable */) {
+        if (param.defaultValue == null /* todo && param.type.nullable */) {
           ctx.pushOp(MaybeBoxNull.make(_paramIndex), MaybeBoxNull.LEN);
         }
         normalized.add(PossiblyValuedParameter(param.parameter, null));

@@ -48,7 +48,7 @@ class PushBridgeSuperShim extends EvcOp {
 
   PushBridgeSuperShim.make();
 
-  static int LEN = Evc.BASE_OPLEN;
+  static int length = Evc.BASE_OPLEN;
 
   @override
   void run(Runtime runtime) {

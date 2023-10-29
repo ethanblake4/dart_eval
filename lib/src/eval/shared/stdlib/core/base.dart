@@ -3,6 +3,7 @@ import 'package:dart_eval/src/eval/runtime/exception.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/collection.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/object.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/pattern.dart';
 import 'num.dart';
 
 const $dynamicCls = BridgeClassDef(
@@ -124,7 +125,7 @@ class $bool implements $Instance {
 
 /// dart_eval [$Instance] representation of a [String]
 class $String implements $Instance {
-  $String(this.$value) : _superclass = $Object($value);
+  $String(this.$value) : _superclass = $Pattern.wrap($value);
 
   static const $declaration = BridgeClassDef(
       BridgeClassType(BridgeTypeRef(CoreTypes.string),
@@ -260,7 +261,7 @@ class $String implements $Instance {
   static $Value? _indexOf(
       final Runtime runtime, final $Value? target, final List<$Value?> args) {
     target as $String;
-    final other = args[0] as $String;
+    final other = args[0]!;
     final start = args.length > 1 ? args[1] as $int : null;
     if (start != null) {
       return $int(target.$value.indexOf(other.$value, start.$value));
@@ -274,7 +275,7 @@ class $String implements $Instance {
   static $Value? _lastIndexOf(
       final Runtime runtime, final $Value? target, final List<$Value?> args) {
     target as $String;
-    final other = args[0] as $String;
+    final other = args[0]!;
     final start = args.length > 1 ? args[1] as $int : null;
     if (start != null) {
       return $int(target.$value.lastIndexOf(other.$value, start.$value));

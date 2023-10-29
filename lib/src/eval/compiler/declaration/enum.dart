@@ -47,7 +47,7 @@ void compileEnumDeclaration(CompilerContext ctx, EnumDeclaration d,
 
   ctx.resetStack(position: 0);
   final pos = beginMethod(ctx, d, d.offset, '$clsName.index (get)');
-  ctx.pushOp(PushObjectPropertyImpl.make(0, 0), PushObjectPropertyImpl.LEN);
+  ctx.pushOp(PushObjectPropertyImpl.make(0, 0), PushObjectPropertyImpl.length);
   ctx.pushOp(Return.make(1), Return.LEN);
   ctx.instanceDeclarationPositions[ctx.library]![clsName]![0]['index'] = pos;
   i++;
@@ -80,11 +80,11 @@ void compileEnumDeclaration(CompilerContext ctx, EnumDeclaration d,
     final cstr =
         ctx.topLevelDeclarationsMap[offset.file]![offset.name ?? '$clsName.'];
 
-    final Vindex = BuiltinValue(intval: idx).push(ctx).boxIfNeeded(ctx);
-    final Vname = BuiltinValue(stringval: cName).push(ctx);
+    final vIndex = BuiltinValue(intval: idx).push(ctx).boxIfNeeded(ctx);
+    final vName = BuiltinValue(stringval: cName).push(ctx);
 
-    ctx.pushOp(PushArg.make(Vindex.scopeFrameOffset), PushArg.LEN);
-    ctx.pushOp(PushArg.make(Vname.scopeFrameOffset), PushArg.LEN);
+    ctx.pushOp(PushArg.make(vIndex.scopeFrameOffset), PushArg.LEN);
+    ctx.pushOp(PushArg.make(vName.scopeFrameOffset), PushArg.LEN);
 
     final dec = cstr?.declaration;
     if (constant.arguments != null && dec != null) {
@@ -94,7 +94,7 @@ void compileEnumDeclaration(CompilerContext ctx, EnumDeclaration d,
           source: constant);
     }
 
-    final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.LEN);
+    final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.length);
     if (offset.offset == null) {
       ctx.offsetTracker.setOffset(loc, offset);
     }

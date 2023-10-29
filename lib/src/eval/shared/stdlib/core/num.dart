@@ -279,7 +279,7 @@ class $num<T extends num> implements $Instance {
 /// dart_eval wrapper for [int]
 class $int extends $num<int> {
   /// Wrap an [int] in a [$int].
-  $int(int $value) : super($value);
+  $int(super.$value);
 
   static const $declaration = BridgeClassDef(
       BridgeClassType(BridgeTypeRef(CoreTypes.int),
@@ -466,7 +466,7 @@ class $int extends $num<int> {
 /// dart_eval wrapper for [double]
 class $double extends $num<double> {
   /// Wrap a [double] in a [$double].
-  $double(double $value) : super($value);
+  $double(super.$value);
 
   static const $declaration = BridgeClassDef(
       BridgeClassType(BridgeTypeRef(CoreTypes.double),

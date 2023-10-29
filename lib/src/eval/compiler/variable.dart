@@ -17,13 +17,12 @@ class Variable {
       this.isFinal = false,
       this.concreteTypes = const [],
       CallingConvention? callingConvention})
-      // ignore: unnecessary_this
       : this.callingConvention = callingConvention ??
             ((type == TypeRef(dartCoreFile, 'Function') && methodOffset == null)
                 ? CallingConvention.dynamic
                 : CallingConvention
                     .static) /*,
-        TODO: assert(!type.nullable || type.boxed)*/
+        todo: assert(!type.nullable || type.boxed)*/
   ;
 
   factory Variable.alloc(ScopeContext ctx, TypeRef type,
@@ -65,7 +64,7 @@ class Variable {
       return copyWith(type: type.copyWith(boxed: true));
     }
 
-    Variable V2 = this;
+    Variable v2 = this;
 
     if (type == CoreTypes.int.ref(ctx)) {
       ctx.pushOp(BoxInt.make(scopeFrameOffset), BoxInt.LEN);
@@ -77,9 +76,9 @@ class Variable {
       ctx.pushOp(BoxBool.make(scopeFrameOffset), BoxBool.LEN);
     } else if (type == CoreTypes.list.ref(ctx)) {
       if (!type.specifiedTypeArgs[0].boxed) {
-        V2 = boxListContents(ctx, this);
+        v2 = boxListContents(ctx, this);
       }
-      ctx.pushOp(BoxList.make(V2.scopeFrameOffset), BoxList.LEN);
+      ctx.pushOp(BoxList.make(v2.scopeFrameOffset), BoxList.LEN);
     } else if (type == CoreTypes.map.ref(ctx)) {
       ctx.pushOp(BoxMap.make(scopeFrameOffset), BoxMap.LEN);
     } else if (type == CoreTypes.string.ref(ctx)) {
@@ -305,7 +304,7 @@ class Variable {
             file: actualType.file, className: actualType.name, name: name);
         final op =
             PushObjectPropertyImpl.make(scopeFrameOffset, offset.offset ?? -1);
-        final loc = ctx.pushOp(op, PushObjectPropertyImpl.LEN);
+        final loc = ctx.pushOp(op, PushObjectPropertyImpl.length);
         ctx.offsetTracker.setOffset(loc, offset);
         return Variable.alloc(ctx, _type);
       }

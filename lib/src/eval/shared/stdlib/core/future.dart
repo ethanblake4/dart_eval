@@ -1,3 +1,5 @@
+// ignore_for_file: camel_case_types
+
 import 'dart:async';
 
 import 'package:dart_eval/dart_eval.dart';
@@ -9,7 +11,7 @@ class $Future<T> implements Future<T>, $Instance {
   /// Configure [$Future] for runtime in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFunc(
-        'dart:core', 'Future.delayed', const _$Future_delayed());
+        'dart:core', 'Future.delayed', const _$Future_delayed().call);
   }
 
   static const $declaration = BridgeClassDef(

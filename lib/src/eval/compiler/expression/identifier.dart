@@ -119,9 +119,7 @@ Pair<TypeRef, DeclarationOrBridge>? resolveInstanceDeclaration(
 }
 
 class GetSet extends DeclarationOrBridge<MethodDeclaration, BridgeMethodDef> {
-  GetSet(int sourceLib,
-      {this.setter, MethodDeclaration? declaration, BridgeMethodDef? bridge})
-      : super(sourceLib, declaration: declaration, bridge: bridge);
+  GetSet(super.sourceLib, {this.setter, super.declaration, super.bridge});
 
   DeclarationOrBridge<MethodDeclaration, BridgeMethodDef>? setter;
 }
