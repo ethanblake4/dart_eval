@@ -65,13 +65,7 @@ class BuiltinValue {
     }
   }
 
-  Variable push(CompilerContext ctx) {
-    final V = _push(ctx);
-    if (ctx.requireNonlinearAccess) {
-      return V.unboxIfNeeded(ctx);
-    }
-    return V;
-  }
+  Variable push(CompilerContext ctx) => _push(ctx);
 }
 
 enum BuiltinValueType { intType, stringType, doubleType, boolType, nullType }
@@ -262,7 +256,7 @@ Map<TypeRef, Map<String, KnownMethod>> getKnownMethods(ctx) {
       ], {}),
       'replaceAll':
           KnownMethod(AlwaysReturnType(CoreTypes.string.ref(ctx), false), [
-        KnownMethodArg('pattern', CoreTypes.string.ref(ctx), false),
+        KnownMethodArg('pattern', CoreTypes.pattern.ref(ctx), false),
         KnownMethodArg('replace', CoreTypes.string.ref(ctx), false),
       ], {}),
       'replaceFirst':

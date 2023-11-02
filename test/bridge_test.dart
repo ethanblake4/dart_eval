@@ -37,7 +37,6 @@ void main() {
           'TestClass.', $TestClass.$construct,
           isBridge: true);
 
-      runtime.setup();
       expect(runtime.executeLib('package:example/main.dart', 'main'), true);
     });
 
@@ -72,7 +71,6 @@ void main() {
           'TestClass.', $TestClass.$construct,
           isBridge: true);
 
-      runtime.setup();
       expect(runtime.executeLib('package:example/main.dart', 'main'), true);
     });
 
@@ -107,7 +105,6 @@ void main() {
           'TestClass.', $TestClass.$construct,
           isBridge: true);
 
-      runtime.setup();
       final res = runtime.executeLib('package:example/main.dart', 'main');
 
       expect(res is TestClass, true);
@@ -138,7 +135,6 @@ void main() {
       runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart',
           'TestClass.runStaticTest', $TestClass.$runStaticTest);
 
-      runtime.setup();
       expect(runtime.executeLib('package:example/main.dart', 'main'), false);
     });
 
@@ -165,7 +161,6 @@ void main() {
 
       runtime.registerBridgeEnumValues(
           'package:bridge_lib/bridge_lib.dart', 'TestEnum', $TestEnum.$values);
-      runtime.setup();
 
       expect(runtime.executeLib('package:example/main.dart', 'main').$value,
           TestEnum.two);
@@ -184,7 +179,6 @@ void main() {
 
       final runtime = Runtime.ofProgram(program);
 
-      runtime.setup();
       expect(
           runtime.executeLib('package:example/main.dart', 'main', [
             $Map<$String, $int>.wrap({$String('hi'): $int(5)})

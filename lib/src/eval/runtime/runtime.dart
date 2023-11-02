@@ -72,9 +72,7 @@ class _UnloadedEnumValues {
 /// avoids overhead of loading bytecode.
 ///
 /// After creating a Runtime, register bridge functions using
-/// [registerBridgeFunc] or [addPlugin], and call [setup] which loads the
-/// byecode and associates the registered bridge functions with the bytecode
-/// program.
+/// [registerBridgeFunc] or [addPlugin].
 ///
 /// Once setup is complete, call [executeLib] to execute a function in the
 /// program.
@@ -268,9 +266,14 @@ class Runtime {
     _unloadedEnumValues.add(_UnloadedEnumValues(library, name, values));
   }
 
-  /// Setup bridged runtime functions and classes. Must be called before running
-  /// the program and after registering all bridged functions and classes.
-  void setup() {
+  /// No longer needed, runtime is automatically setup by [executeLib]
+  @Deprecated("setup() is no longer required")
+  void setup() => _setup();
+
+  void _setup() {
+    if (_didSetup) {
+      return;
+    }
     for (final plugin in _plugins) {
       plugin.configureForRuntime(this);
     }
@@ -279,11 +282,12 @@ class Runtime {
     } else {
       _setupBridging();
     }
+    _didSetup = true;
   }
 
   /// Sets this runtime as the global runtime, and loads its overrides globally.
-  /// Must be called after setup() but before running the program.
   void loadGlobalOverrides() {
+    _setup();
     globalRuntime = this;
     runtimeOverrides = overrideMap;
   }
@@ -367,6 +371,7 @@ class Runtime {
     return (value?.$value).toString();
   }
 
+  var _didSetup = false;
   var _bridgeLibraryMappings = <String, int>{};
   final _bridgeFunctions =
       List<EvalCallableFunc>.filled(1000, _defaultFunction.call);
@@ -782,6 +787,7 @@ class Runtime {
 
   /// Print the program's bytecode in a readable format
   void printOpcodes() {
+    _setup();
     var i = 0;
     for (final oo in pr) {
       print('$i: $oo');
@@ -792,6 +798,7 @@ class Runtime {
   /// Execute a function in the current runtime, from a passed [library] URI
   /// and function [name], with optional [args].
   dynamic executeLib(String library, String name, [List? args]) {
+    _setup();
     if (args != null) {
       this.args = args;
     }
@@ -805,6 +812,7 @@ class Runtime {
   /// Start program execution at a specific bytecode offset.
   /// Users should use [executeLib] instead.
   dynamic execute(int entrypoint) {
+    _setup();
     _prOffset = entrypoint;
     try {
       callStack.add(-1);
@@ -984,7 +992,8 @@ class RuntimeException implements Exception {
         'RUNTIME STATE\n'
         '=============\n'
         'Program offset: ${runtime._prOffset - 1}\n'
-        'Stack sample: ${formatStackSample(runtime.stack.last.take(10).toList(), 10, runtime.frameOffset)}\n'
+        'Stack sample: ${formatStackSample(runtime.stack.last, 10, runtime.frameOffset)}\n'
+        'Args sample: ${formatStackSample(runtime.args, 6)}\n'
         'Call stack: ${runtime.callStack}\n'
         'TRACE:\n$prStr';
   }

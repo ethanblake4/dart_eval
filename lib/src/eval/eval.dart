@@ -54,7 +54,6 @@ dynamic eval(String source,
     runtime.grant(permission);
   }
 
-  runtime.setup();
   runtime.args = args;
   final result = runtime.executeLib('package:default/main.dart', function);
 

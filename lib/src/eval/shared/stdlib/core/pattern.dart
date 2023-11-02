@@ -80,12 +80,10 @@ class $Match implements $Instance {
         return $int($value.groupCount);
 
       case 'group':
-        return $Function(__group.call);
-      case 'groups':
-        return $Function(__groups.call);
-
       case '[]':
-        return $Function(__group.call);
+        return __group;
+      case 'groups':
+        return __groups;
     }
     return _superclass.$getProperty(runtime, identifier);
   }

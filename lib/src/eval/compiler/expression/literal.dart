@@ -1,6 +1,7 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/collection/list.dart';
 import 'package:dart_eval/src/eval/compiler/collection/set_map.dart';
+import 'package:dart_eval/src/eval/compiler/expression/adjacent_strings.dart';
 import 'package:dart_eval/src/eval/compiler/expression/string_interpolation.dart';
 import 'package:dart_eval/src/eval/compiler/expression/symbol.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -46,6 +47,9 @@ Variable parseLiteral(Literal l, CompilerContext ctx, [TypeRef? bound]) {
   }
   if (l is StringInterpolation) {
     return compileStringInterpolation(ctx, l);
+  }
+  if (l is AdjacentStrings) {
+    return compileAdjacentStrings(ctx, l);
   }
   if (l is SymbolLiteral) {
     return compileSymbolLiteral(l, ctx);

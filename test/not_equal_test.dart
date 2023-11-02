@@ -19,7 +19,6 @@ void main() {
       }
     });
     var runtime = Runtime.ofProgram(program);
-    runtime.setup();
     var result = runtime.executeLib(
       "package:my_package/main.dart",
       "fn",
@@ -43,7 +42,6 @@ void main() {
       }
     });
     var runtime = Runtime.ofProgram(program);
-    runtime.setup();
     var result = runtime.executeLib(
       "package:my_package/main.dart",
       "fn",
@@ -74,7 +72,6 @@ void main() {
       }
     });
     var runtime = Runtime.ofProgram(program);
-    runtime.setup();
     var result = runtime.executeLib(
       "package:my_package/main.dart",
       "fn",

@@ -80,7 +80,7 @@ class TypeRef {
       return CoreTypes.nullType.ref(ctx);
     }
     if (types.length == 1) {
-      return types.first;
+      return makeNullable ? types.first.copyWith(nullable: true) : types.first;
     }
     final chains =
         types.map((e) => e.resolveTypeChain(ctx).getTypeChain(ctx)).toList();

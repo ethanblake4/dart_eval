@@ -88,10 +88,11 @@ class IdentifierReference implements Reference {
             'Cannot assign value of type ${value.type} to field "$name" of type $fieldType',
             source);
       }
-      final op = SetObjectProperty.make(object!.scopeFrameOffset, name,
-          value.boxIfNeeded(ctx).scopeFrameOffset);
+      final _v = value.boxIfNeeded(ctx);
+      final op = SetObjectProperty.make(
+          object!.scopeFrameOffset, name, _v.scopeFrameOffset);
       ctx.pushOp(op, SetObjectProperty.len(op));
-      return value;
+      return _v;
     }
 
     var local = ctx.lookupLocal(name);

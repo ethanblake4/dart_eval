@@ -53,7 +53,7 @@ class Variable {
   String? name;
   int? frameIndex;
 
-  Variable boxIfNeeded(ScopeContext ctx) {
+  Variable boxIfNeeded(ScopeContext ctx, [AstNode? source]) {
     if (boxed) {
       return this;
     }
@@ -86,17 +86,20 @@ class Variable {
     } else if (type == CoreTypes.nullType.ref(ctx)) {
       ctx.pushOp(BoxNull.make(scopeFrameOffset), BoxNull.LEN);
     } else {
-      throw CompileError('Cannot box $type');
+      throw CompileError('Cannot box $type', source);
     }
 
     return copyWithUpdate(ctx, type: type.copyWith(boxed: true));
   }
 
-  Variable unboxIfNeeded(ScopeContext ctx) {
+  Variable unboxIfNeeded(ScopeContext ctx, [bool update = true]) {
     if (!boxed) {
       return this;
     }
     ctx.pushOp(Unbox.make(scopeFrameOffset), Unbox.LEN);
+    if (!update) {
+      return copyWith(type: type.copyWith(boxed: false));
+    }
     return copyWithUpdate(ctx, type: type.copyWith(boxed: false));
   }
 

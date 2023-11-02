@@ -81,8 +81,6 @@ Reference compileExpressionAsReference(Expression e, CompilerContext ctx,
     {Variable? cascadeTarget}) {
   if (e is Identifier) {
     return compileIdentifierAsReference(e, ctx);
-  } else if (e is AssignmentExpression) {
-    return compileAssignmentExpressionAsReference(e, ctx);
   } else if (e is IndexExpression) {
     return compileIndexExpressionAsReference(e, ctx,
         cascadeTarget: cascadeTarget);
@@ -96,10 +94,7 @@ Reference compileExpressionAsReference(Expression e, CompilerContext ctx,
 }
 
 bool canReference(Expression e) {
-  return e is Identifier ||
-      e is AssignmentExpression ||
-      e is IndexExpression ||
-      e is PropertyAccess;
+  return e is Identifier || e is IndexExpression || e is PropertyAccess;
 }
 
 Variable? compileExpressionAndDiscardResult(Expression e, CompilerContext ctx,

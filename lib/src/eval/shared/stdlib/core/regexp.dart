@@ -147,7 +147,7 @@ class $RegExp implements $Instance {
   int $getRuntimeType(Runtime runtime) => runtime.lookupType($type.spec!);
 }
 
-class $RegExpMatch implements $Instance {
+class $RegExpMatch implements $Instance, RegExpMatch {
   /// Compile-time type reference to [RegExpMatch]
   static const $type =
       BridgeTypeRef(BridgeTypeSpec('dart:core', 'RegExpMatch'));
@@ -219,4 +219,34 @@ class $RegExpMatch implements $Instance {
 
   @override
   int $getRuntimeType(Runtime runtime) => runtime.lookupType($type.spec!);
+
+  @override
+  String? operator [](int group) => $value[group];
+
+  @override
+  int get end => $value.end;
+
+  @override
+  String? group(int group) => $value.group(group);
+
+  @override
+  int get groupCount => $value.groupCount;
+
+  @override
+  Iterable<String> get groupNames => $value.groupNames;
+
+  @override
+  List<String?> groups(List<int> groupIndices) => $value.groups(groupIndices);
+
+  @override
+  String get input => $value.input;
+
+  @override
+  String? namedGroup(String name) => $value.namedGroup(name);
+
+  @override
+  RegExp get pattern => $value.pattern;
+
+  @override
+  int get start => $value.start;
 }

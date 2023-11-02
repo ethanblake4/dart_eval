@@ -1,4 +1,5 @@
 import 'package:dart_eval/dart_eval.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/stdlib/core.dart';
 import 'package:test/test.dart';
 
@@ -231,6 +232,107 @@ void main() {
       expect(() {
         runtime.executeLib('package:my_package/main.dart', 'main');
       }, prints('[6]\n'));
+    });
+
+    /// https://github.com/ethanblake4/dart_eval/issues/137
+    test('Regexp firstMatch bug', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'extensions_test': {
+          'main.dart': '''main() {
+            var episode = RegExp(r'\\d+').firstMatch('episode 1');
+            return episode;
+          }'''
+        }
+      });
+      final value = runtime.executeLib(
+        'package:extensions_test/main.dart',
+        'main',
+      );
+      expect((value as RegExpMatch).group(0), '1');
+    });
+
+    test('Bridged enum equality ternary assignment', () {
+      final compiler2 = Compiler();
+      compiler2.defineBridgeEnum(BridgeEnumDef(
+          BridgeTypeRef(
+              BridgeTypeSpec('package:my_package/show.dart', 'ShowType')),
+          values: ['Movie', 'Series']));
+      final program = compiler2.compile({
+        'my_package': {
+          'main.dart': r'''
+            import 'show.dart';
+            class Media {
+              Media(this.type, this.url);
+              final ShowType type;
+              String? url;
+            }
+            void main() {
+              final media = Media(ShowType.Movie, 'example.com');
+              final url = media.type == ShowType.Movie ? 
+                media.url = 'movie.com' : null;
+              print(url);
+            }
+          '''
+        }
+      });
+      final runtime = Runtime.ofProgram(program);
+      runtime.registerBridgeEnumValues('package:my_package/show.dart',
+          'ShowType', {'Movie': $int(0), 'Series': $int(1)});
+      runtime.executeLib('package:my_package/main.dart', 'main');
+    });
+
+    test('Regex replacement loop', () {
+      final source = r'''
+      main() {
+        print(transform(
+          "ZAAiPZZiZAPZZAiAPZZZZZPZZiiAPZZAiZPZZiAAPZZZZAPZZZZZPZZAZPZAAiPZAAZ"
+          "PZZAZPZZAAAPZZAZPZZZAAPZZiZZPZZAiZPZZAiAPZZZAAPZZZZZPZZAZPZZiZZPZZAZ"
+          "iPZZiiiPZZZiAPZAAiPAAAiPZZZAAPZZAAiPZZZAiPZZAiZPZZZZAPZiiZZPZiZZZPAA"
+          "ZZPZZiZZPZZAiiPZiiZZPZZAiiPZZZZAPZZZZZPAiZiPZZiZiPZZiZZPZZiiAPZZZAAP"
+          "ZZAAiPZZZAiPZZAiZPZAAiPZiiZZPZiZZZPZZiiAPZZZAAPZZiAAPZZZAiPZZAiZPAii"
+          "ZPZZAZPZAZAPZZAiZPZiZZZPZiiZiPZZAiiPAAAAPAZZZPZiiiiPZZiAiPZZZAiPZiZZ"
+          "iPZZZiZPZZAZiPAiAAPZiZiAPZiZiAPZiZiAPZAZAPZAAZPZAAZPAZAZPZZAZPZAiiZP"
+          "ZAAZPZAAiPZAAZP", 45, "iZAPgKQVv", 11, 3));
+      }
+
+      String transform(String c, int d, String f, int a, int g) {
+        var e = "";
+        for (var h = 0, k = c.length; h < k; h++) {
+          String l = "";
+          while (c[h] != f[g]) {
+            l += c[h];
+            h++;
+          }
+          for (var m = 0; m < f.length; m++) {
+            l = l.replaceAll(RegExp(f[m], multiLine: true), m.toString());
+          }
+
+          print(g);
+          e += l;
+        }
+        return e;
+      }
+      ''';
+
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {'main.dart': source}
+      });
+
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      },
+          prints('3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n'
+              '3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n'
+              '3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n'
+              '3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n'
+              '3\n3\n3\n3\n3\n3\n'
+              '1220110121120211111110021120111022111121111111211220122111211122'
+              '2112111122110111120111202111221111111211101111210110001110212202'
+              '2201112211220111201120111112100111011122111101111200100111120011'
+              '1121111120101101011011110021112211220111201120112201001110111110'
+              '0211122110221112011201200111211212112011011110010112002222211110'
+              '0001102011120101101110111210202210102101021010212121221122121211'
+              '12112001122112201221\n'));
     });
   });
 }

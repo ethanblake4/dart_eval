@@ -1,12 +1,10 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:args/args.dart';
 import 'package:dart_eval/dart_eval.dart';
-import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:package_config/package_config.dart';
-import 'package:path/path.dart';
-import 'package:pubspec_parse/pubspec_parse.dart';
+import 'package:dart_eval/src/eval/cli/bind.dart';
+import 'package:dart_eval/src/eval/cli/compile.dart';
+import 'package:dart_eval/src/eval/cli/run.dart';
 
 void main(List<String> args) {
   final parser = ArgParser();
@@ -23,6 +21,11 @@ void main(List<String> args) {
   final dumpCmd = parser.addCommand('dump');
   dumpCmd.addFlag('help', abbr: 'h');
 
+  final bindCmd = parser.addCommand('bind');
+  bindCmd.addFlag('help', abbr: 'h');
+  bindCmd.addFlag('single-file', abbr: 's');
+  bindCmd.addFlag('all', abbr: 'a');
+
   // ignore: unused_local_variable
   final helpCmd = parser.addCommand('help');
 
@@ -35,6 +38,7 @@ void main(List<String> args) {
     print('   compile Compile a Dart project to EVC bytecode.');
     print('   run Run EVC bytecode in the dart_eval VM.');
     print('   dump Dump op codes from an EVC file.');
+    print('   bind Generate bindings for a Dart project (experimental)');
     print('   help Print this help message.');
     print('');
     print(
@@ -50,134 +54,6 @@ void main(List<String> args) {
       exit(0);
     }
 
-    final compiler = Compiler();
-
-    print('Loading files...');
-    var commandRoot = Directory(current);
-    var projectRoot = commandRoot;
-    while (true) {
-      final files = projectRoot.listSync();
-      if (files.any(
-          (file) => (file is File && file.path.endsWith('pubspec.yaml')))) {
-        break;
-      }
-      projectRoot = projectRoot.parent;
-    }
-
-    final bridgedPackages = <String>[];
-
-    if (FileSystemEntity.typeSync('./.dart_eval/bindings') ==
-        FileSystemEntityType.directory) {
-      final files = Directory('./.dart_eval/bindings')
-          .listSync()
-          .where((entity) => entity is File && entity.path.endsWith('.json'))
-          .cast<File>();
-
-      for (final file in files) {
-        print(
-            'Found binding file: ${relative(file.path, from: projectRoot.path)}');
-        final _data = file.readAsStringSync();
-        final decoded = (json.decode(_data) as Map).cast<String, dynamic>();
-        final classList = (decoded['classes'] as List);
-        for (final $class in classList.cast<Map>()) {
-          compiler.defineBridgeClass(BridgeClassDef.fromJson($class.cast()));
-        }
-        for (final $enum in (decoded['enums'] as List).cast<Map>()) {
-          compiler.defineBridgeEnum(BridgeEnumDef.fromJson($enum.cast()));
-        }
-        for (final $source in (decoded['sources'] as List).cast<Map>()) {
-          compiler.addSource(DartSource($source['uri'], $source['source']));
-        }
-        for (final $function in (decoded['functions'] as List).cast<Map>()) {
-          compiler.defineBridgeTopLevelFunction(
-              BridgeFunctionDeclaration.fromJson($function.cast()));
-        }
-      }
-
-      for (final lib in compiler.bridgedLibraries) {
-        if (lib.startsWith('package:')) {
-          final packageName = lib.split('/')[0].substring(8);
-          if (!bridgedPackages.contains(packageName)) {
-            bridgedPackages.add(packageName);
-          }
-        }
-      }
-    }
-
-    final pubspecFile = File(join(projectRoot.path, 'pubspec.yaml'));
-    final pubspec = Pubspec.parse(pubspecFile.readAsStringSync());
-
-    final packageName = pubspec.name;
-    compiler.version = pubspec.version?.canonicalizedVersion;
-
-    final data = <String, Map<String, String>>{};
-    var sourceLength = 0;
-
-    // Recursively add dart files in the lib and bin directory
-    final libDir = Directory(join(projectRoot.path, 'lib'));
-    final binDir = Directory(join(projectRoot.path, 'bin'));
-
-    void addFiles(String pkg, Directory dir, String root) {
-      if (!dir.existsSync()) return;
-      if (!data.containsKey(pkg)) {
-        data[pkg] = {};
-      }
-      for (final file in dir.listSync()) {
-        if (file is File && file.path.endsWith('.dart')) {
-          final _data = file.readAsStringSync();
-          sourceLength += _data.length;
-
-          final p = relative(file.path, from: root).replaceAll('\\', '/');
-          data[pkg]![p] = _data;
-        } else if (file is Directory) {
-          addFiles(pkg, file, root);
-        }
-      }
-    }
-
-    addFiles(packageName, libDir, libDir.path);
-    addFiles(packageName, binDir, binDir.path);
-
-    final packageConfigFile =
-        File(join(projectRoot.path, '.dart_tool', 'package_config.json'))
-            .readAsStringSync();
-    final packageConfig = PackageConfig.parseString(
-        packageConfigFile, Uri.parse(join(projectRoot.path, '.dart_tool')));
-
-    if (packageConfig.packages.length > 1) {
-      print('Adding packages from package config:');
-    }
-    var skips = '';
-    for (final package in packageConfig.packages) {
-      if (bridgedPackages.contains(package.name)) {
-        skips += 'Skipped package ${package.name} because it is bridged.\n';
-        continue;
-      }
-
-      if (packageName == package.name) {
-        continue;
-      }
-
-      stdout.write('${package.name} ');
-
-      String filepath;
-      try {
-        filepath = package.packageUriRoot.toFilePath();
-      } catch (e) {
-        filepath = package.packageUriRoot.toString();
-      }
-
-      final pkgDir = Directory(filepath);
-      addFiles(package.name, pkgDir, pkgDir.path);
-    }
-
-    stdout.write('\n$skips');
-
-    print('\nCompiling package $packageName...');
-
-    final ts = DateTime.now().millisecondsSinceEpoch;
-
-    final programSource = compiler.compile(data);
     var outputName = command['out'];
     if (outputName == null) {
       if (!command.options.contains('path')) {
@@ -192,13 +68,7 @@ void main(List<String> args) {
       }
     }
 
-    final _out = programSource.write();
-
-    File(outputName).writeAsBytesSync(_out);
-
-    final timeElapsed = DateTime.now().millisecondsSinceEpoch - ts;
-    print(
-        'Compiled $sourceLength characters Dart to ${_out.length} bytes EVC in $timeElapsed ms: $outputName');
+    cliCompile(outputName);
   } else if (command.name == 'run') {
     if (command['help']! || command.rest.length != 1) {
       if (command['help']) {
@@ -222,17 +92,7 @@ void main(List<String> args) {
           'Example: dart_eval run program.evc --library package:my_package/main.dart');
       exit(1);
     }
-    final evc = File(command.rest[0]).readAsBytesSync();
-    final runtime = Runtime(evc.buffer.asByteData());
-    runtime.setup();
-    var result = runtime.executeLib(command['library']!, command['function']!);
-
-    if (result != null) {
-      if (result is $Value) {
-        result = result.$reified;
-      }
-      print('\nProgram exited with result: $result');
-    }
+    cliRun(command.rest[0], command['library'], command['function'] ?? 'main');
   } else if (command.name == 'dump') {
     if (command['help']! || command.rest.length != 1) {
       if (command['help']) {
@@ -247,7 +107,15 @@ void main(List<String> args) {
     }
     final evc = File(command.rest[0]).readAsBytesSync();
     final runtime = Runtime(evc.buffer.asByteData());
-    runtime.setup();
     runtime.printOpcodes();
+  } else if (command.name == 'bind') {
+    if (command['help']!) {
+      print('bind: Generate bindings for a Dart project (experimental)');
+      print('Usage:');
+      print('   dart_eval bind [-h, --help] [-a, --all] [-s, --single-file]');
+      exit(0);
+    }
+
+    cliBind(command['single-file'], command['all']);
   }
 }

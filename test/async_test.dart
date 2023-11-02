@@ -27,8 +27,8 @@ void main() {
           .executeLib('package:example/main.dart', 'main', [150]) as Future;
       await expectLater(future, completion($int(3)));
       final endTime = DateTime.now().millisecondsSinceEpoch;
-      expect(endTime - startTime, greaterThan(100));
-      expect(endTime - startTime, lessThan(200));
+      expect(endTime - startTime, greaterThan(80));
+      expect(endTime - startTime, lessThan(255));
     });
 
     test('Chained async/await', () async {

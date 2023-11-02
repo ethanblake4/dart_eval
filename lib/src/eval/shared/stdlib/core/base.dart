@@ -140,7 +140,14 @@ class $String implements $Instance {
               BridgeParameter('pattern',
                   BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.pattern)), false)
             ],
-            namedParams: []))
+            namedParams: [])),
+        '[]': BridgeMethodDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+            params: [
+              BridgeParameter('index',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), false)
+            ],
+            namedParams: [])),
       },
       wrap: true);
 
@@ -160,6 +167,8 @@ class $String implements $Instance {
         return $bool($value.isNotEmpty);
       case '+':
         return __concat;
+      case '[]':
+        return __index;
       case 'codeUnitAt':
         return __codeUnitAt;
       case 'compareTo':
@@ -218,6 +227,15 @@ class $String implements $Instance {
     target as $String;
     final other = args[0] as $String;
     return $String(target.$value + other.$value);
+  }
+
+  static const $Function __index = $Function(_index);
+
+  static $Value? _index(
+      final Runtime runtime, final $Value? target, final List<$Value?> args) {
+    target as $String;
+    final index = args[0] as $int;
+    return $String(target.$value[index.$value]);
   }
 
   static const $Function __codeUnitAt = $Function(_codeUnitAt);
@@ -317,9 +335,9 @@ class $String implements $Instance {
   static $Value? _replaceAll(
       final Runtime runtime, final $Value? target, final List<$Value?> args) {
     target as $String;
-    final from = args[0] as $String;
-    final replace = args[1] as $String;
-    return $String(target.$value.replaceAll(from.$value, replace.$value));
+    final from = args[0]!.$value;
+    final replace = args[1]!.$value;
+    return $String(target.$value.replaceAll(from, replace));
   }
 
   static const $Function __replaceFirst = $Function(_replaceFirst);

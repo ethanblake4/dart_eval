@@ -39,7 +39,7 @@ import 'package:dart_eval/dart_eval.dart';
 void main() {
   print(eval('2 + 2')); // -> 4
   
-  final program = '''
+  final program = r'''
       class Cat {
         Cat(this.name);
         final String name;
@@ -126,7 +126,6 @@ void main() {
   }});
   
   final runtime = Runtime(program);
-  runtime.setup();
   print(runtime.executeLib(
     'package:my_package/main.dart', 'main')); // prints '[6]'
 }
@@ -191,7 +190,6 @@ void main() {
       .asByteData();
   
   final runtime = Runtime(bytecode);
-  runtime.setup();
   print(runtime.executeLib(
     'package:my_package/main.dart', 'main')); // prints '499500'
 }
@@ -259,7 +257,6 @@ resources, but these permissions can be enabled on a granular basis using
 
 ```dart
 final runtime = Runtime(bytecode);
-runtime.setup();
 
 // Allow full access to the file system
 runtime.grant(FilesystemPermission.any);
@@ -404,7 +401,6 @@ void main() {
   final runtime = Runtime.ofProgram(program);
   // Register static methods and constructors with the runtime
   runtime.registerBridgeFunc('package:hello/book.dart', 'Book.', $Book.$new);
-  runtime.setup();
 
   runtime.executeLib('package:hello/main.dart', 'main'); // -> 'Hello again!'
 }
@@ -412,6 +408,18 @@ void main() {
 
 For more information,
 see the [wrapper interop wiki page](https://github.com/ethanblake4/dart_eval/wiki/Wrappers).
+
+#### (Experimental) Binding generation for wrappers
+As of v0.7.1 the dart_eval CLI includes an experimental wrapper binding generator. 
+It can be invoked in a project using `dart_eval bind`, and will generate bindings
+for all classes annotated with the @Bind annotation from the eval_annotation package.
+You can also pass the '--all' flag to generate bindings for all classes in the project.
+Note that the generated bindings should only be used as a starting point; in 
+particular, they only include placeholder runtime bindings for methods which will
+need to be filled in manually.
+
+Binding generation cannot currently create JSON bindings directly, but you can
+use the generated Dart bindings to create JSON bindings using a `BridgeSerializer`.
 
 ### Bridge interop
 
@@ -483,7 +491,6 @@ void main() {
   final runtime = Runtime.ofProgram(program);
   runtime.registerBridgeFunc(
     'package:hello/book.dart', 'Book.', $Book$bridge.$new, bridge: true);
-  runtime.setup();
 
   // Now we can use the new book class outside dart_eval!
   final book = runtime.executeLib('package:hello/main.dart', 'main') 
@@ -507,14 +514,14 @@ class MyAppPlugin implements EvalPlugin {
   String get identifier => 'package:myapp';
 
   @override
-  void configureForCompile(Compiler compiler) {
-    compiler.defineBridgeTopLevelFunction(BridgeFunctionDeclaration(
+  void configureForCompile(BridgeDeclarationRegistry registry) {
+    registry.defineBridgeTopLevelFunction(BridgeFunctionDeclaration(
       'package:myapp/functions.dart',
       'loadData',
       BridgeFunctionDef(
           returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object)), params: [])
     ));
-    compiler.defineBridgeClass($CoolWidget.$declaration);
+    registry.defineBridgeClass($CoolWidget.$declaration);
   }
 
   @override
@@ -556,7 +563,7 @@ String myFunction() => 'Updated version of string'
 ```
 
 Finally, follow the normal instructions to compile and run the program, but
-call `loadGlobalOverrides` on the Runtime after calling `setup()`.
+call `loadGlobalOverrides` on the Runtime.
 This will set the runtime as the single global runtime for the program, and 
 load its overrides to be accessible by hot wrappers.
 

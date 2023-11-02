@@ -8,14 +8,7 @@ import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 
-import '../reference.dart';
-
 Variable compileAssignmentExpression(
-    AssignmentExpression e, CompilerContext ctx) {
-  return compileAssignmentExpressionAsReference(e, ctx).getValue(ctx);
-}
-
-Reference compileAssignmentExpressionAsReference(
     AssignmentExpression e, CompilerContext ctx) {
   final L = compileExpressionAsReference(e.leftHandSide, ctx);
   final R = compileExpression(e.rightHandSide, ctx);
@@ -26,20 +19,21 @@ Reference compileAssignmentExpressionAsReference(
       throw CompileError(
           'Syntax error: cannot assign value of type ${R.type} to $lType');
     }
-    L.setValue(ctx, R);
+    return L.setValue(ctx, R);
   } else if (e.operator.type.binaryOperatorOfCompoundAssignment ==
       TokenType.QUESTION_QUESTION) {
+    late Variable result;
     macroBranch(ctx, null, condition: (_ctx) {
       return L
           .getValue(_ctx)
           .invoke(ctx, '==', [BuiltinValue().push(_ctx)]).result;
     }, thenBranch: (_ctx, rt) {
-      L.setValue(ctx, R.boxIfNeeded(ctx));
+      result = L.setValue(ctx, R.boxIfNeeded(ctx));
       return StatementInfo(-1);
     });
+    return result;
   } else {
     final method = e.operator.type.binaryOperatorOfCompoundAssignment!.lexeme;
-    L.setValue(ctx, L.getValue(ctx).invoke(ctx, method, [R]).result);
+    return L.setValue(ctx, L.getValue(ctx).invoke(ctx, method, [R]).result);
   }
-  return L;
 }

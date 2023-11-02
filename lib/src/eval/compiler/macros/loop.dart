@@ -16,25 +16,26 @@ StatementInfo macroLoop(
   bool alwaysLoopOnce = false,
   bool updateBeforeBody = false,
 }) {
-  /// Make a save-state of the box/unbox status of all locals
-  final save = ctx.saveState();
-
-  /// Create a nonlinear access context (all new variables will be unboxed)
-  ctx.beginAllocScope(requireNonlinearAccess: true);
+  ctx.beginAllocScope();
 
   if (initialization != null) {
     initialization(ctx);
   }
 
+  /// Make a save-state of the box/unbox status of all locals
+  final save = ctx.saveState();
+
   JumpIfFalse? rewriteCond;
   int? rewritePos;
   Variable? conditionResult;
+  ContextSaveState? conditionSaveState;
   var loopStart = ctx.out.length;
 
-  ctx.beginAllocScope(requireNonlinearAccess: true);
+  ctx.beginAllocScope();
 
   if (!alwaysLoopOnce && condition != null) {
     conditionResult = condition(ctx).unboxIfNeeded(ctx);
+    conditionSaveState = ctx.saveState();
     rewriteCond = JumpIfFalse.make(conditionResult.scopeFrameOffset, -1);
     rewritePos = ctx.pushOp(rewriteCond, JumpIfFalse.LEN);
   }
@@ -58,9 +59,6 @@ StatementInfo macroLoop(
       rewritePos = ctx.pushOp(rewriteCond, JumpIfFalse.LEN);
     }
 
-    /// Re-unbox any variables declared in the loop or initializer
-    /// that were boxed in the loop body
-    ctx.resolveNonlinearity(2);
     ctx.endAllocScope();
 
     /// Box/unbox variables that were declared outside the loop and changed in
@@ -75,6 +73,11 @@ StatementInfo macroLoop(
   if (rewritePos != null) {
     ctx.rewriteOp(rewritePos,
         JumpIfFalse.make(conditionResult!.scopeFrameOffset, ctx.out.length), 0);
+  }
+
+  if (conditionSaveState != null) {
+    ctx.restoreBoxingState(conditionSaveState);
+    ctx.resolveBranchStateDiscontinuity(save);
   }
 
   if (after != null) {

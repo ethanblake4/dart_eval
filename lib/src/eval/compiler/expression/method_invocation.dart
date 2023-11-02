@@ -298,7 +298,7 @@ Variable _invokeWithTarget(
         ctx.offsetTracker.setOffset(loc, offset);
       }
     }
-  } else if (L.concreteTypes.length == 1) {
+  } else if (L.concreteTypes.length == 1 && !_dec.isBridge) {
     // If the concrete type is known we can use a static call
     final actualType = L.concreteTypes[0];
     final offset = DeferredOrOffset(
@@ -338,20 +338,24 @@ DeclarationOrBridge<MethodDeclaration, BridgeMethodDef> resolveInstanceMethod(
   final _bottomType = bottomType ?? instanceType;
   if (_dec.isBridge) {
     // Bridge
-    final bridge = _dec.bridge! as BridgeClassDef;
-    final method = bridge.methods[methodName];
+    final bridge = _dec.bridge!;
+    final method = bridge is BridgeClassDef
+        ? bridge.methods[methodName]
+        : (bridge as BridgeEnumDef).methods[methodName];
     if (method == null) {
-      final $extendsBridgeType = bridge.type.$extends;
-      if ($extendsBridgeType == null) {
+      final $extendsBridgeType =
+          bridge is BridgeClassDef ? bridge.type.$extends : null;
+      if ($extendsBridgeType == null && bridge is! BridgeEnumDef) {
         throw CompileError(
             'Method not found $methodName on $_bottomType', source);
       }
-      final $extendsType = TypeRef.fromBridgeTypeRef(ctx, $extendsBridgeType);
+      final $extendsType = bridge is BridgeEnumDef
+          ? CoreTypes.enumType.ref(ctx)
+          : TypeRef.fromBridgeTypeRef(ctx, $extendsBridgeType!);
       return resolveInstanceMethod(
           ctx, $extendsType, methodName, source, _bottomType);
     }
-    return DeclarationOrBridge(instanceType.file,
-        bridge: bridge.methods[methodName]!);
+    return DeclarationOrBridge(instanceType.file, bridge: method);
   }
 
   final dec = ctx.instanceDeclarationsMap[instanceType.file]![

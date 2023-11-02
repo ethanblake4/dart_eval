@@ -1,3 +1,15 @@
+## 0.7.1
+- Eliminate requirement to call setup() on the Runtime. Setup is now
+  invoked automatically and the setup method is deprecated.
+- Add experimental wrapper binding generator to the CLI (thanks to
+  @a-wallen). See README for details and caveats.
+- Add `[]` indexed getter for strings
+- Fix loop boxing/unboxing bugs
+- Fix argument type of String.replaceAll()
+- Fix error when trying to resolve a method on an enum
+- Fix incorrect type inference of conditional and assignment expressions
+- Make `RegExpMatch` bimodal
+
 ## 0.7.0
 - (Breaking) Removed RuntimeTypes. All builtin types are referenced 
   with CoreTypes/AsyncTypes etc now.

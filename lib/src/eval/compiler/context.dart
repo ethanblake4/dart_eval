@@ -1,5 +1,5 @@
 // ignore_for_file: body_might_complete_normally_nullable
-
+import 'dart:math' as math;
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
@@ -28,8 +28,6 @@ abstract class AbstractScopeContext {
 
   set allocNest(List<int> a);
 
-  List<bool> get inNonlinearAccessContext;
-
   int pushOp(EvcOp op, int length) {
     return 0;
   }
@@ -42,14 +40,11 @@ mixin ScopeContext on Object implements AbstractScopeContext {
   List<Map<String, Variable>> locals = [];
   @override
   List<int> allocNest = [0];
-  @override
-  List<bool> inNonlinearAccessContext = [false];
 
   void beginAllocScope(
       {int existingAllocLen = 0, bool requireNonlinearAccess = false}) {
     allocNest.add(existingAllocLen);
     locals.add({});
-    inNonlinearAccessContext.add(requireNonlinearAccess);
   }
 
   int peekAllocPops({int popAdjust = 0}) {
@@ -57,7 +52,6 @@ mixin ScopeContext on Object implements AbstractScopeContext {
   }
 
   int endAllocScope({bool popValues = true, int popAdjust = 0}) {
-    inNonlinearAccessContext.removeLast();
     locals.removeLast();
     final nestCount = allocNest.removeLast();
     if (popValues) {
@@ -77,7 +71,6 @@ mixin ScopeContext on Object implements AbstractScopeContext {
   void resetStack({int position = 0}) {
     allocNest = [position];
     scopeFrameOffset = position;
-    inNonlinearAccessContext = [false];
   }
 
   Variable setLocal(String name, Variable v, {int? frame}) {
@@ -137,7 +130,26 @@ mixin ScopeContext on Object implements AbstractScopeContext {
   void restoreState(ContextSaveState initial) {
     allocNest = initial.allocNest;
     locals = initial.locals;
-    inNonlinearAccessContext = initial.inNonlinearAccessContext;
+  }
+
+  void restoreBoxingState(ContextSaveState initial) {
+    final _otherLocals = initial.locals;
+    final _myLocals = [...locals];
+    for (var i = 0; i < math.min(_otherLocals.length, _myLocals.length); i++) {
+      final _otherLocalsMap = _otherLocals[i];
+      final _myLocalsMap = _myLocals[i];
+
+      _otherLocalsMap.forEach((key, value) {
+        final myLocal = _myLocalsMap[key]!;
+        if (!myLocal.boxed && value.boxed) {
+          locals[i][key] =
+              myLocal.copyWith(type: myLocal.type.copyWith(boxed: true));
+        } else if (myLocal.boxed && !value.boxed) {
+          locals[i][key] =
+              myLocal.copyWith(type: myLocal.type.copyWith(boxed: false));
+        }
+      });
+    }
   }
 }
 
@@ -187,8 +199,6 @@ class CompilerContext with ScopeContext {
 
   /// A map of String IDs to bytecode offsets used for runtime overrides
   Map<String, OverrideSpec> runtimeOverrideMap = {};
-
-  bool get requireNonlinearAccess => inNonlinearAccessContext.last;
 
   int sourceFile;
 
@@ -289,10 +299,8 @@ class ContextSaveState {
         ],
         scopeDoesClose =
             context is CompilerContext ? [...context.scopeDoesClose] : [],
-        allocNest = [...context.allocNest],
-        inNonlinearAccessContext = [...context.inNonlinearAccessContext];
+        allocNest = [...context.allocNest];
   List<Map<String, Variable>> locals;
   List<bool> scopeDoesClose;
   List<int> allocNest;
-  List<bool> inNonlinearAccessContext;
 }

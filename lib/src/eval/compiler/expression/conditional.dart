@@ -15,7 +15,7 @@ import 'expression.dart';
 Variable compileConditionalExpression(
     CompilerContext ctx, ConditionalExpression e,
     [TypeRef? boundType]) {
-  final Variable V = ctx.setLocal('#conditional', BuiltinValue().push(ctx));
+  ctx.setLocal('#conditional', BuiltinValue().push(ctx));
   final vRef = IdentifierReference(null, '#conditional');
   final types = <TypeRef>{if (boundType != null) boundType};
 
@@ -40,5 +40,7 @@ Variable compileConditionalExpression(
     return StatementInfo(-1);
   });
 
-  return V.copyWith(type: TypeRef.commonBaseType(ctx, types));
+  final val = vRef.getValue(ctx);
+  return val.copyWith(
+      type: TypeRef.commonBaseType(ctx, types).copyWith(boxed: val.boxed));
 }

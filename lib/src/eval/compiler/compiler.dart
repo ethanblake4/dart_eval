@@ -548,7 +548,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
 
     final ob = program.write();
 
-    return Runtime(ob.buffer.asByteData())..setup();
+    return Runtime(ob.buffer.asByteData());
   }
 
   void _populateLookupTablesForDeclaration(
