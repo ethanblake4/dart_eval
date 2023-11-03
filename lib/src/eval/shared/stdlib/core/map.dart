@@ -46,7 +46,10 @@ class $Map<K, V> implements Map<K, V>, $Instance {
                     BridgeTypeRef(CoreTypes.intType))),
             isStatic: false),*/
       },
-      getters: {},
+      getters: {
+        'entries': BridgeMethodDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.iterable))))
+      },
       setters: {},
       fields: {},
       wrap: true);
@@ -65,6 +68,8 @@ class $Map<K, V> implements Map<K, V>, $Instance {
         return __indexSet;
       case 'length':
         return $int($value.length);
+      case 'entries':
+        return $Iterable.wrap(entries.map((e) => $MapEntry.wrap(e)));
     }
     return _superclass.$getProperty(runtime, identifier);
   }
@@ -183,4 +188,75 @@ class $Map<K, V> implements Map<K, V>, $Instance {
 
   @override
   Iterable<V> get values => $value.values;
+}
+
+/// dart_eval bimodal wrapper for [MapEntry]
+class $MapEntry<K, V> implements MapEntry<K, V>, $Instance {
+  /// Wrap a [MapEntry] in a [$MapEntry]
+  $MapEntry.wrap(this.$value);
+
+  static const $declaration = BridgeClassDef(
+      BridgeClassType(BridgeTypeRef(CoreTypes.mapEntry),
+          generics: {'K': BridgeGenericParam(), 'V': BridgeGenericParam()}),
+      constructors: {
+        '': BridgeConstructorDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.mapEntry)),
+            params: [
+              BridgeParameter(
+                  'key', BridgeTypeAnnotation(BridgeTypeRef.ref('K')), false),
+              BridgeParameter(
+                  'value', BridgeTypeAnnotation(BridgeTypeRef.ref('V')), false),
+            ],
+            generics: {
+              'K': BridgeGenericParam(),
+              'V': BridgeGenericParam()
+            }))
+      },
+      getters: {},
+      setters: {},
+      fields: {
+        'key': BridgeFieldDef(BridgeTypeAnnotation(BridgeTypeRef.ref('K'))),
+        'value': BridgeFieldDef(BridgeTypeAnnotation(BridgeTypeRef.ref('V'))),
+      },
+      wrap: true);
+
+  @override
+  final MapEntry<K, V> $value;
+
+  late final $Instance _superclass = $Object($value);
+
+  static $Value? $new(
+      final Runtime runtime, final $Value? target, final List<$Value?> args) {
+    return $MapEntry.wrap(MapEntry(args[0], args[1]));
+  }
+
+  @override
+  $Value? $getProperty(Runtime runtime, String identifier) {
+    switch (identifier) {
+      case 'key':
+        return key as $Value?;
+      case 'value':
+        return value as $Value?;
+      default:
+        return _superclass.$getProperty(runtime, identifier);
+    }
+  }
+
+  @override
+  int $getRuntimeType(Runtime runtime) =>
+      runtime.lookupType(CoreTypes.mapEntry);
+
+  @override
+  MapEntry<K, V> get $reified => $value;
+
+  @override
+  void $setProperty(Runtime runtime, String identifier, $Value value) {
+    _superclass.$setProperty(runtime, identifier, value);
+  }
+
+  @override
+  K get key => $value.key;
+
+  @override
+  V get value => $value.value;
 }

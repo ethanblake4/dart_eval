@@ -528,6 +528,7 @@ class Runtime {
           ...Evc.istr(op._name),
           ...Evc.i16b(op._valuesLen)
         ];
+
       case NumLt:
         op as NumLt;
         return [

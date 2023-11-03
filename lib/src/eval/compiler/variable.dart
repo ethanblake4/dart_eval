@@ -195,6 +195,7 @@ class Variable {
               TypeRef.commonBaseType(ctx, {$this.type, R.type})
                   .copyWith(boxed: false));
           break;
+
         case '<':
           // Num intrinsic less than
           ctx.pushOp(NumLt.make($this.scopeFrameOffset, R.scopeFrameOffset),
@@ -223,6 +224,7 @@ class Variable {
           result = Variable.alloc(
               ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
           break;
+
         default:
           throw CompileError('Unknown num intrinsic method "$method"');
       }

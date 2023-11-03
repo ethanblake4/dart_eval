@@ -42,6 +42,7 @@ Variable compileBinaryExpression(CompilerContext ctx, BinaryExpression e,
     TokenType.GT_GT: '>>',
     TokenType.BANG_EQ: '!=',
     TokenType.CARET: '^',
+    // TokenType.TILDE_SLASH: '~/'
   };
 
   var method = opMap[e.operator.type] ??

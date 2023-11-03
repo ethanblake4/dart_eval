@@ -287,6 +287,8 @@ Map<TypeRef, Map<String, KnownMethod>> getKnownMethods(ctx) {
           AlwaysReturnType(CoreTypes.string.ref(ctx), false), [], {}),
       'toUpperCase': KnownMethod(
           AlwaysReturnType(CoreTypes.string.ref(ctx), false), [], {}),
+      'trim': KnownMethod(
+          AlwaysReturnType(CoreTypes.string.ref(ctx), false), [], {}),
       'trimLeft': KnownMethod(
           AlwaysReturnType(CoreTypes.string.ref(ctx), false), [], {}),
       'trimRight': KnownMethod(

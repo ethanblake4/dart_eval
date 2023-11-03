@@ -40,6 +40,19 @@ class $num<T extends num> implements $Instance {
                       false),
                 ]),
             isStatic: true),
+
+        'toInt': BridgeMethodDef(
+            BridgeFunctionDef(
+                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int),
+                    nullable: true),
+                params: []),
+            isStatic: false),
+        'ceil': BridgeMethodDef(
+            BridgeFunctionDef(
+                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int),
+                    nullable: true),
+                params: []),
+            isStatic: false),
       },
       getters: {},
       setters: {},
@@ -114,6 +127,10 @@ class $num<T extends num> implements $Instance {
         return __gteq;
       case 'compareTo':
         return __compareTo;
+      case 'toInt':
+        return __toInt;
+      case 'ceil':
+        return __ceil;
     }
     return _superclass.$getProperty(runtime, identifier);
   }
@@ -251,6 +268,18 @@ class $num<T extends num> implements $Instance {
     }
 
     throw UnimplementedError();
+  }
+
+  static const $Function __toInt = $Function(_toInt);
+  static $Value? _toInt(Runtime runtime, $Value? target, List<$Value?> args) {
+    final _evalResult = (target!.$value as num).toInt();
+    return $int(_evalResult);
+  }
+
+  static const $Function __ceil = $Function(_ceil);
+  static $Value? _ceil(Runtime runtime, $Value? target, List<$Value?> args) {
+    final _evalResult = (target!.$value as num).ceil();
+    return $int(_evalResult);
   }
 
   static const $Function __compareTo = $Function(_compareTo);

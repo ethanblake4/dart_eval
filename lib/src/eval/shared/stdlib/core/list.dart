@@ -591,7 +591,7 @@ class $List<E> implements List<E>, $Instance {
   static const $Function __asMap = $Function(_asMap);
 
   static $Value? _asMap(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $Map.wrap((target!.$value as List).asMap());
+    return $Map.wrap((target!.$value as List).asMap().map((key, value) => MapEntry($int(key), value)));
   }
 
   @override

@@ -62,6 +62,9 @@ class CoreTypes {
   /// Bridge type spec for [$Map]
   static const map = BridgeTypeSpec('dart:core', 'Map');
 
+  /// Bridge type spec for [$MapEntry]
+  static const mapEntry = BridgeTypeSpec('dart:core', 'MapEntry');
+
   /// Bridge type spec for [$Iterator]
   static const iterator = BridgeTypeSpec('dart:core', 'Iterator');
 
@@ -203,6 +206,15 @@ class ConvertTypes {
 
   /// Bridge type spec for [$Utf8Codec]
   static const utf8Codec = BridgeTypeSpec('dart:convert', 'Utf8Codec');
+
+  /// Bridge type spec for [$Base64Encoder]
+  static const base64Encoder = BridgeTypeSpec('dart:convert', 'Base64Encoder');
+
+  /// Bridge type spec for [$Base64Decoder]
+  static const base64Decoder = BridgeTypeSpec('dart:convert', 'Base64Decoder');
+
+  /// Bridge type spec for [$Base64Codec]
+  static const base64Codec = BridgeTypeSpec('dart:convert', 'Base64Codec');
 }
 
 /// This class contains dart:io bridge type specs for convenience
