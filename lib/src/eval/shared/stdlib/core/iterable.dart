@@ -46,19 +46,6 @@ class $Iterable<E> implements Iterable<E>, $Instance {
                 returns: BridgeTypeAnnotation(
                     BridgeTypeRef(BridgeTypeSpec('dart:core', 'Iterable')))),
             isStatic: false),
-        'fold': BridgeMethodDef(
-            BridgeFunctionDef(
-                params: [
-                  BridgeParameter('initialValue',
-                      BridgeTypeAnnotation(BridgeTypeRef.ref('E')), false),
-                  BridgeParameter(
-                      'combine',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
-                      false),
-                ],
-                returns: BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
-                generics: {'E': BridgeGenericParam()}),
-            isStatic: false),
         'toList': BridgeMethodDef(
             BridgeFunctionDef(
                 params: [
@@ -117,8 +104,6 @@ class $Iterable<E> implements Iterable<E>, $Instance {
         return __join;
       case 'map':
         return __map;
-      case 'fold':
-        return __fold;
       case 'take':
         return __take;
       case 'toSet':
@@ -128,18 +113,6 @@ class $Iterable<E> implements Iterable<E>, $Instance {
       default:
         return _superclass.$getProperty(runtime, identifier);
     }
-  }
-
-  static const $Function __fold = $Function(_fold);
-
-  static $Value? _fold(Runtime runtime, $Value? target, List<$Value?> args) {
-    final combine = args[1] as EvalCallable;
-
-    return (target!.$value as Iterable).fold(
-        args[0]!,
-        //lol
-        //lol
-        (a, b) => combine.call(runtime, null, [a, b]));
   }
 
   @override
