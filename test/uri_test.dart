@@ -114,7 +114,7 @@ void main() {
       final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
-            String main() {
+            int main() {
               final uri = 'https://username:password@example.com:8080/path/to/resource?query=value#fragment';
               final parsedUri = Uri.parse(uri);
               return parsedUri.port;
@@ -124,7 +124,7 @@ void main() {
       });
 
       expect(
-          runtime.executeLib('package:example/main.dart', 'main'), $int(8080));
+          runtime.executeLib('package:example/main.dart', 'main'), 8080);
     });
 
     test('Uri().pathSegments', () {
