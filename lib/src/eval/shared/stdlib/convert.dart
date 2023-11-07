@@ -6,8 +6,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/convert/encoding.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert/json.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert/utf.dart';
 
-const convertSource =
-    '''
+const convertSource = '''
 final utf8 = Utf8Codec();
 final json = JsonCodec();
 ''';

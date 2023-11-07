@@ -4,6 +4,7 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/collection.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/object.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/pattern.dart';
+import 'package:dart_eval/src/eval/utils/wap_helper.dart';
 import 'num.dart';
 
 const $dynamicCls = BridgeClassDef(
@@ -158,6 +159,11 @@ class $String implements $Instance {
             ],
             namedParams: [])),
       },
+      getters: {
+        'codeUnits': BridgeMethodDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.list, [BridgeTypeRef(CoreTypes.int)]))))
+      },
       wrap: true);
 
   @override
@@ -190,6 +196,8 @@ class $String implements $Instance {
         return __index;
       case 'codeUnitAt':
         return __codeUnitAt;
+      case 'codeUnits':
+        return wrapList($value.codeUnits, (e) => $int(e));
       case 'compareTo':
         return __compareTo;
       case 'contains':
