@@ -38,6 +38,21 @@ void main() {
       expect(runtime.executeLib('package:example/main.dart', 'main'), 0.5);
     });
 
+    test('~/ operator', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main() {
+              final a =  45 ~/ 21;
+              return a;
+            }
+          '''
+        }
+      });
+
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 2);
+    });
+
     test('print()', () async {
       final runtime = compiler.compileWriteAndLoad({
         'example': {

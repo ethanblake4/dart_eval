@@ -4,6 +4,7 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/collection.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/object.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/pattern.dart';
+import 'package:dart_eval/src/eval/utils/wap_helper.dart';
 import 'num.dart';
 
 const $dynamicCls = BridgeClassDef(
@@ -130,7 +131,16 @@ class $String implements $Instance {
   static const $declaration = BridgeClassDef(
       BridgeClassType(BridgeTypeRef(CoreTypes.string),
           $implements: [BridgeTypeRef(CoreTypes.pattern)], isAbstract: true),
-      constructors: {},
+      constructors: {
+        'fromCharCode': BridgeConstructorDef(
+            BridgeFunctionDef(
+                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+                params: [
+                  BridgeParameter('charCode',
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), false)
+                ]),
+            isFactory: true),
+      },
       methods: {
         // Other string methods defined in builtins.dart
         'split': BridgeMethodDef(BridgeFunctionDef(
@@ -149,12 +159,27 @@ class $String implements $Instance {
             ],
             namedParams: [])),
       },
+      getters: {
+        'codeUnits': BridgeMethodDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.list, [BridgeTypeRef(CoreTypes.int)]))))
+      },
       wrap: true);
 
   @override
   final String $value;
 
   final $Instance _superclass;
+
+  static void configureForRuntime(Runtime runtime) {
+    runtime.registerBridgeFunc(
+        'dart:core', 'String.fromCharCode', _fromCharCode);
+  }
+
+  static $Value? _fromCharCode(
+      final Runtime runtime, final $Value? target, final List<$Value?> args) {
+    return $String(String.fromCharCode(args[0]?.$value));
+  }
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
@@ -171,6 +196,8 @@ class $String implements $Instance {
         return __index;
       case 'codeUnitAt':
         return __codeUnitAt;
+      case 'codeUnits':
+        return wrapList($value.codeUnits, (e) => $int(e));
       case 'compareTo':
         return __compareTo;
       case 'contains':
@@ -201,6 +228,8 @@ class $String implements $Instance {
         return __toLowerCase;
       case 'toUpperCase':
         return __toUpperCase;
+      case 'trim':
+        return __trim;
       case 'trimLeft':
         return __trimLeft;
       case 'trimRight':
@@ -345,14 +374,13 @@ class $String implements $Instance {
   static $Value? _replaceFirst(
       final Runtime runtime, final $Value? target, final List<$Value?> args) {
     target as $String;
-    final from = args[0] as $String;
-    final to = args[1] as $String;
+    final from = args[0]!.$value;
+    final to = args[1]!.$value;
     final startIndex = args.length > 2 ? args[2] as $int : null;
     if (startIndex != null) {
-      return $String(target.$value
-          .replaceFirst(from.$value, to.$value, startIndex.$value));
+      return $String(target.$value.replaceFirst(from, to, startIndex.$value));
     } else {
-      return $String(target.$value.replaceFirst(from.$value, to.$value));
+      return $String(target.$value.replaceFirst(from, to));
     }
   }
 
@@ -414,6 +442,13 @@ class $String implements $Instance {
   static $Value? _toUpperCase(
       final Runtime runtime, final $Value? target, final List<$Value?> args) {
     return $String((target!.$value as String).toUpperCase());
+  }
+
+  static const $Function __trim = $Function(_trim);
+
+  static $Value? _trim(
+      final Runtime runtime, final $Value? target, final List<$Value?> args) {
+    return $String((target!.$value as String).trim());
   }
 
   static const $Function __trimLeft = $Function(_trimLeft);

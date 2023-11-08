@@ -68,6 +68,7 @@ class DartCorePlugin implements EvalPlugin {
   void configureForRuntime(Runtime runtime) {
     configurePrintForRuntime(runtime);
     configureIdenticalForRuntime(runtime);
+    $String.configureForRuntime(runtime);
     $List.configureForRuntime(runtime);
     $Iterable.configureForRuntime(runtime);
     $Duration.configureForRuntime(runtime);
