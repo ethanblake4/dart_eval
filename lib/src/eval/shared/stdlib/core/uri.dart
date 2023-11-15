@@ -138,15 +138,15 @@ class $Uri implements $Instance {
       case 'fragment':
         return $String($value.fragment);
       case 'pathSegments':
-        return wrapList($value.pathSegments, (e) => $String(e));
+        return wrapList<String>($value.pathSegments, (e) => $String(e));
       case 'queryParameters':
-        return wrapMap($value.queryParameters,
+        return wrapMap<String, String>($value.queryParameters,
             (key, value) => MapEntry($String(key), $String(value)));
       case 'queryParametersAll':
-        return wrapMap(
+        return wrapMap<String, List<String>>(
             $value.queryParametersAll,
-            (key, value) =>
-                MapEntry($String(key), wrapList(value, (e) => $String(e))));
+            (key, value) => MapEntry(
+                $String(key), wrapList<String>(value, (e) => $String(e))));
       case 'isAbsolute':
         return $bool($value.isAbsolute);
       case 'hasScheme':
