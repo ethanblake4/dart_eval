@@ -86,14 +86,32 @@ class $Utf8Codec implements $Instance {
                   BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true)
             ]))
       },
-      methods: {},
+      methods: {
+        'encode': BridgeMethodDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.list, [BridgeTypeRef(CoreTypes.int)])),
+            params: [
+              BridgeParameter('input',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false),
+            ])),
+        'decode': BridgeMethodDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+            params: [
+              BridgeParameter(
+                  'codeUnits',
+                  BridgeTypeAnnotation(BridgeTypeRef(
+                      CoreTypes.list, [BridgeTypeRef(CoreTypes.int)])),
+                  false),
+            ],
+            namedParams: [
+              BridgeParameter('allowMalformed',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true)
+            ])),
+      },
       getters: {
         'decoder': BridgeMethodDef(BridgeFunctionDef(
             returns:
-                BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.utf8Decoder, [
-          BridgeTypeRef(CoreTypes.list, [BridgeTypeRef(CoreTypes.int)]),
-          BridgeTypeRef(CoreTypes.string),
-        ])))),
+                BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.utf8Decoder)))),
       },
       setters: {},
       fields: {},
@@ -120,9 +138,34 @@ class $Utf8Codec implements $Instance {
     switch (identifier) {
       case 'decoder':
         return $Utf8Decoder.wrap($value.decoder);
+      case 'decode':
+        return __decode;
+      case 'encode':
+        return __encode;
       default:
         return _superclass.$getProperty(runtime, identifier);
     }
+  }
+
+  static const $Function __decode = $Function(_decode);
+  static $Value? _decode(
+      final Runtime runtime, final $Value? target, final List<$Value?> args) {
+    final codeUnits = (args[0]!.$value as List)
+        .map((e) => (e is $Value ? e.$reified : e) as int)
+        .toList();
+    return $String((target as $Utf8Codec)
+        .$value
+        .decode(codeUnits, allowMalformed: args[1]?.$value));
+  }
+
+  static const $Function __encode = $Function(_encode);
+  static $Value? _encode(
+      final Runtime runtime, final $Value? target, final List<$Value?> args) {
+    return $List.wrap((target as $Utf8Codec)
+        .$value
+        .encode(args[0]!.$value)
+        .map((e) => $int(e))
+        .toList());
   }
 
   @override
