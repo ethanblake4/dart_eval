@@ -10,7 +10,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/convert/utf.dart';
 const convertSource = '''
 final utf8 = Utf8Codec();
 final json = JsonCodec();
-final base64Url = Base64Codec();
+final Base64Codec base64Url = Base64Codec.urlSafe();
 final base64 = Base64Codec();
 ''';
 
@@ -40,12 +40,7 @@ class DartConvertPlugin implements EvalPlugin {
     runtime.registerBridgeFunc(
         'dart:convert', 'Utf8Decoder.', $Utf8Decoder.$new);
     runtime.registerBridgeFunc('dart:convert', 'Utf8Codec.', $Utf8Codec.$new);
-    runtime.registerBridgeFunc(
-        'dart:convert', 'Base64Encoder.', $Base64Encoder.$new);
-    runtime.registerBridgeFunc(
-        'dart:convert', 'Base64Decoder.', $Base64Decoder.$new);
-    runtime.registerBridgeFunc(
-        'dart:convert', 'Base64Codec.', $Base64Codec.$new);
+    $Base64Codec.configureForRuntime(runtime);
     runtime.registerBridgeFunc(
         'dart:convert', 'JsonDecoder.', $JsonDecoder.$new);
     runtime.registerBridgeFunc(

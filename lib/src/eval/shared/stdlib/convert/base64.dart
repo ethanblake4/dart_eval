@@ -123,7 +123,13 @@ class $Base64Codec implements $Instance {
       BridgeClassType($type, $extends: BridgeTypeRef(ConvertTypes.encoding)),
       constructors: {
         '': BridgeConstructorDef(
-            BridgeFunctionDef(returns: BridgeTypeAnnotation($type)))
+            BridgeFunctionDef(returns: BridgeTypeAnnotation($type))),
+        'urlSafe': BridgeConstructorDef(
+            BridgeFunctionDef(
+              returns:
+                  BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.base64Codec)),
+            ),
+            isFactory: true),
       },
       methods: {
         'encode': BridgeMethodDef(BridgeFunctionDef(
@@ -160,6 +166,16 @@ class $Base64Codec implements $Instance {
   static $Base64Codec $new(
       Runtime runtime, $Value? target, List<$Value?> args) {
     return $Base64Codec.wrap(Base64Codec());
+  }
+
+  static void configureForRuntime(Runtime runtime) {
+    runtime.registerBridgeFunc(
+        'dart:convert', 'Base64Encoder.', $Base64Encoder.$new);
+    runtime.registerBridgeFunc(
+        'dart:convert', 'Base64Decoder.', $Base64Decoder.$new);
+    runtime.registerBridgeFunc(
+        'dart:convert', 'Base64Codec.', $Base64Codec.$new);
+    runtime.registerBridgeFunc('dart:convert', 'Base64Codec.urlSafe', _urlSafe);
   }
 
   late final $Instance _superclass = $Codec.wrap($value);
@@ -200,6 +216,11 @@ class $Base64Codec implements $Instance {
         .decode(args[0]!.$value)
         .map((e) => $int(e))
         .toList());
+  }
+
+  static $Value? _urlSafe(
+      final Runtime runtime, final $Value? target, final List<$Value?> args) {
+    return $Base64Codec.wrap(Base64Codec.urlSafe());
   }
 
   @override

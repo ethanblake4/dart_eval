@@ -132,20 +132,19 @@ void main() {
             import 'dart:convert';
 
             String main() {
-              return base64.encode(utf8.encode("Hello world"));
+              return base64.encode([52, 149, 126]);
             }
           '''
         }
       });
 
       expect(
-          (runtime
-              .executeLib(
-                'package:example/main.dart',
-                'main',
-              )
-               as $Value).$reified,
-          'SGVsbG8gd29ybGQ=');
+          (runtime.executeLib(
+            'package:example/main.dart',
+            'main',
+          ) as $Value)
+              .$reified,
+          'NJV+');
     });
 
     test('base64.decode()', () async {
@@ -156,6 +155,51 @@ void main() {
 
             List<int> main() {
               return base64.decode("SGVsbG8gd29ybGQ=");
+            }
+          '''
+        }
+      });
+
+      expect(
+          runtime
+              .executeLib(
+                'package:example/main.dart',
+                'main',
+              )
+              .map((e) => (e is $Value ? e.$reified : e) as int)
+              .toList(),
+          [72, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100]);
+    });
+    test('base64Url.encode()', () async {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            import 'dart:convert';
+
+            String main() {
+              return base64Url.encode([52, 149, 126]);
+            }
+          '''
+        }
+      });
+
+      expect(
+          (runtime.executeLib(
+            'package:example/main.dart',
+            'main',
+          ) as $Value)
+              .$reified,
+          'NJV-');
+    });
+
+    test('base64Url.decode()', () async {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            import 'dart:convert';
+
+            List<int> main() {
+              return base64Url.decode("SGVsbG8gd29ybGQ=");
             }
           '''
         }
