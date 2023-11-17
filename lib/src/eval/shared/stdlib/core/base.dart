@@ -140,6 +140,24 @@ class $String implements $Instance {
                       BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), false)
                 ]),
             isFactory: true),
+        'fromCharCodes': BridgeConstructorDef(
+            BridgeFunctionDef(
+                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+                params: [
+                  BridgeParameter(
+                      'charCodes',
+                      BridgeTypeAnnotation(BridgeTypeRef(
+                          BridgeTypeSpec('dart:core', 'Iterable'))),
+                      false),
+                  BridgeParameter('start',
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), true),
+                  BridgeParameter(
+                      'end',
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int),
+                          nullable: true),
+                      true),
+                ]),
+            isFactory: true),
       },
       methods: {
         // Other string methods defined in builtins.dart
@@ -174,11 +192,24 @@ class $String implements $Instance {
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFunc(
         'dart:core', 'String.fromCharCode', _fromCharCode);
+    runtime.registerBridgeFunc(
+        'dart:core', 'String.fromCharCodes', _fromCharCodes);
   }
 
   static $Value? _fromCharCode(
       final Runtime runtime, final $Value? target, final List<$Value?> args) {
     return $String(String.fromCharCode(args[0]?.$value));
+  }
+
+  static $Value? _fromCharCodes(
+      final Runtime runtime, final $Value? target, final List<$Value?> args) {
+    final charCodes = (args[0]!.$value as Iterable)
+        .map((e) => (e is $Value ? e.$reified : e) as int);
+    int? end;
+    try {
+      end = args[2]?.$value as int?;
+    } catch (_) {}
+    return $String(String.fromCharCodes(charCodes, args[1]?.$value ?? 0, end));
   }
 
   @override
@@ -197,7 +228,7 @@ class $String implements $Instance {
       case 'codeUnitAt':
         return __codeUnitAt;
       case 'codeUnits':
-        return wrapList($value.codeUnits, (e) => $int(e));
+        return wrapList<int>($value.codeUnits, (e) => $int(e));
       case 'compareTo':
         return __compareTo;
       case 'contains':
