@@ -76,7 +76,8 @@ void compileConstructorDeclaration(
         _type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
       }
       _type ??= TypeRef.lookupFieldType(ctx,
-          TypeRef.lookupDeclaration(ctx, ctx.library, parent), p.name.lexeme);
+          TypeRef.lookupDeclaration(ctx, ctx.library, parent), p.name.lexeme,
+          source: p);
       _type ??= V?.type;
       _type ??= CoreTypes.dynamic.ref(ctx);
 

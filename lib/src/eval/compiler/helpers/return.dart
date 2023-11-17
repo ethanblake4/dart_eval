@@ -24,8 +24,7 @@ StatementInfo doReturn(
       var _value = value.boxIfNeeded(ctx);
 
       if (!_value.type.isAssignableTo(ctx, expected)) {
-        if (_value.type
-            .isAssignableTo(ctx, TypeRef.stdlib(ctx, 'dart:core', 'Future'))) {
+        if (_value.type.isAssignableTo(ctx, CoreTypes.future.ref(ctx))) {
           final vta = _value.type.specifiedTypeArgs;
           final vtype = vta.isEmpty ? CoreTypes.dynamic.ref(ctx) : vta[0];
           if (vtype.isAssignableTo(ctx, expected)) {

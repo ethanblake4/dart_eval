@@ -17,7 +17,11 @@ StatementInfo compileReturn(CompilerContext ctx, ReturnStatement s,
     _e = _e.parent;
   }
 
-  final value = compileExpression(s.expression!, ctx, expectedReturnType?.type);
+  final expression = s.expression;
+
+  final value = expression == null
+      ? null
+      : compileExpression(s.expression!, ctx, expectedReturnType?.type);
   return doReturn(
       ctx,
       expectedReturnType ?? AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true),

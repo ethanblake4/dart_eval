@@ -43,7 +43,7 @@ void main() {
       class Cat {
         Cat(this.name);
         final String name;
-        String speak() => "I'm $name!';
+        String speak() => "I'm $name!";
       }
       String main() {
         final cat = Cat('Fluffy');

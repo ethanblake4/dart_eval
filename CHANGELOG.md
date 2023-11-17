@@ -1,3 +1,11 @@
+## 0.7.2
+- Support inferring variable types when using the `if (x is Y)` pattern
+- Support for setters with a different type than getters / fields of the
+  same name
+- Support for return statements without a value
+- Fix type resolution of super constructor parameters
+- Add binding for `ArgumentError`
+
 ## 0.7.1
 - Eliminate requirement to call setup() on the Runtime. Setup is now
   invoked automatically and the setup method is deprecated.

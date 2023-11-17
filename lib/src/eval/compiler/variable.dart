@@ -153,6 +153,14 @@ class Variable {
     return uV;
   }
 
+  void inferType(CompilerContext ctx, TypeRef type) {
+    if (name != null && ctx.typeInferenceSaveStates.isNotEmpty) {
+      final _locals = ctx.typeInferenceSaveStates.last.locals;
+      _locals[frameIndex!][name!] =
+          _locals[frameIndex!][name!]!.copyWith(type: type);
+    }
+  }
+
   /// Warning! Calling invoke() may modify the state of input variables. They should be refreshed
   /// after use.
   InvokeResult invoke(CompilerContext ctx, String method, List<Variable> args) {
@@ -281,7 +289,7 @@ class Variable {
     return InvokeResult($this, v, _args);
   }
 
-  Variable getProperty(CompilerContext ctx, String name) {
+  Variable getProperty(CompilerContext ctx, String name, {AstNode? source}) {
     if (name == 'runtimeType') {
       if (concreteTypes.isNotEmpty) {
         final concrete = concreteTypes[0];
@@ -292,9 +300,9 @@ class Variable {
       ctx.pushOp(PushRuntimeType.make(scopeFrameOffset), PushRuntimeType.LEN);
       return Variable.alloc(ctx, CoreTypes.type.ref(ctx));
     }
-    final _type =
-        TypeRef.lookupFieldType(ctx, type, name)?.resolveTypeChain(ctx) ??
-            CoreTypes.dynamic.ref(ctx);
+    final _type = TypeRef.lookupFieldType(ctx, type, name, source: source)
+            ?.resolveTypeChain(ctx) ??
+        CoreTypes.dynamic.ref(ctx);
     if (concreteTypes.length == 1) {
       // If the concrete type is known we can access the field directly by
       // its index

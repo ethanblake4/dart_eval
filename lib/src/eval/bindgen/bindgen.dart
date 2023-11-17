@@ -1,4 +1,3 @@
-/// Adapted from code by Alex Wallen (@a-wallen)
 import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/ast/ast.dart';
@@ -14,6 +13,7 @@ import 'dart:io' as io;
 import 'package:package_config/package_config.dart';
 import 'package:path/path.dart';
 
+/// Adapted from code by Alex Wallen (@a-wallen)
 class Bindgen {
   static final resourceProvider = PhysicalResourceProvider.INSTANCE;
   final includedPaths = [resourceProvider.pathContext.current];

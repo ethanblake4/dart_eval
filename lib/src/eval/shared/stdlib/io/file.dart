@@ -66,7 +66,7 @@ class $File implements $Instance {
             ],
             namedParams: [])),
         'openRead': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(AsyncTypes.stream, [
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.stream, [
               BridgeTypeRef(CoreTypes.list, [BridgeTypeRef(CoreTypes.int)])
             ])),
             params: [

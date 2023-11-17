@@ -90,14 +90,9 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
         ctx.offsetTracker.setOffset(loc, offset);
       }
       ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-      TypeRef? thisType;
-      if (ctx.currentClass != null) {
-        thisType =
-            ctx.visibleTypes[ctx.library]![ctx.currentClass!.name.lexeme]!;
-      }
-      mReturnType =
-          method.methodReturnType?.toAlwaysReturnType(ctx, thisType, [], {}) ??
-              AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
+      mReturnType = method.methodReturnType
+              ?.toAlwaysReturnType(ctx, TypeRef.$this(ctx), [], {}) ??
+          AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
       final _returnType = mReturnType.type?.copyWith(
           boxed: L != null ||
               !(mReturnType.type?.isUnboxedAcrossFunctionBoundaries ?? false));
@@ -346,8 +341,7 @@ DeclarationOrBridge<MethodDeclaration, BridgeMethodDef> resolveInstanceMethod(
       final $extendsBridgeType =
           bridge is BridgeClassDef ? bridge.type.$extends : null;
       if ($extendsBridgeType == null && bridge is! BridgeEnumDef) {
-        throw CompileError(
-            'Method not found $methodName on $_bottomType', source);
+        throw CompileError('Unknown method $_bottomType.$methodName', source);
       }
       final $extendsType = bridge is BridgeEnumDef
           ? CoreTypes.enumType.ref(ctx)

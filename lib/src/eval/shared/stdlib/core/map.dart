@@ -10,41 +10,47 @@ class $Map<K, V> implements Map<K, V>, $Instance {
           generics: {'K': BridgeGenericParam(), 'V': BridgeGenericParam()}),
       constructors: {},
       methods: {
-        /*'[]': BridgeMethodDef(
-            BridgeFunctionDef(
-                params: [
-                  BridgeParameter(
-                      'key',
-                      BridgeTypeAnnotation(
-                          BridgeTypeRef(CoreTypes.dynamic)), 
-                      false),
-                ],
-                returns: BridgeTypeAnnotation(
-                    BridgeTypeRef(CoreTypes.dynamic))), 
+        '[]': BridgeMethodDef(
+            BridgeFunctionDef(params: [
+              BridgeParameter(
+                  'key', BridgeTypeAnnotation(BridgeTypeRef.ref('K')), false),
+            ], returns: BridgeTypeAnnotation(BridgeTypeRef.ref('V'))),
             isStatic: false),
         '[]=': BridgeMethodDef(
-            BridgeFunctionDef(
-                params: [
-                  BridgeParameter(
-                      'key',
-                      BridgeTypeAnnotation(
-                          BridgeTypeRef(CoreTypes.dynamic)),
-                      false),
-                  BridgeParameter(
-                      'value',
-                      BridgeTypeAnnotation(
-                          BridgeTypeRef(CoreTypes.dynamic)),
-                      false),
-                ],
-                returns: BridgeTypeAnnotation(
-                    BridgeTypeRef(CoreTypes.dynamic))),
+            BridgeFunctionDef(params: [
+              BridgeParameter(
+                  'key', BridgeTypeAnnotation(BridgeTypeRef.ref('K')), false),
+              BridgeParameter(
+                  'value', BridgeTypeAnnotation(BridgeTypeRef.ref('V')), false),
+            ], returns: BridgeTypeAnnotation(BridgeTypeRef.ref('V'))),
             isStatic: false),
         'length': BridgeMethodDef(
             BridgeFunctionDef(
                 params: [],
-                returns: BridgeTypeAnnotation(
-                    BridgeTypeRef(CoreTypes.intType))),
-            isStatic: false),*/
+                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int))),
+            isStatic: false),
+        'cast': BridgeMethodDef(
+            BridgeFunctionDef(
+                generics: {
+                  'RK': BridgeGenericParam(),
+                  'RV': BridgeGenericParam()
+                },
+                params: [],
+                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.map,
+                    [BridgeTypeRef.ref('RK'), BridgeTypeRef.ref('RV')]))),
+            isStatic: false),
+        'addAll': BridgeMethodDef(
+            BridgeFunctionDef(
+                params: [
+                  BridgeParameter(
+                      'other',
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.map,
+                          [BridgeTypeRef.ref('K'), BridgeTypeRef.ref('V')])),
+                      false),
+                ],
+                returns:
+                    BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType))),
+            isStatic: false),
       },
       getters: {
         'entries': BridgeMethodDef(BridgeFunctionDef(
@@ -66,6 +72,10 @@ class $Map<K, V> implements Map<K, V>, $Instance {
         return __indexGet;
       case '[]=':
         return __indexSet;
+      case 'addAll':
+        return __addAll;
+      case 'cast':
+        return __cast;
       case 'length':
         return $int($value.length);
       case 'entries':
@@ -98,6 +108,20 @@ class $Map<K, V> implements Map<K, V>, $Instance {
     final idx = args[0]!;
     final value = args[1]!;
     return (target!.$value as Map)[idx.$value] = value;
+  }
+
+  static const $Function __addAll = $Function(_addAll);
+
+  static $Value? _addAll(Runtime runtime, $Value? target, List<$Value?> args) {
+    final other = args[0]!;
+    (target!.$value as Map).addAll(other.$value);
+    return null;
+  }
+
+  static const $Function __cast = $Function(_cast);
+
+  static $Value? _cast(Runtime runtime, $Value? target, List<$Value?> args) {
+    return target;
   }
 
   @override

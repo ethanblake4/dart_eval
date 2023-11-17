@@ -184,7 +184,8 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
       if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
         throw CompileError(
             'Cannot assign argument of type ${_arg.type.toStringClear(ctx, paramType)}'
-            ' to parameter "${param.name!.lexeme}" of type ${paramType.toStringClear(ctx, _arg.type)}');
+            ' to parameter "${param.name!.lexeme}" of type ${paramType.toStringClear(ctx, _arg.type)}',
+            source ?? parameterHost);
       }
 
       if (typeAnnotation != null) {
@@ -224,7 +225,8 @@ Pair<List<Variable>, Map<String, Variable>>
         ArgumentList argumentList,
         List<KnownMethodArg> params,
         Map<String, KnownMethodArg> namedParams,
-        {List<Variable> before = const []}) {
+        {List<Variable> before = const [],
+        AstNode? source}) {
   final _args = <Variable>[];
   final _push = <Variable>[];
   final _namedArgs = <String, Variable>{};
@@ -281,7 +283,8 @@ Pair<List<Variable>, Map<String, Variable>>
           .boxIfNeeded(ctx);
       if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
         throw CompileError(
-            'Cannot assign argument of type ${_arg.type} to parameter of type $paramType');
+            'Cannot assign argument of type ${_arg.type} to parameter of type $paramType',
+            source);
       }
       _push.add(_arg);
       _namedArgs[param.name] = _arg;
@@ -375,7 +378,8 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
       }
       if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
         throw CompileError(
-            'Cannot assign argument of type ${_arg.type} to parameter of type $paramType');
+            'Cannot assign argument of type ${_arg.type} to parameter of type $paramType',
+            argumentList);
       }
       _push.add(_arg);
       _namedArgs[param.name] = _arg;
@@ -401,7 +405,7 @@ TypeRef _resolveFieldFormalType(CompilerContext ctx, int decLibrary,
   final $class = parameterHost.parent as NamedCompilationUnitMember;
   return TypeRef.lookupFieldType(ctx,
           TypeRef.lookupDeclaration(ctx, decLibrary, $class), param.name.lexeme,
-          forFieldFormal: true) ??
+          forFieldFormal: true, source: param) ??
       CoreTypes.dynamic.ref(ctx);
 }
 
@@ -435,22 +439,30 @@ TypeRef resolveSuperFormalType(CompilerContext ctx, int decLibrary,
   } else {
     final cstr = superCstr.declaration as ConstructorDeclaration;
     for (final _param in cstr.parameters.parameters) {
-      if (_param is SimpleFormalParameter &&
-          _param.name!.lexeme == param.name.lexeme) {
-        final _type = _param.type;
+      var __param =
+          _param is DefaultFormalParameter ? _param.parameter : _param;
+      if (__param.name?.lexeme != param.name.lexeme) {
+        continue;
+      }
+      if (__param is SimpleFormalParameter) {
+        final _type = __param.type;
         if (_type == null) {
           return CoreTypes.dynamic.ref(ctx);
         }
         return TypeRef.fromAnnotation(ctx, $super.file, _type);
-      } else if (_param is FieldFormalParameter) {
-        return _resolveFieldFormalType(ctx, decLibrary, _param, cstr);
-      } else if (_param is SuperFormalParameter) {
-        return resolveSuperFormalType(ctx, decLibrary, _param, cstr);
+      } else if (__param is FieldFormalParameter) {
+        return _resolveFieldFormalType(ctx, decLibrary, __param, cstr);
+      } else if (__param is SuperFormalParameter) {
+        return resolveSuperFormalType(ctx, decLibrary, __param, cstr);
+      } else {
+        throw CompileError(
+            'Unknown parameter type ${__param.runtimeType}', __param);
       }
     }
   }
 
   throw CompileError(
       'Could not find parameter ${param.name.value()} in the referenced superclass constructor',
-      param);
+      param,
+      decLibrary);
 }

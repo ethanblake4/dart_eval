@@ -493,8 +493,8 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
           _ctx.resetStack();
         });
       });
-    } on CompileError catch (e) {
-      throw e.copyWithContext(_ctx);
+    } on CompileError catch (e, stk) {
+      Error.throwWithStackTrace(e.copyWithContext(_ctx), stk);
     }
 
     for (final library in reachableLibraries) {

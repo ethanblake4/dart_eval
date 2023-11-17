@@ -23,10 +23,10 @@ class $Converter implements $Instance {
       },
       methods: {
         'bind': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(AsyncTypes.stream)),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.stream)),
             params: [
               BridgeParameter('stream',
-                  BridgeTypeAnnotation(BridgeTypeRef(AsyncTypes.stream)), false)
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.stream)), false)
             ],
             namedParams: []))
       },

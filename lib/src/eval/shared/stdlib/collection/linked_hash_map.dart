@@ -26,7 +26,25 @@ class $LinkedHashMap implements $Instance {
                 namedParams: [
                   BridgeParameter(
                       'equals',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
+                      BridgeTypeAnnotation(
+                          BridgeTypeRef.genericFunction(
+                            BridgeFunctionDef(
+                                returns: BridgeTypeAnnotation(
+                                    BridgeTypeRef(CoreTypes.bool)),
+                                params: [
+                                  BridgeParameter(
+                                      'a',
+                                      BridgeTypeAnnotation(
+                                          BridgeTypeRef.ref('K')),
+                                      false),
+                                  BridgeParameter(
+                                      'b',
+                                      BridgeTypeAnnotation(
+                                          BridgeTypeRef.ref('K')),
+                                      false),
+                                ]),
+                          ),
+                          nullable: true),
                       true),
                   BridgeParameter(
                       'hashCode',

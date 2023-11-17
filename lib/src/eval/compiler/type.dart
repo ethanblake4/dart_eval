@@ -271,20 +271,22 @@ class TypeRef {
         'No support for looking up types by other bridge annotation types');
   }
 
-  factory TypeRef.stdlib(CompilerContext ctx, String library, String name) {
-    return TypeRef.fromBridgeTypeRef(
-        ctx, BridgeTypeRef(BridgeTypeSpec(library, name), []));
+  static TypeRef? $this(CompilerContext ctx) {
+    if (ctx.currentClass == null) {
+      return null;
+    }
+    return TypeRef.lookupDeclaration(ctx, ctx.library, ctx.currentClass!);
   }
 
   factory TypeRef.lookupDeclaration(
       CompilerContext ctx, int library, NamedCompilationUnitMember dec) {
-    return ctx.visibleTypes[library]![dec.name.value()] ??
+    return ctx.visibleTypes[library]![dec.name.lexeme] ??
         (throw CompileError('Class/enum ${dec.name.value()} not found'));
   }
 
   static TypeRef? lookupFieldType(
       CompilerContext ctx, TypeRef $class, String field,
-      {bool forFieldFormal = false}) {
+      {bool forFieldFormal = false, bool forSet = false, AstNode? source}) {
     if ($class == CoreTypes.dynamic.ref(ctx)) {
       return null;
     }
@@ -297,13 +299,34 @@ class TypeRef {
       }
     }
     if (ctx.instanceDeclarationsMap[$class.file]!.containsKey($class.name)) {
-      if (ctx.instanceDeclarationsMap[$class.file]![$class.name]!
-          .containsKey(field)) {
-        final _f =
-            ctx.instanceDeclarationsMap[$class.file]![$class.name]![field];
+      final $declarations =
+          ctx.instanceDeclarationsMap[$class.file]![$class.name]!;
+      if (forSet) {
+        if ($declarations.containsKey('$field*s')) {
+          final _f = $declarations['$field*s'];
+          if (_f is! MethodDeclaration) {
+            throw CompileError(
+                'Cannot query setter type of F${$class.file}:${$class.name}.$field, which is not a method',
+                source);
+          }
+          final parameter =
+              _f.parameters!.parameters.first as SimpleFormalParameter;
+          final annotation = parameter.type;
+          if (annotation == null) {
+            return null;
+          }
+          return TypeRef.fromAnnotation(ctx, $class.file, annotation);
+        }
+      }
+      if ($declarations.containsKey(field)) {
+        final _f = $declarations[field];
+        if (_f is MethodDeclaration && !_f.isGetter && !_f.isSetter) {
+          return CoreTypes.function.ref(ctx);
+        }
         if (_f is! VariableDeclaration) {
           throw CompileError(
-              'Cannot query field type of F${$class.file}:${$class.name}.$field, which is not a field');
+              'Cannot query field type of ${$class.name}.$field, which is not a field',
+              source);
         }
         final annotation = (_f.parent as VariableDeclarationList).type;
         if (ctx.inferredFieldTypes.containsKey($class.file) &&
@@ -317,14 +340,12 @@ class TypeRef {
         }
         return TypeRef.fromAnnotation(ctx, $class.file, annotation)
             .copyWith(boxed: true);
-      } else if (!forFieldFormal &&
-          ctx.instanceDeclarationsMap[$class.file]![$class.name]!
-              .containsKey('$field*g')) {
-        final _f =
-            ctx.instanceDeclarationsMap[$class.file]![$class.name]!['$field*g'];
+      } else if (!forFieldFormal && $declarations.containsKey('$field*g')) {
+        final _f = $declarations['$field*g'];
         if (_f is! MethodDeclaration) {
           throw CompileError(
-              'Cannot query getter type of F${$class.file}:${$class.name}.$field, which is not a method');
+              'Cannot query getter type of F${$class.file}:${$class.name}.$field, which is not a method',
+              source);
         }
         final annotation = _f.returnType;
         if (annotation == null) {
@@ -354,25 +375,29 @@ class TypeRef {
       }
       final $extends = br.type.$extends;
       if ($extends == null) {
-        throw CompileError('Field $field not found in bridge class ${$class}');
+        throw CompileError(
+            'Field $field not found in bridge class ${$class}', source);
       } else {
         final $super = TypeRef.fromBridgeTypeRef(ctx, $extends);
         return TypeRef.lookupFieldType(
-            ctx, $super.inheritTypeArgsFrom(ctx, $class), field);
+            ctx, $super.inheritTypeArgsFrom(ctx, $class), field,
+            source: source);
       }
     } else if (dec.declaration is EnumDeclaration && field == 'index') {
       return CoreTypes.int.ref(ctx);
     } else {
       if (forFieldFormal) {
         throw CompileError(
-            'Field formals did not find field $field in class ${$class}');
+            'Field formals did not find field $field in class ${$class}',
+            source);
       }
       final _dec = dec.declaration as NamedCompilationUnitMember;
       final $extends = _dec is ClassDeclaration ? _dec.extendsClause : null;
       if ($extends == null) {
         if ($class == CoreTypes.object.ref(ctx)) {
           throw CompileError(
-              'Field $field not found in class ${$class} or its superclasses');
+              'Field $field not found in class ${$class} or its superclasses',
+              source);
         }
         return TypeRef.lookupFieldType(ctx, CoreTypes.object.ref(ctx), field);
       } else {
@@ -386,7 +411,9 @@ class TypeRef {
   }
 
   TypeRef resolveTypeChain(CompilerContext ctx,
-      {int recursionGuard = 0, Set<TypeRef> stack = const {}}) {
+      {int recursionGuard = 0,
+      Set<TypeRef> stack = const {},
+      AstNode? source}) {
     if (recursionGuard > 500) {
       throw CompileError(
           'Reached max limit on recursion while resolving types. '
@@ -434,18 +461,21 @@ class TypeRef {
         if (type.$extends != null) {
           $super = TypeRef.fromBridgeTypeRef(ctx, type.$extends!,
                   specifiedType: this)
-              .resolveTypeChain(ctx, recursionGuard: rg, stack: _stack);
+              .resolveTypeChain(ctx,
+                  recursionGuard: rg, stack: _stack, source: source);
         }
 
         for (final $i in type.$implements) {
           $implements.add(
               TypeRef.fromBridgeTypeRef(ctx, $i, specifiedType: this)
-                  .resolveTypeChain(ctx, recursionGuard: rg, stack: _stack));
+                  .resolveTypeChain(ctx,
+                      recursionGuard: rg, stack: _stack, source: source));
         }
 
         for (final $i in type.$with) {
           $with.add(TypeRef.fromBridgeTypeRef(ctx, $i, specifiedType: this)
-              .resolveTypeChain(ctx, recursionGuard: rg, stack: _stack));
+              .resolveTypeChain(ctx,
+                  recursionGuard: rg, stack: _stack, source: source));
         }
 
         for (final $g in type.generics.entries) {
@@ -453,8 +483,10 @@ class TypeRef {
           final _type = _extends == null
               ? null
               : TypeRef.fromBridgeTypeRef(ctx, _extends);
-          generics.add(GenericParam($g.key,
-              _type?.resolveTypeChain(ctx, recursionGuard: rg, stack: _stack)));
+          generics.add(GenericParam(
+              $g.key,
+              _type?.resolveTypeChain(ctx,
+                  recursionGuard: rg, stack: _stack, source: source)));
         }
       }
     } else {
@@ -487,13 +519,17 @@ class TypeRef {
               .map((a) => TypeRef.fromAnnotation(ctx, file, a))
               .map((a) => stack.contains(a)
                   ? a
-                  : a.resolveTypeChain(ctx, recursionGuard: rg, stack: _stack))
+                  : a.resolveTypeChain(ctx,
+                      recursionGuard: rg, stack: _stack, source: source))
               .toList() ??
           [];
-      $super = ctx.visibleTypes[file]![
-              superName.name2.stringValue ?? superName.name2.value()]!
+      $super = (ctx.visibleTypes[file]![
+                  superName.name2.stringValue ?? superName.name2.lexeme] ??
+              (throw CompileError(
+                  'Superclass ${superName.name2.lexeme} not found', source)))
           .copyWith(specifiedTypeArgs: typeParams)
-          .resolveTypeChain(ctx, recursionGuard: rg, stack: _stack);
+          .resolveTypeChain(ctx,
+              recursionGuard: rg, stack: _stack, source: source);
     } else if (declaration.declaration is EnumDeclaration) {
       $super = CoreTypes.enumType.ref(ctx);
     } else if (!declaration.isBridge) {
@@ -505,12 +541,14 @@ class TypeRef {
               .map((a) => TypeRef.fromAnnotation(ctx, file, a))
               .map((a) => stack.contains(a)
                   ? a
-                  : a.resolveTypeChain(ctx, recursionGuard: rg, stack: _stack))
+                  : a.resolveTypeChain(ctx,
+                      recursionGuard: rg, stack: _stack, source: source))
               .toList() ??
           [];
       $with.add(ctx.visibleTypes[file]![withName.name2.value()]!
           .copyWith(specifiedTypeArgs: typeParams)
-          .resolveTypeChain(ctx, recursionGuard: rg, stack: _stack));
+          .resolveTypeChain(ctx,
+              recursionGuard: rg, stack: _stack, source: source));
     }
 
     for (final implementsName in implementsNames) {
@@ -518,12 +556,14 @@ class TypeRef {
               .map((a) => TypeRef.fromAnnotation(ctx, file, a))
               .map((a) => stack.contains(a)
                   ? a
-                  : a.resolveTypeChain(ctx, recursionGuard: rg, stack: _stack))
+                  : a.resolveTypeChain(ctx,
+                      recursionGuard: rg, stack: _stack, source: source))
               .toList() ??
           [];
       $implements.add(ctx.visibleTypes[file]![implementsName.name2.value()]!
           .copyWith(specifiedTypeArgs: typeParams)
-          .resolveTypeChain(ctx, recursionGuard: rg, stack: _stack));
+          .resolveTypeChain(ctx,
+              recursionGuard: rg, stack: _stack, source: source));
     }
 
     final _resolved = TypeRef(file, name,

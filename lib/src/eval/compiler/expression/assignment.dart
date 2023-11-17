@@ -2,7 +2,6 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
-import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
@@ -14,11 +13,6 @@ Variable compileAssignmentExpression(
   final R = compileExpression(e.rightHandSide, ctx);
 
   if (e.operator.type == TokenType.EQ) {
-    final lType = L.resolveType(ctx).resolveTypeChain(ctx);
-    if (!R.type.resolveTypeChain(ctx).isAssignableTo(ctx, lType)) {
-      throw CompileError(
-          'Syntax error: cannot assign value of type ${R.type} to $lType');
-    }
     return L.setValue(ctx, R);
   } else if (e.operator.type.binaryOperatorOfCompoundAssignment ==
       TokenType.QUESTION_QUESTION) {

@@ -62,7 +62,7 @@ class $Directory implements $Instance {
         'list': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(
               BridgeTypeRef(
-                  AsyncTypes.stream, [BridgeTypeRef(IoTypes.fileSystemEntity)]),
+                  CoreTypes.stream, [BridgeTypeRef(IoTypes.fileSystemEntity)]),
             ),
             namedParams: [
               BridgeParameter('recursive',

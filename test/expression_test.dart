@@ -58,8 +58,8 @@ void main() {
         }
       });
 
-      expect(
-          runtime.executeLib('package:eval_test/main.dart', 'main'), $int(6));
+      expect(runtime.executeLib('package:eval_test/main.dart', 'main'),
+          $num<num>(6));
     });
 
     test('Null coalescing operator', () {

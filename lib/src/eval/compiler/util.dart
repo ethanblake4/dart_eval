@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
@@ -33,8 +34,7 @@ void asyncComplete(CompilerContext ctx, int valueOffset) {
   if (_completer == null) {
     InvokeExternal.make(ctx.bridgeStaticFunctionIndices[
         ctx.libraryMap['dart:async']!]!['Completer.']!);
-    _completer =
-        Variable.alloc(ctx, TypeRef.stdlib(ctx, 'dart:async', 'Completer'));
+    _completer = Variable.alloc(ctx, AsyncTypes.completer.ref(ctx));
   }
   ctx.pushOp(
       ReturnAsync.make(valueOffset, _completer.scopeFrameOffset), Return.LEN);

@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 
@@ -19,7 +20,7 @@ void setupAsyncFunction(CompilerContext ctx) {
           ctx.libraryMap['dart:async']!]!['Completer.']!),
       InvokeExternal.LEN);
   ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-  ctx.setLocal('#completer',
-      Variable.alloc(ctx, TypeRef.stdlib(ctx, 'dart:async', 'Completer')));
+  ctx.setLocal(
+      '#completer', Variable.alloc(ctx, AsyncTypes.completer.ref(ctx)));
   ctx.nearestAsyncFrame = ctx.locals.length - 1;
 }

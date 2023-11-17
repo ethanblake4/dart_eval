@@ -316,6 +316,12 @@ class $List<E> implements List<E>, $Instance {
                   BridgeTypeRef(BridgeTypeSpec('dart:core', 'Iterable'))),
               false),
         ], returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)))),
+        'cast': BridgeMethodDef(
+            BridgeFunctionDef(
+                generics: {'R': BridgeGenericParam()},
+                returns: BridgeTypeAnnotation(
+                    BridgeTypeRef(CoreTypes.list, [BridgeTypeRef.ref('R')]))),
+            isStatic: false),
       },
       getters: {
         'length': BridgeMethodDef(BridgeFunctionDef(
@@ -419,6 +425,8 @@ class $List<E> implements List<E>, $Instance {
         return __takeWhile;
       case 'clear':
         return __clear;
+      case 'cast':
+        return __cast;
     }
     return $super.$getProperty(runtime, identifier);
   }
@@ -592,6 +600,12 @@ class $List<E> implements List<E>, $Instance {
 
   static $Value? _asMap(Runtime runtime, $Value? target, List<$Value?> args) {
     return $Map.wrap((target!.$value as List).asMap().map((key, value) => MapEntry($int(key), value)));
+  }
+
+  static const $Function __cast = $Function(_cast);
+
+  static $Value? _cast(Runtime runtime, $Value? target, List<$Value?> args) {
+    return target;
   }
 
   @override

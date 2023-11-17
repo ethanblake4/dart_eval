@@ -10,6 +10,7 @@ StatementInfo macroBranch(
     required MacroStatementClosure thenBranch,
     MacroStatementClosure? elseBranch}) {
   ctx.beginAllocScope();
+  ctx.enterTypeInferenceContext();
   final conditionResult = condition(ctx).unboxIfNeeded(ctx);
 
   final rewriteCond = JumpIfFalse.make(conditionResult.scopeFrameOffset, -1);
@@ -17,9 +18,11 @@ StatementInfo macroBranch(
 
   final _initialState = ctx.saveState();
 
+  ctx.inferTypes();
   ctx.beginAllocScope();
   final thenResult = thenBranch(ctx, expectedReturnType);
   ctx.endAllocScope();
+  ctx.uninferTypes();
 
   ctx.resolveBranchStateDiscontinuity(_initialState);
 

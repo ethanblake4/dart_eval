@@ -45,7 +45,7 @@ class $StreamController implements $Instance {
                 BridgeTypeAnnotation(BridgeTypeRef(AsyncTypes.streamSink)))),
         'stream': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(
-                BridgeTypeRef(AsyncTypes.stream, [BridgeTypeRef.ref('T')])))),
+                BridgeTypeRef(CoreTypes.stream, [BridgeTypeRef.ref('T')])))),
       },
       setters: {},
       fields: {},

@@ -270,7 +270,7 @@ class $HttpClientResponse implements $Instance {
   static const $declaration = BridgeClassDef(
       BridgeClassType($type,
           isAbstract: true,
-          $extends: BridgeTypeRef(AsyncTypes.stream, [
+          $extends: BridgeTypeRef(CoreTypes.stream, [
             BridgeTypeRef(CoreTypes.list, [BridgeTypeRef(CoreTypes.int)])
           ])),
       constructors: {},

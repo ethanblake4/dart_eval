@@ -17,7 +17,8 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 /// Using References can help prevent unnecessary bytecode generation, but be careful! Some Dart structures
 /// may rely on side-effects from accessing a variable.
 abstract class Reference {
-  TypeRef resolveType(CompilerContext ctx, [AstNode? source]);
+  TypeRef resolveType(CompilerContext ctx,
+      {bool forSet = false, AstNode? source});
 
   Variable setValue(CompilerContext ctx, Variable value, [AstNode? source]);
 
@@ -35,12 +36,14 @@ class IdentifierReference implements Reference {
   final String name;
 
   @override
-  TypeRef resolveType(CompilerContext ctx, [AstNode? source]) {
+  TypeRef resolveType(CompilerContext ctx,
+      {bool forSet = false, AstNode? source}) {
     if (object != null) {
       if (object!.type == CoreTypes.type.ref(ctx)) {
         return object!.concreteTypes[0].resolveTypeChain(ctx);
       }
-      return TypeRef.lookupFieldType(ctx, object!.type, name) ??
+      return TypeRef.lookupFieldType(ctx, object!.type, name,
+              forSet: forSet, source: source) ??
           CoreTypes.dynamic.ref(ctx);
     }
 
@@ -56,7 +59,7 @@ class IdentifierReference implements Reference {
           ctx, ctx.library, ctx.currentClass!.name.lexeme, name);
       if (instanceDeclaration != null) {
         final $type = instanceDeclaration.first;
-        return TypeRef.lookupFieldType(ctx, $type, name) ??
+        return TypeRef.lookupFieldType(ctx, $type, name, forSet: forSet) ??
             CoreTypes.dynamic.ref(ctx);
       }
     }
@@ -81,7 +84,8 @@ class IdentifierReference implements Reference {
   Variable setValue(CompilerContext ctx, Variable value, [AstNode? source]) {
     if (object != null) {
       object = object!.boxIfNeeded(ctx);
-      final fieldType = TypeRef.lookupFieldType(ctx, object!.type, name) ??
+      final fieldType = TypeRef.lookupFieldType(ctx, object!.type, name,
+              forSet: true, source: source) ??
           CoreTypes.dynamic.ref(ctx);
       if (!value.type.resolveTypeChain(ctx).isAssignableTo(ctx, fieldType)) {
         throw CompileError(
@@ -117,7 +121,8 @@ class IdentifierReference implements Reference {
           ctx, ctx.library, ctx.currentClass!.name.lexeme, name);
       if (instanceDeclaration != null) {
         final $type = instanceDeclaration.first;
-        final fieldType = TypeRef.lookupFieldType(ctx, $type, name) ??
+        final fieldType = TypeRef.lookupFieldType(ctx, $type, name,
+                forSet: true, source: source) ??
             CoreTypes.dynamic.ref(ctx);
         if (!value.type.resolveTypeChain(ctx).isAssignableTo(ctx, fieldType)) {
           throw CompileError(
@@ -211,14 +216,19 @@ class IdentifierReference implements Reference {
 
         final $this = ctx.lookupLocal('#this')!;
 
-        if (!_dec.isBridge && _dec.declaration is MethodDeclaration) {
-          return Variable(-1, CoreTypes.function.ref(ctx),
-              methodOffset: DeferredOrOffset(
-                  file: ctx.library,
-                  className: ctx.currentClass!.name.lexeme,
-                  name: name,
-                  targetScopeFrameOffset: $this.scopeFrameOffset),
-              callingConvention: CallingConvention.static);
+        if (!_dec.isBridge) {
+          final declaration = _dec.declaration;
+          if (declaration is MethodDeclaration &&
+              !declaration.isGetter &&
+              !declaration.isSetter) {
+            return Variable(-1, CoreTypes.function.ref(ctx),
+                methodOffset: DeferredOrOffset(
+                    file: ctx.library,
+                    className: ctx.currentClass!.name.lexeme,
+                    name: name,
+                    targetScopeFrameOffset: $this.scopeFrameOffset),
+                callingConvention: CallingConvention.static);
+          }
         }
 
         final op = PushObjectProperty.make(
@@ -257,7 +267,7 @@ class IdentifierReference implements Reference {
 
         return Variable.alloc(
             ctx,
-            TypeRef.lookupFieldType(ctx, $type, name) ??
+            TypeRef.lookupFieldType(ctx, $type, name, source: source) ??
                 CoreTypes.dynamic.ref(ctx));
       }
 
@@ -371,7 +381,8 @@ class PrefixedIdentifierReference implements Reference {
   }
 
   @override
-  TypeRef resolveType(CompilerContext ctx, [AstNode? source]) {
+  TypeRef resolveType(CompilerContext ctx,
+      {bool forSet = false, AstNode? source}) {
     return CoreTypes.type.ref(ctx);
   }
 
@@ -390,7 +401,8 @@ class IndexedReference implements Reference {
   Variable _index;
 
   @override
-  TypeRef resolveType(CompilerContext ctx, [AstNode? source]) {
+  TypeRef resolveType(CompilerContext ctx,
+      {bool forSet = false, AstNode? source}) {
     if (_variable.type.isAssignableTo(ctx, CoreTypes.list.ref(ctx))) {
       return _variable.type.specifiedTypeArgs.isNotEmpty
           ? _variable.type.specifiedTypeArgs[0]

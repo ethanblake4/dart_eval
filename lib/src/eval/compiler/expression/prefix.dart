@@ -35,10 +35,12 @@ Variable compilePrefixExpression(CompilerContext ctx, PrefixExpression e) {
       V.type != CoreTypes.int.ref(ctx) &&
       V.type != CoreTypes.double.ref(ctx)) {
     throw CompileError(
-        'Unary operator "-" is currently only supported for ints and doubles');
+        'Unary prefix "-" is currently only supported for ints and doubles (type: ${V.type})',
+        e);
   } else if (method == '!' && V.type != CoreTypes.bool.ref(ctx)) {
     throw CompileError(
-        'Unary operator "!" is currently only supported for bools');
+        'Unary prefix "!" is currently only supported for bools (type: ${V.type})',
+        e);
   }
 
   if (method == "!") {

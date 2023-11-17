@@ -74,6 +74,9 @@ class CoreTypes {
   /// Bridge type spec for [$Future]
   static const future = BridgeTypeSpec('dart:core', 'Future');
 
+  /// Bridge type spec for [$Stream]
+  static const stream = BridgeTypeSpec('dart:core', 'Stream');
+
   /// Bridge type spec for [$Uri]
   static const uri = BridgeTypeSpec('dart:core', 'Uri');
 
@@ -101,6 +104,12 @@ class CoreTypes {
   /// Bridge type spec for [AssertionError]
   static const assertionError = BridgeTypeSpec('dart:core', 'AssertionError');
 
+  /// Bridge type spec for [ArgumentError]
+  static const argumentError = BridgeTypeSpec('dart:core', 'ArgumentError');
+
+  /// Bridge type spec for [StateError]
+  static const stateError = BridgeTypeSpec('dart:core', 'StateError');
+
   /// Bridge type spec for [Comparable]
   static const comparable = BridgeTypeSpec('dart:core', 'Comparable');
 
@@ -110,9 +119,6 @@ class CoreTypes {
 
 /// This class contains dart:async bridge type specs for convenience
 class AsyncTypes {
-  /// Bridge type spec for [$Stream]
-  static const stream = BridgeTypeSpec('dart:async', 'Stream');
-
   /// Bridge type spec for [$Completer]
   static const completer = BridgeTypeSpec('dart:async', 'Completer');
 
@@ -130,6 +136,9 @@ class AsyncTypes {
 
   /// Bridge type spec for [$StreamSink]
   static const streamSink = BridgeTypeSpec('dart:async', 'StreamSink');
+
+  /// Bridge type spec for [$StreamView]
+  static const streamView = BridgeTypeSpec('dart:async', 'StreamView');
 
   /// Bridge type spec for [$Zone]
   static const zone = BridgeTypeSpec('dart:async', 'Zone');

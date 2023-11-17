@@ -187,6 +187,9 @@ class CompilerContext with ScopeContext {
   List<String> typeNames = [];
   List<Set<int>> typeTypes = [];
   List<bool> scopeDoesClose = [];
+  List<ContextSaveState> typeInferenceSaveStates = [];
+  List<ContextSaveState> typeUninferenceSaveStates = [];
+  List<bool> inTypeInferenceContext = [];
   final List<Variable> caughtExceptions = [];
   PrescanContext? preScan;
   int nearestAsyncFrame = -1;
@@ -290,9 +293,53 @@ class CompilerContext with ScopeContext {
     super.restoreState(initial);
     scopeDoesClose = initial.scopeDoesClose;
   }
+
+  void enterTypeInferenceContext() {
+    typeInferenceSaveStates.add(saveState());
+    inTypeInferenceContext.add(true);
+  }
+
+  void inferTypes() {
+    final inferredLocals = typeInferenceSaveStates.removeLast().locals;
+    typeUninferenceSaveStates.add(saveState());
+    final _myLocals = [...locals];
+    for (var i = 0;
+        i < math.min(inferredLocals.length, _myLocals.length);
+        i++) {
+      final inferredLocalsMap = inferredLocals[i];
+      final _myLocalsMap = _myLocals[i];
+
+      inferredLocalsMap.forEach((key, value) {
+        final myLocal = _myLocalsMap[key];
+        if (myLocal != null && myLocal.type != value.type) {
+          locals[i][key] =
+              myLocal.copyWith(type: value.type.copyWith(boxed: myLocal.boxed));
+        }
+      });
+    }
+  }
+
+  void uninferTypes() {
+    final uninferredLocals = typeUninferenceSaveStates.removeLast().locals;
+    final _myLocals = [...locals];
+    for (var i = 0;
+        i < math.min(uninferredLocals.length, _myLocals.length);
+        i++) {
+      final uninferredLocalsMap = uninferredLocals[i];
+      final _myLocalsMap = _myLocals[i];
+
+      uninferredLocalsMap.forEach((key, value) {
+        final myLocal = _myLocalsMap[key];
+        if (myLocal != null && myLocal.type != value.type) {
+          locals[i][key] =
+              myLocal.copyWith(type: value.type.copyWith(boxed: myLocal.boxed));
+        }
+      });
+    }
+  }
 }
 
-class ContextSaveState {
+class ContextSaveState with ScopeContext {
   ContextSaveState.of(AbstractScopeContext context)
       : locals = [
           ...context.locals.map((e) => {...e})
@@ -303,4 +350,7 @@ class ContextSaveState {
   List<Map<String, Variable>> locals;
   List<bool> scopeDoesClose;
   List<int> allocNest;
+
+  @override
+  int pushOp(EvcOp op, int length) => throw UnimplementedError();
 }

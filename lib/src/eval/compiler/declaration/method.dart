@@ -23,10 +23,7 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx,
 
   ctx.beginAllocScope(existingAllocLen: (d.parameters?.parameters.length ?? 0));
   ctx.scopeFrameOffset += d.parameters?.parameters.length ?? 0;
-  ctx.setLocal(
-      '#this',
-      Variable(
-          0, ctx.visibleTypes[ctx.library]![ctx.currentClass!.name.lexeme]!));
+  ctx.setLocal('#this', Variable(0, TypeRef.$this(ctx)!));
   final resolvedParams = d.parameters == null
       ? <PossiblyValuedParameter>[]
       : resolveFPLDefaults(ctx, d.parameters, true, allowUnboxed: true);

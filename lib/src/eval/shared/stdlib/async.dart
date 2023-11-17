@@ -15,24 +15,19 @@ class DartAsyncPlugin implements EvalPlugin {
     registry.defineBridgeClass($Completer.$declaration);
     registry.defineBridgeClass($StreamSubscription.$declaration);
     registry.defineBridgeClass($StreamSink.$declaration);
-    registry.defineBridgeClass($Stream.$declaration);
     registry.defineBridgeClass($StreamController.$declaration);
     registry.defineBridgeClass($Zone.$declaration);
+    registry.defineBridgeClass($StreamView.$declaration);
   }
 
   @override
   void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFunc(
         'dart:async', 'Completer.', const $Completer_new().call);
-    runtime.registerBridgeFunc('dart:async', 'Stream.empty', $Stream.$empty);
-    runtime.registerBridgeFunc('dart:async', 'Stream.value', $Stream.$_value);
-    runtime.registerBridgeFunc(
-        'dart:async', 'Stream.fromIterable', $Stream.$fromIterable);
-    runtime.registerBridgeFunc(
-        'dart:async', 'Stream.periodic', $Stream.$periodic);
     runtime.registerBridgeFunc(
         'dart:async', 'StreamController.', $StreamController.$new);
     runtime.registerBridgeFunc('dart:async', 'Zone.current*g', $Zone.$current);
     runtime.registerBridgeFunc('dart:async', 'Zone.root*g', $Zone.$root);
+    runtime.registerBridgeFunc('dart:async', 'StreamView.', $StreamView.$new);
   }
 }

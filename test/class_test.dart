@@ -428,5 +428,35 @@ void main() {
         runtime.executeLib('package:example/main.dart', 'main');
       }, prints('true\nfalse\ntrue\n'));
     });
+
+/*    test('Super parameter multi-level indirection', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            abstract class BaseRequest {
+              BaseRequest(String method, this.url)
+                : this._method = method;
+              String _method;
+              String get method => _method;
+              final Uri url;
+            }
+
+            class Request extends BaseRequest {
+              Request(super.method, super.url);
+            }
+
+            void main() {
+              var r = Request("GET", Uri.parse("http://example.com"));
+              print(r.method);
+              print(r.url);
+            }
+          '''
+        }
+      });
+
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('GET\nhttp://example.com\n'));
+    });*/
   });
 }

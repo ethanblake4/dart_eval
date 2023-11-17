@@ -1,5 +1,6 @@
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/async/stream.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/base.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/collection.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/comparable.dart';
@@ -50,6 +51,7 @@ class DartCorePlugin implements EvalPlugin {
     registry.defineBridgeClass($Map.$declaration);
     registry.defineBridgeClass($Duration.$declaration);
     registry.defineBridgeClass($Future.$declaration);
+    registry.defineBridgeClass($Stream.$declaration);
     registry.defineBridgeClass($DateTime.$declaration);
     registry.defineBridgeClass($Uri.$declaration);
     registry.defineBridgeClass($Pattern.$declaration);
@@ -62,6 +64,8 @@ class DartCorePlugin implements EvalPlugin {
     registry.defineBridgeClass($StringBuffer.$declaration);
     registry.defineBridgeClass($Exception.$declaration);
     registry.defineBridgeClass($FormatException.$declaration);
+    registry.defineBridgeClass($ArgumentError.$declaration);
+    registry.defineBridgeClass($StateError.$declaration);
   }
 
   @override
@@ -99,5 +103,18 @@ class DartCorePlugin implements EvalPlugin {
     runtime.registerBridgeFunc('dart:core', 'Symbol.', $Symbol.$new);
     runtime.registerBridgeFunc(
         'dart:core', 'FormatException.', $FormatException.$new);
+    runtime.registerBridgeFunc(
+        'dart:core', 'ArgumentError.', $ArgumentError.$new);
+    runtime.registerBridgeFunc(
+        'dart:core', 'ArgumentError.notNull', $ArgumentError.$notNull);
+    runtime.registerBridgeFunc(
+        'dart:core', 'ArgumentError.value', $ArgumentError.$_value);
+    runtime.registerBridgeFunc('dart:core', 'StateError.', $StateError.$new);
+    runtime.registerBridgeFunc('dart:async', 'Stream.empty', $Stream.$empty);
+    runtime.registerBridgeFunc('dart:async', 'Stream.value', $Stream.$_value);
+    runtime.registerBridgeFunc(
+        'dart:async', 'Stream.fromIterable', $Stream.$fromIterable);
+    runtime.registerBridgeFunc(
+        'dart:async', 'Stream.periodic', $Stream.$periodic);
   }
 }
