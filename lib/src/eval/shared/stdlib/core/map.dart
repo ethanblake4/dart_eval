@@ -140,12 +140,7 @@ class $Map<K, V> implements Map<K, V>, $Instance {
 
   static $Value? _containsKey(
       Runtime runtime, $Value? target, List<$Value?> args) {
-    final mapObject = target!.$reified as Map;
-    // remove "$" and double quotation sign(")
-    final keyToFind =
-        args[0].toString().replaceAll('\$', '').replaceAll('"', '');
-    final containsKey = mapObject.containsKey(keyToFind);
-    return $bool(containsKey);
+    return $bool((target!.$value as Map).containsKey(args[0]));
   }
 
   @override
