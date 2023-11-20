@@ -51,6 +51,16 @@ class $Map<K, V> implements Map<K, V>, $Instance {
                 returns:
                     BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType))),
             isStatic: false),
+        'containsKey': BridgeMethodDef(
+          BridgeFunctionDef(params: [
+            BridgeParameter(
+                'key',
+                BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
+                    nullable: true),
+                false),
+          ], returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool))),
+          isStatic: false,
+        ),
       },
       getters: {
         'entries': BridgeMethodDef(BridgeFunctionDef(
@@ -78,6 +88,8 @@ class $Map<K, V> implements Map<K, V>, $Instance {
         return __cast;
       case 'length':
         return $int($value.length);
+      case 'containsKey':
+        return __containsKey;
       case 'entries':
         return $Iterable.wrap(entries.map((e) => $MapEntry.wrap(e)));
     }
@@ -122,6 +134,13 @@ class $Map<K, V> implements Map<K, V>, $Instance {
 
   static $Value? _cast(Runtime runtime, $Value? target, List<$Value?> args) {
     return target;
+  }
+
+  static const $Function __containsKey = $Function(_containsKey);
+
+  static $Value? _containsKey(
+      Runtime runtime, $Value? target, List<$Value?> args) {
+    return $bool((target!.$value as Map).containsKey(args[0]));
   }
 
   @override

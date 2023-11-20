@@ -134,4 +134,27 @@ void main() {
           $String('012103223312'));
     });
   });
+
+  group('Map tests', () {
+    late Compiler compiler;
+
+    setUp(() {
+      compiler = Compiler();
+    });
+
+    test('Map.containsKey()', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'eval_test': {
+          'main.dart': '''
+            bool main() {
+              final testMap = {'name': 'Jon', 'id':0};
+              return testMap.containsKey('id');
+            }
+          '''
+        }
+      });
+
+      expect(runtime.executeLib('package:eval_test/main.dart', 'main'), true);
+    });
+  });
 }
