@@ -18,7 +18,8 @@ can be used outside it by creating an interface and [bridge class](#bridge-inter
 
 dart_eval's compiler is powered under the hood by the Dart 
 [analyzer](https://pub.dev/packages/analyzer), so it achieves 100% correct and 
-up-to-date parsing (although compilation and evaluation aren't quite there yet.)
+up-to-date parsing. While compilation and execution aren't quite there yet, dart_eval
+has over 200 tests that are run in CI to ensure correctness.
 
 Currently dart_eval implements a majority of the Dart spec, but there 
 are still missing features like generators, Sets and extension methods.

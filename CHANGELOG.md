@@ -1,10 +1,17 @@
 ## 0.7.2
-- Support inferring variable types when using the `if (x is Y)` pattern
+- Compiler now infers variable types when using the `if (x is Y)` pattern
 - Support for setters with a different type than getters / fields of the
   same name
 - Support for return statements without a value
 - Fix type resolution of super constructor parameters
-- Add binding for `ArgumentError`
+- Support for most `Uri` methods and constructors (thanks @Noobware1 and
+  @kodjodevf)
+- Support for `Base64Codec`, `Base64Decoder`, `Base64Encoder`,
+  `utf8.decode()`, and `utf8.encode()` (thanks @kodjodevf)
+- Support for `Map.containsKey()` (thanks @DeleMike)
+- Support for `String.codeUnits` (thanks @Noobware1)
+- Support for `String.fromCharCodes` (thanks @kodejodevf)
+- Support for `ArgumentError`, `StateError`, and `StreamView`
 
 ## 0.7.1
 - Eliminate requirement to call setup() on the Runtime. Setup is now
