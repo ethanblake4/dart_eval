@@ -9,6 +9,8 @@ class $List<E> implements List<E>, $Instance {
     runtime.registerBridgeFunc('dart:core', 'List.filled', _$List_filled.call);
     runtime.registerBridgeFunc(
         'dart:core', 'List.generate', _$List_generate.call);
+    runtime.registerBridgeFunc('dart:core', 'List.of', _$List_of.call);
+    runtime.registerBridgeFunc('dart:core', 'List.from', _$List_from.call);
   }
 
   /// Bridge class declaration for [$List]
@@ -38,6 +40,36 @@ class $List<E> implements List<E>, $Instance {
               BridgeParameter(
                   'generator',
                   BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
+                  false),
+            ],
+            namedParams: [
+              BridgeParameter('growable',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true),
+            ],
+            returns: BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.list, [BridgeTypeRef.ref('E')])),
+            generics: {'E': BridgeGenericParam()})),
+        'of': BridgeConstructorDef(BridgeFunctionDef(
+            params: [
+              BridgeParameter(
+                  'elements',
+                  BridgeTypeAnnotation(BridgeTypeRef(
+                      CoreTypes.iterable, [BridgeTypeRef.ref('E')])),
+                  false),
+            ],
+            namedParams: [
+              BridgeParameter('growable',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true),
+            ],
+            returns: BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.list, [BridgeTypeRef.ref('E')])),
+            generics: {'E': BridgeGenericParam()})),
+        'from': BridgeConstructorDef(BridgeFunctionDef(
+            params: [
+              BridgeParameter(
+                  'elements',
+                  BridgeTypeAnnotation(BridgeTypeRef(
+                      CoreTypes.iterable, [BridgeTypeRef(CoreTypes.dynamic)])),
                   false),
             ],
             namedParams: [
@@ -232,6 +264,17 @@ class $List<E> implements List<E>, $Instance {
                 returns:
                     BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType))),
             isStatic: false),
+        'removeWhere': BridgeMethodDef(
+            BridgeFunctionDef(
+                params: [
+                  BridgeParameter(
+                      'test',
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
+                      false),
+                ],
+                returns:
+                    BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType))),
+            isStatic: false),
         'sublist': BridgeMethodDef(
             BridgeFunctionDef(
                 params: [
@@ -409,6 +452,8 @@ class $List<E> implements List<E>, $Instance {
         return __indexOf;
       case 'retainWhere':
         return __retainWhere;
+      case 'removeWhere':
+        return __removeWhere;
       case 'replaceRange':
         return __replaceRange;
       case 'getRange':
@@ -475,6 +520,16 @@ class $List<E> implements List<E>, $Instance {
     final test = args[0] as EvalCallable;
     (target!.$value as List)
         .retainWhere((e) => test.call(runtime, null, [e])!.$value as bool);
+    return null;
+  }
+
+  static const $Function __removeWhere = $Function(_removeWhere);
+
+  static $Value? _removeWhere(
+      Runtime runtime, $Value? target, List<$Value?> args) {
+    final test = args[0] as EvalCallable;
+    (target!.$value as List)
+        .removeWhere((e) => test.call(runtime, null, [e])!.$value as bool);
     return null;
   }
 
@@ -599,7 +654,9 @@ class $List<E> implements List<E>, $Instance {
   static const $Function __asMap = $Function(_asMap);
 
   static $Value? _asMap(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $Map.wrap((target!.$value as List).asMap().map((key, value) => MapEntry($int(key), value)));
+    return $Map.wrap((target!.$value as List)
+        .asMap()
+        .map((key, value) => MapEntry($int(key), value)));
   }
 
   static const $Function __cast = $Function(_cast);
@@ -829,5 +886,25 @@ $Value? _List_generate(Runtime runtime, $Value? target, List<$Value?> args) {
   return $List.wrap(
     List.generate(args[0]!.$value, (i) => generator(runtime, target, [$int(i)]),
         growable: args[2]?.$value ?? true),
+  );
+}
+
+$Function get$List_of(Runtime _) => _$List_of;
+
+const _$List_of = $Function(_List_of);
+
+$Value? _List_of(Runtime runtime, $Value? target, List<$Value?> args) {
+  return $List.wrap(
+    List.of(args[0]!.$value, growable: args[1]?.$value ?? true),
+  );
+}
+
+$Function get$List_from(Runtime _) => _$List_from;
+
+const _$List_from = $Function(_List_from);
+
+$Value? _List_from(Runtime runtime, $Value? target, List<$Value?> args) {
+  return $List.wrap(
+    List.from(args[0]!.$value, growable: args[1]?.$value ?? true),
   );
 }

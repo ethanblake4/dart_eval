@@ -390,6 +390,36 @@ void main() {
       }, prints('[0, 1, 2]\n'));
     });
 
+    test('List.of', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              print(List.of([0, 1, 2], growable: true));
+            }
+          ''',
+        }
+      });
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('[0, 1, 2]\n'));
+    });
+
+    test('List.from', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              print(List<int>.from([0, 1, 2], growable: true));
+            }
+          ''',
+        }
+      });
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('[0, 1, 2]\n'));
+    });
+
     test('Object.hash', () {
       final runtime = compiler.compileWriteAndLoad({
         'example': {
