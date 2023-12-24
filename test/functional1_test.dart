@@ -99,12 +99,8 @@ void main() {
         'example': {'main.dart': source}
       });
 
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-
       final result = runtime.executeLib('package:example/main.dart', 'main');
       expect(result, $int(45646));
-      print(DateTime.now().millisecondsSinceEpoch - timestamp);
-      expect(DateTime.now().millisecondsSinceEpoch - timestamp, lessThan(150));
     });
 
     test('Sum to', () {

@@ -22,27 +22,37 @@ StatementInfo compileForStatement(
           'Cannot iterate over ${iterable.type}', parts, ctx.library, ctx);
     }
 
-    final elementType = itype.specifiedTypeArgs.isEmpty
+    var elementType = itype.specifiedTypeArgs.isEmpty
         ? CoreTypes.dynamic.ref(ctx)
         : itype.specifiedTypeArgs[0];
 
-    final iterator = iterable.getProperty(ctx, 'iterator');
+    var iterator = iterable.getProperty(ctx, 'iterator');
     late Reference loopVariable;
 
     return macroLoop(ctx, expectedReturnType,
         initialization: (_ctx) {
           if (parts is ForEachPartsWithDeclaration) {
+            final declaredType = parts.loopVariable.type == null
+                ? CoreTypes.dynamic.ref(ctx)
+                : TypeRef.fromAnnotation(
+                    ctx, ctx.library, parts.loopVariable.type!);
             if (parts.loopVariable.type != null &&
-                !elementType.isAssignableTo(
-                    ctx,
-                    TypeRef.fromAnnotation(
-                        ctx, ctx.library, parts.loopVariable.type!))) {
+                !elementType.isAssignableTo(ctx, declaredType)) {
               throw CompileError(
                   'Cannot assign $elementType to ${parts.loopVariable.type}',
                   parts,
                   ctx.library,
                   ctx);
             }
+
+            if (itype.specifiedTypeArgs.isEmpty) {
+              elementType = declaredType.copyWith(boxed: true);
+            }
+
+            iterator = iterator.copyWith(
+                type: CoreTypes.iterator.ref(ctx).copyWith(
+                    specifiedTypeArgs: [elementType.copyWith(boxed: true)]));
+
             final name = parts.loopVariable.name.lexeme;
             ctx.setLocal(
                 name, BuiltinValue().push(ctx).copyWith(type: elementType));

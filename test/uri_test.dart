@@ -123,8 +123,7 @@ void main() {
         }
       });
 
-      expect(
-          runtime.executeLib('package:example/main.dart', 'main'), 8080);
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 8080);
     });
 
     test('Uri().pathSegments', () {
@@ -201,18 +200,16 @@ void main() {
         }
       });
 
-      expect(runtime.executeLib('package:example/main.dart', 'main'), 
-        [
-          $bool(false),
-          $bool(true),
-          $bool(true),
-          $bool(true),
-          $bool(true),
-          $bool(true),
-          $bool(false),
-          $bool(true),
-        ]
-      );
+      expect(runtime.executeLib('package:example/main.dart', 'main'), [
+        $bool(false),
+        $bool(true),
+        $bool(true),
+        $bool(true),
+        $bool(true),
+        $bool(true),
+        $bool(false),
+        $bool(true),
+      ]);
     });
   });
 }

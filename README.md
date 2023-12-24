@@ -126,7 +126,7 @@ void main() {
     '''
   }});
   
-  final runtime = Runtime(program);
+  final runtime = Runtime.ofProgram(program);
   print(runtime.executeLib(
     'package:my_package/main.dart', 'main')); // prints '[6]'
 }

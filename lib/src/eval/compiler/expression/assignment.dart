@@ -13,7 +13,9 @@ Variable compileAssignmentExpression(
   final R = compileExpression(e.rightHandSide, ctx);
 
   if (e.operator.type == TokenType.EQ) {
-    return L.setValue(ctx, R);
+    final set =
+        R.type != L.resolveType(ctx, forSet: true) ? R.boxIfNeeded(ctx) : R;
+    return L.setValue(ctx, set);
   } else if (e.operator.type.binaryOperatorOfCompoundAssignment ==
       TokenType.QUESTION_QUESTION) {
     late Variable result;
@@ -28,6 +30,11 @@ Variable compileAssignmentExpression(
     return result;
   } else {
     final method = e.operator.type.binaryOperatorOfCompoundAssignment!.lexeme;
-    return L.setValue(ctx, L.getValue(ctx).invoke(ctx, method, [R]).result);
+    final V = L.getValue(ctx);
+    final res = V.invoke(ctx, method, [R]).result;
+    final set = res.type != L.resolveType(ctx, forSet: true)
+        ? res.boxIfNeeded(ctx)
+        : res;
+    return L.setValue(ctx, set);
   }
 }

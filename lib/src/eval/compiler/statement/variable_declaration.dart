@@ -37,7 +37,7 @@ void compileVariableDeclarationList(
             'Type mismatch: variable "${li.name.lexeme} is specified'
             ' as type $type, but is initialized to an incompatible value of type ${res.type}');
       }
-      if (!(type?.isUnboxedAcrossFunctionBoundaries ?? true)) {
+      if (!((type ?? res.type).isUnboxedAcrossFunctionBoundaries)) {
         res = res.boxIfNeeded(ctx);
       }
       if (res.name != null) {

@@ -1,3 +1,12 @@
+## 0.7.3
+- Fix error when setting a top-level variable
+- Fix for-each loops that specify the type of the loop variable
+- Allow exceptions to bubble up through an asynchronous gap
+- Fix CLI error resolving URIs from a Dart package_config.json file (thanks
+  @think-of-xiao)
+- Support for `List.of()`, `List.from()`, and `List.removeWhere()` (thanks 
+  @Noobware1)
+
 ## 0.7.2
 - Compiler now infers variable types when using the `if (x is Y)` pattern
 - Support for setters with a different type than getters / fields of the

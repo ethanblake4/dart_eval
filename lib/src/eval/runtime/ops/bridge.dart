@@ -139,7 +139,7 @@ class Await implements EvcOp {
         args: []);
 
     var future = runtime.frame[_futureOffset] as $Future;
-    _suspend(runtime, continuation, future);
+    _suspend(runtime, continuation, future, completer);
 
     // Return with the completer as the result (the following lines are a copy of the Return op code)
     runtime.returnValue = $Future.wrap(completer.future);
@@ -158,15 +158,21 @@ class Await implements EvcOp {
     runtime._prOffset = prOffset;
   }
 
-  void _suspend(
-      Runtime runtime, Continuation continuation, $Future future) async {
+  void _suspend(Runtime runtime, Continuation continuation, $Future future,
+      Completer completer) async {
     final result = await future.$value;
     runtime.returnValue = result;
     runtime.frameOffset = continuation.frameOffset;
     runtime.frame = continuation.frame;
     runtime.stack.add(continuation.frame);
     runtime.scopeNameStack.add('<asynchronous gap>');
-    runtime.bridgeCall(continuation.programOffset);
+
+    try {
+      runtime.bridgeCall(continuation.programOffset);
+    } catch (e) {
+      // temporary fix: this isn't correct, we need to reenter the eval loop
+      completer.completeError(e);
+    }
   }
 
   @override

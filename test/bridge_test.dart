@@ -2,6 +2,7 @@ import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/base.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/collection.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/future.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
 import 'package:test/test.dart';
 
@@ -220,6 +221,43 @@ void main() {
 
       runtimeOverrideVersion = Version.parse('1.4.0');
       expect(runtimeOverride('#get_list'), null);
+    });
+
+    test('Awaiting a callback', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            import 'dart:async';
+            
+            void main(Function callback) async {
+              callback('a');
+              await callback('w');
+              callback('b');
+            }
+          '''
+        }
+      });
+
+      final callback = $Closure((runtime, target, args) {
+        final fn = args[0]!.$value as String;
+        switch (fn) {
+          case 'a':
+            print('a');
+            break;
+          case 'b':
+            print('b');
+            break;
+          case 'w':
+            return $Future.wrap(
+                Future.delayed(const Duration(milliseconds: 10), () => 5));
+        }
+        return null;
+      });
+
+      expect(
+          () async => (await runtime
+              .executeLib('package:example/main.dart', 'main', [callback])),
+          prints('a\nb\n'));
     });
   });
 }

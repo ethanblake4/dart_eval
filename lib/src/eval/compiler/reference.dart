@@ -62,19 +62,30 @@ class IdentifierReference implements Reference {
         return TypeRef.lookupFieldType(ctx, $type, name, forSet: forSet) ??
             CoreTypes.dynamic.ref(ctx);
       }
+
+      final staticDeclaration = resolveStaticDeclaration(
+          ctx, ctx.library, ctx.currentClass!.name.lexeme, name);
+
+      if (staticDeclaration != null && staticDeclaration.declaration != null) {
+        final _dec = staticDeclaration.declaration!;
+        if (_dec is MethodDeclaration) {
+          return CoreTypes.function.ref(ctx);
+        } else if (_dec is VariableDeclaration) {
+          final name = '${ctx.currentClass!.name.lexeme}.${_dec.name.lexeme}';
+          return ctx.topLevelVariableInferredTypes[ctx.library]![name]!;
+        }
+      }
     }
 
-    final staticDeclaration = resolveStaticDeclaration(
-        ctx, ctx.library, ctx.currentClass!.name.lexeme, name);
+    final declaration = ctx.visibleDeclarations[ctx.library]![name] ??
+        (throw CompileError('Could not find declaration "$name"', source));
+    final _decl = declaration.declaration ?? (throw PrefixError());
 
-    if (staticDeclaration != null && staticDeclaration.declaration != null) {
-      final _dec = staticDeclaration.declaration!;
-      if (_dec is MethodDeclaration) {
-        return CoreTypes.function.ref(ctx);
-      } else if (_dec is VariableDeclaration) {
-        final name = '${ctx.currentClass!.name.lexeme}.${_dec.name.lexeme}';
-        return ctx.topLevelVariableInferredTypes[ctx.library]![name]!;
-      }
+    final decl = _decl.declaration!;
+
+    if (decl is VariableDeclaration) {
+      return ctx
+          .topLevelVariableInferredTypes[_decl.sourceLib]![decl.name.lexeme]!;
     }
 
     return CoreTypes.type.ref(ctx);
@@ -103,7 +114,8 @@ class IdentifierReference implements Reference {
 
     if (local != null) {
       if (local.isFinal && local.concreteTypes.isNotEmpty) {
-        throw CompileError('Cannot change value of a final variable', source);
+        throw CompileError(
+            'Cannot modify value of final variable $name', source);
       }
 
       ctx.pushOp(CopyValue.make(local.scopeFrameOffset, value.scopeFrameOffset),
@@ -135,6 +147,21 @@ class IdentifierReference implements Reference {
         ctx.pushOp(op, SetObjectProperty.len(op));
         return value;
       }
+    }
+
+    final declaration = ctx.visibleDeclarations[ctx.library]![name] ??
+        (throw CompileError('Could not find declaration "$name"', source));
+    final _decl = declaration.declaration ?? (throw PrefixError());
+
+    final decl = _decl.declaration!;
+
+    if (decl is VariableDeclaration) {
+      //final type = ctx
+      //    .topLevelVariableInferredTypes[_decl.sourceLib]![decl.name.lexeme]!;
+      final gIndex =
+          ctx.topLevelGlobalIndices[_decl.sourceLib]![decl.name.lexeme]!;
+      ctx.pushOp(SetGlobal.make(gIndex, value.scopeFrameOffset), SetGlobal.LEN);
+      return value;
     }
 
     throw CompileError(

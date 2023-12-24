@@ -68,6 +68,25 @@ void main() {
       expect(runtime.executeLib('package:example/main.dart', 'main'), $int(15));
     });
 
+    test('Foreach with dynamic iterable, specifying type in loop', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            num main() {
+              var i = 0;
+              dynamic list = [[1, 2], [3, 4], [5]];
+              for (List<int> x in list) {
+                i += x[0];
+              }
+              i++;
+              return i;
+            }
+          ''',
+        }
+      });
+      expect(runtime.executeLib('package:example/main.dart', 'main'), $int(10));
+    });
+
     test('Simple while loop', () {
       final runtime = compiler.compileWriteAndLoad({
         'example': {

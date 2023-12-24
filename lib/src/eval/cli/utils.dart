@@ -19,5 +19,5 @@ Directory findProjectRoot(Directory start) {
 PackageConfig getPackageConfig(Directory projectRoot) {
   final path = join(projectRoot.path, '.dart_tool', 'package_config.json');
   final packageConfigFile = File(path).readAsStringSync();
-  return PackageConfig.parseString(packageConfigFile, Uri.parse(path));
+  return PackageConfig.parseString(packageConfigFile, Uri.file(path));
 }
