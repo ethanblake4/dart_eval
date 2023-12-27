@@ -28,6 +28,7 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 
 Variable compileExpression(Expression e, CompilerContext ctx,
     [TypeRef? bound]) {
+      
   if (e is Literal) {
     return parseLiteral(e, ctx, bound);
   } else if (e is AssignmentExpression) {
