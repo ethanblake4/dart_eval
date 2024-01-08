@@ -117,8 +117,14 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
 
   if (_dec.isBridge) {
     final bridge = _dec.bridge;
+
+    /// If we're invoking a class identifier directly (like ClassName()), call
+    /// its default constructor
     final fnDescriptor = bridge is BridgeClassDef
-        ? bridge.constructors['']!.functionDescriptor
+        ? (bridge.constructors['']?.functionDescriptor ??
+            (throw CompileError(
+                'Class "${e.methodName.name}" does not have a default constructor',
+                e)))
         : (bridge as BridgeFunctionDeclaration).function;
 
     final argsPair = compileArgumentListWithBridge(
