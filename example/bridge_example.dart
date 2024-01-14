@@ -24,6 +24,7 @@ class $Book$bridge extends Book with $Bridge<Book> {
             returns: $type.annotate,
             params: ['pages'.param(CoreTypes.list.ref.annotate)]).asConstructor
       },
+      fields: {'pages': BridgeFieldDef(CoreTypes.list.ref.annotate)},
       methods: {
         'getPage': BridgeFunctionDef(
           returns: CoreTypes.string.ref.annotate,
@@ -53,12 +54,25 @@ class $Book$bridge extends Book with $Bridge<Book> {
   $Value? $bridgeSet(String identifier, $Value value) =>
       throw UnimplementedError('Unknown property $identifier');
 
+  @override
+  $Value? $getProperty(Runtime runtime, String identifier) {
+    switch (identifier) {
+      case 'pages':
+        // TODO: Now we just pass along the bridged/parent class' property, so values don't change...
+        return $List<$String>(identifier,
+            $List<$String>.wrap(pages.map((e) => $String(e)).toList()));
+      default:
+        return super.$getProperty(runtime, identifier);
+    }
+  }
+
   /// Override the original class' properties and methods
   @override
   String getPage(int index) => $_invoke('getPage', [$int(index)]);
 
-  @override
-  List<String> get pages => $_get('pages');
+  // @override
+  // List<String> get pages => $_get('pages');
+
 }
 
 void main() {
@@ -75,7 +89,9 @@ void main() {
       }
 
       Book main() {
-        final book = MyBook(['Hello world!', 'Hello again!']);
+        final book = MyBook(['Hi world!', 'Hello again!']);
+        book.pages.add('Next Chapter');
+        book.pages.add('Final Chapter');
         return book;
       }
     '''
@@ -90,4 +106,8 @@ void main() {
   // Now we can use the new book class outside dart_eval!
   final book = runtime.executeLib('package:hello/main.dart', 'main') as Book;
   print(book.getPage(1)); // -> 'Hello world!'
+  print(book is Book);
+  print(book is $Book$bridge);
+  // TODO: I'd expect the "Next Chapter" and "Final Chapter" here as well...
+  print(book.pages);
 }
