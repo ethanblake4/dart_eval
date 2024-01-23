@@ -10,6 +10,7 @@ class $DateTime implements DateTime, $Instance {
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFunc('dart:core', 'DateTime.now',
         (runtime, target, args) => $DateTime.wrap(DateTime.now()));
+    runtime.registerBridgeFunc('dart:core', 'DateTime.', $new);
     runtime.registerBridgeFunc('dart:core', 'DateTime.parse', $parse);
     runtime.registerBridgeFunc('dart:core', 'DateTime.tryParse', $tryParse);
   }
@@ -33,6 +34,27 @@ class $DateTime implements DateTime, $Instance {
   static const $declaration = BridgeClassDef(
       BridgeClassType(BridgeTypeRef(CoreTypes.dateTime)),
       constructors: {
+        '': BridgeConstructorDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dateTime)),
+            params: [
+              BridgeParameter('year',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), false),
+              BridgeParameter('month',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), true),
+              BridgeParameter('day',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), true),
+              BridgeParameter('hour',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), true),
+              BridgeParameter('minute',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), true),
+              BridgeParameter('second',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), true),
+              BridgeParameter('millisecond',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), true),
+              BridgeParameter('microsecond',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), true),
+            ],
+            namedParams: [])),
         'now': BridgeConstructorDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dateTime)),
             params: [],
@@ -147,6 +169,19 @@ class $DateTime implements DateTime, $Instance {
       setters: {},
       fields: {},
       wrap: true);
+
+  static $DateTime $new(Runtime runtime, $Value? target, List<$Value?> args) {
+    final year = args[0]!.$value as int;
+    final month = args[1]?.$value as int?;
+    final day = args[2]?.$value as int?;
+    final hour = args[3]?.$value as int?;
+    final minute = args[4]?.$value as int?;
+    final second = args[5]?.$value as int?;
+    final millisecond = args[6]?.$value as int?;
+    final microsecond = args[7]?.$value as int?;
+    return $DateTime.wrap(DateTime(year, month ?? 1, day ?? 1, hour ?? 0,
+        minute ?? 0, second ?? 0, millisecond ?? 0, microsecond ?? 0));
+  }
 
   /// Wrap a [DateTime] in a [$DateTime]
   $DateTime.wrap(this.$value) : _superclass = $Object($value);

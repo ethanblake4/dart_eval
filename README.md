@@ -1,7 +1,7 @@
 [![Build status](https://img.shields.io/github/actions/workflow/status/ethanblake4/dart_eval/dart.yml?branch=master)](https://github.com/ethanblake4/dart_eval/actions/workflows/dart.yml)
-[![Star on Github](https://img.shields.io/github/stars/ethanblake4/dart_eval?logo=github&colorB=orange&label=stars)](https://github.com/ethanblake4/dart_eval)
 [![License: BSD-3](https://img.shields.io/badge/license-BSD3-purple.svg)](https://opensource.org/licenses/BSD-3-Clause)
 [![Web example](https://img.shields.io/badge/web-example-blue.svg)](https://ethanblake.xyz/evalpad)
+[![Star on Github](https://img.shields.io/github/stars/ethanblake4/dart_eval?logo=github&colorB=orange&label=stars)](https://github.com/ethanblake4/dart_eval)
 
 `dart_eval` is an extensible bytecode compiler and interpreter for the Dart language, 
 written in Dart, enabling dynamic execution and codepush for Flutter and Dart AOT.
@@ -445,7 +445,7 @@ class $Book$bridge extends Book with $Bridge<Book> {
 
   static $Value? $new(
     Runtime runtime, $Value? target, List<$Value?> args) {
-    return $Book$bridge(args[0]!.$value);
+    return $Book$bridge((args[0]!.$reified as List).cast());
   }
 
   @override

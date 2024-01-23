@@ -324,7 +324,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
     if (param.optional && argumentList.arguments.length <= i) {
       $null ??= BuiltinValue().push(ctx);
       _push.add($null);
-      break;
+      continue;
     }
     final arg = argumentList.arguments[i];
     if (arg is NamedExpression) {
