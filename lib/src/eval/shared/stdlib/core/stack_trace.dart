@@ -1,12 +1,11 @@
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/shared/stdlib/core/base.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/object.dart';
 
 /// dart_eval bimodal wrapper for [StackTrace]
 class $StackTrace implements StackTrace, $Instance {
   /// Configure the [$StackTrace] wrapper for use in a [Runtime]
-  static void configureForCompileTime(BridgeDeclarationRegistry registry) {
+  static void configureForCompile(BridgeDeclarationRegistry registry) {
     registry.defineBridgeClass($declaration);
   }
 
