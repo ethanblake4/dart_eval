@@ -494,7 +494,7 @@ class $List<E> implements List<E>, $Instance {
   static $Value? _where(Runtime runtime, $Value? target, List<$Value?> args) {
     final test = args[0] as EvalCallable;
     return $Iterable.wrap((target!.$value as Iterable)
-        .where((e) => test.call(runtime, null, [e])!.$value as bool));
+        .where((e) => test.call(runtime, target, [e])!.$value as bool));
   }
 
   static const $Function __takeWhile = $Function(_takeWhile);

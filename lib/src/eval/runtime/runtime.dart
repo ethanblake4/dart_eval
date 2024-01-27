@@ -840,7 +840,6 @@ class Runtime {
     _prOffset = $offset;
     callStack.add(-1);
     catchStack.add([]);
-
     try {
       while (true) {
         final op = pr[_prOffset++];

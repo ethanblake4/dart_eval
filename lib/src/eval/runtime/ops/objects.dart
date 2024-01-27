@@ -128,7 +128,7 @@ class CheckEq implements EvcOp {
   void run(Runtime runtime) {
     final v1 = runtime.frame[_value1];
     final v2 = runtime.frame[_value2];
-   
+
     var vx = v1;
 
     while (true) {
@@ -143,6 +143,7 @@ class CheckEq implements EvcOp {
         runtime.callStack.add(runtime._prOffset);
         runtime.catchStack.add([]);
         runtime._prOffset = _offset;
+
         return;
       }
 
@@ -152,6 +153,7 @@ class CheckEq implements EvcOp {
         runtime.returnValue = method
             .call(runtime, vx, [v2 == null ? null : v2 as $Value])!.$value;
         runtime.args = [];
+
         return;
       }
 
