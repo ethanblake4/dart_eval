@@ -5,8 +5,6 @@ void main() {
   final compiler = Compiler();
 
   test('datetime parse', () async {
-    //DateTime x = DateTime.now();
-    //x.month
     final source = '''
       bool fn(){ 
         final a = DateTime.parse('2011-10-20 23:12:23'); 
@@ -164,6 +162,46 @@ void main() {
           return false;
         }
         if(!(a.compareTo(b) == 1)){
+          return false;
+        }
+        return true;
+      }
+      ''';
+    final runtime = compiler.compileWriteAndLoad({
+      'my_package': {
+        'main.dart': source,
+      }
+    });
+    var result = runtime.executeLib(
+      "package:my_package/main.dart",
+      "fn",
+    );
+    assert(result);
+  });
+
+  test('DateTime default constructor', () async {
+    final source = '''
+      bool fn(){ 
+        final a = DateTime(2011, 10, 22, 0, 0);
+        if(a.year != 2011){
+          return false;
+        }
+        if(a.month != 10){
+          return false;
+        }
+        if(a.day != 22){
+          return false;
+        }
+        if(a.hour != 0){
+          return false;
+        }
+        if(a.minute != 0){
+          return false;
+        }
+        if(a.second != 0){
+          return false;
+        }
+        if (a.millisecond != 0){
           return false;
         }
         return true;
