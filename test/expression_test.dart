@@ -358,9 +358,8 @@ void main() {
         }
       });
 
-      expect(() {
-        runtime.executeLib('package:example/main.dart', 'main');
-      }, '1\n');
+      expect(() => runtime.executeLib('package:example/main.dart', 'main'),
+          prints('1\n'));
     });
   });
 }

@@ -53,7 +53,6 @@ class $Future<T> implements Future<T>, $Instance {
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
-    print(identifier);
     switch (identifier) {
       case 'then':
         return __then;
