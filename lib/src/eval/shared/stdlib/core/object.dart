@@ -265,7 +265,7 @@ class $Object implements $Instance {
 
   static $Value? _equals(Runtime runtime, $Value? target, List<$Value?> args) {
     final other = args[0];
-    return $bool(target!.$value == other!.$value);
+    return $bool(target?.$value == other?.$value);
   }
 
   static const $Function __not_equals = $Function(_not_equals);

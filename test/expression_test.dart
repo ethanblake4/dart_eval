@@ -360,7 +360,7 @@ void main() {
 
       expect(() {
         runtime.executeLib('package:example/main.dart', 'main');
-      }, prints('1\n'));
+      }, '1\n');
     });
   });
 }

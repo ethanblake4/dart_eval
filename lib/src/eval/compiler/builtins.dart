@@ -29,6 +29,7 @@ class BuiltinValue {
   final bool? boolval;
 
   Variable _push(CompilerContext ctx) {
+   
     if (type == BuiltinValueType.intType) {
       ctx.pushOp(PushConstantInt.make(intval!), PushConstantInt.LEN);
       final type = CoreTypes.int.ref(ctx).copyWith(boxed: false);

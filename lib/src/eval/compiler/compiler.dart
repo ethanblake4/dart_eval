@@ -524,21 +524,21 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       final type = t.key;
       typeIds.putIfAbsent(type.file, () => {})[type.name] = t.value;
     }
-
     return Program(
-        _ctx.topLevelDeclarationPositions,
-        _ctx.instanceDeclarationPositions,
-        typeIds,
-        //ctx.typeNames,
-        _ctx.typeTypes,
-        _ctx.offsetTracker.apply(_ctx.out),
-        libraryMapString,
-        _ctx.bridgeStaticFunctionIndices,
-        _ctx.constantPool.pool,
-        _ctx.runtimeTypes.pool,
-        globalInitializers,
-        _ctx.enumValueIndices,
-        _ctx.runtimeOverrideMap);
+      _ctx.topLevelDeclarationPositions,
+      _ctx.instanceDeclarationPositions,
+      typeIds,
+      //ctx.typeNames,
+      _ctx.typeTypes,
+      _ctx.offsetTracker.apply(_ctx.out),
+      libraryMapString,
+      _ctx.bridgeStaticFunctionIndices,
+      _ctx.constantPool.pool,
+      _ctx.runtimeTypes.pool,
+      globalInitializers,
+      _ctx.enumValueIndices,
+      _ctx.runtimeOverrideMap,
+    );
   }
 
   /// For testing purposes. Compile code, write it to a byte stream, load it,
@@ -613,6 +613,15 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
             DeclarationOrBridge(libraryIndex, declaration: variable);
         _topLevelGlobalIndices[libraryIndex]![name] = _ctx.globalIndex++;
       }
+    } else if (declaration is ExtensionDeclaration) {
+      final name = declaration.name!.lexeme;
+      if (_topLevelDeclarationsMap[libraryIndex]!.containsKey(name)) {
+        throw CompileError('Cannot define "$name" twice in the same library',
+            declaration, libraryIndex);
+      }
+
+      _topLevelDeclarationsMap[libraryIndex]![name] =
+          DeclarationOrBridge(libraryIndex, declaration: declaration);
     } else {
       declaration as NamedCompilationUnitMember;
       final name = declaration.name.lexeme;

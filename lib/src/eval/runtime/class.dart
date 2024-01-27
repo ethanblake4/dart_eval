@@ -37,6 +37,7 @@ class $InstanceImpl implements $Instance {
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
+  
     final getter = evalClass.getters[identifier];
     if (getter == null) {
       final method = evalClass.methods[identifier];

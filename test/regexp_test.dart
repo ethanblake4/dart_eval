@@ -17,9 +17,8 @@ void main() {
               final string = '[00:13.37] This is a chat message.';
               final regExp = RegExp(r'c\\w*');
               final match = regExp.firstMatch(string);
-              return match[0];
-            }
-          ''',
+              return match![0]!;
+          }''',
         }
       });
       expect(
