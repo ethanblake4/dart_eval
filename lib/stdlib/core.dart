@@ -15,3 +15,5 @@ export '../src/eval/shared/stdlib/core/pattern.dart';
 export '../src/eval/shared/stdlib/core/regexp.dart';
 export '../src/eval/shared/stdlib/core/string_buffer.dart';
 export '../src/eval/shared/stdlib/core/uri.dart';
+export '../src/eval/shared/stdlib/core/stack_trace.dart';
+
