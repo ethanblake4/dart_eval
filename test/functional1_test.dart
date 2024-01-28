@@ -263,12 +263,10 @@ void main() {
               String? url;
             }
             void main() {
-              final requiredType = 'movie';
-              final type = (requiredType == 'movie') ? 
-                ShowType.Movie : ShowType.Series;
-              
-              final media = Media(type, 'example.com');
-              print(media.url);
+              final media = Media(ShowType.Movie, 'example.com');
+              final url = media.type == ShowType.Movie ? 
+                media.url = 'movie.com' : null;
+              print(url);
             }
           '''
         }
