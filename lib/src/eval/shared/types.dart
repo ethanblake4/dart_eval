@@ -268,6 +268,13 @@ class IoTypes {
   /// Bridge type spec for [StringSink]
   static const stringSink = BridgeTypeSpec('dart:io', 'StringSink');
 
+  /// Bridge type spec for [$InternetAddressType]
+  static const internetAddressType =
+      BridgeTypeSpec('dart:io', 'InternetAddressType');
+
+  /// Bridge type spec for [$InternetAddress]
+  static const internetAddress = BridgeTypeSpec('dart:io', 'InternetAddress');
+
   /// Bridge type spec for [$HttpClient]
   static const httpClient = BridgeTypeSpec('dart:io', 'HttpClient');
 
