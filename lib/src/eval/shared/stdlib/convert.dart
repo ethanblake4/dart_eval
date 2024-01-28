@@ -14,7 +14,6 @@ final Base64Codec base64Url = Base64Codec.urlSafe();
 final base64 = Base64Codec();
 ''';
 
-
 /// [EvalPlugin] for the `dart:convert` library
 class DartConvertPlugin implements EvalPlugin {
   @override

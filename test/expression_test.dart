@@ -341,6 +341,31 @@ void main() {
       }, prints('null\n1\n'));
     });
 
+    //
+
+    test('idk', () {
+      final runtime = Compiler().compileWriteAndLoad({
+        'example': {
+          'main.dart': '''  
+            String main(bool encrypt) {
+              final encoding = cryptoHandler(encrypt: encrypt);
+              return encoding;
+            }
+            
+            String cryptoHandler({encrypt = true}) {
+              return (encrypt) ? 'utf8' : 'base64';
+            }
+            
+         '''
+        }
+      });
+
+      expect(
+          runtime
+              .executeLib('package:example/main.dart', 'main', [true])?.$value,
+          'utf8');
+    });
+
     test('Null assertion', () {
       final runtime = Compiler().compileWriteAndLoad({
         'example': {

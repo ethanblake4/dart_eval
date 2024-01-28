@@ -613,15 +613,6 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
             DeclarationOrBridge(libraryIndex, declaration: variable);
         _topLevelGlobalIndices[libraryIndex]![name] = _ctx.globalIndex++;
       }
-    } else if (declaration is ExtensionDeclaration) {
-      final name = declaration.name!.lexeme;
-      if (_topLevelDeclarationsMap[libraryIndex]!.containsKey(name)) {
-        throw CompileError('Cannot define "$name" twice in the same library',
-            declaration, libraryIndex);
-      }
-
-      _topLevelDeclarationsMap[libraryIndex]![name] =
-          DeclarationOrBridge(libraryIndex, declaration: declaration);
     } else {
       declaration as NamedCompilationUnitMember;
       final name = declaration.name.lexeme;

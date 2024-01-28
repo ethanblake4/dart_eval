@@ -193,7 +193,8 @@ void main() {
           'main.dart': '''
             Iterable<int> main() {
               final List<int> a = [1, 2, 1, 4, 1];              
-              return a.where((element) => element == 1);
+              return a.where((element) => element == 1;
+              );
             }
           ''',
         }
