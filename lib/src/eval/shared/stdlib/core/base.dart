@@ -8,10 +8,19 @@ import 'package:dart_eval/src/eval/utils/wap_helper.dart';
 import 'num.dart';
 
 const $dynamicCls = BridgeClassDef(
-    BridgeClassType(BridgeTypeRef(CoreTypes.dynamic),
-        isAbstract: true, $extends: null),
-    constructors: {},
-    wrap: true);
+  BridgeClassType(BridgeTypeRef(CoreTypes.dynamic),
+      isAbstract: true, $extends: null),
+  constructors: {},
+  wrap: true,
+  methods: {
+    'toString': BridgeMethodDef(
+      BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+          params: [],
+          namedParams: []),
+    ),
+  },
+);
 
 const $voidCls = BridgeClassDef(
     BridgeClassType(BridgeTypeRef(CoreTypes.voidType), isAbstract: true),

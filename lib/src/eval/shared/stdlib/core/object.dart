@@ -280,7 +280,7 @@ class $Object implements $Instance {
 
   static $Value? _toString(
       Runtime runtime, $Value? target, List<$Value?> args) {
-    return $String(target!.$value.toString());
+    return $String(target!.$reified.toString());
   }
 
   static const $Function __hashCode = $Function(_hashCode);

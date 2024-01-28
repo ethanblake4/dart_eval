@@ -187,6 +187,28 @@ void main() {
       }, prints('null\n'));
     });
 
+    test('dynamic.toString', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            dynamic main() {
+              final a = abc();
+              print(a.toString());
+            }
+            
+            dynamic abc() {
+              return {
+                'hello': null
+              };
+            }
+          ''',
+        }
+      });
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('{hello: null}\n'));
+    });
+
     test('List.where', () {
       final runtime = compiler.compileWriteAndLoad({
         'example': {
