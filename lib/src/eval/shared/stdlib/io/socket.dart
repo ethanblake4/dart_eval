@@ -214,7 +214,7 @@ class $InternetAddress implements InternetAddress, $Instance {
         ),
         isFactory: true,
       ),
-      'InternetAddress.fromRawAddress': BridgeConstructorDef(
+      'fromRawAddress': BridgeConstructorDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation($type),
           params: [

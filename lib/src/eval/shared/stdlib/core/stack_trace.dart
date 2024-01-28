@@ -38,7 +38,7 @@ class $StackTrace implements StackTrace, $Instance {
         ),
         isFactory: false,
       ),
-      'StackTrace.fromString': BridgeConstructorDef(
+      'fromString': BridgeConstructorDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation($type),
           params: [
