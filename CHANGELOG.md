@@ -1,3 +1,6 @@
+## 0.7.4
+- Fix return value boxing of equals and not equals operators
+
 ## 0.7.3
 - Fix error when setting a top-level variable
 - Fix for-each loops that specify the type of the loop variable
