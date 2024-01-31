@@ -8,7 +8,8 @@ StatementInfo macroBranch(
     CompilerContext ctx, AlwaysReturnType? expectedReturnType,
     {required MacroVariableClosure condition,
     required MacroStatementClosure thenBranch,
-    MacroStatementClosure? elseBranch}) {
+    MacroStatementClosure? elseBranch,
+    bool resolveStateToThen = false}) {
   ctx.beginAllocScope();
   ctx.enterTypeInferenceContext();
   final conditionResult = condition(ctx).unboxIfNeeded(ctx);
@@ -16,7 +17,7 @@ StatementInfo macroBranch(
   final rewriteCond = JumpIfFalse.make(conditionResult.scopeFrameOffset, -1);
   final rewritePos = ctx.pushOp(rewriteCond, JumpIfFalse.LEN);
 
-  final _initialState = ctx.saveState();
+  var _initialState = ctx.saveState();
 
   ctx.inferTypes();
   ctx.beginAllocScope();
@@ -24,7 +25,11 @@ StatementInfo macroBranch(
   ctx.endAllocScope();
   ctx.uninferTypes();
 
-  ctx.resolveBranchStateDiscontinuity(_initialState);
+  if (!resolveStateToThen) {
+    ctx.resolveBranchStateDiscontinuity(_initialState);
+  } else {
+    _initialState = ctx.saveState();
+  }
 
   int? rewriteOut;
   if (elseBranch != null) {

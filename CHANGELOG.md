@@ -1,5 +1,6 @@
 ## 0.7.4
 - Fix return value boxing of equals and not equals operators
+- Fix assigning enums in conditional expressions
 
 ## 0.7.3
 - Fix error when setting a top-level variable

@@ -38,9 +38,9 @@ Variable compileConditionalExpression(
     types.add(v.type);
     vRef.setValue(ctx, v);
     return StatementInfo(-1);
-  });
+  }, resolveStateToThen: true);
 
-  final val = vRef.getValue(ctx);
+  final val = vRef.getValue(ctx).updated(ctx);
   return val.copyWith(
       type: TypeRef.commonBaseType(ctx, types).copyWith(boxed: val.boxed));
 }
