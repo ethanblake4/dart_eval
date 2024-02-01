@@ -35,6 +35,29 @@ void main() {
           '{"a":1,"b":2}');
     });
 
+    test('jsonEncode()', () async {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            import 'dart:convert';
+
+            String main() {
+              return jsonEncode({'a': 1, 'b': 2});
+            }
+          '''
+        }
+      });
+
+      expect(
+          runtime
+              .executeLib(
+                'package:example/main.dart',
+                'main',
+              )
+              .$value,
+          '{"a":1,"b":2}');
+    });
+
     test('json.decode()', () async {
       final runtime = compiler.compileWriteAndLoad({
         'example': {
@@ -43,6 +66,29 @@ void main() {
 
             Map<String, int> main() {
               return json.decode('{"a":1,"b":2}');
+            }
+          '''
+        }
+      });
+
+      expect(
+          runtime
+              .executeLib(
+                'package:example/main.dart',
+                'main',
+              )
+              .$reified,
+          {'a': 1, 'b': 2});
+    });
+
+    test('jsonDecode()', () async {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            import 'dart:convert';
+
+            Map<String, int> main() {
+              return jsonDecode('{"a":1,"b":2}');
             }
           '''
         }
