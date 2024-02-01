@@ -297,7 +297,7 @@ class $JsonEncodeAndDecode {
   static const __$jsonEncode = $Function(_$encode);
   static $Value? _$encode(Runtime runtime, $Value? target, List<$Value?> args) {
     final toEncodable = args[1]?.$value as EvalCallable?;
-    return $String(jsonEncode(args[0]?.$value,
+    return $String(jsonEncode(args[0]?.$reified,
         toEncodable: toEncodable == null
             ? null
             : (object) {
