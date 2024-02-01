@@ -16,20 +16,20 @@ class $Error implements Error, $Instance {
 
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFunc(
-        $type.spec!.library, 'Error.', __$Error$new.call);
-    runtime.registerBridgeFunc($type.spec!.library, 'Error.safeToString',
+        _$type.spec!.library, 'Error.', __$Error$new.call);
+    runtime.registerBridgeFunc(_$type.spec!.library, 'Error.safeToString',
         __$static$method$safeToString.call);
-    runtime.registerBridgeFunc($type.spec!.library, 'Error.throwWithStackTrace',
-        __$static$method$throwWithStackTrace.call);
+    runtime.registerBridgeFunc(_$type.spec!.library,
+        'Error.throwWithStackTrace', __$static$method$throwWithStackTrace.call);
   }
 
   late final $Instance _superclass = $Object($value);
 
-  static const $type = BridgeTypeRef(CoreTypes.error);
+  static const _$type = BridgeTypeRef(CoreTypes.error);
 
   static const $declaration = BridgeClassDef(
     BridgeClassType(
-      $type,
+      _$type,
       $extends: null,
       $implements: [],
       isAbstract: false,
@@ -37,7 +37,7 @@ class $Error implements Error, $Instance {
     constructors: {
       '': BridgeConstructorDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation($type),
+          returns: BridgeTypeAnnotation(_$type),
           params: [],
           namedParams: [],
         ),
@@ -112,7 +112,7 @@ class $Error implements Error, $Instance {
   }
 
   @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType($type.spec!);
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType(_$type.spec!);
 
   @override
   Error get $reified => $value;
@@ -164,17 +164,17 @@ class $UnsupportedError implements UnsupportedError, $Instance {
   }
 
   static void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFunc(
-        $type.spec!.library, 'UnsupportedError.', __$UnsupportedError$new.call);
+    runtime.registerBridgeFunc(_$type.spec!.library, 'UnsupportedError.',
+        __$UnsupportedError$new.call);
   }
 
   late final $Instance _superclass = $Error.wrap($value);
 
-  static const $type = BridgeTypeRef(CoreTypes.unsupportedError);
+  static const _$type = BridgeTypeRef(CoreTypes.unsupportedError);
 
   static const $declaration = BridgeClassDef(
     BridgeClassType(
-      $type,
+      _$type,
       $extends: BridgeTypeRef(CoreTypes.error, []),
       $implements: [],
       isAbstract: false,
@@ -182,7 +182,7 @@ class $UnsupportedError implements UnsupportedError, $Instance {
     constructors: {
       '': BridgeConstructorDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation($type),
+          returns: BridgeTypeAnnotation(_$type),
           params: [
             BridgeParameter(
                 'message',
@@ -222,7 +222,7 @@ class $UnsupportedError implements UnsupportedError, $Instance {
   }
 
   @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType($type.spec!);
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType(_$type.spec!);
 
   @override
   UnsupportedError get $reified => $value;
@@ -260,17 +260,17 @@ class $UnimplementedError implements UnimplementedError, $Instance {
   }
 
   static void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFunc($type.spec!.library, 'UnimplementedError.',
+    runtime.registerBridgeFunc(_$type.spec!.library, 'UnimplementedError.',
         __$UnimplementedError$new.call);
   }
 
   late final $Instance _superclass = $Error.wrap($value);
 
-  static const $type = BridgeTypeRef(CoreTypes.unimplementedError);
+  static const _$type = BridgeTypeRef(CoreTypes.unimplementedError);
 
   static const $declaration = BridgeClassDef(
     BridgeClassType(
-      $type,
+      _$type,
       $extends: BridgeTypeRef(CoreTypes.error, []),
       $implements: [
         BridgeTypeRef(CoreTypes.unsupportedError, []),
@@ -280,7 +280,7 @@ class $UnimplementedError implements UnimplementedError, $Instance {
     constructors: {
       '': BridgeConstructorDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation($type),
+          returns: BridgeTypeAnnotation(_$type),
           params: [
             BridgeParameter(
                 'message',
@@ -320,7 +320,7 @@ class $UnimplementedError implements UnimplementedError, $Instance {
   }
 
   @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType($type.spec!);
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType(_$type.spec!);
 
   @override
   UnimplementedError get $reified => $value;
