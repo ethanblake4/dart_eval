@@ -277,6 +277,8 @@ class Variable {
     final AlwaysReturnType? returnType;
     if ($this.type == CoreTypes.function.ref(ctx) && method == 'call') {
       returnType = null;
+    } else if (checkEq || checkNotEq) {
+      returnType = AlwaysReturnType(CoreTypes.bool.ref(ctx), false);
     } else {
       returnType = AlwaysReturnType.fromInstanceMethodOrBuiltin(
           ctx, $this.type, method, [..._args.map((e) => e.type)], {});

@@ -1,4 +1,6 @@
 import 'package:dart_eval/dart_eval.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -62,6 +64,38 @@ void main() {
 
       expect(() => runtime.executeLib('package:example/main.dart', 'main'),
           prints('false\ntrue\n'));
+    });
+
+    test('Enum boxing error', () {
+      final compiler2 = Compiler();
+      compiler2.defineBridgeEnum(BridgeEnumDef(
+          BridgeTypeRef(
+              BridgeTypeSpec('package:my_package/show.dart', 'ShowType')),
+          values: ['Movie', 'Series']));
+      final program = compiler2.compile({
+        'my_package': {
+          'main.dart': r'''
+            import 'show.dart';
+            class Media {
+              Media(this.type, this.url);
+              final ShowType type;
+              String? url;
+            }
+            void main() {
+              final requiredType = 'movie';
+              final type = (requiredType == 'movie') ? 
+                ShowType.Movie : ShowType.Series;
+              
+              final media = Media(type, 'example.com');
+              print(media.url);
+            }
+          '''
+        }
+      });
+      final runtime = Runtime.ofProgram(program);
+      runtime.registerBridgeEnumValues('package:my_package/show.dart',
+          'ShowType', {'Movie': $int(0), 'Series': $int(1)});
+      runtime.executeLib('package:my_package/main.dart', 'main');
     });
   });
 }
