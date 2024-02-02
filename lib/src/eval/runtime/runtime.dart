@@ -84,7 +84,7 @@ class _UnloadedEnumValues {
 ///
 class Runtime {
   /// The current runtime version code
-  static const int versionCode = 73;
+  static const int versionCode = 74;
 
   /// Construct a runtime from EVC bytecode. When possible, use the
   /// [Runtime.ofProgram] constructor instead to reduce loading time.
