@@ -29,6 +29,7 @@ void compileVariableDeclarationList(
           ' multiple times in the same scope');
     }
     final init = li.initializer;
+
     if (init != null) {
       var res = compileExpression(init, ctx, type);
       if (type != null &&

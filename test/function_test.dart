@@ -47,6 +47,24 @@ void main() {
       expect(runtime.executeLib('package:eval_test/main.dart', 'main'), 7);
     });
 
+    test('idk', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'eval_test': {
+          'main.dart': '''
+            int main() {
+              return test();
+            }
+            int test({bool bigger = true}) {
+              final num = (bigger) ? 10 : 5;
+              return num;
+            }
+          '''
+        }
+      });
+
+      expect(runtime.executeLib('package:eval_test/main.dart', 'main'), 10);
+    });
+
     test('Recursion (fibonacci)', () {
       final runtime = compiler.compileWriteAndLoad({
         'example': {

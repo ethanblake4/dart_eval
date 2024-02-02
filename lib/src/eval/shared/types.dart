@@ -89,6 +89,9 @@ class CoreTypes {
   /// Bridge type spec for [$RegExp]
   static const regExp = BridgeTypeSpec('dart:core', 'RegExp');
 
+  /// Bridge type spec for [$StackTrace]
+  static const stackTrace = BridgeTypeSpec('dart:core', 'StackTrace');
+
   /// Bridge type spec for [Error]
   static const error = BridgeTypeSpec('dart:core', 'Error');
 
@@ -100,6 +103,14 @@ class CoreTypes {
 
   /// Bridge type spec for [Exception]
   static const formatException = BridgeTypeSpec('dart:core', 'FormatException');
+
+  /// Bridge type spec for [$UnsupportedError]
+  static const unsupportedError =
+      BridgeTypeSpec('dart:core', 'UnsupportedError');
+
+  /// Bridge type spec for [$UnimplementedError]
+  static const unimplementedError =
+      BridgeTypeSpec('dart:core', 'UnimplementedError');
 
   /// Bridge type spec for [AssertionError]
   static const assertionError = BridgeTypeSpec('dart:core', 'AssertionError');
@@ -256,6 +267,13 @@ class IoTypes {
 
   /// Bridge type spec for [StringSink]
   static const stringSink = BridgeTypeSpec('dart:io', 'StringSink');
+
+  /// Bridge type spec for [$InternetAddressType]
+  static const internetAddressType =
+      BridgeTypeSpec('dart:io', 'InternetAddressType');
+
+  /// Bridge type spec for [$InternetAddress]
+  static const internetAddress = BridgeTypeSpec('dart:io', 'InternetAddress');
 
   /// Bridge type spec for [$HttpClient]
   static const httpClient = BridgeTypeSpec('dart:io', 'HttpClient');

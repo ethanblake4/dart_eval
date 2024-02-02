@@ -143,14 +143,17 @@ class CheckEq implements EvcOp {
         runtime.callStack.add(runtime._prOffset);
         runtime.catchStack.add([]);
         runtime._prOffset = _offset;
+
         return;
       }
 
       if (vx is $Instance) {
         final method = vx.$getProperty(runtime, '==') as EvalFunction;
+
         runtime.returnValue = method
             .call(runtime, vx, [v2 == null ? null : v2 as $Value])!.$value;
         runtime.args = [];
+
         return;
       }
 

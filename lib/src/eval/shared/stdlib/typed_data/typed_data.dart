@@ -640,7 +640,8 @@ class $Uint8List implements $Instance {
   /// Create a new [$Uint8List] wrapping [Uint8List.fromList]
   static $Uint8List $fromList(
       Runtime runtime, $Value? target, List<$Value?> args) {
-    return $Uint8List.wrap(Uint8List.fromList(args[0]?.$value));
+    final list = (args[0]!.$reified as List).cast<int>();
+    return $Uint8List.wrap(Uint8List.fromList(list));
   }
 
   /// Create a new [$Uint8List] wrapping [Uint8List.view]

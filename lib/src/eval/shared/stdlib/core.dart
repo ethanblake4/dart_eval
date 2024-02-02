@@ -14,6 +14,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/object.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/pattern.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/regexp.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/stack_trace.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/string_buffer.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/symbol.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/type.dart';
@@ -66,6 +67,10 @@ class DartCorePlugin implements EvalPlugin {
     registry.defineBridgeClass($FormatException.$declaration);
     registry.defineBridgeClass($ArgumentError.$declaration);
     registry.defineBridgeClass($StateError.$declaration);
+    $StackTrace.configureForCompile(registry);
+    $Error.configureForCompile(registry);
+    $UnimplementedError.configureForCompile(registry);
+    $UnsupportedError.configureForCompile(registry);
   }
 
   @override
@@ -101,6 +106,10 @@ class DartCorePlugin implements EvalPlugin {
     runtime.registerBridgeFunc('dart:core', 'RangeError.checkNotNegative',
         $RangeError.$checkNotNegative);
     runtime.registerBridgeFunc('dart:core', 'Symbol.', $Symbol.$new);
+    $StackTrace.configureForRuntime(runtime);
+    $Error.configureForRuntime(runtime);
+    $UnimplementedError.configureForRuntime(runtime);
+    $UnsupportedError.configureForRuntime(runtime);
     runtime.registerBridgeFunc(
         'dart:core', 'FormatException.', $FormatException.$new);
     runtime.registerBridgeFunc(

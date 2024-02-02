@@ -78,8 +78,10 @@ class $Future<T> implements Future<T>, $Instance {
 
   static $Value? _then(Runtime runtime, $Value? target, List<$Value?> args) {
     final $t = target as $Future;
-    return $Future.wrap(($t.$value).then((value) =>
-        (args[0] as EvalFunction)(runtime, target, [runtime.wrap($t)])));
+    final $then = args[0] as EvalFunction;
+    final $result = ($t.$value)
+        .then((value) => $then.call(runtime, target, [runtime.wrap(value)]));
+    return $Future.wrap($result);
   }
 
   @override

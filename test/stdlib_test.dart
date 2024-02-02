@@ -1,4 +1,5 @@
 import 'package:dart_eval/dart_eval.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/stdlib/core.dart';
 import 'package:test/test.dart';
 
@@ -184,6 +185,46 @@ void main() {
         expect(
             runtime.executeLib('package:example/main.dart', 'main'), $null());
       }, prints('null\n'));
+    });
+
+    test('dynamic.toString', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            dynamic main() {
+              final a = abc();
+              print(a.toString());
+            }
+            
+            dynamic abc() {
+              return {
+                'hello': null
+              };
+            }
+          ''',
+        }
+      });
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('{hello: null}\n'));
+    });
+
+    test('List.where', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            Iterable<int> main() {
+              final List<int> a = [1, 2, 1, 4, 1];              
+              return a.where((element) => element == 1);
+            }
+          ''',
+        }
+      });
+      expect(
+          ((runtime.executeLib('package:example/main.dart', 'main') as $Value)
+                  .$reified as Iterable)
+              .toList(),
+          [$int(1), $int(1), $int(1)]);
     });
 
     test('StreamController and Stream.listen()', () {

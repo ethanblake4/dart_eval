@@ -95,8 +95,8 @@ void main() {
           'main.dart': '''
           import 'dart:math';
           Future<num> main(int milliseconds) async {
-            final result = await getPoint(milliseconds);
-            return result.x + result.y;
+            final result = await getPoint(milliseconds).then((result) => result.x + result.y);
+            return result + 1;
           }
 
           Future<Point> getPoint(int milliseconds) async {
@@ -107,9 +107,9 @@ void main() {
         }
       });
 
-      final future = runtime
-          .executeLib('package:example/main.dart', 'main', [150]) as Future;
-      await expectLater(future, completion($num<num>(10)));
+      final value = await (runtime
+          .executeLib('package:example/main.dart', 'main', [150]) as Future);
+      expect(value, $int(11));
     });
   });
 }

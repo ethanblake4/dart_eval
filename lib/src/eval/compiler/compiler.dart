@@ -524,21 +524,21 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       final type = t.key;
       typeIds.putIfAbsent(type.file, () => {})[type.name] = t.value;
     }
-
     return Program(
-        _ctx.topLevelDeclarationPositions,
-        _ctx.instanceDeclarationPositions,
-        typeIds,
-        //ctx.typeNames,
-        _ctx.typeTypes,
-        _ctx.offsetTracker.apply(_ctx.out),
-        libraryMapString,
-        _ctx.bridgeStaticFunctionIndices,
-        _ctx.constantPool.pool,
-        _ctx.runtimeTypes.pool,
-        globalInitializers,
-        _ctx.enumValueIndices,
-        _ctx.runtimeOverrideMap);
+      _ctx.topLevelDeclarationPositions,
+      _ctx.instanceDeclarationPositions,
+      typeIds,
+      //ctx.typeNames,
+      _ctx.typeTypes,
+      _ctx.offsetTracker.apply(_ctx.out),
+      libraryMapString,
+      _ctx.bridgeStaticFunctionIndices,
+      _ctx.constantPool.pool,
+      _ctx.runtimeTypes.pool,
+      globalInitializers,
+      _ctx.enumValueIndices,
+      _ctx.runtimeOverrideMap,
+    );
   }
 
   /// For testing purposes. Compile code, write it to a byte stream, load it,

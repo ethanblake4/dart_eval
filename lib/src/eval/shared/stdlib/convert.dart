@@ -33,6 +33,7 @@ class DartConvertPlugin implements EvalPlugin {
     registry.defineBridgeClass($JsonEncoder.$declaration);
     registry.defineBridgeClass($JsonCodec.$declaration);
     registry.addSource(DartSource('dart:convert', convertSource));
+    $JsonEncodeAndDecode.configureForCompile(registry);
   }
 
   @override
@@ -46,5 +47,6 @@ class DartConvertPlugin implements EvalPlugin {
     runtime.registerBridgeFunc(
         'dart:convert', 'JsonEncoder.', $JsonEncoder.$new);
     runtime.registerBridgeFunc('dart:convert', 'JsonCodec.', $JsonCodec.$new);
+    $JsonEncodeAndDecode.configureForRuntime(runtime);
   }
 }
