@@ -47,7 +47,6 @@ Variable compileBinaryExpression(CompilerContext ctx, BinaryExpression e,
 
   var method = opMap[e.operator.type] ??
       (throw CompileError('Unknown binary operator ${e.operator.type}'));
-
   return L.invoke(ctx, method, [R]).result;
 }
 

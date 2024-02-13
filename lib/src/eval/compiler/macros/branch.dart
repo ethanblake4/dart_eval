@@ -12,6 +12,7 @@ StatementInfo macroBranch(
     bool resolveStateToThen = false}) {
   ctx.beginAllocScope();
   ctx.enterTypeInferenceContext();
+
   final conditionResult = condition(ctx).unboxIfNeeded(ctx);
 
   final rewriteCond = JumpIfFalse.make(conditionResult.scopeFrameOffset, -1);
