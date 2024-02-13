@@ -240,7 +240,10 @@ class Runtime {
     }
 
     for (final ule in _unloadedEnumValues) {
-      final libIndex = _bridgeLibraryMappings[ule.library]!;
+      final libIndex = _bridgeLibraryMappings[ule.library];
+      if (libIndex == null || bridgeEnumMappings[libIndex]?[ule.name] == null) {
+        continue;
+      }
       final mapping = bridgeEnumMappings[libIndex]![ule.name]!;
       for (final value in ule.values.entries) {
         globals[mapping[value.key]!] = value.value;
