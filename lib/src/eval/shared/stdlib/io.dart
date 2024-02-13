@@ -4,6 +4,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/io/directory.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io/file.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io/file_system_entity.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io/http.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/io/http_status.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io/io_sink.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io/socket.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io/string_sink.dart';
@@ -25,6 +26,7 @@ class DartIoPlugin implements EvalPlugin {
     registry.defineBridgeClass($Directory.$declaration);
     $InternetAddress.configureForCompile(registry);
     $InternetAddressType.configureForCompile(registry);
+    $HttpStatus.configureForCompile(registry);
   }
 
   @override
@@ -34,5 +36,6 @@ class DartIoPlugin implements EvalPlugin {
     runtime.registerBridgeFunc('dart:io', 'Directory.', $Directory.$new);
     $InternetAddress.configureForRuntime(runtime);
     $InternetAddressType.configureForRuntime(runtime);
+    $HttpStatus.configureForRuntime(runtime);
   }
 }
