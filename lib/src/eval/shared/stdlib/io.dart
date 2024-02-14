@@ -26,7 +26,7 @@ class DartIoPlugin implements EvalPlugin {
     registry.defineBridgeClass($Directory.$declaration);
     $InternetAddress.configureForCompile(registry);
     $InternetAddressType.configureForCompile(registry);
-    $HttpStatus.configureForCompile(registry);
+    registry.addSource($HttpStatusSource());
   }
 
   @override
@@ -36,6 +36,5 @@ class DartIoPlugin implements EvalPlugin {
     runtime.registerBridgeFunc('dart:io', 'Directory.', $Directory.$new);
     $InternetAddress.configureForRuntime(runtime);
     $InternetAddressType.configureForRuntime(runtime);
-    $HttpStatus.configureForRuntime(runtime);
   }
 }
