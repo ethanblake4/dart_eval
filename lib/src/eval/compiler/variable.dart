@@ -241,7 +241,6 @@ class Variable {
     } else if (type.isAssignableTo(ctx, CoreTypes.bool.ref(ctx),
             forceAllowDynamic: false) &&
         supportedBoolIntrinsicOps.contains(method)) {
-      print(this);
       $this = unboxIfNeeded(ctx);
       ctx.pushOp(LogicalNot.make($this.scopeFrameOffset), LogicalNot.LEN);
       var result =
