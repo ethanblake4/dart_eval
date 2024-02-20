@@ -275,6 +275,19 @@ class $List<E> implements List<E>, $Instance {
                 returns:
                     BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType))),
             isStatic: false),
+        'firstWhere': BridgeMethodDef(
+            BridgeFunctionDef(params: [
+              BridgeParameter(
+                  'test',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
+                  false),
+            ], namedParams: [
+              BridgeParameter(
+                  'orElse',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
+                  false),
+            ], returns: BridgeTypeAnnotation(BridgeTypeRef.ref('E'))),
+            isStatic: false),
         'sublist': BridgeMethodDef(
             BridgeFunctionDef(
                 params: [
@@ -454,6 +467,8 @@ class $List<E> implements List<E>, $Instance {
         return __retainWhere;
       case 'removeWhere':
         return __removeWhere;
+      case 'firstWhere':
+        return __firstWhere;
       case 'replaceRange':
         return __replaceRange;
       case 'getRange':
@@ -663,6 +678,18 @@ class $List<E> implements List<E>, $Instance {
 
   static $Value? _cast(Runtime runtime, $Value? target, List<$Value?> args) {
     return target;
+  }
+
+  static const $Function __firstWhere = $Function(_firstWhere);
+
+  static $Value? _firstWhere(
+      Runtime runtime, $Value? target, List<$Value?> args) {
+    final test = args[0] as EvalCallable;
+    final orElse = args[1] as EvalCallable?;
+    return (target!.$value as List).firstWhere(
+      (element) => test.call(runtime, null, args)?.$value as bool,
+      orElse: orElse == null ? null : () => orElse.call(runtime, null, args),
+    ) as $Value?;
   }
 
   @override
