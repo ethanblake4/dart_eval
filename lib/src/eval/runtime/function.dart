@@ -1,6 +1,7 @@
 import 'package:dart_eval/src/eval/runtime/exception.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/runtime/type.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/object.dart';
 
 import '../../../dart_eval_bridge.dart';
 
@@ -118,6 +119,15 @@ class $Function extends EvalFunction {
   final EvalCallableFunc func;
 
   @override
+  $Value? $getProperty(Runtime runtime, String identifier) {
+    try {
+      return super.$getProperty(runtime, identifier);
+    } on EvalUnknownPropertyException {
+      return $Object($value).$getProperty(runtime, identifier);
+    }
+  }
+
+  @override
   $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
     return func(runtime, target, args);
   }
@@ -134,6 +144,15 @@ class $Closure extends EvalFunction {
 
   final EvalCallableFunc func;
   final $Instance? $this;
+
+  @override
+  $Value? $getProperty(Runtime runtime, String identifier) {
+    try {
+      return super.$getProperty(runtime, identifier);
+    } on EvalUnknownPropertyException {
+      return $Object($value).$getProperty(runtime, identifier);
+    }
+  }
 
   @override
   $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {

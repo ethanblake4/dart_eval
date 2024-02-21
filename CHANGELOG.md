@@ -5,6 +5,8 @@
 - Binding generator can now generate `configureForRuntime` methods
 - Support for static methods and getters in the binding generator
 - Fix compile error with empty map literals
+- Automatically resolve bridged superclass field references without 'this.'
+- Fix broken implementation of Object.hashCode
 
 ## 0.7.4
 - Fix return value boxing of equals and not equals operators

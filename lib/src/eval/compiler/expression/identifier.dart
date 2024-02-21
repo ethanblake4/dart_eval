@@ -63,6 +63,12 @@ Pair<TypeRef, DeclarationOrBridge>? resolveInstanceDeclaration(
       return Pair($type, GetSet(-1, bridge: getter, setter: _setter));
     }
 
+    final field = bridge.fields[name];
+    if (field != null) {
+      final $type = ctx.visibleTypes[library]![$class]!;
+      return Pair($type, DeclarationOrBridge(-1, bridge: field));
+    }
+
     final $extends = bridge.type.$extends;
     if ($extends != null) {
       final _type = TypeRef.fromBridgeTypeRef(ctx, $extends);

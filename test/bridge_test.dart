@@ -54,7 +54,7 @@ void main() {
             
               @override
               bool runTest(int a, {String b = 'wow'}) {
-                return super.runTest(a + 2, b: b);
+                return super.runTest(a + 2 + someNumber, b: b);
               }
             }
             

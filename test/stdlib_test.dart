@@ -495,5 +495,23 @@ void main() {
         runtime.executeLib('package:example/main.dart', 'main');
       }, prints('-1\n1\n0\n'));
     });
+
+    test('Printing hashCode', () {
+      final program = compiler.compile({
+        'example': {
+          'main.dart': '''
+            bool main() {
+              final value = 5;
+              final valueHashCode = value.hashCode;
+              print('hashCode \$valueHashCode');
+              return true;
+            }
+          '''
+        }
+      });
+
+      final runtime = Runtime.ofProgram(program);
+      expect(runtime.executeLib('package:example/main.dart', 'main'), true);
+    });
   });
 }
