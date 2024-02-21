@@ -170,7 +170,7 @@ void main() {
     test('Passing a map to a function externally', () {
       final program = compiler.compile({
         'example': {
-          'main.dart': '''            
+          'main.dart': '''
             int main(Map<String, int> map) {
               return map['hi'];
             }

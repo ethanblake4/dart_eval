@@ -37,20 +37,37 @@ Variable compileSetOrMapLiteral(SetOrMapLiteral l, CompilerContext ctx) {
     keyResultTypes.addAll(_result.second.map((e) => e.first));
     valueResultTypes.addAll(_result.second.map((e) => e.second));
   }
+  var isEmpty = false;
+  if (_collection == null) {
+    isEmpty = true;
+    if (specifiedValueType != null ||
+        (specifiedKeyType == null && specifiedValueType == null)) {
+      // make an empty Map
+      ctx.pushOp(PushMap.make(), PushMap.LEN);
+      _collection = Variable.alloc(
+          ctx,
+          CoreTypes.map.ref(ctx).copyWith(specifiedTypeArgs: [
+            specifiedKeyType ?? CoreTypes.dynamic.ref(ctx),
+            specifiedValueType ?? CoreTypes.dynamic.ref(ctx),
+          ], boxed: false));
+    } else {
+      throw CompileError('Sets are not currently supported');
+    }
+  }
   ctx.endAllocScope(popAdjust: -1);
   ctx.scopeFrameOffset++;
   ctx.allocNest.last++;
 
-  if (specifiedValueType == null) {
+  if (specifiedValueType == null && !isEmpty) {
     return Variable(
-        _collection!.scopeFrameOffset,
+        _collection.scopeFrameOffset,
         _collection.type.copyWith(boxed: false, specifiedTypeArgs: [
           TypeRef.commonBaseType(ctx, keyResultTypes.toSet()),
           TypeRef.commonBaseType(ctx, valueResultTypes.toSet())
         ]));
   }
 
-  return _collection!;
+  return _collection;
 }
 
 Pair<Variable, List<Pair<TypeRef, TypeRef>>> compileSetOrMapElement(

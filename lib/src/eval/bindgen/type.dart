@@ -1,3 +1,4 @@
+import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
@@ -74,7 +75,15 @@ String? wrapVar(BindgenContext ctx, DartType type, String expr) {
     return '\$null()';
   }
 
-  final wrapped = wrapType(ctx, type, expr) ?? '\$Object($expr)';
+  var wrapped = wrapType(ctx, type, expr);
+
+  if (wrapped == null) {
+    if (ctx.unknownTypes.add(type.element!.name!)) {
+      print('Warning: type ${type.element!.name} is not bound, '
+          'falling back to \$Object');
+    }
+    wrapped = '\$Object($expr)';
+  }
 
   if (type.nullabilitySuffix == NullabilitySuffix.question) {
     return '$expr == null ? \$null() : $wrapped';
@@ -105,6 +114,18 @@ String? wrapType(BindgenContext ctx, DartType type, String expr) {
     if (defaultCstr.contains(name)) {
       return '\$$name($expr)';
     }
+    if (name == 'List') {
+      final generic = type as ParameterizedType;
+      final arg = generic.typeArguments.first;
+      return '\$List.view($expr, (e) => ${wrapVar(ctx, arg, 'e')})';
+    }
+    return '\$$name.wrap($expr)';
+  }
+
+  final typeEl = type.element;
+  if (typeEl is ClassElement &&
+      typeEl.metadata.any((e) => e.element?.displayName == 'Bind')) {
+    ctx.imports.add(typeEl.library.source.uri.toString());
     return '\$$name.wrap($expr)';
   }
 

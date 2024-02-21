@@ -1,3 +1,11 @@
+## 0.7.5
+- Create writeback-capable List wrapper. Use `$List.view()` with a type mapper
+  function to create a view of an underlying List that can be written to.
+- Support for `$List.view` in the binding generator
+- Binding generator can now generate `configureForRuntime` methods
+- Support for static methods and getters in the binding generator
+- Fix compile error with empty map literals
+
 ## 0.7.4
 - Fix return value boxing of equals and not equals operators
 - Fix assigning enums in conditional expressions

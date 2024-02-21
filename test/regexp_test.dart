@@ -118,7 +118,7 @@ void main() {
   test('RegExp.groupNames', () {
     final runtime = compiler.compileWriteAndLoad({
       'example': {
-        'main.dart': '''          
+        'main.dart': '''
             List<String> main() {
               final regex = RegExp(r'(?<year>\\d{4})-(?<month>\\d{2})-(?<day>\\d{2})');
               final match = regex.firstMatch('2023-10-27');

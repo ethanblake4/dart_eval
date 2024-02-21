@@ -397,15 +397,16 @@ class $List<E> implements List<E>, $Instance {
       fields: {},
       wrap: true);
 
-  $List(String id, List<E> value)
-      : $value = runtimeOverride(id) as List<E>? ?? value;
-
+  /// Wrap a [List] in a [$List]
   $List.wrap(this.$value);
+
+  /// Create a view of a [List] as a [$List] (supports writeback)
+  factory $List.view(List<E> value, $Value Function(E value)) = _$List$view;
 
   @override
   final List<E> $value;
 
-  late final $Iterable $super = $Iterable.wrap($value);
+  late final $Iterable _superclass = $Iterable.wrap($value);
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
@@ -421,17 +422,17 @@ class $List<E> implements List<E>, $Instance {
       case 'addAll':
         return __addAll;
       case 'first':
-        return $super.first;
+        return _superclass.first;
       case 'contains':
         return __listContains;
       case 'where':
         return __where;
       case 'isEmpty':
-        return $bool($super.isEmpty);
+        return $bool(_superclass.isEmpty);
       case 'isNotEmpty':
-        return $bool($super.isNotEmpty);
+        return $bool(_superclass.isNotEmpty);
       case 'last':
-        return $super.last;
+        return _superclass.last;
       case 'reversed':
         return $Iterable.wrap($value.reversed);
       case 'iterator':
@@ -473,7 +474,7 @@ class $List<E> implements List<E>, $Instance {
       case 'cast':
         return __cast;
     }
-    return $super.$getProperty(runtime, identifier);
+    return _superclass.$getProperty(runtime, identifier);
   }
 
   @override
@@ -907,4 +908,245 @@ $Value? _List_from(Runtime runtime, $Value? target, List<$Value?> args) {
   return $List.wrap(
     List.from(args[0]!.$value, growable: args[1]?.$value ?? true),
   );
+}
+
+/// Writeback-capable wrapper for [List] with type mapping function
+class _$List$view<E> extends $List<E> {
+  _$List$view(List<E> $value, this.mapper) : super.wrap($value);
+
+  final $Value Function(E) mapper;
+
+  $Value $map(E value) {
+    if (value == null) return $null();
+    return mapper(value);
+  }
+
+  @override
+  $Value? $getProperty(Runtime runtime, String identifier) {
+    switch (identifier) {
+      case '[]':
+        return __indexGet;
+      case '[]=':
+        return __indexSet;
+      case 'add':
+        return __add;
+      case 'addAll':
+        return __addAll;
+      case 'first':
+        return $map(_superclass.first);
+      case 'contains':
+        return __listContains;
+      case 'where':
+        return __where;
+      case 'last':
+        return $map(_superclass.last);
+      case 'reversed':
+        return $Iterable.wrap($value.reversed.map($map));
+      case 'iterator':
+        return $Iterator.wrap($value.map($map).iterator);
+      case 'insert':
+        return __insert;
+      case 'insertAll':
+        return __insertAll;
+      case 'remove':
+        return __remove;
+      case 'asMap':
+        return __asMap;
+      case 'lastIndexOf':
+        return __lastIndexOf;
+      case 'indexOf':
+        return __indexOf;
+      case 'retainWhere':
+        return __retainWhere;
+      case 'removeWhere':
+        return __removeWhere;
+      case 'replaceRange':
+        return __replaceRange;
+      case 'getRange':
+        return __getRange;
+      case 'sort':
+        return __sort;
+      case 'removeAt':
+        return __removeAt;
+      case 'sublist':
+        return __sublist;
+      case 'takeWhile':
+        return __takeWhile;
+    }
+    return super.$getProperty(runtime, identifier);
+  }
+
+  static const $Function __add = $Function(_add);
+
+  static $Value? _add(Runtime runtime, $Value? target, List<$Value?> args) {
+    final value = args[0]!;
+    (target! as _$List$view).add(value.$value);
+    return null;
+  }
+
+  static const $Function __addAll = $Function(_addAll);
+
+  static $Value? _addAll(Runtime runtime, $Value? target, List<$Value?> args) {
+    (target! as _$List$view).addAll(args[0]!.$reified);
+    return null;
+  }
+
+  static const $Function __insertAll = $Function(_insertAll);
+
+  static $Value? _insertAll(
+      Runtime runtime, $Value? target, List<$Value?> args) {
+    (target! as _$List$view).insertAll(args[0]!.$value, args[1]!.$reified);
+    return null;
+  }
+
+  static const $Function __insert = $Function(_insert);
+
+  static $Value? _insert(Runtime runtime, $Value? target, List<$Value?> args) {
+    (target! as _$List$view).insert(args[0]!.$value, args[1]!.$reified);
+    return null;
+  }
+
+  static const $Function __remove = $Function(_remove);
+
+  static $Value? _remove(Runtime runtime, $Value? target, List<$Value?> args) {
+    return $bool((target! as _$List$view).remove(args[0]!.$reified));
+  }
+
+  static const $Function __removeAt = $Function(_removeAt);
+
+  static $Value? _removeAt(
+      Runtime runtime, $Value? target, List<$Value?> args) {
+    return (target! as _$List$view).removeAt(args[0]!.$value);
+  }
+
+  static const $Function __lastIndexOf = $Function(_lastIndexOf);
+
+  static $Value? _lastIndexOf(
+      Runtime runtime, $Value? target, List<$Value?> args) {
+    return $int((target! as _$List$view).lastIndexOf(args[0]!.$reified));
+  }
+
+  static const $Function __indexOf = $Function(_indexOf);
+
+  static $Value? _indexOf(Runtime runtime, $Value? target, List<$Value?> args) {
+    return $int((target! as _$List$view).indexOf(args[0]!.$reified));
+  }
+
+  static const $Function __indexGet = $Function(_indexGet);
+
+  static $Value? _indexGet(
+      Runtime runtime, $Value? target, List<$Value?> args) {
+    final idx = args[0]!;
+    final view = (target! as _$List$view);
+    return view.$map(view.$value[idx.$value]);
+  }
+
+  static const $Function __indexSet = $Function(_indexSet);
+
+  static $Value? _indexSet(
+      Runtime runtime, $Value? target, List<$Value?> args) {
+    final idx = args[0]!;
+    final value = args[1]!;
+    (target! as _$List$view).$value[idx.$value] = value.$value;
+    return value;
+  }
+
+  static const $Function __sublist = $Function(_sublist);
+
+  static $Value? _sublist(Runtime runtime, $Value? target, List<$Value?> args) {
+    return $List.wrap((target! as _$List$view)
+        .$value
+        .sublist(args[0]!.$value, args[1]?.$value));
+  }
+
+  static const $Function __listContains = $Function(_listContains);
+
+  static $Value? _listContains(
+      Runtime runtime, $Value? target, List<$Value?> args) {
+    return $bool((target! as _$List$view).contains(args[0]!.$reified));
+  }
+
+  static const $Function __where = $Function(_where);
+
+  static $Value? _where(Runtime runtime, $Value? target, List<$Value?> args) {
+    final test = args[0] as EvalCallable;
+    return $Iterable.wrap((target! as _$List$view)
+        .$value
+        .where((e) => test.call(runtime, null, [e])!.$value as bool)
+        .map((e) => (target as _$List$view).$map(e)));
+  }
+
+  static const $Function __asMap = $Function(_asMap);
+
+  static $Value? _asMap(Runtime runtime, $Value? target, List<$Value?> args) {
+    final view = (target! as _$List$view);
+    return $Map.wrap(view.$value
+        .asMap()
+        .map((key, value) => MapEntry($int(key), view.$map(value))));
+  }
+
+  static const $Function __retainWhere = $Function(_retainWhere);
+
+  static $Value? _retainWhere(
+      Runtime runtime, $Value? target, List<$Value?> args) {
+    final test = args[0] as EvalCallable;
+    final view = (target! as _$List$view);
+
+    view.retainWhere(
+        (e) => test.call(runtime, null, [view.$map(e)])!.$value as bool);
+    return null;
+  }
+
+  static const $Function __removeWhere = $Function(_removeWhere);
+
+  static $Value? _removeWhere(
+      Runtime runtime, $Value? target, List<$Value?> args) {
+    final test = args[0] as EvalCallable;
+    final view = (target! as _$List$view);
+
+    view.removeWhere(
+        (e) => test.call(runtime, null, [view.$map(e)])!.$value as bool);
+    return null;
+  }
+
+  static const $Function __replaceRange = $Function(_replaceRange);
+
+  static $Value? _replaceRange(
+      Runtime runtime, $Value? target, List<$Value?> args) {
+    final view = (target! as _$List$view);
+    view.$value
+        .replaceRange(args[0]!.$value, args[1]!.$value, args[2]!.$reified);
+    return null;
+  }
+
+  static const $Function __getRange = $Function(_getRange);
+
+  static $Value? _getRange(
+      Runtime runtime, $Value? target, List<$Value?> args) {
+    final view = (target! as _$List$view);
+    return $Iterable.wrap(
+        view.$value.getRange(args[0]!.$value, args[1]!.$value).map(view.$map));
+  }
+
+  static const $Function __sort = $Function(_sort);
+
+  static $Value? _sort(Runtime runtime, $Value? target, List<$Value?> args) {
+    final compare = args[0] as EvalCallable;
+    final view = (target! as _$List$view);
+
+    view.$value.sort((a, b) =>
+        compare.call(runtime, null, [view.$map(a), view.$map(b)])!.$value);
+    return null;
+  }
+
+  static const $Function __takeWhile = $Function(_takeWhile);
+
+  static $Value? _takeWhile(
+      Runtime runtime, $Value? target, List<$Value?> args) {
+    final test = args[0] as EvalCallable;
+    final view = (target! as _$List$view);
+
+    return $Iterable.wrap(view.$value
+        .takeWhile((e) => test.call(runtime, null, [view.$map(e)])!.$value));
+  }
 }
