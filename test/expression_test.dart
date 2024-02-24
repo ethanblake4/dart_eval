@@ -346,7 +346,7 @@ void main() {
     test('idk', () {
       final runtime = Compiler().compileWriteAndLoad({
         'example': {
-          'main.dart': '''  
+          'main.dart': '''
             String main(bool encrypt) {
               final encoding = cryptoHandler(encrypt: encrypt);
               return encoding;

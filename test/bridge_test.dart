@@ -54,7 +54,7 @@ void main() {
             
               @override
               bool runTest(int a, {String b = 'wow'}) {
-                return super.runTest(a + 2, b: b);
+                return super.runTest(a + 2 + someNumber, b: b);
               }
             }
             
@@ -170,7 +170,7 @@ void main() {
     test('Passing a map to a function externally', () {
       final program = compiler.compile({
         'example': {
-          'main.dart': '''            
+          'main.dart': '''
             int main(Map<String, int> map) {
               return map['hi'];
             }

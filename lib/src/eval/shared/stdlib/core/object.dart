@@ -133,7 +133,7 @@ class $Object implements $Instance {
       case 'toString':
         return __toString;
       case 'hashCode':
-        return __hashCode;
+        return $int($value.hashCode);
     }
 
     throw UnimplementedError();
@@ -281,13 +281,6 @@ class $Object implements $Instance {
   static $Value? _toString(
       Runtime runtime, $Value? target, List<$Value?> args) {
     return $String(target!.$reified.toString());
-  }
-
-  static const $Function __hashCode = $Function(_hashCode);
-
-  static $Value? _hashCode(
-      Runtime runtime, $Value? target, List<$Value?> args) {
-    return $int(target!.$value.hashCode);
   }
 
   @override

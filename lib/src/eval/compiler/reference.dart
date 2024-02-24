@@ -287,6 +287,16 @@ class IdentifierReference implements Reference {
                     className: ctx.currentClass!.name.lexeme,
                     name: name));
           }
+          if (bridge is BridgeFieldDef) {
+            return Variable.alloc(
+                ctx,
+                TypeRef.fromBridgeAnnotation(ctx, bridge.type,
+                    specifiedType: $type, specifyingType: $this.type),
+                methodOffset: DeferredOrOffset(
+                    file: ctx.library,
+                    className: ctx.currentClass!.name.lexeme,
+                    name: name));
+          }
           throw CompileError(
               'Ref: cannot resolve bridge declaration "$name" of type ${_dec.runtimeType}',
               source);

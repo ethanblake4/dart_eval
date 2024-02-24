@@ -158,8 +158,8 @@ extension TearOff on Variable {
         .map((rt) => rt.toJson())
         .toList();
 
-    final named =
-        ((parameters?.parameters ?? []).where((element) => element.isNamed));
+    final named = ((parameters?.parameters ?? <FormalParameter>[])
+        .where((element) => element.isNamed));
     final sortedNamedArgs = named.toList()
       ..sort((e1, e2) => (e1.name!.lexeme).compareTo((e2.name!.lexeme)));
     final sortedNamedArgNames =

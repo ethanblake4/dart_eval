@@ -93,7 +93,7 @@ class BridgeConstructorDef implements BridgeDeclaration {
 /// A bridged field definition, used to inform the dart_eval compiler of
 /// a field's properties and type when it is defined outside of dart_eval.
 @JsonSerializable()
-class BridgeFieldDef {
+class BridgeFieldDef implements BridgeDeclaration {
   const BridgeFieldDef(this.type, {this.isStatic = false});
 
   final BridgeTypeAnnotation type;

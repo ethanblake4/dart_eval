@@ -5,6 +5,7 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/file_system/physical_file_system.dart';
 import 'package:collection/collection.dart';
 import 'package:dart_eval/src/eval/bindgen/bridge_declaration.dart';
+import 'package:dart_eval/src/eval/bindgen/configure.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
 import 'package:dart_eval/src/eval/bindgen/statics.dart';
 import 'package:dart_eval/src/eval/bindgen/type.dart';
@@ -61,7 +62,10 @@ class Bindgen {
       }
 
       final result = resolved.join('\n');
-      final imports = ctx.imports.map((e) => 'import \'$e\';').join('\n');
+      final imports = ctx.imports
+          .whereNot((e) => e == uri)
+          .map((e) => 'import \'$e\';')
+          .join('\n');
 
       return imports + result;
     }
@@ -82,11 +86,15 @@ class Bindgen {
     return '''
 /// dart_eval wrapper binding for [${element.name}]
 class \$${element.name} implements \$Instance {
+/// Configure this class for use in a [Runtime]
+${bindConfigureForRuntime(ctx, element)}
 /// Compile-time type declaration of [\$${element.name}]
 ${bindBridgeType(ctx, element)}
 /// Compile-time class declaration of [\$${element.name}]
 ${bindBridgeDeclaration(ctx, element)}
 ${$constructors(element)}
+${$staticMethods(ctx, element)}
+${$staticGetters(ctx, element)}
 ${$wrap(ctx, element)}
 ${$getRuntimeType(element)}
 ${$getProperty(ctx, element)}
@@ -105,7 +113,7 @@ ${$setProperty(ctx, element)}
   }
 
   String $wrap(BindgenContext ctx, ClassElement element) {
-    return '''  
+    return '''
   final \$Instance _superclass;
 
   @override
@@ -130,8 +138,9 @@ ${$setProperty(ctx, element)}
   }
 
   String propertyGetters(BindgenContext ctx, ClassElement element) {
-    final _getters = element.accessors.where((element) => element.isGetter);
-    final _methods = element.methods;
+    final _getters = element.accessors
+        .where((accessor) => accessor.isGetter && !accessor.isStatic);
+    final _methods = element.methods.where((method) => !method.isStatic);
     if (_getters.isEmpty && _methods.isEmpty) {
       return '';
     }

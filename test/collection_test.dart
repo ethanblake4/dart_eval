@@ -156,5 +156,20 @@ void main() {
 
       expect(runtime.executeLib('package:eval_test/main.dart', 'main'), true);
     });
+
+    test('Empty map literal', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'eval_test': {
+          'main.dart': '''
+            bool main() {
+              final testMap = {};
+              return testMap.isEmpty;
+            }
+          '''
+        }
+      });
+
+      expect(runtime.executeLib('package:eval_test/main.dart', 'main'), true);
+    });
   });
 }

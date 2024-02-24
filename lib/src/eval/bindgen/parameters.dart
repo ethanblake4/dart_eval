@@ -30,3 +30,15 @@ String _parameterFrom(ParameterElement parameter) {
     ),
   ''';
 }
+
+String argumentAccessors(List<ParameterElement> parameters) {
+  return parameters.asMap().entries.map((e) {
+    final index = e.key;
+    final parameter = e.value;
+    final nullCheck = parameter.isRequired ? '!' : '?';
+    final defaultValue =
+        parameter.hasDefaultValue ? ' ?? ${parameter.defaultValueCode}' : '';
+    final paramName = parameter.isNamed ? '${parameter.name}: ' : '';
+    return '${paramName}args[$index]$nullCheck.\$value$defaultValue';
+  }).join(',\n');
+}
