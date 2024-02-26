@@ -4,6 +4,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/constant_pool.dart';
+import 'package:dart_eval/src/eval/compiler/model/label.dart';
 import 'package:dart_eval/src/eval/compiler/model/override_spec.dart';
 import 'package:dart_eval/src/eval/compiler/optimizer/prescan.dart';
 import 'package:dart_eval/src/eval/compiler/source.dart';
@@ -58,6 +59,14 @@ mixin ScopeContext on Object implements AbstractScopeContext {
       popN(nestCount + popAdjust);
     }
     scopeFrameOffset -= nestCount;
+    return nestCount;
+  }
+
+  int endAllocScopeQuiet({bool popValues = true, int popAdjust = 0}) {
+    final nestCount = allocNest.removeLast();
+    if (popValues) {
+      popN(nestCount + popAdjust);
+    }
     return nestCount;
   }
 
@@ -189,6 +198,8 @@ class CompilerContext with ScopeContext {
   List<bool> scopeDoesClose = [];
   List<ContextSaveState> typeInferenceSaveStates = [];
   List<ContextSaveState> typeUninferenceSaveStates = [];
+  List<CompilerLabel> labels = [];
+  Map<CompilerLabel, Set<int>> labelReferences = {};
   List<bool> inTypeInferenceContext = [];
   final List<Variable> caughtExceptions = [];
   PrescanContext? preScan;
@@ -335,6 +346,16 @@ class CompilerContext with ScopeContext {
               myLocal.copyWith(type: value.type.copyWith(boxed: myLocal.boxed));
         }
       });
+    }
+  }
+
+  void resolveLabel(CompilerLabel label) {
+    final references = labelReferences[label];
+    if (references != null) {
+      for (final ref in references) {
+        final jump = JumpConstant.make(out.length);
+        rewriteOp(ref, jump, 0);
+      }
     }
   }
 }

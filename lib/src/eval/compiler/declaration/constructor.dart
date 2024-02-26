@@ -262,6 +262,21 @@ void compileConstructorDeclaration(
 
   _compileUnusedFields(ctx, fields, {}, instOffset);
 
+  final body = d.body;
+  if (d.factoryKeyword == null && !(body is EmptyFunctionBody)) {
+    ctx.beginAllocScope();
+    ctx.setLocal('#this', Variable(instOffset, TypeRef.$this(ctx)!));
+    if (body is BlockFunctionBody) {
+      compileBlock(
+          body.block, AlwaysReturnType(CoreTypes.voidType.ref(ctx), false), ctx,
+          name: '$n()');
+    } else if (body is ExpressionFunctionBody) {
+      final V = compileExpression(body.expression, ctx);
+      doReturn(ctx, AlwaysReturnType(CoreTypes.voidType.ref(ctx), false), V);
+    }
+    ctx.endAllocScope();
+  }
+
   if ($extends != null && extendsWhat!.declaration!.isBridge) {
     final decl = extendsWhat.declaration!;
     final bridge = decl.bridge! as BridgeClassDef;

@@ -122,5 +122,51 @@ void main() {
       expect(
           runtime.executeLib('package:example/main.dart', 'main'), $int(555));
     });
+
+    test('For loop with break', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            num main() {
+              var i = 0;
+              for (; i < 555; i++) {
+                print(i);
+                if (i == 5) {
+                  break;
+                }
+              }
+              return i;
+            }
+          ''',
+        }
+      });
+      expect(runtime.executeLib('package:example/main.dart', 'main'), $int(5));
+    });
+
+    test('Nested for loop with break', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            num main() {
+              var i = 0;
+              var j = 0;
+              for (; i < 555; i++) {
+                for (; j < 555; j++) {
+                  if (j == 100) {
+                    break;
+                  }
+                }
+                if (i == 100) {
+                  break;
+                }
+              }
+              return i * 1000 + j;
+            }
+          ''',
+        }
+      });
+      expect(runtime.executeLib('package:example/main.dart', 'main'),
+          $int(100100));
+    });
   });
 }

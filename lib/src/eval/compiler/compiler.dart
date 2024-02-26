@@ -283,6 +283,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
         /// Discover entrypoints
         for (final declaration in library.declarations) {
           if (declaration.isBridge) {
+            _entrypoints.add(library.uri);
             continue;
           }
           final d = declaration.declaration!;

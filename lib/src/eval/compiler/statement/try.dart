@@ -1,6 +1,7 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
+import 'package:dart_eval/src/eval/compiler/model/label.dart';
 import 'package:dart_eval/src/eval/compiler/statement/block.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -31,7 +32,9 @@ StatementInfo compileTryStatement(
   final _initialState = ctx.saveState();
 
   ctx.beginAllocScope();
+  ctx.labels.add(SimpleCompilerLabel());
   final bodyInfo = compileBlock(s.body, expectedReturnType, ctx);
+  ctx.labels.removeLast();
   ctx.endAllocScope();
 
   ctx.resolveBranchStateDiscontinuity(_initialState);

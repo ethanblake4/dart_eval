@@ -94,6 +94,23 @@ class IdentifierReference implements Reference {
   @override
   Variable setValue(CompilerContext ctx, Variable value, [AstNode? source]) {
     if (object != null) {
+      // If the object is a class name, access static fields
+      if (object!.type == CoreTypes.type.ref(ctx)) {
+        final classType = object!.concreteTypes[0].resolveTypeChain(ctx);
+        final _name = '${classType.name}.$name';
+        final type = ctx.topLevelVariableInferredTypes[classType.file]![_name]!;
+        final gIndex = ctx.topLevelGlobalIndices[classType.file]![_name]!;
+        if (!value.type.isAssignableTo(ctx, type)) {
+          throw CompileError(
+              'Cannot assign value of type ${value.type} to field "$name" of type $type',
+              source);
+        }
+        final _value =
+            type.boxed ? value.boxIfNeeded(ctx) : value.unboxIfNeeded(ctx);
+        ctx.pushOp(
+            SetGlobal.make(gIndex, _value.scopeFrameOffset), SetGlobal.LEN);
+        return _value;
+      }
       object = object!.boxIfNeeded(ctx);
       final fieldType = TypeRef.lookupFieldType(ctx, object!.type, name,
               forSet: true, source: source) ??

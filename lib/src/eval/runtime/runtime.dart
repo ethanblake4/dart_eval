@@ -315,8 +315,10 @@ class Runtime {
   void assertPermission(String domain, [Object? data]) {
     if (!checkPermission(domain, data)) {
       throw Exception(
-          "Permission '$domain' denied${data == null ? '' : ' for $data'}.\n"
-          "To grant permissions, use Runtime.grant().");
+          "Permission '$domain' denied${data == null ? '' : " for '$data'"}.\n"
+          "To grant permissions, use Runtime.grant() or add the permission "
+          "to the permissions array of your HotSwapLoader, EvalWidget, "
+          "or eval() function.");
     }
   }
 

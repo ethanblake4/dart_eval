@@ -1,5 +1,6 @@
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/macros/macro.dart';
+import 'package:dart_eval/src/eval/compiler/model/label.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
@@ -46,7 +47,27 @@ StatementInfo macroLoop(
     update(ctx);
   }
 
+  final label = CompilerLabel(LabelType.loop, loopStart, (_ctx) {
+    _ctx.endAllocScopeQuiet();
+
+    /// Box/unbox variables that were declared outside the loop and changed in
+    /// the loop body to match the save state
+    _ctx.resolveBranchStateDiscontinuity(save);
+
+    if (conditionSaveState != null) {
+      ctx.restoreBoxingState(conditionSaveState);
+      ctx.resolveBranchStateDiscontinuity(save);
+    }
+
+    ctx.endAllocScopeQuiet();
+    final result = ctx.pushOp(JumpConstant.make(-1), JumpConstant.LEN);
+    return result;
+  });
+
+  ctx.labels.add(label);
   final statementResult = body(ctx, expectedReturnType);
+  ctx.labels.removeLast();
+
   if (!(statementResult.willAlwaysThrow || statementResult.willAlwaysReturn)) {
     if (update != null && !updateBeforeBody) {
       update(ctx);
@@ -85,6 +106,7 @@ StatementInfo macroLoop(
   }
 
   ctx.endAllocScope(popAdjust: pops);
+  ctx.resolveLabel(label);
 
   return statementResult;
 }

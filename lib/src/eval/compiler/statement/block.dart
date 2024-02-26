@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/src/eval/compiler/model/label.dart';
 
 import '../context.dart';
 import 'statement.dart';
@@ -13,6 +14,7 @@ StatementInfo compileBlock(
   var willAlwaysReturn = false;
   var willAlwaysThrow = false;
 
+  ctx.labels.add(SimpleCompilerLabel());
   for (final s in b.statements) {
     final stInfo = compileStatement(s, expectedReturnType, ctx);
 
@@ -25,6 +27,7 @@ StatementInfo compileBlock(
       break;
     }
   }
+  ctx.labels.removeLast();
 
   ctx.endAllocScope(popValues: !willAlwaysThrow && !willAlwaysReturn);
 

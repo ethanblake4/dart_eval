@@ -1,3 +1,11 @@
+## 0.7.6
+- Support for 'break' inside loops
+- Support for constructor block bodies
+- Allow changing the value of static class fields
+- Fix various errors caused by tree-shaking bridge class data that is required
+  to set up the runtime
+- Fix error when setting values on Maps
+
 ## 0.7.5
 - Create writeback-capable List wrapper. Use `$List.view()` with a type mapper
   function to create a view of an underlying List that can be written to.

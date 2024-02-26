@@ -650,7 +650,7 @@ may vary when bridging.
 | For-each loops | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/statement_test.dart#L52) |
 | Async for-each | ❌ | N/A |
 | Switch statements | ❌ | N/A |
-| Labels and `break` | ❌ | N/A |
+| Labels, `break` & `continue` | Partial | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/loop_test.dart#L126), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/loop_test.dart#L146) |
 | If statements | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/loop_test.dart#L28) |
 | Try-catch | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#L13), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#31), [[3]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#49), [[4]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#71), [[5]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#92) |
 | Try-catch-finally | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#L132), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#147), [[3]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#187), [[4]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#209), [[5]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#231) |

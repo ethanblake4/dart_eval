@@ -121,10 +121,7 @@ class $Map<K, V> implements Map<K, V>, $Instance {
       Runtime runtime, $Value? target, List<$Value?> args) {
     final idx = args[0]!;
     final map = target!.$value as Map;
-    if (map.values.first is $Value) {
-      return map[idx];
-    }
-    return map[idx.$value];
+    return map[idx];
   }
 
   static const $Function __indexSet = $Function(_indexSet);
@@ -133,7 +130,7 @@ class $Map<K, V> implements Map<K, V>, $Instance {
       Runtime runtime, $Value? target, List<$Value?> args) {
     final idx = args[0]!;
     final value = args[1]!;
-    return (target!.$value as Map)[idx.$value] = value;
+    return (target!.$value as Map)[idx] = value;
   }
 
   static const $Function __addAll = $Function(_addAll);

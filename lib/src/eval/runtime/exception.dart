@@ -5,8 +5,12 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
 /// Format a dart_eval stack sample for printing.
 String formatStackSample(List st, int size, [int? frameOffset]) {
   final sb = StringBuffer('[');
-  final _size = min(size, st.length);
-  for (var i = 0; i < _size; i++) {
+  var i = 0;
+  if (frameOffset != null) {
+    i = max(0, frameOffset - size ~/ 1.3);
+  }
+  final end = min(i + size, st.length);
+  for (; i < end; i++) {
     final s = st[i];
     if (i == frameOffset) {
       sb.write('*');
@@ -21,7 +25,7 @@ String formatStackSample(List st, int size, [int? frameOffset]) {
     } else {
       sb.write('$s');
     }
-    if (i < _size - 1) {
+    if (i < end - 1) {
       sb.write(', ');
     }
   }
