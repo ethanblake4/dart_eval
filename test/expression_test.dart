@@ -341,9 +341,7 @@ void main() {
       }, prints('null\n1\n'));
     });
 
-    //
-
-    test('idk', () {
+    test('Named params and ternary', () {
       final runtime = Compiler().compileWriteAndLoad({
         'example': {
           'main.dart': '''

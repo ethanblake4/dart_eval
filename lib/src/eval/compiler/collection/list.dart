@@ -7,6 +7,7 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/macros/loop.dart';
+import 'package:dart_eval/src/eval/compiler/model/label.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
@@ -49,10 +50,12 @@ Variable compileListLiteral(ListLiteral l, CompilerContext ctx,
   );
 
   ctx.beginAllocScope();
+  ctx.labels.add(SimpleCompilerLabel());
   final resultTypes = <TypeRef>[];
   for (final e in elements) {
     resultTypes.addAll(compileListElement(e, _list, ctx, _boxListElements));
   }
+  ctx.labels.removeLast();
   ctx.endAllocScope();
 
   if (listSpecifiedType == null) {

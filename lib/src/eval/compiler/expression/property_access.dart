@@ -31,7 +31,7 @@ Variable compilePropertyAccess(PropertyAccess pa, CompilerContext ctx,
       ctx.pushOp(CopyValue.make(out.scopeFrameOffset, V.scopeFrameOffset),
           CopyValue.LEN);
       return StatementInfo(-1);
-    });
+    }, source: pa);
     return out;
   }
 

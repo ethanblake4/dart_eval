@@ -10,7 +10,7 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import '../util.dart';
 
 Variable compileIdentifier(Identifier id, CompilerContext ctx) {
-  return compileIdentifierAsReference(id, ctx).getValue(ctx);
+  return compileIdentifierAsReference(id, ctx).getValue(ctx, id);
 }
 
 Reference compileIdentifierAsReference(Identifier id, CompilerContext ctx) {

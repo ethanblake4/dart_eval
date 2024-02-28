@@ -1,6 +1,7 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
+import 'package:dart_eval/src/eval/compiler/model/label.dart';
 import 'package:dart_eval/src/eval/compiler/statement/block.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -31,7 +32,9 @@ StatementInfo compileTryStatement(
   final _initialState = ctx.saveState();
 
   ctx.beginAllocScope();
+  ctx.labels.add(SimpleCompilerLabel());
   final bodyInfo = compileBlock(s.body, expectedReturnType, ctx);
+  ctx.labels.removeLast();
   ctx.endAllocScope();
 
   ctx.resolveBranchStateDiscontinuity(_initialState);
@@ -83,29 +86,24 @@ StatementInfo _compileCatchClause(
     return compileBlock(catchClause.body, expectedReturnType, ctx);
   }
   final slot = TypeRef.fromAnnotation(ctx, ctx.library, exceptionType);
-  return macroBranch(
-    ctx,
-    expectedReturnType,
-    condition: (_ctx) {
-      ctx.pushOp(
-          IsType.make(
-              exceptionVar.scopeFrameOffset, ctx.typeRefIndexMap[slot]!, false),
-          IsType.length);
-      return Variable.alloc(
-          ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
-    },
-    thenBranch: (_ctx, _expectedReturnType) {
-      ctx.setLocal(catchClause.exceptionParameter!.name.lexeme,
-          exceptionVar.copyWith(type: slot));
-      return compileBlock(catchClause.body, expectedReturnType, ctx);
-    },
-    elseBranch: clauses.length <= index + 1
-        ? null
-        : (ctx, expectedReturnType) {
-            return _compileCatchClause(
-                ctx, clauses, index + 1, exceptionVar, expectedReturnType);
-          },
-  );
+  return macroBranch(ctx, expectedReturnType, condition: (_ctx) {
+    ctx.pushOp(
+        IsType.make(
+            exceptionVar.scopeFrameOffset, ctx.typeRefIndexMap[slot]!, false),
+        IsType.length);
+    return Variable.alloc(ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
+  }, thenBranch: (_ctx, _expectedReturnType) {
+    ctx.setLocal(catchClause.exceptionParameter!.name.lexeme,
+        exceptionVar.copyWith(type: slot));
+    return compileBlock(catchClause.body, expectedReturnType, ctx);
+  },
+      elseBranch: clauses.length <= index + 1
+          ? null
+          : (ctx, expectedReturnType) {
+              return _compileCatchClause(
+                  ctx, clauses, index + 1, exceptionVar, expectedReturnType);
+            },
+      source: catchClause);
 }
 
 ///

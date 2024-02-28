@@ -1,3 +1,20 @@
+## 0.7.7
+- Support for redirecting constructors
+- Fixed issue where tree-shaking would not always detect uses of symbols made
+  visible by an export
+- Fixed dart:io File constructor
+- Better detection of main.dart files
+- Fixed empty function bodies causing scope leakage
+- Support for `Map.remove()`
+
+## 0.7.6
+- Support for 'break' inside loops
+- Support for constructor block bodies
+- Allow changing the value of static class fields
+- Fix various errors caused by tree-shaking bridge class data that is required
+  to set up the runtime
+- Fix error when setting values on Maps
+
 ## 0.7.5
 - Create writeback-capable List wrapper. Use `$List.view()` with a type mapper
   function to create a view of an underlying List that can be written to.

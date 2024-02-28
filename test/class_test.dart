@@ -429,6 +429,70 @@ void main() {
       }, prints('true\nfalse\ntrue\n'));
     });
 
+    test('Modifying static class field', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            class TestA {
+              static int value = 11;
+            }      
+      
+            int main() {
+              TestA.value = 22;
+              return TestA.value;
+            }
+          '''
+        }
+      });
+
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 22);
+    });
+
+    test('Modifying field value in constructor block', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            class TestA {
+              int value = 11;
+              TestA() {
+                value = 22;
+                this.value++;
+              }
+            }      
+      
+            int main() {
+              var a = TestA();
+              return a.value;
+            }
+          '''
+        }
+      });
+
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 23);
+    });
+
+    test('Simple redirecting constructor', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            class TestA {
+              int value;
+              int value2;
+              TestA(int b) : this._(11, b);
+              TestA._(this.value, this.value2);
+            }      
+      
+            int main() {
+              var a = TestA(4);
+              return a.value + a.value2;
+            }
+          '''
+        }
+      });
+
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 15);
+    });
+
 /*    test('Super parameter multi-level indirection', () {
       final runtime = compiler.compileWriteAndLoad({
         'example': {

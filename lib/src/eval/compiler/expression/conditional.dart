@@ -38,7 +38,7 @@ Variable compileConditionalExpression(
     types.add(v.type);
     vRef.setValue(ctx, v);
     return StatementInfo(-1);
-  }, resolveStateToThen: true);
+  }, resolveStateToThen: true, source: e);
 
   final val = vRef.getValue(ctx).updated(ctx);
   return val.copyWith(

@@ -68,5 +68,35 @@ void main() {
 
       expect(result, contains('Example Domain'));
     });
+
+    test('Write/read a file', () async {
+      final compiler = Compiler();
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+          import 'dart:io';
+          import 'dart:convert';
+
+          Future<String> main() async {
+            final file = File('example.txt');
+            await file.writeAsString('Hello, World!');
+            final contents = await file.readAsString();
+            file.delete();
+            return contents;
+          }
+        '''
+        }
+      });
+
+      runtime.grant(FilesystemPermission.any);
+
+      final result = (await runtime.executeLib(
+        'package:example/main.dart',
+        'main',
+      ))
+          .$value;
+
+      expect(result, 'Hello, World!');
+    });
   });
 }

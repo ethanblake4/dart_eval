@@ -16,7 +16,7 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
-  ctx.runPrescan(d);
+  //ctx.runPrescan(d);
   final pos = beginMethod(ctx, d, d.offset, '${d.name.lexeme}()');
   ctx.topLevelDeclarationPositions[ctx.library]![d.name.lexeme] = pos;
 

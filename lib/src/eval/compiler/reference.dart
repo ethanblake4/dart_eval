@@ -94,7 +94,25 @@ class IdentifierReference implements Reference {
   @override
   Variable setValue(CompilerContext ctx, Variable value, [AstNode? source]) {
     if (object != null) {
-      object = object!.boxIfNeeded(ctx);
+      // If the object is a class name, access static fields
+      if (object!.type == CoreTypes.type.ref(ctx)) {
+        final classType = object!.concreteTypes[0].resolveTypeChain(ctx);
+        final _name = '${classType.name}.$name';
+        final type = ctx.topLevelVariableInferredTypes[classType.file]![_name]!;
+        final gIndex = ctx.topLevelGlobalIndices[classType.file]![_name]!;
+        if (!value.type.isAssignableTo(ctx, type)) {
+          throw CompileError(
+              'Cannot assign value of type ${value.type} to field "$name" of type $type',
+              source);
+        }
+        final _value = type.boxed
+            ? value.boxIfNeeded(ctx, source)
+            : value.unboxIfNeeded(ctx);
+        ctx.pushOp(
+            SetGlobal.make(gIndex, _value.scopeFrameOffset), SetGlobal.LEN);
+        return _value;
+      }
+      object = object!.boxIfNeeded(ctx, source);
       final fieldType = TypeRef.lookupFieldType(ctx, object!.type, name,
               forSet: true, source: source) ??
           CoreTypes.dynamic.ref(ctx);
@@ -103,7 +121,7 @@ class IdentifierReference implements Reference {
             'Cannot assign value of type ${value.type} to field "$name" of type $fieldType',
             source);
       }
-      final _v = value.boxIfNeeded(ctx);
+      final _v = value.boxIfNeeded(ctx, source);
       final op = SetObjectProperty.make(
           object!.scopeFrameOffset, name, _v.scopeFrameOffset);
       ctx.pushOp(op, SetObjectProperty.len(op));
@@ -143,7 +161,7 @@ class IdentifierReference implements Reference {
         }
         final $this = ctx.lookupLocal('#this')!;
         final op = SetObjectProperty.make($this.scopeFrameOffset, name,
-            value.boxIfNeeded(ctx).scopeFrameOffset);
+            value.boxIfNeeded(ctx, source).scopeFrameOffset);
         ctx.pushOp(op, SetObjectProperty.len(op));
         return value;
       }
@@ -223,7 +241,7 @@ class IdentifierReference implements Reference {
         ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
         return Variable.alloc(ctx, type);
       }
-      object = object!.boxIfNeeded(ctx);
+      object = object!.boxIfNeeded(ctx, source);
       return object!.getProperty(ctx, name);
     }
 
@@ -483,7 +501,7 @@ class IndexedReference implements Reference {
       final map = _variable.unboxIfNeeded(ctx);
       _index = (_variable.type.specifiedTypeArgs.isEmpty ||
               _variable.type.specifiedTypeArgs[0].boxed)
-          ? _index.boxIfNeeded(ctx)
+          ? _index.boxIfNeeded(ctx, source)
           : _index.unboxIfNeeded(ctx);
       ctx.pushOp(IndexMap.make(map.scopeFrameOffset, _index.scopeFrameOffset),
           IndexMap.LEN);
@@ -516,7 +534,7 @@ class IndexedReference implements Reference {
       final elementType = list.type.specifiedTypeArgs[0];
       var _value = value;
       if (elementType.boxed) {
-        _value = _value.boxIfNeeded(ctx);
+        _value = _value.boxIfNeeded(ctx, source);
       } else {
         _value = _value.unboxIfNeeded(ctx);
       }
