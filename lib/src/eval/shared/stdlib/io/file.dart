@@ -29,8 +29,11 @@ class $File implements $Instance {
   static const $declaration = BridgeClassDef(
       BridgeClassType($type, $extends: $FileSystemEntity.$type),
       constructors: {
-        '': BridgeConstructorDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation($type), params: [], namedParams: []))
+        '': BridgeConstructorDef(
+            BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [
+          BridgeParameter('path',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false)
+        ], namedParams: []))
       },
       methods: {
         'create': BridgeMethodDef(BridgeFunctionDef(

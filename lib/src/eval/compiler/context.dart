@@ -200,7 +200,6 @@ class CompilerContext with ScopeContext {
   List<ContextSaveState> typeUninferenceSaveStates = [];
   List<CompilerLabel> labels = [];
   Map<CompilerLabel, Set<int>> labelReferences = {};
-  List<bool> inTypeInferenceContext = [];
   final List<Variable> caughtExceptions = [];
   PrescanContext? preScan;
   int nearestAsyncFrame = -1;
@@ -307,7 +306,6 @@ class CompilerContext with ScopeContext {
 
   void enterTypeInferenceContext() {
     typeInferenceSaveStates.add(saveState());
-    inTypeInferenceContext.add(true);
   }
 
   void inferTypes() {

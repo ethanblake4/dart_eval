@@ -72,7 +72,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
   /// full URIs (e.g. `package:foo/main.dart`) or just filenames (e.g.
   /// `main.dart`). Adding a file to this list prevents it from being dead-code
   /// eliminated.
-  final entrypoints = ['main.dart'];
+  final entrypoints = ['/main.dart'];
 
   // Add a plugin, which will only be run once.
   @override
@@ -913,7 +913,7 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
   final crawler = CachedFastCrawler(exportGraph.edges);
 
   final result = <Library, Map<String, DeclarationOrPrefix>>{};
-  final usedDeclarationsForLibrary = <Library, Set<String>>{};
+  final usedDeclarationsForLibrary = <int, Set<String>>{};
 
   final worklist = <Library>[];
   final importMap = <Library, List<_Import>>{};
@@ -1015,8 +1015,8 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
             }
           }
           if (isEntrypoint && ids!.contains(declaration.first)) {
-            usedDeclarationsForLibrary[lib] ??= {'main'};
-            usedDeclarationsForLibrary[lib]!.add(declaration.first);
+            usedDeclarationsForLibrary[libId] ??= {'main'};
+            usedDeclarationsForLibrary[libId]!.add(declaration.first);
             if (!worklist.contains(lib)) {
               worklist.add(lib);
             }
@@ -1047,8 +1047,8 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
   /// Run tree-shaking
   while (worklist.isNotEmpty) {
     final library = worklist.removeLast();
-    Map<Library, Set<String>> applyUsedDeclarations = {};
-    for (final dec in usedDeclarationsForLibrary[library]!) {
+    Map<int, Set<String>> applyUsedDeclarations = {};
+    for (final dec in (usedDeclarationsForLibrary[libraryIds[library]] ?? {})) {
       final ids = usedIdentifiers[library]?[dec];
       if (ids == null) continue;
       final importsWithImplicitSelf = [
@@ -1062,12 +1062,14 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
         }
         processedImports.add(iid);
         final lib = uriMap[import.uri]!;
-        final decs = importedDeclarationsMap[library]?[lib];
+        final decs = result[library]?.entries.toList();
         if (decs == null) continue;
         for (final declaration in decs) {
-          if (ids.contains(declaration.first)) {
-            applyUsedDeclarations[lib] ??= {'main'};
-            applyUsedDeclarations[lib]!.add(declaration.first);
+          if (ids.contains(declaration.key)) {
+            final applyLib =
+                declaration.value.declaration?.sourceLib ?? libraryIds[lib]!;
+            applyUsedDeclarations[applyLib] ??= {'main'};
+            applyUsedDeclarations[applyLib]!.add(declaration.key);
             if (!worklist.contains(lib)) {
               worklist.add(lib);
             }
@@ -1075,9 +1077,9 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
         }
       }
     }
-    for (final lib in applyUsedDeclarations.keys) {
-      usedDeclarationsForLibrary[lib] ??= {};
-      usedDeclarationsForLibrary[lib]!.addAll(applyUsedDeclarations[lib]!);
+    for (final libId in applyUsedDeclarations.keys) {
+      usedDeclarationsForLibrary[libId] ??= {};
+      usedDeclarationsForLibrary[libId]!.addAll(applyUsedDeclarations[libId]!);
     }
   }
 
@@ -1088,8 +1090,8 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
     l.declarations = l.declarations
         .where((declaration) =>
             declaration.isBridge ||
-            DeclarationOrBridge.nameOf(declaration).any(
-                (name) => {...?usedDeclarationsForLibrary[l]}.contains(name)))
+            DeclarationOrBridge.nameOf(declaration).any((name) =>
+                {...?usedDeclarationsForLibrary[libraryIds[l]]}.contains(name)))
         .toList();
   }
 

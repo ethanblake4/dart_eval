@@ -61,6 +61,15 @@ class $Map<K, V> implements Map<K, V>, $Instance {
           ], returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool))),
           isStatic: false,
         ),
+        'remove': BridgeMethodDef(
+            BridgeFunctionDef(params: [
+              BridgeParameter(
+                  'key',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
+                      nullable: true),
+                  false),
+            ], returns: BridgeTypeAnnotation(BridgeTypeRef.ref('V'))),
+            isStatic: false),
       },
       getters: {
         'entries': BridgeMethodDef(BridgeFunctionDef(
@@ -100,6 +109,8 @@ class $Map<K, V> implements Map<K, V>, $Instance {
         return $int($value.length);
       case 'containsKey':
         return __containsKey;
+      case 'remove':
+        return __remove;
       case 'entries':
         return $Iterable.wrap(entries.map((e) => $MapEntry.wrap(e)));
       case 'isEmpty':
@@ -152,6 +163,12 @@ class $Map<K, V> implements Map<K, V>, $Instance {
   static $Value? _containsKey(
       Runtime runtime, $Value? target, List<$Value?> args) {
     return $bool((target!.$value as Map).containsKey(args[0]));
+  }
+
+  static const $Function __remove = $Function(_remove);
+
+  static $Value? _remove(Runtime runtime, $Value? target, List<$Value?> args) {
+    return (target!.$value as Map).remove(args[0]);
   }
 
   @override

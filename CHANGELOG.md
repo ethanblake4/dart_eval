@@ -1,3 +1,12 @@
+## 0.7.7
+- Support for redirecting constructors
+- Fixed issue where tree-shaking would not always detect uses of symbols made
+  visible by an export
+- Fixed dart:io File constructor
+- Better detection of main.dart files
+- Fixed empty function bodies causing scope leakage
+- Support for `Map.remove()`
+
 ## 0.7.6
 - Support for 'break' inside loops
 - Support for constructor block bodies

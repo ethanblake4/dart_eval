@@ -15,7 +15,7 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx,
     NamedCompilationUnitMember parent) {
-  ctx.runPrescan(d);
+  ///ctx.runPrescan(d);
   final b = d.body;
   final parentName = parent.name.lexeme;
   final methodName = d.name.lexeme;
@@ -70,6 +70,7 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx,
         isAsync: b.isAsynchronous);
     ctx.endAllocScope();
   } else if (b is EmptyFunctionBody) {
+    ctx.endAllocScope();
     return -1;
   } else {
     throw CompileError('Unknown function body type ${b.runtimeType}');

@@ -18,5 +18,6 @@ StatementInfo compileIfStatement(
         ? null
         : (_ctx, expectedReturnType) =>
             compileStatement(elseStatement, expectedReturnType, _ctx),
+    source: s,
   );
 }

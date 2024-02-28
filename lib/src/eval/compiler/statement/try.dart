@@ -86,29 +86,24 @@ StatementInfo _compileCatchClause(
     return compileBlock(catchClause.body, expectedReturnType, ctx);
   }
   final slot = TypeRef.fromAnnotation(ctx, ctx.library, exceptionType);
-  return macroBranch(
-    ctx,
-    expectedReturnType,
-    condition: (_ctx) {
-      ctx.pushOp(
-          IsType.make(
-              exceptionVar.scopeFrameOffset, ctx.typeRefIndexMap[slot]!, false),
-          IsType.length);
-      return Variable.alloc(
-          ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
-    },
-    thenBranch: (_ctx, _expectedReturnType) {
-      ctx.setLocal(catchClause.exceptionParameter!.name.lexeme,
-          exceptionVar.copyWith(type: slot));
-      return compileBlock(catchClause.body, expectedReturnType, ctx);
-    },
-    elseBranch: clauses.length <= index + 1
-        ? null
-        : (ctx, expectedReturnType) {
-            return _compileCatchClause(
-                ctx, clauses, index + 1, exceptionVar, expectedReturnType);
-          },
-  );
+  return macroBranch(ctx, expectedReturnType, condition: (_ctx) {
+    ctx.pushOp(
+        IsType.make(
+            exceptionVar.scopeFrameOffset, ctx.typeRefIndexMap[slot]!, false),
+        IsType.length);
+    return Variable.alloc(ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
+  }, thenBranch: (_ctx, _expectedReturnType) {
+    ctx.setLocal(catchClause.exceptionParameter!.name.lexeme,
+        exceptionVar.copyWith(type: slot));
+    return compileBlock(catchClause.body, expectedReturnType, ctx);
+  },
+      elseBranch: clauses.length <= index + 1
+          ? null
+          : (ctx, expectedReturnType) {
+              return _compileCatchClause(
+                  ctx, clauses, index + 1, exceptionVar, expectedReturnType);
+            },
+      source: catchClause);
 }
 
 ///

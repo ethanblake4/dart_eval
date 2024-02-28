@@ -4,9 +4,11 @@ import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
+import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/fpl.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/return.dart';
+import 'package:dart_eval/src/eval/compiler/offset_tracker.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/scope.dart';
 import 'package:dart_eval/src/eval/compiler/source.dart';
@@ -39,10 +41,18 @@ void compileConstructorDeclaration(
   ctx.scopeFrameOffset = d.parameters.parameters.length + (isEnum ? 2 : 0);
 
   SuperConstructorInvocation? $superInitializer;
+  RedirectingConstructorInvocation? $redirectingInitializer;
   final otherInitializers = <ConstructorInitializer>[];
   for (final initializer in d.initializers) {
     if (initializer is SuperConstructorInvocation) {
       $superInitializer = initializer;
+    } else if (initializer is RedirectingConstructorInvocation) {
+      if (d.initializers.length > 1) {
+        throw CompileError(
+            'Redirecting constructor invocation must be the only initializer',
+            d);
+      }
+      $redirectingInitializer = initializer;
     } else if ($superInitializer != null) {
       throw CompileError(
           'Super constructor invocation must be last in the initializer list',
@@ -70,6 +80,11 @@ void compileConstructorDeclaration(
     final p = param.parameter;
     final V = param.V;
     Variable vrep;
+    if ($redirectingInitializer != null && !(p is SimpleFormalParameter)) {
+      throw CompileError(
+          'Redirecting constructor invocation cannot have super or this parameters',
+          d);
+    }
     if (p is FieldFormalParameter) {
       TypeRef? _type;
       if (p.type != null) {
@@ -112,6 +127,7 @@ void compileConstructorDeclaration(
 
   final clsType = TypeRef.lookupDeclaration(ctx, ctx.library, parent);
 
+  // Handle factory constructor
   if (d.factoryKeyword != null) {
     final b = d.body;
 
@@ -141,6 +157,29 @@ void compileConstructorDeclaration(
     }
 
     ctx.endAllocScope(popValues: false);
+    return;
+  }
+
+  // Handle redirecting constructor
+  if ($redirectingInitializer != null) {
+    final name = $redirectingInitializer.constructorName?.name ?? '';
+    final _dec = resolveStaticMethod(ctx, clsType, name);
+    final dec = _dec.declaration!;
+    final fpl = (dec as ConstructorDeclaration).parameters.parameters;
+
+    compileArgumentList(
+        ctx, $redirectingInitializer.argumentList, clsType.file, fpl, dec,
+        source: $redirectingInitializer.argumentList);
+
+    final offset =
+        DeferredOrOffset.lookupStatic(ctx, clsType.file, clsType.name, name);
+    final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.length);
+    if (offset.offset == null) {
+      ctx.offsetTracker.setOffset(loc, offset);
+    }
+    ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
+    final V = Variable.alloc(ctx, clsType);
+    doReturn(ctx, AlwaysReturnType(clsType, false), V);
     return;
   }
 
