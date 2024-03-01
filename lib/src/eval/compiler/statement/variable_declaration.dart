@@ -42,7 +42,13 @@ void compileVariableDeclarationList(
         res = res.boxIfNeeded(ctx);
       }
       if (res.name != null) {
-        var _v = Variable.alloc(ctx, type ?? res.type);
+        final _type = type ?? res.type;
+        var _v = Variable.alloc(
+          ctx,
+          _type.isUnboxedAcrossFunctionBoundaries
+              ? _type.copyWith(boxed: false)
+              : _type,
+        );
         ctx.pushOp(PushNull.make(), PushNull.LEN);
         ctx.pushOp(CopyValue.make(_v.scopeFrameOffset, res.scopeFrameOffset),
             CopyValue.LEN);

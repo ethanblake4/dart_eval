@@ -285,6 +285,9 @@ class IoTypes {
   /// Bridge type spec for [$HttpClientResponse]
   static const httpClientResponse =
       BridgeTypeSpec('dart:io', 'HttpClientResponse');
+
+  /// Bridge type spec for [$HttpStatus]
+  static const httpStatus = BridgeTypeSpec('dart:io', 'HttpStatus');
 }
 
 class TypedDataTypes {

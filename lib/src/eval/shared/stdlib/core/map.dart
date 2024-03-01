@@ -266,6 +266,10 @@ class $MapEntry<K, V> implements MapEntry<K, V>, $Instance {
   /// Wrap a [MapEntry] in a [$MapEntry]
   $MapEntry.wrap(this.$value);
 
+  static void configureForRuntime(Runtime runtime) {
+    return runtime.registerBridgeFunc('dart:core', 'MapEntry.', _$new.call);
+  }
+
   static const $declaration = BridgeClassDef(
       BridgeClassType(BridgeTypeRef(CoreTypes.mapEntry),
           generics: {'K': BridgeGenericParam(), 'V': BridgeGenericParam()}),
@@ -296,7 +300,7 @@ class $MapEntry<K, V> implements MapEntry<K, V>, $Instance {
 
   late final $Instance _superclass = $Object($value);
 
-  static $Value? $new(
+  static $Value? _$new(
       final Runtime runtime, final $Value? target, final List<$Value?> args) {
     return $MapEntry.wrap(MapEntry(args[0], args[1]));
   }

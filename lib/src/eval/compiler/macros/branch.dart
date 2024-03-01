@@ -17,6 +17,7 @@ StatementInfo macroBranch(
     AstNode? source}) {
   ctx.beginAllocScope();
   ctx.enterTypeInferenceContext();
+
   final conditionResult = condition(ctx).unboxIfNeeded(ctx);
   if (!conditionResult.type.isAssignableTo(ctx, CoreTypes.bool.ref(ctx))) {
     throw CompileError("Conditions must have a static type of 'bool'", source);
