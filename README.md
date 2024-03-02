@@ -415,9 +415,8 @@ As of v0.7.1 the dart_eval CLI includes an experimental wrapper binding generato
 It can be invoked in a project using `dart_eval bind`, and will generate bindings
 for all classes annotated with the @Bind annotation from the eval_annotation package.
 You can also pass the '--all' flag to generate bindings for all classes in the project.
-Note that the generated bindings should only be used as a starting point; in 
-particular, they only include placeholder runtime bindings for methods which will
-need to be filled in manually.
+Note that generated bindings don't support every edge case, and may require manual
+adjustment.
 
 Binding generation cannot currently create JSON bindings directly, but you can
 use the generated Dart bindings to create JSON bindings using a `BridgeSerializer`.

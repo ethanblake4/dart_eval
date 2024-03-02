@@ -4,7 +4,10 @@ import 'package:dart_eval/src/eval/bindgen/parameters.dart';
 import 'package:dart_eval/src/eval/bindgen/type.dart';
 
 String $constructors(ClassElement element) {
-  return element.constructors.map((e) => _$constructor(element, e)).join('\n');
+  return element.constructors
+      .where((cstr) => !cstr.isPrivate && !element.isAbstract)
+      .map((e) => _$constructor(element, e))
+      .join('\n');
 }
 
 String _$constructor(ClassElement element, ConstructorElement constructor) {
@@ -27,7 +30,7 @@ String _$constructor(ClassElement element, ConstructorElement constructor) {
 
 String $staticMethods(BindgenContext ctx, ClassElement element) {
   return element.methods
-      .where((e) => e.isStatic)
+      .where((e) => e.isStatic && !e.isOperator && !e.isPrivate)
       .map((e) => _$staticMethod(ctx, element, e))
       .join('\n');
 }
@@ -47,7 +50,7 @@ String _$staticMethod(
 
 String $staticGetters(BindgenContext ctx, ClassElement element) {
   return element.accessors
-      .where((e) => e.isStatic && e.isGetter)
+      .where((e) => e.isStatic && e.isGetter && !e.isPrivate)
       .map((e) => _$staticGetter(ctx, element, e))
       .join('\n');
 }
@@ -59,6 +62,24 @@ String _$staticGetter(
   static \$Value? \$${getter.name}(Runtime runtime, \$Value? target, List<\$Value?> args) {
     final value = ${element.name}.${getter.name};
     return ${wrapVar(ctx, getter.returnType, "value")};
+  }
+''';
+}
+
+String $staticSetters(BindgenContext ctx, ClassElement element) {
+  return element.accessors
+      .where((e) => e.isStatic && e.isSetter && !e.isPrivate)
+      .map((e) => _$staticSetter(ctx, element, e))
+      .join('\n');
+}
+
+String _$staticSetter(
+    BindgenContext ctx, ClassElement element, PropertyAccessorElement setter) {
+  return '''
+  /// Wrapper for the [${element.name}.${setter.name}] setter
+  static \$Value? set\$${setter.name}(Runtime runtime, \$Value? target, List<\$Value?> args) {
+    ${element.name}.${setter.name} = args[0]!.\$value;
+    return null;
   }
 ''';
 }

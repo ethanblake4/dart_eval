@@ -26,7 +26,7 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx,
   ctx.setLocal('#this', Variable(0, TypeRef.$this(ctx)!));
   final resolvedParams = d.parameters == null
       ? <PossiblyValuedParameter>[]
-      : resolveFPLDefaults(ctx, d.parameters, true, allowUnboxed: true);
+      : resolveFPLDefaults(ctx, d.parameters, true, allowUnboxed: false);
 
   if (b.isAsynchronous) {
     setupAsyncFunction(ctx);
@@ -36,17 +36,17 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx,
 
   for (final param in resolvedParams) {
     final p = param.parameter;
-    Variable vRep;
 
     p as SimpleFormalParameter;
     var type = CoreTypes.dynamic.ref(ctx);
     if (p.type != null) {
+      // Method args are always boxed to allow for bridge interop to have a
+      // consistent interface
       type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!)
           .copyWith(boxed: true);
     }
-    vRep = Variable(i, type)..name = p.name!.lexeme;
 
-    ctx.setLocal(vRep.name!, vRep);
+    ctx.setLocal(p.name!.lexeme, Variable(i, type));
 
     i++;
   }

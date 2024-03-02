@@ -6,11 +6,13 @@ static void configureForRuntime(Runtime runtime) {
   ${constructorsForRuntime(ctx, element)}
   ${staticMethodsForRuntime(ctx, element)}
   ${staticGettersForRuntime(ctx, element)}
+  ${staticSettersForRuntime(ctx, element)}
 }
 ''';
 
 String constructorsForRuntime(BindgenContext ctx, ClassElement element) {
   return element.constructors
+      .where((cstr) => !element.isAbstract && !cstr.isPrivate)
       .map((e) => constructorForRuntime(ctx, element, e))
       .join('\n');
 }
@@ -33,7 +35,7 @@ String constructorForRuntime(
 
 String staticMethodsForRuntime(BindgenContext ctx, ClassElement element) {
   return element.methods
-      .where((e) => e.isStatic)
+      .where((e) => e.isStatic && !e.isOperator && !e.isPrivate)
       .map((e) => staticMethodForRuntime(ctx, element, e))
       .join('\n');
 }
@@ -51,7 +53,7 @@ String staticMethodForRuntime(
 
 String staticGettersForRuntime(BindgenContext ctx, ClassElement element) {
   return element.accessors
-      .where((e) => e.isStatic && e.isGetter)
+      .where((e) => e.isStatic && e.isGetter && !e.isPrivate)
       .map((e) => staticGetterForRuntime(ctx, element, e))
       .join('\n');
 }
@@ -63,6 +65,24 @@ String staticGetterForRuntime(
       '${ctx.uri}',
       '${element.name}.${getter.name}*g',
       \$${element.name}.\$${getter.name}
+    );
+  ''';
+}
+
+String staticSettersForRuntime(BindgenContext ctx, ClassElement element) {
+  return element.accessors
+      .where((e) => e.isStatic && e.isSetter && !e.isPrivate)
+      .map((e) => staticSetterForRuntime(ctx, element, e))
+      .join('\n');
+}
+
+String staticSetterForRuntime(
+    BindgenContext ctx, ClassElement element, PropertyAccessorElement setter) {
+  return '''
+    runtime.registerBridgeFunc(
+      '${ctx.uri}',
+      '${element.name}.${setter.name}*s',
+      \$${element.name}.set\$${setter.name}
     );
   ''';
 }

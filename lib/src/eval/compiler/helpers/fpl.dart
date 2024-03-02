@@ -50,8 +50,10 @@ List<PossiblyValuedParameter> resolveFPLDefaults(
         final _reserve = JumpIfNonNull.make(_paramIndex, -1);
         final _reserveOffset = ctx.pushOp(_reserve, JumpIfNonNull.LEN);
         var V = compileExpression(param.defaultValue!, ctx);
-        if (!allowUnboxed) {
+        if (!allowUnboxed || !V.type.isUnboxedAcrossFunctionBoundaries) {
           V = V.boxIfNeeded(ctx);
+        } else if (allowUnboxed && V.type.isUnboxedAcrossFunctionBoundaries) {
+          V = V.unboxIfNeeded(ctx);
         }
         ctx.pushOp(
             CopyValue.make(_paramIndex, V.scopeFrameOffset), CopyValue.LEN);

@@ -98,5 +98,25 @@ void main() {
 
       expect(result, 'Hello, World!');
     });
+
+    test('HttpStatus constants', () {
+      final runtime = Compiler().compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            import 'dart:io';
+
+            void main() {
+              print(HttpStatus.ok);
+              print(HttpStatus.movedPermanently);
+            }
+          '''
+        }
+      });
+
+      expect(
+        () => runtime.executeLib('package:example/main.dart', 'main'),
+        prints('200\n301\n'),
+      );
+    });
   });
 }

@@ -330,5 +330,37 @@ void main() {
               '0001102011120101101110111210202210102101021010212121221122121211'
               '12112001122112201221\n'));
     });
+
+    test('Default parameter boxing error', () {
+      final source = r'''
+      void main() async {
+        final interceptor = AccessTokenInterceptor();
+        print(await interceptor.getAccessToken());
+      }
+
+      class AccessTokenInterceptor {
+        Future<String> getAccessToken([bool force = false]) async {
+          final String? token = null;
+          if (!force && token != null) {
+            return 'decoded';
+          } else {
+            return refreshAccessToken();
+          }
+        }
+
+        Future<String> refreshAccessToken([bool force = true]) async {
+          return 'refreshed';
+        }
+      }
+      ''';
+
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {'main.dart': source}
+      });
+
+      expect(() async {
+        await runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('refreshed\n'));
+    });
   });
 }

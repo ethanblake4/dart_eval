@@ -7,6 +7,7 @@ import 'package:collection/collection.dart';
 import 'package:dart_eval/src/eval/bindgen/bridge_declaration.dart';
 import 'package:dart_eval/src/eval/bindgen/configure.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
+import 'package:dart_eval/src/eval/bindgen/methods.dart';
 import 'package:dart_eval/src/eval/bindgen/statics.dart';
 import 'package:dart_eval/src/eval/bindgen/type.dart';
 import 'dart:io' as io;
@@ -95,6 +96,7 @@ ${bindBridgeDeclaration(ctx, element)}
 ${$constructors(element)}
 ${$staticMethods(ctx, element)}
 ${$staticGetters(ctx, element)}
+${$staticSetters(ctx, element)}
 ${$wrap(ctx, element)}
 ${$getRuntimeType(element)}
 ${$getProperty(ctx, element)}
@@ -138,8 +140,8 @@ ${$setProperty(ctx, element)}
   }
 
   String propertyGetters(BindgenContext ctx, ClassElement element) {
-    final _getters = element.accessors
-        .where((accessor) => accessor.isGetter && !accessor.isStatic);
+    final _getters = element.accessors.where((accessor) =>
+        accessor.isGetter && !accessor.isStatic && !accessor.isPrivate);
     final _methods = element.methods.where((method) => !method.isStatic);
     if (_getters.isEmpty && _methods.isEmpty) {
       return '';
@@ -152,16 +154,6 @@ ${$setProperty(ctx, element)}
       case '${e.displayName}':
         return __${e.displayName};
       ''').join('\n') + '\n' + '}';
-  }
-
-  String $methods(BindgenContext ctx, ClassElement element) {
-    return element.methods.map((e) {
-      return '''
-        static const \$Function __${e.displayName} = \$Function(_${e.displayName});
-        static \$Value? _${e.displayName}(Runtime runtime, \$Value? target, List<\$Value?> args) {
-          throw UnimplementedError();
-        }''';
-    }).join('\n');
   }
 
   String $getRuntimeType(ClassElement element) {
@@ -182,7 +174,8 @@ ${$setProperty(ctx, element)}
   }
 
   String propertySetters(BindgenContext ctx, ClassElement element) {
-    final _setters = element.accessors.where((element) => element.isSetter);
+    final _setters = element.accessors.where((element) =>
+        element.isSetter && !element.isStatic && !element.isPrivate);
     if (_setters.isEmpty) {
       return '';
     }

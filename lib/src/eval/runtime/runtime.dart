@@ -362,6 +362,14 @@ class Runtime {
     return wrapPrimitive(value) ?? (throw Exception('Cannot wrap $value'));
   }
 
+  $Value? wrapAlways(dynamic value) {
+    try {
+      return wrapRecursive(value);
+    } catch (e) {
+      return $Object(value);
+    }
+  }
+
   String valueToString($Value? value) {
     if (value is $Instance) {
       final toString = value.$getProperty(this, 'toString');

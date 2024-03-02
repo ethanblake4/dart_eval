@@ -1,3 +1,10 @@
+## 0.7.8
+- Support for runtime methods, static setters, type parameters, class 
+  inheritance, anonymous function types, and typedefs in the binding generator
+- Add bindings for `MapEntry`, `List.firstWhere()`, and `HttpStatus` (thanks
+  @Noobware1)
+- Fix boxing error on default function parameters (thanks @Noobware1)
+
 ## 0.7.7
 - Support for redirecting constructors
 - Fixed issue where tree-shaking would not always detect uses of symbols made

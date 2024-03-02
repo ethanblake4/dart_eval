@@ -19,11 +19,38 @@ String? bindBridgeDeclaration(BindgenContext ctx, ClassElement element) {
     return null;
   }
 
+  var genericsStr = '';
+  final typeParams = element.typeParameters;
+  if (typeParams.isNotEmpty) {
+    genericsStr = '''\ngenerics: {
+      ${typeParams.map((e) {
+      final boundStr = e.bound != null
+          ? '\$extends: ${bridgeTypeRefFromType(e.bound!)}'
+          : '';
+      return '\'${e.name}\': BridgeGenericParam($boundStr)';
+    }).join(',')}
+    },''';
+  }
+
+  var extendsStr = '';
+  if (element.supertype != null && !element.supertype!.isDartCoreObject) {
+    extendsStr = '\n\$extends: ${bridgeTypeRefFromType(element.supertype!)},';
+  }
+
+  var implementsStr = '';
+  if (element.interfaces.isNotEmpty) {
+    implementsStr =
+        '\n\$implements: [${element.interfaces.map((e) => bridgeTypeRefFromType(e)).join(', ')}],';
+  }
+
   return '''
   static const \$declaration = BridgeClassDef(
     BridgeClassType(
       \$type,
       isAbstract: ${element.isAbstract},
+      $genericsStr
+      $extendsStr
+      $implementsStr
     ),
     constructors: {
 ${constructors(element)}

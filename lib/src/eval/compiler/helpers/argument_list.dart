@@ -64,13 +64,9 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
       if (param.isRequired) {
         throw CompileError('Not enough positional arguments');
       } else if (param is DefaultFormalParameter) {
-        if (param.defaultValue == null) {
-          $null ??= BuiltinValue().push(ctx);
-          _push.add($null);
-        } else {
-          final _arg = compileExpression(param.defaultValue!, ctx);
-          _push.add(_arg);
-        }
+        // Default parameter values are handled at the call site
+        $null ??= BuiltinValue().push(ctx);
+        _push.add($null);
       } else {
         $null ??= BuiltinValue().push(ctx);
         _push.add($null);
