@@ -125,6 +125,7 @@ String bridgeConstructorDef({required ConstructorElement constructor}) {
             namedParams: [${namedParameters(element: constructor)}],
             params: [${positionalParameters(element: constructor)}],
           ),
+          isFactory: ${constructor.isFactory},
       ),
       ''';
 }

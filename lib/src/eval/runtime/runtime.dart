@@ -35,6 +35,8 @@ part 'ops/objects.dart';
 
 part 'ops/bridge.dart';
 
+typedef TypeAutowrapper = $Value? Function(dynamic);
+
 class ScopeFrame {
   const ScopeFrame(this.stackOffset, this.scopeStackOffset,
       [this.entrypoint = false]);
@@ -84,7 +86,7 @@ class _UnloadedEnumValues {
 ///
 class Runtime {
   /// The current runtime version code
-  static const int versionCode = 75;
+  static const int versionCode = 79;
 
   /// Construct a runtime from EVC bytecode. When possible, use the
   /// [Runtime.ofProgram] constructor instead to reduce loading time.
@@ -341,30 +343,61 @@ class Runtime {
     return null;
   }
 
-  /// Attempt to wrap a Dart value into a [$Value], and throw if unsuccessful.
-  $Value? wrap(dynamic value) {
-    if (value is $Value) {
-      return value;
-    }
-    return wrapPrimitive(value) ?? (throw Exception('Cannot wrap $value'));
+  /// Add a type autowrapper to the runtime. Type autowrappers are used to
+  /// automatically wrap values of a certain type into a [$Value]. They should
+  /// be used sparingly due to their high performance overhead.
+  ///
+  /// Type autowrappers should implement the code pattern:
+  /// ```dart
+  /// $Value? myTypeAutowrapper(dynamic value) {
+  ///   if (value is MyType) {
+  ///     return $MyType.wrap(value);
+  ///   } else if (value is MyOtherType) {
+  ///     return $MyOtherType.wrap(value);
+  ///   }
+  ///   return null;
+  /// }
+  /// ```
+  void addTypeAutowrapper(TypeAutowrapper wrapper) {
+    _typeAutowrappers.add(wrapper);
   }
 
-  $Value? wrapRecursive(dynamic value) {
+  /// Attempt to wrap a Dart value into a [$Value], and throw if unsuccessful.
+  $Value wrap(dynamic value, {bool recursive = false}) {
     if (value is $Value) {
       return value;
     }
     if (value is List) {
-      return $List.wrap(value.map(wrapRecursive).toList());
+      return recursive
+          ? $List.wrap(value.map((v) => wrap(v, recursive: true)).toList())
+          : $List.wrap(value);
     } else if (value is Map) {
-      return $Map.wrap(value.map(
-          (key, value) => MapEntry(wrapRecursive(key), wrapRecursive(value))));
+      return recursive
+          ? $Map.wrap(value.map((key, value) => MapEntry(
+              wrap(key, recursive: true), wrap(value, recursive: true))))
+          : $Map.wrap(value);
     }
-    return wrapPrimitive(value) ?? (throw Exception('Cannot wrap $value'));
+    for (final wrapper in _typeAutowrappers) {
+      final wrapped = wrapper(value);
+      if (wrapped != null) {
+        return wrapped;
+      }
+    }
+    return wrapPrimitive(value) ??
+        (throw Exception('Cannot wrap $value (${value.runtimeType}).'
+            'If the type is known explicitly, use \${TypeName}.wrap(value); '
+            'otherwise, try adding a type autowrapper with '
+            'runtime.addTypeAutowrapper().'));
   }
 
-  $Value? wrapAlways(dynamic value) {
+  @Deprecated("Use runtime.wrap() with recursive:true instead")
+  $Value wrapRecursive(dynamic value) => wrap(value, recursive: true);
+
+  /// Attempt to wrap a Dart value into a [$Value], falling back to wrapping
+  /// in an [$Object]
+  $Value wrapAlways(dynamic value, {bool recursive = false}) {
     try {
-      return wrapRecursive(value);
+      return wrap(value, recursive: recursive);
     } catch (e) {
       return $Object(value);
     }
@@ -401,6 +434,7 @@ class Runtime {
   var globalInitializers = <int>[];
   var overrideMap = <String, OverrideSpec>{};
   final _permissions = <String, List<Permission>>{};
+  final _typeAutowrappers = <TypeAutowrapper>[];
 
   /// Write an [EvcOp] bytecode to a list of bytes.
   static List<int> opcodeFrom(EvcOp op) {

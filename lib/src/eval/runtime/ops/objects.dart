@@ -250,16 +250,23 @@ class PushObjectProperty implements EvcOp {
   @override
   void run(Runtime runtime) {
     final _property = runtime.constantPool[_propertyIdx] as String;
-    var object = runtime.frame[_location];
+    var base = runtime.frame[_location];
+    var object = base;
 
     while (true) {
       if (object is $InstanceImpl) {
+        base = object;
         final evalClass = object.evalClass;
         final _offset = evalClass.getters[_property];
         if (_offset == null) {
           final method = evalClass.methods[_property];
           if (method == null) {
             object = object.evalSuperclass;
+            if (object == null) {
+              runtime.returnValue =
+                  (base as $InstanceImpl).getCoreObjectProperty(_property);
+              return;
+            }
             continue;
           }
           runtime.returnValue = EvalStaticFunctionPtr(object, method);

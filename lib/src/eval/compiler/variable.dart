@@ -4,6 +4,7 @@ import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/collection/list.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
@@ -254,6 +255,15 @@ class Variable {
     final checkEq = method == '==' && _args.length == 1;
     final checkNotEq = method == '!=' && _args.length == 1;
     if (checkEq || checkNotEq) {
+      if ($this.scopeFrameOffset == -1 && _args[0].scopeFrameOffset == -1) {
+        final result = $this.methodOffset! == _args[0].methodOffset!;
+        final rV = BuiltinValue(boolval: result).push(ctx);
+        return InvokeResult($this, rV, _args);
+      } else if ($this.scopeFrameOffset == -1) {
+        $this = $this.tearOff(ctx);
+      } else if (_args[0].scopeFrameOffset == -1) {
+        _args[0] = _args[0].tearOff(ctx);
+      }
       ctx.pushOp(
           CheckEq.make($this.scopeFrameOffset, _args[0].scopeFrameOffset),
           CheckEq.LEN);

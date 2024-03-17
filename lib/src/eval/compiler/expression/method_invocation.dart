@@ -21,7 +21,7 @@ import 'expression.dart';
 import 'identifier.dart';
 
 Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
-    {Variable? cascadeTarget}) {
+    {TypeRef? bound, Variable? cascadeTarget}) {
   Variable? L = cascadeTarget;
   var isPrefix = false;
   if (e.target != null && cascadeTarget == null) {

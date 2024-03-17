@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert/converter.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/object.dart';
@@ -83,7 +82,7 @@ class $Codec implements $Instance {
   static $Value? _decode(Runtime runtime, $Value? target, List<$Value?> args) {
     final encoded = args[0]!.$value;
     final result = (target!.$value as Codec).decode(encoded);
-    return runtime.wrapRecursive(result);
+    return runtime.wrap(result, recursive: true);
   }
 
   @override

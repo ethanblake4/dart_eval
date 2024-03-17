@@ -10,7 +10,8 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 Variable compileAssignmentExpression(
     AssignmentExpression e, CompilerContext ctx) {
   final L = compileExpressionAsReference(e.leftHandSide, ctx);
-  final R = compileExpression(e.rightHandSide, ctx);
+  final R =
+      compileExpression(e.rightHandSide, ctx, L.resolveType(ctx, forSet: true));
 
   if (e.operator.type == TokenType.EQ) {
     final set =

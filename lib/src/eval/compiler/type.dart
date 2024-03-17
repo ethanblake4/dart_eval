@@ -4,6 +4,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
+import 'package:dart_eval/src/eval/compiler/model/function_type.dart';
 import 'package:dart_eval/src/eval/runtime/type.dart';
 
 import 'builtins.dart';
@@ -22,6 +23,7 @@ class TypeRef {
       this.genericParams = const [],
       this.specifiedTypeArgs = const [],
       this.resolved = false,
+      this.functionType = null,
       this.boxed = true,
       this.nullable = false});
 
@@ -38,6 +40,7 @@ class TypeRef {
   final List<TypeRef> withType;
   final List<GenericParam> genericParams;
   final List<TypeRef> specifiedTypeArgs;
+  final EvalFunctionType? functionType;
   final bool resolved;
   final bool boxed;
   final bool nullable;
@@ -173,7 +176,8 @@ class TypeRef {
       CompilerContext ctx, BridgeTypeAnnotation typeAnnotation,
       {TypeRef? specifyingType, TypeRef? specifiedType}) {
     return TypeRef.fromBridgeTypeRef(ctx, typeAnnotation.type,
-        specifyingType: specifyingType, specifiedType: specifiedType);
+            specifyingType: specifyingType, specifiedType: specifiedType)
+        .copyWith(nullable: typeAnnotation.nullable);
   }
 
   factory TypeRef.fromBridgeTypeRef(
@@ -265,7 +269,8 @@ class TypeRef {
     }
     final gft = typeReference.gft;
     if (gft != null) {
-      return CoreTypes.function.ref(ctx);
+      return CoreTypes.function.ref(ctx).copyWith(
+          functionType: EvalFunctionType.fromBridgeFunctionDef(ctx, gft));
     }
     throw CompileError(
         'No support for looking up types by other bridge annotation types');
@@ -714,6 +719,7 @@ class TypeRef {
       List<TypeRef>? withType,
       List<GenericParam>? genericParams,
       List<TypeRef>? specifiedTypeArgs,
+      EvalFunctionType? functionType,
       bool? boxed,
       bool? resolved,
       bool? nullable}) {
@@ -723,6 +729,7 @@ class TypeRef {
         withType: withType ?? this.withType,
         genericParams: genericParams ?? this.genericParams,
         specifiedTypeArgs: specifiedTypeArgs ?? this.specifiedTypeArgs,
+        functionType: functionType ?? this.functionType,
         boxed: boxed ?? this.boxed,
         resolved: resolved ?? this.resolved,
         nullable: nullable ?? this.nullable);

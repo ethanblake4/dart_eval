@@ -493,6 +493,48 @@ void main() {
       expect(runtime.executeLib('package:example/main.dart', 'main'), 15);
     });
 
+    test('Nullable static value', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+              class TestA {
+                static int? value;
+              }      
+        
+              int? main() {
+                TestA.value = 22;
+                return TestA.value;
+              }
+        '''
+        }
+      });
+
+      expect(runtime.executeLib('package:example/main.dart', 'main'), $int(22));
+    });
+
+    test('Using set value', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            class TestClass {
+              int tempValue = 0;
+            }  
+         
+            bool main() {
+              final testClass = TestClass();
+              testClass.tempValue = testClass.hashCode;
+              print('hashCode \${testClass.tempValue}');
+              return true;
+            }
+          '''
+        }
+      });
+
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints(startsWith('hashCode ')));
+    });
+
 /*    test('Super parameter multi-level indirection', () {
       final runtime = compiler.compileWriteAndLoad({
         'example': {

@@ -1,4 +1,3 @@
-import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 
 void configurePrintForCompile(BridgeDeclarationRegistry registry) {

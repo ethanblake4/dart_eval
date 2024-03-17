@@ -1,6 +1,5 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/runtime/class.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 /// A class is an instance of [Type]
 class EvalClass extends $InstanceImpl {
@@ -81,4 +80,9 @@ class EvalClassClass implements EvalClass {
 
   @override
   int get delegatedType => throw UnimplementedError();
+
+  @override
+  $Value? getCoreObjectProperty(String identifier) {
+    throw UnimplementedError();
+  }
 }

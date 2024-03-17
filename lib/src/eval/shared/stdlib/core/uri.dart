@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/utils/wap_helper.dart';
 import 'package:dart_eval/stdlib/core.dart';

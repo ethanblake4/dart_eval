@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 
 void cliRun(String path, String library, String function) {

@@ -1,4 +1,5 @@
 import 'package:dart_eval/dart_eval.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/stdlib/core.dart';
 import 'package:test/test.dart';
 
@@ -45,24 +46,6 @@ void main() {
       });
 
       expect(runtime.executeLib('package:eval_test/main.dart', 'main'), 7);
-    });
-
-    test('idk', () {
-      final runtime = compiler.compileWriteAndLoad({
-        'eval_test': {
-          'main.dart': '''
-            int main() {
-              return test();
-            }
-            int test({bool bigger = true}) {
-              final num = (bigger) ? 10 : 5;
-              return num;
-            }
-          '''
-        }
-      });
-
-      expect(runtime.executeLib('package:eval_test/main.dart', 'main'), 10);
     });
 
     test('Recursion (fibonacci)', () {
@@ -232,6 +215,25 @@ void main() {
       expect(runtime.executeLib('package:example/main.dart', 'main'), $int(3));
     });
 
+    test('Anonymous function with many unordered named args', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            num main () {
+              var myfunc = ({d, a, b, c, e}) {
+                return d * e + a / c + b;
+              };
+
+              return myfunc(a: 2, b: 4, c: 2, d: 3, e: 4);
+            }
+          '''
+        }
+      });
+
+      expect(
+          runtime.executeLib('package:example/main.dart', 'main'), $double(17));
+    });
+
     test('Closure with arg', () {
       final runtime = compiler.compileWriteAndLoad({
         'example': {
@@ -372,6 +374,46 @@ void main() {
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 3);
+    });
+
+    test('Function equality test', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            class TestClass {
+              static TestClass instance = TestClass();
+            
+              Function? _callback;
+              
+              void init(Function callback) {
+                _callback = callback;
+              }
+              
+              void runFunction() {
+                _callback!('Hello');
+              }
+            }
+      
+            void main(Function callback) {
+              TestClass.instance.init(callback);
+              TestClass.instance.runFunction(callback);
+              print(fun == fun);
+              print(fun == callback);
+            }
+            
+            int fun() => 1;
+           '''
+        }
+      });
+
+      expect(
+          () => runtime.executeLib('package:example/main.dart', 'main', [
+                $Closure((runtime, target, args) {
+                  print(args[0]!.$value + '!');
+                  return null;
+                })
+              ]),
+          prints('Hello!\ntrue\nfalse\n'));
     });
   });
 }

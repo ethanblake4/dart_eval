@@ -1,6 +1,7 @@
 import 'package:dart_eval/src/eval/runtime/exception.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/runtime/type.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/base.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/object.dart';
 
 import '../../../dart_eval_bridge.dart';
@@ -62,6 +63,31 @@ class EvalFunctionPtr extends EvalFunction {
   }
 
   @override
+  $Value? $getProperty(Runtime runtime, String identifier) {
+    switch (identifier) {
+      case '==':
+        return $Function((runtime, target, args) {
+          if (args.length != 1) {
+            throw ArgumentError('Expected 1 argument, got ${args.length}');
+          }
+          final other = args[0];
+          return $bool(other is EvalFunctionPtr && other.offset == offset);
+        });
+      case '!=':
+        return $Function((runtime, target, args) {
+          if (args.length != 1) {
+            throw ArgumentError('Expected 1 argument, got ${args.length}');
+          }
+          final other = args[0];
+          return $bool(other is EvalFunctionPtr && other.offset != offset);
+        });
+      case 'hashCode':
+        return $int(hashCode ^ offset.hashCode);
+    }
+    return super.$getProperty(runtime, identifier);
+  }
+
+  @override
   int $getRuntimeType(Runtime runtime) =>
       runtime.lookupType(CoreTypes.function);
 
@@ -91,6 +117,33 @@ class EvalStaticFunctionPtr extends EvalFunction {
   @override
   int $getRuntimeType(Runtime runtime) =>
       runtime.lookupType(CoreTypes.function);
+
+  @override
+  $Value? $getProperty(Runtime runtime, String identifier) {
+    switch (identifier) {
+      case '==':
+        return $Function((runtime, target, args) {
+          if (args.length != 1) {
+            throw ArgumentError('Expected 1 argument, got ${args.length}');
+          }
+          final other = args[0];
+          return $bool(
+              other is EvalStaticFunctionPtr && other.offset == offset);
+        });
+      case '!=':
+        return $Function((runtime, target, args) {
+          if (args.length != 1) {
+            throw ArgumentError('Expected 1 argument, got ${args.length}');
+          }
+          final other = args[0];
+          return $bool(
+              other is EvalStaticFunctionPtr && other.offset != offset);
+        });
+      case 'hashCode':
+        return $int(hashCode ^ offset.hashCode);
+    }
+    return super.$getProperty(runtime, identifier);
+  }
 }
 
 /// An implementation of [EvalFunction] that wraps an existing Dart function for
@@ -118,12 +171,18 @@ class $Function extends EvalFunction {
 
   final EvalCallableFunc func;
 
+  get $value => func;
+
+  get $reified => func;
+
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
     try {
       return super.$getProperty(runtime, identifier);
+    } on UnimplementedError {
+      return $Object(this).$getProperty(runtime, identifier);
     } on EvalUnknownPropertyException {
-      return $Object($value).$getProperty(runtime, identifier);
+      return $Object(this).$getProperty(runtime, identifier);
     }
   }
 
@@ -135,6 +194,11 @@ class $Function extends EvalFunction {
   @override
   int $getRuntimeType(Runtime runtime) =>
       runtime.lookupType(CoreTypes.function);
+
+  @override
+  String toString() {
+    return 'Function{func: $func}';
+  }
 }
 
 /// Variant of [$Function] for use in a dynamic invocation / closure context,
@@ -145,12 +209,18 @@ class $Closure extends EvalFunction {
   final EvalCallableFunc func;
   final $Instance? $this;
 
+  get $value => func;
+
+  get $reified => func;
+
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
     try {
       return super.$getProperty(runtime, identifier);
+    } on UnimplementedError {
+      return $Object(this).$getProperty(runtime, identifier);
     } on EvalUnknownPropertyException {
-      return $Object($value).$getProperty(runtime, identifier);
+      return $Object(this).$getProperty(runtime, identifier);
     }
   }
 

@@ -75,4 +75,16 @@ class DeferredOrOffset {
   String toString() {
     return 'DeferredOrOffset{offset: $offset, file: $file, name: $name}';
   }
+
+  @override
+  bool operator ==(Object other) =>
+      other is DeferredOrOffset &&
+      other.offset == offset &&
+      other.file == file &&
+      other.className == className &&
+      other.name == name;
+
+  @override
+  int get hashCode =>
+      offset.hashCode ^ className.hashCode ^ file.hashCode ^ name.hashCode;
 }

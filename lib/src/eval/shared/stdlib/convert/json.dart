@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert/codec.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert/converter.dart';
@@ -310,16 +309,16 @@ class $JsonEncodeAndDecode {
   static const __$jsonDecode = $Function(_$decode);
   static $Value? _$decode(Runtime runtime, $Value? target, List<$Value?> args) {
     final reviver = args[1]?.$value as EvalCallable?;
-    return runtime.wrapRecursive(
-      jsonDecode(args[0]?.$value,
-          reviver: reviver == null
-              ? null
-              : (key, value) {
-                  return reviver.call(runtime, null, [
-                    runtime.wrapPrimitive(key) ?? key as $Value?,
-                    runtime.wrapPrimitive(value) ?? value as $Value?
-                  ])?.$value;
-                }),
-    );
+    return runtime.wrap(
+        jsonDecode(args[0]?.$value,
+            reviver: reviver == null
+                ? null
+                : (key, value) {
+                    return reviver.call(runtime, null, [
+                      runtime.wrapPrimitive(key) ?? key as $Value?,
+                      runtime.wrapPrimitive(value) ?? value as $Value?
+                    ])?.$value;
+                  }),
+        recursive: true);
   }
 }
