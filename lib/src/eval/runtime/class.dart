@@ -1,7 +1,9 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/runtime/exception.dart';
 import 'package:dart_eval/src/eval/runtime/function.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/base.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/type.dart';
 
 /// Interface for objects with a backing value
 abstract class $Value {
@@ -41,7 +43,10 @@ class $InstanceImpl implements $Instance {
     if (getter == null) {
       final method = evalClass.methods[identifier];
       if (method == null) {
-        return evalSuperclass?.$getProperty(runtime, identifier);
+        if (evalSuperclass == null) {
+          return getCoreObjectProperty(identifier);
+        }
+        return evalSuperclass!.$getProperty(runtime, identifier);
       }
       return EvalStaticFunctionPtr(this, method);
     }
@@ -64,6 +69,45 @@ class $InstanceImpl implements $Instance {
     runtime.args.add(this);
     runtime.args.add(value);
     runtime.bridgeCall(setter);
+  }
+
+  $Value? getCoreObjectProperty(String identifier) {
+    switch (identifier) {
+      case 'hashCode':
+        return $int(hashCode);
+      case 'toString':
+        return __toString;
+      case '==':
+        return __equals;
+      case '!=':
+        return __notEquals;
+      case 'runtimeType':
+        return $TypeImpl(evalClass.delegatedType);
+      default:
+        throw EvalUnknownPropertyException(identifier);
+    }
+  }
+
+  static const $Function __equals = $Function(_equals);
+
+  static $Value? _equals(Runtime runtime, $Value? target, List<$Value?> args) {
+    final other = args[0];
+    return $bool(target == other);
+  }
+
+  static const $Function __notEquals = $Function(_notEquals);
+
+  static $Value? _notEquals(
+      Runtime runtime, $Value? target, List<$Value?> args) {
+    final other = args[0];
+    return $bool(target != other);
+  }
+
+  static const $Function __toString = $Function(_toString);
+
+  static $Value? _toString(
+      Runtime runtime, $Value? target, List<$Value?> args) {
+    return $String('object Object');
   }
 
   @override

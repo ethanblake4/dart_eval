@@ -35,7 +35,7 @@ Variable compileExpression(Expression e, CompilerContext ctx,
   } else if (e is Identifier) {
     return compileIdentifier(e, ctx);
   } else if (e is MethodInvocation) {
-    return compileMethodInvocation(ctx, e);
+    return compileMethodInvocation(ctx, e, bound: bound);
   } else if (e is BinaryExpression) {
     return compileBinaryExpression(ctx, e, bound);
   } else if (e is PrefixExpression) {
@@ -51,7 +51,7 @@ Variable compileExpression(Expression e, CompilerContext ctx,
   } else if (e is IndexExpression) {
     return compileIndexExpression(e, ctx);
   } else if (e is FunctionExpression) {
-    return compileFunctionExpression(e, ctx);
+    return compileFunctionExpression(e, ctx, bound);
   } else if (e is FunctionExpressionInvocation) {
     return compileFunctionExpressionInvocation(e, ctx);
   } else if (e is AwaitExpression) {

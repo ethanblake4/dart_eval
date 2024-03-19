@@ -1,5 +1,4 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/base.dart';
 
 void configureIdenticalForCompile(BridgeDeclarationRegistry registry) {

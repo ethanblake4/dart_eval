@@ -15,7 +15,6 @@ import 'package:dart_eval/src/eval/compiler/util/custom_crawler.dart';
 import 'package:dart_eval/src/eval/compiler/util/graph.dart';
 import 'package:dart_eval/src/eval/compiler/util/library_graph.dart';
 import 'package:dart_eval/src/eval/compiler/util/tree_shake.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/collection.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert.dart';

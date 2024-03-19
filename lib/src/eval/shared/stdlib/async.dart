@@ -1,7 +1,7 @@
-import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async/stream.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async/stream_controller.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/async/timer.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async/zone.dart';
 import 'async/future.dart';
 
@@ -18,6 +18,7 @@ class DartAsyncPlugin implements EvalPlugin {
     registry.defineBridgeClass($StreamController.$declaration);
     registry.defineBridgeClass($Zone.$declaration);
     registry.defineBridgeClass($StreamView.$declaration);
+    registry.defineBridgeClass($Timer.$declaration);
   }
 
   @override
@@ -29,5 +30,9 @@ class DartAsyncPlugin implements EvalPlugin {
     runtime.registerBridgeFunc('dart:async', 'Zone.current*g', $Zone.$current);
     runtime.registerBridgeFunc('dart:async', 'Zone.root*g', $Zone.$root);
     runtime.registerBridgeFunc('dart:async', 'StreamView.', $StreamView.$new);
+    runtime.registerBridgeFunc('dart:async', 'Timer.', $Timer.$new);
+    runtime.registerBridgeFunc(
+        'dart:async', 'Timer.periodic', $Timer.$periodic);
+    runtime.registerBridgeFunc('dart:async', 'Timer.run', $Timer.$run);
   }
 }

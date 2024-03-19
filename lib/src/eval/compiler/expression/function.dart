@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:collection/collection.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
@@ -6,6 +7,7 @@ import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/fpl.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/return.dart';
+import 'package:dart_eval/src/eval/compiler/model/function_type.dart';
 import 'package:dart_eval/src/eval/compiler/offset_tracker.dart';
 import 'package:dart_eval/src/eval/compiler/scope.dart';
 import 'package:dart_eval/src/eval/compiler/statement/block.dart';
@@ -17,7 +19,8 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 enum CallingConvention { static, dynamic }
 
-Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
+Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx,
+    [TypeRef? bound]) {
   final jumpOver = ctx.pushOp(JumpConstant.make(-1), JumpConstant.LEN);
 
   final fnOffset = ctx.out.length;
@@ -38,7 +41,24 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
   final resolvedParams = resolveFPLDefaults(ctx, e.parameters, false,
       allowUnboxed: false, sortNamed: true);
 
-  var i = 1;
+  List<FunctionFormalParameter> boundNormalParams = [];
+  List<FunctionFormalParameter> boundOptionalParams = [];
+  List<FunctionFormalParameter> boundNamedParams = [];
+  if (bound != null) {
+    final functionType = bound.functionType;
+    if (functionType != null) {
+      boundNormalParams = functionType.normalParameters;
+      boundOptionalParams = functionType.optionalParameters;
+      boundNamedParams = functionType.namedParameters.entries
+          .map((e) => e.value)
+          .sorted((a, b) => a.name!.compareTo(b.name!));
+    }
+  }
+
+  final boundPositionalParams = [...boundNormalParams, ...boundOptionalParams];
+  final inorderBoundParams = [...boundPositionalParams, ...boundNamedParams];
+
+  var i = 0;
 
   for (final param in resolvedParams) {
     final p = param.parameter;
@@ -48,8 +68,13 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
     var type = CoreTypes.dynamic.ref(ctx);
     if (p.type != null) {
       type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
+    } else if (i < inorderBoundParams.length) {
+      final fType = inorderBoundParams[i].type;
+      if (fType.type != null) {
+        type = fType.type!;
+      }
     }
-    vRep = Variable(i, type.copyWith(boxed: true))..name = p.name!.lexeme;
+    vRep = Variable(i + 1, type.copyWith(boxed: true))..name = p.name!.lexeme;
 
     ctx.setLocal(vRep.name!, vRep);
 
@@ -106,9 +131,18 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
           ? a
           : (a as DefaultFormalParameter).parameter)
       .cast<SimpleFormalParameter>()
-      .map((a) => a.type == null
-          ? CoreTypes.dynamic.ref(ctx)
-          : TypeRef.fromAnnotation(ctx, ctx.library, a.type!))
+      .mapIndexed((i, a) {
+        if (a.type != null) {
+          return TypeRef.fromAnnotation(ctx, ctx.library, a.type!);
+        }
+        if (i < boundPositionalParams.length) {
+          final fType = boundPositionalParams[i].type;
+          if (fType.type != null) {
+            return fType.type!;
+          }
+        }
+        return CoreTypes.dynamic.ref(ctx);
+      })
       .map((t) => t.toRuntimeType(ctx))
       .map((rt) => rt.toJson())
       .toList();
@@ -123,9 +157,18 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx) {
   final sortedNamedArgTypes = sortedNamedArgs
       .map((e) => e is DefaultFormalParameter ? e.parameter : e)
       .cast<SimpleFormalParameter>()
-      .map((a) => a.type == null
-          ? CoreTypes.dynamic.ref(ctx)
-          : TypeRef.fromAnnotation(ctx, ctx.library, a.type!))
+      .mapIndexed((i, a) {
+        if (a.type != null) {
+          return TypeRef.fromAnnotation(ctx, ctx.library, a.type!);
+        }
+        if (i < boundNamedParams.length) {
+          final fType = boundNamedParams[i].type;
+          if (fType.type != null) {
+            return fType.type!;
+          }
+        }
+        return CoreTypes.dynamic.ref(ctx);
+      })
       .map((t) => t.toRuntimeType(ctx))
       .map((rt) => rt.toJson())
       .toList();

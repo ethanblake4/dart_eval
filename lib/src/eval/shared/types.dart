@@ -151,6 +151,9 @@ class AsyncTypes {
   /// Bridge type spec for [$StreamView]
   static const streamView = BridgeTypeSpec('dart:async', 'StreamView');
 
+  /// Bridge type spec for [$Timer]
+  static const timer = BridgeTypeSpec('dart:async', 'Timer');
+
   /// Bridge type spec for [$Zone]
   static const zone = BridgeTypeSpec('dart:async', 'Zone');
 }

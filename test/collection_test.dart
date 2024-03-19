@@ -187,5 +187,23 @@ void main() {
 
       expect(runtime.executeLib('package:eval_test/main.dart', 'main'), true);
     });
+
+    test('Map null values == null', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'eval_test': {
+          'main.dart': '''
+            bool main() {
+              final e = [{'name': null}];
+              for (var item in e) {
+                bool ifNull = item['name'] == null;
+                return ifNull; 
+              }
+            }
+          '''
+        }
+      });
+
+      expect(runtime.executeLib('package:eval_test/main.dart', 'main'), true);
+    });
   });
 }

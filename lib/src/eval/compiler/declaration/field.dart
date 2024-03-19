@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
@@ -14,14 +15,14 @@ void compileFieldDeclaration(int fieldIndex, FieldDeclaration d,
     final fieldName = field.name.lexeme;
     if (d.isStatic) {
       final initializer = field.initializer;
+      TypeRef? type;
+      final specifiedType = d.fields.type;
+      if (specifiedType != null) {
+        type = TypeRef.fromAnnotation(ctx, ctx.library, specifiedType);
+      }
       if (initializer != null) {
         final pos = beginMethod(ctx, field, field.offset, '$fieldName*i');
         ctx.beginAllocScope();
-        TypeRef? type;
-        final specifiedType = d.fields.type;
-        if (specifiedType != null) {
-          type = TypeRef.fromAnnotation(ctx, ctx.library, specifiedType);
-        }
         var V = compileExpression(initializer, ctx, type);
         if (type != null) {
           if (!V.type.isAssignableTo(ctx, type)) {
@@ -47,6 +48,9 @@ void compileFieldDeclaration(int fieldIndex, FieldDeclaration d,
         ctx.runtimeGlobalInitializerMap[_index] = pos;
         ctx.pushOp(Return.make(V.scopeFrameOffset), Return.LEN);
         ctx.endAllocScope(popValues: false);
+      } else {
+        ctx.topLevelVariableInferredTypes[ctx.library]![
+            '$parentName.$fieldName'] = type ?? CoreTypes.dynamic.ref(ctx);
       }
     } else {
       final pos = beginMethod(ctx, d, d.offset, '$parentName.$fieldName (get)');

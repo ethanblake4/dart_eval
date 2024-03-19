@@ -624,6 +624,14 @@ dart_eval VM, and not any code it interacts with. For example, most Flutter apps
 the vast majority of their performance budget in the Flutter framework itself, so the
 speed impact of dart_eval is usually negligible.
 
+### Is this allowed in the App Store?
+
+Though Apple's official guidelines are unclear, many popular apps use similar
+techniques to dynamically update their code. For example, apps built on
+React Native often use its custom Hermes JavaScript engine to enable dynamic 
+code updates. Note that Apple is likely to remove apps if they introduce policy 
+violations in updates, regardless of the technology used.
+
 ## Language feature support table
 
 The following table details the language features supported by dart_eval with native Dart code. Feature support

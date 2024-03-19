@@ -12,7 +12,8 @@ static void configureForRuntime(Runtime runtime) {
 
 String constructorsForRuntime(BindgenContext ctx, ClassElement element) {
   return element.constructors
-      .where((cstr) => !element.isAbstract && !cstr.isPrivate)
+      .where(
+          (cstr) => (!element.isAbstract || cstr.isFactory) && !cstr.isPrivate)
       .map((e) => constructorForRuntime(ctx, element, e))
       .join('\n');
 }

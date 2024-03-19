@@ -288,7 +288,12 @@ void compileConstructorDeclaration(
 
   for (final init in otherInitializers) {
     if (init is ConstructorFieldInitializer) {
-      final V = compileExpression(init.expression, ctx).boxIfNeeded(ctx);
+      final fType = TypeRef.lookupFieldType(
+          ctx,
+          TypeRef.lookupDeclaration(ctx, ctx.library, parent),
+          init.fieldName.name,
+          source: init);
+      final V = compileExpression(init.expression, ctx, fType).boxIfNeeded(ctx);
       ctx.pushOp(
           SetObjectPropertyImpl.make(instOffset,
               fieldIndices[init.fieldName.name]!, V.scopeFrameOffset),

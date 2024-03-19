@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async/stream.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io/io_sink.dart';
 import 'package:dart_eval/stdlib/core.dart';

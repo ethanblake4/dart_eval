@@ -2,7 +2,6 @@
 
 import 'dart:async';
 
-import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/stdlib/core.dart';
 
@@ -47,7 +46,8 @@ class $Future<T> implements Future<T>, $Instance {
   final Future<T> $value;
 
   @override
-  Future<T> get $reified => $value;
+  Future get $reified =>
+      $value.then((value) => value is $Value ? value.$value : value);
 
   final $Instance _superclass;
 

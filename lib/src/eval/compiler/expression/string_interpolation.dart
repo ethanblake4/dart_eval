@@ -11,8 +11,11 @@ Variable compileStringInterpolation(
   Variable? build;
   for (final element in str.elements) {
     if (element is InterpolationString) {
-      final _el = BuiltinValue(stringval: element.value).push(ctx);
-      build = build == null ? _el : build.invoke(ctx, '+', [_el]).result;
+      final sval = element.value;
+      if (sval.isNotEmpty) {
+        final _el = BuiltinValue(stringval: element.value).push(ctx);
+        build = build == null ? _el : build.invoke(ctx, '+', [_el]).result;
+      }
     } else if (element is InterpolationExpression) {
       final V = compileExpression(element.expression, ctx);
       Variable vStr;

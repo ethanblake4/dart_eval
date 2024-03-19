@@ -1,7 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 /// A bridge class can be extended inside the dart_eval VM and used both in
 /// and outside of it.
@@ -51,6 +50,8 @@ mixin $Bridge<T> on Object implements $Value, $Instance {
 
   @override
   T get $reified => this as T;
+
+  Runtime get $runtime => Runtime.bridgeData[this]!.runtime;
 
   @override
   int $getRuntimeType(Runtime runtime) {
