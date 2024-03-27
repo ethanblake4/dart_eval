@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/math/random.dart';
 import 'math/point.dart';
 
 const mathSource = '''
@@ -24,6 +25,7 @@ class DartMathPlugin implements EvalPlugin {
   @override
   void configureForCompile(BridgeDeclarationRegistry registry) {
     $Point.configureForCompile(registry);
+    $Random.configureForCompile(registry);
     registry.addSource(DartSource('dart:math', mathSource));
     registry.defineBridgeTopLevelFunction(BridgeFunctionDeclaration(
         'dart:math',
@@ -133,6 +135,7 @@ class DartMathPlugin implements EvalPlugin {
   @override
   void configureForRuntime(Runtime runtime) {
     $Point.configureForRuntime(runtime);
+    $Random.configureForRuntime(runtime);
     runtime.registerBridgeFunc('dart:math', 'atan2', const _$atan2().call);
     runtime.registerBridgeFunc('dart:math', 'pow', const _$pow().call);
     runtime.registerBridgeFunc('dart:math', 'cos', const _$cos().call);
