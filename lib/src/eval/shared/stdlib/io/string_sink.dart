@@ -111,7 +111,8 @@ class $StringSink implements $Instance {
 
   static $Value? _writeln(Runtime runtime, $Value? target, List<$Value?> args) {
     final object = args[0];
-    (target!.$value as StringSink).writeln(runtime.valueToString(object));
+    (target!.$value as StringSink)
+        .writeln(object == null ? "" : runtime.valueToString(object));
     return null;
   }
 
