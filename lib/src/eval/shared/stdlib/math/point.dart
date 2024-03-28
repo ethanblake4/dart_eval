@@ -18,7 +18,7 @@ class $Point implements Point, $Instance {
     runtime.registerBridgeFunc('dart:math', 'Point.', const _$Point_new().call);
   }
 
-  static const _$type = BridgeTypeRef(BridgeTypeSpec('dart:math', 'Point'));
+  static const _$type = BridgeTypeRef(MathTypes.point);
 
   /// The bridge class definition for this class.
   static const $declaration = BridgeClassDef(

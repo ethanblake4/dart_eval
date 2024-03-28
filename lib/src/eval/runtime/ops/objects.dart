@@ -95,7 +95,6 @@ class InvokeDynamic implements EvcOp {
         runtime._prOffset = object.offset;
         return;
       }
-
       final method = ((object as $Instance).$getProperty(runtime, _method)
           as EvalFunction);
       try {

@@ -515,6 +515,7 @@ class IndexedReference implements Reference {
     final result = _variable.invoke(ctx, '[]', [_index]);
     _variable = result.target!;
     _index = result.args[0];
+
     return result.result;
   }
 
