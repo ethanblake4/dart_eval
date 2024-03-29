@@ -93,7 +93,7 @@ class $StringSink implements $Instance {
 
   static $Value? _write(Runtime runtime, $Value? target, List<$Value?> args) {
     final object = args[0];
-    target!.$value.write(runtime.valueToString(object));
+    (target!.$value as StringSink).write(runtime.valueToString(object));
     return null;
   }
 
@@ -103,15 +103,16 @@ class $StringSink implements $Instance {
       Runtime runtime, $Value? target, List<$Value?> args) {
     final objects = args[0]!.$value;
     final separator = args[1]?.$value;
-    target!.$value.writeAll(objects!.$reified, separator);
+    (target!.$value as StringSink).writeAll(objects!.$reified, separator);
     return null;
   }
 
   static final $Function __writeln = $Function(_writeln);
 
   static $Value? _writeln(Runtime runtime, $Value? target, List<$Value?> args) {
-    final object = args[0]?.$value;
-    target!.$value.writeln(object);
+    final object = args[0];
+    (target!.$value as StringSink)
+        .writeln(object == null ? "" : runtime.valueToString(object));
     return null;
   }
 
@@ -120,7 +121,7 @@ class $StringSink implements $Instance {
   static $Value? __writeCharCode(
       Runtime runtime, $Value? target, List<$Value?> args) {
     final charCode = args[0]!.$value;
-    target!.$value.writeCharCode(charCode);
+    (target!.$value as StringSink).writeCharCode(charCode);
     return null;
   }
 
