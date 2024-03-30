@@ -89,6 +89,8 @@ class Bindgen {
 class \$${element.name} implements \$Instance {
 /// Configure this class for use in a [Runtime]
 ${bindConfigureForRuntime(ctx, element)}
+/// Compile-time type specification of [\$${element.name}]
+${bindTypeSpec(ctx, element)}
 /// Compile-time type declaration of [\$${element.name}]
 ${bindBridgeType(ctx, element)}
 /// Compile-time class declaration of [\$${element.name}]

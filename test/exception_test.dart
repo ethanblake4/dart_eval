@@ -338,5 +338,22 @@ void main() {
       expect(() => runtime.executeLib('package:example/main.dart', 'main'),
           throwsA($String('error')));
     });
+
+    test('Exception bubbles through asynchronous gap', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            import 'dart:async';
+            
+            void main() async {
+              await Future.delayed(const Duration(milliseconds: 10));
+              throw 'error';
+            }
+          '''
+        }
+      });
+      expect(() => runtime.executeLib('package:example/main.dart', 'main'),
+          throwsA($String('error')));
+    });
   });
 }

@@ -3,14 +3,18 @@ import 'package:dart_eval/src/eval/bindgen/context.dart';
 import 'package:dart_eval/src/eval/bindgen/parameters.dart';
 import 'package:dart_eval/src/eval/bindgen/type.dart';
 
+String bindTypeSpec(BindgenContext ctx, ClassElement element) {
+  return '''
+  static const \$spec = BridgeTypeSpec(
+    '${ctx.uri}',
+    '${element.name}',
+  );
+''';
+}
+
 String bindBridgeType(BindgenContext ctx, ClassElement element) {
   return '''
-  static const \$type = BridgeTypeRef(
-    BridgeTypeSpec(
-      '${ctx.uri}',
-      '${element.name}',
-    ),
-  );
+  static const \$type = BridgeTypeRef(\$spec);
 ''';
 }
 
