@@ -1,0 +1,3 @@
+dependency_overrides:
+  control_flow_graph:
+    path: ../control_flow_graph

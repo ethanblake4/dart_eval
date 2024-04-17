@@ -4,7 +4,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 
 void cliRun(String path, String library, String function) {
   final evc = File(path).readAsBytesSync();
-  final runtime = Runtime(evc.buffer.asByteData());
+  final runtime = Runtime(evc.buffer);
   var result = runtime.executeLib(library, function);
 
   if (result != null) {

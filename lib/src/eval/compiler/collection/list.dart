@@ -1,17 +1,14 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/collection/for.dart';
 import 'package:dart_eval/src/eval/compiler/collection/if.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
-import 'package:dart_eval/src/eval/compiler/macros/loop.dart';
 import 'package:dart_eval/src/eval/compiler/model/label.dart';
-import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/ir/collection.dart';
 
 const _boxListElements = true;
 
@@ -40,10 +37,9 @@ Variable compileListLiteral(ListLiteral l, CompilerContext ctx,
     listSpecifiedType = boundType;
   }
 
-  ctx.pushOp(PushList.make(), PushList.LEN);
-
-  var _list = Variable.alloc(
+  var _list = Variable.ssa(
     ctx,
+    NewList(ctx.svar('list')),
     CoreTypes.list.ref(ctx).copyWith(
         specifiedTypeArgs: [listSpecifiedType ?? CoreTypes.dynamic.ref(ctx)],
         boxed: false),
@@ -70,7 +66,7 @@ Variable compileListLiteral(ListLiteral l, CompilerContext ctx,
 
   return _list;
 }
-
+/* TODO
 Variable boxListContents(CompilerContext ctx, Variable list) {
   late Variable $i, $1, len, newList;
 
@@ -84,21 +80,17 @@ Variable boxListContents(CompilerContext ctx, Variable list) {
     _ctx.pushOp(
         PushIterableLength.make(list.scopeFrameOffset), PushIterableLength.LEN);
 
-    // final newList = <T{boxed}>[];
-    _ctx.pushOp(PushList.make(), PushList.LEN);
-
-    newList = Variable.alloc(
+    // final newList = <T{boxed}>
+    newList = Variable.ssa(
         _ctx,
+        NewList(ctx.svar()),
         CoreTypes.list.ref(ctx).copyWith(boxed: true, specifiedTypeArgs: [
           list.type.specifiedTypeArgs[0].copyWith(boxed: true)
         ]));
   }, condition: (_ctx) {
     // i < len
-    final v =
-        Variable.alloc(_ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
-    _ctx.pushOp(
-        NumLt.make($i.scopeFrameOffset, len.scopeFrameOffset), NumLt.LEN);
-    return v;
+    return Variable.ssa(_ctx, LessThan(ctx.svar(), $i.ssa, len.ssa),
+        CoreTypes.bool.ref(ctx).copyWith(boxed: false));
   }, body: (_ctx, rt) {
     final v = Variable.alloc(_ctx, list.type.specifiedTypeArgs[0]);
     _ctx.pushOp(IndexList.make(list.scopeFrameOffset, $i.scopeFrameOffset),
@@ -128,7 +120,7 @@ Variable boxListContents(CompilerContext ctx, Variable list) {
       ]))
     ..name = list.name
     ..frameIndex = list.frameIndex;
-}
+}*/
 
 List<TypeRef> compileListElement(
     CollectionElement e, Variable list, CompilerContext ctx, bool box) {
@@ -142,8 +134,8 @@ List<TypeRef> compileListElement(
     if (box) {
       _result = _result.boxIfNeeded(ctx);
     }
-    ctx.pushOp(ListAppend.make(list.scopeFrameOffset, _result.scopeFrameOffset),
-        ListAppend.LEN);
+    // TODO ctx.pushOp(ListAppend.make(list.scopeFrameOffset, _result.scopeFrameOffset),
+    //    ListAppend.LEN);
     return [_result.type];
   } else if (e is IfElement) {
     return compileIfElementForList(e, list, ctx, box);

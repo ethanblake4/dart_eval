@@ -1,5 +1,5 @@
 part of '../runtime.dart';
-
+/*
 class BridgeInstantiate implements EvcOp {
   BridgeInstantiate(Runtime exec)
       : _subclass = exec._readInt16(),
@@ -192,3 +192,4 @@ class Complete implements EvcOp {
   @override
   String toString() => 'Complete (L$_offset)';
 }
+*/

@@ -13,10 +13,9 @@ import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/util.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/ir/flow.dart';
 
 void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
-  //ctx.runPrescan(d);
   final pos = beginMethod(ctx, d, d.offset, '${d.name.lexeme}()');
   ctx.topLevelDeclarationPositions[ctx.library]![d.name.lexeme] = pos;
 
@@ -106,6 +105,6 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   ctx.endAllocScope();
 
   if (!(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
-    ctx.pushOp(Return.make(-1), Return.LEN);
+    ctx.pushOp(Return(null));
   }
 }

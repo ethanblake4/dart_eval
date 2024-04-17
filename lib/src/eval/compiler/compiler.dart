@@ -417,7 +417,9 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       CoreTypes.int.ref(_ctx),
       CoreTypes.double.ref(_ctx),
       CoreTypes.bool.ref(_ctx),
-      CoreTypes.list.ref(_ctx)
+      CoreTypes.string.ref(_ctx),
+      CoreTypes.list.ref(_ctx),
+      CoreTypes.map.ref(_ctx),
     };
 
     for (final library in reachableLibraries) {
@@ -530,7 +532,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       typeIds,
       //ctx.typeNames,
       _ctx.typeTypes,
-      _ctx.offsetTracker.apply(_ctx.out),
+      [/* TODO ops */],
       libraryMapString,
       _ctx.bridgeStaticFunctionIndices,
       _ctx.constantPool.pool,
@@ -548,7 +550,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
 
     final ob = program.write();
 
-    return Runtime(ob.buffer.asByteData());
+    return Runtime(ob.buffer);
   }
 
   void _populateLookupTablesForDeclaration(

@@ -11,7 +11,7 @@ import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/util.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/ir/flow.dart';
 
 int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx,
     NamedCompilationUnitMember parent) {
@@ -82,7 +82,7 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx,
     if (b.isAsynchronous) {
       asyncComplete(ctx, -1);
     } else {
-      ctx.pushOp(Return.make(-1), Return.LEN);
+      ctx.pushOp(Return(null));
     }
   }
 

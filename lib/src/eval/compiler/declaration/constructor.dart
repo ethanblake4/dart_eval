@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
@@ -15,7 +16,11 @@ import 'package:dart_eval/src/eval/compiler/source.dart';
 import 'package:dart_eval/src/eval/compiler/statement/block.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/ir/bridge.dart';
+import 'package:dart_eval/src/eval/ir/flow.dart';
+import 'package:dart_eval/src/eval/ir/memory.dart';
+import 'package:dart_eval/src/eval/ir/objects.dart';
+import 'package:dart_eval/src/eval/shared/registers.dart';
 
 import '../variable.dart';
 
@@ -167,17 +172,16 @@ void compileConstructorDeclaration(
     final dec = _dec.declaration!;
     final fpl = (dec as ConstructorDeclaration).parameters.parameters;
 
-    compileArgumentList(
+    final result = compileArgumentList(
         ctx, $redirectingInitializer.argumentList, clsType.file, fpl, dec,
         source: $redirectingInitializer.argumentList);
 
     final offset =
         DeferredOrOffset.lookupStatic(ctx, clsType.file, clsType.name, name);
-    final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.length);
-    if (offset.offset == null) {
-      ctx.offsetTracker.setOffset(loc, offset);
-    }
-    ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
+    ctx.pushOp(Call(offset, [
+      for (final name in result.ssa) SSA(name),
+    ]));
+
     final V = Variable.alloc(ctx, clsType);
     doReturn(ctx, AlwaysReturnType(clsType, false), V);
     return;
@@ -189,6 +193,7 @@ void compileConstructorDeclaration(
   Variable $super;
   DeclarationOrPrefix? extendsWhat;
 
+  final ssa = <SSA>[];
   final argTypes = <TypeRef?>[];
   final namedArgTypes = <String, TypeRef?>{};
 
@@ -203,8 +208,8 @@ void compileConstructorDeclaration(
     final decl = extendsWhat.declaration!;
 
     if (decl.isBridge) {
-      ctx.pushOp(PushBridgeSuperShim.make(), PushBridgeSuperShim.length);
-      $super = Variable.alloc(ctx, CoreTypes.dynamic.ref(ctx));
+      $super = Variable.ssa(ctx, NewBridgeSuperShim(ctx.svar('shim')),
+          CoreTypes.dynamic.ref(ctx));
     } else {
       final extendsType = TypeRef.lookupDeclaration(
           ctx, ctx.library, decl.declaration as ClassDeclaration);
@@ -216,16 +221,12 @@ void compileConstructorDeclaration(
             '${extendsType.name}.$constructorName']!;
         final constructor = _constructor.declaration as ConstructorDeclaration;
 
-        final argsPair = compileArgumentList(
-            ctx,
-            $superInitializer.argumentList,
-            decl.sourceLib,
-            constructor.parameters.parameters,
-            constructor,
-            superParams: superParams,
-            source: $superInitializer);
-        final _args = argsPair.first;
-        final _namedArgs = argsPair.second;
+        final argres = compileArgumentList(ctx, $superInitializer.argumentList,
+            decl.sourceLib, constructor.parameters.parameters, constructor,
+            superParams: superParams, source: $superInitializer);
+        final _args = argres.args;
+        final _namedArgs = argres.namedArgs;
+        ssa.addAll([for (final name in argres.ssa) SSA(name)]);
 
         argTypes.addAll(_args.map((e) => e.type).toList());
         namedArgTypes
@@ -241,25 +242,22 @@ void compileConstructorDeclaration(
       }
 
       final offset = method.methodOffset!;
-      final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.length);
-      if (offset.offset == null) {
-        ctx.offsetTracker.setOffset(loc, offset);
-      }
+      ctx.pushOp(Call(offset, ssa));
 
       mReturnType = method.methodReturnType
               ?.toAlwaysReturnType(ctx, clsType, argTypes, namedArgTypes) ??
           AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
 
-      ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-      $super =
-          Variable.alloc(ctx, mReturnType.type ?? CoreTypes.dynamic.ref(ctx));
+      $super = Variable.ssa(ctx, AssignRegister(ctx.svar('super'), regGPR1),
+          mReturnType.type ?? CoreTypes.dynamic.ref(ctx));
     }
   }
 
-  final op = CreateClass.make(ctx.library, $super.scopeFrameOffset,
-      parent.name.lexeme, fieldIdx + (isEnum ? 2 : 0));
-  ctx.pushOp(op, CreateClass.len(op));
-  final instOffset = ctx.scopeFrameOffset++;
+  final inst = Variable.ssa(
+      ctx,
+      CreateClass(ctx.svar('inst'), ctx.library, parent.name.lexeme, $super.ssa,
+          fieldIdx + (isEnum ? 2 : 0)),
+      CoreTypes.object.ref(ctx));
 
   if (parent is EnumDeclaration) {
     /// Add implicit index and name fields
@@ -271,17 +269,17 @@ void compileConstructorDeclaration(
   }
 
   if (parent is EnumDeclaration) {
-    ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 0, 0),
+    ctx.pushOp(SetPropertyStatic(inst.ssa, 0, valueIndex));
+    ctx.pushOp(SetPropertyStatic(inst.ssa, 1, valueName));
+    /*ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 0, 0),
         SetObjectPropertyImpl.length);
     ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 1, 1),
-        SetObjectPropertyImpl.length);
+        SetObjectPropertyImpl.length);*/
   }
 
   for (final fieldFormal in fieldFormalNames) {
-    ctx.pushOp(
-        SetObjectPropertyImpl.make(instOffset, fieldIndices[fieldFormal]!,
-            ctx.lookupLocal(fieldFormal)!.scopeFrameOffset),
-        SetObjectPropertyImpl.length);
+    ctx.pushOp(SetPropertyStatic(inst.ssa, fieldIndices[fieldFormal]!,
+        ctx.lookupLocal(fieldFormal)!.ssa));
   }
 
   final usedNames = {...fieldFormalNames};
@@ -294,17 +292,15 @@ void compileConstructorDeclaration(
           init.fieldName.name,
           source: init);
       final V = compileExpression(init.expression, ctx, fType).boxIfNeeded(ctx);
-      ctx.pushOp(
-          SetObjectPropertyImpl.make(instOffset,
-              fieldIndices[init.fieldName.name]!, V.scopeFrameOffset),
-          SetObjectPropertyImpl.length);
+      ctx.pushOp(SetPropertyStatic(
+          inst.ssa, fieldIndices[init.fieldName.name]!, V.ssa));
       usedNames.add(init.fieldName.name);
     } else {
       throw CompileError('${init.runtimeType} initializer is not supported');
     }
   }
 
-  _compileUnusedFields(ctx, fields, {}, instOffset);
+  _compileUnusedFields(ctx, fields, {}, inst);
 
   final body = d.body;
   if (d.factoryKeyword == null && !(body is EmptyFunctionBody)) {
@@ -353,9 +349,9 @@ void compileConstructorDeclaration(
             $super.scopeFrameOffset, bridgeInst.scopeFrameOffset),
         ParentBridgeSuperShim.LEN);
 
-    ctx.pushOp(Return.make(bridgeInst.scopeFrameOffset), Return.LEN);
+    ctx.pushOp(Return(bridgeInst.ssa));
   } else {
-    ctx.pushOp(Return.make(instOffset), Return.LEN);
+    ctx.pushOp(Return(inst.ssa));
   }
 
   ctx.endAllocScope(popValues: false);
@@ -396,8 +392,8 @@ void compileDefaultConstructor(CompilerContext ctx,
     final decl = extendsWhat.declaration!;
 
     if (decl.isBridge) {
-      ctx.pushOp(PushBridgeSuperShim.make(), PushBridgeSuperShim.length);
-      $super = Variable.alloc(ctx, CoreTypes.dynamic.ref(ctx));
+      $super = Variable.ssa(ctx, NewBridgeSuperShim(ctx.svar('shim')),
+          CoreTypes.dynamic.ref(ctx));
     } else {
       final extendsType = TypeRef.lookupDeclaration(
           ctx, ctx.library, decl.declaration as ClassDeclaration);
@@ -413,10 +409,7 @@ void compileDefaultConstructor(CompilerContext ctx,
       }
 
       final offset = method.methodOffset!;
-      final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.length);
-      if (offset.offset == null) {
-        ctx.offsetTracker.setOffset(loc, offset);
-      }
+      ctx.pushOp(Call(offset, []));
       final clsType = TypeRef.lookupDeclaration(ctx, ctx.library, parent);
       mReturnType = method.methodReturnType
               ?.toAlwaysReturnType(ctx, clsType, argTypes, namedArgTypes) ??
@@ -428,10 +421,11 @@ void compileDefaultConstructor(CompilerContext ctx,
     }
   }
 
-  final op = CreateClass.make(ctx.library, $super.scopeFrameOffset,
-      parent.name.lexeme, fieldIdx + (isEnum ? 2 : 0));
-  ctx.pushOp(op, CreateClass.len(op));
-  final instOffset = ctx.scopeFrameOffset++;
+  final inst = Variable.ssa(
+      ctx,
+      CreateClass(ctx.svar('inst'), ctx.library, parent.name.lexeme, $super.ssa,
+          fieldIdx + (isEnum ? 2 : 0)),
+      CoreTypes.object.ref(ctx));
 
   if (parent is EnumDeclaration) {
     /// Add implicit index and name fields
@@ -443,17 +437,15 @@ void compileDefaultConstructor(CompilerContext ctx,
   }
 
   if (parent is EnumDeclaration) {
-    ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 0, 0),
-        SetObjectPropertyImpl.length);
-    ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 1, 1),
-        SetObjectPropertyImpl.length);
+    ctx.pushOp(SetPropertyStatic(inst.ssa, 0, valueIndex));
+    ctx.pushOp(SetPropertyStatic(inst.ssa, 1, valueName));
   }
 
   _compileUnusedFields(
       ctx,
       fields,
       parent is EnumDeclaration ? {'index', 'name'} : {},
-      instOffset,
+      inst,
       parent is EnumDeclaration ? 2 : 0);
 
   if ($extends != null && extendsWhat!.declaration!.isBridge) {
@@ -477,9 +469,9 @@ void compileDefaultConstructor(CompilerContext ctx,
             $super.scopeFrameOffset, bridgeInst.scopeFrameOffset),
         ParentBridgeSuperShim.LEN);
 
-    ctx.pushOp(Return.make(bridgeInst.scopeFrameOffset), Return.LEN);
+    ctx.pushOp(Return(bridgeInst.ssa));
   } else {
-    ctx.pushOp(Return.make(instOffset), Return.LEN);
+    ctx.pushOp(Return(inst.ssa));
   }
 
   ctx.endAllocScope(popValues: false);
@@ -499,7 +491,7 @@ Map<String, int> _getFieldIndices(List<FieldDeclaration> fields,
 }
 
 void _compileUnusedFields(CompilerContext ctx, List<FieldDeclaration> fields,
-    Set<String> usedNames, int instOffset,
+    Set<String> usedNames, Variable inst,
     [int fieldIdx = 0]) {
   var _fieldIdx = fieldIdx;
   for (final fd in fields) {
@@ -509,10 +501,7 @@ void _compileUnusedFields(CompilerContext ctx, List<FieldDeclaration> fields,
         ctx.inferredFieldTypes.putIfAbsent(ctx.library, () => {}).putIfAbsent(
                 ctx.currentClass!.name.lexeme, () => {})[field.name.lexeme] =
             V.type;
-        ctx.pushOp(
-            SetObjectPropertyImpl.make(
-                instOffset, _fieldIdx, V.scopeFrameOffset),
-            SetObjectPropertyImpl.length);
+        ctx.pushOp(SetPropertyStatic(inst.ssa, _fieldIdx, V.ssa));
       }
       _fieldIdx++;
     }

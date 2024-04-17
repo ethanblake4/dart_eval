@@ -5,11 +5,14 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/fpl.dart';
+import 'package:dart_eval/src/eval/compiler/model/registers.dart';
 import 'package:dart_eval/src/eval/compiler/offset_tracker.dart';
 import 'package:dart_eval/src/eval/compiler/scope.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/ir/flow.dart';
+import 'package:dart_eval/src/eval/ir/memory.dart';
+import 'package:dart_eval/src/eval/shared/registers.dart';
 
 extension TearOff on Variable {
   Variable tearOff(CompilerContext ctx) {
@@ -21,14 +24,13 @@ extension TearOff on Variable {
     }
     final Declaration dec;
     TypeRef? targetType;
+    final clsName = methodOffset!.className, name = methodOffset!.name;
     if (methodOffset!.className != null) {
-      dec = ctx.instanceDeclarationsMap[methodOffset!.file]![
-          methodOffset!.className!]![methodOffset!.name]! as MethodDeclaration;
-      targetType =
-          ctx.visibleTypes[methodOffset!.file!]![methodOffset!.className!]!;
+      dec = ctx.instanceDeclarationsMap[methodOffset!.file]![clsName]![name]!
+          as MethodDeclaration;
+      targetType = ctx.visibleTypes[methodOffset!.file!]![clsName]!;
     } else {
-      final _dec =
-          ctx.topLevelDeclarationsMap[methodOffset!.file]![methodOffset!.name]!;
+      final _dec = ctx.topLevelDeclarationsMap[methodOffset!.file]![name]!;
       if (_dec.isBridge) {
         throw CompileError('Cannot tear off bridged function');
       }
@@ -49,9 +51,10 @@ extension TearOff on Variable {
       methodReturnType = dec.returnType;
     }
 
-    final jumpOver = ctx.pushOp(JumpConstant.make(-1), JumpConstant.LEN);
+    final endLabel = ctx.label('${name}_setup_tearoff');
+    ctx.pushOp(Jump(endLabel));
+    ctx.builder.merge(ctx.commitBlock());
 
-    final fnOffset = ctx.out.length;
     beginMethod(ctx, dec, dec.offset, '<$methodName() tearoff>');
 
     final ctxSaveState = ctx.saveState();
@@ -61,7 +64,9 @@ extension TearOff on Variable {
     final _existingAllocs = 1 + (parameters?.parameters.length ?? 0);
     ctx.beginAllocScope(existingAllocLen: _existingAllocs, closure: true);
 
-    final $prev = Variable(0, CoreTypes.list.ref(ctx), isFinal: true);
+    final $prev = Variable.ssa(
+        ctx, AssignRegister(ctx.svar('prev'), regGPR1), CoreTypes.list.ref(ctx),
+        isFinal: true);
     ctx.setLocal('#prev', $prev);
 
     ctx.scopeFrameOffset += _existingAllocs;
@@ -76,8 +81,7 @@ extension TearOff on Variable {
     if (dec is MethodDeclaration) {
       final targetOffset =
           BuiltinValue(intval: methodOffset!.targetScopeFrameOffset!).push(ctx);
-      ctx.pushOp(
-          IndexList.make(0, targetOffset.scopeFrameOffset), IndexList.LEN);
+      ctx.pushOp(IndexList(0, targetOffset.scopeFrameOffset), IndexList.LEN);
       $target = Variable.alloc(ctx, targetType!);
       ctx.pushOp(PushArg.make($target.scopeFrameOffset), PushArg.LEN);
     }
@@ -130,13 +134,16 @@ extension TearOff on Variable {
           boxed: dec is MethodDeclaration ||
               !returnType.isUnboxedAcrossFunctionBoundaries);
     }
-    var rV = Variable.alloc(ctx, returnType);
+    var rV = Variable.ssa(
+        ctx,
+        AssignRegister(ctx.svar(), returnTypeToRegister(ctx, returnType)),
+        returnType);
     rV = rV.boxIfNeeded(ctx);
 
-    ctx.pushOp(Return.make(rV.scopeFrameOffset), Return.LEN);
+    ctx.pushOp(Return(rV.ssa));
     ctx.endAllocScope();
 
-    ctx.rewriteOp(jumpOver, JumpConstant.make(ctx.out.length), 0);
+    final tearoffBlock = ctx.commitBlock(ctx.label('${name}_tearoff'));
 
     ctx.restoreState(ctxSaveState);
     ctx.scopeFrameOffset = sfo;
@@ -188,9 +195,11 @@ extension TearOff on Variable {
 
     ctx.pushOp(PushFunctionPtr.make(fnOffset), PushFunctionPtr.LEN);
 
-    return Variable.alloc(ctx, CoreTypes.function.ref(ctx),
+    final res = Variable.alloc(ctx, CoreTypes.function.ref(ctx),
         methodReturnType: AlwaysReturnType(CoreTypes.dynamic.ref(ctx), false),
         methodOffset: DeferredOrOffset(offset: fnOffset),
         callingConvention: CallingConvention.dynamic);
+
+    ctx.builder.split(tearoffBlock, ctx.commitBlock(endLabel));
   }
 }

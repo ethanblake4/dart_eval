@@ -15,7 +15,6 @@ class Program {
       this.topLevelDeclarations,
       this.instanceDeclarations,
       this.typeIds,
-      //this.typeNames,
       this.typeTypes,
       this.ops,
       this.bridgeLibraryMappings,
@@ -72,7 +71,7 @@ class Program {
   Map<String, OverrideSpec> overrideMap;
 
   /// The program's bytecode.
-  List<EvcOp> ops;
+  List<int> ops;
 
   /// Write the program to a [Uint8List], to be loaded by a [Runtime].
   Uint8List write() {
@@ -109,7 +108,7 @@ class Program {
             MapEntry(key, [value.offset, value.versionConstraint])));
 
     for (final op in ops) {
-      b.add(Runtime.opcodeFrom(op));
+      //b.add(Runtime.opcodeFrom(op));
     }
     final res = b.takeBytes();
 

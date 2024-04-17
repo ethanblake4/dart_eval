@@ -1,5 +1,5 @@
 part of '../runtime.dart';
-
+/*
 class PushConstant implements EvcOp {
   PushConstant(Runtime runtime) : _const = runtime._readInt32();
 
@@ -12,7 +12,7 @@ class PushConstant implements EvcOp {
   // Set value at position to constant
   @override
   void run(Runtime runtime) {
-    runtime.frame[runtime.frameOffset++] = runtime.constantPool[_const];
+    runtime.frame[runtime.frameOffset++] = runtime._constantPool[_const];
   }
 
   @override
@@ -557,3 +557,4 @@ class BoxBool implements EvcOp {
   @override
   String toString() => 'BoxBool (L$_reg)';
 }
+*/

@@ -106,7 +106,7 @@ void main(List<String> args) {
       exit(command['help'] ? 0 : 1);
     }
     final evc = File(command.rest[0]).readAsBytesSync();
-    final runtime = Runtime(evc.buffer.asByteData());
+    final runtime = Runtime(evc.buffer);
     runtime.printOpcodes();
   } else if (command.name == 'bind') {
     if (command['help']!) {

@@ -1,7 +1,5 @@
 import 'package:dart_eval/src/eval/compiler/context.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
-import 'package:dart_eval/src/eval/runtime/ops/all_ops.dart';
-
+/*
 class OffsetTracker {
   OffsetTracker(this.context);
 
@@ -36,7 +34,7 @@ class OffsetTracker {
     });
     return source;
   }
-}
+}*/
 
 /// An structure pointing to a function that may or may not have been generated already. If it hasn't, the exact program
 /// offset will be resolved later by the [OffsetTracker]
@@ -59,16 +57,7 @@ class DeferredOrOffset {
 
   factory DeferredOrOffset.lookupStatic(
       CompilerContext ctx, int library, String parent, String name) {
-    if (ctx.topLevelDeclarationPositions[library]
-            ?.containsKey('$parent.$name') ??
-        false) {
-      return DeferredOrOffset(
-          file: library,
-          offset: ctx.topLevelDeclarationPositions[library]!['$parent.$name'],
-          name: '$parent.$name');
-    } else {
-      return DeferredOrOffset(file: library, name: '$parent.$name');
-    }
+    return DeferredOrOffset(file: library, name: '$parent.$name');
   }
 
   @override

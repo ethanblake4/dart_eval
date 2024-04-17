@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
@@ -6,7 +7,7 @@ import 'package:dart_eval/src/eval/compiler/macros/macro.dart';
 import 'package:dart_eval/src/eval/compiler/model/label.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/ir/flow.dart';
 
 StatementInfo macroBranch(
     CompilerContext ctx, AlwaysReturnType? expectedReturnType,
@@ -14,7 +15,8 @@ StatementInfo macroBranch(
     required MacroStatementClosure thenBranch,
     MacroStatementClosure? elseBranch,
     bool resolveStateToThen = false,
-    AstNode? source}) {
+    AstNode? source,
+    bool testNullish = false}) {
   ctx.beginAllocScope();
   ctx.enterTypeInferenceContext();
 
@@ -23,14 +25,23 @@ StatementInfo macroBranch(
     throw CompileError("Conditions must have a static type of 'bool'", source);
   }
 
-  final rewriteCond = JumpIfFalse.make(conditionResult.scopeFrameOffset, -1);
-  final rewritePos = ctx.pushOp(rewriteCond, JumpIfFalse.LEN);
+  final trueLabel = ctx.label(testNullish ? 'if_true' : 'if_null');
+  final falseLabel = ctx.label(testNullish ? 'if_false' : 'if_nonnull');
+  final endLabel = ctx.label('if_end');
+
+  if (testNullish) {
+    ctx.pushOp(JumpIfNonNull(conditionResult.ssa, falseLabel));
+  } else {
+    ctx.pushOp(JumpIfFalse(conditionResult.ssa, falseLabel));
+  }
+
+  final condBlock = ctx.commitBlock();
+  ctx.builder.merge(condBlock);
 
   var _initialState = ctx.saveState();
-
   ctx.inferTypes();
   ctx.beginAllocScope();
-  final label = CompilerLabel(LabelType.branch, -1, (_ctx) {
+  final label = CompilerLabel(trueLabel, LabelType.branch, (_ctx) {
     _ctx.endAllocScopeQuiet();
     if (!resolveStateToThen) {
       _ctx.resolveBranchStateDiscontinuity(_initialState);
@@ -50,17 +61,16 @@ StatementInfo macroBranch(
     _initialState = ctx.saveState();
   }
 
-  int? rewriteOut;
   if (elseBranch != null) {
-    rewriteOut = ctx.pushOp(JumpConstant.make(-1), JumpConstant.LEN);
+    ctx.pushOp(Jump(endLabel));
   }
 
-  ctx.rewriteOp(rewritePos,
-      JumpIfFalse.make(conditionResult.scopeFrameOffset, ctx.out.length), 0);
+  final trueBlock = ctx.commitBlock(trueLabel);
+  BasicBlock? falseBlock;
 
   if (elseBranch != null) {
     ctx.beginAllocScope();
-    final label = CompilerLabel(LabelType.branch, -1, (_ctx) {
+    final label = CompilerLabel(falseLabel, LabelType.branch, (_ctx) {
       ctx.endAllocScope();
       ctx.resolveBranchStateDiscontinuity(_initialState);
       ctx.endAllocScope();
@@ -71,12 +81,18 @@ StatementInfo macroBranch(
     ctx.labels.removeLast();
     ctx.endAllocScope();
     ctx.resolveBranchStateDiscontinuity(_initialState);
-    ctx.rewriteOp(rewriteOut!, JumpConstant.make(ctx.out.length), 0);
+    falseBlock = ctx.commitBlock(falseLabel);
     ctx.endAllocScope();
     return thenResult | elseResult;
   }
 
   ctx.endAllocScope();
+  final endBlock = ctx.commitBlock(endLabel);
+  if (elseBranch != null) {
+    ctx.builder.split(trueBlock, falseBlock!).merge(endBlock);
+  } else {
+    ctx.builder.splitMerge(trueBlock, endBlock);
+  }
 
   return thenResult |
       StatementInfo(thenResult.position,

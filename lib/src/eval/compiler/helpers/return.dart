@@ -4,7 +4,7 @@ import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/ir/flow.dart';
 
 StatementInfo doReturn(
     CompilerContext ctx, AlwaysReturnType expectedReturnType, Variable? value,
@@ -14,7 +14,7 @@ StatementInfo doReturn(
       final _completer = ctx.lookupLocal('#completer')!;
       ctx.pushOp(ReturnAsync.make(-1, _completer.scopeFrameOffset), Return.LEN);
     } else {
-      ctx.pushOp(Return.make(-1), Return.LEN);
+      ctx.pushOp(Return(null));
     }
   } else {
     if (isAsync) {
@@ -63,7 +63,7 @@ StatementInfo doReturn(
     } else {
       _value = _value.boxIfNeeded(ctx);
     }
-    ctx.pushOp(Return.make(value.scopeFrameOffset), Return.LEN);
+    ctx.pushOp(Return(value.ssa));
   }
 
   return StatementInfo(-1, willAlwaysReturn: true);

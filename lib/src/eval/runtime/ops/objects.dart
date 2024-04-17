@@ -1,5 +1,5 @@
 part of '../runtime.dart';
-
+/*
 class InvokeDynamic implements EvcOp {
   InvokeDynamic(Runtime runtime)
       : _location = runtime._readInt16(),
@@ -16,7 +16,7 @@ class InvokeDynamic implements EvcOp {
 
   @override
   void run(Runtime runtime) {
-    final _method = runtime.constantPool[_methodIdx] as String;
+    final _method = runtime._constantPool[_methodIdx] as String;
     var object = runtime.frame[_location];
 
     while (true) {
@@ -37,9 +37,11 @@ class InvokeDynamic implements EvcOp {
         final cpat = runtime.args[0] as List;
         final cnat = runtime.args[2] as List;
 
-        final csPosArgTypes = [for (final a in cpat) runtime.runtimeTypes[a]];
+        final csPosArgTypes = [for (final a in cpat) runtime._runtimeTypes[a]];
         final csNamedArgs = runtime.args[1] as List;
-        final csNamedArgTypes = [for (final a in cnat) runtime.runtimeTypes[a]];
+        final csNamedArgTypes = [
+          for (final a in cnat) runtime._runtimeTypes[a]
+        ];
 
         final totalPositionalArgCount = object.positionalArgTypes.length;
         final totalNamedArgCount = object.sortedNamedArgs.length;
@@ -248,7 +250,7 @@ class PushObjectProperty implements EvcOp {
 
   @override
   void run(Runtime runtime) {
-    final _property = runtime.constantPool[_propertyIdx] as String;
+    final _property = runtime._constantPool[_propertyIdx] as String;
     var base = runtime.frame[_location];
     var object = base;
 
@@ -390,7 +392,7 @@ class IsType implements EvcOp {
       runtime.frame[runtime.frameOffset++] = _not ? !result : result;
       return;
     }
-    final typeSet = runtime.typeTypes[type];
+    final typeSet = runtime._typeTypes[type];
     final result = typeSet.contains(_type);
     runtime.frame[runtime.frameOffset++] = _not ? !result : result;
   }
@@ -436,3 +438,4 @@ class PushConstantType implements EvcOp {
   @override
   String toString() => 'PushConstantType (ID $_typeId)';
 }
+*/

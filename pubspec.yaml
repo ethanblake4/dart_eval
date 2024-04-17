@@ -17,7 +17,7 @@ topics:
   - codepush
 
 environment:
-  sdk: ">=2.19.0 <4.0.0"
+  sdk: ">=3.0.0 <4.0.0"
 
 executables:
   dart_eval:
@@ -33,6 +33,7 @@ dependencies:
   pub_semver: ^2.1.0
   package_config: ^2.1.0
   dart_style: ^2.3.0
+  control_flow_graph: ^1.1.0
 
 dev_dependencies:
   test: ^1.21.0

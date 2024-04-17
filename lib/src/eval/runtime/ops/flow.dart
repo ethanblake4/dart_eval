@@ -1,5 +1,6 @@
 part of '../runtime.dart';
 
+/*
 /// Static call opcode that jumps to another location in the program and adds the prior location to the call stack.
 class Call implements EvcOp {
   Call(Runtime runtime) : _offset = runtime._readInt32();
@@ -186,14 +187,14 @@ class Return implements EvcOp {
     } else if (_location == -1 || _location == -3) {
       runtime.returnValue = null;
     } else {
-      if (runtime.rethrowException != null) {
-        runtime.$throw(runtime.rethrowException!);
+      if (runtime._rethrowException != null) {
+        runtime.$throw(runtime._rethrowException!);
         return;
       }
-      if (runtime.catchControlFlowOutcome != 1) {
+      if (runtime._catchControlFlowOutcome != 1) {
         return;
       }
-      runtime.returnValue = runtime.returnFromCatch;
+      runtime.returnValue = runtime._returnFromCatch;
     }
 
     runtime.stack.removeLast();
@@ -204,11 +205,11 @@ class Return implements EvcOp {
     }
 
     runtime.catchStack.removeLast();
-    if (runtime.inCatch) {
+    if (runtime._inCatch) {
       if (_location != -3) {
-        runtime.catchControlFlowOutcome = 1;
+        runtime._catchControlFlowOutcome = 1;
       }
-      runtime.inCatch = false;
+      runtime._inCatch = false;
     }
 
     final prOffset = runtime.callStack.removeLast();
@@ -251,11 +252,11 @@ class ReturnAsync implements EvcOp {
 
     final prOffset = runtime.callStack.removeLast();
     runtime.catchStack.removeLast();
-    if (runtime.inCatch) {
+    if (runtime._inCatch) {
       if (_location != -3) {
-        runtime.catchControlFlowOutcome = 1;
+        runtime._catchControlFlowOutcome = 1;
       }
-      runtime.inCatch = false;
+      runtime._inCatch = false;
     }
     if (prOffset == -1) {
       throw ProgramExit(0);
@@ -308,9 +309,9 @@ class PushFunctionPtr implements EvcOp {
   @override
   void run(Runtime runtime) {
     final args = runtime.args;
-    final pAT = runtime.constantPool[args[1] as int] as List;
+    final pAT = runtime._constantPool[args[1] as int] as List;
     final posArgTypes = [for (final json in pAT) RuntimeType.fromJson(json)];
-    final snAT = runtime.constantPool[args[3] as int] as List;
+    final snAT = runtime._constantPool[args[3] as int] as List;
     final sortedNamedArgTypes = [
       for (final json in snAT) RuntimeType.fromJson(json)
     ];
@@ -318,9 +319,10 @@ class PushFunctionPtr implements EvcOp {
     runtime.frame[runtime.frameOffset++] = EvalFunctionPtr(
         runtime.frame,
         _offset,
+        255,
         args[0] as int,
         posArgTypes,
-        (runtime.constantPool[args[2] as int] as List).cast(),
+        (runtime._constantPool[args[2] as int] as List).cast(),
         sortedNamedArgTypes);
 
     runtime.args = [];
@@ -341,7 +343,7 @@ class Try implements EvcOp {
 
   @override
   void run(Runtime runtime) {
-    runtime.catchControlFlowOutcome = -1;
+    runtime._catchControlFlowOutcome = -1;
     runtime.frameOffsetStack.add(runtime.frameOffset);
     if (_catchOffset > -1) {
       runtime.catchStack.last.add(_catchOffset);
@@ -440,9 +442,11 @@ class PushReturnFromCatch implements EvcOp {
 
   @override
   void run(Runtime runtime) {
-    runtime.returnFromCatch = runtime.returnValue;
+    runtime._returnFromCatch = runtime.returnValue;
   }
 
   @override
   String toString() => 'PushReturnFromCatch ()';
 }
+
+*/

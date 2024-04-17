@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/constructor.dart';
@@ -9,7 +10,11 @@ import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/scope.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/ir/flow.dart';
+import 'package:dart_eval/src/eval/ir/globals.dart';
+import 'package:dart_eval/src/eval/ir/memory.dart';
+import 'package:dart_eval/src/eval/ir/objects.dart';
+import 'package:dart_eval/src/eval/shared/registers.dart';
 
 void compileEnumDeclaration(CompilerContext ctx, EnumDeclaration d,
     {bool statics = false}) {
@@ -47,8 +52,11 @@ void compileEnumDeclaration(CompilerContext ctx, EnumDeclaration d,
 
   ctx.resetStack(position: 0);
   final pos = beginMethod(ctx, d, d.offset, '$clsName.index (get)');
-  ctx.pushOp(PushObjectPropertyImpl.make(0, 0), PushObjectPropertyImpl.length);
-  ctx.pushOp(Return.make(1), Return.LEN);
+  final object =
+      Variable.ssa(ctx, AssignRegister(ctx.svar('this'), regGPR3), type);
+  final prop = Variable.ssa(
+      ctx, LoadPropertyStatic(ctx.svar('index'), object.ssa, 0), type);
+  ctx.pushOp(Return(prop.ssa));
   ctx.instanceDeclarationPositions[ctx.library]![clsName]![0]['index'] = pos;
   i++;
   i++;
@@ -80,33 +88,30 @@ void compileEnumDeclaration(CompilerContext ctx, EnumDeclaration d,
     final cstr =
         ctx.topLevelDeclarationsMap[offset.file]![offset.name ?? '$clsName.'];
 
-    final vIndex = BuiltinValue(intval: idx).push(ctx).boxIfNeeded(ctx);
-    final vName = BuiltinValue(stringval: cName).push(ctx);
+    final vIndex =
+        BuiltinValue(intval: idx).push(ctx, ctx.svar('vidx')).boxIfNeeded(ctx);
+    final vName = BuiltinValue(stringval: cName).push(ctx, ctx.svar('vname'));
 
-    ctx.pushOp(PushArg.make(vIndex.scopeFrameOffset), PushArg.LEN);
-    ctx.pushOp(PushArg.make(vName.scopeFrameOffset), PushArg.LEN);
-
+    final ssa = [vIndex.ssa, vName.ssa];
     final dec = cstr?.declaration;
     if (constant.arguments != null && dec != null) {
       final fpl = (dec as ConstructorDeclaration).parameters.parameters;
-      compileArgumentList(
-          ctx, constant.arguments!.argumentList, ctx.library, fpl, dec,
-          source: constant);
+      ssa.addAll(compileArgumentList(
+              ctx, constant.arguments!.argumentList, ctx.library, fpl, dec,
+              source: constant)
+          .ssa
+          .map((name) => SSA(name)));
     }
 
-    final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.length);
-    if (offset.offset == null) {
-      ctx.offsetTracker.setOffset(loc, offset);
-    }
-    ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-    final V = Variable.alloc(ctx, type);
+    ctx.pushOp(Call(offset, ssa));
+    final V = Variable.ssa(ctx, AssignRegister(ctx.svar(cName), regGPR1), type);
     final _name = '$clsName.$cName';
     final _index = ctx.topLevelGlobalIndices[ctx.library]![_name]!;
-    ctx.pushOp(SetGlobal.make(_index, V.scopeFrameOffset), SetGlobal.LEN);
+    ctx.pushOp(SetGlobal(_index, V.ssa));
     ctx.topLevelVariableInferredTypes[ctx.library]![_name] = type;
     ctx.topLevelGlobalInitializers[ctx.library]![_name] = pos;
     ctx.runtimeGlobalInitializerMap[_index] = pos;
-    ctx.pushOp(Return.make(V.scopeFrameOffset), Return.LEN);
+    ctx.pushOp(Return(V.ssa));
     idx++;
   }
 

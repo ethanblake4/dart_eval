@@ -3,6 +3,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
+import 'package:dart_eval/src/eval/ir/memory.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
@@ -197,8 +198,7 @@ class IdentifierReference implements Reference {
           final gIndex =
               ctx.enumValueIndices[classType.file]?[type.name]?[name];
           if (gIndex != null) {
-            ctx.pushOp(LoadGlobal.make(gIndex), LoadGlobal.LEN);
-            ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
+            ctx.asm.lg0(gIndex);
             return Variable.alloc(ctx, type);
           }
         }
@@ -480,12 +480,11 @@ class IndexedReference implements Reference {
 
       final list = _variable.unboxIfNeeded(ctx);
       _index = _index.unboxIfNeeded(ctx);
-      ctx.pushOp(IndexList.make(list.scopeFrameOffset, _index.scopeFrameOffset),
-          IndexList.LEN);
       final listElementType = _variable.type.specifiedTypeArgs.isNotEmpty
           ? _variable.type.specifiedTypeArgs[0]
           : CoreTypes.dynamic.ref(ctx);
-      return Variable.alloc(ctx, listElementType);
+      return Variable.ssa(ctx,
+          IndexList(ctx.svar('list'), list.ssa, _index.ssa), listElementType);
     }
 
     if (_variable.type.isAssignableTo(ctx, CoreTypes.map.ref(ctx),

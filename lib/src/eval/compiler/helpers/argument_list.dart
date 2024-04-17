@@ -11,7 +11,15 @@ import '../type.dart';
 import '../util.dart';
 import '../variable.dart';
 
-Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
+class ArgumentListResult {
+  final List<String> ssa;
+  final List<Variable> args;
+  final Map<String, Variable> namedArgs;
+
+  ArgumentListResult(this.ssa, this.args, this.namedArgs);
+}
+
+ArgumentListResult compileArgumentList(
     CompilerContext ctx,
     ArgumentList argumentList,
     int decLibrary,
@@ -21,6 +29,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
     Map<String, TypeRef> resolveGenerics = const {},
     List<String> superParams = const [],
     AstNode? source}) {
+  final ssa = <String>[];
   final _args = <Variable>[];
   final _push = <Variable>[];
   final _namedArgs = <String, Variable>{};
@@ -122,7 +131,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
           resolveGenericsMap[n]!.add(_arg.type);
         }
       }
-
+      ssa.add(_arg.name!);
       _args.add(_arg);
       _push.add(_arg);
     }
@@ -143,6 +152,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
       final V = ctx.lookupLocal(name)!;
       _push.add(V);
       _namedArgs[name] = V;
+      ssa.add(name);
       continue;
     }
     final param = (_param is DefaultFormalParameter ? _param.parameter : _param)
@@ -196,9 +206,11 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
 
       _push.add(_arg);
       _namedArgs[name] = _arg;
+      ssa.add(name);
     } else {
       $null ??= BuiltinValue().push(ctx);
       _push.add($null);
+      ssa.add($null.name!);
     }
   }
 
@@ -207,12 +219,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
         TypeRef.commonBaseType(ctx, resolveGenericsMap[generic]!);
   }
 
-  for (final _arg in <Variable>[...before, ..._push]) {
-    final argOp = PushArg.make(_arg.scopeFrameOffset);
-    ctx.pushOp(argOp, PushArg.LEN);
-  }
-
-  return Pair(_args, _namedArgs);
+  return ArgumentListResult(ssa, _args, _namedArgs);
 }
 
 Pair<List<Variable>, Map<String, Variable>>
@@ -288,11 +295,6 @@ Pair<List<Variable>, Map<String, Variable>>
       $null ??= BuiltinValue().push(ctx);
       _push.add($null);
     }
-  }
-
-  for (final _arg in [...before, ..._push]) {
-    final argOp = PushArg.make(_arg.scopeFrameOffset);
-    ctx.pushOp(argOp, PushArg.LEN);
   }
 
   return Pair(_args, _namedArgs);

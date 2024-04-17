@@ -1,5 +1,5 @@
 part of '../runtime.dart';
-
+/*
 class PushArg implements EvcOp {
   PushArg(Runtime runtime) : _location = runtime._readInt16();
 
@@ -110,7 +110,7 @@ class LoadGlobal implements EvcOp {
     if (value == null) {
       runtime.callStack.add(runtime._prOffset);
       runtime.catchStack.add([]);
-      runtime._prOffset = runtime.globalInitializers[_index];
+      runtime._prOffset = runtime._globalInitializers[_index];
     } else {
       runtime.returnValue = value;
     }
@@ -141,3 +141,4 @@ class SetGlobal implements EvcOp {
   @override
   String toString() => 'SetGlobal (G$_index = L$_value)';
 }
+*/

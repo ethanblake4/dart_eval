@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/collection/list.dart';
@@ -48,7 +49,10 @@ List<TypeRef> compileForElementForList(
             }
             final name = parts.loopVariable.name.lexeme;
             ctx.setLocal(
-                name, BuiltinValue().push(ctx).copyWith(type: elementType));
+                name,
+                BuiltinValue()
+                    .push(ctx, SSA(name))
+                    .copyWith(type: elementType));
             loopVariable = IdentifierReference(null, name);
           } else if (parts is ForEachPartsWithIdentifier) {
             loopVariable = compileExpressionAsReference(parts.identifier, ctx);

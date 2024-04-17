@@ -45,10 +45,17 @@ abstract class EvalFunction implements $Instance, EvalCallable {
 }
 
 class EvalFunctionPtr extends EvalFunction {
-  EvalFunctionPtr(this.$prev, this.offset, this.requiredPositionalArgCount,
-      this.positionalArgTypes, this.sortedNamedArgs, this.sortedNamedArgTypes);
+  EvalFunctionPtr(
+      this.$prev,
+      this.offset,
+      this.frameLen,
+      this.requiredPositionalArgCount,
+      this.positionalArgTypes,
+      this.sortedNamedArgs,
+      this.sortedNamedArgTypes);
 
   final int offset;
+  final int frameLen;
   final List<Object?>? $prev;
   final int requiredPositionalArgCount;
   final List<RuntimeType> positionalArgTypes;

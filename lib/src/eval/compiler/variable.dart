@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/collection/list.dart';
@@ -6,8 +7,6 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
-
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'errors.dart';
 import 'offset_tracker.dart';
 
@@ -21,10 +20,7 @@ class Variable {
       : this.callingConvention = callingConvention ??
             ((type == TypeRef(dartCoreFile, 'Function') && methodOffset == null)
                 ? CallingConvention.dynamic
-                : CallingConvention
-                    .static) /*,
-        todo: assert(!type.nullable || type.boxed)*/
-  ;
+                : CallingConvention.static);
 
   factory Variable.alloc(ScopeContext ctx, TypeRef type,
       {DeferredOrOffset? methodOffset,
@@ -41,6 +37,21 @@ class Variable {
         callingConvention: callingConvention);
   }
 
+  factory Variable.ssa(ScopeContext ctx, Operation op, TypeRef type,
+      {DeferredOrOffset? methodOffset,
+      ReturnType? methodReturnType,
+      bool isFinal = false,
+      List<TypeRef> concreteTypes = const [],
+      CallingConvention callingConvention = CallingConvention.static}) {
+    return Variable(-1, type,
+        methodOffset: methodOffset,
+        methodReturnType: methodReturnType,
+        isFinal: isFinal,
+        concreteTypes: concreteTypes,
+        callingConvention: callingConvention)
+      ..name = op.writesTo!.name;
+  }
+
   final int scopeFrameOffset;
   final TypeRef type;
   final List<TypeRef> concreteTypes;
@@ -53,6 +64,8 @@ class Variable {
 
   String? name;
   int? frameIndex;
+
+  SSA get ssa => SSA(name!);
 
   Variable boxIfNeeded(ScopeContext ctx, [AstNode? source]) {
     if (boxed) {

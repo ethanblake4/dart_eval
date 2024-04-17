@@ -5,7 +5,12 @@ import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/scope.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/compiler/variable.dart';
+import 'package:dart_eval/src/eval/ir/flow.dart';
+import 'package:dart_eval/src/eval/ir/globals.dart';
+import 'package:dart_eval/src/eval/ir/memory.dart';
+import 'package:dart_eval/src/eval/ir/objects.dart';
+import 'package:dart_eval/src/eval/shared/registers.dart';
 
 void compileFieldDeclaration(int fieldIndex, FieldDeclaration d,
     CompilerContext ctx, NamedCompilationUnitMember parent) {
@@ -42,11 +47,11 @@ void compileFieldDeclaration(int fieldIndex, FieldDeclaration d,
         }
         final _name = '$parentName.$fieldName';
         final _index = ctx.topLevelGlobalIndices[ctx.library]![_name]!;
-        ctx.pushOp(SetGlobal.make(_index, V.scopeFrameOffset), SetGlobal.LEN);
+        ctx.pushOp(SetGlobal(_index, V.ssa));
         ctx.topLevelVariableInferredTypes[ctx.library]![_name] = type;
         ctx.topLevelGlobalInitializers[ctx.library]![_name] = pos;
         ctx.runtimeGlobalInitializerMap[_index] = pos;
-        ctx.pushOp(Return.make(V.scopeFrameOffset), Return.LEN);
+        ctx.pushOp(Return(V.ssa));
         ctx.endAllocScope(popValues: false);
       } else {
         ctx.topLevelVariableInferredTypes[ctx.library]![
@@ -54,9 +59,13 @@ void compileFieldDeclaration(int fieldIndex, FieldDeclaration d,
       }
     } else {
       final pos = beginMethod(ctx, d, d.offset, '$parentName.$fieldName (get)');
-      ctx.pushOp(PushObjectPropertyImpl.make(0, _fieldIndex),
-          PushObjectPropertyImpl.length);
-      ctx.pushOp(Return.make(1), Return.LEN);
+      final obj = Variable.ssa(ctx, AssignRegister(ctx.svar('this'), regGPR3),
+          CoreTypes.object.ref(ctx));
+      final result = Variable.ssa(
+          ctx,
+          LoadPropertyStatic(ctx.svar(fieldName), obj.ssa, _fieldIndex),
+          CoreTypes.dynamic.ref(ctx));
+      ctx.pushOp(Return(result.ssa));
       ctx.instanceDeclarationPositions[ctx.library]![parentName]![0]
           [fieldName] = pos;
       ctx.instanceGetterIndices[ctx.library]![parentName]![fieldName] =
@@ -65,9 +74,16 @@ void compileFieldDeclaration(int fieldIndex, FieldDeclaration d,
       if (!(field.isFinal || field.isConst)) {
         final setterPos =
             beginMethod(ctx, d, d.offset, '$parentName.$fieldName (set)');
-        ctx.pushOp(SetObjectPropertyImpl.make(0, _fieldIndex, 1),
-            SetObjectPropertyImpl.length);
-        ctx.pushOp(Return.make(1), Return.LEN);
+        final value = Variable.ssa(
+            ctx,
+            AssignRegister(ctx.svar('value'), regGPR1),
+            CoreTypes.dynamic.ref(ctx));
+        ctx.pushOp(SetPropertyStatic(
+          obj.ssa,
+          _fieldIndex,
+          value.ssa,
+        ));
+        ctx.pushOp(Return(value.ssa));
         ctx.instanceDeclarationPositions[ctx.library]![parentName]![1]
             [fieldName] = setterPos;
       }

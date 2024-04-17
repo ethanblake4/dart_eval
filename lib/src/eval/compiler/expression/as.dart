@@ -1,11 +1,10 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/ir/types.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
 
 Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
@@ -18,17 +17,7 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
   }
 
   // Otherwise type-test
-  ctx.pushOp(IsType.make(V.scopeFrameOffset, ctx.typeRefIndexMap[slot]!, false),
-      IsType.length);
-  final vIs =
-      Variable.alloc(ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
-
-  // And assert
-  final errMsg =
-      BuiltinValue(stringval: "TypeError: Not a subtype of type TYPE")
-          .push(ctx);
-  ctx.pushOp(
-      Assert.make(vIs.scopeFrameOffset, errMsg.scopeFrameOffset), Assert.LEN);
+  ctx.pushOp(AssertType(V.ssa, ctx.typeRefIndexMap[slot]!));
 
   // If the type changes between num and int/double, unbox/box
   if (slot == CoreTypes.num.ref(ctx)) {

@@ -1,4 +1,4 @@
-import 'package:analyzer/dart/ast/ast.dart';
+/*import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
@@ -6,7 +6,6 @@ import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/util.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 const _boxSetOrMapElements = true;
 
@@ -121,3 +120,4 @@ Pair<Variable, List<Pair<TypeRef, TypeRef>>> compileSetOrMapElement(
 
   throw CompileError('Unknown set or map collection element ${e.runtimeType}');
 }
+*/

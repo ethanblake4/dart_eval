@@ -1,12 +1,12 @@
 import 'package:dart_eval/src/eval/compiler/context.dart';
 
 class CompilerLabel {
-  final int offset;
+  final int? offset;
   final int Function(CompilerContext ctx) cleanup;
-  final String? name;
+  final String name;
   final LabelType type;
 
-  const CompilerLabel(this.type, this.offset, this.cleanup, {this.name});
+  const CompilerLabel(this.name, this.type, this.cleanup, {this.offset});
 }
 
 class SimpleCompilerLabel implements CompilerLabel {

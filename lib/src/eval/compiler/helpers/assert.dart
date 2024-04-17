@@ -2,7 +2,6 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 void doAssert(CompilerContext ctx, Variable condition, Variable message) {
   message.boxIfNeeded(ctx).pushArg(ctx);
