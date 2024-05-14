@@ -257,7 +257,7 @@ void compileConstructorDeclaration(
       ctx,
       CreateClass(ctx.svar('inst'), ctx.library, parent.name.lexeme, $super.ssa,
           fieldIdx + (isEnum ? 2 : 0)),
-      CoreTypes.object.ref(ctx));
+      TypeRef.$this(ctx)!);
 
   if (parent is EnumDeclaration) {
     /// Add implicit index and name fields
@@ -269,12 +269,7 @@ void compileConstructorDeclaration(
   }
 
   if (parent is EnumDeclaration) {
-    ctx.pushOp(SetPropertyStatic(inst.ssa, 0, valueIndex));
-    ctx.pushOp(SetPropertyStatic(inst.ssa, 1, valueName));
-    /*ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 0, 0),
-        SetObjectPropertyImpl.length);
-    ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 1, 1),
-        SetObjectPropertyImpl.length);*/
+    _setupImplicitEnumFields(ctx, inst.ssa);
   }
 
   for (final fieldFormal in fieldFormalNames) {
@@ -305,7 +300,7 @@ void compileConstructorDeclaration(
   final body = d.body;
   if (d.factoryKeyword == null && !(body is EmptyFunctionBody)) {
     ctx.beginAllocScope();
-    ctx.setLocal('#this', Variable(instOffset, TypeRef.$this(ctx)!));
+    ctx.setLocal('#this', inst);
     if (body is BlockFunctionBody) {
       compileBlock(
           body.block, AlwaysReturnType(CoreTypes.voidType.ref(ctx), false), ctx,
@@ -337,6 +332,8 @@ void compileConstructorDeclaration(
           .addAll(_namedArgs.map((key, value) => MapEntry(key, value.type)));
     }
 
+    /* TODO 
+
     final op = BridgeInstantiate.make(
         instOffset,
         ctx.bridgeStaticFunctionIndices[decl.sourceLib]![
@@ -349,7 +346,7 @@ void compileConstructorDeclaration(
             $super.scopeFrameOffset, bridgeInst.scopeFrameOffset),
         ParentBridgeSuperShim.LEN);
 
-    ctx.pushOp(Return(bridgeInst.ssa));
+    ctx.pushOp(Return(bridgeInst.ssa));*/
   } else {
     ctx.pushOp(Return(inst.ssa));
   }
@@ -415,7 +412,6 @@ void compileDefaultConstructor(CompilerContext ctx,
               ?.toAlwaysReturnType(ctx, clsType, argTypes, namedArgTypes) ??
           AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
 
-      ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
       $super =
           Variable.alloc(ctx, mReturnType.type ?? CoreTypes.dynamic.ref(ctx));
     }
@@ -428,17 +424,7 @@ void compileDefaultConstructor(CompilerContext ctx,
       CoreTypes.object.ref(ctx));
 
   if (parent is EnumDeclaration) {
-    /// Add implicit index and name fields
-    ctx.inferredFieldTypes
-        .putIfAbsent(ctx.library, () => {})
-        .putIfAbsent(ctx.currentClass!.name.lexeme, () => {})
-      ..['index'] = CoreTypes.int.ref(ctx)
-      ..['name'] = CoreTypes.string.ref(ctx);
-  }
-
-  if (parent is EnumDeclaration) {
-    ctx.pushOp(SetPropertyStatic(inst.ssa, 0, valueIndex));
-    ctx.pushOp(SetPropertyStatic(inst.ssa, 1, valueName));
+    _setupImplicitEnumFields(ctx, inst.ssa);
   }
 
   _compileUnusedFields(
@@ -457,7 +443,7 @@ void compileDefaultConstructor(CompilerContext ctx,
           'Bridge class ${$extends.superclass} is a wrapper, not a bridge, so you can\'t extend it');
     }
 
-    final op = BridgeInstantiate.make(
+    /*TODO final op = BridgeInstantiate.make(
         instOffset,
         ctx.bridgeStaticFunctionIndices[decl.sourceLib]![
             '${$extends.superclass.name2.lexeme}.$constructorName']!);
@@ -467,9 +453,9 @@ void compileDefaultConstructor(CompilerContext ctx,
     ctx.pushOp(
         ParentBridgeSuperShim.make(
             $super.scopeFrameOffset, bridgeInst.scopeFrameOffset),
-        ParentBridgeSuperShim.LEN);
+        ParentBridgeSuperShim.LEN); */
 
-    ctx.pushOp(Return(bridgeInst.ssa));
+    //ctx.pushOp(Return(bridgeInst.ssa));
   } else {
     ctx.pushOp(Return(inst.ssa));
   }
@@ -506,4 +492,22 @@ void _compileUnusedFields(CompilerContext ctx, List<FieldDeclaration> fields,
       _fieldIdx++;
     }
   }
+}
+
+void _setupImplicitEnumFields(CompilerContext ctx, SSA inst) {
+  /// Add implicit index and name fields
+  ctx.inferredFieldTypes
+      .putIfAbsent(ctx.library, () => {})
+      .putIfAbsent(ctx.currentClass!.name.lexeme, () => {})
+    ..['index'] = CoreTypes.int.ref(ctx)
+    ..['name'] = CoreTypes.string.ref(ctx);
+
+  final vIndex = ctx.svar('vindex');
+  final vName = ctx.svar('vname');
+
+  ctx.pushOp(AssignRegister(vIndex, regALUAcc));
+  ctx.pushOp(AssignRegister(vName, regStringAcc));
+
+  ctx.pushOp(SetPropertyStatic(inst, 0, vIndex));
+  ctx.pushOp(SetPropertyStatic(inst, 1, vName));
 }

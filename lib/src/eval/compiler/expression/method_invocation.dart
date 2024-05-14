@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
+import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
@@ -14,7 +15,11 @@ import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
+import 'package:dart_eval/src/eval/ir/bridge.dart';
+import 'package:dart_eval/src/eval/ir/flow.dart';
+import 'package:dart_eval/src/eval/ir/memory.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/shared/registers.dart';
 
 import '../util.dart';
 import 'expression.dart';
@@ -46,8 +51,7 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
       }, thenBranch: (_ctx, rt) {
         final V = _invokeWithTarget(ctx, L!, e);
         out = out.copyWith(type: V.type.copyWith(nullable: true));
-        ctx.pushOp(CopyValue.make(out.scopeFrameOffset, V.scopeFrameOffset),
-            CopyValue.LEN);
+        ctx.pushOp(Assign(out.ssa, V.ssa));
         return StatementInfo(-1);
       });
       return out;
@@ -85,19 +89,16 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
         offset.name ?? '${e.methodName.name}.'];
     if (_dec == null) {
       // Call to default constructor
-      final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.length);
-      if (offset.offset == null) {
-        ctx.offsetTracker.setOffset(loc, offset);
-      }
-      ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
+      ctx.pushOp(Call(offset, []));
       mReturnType = method.methodReturnType
               ?.toAlwaysReturnType(ctx, TypeRef.$this(ctx), [], {}) ??
           AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
       final _returnType = mReturnType.type?.copyWith(
           boxed: L != null ||
               !(mReturnType.type?.isUnboxedAcrossFunctionBoundaries ?? false));
-      final v = Variable.alloc(
+      final v = Variable.ssa(
           ctx,
+          AssignRegister(ctx.svar('new_${e.methodName.name}_result'), regGPR1),
           mReturnType.type?.copyWith(
                   boxed: L != null ||
                       !(mReturnType.type?.isUnboxedAcrossFunctionBoundaries ??
@@ -110,6 +111,7 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
   }
 
   final List<Variable> _args;
+  final List<SSA> ssaArgs;
   final Map<String, Variable> _namedArgs;
 
   final resolveGenerics = <String, TypeRef>{};
@@ -181,8 +183,9 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
         mReturnType = AlwaysReturnType(g, returnAnnotation.question != null);
       }
     }
-    _args = argsPair.first;
-    _namedArgs = argsPair.second;
+    _args = argsPair.args;
+    ssaArgs = argsPair.ssa.map((e) => SSA(e)).toList();
+    _namedArgs = argsPair.namedArgs;
   }
 
   final _argTypes = _args.map((e) => e.type).toList();
@@ -195,9 +198,12 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
       final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type.type);
 
       final $null = BuiltinValue().push(ctx);
-      final op = BridgeInstantiate.make($null.scopeFrameOffset,
-          ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.']!);
-      ctx.pushOp(op, BridgeInstantiate.len(op));
+      final op = BridgeInstantiate(
+          ctx.svar('${e.methodName.name}_brinst_result'),
+          ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.']!,
+          $null.ssa,
+          ssaArgs);
+      ctx.pushOp(op);
     } else {
       final op = InvokeExternal.make(
           ctx.bridgeStaticFunctionIndices[offset.file]![offset.name]!);

@@ -7,7 +7,7 @@ import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/ir/memory.dart';
 
 import '../errors.dart';
 import 'expression.dart';
@@ -55,23 +55,17 @@ Variable _compileNullCoalesce(
   late TypeRef rightType;
   var outVar = BuiltinValue().push(ctx);
   L = L.boxIfNeeded(ctx);
-  ctx.pushOp(CopyValue.make(outVar.scopeFrameOffset, L.scopeFrameOffset),
-      CopyValue.LEN);
+  ctx.pushOp(Assign(outVar.ssa, L.ssa));
 
   macroBranch(ctx, null, condition: (_ctx) {
-    final $null = BuiltinValue().push(ctx).boxIfNeeded(ctx);
-    ctx.pushOp(
-        CheckEq.make(L.scopeFrameOffset, $null.scopeFrameOffset), CheckEq.LEN);
-    ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-    return Variable.alloc(ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
+    return L;
   }, thenBranch: (_ctx, rt) {
     // Short-circuit: we only execute the RHS if the LHS is null
     final R = compileExpression(right, ctx).boxIfNeeded(ctx);
     rightType = R.type;
-    ctx.pushOp(CopyValue.make(outVar.scopeFrameOffset, R.scopeFrameOffset),
-        CopyValue.LEN);
+    ctx.pushOp(Assign(outVar.ssa, R.ssa));
     return StatementInfo(-1);
-  });
+  }, testNullish: true);
 
   final outType =
       TypeRef.commonBaseType(ctx, {L.type.copyWith(nullable: false), rightType})

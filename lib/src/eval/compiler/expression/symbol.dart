@@ -4,7 +4,6 @@ import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 Variable compileSymbolLiteral(SymbolLiteral l, CompilerContext ctx) {
   var name = l.components.map((t) => t.lexeme).join('.');

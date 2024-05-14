@@ -21,7 +21,9 @@ StatementInfo macroBranch(
   ctx.enterTypeInferenceContext();
 
   final conditionResult = condition(ctx).unboxIfNeeded(ctx);
-  if (!conditionResult.type.isAssignableTo(ctx, CoreTypes.bool.ref(ctx))) {
+
+  if (!testNullish &&
+      !conditionResult.type.isAssignableTo(ctx, CoreTypes.bool.ref(ctx))) {
     throw CompileError("Conditions must have a static type of 'bool'", source);
   }
 
@@ -35,8 +37,19 @@ StatementInfo macroBranch(
     ctx.pushOp(JumpIfFalse(conditionResult.ssa, falseLabel));
   }
 
-  final condBlock = ctx.commitBlock();
-  ctx.builder.merge(condBlock);
+  final condBlock = BasicBlock(ctx.commit());
+  ctx.builder = ctx.builder.merge(condBlock);
+
+  final trueBlock = BasicBlock<Operation>([], label: trueLabel);
+  final falseBlock = BasicBlock<Operation>([], label: falseLabel);
+  final endBlock = BasicBlock<Operation>([], label: endLabel);
+
+  if (elseBranch != null) {
+    ctx.builder = ctx.builder.split(trueBlock, falseBlock).block(0);
+  } else {
+    ctx.builder = ctx.builder.then(trueBlock);
+    ctx.builder.link(condBlock, endBlock);
+  }
 
   var _initialState = ctx.saveState();
   ctx.inferTypes();
@@ -65,10 +78,11 @@ StatementInfo macroBranch(
     ctx.pushOp(Jump(endLabel));
   }
 
-  final trueBlock = ctx.commitBlock(trueLabel);
-  BasicBlock? falseBlock;
+  ctx.builder.then(BasicBlock(ctx.commit()));
+  ctx.builder.commit();
 
   if (elseBranch != null) {
+    ctx.builder = ctx.builder.block(1);
     ctx.beginAllocScope();
     final label = CompilerLabel(falseLabel, LabelType.branch, (_ctx) {
       ctx.endAllocScope();
@@ -81,18 +95,14 @@ StatementInfo macroBranch(
     ctx.labels.removeLast();
     ctx.endAllocScope();
     ctx.resolveBranchStateDiscontinuity(_initialState);
-    falseBlock = ctx.commitBlock(falseLabel);
+    ctx.builder.then(BasicBlock(ctx.commit())).commit().merge(endBlock);
     ctx.endAllocScope();
+    endBlock.code.addAll(ctx.commit());
     return thenResult | elseResult;
   }
 
   ctx.endAllocScope();
-  final endBlock = ctx.commitBlock(endLabel);
-  if (elseBranch != null) {
-    ctx.builder.split(trueBlock, falseBlock!).merge(endBlock);
-  } else {
-    ctx.builder.splitMerge(trueBlock, endBlock);
-  }
+  endBlock.code.addAll(ctx.commit());
 
   return thenResult |
       StatementInfo(thenResult.position,

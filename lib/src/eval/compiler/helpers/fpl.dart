@@ -3,7 +3,7 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/ir/flow.dart';
 
 List<PossiblyValuedParameter> resolveFPLDefaults(
     CompilerContext ctx, FormalParameterList? fpl, bool isInstanceMethod,
@@ -43,11 +43,20 @@ List<PossiblyValuedParameter> resolveFPLDefaults(
     named.sort((a, b) => (a.name!.lexeme).compareTo(b.name!.lexeme));
   }
 
+  // parameter layout:
+  // 1st int: regALUAcc, 2nd int: regALU2
+  // 1st double: regFPUAcc, 2nd float: regFPU2
+  // 1st string: regStringAcc, 2nd string: regString2
+  // 1st bool: regBoolAcc, 2nd bool: regBool2
+  // 1st collection: regGPR3
+  // next: regGPR1, regGPR2, regGPR3
+  // remaining: pushed in order to stack
+
   for (final param in [...positional, ...named]) {
     if (param is DefaultFormalParameter) {
       if (param.defaultValue != null && !ignoreDefaults) {
         ctx.beginAllocScope();
-        final _reserve = JumpIfNonNull.make(_paramIndex, -1);
+        final _reserve = JumpIfNonNull(_paramIndex, -1);
         final _reserveOffset = ctx.pushOp(_reserve, JumpIfNonNull.LEN);
         var V = compileExpression(param.defaultValue!, ctx);
         if (!allowUnboxed || !V.type.isUnboxedAcrossFunctionBoundaries) {

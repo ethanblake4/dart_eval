@@ -15,19 +15,22 @@ import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/util.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/ir/flow.dart';
+import 'package:dart_eval/src/eval/ir/function.dart';
 
 enum CallingConvention { static, dynamic }
 
 Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx,
     [TypeRef? bound]) {
-  final jumpOver = ctx.pushOp(JumpConstant.make(-1), JumpConstant.LEN);
+  final pushLabel = ctx.label('push_funcexpr');
+  final fnLabel = ctx.label('funcexpr');
+  ctx.pushOp(Jump(pushLabel));
+  ctx.builder.then(ctx.commitBlock());
+  ctx.builder.then(ctx.commitBlock(fnLabel));
 
-  final fnOffset = ctx.out.length;
   beginMethod(ctx, e, e.offset, '<anonymous closure>');
 
   final ctxSaveState = ctx.saveState();
-  final sfo = ctx.scopeFrameOffset;
   ctx.resetStack();
 
   final _existingAllocs = 1 + (e.parameters?.parameters.length ?? 0);
@@ -101,6 +104,7 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx,
     stInfo = doReturn(
         ctx, AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true), V,
         isAsync: b.isAsynchronous);
+    ctx.builder.then(ctx.commitBlock(ctx.label('funcexpr')));
     ctx.endAllocScope();
   } else {
     throw CompileError('Unsupported function body type: ${b.runtimeType}');
@@ -112,14 +116,12 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx,
       ctx.endAllocScope(popValues: false);
     } else {
       ctx.endAllocScope();
-      ctx.pushOp(Return.make(-1), Return.LEN);
+      ctx.pushOp(Return(null));
+      ctx.builder.then(ctx.commitBlock(ctx.label('funcexpr')));
     }
   }
 
-  ctx.rewriteOp(jumpOver, JumpConstant.make(ctx.out.length), 0);
-
   ctx.restoreState(ctxSaveState);
-  ctx.scopeFrameOffset = sfo;
 
   final positional =
       (e.parameters?.parameters.where((element) => element.isPositional) ?? []);
@@ -184,10 +186,14 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx,
       .push(ctx)
       .pushArg(ctx);
 
-  ctx.pushOp(PushFunctionPtr.make(fnOffset), PushFunctionPtr.LEN);
-
-  return Variable.alloc(ctx, CoreTypes.function.ref(ctx),
+  final result = Variable.ssa(
+      ctx,
+      LoadFunctionPointer(ctx.svar('function_ptr'), fnLabel),
+      CoreTypes.function.ref(ctx),
       methodReturnType: AlwaysReturnType(CoreTypes.dynamic.ref(ctx), false),
-      methodOffset: DeferredOrOffset(offset: fnOffset),
+      methodOffset: DeferredOrOffset(name: fnLabel),
       callingConvention: CallingConvention.dynamic);
+
+  ctx.builder.then(ctx.commitBlock(pushLabel));
+  return result;
 }

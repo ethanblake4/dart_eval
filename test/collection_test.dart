@@ -205,5 +205,31 @@ void main() {
 
       expect(runtime.executeLib('package:eval_test/main.dart', 'main'), true);
     });
+
+    test('Function returns list', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'eval_test': {
+          'main.dart': '''
+            int main() {
+              return makeList([
+                'a',
+                'b',
+                'c',
+              ]).length;
+            }
+
+            List<String> makeList(List items) {
+              List results = [];
+              for (var item in items) {
+                results.add(item);
+              }
+              return results;
+            }
+          '''
+        }
+      });
+
+      expect(runtime.executeLib('package:eval_test/main.dart', 'main'), 3);
+    });
   });
 }

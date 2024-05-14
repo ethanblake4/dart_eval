@@ -384,5 +384,32 @@ void main() {
       expect(() => runtime.executeLib('package:example/main.dart', 'main'),
           prints('1\n'));
     });
+
+    test('Not null && not empty', () {
+      final runtime = Compiler().compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+          void main() {
+            final x = X();
+            if (x.a?.isNotEmpty ?? false) {
+              print(x.a[0]);
+            }
+
+            x.a = [1];
+            if (x.a?.isNotEmpty ?? false) {
+              print(x.a[0]);
+            }
+          }
+
+          class X {
+            List<int>? a = null;
+          }
+         '''
+        }
+      });
+
+      expect(() => runtime.executeLib('package:example/main.dart', 'main'),
+          prints('1\n'));
+    });
   });
 }

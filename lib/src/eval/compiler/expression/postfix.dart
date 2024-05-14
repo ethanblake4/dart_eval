@@ -6,7 +6,7 @@ import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/assert.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/equality.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/ir/memory.dart';
 
 Variable compilePostfixExpression(PostfixExpression e, CompilerContext ctx) {
   if (e.operator.type == TokenType.BANG) {
@@ -24,10 +24,7 @@ Variable compilePostfixExpression(PostfixExpression e, CompilerContext ctx) {
   final L = V.getValue(ctx);
   var out = L;
 
-  out = Variable.alloc(ctx, L.type);
-  ctx.pushOp(PushNull.make(), PushNull.LEN);
-  ctx.pushOp(
-      CopyValue.make(out.scopeFrameOffset, L.scopeFrameOffset), CopyValue.LEN);
+  out = Variable.ssa(ctx, Assign(ctx.svar(L.name ?? ''), L.ssa), L.type);
 
   const opMap = {TokenType.PLUS_PLUS: '+', TokenType.MINUS_MINUS: '-'};
 

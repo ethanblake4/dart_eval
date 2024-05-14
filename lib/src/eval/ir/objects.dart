@@ -101,3 +101,31 @@ final class LoadPropertyStatic extends Operation {
     return LoadPropertyStatic(writesTo ?? target, object, index);
   }
 }
+
+final class LoadSuper extends Operation {
+  final SSA target;
+  final SSA object;
+
+  LoadSuper(this.target, this.object);
+
+  @override
+  Set<SSA> get readsFrom => {object};
+
+  @override
+  SSA? get writesTo => target;
+
+  @override
+  String toString() => '$target = loadsuper $object';
+
+  @override
+  bool operator ==(Object other) =>
+      other is LoadSuper && target == other.target && object == other.object;
+
+  @override
+  int get hashCode => target.hashCode ^ object.hashCode;
+
+  @override
+  Operation copyWith({SSA? writesTo}) {
+    return LoadSuper(writesTo ?? target, object);
+  }
+}

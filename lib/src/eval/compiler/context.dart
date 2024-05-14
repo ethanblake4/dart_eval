@@ -163,7 +163,6 @@ class CompilerContext with ScopeContext {
   Map<int, Map<String, DeclarationOrBridge>> topLevelDeclarationsMap = {};
 
   Map<int, Map<String, Map<String, Declaration>>> instanceDeclarationsMap = {};
-  late OffsetTracker offsetTracker = OffsetTracker(this);
   Map<int, Map<String, TypeRef>> visibleTypes = {};
   Map<int, Map<String, TypeRef>> temporaryTypes = {};
   Map<int, Map<String, DeclarationOrPrefix>> visibleDeclarations = {};
@@ -202,10 +201,14 @@ class CompilerContext with ScopeContext {
 
   int sourceFile;
 
-  BasicBlock commitBlock([String? label]) {
-    final block = BasicBlock(blockCode, label: label);
+  List<Operation> commit() {
+    final code = blockCode;
     blockCode = [];
-    return block;
+    return code;
+  }
+
+  BasicBlock commitBlock([String? label]) {
+    return BasicBlock(commit(), label: label);
   }
 
   @override

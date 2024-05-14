@@ -1,6 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/ir/objects.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -27,7 +27,6 @@ Variable compileSuperExpression(SuperExpression e, CompilerContext ctx) {
   }
 
   final $this = ctx.lookupLocal('#this')!;
-  ctx.pushOp(PushSuper.make($this.scopeFrameOffset), PushSuper.length);
-  final v = Variable.alloc(ctx, type);
+  final v = Variable.ssa(ctx, LoadSuper(ctx.svar('super'), $this.ssa), type);
   return v;
 }

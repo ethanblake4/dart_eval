@@ -184,3 +184,34 @@ final class AssignRegister extends Operation {
     return AssignRegister(writesTo ?? target, reg);
   }
 }
+
+final class IsNull extends Operation {
+  final SSA result;
+  final SSA object;
+
+  IsNull(
+    this.result,
+    this.object,
+  );
+
+  @override
+  Set<SSA> get readsFrom => {object};
+
+  @override
+  SSA? get writesTo => result;
+
+  @override
+  String toString() => '$result = $object is null';
+
+  @override
+  bool operator ==(Object other) =>
+      other is IsNull && result == other.result && object == other.object;
+
+  @override
+  int get hashCode => object.hashCode ^ result.hashCode;
+
+  @override
+  Operation copyWith({SSA? writesTo}) {
+    return IsNull(writesTo ?? result, object);
+  }
+}

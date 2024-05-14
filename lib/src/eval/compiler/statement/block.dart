@@ -8,7 +8,7 @@ import '../type.dart';
 StatementInfo compileBlock(
     Block b, AlwaysReturnType? expectedReturnType, CompilerContext ctx,
     {String name = '<block>'}) {
-  final position = ctx.out.length;
+  //final position = ctx.out.length;
   ctx.beginAllocScope();
 
   var willAlwaysReturn = false;
@@ -31,6 +31,6 @@ StatementInfo compileBlock(
 
   ctx.endAllocScope(popValues: !willAlwaysThrow && !willAlwaysReturn);
 
-  return StatementInfo(position,
+  return StatementInfo(-1,
       willAlwaysReturn: willAlwaysReturn, willAlwaysThrow: willAlwaysThrow);
 }

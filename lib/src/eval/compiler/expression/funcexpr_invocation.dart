@@ -1,13 +1,9 @@
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
+import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/compiler/type.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
-import 'package:dart_eval/src/eval/runtime/type.dart';
 
 /// Compile a [FunctionExpressionInvocation]
 Variable compileFunctionExpressionInvocation(
@@ -28,7 +24,8 @@ Variable compileFunctionExpressionInvocation(
 
 Variable invokeClosure(CompilerContext ctx, Reference? closureRef,
     Variable? closureVar, ArgumentList argumentList) {
-  ctx.pushOp(PushList.make(), PushList.LEN);
+  throw CompileError('Closures TODO');
+  /*ctx.pushOp(PushList.make(), PushList.LEN);
   final csPosArgTypes = Variable.alloc(
       ctx,
       CoreTypes.list
@@ -126,5 +123,5 @@ Variable invokeClosure(CompilerContext ctx, Reference? closureRef,
 
     final res = dd.invoke(ctx, 'call', []);
     return res.result;
-  }
+  }*/
 }
