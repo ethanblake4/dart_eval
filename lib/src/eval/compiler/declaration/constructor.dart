@@ -28,7 +28,7 @@ void compileConstructorDeclaration(
   final dName = (d.name?.lexeme) ?? "";
   final n = '$parentName.$dName';
   final isEnum = parent is EnumDeclaration;
-  bool doesExtendsBridge = false;
+
   if (d.factoryKeyword != null && d.initializers.isNotEmpty) {
     throw CompileError('Factory constructors cannot have initializers', d);
   }
@@ -183,10 +183,9 @@ void compileConstructorDeclaration(
     return;
   }
 
-  var $extends = parent is EnumDeclaration
+  final $extends = parent is EnumDeclaration
       ? null
       : (parent as ClassDeclaration).extendsClause;
-
   Variable $super;
   DeclarationOrPrefix? extendsWhat;
 
@@ -194,25 +193,16 @@ void compileConstructorDeclaration(
   final namedArgTypes = <String, TypeRef?>{};
 
   var constructorName = $superInitializer?.constructorName?.name ?? '';
+
   if ($extends == null) {
     $super = BuiltinValue().push(ctx);
   } else {
     extendsWhat = ctx
         .visibleDeclarations[ctx.library]![$extends.superclass.name2.lexeme]!;
+
     final decl = extendsWhat.declaration!;
 
-    if (decl.declaration is ClassDeclaration) {
-      final bridgeDecl = ctx.visibleDeclarations[decl.sourceLib]?[
-          (decl.declaration as ClassDeclaration)
-              .extendsClause
-              ?.superclass
-              .name2
-              .lexeme]!;
-      doesExtendsBridge =
-          bridgeDecl != null && bridgeDecl.declaration!.isBridge;
-    }
-
-    if (decl.isBridge || doesExtendsBridge) {
+    if (decl.isBridge) {
       ctx.pushOp(PushBridgeSuperShim.make(), PushBridgeSuperShim.length);
       $super = Variable.alloc(ctx, CoreTypes.dynamic.ref(ctx));
     } else {
@@ -261,7 +251,6 @@ void compileConstructorDeclaration(
           AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
 
       ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-
       $super =
           Variable.alloc(ctx, mReturnType.type ?? CoreTypes.dynamic.ref(ctx));
     }
@@ -332,18 +321,10 @@ void compileConstructorDeclaration(
     ctx.endAllocScope();
   }
 
-  if ($extends != null &&
-      (extendsWhat!.declaration!.isBridge || doesExtendsBridge)) {
-    if (doesExtendsBridge) {
-      $extends = (extendsWhat.declaration!.declaration as ClassDeclaration)
-          .extendsClause!;
-
-      extendsWhat = ctx.visibleDeclarations[extendsWhat
-          .declaration!.sourceLib]![$extends.superclass.name2.lexeme]!;
-    }
-
+  if ($extends != null && extendsWhat!.declaration!.isBridge) {
     final decl = extendsWhat.declaration!;
     final bridge = decl.bridge! as BridgeClassDef;
+
     if (!bridge.bridge) {
       throw CompileError(
           'Bridge class ${$extends.superclass} is a wrapper, not a bridge, so you can\'t extend it');
@@ -359,6 +340,7 @@ void compileConstructorDeclaration(
       namedArgTypes
           .addAll(_namedArgs.map((key, value) => MapEntry(key, value.type)));
     }
+
     final op = BridgeInstantiate.make(
         instOffset,
         ctx.bridgeStaticFunctionIndices[decl.sourceLib]![
