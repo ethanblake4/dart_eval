@@ -200,14 +200,17 @@ void compileConstructorDeclaration(
     extendsWhat = ctx
         .visibleDeclarations[ctx.library]![$extends.superclass.name2.lexeme]!;
     final decl = extendsWhat.declaration!;
-    doesExtendsBridge = (decl.declaration is ClassDeclaration &&
-        ctx.visibleDeclarations[ctx.library]?[
-                (decl.declaration as ClassDeclaration)
-                    .extendsClause
-                    ?.superclass
-                    .name2
-                    .lexeme] !=
-            null);
+
+    if (decl.declaration is ClassDeclaration) {
+      final bridgeDecl = ctx.visibleDeclarations[decl.sourceLib]?[
+          (decl.declaration as ClassDeclaration)
+              .extendsClause
+              ?.superclass
+              .name2
+              .lexeme]!;
+      doesExtendsBridge =
+          bridgeDecl != null && bridgeDecl.declaration!.isBridge;
+    }
 
     if (decl.isBridge || doesExtendsBridge) {
       ctx.pushOp(PushBridgeSuperShim.make(), PushBridgeSuperShim.length);
@@ -258,6 +261,7 @@ void compileConstructorDeclaration(
           AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
 
       ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
+
       $super =
           Variable.alloc(ctx, mReturnType.type ?? CoreTypes.dynamic.ref(ctx));
     }
@@ -333,8 +337,9 @@ void compileConstructorDeclaration(
     if (doesExtendsBridge) {
       $extends = (extendsWhat.declaration!.declaration as ClassDeclaration)
           .extendsClause!;
-      extendsWhat = ctx
-          .visibleDeclarations[ctx.library]![$extends.superclass.name2.lexeme]!;
+
+      extendsWhat = ctx.visibleDeclarations[extendsWhat
+          .declaration!.sourceLib]![$extends.superclass.name2.lexeme]!;
     }
 
     final decl = extendsWhat.declaration!;

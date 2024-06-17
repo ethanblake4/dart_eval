@@ -17,7 +17,6 @@ class BridgeInstantiate implements EvcOp {
   @override
   void run(Runtime runtime) {
     final $subclass = runtime.frame[_subclass] as $Instance?;
-
     final _args = runtime.args;
     final _argsLen = _args.length;
 
@@ -32,6 +31,7 @@ class BridgeInstantiate implements EvcOp {
     final instance =
         runtime._bridgeFunctions[_constructor](runtime, null, _mappedArgs)
             as $Instance;
+
     Runtime.bridgeData[instance] =
         BridgeData(runtime, $runtimeType, $subclass ?? BridgeDelegatingShim());
 
