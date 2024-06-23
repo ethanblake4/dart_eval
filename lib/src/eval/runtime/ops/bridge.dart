@@ -34,7 +34,6 @@ class BridgeInstantiate implements EvcOp {
 
     Runtime.bridgeData[instance] =
         BridgeData(runtime, $runtimeType, $subclass ?? BridgeDelegatingShim());
-
     runtime.frame[runtime.frameOffset++] = instance;
   }
 

@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
@@ -183,7 +184,7 @@ void compileConstructorDeclaration(
     return;
   }
 
-  final $extends = parent is EnumDeclaration
+  var $extends = parent is EnumDeclaration
       ? null
       : (parent as ClassDeclaration).extendsClause;
   Variable $super;
@@ -193,14 +194,25 @@ void compileConstructorDeclaration(
   final namedArgTypes = <String, TypeRef?>{};
 
   var constructorName = $superInitializer?.constructorName?.name ?? '';
-
+  // final bool doesExtendBridge;
   if ($extends == null) {
     $super = BuiltinValue().push(ctx);
+    // doesExtendBridge = false;
   } else {
     extendsWhat = ctx
         .visibleDeclarations[ctx.library]![$extends.superclass.name2.lexeme]!;
 
     final decl = extendsWhat.declaration!;
+    // if (!decl.isBridge) {
+    //   final $doesExtendBridge = _doesExtendBridge(decl, ctx);
+    //   doesExtendBridge = $doesExtendBridge[0] as bool;
+    //   if (doesExtendBridge) {
+    //     extendsWhat = $doesExtendBridge[1] as DeclarationOrPrefix;
+    //     $extends = $doesExtendBridge[2] as ExtendsClause;
+    //   }
+    // } else {
+    //   doesExtendBridge = false;
+    // }
 
     if (decl.isBridge) {
       ctx.pushOp(PushBridgeSuperShim.make(), PushBridgeSuperShim.length);
@@ -250,7 +262,11 @@ void compileConstructorDeclaration(
               ?.toAlwaysReturnType(ctx, clsType, argTypes, namedArgTypes) ??
           AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
 
+      // if (doesExtendBridge) {
+      //   ctx.pushOp(PushBridgeSuperShim.make(), PushBridgeSuperShim.length);
+      // } else {
       ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
+      // }
       $super =
           Variable.alloc(ctx, mReturnType.type ?? CoreTypes.dynamic.ref(ctx));
     }
@@ -346,6 +362,7 @@ void compileConstructorDeclaration(
         ctx.bridgeStaticFunctionIndices[decl.sourceLib]![
             '${$extends.superclass.name2.value()}.$constructorName']!);
     ctx.pushOp(op, BridgeInstantiate.len(op));
+
     final bridgeInst = Variable.alloc(ctx, CoreTypes.dynamic.ref(ctx));
 
     ctx.pushOp(
@@ -516,5 +533,29 @@ void _compileUnusedFields(CompilerContext ctx, List<FieldDeclaration> fields,
       }
       _fieldIdx++;
     }
+  }
+}
+
+List<Object?> _doesExtendBridge(
+    DeclarationOrBridge? decl, CompilerContext ctx) {
+  if (decl != null && decl.declaration is ClassDeclaration) {
+    var $decl = ctx.visibleDeclarations[decl.sourceLib]?[
+        (decl.declaration as ClassDeclaration)
+            .extendsClause
+            ?.superclass
+            .name2
+            .lexeme];
+    if ($decl != null && $decl.declaration!.isBridge) {
+      return [
+        true,
+        $decl,
+        (decl.declaration as ClassDeclaration).extendsClause
+      ];
+    } else if ($decl == null || $decl.declaration == null) {
+      return [false];
+    }
+    return _doesExtendBridge($decl.declaration!, ctx);
+  } else {
+    return [false];
   }
 }
