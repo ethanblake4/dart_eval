@@ -87,15 +87,6 @@ mixin ScopeContext on Object implements AbstractScopeContext {
     }
   }
 
-  void resolveNonlinearity([int depth = 1]) {
-    for (var i = 0; i < depth; i++) {
-      <String, Variable>{...(locals[locals.length - depth])}
-          .forEach((key, value) {
-        locals[locals.length - depth][key] = value.unboxIfNeeded(this);
-      });
-    }
-  }
-
   ContextSaveState saveState() {
     final _state = ContextSaveState.of(this);
     return _state;
@@ -113,7 +104,8 @@ mixin ScopeContext on Object implements AbstractScopeContext {
         if (!myLocal.boxed && value.boxed) {
           locals[i][key] = myLocal.boxIfNeeded(this);
         } else if (myLocal.boxed && !value.boxed) {
-          locals[i][key] = myLocal.unboxIfNeeded(this);
+          final _this = this as CompilerContext;
+          locals[i][key] = myLocal.unboxIfNeeded(_this);
         }
       });
     }
@@ -191,6 +183,7 @@ class CompilerContext with ScopeContext {
   int nearestAsyncFrame = -1;
   int globalIndex = 0;
   String? version;
+  String? funcLabel;
 
   final signaturePool = FunctionSignaturePool();
   final constantPool = ConstantPool<Object>();
@@ -208,7 +201,16 @@ class CompilerContext with ScopeContext {
   }
 
   BasicBlock commitBlock([String? label]) {
-    return BasicBlock(commit(), label: label);
+    return BasicBlock(commit(), label: label ?? funcLabel);
+  }
+
+  void resolveNonlinearity([int depth = 1]) {
+    for (var i = 0; i < depth; i++) {
+      <String, Variable>{...(locals[locals.length - depth])}
+          .forEach((key, value) {
+        locals[locals.length - depth][key] = value.unboxIfNeeded(this);
+      });
+    }
   }
 
   @override
@@ -231,13 +233,13 @@ class CompilerContext with ScopeContext {
   SSA svar([String name = 'var']) {
     final tvi = tempVarMap.putIfAbsent(name, () => 0);
     tempVarMap[name] = tvi + 1;
-    return SSA('.$name' + (tvi == 0 ? '' : '_$tvi'), sourceFile);
+    return SSA('$name' + (tvi == 0 ? '' : '_$tvi'));
   }
 
   String label([String name = 'label']) {
     final tvi = labelMap.putIfAbsent(name, () => 0);
     labelMap[name] = tvi + 1;
-    return '.$name' + (tvi == 0 ? '' : '_$tvi');
+    return '$name' + (tvi == 0 ? '' : '_$tvi');
   }
 
   void pushOp(Operation op) {

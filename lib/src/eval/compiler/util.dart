@@ -1,8 +1,11 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
+import 'package:dart_eval/src/eval/ir/bridge.dart';
+import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 class Pair<T, T2> {
@@ -29,13 +32,17 @@ class FunctionSignaturePool {
   }
 }
 
-void asyncComplete(CompilerContext ctx, int valueOffset) {
+void asyncComplete(CompilerContext ctx, SSA? value) {
   var _completer = ctx.lookupLocal('#completer');
   if (_completer == null) {
-    InvokeExternal.make(ctx.bridgeStaticFunctionIndices[
-        ctx.libraryMap['dart:async']!]!['Completer.']!);
-    _completer = Variable.alloc(ctx, AsyncTypes.completer.ref(ctx));
+    _completer = Variable.ssa(
+        ctx,
+        InvokeExternal(
+            ctx.svar('#completer'),
+            ctx.bridgeStaticFunctionIndices[ctx.libraryMap['dart:async']!]![
+                'Completer.']!,
+            []),
+        AsyncTypes.completer.ref(ctx));
   }
-  ctx.pushOp(
-      ReturnAsync.make(valueOffset, _completer.scopeFrameOffset), Return.LEN);
+  ctx.pushOp(ReturnAsync(value, _completer.ssa));
 }

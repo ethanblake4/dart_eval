@@ -42,9 +42,9 @@ Variable parseLiteral(Literal l, CompilerContext ctx, [TypeRef? bound]) {
   if (l is ListLiteral) {
     return compileListLiteral(l, ctx);
   }
-  if (l is SetOrMapLiteral) {
+  /*if (l is SetOrMapLiteral) {
     return compileSetOrMapLiteral(l, ctx);
-  }
+  }*/
   if (l is StringInterpolation) {
     return compileStringInterpolation(ctx, l);
   }

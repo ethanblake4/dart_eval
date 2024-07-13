@@ -1280,7 +1280,7 @@ class $List<E> implements List<E>, $Instance {
     final $this = target?.$value as List;
     final $result = $this.asMap();
     return $Map.wrap($result.map((key, value) {
-      return $MapEntry.wrap(MapEntry($int(key), value));
+      return MapEntry($int(key), value);
     }));
   }
 

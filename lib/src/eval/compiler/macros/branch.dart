@@ -78,8 +78,7 @@ StatementInfo macroBranch(
     ctx.pushOp(Jump(endLabel));
   }
 
-  ctx.builder.then(BasicBlock(ctx.commit()));
-  ctx.builder.commit();
+  ctx.builder = ctx.builder.then(BasicBlock(ctx.commit())).commit();
 
   if (elseBranch != null) {
     ctx.builder = ctx.builder.block(1);
@@ -95,7 +94,8 @@ StatementInfo macroBranch(
     ctx.labels.removeLast();
     ctx.endAllocScope();
     ctx.resolveBranchStateDiscontinuity(_initialState);
-    ctx.builder.then(BasicBlock(ctx.commit())).commit().merge(endBlock);
+    ctx.builder =
+        ctx.builder.then(BasicBlock(ctx.commit())).commit().merge(endBlock);
     ctx.endAllocScope();
     endBlock.code.addAll(ctx.commit());
     return thenResult | elseResult;

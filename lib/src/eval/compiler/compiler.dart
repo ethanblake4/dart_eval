@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:collection/collection.dart';
+import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/declaration.dart';
@@ -438,6 +439,9 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       }
     }
 
+    final programRoot = BasicBlock<Operation>([]);
+    _ctx.builder = ControlFlowGraph.builder().root(programRoot);
+
     _ctx.topLevelGlobalIndices = _topLevelGlobalIndices;
 
     try {
@@ -526,6 +530,9 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       final type = t.key;
       typeIds.putIfAbsent(type.file, () => {})[type.name] = t.value;
     }
+
+    print(_ctx.builder.build());
+
     return Program(
       _ctx.topLevelDeclarationPositions,
       _ctx.instanceDeclarationPositions,

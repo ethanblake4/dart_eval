@@ -10,8 +10,7 @@ import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
-
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/ir/memory.dart';
 
 Variable compilePropertyAccess(PropertyAccess pa, CompilerContext ctx,
     {Variable? cascadeTarget}) {
@@ -28,8 +27,7 @@ Variable compilePropertyAccess(PropertyAccess pa, CompilerContext ctx,
     }, thenBranch: (_ctx, rt) {
       final V = L.getProperty(ctx, pa.propertyName.name).boxIfNeeded(ctx);
       out = out.copyWith(type: V.type.copyWith(nullable: true));
-      ctx.pushOp(CopyValue.make(out.scopeFrameOffset, V.scopeFrameOffset),
-          CopyValue.LEN);
+      ctx.pushOp(Assign(out.ssa, V.ssa));
       return StatementInfo(-1);
     }, source: pa);
     return out;

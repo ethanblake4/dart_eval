@@ -33,7 +33,7 @@ class BuiltinValue {
     if (type == BuiltinValueType.intType) {
       ctx.pushOp(LoadInt(target, intval!));
       final type = CoreTypes.int.ref(ctx).copyWith(boxed: false);
-      return Variable.ssa(ctx, LoadDouble(target, doubleval!), type,
+      return Variable.ssa(ctx, LoadInt(target, intval!), type,
           concreteTypes: [type]);
     } else if (type == BuiltinValueType.doubleType) {
       final type = CoreTypes.double.ref(ctx).copyWith(boxed: false);

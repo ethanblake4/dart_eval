@@ -115,3 +115,67 @@ final class IndexMap extends Operation {
     return IndexMap(writesTo ?? target, map, key);
   }
 }
+
+final class ListSet extends Operation {
+  final SSA list;
+  final SSA index;
+  final SSA value;
+
+  ListSet(this.list, this.index, this.value);
+
+  @override
+  Set<SSA> get readsFrom => {list, index, value};
+
+  @override
+  OpType get type => CollectionOp.indexInto;
+
+  @override
+  String toString() => 'listset $list[$index] = $value';
+
+  @override
+  bool operator ==(Object other) =>
+      other is ListSet &&
+      list == other.list &&
+      index == other.index &&
+      value == other.value;
+
+  @override
+  int get hashCode => list.hashCode ^ index.hashCode ^ value.hashCode;
+
+  @override
+  Operation copyWith({SSA? writesTo}) {
+    return ListSet(list, index, writesTo ?? value);
+  }
+}
+
+final class MapSet extends Operation {
+  final SSA map;
+  final SSA key;
+  final SSA value;
+
+  MapSet(this.map, this.key, this.value);
+
+  @override
+  Set<SSA> get readsFrom => {map, key, value};
+
+  @override
+  OpType get type => CollectionOp.indexInto;
+
+  @override
+  String toString() => 'mapset $map[$key] = $value';
+
+  @override
+  bool operator ==(Object other) =>
+      other is MapSet &&
+      map == other.map &&
+      key == other.key &&
+      value == other.value;
+
+  @override
+  int get hashCode => map.hashCode ^ key.hashCode ^ value.hashCode;
+
+  @override
+  Operation copyWith({SSA? writesTo}) {
+    return MapSet(map, key, writesTo ?? value);
+  }
+}

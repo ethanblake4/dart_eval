@@ -25,6 +25,7 @@ final class AssertType extends Operation {
   }
 }
 
+/// TODO fix add result object
 final class IsType extends Operation {
   final SSA object;
   final int typeId;
@@ -47,6 +48,63 @@ final class IsType extends Operation {
 
   @override
   Operation copyWith({SSA? writesTo}) {
-    return IsType(writesTo ?? object, typeId);
+    return IsType(writesTo ?? object, typeId, not);
+  }
+}
+
+final class LoadConstantType extends Operation {
+  final SSA result;
+  final int typeId;
+
+  LoadConstantType(this.result, this.typeId);
+
+  @override
+  SSA? get writesTo => result;
+
+  @override
+  String toString() => '$result = loadconstanttype $typeId';
+
+  @override
+  bool operator ==(Object other) =>
+      other is LoadConstantType &&
+      result == other.result &&
+      typeId == other.typeId;
+
+  @override
+  int get hashCode => result.hashCode ^ typeId.hashCode;
+
+  @override
+  Operation copyWith({SSA? writesTo}) {
+    return LoadConstantType(writesTo ?? result, typeId);
+  }
+}
+
+final class LoadRuntimeType extends Operation {
+  final SSA result;
+  final SSA object;
+
+  LoadRuntimeType(this.result, this.object);
+
+  @override
+  SSA? get writesTo => result;
+
+  @override
+  Set<SSA> get readsFrom => {object};
+
+  @override
+  String toString() => '$result = loadruntimetype $object';
+
+  @override
+  bool operator ==(Object other) =>
+      other is LoadRuntimeType &&
+      result == other.result &&
+      object == other.object;
+
+  @override
+  int get hashCode => result.hashCode ^ object.hashCode;
+
+  @override
+  Operation copyWith({SSA? writesTo}) {
+    return LoadRuntimeType(writesTo ?? result, object);
   }
 }

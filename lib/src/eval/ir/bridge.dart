@@ -41,7 +41,7 @@ final class BridgeInstantiate extends Operation {
 
   @override
   String toString() =>
-      '$target = newbridge $externalFunctionId, $subclass ($args)';
+      '$target = newbridge $externalFunctionId, $subclass $args';
 
   @override
   bool operator ==(Object other) =>
@@ -80,7 +80,7 @@ final class InvokeExternal extends Operation {
   Set<SSA> get readsFrom => {...args};
 
   @override
-  String toString() => '$target = invokeexternal $externalFunctionId ($args)';
+  String toString() => '$target = invokeexternal $externalFunctionId $args';
 
   @override
   bool operator ==(Object other) =>

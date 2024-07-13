@@ -43,14 +43,15 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
       d.functionExpression.parameters?.parameters.length ?? 0;
   ctx.beginAllocScope(existingAllocLen: _existingAllocs);
   ctx.scopeFrameOffset += _existingAllocs;
+
+  TypeRef.loadTemporaryTypes(
+      ctx, d.functionExpression.typeParameters?.typeParameters);
+
   final resolvedParams = resolveFPLDefaults(
       ctx, d.functionExpression.parameters, false,
       allowUnboxed: true);
 
   var i = 0;
-
-  TypeRef.loadTemporaryTypes(
-      ctx, d.functionExpression.typeParameters?.typeParameters);
 
   for (final param in resolvedParams) {
     final p = param.parameter;
@@ -97,7 +98,7 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
 
   if (!(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
     if (b.isAsynchronous) {
-      asyncComplete(ctx, -1);
+      asyncComplete(ctx, null);
       return;
     }
   }

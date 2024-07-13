@@ -39,7 +39,8 @@ StatementInfo compileStatement(
   } else if (s is IfStatement) {
     return compileIfStatement(s, ctx, expectedReturnType);
   } else if (s is TryStatement) {
-    return compileTryStatement(s, ctx, expectedReturnType);
+    throw UnimplementedError();
+    //return compileTryStatement(s, ctx, expectedReturnType);
   } else if (s is AssertStatement) {
     return compileAssertStatement(s, ctx, expectedReturnType);
   } else if (s is BreakStatement) {

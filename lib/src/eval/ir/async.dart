@@ -1,18 +1,19 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
 
 final class Await extends Operation {
+  final SSA result;
   final SSA completer;
   final SSA subject;
 
-  Await(this.completer, this.subject);
+  Await(this.result, this.completer, this.subject);
 
   @override
   Set<SSA> get readsFrom => {completer, subject};
 
-  SSA? get writesTo => ControlFlowGraph.branch;
+  SSA? get writesTo => this.result;
 
   @override
-  String toString() => 'await ${subject}, completer: ${completer}';
+  String toString() => '$result = await ${subject}, completer: ${completer}';
 
   @override
   bool operator ==(Object other) =>

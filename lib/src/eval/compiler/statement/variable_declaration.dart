@@ -50,7 +50,6 @@ void compileVariableDeclarationList(
               ? _type.copyWith(boxed: false)
               : _type,
         );
-        ctx.pushOp(PushNull.make(), PushNull.LEN);
         ctx.pushOp(Assign(_v.ssa, res.ssa));
         ctx.setLocal(li.name.lexeme, _v);
       } else {

@@ -24,6 +24,33 @@ final class Return extends Operation {
   }
 }
 
+final class ReturnAsync extends Operation {
+  final SSA? value;
+  final SSA completer;
+
+  ReturnAsync(this.value, this.completer);
+
+  @override
+  Set<SSA> get readsFrom => {if (value != null) value!, completer};
+
+  @override
+  String toString() => 'returnasync $value, $completer';
+
+  @override
+  bool operator ==(Object other) =>
+      other is ReturnAsync &&
+      value == other.value &&
+      completer == other.completer;
+
+  @override
+  int get hashCode => value.hashCode ^ completer.hashCode;
+
+  @override
+  Operation copyWith({SSA? writesTo}) {
+    return this;
+  }
+}
+
 final class Jump extends Operation {
   final String target;
 
@@ -56,7 +83,7 @@ final class JumpIfFalse extends Operation {
   SSA? get writesTo => ControlFlowGraph.branch;
 
   @override
-  String toString() => 'jumpiffalse $condition ${target}';
+  String toString() => 'jumpiffalse $condition @${target}';
 
   @override
   bool operator ==(Object other) =>
@@ -85,11 +112,40 @@ final class JumpIfNonNull extends Operation {
   SSA? get writesTo => ControlFlowGraph.branch;
 
   @override
-  String toString() => 'jumpifnonnull $condition ${target}';
+  String toString() => 'jumpifnonnull $condition @${target}';
 
   @override
   bool operator ==(Object other) =>
       other is JumpIfNonNull &&
+      condition == other.condition &&
+      target == other.target;
+
+  @override
+  int get hashCode => condition.hashCode ^ target.hashCode;
+
+  @override
+  Operation copyWith({SSA? writesTo}) {
+    return this;
+  }
+}
+
+final class JumpIfNull extends Operation {
+  final SSA condition;
+  final String target;
+
+  JumpIfNull(this.condition, this.target);
+
+  @override
+  Set<SSA> get readsFrom => {condition};
+
+  SSA? get writesTo => ControlFlowGraph.branch;
+
+  @override
+  String toString() => 'jumpifnull $condition @${target}';
+
+  @override
+  bool operator ==(Object other) =>
+      other is JumpIfNull &&
       condition == other.condition &&
       target == other.target;
 
@@ -123,6 +179,33 @@ final class Call extends Operation {
 
   @override
   int get hashCode => target.hashCode ^ arguments.hashCode;
+
+  @override
+  Operation copyWith({SSA? writesTo}) {
+    return this;
+  }
+}
+
+final class Assert extends Operation {
+  final SSA condition;
+  final SSA errorMessage;
+
+  Assert(this.condition, this.errorMessage);
+
+  @override
+  Set<SSA> get readsFrom => {condition, errorMessage};
+
+  @override
+  String toString() => 'assert $condition, $errorMessage';
+
+  @override
+  bool operator ==(Object other) =>
+      other is Assert &&
+      condition == other.condition &&
+      errorMessage == other.errorMessage;
+
+  @override
+  int get hashCode => condition.hashCode ^ errorMessage.hashCode;
 
   @override
   Operation copyWith({SSA? writesTo}) {

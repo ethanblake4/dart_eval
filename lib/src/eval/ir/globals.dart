@@ -10,9 +10,6 @@ final class SetGlobal extends Operation {
   Set<SSA> get readsFrom => {source};
 
   @override
-  OpType get type => AssignmentOp.assign;
-
-  @override
   String toString() => 'setglobal $index = $source';
 
   @override
@@ -25,5 +22,36 @@ final class SetGlobal extends Operation {
   @override
   Operation copyWith({SSA? writesTo}) {
     return this;
+  }
+}
+
+final class LoadGlobal extends Operation {
+  final SSA target;
+  final int index;
+
+  LoadGlobal(this.target, this.index);
+
+  @override
+  Set<SSA> get readsFrom => {};
+
+  @override
+  SSA? get writesTo => target;
+
+  @override
+  OpType get type => AssignmentOp.assign;
+
+  @override
+  String toString() => '$target = loadglobal $index';
+
+  @override
+  bool operator ==(Object other) =>
+      other is LoadGlobal && target == other.target && index == other.index;
+
+  @override
+  int get hashCode => index.hashCode ^ target.hashCode;
+
+  @override
+  Operation copyWith({SSA? writesTo}) {
+    return LoadGlobal(writesTo ?? target, index);
   }
 }

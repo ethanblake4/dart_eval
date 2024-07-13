@@ -77,7 +77,7 @@ extension TearOff on Variable {
 
     ctx.beginAllocScope();
 
-    Variable? $target;
+    /*Variable? $target;
     if (dec is MethodDeclaration) {
       final targetOffset =
           BuiltinValue(intval: methodOffset!.targetScopeFrameOffset!).push(ctx);
@@ -200,6 +200,8 @@ extension TearOff on Variable {
         methodOffset: DeferredOrOffset(offset: fnOffset),
         callingConvention: CallingConvention.dynamic);
 
-    ctx.builder.split(tearoffBlock, ctx.commitBlock(endLabel));
+    ctx.builder.split(tearoffBlock, ctx.commitBlock(endLabel));*/
+
+    return this;
   }
 }

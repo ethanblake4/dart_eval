@@ -25,7 +25,7 @@ StatementInfo macroLoop(
 
   /// Make a save-state of the box/unbox status of all locals
   final save = ctx.saveState();
-
+/*
   JumpIfFalse? rewriteCond;
   int? rewritePos;
   Variable? conditionResult;
@@ -60,7 +60,7 @@ StatementInfo macroLoop(
     }
 
     ctx.endAllocScopeQuiet();
-    final result = ctx.pushOp(JumpConstant.make(-1), JumpConstant.LEN);
+    final result = ctx.pushOp(Jump.make(-1), JumpConstant.LEN);
     return result;
   });
 
@@ -93,7 +93,7 @@ StatementInfo macroLoop(
 
   if (rewritePos != null) {
     ctx.rewriteOp(rewritePos,
-        JumpIfFalse.make(conditionResult!.scopeFrameOffset, ctx.out.length), 0);
+        JumpIfFalse(conditionResult!.scopeFrameOffset, ctx.out.length), 0);
   }
 
   if (conditionSaveState != null) {
@@ -108,5 +108,7 @@ StatementInfo macroLoop(
   ctx.endAllocScope(popAdjust: pops);
   ctx.resolveLabel(label);
 
-  return statementResult;
+  return statementResult;*/
+
+  return StatementInfo(-1);
 }

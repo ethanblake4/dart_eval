@@ -3,10 +3,11 @@ import 'package:analyzer/dart/ast/token.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/ir/memory.dart';
 
 import '../errors.dart';
 import 'expression.dart';
@@ -68,12 +69,7 @@ Variable _handleDoubleOperands(
 ) {
   var l = L;
 
-  l = Variable.alloc(ctx, L.type);
-  ctx.pushOp(PushNull.make(), PushNull.LEN);
-  ctx.pushOp(
-    CopyValue.make(l.scopeFrameOffset, L.scopeFrameOffset),
-    CopyValue.LEN,
-  );
+  l = Variable.ssa(ctx, Assign(ctx.svar('dbl_op_im'), L.ssa), L.type);
 
   final result = l.invoke(
     ctx,

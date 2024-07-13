@@ -411,9 +411,10 @@ class Runtime {
                     MapEntry(key, (value as Map).cast<String, int>()))
                 .cast<String, Map<String, int>>()));
 
-    final classes = (json.decode(encodedInstanceDecs).map((k, v) =>
+    final classes = /* TODO (json.decode(encodedInstanceDecs).map((k, v) =>
             MapEntry(int.parse(k), (v as Map).cast<String, List>())) as Map)
-        .cast<int, Map<String, List>>();
+        .cast<int, Map<String, List>>(); */
+        {};
 
     classes.forEach((file, $class) {
       declaredClasses[file] = {
@@ -666,7 +667,7 @@ class Runtime {
   var args = <Object?>[];
 
   /// The decoded program bytecode
-  final pr = <EvcOp>[];
+  final pr = <dynamic>[];
 
   /// The most recent return value
   Object? returnValue;

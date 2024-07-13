@@ -262,7 +262,7 @@ class $Map<K, V> implements Map<K, V>, $Instance {
 }
 
 /// dart_eval bimodal wrapper for [MapEntry]
-class $MapEntry<K, V> implements MapEntry<K, V>, $Instance {
+class $MapEntry<K, V> implements $Instance {
   /// Wrap a [MapEntry] in a [$MapEntry]
   $MapEntry.wrap(this.$value);
 

@@ -80,7 +80,7 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx,
 
   if (!(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
     if (b.isAsynchronous) {
-      asyncComplete(ctx, -1);
+      asyncComplete(ctx, null);
     } else {
       ctx.pushOp(Return(null));
     }

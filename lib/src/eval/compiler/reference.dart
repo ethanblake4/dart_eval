@@ -3,7 +3,12 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
+import 'package:dart_eval/src/eval/ir/bridge.dart';
+import 'package:dart_eval/src/eval/ir/collection.dart';
+import 'package:dart_eval/src/eval/ir/globals.dart';
 import 'package:dart_eval/src/eval/ir/memory.dart';
+import 'package:dart_eval/src/eval/ir/objects.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
@@ -109,8 +114,7 @@ class IdentifierReference implements Reference {
         final _value = type.boxed
             ? value.boxIfNeeded(ctx, source)
             : value.unboxIfNeeded(ctx);
-        ctx.pushOp(
-            SetGlobal.make(gIndex, _value.scopeFrameOffset), SetGlobal.LEN);
+        ctx.pushOp(SetGlobal(gIndex, _value.ssa));
         return _value;
       }
       object = object!.boxIfNeeded(ctx, source);
@@ -123,9 +127,8 @@ class IdentifierReference implements Reference {
             source);
       }
       final _v = value.boxIfNeeded(ctx, source);
-      final op = SetObjectProperty.make(
-          object!.scopeFrameOffset, name, _v.scopeFrameOffset);
-      ctx.pushOp(op, SetObjectProperty.len(op));
+      final op = SetPropertyDynamic(object!.ssa, name, _v.ssa);
+      ctx.pushOp(op);
       return _v;
     }
 
@@ -137,8 +140,7 @@ class IdentifierReference implements Reference {
             'Cannot modify value of final variable $name', source);
       }
 
-      ctx.pushOp(CopyValue.make(local.scopeFrameOffset, value.scopeFrameOffset),
-          CopyValue.LEN);
+      ctx.pushOp(Assign(local.ssa, value.ssa));
       final type = TypeRef.commonBaseType(ctx, {local.type, value.type});
       local.copyWithUpdate(ctx,
           type: type.copyWith(boxed: value.type.boxed),
@@ -161,9 +163,9 @@ class IdentifierReference implements Reference {
               source);
         }
         final $this = ctx.lookupLocal('#this')!;
-        final op = SetObjectProperty.make($this.scopeFrameOffset, name,
-            value.boxIfNeeded(ctx, source).scopeFrameOffset);
-        ctx.pushOp(op, SetObjectProperty.len(op));
+        final op = SetPropertyDynamic(
+            $this.ssa, name, value.boxIfNeeded(ctx, source).ssa);
+        ctx.pushOp(op);
         return value;
       }
     }
@@ -179,7 +181,7 @@ class IdentifierReference implements Reference {
       //    .topLevelVariableInferredTypes[_decl.sourceLib]![decl.name.lexeme]!;
       final gIndex =
           ctx.topLevelGlobalIndices[_decl.sourceLib]![decl.name.lexeme]!;
-      ctx.pushOp(SetGlobal.make(gIndex, value.scopeFrameOffset), SetGlobal.LEN);
+      ctx.pushOp(SetGlobal(gIndex, value.ssa));
       return value;
     }
 
@@ -211,22 +213,26 @@ class IdentifierReference implements Reference {
             if (getter != null) {
               final getterType = TypeRef.fromBridgeAnnotation(
                   ctx, getter.functionDescriptor.returns);
-              ctx.pushOp(
-                  InvokeExternal.make(ctx.bridgeStaticFunctionIndices[
-                      classType.file]!['${classType.name}.$name*g']!),
-                  InvokeExternal.LEN);
-              ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-              return Variable.alloc(ctx, getterType);
+              return Variable.ssa(
+                  ctx,
+                  InvokeExternal(
+                      ctx.svar('$name'),
+                      ctx.bridgeStaticFunctionIndices[classType.file]![
+                          '${classType.name}.$name*g']!,
+                      []),
+                  getterType);
             }
             final field = br.fields[name];
             if (field != null) {
               final fieldType = TypeRef.fromBridgeAnnotation(ctx, field.type);
-              ctx.pushOp(
-                  InvokeExternal.make(ctx.bridgeStaticFunctionIndices[
-                      classType.file]!['${classType.name}.$name*g']!),
-                  InvokeExternal.LEN);
-              ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-              return Variable.alloc(ctx, fieldType);
+              return Variable.ssa(
+                  ctx,
+                  InvokeExternal(
+                      ctx.svar('$name'),
+                      ctx.bridgeStaticFunctionIndices[classType.file]![
+                          '${classType.name}.$name*g']!,
+                      []),
+                  fieldType);
             }
 
             throw CompileError(
@@ -237,9 +243,7 @@ class IdentifierReference implements Reference {
         final _name = '${classType.name}.$name';
         final type = ctx.topLevelVariableInferredTypes[classType.file]![_name]!;
         final gIndex = ctx.topLevelGlobalIndices[classType.file]![_name]!;
-        ctx.pushOp(LoadGlobal.make(gIndex), LoadGlobal.LEN);
-        ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-        return Variable.alloc(ctx, type);
+        return Variable.ssa(ctx, LoadGlobal(ctx.svar(name), gIndex), type);
       }
       object = object!.boxIfNeeded(ctx, source);
       return object!.getProperty(ctx, name);
@@ -276,10 +280,9 @@ class IdentifierReference implements Reference {
           }
         }
 
-        final op = PushObjectProperty.make(
-            $this.scopeFrameOffset, ctx.constantPool.addOrGet(name));
-        ctx.pushOp(op, PushObjectProperty.len(op));
-        ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
+        final resvar = ctx.svar(name);
+
+        ctx.pushOp(LoadPropertyDynamic(resvar, $this.ssa, name));
 
         if (_dec.isBridge) {
           if (_dec is GetSet) {
@@ -287,8 +290,9 @@ class IdentifierReference implements Reference {
                 (throw CompileError(
                     'Property "$name" has a setter but no getter, so it cannot be accessed',
                     source));
-            return Variable.alloc(
+            return Variable.of(
                 ctx,
+                resvar,
                 TypeRef.fromBridgeAnnotation(
                     ctx, getter.functionDescriptor.returns,
                     specifiedType: $type, specifyingType: $this.type),
@@ -306,8 +310,9 @@ class IdentifierReference implements Reference {
                     name: name));
           }
           if (bridge is BridgeFieldDef) {
-            return Variable.alloc(
+            return Variable.of(
                 ctx,
+                resvar,
                 TypeRef.fromBridgeAnnotation(ctx, bridge.type,
                     specifiedType: $type, specifyingType: $this.type),
                 methodOffset: DeferredOrOffset(
@@ -320,8 +325,9 @@ class IdentifierReference implements Reference {
               source);
         }
 
-        return Variable.alloc(
+        return Variable.of(
             ctx,
+            resvar,
             TypeRef.lookupFieldType(ctx, $type, name, source: source) ??
                 CoreTypes.dynamic.ref(ctx));
       }
@@ -339,10 +345,9 @@ class IdentifierReference implements Reference {
           final name = '${ctx.currentClass!.name.lexeme}.${_dec.name.lexeme}';
           final type = ctx.topLevelVariableInferredTypes[ctx.library]![name]!;
           final gIndex = ctx.topLevelGlobalIndices[ctx.library]![name]!;
-          ctx.pushOp(LoadGlobal.make(gIndex), LoadGlobal.LEN);
-          ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
 
-          return Variable.alloc(ctx, type);
+          return Variable.ssa(
+              ctx, LoadGlobal(ctx.svar(_dec.name.lexeme), gIndex), type);
         }
       }
     }
@@ -502,10 +507,9 @@ class IndexedReference implements Reference {
               _variable.type.specifiedTypeArgs[0].boxed)
           ? _index.boxIfNeeded(ctx, source)
           : _index.unboxIfNeeded(ctx);
-      ctx.pushOp(IndexMap.make(map.scopeFrameOffset, _index.scopeFrameOffset),
-          IndexMap.LEN);
-      return Variable.alloc(
+      return Variable.ssa(
           ctx,
+          IndexMap(ctx.svar('map'), map.ssa, _index.ssa),
           _variable.type.specifiedTypeArgs.length < 2
               ? CoreTypes.dynamic.ref(ctx)
               : _variable.type.specifiedTypeArgs[1]);
@@ -538,10 +542,7 @@ class IndexedReference implements Reference {
       } else {
         _value = _value.unboxIfNeeded(ctx);
       }
-      ctx.pushOp(
-          ListSetIndexed.make(list.scopeFrameOffset, _index.scopeFrameOffset,
-              value.scopeFrameOffset),
-          IndexList.LEN);
+      ctx.pushOp(ListSet(list.ssa, _index.ssa, value.ssa));
       return _value;
     }
 
@@ -601,10 +602,9 @@ Variable _declarationToVariable(
         ctx.topLevelVariableInferredTypes[_decl.sourceLib]![decl.name.lexeme]!;
     final gIndex =
         ctx.topLevelGlobalIndices[_decl.sourceLib]![decl.name.lexeme]!;
-    ctx.pushOp(LoadGlobal.make(gIndex), LoadGlobal.LEN);
-    ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
 
-    return Variable.alloc(ctx, type);
+    return Variable.ssa(
+        ctx, LoadGlobal(ctx.svar(decl.name.lexeme), gIndex), type);
   }
 
   if (decl is! FunctionDeclaration && decl is! ConstructorDeclaration) {

@@ -1,4 +1,4 @@
-import 'package:analyzer/dart/ast/ast.dart';
+/*import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/model/label.dart';
@@ -103,6 +103,6 @@ StatementInfo _compileCatchClause(
                   ctx, clauses, index + 1, exceptionVar, expectedReturnType);
             },
       source: catchClause);
-}
+}*/
 
 ///

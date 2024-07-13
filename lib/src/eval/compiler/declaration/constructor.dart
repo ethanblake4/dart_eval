@@ -325,8 +325,8 @@ void compileConstructorDeclaration(
       final constructor = bridge.constructors[constructorName]!;
       final argsPair = compileArgumentListWithBridge(
           ctx, $superInitializer.argumentList, constructor.functionDescriptor);
-      final _args = argsPair.first;
-      final _namedArgs = argsPair.second;
+      final _args = argsPair.args;
+      final _namedArgs = argsPair.namedArgs;
       argTypes.addAll(_args.map((e) => e.type).toList());
       namedArgTypes
           .addAll(_namedArgs.map((key, value) => MapEntry(key, value.type)));

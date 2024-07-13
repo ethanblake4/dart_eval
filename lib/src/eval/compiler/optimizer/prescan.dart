@@ -2,6 +2,7 @@
 
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
+import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
@@ -86,8 +87,7 @@ class PrescanContext with ScopeContext {
   List<Variable> localsReferencedFromClosure = [];
   Set<int> closedFrames = {};
 
-  @override
-  int pushOp(EvcOp op, int length) {
+  int pushOp(Operation op, int length) {
     return 0;
   }
 }

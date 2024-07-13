@@ -61,7 +61,8 @@ Variable compileExpression(Expression e, CompilerContext ctx,
   } else if (e is ParenthesizedExpression) {
     return compileParenthesizedExpression(e, ctx);
   } else if (e is ThrowExpression) {
-    return compileThrowExpression(ctx, e);
+    throw CompileError('Unsupported throw expression');
+    //return compileThrowExpression(ctx, e);
   } else if (e is ConditionalExpression) {
     return compileConditionalExpression(ctx, e);
   } else if (e is IsExpression) {

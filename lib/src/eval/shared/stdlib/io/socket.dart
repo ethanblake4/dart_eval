@@ -6,7 +6,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/typed_data/typed_data.dart';
 import 'package:dart_eval/stdlib/core.dart';
 
 /// dart_eval bimodal wrapper for [InternetAddressType]
-class $InternetAddressType implements InternetAddressType, $Instance {
+class $InternetAddressType implements $Instance {
   /// Configure the [$InternetAddressType] wrapper for use in a [Runtime]
   static void configureForCompile(BridgeDeclarationRegistry registry) {
     registry.defineBridgeClass($declaration);
@@ -137,9 +137,6 @@ class $InternetAddressType implements InternetAddressType, $Instance {
     final $result = InternetAddressType.any;
     return $InternetAddressType.wrap($result);
   }
-
-  @override
-  String get name => $value.name;
 
   @override
   String toString() => $value.toString();

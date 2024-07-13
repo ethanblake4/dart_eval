@@ -112,7 +112,7 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx,
 
   if (!(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
     if (b.isAsynchronous) {
-      asyncComplete(ctx, -1);
+      asyncComplete(ctx, null);
       ctx.endAllocScope(popValues: false);
     } else {
       ctx.endAllocScope();
@@ -175,6 +175,10 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx,
       .map((rt) => rt.toJson())
       .toList();
 
+  assert(false);
+
+  /*
+
   BuiltinValue(intval: requiredPositionalArgCount).push(ctx).pushArg(ctx);
   BuiltinValue(intval: ctx.constantPool.addOrGet(positionalArgTypes))
       .push(ctx)
@@ -184,7 +188,7 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx,
       .pushArg(ctx);
   BuiltinValue(intval: ctx.constantPool.addOrGet(sortedNamedArgTypes))
       .push(ctx)
-      .pushArg(ctx);
+      .pushArg(ctx);*/
 
   final result = Variable.ssa(
       ctx,

@@ -1,8 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import '../runtime.dart';
-
 class Evc {
   static List<int> i16b(int i16) {
     final x = ByteData(2);

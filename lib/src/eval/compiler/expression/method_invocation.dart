@@ -9,7 +9,9 @@ import 'package:dart_eval/src/eval/compiler/expression/funcexpr_invocation.dart'
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/equality.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
+import 'package:dart_eval/src/eval/compiler/model/registers.dart';
 import 'package:dart_eval/src/eval/compiler/offset_tracker.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -18,10 +20,9 @@ import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'package:dart_eval/src/eval/ir/bridge.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/memory.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/ir/objects.dart';
 import 'package:dart_eval/src/eval/shared/registers.dart';
 
-import '../util.dart';
 import 'expression.dart';
 import 'identifier.dart';
 
@@ -133,8 +134,9 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
         ctx, e.argumentList, fnDescriptor,
         before: L != null ? [L] : []);
 
-    _args = argsPair.first;
-    _namedArgs = argsPair.second;
+    _args = argsPair.args;
+    _namedArgs = argsPair.namedArgs;
+    ssaArgs = argsPair.ssa.map((e) => SSA(e)).toList();
     isConstructor = bridge is BridgeClassDef;
   } else {
     final dec = _dec.declaration!;
@@ -192,31 +194,7 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
   final _namedArgTypes =
       _namedArgs.map((key, value) => MapEntry(key, value.type));
 
-  if (_dec.isBridge) {
-    final bridge = _dec.bridge!;
-    if (bridge is BridgeClassDef && !bridge.wrap) {
-      final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type.type);
-
-      final $null = BuiltinValue().push(ctx);
-      final op = BridgeInstantiate(
-          ctx.svar('${e.methodName.name}_brinst_result'),
-          ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.']!,
-          $null.ssa,
-          ssaArgs);
-      ctx.pushOp(op);
-    } else {
-      final op = InvokeExternal.make(
-          ctx.bridgeStaticFunctionIndices[offset.file]![offset.name]!);
-      ctx.pushOp(op, InvokeExternal.LEN);
-      ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-    }
-  } else {
-    final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.length);
-    if (offset.offset == null) {
-      ctx.offsetTracker.setOffset(loc, offset);
-    }
-    ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-  }
+  final invokeResult = ctx.svar('${e.methodName.name}_result');
 
   TypeRef? thisType;
   if (ctx.currentClass != null) {
@@ -230,7 +208,32 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
       boxed: _dec.isBridge ||
           !(mReturnType.type?.isUnboxedAcrossFunctionBoundaries ?? false));
 
-  final v = Variable.alloc(ctx, _returnType ?? CoreTypes.dynamic.ref(ctx),
+  if (_dec.isBridge) {
+    final bridge = _dec.bridge!;
+    if (bridge is BridgeClassDef && !bridge.wrap) {
+      final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type.type);
+
+      final $null = BuiltinValue().push(ctx);
+      final op = BridgeInstantiate(
+          invokeResult,
+          ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.']!,
+          $null.ssa,
+          ssaArgs);
+      ctx.pushOp(op);
+    } else {
+      ctx.pushOp(InvokeExternal(
+          invokeResult,
+          ctx.bridgeStaticFunctionIndices[offset.file]![offset.name]!,
+          ssaArgs));
+    }
+  } else {
+    ctx.pushOp(Call(offset, ssaArgs));
+    ctx.pushOp(AssignRegister(invokeResult,
+        returnTypeToRegister(ctx, _returnType ?? CoreTypes.dynamic.ref(ctx))));
+  }
+
+  final v = Variable.of(
+      ctx, invokeResult, _returnType ?? CoreTypes.dynamic.ref(ctx),
       concreteTypes: [if (isConstructor && _returnType != null) _returnType]);
 
   return v;
@@ -244,7 +247,7 @@ Variable _invokeWithTarget(
   final bool isStatic;
   TypeRef? staticType;
 
-  Pair<List<Variable>, Map<String, Variable>> argsPair;
+  ArgumentListResult argsPair;
 
   final knownMethod = getKnownMethods(ctx)[L.type]?[e.methodName.name];
 
@@ -285,41 +288,13 @@ Variable _invokeWithTarget(
         before: [if (!isStatic) L], source: e);
   }
 
-  final _args = argsPair.first;
-  final _namedArgs = argsPair.second;
+  final _args = argsPair.args;
+  final _namedArgs = argsPair.namedArgs;
+  final _ssaArgs = argsPair.ssa.map((e) => SSA(e)).toList();
 
   final _argTypes = _args.map((e) => e.type).toList();
   final _namedArgTypes =
       _namedArgs.map((key, value) => MapEntry(key, value.type));
-
-  if (isStatic) {
-    if (_dec.isBridge) {
-      final ix = InvokeExternal.make(ctx.bridgeStaticFunctionIndices[
-          staticType!.file]!['${staticType.name}.${e.methodName.name}']!);
-      ctx.pushOp(ix, InvokeExternal.LEN);
-    } else {
-      final offset = DeferredOrOffset.lookupStatic(
-          ctx, staticType!.file, staticType.name, e.methodName.name);
-      final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.length);
-      if (offset.offset == null) {
-        ctx.offsetTracker.setOffset(loc, offset);
-      }
-    }
-  } else if (L.concreteTypes.length == 1 && !_dec.isBridge) {
-    // If the concrete type is known we can use a static call
-    final actualType = L.concreteTypes[0];
-    final offset = DeferredOrOffset(
-        file: actualType.file,
-        className: actualType.name,
-        methodType: 2,
-        name: e.methodName.name);
-    final loc = ctx.pushOp(Call.make(-1), Call.length);
-    ctx.offsetTracker.setOffset(loc, offset);
-  } else {
-    final op = InvokeDynamic.make(L.boxIfNeeded(ctx).scopeFrameOffset,
-        ctx.constantPool.addOrGet(e.methodName.name));
-    ctx.pushOp(op, InvokeDynamic.len(op));
-  }
 
   mReturnType = AlwaysReturnType.fromInstanceMethodOrBuiltin(
       ctx,
@@ -329,12 +304,40 @@ Variable _invokeWithTarget(
       _namedArgTypes,
       $static: isStatic);
 
-  ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
+  final returnType =
+      mReturnType?.type?.copyWith(boxed: true) ?? CoreTypes.dynamic.ref(ctx);
 
-  final v = Variable.alloc(ctx,
-      mReturnType?.type?.copyWith(boxed: true) ?? CoreTypes.dynamic.ref(ctx));
+  final result = ctx.svar('${e.methodName.name}_result');
 
-  return v;
+  if (isStatic) {
+    if (_dec.isBridge) {
+      ctx.pushOp(InvokeExternal(
+          result,
+          ctx.bridgeStaticFunctionIndices[staticType!.file]![
+              '${staticType.name}.${e.methodName.name}']!,
+          _ssaArgs));
+    } else {
+      final offset = DeferredOrOffset.lookupStatic(
+          ctx, staticType!.file, staticType.name, e.methodName.name);
+      ctx.pushOp(Call(offset, _ssaArgs));
+      ctx.pushOp(AssignRegister(result, returnTypeToRegister(ctx, returnType)));
+    }
+  } else if (L.concreteTypes.length == 1 && !_dec.isBridge) {
+    // If the concrete type is known we can use a static call
+    final actualType = L.concreteTypes[0];
+    final offset = DeferredOrOffset(
+        file: actualType.file,
+        className: actualType.name,
+        methodType: 2,
+        name: e.methodName.name);
+    ctx.pushOp(Call(offset, _args.map((e) => e.ssa).toList()));
+    ctx.pushOp(AssignRegister(result, returnTypeToRegister(ctx, returnType)));
+  } else {
+    ctx.pushOp(InvokeDynamic(
+        result, L.boxIfNeeded(ctx).ssa, e.methodName.name, _ssaArgs));
+  }
+
+  return Variable.of(ctx, result, returnType);
 }
 
 DeclarationOrBridge<MethodDeclaration, BridgeMethodDef> resolveInstanceMethod(

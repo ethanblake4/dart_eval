@@ -6,8 +6,6 @@ import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/async.dart';
-import 'package:dart_eval/src/eval/ir/memory.dart';
-import 'package:dart_eval/src/eval/shared/registers.dart';
 
 Variable compileAwaitExpression(AwaitExpression e, CompilerContext ctx) {
   AstNode? _e = e;
@@ -31,12 +29,9 @@ Variable compileAwaitExpression(AwaitExpression e, CompilerContext ctx) {
 
   var _completer = ctx.lookupLocal('#completer');
 
-  final awaitOp = Await(_completer!.ssa, subject.ssa);
-  ctx.pushOp(awaitOp);
-
   return Variable.ssa(
       ctx,
-      AssignRegister(ctx.svar('async_result'), regGPR1),
+      Await(ctx.svar('async_result'), _completer!.ssa, subject.ssa),
       type.specifiedTypeArgs.isNotEmpty
           ? type.specifiedTypeArgs[0]
           : CoreTypes.dynamic.ref(ctx));
