@@ -78,7 +78,11 @@ StatementInfo macroBranch(
     ctx.pushOp(Jump(endLabel));
   }
 
-  ctx.builder = ctx.builder.then(BasicBlock(ctx.commit())).commit();
+  ctx.builder = ctx.builder.then(BasicBlock(ctx.commit()));
+
+  if (elseBranch != null) {
+    ctx.builder = ctx.builder.commit();
+  }
 
   if (elseBranch != null) {
     ctx.builder = ctx.builder.block(1);

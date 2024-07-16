@@ -64,9 +64,9 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
     }
     vRep = Variable(
         i, type.copyWith(boxed: !type.isUnboxedAcrossFunctionBoundaries))
-      ..name = p.name!.lexeme;
+      ..name = param.name;
 
-    ctx.setLocal(vRep.name!, vRep);
+    ctx.setLocal(p.name!.lexeme, vRep);
 
     i++;
   }

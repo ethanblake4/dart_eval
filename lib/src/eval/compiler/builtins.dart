@@ -9,7 +9,8 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 var dartCoreFile = -1;
 
 class BuiltinValue {
-  BuiltinValue({this.intval, this.doubleval, this.stringval, this.boolval}) {
+  BuiltinValue(
+      {this.intval, this.doubleval, this.stringval, this.boolval, this.name}) {
     if (intval != null) {
       type = BuiltinValueType.intType;
     } else if (stringval != null) {
@@ -23,6 +24,7 @@ class BuiltinValue {
     }
   }
 
+  String? name;
   late BuiltinValueType type;
   final int? intval;
   final double? doubleval;
@@ -31,7 +33,6 @@ class BuiltinValue {
 
   Variable _push(CompilerContext ctx, SSA target) {
     if (type == BuiltinValueType.intType) {
-      ctx.pushOp(LoadInt(target, intval!));
       final type = CoreTypes.int.ref(ctx).copyWith(boxed: false);
       return Variable.ssa(ctx, LoadInt(target, intval!), type,
           concreteTypes: [type]);
@@ -64,7 +65,7 @@ class BuiltinValue {
   }
 
   Variable push(CompilerContext ctx, [SSA? ssa]) =>
-      _push(ctx, ssa ?? ctx.svar());
+      _push(ctx, ssa ?? ctx.svar(this.name ?? 'var'));
 }
 
 enum BuiltinValueType { intType, stringType, doubleType, boolType, nullType }

@@ -125,7 +125,7 @@ void compileConstructorDeclaration(
       vrep = Variable(i, type)..name = p.name!.lexeme;
     }
 
-    ctx.setLocal(vrep.name!, vrep);
+    ctx.setLocal(p.name!.lexeme, vrep);
 
     i++;
   }

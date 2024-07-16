@@ -2,10 +2,8 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
-import 'package:dart_eval/src/eval/compiler/collection/list.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
 import 'package:dart_eval/src/eval/ir/primitives.dart';
@@ -243,13 +241,6 @@ class Variable {
       final v = vlist[i];
       final set = boxed ? v.boxIfNeeded(ctx) : v.unboxIfNeeded(ctx);
       out.add(set);
-      for (var j = i + 1; j < vlist.length; j++) {
-        final v2 = vlist[j];
-        // not great for large variable lists, but since most variable lists are small...
-        if (v2.scopeFrameOffset == v.scopeFrameOffset) {
-          vlist[j] = set;
-        }
-      }
     }
 
     return out;
@@ -273,8 +264,9 @@ class InvokeResult {
 }
 
 class PossiblyValuedParameter {
-  PossiblyValuedParameter(this.parameter, this.V);
+  PossiblyValuedParameter(this.parameter, this.name, this.V);
 
   NormalFormalParameter parameter;
+  String name;
   Variable? V;
 }

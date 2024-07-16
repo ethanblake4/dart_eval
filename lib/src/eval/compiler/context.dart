@@ -67,14 +67,10 @@ mixin ScopeContext on Object implements AbstractScopeContext {
 
   Variable setLocal(String name, Variable v, {int? frame}) {
     if (frame != null) {
-      return locals[frame][name] = v
-        ..name = name
-        ..frameIndex = frame;
+      return locals[frame][name] = v..frameIndex = frame;
     }
 
-    return locals.last[name] = v
-      ..name = name
-      ..frameIndex = locals.length - 1;
+    return locals.last[name] = v..frameIndex = locals.length - 1;
   }
 
   Variable? lookupLocal(String name) {
@@ -270,9 +266,7 @@ class CompilerContext with ScopeContext {
 
           return v.copyWith(scopeFrameOffset: scopeFrameOffset++);
         }*/
-        return v
-          ..name = name
-          ..frameIndex = i;
+        return v..frameIndex = i;
       }
       if (scopeDoesClose[i]) {
         frameRef.add(locals[i]['#prev']!);

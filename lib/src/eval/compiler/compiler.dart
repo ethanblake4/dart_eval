@@ -531,7 +531,12 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       typeIds.putIfAbsent(type.file, () => {})[type.name] = t.value;
     }
 
-    print(_ctx.builder.build());
+    final cfg = _ctx.builder.build();
+    print(cfg);
+    cfg.insertPhiNodes();
+    cfg.computeSemiPrunedSSA();
+    //cfg.removeEmptyAndUnusedBlocks();
+    print(cfg);
 
     return Program(
       _ctx.topLevelDeclarationPositions,

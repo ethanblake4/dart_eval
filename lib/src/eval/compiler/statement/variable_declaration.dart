@@ -49,7 +49,7 @@ void compileVariableDeclarationList(
           _type.isUnboxedAcrossFunctionBoundaries
               ? _type.copyWith(boxed: false)
               : _type,
-        );
+        )..name = ctx.svar(li.name.lexeme).name;
         ctx.pushOp(Assign(_v.ssa, res.ssa));
         ctx.setLocal(li.name.lexeme, _v);
       } else {
@@ -60,7 +60,8 @@ void compileVariableDeclarationList(
                 isFinal: l.isFinal || l.isConst,
                 methodOffset: res.methodOffset,
                 methodReturnType: res.methodReturnType,
-                callingConvention: res.callingConvention));
+                callingConvention: res.callingConvention)
+              ..name = ctx.svar(li.name.lexeme).name);
       }
     } else {
       ctx.setLocal(

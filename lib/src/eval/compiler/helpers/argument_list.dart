@@ -329,7 +329,7 @@ ArgumentListResult compileArgumentListWithBridge(
     } else {
       var paramType = TypeRef.fromBridgeAnnotation(ctx, param.type);
 
-      var _arg = compileExpression(arg, ctx, paramType);
+      var _arg = compileExpression(arg, ctx, paramType, param.name);
       _arg = _arg.boxIfNeeded(ctx);
       if (_arg.type == CoreTypes.function.ref(ctx) &&
           _arg.scopeFrameOffset == -1) {
@@ -343,7 +343,7 @@ ArgumentListResult compileArgumentListWithBridge(
       }
       _args.add(_arg);
       _push.add(_arg);
-      ssa.add(param.name);
+      ssa.add(_arg.name!);
     }
 
     i++;

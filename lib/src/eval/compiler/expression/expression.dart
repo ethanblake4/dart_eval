@@ -21,15 +21,14 @@ import 'package:dart_eval/src/eval/compiler/expression/postfix.dart';
 import 'package:dart_eval/src/eval/compiler/expression/prefix.dart';
 import 'package:dart_eval/src/eval/compiler/expression/property_access.dart';
 import 'package:dart_eval/src/eval/compiler/expression/rethrow.dart';
-import 'package:dart_eval/src/eval/compiler/expression/throw.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 
 Variable compileExpression(Expression e, CompilerContext ctx,
-    [TypeRef? bound]) {
+    [TypeRef? bound, String? nameHint]) {
   if (e is Literal) {
-    return parseLiteral(e, ctx, bound);
+    return parseLiteral(e, ctx, bound, nameHint);
   } else if (e is AssignmentExpression) {
     return compileAssignmentExpression(e, ctx);
   } else if (e is Identifier) {

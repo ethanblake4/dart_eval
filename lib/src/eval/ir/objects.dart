@@ -148,7 +148,7 @@ final class SetPropertyDynamic extends Operation {
   SSA? get writesTo => null;
 
   @override
-  String toString() => 'setpropertydynamic $object:"$name" = $variable';
+  String toString() => 'setpropdynamic $object:"$name" = $variable';
 
   @override
   bool operator ==(Object other) =>
@@ -235,10 +235,10 @@ final class InvokeDynamic extends Operation {
   InvokeDynamic(this.target, this.object, this.name, this.args);
 
   @override
-  Set<SSA> get readsFrom => {...args, target};
+  Set<SSA> get readsFrom => {...args, object};
 
   @override
-  SSA? get writesTo => object;
+  SSA? get writesTo => target;
 
   @override
   String toString() => '$target = invokedynamic $object.$name $args';

@@ -89,18 +89,20 @@ List<PossiblyValuedParameter> resolveFPLDefaults(
             V = V.unboxIfNeeded(ctx);
           }
           ctx.pushOp(Assign(paramVar, V.ssa));
-          normalized.add(PossiblyValuedParameter(param.parameter, V));
+          normalized
+              .add(PossiblyValuedParameter(param.parameter, paramVar.name, V));
           return StatementInfo(-1);
         }, testNullish: true);
       } else {
         if (param.defaultValue == null /* todo && param.type.nullable */) {
           ctx.pushOp(MaybeBoxNull(paramVar.copy(), paramVar));
         }
-        normalized.add(PossiblyValuedParameter(param.parameter, null));
+        normalized
+            .add(PossiblyValuedParameter(param.parameter, paramVar.name, null));
       }
     } else {
       param as NormalFormalParameter;
-      normalized.add(PossiblyValuedParameter(param, null));
+      normalized.add(PossiblyValuedParameter(param, paramVar.name, null));
     }
 
     _paramIndex++;

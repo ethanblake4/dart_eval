@@ -3,9 +3,9 @@ import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
+import 'package:dart_eval/src/eval/compiler/optimizer/intrinsics.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
-import 'package:dart_eval/src/eval/ir/alu.dart';
 import 'package:dart_eval/src/eval/ir/logic.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
 
@@ -15,11 +15,9 @@ extension Invoke on Variable {
   InvokeResult invoke(CompilerContext ctx, String method, List<Variable> args) {
     var $this = this;
 
-    final supportedIntIntrinsicOps = {'+', '-', '<', '>', '<=', '>='};
-    final supportedBoolIntrinsicOps = {'!'};
     if (type.isAssignableTo(ctx, CoreTypes.int.ref(ctx),
             forceAllowDynamic: false) &&
-        supportedIntIntrinsicOps.contains(method) &&
+        intIntrinsics.keys.contains(method) &&
         args[0].type.isAssignableTo(ctx, CoreTypes.int.ref(ctx))) {
       $this = unboxIfNeeded(ctx);
       if (args.length != 1) {
@@ -27,71 +25,30 @@ extension Invoke on Variable {
             'Cannot invoke method "$method" on variable of type $type with args count: ${args.length} (required: 1)');
       }
       var R = args[0];
-      if (R.scopeFrameOffset == scopeFrameOffset) {
-        R = $this;
-      } else {
-        R = R.unboxIfNeeded(ctx);
-      }
+      R = R.ssa == ssa ? $this : R.unboxIfNeeded(ctx);
 
-      Variable result;
-      switch (method) {
-        case '+':
-          // Int intrinsic add
-          result = Variable.ssa(
-              ctx,
-              IntAdd(ctx.svar('add_result'), $this.ssa, R.ssa),
-              CoreTypes.int.ref(ctx).copyWith(boxed: false));
-          break;
-        case '-':
-          // Int intrinsic sub
-          result = Variable.ssa(
-              ctx,
-              IntSub(ctx.svar('sub_result'), $this.ssa, R.ssa),
-              CoreTypes.int.ref(ctx).copyWith(boxed: false));
-          break;
-
-        case '<':
-          // Int intrinsic less than
-          result = Variable.ssa(
-              ctx,
-              IntLessThan(ctx.svar('lt_result'), $this.ssa, R.ssa),
-              CoreTypes.bool.ref(ctx).copyWith(boxed: false));
-          break;
-        case '>':
-          // Int intrinsic greater than
-          result = Variable.ssa(
-              ctx,
-              IntGreaterThan(ctx.svar('gt_result'), $this.ssa, R.ssa),
-              CoreTypes.bool.ref(ctx).copyWith(boxed: false));
-          break;
-        case '<=':
-          // Int intrinsic less than or equal
-          result = Variable.ssa(
-              ctx,
-              IntLessThanOrEqual(ctx.svar('le_result'), $this.ssa, R.ssa),
-              CoreTypes.bool.ref(ctx).copyWith(boxed: false));
-          break;
-        case '>=':
-          // Int intrinsic greater than or equal
-          result = Variable.ssa(
-              ctx,
-              IntGreaterThanOrEqual(ctx.svar('ge_result'), $this.ssa, R.ssa),
-              CoreTypes.bool.ref(ctx).copyWith(boxed: false));
-          break;
-
-        default:
-          throw CompileError('Unknown num intrinsic method "$method"');
-      }
+      final (itype, intrinsic) = intIntrinsics[method]!;
+      final result = Variable.ssa(
+          ctx,
+          intrinsic(
+              ctx.svar('${intrinsicNames[method]}_result'), $this.ssa, R.ssa),
+          itype.ref(ctx).copyWith(boxed: false));
 
       return InvokeResult($this, result, [R]);
     } else if (type.isAssignableTo(ctx, CoreTypes.bool.ref(ctx),
             forceAllowDynamic: false) &&
-        supportedBoolIntrinsicOps.contains(method)) {
+        boolIntrinsics.keys.contains(method) &&
+        (method == '!' ||
+            args[0].type.isAssignableTo(ctx, CoreTypes.bool.ref(ctx)))) {
       $this = unboxIfNeeded(ctx);
+      final (itype, intrinsic) = boolIntrinsics[method]!;
+      var R = method == '!' ? null : args[0];
+      R = R == null ? null : (R.ssa == ssa ? $this : R.unboxIfNeeded(ctx));
       var result = Variable.ssa(
           ctx,
-          LogicalNot(ctx.svar('not_result'), $this.ssa),
-          CoreTypes.bool.ref(ctx).copyWith(boxed: false));
+          intrinsic(
+              ctx.svar('${intrinsicNames[method]}_result'), $this.ssa, R?.ssa),
+          itype.ref(ctx).copyWith(boxed: false));
       return InvokeResult($this, result, []);
     }
 
@@ -103,13 +60,13 @@ extension Invoke on Variable {
     final resvar =
         ctx.svar(checkEq || checkNotEq ? 'equals_result' : 'invoke_result');
     if (checkEq || checkNotEq) {
-      if ($this.scopeFrameOffset == -1 && _args[0].scopeFrameOffset == -1) {
+      if ($this.methodOffset != null && _args[0].methodOffset != null) {
         final result = $this.methodOffset! == _args[0].methodOffset!;
         final rV = BuiltinValue(boolval: result).push(ctx);
         return InvokeResult($this, rV, _args);
-      } else if ($this.scopeFrameOffset == -1) {
+      } else if ($this.methodOffset != null) {
         $this = $this.tearOff(ctx);
-      } else if (_args[0].scopeFrameOffset == -1) {
+      } else if (_args[0].methodOffset != null) {
         _args[0] = _args[0].tearOff(ctx);
       }
       ctx.pushOp(DynamicEquals(resvar, $this.ssa, _args[0].ssa));
@@ -119,7 +76,7 @@ extension Invoke on Variable {
     }
 
     if (checkNotEq) {
-      ctx.pushOp(LogicalNot(resvar, resvar));
+      ctx.pushOp(LogicalNot(resvar.copy(), resvar));
     }
 
     final AlwaysReturnType? returnType;
