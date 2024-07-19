@@ -113,106 +113,106 @@ void main() {
       expect(res.runTest(2), false);
     });
 
-    // test(
-    //     'Creating and using multiple subclassed bridge class inside the runtime',
-    //     () {
-    //   compiler.defineBridgeClasses([$TestClass.$declaration]);
+    test(
+        'Creating and using multiple subclassed bridge class inside the runtime',
+        () {
+      compiler.defineBridgeClasses([$TestClass.$declaration]);
 
-    //   final program = compiler.compile({
-    //     'example': {
-    //       'main.dart': '''
-    //         import 'package:bridge_lib/bridge_lib.dart';
+      final program = compiler.compile({
+        'example': {
+          'main.dart': '''
+            import 'package:bridge_lib/bridge_lib.dart';
+            
+            class MyTestClass1 extends TestClass {
+              MyTestClass1(int someNumber) : super(someNumber);
+            
+              @override
+              bool runTest(int a, {String b = 'wow'}) {
+                return super.runTest(a + 2 + someNumber, b: b);
+              }
+            }
 
-    //         class MyTestClass1 extends TestClass {
-    //           MyTestClass1(int someNumber) : super(someNumber);
+            class MyTestClass2 extends MyTestClass1 {
+              MyTestClass2(int someNumber) : super(someNumber);
+            
+              @override
+              bool runTest(int a, {String b = 'wow'}) {
+                return !super.runTest(a, b: b);
+              }
+            }
+            
+            void main() {
+              final test1 = MyTestClass1(18);
+              print(test1.runTest(5, b: 'cool'));
+              final test2 = MyTestClass2(1);
+              print(test2.runTest(0, b: 'idk'));  
+            }
+          '''
+        }
+      });
 
-    //           @override
-    //           bool runTest(int a, {String b = 'wow'}) {
-    //             return super.runTest(a + 2 + someNumber, b: b);
-    //           }
-    //         }
+      final runtime = Runtime.ofProgram(program);
 
-    //         class MyTestClass2 extends TestClass1 {
-    //           MyTestClass2(int someNumber) : super(someNumber);
+      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart',
+          'TestClass.', $TestClass.$construct,
+          isBridge: true);
 
-    //           @override
-    //           bool runTest(int a, {String b = 'wow'}) {
-    //             return super.runTest(a + 0 + someNumber, b: b);
-    //           }
-    //         }
+      expect(() => runtime.executeLib('package:example/main.dart', 'main'),
+          prints('true\nfalse\n'));
+    });
 
-    //         void main() {
-    //           final test1 = MyTestClass1(18);
-    //           print(test1.runTest(5, b: 'cool'));
-    //           final test2 = MyTestClass2(1);
-    //           print(test2.runTest(0, b: 'idk'));
-    //         }
-    //       '''
-    //     }
-    //   });
+    test(
+        'Creating and using multiple subclassed bridge class outside the runtime',
+        () {
+      compiler.defineBridgeClasses([$TestClass.$declaration]);
 
-    //   final runtime = Runtime.ofProgram(program);
+      final program = compiler.compile({
+        'example': {
+          'main.dart': '''
+            import 'package:bridge_lib/bridge_lib.dart';
+            
+            class TestClass1 extends TestClass {
+              TestClass1(int someNumber) : super(someNumber);
+            
+              @override
+              bool runTest(int a, {String b = 'wow'}) {
+                return super.runTest(a + 2 + someNumber, b: b);
+              }
+            }
 
-    //   runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart',
-    //       'TestClass.', $TestClass.$construct,
-    //       isBridge: true);
+            class TestClass2 extends TestClass1 {
+              TestClass2(int someNumber) : super(someNumber);
+            
+              @override
+              bool runTest(int a, {String b = 'wow'}) {
+                return !super.runTest(a, b: b);
+              }
+            }
+            
+            List<TestClass> main() {
+              final test1 = TestClass1(18);
+              final test2 = TestClass2(1);
+              return [test1, test2];
+            }
+          '''
+        }
+      });
 
-    //   expect(() => runtime.executeLib('package:example/main.dart', 'main'),
-    //       prints('true\nfalse\n'));
-    // });
+      final runtime = Runtime.ofProgram(program);
 
-    // test(
-    //     'Creating and using multiple subclassed bridge class outside the runtime',
-    //     () {
-    //   compiler.defineBridgeClasses([$TestClass.$declaration]);
+      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart',
+          'TestClass.', $TestClass.$construct,
+          isBridge: true);
 
-    //   final program = compiler.compile({
-    //     'example': {
-    //       'main.dart': '''
-    //         import 'package:bridge_lib/bridge_lib.dart';
+      final res = runtime.executeLib('package:example/main.dart', 'main');
 
-    //         class MyTestClass1 extends TestClass {
-    //           MyTestClass1(int someNumber) : super(someNumber);
-
-    //           @override
-    //           bool runTest(int a, {String b = 'wow'}) {
-    //             return super.runTest(a + 2 + someNumber, b: b);
-    //           }
-    //         }
-
-    //         class MyTestClass2 extends TestClass1 {
-    //           MyTestClass2(int someNumber) : super(someNumber);
-
-    //           @override
-    //           bool runTest(int a, {String b = 'wow'}) {
-    //             return super.runTest(a + 0 + someNumber, b: b);
-    //           }
-    //         }
-
-    //         List<TestClass> main() {
-    //           final test1 = MyTestClass1(18);
-    //           final test2 = MyTestClass2(1);
-    //           return [test1, test2];
-    //         }
-    //       '''
-    //     }
-    //   });
-
-    //   final runtime = Runtime.ofProgram(program);
-
-    //   runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart',
-    //       'TestClass.', $TestClass.$construct,
-    //       isBridge: true);
-
-    //   final res = runtime.executeLib('package:example/main.dart', 'main');
-
-    //   expect(res is List, true);
-    //   res as List;
-    //   final test1 = res[0] as TestClass;
-    //   expect(test1.runTest(5, b: 'cool'), true);
-    //   final test2 = res[1] as TestClass;
-    //   expect(test2.runTest(0, b: 'idk'), false);
-    // });
+      expect(res is List, true);
+      res as List;
+      final test1 = res[0] as TestClass;
+      expect(test1.runTest(5, b: 'cool'), true);
+      final test2 = res[1] as TestClass;
+      expect(test2.runTest(0, b: 'idk'), false);
+    });
 
     test('Using an external static method', () {
       compiler.defineBridgeClasses([$TestClass.$declaration]);
