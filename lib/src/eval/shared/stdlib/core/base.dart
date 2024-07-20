@@ -3,7 +3,6 @@ import 'package:dart_eval/src/eval/runtime/exception.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/collection.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/object.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/pattern.dart';
-import 'package:dart_eval/src/eval/utils/wap_helper.dart';
 import 'num.dart';
 
 const $dynamicCls = BridgeClassDef(
@@ -236,7 +235,7 @@ class $String implements $Instance {
       case 'codeUnitAt':
         return __codeUnitAt;
       case 'codeUnits':
-        return wrapList<int>($value.codeUnits, (e) => $int(e));
+        return $List.wrap($value.codeUnits.map((e) => $int(e)).toList());
       case 'compareTo':
         return __compareTo;
       case 'contains':
