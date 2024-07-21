@@ -204,11 +204,11 @@ void compileConstructorDeclaration(
 
     final decl = extendsWhat.declaration!;
     if (!decl.isBridge) {
-      final $checkResults = _doesExtendBridge(decl, ctx);
-      if ($checkResults.extendsBridge) {
+      final checkResults = _doesExtendBridge(decl, ctx);
+      if (checkResults.extendsBridge) {
         doesExtendBridge = true;
-        extendsWhat = $checkResults.declaration;
-        $extends = $checkResults.extendsClause;
+        extendsWhat = checkResults.declaration;
+        $extends = checkResults.extendsClause;
       }
     }
 
@@ -412,11 +412,11 @@ void compileDefaultConstructor(CompilerContext ctx,
     final decl = extendsWhat.declaration!;
 
     if (!decl.isBridge) {
-      final $checkResults = _doesExtendBridge(decl, ctx);
-      if ($checkResults.extendsBridge) {
+      final checkResults = _doesExtendBridge(decl, ctx);
+      if (checkResults.extendsBridge) {
         doesExtendBridge = true;
-        extendsWhat = $checkResults.declaration;
-        $extends = $checkResults.extendsClause;
+        extendsWhat = checkResults.declaration;
+        $extends = checkResults.extendsClause;
       }
     }
 

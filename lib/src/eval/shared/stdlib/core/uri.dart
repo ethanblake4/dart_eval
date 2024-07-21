@@ -78,7 +78,6 @@ class $Uri implements $Instance {
   static const $declaration = BridgeClassDef(
     BridgeClassType(
       $type,
-      $extends: null,
       $implements: [],
       isAbstract: true,
     ),
@@ -1308,7 +1307,6 @@ class $UriData implements UriData, $Instance {
   static const $declaration = BridgeClassDef(
     BridgeClassType(
       $type,
-      $extends: null,
       $implements: [],
       isAbstract: false,
     ),
