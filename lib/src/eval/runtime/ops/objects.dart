@@ -95,13 +95,23 @@ class InvokeDynamic implements EvcOp {
         runtime._prOffset = object.offset;
         return;
       }
-      final method = ((object as $Instance).$getProperty(runtime, _method)
-          as EvalFunction);
-      try {
-        runtime.returnValue = method.call(runtime, object, runtime.args.cast());
-      } catch (e) {
-        runtime.$throw(e);
+
+      if (object == null) {
+        object = $Null();
       }
+
+      if (object is $Instance) {
+        final method = (object.$getProperty(runtime, _method) as EvalFunction);
+        try {
+          runtime.returnValue =
+              method.call(runtime, object, runtime.args.cast());
+        } catch (e) {
+          runtime.$throw(e);
+        }
+      } else {
+        runtime.returnValue = $null();
+      }
+
       runtime.args = [];
       return;
     }
@@ -156,7 +166,14 @@ class CheckEq implements EvcOp {
         return;
       }
 
-      runtime.returnValue = v1 == v2;
+      if (v2 is $Value && v1 is! $Value) {
+        runtime.returnValue = v2.$value == v1;
+      } else if (v1 is $Value && v2 is! $Value) {
+        runtime.returnValue = v1.$value == v2;
+      } else {
+        runtime.returnValue = v1 == v2;
+      }
+
       return;
     }
   }

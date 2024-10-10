@@ -520,3 +520,71 @@ class $String implements $Instance {
   @override
   int get hashCode => $value.hashCode;
 }
+
+/// dart_eval [$Instance] representation of a [Null]
+class $Null implements $Instance {
+  $Null() : _superclass = $Object(_Null());
+
+  static const $declaration = BridgeClassDef(
+      BridgeClassType(BridgeTypeRef(CoreTypes.nullType), isAbstract: true),
+      constructors: {},
+      methods: {
+        // Other Null methods defined in builtins.dart
+      },
+      wrap: true);
+
+  final $Instance _superclass;
+
+  @override
+  $Value? $getProperty(Runtime runtime, String identifier) {
+    try {
+      return _superclass.$getProperty(runtime, identifier);
+    } catch (e) {
+      return $Function((
+        Runtime runtime,
+        $Value? target,
+        List<$Value?> args,
+      ) {
+        return $null();
+      });
+    }
+  }
+
+  @override
+  void $setProperty(Runtime runtime, String identifier, $Value value) {}
+
+  @override
+  _Null get $reified => $value;
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is $Null &&
+            runtimeType == other.runtimeType &&
+            $value == other.$value;
+  }
+
+  @override
+  int get hashCode => $value.hashCode;
+
+  @override
+  String toString() {
+    return '\$${$value}';
+  }
+
+  @override
+  int $getRuntimeType(Runtime runtime) =>
+      runtime.lookupType(CoreTypes.nullType);
+
+  @override
+  get $value => _Null();
+}
+
+@pragma("vm:entry-point")
+class _Null extends Object {
+  String toString() => "null";
+
+  dynamic noSuchMethod(Invocation invocation) {
+    print("_Null.noSuchMethod(): $invocation");
+  }
+}
