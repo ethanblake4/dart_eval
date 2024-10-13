@@ -400,7 +400,7 @@ class IsType implements EvcOp {
 
   @override
   void run(Runtime runtime) {
-    final value = runtime.frame[_objectOffset] as $Value;
+    final value = (runtime.frame[_objectOffset] ?? $null()) as $Value;
     final type = value.$getRuntimeType(runtime);
     if (type < 0) {
       final result = type == _type;
