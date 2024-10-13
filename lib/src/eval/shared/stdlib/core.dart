@@ -80,6 +80,7 @@ class DartCorePlugin implements EvalPlugin {
     configureIdenticalForRuntime(runtime);
     $String.configureForRuntime(runtime);
     $List.configureForRuntime(runtime);
+    $Map.configureForRuntime(runtime);
     $MapEntry.configureForRuntime(runtime);
     $Iterable.configureForRuntime(runtime);
     $Duration.configureForRuntime(runtime);
