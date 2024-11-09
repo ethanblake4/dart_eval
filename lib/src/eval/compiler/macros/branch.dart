@@ -27,17 +27,19 @@ StatementInfo macroBranch(
     throw CompileError("Conditions must have a static type of 'bool'", source);
   }
 
-  final trueLabel = ctx.label(testNullish ? 'if_true' : 'if_null');
-  final falseLabel = ctx.label(testNullish ? 'if_false' : 'if_nonnull');
+  final trueLabel = ctx.label(testNullish ? 'if_null' : 'if_true');
+  final falseLabel = ctx.label(testNullish ? 'if_nonnull' : 'if_false');
   final endLabel = ctx.label('if_end');
 
   if (testNullish) {
-    ctx.pushOp(JumpIfNonNull(conditionResult.ssa, falseLabel));
+    ctx.pushOp(JumpIfNonNull(
+        conditionResult.ssa, elseBranch != null ? falseLabel : endLabel));
   } else {
-    ctx.pushOp(JumpIfFalse(conditionResult.ssa, falseLabel));
+    ctx.pushOp(JumpIfFalse(
+        conditionResult.ssa, elseBranch != null ? falseLabel : endLabel));
   }
 
-  final condBlock = BasicBlock(ctx.commit());
+  final condBlock = ctx.commitBlock();
   ctx.builder = ctx.builder.merge(condBlock);
 
   final trueBlock = BasicBlock<Operation>([], label: trueLabel);
@@ -78,14 +80,10 @@ StatementInfo macroBranch(
     ctx.pushOp(Jump(endLabel));
   }
 
-  ctx.builder = ctx.builder.then(BasicBlock(ctx.commit()));
+  trueBlock.code.addAll(ctx.commit());
 
   if (elseBranch != null) {
-    ctx.builder = ctx.builder.commit();
-  }
-
-  if (elseBranch != null) {
-    ctx.builder = ctx.builder.block(1);
+    ctx.builder = ctx.builder.commit().block(1);
     ctx.beginAllocScope();
     final label = CompilerLabel(falseLabel, LabelType.branch, (_ctx) {
       ctx.endAllocScope();
@@ -103,6 +101,8 @@ StatementInfo macroBranch(
     ctx.endAllocScope();
     endBlock.code.addAll(ctx.commit());
     return thenResult | elseResult;
+  } else {
+    ctx.builder = ctx.builder.merge(endBlock);
   }
 
   ctx.endAllocScope();

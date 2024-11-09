@@ -15,8 +15,6 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'package:dart_eval/src/eval/runtime/type.dart';
 
-import 'offset_tracker.dart';
-
 abstract class AbstractScopeContext {
   int get scopeFrameOffset;
 
@@ -154,7 +152,6 @@ class CompilerContext with ScopeContext {
   Map<int, Map<String, TypeRef>> visibleTypes = {};
   Map<int, Map<String, TypeRef>> temporaryTypes = {};
   Map<int, Map<String, DeclarationOrPrefix>> visibleDeclarations = {};
-  Map<int, Map<String, int>> topLevelDeclarationPositions = {};
   Map<int, Map<String, int>> bridgeStaticFunctionIndices = {};
   Map<int, Map<String, List>> instanceDeclarationPositions = {};
   Map<int, Map<String, Map<String, int>>> instanceGetterIndices = {};
@@ -174,12 +171,15 @@ class CompilerContext with ScopeContext {
   List<ContextSaveState> typeUninferenceSaveStates = [];
   List<CompilerLabel> labels = [];
   Map<CompilerLabel, Set<int>> labelReferences = {};
+  Set<Declaration> entrypoints = {};
   final List<Variable> caughtExceptions = [];
   PrescanContext? preScan;
   int nearestAsyncFrame = -1;
   int globalIndex = 0;
   String? version;
   String? funcLabel;
+  bool entrypoint = false;
+  bool hasBegunMethod = false;
 
   final signaturePool = FunctionSignaturePool();
   final constantPool = ConstantPool<Object>();

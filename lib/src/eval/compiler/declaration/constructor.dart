@@ -38,8 +38,7 @@ void compileConstructorDeclaration(
     throw CompileError('Factory constructors cannot have initializers', d);
   }
 
-  ctx.topLevelDeclarationPositions[ctx.library]![n] =
-      beginMethod(ctx, d, d.offset, '$n()');
+  beginMethod(ctx, d, d.offset, '$n()');
 
   ctx.beginAllocScope(
       existingAllocLen: d.parameters.parameters.length + (isEnum ? 2 : 0));
@@ -359,8 +358,7 @@ void compileDefaultConstructor(CompilerContext ctx,
   final parentName = parent.name.lexeme;
   final n = '$parentName.';
 
-  ctx.topLevelDeclarationPositions[ctx.library]![n] =
-      beginMethod(ctx, parent, parent.offset, '$n()');
+  beginMethod(ctx, parent, parent.offset, '$n()');
 
   final isEnum = parent is EnumDeclaration;
   ctx.beginAllocScope(existingAllocLen: isEnum ? 2 : 0);

@@ -1,493 +1,429 @@
+/*
+%a -> alu acc, %b -> alu 2
+%l -> loop counter
+%f -> fpu acc, %g -> fpu 2
+%u -> string acc, %v -> string 2
+%e -> bool / flag, %x -> bool 2
+%r -> gpr1/acc, %s -> gpr2, %c -> gpr3 / collection
+*/
 class Xops {
   static const int i16Max = 0x7fff;
   static const int i16Half = 0x4000;
 
 /*
-scope
-asyncscope
-popscope
-lc0
-lc1
-lc0boxs
-lc1boxs
-lc0p
-lc1p
-lcf0
-lcf1
-lcd0
-lcd1
-lcf0box
-lcf1box
-lcf0p
-lcf1p
-lci0
-lci1
-lci0p
-lci1p
-lcl0
-lcl1
-ls0
-ls1
-lprop0i
-lprop1i
 jump
-jumpf
-jumpt
-jumpnnil
-push0
-push1
-push2
-sets0
-sets1
-lii0
-lii1
-lii0b
-lii1b
-lii0p
-lii1p
-lii0bp
-lii1bp
-ltrue0
-ltrue1
-lfalse0
-lfalse1
-ltrue0b
-ltrue1b
-lfalse0b
-lfalse1b
-lnull0
-lnull1
-lnull0b
-lnull1b
-lctype0
-lctype1
-ltrue0p
-ltrue1p
-lfalse0p
-lfalse1p
-lnull0p
-lnull1p
-ltrue0bp
-ltrue1bp
-lfalse0bp
-lfalse1bp
-lnull0bp
-lnull1bp
-swap01
-swap12
-swap02
-dup0
-dup1
-lg0
-sg0
-isp
-iadd
-iadds
-iaddsp
-iinc0
-iinc1
-isinc
-isub
-isubs
-isubsp
-imul
-imuls
-imulsp
-idiv
-idivs
-idivsp
-iidiv
-iidivs
-iidivsp
-ilt
-iltj
-ilteq
-ilteqj
-ieq
-ieqj
-iand
-ior
-ixor
-imod
-ishl
-ishr
-itoa
-dadd
-dadds
-daddsp
-dsub
-dsubs
-dsubsp
-dmul
-dmuls
-dmulsp
-ddiv
-ddivs
-ddivsp
-dlt
-dltj
-dlteq
-dlteqj
-deq
-deqj
-dmod
-dtoa
-nadd
-nadds
-naddsp
-nsub
-nsubs
-nsubsp
-nmul
-nmuls
-nmulsp
-nidiv
-nidivs
-nidivsp
-ndiv
-ndivs
-ndivsp
-nneg0
-nneg1
-nnegs
-nlt
-nltj
-nlteq
-nlteqj
-numeq
-numeqj
-nmod
-ntoa
-bnot
-beq
-beqj
-beqs
-beqsj
-beqsp
-bneqj
-bneqsj
-band
-bor
-unbox0
-unbox1
-boxi0
-boxd0
-boxn0
-boxs0
-boxb0
-boxl0
-boxm0
-boxnilq0
-boxi1
-boxd1
-boxn1
-boxs1
-boxb1
-boxl1
-boxm1
-boxnilq1
-newcls
-newbr
-newbss
-linkbss
-call
-wcall
-tailcall
-wtailcall
-invoke
-invokex
-invokex1
-lprop0
-lprop1
-pop
 ret
-retc
-retf
-retasync
-retcasync
-newlist
-itlen
-listset
-listappend
-listindex
-listaddall
-newmap
-mapset
-mapindex
-mapremove
-mapcontainskey
-newset
-setadd
-setcontains
-setremove
-newfuncptr
-await
-istype
-istypej
-try
-throw
-popcatch
-assert
-finally
-typeof0
-typeof1
-strlen
-strlens
-concat
-concats
-eq
-eqj
-neqj
-tostring
-hashcode
-index
-pusharg0
-pusharg1
-pushargs
-switch
+try @offset
+popcatch @offset
+finally @tryOffset
+call @offset
+tailcall @offset
+pushnullargs (u8 count)
+fillnullargs (u8 count)
+pop n
+movs Sx Sx
+newbr -> %r
+newbss -> %c
+parentbss
+newcls %r (super %c)
+newcls %c (super %c)
+lg -> %s
+lc %r
+lc %s
+lcf %f
+lcf %g
+lcs %u
+lcs %v
+jf %e
+jt %e
+jnn %r
+jnn %s
+jn %r
+jn %s
+push %a
+push %b
+push %f
+push %g
+push %e
+push %r
+push %s
+push %c
+push %u
+load %a *Sx
+load %b *Sx
+load %f *Sx
+load %g *Sx
+load %r *Sx
+load %s *Sx
+load %c *Sx
+load %u *Sx
+load %v *Sx
+load %e *Sx
+load %x *Sx
+save %a *Sx
+save %f *Sx
+save %r *Sx
+save %s *Sx
+save %c *Sx
+save %u *Sx
+save %e *Sx
+imm %a i16
+imm %b i16
+imm %l i16
+mov %ab
+mov %ra
+mov %sa
+mov %rb
+mov %sb
+mov %rf
+mov %sf
+mov %ar
+mov %sr
+mov %as
+mov %fr
+mov %fs
+mov %er
+mov %es
+mov %ur
+swap %ab
+swap %er
+swap %rs
+swap %ex
+swap %fg
+ltrue %e
+lfalse %e
+ltrue %x
+lfalse %x
+lnull %r
+lnull %s
+lnull %c
+ineg %a
+ineg %b
+fneg %f
+fneg %g
+nneg %r
+bnot %e
+bnot %x
+unbox %r
+unbox %s
+unboxs %r -> %u
+unboxi %r -> %a
+unboxf %r -> %f
+box %r [3bit type][5bit *Sx?]
+box %s [3bit type][5bit *Sx?]
+invokexf %ar imm24 [6bit box, 18-bit idx]
+invokexf %fr imm24 [6bit box, 18-bit idx]
+invokexf %er imm24 [6bit box, 18-bit idx]
+invokexf %rs imm24 [6bit box, 18-bit idx]
+istype %r u16 -> %e
+istype %s u16 -> %e
+istype %c u16 -> %e
+istypej %r u16 @target
+istypej %s u16 @target
+istypej %c u16 @target
+newmap %c
+newlist %c
+newset %c
+mapset %c[%s] = %r
+mapset %c[%r] = %s
+mapset %c[%u] = %r
+mapset %c[%u] = %a
+listset %c[%s] = %r
+listset %c[%a] = %r
+listset %c[%a] = %s
+setadd %c [box] = %r
+setadd %c [box] = %s
+setadd %c [box] = %a
+setcontains %c %r
+listappend %c %r
+listappend %c %s
+listindex %r = %c[%a]
+listindex %s = %c[%a]
+mapindex %r = %c[%s]
+mapindex %s = %c[%r]
+eq %r %s -> %e
+eq %r %s -> %x
+band %e %x
+bor %e %x
+beq %e %x
+lpropi %r [u8] -> %r
+lpropi %c [u8] -> %s
+lpropi %r [u8] -> %a
+lpropi %c [u8] -> %a
+lpropi %r [u8] -> %f
+lpropi %c [u8] -> %f
+lpropi %r [u8] -> %e
+lpropi %c [u8] -> %e
+lpropi %r [u8] -> %u
+lpropi %c [u8] -> %u
+spropi %r [u8] = %s
+spropi %r [u8] = %a
+spropi %r [u8] = %f
+spropi %r [u8] = %e
+spropi %r [u8] = %u
+spropi %c [u8] = %r
+spropi %c [u8] = %a
+spropi %c [u8] = %f
+spropi %c [u8] = %e
+spropi %c [u8] = %u
+super %r -> %r
+super %r -> %c
+super %c -> %c
+iinc %a
+iinc %l
+idec %l
+itoa %a -> %u
+itoa %a -> %v
+add %a %b
+add %a imm
+add %l imm
+sub %a %b
+sub %b %a
+sub %a imm
+mul %a %b
+mul %a imm
+div %a %b -> %f
+idiv %a %b
+idiv %b %a
+ilt %a %b -> %e
+ilt %a %b -> %x
+iltj %l %a
+ilteq %a %b -> %e
+ilteq %a %b -> %x
+ilteqj %l %a
+igt %a %b -> %e
+igt %a %b -> %x
+igtj %l %a
+igteq %a %b -> %e
+igteq %a %b -> %x
+igteqj %l %a
+ieq %a %b -> %e
+ieq %a %b -> %x
+ineq %a %b -> %e
+ineq %a %b -> %x
+iand %a %b
+iand %a imm
+ior %a %b
+ior %a imm
+ixor %a %b
+ixor %a imm
+imod %a %b
+imod %a imm
+ishl %a %b
+ishl %a imm
+ishr %a %b
+ishr %a imm
+dadd %f %g
+dsub %f %g
+dsub %g %f
+dmul %f %g
+ddiv %f %g
+ddiv %g %f
+dtoa %f -> %v
+dlt %f %g -> %e
+dlt %f %g -> %x
+dlteq %f %g -> %e
+dlteq %f %g -> %x
+deq %f %g -> %e
+deq %f %g -> %x
+pushargb %a
+pushargb %f
+pushargb %u
+pushargb %r
+pushargb %s
+pushargb %e
+sgl %r Gx
+tostring %r -> %u
+tostring %s -> %u
+tostring %c -> %u
+tostring %r -> %v
+tostring %s -> %v
+tostring %c -> %v
+concat %uv -> %u
+concat %ur -> %u
+strlen %u -> %a
+strlen %u -> %b
+switch %a
+switch %f
+switch %u
+switch %r
+switch %s
 */
 
-  static const int scope = 0x00;
-  static const int asyncscope = 0x01;
-  static const int popscope = 0x02;
-  static const int lc0 = 0x03;
-  static const int lc1 = 0x04;
-  static const int lc0boxs = 0x05;
-  static const int lc1boxs = 0x06;
-  static const int lc0p = 0x07;
-  static const int lc1p = 0x08;
-  static const int lcf0box = 0x09;
-  static const int lcf1box = 0x0a;
-  static const int lcf0p = 0x0b;
-  static const int lcf1p = 0x0c;
-  static const int ls0 = 0x0d;
-  static const int ls1 = 0x0e;
-  static const int lprop0i = 0x0f;
-  static const int lprop1i = 0x10;
-  static const int jump = 0x11;
-  static const int jumpf = 0x12;
-  static const int jumpt = 0x13;
-  static const int jumpnnil = 0x14;
-  static const int push0 = 0x15;
-  static const int push1 = 0x16;
-  static const int sets0 = 0x17;
-  static const int sets1 = 0x18;
-  static const int lii0 = 0x19;
-  static const int lii1 = 0x1a;
-  static const int lii0b = 0x1b;
-  static const int lii1b = 0x1c;
-  static const int lii0p = 0x1d;
-  static const int lii1p = 0x1e;
-  static const int lii0bp = 0x1f;
-  static const int lii1bp = 0x20;
-  static const int ltrue0 = 0x21;
-  static const int ltrue1 = 0x22;
-  static const int lfalse0 = 0x23;
-  static const int lfalse1 = 0x24;
-  static const int ltrue0b = 0x25;
-  static const int ltrue1b = 0x26;
-  static const int lfalse0b = 0x27;
-  static const int lfalse1b = 0x28;
-  static const int lnull0 = 0x29;
-  static const int lnull1 = 0x2a;
-  static const int lnull0b = 0x2b;
-  static const int lnull1b = 0x2c;
-  static const int lctype0 = 0x2d;
-  static const int lctype1 = 0x2e;
-  static const int ltrue0p = 0x2f;
-  static const int ltrue1p = 0x30;
-  static const int lfalse0p = 0x31;
-  static const int lfalse1p = 0x32;
-  static const int lnull0p = 0x33;
-  static const int lnull1p = 0x34;
-  static const int ltrue0bp = 0x35;
-  static const int ltrue1bp = 0x36;
-  static const int lfalse0bp = 0x37;
-  static const int lfalse1bp = 0x38;
-  static const int lnull0bp = 0x39;
-  static const int lnull1bp = 0x3a;
-  static const int swap01 = 0x3b;
-  static const int swap12 = 0x3c;
-  static const int swap02 = 0x3d;
-  static const int dup0 = 0x3e;
-  static const int dup1 = 0x3f;
-  static const int lg0 = 0x40;
-  static const int sg0 = 0x41;
-  static const int isp = 0x42;
-  static const int iadd = 0x43;
-  static const int iadds = 0x44;
-  static const int iaddsp = 0x45;
-  static const int iinc0 = 0x46;
-  static const int iinc1 = 0x47;
-  static const int isinc = 0x48;
-  static const int isub = 0x49;
-  static const int isubs = 0x4a;
-  static const int isubsp = 0x4b;
-  static const int imul = 0x4c;
-  static const int imuls = 0x4d;
-  static const int imulsp = 0x4e;
-  static const int idiv = 0x4f;
-  static const int idivs = 0x50;
-  static const int idivsp = 0x51;
-  static const int iidiv = 0x52;
-  static const int iidivs = 0x53;
-  static const int iidivsp = 0x54;
-  static const int ilt = 0x55;
-  static const int iltj = 0x56;
-  static const int ilteq = 0x57;
-  static const int ilteqj = 0x58;
-  static const int ieq = 0x59;
-  static const int ieqj = 0x5a;
-  static const int iand = 0x5b;
-  static const int ior = 0x5c;
-  static const int ixor = 0x5d;
-  static const int imod = 0x5e;
-  static const int ishl = 0x5f;
-  static const int ishr = 0x60;
-  static const int itoa = 0x61;
-  static const int dadd = 0x62;
-  static const int dadds = 0x63;
-  static const int daddsp = 0x64;
-  static const int dsub = 0x65;
-  static const int dsubs = 0x66;
-  static const int dsubsp = 0x67;
-  static const int dmul = 0x68;
-  static const int dmuls = 0x69;
-  static const int dmulsp = 0x6a;
-  static const int ddiv = 0x6b;
-  static const int ddivs = 0x6c;
-  static const int ddivsp = 0x6d;
-  static const int dlt = 0x6e;
-  static const int dltj = 0x6f;
-  static const int dlteq = 0x70;
-  static const int dlteqj = 0x71;
-  static const int deq = 0x72;
-  static const int deqj = 0x73;
-  static const int dmod = 0x74;
-  static const int dtoa = 0x75;
-  static const int nadd = 0x76;
-  static const int nadds = 0x77;
-  static const int naddsp = 0x78;
-  static const int nsub = 0x79;
-  static const int nsubs = 0x7a;
-  static const int nsubsp = 0x7b;
-  static const int nmul = 0x7c;
-  static const int nmuls = 0x7d;
-  static const int nmulsp = 0x7e;
-  static const int nidiv = 0x7f;
-  static const int nidivs = 0x80;
-  static const int nidivsp = 0x81;
-  static const int ndiv = 0x82;
-  static const int ndivs = 0x83;
-  static const int ndivsp = 0x84;
-  static const int nneg0 = 0x85;
-  static const int nneg1 = 0x86;
-  static const int nnegs = 0x87;
-  static const int nlt = 0x88;
-  static const int nltj = 0x89;
-  static const int nlteq = 0x8a;
-  static const int nlteqj = 0x8b;
-  static const int numeq = 0x8c;
-  static const int numeqj = 0x8d;
-  static const int nmod = 0x8e;
-  static const int ntoa = 0x8f;
-  static const int bnot = 0x90;
-  static const int beq = 0x91;
-  static const int beqj = 0x92;
-  static const int beqs = 0x93;
-  static const int beqsj = 0x94;
-  static const int beqsp = 0x95;
-  static const int bneqj = 0x96;
-  static const int bneqsj = 0x97;
-  static const int band = 0x98;
-  static const int bor = 0x99;
-  static const int unbox0 = 0x9a;
-  static const int unbox1 = 0x9b;
-  static const int boxi0 = 0x9c;
-  static const int boxd0 = 0x9d;
-  static const int boxn0 = 0x9e;
-  static const int boxs0 = 0x9f;
-  static const int boxb0 = 0xa0;
-  static const int boxl0 = 0xa1;
-  static const int boxm0 = 0xa2;
-  static const int boxnilq0 = 0xa3;
-  static const int boxi1 = 0xa4;
-  static const int boxd1 = 0xa5;
-  static const int boxn1 = 0xa6;
-  static const int boxs1 = 0xa7;
-  static const int boxb1 = 0xa8;
-  static const int boxl1 = 0xa9;
-  static const int boxm1 = 0xaa;
-  static const int boxnilq1 = 0xab;
-  static const int newcls = 0xac;
-  static const int newbr = 0xad;
-  static const int newbss = 0xae;
-  static const int linkbss = 0xaf;
-  static const int call = 0xb0;
-  static const int wcall = 0xb1;
-  static const int tailcall = 0xb2;
-  static const int wtailcall = 0xb3;
-  static const int invoke = 0xb4;
-  static const int invokex = 0xb5;
-  static const int invokex1 = 0xb6;
-  static const int lprop0 = 0xb7;
-  static const int lprop1 = 0xb8;
-  static const int pop = 0xb9;
-  static const int ret = 0xba;
-  static const int retc = 0xbb;
-  static const int retasync = 0xbc;
-  static const int retcasync = 0xbd;
-  static const int newlist = 0xbe;
-  static const int itlen = 0xbf;
-  static const int listset = 0xc0;
-  static const int listappend = 0xc1;
-  static const int listindex = 0xc2;
-  static const int listaddall = 0xc3;
-  static const int newmap = 0xc4;
-  static const int mapset = 0xc5;
-  static const int mapindex = 0xc6;
-  static const int newfuncptr = 0xc7;
-  static const int await = 0xc8;
-  static const int istype = 0xc9;
-  static const int istypej = 0xca;
-  static const int try_ = 0xcb;
-  static const int throw_ = 0xcc;
-  static const int popcatch = 0xcd;
-  static const int assert_ = 0xce;
-  static const int finally_ = 0xcf;
-  static const int typeof0 = 0xd0;
-  static const int typeof1 = 0xd1;
-  static const int strlen = 0xd2;
-  static const int strlens = 0xd3;
-  static const int concat = 0xd4;
-  static const int concats = 0xd5;
-  static const int eq = 0xd6;
-  static const int eqj = 0xd7;
-  static const int neqj = 0xd8;
-  static const int tostring = 0xd9;
-  static const int index = 0xda;
-  static const int pusharg0 = 0xdb;
-  static const int pusharg1 = 0xdc;
-  static const int pushargs = 0xdd;
-  static const int switch_ = 0xde;
-  static const int retf = 0xdf;
-  static const int mapremove = 0xe0;
-  static const int mapcontainskey = 0xe1;
-  static const int newset = 0xe2;
-  static const int setadd = 0xe3;
-  static const int setcontains = 0xe4;
-  static const int setremove = 0xe5;
-  static const int hashcode = 0xe6;
-  static const int push2 = 0xe7;
-  static const int lci0 = 0xe8;
-  static const int lci1 = 0xe9;
-  static const int lcl0 = 0xea;
-  static const int lcl1 = 0xeb;
-  static const int lcf0 = 0xec;
-  static const int lcf1 = 0xed;
-  static const int lcd0 = 0xee;
-  static const int lcd1 = 0xef;
-  static const int lci0p = 0xf0;
-  static const int lci1p = 0xf1;
-  static const int nop = 0xff;
+  static const int jump = 0;
+  static const int ret = 1;
+  static const int try_ = 2;
+  static const int popcatch = 3;
+  static const int finally_ = 4;
+  static const int call = 5;
+  static const int tailcall = 6;
+  static const int pushnullargs = 7;
+  static const int fillnullargs = 8;
+  static const int pop = 9;
+  static const int movs = 10;
+  static const int newbr = 11;
+  static const int newbss = 12;
+  static const int parentbss = 13;
+  static const int newcls0 = 14;
+  static const int newcls1 = 15;
+  static const int lg = 16;
+  static const int lc0 = 17;
+  static const int lc1 = 18;
+  static const int lcf0 = 19;
+  static const int lcf1 = 20;
+  static const int lcs0 = 21;
+  static const int lcs1 = 22;
+  static const int jf = 23;
+  static const int jt = 24;
+  static const int jnn0 = 25;
+  static const int jnn1 = 26;
+  static const int jn0 = 27;
+  static const int jn1 = 28;
+  static const int push0 = 29;
+  static const int push1 = 30;
+  static const int push2 = 31;
+  static const int push3 = 32;
+  static const int push4 = 33;
+  static const int push5 = 34;
+  static const int push6 = 35;
+  static const int push7 = 36;
+  static const int push8 = 174;
+  static const int load0 = 37;
+  static const int load1 = 38;
+  static const int load2 = 39;
+  static const int load3 = 40;
+  static const int load4 = 41;
+  static const int load5 = 42;
+  static const int load6 = 43;
+  static const int load7 = 44;
+  static const int load8 = 45;
+  static const int load9 = 46;
+  static const int load10 = 47;
+  static const int save0 = 48;
+  static const int save1 = 49;
+  static const int save2 = 50;
+  static const int save3 = 51;
+  static const int save4 = 52;
+  static const int save5 = 53;
+  static const int save6 = 54;
+  static const int imm0 = 55;
+  static const int imm1 = 56;
+  static const int imm2 = 57;
+  static const int mov0 = 58;
+  static const int mov1 = 59;
+  static const int mov2 = 60;
+  static const int mov3 = 61;
+  static const int mov4 = 62;
+  static const int mov5 = 63;
+  static const int mov6 = 64;
+  static const int mov7 = 65;
+  static const int mov8 = 66;
+  static const int mov9 = 67;
+  static const int mov10 = 68;
+  static const int mov11 = 69;
+  static const int mov12 = 70;
+  static const int mov13 = 71;
+  static const int mov14 = 72;
+  static const int mov15 = 73;
+  static const int swap0 = 74;
+  static const int swap1 = 75;
+  static const int swap2 = 76;
+  static const int swap3 = 77;
+  static const int swap4 = 78;
+  static const int swap5 = 79;
+  static const int ltrue0 = 80;
+  static const int ltrue1 = 81;
+  static const int lfalse0 = 82;
+  static const int lfalse1 = 83;
+  static const int lnull0 = 84;
+  static const int lnull1 = 85;
+  static const int ineg0 = 86;
+  static const int ineg1 = 87;
+  static const int fneg0 = 88;
+  static const int fneg1 = 89;
+  static const int nneg0 = 90;
+  static const int bnot0 = 91;
+  static const int bnot1 = 92;
+  static const int unbox0 = 93;
+  static const int unbox1 = 94;
+  static const int unboxs = 95;
+  static const int unboxi = 96;
+  static const int unboxf = 97;
+  static const int box0 = 98;
+  static const int box1 = 99;
+  static const int invokexf0 = 100;
+  static const int invokexf1 = 101;
+  static const int invokexf2 = 102;
+  static const int invokexf3 = 103;
+  static const int istype0 = 104;
+  static const int istype1 = 105;
+  static const int istype2 = 106;
+  static const int istypej0 = 107;
+  static const int istypej1 = 108;
+  static const int istypej2 = 109;
+  static const int newmap = 110;
+  static const int newlist = 111;
+  static const int newset = 112;
+  static const int mapset0 = 113;
+  static const int mapset1 = 114;
+  static const int mapset2 = 115;
+  static const int mapset3 = 116;
+  static const int listset0 = 117;
+  static const int listset1 = 118;
+  static const int listset2 = 119;
+  static const int setadd0 = 120;
+  static const int setadd1 = 121;
+  static const int setadd2 = 122;
+  static const int setcontains = 123;
+  static const int listappend0 = 124;
+  static const int listappend1 = 125;
+  static const int listindex0 = 126;
+  static const int listindex1 = 127;
+  static const int mapindex0 = 128;
+  static const int mapindex1 = 129;
+  static const int eq0 = 130;
+  static const int eq1 = 131;
+  static const int eq2 = 132;
+  static const int band = 133;
+  static const int bor = 134;
+  static const int beq = 135;
+  static const int lpropi0 = 136;
+  static const int lpropi1 = 137;
+  static const int lpropi2 = 138;
+  static const int lpropi3 = 139;
+  static const int lpropi4 = 140;
+  static const int lpropi5 = 141;
+  static const int lpropi6 = 142;
+  static const int lpropi7 = 143;
+  static const int lpropi8 = 144;
+  static const int lpropi9 = 145;
+  static const int spropi0 = 146;
+  static const int spropi1 = 147;
+  static const int spropi2 = 148;
+  static const int spropi3 = 149;
+  static const int spropi4 = 150;
+  static const int spropi5 = 151;
+  static const int spropi6 = 152;
+  static const int spropi7 = 153;
+  static const int spropi8 = 154;
+  static const int spropi9 = 155;
+  static const int super0 = 156;
+  static const int super1 = 157;
+  static const int super2 = 158;
+  static const int iinc0 = 159;
+  static const int iinc1 = 160;
+  static const int idec = 161;
+  static const int itoa0 = 162;
+  static const int itoa1 = 163;
+  static const int add0 = 164;
+  static const int add1 = 165;
+  static const int add2 = 166;
+  static const int sub0 = 167;
+  static const int sub1 = 168;
+  static const int sub2 = 169;
+  static const int mul0 = 170;
+  static const int mul1 = 171;
+  static const int div0 = 172;
+  static const int div1 = 173;
+  // 174 is push8
 }

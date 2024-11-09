@@ -12,7 +12,6 @@ import 'package:dart_eval/src/eval/runtime/type.dart';
 class Program {
   /// Construct a [Program] with bytecode and metadata.
   Program(
-      this.topLevelDeclarations,
       this.instanceDeclarations,
       this.typeIds,
       this.typeTypes,
@@ -24,9 +23,6 @@ class Program {
       this.globalInitializers,
       this.enumMappings,
       this.overrideMap);
-
-  /// Global bytecode offsets of the program's top-level declarations.
-  Map<int, Map<String, int>> topLevelDeclarations;
 
   /// Global bytecode offsets of the program's instance-level declarations.
   ///
@@ -79,11 +75,6 @@ class Program {
 
     b.add([0x45, 0x56, 0x43, 0x00]); // EVC\0
     b.add(Evc.i32b(Runtime.versionCode)); // version
-
-    _writeMetaBlock(
-        b,
-        topLevelDeclarations
-            .map((key, value) => MapEntry(key.toString(), value)));
     _writeMetaBlock(
         b,
         instanceDeclarations

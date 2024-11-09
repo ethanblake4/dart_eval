@@ -9,7 +9,6 @@ import 'package:dart_eval/src/eval/ir/collection.dart';
 import 'package:dart_eval/src/eval/ir/globals.dart';
 import 'package:dart_eval/src/eval/ir/memory.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/identifier.dart';
@@ -200,8 +199,7 @@ class IdentifierReference implements Reference {
           final gIndex =
               ctx.enumValueIndices[classType.file]?[type.name]?[name];
           if (gIndex != null) {
-            ctx.asm.lg0(gIndex);
-            return Variable.alloc(ctx, type);
+            return Variable.ssa(ctx, LoadGlobal(ctx.svar(name), gIndex), type);
           }
         }
         final _dec =
@@ -611,17 +609,7 @@ Variable _declarationToVariable(
     decl as NamedCompilationUnitMember;
 
     final returnType = TypeRef.lookupDeclaration(ctx, _decl.sourceLib, decl);
-    final DeferredOrOffset offset;
-
-    if (ctx.topLevelDeclarationPositions[_decl.sourceLib]
-            ?.containsKey('$name.') ??
-        false) {
-      offset = DeferredOrOffset(
-          file: _decl.sourceLib,
-          offset: ctx.topLevelDeclarationPositions[_decl.sourceLib]!['$name.']);
-    } else {
-      offset = DeferredOrOffset(file: _decl.sourceLib, name: '$name.');
-    }
+    final offset = DeferredOrOffset(file: _decl.sourceLib, name: '$name.');
 
     return Variable(-1, CoreTypes.type.ref(ctx),
         concreteTypes: [returnType],
@@ -647,16 +635,7 @@ Variable _declarationToVariable(
         ctx, _decl.sourceLib, decl.parent as ClassDeclaration);
   }
 
-  final DeferredOrOffset offset;
-  if (ctx.topLevelDeclarationPositions[_decl.sourceLib]?.containsKey(name) ??
-      false) {
-    offset = DeferredOrOffset(
-        file: _decl.sourceLib,
-        offset: ctx.topLevelDeclarationPositions[ctx.library]![name],
-        name: name);
-  } else {
-    offset = DeferredOrOffset(file: _decl.sourceLib, name: name);
-  }
+  final offset = DeferredOrOffset(file: _decl.sourceLib, name: name);
 
   return Variable(
       -1,
@@ -681,17 +660,7 @@ StaticDispatch? _declarationToStaticDispatch(
   if (decl is! FunctionDeclaration && decl is! ConstructorDeclaration) {
     decl as ClassDeclaration;
 
-    final DeferredOrOffset offset;
-
-    if (ctx.topLevelDeclarationPositions[_decl.sourceLib]
-            ?.containsKey('$name.') ??
-        false) {
-      offset = DeferredOrOffset(
-          file: _decl.sourceLib,
-          offset: ctx.topLevelDeclarationPositions[_decl.sourceLib]!['$name.']);
-    } else {
-      offset = DeferredOrOffset(file: _decl.sourceLib, name: '$name.');
-    }
+    final offset = DeferredOrOffset(file: _decl.sourceLib, name: '$name.');
 
     final rt = AlwaysReturnType(
         TypeRef.lookupDeclaration(ctx, _decl.sourceLib, decl), false);
@@ -709,15 +678,7 @@ StaticDispatch? _declarationToStaticDispatch(
         ctx, _decl.sourceLib, decl.parent as ClassDeclaration);
   }
 
-  final DeferredOrOffset offset;
-  if (ctx.topLevelDeclarationPositions[_decl.sourceLib]?.containsKey(name) ??
-      false) {
-    offset = DeferredOrOffset(
-        file: _decl.sourceLib,
-        offset: ctx.topLevelDeclarationPositions[ctx.library]![name]);
-  } else {
-    offset = DeferredOrOffset(file: _decl.sourceLib, name: name);
-  }
+  final offset = DeferredOrOffset(file: _decl.sourceLib, name: name);
 
   return StaticDispatch(offset, AlwaysReturnType(returnType, nullable));
 }

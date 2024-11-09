@@ -57,7 +57,7 @@ final class Jump extends Operation {
   Jump(this.target);
 
   @override
-  String toString() => 'jump ${target}';
+  String toString() => 'jump @${target}';
 
   @override
   bool operator ==(Object other) => other is Jump && target == other.target;

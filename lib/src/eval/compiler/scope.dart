@@ -6,11 +6,20 @@ import 'package:dart_eval/src/eval/ir/bridge.dart';
 
 import 'context.dart';
 
-int beginMethod(CompilerContext ctx, AstNode scopeHost, int offset, String name,
+void beginMethod(
+    CompilerContext ctx, AstNode scopeHost, int offset, String name,
     [bool isRoot = false]) {
-  ctx.builder = ctx.builder.merge(ctx.commitBlock()).root;
+  if (ctx.hasBegunMethod) {
+    final methodBlock = ctx.commitBlock();
+    if (ctx.entrypoint) {
+      ctx.builder = ctx.builder.merge(methodBlock).root;
+    } else {
+      ctx.builder = ctx.builder.float(methodBlock).root;
+    }
+  }
   ctx.funcLabel = name;
-  return -1;
+  ctx.entrypoint = ctx.entrypoints.contains(scopeHost);
+  ctx.hasBegunMethod = true;
 }
 
 void setupAsyncFunction(CompilerContext ctx) {

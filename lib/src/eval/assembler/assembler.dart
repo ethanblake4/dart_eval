@@ -13,11 +13,10 @@ enum Size {
 }
 
 enum Register { r0, r1, r2 }
-
+/*
 const _instructionsModifyingR0 = {
   Xops.lc0,
-  Xops.lii0,
-  Xops.lii0p,
+  Xops.imm0,
   Xops.ls0,
   Xops.lprop0,
   Xops.iadd,
@@ -30,7 +29,7 @@ const _instructionsUsingR0 = {
   Xops.iadd,
   Xops.ilt,
   Xops.ilteq,
-};
+};*/
 
 class Assembler {
   Assembler({this.optimizationLevel = 2});
@@ -38,7 +37,7 @@ class Assembler {
   final int optimizationLevel;
   int prLen = 0;
 
-  int? _findLastNot(
+  /*int? _findLastNot(
       {bool using = false,
       bool r0 = false,
       bool r1 = false,
@@ -108,9 +107,9 @@ class Assembler {
       count++;
     }
     return null;
-  }
+  }*/
 
-  int? _findLastOfTypeNot(int type,
+  /*int? _findLastOfTypeNot(int type,
       {bool using = false,
       bool r0 = false,
       bool r1 = false,
@@ -139,12 +138,12 @@ class Assembler {
       count++;
     }
     return null;
-  }
+  }*/
 
-  void scope(int len, int name) {
+  /*void scope(int len, int name) {
     program.add([Xops.scope, len, name >> 8, name & 0xff]);
     prLen += 4;
-  }
+  }*/
 
   void loadConstant0(int i) {
     program.add([Xops.lc0, i >> 8, i & 0xff]);
@@ -156,11 +155,11 @@ class Assembler {
     prLen += 3;
   }
 
-  void lg0(int i) {
+  /*void lg0(int i) {
     program.add([Xops.lg0, i >> 8, i & 0xff]);
     prLen += 3;
-  }
-
+  }*/
+/*
   void ls0(int ptr) {
     final last0 = _findLastNot(using: true, r0: true, stack: [ptr]);
 
@@ -191,7 +190,7 @@ class Assembler {
   void loadProperty1(int ptr) {
     program.add([Xops.lprop1, ptr]);
     prLen += 2;
-  }
+  }*/
 
   Jump jump([int offset = 0]) {
     program.add([Xops.jump, offset >> 8, offset & 0xff]);
@@ -204,7 +203,7 @@ class Assembler {
   }
 
   Jump jumpf([int offset = 0]) {
-    program.add([Xops.jumpf, offset >> 8, offset & 0xff]);
+    program.add([Xops.jf, offset >> 8, offset & 0xff]);
     prLen += 3;
     return Jump(program.length - 1, prLen - 3, 1, Size.i16);
   }
@@ -212,7 +211,7 @@ class Assembler {
   Jump jumpfLabel(Label label) {
     return jumpf()..linkLabel(this, label);
   }
-
+/*
   void push0() {
     if (optimizationLevel >= 2) {
       final pushMapping = {
@@ -317,7 +316,7 @@ class Assembler {
   void isp() {
     program.add([Xops.isp]);
     prLen++;
-  }
+  }*/
 
   Label label() {
     return Label(program.length, prLen);

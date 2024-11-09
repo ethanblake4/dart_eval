@@ -51,13 +51,11 @@ void compileEnumDeclaration(CompilerContext ctx, EnumDeclaration d,
   }
 
   ctx.resetStack(position: 0);
-  final pos = beginMethod(ctx, d, d.offset, '$clsName.index (get)');
   final object =
       Variable.ssa(ctx, AssignRegister(ctx.svar('this'), regGPR3), type);
   final prop = Variable.ssa(
       ctx, LoadPropertyStatic(ctx.svar('index'), object.ssa, 0), type);
   ctx.pushOp(Return(prop.ssa));
-  ctx.instanceDeclarationPositions[ctx.library]![clsName]![0]['index'] = pos;
   i++;
   i++;
 
@@ -109,8 +107,6 @@ void compileEnumDeclaration(CompilerContext ctx, EnumDeclaration d,
     final _index = ctx.topLevelGlobalIndices[ctx.library]![_name]!;
     ctx.pushOp(SetGlobal(_index, V.ssa));
     ctx.topLevelVariableInferredTypes[ctx.library]![_name] = type;
-    ctx.topLevelGlobalInitializers[ctx.library]![_name] = pos;
-    ctx.runtimeGlobalInitializerMap[_index] = pos;
     ctx.pushOp(Return(V.ssa));
     idx++;
   }

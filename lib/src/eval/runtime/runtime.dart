@@ -116,7 +116,6 @@ class Runtime {
         _bridgeEnumMappings = program.enumMappings,
         _globalInitializers = program.globalInitializers,
         overrideMap = program.overrideMap {
-    _declarations = program.topLevelDeclarations;
     _constantPool.addAll(program.constantPool);
     program.instanceDeclarations.forEach((file, $class) {
       final decls = <String, EvalClass>{};
@@ -763,6 +762,14 @@ class Runtime {
     }
   }
 
+/*
+%a -> alu acc, %b -> alu 2
+%l -> loop counter
+%f -> fpu acc, %g -> fpu 2
+%u -> string acc, %v -> string 2
+%e -> bool / flag, %x -> bool 2
+%r -> gpr1/acc, %s -> gpr2, %c -> gpr3 / collection
+*/
   /// pr: Program bytecode
   /// idt: Identifier table
   /// ct: Constant table
@@ -774,25 +781,32 @@ class Runtime {
   /// si: Stack index
   /// fi: Frame index
   /// fis: Frame index stack
-  /// r0, r1: Primary registers (r0 is accumulator)
-  /// r3: Secondary register
   /// args: Arguments
   dynamic _run(
       Uint8List pr,
       List<int> cs,
       List<int> fis,
       List<List<int>> ts,
-      List<List<Object?>> s,
+      List<List<Object?>> st,
       List<String> t,
       int pc,
       int si,
       int fi,
-      Object? r0,
-      Object? r1,
-      Object? r2,
+      int a,
+      int b,
+      int l,
+      double f,
+      double g,
+      String u,
+      String v,
+      bool e,
+      bool x,
+      Object? r,
+      Object? rs,
+      Object? c,
       List<Object?> args) {
     // current stack frame
-    var fr = s[si];
+    var fr = st[si];
 
     final idt = _identifierTable, ct = _constantPool;
     final ilist = _intlist,
@@ -804,7 +818,7 @@ class Runtime {
     execloop:
     while (true) {
       switch (pr[pc++]) {
-        case Xops.scope:
+        /*case Xops.push:
           // scope (Ix u16): Push scope with specified name
           t[si] = idt[pr[pc++] << 8 | pr[pc++]];
           break;
@@ -818,135 +832,88 @@ class Runtime {
           // popscope: Pop scope
           si--;
           fr = s[si];
-          break;
-        case Xops.lc0:
-          // lc0 (Cx u16): Load constant Cx into register 0
-          r0 = ct[pr[pc++] << 8 | pr[pc++]];
-          break;
-
-        case Xops.lc1:
-          // lc0 (Cx u16): Load constant Cx into register 1
-          r1 = ct[pr[pc++] << 8 | pr[pc++]];
-          break;
-
-        case Xops.lc0boxs:
-          // lc0boxs (Cx u16): Load constant Cx into register 0 and box string
-          r0 = $String(ct[pr[pc++] << 8 | pr[pc++]] as String);
-          break;
-
-        case Xops.lc1boxs:
-          // lc1boxs (Cx u16): Load constant Cx into register 1 and box string
-          r1 = $String(ct[pr[pc++] << 8 | pr[pc++]] as String);
-          break;
-
-        case Xops.lc0p:
-          // lc0p (Cx u16): Load constant Cx into register 0 and push
-          fr[fi++] = r0 = ct[pr[pc++] << 8 | pr[pc++]];
-          break;
-
-        case Xops.lc1p:
-          // lc1p (Cx u16): Load constant Cx into register 1 and push
-          fr[fi++] = r1 = ct[pr[pc++] << 8 | pr[pc++]];
-          break;
-
-        case Xops.lcf0box:
-          // lcf0box (Cx u16): Load constant Cx into register 0 and box double
-          r0 = $double(flist[pr[pc++] << 8 | pr[pc++]]);
-          break;
-
-        case Xops.lcf1box:
-          // lcf0box (Cx u16): Load constant Cx into register 1 and box double
-          r1 = $double(flist[pr[pc++] << 8 | pr[pc++]]);
-          break;
-
-        case Xops.lci0:
-          // lci0 (Cx u16): Load constant Cx into register 0 as integer
-          r0 = ilist[pr[pc++] << 8 | pr[pc++]];
-          break;
-
-        case Xops.lci1:
-          // lci1 (Cx u16): Load constant Cx into register 1 as integer
-          r1 = ilist[pr[pc++] << 8 | pr[pc++]];
-          break;
-
-        case Xops.lcl0:
-          // lcl0 (Cx u16): Load constant Cx into register 0 as long
-          r0 = llist[pr[pc++] << 8 | pr[pc++]];
-          break;
-
-        case Xops.lcl1:
-          // lcl1 (Cx u16): Load constant Cx into register 1 as long
-          r1 = llist[pr[pc++] << 8 | pr[pc++]];
-          break;
-
-        case Xops.lci0p:
-          // lci0p (Cx u16): Load constant Cx into register 0 as integer and push
-          fr[fi++] = r0 = ilist[pr[pc++] << 8 | pr[pc++]];
-          break;
-
-        case Xops.lci1p:
-          // lci1p (Cx u16): Load constant Cx into register 1 as integer and push
-          fr[fi++] = r1 = ilist[pr[pc++] << 8 | pr[pc++]];
-          break;
-
-        case Xops.lcd0:
-          // lcd0 (Cx u16): Load constant Cx into register 0 as double
-          r0 = dlist[pr[pc++] << 8 | pr[pc++]];
-          break;
-
-        case Xops.lcd1:
-          // lcd1 (Cx u16): Load constant Cx into register 1 as double
-          r1 = dlist[pr[pc++] << 8 | pr[pc++]];
-          break;
-
-        case Xops.ls0:
-          // ls0 (*Sx u8): Load stack value at Sx into register 0
-          r0 = fr[pr[pc++]];
-          break;
-
-        case Xops.ls1:
-          // ls1 (*Sx u8): Load stack value at Sx into register 1
-          r1 = fr[pr[pc++]];
-          break;
-
-        case Xops.lprop0i:
-          // lprop0i (u8): Load property Ix from register 0 into register 0
-          final object = r0 as $InstanceImpl;
-          r1 = object.values[pr[pc++]];
-          break;
-
-        case Xops.lprop1i:
-          // lprop1i (u8): Load property Ix from register 0 into register 1
-          final object = r1 as $InstanceImpl;
-          r1 = object.values[pr[pc++]];
-          break;
-
+          break;*/
         case Xops.jump:
           // jump (Jx i16): Jump relative (constant)
           pc += (pr[pc++] << 8 | pr[pc++]) - Xops.i16Half;
           break;
 
-        case Xops.jumpf:
-          // jumpf (Jx i16): Jump relative (false)
-          if (r0 == false) {
+        case Xops.lc0:
+          // lc0 (Cx u16): Load constant Cx into register 0
+          r = ct[pr[pc++] << 8 | pr[pc++]];
+          break;
+
+        case Xops.lc1:
+          // lc0 (Cx u16): Load constant Cx into register 1
+          rs = ct[pr[pc++] << 8 | pr[pc++]];
+          break;
+
+        case Xops.lcs0:
+          u = ct[pr[pc++] << 8 | pr[pc++]] as String;
+          break;
+
+        case Xops.lcs1:
+          v = ct[pr[pc++] << 8 | pr[pc++]] as String;
+          break;
+
+        case Xops.lcf0:
+          // lcf %f (Cx u16): Load constant Cx into register 0 and box double
+          f = flist[pr[pc++] << 8 | pr[pc++]];
+          break;
+
+        case Xops.lcf1:
+          // lcf %g (Cx u16): Load constant Cx into register 1 and box double
+          g = flist[pr[pc++] << 8 | pr[pc++]];
+          break;
+
+        case Xops.jf:
+          // jf %e (Jx i16): Jump relative (false)
+          if (!e) {
             pc += (pr[pc++] << 8 | pr[pc++]) - Xops.i16Half;
           } else {
             pc += 2;
           }
           break;
 
-        case Xops.jumpt:
-          // jumpt (Jx i16): Jump relative (true)
-          if (r0 == true) {
+        case Xops.jt:
+          // jt (Jx i16): Jump relative (true)
+          if (e) {
             pc += (pr[pc++] << 8 | pr[pc++]) - Xops.i16Half;
           } else {
             pc += 2;
           }
           break;
 
-        case Xops.jumpnnil:
-          // jumpnnil (Jx i16): Jump relative (not null)
-          if (r0 != null) {
+        case Xops.jnn0:
+          // jnn %r (Jx i16): Jump relative (not null)
+          if (r != null) {
+            pc += (pr[pc++] << 8 | pr[pc++]) - Xops.i16Half;
+          } else {
+            pc += 2;
+          }
+          break;
+
+        case Xops.jnn1:
+          // jnn %s (Jx i16): Jump relative (not null)
+          if (rs != null) {
+            pc += (pr[pc++] << 8 | pr[pc++]) - Xops.i16Half;
+          } else {
+            pc += 2;
+          }
+          break;
+
+        case Xops.jn0:
+          // jn %r (Jx i16): Jump relative (null)
+          if (r == null) {
+            pc += (pr[pc++] << 8 | pr[pc++]) - Xops.i16Half;
+          } else {
+            pc += 2;
+          }
+          break;
+
+        case Xops.jn1:
+          // jn %s (Jx i16): Jump relative (null)
+          if (rs == null) {
             pc += (pr[pc++] << 8 | pr[pc++]) - Xops.i16Half;
           } else {
             pc += 2;
@@ -954,15 +921,149 @@ class Runtime {
           break;
 
         case Xops.push0:
-          // push0: Push register 0 onto stack
-          fr[fi++] = r0;
+          // push %a: Push register a onto stack
+          fr[fi++] = a;
           break;
 
         case Xops.push1:
-          // push1: Push register 1 onto stack
-          fr[fi++] = r1;
+          // push %b: Push register b onto stack
+          fr[fi++] = b;
           break;
 
+        case Xops.push2:
+          // push %f: Push register f onto stack
+          fr[fi++] = f;
+          break;
+
+        case Xops.push3:
+          // push %g: Push register g onto stack
+          fr[fi++] = g;
+          break;
+
+        case Xops.push4:
+          // push %e: Push register e onto stack
+          fr[fi++] = e;
+          break;
+
+        case Xops.push5:
+          // push %r: Push register r onto stack
+          fr[fi++] = r;
+          break;
+
+        case Xops.push6:
+          // push %s: Push register s onto stack
+          fr[fi++] = rs;
+          break;
+
+        case Xops.push7:
+          // push %c: Push register c onto stack
+          fr[fi++] = c;
+          break;
+
+        case Xops.push8:
+          // push %u: Push register u onto stack
+          fr[fi++] = u;
+          break;
+
+        case Xops.load0:
+          // load %a *Sx: Load stack value at Sx into register a
+          a = fr[pr[pc++]] as int;
+          break;
+
+        case Xops.load1:
+          // load %b *Sx: Load stack value at Sx into register b
+          b = fr[pr[pc++]] as int;
+          break;
+
+        case Xops.load2:
+          // load %f *Sx: Load stack value at Sx into register f
+          f = fr[pr[pc++].toInt()] as double;
+          break;
+
+        case Xops.load3:
+          // load %g *Sx: Load stack value at Sx into register g
+          g = fr[pr[pc++].toInt()] as double;
+          break;
+
+        case Xops.load4:
+          // load %e *Sx: Load stack value at Sx into register e
+          e = fr[pr[pc++].toInt()] as bool;
+          break;
+
+        case Xops.load5:
+          // load %r *Sx: Load stack value at Sx into register r
+          r = fr[pr[pc++]];
+          break;
+
+        case Xops.load6:
+          // load %s *Sx: Load stack value at Sx into register s
+          rs = fr[pr[pc++]];
+          break;
+
+        case Xops.load7:
+          // load %c *Sx: Load stack value at Sx into register c
+          c = fr[pr[pc++]];
+          break;
+
+        case Xops.load8:
+          // load %u *Sx: Load stack value at Sx into register u
+          u = fr[pr[pc++]] as String;
+          break;
+
+        case Xops.load9:
+          // load %v *Sx: Load stack value at Sx into register v
+          v = fr[pr[pc++]] as String;
+          break;
+
+        case Xops.load10:
+          // load %x *Sx: Load stack value at Sx into register x
+          x = fr[pr[pc++].toInt()] as bool;
+          break;
+
+        case Xops.save0:
+          fr[pr[pc++]] = a;
+          break;
+
+        case Xops.save1:
+          fr[pr[pc++]] = f;
+          break;
+
+        case Xops.save2:
+          fr[pr[pc++]] = r;
+          break;
+
+        case Xops.save3:
+          fr[pr[pc++]] = rs;
+          break;
+
+        case Xops.save4:
+          fr[pr[pc++]] = c;
+          break;
+
+        case Xops.save5:
+          fr[pr[pc++]] = u;
+          break;
+
+        case Xops.save6:
+          fr[pr[pc++]] = e;
+          break;
+
+        case Xops.imm0:
+          // imm %a i16: Load immediate integer into register a
+          a = (pr[pc++] << 8 | pr[pc++]) - Xops.i16Half;
+          break;
+
+        case Xops.imm1:
+          // imm %b i16: Load immediate integer into register b
+          b = (pr[pc++] << 8 | pr[pc++]) - Xops.i16Half;
+          break;
+
+        case Xops.imm2:
+          // imm %f i16: Load immediate double into register l
+          l = (pr[pc++] << 8 | pr[pc++]) - Xops.i16Half;
+          break;
+
+        /*
         case Xops.sets0:
           // sets0 (*Sx u8): Set stack value at Sx to register 0
           fr[pr[pc++]] = r0;
@@ -2102,6 +2203,7 @@ class Runtime {
           r0 = EvalFunctionPtr(fr, offset, frameLen, argc, positionalArgTypes,
               sortedNamedArgs.cast(), sortedNamedArgTypes);
           break;
+          */
       }
     }
   }

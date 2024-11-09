@@ -265,17 +265,19 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     var i = 0;
     final libraryIndexMap = <Library, int>{};
     final _entrypoints = <Uri>{};
+    final _entrypointDeclarations = <Declaration>{};
 
     for (final library in libraries) {
       if (libraryIndexMap[library] == null) {
         libraryIndexMap[library] = i++;
       }
 
-      var isEntrypoint = false;
+      var isEntrypoint = false, isEntrypointNonBridge = false;
       for (final entrypoint in entrypoints) {
         if (library.uri.toString().endsWith(entrypoint)) {
           _entrypoints.add(library.uri);
           isEntrypoint = true;
+          isEntrypointNonBridge = true;
         }
       }
 
@@ -284,6 +286,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
         for (final declaration in library.declarations) {
           if (declaration.isBridge) {
             _entrypoints.add(library.uri);
+            isEntrypoint = true;
             continue;
           }
           final d = declaration.declaration!;
@@ -292,11 +295,47 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
                 (element) => element.name.name == 'RuntimeOverride');
             if (overrideAnno != null) {
               _entrypoints.add(library.uri);
+              isEntrypoint = true;
+              isEntrypointNonBridge = true;
+            }
+          }
+        }
+      }
+
+      if (isEntrypointNonBridge) {
+        for (final declaration in library.declarations) {
+          if (declaration.isBridge) {
+            continue;
+          }
+          final _declaration = declaration.declaration!;
+          if (_declaration is FunctionDeclaration) {
+            _entrypointDeclarations.add(_declaration);
+          } else if (_declaration is ClassDeclaration) {
+            _entrypointDeclarations.add(_declaration);
+            for (final member in _declaration.members) {
+              if (member is ConstructorDeclaration) {
+                _entrypointDeclarations.add(member);
+              } else if (member is MethodDeclaration && member.isStatic) {
+                _entrypointDeclarations.add(member);
+              } else if (member is FieldDeclaration && member.isStatic) {
+                _entrypointDeclarations.add(member);
+              }
+            }
+          } else if (_declaration is EnumDeclaration) {
+            _entrypointDeclarations.add(_declaration);
+            for (final member in _declaration.members) {
+              if (member is ConstructorDeclaration) {
+                _entrypointDeclarations.add(member);
+              } else if (member is FieldDeclaration && member.isStatic) {
+                _entrypointDeclarations.add(member);
+              }
             }
           }
         }
       }
     }
+
+    _ctx.entrypoints = _entrypointDeclarations;
 
     final reachableLibraries =
         _discoverReachableLibraries(libraries, _entrypoints).toSet();
@@ -481,7 +520,6 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
 
       /// Compile the rest of the declarations
       _topLevelDeclarationsMap.forEach((key, value) {
-        _ctx.topLevelDeclarationPositions[key] = {};
         _ctx.instanceDeclarationPositions[key] = {};
         _ctx.instanceGetterIndices[key] = {};
         value.forEach((lib, _declaration) {
@@ -497,6 +535,14 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
           _ctx.library = key;
           compileDeclaration(declaration, _ctx);
           _ctx.resetStack();
+          if (_ctx.hasBegunMethod) {
+            final methodBlock = _ctx.commitBlock();
+            if (_ctx.entrypoint) {
+              _ctx.builder = _ctx.builder.merge(methodBlock).root;
+            } else {
+              _ctx.builder = _ctx.builder.float(methodBlock).root;
+            }
+          }
         });
       });
     } on CompileError catch (e, stk) {
@@ -539,7 +585,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     print(cfg);
 
     return Program(
-      _ctx.topLevelDeclarationPositions,
+      /* TODO top level declaration positions */
       _ctx.instanceDeclarationPositions,
       typeIds,
       //ctx.typeNames,

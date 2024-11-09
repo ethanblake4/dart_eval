@@ -16,8 +16,7 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 
 void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
-  final pos = beginMethod(ctx, d, d.offset, '${d.name.lexeme}()');
-  ctx.topLevelDeclarationPositions[ctx.library]![d.name.lexeme] = pos;
+  beginMethod(ctx, d, d.offset, '${d.name.lexeme}()');
 
   final overrideAnno = d.metadata
       .firstWhereOrNull((element) => element.name.name == 'RuntimeOverride');
@@ -36,7 +35,7 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
     }
     final overrideName = name.stringValue!;
     ctx.runtimeOverrideMap[overrideName] =
-        OverrideSpec(pos, version ?? '<${ctx.version}');
+        OverrideSpec(-1, version ?? '<${ctx.version}');
   }
 
   final _existingAllocs =

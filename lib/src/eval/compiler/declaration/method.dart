@@ -19,7 +19,7 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx,
   final b = d.body;
   final parentName = parent.name.lexeme;
   final methodName = d.name.lexeme;
-  final pos = beginMethod(ctx, d, d.offset, '$parentName.$methodName()');
+  beginMethod(ctx, d, d.offset, '$parentName.$methodName()');
 
   ctx.beginAllocScope(existingAllocLen: (d.parameters?.parameters.length ?? 0));
   ctx.scopeFrameOffset += d.parameters?.parameters.length ?? 0;
@@ -86,18 +86,5 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx,
     }
   }
 
-  if (d.isStatic) {
-    ctx.topLevelDeclarationPositions[ctx.library]!['$parentName.$methodName'] =
-        pos;
-  } else {
-    final mapIndex = d.isGetter
-        ? 0
-        : d.isSetter
-            ? 1
-            : 2;
-    ctx.instanceDeclarationPositions[ctx.library]![parentName]![mapIndex]
-        [methodName] = pos;
-  }
-
-  return pos;
+  return -1;
 }
