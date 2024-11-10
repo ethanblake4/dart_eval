@@ -332,7 +332,13 @@ class Unbox implements EvcOp {
 
   @override
   void run(Runtime runtime) {
-    runtime.frame[_reg] = (runtime.frame[_reg] as $Value).$value;
+    dynamic v = runtime.frame[_reg];
+
+    if (v is $Value) {
+      v = v.$value;
+    }
+
+    runtime.frame[_reg] = v;
   }
 
   @override
