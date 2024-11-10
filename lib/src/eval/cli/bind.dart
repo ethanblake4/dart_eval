@@ -7,6 +7,10 @@ import 'package:path/path.dart';
 import 'package:pubspec_parse/pubspec_parse.dart';
 
 const defaultImports = '''
+// ignore_for_file: unused_import
+// ignore_for_file: unnecessary_import
+
+
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 ''';
@@ -43,7 +47,7 @@ void cliBind([bool singleFile = false, bool all = false]) async {
           filename.split('.').length == 2) {
         final p = relative(file.path, from: root).replaceAll('\\', '/');
         final uri = 'package:${posix.join(packageName, p)}';
-        final output = await bindgen.parse(file, uri, all);
+        final output = await bindgen.parse(file, filename, uri, all);
         if (output != null) {
           print('Bound ${file.path}');
           numBound++;

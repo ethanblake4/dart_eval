@@ -1,16 +1,18 @@
 import 'package:analyzer/dart/element/element.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
 import 'package:dart_eval/src/eval/bindgen/parameters.dart';
+import 'package:dart_eval/src/eval/bindgen/permission.dart';
 import 'package:dart_eval/src/eval/bindgen/type.dart';
 
-String $constructors(ClassElement element) {
+String $constructors(BindgenContext ctx, ClassElement element) {
   return element.constructors
       .where((cstr) => !cstr.isPrivate && !element.isAbstract)
-      .map((e) => _$constructor(element, e))
+      .map((e) => _$constructor(ctx, element, e))
       .join('\n');
 }
 
-String _$constructor(ClassElement element, ConstructorElement constructor) {
+String _$constructor(
+    BindgenContext ctx, ClassElement element, ConstructorElement constructor) {
   final name = constructor.name.isEmpty ? 'new' : constructor.name;
   final namedConstructor =
       constructor.name.isNotEmpty ? '.${constructor.name}' : '';
@@ -21,7 +23,7 @@ String _$constructor(ClassElement element, ConstructorElement constructor) {
   static \$Value? \$$name(Runtime runtime, \$Value? thisValue, List<\$Value?> args) {
     return \$${element.name}.wrap(
       $fullyQualifiedConstructorId(
-        ${argumentAccessors(constructor.parameters)}
+        ${argumentAccessors(ctx, constructor.parameters)}
       ),
     );
   }
@@ -40,8 +42,9 @@ String _$staticMethod(
   return '''
   /// Wrapper for the [${element.name}.${method.name}] method
   static \$Value? \$${method.name}(Runtime runtime, \$Value? target, List<\$Value?> args) {
+    ${assertMethodPermissions(method)}
     final value = ${element.name}.${method.name}(
-      ${argumentAccessors(method.parameters)}
+      ${argumentAccessors(ctx, method.parameters)}
     );
     return ${wrapVar(ctx, method.returnType, "value")};
   }

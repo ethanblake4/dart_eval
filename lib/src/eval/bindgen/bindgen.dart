@@ -32,7 +32,8 @@ class Bindgen {
     includedPaths.add(normalize(filepath));
   }
 
-  Future<String?> parse(io.File src, String uri, bool all) async {
+  Future<String?> parse(
+      io.File src, String filename, String uri, bool all) async {
     final resourceProvider = PhysicalResourceProvider.INSTANCE;
     if (_contextCollection == null) {
       _contextCollection = AnalysisContextCollection(
@@ -50,6 +51,27 @@ class Bindgen {
 
     if (analysisResult is ResolvedUnitResult) {
       // Access the resolved unit and analyze it
+
+      final evalOutput = filename.replaceAll('.dart', '.eval.dart');
+      bool partOf = false;
+
+      if (!all &&
+          analysisResult.unit.directives.any((element) =>
+              element is PartDirective &&
+              element.uri.stringValue == evalOutput)) {
+        partOf = true;
+      } else {
+        for (final directive in analysisResult.unit.directives) {
+          if (directive is ImportDirective) {
+            final uri = directive.uri.stringValue;
+            if (uri == null || uri.startsWith('package:eval_annotation')) {
+              continue;
+            }
+            ctx.imports.add(uri);
+          }
+        }
+      }
+
       final units =
           analysisResult.unit.declarations.whereType<ClassDeclaration>();
 
@@ -68,7 +90,7 @@ class Bindgen {
           .map((e) => 'import \'$e\';')
           .join('\n');
 
-      return imports + result;
+      return partOf ? "part of '$filename'" : "" + imports + result;
     }
 
     return null;
@@ -81,6 +103,14 @@ class Bindgen {
           (element) => element.element?.displayName == 'Bind');
       if (bindAnno == null) {
         return null;
+      }
+      final override =
+          bindAnno.computeConstantValue()?.getField('overrideLibrary');
+      if (override != null && !override.isNull) {
+        final overrideUri = override.toStringValue();
+        if (overrideUri != null) {
+          ctx.libOverrides[element.name] = overrideUri;
+        }
       }
     }
 
@@ -95,7 +125,7 @@ ${bindTypeSpec(ctx, element)}
 ${bindBridgeType(ctx, element)}
 /// Compile-time class declaration of [\$${element.name}]
 ${bindBridgeDeclaration(ctx, element)}
-${$constructors(element)}
+${$constructors(ctx, element)}
 ${$staticMethods(ctx, element)}
 ${$staticGetters(ctx, element)}
 ${$staticSetters(ctx, element)}
@@ -151,7 +181,7 @@ ${$setProperty(ctx, element)}
     return 'switch (identifier) {\n' + _getters.map((e) => '''
       case '${e.displayName}':
         final _${e.displayName} = \$value.${e.displayName};
-        return ${wrapVar(ctx, e.type.returnType, '_${e.displayName}')};
+        return ${wrapVar(ctx, e.type.returnType, '_${e.displayName}', metadata: e.nonSynthetic.metadata)};
       ''').join('\n') + _methods.map((e) => '''
       case '${e.displayName}':
         return __${e.displayName};

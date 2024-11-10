@@ -24,10 +24,11 @@ String constructorForRuntime(
   final fullyQualifiedConstructorId = '${element.name}.$name';
 
   final staticName = constructor.name.isEmpty ? 'new' : constructor.name;
+  final uri = ctx.libOverrides[element.name] ?? ctx.uri;
 
   return '''
     runtime.registerBridgeFunc(
-      '${ctx.uri}',
+      '${uri}',
       '$fullyQualifiedConstructorId',
       \$${element.name}.\$$staticName
     );
@@ -43,9 +44,10 @@ String staticMethodsForRuntime(BindgenContext ctx, ClassElement element) {
 
 String staticMethodForRuntime(
     BindgenContext ctx, ClassElement element, MethodElement method) {
+  final uri = ctx.libOverrides[element.name] ?? ctx.uri;
   return '''
     runtime.registerBridgeFunc(
-      '${ctx.uri}',
+      '${uri}',
       '${element.name}.${method.name}',
       \$${element.name}.\$${method.name}
     );
@@ -61,9 +63,10 @@ String staticGettersForRuntime(BindgenContext ctx, ClassElement element) {
 
 String staticGetterForRuntime(
     BindgenContext ctx, ClassElement element, PropertyAccessorElement getter) {
+  final uri = ctx.libOverrides[element.name] ?? ctx.uri;
   return '''
     runtime.registerBridgeFunc(
-      '${ctx.uri}',
+      '${uri}',
       '${element.name}.${getter.name}*g',
       \$${element.name}.\$${getter.name}
     );
@@ -79,9 +82,10 @@ String staticSettersForRuntime(BindgenContext ctx, ClassElement element) {
 
 String staticSetterForRuntime(
     BindgenContext ctx, ClassElement element, PropertyAccessorElement setter) {
+  final uri = ctx.libOverrides[element.name] ?? ctx.uri;
   return '''
     runtime.registerBridgeFunc(
-      '${ctx.uri}',
+      '${uri}',
       '${element.name}.${setter.name}*s',
       \$${element.name}.set\$${setter.name}
     );

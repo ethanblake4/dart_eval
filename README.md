@@ -272,6 +272,7 @@ runtime.grant(NetworkPermission.url('https://dart.dev/api/users.json'));
 eval(source, permissions: [
   NetworkPermission.any,
   FilesystemReadPermission.directory('/home/user/mydata'), 
+  ProcessRunPermission(RegExp(r'^ls$'))
 ]);
 ```
 
@@ -279,8 +280,9 @@ Permissions can also be revoked using `runtime.revoke`.
 
 When writing bindings that access sensitive resources, you can check whether a 
 permission is enabled using `runtime.checkPermission`, or assert using
-`runtime.assertPermission`. Out of the box, dart_eval includes the FilesystemPermission
-and NetworkPermission classes ('filesystem' and 'network' domains, respectively)
+`runtime.assertPermission`. Out of the box, dart_eval includes the FilesystemPermission, 
+NetworkPermission, and Process(Run/Kill)Permission classes 
+('filesystem', 'network', and 'process' domains, respectively)
 as well as read/write only variations of FilesystemPermission, but 
 you can also create your own custom permissions by implementing the Permission
 interface.
@@ -337,7 +339,7 @@ class $Book implements $Instance {
     constructors: {
       // Define the default constructor with an empty string
       '': BridgeFunctionDef(returns: $type.annotate, params: [
-        'pages'.param(CoreTypes.string.ref.annotate)
+        'pages'.param(CoreTypes.list.refWith([CoreTypes.string.ref]).annotate)
       ]).asConstructor
     },
     methods: {

@@ -1,3 +1,16 @@
+## 0.7.10
+- Binding generator can now be configured with custom library paths
+- Binding generator can optimally wrap a field that has multiple possible 
+  types using the new @UnionOf annotation
+- Binding generator can automatically generate permission checks using the
+  new @AssertPermission annotation
+- Support for automatically mapping the values of Futures and Streams in the
+  binding generator
+- Fix bugs related to imports in the binding generator
+- Support for the dart:io `Process` class and its support classes
+- Added ProcessRunPermission and ProcessKillPermission to guard running and
+  killing processes
+
 ## 0.7.9
 - Expose base `Object` properties (eg toString, hashCode) for classes 
   declared inside dart_eval

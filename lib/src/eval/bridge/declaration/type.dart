@@ -91,7 +91,7 @@ class BridgeTypeRef {
         spec = null;
 
   /// Reference a generic function type.
-  /// Currently unsupported.
+  /// Currently maps to [CoreTypes.function]
   const BridgeTypeRef.genericFunction(this.gft)
       : typeArgs = const [],
         ref = null,
