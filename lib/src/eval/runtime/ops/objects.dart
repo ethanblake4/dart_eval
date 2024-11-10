@@ -191,7 +191,6 @@ class CreateClass implements EvcOp {
   void run(Runtime runtime) {
     final $super = runtime.frame[_super] as $Instance?;
     final $cls = runtime.declaredClasses[_library]![_name]!;
-
     final instance = $InstanceImpl($cls, $super, List.filled(_valuesLen, null));
     runtime.frame[runtime.frameOffset++] = instance;
   }

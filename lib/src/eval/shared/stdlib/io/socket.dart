@@ -30,7 +30,6 @@ class $InternetAddressType implements InternetAddressType, $Instance {
   static const $declaration = BridgeClassDef(
     BridgeClassType(
       $type,
-      $extends: null,
       $implements: [],
       isAbstract: false,
     ),
@@ -187,7 +186,6 @@ class $InternetAddress implements InternetAddress, $Instance {
   static const $declaration = BridgeClassDef(
     BridgeClassType(
       $type,
-      $extends: null,
       $implements: [],
       isAbstract: true,
     ),

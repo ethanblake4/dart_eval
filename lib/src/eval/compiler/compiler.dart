@@ -220,6 +220,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     // Iterate over bridge libraries
     for (final bridgeLibrary in _bridgeDeclarations.keys) {
       // Wrap bridge declarations in this library as [DeclarationOrBridge]s
+
       final bridgeLibDeclarations = [
         for (final bridgeDeclaration in _bridgeDeclarations[bridgeLibrary]!)
           DeclarationOrBridge(-1, bridge: bridgeDeclaration)
@@ -412,7 +413,6 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     _ctx.instanceDeclarationsMap = _instanceDeclarationsMap;
     _ctx.visibleDeclarations = visibleDeclarationsByIndex;
     _ctx.visibleTypes = visibleTypesByIndex;
-
     unboxedAcrossFunctionBoundaries = {
       CoreTypes.int.ref(_ctx),
       CoreTypes.double.ref(_ctx),
@@ -422,6 +422,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
 
     for (final library in reachableLibraries) {
       final libraryIndex = libraryIndexMap[library]!;
+      // print(library.uri.toString());
       for (final dec in library.declarations) {
         if (dec.isBridge) {
           final bridge = dec.bridge;
@@ -560,7 +561,6 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     if (!_instanceDeclarationsMap.containsKey(libraryIndex)) {
       _instanceDeclarationsMap[libraryIndex] = {};
     }
-
     if (declarationOrBridge.isBridge) {
       final bridge = declarationOrBridge.bridge!;
       if (bridge is BridgeClassDef) {

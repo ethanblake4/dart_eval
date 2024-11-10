@@ -931,9 +931,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     final orElse = args[1] as EvalCallable?;
     final $result = $this.firstWhere(
       (element) => test.call(runtime, null, [element])!.$value as bool,
-      orElse: orElse == null
-          ? null
-          : () => orElse.call(runtime, null, [])!,
+      orElse: orElse == null ? null : () => orElse.call(runtime, null, [])!,
     );
     return $result;
   }
@@ -949,9 +947,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     final orElse = args[1] as EvalCallable?;
     final $result = $this.lastWhere(
       (element) => test.call(runtime, null, [element])!.$value as bool,
-      orElse: orElse == null
-          ? null
-          : () => orElse.call(runtime, null, [])!,
+      orElse: orElse == null ? null : () => orElse.call(runtime, null, [])!,
     );
     return $result;
   }
@@ -967,9 +963,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     final orElse = args[1] as EvalCallable?;
     final $result = $this.singleWhere(
       (element) => test.call(runtime, null, [element])!.$value as bool,
-      orElse: orElse == null
-          ? null
-          : () => orElse.call(runtime, null, [])!,
+      orElse: orElse == null ? null : () => orElse.call(runtime, null, [])!,
     );
     return $result;
   }
