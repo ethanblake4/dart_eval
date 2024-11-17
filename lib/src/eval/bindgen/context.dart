@@ -6,6 +6,7 @@ class BindgenContext {
   final bool wrap;
   final bool all;
   final Map<String, String> libOverrides = {};
+  bool implicitSupers = false;
 
   BindgenContext(this.uri, {required this.wrap, required this.all});
 }

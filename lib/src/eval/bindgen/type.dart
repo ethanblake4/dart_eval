@@ -39,7 +39,7 @@ String bridgeTypeSpecFrom(BindgenContext ctx, DartType type) {
   final element = type.element!;
   final lib = element.library!;
   final uri = ctx.libOverrides[element.name] ?? lib.source.uri.toString();
-  return 'BridgeTypeSpec(\'${uri}\', \'${element.name}\')';
+  return 'BridgeTypeSpec(\'${uri}\', \'${element.name!.replaceAll(r'$', r'\$')}\')';
 }
 
 String? builtinTypeFrom(DartType type) {

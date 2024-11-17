@@ -8,7 +8,7 @@ String bindTypeSpec(BindgenContext ctx, ClassElement element) {
   return '''
   static const \$spec = BridgeTypeSpec(
     '${uri}',
-    '${element.name}',
+    '${element.name.replaceAll(r'$', r'\$')}',
   );
 ''';
 }
@@ -29,7 +29,7 @@ String? bindBridgeDeclaration(BindgenContext ctx, ClassElement element) {
   if (typeParams.isNotEmpty) {
     genericsStr = '''\ngenerics: {
       ${typeParams.map((e) {
-      final boundStr = e.bound != null
+      final boundStr = e.bound != null && !ctx.implicitSupers
           ? '\$extends: ${bridgeTypeRefFromType(ctx, e.bound!)}'
           : '';
       return '\'${e.name}\': BridgeGenericParam($boundStr)';
@@ -85,40 +85,65 @@ String constructors(BindgenContext ctx, ClassElement element) {
 }
 
 String methods(BindgenContext ctx, ClassElement element) {
-  return element.methods.map((e) => bridgeMethodDef(ctx, method: e)).join('\n');
+  final methods = {
+    if (ctx.implicitSupers)
+      for (var s in element.allSupertypes)
+        for (final m in s.element.methods.where((m) => !m.isStatic)) m.name: m,
+    for (final m in element.methods) m.name: m
+  };
+  return methods.values
+      .where(
+          (m) => !(const ['==', 'toString', 'noSuchMethod'].contains(m.name)))
+      .map((m) => bridgeMethodDef(ctx, method: m))
+      .join('\n');
 }
 
 String getters(BindgenContext ctx, ClassElement element) {
-  var getters = element.accessors
-      .where((element) => element.isGetter && !element.isSynthetic)
-      .map((element) => element.displayName)
-      .toList();
+  final accessors = {
+    if (ctx.implicitSupers)
+      for (var s in element.allSupertypes)
+        for (final a in s.element.accessors.where((a) => !a.isStatic))
+          a.name: a,
+    for (final a in element.accessors) a.name: a
+  };
 
-  return getters
-      .map((e) => bridgeGetterDef(ctx, getter: element.getGetter(e)!))
-      .join('\n');
+  var getters = accessors.values
+      .where((m) => !(const ['hashCode', 'runtimeType'].contains(m.name)))
+      .where((element) => element.isGetter && !element.isSynthetic);
+
+  return getters.map((e) => bridgeGetterDef(ctx, getter: e)).join('\n');
 }
 
 String setters(BindgenContext ctx, ClassElement element) {
-  var setters = element.accessors
-      .where((element) => element.isSetter && !element.isSynthetic)
-      .map((element) => element.displayName)
-      .toList();
+  final accessors = {
+    if (ctx.implicitSupers)
+      for (var s in element.allSupertypes)
+        for (final a in s.element.accessors.where((a) => !a.isStatic))
+          a.name: a,
+    for (final a in element.accessors) a.name: a
+  };
 
-  return setters
-      .map((e) => bridgeSetterDef(ctx, setter: element.getSetter(e)!))
-      .join('\n');
+  var setters = accessors.values
+      .where((element) => element.isSetter && !element.isSynthetic);
+
+  return setters.map((e) => bridgeSetterDef(ctx, setter: e)).join('\n');
 }
 
 String fields(BindgenContext ctx, ClassElement element) {
-  var fields = element.fields
-      .where((element) => !element.isSynthetic)
-      .map((element) => element.displayName)
-      .toList();
+  final allFields = {
+    if (ctx.implicitSupers)
+      for (var s in element.allSupertypes)
+        if (s is ClassElement)
+          for (final f in (s as ClassElement).fields.where((f) => !f.isStatic))
+            f.name: f,
+    for (final f in element.fields) f.name: f
+  };
+
+  final fields = allFields.values.where((element) => !element.isSynthetic);
 
   return fields
       .map(
-        (e) => bridgeFieldDef(ctx, field: element.getField(e)!),
+        (e) => bridgeFieldDef(ctx, field: e),
       )
       .join('\n');
 }

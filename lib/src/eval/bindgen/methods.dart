@@ -6,8 +6,17 @@ import 'package:dart_eval/src/eval/bindgen/permission.dart';
 import 'package:dart_eval/src/eval/bindgen/type.dart';
 
 String $methods(BindgenContext ctx, ClassElement element) {
-  return element.methods
+  final methods = {
+    if (ctx.implicitSupers)
+      for (var s in element.allSupertypes)
+        for (final m in s.element.methods) m.name: m,
+    for (final m in element.methods) m.name: m
+  };
+
+  return methods.values
       .where((method) => !method.isPrivate && !method.isStatic)
+      .where(
+          (m) => !(const ['==', 'toString', 'noSuchMethod'].contains(m.name)))
       .map((e) {
     final returnsValue =
         e.returnType is! VoidType && !e.returnType.isDartCoreNull;

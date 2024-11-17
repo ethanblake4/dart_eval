@@ -6,7 +6,7 @@ import 'package:dart_eval/src/eval/bindgen/type.dart';
 
 String $constructors(BindgenContext ctx, ClassElement element) {
   return element.constructors
-      .where((cstr) => !cstr.isPrivate && !element.isAbstract)
+      .where((cstr) => !cstr.isPrivate)
       .map((e) => _$constructor(ctx, element, e))
       .join('\n');
 }

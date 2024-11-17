@@ -7,7 +7,9 @@ import 'package:collection/collection.dart';
 import 'package:dart_eval/src/eval/bindgen/bridge_declaration.dart';
 import 'package:dart_eval/src/eval/bindgen/configure.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
+import 'package:dart_eval/src/eval/bindgen/errors.dart';
 import 'package:dart_eval/src/eval/bindgen/methods.dart';
+import 'package:dart_eval/src/eval/bindgen/properties.dart';
 import 'package:dart_eval/src/eval/bindgen/statics.dart';
 import 'package:dart_eval/src/eval/bindgen/type.dart';
 import 'dart:io' as io;
@@ -104,8 +106,11 @@ class Bindgen {
       if (bindAnno == null) {
         return null;
       }
-      final override =
-          bindAnno.computeConstantValue()?.getField('overrideLibrary');
+      final bindAnnoValue = bindAnno.computeConstantValue();
+      final implicitSupers =
+          bindAnnoValue?.getField('implicitSupers')?.toBoolValue() ?? false;
+      ctx.implicitSupers = implicitSupers;
+      final override = bindAnnoValue?.getField('overrideLibrary');
       if (override != null && !override.isNull) {
         final overrideUri = override.toStringValue();
         if (overrideUri != null) {
@@ -141,9 +146,26 @@ ${$setProperty(ctx, element)}
   String $superclassWrapper(BindgenContext ctx, ClassElement element) {
     final supertype = element.supertype;
     final objectWrapper = '\$Object(\$value)';
-    return supertype == null
-        ? objectWrapper
-        : wrapType(ctx, supertype, '\$value') ?? objectWrapper;
+    if (supertype == null || ctx.implicitSupers) {
+      ctx.imports.add('package:dart_eval/stdlib/core.dart');
+      return objectWrapper;
+    }
+    final narrowWrapper = wrapType(ctx, supertype, '\$value');
+    if (narrowWrapper == null) {
+      print('Warning: Could not wrap supertype $supertype of ${element.name},'
+          ' falling back to \$Object. Add a @Bind annotation to $supertype'
+          ' or set `implicitSupers: true`');
+      ctx.imports.add('package:dart_eval/stdlib/core.dart');
+      return objectWrapper;
+    }
+    return narrowWrapper;
+  }
+
+  String $getRuntimeType(ClassElement element) {
+    return '''
+  @override
+  int \$getRuntimeType(Runtime runtime) => runtime.lookupType(\$spec);
+''';
   }
 
   String $wrap(BindgenContext ctx, ClassElement element) {
@@ -159,62 +181,5 @@ ${$setProperty(ctx, element)}
   /// Wrap a [${element.name}] in a [\$${element.name}]
   \$${element.name}.wrap(this.\$value) : _superclass = ${$superclassWrapper(ctx, element)};
     ''';
-  }
-
-  String $getProperty(BindgenContext ctx, ClassElement element) {
-    return '''
-  @override
-  \$Value? \$getProperty(Runtime runtime, String identifier) {
-    ${propertyGetters(ctx, element)}
-    return _superclass.\$getProperty(runtime, identifier);
-  }
-''';
-  }
-
-  String propertyGetters(BindgenContext ctx, ClassElement element) {
-    final _getters = element.accessors.where((accessor) =>
-        accessor.isGetter && !accessor.isStatic && !accessor.isPrivate);
-    final _methods = element.methods.where((method) => !method.isStatic);
-    if (_getters.isEmpty && _methods.isEmpty) {
-      return '';
-    }
-    return 'switch (identifier) {\n' + _getters.map((e) => '''
-      case '${e.displayName}':
-        final _${e.displayName} = \$value.${e.displayName};
-        return ${wrapVar(ctx, e.type.returnType, '_${e.displayName}', metadata: e.nonSynthetic.metadata)};
-      ''').join('\n') + _methods.map((e) => '''
-      case '${e.displayName}':
-        return __${e.displayName};
-      ''').join('\n') + '\n' + '}';
-  }
-
-  String $getRuntimeType(ClassElement element) {
-    return '''
-  @override
-  int \$getRuntimeType(Runtime runtime) => runtime.lookupType(\$type.spec!);
-''';
-  }
-
-  String $setProperty(BindgenContext ctx, ClassElement element) {
-    return '''
-  @override
-  void \$setProperty(Runtime runtime, String identifier, \$Value value) {
-    ${propertySetters(ctx, element)}
-    return _superclass.\$setProperty(runtime, identifier, value);
-  }
-''';
-  }
-
-  String propertySetters(BindgenContext ctx, ClassElement element) {
-    final _setters = element.accessors.where((element) =>
-        element.isSetter && !element.isStatic && !element.isPrivate);
-    if (_setters.isEmpty) {
-      return '';
-    }
-    return 'switch (identifier) {\n' + _setters.map((e) => '''
-        case '${e.displayName}':
-          \$value.${e.displayName} = value.\$value;
-          return;
-        ''').join('\n') + '\n' + '}';
   }
 }
