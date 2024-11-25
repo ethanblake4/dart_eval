@@ -38,12 +38,13 @@ String _parameterFrom(BindgenContext ctx, ParameterElement parameter) {
   ''';
 }
 
-String argumentAccessors(BindgenContext ctx, List<ParameterElement> params) {
+String argumentAccessors(BindgenContext ctx, List<ParameterElement> params,
+    {Map<String, String> paramMapping = const {}}) {
   final paramBuffer = StringBuffer();
   for (var i = 0; i < params.length; i++) {
     final param = params[i];
     if (param.isNamed) {
-      paramBuffer.write('${param.name}: ');
+      paramBuffer.write('${paramMapping[param.name] ?? param.name}: ');
     }
     final type = param.type;
     if (type.isDartCoreFunction || type is FunctionType) {

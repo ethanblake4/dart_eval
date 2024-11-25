@@ -38,7 +38,9 @@ String? bindBridgeDeclaration(BindgenContext ctx, ClassElement element) {
   }
 
   var extendsStr = '';
-  if (element.supertype != null && !element.supertype!.isDartCoreObject) {
+  if (element.supertype != null &&
+      !element.supertype!.isDartCoreObject &&
+      !ctx.implicitSupers) {
     extendsStr =
         '\n\$extends: ${bridgeTypeRefFromType(ctx, element.supertype!)},';
   }

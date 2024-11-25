@@ -210,7 +210,8 @@ String? wrapType(BindgenContext ctx, DartType type, String expr,
   final typeEl = type.element;
   if (typeEl is ClassElement &&
       typeEl.metadata.any((e) => e.element?.displayName == 'Bind')) {
-    ctx.imports.add(typeEl.library.source.uri.toString());
+    ctx.imports.add(
+        typeEl.library.source.uri.toString().replaceAll('.dart', '.eval.dart'));
     return '${unionStr}\$$name.wrap($expr)';
   }
 

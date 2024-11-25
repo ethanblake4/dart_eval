@@ -18,6 +18,23 @@ String _$constructor(
       constructor.name.isNotEmpty ? '.${constructor.name}' : '';
   final fullyQualifiedConstructorId = '${element.name}$namedConstructor';
 
+  final oConstructor = constructor;
+
+  final paramMapping = <String, String>{};
+  for (var i = 0; i < constructor.parameters.length; i++) {
+    final param = constructor.parameters[i];
+    paramMapping[param.name] = param.name;
+  }
+
+  while (constructor.redirectedConstructor != null) {
+    constructor = constructor.redirectedConstructor!;
+    for (var i = 0; i < constructor.parameters.length; i++) {
+      final param = constructor.parameters[i];
+      final oParam = oConstructor.parameters[i];
+      paramMapping[param.name] = oParam.name;
+    }
+  }
+
   return '''
   /// Wrapper for the [${element.name}.$name] constructor
   static \$Value? \$$name(Runtime runtime, \$Value? thisValue, List<\$Value?> args) {

@@ -9,7 +9,7 @@ import 'package:pubspec_parse/pubspec_parse.dart';
 const defaultImports = '''
 // ignore_for_file: unused_import
 // ignore_for_file: unnecessary_import
-
+// ignore_for_file: no_leading_underscores_for_local_identifiers
 
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
