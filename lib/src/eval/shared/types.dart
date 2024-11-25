@@ -79,6 +79,9 @@ class CoreTypes {
   /// Bridge type spec for [$Uri]
   static const uri = BridgeTypeSpec('dart:core', 'Uri');
 
+  /// Bridge type spec for [$UriData]
+  static const uriData = BridgeTypeSpec('dart:core', 'UriData');
+
   /// Bridge type spec for [$Pattern]
   static const pattern = BridgeTypeSpec('dart:core', 'Pattern');
 
