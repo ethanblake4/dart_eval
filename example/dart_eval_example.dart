@@ -69,12 +69,14 @@ void main(List<String> args) {
   // Create a runtime from the compiled program, and register bridge functions
   // for all static methods and constructors. Default constructors use
   // "ClassName." syntax.
+
   final runtime = Runtime.ofProgram(program)
     ..registerBridgeFunc('package:example/bridge.dart', 'TimestampedTime.',
         $TimestampedTime.$new)
     ..registerBridgeFunc('package:example/bridge.dart', 'WorldTimeTracker.',
         $WorldTimeTracker$bridge.$new,
         isBridge: true);
+
 
   // Call the function and cast the result to the desired type
   final timeTracker = runtime.executeLib(
