@@ -62,33 +62,39 @@ void main(List<String> args) {
   // Compile the source code into a Program containing metadata and bytecode.
   // In a real app, you could also compile the Eval code separately and output
   // it to a file using program.write().
-  final program = compiler.compile({
-    'example': {'main.dart': source}
-  });
+  try {
+    final program = compiler.compile({
+      'example': {'main.dart': source}
+    });
 
-  // Create a runtime from the compiled program, and register bridge functions
-  // for all static methods and constructors. Default constructors use
-  // "ClassName." syntax.
+    // Create a runtime from the compiled program, and register bridge functions
+    // for all static methods and constructors. Default constructors use
+    // "ClassName." syntax.
 
-  final runtime = Runtime.ofProgram(program)
-    ..registerBridgeFunc('package:example/bridge.dart', 'TimestampedTime.',
-        $TimestampedTime.$new)
-    ..registerBridgeFunc('package:example/bridge.dart', 'WorldTimeTracker.',
-        $WorldTimeTracker$bridge.$new,
-        isBridge: true);
+    final runtime = Runtime.ofProgram(program)
+      ..registerBridgeFunc('package:example/bridge.dart', 'TimestampedTime.',
+          $TimestampedTime.$new)
+      ..registerBridgeFunc('package:example/bridge.dart', 'WorldTimeTracker.',
+          $WorldTimeTracker$bridge.$new,
+          isBridge: true);
 
+    // Call the function and cast the result to the desired type
+    final timeTracker = runtime.executeLib(
+      'package:example/main.dart',
+      'fn',
+      // Wrap args in $Value wrappers except int, double, bool, and List
+      [$String('USA')],
+    ) as WorldTimeTracker;
 
-  // Call the function and cast the result to the desired type
-  final timeTracker = runtime.executeLib(
-    'package:example/main.dart',
-    'fn',
-    // Wrap args in $Value wrappers except int, double, bool, and List
-    [$String('USA')],
-  ) as WorldTimeTracker;
-
-  // We can now utilize the returned bridge class
-  print('UK timezone offset: ${timeTracker.getTimeFor('UK').timezoneOffset}'
-      ' (from outside Eval!)');
+    // We can now utilize the returned bridge class
+    print('UK timezone offset: ${timeTracker.getTimeFor('UK').timezoneOffset}'
+        ' (from outside Eval!)');
+  } catch (e) {
+    if (e is CompileError) {
+      print(e.message);
+    }
+    print(e.toString());
+  }
 }
 
 /// Create a wrapper for [TimestampedTime]. A wrapper is a performant interop

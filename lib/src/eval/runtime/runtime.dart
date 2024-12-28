@@ -9,7 +9,9 @@ import 'package:dart_eval/dart_eval_security.dart';
 import 'package:dart_eval/src/eval/bridge/runtime_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/model/override_spec.dart';
 import 'package:dart_eval/src/eval/runtime/class.dart';
+import 'package:dart_eval/src/eval/runtime/continuation.dart';
 import 'package:dart_eval/src/eval/runtime/function.dart';
+import 'package:dart_eval/src/eval/runtime/type.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/collection.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert.dart';
@@ -19,21 +21,15 @@ import 'package:dart_eval/src/eval/shared/stdlib/io.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/math.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/typed_data.dart';
 import 'package:dart_eval/stdlib/core.dart';
-import 'package:dart_eval/src/eval/runtime/continuation.dart';
-import 'package:dart_eval/src/eval/runtime/type.dart';
 
 import 'exception.dart';
 import 'ops/all_ops.dart';
 
-part 'ops/primitives.dart';
-
-part 'ops/memory.dart';
-
-part 'ops/flow.dart';
-
-part 'ops/objects.dart';
-
 part 'ops/bridge.dart';
+part 'ops/flow.dart';
+part 'ops/memory.dart';
+part 'ops/objects.dart';
+part 'ops/primitives.dart';
 
 typedef TypeAutowrapper = $Value? Function(dynamic);
 
@@ -61,6 +57,7 @@ class _UnloadedBridgeFunction {
 
 class _UnloadedEnumValues {
   const _UnloadedEnumValues(this.library, this.name, this.values);
+
   final String library;
   final String name;
   final Map<String, $Value> values;
@@ -103,6 +100,7 @@ class Runtime {
 
   /// Create a [Runtime] from a [Program]. This constructor should be preferred
   /// where possible as it avoids overhead of loading bytecode.
+  ///CompileError will be be thrown when there's an error
   Runtime.ofProgram(Program program)
       : id = _id++,
         _fromEvc = false,
@@ -808,6 +806,7 @@ class Runtime {
 
   var declarations = <int, Map<String, int>>{};
   final declaredClasses = <int, Map<String, EvalClass>>{};
+
   //late final List<String> typeNames;
   late final List<Set<int>> typeTypes;
   late final Map<int, Map<String, int>> typeIds;
