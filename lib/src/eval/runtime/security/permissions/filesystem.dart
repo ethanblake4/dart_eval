@@ -1,3 +1,4 @@
+import 'package:path/path.dart' as p;
 import 'package:dart_eval/dart_eval_security.dart';
 
 /// A permission that allows access to read and write a file system resource.
@@ -14,13 +15,15 @@ class FilesystemPermission implements Permission {
   /// Create a new filesystem permission that matches any file in a directory
   /// or one of its subdirectories.
   factory FilesystemPermission.directory(String dir) {
-    final escaped = dir.replaceAll(r'\', r'\\').replaceAll(r'/', r'\/');
+    final normalized = p.normalize(p.absolute(dir));
+    final escaped = normalized.replaceAll(r'\', r'\\').replaceAll(r'/', r'\/');
     return FilesystemPermission(RegExp('^$escaped.*'));
   }
 
   /// Create a new filesystem permission that matches a specific file.
   factory FilesystemPermission.file(String file) {
-    final escaped = file.replaceAll(r'\', r'\\').replaceAll(r'/', r'\/');
+    final normalized = p.normalize(p.absolute(file));
+    final escaped = normalized.replaceAll(r'\', r'\\').replaceAll(r'/', r'\/');
     return FilesystemPermission(RegExp('^$escaped\$'));
   }
 
@@ -59,13 +62,15 @@ class FilesystemReadPermission extends FilesystemPermission {
   /// Create a new filesystem permission that matches any file in a directory
   /// or one of its subdirectories.
   factory FilesystemReadPermission.directory(String dir) {
-    final escaped = dir.replaceAll(r'\', r'\\').replaceAll(r'/', r'\/');
+    final normalized = p.normalize(p.absolute(dir));
+    final escaped = normalized.replaceAll(r'\', r'\\').replaceAll(r'/', r'\/');
     return FilesystemReadPermission(RegExp('^$escaped.*'));
   }
 
   /// Create a new filesystem permission that matches a specific file.
   factory FilesystemReadPermission.file(String file) {
-    final escaped = file.replaceAll(r'\', r'\\').replaceAll(r'/', r'\/');
+    final normalized = p.normalize(p.absolute(file));
+    final escaped = normalized.replaceAll(r'\', r'\\').replaceAll(r'/', r'\/');
     return FilesystemReadPermission(RegExp('^$escaped\$'));
   }
 
@@ -104,13 +109,15 @@ class FilesystemWritePermission extends FilesystemPermission {
   /// Create a new filesystem permission that matches any file in a directory
   /// or one of its subdirectories.
   factory FilesystemWritePermission.directory(String dir) {
-    final escaped = dir.replaceAll(r'\', r'\\').replaceAll(r'/', r'\/');
+    final normalized = p.normalize(p.absolute(dir));
+    final escaped = normalized.replaceAll(r'\', r'\\').replaceAll(r'/', r'\/');
     return FilesystemWritePermission(RegExp('^$escaped.*'));
   }
 
   /// Create a new filesystem permission that matches a specific file.
   factory FilesystemWritePermission.file(String file) {
-    final escaped = file.replaceAll(r'\', r'\\').replaceAll(r'/', r'\/');
+    final normalized = p.normalize(p.absolute(file));
+    final escaped = normalized.replaceAll(r'\', r'\\').replaceAll(r'/', r'\/');
     return FilesystemWritePermission(RegExp('^$escaped\$'));
   }
 
