@@ -95,6 +95,11 @@ void cliCompile(String outputName) {
   }
   var skips = '';
   for (final package in packageConfig.packages) {
+    if (package.name == 'sky_engine') {
+      skips += 'Skipped SDK package sky_engine.\n';
+      continue;
+    }
+
     if (bridgedPackages.contains(package.name)) {
       skips += 'Skipped package ${package.name} because it is bridged.\n';
       continue;
