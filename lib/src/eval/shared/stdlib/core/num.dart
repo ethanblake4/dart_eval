@@ -524,43 +524,107 @@ class $double extends $num<double> {
   $double(super.$value);
 
   static const $declaration = BridgeClassDef(
-      BridgeClassType(BridgeTypeRef(CoreTypes.double),
-          $extends: BridgeTypeRef(CoreTypes.num), isAbstract: true),
-      constructors: {},
-      methods: {
-        'parse': BridgeMethodDef(
-            BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
-                params: [
-                  BridgeParameter(
-                      'source',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-                      false),
-                  BridgeParameter(
-                      'onError',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function),
-                          nullable: true),
-                      true),
-                ],
-                namedParams: []),
-            isStatic: true),
-        'tryParse': BridgeMethodDef(
-            BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double),
-                    nullable: true),
-                params: [
-                  BridgeParameter(
-                      'source',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-                      false),
-                ],
-                namedParams: []),
-            isStatic: true),
-      },
-      getters: {},
-      setters: {},
-      fields: {},
-      wrap: true);
+    BridgeClassType(
+      BridgeTypeRef(CoreTypes.double),
+      $extends: BridgeTypeRef(CoreTypes.num),
+      isAbstract: true,
+    ),
+    constructors: {},
+    methods: {
+      'parse': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
+          params: [
+            BridgeParameter(
+              'source',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string),
+              ),
+              false,
+            ),
+            BridgeParameter(
+              'onError',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.function),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+          namedParams: [],
+        ),
+        isStatic: true,
+      ),
+      'tryParse': BridgeMethodDef(
+        BridgeFunctionDef(
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double),
+                nullable: true),
+            params: [
+              BridgeParameter('source',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false),
+            ],
+            namedParams: []),
+        isStatic: true,
+      ),
+    },
+    getters: {
+      'infinity': _dtDoubleGetter,
+    },
+    setters: {},
+    fields: {},
+    wrap: true,
+  );
+
+  static const _dtDoubleGetter = BridgeMethodDef(
+    BridgeFunctionDef(
+      returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
+      params: [],
+      namedParams: [],
+    ),
+    isStatic: true,
+  );
+
+  @override
+  $Value? $getProperty(Runtime runtime, String identifier) {
+    switch (identifier) {
+      default:
+        return _superclass.$getProperty(runtime, identifier);
+    }
+  }
+
+  static $double? $parse(Runtime runtime, $Value? target, List<$Value?> args) {
+    final source = args[0]!.$value as String;
+    final double result;
+
+    try {
+      result = double.parse(source);
+    } on FormatException catch (e) {
+      runtime.$throw($FormatException.wrap(e));
+      return null;
+    }
+
+    return $double(result);
+  }
+
+  static $Value $tryParse(Runtime runtime, $Value? target, List<$Value?> args) {
+    final source = args[0]!.$value as String;
+
+    final result = double.tryParse(source);
+
+    if (result == null) {
+      return $null();
+    }
+
+    return $double(result);
+  }
+
+  static $double? $infinity(
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
+    return $double(double.infinity);
+  }
 
   @override
   double get $reified => $value;

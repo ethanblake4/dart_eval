@@ -212,8 +212,10 @@ class IdentifierReference implements Reference {
               final getterType = TypeRef.fromBridgeAnnotation(
                   ctx, getter.functionDescriptor.returns);
               ctx.pushOp(
-                  InvokeExternal.make(ctx.bridgeStaticFunctionIndices[
-                      classType.file]!['${classType.name}.$name*g']!),
+                  InvokeExternal.make(
+                    ctx.bridgeStaticFunctionIndices[classType.file]![
+                        '${classType.name}.$name*g']!,
+                  ),
                   InvokeExternal.LEN);
               ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
               return Variable.alloc(ctx, getterType);
