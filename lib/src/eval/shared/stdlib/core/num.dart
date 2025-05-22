@@ -523,9 +523,11 @@ class $double extends $num<double> {
   /// Wrap a [double] in a [$double].
   $double(super.$value);
 
+  static const $type = BridgeTypeRef(CoreTypes.double);
+
   static const $declaration = BridgeClassDef(
     BridgeClassType(
-      BridgeTypeRef(CoreTypes.double),
+      $type,
       $extends: BridgeTypeRef(CoreTypes.num),
       isAbstract: true,
     ),

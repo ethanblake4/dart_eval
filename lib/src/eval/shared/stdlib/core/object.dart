@@ -7,9 +7,14 @@ import 'package:dart_eval/stdlib/core.dart';
 class $Object implements $Instance {
   $Object(this.$value);
 
+  static const $type = BridgeTypeRef(CoreTypes.object);
+
   static const $declaration = BridgeClassDef(
-      BridgeClassType(BridgeTypeRef(CoreTypes.object),
-          $extends: BridgeTypeRef(CoreTypes.dynamic), isAbstract: true),
+      BridgeClassType(
+        $type,
+        $extends: BridgeTypeRef(CoreTypes.dynamic),
+        isAbstract: true,
+      ),
       constructors: {},
       methods: {
         '!=': BridgeMethodDef(BridgeFunctionDef(
