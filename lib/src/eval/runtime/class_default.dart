@@ -34,6 +34,15 @@ class $InstanceDefault<T extends Object> implements $Instance {
       return g.run(runtime, this);
     }
 
+    final InstanceDefaultPropsMethod? m =
+        props.methods.firstWhereOrNull((e) => e.name == identifier);
+
+    if (m != null) {
+      return $Function((_, target, args) {
+        return m.run(runtime, this, args);
+      });
+    }
+
     return superclass?.$getProperty(runtime, identifier);
   }
 
@@ -62,6 +71,13 @@ class InstanceDefaultProps {
         ),
         ...Map.fromEntries(
           gettersStatic.map(
+            (e) => MapEntry(e.name, e.definition),
+          ),
+        ),
+      },
+      methods: {
+        ...Map.fromEntries(
+          methods.map(
             (e) => MapEntry(e.name, e.definition),
           ),
         ),
@@ -107,6 +123,8 @@ class InstanceDefaultProps {
 
   List<InstanceDefaultPropsGetter> get getters => [];
 
+  List<InstanceDefaultPropsMethod> get methods => [];
+
   @mustBeOverridden
   BridgeClassType get type => throw UnimplementedError();
 
@@ -141,4 +159,12 @@ abstract class InstanceDefaultPropsGetter<T extends $Value> {
   BridgeMethodDef get definition;
 
   $Value? run(Runtime runtime, T target);
+}
+
+abstract class InstanceDefaultPropsMethod<T extends $Value> {
+  String get name;
+
+  BridgeMethodDef get definition;
+
+  $Value? run(Runtime runtime, T target, List<$Value?> args);
 }
