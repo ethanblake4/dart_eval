@@ -713,7 +713,10 @@ class TypeRef {
     var resolvedGenerics = List<TypeRef>.filled(i, CoreTypes.dynamic.ref(ctx));
     for (final generic in _prototype.genericParams) {
       if (gmap.containsKey(generic.name)) {
-        resolvedGenerics[gmap[generic.name]!] = _prototype.specifiedTypeArgs[j];
+        try {
+          resolvedGenerics[gmap[generic.name]!] =
+              _prototype.specifiedTypeArgs[j];
+        } catch (e) {}
       }
       j++;
     }
