@@ -4,6 +4,7 @@ export 'package:pub_semver/pub_semver.dart' show Version;
 export 'src/eval/runtime/runtime.dart' show Runtime;
 export 'src/eval/runtime/class.dart' hide $InstanceImpl;
 export 'src/eval/runtime/class_default.dart';
+export 'src/eval/runtime/enum_default.dart';
 export 'src/eval/runtime/declaration.dart' hide EvalClassClass;
 export 'src/eval/bridge/declaration/class.dart';
 export 'src/eval/bridge/declaration/enum.dart';

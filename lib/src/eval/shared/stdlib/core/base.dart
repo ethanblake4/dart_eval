@@ -35,8 +35,10 @@ const $neverCls = BridgeClassDef(
 class $null implements $Value {
   const $null();
 
+  static const $type = BridgeTypeRef(CoreTypes.nullType);
+
   static const $declaration = BridgeClassDef(
-      BridgeClassType(BridgeTypeRef(CoreTypes.nullType), isAbstract: true),
+      BridgeClassType($type, isAbstract: true),
       constructors: {},
       wrap: true);
 
@@ -61,13 +63,15 @@ class $null implements $Value {
 class $bool implements $Instance {
   $bool(this.$value) : _superclass = $Object($value);
 
-  static const $declaration = BridgeClassDef(
-      BridgeClassType(BridgeTypeRef(CoreTypes.bool), isAbstract: true),
-      constructors: {},
-      methods: {
-        // Other bool methods defined in builtins.dart
-      },
-      wrap: true);
+  static const $type = BridgeTypeRef(CoreTypes.bool);
+
+  static const $declaration =
+      BridgeClassDef(BridgeClassType($type, isAbstract: true),
+          constructors: {},
+          methods: {
+            // Other bool methods defined in builtins.dart
+          },
+          wrap: true);
 
   final $Instance _superclass;
 
@@ -136,8 +140,10 @@ class $bool implements $Instance {
 class $String implements $Instance {
   $String(this.$value) : _superclass = $Pattern.wrap($value);
 
+  static const $type = BridgeTypeRef(CoreTypes.string);
+
   static const $declaration = BridgeClassDef(
-      BridgeClassType(BridgeTypeRef(CoreTypes.string),
+      BridgeClassType($type,
           $implements: [BridgeTypeRef(CoreTypes.pattern)], isAbstract: true),
       constructors: {
         'fromCharCode': BridgeConstructorDef(

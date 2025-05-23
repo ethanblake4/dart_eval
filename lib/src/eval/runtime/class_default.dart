@@ -52,7 +52,13 @@ class $InstanceDefault<T extends Object> implements $Instance {
   }
 }
 
-class InstanceDefaultProps {
+abstract class IInstanceDefaultProps {
+  void defineCompiler(BridgeDeclarationRegistry registry);
+
+  void registerRuntime(Runtime runtime);
+}
+
+class InstanceDefaultProps implements IInstanceDefaultProps {
   BridgeDeclaration? _declaration;
 
   BridgeDeclaration get declaration {
@@ -88,6 +94,7 @@ class InstanceDefaultProps {
     return _declaration!;
   }
 
+  @override
   void defineCompiler(BridgeDeclarationRegistry registry) {
     if (declaration is BridgeClassDef) {
       registry.defineBridgeClass(declaration as BridgeClassDef);
@@ -99,6 +106,7 @@ class InstanceDefaultProps {
     }
   }
 
+  @override
   void registerRuntime(Runtime runtime) {
     for (var e in constructors) {
       runtime.registerBridgeFunc(
