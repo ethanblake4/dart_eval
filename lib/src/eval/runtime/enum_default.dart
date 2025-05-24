@@ -43,13 +43,14 @@ class $InstanceDefaultEnum<T> implements $Instance {
   }
 }
 
-class InstanceDefaultEnumProps implements IInstanceDefaultProps {
+class InstanceDefaultEnumProps<T extends $Value>
+    implements IInstanceDefaultProps {
   BridgeDeclaration? _declaration;
 
   BridgeDeclaration get declaration {
     _declaration ??= BridgeEnumDef(
       type,
-      values: values,
+      values: values.map((e) => (e as Enum).name).toList(),
     );
 
     return _declaration!;
@@ -63,12 +64,20 @@ class InstanceDefaultEnumProps implements IInstanceDefaultProps {
   }
 
   @override
-  void registerRuntime(Runtime runtime) {}
+  void registerRuntime(Runtime runtime) {
+    runtime.registerBridgeEnumValues(
+      fileName,
+      className,
+      Map.fromEntries(
+        values.map((e) => MapEntry((e.$reified as Enum).name, e)),
+      ),
+    );
+  }
 
   List<InstanceDefaultEnumPropsGetter> get getters => [];
 
   @mustBeOverridden
-  List<String> get values => throw UnimplementedError();
+  List<T> get values => throw UnimplementedError();
 
   @mustBeOverridden
   BridgeTypeRef get type => throw UnimplementedError();
