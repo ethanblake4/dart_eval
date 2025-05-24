@@ -152,7 +152,7 @@ class $num<T extends num> implements $Instance {
     return _superclass.$setProperty(runtime, identifier, value);
   }
 
-  final $Instance _superclass;
+  $Instance _superclass;
 
   @override
   T get $reified => $value;
@@ -527,7 +527,9 @@ class $int extends $num<int> {
 /// dart_eval wrapper for [double]
 class $double extends $num<double> {
   /// Wrap a [double] in a [$double].
-  $double(super.$value);
+  $double(super.$value) {
+    this._superclass = $num($value);
+  }
 
   static const $type = BridgeTypeRef(CoreTypes.double);
 

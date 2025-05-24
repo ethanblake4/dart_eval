@@ -195,7 +195,10 @@ class BoxDouble implements EvcOp {
   @override
   void run(Runtime runtime) {
     final reg = _reg;
-    runtime.frame[reg] = $double(runtime.frame[reg] as double);
+
+    if (runtime.frame[reg] is double) {
+      runtime.frame[reg] = $double(runtime.frame[reg] as double);
+    }
   }
 
   @override
