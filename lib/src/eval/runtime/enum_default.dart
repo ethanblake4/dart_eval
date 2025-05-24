@@ -43,8 +43,7 @@ class $InstanceDefaultEnum<T> implements $Instance {
   }
 }
 
-class InstanceDefaultEnumProps<T extends $Value>
-    implements IInstanceDefaultProps {
+class InstanceDefaultEnumProps implements IInstanceDefaultProps {
   BridgeDeclaration? _declaration;
 
   BridgeDeclaration get declaration {
@@ -77,7 +76,7 @@ class InstanceDefaultEnumProps<T extends $Value>
   List<InstanceDefaultEnumPropsGetter> get getters => [];
 
   @mustBeOverridden
-  List<T> get values => throw UnimplementedError();
+  List<$Value> get values => throw UnimplementedError();
 
   @mustBeOverridden
   BridgeTypeRef get type => throw UnimplementedError();
