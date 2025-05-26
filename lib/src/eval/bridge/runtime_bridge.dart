@@ -67,9 +67,25 @@ mixin $Bridge<T> on Object implements $Value, $Instance {
   }
 
   dynamic $_invoke(String method, List<$Value?> args) {
-    final runtime = Runtime.bridgeData[this]!.runtime;
-    return ($getProperty(runtime, method) as EvalFunction)
-        .call(runtime, this, [this, ...args])?.$reified;
+    Runtime? bridgeRuntime = Runtime.bridgeData[this]?.runtime;
+
+    if (bridgeRuntime == null) {
+      throw ("BridgeRuntime NOT FOUND: $this");
+    }
+
+    final $Value? value = $getProperty(bridgeRuntime, method);
+
+    if (value is EvalFunction) {
+      final EvalFunction evalFunction =
+          ($getProperty(bridgeRuntime, method) as EvalFunction);
+
+      dynamic result =
+          evalFunction.call(bridgeRuntime, this, [this, ...args])?.$reified;
+
+      return result;
+    } else {
+      return value?.$reified;
+    }
   }
 
   @override

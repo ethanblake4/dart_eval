@@ -1,6 +1,9 @@
 // ignore_for_file: depend_on_referenced_packages
 
+import 'package:dart_eval/src/eval/runtime/class.dart';
+
 import '../../../dart_eval_bridge.dart';
+import '../bridge/runtime_bridge.dart';
 
 mixin $InstanceDefaultBridge<T extends Object> on $Bridge<T> {
   InstanceDefaultProps get props;
@@ -22,5 +25,23 @@ mixin $InstanceDefaultBridge<T extends Object> on $Bridge<T> {
       value,
       this,
     );
+  }
+
+  @override
+  String toString() {
+    return "\$${super.toString()}";
+  }
+
+  void changeBridgeData($Bridge<T> newData) {
+    final BridgeData oldData = Runtime.bridgeData[this]!;
+
+    if (oldData.subclass is $InstanceImpl) {
+      final superClass = (oldData.subclass as $InstanceImpl).evalSuperclass;
+
+      if (superClass is BridgeSuperShim) {
+        superClass.bridge = newData;
+      }
+    }
+    Runtime.bridgeData[newData] = oldData;
   }
 }
