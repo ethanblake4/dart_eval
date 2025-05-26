@@ -49,7 +49,7 @@ class InstanceDefaultEnumProps implements IInstanceDefaultProps {
   BridgeDeclaration get declaration {
     _declaration ??= BridgeEnumDef(
       type,
-      values: values.map((e) => (e as Enum).name).toList(),
+      values: values.map((e) => (e.$reified as Enum).name).toList(),
     );
 
     return _declaration!;

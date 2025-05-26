@@ -222,13 +222,13 @@ class $Pattern$bridge with $Bridge implements Pattern {
   static const $type = BridgeTypeRef(BridgeTypeSpec('dart:core', 'Pattern'));
 
   @override
-  $Value? $bridgeGet(String identifier) {
+  $Value? $bridgeGet(Runtime runtime, String identifier) {
     switch (identifier) {}
     throw UnimplementedError();
   }
 
   @override
-  void $bridgeSet(String identifier, $Value value) {
+  void $bridgeSet(Runtime runtime, String identifier, $Value value) {
     throw UnimplementedError();
   }
 

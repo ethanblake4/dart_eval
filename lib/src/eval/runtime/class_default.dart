@@ -26,29 +26,35 @@ class $InstanceDefault<T extends Object> implements $Instance {
   }
 
   @override
-  $Value? $getProperty(Runtime runtime, String identifier) {
-    final InstanceDefaultPropsGetter? g =
-        props.getters.firstWhereOrNull((e) => e.name == identifier);
-
-    if (g != null) {
-      return g.run(runtime, this);
-    }
-
-    final InstanceDefaultPropsMethod? m =
-        props.methods.firstWhereOrNull((e) => e.name == identifier);
-
-    if (m != null) {
-      return $Function((_, target, args) {
-        return m.run(runtime, this, args);
-      });
-    }
-
-    return superclass?.$getProperty(runtime, identifier);
+  $Value? $getProperty(
+    Runtime runtime,
+    String identifier,
+  ) {
+    return props.getProperty(
+      runtime,
+      identifier,
+      this,
+      notFoundCallback: () => superclass?.$getProperty(runtime, identifier),
+    );
   }
 
   @override
-  void $setProperty(Runtime runtime, String identifier, $Value value) {
-    superclass?.$setProperty(runtime, identifier, value);
+  void $setProperty(
+    Runtime runtime,
+    String identifier,
+    $Value value,
+  ) {
+    props.setProperty(
+      runtime,
+      identifier,
+      value,
+      this,
+      notFoundCallback: () => superclass?.$setProperty(
+        runtime,
+        identifier,
+        value,
+      ),
+    );
   }
 }
 
@@ -58,10 +64,12 @@ abstract class IInstanceDefaultProps {
   void registerRuntime(Runtime runtime);
 }
 
-class InstanceDefaultProps implements IInstanceDefaultProps {
-  BridgeDeclaration? _declaration;
+class InstanceDefaultProps<T extends $Value> implements IInstanceDefaultProps {
+  BridgeClassDef? _declaration;
 
-  BridgeDeclaration get declaration {
+  bool get bridge => false;
+
+  BridgeClassDef get declaration {
     _declaration ??= BridgeClassDef(
       type,
       constructors: Map.fromEntries(
@@ -81,6 +89,13 @@ class InstanceDefaultProps implements IInstanceDefaultProps {
           ),
         ),
       },
+      fields: {
+        ...Map.fromEntries(
+          fields.map(
+            (e) => MapEntry(e.name, e.definition),
+          ),
+        ),
+      },
       methods: {
         ...Map.fromEntries(
           methods.map(
@@ -88,7 +103,8 @@ class InstanceDefaultProps implements IInstanceDefaultProps {
           ),
         ),
       },
-      wrap: true,
+      bridge: bridge,
+      wrap: !bridge,
     );
 
     return _declaration!;
@@ -96,14 +112,7 @@ class InstanceDefaultProps implements IInstanceDefaultProps {
 
   @override
   void defineCompiler(BridgeDeclarationRegistry registry) {
-    if (declaration is BridgeClassDef) {
-      registry.defineBridgeClass(declaration as BridgeClassDef);
-    } else if (declaration is BridgeEnumDef) {
-      registry.defineBridgeEnum(declaration as BridgeEnumDef);
-    } else if (declaration is BridgeFunctionDeclaration) {
-      registry.defineBridgeTopLevelFunction(
-          declaration as BridgeFunctionDeclaration);
-    }
+    registry.defineBridgeClass(declaration);
   }
 
   @override
@@ -113,6 +122,7 @@ class InstanceDefaultProps implements IInstanceDefaultProps {
         fileName,
         '$className.${e.name}',
         e.run,
+        isBridge: bridge,
       );
     }
 
@@ -121,6 +131,7 @@ class InstanceDefaultProps implements IInstanceDefaultProps {
         fileName,
         '$className.${e.name}*g',
         e.run,
+        isBridge: bridge,
       );
     }
   }
@@ -131,16 +142,73 @@ class InstanceDefaultProps implements IInstanceDefaultProps {
 
   List<InstanceDefaultPropsGetter> get getters => [];
 
+  List<InstanceDefaultPropsField> get fields => [];
+
   List<InstanceDefaultPropsMethod> get methods => [];
 
   @mustBeOverridden
   BridgeClassType get type => throw UnimplementedError();
 
-  @mustBeOverridden
-  String get fileName => throw UnimplementedError();
+  String get fileName => type.type.spec!.library;
 
-  @mustBeOverridden
-  String get className => throw UnimplementedError();
+  String get className => type.type.spec!.name;
+
+  $Value? getProperty(
+    Runtime runtime,
+    String identifier,
+    T target, {
+    $Value? Function()? notFoundCallback,
+  }) {
+    final InstanceDefaultPropsGetter? g =
+        getters.firstWhereOrNull((e) => e.name == identifier);
+
+    if (g != null) {
+      return g.run(runtime, target);
+    }
+
+    final InstanceDefaultPropsField? f =
+        fields.firstWhereOrNull((e) => e.name == identifier);
+
+    if (f != null) {
+      return f.getValue(runtime, target);
+    }
+
+    final InstanceDefaultPropsMethod? m =
+        methods.firstWhereOrNull((e) => e.name == identifier);
+
+    if (m != null) {
+      return $Function((_, __, args) {
+        return m.run(runtime, target, args);
+      });
+    }
+
+    if (notFoundCallback != null) {
+      return notFoundCallback();
+    }
+
+    return null;
+  }
+
+  void setProperty(
+    Runtime runtime,
+    String identifier,
+    $Value value,
+    T target, {
+    void Function()? notFoundCallback,
+  }) {
+    final InstanceDefaultPropsField? f =
+        fields.firstWhereOrNull((e) => e.name == identifier);
+
+    if (f != null) {
+      f.setValue(runtime, target, value);
+
+      return;
+    }
+
+    if (notFoundCallback != null) {
+      notFoundCallback();
+    }
+  }
 }
 
 abstract class InstanceDefaultPropsBase {
@@ -167,6 +235,16 @@ abstract class InstanceDefaultPropsGetter<T extends $Value> {
   BridgeMethodDef get definition;
 
   $Value? run(Runtime runtime, T target);
+}
+
+abstract class InstanceDefaultPropsField<T extends $Value> {
+  String get name;
+
+  BridgeFieldDef get definition;
+
+  $Value? getValue(Runtime runtime, T target);
+
+  void setValue(Runtime runtime, T target, $Value value);
 }
 
 abstract class InstanceDefaultPropsMethod<T extends $Value> {

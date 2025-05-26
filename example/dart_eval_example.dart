@@ -225,7 +225,7 @@ class $WorldTimeTracker$bridge
   /// [$bridgeGet] works differently than [$getProperty] - it's only called
   /// if the Eval subclass hasn't provided an override implementation.
   @override
-  $Value? $bridgeGet(String identifier) {
+  $Value? $bridgeGet(Runtime runtime, String identifier) {
     // [WorldTimeTracker] is abstract, so if we haven't overridden all of its
     // methods that's an error.
     // If it were concrete, this implementation would look like [$getProperty]
@@ -237,6 +237,7 @@ class $WorldTimeTracker$bridge
 
   @override
   void $bridgeSet(
+    Runtime runtime,
     String identifier,
     $Value value,
   ) {

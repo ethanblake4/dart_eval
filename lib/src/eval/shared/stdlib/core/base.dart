@@ -297,10 +297,18 @@ class $String implements $Instance {
   static const $Function __concat = $Function(_concat);
 
   static $Value? _concat(
-      final Runtime runtime, final $Value? target, final List<$Value?> args) {
+    final Runtime runtime,
+    final $Value? target,
+    final List<$Value?> args,
+  ) {
     target as $String;
-    final other = args[0] as $String;
-    return $String(target.$value + other.$value);
+    final other = args[0];
+
+    if (other is $String) {
+      return $String(target.$value + other.$value);
+    } else {
+      return $String(target.$value + other.toString());
+    }
   }
 
   static const $Function __index = $Function(_index);

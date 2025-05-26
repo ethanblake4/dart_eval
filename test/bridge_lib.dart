@@ -69,7 +69,7 @@ class $TestClass extends TestClass with $Bridge {
       bridge: true);
 
   @override
-  $Value? $bridgeGet(String identifier) {
+  $Value? $bridgeGet(Runtime runtime, String identifier) {
     switch (identifier) {
       case 'runTest':
         return $Function((Runtime rt, $Value? target, List<$Value?> args) {
@@ -83,7 +83,7 @@ class $TestClass extends TestClass with $Bridge {
   }
 
   @override
-  void $bridgeSet(String identifier, $Value value) {
+  void $bridgeSet(Runtime runtime, String identifier, $Value value) {
     switch (identifier) {
       case 'someNumber':
         super.someNumber = value.$value;
