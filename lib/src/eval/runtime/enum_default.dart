@@ -81,11 +81,9 @@ class InstanceDefaultEnumProps implements IInstanceDefaultProps {
   @mustBeOverridden
   BridgeTypeRef get type => throw UnimplementedError();
 
-  @mustBeOverridden
-  String get fileName => throw UnimplementedError();
+  String get className => type.spec!.name;
 
-  @mustBeOverridden
-  String get className => throw UnimplementedError();
+  String get fileName => type.spec!.library;
 }
 
 abstract class InstanceDefaultEnumPropsGetter<T extends $Value> {

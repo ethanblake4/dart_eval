@@ -29,9 +29,10 @@ class $DateTime implements DateTime, $Instance {
       params: [],
       namedParams: []));
 
+  static const $type = BridgeTypeRef(CoreTypes.dateTime);
+
   /// Compile-time class declaration for [$DateTime]
-  static const $declaration = BridgeClassDef(
-      BridgeClassType(BridgeTypeRef(CoreTypes.dateTime)),
+  static const $declaration = BridgeClassDef(BridgeClassType($type),
       constructors: {
         '': BridgeConstructorDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dateTime)),
