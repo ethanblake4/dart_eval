@@ -293,6 +293,16 @@ class $Map<K, V> implements Map<K, V>, $Instance {
   Iterable<V> get values => $value.values;
 }
 
+extension $MapExt<K, V> on Map<K, V>? {
+  $Map<K, V>? get toEval {
+    if (this == null) {
+      return null;
+    }
+
+    return $Map<K, V>.wrap(this!);
+  }
+}
+
 /// dart_eval bimodal wrapper for [MapEntry]
 class $MapEntry<K, V> implements MapEntry<K, V>, $Instance {
   /// Wrap a [MapEntry] in a [$MapEntry]

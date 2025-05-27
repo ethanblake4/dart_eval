@@ -136,6 +136,16 @@ class $bool implements $Instance {
   int $getRuntimeType(Runtime runtime) => runtime.lookupType(CoreTypes.bool);
 }
 
+extension $BoolExt on bool? {
+  $bool? get toEval {
+    if (this == null) {
+      return null;
+    }
+
+    return $bool(this!);
+  }
+}
+
 /// dart_eval [$Instance] representation of a [String]
 class $String implements $Instance {
   $String(this.$value) : _superclass = $Pattern.wrap($value);
@@ -533,6 +543,16 @@ class $String implements $Instance {
 
   @override
   int get hashCode => $value.hashCode;
+}
+
+extension $StringExt on String? {
+  $String? get toEval {
+    if (this == null) {
+      return null;
+    }
+
+    return $String(this!);
+  }
 }
 
 /// dart_eval [$Instance] representation of a [Null]

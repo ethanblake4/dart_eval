@@ -323,6 +323,16 @@ class $Duration implements Duration, $Instance {
   Duration operator ~/(int quotient) => $value ~/ quotient;
 }
 
+extension $DurationExt on Duration? {
+  $Duration? get toEval {
+    if (this == null) {
+      return null;
+    }
+
+    return $Duration.wrap(this!);
+  }
+}
+
 class _$Duration_new implements EvalCallable {
   const _$Duration_new();
 

@@ -324,6 +324,16 @@ class $num<T extends num> implements $Instance {
   int $getRuntimeType(Runtime runtime) => runtime.lookupType(CoreTypes.num);
 }
 
+extension $NumExt on num? {
+  $num? get toEval {
+    if (this == null) {
+      return null;
+    }
+
+    return $num(this!);
+  }
+}
+
 /// dart_eval wrapper for [int]
 class $int extends $num<int> {
   /// Wrap an [int] in a [$int].
@@ -524,6 +534,16 @@ class $int extends $num<int> {
   }
 }
 
+extension $IntExt on int? {
+  $int? get toEval {
+    if (this == null) {
+      return null;
+    }
+
+    return $int(this!);
+  }
+}
+
 /// dart_eval wrapper for [double]
 class $double extends $num<double> {
   /// Wrap a [double] in a [$double].
@@ -641,4 +661,14 @@ class $double extends $num<double> {
 
   @override
   int $getRuntimeType(Runtime runtime) => runtime.lookupType(CoreTypes.double);
+}
+
+extension $DoubleExt on double? {
+  $double? get toEval {
+    if (this == null) {
+      return null;
+    }
+
+    return $double(this!);
+  }
 }

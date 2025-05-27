@@ -419,3 +419,13 @@ class $DateTime implements DateTime, $Instance {
     return result == null ? $null() : $DateTime.wrap(result);
   }
 }
+
+extension $DateTimeExt on DateTime? {
+  $DateTime? get toEval {
+    if (this == null) {
+      return null;
+    }
+
+    return $DateTime.wrap(this!);
+  }
+}
