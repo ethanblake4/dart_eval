@@ -98,8 +98,8 @@ mixin $Bridge<T> on Object implements $Value, $Instance {
 
   @override
   int $getRuntimeType(Runtime runtime) {
-    final data = Runtime.bridgeData[this]!;
-    return data.subclass?.$getRuntimeType(runtime) ?? data.$runtimeType;
+    final data = Runtime.bridgeData[this];
+    return data?.subclass?.$getRuntimeType(runtime) ?? data?.$runtimeType ?? 0;
   }
 }
 

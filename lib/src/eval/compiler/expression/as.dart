@@ -17,16 +17,24 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
     return V;
   }
 
+  // Special case: if casting null to a nullable type, allow it
+  if (V.type == CoreTypes.nullType.ref(ctx) && slot.nullable) {
+    return V.copyWithUpdate(ctx, type: slot);
+  }
+
   // Otherwise type-test
   ctx.pushOp(IsType.make(V.scopeFrameOffset, ctx.typeRefIndexMap[slot]!, false),
       IsType.length);
   final vIs =
       Variable.alloc(ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
 
-  // And assert
-  final errMsg =
-      BuiltinValue(stringval: "TypeError: Not a subtype of type TYPE")
-          .push(ctx);
+  // And assert with more informative error message
+  final sourceTypeName = V.type.name;
+  final targetTypeName = slot.name;
+  final errMsg = BuiltinValue(
+          stringval:
+              "TypeError: Cannot cast '$sourceTypeName' to '$targetTypeName'")
+      .push(ctx);
   ctx.pushOp(
       Assert.make(vIs.scopeFrameOffset, errMsg.scopeFrameOffset), Assert.LEN);
 

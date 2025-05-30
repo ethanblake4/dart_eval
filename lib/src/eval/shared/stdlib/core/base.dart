@@ -564,6 +564,11 @@ class $Null implements $Instance {
       constructors: {},
       methods: {
         // Other Null methods defined in builtins.dart
+        "[]": BridgeMethodDef(
+          BridgeFunctionDef(
+            returns: BridgeTypeAnnotation($null.$type),
+          ),
+        ),
       },
       wrap: true);
 

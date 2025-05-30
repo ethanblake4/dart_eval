@@ -427,11 +427,25 @@ TypeRef resolveSuperFormalType(CompilerContext ctx, int decLibrary,
       '${$super.name}.$superConstructorName']!;
   if (superCstr.isBridge) {
     final fd = (superCstr.bridge as BridgeConstructorDef).functionDescriptor;
-    for (final _param in (param.isNamed ? fd.namedParams : fd.params)) {
+
+    // First, try to find in named parameters
+    for (final _param in fd.namedParams) {
+      if (_param.name == param.name.lexeme) {
+        TypeRef t = TypeRef.fromBridgeAnnotation(ctx, _param.type);
+        return t;
+      }
+    }
+
+    // Then try positional parameters
+    for (final _param in fd.params) {
       if (_param.name == param.name.lexeme) {
         return TypeRef.fromBridgeAnnotation(ctx, _param.type);
       }
     }
+
+    // If parameter not found in bridge class, use dynamic as fallback
+    // This allows any super.parameter to work with bridge classes
+    return CoreTypes.dynamic.ref(ctx);
   } else {
     final cstr = superCstr.declaration as ConstructorDeclaration;
     for (final _param in cstr.parameters.parameters) {

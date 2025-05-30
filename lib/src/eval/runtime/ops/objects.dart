@@ -351,9 +351,11 @@ class SetObjectPropertyImpl implements EvcOp {
 
   @override
   void run(Runtime runtime) {
-    final object = runtime.frame[_objectOffset] as $InstanceImpl;
-    final value = runtime.frame[_valueOffset]!;
-    object.values[_propertyIndex] = value;
+    if (runtime.frame[_objectOffset] is $InstanceImpl) {
+      final object = runtime.frame[_objectOffset] as $InstanceImpl;
+      final value = runtime.frame[_valueOffset]!;
+      object.values[_propertyIndex] = value;
+    }
   }
 
   @override

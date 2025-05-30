@@ -158,13 +158,26 @@ class $Map<K, V> implements Map<K, V>, $Instance {
     return $Map.wrap(Map.from(other));
   }
 
-  static const $Function __indexGet = $Function(_indexGet);
+  static const $Function __indexGet = $Function(indexGet);
 
-  static $Value? _indexGet(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? indexGet(
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final idx = args[0]!;
     final map = target!.$value as Map;
-    return map[idx];
+    dynamic v = map[idx];
+
+    if (v == null) {
+      v = map[idx.$reified];
+    }
+
+    if (v is $Value) {
+      return v;
+    } else {
+      return runtime.wrap(v);
+    }
   }
 
   static const $Function __indexSet = $Function(_indexSet);
@@ -212,7 +225,16 @@ class $Map<K, V> implements Map<K, V>, $Instance {
 
   @override
   V? operator [](Object? key) {
-    return $value[key];
+    final dynamic _key = key is $Value ? key.$reified : key;
+    dynamic v = $value[_key];
+
+    if (v is $Value) {
+      return v as V?;
+    } else {
+      // v = runtime.wrap(v);
+    }
+
+    return v;
   }
 
   @override

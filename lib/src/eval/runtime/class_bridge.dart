@@ -33,7 +33,11 @@ mixin $InstanceDefaultBridge<T extends Object> on $Bridge<T> {
   }
 
   void changeBridgeData($Bridge<T> newData) {
-    final BridgeData oldData = Runtime.bridgeData[this]!;
+    final BridgeData? oldData = Runtime.bridgeData[this];
+
+    if (oldData == null) {
+      return;
+    }
 
     if (oldData.subclass is $InstanceImpl) {
       final superClass = (oldData.subclass as $InstanceImpl).evalSuperclass;

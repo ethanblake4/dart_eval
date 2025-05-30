@@ -505,7 +505,20 @@ class IndexMap extends EvcOp {
   @override
   void run(Runtime runtime) {
     final frame = runtime.frame;
-    frame[runtime.frameOffset++] = (frame[_map] as Map)[frame[_index]];
+    final mapValue = frame[_map];
+    if (mapValue == null) {
+      frame[runtime.frameOffset++] = null;
+    } else {
+      if (mapValue is $Map) {
+        frame[runtime.frameOffset++] = $Map.indexGet(
+          runtime,
+          mapValue,
+          [runtime.wrap(frame[_index])],
+        );
+      } else {
+        frame[runtime.frameOffset++] = (mapValue as Map)[frame[_index]];
+      }
+    }
   }
 
   @override
