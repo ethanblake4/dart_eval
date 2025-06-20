@@ -2,6 +2,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:collection/collection.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
+import 'package:dart_eval/src/eval/compiler/declaration/class.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/field.dart';
 import 'package:dart_eval/src/eval/compiler/model/library.dart';
@@ -473,11 +474,16 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
         });
       });
 
-      /// Compile the rest of the declarations
+      /// Compile the rest of the declarations in proper order across all libraries
+      // First, initialize all library positions
       _topLevelDeclarationsMap.forEach((key, value) {
         _ctx.topLevelDeclarationPositions[key] = {};
         _ctx.instanceDeclarationPositions[key] = {};
         _ctx.instanceGetterIndices[key] = {};
+      });
+
+      // GLOBAL FIRST PASS: compile all enums and class structures (without methods) across all libraries
+      _topLevelDeclarationsMap.forEach((key, value) {
         value.forEach((lib, _declaration) {
           if (_declaration.isBridge) {
             return;
@@ -485,12 +491,49 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
           final declaration = _declaration.declaration!;
           if (declaration is ConstructorDeclaration ||
               declaration is MethodDeclaration ||
-              declaration is VariableDeclaration) {
+              declaration is VariableDeclaration ||
+              declaration is FunctionDeclaration) {
             return;
           }
           _ctx.library = key;
-          compileDeclaration(declaration, _ctx);
+          if (declaration is ClassDeclaration) {
+            // Compile only the class structure, not the methods yet
+            compileClassStructure(declaration, _ctx);
+          } else {
+            // Compile enums normally
+            compileDeclaration(declaration, _ctx);
+          }
           _ctx.resetStack();
+        });
+      });
+
+      // GLOBAL SECOND PASS: compile all class methods across all libraries
+      _topLevelDeclarationsMap.forEach((key, value) {
+        value.forEach((lib, _declaration) {
+          if (_declaration.isBridge) {
+            return;
+          }
+          final declaration = _declaration.declaration!;
+          if (declaration is ClassDeclaration) {
+            _ctx.library = key;
+            compileClassMethods(declaration, _ctx);
+            _ctx.resetStack();
+          }
+        });
+      });
+
+      // GLOBAL THIRD PASS: compile all functions across all libraries
+      _topLevelDeclarationsMap.forEach((key, value) {
+        value.forEach((lib, _declaration) {
+          if (_declaration.isBridge) {
+            return;
+          }
+          final declaration = _declaration.declaration!;
+          if (declaration is FunctionDeclaration) {
+            _ctx.library = key;
+            compileDeclaration(declaration, _ctx);
+            _ctx.resetStack();
+          }
         });
       });
     } on CompileError catch (e, stk) {

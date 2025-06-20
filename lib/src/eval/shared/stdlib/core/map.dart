@@ -5,10 +5,34 @@ class $Map<K, V> implements Map<K, V>, $Instance {
   /// Wrap a [Map] in a [$Map]
   $Map.wrap(this.$value);
 
+  static void configureForRuntime(Runtime runtime) {
+    return runtime.registerBridgeFunc(
+        'dart:core', 'Map.from', __$Map$from.call);
+  }
+
+  static const $type = BridgeTypeRef(CoreTypes.map);
+
   static const $declaration = BridgeClassDef(
-      BridgeClassType(BridgeTypeRef(CoreTypes.map),
-          generics: {'K': BridgeGenericParam(), 'V': BridgeGenericParam()}),
-      constructors: {},
+      BridgeClassType(
+        $type,
+        generics: {'K': BridgeGenericParam(), 'V': BridgeGenericParam()},
+      ),
+      constructors: {
+        'from': BridgeConstructorDef(
+          BridgeFunctionDef(
+            returns: BridgeTypeAnnotation($type),
+            params: [
+              BridgeParameter(
+                'other',
+                BridgeTypeAnnotation($type, nullable: false),
+                false,
+              )
+            ],
+            generics: {'K': BridgeGenericParam(), 'V': BridgeGenericParam()},
+          ),
+          isFactory: true,
+        ),
+      },
       methods: {
         '[]': BridgeMethodDef(
             BridgeFunctionDef(params: [
@@ -126,13 +150,34 @@ class $Map<K, V> implements Map<K, V>, $Instance {
     return _superclass.$setProperty(runtime, identifier, value);
   }
 
-  static const $Function __indexGet = $Function(_indexGet);
-
-  static $Value? _indexGet(
+  static const __$Map$from = $Function(_$Map$from);
+  static $Value? _$Map$from(
       Runtime runtime, $Value? target, List<$Value?> args) {
+    final other = args[0]?.$value as Map;
+
+    return $Map.wrap(Map.from(other));
+  }
+
+  static const $Function __indexGet = $Function(indexGet);
+
+  static $Value? indexGet(
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final idx = args[0]!;
     final map = target!.$value as Map;
-    return map[idx];
+    dynamic v = map[idx];
+
+    if (v == null) {
+      v = map[idx.$reified];
+    }
+
+    if (v is $Value) {
+      return v;
+    } else {
+      return runtime.wrap(v);
+    }
   }
 
   static const $Function __indexSet = $Function(_indexSet);
@@ -180,7 +225,16 @@ class $Map<K, V> implements Map<K, V>, $Instance {
 
   @override
   V? operator [](Object? key) {
-    return $value[key];
+    final dynamic _key = key is $Value ? key.$reified : key;
+    dynamic v = $value[_key];
+
+    if (v is $Value) {
+      return v as V?;
+    } else {
+      // v = runtime.wrap(v);
+    }
+
+    return v;
   }
 
   @override
@@ -259,6 +313,16 @@ class $Map<K, V> implements Map<K, V>, $Instance {
 
   @override
   Iterable<V> get values => $value.values;
+}
+
+extension $MapExt<K, V> on Map<K, V>? {
+  $Map<K, V>? get toEval {
+    if (this == null) {
+      return null;
+    }
+
+    return $Map<K, V>.wrap(this!);
+  }
 }
 
 /// dart_eval bimodal wrapper for [MapEntry]

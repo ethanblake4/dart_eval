@@ -1458,6 +1458,16 @@ class $List<E> implements List<E>, $Instance {
   Iterable<T> whereType<T>() => $value.whereType<T>();
 }
 
+extension $ListExt<E> on List<E>? {
+  $List<E>? get toEval {
+    if (this == null) {
+      return null;
+    }
+
+    return $List<E>.wrap(this!);
+  }
+}
+
 /// Writeback-capable wrapper for [List] with type mapping function
 class _$List$view<E> extends $List<E> {
   _$List$view(List<E> $value, this.mapper) : super.wrap($value);

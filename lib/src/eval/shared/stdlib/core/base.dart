@@ -35,8 +35,10 @@ const $neverCls = BridgeClassDef(
 class $null implements $Value {
   const $null();
 
+  static const $type = BridgeTypeRef(CoreTypes.nullType);
+
   static const $declaration = BridgeClassDef(
-      BridgeClassType(BridgeTypeRef(CoreTypes.nullType), isAbstract: true),
+      BridgeClassType($type, isAbstract: true),
       constructors: {},
       wrap: true);
 
@@ -61,13 +63,15 @@ class $null implements $Value {
 class $bool implements $Instance {
   $bool(this.$value) : _superclass = $Object($value);
 
-  static const $declaration = BridgeClassDef(
-      BridgeClassType(BridgeTypeRef(CoreTypes.bool), isAbstract: true),
-      constructors: {},
-      methods: {
-        // Other bool methods defined in builtins.dart
-      },
-      wrap: true);
+  static const $type = BridgeTypeRef(CoreTypes.bool);
+
+  static const $declaration =
+      BridgeClassDef(BridgeClassType($type, isAbstract: true),
+          constructors: {},
+          methods: {
+            // Other bool methods defined in builtins.dart
+          },
+          wrap: true);
 
   final $Instance _superclass;
 
@@ -132,12 +136,24 @@ class $bool implements $Instance {
   int $getRuntimeType(Runtime runtime) => runtime.lookupType(CoreTypes.bool);
 }
 
+extension $BoolExt on bool? {
+  $bool? get toEval {
+    if (this == null) {
+      return null;
+    }
+
+    return $bool(this!);
+  }
+}
+
 /// dart_eval [$Instance] representation of a [String]
 class $String implements $Instance {
   $String(this.$value) : _superclass = $Pattern.wrap($value);
 
+  static const $type = BridgeTypeRef(CoreTypes.string);
+
   static const $declaration = BridgeClassDef(
-      BridgeClassType(BridgeTypeRef(CoreTypes.string),
+      BridgeClassType($type,
           $implements: [BridgeTypeRef(CoreTypes.pattern)], isAbstract: true),
       constructors: {
         'fromCharCode': BridgeConstructorDef(
@@ -291,10 +307,18 @@ class $String implements $Instance {
   static const $Function __concat = $Function(_concat);
 
   static $Value? _concat(
-      final Runtime runtime, final $Value? target, final List<$Value?> args) {
+    final Runtime runtime,
+    final $Value? target,
+    final List<$Value?> args,
+  ) {
     target as $String;
-    final other = args[0] as $String;
-    return $String(target.$value + other.$value);
+    final other = args[0];
+
+    if (other is $String) {
+      return $String(target.$value + other.$value);
+    } else {
+      return $String(target.$value + other.toString());
+    }
   }
 
   static const $Function __index = $Function(_index);
@@ -519,4 +543,87 @@ class $String implements $Instance {
 
   @override
   int get hashCode => $value.hashCode;
+}
+
+extension $StringExt on String? {
+  $String? get toEval {
+    if (this == null) {
+      return null;
+    }
+
+    return $String(this!);
+  }
+}
+
+/// dart_eval [$Instance] representation of a [Null]
+class $Null implements $Instance {
+  $Null() : _superclass = $Object(_Null());
+
+  static const $declaration = BridgeClassDef(
+      BridgeClassType(BridgeTypeRef(CoreTypes.nullType), isAbstract: true),
+      constructors: {},
+      methods: {
+        // Other Null methods defined in builtins.dart
+        "[]": BridgeMethodDef(
+          BridgeFunctionDef(
+            returns: BridgeTypeAnnotation($null.$type),
+          ),
+        ),
+      },
+      wrap: true);
+
+  final $Instance _superclass;
+
+  @override
+  $Value? $getProperty(Runtime runtime, String identifier) {
+    try {
+      return _superclass.$getProperty(runtime, identifier);
+    } catch (e) {
+      return $Function((
+        Runtime runtime,
+        $Value? target,
+        List<$Value?> args,
+      ) {
+        return $null();
+      });
+    }
+  }
+
+  @override
+  void $setProperty(Runtime runtime, String identifier, $Value value) {}
+
+  @override
+  _Null get $reified => $value;
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is $Null &&
+            runtimeType == other.runtimeType &&
+            $value == other.$value;
+  }
+
+  @override
+  int get hashCode => $value.hashCode;
+
+  @override
+  String toString() {
+    return '\$${$value}';
+  }
+
+  @override
+  int $getRuntimeType(Runtime runtime) =>
+      runtime.lookupType(CoreTypes.nullType);
+
+  @override
+  get $value => _Null();
+}
+
+@pragma("vm:entry-point")
+class _Null extends Object {
+  String toString() => "null";
+
+  dynamic noSuchMethod(Invocation invocation) {
+    print("_Null.noSuchMethod(): $invocation");
+  }
 }

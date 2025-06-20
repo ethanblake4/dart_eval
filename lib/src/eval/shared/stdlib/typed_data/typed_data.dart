@@ -69,6 +69,16 @@ class $ByteBuffer implements $Instance {
   }
 }
 
+extension $ByteBufferExt on ByteBuffer? {
+  $ByteBuffer? get toEval {
+    if (this == null) {
+      return null;
+    }
+
+    return $ByteBuffer.wrap(this!);
+  }
+}
+
 /// dart_eval wrapper for [TypedData]
 class $TypedData implements $Instance {
   /// Compile-time class definition for [$TypedData]
@@ -122,6 +132,16 @@ class $TypedData implements $Instance {
   @override
   void $setProperty(Runtime runtime, String identifier, $Value value) {
     return _superclass.$setProperty(runtime, identifier, value);
+  }
+}
+
+extension $TypedDataExt on TypedData? {
+  $TypedData? get toEval {
+    if (this == null) {
+      return null;
+    }
+
+    return $TypedData.wrap(this!);
   }
 }
 
@@ -543,11 +563,24 @@ class $ByteData implements $Instance {
   }
 }
 
+extension $ByteDataExt on ByteData? {
+  $ByteData? get toEval {
+    if (this == null) {
+      return null;
+    }
+
+    return $ByteData.wrap(this!);
+  }
+}
+
 /// dart_eval wrapper for [Uint8List]
 class $Uint8List implements $Instance {
   /// Compile-time class definition for [$AssertionError]
+
+  static const $type = BridgeTypeRef(TypedDataTypes.uint8List);
+
   static const $declaration = BridgeClassDef(
-      BridgeClassType(BridgeTypeRef(TypedDataTypes.uint8List), $implements: [
+      BridgeClassType($type, $implements: [
         BridgeTypeRef(TypedDataTypes.typedData),
         BridgeTypeRef(CoreTypes.list, [BridgeTypeRef(CoreTypes.int)])
       ]),
@@ -693,5 +726,15 @@ class $Uint8List implements $Instance {
     } on UnimplementedError catch (_) {
       return _implements2.$setProperty(runtime, identifier, value);
     }
+  }
+}
+
+extension $Uint8ListExt on Uint8List? {
+  $Uint8List? get toEval {
+    if (this == null) {
+      return null;
+    }
+
+    return $Uint8List.wrap(this!);
   }
 }

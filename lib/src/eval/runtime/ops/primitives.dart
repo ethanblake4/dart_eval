@@ -195,7 +195,10 @@ class BoxDouble implements EvcOp {
   @override
   void run(Runtime runtime) {
     final reg = _reg;
-    runtime.frame[reg] = $double(runtime.frame[reg] as double);
+
+    if (runtime.frame[reg] is double) {
+      runtime.frame[reg] = $double(runtime.frame[reg] as double);
+    }
   }
 
   @override
@@ -332,7 +335,13 @@ class Unbox implements EvcOp {
 
   @override
   void run(Runtime runtime) {
-    runtime.frame[_reg] = (runtime.frame[_reg] as $Value).$value;
+    dynamic v = runtime.frame[_reg];
+
+    if (v is $Value) {
+      v = v.$value;
+    }
+
+    runtime.frame[_reg] = v;
   }
 
   @override
@@ -496,7 +505,20 @@ class IndexMap extends EvcOp {
   @override
   void run(Runtime runtime) {
     final frame = runtime.frame;
-    frame[runtime.frameOffset++] = (frame[_map] as Map)[frame[_index]];
+    final mapValue = frame[_map];
+    if (mapValue == null) {
+      frame[runtime.frameOffset++] = null;
+    } else {
+      if (mapValue is $Map) {
+        frame[runtime.frameOffset++] = $Map.indexGet(
+          runtime,
+          mapValue,
+          [runtime.wrap(frame[_index])],
+        );
+      } else {
+        frame[runtime.frameOffset++] = (mapValue as Map)[frame[_index]];
+      }
+    }
   }
 
   @override

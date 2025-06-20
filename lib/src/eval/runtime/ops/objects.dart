@@ -95,13 +95,23 @@ class InvokeDynamic implements EvcOp {
         runtime._prOffset = object.offset;
         return;
       }
-      final method = ((object as $Instance).$getProperty(runtime, _method)
-          as EvalFunction);
-      try {
-        runtime.returnValue = method.call(runtime, object, runtime.args.cast());
-      } catch (e) {
-        runtime.$throw(e);
+
+      if (object == null) {
+        object = $Null();
       }
+
+      if (object is $Instance) {
+        final method = (object.$getProperty(runtime, _method) as EvalFunction);
+        try {
+          runtime.returnValue =
+              method.call(runtime, object, runtime.args.cast());
+        } catch (e) {
+          runtime.$throw(e);
+        }
+      } else {
+        runtime.returnValue = $null();
+      }
+
       runtime.args = [];
       return;
     }
@@ -147,16 +157,27 @@ class CheckEq implements EvcOp {
       }
 
       if (vx is $Instance) {
-        final method = vx.$getProperty(runtime, '==') as EvalFunction;
+        final _method = vx.$getProperty(runtime, '==');
 
-        runtime.returnValue = method
-            .call(runtime, vx, [v2 == null ? null : v2 as $Value])!.$value;
-        runtime.args = [];
+        if (_method is EvalFunction) {
+          final method = vx.$getProperty(runtime, '==') as EvalFunction;
 
-        return;
+          runtime.returnValue = method
+              .call(runtime, vx, [v2 == null ? null : v2 as $Value])!.$value;
+          runtime.args = [];
+
+          return;
+        }
       }
 
-      runtime.returnValue = v1 == v2;
+      if (v2 is $Value && v1 is! $Value) {
+        runtime.returnValue = v2.$value == v1;
+      } else if (v1 is $Value && v2 is! $Value) {
+        runtime.returnValue = v1.$value == v2;
+      } else {
+        runtime.returnValue = v1 == v2;
+      }
+
       return;
     }
   }
@@ -330,9 +351,11 @@ class SetObjectPropertyImpl implements EvcOp {
 
   @override
   void run(Runtime runtime) {
-    final object = runtime.frame[_objectOffset] as $InstanceImpl;
-    final value = runtime.frame[_valueOffset]!;
-    object.values[_propertyIndex] = value;
+    if (runtime.frame[_objectOffset] is $InstanceImpl) {
+      final object = runtime.frame[_objectOffset] as $InstanceImpl;
+      final value = runtime.frame[_valueOffset]!;
+      object.values[_propertyIndex] = value;
+    }
   }
 
   @override
@@ -383,7 +406,7 @@ class IsType implements EvcOp {
 
   @override
   void run(Runtime runtime) {
-    final value = runtime.frame[_objectOffset] as $Value;
+    final value = (runtime.frame[_objectOffset] ?? $null()) as $Value;
     final type = value.$getRuntimeType(runtime);
     if (type < 0) {
       final result = type == _type;

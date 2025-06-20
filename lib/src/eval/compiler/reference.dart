@@ -212,8 +212,10 @@ class IdentifierReference implements Reference {
               final getterType = TypeRef.fromBridgeAnnotation(
                   ctx, getter.functionDescriptor.returns);
               ctx.pushOp(
-                  InvokeExternal.make(ctx.bridgeStaticFunctionIndices[
-                      classType.file]!['${classType.name}.$name*g']!),
+                  InvokeExternal.make(
+                    ctx.bridgeStaticFunctionIndices[classType.file]![
+                        '${classType.name}.$name*g']!,
+                  ),
                   InvokeExternal.LEN);
               ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
               return Variable.alloc(ctx, getterType);
@@ -235,7 +237,17 @@ class IdentifierReference implements Reference {
           }
         }
         final _name = '${classType.name}.$name';
-        final type = ctx.topLevelVariableInferredTypes[classType.file]![_name]!;
+        final cls = ctx.topLevelVariableInferredTypes[classType.file];
+
+        if (cls == null) {
+          throw CompileError('Cannot find class: $classType', source);
+        }
+
+        var type = cls[_name];
+        if (type == null) {
+          throw CompileError('Cannot find type: $_name', source);
+        }
+
         final gIndex = ctx.topLevelGlobalIndices[classType.file]![_name]!;
         ctx.pushOp(LoadGlobal.make(gIndex), LoadGlobal.LEN);
         ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);

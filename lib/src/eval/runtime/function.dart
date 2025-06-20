@@ -164,8 +164,10 @@ class EvalStaticFunctionPtr extends EvalFunction {
 class $Function extends EvalFunction {
   const $Function(this.func);
 
+  static const $type = BridgeTypeRef(CoreTypes.function);
+
   static const $declaration = BridgeClassDef(
-      BridgeClassType(BridgeTypeRef(CoreTypes.function)),
+      BridgeClassType($type, isAbstract: true),
       constructors: {},
       wrap: true);
 

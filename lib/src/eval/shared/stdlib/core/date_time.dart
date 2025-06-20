@@ -29,9 +29,10 @@ class $DateTime implements DateTime, $Instance {
       params: [],
       namedParams: []));
 
+  static const $type = BridgeTypeRef(CoreTypes.dateTime);
+
   /// Compile-time class declaration for [$DateTime]
-  static const $declaration = BridgeClassDef(
-      BridgeClassType(BridgeTypeRef(CoreTypes.dateTime)),
+  static const $declaration = BridgeClassDef(BridgeClassType($type),
       constructors: {
         '': BridgeConstructorDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dateTime)),
@@ -416,5 +417,15 @@ class $DateTime implements DateTime, $Instance {
     final formattedString = args[0]!.$value as String;
     final result = DateTime.tryParse(formattedString);
     return result == null ? $null() : $DateTime.wrap(result);
+  }
+}
+
+extension $DateTimeExt on DateTime? {
+  $DateTime? get toEval {
+    if (this == null) {
+      return null;
+    }
+
+    return $DateTime.wrap(this!);
   }
 }

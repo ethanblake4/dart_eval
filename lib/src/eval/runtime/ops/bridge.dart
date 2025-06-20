@@ -73,8 +73,13 @@ class ParentBridgeSuperShim extends EvcOp {
 
   @override
   void run(Runtime runtime) {
-    final shim = runtime.frame[_shimOffset] as BridgeSuperShim;
-    shim.bridge = runtime.frame[_bridgeOffset] as $Bridge;
+    if (runtime.frame[_shimOffset] is BridgeSuperShim) {
+      final shim = runtime.frame[_shimOffset] as BridgeSuperShim;
+      shim.bridge = runtime.frame[_bridgeOffset] as $Bridge;
+    } else {
+      print(
+          "ParentBridgeSuperShim (shim L$_shimOffset, bridge L$_bridgeOffset)");
+    }
   }
 
   @override

@@ -5,27 +5,54 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 /// A bridge class can be extended inside the dart_eval VM and used both in
 /// and outside of it.
 mixin $Bridge<T> on Object implements $Value, $Instance {
-  $Value? $bridgeGet(String identifier);
+  $Value? $bridgeGet(
+    Runtime runtime,
+    String identifier,
+  );
 
-  void $bridgeSet(String identifier, $Value value);
+  void $bridgeSet(
+    Runtime runtime,
+    String identifier,
+    $Value value,
+  );
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
     try {
-      return Runtime.bridgeData[this]!.subclass!
-          .$getProperty(runtime, identifier);
+      final BridgeData? bridgeData = Runtime.bridgeData[this];
+
+      if (bridgeData == null) {
+        return $bridgeGet(runtime, identifier);
+      }
+
+      if (bridgeData.subclass == null) {
+        throw ("Subclass NOT FOUND: $bridgeData");
+      }
+
+      return bridgeData.subclass!.$getProperty(runtime, identifier);
     } on UnimplementedError catch (_) {
-      return $bridgeGet(identifier);
+      return $bridgeGet(runtime, identifier);
     }
   }
 
   @override
   void $setProperty(Runtime runtime, String identifier, $Value value) {
     try {
-      return Runtime.bridgeData[this]!.subclass!
-          .$setProperty(runtime, identifier, value);
+      final BridgeData? bridgeData = Runtime.bridgeData[this];
+
+      if (bridgeData == null) {
+        $bridgeSet(runtime, identifier, value);
+        return;
+        // throw ("BridgeData NOT FOUND: $this");
+      }
+
+      if (bridgeData.subclass == null) {
+        throw ("Subclass NOT FOUND: $bridgeData");
+      }
+
+      return bridgeData.subclass!.$setProperty(runtime, identifier, value);
     } on UnimplementedError catch (_) {
-      $bridgeSet(identifier, value);
+      $bridgeSet(runtime, identifier, value);
     }
   }
 
@@ -40,9 +67,25 @@ mixin $Bridge<T> on Object implements $Value, $Instance {
   }
 
   dynamic $_invoke(String method, List<$Value?> args) {
-    final runtime = Runtime.bridgeData[this]!.runtime;
-    return ($getProperty(runtime, method) as EvalFunction)
-        .call(runtime, this, [this, ...args])?.$reified;
+    Runtime? bridgeRuntime = Runtime.bridgeData[this]?.runtime;
+
+    if (bridgeRuntime == null) {
+      throw ("BridgeRuntime NOT FOUND: $this");
+    }
+
+    final $Value? value = $getProperty(bridgeRuntime, method);
+
+    if (value is EvalFunction) {
+      final EvalFunction evalFunction =
+          ($getProperty(bridgeRuntime, method) as EvalFunction);
+
+      dynamic result =
+          evalFunction.call(bridgeRuntime, this, [this, ...args])?.$reified;
+
+      return result;
+    } else {
+      return value?.$reified;
+    }
   }
 
   @override
@@ -55,8 +98,8 @@ mixin $Bridge<T> on Object implements $Value, $Instance {
 
   @override
   int $getRuntimeType(Runtime runtime) {
-    final data = Runtime.bridgeData[this]!;
-    return data.subclass?.$getRuntimeType(runtime) ?? data.$runtimeType;
+    final data = Runtime.bridgeData[this];
+    return data?.subclass?.$getRuntimeType(runtime) ?? data?.$runtimeType ?? 0;
   }
 }
 
@@ -66,11 +109,12 @@ class BridgeSuperShim implements $Instance {
   late $Bridge bridge;
 
   @override
-  $Value? $getProperty(Runtime runtime, String name) => bridge.$bridgeGet(name);
+  $Value? $getProperty(Runtime runtime, String name) =>
+      bridge.$bridgeGet(runtime, name);
 
   @override
   void $setProperty(Runtime runtime, String name, $Value value) =>
-      bridge.$bridgeSet(name, value);
+      bridge.$bridgeSet(runtime, name, value);
 
   @override
   $Bridge get $reified => bridge;
