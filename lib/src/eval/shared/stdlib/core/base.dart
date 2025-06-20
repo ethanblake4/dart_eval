@@ -3,7 +3,7 @@ import 'package:dart_eval/src/eval/runtime/exception.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/collection.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/object.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/pattern.dart';
-import 'package:dart_eval/src/eval/utils/wap_helper.dart';
+import 'package:dart_eval/src/eval/utils/wrap_helper.dart';
 import 'num.dart';
 
 const $dynamicCls = BridgeClassDef(

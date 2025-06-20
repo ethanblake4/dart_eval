@@ -1279,9 +1279,10 @@ class $List<E> implements List<E>, $Instance {
   static $Value? _$asMap(Runtime runtime, $Value? target, List<$Value?> args) {
     final $this = target?.$value as List;
     final $result = $this.asMap();
-    return $Map.wrap($result.map((key, value) {
-      return $MapEntry.wrap(MapEntry($int(key), value));
-    }));
+    return $Map.wrap({
+      for (var entry in $result.entries)
+        $int(entry.key): runtime.wrap(entry.value, recursive: true),
+    });
   }
 
   static const __$static$method$castFrom = $Function(_$static$method$castFrom);

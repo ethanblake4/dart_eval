@@ -7,7 +7,6 @@ import 'package:collection/collection.dart';
 import 'package:dart_eval/src/eval/bindgen/bridge_declaration.dart';
 import 'package:dart_eval/src/eval/bindgen/configure.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
-import 'package:dart_eval/src/eval/bindgen/errors.dart';
 import 'package:dart_eval/src/eval/bindgen/methods.dart';
 import 'package:dart_eval/src/eval/bindgen/properties.dart';
 import 'package:dart_eval/src/eval/bindgen/statics.dart';
@@ -80,7 +79,7 @@ class Bindgen {
       final resolved = units
           .where((declaration) => declaration.declaredElement != null)
           .map((declaration) => _$instance(ctx, declaration.declaredElement!))
-          .whereNotNull();
+          .nonNulls;
 
       if (resolved.isEmpty) {
         return null;

@@ -262,7 +262,7 @@ class $Map<K, V> implements Map<K, V>, $Instance {
 }
 
 /// dart_eval bimodal wrapper for [MapEntry]
-class $MapEntry<K, V> implements MapEntry<K, V>, $Instance {
+class $MapEntry<K, V> implements $Instance {
   /// Wrap a [MapEntry] in a [$MapEntry]
   $MapEntry.wrap(this.$value);
 
@@ -309,9 +309,9 @@ class $MapEntry<K, V> implements MapEntry<K, V>, $Instance {
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case 'key':
-        return key as $Value?;
+        return $value.key as $Value?;
       case 'value':
-        return value as $Value?;
+        return $value.value as $Value?;
       default:
         return _superclass.$getProperty(runtime, identifier);
     }
@@ -328,10 +328,4 @@ class $MapEntry<K, V> implements MapEntry<K, V>, $Instance {
   void $setProperty(Runtime runtime, String identifier, $Value value) {
     _superclass.$setProperty(runtime, identifier, value);
   }
-
-  @override
-  K get key => $value.key;
-
-  @override
-  V get value => $value.value;
 }
