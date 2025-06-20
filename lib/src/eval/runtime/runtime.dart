@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:path/path.dart' as p;
+
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/dart_eval_security.dart';
@@ -310,6 +312,11 @@ class Runtime {
 
   /// Check if a permission is granted.
   bool checkPermission(String domain, [Object? data]) {
+    if (domain == 'filesystem:read' || domain == 'filesystem:write') {
+      if (data is String) {
+        data = p.normalize(p.absolute(data));
+      }
+    }
     return _permissions[domain]?.any((element) => element.match(data)) ?? false;
   }
 
