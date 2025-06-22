@@ -838,8 +838,13 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     classDef.constructors.forEach((name, constructor) {
       final idc = _ctx.bridgeStaticFunctionIndices[lib]!;
       final id = '${type.name}.$name';
-      final prev = classDef.wrap ? idc[id]! : idc.remove(id)!;
-      _ctx.bridgeStaticFunctionIndices[lib]!['#${type.name}.$name'] = prev;
+      try {
+        final prev = classDef.wrap ? idc[id]! : idc.remove(id)!;
+        _ctx.bridgeStaticFunctionIndices[lib]!['#${type.name}.$name'] = prev;
+      } catch (e) {
+        print(
+            "Error reassigning bridge static function indices for class $id: $e");
+      }
     });
   }
 

@@ -13,7 +13,11 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 
 List<TypeRef> compileForElementForList(
-    ForElement e, Variable list, CompilerContext ctx, bool box) {
+  ForElement e,
+  Variable list,
+  CompilerContext ctx,
+  bool box,
+) {
   final potentialReturnTypes = <TypeRef>[];
   final parts = e.forLoopParts;
 

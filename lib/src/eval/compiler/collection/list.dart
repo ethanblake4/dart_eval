@@ -3,6 +3,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/collection/for.dart';
 import 'package:dart_eval/src/eval/compiler/collection/if.dart';
+import 'package:dart_eval/src/eval/compiler/collection/spread.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
@@ -149,6 +150,8 @@ List<TypeRef> compileListElement(
     return compileIfElementForList(e, list, ctx, box);
   } else if (e is ForElement) {
     return compileForElementForList(e, list, ctx, box);
+  } else if (e is SpreadElement) {
+    return compileSpreadElementForList(e, list, ctx, box);
   }
   throw CompileError('Unknown list collection element ${e.runtimeType}');
 }
