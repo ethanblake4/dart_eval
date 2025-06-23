@@ -46,6 +46,12 @@ class $num<T extends num> implements $Instance {
                     nullable: true),
                 params: []),
             isStatic: false),
+        'toDouble': BridgeMethodDef(
+            BridgeFunctionDef(
+                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double),
+                    nullable: true),
+                params: []),
+            isStatic: false),
         'ceil': BridgeMethodDef(
             BridgeFunctionDef(
                 returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int),
@@ -129,6 +135,8 @@ class $num<T extends num> implements $Instance {
         return __compareTo;
       case 'toInt':
         return __toInt;
+      case 'toDouble':
+        return __toDouble;
       case 'ceil':
         return __ceil;
     }
@@ -274,6 +282,13 @@ class $num<T extends num> implements $Instance {
   static $Value? _toInt(Runtime runtime, $Value? target, List<$Value?> args) {
     final _evalResult = (target!.$value as num).toInt();
     return $int(_evalResult);
+  }
+
+  static const $Function __toDouble = $Function(_toDouble);
+  static $Value? _toDouble(
+      Runtime runtime, $Value? target, List<$Value?> args) {
+    final _evalResult = (target!.$value as num).toDouble();
+    return $double(_evalResult);
   }
 
   static const $Function __ceil = $Function(_ceil);

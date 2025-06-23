@@ -415,6 +415,9 @@ class TypeRef {
     }
   }
 
+  /// Resolve the full type chain of this [TypeRef]. If it or its supertypes
+  /// have already been resolved, it will return a copy of the resolved type
+  /// from the cache.
   TypeRef resolveTypeChain(CompilerContext ctx,
       {int recursionGuard = 0,
       Set<TypeRef> stack = const {},

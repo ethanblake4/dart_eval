@@ -666,11 +666,11 @@ may vary when bridging.
 | Try-catch-finally | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#L132), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#147), [[3]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#187), [[4]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#209), [[5]](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#231) |
 | Lists | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart) |
 | Iterable | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L14), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L29) |
-| Maps | Partial | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/convert_test.dart#L60), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L145), [[3]](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L160), [[4]](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L175) |
+| Maps | Partial | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/convert_test.dart#L60), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L202), [[3]](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L217), [[4]](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L232) |
 | Sets | ❌ | N/A |
 | Collection `for` | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L14), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L76) |
 | Collection `if` | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L14), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L52) |
-| Spreads | ❌ | N/A |
+| Spreads | Partial | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L137) |
 | Classes | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/class_test.dart) |
 | Class static methods | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/class_test.dart#L147), [[2]](https://github.com/ethanblake4/dart_eval/blob/master/test/class_test.dart#L167) |
 | Getters and setters | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/class_test.dart#L253) |

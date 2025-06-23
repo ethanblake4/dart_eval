@@ -85,6 +85,7 @@ class DartCorePlugin implements EvalPlugin {
     $Future.configureForRuntime(runtime);
     $DateTime.configureForRuntime(runtime);
     $Uri.configureForRuntime(runtime);
+    $Map.configureForRuntime(runtime);
     runtime.registerBridgeFunc('dart:core', 'RegExp.', $RegExp.$new);
     runtime.registerBridgeFunc(
         'dart:core', 'AssertionError.', $AssertionError.$new);

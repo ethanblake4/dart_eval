@@ -5,10 +5,32 @@ class $Map<K, V> implements Map<K, V>, $Instance {
   /// Wrap a [Map] in a [$Map]
   $Map.wrap(this.$value);
 
+  static void configureForRuntime(Runtime runtime) {
+    return runtime.registerBridgeFunc(
+        'dart:core', 'Map.from', __$Map$from.call);
+  }
+
+  static const $type = BridgeTypeRef(CoreTypes.map);
+
   static const $declaration = BridgeClassDef(
       BridgeClassType(BridgeTypeRef(CoreTypes.map),
           generics: {'K': BridgeGenericParam(), 'V': BridgeGenericParam()}),
-      constructors: {},
+      constructors: {
+        'from': BridgeConstructorDef(
+          BridgeFunctionDef(
+            returns: BridgeTypeAnnotation($type),
+            params: [
+              BridgeParameter(
+                'other',
+                BridgeTypeAnnotation($type, nullable: false),
+                false,
+              )
+            ],
+            generics: {'K': BridgeGenericParam(), 'V': BridgeGenericParam()},
+          ),
+          isFactory: true,
+        ),
+      },
       methods: {
         '[]': BridgeMethodDef(
             BridgeFunctionDef(params: [
@@ -88,6 +110,14 @@ class $Map<K, V> implements Map<K, V>, $Instance {
       setters: {},
       fields: {},
       wrap: true);
+
+  static const __$Map$from = $Function(_$Map$from);
+  static $Value? _$Map$from(
+      Runtime runtime, $Value? target, List<$Value?> args) {
+    final other = args[0]?.$value as Map;
+
+    return $Map.wrap(Map.from(other));
+  }
 
   @override
   final Map<K, V> $value;
