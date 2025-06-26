@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/constructor.dart';
@@ -67,8 +68,11 @@ void compileEnumDeclaration(CompilerContext ctx, EnumDeclaration d,
   }
 
   var idx = 0;
+  final enumConstants = <String>[];
+
   for (final constant in d.constants) {
     final cName = constant.name.lexeme;
+    enumConstants.add(cName);
     ctx.resetStack(position: 0);
     final pos = beginMethod(ctx, constant, constant.offset, '$cName*i');
     final cstrName = constant.arguments?.constructorSelector?.name.name ?? '';
@@ -110,6 +114,57 @@ void compileEnumDeclaration(CompilerContext ctx, EnumDeclaration d,
     idx++;
   }
 
+  // Registrar CORRETAMENTE o getter values como uma propriedade estática
+  if (enumConstants.isNotEmpty) {
+    _compileEnumValues(ctx, d, type, enumConstants, clsName);
+  }
+
   ctx.currentClass = null;
   ctx.resetStack();
+}
+
+void _compileEnumValues(CompilerContext ctx, EnumDeclaration d, TypeRef type,
+    List<String> enumConstants, String clsName) {
+  final valuesName = '$clsName.values';
+  ctx.resetStack(position: 0);
+  final pos = beginMethod(ctx, d, d.offset, '$clsName.values (get)');
+
+  // Criar lista com todos os valores do enum (seguindo padrão do compilador)
+  final listType =
+      CoreTypes.list.ref(ctx).copyWith(specifiedTypeArgs: [type], boxed: false);
+
+  ctx.pushOp(PushList.make(), PushList.LEN);
+  final valuesList = Variable.alloc(ctx, listType);
+
+  for (final constantName in enumConstants) {
+    final enumValueName = '$clsName.$constantName';
+    final globalIndex = ctx.topLevelGlobalIndices[ctx.library]![enumValueName]!;
+
+    ctx.pushOp(LoadGlobal.make(globalIndex), LoadGlobal.LEN);
+    ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
+    final enumValue = Variable.alloc(ctx, type);
+
+    ctx.pushOp(
+        ListAppend.make(
+            valuesList.scopeFrameOffset, enumValue.scopeFrameOffset),
+        ListAppend.LEN);
+  }
+
+  ctx.pushOp(BoxList.make(valuesList.scopeFrameOffset), BoxList.LEN);
+  ctx.pushOp(Return.make(valuesList.scopeFrameOffset), Return.LEN);
+
+  final finalListType = listType.copyWith(boxed: true);
+  ctx.topLevelVariableInferredTypes[ctx.library]![valuesName] = finalListType;
+
+  if (!ctx.topLevelGlobalIndices.containsKey(ctx.library)) {
+    ctx.topLevelGlobalIndices[ctx.library] = {};
+  }
+  ctx.topLevelGlobalIndices[ctx.library]![valuesName] = ctx.globalIndex++;
+
+  if (!ctx.topLevelGlobalInitializers.containsKey(ctx.library)) {
+    ctx.topLevelGlobalInitializers[ctx.library] = {};
+  }
+  ctx.topLevelGlobalInitializers[ctx.library]![valuesName] = pos;
+  ctx.runtimeGlobalInitializerMap[
+      ctx.topLevelGlobalIndices[ctx.library]![valuesName]!] = pos;
 }

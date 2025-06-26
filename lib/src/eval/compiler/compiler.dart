@@ -694,6 +694,11 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
                 DeclarationOrBridge(libraryIndex, declaration: constant);
             _topLevelGlobalIndices[libraryIndex]![name] = _ctx.globalIndex++;
           }
+
+          // Adicionar declaração para values
+          final valuesName = '${declaration.name.lexeme}.values';
+          _topLevelDeclarationsMap[libraryIndex]![valuesName] =
+              DeclarationOrBridge(libraryIndex, declaration: declaration);
         }
 
         members.forEach((member) {
