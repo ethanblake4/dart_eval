@@ -8,37 +8,39 @@ import 'package:dart_eval/stdlib/core.dart';
 /// Wrapper for [Future]
 class $Future<T> implements Future<T>, $Instance {
   /// Configure [$Future] for runtime in a [Runtime]
+
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFunc(
         'dart:core', 'Future.delayed', const _$Future_delayed().call);
   }
 
-  static const $declaration = BridgeClassDef(
-      BridgeClassType(BridgeTypeRef(CoreTypes.future), isAbstract: true),
-      constructors: {
-        'delayed': BridgeConstructorDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future)),
-            params: [
-              BridgeParameter(
-                  'duration', BridgeTypeAnnotation($Duration.$type), false)
-            ],
-            namedParams: []))
-      },
-      methods: {
-        'then': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future)),
-            params: [
-              BridgeParameter(
-                  'onValue',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
-                  false)
-            ],
-            namedParams: []))
-      },
-      getters: {},
-      setters: {},
-      fields: {},
-      wrap: true);
+  static const $type = BridgeTypeRef(CoreTypes.future);
+  static const $declaration =
+      BridgeClassDef(BridgeClassType($type, isAbstract: true),
+          constructors: {
+            'delayed': BridgeConstructorDef(BridgeFunctionDef(
+                returns: BridgeTypeAnnotation($type),
+                params: [
+                  BridgeParameter(
+                      'duration', BridgeTypeAnnotation($Duration.$type), false)
+                ],
+                namedParams: []))
+          },
+          methods: {
+            'then': BridgeMethodDef(BridgeFunctionDef(
+                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future)),
+                params: [
+                  BridgeParameter(
+                      'onValue',
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
+                      false)
+                ],
+                namedParams: []))
+          },
+          getters: {},
+          setters: {},
+          fields: {},
+          wrap: true);
 
   $Future.wrap(this.$value) : _superclass = $Object($value);
 
