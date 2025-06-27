@@ -12,6 +12,7 @@ import 'package:dart_eval/src/eval/compiler/statement/return.dart';
 import 'package:dart_eval/src/eval/compiler/statement/try.dart';
 import 'package:dart_eval/src/eval/compiler/statement/variable_declaration.dart';
 import 'package:dart_eval/src/eval/compiler/statement/while.dart';
+import 'package:dart_eval/src/eval/compiler/statement/switch.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 
 import 'block.dart';
@@ -44,6 +45,8 @@ StatementInfo compileStatement(
     return compileAssertStatement(s, ctx, expectedReturnType);
   } else if (s is BreakStatement) {
     return compileBreakStatement(s, ctx);
+  } else if (s is SwitchStatement) {
+    return compileSwitchStatement(s, ctx, expectedReturnType);
   } else {
     throw CompileError('Unknown statement type ${s.runtimeType}');
   }
