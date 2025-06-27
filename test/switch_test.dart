@@ -527,5 +527,246 @@ void main() {
       expect(runtime.executeLib('package:example/main.dart', 'main'),
           $String('Vogal'));
     });
+
+    // Switch Expression Tests
+    test('Switch expression with enum and specific days', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            enum DiaDaSemana {
+              segunda,
+              terca,
+              quarta,
+              quinta,
+              sexta,
+              sabado,
+              domingo,
+            }
+
+            String saudacao(DiaDaSemana dia) {
+              return switch (dia) {
+                DiaDaSemana.segunda => "Boa segunda",
+                DiaDaSemana.terca => "Boa terça",
+                DiaDaSemana.quarta => "Boa quarta",
+                _ => "Ótimo dia",
+              };
+            }
+
+            String main() {
+              return saudacao(DiaDaSemana.terca);
+            }
+          ''',
+        }
+      });
+      expect(runtime.executeLib('package:example/main.dart', 'main'),
+          $String('Boa terça'));
+    });
+
+    test('Switch expression with enum default case', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            enum DiaDaSemana {
+              segunda,
+              terca,
+              quarta,
+              quinta,
+              sexta,
+              sabado,
+              domingo,
+            }
+
+            String saudacao(DiaDaSemana dia) {
+              return switch (dia) {
+                DiaDaSemana.segunda => "Boa segunda",
+                DiaDaSemana.terca => "Boa terça",
+                DiaDaSemana.quarta => "Boa quarta",
+                _ => "Ótimo dia",
+              };
+            }
+
+            String main() {
+              return saudacao(DiaDaSemana.domingo);
+            }
+          ''',
+        }
+      });
+      expect(runtime.executeLib('package:example/main.dart', 'main'),
+          $String('Ótimo dia'));
+    });
+
+    test('Switch expression with int values', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            String numberName(int n) {
+              return switch (n) {
+                1 => "um",
+                2 => "dois",
+                3 => "três",
+                _ => "outro número",
+              };
+            }
+
+            String main() {
+              return numberName(2);
+            }
+          ''',
+        }
+      });
+      expect(runtime.executeLib('package:example/main.dart', 'main'),
+          $String('dois'));
+    });
+
+    test('Switch expression with string values', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int fruitPrice(String fruit) {
+              return switch (fruit) {
+                "apple" => 100,
+                "banana" => 50,
+                "orange" => 80,
+                _ => 0,
+              };
+            }
+
+            int main() {
+              return fruitPrice("banana");
+            }
+          ''',
+        }
+      });
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 50);
+    });
+
+    test('Switch expression with boolean values', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            String boolToString(bool value) {
+              return switch (value) {
+                true => "verdadeiro",
+                false => "falso",
+              };
+            }
+
+            String main() {
+              return boolToString(true);
+            }
+          ''',
+        }
+      });
+      expect(runtime.executeLib('package:example/main.dart', 'main'),
+          $String('verdadeiro'));
+    });
+
+    test('Switch expression with complex expressions', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            String calculate(int x) {
+              return switch (x * 2) {
+                2 => "dois",
+                4 => "quatro",
+                6 => "seis",
+                _ => "outro",
+              };
+            }
+
+            String main() {
+              return calculate(2);
+            }
+          ''',
+        }
+      });
+      expect(runtime.executeLib('package:example/main.dart', 'main'),
+          $String('quatro'));
+    });
+
+    test('Switch expression nested in function call', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            String processResult(String result) {
+              return "Resultado: " + result;
+            }
+
+            String evaluate(int score) {
+              return processResult(switch (score) {
+                90 => "Excelente",
+                80 => "Bom",
+                70 => "Regular",
+                _ => "Precisa melhorar",
+              });
+            }
+
+            String main() {
+              return evaluate(90);
+            }
+          ''',
+        }
+      });
+      expect(runtime.executeLib('package:example/main.dart', 'main'),
+          $String('Resultado: Excelente'));
+    });
+
+    test('Switch expression with const values', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            const int MAX_SCORE = 100;
+            const int MIN_SCORE = 0;
+
+            String scoreCategory(int score) {
+              return switch (score) {
+                MAX_SCORE => "Perfeito",
+                MIN_SCORE => "Zero",
+                _ => "Médio",
+              };
+            }
+
+            String main() {
+              return scoreCategory(100);
+            }
+          ''',
+        }
+      });
+      expect(runtime.executeLib('package:example/main.dart', 'main'),
+          $String('Perfeito'));
+    });
+
+    test('Switch expression - exact user example', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            enum DiaDaSemana {
+              segunda,
+              terca,
+              quarta,
+              quinta,
+              sexta,
+              sabado,
+              domingo,
+            }
+
+            String saudacao(DiaDaSemana dia) {
+              return switch (dia) {
+                DiaDaSemana.segunda => "Boa segunda",
+                DiaDaSemana.terca => "Boa terça",
+                DiaDaSemana.quarta => "Boa quarta",
+                _ => "Otimo dia",
+              };
+            }
+
+            String main() {
+              return saudacao(DiaDaSemana.terca);
+            }
+          ''',
+        }
+      });
+      expect(runtime.executeLib('package:example/main.dart', 'main'),
+          $String('Boa terça'));
+    });
   });
 }

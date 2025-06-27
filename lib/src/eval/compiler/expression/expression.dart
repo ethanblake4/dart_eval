@@ -21,6 +21,7 @@ import 'package:dart_eval/src/eval/compiler/expression/postfix.dart';
 import 'package:dart_eval/src/eval/compiler/expression/prefix.dart';
 import 'package:dart_eval/src/eval/compiler/expression/property_access.dart';
 import 'package:dart_eval/src/eval/compiler/expression/rethrow.dart';
+import 'package:dart_eval/src/eval/compiler/expression/switch_expression.dart';
 import 'package:dart_eval/src/eval/compiler/expression/throw.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -72,6 +73,8 @@ Variable compileExpression(Expression e, CompilerContext ctx,
     return compileAsExpression(e, ctx);
   } else if (e is RethrowExpression) {
     return compileRethrowExpression(ctx, e);
+  } else if (e is SwitchExpression) {
+    return compileSwitchExpression(e, ctx, bound);
   }
 
   throw CompileError('Unknown expression type ${e.runtimeType}');
