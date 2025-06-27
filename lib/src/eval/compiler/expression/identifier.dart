@@ -17,8 +17,29 @@ Reference compileIdentifierAsReference(Identifier id, CompilerContext ctx) {
   if (id is SimpleIdentifier) {
     return IdentifierReference(null, id.name);
   } else if (id is PrefixedIdentifier) {
-    final L = compileIdentifier(id.prefix, ctx);
-    return IdentifierReference(L, id.identifier.name);
+    try {
+      // First try to compile the prefix as a normal identifier/variable
+      final L = compileIdentifier(id.prefix, ctx);
+      return IdentifierReference(L, id.identifier.name);
+    } catch (e) {
+      // If that fails, check if this is a static member access
+      final prefixName = id.prefix.name;
+      final memberName = id.identifier.name;
+
+      // Look for a static declaration with the pattern 'ClassName.memberName'
+      final staticDeclaration =
+          resolveStaticDeclaration(ctx, ctx.library, prefixName, memberName);
+
+      if (staticDeclaration != null) {
+        // This is a static member access like ClassName.staticMember
+        return IdentifierReference(null, '$prefixName.$memberName');
+      }
+
+      // If class exists but no static member found, fall through to normal error handling
+
+      // If both approaches fail, rethrow the original error
+      rethrow;
+    }
   }
   throw CompileError('Unknown identifier ${id.runtimeType}');
 }

@@ -259,5 +259,42 @@ void main() {
               .executeLib('package:example/main.dart', 'main', [callback])),
           prints('a\nb\n'));
     });
+
+    test('Using a bridge class with a getter', () {
+      compiler.defineBridgeClasses([$TestClass.$declaration]);
+
+      final program = compiler.compile({
+        'example': {
+          'main.dart': '''
+            import 'package:bridge_lib/bridge_lib.dart';
+            
+            class MyTestClass {
+              TestClass test = TestClass(4);
+
+              double? getNumber() {
+                return test.getNumber?.toDouble();
+              }
+            }
+
+            double? main() {
+              final test = MyTestClass();
+              return test.getNumber();
+            }
+          '''
+        }
+      });
+
+      final runtime = Runtime.ofProgram(program);
+
+      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart',
+          'TestClass.', $TestClass.$construct,
+          isBridge: true);
+
+      final res =
+          runtime.executeLib('package:example/main.dart', 'main')?.$value;
+      print("res: $res");
+      expect(res is double, true);
+      expect(res, 4.0);
+    });
   });
 }

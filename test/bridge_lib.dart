@@ -60,7 +60,18 @@ class $TestClass extends TestClass with $Bridge {
                   BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false),
             ]))
       },
-      getters: {},
+      getters: {
+        "getNumber": BridgeMethodDef(
+          BridgeFunctionDef(
+            returns: BridgeTypeAnnotation(
+              BridgeTypeRef(CoreTypes.int),
+              nullable: true,
+            ),
+            params: [],
+            namedParams: [],
+          ),
+        )
+      },
       setters: {},
       fields: {
         'someNumber':
@@ -77,6 +88,8 @@ class $TestClass extends TestClass with $Bridge {
               super.runTest(args[0]!.$value, b: args[1]!.$value ?? 'hello'));
         });
       case 'someNumber':
+        return $int(super.someNumber);
+      case 'getNumber':
         return $int(super.someNumber);
     }
     throw UnimplementedError();

@@ -344,9 +344,34 @@ class IdentifierReference implements Reference {
       if (staticDeclaration != null && staticDeclaration.declaration != null) {
         final _dec = staticDeclaration.declaration!;
         if (_dec is MethodDeclaration) {
-          return Variable(-1, CoreTypes.function.ref(ctx),
-              methodOffset: DeferredOrOffset.lookupStatic(
-                  ctx, ctx.library, ctx.currentClass!.name.lexeme, name));
+          if (_dec.isGetter) {
+            // For static getters, we need to call the getter and get the actual type
+            final offset = DeferredOrOffset.lookupStatic(
+                ctx, ctx.library, ctx.currentClass!.name.lexeme, name);
+            final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.length);
+            if (offset.offset == null) {
+              ctx.offsetTracker.setOffset(loc, offset);
+            }
+            ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
+
+            // Try to get the getter's return type
+            TypeRef? returnType;
+            try {
+              returnType = _dec.returnType != null
+                  ? TypeRef.fromAnnotation(ctx, ctx.library, _dec.returnType!)
+                  : null;
+            } catch (e) {
+              // If type resolution fails, fall back to dynamic
+              returnType = null;
+            }
+
+            return Variable.alloc(
+                ctx, returnType ?? CoreTypes.dynamic.ref(ctx));
+          } else {
+            return Variable(-1, CoreTypes.function.ref(ctx),
+                methodOffset: DeferredOrOffset.lookupStatic(
+                    ctx, ctx.library, ctx.currentClass!.name.lexeme, name));
+          }
         } else if (_dec is VariableDeclaration) {
           final name = '${ctx.currentClass!.name.lexeme}.${_dec.name.lexeme}';
           final type = ctx.topLevelVariableInferredTypes[ctx.library]![name]!;
