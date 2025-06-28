@@ -1,5 +1,4 @@
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
@@ -109,39 +108,39 @@ void _compileSwitchExpressionCases(
 }
 
 /// Check if a switch expression is exhaustive
-bool _isExhaustive(CompilerContext ctx, Variable switchExpr,
-    List<SwitchExpressionCase> cases) {
-  // Check if there's a wildcard pattern (default case)
-  for (final case_ in cases) {
-    if (case_.guardedPattern.pattern is WildcardPattern) {
-      return true;
-    }
-  }
+// bool _isExhaustive(CompilerContext ctx, Variable switchExpr,
+//     List<SwitchExpressionCase> cases) {
+//   // Check if there's a wildcard pattern (default case)
+//   for (final case_ in cases) {
+//     if (case_.guardedPattern.pattern is WildcardPattern) {
+//       return true;
+//     }
+//   }
 
-  // For boolean types, check if both true and false are covered
-  if (switchExpr.type == CoreTypes.bool.ref(ctx)) {
-    bool hasTrue = false;
-    bool hasFalse = false;
+//   // For boolean types, check if both true and false are covered
+//   if (switchExpr.type == CoreTypes.bool.ref(ctx)) {
+//     bool hasTrue = false;
+//     bool hasFalse = false;
 
-    for (final case_ in cases) {
-      final pattern = case_.guardedPattern.pattern;
-      if (pattern.runtimeType.toString().contains('ConstantPattern')) {
-        try {
-          final dynamic constantPattern = pattern;
-          final expr = constantPattern.expression;
-          if (expr is BooleanLiteral) {
-            if (expr.value == true) hasTrue = true;
-            if (expr.value == false) hasFalse = true;
-          }
-        } catch (e) {
-          // Ignore and continue
-        }
-      }
-    }
+//     for (final case_ in cases) {
+//       final pattern = case_.guardedPattern.pattern;
+//       if (pattern.runtimeType.toString().contains('ConstantPattern')) {
+//         try {
+//           final dynamic constantPattern = pattern;
+//           final expr = constantPattern.expression;
+//           if (expr is BooleanLiteral) {
+//             if (expr.value == true) hasTrue = true;
+//             if (expr.value == false) hasFalse = true;
+//           }
+//         } catch (e) {
+//           // Ignore and continue
+//         }
+//       }
+//     }
 
-    return hasTrue && hasFalse;
-  }
+//     return hasTrue && hasFalse;
+//   }
 
-  // For other types, we'll be conservative and require a wildcard
-  return false;
-}
+//   // For other types, we'll be conservative and require a wildcard
+//   return false;
+// }
