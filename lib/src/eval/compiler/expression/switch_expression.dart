@@ -40,11 +40,12 @@ void _compileSwitchExpressionCases(
 ) {
   if (index >= cases.length) {
     // No more cases - check if we have exhaustive coverage
-    if (_isExhaustive(ctx, switchExpr, cases)) {
-      // This case should not be reached if switch is truly exhaustive
-      return;
-    }
-    throw CompileError('Switch expression must be exhaustive');
+    // if (_isExhaustive(ctx, switchExpr, cases)) {
+    // This case should not be reached if switch is truly exhaustive
+    // return;
+    // }
+    return;
+    // throw CompileError('Switch expression must be exhaustive');
   }
 
   final currentCase = cases[index];
