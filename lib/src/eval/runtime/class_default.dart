@@ -166,13 +166,6 @@ class InstanceDefaultProps<T extends $Value> implements IInstanceDefaultProps {
       return g.run(runtime, target);
     }
 
-    final InstanceDefaultPropsField? f =
-        fields.firstWhereOrNull((e) => e.name == identifier);
-
-    if (f != null) {
-      return f.getValue(runtime, target);
-    }
-
     final InstanceDefaultPropsMethod? m =
         methods.firstWhereOrNull((e) => e.name == identifier);
 
@@ -180,6 +173,13 @@ class InstanceDefaultProps<T extends $Value> implements IInstanceDefaultProps {
       return $Function((_, __, args) {
         return m.run(runtime, target, args);
       });
+    }
+
+    final InstanceDefaultPropsField? f =
+        fields.firstWhereOrNull((e) => e.name == identifier);
+
+    if (f != null) {
+      return f.getValue(runtime, target);
     }
 
     if (notFoundCallback != null) {
