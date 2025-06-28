@@ -236,7 +236,32 @@ class ReturnAsync implements EvcOp {
 
   @override
   void run(Runtime runtime) {
-    final completer = runtime.frame[_completerOffset] as Completer;
+    // Tenta obter o completer do offset especificado
+    dynamic completerCandidate = runtime.frame[_completerOffset];
+
+    // Se não for um Completer, procura por um Completer no frame
+    Completer completer;
+    if (completerCandidate is Completer) {
+      completer = completerCandidate;
+    } else {
+      // Procura por um Completer no frame atual
+      Completer? foundCompleter;
+      for (int i = 0; i < runtime.frame.length; i++) {
+        if (runtime.frame[i] is Completer) {
+          foundCompleter = runtime.frame[i] as Completer;
+          break;
+        }
+      }
+
+      if (foundCompleter != null) {
+        completer = foundCompleter;
+      } else {
+        throw Exception(
+            'Expected Completer at offset $_completerOffset, but found ${completerCandidate.runtimeType}. '
+            'No Completer found in frame. This indicates a compiler bug with async function handling.');
+      }
+    }
+
     final rv = _location == -1 ? null : runtime.frame[_location];
     runtime.returnValue = $Future.wrap(completer.future);
 
