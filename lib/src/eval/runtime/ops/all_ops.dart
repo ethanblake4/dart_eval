@@ -213,6 +213,9 @@ class Evc {
   /// [PushConstantType]
   static const OP_PUSH_CONSTANT_TYPE = 68;
 
+  /// [PushRecord]
+  static const OP_PUSH_RECORD = 69;
+
   static List<int> i16b(int i16) {
     final x = ByteData(2);
     x.setInt16(0, i16);
@@ -325,4 +328,5 @@ final List<OpLoader> ops = [
   (Runtime rt) => MaybeBoxNull(rt), // 66
   (Runtime rt) => PushRuntimeType(rt), // 67
   (Runtime rt) => PushConstantType(rt), // 68
+  (Runtime rt) => PushRecord(rt), // 69
 ];

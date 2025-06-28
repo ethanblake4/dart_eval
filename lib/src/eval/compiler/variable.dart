@@ -119,12 +119,14 @@ class Variable {
       TypeRef? type,
       DeferredOrOffset? methodOffset,
       ReturnType? methodReturnType,
+      bool? isFinal,
       String? name,
       int? frameIndex,
       List<TypeRef>? concreteTypes}) {
     return Variable(
         scopeFrameOffset ?? this.scopeFrameOffset, type ?? this.type,
         methodOffset: methodOffset ?? this.methodOffset,
+        isFinal: isFinal ?? this.isFinal,
         methodReturnType: methodReturnType ?? this.methodReturnType,
         concreteTypes: concreteTypes ?? this.concreteTypes)
       ..name = name ?? this.name

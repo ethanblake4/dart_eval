@@ -557,3 +557,30 @@ class BoxBool implements EvcOp {
   @override
   String toString() => 'BoxBool (L$_reg)';
 }
+
+class PushRecord implements EvcOp {
+  PushRecord(Runtime runtime) : 
+    _fields = runtime._readInt16(), 
+    _const = runtime._readInt32(), 
+    _type = runtime._readInt32();
+
+  PushRecord.make(this._fields, this._const, this._type);
+
+  final int _fields;
+  final int _const;
+  final int _type;
+
+  static const int LEN = Evc.BASE_OPLEN + Evc.I16_LEN + Evc.I32_LEN * 2;
+
+  @override
+  void run(Runtime runtime) {
+    runtime.frame[runtime.frameOffset++] = $Record(
+      (runtime.frame[_fields] as List).cast(),
+      (runtime.constantPool[_const] as Map).cast(),
+      _type,
+    );
+  }
+
+  @override
+  String toString() => 'PushRecord ()';
+}

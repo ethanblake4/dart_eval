@@ -43,6 +43,9 @@ class CoreTypes {
   /// Bridge type spec for [Enum]
   static const enumType = BridgeTypeSpec('dart:core', 'Enum');
 
+  /// Bridge type spec for [Record]
+  static const record = BridgeTypeSpec('dart:core', 'Record');
+
   /// Bridge type spec for [Type]
   static const type = BridgeTypeSpec('dart:core', 'Type');
 

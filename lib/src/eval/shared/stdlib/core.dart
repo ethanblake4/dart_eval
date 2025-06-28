@@ -12,6 +12,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/iterator.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/object.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/pattern.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/record.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/regexp.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/stack_trace.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/string_buffer.dart';
@@ -34,6 +35,7 @@ class DartCorePlugin implements EvalPlugin {
     registry.defineBridgeClass($dynamicCls);
     registry.defineBridgeClass($voidCls);
     registry.defineBridgeClass($neverCls);
+    registry.defineBridgeClass($recordCls);
     registry.defineBridgeClass($Type.$declaration);
     registry.defineBridgeClass($null.$declaration);
     registry.defineBridgeClass($Object.$declaration);

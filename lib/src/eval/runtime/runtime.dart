@@ -10,6 +10,7 @@ import 'package:dart_eval/src/eval/bridge/runtime_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/model/override_spec.dart';
 import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'package:dart_eval/src/eval/runtime/function.dart';
+import 'package:dart_eval/src/eval/runtime/record.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/collection.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert.dart';
@@ -680,6 +681,8 @@ class Runtime {
         return [Evc.OP_PUSH_RUNTIME_TYPE, ...Evc.i16b(op._value)];
       case PushConstantType op:
         return [Evc.OP_PUSH_CONSTANT_TYPE, ...Evc.i32b(op._typeId)];
+      case PushRecord op:
+        return [Evc.OP_PUSH_RECORD, ...Evc.i16b(op._fields), ...Evc.i32b(op._const), ...Evc.i32b(op._type)];
       default:
         throw ArgumentError('Not a valid op $op');
     }
