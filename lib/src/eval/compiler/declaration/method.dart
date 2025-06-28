@@ -28,10 +28,6 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx,
       ? <PossiblyValuedParameter>[]
       : resolveFPLDefaults(ctx, d.parameters, true, allowUnboxed: false);
 
-  if (b.isAsynchronous) {
-    setupAsyncFunction(ctx);
-  }
-
   var i = d.isStatic ? 0 : 1;
 
   for (final param in resolvedParams) {
@@ -49,6 +45,10 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx,
     ctx.setLocal(p.name!.lexeme, Variable(i, type));
 
     i++;
+  }
+
+  if (b.isAsynchronous) {
+    setupAsyncFunction(ctx);
   }
 
   StatementInfo? stInfo;
