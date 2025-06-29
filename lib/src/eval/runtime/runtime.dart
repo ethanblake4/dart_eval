@@ -936,9 +936,9 @@ class RuntimeException implements Exception {
   @override
   String toString() {
     var prStr = '';
-    final maxIdx = min(runtime.pr.length - 1, runtime._prOffset + 3);
+    final maxIdx = min(runtime.pr.length - 1, runtime._prOffset + 24);
 
-    for (var i = max(0, runtime._prOffset - 7); i < maxIdx; i++) {
+    for (var i = max(0, runtime._prOffset - 24); i < maxIdx; i++) {
       prStr += '$i: ${runtime.pr[i]}';
       if (i == runtime._prOffset - 1) {
         prStr += '  <<< EXCEPTION';

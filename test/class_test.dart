@@ -535,7 +535,7 @@ void main() {
       }, prints(startsWith('hashCode ')));
     });
 
-/*    test('Super parameter multi-level indirection', () {
+    test('Super parameter multi-level indirection', () {
       final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
@@ -563,6 +563,6 @@ void main() {
       expect(() {
         runtime.executeLib('package:example/main.dart', 'main');
       }, prints('GET\nhttp://example.com\n'));
-    });*/
+    });
   });
 }
