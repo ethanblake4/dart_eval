@@ -1,4 +1,5 @@
 import 'package:dart_eval/dart_eval.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/base.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -99,6 +100,101 @@ void main() {
         },
         prints('1\n3\n'),
       );
+    });
+  });
+
+  
+  group('Switch pattern tests', () {
+    late Compiler compiler;
+
+    setUp(() {
+      compiler = Compiler();
+    });
+
+    test('Switch matching record pattern', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            String main() {
+              var data = (1, name: "Elise");
+              switch (data) {
+                case (0, name: var n):
+                  return "Fail";
+                case (1, name: var n):
+                  return n + " is the name";
+                default:
+                  return "Unknown";
+              }
+            }
+          ''',
+        }
+      });
+      expect(runtime.executeLib('package:example/main.dart', 'main'),
+          $String('Elise is the name'));
+    });
+
+    test('Switch matching list pattern', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            String main() {
+              var data = [1, 2, 3];
+              switch (data) {
+                case [1, 2, var x]:
+                  return "Matched with x = " + x.toString();
+                case [var a, var b]:
+                  return "Matched with a = " + a.toString() + ", b = " + b.toString();
+                default:
+                  return "No match";
+              }
+            }
+          ''',
+        }
+      });
+      expect(runtime.executeLib('package:example/main.dart', 'main'),
+          $String('Matched with x = 3'));
+    });
+
+    test('Switch with pattern guard', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            String main() {
+              var data = (1, name: "Elise");
+              switch (data) {
+                case (var id, name: var n) when id > 5:
+                  return n + " has ID " + id.toString();
+                default:
+                  return "No match";
+              }
+            }
+          ''',
+        }
+      });
+      expect(runtime.executeLib('package:example/main.dart', 'main'),
+          $String('No match'));
+    });
+
+    test('Switch with relational pattern', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            String main() {
+              var data = 10;
+              switch (data) {
+                case >5:
+                  return "Greater than 5";
+                case <=5:
+                  return "5 or less";
+                default:
+                  return "No match";
+              }
+            }
+          ''',
+        }
+      });
+      expect(runtime.executeLib('package:example/main.dart', 'main'),
+          $String('Greater than 5'));
     });
   });
 }

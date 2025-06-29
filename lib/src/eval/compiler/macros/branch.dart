@@ -33,9 +33,9 @@ StatementInfo macroBranch(
   final label = CompilerLabel(LabelType.branch, -1, (_ctx) {
     _ctx.endAllocScopeQuiet();
     if (!resolveStateToThen) {
-      _ctx.resolveBranchStateDiscontinuity(_initialState);
+      //_ctx.resolveBranchStateDiscontinuity(_initialState);
     }
-    _ctx.endAllocScopeQuiet();
+    //_ctx.endAllocScopeQuiet();
     return -1;
   });
   ctx.labels.add(label);

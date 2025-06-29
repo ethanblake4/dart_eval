@@ -12,18 +12,7 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import '../errors.dart';
 import 'expression.dart';
 
-/// Compile a [BinaryExpression] to EVC bytecode
-Variable compileBinaryExpression(CompilerContext ctx, BinaryExpression e,
-    [TypeRef? boundType]) {
-  var L = compileExpression(e.leftOperand, ctx, boundType);
-
-  if (e.operator.type == TokenType.QUESTION_QUESTION) {
-    return _compileNullCoalesce(ctx, L, e.rightOperand);
-  }
-
-  var R = compileExpression(e.rightOperand, ctx, boundType);
-
-  final opMap = {
+final binaryOpMap = {
     TokenType.PLUS: '+',
     TokenType.MINUS: '-',
     TokenType.SLASH: '/',
@@ -45,7 +34,18 @@ Variable compileBinaryExpression(CompilerContext ctx, BinaryExpression e,
     TokenType.TILDE_SLASH: '~/'
   };
 
-  var method = opMap[e.operator.type] ??
+/// Compile a [BinaryExpression] to EVC bytecode
+Variable compileBinaryExpression(CompilerContext ctx, BinaryExpression e,
+    [TypeRef? boundType]) {
+  var L = compileExpression(e.leftOperand, ctx, boundType);
+
+  if (e.operator.type == TokenType.QUESTION_QUESTION) {
+    return _compileNullCoalesce(ctx, L, e.rightOperand);
+  }
+
+  var R = compileExpression(e.rightOperand, ctx, boundType);
+
+  var method = binaryOpMap[e.operator.type] ??
       (throw CompileError('Unknown binary operator ${e.operator.type}'));
   return L.invoke(ctx, method, [R]).result;
 }

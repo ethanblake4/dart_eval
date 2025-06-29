@@ -4,6 +4,8 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
+import 'package:dart_eval/src/eval/compiler/expression/binary.dart';
+import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
@@ -108,6 +110,9 @@ Variable patternMatchAndBind(
     CompilerContext ctx, ListPatternElement pattern, Variable V,
     {PatternBindContext patternContext = PatternBindContext.none}) {
   switch (pattern) {
+    case ConstantPattern pat:
+      final constant = compileExpression(pat.expression, ctx);
+      return V.invoke(ctx, '==', [constant]).result;
     case RecordPattern pat:
       var positionalFields = 1;
       Variable? result;
@@ -178,6 +183,11 @@ Variable patternMatchAndBind(
       }
 
       return BuiltinValue(boolval: true).push(ctx);
+    case RelationalPattern pat:
+      final operand = compileExpression(pat.operand, ctx);
+      final operator = binaryOpMap[pat.operator.type] ??
+          (throw CompileError('Unknown relational operator ${pat.operator.type}'));
+      return V.invoke(ctx, operator, [operand]).result;
     case WildcardPattern pat:
       return _typeTest(ctx, pat.type, V);
     case ParenthesizedPattern pat:
