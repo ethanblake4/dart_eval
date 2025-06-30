@@ -23,7 +23,7 @@ up-to-date parsing. While compilation and execution aren't quite there yet, dart
 has over 250 tests that are run in CI to ensure correctness.
 
 Currently dart_eval implements a majority of the Dart spec, but there 
-are still missing features like generators, Sets and extension methods.
+are still missing features like generators and extension methods.
 In addition, parts of the standard library haven't been implemented. See the
 [language feature support table](#language-feature-support-table) for details.
 
@@ -660,6 +660,7 @@ may vary when bridging.
 | For-each loops | ✅ | [2 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/loop_test.dart#L54) |
 | Async for-each | ❌ | N/A |
 | Switch statements | ✅ | [20 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/switch_test.dart) |
+| Switch expressions | ❌ | N/A |
 | Labels, `break` & `continue` | Partial | [2 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/loop_test.dart#L126), [+more](https://github.com/ethanblake4/dart_eval/blob/master/test/switch_test.dart) |
 | If statements | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/loop_test.dart#L28) |
 | Try-catch | ✅ | [5 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#L13)|
@@ -667,7 +668,7 @@ may vary when bridging.
 | Lists | ✅ | [1 test](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart) |
 | Iterable | ✅ | [2 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L14) |
 | Maps | Partial | [3 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L202) |
-| Sets | ❌ | N/A |
+| Sets | ✅ | [7 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/set_test.dart) |
 | Collection `for` | ✅ | [2 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L14) |
 | Collection `if` | ✅ | [2 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L14) |
 | Spreads | Partial | [1 test](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L137) |

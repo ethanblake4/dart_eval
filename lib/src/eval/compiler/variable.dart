@@ -82,8 +82,10 @@ class Variable {
       ctx.pushOp(BoxList.make(v2.scopeFrameOffset), BoxList.LEN);
     } else if (type == CoreTypes.map.ref(ctx)) {
       ctx.pushOp(BoxMap.make(scopeFrameOffset), BoxMap.LEN);
+    } else if (type == CoreTypes.set.ref(ctx)) {
+      ctx.pushOp(BoxSet.make(scopeFrameOffset), BoxSet.LEN);
     } else if (type == CoreTypes.string.ref(ctx)) {
-      ctx.pushOp(BoxString.make(scopeFrameOffset), BoxInt.LEN);
+      ctx.pushOp(BoxString.make(scopeFrameOffset), BoxString.LEN);
     } else if (type == CoreTypes.nullType.ref(ctx)) {
       ctx.pushOp(BoxNull.make(scopeFrameOffset), BoxNull.LEN);
     } else {

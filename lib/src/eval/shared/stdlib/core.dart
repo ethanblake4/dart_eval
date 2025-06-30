@@ -69,6 +69,7 @@ class DartCorePlugin implements EvalPlugin {
     registry.defineBridgeClass($FormatException.$declaration);
     registry.defineBridgeClass($ArgumentError.$declaration);
     registry.defineBridgeClass($StateError.$declaration);
+    registry.defineBridgeClass($Set.$declaration);
     $StackTrace.configureForCompile(registry);
     $Error.configureForCompile(registry);
     $UnimplementedError.configureForCompile(registry);
@@ -88,6 +89,7 @@ class DartCorePlugin implements EvalPlugin {
     $DateTime.configureForRuntime(runtime);
     $Uri.configureForRuntime(runtime);
     $Map.configureForRuntime(runtime);
+    $Set.configureForRuntime(runtime);
     runtime.registerBridgeFunc('dart:core', 'RegExp.', $RegExp.$new);
     runtime.registerBridgeFunc(
         'dart:core', 'AssertionError.', $AssertionError.$new);

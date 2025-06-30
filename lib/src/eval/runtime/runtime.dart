@@ -603,6 +603,8 @@ class Runtime {
         return [Evc.OP_BOXLIST, ...Evc.i16b(op._reg)];
       case BoxMap op:
         return [Evc.OP_BOXMAP, ...Evc.i16b(op._reg)];
+      case BoxSet op:
+        return [Evc.OP_BOXSET, ...Evc.i16b(op._reg)];
       case BoxBool op:
         return [Evc.OP_BOXBOOL, ...Evc.i16b(op._reg)];
       case BoxNull op:
@@ -632,6 +634,14 @@ class Runtime {
         ];
       case IndexMap op:
         return [Evc.OP_INDEX_MAP, ...Evc.i16b(op._map), ...Evc.i16b(op._index)];
+      case PushSet _:
+        return [Evc.OP_PUSH_SET];
+      case SetAdd op:
+        return [
+          Evc.OP_SET_ADD,
+          ...Evc.i16b(op._set),
+          ...Evc.i16b(op._value)
+        ];
       case PushConstantDouble op:
         return [Evc.OP_PUSH_DOUBLE, ...Evc.f32b(op._value)];
       case SetGlobal op:
