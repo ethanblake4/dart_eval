@@ -13,45 +13,49 @@ import '../errors.dart';
 import 'expression.dart';
 
 final binaryOpMap = {
-    TokenType.PLUS: '+',
-    TokenType.MINUS: '-',
-    TokenType.SLASH: '/',
-    TokenType.STAR: '*',
-    TokenType.LT: '<',
-    TokenType.GT: '>',
-    TokenType.LT_EQ: '<=',
-    TokenType.GT_EQ: '>=',
-    TokenType.PERCENT: '%',
-    TokenType.EQ_EQ: '==',
-    TokenType.AMPERSAND_AMPERSAND: '&&',
-    TokenType.BAR_BAR: '||',
-    TokenType.BAR: '|',
-    TokenType.AMPERSAND: '&',
-    TokenType.LT_LT: '<<',
-    TokenType.GT_GT: '>>',
-    TokenType.BANG_EQ: '!=',
-    TokenType.CARET: '^',
-    TokenType.TILDE_SLASH: '~/'
-  };
+  TokenType.PLUS: '+',
+  TokenType.MINUS: '-',
+  TokenType.SLASH: '/',
+  TokenType.STAR: '*',
+  TokenType.LT: '<',
+  TokenType.GT: '>',
+  TokenType.LT_EQ: '<=',
+  TokenType.GT_EQ: '>=',
+  TokenType.PERCENT: '%',
+  TokenType.EQ_EQ: '==',
+  TokenType.AMPERSAND_AMPERSAND: '&&',
+  TokenType.QUESTION_QUESTION: '??',
+  TokenType.BAR_BAR: '||',
+  TokenType.BAR: '|',
+  TokenType.AMPERSAND: '&',
+  TokenType.LT_LT: '<<',
+  TokenType.GT_GT: '>>',
+  TokenType.BANG_EQ: '!=',
+  TokenType.CARET: '^',
+  TokenType.TILDE_SLASH: '~/'
+};
 
 /// Compile a [BinaryExpression] to EVC bytecode
 Variable compileBinaryExpression(CompilerContext ctx, BinaryExpression e,
     [TypeRef? boundType]) {
+  final method = binaryOpMap[e.operator.type] ??
+      (throw CompileError('Unknown binary operator ${e.operator.type}'));
   var L = compileExpression(e.leftOperand, ctx, boundType);
 
-  if (e.operator.type == TokenType.QUESTION_QUESTION) {
-    return _compileNullCoalesce(ctx, L, e.rightOperand);
+  switch (e.operator.type) {
+    case TokenType.AMPERSAND_AMPERSAND:
+    case TokenType.BAR_BAR:
+    case TokenType.QUESTION_QUESTION:
+      return _compileShortCircuit(ctx, L, e.rightOperand, method);
   }
 
   var R = compileExpression(e.rightOperand, ctx, boundType);
 
-  var method = binaryOpMap[e.operator.type] ??
-      (throw CompileError('Unknown binary operator ${e.operator.type}'));
   return L.invoke(ctx, method, [R]).result;
 }
 
-Variable _compileNullCoalesce(
-    CompilerContext ctx, Variable L, Expression right) {
+Variable _compileShortCircuit(
+    CompilerContext ctx, Variable L, Expression right, String operator) {
   late TypeRef rightType;
   var outVar = BuiltinValue().push(ctx);
   L = L.boxIfNeeded(ctx);
@@ -59,9 +63,22 @@ Variable _compileNullCoalesce(
       CopyValue.LEN);
 
   macroBranch(ctx, null, condition: (_ctx) {
-    final $null = BuiltinValue().push(ctx).boxIfNeeded(ctx);
+    final Variable $comparison;
+    switch (operator) {
+      case '??':
+        $comparison = BuiltinValue().push(ctx).boxIfNeeded(ctx);
+        break;
+      case '&&':
+        $comparison = BuiltinValue(boolval: true).push(ctx).boxIfNeeded(ctx);
+        break;
+      case '||':
+        $comparison = BuiltinValue(boolval: false).push(ctx).boxIfNeeded(ctx);
+        break;
+      default:
+        throw CompileError('Unknown short-circuit operator $operator');
+    }
     ctx.pushOp(
-        CheckEq.make(L.scopeFrameOffset, $null.scopeFrameOffset), CheckEq.LEN);
+        CheckEq.make(L.scopeFrameOffset, $comparison.scopeFrameOffset), CheckEq.LEN);
     ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
     return Variable.alloc(ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
   }, thenBranch: (_ctx, rt) {
@@ -73,9 +90,10 @@ Variable _compileNullCoalesce(
     return StatementInfo(-1);
   });
 
-  final outType =
+  final outType = operator == '??' ?
       TypeRef.commonBaseType(ctx, {L.type.copyWith(nullable: false), rightType})
-          .copyWith(boxed: true);
+          .copyWith(boxed: true) :
+      CoreTypes.bool.ref(ctx).copyWith(boxed: true);
 
   return outVar.copyWith(type: outType);
 }
