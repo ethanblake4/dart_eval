@@ -183,9 +183,21 @@ class $Map<K, V> implements Map<K, V>, $Instance {
   static const $Function __indexSet = $Function(_indexSet);
 
   static $Value? _indexSet(
-      Runtime runtime, $Value? target, List<$Value?> args) {
-    final idx = args[0]!;
-    final value = args[1]!;
+    Runtime runtime,
+    $Value? target,
+    List args,
+  ) {
+    var idx = args[0] ?? $null();
+    var value = args[1] ?? $null();
+
+    if (idx is! $Value) {
+      idx = runtime.wrap(idx);
+    }
+
+    if (value is! $Value) {
+      value = runtime.wrap(value);
+    }
+
     return (target!.$value as Map)[idx] = value;
   }
 
