@@ -97,7 +97,11 @@ class InvokeDynamic implements EvcOp {
       }
 
       if (object == null) {
-        object = $Null();
+        object = $null();
+      }
+
+      if (object is! $Value) {
+        object = runtime.wrap(object);
       }
 
       if (object is $Instance) {
@@ -108,8 +112,6 @@ class InvokeDynamic implements EvcOp {
         } catch (e) {
           runtime.$throw(e);
         }
-      } else {
-        runtime.returnValue = $null();
       }
 
       runtime.args = [];
@@ -157,23 +159,32 @@ class CheckEq implements EvcOp {
       }
 
       if (vx is $Instance) {
-        final _method = vx.$getProperty(runtime, '==');
+        try {
+          final _method = vx.$getProperty(runtime, '==');
 
-        if (_method is EvalFunction) {
-          final method = vx.$getProperty(runtime, '==') as EvalFunction;
+          if (_method is EvalFunction) {
+            final method = vx.$getProperty(runtime, '==') as EvalFunction;
 
-          runtime.returnValue = method
-              .call(runtime, vx, [v2 == null ? null : v2 as $Value])!.$value;
-          runtime.args = [];
+            runtime.returnValue = method
+                .call(runtime, vx, [v2 == null ? null : v2 as $Value])!.$value;
+            runtime.args = [];
 
-          return;
+            return;
+          }
+        } catch (e) {
+          print('CheckEq: $e');
+          // If bridge object doesn't implement ==, fall back to default comparison
+          break;
         }
       }
 
+      // Default comparison logic
       if (v2 is $Value && v1 is! $Value) {
         runtime.returnValue = v2.$value == v1;
       } else if (v1 is $Value && v2 is! $Value) {
         runtime.returnValue = v1.$value == v2;
+      } else if (v1 is $Value && v2 is $Value) {
+        runtime.returnValue = v1.$value == v2.$value;
       } else {
         runtime.returnValue = v1 == v2;
       }
