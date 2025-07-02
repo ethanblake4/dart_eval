@@ -317,7 +317,7 @@ class $String implements $Instance {
     if (other is $String) {
       return $String(target.$value + other.$value);
     } else {
-      return $String(target.$value + other.toString());
+      return $String(target.$value + runtime.valueToString(other));
     }
   }
 
