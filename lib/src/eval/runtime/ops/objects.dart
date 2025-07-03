@@ -323,9 +323,13 @@ class PushObjectProperty implements EvcOp {
         return;
       }
 
-      final result = ((object as $Instance).$getProperty(runtime, _property));
-      runtime.returnValue = result;
-      runtime.args = [];
+      try {
+        final result = ((object as $Instance).$getProperty(runtime, _property));
+        runtime.returnValue = result;
+        runtime.args = [];
+      } catch (e) {
+        rethrow;
+      }
       return;
     }
   }

@@ -108,3 +108,5 @@ fabric.properties
 
 # Executables
 *.exe
+
+.vscode/
