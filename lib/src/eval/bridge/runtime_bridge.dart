@@ -38,12 +38,16 @@ mixin $Bridge<T> on Object implements $Value, $Instance {
   @override
   void $setProperty(Runtime runtime, String identifier, $Value value) {
     try {
-      final BridgeData? bridgeData = Runtime.bridgeData[this];
+      BridgeData? bridgeData = Runtime.bridgeData[this];
+
+      if (bridgeData == null) {
+        _autoRegisterBridge(runtime);
+        bridgeData = Runtime.bridgeData[this];
+      }
 
       if (bridgeData == null) {
         $bridgeSet(runtime, identifier, value);
         return;
-        // throw ("BridgeData NOT FOUND: $this");
       }
 
       if (bridgeData.subclass == null) {
@@ -53,6 +57,18 @@ mixin $Bridge<T> on Object implements $Value, $Instance {
       return bridgeData.subclass!.$setProperty(runtime, identifier, value);
     } on UnimplementedError catch (_) {
       $bridgeSet(runtime, identifier, value);
+    }
+  }
+
+  /// Auto-registra objetos bridge externos no Runtime.bridgeData
+  /// para garantir consistência nas modificações de propriedades
+  void _autoRegisterBridge(Runtime runtime) {
+    if (Runtime.bridgeData[this] == null) {
+      Runtime.bridgeData[this] = BridgeData(
+        runtime,
+        1, // $runtimeType padrão para objetos bridge externos
+        BridgeExternalShim(this),
+      );
     }
   }
 
@@ -145,6 +161,31 @@ class BridgeDelegatingShim implements $Instance {
 
   @override
   int $getRuntimeType(Runtime runtime) => throw UnimplementedError();
+}
+
+/// Shim para objetos bridge criados externamente que delega
+/// de volta para os métodos $bridgeGet/$bridgeSet do objeto original
+class BridgeExternalShim implements $Instance {
+  final $Bridge _bridge;
+
+  const BridgeExternalShim(this._bridge);
+
+  @override
+  $Value? $getProperty(Runtime runtime, String name) =>
+      _bridge.$bridgeGet(runtime, name);
+
+  @override
+  void $setProperty(Runtime runtime, String name, $Value value) =>
+      _bridge.$bridgeSet(runtime, name, value);
+
+  @override
+  $Bridge get $reified => _bridge;
+
+  @override
+  $Bridge get $value => _bridge;
+
+  @override
+  int $getRuntimeType(Runtime runtime) => _bridge.$getRuntimeType(runtime);
 }
 
 class BridgeData {
