@@ -306,16 +306,21 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     for (final lib in reachableLibraries) {
       final treeShaker = TreeShakeVisitor();
       discoveredIdentifiers[lib] = {};
+
+      final allIdentifiersInLibrary = <String>{};
       for (final decl in lib.declarations) {
         final d = decl.declaration;
-        final names = DeclarationOrBridge.nameOf(decl);
         if (d != null) {
           d.visitChildren(treeShaker);
+          allIdentifiersInLibrary.addAll(treeShaker.ctx.identifiers);
         }
+      }
+
+      for (final decl in lib.declarations) {
+        final names = DeclarationOrBridge.nameOf(decl);
         for (final name in names) {
-          discoveredIdentifiers[lib]![name] = treeShaker.ctx.identifiers;
+          discoveredIdentifiers[lib]![name] = Set.from(allIdentifiersInLibrary);
         }
-        treeShaker.ctx.identifiers = {};
       }
     }
 
@@ -328,6 +333,20 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     // remaining library IDs
     for (final library in reachableLibraries) {
       final libraryIndex = libraryIndexMap[library]!;
+
+      // DEBUG: Log temporário para projeto real
+      if (libraryIndex == 147) {
+        print(
+            'DEBUG: PARSING biblioteca $libraryIndex tem ${library.declarations.length} declarações:');
+        for (int i = 0; i < library.declarations.length; i++) {
+          final decl = library.declarations[i];
+          if (!decl.isBridge && decl.declaration is ClassDeclaration) {
+            final classDecl = decl.declaration as ClassDeclaration;
+            print('DEBUG: PARSING [$i] Classe: ${classDecl.name.lexeme}');
+          }
+        }
+      }
+
       for (final declarationOrBridge in library.declarations) {
         _populateLookupTablesForDeclaration(libraryIndex, declarationOrBridge);
       }
@@ -482,7 +501,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
         _ctx.instanceGetterIndices[key] = {};
       });
 
-      // GLOBAL FIRST PASS: compile all enums and class structures (without methods) across all libraries
+      // GLOBAL FIRST PASS: compile all enums and class structures across all libraries
       _topLevelDeclarationsMap.forEach((key, value) {
         value.forEach((lib, _declaration) {
           if (_declaration.isBridge) {
@@ -496,6 +515,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
             return;
           }
           _ctx.library = key;
+
           if (declaration is ClassDeclaration) {
             // Compile only the class structure, not the methods yet
             compileClassStructure(declaration, _ctx);
@@ -536,6 +556,10 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
           }
         });
       });
+
+      // Limpar todos os tipos temporários após completar toda a compilação
+      // Isso garante que os generics estejam disponíveis durante toda a compilação
+      _ctx.temporaryTypes.clear();
     } on CompileError catch (e, stk) {
       Error.throwWithStackTrace(e.copyWithContext(_ctx), stk);
     }
@@ -1139,12 +1163,28 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
     if (entrypoints.contains(l.uri)) {
       continue;
     }
+
+    // DEBUG: Log temporário para projeto real
+    final libraryId = libraryIds[l]!;
+    if (libraryId == 147) {
+      print(
+          'DEBUG: usedDeclarationsForLibrary para biblioteca $libraryId: ${usedDeclarationsForLibrary[libraryId]}');
+      print(
+          'DEBUG: Declarações ANTES do tree-shaking: ${l.declarations.map((d) => DeclarationOrBridge.nameOf(d)).toList()}');
+    }
+
     l.declarations = l.declarations
         .where((declaration) =>
             declaration.isBridge ||
             DeclarationOrBridge.nameOf(declaration).any((name) =>
                 {...?usedDeclarationsForLibrary[libraryIds[l]]}.contains(name)))
         .toList();
+
+    // DEBUG: Log temporário para projeto real
+    if (libraryId == 147) {
+      print(
+          'DEBUG: Declarações DEPOIS do tree-shaking: ${l.declarations.map((d) => DeclarationOrBridge.nameOf(d)).toList()}');
+    }
   }
 
   return result;
