@@ -33,7 +33,8 @@ class FilesystemPermission implements Permission {
   @override
   bool match([Object? data]) {
     if (data is String) {
-      return matchPattern.matchAsPrefix(data) != null;
+      final normalized = p.normalize(p.absolute(data));
+      return matchPattern.matchAsPrefix(normalized) != null;
     }
     return false;
   }
@@ -80,7 +81,8 @@ class FilesystemReadPermission extends FilesystemPermission {
   @override
   bool match([Object? data]) {
     if (data is String) {
-      return matchPattern.matchAsPrefix(data) != null;
+      final normalized = p.normalize(p.absolute(data));
+      return matchPattern.matchAsPrefix(normalized) != null;
     }
     return false;
   }
@@ -127,7 +129,8 @@ class FilesystemWritePermission extends FilesystemPermission {
   @override
   bool match([Object? data]) {
     if (data is String) {
-      return matchPattern.matchAsPrefix(data) != null;
+      final normalized = p.normalize(p.absolute(data));
+      return matchPattern.matchAsPrefix(normalized) != null;
     }
     return false;
   }
