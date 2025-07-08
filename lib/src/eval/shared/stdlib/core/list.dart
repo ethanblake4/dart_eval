@@ -393,7 +393,7 @@ class $List<E> implements List<E>, $Instance {
             params: [
               BridgeParameter(
                   'test',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, []),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function, []),
                       nullable: false),
                   false),
               BridgeParameter(
@@ -412,7 +412,7 @@ class $List<E> implements List<E>, $Instance {
             params: [
               BridgeParameter(
                   'test',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, []),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function, []),
                       nullable: false),
                   false),
               BridgeParameter(

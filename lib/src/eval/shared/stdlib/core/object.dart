@@ -140,7 +140,7 @@ class $Object implements $Instance {
         return $int($value.hashCode);
     }
 
-    throw UnimplementedError();
+    throw UnimplementedError("identifier: $identifier");
   }
 
   /// dart_eval implementation of [Object.hash]

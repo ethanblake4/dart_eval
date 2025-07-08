@@ -464,7 +464,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
             namedParams: [
               BridgeParameter(
                   'orElse',
-                  BridgeTypeAnnotation(BridgeTypeRef.ref('E', []),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function, []),
                       nullable: false),
                   true)
             ],
@@ -484,7 +484,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
             namedParams: [
               BridgeParameter(
                   'orElse',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function, []),
                       nullable: false),
                   true)
             ],
