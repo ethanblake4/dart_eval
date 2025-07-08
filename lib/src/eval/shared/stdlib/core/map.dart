@@ -108,6 +108,18 @@ class $Map<K, V> implements Map<K, V>, $Instance {
                 params: [],
                 returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool))),
             isStatic: false),
+        'keys': BridgeMethodDef(
+            BridgeFunctionDef(
+                params: [],
+                returns:
+                    BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.iterable))),
+            isStatic: false),
+        'values': BridgeMethodDef(
+            BridgeFunctionDef(
+                params: [],
+                returns:
+                    BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.iterable))),
+            isStatic: false),
       },
       setters: {},
       fields: {},
@@ -141,6 +153,10 @@ class $Map<K, V> implements Map<K, V>, $Instance {
         return $bool($value.isEmpty);
       case 'isNotEmpty':
         return $bool($value.isNotEmpty);
+      case 'keys':
+        return $Iterable.wrap($value.keys);
+      case 'values':
+        return $Iterable.wrap($value.values);
     }
     return _superclass.$getProperty(runtime, identifier);
   }
