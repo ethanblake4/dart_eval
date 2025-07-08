@@ -317,18 +317,19 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
 
       final allIdentifiersInLibrary = <String>{};
 
-      if (enableTreeShaking) {
-        final treeShaker = TreeShakeVisitor();
+      final treeShaker = TreeShakeVisitor();
 
-        for (final decl in lib.declarations) {
-          final d = decl.declaration;
-          if (d != null) {
-            d.visitChildren(treeShaker);
-            allIdentifiersInLibrary.addAll(treeShaker.ctx.identifiers);
-          }
+      for (final decl in lib.declarations) {
+        final d = decl.declaration;
+        if (d != null) {
+          d.visitChildren(treeShaker);
+          allIdentifiersInLibrary.addAll(treeShaker.ctx.identifiers);
         }
-      } else {
-        // Se tree shaking está desabilitado, incluir todos os identificadores
+      }
+
+      if (!enableTreeShaking) {
+        // Se tree shaking está desabilitado, incluir TODOS os nomes de declarações
+        // para garantir que nada seja removido
         for (final decl in lib.declarations) {
           final names = DeclarationOrBridge.nameOf(decl);
           for (final name in names) {
@@ -346,8 +347,12 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     }
 
     // Resolve the export and import relationship of the libraries
-    final visibleDeclarations = _resolveImportsAndExports(reachableLibraries,
-        discoveredIdentifiers, _entrypoints, libraryIndexMap);
+    final visibleDeclarations = _resolveImportsAndExports(
+        reachableLibraries,
+        discoveredIdentifiers,
+        _entrypoints,
+        libraryIndexMap,
+        enableTreeShaking);
 
     // Populate lookup tables [_topLevelDeclarationsMap],
     // [_instanceDeclarationsMap], and [_topLevelGlobalIndices], and generate
@@ -973,10 +978,12 @@ List<Library> _buildLibraries(Iterable<DartCompilationUnit> units) {
 /// declarations exported by another imported library. A graph is used to
 /// resolve long export chains.
 Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
-    Iterable<Library> libraries,
-    Map<Library, Map<String, Set<String>>> usedIdentifiers,
-    Set<Uri> entrypoints,
-    Map<Library, int> libraryIds) {
+  Iterable<Library> libraries,
+  Map<Library, Map<String, Set<String>>> usedIdentifiers,
+  Set<Uri> entrypoints,
+  Map<Library, int> libraryIds,
+  bool enableTreeShaking,
+) {
   /// URI-Library mapping
   final uriMap = {for (final l in libraries) l.uri: l};
 
@@ -1172,13 +1179,16 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
       continue;
     }
 
-    // DEBUG: Log temporário para projeto real
-    l.declarations = l.declarations
-        .where((declaration) =>
-            declaration.isBridge ||
-            DeclarationOrBridge.nameOf(declaration).any((name) =>
-                {...?usedDeclarationsForLibrary[libraryIds[l]]}.contains(name)))
-        .toList();
+    // Só aplicar tree-shaking se estiver habilitado
+    if (enableTreeShaking) {
+      l.declarations = l.declarations
+          .where((declaration) =>
+              declaration.isBridge ||
+              DeclarationOrBridge.nameOf(declaration).any((name) => {
+                    ...?usedDeclarationsForLibrary[libraryIds[l]]
+                  }.contains(name)))
+          .toList();
+    }
   }
 
   return result;

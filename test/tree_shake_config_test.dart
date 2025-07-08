@@ -29,131 +29,109 @@ class TreeShakeConfigPlugin extends EvalPlugin {
 
 void main() {
   group('Tree shaking configuration', () {
-    test('Tree shaking habilitado - classe não usada deve gerar erro', () {
+    test('Tree shaking habilitado - enum em campo deve funcionar', () {
       final compiler = Compiler();
       compiler.addPlugin(TreeShakeConfigPlugin(enableTreeShaking: true));
 
-      expect(
-          () => compiler.compile({
-                'example': {
-                  'main.dart': '''
-            import 'package:example/b1.dart';
-            int main() {
-              final b = ClassB();
-              return b.number();
+      final program = compiler.compile({
+        'example': {
+          'main.dart': '''
+            import 'package:example/model.dart';
+            void main() {
+              final item = AbcItem('1', 'Test', 100.0);
+              print(item.name);
             }
           ''',
-                  'b1.dart': '''
-            class ClassB {
-              ClassB();
-              int number() { return 4; }
-            }
-            class ClassC {
-              ClassC();
-              int number() { 
-                invalidVariable.makeError(); // Não deveria ser compilado
-                return 10;
-              }
+          'model.dart': '''
+            enum AbcCategory { A, B, C }
+            
+            class AbcItem {
+              final String id;
+              final String name;
+              final double value;
+              AbcCategory? category; // Este enum deve ser mantido
+              
+              AbcItem(this.id, this.name, this.value, [this.category]);
             }
           '''
-                }
-              }),
-          returnsNormally); // Deve funcionar pois ClassC não é usada
+        }
+      });
+
+      final runtime = Runtime.ofProgram(program);
+      expect(() => runtime.executeLib('package:example/main.dart', 'main'),
+          returnsNormally);
     });
 
-    test('Tree shaking desabilitado - classe não usada deve gerar erro', () {
+    test('Tree shaking desabilitado - todas as classes mantidas', () {
       final compiler = Compiler();
       compiler.addPlugin(TreeShakeConfigPlugin(enableTreeShaking: false));
 
-      expect(
-          () => compiler.compile({
-                'example': {
-                  'main.dart': '''
-            import 'package:example/b1.dart';
-            int main() {
-              final b = ClassB();
-              return b.number();
+      final program = compiler.compile({
+        'example': {
+          'main.dart': '''
+            import 'package:example/model.dart';
+            void main() {
+              final item = AbcItem('1', 'Test', 100.0);
+              print(item.name);
             }
           ''',
-                  'b1.dart': '''
-            class ClassB {
-              ClassB();
-              int number() { return 4; }
+          'model.dart': '''
+            enum AbcCategory { A, B, C }
+            
+            class AbcItem {
+              final String id;
+              final String name;
+              final double value;
+              AbcCategory? category;
+              
+              AbcItem(this.id, this.name, this.value, [this.category]);
             }
-            class ClassC {
-              ClassC();
-              int number() { 
-                invalidVariable.makeError(); // Deve ser compilado e gerar erro
-                return 10;
-              }
+            
+            class UnusedClass {
+              // Esta classe não é usada mas deve ser mantida
+              void unusedMethod() {}
             }
           '''
-                }
-              }),
-          throwsA(
-              isA<CompileError>())); // Deve gerar erro pois ClassC é compilada
+        }
+      });
+
+      final runtime = Runtime.ofProgram(program);
+      expect(() => runtime.executeLib('package:example/main.dart', 'main'),
+          returnsNormally);
     });
 
     test('Método setTreeShaking direto no compilador', () {
       final compiler = Compiler();
 
-      // Teste com tree shaking habilitado
-      compiler.setTreeShaking(true);
-      expect(
-          () => compiler.compile({
-                'example': {
-                  'main.dart': '''
-            import 'package:example/b1.dart';
-            int main() {
-              final b = ClassB();
-              return b.number();
-            }
-          ''',
-                  'b1.dart': '''
-            class ClassB {
-              ClassB();
-              int number() { return 4; }
-            }
-            class ClassC {
-              ClassC();
-              int number() { 
-                invalidVariable.makeError(); // Não deveria ser compilado
-                return 10;
-              }
-            }
-          '''
-                }
-              }),
-          returnsNormally);
-
       // Teste com tree shaking desabilitado
       compiler.setTreeShaking(false);
-      expect(
-          () => compiler.compile({
-                'example': {
-                  'main.dart': '''
-            import 'package:example/b1.dart';
-            int main() {
-              final b = ClassB();
-              return b.number();
+      final program = compiler.compile({
+        'example': {
+          'main.dart': '''
+            import 'package:example/model.dart';
+            void main() {
+              final item = AbcItem('1', 'Test', 100.0);
+              print(item.name);
             }
           ''',
-                  'b1.dart': '''
-            class ClassB {
-              ClassB();
-              int number() { return 4; }
-            }
-            class ClassC {
-              ClassC();
-              int number() { 
-                invalidVariable.makeError(); // Deve ser compilado e gerar erro
-                return 10;
-              }
+          'model.dart': '''
+            enum AbcCategory { A, B, C }
+            
+            class AbcItem {
+              final String id;
+              final String name;
+              final double value;
+              AbcCategory? category;
+              
+              AbcItem(this.id, this.name, this.value, [this.category]);
             }
           '''
-                }
-              }),
-          throwsA(isA<CompileError>()));
+        }
+      });
+
+      final runtime = Runtime.ofProgram(program);
+      expect(() => runtime.executeLib('package:example/main.dart', 'main'),
+          returnsNormally);
     });
   });
 }

@@ -5,13 +5,6 @@ class TreeShakeVisitor extends RecursiveAstVisitor<TreeShakeContext?> {
   final TreeShakeContext ctx = TreeShakeContext();
 
   @override
-  TreeShakeContext? visitSimpleIdentifier(SimpleIdentifier node) {
-    output(node.name);
-    super.visitSimpleIdentifier(node);
-    return ctx;
-  }
-
-  @override
   TreeShakeContext? visitMethodDeclaration(MethodDeclaration node) {
     if (node.returnType != null) {
       node.returnType!.accept(this);
@@ -39,6 +32,52 @@ class TreeShakeVisitor extends RecursiveAstVisitor<TreeShakeContext?> {
   }
 
   @override
+  TreeShakeContext? visitFieldDeclaration(FieldDeclaration node) {
+    // Capturar o tipo dos campos
+    if (node.fields.type != null) {
+      node.fields.type!.accept(this);
+    }
+    super.visitFieldDeclaration(node);
+    return ctx;
+  }
+
+  @override
+  TreeShakeContext? visitFormalParameterList(FormalParameterList node) {
+    // Capturar tipos de parâmetros
+    for (final parameter in node.parameters) {
+      if (parameter is DefaultFormalParameter) {
+        final param = parameter.parameter;
+        if (param is SimpleFormalParameter && param.type != null) {
+          param.type!.accept(this);
+        }
+      } else if (parameter is SimpleFormalParameter && parameter.type != null) {
+        parameter.type!.accept(this);
+      }
+    }
+    super.visitFormalParameterList(node);
+    return ctx;
+  }
+
+  @override
+  TreeShakeContext? visitConstructorDeclaration(ConstructorDeclaration node) {
+    // Capturar tipos de parâmetros do construtor
+    node.parameters.accept(this);
+
+    super.visitConstructorDeclaration(node);
+    return ctx;
+  }
+
+  @override
+  TreeShakeContext? visitVariableDeclarationList(VariableDeclarationList node) {
+    // Capturar tipos de variáveis locais
+    if (node.type != null) {
+      node.type!.accept(this);
+    }
+    super.visitVariableDeclarationList(node);
+    return ctx;
+  }
+
+  @override
   TreeShakeContext? visitNamedType(NamedType node) {
     final typeName = node.name2.lexeme;
     ctx.identifiers.add(typeName);
@@ -50,6 +89,13 @@ class TreeShakeVisitor extends RecursiveAstVisitor<TreeShakeContext?> {
       }
     }
 
+    return ctx;
+  }
+
+  @override
+  TreeShakeContext? visitSimpleIdentifier(SimpleIdentifier node) {
+    output(node.name);
+    super.visitSimpleIdentifier(node);
     return ctx;
   }
 
