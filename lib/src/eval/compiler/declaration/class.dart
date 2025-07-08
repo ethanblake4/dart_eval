@@ -57,8 +57,18 @@ void compileClassDeclaration(CompilerContext ctx, ClassDeclaration d,
 /// Compiles only the class structure (type registration and static fields)
 /// without compiling methods, constructors, or instance fields
 void compileClassStructure(ClassDeclaration d, CompilerContext ctx) {
-  final $runtimeType =
-      ctx.typeRefIndexMap[TypeRef.lookupDeclaration(ctx, ctx.library, d)];
+  // PRIMEIRO: Criar e registrar o tipo básico nos visibleTypes
+  final basicTypeRef = TypeRef(ctx.library, d.name.lexeme);
+  ctx.visibleTypes[ctx.library] ??= {};
+  ctx.visibleTypes[ctx.library]![d.name.lexeme] = basicTypeRef;
+
+  // SEGUNDO: Resolver a cadeia de tipos (agora que o tipo básico está registrado)
+  final resolvedType = basicTypeRef.resolveTypeChain(ctx);
+
+  // TERCEIRO: Atualizar com o tipo resolvido
+  ctx.visibleTypes[ctx.library]![d.name.lexeme] = resolvedType;
+
+  final $runtimeType = ctx.typeRefIndexMap[basicTypeRef];
   final clsName = d.name.lexeme;
   ctx.instanceDeclarationPositions[ctx.library]![clsName] = [
     {},

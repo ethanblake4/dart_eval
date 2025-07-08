@@ -157,14 +157,27 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
     }
 
     if (typeParams != null) {
-      for (final param in typeParams) {
-        final bound = param.bound;
-        final name = param.name.lexeme;
-        if (bound != null) {
+      // Se há argumentos de tipo especificados na chamada (como <int, double>)
+      if (e.typeArguments != null) {
+        final typeArgs = e.typeArguments!.arguments;
+        for (var i = 0; i < typeParams.length && i < typeArgs.length; i++) {
+          final param = typeParams[i];
+          final name = param.name.lexeme;
+          final typeArg = typeArgs[i];
           resolveGenerics[name] =
-              TypeRef.fromAnnotation(ctx, offset.file!, bound);
-        } else {
-          resolveGenerics[name] = CoreTypes.dynamic.ref(ctx);
+              TypeRef.fromAnnotation(ctx, offset.file!, typeArg);
+        }
+      } else {
+        // Caso não haja argumentos de tipo especificados, usa bounds ou dynamic
+        for (final param in typeParams) {
+          final bound = param.bound;
+          final name = param.name.lexeme;
+          if (bound != null) {
+            resolveGenerics[name] =
+                TypeRef.fromAnnotation(ctx, offset.file!, bound);
+          } else {
+            resolveGenerics[name] = CoreTypes.dynamic.ref(ctx);
+          }
         }
       }
     }
@@ -274,9 +287,41 @@ Variable _invokeWithTarget(
             : (dec as ConstructorDeclaration).parameters.parameters) ??
         <FormalParameter>[];
 
+    // Processar argumentos de tipo genérico se existirem
+    final resolveGenerics = <String, TypeRef>{};
+    if (dec is MethodDeclaration) {
+      final typeParams = dec.typeParameters?.typeParameters;
+      if (typeParams != null) {
+        if (e.typeArguments != null) {
+          final typeArgs = e.typeArguments!.arguments;
+          for (var i = 0; i < typeParams.length && i < typeArgs.length; i++) {
+            final param = typeParams[i];
+            final name = param.name.lexeme;
+            final typeArg = typeArgs[i];
+            resolveGenerics[name] = TypeRef.fromAnnotation(
+                ctx, (isStatic ? staticType! : L.type).file, typeArg);
+          }
+        } else {
+          // Caso não haja argumentos de tipo especificados, usa bounds ou dynamic
+          for (final param in typeParams) {
+            final bound = param.bound;
+            final name = param.name.lexeme;
+            if (bound != null) {
+              resolveGenerics[name] = TypeRef.fromAnnotation(
+                  ctx, (isStatic ? staticType! : L.type).file, bound);
+            } else {
+              resolveGenerics[name] = CoreTypes.dynamic.ref(ctx);
+            }
+          }
+        }
+      }
+    }
+
     argsPair = compileArgumentList(
         ctx, e.argumentList, (isStatic ? staticType! : L.type).file, fpl, dec,
-        before: [if (!isStatic) L], source: e);
+        before: [if (!isStatic) L],
+        source: e,
+        resolveGenerics: resolveGenerics);
   }
 
   final _args = argsPair.first;

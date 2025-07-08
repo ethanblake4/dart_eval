@@ -1005,9 +1005,9 @@ class $List<E> implements List<E>, $Instance {
   static const __$sort = $Function(_$sort);
   static $Value? _$sort(Runtime runtime, $Value? target, List<$Value?> args) {
     final $this = target?.$value as List;
-    final compare = args[0] as EvalFunction? ??
+    final compare = (args[0] is $null ? null : args[0] as EvalFunction?) ??
         $Function((runtime, target, args) =>
-            $int(Comparable.compare(args[0]?.$value, args[0]?.$value)));
+            $int(Comparable.compare(args[0]?.$value, args[1]?.$value)));
     $this.sort((a, b) => compare.call(runtime, null, [a, b])?.$value as int);
     return null;
   }

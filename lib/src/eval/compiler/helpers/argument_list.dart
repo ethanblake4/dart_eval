@@ -90,6 +90,11 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
       }
 
       if (typeAnnotation != null) {
+        for (final entry in resolveGenerics.entries) {
+          ctx.temporaryTypes[decLibrary] ??= {};
+          ctx.temporaryTypes[decLibrary]![entry.key] = entry.value;
+        }
+
         paramType = TypeRef.fromAnnotation(ctx, decLibrary, typeAnnotation);
       }
 

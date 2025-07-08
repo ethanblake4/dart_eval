@@ -16,6 +16,23 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx,
     NamedCompilationUnitMember parent) {
   ///ctx.runPrescan(d);
+
+  // Carregar tipos temporários para suporte a generics ANTES de qualquer processamento
+  // Isso deve acontecer antes de qualquer análise de tipos
+  if (d.typeParameters?.typeParameters != null) {
+    for (final param in d.typeParameters!.typeParameters) {
+      ctx.temporaryTypes[ctx.library] ??= {};
+      final bound = param.bound;
+      final name = param.name.lexeme;
+      if (bound != null) {
+        ctx.temporaryTypes[ctx.library]![name] =
+            TypeRef.fromAnnotation(ctx, ctx.library, bound);
+      } else {
+        ctx.temporaryTypes[ctx.library]![name] = CoreTypes.dynamic.ref(ctx);
+      }
+    }
+  }
+
   final b = d.body;
   final parentName = parent.name.lexeme;
   final methodName = d.name.lexeme;

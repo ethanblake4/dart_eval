@@ -19,6 +19,104 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 enum CallingConvention { static, dynamic }
 
+/// Infere o tipo de um parâmetro dinamicamente baseado no contexto de tipos genéricos
+TypeRef _inferTypeFromContext(CompilerContext ctx, int parameterIndex,
+    [List<FunctionFormalParameter>? boundParams]) {
+  // Coletar todos os tipos temporários e visíveis
+  final allTempTypes = <String, TypeRef>{};
+
+  // Adicionar tipos temporários
+  for (final entry in ctx.temporaryTypes.entries) {
+    allTempTypes.addAll(entry.value);
+  }
+
+  // Adicionar tipos visíveis (onde as classes bridge estão armazenadas)
+  for (final entry in ctx.visibleTypes.entries) {
+    allTempTypes.addAll(entry.value);
+  }
+
+  // Estratégia principal: usar o NOME do tipo genérico
+  if (boundParams != null && parameterIndex < boundParams.length) {
+    final boundParam = boundParams[parameterIndex];
+    if (boundParam.type.type != null) {
+      final boundTypeName = boundParam.type.type!.name;
+      if (allTempTypes.containsKey(boundTypeName)) {
+        return allTempTypes[boundTypeName]!;
+      }
+    }
+  }
+
+  // Se não temos bound específico, usar dynamic
+  return CoreTypes.dynamic.ref(ctx);
+}
+
+/// Resolve generic types in a bound TypeRef using the temporary types from the context
+TypeRef _resolveGenericTypesInBound(CompilerContext ctx, TypeRef bound) {
+  if (bound.functionType == null) return bound;
+
+  final ft = bound.functionType!;
+
+  // Criar um mapa de tipos temporários E tipos visíveis de todas as bibliotecas
+  final allTempTypes = <String, TypeRef>{};
+
+  // Adicionar tipos temporários
+  for (final entry in ctx.temporaryTypes.entries) {
+    allTempTypes.addAll(entry.value);
+  }
+
+  // Adicionar tipos visíveis (onde as classes bridge estão armazenadas)
+  for (final entry in ctx.visibleTypes.entries) {
+    allTempTypes.addAll(entry.value);
+  }
+
+  if (allTempTypes.isEmpty) return bound;
+
+  // Resolver tipos genéricos nos parâmetros da função
+  final resolvedNormalParams = ft.normalParameters
+      .map((p) => FunctionFormalParameter(
+          p.name,
+          p.type.type != null && allTempTypes.containsKey(p.type.type!.name)
+              ? FunctionTypeAnnotation.type(allTempTypes[p.type.type!.name]!)
+              : p.type,
+          p.isRequired))
+      .toList();
+
+  final resolvedOptionalParams = ft.optionalParameters
+      .map((p) => FunctionFormalParameter(
+          p.name,
+          p.type.type != null && allTempTypes.containsKey(p.type.type!.name)
+              ? FunctionTypeAnnotation.type(allTempTypes[p.type.type!.name]!)
+              : p.type,
+          p.isRequired))
+      .toList();
+
+  final resolvedNamedParams = <String, FunctionFormalParameter>{};
+  for (final entry in ft.namedParameters.entries) {
+    resolvedNamedParams[entry.key] = FunctionFormalParameter(
+        entry.value.name,
+        entry.value.type.type != null &&
+                allTempTypes.containsKey(entry.value.type.type!.name)
+            ? FunctionTypeAnnotation.type(
+                allTempTypes[entry.value.type.type!.name]!)
+            : entry.value.type,
+        entry.value.isRequired);
+  }
+
+  final resolvedReturnType = ft.returnType.type != null &&
+          allTempTypes.containsKey(ft.returnType.type!.name)
+      ? FunctionTypeAnnotation.type(allTempTypes[ft.returnType.type!.name]!)
+      : ft.returnType;
+
+  return bound.copyWith(
+      functionType: EvalFunctionType(
+    resolvedNormalParams,
+    resolvedOptionalParams,
+    resolvedNamedParams,
+    resolvedReturnType,
+    ft.generics,
+  ));
+}
+
 Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx,
     [TypeRef? bound]) {
   final jumpOver = ctx.pushOp(JumpConstant.make(-1), JumpConstant.LEN);
@@ -44,8 +142,11 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx,
   List<FunctionFormalParameter> boundNormalParams = [];
   List<FunctionFormalParameter> boundOptionalParams = [];
   List<FunctionFormalParameter> boundNamedParams = [];
+
   if (bound != null) {
-    final functionType = bound.functionType;
+    // Resolver tipos genéricos no bound usando os tipos temporários do contexto
+    final resolvedBound = _resolveGenericTypesInBound(ctx, bound);
+    final functionType = resolvedBound.functionType;
     if (functionType != null) {
       boundNormalParams = functionType.normalParameters;
       boundOptionalParams = functionType.optionalParameters;
@@ -72,6 +173,13 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx,
       final fType = inorderBoundParams[i].type;
       if (fType.type != null) {
         type = fType.type!;
+      }
+    } else {
+      // Tentar resolver o tipo usando informações do contexto temporário
+      // Se o bound é uma função mas sem tipos detalhados, tentar inferir
+      if (bound != null && bound.name == 'Function') {
+        // Tentar inferir tipo dinamicamente baseado no contexto de tipos genéricos disponíveis
+        type = _inferTypeFromContext(ctx, i, inorderBoundParams);
       }
     }
     vRep = Variable(i + 1, type.copyWith(boxed: true))..name = p.name!.lexeme;

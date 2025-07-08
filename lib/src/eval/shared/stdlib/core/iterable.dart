@@ -931,9 +931,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     final orElse = args[1] as EvalCallable?;
     final $result = $this.firstWhere(
       (element) => test.call(runtime, null, [element])!.$value as bool,
-      orElse: orElse == null
-          ? null
-          : () => orElse.call(runtime, null, [])!,
+      orElse: orElse == null ? null : () => orElse.call(runtime, null, [])!,
     );
     return $result;
   }
@@ -949,9 +947,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     final orElse = args[1] as EvalCallable?;
     final $result = $this.lastWhere(
       (element) => test.call(runtime, null, [element])!.$value as bool,
-      orElse: orElse == null
-          ? null
-          : () => orElse.call(runtime, null, [])!,
+      orElse: orElse == null ? null : () => orElse.call(runtime, null, [])!,
     );
     return $result;
   }
@@ -967,9 +963,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     final orElse = args[1] as EvalCallable?;
     final $result = $this.singleWhere(
       (element) => test.call(runtime, null, [element])!.$value as bool,
-      orElse: orElse == null
-          ? null
-          : () => orElse.call(runtime, null, [])!,
+      orElse: orElse == null ? null : () => orElse.call(runtime, null, [])!,
     );
     return $result;
   }
@@ -1027,7 +1021,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   static $Value? _$Iterable$generate(
       Runtime runtime, $Value? target, List<$Value?> args) {
     final count = args[0]?.$value as int;
-    final generator = args[1] as EvalFunction? ??
+    final generator = (args[1] is $null ? null : args[1] as EvalFunction?) ??
         $Function((runtime, target, args) => args[0]);
     return $Iterable.wrap(Iterable.generate(
       count,

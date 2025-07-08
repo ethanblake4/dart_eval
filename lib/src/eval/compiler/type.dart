@@ -152,8 +152,42 @@ class TypeRef {
     }
     typeAnnotation as NamedType;
     final n = typeAnnotation.name2.stringValue ?? typeAnnotation.name2.value();
-    final unspecifiedType =
+
+    // Primeiro, procura na biblioteca especificada
+    var unspecifiedType =
         ctx.temporaryTypes[library]?[n] ?? ctx.visibleTypes[library]?[n];
+
+    // Se não encontrar, procura em todas as bibliotecas pelos tipos temporários
+    // Isso é necessário para generics de métodos que podem estar em contextos diferentes
+    if (unspecifiedType == null) {
+      for (final entry in ctx.temporaryTypes.entries) {
+        if (entry.value.containsKey(n)) {
+          unspecifiedType = entry.value[n];
+          break;
+        }
+      }
+    }
+
+    if (unspecifiedType == null) {
+      for (final entry in ctx.visibleTypes.entries) {
+        if (entry.value.containsKey(n)) {
+          unspecifiedType = entry.value[n];
+          break;
+        }
+      }
+    }
+
+    if (unspecifiedType == null) {
+      // Se ainda não encontrou, procura em todas as bibliotecas pelos tipos visíveis
+      // Isso é necessário para classes bridge que podem estar em diferentes bibliotecas
+      for (final entry in ctx.visibleTypes.entries) {
+        if (entry.value.containsKey(n)) {
+          unspecifiedType = entry.value[n];
+          break;
+        }
+      }
+    }
+
     if (unspecifiedType == null) {
       throw CompileError(
           'Unknown type $n', typeAnnotation.parent, library, ctx);
