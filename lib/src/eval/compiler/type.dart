@@ -1,7 +1,7 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:analyzer/dart/element/type.dart';
+import 'package:collection/collection.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/compiler/model/function_type.dart';
@@ -22,6 +22,7 @@ class TypeRef {
       this.withType = const [],
       this.genericParams = const [],
       this.specifiedTypeArgs = const [],
+      this.recordFields = const [],
       this.resolved = false,
       this.functionType = null,
       this.boxed = true,
@@ -40,6 +41,7 @@ class TypeRef {
   final List<TypeRef> withType;
   final List<GenericParam> genericParams;
   final List<TypeRef> specifiedTypeArgs;
+  final List<RecordParameterType> recordFields;
   final EvalFunctionType? functionType;
   final bool resolved;
   final bool boxed;
@@ -146,9 +148,48 @@ class TypeRef {
     if (typeAnnotation is GenericFunctionType) {
       return CoreTypes.function.ref(ctx);
     }
-    if (typeAnnotation is RecordType) {
-      throw CompileError('No support for record types yet',
-          typeAnnotation.parent, library, ctx);
+    if (typeAnnotation is RecordTypeAnnotation) {
+      final fields = <RecordParameterType>[];
+
+      var name = '@record<';
+      var positionalFields = 1;
+      for (var i = 0; i < typeAnnotation.positionalFields.length; i++) {
+        final field = typeAnnotation.positionalFields[i];
+        final fType = TypeRef.fromAnnotation(ctx, library, field.type);
+        fields.add(RecordParameterType(
+          '\$${positionalFields++}',
+          fType,
+          false
+        ));
+        name += '$fType';
+        if (i < typeAnnotation.positionalFields.length - 1) {
+          name += ',';
+        }
+      }
+
+      final namedFields = typeAnnotation.namedFields?.fields ?? <RecordTypeAnnotationNamedField>[];
+      if (namedFields.isNotEmpty) {
+        name += ',{';
+      }
+      for (var i = 0; i < namedFields.length; i++) {
+        final field = namedFields[i];
+        final fType = TypeRef.fromAnnotation(ctx, library, field.type);
+        fields.add(RecordParameterType(
+          field.name.lexeme,
+          fType,
+          true
+        ));
+        name += '${field.name.lexeme}:$fType';
+        if (i < namedFields.length - 1) {
+          name += ',';
+        }
+      }
+      if (namedFields.isNotEmpty) {
+        name += '}';
+      }
+      name += '>';
+      return TypeRef(-1, name, recordFields: fields, extendsType: CoreTypes.record.ref(ctx),
+          resolved: true, boxed: false, nullable: typeAnnotation.question != null);
     }
     typeAnnotation as NamedType;
     final n = typeAnnotation.name2.stringValue ?? typeAnnotation.name2.value();
@@ -303,6 +344,14 @@ class TypeRef {
             CoreTypes.dynamic.ref(ctx);
       }
     }
+
+    if ($class.recordFields.isNotEmpty) {
+      final _field = $class.recordFields.firstWhereOrNull(
+          (f) => f.name == field);
+      if (_field != null) {
+        return _field.type.copyWith(boxed: true);
+      }
+    }
     if (ctx.instanceDeclarationsMap[$class.file]!.containsKey($class.name)) {
       final $declarations =
           ctx.instanceDeclarationsMap[$class.file]![$class.name]!;
@@ -415,6 +464,9 @@ class TypeRef {
     }
   }
 
+  /// Resolve the full type chain of this [TypeRef]. If it or its supertypes
+  /// have already been resolved, it will return a copy of the resolved type
+  /// from the cache.
   TypeRef resolveTypeChain(CompilerContext ctx,
       {int recursionGuard = 0,
       Set<TypeRef> stack = const {},
@@ -433,6 +485,14 @@ class TypeRef {
         .toList();
     if (resolved) {
       return copyWith(specifiedTypeArgs: _resolvedSpecifiedTypeArgs);
+    }
+
+    if (recordFields.isNotEmpty) {
+      return copyWith(
+          resolved: true,
+          extendsType: CoreTypes.record.ref(ctx),
+          specifiedTypeArgs: _resolvedSpecifiedTypeArgs,
+          boxed: false);
     }
 
     final $cached = _cache[file]![name]!;
@@ -719,6 +779,7 @@ class TypeRef {
       List<TypeRef>? withType,
       List<GenericParam>? genericParams,
       List<TypeRef>? specifiedTypeArgs,
+      List<RecordParameterType>? recordFields,
       EvalFunctionType? functionType,
       bool? boxed,
       bool? resolved,
@@ -730,6 +791,7 @@ class TypeRef {
         genericParams: genericParams ?? this.genericParams,
         specifiedTypeArgs: specifiedTypeArgs ?? this.specifiedTypeArgs,
         functionType: functionType ?? this.functionType,
+        recordFields: recordFields ?? this.recordFields,
         boxed: boxed ?? this.boxed,
         resolved: resolved ?? this.resolved,
         nullable: nullable ?? this.nullable);
@@ -740,7 +802,7 @@ class TypeRef {
       identical(this, other) ||
       other is TypeRef &&
           runtimeType == other.runtimeType &&
-          file == other.file &&
+          (file == other.file || name.startsWith('@record')) &&
           name == other.name;
 
   @override
@@ -784,6 +846,19 @@ class TypeRef {
         }
       }
     }
+  }
+}
+
+class RecordParameterType {
+  const RecordParameterType(this.name, this.type, this.isNamed);
+
+  final String? name;
+  final TypeRef type;
+  final bool isNamed;
+
+  @override
+  String toString() {
+    return '$name: ${type.toString()}';
   }
 }
 

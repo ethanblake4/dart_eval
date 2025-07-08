@@ -18,12 +18,5 @@ $List<$Value?> wrapNullableList<T>(
 /// `$Map` of `$Value` by applying a wrapping function to each entry in the map.
 $Map<$Value, $Value> wrapMap<K, V>(
     Map<K, V> map, MapEntry<$Value, $Value> Function(K key, V value) wrap) {
-  return $Map.wrap(map.map((key, value) => $MapEntry.wrap(wrap(key, value))));
-}
-
-/// Converts a Dart map with keys of type `K` and nullable values of type `V`
-/// into a `$Map` of `$Value` by applying a wrapping function to each entry in the map.
-$Map<$Value, $Value?> wrapNullableMap<K, V>(
-    Map<K, V?> map, MapEntry<$Value, $Value?> Function(K key, V? value) wrap) {
-  return $Map.wrap(map.map((key, value) => $MapEntry.wrap(wrap(key, value))));
+  return $Map.wrap(map.map((key, value) => wrap(key, value)));
 }

@@ -1,3 +1,10 @@
+## 0.7.11
+- Support for list spreads (`...` operator) (thanks @apps-auth)
+- New `implicitSupers` option for the binding generator to automatically
+  generate bindings for superclasses of classes that are bound
+- Support for redirecting constructors in the binding generator
+- Add bindings for `Map.from()` and `num.toDouble()` (thanks @apps-auth)
+
 ## 0.7.10
 - Binding generator can now be configured with custom library paths
 - Binding generator can optimally wrap a field that has multiple possible 

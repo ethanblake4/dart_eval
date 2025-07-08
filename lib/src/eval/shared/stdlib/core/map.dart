@@ -5,10 +5,32 @@ class $Map<K, V> implements Map<K, V>, $Instance {
   /// Wrap a [Map] in a [$Map]
   $Map.wrap(this.$value);
 
+  static void configureForRuntime(Runtime runtime) {
+    return runtime.registerBridgeFunc(
+        'dart:core', 'Map.from', __$Map$from.call);
+  }
+
+  static const $type = BridgeTypeRef(CoreTypes.map);
+
   static const $declaration = BridgeClassDef(
       BridgeClassType(BridgeTypeRef(CoreTypes.map),
           generics: {'K': BridgeGenericParam(), 'V': BridgeGenericParam()}),
-      constructors: {},
+      constructors: {
+        'from': BridgeConstructorDef(
+          BridgeFunctionDef(
+            returns: BridgeTypeAnnotation($type),
+            params: [
+              BridgeParameter(
+                'other',
+                BridgeTypeAnnotation($type, nullable: false),
+                false,
+              )
+            ],
+            generics: {'K': BridgeGenericParam(), 'V': BridgeGenericParam()},
+          ),
+          isFactory: true,
+        ),
+      },
       methods: {
         '[]': BridgeMethodDef(
             BridgeFunctionDef(params: [
@@ -88,6 +110,14 @@ class $Map<K, V> implements Map<K, V>, $Instance {
       setters: {},
       fields: {},
       wrap: true);
+
+  static const __$Map$from = $Function(_$Map$from);
+  static $Value? _$Map$from(
+      Runtime runtime, $Value? target, List<$Value?> args) {
+    final other = args[0]?.$value as Map;
+
+    return $Map.wrap(Map.from(other));
+  }
 
   @override
   final Map<K, V> $value;
@@ -262,7 +292,7 @@ class $Map<K, V> implements Map<K, V>, $Instance {
 }
 
 /// dart_eval bimodal wrapper for [MapEntry]
-class $MapEntry<K, V> implements MapEntry<K, V>, $Instance {
+class $MapEntry<K, V> implements $Instance {
   /// Wrap a [MapEntry] in a [$MapEntry]
   $MapEntry.wrap(this.$value);
 
@@ -309,9 +339,9 @@ class $MapEntry<K, V> implements MapEntry<K, V>, $Instance {
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case 'key':
-        return key as $Value?;
+        return $value.key as $Value?;
       case 'value':
-        return value as $Value?;
+        return $value.value as $Value?;
       default:
         return _superclass.$getProperty(runtime, identifier);
     }
@@ -328,10 +358,4 @@ class $MapEntry<K, V> implements MapEntry<K, V>, $Instance {
   void $setProperty(Runtime runtime, String identifier, $Value value) {
     _superclass.$setProperty(runtime, identifier, value);
   }
-
-  @override
-  K get key => $value.key;
-
-  @override
-  V get value => $value.value;
 }

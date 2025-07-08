@@ -230,6 +230,23 @@ void compileConstructorDeclaration(
         argTypes.addAll(_args.map((e) => e.type).toList());
         namedArgTypes
             .addAll(_namedArgs.map((key, value) => MapEntry(key, value.type)));
+      } else if (superParams.isNotEmpty) {
+        // If there are super parameters, compile without an argument list
+        final _constructor = ctx.topLevelDeclarationsMap[decl.sourceLib]![
+            '${extendsType.name}.$constructorName']!;
+        final constructor = _constructor.declaration as ConstructorDeclaration;
+        final argsPair = compileSuperParams(
+            ctx,
+            constructor.parameters.parameters,
+            constructor,
+            superParams: superParams,
+            source: $superInitializer);
+            final _args = argsPair.first;
+        final _namedArgs = argsPair.second;
+
+        argTypes.addAll(_args.map((e) => e.type).toList());
+        namedArgTypes
+            .addAll(_namedArgs.map((key, value) => MapEntry(key, value.type)));
       }
 
       final method =
@@ -262,19 +279,7 @@ void compileConstructorDeclaration(
   final instOffset = ctx.scopeFrameOffset++;
 
   if (parent is EnumDeclaration) {
-    /// Add implicit index and name fields
-    ctx.inferredFieldTypes
-        .putIfAbsent(ctx.library, () => {})
-        .putIfAbsent(ctx.currentClass!.name.lexeme, () => {})
-      ..['index'] = CoreTypes.int.ref(ctx)
-      ..['name'] = CoreTypes.string.ref(ctx);
-  }
-
-  if (parent is EnumDeclaration) {
-    ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 0, 0),
-        SetObjectPropertyImpl.length);
-    ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 1, 1),
-        SetObjectPropertyImpl.length);
+    _setupEnum(ctx, parent, instOffset);
   }
 
   for (final fieldFormal in fieldFormalNames) {
@@ -434,19 +439,7 @@ void compileDefaultConstructor(CompilerContext ctx,
   final instOffset = ctx.scopeFrameOffset++;
 
   if (parent is EnumDeclaration) {
-    /// Add implicit index and name fields
-    ctx.inferredFieldTypes
-        .putIfAbsent(ctx.library, () => {})
-        .putIfAbsent(ctx.currentClass!.name.lexeme, () => {})
-      ..['index'] = CoreTypes.int.ref(ctx)
-      ..['name'] = CoreTypes.string.ref(ctx);
-  }
-
-  if (parent is EnumDeclaration) {
-    ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 0, 0),
-        SetObjectPropertyImpl.length);
-    ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 1, 1),
-        SetObjectPropertyImpl.length);
+    _setupEnum(ctx, parent, instOffset);
   }
 
   _compileUnusedFields(
@@ -517,4 +510,18 @@ void _compileUnusedFields(CompilerContext ctx, List<FieldDeclaration> fields,
       _fieldIdx++;
     }
   }
+}
+
+void _setupEnum(CompilerContext ctx, EnumDeclaration parent, int instOffset) {
+    /// Add implicit index and name fields
+    ctx.inferredFieldTypes
+        .putIfAbsent(ctx.library, () => {})
+        .putIfAbsent(ctx.currentClass!.name.lexeme, () => {})
+      ..['index'] = CoreTypes.int.ref(ctx)
+      ..['name'] = CoreTypes.string.ref(ctx);
+
+    ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 0, 0),
+        SetObjectPropertyImpl.length);
+    ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 1, 1),
+        SetObjectPropertyImpl.length);
 }

@@ -235,7 +235,17 @@ class IdentifierReference implements Reference {
           }
         }
         final _name = '${classType.name}.$name';
-        final type = ctx.topLevelVariableInferredTypes[classType.file]![_name]!;
+        final cls = ctx.topLevelVariableInferredTypes[classType.file];
+
+        if (cls == null) {
+          throw CompileError('Cannot find file types for "$classType"', source);
+        }
+
+        final type = cls[_name];
+        if (type == null) {
+          throw CompileError('Cannot resolve type of "$_name" on "$classType"', source);
+        }
+
         final gIndex = ctx.topLevelGlobalIndices[classType.file]![_name]!;
         ctx.pushOp(LoadGlobal.make(gIndex), LoadGlobal.LEN);
         ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);

@@ -298,6 +298,25 @@ class BoxMap implements EvcOp {
   String toString() => 'BoxMap (L$_reg)';
 }
 
+class BoxSet implements EvcOp {
+  BoxSet(Runtime runtime) : _reg = runtime._readInt16();
+
+  BoxSet.make(this._reg);
+
+  final int _reg;
+
+  static const int LEN = Evc.BASE_OPLEN + Evc.I16_LEN;
+
+  @override
+  void run(Runtime runtime) {
+    final reg = _reg;
+    runtime.frame[reg] = $Set.wrap(<$Value>{...(runtime.frame[reg] as Set)});
+  }
+
+  @override
+  String toString() => 'BoxSet (L$_reg)';
+} 
+
 class MaybeBoxNull implements EvcOp {
   MaybeBoxNull(Runtime runtime) : _reg = runtime._readInt16();
 
@@ -503,6 +522,43 @@ class IndexMap extends EvcOp {
   String toString() => 'IndexMap (L$_map[L$_index])';
 }
 
+class PushSet extends EvcOp {
+  PushSet(Runtime runtime);
+
+  PushSet.make();
+
+  static const int LEN = Evc.BASE_OPLEN;
+
+  @override
+  void run(Runtime runtime) {
+    runtime.frame[runtime.frameOffset++] = <Object?>{};
+  }
+
+  @override
+  String toString() => 'PushSet ()';
+}
+
+class SetAdd extends EvcOp {
+  SetAdd(Runtime runtime)
+      : _set = runtime._readInt16(),
+        _value = runtime._readInt16();
+
+  SetAdd.make(this._set, this._value);
+
+  final int _set;
+  final int _value;
+
+  static const int LEN = Evc.BASE_OPLEN + Evc.I16_LEN * 2;
+
+  @override
+  void run(Runtime runtime) {
+    (runtime.frame[_set] as Set).add(runtime.frame[_value]);
+  }
+
+  @override
+  String toString() => 'SetAdd (L$_set, L$_value)';
+}
+
 class PushTrue extends EvcOp {
   PushTrue(Runtime runtime);
 
@@ -556,4 +612,31 @@ class BoxBool implements EvcOp {
 
   @override
   String toString() => 'BoxBool (L$_reg)';
+}
+
+class PushRecord implements EvcOp {
+  PushRecord(Runtime runtime) : 
+    _fields = runtime._readInt16(), 
+    _const = runtime._readInt32(), 
+    _type = runtime._readInt32();
+
+  PushRecord.make(this._fields, this._const, this._type);
+
+  final int _fields;
+  final int _const;
+  final int _type;
+
+  static const int LEN = Evc.BASE_OPLEN + Evc.I16_LEN + Evc.I32_LEN * 2;
+
+  @override
+  void run(Runtime runtime) {
+    runtime.frame[runtime.frameOffset++] = $Record(
+      (runtime.frame[_fields] as List).cast(),
+      (runtime.constantPool[_const] as Map).cast(),
+      _type,
+    );
+  }
+
+  @override
+  String toString() => 'PushRecord ()';
 }

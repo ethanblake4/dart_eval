@@ -148,7 +148,7 @@ String? wrapType(BindgenContext ctx, DartType type, String expr,
         final wrapper = wrapVar(ctx, _type, expr);
 
         unionStr +=
-            '$expr is ${_type.getDisplayString(withNullability: false)} ? $wrapper : ';
+            '$expr is ${_type.element!.name!} ? $wrapper : ';
       }
     }
   }

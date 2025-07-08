@@ -11,11 +11,17 @@ StatementInfo compileBreakStatement(BreakStatement s, CompilerContext ctx) {
 
   final currentState = ctx.saveState();
 
-  final index =
+  var index =
       ctx.labels.lastIndexWhere((label) => label.type == LabelType.loop);
 
   if (index == -1) {
-    throw CompileError('Cannot use \'break\' outside of a loop context', s);
+    index =
+        ctx.labels.lastIndexWhere((label) => label.type == LabelType.branch);
+  }
+
+  if (index == -1) {
+    throw CompileError(
+        'Cannot use \'break\' outside of a loop or switch context', s);
   }
 
   for (var i = ctx.labels.length - 1; i > index; i--) {

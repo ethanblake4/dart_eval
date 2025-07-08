@@ -10,6 +10,7 @@ import 'package:dart_eval/src/eval/bridge/runtime_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/model/override_spec.dart';
 import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'package:dart_eval/src/eval/runtime/function.dart';
+import 'package:dart_eval/src/eval/runtime/record.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/collection.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert.dart';
@@ -438,133 +439,105 @@ class Runtime {
 
   /// Write an [EvcOp] bytecode to a list of bytes.
   static List<int> opcodeFrom(EvcOp op) {
-    switch (op.runtimeType) {
-      case JumpConstant:
-        op as JumpConstant;
+    switch (op) {
+      case JumpConstant op:
         return [Evc.OP_JMPC, ...Evc.i32b(op._offset)];
-      case Exit:
-        op as Exit;
+      case Exit op:
         return [Evc.OP_EXIT, ...Evc.i16b(op._location)];
-      case Unbox:
-        op as Unbox;
+      case Unbox op:
         return [Evc.OP_UNBOX, ...Evc.i16b(op._reg)];
-      case PushReturnValue:
-        op as PushReturnValue;
+      case PushReturnValue _:
         return [Evc.OP_SETVR];
-      case NumAdd:
-        op as NumAdd;
+      case NumAdd op:
         return [
           Evc.OP_ADDVV,
           ...Evc.i16b(op._location1),
           ...Evc.i16b(op._location2)
         ];
-      case NumSub:
-        op as NumSub;
+      case NumSub op:
         return [
           Evc.OP_NUM_SUB,
           ...Evc.i16b(op._location1),
           ...Evc.i16b(op._location2)
         ];
-      case BoxInt:
-        op as BoxInt;
+      case BoxInt op:
         return [Evc.OP_BOXINT, ...Evc.i16b(op._reg)];
-      case BoxDouble:
-        op as BoxDouble;
+      case BoxDouble op:
         return [Evc.OP_BOXDOUBLE, ...Evc.i16b(op._reg)];
-      case BoxNum:
-        op as BoxNum;
+      case BoxNum op:
         return [Evc.OP_BOXNUM, ...Evc.i16b(op._reg)];
-      case PushArg:
-        op as PushArg;
+      case PushArg op:
         return [Evc.OP_PUSH_ARG, ...Evc.i16b(op._location)];
-      case JumpIfNonNull:
-        op as JumpIfNonNull;
+      case JumpIfNonNull op:
         return [Evc.OP_JNZ, ...Evc.i16b(op._location), ...Evc.i32b(op._offset)];
-      case JumpIfFalse:
-        op as JumpIfFalse;
+      case JumpIfFalse op:
         return [
           Evc.OP_JUMP_IF_FALSE,
           ...Evc.i16b(op._location),
           ...Evc.i32b(op._offset)
         ];
-      case PushConstantInt:
-        op as PushConstantInt;
+      case PushConstantInt op:
         return [Evc.OP_SETVC, ...Evc.i32b(op._value)];
-      case PushScope:
-        op as PushScope;
+      case PushScope op:
         return [
           Evc.OP_PUSHSCOPE,
           ...Evc.i32b(op.sourceFile),
           ...Evc.i32b(op.sourceOffset),
           ...Evc.istr(op.frName)
         ];
-      case PopScope:
-        op as PopScope;
+      case PopScope _:
         return [Evc.OP_POPSCOPE];
-      case CopyValue:
-        op as CopyValue;
+      case CopyValue op:
         return [Evc.OP_SETVV, ...Evc.i16b(op._to), ...Evc.i16b(op._from)];
-      case SetReturnValue:
-        op as SetReturnValue;
+      case SetReturnValue op:
         return [Evc.OP_SETRV, ...Evc.i16b(op._location)];
-      case Return:
-        op as Return;
+      case Return op:
         return [Evc.OP_RETURN, ...Evc.i16b(op._location)];
-      case ReturnAsync:
-        op as ReturnAsync;
+      case ReturnAsync op:
         return [
           Evc.OP_RETURN_ASYNC,
           ...Evc.i16b(op._location),
           ...Evc.i16b(op._completerOffset)
         ];
-      case Pop:
-        op as Pop;
+      case Pop op:
         return [Evc.OP_POP, op._amount];
-      case Call:
-        op as Call;
+      case Call op:
         return [Evc.OP_CALL, ...Evc.i32b(op._offset)];
-      case InvokeDynamic:
-        op as InvokeDynamic;
+      case InvokeDynamic op:
         return [
           Evc.OP_INVOKE_DYNAMIC,
           ...Evc.i16b(op._location),
           ...Evc.i32b(op._methodIdx)
         ];
-      case SetObjectProperty:
-        op as SetObjectProperty;
+      case SetObjectProperty op:
         return [
           Evc.OP_SET_OBJECT_PROP,
           ...Evc.i16b(op._location),
           ...Evc.istr(op._property),
           ...Evc.i16b(op._valueOffset)
         ];
-      case PushObjectProperty:
-        op as PushObjectProperty;
+      case PushObjectProperty op:
         return [
           Evc.OP_PUSH_OBJECT_PROP,
           ...Evc.i16b(op._location),
           ...Evc.i32b(op._propertyIdx)
         ];
-      case PushObjectPropertyImpl:
-        op as PushObjectPropertyImpl;
+      case PushObjectPropertyImpl op:
         return [
           Evc.OP_PUSH_OBJECT_PROP_IMPL,
           ...Evc.i16b(op.objectOffset),
           ...Evc.i16b(op._propertyIndex)
         ];
-      case SetObjectPropertyImpl:
-        op as SetObjectPropertyImpl;
+      case SetObjectPropertyImpl op:
         return [
           Evc.OP_SET_OBJECT_PROP_IMPL,
           ...Evc.i16b(op._objectOffset),
           ...Evc.i16b(op._propertyIndex),
           ...Evc.i16b(op._valueOffset)
         ];
-      case PushNull:
-        op as PushNull;
+      case PushNull _:
         return [Evc.OP_PUSH_NULL];
-      case CreateClass:
-        op as CreateClass;
+      case CreateClass op:
         return [
           Evc.OP_CREATE_CLASS,
           ...Evc.i32b(op._library),
@@ -573,181 +546,153 @@ class Runtime {
           ...Evc.i16b(op._valuesLen)
         ];
 
-      case NumLt:
-        op as NumLt;
+      case NumLt op:
         return [
           Evc.OP_NUM_LT,
           ...Evc.i16b(op._location1),
           ...Evc.i16b(op._location2)
         ];
-      case NumLtEq:
-        op as NumLtEq;
+      case NumLtEq op:
         return [
           Evc.OP_NUM_LT_EQ,
           ...Evc.i16b(op._location1),
           ...Evc.i16b(op._location2)
         ];
-      case PushSuper:
-        op as PushSuper;
+      case PushSuper op:
         return [Evc.OP_PUSH_SUPER, ...Evc.i16b(op._objectOffset)];
-      case BridgeInstantiate:
-        op as BridgeInstantiate;
+      case BridgeInstantiate op:
         return [
           Evc.OP_BRIDGE_INSTANTIATE,
           ...Evc.i16b(op._subclass),
           ...Evc.i32b(op._constructor)
         ];
-      case PushBridgeSuperShim:
-        op as PushBridgeSuperShim;
+      case PushBridgeSuperShim _:
         return [Evc.OP_PUSH_SUPER_SHIM];
-      case ParentBridgeSuperShim:
-        op as ParentBridgeSuperShim;
+      case ParentBridgeSuperShim op:
         return [
           Evc.OP_PARENT_SUPER_SHIM,
           ...Evc.i16b(op._shimOffset),
           ...Evc.i16b(op._bridgeOffset)
         ];
-      case PushList:
-        op as PushList;
+      case PushList _:
         return [Evc.OP_PUSH_LIST];
-      case ListAppend:
-        op as ListAppend;
+      case ListAppend op:
         return [
           Evc.OP_LIST_APPEND,
           ...Evc.i16b(op._reg),
           ...Evc.i16b(op._value)
         ];
-      case IndexList:
-        op as IndexList;
+      case IndexList op:
         return [
           Evc.OP_INDEX_LIST,
           ...Evc.i16b(op._position),
           ...Evc.i32b(op._index)
         ];
-      case PushIterableLength:
-        op as PushIterableLength;
+      case PushIterableLength op:
         return [Evc.OP_ITER_LENGTH, ...Evc.i16b(op._position)];
-      case ListSetIndexed:
-        op as ListSetIndexed;
+      case ListSetIndexed op:
         return [
           Evc.OP_LIST_SETINDEXED,
           ...Evc.i16b(op._position),
           ...Evc.i32b(op._index),
           ...Evc.i16b(op._value)
         ];
-      case BoxString:
-        op as BoxString;
+      case BoxString op:
         return [Evc.OP_BOXSTRING, ...Evc.i16b(op._reg)];
-      case BoxList:
-        op as BoxList;
+      case BoxList op:
         return [Evc.OP_BOXLIST, ...Evc.i16b(op._reg)];
-      case BoxMap:
-        op as BoxMap;
+      case BoxMap op:
         return [Evc.OP_BOXMAP, ...Evc.i16b(op._reg)];
-      case BoxBool:
-        op as BoxBool;
+      case BoxSet op:
+        return [Evc.OP_BOXSET, ...Evc.i16b(op._reg)];
+      case BoxBool op:
         return [Evc.OP_BOXBOOL, ...Evc.i16b(op._reg)];
-      case BoxNull:
-        op as BoxNull;
+      case BoxNull op:
         return [Evc.OP_BOX_NULL, ...Evc.i16b(op._reg)];
-      case PushCaptureScope:
-        op as PushCaptureScope;
+      case PushCaptureScope _:
         return [Evc.OP_CAPTURE_SCOPE];
-      case PushConstant:
-        op as PushConstant;
+      case PushConstant op:
         return [Evc.OP_PUSH_CONST, ...Evc.i32b(op._const)];
-      case PushFunctionPtr:
-        op as PushFunctionPtr;
+      case PushFunctionPtr op:
         return [Evc.OP_PUSH_FUNCTION_PTR, ...Evc.i32b(op._offset)];
-      case InvokeExternal:
-        op as InvokeExternal;
+      case InvokeExternal op:
         return [Evc.OP_INVOKE_EXTERNAL, ...Evc.i32b(op._function)];
-      case Await:
-        op as Await;
+      case Await op:
         return [
           Evc.OP_AWAIT,
           ...Evc.i16b(op._completerOffset),
           ...Evc.i16b(op._futureOffset)
         ];
-      case PushMap:
-        op as PushMap;
+      case PushMap _:
         return [Evc.OP_PUSH_MAP];
-      case MapSet:
-        op as MapSet;
+      case MapSet op:
         return [
           Evc.OP_MAP_SET,
           ...Evc.i16b(op._map),
           ...Evc.i16b(op._index),
           ...Evc.i16b(op._value)
         ];
-      case IndexMap:
-        op as IndexMap;
+      case IndexMap op:
         return [Evc.OP_INDEX_MAP, ...Evc.i16b(op._map), ...Evc.i16b(op._index)];
-      case PushConstantDouble:
-        op as PushConstantDouble;
+      case PushSet _:
+        return [Evc.OP_PUSH_SET];
+      case SetAdd op:
+        return [
+          Evc.OP_SET_ADD,
+          ...Evc.i16b(op._set),
+          ...Evc.i16b(op._value)
+        ];
+      case PushConstantDouble op:
         return [Evc.OP_PUSH_DOUBLE, ...Evc.f32b(op._value)];
-      case SetGlobal:
-        op as SetGlobal;
+      case SetGlobal op:
         return [
           Evc.OP_SET_GLOBAL,
           ...Evc.i32b(op._index),
           ...Evc.i16b(op._value)
         ];
-      case LoadGlobal:
-        op as LoadGlobal;
+      case LoadGlobal op:
         return [Evc.OP_LOAD_GLOBAL, ...Evc.i32b(op._index)];
-      case PushTrue:
-        op as PushTrue;
+      case PushTrue _:
         return [Evc.OP_PUSH_TRUE];
-      case LogicalNot:
-        op as LogicalNot;
+      case LogicalNot op:
         return [Evc.OP_LOGICAL_NOT, ...Evc.i16b(op._index)];
-      case CheckEq:
-        op as CheckEq;
+      case CheckEq op:
         return [
           Evc.OP_CHECK_EQ,
           ...Evc.i16b(op._value1),
           ...Evc.i16b(op._value2)
         ];
-      case Try:
-        op as Try;
+      case Try op:
         return [Evc.OP_TRY, ...Evc.i32b(op._catchOffset)];
-      case Throw:
-        op as Throw;
+      case Throw op:
         return [Evc.OP_THROW, ...Evc.i16b(op._location)];
-      case PopCatch:
-        op as PopCatch;
+      case PopCatch _:
         return [Evc.OP_POP_CATCH];
-      case IsType:
-        op as IsType;
+      case IsType op:
         return [
           Evc.OP_IS_TYPE,
           ...Evc.i16b(op._objectOffset),
           ...Evc.i32b(op._type),
           op._not ? 1 : 0
         ];
-      case Assert:
-        op as Assert;
+      case Assert op:
         return [
           Evc.OP_ASSERT,
           ...Evc.i16b(op._valueOffset),
           ...Evc.i16b(op._exceptionOffset)
         ];
-      case PushFinally:
-        op as PushFinally;
+      case PushFinally op:
         return [Evc.OP_PUSH_FINALLY, ...Evc.i32b(op._tryOffset)];
-      case PushReturnFromCatch:
-        op as PushReturnFromCatch;
+      case PushReturnFromCatch _:
         return [Evc.OP_PUSH_RETURN_FROM_CATCH];
-      case MaybeBoxNull:
-        op as MaybeBoxNull;
+      case MaybeBoxNull op:
         return [Evc.OP_MAYBE_BOX_NULL, ...Evc.i16b(op._reg)];
-      case PushRuntimeType:
-        op as PushRuntimeType;
+      case PushRuntimeType op:
         return [Evc.OP_PUSH_RUNTIME_TYPE, ...Evc.i16b(op._value)];
-      case PushConstantType:
-        op as PushConstantType;
+      case PushConstantType op:
         return [Evc.OP_PUSH_CONSTANT_TYPE, ...Evc.i32b(op._typeId)];
+      case PushRecord op:
+        return [Evc.OP_PUSH_RECORD, ...Evc.i16b(op._fields), ...Evc.i32b(op._const), ...Evc.i32b(op._type)];
       default:
         throw ArgumentError('Not a valid op $op');
     }

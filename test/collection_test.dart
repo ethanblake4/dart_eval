@@ -1,5 +1,6 @@
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/base.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
 import 'package:test/expect.dart';
 import 'package:test/scaffolding.dart';
 
@@ -133,6 +134,62 @@ void main() {
       expect(runtime.executeLib('package:eval_test/main.dart', 'main'),
           $String('012103223312'));
     });
+
+    test('Basic spread operator with list literal', () {
+      const source = '''
+        List<int> test() {
+          var list1 = [1, 2, 3];
+          var list2 = [0, ...list1, 4];
+          return list2;
+        }
+      ''';
+
+      final runtime = compiler.compileWriteAndLoad({
+        'test': {'main.dart': source}
+      });
+
+      final result = runtime.executeLib('package:test/main.dart', 'test');
+
+      expect(result, equals([0, 1, 2, 3, 4].map((e) => $int(e)).toList()));
+    });
+
+    test('Spread operator with empty list', () {
+      const source = '''
+        List<int> test() {
+          var empty = <int>[];
+          var list = [1, ...empty, 2];
+          return list;
+        }
+      ''';
+
+      final compiler = Compiler();
+      final runtime = compiler.compileWriteAndLoad({
+        'test': {'main.dart': source}
+      });
+
+      final result = runtime.executeLib('package:test/main.dart', 'test');
+      expect(result, equals([1, 2].map((e) => $int(e)).toList()));
+    });
+
+    test('Multiple spread operators', () {
+      const source = '''
+        List<int> test() {
+          var list1 = [1, 2];
+          var list2 = [3, 4];
+          var combined = [...list1, ...list2];
+          return combined;
+        }
+      ''';
+
+      final runtime = compiler.compileWriteAndLoad({
+        'test': {'main.dart': source}
+      });
+
+      final result = runtime.executeLib('package:test/main.dart', 'test');
+
+      expect(result, equals([1, 2, 3, 4].map((e) => $int(e)).toList()));
+    });
+
   });
 
   group('Map tests', () {

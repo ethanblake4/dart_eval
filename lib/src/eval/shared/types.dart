@@ -43,6 +43,9 @@ class CoreTypes {
   /// Bridge type spec for [Enum]
   static const enumType = BridgeTypeSpec('dart:core', 'Enum');
 
+  /// Bridge type spec for [Record]
+  static const record = BridgeTypeSpec('dart:core', 'Record');
+
   /// Bridge type spec for [Type]
   static const type = BridgeTypeSpec('dart:core', 'Type');
 
@@ -60,6 +63,9 @@ class CoreTypes {
 
   /// Bridge type spec for [$Map]
   static const map = BridgeTypeSpec('dart:core', 'Map');
+
+  /// Bridge type spec for [$Set]
+  static const set = BridgeTypeSpec('dart:core', 'Set');
 
   /// Bridge type spec for [$MapEntry]
   static const mapEntry = BridgeTypeSpec('dart:core', 'MapEntry');
