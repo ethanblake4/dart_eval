@@ -41,6 +41,18 @@ class $InstanceDefaultEnum<T> implements $Instance {
   void $setProperty(Runtime runtime, String identifier, $Value value) {
     superclass?.$setProperty(runtime, identifier, value);
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is $InstanceDefaultEnum<T> && other.$value == $value;
+  }
+
+  @override
+  int get hashCode {
+    return $value.hashCode;
+  }
 }
 
 class InstanceDefaultEnumProps implements IInstanceDefaultProps {
