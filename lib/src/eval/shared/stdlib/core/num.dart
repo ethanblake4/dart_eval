@@ -8,65 +8,73 @@ class $num<T extends num> implements $Instance {
 
   static const $type = BridgeTypeRef(CoreTypes.num);
 
-  static const $declaration =
-      BridgeClassDef(BridgeClassType($type, isAbstract: true),
-          constructors: {},
-          methods: {
-            // Other num methods are defined in builtins.dart
-            // since they have special requirements (return types dependent on
-            // argument types, etc.)
-            'parse': BridgeMethodDef(
-                BridgeFunctionDef(
-                    returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
-                    params: [
-                      BridgeParameter(
-                          'source',
-                          BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-                          false),
-                      BridgeParameter(
-                          'onError',
-                          BridgeTypeAnnotation(
-                              BridgeTypeRef(CoreTypes.function),
-                              nullable: true),
-                          true),
-                    ]),
-                isStatic: true),
-            'tryParse': BridgeMethodDef(
-                BridgeFunctionDef(
-                    returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num),
-                        nullable: true),
-                    params: [
-                      BridgeParameter(
-                          'source',
-                          BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-                          false),
-                    ]),
-                isStatic: true),
+  static const $declaration = BridgeClassDef(
+      BridgeClassType($type, isAbstract: true),
+      constructors: {},
+      methods: {
+        // Other num methods are defined in builtins.dart
+        // since they have special requirements (return types dependent on
+        // argument types, etc.)
+        'parse': BridgeMethodDef(
+            BridgeFunctionDef(
+                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+                params: [
+                  BridgeParameter(
+                      'source',
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+                      false),
+                  BridgeParameter(
+                      'onError',
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function),
+                          nullable: true),
+                      true),
+                ]),
+            isStatic: true),
+        'tryParse': BridgeMethodDef(
+            BridgeFunctionDef(
+                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num),
+                    nullable: true),
+                params: [
+                  BridgeParameter(
+                      'source',
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+                      false),
+                ]),
+            isStatic: true),
 
-            'toInt': BridgeMethodDef(
-                BridgeFunctionDef(
-                    returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int),
-                        nullable: true),
-                    params: []),
-                isStatic: false),
-            'toDouble': BridgeMethodDef(
-                BridgeFunctionDef(
-                    returns: BridgeTypeAnnotation(
-                        BridgeTypeRef(CoreTypes.double),
-                        nullable: true),
-                    params: []),
-                isStatic: false),
-            'ceil': BridgeMethodDef(
-                BridgeFunctionDef(
-                    returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int),
-                        nullable: true),
-                    params: []),
-                isStatic: false),
-          },
-          getters: {},
-          setters: {},
-          fields: {},
-          wrap: true);
+        'toInt': BridgeMethodDef(
+            BridgeFunctionDef(
+                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int),
+                    nullable: true),
+                params: []),
+            isStatic: false),
+        'toDouble': BridgeMethodDef(
+            BridgeFunctionDef(
+                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double),
+                    nullable: true),
+                params: []),
+            isStatic: false),
+        'ceil': BridgeMethodDef(
+            BridgeFunctionDef(
+                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int),
+                    nullable: true),
+                params: []),
+            isStatic: false),
+        'toStringAsFixed': BridgeMethodDef(
+            BridgeFunctionDef(
+                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+                params: [
+                  BridgeParameter(
+                      'fractionDigits',
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+                      false),
+                ]),
+            isStatic: false),
+      },
+      getters: {},
+      setters: {},
+      fields: {},
+      wrap: true);
 
   /// Wrapper of [num.parse]
   static $num? $parse(Runtime runtime, $Value? target, List<$Value?> args) {
@@ -143,6 +151,8 @@ class $num<T extends num> implements $Instance {
         return __toDouble;
       case 'ceil':
         return __ceil;
+      case 'toStringAsFixed':
+        return __toStringAsFixed;
     }
     return _superclass.$getProperty(runtime, identifier);
   }
@@ -308,6 +318,14 @@ class $num<T extends num> implements $Instance {
     final _evalResult = target!.$value.compareTo(other!.$value);
 
     return $int(_evalResult);
+  }
+
+  static const $Function __toStringAsFixed = $Function(_toStringAsFixed);
+  static $Value? _toStringAsFixed(
+      Runtime runtime, $Value? target, List<$Value?> args) {
+    final fractionDigits = args[0]!.$value as int;
+    final _evalResult = (target!.$value as num).toStringAsFixed(fractionDigits);
+    return $String(_evalResult);
   }
 
   @override
