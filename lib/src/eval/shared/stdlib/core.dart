@@ -142,4 +142,9 @@ class DartCorePlugin implements EvalPlugin {
     runtime.registerBridgeFunc(
         'dart:async', 'Stream.periodic', $Stream.$periodic);
   }
+
+  @override
+  void configureCompiler(Compiler compiler) {
+    // Default implementation - no special configuration needed
+  }
 }

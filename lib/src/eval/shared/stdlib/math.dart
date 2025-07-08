@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/math/random.dart';
+import '../../../../dart_eval.dart';
 import 'math/point.dart';
 
 const mathSource = '''
@@ -147,6 +148,11 @@ class DartMathPlugin implements EvalPlugin {
     runtime.registerBridgeFunc('dart:math', 'sqrt', const _$sqrt().call);
     runtime.registerBridgeFunc('dart:math', 'exp', const _$exp().call);
     runtime.registerBridgeFunc('dart:math', 'log', const _$log().call);
+  }
+
+  @override
+  void configureCompiler(Compiler compiler) {
+    // Default implementation - no special configuration needed
   }
 }
 

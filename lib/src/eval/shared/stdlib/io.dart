@@ -1,4 +1,5 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io/directory.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io/file.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io/file_system_entity.dart';
@@ -39,5 +40,10 @@ class DartIoPlugin implements EvalPlugin {
     runtime.registerBridgeFunc('dart:io', 'Directory.', $Directory.$new);
     $InternetAddress.configureForRuntime(runtime);
     $InternetAddressType.configureForRuntime(runtime);
+  }
+
+  @override
+  void configureCompiler(Compiler compiler) {
+    // Default implementation - no special configuration needed
   }
 }

@@ -50,6 +50,9 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
   /// The semantic version of the compiled code, for runtime overrides
   String? version;
 
+  /// Whether to enable tree shaking (dead code elimination). Default is true.
+  bool enableTreeShaking = true;
+
   var _ctx = CompilerContext(0);
 
   /// List of additional [DartSource] files to be compiled when [compile] is run
@@ -78,6 +81,11 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
   @override
   void addPlugin(EvalPlugin plugin) {
     _plugins.add(plugin);
+  }
+
+  /// Enable or disable tree shaking (dead code elimination).
+  void setTreeShaking(bool enabled) {
+    enableTreeShaking = enabled;
   }
 
   // Manually define a (unresolved) bridge class
@@ -178,6 +186,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     for (final plugin in _plugins) {
       if (!_appliedPlugins.contains(plugin.identifier)) {
         plugin.configureForCompile(this);
+        plugin.configureCompiler(this);
         _appliedPlugins.add(plugin.identifier);
       }
     }
@@ -304,15 +313,27 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     final discoveredIdentifiers = <Library, Map<String, Set<String>>>{};
 
     for (final lib in reachableLibraries) {
-      final treeShaker = TreeShakeVisitor();
       discoveredIdentifiers[lib] = {};
 
       final allIdentifiersInLibrary = <String>{};
-      for (final decl in lib.declarations) {
-        final d = decl.declaration;
-        if (d != null) {
-          d.visitChildren(treeShaker);
-          allIdentifiersInLibrary.addAll(treeShaker.ctx.identifiers);
+
+      if (enableTreeShaking) {
+        final treeShaker = TreeShakeVisitor();
+
+        for (final decl in lib.declarations) {
+          final d = decl.declaration;
+          if (d != null) {
+            d.visitChildren(treeShaker);
+            allIdentifiersInLibrary.addAll(treeShaker.ctx.identifiers);
+          }
+        }
+      } else {
+        // Se tree shaking está desabilitado, incluir todos os identificadores
+        for (final decl in lib.declarations) {
+          final names = DeclarationOrBridge.nameOf(decl);
+          for (final name in names) {
+            allIdentifiersInLibrary.add(name);
+          }
         }
       }
 
@@ -333,19 +354,6 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     // remaining library IDs
     for (final library in reachableLibraries) {
       final libraryIndex = libraryIndexMap[library]!;
-
-      // DEBUG: Log temporário para projeto real
-      if (libraryIndex == 147) {
-        print(
-            'DEBUG: PARSING biblioteca $libraryIndex tem ${library.declarations.length} declarações:');
-        for (int i = 0; i < library.declarations.length; i++) {
-          final decl = library.declarations[i];
-          if (!decl.isBridge && decl.declaration is ClassDeclaration) {
-            final classDecl = decl.declaration as ClassDeclaration;
-            print('DEBUG: PARSING [$i] Classe: ${classDecl.name.lexeme}');
-          }
-        }
-      }
 
       for (final declarationOrBridge in library.declarations) {
         _populateLookupTablesForDeclaration(libraryIndex, declarationOrBridge);
@@ -1165,26 +1173,12 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
     }
 
     // DEBUG: Log temporário para projeto real
-    final libraryId = libraryIds[l]!;
-    if (libraryId == 147) {
-      print(
-          'DEBUG: usedDeclarationsForLibrary para biblioteca $libraryId: ${usedDeclarationsForLibrary[libraryId]}');
-      print(
-          'DEBUG: Declarações ANTES do tree-shaking: ${l.declarations.map((d) => DeclarationOrBridge.nameOf(d)).toList()}');
-    }
-
     l.declarations = l.declarations
         .where((declaration) =>
             declaration.isBridge ||
             DeclarationOrBridge.nameOf(declaration).any((name) =>
                 {...?usedDeclarationsForLibrary[libraryIds[l]]}.contains(name)))
         .toList();
-
-    // DEBUG: Log temporário para projeto real
-    if (libraryId == 147) {
-      print(
-          'DEBUG: Declarações DEPOIS do tree-shaking: ${l.declarations.map((d) => DeclarationOrBridge.nameOf(d)).toList()}');
-    }
   }
 
   return result;

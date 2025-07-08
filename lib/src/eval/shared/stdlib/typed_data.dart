@@ -1,4 +1,5 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/typed_data/typed_data.dart';
 
 /// [EvalPlugin] for the `dart:typed_data` library
@@ -27,5 +28,10 @@ class DartTypedDataPlugin implements EvalPlugin {
         'dart:typed_data', 'Uint8List.view', $Uint8List.$view);
     runtime.registerBridgeFunc(
         'dart:typed_data', 'Uint8List.sublistView', $Uint8List.$sublistView);
+  }
+
+  @override
+  void configureCompiler(Compiler compiler) {
+    // Default implementation - no special configuration needed
   }
 }

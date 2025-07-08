@@ -18,6 +18,12 @@ abstract class EvalPlugin {
 
   /// Configure this plugin for use in a dart_eval [Runtime].
   void configureForRuntime(Runtime runtime);
+
+  /// Configure compiler settings like tree shaking.
+  /// Override this method to customize compiler behavior.
+  void configureCompiler(Compiler compiler) {
+    // Default implementation does nothing
+  }
 }
 
 /// A registry of [EvalPlugin]s.

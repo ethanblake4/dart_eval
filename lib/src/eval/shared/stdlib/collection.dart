@@ -1,4 +1,5 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/collection/linked_hash_map.dart';
 
 /// [EvalPlugin] for the `dart:collection` library
@@ -25,5 +26,10 @@ class DartCollectionPlugin implements EvalPlugin {
         $LinkedHashMap.$fromIterable);
     runtime.registerBridgeFunc('dart:collection', 'LinkedHashMap.fromIterables',
         $LinkedHashMap.$fromIterables);
+  }
+
+  @override
+  void configureCompiler(Compiler compiler) {
+    // Default implementation - no special configuration needed
   }
 }

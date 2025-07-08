@@ -1,4 +1,5 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert/base64.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert/codec.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert/converter.dart';
@@ -47,5 +48,10 @@ class DartConvertPlugin implements EvalPlugin {
         'dart:convert', 'JsonEncoder.', $JsonEncoder.$new);
     runtime.registerBridgeFunc('dart:convert', 'JsonCodec.', $JsonCodec.$new);
     $JsonEncodeAndDecode.configureForRuntime(runtime);
+  }
+
+  @override
+  void configureCompiler(Compiler compiler) {
+    // Default implementation - no special configuration needed
   }
 }
