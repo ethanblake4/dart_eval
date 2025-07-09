@@ -262,5 +262,34 @@ void main() {
 
       expect(runtime.executeLib('package:eval_test/main.dart', 'main'), true);
     });
+
+    test('Access null value from map', () {
+      final runtime = Compiler().compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            import 'dart:convert';
+
+            String main() {
+              final json = { "title": "One Piece Movie 01" };
+
+              final String title;
+              final String? englishTitle = json['title_en'];
+              //print(englishTitle);
+              if (englishTitle != null && englishTitle.isNotEmpty) {
+                title = englishTitle;
+              } else {
+                title = json['title'];
+              }
+
+              return title;
+            }
+          '''
+        }
+      });
+
+      final value = runtime.executeLib('package:example/main.dart', 'main');
+      expect(value, $String('One Piece Movie 01'));
+    });
   });
+
 }
