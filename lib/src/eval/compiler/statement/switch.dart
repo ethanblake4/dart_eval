@@ -58,47 +58,16 @@ StatementInfo _compileSwitchCases(CompilerContext ctx, Variable switchExpr,
       final dynamic guardedPattern = patternCase.guardedPattern;
       final dynamic pattern = guardedPattern?.pattern;
 
-      if (pattern != null) {
-        final patternType = pattern.runtimeType.toString();
-
-        // Handle ConstantPattern (literal values)
-        if (patternType.contains('ConstantPattern')) {
-          final dynamic constantPattern = pattern;
-          caseExpression = constantPattern.expression;
-        }
-        // Handle PropertyAccess patterns (like EnumName.value)
-        else if (patternType.contains('PropertyAccess') ||
-            patternType.contains('PrefixedIdentifier') ||
-            patternType.contains('Identifier')) {
-          // For enum values and other constant expressions
-          caseExpression = pattern;
-        }
-        // Handle other constant-like patterns
-        else if (patternType.contains('Literal') ||
-            patternType.contains('Simple')) {
-          // Try to extract expression if it exists
-          try {
-            final dynamic expressionPattern = pattern;
-            if (expressionPattern.expression != null) {
-              caseExpression = expressionPattern.expression;
-            } else {
-              caseExpression = pattern;
-            }
-          } catch (e) {
-            caseExpression = pattern;
-          }
-        } else {
-          throw CompileError(
-              'Unsupported switch pattern type: $patternType. Only constant patterns are supported.',
-              currentCase);
-        }
+      if (pattern != null &&
+          pattern.runtimeType.toString().contains('ConstantPattern')) {
+        final dynamic constantPattern = pattern;
+        caseExpression = constantPattern.expression;
       } else {
         throw CompileError(
             'Unsupported switch pattern type. Only constant patterns are supported.',
             currentCase);
       }
     } catch (e) {
-      if (e is CompileError) rethrow;
       print("ERROR: $e");
       throw CompileError(
           'Unsupported switch case type: ${currentCase.runtimeType}',
