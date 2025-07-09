@@ -870,7 +870,8 @@ class Runtime {
       return returnValue;
     } on RuntimeException catch (_) {
       rethrow;
-    } on WrappedException catch (e) {
+    } on WrappedException catch (e, s) {
+      print(s);
       throw e.exception;
     } catch (e, stk) {
       throw RuntimeException(this, e, stk);

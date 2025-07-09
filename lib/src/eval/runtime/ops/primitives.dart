@@ -89,8 +89,13 @@ class NumAdd implements EvcOp {
   // Add value A + B
   @override
   void run(Runtime runtime) {
-    runtime.frame[runtime.frameOffset++] =
-        (runtime.frame[_location1] as num) + (runtime.frame[_location2] as num);
+    try {
+      runtime.frame[runtime.frameOffset++] =
+          (runtime.frame[_location1] as num) +
+              (runtime.frame[_location2] as num);
+    } catch (e) {
+      print("NumAdd error: $e");
+    }
   }
 
   @override
@@ -235,8 +240,15 @@ class BoxString implements EvcOp {
 
   @override
   void run(Runtime runtime) {
-    final reg = _reg;
-    runtime.frame[reg] = $String(runtime.frame[reg] as String);
+    final dynamic value = runtime.frame[_reg];
+
+    if (value is String) {
+      runtime.frame[_reg] = $String(value);
+    } else if (value is $Value) {
+      runtime.frame[_reg] = $String(runtime.valueToString(value));
+    } else {
+      runtime.frame[_reg] = value.toString();
+    }
   }
 
   @override
@@ -335,6 +347,9 @@ class Unbox implements EvcOp {
 
   @override
   void run(Runtime runtime) {
+    if (_reg == -1) {
+      print("Unbox -1");
+    }
     dynamic v = runtime.frame[_reg];
 
     if (v is $Value) {
@@ -516,7 +531,11 @@ class IndexMap extends EvcOp {
           [runtime.wrap(frame[_index])],
         );
       } else {
-        frame[runtime.frameOffset++] = (mapValue as Map)[frame[_index]];
+        if (mapValue is int) {
+          frame[runtime.frameOffset++] = mapValue;
+        } else {
+          frame[runtime.frameOffset++] = (mapValue as Map)[frame[_index]];
+        }
       }
     }
   }
@@ -573,7 +592,10 @@ class BoxBool implements EvcOp {
   @override
   void run(Runtime runtime) {
     final reg = _reg;
-    runtime.frame[reg] = $bool(runtime.frame[reg] as bool);
+
+    if (runtime.frame[reg] is! $bool) {
+      runtime.frame[reg] = $bool(runtime.frame[reg] as bool);
+    }
   }
 
   @override
