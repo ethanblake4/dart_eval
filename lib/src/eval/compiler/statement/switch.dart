@@ -52,25 +52,74 @@ StatementInfo _compileSwitchCases(CompilerContext ctx, Variable switchExpr,
   if (currentCase is SwitchCase) {
     caseExpression = currentCase.expression;
   } else {
-    // Handle Dart 3.0+ pattern switch cases
+    // Handle pattern switch cases using duck typing (more robust across platforms)
     try {
       final dynamic patternCase = currentCase;
-      final dynamic guardedPattern = patternCase.guardedPattern;
-      final dynamic pattern = guardedPattern?.pattern;
 
-      if (pattern != null &&
-          pattern.runtimeType.toString().contains('ConstantPattern')) {
-        final dynamic constantPattern = pattern;
-        caseExpression = constantPattern.expression;
-      } else {
-        throw CompileError(
-            'Unsupported switch pattern type. Only constant patterns are supported.',
-            currentCase);
+      // Try to access guardedPattern property - use duck typing
+      try {
+        final dynamic guardedPattern = patternCase.guardedPattern;
+        if (guardedPattern != null) {
+          final dynamic pattern = guardedPattern.pattern;
+
+          if (pattern != null) {
+            // Try to access the expression property - works for ConstantPattern
+            try {
+              final dynamic constantPattern = pattern;
+              final Expression? expr = constantPattern.expression;
+              if (expr != null) {
+                caseExpression = expr;
+              } else {
+                throw CompileError(
+                    'Switch pattern must have a constant expression. Only enum constants and literal values are supported.',
+                    currentCase);
+              }
+            } catch (e) {
+              // If we can't access expression, it's not a constant pattern
+              throw CompileError(
+                  'Unsupported switch pattern type. Only constant patterns (enum values, literals) are supported.',
+                  currentCase);
+            }
+          } else {
+            throw CompileError(
+                'Could not extract pattern from switch case', currentCase);
+          }
+        } else {
+          throw CompileError(
+              'Switch case is missing guardedPattern', currentCase);
+        }
+      } catch (e) {
+        // Fallback: try to treat as legacy case that might have direct expression property
+        try {
+          final dynamic legacyCase = currentCase;
+          final Expression? expr = legacyCase.expression;
+          if (expr != null) {
+            caseExpression = expr;
+          } else {
+            throw CompileError(
+                'Switch case must have an expression. Case type: ${currentCase.runtimeType}',
+                currentCase);
+          }
+        } catch (fallbackError) {
+          // Final error with helpful debugging info
+          print("DEBUG: Switch case compilation failed");
+          print("DEBUG: Original error: ${e.toString()}");
+          print("DEBUG: Fallback error: ${fallbackError.toString()}");
+          print("DEBUG: Case type: ${currentCase.runtimeType}");
+          throw CompileError(
+              'Unsupported switch case format. Only enum constants (e.g., MyEnum.value) and literal values are supported in switch cases.',
+              currentCase);
+        }
       }
     } catch (e) {
-      print("ERROR: $e");
+      if (e is CompileError) {
+        rethrow;
+      }
+      // Unexpected error - provide debugging info
+      print("DEBUG: Unexpected switch case error: ${e.toString()}");
+      print("DEBUG: Case type: ${currentCase.runtimeType}");
       throw CompileError(
-          'Unsupported switch case type: ${currentCase.runtimeType}',
+          'Failed to process switch case. Only enum constants and literal values are supported.',
           currentCase);
     }
   }
