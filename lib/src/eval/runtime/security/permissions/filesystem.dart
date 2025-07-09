@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:dart_eval/dart_eval_security.dart';
 
@@ -12,18 +13,41 @@ class FilesystemPermission implements Permission {
   /// A permission that allows access to any file system resource.
   static final FilesystemPermission any = FilesystemPermission(RegExp('.*'));
 
+  /// Resolves a path to its canonical form, handling symlinks and different
+  /// path representations (e.g., /data/data vs /data/user/0 on Android).
+  static String _resolvePath(String path) {
+    try {
+      final file = File(path);
+      if (file.existsSync()) {
+        return file.resolveSymbolicLinksSync();
+      }
+
+      final dir = Directory(p.dirname(path));
+      if (dir.existsSync()) {
+        final resolvedParent = dir.resolveSymbolicLinksSync();
+        return p.join(resolvedParent, p.basename(path));
+      }
+
+      return p.normalize(p.absolute(path));
+    } catch (e) {
+      return p.normalize(p.absolute(path));
+    }
+  }
+
   /// Create a new filesystem permission that matches any file in a directory
   /// or one of its subdirectories.
   factory FilesystemPermission.directory(String dir) {
-    final normalized = p.normalize(p.absolute(dir));
-    final escaped = normalized.replaceAll(r'\', r'\\').replaceAll(r'/', r'\/');
+    final resolvedPath = _resolvePath(dir);
+    final escaped =
+        resolvedPath.replaceAll(r'\', r'\\').replaceAll(r'/', r'\/');
     return FilesystemPermission(RegExp('^$escaped.*'));
   }
 
   /// Create a new filesystem permission that matches a specific file.
   factory FilesystemPermission.file(String file) {
-    final normalized = p.normalize(p.absolute(file));
-    final escaped = normalized.replaceAll(r'\', r'\\').replaceAll(r'/', r'\/');
+    final resolvedPath = _resolvePath(file);
+    final escaped =
+        resolvedPath.replaceAll(r'\', r'\\').replaceAll(r'/', r'\/');
     return FilesystemPermission(RegExp('^$escaped\$'));
   }
 
@@ -33,8 +57,8 @@ class FilesystemPermission implements Permission {
   @override
   bool match([Object? data]) {
     if (data is String) {
-      final normalized = p.normalize(p.absolute(data));
-      return matchPattern.matchAsPrefix(normalized) != null;
+      final resolvedPath = _resolvePath(data);
+      return matchPattern.matchAsPrefix(resolvedPath) != null;
     }
     return false;
   }
@@ -63,15 +87,17 @@ class FilesystemReadPermission extends FilesystemPermission {
   /// Create a new filesystem permission that matches any file in a directory
   /// or one of its subdirectories.
   factory FilesystemReadPermission.directory(String dir) {
-    final normalized = p.normalize(p.absolute(dir));
-    final escaped = normalized.replaceAll(r'\', r'\\').replaceAll(r'/', r'\/');
+    final resolvedPath = FilesystemPermission._resolvePath(dir);
+    final escaped =
+        resolvedPath.replaceAll(r'\', r'\\').replaceAll(r'/', r'\/');
     return FilesystemReadPermission(RegExp('^$escaped.*'));
   }
 
   /// Create a new filesystem permission that matches a specific file.
   factory FilesystemReadPermission.file(String file) {
-    final normalized = p.normalize(p.absolute(file));
-    final escaped = normalized.replaceAll(r'\', r'\\').replaceAll(r'/', r'\/');
+    final resolvedPath = FilesystemPermission._resolvePath(file);
+    final escaped =
+        resolvedPath.replaceAll(r'\', r'\\').replaceAll(r'/', r'\/');
     return FilesystemReadPermission(RegExp('^$escaped\$'));
   }
 
@@ -81,8 +107,8 @@ class FilesystemReadPermission extends FilesystemPermission {
   @override
   bool match([Object? data]) {
     if (data is String) {
-      final normalized = p.normalize(p.absolute(data));
-      return matchPattern.matchAsPrefix(normalized) != null;
+      final resolvedPath = FilesystemPermission._resolvePath(data);
+      return matchPattern.matchAsPrefix(resolvedPath) != null;
     }
     return false;
   }
@@ -111,15 +137,17 @@ class FilesystemWritePermission extends FilesystemPermission {
   /// Create a new filesystem permission that matches any file in a directory
   /// or one of its subdirectories.
   factory FilesystemWritePermission.directory(String dir) {
-    final normalized = p.normalize(p.absolute(dir));
-    final escaped = normalized.replaceAll(r'\', r'\\').replaceAll(r'/', r'\/');
+    final resolvedPath = FilesystemPermission._resolvePath(dir);
+    final escaped =
+        resolvedPath.replaceAll(r'\', r'\\').replaceAll(r'/', r'\/');
     return FilesystemWritePermission(RegExp('^$escaped.*'));
   }
 
   /// Create a new filesystem permission that matches a specific file.
   factory FilesystemWritePermission.file(String file) {
-    final normalized = p.normalize(p.absolute(file));
-    final escaped = normalized.replaceAll(r'\', r'\\').replaceAll(r'/', r'\/');
+    final resolvedPath = FilesystemPermission._resolvePath(file);
+    final escaped =
+        resolvedPath.replaceAll(r'\', r'\\').replaceAll(r'/', r'\/');
     return FilesystemWritePermission(RegExp('^$escaped\$'));
   }
 
@@ -129,8 +157,8 @@ class FilesystemWritePermission extends FilesystemPermission {
   @override
   bool match([Object? data]) {
     if (data is String) {
-      final normalized = p.normalize(p.absolute(data));
-      return matchPattern.matchAsPrefix(normalized) != null;
+      final resolvedPath = FilesystemPermission._resolvePath(data);
+      return matchPattern.matchAsPrefix(resolvedPath) != null;
     }
     return false;
   }
