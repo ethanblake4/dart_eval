@@ -437,6 +437,56 @@ class Runtime {
   final _permissions = <String, List<Permission>>{};
   final _typeAutowrappers = <TypeAutowrapper>[];
 
+  /// Virtual current working directory for filesystem operations
+  String? _currentDir;
+
+  /// Get the current virtual working directory
+  String? get currentDir => _currentDir;
+
+  /// Set the current virtual working directory
+  set currentDir(String? path) {
+    if (path == null) {
+      _currentDir = null;
+    } else if (path.startsWith('/')) {
+      _currentDir = path;
+    } else {
+      // If relative, resolve against current directory
+      _currentDir = _currentDir != null ? resolvePath(path, _currentDir) : path;
+    }
+  }
+
+  /// Resolve a path against a given current working directory
+  String resolvePath(String path, [String? workingDir]) {
+    if (path.startsWith('/') || workingDir == null) {
+      // Already absolute or no working directory
+      return path;
+    }
+    // Relative path - resolve against workingDir
+    return _normalizePath('$workingDir/$path');
+  }
+
+  /// Normalize a path by resolving . and .. components
+  String _normalizePath(String path) {
+    final parts = path.split('/').where((part) => part.isNotEmpty).toList();
+    final normalizedParts = <String>[];
+
+    for (final part in parts) {
+      if (part == '.') {
+        // Skip current directory references
+        continue;
+      } else if (part == '..') {
+        // Go up one directory if possible
+        if (normalizedParts.isNotEmpty) {
+          normalizedParts.removeLast();
+        }
+      } else {
+        normalizedParts.add(part);
+      }
+    }
+
+    return '/${normalizedParts.join('/')}';
+  }
+
   /// Write an [EvcOp] bytecode to a list of bytes.
   static List<int> opcodeFrom(EvcOp op) {
     switch (op) {
@@ -637,11 +687,7 @@ class Runtime {
       case PushSet _:
         return [Evc.OP_PUSH_SET];
       case SetAdd op:
-        return [
-          Evc.OP_SET_ADD,
-          ...Evc.i16b(op._set),
-          ...Evc.i16b(op._value)
-        ];
+        return [Evc.OP_SET_ADD, ...Evc.i16b(op._set), ...Evc.i16b(op._value)];
       case PushConstantDouble op:
         return [Evc.OP_PUSH_DOUBLE, ...Evc.f32b(op._value)];
       case SetGlobal op:
@@ -692,7 +738,12 @@ class Runtime {
       case PushConstantType op:
         return [Evc.OP_PUSH_CONSTANT_TYPE, ...Evc.i32b(op._typeId)];
       case PushRecord op:
-        return [Evc.OP_PUSH_RECORD, ...Evc.i16b(op._fields), ...Evc.i32b(op._const), ...Evc.i32b(op._type)];
+        return [
+          Evc.OP_PUSH_RECORD,
+          ...Evc.i16b(op._fields),
+          ...Evc.i32b(op._const),
+          ...Evc.i32b(op._type)
+        ];
       default:
         throw ArgumentError('Not a valid op $op');
     }

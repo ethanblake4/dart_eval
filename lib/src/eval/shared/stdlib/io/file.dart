@@ -58,15 +58,15 @@ class $File implements $Instance {
             returns:
                 BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future, [$type])),
             params: [
-              BridgeParameter('newPath', BridgeTypeAnnotation($type), false)
+              BridgeParameter('newPath',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false)
             ],
             namedParams: [])),
-        'renameSync': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation($type),
-            params: [
-              BridgeParameter('newPath', BridgeTypeAnnotation($type), false)
-            ],
-            namedParams: [])),
+        'renameSync': BridgeMethodDef(
+            BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [
+          BridgeParameter('newPath',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false)
+        ], namedParams: [])),
         'openRead': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.stream, [
               BridgeTypeRef(CoreTypes.list, [BridgeTypeRef(CoreTypes.int)])
@@ -275,7 +275,9 @@ class $File implements $Instance {
       wrap: true);
 
   static $File $new(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $File.wrap(File(args[0]!.$value));
+    final path = args[0]!.$value as String;
+    final resolvedPath = runtime.resolvePath(path, runtime.currentDir);
+    return $File.wrap(File(resolvedPath));
   }
 
   @override
@@ -486,7 +488,8 @@ class $File implements $Instance {
 
   static $Value? __rename(Runtime runtime, $Value? target, List<$Value?> args) {
     final entity = target!.$value as File;
-    final newPath = args[0]!.$value as String;
+    final rawNewPath = args[0]!.$value as String;
+    final newPath = runtime.resolvePath(rawNewPath, runtime.currentDir);
     runtime.assertPermission('filesystem:write', entity.path);
     runtime.assertPermission('filesystem:write', newPath);
     return $Future
@@ -498,7 +501,8 @@ class $File implements $Instance {
   static $Value? __renameSync(
       Runtime runtime, $Value? target, List<$Value?> args) {
     final entity = target!.$value as File;
-    final newPath = args[0]!.$value as String;
+    final rawNewPath = args[0]!.$value as String;
+    final newPath = runtime.resolvePath(rawNewPath, runtime.currentDir);
     runtime.assertPermission('filesystem:write', entity.path);
     runtime.assertPermission('filesystem:write', newPath);
     return $File.wrap(entity.renameSync(newPath));

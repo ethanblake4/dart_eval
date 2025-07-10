@@ -52,15 +52,15 @@ class $FileSystemEntity implements $Instance {
             returns: BridgeTypeAnnotation(BridgeTypeRef(
                 CoreTypes.future, [BridgeTypeRef(IoTypes.fileSystemEntity)])),
             params: [
-              BridgeParameter('newPath', BridgeTypeAnnotation($type), false)
+              BridgeParameter('newPath',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false)
             ],
             namedParams: [])),
-        'renameSync': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation($type),
-            params: [
-              BridgeParameter('newPath', BridgeTypeAnnotation($type), false)
-            ],
-            namedParams: [])),
+        'renameSync': BridgeMethodDef(
+            BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [
+          BridgeParameter('newPath',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false)
+        ], namedParams: [])),
       },
       getters: {
         'path': BridgeMethodDef(BridgeFunctionDef(
@@ -152,7 +152,8 @@ class $FileSystemEntity implements $Instance {
   static $Value? __rename(Runtime runtime, $Value? target, List<$Value?> args) {
     final entity = target!.$value as FileSystemEntity;
     runtime.assertPermission('filesystem:write', entity.path);
-    final newPath = args[0]!.$value as String;
+    final rawNewPath = args[0]!.$value as String;
+    final newPath = runtime.resolvePath(rawNewPath, runtime.currentDir);
     return $Future.wrap(
         entity.rename(newPath).then((value) => $FileSystemEntity.wrap(value)));
   }
@@ -163,7 +164,8 @@ class $FileSystemEntity implements $Instance {
       Runtime runtime, $Value? target, List<$Value?> args) {
     final entity = target!.$value as FileSystemEntity;
     runtime.assertPermission('filesystem:write', entity.path);
-    final newPath = args[0]!.$value as String;
+    final rawNewPath = args[0]!.$value as String;
+    final newPath = runtime.resolvePath(rawNewPath, runtime.currentDir);
     return $FileSystemEntity.wrap(entity.renameSync(newPath));
   }
 

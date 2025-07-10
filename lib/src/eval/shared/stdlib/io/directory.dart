@@ -26,8 +26,11 @@ class $Directory implements $Instance {
   static const $declaration = BridgeClassDef(
       BridgeClassType($type, $extends: $FileSystemEntity.$type),
       constructors: {
-        '': BridgeConstructorDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation($type), params: [], namedParams: []))
+        '': BridgeConstructorDef(
+            BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [
+          BridgeParameter('path',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false)
+        ], namedParams: []))
       },
       methods: {
         'create': BridgeMethodDef(BridgeFunctionDef(
@@ -82,7 +85,9 @@ class $Directory implements $Instance {
       wrap: true);
 
   static $Directory $new(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $Directory.wrap(Directory(args[0]!.$value));
+    final path = args[0]!.$value as String;
+    final resolvedPath = runtime.resolvePath(path, runtime.currentDir);
+    return $Directory.wrap(Directory(resolvedPath));
   }
 
   @override
@@ -133,7 +138,8 @@ class $Directory implements $Instance {
   static $Value? __rename(Runtime runtime, $Value? target, List<$Value?> args) {
     final entity = target!.$value as Directory;
     runtime.assertPermission('filesystem:write', entity.path);
-    final newPath = args[0]!.$value as String;
+    final rawNewPath = args[0]!.$value as String;
+    final newPath = runtime.resolvePath(rawNewPath, runtime.currentDir);
     runtime.assertPermission('filesystem:write', newPath);
     return $Future
         .wrap(entity.rename(newPath).then((value) => $Directory.wrap(value)));
@@ -145,7 +151,8 @@ class $Directory implements $Instance {
       Runtime runtime, $Value? target, List<$Value?> args) {
     final entity = target!.$value as Directory;
     runtime.assertPermission('filesystem:write', entity.path);
-    final newPath = args[0]!.$value as String;
+    final rawNewPath = args[0]!.$value as String;
+    final newPath = runtime.resolvePath(rawNewPath, runtime.currentDir);
     runtime.assertPermission('filesystem:write', newPath);
     return $Directory.wrap(entity.renameSync(newPath));
   }
