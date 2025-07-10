@@ -19,6 +19,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/type.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/math.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/typed_data.dart';
+import 'package:dart_eval/src/eval/utils/path_helper.dart';
 import 'package:dart_eval/stdlib/core.dart';
 import 'package:dart_eval/src/eval/runtime/continuation.dart';
 import 'package:dart_eval/src/eval/runtime/type.dart';
@@ -453,38 +454,6 @@ class Runtime {
       // If relative, resolve against current directory
       _currentDir = _currentDir != null ? resolvePath(path, _currentDir) : path;
     }
-  }
-
-  /// Resolve a path against a given current working directory
-  String resolvePath(String path, [String? workingDir]) {
-    if (path.startsWith('/') || workingDir == null) {
-      // Already absolute or no working directory
-      return path;
-    }
-    // Relative path - resolve against workingDir
-    return _normalizePath('$workingDir/$path');
-  }
-
-  /// Normalize a path by resolving . and .. components
-  String _normalizePath(String path) {
-    final parts = path.split('/').where((part) => part.isNotEmpty).toList();
-    final normalizedParts = <String>[];
-
-    for (final part in parts) {
-      if (part == '.') {
-        // Skip current directory references
-        continue;
-      } else if (part == '..') {
-        // Go up one directory if possible
-        if (normalizedParts.isNotEmpty) {
-          normalizedParts.removeLast();
-        }
-      } else {
-        normalizedParts.add(part);
-      }
-    }
-
-    return '/${normalizedParts.join('/')}';
   }
 
   /// Write an [EvcOp] bytecode to a list of bytes.

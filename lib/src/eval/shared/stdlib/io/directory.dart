@@ -5,6 +5,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/async/stream.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/collection.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/future.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io/file_system_entity.dart';
+import 'package:dart_eval/src/eval/utils/path_helper.dart';
 
 /// dart_eval wrapper for [Directory]
 class $Directory implements $Instance {
@@ -86,7 +87,7 @@ class $Directory implements $Instance {
 
   static $Directory $new(Runtime runtime, $Value? target, List<$Value?> args) {
     final path = args[0]!.$value as String;
-    final resolvedPath = runtime.resolvePath(path, runtime.currentDir);
+    final resolvedPath = resolvePath(path, runtime.currentDir);
     return $Directory.wrap(Directory(resolvedPath));
   }
 
@@ -139,7 +140,7 @@ class $Directory implements $Instance {
     final entity = target!.$value as Directory;
     runtime.assertPermission('filesystem:write', entity.path);
     final rawNewPath = args[0]!.$value as String;
-    final newPath = runtime.resolvePath(rawNewPath, runtime.currentDir);
+    final newPath = resolvePath(rawNewPath, runtime.currentDir);
     runtime.assertPermission('filesystem:write', newPath);
     return $Future
         .wrap(entity.rename(newPath).then((value) => $Directory.wrap(value)));
@@ -152,7 +153,7 @@ class $Directory implements $Instance {
     final entity = target!.$value as Directory;
     runtime.assertPermission('filesystem:write', entity.path);
     final rawNewPath = args[0]!.$value as String;
-    final newPath = runtime.resolvePath(rawNewPath, runtime.currentDir);
+    final newPath = resolvePath(rawNewPath, runtime.currentDir);
     runtime.assertPermission('filesystem:write', newPath);
     return $Directory.wrap(entity.renameSync(newPath));
   }

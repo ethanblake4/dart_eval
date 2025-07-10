@@ -4,6 +4,7 @@ library current_dir_test;
 import 'dart:io' as io;
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_security.dart';
+import 'package:dart_eval/src/eval/utils/path_helper.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -282,7 +283,7 @@ void main() {
     });
 
     test('resolvePath function with various inputs', () {
-      final runtime = compiler.compileWriteAndLoad({
+      compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
             void main() {
@@ -293,14 +294,13 @@ void main() {
       });
 
       // Test absolute path - should return as is
-      expect(runtime.resolvePath('/absolute/path'), '/absolute/path');
+      expect(resolvePath('/absolute/path'), '/absolute/path');
 
       // Test relative path with working directory
-      expect(
-          runtime.resolvePath('relative/path', '/base'), '/base/relative/path');
+      expect(resolvePath('relative/path', '/base'), '/base/relative/path');
 
       // Test relative path without working directory
-      expect(runtime.resolvePath('relative/path'), 'relative/path');
+      expect(resolvePath('relative/path'), 'relative/path');
     });
 
     test('Path normalization with complex paths', () {
@@ -315,12 +315,9 @@ void main() {
       });
 
       // Test resolvePath function which does normalization
-      expect(runtime.resolvePath('base/./path/../normalized', '/'),
-          '/base/normalized');
-      expect(runtime.resolvePath('path/to/deep/../../shallow', '/'),
-          '/path/shallow');
-      expect(
-          runtime.resolvePath('root/./././directory', '/'), '/root/directory');
+      expect(resolvePath('base/./path/../normalized', '/'), '/base/normalized');
+      expect(resolvePath('path/to/deep/../../shallow', '/'), '/path/shallow');
+      expect(resolvePath('root/./././directory', '/'), '/root/directory');
 
       // Test currentDir setter with relative paths that get normalized
       runtime.currentDir = '/base';

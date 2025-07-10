@@ -7,6 +7,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/date_time.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/future.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io/file_system_entity.dart';
+import 'package:dart_eval/src/eval/utils/path_helper.dart';
 
 /// dart_eval wrapper for [File]
 class $File implements $Instance {
@@ -276,7 +277,7 @@ class $File implements $Instance {
 
   static $File $new(Runtime runtime, $Value? target, List<$Value?> args) {
     final path = args[0]!.$value as String;
-    final resolvedPath = runtime.resolvePath(path, runtime.currentDir);
+    final resolvedPath = resolvePath(path, runtime.currentDir);
     return $File.wrap(File(resolvedPath));
   }
 
@@ -489,7 +490,7 @@ class $File implements $Instance {
   static $Value? __rename(Runtime runtime, $Value? target, List<$Value?> args) {
     final entity = target!.$value as File;
     final rawNewPath = args[0]!.$value as String;
-    final newPath = runtime.resolvePath(rawNewPath, runtime.currentDir);
+    final newPath = resolvePath(rawNewPath, runtime.currentDir);
     runtime.assertPermission('filesystem:write', entity.path);
     runtime.assertPermission('filesystem:write', newPath);
     return $Future
@@ -502,7 +503,7 @@ class $File implements $Instance {
       Runtime runtime, $Value? target, List<$Value?> args) {
     final entity = target!.$value as File;
     final rawNewPath = args[0]!.$value as String;
-    final newPath = runtime.resolvePath(rawNewPath, runtime.currentDir);
+    final newPath = resolvePath(rawNewPath, runtime.currentDir);
     runtime.assertPermission('filesystem:write', entity.path);
     runtime.assertPermission('filesystem:write', newPath);
     return $File.wrap(entity.renameSync(newPath));

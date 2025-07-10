@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io/directory.dart';
+import 'package:dart_eval/src/eval/utils/path_helper.dart';
 import 'package:dart_eval/stdlib/core.dart';
 
 /// dart_eval wrapper for [FileSystemEntity]
@@ -153,7 +154,7 @@ class $FileSystemEntity implements $Instance {
     final entity = target!.$value as FileSystemEntity;
     runtime.assertPermission('filesystem:write', entity.path);
     final rawNewPath = args[0]!.$value as String;
-    final newPath = runtime.resolvePath(rawNewPath, runtime.currentDir);
+    final newPath = resolvePath(rawNewPath, runtime.currentDir);
     return $Future.wrap(
         entity.rename(newPath).then((value) => $FileSystemEntity.wrap(value)));
   }
@@ -165,7 +166,7 @@ class $FileSystemEntity implements $Instance {
     final entity = target!.$value as FileSystemEntity;
     runtime.assertPermission('filesystem:write', entity.path);
     final rawNewPath = args[0]!.$value as String;
-    final newPath = runtime.resolvePath(rawNewPath, runtime.currentDir);
+    final newPath = resolvePath(rawNewPath, runtime.currentDir);
     return $FileSystemEntity.wrap(entity.renameSync(newPath));
   }
 
