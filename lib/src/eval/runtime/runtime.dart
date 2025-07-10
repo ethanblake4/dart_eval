@@ -448,10 +448,7 @@ class Runtime {
   set currentDir(String? path) {
     if (path == null) {
       _currentDir = null;
-    } else if (path.startsWith('/')) {
-      _currentDir = path;
     } else {
-      // If relative, resolve against current directory
       _currentDir = _currentDir != null ? resolvePath(path, _currentDir) : path;
     }
   }
