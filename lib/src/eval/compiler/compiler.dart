@@ -36,6 +36,54 @@ import 'errors.dart';
 /// [defineBridgeTopLevelFunction], and [defineBridgeEnum].
 ///
 /// Additional sources can be added with [addSource].
+///
+/// ## Tree Shaking Control
+///
+/// The compiler supports both global and granular tree shaking control:
+///
+/// ### Global Control
+/// - [setTreeShaking] - Enable/disable tree shaking for all libraries
+///
+/// ### Granular Control
+/// - [excludeLibraryFromTreeShaking] - Exclude a specific library from tree shaking
+/// - [excludeLibrariesFromTreeShaking] - Exclude multiple libraries from tree shaking
+/// - [includeLibraryInTreeShaking] - Re-include a previously excluded library
+/// - [clearTreeShakingExclusions] - Clear all library exclusions
+/// - [treeShakeExcludedLibraries] - Get currently excluded libraries
+///
+/// ### Plugin-Based Control
+/// - [excludePluginFromTreeShaking] - Exclude an entire plugin from tree shaking
+/// - [excludePluginsFromTreeShaking] - Exclude multiple plugins from tree shaking
+/// - [includePluginInTreeShaking] - Re-include a previously excluded plugin
+/// - [treeShakeExcludedPlugins] - Get currently excluded plugins
+///
+/// ### Plugin Usage Examples
+///
+/// #### Method 1: Exclude entire plugin (Recommended)
+/// ```dart
+/// class MyPlugin extends EvalPlugin {
+///   @override
+///   void configureCompiler(Compiler compiler) {
+///     // Exclude the entire plugin from tree shaking
+///     // All libraries added by this plugin will be preserved
+///     compiler.excludePluginFromTreeShaking(identifier);
+///   }
+/// }
+/// ```
+///
+/// #### Method 2: Exclude specific libraries
+/// ```dart
+/// class MyPlugin extends EvalPlugin {
+///   @override
+///   void configureCompiler(Compiler compiler) {
+///     // Exclude only specific libraries from tree shaking
+///     compiler.excludeLibrariesFromTreeShaking([
+///       'package:my_plugin/core.dart',
+///       'package:my_plugin/models.dart',
+///     ]);
+///   }
+/// }
+/// ```
 class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
   var _bridgeStaticFunctionIdx = 0;
   final _bridgeDeclarations = <String, List<BridgeDeclaration>>{};
@@ -52,6 +100,18 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
 
   /// Whether to enable tree shaking (dead code elimination). Default is true.
   bool enableTreeShaking = true;
+
+  /// Set of library URIs that should be excluded from tree shaking.
+  /// Libraries in this set will have all their declarations preserved.
+  final Set<String> _treeShakeExcludedLibraries = <String>{};
+
+  /// Set of plugin identifiers that should be excluded from tree shaking.
+  /// All libraries and declarations added by these plugins will be preserved.
+  final Set<String> _treeShakeExcludedPlugins = <String>{};
+
+  /// Map of library URIs to the plugin identifier that added them.
+  /// Used to determine which libraries belong to which plugins.
+  final Map<String, String> _libraryToPluginMap = <String, String>{};
 
   var _ctx = CompilerContext(0);
 
@@ -71,6 +131,9 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
   ];
   final _appliedPlugins = <String>[];
 
+  /// Plugin identifier currently being configured (used for tracking)
+  String? _currentlyConfiguringPlugin;
+
   /// List of files whose functions should be used as entrypoints. These can be
   /// full URIs (e.g. `package:foo/main.dart`) or just filenames (e.g.
   /// `main.dart`). Adding a file to this list prevents it from being dead-code
@@ -86,6 +149,72 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
   /// Enable or disable tree shaking (dead code elimination).
   void setTreeShaking(bool enabled) {
     enableTreeShaking = enabled;
+  }
+
+  /// Mark a library as excluded from tree shaking.
+  /// All declarations in the specified library will be preserved.
+  ///
+  /// [libraryUri] should be the full URI of the library (e.g., 'package:example/lib.dart')
+  void excludeLibraryFromTreeShaking(String libraryUri) {
+    _treeShakeExcludedLibraries.add(libraryUri);
+  }
+
+  /// Mark multiple libraries as excluded from tree shaking.
+  void excludeLibrariesFromTreeShaking(Iterable<String> libraryUris) {
+    _treeShakeExcludedLibraries.addAll(libraryUris);
+  }
+
+  /// Remove a library from tree shaking exclusion.
+  void includeLibraryInTreeShaking(String libraryUri) {
+    _treeShakeExcludedLibraries.remove(libraryUri);
+  }
+
+  /// Clear all tree shaking exclusions.
+  void clearTreeShakingExclusions() {
+    _treeShakeExcludedLibraries.clear();
+  }
+
+  /// Get a copy of currently excluded libraries.
+  Set<String> get treeShakeExcludedLibraries =>
+      Set.from(_treeShakeExcludedLibraries);
+
+  /// Mark a plugin as excluded from tree shaking.
+  /// All libraries and declarations added by this plugin will be preserved.
+  ///
+  /// [pluginIdentifier] should be the identifier returned by EvalPlugin.identifier
+  void excludePluginFromTreeShaking(String pluginIdentifier) {
+    _treeShakeExcludedPlugins.add(pluginIdentifier);
+  }
+
+  /// Mark multiple plugins as excluded from tree shaking.
+  void excludePluginsFromTreeShaking(Iterable<String> pluginIdentifiers) {
+    _treeShakeExcludedPlugins.addAll(pluginIdentifiers);
+  }
+
+  /// Remove a plugin from tree shaking exclusion.
+  void includePluginInTreeShaking(String pluginIdentifier) {
+    _treeShakeExcludedPlugins.remove(pluginIdentifier);
+  }
+
+  /// Get a copy of currently excluded plugins.
+  Set<String> get treeShakeExcludedPlugins =>
+      Set.from(_treeShakeExcludedPlugins);
+
+  /// Check if a library should be excluded from tree shaking.
+  /// This checks both explicit library exclusions and plugin-based exclusions.
+  bool _isLibraryExcludedFromTreeShaking(String libraryUri) {
+    // Check explicit library exclusions
+    if (_treeShakeExcludedLibraries.contains(libraryUri)) {
+      return true;
+    }
+
+    // Check plugin-based exclusions
+    final pluginId = _libraryToPluginMap[libraryUri];
+    if (pluginId != null && _treeShakeExcludedPlugins.contains(pluginId)) {
+      return true;
+    }
+
+    return false;
   }
 
   // Manually define a (unresolved) bridge class
@@ -109,6 +238,11 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     } else {
       libraryDeclarations.add(classDef);
     }
+
+    // Rastrear qual plugin adicionou esta biblioteca
+    if (_currentlyConfiguringPlugin != null) {
+      _libraryToPluginMap[spec.library] = _currentlyConfiguringPlugin!;
+    }
   }
 
   /// Define a bridged enum definition to be used when compiling.
@@ -126,6 +260,11 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     } else {
       libraryDeclarations.add(enumDef);
     }
+
+    // Rastrear qual plugin adicionou esta biblioteca
+    if (_currentlyConfiguringPlugin != null) {
+      _libraryToPluginMap[spec.library] = _currentlyConfiguringPlugin!;
+    }
   }
 
   /// Add a unit source to the list of additional sources which will be compiled
@@ -141,6 +280,11 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       _bridgeDeclarations[function.library] = [function];
     } else {
       libraryDeclarations.add(function);
+    }
+
+    // Rastrear qual plugin adicionou esta biblioteca
+    if (_currentlyConfiguringPlugin != null) {
+      _libraryToPluginMap[function.library] = _currentlyConfiguringPlugin!;
     }
   }
 
@@ -185,9 +329,11 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
 
     for (final plugin in _plugins) {
       if (!_appliedPlugins.contains(plugin.identifier)) {
+        _currentlyConfiguringPlugin = plugin.identifier;
         plugin.configureForCompile(this);
         plugin.configureCompiler(this);
         _appliedPlugins.add(plugin.identifier);
+        _currentlyConfiguringPlugin = null;
       }
     }
 
@@ -327,9 +473,10 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
         }
       }
 
-      if (!enableTreeShaking) {
-        // Se tree shaking está desabilitado, incluir TODOS os nomes de declarações
-        // para garantir que nada seja removido
+      if (!enableTreeShaking ||
+          _isLibraryExcludedFromTreeShaking(lib.uri.toString())) {
+        // Se tree shaking está desabilitado OU a biblioteca/plugin está excluído,
+        // incluir TODOS os nomes de declarações para garantir que nada seja removido
         for (final decl in lib.declarations) {
           final names = DeclarationOrBridge.nameOf(decl);
           for (final name in names) {
@@ -352,7 +499,8 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
         discoveredIdentifiers,
         _entrypoints,
         libraryIndexMap,
-        enableTreeShaking);
+        enableTreeShaking,
+        _isLibraryExcludedFromTreeShaking);
 
     // Populate lookup tables [_topLevelDeclarationsMap],
     // [_instanceDeclarationsMap], and [_topLevelGlobalIndices], and generate
@@ -983,6 +1131,7 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
   Set<Uri> entrypoints,
   Map<Library, int> libraryIds,
   bool enableTreeShaking,
+  bool Function(String) isLibraryExcluded,
 ) {
   /// URI-Library mapping
   final uriMap = {for (final l in libraries) l.uri: l};
@@ -1179,8 +1328,8 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
       continue;
     }
 
-    // Só aplicar tree-shaking se estiver habilitado
-    if (enableTreeShaking) {
+    // Só aplicar tree-shaking se estiver habilitado E a biblioteca não estiver excluída
+    if (enableTreeShaking && !isLibraryExcluded(l.uri.toString())) {
       l.declarations = l.declarations
           .where((declaration) =>
               declaration.isBridge ||
