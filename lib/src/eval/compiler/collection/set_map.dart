@@ -44,6 +44,14 @@ Variable compileSetOrMapLiteral(SetOrMapLiteral l, CompilerContext ctx) {
     specifiedValueType = TypeRef.commonBaseType(ctx, valueResultTypes.toSet());
   }
 
+  final collectionKeyType = (_boxSetOrMapElements ? 
+      specifiedKeyType?.copyWith(boxed: true) :
+      specifiedKeyType) ?? CoreTypes.dynamic.ref(ctx);
+
+  final collectionValueType = (_boxSetOrMapElements ? 
+      specifiedValueType?.copyWith(boxed: true) :
+      specifiedValueType) ?? CoreTypes.dynamic.ref(ctx);
+
   var isEmpty = false;
   if (_collection == null) {
     isEmpty = true;
@@ -54,8 +62,8 @@ Variable compileSetOrMapLiteral(SetOrMapLiteral l, CompilerContext ctx) {
       _collection = Variable.alloc(
           ctx,
           CoreTypes.map.ref(ctx).copyWith(specifiedTypeArgs: [
-            specifiedKeyType ?? CoreTypes.dynamic.ref(ctx),
-            specifiedValueType ?? CoreTypes.dynamic.ref(ctx),
+            collectionKeyType,
+            collectionValueType,
           ], boxed: false));
     } else {
       // make an empty Set
@@ -63,7 +71,7 @@ Variable compileSetOrMapLiteral(SetOrMapLiteral l, CompilerContext ctx) {
       _collection = Variable.alloc(
           ctx,
           CoreTypes.set.ref(ctx).copyWith(specifiedTypeArgs: [
-            specifiedKeyType ?? CoreTypes.dynamic.ref(ctx),
+            collectionKeyType,
           ], boxed: false));
     }
   }

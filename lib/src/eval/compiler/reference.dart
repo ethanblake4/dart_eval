@@ -515,11 +515,20 @@ class IndexedReference implements Reference {
           : _index.unboxIfNeeded(ctx);
       ctx.pushOp(IndexMap.make(map.scopeFrameOffset, _index.scopeFrameOffset),
           IndexMap.LEN);
-      return Variable.alloc(
+      
+      final mapResult = Variable.alloc(
           ctx,
           _variable.type.specifiedTypeArgs.length < 2
               ? CoreTypes.dynamic.ref(ctx)
               : _variable.type.specifiedTypeArgs[1]);
+
+      if (_variable.type.specifiedTypeArgs.isEmpty ||
+          _variable.type.specifiedTypeArgs[1].boxed) {
+        ctx.pushOp(MaybeBoxNull.make(mapResult.scopeFrameOffset),
+            MaybeBoxNull.LEN);
+      }
+
+      return mapResult;
     }
 
     final result = _variable.invoke(ctx, '[]', [_index]);
