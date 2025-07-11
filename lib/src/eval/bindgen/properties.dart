@@ -1,5 +1,8 @@
 import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/dart/element/type.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
+import 'package:dart_eval/src/eval/bindgen/parameters.dart';
+import 'package:dart_eval/src/eval/bindgen/permission.dart';
 import 'package:dart_eval/src/eval/bindgen/type.dart';
 
 String $getProperty(BindgenContext ctx, ClassElement element) {
@@ -12,7 +15,18 @@ String $getProperty(BindgenContext ctx, ClassElement element) {
 ''';
 }
 
-String propertyGetters(BindgenContext ctx, ClassElement element) {
+String $bridgeGet(BindgenContext ctx, ClassElement element) {
+  return '''
+  @override
+  \$Value? \$bridgeGet(String identifier) {
+    ${propertyGetters(ctx, element, isBridge: true)}
+    return null;
+  }
+''';
+}
+
+String propertyGetters(BindgenContext ctx, ClassElement element,
+    {bool isBridge = false}) {
   final accessors = {
     if (ctx.implicitSupers)
       for (var s in element.allSupertypes)
@@ -37,6 +51,27 @@ String propertyGetters(BindgenContext ctx, ClassElement element) {
   if (_getters.isEmpty && _methods.isEmpty) {
     return '';
   }
+  if (isBridge) {
+    return 'switch (identifier) {\n' +
+        _getters.map((e) => '''
+      case '${e.displayName}':
+        final _${e.displayName} = super.${e.displayName};
+        return ${wrapVar(ctx, e.type.returnType, '_${e.displayName}', metadata: e.nonSynthetic.metadata)};
+      ''').join('\n') +
+        _methods.map((e) {
+          final returnsValue =
+              e.returnType is! VoidType && !e.returnType.isDartCoreNull;
+          return '''
+        case '${e.displayName}':
+          return \$Function((runtime, target, args) {
+            ${assertMethodPermissions(e)}
+            ${returnsValue ? 'final result = ' : ''}super.${e.displayName}(${argumentAccessors(ctx, e.parameters)});
+            return ${wrapVar(ctx, e.returnType, 'result')};
+          });''';
+        }).join('\n') +
+        '\n' +
+        '}';
+  }
   return 'switch (identifier) {\n' + _getters.map((e) => '''
       case '${e.displayName}':
         final _${e.displayName} = \$value.${e.displayName};
@@ -57,7 +92,17 @@ String $setProperty(BindgenContext ctx, ClassElement element) {
 ''';
 }
 
-String propertySetters(BindgenContext ctx, ClassElement element) {
+String $bridgeSet(BindgenContext ctx, ClassElement element) {
+  return '''
+  @override
+  void \$bridgeSet(String identifier, \$Value value) {
+    ${propertySetters(ctx, element, isBridge: true)}
+  }
+''';
+}
+
+
+String propertySetters(BindgenContext ctx, ClassElement element, {bool isBridge = false}) {
   final accessors = {
     if (ctx.implicitSupers)
       for (var s in element.allSupertypes)
@@ -68,6 +113,13 @@ String propertySetters(BindgenContext ctx, ClassElement element) {
       (element) => element.isSetter && !element.isStatic && !element.isPrivate);
   if (_setters.isEmpty) {
     return '';
+  }
+  if (isBridge) {
+    return 'switch (identifier) {\n' + _setters.map((e) => '''
+        case '${e.displayName}':
+          super.${e.displayName} = value.${e.displayName};
+          return;
+        ''').join('\n') + '\n' + '}';
   }
   return 'switch (identifier) {\n' + _setters.map((e) => '''
         case '${e.displayName}':

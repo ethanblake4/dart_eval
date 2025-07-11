@@ -29,7 +29,7 @@ void cliBind([bool singleFile = false, bool all = false]) async {
   final packageName = pubspec.name;
 
   final bindgen = Bindgen();
-  final version = Version.parse(Platform.version);
+  final version = Version.parse(Platform.version.split(' ').first);
   final formatter = DartFormatter(languageVersion: version);
   for (final package in packageConfig.packages) {
     if (package.name == packageName) {

@@ -1,36 +1,38 @@
 import 'package:analyzer/dart/element/element.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
 
-String bindConfigureForRuntime(BindgenContext ctx, ClassElement element) => '''
+String bindConfigureForRuntime(BindgenContext ctx, ClassElement element, {bool isBridge = false}) => '''
 static void configureForRuntime(Runtime runtime) {
-  ${constructorsForRuntime(ctx, element)}
+  ${constructorsForRuntime(ctx, element, isBridge: isBridge)}
   ${staticMethodsForRuntime(ctx, element)}
   ${staticGettersForRuntime(ctx, element)}
   ${staticSettersForRuntime(ctx, element)}
 }
 ''';
 
-String constructorsForRuntime(BindgenContext ctx, ClassElement element) {
+String constructorsForRuntime(BindgenContext ctx, ClassElement element, {bool isBridge = false}) {
   return element.constructors
       .where(
           (cstr) => (!element.isAbstract || cstr.isFactory) && !cstr.isPrivate)
-      .map((e) => constructorForRuntime(ctx, element, e))
+      .map((e) => constructorForRuntime(ctx, element, e, isBridge: isBridge))
       .join('\n');
 }
 
 String constructorForRuntime(
-    BindgenContext ctx, ClassElement element, ConstructorElement constructor) {
+    BindgenContext ctx, ClassElement element, ConstructorElement constructor, {bool isBridge = false}) {
   final name = constructor.name.isEmpty ? '' : constructor.name;
   final fullyQualifiedConstructorId = '${element.name}.$name';
 
   final staticName = constructor.name.isEmpty ? 'new' : constructor.name;
   final uri = ctx.libOverrides[element.name] ?? ctx.uri;
+  final bridgeParam = isBridge ? ',bridge: true' : '';
 
   return '''
     runtime.registerBridgeFunc(
       '${uri}',
       '$fullyQualifiedConstructorId',
       \$${element.name}.\$$staticName
+      $bridgeParam
     );
   ''';
 }

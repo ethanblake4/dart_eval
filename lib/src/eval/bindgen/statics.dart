@@ -4,19 +4,21 @@ import 'package:dart_eval/src/eval/bindgen/parameters.dart';
 import 'package:dart_eval/src/eval/bindgen/permission.dart';
 import 'package:dart_eval/src/eval/bindgen/type.dart';
 
-String $constructors(BindgenContext ctx, ClassElement element) {
+String $constructors(BindgenContext ctx, ClassElement element, {bool isBridge = false}) {
   return element.constructors
-      .where((cstr) => !cstr.isPrivate)
-      .map((e) => _$constructor(ctx, element, e))
+      .where((cstr) => !cstr.isPrivate && !cstr.isSynthetic && (cstr.isFactory || !element.isAbstract))
+      .map((e) => _$constructor(ctx, element, e, isBridge: isBridge))
       .join('\n');
 }
 
 String _$constructor(
-    BindgenContext ctx, ClassElement element, ConstructorElement constructor) {
+    BindgenContext ctx, ClassElement element, ConstructorElement constructor, {bool isBridge = false}) {
   final name = constructor.name.isEmpty ? 'new' : constructor.name;
   final namedConstructor =
       constructor.name.isNotEmpty ? '.${constructor.name}' : '';
-  final fullyQualifiedConstructorId = '${element.name}$namedConstructor';
+  final fullyQualifiedConstructorId = isBridge ? 
+    '\$${element.name}\$bridge$namedConstructor' :
+    '${element.name}$namedConstructor';
 
   final oConstructor = constructor;
 
@@ -36,12 +38,12 @@ String _$constructor(
   }
 
   return '''
-  /// Wrapper for the [${element.name}.$name] constructor
+  /// ${isBridge ? 'Proxy' : 'Wrapper'} for the [${element.name}.$name] constructor
   static \$Value? \$$name(Runtime runtime, \$Value? thisValue, List<\$Value?> args) {
-    return \$${element.name}.wrap(
+    return ${!isBridge ? '\$${element.name}.wrap(' : ''}
       $fullyQualifiedConstructorId(
         ${argumentAccessors(ctx, constructor.parameters)}
-      ),
+      ${!isBridge ? '),' : ''}
     );
   }
 ''';

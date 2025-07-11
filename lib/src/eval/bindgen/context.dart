@@ -3,10 +3,9 @@ class BindgenContext {
   final Set<String> imports = {};
   final Set<String> knownTypes = {};
   final Set<String> unknownTypes = {};
-  final bool wrap;
   final bool all;
   final Map<String, String> libOverrides = {};
   bool implicitSupers = false;
 
-  BindgenContext(this.uri, {required this.wrap, required this.all});
+  BindgenContext(this.uri, {required this.all});
 }
