@@ -168,5 +168,48 @@ void main() {
       expect(runtime.executeLib('package:example/main.dart', 'main'),
           $int(100100));
     });
+
+    test('continue statemnt should skip iteration when condition is met', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            num main() {
+              var count = 0;
+              for (var i = 0; i < 5; i++) {
+                if (i == 2) {
+                  continue;
+                }
+                count++;
+              }
+              return count;
+            }
+          ''',
+        }
+      });
+      // skip when i == 2, -> 4
+      expect(runtime.executeLib('package:example/main.dart', 'main'), $int(4));
+    });
+
+    test('For loop with continue', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            num main() {
+              var total = 0;
+              for (var i = 0; i < 10; i++) {
+                if (i > 2) {
+                  continue;
+                }
+                total += i;
+              }
+              return total;
+            }
+          ''',
+        }
+      });
+      // skip 3, 4, 5, 6, 7, 8, 9
+      // so 0 + 1 + 2 = 3
+      expect(runtime.executeLib('package:example/main.dart', 'main'), $int(3));
+    });
   });
 }
