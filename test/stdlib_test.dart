@@ -496,6 +496,42 @@ void main() {
       }, prints('-1\n1\n0\n'));
     });
 
+    test('num.toDouble', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              print(1.toDouble());
+              print(2.toDouble());
+              print(1.toDouble());
+            }
+          ''',
+        }
+      });
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('1.0\n2.0\n1.0\n'));
+    });
+
+    test('num.abs', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              print((-5).abs());
+              print((5).abs());
+              print((0).abs());
+              print((-2.5).abs());
+              print((1.5).abs());
+            }
+          ''',
+        }
+      });
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('5\n5\n0\n2.5\n1.5\n'));
+    });
+
     test('Printing hashCode', () {
       final program = compiler.compile({
         'example': {
