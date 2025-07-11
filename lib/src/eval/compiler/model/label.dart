@@ -5,16 +5,25 @@ class CompilerLabel {
   final int Function(CompilerContext ctx) cleanup;
   final String? name;
   final LabelType type;
+  final List<int> continueHoles = [];
 
-  const CompilerLabel(this.type, this.offset, this.cleanup, {this.name});
+  CompilerLabel(this.type, this.offset, this.cleanup, {this.name});
 }
 
 class SimpleCompilerLabel implements CompilerLabel {
+  @override
   get offset => -1;
+
+  @override
   final String? name;
+
+  @override
   get type => LabelType.block;
 
-  const SimpleCompilerLabel({this.name});
+  @override
+  final List<int> continueHoles = [];
+
+  SimpleCompilerLabel({this.name});
 
   get cleanup => (CompilerContext ctx) {
         ctx.endAllocScopeQuiet();

@@ -89,8 +89,15 @@ class NumAdd implements EvcOp {
   // Add value A + B
   @override
   void run(Runtime runtime) {
+    final left = runtime.frame[_location1];
+    final right = runtime.frame[_location2];
+
+    // Handle the case where values might be boxed ($Value objects)
+    final leftValue = left is $Value ? left.$value : left;
+    final rightValue = right is $Value ? right.$value : right;
+
     runtime.frame[runtime.frameOffset++] =
-        (runtime.frame[_location1] as num) + (runtime.frame[_location2] as num);
+        (leftValue as num) + (rightValue as num);
   }
 
   @override
@@ -109,11 +116,18 @@ class NumSub implements EvcOp {
 
   static const int LEN = Evc.BASE_OPLEN + Evc.I16_LEN * 2;
 
-  // Add value A + B
+  // Subtract value A - B
   @override
   void run(Runtime runtime) {
+    final left = runtime.frame[_location1];
+    final right = runtime.frame[_location2];
+
+    // check for situation where values might be boxed ($Value)
+    final leftValue = left is $Value ? left.$value : left;
+    final rightValue = right is $Value ? right.$value : right;
+
     runtime.frame[runtime.frameOffset++] =
-        (runtime.frame[_location1] as num) - (runtime.frame[_location2] as num);
+        (leftValue as num) - (rightValue as num);
   }
 
   @override
@@ -134,8 +148,15 @@ class NumLt implements EvcOp {
 
   @override
   void run(Runtime runtime) {
+    final left = runtime.frame[_location1];
+    final right = runtime.frame[_location2];
+
+    // check for situation where values might be boxed ($Value)
+    final leftValue = left is $Value ? left.$value : left;
+    final rightValue = right is $Value ? right.$value : right;
+
     runtime.frame[runtime.frameOffset++] =
-        (runtime.frame[_location1] as num) < (runtime.frame[_location2] as num);
+        (leftValue as num) < (rightValue as num);
   }
 
   @override
@@ -156,8 +177,15 @@ class NumLtEq implements EvcOp {
 
   @override
   void run(Runtime runtime) {
-    runtime.frame[runtime.frameOffset++] = (runtime.frame[_location1] as num) <=
-        (runtime.frame[_location2] as num);
+    final left = runtime.frame[_location1];
+    final right = runtime.frame[_location2];
+
+    // check for situation where values might be boxed ($Value)
+    final leftValue = left is $Value ? left.$value : left;
+    final rightValue = right is $Value ? right.$value : right;
+
+    runtime.frame[runtime.frameOffset++] =
+        (leftValue as num) <= (rightValue as num);
   }
 
   @override
@@ -176,7 +204,9 @@ class BoxInt implements EvcOp {
   @override
   void run(Runtime runtime) {
     final reg = _reg;
-    runtime.frame[reg] = $int(runtime.frame[reg] as int);
+    final value = runtime.frame[reg];
+    // Handle the case where the value is already boxed
+    runtime.frame[reg] = value is $Value ? value : $int(value as int);
   }
 
   @override
@@ -195,7 +225,9 @@ class BoxDouble implements EvcOp {
   @override
   void run(Runtime runtime) {
     final reg = _reg;
-    runtime.frame[reg] = $double(runtime.frame[reg] as double);
+    final value = runtime.frame[reg];
+    // Handle the case where the value is already boxed
+    runtime.frame[reg] = value is $Value ? value : $double(value as double);
   }
 
   @override
@@ -214,7 +246,9 @@ class BoxNum implements EvcOp {
   @override
   void run(Runtime runtime) {
     final reg = _reg;
-    runtime.frame[reg] = $num(runtime.frame[reg] as num);
+    final value = runtime.frame[reg];
+    // Handle the case where the value is already boxed
+    runtime.frame[reg] = value is $Value ? value : $num(value as num);
   }
 
   @override
@@ -233,7 +267,9 @@ class BoxString implements EvcOp {
   @override
   void run(Runtime runtime) {
     final reg = _reg;
-    runtime.frame[reg] = $String(runtime.frame[reg] as String);
+    final value = runtime.frame[reg];
+    // Handle the case where the value is already boxed
+    runtime.frame[reg] = value is $Value ? value : $String(value as String);
   }
 
   @override
@@ -315,7 +351,7 @@ class BoxSet implements EvcOp {
 
   @override
   String toString() => 'BoxSet (L$_reg)';
-} 
+}
 
 class MaybeBoxNull implements EvcOp {
   MaybeBoxNull(Runtime runtime) : _reg = runtime._readInt16();
@@ -351,7 +387,9 @@ class Unbox implements EvcOp {
 
   @override
   void run(Runtime runtime) {
-    runtime.frame[_reg] = (runtime.frame[_reg] as $Value).$value;
+    final value = runtime.frame[_reg];
+    // Handle the case where the value is already unboxed
+    runtime.frame[_reg] = value is $Value ? value.$value : value;
   }
 
   @override
@@ -607,7 +645,9 @@ class BoxBool implements EvcOp {
   @override
   void run(Runtime runtime) {
     final reg = _reg;
-    runtime.frame[reg] = $bool(runtime.frame[reg] as bool);
+    final value = runtime.frame[reg];
+    // Handle the case where the value is already boxed
+    runtime.frame[reg] = value is $Value ? value : $bool(value as bool);
   }
 
   @override
@@ -615,10 +655,10 @@ class BoxBool implements EvcOp {
 }
 
 class PushRecord implements EvcOp {
-  PushRecord(Runtime runtime) : 
-    _fields = runtime._readInt16(), 
-    _const = runtime._readInt32(), 
-    _type = runtime._readInt32();
+  PushRecord(Runtime runtime)
+      : _fields = runtime._readInt16(),
+        _const = runtime._readInt32(),
+        _type = runtime._readInt32();
 
   PushRecord.make(this._fields, this._const, this._type);
 

@@ -5,6 +5,7 @@ import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/statement/assert.dart';
 import 'package:dart_eval/src/eval/compiler/statement/break.dart';
+import 'package:dart_eval/src/eval/compiler/statement/continue.dart';
 import 'package:dart_eval/src/eval/compiler/statement/do.dart';
 import 'package:dart_eval/src/eval/compiler/statement/for.dart';
 import 'package:dart_eval/src/eval/compiler/statement/if.dart';
@@ -19,7 +20,7 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'block.dart';
 
 StatementInfo compileStatement(
-    Statement s, AlwaysReturnType? expectedReturnType, CompilerContext ctx) { 
+    Statement s, AlwaysReturnType? expectedReturnType, CompilerContext ctx) {
   if (s is Block) {
     return compileBlock(s, expectedReturnType, ctx);
   } else if (s is VariableDeclarationStatement) {
@@ -48,6 +49,8 @@ StatementInfo compileStatement(
     return compileAssertStatement(s, ctx, expectedReturnType);
   } else if (s is BreakStatement) {
     return compileBreakStatement(s, ctx);
+  } else if (s is ContinueStatement) {
+    return compileContinueStatement(s, ctx);
   } else if (s is PatternVariableDeclarationStatement) {
     return compilePatternVariableDeclarationStatement(s, ctx);
   } else {
