@@ -94,6 +94,10 @@ class $Map<K, V> implements Map<K, V>, $Instance {
             isStatic: false),
       },
       getters: {
+        'keys': BridgeMethodDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.iterable)))),
+        'values': BridgeMethodDef(BridgeFunctionDef(
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.iterable)))),
         'entries': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.iterable)))),
         'isEmpty': BridgeMethodDef(
@@ -145,6 +149,10 @@ class $Map<K, V> implements Map<K, V>, $Instance {
         return $Iterable.wrap(entries.map((e) => $MapEntry.wrap(e)));
       case 'isEmpty':
         return $bool($value.isEmpty);
+      case 'keys':
+        return $Iterable.wrap(keys);
+      case 'values':
+        return $Iterable.wrap(values);
       case 'isNotEmpty':
         return $bool($value.isNotEmpty);
     }

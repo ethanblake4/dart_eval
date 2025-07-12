@@ -189,7 +189,6 @@ void main() {
 
       expect(result, equals([1, 2, 3, 4].map((e) => $int(e)).toList()));
     });
-
   });
 
   group('Map tests', () {
@@ -263,6 +262,76 @@ void main() {
       expect(runtime.executeLib('package:eval_test/main.dart', 'main'), true);
     });
 
+    test('Map.addAll()', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'eval_test': {
+          'main.dart': '''
+            int main() {
+              final map1 = {'a': 1, 'b': 2};
+              final map2 = {'c': 3, 'd': 4};
+              map1.addAll(map2);
+              return map1.length;
+            }
+          '''
+        }
+      });
+
+      expect(runtime.executeLib('package:eval_test/main.dart', 'main'), 4);
+    });
+
+    test('Map.remove()', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'eval_test': {
+          'main.dart': '''
+            dynamic main() {
+              final map = {'a': 1, 'b': 2, 'c': 3};
+              final removed = map.remove('b');
+              print('removed: \$removed');
+              print('length: \${map.length}');
+              return removed;
+            }
+          '''
+        }
+      });
+
+      expect(() {
+        final result =
+            runtime.executeLib('package:eval_test/main.dart', 'main');
+        expect(result, $int(2));
+      }, prints('removed: 2\nlength: 2\n'));
+    });
+
+    test('Map.length', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'eval_test': {
+          'main.dart': '''
+            int main() {
+              final map = {'a': 1, 'b': 2, 'c': 3};
+              return map.length;
+            }
+          '''
+        }
+      });
+
+      expect(runtime.executeLib('package:eval_test/main.dart', 'main'), 3);
+    });
+
+    test('Map index access []', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'eval_test': {
+          'main.dart': '''
+            dynamic main() {
+              final map = {'name': 'Alice', 'age': 30};
+              return map['name'];
+            }
+          '''
+        }
+      });
+
+      expect(runtime.executeLib('package:eval_test/main.dart', 'main'),
+          $String('Alice'));
+    });
+
     test('Access null value from map', () {
       final runtime = Compiler().compileWriteAndLoad({
         'example': {
@@ -290,6 +359,76 @@ void main() {
       final value = runtime.executeLib('package:example/main.dart', 'main');
       expect(value, $String('One Piece Movie 01'));
     });
-  });
 
+    test('Map.keys', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'eval_test': {
+          'main.dart': '''
+            String main() {
+              final map = {'a': 1, 'b': 2, 'c': 3};
+              final keys = map.keys.toList();
+              keys.sort();
+              return keys.join(',');
+            }
+          '''
+        }
+      });
+
+      expect(runtime.executeLib('package:eval_test/main.dart', 'main'),
+          $String('a,b,c'));
+    });
+
+    test('Map.values', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'eval_test': {
+          'main.dart': '''
+            String main() {
+              final map = {'a': 1, 'b': 2, 'c': 3};
+              final values = map.values.toList();
+              values.sort();
+              return values.join(',');
+            }
+          '''
+        }
+      });
+
+      expect(runtime.executeLib('package:eval_test/main.dart', 'main'),
+          $String('1,2,3'));
+    });
+
+    test('Map.entries', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'eval_test': {
+          'main.dart': '''
+            void main() {
+              final map = {'a': 1, 'b': 2};
+              for (var entry in map.entries) {
+                print('\${entry.key}:\${entry.value}');
+              }
+            }
+          '''
+        }
+      });
+
+      expect(() {
+        runtime.executeLib('package:eval_test/main.dart', 'main');
+      }, prints('a:1\nb:2\n'));
+    });
+
+    test('Map.cast()', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'eval_test': {
+          'main.dart': '''
+            int main() {
+              final map = {'a': 1, 'b': 2};
+              final castMap = map.cast<String, int>();
+              return castMap['a'];
+            }
+          '''
+        }
+      });
+
+      expect(runtime.executeLib('package:eval_test/main.dart', 'main'), 1);
+    });
+  });
 }
