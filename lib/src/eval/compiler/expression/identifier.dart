@@ -17,8 +17,12 @@ Reference compileIdentifierAsReference(Identifier id, CompilerContext ctx) {
   if (id is SimpleIdentifier) {
     return IdentifierReference(null, id.name);
   } else if (id is PrefixedIdentifier) {
-    final L = compileIdentifier(id.prefix, ctx);
-    return IdentifierReference(L, id.identifier.name);
+    try {
+      final L = compileIdentifier(id.prefix, ctx);
+      return IdentifierReference(L, id.identifier.name);
+    } on PrefixError {
+      return IdentifierReference(null, '${id.prefix}.${id.identifier.name}');
+    }
   }
   throw CompileError('Unknown identifier ${id.runtimeType}');
 }
