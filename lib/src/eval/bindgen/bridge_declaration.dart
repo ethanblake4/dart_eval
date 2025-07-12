@@ -105,7 +105,8 @@ String getters(BindgenContext ctx, ClassElement2 element) {
   final getters = {
     if (ctx.implicitSupers)
       for (var s in element.allSupertypes)
-        for (final a in s.element3.getters2.where((a) => !a.isStatic)) a.name3: a,
+        for (final a in s.element3.getters2.where((a) => !a.isStatic))
+          a.name3: a,
     for (final a in element.getters2) a.name3: a
   };
 

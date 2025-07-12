@@ -102,7 +102,7 @@ String argumentAccessors(BindgenContext ctx, List<FormalParameterElement> params
           if (_name == null) {
             _name = 'v$j';
           }
-          paramBuffer.write(wrapVar(ctx, type.normalParameterTypes[j], _name));
+          paramBuffer.write(wrapVar(ctx, type.normalParameterTypes[i], _name));
           if (j < type.normalParameterTypes.length - 1) {
             paramBuffer.write(', ');
           }
