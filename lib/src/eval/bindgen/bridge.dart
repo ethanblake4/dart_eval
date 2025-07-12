@@ -25,10 +25,10 @@ String bindDecoratoratorMethods(BindgenContext ctx, ClassElement2 element) {
 
     return '''
         @override
-        ${returnType} ${e.name3}(${_parameterHeader(e.formalParameters)}) =>
-          ${needsCast ? '(' : ''}\$_invoke('${e.name3}', [
-            ${e.formalParameters.map((p) => wrapVar(ctx, p.type, p.displayName)).join(', ')}
-          ])${needsCast ? 'as ${returnType..getDisplayString()}$q)$q.cast()' : ''};
+        ${returnType} ${e.displayName}(${_parameterHeader(e.formalParameters)}) =>
+          ${needsCast ? '(' : ''}\$_invoke('${e.displayName}', [
+            ${e.formalParameters.map((p) => wrapVar(ctx, p.type, p.name3 ?? '')).join(', ')}
+          ])${needsCast ? 'as ${returnType.element3!.name3}$q)$q.cast()' : ''};
         ''';
   }).join('\n');
 

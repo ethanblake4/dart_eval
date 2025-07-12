@@ -102,7 +102,7 @@ class Bindgen {
   String? _$instance(BindgenContext ctx, ClassElement2 element) {
     final metadata = element.metadata2;
     final bindAnno = metadata.annotations.firstWhereOrNull(
-          (element) => element.element2?.name3 == 'Bind');
+          (element) => element.element2?.displayName == 'Bind');
     final bindAnnoValue = bindAnno?.computeConstantValue();
     if (!ctx.all) {
       if (bindAnnoValue == null) {
