@@ -1,4 +1,4 @@
-import 'package:analyzer/dart/element/element2.dart' show FormalParameterElement;
+import 'package:analyzer/dart/element/element2.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
 import 'package:dart_eval/src/eval/bindgen/type.dart';

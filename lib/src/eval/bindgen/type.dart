@@ -1,5 +1,4 @@
-import 'package:analyzer/dart/element/element.dart';
-import 'package:analyzer/dart/element/element2.dart' show ClassElement2;
+import 'package:analyzer/dart/element/element2.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:change_case/change_case.dart';
