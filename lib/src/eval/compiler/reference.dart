@@ -187,6 +187,14 @@ class IdentifierReference implements Reference {
         source);
   }
 
+  String get _refName {
+    final split = name.split('.');
+    if (split.length > 2) {
+      return split.sublist(1).join('.');
+    }
+    return name;
+  }
+
   @override
   Variable getValue(CompilerContext ctx, [AstNode? source]) {
     if (object != null) {
@@ -280,7 +288,7 @@ class IdentifierReference implements Reference {
                 methodOffset: DeferredOrOffset(
                     file: ctx.library,
                     className: ctx.currentClass!.name.lexeme,
-                    name: name,
+                    name: _refName,
                     targetScopeFrameOffset: $this.scopeFrameOffset),
                 callingConvention: CallingConvention.static);
           }
@@ -305,7 +313,7 @@ class IdentifierReference implements Reference {
                 methodOffset: DeferredOrOffset(
                     file: ctx.library,
                     className: ctx.currentClass!.name.lexeme,
-                    name: name));
+                    name: _refName));
           }
           final bridge = _dec.bridge!;
           if (bridge is BridgeMethodDef) {
@@ -323,7 +331,7 @@ class IdentifierReference implements Reference {
                 methodOffset: DeferredOrOffset(
                     file: ctx.library,
                     className: ctx.currentClass!.name.lexeme,
-                    name: name));
+                    name: _refName));
           }
           throw CompileError(
               'Ref: cannot resolve bridge declaration "$name" of type ${_dec.runtimeType}',
@@ -344,7 +352,7 @@ class IdentifierReference implements Reference {
         if (_dec is MethodDeclaration) {
           return Variable(-1, CoreTypes.function.ref(ctx),
               methodOffset: DeferredOrOffset.lookupStatic(
-                  ctx, ctx.library, ctx.currentClass!.name.lexeme, name));
+                  ctx, ctx.library, ctx.currentClass!.name.lexeme, _refName));
         } else if (_dec is VariableDeclaration) {
           final name = '${ctx.currentClass!.name.lexeme}.${_dec.name.lexeme}';
           final type = ctx.topLevelVariableInferredTypes[ctx.library]![name]!;
@@ -358,10 +366,13 @@ class IdentifierReference implements Reference {
     }
 
     final declaration = ctx.visibleDeclarations[ctx.library]![name] ??
+      ctx.visibleDeclarations[ctx.library]![name.split('.')[0]] ??
         (throw CompileError('Could not find declaration "$name"', source));
-    final _decl = declaration.declaration ?? (throw PrefixError());
+    
+    final _decl = declaration.declaration ?? declaration.children?[name.split('.').sublist(1).join('.')] ??
+        (throw PrefixError());
 
-    return _declarationToVariable(_decl, name, ctx, source);
+    return _declarationToVariable(_decl, _refName, ctx, source);
   }
 
   @override

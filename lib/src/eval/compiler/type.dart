@@ -325,8 +325,8 @@ class TypeRef {
   }
 
   factory TypeRef.lookupDeclaration(
-      CompilerContext ctx, int library, NamedCompilationUnitMember dec) {
-    return ctx.visibleTypes[library]![dec.name.lexeme] ??
+      CompilerContext ctx, int library, NamedCompilationUnitMember dec, {String? prefix}) {
+    return ctx.visibleTypes[library]!['${prefix != null ? '$prefix.' : ''}${dec.name.lexeme}'] ??
         (throw CompileError('Class/enum ${dec.name.value()} not found'));
   }
 
@@ -588,8 +588,9 @@ class TypeRef {
                       recursionGuard: rg, stack: _stack, source: source))
               .toList() ??
           [];
-      $super = (ctx.visibleTypes[file]![
-                  superName.name2.stringValue ?? superName.name2.lexeme] ??
+      final prefix = superName.importPrefix;
+      final superPrefix = '${prefix != null ? '${prefix.name.value()}.' : ''}';
+      $super = (ctx.visibleTypes[file]!['$superPrefix${superName.name2.lexeme}'] ??
               (throw CompileError(
                   'Superclass ${superName.name2.lexeme} not found', source)))
           .copyWith(specifiedTypeArgs: typeParams)

@@ -109,9 +109,9 @@ Pair<TypeRef, DeclarationOrBridge>? resolveInstanceDeclaration(
     }
   }
   if ($extendsClause != null) {
-    final extendsType = ctx.visibleTypes[library]![
-        $extendsClause.superclass.name2.stringValue ??
-            $extendsClause.superclass.name2.value()]!;
+    final prefix = $extendsClause.superclass.importPrefix;
+    final extendsType = ctx.visibleTypes[library]!['${prefix != null ? '${prefix.name.value()}.' : ''}'
+            '${$extendsClause.superclass.name2.value()}']!;
     return resolveInstanceDeclaration(
         ctx, extendsType.file, extendsType.name, name);
   } else {
