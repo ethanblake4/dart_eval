@@ -1066,8 +1066,9 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
         final s = usedIdentifiers[library]![declaration.key];
         for (final id in s ?? {}) {
           ids.add(id);
-          if (usedSelf.contains(id)) continue;
-          selfList.add(MapEntry(id, result[library]![id]!));
+          final selfDec = result[library]?[id];
+          if (usedSelf.contains(id) || selfDec == null) continue;
+          selfList.add(MapEntry(id, selfDec));
         }
         usedSelf.add(declaration.key);
       }
