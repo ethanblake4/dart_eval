@@ -114,8 +114,9 @@ String argumentAccessors(BindgenContext ctx, List<FormalParameterElement> params
           }
 
           for (var j = 0; j < type.optionalParameterTypes.length; j++) {
-            final _name = type.optionalParameterTypes[j].element3?.name3;
-            paramBuffer.write(wrapVar(ctx, type.optionalParameterTypes[j], _name ?? ''));
+            final _name = type.optionalParameterTypes[i].element3?.name3;
+            paramBuffer
+                .write(wrapVar(ctx, type.optionalParameterTypes[i], _name!));
             if (j < type.optionalParameterTypes.length - 1) {
               paramBuffer.write(', ');
             }

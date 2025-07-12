@@ -121,7 +121,7 @@ String? wrapVar(BindgenContext ctx, DartType type, String expr,
       wrapType(ctx, type, expr, metadata: metadata, wrapList: wrapList);
 
   if (wrapped == null) {
-    if (ctx.unknownTypes.add(type.element3!.displayName)) {
+    if (ctx.unknownTypes.add(type.element3!.name3!)) {
       print('Warning: type ${type.element3!.name3} is not bound, '
           'falling back to wrapAlways()');
     }
@@ -138,7 +138,7 @@ String? wrapVar(BindgenContext ctx, DartType type, String expr,
 String? wrapType(BindgenContext ctx, DartType type, String expr,
     {bool wrapList = false, List<ElementAnnotation>? metadata}) {
   final union =
-      metadata?.firstWhereOrNull((e) => e.element2?.name3 == 'UnionOf');
+      metadata?.firstWhereOrNull((e) => e.element2?.displayName == 'UnionOf');
   String unionStr = '';
   if (union != null) {
     final types =

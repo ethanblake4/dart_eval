@@ -124,9 +124,8 @@ String setters(BindgenContext ctx, ClassElement2 element) {
     for (final a in element.setters2) a.name3: a
   };
 
-  return setters.values	
-        .where((m) => !(const ['hashCode', 'runtimeType'].contains(m.name3)))	
-        .where((element) =>  !element.isSynthetic)
+  return setters.values
+        .where((element) => !element.isSynthetic)
         .map((e) => bridgeSetterDef(ctx, setter: e)).join('\n');
 }
 
@@ -137,7 +136,7 @@ String fields(BindgenContext ctx, ClassElement2 element) {
         if (s is ClassElement2)
           for (final f in s.element3.fields2.where((f) => !f.isStatic))
             f.name3: f,
-    for (final f in element.fields2)f.name3: f
+    for (final f in element.fields2) f.name3: f
   };
 
   final fields = allFields.values.where((element) => !element.isSynthetic);
