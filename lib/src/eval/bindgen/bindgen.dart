@@ -1,7 +1,7 @@
 import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/dart/element/element2.dart';
 import 'package:analyzer/file_system/physical_file_system.dart';
 import 'package:collection/collection.dart';
 import 'package:dart_eval/src/eval/bindgen/bridge.dart';
@@ -79,8 +79,8 @@ class Bindgen {
           analysisResult.unit.declarations.whereType<ClassDeclaration>();
 
       final resolved = units
-          .where((declaration) => declaration.declaredElement != null)
-          .map((declaration) => _$instance(ctx, declaration.declaredElement!))
+          .where((declaration) => declaration.declaredFragment != null)
+          .map((declaration) => _$instance(ctx, declaration.declaredFragment!.element))
           .nonNulls;
 
       if (resolved.isEmpty) {
@@ -99,10 +99,10 @@ class Bindgen {
     return null;
   }
 
-  String? _$instance(BindgenContext ctx, ClassElement element) {
-    final metadata = element.metadata;
-    final bindAnno = metadata.firstWhereOrNull(
-          (element) => element.element?.displayName == 'Bind');
+  String? _$instance(BindgenContext ctx, ClassElement2 element) {
+    final metadata = element.metadata2;
+    final bindAnno = metadata.annotations.firstWhereOrNull(
+          (element) => element.element2?.displayName == 'Bind');
     final bindAnnoValue = bindAnno?.computeConstantValue();
     if (!ctx.all) {
       if (bindAnnoValue == null) {
@@ -115,7 +115,7 @@ class Bindgen {
       if (override != null && !override.isNull) {
         final overrideUri = override.toStringValue();
         if (overrideUri != null) {
-          ctx.libOverrides[element.name] = overrideUri;
+          ctx.libOverrides[element.name3!] = overrideUri;
         }
       }
     }
@@ -125,20 +125,20 @@ class Bindgen {
     if (isBridge) {
       if (element.isSealed) {
         throw CompileError(
-          'Cannot bind sealed class ${element.name} as a bridge type. '
+          'Cannot bind sealed class ${element.name3} as a bridge type. '
           'Please remove the @Bind annotation, use a wrapper, or make the class non-sealed.');
       }
 
       return '''
-/// dart_eval bridge binding for [${element.name}]
-class \$${element.name}\$bridge extends ${element.name} with \$Bridge<${element.name}> {
+/// dart_eval bridge binding for [${element.name3}]
+class \$${element.name3}\$bridge extends ${element.name3} with \$Bridge<${element.name3}> {
 /// Configure this class for use in a [Runtime]
 ${bindConfigureForRuntime(ctx, element, isBridge: true)}
-/// Compile-time type specification of [\$${element.name}\$bridge]
+/// Compile-time type specification of [\$${element.name3}\$bridge]
 ${bindTypeSpec(ctx, element)}
-/// Compile-time type declaration of [\$${element.name}\$bridge]
+/// Compile-time type declaration of [\$${element.name3}\$bridge]
 ${bindBridgeType(ctx, element)}
-/// Compile-time class declaration of [\$${element.name}]
+/// Compile-time class declaration of [\$${element.name3}]
 ${bindBridgeDeclaration(ctx, element, isBridge: true)}
 ${$constructors(ctx, element, isBridge: true)}
 ${$staticMethods(ctx, element)}
@@ -152,15 +152,15 @@ ${bindDecoratoratorMethods(ctx, element)}
     }
 
     return '''
-/// dart_eval wrapper binding for [${element.name}]
-class \$${element.name} implements \$Instance {
+/// dart_eval wrapper binding for [${element.name3}]
+class \$${element.name3} implements \$Instance {
 /// Configure this class for use in a [Runtime]
 ${bindConfigureForRuntime(ctx, element)}
-/// Compile-time type specification of [\$${element.name}]
+/// Compile-time type specification of [\$${element.name3}]
 ${bindTypeSpec(ctx, element)}
-/// Compile-time type declaration of [\$${element.name}]
+/// Compile-time type declaration of [\$${element.name3}]
 ${bindBridgeType(ctx, element)}
-/// Compile-time class declaration of [\$${element.name}]
+/// Compile-time class declaration of [\$${element.name3}]
 ${bindBridgeDeclaration(ctx, element)}
 ${$constructors(ctx, element)}
 ${$staticMethods(ctx, element)}
@@ -175,7 +175,7 @@ ${$setProperty(ctx, element)}
 ''';
   }
 
-  String $superclassWrapper(BindgenContext ctx, ClassElement element) {
+  String $superclassWrapper(BindgenContext ctx, ClassElement2 element) {
     final supertype = element.supertype;
     final objectWrapper = '\$Object(\$value)';
     if (supertype == null || ctx.implicitSupers) {
@@ -184,7 +184,7 @@ ${$setProperty(ctx, element)}
     }
     final narrowWrapper = wrapType(ctx, supertype, '\$value');
     if (narrowWrapper == null) {
-      print('Warning: Could not wrap supertype $supertype of ${element.name},'
+      print('Warning: Could not wrap supertype $supertype of ${element.name3},'
           ' falling back to \$Object. Add a @Bind annotation to $supertype'
           ' or set `implicitSupers: true`');
       ctx.imports.add('package:dart_eval/stdlib/core.dart');
@@ -193,25 +193,25 @@ ${$setProperty(ctx, element)}
     return narrowWrapper;
   }
 
-  String $getRuntimeType(ClassElement element) {
+  String $getRuntimeType(ClassElement2 element) {
     return '''
   @override
   int \$getRuntimeType(Runtime runtime) => runtime.lookupType(\$spec);
 ''';
   }
 
-  String $wrap(BindgenContext ctx, ClassElement element) {
+  String $wrap(BindgenContext ctx, ClassElement2 element) {
     return '''
   final \$Instance _superclass;
 
   @override
-  final ${element.name} \$value;
+  final ${element.name3} \$value;
 
   @override
-  ${element.name} get \$reified => \$value;
+  ${element.name3} get \$reified => \$value;
 
-  /// Wrap a [${element.name}] in a [\$${element.name}]
-  \$${element.name}.wrap(this.\$value) : _superclass = ${$superclassWrapper(ctx, element)};
+  /// Wrap a [${element.name3}] in a [\$${element.name3}]
+  \$${element.name3}.wrap(this.\$value) : _superclass = ${$superclassWrapper(ctx, element)};
     ''';
   }
 }

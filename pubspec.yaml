@@ -24,7 +24,7 @@ executables:
 
 dependencies:
   args: ^2.4.0
-  analyzer: ^6.9.0
+  analyzer: ^7.0.0
   collection: ^1.18.0
   directed_graph: '>=0.3.9 <0.5.0'
   json_annotation: ^4.7.0
