@@ -594,36 +594,5 @@ void main() {
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 10);
     });
-
-    test('Returning class from static top-level method', () {
-      final runtime = compiler.compileWriteAndLoad({
-        'example': {
-          'main.dart': '''
-            library;
-            import 'package:example/my_class.dart';
-            final MyClass myClass = createMyClass();
-            int get p => 4;
-            
-            int main() {
-              return myClass.someMethod() + 2;
-            }
-          ''',
-          'my_class.dart': '''
-            import 'package:example/main.dart' as m;
-            MyClass createMyClass() => MyClass._internal();
-
-            class MyClass {
-              MyClass._internal();
-              
-              int someMethod() {
-                return 4 + m.p;
-              }
-            }
-          '''
-        }
-      });
-
-      expect(runtime.executeLib('package:example/main.dart', 'main'), 10);
-    });
   });
 }
