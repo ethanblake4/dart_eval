@@ -19,7 +19,7 @@ String bindBridgeType(BindgenContext ctx, ClassElement element) {
 ''';
 }
 
-String? bindBridgeDeclaration(BindgenContext ctx, ClassElement element) {
+String? bindBridgeDeclaration(BindgenContext ctx, ClassElement element, {bool isBridge = false}) {
   if (element.constructors.isEmpty) {
     return null;
   }
@@ -75,7 +75,8 @@ ${setters(ctx, element)}
     fields: {
 ${fields(ctx, element)}
     },
-    wrap: ${ctx.wrap},
+    wrap: ${!isBridge},
+    bridge: $isBridge,
   );
     ''';
 }

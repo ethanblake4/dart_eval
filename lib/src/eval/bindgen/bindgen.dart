@@ -4,6 +4,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/file_system/physical_file_system.dart';
 import 'package:collection/collection.dart';
+import 'package:dart_eval/src/eval/bindgen/bridge.dart';
 import 'package:dart_eval/src/eval/bindgen/bridge_declaration.dart';
 import 'package:dart_eval/src/eval/bindgen/configure.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
@@ -11,6 +12,7 @@ import 'package:dart_eval/src/eval/bindgen/methods.dart';
 import 'package:dart_eval/src/eval/bindgen/properties.dart';
 import 'package:dart_eval/src/eval/bindgen/statics.dart';
 import 'package:dart_eval/src/eval/bindgen/type.dart';
+import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'dart:io' as io;
 
 import 'package:package_config/package_config.dart';
@@ -48,7 +50,7 @@ class Bindgen {
     final analysisContext = _contextCollection!.contextFor(filePath);
     final session = analysisContext.currentSession;
     final analysisResult = await session.getResolvedUnit(filePath);
-    final ctx = BindgenContext(uri, wrap: true, all: all);
+    final ctx = BindgenContext(uri, all: all);
 
     if (analysisResult is ResolvedUnitResult) {
       // Access the resolved unit and analyze it
@@ -99,23 +101,54 @@ class Bindgen {
 
   String? _$instance(BindgenContext ctx, ClassElement element) {
     final metadata = element.metadata;
-    if (!ctx.all) {
-      final bindAnno = metadata.firstWhereOrNull(
+    final bindAnno = metadata.firstWhereOrNull(
           (element) => element.element?.displayName == 'Bind');
-      if (bindAnno == null) {
+    final bindAnnoValue = bindAnno?.computeConstantValue();
+    if (!ctx.all) {
+      if (bindAnnoValue == null) {
         return null;
       }
-      final bindAnnoValue = bindAnno.computeConstantValue();
       final implicitSupers =
-          bindAnnoValue?.getField('implicitSupers')?.toBoolValue() ?? false;
+          bindAnnoValue.getField('implicitSupers')?.toBoolValue() ?? false;
       ctx.implicitSupers = implicitSupers;
-      final override = bindAnnoValue?.getField('overrideLibrary');
+      final override = bindAnnoValue.getField('overrideLibrary');
       if (override != null && !override.isNull) {
         final overrideUri = override.toStringValue();
         if (overrideUri != null) {
           ctx.libOverrides[element.name] = overrideUri;
         }
       }
+    }
+
+    final isBridge = bindAnnoValue?.getField('bridge')?.toBoolValue() ?? false;
+
+    if (isBridge) {
+      if (element.isSealed) {
+        throw CompileError(
+          'Cannot bind sealed class ${element.name} as a bridge type. '
+          'Please remove the @Bind annotation, use a wrapper, or make the class non-sealed.');
+      }
+
+      return '''
+/// dart_eval bridge binding for [${element.name}]
+class \$${element.name}\$bridge extends ${element.name} with \$Bridge<${element.name}> {
+/// Configure this class for use in a [Runtime]
+${bindConfigureForRuntime(ctx, element, isBridge: true)}
+/// Compile-time type specification of [\$${element.name}\$bridge]
+${bindTypeSpec(ctx, element)}
+/// Compile-time type declaration of [\$${element.name}\$bridge]
+${bindBridgeType(ctx, element)}
+/// Compile-time class declaration of [\$${element.name}]
+${bindBridgeDeclaration(ctx, element, isBridge: true)}
+${$constructors(ctx, element, isBridge: true)}
+${$staticMethods(ctx, element)}
+${$staticGetters(ctx, element)}
+${$staticSetters(ctx, element)}
+${$bridgeGet(ctx, element)}
+${$bridgeSet(ctx, element)}
+${bindDecoratoratorMethods(ctx, element)}
+}
+''';
     }
 
     return '''

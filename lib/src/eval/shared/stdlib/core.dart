@@ -14,6 +14,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/object.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/pattern.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/record.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/regexp.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/sink.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/stack_trace.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/string_buffer.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/symbol.dart';
@@ -70,6 +71,7 @@ class DartCorePlugin implements EvalPlugin {
     registry.defineBridgeClass($ArgumentError.$declaration);
     registry.defineBridgeClass($StateError.$declaration);
     registry.defineBridgeClass($Set.$declaration);
+    registry.defineBridgeClass($Sink.$declaration);
     $StackTrace.configureForCompile(registry);
     $Error.configureForCompile(registry);
     $UnimplementedError.configureForCompile(registry);

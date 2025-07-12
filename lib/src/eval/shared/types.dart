@@ -131,6 +131,9 @@ class CoreTypes {
 
   /// Bridge type spec for [StringBuffer]
   static const stringBuffer = BridgeTypeSpec('dart:core', 'StringBuffer');
+
+  /// Bridge type spec for [Sink]
+  static const sink = BridgeTypeSpec('dart:core', 'Sink');
 }
 
 /// This class contains dart:async bridge type specs for convenience
@@ -243,6 +246,14 @@ class ConvertTypes {
 
   /// Bridge type spec for [$Base64Codec]
   static const base64Codec = BridgeTypeSpec('dart:convert', 'Base64Codec');
+
+  /// Bridge type spec for [ByteConversionSink]
+  static const byteConversionSink =
+      BridgeTypeSpec('dart:convert', 'ByteConversionSink');
+
+  /// Bridge type spec for [ChunkedConversionSink]
+  static const chunkedConversionSink =
+      BridgeTypeSpec('dart:convert', 'ChunkedConversionSink');
 }
 
 /// This class contains dart:io bridge type specs for convenience

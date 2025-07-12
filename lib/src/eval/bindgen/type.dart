@@ -20,7 +20,12 @@ String bridgeTypeRefFromType(BindgenContext ctx, DartType type) {
         ${parameters(ctx, type.parameters.where((p) => p.isNamed).toList())}
       ],
     ))''';
-  }
+  } else if (type is ParameterizedType) {
+    final typeArgs = type.typeArguments
+        .map((e) => bridgeTypeRefFromType(ctx, e))
+        .join(', ');
+    return 'BridgeTypeRef(${bridgeTypeSpecFrom(ctx, type)}, [$typeArgs])';
+  } 
   return 'BridgeTypeRef(${bridgeTypeSpecFrom(ctx, type)})';
 }
 

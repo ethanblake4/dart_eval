@@ -58,6 +58,12 @@ class $num<T extends num> implements $Instance {
                     nullable: true),
                 params: []),
             isStatic: false),
+        'abs': BridgeMethodDef(
+            BridgeFunctionDef(
+                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num),
+                    nullable: true),
+                params: []),
+            isStatic: false),
       },
       getters: {},
       setters: {},
@@ -139,6 +145,8 @@ class $num<T extends num> implements $Instance {
         return __toDouble;
       case 'ceil':
         return __ceil;
+      case 'abs':
+        return __abs;
     }
     return _superclass.$getProperty(runtime, identifier);
   }
@@ -289,6 +297,12 @@ class $num<T extends num> implements $Instance {
       Runtime runtime, $Value? target, List<$Value?> args) {
     final _evalResult = (target!.$value as num).toDouble();
     return $double(_evalResult);
+  }
+
+  static const $Function __abs = $Function(_abs);
+  static $Value? _abs(Runtime runtime, $Value? target, List<$Value?> args) {
+    final _evalResult = (target!.$value as num).abs();
+    return $num(_evalResult);
   }
 
   static const $Function __ceil = $Function(_ceil);
