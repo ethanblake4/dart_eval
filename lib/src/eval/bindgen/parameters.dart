@@ -50,7 +50,7 @@ String argumentAccessors(BindgenContext ctx, List<FormalParameterElement> params
     if (type.isDartCoreFunction || type is FunctionType) {
       paramBuffer.write('(');
       if (type is FunctionType) {
-        for (var j = 0; j < type.normalParameterTypes.length; j++) {	
+        for (var j = 0; j < type.normalParameterTypes.length; j++) {
           var _name = type.normalParameterTypes[j].element3?.name3;
           if (_name == null) {
             _name = 'v$j';

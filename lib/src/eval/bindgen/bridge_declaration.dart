@@ -134,7 +134,7 @@ String fields(BindgenContext ctx, ClassElement2 element) {
     if (ctx.implicitSupers)
       for (var s in element.allSupertypes)
         if (s is ClassElement2)
-          for (final f in s.element3.fields2.where((f) => !f.isStatic))
+          for (final f in (s as ClassElement2).fields2.where((f) => !f.isStatic))
             f.name3: f,
     for (final f in element.fields2) f.name3: f
   };
