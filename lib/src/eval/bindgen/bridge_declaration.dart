@@ -8,7 +8,7 @@ String bindTypeSpec(BindgenContext ctx, ClassElement2 element) {
   return '''
   static const \$spec = BridgeTypeSpec(
     '${uri}',
-    '${element.displayName.replaceAll(r'$', r'\$')}',
+    '${element.name3!.replaceAll(r'$', r'\$')}',
   );
 ''';
 }
@@ -128,12 +128,13 @@ String fields(BindgenContext ctx, ClassElement2 element) {
   final allFields = {
     if (ctx.implicitSupers)
       for (var s in element.allSupertypes)
-        for (final f in s.element3.fields2.where((f) => !f.isStatic))
-          f,
-    for (final f in element.fields2) f
+        if (s is ClassElement2)
+          for (final f in s.element3.fields2.where((f) => !f.isStatic))
+            f.name3: f,
+    for (final f in element.fields2)f.name3: f
   };
 
-  final fields = allFields.where((element) => !element.isSynthetic);
+  final fields = allFields.values.where((element) => !element.isSynthetic);
 
   return fields
       .map(
@@ -148,8 +149,8 @@ String bridgeConstructorDef(BindgenContext ctx,
       '${constructor.name3}': BridgeConstructorDef(
           BridgeFunctionDef(
             returns: BridgeTypeAnnotation(\$type),
-            namedParams: [${namedParameters(ctx, element: constructor.formalParameters.first)}],
-            params: [${positionalParameters(ctx, element: constructor.formalParameters.first)}],
+            namedParams: [${namedParameters(ctx, element: constructor)}],
+            params: [${positionalParameters(ctx, element: constructor)}],
           ),
           isFactory: ${constructor.isFactory},
       ),
@@ -161,8 +162,8 @@ String bridgeMethodDef(BindgenContext ctx, {required MethodElement2 method}) {
       '${method.name3}': BridgeMethodDef(
         BridgeFunctionDef(
           returns: ${bridgeTypeAnnotationFrom(ctx, method.returnType)},
-          namedParams: [${namedParameters(ctx, element: method.formalParameters.first)}],
-          params: [${positionalParameters(ctx, element: method.formalParameters.first)}],
+          namedParams: [${namedParameters(ctx, element: method)}],
+          params: [${positionalParameters(ctx, element: method)}],
         ),
         ${method.isStatic ? 'isStatic: true,' : ''}
       ),
@@ -175,8 +176,8 @@ String bridgeGetterDef(BindgenContext ctx,
       '${getter.name3}': BridgeMethodDef(
         BridgeFunctionDef(
           returns: ${bridgeTypeAnnotationFrom(ctx, getter.returnType)},
-          namedParams: [${namedParameters(ctx, element: getter.formalParameters.first)}],
-          params: [${positionalParameters(ctx, element: getter.formalParameters.first)}],
+          namedParams: [${namedParameters(ctx, element: getter)}],
+          params: [${positionalParameters(ctx, element: getter)}],
         ),
         ${getter.isStatic ? 'isStatic: true,' : ''}
       ),
@@ -189,8 +190,8 @@ String bridgeSetterDef(BindgenContext ctx,
       '${setter.name3}': BridgeMethodDef(
         BridgeFunctionDef(
           returns: ${bridgeTypeAnnotationFrom(ctx, setter.returnType)},
-          namedParams: [${namedParameters(ctx, element: setter.formalParameters.first)}],
-          params: [${positionalParameters(ctx, element: setter.formalParameters.first)}],
+          namedParams: [${namedParameters(ctx, element: setter)}],
+          params: [${positionalParameters(ctx, element: setter)}],
         ),
         ${setter.isStatic ? 'isStatic: true,' : ''}
       ),

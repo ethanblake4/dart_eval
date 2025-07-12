@@ -4,7 +4,7 @@ import 'package:dart_eval/src/eval/bindgen/context.dart';
 import 'package:dart_eval/src/eval/bindgen/type.dart';
 
 String namedParameters(BindgenContext ctx,
-    {required FormalParameterElement element}) {
+    {required ExecutableElement2 element}) {
   final params = element.formalParameters.where((e) => e.isNamed);
   if (params.isEmpty) {
     return '';
@@ -14,7 +14,7 @@ String namedParameters(BindgenContext ctx,
 }
 
 String positionalParameters(BindgenContext ctx,
-    {required FormalParameterElement element}) {
+    {required ExecutableElement2 element}) {
   final params = element.formalParameters.where((e) => e.isPositional);
   if (params.isEmpty) {
     return '';
