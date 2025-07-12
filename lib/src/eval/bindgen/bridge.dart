@@ -28,7 +28,7 @@ String bindDecoratoratorMethods(BindgenContext ctx, ClassElement element) {
         ${returnType} ${e.displayName}(${_parameterHeader(e.parameters)}) =>
           ${needsCast ? '(' : ''}\$_invoke('${e.displayName}', [
             ${e.parameters.map((p) => wrapVar(ctx, p.type, p.name)).join(', ')}
-          ])${needsCast ? 'as ${returnType.element3!.name}$q)$q.cast()' : ''};
+          ])${needsCast ? 'as ${returnType.getDisplayString(withNullability: false)}$q)$q.cast()' : ''};
         ''';
   }).join('\n');
 

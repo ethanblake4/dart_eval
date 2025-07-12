@@ -253,19 +253,19 @@ String wrapFunctionType(BindgenContext ctx, FunctionType type, String expr) {
     }
   }
 
-  if (type.optionalParameterNames.isNotEmpty) {
-    for (var j = i; j < type.optionalParameterNames.length + i; j++) {
+  if (type.optionalParameterTypes.isNotEmpty) {
+    for (var j = i; j < type.optionalParameterTypes.length + i; j++) {
       if (type.normalParameterTypes.isNotEmpty) {
         buffer.write(', ');
       }
-      final _type = type.optionalParameterTypes[i];
+      final _type = type.optionalParameterTypes[j - i];
       buffer.write('args[$j]');
       if (_type.nullabilitySuffix == NullabilitySuffix.question) {
         buffer.write('?.\$value');
       } else {
         buffer.write('!.\$value');
       }
-      if (j < type.optionalParameterNames.length + i - 1) {
+      if (j < type.optionalParameterTypes.length + i - 1) {
         buffer.write(', ');
       }
     }
@@ -273,7 +273,7 @@ String wrapFunctionType(BindgenContext ctx, FunctionType type, String expr) {
 
   if (type.namedParameterTypes.isNotEmpty) {
     if (type.normalParameterTypes.isNotEmpty ||
-        type.optionalParameterNames.isNotEmpty) {
+        type.optionalParameterTypes.isNotEmpty) {
       buffer.write(', ');
     }
 
