@@ -20,18 +20,18 @@ String constructorsForRuntime(BindgenContext ctx, ClassElement2 element, {bool i
 
 String constructorForRuntime(
     BindgenContext ctx, ClassElement2 element, ConstructorElement2 constructor, {bool isBridge = false}) {
-  final name = constructor.displayName.isEmpty ? '' : constructor.displayName;
-  final fullyQualifiedConstructorId = '${element.displayName}.$name';
+  final name = constructor.name3 == null ? '' : constructor.name3;
+  final fullyQualifiedConstructorId = '${element.name3}.$name';
 
-  final staticName = constructor.displayName.isEmpty ? 'new' : constructor.displayName;
-  final uri = ctx.libOverrides[element.displayName] ?? ctx.uri;
+  final staticName = constructor.name3 == null ? 'new' : constructor.name3;
+  final uri = ctx.libOverrides[element.name3] ?? ctx.uri;
   final bridgeParam = isBridge ? ',bridge: true' : '';
 
   return '''
     runtime.registerBridgeFunc(
       '${uri}',
       '$fullyQualifiedConstructorId',
-      \$${element.displayName}.\$$staticName
+      \$${element.name3}.\$$staticName
       $bridgeParam
     );
   ''';
@@ -46,12 +46,12 @@ String staticMethodsForRuntime(BindgenContext ctx, ClassElement2 element) {
 
 String staticMethodForRuntime(
     BindgenContext ctx, ClassElement2 element, MethodElement2 method) {
-  final uri = ctx.libOverrides[element.displayName] ?? ctx.uri;
+  final uri = ctx.libOverrides[element.name3] ?? ctx.uri;
   return '''
     runtime.registerBridgeFunc(
       '${uri}',
-      '${element.displayName}.${method.displayName}',
-      \$${element.displayName}.\$${method.displayName}
+      '${element.name3}.${method.name3}',
+      \$${element.name3}.\$${method.name3}
     );
   ''';
 }
@@ -65,12 +65,12 @@ String staticGettersForRuntime(BindgenContext ctx, ClassElement2 element) {
 
 String staticGetterForRuntime(
     BindgenContext ctx, ClassElement2 element, PropertyAccessorElement2 getter) {
-  final uri = ctx.libOverrides[element.displayName] ?? ctx.uri;
+  final uri = ctx.libOverrides[element.name3] ?? ctx.uri;
   return '''
     runtime.registerBridgeFunc(
       '${uri}',
-      '${element.displayName}.${getter.displayName}*g',
-      \$${element.displayName}.\$${getter.displayName}
+      '${element.name3}.${getter.name3}*g',
+      \$${element.name3}.\$${getter.name3}
     );
   ''';
 }
@@ -84,12 +84,12 @@ String staticSettersForRuntime(BindgenContext ctx, ClassElement2 element) {
 
 String staticSetterForRuntime(
     BindgenContext ctx, ClassElement2 element, PropertyAccessorElement2 setter) {
-  final uri = ctx.libOverrides[element.displayName] ?? ctx.uri;
+  final uri = ctx.libOverrides[element.name3] ?? ctx.uri;
   return '''
     runtime.registerBridgeFunc(
       '${uri}',
-      '${element.displayName}.${setter.displayName}*s',
-      \$${element.displayName}.set\$${setter.displayName}
+      '${element.name3}.${setter.name3}*s',
+      \$${element.name3}.set\$${setter.name3}
     );
   ''';
 }

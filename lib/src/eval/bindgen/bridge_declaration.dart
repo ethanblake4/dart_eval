@@ -4,7 +4,7 @@ import 'package:dart_eval/src/eval/bindgen/parameters.dart';
 import 'package:dart_eval/src/eval/bindgen/type.dart';
 
 String bindTypeSpec(BindgenContext ctx, ClassElement2 element) {
-  final uri = ctx.libOverrides[element.displayName] ?? ctx.uri;
+  final uri = ctx.libOverrides[element.name3] ?? ctx.uri;
   return '''
   static const \$spec = BridgeTypeSpec(
     '${uri}',
@@ -32,7 +32,7 @@ String? bindBridgeDeclaration(BindgenContext ctx, ClassElement2 element, {bool i
       final boundStr = e.bound != null && !ctx.implicitSupers
           ? '\$extends: ${bridgeTypeRefFromType(ctx, e.bound!)}'
           : '';
-      return '\'${e.displayName}\': BridgeGenericParam($boundStr)';
+      return '\'${e.name3}\': BridgeGenericParam($boundStr)';
     }).join(',')}
     },''';
   }
@@ -91,12 +91,12 @@ String methods(BindgenContext ctx, ClassElement2 element) {
   final methods = {
     if (ctx.implicitSupers)
       for (var s in element.allSupertypes)
-        for (final m in s.element3.methods2.where((m) => !m.isStatic)) m.displayName: m,
-    for (final m in element.methods2) m.displayName: m
+        for (final m in s.element3.methods2.where((m) => !m.isStatic)) m.name3: m,
+    for (final m in element.methods2) m.name3: m
   };
   return methods.values
       .where(
-          (m) => !(const ['==', 'toString', 'noSuchMethod'].contains(m.displayName)))
+          (m) => !(const ['==', 'toString', 'noSuchMethod'].contains(m.name3)))
       .map((m) => bridgeMethodDef(ctx, method: m))
       .join('\n');
 }
@@ -145,7 +145,7 @@ String fields(BindgenContext ctx, ClassElement2 element) {
 String bridgeConstructorDef(BindgenContext ctx,
     {required ConstructorElement2 constructor}) {
   return '''
-      '${constructor.displayName}': BridgeConstructorDef(
+      '${constructor.name3}': BridgeConstructorDef(
           BridgeFunctionDef(
             returns: BridgeTypeAnnotation(\$type),
             namedParams: [${namedParameters(ctx, element: constructor.formalParameters.first)}],
@@ -158,7 +158,7 @@ String bridgeConstructorDef(BindgenContext ctx,
 
 String bridgeMethodDef(BindgenContext ctx, {required MethodElement2 method}) {
   return '''
-      '${method.displayName}': BridgeMethodDef(
+      '${method.name3}': BridgeMethodDef(
         BridgeFunctionDef(
           returns: ${bridgeTypeAnnotationFrom(ctx, method.returnType)},
           namedParams: [${namedParameters(ctx, element: method.formalParameters.first)}],
@@ -172,7 +172,7 @@ String bridgeMethodDef(BindgenContext ctx, {required MethodElement2 method}) {
 String bridgeGetterDef(BindgenContext ctx,
     {required PropertyAccessorElement2 getter}) {
   return '''
-      '${getter.displayName}': BridgeMethodDef(
+      '${getter.name3}': BridgeMethodDef(
         BridgeFunctionDef(
           returns: ${bridgeTypeAnnotationFrom(ctx, getter.returnType)},
           namedParams: [${namedParameters(ctx, element: getter.formalParameters.first)}],
@@ -186,7 +186,7 @@ String bridgeGetterDef(BindgenContext ctx,
 String bridgeSetterDef(BindgenContext ctx,
     {required PropertyAccessorElement2 setter}) {
   return '''
-      '${setter.displayName}': BridgeMethodDef(
+      '${setter.name3}': BridgeMethodDef(
         BridgeFunctionDef(
           returns: ${bridgeTypeAnnotationFrom(ctx, setter.returnType)},
           namedParams: [${namedParameters(ctx, element: setter.formalParameters.first)}],
@@ -199,7 +199,7 @@ String bridgeSetterDef(BindgenContext ctx,
 
 String bridgeFieldDef(BindgenContext ctx, {required FieldElement2 field}) {
   return '''
-      '${field.displayName}': BridgeFieldDef(
+      '${field.name3}': BridgeFieldDef(
         ${bridgeTypeAnnotationFrom(ctx, field.type)},
         isStatic: ${field.isStatic},
       ),

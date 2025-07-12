@@ -31,7 +31,7 @@ String parameters(BindgenContext ctx, List<FormalParameterElement> params) {
 String _parameterFrom(BindgenContext ctx, FormalParameterElement parameter) {
   return '''
     BridgeParameter(
-      '${parameter.displayName}',
+      '${parameter.name3}',
       ${bridgeTypeAnnotationFrom(ctx, parameter.type)},
       ${parameter.isOptional ? 'true' : 'false'},
     ),
@@ -44,7 +44,7 @@ String argumentAccessors(BindgenContext ctx, List<FormalParameterElement> params
   for (var i = 0; i < params.length; i++) {
     final param = params[i];
     if (param.isNamed) {
-      paramBuffer.write('${paramMapping[param.displayName] ?? param.displayName}: ');
+      paramBuffer.write('${paramMapping[param.name3] ?? param.name3}: ');
     }
     final type = param.type;
     if (type.isDartCoreFunction || type is FunctionType) {
@@ -52,8 +52,8 @@ String argumentAccessors(BindgenContext ctx, List<FormalParameterElement> params
       if (type is FunctionType) {
         final normalParams = type.formalParameters.where((p) => p.isRequiredPositional).toList();
         for (var j = 0; j < normalParams.length; j++) {
-          var _name = normalParams[j].displayName;
-          if (_name.isEmpty) {
+          var _name = normalParams[j].name3;
+          if (_name == null) {
             _name = 'v$j';
           }
           paramBuffer.write(_name);
@@ -70,7 +70,7 @@ String argumentAccessors(BindgenContext ctx, List<FormalParameterElement> params
           paramBuffer.write('[');
 
           for (var j = 0; j < optionalParams.length; j++) {
-            final _name = optionalParams[j].displayName;
+            final _name = optionalParams[j].name3;
             paramBuffer.write(_name);
             if (j < optionalParams.length - 1) {
               paramBuffer.write(', ');
@@ -87,7 +87,7 @@ String argumentAccessors(BindgenContext ctx, List<FormalParameterElement> params
           paramBuffer.write('{');
 
           for (var k = 0; k < namedParams.length; k++) {
-            final _name = namedParams[k].displayName;
+            final _name = namedParams[k].name3;
             paramBuffer.write(_name);
             if (k < namedParams.length - 1) {
               paramBuffer.write(', ');
@@ -101,8 +101,8 @@ String argumentAccessors(BindgenContext ctx, List<FormalParameterElement> params
       if (type is FunctionType) {
         final normalParams = type.formalParameters.where((p) => p.isRequiredPositional).toList();
         for (var j = 0; j < normalParams.length; j++) {
-          var _name = normalParams[j].displayName;
-          if (_name.isEmpty) {
+          var _name = normalParams[j].name3;
+          if (_name == null) {
             _name = 'v$j';
           }
           paramBuffer.write(wrapVar(ctx, normalParams[j].type, _name));
@@ -160,7 +160,7 @@ String argumentAccessors(BindgenContext ctx, List<FormalParameterElement> params
       }
       if (needsCast) {
         final q = (param.isRequired ? '' : '?');
-        paramBuffer.write(' as ${type.element3!.displayName}$q');
+        paramBuffer.write(' as ${type.element3!.name3}$q');
         paramBuffer.write(')$q.cast()');
       }
     }

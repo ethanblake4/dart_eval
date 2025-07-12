@@ -9,7 +9,7 @@ import 'package:dart_eval/src/eval/bindgen/parameters.dart';
 
 String bridgeTypeRefFromType(BindgenContext ctx, DartType type) {
   if (type is TypeParameterType) {
-    return 'BridgeTypeRef.ref(\'${type.element3.displayName}\')';
+    return 'BridgeTypeRef.ref(\'${type.element3.name3}\')';
   } else if (type is FunctionType) {
     return '''BridgeTypeRef.genericFunction(BridgeFunctionDef(
       returns: ${bridgeTypeAnnotationFrom(ctx, type.returnType)},
@@ -43,7 +43,7 @@ String bridgeTypeSpecFrom(BindgenContext ctx, DartType type) {
   }
   final element = type.element3!;
   final lib = element.library2!;
-  final uri = ctx.libOverrides[element.displayName] ?? lib.uri.toString();
+  final uri = ctx.libOverrides[element.name3] ?? lib.uri.toString();
   return 'BridgeTypeSpec(\'${uri}\', \'${element.displayName.replaceAll(r'$', r'\$')}\')';
 }
 
@@ -122,7 +122,7 @@ String? wrapVar(BindgenContext ctx, DartType type, String expr,
 
   if (wrapped == null) {
     if (ctx.unknownTypes.add(type.element3!.displayName)) {
-      print('Warning: type ${type.element3!.displayName} is not bound, '
+      print('Warning: type ${type.element3!.name3} is not bound, '
           'falling back to wrapAlways()');
     }
     wrapped = 'runtime.wrapAlways($expr)';
@@ -138,7 +138,7 @@ String? wrapVar(BindgenContext ctx, DartType type, String expr,
 String? wrapType(BindgenContext ctx, DartType type, String expr,
     {bool wrapList = false, List<ElementAnnotation>? metadata}) {
   final union =
-      metadata?.firstWhereOrNull((e) => e.element2?.displayName == 'UnionOf');
+      metadata?.firstWhereOrNull((e) => e.element2?.name3 == 'UnionOf');
   String unionStr = '';
   if (union != null) {
     final types =
@@ -153,7 +153,7 @@ String? wrapType(BindgenContext ctx, DartType type, String expr,
         final wrapper = wrapVar(ctx, _type, expr);
 
         unionStr +=
-            '$expr is ${_type.element3!.displayName} ? $wrapper : ';
+            '$expr is ${_type.element3!.name3} ? $wrapper : ';
       }
     }
   }
@@ -180,7 +180,7 @@ String? wrapType(BindgenContext ctx, DartType type, String expr,
   final element = type.element3 ??
       (throw BindingGenerationError('Type $type has no element'));
   final lib = element.library2!;
-  final name = element.displayName;
+  final name = element.name3;
 
   final defaultCstr = {'int', 'num', 'double', 'bool', 'String', 'Object'};
 
@@ -214,7 +214,7 @@ String? wrapType(BindgenContext ctx, DartType type, String expr,
 
   final typeEl = type.element3!;
   if (typeEl is ClassElement2 &&
-      typeEl.metadata2.annotations.any((e) => e.element2?.displayName == 'Bind')) {
+      typeEl.metadata2.annotations.any((e) => e.element2?.name3 == 'Bind')) {
     ctx.imports.add(
         typeEl.library2.uri.toString().replaceAll('.dart', '.eval.dart'));
     return '${unionStr}\$$name.wrap($expr)';

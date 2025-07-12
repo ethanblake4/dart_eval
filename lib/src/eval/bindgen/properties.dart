@@ -36,36 +36,36 @@ String propertyGetters(BindgenContext ctx, ClassElement2 element,
   final methods = {
     if (ctx.implicitSupers)
       for (var s in element.allSupertypes)
-        for (final m in s.element3.methods2) m.displayName: m,
-    for (final m in element.methods2) m.displayName: m
+        for (final m in s.element3.methods2) m.name3: m,
+    for (final m in element.methods2) m.name3: m
   };
   final _getters = element.getters2
       .where((accessor) =>
            !accessor.isStatic && !accessor.isPrivate)
-      .where((a) => !(const ['hashCode', 'runtimeType'].contains(a.displayName)));
+      .where((a) => !(const ['hashCode', 'runtimeType'].contains(a.name3)));
 
   final _methods = methods.values
       .where((method) => !method.isPrivate && !method.isStatic)
       .where(
-          (m) => !(const ['==', 'toString', 'noSuchMethod'].contains(m.displayName)));
+          (m) => !(const ['==', 'toString', 'noSuchMethod'].contains(m.name3)));
   if (_getters.isEmpty && _methods.isEmpty) {
     return '';
   }
   if (isBridge) {
     return 'switch (identifier) {\n' +
         _getters.map((e) => '''
-      case '${e.displayName}':
-        final _${e.displayName} = super.${e.displayName};
-        return ${wrapVar(ctx, e.type.returnType, '_${e.displayName}', metadata: e.metadata2.annotations)};
+      case '${e.name3}':
+        final _${e.name3} = super.${e.name3};
+        return ${wrapVar(ctx, e.type.returnType, '_${e.name3}', metadata: e.metadata2.annotations)};
       ''').join('\n') +
         _methods.map((e) {
           final returnsValue =
               e.returnType is! VoidType && !e.returnType.isDartCoreNull;
           return '''
-        case '${e.displayName}':
+        case '${e.name3}':
           return \$Function((runtime, target, args) {
             ${assertMethodPermissions(e)}
-            ${returnsValue ? 'final result = ' : ''}super.${e.displayName}(${argumentAccessors(ctx, e.formalParameters)});
+            ${returnsValue ? 'final result = ' : ''}super.${e.name3}(${argumentAccessors(ctx, e.formalParameters)});
             return ${wrapVar(ctx, e.returnType, 'result')};
           });''';
         }).join('\n') +
@@ -73,12 +73,12 @@ String propertyGetters(BindgenContext ctx, ClassElement2 element,
         '}';
   }
   return 'switch (identifier) {\n' + _getters.map((e) => '''
-      case '${e.displayName}':
-        final _${e.displayName} = \$value.${e.displayName};
-        return ${wrapVar(ctx, e.type.returnType, '_${e.displayName}', metadata: e.metadata2.annotations)};
+      case '${e.name3}':
+        final _${e.name3} = \$value.${e.name3};
+        return ${wrapVar(ctx, e.type.returnType, '_${e.name3}', metadata: e.metadata2.annotations)};
       ''').join('\n') + _methods.map((e) => '''
-      case '${e.displayName}':
-        return __${e.displayName};
+      case '${e.name3}':
+        return __${e.name3};
       ''').join('\n') + '\n' + '}';
 }
 
@@ -110,14 +110,14 @@ String propertySetters(BindgenContext ctx, ClassElement2 element, {bool isBridge
   }
   if (isBridge) {
     return 'switch (identifier) {\n' + _setters.map((e) => '''
-        case '${e.displayName}':
-          super.${e.displayName} = value.${e.displayName};
+        case '${e.name3}':
+          super.${e.name3} = value.${e.name3};
           return;
         ''').join('\n') + '\n' + '}';
   }
   return 'switch (identifier) {\n' + _setters.map((e) => '''
-        case '${e.displayName}':
-          \$value.${e.displayName} = value.\$value;
+        case '${e.name3}':
+          \$value.${e.name3} = value.\$value;
           return;
         ''').join('\n') + '\n' + '}';
 }

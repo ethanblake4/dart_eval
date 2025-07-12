@@ -13,12 +13,12 @@ String $constructors(BindgenContext ctx, ClassElement2 element, {bool isBridge =
 
 String _$constructor(
     BindgenContext ctx, ClassElement2 element, ConstructorElement2 constructor, {bool isBridge = false}) {
-  final name = constructor.displayName.isEmpty ? 'new' : constructor.displayName;
+  final name = constructor.name3 == null ? 'new' : constructor.name3;
   final namedConstructor =
-      constructor.displayName.isNotEmpty ? '.${constructor.displayName}' : '';
+      constructor.name3 != null ? '.${constructor.name3}' : '';
   final fullyQualifiedConstructorId = isBridge ? 
-    '\$${element.displayName}\$bridge$namedConstructor' :
-    '${element.displayName}$namedConstructor';
+    '\$${element.name3}\$bridge$namedConstructor' :
+    '${element.name3}$namedConstructor';
 
   final oConstructor = constructor;
 
@@ -38,9 +38,9 @@ String _$constructor(
   }
 
   return '''
-  /// ${isBridge ? 'Proxy' : 'Wrapper'} for the [${element.displayName}.$name] constructor
+  /// ${isBridge ? 'Proxy' : 'Wrapper'} for the [${element.name3}.$name] constructor
   static \$Value? \$$name(Runtime runtime, \$Value? thisValue, List<\$Value?> args) {
-    return ${!isBridge ? '\$${element.displayName}.wrap(' : ''}
+    return ${!isBridge ? '\$${element.name3}.wrap(' : ''}
       $fullyQualifiedConstructorId(
         ${argumentAccessors(ctx, constructor.formalParameters)}
       ${!isBridge ? '),' : ''}
@@ -59,10 +59,10 @@ String $staticMethods(BindgenContext ctx, ClassElement2 element) {
 String _$staticMethod(
     BindgenContext ctx, ClassElement2 element, MethodElement2 method) {
   return '''
-  /// Wrapper for the [${element.displayName}.${method.displayName}] method
-  static \$Value? \$${method.displayName}(Runtime runtime, \$Value? target, List<\$Value?> args) {
+  /// Wrapper for the [${element.name3}.${method.name3}] method
+  static \$Value? \$${method.name3}(Runtime runtime, \$Value? target, List<\$Value?> args) {
     ${assertMethodPermissions(method)}
-    final value = ${element.displayName}.${method.displayName}(
+    final value = ${element.name3}.${method.name3}(
       ${argumentAccessors(ctx, method.formalParameters)}
     );
     return ${wrapVar(ctx, method.returnType, "value")};
@@ -80,9 +80,9 @@ String $staticGetters(BindgenContext ctx, ClassElement2 element) {
 String _$staticGetter(
     BindgenContext ctx, ClassElement2 element, PropertyAccessorElement2 getter) {
   return '''
-  /// Wrapper for the [${element.displayName}.${getter.displayName}] getter
-  static \$Value? \$${getter.displayName}(Runtime runtime, \$Value? target, List<\$Value?> args) {
-    final value = ${element.displayName}.${getter.displayName};
+  /// Wrapper for the [${element.name3}.${getter.name3}] getter
+  static \$Value? \$${getter.name3}(Runtime runtime, \$Value? target, List<\$Value?> args) {
+    final value = ${element.name3}.${getter.name3};
     return ${wrapVar(ctx, getter.returnType, "value")};
   }
 ''';
@@ -98,9 +98,9 @@ String $staticSetters(BindgenContext ctx, ClassElement2 element) {
 String _$staticSetter(
     BindgenContext ctx, ClassElement2 element, PropertyAccessorElement2 setter) {
   return '''
-  /// Wrapper for the [${element.displayName}.${setter.displayName}] setter
-  static \$Value? set\$${setter.displayName}(Runtime runtime, \$Value? target, List<\$Value?> args) {
-    ${element.displayName}.${setter.displayName} = args[0]!.\$value;
+  /// Wrapper for the [${element.name3}.${setter.name3}] setter
+  static \$Value? set\$${setter.name3}(Runtime runtime, \$Value? target, List<\$Value?> args) {
+    ${element.name3}.${setter.name3} = args[0]!.\$value;
     return null;
   }
 ''';

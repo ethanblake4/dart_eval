@@ -8,14 +8,14 @@ String bindDecoratoratorMethods(BindgenContext ctx, ClassElement2 element) {
   final methods = {
     if (ctx.implicitSupers)
       for (var s in element.allSupertypes)
-        for (final m in s.element3.methods2) m.displayName: m,
-    for (final m in element.methods2) m.displayName: m
+        for (final m in s.element3.methods2) m.name3: m,
+    for (final m in element.methods2) m.name3: m
   };
 
   return methods.values
       .where((method) => !method.isPrivate && !method.isStatic)
       .where(
-          (m) => !(const ['==', 'toString', 'noSuchMethod'].contains(m.displayName)))
+          (m) => !(const ['==', 'toString', 'noSuchMethod'].contains(m.name3)))
       .map((e) {
         final returnType = e.returnType;
         final needsCast = returnType.isDartCoreList ||
@@ -25,8 +25,8 @@ String bindDecoratoratorMethods(BindgenContext ctx, ClassElement2 element) {
 
     return '''
         @override
-        ${returnType} ${e.displayName}(${_parameterHeader(e.formalParameters)}) =>
-          ${needsCast ? '(' : ''}\$_invoke('${e.displayName}', [
+        ${returnType} ${e.name3}(${_parameterHeader(e.formalParameters)}) =>
+          ${needsCast ? '(' : ''}\$_invoke('${e.name3}', [
             ${e.formalParameters.map((p) => wrapVar(ctx, p.type, p.displayName)).join(', ')}
           ])${needsCast ? 'as ${returnType..getDisplayString()}$q)$q.cast()' : ''};
         ''';
@@ -53,7 +53,7 @@ String _parameterHeader(List<FormalParameterElement> params) {
         paramBuffer.write(')');
         break;
       default:
-        paramBuffer.write('${param.type.getDisplayString()} ${param.displayName}');
+        paramBuffer.write('${param.type.getDisplayString()} ${param.name3}');
     }
     if (i < params.length - 1) {
       paramBuffer.write(', ');
