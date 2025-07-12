@@ -69,6 +69,11 @@ StatementInfo macroLoop(
   ctx.labels.removeLast();
 
   if (!(statementResult.willAlwaysThrow || statementResult.willAlwaysReturn)) {
+    final continueTarget = ctx.out.length;
+    for (final hole in label.continueHoles) {
+      ctx.rewriteOp(hole, JumpConstant.make(continueTarget), 0);
+    }
+
     if (update != null && !updateBeforeBody) {
       update(ctx);
     }
@@ -88,6 +93,16 @@ StatementInfo macroLoop(
 
     ctx.pushOp(JumpConstant.make(loopStart), JumpConstant.LEN);
   } else {
+    // even if the statement always throws or returns, still need to resolve continue holes
+    final continueTarget = ctx.out.length;
+    for (final hole in label.continueHoles) {
+      ctx.rewriteOp(hole, JumpConstant.make(continueTarget), 0);
+    }
+
+    if (update != null && !updateBeforeBody) {
+      update(ctx);
+    }
+
     pops = 0;
   }
 
