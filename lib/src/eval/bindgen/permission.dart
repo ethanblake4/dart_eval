@@ -26,7 +26,7 @@ String assertMethodPermissions(MethodElement2 element) {
       final params = element.formalParameters;
       for (var i = 0; i < params.length; i++) {
         final param = params[i];
-        if (param.displayName == paramData) {
+        if (param.name3 == paramData) {
           final nullCheck = param.isRequired ? '!' : '?';
           final defaultValue =
               param.hasDefaultValue ? ' ?? ${param.defaultValueCode}' : '';

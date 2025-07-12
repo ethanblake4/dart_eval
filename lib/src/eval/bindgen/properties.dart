@@ -27,12 +27,6 @@ String $bridgeGet(BindgenContext ctx, ClassElement2 element) {
 
 String propertyGetters(BindgenContext ctx, ClassElement2 element,
     {bool isBridge = false}) {
-  // final accessors = {
-  //   if (ctx.implicitSupers)
-  //     for (var s in element.allSupertypes)
-  //       for (final a in s.element.accessors) a.name: a,
-  //   for (final a in element.accessors) a.name: a
-  // };
   final methods = {
     if (ctx.implicitSupers)
       for (var s in element.allSupertypes)
@@ -54,18 +48,18 @@ String propertyGetters(BindgenContext ctx, ClassElement2 element,
   if (isBridge) {
     return 'switch (identifier) {\n' +
         _getters.map((e) => '''
-      case '${e.name3}':
-        final _${e.name3} = super.${e.name3};
-        return ${wrapVar(ctx, e.type.returnType, '_${e.name3}', metadata: e.metadata2.annotations)};
+      case '${e.displayName}':
+        final _${e.displayName} = super.${e.displayName};
+        return ${wrapVar(ctx, e.type.returnType, '_${e.displayName}', metadata: e.metadata2.annotations)};
       ''').join('\n') +
         _methods.map((e) {
           final returnsValue =
               e.returnType is! VoidType && !e.returnType.isDartCoreNull;
           return '''
-        case '${e.name3}':
+        case '${e.displayName}':
           return \$Function((runtime, target, args) {
             ${assertMethodPermissions(e)}
-            ${returnsValue ? 'final result = ' : ''}super.${e.name3}(${argumentAccessors(ctx, e.formalParameters)});
+            ${returnsValue ? 'final result = ' : ''}super.${e.displayName}(${argumentAccessors(ctx, e.formalParameters)});
             return ${wrapVar(ctx, e.returnType, 'result')};
           });''';
         }).join('\n') +
@@ -110,14 +104,14 @@ String propertySetters(BindgenContext ctx, ClassElement2 element, {bool isBridge
   }
   if (isBridge) {
     return 'switch (identifier) {\n' + _setters.map((e) => '''
-        case '${e.name3}':
-          super.${e.name3} = value.${e.name3};
+        case '${e.displayName}':
+          super.${e.displayName} = value.${e.displayName};
           return;
         ''').join('\n') + '\n' + '}';
   }
   return 'switch (identifier) {\n' + _setters.map((e) => '''
-        case '${e.name3}':
-          \$value.${e.name3} = value.\$value;
+        case '${e.displayName}':
+          \$value.${e.displayName} = value.\$value;
           return;
         ''').join('\n') + '\n' + '}';
 }

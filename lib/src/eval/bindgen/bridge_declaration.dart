@@ -102,26 +102,32 @@ String methods(BindgenContext ctx, ClassElement2 element) {
 }
 
 String getters(BindgenContext ctx, ClassElement2 element) {
-  final getters = [
+  final getters = {
     if (ctx.implicitSupers)
       for (var s in element.allSupertypes)
-        for (final a in s.element3.getters2.where((a) => !a.isStatic)) a,
-    for (final a in element.getters2) a
-  ];
+        for (final a in s.element3.getters2.where((a) => !a.isStatic)) a.name3: a,
+    for (final a in element.getters2) a.name3: a
+  };
 
-  return getters.map((e) => bridgeGetterDef(ctx, getter: e)).join('\n');
+  return getters.values
+        .where((m) => !(const ['hashCode', 'runtimeType'].contains(m.name3)))	
+        .where((element) =>  !element.isSynthetic)
+        .map((e) => bridgeGetterDef(ctx, getter: e)).join('\n');
 }
 
 String setters(BindgenContext ctx, ClassElement2 element) {
-  final setters = [
+  final setters = {
     if (ctx.implicitSupers)
       for (var s in element.allSupertypes)
         for (final a in s.element3.setters2.where((a) => !a.isStatic))
-          a,
-    for (final a in [...element.getters2, ...element.setters2]) a
-  ];
+          a.name3: a,
+    for (final a in element.setters2) a.name3: a
+  };
 
-  return setters.map((e) => bridgeSetterDef(ctx, setter: e)).join('\n');
+  return setters.values	
+        .where((m) => !(const ['hashCode', 'runtimeType'].contains(m.name3)))	
+        .where((element) =>  !element.isSynthetic)
+        .map((e) => bridgeSetterDef(ctx, setter: e)).join('\n');
 }
 
 String fields(BindgenContext ctx, ClassElement2 element) {

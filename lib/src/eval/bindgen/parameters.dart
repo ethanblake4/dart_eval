@@ -50,95 +50,91 @@ String argumentAccessors(BindgenContext ctx, List<FormalParameterElement> params
     if (type.isDartCoreFunction || type is FunctionType) {
       paramBuffer.write('(');
       if (type is FunctionType) {
-        final normalParams = type.formalParameters.where((p) => p.isRequiredPositional).toList();
-        for (var j = 0; j < normalParams.length; j++) {
-          var _name = normalParams[j].name3;
+        for (var j = 0; j < type.normalParameterTypes.length; j++) {	
+          var _name = type.normalParameterTypes[j].element3?.name3;
           if (_name == null) {
             _name = 'v$j';
           }
           paramBuffer.write(_name);
-          if (j < normalParams.length - 1) {
+          if (j < type.normalParameterTypes.length - 1) {
             paramBuffer.write(', ');
           }
         }
 
-        final optionalParams = type.formalParameters.where((p) => p.isOptionalPositional).toList();
-        if (optionalParams.isNotEmpty) {
-          if (normalParams.isNotEmpty) {
+        if (type.optionalParameterTypes.isNotEmpty) {
+          if (type.normalParameterTypes.isNotEmpty) {
             paramBuffer.write(', ');
           }
           paramBuffer.write('[');
 
-          for (var j = 0; j < optionalParams.length; j++) {
-            final _name = optionalParams[j].name3;
+          for (var j = 0; j < type.optionalParameterTypes.length; j++) {
+            final _name = type.optionalParameterTypes[j].element3?.name3;
             paramBuffer.write(_name);
-            if (j < optionalParams.length - 1) {
+            if (j < type.optionalParameterTypes.length - 1) {
               paramBuffer.write(', ');
             }
           }
           paramBuffer.write(']');
         }
 
-        final namedParams = type.formalParameters.where((p) => p.isNamed).toList();
-        if (namedParams.isNotEmpty) {
-          if (normalParams.isNotEmpty || optionalParams.isNotEmpty) {
+        if (type.namedParameterTypes.isNotEmpty) {
+          if (type.normalParameterTypes.isNotEmpty ||
+              type.optionalParameterTypes.isNotEmpty) {
             paramBuffer.write(', ');
           }
           paramBuffer.write('{');
 
-          for (var k = 0; k < namedParams.length; k++) {
-            final _name = namedParams[k].name3;
+          var k = 0;
+          type.namedParameterTypes.forEach((_name, _type) {
             paramBuffer.write(_name);
-            if (k < namedParams.length - 1) {
+            if (k < type.namedParameterTypes.length - 1) {
               paramBuffer.write(', ');
             }
-          }
+          });
           paramBuffer.write('}');
         }
       }
       paramBuffer.write(') {\n');
       paramBuffer.write('return (args[$i] as EvalCallable)(runtime, null, [');
       if (type is FunctionType) {
-        final normalParams = type.formalParameters.where((p) => p.isRequiredPositional).toList();
-        for (var j = 0; j < normalParams.length; j++) {
-          var _name = normalParams[j].name3;
+        for (var j = 0; j < type.normalParameterTypes.length; j++) {
+          var _name = type.normalParameterTypes[j].element3?.name3;
           if (_name == null) {
             _name = 'v$j';
           }
-          paramBuffer.write(wrapVar(ctx, normalParams[j].type, _name));
-          if (j < normalParams.length - 1) {
+          paramBuffer.write(wrapVar(ctx, type.normalParameterTypes[j], _name));
+          if (j < type.normalParameterTypes.length - 1) {
             paramBuffer.write(', ');
           }
         }
 
-        final optionalParams = type.formalParameters.where((p) => p.isOptionalPositional).toList();
-        if (optionalParams.isNotEmpty) {
-          if (normalParams.isNotEmpty) {
+        if (type.optionalParameterTypes.isNotEmpty) {
+          if (type.normalParameterTypes.isNotEmpty) {
             paramBuffer.write(', ');
           }
 
-          for (var j = 0; j < optionalParams.length; j++) {
-            final _name = optionalParams[j].displayName;
-            paramBuffer.write(wrapVar(ctx, optionalParams[j].type, _name));
-            if (j < optionalParams.length - 1) {
+          for (var j = 0; j < type.optionalParameterTypes.length; j++) {
+            final _name = type.optionalParameterTypes[j].element3?.name3;
+            paramBuffer.write(wrapVar(ctx, type.optionalParameterTypes[j], _name ?? ''));
+            if (j < type.optionalParameterTypes.length - 1) {
               paramBuffer.write(', ');
             }
           }
         }
 
-        final namedParams = type.formalParameters.where((p) => p.isNamed).toList();
-        if (namedParams.isNotEmpty) {
-          if (normalParams.isNotEmpty || optionalParams.isNotEmpty) {
+        if (type.namedParameterTypes.isNotEmpty) {
+          if (type.normalParameterTypes.isNotEmpty ||
+              type.optionalParameterTypes.isNotEmpty) {
             paramBuffer.write(', ');
           }
 
-          for (var k = 0; k < namedParams.length; k++) {
-            final _name = namedParams[k].displayName;
-            paramBuffer.write(wrapVar(ctx, namedParams[k].type, _name));
-            if (k < namedParams.length - 1) {
+          var k = 0;
+          type.namedParameterTypes.forEach((_name, _type) {
+            paramBuffer.write(wrapVar(ctx, _type, _name));
+            if (k < type.namedParameterTypes.length - 1) {
               paramBuffer.write(', ');
             }
-          }
+          });
         }
       }
       paramBuffer.write('])?.\$value;\n}');

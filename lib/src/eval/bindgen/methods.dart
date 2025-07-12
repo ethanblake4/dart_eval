@@ -21,11 +21,11 @@ String $methods(BindgenContext ctx, ClassElement2 element) {
     final returnsValue =
         e.returnType is! VoidType && !e.returnType.isDartCoreNull;
     return '''
-        static const \$Function __${e.name3} = \$Function(_${e.name3});
-        static \$Value? _${e.name3}(Runtime runtime, \$Value? target, List<\$Value?> args) {
+        static const \$Function __${e.displayName} = \$Function(_${e.displayName});
+        static \$Value? _${e.displayName}(Runtime runtime, \$Value? target, List<\$Value?> args) {
           ${assertMethodPermissions(e)}
           final self = target as \$${element.name3};
-          ${returnsValue ? 'final result = ' : ''}self.\$value.${e.name3}(${argumentAccessors(ctx, e.formalParameters)});
+          ${returnsValue ? 'final result = ' : ''}self.\$value.${e.displayName}(${argumentAccessors(ctx, e.formalParameters)});
           return ${wrapVar(ctx, e.returnType, 'result')};
         }''';
   }).join('\n');

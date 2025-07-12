@@ -115,7 +115,7 @@ class Bindgen {
       if (override != null && !override.isNull) {
         final overrideUri = override.toStringValue();
         if (overrideUri != null) {
-          ctx.libOverrides[element.displayName] = overrideUri;
+          ctx.libOverrides[element.name3!] = overrideUri;
         }
       }
     }

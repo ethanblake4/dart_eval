@@ -44,7 +44,7 @@ String bridgeTypeSpecFrom(BindgenContext ctx, DartType type) {
   final element = type.element3!;
   final lib = element.library2!;
   final uri = ctx.libOverrides[element.name3] ?? lib.uri.toString();
-  return 'BridgeTypeSpec(\'${uri}\', \'${element.displayName.replaceAll(r'$', r'\$')}\')';
+  return 'BridgeTypeSpec(\'${uri}\', \'${element.name3!.replaceAll(r'$', r'\$')}\')';
 }
 
 String? builtinTypeFrom(DartType type) {
@@ -66,7 +66,7 @@ String? builtinTypeFrom(DartType type) {
 
   final element = type.element3!;
   final lib = element.library2!;
-  final name = element.displayName;
+  final name = element.name3 ?? ' ';
   final lowerCamelCaseName = name.toCamelCase();
 
   if (!lib.isInSdk) {
@@ -180,7 +180,7 @@ String? wrapType(BindgenContext ctx, DartType type, String expr,
   final element = type.element3 ??
       (throw BindingGenerationError('Type $type has no element'));
   final lib = element.library2!;
-  final name = element.name3;
+  final name = element.name3 ?? ' ';
 
   final defaultCstr = {'int', 'num', 'double', 'bool', 'String', 'Object'};
 
@@ -214,7 +214,7 @@ String? wrapType(BindgenContext ctx, DartType type, String expr,
 
   final typeEl = type.element3!;
   if (typeEl is ClassElement2 &&
-      typeEl.metadata2.annotations.any((e) => e.element2?.name3 == 'Bind')) {
+      typeEl.metadata2.annotations.any((e) => e.element2?.displayName == 'Bind')) {
     ctx.imports.add(
         typeEl.library2.uri.toString().replaceAll('.dart', '.eval.dart'));
     return '${unionStr}\$$name.wrap($expr)';
@@ -258,7 +258,7 @@ String wrapFunctionType(BindgenContext ctx, FunctionType type, String expr) {
       if (type.normalParameterTypes.isNotEmpty) {
         buffer.write(', ');
       }
-      final _type = type.optionalParameterTypes[j - i];
+      final _type = type.optionalParameterTypes[i];
       buffer.write('args[$j]');
       if (_type.nullabilitySuffix == NullabilitySuffix.question) {
         buffer.write('?.\$value');

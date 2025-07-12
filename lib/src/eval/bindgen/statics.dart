@@ -25,7 +25,7 @@ String _$constructor(
   final paramMapping = <String, String>{};
   for (var i = 0; i < constructor.formalParameters.length; i++) {
     final param = constructor.formalParameters[i];
-    paramMapping[param.displayName] = param.displayName;
+    paramMapping[param.name3!] = param.name3!;
   }
 
   while (constructor.redirectedConstructor2 != null) {
@@ -33,7 +33,7 @@ String _$constructor(
     for (var i = 0; i < constructor.formalParameters.length; i++) {
       final param = constructor.formalParameters[i];
       final oParam = oConstructor.formalParameters[i];
-      paramMapping[param.displayName] = oParam.displayName;
+      paramMapping[param.name3!] = oParam.name3!;
     }
   }
 
