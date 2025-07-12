@@ -38,7 +38,8 @@ String _parameterFrom(BindgenContext ctx, FormalParameterElement parameter) {
   ''';
 }
 
-String argumentAccessors(BindgenContext ctx, List<FormalParameterElement> params,
+String argumentAccessors(
+    BindgenContext ctx, List<FormalParameterElement> params,
     {Map<String, String> paramMapping = const {}}) {
   final paramBuffer = StringBuffer();
   for (var i = 0; i < params.length; i++) {

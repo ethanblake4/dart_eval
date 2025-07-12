@@ -21,11 +21,10 @@ String bridgeTypeRefFromType(BindgenContext ctx, DartType type) {
       ],
     ))''';
   } else if (type is ParameterizedType) {
-    final typeArgs = type.typeArguments
-        .map((e) => bridgeTypeRefFromType(ctx, e))
-        .join(', ');
+    final typeArgs =
+        type.typeArguments.map((e) => bridgeTypeAnnotationFrom(ctx, e)).join(', ');
     return 'BridgeTypeRef(${bridgeTypeSpecFrom(ctx, type)}, [$typeArgs])';
-  } 
+  }
   return 'BridgeTypeRef(${bridgeTypeSpecFrom(ctx, type)})';
 }
 
@@ -152,8 +151,7 @@ String? wrapType(BindgenContext ctx, DartType type, String expr,
         ctx.imports.add(_type.element3!.library2!.uri.toString());
         final wrapper = wrapVar(ctx, _type, expr);
 
-        unionStr +=
-            '$expr is ${_type.element3!.name3} ? $wrapper : ';
+        unionStr += '$expr is ${_type.element3!.name3} ? $wrapper : ';
       }
     }
   }
@@ -214,9 +212,10 @@ String? wrapType(BindgenContext ctx, DartType type, String expr,
 
   final typeEl = type.element3!;
   if (typeEl is ClassElement2 &&
-      typeEl.metadata2.annotations.any((e) => e.element2?.displayName == 'Bind')) {
-    ctx.imports.add(
-        typeEl.library2.uri.toString().replaceAll('.dart', '.eval.dart'));
+      typeEl.metadata2.annotations
+          .any((e) => e.element2?.displayName == 'Bind')) {
+    ctx.imports
+        .add(typeEl.library2.uri.toString().replaceAll('.dart', '.eval.dart'));
     return '${unionStr}\$$name.wrap($expr)';
   }
 

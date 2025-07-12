@@ -202,12 +202,12 @@ void compileConstructorDeclaration(
     final prefix = $extends.superclass.importPrefix;
     final clsName = $extends.superclass.name2.lexeme;
     extendsWhat = (prefix != null
-        ? ctx.visibleDeclarations[ctx.library]![prefix.name.value()]
-        : ctx.visibleDeclarations[ctx.library]![clsName])
-        ?? (throw CompileError(
-            'Cannot find superclass $clsName', $extends));
+            ? ctx.visibleDeclarations[ctx.library]![prefix.name.value()]
+            : ctx.visibleDeclarations[ctx.library]![clsName]) ??
+        (throw CompileError('Cannot find superclass $clsName', $extends));
 
-    extendsDecl = extendsWhat.declaration ?? extendsWhat.children?[clsName] ??
+    extendsDecl = extendsWhat.declaration ??
+        extendsWhat.children?[clsName] ??
         (throw CompileError('Cannot find superclass $clsName', $extends));
 
     if (extendsDecl.isBridge) {
@@ -215,13 +215,14 @@ void compileConstructorDeclaration(
       $super = Variable.alloc(ctx, CoreTypes.dynamic.ref(ctx));
     } else {
       final extendsType = TypeRef.lookupDeclaration(
-          ctx, ctx.library, extendsDecl.declaration as ClassDeclaration, prefix: prefix?.name.lexeme);
+          ctx, ctx.library, extendsDecl.declaration as ClassDeclaration,
+          prefix: prefix?.name.lexeme);
 
       AlwaysReturnType? mReturnType;
 
       if ($superInitializer != null) {
-        final _constructor = ctx.topLevelDeclarationsMap[extendsDecl.sourceLib]![
-            '${extendsType.name}.$constructorName']!;
+        final _constructor = ctx.topLevelDeclarationsMap[
+            extendsDecl.sourceLib]!['${extendsType.name}.$constructorName']!;
         final constructor = _constructor.declaration as ConstructorDeclaration;
 
         final argsPair = compileArgumentList(
@@ -240,16 +241,13 @@ void compileConstructorDeclaration(
             .addAll(_namedArgs.map((key, value) => MapEntry(key, value.type)));
       } else if (superParams.isNotEmpty) {
         // If there are super parameters, compile without an argument list
-        final _constructor = ctx.topLevelDeclarationsMap[extendsDecl.sourceLib]![
-            '${extendsType.name}.$constructorName']!;
+        final _constructor = ctx.topLevelDeclarationsMap[
+            extendsDecl.sourceLib]!['${extendsType.name}.$constructorName']!;
         final constructor = _constructor.declaration as ConstructorDeclaration;
         final argsPair = compileSuperParams(
-            ctx,
-            constructor.parameters.parameters,
-            constructor,
-            superParams: superParams,
-            source: $superInitializer);
-            final _args = argsPair.first;
+            ctx, constructor.parameters.parameters, constructor,
+            superParams: superParams, source: $superInitializer);
+        final _args = argsPair.first;
         final _namedArgs = argsPair.second;
 
         argTypes.addAll(_args.map((e) => e.type).toList());
@@ -257,9 +255,9 @@ void compileConstructorDeclaration(
             .addAll(_namedArgs.map((key, value) => MapEntry(key, value.type)));
       }
 
-      final method =
-          IdentifierReference(null, '${prefix != null ? '${prefix.name.value()}.' : ''}${extendsType.name}.$constructorName')
-              .getValue(ctx);
+      final method = IdentifierReference(null,
+              '${prefix != null ? '${prefix.name.value()}.' : ''}${extendsType.name}.$constructorName')
+          .getValue(ctx);
       if (method.methodOffset == null) {
         throw CompileError(
             'Cannot call $constructorName as it is not a valid method');
@@ -406,12 +404,12 @@ void compileDefaultConstructor(CompilerContext ctx,
     final prefix = $extends.superclass.importPrefix;
     final clsName = $extends.superclass.name2.lexeme;
     extendsWhat = (prefix != null
-        ? ctx.visibleDeclarations[ctx.library]![prefix.name.value()]
-        : ctx.visibleDeclarations[ctx.library]![clsName])
-        ?? (throw CompileError(
-            'Cannot find superclass $clsName', $extends));
+            ? ctx.visibleDeclarations[ctx.library]![prefix.name.value()]
+            : ctx.visibleDeclarations[ctx.library]![clsName]) ??
+        (throw CompileError('Cannot find superclass $clsName', $extends));
 
-    extendsDecl = extendsWhat.declaration ?? extendsWhat.children?[clsName] ??
+    extendsDecl = extendsWhat.declaration ??
+        extendsWhat.children?[clsName] ??
         (throw CompileError('Cannot find superclass $clsName', $extends));
 
     if (extendsDecl.isBridge) {
@@ -419,13 +417,14 @@ void compileDefaultConstructor(CompilerContext ctx,
       $super = Variable.alloc(ctx, CoreTypes.dynamic.ref(ctx));
     } else {
       final extendsType = TypeRef.lookupDeclaration(
-          ctx, ctx.library, extendsDecl.declaration as ClassDeclaration, prefix: prefix?.name.lexeme);
+          ctx, ctx.library, extendsDecl.declaration as ClassDeclaration,
+          prefix: prefix?.name.lexeme);
 
       AlwaysReturnType? mReturnType;
 
-      final method =
-          IdentifierReference(null, '${prefix != null ? '${prefix.name.value()}.' : ''}${extendsType.name}.$constructorName')
-              .getValue(ctx);
+      final method = IdentifierReference(null,
+              '${prefix != null ? '${prefix.name.value()}.' : ''}${extendsType.name}.$constructorName')
+          .getValue(ctx);
       if (method.methodOffset == null) {
         throw CompileError(
             'Cannot call $constructorName as it is not a valid method');
@@ -526,15 +525,15 @@ void _compileUnusedFields(CompilerContext ctx, List<FieldDeclaration> fields,
 }
 
 void _setupEnum(CompilerContext ctx, EnumDeclaration parent, int instOffset) {
-    /// Add implicit index and name fields
-    ctx.inferredFieldTypes
-        .putIfAbsent(ctx.library, () => {})
-        .putIfAbsent(ctx.currentClass!.name.lexeme, () => {})
-      ..['index'] = CoreTypes.int.ref(ctx)
-      ..['name'] = CoreTypes.string.ref(ctx);
+  /// Add implicit index and name fields
+  ctx.inferredFieldTypes
+      .putIfAbsent(ctx.library, () => {})
+      .putIfAbsent(ctx.currentClass!.name.lexeme, () => {})
+    ..['index'] = CoreTypes.int.ref(ctx)
+    ..['name'] = CoreTypes.string.ref(ctx);
 
-    ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 0, 0),
-        SetObjectPropertyImpl.length);
-    ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 1, 1),
-        SetObjectPropertyImpl.length);
+  ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 0, 0),
+      SetObjectPropertyImpl.length);
+  ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 1, 1),
+      SetObjectPropertyImpl.length);
 }

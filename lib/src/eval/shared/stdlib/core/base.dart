@@ -170,8 +170,8 @@ class $String implements $Instance {
       methods: {
         // Other string methods defined in builtins.dart
         'split': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(
-                CoreTypes.list, [BridgeTypeRef(CoreTypes.string)])),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list,
+                [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string))])),
             params: [
               BridgeParameter('pattern',
                   BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.pattern)), false)
@@ -187,8 +187,8 @@ class $String implements $Instance {
       },
       getters: {
         'codeUnits': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.list, [BridgeTypeRef(CoreTypes.int)]))))
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list,
+                [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int))]))))
       },
       wrap: true);
 

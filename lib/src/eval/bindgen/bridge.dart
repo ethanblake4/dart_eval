@@ -17,11 +17,12 @@ String bindDecoratoratorMethods(BindgenContext ctx, ClassElement2 element) {
       .where(
           (m) => !(const ['==', 'toString', 'noSuchMethod'].contains(m.name3)))
       .map((e) {
-        final returnType = e.returnType;
-        final needsCast = returnType.isDartCoreList ||
-            returnType.isDartCoreMap ||
-            returnType.isDartCoreSet;
-        final q = returnType.nullabilitySuffix == NullabilitySuffix.question ? '?' : '';
+    final returnType = e.returnType;
+    final needsCast = returnType.isDartCoreList ||
+        returnType.isDartCoreMap ||
+        returnType.isDartCoreSet;
+    final q =
+        returnType.nullabilitySuffix == NullabilitySuffix.question ? '?' : '';
 
     return '''
         @override
@@ -31,7 +32,6 @@ String bindDecoratoratorMethods(BindgenContext ctx, ClassElement2 element) {
           ])${needsCast ? 'as ${returnType.element3!.name3}$q)$q.cast()' : ''};
         ''';
   }).join('\n');
-
 }
 
 String _parameterHeader(List<FormalParameterElement> params) {
@@ -44,7 +44,7 @@ String _parameterHeader(List<FormalParameterElement> params) {
         inNonPositional = true;
         paramBuffer.write(param.isNamed ? '{' : '[');
       }
-    } 
+    }
     switch (param.type) {
       case FunctionType functionType:
         paramBuffer.write(functionType.returnType.getDisplayString());

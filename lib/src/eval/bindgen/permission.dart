@@ -3,8 +3,8 @@ import 'package:analyzer/dart/element/element2.dart';
 String assertMethodPermissions(MethodElement2 element) {
   final metadata = element.metadata2;
 
-  final permissions =
-      metadata.annotations.where((e) => e.element2?.displayName == 'AssertPermission');
+  final permissions = metadata.annotations
+      .where((e) => e.element2?.displayName == 'AssertPermission');
 
   String output = '';
   for (final permission in permissions) {

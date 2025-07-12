@@ -549,7 +549,8 @@ class $Uint8List implements $Instance {
   static const $declaration = BridgeClassDef(
       BridgeClassType(BridgeTypeRef(TypedDataTypes.uint8List), $implements: [
         BridgeTypeRef(TypedDataTypes.typedData),
-        BridgeTypeRef(CoreTypes.list, [BridgeTypeRef(CoreTypes.int)])
+        BridgeTypeRef(CoreTypes.list,
+            [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int))])
       ]),
       constructors: {
         '': BridgeConstructorDef(

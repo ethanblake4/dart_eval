@@ -637,11 +637,7 @@ class Runtime {
       case PushSet _:
         return [Evc.OP_PUSH_SET];
       case SetAdd op:
-        return [
-          Evc.OP_SET_ADD,
-          ...Evc.i16b(op._set),
-          ...Evc.i16b(op._value)
-        ];
+        return [Evc.OP_SET_ADD, ...Evc.i16b(op._set), ...Evc.i16b(op._value)];
       case PushConstantDouble op:
         return [Evc.OP_PUSH_DOUBLE, ...Evc.f32b(op._value)];
       case SetGlobal op:
@@ -692,7 +688,12 @@ class Runtime {
       case PushConstantType op:
         return [Evc.OP_PUSH_CONSTANT_TYPE, ...Evc.i32b(op._typeId)];
       case PushRecord op:
-        return [Evc.OP_PUSH_RECORD, ...Evc.i16b(op._fields), ...Evc.i32b(op._const), ...Evc.i32b(op._type)];
+        return [
+          Evc.OP_PUSH_RECORD,
+          ...Evc.i16b(op._fields),
+          ...Evc.i32b(op._const),
+          ...Evc.i32b(op._type)
+        ];
       default:
         throw ArgumentError('Not a valid op $op');
     }

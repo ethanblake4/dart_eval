@@ -251,7 +251,8 @@ class IdentifierReference implements Reference {
 
         final type = cls[_name];
         if (type == null) {
-          throw CompileError('Cannot resolve type of "$_name" on "$classType"', source);
+          throw CompileError(
+              'Cannot resolve type of "$_name" on "$classType"', source);
         }
 
         final gIndex = ctx.topLevelGlobalIndices[classType.file]![_name]!;
@@ -366,10 +367,11 @@ class IdentifierReference implements Reference {
     }
 
     final declaration = ctx.visibleDeclarations[ctx.library]![name] ??
-      ctx.visibleDeclarations[ctx.library]![name.split('.')[0]] ??
+        ctx.visibleDeclarations[ctx.library]![name.split('.')[0]] ??
         (throw CompileError('Could not find declaration "$name"', source));
-    
-    final _decl = declaration.declaration ?? declaration.children?[name.split('.').sublist(1).join('.')] ??
+
+    final _decl = declaration.declaration ??
+        declaration.children?[name.split('.').sublist(1).join('.')] ??
         (throw PrefixError());
 
     return _declarationToVariable(_decl, _refName, ctx, source);
@@ -526,7 +528,7 @@ class IndexedReference implements Reference {
           : _index.unboxIfNeeded(ctx);
       ctx.pushOp(IndexMap.make(map.scopeFrameOffset, _index.scopeFrameOffset),
           IndexMap.LEN);
-      
+
       final mapResult = Variable.alloc(
           ctx,
           _variable.type.specifiedTypeArgs.length < 2
@@ -535,8 +537,8 @@ class IndexedReference implements Reference {
 
       if (_variable.type.specifiedTypeArgs.isEmpty ||
           _variable.type.specifiedTypeArgs[1].boxed) {
-        ctx.pushOp(MaybeBoxNull.make(mapResult.scopeFrameOffset),
-            MaybeBoxNull.LEN);
+        ctx.pushOp(
+            MaybeBoxNull.make(mapResult.scopeFrameOffset), MaybeBoxNull.LEN);
       }
 
       return mapResult;

@@ -1,7 +1,9 @@
 import 'package:analyzer/dart/element/element2.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
 
-String bindConfigureForRuntime(BindgenContext ctx, ClassElement2 element, {bool isBridge = false}) => '''
+String bindConfigureForRuntime(BindgenContext ctx, ClassElement2 element,
+        {bool isBridge = false}) =>
+    '''
 static void configureForRuntime(Runtime runtime) {
   ${constructorsForRuntime(ctx, element, isBridge: isBridge)}
   ${staticMethodsForRuntime(ctx, element, isBridge: isBridge)}
@@ -10,7 +12,8 @@ static void configureForRuntime(Runtime runtime) {
 }
 ''';
 
-String constructorsForRuntime(BindgenContext ctx, ClassElement2 element, {bool isBridge = false}) {
+String constructorsForRuntime(BindgenContext ctx, ClassElement2 element,
+    {bool isBridge = false}) {
   return element.constructors2
       .where(
           (cstr) => (!element.isAbstract || cstr.isFactory) && !cstr.isPrivate)
@@ -19,7 +22,8 @@ String constructorsForRuntime(BindgenContext ctx, ClassElement2 element, {bool i
 }
 
 String constructorForRuntime(
-    BindgenContext ctx, ClassElement2 element, ConstructorElement2 constructor, {bool isBridge = false}) {
+    BindgenContext ctx, ClassElement2 element, ConstructorElement2 constructor,
+    {bool isBridge = false}) {
   final name = constructor.name3 == null ? '' : constructor.name3;
   final fullyQualifiedConstructorId = '${element.name3}.$name';
 
@@ -37,7 +41,8 @@ String constructorForRuntime(
   ''';
 }
 
-String staticMethodsForRuntime(BindgenContext ctx, ClassElement2 element, {bool isBridge = false}) {
+String staticMethodsForRuntime(BindgenContext ctx, ClassElement2 element,
+    {bool isBridge = false}) {
   return element.methods2
       .where((e) => e.isStatic && !e.isOperator && !e.isPrivate)
       .map((e) => staticMethodForRuntime(ctx, element, e, isBridge: isBridge))
@@ -45,7 +50,8 @@ String staticMethodsForRuntime(BindgenContext ctx, ClassElement2 element, {bool 
 }
 
 String staticMethodForRuntime(
-    BindgenContext ctx, ClassElement2 element, MethodElement2 method, {bool isBridge = false}) {
+    BindgenContext ctx, ClassElement2 element, MethodElement2 method,
+    {bool isBridge = false}) {
   final uri = ctx.libOverrides[element.name3] ?? ctx.uri;
   return '''
     runtime.registerBridgeFunc(
@@ -56,7 +62,8 @@ String staticMethodForRuntime(
   ''';
 }
 
-String staticGettersForRuntime(BindgenContext ctx, ClassElement2 element, {bool isBridge = false}) {
+String staticGettersForRuntime(BindgenContext ctx, ClassElement2 element,
+    {bool isBridge = false}) {
   return element.getters2
       .where((e) => e.isStatic && !e.isPrivate)
       .map((e) => staticGetterForRuntime(ctx, element, e, isBridge: isBridge))
@@ -64,7 +71,8 @@ String staticGettersForRuntime(BindgenContext ctx, ClassElement2 element, {bool 
 }
 
 String staticGetterForRuntime(
-    BindgenContext ctx, ClassElement2 element, PropertyAccessorElement2 getter, {bool isBridge = false}) {
+    BindgenContext ctx, ClassElement2 element, PropertyAccessorElement2 getter,
+    {bool isBridge = false}) {
   final uri = ctx.libOverrides[element.name3] ?? ctx.uri;
   return '''
     runtime.registerBridgeFunc(
@@ -75,7 +83,8 @@ String staticGetterForRuntime(
   ''';
 }
 
-String staticSettersForRuntime(BindgenContext ctx, ClassElement2 element, {bool isBridge = false}) {
+String staticSettersForRuntime(BindgenContext ctx, ClassElement2 element,
+    {bool isBridge = false}) {
   return element.setters2
       .where((e) => e.isStatic && !e.isPrivate)
       .map((e) => staticSetterForRuntime(ctx, element, e, isBridge: isBridge))
@@ -83,7 +92,8 @@ String staticSettersForRuntime(BindgenContext ctx, ClassElement2 element, {bool 
 }
 
 String staticSetterForRuntime(
-    BindgenContext ctx, ClassElement2 element, PropertyAccessorElement2 setter, {bool isBridge = false}) {
+    BindgenContext ctx, ClassElement2 element, PropertyAccessorElement2 setter,
+    {bool isBridge = false}) {
   final uri = ctx.libOverrides[element.name3] ?? ctx.uri;
   return '''
     runtime.registerBridgeFunc(

@@ -289,7 +289,8 @@ void main() {
       expect(result, 16);
     });
 
-    test('Correct tree shaking of long reference chains within a single file', () {
+    test('Correct tree shaking of long reference chains within a single file',
+        () {
       final program = compiler.compile({
         'example': {
           'main.dart': '''
@@ -321,7 +322,6 @@ void main() {
               }
             }
           ''',
-
         }
       });
 

@@ -30,8 +30,9 @@ class $Encoding implements $Instance {
       $type,
       isAbstract: true,
       $extends: BridgeTypeRef(ConvertTypes.codec, [
-        BridgeTypeRef(CoreTypes.string, []),
-        BridgeTypeRef(CoreTypes.list, [BridgeTypeRef(CoreTypes.int, [])])
+        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list,
+            [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, []))]))
       ]),
     ),
     constructors: {
@@ -47,15 +48,15 @@ class $Encoding implements $Instance {
     methods: {
       'decodeStream': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(
-              CoreTypes.future, [BridgeTypeRef(CoreTypes.string, [])])),
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future,
+              [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, []))])),
           namedParams: [],
           params: [
             BridgeParameter(
               'byteStream',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.stream, [
-                BridgeTypeRef(
-                    CoreTypes.list, [BridgeTypeRef(CoreTypes.int, [])])
+                BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list,
+                    [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, []))]))
               ])),
               false,
             ),
@@ -84,8 +85,9 @@ class $Encoding implements $Instance {
       'encoder': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.converter, [
-            BridgeTypeRef(CoreTypes.string, []),
-            BridgeTypeRef(CoreTypes.list, [BridgeTypeRef(CoreTypes.int, [])])
+            BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+            BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list,
+                [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, []))]))
           ])),
           namedParams: [],
           params: [],
@@ -94,8 +96,9 @@ class $Encoding implements $Instance {
       'decoder': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.converter, [
-            BridgeTypeRef(CoreTypes.list, [BridgeTypeRef(CoreTypes.int, [])]),
-            BridgeTypeRef(CoreTypes.string, [])
+            BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list,
+                [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, []))])),
+            BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, []))
           ])),
           namedParams: [],
           params: [],

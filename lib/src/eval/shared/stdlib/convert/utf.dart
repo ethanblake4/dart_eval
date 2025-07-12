@@ -13,8 +13,9 @@ class $Utf8Decoder implements $Instance {
   static const $declaration = BridgeClassDef(
       BridgeClassType($type,
           $extends: BridgeTypeRef(ConvertTypes.converter, [
-            BridgeTypeRef(CoreTypes.list, [BridgeTypeRef(CoreTypes.int)]),
-            BridgeTypeRef(CoreTypes.string),
+            BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list,
+                [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int))])),
+            BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
           ])),
       constructors: {
         '': BridgeConstructorDef(BridgeFunctionDef(
@@ -87,8 +88,8 @@ class $Utf8Codec implements $Instance {
       },
       methods: {
         'encode': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.list, [BridgeTypeRef(CoreTypes.int)])),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list,
+                [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int))])),
             params: [
               BridgeParameter('input',
                   BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false),
@@ -98,8 +99,8 @@ class $Utf8Codec implements $Instance {
             params: [
               BridgeParameter(
                   'codeUnits',
-                  BridgeTypeAnnotation(BridgeTypeRef(
-                      CoreTypes.list, [BridgeTypeRef(CoreTypes.int)])),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list,
+                      [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int))])),
                   false),
             ],
             namedParams: [

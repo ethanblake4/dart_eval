@@ -19,7 +19,7 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'block.dart';
 
 StatementInfo compileStatement(
-    Statement s, AlwaysReturnType? expectedReturnType, CompilerContext ctx) { 
+    Statement s, AlwaysReturnType? expectedReturnType, CompilerContext ctx) {
   if (s is Block) {
     return compileBlock(s, expectedReturnType, ctx);
   } else if (s is VariableDeclarationStatement) {

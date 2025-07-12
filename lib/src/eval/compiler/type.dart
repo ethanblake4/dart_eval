@@ -156,29 +156,23 @@ class TypeRef {
       for (var i = 0; i < typeAnnotation.positionalFields.length; i++) {
         final field = typeAnnotation.positionalFields[i];
         final fType = TypeRef.fromAnnotation(ctx, library, field.type);
-        fields.add(RecordParameterType(
-          '\$${positionalFields++}',
-          fType,
-          false
-        ));
+        fields
+            .add(RecordParameterType('\$${positionalFields++}', fType, false));
         name += '$fType';
         if (i < typeAnnotation.positionalFields.length - 1) {
           name += ',';
         }
       }
 
-      final namedFields = typeAnnotation.namedFields?.fields ?? <RecordTypeAnnotationNamedField>[];
+      final namedFields = typeAnnotation.namedFields?.fields ??
+          <RecordTypeAnnotationNamedField>[];
       if (namedFields.isNotEmpty) {
         name += ',{';
       }
       for (var i = 0; i < namedFields.length; i++) {
         final field = namedFields[i];
         final fType = TypeRef.fromAnnotation(ctx, library, field.type);
-        fields.add(RecordParameterType(
-          field.name.lexeme,
-          fType,
-          true
-        ));
+        fields.add(RecordParameterType(field.name.lexeme, fType, true));
         name += '${field.name.lexeme}:$fType';
         if (i < namedFields.length - 1) {
           name += ',';
@@ -188,8 +182,12 @@ class TypeRef {
         name += '}';
       }
       name += '>';
-      return TypeRef(-1, name, recordFields: fields, extendsType: CoreTypes.record.ref(ctx),
-          resolved: true, boxed: false, nullable: typeAnnotation.question != null);
+      return TypeRef(-1, name,
+          recordFields: fields,
+          extendsType: CoreTypes.record.ref(ctx),
+          resolved: true,
+          boxed: false,
+          nullable: typeAnnotation.question != null);
     }
     typeAnnotation as NamedType;
     final n = typeAnnotation.name2.stringValue ?? typeAnnotation.name2.value();
@@ -215,9 +213,13 @@ class TypeRef {
   /// Create a [TypeRef] from a [BridgeTypeAnnotation].
   factory TypeRef.fromBridgeAnnotation(
       CompilerContext ctx, BridgeTypeAnnotation typeAnnotation,
-      {TypeRef? specifyingType, TypeRef? specifiedType}) {
+      {TypeRef? specifyingType,
+      TypeRef? specifiedType,
+      bool staticSource = true}) {
     return TypeRef.fromBridgeTypeRef(ctx, typeAnnotation.type,
-            specifyingType: specifyingType, specifiedType: specifiedType)
+            staticSource: staticSource,
+            specifyingType: specifyingType,
+            specifiedType: specifiedType)
         .copyWith(nullable: typeAnnotation.nullable);
   }
 
@@ -240,7 +242,7 @@ class TypeRef {
     if (spec != null) {
       final specifiedTypeArgs = <TypeRef>[];
       for (final arg in typeReference.typeArgs) {
-        specifiedTypeArgs.add(TypeRef.fromBridgeTypeRef(ctx, arg,
+        specifiedTypeArgs.add(TypeRef.fromBridgeAnnotation(ctx, arg,
             staticSource: staticSource, specifiedType: specifiedType));
       }
       final lib = ctx.libraryMap[spec.library] ??
@@ -325,8 +327,10 @@ class TypeRef {
   }
 
   factory TypeRef.lookupDeclaration(
-      CompilerContext ctx, int library, NamedCompilationUnitMember dec, {String? prefix}) {
-    return ctx.visibleTypes[library]!['${prefix != null ? '$prefix.' : ''}${dec.name.lexeme}'] ??
+      CompilerContext ctx, int library, NamedCompilationUnitMember dec,
+      {String? prefix}) {
+    return ctx.visibleTypes[library]![
+            '${prefix != null ? '$prefix.' : ''}${dec.name.lexeme}'] ??
         (throw CompileError('Class/enum ${dec.name.value()} not found'));
   }
 
@@ -346,8 +350,8 @@ class TypeRef {
     }
 
     if ($class.recordFields.isNotEmpty) {
-      final _field = $class.recordFields.firstWhereOrNull(
-          (f) => f.name == field);
+      final _field =
+          $class.recordFields.firstWhereOrNull((f) => f.name == field);
       if (_field != null) {
         return _field.type.copyWith(boxed: true);
       }
@@ -590,12 +594,14 @@ class TypeRef {
           [];
       final prefix = superName.importPrefix;
       final superPrefix = '${prefix != null ? '${prefix.name.value()}.' : ''}';
-      $super = (ctx.visibleTypes[file]!['$superPrefix${superName.name2.lexeme}'] ??
-              (throw CompileError(
-                  'Superclass ${superName.name2.lexeme} not found', source)))
-          .copyWith(specifiedTypeArgs: typeParams)
-          .resolveTypeChain(ctx,
-              recursionGuard: rg, stack: _stack, source: source);
+      $super =
+          (ctx.visibleTypes[file]!['$superPrefix${superName.name2.lexeme}'] ??
+                  (throw CompileError(
+                      'Superclass ${superName.name2.lexeme} not found',
+                      source)))
+              .copyWith(specifiedTypeArgs: typeParams)
+              .resolveTypeChain(ctx,
+                  recursionGuard: rg, stack: _stack, source: source);
     } else if (declaration.declaration is EnumDeclaration) {
       $super = CoreTypes.enumType.ref(ctx);
     } else if (!declaration.isBridge) {
@@ -1042,7 +1048,8 @@ class C<T extends R, R extends int> {
 }
 
 extension Refify on BridgeTypeSpec {
-  TypeRef ref(CompilerContext ctx, [List<BridgeTypeRef> typeArgs = const []]) {
+  TypeRef ref(CompilerContext ctx,
+      [List<BridgeTypeAnnotation> typeArgs = const []]) {
     final res = TypeRef.fromBridgeTypeRef(ctx, BridgeTypeRef(this, typeArgs));
     if (library == 'dart:core') {
       dartCoreFile = res.file;

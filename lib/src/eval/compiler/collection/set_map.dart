@@ -36,7 +36,7 @@ Variable compileSetOrMapLiteral(SetOrMapLiteral l, CompilerContext ctx) {
     keyResultTypes.addAll(_result.second.map((e) => e.first));
     valueResultTypes.addAll(_result.second.map((e) => e.second));
   }
-  
+
   if (specifiedKeyType == null && keyResultTypes.isNotEmpty) {
     specifiedKeyType = TypeRef.commonBaseType(ctx, keyResultTypes.toSet());
   }
@@ -44,13 +44,15 @@ Variable compileSetOrMapLiteral(SetOrMapLiteral l, CompilerContext ctx) {
     specifiedValueType = TypeRef.commonBaseType(ctx, valueResultTypes.toSet());
   }
 
-  final collectionKeyType = (_boxSetOrMapElements ? 
-      specifiedKeyType?.copyWith(boxed: true) :
-      specifiedKeyType) ?? CoreTypes.dynamic.ref(ctx);
+  final collectionKeyType = (_boxSetOrMapElements
+          ? specifiedKeyType?.copyWith(boxed: true)
+          : specifiedKeyType) ??
+      CoreTypes.dynamic.ref(ctx);
 
-  final collectionValueType = (_boxSetOrMapElements ? 
-      specifiedValueType?.copyWith(boxed: true) :
-      specifiedValueType) ?? CoreTypes.dynamic.ref(ctx);
+  final collectionValueType = (_boxSetOrMapElements
+          ? specifiedValueType?.copyWith(boxed: true)
+          : specifiedValueType) ??
+      CoreTypes.dynamic.ref(ctx);
 
   var isEmpty = false;
   if (_collection == null) {
@@ -163,7 +165,7 @@ Pair<Variable, List<Pair<TypeRef, TypeRef>>> compileSetOrMapElement(
         MapSet.LEN);
 
     return Pair(setOrMap, [Pair(_key.type, _value.type)]);
-  } 
+  }
 
   throw CompileError('Unknown set or map collection element ${e.runtimeType}');
 }

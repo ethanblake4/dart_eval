@@ -9,7 +9,6 @@ import 'package:dart_eval/stdlib/core.dart';
 
 /// dart_eval wrapper binding for [Sink]
 class $Sink implements $Instance {
-
   /// Compile-time type declaration of [$Sink]
   static const $type = BridgeTypeRef(CoreTypes.sink);
 

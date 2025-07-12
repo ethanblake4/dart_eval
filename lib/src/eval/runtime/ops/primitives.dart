@@ -315,7 +315,7 @@ class BoxSet implements EvcOp {
 
   @override
   String toString() => 'BoxSet (L$_reg)';
-} 
+}
 
 class MaybeBoxNull implements EvcOp {
   MaybeBoxNull(Runtime runtime) : _reg = runtime._readInt16();
@@ -615,10 +615,10 @@ class BoxBool implements EvcOp {
 }
 
 class PushRecord implements EvcOp {
-  PushRecord(Runtime runtime) : 
-    _fields = runtime._readInt16(), 
-    _const = runtime._readInt32(), 
-    _type = runtime._readInt32();
+  PushRecord(Runtime runtime)
+      : _fields = runtime._readInt16(),
+        _const = runtime._readInt32(),
+        _type = runtime._readInt32();
 
   PushRecord.make(this._fields, this._const, this._type);
 

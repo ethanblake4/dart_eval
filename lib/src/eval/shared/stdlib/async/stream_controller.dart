@@ -18,7 +18,8 @@ class $StreamController implements $Instance {
       BridgeClassType($type, isAbstract: true, generics: {
         'T': BridgeGenericParam()
       }, $implements: [
-        BridgeTypeRef(AsyncTypes.streamSink, [BridgeTypeRef.ref('T')])
+        BridgeTypeRef(AsyncTypes.streamSink,
+            [BridgeTypeAnnotation(BridgeTypeRef.ref('T'))])
       ]),
       constructors: {
         '': BridgeConstructorDef(
@@ -43,8 +44,8 @@ class $StreamController implements $Instance {
             returns:
                 BridgeTypeAnnotation(BridgeTypeRef(AsyncTypes.streamSink)))),
         'stream': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.stream, [BridgeTypeRef.ref('T')])))),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.stream,
+                [BridgeTypeAnnotation(BridgeTypeRef.ref('T'))])))),
       },
       setters: {},
       fields: {},

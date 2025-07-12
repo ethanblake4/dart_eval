@@ -19,7 +19,8 @@ String bindBridgeType(BindgenContext ctx, ClassElement2 element) {
 ''';
 }
 
-String? bindBridgeDeclaration(BindgenContext ctx, ClassElement2 element, {bool isBridge = false}) {
+String? bindBridgeDeclaration(BindgenContext ctx, ClassElement2 element,
+    {bool isBridge = false}) {
   if (element.constructors2.isEmpty) {
     return null;
   }
@@ -91,7 +92,8 @@ String methods(BindgenContext ctx, ClassElement2 element) {
   final methods = {
     if (ctx.implicitSupers)
       for (var s in element.allSupertypes)
-        for (final m in s.element3.methods2.where((m) => !m.isStatic)) m.name3: m,
+        for (final m in s.element3.methods2.where((m) => !m.isStatic))
+          m.name3: m,
     for (final m in element.methods2) m.name3: m
   };
   return methods.values
@@ -111,9 +113,10 @@ String getters(BindgenContext ctx, ClassElement2 element) {
   };
 
   return getters.values
-        .where((m) => !(const ['hashCode', 'runtimeType'].contains(m.name3)))	
-        .where((element) =>  !element.isSynthetic)
-        .map((e) => bridgeGetterDef(ctx, getter: e)).join('\n');
+      .where((m) => !(const ['hashCode', 'runtimeType'].contains(m.name3)))
+      .where((element) => !element.isSynthetic)
+      .map((e) => bridgeGetterDef(ctx, getter: e))
+      .join('\n');
 }
 
 String setters(BindgenContext ctx, ClassElement2 element) {
@@ -126,8 +129,9 @@ String setters(BindgenContext ctx, ClassElement2 element) {
   };
 
   return setters.values
-        .where((element) => !element.isSynthetic)
-        .map((e) => bridgeSetterDef(ctx, setter: e)).join('\n');
+      .where((element) => !element.isSynthetic)
+      .map((e) => bridgeSetterDef(ctx, setter: e))
+      .join('\n');
 }
 
 String fields(BindgenContext ctx, ClassElement2 element) {
@@ -135,7 +139,8 @@ String fields(BindgenContext ctx, ClassElement2 element) {
     if (ctx.implicitSupers)
       for (var s in element.allSupertypes)
         if (s is ClassElement2)
-          for (final f in (s as ClassElement2).fields2.where((f) => !f.isStatic))
+          for (final f
+              in (s as ClassElement2).fields2.where((f) => !f.isStatic))
             f.name3: f,
     for (final f in element.fields2) f.name3: f
   };

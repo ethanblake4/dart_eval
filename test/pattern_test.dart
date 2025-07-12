@@ -103,7 +103,6 @@ void main() {
     });
   });
 
-  
   group('Switch pattern tests', () {
     late Compiler compiler;
 

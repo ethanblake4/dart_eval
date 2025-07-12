@@ -59,7 +59,6 @@ void main() {
 
       expect(runtime.executeLib('package:eval_test/main.dart', 'main'),
           $String('false'));
-
     });
 
     test('Set union operation', () {
@@ -129,7 +128,6 @@ void main() {
 
       expect(runtime.executeLib('package:eval_test/main.dart', 'main'),
           $String('true'));
-
     });
   });
 }

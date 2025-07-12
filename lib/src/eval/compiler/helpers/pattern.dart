@@ -186,7 +186,8 @@ Variable patternMatchAndBind(
     case RelationalPattern pat:
       final operand = compileExpression(pat.operand, ctx);
       final operator = binaryOpMap[pat.operator.type] ??
-          (throw CompileError('Unknown relational operator ${pat.operator.type}'));
+          (throw CompileError(
+              'Unknown relational operator ${pat.operator.type}'));
       return V.invoke(ctx, operator, [operand]).result;
     case WildcardPattern pat:
       return _typeTest(ctx, pat.type, V);
@@ -194,8 +195,7 @@ Variable patternMatchAndBind(
       return patternMatchAndBind(ctx, pat.pattern, V,
           patternContext: patternContext);
     default:
-      throw CompileError(
-          'Unsupported pattern type: ${pattern.runtimeType}');
+      throw CompileError('Unsupported pattern type: ${pattern.runtimeType}');
   }
 }
 
@@ -209,9 +209,7 @@ Variable _typeTest(CompilerContext ctx, TypeAnnotation? patType, Variable V) {
     return BuiltinValue(boolval: true).push(ctx);
   }
 
-  ctx.pushOp(
-      IsType.make(V.scopeFrameOffset, ctx.typeRefIndexMap[slot]!, false),
+  ctx.pushOp(IsType.make(V.scopeFrameOffset, ctx.typeRefIndexMap[slot]!, false),
       IsType.length);
-  return Variable.alloc(
-      ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
+  return Variable.alloc(ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
 }

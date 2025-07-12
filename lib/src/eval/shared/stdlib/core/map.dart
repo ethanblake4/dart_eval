@@ -58,16 +58,20 @@ class $Map<K, V> implements Map<K, V>, $Instance {
                   'RV': BridgeGenericParam()
                 },
                 params: [],
-                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.map,
-                    [BridgeTypeRef.ref('RK'), BridgeTypeRef.ref('RV')]))),
+                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.map, [
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('RK')),
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('RV'))
+                ]))),
             isStatic: false),
         'addAll': BridgeMethodDef(
             BridgeFunctionDef(
                 params: [
                   BridgeParameter(
                       'other',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.map,
-                          [BridgeTypeRef.ref('K'), BridgeTypeRef.ref('V')])),
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.map, [
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('K')),
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('V'))
+                      ])),
                       false),
                 ],
                 returns:

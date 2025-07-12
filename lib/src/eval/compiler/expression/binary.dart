@@ -77,8 +77,8 @@ Variable _compileShortCircuit(
       default:
         throw CompileError('Unknown short-circuit operator $operator');
     }
-    ctx.pushOp(
-        CheckEq.make(L.scopeFrameOffset, $comparison.scopeFrameOffset), CheckEq.LEN);
+    ctx.pushOp(CheckEq.make(L.scopeFrameOffset, $comparison.scopeFrameOffset),
+        CheckEq.LEN);
     ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
     return Variable.alloc(ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
   }, thenBranch: (_ctx, rt) {
@@ -90,10 +90,11 @@ Variable _compileShortCircuit(
     return StatementInfo(-1);
   });
 
-  final outType = operator == '??' ?
-      TypeRef.commonBaseType(ctx, {L.type.copyWith(nullable: false), rightType})
-          .copyWith(boxed: true) :
-      CoreTypes.bool.ref(ctx).copyWith(boxed: true);
+  final outType = operator == '??'
+      ? TypeRef.commonBaseType(
+              ctx, {L.type.copyWith(nullable: false), rightType})
+          .copyWith(boxed: true)
+      : CoreTypes.bool.ref(ctx).copyWith(boxed: true);
 
   return outVar.copyWith(type: outType);
 }

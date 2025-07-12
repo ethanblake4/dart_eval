@@ -239,9 +239,10 @@ class $InternetAddress implements InternetAddress, $Instance {
           BridgeFunctionDef(
             returns: BridgeTypeAnnotation(
                 BridgeTypeRef(CoreTypes.future, [
-                  BridgeTypeRef(CoreTypes.list, [
-                    BridgeTypeRef(IoTypes.internetAddress, []),
-                  ]),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list, [
+                    BridgeTypeAnnotation(
+                        BridgeTypeRef(IoTypes.internetAddress, [])),
+                  ])),
                 ]),
                 nullable: false),
             params: [
@@ -280,7 +281,8 @@ class $InternetAddress implements InternetAddress, $Instance {
           BridgeFunctionDef(
             returns: BridgeTypeAnnotation(
                 BridgeTypeRef(CoreTypes.future, [
-                  BridgeTypeRef(IoTypes.internetAddress, []),
+                  BridgeTypeAnnotation(
+                      BridgeTypeRef(IoTypes.internetAddress, [])),
                 ]),
                 nullable: false),
             params: [],

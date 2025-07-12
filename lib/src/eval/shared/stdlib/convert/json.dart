@@ -13,8 +13,8 @@ class $JsonDecoder implements $Instance {
   static const $declaration = BridgeClassDef(
       BridgeClassType($type,
           $extends: BridgeTypeRef(ConvertTypes.converter, [
-            BridgeTypeRef(CoreTypes.string),
-            BridgeTypeRef(CoreTypes.object),
+            BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+            BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object)),
           ])),
       constructors: {
         '': BridgeConstructorDef(
@@ -82,8 +82,8 @@ class $JsonEncoder implements $Instance {
   static const $declaration = BridgeClassDef(
       BridgeClassType($type,
           $extends: BridgeTypeRef(ConvertTypes.converter, [
-            BridgeTypeRef(CoreTypes.object),
-            BridgeTypeRef(CoreTypes.string),
+            BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object)),
+            BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
           ])),
       constructors: {
         '': BridgeConstructorDef(

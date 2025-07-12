@@ -6,15 +6,15 @@ class $Set<E> implements Set<E>, $Instance {
   $Set.wrap(this.$value);
 
   static void configureForRuntime(Runtime runtime) {
-    return runtime.registerBridgeFunc(
-        'dart:core', 'Set.from', __$Set$from);
+    return runtime.registerBridgeFunc('dart:core', 'Set.from', __$Set$from);
   }
 
   static const $type = BridgeTypeRef(CoreTypes.set);
 
   static const $declaration = BridgeClassDef(
       BridgeClassType(BridgeTypeRef(CoreTypes.set),
-      $extends: BridgeTypeRef(CoreTypes.iterable, [BridgeTypeRef.ref('E')]),
+          $extends: BridgeTypeRef(CoreTypes.iterable,
+              [BridgeTypeAnnotation(BridgeTypeRef.ref('E'))]),
           generics: {'E': BridgeGenericParam()}),
       constructors: {
         'from': BridgeConstructorDef(
@@ -23,7 +23,10 @@ class $Set<E> implements Set<E>, $Instance {
             params: [
               BridgeParameter(
                 'elements',
-                BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.iterable, [BridgeTypeRef.ref('E')]), nullable: false),
+                BridgeTypeAnnotation(
+                    BridgeTypeRef(CoreTypes.iterable,
+                        [BridgeTypeAnnotation(BridgeTypeRef.ref('E'))]),
+                    nullable: false),
                 false,
               )
             ],
@@ -36,22 +39,18 @@ class $Set<E> implements Set<E>, $Instance {
         // Most methods are inherited from Iterable, so we don't need to
         // redefine them here.
         'add': BridgeMethodDef(
-            BridgeFunctionDef(
-                params: [
-                  BridgeParameter(
-                      'value',
-                      BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
-                      false),
-                ],
-                returns:
-                    BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool))),
+            BridgeFunctionDef(params: [
+              BridgeParameter(
+                  'value', BridgeTypeAnnotation(BridgeTypeRef.ref('E')), false),
+            ], returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool))),
             isStatic: false),
         'addAll': BridgeMethodDef(
             BridgeFunctionDef(
                 params: [
                   BridgeParameter(
                       'other',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.iterable, [BridgeTypeRef.ref('E')])),
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.iterable,
+                          [BridgeTypeAnnotation(BridgeTypeRef.ref('E'))])),
                       false),
                 ],
                 returns:
@@ -78,7 +77,8 @@ class $Set<E> implements Set<E>, $Instance {
             isStatic: false),
         'clear': BridgeMethodDef(
             BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType))),
+                returns:
+                    BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType))),
             isStatic: false),
         'lookup': BridgeMethodDef(
             BridgeFunctionDef(
@@ -89,15 +89,16 @@ class $Set<E> implements Set<E>, $Instance {
                           nullable: true),
                       false),
                 ],
-                returns:
-                    BridgeTypeAnnotation(BridgeTypeRef.ref('E'), nullable: true)),
+                returns: BridgeTypeAnnotation(BridgeTypeRef.ref('E'),
+                    nullable: true)),
             isStatic: false),
         'removeAll': BridgeMethodDef(
             BridgeFunctionDef(
                 params: [
                   BridgeParameter(
                       'elements',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.iterable, [BridgeTypeRef.ref('E')])),
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.iterable,
+                          [BridgeTypeAnnotation(BridgeTypeRef.ref('E'))])),
                       false),
                 ],
                 returns:
@@ -108,7 +109,8 @@ class $Set<E> implements Set<E>, $Instance {
                 params: [
                   BridgeParameter(
                       'elements',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.iterable, [BridgeTypeRef.ref('E')])),
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.iterable,
+                          [BridgeTypeAnnotation(BridgeTypeRef.ref('E'))])),
                       false),
                 ],
                 returns:
@@ -119,33 +121,38 @@ class $Set<E> implements Set<E>, $Instance {
                 params: [
                   BridgeParameter(
                       'other',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.set, [BridgeTypeRef(CoreTypes.object)])),
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.set, [
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object))
+                      ])),
                       false),
                 ],
-                returns:
-                    BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.set, [BridgeTypeRef.ref('E')]))),
+                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.set,
+                    [BridgeTypeAnnotation(BridgeTypeRef.ref('E'))]))),
             isStatic: false),
         'union': BridgeMethodDef(
             BridgeFunctionDef(
                 params: [
                   BridgeParameter(
                       'other',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.set, [BridgeTypeRef.ref('E')])),
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.set,
+                          [BridgeTypeAnnotation(BridgeTypeRef.ref('E'))])),
                       false),
                 ],
-                returns:
-                    BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.set, [BridgeTypeRef.ref('E')]))),
+                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.set,
+                    [BridgeTypeAnnotation(BridgeTypeRef.ref('E'))]))),
             isStatic: false),
         'difference': BridgeMethodDef(
             BridgeFunctionDef(
                 params: [
                   BridgeParameter(
                       'other',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.set, [BridgeTypeRef(CoreTypes.object)])),
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.set, [
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object))
+                      ])),
                       false),
                 ],
-                returns:
-                    BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.set, [BridgeTypeRef.ref('E')]))),
+                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.set,
+                    [BridgeTypeAnnotation(BridgeTypeRef.ref('E'))]))),
             isStatic: false),
       },
       getters: {},
@@ -236,8 +243,7 @@ class $Set<E> implements Set<E>, $Instance {
   }
 
   static const $Function __union = $Function(_union);
-  static $Value? _union(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _union(Runtime runtime, $Value? target, List<$Value?> args) {
     final other = args[0]!.$value as Set<Object?>;
     return $Set.wrap((target!.$value as Set).union(other));
   }
@@ -266,38 +272,38 @@ class $Set<E> implements Set<E>, $Instance {
   void clear() {
     return $value.clear();
   }
-  
+
   @override
   bool add(E value) => $value.add(value);
-  
+
   @override
   void addAll(Iterable<E> elements) => $value.addAll(elements);
-  
+
   @override
   bool any(bool Function(E element) test) => $value.any(test);
-  
+
   @override
   Set<R> cast<R>() => $value.cast<R>();
-  
+
   @override
   bool contains(Object? value) => $value.contains(value);
-  
+
   @override
   bool containsAll(Iterable<Object?> other) => $value.containsAll(other);
-  
+
   @override
   Set<E> difference(Set<Object?> other) => $value.difference(other);
-  
 
   @override
   E elementAt(int index) => $value.elementAt(index);
-  
+
   @override
   bool every(bool Function(E element) test) => $value.every(test);
-  
+
   @override
-  Iterable<T> expand<T>(Iterable<T> Function(E element) toElements) => $value.expand(toElements);
-  
+  Iterable<T> expand<T>(Iterable<T> Function(E element) toElements) =>
+      $value.expand(toElements);
+
   @override
   E get first => $value.first;
 
@@ -305,15 +311,15 @@ class $Set<E> implements Set<E>, $Instance {
   E firstWhere(bool Function(E element) test, {E Function()? orElse}) {
     return $value.firstWhere(test, orElse: orElse);
   }
-  
+
   @override
   T fold<T>(T initialValue, T Function(T previousValue, E element) combine) {
     return $value.fold(initialValue, combine);
   }
-  
+
   @override
   Iterable<E> followedBy(Iterable<E> other) => $value.followedBy(other);
-  
+
   @override
   void forEach(void Function(E element) action) {
     $value.forEach(action);
@@ -323,10 +329,10 @@ class $Set<E> implements Set<E>, $Instance {
   Set<E> intersection(Set<Object?> other) {
     return $value.intersection(other);
   }
-  
+
   @override
   bool get isEmpty => $value.isEmpty;
-  
+
   @override
   bool get isNotEmpty => $value.isNotEmpty;
 
@@ -337,7 +343,7 @@ class $Set<E> implements Set<E>, $Instance {
   String join([String separator = ""]) {
     return $value.join(separator);
   }
-  
+
   @override
   E get last => $value.last;
 
@@ -345,7 +351,7 @@ class $Set<E> implements Set<E>, $Instance {
   E lastWhere(bool Function(E element) test, {E Function()? orElse}) {
     return $value.lastWhere(test, orElse: orElse);
   }
-  
+
   @override
   int get length => $value.length;
 
@@ -353,32 +359,32 @@ class $Set<E> implements Set<E>, $Instance {
   E? lookup(Object? object) {
     return $value.lookup(object);
   }
-  
+
   @override
   Iterable<T> map<T>(T Function(E e) toElement) {
     return $value.map(toElement);
   }
-  
+
   @override
   E reduce(E Function(E value, E element) combine) {
     return $value.reduce(combine);
   }
-  
+
   @override
   bool remove(Object? value) {
     return $value.remove(value);
   }
-  
+
   @override
   void removeAll(Iterable<Object?> elements) {
     $value.removeAll(elements);
   }
-  
+
   @override
   void removeWhere(bool Function(E element) test) {
     $value.removeWhere(test);
   }
-  
+
   @override
   void retainAll(Iterable<Object?> elements) {
     $value.retainAll(elements);
@@ -388,7 +394,7 @@ class $Set<E> implements Set<E>, $Instance {
   void retainWhere(bool Function(E element) test) {
     $value.retainWhere(test);
   }
-  
+
   @override
   E get single => $value.single;
 
@@ -396,50 +402,49 @@ class $Set<E> implements Set<E>, $Instance {
   E singleWhere(bool Function(E element) test, {E Function()? orElse}) {
     return $value.singleWhere(test, orElse: orElse);
   }
-  
+
   @override
   Iterable<E> skip(int count) {
     return $value.skip(count);
   }
-  
+
   @override
   Iterable<E> skipWhile(bool Function(E value) test) {
     return $value.skipWhile(test);
   }
-  
+
   @override
   Iterable<E> take(int count) {
     return $value.take(count);
   }
-  
+
   @override
   Iterable<E> takeWhile(bool Function(E value) test) {
     return $value.takeWhile(test);
   }
-  
+
   @override
   List<E> toList({bool growable = true}) {
     return $value.toList(growable: growable);
   }
-  
+
   @override
   Set<E> toSet() {
     return $value.toSet();
   }
-  
+
   @override
   Set<E> union(Set<E> other) {
     return $value.union(other);
   }
-  
+
   @override
   Iterable<E> where(bool Function(E element) test) {
     return $value.where(test);
   }
-  
+
   @override
   Iterable<T> whereType<T>() {
     return $value.whereType<T>();
   }
-
 }

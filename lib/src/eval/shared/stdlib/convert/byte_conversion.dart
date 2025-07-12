@@ -32,7 +32,8 @@ class $ByteConversionSink implements $Instance {
       isAbstract: true,
       $implements: [
         BridgeTypeRef(ConvertTypes.chunkedConversionSink, [
-          BridgeTypeRef(CoreTypes.list, [BridgeTypeRef(CoreTypes.int)])
+          BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list,
+              [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int))]))
         ]),
       ],
     ),

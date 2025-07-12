@@ -45,7 +45,8 @@ StatementInfo _compileSwitchCases(CompilerContext ctx, Variable switchExpr,
         final caseVar = compileExpression(currentCase.expression, ctx);
         return switchExpr.invoke(_ctx, '==', [caseVar]).result;
       } else if (currentCase is SwitchPatternCase) {
-        final matches = patternMatchAndBind(ctx, currentCase.guardedPattern.pattern, switchExpr);
+        final matches = patternMatchAndBind(
+            ctx, currentCase.guardedPattern.pattern, switchExpr);
         final guard = currentCase.guardedPattern.whenClause;
         if (guard != null) {
           // If there's a guard, we need to compile it and check if it matches

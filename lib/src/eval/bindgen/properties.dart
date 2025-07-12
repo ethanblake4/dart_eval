@@ -34,8 +34,7 @@ String propertyGetters(BindgenContext ctx, ClassElement2 element,
     for (final m in element.methods2) m.name3: m
   };
   final _getters = element.getters2
-      .where((accessor) =>
-           !accessor.isStatic && !accessor.isPrivate)
+      .where((accessor) => !accessor.isStatic && !accessor.isPrivate)
       .where((a) => !(const ['hashCode', 'runtimeType'].contains(a.name3)));
 
   final _methods = methods.values
@@ -95,8 +94,8 @@ String $bridgeSet(BindgenContext ctx, ClassElement2 element) {
 ''';
 }
 
-
-String propertySetters(BindgenContext ctx, ClassElement2 element, {bool isBridge = false}) {
+String propertySetters(BindgenContext ctx, ClassElement2 element,
+    {bool isBridge = false}) {
   final _setters = element.setters2
       .where((element) => !element.isStatic && !element.isPrivate);
   if (_setters.isEmpty) {

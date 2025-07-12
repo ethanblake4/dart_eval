@@ -13,8 +13,9 @@ class $Base64Decoder implements $Instance {
   static const $declaration = BridgeClassDef(
       BridgeClassType($type,
           $extends: BridgeTypeRef(ConvertTypes.converter, [
-            BridgeTypeRef(CoreTypes.string),
-            BridgeTypeRef(CoreTypes.list, [BridgeTypeRef(CoreTypes.int)]),
+            BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+            BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list,
+                [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int))])),
           ])),
       constructors: {
         '': BridgeConstructorDef(
@@ -67,8 +68,9 @@ class $Base64Encoder implements $Instance {
   static const $declaration = BridgeClassDef(
       BridgeClassType($type,
           $extends: BridgeTypeRef(ConvertTypes.converter, [
-            BridgeTypeRef(CoreTypes.list, [BridgeTypeRef(CoreTypes.int)]),
-            BridgeTypeRef(CoreTypes.string),
+            BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list,
+                [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int))])),
+            BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
           ])),
       constructors: {
         '': BridgeConstructorDef(
@@ -136,13 +138,13 @@ class $Base64Codec implements $Instance {
             params: [
               BridgeParameter(
                   'input',
-                  BridgeTypeAnnotation(BridgeTypeRef(
-                      CoreTypes.list, [BridgeTypeRef(CoreTypes.int)])),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list,
+                      [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int))])),
                   false),
             ])),
         'decode': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.list, [BridgeTypeRef(CoreTypes.int)])),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list,
+                [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int))])),
             params: [
               BridgeParameter('input',
                   BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false),

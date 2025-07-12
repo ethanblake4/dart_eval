@@ -4,21 +4,26 @@ import 'package:dart_eval/src/eval/bindgen/parameters.dart';
 import 'package:dart_eval/src/eval/bindgen/permission.dart';
 import 'package:dart_eval/src/eval/bindgen/type.dart';
 
-String $constructors(BindgenContext ctx, ClassElement2 element, {bool isBridge = false}) {
+String $constructors(BindgenContext ctx, ClassElement2 element,
+    {bool isBridge = false}) {
   return element.constructors2
-      .where((cstr) => !cstr.isPrivate && !cstr.isSynthetic && (cstr.isFactory || !element.isAbstract))
+      .where((cstr) =>
+          !cstr.isPrivate &&
+          !cstr.isSynthetic &&
+          (cstr.isFactory || !element.isAbstract))
       .map((e) => _$constructor(ctx, element, e, isBridge: isBridge))
       .join('\n');
 }
 
 String _$constructor(
-    BindgenContext ctx, ClassElement2 element, ConstructorElement2 constructor, {bool isBridge = false}) {
+    BindgenContext ctx, ClassElement2 element, ConstructorElement2 constructor,
+    {bool isBridge = false}) {
   final name = constructor.name3 == null ? 'new' : constructor.name3;
   final namedConstructor =
       constructor.name3 != null ? '.${constructor.name3}' : '';
-  final fullyQualifiedConstructorId = isBridge ? 
-    '\$${element.name3}\$bridge$namedConstructor' :
-    '${element.name3}$namedConstructor';
+  final fullyQualifiedConstructorId = isBridge
+      ? '\$${element.name3}\$bridge$namedConstructor'
+      : '${element.name3}$namedConstructor';
 
   final oConstructor = constructor;
 
@@ -77,8 +82,8 @@ String $staticGetters(BindgenContext ctx, ClassElement2 element) {
       .join('\n');
 }
 
-String _$staticGetter(
-    BindgenContext ctx, ClassElement2 element, PropertyAccessorElement2 getter) {
+String _$staticGetter(BindgenContext ctx, ClassElement2 element,
+    PropertyAccessorElement2 getter) {
   return '''
   /// Wrapper for the [${element.name3}.${getter.name3}] getter
   static \$Value? \$${getter.name3}(Runtime runtime, \$Value? target, List<\$Value?> args) {
@@ -95,8 +100,8 @@ String $staticSetters(BindgenContext ctx, ClassElement2 element) {
       .join('\n');
 }
 
-String _$staticSetter(
-    BindgenContext ctx, ClassElement2 element, PropertyAccessorElement2 setter) {
+String _$staticSetter(BindgenContext ctx, ClassElement2 element,
+    PropertyAccessorElement2 setter) {
   return '''
   /// Wrapper for the [${element.name3}.${setter.name3}] setter
   static \$Value? set\$${setter.name3}(Runtime runtime, \$Value? target, List<\$Value?> args) {

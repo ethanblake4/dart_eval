@@ -102,7 +102,7 @@ class BridgeTypeRef {
   factory BridgeTypeRef.fromJson(Map<String, dynamic> json) {
     final id = json['id'];
     final ta = [
-      for (final arg in json['typeArgs']) BridgeTypeRef.fromJson(arg)
+      for (final arg in json['typeArgs']) BridgeTypeAnnotation.fromJson(arg)
     ];
     if (id != null) {
       return BridgeTypeRef.type(id, ta);
@@ -122,7 +122,7 @@ class BridgeTypeRef {
   final String? ref;
   final BridgeFunctionDef? gft;
   final BridgeTypeSpec? spec;
-  final List<BridgeTypeRef> typeArgs;
+  final List<BridgeTypeAnnotation> typeArgs;
 
   /// Convert the type ref to its JSON representation.
   Map<String, dynamic> toJson() => {

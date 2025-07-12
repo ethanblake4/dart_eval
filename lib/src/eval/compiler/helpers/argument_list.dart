@@ -276,8 +276,7 @@ Pair<List<Variable>, Map<String, Variable>> compileSuperParams(
 /// Best effort method to compile an argument list against a dynamic target.
 /// This will not always work, but it's better than nothing for simple cases.
 Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithDynamic(
-    CompilerContext ctx,
-    ArgumentList argumentList,
+    CompilerContext ctx, ArgumentList argumentList,
     {List<Variable> before = const [],
     Map<String, TypeRef> resolveGenerics = const {},
     AstNode? source}) {
@@ -289,26 +288,26 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithDynamic(
     final arg = argumentList.arguments[i];
 
     if (arg is NamedExpression) {
-      throw CompileError('dart_eval does not support passing named arguments '
+      throw CompileError(
+          'dart_eval does not support passing named arguments '
           'to dynamic targets.',
           source ?? argumentList);
     }
 
-      var _arg = compileExpression(arg, ctx);
-      if (_arg.type.isUnboxedAcrossFunctionBoundaries) {
-        _arg = _arg.boxIfNeeded(ctx);
-      } else {
-        _arg = _arg.unboxIfNeeded(ctx);
-      }
+    var _arg = compileExpression(arg, ctx);
+    if (_arg.type.isUnboxedAcrossFunctionBoundaries) {
+      _arg = _arg.boxIfNeeded(ctx);
+    } else {
+      _arg = _arg.unboxIfNeeded(ctx);
+    }
 
-      if (_arg.type == CoreTypes.function.ref(ctx) &&
-          _arg.scopeFrameOffset == -1) {
-        _arg = _arg.tearOff(ctx);
-      }
+    if (_arg.type == CoreTypes.function.ref(ctx) &&
+        _arg.scopeFrameOffset == -1) {
+      _arg = _arg.tearOff(ctx);
+    }
 
-      _args.add(_arg);
-      _push.add(_arg);
-
+    _args.add(_arg);
+    _push.add(_arg);
   }
 
   for (final _arg in <Variable>[...before, ..._push]) {

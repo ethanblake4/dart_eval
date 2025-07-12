@@ -80,7 +80,8 @@ class Bindgen {
 
       final resolved = units
           .where((declaration) => declaration.declaredFragment != null)
-          .map((declaration) => _$instance(ctx, declaration.declaredFragment!.element))
+          .map((declaration) =>
+              _$instance(ctx, declaration.declaredFragment!.element))
           .nonNulls;
 
       if (resolved.isEmpty) {
@@ -101,8 +102,8 @@ class Bindgen {
 
   String? _$instance(BindgenContext ctx, ClassElement2 element) {
     final metadata = element.metadata2;
-    final bindAnno = metadata.annotations.firstWhereOrNull(
-          (element) => element.element2?.displayName == 'Bind');
+    final bindAnno = metadata.annotations
+        .firstWhereOrNull((element) => element.element2?.displayName == 'Bind');
     final bindAnnoValue = bindAnno?.computeConstantValue();
     if (!ctx.all) {
       if (bindAnnoValue == null) {
@@ -125,8 +126,8 @@ class Bindgen {
     if (isBridge) {
       if (element.isSealed) {
         throw CompileError(
-          'Cannot bind sealed class ${element.name3} as a bridge type. '
-          'Please remove the @Bind annotation, use a wrapper, or make the class non-sealed.');
+            'Cannot bind sealed class ${element.name3} as a bridge type. '
+            'Please remove the @Bind annotation, use a wrapper, or make the class non-sealed.');
       }
 
       return '''

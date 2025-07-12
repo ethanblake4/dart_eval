@@ -14,8 +14,10 @@ class $LinkedHashMap implements $Instance {
         'K': BridgeGenericParam(),
         'V': BridgeGenericParam(),
       }, $implements: [
-        BridgeTypeRef(
-            CoreTypes.map, [BridgeTypeRef.ref('K'), BridgeTypeRef.ref('V')])
+        BridgeTypeRef(CoreTypes.map, [
+          BridgeTypeAnnotation(BridgeTypeRef.ref('K')),
+          BridgeTypeAnnotation(BridgeTypeRef.ref('V'))
+        ])
       ]),
       constructors: {
         '': BridgeConstructorDef(
@@ -114,8 +116,8 @@ class $LinkedHashMap implements $Instance {
                       false),
                   BridgeParameter(
                       'values',
-                      BridgeTypeAnnotation(BridgeTypeRef(
-                          CoreTypes.iterable, [BridgeTypeRef.ref('V')])),
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.iterable,
+                          [BridgeTypeAnnotation(BridgeTypeRef.ref('V'))])),
                       false)
                 ]),
             isFactory: true),

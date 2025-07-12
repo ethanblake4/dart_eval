@@ -97,7 +97,6 @@ class $ChunkedConversionSink implements $Instance {
     wrap: true,
   );
 
-
   /// Wrapper for the [ChunkedConversionSink.withCallback] constructor
   static $Value? $withCallback(
       Runtime runtime, $Value? thisValue, List<$Value?> args) {
