@@ -184,7 +184,6 @@ class CheckEq implements EvcOp {
             return;
           }
         } catch (e) {
-          print('CheckEq: $e');
           // If bridge object doesn't implement ==, fall back to default comparison
           break;
         }
@@ -281,7 +280,11 @@ class PushObjectProperty implements EvcOp {
       : _location = runtime._readInt16(),
         _propertyIdx = runtime._readInt32();
 
-  PushObjectProperty.make(this._location, this._propertyIdx);
+  PushObjectProperty.make(this._location, this._propertyIdx) {
+    if (_location == 10 && _propertyIdx == 317) {
+      print("");
+    }
+  }
 
   final int _location;
   final int _propertyIdx;
@@ -324,8 +327,15 @@ class PushObjectProperty implements EvcOp {
       }
 
       try {
-        final result = ((object as $Instance).$getProperty(runtime, _property));
-        runtime.returnValue = result;
+        if (object is! $Value) {
+          runtime.returnValue = runtime.wrap(object);
+        } else {
+          final result =
+              ((object as $Instance).$getProperty(runtime, _property));
+
+          runtime.returnValue = result;
+        }
+
         runtime.args = [];
       } catch (e) {
         rethrow;

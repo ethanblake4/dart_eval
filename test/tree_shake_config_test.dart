@@ -1,7 +1,6 @@
 import 'package:test/test.dart';
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/compiler/errors.dart';
 
 class TreeShakeConfigPlugin extends EvalPlugin {
   final bool enableTreeShaking;

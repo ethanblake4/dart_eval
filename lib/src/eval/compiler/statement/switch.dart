@@ -3,7 +3,6 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
-import 'package:dart_eval/src/eval/compiler/model/label.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
@@ -15,25 +14,18 @@ StatementInfo compileSwitchStatement(SwitchStatement s, CompilerContext ctx,
   // Validate switch cases for proper Dart semantics
   _validateSwitchCases(s.members);
 
-  // Create a switch label for break statements
-  final switchLabel = CompilerLabel(LabelType.branch, ctx.out.length, (_ctx) {
-    return -1;
-  });
-
-  ctx.labels.add(switchLabel);
-  final result = _compileSwitchCases(
+  // Convert switch to if-else chain to avoid label issues
+  return _compileSwitchAsIfElseChain(
       ctx, switchExpr, s.members, 0, expectedReturnType,
       source: s);
-  ctx.labels.removeLast();
-
-  // Resolve any break statements that jumped to this switch
-  ctx.resolveLabel(switchLabel);
-
-  return result;
 }
 
-StatementInfo _compileSwitchCases(CompilerContext ctx, Variable switchExpr,
-    List<SwitchMember> cases, int index, AlwaysReturnType? expectedReturnType,
+StatementInfo _compileSwitchAsIfElseChain(
+    CompilerContext ctx,
+    Variable switchExpr,
+    List<SwitchMember> cases,
+    int index,
+    AlwaysReturnType? expectedReturnType,
     {AstNode? source}) {
   if (index >= cases.length) {
     // No more cases, return empty statement
@@ -44,7 +36,8 @@ StatementInfo _compileSwitchCases(CompilerContext ctx, Variable switchExpr,
 
   // Handle default case
   if (currentCase is SwitchDefault) {
-    return _executeSwitchBlock(ctx, currentCase.statements, expectedReturnType);
+    return _executeSwitchBlockWithoutBreak(
+        ctx, currentCase.statements, expectedReturnType);
   }
 
   // Handle regular case - support both SwitchCase and SwitchPatternCase
@@ -129,28 +122,32 @@ StatementInfo _compileSwitchCases(CompilerContext ctx, Variable switchExpr,
         'Could not extract expression from switch case', currentCase);
   }
 
+  // Use macroBranch to create if-else chain
   return macroBranch(
     ctx,
     expectedReturnType,
     condition: (_ctx) {
       final caseExpr =
           compileExpression(caseExpression!, _ctx).boxIfNeeded(_ctx);
-      return switchExpr.invoke(_ctx, '==', [caseExpr]).result;
+      final result = switchExpr.invoke(_ctx, '==', [caseExpr]).result;
+      return result;
     },
     thenBranch: (_ctx, _expectedReturnType) {
       // Execute this case and following empty cases (Dart fall-through)
-      return _executeMatchingCases(_ctx, cases, index, _expectedReturnType);
+      // But terminate naturally without break statement
+      return _executeMatchingCasesWithoutBreak(
+          _ctx, cases, index, _expectedReturnType);
     },
     elseBranch: (_ctx, _expectedReturnType) {
       // Try next case
-      return _compileSwitchCases(
+      return _compileSwitchAsIfElseChain(
           _ctx, switchExpr, cases, index + 1, _expectedReturnType);
     },
     source: source,
   );
 }
 
-StatementInfo _executeMatchingCases(
+StatementInfo _executeMatchingCasesWithoutBreak(
     CompilerContext ctx,
     List<SwitchMember> cases,
     int startIndex,
@@ -171,8 +168,8 @@ StatementInfo _executeMatchingCases(
   // Execute the case with statements (if found)
   if (executionIndex < cases.length) {
     final member = cases[executionIndex];
-    final stmtInfo =
-        _executeSwitchBlock(ctx, member.statements, expectedReturnType);
+    final stmtInfo = _executeSwitchBlockWithoutBreak(
+        ctx, member.statements, expectedReturnType);
     willAlwaysReturn = stmtInfo.willAlwaysReturn;
     willAlwaysThrow = stmtInfo.willAlwaysThrow;
   }
@@ -181,7 +178,7 @@ StatementInfo _executeMatchingCases(
       willAlwaysReturn: willAlwaysReturn, willAlwaysThrow: willAlwaysThrow);
 }
 
-StatementInfo _executeSwitchBlock(CompilerContext ctx,
+StatementInfo _executeSwitchBlockWithoutBreak(CompilerContext ctx,
     List<Statement> statements, AlwaysReturnType? expectedReturnType) {
   var willAlwaysReturn = false;
   var willAlwaysThrow = false;
@@ -189,7 +186,14 @@ StatementInfo _executeSwitchBlock(CompilerContext ctx,
 
   ctx.beginAllocScope();
 
-  for (final stmt in statements) {
+  for (int i = 0; i < statements.length; i++) {
+    final stmt = statements[i];
+
+    // Skip break statements in switch context - they are not needed
+    if (stmt is BreakStatement && stmt.label == null) {
+      continue;
+    }
+
     final stmtInfo = compileStatement(stmt, expectedReturnType, ctx);
 
     if (stmtInfo.willAlwaysThrow) {
