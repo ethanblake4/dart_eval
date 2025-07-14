@@ -105,8 +105,9 @@ class InvokeDynamic implements EvcOp {
       }
 
       if (object is $Instance) {
-        final method = (object.$getProperty(runtime, _method) as EvalFunction);
         try {
+          final method =
+              (object.$getProperty(runtime, _method) as EvalFunction);
           runtime.returnValue = method.call(
             runtime,
             object,

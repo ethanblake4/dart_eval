@@ -4,6 +4,7 @@ import 'package:meta/meta.dart';
 import 'package:collection/collection.dart';
 
 import '../../../dart_eval_bridge.dart';
+import '../../../stdlib/core.dart';
 
 class $InstanceDefaultEnum<T> implements $Instance {
   final InstanceDefaultEnumProps props;
@@ -34,6 +35,15 @@ class $InstanceDefaultEnum<T> implements $Instance {
       return g.run(runtime, this);
     }
 
+    final InstanceDefaultPropsMethod? m =
+        props.methods.firstWhereOrNull((e) => e.name == identifier);
+
+    if (m != null) {
+      return $Function((_, __, args) {
+        return m.run(runtime, this, args);
+      });
+    }
+
     return superclass?.$getProperty(runtime, identifier);
   }
 
@@ -62,6 +72,13 @@ class InstanceDefaultEnumProps implements IInstanceDefaultProps {
     _declaration ??= BridgeEnumDef(
       type,
       values: values.map((e) => (e.$reified as Enum).name).toList(),
+      methods: {
+        ...Map.fromEntries(
+          methods.map(
+            (e) => MapEntry(e.name, e.definition),
+          ),
+        ),
+      },
     );
 
     return _declaration!;
@@ -87,6 +104,10 @@ class InstanceDefaultEnumProps implements IInstanceDefaultProps {
 
   List<InstanceDefaultEnumPropsGetter> get getters => [];
 
+  List<InstanceDefaultPropsMethod> get methods => [
+        _InstanceDefaultPropsMethod(),
+      ];
+
   @mustBeOverridden
   List<$Value> get values => throw UnimplementedError();
 
@@ -104,4 +125,28 @@ abstract class InstanceDefaultEnumPropsGetter<T extends $Value> {
   BridgeMethodDef get definition;
 
   $Value? run(Runtime runtime, T target);
+}
+
+class _InstanceDefaultPropsMethod implements InstanceDefaultPropsMethod {
+  @override
+  String get name => 'toString';
+
+  @override
+  BridgeMethodDef get definition => const BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            $String.$type,
+            nullable: false,
+          ),
+        ),
+      );
+
+  @override
+  $Value? run(
+    Runtime runtime,
+    $Value target,
+    List<$Value?> args,
+  ) {
+    return $String(target.$reified.toString());
+  }
 }
