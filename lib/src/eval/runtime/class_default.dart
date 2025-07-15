@@ -131,7 +131,7 @@ class InstanceDefaultProps<T extends $Value> implements IInstanceDefaultProps {
         fileName,
         '$className.${e.name}*g',
         e.run,
-        isBridge: bridge,
+        isBridge: false,
       );
     }
   }
