@@ -40,7 +40,8 @@ class $RegExp implements $Instance {
             ])),
         'allMatches': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.iterable, [$RegExpMatch.$type]),
+                BridgeTypeRef(CoreTypes.iterable,
+                    [BridgeTypeAnnotation($RegExpMatch.$type)]),
                 nullable: true),
             params: [
               BridgeParameter('input',
@@ -169,8 +170,8 @@ class $RegExpMatch implements $Instance, RegExpMatch {
         'pattern': BridgeMethodDef(
             BridgeFunctionDef(returns: BridgeTypeAnnotation($RegExp.$type))),
         'groupNames': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(
-                CoreTypes.iterable, [BridgeTypeRef(CoreTypes.string)]))))
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.iterable,
+                [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string))]))))
       },
       wrap: true);
 

@@ -187,6 +187,14 @@ class IdentifierReference implements Reference {
         source);
   }
 
+  String get _refName {
+    final split = name.split('.');
+    if (split.length > 2) {
+      return split.sublist(1).join('.');
+    }
+    return name;
+  }
+
   @override
   Variable getValue(CompilerContext ctx, [AstNode? source]) {
     if (object != null) {
@@ -235,7 +243,18 @@ class IdentifierReference implements Reference {
           }
         }
         final _name = '${classType.name}.$name';
-        final type = ctx.topLevelVariableInferredTypes[classType.file]![_name]!;
+        final cls = ctx.topLevelVariableInferredTypes[classType.file];
+
+        if (cls == null) {
+          throw CompileError('Cannot find file types for "$classType"', source);
+        }
+
+        final type = cls[_name];
+        if (type == null) {
+          throw CompileError(
+              'Cannot resolve type of "$_name" on "$classType"', source);
+        }
+
         final gIndex = ctx.topLevelGlobalIndices[classType.file]![_name]!;
         ctx.pushOp(LoadGlobal.make(gIndex), LoadGlobal.LEN);
         ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
@@ -270,7 +289,7 @@ class IdentifierReference implements Reference {
                 methodOffset: DeferredOrOffset(
                     file: ctx.library,
                     className: ctx.currentClass!.name.lexeme,
-                    name: name,
+                    name: _refName,
                     targetScopeFrameOffset: $this.scopeFrameOffset),
                 callingConvention: CallingConvention.static);
           }
@@ -295,7 +314,7 @@ class IdentifierReference implements Reference {
                 methodOffset: DeferredOrOffset(
                     file: ctx.library,
                     className: ctx.currentClass!.name.lexeme,
-                    name: name));
+                    name: _refName));
           }
           final bridge = _dec.bridge!;
           if (bridge is BridgeMethodDef) {
@@ -313,7 +332,7 @@ class IdentifierReference implements Reference {
                 methodOffset: DeferredOrOffset(
                     file: ctx.library,
                     className: ctx.currentClass!.name.lexeme,
-                    name: name));
+                    name: _refName));
           }
           throw CompileError(
               'Ref: cannot resolve bridge declaration "$name" of type ${_dec.runtimeType}',
@@ -334,7 +353,7 @@ class IdentifierReference implements Reference {
         if (_dec is MethodDeclaration) {
           return Variable(-1, CoreTypes.function.ref(ctx),
               methodOffset: DeferredOrOffset.lookupStatic(
-                  ctx, ctx.library, ctx.currentClass!.name.lexeme, name));
+                  ctx, ctx.library, ctx.currentClass!.name.lexeme, _refName));
         } else if (_dec is VariableDeclaration) {
           final name = '${ctx.currentClass!.name.lexeme}.${_dec.name.lexeme}';
           final type = ctx.topLevelVariableInferredTypes[ctx.library]![name]!;
@@ -348,10 +367,14 @@ class IdentifierReference implements Reference {
     }
 
     final declaration = ctx.visibleDeclarations[ctx.library]![name] ??
+        ctx.visibleDeclarations[ctx.library]![name.split('.')[0]] ??
         (throw CompileError('Could not find declaration "$name"', source));
-    final _decl = declaration.declaration ?? (throw PrefixError());
 
-    return _declarationToVariable(_decl, name, ctx, source);
+    final _decl = declaration.declaration ??
+        declaration.children?[name.split('.').sublist(1).join('.')] ??
+        (throw PrefixError());
+
+    return _declarationToVariable(_decl, _refName, ctx, source);
   }
 
   @override
@@ -505,11 +528,20 @@ class IndexedReference implements Reference {
           : _index.unboxIfNeeded(ctx);
       ctx.pushOp(IndexMap.make(map.scopeFrameOffset, _index.scopeFrameOffset),
           IndexMap.LEN);
-      return Variable.alloc(
+
+      final mapResult = Variable.alloc(
           ctx,
           _variable.type.specifiedTypeArgs.length < 2
               ? CoreTypes.dynamic.ref(ctx)
               : _variable.type.specifiedTypeArgs[1]);
+
+      if (_variable.type.specifiedTypeArgs.isEmpty ||
+          _variable.type.specifiedTypeArgs[1].boxed) {
+        ctx.pushOp(
+            MaybeBoxNull.make(mapResult.scopeFrameOffset), MaybeBoxNull.LEN);
+      }
+
+      return mapResult;
     }
 
     final result = _variable.invoke(ctx, '[]', [_index]);

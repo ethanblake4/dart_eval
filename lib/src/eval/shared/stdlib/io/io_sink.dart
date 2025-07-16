@@ -16,7 +16,8 @@ class $IOSink implements $Instance {
       BridgeClassType($type, isAbstract: true, $implements: [
         $StringSink.$type,
         BridgeTypeRef(AsyncTypes.streamSink, [
-          BridgeTypeRef(CoreTypes.list, [BridgeTypeRef(CoreTypes.int)])
+          BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list,
+              [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int))]))
         ])
       ]),
       constructors: {

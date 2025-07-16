@@ -8,7 +8,9 @@ import 'package:dart_eval/src/eval/compiler/statement/break.dart';
 import 'package:dart_eval/src/eval/compiler/statement/do.dart';
 import 'package:dart_eval/src/eval/compiler/statement/for.dart';
 import 'package:dart_eval/src/eval/compiler/statement/if.dart';
+import 'package:dart_eval/src/eval/compiler/statement/pattern_variable_declaration.dart';
 import 'package:dart_eval/src/eval/compiler/statement/return.dart';
+import 'package:dart_eval/src/eval/compiler/statement/switch.dart';
 import 'package:dart_eval/src/eval/compiler/statement/try.dart';
 import 'package:dart_eval/src/eval/compiler/statement/variable_declaration.dart';
 import 'package:dart_eval/src/eval/compiler/statement/while.dart';
@@ -38,12 +40,16 @@ StatementInfo compileStatement(
     return compileDoStatement(s, ctx, expectedReturnType);
   } else if (s is IfStatement) {
     return compileIfStatement(s, ctx, expectedReturnType);
+  } else if (s is SwitchStatement) {
+    return compileSwitchStatement(s, ctx, expectedReturnType);
   } else if (s is TryStatement) {
     return compileTryStatement(s, ctx, expectedReturnType);
   } else if (s is AssertStatement) {
     return compileAssertStatement(s, ctx, expectedReturnType);
   } else if (s is BreakStatement) {
     return compileBreakStatement(s, ctx);
+  } else if (s is PatternVariableDeclarationStatement) {
+    return compilePatternVariableDeclarationStatement(s, ctx);
   } else {
     throw CompileError('Unknown statement type ${s.runtimeType}');
   }

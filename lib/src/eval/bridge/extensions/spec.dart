@@ -7,7 +7,7 @@ extension BridgeTypeSpecExt on BridgeTypeSpec {
   }
 
   /// Extension to create a type ref from a spec, with type args
-  BridgeTypeRef refWith(List<BridgeTypeRef> typeArgs) {
+  BridgeTypeRef refWith(List<BridgeTypeAnnotation> typeArgs) {
     return BridgeTypeRef(this, typeArgs);
   }
 }

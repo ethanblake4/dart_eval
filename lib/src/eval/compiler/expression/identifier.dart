@@ -17,8 +17,12 @@ Reference compileIdentifierAsReference(Identifier id, CompilerContext ctx) {
   if (id is SimpleIdentifier) {
     return IdentifierReference(null, id.name);
   } else if (id is PrefixedIdentifier) {
-    final L = compileIdentifier(id.prefix, ctx);
-    return IdentifierReference(L, id.identifier.name);
+    try {
+      final L = compileIdentifier(id.prefix, ctx);
+      return IdentifierReference(L, id.identifier.name);
+    } on PrefixError {
+      return IdentifierReference(null, '${id.prefix}.${id.identifier.name}');
+    }
   }
   throw CompileError('Unknown identifier ${id.runtimeType}');
 }
@@ -109,9 +113,10 @@ Pair<TypeRef, DeclarationOrBridge>? resolveInstanceDeclaration(
     }
   }
   if ($extendsClause != null) {
+    final prefix = $extendsClause.superclass.importPrefix;
     final extendsType = ctx.visibleTypes[library]![
-        $extendsClause.superclass.name2.stringValue ??
-            $extendsClause.superclass.name2.value()]!;
+        '${prefix != null ? '${prefix.name.value()}.' : ''}'
+            '${$extendsClause.superclass.name2.value()}']!;
     return resolveInstanceDeclaration(
         ctx, extendsType.file, extendsType.name, name);
   } else {

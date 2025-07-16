@@ -9,7 +9,7 @@
             "args": [
                 "compile"
             ],
-            "cwd": "C:\\Users\\ethan\\Projects\\debug_test"
+            "cwd": "D:\\Projects\\eval_test"
         },
         {
             "name": "Dart: Run all Tests",

@@ -32,12 +32,18 @@ class $Codec implements $Instance {
       },
       getters: {
         'encoder': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.converter,
-                [BridgeTypeRef.ref('S'), BridgeTypeRef.ref('T')])),
+            returns:
+                BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.converter, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('S')),
+              BridgeTypeAnnotation(BridgeTypeRef.ref('T'))
+            ])),
             params: [])),
         'decoder': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.converter,
-                [BridgeTypeRef.ref('T'), BridgeTypeRef.ref('S')])),
+            returns:
+                BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.converter, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+              BridgeTypeAnnotation(BridgeTypeRef.ref('S'))
+            ])),
             params: [])),
       },
       wrap: true);

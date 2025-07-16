@@ -1,5 +1,7 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert/base64.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/convert/byte_conversion.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/convert/chunked_conversion.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert/codec.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert/converter.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert/encoding.dart';
@@ -31,6 +33,8 @@ class DartConvertPlugin implements EvalPlugin {
     registry.defineBridgeClass($JsonDecoder.$declaration);
     registry.defineBridgeClass($JsonEncoder.$declaration);
     registry.defineBridgeClass($JsonCodec.$declaration);
+    registry.defineBridgeClass($ChunkedConversionSink.$declaration);
+    registry.defineBridgeClass($ByteConversionSink.$declaration);
     registry.addSource(DartSource('dart:convert', convertSource));
     $JsonEncodeAndDecode.configureForCompile(registry);
   }
@@ -47,5 +51,8 @@ class DartConvertPlugin implements EvalPlugin {
         'dart:convert', 'JsonEncoder.', $JsonEncoder.$new);
     runtime.registerBridgeFunc('dart:convert', 'JsonCodec.', $JsonCodec.$new);
     $JsonEncodeAndDecode.configureForRuntime(runtime);
+    $ByteConversionSink.configureForRuntime(runtime);
+    $ChunkedConversionSink.configureForRuntime(runtime);
+    $Encoding.configureForRuntime(runtime);
   }
 }

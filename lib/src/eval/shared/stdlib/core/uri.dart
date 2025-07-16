@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/utils/wap_helper.dart';
+import 'package:dart_eval/src/eval/utils/wrap_helper.dart';
 import 'package:dart_eval/stdlib/core.dart';
 
 /// dart_eval wrapper for [Uri]
@@ -144,8 +144,9 @@ class $Uri implements $Instance {
                 params: [
                   BridgeParameter(
                       'bytes',
-                      BridgeTypeAnnotation(BridgeTypeRef(
-                          CoreTypes.list, [BridgeTypeRef(CoreTypes.int)])),
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list, [
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int))
+                      ])),
                       false),
                 ],
                 namedParams: [
@@ -157,8 +158,8 @@ class $Uri implements $Instance {
                       'parameters',
                       BridgeTypeAnnotation(
                         BridgeTypeRef(CoreTypes.map, [
-                          BridgeTypeRef(CoreTypes.string),
-                          BridgeTypeRef(CoreTypes.string)
+                          BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+                          BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string))
                         ]),
                       ),
                       true),
@@ -186,8 +187,10 @@ class $Uri implements $Instance {
                       'parameters',
                       BridgeTypeAnnotation(
                           BridgeTypeRef(CoreTypes.map, [
-                            BridgeTypeRef(CoreTypes.string),
-                            BridgeTypeRef(CoreTypes.string)
+                            BridgeTypeAnnotation(
+                                BridgeTypeRef(CoreTypes.string)),
+                            BridgeTypeAnnotation(
+                                BridgeTypeRef(CoreTypes.string))
                           ]),
                           nullable: true),
                       true),
@@ -241,8 +244,10 @@ class $Uri implements $Instance {
                       'queryParameters',
                       BridgeTypeAnnotation(
                           BridgeTypeRef(CoreTypes.map, [
-                            BridgeTypeRef(CoreTypes.string),
-                            BridgeTypeRef(CoreTypes.dynamic)
+                            BridgeTypeAnnotation(
+                                BridgeTypeRef(CoreTypes.string)),
+                            BridgeTypeAnnotation(
+                                BridgeTypeRef(CoreTypes.dynamic))
                           ]),
                           nullable: true),
                       true),
@@ -265,8 +270,10 @@ class $Uri implements $Instance {
                       'queryParameters',
                       BridgeTypeAnnotation(
                           BridgeTypeRef(CoreTypes.map, [
-                            BridgeTypeRef(CoreTypes.string),
-                            BridgeTypeRef(CoreTypes.dynamic)
+                            BridgeTypeAnnotation(
+                                BridgeTypeRef(CoreTypes.string)),
+                            BridgeTypeAnnotation(
+                                BridgeTypeRef(CoreTypes.dynamic))
                           ]),
                           nullable: true),
                       true),
@@ -275,8 +282,8 @@ class $Uri implements $Instance {
             isStatic: true),
         'parseIPv4Address': BridgeMethodDef(
             BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(BridgeTypeRef(
-                    CoreTypes.list, [BridgeTypeRef(CoreTypes.int)])),
+                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list,
+                    [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int))])),
                 params: [
                   BridgeParameter(
                       'host',
@@ -287,8 +294,8 @@ class $Uri implements $Instance {
             isStatic: true),
         'parseIPv6Address': BridgeMethodDef(
             BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(BridgeTypeRef(
-                    CoreTypes.list, [BridgeTypeRef(CoreTypes.int)])),
+                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list,
+                    [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int))])),
                 params: [
                   BridgeParameter(
                       'host',
@@ -309,8 +316,8 @@ class $Uri implements $Instance {
         'splitQueryString': BridgeMethodDef(
             BridgeFunctionDef(
                 returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.map, [
-                  BridgeTypeRef(CoreTypes.string),
-                  BridgeTypeRef(CoreTypes.string)
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string))
                 ])),
                 params: [
                   BridgeParameter(

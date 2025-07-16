@@ -90,7 +90,8 @@ class $List<E> implements List<E>, $Instance {
             BridgeParameter(
                 'elements',
                 BridgeTypeAnnotation(
-                    BridgeTypeRef(CoreTypes.iterable, [BridgeTypeRef.ref('E')]),
+                    BridgeTypeRef(CoreTypes.iterable,
+                        [BridgeTypeAnnotation(BridgeTypeRef.ref('E'))]),
                     nullable: false),
                 false)
           ],
@@ -111,7 +112,7 @@ class $List<E> implements List<E>, $Instance {
               'elements',
               BridgeTypeAnnotation(
                   BridgeTypeRef(CoreTypes.iterable, [
-                    BridgeTypeRef.ref('E', []),
+                    BridgeTypeAnnotation(BridgeTypeRef.ref('E', [])),
                   ]),
                   nullable: false),
               false)
@@ -168,7 +169,7 @@ class $List<E> implements List<E>, $Instance {
           BridgeFunctionDef(
               returns: BridgeTypeAnnotation(
                   BridgeTypeRef(CoreTypes.list, [
-                    BridgeTypeRef.ref('T', []),
+                    BridgeTypeAnnotation(BridgeTypeRef.ref('T', [])),
                   ]),
                   nullable: false),
               params: [
@@ -176,7 +177,7 @@ class $List<E> implements List<E>, $Instance {
                     'source',
                     BridgeTypeAnnotation(
                         BridgeTypeRef(CoreTypes.list, [
-                          BridgeTypeRef.ref('S', []),
+                          BridgeTypeAnnotation(BridgeTypeRef.ref('S', [])),
                         ]),
                         nullable: false),
                     false)
@@ -197,7 +198,7 @@ class $List<E> implements List<E>, $Instance {
                     'target',
                     BridgeTypeAnnotation(
                         BridgeTypeRef(CoreTypes.list, [
-                          BridgeTypeRef.ref('T', []),
+                          BridgeTypeAnnotation(BridgeTypeRef.ref('T', [])),
                         ]),
                         nullable: false),
                     false),
@@ -210,7 +211,7 @@ class $List<E> implements List<E>, $Instance {
                     'source',
                     BridgeTypeAnnotation(
                         BridgeTypeRef(CoreTypes.list, [
-                          BridgeTypeRef.ref('T', []),
+                          BridgeTypeAnnotation(BridgeTypeRef.ref('T', [])),
                         ]),
                         nullable: false),
                     false),
@@ -240,7 +241,7 @@ class $List<E> implements List<E>, $Instance {
                     'target',
                     BridgeTypeAnnotation(
                         BridgeTypeRef(CoreTypes.list, [
-                          BridgeTypeRef.ref('T', []),
+                          BridgeTypeAnnotation(BridgeTypeRef.ref('T', [])),
                         ]),
                         nullable: false),
                     false),
@@ -253,7 +254,7 @@ class $List<E> implements List<E>, $Instance {
                     'source',
                     BridgeTypeAnnotation(
                         BridgeTypeRef(CoreTypes.iterable, [
-                          BridgeTypeRef.ref('T', []),
+                          BridgeTypeAnnotation(BridgeTypeRef.ref('T', [])),
                         ]),
                         nullable: false),
                     false)
@@ -267,7 +268,7 @@ class $List<E> implements List<E>, $Instance {
           BridgeFunctionDef(
             returns: BridgeTypeAnnotation(
                 BridgeTypeRef(CoreTypes.list, [
-                  BridgeTypeRef.ref('R', []),
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('R', [])),
                 ]),
                 nullable: false),
             params: [],
@@ -331,7 +332,7 @@ class $List<E> implements List<E>, $Instance {
                   'iterable',
                   BridgeTypeAnnotation(
                       BridgeTypeRef(CoreTypes.iterable, [
-                        BridgeTypeRef.ref('E', []),
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('E', [])),
                       ]),
                       nullable: false),
                   false)
@@ -484,7 +485,7 @@ class $List<E> implements List<E>, $Instance {
                   'iterable',
                   BridgeTypeAnnotation(
                       BridgeTypeRef(CoreTypes.iterable, [
-                        BridgeTypeRef.ref('E', []),
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('E', [])),
                       ]),
                       nullable: false),
                   false)
@@ -506,7 +507,7 @@ class $List<E> implements List<E>, $Instance {
                   'iterable',
                   BridgeTypeAnnotation(
                       BridgeTypeRef(CoreTypes.iterable, [
-                        BridgeTypeRef.ref('E', []),
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('E', [])),
                       ]),
                       nullable: false),
                   false)
@@ -582,7 +583,7 @@ class $List<E> implements List<E>, $Instance {
           BridgeFunctionDef(
             returns: BridgeTypeAnnotation(
                 BridgeTypeRef(CoreTypes.list, [
-                  BridgeTypeRef.ref('E', []),
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('E', [])),
                 ]),
                 nullable: false),
             params: [
@@ -590,7 +591,7 @@ class $List<E> implements List<E>, $Instance {
                   'other',
                   BridgeTypeAnnotation(
                       BridgeTypeRef(CoreTypes.list, [
-                        BridgeTypeRef.ref('E', []),
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('E', [])),
                       ]),
                       nullable: false),
                   false)
@@ -602,7 +603,7 @@ class $List<E> implements List<E>, $Instance {
           BridgeFunctionDef(
             returns: BridgeTypeAnnotation(
                 BridgeTypeRef(CoreTypes.list, [
-                  BridgeTypeRef.ref('E', []),
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('E', [])),
                 ]),
                 nullable: false),
             params: [
@@ -624,7 +625,7 @@ class $List<E> implements List<E>, $Instance {
           BridgeFunctionDef(
             returns: BridgeTypeAnnotation(
                 BridgeTypeRef(CoreTypes.iterable, [
-                  BridgeTypeRef.ref('E', []),
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('E', [])),
                 ]),
                 nullable: false),
             params: [
@@ -661,7 +662,7 @@ class $List<E> implements List<E>, $Instance {
                   'iterable',
                   BridgeTypeAnnotation(
                       BridgeTypeRef(CoreTypes.iterable, [
-                        BridgeTypeRef.ref('E', []),
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('E', [])),
                       ]),
                       nullable: false),
                   false),
@@ -736,7 +737,7 @@ class $List<E> implements List<E>, $Instance {
                   'replacements',
                   BridgeTypeAnnotation(
                       BridgeTypeRef(CoreTypes.iterable, [
-                        BridgeTypeRef.ref('E', []),
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('E', [])),
                       ]),
                       nullable: false),
                   false)
@@ -748,8 +749,8 @@ class $List<E> implements List<E>, $Instance {
           BridgeFunctionDef(
             returns: BridgeTypeAnnotation(
                 BridgeTypeRef(CoreTypes.map, [
-                  BridgeTypeRef(CoreTypes.int, []),
-                  BridgeTypeRef.ref('E', []),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('E', [])),
                 ]),
                 nullable: false),
             params: [],
@@ -770,7 +771,7 @@ class $List<E> implements List<E>, $Instance {
           BridgeFunctionDef(
             returns: BridgeTypeAnnotation(
                 BridgeTypeRef(CoreTypes.iterable, [
-                  BridgeTypeRef.ref('E', []),
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('E', [])),
                 ]),
                 nullable: false),
             params: [],
@@ -1279,9 +1280,10 @@ class $List<E> implements List<E>, $Instance {
   static $Value? _$asMap(Runtime runtime, $Value? target, List<$Value?> args) {
     final $this = target?.$value as List;
     final $result = $this.asMap();
-    return $Map.wrap($result.map((key, value) {
-      return $MapEntry.wrap(MapEntry($int(key), value));
-    }));
+    return $Map.wrap({
+      for (var entry in $result.entries)
+        $int(entry.key): runtime.wrap(entry.value, recursive: true),
+    });
   }
 
   static const __$static$method$castFrom = $Function(_$static$method$castFrom);

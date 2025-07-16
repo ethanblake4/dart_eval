@@ -3,7 +3,7 @@ import 'package:dart_eval/src/eval/runtime/exception.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/collection.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/object.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/pattern.dart';
-import 'package:dart_eval/src/eval/utils/wap_helper.dart';
+import 'package:dart_eval/src/eval/utils/wrap_helper.dart';
 import 'num.dart';
 
 const $dynamicCls = BridgeClassDef(
@@ -170,8 +170,8 @@ class $String implements $Instance {
       methods: {
         // Other string methods defined in builtins.dart
         'split': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(
-                CoreTypes.list, [BridgeTypeRef(CoreTypes.string)])),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list,
+                [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string))])),
             params: [
               BridgeParameter('pattern',
                   BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.pattern)), false)
@@ -187,8 +187,8 @@ class $String implements $Instance {
       },
       getters: {
         'codeUnits': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.list, [BridgeTypeRef(CoreTypes.int)]))))
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list,
+                [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int))]))))
       },
       wrap: true);
 

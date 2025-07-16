@@ -26,13 +26,16 @@ class $Directory implements $Instance {
   static const $declaration = BridgeClassDef(
       BridgeClassType($type, $extends: $FileSystemEntity.$type),
       constructors: {
-        '': BridgeConstructorDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation($type), params: [], namedParams: []))
+        '': BridgeConstructorDef(
+            BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [
+          BridgeParameter('path',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false)
+        ], namedParams: []))
       },
       methods: {
         'create': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(
-                CoreTypes.future, [BridgeTypeRef(CoreTypes.voidType)])),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future,
+                [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType))])),
             params: [],
             namedParams: [
               BridgeParameter('recursive',
@@ -46,8 +49,8 @@ class $Directory implements $Instance {
                   BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true),
             ])),
         'rename': BridgeMethodDef(BridgeFunctionDef(
-            returns:
-                BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future, [$type])),
+            returns: BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.future, [BridgeTypeAnnotation($type)])),
             params: [
               BridgeParameter('newPath',
                   BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false)
@@ -60,8 +63,9 @@ class $Directory implements $Instance {
         ], namedParams: [])),
         'list': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(
-              BridgeTypeRef(
-                  CoreTypes.stream, [BridgeTypeRef(IoTypes.fileSystemEntity)]),
+              BridgeTypeRef(CoreTypes.stream, [
+                BridgeTypeAnnotation(BridgeTypeRef(IoTypes.fileSystemEntity))
+              ]),
             ),
             namedParams: [
               BridgeParameter('recursive',
@@ -70,8 +74,9 @@ class $Directory implements $Instance {
                   BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true),
             ])),
         'listSync': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(
-                CoreTypes.list, [BridgeTypeRef(IoTypes.fileSystemEntity)])),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list, [
+              BridgeTypeAnnotation(BridgeTypeRef(IoTypes.fileSystemEntity))
+            ])),
             namedParams: [
               BridgeParameter('recursive',
                   BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true),

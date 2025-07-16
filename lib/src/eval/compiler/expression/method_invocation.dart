@@ -234,7 +234,7 @@ Variable _invokeWithTarget(
     CompilerContext ctx, Variable L, MethodInvocation e) {
   AlwaysReturnType? mReturnType;
 
-  final DeclarationOrBridge<ClassMember, BridgeDeclaration> _dec;
+  DeclarationOrBridge<ClassMember, BridgeDeclaration>? _dec;
   final bool isStatic;
   TypeRef? staticType;
 
@@ -255,20 +255,24 @@ Variable _invokeWithTarget(
     staticType = L.concreteTypes[0];
     _dec = resolveStaticMethod(ctx, staticType, e.methodName.name);
     isStatic = true;
-  } else {
+  } else if (L.type != CoreTypes.dynamic.ref(ctx)) {
     _dec = resolveInstanceMethod(ctx, L.type, e.methodName.name, e);
+    isStatic = false;
+  } else {
     isStatic = false;
   }
 
-  if (_dec.isBridge) {
-    final br = _dec.bridge!;
+  if (_dec?.isBridge == true) {
+    final br = _dec!.bridge!;
     final fd = br is BridgeMethodDef
         ? br.functionDescriptor
         : (br as BridgeConstructorDef).functionDescriptor;
     argsPair =
         compileArgumentListWithBridge(ctx, e.argumentList, fd, before: []);
+  } else if (L.type == CoreTypes.dynamic.ref(ctx)) {
+    argsPair = compileArgumentListWithDynamic(ctx, e.argumentList, before: [L]);
   } else {
-    final dec = _dec.declaration!;
+    final dec = _dec!.declaration!;
     final fpl = (dec is MethodDeclaration
             ? dec.parameters?.parameters
             : (dec as ConstructorDeclaration).parameters.parameters) ??
@@ -287,7 +291,7 @@ Variable _invokeWithTarget(
       _namedArgs.map((key, value) => MapEntry(key, value.type));
 
   if (isStatic) {
-    if (_dec.isBridge) {
+    if (_dec!.isBridge) {
       final ix = InvokeExternal.make(ctx.bridgeStaticFunctionIndices[
           staticType!.file]!['${staticType.name}.${e.methodName.name}']!);
       ctx.pushOp(ix, InvokeExternal.LEN);
@@ -299,7 +303,7 @@ Variable _invokeWithTarget(
         ctx.offsetTracker.setOffset(loc, offset);
       }
     }
-  } else if (L.concreteTypes.length == 1 && !_dec.isBridge) {
+  } else if (L.concreteTypes.length == 1 && !_dec!.isBridge) {
     // If the concrete type is known we can use a static call
     final actualType = L.concreteTypes[0];
     final offset = DeferredOrOffset(

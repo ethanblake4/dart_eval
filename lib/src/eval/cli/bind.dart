@@ -1,9 +1,11 @@
 import 'dart:io';
 
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bindgen/bindgen.dart';
 import 'package:dart_eval/src/eval/cli/utils.dart';
 import 'package:dart_style/dart_style.dart';
 import 'package:path/path.dart';
+import 'package:pub_semver/pub_semver.dart';
 import 'package:pubspec_parse/pubspec_parse.dart';
 
 const defaultImports = '''
@@ -27,7 +29,8 @@ void cliBind([bool singleFile = false, bool all = false]) async {
   final packageName = pubspec.name;
 
   final bindgen = Bindgen();
-  final formatter = DartFormatter();
+  final version = Version.parse(Platform.version.split(' ').first);
+  final formatter = DartFormatter(languageVersion: version);
   for (final package in packageConfig.packages) {
     if (package.name == packageName) {
       bindgen.inject(package: package);

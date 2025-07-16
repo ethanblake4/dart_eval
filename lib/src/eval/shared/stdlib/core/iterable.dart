@@ -82,7 +82,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
           BridgeFunctionDef(
               returns: BridgeTypeAnnotation(
                   BridgeTypeRef(CoreTypes.iterable, [
-                    BridgeTypeRef.ref('T', []),
+                    BridgeTypeAnnotation(BridgeTypeRef.ref('T', [])),
                   ]),
                   nullable: false),
               params: [
@@ -90,7 +90,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
                     'source',
                     BridgeTypeAnnotation(
                         BridgeTypeRef(CoreTypes.iterable, [
-                          BridgeTypeRef.ref('S', []),
+                          BridgeTypeAnnotation(BridgeTypeRef.ref('S', [])),
                         ]),
                         nullable: false),
                     false)
@@ -153,7 +153,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
           BridgeFunctionDef(
             returns: BridgeTypeAnnotation(
                 BridgeTypeRef(CoreTypes.iterable, [
-                  BridgeTypeRef.ref('R', []),
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('R', [])),
                 ]),
                 nullable: false),
             params: [],
@@ -165,7 +165,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
           BridgeFunctionDef(
             returns: BridgeTypeAnnotation(
                 BridgeTypeRef(CoreTypes.iterable, [
-                  BridgeTypeRef.ref('E', []),
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('E', [])),
                 ]),
                 nullable: false),
             params: [
@@ -173,7 +173,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
                   'other',
                   BridgeTypeAnnotation(
                       BridgeTypeRef(CoreTypes.iterable, [
-                        BridgeTypeRef.ref('E', []),
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('E', [])),
                       ]),
                       nullable: false),
                   false)
@@ -185,7 +185,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
           BridgeFunctionDef(
             returns: BridgeTypeAnnotation(
                 BridgeTypeRef(CoreTypes.iterable, [
-                  BridgeTypeRef.ref('T', []),
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('T', [])),
                 ]),
                 nullable: false),
             params: [
@@ -203,7 +203,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
           BridgeFunctionDef(
             returns: BridgeTypeAnnotation(
                 BridgeTypeRef(CoreTypes.iterable, [
-                  BridgeTypeRef.ref('E', []),
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('E', [])),
                 ]),
                 nullable: false),
             params: [
@@ -220,7 +220,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
           BridgeFunctionDef(
             returns: BridgeTypeAnnotation(
                 BridgeTypeRef(CoreTypes.iterable, [
-                  BridgeTypeRef.ref('T', []),
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('T', [])),
                 ]),
                 nullable: false),
             params: [],
@@ -232,7 +232,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
           BridgeFunctionDef(
             returns: BridgeTypeAnnotation(
                 BridgeTypeRef(CoreTypes.iterable, [
-                  BridgeTypeRef.ref('T', []),
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('T', [])),
                 ]),
                 nullable: false),
             params: [
@@ -240,7 +240,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
                   'toElements',
                   BridgeTypeAnnotation(
                       BridgeTypeRef(CoreTypes.iterable, [
-                        BridgeTypeRef.ref('T', []),
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('T', [])),
                       ]),
                       nullable: false),
                   false)
@@ -358,7 +358,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
           BridgeFunctionDef(
             returns: BridgeTypeAnnotation(
                 BridgeTypeRef(CoreTypes.list, [
-                  BridgeTypeRef.ref('E', []),
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('E', [])),
                 ]),
                 nullable: false),
             params: [],
@@ -375,7 +375,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
           BridgeFunctionDef(
             returns: BridgeTypeAnnotation(
                 BridgeTypeRef(CoreTypes.list, [
-                  BridgeTypeRef.ref('E', []),
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('E', [])),
                 ]),
                 nullable: false),
             params: [],
@@ -386,7 +386,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
           BridgeFunctionDef(
             returns: BridgeTypeAnnotation(
                 BridgeTypeRef(CoreTypes.iterable, [
-                  BridgeTypeRef.ref('E', []),
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('E', [])),
                 ]),
                 nullable: false),
             params: [
@@ -403,7 +403,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
           BridgeFunctionDef(
             returns: BridgeTypeAnnotation(
                 BridgeTypeRef(CoreTypes.iterable, [
-                  BridgeTypeRef.ref('E', []),
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('E', [])),
                 ]),
                 nullable: false),
             params: [
@@ -420,7 +420,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
           BridgeFunctionDef(
             returns: BridgeTypeAnnotation(
                 BridgeTypeRef(CoreTypes.iterable, [
-                  BridgeTypeRef.ref('E', []),
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('E', [])),
                 ]),
                 nullable: false),
             params: [
@@ -437,7 +437,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
           BridgeFunctionDef(
             returns: BridgeTypeAnnotation(
                 BridgeTypeRef(CoreTypes.iterable, [
-                  BridgeTypeRef.ref('E', []),
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('E', [])),
                 ]),
                 nullable: false),
             params: [
@@ -530,7 +530,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
           BridgeFunctionDef(
             returns: BridgeTypeAnnotation(
                 BridgeTypeRef(CoreTypes.iterator, [
-                  BridgeTypeRef.ref('E', []),
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('E', [])),
                 ]),
                 nullable: false),
             params: [],
@@ -931,9 +931,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     final orElse = args[1] as EvalCallable?;
     final $result = $this.firstWhere(
       (element) => test.call(runtime, null, [element])!.$value as bool,
-      orElse: orElse == null
-          ? null
-          : () => orElse.call(runtime, null, [])!,
+      orElse: orElse == null ? null : () => orElse.call(runtime, null, [])!,
     );
     return $result;
   }
@@ -949,9 +947,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     final orElse = args[1] as EvalCallable?;
     final $result = $this.lastWhere(
       (element) => test.call(runtime, null, [element])!.$value as bool,
-      orElse: orElse == null
-          ? null
-          : () => orElse.call(runtime, null, [])!,
+      orElse: orElse == null ? null : () => orElse.call(runtime, null, [])!,
     );
     return $result;
   }
@@ -967,9 +963,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     final orElse = args[1] as EvalCallable?;
     final $result = $this.singleWhere(
       (element) => test.call(runtime, null, [element])!.$value as bool,
-      orElse: orElse == null
-          ? null
-          : () => orElse.call(runtime, null, [])!,
+      orElse: orElse == null ? null : () => orElse.call(runtime, null, [])!,
     );
     return $result;
   }

@@ -6,7 +6,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/typed_data/typed_data.dart';
 import 'package:dart_eval/stdlib/core.dart';
 
 /// dart_eval bimodal wrapper for [InternetAddressType]
-class $InternetAddressType implements InternetAddressType, $Instance {
+class $InternetAddressType implements $Instance {
   /// Configure the [$InternetAddressType] wrapper for use in a [Runtime]
   static void configureForCompile(BridgeDeclarationRegistry registry) {
     registry.defineBridgeClass($declaration);
@@ -139,9 +139,6 @@ class $InternetAddressType implements InternetAddressType, $Instance {
   }
 
   @override
-  String get name => $value.name;
-
-  @override
   String toString() => $value.toString();
   static const __$toString = $Function(_$toString);
   static $Value? _$toString(
@@ -242,9 +239,10 @@ class $InternetAddress implements InternetAddress, $Instance {
           BridgeFunctionDef(
             returns: BridgeTypeAnnotation(
                 BridgeTypeRef(CoreTypes.future, [
-                  BridgeTypeRef(CoreTypes.list, [
-                    BridgeTypeRef(IoTypes.internetAddress, []),
-                  ]),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list, [
+                    BridgeTypeAnnotation(
+                        BridgeTypeRef(IoTypes.internetAddress, [])),
+                  ])),
                 ]),
                 nullable: false),
             params: [
@@ -283,7 +281,8 @@ class $InternetAddress implements InternetAddress, $Instance {
           BridgeFunctionDef(
             returns: BridgeTypeAnnotation(
                 BridgeTypeRef(CoreTypes.future, [
-                  BridgeTypeRef(IoTypes.internetAddress, []),
+                  BridgeTypeAnnotation(
+                      BridgeTypeRef(IoTypes.internetAddress, [])),
                 ]),
                 nullable: false),
             params: [],

@@ -6,3 +6,4 @@ import 'package:dart_eval/stdlib/core.dart';
 part 'iterable.dart';
 part 'list.dart';
 part 'map.dart';
+part 'set.dart';

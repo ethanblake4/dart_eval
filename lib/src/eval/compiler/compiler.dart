@@ -1054,6 +1054,25 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
         ...importMap[library]!,
         _Import(library.uri, null)
       ];
+
+      final usedSelf = <String>{};
+      final selfList = result[library]?.entries.toList() ?? [];
+      while (selfList.isNotEmpty) {
+        final declaration = selfList.removeLast();
+        if (usedSelf.contains(declaration.key) ||
+            !ids.contains(declaration.key)) {
+          continue;
+        }
+        final s = usedIdentifiers[library]![declaration.key];
+        for (final id in s ?? {}) {
+          ids.add(id);
+          final selfDec = result[library]?[id];
+          if (usedSelf.contains(id) || selfDec == null) continue;
+          selfList.add(MapEntry(id, selfDec));
+        }
+        usedSelf.add(declaration.key);
+      }
+
       for (final import in importsWithImplicitSelf) {
         final iid = '${library.uri}:${import.uri}';
         if (processedImports.contains(iid)) {

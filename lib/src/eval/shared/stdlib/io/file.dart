@@ -36,8 +36,8 @@ class $File implements $Instance {
       },
       methods: {
         'create': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(
-                CoreTypes.future, [BridgeTypeRef(CoreTypes.voidType)])),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future,
+                [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType))])),
             params: [],
             namedParams: [
               BridgeParameter('recursive',
@@ -55,8 +55,8 @@ class $File implements $Instance {
                   BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true),
             ])),
         'rename': BridgeMethodDef(BridgeFunctionDef(
-            returns:
-                BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future, [$type])),
+            returns: BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.future, [BridgeTypeAnnotation($type)])),
             params: [
               BridgeParameter('newPath', BridgeTypeAnnotation($type), false)
             ],
@@ -69,7 +69,8 @@ class $File implements $Instance {
             namedParams: [])),
         'openRead': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.stream, [
-              BridgeTypeRef(CoreTypes.list, [BridgeTypeRef(CoreTypes.int)])
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list,
+                  [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int))]))
             ])),
             params: [
               BridgeParameter(
@@ -94,7 +95,7 @@ class $File implements $Instance {
         'length': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(
               CoreTypes.future,
-              [BridgeTypeRef(CoreTypes.int)],
+              [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int))],
             )),
             params: [],
             namedParams: [])),
@@ -105,7 +106,7 @@ class $File implements $Instance {
         'lastAccessed': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(
               CoreTypes.future,
-              [BridgeTypeRef(CoreTypes.dateTime)],
+              [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dateTime))],
             )),
             params: [],
             namedParams: [])),
@@ -116,7 +117,7 @@ class $File implements $Instance {
         'lastModified': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(
               CoreTypes.future,
-              [BridgeTypeRef(CoreTypes.dateTime)],
+              [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dateTime))],
             )),
             params: [],
             namedParams: [])),
@@ -127,7 +128,7 @@ class $File implements $Instance {
         'setLastAccessed': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(
               CoreTypes.future,
-              [BridgeTypeRef(CoreTypes.voidType)],
+              [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType))],
             )),
             params: [
               BridgeParameter(
@@ -148,7 +149,7 @@ class $File implements $Instance {
         'setLastModified': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(
               CoreTypes.future,
-              [BridgeTypeRef(CoreTypes.voidType)],
+              [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType))],
             )),
             params: [
               BridgeParameter(
@@ -169,7 +170,7 @@ class $File implements $Instance {
         'readAsString': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(
               CoreTypes.future,
-              [BridgeTypeRef(CoreTypes.string)],
+              [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string))],
             )),
             params: [],
             namedParams: [
@@ -185,20 +186,21 @@ class $File implements $Instance {
             returns: BridgeTypeAnnotation(BridgeTypeRef(
               CoreTypes.future,
               [
-                BridgeTypeRef(CoreTypes.list, [BridgeTypeRef(CoreTypes.int)])
+                BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list,
+                    [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int))]))
               ],
             )),
             params: [],
             namedParams: [])),
         'readAsBytesSync': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.list, [BridgeTypeRef(CoreTypes.int)])),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list,
+                [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int))])),
             params: [],
             namedParams: [])),
         'writeAsString': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(
               CoreTypes.future,
-              [BridgeTypeRef(CoreTypes.voidType)],
+              [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType))],
             )),
             params: [
               BridgeParameter('contents',
@@ -225,13 +227,13 @@ class $File implements $Instance {
         'writeAsBytes': BridgeMethodDef(BridgeFunctionDef(
             returns: BridgeTypeAnnotation(BridgeTypeRef(
               CoreTypes.future,
-              [BridgeTypeRef(CoreTypes.voidType)],
+              [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType))],
             )),
             params: [
               BridgeParameter(
                   'bytes',
-                  BridgeTypeAnnotation(BridgeTypeRef(
-                      CoreTypes.list, [BridgeTypeRef(CoreTypes.int)])),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list,
+                      [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int))])),
                   false)
             ],
             namedParams: [
@@ -244,8 +246,8 @@ class $File implements $Instance {
             params: [
               BridgeParameter(
                   'bytes',
-                  BridgeTypeAnnotation(BridgeTypeRef(
-                      CoreTypes.list, [BridgeTypeRef(CoreTypes.int)])),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list,
+                      [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int))])),
                   false)
             ],
             namedParams: [
@@ -257,7 +259,8 @@ class $File implements $Instance {
             returns: BridgeTypeAnnotation(BridgeTypeRef(
               CoreTypes.future,
               [
-                BridgeTypeRef(CoreTypes.list, [BridgeTypeRef(CoreTypes.string)])
+                BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list,
+                    [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string))]))
               ],
             )),
             params: [],
@@ -265,8 +268,8 @@ class $File implements $Instance {
               //BridgeParameter('encoding', BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.encodingType)), true),
             ])),
         'readAsLinesSync': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(
-                CoreTypes.list, [BridgeTypeRef(CoreTypes.string)])),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list,
+                [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string))])),
             params: [],
             namedParams: [
               //BridgeParameter('encoding', BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.encodingType)), true),

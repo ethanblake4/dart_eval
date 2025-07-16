@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
@@ -188,6 +189,7 @@ void compileConstructorDeclaration(
       : (parent as ClassDeclaration).extendsClause;
   Variable $super;
   DeclarationOrPrefix? extendsWhat;
+  DeclarationOrBridge? extendsDecl;
 
   final argTypes = <TypeRef?>[];
   final namedArgTypes = <String, TypeRef?>{};
@@ -197,29 +199,36 @@ void compileConstructorDeclaration(
   if ($extends == null) {
     $super = BuiltinValue().push(ctx);
   } else {
-    extendsWhat = ctx
-        .visibleDeclarations[ctx.library]![$extends.superclass.name2.lexeme]!;
+    final prefix = $extends.superclass.importPrefix;
+    final clsName = $extends.superclass.name2.lexeme;
+    extendsWhat = (prefix != null
+            ? ctx.visibleDeclarations[ctx.library]![prefix.name.value()]
+            : ctx.visibleDeclarations[ctx.library]![clsName]) ??
+        (throw CompileError('Cannot find superclass $clsName', $extends));
 
-    final decl = extendsWhat.declaration!;
+    extendsDecl = extendsWhat.declaration ??
+        extendsWhat.children?[clsName] ??
+        (throw CompileError('Cannot find superclass $clsName', $extends));
 
-    if (decl.isBridge) {
+    if (extendsDecl.isBridge) {
       ctx.pushOp(PushBridgeSuperShim.make(), PushBridgeSuperShim.length);
       $super = Variable.alloc(ctx, CoreTypes.dynamic.ref(ctx));
     } else {
       final extendsType = TypeRef.lookupDeclaration(
-          ctx, ctx.library, decl.declaration as ClassDeclaration);
+          ctx, ctx.library, extendsDecl.declaration as ClassDeclaration,
+          prefix: prefix?.name.lexeme);
 
       AlwaysReturnType? mReturnType;
 
       if ($superInitializer != null) {
-        final _constructor = ctx.topLevelDeclarationsMap[decl.sourceLib]![
-            '${extendsType.name}.$constructorName']!;
+        final _constructor = ctx.topLevelDeclarationsMap[
+            extendsDecl.sourceLib]!['${extendsType.name}.$constructorName']!;
         final constructor = _constructor.declaration as ConstructorDeclaration;
 
         final argsPair = compileArgumentList(
             ctx,
             $superInitializer.argumentList,
-            decl.sourceLib,
+            extendsDecl.sourceLib,
             constructor.parameters.parameters,
             constructor,
             superParams: superParams,
@@ -230,11 +239,25 @@ void compileConstructorDeclaration(
         argTypes.addAll(_args.map((e) => e.type).toList());
         namedArgTypes
             .addAll(_namedArgs.map((key, value) => MapEntry(key, value.type)));
+      } else if (superParams.isNotEmpty) {
+        // If there are super parameters, compile without an argument list
+        final _constructor = ctx.topLevelDeclarationsMap[
+            extendsDecl.sourceLib]!['${extendsType.name}.$constructorName']!;
+        final constructor = _constructor.declaration as ConstructorDeclaration;
+        final argsPair = compileSuperParams(
+            ctx, constructor.parameters.parameters, constructor,
+            superParams: superParams, source: $superInitializer);
+        final _args = argsPair.first;
+        final _namedArgs = argsPair.second;
+
+        argTypes.addAll(_args.map((e) => e.type).toList());
+        namedArgTypes
+            .addAll(_namedArgs.map((key, value) => MapEntry(key, value.type)));
       }
 
-      final method =
-          IdentifierReference(null, '${extendsType.name}.$constructorName')
-              .getValue(ctx);
+      final method = IdentifierReference(null,
+              '${prefix != null ? '${prefix.name.value()}.' : ''}${extendsType.name}.$constructorName')
+          .getValue(ctx);
       if (method.methodOffset == null) {
         throw CompileError(
             'Cannot call $constructorName as it is not a valid method');
@@ -262,19 +285,7 @@ void compileConstructorDeclaration(
   final instOffset = ctx.scopeFrameOffset++;
 
   if (parent is EnumDeclaration) {
-    /// Add implicit index and name fields
-    ctx.inferredFieldTypes
-        .putIfAbsent(ctx.library, () => {})
-        .putIfAbsent(ctx.currentClass!.name.lexeme, () => {})
-      ..['index'] = CoreTypes.int.ref(ctx)
-      ..['name'] = CoreTypes.string.ref(ctx);
-  }
-
-  if (parent is EnumDeclaration) {
-    ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 0, 0),
-        SetObjectPropertyImpl.length);
-    ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 1, 1),
-        SetObjectPropertyImpl.length);
+    _setupEnum(ctx, parent, instOffset);
   }
 
   for (final fieldFormal in fieldFormalNames) {
@@ -321,9 +332,8 @@ void compileConstructorDeclaration(
     ctx.endAllocScope();
   }
 
-  if ($extends != null && extendsWhat!.declaration!.isBridge) {
-    final decl = extendsWhat.declaration!;
-    final bridge = decl.bridge! as BridgeClassDef;
+  if ($extends != null && extendsDecl!.isBridge) {
+    final bridge = extendsDecl.bridge! as BridgeClassDef;
 
     if (!bridge.bridge) {
       throw CompileError(
@@ -343,7 +353,7 @@ void compileConstructorDeclaration(
 
     final op = BridgeInstantiate.make(
         instOffset,
-        ctx.bridgeStaticFunctionIndices[decl.sourceLib]![
+        ctx.bridgeStaticFunctionIndices[extendsDecl.sourceLib]![
             '${$extends.superclass.name2.value()}.$constructorName']!);
     ctx.pushOp(op, BridgeInstantiate.len(op));
     final bridgeInst = Variable.alloc(ctx, CoreTypes.dynamic.ref(ctx));
@@ -381,6 +391,7 @@ void compileDefaultConstructor(CompilerContext ctx,
       : (parent as ClassDeclaration).extendsClause;
   Variable $super;
   DeclarationOrPrefix? extendsWhat;
+  DeclarationOrBridge? extendsDecl;
 
   final argTypes = <TypeRef?>[];
   final namedArgTypes = <String, TypeRef?>{};
@@ -390,23 +401,30 @@ void compileDefaultConstructor(CompilerContext ctx,
   if ($extends == null) {
     $super = BuiltinValue().push(ctx);
   } else {
-    extendsWhat = ctx
-        .visibleDeclarations[ctx.library]![$extends.superclass.name2.lexeme]!;
+    final prefix = $extends.superclass.importPrefix;
+    final clsName = $extends.superclass.name2.lexeme;
+    extendsWhat = (prefix != null
+            ? ctx.visibleDeclarations[ctx.library]![prefix.name.value()]
+            : ctx.visibleDeclarations[ctx.library]![clsName]) ??
+        (throw CompileError('Cannot find superclass $clsName', $extends));
 
-    final decl = extendsWhat.declaration!;
+    extendsDecl = extendsWhat.declaration ??
+        extendsWhat.children?[clsName] ??
+        (throw CompileError('Cannot find superclass $clsName', $extends));
 
-    if (decl.isBridge) {
+    if (extendsDecl.isBridge) {
       ctx.pushOp(PushBridgeSuperShim.make(), PushBridgeSuperShim.length);
       $super = Variable.alloc(ctx, CoreTypes.dynamic.ref(ctx));
     } else {
       final extendsType = TypeRef.lookupDeclaration(
-          ctx, ctx.library, decl.declaration as ClassDeclaration);
+          ctx, ctx.library, extendsDecl.declaration as ClassDeclaration,
+          prefix: prefix?.name.lexeme);
 
       AlwaysReturnType? mReturnType;
 
-      final method =
-          IdentifierReference(null, '${extendsType.name}.$constructorName')
-              .getValue(ctx);
+      final method = IdentifierReference(null,
+              '${prefix != null ? '${prefix.name.value()}.' : ''}${extendsType.name}.$constructorName')
+          .getValue(ctx);
       if (method.methodOffset == null) {
         throw CompileError(
             'Cannot call $constructorName as it is not a valid method');
@@ -434,19 +452,7 @@ void compileDefaultConstructor(CompilerContext ctx,
   final instOffset = ctx.scopeFrameOffset++;
 
   if (parent is EnumDeclaration) {
-    /// Add implicit index and name fields
-    ctx.inferredFieldTypes
-        .putIfAbsent(ctx.library, () => {})
-        .putIfAbsent(ctx.currentClass!.name.lexeme, () => {})
-      ..['index'] = CoreTypes.int.ref(ctx)
-      ..['name'] = CoreTypes.string.ref(ctx);
-  }
-
-  if (parent is EnumDeclaration) {
-    ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 0, 0),
-        SetObjectPropertyImpl.length);
-    ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 1, 1),
-        SetObjectPropertyImpl.length);
+    _setupEnum(ctx, parent, instOffset);
   }
 
   _compileUnusedFields(
@@ -456,9 +462,8 @@ void compileDefaultConstructor(CompilerContext ctx,
       instOffset,
       parent is EnumDeclaration ? 2 : 0);
 
-  if ($extends != null && extendsWhat!.declaration!.isBridge) {
-    final decl = extendsWhat.declaration!;
-    final bridge = decl.bridge! as BridgeClassDef;
+  if ($extends != null && extendsDecl!.isBridge) {
+    final bridge = extendsDecl.bridge! as BridgeClassDef;
 
     if (!bridge.bridge) {
       throw CompileError(
@@ -467,7 +472,7 @@ void compileDefaultConstructor(CompilerContext ctx,
 
     final op = BridgeInstantiate.make(
         instOffset,
-        ctx.bridgeStaticFunctionIndices[decl.sourceLib]![
+        ctx.bridgeStaticFunctionIndices[extendsDecl.sourceLib]![
             '${$extends.superclass.name2.lexeme}.$constructorName']!);
     ctx.pushOp(op, BridgeInstantiate.len(op));
     final bridgeInst = Variable.alloc(ctx, CoreTypes.dynamic.ref(ctx));
@@ -517,4 +522,18 @@ void _compileUnusedFields(CompilerContext ctx, List<FieldDeclaration> fields,
       _fieldIdx++;
     }
   }
+}
+
+void _setupEnum(CompilerContext ctx, EnumDeclaration parent, int instOffset) {
+  /// Add implicit index and name fields
+  ctx.inferredFieldTypes
+      .putIfAbsent(ctx.library, () => {})
+      .putIfAbsent(ctx.currentClass!.name.lexeme, () => {})
+    ..['index'] = CoreTypes.int.ref(ctx)
+    ..['name'] = CoreTypes.string.ref(ctx);
+
+  ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 0, 0),
+      SetObjectPropertyImpl.length);
+  ctx.pushOp(SetObjectPropertyImpl.make(instOffset, 1, 1),
+      SetObjectPropertyImpl.length);
 }

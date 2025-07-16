@@ -288,5 +288,46 @@ void main() {
       final result = runtime.executeLib('package:example/main.dart', 'main');
       expect(result, 16);
     });
+
+    test('Correct tree shaking of long reference chains within a single file',
+        () {
+      final program = compiler.compile({
+        'example': {
+          'main.dart': '''
+            import 'package:example/file.dart';
+            int main() {
+              return getClass().number();
+            }
+          ''',
+          'file.dart': '''
+            Cls getClass() {
+              return getClass2();
+            }
+
+            Cls getClass2() {
+              return getClass3();
+            }
+
+            Cls getClass3() {
+              return getClass4();
+            }
+
+            Cls getClass4() {
+              return Cls();
+            }
+
+            class Cls {
+              int number() {
+                return 42;
+              }
+            }
+          ''',
+        }
+      });
+
+      final runtime = Runtime.ofProgram(program);
+      final result = runtime.executeLib('package:example/main.dart', 'main');
+      expect(result, 42);
+    });
   });
 }

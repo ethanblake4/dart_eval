@@ -1,4 +1,4 @@
-import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/dart/element/element2.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:change_case/change_case.dart';
@@ -9,17 +9,21 @@ import 'package:dart_eval/src/eval/bindgen/parameters.dart';
 
 String bridgeTypeRefFromType(BindgenContext ctx, DartType type) {
   if (type is TypeParameterType) {
-    return 'BridgeTypeRef.ref(\'${type.element.name}\')';
+    return 'BridgeTypeRef.ref(\'${type.element3.name3}\')';
   } else if (type is FunctionType) {
     return '''BridgeTypeRef.genericFunction(BridgeFunctionDef(
       returns: ${bridgeTypeAnnotationFrom(ctx, type.returnType)},
       params: [
-        ${parameters(ctx, type.parameters.where((p) => p.isPositional).toList())}
+        ${parameters(ctx, type.formalParameters.where((p) => p.isPositional).toList())}
       ],
       namedParams: [
-        ${parameters(ctx, type.parameters.where((p) => p.isNamed).toList())}
+        ${parameters(ctx, type.formalParameters.where((p) => p.isNamed).toList())}
       ],
     ))''';
+  } else if (type is ParameterizedType) {
+    final typeArgs =
+        type.typeArguments.map((e) => bridgeTypeAnnotationFrom(ctx, e)).join(', ');
+    return 'BridgeTypeRef(${bridgeTypeSpecFrom(ctx, type)}, [$typeArgs])';
   }
   return 'BridgeTypeRef(${bridgeTypeSpecFrom(ctx, type)})';
 }
@@ -36,10 +40,10 @@ String bridgeTypeSpecFrom(BindgenContext ctx, DartType type) {
   if (builtin != null) {
     return builtin;
   }
-  final element = type.element!;
-  final lib = element.library!;
-  final uri = ctx.libOverrides[element.name] ?? lib.source.uri.toString();
-  return 'BridgeTypeSpec(\'${uri}\', \'${element.name!.replaceAll(r'$', r'\$')}\')';
+  final element = type.element3!;
+  final lib = element.library2!;
+  final uri = ctx.libOverrides[element.name3] ?? lib.uri.toString();
+  return 'BridgeTypeSpec(\'${uri}\', \'${element.name3!.replaceAll(r'$', r'\$')}\')';
 }
 
 String? builtinTypeFrom(DartType type) {
@@ -59,16 +63,16 @@ String? builtinTypeFrom(DartType type) {
     return 'CoreTypes.function';
   }
 
-  final element = type.element!;
-  final lib = element.library!;
-  final name = element.name ?? ' ';
+  final element = type.element3!;
+  final lib = element.library2!;
+  final name = element.name3 ?? ' ';
   final lowerCamelCaseName = name.toCamelCase();
 
   if (!lib.isInSdk) {
     return null;
   }
 
-  final uri = lib.source.uri.toString();
+  final uri = lib.uri.toString();
 
   if (uri == 'dart:async') {
     if (name == 'Future' || name == 'Stream') {
@@ -116,8 +120,8 @@ String? wrapVar(BindgenContext ctx, DartType type, String expr,
       wrapType(ctx, type, expr, metadata: metadata, wrapList: wrapList);
 
   if (wrapped == null) {
-    if (ctx.unknownTypes.add(type.element!.name!)) {
-      print('Warning: type ${type.element!.name} is not bound, '
+    if (ctx.unknownTypes.add(type.element3!.name3!)) {
+      print('Warning: type ${type.element3!.name3} is not bound, '
           'falling back to wrapAlways()');
     }
     wrapped = 'runtime.wrapAlways($expr)';
@@ -133,7 +137,7 @@ String? wrapVar(BindgenContext ctx, DartType type, String expr,
 String? wrapType(BindgenContext ctx, DartType type, String expr,
     {bool wrapList = false, List<ElementAnnotation>? metadata}) {
   final union =
-      metadata?.firstWhereOrNull((e) => e.element?.displayName == 'UnionOf');
+      metadata?.firstWhereOrNull((e) => e.element2?.displayName == 'UnionOf');
   String unionStr = '';
   if (union != null) {
     final types =
@@ -144,11 +148,10 @@ String? wrapType(BindgenContext ctx, DartType type, String expr,
         if (_type == null) {
           continue;
         }
-        ctx.imports.add(_type.element!.library!.source.uri.toString());
+        ctx.imports.add(_type.element3!.library2!.uri.toString());
         final wrapper = wrapVar(ctx, _type, expr);
 
-        unionStr +=
-            '$expr is ${_type.getDisplayString(withNullability: false)} ? $wrapper : ';
+        unionStr += '$expr is ${_type.element3!.name3} ? $wrapper : ';
       }
     }
   }
@@ -172,15 +175,15 @@ String? wrapType(BindgenContext ctx, DartType type, String expr,
     return '${unionStr}\$Function((runtime, target, args) => $expr())';
   }
 
-  final element = type.element ??
+  final element = type.element3 ??
       (throw BindingGenerationError('Type $type has no element'));
-  final lib = element.library!;
-  final name = element.name ?? ' ';
+  final lib = element.library2!;
+  final name = element.name3 ?? ' ';
 
   final defaultCstr = {'int', 'num', 'double', 'bool', 'String', 'Object'};
 
   if (lib.isInSdk) {
-    final dartUri = lib.source.uri.toString();
+    final dartUri = lib.uri.toString();
     final which = dartUri.substring(5);
     ctx.imports.add('package:dart_eval/stdlib/$which.dart');
     if (defaultCstr.contains(name)) {
@@ -207,11 +210,12 @@ String? wrapType(BindgenContext ctx, DartType type, String expr,
     return '${unionStr}\$$name.wrap($expr)';
   }
 
-  final typeEl = type.element;
-  if (typeEl is ClassElement &&
-      typeEl.metadata.any((e) => e.element?.displayName == 'Bind')) {
-    ctx.imports.add(
-        typeEl.library.source.uri.toString().replaceAll('.dart', '.eval.dart'));
+  final typeEl = type.element3!;
+  if (typeEl is ClassElement2 &&
+      typeEl.metadata2.annotations
+          .any((e) => e.element2?.displayName == 'Bind')) {
+    ctx.imports
+        .add(typeEl.library2.uri.toString().replaceAll('.dart', '.eval.dart'));
     return '${unionStr}\$$name.wrap($expr)';
   }
 
@@ -248,8 +252,8 @@ String wrapFunctionType(BindgenContext ctx, FunctionType type, String expr) {
     }
   }
 
-  if (type.optionalParameterNames.isNotEmpty) {
-    for (var j = i; j < type.optionalParameterNames.length + i; j++) {
+  if (type.optionalParameterTypes.isNotEmpty) {
+    for (var j = i; j < type.optionalParameterTypes.length + i; j++) {
       if (type.normalParameterTypes.isNotEmpty) {
         buffer.write(', ');
       }
@@ -260,7 +264,7 @@ String wrapFunctionType(BindgenContext ctx, FunctionType type, String expr) {
       } else {
         buffer.write('!.\$value');
       }
-      if (j < type.optionalParameterNames.length + i - 1) {
+      if (j < type.optionalParameterTypes.length + i - 1) {
         buffer.write(', ');
       }
     }
@@ -268,7 +272,7 @@ String wrapFunctionType(BindgenContext ctx, FunctionType type, String expr) {
 
   if (type.namedParameterTypes.isNotEmpty) {
     if (type.normalParameterTypes.isNotEmpty ||
-        type.optionalParameterNames.isNotEmpty) {
+        type.optionalParameterTypes.isNotEmpty) {
       buffer.write(', ');
     }
 

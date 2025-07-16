@@ -415,5 +415,28 @@ void main() {
               ]),
           prints('Hello!\ntrue\nfalse\n'));
     });
+
+    test('Simple function call on dynamic type', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main() {
+              dynamic c = getC();
+              return c.call(2);
+            }
+
+            dynamic getC() {
+              return C();
+            }
+
+            class C {
+              int call(int a) => a + 1;
+            }
+           '''
+        }
+      });
+
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 3);
+    });
   });
 }

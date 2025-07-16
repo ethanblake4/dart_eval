@@ -25,8 +25,8 @@ class $FileSystemEntity implements $Instance {
       },
       methods: {
         'exists': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(
-                CoreTypes.future, [BridgeTypeRef(CoreTypes.bool)])),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future,
+                [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool))])),
             params: [],
             namedParams: [])),
         'existsSync': BridgeMethodDef(BridgeFunctionDef(
@@ -34,8 +34,8 @@ class $FileSystemEntity implements $Instance {
             params: [],
             namedParams: [])),
         'delete': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(
-                CoreTypes.future, [BridgeTypeRef(CoreTypes.voidType)])),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future,
+                [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType))])),
             params: [],
             namedParams: [
               BridgeParameter('recursive',
@@ -49,8 +49,9 @@ class $FileSystemEntity implements $Instance {
                   BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true)
             ])),
         'rename': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(
-                CoreTypes.future, [BridgeTypeRef(IoTypes.fileSystemEntity)])),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future, [
+              BridgeTypeAnnotation(BridgeTypeRef(IoTypes.fileSystemEntity))
+            ])),
             params: [
               BridgeParameter('newPath', BridgeTypeAnnotation($type), false)
             ],

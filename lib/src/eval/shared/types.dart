@@ -43,6 +43,9 @@ class CoreTypes {
   /// Bridge type spec for [Enum]
   static const enumType = BridgeTypeSpec('dart:core', 'Enum');
 
+  /// Bridge type spec for [Record]
+  static const record = BridgeTypeSpec('dart:core', 'Record');
+
   /// Bridge type spec for [Type]
   static const type = BridgeTypeSpec('dart:core', 'Type');
 
@@ -60,6 +63,9 @@ class CoreTypes {
 
   /// Bridge type spec for [$Map]
   static const map = BridgeTypeSpec('dart:core', 'Map');
+
+  /// Bridge type spec for [$Set]
+  static const set = BridgeTypeSpec('dart:core', 'Set');
 
   /// Bridge type spec for [$MapEntry]
   static const mapEntry = BridgeTypeSpec('dart:core', 'MapEntry');
@@ -125,6 +131,9 @@ class CoreTypes {
 
   /// Bridge type spec for [StringBuffer]
   static const stringBuffer = BridgeTypeSpec('dart:core', 'StringBuffer');
+
+  /// Bridge type spec for [Sink]
+  static const sink = BridgeTypeSpec('dart:core', 'Sink');
 }
 
 /// This class contains dart:async bridge type specs for convenience
@@ -237,6 +246,14 @@ class ConvertTypes {
 
   /// Bridge type spec for [$Base64Codec]
   static const base64Codec = BridgeTypeSpec('dart:convert', 'Base64Codec');
+
+  /// Bridge type spec for [ByteConversionSink]
+  static const byteConversionSink =
+      BridgeTypeSpec('dart:convert', 'ByteConversionSink');
+
+  /// Bridge type spec for [ChunkedConversionSink]
+  static const chunkedConversionSink =
+      BridgeTypeSpec('dart:convert', 'ChunkedConversionSink');
 }
 
 /// This class contains dart:io bridge type specs for convenience

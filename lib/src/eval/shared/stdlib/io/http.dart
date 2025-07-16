@@ -25,8 +25,9 @@ class $HttpClient implements $Instance {
       },
       methods: {
         'get': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(
-                CoreTypes.future, [BridgeTypeRef(IoTypes.httpClientRequest)])),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future, [
+              BridgeTypeAnnotation(BridgeTypeRef(IoTypes.httpClientRequest))
+            ])),
             params: [
               BridgeParameter('url',
                   BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false),
@@ -37,8 +38,9 @@ class $HttpClient implements $Instance {
             ],
             namedParams: [])),
         'post': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(
-                CoreTypes.future, [BridgeTypeRef(IoTypes.httpClientRequest)])),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future, [
+              BridgeTypeAnnotation(BridgeTypeRef(IoTypes.httpClientRequest))
+            ])),
             params: [
               BridgeParameter('url',
                   BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false),
@@ -49,8 +51,9 @@ class $HttpClient implements $Instance {
             ],
             namedParams: [])),
         'put': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(
-                CoreTypes.future, [BridgeTypeRef(IoTypes.httpClientRequest)])),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future, [
+              BridgeTypeAnnotation(BridgeTypeRef(IoTypes.httpClientRequest))
+            ])),
             params: [
               BridgeParameter('url',
                   BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false),
@@ -61,24 +64,27 @@ class $HttpClient implements $Instance {
             ],
             namedParams: [])),
         'getUrl': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(
-                CoreTypes.future, [BridgeTypeRef(IoTypes.httpClientRequest)])),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future, [
+              BridgeTypeAnnotation(BridgeTypeRef(IoTypes.httpClientRequest))
+            ])),
             params: [
               BridgeParameter('url',
                   BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.uri)), false)
             ],
             namedParams: [])),
         'postUrl': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(
-                CoreTypes.future, [BridgeTypeRef(IoTypes.httpClientRequest)])),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future, [
+              BridgeTypeAnnotation(BridgeTypeRef(IoTypes.httpClientRequest))
+            ])),
             params: [
               BridgeParameter('url',
                   BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.uri)), false)
             ],
             namedParams: [])),
         'putUrl': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(
-                CoreTypes.future, [BridgeTypeRef(IoTypes.httpClientRequest)])),
+            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future, [
+              BridgeTypeAnnotation(BridgeTypeRef(IoTypes.httpClientRequest))
+            ])),
             params: [
               BridgeParameter('url',
                   BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.uri)), false)
@@ -213,8 +219,8 @@ class $HttpClientRequest implements $Instance {
       constructors: {},
       methods: {
         'close': BridgeMethodDef(BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-              BridgeTypeRef(CoreTypes.future, [$HttpClientResponse.$type])),
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future,
+              [BridgeTypeAnnotation($HttpClientResponse.$type)])),
         )),
       },
       getters: {},
@@ -270,7 +276,8 @@ class $HttpClientResponse implements $Instance {
       BridgeClassType($type,
           isAbstract: true,
           $extends: BridgeTypeRef(CoreTypes.stream, [
-            BridgeTypeRef(CoreTypes.list, [BridgeTypeRef(CoreTypes.int)])
+            BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list,
+                [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int))]))
           ])),
       constructors: {},
       methods: {},

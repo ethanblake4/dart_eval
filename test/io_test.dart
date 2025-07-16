@@ -1,4 +1,5 @@
 @TestOn('vm')
+library io_test;
 
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_security.dart';

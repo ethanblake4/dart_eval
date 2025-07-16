@@ -215,6 +215,109 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
   return Pair(_args, _namedArgs);
 }
 
+Pair<List<Variable>, Map<String, Variable>> compileSuperParams(
+    CompilerContext ctx, List<FormalParameter> fpl, Declaration parameterHost,
+    {List<Variable> before = const [],
+    List<String> superParams = const [],
+    AstNode? source}) {
+  final _args = <Variable>[];
+  final _push = <Variable>[];
+  final _namedArgs = <String, Variable>{};
+
+  final positional = <FormalParameter>[];
+  final named = <String, FormalParameter>{};
+
+  for (final param in fpl) {
+    if (param.isNamed) {
+      named[param.name!.lexeme] = param;
+    } else {
+      positional.add(param);
+    }
+  }
+
+  Variable? $null;
+
+  for (final param in positional) {
+    // First check super params. Super params do not contain an expression.
+    if (superParams.contains(param.name!.lexeme)) {
+      final V = ctx.lookupLocal(param.name!.lexeme)!;
+      _push.add(V);
+      _args.add(V);
+    } else {
+      if (param.isRequired) {
+        throw CompileError('Not enough positional arguments');
+      } else {
+        $null ??= BuiltinValue().push(ctx);
+        _push.add($null);
+      }
+    }
+  }
+
+  for (final n in named.entries) {
+    final name = n.key;
+    if (superParams.contains(name)) {
+      final V = ctx.lookupLocal(name)!;
+      _push.add(V);
+      _namedArgs[name] = V;
+    } else {
+      $null ??= BuiltinValue().push(ctx);
+      _push.add($null);
+    }
+  }
+
+  for (final _arg in <Variable>[...before, ..._push]) {
+    final argOp = PushArg.make(_arg.scopeFrameOffset);
+    ctx.pushOp(argOp, PushArg.LEN);
+  }
+
+  return Pair(_args, _namedArgs);
+}
+
+/// Best effort method to compile an argument list against a dynamic target.
+/// This will not always work, but it's better than nothing for simple cases.
+Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithDynamic(
+    CompilerContext ctx, ArgumentList argumentList,
+    {List<Variable> before = const [],
+    Map<String, TypeRef> resolveGenerics = const {},
+    AstNode? source}) {
+  final _args = <Variable>[];
+  final _push = <Variable>[];
+  final _namedArgs = <String, Variable>{};
+
+  for (var i = 0; i < argumentList.arguments.length; i++) {
+    final arg = argumentList.arguments[i];
+
+    if (arg is NamedExpression) {
+      throw CompileError(
+          'dart_eval does not support passing named arguments '
+          'to dynamic targets.',
+          source ?? argumentList);
+    }
+
+    var _arg = compileExpression(arg, ctx);
+    if (_arg.type.isUnboxedAcrossFunctionBoundaries) {
+      _arg = _arg.boxIfNeeded(ctx);
+    } else {
+      _arg = _arg.unboxIfNeeded(ctx);
+    }
+
+    if (_arg.type == CoreTypes.function.ref(ctx) &&
+        _arg.scopeFrameOffset == -1) {
+      _arg = _arg.tearOff(ctx);
+    }
+
+    _args.add(_arg);
+    _push.add(_arg);
+  }
+
+  for (final _arg in <Variable>[...before, ..._push]) {
+    final argOp = PushArg.make(_arg.scopeFrameOffset);
+    ctx.pushOp(argOp, PushArg.LEN);
+  }
+
+  return Pair(_args, _namedArgs);
+}
+
 Pair<List<Variable>, Map<String, Variable>>
     compileArgumentListWithKnownMethodArgs(
         CompilerContext ctx,

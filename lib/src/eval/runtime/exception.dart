@@ -42,6 +42,15 @@ class EvalUnknownPropertyException implements Exception {
   String toString() => 'EvalUnknownPropertyException ($name)';
 }
 
+class InvalidUnboxedValueException implements Exception {
+  const InvalidUnboxedValueException(this.value);
+
+  final Object value;
+
+  @override
+  String toString() => 'InvalidUnboxedValueException: $value';
+}
+
 class ProgramExit implements Exception {
   final int exitCode;
 

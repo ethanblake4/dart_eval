@@ -17,6 +17,11 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
     return V;
   }
 
+  // Special case: if casting null to a nullable type, allow it
+  if (V.type == CoreTypes.nullType.ref(ctx) && slot.nullable) {
+    return V.copyWithUpdate(ctx, type: slot);
+  }
+
   // Otherwise type-test
   ctx.pushOp(IsType.make(V.scopeFrameOffset, ctx.typeRefIndexMap[slot]!, false),
       IsType.length);
@@ -25,7 +30,7 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
 
   // And assert
   final errMsg =
-      BuiltinValue(stringval: "TypeError: Not a subtype of type TYPE")
+      BuiltinValue(stringval: "TypeError: Not a subtype of type ${slot.name}")
           .push(ctx);
   ctx.pushOp(
       Assert.make(vIs.scopeFrameOffset, errMsg.scopeFrameOffset), Assert.LEN);

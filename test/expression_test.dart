@@ -112,6 +112,26 @@ void main() {
       }, prints('X(a: 3, b: 2)\nX(a: 1, b: 3)\nX(a: 3, b: 4)\n'));
     });
 
+    test('Null coalescing assignment', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              var x;
+              x ??= 1;
+              print(x);
+              x ??= 2;
+              print(x);
+            }
+           '''
+        }
+      });
+
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('1\n1\n'));
+    });
+
     test("Not expression", () {
       final runtime = compiler.compileWriteAndLoad({
         'eval_test': {
@@ -215,26 +235,6 @@ void main() {
       expect(() {
         runtime.executeLib('package:example/main.dart', 'main');
       }, prints('1\n2\n'));
-    });
-
-    test('Null coalescing assignment', () {
-      final runtime = compiler.compileWriteAndLoad({
-        'example': {
-          'main.dart': '''
-            void main() {
-              var x;
-              x ??= 1;
-              print(x);
-              x ??= 2;
-              print(x);
-            }
-           '''
-        }
-      });
-
-      expect(() {
-        runtime.executeLib('package:example/main.dart', 'main');
-      }, prints('1\n1\n'));
     });
 
     test('Class cast', () {
@@ -383,6 +383,35 @@ void main() {
 
       expect(() => runtime.executeLib('package:example/main.dart', 'main'),
           prints('1\n'));
+    });
+
+    test('Short-circuiting logical operators', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+          bool doTrue() {
+            print('True executed');
+            return true;
+          }
+
+          bool doFalse() {
+            print('False executed');
+            return false;
+          }
+
+          void main() {
+            var x = doTrue() || doFalse();
+            print(x);
+            x = doFalse() && doTrue();
+            print(x);
+          }
+          '''
+        }
+      });
+
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('True executed\ntrue\nFalse executed\nfalse\n'));
     });
   });
 }
