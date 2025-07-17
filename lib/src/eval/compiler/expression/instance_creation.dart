@@ -70,24 +70,31 @@ Variable compileInstanceCreation(
       if (superclass.typeArguments?.arguments != null) {
         try {
           // Obter os parâmetros genéricos da superclass
-          final superclassDeclaration = ctx.topLevelDeclarationsMap[
-              staticType.file]![superclass.name2.lexeme]!;
-          if (superclassDeclaration.declaration is ClassDeclaration) {
-            final superclassClass =
-                superclassDeclaration.declaration as ClassDeclaration;
+          final superclassName = superclass.name2.lexeme;
+          final staticTypeFile = staticType.file;
 
-            if (superclassClass.typeParameters?.typeParameters != null) {
-              final typeParams = superclassClass.typeParameters!.typeParameters;
-              final typeArgs = superclass.typeArguments!.arguments;
+          final topLevelDeclarations =
+              ctx.topLevelDeclarationsMap[staticTypeFile];
+          if (topLevelDeclarations != null) {
+            final superclassDeclaration = topLevelDeclarations[superclassName];
+            if (superclassDeclaration != null &&
+                superclassDeclaration.declaration is ClassDeclaration) {
+              final superclassClass =
+                  superclassDeclaration.declaration as ClassDeclaration;
 
-              // Mapear cada parâmetro genérico para o tipo específico
-              for (int i = 0;
-                  i < typeParams.length && i < typeArgs.length;
-                  i++) {
-                final paramName = typeParams[i].name.lexeme;
-                final argType =
-                    TypeRef.fromAnnotation(ctx, ctx.library, typeArgs[i]);
-                resolveGenerics[paramName] = argType;
+              final typeParams = superclassClass.typeParameters?.typeParameters;
+              final typeArgs = superclass.typeArguments?.arguments;
+
+              if (typeParams != null && typeArgs != null) {
+                // Mapear cada parâmetro genérico para o tipo específico
+                for (int i = 0;
+                    i < typeParams.length && i < typeArgs.length;
+                    i++) {
+                  final paramName = typeParams[i].name.lexeme;
+                  final argType =
+                      TypeRef.fromAnnotation(ctx, ctx.library, typeArgs[i]);
+                  resolveGenerics[paramName] = argType;
+                }
               }
             }
           }
