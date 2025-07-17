@@ -74,31 +74,62 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
     } else {
       var paramType = CoreTypes.dynamic.ref(ctx);
       TypeAnnotation? typeAnnotation;
+
       if (param is SimpleFormalParameter) {
         typeAnnotation = param.type;
       } else if (param is FieldFormalParameter) {
-        paramType =
-            _resolveFieldFormalType(ctx, decLibrary, param, parameterHost);
+        paramType = _resolveFieldFormalType(
+          ctx,
+          decLibrary,
+          param,
+          parameterHost,
+          resolveGenerics: resolveGenerics,
+        );
+
+        // Aplicar resolveGenerics se o tipo for genérico
+        if (resolveGenerics.containsKey(paramType.name)) {
+          final resolvedType = resolveGenerics[paramType.name]!;
+          paramType = resolvedType;
+        }
       } else if (param is SuperFormalParameter) {
         paramType =
             resolveSuperFormalType(ctx, decLibrary, param, parameterHost);
-      } else if (param is DefaultFormalParameter) {
-        final p = param.parameter;
-        typeAnnotation = p is SimpleFormalParameter ? p.type : null;
+
+        // Aplicar resolveGenerics se o tipo for genérico
+        if (resolveGenerics.containsKey(paramType.name)) {
+          final resolvedType = resolveGenerics[paramType.name]!;
+          paramType = resolvedType;
+        }
+
+        // Para SuperFormalParameter, não há typeAnnotation - processar diretamente
+        typeAnnotation = null;
       } else {
         throw CompileError('Unknown formal type ${param.runtimeType}');
       }
 
       if (typeAnnotation != null) {
+        // Adicionar resolveGenerics ao contexto temporário para múltiplas bibliotecas
         for (final entry in resolveGenerics.entries) {
+          // Adicionar à biblioteca especificada
           ctx.temporaryTypes[decLibrary] ??= {};
           ctx.temporaryTypes[decLibrary]![entry.key] = entry.value;
+
+          // Adicionar também à biblioteca atual para garantir disponibilidade
+          ctx.temporaryTypes[ctx.library] ??= {};
+          ctx.temporaryTypes[ctx.library]![entry.key] = entry.value;
         }
 
         paramType = TypeRef.fromAnnotation(ctx, decLibrary, typeAnnotation);
+
+        // Aplicar resolveGenerics se o tipo for genérico
+        if (resolveGenerics.containsKey(paramType.name)) {
+          final resolvedType = resolveGenerics[paramType.name]!;
+          paramType = resolvedType;
+        }
       }
 
       var _arg = compileExpression(arg, ctx, paramType);
+
       if (parameterHost is MethodDeclaration ||
           !paramType.isUnboxedAcrossFunctionBoundaries) {
         _arg = _arg.boxIfNeeded(ctx);
@@ -160,12 +191,50 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
         paramType = TypeRef.fromAnnotation(ctx, decLibrary, typeAnnotation);
       }
     } else if (param is FieldFormalParameter) {
-      paramType =
-          _resolveFieldFormalType(ctx, decLibrary, param, parameterHost);
+      paramType = _resolveFieldFormalType(
+        ctx,
+        decLibrary,
+        param,
+        parameterHost,
+        resolveGenerics: resolveGenerics,
+      );
+      // Aplicar resolveGenerics se o tipo for genérico
+      if (resolveGenerics.containsKey(paramType.name)) {
+        final resolvedType = resolveGenerics[paramType.name]!;
+        paramType = resolvedType;
+      }
+      // FieldFormalParameter pode ter typeAnnotation explícita
+      typeAnnotation = param.type;
     } else if (param is SuperFormalParameter) {
       paramType = resolveSuperFormalType(ctx, decLibrary, param, parameterHost);
+      // Aplicar resolveGenerics se o tipo for genérico
+      if (resolveGenerics.containsKey(paramType.name)) {
+        paramType = resolveGenerics[paramType.name]!;
+      }
     } else {
       throw CompileError('Unknown formal type ${param.runtimeType}');
+    }
+
+    if (typeAnnotation != null && param is SimpleFormalParameter) {
+      // Para SimpleFormalParameter, usar typeAnnotation
+      paramType = TypeRef.fromAnnotation(ctx, decLibrary, typeAnnotation);
+
+      // Aplicar resolveGenerics se o tipo for genérico
+      if (resolveGenerics.containsKey(paramType.name)) {
+        paramType = resolveGenerics[paramType.name]!;
+      }
+    } else if (typeAnnotation != null && param is FieldFormalParameter) {
+      // Para FieldFormalParameter com typeAnnotation explícita, usar typeAnnotation
+      // mas manter a lógica de resolveGenerics que já foi aplicada
+      final annotationType =
+          TypeRef.fromAnnotation(ctx, decLibrary, typeAnnotation);
+
+      // Se o tipo da annotation for genérico, resolver
+      if (resolveGenerics.containsKey(annotationType.name)) {
+        paramType = resolveGenerics[annotationType.name]!;
+      } else {
+        paramType = annotationType;
+      }
     }
 
     if (namedExpr.containsKey(name)) {
@@ -398,16 +467,47 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
   return Pair(_args, _namedArgs);
 }
 
-TypeRef _resolveFieldFormalType(CompilerContext ctx, int decLibrary,
-    FieldFormalParameter param, Declaration parameterHost) {
+/// Resolve o tipo de um FieldFormalParameter usando os tipos genéricos
+TypeRef _resolveFieldFormalType(
+  CompilerContext ctx,
+  int decLibrary,
+  FieldFormalParameter param,
+  Declaration parameterHost, {
+  Map<String, TypeRef>? resolveGenerics,
+}) {
   if (parameterHost is! ConstructorDeclaration) {
     throw CompileError('Field formals can only occur in constructors');
   }
   final $class = parameterHost.parent as NamedCompilationUnitMember;
-  return TypeRef.lookupFieldType(ctx,
-          TypeRef.lookupDeclaration(ctx, decLibrary, $class), param.name.lexeme,
-          forFieldFormal: true, source: param) ??
-      CoreTypes.dynamic.ref(ctx);
+
+  // Garantir que os tipos genéricos da classe estão registrados
+  // Isso é crítico para resolver field formal parameters com tipos genéricos
+  if ($class is ClassDeclaration &&
+      $class.typeParameters?.typeParameters != null) {
+    // Registrar os tipos genéricos da classe no contexto temporário
+    ctx.temporaryTypes[decLibrary] ??= {};
+    for (final param in $class.typeParameters!.typeParameters) {
+      final name = param.name.lexeme;
+
+      // Sempre criar um TypeRef para o tipo genérico, não o bound
+      // O bound é usado para verificações de tipo, não para o tipo em si
+      ctx.temporaryTypes[decLibrary]![name] =
+          TypeRef.cache(ctx, decLibrary, name);
+    }
+  }
+
+  final baseType = TypeRef.lookupFieldType(ctx,
+      TypeRef.lookupDeclaration(ctx, decLibrary, $class), param.name.lexeme,
+      forFieldFormal: true, source: param);
+
+  if (baseType != null) {
+    if (resolveGenerics != null && resolveGenerics.containsKey(baseType.name)) {
+      return resolveGenerics[baseType.name]!;
+    }
+    return baseType;
+  }
+
+  return CoreTypes.dynamic.ref(ctx);
 }
 
 TypeRef resolveSuperFormalType(CompilerContext ctx, int decLibrary,

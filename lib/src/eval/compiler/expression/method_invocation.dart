@@ -152,8 +152,61 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
     } else if (dec is ConstructorDeclaration) {
       fpl = dec.parameters.parameters;
       isConstructor = true;
+      // Para construtores, os tipos genéricos vêm da classe pai
+      final parentClass = dec.parent as ClassDeclaration;
+      typeParams = parentClass.typeParameters?.typeParameters;
+
+      // Detectar herança genérica se a classe não tem typeParameters próprios
+      if (typeParams == null || typeParams.isEmpty) {
+        if (parentClass.extendsClause != null) {
+          final extendsClause = parentClass.extendsClause!;
+          final superclass = extendsClause.superclass;
+
+          // Se a superclass tem argumentos de tipo (ex: CustomOrderItenModel<BudgetModel>)
+          if (superclass.typeArguments?.arguments != null) {
+            try {
+              // Obter os parâmetros genéricos da superclass
+              final superclassDeclaration = ctx.topLevelDeclarationsMap[
+                  offset.file!]![superclass.name2!.lexeme]!;
+              if (superclassDeclaration.declaration is ClassDeclaration) {
+                final superclassClass =
+                    superclassDeclaration.declaration as ClassDeclaration;
+
+                if (superclassClass.typeParameters?.typeParameters != null) {
+                  final superTypeParams =
+                      superclassClass.typeParameters!.typeParameters;
+                  final typeArgs = superclass.typeArguments!.arguments;
+
+                  // Mapear cada parâmetro genérico para o tipo específico
+                  for (int i = 0;
+                      i < superTypeParams.length && i < typeArgs.length;
+                      i++) {
+                    final paramName = superTypeParams[i].name.lexeme;
+                    final argType =
+                        TypeRef.fromAnnotation(ctx, offset.file!, typeArgs[i]);
+                    resolveGenerics[paramName] = argType;
+                  }
+                }
+              }
+            } catch (e) {
+              print(
+                  '⚠️ Erro ao resolver tipos genéricos em method_invocation: $e');
+            }
+          }
+        }
+      }
     } else {
       throw CompileError('Invalid declaration type ${dec.runtimeType}');
+    }
+
+    // Adicionar resolveGenerics aos temporaryTypes para que estejam disponíveis
+    if (resolveGenerics.isNotEmpty) {
+      for (final entry in resolveGenerics.entries) {
+        ctx.temporaryTypes[offset.file!] ??= {};
+        ctx.temporaryTypes[offset.file!]![entry.key] = entry.value;
+        ctx.temporaryTypes[ctx.library] ??= {};
+        ctx.temporaryTypes[ctx.library]![entry.key] = entry.value;
+      }
     }
 
     if (typeParams != null) {
@@ -228,6 +281,34 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
   TypeRef? thisType;
   if (ctx.currentClass != null) {
     thisType = ctx.visibleTypes[ctx.library]![ctx.currentClass!.name.lexeme]!;
+  }
+
+  // Para construtores, aplicar os tipos genéricos resolvidos
+  if (isConstructor && resolveGenerics.isNotEmpty) {
+    final constructorType = ctx.visibleTypes[offset.file]![e.methodName.name];
+    if (constructorType != null) {
+      final typeArgs = <TypeRef>[];
+
+      // Buscar os parâmetros genéricos da classe
+      final classDecl = ctx.topLevelDeclarationsMap[constructorType.file]![
+          constructorType.name]!;
+      if (classDecl.declaration is ClassDeclaration) {
+        final classDeclaration = classDecl.declaration as ClassDeclaration;
+        if (classDeclaration.typeParameters?.typeParameters != null) {
+          for (final param in classDeclaration.typeParameters!.typeParameters) {
+            final resolvedType = resolveGenerics[param.name.lexeme];
+            if (resolvedType != null) {
+              typeArgs.add(resolvedType);
+            }
+          }
+        }
+      }
+
+      if (typeArgs.isNotEmpty) {
+        mReturnType = AlwaysReturnType(
+            constructorType.copyWith(specifiedTypeArgs: typeArgs), false);
+      }
+    }
   }
 
   mReturnType ??= method.methodReturnType

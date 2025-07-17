@@ -66,8 +66,19 @@ class $TypeImpl implements $Type {
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case 'toString':
-        return $Function(
-            ((runtime, target, args) => $String("Instance of 'Type'")));
+        return $Function(((runtime, target, args) {
+          // Percorrer os typeIds para encontrar o nome do tipo
+          for (final libraryEntry in runtime.typeIds.entries) {
+            for (final typeEntry in libraryEntry.value.entries) {
+              if (typeEntry.value == _typeId) {
+                return $String(typeEntry.key);
+              }
+            }
+          }
+
+          // Fallback para o comportamento anterior se não encontrar o nome
+          return $String("Instance of 'Type' (ID: $_typeId)");
+        }));
       case '==':
         return $Function((runtime, target, args) {
           final other = args[0];

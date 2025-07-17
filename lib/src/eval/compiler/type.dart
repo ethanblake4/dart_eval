@@ -386,8 +386,39 @@ class TypeRef {
         if (annotation == null) {
           return null;
         }
-        return TypeRef.fromAnnotation(ctx, $class.file, annotation)
-            .copyWith(boxed: true);
+
+        // Para campos com tipos genéricos, precisa resolver usando os tipos especializados da instância
+        final fieldType = TypeRef.fromAnnotation(ctx, $class.file, annotation);
+
+        // Resolver tipos genéricos se a classe tiver especificações de tipo
+        if ($class.specifiedTypeArgs.isNotEmpty) {
+          final declaration =
+              ctx.topLevelDeclarationsMap[$class.file]![$class.name]!;
+          if (declaration.declaration is ClassDeclaration) {
+            final classDecl = declaration.declaration as ClassDeclaration;
+            if (classDecl.typeParameters?.typeParameters != null) {
+              // Criar mapeamento de nomes de parâmetros genéricos para tipos específicos
+              final typeParamMap = <String, TypeRef>{};
+              final typeParams = classDecl.typeParameters!.typeParameters;
+
+              for (var i = 0;
+                  i < typeParams.length && i < $class.specifiedTypeArgs.length;
+                  i++) {
+                final param = typeParams[i];
+                typeParamMap[param.name.lexeme] = $class.specifiedTypeArgs[i];
+              }
+
+              // Se o tipo do campo é um tipo genérico, resolve para o tipo específico
+              if (typeParamMap.containsKey(fieldType.name)) {
+                final resolvedType =
+                    typeParamMap[fieldType.name]!.copyWith(boxed: true);
+                return resolvedType;
+              }
+            }
+          }
+        }
+
+        return fieldType.copyWith(boxed: true);
       } else if (!forFieldFormal && $declarations.containsKey('$field*g')) {
         final _f = $declarations['$field*g'];
         if (_f is! MethodDeclaration) {
@@ -402,7 +433,13 @@ class TypeRef {
         return TypeRef.fromAnnotation(ctx, $class.file, annotation);
       }
     }
-    final dec = ctx.topLevelDeclarationsMap[$class.file]![$class.name]!;
+    final dec = ctx.topLevelDeclarationsMap[$class.file]?[$class.name];
+
+    if (dec == null) {
+      // Se não encontrar a declaração, pode ser um tipo genérico
+      // Retornar null para indicar que o tipo não foi encontrado
+      return null;
+    }
 
     if (dec.isBridge) {
       final br = dec.bridge as BridgeClassDef;
@@ -482,6 +519,15 @@ class TypeRef {
     if ($cached.resolved) {
       return $cached.copyWith(
           boxed: boxed, specifiedTypeArgs: _resolvedSpecifiedTypeArgs);
+    }
+
+    // Verificar se o tipo existe no topLevelDeclarationsMap
+    // Tipos genéricos (como "T") não existem como declarações reais
+    if (ctx.topLevelDeclarationsMap[file] == null ||
+        ctx.topLevelDeclarationsMap[file]![name] == null) {
+      // Este é provavelmente um tipo genérico - retornar sem resolver
+      return copyWith(
+          resolved: true, specifiedTypeArgs: _resolvedSpecifiedTypeArgs);
     }
 
     TypeRef? $super;
@@ -636,8 +682,14 @@ class TypeRef {
   }
 
   Set<int> getRuntimeIndices(CompilerContext ctx) {
+    final typeIndex = ctx.typeRefIndexMap[this];
+    if (typeIndex == null) {
+      // Retornar apenas os índices dos supertipos se este tipo não estiver no mapa
+      return {for (final a in allSupertypes) ...a.getRuntimeIndices(ctx)};
+    }
+
     return {
-      ctx.typeRefIndexMap[this]!,
+      typeIndex,
       for (final a in allSupertypes) ...a.getRuntimeIndices(ctx)
     };
   }
@@ -711,6 +763,11 @@ class TypeRef {
 
     if (this == CoreTypes.nullType.ref(ctx)) {
       return slot.nullable || slot == CoreTypes.nullType.ref(ctx);
+    }
+
+    // Regra especial: int pode ser implicitamente convertido para double
+    if (this == CoreTypes.int.ref(ctx) && slot == CoreTypes.double.ref(ctx)) {
+      return true;
     }
 
     final generics = overrideGenerics ?? specifiedTypeArgs;

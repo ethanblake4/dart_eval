@@ -310,16 +310,38 @@ class Variable {
             PushConstantType.LEN);
         return Variable.alloc(ctx, CoreTypes.type.ref(ctx));
       }
+      // Se concreteTypes estiver vazio, usar o tipo da variável
+      // Isso preserva os tipos genéricos especializados
+      if (type.specifiedTypeArgs.isNotEmpty) {
+        ctx.pushOp(PushConstantType.make(type.toRuntimeType(ctx).type),
+            PushConstantType.LEN);
+        return Variable.alloc(ctx, CoreTypes.type.ref(ctx));
+      }
+      // Se o tipo não for dynamic, usar o tipo da variável
+      if (type != CoreTypes.dynamic.ref(ctx)) {
+        ctx.pushOp(PushConstantType.make(type.toRuntimeType(ctx).type),
+            PushConstantType.LEN);
+        return Variable.alloc(ctx, CoreTypes.type.ref(ctx));
+      }
       ctx.pushOp(PushRuntimeType.make(scopeFrameOffset), PushRuntimeType.LEN);
       return Variable.alloc(ctx, CoreTypes.type.ref(ctx));
     }
+
     final _type = TypeRef.lookupFieldType(ctx, type, name, source: source)
             ?.resolveTypeChain(ctx) ??
         CoreTypes.dynamic.ref(ctx);
+
     if (concreteTypes.length == 1) {
       // If the concrete type is known we can access the field directly by
       // its index
       final actualType = concreteTypes[0];
+
+      // Usar o tipo concreto para lookupFieldType pode fornecer resolução mais precisa
+      final concreteFieldType =
+          TypeRef.lookupFieldType(ctx, actualType, name, source: source)
+                  ?.resolveTypeChain(ctx) ??
+              CoreTypes.dynamic.ref(ctx);
+
       final declaration =
           ctx.topLevelDeclarationsMap[actualType.file]?[actualType.name];
       final fieldDeclaration =
@@ -332,15 +354,22 @@ class Variable {
             PushObjectPropertyImpl.make(scopeFrameOffset, offset.offset ?? -1);
         final loc = ctx.pushOp(op, PushObjectPropertyImpl.length);
         ctx.offsetTracker.setOffset(loc, offset);
-        return Variable.alloc(ctx, _type);
+        return Variable.alloc(ctx, concreteFieldType);
       }
     }
     final op = PushObjectProperty.make(
         scopeFrameOffset, ctx.constantPool.addOrGet(name));
     ctx.pushOp(op, PushObjectProperty.len(op));
-
     ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-    return Variable.alloc(ctx, _type);
+
+    // Usar o tipo concreto se disponível para melhor resolução de tipos genéricos
+    final finalType = concreteTypes.isNotEmpty
+        ? (TypeRef.lookupFieldType(ctx, concreteTypes[0], name, source: source)
+                ?.resolveTypeChain(ctx) ??
+            _type)
+        : _type;
+
+    return Variable.alloc(ctx, finalType);
   }
 
   static List<Variable> boxUnboxMultiple(

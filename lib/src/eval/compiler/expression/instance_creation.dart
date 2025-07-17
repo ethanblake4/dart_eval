@@ -41,8 +41,71 @@ Variable compileInstanceCreation(
     final dec = _dec.declaration!;
     final fpl = (dec as ConstructorDeclaration).parameters.parameters;
 
+    // Preparar tipos genéricos especializados baseado na herança
+    final resolveGenerics = <String, TypeRef>{};
+
+    // Verificar se há argumentos de tipo explícitos
+    if (type.typeArguments != null) {
+      final parentClass = dec.parent as ClassDeclaration;
+      if (parentClass.typeParameters?.typeParameters != null) {
+        final typeParams = parentClass.typeParameters!.typeParameters;
+        final typeArgs = type.typeArguments!.arguments;
+
+        for (var i = 0; i < typeParams.length && i < typeArgs.length; i++) {
+          final param = typeParams[i];
+          final arg = typeArgs[i];
+          resolveGenerics[param.name.lexeme] =
+              TypeRef.fromAnnotation(ctx, staticType.file, arg);
+        }
+      }
+    }
+
+    // Verificar tipos genéricos especializados baseado na herança
+    final parentClass = dec.parent as ClassDeclaration;
+    if (parentClass.extendsClause != null) {
+      final extendsClause = parentClass.extendsClause!;
+      final superclass = extendsClause.superclass;
+
+      // Se a superclass tem argumentos de tipo (ex: CustomOrderItenModel<OrderModel>)
+      if (superclass.typeArguments?.arguments != null) {
+        try {
+          // Obter os parâmetros genéricos da superclass
+          final superclassDeclaration = ctx.topLevelDeclarationsMap[
+              staticType.file]![superclass.name2.lexeme]!;
+          if (superclassDeclaration.declaration is ClassDeclaration) {
+            final superclassClass =
+                superclassDeclaration.declaration as ClassDeclaration;
+
+            if (superclassClass.typeParameters?.typeParameters != null) {
+              final typeParams = superclassClass.typeParameters!.typeParameters;
+              final typeArgs = superclass.typeArguments!.arguments;
+
+              // Mapear cada parâmetro genérico para o tipo específico
+              for (int i = 0;
+                  i < typeParams.length && i < typeArgs.length;
+                  i++) {
+                final paramName = typeParams[i].name.lexeme;
+                final argType =
+                    TypeRef.fromAnnotation(ctx, ctx.library, typeArgs[i]);
+                resolveGenerics[paramName] = argType;
+              }
+            }
+          }
+        } catch (e) {
+          print('⚠️ Erro ao resolver tipos genéricos: $e');
+        }
+      }
+    }
+
+    if (resolveGenerics.isNotEmpty) {
+      for (final entry in resolveGenerics.entries) {
+        ctx.temporaryTypes[ctx.library] ??= {};
+        ctx.temporaryTypes[ctx.library]![entry.key] = entry.value;
+      }
+    }
+
     compileArgumentList(ctx, e.argumentList, staticType.file, fpl, dec,
-        source: e);
+        source: e, resolveGenerics: resolveGenerics);
     //_args = argsPair.first;
     //_namedArgs = argsPair.second;
   }
@@ -75,6 +138,15 @@ Variable compileInstanceCreation(
     ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
   }
 
-  return Variable.alloc(
-      ctx, $resolved.concreteTypes.first.copyWith(boxed: true));
+  // Processar argumentos de tipo genérico se presentes
+  var returnType = $resolved.concreteTypes.first;
+  if (type.typeArguments != null) {
+    final typeArgs = <TypeRef>[];
+    for (final arg in type.typeArguments!.arguments) {
+      typeArgs.add(TypeRef.fromAnnotation(ctx, staticType.file, arg));
+    }
+    returnType = returnType.copyWith(specifiedTypeArgs: typeArgs);
+  }
+
+  return Variable.alloc(ctx, returnType.copyWith(boxed: true));
 }

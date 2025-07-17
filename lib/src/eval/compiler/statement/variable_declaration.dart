@@ -32,12 +32,21 @@ void compileVariableDeclarationList(
 
     if (init != null) {
       var res = compileExpression(init, ctx, type);
-      if (type != null &&
-          !res.type.resolveTypeChain(ctx).isAssignableTo(ctx, type)) {
-        throw CompileError(
-            'Type mismatch: variable "${li.name.lexeme} is specified'
-            ' as type $type, but is initialized to an incompatible value of type ${res.type}');
+
+      if (type != null) {
+        // Resolver tipos genéricos usando os tipos temporários do contexto
+        final resolvedType = _resolveGenericType(ctx, type);
+        final resolvedResType = _resolveGenericType(ctx, res.type);
+
+        if (!resolvedResType
+            .resolveTypeChain(ctx)
+            .isAssignableTo(ctx, resolvedType)) {
+          throw CompileError(
+              'Type mismatch: variable "${li.name.lexeme}" is specified'
+              ' as type $resolvedType, but is initialized to an incompatible value of type ${resolvedResType}');
+        }
       }
+      // Debug de declaração removido para reduzir logs
       if (!((type ?? res.type).isUnboxedAcrossFunctionBoundaries)) {
         res = res.boxIfNeeded(ctx);
       }
@@ -72,4 +81,33 @@ void compileVariableDeclarationList(
               .copyWith(type: type ?? CoreTypes.dynamic.ref(ctx)));
     }
   }
+}
+
+/// Resolve tipos genéricos usando os tipos temporários do contexto
+TypeRef _resolveGenericType(CompilerContext ctx, TypeRef type) {
+  // Primeiro, verificar se há uma resolução direta nos tipos temporários
+  for (final entry in ctx.temporaryTypes.entries) {
+    if (entry.value.containsKey(type.name)) {
+      final resolvedType = entry.value[type.name]!;
+
+      // Se o tipo resolvido é o mesmo que o tipo original (T -> T),
+      // continuar procurando por uma resolução mais específica
+      if (resolvedType.name == type.name) {
+        continue;
+      }
+
+      return resolvedType;
+    }
+  }
+
+  // Se não encontrou em temporaryTypes, procurar em visibleTypes
+  for (final entry in ctx.visibleTypes.entries) {
+    if (entry.value.containsKey(type.name)) {
+      final resolvedType = entry.value[type.name]!;
+      return resolvedType;
+    }
+  }
+
+  // Se não encontrou, retornar o tipo original
+  return type;
 }

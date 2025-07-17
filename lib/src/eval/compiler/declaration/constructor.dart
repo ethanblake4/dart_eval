@@ -33,6 +33,11 @@ void compileConstructorDeclaration(
     throw CompileError('Factory constructors cannot have initializers', d);
   }
 
+  if (parent is ClassDeclaration &&
+      parent.typeParameters?.typeParameters != null) {
+    ctx.temporaryTypes[ctx.library] ??= {};
+  }
+
   ctx.topLevelDeclarationPositions[ctx.library]![n] =
       beginMethod(ctx, d, d.offset, '$n()');
 
@@ -73,6 +78,52 @@ void compileConstructorDeclaration(
   final resolvedParams = resolveFPLDefaults(ctx, d.parameters, false,
       allowUnboxed: true, isEnum: parent is EnumDeclaration);
 
+  // Criar mapeamento de tipos genéricos para field formal parameters
+  final resolveGenerics = <String, TypeRef>{};
+
+  // Se a classe atual estende uma classe genérica, mapear os tipos genéricos
+  if (parent is ClassDeclaration && parent.extendsClause != null) {
+    final extendsClause = parent.extendsClause!;
+    final superclass = extendsClause.superclass;
+
+    if (superclass.typeArguments?.arguments != null) {
+      try {
+        // Obter os parâmetros genéricos da superclass
+        final superclassDeclaration =
+            ctx.topLevelDeclarationsMap[ctx.library]![superclass.name2.lexeme]!;
+        if (superclassDeclaration.declaration is ClassDeclaration) {
+          final superclassClass =
+              superclassDeclaration.declaration as ClassDeclaration;
+
+          // print('🏛️ Superclass declaration: ${superclassClass.name.lexeme}');
+
+          if (superclassClass.typeParameters?.typeParameters != null) {
+            final typeParams = superclassClass.typeParameters!.typeParameters;
+            final typeArgs = superclass.typeArguments!.arguments;
+
+            // print('🔗 Mapeando tipos genéricos:');
+            for (int i = 0; i < typeParams.length && i < typeArgs.length; i++) {
+              final paramName = typeParams[i].name.lexeme;
+              final argType =
+                  TypeRef.fromAnnotation(ctx, ctx.library, typeArgs[i]);
+              resolveGenerics[paramName] = argType;
+            }
+          }
+        }
+      } catch (e) {
+        print('⚠️ Erro ao resolver tipos genéricos: $e');
+      }
+    }
+  }
+
+  if (resolveGenerics.isNotEmpty) {
+    // Adicionar aos temporaryTypes para que estejam disponíveis em declarações de variáveis
+    for (final entry in resolveGenerics.entries) {
+      ctx.temporaryTypes[ctx.library] ??= {};
+      ctx.temporaryTypes[ctx.library]![entry.key] = entry.value;
+    }
+  }
+
   final superParams = <String>[];
   var i = parent is EnumDeclaration ? 2 : 0;
 
@@ -96,6 +147,11 @@ void compileConstructorDeclaration(
       _type ??= V?.type;
       _type ??= CoreTypes.dynamic.ref(ctx);
 
+      // Aplicar resolveGenerics se o tipo for genérico
+      if (resolveGenerics.containsKey(_type.name)) {
+        _type = resolveGenerics[_type.name]!;
+      }
+
       vrep = Variable(i,
               _type.copyWith(boxed: !_type.isUnboxedAcrossFunctionBoundaries))
           .boxIfNeeded(ctx)
@@ -110,18 +166,10 @@ void compileConstructorDeclaration(
         ..name = p.name.lexeme;
       superParams.add(p.name.lexeme);
     } else {
-      p as SimpleFormalParameter;
-      var type = CoreTypes.dynamic.ref(ctx);
-      if (p.type != null) {
-        type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
-      }
-      type =
-          type.copyWith(boxed: !unboxedAcrossFunctionBoundaries.contains(type));
-      vrep = Variable(i, type)..name = p.name!.lexeme;
+      vrep = Variable(i, V?.type ?? CoreTypes.dynamic.ref(ctx)).boxIfNeeded(ctx)
+        ..name = p.name?.lexeme ?? '';
     }
-
-    ctx.setLocal(vrep.name!, vrep);
-
+    ctx.setLocal(p.name?.lexeme ?? '', vrep);
     i++;
   }
 
@@ -216,14 +264,48 @@ void compileConstructorDeclaration(
             '${extendsType.name}.$constructorName']!;
         final constructor = _constructor.declaration as ConstructorDeclaration;
 
+        // Criar mapeamento de tipos genéricos para super constructor
+        final resolveGenerics = <String, TypeRef>{};
+
+        // Se a classe atual estende uma classe genérica, mapear os tipos genéricos
+        if (parent is ClassDeclaration && parent.extendsClause != null) {
+          final extendsClause = parent.extendsClause!;
+          final superclass = extendsClause.superclass;
+
+          // Se a superclass tem argumentos de tipo (ex: CustomOrderItenModel<OrderModel>)
+          if (superclass.typeArguments?.arguments != null) {
+            // Obter os parâmetros genéricos da superclass
+            final superclassDeclaration = decl.declaration as ClassDeclaration;
+
+            if (superclassDeclaration.typeParameters?.typeParameters != null) {
+              final typeParams =
+                  superclassDeclaration.typeParameters!.typeParameters;
+              final typeArgs = superclass.typeArguments!.arguments;
+
+              for (var i = 0;
+                  i < typeParams.length && i < typeArgs.length;
+                  i++) {
+                final param = typeParams[i];
+                final arg = typeArgs[i];
+                final paramName = param.name.lexeme; // ex: "T"
+                final argType = TypeRef.fromAnnotation(
+                    ctx, ctx.library, arg); // ex: OrderModel
+                resolveGenerics[paramName] = argType;
+              }
+            }
+          }
+        }
+
         final argsPair = compileArgumentList(
-            ctx,
-            $superInitializer.argumentList,
-            decl.sourceLib,
-            constructor.parameters.parameters,
-            constructor,
-            superParams: superParams,
-            source: $superInitializer);
+          ctx,
+          $superInitializer.argumentList,
+          decl.sourceLib,
+          constructor.parameters.parameters,
+          constructor,
+          superParams: superParams,
+          source: $superInitializer,
+          resolveGenerics: resolveGenerics,
+        );
         final _args = argsPair.first;
         final _namedArgs = argsPair.second;
 

@@ -564,5 +564,613 @@ void main() {
         runtime.executeLib('package:example/main.dart', 'main');
       }, prints('GET\nhttp://example.com\n'));
     });*/
+
+    test('Generic class with type parameter field', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'generic_test': {
+          'main.dart': '''
+            class OrderItenModel {
+              String name;
+              OrderItenModel({required this.name});
+            }
+            
+            class OrderModel extends OrderItenModel {
+              OrderModel({required String name}) : super(name: name);
+            }
+            
+            class BudgetModel extends OrderItenModel {
+              BudgetModel({required String name}) : super(name: name);
+            }
+            
+            class CustomOrderItenModel<T extends OrderItenModel> {
+              final T model;
+              
+              CustomOrderItenModel({
+                required this.model,
+              });
+              
+              String getModelName() {
+                return model.name;
+              }
+            }
+            
+            class CustomOrderModel extends CustomOrderItenModel<OrderModel> {
+              CustomOrderModel({
+                required OrderModel model,
+              }) : super(
+                      model: model,
+                    );
+            }
+            
+            class CustomBudgetModel extends CustomOrderItenModel<BudgetModel> {
+              CustomBudgetModel({
+                required BudgetModel model,
+              }) : super(
+                      model: model,
+                    );
+            }
+            
+            String main() {
+              final orderModel = OrderModel(name: 'Test Order');
+              final customOrder = CustomOrderModel(model: orderModel);
+              
+              final budgetModel = BudgetModel(name: 'Test Budget');
+              final customBudget = CustomBudgetModel(model: budgetModel);
+              
+              return customOrder.getModelName() + '|' + customBudget.getModelName();
+            }
+          '''
+        }
+      });
+
+      final result =
+          runtime.executeLib('package:generic_test/main.dart', 'main');
+      expect(result.toString(), '\$"Test Order|Test Budget"');
+    });
+
+    test('Generic class with field formal parameters', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'generic_test': {
+          'main.dart': '''
+            class OrderItenModel {
+              String name;
+              OrderItenModel({required this.name});
+            }
+            
+            class OrderModel extends OrderItenModel {
+              OrderModel({required String name}) : super(name: name);
+            }
+            
+            class BudgetModel extends OrderItenModel {
+              BudgetModel({required String name}) : super(name: name);
+            }
+            
+            class CustomOrderItenModel<T extends OrderItenModel> {
+              final T model;
+              
+              CustomOrderItenModel({
+                required this.model,
+              });
+              
+              String getModelName() {
+                return model.name;
+              }
+            }
+            
+            class CustomOrderModel extends CustomOrderItenModel<OrderModel> {
+              CustomOrderModel({
+                required OrderModel model,
+              }) : super(
+                      model: model,
+                    );
+            }
+            
+            class CustomBudgetModel extends CustomOrderItenModel<BudgetModel> {
+              CustomBudgetModel({
+                required BudgetModel model,
+              }) : super(
+                      model: model,
+                    );
+            }
+            
+            String main() {
+              final orderModel = OrderModel(name: 'Test Order');
+              final customOrder = CustomOrderModel(model: orderModel);
+              
+              final budgetModel = BudgetModel(name: 'Test Budget');
+              final customBudget = CustomBudgetModel(model: budgetModel);
+              
+              return customOrder.getModelName() + '|' + customBudget.getModelName();
+            }
+          '''
+        }
+      });
+
+      final result =
+          runtime.executeLib('package:generic_test/main.dart', 'main');
+      expect(result.toString(), '\$"Test Order|Test Budget"');
+    });
+
+    test('Generic class with multiple type parameters and bounds', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'generic_test': {
+          'main.dart': '''
+            class BaseModel {
+              String id;
+              BaseModel({required this.id});
+            }
+            
+            class CustomContainer<T extends BaseModel, U extends BaseModel> {
+              final T first;
+              final U second;
+              
+              CustomContainer({
+                required this.first,
+                required this.second,
+              });
+              
+              String getFirstId() {
+                return first.id;
+              }
+              
+              String getSecondId() {
+                return second.id;
+              }
+            }
+            
+            String main() {
+              final base1 = BaseModel(id: 'base123');
+              final base2 = BaseModel(id: 'base456');
+              final container = CustomContainer<BaseModel, BaseModel>(first: base1, second: base2);
+              
+              return container.getFirstId() + '|' + container.getSecondId();
+            }
+          '''
+        }
+      });
+
+      final result =
+          runtime.executeLib('package:generic_test/main.dart', 'main');
+      expect(result.toString(), '\$"base123|base456"');
+    });
+
+    test('Generic class with field formal parameters - exact real scenario',
+        () {
+      final runtime = compiler.compileWriteAndLoad({
+        'altforce_test': {
+          'main.dart': '''
+            class OrderItenModel {
+              String name;
+              OrderItenModel({required this.name});
+            }
+            
+            class OrderModel extends OrderItenModel {
+              OrderModel({required String name}) : super(name: name);
+            }
+            
+            class CustomUserModel {
+              String name;
+              CustomUserModel({required this.name});
+            }
+            
+            class CustomOrderItenModel<T extends OrderItenModel> {
+              final T model;
+              final CustomUserModel user;
+              
+              CustomOrderItenModel({
+                required this.model,
+                required this.user,
+              });
+            }
+            
+            class CustomOrderModel extends CustomOrderItenModel<OrderModel> {
+              CustomOrderModel({
+                required OrderModel model,
+                required CustomUserModel user,
+              }) : super(
+                model: model,
+                user: user,
+              );
+            }
+            
+            String main() {
+              final order = OrderModel(name: "Test Order");
+              final user = CustomUserModel(name: "Test User");
+              
+              final customOrder = CustomOrderModel(
+                model: order,
+                user: user,
+              );
+              
+              return customOrder.model.name + "|" + customOrder.user.name;
+            }
+          ''',
+        },
+      });
+
+      final result =
+          runtime.executeLib('package:altforce_test/main.dart', 'main');
+      expect(result.toString(), '\$"Test Order|Test User"');
+    });
+
+    test('Generic field access with type inference', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'generic_test': {
+          'main.dart': '''
+            class OrderItenModel {
+              String name;
+              OrderItenModel({required this.name});
+            }
+            
+            class BudgetModel extends OrderItenModel {
+              double budget;
+              BudgetModel({required String name, required this.budget}) : super(name: name);
+            }
+            
+            class CustomOrderItenModel<T extends OrderItenModel> {
+              final T model;
+              
+              CustomOrderItenModel({
+                required this.model,
+              });
+            }
+            
+            String main() {
+              final customBudget = CustomOrderItenModel<BudgetModel>(
+                model: BudgetModel(name: "Test", budget: 100.0),
+              );
+              
+              // Este é o problema - o compilador não está inferindo o tipo corretamente
+              BudgetModel extractedModel = customBudget.model;
+              
+              return extractedModel.name;
+            }
+          ''',
+        },
+      });
+
+      final result =
+          runtime.executeLib('package:generic_test/main.dart', 'main');
+      expect(result.toString(), '\$"Test"');
+    });
+
+    test('Generic field access debug', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'generic_test': {
+          'main.dart': '''
+            class BaseModel {
+              String name;
+              BaseModel({required this.name});
+            }
+            
+            class SpecificModel extends BaseModel {
+              SpecificModel({required String name}) : super(name: name);
+            }
+            
+            class Container<T extends BaseModel> {
+              final T item;
+              Container({required this.item});
+            }
+            
+            String main() {
+              final container = Container<SpecificModel>(
+                item: SpecificModel(name: "Test"),
+              );
+              
+              // Tentar acessar o item sem declarar uma variável tipada
+              return container.item.name;
+            }
+          ''',
+        },
+      });
+
+      final result =
+          runtime.executeLib('package:generic_test/main.dart', 'main');
+      expect(result.toString(), '\$"Test"');
+    });
+
+    test('Generic field access - direct vs typed assignment', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'generic_test': {
+          'main.dart': '''
+            class BaseModel {
+              String name;
+              BaseModel({required this.name});
+            }
+            
+            class SpecificModel extends BaseModel {
+              SpecificModel({required String name}) : super(name: name);
+            }
+            
+            class Container<T extends BaseModel> {
+              final T item;
+              Container({required this.item});
+            }
+            
+            String main() {
+              final container = Container<SpecificModel>(
+                item: SpecificModel(name: "Test"),
+              );
+              
+              // Acesso direto funciona
+              final directAccess = container.item.name;
+              
+              // Atribuição a variável sem tipo específico também funciona
+              final inferredType = container.item;
+              
+              return directAccess + "|" + inferredType.name;
+            }
+          ''',
+        },
+      });
+
+      final result =
+          runtime.executeLib('package:generic_test/main.dart', 'main');
+      expect(result.toString(), '\$"Test|Test"');
+    });
+
+    test('Generic field access - typed assignment problem', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'generic_test': {
+          'main.dart': '''
+            class BaseModel {
+              String name;
+              BaseModel({required this.name});
+            }
+            
+            class SpecificModel extends BaseModel {
+              SpecificModel({required String name}) : super(name: name);
+            }
+            
+            class Container<T extends BaseModel> {
+              final T item;
+              Container({required this.item});
+            }
+            
+            String main() {
+              final container = Container<SpecificModel>(
+                item: SpecificModel(name: "Test"),
+              );
+              
+              // Aqui está o problema - atribuição tipada
+              SpecificModel typedAssignment = container.item;
+              
+              return typedAssignment.name;
+            }
+          ''',
+        },
+      });
+
+      final result =
+          runtime.executeLib('package:generic_test/main.dart', 'main');
+      expect(result.toString(), '\$"Test"');
+    });
+
+    test('Generic instance creation debug', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'generic_test': {
+          'main.dart': '''
+            class BaseModel {
+              String name;
+              BaseModel({required this.name});
+            }
+            
+            class SpecificModel extends BaseModel {
+              SpecificModel({required String name}) : super(name: name);
+            }
+            
+            class Container<T extends BaseModel> {
+              final T item;
+              Container({required this.item});
+            }
+            
+            String main() {
+              final container = Container<SpecificModel>(
+                item: SpecificModel(name: "Test"),
+              );
+              
+              // Verificar se o tipo está sendo inferido corretamente
+              return container.item.runtimeType.toString();
+            }
+          ''',
+        },
+      });
+
+      final result =
+          runtime.executeLib('package:generic_test/main.dart', 'main');
+      print('Result: $result');
+      expect(result.toString(), contains('SpecificModel'));
+    });
+
+    test('Simple instance creation debug', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'generic_test': {
+          'main.dart': '''
+            class Container<T> {
+              final T item;
+              Container({required this.item});
+            }
+            
+            String main() {
+              Container<String> container = Container<String>(item: "test");
+              return container.item;
+            }
+          ''',
+        },
+      });
+
+      final result =
+          runtime.executeLib('package:generic_test/main.dart', 'main');
+      print('Result: $result');
+      expect(result.toString(), '\$"test"');
+    });
+
+    test('Simple positional args debug', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'generic_test': {
+          'main.dart': '''
+            class Container<T> {
+              final T item;
+              Container(this.item);
+            }
+            
+            String main() {
+              Container<String> container = Container<String>("test");
+              return container.item;
+            }
+          ''',
+        },
+      });
+
+      final result =
+          runtime.executeLib('package:generic_test/main.dart', 'main');
+      print('Result: $result');
+      expect(result.toString(), '\$"test"');
+    });
+  });
+
+  group('Super constructor generic type resolution', () {
+    test('Super constructor with generic inheritance chain', () {
+      eval(r'''
+        class OrderModel {
+          String name;
+          OrderModel(this.name);
+        }
+        
+        class BudgetModel {
+          String title;
+          BudgetModel(this.title);
+        }
+        
+        class BaseModel<T> {
+          T model;
+          BaseModel(this.model);
+        }
+        
+        class CustomOrderItenModel<T> extends BaseModel<T> {
+          CustomOrderItenModel(T model) : super(model);
+        }
+        
+        class SpecificOrderModel extends CustomOrderItenModel<OrderModel> {
+          SpecificOrderModel(OrderModel model) : super(model);
+        }
+        
+        class SpecificBudgetModel extends CustomOrderItenModel<BudgetModel> {
+          SpecificBudgetModel(BudgetModel model) : super(model);
+        }
+        
+        void main() {
+          final order = OrderModel("test order");
+          final budget = BudgetModel("test budget");
+          
+          final specificOrder = SpecificOrderModel(order);
+          final specificBudget = SpecificBudgetModel(budget);
+          
+          print("Order: ${specificOrder.model.name}");
+          print("Budget: ${specificBudget.model.title}");
+        }
+      ''');
+    });
+  });
+
+  group('Real world generic constructor problem', () {
+    test('CustomOrderItenModel with OrderModel and BudgetModel', () {
+      eval(r'''
+        class OrderItenModel {
+          String name;
+          OrderItenModel(this.name);
+        }
+        
+        class OrderModel extends OrderItenModel {
+          OrderModel(String name) : super(name);
+        }
+        
+        class BudgetModel extends OrderItenModel {
+          BudgetModel(String name) : super(name);
+        }
+        
+        class CustomOrderItenModel<T extends OrderItenModel> {
+          final T model;
+          final String user;
+          final String state;
+          final String city;
+          final String? region;
+          final String? dealer;
+          final String? coordination;
+
+          CustomOrderItenModel({
+            required this.model,
+            required this.user,
+            required this.state,
+            required this.city,
+            this.region,
+            this.dealer,
+            this.coordination,
+          });
+        }
+        
+        class CustomOrderModel extends CustomOrderItenModel<OrderModel> {
+          CustomOrderModel({
+            required OrderModel model,
+            required String user,
+            required String state,
+            required String city,
+            String? region,
+            String? dealer,
+            String? coordination,
+          }) : super(
+                model: model,
+                user: user,
+                state: state,
+                city: city,
+                region: region,
+                dealer: dealer,
+                coordination: coordination,
+              );
+        }
+        
+        class CustomBudgetModel extends CustomOrderItenModel<BudgetModel> {
+          CustomBudgetModel({
+            required BudgetModel model,
+            required String user,
+            required String state,
+            required String city,
+            String? region,
+            String? dealer,
+            String? coordination,
+          }) : super(
+                model: model,
+                user: user,
+                state: state,
+                city: city,
+                region: region,
+                dealer: dealer,
+                coordination: coordination,
+              );
+        }
+        
+        void main() {
+          final order = OrderModel("test order");
+          final budget = BudgetModel("test budget");
+          
+          final customOrder = CustomOrderModel(
+            model: order,
+            user: "user1",
+            state: "state1",
+            city: "city1",
+          );
+          
+          final customBudget = CustomBudgetModel(
+            model: budget,
+            user: "user2",
+            state: "state2",
+            city: "city2",
+          );
+          
+          print("Order: ${customOrder.model.name}");
+          print("Budget: ${customBudget.model.name}");
+        }
+      ''');
+    });
   });
 }
