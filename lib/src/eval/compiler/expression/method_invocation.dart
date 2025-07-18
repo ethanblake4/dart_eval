@@ -166,25 +166,35 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
           if (superclass.typeArguments?.arguments != null) {
             try {
               // Obter os parâmetros genéricos da superclass
-              final superclassDeclaration = ctx.topLevelDeclarationsMap[
-                  offset.file!]![superclass.name2!.lexeme]!;
-              if (superclassDeclaration.declaration is ClassDeclaration) {
-                final superclassClass =
-                    superclassDeclaration.declaration as ClassDeclaration;
+              final superclassName = superclass.name2.lexeme;
+              final offsetFile = offset.file;
 
-                if (superclassClass.typeParameters?.typeParameters != null) {
-                  final superTypeParams =
-                      superclassClass.typeParameters!.typeParameters;
-                  final typeArgs = superclass.typeArguments!.arguments;
+              if (offsetFile != null) {
+                final topLevelDeclarations =
+                    ctx.topLevelDeclarationsMap[offsetFile];
+                if (topLevelDeclarations != null) {
+                  final superclassDeclaration =
+                      topLevelDeclarations[superclassName];
+                  if (superclassDeclaration != null &&
+                      superclassDeclaration.declaration is ClassDeclaration) {
+                    final superclassClass =
+                        superclassDeclaration.declaration as ClassDeclaration;
 
-                  // Mapear cada parâmetro genérico para o tipo específico
-                  for (int i = 0;
-                      i < superTypeParams.length && i < typeArgs.length;
-                      i++) {
-                    final paramName = superTypeParams[i].name.lexeme;
-                    final argType =
-                        TypeRef.fromAnnotation(ctx, offset.file!, typeArgs[i]);
-                    resolveGenerics[paramName] = argType;
+                    final superTypeParams =
+                        superclassClass.typeParameters?.typeParameters;
+                    final typeArgs = superclass.typeArguments?.arguments;
+
+                    if (superTypeParams != null && typeArgs != null) {
+                      // Mapear cada parâmetro genérico para o tipo específico
+                      for (int i = 0;
+                          i < superTypeParams.length && i < typeArgs.length;
+                          i++) {
+                        final paramName = superTypeParams[i].name.lexeme;
+                        final argType = TypeRef.fromAnnotation(
+                            ctx, offsetFile, typeArgs[i]);
+                        resolveGenerics[paramName] = argType;
+                      }
+                    }
                   }
                 }
               }
