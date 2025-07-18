@@ -117,11 +117,6 @@ StatementInfo _compileSwitchAsIfElseChain(
     }
   }
 
-  if (caseExpression == null) {
-    throw CompileError(
-        'Could not extract expression from switch case', currentCase);
-  }
-
   // Use macroBranch to create if-else chain
   return macroBranch(
     ctx,

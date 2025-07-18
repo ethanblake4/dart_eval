@@ -34,19 +34,19 @@ void compileVariableDeclarationList(
       var res = compileExpression(init, ctx, type);
 
       if (type != null) {
-        // Resolver tipos genéricos usando os tipos temporários do contexto
-        final resolvedType = _resolveGenericType(ctx, type);
-        final resolvedResType = _resolveGenericType(ctx, res.type);
+        final bool isAssignable =
+            type.resolveTypeChain(ctx).isAssignableTo(ctx, res.type);
 
-        if (!resolvedResType
-            .resolveTypeChain(ctx)
-            .isAssignableTo(ctx, resolvedType)) {
-          throw CompileError(
-              'Type mismatch: variable "${li.name.lexeme}" is specified'
-              ' as type $resolvedType, but is initialized to an incompatible value of type ${resolvedResType}');
+        if (!isAssignable) {
+          final bool isGeneric = isGenericType(ctx, res.type);
+
+          if (!isGeneric) {
+            throw CompileError(
+                'Type mismatch: variable "${li.name.lexeme} is specified'
+                ' as type $type, but is initialized to an incompatible value of type ${res.type}');
+          }
         }
       }
-      // Debug de declaração removido para reduzir logs
       if (!((type ?? res.type).isUnboxedAcrossFunctionBoundaries)) {
         res = res.boxIfNeeded(ctx);
       }
@@ -83,31 +83,52 @@ void compileVariableDeclarationList(
   }
 }
 
-/// Resolve tipos genéricos usando os tipos temporários do contexto
-TypeRef _resolveGenericType(CompilerContext ctx, TypeRef type) {
-  // Primeiro, verificar se há uma resolução direta nos tipos temporários
-  for (final entry in ctx.temporaryTypes.entries) {
-    if (entry.value.containsKey(type.name)) {
-      final resolvedType = entry.value[type.name]!;
+/// Função utilitária para identificar se um tipo é genérico
+/// Considera múltiplas formas de identificação de tipos genéricos
+bool isGenericType(CompilerContext ctx, TypeRef? type) {
+  if (type == null) return false;
 
-      // Se o tipo resolvido é o mesmo que o tipo original (T -> T),
-      // continuar procurando por uma resolução mais específica
-      if (resolvedType.name == type.name) {
-        continue;
+  // 1. Verificar se tem parâmetros genéricos definidos
+  if (type.genericParams.isNotEmpty) {
+    return true;
+  }
+
+  // 2. Verificar se foi especializado com argumentos de tipo
+  if (type.specifiedTypeArgs.isNotEmpty) {
+    return true;
+  }
+
+  // 3. Verificar se é um tipo de função genérica
+  if (type.functionType != null) {
+    return true;
+  }
+
+  // 4. Verificar se é um parâmetro genérico nos tipos temporários
+  for (final typeMap in ctx.temporaryTypes.values) {
+    if (typeMap.containsKey(type.name)) {
+      return true;
+    }
+  }
+
+  // 5. Verificar se é um tipo genérico visível
+  for (final typeMap in ctx.visibleTypes.values) {
+    if (typeMap.containsKey(type.name)) {
+      // Verificar se o tipo encontrado tem características genéricas
+      final foundType = typeMap[type.name]!;
+      if (foundType.genericParams.isNotEmpty ||
+          foundType.specifiedTypeArgs.isNotEmpty) {
+        return true;
       }
-
-      return resolvedType;
     }
   }
 
-  // Se não encontrou em temporaryTypes, procurar em visibleTypes
-  for (final entry in ctx.visibleTypes.entries) {
-    if (entry.value.containsKey(type.name)) {
-      final resolvedType = entry.value[type.name]!;
-      return resolvedType;
-    }
+  // 6. Verificar se não existe em topLevelDeclarationsMap (pode ser um parâmetro genérico)
+  if (ctx.topLevelDeclarationsMap[type.file] == null ||
+      ctx.topLevelDeclarationsMap[type.file]![type.name] == null) {
+    // Se o nome tem características de tipo genérico (ex: nome de uma letra como T, U, V)
+    // ou se está em um contexto onde tipos genéricos são esperados
+    return type.name.length == 1 && type.name.toUpperCase() == type.name;
   }
 
-  // Se não encontrou, retornar o tipo original
-  return type;
+  return false;
 }

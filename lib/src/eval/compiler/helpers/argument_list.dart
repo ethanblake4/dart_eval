@@ -7,6 +7,7 @@ import '../../../../dart_eval_bridge.dart';
 import '../builtins.dart';
 import '../context.dart';
 import '../errors.dart';
+import '../statement/variable_declaration.dart';
 import '../type.dart';
 import '../util.dart';
 import '../variable.dart';
@@ -142,11 +143,20 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
         _arg = _arg.tearOff(ctx);
       }
 
-      if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
-        throw CompileError(
+      TypeRef _realType = _arg.type;
+
+      if (!_realType.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
+        final bool isGeneric = isGenericType(ctx, _realType);
+
+        if (isGeneric) {
+          _realType = paramType;
+        } else {
+          throw CompileError(
             'Cannot assign argument of type ${_arg.type.toStringClear(ctx, paramType)} '
             'to parameter "${param.name!.lexeme}" of type ${paramType.toStringClear(ctx, _arg.type)}',
-            source ?? parameterHost);
+            source ?? parameterHost,
+          );
+        }
       }
 
       if (typeAnnotation != null) {
@@ -155,7 +165,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
             : null;
         if (n != null && resolveGenerics.containsKey(n)) {
           resolveGenericsMap[n] ??= {};
-          resolveGenericsMap[n]!.add(_arg.type);
+          resolveGenericsMap[n]!.add(_realType);
         }
       }
 
