@@ -12,17 +12,21 @@ import 'errors.dart';
 import 'offset_tracker.dart';
 
 class Variable {
-  Variable(this.scopeFrameOffset, this.type,
-      {this.methodOffset,
-      this.methodReturnType,
-      this.isFinal = false,
-      this.concreteTypes = const [],
-      CallingConvention? callingConvention})
-      : this.callingConvention = callingConvention ??
+  Variable(
+    this.scopeFrameOffset,
+    this.type, {
+    this.methodOffset,
+    this.methodReturnType,
+    this.isFinal = false,
+    this.concreteTypes = const [],
+    CallingConvention? callingConvention,
+    int? originalFrameOffset,
+  })  : this.callingConvention = callingConvention ??
             ((type == TypeRef(dartCoreFile, 'Function') && methodOffset == null)
                 ? CallingConvention.dynamic
-                : CallingConvention
-                    .static) /*,
+                : CallingConvention.static),
+        this.originalFrameOffset = originalFrameOffset ??
+            scopeFrameOffset /*,
         todo: assert(!type.nullable || type.boxed)*/
   ;
 
@@ -33,12 +37,17 @@ class Variable {
       List<TypeRef> concreteTypes = const [],
       CallingConvention callingConvention = CallingConvention.static}) {
     ctx.allocNest.last++;
-    return Variable(ctx.scopeFrameOffset++, type,
-        methodOffset: methodOffset,
-        methodReturnType: methodReturnType,
-        isFinal: isFinal,
-        concreteTypes: concreteTypes,
-        callingConvention: callingConvention);
+    final offset = ctx.scopeFrameOffset++;
+    return Variable(
+      offset,
+      type,
+      methodOffset: methodOffset,
+      methodReturnType: methodReturnType,
+      isFinal: isFinal,
+      concreteTypes: concreteTypes,
+      callingConvention: callingConvention,
+      originalFrameOffset: offset,
+    ); // Rastrear offset original
   }
 
   final int scopeFrameOffset;
@@ -48,6 +57,9 @@ class Variable {
   final ReturnType? methodReturnType;
   final bool isFinal;
   final CallingConvention callingConvention;
+  final int? originalFrameOffset;
+
+  int get effectiveOffset => originalFrameOffset ?? scopeFrameOffset;
 
   bool get boxed => type.boxed;
 
@@ -115,36 +127,43 @@ class Variable {
   void pushArg(CompilerContext ctx) =>
       ctx.pushOp(PushArg.make(scopeFrameOffset), PushArg.LEN);
 
-  Variable copyWith(
-      {int? scopeFrameOffset,
-      TypeRef? type,
-      DeferredOrOffset? methodOffset,
-      ReturnType? methodReturnType,
-      String? name,
-      int? frameIndex,
-      List<TypeRef>? concreteTypes}) {
+  Variable copyWith({
+    int? scopeFrameOffset,
+    TypeRef? type,
+    DeferredOrOffset? methodOffset,
+    ReturnType? methodReturnType,
+    String? name,
+    int? frameIndex,
+    List<TypeRef>? concreteTypes,
+    int? originalFrameOffset,
+  }) {
     return Variable(
         scopeFrameOffset ?? this.scopeFrameOffset, type ?? this.type,
         methodOffset: methodOffset ?? this.methodOffset,
         methodReturnType: methodReturnType ?? this.methodReturnType,
-        concreteTypes: concreteTypes ?? this.concreteTypes)
+        concreteTypes: concreteTypes ?? this.concreteTypes,
+        originalFrameOffset: originalFrameOffset ?? this.originalFrameOffset)
       ..name = name ?? this.name
       ..frameIndex = frameIndex ?? this.frameIndex;
   }
 
-  Variable copyWithUpdate(ScopeContext? ctx,
-      {int? scopeFrameOffset,
-      TypeRef? type,
-      DeferredOrOffset? methodOffset,
-      ReturnType? methodReturnType,
-      String? name,
-      int? frameIndex,
-      List<TypeRef>? concreteTypes}) {
+  Variable copyWithUpdate(
+    ScopeContext? ctx, {
+    int? scopeFrameOffset,
+    TypeRef? type,
+    DeferredOrOffset? methodOffset,
+    ReturnType? methodReturnType,
+    String? name,
+    int? frameIndex,
+    List<TypeRef>? concreteTypes,
+    int? originalFrameOffset,
+  }) {
     var uV = Variable(
         scopeFrameOffset ?? this.scopeFrameOffset, type ?? this.type,
         methodOffset: methodOffset ?? this.methodOffset,
         methodReturnType: methodReturnType ?? this.methodReturnType,
-        concreteTypes: concreteTypes ?? this.concreteTypes)
+        concreteTypes: concreteTypes ?? this.concreteTypes,
+        originalFrameOffset: originalFrameOffset ?? this.originalFrameOffset)
       ..name = name ?? this.name
       ..frameIndex = frameIndex ?? this.frameIndex;
 

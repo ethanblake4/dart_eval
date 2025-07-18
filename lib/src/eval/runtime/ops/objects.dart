@@ -281,11 +281,7 @@ class PushObjectProperty implements EvcOp {
       : _location = runtime._readInt16(),
         _propertyIdx = runtime._readInt32();
 
-  PushObjectProperty.make(this._location, this._propertyIdx) {
-    if (_location == 10 && _propertyIdx == 317) {
-      print("");
-    }
-  }
+  PushObjectProperty.make(this._location, this._propertyIdx);
 
   final int _location;
   final int _propertyIdx;

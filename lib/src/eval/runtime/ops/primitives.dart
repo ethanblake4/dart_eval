@@ -89,13 +89,8 @@ class NumAdd implements EvcOp {
   // Add value A + B
   @override
   void run(Runtime runtime) {
-    try {
-      runtime.frame[runtime.frameOffset++] =
-          (runtime.frame[_location1] as num) +
-              (runtime.frame[_location2] as num);
-    } catch (e) {
-      print("NumAdd error: $e");
-    }
+    runtime.frame[runtime.frameOffset++] =
+        (runtime.frame[_location1] as num) + (runtime.frame[_location2] as num);
   }
 
   @override
@@ -347,9 +342,6 @@ class Unbox implements EvcOp {
 
   @override
   void run(Runtime runtime) {
-    if (_reg == -1) {
-      print("Unbox -1");
-    }
     dynamic v = runtime.frame[_reg];
 
     if (v is $Value) {

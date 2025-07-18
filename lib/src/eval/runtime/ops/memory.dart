@@ -44,14 +44,16 @@ class PushReturnValue implements EvcOp {
 
   static const int LEN = Evc.BASE_OPLEN;
 
+  int? _offset;
+
   @override
   void run(Runtime runtime) {
-    final offset = runtime.frameOffset++;
-    runtime.frame[offset] = runtime.returnValue;
+    _offset = runtime.frameOffset++;
+    runtime.frame[_offset!] = runtime.returnValue;
   }
 
   @override
-  String toString() => 'PushReturnValue ()';
+  String toString() => 'PushReturnValue(${_offset ?? ""})';
 }
 
 class SetReturnValue implements EvcOp {

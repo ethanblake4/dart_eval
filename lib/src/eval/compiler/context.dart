@@ -258,7 +258,7 @@ class CompilerContext with ScopeContext {
             allocNest.last++;
           }
 
-          final _index = BuiltinValue(intval: v.scopeFrameOffset).push(this);
+          final _index = BuiltinValue(intval: v.effectiveOffset).push(this);
           pushOp(
               IndexList.make(frOffset, _index.scopeFrameOffset), IndexList.LEN);
           allocNest.last++;
