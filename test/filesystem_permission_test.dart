@@ -1,9 +1,10 @@
 import 'dart:io';
-import 'package:dart_eval/src/eval/utils/path_helper.dart';
 import 'package:test/test.dart';
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_security.dart';
 import 'package:path/path.dart' as p;
+
+import 'util/current_dir_overrides.dart';
 
 void main() {
   group('FilesystemPermission Tests', () {
