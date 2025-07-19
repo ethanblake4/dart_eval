@@ -12,35 +12,49 @@ class $Future<T> implements Future<T>, $Instance {
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFunc(
         'dart:core', 'Future.delayed', const _$Future_delayed().call);
+    runtime.registerBridgeFunc(
+        'dart:core', 'Future.wait', const _$Future_wait().call);
   }
 
   static const $type = BridgeTypeRef(CoreTypes.future);
-  static const $declaration =
-      BridgeClassDef(BridgeClassType($type, isAbstract: true),
-          constructors: {
-            'delayed': BridgeConstructorDef(BridgeFunctionDef(
-                returns: BridgeTypeAnnotation($type),
-                params: [
-                  BridgeParameter(
-                      'duration', BridgeTypeAnnotation($Duration.$type), false)
-                ],
-                namedParams: []))
-          },
-          methods: {
-            'then': BridgeMethodDef(BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future)),
-                params: [
-                  BridgeParameter(
-                      'onValue',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
-                      false)
-                ],
-                namedParams: []))
-          },
-          getters: {},
-          setters: {},
-          fields: {},
-          wrap: true);
+  static const $declaration = BridgeClassDef(
+    BridgeClassType($type, isAbstract: true),
+    constructors: {
+      'delayed': BridgeConstructorDef(BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          params: [
+            BridgeParameter(
+                'duration', BridgeTypeAnnotation($Duration.$type), false)
+          ],
+          namedParams: [])),
+      'wait': BridgeConstructorDef(
+          BridgeFunctionDef(
+              returns: BridgeTypeAnnotation(BridgeTypeRef(
+                  CoreTypes.future, [BridgeTypeRef(CoreTypes.list)])),
+              params: [
+                BridgeParameter(
+                    'futures',
+                    BridgeTypeAnnotation(BridgeTypeRef(
+                        CoreTypes.iterable, [BridgeTypeRef(CoreTypes.future)])),
+                    false)
+              ],
+              namedParams: []),
+          isFactory: true)
+    },
+    methods: {
+      'then': BridgeMethodDef(BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future)),
+          params: [
+            BridgeParameter('onValue',
+                BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)), false)
+          ],
+          namedParams: []))
+    },
+    getters: {},
+    setters: {},
+    fields: {},
+    wrap: true,
+  );
 
   $Future.wrap(this.$value) : _superclass = $Object($value);
 
@@ -106,5 +120,17 @@ class _$Future_delayed implements EvalCallable {
   @override
   $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
     return $Future.wrap(Future.delayed(args[0]!.$value));
+  }
+}
+
+class _$Future_wait implements EvalCallable {
+  const _$Future_wait();
+
+  @override
+  $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
+    final futures = args[0]!.$value as Iterable;
+    final List<Future> dartFutures =
+        futures.map((f) => (f as $Future).$value).toList();
+    return $Future.wrap(Future.wait(dartFutures));
   }
 }
