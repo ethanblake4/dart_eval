@@ -6,6 +6,7 @@ import 'package:collection/collection.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
 import 'package:dart_eval/src/eval/bindgen/errors.dart';
 import 'package:dart_eval/src/eval/bindgen/parameters.dart';
+import 'package:path/path.dart' as path;
 
 String bridgeTypeRefFromType(BindgenContext ctx, DartType type) {
   if (type is TypeParameterType) {
@@ -21,8 +22,9 @@ String bridgeTypeRefFromType(BindgenContext ctx, DartType type) {
       ],
     ))''';
   } else if (type is ParameterizedType) {
-    final typeArgs =
-        type.typeArguments.map((e) => bridgeTypeAnnotationFrom(ctx, e)).join(', ');
+    final typeArgs = type.typeArguments
+        .map((e) => bridgeTypeAnnotationFrom(ctx, e))
+        .join(', ');
     return 'BridgeTypeRef(${bridgeTypeSpecFrom(ctx, type)}, [$typeArgs])';
   }
   return 'BridgeTypeRef(${bridgeTypeSpecFrom(ctx, type)})';
@@ -211,12 +213,32 @@ String? wrapType(BindgenContext ctx, DartType type, String expr,
   }
 
   final typeEl = type.element3!;
-  if (typeEl is ClassElement2 &&
-      typeEl.metadata2.annotations
-          .any((e) => e.element2?.displayName == 'Bind')) {
-    ctx.imports
-        .add(typeEl.library2.uri.toString().replaceAll('.dart', '.eval.dart'));
-    return '${unionStr}\$$name.wrap($expr)';
+  if (typeEl is ClassElement2) {
+    final uri = typeEl.library2.uri.toString();
+    final hasAnno = typeEl.metadata2.annotations
+        .any((e) => e.element2?.displayName == 'Bind');
+    if (hasAnno) {
+      ctx.imports.add(uri.replaceAll('.dart', '.eval.dart'));
+      return '${unionStr}\$$name.wrap($expr)';
+    } else if (ctx.bridgeDeclarations.containsKey(uri)) {
+      final parsedUri = Uri.parse(uri);
+      
+      String current = parsedUri.path;
+      String? mappedUri;
+      // walk up the path until we find a match in ctx.exportedLibMappings
+      while (current != path.dirname(current)) {
+        if (ctx.exportedLibMappings.containsKey('${parsedUri.scheme}:$current')) {
+          mappedUri = ctx.exportedLibMappings['${parsedUri.scheme}:$current']!;
+          break;
+        }
+        current = path.dirname(current);
+      }
+
+      if (mappedUri != null) {
+        ctx.imports.add(mappedUri);
+        return '${unionStr}\$$name.wrap($expr)';
+      }
+    }
   }
 
   if (type is TypeParameterType) {

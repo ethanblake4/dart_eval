@@ -819,6 +819,11 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     _ctx.bridgeStaticFunctionIndices[libraryIndex]![functionDef.name] =
         _bridgeStaticFunctionIdx++;
   }
+  
+  @override
+  void addExportedLibraryMapping(String libraryUri, String exportUri) {
+    // does nothing in compiler context
+  }
 }
 
 List<Library> _buildLibraries(Iterable<DartCompilationUnit> units) {

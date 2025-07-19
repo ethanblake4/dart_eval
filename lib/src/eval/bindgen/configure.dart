@@ -24,12 +24,15 @@ String constructorsForRuntime(BindgenContext ctx, ClassElement2 element,
 String constructorForRuntime(
     BindgenContext ctx, ClassElement2 element, ConstructorElement2 constructor,
     {bool isBridge = false}) {
-  final name = constructor.name3 == null ? '' : constructor.name3;
+  var name = constructor.name3 == null ? '' : constructor.name3;
+  if (name == 'new') {
+    name = '';
+  }
   final fullyQualifiedConstructorId = '${element.name3}.$name';
 
-  final staticName = constructor.name3 == null ? 'new' : constructor.name3;
+  final staticName = constructor.name3 == null ? '' : constructor.name3;
   final uri = ctx.libOverrides[element.name3] ?? ctx.uri;
-  final bridgeParam = isBridge ? ',bridge: true' : '';
+  final bridgeParam = isBridge ? ', isBridge: true' : '';
 
   return '''
     runtime.registerBridgeFunc(

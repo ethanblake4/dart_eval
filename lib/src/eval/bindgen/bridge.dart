@@ -4,6 +4,31 @@ import 'package:analyzer/dart/element/type.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
 import 'package:dart_eval/src/eval/bindgen/type.dart';
 
+String bindForwardedConstructors(
+    BindgenContext ctx, ClassElement2 element,
+    {bool isBridge = false}) {
+  return element.constructors2
+      .where((cstr) => !cstr.isPrivate)
+      .map((e) => _$forwardedConstructor(ctx, element, e, isBridge: isBridge))
+      .join('\n');
+}
+
+String _$forwardedConstructor(
+    BindgenContext ctx, ClassElement2 element, ConstructorElement2 constructor,
+    {bool isBridge = false}) {
+  final name = constructor.name3 == null ? '' : constructor.name3;
+  final namedConstructor =
+      constructor.name3 != null && constructor.name3 != 'new'
+          ? '.${constructor.name3}'
+          : '';
+  final fullyQualifiedConstructorId = '\$${element.name3}\$bridge$namedConstructor';
+
+  return '''
+  /// Forwarded constructor for [${element.name3}.$name]
+  $fullyQualifiedConstructorId(${parameterHeader(constructor.formalParameters, forConstructor: true)});
+''';
+}
+
 String bindDecoratoratorMethods(BindgenContext ctx, ClassElement2 element) {
   final methods = {
     if (ctx.implicitSupers)
@@ -26,7 +51,7 @@ String bindDecoratoratorMethods(BindgenContext ctx, ClassElement2 element) {
 
     return '''
         @override
-        ${returnType} ${e.displayName}(${_parameterHeader(e.formalParameters)}) =>
+        ${returnType} ${e.displayName}(${parameterHeader(e.formalParameters)}) =>
           ${needsCast ? '(' : ''}\$_invoke('${e.displayName}', [
             ${e.formalParameters.map((p) => wrapVar(ctx, p.type, p.name3 ?? '')).join(', ')}
           ])${needsCast ? 'as ${returnType.element3!.name3}$q)$q.cast()' : ''};
@@ -34,7 +59,7 @@ String bindDecoratoratorMethods(BindgenContext ctx, ClassElement2 element) {
   }).join('\n');
 }
 
-String _parameterHeader(List<FormalParameterElement> params) {
+String parameterHeader(List<FormalParameterElement> params, {bool forConstructor = false}) {
   final paramBuffer = StringBuffer();
   var inNonPositional = false;
   for (var i = 0; i < params.length; i++) {
@@ -45,15 +70,23 @@ String _parameterHeader(List<FormalParameterElement> params) {
         paramBuffer.write(param.isNamed ? '{' : '[');
       }
     }
+    if (param.isRequiredNamed) {
+      paramBuffer.write('required ');
+    }
     switch (param.type) {
       case FunctionType functionType:
         paramBuffer.write(functionType.returnType.getDisplayString());
         paramBuffer.write(' Function(');
-        paramBuffer.write(_parameterHeader(functionType.formalParameters));
+        paramBuffer.write(parameterHeader(functionType.formalParameters));
         paramBuffer.write(')');
         break;
       default:
-        paramBuffer.write('${param.type.getDisplayString()} ${param.name3}');
+        if (forConstructor) {
+          paramBuffer.write('super.');
+        } else {
+          paramBuffer.write('${param.type.getDisplayString()} ');
+        }
+        paramBuffer.write('${param.name3}');
     }
     if (i < params.length - 1) {
       paramBuffer.write(', ');

@@ -157,7 +157,7 @@ String fields(BindgenContext ctx, ClassElement2 element) {
 String bridgeConstructorDef(BindgenContext ctx,
     {required ConstructorElement2 constructor}) {
   return '''
-      '${constructor.name3}': BridgeConstructorDef(
+      '${constructor.name3 == 'new' ? '' : constructor.name3}': BridgeConstructorDef(
           BridgeFunctionDef(
             returns: BridgeTypeAnnotation(\$type),
             namedParams: [${namedParameters(ctx, element: constructor)}],

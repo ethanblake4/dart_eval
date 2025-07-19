@@ -1,11 +1,12 @@
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:change_case/change_case.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bindgen/bindgen.dart';
 import 'package:dart_eval/src/eval/cli/utils.dart';
 import 'package:dart_style/dart_style.dart';
 import 'package:path/path.dart';
-import 'package:pub_semver/pub_semver.dart';
 import 'package:pubspec_parse/pubspec_parse.dart';
 
 const defaultImports = '''
@@ -17,10 +18,46 @@ import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 ''';
 
-void cliBind([bool singleFile = false, bool all = false]) async {
+void cliBind(
+    {bool singleFile = false,
+    bool all = false,
+    bool generatePlugin = true}) async {
   print('Loading files...');
   final commandRoot = Directory(current);
   final projectRoot = findProjectRoot(commandRoot);
+
+  final bindgen = Bindgen();
+
+  if (FileSystemEntity.typeSync('./.dart_eval/bindings') ==
+      FileSystemEntityType.directory) {
+    final files = Directory('./.dart_eval/bindings')
+        .listSync()
+        .where((entity) => entity is File && entity.path.endsWith('.json'))
+        .cast<File>();
+
+    for (final file in files) {
+      print(
+          'Found binding file: ${relative(file.path, from: projectRoot.path)}');
+      final _data = file.readAsStringSync();
+      final decoded = (json.decode(_data) as Map).cast<String, dynamic>();
+      final classList = (decoded['classes'] as List);
+      for (final $class in classList.cast<Map>()) {
+        bindgen.defineBridgeClass(BridgeClassDef.fromJson($class.cast()));
+      }
+      for (final $enum in (decoded['enums'] as List).cast<Map>()) {
+        bindgen.defineBridgeEnum(BridgeEnumDef.fromJson($enum.cast()));
+      }
+      for (final $function in (decoded['functions'] as List).cast<Map>()) {
+        bindgen.defineBridgeTopLevelFunction(
+            BridgeFunctionDeclaration.fromJson($function.cast()));
+      }
+      (decoded['exportedLibMappings'] as Map)
+          .cast<String, String>()
+          .forEach((key, value) {
+        bindgen.addExportedLibraryMapping(key, value);
+      });
+    }
+  }
 
   final packageConfig = getPackageConfig(projectRoot);
 
@@ -28,7 +65,6 @@ void cliBind([bool singleFile = false, bool all = false]) async {
   final pubspec = Pubspec.parse(pubspecFile.readAsStringSync());
   final packageName = pubspec.name;
 
-  final bindgen = Bindgen();
   final version = Version.parse(Platform.version.split(' ').first);
   final formatter = DartFormatter(languageVersion: version);
   for (final package in packageConfig.packages) {
@@ -79,6 +115,35 @@ void cliBind([bool singleFile = false, bool all = false]) async {
         File(join(projectRoot.path, 'lib', 'dart_eval_bindings.dart'));
     final result = formatter.format(defaultImports + singleResult);
     outputFile.writeAsStringSync(result);
+  }
+
+  if (generatePlugin) {
+    final pluginFile =
+        File(join(projectRoot.path, 'lib', 'eval_plugin.dart'));
+    final pluginContent = '''
+import 'package:dart_eval/dart_eval_bridge.dart';
+${bindgen.registerClasses.map((e) => e.file).toSet().map((e) => 'import \'${e.replaceAll('.dart', '.eval.dart')}\';').join('\n')}
+
+/// [EvalPlugin] for ${packageName}
+class ${packageName.toPascalCase()}Plugin implements EvalPlugin {
+  @override
+  String get identifier => 'package:${packageName.toLowerCase()}';
+
+  @override
+  void configureForCompile(BridgeDeclarationRegistry registry) {
+    ${bindgen.registerClasses.map((e) => 'registry.defineBridgeClass(\$${e.name}.\$declaration);').join('\n')}
+  }
+
+  @override
+  void configureForRuntime(Runtime runtime) {
+    ${bindgen.registerClasses.map((e) => '\$${e.name}.configureForRuntime(runtime);').join('\n')}
+  }
+}
+''';
+    pluginFile.writeAsStringSync(formatter.format(pluginContent));
+    print('Generated plugin file: ${pluginFile.path}');
+  } else {
+    print('Skipping plugin generation.');
   }
 
   if (numBound == 0) {

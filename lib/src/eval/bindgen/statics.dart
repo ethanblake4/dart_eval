@@ -7,10 +7,8 @@ import 'package:dart_eval/src/eval/bindgen/type.dart';
 String $constructors(BindgenContext ctx, ClassElement2 element,
     {bool isBridge = false}) {
   return element.constructors2
-      .where((cstr) =>
-          !cstr.isPrivate &&
-          !cstr.isSynthetic &&
-          (cstr.isFactory || !element.isAbstract))
+      .where(
+          (cstr) => !cstr.isPrivate && (cstr.isFactory || !element.isAbstract))
       .map((e) => _$constructor(ctx, element, e, isBridge: isBridge))
       .join('\n');
 }
@@ -18,9 +16,11 @@ String $constructors(BindgenContext ctx, ClassElement2 element,
 String _$constructor(
     BindgenContext ctx, ClassElement2 element, ConstructorElement2 constructor,
     {bool isBridge = false}) {
-  final name = constructor.name3 == null ? 'new' : constructor.name3;
+  final name = constructor.name3 == null ? '' : constructor.name3;
   final namedConstructor =
-      constructor.name3 != null ? '.${constructor.name3}' : '';
+      constructor.name3 != null && constructor.name3 != 'new'
+          ? '.${constructor.name3}'
+          : '';
   final fullyQualifiedConstructorId = isBridge
       ? '\$${element.name3}\$bridge$namedConstructor'
       : '${element.name3}$namedConstructor';

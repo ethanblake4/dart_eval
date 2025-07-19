@@ -4,6 +4,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element2.dart';
 import 'package:analyzer/file_system/physical_file_system.dart';
 import 'package:collection/collection.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bindgen/bridge.dart';
 import 'package:dart_eval/src/eval/bindgen/bridge_declaration.dart';
 import 'package:dart_eval/src/eval/bindgen/configure.dart';
@@ -19,9 +20,13 @@ import 'package:package_config/package_config.dart';
 import 'package:path/path.dart';
 
 /// Adapted from code by Alex Wallen (@a-wallen)
-class Bindgen {
+class Bindgen implements BridgeDeclarationRegistry {
   static final resourceProvider = PhysicalResourceProvider.INSTANCE;
   final includedPaths = [resourceProvider.pathContext.current];
+
+  final _bridgeDeclarations = <String, List<BridgeDeclaration>>{};
+  final _exportedLibMappings = <String, String>{};
+  final List<({String file, String uri, String name})> registerClasses = [];
 
   AnalysisContextCollection? _contextCollection;
 
@@ -33,6 +38,73 @@ class Bindgen {
       filepath = package.packageUriRoot.toString();
     }
     includedPaths.add(normalize(filepath));
+  }
+
+  // Manually define a (unresolved) bridge class
+  @override
+  void defineBridgeClass(BridgeClassDef classDef) {
+    if (!classDef.bridge && !classDef.wrap) {
+      throw CompileError(
+          'Cannot define a bridge class that\'s not either bridge or wrap');
+    }
+    final type = classDef.type;
+    final spec = type.type.spec;
+
+    if (spec == null) {
+      throw CompileError(
+          'Cannot define a bridge class that\'s already resolved, a ref, or a generic function type');
+    }
+
+    final libraryDeclarations = _bridgeDeclarations[spec.library];
+    if (libraryDeclarations == null) {
+      _bridgeDeclarations[spec.library] = [classDef];
+    } else {
+      libraryDeclarations.add(classDef);
+    }
+  }
+
+  /// Define a bridged enum definition to be used when binding.
+  @override
+  void defineBridgeEnum(BridgeEnumDef enumDef) {
+    final spec = enumDef.type.spec;
+    if (spec == null) {
+      throw CompileError(
+          'Cannot define a bridge enum that\'s already resolved, a ref, or a generic function type');
+    }
+
+    final libraryDeclarations = _bridgeDeclarations[spec.library];
+    if (libraryDeclarations == null) {
+      _bridgeDeclarations[spec.library] = [enumDef];
+    } else {
+      libraryDeclarations.add(enumDef);
+    }
+  }
+
+  @override
+  void addSource(DartSource source) {
+    // Has no effect in binding generator
+  }
+
+  /// Define a bridged top-level function declaration.
+  @override
+  void defineBridgeTopLevelFunction(BridgeFunctionDeclaration function) {
+    final libraryDeclarations = _bridgeDeclarations[function.library];
+    if (libraryDeclarations == null) {
+      _bridgeDeclarations[function.library] = [function];
+    } else {
+      libraryDeclarations.add(function);
+    }
+  }
+
+  /// Define a set of unresolved bridge classes
+  void defineBridgeClasses(List<BridgeClassDef> classDefs) {
+    for (final classDef in classDefs) {
+      defineBridgeClass(classDef);
+    }
+  }
+
+  void addExportedLibraryMapping(String libraryUri, String exportUri) {
+    _exportedLibMappings[libraryUri] = exportUri;
   }
 
   Future<String?> parse(
@@ -50,7 +122,12 @@ class Bindgen {
     final analysisContext = _contextCollection!.contextFor(filePath);
     final session = analysisContext.currentSession;
     final analysisResult = await session.getResolvedUnit(filePath);
-    final ctx = BindgenContext(uri, all: all);
+    final ctx = BindgenContext(
+        filename,
+        uri,
+        all: all,
+        bridgeDeclarations: _bridgeDeclarations,
+        exportedLibMappings: _exportedLibMappings);
 
     if (analysisResult is ResolvedUnitResult) {
       // Access the resolved unit and analyze it
@@ -82,6 +159,7 @@ class Bindgen {
           .where((declaration) => declaration.declaredFragment != null)
           .map((declaration) =>
               _$instance(ctx, declaration.declaredFragment!.element))
+          .toList()
           .nonNulls;
 
       if (resolved.isEmpty) {
@@ -123,16 +201,24 @@ class Bindgen {
 
     final isBridge = bindAnnoValue?.getField('bridge')?.toBoolValue() ?? false;
 
+    if (element.isSealed) {
+      throw CompileError(
+          'Cannot bind sealed class ${element.name3} as a bridge type. '
+          'Please remove the @Bind annotation, use a wrapper, or make the class non-sealed.');
+    }
+
+    registerClasses.add((
+      file: ctx.filename,
+      uri: ctx.libOverrides[element.name3!] ?? ctx.uri,
+      name: '${element.name3!}${isBridge ? '\$bridge' : ''}',
+    ));
+
     if (isBridge) {
-      if (element.isSealed) {
-        throw CompileError(
-            'Cannot bind sealed class ${element.name3} as a bridge type. '
-            'Please remove the @Bind annotation, use a wrapper, or make the class non-sealed.');
-      }
 
       return '''
 /// dart_eval bridge binding for [${element.name3}]
 class \$${element.name3}\$bridge extends ${element.name3} with \$Bridge<${element.name3}> {
+${bindForwardedConstructors(ctx, element)}
 /// Configure this class for use in a [Runtime]
 ${bindConfigureForRuntime(ctx, element, isBridge: true)}
 /// Compile-time type specification of [\$${element.name3}\$bridge]

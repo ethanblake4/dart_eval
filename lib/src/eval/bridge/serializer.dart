@@ -8,6 +8,7 @@ class BridgeSerializer
   final List<BridgeEnumDef> _enums = [];
   final List<BridgeFunctionDeclaration> _functions = [];
   final List<DartSource> _sources = [];
+  final Map<String, String> _exportedLibMappings = {};
 
   @override
   void addPlugin(EvalPlugin plugin) {
@@ -34,6 +35,12 @@ class BridgeSerializer
     _functions.add(function);
   }
 
+  @override
+  void addExportedLibraryMapping(
+      String libraryUri, String exportUri) {
+    _exportedLibMappings[libraryUri] = exportUri;
+  }
+
   /// Serialize all declarations to a JSON object.
   Map<String, dynamic> serialize() {
     return {
@@ -43,6 +50,7 @@ class BridgeSerializer
       'sources': _sources
           .map((e) => {'uri': e.uri.toString(), 'source': e.toString()})
           .toList(),
+      'exportedLibMappings': _exportedLibMappings,
     };
   }
 }

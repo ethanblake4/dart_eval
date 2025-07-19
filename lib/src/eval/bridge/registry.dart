@@ -15,4 +15,7 @@ abstract class BridgeDeclarationRegistry {
 
   /// Define a bridged top-level function declaration.
   void defineBridgeTopLevelFunction(BridgeFunctionDeclaration function);
+
+  /// Add a mapping from a library URI to an exported library URI.
+  void addExportedLibraryMapping(String libraryUri, String exportUri);
 }
