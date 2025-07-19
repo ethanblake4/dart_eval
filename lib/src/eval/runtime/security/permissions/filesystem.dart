@@ -1,27 +1,31 @@
 import 'package:dart_eval/dart_eval_security.dart';
+import 'package:dart_eval/src/eval/utils/path_helper.dart';
 
 /// A permission that allows access to read and write a file system resource.
 class FilesystemPermission implements Permission {
-  /// The pattern that will be matched against the path.
-  final Pattern matchPattern;
+  /// The allowed path pattern (absolute path to a file or directory).
+  final String allowedPath;
 
-  /// Create a new filesystem permission that matches a [Pattern].
-  const FilesystemPermission(this.matchPattern);
+  /// Create a new filesystem permission that matches a specific path.
+  /// The path should be absolute. If relative, it will be resolved relative
+  /// to the current working directory at permission creation time.
+  FilesystemPermission(String path) : allowedPath = normalizePath(path);
 
   /// A permission that allows access to any file system resource.
-  static final FilesystemPermission any = FilesystemPermission(RegExp('.*'));
+  static final FilesystemPermission any = FilesystemPermission._internal('');
+
+  /// Internal constructor for special cases like 'any' permission
+  const FilesystemPermission._internal(this.allowedPath);
 
   /// Create a new filesystem permission that matches any file in a directory
   /// or one of its subdirectories.
   factory FilesystemPermission.directory(String dir) {
-    final escaped = dir.replaceAll(r'\', r'\\').replaceAll(r'/', r'\/');
-    return FilesystemPermission(RegExp('^$escaped.*'));
+    return FilesystemPermission(dir);
   }
 
   /// Create a new filesystem permission that matches a specific file.
   factory FilesystemPermission.file(String file) {
-    final escaped = file.replaceAll(r'\', r'\\').replaceAll(r'/', r'\/');
-    return FilesystemPermission(RegExp('^$escaped\$'));
+    return FilesystemPermission(file);
   }
 
   @override
@@ -30,7 +34,7 @@ class FilesystemPermission implements Permission {
   @override
   bool match([Object? data]) {
     if (data is String) {
-      return matchPattern.matchAsPrefix(data) != null;
+      return isPathAllowed(data, allowedPath);
     }
     return false;
   }
@@ -38,35 +42,37 @@ class FilesystemPermission implements Permission {
   @override
   bool operator ==(Object other) {
     if (other is FilesystemPermission) {
-      return other.matchPattern == matchPattern && other.domains == domains;
+      return other.allowedPath == allowedPath &&
+          other.runtimeType == runtimeType;
     }
     return false;
   }
 
   @override
-  int get hashCode => matchPattern.hashCode ^ domains.hashCode;
+  int get hashCode => allowedPath.hashCode ^ runtimeType.hashCode;
 }
 
 /// A permission that allows access to read a file system resource.
 class FilesystemReadPermission extends FilesystemPermission {
-  /// Create a new filesystem permission that matches a [Pattern].
-  const FilesystemReadPermission(super.matchPattern);
+  /// Create a new filesystem read permission that matches a specific path.
+  FilesystemReadPermission(super.path);
 
-  /// A permission that allows access to any file system resource.
+  /// A permission that allows read access to any file system resource.
   static final FilesystemReadPermission any =
-      FilesystemReadPermission(RegExp('.*'));
+      FilesystemReadPermission._internal('');
+
+  /// Internal constructor for special cases
+  const FilesystemReadPermission._internal(String path) : super._internal(path);
 
   /// Create a new filesystem permission that matches any file in a directory
   /// or one of its subdirectories.
   factory FilesystemReadPermission.directory(String dir) {
-    final escaped = dir.replaceAll(r'\', r'\\').replaceAll(r'/', r'\/');
-    return FilesystemReadPermission(RegExp('^$escaped.*'));
+    return FilesystemReadPermission(dir);
   }
 
   /// Create a new filesystem permission that matches a specific file.
   factory FilesystemReadPermission.file(String file) {
-    final escaped = file.replaceAll(r'\', r'\\').replaceAll(r'/', r'\/');
-    return FilesystemReadPermission(RegExp('^$escaped\$'));
+    return FilesystemReadPermission(file);
   }
 
   @override
@@ -75,7 +81,7 @@ class FilesystemReadPermission extends FilesystemPermission {
   @override
   bool match([Object? data]) {
     if (data is String) {
-      return matchPattern.matchAsPrefix(data) != null;
+      return isPathAllowed(data, allowedPath);
     }
     return false;
   }
@@ -83,35 +89,37 @@ class FilesystemReadPermission extends FilesystemPermission {
   @override
   bool operator ==(Object other) {
     if (other is FilesystemReadPermission) {
-      return other.matchPattern == matchPattern && other.domains == domains;
+      return other.allowedPath == allowedPath;
     }
     return false;
   }
 
   @override
-  int get hashCode => matchPattern.hashCode ^ domains.hashCode;
+  int get hashCode => allowedPath.hashCode ^ runtimeType.hashCode;
 }
 
 /// A permission that allows access to write a file system resource.
 class FilesystemWritePermission extends FilesystemPermission {
-  /// Create a new filesystem permission that matches a [Pattern].
-  const FilesystemWritePermission(super.matchPattern);
+  /// Create a new filesystem write permission that matches a specific path.
+  FilesystemWritePermission(super.path);
 
-  /// A permission that allows access to any file system resource.
+  /// A permission that allows write access to any file system resource.
   static final FilesystemWritePermission any =
-      FilesystemWritePermission(RegExp('.*'));
+      FilesystemWritePermission._internal('');
+
+  /// Internal constructor for special cases
+  const FilesystemWritePermission._internal(String path)
+      : super._internal(path);
 
   /// Create a new filesystem permission that matches any file in a directory
   /// or one of its subdirectories.
   factory FilesystemWritePermission.directory(String dir) {
-    final escaped = dir.replaceAll(r'\', r'\\').replaceAll(r'/', r'\/');
-    return FilesystemWritePermission(RegExp('^$escaped.*'));
+    return FilesystemWritePermission(dir);
   }
 
   /// Create a new filesystem permission that matches a specific file.
   factory FilesystemWritePermission.file(String file) {
-    final escaped = file.replaceAll(r'\', r'\\').replaceAll(r'/', r'\/');
-    return FilesystemWritePermission(RegExp('^$escaped\$'));
+    return FilesystemWritePermission(file);
   }
 
   @override
@@ -120,7 +128,7 @@ class FilesystemWritePermission extends FilesystemPermission {
   @override
   bool match([Object? data]) {
     if (data is String) {
-      return matchPattern.matchAsPrefix(data) != null;
+      return isPathAllowed(data, allowedPath);
     }
     return false;
   }
@@ -128,11 +136,11 @@ class FilesystemWritePermission extends FilesystemPermission {
   @override
   bool operator ==(Object other) {
     if (other is FilesystemWritePermission) {
-      return other.matchPattern == matchPattern && other.domains == domains;
+      return other.allowedPath == allowedPath;
     }
     return false;
   }
 
   @override
-  int get hashCode => matchPattern.hashCode ^ domains.hashCode;
+  int get hashCode => allowedPath.hashCode ^ runtimeType.hashCode;
 }
