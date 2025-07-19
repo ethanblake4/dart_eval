@@ -849,7 +849,7 @@ class $List<E> implements List<E>, $Instance {
       case 'add':
         return __$add;
       case 'addAll':
-        return __$addAll;
+        return __$addAll<E>();
       case 'sort':
         return __$sort;
       case 'shuffle':
@@ -992,10 +992,13 @@ class $List<E> implements List<E>, $Instance {
 
   @override
   void addAll(Iterable<E> iterable) => $value.addAll(iterable);
-  static const __$addAll = $Function(_$addAll);
-  static $Value? _$addAll(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Function __$addAll<E>() =>
+      $Function((r, t, a) => _$addAll<E>(r, t, a));
+
+  static $Value? _$addAll<E>(
+      Runtime runtime, $Value? target, List<$Value?> args) {
     final $this = target?.$value as List;
-    final iterable = args[0]?.$value as Iterable;
+    final iterable = (args[0]?.$value as Iterable).cast<E>();
     $this.addAll(iterable);
     return null;
   }
