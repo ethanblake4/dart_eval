@@ -52,13 +52,13 @@ class InvokeDynamic implements EvcOp {
         }
 
         var i = 0, j = 0;
-        while (i < csPosArgTypes.length) {
-          if (!csPosArgTypes[i].isAssignableTo(object.positionalArgTypes[i])) {
-            throw ArgumentError(
-                'FunctionPtr: Cannot invoke function with the given arguments');
-          }
-          i++;
-        }
+        // while (i < csPosArgTypes.length) {
+        //   if (!csPosArgTypes[i].isAssignableTo(object.positionalArgTypes[i])) {
+        //     throw ArgumentError(
+        //         'FunctionPtr: Cannot invoke function with the given arguments');
+        //   }
+        //   i++;
+        // }
 
         // Very efficient algorithm for checking that named args match
         // Requires that the named arg arrays be sorted

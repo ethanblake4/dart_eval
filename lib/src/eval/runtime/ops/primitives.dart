@@ -89,8 +89,18 @@ class NumAdd implements EvcOp {
   // Add value A + B
   @override
   void run(Runtime runtime) {
-    runtime.frame[runtime.frameOffset++] =
-        (runtime.frame[_location1] as num) + (runtime.frame[_location2] as num);
+    var value1 = runtime.frame[_location1];
+    var value2 = runtime.frame[_location2];
+
+    if (value1 is $Value) {
+      value1 = value1.$value;
+    }
+
+    if (value2 is $Value) {
+      value2 = value2.$value;
+    }
+
+    runtime.frame[runtime.frameOffset++] = (value1 as num) + (value2 as num);
   }
 
   @override
@@ -431,7 +441,13 @@ class ListSetIndexed extends EvcOp {
   @override
   void run(Runtime runtime) {
     final frame = runtime.frame;
-    (frame[_position] as List)[frame[_index] as int] = frame[_value];
+
+    var __index = frame[_index];
+    if (__index is $Value) {
+      __index = __index.$value;
+    }
+
+    (frame[_position] as List)[__index as int] = frame[_value];
   }
 
   @override
