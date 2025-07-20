@@ -15,7 +15,10 @@ The project structure is as follows:
 - stdlib - Exported libraries for builtin 'dart:' library mappings
 - src/eval - contains the main project source
   - eval.dart - The eval() function
+  - bindgen - Source for the bindgen functionality, which generates Dart code to bridge from
+    source code
   - bridge - Source for bridge functionality, both runtime and compile-time
+  - cli - Source for the command line interface
   - compiler - Source for the dart_eval compiler
     - collection - functionality for compiling lists, maps, etc
     - declaration - functionality for compiling top-level declarations like functions and classes
@@ -65,5 +68,5 @@ getting in touch with me first or filing an issue and getting a go-ahead.
 
 ## Adding a new feature
 
-If you're adding a new feature, the best place to start is by writing a test in `dart_eval_test.dart`. 
-This is because, in this project, the error you get when running a failed test will often point you to the right place to start!
+If you're adding a new feature, the best place to start is by writing a test. 
+The error you get when running a failed test will often point you to the right place to start!

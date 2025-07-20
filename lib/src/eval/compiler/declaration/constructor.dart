@@ -81,24 +81,24 @@ void compileConstructorDeclaration(
     final p = param.parameter;
     final V = param.V;
     Variable vrep;
-    if ($redirectingInitializer != null && !(p is SimpleFormalParameter)) {
+    if ($redirectingInitializer != null && p is! SimpleFormalParameter) {
       throw CompileError(
           'Redirecting constructor invocation cannot have super or this parameters',
           d);
     }
     if (p is FieldFormalParameter) {
-      TypeRef? _type;
+      TypeRef? type0;
       if (p.type != null) {
-        _type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
+        type0 = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
       }
-      _type ??= TypeRef.lookupFieldType(ctx,
+      type0 ??= TypeRef.lookupFieldType(ctx,
           TypeRef.lookupDeclaration(ctx, ctx.library, parent), p.name.lexeme,
           source: p);
-      _type ??= V?.type;
-      _type ??= CoreTypes.dynamic.ref(ctx);
+      type0 ??= V?.type;
+      type0 ??= CoreTypes.dynamic.ref(ctx);
 
       vrep = Variable(i,
-              _type.copyWith(boxed: !_type.isUnboxedAcrossFunctionBoundaries))
+              type0.copyWith(boxed: !type0.isUnboxedAcrossFunctionBoundaries))
           .boxIfNeeded(ctx)
         ..name = p.name.lexeme;
 
@@ -164,8 +164,8 @@ void compileConstructorDeclaration(
   // Handle redirecting constructor
   if ($redirectingInitializer != null) {
     final name = $redirectingInitializer.constructorName?.name ?? '';
-    final _dec = resolveStaticMethod(ctx, clsType, name);
-    final dec = _dec.declaration!;
+    final dec0 = resolveStaticMethod(ctx, clsType, name);
+    final dec = dec0.declaration!;
     final fpl = (dec as ConstructorDeclaration).parameters.parameters;
 
     compileArgumentList(
@@ -221,9 +221,9 @@ void compileConstructorDeclaration(
       AlwaysReturnType? mReturnType;
 
       if ($superInitializer != null) {
-        final _constructor = ctx.topLevelDeclarationsMap[
+        final constructor0 = ctx.topLevelDeclarationsMap[
             extendsDecl.sourceLib]!['${extendsType.name}.$constructorName']!;
-        final constructor = _constructor.declaration as ConstructorDeclaration;
+        final constructor = constructor0.declaration as ConstructorDeclaration;
 
         final argsPair = compileArgumentList(
             ctx,
@@ -233,26 +233,26 @@ void compileConstructorDeclaration(
             constructor,
             superParams: superParams,
             source: $superInitializer);
-        final _args = argsPair.first;
-        final _namedArgs = argsPair.second;
+        final args = argsPair.first;
+        final namedArgs = argsPair.second;
 
-        argTypes.addAll(_args.map((e) => e.type).toList());
+        argTypes.addAll(args.map((e) => e.type).toList());
         namedArgTypes
-            .addAll(_namedArgs.map((key, value) => MapEntry(key, value.type)));
+            .addAll(namedArgs.map((key, value) => MapEntry(key, value.type)));
       } else if (superParams.isNotEmpty) {
         // If there are super parameters, compile without an argument list
-        final _constructor = ctx.topLevelDeclarationsMap[
+        final constructor0 = ctx.topLevelDeclarationsMap[
             extendsDecl.sourceLib]!['${extendsType.name}.$constructorName']!;
-        final constructor = _constructor.declaration as ConstructorDeclaration;
+        final constructor = constructor0.declaration as ConstructorDeclaration;
         final argsPair = compileSuperParams(
             ctx, constructor.parameters.parameters, constructor,
             superParams: superParams, source: $superInitializer);
-        final _args = argsPair.first;
-        final _namedArgs = argsPair.second;
+        final args = argsPair.first;
+        final namedArgs = argsPair.second;
 
-        argTypes.addAll(_args.map((e) => e.type).toList());
+        argTypes.addAll(args.map((e) => e.type).toList());
         namedArgTypes
-            .addAll(_namedArgs.map((key, value) => MapEntry(key, value.type)));
+            .addAll(namedArgs.map((key, value) => MapEntry(key, value.type)));
       }
 
       final method = IdentifierReference(null,
@@ -318,7 +318,7 @@ void compileConstructorDeclaration(
   _compileUnusedFields(ctx, fields, {}, instOffset);
 
   final body = d.body;
-  if (d.factoryKeyword == null && !(body is EmptyFunctionBody)) {
+  if (d.factoryKeyword == null && body is! EmptyFunctionBody) {
     ctx.beginAllocScope();
     ctx.setLocal('#this', Variable(instOffset, TypeRef.$this(ctx)!));
     if (body is BlockFunctionBody) {
@@ -344,11 +344,11 @@ void compileConstructorDeclaration(
       final constructor = bridge.constructors[constructorName]!;
       final argsPair = compileArgumentListWithBridge(
           ctx, $superInitializer.argumentList, constructor.functionDescriptor);
-      final _args = argsPair.first;
-      final _namedArgs = argsPair.second;
-      argTypes.addAll(_args.map((e) => e.type).toList());
+      final args = argsPair.first;
+      final namedArgs = argsPair.second;
+      argTypes.addAll(args.map((e) => e.type).toList());
       namedArgTypes
-          .addAll(_namedArgs.map((key, value) => MapEntry(key, value.type)));
+          .addAll(namedArgs.map((key, value) => MapEntry(key, value.type)));
     }
 
     final op = BridgeInstantiate.make(
@@ -493,11 +493,11 @@ void compileDefaultConstructor(CompilerContext ctx,
 Map<String, int> _getFieldIndices(List<FieldDeclaration> fields,
     [int fieldIdx = 0]) {
   final fieldIndices = <String, int>{};
-  var _fieldIdx = fieldIdx;
+  var fieldIdx0 = fieldIdx;
   for (final fd in fields) {
     for (final field in fd.fields.variables) {
-      fieldIndices[field.name.lexeme] = _fieldIdx;
-      _fieldIdx++;
+      fieldIndices[field.name.lexeme] = fieldIdx0;
+      fieldIdx0++;
     }
   }
   return fieldIndices;
@@ -506,7 +506,7 @@ Map<String, int> _getFieldIndices(List<FieldDeclaration> fields,
 void _compileUnusedFields(CompilerContext ctx, List<FieldDeclaration> fields,
     Set<String> usedNames, int instOffset,
     [int fieldIdx = 0]) {
-  var _fieldIdx = fieldIdx;
+  var fieldIdx0 = fieldIdx;
   for (final fd in fields) {
     for (final field in fd.fields.variables) {
       if (!usedNames.contains(field.name.lexeme) && field.initializer != null) {
@@ -516,10 +516,10 @@ void _compileUnusedFields(CompilerContext ctx, List<FieldDeclaration> fields,
             V.type;
         ctx.pushOp(
             SetObjectPropertyImpl.make(
-                instOffset, _fieldIdx, V.scopeFrameOffset),
+                instOffset, fieldIdx0, V.scopeFrameOffset),
             SetObjectPropertyImpl.length);
       }
-      _fieldIdx++;
+      fieldIdx0++;
     }
   }
 }

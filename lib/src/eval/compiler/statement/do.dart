@@ -8,7 +8,7 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 StatementInfo compileDoStatement(
     DoStatement s, CompilerContext ctx, AlwaysReturnType? expectedReturnType) {
   return macroLoop(ctx, expectedReturnType,
-      condition: (_ctx) => compileExpression(s.condition, _ctx),
-      body: (_ctx, ert) => compileStatement(s.body, ert, _ctx),
+      condition: (ctx) => compileExpression(s.condition, ctx),
+      body: (ctx, ert) => compileStatement(s.body, ert, ctx),
       alwaysLoopOnce: true);
 }

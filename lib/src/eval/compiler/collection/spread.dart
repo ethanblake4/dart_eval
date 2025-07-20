@@ -18,7 +18,7 @@ List<TypeRef> compileSpreadElementForList(
   final isNullAware = e.isNullAware;
 
   // Compile the expression to get the spreaded collection
-  var _collection = compileExpression(expression, ctx, list.type);
+  var collection = compileExpression(expression, ctx, list.type);
 
   if (isNullAware) {
     // For null-aware spread, we need to check if the collection is not null
@@ -28,17 +28,17 @@ List<TypeRef> compileSpreadElementForList(
 
   // Check if the collection is iterable
   final iterableType = CoreTypes.iterable.ref(ctx);
-  if (!_collection.type
+  if (!collection.type
       .resolveTypeChain(ctx)
       .isAssignableTo(ctx, iterableType)) {
     throw CompileError(
-        'Cannot spread non-iterable type ${_collection.type} in list literal');
+        'Cannot spread non-iterable type ${collection.type} in list literal');
   }
 
   // Get the element type of the collection
   var collectionElementType = CoreTypes.dynamic.ref(ctx);
-  if (_collection.type.specifiedTypeArgs.isNotEmpty) {
-    collectionElementType = _collection.type.specifiedTypeArgs[0];
+  if (collection.type.specifiedTypeArgs.isNotEmpty) {
+    collectionElementType = collection.type.specifiedTypeArgs[0];
   }
 
   // Check if the collection elements are compatible with the list type
@@ -46,7 +46,7 @@ List<TypeRef> compileSpreadElementForList(
       .resolveTypeChain(ctx)
       .isAssignableTo(ctx, listType)) {
     throw CompileError(
-        'Cannot spread collection of type ${collectionElementType} in list of type $listType');
+        'Cannot spread collection of type $collectionElementType in list of type $listType');
   }
 
   // Implement the spread using a loop similar to boxListContents
@@ -58,45 +58,44 @@ List<TypeRef> compileSpreadElementForList(
 
   // Get the length of the collection
   len = Variable.alloc(ctx, CoreTypes.int.ref(ctx).copyWith(boxed: false));
-  ctx.pushOp(PushIterableLength.make(_collection.scopeFrameOffset),
+  ctx.pushOp(PushIterableLength.make(collection.scopeFrameOffset),
       PushIterableLength.LEN);
 
   // Loop to add each element
   macroLoop(ctx, AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true),
-      initialization: (_ctx) {
+      initialization: (ctx) {
     // We have already initialized the variables above
-  }, condition: (_ctx) {
+  }, condition: (ctx) {
     // i < len
     final v =
-        Variable.alloc(_ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
-    _ctx.pushOp(
+        Variable.alloc(ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
+    ctx.pushOp(
         NumLt.make($i.scopeFrameOffset, len.scopeFrameOffset), NumLt.LEN);
     return v;
-  }, body: (_ctx, rt) {
+  }, body: (ctx, rt) {
     // Get the element at index i
-    final element = Variable.alloc(_ctx, collectionElementType);
-    _ctx.pushOp(
-        IndexList.make(_collection.scopeFrameOffset, $i.scopeFrameOffset),
+    final element = Variable.alloc(ctx, collectionElementType);
+    ctx.pushOp(IndexList.make(collection.scopeFrameOffset, $i.scopeFrameOffset),
         IndexList.LEN);
 
     // Boxing if needed
     final elementToAdd = box ? element.boxIfNeeded(ctx) : element;
 
     // Add the element to the list
-    _ctx.pushOp(
+    ctx.pushOp(
         ListAppend.make(list.scopeFrameOffset, elementToAdd.scopeFrameOffset),
         ListAppend.LEN);
 
     return StatementInfo(-1);
-  }, update: (_ctx) {
+  }, update: (ctx) {
     // i++
     final ip1 =
-        Variable.alloc(_ctx, CoreTypes.int.ref(ctx).copyWith(boxed: false));
-    _ctx.pushOp(
+        Variable.alloc(ctx, CoreTypes.int.ref(ctx).copyWith(boxed: false));
+    ctx.pushOp(
         NumAdd.make($i.scopeFrameOffset, $1.scopeFrameOffset), NumAdd.LEN);
-    _ctx.pushOp(CopyValue.make($i.scopeFrameOffset, ip1.scopeFrameOffset),
+    ctx.pushOp(CopyValue.make($i.scopeFrameOffset, ip1.scopeFrameOffset),
         CopyValue.LEN);
-  }, after: (_ctx) {
+  }, after: (ctx) {
     // Nothing additional needed after the loop
   });
 

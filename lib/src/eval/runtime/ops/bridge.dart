@@ -1,3 +1,5 @@
+// ignore_for_file: constant_identifier_names
+
 part of '../runtime.dart';
 
 class BridgeInstantiate implements EvcOp {
@@ -18,19 +20,19 @@ class BridgeInstantiate implements EvcOp {
   void run(Runtime runtime) {
     final $subclass = runtime.frame[_subclass] as $Instance?;
 
-    final _args = runtime.args;
-    final _argsLen = _args.length;
+    final args = runtime.args;
+    final argsLen = args.length;
 
-    final _mappedArgs = List<$Value?>.filled(_argsLen, null);
-    for (var i = 0; i < _argsLen; i++) {
-      _mappedArgs[i] = (_args[i] as $Value?);
+    final mappedArgs = List<$Value?>.filled(argsLen, null);
+    for (var i = 0; i < argsLen; i++) {
+      mappedArgs[i] = (args[i] as $Value?);
     }
 
     runtime.args = [];
 
     final $runtimeType = 1;
     final instance =
-        runtime._bridgeFunctions[_constructor](runtime, null, _mappedArgs)
+        runtime._bridgeFunctions[_constructor](runtime, null, mappedArgs)
             as $Instance;
     Runtime.bridgeData[instance] =
         BridgeData(runtime, $runtimeType, $subclass ?? BridgeDelegatingShim());
@@ -93,18 +95,18 @@ class InvokeExternal implements EvcOp {
 
   @override
   void run(Runtime runtime) {
-    final _args = runtime.args;
-    final _argsLen = _args.length;
+    final args = runtime.args;
+    final argsLen = args.length;
 
-    final _mappedArgs = List<$Value?>.filled(_argsLen, null);
-    for (var i = 0; i < _argsLen; i++) {
-      _mappedArgs[i] = (_args[i] as $Value?);
+    final mappedArgs = List<$Value?>.filled(argsLen, null);
+    for (var i = 0; i < argsLen; i++) {
+      mappedArgs[i] = (args[i] as $Value?);
     }
 
     runtime.args = [];
     runtime.returnValue = null;
     final result =
-        runtime._bridgeFunctions[_function](runtime, null, _mappedArgs);
+        runtime._bridgeFunctions[_function](runtime, null, mappedArgs);
     if (result != null) {
       runtime.returnValue = result;
     }

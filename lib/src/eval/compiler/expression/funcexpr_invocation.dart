@@ -53,21 +53,21 @@ Variable invokeClosure(CompilerContext ctx, Reference? closureRef,
       final nName = arg.name.label.name;
       namedArgNames.add(nName);
 
-      var _arg = compileExpression(arg.expression, ctx);
-      _arg = _arg.boxIfNeeded(ctx);
+      var argVar = compileExpression(arg.expression, ctx);
+      argVar = argVar.boxIfNeeded(ctx);
 
-      final type = _arg.type.resolveTypeChain(ctx);
+      final type = argVar.type.resolveTypeChain(ctx);
       final rtti = type.getRuntimeIndices(ctx);
 
       final rttiIndex = ctx.runtimeTypes
           .addOrGet(RuntimeTypeSet(type.toRuntimeType(ctx).type, rtti, []));
       namedArgsRttiMap[nName] = rttiIndex;
-      namedArgs[nName] = _arg;
+      namedArgs[nName] = argVar;
     } else {
-      var _arg = compileExpression(arg, ctx);
-      _arg = _arg.boxIfNeeded(ctx);
+      var argVar = compileExpression(arg, ctx);
+      argVar = argVar.boxIfNeeded(ctx);
 
-      final type = _arg.type.resolveTypeChain(ctx);
+      final type = argVar.type.resolveTypeChain(ctx);
       final rtti = type.getRuntimeIndices(ctx);
 
       final rttiIndex = ctx.runtimeTypes
@@ -77,7 +77,7 @@ Variable invokeClosure(CompilerContext ctx, Reference? closureRef,
 
       ctx.pushOp(la, ListAppend.LEN);
 
-      positionalArgs.add(_arg);
+      positionalArgs.add(argVar);
     }
   }
 

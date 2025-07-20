@@ -51,10 +51,10 @@ class $Comparable<T> implements Comparable<T>, $Instance {
   static $Value? _compareTo(
       Runtime runtime, $Value? target, List<$Value?> args) {
     final other = args[0];
-    final _evalResult = target!.$value.compareTo(other!.$value);
+    final evalResult = target!.$value.compareTo(other!.$value);
 
-    if (_evalResult is int) {
-      return $int(_evalResult);
+    if (evalResult is int) {
+      return $int(evalResult);
     }
 
     return null;

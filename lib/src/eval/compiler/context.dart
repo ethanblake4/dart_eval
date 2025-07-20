@@ -114,19 +114,19 @@ mixin ScopeContext on Object implements AbstractScopeContext {
   }
 
   ContextSaveState saveState() {
-    final _state = ContextSaveState.of(this);
-    return _state;
+    final state = ContextSaveState.of(this);
+    return state;
   }
 
   void resolveBranchStateDiscontinuity(ContextSaveState initial) {
-    final _otherLocals = initial.locals;
-    final _myLocals = [...locals];
-    for (var i = 0; i < _otherLocals.length; i++) {
-      final _otherLocalsMap = _otherLocals[i];
-      final _myLocalsMap = _myLocals[i];
+    final otherLocals = initial.locals;
+    final myLocals = [...locals];
+    for (var i = 0; i < otherLocals.length; i++) {
+      final otherLocalsMap = otherLocals[i];
+      final myLocalsMap = myLocals[i];
 
-      _otherLocalsMap.forEach((key, value) {
-        final myLocal = _myLocalsMap[key]!;
+      otherLocalsMap.forEach((key, value) {
+        final myLocal = myLocalsMap[key]!;
         if (!myLocal.boxed && value.boxed) {
           locals[i][key] = myLocal.boxIfNeeded(this);
         } else if (myLocal.boxed && !value.boxed) {
@@ -142,14 +142,14 @@ mixin ScopeContext on Object implements AbstractScopeContext {
   }
 
   void restoreBoxingState(ContextSaveState initial) {
-    final _otherLocals = initial.locals;
-    final _myLocals = [...locals];
-    for (var i = 0; i < math.min(_otherLocals.length, _myLocals.length); i++) {
-      final _otherLocalsMap = _otherLocals[i];
-      final _myLocalsMap = _myLocals[i];
+    final otherLocals = initial.locals;
+    final myLocals = [...locals];
+    for (var i = 0; i < math.min(otherLocals.length, myLocals.length); i++) {
+      final otherLocalsMap = otherLocals[i];
+      final myLocalsMap = myLocals[i];
 
-      _otherLocalsMap.forEach((key, value) {
-        final myLocal = _myLocalsMap[key]!;
+      otherLocalsMap.forEach((key, value) {
+        final myLocal = myLocalsMap[key]!;
         if (!myLocal.boxed && value.boxed) {
           locals[i][key] =
               myLocal.copyWith(type: myLocal.type.copyWith(boxed: true));
@@ -249,18 +249,17 @@ class CompilerContext with ScopeContext {
         if (frameRef.isNotEmpty) {
           var frOffset = frameRef[0].scopeFrameOffset;
           for (var i = 0; i < frameRef.length - 1; i++) {
-            final _index =
-                BuiltinValue(intval: frameRef[i + 1].scopeFrameOffset)
-                    .push(this);
-            pushOp(IndexList.make(frOffset, _index.scopeFrameOffset),
+            final index = BuiltinValue(intval: frameRef[i + 1].scopeFrameOffset)
+                .push(this);
+            pushOp(IndexList.make(frOffset, index.scopeFrameOffset),
                 IndexList.LEN);
             frOffset = scopeFrameOffset++;
             allocNest.last++;
           }
 
-          final _index = BuiltinValue(intval: v.scopeFrameOffset).push(this);
+          final index = BuiltinValue(intval: v.scopeFrameOffset).push(this);
           pushOp(
-              IndexList.make(frOffset, _index.scopeFrameOffset), IndexList.LEN);
+              IndexList.make(frOffset, index.scopeFrameOffset), IndexList.LEN);
           allocNest.last++;
 
           return v.copyWith(scopeFrameOffset: scopeFrameOffset++);
@@ -311,15 +310,13 @@ class CompilerContext with ScopeContext {
   void inferTypes() {
     final inferredLocals = typeInferenceSaveStates.removeLast().locals;
     typeUninferenceSaveStates.add(saveState());
-    final _myLocals = [...locals];
-    for (var i = 0;
-        i < math.min(inferredLocals.length, _myLocals.length);
-        i++) {
+    final myLocals = [...locals];
+    for (var i = 0; i < math.min(inferredLocals.length, myLocals.length); i++) {
       final inferredLocalsMap = inferredLocals[i];
-      final _myLocalsMap = _myLocals[i];
+      final myLocalsMap = myLocals[i];
 
       inferredLocalsMap.forEach((key, value) {
-        final myLocal = _myLocalsMap[key];
+        final myLocal = myLocalsMap[key];
         if (myLocal != null && myLocal.type != value.type) {
           locals[i][key] =
               myLocal.copyWith(type: value.type.copyWith(boxed: myLocal.boxed));
@@ -330,15 +327,15 @@ class CompilerContext with ScopeContext {
 
   void uninferTypes() {
     final uninferredLocals = typeUninferenceSaveStates.removeLast().locals;
-    final _myLocals = [...locals];
+    final myLocals = [...locals];
     for (var i = 0;
-        i < math.min(uninferredLocals.length, _myLocals.length);
+        i < math.min(uninferredLocals.length, myLocals.length);
         i++) {
       final uninferredLocalsMap = uninferredLocals[i];
-      final _myLocalsMap = _myLocals[i];
+      final myLocalsMap = myLocals[i];
 
       uninferredLocalsMap.forEach((key, value) {
-        final myLocal = _myLocalsMap[key];
+        final myLocal = myLocalsMap[key];
         if (myLocal != null && myLocal.type != value.type) {
           locals[i][key] =
               myLocal.copyWith(type: value.type.copyWith(boxed: myLocal.boxed));
@@ -366,8 +363,12 @@ class ContextSaveState with ScopeContext {
         scopeDoesClose =
             context is CompilerContext ? [...context.scopeDoesClose] : [],
         allocNest = [...context.allocNest];
+  @override
+  // ignore: overridden_fields
   List<Map<String, Variable>> locals;
   List<bool> scopeDoesClose;
+  @override
+  // ignore: overridden_fields
   List<int> allocNest;
 
   @override

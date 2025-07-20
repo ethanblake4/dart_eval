@@ -62,7 +62,7 @@ Variable _compileShortCircuit(
   ctx.pushOp(CopyValue.make(outVar.scopeFrameOffset, L.scopeFrameOffset),
       CopyValue.LEN);
 
-  macroBranch(ctx, null, condition: (_ctx) {
+  macroBranch(ctx, null, condition: (ctx) {
     final Variable $comparison;
     switch (operator) {
       case '??':
@@ -81,7 +81,7 @@ Variable _compileShortCircuit(
         CheckEq.LEN);
     ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
     return Variable.alloc(ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
-  }, thenBranch: (_ctx, rt) {
+  }, thenBranch: (ctx, rt) {
     // Short-circuit: we only execute the RHS if the LHS is null
     final R = compileExpression(right, ctx).boxIfNeeded(ctx);
     rightType = R.type;

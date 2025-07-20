@@ -785,9 +785,9 @@ class $Iterable<E> implements Iterable<E>, $Instance {
       Runtime runtime, $Value? target, List<$Value?> args) {
     final $this = target?.$value as Iterable;
     final action = args[0] as EvalCallable;
-    $this.forEach(
-      (element) => action.call(runtime, null, [element]),
-    );
+    for (var element in $this) {
+      action.call(runtime, null, [element]);
+    }
     return null;
   }
 
@@ -885,7 +885,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   }
 
   @override
-  Iterable<E> takeWhile(bool test(E value)) => $value.takeWhile(test);
+  Iterable<E> takeWhile(bool Function(E value) test) => $value.takeWhile(test);
   static const __$takeWhile = $Function(_$takeWhile);
   static $Value? _$takeWhile(
       Runtime runtime, $Value? target, List<$Value?> args) {
@@ -908,7 +908,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   }
 
   @override
-  Iterable<E> skipWhile(bool test(E value)) => $value.skipWhile(test);
+  Iterable<E> skipWhile(bool Function(E value) test) => $value.skipWhile(test);
   static const __$skipWhile = $Function(_$skipWhile);
   static $Value? _$skipWhile(
       Runtime runtime, $Value? target, List<$Value?> args) {

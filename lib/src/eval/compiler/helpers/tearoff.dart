@@ -27,12 +27,12 @@ extension TearOff on Variable {
       targetType =
           ctx.visibleTypes[methodOffset!.file!]![methodOffset!.className!]!;
     } else {
-      final _dec =
+      final dec0 =
           ctx.topLevelDeclarationsMap[methodOffset!.file]![methodOffset!.name]!;
-      if (_dec.isBridge) {
+      if (dec0.isBridge) {
         throw CompileError('Cannot tear off bridged function');
       }
-      dec = _dec.declaration as FunctionDeclaration;
+      dec = dec0.declaration as FunctionDeclaration;
     }
 
     final FormalParameterList? parameters;
@@ -58,13 +58,13 @@ extension TearOff on Variable {
     final sfo = ctx.scopeFrameOffset;
     ctx.resetStack();
 
-    final _existingAllocs = 1 + (parameters?.parameters.length ?? 0);
-    ctx.beginAllocScope(existingAllocLen: _existingAllocs, closure: true);
+    final existingAllocs = 1 + (parameters?.parameters.length ?? 0);
+    ctx.beginAllocScope(existingAllocLen: existingAllocs, closure: true);
 
     final $prev = Variable(0, CoreTypes.list.ref(ctx), isFinal: true);
     ctx.setLocal('#prev', $prev);
 
-    ctx.scopeFrameOffset += _existingAllocs;
+    ctx.scopeFrameOffset += existingAllocs;
     final resolvedParams = resolveFPLDefaults(ctx, parameters, false,
         allowUnboxed: true, sortNamed: true, ignoreDefaults: true);
 

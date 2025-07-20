@@ -40,10 +40,10 @@ StatementInfo _compileSwitchCases(CompilerContext ctx, Variable switchExpr,
   return macroBranch(
     ctx,
     expectedReturnType,
-    condition: (_ctx) {
+    condition: (ctx) {
       if (currentCase is SwitchCase) {
         final caseVar = compileExpression(currentCase.expression, ctx);
-        return switchExpr.invoke(_ctx, '==', [caseVar]).result;
+        return switchExpr.invoke(ctx, '==', [caseVar]).result;
       } else if (currentCase is SwitchPatternCase) {
         final matches = patternMatchAndBind(
             ctx, currentCase.guardedPattern.pattern, switchExpr);
@@ -51,7 +51,7 @@ StatementInfo _compileSwitchCases(CompilerContext ctx, Variable switchExpr,
         if (guard != null) {
           // If there's a guard, we need to compile it and check if it matches
           final guardExpr = compileExpression(guard.expression, ctx);
-          return matches.invoke(_ctx, '&&', [guardExpr]).result;
+          return matches.invoke(ctx, '&&', [guardExpr]).result;
         }
         return matches;
       } else {
@@ -60,14 +60,14 @@ StatementInfo _compileSwitchCases(CompilerContext ctx, Variable switchExpr,
             currentCase);
       }
     },
-    thenBranch: (_ctx, _expectedReturnType) {
+    thenBranch: (ctx, expectedReturnType) {
       // Execute this case and following empty cases (Dart fall-through)
-      return _executeMatchingCases(_ctx, cases, index, _expectedReturnType);
+      return _executeMatchingCases(ctx, cases, index, expectedReturnType);
     },
-    elseBranch: (_ctx, _expectedReturnType) {
+    elseBranch: (ctx, expectedReturnType) {
       // Try next case
       return _compileSwitchCases(
-          _ctx, switchExpr, cases, index + 1, _expectedReturnType);
+          ctx, switchExpr, cases, index + 1, expectedReturnType);
     },
     source: source,
   );

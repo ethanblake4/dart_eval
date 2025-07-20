@@ -7,13 +7,13 @@ import 'package:dart_eval/src/eval/compiler/model/compilation_unit.dart';
 
 /// A unit of Dart source code, from a file or String.
 class DartSource {
-  DartSource(String _uri, String source)
-      : uri = Uri.parse(_uri),
+  DartSource(String uri, String source)
+      : uri = Uri.parse(uri),
         stringSource = source,
         fileSource = null;
 
-  DartSource.file(String _uri, File file)
-      : uri = Uri.parse(_uri),
+  DartSource.file(String uri, File file)
+      : uri = Uri.parse(uri),
         fileSource = file,
         stringSource = null;
 
@@ -94,13 +94,13 @@ class DartSource {
 
   @override
   String toString() {
-    final String _source;
+    final String source;
     if (stringSource != null) {
-      _source = stringSource!;
+      source = stringSource!;
     } else {
-      _source = fileSource!.readAsStringSync();
+      source = fileSource!.readAsStringSync();
     }
-    return _source;
+    return source;
   }
 }
 

@@ -32,18 +32,18 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
         throw CompileError(
             'Invalid @RuntimeOverride annotation', d, ctx.library, ctx);
       }
-      final _version = exp.expression as StringLiteral;
-      version = _version.stringValue;
+      final version0 = exp.expression as StringLiteral;
+      version = version0.stringValue;
     }
     final overrideName = name.stringValue!;
     ctx.runtimeOverrideMap[overrideName] =
         OverrideSpec(pos, version ?? '<${ctx.version}');
   }
 
-  final _existingAllocs =
+  final existingAllocs =
       d.functionExpression.parameters?.parameters.length ?? 0;
-  ctx.beginAllocScope(existingAllocLen: _existingAllocs);
-  ctx.scopeFrameOffset += _existingAllocs;
+  ctx.beginAllocScope(existingAllocLen: existingAllocs);
+  ctx.scopeFrameOffset += existingAllocs;
   final resolvedParams = resolveFPLDefaults(
       ctx, d.functionExpression.parameters, false,
       allowUnboxed: true);

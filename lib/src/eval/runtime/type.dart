@@ -45,14 +45,14 @@ class RuntimeTypeSet {
   final List<RuntimeTypeSet> typeArgs;
 
   bool isAssignableTo(RuntimeType type) {
-    final _ta = typeArgs;
-    final _tta = type.typeArgs;
-    final _len = _ta.length;
-    if (_len != _tta.length) {
+    final ta = typeArgs;
+    final tta = type.typeArgs;
+    final len = ta.length;
+    if (len != tta.length) {
       return false;
     }
-    for (var i = 0; i < _len; i++) {
-      if (!_ta[i].isAssignableTo(_tta[i])) {
+    for (var i = 0; i < len; i++) {
+      if (!ta[i].isAssignableTo(tta[i])) {
         return false;
       }
     }

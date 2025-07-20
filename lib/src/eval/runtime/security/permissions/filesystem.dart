@@ -62,7 +62,7 @@ class FilesystemReadPermission extends FilesystemPermission {
       FilesystemReadPermission._internal('');
 
   /// Internal constructor for special cases
-  const FilesystemReadPermission._internal(String path) : super._internal(path);
+  const FilesystemReadPermission._internal(super.path) : super._internal();
 
   /// Create a new filesystem permission that matches any file in a directory
   /// or one of its subdirectories.
@@ -108,8 +108,7 @@ class FilesystemWritePermission extends FilesystemPermission {
       FilesystemWritePermission._internal('');
 
   /// Internal constructor for special cases
-  const FilesystemWritePermission._internal(String path)
-      : super._internal(path);
+  const FilesystemWritePermission._internal(super.path) : super._internal();
 
   /// Create a new filesystem permission that matches any file in a directory
   /// or one of its subdirectories.

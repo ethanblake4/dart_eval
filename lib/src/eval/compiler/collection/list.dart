@@ -43,7 +43,7 @@ Variable compileListLiteral(ListLiteral l, CompilerContext ctx,
 
   ctx.pushOp(PushList.make(), PushList.LEN);
 
-  var _list = Variable.alloc(
+  var list = Variable.alloc(
     ctx,
     CoreTypes.list.ref(ctx).copyWith(
         specifiedTypeArgs: [listSpecifiedType ?? CoreTypes.dynamic.ref(ctx)],
@@ -54,14 +54,14 @@ Variable compileListLiteral(ListLiteral l, CompilerContext ctx,
   ctx.labels.add(SimpleCompilerLabel());
   final resultTypes = <TypeRef>[];
   for (final e in elements) {
-    resultTypes.addAll(compileListElement(e, _list, ctx, _boxListElements));
+    resultTypes.addAll(compileListElement(e, list, ctx, _boxListElements));
   }
   ctx.labels.removeLast();
   ctx.endAllocScope();
 
   if (listSpecifiedType == null) {
     return Variable(
-        _list.scopeFrameOffset,
+        list.scopeFrameOffset,
         CoreTypes.list.ref(ctx).copyWith(boxed: false, specifiedTypeArgs: [
           resultTypes.isEmpty
               ? CoreTypes.dynamic.ref(ctx)
@@ -69,55 +69,55 @@ Variable compileListLiteral(ListLiteral l, CompilerContext ctx,
         ]));
   }
 
-  return _list;
+  return list;
 }
 
 Variable boxListContents(CompilerContext ctx, Variable list) {
   late Variable $i, $1, len, newList;
 
   macroLoop(ctx, AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true),
-      initialization: (_ctx) {
-    $i = BuiltinValue(intval: 0).push(_ctx);
-    $1 = BuiltinValue(intval: 1).push(_ctx);
+      initialization: (ctx) {
+    $i = BuiltinValue(intval: 0).push(ctx);
+    $1 = BuiltinValue(intval: 1).push(ctx);
 
     // final len = list.length;
-    len = Variable.alloc(_ctx, CoreTypes.int.ref(ctx).copyWith(boxed: false));
-    _ctx.pushOp(
+    len = Variable.alloc(ctx, CoreTypes.int.ref(ctx).copyWith(boxed: false));
+    ctx.pushOp(
         PushIterableLength.make(list.scopeFrameOffset), PushIterableLength.LEN);
 
     // final newList = <T{boxed}>[];
-    _ctx.pushOp(PushList.make(), PushList.LEN);
+    ctx.pushOp(PushList.make(), PushList.LEN);
 
     newList = Variable.alloc(
-        _ctx,
+        ctx,
         CoreTypes.list.ref(ctx).copyWith(boxed: true, specifiedTypeArgs: [
           list.type.specifiedTypeArgs[0].copyWith(boxed: true)
         ]));
-  }, condition: (_ctx) {
+  }, condition: (ctx) {
     // i < len
     final v =
-        Variable.alloc(_ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
-    _ctx.pushOp(
+        Variable.alloc(ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
+    ctx.pushOp(
         NumLt.make($i.scopeFrameOffset, len.scopeFrameOffset), NumLt.LEN);
     return v;
-  }, body: (_ctx, rt) {
-    final v = Variable.alloc(_ctx, list.type.specifiedTypeArgs[0]);
-    _ctx.pushOp(IndexList.make(list.scopeFrameOffset, $i.scopeFrameOffset),
+  }, body: (ctx, rt) {
+    final v = Variable.alloc(ctx, list.type.specifiedTypeArgs[0]);
+    ctx.pushOp(IndexList.make(list.scopeFrameOffset, $i.scopeFrameOffset),
         IndexList.LEN);
     final boxed = v.boxIfNeeded(ctx);
-    _ctx.pushOp(
+    ctx.pushOp(
         ListAppend.make(newList.scopeFrameOffset, boxed.scopeFrameOffset),
         ListAppend.LEN);
     return StatementInfo(-1);
-  }, update: (_ctx) {
+  }, update: (ctx) {
     final ip1 =
-        Variable.alloc(_ctx, CoreTypes.int.ref(ctx).copyWith(boxed: false));
-    _ctx.pushOp(
+        Variable.alloc(ctx, CoreTypes.int.ref(ctx).copyWith(boxed: false));
+    ctx.pushOp(
         NumAdd.make($i.scopeFrameOffset, $1.scopeFrameOffset), NumAdd.LEN);
-    _ctx.pushOp(CopyValue.make($i.scopeFrameOffset, ip1.scopeFrameOffset),
+    ctx.pushOp(CopyValue.make($i.scopeFrameOffset, ip1.scopeFrameOffset),
         CopyValue.LEN);
-  }, after: (_ctx) {
-    _ctx.pushOp(CopyValue.make(list.scopeFrameOffset, newList.scopeFrameOffset),
+  }, after: (ctx) {
+    ctx.pushOp(CopyValue.make(list.scopeFrameOffset, newList.scopeFrameOffset),
         CopyValue.LEN);
   });
 
@@ -135,17 +135,17 @@ List<TypeRef> compileListElement(
     CollectionElement e, Variable list, CompilerContext ctx, bool box) {
   final listType = list.type.specifiedTypeArgs[0];
   if (e is Expression) {
-    var _result = compileExpression(e, ctx, listType);
-    if (!_result.type.resolveTypeChain(ctx).isAssignableTo(ctx, listType)) {
+    var result = compileExpression(e, ctx, listType);
+    if (!result.type.resolveTypeChain(ctx).isAssignableTo(ctx, listType)) {
       throw CompileError(
-          'Cannot use expression of type ${_result.type} in list of type $listType');
+          'Cannot use expression of type ${result.type} in list of type $listType');
     }
     if (box) {
-      _result = _result.boxIfNeeded(ctx);
+      result = result.boxIfNeeded(ctx);
     }
-    ctx.pushOp(ListAppend.make(list.scopeFrameOffset, _result.scopeFrameOffset),
+    ctx.pushOp(ListAppend.make(list.scopeFrameOffset, result.scopeFrameOffset),
         ListAppend.LEN);
-    return [_result.type];
+    return [result.type];
   } else if (e is IfElement) {
     return compileIfElementForList(e, list, ctx, box);
   } else if (e is ForElement) {

@@ -10,12 +10,16 @@ class CompilerLabel {
 }
 
 class SimpleCompilerLabel implements CompilerLabel {
+  @override
   get offset => -1;
+  @override
   final String? name;
+  @override
   get type => LabelType.block;
 
   const SimpleCompilerLabel({this.name});
 
+  @override
   get cleanup => (CompilerContext ctx) {
         ctx.endAllocScopeQuiet();
         return -1;

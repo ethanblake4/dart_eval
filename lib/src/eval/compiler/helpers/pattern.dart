@@ -17,7 +17,7 @@ TypeRef patternTypeBound(CompilerContext ctx, ListPatternElement pattern,
     {AstNode? source, TypeRef? bound}) {
   switch (pattern) {
     case ListPattern pat:
-      TypeRef? specifiedTypeArg = null;
+      TypeRef? specifiedTypeArg;
       if (pat.typeArguments != null) {
         if (pat.typeArguments!.arguments.length != 1) {
           throw CompileError(
@@ -169,11 +169,11 @@ Variable patternMatchAndBind(
         if (!(V.type.isUnboxedAcrossFunctionBoundaries)) {
           V = V.boxIfNeeded(ctx);
         }
-        var _v = Variable.alloc(ctx, V.type, isFinal: isFinal);
+        var v = Variable.alloc(ctx, V.type, isFinal: isFinal);
         ctx.pushOp(PushNull.make(), PushNull.LEN);
-        ctx.pushOp(CopyValue.make(_v.scopeFrameOffset, V.scopeFrameOffset),
+        ctx.pushOp(CopyValue.make(v.scopeFrameOffset, V.scopeFrameOffset),
             CopyValue.LEN);
-        ctx.setLocal(variableName, _v);
+        ctx.setLocal(variableName, v);
       } else {
         ctx.setLocal(variableName, V.copyWith(isFinal: isFinal));
       }

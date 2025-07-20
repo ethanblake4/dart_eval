@@ -20,11 +20,11 @@ Variable compileAssignmentExpression(
   } else if (e.operator.type.binaryOperatorOfCompoundAssignment ==
       TokenType.QUESTION_QUESTION) {
     late Variable result;
-    macroBranch(ctx, null, condition: (_ctx) {
+    macroBranch(ctx, null, condition: (ctx) {
       return L
-          .getValue(_ctx)
-          .invoke(ctx, '==', [BuiltinValue().push(_ctx)]).result;
-    }, thenBranch: (_ctx, rt) {
+          .getValue(ctx)
+          .invoke(ctx, '==', [BuiltinValue().push(ctx)]).result;
+    }, thenBranch: (ctx, rt) {
       result = L.setValue(ctx, R.boxIfNeeded(ctx));
       return StatementInfo(-1);
     });

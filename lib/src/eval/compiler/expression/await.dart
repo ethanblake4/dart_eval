@@ -8,16 +8,16 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 Variable compileAwaitExpression(AwaitExpression e, CompilerContext ctx) {
-  AstNode? _e = e;
-  while (_e != null) {
-    if (_e is FunctionBody) {
-      if (!_e.isAsynchronous) {
+  AstNode? e0 = e;
+  while (e0 != null) {
+    if (e0 is FunctionBody) {
+      if (!e0.isAsynchronous) {
         throw CompileError('Cannot use await in a non-async context');
       } else {
         break;
       }
     }
-    _e = _e.parent;
+    e0 = e0.parent;
   }
 
   final subject = compileExpression(e.expression, ctx);
@@ -27,10 +27,10 @@ Variable compileAwaitExpression(AwaitExpression e, CompilerContext ctx) {
     throw CompileError("Cannot await something that isn't a Future");
   }
 
-  var _completer = ctx.lookupLocal('#completer');
+  var completer = ctx.lookupLocal('#completer');
 
   final awaitOp =
-      Await.make(_completer!.scopeFrameOffset, subject.scopeFrameOffset);
+      Await.make(completer!.scopeFrameOffset, subject.scopeFrameOffset);
   ctx.pushOp(awaitOp, Await.LEN);
 
   ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);

@@ -24,21 +24,21 @@ dynamic eval(String source,
     plugin.configureForCompile(compiler);
   }
 
-  var _source = source;
+  var source0 = source;
 
   if (!RegExp(r'(?:\w* )?' + function + r'\s?\([\s\S]*?\)\s?({|=>)')
-      .hasMatch(_source)) {
-    if (!_source.contains(';')) {
-      _source = '$_source;';
-      if (!_source.contains('return')) {
-        _source = 'return $_source';
+      .hasMatch(source0)) {
+    if (!source0.contains(';')) {
+      source0 = '$source0;';
+      if (!source0.contains('return')) {
+        source0 = 'return $source0';
       }
     }
-    _source = 'dynamic $function() {$_source}';
+    source0 = 'dynamic $function() {$source0}';
   }
 
   final program = compiler.compile({
-    'default': {'main.dart': _source}
+    'default': {'main.dart': source0}
   });
 
   if (outputFile != null) {

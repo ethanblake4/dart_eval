@@ -2,7 +2,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 
-/// Represents either a real [TypeRef] or an unresolved type name e.g. <T>
+/// Represents either a real [TypeRef] or an unresolved type name e.g. "T"
 class FunctionTypeAnnotation {
   final TypeRef? type;
   final String? name;
@@ -13,9 +13,9 @@ class FunctionTypeAnnotation {
 
   factory FunctionTypeAnnotation.fromBridgeAnnotation(
       CompilerContext ctx, BridgeTypeAnnotation annotation) {
-    final _type = annotation.type;
-    if (_type.ref != null) {
-      return FunctionTypeAnnotation.name(_type.ref!);
+    final type = annotation.type;
+    if (type.ref != null) {
+      return FunctionTypeAnnotation.name(type.ref!);
     } else {
       return FunctionTypeAnnotation.type(
           TypeRef.fromBridgeAnnotation(ctx, annotation));

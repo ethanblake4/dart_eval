@@ -21,19 +21,19 @@ Variable compileConditionalExpression(
 
   macroBranch(
       ctx, boundType == null ? null : AlwaysReturnType(boundType, false),
-      condition: (_ctx) {
-    var c = compileExpression(e.condition, _ctx);
+      condition: (ctx) {
+    var c = compileExpression(e.condition, ctx);
     if (!c.type.isAssignableTo(ctx, CoreTypes.bool.ref(ctx))) {
       throw CompileError('Condition must be a boolean');
     }
 
     return c;
-  }, thenBranch: (_ctx, rt) {
+  }, thenBranch: (ctx, rt) {
     final v = compileExpression(e.thenExpression, ctx, boundType);
     types.add(v.type);
     vRef.setValue(ctx, v);
     return StatementInfo(-1);
-  }, elseBranch: (_ctx, rt) {
+  }, elseBranch: (ctx, rt) {
     final v = compileExpression(e.elseExpression, ctx, boundType);
     types.add(v.type);
     vRef.setValue(ctx, v);

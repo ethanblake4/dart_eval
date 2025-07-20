@@ -42,17 +42,17 @@ void compileVariableDeclarationList(
         res = res.boxIfNeeded(ctx);
       }
       if (res.name != null) {
-        final _type = type ?? res.type;
-        var _v = Variable.alloc(
+        final type0 = type ?? res.type;
+        var v = Variable.alloc(
           ctx,
-          _type.isUnboxedAcrossFunctionBoundaries
-              ? _type.copyWith(boxed: false)
-              : _type,
+          type0.isUnboxedAcrossFunctionBoundaries
+              ? type0.copyWith(boxed: false)
+              : type0,
         );
         ctx.pushOp(PushNull.make(), PushNull.LEN);
-        ctx.pushOp(CopyValue.make(_v.scopeFrameOffset, res.scopeFrameOffset),
+        ctx.pushOp(CopyValue.make(v.scopeFrameOffset, res.scopeFrameOffset),
             CopyValue.LEN);
-        ctx.setLocal(li.name.lexeme, _v);
+        ctx.setLocal(li.name.lexeme, v);
       } else {
         ctx.setLocal(
             li.name.lexeme,

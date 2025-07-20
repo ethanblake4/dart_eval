@@ -114,7 +114,7 @@ Map<TypeRef, Map<String, KnownMethod>> getKnownMethods(ctx) {
   final toStringOp =
       KnownMethod(AlwaysReturnType(CoreTypes.string.ref(ctx), false), [], {});
 
-  final _knownObject = <String, KnownMethod>{
+  final knownObject = <String, KnownMethod>{
     '==': objectComparisonOp,
     'toString': toStringOp,
   };
@@ -162,9 +162,9 @@ Map<TypeRef, Map<String, KnownMethod>> getKnownMethods(ctx) {
       {});
 
   return _knownMethods = {
-    CoreTypes.nullType.ref(ctx): {..._knownObject},
+    CoreTypes.nullType.ref(ctx): {...knownObject},
     CoreTypes.int.ref(ctx): {
-      ..._knownObject,
+      ...knownObject,
       '+': intBinaryOp,
       '-': intBinaryOp,
       '*': intBinaryOp,
@@ -185,7 +185,7 @@ Map<TypeRef, Map<String, KnownMethod>> getKnownMethods(ctx) {
       'compareTo': numCompareToOp
     },
     CoreTypes.double.ref(ctx): {
-      ..._knownObject,
+      ...knownObject,
       '+': doubleBinaryOp,
       '-': doubleBinaryOp,
       '*': doubleBinaryOp,
@@ -201,7 +201,7 @@ Map<TypeRef, Map<String, KnownMethod>> getKnownMethods(ctx) {
       'compareTo': numCompareToOp
     },
     CoreTypes.num.ref(ctx): {
-      ..._knownObject,
+      ...knownObject,
       '+': numBinaryOp,
       '-': numBinaryOp,
       '*': numBinaryOp,
@@ -223,7 +223,7 @@ Map<TypeRef, Map<String, KnownMethod>> getKnownMethods(ctx) {
       '!=': boolBinaryOp
     },
     CoreTypes.string.ref(ctx): {
-      ..._knownObject,
+      ...knownObject,
       '+': KnownMethod(AlwaysReturnType(CoreTypes.string.ref(ctx), false),
           [KnownMethodArg('other', CoreTypes.string.ref(ctx), false)], {}),
       '==': KnownMethod(AlwaysReturnType(CoreTypes.bool.ref(ctx), false),
@@ -297,7 +297,7 @@ Map<TypeRef, Map<String, KnownMethod>> getKnownMethods(ctx) {
       'trimRight': KnownMethod(
           AlwaysReturnType(CoreTypes.string.ref(ctx), false), [], {}),
     },
-    CoreTypes.enumType.ref(ctx): {..._knownObject}
+    CoreTypes.enumType.ref(ctx): {...knownObject}
   };
 }
 

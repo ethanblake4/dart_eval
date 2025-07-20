@@ -18,7 +18,7 @@ class Variable {
       this.isFinal = false,
       this.concreteTypes = const [],
       CallingConvention? callingConvention})
-      : this.callingConvention = callingConvention ??
+      : callingConvention = callingConvention ??
             ((type == TypeRef(dartCoreFile, 'Function') && methodOffset == null)
                 ? CallingConvention.dynamic
                 : CallingConvention
@@ -160,9 +160,9 @@ class Variable {
 
   void inferType(CompilerContext ctx, TypeRef type) {
     if (name != null && ctx.typeInferenceSaveStates.isNotEmpty) {
-      final _locals = ctx.typeInferenceSaveStates.last.locals;
-      _locals[frameIndex!][name!] =
-          _locals[frameIndex!][name!]!.copyWith(type: type);
+      final locals = ctx.typeInferenceSaveStates.last.locals;
+      locals[frameIndex!][name!] =
+          locals[frameIndex!][name!]!.copyWith(type: type);
     }
   }
 
@@ -253,27 +253,27 @@ class Variable {
       return InvokeResult($this, result, []);
     }
 
-    final _boxed = boxUnboxMultiple(ctx, [$this, ...args], true);
-    $this = _boxed[0];
-    final _args = _boxed.sublist(1);
-    final checkEq = method == '==' && _args.length == 1;
-    final checkNotEq = method == '!=' && _args.length == 1;
+    final boxed = boxUnboxMultiple(ctx, [$this, ...args], true);
+    $this = boxed[0];
+    final args0 = boxed.sublist(1);
+    final checkEq = method == '==' && args0.length == 1;
+    final checkNotEq = method == '!=' && args0.length == 1;
     if (checkEq || checkNotEq) {
-      if ($this.scopeFrameOffset == -1 && _args[0].scopeFrameOffset == -1) {
-        final result = $this.methodOffset! == _args[0].methodOffset!;
+      if ($this.scopeFrameOffset == -1 && args0[0].scopeFrameOffset == -1) {
+        final result = $this.methodOffset! == args0[0].methodOffset!;
         final rV = BuiltinValue(boolval: result).push(ctx);
-        return InvokeResult($this, rV, _args);
+        return InvokeResult($this, rV, args0);
       } else if ($this.scopeFrameOffset == -1) {
         $this = $this.tearOff(ctx);
-      } else if (_args[0].scopeFrameOffset == -1) {
-        _args[0] = _args[0].tearOff(ctx);
+      } else if (args0[0].scopeFrameOffset == -1) {
+        args0[0] = args0[0].tearOff(ctx);
       }
       ctx.pushOp(
-          CheckEq.make($this.scopeFrameOffset, _args[0].scopeFrameOffset),
+          CheckEq.make($this.scopeFrameOffset, args0[0].scopeFrameOffset),
           CheckEq.LEN);
     } else {
-      for (final _arg in _args) {
-        ctx.pushOp(PushArg.make(_arg.scopeFrameOffset), PushArg.LEN);
+      for (final invokeArg in args0) {
+        ctx.pushOp(PushArg.make(invokeArg.scopeFrameOffset), PushArg.LEN);
       }
 
       final invokeOp = InvokeDynamic.make(
@@ -295,14 +295,14 @@ class Variable {
       returnType = AlwaysReturnType(CoreTypes.bool.ref(ctx), false);
     } else {
       returnType = AlwaysReturnType.fromInstanceMethodOrBuiltin(
-          ctx, $this.type, method, [..._args.map((e) => e.type)], {});
+          ctx, $this.type, method, [...args0.map((e) => e.type)], {});
     }
 
     final v = Variable.alloc(
         ctx,
         (returnType?.type ?? CoreTypes.dynamic.ref(ctx))
             .copyWith(boxed: !(checkEq || checkNotEq)));
-    return InvokeResult($this, v, _args);
+    return InvokeResult($this, v, args0);
   }
 
   Variable getProperty(CompilerContext ctx, String name, {AstNode? source}) {
@@ -316,7 +316,7 @@ class Variable {
       ctx.pushOp(PushRuntimeType.make(scopeFrameOffset), PushRuntimeType.LEN);
       return Variable.alloc(ctx, CoreTypes.type.ref(ctx));
     }
-    final _type = TypeRef.lookupFieldType(ctx, type, name, source: source)
+    final fieldType = TypeRef.lookupFieldType(ctx, type, name, source: source)
             ?.resolveTypeChain(ctx) ??
         CoreTypes.dynamic.ref(ctx);
     if (concreteTypes.length == 1) {
@@ -335,7 +335,7 @@ class Variable {
             PushObjectPropertyImpl.make(scopeFrameOffset, offset.offset ?? -1);
         final loc = ctx.pushOp(op, PushObjectPropertyImpl.length);
         ctx.offsetTracker.setOffset(loc, offset);
-        return Variable.alloc(ctx, _type);
+        return Variable.alloc(ctx, fieldType);
       }
     }
     final op = PushObjectProperty.make(
@@ -343,7 +343,7 @@ class Variable {
     ctx.pushOp(op, PushObjectProperty.len(op));
 
     ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-    return Variable.alloc(ctx, _type);
+    return Variable.alloc(ctx, fieldType);
   }
 
   static List<Variable> boxUnboxMultiple(
@@ -369,8 +369,8 @@ class Variable {
 
   @override
   String toString() {
-    final _name = name == null ? 'unnamed' : '"$name"';
-    return 'Variable{$_name at L$scopeFrameOffset, $type, '
+    final varName = name == null ? 'unnamed' : '"$name"';
+    return 'Variable{$varName at L$scopeFrameOffset, $type, '
         '${methodOffset == null ? '' : 'method: $methodReturnType $methodOffset, '}'
         '${boxed ? 'boxed' : 'unboxed'}, F[$frameIndex]}';
   }

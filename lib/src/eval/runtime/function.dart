@@ -171,8 +171,10 @@ class $Function extends EvalFunction {
 
   final EvalCallableFunc func;
 
+  @override
   get $value => func;
 
+  @override
   get $reified => func;
 
   @override
@@ -209,8 +211,10 @@ class $Closure extends EvalFunction {
   final EvalCallableFunc func;
   final $Instance? $this;
 
+  @override
   get $value => func;
 
+  @override
   get $reified => func;
 
   @override

@@ -1,3 +1,5 @@
+// ignore_for_file: constant_identifier_names
+
 part of '../runtime.dart';
 
 class InvokeDynamic implements EvcOp {
@@ -16,24 +18,24 @@ class InvokeDynamic implements EvcOp {
 
   @override
   void run(Runtime runtime) {
-    final _method = runtime.constantPool[_methodIdx] as String;
+    final method0 = runtime.constantPool[_methodIdx] as String;
     var object = runtime.frame[_location];
 
     while (true) {
       if (object is $InstanceImpl) {
         final methods = object.evalClass.methods;
-        final _offset = methods[_method];
-        if (_offset == null) {
+        final offset = methods[method0];
+        if (offset == null) {
           object = object.evalSuperclass;
           continue;
         }
         runtime.callStack.add(runtime._prOffset);
         runtime.catchStack.add([]);
-        runtime._prOffset = _offset;
+        runtime._prOffset = offset;
         return;
       }
 
-      if (_method == 'call' && object is EvalFunctionPtr) {
+      if (method0 == 'call' && object is EvalFunctionPtr) {
         final cpat = runtime.args[0] as List;
         final cnat = runtime.args[2] as List;
 
@@ -70,10 +72,10 @@ class InvokeDynamic implements EvcOp {
             throw ArgumentError(
                 'FunctionPtr: Cannot invoke function with the given arguments');
           }
-          final _t = csNamedArgTypes[j];
-          final _ti = object.sortedNamedArgTypes[i];
+          final t = csNamedArgTypes[j];
+          final ti = object.sortedNamedArgTypes[i];
           if (object.sortedNamedArgs[i] == csNamedArgs[j] &&
-              _t.isAssignableTo(_ti)) {
+              t.isAssignableTo(ti)) {
             j++;
           }
           i++;
@@ -95,7 +97,7 @@ class InvokeDynamic implements EvcOp {
         runtime._prOffset = object.offset;
         return;
       }
-      final method = ((object as $Instance).$getProperty(runtime, _method)
+      final method = ((object as $Instance).$getProperty(runtime, method0)
           as EvalFunction);
       try {
         runtime.returnValue = method.call(runtime, object, runtime.args.cast());
@@ -133,15 +135,15 @@ class CheckEq implements EvcOp {
     while (true) {
       if (vx is $InstanceImpl) {
         final methods = vx.evalClass.methods;
-        final _offset = methods['=='];
-        if (_offset == null) {
+        final offset = methods['=='];
+        if (offset == null) {
           vx = vx.evalSuperclass;
           continue;
         }
         runtime.args = [v2];
         runtime.callStack.add(runtime._prOffset);
         runtime.catchStack.add([]);
-        runtime._prOffset = _offset;
+        runtime._prOffset = offset;
 
         return;
       }
@@ -248,7 +250,7 @@ class PushObjectProperty implements EvcOp {
 
   @override
   void run(Runtime runtime) {
-    final _property = runtime.constantPool[_propertyIdx] as String;
+    final property = runtime.constantPool[_propertyIdx] as String;
     var base = runtime.frame[_location];
     var object = base;
 
@@ -256,14 +258,14 @@ class PushObjectProperty implements EvcOp {
       if (object is $InstanceImpl) {
         base = object;
         final evalClass = object.evalClass;
-        final _offset = evalClass.getters[_property];
-        if (_offset == null) {
-          final method = evalClass.methods[_property];
+        final offset = evalClass.getters[property];
+        if (offset == null) {
+          final method = evalClass.methods[property];
           if (method == null) {
             object = object.evalSuperclass;
             if (object == null) {
               runtime.returnValue =
-                  (base as $InstanceImpl).getCoreObjectProperty(_property);
+                  (base as $InstanceImpl).getCoreObjectProperty(property);
               return;
             }
             continue;
@@ -275,11 +277,11 @@ class PushObjectProperty implements EvcOp {
         runtime.args.add(object);
         runtime.callStack.add(runtime._prOffset);
         runtime.catchStack.add([]);
-        runtime._prOffset = _offset;
+        runtime._prOffset = offset;
         return;
       }
 
-      final result = ((object as $Instance).$getProperty(runtime, _property));
+      final result = ((object as $Instance).$getProperty(runtime, property));
       runtime.returnValue = result;
       runtime.args = [];
       return;

@@ -9,12 +9,12 @@ import 'statement.dart';
 
 StatementInfo compileReturn(CompilerContext ctx, ReturnStatement s,
     AlwaysReturnType? expectedReturnType) {
-  AstNode? _e = s;
-  while (_e != null) {
-    if (_e is FunctionBody) {
+  AstNode? e = s;
+  while (e != null) {
+    if (e is FunctionBody) {
       break;
     }
-    _e = _e.parent;
+    e = e.parent;
   }
 
   final expression = s.expression;
@@ -26,5 +26,5 @@ StatementInfo compileReturn(CompilerContext ctx, ReturnStatement s,
       ctx,
       expectedReturnType ?? AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true),
       value,
-      isAsync: (_e as FunctionBody).isAsynchronous);
+      isAsync: (e as FunctionBody).isAsynchronous);
 }

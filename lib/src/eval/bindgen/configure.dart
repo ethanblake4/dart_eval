@@ -24,19 +24,19 @@ String constructorsForRuntime(BindgenContext ctx, ClassElement2 element,
 String constructorForRuntime(
     BindgenContext ctx, ClassElement2 element, ConstructorElement2 constructor,
     {bool isBridge = false}) {
-  var name = constructor.name3 == null ? '' : constructor.name3;
+  var name = constructor.name3 ?? '';
   if (name == 'new') {
     name = '';
   }
   final fullyQualifiedConstructorId = '${element.name3}.$name';
 
-  final staticName = constructor.name3 == null ? '' : constructor.name3;
+  final staticName = constructor.name3 ?? '';
   final uri = ctx.libOverrides[element.name3] ?? ctx.uri;
   final bridgeParam = isBridge ? ', isBridge: true' : '';
 
   return '''
     runtime.registerBridgeFunc(
-      '${uri}',
+      '$uri',
       '$fullyQualifiedConstructorId',
       \$${element.name3}${isBridge ? '\$bridge' : ''}.\$$staticName
       $bridgeParam
@@ -58,7 +58,7 @@ String staticMethodForRuntime(
   final uri = ctx.libOverrides[element.name3] ?? ctx.uri;
   return '''
     runtime.registerBridgeFunc(
-      '${uri}',
+      '$uri',
       '${element.name3}.${method.name3}',
       \$${element.name3}${isBridge ? '\$bridge' : ''}.\$${method.name3}
     );
@@ -79,7 +79,7 @@ String staticGetterForRuntime(
   final uri = ctx.libOverrides[element.name3] ?? ctx.uri;
   return '''
     runtime.registerBridgeFunc(
-      '${uri}',
+      '$uri',
       '${element.name3}.${getter.name3}*g',
       \$${element.name3}${isBridge ? '\$bridge' : ''}.\$${getter.name3}
     );
@@ -100,7 +100,7 @@ String staticSetterForRuntime(
   final uri = ctx.libOverrides[element.name3] ?? ctx.uri;
   return '''
     runtime.registerBridgeFunc(
-      '${uri}',
+      '$uri',
       '${element.name3}.${setter.name3}*s',
       \$${element.name3}${isBridge ? '\$bridge' : ''}.set\$${setter.name3}
     );

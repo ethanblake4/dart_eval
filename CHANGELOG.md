@@ -1,3 +1,39 @@
+## 0.8.0
+- (Breaking) Type parameters provided to BridgeTypeRef are now
+  `BridgeTypeAnnotation` objects instead of `BridgeTypeRef` objects to allow
+  for specifying nullability.
+- (Breaking) Overhauled filesystem permissions to use bespoke filesystem-based
+  matching with symlink support instead of RegEx (thanks @MohamedAl-Kainai)
+- Support for switch statements (thanks @apps-auth)
+- Support for Sets
+- Support for record types
+- Support for patterns and switch pattern matching
+- Fix inability to compile super parameters without an explicit call to
+  `super()`
+- Enable short-circuit evaluation for logical operators `&&` and `||`
+- Add basic support for calling functions on `dynamic` types. This is
+  currently limited to functions without named arguments.
+- Update analyzer to v7 (thanks @normidar)
+- Binding generator is now stable and is the recommended way to create
+  bindings for Dart classes. See the README for details.
+- Binding generator can now generate bridge bindings in addition to
+  wrapper bindings.
+- Binding generator can now automatically create an EvalPlugin for your
+  library, which can be used to register the bindings with the runtime.
+- Binding generator can now use JSON binding files to allow defining bindings
+  that rely on an existing plugin.
+- Fix bug that could occasionally cause errors when modifying variables in
+  an `if` branch
+- Fix bug when accessing null values from a Map
+- Fix tree-shaking of long reference chains within a single library
+- Support for extending a class referenced via an import prefix
+- Fix referencing a variable via an import prefix
+- Binding generator correctly handles type references with generic type
+  parameters
+- Add bindings for `ByteConversionSink` and `ChunkedConversionSink`
+- Add bindings for `num.abs()`, `Map.keys` and `Map.values` (thanks @knatola)
+- Improve bindings for `Encoding`
+
 ## 0.7.11
 - Support for list spreads (`...` operator) (thanks @apps-auth)
 - New `implicitSupers` option for the binding generator to automatically

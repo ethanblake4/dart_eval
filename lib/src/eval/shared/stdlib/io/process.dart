@@ -615,24 +615,24 @@ class $Process implements $Instance {
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case 'exitCode':
-        final _exitCode = $value.exitCode;
-        return $Future.wrap(_exitCode.then((e) => $int(e)));
+        final exitCode = $value.exitCode;
+        return $Future.wrap(exitCode.then((e) => $int(e)));
 
       case 'stdout':
-        final _stdout = $value.stdout;
-        return $Stream.wrap(_stdout.map((e) => $List.view(e, (e) => $int(e))));
+        final stdout = $value.stdout;
+        return $Stream.wrap(stdout.map((e) => $List.view(e, (e) => $int(e))));
 
       case 'stderr':
-        final _stderr = $value.stderr;
-        return $Stream.wrap(_stderr.map((e) => $List.view(e, (e) => $int(e))));
+        final stderr = $value.stderr;
+        return $Stream.wrap(stderr.map((e) => $List.view(e, (e) => $int(e))));
 
       case 'stdin':
-        final _stdin = $value.stdin;
-        return $IOSink.wrap(_stdin);
+        final stdin = $value.stdin;
+        return $IOSink.wrap(stdin);
 
       case 'pid':
-        final _pid = $value.pid;
-        return $int(_pid);
+        final pid = $value.pid;
+        return $int(pid);
       case 'kill':
         return __kill;
     }
@@ -756,28 +756,28 @@ class $ProcessResult implements $Instance {
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case 'exitCode':
-        final _exitCode = $value.exitCode;
-        return $int(_exitCode);
+        final exitCode = $value.exitCode;
+        return $int(exitCode);
 
       case 'stdout':
-        final _stdout = $value.stdout;
-        return _stdout is String
-            ? $String(_stdout)
-            : _stdout is List<int>
-                ? $List.view(_stdout, (e) => $int(e))
-                : $Object(_stdout);
+        final stdout = $value.stdout;
+        return stdout is String
+            ? $String(stdout)
+            : stdout is List<int>
+                ? $List.view(stdout, (e) => $int(e))
+                : $Object(stdout);
 
       case 'stderr':
-        final _stderr = $value.stderr;
-        return _stderr is String
-            ? $String(_stderr)
-            : _stderr is List<int>
-                ? $List.view(_stderr, (e) => $int(e))
-                : $Object(_stderr);
+        final stderr = $value.stderr;
+        return stderr is String
+            ? $String(stderr)
+            : stderr is List<int>
+                ? $List.view(stderr, (e) => $int(e))
+                : $Object(stderr);
 
       case 'pid':
-        final _pid = $value.pid;
-        return $int(_pid);
+        final pid = $value.pid;
+        return $int(pid);
     }
     return _superclass.$getProperty(runtime, identifier);
   }
@@ -1286,12 +1286,12 @@ class $ProcessSignal implements $Instance {
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case 'signalNumber':
-        final _signalNumber = $value.signalNumber;
-        return $int(_signalNumber);
+        final signalNumber = $value.signalNumber;
+        return $int(signalNumber);
 
       case 'name':
-        final _name = $value.name;
-        return $String(_name);
+        final name = $value.name;
+        return $String(name);
       case 'toString':
         return __toString;
 

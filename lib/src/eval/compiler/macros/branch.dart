@@ -26,12 +26,12 @@ StatementInfo macroBranch(
   final rewriteCond = JumpIfFalse.make(conditionResult.scopeFrameOffset, -1);
   final rewritePos = ctx.pushOp(rewriteCond, JumpIfFalse.LEN);
 
-  var _initialState = ctx.saveState();
+  var initialState = ctx.saveState();
 
   ctx.inferTypes();
   ctx.beginAllocScope();
-  final label = CompilerLabel(LabelType.branch, -1, (_ctx) {
-    _ctx.endAllocScopeQuiet();
+  final label = CompilerLabel(LabelType.branch, -1, (ctx) {
+    ctx.endAllocScopeQuiet();
     if (!resolveStateToThen) {
       //_ctx.resolveBranchStateDiscontinuity(_initialState);
     }
@@ -45,9 +45,9 @@ StatementInfo macroBranch(
   ctx.uninferTypes();
 
   if (!resolveStateToThen) {
-    ctx.resolveBranchStateDiscontinuity(_initialState);
+    ctx.resolveBranchStateDiscontinuity(initialState);
   } else {
-    _initialState = ctx.saveState();
+    initialState = ctx.saveState();
   }
 
   int? rewriteOut;
@@ -60,9 +60,9 @@ StatementInfo macroBranch(
 
   if (elseBranch != null) {
     ctx.beginAllocScope();
-    final label = CompilerLabel(LabelType.branch, -1, (_ctx) {
+    final label = CompilerLabel(LabelType.branch, -1, (ctx) {
       ctx.endAllocScope();
-      ctx.resolveBranchStateDiscontinuity(_initialState);
+      ctx.resolveBranchStateDiscontinuity(initialState);
       ctx.endAllocScope();
       return -1;
     });
@@ -70,7 +70,7 @@ StatementInfo macroBranch(
     final elseResult = elseBranch(ctx, expectedReturnType);
     ctx.labels.removeLast();
     ctx.endAllocScope();
-    ctx.resolveBranchStateDiscontinuity(_initialState);
+    ctx.resolveBranchStateDiscontinuity(initialState);
     ctx.rewriteOp(rewriteOut!, JumpConstant.make(ctx.out.length), 0);
     ctx.endAllocScope();
     return thenResult | elseResult;

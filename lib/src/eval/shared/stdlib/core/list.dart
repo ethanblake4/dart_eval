@@ -1462,7 +1462,7 @@ class $List<E> implements List<E>, $Instance {
 
 /// Writeback-capable wrapper for [List] with type mapping function
 class _$List$view<E> extends $List<E> {
-  _$List$view(List<E> $value, this.mapper) : super.wrap($value);
+  _$List$view(super.$value, this.mapper) : super.wrap();
 
   final $Value Function(E) mapper;
 

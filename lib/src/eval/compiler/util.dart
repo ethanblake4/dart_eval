@@ -30,12 +30,12 @@ class FunctionSignaturePool {
 }
 
 void asyncComplete(CompilerContext ctx, int valueOffset) {
-  var _completer = ctx.lookupLocal('#completer');
-  if (_completer == null) {
+  var completer = ctx.lookupLocal('#completer');
+  if (completer == null) {
     InvokeExternal.make(ctx.bridgeStaticFunctionIndices[
         ctx.libraryMap['dart:async']!]!['Completer.']!);
-    _completer = Variable.alloc(ctx, AsyncTypes.completer.ref(ctx));
+    completer = Variable.alloc(ctx, AsyncTypes.completer.ref(ctx));
   }
   ctx.pushOp(
-      ReturnAsync.make(valueOffset, _completer.scopeFrameOffset), Return.LEN);
+      ReturnAsync.make(valueOffset, completer.scopeFrameOffset), Return.LEN);
 }

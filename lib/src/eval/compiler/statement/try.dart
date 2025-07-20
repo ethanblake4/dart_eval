@@ -29,7 +29,7 @@ StatementInfo compileTryStatement(
 
   final tryOp = ctx.pushOp(Try.make(-1), Try.LEN);
 
-  final _initialState = ctx.saveState();
+  final initialState = ctx.saveState();
 
   ctx.beginAllocScope();
   ctx.labels.add(SimpleCompilerLabel());
@@ -37,7 +37,7 @@ StatementInfo compileTryStatement(
   ctx.labels.removeLast();
   ctx.endAllocScope();
 
-  ctx.resolveBranchStateDiscontinuity(_initialState);
+  ctx.resolveBranchStateDiscontinuity(initialState);
 
   ctx.pushOp(PopCatch.make(), PopCatch.LEN);
 
@@ -52,7 +52,7 @@ StatementInfo compileTryStatement(
 
   var catchInfo = StatementInfo(-1);
   if (s.catchClauses.isNotEmpty) {
-    final _state = ctx.saveState();
+    final state = ctx.saveState();
     ctx.beginAllocScope();
     ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
     final v = Variable.alloc(ctx, CoreTypes.dynamic.ref(ctx));
@@ -61,7 +61,7 @@ StatementInfo compileTryStatement(
         _compileCatchClause(ctx, s.catchClauses, 0, v, expectedReturnType);
     ctx.caughtExceptions.removeLast();
     ctx.endAllocScope();
-    ctx.resolveBranchStateDiscontinuity(_state);
+    ctx.resolveBranchStateDiscontinuity(state);
     ctx.pushOp(Return.make(-3), Return.LEN);
   }
 
@@ -86,13 +86,13 @@ StatementInfo _compileCatchClause(
     return compileBlock(catchClause.body, expectedReturnType, ctx);
   }
   final slot = TypeRef.fromAnnotation(ctx, ctx.library, exceptionType);
-  return macroBranch(ctx, expectedReturnType, condition: (_ctx) {
+  return macroBranch(ctx, expectedReturnType, condition: (ctx) {
     ctx.pushOp(
         IsType.make(
             exceptionVar.scopeFrameOffset, ctx.typeRefIndexMap[slot]!, false),
         IsType.length);
     return Variable.alloc(ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
-  }, thenBranch: (_ctx, _expectedReturnType) {
+  }, thenBranch: (ctx, expectedReturnType) {
     ctx.setLocal(catchClause.exceptionParameter!.name.lexeme,
         exceptionVar.copyWith(type: slot));
     return compileBlock(catchClause.body, expectedReturnType, ctx);

@@ -103,6 +103,7 @@ class Bindgen implements BridgeDeclarationRegistry {
     }
   }
 
+  @override
   void addExportedLibraryMapping(String libraryUri, String exportUri) {
     _exportedLibMappings[libraryUri] = exportUri;
   }
@@ -122,9 +123,7 @@ class Bindgen implements BridgeDeclarationRegistry {
     final analysisContext = _contextCollection!.contextFor(filePath);
     final session = analysisContext.currentSession;
     final analysisResult = await session.getResolvedUnit(filePath);
-    final ctx = BindgenContext(
-        filename,
-        uri,
+    final ctx = BindgenContext(filename, uri,
         all: all,
         bridgeDeclarations: _bridgeDeclarations,
         exportedLibMappings: _exportedLibMappings);
@@ -172,7 +171,7 @@ class Bindgen implements BridgeDeclarationRegistry {
           .map((e) => 'import \'$e\';')
           .join('\n');
 
-      return partOf ? "part of '$filename'" : "" + imports + result;
+      return partOf ? "part of '$filename'" : "$imports$result";
     }
 
     return null;
@@ -214,7 +213,6 @@ class Bindgen implements BridgeDeclarationRegistry {
     ));
 
     if (isBridge) {
-
       return '''
 /// dart_eval bridge binding for [${element.name3}]
 class \$${element.name3}\$bridge extends ${element.name3} with \$Bridge<${element.name3}> {
@@ -233,7 +231,8 @@ ${$staticGetters(ctx, element)}
 ${$staticSetters(ctx, element)}
 ${$bridgeGet(ctx, element)}
 ${$bridgeSet(ctx, element)}
-${bindDecoratoratorMethods(ctx, element)}
+${bindDecoratorProperties(ctx, element)}
+${bindDecoratorMethods(ctx, element)}
 }
 ''';
     }

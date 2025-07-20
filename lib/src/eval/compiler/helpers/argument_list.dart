@@ -21,9 +21,9 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
     Map<String, TypeRef> resolveGenerics = const {},
     List<String> superParams = const [],
     AstNode? source}) {
-  final _args = <Variable>[];
-  final _push = <Variable>[];
-  final _namedArgs = <String, Variable>{};
+  final args = <Variable>[];
+  final push = <Variable>[];
+  final namedArgs = <String, Variable>{};
 
   final positional = <FormalParameter>[];
   final named = <String, FormalParameter>{};
@@ -46,8 +46,8 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
     // First check super params. Super params do not contain an expression.
     if (superParams.contains(param.name!.lexeme)) {
       final V = ctx.lookupLocal(param.name!.lexeme)!;
-      _push.add(V);
-      _args.add(V);
+      push.add(V);
+      args.add(V);
       i++;
       continue;
     }
@@ -58,7 +58,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
         throw CompileError('Not enough positional arguments');
       } else {
         $null ??= BuiltinValue().push(ctx);
-        _push.add($null);
+        push.add($null);
       }
     } else if (arg == null) {
       if (param.isRequired) {
@@ -66,10 +66,10 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
       } else if (param is DefaultFormalParameter) {
         // Default parameter values are handled at the call site
         $null ??= BuiltinValue().push(ctx);
-        _push.add($null);
+        push.add($null);
       } else {
         $null ??= BuiltinValue().push(ctx);
-        _push.add($null);
+        push.add($null);
       }
     } else {
       var paramType = CoreTypes.dynamic.ref(ctx);
@@ -93,23 +93,23 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
         paramType = TypeRef.fromAnnotation(ctx, decLibrary, typeAnnotation);
       }
 
-      var _arg = compileExpression(arg, ctx, paramType);
+      var arg0 = compileExpression(arg, ctx, paramType);
       if (parameterHost is MethodDeclaration ||
           !paramType.isUnboxedAcrossFunctionBoundaries) {
-        _arg = _arg.boxIfNeeded(ctx);
+        arg0 = arg0.boxIfNeeded(ctx);
       } else if (paramType.isUnboxedAcrossFunctionBoundaries) {
-        _arg = _arg.unboxIfNeeded(ctx);
+        arg0 = arg0.unboxIfNeeded(ctx);
       }
 
-      if (_arg.type == CoreTypes.function.ref(ctx) &&
-          _arg.scopeFrameOffset == -1) {
-        _arg = _arg.tearOff(ctx);
+      if (arg0.type == CoreTypes.function.ref(ctx) &&
+          arg0.scopeFrameOffset == -1) {
+        arg0 = arg0.tearOff(ctx);
       }
 
-      if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
+      if (!arg0.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
         throw CompileError(
-            'Cannot assign argument of type ${_arg.type.toStringClear(ctx, paramType)} '
-            'to parameter "${param.name!.lexeme}" of type ${paramType.toStringClear(ctx, _arg.type)}',
+            'Cannot assign argument of type ${arg0.type.toStringClear(ctx, paramType)} '
+            'to parameter "${param.name!.lexeme}" of type ${paramType.toStringClear(ctx, arg0.type)}',
             source ?? parameterHost);
       }
 
@@ -119,12 +119,12 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
             : null;
         if (n != null && resolveGenerics.containsKey(n)) {
           resolveGenericsMap[n] ??= {};
-          resolveGenericsMap[n]!.add(_arg.type);
+          resolveGenericsMap[n]!.add(arg0.type);
         }
       }
 
-      _args.add(_arg);
-      _push.add(_arg);
+      args.add(arg0);
+      push.add(arg0);
     }
 
     i++;
@@ -138,14 +138,14 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
 
   for (final n in named.entries) {
     final name = n.key;
-    final _param = n.value;
+    final param0 = n.value;
     if (superParams.contains(name)) {
       final V = ctx.lookupLocal(name)!;
-      _push.add(V);
-      _namedArgs[name] = V;
+      push.add(V);
+      namedArgs[name] = V;
       continue;
     }
-    final param = (_param is DefaultFormalParameter ? _param.parameter : _param)
+    final param = (param0 is DefaultFormalParameter ? param0.parameter : param0)
         as NormalFormalParameter;
     var paramType = CoreTypes.dynamic.ref(ctx);
     TypeAnnotation? typeAnnotation;
@@ -164,23 +164,23 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
     }
 
     if (namedExpr.containsKey(name)) {
-      var _arg = compileExpression(namedExpr[name]!, ctx, paramType);
+      var arg0 = compileExpression(namedExpr[name]!, ctx, paramType);
       if (parameterHost is MethodDeclaration ||
           !paramType.isUnboxedAcrossFunctionBoundaries) {
-        _arg = _arg.boxIfNeeded(ctx);
+        arg0 = arg0.boxIfNeeded(ctx);
       } else if (paramType.isUnboxedAcrossFunctionBoundaries) {
-        _arg = _arg.unboxIfNeeded(ctx);
+        arg0 = arg0.unboxIfNeeded(ctx);
       }
 
-      if (_arg.type == CoreTypes.function.ref(ctx) &&
-          _arg.scopeFrameOffset == -1) {
-        _arg = _arg.tearOff(ctx);
+      if (arg0.type == CoreTypes.function.ref(ctx) &&
+          arg0.scopeFrameOffset == -1) {
+        arg0 = arg0.tearOff(ctx);
       }
 
-      if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
+      if (!arg0.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
         throw CompileError(
-            'Cannot assign argument of type ${_arg.type.toStringClear(ctx, paramType)}'
-            ' to parameter "${param.name!.lexeme}" of type ${paramType.toStringClear(ctx, _arg.type)}',
+            'Cannot assign argument of type ${arg0.type.toStringClear(ctx, paramType)}'
+            ' to parameter "${param.name!.lexeme}" of type ${paramType.toStringClear(ctx, arg0.type)}',
             source ?? parameterHost);
       }
 
@@ -190,15 +190,15 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
             : null;
         if (n != null && resolveGenerics.containsKey(n)) {
           resolveGenericsMap[n] ??= {};
-          resolveGenericsMap[n]!.add(_arg.type);
+          resolveGenericsMap[n]!.add(arg0.type);
         }
       }
 
-      _push.add(_arg);
-      _namedArgs[name] = _arg;
+      push.add(arg0);
+      namedArgs[name] = arg0;
     } else {
       $null ??= BuiltinValue().push(ctx);
-      _push.add($null);
+      push.add($null);
     }
   }
 
@@ -207,12 +207,12 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
         TypeRef.commonBaseType(ctx, resolveGenericsMap[generic]!);
   }
 
-  for (final _arg in <Variable>[...before, ..._push]) {
-    final argOp = PushArg.make(_arg.scopeFrameOffset);
+  for (final restArg in <Variable>[...before, ...push]) {
+    final argOp = PushArg.make(restArg.scopeFrameOffset);
     ctx.pushOp(argOp, PushArg.LEN);
   }
 
-  return Pair(_args, _namedArgs);
+  return Pair(args, namedArgs);
 }
 
 Pair<List<Variable>, Map<String, Variable>> compileSuperParams(
@@ -220,9 +220,9 @@ Pair<List<Variable>, Map<String, Variable>> compileSuperParams(
     {List<Variable> before = const [],
     List<String> superParams = const [],
     AstNode? source}) {
-  final _args = <Variable>[];
-  final _push = <Variable>[];
-  final _namedArgs = <String, Variable>{};
+  final args = <Variable>[];
+  final push = <Variable>[];
+  final namedArgs = <String, Variable>{};
 
   final positional = <FormalParameter>[];
   final named = <String, FormalParameter>{};
@@ -241,14 +241,14 @@ Pair<List<Variable>, Map<String, Variable>> compileSuperParams(
     // First check super params. Super params do not contain an expression.
     if (superParams.contains(param.name!.lexeme)) {
       final V = ctx.lookupLocal(param.name!.lexeme)!;
-      _push.add(V);
-      _args.add(V);
+      push.add(V);
+      args.add(V);
     } else {
       if (param.isRequired) {
         throw CompileError('Not enough positional arguments');
       } else {
         $null ??= BuiltinValue().push(ctx);
-        _push.add($null);
+        push.add($null);
       }
     }
   }
@@ -257,20 +257,20 @@ Pair<List<Variable>, Map<String, Variable>> compileSuperParams(
     final name = n.key;
     if (superParams.contains(name)) {
       final V = ctx.lookupLocal(name)!;
-      _push.add(V);
-      _namedArgs[name] = V;
+      push.add(V);
+      namedArgs[name] = V;
     } else {
       $null ??= BuiltinValue().push(ctx);
-      _push.add($null);
+      push.add($null);
     }
   }
 
-  for (final _arg in <Variable>[...before, ..._push]) {
-    final argOp = PushArg.make(_arg.scopeFrameOffset);
+  for (final restArg in <Variable>[...before, ...push]) {
+    final argOp = PushArg.make(restArg.scopeFrameOffset);
     ctx.pushOp(argOp, PushArg.LEN);
   }
 
-  return Pair(_args, _namedArgs);
+  return Pair(args, namedArgs);
 }
 
 /// Best effort method to compile an argument list against a dynamic target.
@@ -280,9 +280,9 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithDynamic(
     {List<Variable> before = const [],
     Map<String, TypeRef> resolveGenerics = const {},
     AstNode? source}) {
-  final _args = <Variable>[];
-  final _push = <Variable>[];
-  final _namedArgs = <String, Variable>{};
+  final args = <Variable>[];
+  final push = <Variable>[];
+  final namedArgs = <String, Variable>{};
 
   for (var i = 0; i < argumentList.arguments.length; i++) {
     final arg = argumentList.arguments[i];
@@ -294,28 +294,28 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithDynamic(
           source ?? argumentList);
     }
 
-    var _arg = compileExpression(arg, ctx);
-    if (_arg.type.isUnboxedAcrossFunctionBoundaries) {
-      _arg = _arg.boxIfNeeded(ctx);
+    var arg0 = compileExpression(arg, ctx);
+    if (arg0.type.isUnboxedAcrossFunctionBoundaries) {
+      arg0 = arg0.boxIfNeeded(ctx);
     } else {
-      _arg = _arg.unboxIfNeeded(ctx);
+      arg0 = arg0.unboxIfNeeded(ctx);
     }
 
-    if (_arg.type == CoreTypes.function.ref(ctx) &&
-        _arg.scopeFrameOffset == -1) {
-      _arg = _arg.tearOff(ctx);
+    if (arg0.type == CoreTypes.function.ref(ctx) &&
+        arg0.scopeFrameOffset == -1) {
+      arg0 = arg0.tearOff(ctx);
     }
 
-    _args.add(_arg);
-    _push.add(_arg);
+    args.add(arg0);
+    push.add(arg0);
   }
 
-  for (final _arg in <Variable>[...before, ..._push]) {
-    final argOp = PushArg.make(_arg.scopeFrameOffset);
+  for (final restArg in <Variable>[...before, ...push]) {
+    final argOp = PushArg.make(restArg.scopeFrameOffset);
     ctx.pushOp(argOp, PushArg.LEN);
   }
 
-  return Pair(_args, _namedArgs);
+  return Pair(args, namedArgs);
 }
 
 Pair<List<Variable>, Map<String, Variable>>
@@ -326,9 +326,9 @@ Pair<List<Variable>, Map<String, Variable>>
         Map<String, KnownMethodArg> namedParams,
         {List<Variable> before = const [],
         AstNode? source}) {
-  final _args = <Variable>[];
-  final _push = <Variable>[];
-  final _namedArgs = <String, Variable>{};
+  final args = <Variable>[];
+  final push = <Variable>[];
+  final namedArgs = <String, Variable>{};
   final namedExpr = <String, Expression>{};
 
   var i = 0;
@@ -344,26 +344,26 @@ Pair<List<Variable>, Map<String, Variable>>
         throw CompileError('Not enough positional arguments');
       } else {
         $null ??= BuiltinValue().push(ctx);
-        _push.add($null);
+        push.add($null);
       }
     } else {
       var paramType = param.type ?? CoreTypes.dynamic.ref(ctx);
 
-      var _arg = compileExpression(arg, ctx, paramType);
-      _arg = _arg.boxIfNeeded(ctx);
+      var arg0 = compileExpression(arg, ctx, paramType);
+      arg0 = arg0.boxIfNeeded(ctx);
 
-      if (_arg.type == CoreTypes.function.ref(ctx) &&
-          _arg.scopeFrameOffset == -1) {
-        _arg = _arg.tearOff(ctx);
+      if (arg0.type == CoreTypes.function.ref(ctx) &&
+          arg0.scopeFrameOffset == -1) {
+        arg0 = arg0.tearOff(ctx);
       }
 
-      if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
+      if (!arg0.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
         throw CompileError(
-            'Cannot assign argument of type ${_arg.type} to parameter of type $paramType',
+            'Cannot assign argument of type ${arg0.type} to parameter of type $paramType',
             argumentList);
       }
-      _args.add(_arg);
-      _push.add(_arg);
+      args.add(arg0);
+      push.add(arg0);
     }
 
     i++;
@@ -378,35 +378,35 @@ Pair<List<Variable>, Map<String, Variable>>
   for (final param in namedParams.values) {
     var paramType = param.type ?? CoreTypes.dynamic.ref(ctx);
     if (namedExpr.containsKey(param.name)) {
-      final _arg = compileExpression(namedExpr[param.name]!, ctx, paramType)
+      final arg0 = compileExpression(namedExpr[param.name]!, ctx, paramType)
           .boxIfNeeded(ctx);
-      if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
+      if (!arg0.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
         throw CompileError(
-            'Cannot assign argument of type ${_arg.type} to parameter of type $paramType',
+            'Cannot assign argument of type ${arg0.type} to parameter of type $paramType',
             source);
       }
-      _push.add(_arg);
-      _namedArgs[param.name] = _arg;
+      push.add(arg0);
+      namedArgs[param.name] = arg0;
     } else {
       $null ??= BuiltinValue().push(ctx);
-      _push.add($null);
+      push.add($null);
     }
   }
 
-  for (final _arg in [...before, ..._push]) {
-    final argOp = PushArg.make(_arg.scopeFrameOffset);
+  for (final restArg in [...before, ...push]) {
+    final argOp = PushArg.make(restArg.scopeFrameOffset);
     ctx.pushOp(argOp, PushArg.LEN);
   }
 
-  return Pair(_args, _namedArgs);
+  return Pair(args, namedArgs);
 }
 
 Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
     CompilerContext ctx, ArgumentList argumentList, BridgeFunctionDef function,
     {List<Variable> before = const [], List<String> superParams = const []}) {
-  final _args = <Variable>[];
-  final _push = <Variable>[];
-  final _namedArgs = <String, Variable>{};
+  final args = <Variable>[];
+  final push = <Variable>[];
+  final namedArgs = <String, Variable>{};
   final namedExpr = <String, Expression>{};
 
   var i = 0;
@@ -415,14 +415,14 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
   for (final param in function.params) {
     if (superParams.contains(param.name)) {
       final V = ctx.lookupLocal(param.name)!;
-      _push.add(V);
-      _args.add(V);
+      push.add(V);
+      args.add(V);
       i++;
       continue;
     }
     if (param.optional && argumentList.arguments.length <= i) {
       $null ??= BuiltinValue().push(ctx);
-      _push.add($null);
+      push.add($null);
       continue;
     }
     final arg = argumentList.arguments[i];
@@ -431,25 +431,25 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
         throw CompileError('Not enough positional arguments');
       } else {
         $null ??= BuiltinValue().push(ctx);
-        _push.add($null);
+        push.add($null);
       }
     } else {
       var paramType = TypeRef.fromBridgeAnnotation(ctx, param.type);
 
-      var _arg = compileExpression(arg, ctx, paramType);
-      _arg = _arg.boxIfNeeded(ctx);
-      if (_arg.type == CoreTypes.function.ref(ctx) &&
-          _arg.scopeFrameOffset == -1) {
-        _arg = _arg.tearOff(ctx);
+      var arg0 = compileExpression(arg, ctx, paramType);
+      arg0 = arg0.boxIfNeeded(ctx);
+      if (arg0.type == CoreTypes.function.ref(ctx) &&
+          arg0.scopeFrameOffset == -1) {
+        arg0 = arg0.tearOff(ctx);
       }
-      if (!(param.type.nullable && _arg.type == CoreTypes.nullType.ref(ctx)) &&
-          !_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
+      if (!(param.type.nullable && arg0.type == CoreTypes.nullType.ref(ctx)) &&
+          !arg0.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
         throw CompileError(
-            'Cannot assign argument of type ${_arg.type} to parameter of type $paramType',
+            'Cannot assign argument of type ${arg0.type} to parameter of type $paramType',
             argumentList);
       }
-      _args.add(_arg);
-      _push.add(_arg);
+      args.add(arg0);
+      push.add(arg0);
     }
 
     i++;
@@ -464,36 +464,36 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
   for (final param in function.namedParams) {
     if (superParams.contains(param.name)) {
       final V = ctx.lookupLocal(param.name)!;
-      _push.add(V);
-      _namedArgs[param.name] = V;
+      push.add(V);
+      namedArgs[param.name] = V;
     }
     var paramType = TypeRef.fromBridgeAnnotation(ctx, param.type);
     if (namedExpr.containsKey(param.name)) {
-      var _arg = compileExpression(namedExpr[param.name]!, ctx, paramType)
+      var arg0 = compileExpression(namedExpr[param.name]!, ctx, paramType)
           .boxIfNeeded(ctx);
-      if (_arg.type == CoreTypes.function.ref(ctx) &&
-          _arg.scopeFrameOffset == -1) {
-        _arg = _arg.tearOff(ctx);
+      if (arg0.type == CoreTypes.function.ref(ctx) &&
+          arg0.scopeFrameOffset == -1) {
+        arg0 = arg0.tearOff(ctx);
       }
-      if (!_arg.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
+      if (!arg0.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
         throw CompileError(
-            'Cannot assign argument of type ${_arg.type} to parameter of type $paramType',
+            'Cannot assign argument of type ${arg0.type} to parameter of type $paramType',
             argumentList);
       }
-      _push.add(_arg);
-      _namedArgs[param.name] = _arg;
+      push.add(arg0);
+      namedArgs[param.name] = arg0;
     } else {
       $null ??= BuiltinValue().push(ctx);
-      _push.add($null);
+      push.add($null);
     }
   }
 
-  for (final _arg in [...before, ..._push]) {
-    final argOp = PushArg.make(_arg.scopeFrameOffset);
+  for (final restArg in [...before, ...push]) {
+    final argOp = PushArg.make(restArg.scopeFrameOffset);
     ctx.pushOp(argOp, PushArg.LEN);
   }
 
-  return Pair(_args, _namedArgs);
+  return Pair(args, namedArgs);
 }
 
 TypeRef _resolveFieldFormalType(CompilerContext ctx, int decLibrary,
@@ -530,32 +530,32 @@ TypeRef resolveSuperFormalType(CompilerContext ctx, int decLibrary,
       '${$super.name}.$superConstructorName']!;
   if (superCstr.isBridge) {
     final fd = (superCstr.bridge as BridgeConstructorDef).functionDescriptor;
-    for (final _param in (param.isNamed ? fd.namedParams : fd.params)) {
-      if (_param.name == param.name.lexeme) {
-        return TypeRef.fromBridgeAnnotation(ctx, _param.type);
+    for (final bridgeParam in (param.isNamed ? fd.namedParams : fd.params)) {
+      if (bridgeParam.name == param.name.lexeme) {
+        return TypeRef.fromBridgeAnnotation(ctx, bridgeParam.type);
       }
     }
   } else {
     final cstr = superCstr.declaration as ConstructorDeclaration;
-    for (final _param in cstr.parameters.parameters) {
-      var __param =
-          _param is DefaultFormalParameter ? _param.parameter : _param;
-      if (__param.name?.lexeme != param.name.lexeme) {
+    for (final cstrParam in cstr.parameters.parameters) {
+      var param0 =
+          cstrParam is DefaultFormalParameter ? cstrParam.parameter : cstrParam;
+      if (param0.name?.lexeme != param.name.lexeme) {
         continue;
       }
-      if (__param is SimpleFormalParameter) {
-        final _type = __param.type;
-        if (_type == null) {
+      if (param0 is SimpleFormalParameter) {
+        final type0 = param0.type;
+        if (type0 == null) {
           return CoreTypes.dynamic.ref(ctx);
         }
-        return TypeRef.fromAnnotation(ctx, $super.file, _type);
-      } else if (__param is FieldFormalParameter) {
-        return _resolveFieldFormalType(ctx, decLibrary, __param, cstr);
-      } else if (__param is SuperFormalParameter) {
-        return resolveSuperFormalType(ctx, decLibrary, __param, cstr);
+        return TypeRef.fromAnnotation(ctx, $super.file, type0);
+      } else if (param0 is FieldFormalParameter) {
+        return _resolveFieldFormalType(ctx, decLibrary, param0, cstr);
+      } else if (param0 is SuperFormalParameter) {
+        return resolveSuperFormalType(ctx, decLibrary, param0, cstr);
       } else {
         throw CompileError(
-            'Unknown parameter type ${__param.runtimeType}', __param);
+            'Unknown parameter type ${param0.runtimeType}', param0);
       }
     }
   }

@@ -41,9 +41,9 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
           L.concreteTypes[0] == CoreTypes.nullType.ref(ctx)) {
         return out;
       }
-      macroBranch(ctx, null, condition: (_ctx) {
+      macroBranch(ctx, null, condition: (ctx) {
         return checkNotEqual(ctx, L!, out);
-      }, thenBranch: (_ctx, rt) {
+      }, thenBranch: (ctx, rt) {
         final V = _invokeWithTarget(ctx, L!, e);
         out = out.copyWith(type: V.type.copyWith(nullable: true));
         ctx.pushOp(CopyValue.make(out.scopeFrameOffset, V.scopeFrameOffset),
@@ -78,12 +78,12 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
     return _invokeWithTarget(ctx, $this, e);
   }
 
-  var _dec = ctx.topLevelDeclarationsMap[offset.file]![e.methodName.name];
-  if (_dec == null ||
-      (!_dec.isBridge && _dec.declaration! is ClassDeclaration)) {
-    _dec = ctx.topLevelDeclarationsMap[offset.file]![
+  var dec0 = ctx.topLevelDeclarationsMap[offset.file]![e.methodName.name];
+  if (dec0 == null ||
+      (!dec0.isBridge && dec0.declaration! is ClassDeclaration)) {
+    dec0 = ctx.topLevelDeclarationsMap[offset.file]![
         offset.name ?? '${e.methodName.name}.'];
-    if (_dec == null) {
+    if (dec0 == null) {
       // Call to default constructor
       final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.length);
       if (offset.offset == null) {
@@ -93,7 +93,7 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
       mReturnType = method.methodReturnType
               ?.toAlwaysReturnType(ctx, TypeRef.$this(ctx), [], {}) ??
           AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
-      final _returnType = mReturnType.type?.copyWith(
+      final returnType = mReturnType.type?.copyWith(
           boxed: L != null ||
               !(mReturnType.type?.isUnboxedAcrossFunctionBoundaries ?? false));
       final v = Variable.alloc(
@@ -103,20 +103,20 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
                       !(mReturnType.type?.isUnboxedAcrossFunctionBoundaries ??
                           false)) ??
               CoreTypes.dynamic.ref(ctx),
-          concreteTypes: _returnType == null ? [] : [_returnType]);
+          concreteTypes: returnType == null ? [] : [returnType]);
 
       return v;
     }
   }
 
-  final List<Variable> _args;
-  final Map<String, Variable> _namedArgs;
+  final List<Variable> args;
+  final Map<String, Variable> namedArgs;
 
   final resolveGenerics = <String, TypeRef>{};
   var isConstructor = false;
 
-  if (_dec.isBridge) {
-    final bridge = _dec.bridge;
+  if (dec0.isBridge) {
+    final bridge = dec0.bridge;
 
     /// If we're invoking a class identifier directly (like ClassName()), call
     /// its default constructor
@@ -131,11 +131,11 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
         ctx, e.argumentList, fnDescriptor,
         before: L != null ? [L] : []);
 
-    _args = argsPair.first;
-    _namedArgs = argsPair.second;
+    args = argsPair.first;
+    namedArgs = argsPair.second;
     isConstructor = bridge is BridgeClassDef;
   } else {
-    final dec = _dec.declaration!;
+    final dec = dec0.declaration!;
 
     List<FormalParameter> fpl;
     List<TypeParameter>? typeParams;
@@ -181,16 +181,16 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
         mReturnType = AlwaysReturnType(g, returnAnnotation.question != null);
       }
     }
-    _args = argsPair.first;
-    _namedArgs = argsPair.second;
+    args = argsPair.first;
+    namedArgs = argsPair.second;
   }
 
-  final _argTypes = _args.map((e) => e.type).toList();
-  final _namedArgTypes =
-      _namedArgs.map((key, value) => MapEntry(key, value.type));
+  final argTypes = args.map((e) => e.type).toList();
+  final namedArgTypes =
+      namedArgs.map((key, value) => MapEntry(key, value.type));
 
-  if (_dec.isBridge) {
-    final bridge = _dec.bridge!;
+  if (dec0.isBridge) {
+    final bridge = dec0.bridge!;
     if (bridge is BridgeClassDef && !bridge.wrap) {
       final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type.type);
 
@@ -218,14 +218,14 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
   }
 
   mReturnType ??= method.methodReturnType
-          ?.toAlwaysReturnType(ctx, thisType, _argTypes, _namedArgTypes) ??
+          ?.toAlwaysReturnType(ctx, thisType, argTypes, namedArgTypes) ??
       AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
-  final _returnType = mReturnType.type?.copyWith(
-      boxed: _dec.isBridge ||
+  final returnType = mReturnType.type?.copyWith(
+      boxed: dec0.isBridge ||
           !(mReturnType.type?.isUnboxedAcrossFunctionBoundaries ?? false));
 
-  final v = Variable.alloc(ctx, _returnType ?? CoreTypes.dynamic.ref(ctx),
-      concreteTypes: [if (isConstructor && _returnType != null) _returnType]);
+  final v = Variable.alloc(ctx, returnType ?? CoreTypes.dynamic.ref(ctx),
+      concreteTypes: [if (isConstructor && returnType != null) returnType]);
 
   return v;
 }
@@ -234,7 +234,7 @@ Variable _invokeWithTarget(
     CompilerContext ctx, Variable L, MethodInvocation e) {
   AlwaysReturnType? mReturnType;
 
-  DeclarationOrBridge<ClassMember, BridgeDeclaration>? _dec;
+  DeclarationOrBridge<ClassMember, BridgeDeclaration>? dec0;
   final bool isStatic;
   TypeRef? staticType;
 
@@ -253,17 +253,17 @@ Variable _invokeWithTarget(
   if (L.type == CoreTypes.type.ref(ctx) && L.concreteTypes.length == 1) {
     // Static method
     staticType = L.concreteTypes[0];
-    _dec = resolveStaticMethod(ctx, staticType, e.methodName.name);
+    dec0 = resolveStaticMethod(ctx, staticType, e.methodName.name);
     isStatic = true;
   } else if (L.type != CoreTypes.dynamic.ref(ctx)) {
-    _dec = resolveInstanceMethod(ctx, L.type, e.methodName.name, e);
+    dec0 = resolveInstanceMethod(ctx, L.type, e.methodName.name, e);
     isStatic = false;
   } else {
     isStatic = false;
   }
 
-  if (_dec?.isBridge == true) {
-    final br = _dec!.bridge!;
+  if (dec0?.isBridge == true) {
+    final br = dec0!.bridge!;
     final fd = br is BridgeMethodDef
         ? br.functionDescriptor
         : (br as BridgeConstructorDef).functionDescriptor;
@@ -272,7 +272,7 @@ Variable _invokeWithTarget(
   } else if (L.type == CoreTypes.dynamic.ref(ctx)) {
     argsPair = compileArgumentListWithDynamic(ctx, e.argumentList, before: [L]);
   } else {
-    final dec = _dec!.declaration!;
+    final dec = dec0!.declaration!;
     final fpl = (dec is MethodDeclaration
             ? dec.parameters?.parameters
             : (dec as ConstructorDeclaration).parameters.parameters) ??
@@ -283,15 +283,15 @@ Variable _invokeWithTarget(
         before: [if (!isStatic) L], source: e);
   }
 
-  final _args = argsPair.first;
-  final _namedArgs = argsPair.second;
+  final args = argsPair.first;
+  final namedArgs = argsPair.second;
 
-  final _argTypes = _args.map((e) => e.type).toList();
-  final _namedArgTypes =
-      _namedArgs.map((key, value) => MapEntry(key, value.type));
+  final argTypes = args.map((e) => e.type).toList();
+  final namedArgTypes =
+      namedArgs.map((key, value) => MapEntry(key, value.type));
 
   if (isStatic) {
-    if (_dec!.isBridge) {
+    if (dec0!.isBridge) {
       final ix = InvokeExternal.make(ctx.bridgeStaticFunctionIndices[
           staticType!.file]!['${staticType.name}.${e.methodName.name}']!);
       ctx.pushOp(ix, InvokeExternal.LEN);
@@ -303,7 +303,7 @@ Variable _invokeWithTarget(
         ctx.offsetTracker.setOffset(loc, offset);
       }
     }
-  } else if (L.concreteTypes.length == 1 && !_dec!.isBridge) {
+  } else if (L.concreteTypes.length == 1 && !dec0!.isBridge) {
     // If the concrete type is known we can use a static call
     final actualType = L.concreteTypes[0];
     final offset = DeferredOrOffset(
@@ -323,8 +323,8 @@ Variable _invokeWithTarget(
       ctx,
       isStatic ? staticType! : L.type,
       e.methodName.name,
-      _argTypes,
-      _namedArgTypes,
+      argTypes,
+      namedArgTypes,
       $static: isStatic);
 
   ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
@@ -338,12 +338,12 @@ Variable _invokeWithTarget(
 DeclarationOrBridge<MethodDeclaration, BridgeMethodDef> resolveInstanceMethod(
     CompilerContext ctx, TypeRef instanceType, String methodName,
     [AstNode? source, TypeRef? bottomType]) {
-  final _dec =
+  final dec0 =
       ctx.topLevelDeclarationsMap[instanceType.file]![instanceType.name]!;
-  final _bottomType = bottomType ?? instanceType;
-  if (_dec.isBridge) {
+  final bottomType0 = bottomType ?? instanceType;
+  if (dec0.isBridge) {
     // Bridge
-    final bridge = _dec.bridge!;
+    final bridge = dec0.bridge!;
     final method = bridge is BridgeClassDef
         ? bridge.methods[methodName]
         : (bridge as BridgeEnumDef).methods[methodName];
@@ -351,13 +351,13 @@ DeclarationOrBridge<MethodDeclaration, BridgeMethodDef> resolveInstanceMethod(
       final $extendsBridgeType =
           bridge is BridgeClassDef ? bridge.type.$extends : null;
       if ($extendsBridgeType == null && bridge is! BridgeEnumDef) {
-        throw CompileError('Unknown method $_bottomType.$methodName', source);
+        throw CompileError('Unknown method $bottomType0.$methodName', source);
       }
       final $extendsType = bridge is BridgeEnumDef
           ? CoreTypes.enumType.ref(ctx)
           : TypeRef.fromBridgeTypeRef(ctx, $extendsBridgeType!);
       return resolveInstanceMethod(
-          ctx, $extendsType, methodName, source, _bottomType);
+          ctx, $extendsType, methodName, source, bottomType0);
     }
     return DeclarationOrBridge(instanceType.file, bridge: method);
   }
@@ -369,15 +369,15 @@ DeclarationOrBridge<MethodDeclaration, BridgeMethodDef> resolveInstanceMethod(
     return DeclarationOrBridge(instanceType.file,
         declaration: dec as MethodDeclaration);
   } else {
-    final $class = _dec.declaration as ClassDeclaration;
+    final $class = dec0.declaration as ClassDeclaration;
     if ($class.extendsClause == null) {
       return resolveInstanceMethod(
-          ctx, CoreTypes.object.ref(ctx), methodName, source, _bottomType);
+          ctx, CoreTypes.object.ref(ctx), methodName, source, bottomType0);
     }
     final $supertype = ctx.visibleTypes[instanceType.file]![
         $class.extendsClause!.superclass.name2.value()]!;
     return resolveInstanceMethod(
-        ctx, $supertype, methodName, source, _bottomType);
+        ctx, $supertype, methodName, source, bottomType0);
   }
 }
 

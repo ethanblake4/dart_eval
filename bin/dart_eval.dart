@@ -60,12 +60,12 @@ void main(List<String> args) {
       if (!command.options.contains('path')) {
         outputName = 'program.evc';
       } else {
-        var _path = command['path'] as String;
-        final _filename = _path.split('.')[0];
-        if (_filename.isEmpty) {
+        var cmdPath = command['path'] as String;
+        final cmdFilename = cmdPath.split('.')[0];
+        if (cmdFilename.isEmpty) {
           outputName = 'program.evc';
         }
-        outputName = '$_filename.evc';
+        outputName = '$cmdFilename.evc';
       }
     }
 
@@ -113,10 +113,14 @@ void main(List<String> args) {
     if (command['help']!) {
       print('bind: Generate bindings for a Dart project');
       print('Usage:');
-      print('   dart_eval bind [-h, --help] [-a, --all] [-s, --single-file] [--[no-]plugin]');
+      print(
+          '   dart_eval bind [-h, --help] [-a, --all] [-s, --single-file] [--[no-]plugin]');
       exit(0);
     }
 
-    cliBind(singleFile: command['single-file'], all: command['all'], generatePlugin: command['plugin']);
+    cliBind(
+        singleFile: command['single-file'],
+        all: command['all'],
+        generatePlugin: command['plugin']);
   }
 }

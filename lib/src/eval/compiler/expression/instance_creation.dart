@@ -25,20 +25,20 @@ Variable compileInstanceCreation(
   }
 
   final staticType = $resolved.concreteTypes.first;
-  final _dec = resolveStaticMethod(ctx, staticType, name);
+  final dec0 = resolveStaticMethod(ctx, staticType, name);
 
   //final List<Variable> _args;
   //final Map<String, Variable> _namedArgs;
 
-  if (_dec.isBridge) {
-    final bridge = _dec.bridge;
+  if (dec0.isBridge) {
+    final bridge = dec0.bridge;
     final fnDescriptor = (bridge as BridgeConstructorDef).functionDescriptor;
     compileArgumentListWithBridge(ctx, e.argumentList, fnDescriptor);
 
     //_args = argsPair.first;
     //_namedArgs = argsPair.second;
   } else {
-    final dec = _dec.declaration!;
+    final dec = dec0.declaration!;
     final fpl = (dec as ConstructorDeclaration).parameters.parameters;
 
     compileArgumentList(ctx, e.argumentList, staticType.file, fpl, dec,
@@ -50,8 +50,8 @@ Variable compileInstanceCreation(
   //final _argTypes = _args.map((e) => e.type).toList();
   //final _namedArgTypes = _namedArgs.map((key, value) => MapEntry(key, value.type));
 
-  if (_dec.isBridge) {
-    final bridge = _dec.bridge!;
+  if (dec0.isBridge) {
+    final bridge = dec0.bridge!;
     if (bridge is BridgeClassDef && !bridge.wrap) {
       final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type.type);
 

@@ -11,8 +11,8 @@ StatementInfo doReturn(
     {bool isAsync = false}) {
   if (value == null) {
     if (isAsync) {
-      final _completer = ctx.lookupLocal('#completer')!;
-      ctx.pushOp(ReturnAsync.make(-1, _completer.scopeFrameOffset), Return.LEN);
+      final completer = ctx.lookupLocal('#completer')!;
+      ctx.pushOp(ReturnAsync.make(-1, completer.scopeFrameOffset), Return.LEN);
     } else {
       ctx.pushOp(Return.make(-1), Return.LEN);
     }
@@ -21,47 +21,46 @@ StatementInfo doReturn(
       final ta = expectedReturnType.type?.specifiedTypeArgs;
       final expected =
           (ta?.isEmpty ?? true) ? CoreTypes.dynamic.ref(ctx) : ta![0];
-      var _value = value.boxIfNeeded(ctx);
+      var value0 = value.boxIfNeeded(ctx);
 
-      if (!_value.type.isAssignableTo(ctx, expected)) {
-        if (_value.type.isAssignableTo(ctx, CoreTypes.future.ref(ctx))) {
-          final vta = _value.type.specifiedTypeArgs;
+      if (!value0.type.isAssignableTo(ctx, expected)) {
+        if (value0.type.isAssignableTo(ctx, CoreTypes.future.ref(ctx))) {
+          final vta = value0.type.specifiedTypeArgs;
           final vtype = vta.isEmpty ? CoreTypes.dynamic.ref(ctx) : vta[0];
           if (vtype.isAssignableTo(ctx, expected)) {
-            final _completer = ctx.lookupLocal('#completer')!;
-            final awaitOp = Await.make(
-                _completer.scopeFrameOffset, _value.scopeFrameOffset);
+            final completer = ctx.lookupLocal('#completer')!;
+            final awaitOp =
+                Await.make(completer.scopeFrameOffset, value0.scopeFrameOffset);
             ctx.pushOp(awaitOp, Await.LEN);
             ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
             final result = Variable.alloc(ctx, CoreTypes.dynamic.ref(ctx));
             ctx.pushOp(
                 ReturnAsync.make(
-                    result.scopeFrameOffset, _completer.scopeFrameOffset),
+                    result.scopeFrameOffset, completer.scopeFrameOffset),
                 ReturnAsync.LEN);
             return StatementInfo(-1, willAlwaysReturn: true);
           }
         }
         throw CompileError(
-            'Cannot return ${_value.type} (expected: $expected)');
+            'Cannot return ${value0.type} (expected: $expected)');
       }
-      final _completer = ctx.lookupLocal('#completer')!;
+      final completer = ctx.lookupLocal('#completer')!;
       ctx.pushOp(
-          ReturnAsync.make(
-              _value.scopeFrameOffset, _completer.scopeFrameOffset),
+          ReturnAsync.make(value0.scopeFrameOffset, completer.scopeFrameOffset),
           ReturnAsync.LEN);
       return StatementInfo(-1, willAlwaysReturn: true);
     }
 
     final expected = expectedReturnType.type ?? CoreTypes.dynamic.ref(ctx);
-    var _value = value;
-    if (!_value.type.isAssignableTo(ctx, expected)) {
-      throw CompileError('Cannot return ${_value.type} (expected: $expected)');
+    var value0 = value;
+    if (!value0.type.isAssignableTo(ctx, expected)) {
+      throw CompileError('Cannot return ${value0.type} (expected: $expected)');
     }
     if (expected.isUnboxedAcrossFunctionBoundaries &&
         ctx.currentClass == null) {
-      _value = _value.unboxIfNeeded(ctx);
+      value0 = value0.unboxIfNeeded(ctx);
     } else {
-      _value = _value.boxIfNeeded(ctx);
+      value0 = value0.boxIfNeeded(ctx);
     }
     ctx.pushOp(Return.make(value.scopeFrameOffset), Return.LEN);
   }

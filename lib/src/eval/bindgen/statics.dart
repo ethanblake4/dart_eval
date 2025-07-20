@@ -16,7 +16,7 @@ String $constructors(BindgenContext ctx, ClassElement2 element,
 String _$constructor(
     BindgenContext ctx, ClassElement2 element, ConstructorElement2 constructor,
     {bool isBridge = false}) {
-  final name = constructor.name3 == null ? '' : constructor.name3;
+  final name = constructor.name3 ?? '';
   final namedConstructor =
       constructor.name3 != null && constructor.name3 != 'new'
           ? '.${constructor.name3}'

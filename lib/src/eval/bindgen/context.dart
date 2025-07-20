@@ -12,5 +12,8 @@ class BindgenContext {
   final Map<String, List<BridgeDeclaration>> bridgeDeclarations;
   final Map<String, String> exportedLibMappings;
 
-  BindgenContext(this.filename, this.uri, {required this.all, required this.bridgeDeclarations, required this.exportedLibMappings});
+  BindgenContext(this.filename, this.uri,
+      {required this.all,
+      required this.bridgeDeclarations,
+      required this.exportedLibMappings});
 }

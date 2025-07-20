@@ -110,4 +110,3 @@ String resolvePathRecursively(String path) {
     return path;
   }
 }
-

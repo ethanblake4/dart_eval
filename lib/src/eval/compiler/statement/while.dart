@@ -10,7 +10,7 @@ StatementInfo compileWhileStatement(WhileStatement s, CompilerContext ctx,
   return macroLoop(
     ctx,
     expectedReturnType,
-    condition: (_ctx) => compileExpression(s.condition, _ctx),
-    body: (_ctx, ert) => compileStatement(s.body, ert, _ctx),
+    condition: (ctx) => compileExpression(s.condition, ctx),
+    body: (ctx, ert) => compileStatement(s.body, ert, ctx),
   );
 }

@@ -42,16 +42,16 @@ class PrescanVisitor extends RecursiveAstVisitor<PrescanContext?> {
   PrescanContext? visitIfStatement(IfStatement node) {
     ctx.beginAllocScope();
     node.expression.accept(this);
-    final _initialState = ctx.saveState();
+    final initialState = ctx.saveState();
     ctx.beginAllocScope();
     node.thenStatement.accept(this);
     ctx.endAllocScope();
-    ctx.resolveBranchStateDiscontinuity(_initialState);
+    ctx.resolveBranchStateDiscontinuity(initialState);
     if (node.elseStatement != null) {
       ctx.beginAllocScope();
       node.elseStatement!.accept(this);
       ctx.endAllocScope();
-      ctx.resolveBranchStateDiscontinuity(_initialState);
+      ctx.resolveBranchStateDiscontinuity(initialState);
     }
     ctx.endAllocScope();
   }

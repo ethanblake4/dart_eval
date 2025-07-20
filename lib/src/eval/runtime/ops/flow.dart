@@ -1,3 +1,5 @@
+// ignore_for_file: constant_identifier_names
+
 part of '../runtime.dart';
 
 /// Static call opcode that jumps to another location in the program and adds the prior location to the call stack.

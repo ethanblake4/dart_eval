@@ -27,6 +27,8 @@ are still missing features like generators and extension methods.
 In addition, parts of the standard library haven't been implemented. See the
 [language feature support table](#language-feature-support-table) for details.
 
+If you use this project, please consider a small donation on [GitHub Sponsors](https://github.com/sponsors/ethanblake4) to help support its development.
+
 ## Usage
 
 > **Note**: See the README for [flutter_eval](https://pub.dev/packages/flutter_eval) for
@@ -280,263 +282,124 @@ eval(source, permissions: [
 Permissions can also be revoked using `runtime.revoke`.
 
 When writing bindings that access sensitive resources, you can check whether a 
-permission is enabled using `runtime.checkPermission`, or assert using
-`runtime.assertPermission`. Out of the box, dart_eval includes the FilesystemPermission, 
+permission is enabled by adding the `@AssertPermission` annotation.
+Out of the box, dart_eval includes the FilesystemPermission, 
 NetworkPermission, and Process(Run/Kill)Permission classes 
 ('filesystem', 'network', and 'process' domains, respectively)
 as well as read/write only variations of FilesystemPermission, but 
 you can also create your own custom permissions by implementing the Permission
 interface.
 
-## Interop
+## Interop and binding
 
-Interop is a general term for methods in which we can access, use, and modify data
-from dart_eval in Dart. Enabling this access is a high priority for dart_eval.
+dart_eval contains a suite of interop features allowing it to work with native
+Dart values and vice versa. Core Dart types are all backed by a native Dart value,
+and you can access the backing value using the `$value` property of a `$Value`.
 
-There are three main levels of interop:
-* Value interop
-* Wrapper interop
-* Bridge interop
+To enable your own classes and functions to be used in dart_eval, you can use the 
+dart_eval CLI to generate *bindings*, which give the dart_eval compiler and runtime
+access to your code. To do this, first annotate your class with the `@Bind` 
+annotation from the [eval_annotation](https://pub.dev/packages/eval_annotation) package.
+Then, run `dart_eval bind` in your project directory to generate bindings and a plugin
+to register them.
 
-### Value interop
+For example, to create a wrapper binding for a class `Book`, simply annotate it:
 
-Value interop happens automatically whenever dart_eval is working
-with an object backed by a real Dart value. (Therefore, an int and a string
-are value interop enabled, but a class created inside Eval isn't.)
-To access the backing object of a `$Value`, use its `$value` property. If the
-value is a collection like a Map or a List, you can use its `$reified` property
-to also unwrap the values it contains.
+```dart
+import 'package:eval_annotation/eval_annotation.dart';
 
-### Wrapper interop
+@Bind()
+class Book {
+  final List<String> pages;
 
-Using a wrapper enables the Eval environment to access the functions and fields on
-a class created outside Eval. It's much more powerful than value interop, and
-more performant than bridge interop, making it a great choice for certain use 
-cases. To use wrapper interop, create a class that implements `$Instance`, and
-a compile-time class definition. Then, override `$getProperty`, `$setProperty`
-and `$getRuntimeType` to enable the Eval environment to access the class's
-properties and methods:
+  Book(this.pages);
+  String getPage(int index) => pages[index];
+}
+```
+
+Running `bind` will generate bindings in `book.eval.dart`, as well as an 
+`eval_plugin.dart` file containing the plugin. Now, you can use it in dart_eval
+by adding the plugin to the `Compiler` and `Runtime`:
 
 ```dart
 import 'package:dart_eval/dart_eval.dart';
-import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/dart_eval_extensions.dart';
 
-/// An example class we want to wrap
-class Book {
-  Book(this.pages);
-  final List<String> pages;
-  
-  String getPage(int index) => pages[index];
-}
-
-/// This is our wrapper class
-class $Book implements $Instance {
-  /// Create a type specification for the dart_eval compiler
-  static final $type = BridgeTypeSpec('package:hello/book.dart', 'Book').ref;
-
-  /// Create a class declaration for the dart_eval compiler
-  static final $declaration = BridgeClassDef(BridgeClassType($type),
-    constructors: {
-      // Define the default constructor with an empty string
-      '': BridgeFunctionDef(returns: $type.annotate, params: [
-        'pages'.param(CoreTypes.list.refWith([CoreTypes.string.ref]).annotate)
-      ]).asConstructor
-    },
-    methods: {
-      'getPage': BridgeFunctionDef(
-        returns: CoreTypes.string.ref.annotate,
-        params: ['index'.param(CoreTypes.int.ref.annotate)],
-      ).asMethod,
-    }, wrap: true);
-
-  /// Override $value and $reified to return the value
-  @override
-  final Book $value;
-
-  @override
-  get $reified => $value;
-  
-  /// Create a constructor that wraps the Book class
-  $Book.wrap(this.$value);
-  
-  static $Value? $new(
-    Runtime runtime, $Value? target, List<$Value?> args) {
-    return $Book.wrap(Book(args[0]!.$value));
-  }
-
-  /// Create a wrapper for property and method getters
-  @override
-  $Value? $getProperty(Runtime runtime, String identifier) {
-    if (identifier == 'getPage') {
-      return $Function((_, target, args) {
-        return $String($value.getPage(args[0]!.$value));
-      });
+final compiler = Compiler();
+compiler.addPlugin(MyAppPlugin());
+final program = compiler.compile({'my_package': {
+  'main.dart': '''
+    import 'package:my_app/book.dart';
+    
+    Book main() {
+      final book = Book(['Page 1', 'Page 2']);
+      return book;
     }
-    return $Object(this).$getProperty(runtime, identifier);
-  }
+  '''
+}});
 
-  /// Create a wrapper for property setters
-  @override
-  void $setProperty(Runtime runtime, String identifier, $Value value) {
-    return $Object(this).$setProperty(runtime, identifier, value);
-  }
+final runtime = Runtime.ofProgram(program);
+runtime.addPlugin(MyAppPlugin()); // MyAppPlugin is the generated plugin
 
-  /// Allow runtime type lookup
-  @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType($type.spec!);
-}
-
-/// Now we can use it in dart_eval!
-void main() {
-  final compiler = Compiler();
-  compiler.defineBridgeClass($Book.$declaration);
-  
-  final program = compiler.compile({'hello' : { 
-    'main.dart': '''
-      import 'book.dart';
-      void main() {
-        final book = Book(['Hello world!', 'Hello again!']);
-        print(book.getPage(1));
-      }
-    '''
-  }});
-
-  final runtime = Runtime.ofProgram(program);
-  // Register static methods and constructors with the runtime
-  runtime.registerBridgeFunc('package:hello/book.dart', 'Book.', $Book.$new);
-
-  runtime.executeLib('package:hello/main.dart', 'main'); // -> 'Hello again!'
-}
+final book = runtime.executeLib('package:my_package/main.dart', 'main') as Book;
+print(book.getPage(0)); // prints 'Page 1'
 ```
 
-For more information,
-see the [wrapper interop wiki page](https://github.com/ethanblake4/dart_eval/wiki/Wrappers).
+This approach, known as wrapper interop, will allow you to use the `Book` class in dart_eval, 
+pass it as an argument, and call its methods. It also exposes a `$Book` wrapper class that 
+can be used to wrap an existing `Book` instance, allowing it to be passed to dart_eval.
 
-#### (Experimental) Binding generation for wrappers
-As of v0.7.1 the dart_eval CLI includes an experimental wrapper binding generator. 
-It can be invoked in a project using `dart_eval bind`, and will generate bindings
-for all classes annotated with the @Bind annotation from the eval_annotation package.
-You can also pass the '--all' flag to generate bindings for all classes in the project.
-Note that generated bindings don't support every edge case, and may require manual
-adjustment.
+However, if we instead want to to extend the class or use it as an interface, we'll need to 
+use a different approach called *bridge interop*. To generate a bridge class, simply change
+the `@Bind` annotation to `@Bind(bridge: true)`. Note that using bridge interop will *not* 
+allow you to wrap an existing instance of `Book`.
 
-Binding generation cannot currently create JSON bindings directly, but you can
-use the generated Dart bindings to create JSON bindings using a `BridgeSerializer`.
-
-### Bridge interop
-
-Bridge interop enables the most functionality: Not only can dart_eval access the fields
-of an object, but it can also be extended, allowing you to create subclasses within Eval
-and use them outside of dart_eval. For example, this can be used to create custom
-Flutter widgets that can be dynamically updated at runtime. Bridge interop is also in 
-some ways simpler than creating a wrapper, but it comes at a performance cost, so should
-be avoided in performance-sensitive situations. To use bridge interop, extend the original
-class and mixin `$Bridge`:
+After generating the bridge class, you can use it in dart_eval like this:
 
 ```dart
-// ** See previous example for the original class and imports **
+import 'package:dart_eval/dart_eval.dart';
+import 'package:my_app/book.dart';
 
-/// This is our bridge class
-class $Book$bridge extends Book with $Bridge<Book> {
-  static final $type = ...; // See previous example
-  static final $declaration = ...; // Previous example, but use bridge: true instead of wrap
+final compiler = Compiler();
+compiler.addPlugin(MyAppPlugin());
+final program = compiler.compile({'my_package': {
+  'main.dart': '''
+    import 'package:my_app/book.dart';
 
-  /// Recreate the original constructor
-  $Book$bridge(super.pages);
+    class MyBook extends Book {
+      MyBook(super.pages);
 
-  static $Value? $new(
-    Runtime runtime, $Value? target, List<$Value?> args) {
-    return $Book$bridge((args[0]!.$reified as List).cast());
-  }
-
-  @override
-  $Value? $bridgeGet(String identifier) {
-    if (identifier == 'getPage') {
-      return $Function((_, target, args) {
-        return $String(getPage(args[0]!.$value));
-      });
-    } 
-    throw UnimplementedError('Unknown property $identifier');
-  }
-
-  @override
-  $Value? $bridgeSet(String identifier) => 
-    throw UnimplementedError('Unknown property $identifier');
-
-  /// Override the original class' properties and methods
-  @override
-  String getPage(int index) => $_invoke('getPage', [$int(index)]);
-
-  @override
-  List<String> get pages => $_get('pages');
-}
-
-void main() {
-  final compiler = Compiler();
-  compiler.defineBridgeClass($Book$bridge.$declaration);
-  
-  final program = compiler.compile({'hello' : { 
-    'main.dart': '''
-      import 'book.dart';
-      class MyBook extends Book {
-        MyBook(List<String> pages) : super(pages);
-        String getPage(int index) => 'Hello world!';
+      @override
+      String getPage(int index) {
+        return 'MyBook: ${super.getPage(index)}';
       }
+    }
 
-      Book main() {
-        final book = MyBook(['Hello world!', 'Hello again!']);
-        return book;
-      }
-    '''
-  }});
+    MyBook main() {
+      final book = MyBook(['Page 1', 'Page 2']);
+      return book;
+    }
+  '''
+}});
 
-  final runtime = Runtime.ofProgram(program);
-  runtime.registerBridgeFunc(
-    'package:hello/book.dart', 'Book.', $Book$bridge.$new, bridge: true);
+final runtime = Runtime.ofProgram(program);
+runtime.addPlugin(MyAppPlugin()); // MyAppPlugin is the generated plugin
 
-  // Now we can use the new book class outside dart_eval!
-  final book = runtime.executeLib('package:hello/main.dart', 'main') 
-    as Book;
-  print(book.getPage(1)); // -> 'Hello world!'
-}
+final book = runtime.executeLib('package:my_package/main.dart', 'main') as Book;
+print(book.getPage(0)); // prints 'MyBook: Page 1'
 ```
 
-An example featuring both bridge and wrapper interop is available in the 
-`example` directory. For more information, see the 
-[wiki page on bridge classes](https://github.com/ethanblake4/dart_eval/wiki/Bridge-classes).
+If you want to use a class from another Dart package, in some cases you may be able to avoid
+cloning the package by simply writing a subclass and adding the `@Bind(implicitSupers: true)` 
+annotation, which creates bindings for all inherited methods and properties.
 
-## Plugins
+The binding generator also supports binding classes that rely on an
+existing plugin by using JSON binding files. To add these, create a folder in your project 
+root called `.dart_eval`, add a `bindings` subfolder, and place JSON binding files there.
 
-To configure interop for compilation and runtime, it's recommended to create an
-`EvalPlugin` which enables reuse of Compiler instances. Basic example:
-  
-```dart
-class MyAppPlugin implements EvalPlugin {
-  @override
-  String get identifier => 'package:myapp';
-
-  @override
-  void configureForCompile(BridgeDeclarationRegistry registry) {
-    registry.defineBridgeTopLevelFunction(BridgeFunctionDeclaration(
-      'package:myapp/functions.dart',
-      'loadData',
-      BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object)), params: [])
-    ));
-    registry.defineBridgeClass($CoolWidget.$declaration);
-  }
-
-  @override
-  void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFunc('package:myapp/functions.dart', 'loadData', 
-        (runtime, target, args) => $Object(loadData()));
-    runtime.registerBridgeFunc('package:myapp/classes.dart', 'CoolWidget.', $CoolWidget.$new);
-  }
-}
-```
-
-You can then use this plugin with `Compiler.addPlugin` and `Runtime.addPlugin`.
+For some specialized use cases, bindings may need to be manually adjusted or written from scratch.
+For information about this, refer to the 
+[wrapper interop wiki page](https://github.com/ethanblake4/dart_eval/wiki/Wrappers) and 
+[bridge interop wiki page](https://github.com/ethanblake4/dart_eval/wiki/Bridge-classes).
 
 ## Runtime overrides
 
@@ -647,6 +510,7 @@ may vary when bridging.
 | `part` / `part of` | ✅ | [1 test](https://github.com/ethanblake4/dart_eval/blob/master/test/lib_composition_test.dart#L76) |
 | `show` and `hide` | ✅ | [1 test](https://github.com/ethanblake4/dart_eval/blob/master/test/lib_composition_test.dart#L14) |
 | Conditional imports | ❌ | N/A |
+| Prefixed imports | ✅ | [1 test](https://github.com/ethanblake4/dart_eval/blob/master/test/class_test#L568) |
 | Deferred imports | ❌ | N/A |
 | Functions | ✅ | [4 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L36) |
 | Anonymous functions | ✅ | [6 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L104) |
@@ -665,9 +529,9 @@ may vary when bridging.
 | If statements | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/loop_test.dart#L28) |
 | Try-catch | ✅ | [5 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#L13)|
 | Try-catch-finally | ✅ | [5 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/exception_test.dart#L132) |
-| Lists | ✅ | [1 test](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart) |
+| Lists | ✅ | [2 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L44) |
 | Iterable | ✅ | [2 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L14) |
-| Maps | Partial | [3 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L202) |
+| Maps | ✅ | [9 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L202) |
 | Sets | ✅ | [7 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/set_test.dart) |
 | Collection `for` | ✅ | [2 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L14) |
 | Collection `if` | ✅ | [2 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/collection_test.dart#L14) |

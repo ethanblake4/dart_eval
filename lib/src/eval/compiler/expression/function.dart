@@ -30,14 +30,14 @@ Variable compileFunctionExpression(FunctionExpression e, CompilerContext ctx,
   final sfo = ctx.scopeFrameOffset;
   ctx.resetStack();
 
-  final _existingAllocs = 1 + (e.parameters?.parameters.length ?? 0);
-  ctx.beginAllocScope(existingAllocLen: _existingAllocs, closure: true);
+  final existingAllocs = 1 + (e.parameters?.parameters.length ?? 0);
+  ctx.beginAllocScope(existingAllocLen: existingAllocs, closure: true);
 
   final $prev = Variable(0, CoreTypes.list.ref(ctx), isFinal: true);
 
   ctx.setLocal('#prev', $prev);
 
-  ctx.scopeFrameOffset += _existingAllocs;
+  ctx.scopeFrameOffset += existingAllocs;
   final resolvedParams = resolveFPLDefaults(ctx, e.parameters, false,
       allowUnboxed: false, sortNamed: true);
 

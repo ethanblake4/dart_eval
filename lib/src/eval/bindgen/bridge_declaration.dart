@@ -7,7 +7,7 @@ String bindTypeSpec(BindgenContext ctx, ClassElement2 element) {
   final uri = ctx.libOverrides[element.name3] ?? ctx.uri;
   return '''
   static const \$spec = BridgeTypeSpec(
-    '${uri}',
+    '$uri',
     '${element.name3!.replaceAll(r'$', r'\$')}',
   );
 ''';

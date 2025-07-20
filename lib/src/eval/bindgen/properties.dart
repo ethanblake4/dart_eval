@@ -33,46 +33,42 @@ String propertyGetters(BindgenContext ctx, ClassElement2 element,
         for (final m in s.element3.methods2) m.name3: m,
     for (final m in element.methods2) m.name3: m
   };
-  final _getters = element.getters2
+  final getters = element.getters2
       .where((accessor) => !accessor.isStatic && !accessor.isPrivate)
       .where((a) => !(const ['hashCode', 'runtimeType'].contains(a.name3)));
 
-  final _methods = methods.values
+  final methods0 = methods.values
       .where((method) => !method.isPrivate && !method.isStatic)
       .where(
           (m) => !(const ['==', 'toString', 'noSuchMethod'].contains(m.name3)));
-  if (_getters.isEmpty && _methods.isEmpty) {
+  if (getters.isEmpty && methods0.isEmpty) {
     return '';
   }
   if (isBridge) {
-    return 'switch (identifier) {\n' +
-        _getters.map((e) => '''
+    return 'switch (identifier) {\n${getters.map((e) => '''
       case '${e.displayName}':
         final _${e.displayName} = super.${e.displayName};
         return ${wrapVar(ctx, e.type.returnType, '_${e.displayName}', metadata: e.metadata2.annotations)};
-      ''').join('\n') +
-        _methods.map((e) {
-          final returnsValue =
-              e.returnType is! VoidType && !e.returnType.isDartCoreNull;
-          return '''
+      ''').join('\n')}${methods0.map((e) {
+      final returnsValue =
+          e.returnType is! VoidType && !e.returnType.isDartCoreNull;
+      return '''
         case '${e.displayName}':
           return \$Function((runtime, target, args) {
             ${assertMethodPermissions(e)}
             ${returnsValue ? 'final result = ' : ''}super.${e.displayName}(${argumentAccessors(ctx, e.formalParameters)});
             return ${wrapVar(ctx, e.returnType, 'result')};
           });''';
-        }).join('\n') +
-        '\n' +
-        '}';
+    }).join('\n')}\n}';
   }
-  return 'switch (identifier) {\n' + _getters.map((e) => '''
+  return 'switch (identifier) {\n${getters.map((e) => '''
       case '${e.name3}':
         final _${e.name3} = \$value.${e.name3};
         return ${wrapVar(ctx, e.type.returnType, '_${e.name3}', metadata: e.metadata2.annotations)};
-      ''').join('\n') + _methods.map((e) => '''
+      ''').join('\n')}${methods0.map((e) => '''
       case '${e.name3}':
         return __${e.name3};
-      ''').join('\n') + '\n' + '}';
+      ''').join('\n')}\n}';
 }
 
 String $setProperty(BindgenContext ctx, ClassElement2 element) {
@@ -96,21 +92,21 @@ String $bridgeSet(BindgenContext ctx, ClassElement2 element) {
 
 String propertySetters(BindgenContext ctx, ClassElement2 element,
     {bool isBridge = false}) {
-  final _setters = element.setters2
+  final setters = element.setters2
       .where((element) => !element.isStatic && !element.isPrivate);
-  if (_setters.isEmpty) {
+  if (setters.isEmpty) {
     return '';
   }
   if (isBridge) {
-    return 'switch (identifier) {\n' + _setters.map((e) => '''
+    return 'switch (identifier) {\n${setters.map((e) => '''
         case '${e.displayName}':
           super.${e.displayName} = value.${e.displayName};
           return;
-        ''').join('\n') + '\n' + '}';
+        ''').join('\n')}\n}';
   }
-  return 'switch (identifier) {\n' + _setters.map((e) => '''
+  return 'switch (identifier) {\n${setters.map((e) => '''
         case '${e.displayName}':
           \$value.${e.displayName} = value.\$value;
           return;
-        ''').join('\n') + '\n' + '}';
+        ''').join('\n')}\n}';
 }

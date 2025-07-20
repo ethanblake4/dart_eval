@@ -36,8 +36,7 @@ class BridgeSerializer
   }
 
   @override
-  void addExportedLibraryMapping(
-      String libraryUri, String exportUri) {
+  void addExportedLibraryMapping(String libraryUri, String exportUri) {
     _exportedLibMappings[libraryUri] = exportUri;
   }
 

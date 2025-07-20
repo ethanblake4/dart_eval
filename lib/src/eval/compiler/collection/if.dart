@@ -13,17 +13,17 @@ List<TypeRef> compileIfElementForList(
   final elseElement = e.elseElement;
 
   macroBranch(ctx, null,
-      condition: (_ctx) => compileExpression(e.expression, _ctx),
-      thenBranch: (_ctx, _) {
+      condition: (ctx) => compileExpression(e.expression, ctx),
+      thenBranch: (ctx, _) {
         potentialReturnTypes
-            .addAll(compileListElement(e.thenElement, list, _ctx, box));
+            .addAll(compileListElement(e.thenElement, list, ctx, box));
         return StatementInfo(-1);
       },
       elseBranch: elseElement == null
           ? null
-          : (_ctx, _) {
+          : (ctx, _) {
               potentialReturnTypes
-                  .addAll(compileListElement(elseElement, list, _ctx, box));
+                  .addAll(compileListElement(elseElement, list, ctx, box));
               return StatementInfo(-1);
             });
 

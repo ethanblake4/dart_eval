@@ -30,7 +30,7 @@ StatementInfo compileForStatement(
     late Reference loopVariable;
 
     return macroLoop(ctx, expectedReturnType,
-        initialization: (_ctx) {
+        initialization: (ctx) {
           if (parts is ForEachPartsWithDeclaration) {
             final declaredType = parts.loopVariable.type == null
                 ? CoreTypes.dynamic.ref(ctx)
@@ -60,14 +60,14 @@ StatementInfo compileForStatement(
           } else if (parts is ForEachPartsWithIdentifier) {
             loopVariable = compileExpressionAsReference(parts.identifier, ctx);
             final type = loopVariable.resolveType(ctx);
-            if (!elementType.isAssignableTo(_ctx, type)) {
+            if (!elementType.isAssignableTo(ctx, type)) {
               throw CompileError('Cannot assign $elementType to $type', parts,
                   ctx.library, ctx);
             }
           }
         },
-        condition: (_ctx) => iterator.invoke(_ctx, 'moveNext', []).result,
-        body: (_ctx, ert) => compileStatement(s.body, ert, _ctx),
+        condition: (ctx) => iterator.invoke(ctx, 'moveNext', []).result,
+        body: (ctx, ert) => compileStatement(s.body, ert, ctx),
         update: (ctx) =>
             loopVariable.setValue(ctx, iterator.getProperty(ctx, 'current')),
         updateBeforeBody: true);
@@ -76,22 +76,22 @@ StatementInfo compileForStatement(
   parts as ForParts;
 
   return macroLoop(ctx, expectedReturnType,
-      initialization: (_ctx) {
+      initialization: (ctx) {
         if (parts is ForPartsWithDeclarations) {
-          compileVariableDeclarationList(parts.variables, _ctx);
+          compileVariableDeclarationList(parts.variables, ctx);
         } else if (parts is ForPartsWithExpression) {
           if (parts.initialization != null) {
-            compileExpressionAndDiscardResult(parts.initialization!, _ctx);
+            compileExpressionAndDiscardResult(parts.initialization!, ctx);
           }
         }
       },
       condition: parts.condition == null
           ? null
-          : (_ctx) => compileExpression(parts.condition!, _ctx),
-      body: (_ctx, ert) => compileStatement(s.body, ert, _ctx),
-      update: (_ctx) {
+          : (ctx) => compileExpression(parts.condition!, ctx),
+      body: (ctx, ert) => compileStatement(s.body, ert, ctx),
+      update: (ctx) {
         for (final u in parts.updaters) {
-          compileExpressionAndDiscardResult(u, _ctx);
+          compileExpressionAndDiscardResult(u, ctx);
         }
       });
 }

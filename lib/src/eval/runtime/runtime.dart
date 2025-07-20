@@ -87,7 +87,7 @@ class _UnloadedEnumValues {
 ///
 class Runtime {
   /// The current runtime version code
-  static const int versionCode = 79;
+  static const int versionCode = 80;
 
   /// Construct a runtime from EVC bytecode. When possible, use the
   /// [Runtime.ofProgram] constructor instead to reduce loading time.
@@ -269,10 +269,6 @@ class Runtime {
     _unloadedEnumValues.add(_UnloadedEnumValues(library, name, values));
   }
 
-  /// No longer needed, runtime is automatically setup by [executeLib]
-  @Deprecated("setup() is no longer required")
-  void setup() => _setup();
-
   void _setup() {
     if (_didSetup) {
       return;
@@ -390,9 +386,6 @@ class Runtime {
             'otherwise, try adding a type autowrapper with '
             'runtime.addTypeAutowrapper().'));
   }
-
-  @Deprecated("Use runtime.wrap() with recursive:true instead")
-  $Value wrapRecursive(dynamic value) => wrap(value, recursive: true);
 
   /// Attempt to wrap a Dart value into a [$Value], falling back to wrapping
   /// in an [$Object]
@@ -826,7 +819,7 @@ class Runtime {
   /// Run the VM in a 'sub-state' of a parent invocation of the VM. Used for bridge calls.
   /// For performance reasons, avoid making excessive use of this pattern, despite its convenience
   void bridgeCall(int $offset) {
-    final _savedOffset = _prOffset;
+    final savedOffset = _prOffset;
     _prOffset = $offset;
     callStack.add(-1);
     catchStack.add([]);
@@ -836,7 +829,7 @@ class Runtime {
         op.run(this);
       }
     } on ProgramExit catch (_) {
-      _prOffset = _savedOffset;
+      _prOffset = savedOffset;
       return;
     } on RuntimeException catch (_) {
       rethrow;

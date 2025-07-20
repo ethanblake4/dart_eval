@@ -11,13 +11,13 @@ StatementInfo compileIfStatement(
   return macroBranch(
     ctx,
     expectedReturnType,
-    condition: (_ctx) => compileExpression(s.expression, _ctx),
-    thenBranch: (_ctx, expectedReturnType) =>
-        compileStatement(s.thenStatement, expectedReturnType, _ctx),
+    condition: (ctx) => compileExpression(s.expression, ctx),
+    thenBranch: (ctx, expectedReturnType) =>
+        compileStatement(s.thenStatement, expectedReturnType, ctx),
     elseBranch: elseStatement == null
         ? null
-        : (_ctx, expectedReturnType) =>
-            compileStatement(elseStatement, expectedReturnType, _ctx),
+        : (ctx, expectedReturnType) =>
+            compileStatement(elseStatement, expectedReturnType, ctx),
     source: s,
   );
 }

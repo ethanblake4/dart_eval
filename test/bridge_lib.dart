@@ -102,7 +102,7 @@ class $TestClass extends TestClass with $Bridge {
   int get someNumber => $_get('someNumber');
 
   @override
-  set someNumber(int _someNumber) => $_set('someNumber', $int(_someNumber));
+  set someNumber(int someNumber) => $_set('someNumber', $int(someNumber));
 }
 
 enum TestEnum {

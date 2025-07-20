@@ -43,7 +43,7 @@ Variable compileRecordLiteral(RecordLiteral l, CompilerContext ctx,
               fieldBound.name != name ||
               !value.type.isAssignableTo(ctx, fieldBound.type))) {
         throw CompileError(
-            'A value of type $name: ${value.type} is not assignable to ${fieldBound}',
+            'A value of type $name: ${value.type} is not assignable to $fieldBound',
             field);
       } else if (boundRecordFields == null) {
         inferredRecordFields.add(RecordParameterType(name, value.type, true));
@@ -71,7 +71,7 @@ Variable compileRecordLiteral(RecordLiteral l, CompilerContext ctx,
           (fieldBound.isNamed ||
               !value.type.isAssignableTo(ctx, fieldBound.type))) {
         throw CompileError(
-            'A value of type ${value.type} is not assignable to ${fieldBound}',
+            'A value of type ${value.type} is not assignable to $fieldBound',
             field);
       } else if (boundRecordFields == null) {
         inferredRecordFields.add(RecordParameterType(name, value.type, false));

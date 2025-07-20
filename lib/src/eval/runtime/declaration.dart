@@ -70,7 +70,7 @@ class EvalClassClass implements EvalClass {
   List<Object> get values => throw UnimplementedError();
 
   @override
-  set values(List<Object?> _values) => throw UnimplementedError();
+  set values(List<Object?> values) => throw UnimplementedError();
 
   @override
   Never get evalClass => throw UnimplementedError();

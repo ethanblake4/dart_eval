@@ -33,11 +33,11 @@ void compileTopLevelVariableDeclaration(
       V = V.unboxIfNeeded(ctx);
       type = type.copyWith(boxed: false);
     }
-    final _index = ctx.topLevelGlobalIndices[ctx.library]![varName]!;
-    ctx.pushOp(SetGlobal.make(_index, V.scopeFrameOffset), SetGlobal.LEN);
+    final index = ctx.topLevelGlobalIndices[ctx.library]![varName]!;
+    ctx.pushOp(SetGlobal.make(index, V.scopeFrameOffset), SetGlobal.LEN);
     ctx.topLevelVariableInferredTypes[ctx.library]![varName] = type;
     ctx.topLevelGlobalInitializers[ctx.library]![varName] = pos;
-    ctx.runtimeGlobalInitializerMap[_index] = pos;
+    ctx.runtimeGlobalInitializerMap[index] = pos;
     ctx.pushOp(Return.make(V.scopeFrameOffset), Return.LEN);
   }
 }

@@ -100,12 +100,12 @@ void compileEnumDeclaration(CompilerContext ctx, EnumDeclaration d,
     }
     ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
     final V = Variable.alloc(ctx, type);
-    final _name = '$clsName.$cName';
-    final _index = ctx.topLevelGlobalIndices[ctx.library]![_name]!;
-    ctx.pushOp(SetGlobal.make(_index, V.scopeFrameOffset), SetGlobal.LEN);
-    ctx.topLevelVariableInferredTypes[ctx.library]![_name] = type;
-    ctx.topLevelGlobalInitializers[ctx.library]![_name] = pos;
-    ctx.runtimeGlobalInitializerMap[_index] = pos;
+    final name = '$clsName.$cName';
+    final index = ctx.topLevelGlobalIndices[ctx.library]![name]!;
+    ctx.pushOp(SetGlobal.make(index, V.scopeFrameOffset), SetGlobal.LEN);
+    ctx.topLevelVariableInferredTypes[ctx.library]![name] = type;
+    ctx.topLevelGlobalInitializers[ctx.library]![name] = pos;
+    ctx.runtimeGlobalInitializerMap[index] = pos;
     ctx.pushOp(Return.make(V.scopeFrameOffset), Return.LEN);
     idx++;
   }

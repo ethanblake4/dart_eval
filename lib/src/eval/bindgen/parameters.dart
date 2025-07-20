@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/element/element2.dart';
 import 'package:analyzer/dart/element/type.dart';
+import 'package:dart_eval/src/eval/bindgen/bridge.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
 import 'package:dart_eval/src/eval/bindgen/type.dart';
 
@@ -51,95 +52,34 @@ String argumentAccessors(
     if (type.isDartCoreFunction || type is FunctionType) {
       paramBuffer.write('(');
       if (type is FunctionType) {
-        for (var j = 0; j < type.normalParameterTypes.length; j++) {
-          var _name = type.normalParameterTypes[j].element3?.name3;
-          if (_name == null) {
-            _name = 'v$j';
-          }
-          paramBuffer.write(_name);
-          if (j < type.normalParameterTypes.length - 1) {
-            paramBuffer.write(', ');
-          }
-        }
-
-        if (type.optionalParameterTypes.isNotEmpty) {
-          if (type.normalParameterTypes.isNotEmpty) {
-            paramBuffer.write(', ');
-          }
-          paramBuffer.write('[');
-
-          for (var j = 0; j < type.optionalParameterTypes.length; j++) {
-            final _name = type.optionalParameterTypes[j].element3?.name3;
-            paramBuffer.write(_name);
-            if (j < type.optionalParameterTypes.length - 1) {
-              paramBuffer.write(', ');
-            }
-          }
-          paramBuffer.write(']');
-        }
-
-        if (type.namedParameterTypes.isNotEmpty) {
-          if (type.normalParameterTypes.isNotEmpty ||
-              type.optionalParameterTypes.isNotEmpty) {
-            paramBuffer.write(', ');
-          }
-          paramBuffer.write('{');
-
-          var k = 0;
-          type.namedParameterTypes.forEach((_name, _type) {
-            paramBuffer.write(_name);
-            if (k < type.namedParameterTypes.length - 1) {
-              paramBuffer.write(', ');
-            }
-          });
-          paramBuffer.write('}');
-        }
+        paramBuffer.write(parameterHeader(type.formalParameters));
       }
       paramBuffer.write(') {\n');
-      paramBuffer.write('return (args[$i] as EvalCallable)(runtime, null, [');
       if (type is FunctionType) {
-        for (var j = 0; j < type.normalParameterTypes.length; j++) {
-          var _name = type.normalParameterTypes[j].element3?.name3;
-          if (_name == null) {
-            _name = 'v$j';
-          }
-          paramBuffer.write(wrapVar(ctx, type.normalParameterTypes[i], _name));
-          if (j < type.normalParameterTypes.length - 1) {
-            paramBuffer.write(', ');
-          }
-        }
-
-        if (type.optionalParameterTypes.isNotEmpty) {
-          if (type.normalParameterTypes.isNotEmpty) {
-            paramBuffer.write(', ');
-          }
-
-          for (var j = 0; j < type.optionalParameterTypes.length; j++) {
-            final _name = type.optionalParameterTypes[i].element3?.name3;
-            paramBuffer
-                .write(wrapVar(ctx, type.optionalParameterTypes[i], _name!));
-            if (j < type.optionalParameterTypes.length - 1) {
-              paramBuffer.write(', ');
-            }
-          }
-        }
-
-        if (type.namedParameterTypes.isNotEmpty) {
-          if (type.normalParameterTypes.isNotEmpty ||
-              type.optionalParameterTypes.isNotEmpty) {
-            paramBuffer.write(', ');
-          }
-
-          var k = 0;
-          type.namedParameterTypes.forEach((_name, _type) {
-            paramBuffer.write(wrapVar(ctx, _type, _name));
-            if (k < type.namedParameterTypes.length - 1) {
-              paramBuffer.write(', ');
-            }
-          });
+        if (type.returnType is! VoidType) {
+          paramBuffer.write('return ');
         }
       }
-      paramBuffer.write('])?.\$value;\n}');
+      final q = (param.isRequired ? '' : '?');
+      final call = (param.isRequired ? '' : '?.call');
+      paramBuffer.write('(args[$i] as EvalCallable$q)$call(runtime, null, [');
+      if (type is FunctionType) {
+        for (var j = 0; j < type.formalParameters.length; j++) {
+          final ftParam = type.formalParameters[j];
+          paramBuffer
+              .write(wrapVar(ctx, ftParam.type, ftParam.name3 ?? 'arg$j'));
+          if (j < type.formalParameters.length - 1) {
+            paramBuffer.write(', ');
+          }
+        }
+      }
+      paramBuffer.write('])');
+      if (type is FunctionType) {
+        if (type.returnType is! VoidType) {
+          paramBuffer.write('?.\$value');
+        }
+      }
+      paramBuffer.write(';\n}');
     } else {
       final needsCast =
           type.isDartCoreList || type.isDartCoreMap || type.isDartCoreSet;

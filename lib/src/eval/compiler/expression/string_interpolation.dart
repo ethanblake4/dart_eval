@@ -13,8 +13,8 @@ Variable compileStringInterpolation(
     if (element is InterpolationString) {
       final sval = element.value;
       if (sval.isNotEmpty) {
-        final _el = BuiltinValue(stringval: element.value).push(ctx);
-        build = build == null ? _el : build.invoke(ctx, '+', [_el]).result;
+        final el = BuiltinValue(stringval: element.value).push(ctx);
+        build = build == null ? el : build.invoke(ctx, '+', [el]).result;
       }
     } else if (element is InterpolationExpression) {
       final V = compileExpression(element.expression, ctx);

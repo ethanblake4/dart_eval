@@ -23,9 +23,9 @@ Variable compilePropertyAccess(PropertyAccess pa, CompilerContext ctx,
         L.concreteTypes[0] == CoreTypes.nullType.ref(ctx)) {
       return out;
     }
-    macroBranch(ctx, null, condition: (_ctx) {
+    macroBranch(ctx, null, condition: (ctx) {
       return checkNotEqual(ctx, L, out);
-    }, thenBranch: (_ctx, rt) {
+    }, thenBranch: (ctx, rt) {
       final V = L.getProperty(ctx, pa.propertyName.name).boxIfNeeded(ctx);
       out = out.copyWith(type: V.type.copyWith(nullable: true));
       ctx.pushOp(CopyValue.make(out.scopeFrameOffset, V.scopeFrameOffset),

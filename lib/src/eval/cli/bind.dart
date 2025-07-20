@@ -38,8 +38,8 @@ void cliBind(
     for (final file in files) {
       print(
           'Found binding file: ${relative(file.path, from: projectRoot.path)}');
-      final _data = file.readAsStringSync();
-      final decoded = (json.decode(_data) as Map).cast<String, dynamic>();
+      final data = file.readAsStringSync();
+      final decoded = (json.decode(data) as Map).cast<String, dynamic>();
       final classList = (decoded['classes'] as List);
       for (final $class in classList.cast<Map>()) {
         bindgen.defineBridgeClass(BridgeClassDef.fromJson($class.cast()));
@@ -118,13 +118,12 @@ void cliBind(
   }
 
   if (generatePlugin) {
-    final pluginFile =
-        File(join(projectRoot.path, 'lib', 'eval_plugin.dart'));
+    final pluginFile = File(join(projectRoot.path, 'lib', 'eval_plugin.dart'));
     final pluginContent = '''
 import 'package:dart_eval/dart_eval_bridge.dart';
 ${bindgen.registerClasses.map((e) => e.file).toSet().map((e) => 'import \'${e.replaceAll('.dart', '.eval.dart')}\';').join('\n')}
 
-/// [EvalPlugin] for ${packageName}
+/// [EvalPlugin] for $packageName
 class ${packageName.toPascalCase()}Plugin implements EvalPlugin {
   @override
   String get identifier => 'package:${packageName.toLowerCase()}';
