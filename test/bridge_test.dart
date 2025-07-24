@@ -259,5 +259,41 @@ void main() {
               .executeLib('package:example/main.dart', 'main', [callback])),
           prints('a\nb\n'));
     });
+
+    test('Should catch bridge future error', () async {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            import 'dart:async';
+
+            void main(Function callback) async {
+              await callback();
+            }
+          '''
+        }
+      });
+
+      bool callbackExecuted = false;
+      final callback = $Closure((runtime, target, args) {
+        callbackExecuted = true;
+        return $Future.wrap(Future.error(Exception('Bridge error')));
+      });
+
+      Exception? caughtException;
+      try {
+        await runtime
+            .executeLib('package:example/main.dart', 'main', [callback]);
+        fail('Expected exception was not thrown');
+      } catch (e) {
+        caughtException = e as Exception;
+      }
+
+      // Verify callback was executed
+      expect(callbackExecuted, isTrue);
+
+      // Verify correct exception type and message
+      expect(caughtException, isA<Exception>());
+      expect(caughtException.toString(), contains('Bridge error'));
+    });
   });
 }
