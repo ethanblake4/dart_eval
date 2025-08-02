@@ -97,5 +97,32 @@ void main() {
           'ShowType', {'Movie': $int(0), 'Series': $int(1)});
       runtime.executeLib('package:my_package/main.dart', 'main');
     });
+
+    test('Enum value index property from imported file', () {
+      const libSource = '''
+        enum TestEnum {
+          alpha,
+          beta
+        }
+      ''';
+
+      const mainSource = '''
+        import 'package:my_test_package/lib.dart';
+
+        int main() {
+          return TestEnum.beta.index;
+        }
+      ''';
+
+      final runtime = compiler.compileWriteAndLoad({
+        'my_test_package': {
+          'main.dart': mainSource,
+          'lib.dart': libSource,
+        }
+      });
+
+      final result = runtime.executeLib('package:my_test_package/main.dart', 'main');
+      expect(result, 1);
+    });
   });
 }
