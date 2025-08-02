@@ -162,14 +162,14 @@ class Await implements EvcOp {
 
   void _suspend(Runtime runtime, Continuation continuation, $Future future,
       Completer completer) async {
-    final result = await future.$value;
-    runtime.returnValue = result;
-    runtime.frameOffset = continuation.frameOffset;
-    runtime.frame = continuation.frame;
-    runtime.stack.add(continuation.frame);
-    runtime.scopeNameStack.add('<asynchronous gap>');
-
     try {
+      final result = await future.$value;
+      runtime.returnValue = result;
+      runtime.frameOffset = continuation.frameOffset;
+      runtime.frame = continuation.frame;
+      runtime.stack.add(continuation.frame);
+      runtime.scopeNameStack.add('<asynchronous gap>');
+
       runtime.bridgeCall(continuation.programOffset);
     } catch (e) {
       // temporary fix: this isn't correct, we need to reenter the eval loop
