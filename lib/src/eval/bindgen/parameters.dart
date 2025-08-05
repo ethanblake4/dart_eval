@@ -62,12 +62,15 @@ String argumentAccessors(
       }
       final q = (param.isRequired ? '' : '?');
       final call = (param.isRequired ? '' : '?.call');
-      paramBuffer.write('(args[$i] as EvalCallable$q)$call(runtime, null, [');
+      paramBuffer.write('(args[$i]! as EvalCallable$q)$call(runtime, null, [');
       if (type is FunctionType) {
         for (var j = 0; j < type.formalParameters.length; j++) {
           final ftParam = type.formalParameters[j];
+          final name = ftParam.name3 == null || ftParam.name3!.isEmpty
+              ? 'arg$j'
+              : ftParam.name3!;
           paramBuffer
-              .write(wrapVar(ctx, ftParam.type, ftParam.name3 ?? 'arg$j'));
+              .write(wrapVar(ctx, ftParam.type, name, forCollection: true));
           if (j < type.formalParameters.length - 1) {
             paramBuffer.write(', ');
           }

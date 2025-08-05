@@ -5,7 +5,7 @@ import 'package:dart_eval/src/eval/bindgen/parameters.dart';
 import 'package:dart_eval/src/eval/bindgen/permission.dart';
 import 'package:dart_eval/src/eval/bindgen/type.dart';
 
-String $getProperty(BindgenContext ctx, ClassElement2 element) {
+String $getProperty(BindgenContext ctx, InterfaceElement2 element) {
   return '''
   @override
   \$Value? \$getProperty(Runtime runtime, String identifier) {
@@ -25,7 +25,7 @@ String $bridgeGet(BindgenContext ctx, ClassElement2 element) {
 ''';
 }
 
-String propertyGetters(BindgenContext ctx, ClassElement2 element,
+String propertyGetters(BindgenContext ctx, InterfaceElement2 element,
     {bool isBridge = false}) {
   final methods = {
     if (ctx.implicitSupers)
@@ -71,7 +71,7 @@ String propertyGetters(BindgenContext ctx, ClassElement2 element,
       ''').join('\n')}\n}';
 }
 
-String $setProperty(BindgenContext ctx, ClassElement2 element) {
+String $setProperty(BindgenContext ctx, InterfaceElement2 element) {
   return '''
   @override
   void \$setProperty(Runtime runtime, String identifier, \$Value value) {
@@ -90,7 +90,7 @@ String $bridgeSet(BindgenContext ctx, ClassElement2 element) {
 ''';
 }
 
-String propertySetters(BindgenContext ctx, ClassElement2 element,
+String propertySetters(BindgenContext ctx, InterfaceElement2 element,
     {bool isBridge = false}) {
   final setters = element.setters2
       .where((element) => !element.isStatic && !element.isPrivate);

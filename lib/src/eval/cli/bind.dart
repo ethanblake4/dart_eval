@@ -10,8 +10,9 @@ import 'package:path/path.dart';
 import 'package:pubspec_parse/pubspec_parse.dart';
 
 const defaultImports = '''
-// ignore_for_file: unused_import
-// ignore_for_file: unnecessary_import
+// ignore_for_file: unused_import, unnecessary_import
+// ignore_for_file: always_specify_types, avoid_redundant_argument_values
+// ignore_for_file: sort_constructors_first
 // ignore_for_file: no_leading_underscores_for_local_identifiers
 
 import 'package:dart_eval/dart_eval.dart';
@@ -83,7 +84,7 @@ void cliBind(
       final filename = basename(file.path);
       if (file is File &&
           filename.endsWith('.dart') &&
-          filename.split('.').length == 2) {
+          !filename.endsWith('.eval.dart')) {
         final p = relative(file.path, from: root).replaceAll('\\', '/');
         final uri = 'package:${posix.join(packageName, p)}';
         final output = await bindgen.parse(file, filename, uri, all);
@@ -97,7 +98,8 @@ void cliBind(
             final ogImport = "import '$filename';\n";
             final outputFilename = filename.replaceAll('.dart', '.eval.dart');
             final outputFile = File(join(dir.path, outputFilename));
-            final result = formatter.format(defaultImports + ogImport + output);
+            final result = formatter.format(defaultImports + ogImport + output,
+                uri: Uri.parse(uri));
             outputFile.writeAsStringSync(result);
           }
         }
@@ -111,9 +113,10 @@ void cliBind(
       join(projectRoot.path, 'lib'));
 
   if (singleFile) {
-    final outputFile =
-        File(join(projectRoot.path, 'lib', 'dart_eval_bindings.dart'));
-    final result = formatter.format(defaultImports + singleResult);
+    final outPath = join(projectRoot.path, 'lib', 'dart_eval_bindings.dart');
+    final outputFile = File(outPath);
+    final result = formatter.format(defaultImports + singleResult,
+        uri: Uri.parse('package:$packageName/dart_eval_bindings.dart'));
     outputFile.writeAsStringSync(result);
   }
 
@@ -121,7 +124,10 @@ void cliBind(
     final pluginFile = File(join(projectRoot.path, 'lib', 'eval_plugin.dart'));
     final pluginContent = '''
 import 'package:dart_eval/dart_eval_bridge.dart';
-${bindgen.registerClasses.map((e) => e.file).toSet().map((e) => 'import \'${e.replaceAll('.dart', '.eval.dart')}\';').join('\n')}
+${[
+      ...bindgen.registerClasses,
+      ...bindgen.registerEnums
+    ].map((e) => e.uri.substring(e.uri.indexOf('/') + 1)).toSet().map((e) => 'import \'${e.replaceAll('.dart', '.eval.dart')}\';').join('\n')}
 
 /// [EvalPlugin] for $packageName
 class ${packageName.toPascalCase()}Plugin implements EvalPlugin {
@@ -131,15 +137,18 @@ class ${packageName.toPascalCase()}Plugin implements EvalPlugin {
   @override
   void configureForCompile(BridgeDeclarationRegistry registry) {
     ${bindgen.registerClasses.map((e) => 'registry.defineBridgeClass(\$${e.name}.\$declaration);').join('\n')}
+    ${bindgen.registerEnums.map((e) => 'registry.defineBridgeEnum(\$${e.name}.\$declaration);').join('\n')}
   }
 
   @override
   void configureForRuntime(Runtime runtime) {
     ${bindgen.registerClasses.map((e) => '\$${e.name}.configureForRuntime(runtime);').join('\n')}
+    ${bindgen.registerEnums.map((e) => '\$${e.name}.configureForRuntime(runtime);').join('\n')}
   }
 }
 ''';
-    pluginFile.writeAsStringSync(formatter.format(pluginContent));
+    pluginFile.writeAsStringSync(formatter.format(pluginContent,
+        uri: Uri.parse('package:$packageName/eval_plugin.dart')));
     print('Generated plugin file: ${pluginFile.path}');
   } else {
     print('Skipping plugin generation.');

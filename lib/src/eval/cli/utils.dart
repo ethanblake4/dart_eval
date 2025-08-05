@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:package_config/package_config_types.dart';
@@ -17,7 +18,18 @@ Directory findProjectRoot(Directory start) {
 }
 
 PackageConfig getPackageConfig(Directory projectRoot) {
-  final path = join(projectRoot.path, '.dart_tool', 'package_config.json');
+  String path;
+  final workspaceRefFile =
+      File(join(projectRoot.path, '.dart_tool', 'pub', 'workspace_ref.json'));
+  if (workspaceRefFile.existsSync()) {
+    final workspaceRef = workspaceRefFile.readAsStringSync();
+    final workspaceRefMap = json.decode(workspaceRef) as Map<String, dynamic>;
+    final workspacePath = workspaceRefMap['workspaceRoot'] as String;
+    path = join(normalize('${projectRoot.path}/.dart_tool/pub/$workspacePath'),
+        '.dart_tool', 'package_config.json');
+  } else {
+    path = join(projectRoot.path, '.dart_tool', 'package_config.json');
+  }
   final packageConfigFile = File(path).readAsStringSync();
   return PackageConfig.parseString(packageConfigFile, Uri.file(path));
 }

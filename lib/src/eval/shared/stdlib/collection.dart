@@ -1,5 +1,6 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/collection/linked_hash_map.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/collection/list_queue.dart';
 
 /// [EvalPlugin] for the `dart:collection` library
 class DartCollectionPlugin implements EvalPlugin {
@@ -9,6 +10,7 @@ class DartCollectionPlugin implements EvalPlugin {
   @override
   void configureForCompile(BridgeDeclarationRegistry registry) {
     registry.defineBridgeClass($LinkedHashMap.$declaration);
+    registry.defineBridgeClass($ListQueue.$declaration);
   }
 
   @override

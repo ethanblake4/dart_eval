@@ -64,6 +64,9 @@ String? builtinTypeFrom(DartType type) {
   if (type is FunctionType) {
     return 'CoreTypes.function';
   }
+  if (type is RecordType) {
+    return 'CoreTypes.record';
+  }
 
   final element = type.element3!;
   final lib = element.library2!;
@@ -106,16 +109,17 @@ String? builtinTypeFrom(DartType type) {
 String? wrapVar(BindgenContext ctx, DartType type, String expr,
     {bool func = false,
     bool wrapList = false,
-    List<ElementAnnotation>? metadata}) {
+    List<ElementAnnotation>? metadata,
+    bool forCollection = false}) {
   if (type is VoidType) {
     if (func) {
-      return '\$null()';
+      return 'const \$null()';
     }
     return 'null';
   }
 
   if (type.isDartCoreNull) {
-    return '\$null()';
+    return 'const \$null()';
   }
 
   var wrapped =
@@ -130,7 +134,10 @@ String? wrapVar(BindgenContext ctx, DartType type, String expr,
   }
 
   if (type.nullabilitySuffix == NullabilitySuffix.question) {
-    return '$expr == null ? \$null() : $wrapped';
+    if (forCollection) {
+      return 'if ($expr == null) const \$null() else $wrapped';
+    }
+    return '$expr == null ? const \$null() : $wrapped';
   }
 
   return wrapped;
@@ -162,7 +169,7 @@ String? wrapType(BindgenContext ctx, DartType type, String expr,
   }
 
   if (type.isDartCoreNull) {
-    return '$unionStr\$null()';
+    return '${unionStr}const \$null()';
   }
 
   if (type is DynamicType) {
@@ -213,7 +220,7 @@ String? wrapType(BindgenContext ctx, DartType type, String expr,
   }
 
   final typeEl = type.element3!;
-  if (typeEl is ClassElement2) {
+  if (typeEl is InterfaceElement2) {
     final uri = typeEl.library2.uri.toString();
     final hasAnno = typeEl.metadata2.annotations
         .any((e) => e.element2?.displayName == 'Bind');

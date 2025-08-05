@@ -3,6 +3,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
@@ -679,27 +680,26 @@ Variable _declarationToVariable(
         TypeRef.fromAnnotation(ctx, decOrBridge.sourceLib, decl.returnType!);
     nullable = decl.returnType!.question != null;
     ctx.temporaryTypes[ctx.library]?.clear();
-    if (decl.isGetter) {
-      return Variable(-1, returnType);
-    }
   } else {
     returnType = TypeRef.lookupDeclaration(
         ctx, decOrBridge.sourceLib, decl.parent as ClassDeclaration);
   }
 
   final DeferredOrOffset offset;
-  if (ctx.topLevelDeclarationPositions[decOrBridge.sourceLib]
-          ?.containsKey(name) ??
+  if (ctx.topLevelDeclarationsMap[decOrBridge.sourceLib]?.containsKey(name) ??
       false) {
-    offset = DeferredOrOffset(
-        file: decOrBridge.sourceLib,
-        offset: ctx.topLevelDeclarationPositions[ctx.library]![name],
-        name: name);
-  } else {
     offset = DeferredOrOffset(file: decOrBridge.sourceLib, name: name);
+  } else {
+    final cls = decl.parent;
+    String? className;
+    if (cls is NamedCompilationUnitMember) {
+      className = cls.name.lexeme;
+    }
+    offset = DeferredOrOffset(
+        file: decOrBridge.sourceLib, name: name, className: className);
   }
 
-  return Variable(
+  final fn = Variable(
       -1,
       decl is FunctionDeclaration
           ? CoreTypes.function.ref(ctx)
@@ -707,6 +707,11 @@ Variable _declarationToVariable(
       concreteTypes: [returnType],
       methodOffset: offset,
       methodReturnType: AlwaysReturnType(returnType, nullable));
+
+  if (decl is FunctionDeclaration && decl.isGetter) {
+    return fn.invoke(ctx, null, []).result;
+  }
+  return fn;
 }
 
 StaticDispatch? _declarationToStaticDispatch(

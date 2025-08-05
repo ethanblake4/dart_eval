@@ -4,6 +4,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/field.dart';
+import 'package:dart_eval/src/eval/compiler/model/diagnostic_mode.dart';
 import 'package:dart_eval/src/eval/compiler/model/library.dart';
 import 'package:dart_eval/src/eval/compiler/source.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -72,6 +73,9 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
   /// `main.dart`). Adding a file to this list prevents it from being dead-code
   /// eliminated.
   final entrypoints = ['/main.dart'];
+
+  /// The diagnostic mode to use when parsing.
+  var diagnosticMode = DiagnosticMode.throwIfError;
 
   // Add a plugin, which will only be run once.
   @override
@@ -195,7 +199,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
 
       // Load the source code from the filesystem or a String and parse it
       // (internally using the Dart analyzer) into an AST
-      final parsed = _cachedParsedSources[source] = source.load();
+      final parsed = _cachedParsedSources[source] = source.load(diagnosticMode);
       return parsed;
     }).toList();
 
@@ -263,12 +267,15 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
 
     var i = 0;
     final libraryIndexMap = <Library, int>{};
+    final inverseIndexMap = <int, Library>{};
     final computedEntrypoints = <Uri>{};
 
     for (final library in libraries) {
       if (libraryIndexMap[library] == null) {
         libraryIndexMap[library] = i++;
       }
+
+      inverseIndexMap[libraryIndexMap[library]!] = library;
 
       var isEntrypoint = false;
       for (final entrypoint in entrypoints) {
@@ -441,8 +448,12 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     try {
       /// Compile statics first so we can infer their type
       _topLevelDeclarationsMap.forEach((key, value) {
-        value.forEach((lib, tlDeclaration) {
-          if (tlDeclaration.isBridge) {
+        final visibleInLibrary = visibleDeclarationsByIndex[key];
+        if (visibleInLibrary == null) {
+          return;
+        }
+        value.forEach((name, tlDeclaration) {
+          if (tlDeclaration.isBridge || !visibleInLibrary.containsKey(name)) {
             return;
           }
           final declaration = tlDeclaration.declaration!;
@@ -478,8 +489,12 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
         _ctx.topLevelDeclarationPositions[key] = {};
         _ctx.instanceDeclarationPositions[key] = {};
         _ctx.instanceGetterIndices[key] = {};
-        value.forEach((lib, tlDeclaration) {
-          if (tlDeclaration.isBridge) {
+        final visibleInLibrary = visibleDeclarationsByIndex[key];
+        if (visibleInLibrary == null) {
+          return;
+        }
+        value.forEach((name, tlDeclaration) {
+          if (tlDeclaration.isBridge || !visibleInLibrary.containsKey(name)) {
             return;
           }
           final declaration = tlDeclaration.declaration!;
@@ -927,7 +942,7 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
   // Traversing libraries
   for (final l in libraries) {
     // All visible declarations under this Library
-    final visibleDeclarations0 = <String, DeclarationOrPrefix>{
+    final visibleDeclarationsLib = <String, DeclarationOrPrefix>{
       for (final d in DeclarationOrBridge.expand(l.declarations))
         // Key: the expanded name of the declaration (see [_expandDeclarations])
         // Value: DeclarationOrPrefix (declaration content, and store the ID
@@ -1040,10 +1055,10 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
             d.first: DeclarationOrPrefix(declaration: d.second)
       };
 
-      visibleDeclarations0.addAll(mappedVisibleDeclarations);
+      visibleDeclarationsLib.addAll(mappedVisibleDeclarations);
     }
 
-    result[l] = visibleDeclarations0;
+    result[l] = visibleDeclarationsLib;
   }
 
   final processedImports = <String>{};
@@ -1116,6 +1131,13 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
             DeclarationOrBridge.nameOf(declaration).any((name) =>
                 {...?usedDeclarationsForLibrary[libraryIds[l]]}.contains(name)))
         .toList();
+    /*result[l]!.removeWhere((key, d) {
+      final dec = d.declaration;
+      if (dec == null || !dec.isBridge) {
+        return !(usedDeclarationsForLibrary[libraryIds[l]]?.contains(key) ?? true);
+      }
+      return false; // Bridges are always visible
+    });*/
   }
 
   return result;

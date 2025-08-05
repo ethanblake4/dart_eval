@@ -5,7 +5,7 @@ import 'package:dart_eval/src/eval/bindgen/parameters.dart';
 import 'package:dart_eval/src/eval/bindgen/permission.dart';
 import 'package:dart_eval/src/eval/bindgen/type.dart';
 
-String $methods(BindgenContext ctx, ClassElement2 element) {
+String $methods(BindgenContext ctx, InterfaceElement2 element) {
   final methods = {
     if (ctx.implicitSupers)
       for (var s in element.allSupertypes)
@@ -24,7 +24,7 @@ String $methods(BindgenContext ctx, ClassElement2 element) {
         static const \$Function __${e.displayName} = \$Function(_${e.displayName});
         static \$Value? _${e.displayName}(Runtime runtime, \$Value? target, List<\$Value?> args) {
           ${assertMethodPermissions(e)}
-          final self = target as \$${element.name3};
+          final self = target! as \$${element.name3};
           ${returnsValue ? 'final result = ' : ''}self.\$value.${e.displayName}(${argumentAccessors(ctx, e.formalParameters)});
           return ${wrapVar(ctx, e.returnType, 'result')};
         }''';

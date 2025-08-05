@@ -16,7 +16,7 @@ BridgeParameter _$BridgeParameterFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$BridgeParameterToJson(BridgeParameter instance) =>
     <String, dynamic>{
       'name': instance.name,
-      'type': instance.type,
+      'type': instance.type.toJson(),
       'optional': instance.optional,
     };
 
@@ -41,10 +41,10 @@ BridgeFunctionDef _$BridgeFunctionDefFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$BridgeFunctionDefToJson(BridgeFunctionDef instance) =>
     <String, dynamic>{
-      'returns': instance.returns,
-      'generics': instance.generics,
-      'params': instance.params,
-      'namedParams': instance.namedParams,
+      'returns': instance.returns.toJson(),
+      'generics': instance.generics.map((k, e) => MapEntry(k, e.toJson())),
+      'params': instance.params.map((e) => e.toJson()).toList(),
+      'namedParams': instance.namedParams.map((e) => e.toJson()).toList(),
     };
 
 BridgeFunctionDeclaration _$BridgeFunctionDeclarationFromJson(
@@ -58,7 +58,7 @@ BridgeFunctionDeclaration _$BridgeFunctionDeclarationFromJson(
 Map<String, dynamic> _$BridgeFunctionDeclarationToJson(
         BridgeFunctionDeclaration instance) =>
     <String, dynamic>{
-      'function': instance.function,
+      'function': instance.function.toJson(),
       'library': instance.library,
       'name': instance.name,
     };

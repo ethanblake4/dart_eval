@@ -16,7 +16,7 @@ BridgeTypeAnnotation _$BridgeTypeAnnotationFromJson(
 Map<String, dynamic> _$BridgeTypeAnnotationToJson(
         BridgeTypeAnnotation instance) =>
     <String, dynamic>{
-      'type': instance.type,
+      'type': instance.type.toJson(),
       'nullable': instance.nullable,
     };
 
@@ -44,12 +44,12 @@ BridgeClassType _$BridgeClassTypeFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$BridgeClassTypeToJson(BridgeClassType instance) =>
     <String, dynamic>{
-      'type': instance.type,
+      'type': instance.type.toJson(),
       'isAbstract': instance.isAbstract,
-      r'$extends': instance.$extends,
-      r'$implements': instance.$implements,
-      r'$with': instance.$with,
-      'generics': instance.generics,
+      r'$extends': instance.$extends?.toJson(),
+      r'$implements': instance.$implements.map((e) => e.toJson()).toList(),
+      r'$with': instance.$with.map((e) => e.toJson()).toList(),
+      'generics': instance.generics.map((k, e) => MapEntry(k, e.toJson())),
     };
 
 BridgeTypeSpec _$BridgeTypeSpecFromJson(Map<String, dynamic> json) =>

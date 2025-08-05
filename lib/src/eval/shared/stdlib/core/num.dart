@@ -571,10 +571,41 @@ class $double extends $num<double> {
                 namedParams: []),
             isStatic: true),
       },
-      getters: {},
+      getters: {
+        'nan': BridgeMethodDef(
+            BridgeFunctionDef(
+                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
+                params: []),
+            isStatic: true),
+        'infinity': BridgeMethodDef(
+            BridgeFunctionDef(
+                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
+                params: []),
+            isStatic: true),
+        'negativeInfinity': BridgeMethodDef(
+            BridgeFunctionDef(
+                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
+                params: []),
+            isStatic: true),
+      },
       setters: {},
       fields: {},
       wrap: true);
+
+  static $Value? $nan(Runtime runtime, $Value? target,
+      List<$Value?> args) {
+    return $double(double.nan);
+  }
+
+  static $Value? $infinity(Runtime runtime, $Value? target,
+      List<$Value?> args) {
+    return $double(double.infinity);
+  }
+
+  static $Value? $negativeInfinity(Runtime runtime, $Value? target,
+      List<$Value?> args) {
+    return $double(double.negativeInfinity);
+  }
 
   @override
   double get $reified => $value;

@@ -9,6 +9,7 @@ import 'package:dart_eval/src/eval/bindgen/bridge.dart';
 import 'package:dart_eval/src/eval/bindgen/bridge_declaration.dart';
 import 'package:dart_eval/src/eval/bindgen/configure.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
+import 'package:dart_eval/src/eval/bindgen/enum.dart';
 import 'package:dart_eval/src/eval/bindgen/methods.dart';
 import 'package:dart_eval/src/eval/bindgen/properties.dart';
 import 'package:dart_eval/src/eval/bindgen/statics.dart';
@@ -27,6 +28,7 @@ class Bindgen implements BridgeDeclarationRegistry {
   final _bridgeDeclarations = <String, List<BridgeDeclaration>>{};
   final _exportedLibMappings = <String, String>{};
   final List<({String file, String uri, String name})> registerClasses = [];
+  final List<({String file, String uri, String name})> registerEnums = [];
 
   AnalysisContextCollection? _contextCollection;
 
@@ -151,13 +153,15 @@ class Bindgen implements BridgeDeclarationRegistry {
         }
       }
 
-      final units =
-          analysisResult.unit.declarations.whereType<ClassDeclaration>();
+      final units = analysisResult.unit.declarations;
 
       final resolved = units
           .where((declaration) => declaration.declaredFragment != null)
-          .map((declaration) =>
-              _$instance(ctx, declaration.declaredFragment!.element))
+          .map((declaration) => declaration is ClassDeclaration
+              ? _$instance(ctx, declaration.declaredFragment!.element)
+              : (declaration is EnumDeclaration
+                  ? _$enum(ctx, declaration.declaredFragment!.element)
+                  : null))
           .toList()
           .nonNulls;
 
@@ -177,28 +181,37 @@ class Bindgen implements BridgeDeclarationRegistry {
     return null;
   }
 
-  String? _$instance(BindgenContext ctx, ClassElement2 element) {
+  ({bool process, bool isBridge}) _shouldProcess(
+      BindgenContext ctx, TypeDefiningElement2 element) {
     final metadata = element.metadata2;
     final bindAnno = metadata.annotations
         .firstWhereOrNull((element) => element.element2?.displayName == 'Bind');
     final bindAnnoValue = bindAnno?.computeConstantValue();
-    if (!ctx.all) {
-      if (bindAnnoValue == null) {
-        return null;
-      }
-      final implicitSupers =
-          bindAnnoValue.getField('implicitSupers')?.toBoolValue() ?? false;
-      ctx.implicitSupers = implicitSupers;
-      final override = bindAnnoValue.getField('overrideLibrary');
-      if (override != null && !override.isNull) {
-        final overrideUri = override.toStringValue();
-        if (overrideUri != null) {
-          ctx.libOverrides[element.name3!] = overrideUri;
-        }
+
+    if (bindAnnoValue == null && !ctx.all) {
+      return (process: false, isBridge: false);
+    }
+    final implicitSupers =
+        bindAnnoValue?.getField('implicitSupers')?.toBoolValue() ?? false;
+    ctx.implicitSupers = implicitSupers;
+    final override = bindAnnoValue?.getField('overrideLibrary');
+    if (override != null && !override.isNull) {
+      final overrideUri = override.toStringValue();
+      if (overrideUri != null) {
+        ctx.libOverrides[element.name3!] = overrideUri;
       }
     }
 
     final isBridge = bindAnnoValue?.getField('bridge')?.toBoolValue() ?? false;
+
+    return (process: ctx.all || bindAnnoValue != null, isBridge: isBridge);
+  }
+
+  String? _$instance(BindgenContext ctx, ClassElement2 element) {
+    final (:process, :isBridge) = _shouldProcess(ctx, element);
+    if (!process) {
+      return null;
+    }
 
     if (element.isSealed) {
       throw CompileError(
@@ -261,10 +274,46 @@ ${$setProperty(ctx, element)}
 ''';
   }
 
-  String $superclassWrapper(BindgenContext ctx, ClassElement2 element) {
+  String? _$enum(BindgenContext ctx, EnumElement2 element) {
+    final (:process, :isBridge) = _shouldProcess(ctx, element);
+    if (!process) {
+      return null;
+    }
+
+    registerEnums.add((
+      file: ctx.filename,
+      uri: ctx.libOverrides[element.name3!] ?? ctx.uri,
+      name: '${element.name3!}${isBridge ? '\$bridge' : ''}',
+    ));
+
+    return '''
+/// dart_eval enum wrapper binding for [${element.name3}]
+class \$${element.name3} implements \$Instance {
+  /// Configure this enum for use in a [Runtime]
+  ${bindConfigureEnumForRuntime(ctx, element)}
+  /// Compile-time type specification of [\$${element.name3}]
+  ${bindTypeSpec(ctx, element)}
+  /// Compile-time type declaration of [\$${element.name3}]
+  ${bindBridgeType(ctx, element)}
+  /// Compile-time class declaration of [\$${element.name3}]
+  ${bindBridgeDeclaration(ctx, element)}
+  ${$enumValues(ctx, element)}
+  ${$staticMethods(ctx, element)}
+  ${$staticGetters(ctx, element)}
+  ${$staticSetters(ctx, element)}
+  ${$wrap(ctx, element)}
+  ${$getRuntimeType(element)}
+  ${$getProperty(ctx, element)}
+  ${$methods(ctx, element)}
+  ${$setProperty(ctx, element)}
+}
+''';
+  }
+
+  String $superclassWrapper(BindgenContext ctx, InterfaceElement2 element) {
     final supertype = element.supertype;
     final objectWrapper = '\$Object(\$value)';
-    if (supertype == null || ctx.implicitSupers) {
+    if (supertype == null || ctx.implicitSupers || element is EnumElement2) {
       ctx.imports.add('package:dart_eval/stdlib/core.dart');
       return objectWrapper;
     }
@@ -279,14 +328,14 @@ ${$setProperty(ctx, element)}
     return narrowWrapper;
   }
 
-  String $getRuntimeType(ClassElement2 element) {
+  String $getRuntimeType(InterfaceElement2 element) {
     return '''
   @override
   int \$getRuntimeType(Runtime runtime) => runtime.lookupType(\$spec);
 ''';
   }
 
-  String $wrap(BindgenContext ctx, ClassElement2 element) {
+  String $wrap(BindgenContext ctx, InterfaceElement2 element) {
     return '''
   final \$Instance _superclass;
 

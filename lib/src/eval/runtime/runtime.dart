@@ -411,7 +411,7 @@ class Runtime {
   var _didSetup = false;
   var _bridgeLibraryMappings = <String, int>{};
   final _bridgeFunctions =
-      List<EvalCallableFunc>.filled(1000, _defaultFunction.call);
+      List<EvalCallableFunc>.filled(3000, _defaultFunction.call);
   final _unloadedBrFunc = <_UnloadedBridgeFunction>[];
   final _unloadedEnumValues = <_UnloadedEnumValues>[];
   final _plugins = <EvalPlugin>[
@@ -790,7 +790,9 @@ class Runtime {
       throw ArgumentError('Cannot find $library, maybe it wasn\'t declared as'
           ' an entrypoint?');
     }
-    return execute(declarations[_bridgeLibraryMappings[library]!]![name]!);
+    return execute(declarations[_bridgeLibraryMappings[library]!]![name] ??
+        (throw ArgumentError(
+            'Unable to find "$name()" from $library, maybe it wasn\'t declared as an entrypoint?')));
   }
 
   /// Start program execution at a specific bytecode offset.

@@ -5,7 +5,7 @@ import 'package:dart_eval/stdlib/core.dart';
 
 // ** Sample class definitions ** //
 // Typically you would mark these with @Bind() to generate bindings,
-// but that annotation is part of the eval_annotation package so we 
+// but that annotation is part of the eval_annotation package so we
 // don't have access to it here.
 
 // @Bind()
@@ -73,7 +73,7 @@ void main(List<String> args) {
   // Create a runtime from the compiled program, and add our plugin.
   final runtime = Runtime.ofProgram(program);
   runtime.addPlugin(ExamplePlugin());
-    
+
   // Call the function and cast the result to the desired type
   final timeTracker = runtime.executeLib(
     'package:example/main.dart',

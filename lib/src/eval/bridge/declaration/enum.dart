@@ -5,7 +5,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'enum.g.dart';
 
-@JsonSerializable()
+@JsonSerializable(explicitToJson: true)
 class BridgeEnumDef implements BridgeDeclaration {
   const BridgeEnumDef(this.type,
       {this.values = const [],

@@ -1,3 +1,14 @@
+## 0.8.1
+- Added support for configurable parser error handling
+- Fix accessing enum index values from an imported enum (thanks @jacksonrl)
+- Improve error handling when using `await` on a bridged future 
+  (thanks @MohamedAl-Kainai)
+- Support for enums in the binding generator
+- Fix serializing generic function types in BridgeTypeRef
+- Fix binding generator outputting incorrect import paths in eval_plugin.dart
+- Document how to create JSON bindings
+- Support for double.nan, double.infinity, and double.negativeInfinity
+
 ## 0.8.0
 - (Breaking) Type parameters provided to BridgeTypeRef are now
   `BridgeTypeAnnotation` objects instead of `BridgeTypeRef` objects to allow

@@ -594,5 +594,31 @@ void main() {
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 10);
     });
+
+    test('Assigning to default null field', () {
+      final program = compiler.compile({
+        'example': {
+          'main.dart': '''
+            class TestClass {
+              int? value = null;
+
+              void update() {
+                value = 42;
+              }
+            }
+            
+            int main() {
+              final testClass = TestClass();
+              testClass.update();
+              return testClass.value!;
+            }
+          '''
+        }
+      });
+
+      final runtime = Runtime.ofProgram(program);
+      final result = runtime.executeLib('package:example/main.dart', 'main');
+      expect(result, 42);
+    });
   });
 }

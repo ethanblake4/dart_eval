@@ -385,17 +385,17 @@ class TypeRef {
               source);
         }
         final annotation = (f.parent as VariableDeclarationList).type;
+        if (annotation != null) {
+          return TypeRef.fromAnnotation(ctx, $class.file, annotation)
+              .copyWith(boxed: true);
+        }
         if (ctx.inferredFieldTypes.containsKey($class.file) &&
             ctx.inferredFieldTypes[$class.file]!.containsKey($class.name) &&
             ctx.inferredFieldTypes[$class.file]![$class.name]!
                 .containsKey(field)) {
           return ctx.inferredFieldTypes[$class.file]![$class.name]![field]!;
         }
-        if (annotation == null) {
-          return null;
-        }
-        return TypeRef.fromAnnotation(ctx, $class.file, annotation)
-            .copyWith(boxed: true);
+        return null;
       } else if (!forFieldFormal && $declarations.containsKey('$field*g')) {
         final f = $declarations['$field*g'];
         if (f is! MethodDeclaration) {

@@ -17,6 +17,11 @@ class OffsetTracker {
       final op = source[pos];
       if (op is Call) {
         int resolvedOffset;
+
+        // Just removing this for consistency for now
+        /*if (offset.offset != null) {
+          resolvedOffset = offset.offset!;
+        } else*/
         if (offset.methodType == 2) {
           resolvedOffset = context.instanceDeclarationPositions[offset.file!]![
               offset.className!]![2]![offset.name!]!;

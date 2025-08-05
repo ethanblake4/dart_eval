@@ -108,7 +108,8 @@ String parameterHeader(List<FormalParameterElement> params,
           paramBuffer.write('${param.type.getDisplayString()} ');
         }
     }
-    paramBuffer.write(param.name3 ?? 'arg$i');
+    paramBuffer.write(
+        param.name3 == null || param.name3!.isEmpty ? 'arg$i' : param.name3);
     if (i < params.length - 1) {
       paramBuffer.write(', ');
     }

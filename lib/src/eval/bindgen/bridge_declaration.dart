@@ -3,7 +3,7 @@ import 'package:dart_eval/src/eval/bindgen/context.dart';
 import 'package:dart_eval/src/eval/bindgen/parameters.dart';
 import 'package:dart_eval/src/eval/bindgen/type.dart';
 
-String bindTypeSpec(BindgenContext ctx, ClassElement2 element) {
+String bindTypeSpec(BindgenContext ctx, InterfaceElement2 element) {
   final uri = ctx.libOverrides[element.name3] ?? ctx.uri;
   return '''
   static const \$spec = BridgeTypeSpec(
@@ -13,21 +13,21 @@ String bindTypeSpec(BindgenContext ctx, ClassElement2 element) {
 ''';
 }
 
-String bindBridgeType(BindgenContext ctx, ClassElement2 element) {
+String bindBridgeType(BindgenContext ctx, InterfaceElement2 element) {
   return '''
   static const \$type = BridgeTypeRef(\$spec);
 ''';
 }
 
-String? bindBridgeDeclaration(BindgenContext ctx, ClassElement2 element,
+String? bindBridgeDeclaration(BindgenContext ctx, InterfaceElement2 element,
     {bool isBridge = false}) {
-  if (element.constructors2.isEmpty) {
+  if (element is ClassElement2 && element.constructors2.isEmpty) {
     return null;
   }
 
   var genericsStr = '';
   final typeParams = element.typeParameters2;
-  if (typeParams.isNotEmpty) {
+  if (typeParams.isNotEmpty && element is ClassElement2) {
     genericsStr = '''\ngenerics: {
       ${typeParams.map((e) {
       final boundStr = e.bound != null && !ctx.implicitSupers
@@ -39,7 +39,8 @@ String? bindBridgeDeclaration(BindgenContext ctx, ClassElement2 element,
   }
 
   var extendsStr = '';
-  if (element.supertype != null &&
+  if (element is ClassElement2 &&
+      element.supertype != null &&
       !element.supertype!.isDartCoreObject &&
       !ctx.implicitSupers) {
     extendsStr =
@@ -47,23 +48,32 @@ String? bindBridgeDeclaration(BindgenContext ctx, ClassElement2 element,
   }
 
   var implementsStr = '';
-  if (element.interfaces.isNotEmpty) {
+  if (element is ClassElement2 && element.interfaces.isNotEmpty) {
     implementsStr =
         '\n\$implements: [${element.interfaces.map((e) => bridgeTypeRefFromType(ctx, e)).join(', ')}],';
   }
 
+  var enumValuesStr = '';
+  if (element is EnumElement2) {
+    enumValuesStr = '''
+    values: [${element.constants2.map((e) => "'${e.name3}'").join(', ')}],
+    ''';
+  }
+
   return '''
-  static const \$declaration = BridgeClassDef(
-    BridgeClassType(
+  static const \$declaration = ${element is ClassElement2 ? 'BridgeClassDef(BridgeClassType(' : 'BridgeEnumDef('}
       \$type,
-      isAbstract: ${element.isAbstract},
+      ${element is ClassElement2 && element.isAbstract ? 'isAbstract: true,' : ''}
+      $enumValuesStr
       $genericsStr
       $extendsStr
       $implementsStr
-    ),
+    ${element is ClassElement2 ? '),' : ''}
+    ${element is ClassElement2 ? '''
     constructors: {
 ${constructors(ctx, element)}
     },
+    ''' : ''}
     methods: {
 ${methods(ctx, element)}
     },
@@ -76,19 +86,21 @@ ${setters(ctx, element)}
     fields: {
 ${fields(ctx, element)}
     },
+    ${element is ClassElement2 ? '''
     wrap: ${!isBridge},
     bridge: $isBridge,
+    ''' : ''}
   );
     ''';
 }
 
-String constructors(BindgenContext ctx, ClassElement2 element) {
+String constructors(BindgenContext ctx, InterfaceElement2 element) {
   return element.constructors2
       .map((e) => bridgeConstructorDef(ctx, constructor: e))
       .join('\n');
 }
 
-String methods(BindgenContext ctx, ClassElement2 element) {
+String methods(BindgenContext ctx, InterfaceElement2 element) {
   final methods = {
     if (ctx.implicitSupers)
       for (var s in element.allSupertypes)
@@ -103,7 +115,7 @@ String methods(BindgenContext ctx, ClassElement2 element) {
       .join('\n');
 }
 
-String getters(BindgenContext ctx, ClassElement2 element) {
+String getters(BindgenContext ctx, InterfaceElement2 element) {
   final getters = {
     if (ctx.implicitSupers)
       for (var s in element.allSupertypes)
@@ -114,12 +126,16 @@ String getters(BindgenContext ctx, ClassElement2 element) {
 
   return getters.values
       .where((m) => !(const ['hashCode', 'runtimeType'].contains(m.name3)))
-      .where((element) => !element.isSynthetic)
+      .where((element) =>
+          !element.isSynthetic ||
+          (element is EnumElement2 &&
+              element.nonSynthetic2 is FieldElement2 &&
+              !(element.nonSynthetic2 as FieldElement2).isEnumConstant))
       .map((e) => bridgeGetterDef(ctx, getter: e))
       .join('\n');
 }
 
-String setters(BindgenContext ctx, ClassElement2 element) {
+String setters(BindgenContext ctx, InterfaceElement2 element) {
   final setters = {
     if (ctx.implicitSupers)
       for (var s in element.allSupertypes)
@@ -134,7 +150,7 @@ String setters(BindgenContext ctx, ClassElement2 element) {
       .join('\n');
 }
 
-String fields(BindgenContext ctx, ClassElement2 element) {
+String fields(BindgenContext ctx, InterfaceElement2 element) {
   final allFields = {
     if (ctx.implicitSupers)
       for (var s in element.allSupertypes)
@@ -145,7 +161,8 @@ String fields(BindgenContext ctx, ClassElement2 element) {
     for (final f in element.fields2) f.name3: f
   };
 
-  final fields = allFields.values.where((element) => !element.isSynthetic);
+  final fields = allFields.values
+      .where((element) => !element.isSynthetic && !element.isEnumConstant);
 
   return fields
       .map(

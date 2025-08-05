@@ -549,5 +549,20 @@ void main() {
       final runtime = Runtime.ofProgram(program);
       expect(runtime.executeLib('package:example/main.dart', 'main'), true);
     });
+
+    test('double.infinity', () {
+      final program = compiler.compile({
+        'example': {
+          'main.dart': '''
+            double main() {
+              return double.infinity;
+            }
+          '''
+        }
+      });
+
+      final runtime = Runtime.ofProgram(program);
+      expect(runtime.executeLib('package:example/main.dart', 'main'), double.infinity);
+    });
   });
 }

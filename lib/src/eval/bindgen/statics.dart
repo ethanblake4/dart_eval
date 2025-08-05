@@ -25,7 +25,7 @@ String _$constructor(
       ? '\$${element.name3}\$bridge$namedConstructor'
       : '${element.name3}$namedConstructor';
 
-  final oConstructor = constructor;
+  /*final oConstructor = constructor;
 
   final paramMapping = <String, String>{};
   for (var i = 0; i < constructor.formalParameters.length; i++) {
@@ -40,7 +40,7 @@ String _$constructor(
       final oParam = oConstructor.formalParameters[i];
       paramMapping[param.name3!] = oParam.name3!;
     }
-  }
+  }*/
 
   return '''
   /// ${isBridge ? 'Proxy' : 'Wrapper'} for the [${element.name3}.$name] constructor
@@ -54,7 +54,7 @@ String _$constructor(
 ''';
 }
 
-String $staticMethods(BindgenContext ctx, ClassElement2 element) {
+String $staticMethods(BindgenContext ctx, InterfaceElement2 element) {
   return element.methods2
       .where((e) => e.isStatic && !e.isOperator && !e.isPrivate)
       .map((e) => _$staticMethod(ctx, element, e))
@@ -62,7 +62,7 @@ String $staticMethods(BindgenContext ctx, ClassElement2 element) {
 }
 
 String _$staticMethod(
-    BindgenContext ctx, ClassElement2 element, MethodElement2 method) {
+    BindgenContext ctx, InterfaceElement2 element, MethodElement2 method) {
   return '''
   /// Wrapper for the [${element.name3}.${method.name3}] method
   static \$Value? \$${method.name3}(Runtime runtime, \$Value? target, List<\$Value?> args) {
@@ -75,14 +75,18 @@ String _$staticMethod(
 ''';
 }
 
-String $staticGetters(BindgenContext ctx, ClassElement2 element) {
+String $staticGetters(BindgenContext ctx, InterfaceElement2 element) {
   return element.getters2
-      .where((e) => e.isStatic && !e.isPrivate)
+      .where((e) =>
+          e.isStatic &&
+          !e.isPrivate &&
+          (e.nonSynthetic2 is! FieldElement2 ||
+              !(e.nonSynthetic2 as FieldElement2).isEnumConstant))
       .map((e) => _$staticGetter(ctx, element, e))
       .join('\n');
 }
 
-String _$staticGetter(BindgenContext ctx, ClassElement2 element,
+String _$staticGetter(BindgenContext ctx, InterfaceElement2 element,
     PropertyAccessorElement2 getter) {
   return '''
   /// Wrapper for the [${element.name3}.${getter.name3}] getter
@@ -93,14 +97,14 @@ String _$staticGetter(BindgenContext ctx, ClassElement2 element,
 ''';
 }
 
-String $staticSetters(BindgenContext ctx, ClassElement2 element) {
+String $staticSetters(BindgenContext ctx, InterfaceElement2 element) {
   return element.setters2
       .where((e) => e.isStatic && !e.isPrivate)
       .map((e) => _$staticSetter(ctx, element, e))
       .join('\n');
 }
 
-String _$staticSetter(BindgenContext ctx, ClassElement2 element,
+String _$staticSetter(BindgenContext ctx, InterfaceElement2 element,
     PropertyAccessorElement2 setter) {
   return '''
   /// Wrapper for the [${element.name3}.${setter.name3}] setter

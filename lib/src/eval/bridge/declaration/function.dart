@@ -4,7 +4,7 @@ import 'package:json_annotation/json_annotation.dart';
 part 'function.g.dart';
 
 /// Describes a parameter of a bridged function.
-@JsonSerializable()
+@JsonSerializable(explicitToJson: true)
 class BridgeParameter {
   const BridgeParameter(this.name, this.type, this.optional);
 
@@ -27,7 +27,7 @@ class BridgeParameter {
 }
 
 /// A bridged function definition.
-@JsonSerializable()
+@JsonSerializable(explicitToJson: true)
 class BridgeFunctionDef {
   const BridgeFunctionDef(
       {required this.returns,
@@ -57,7 +57,7 @@ class BridgeFunctionDef {
 }
 
 /// Represents a bridged function declaration.
-@JsonSerializable()
+@JsonSerializable(explicitToJson: true)
 class BridgeFunctionDeclaration implements BridgeDeclaration {
   const BridgeFunctionDeclaration(this.library, this.name, this.function);
 

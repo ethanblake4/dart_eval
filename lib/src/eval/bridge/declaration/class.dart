@@ -13,7 +13,7 @@ part 'class.g.dart';
 /// [$Instance] (i.e. a wrapper). You can learn about the difference between
 /// these [on the wiki](https://github.com/ethanblake4/dart_eval/wiki/Wrappers).
 ///
-@JsonSerializable()
+@JsonSerializable(explicitToJson: true)
 class BridgeClassDef implements BridgeDeclaration {
   const BridgeClassDef(this.type,
       {required this.constructors,
@@ -56,7 +56,7 @@ class BridgeClassDef implements BridgeDeclaration {
 
 /// A bridged method definition, used to inform the dart_eval compiler about
 /// a method's properties when it is defined outside of dart_eval.
-@JsonSerializable()
+@JsonSerializable(explicitToJson: true)
 class BridgeMethodDef implements BridgeDeclaration {
   const BridgeMethodDef(this.functionDescriptor, {this.isStatic = false});
 
@@ -74,7 +74,7 @@ class BridgeMethodDef implements BridgeDeclaration {
 
 /// A bridged constructor definition, used to inform the dart_eval compiler of
 /// a constructor's properties when it is defined outside of dart_eval.
-@JsonSerializable()
+@JsonSerializable(explicitToJson: true)
 class BridgeConstructorDef implements BridgeDeclaration {
   const BridgeConstructorDef(this.functionDescriptor, {this.isFactory = false});
 
@@ -92,7 +92,7 @@ class BridgeConstructorDef implements BridgeDeclaration {
 
 /// A bridged field definition, used to inform the dart_eval compiler of
 /// a field's properties and type when it is defined outside of dart_eval.
-@JsonSerializable()
+@JsonSerializable(explicitToJson: true)
 class BridgeFieldDef implements BridgeDeclaration {
   const BridgeFieldDef(this.type, {this.isStatic = false});
 

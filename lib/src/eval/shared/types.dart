@@ -207,6 +207,9 @@ class CollectionTypes {
 
   /// Bridge type spec for [$ListMixin]
   static const listMixin = BridgeTypeSpec('dart:collection', 'ListMixin');
+
+  /// Bridge type spec for [$ListQueue]
+  static const listQueue = BridgeTypeSpec('dart:collection', 'ListQueue');
 }
 
 /// This class contains dart:convert bridge type specs for convenience

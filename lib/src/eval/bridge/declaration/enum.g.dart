@@ -9,32 +9,38 @@ part of 'enum.dart';
 BridgeEnumDef _$BridgeEnumDefFromJson(Map<String, dynamic> json) =>
     BridgeEnumDef(
       BridgeTypeRef.fromJson(json['type'] as Map<String, dynamic>),
-      values:
-          (json['values'] as List<dynamic>).map((e) => e as String).toList(),
-      methods: (json['methods'] as Map<String, dynamic>).map(
-        (k, e) =>
-            MapEntry(k, BridgeMethodDef.fromJson(e as Map<String, dynamic>)),
-      ),
-      getters: (json['getters'] as Map<String, dynamic>).map(
-        (k, e) =>
-            MapEntry(k, BridgeMethodDef.fromJson(e as Map<String, dynamic>)),
-      ),
-      setters: (json['setters'] as Map<String, dynamic>).map(
-        (k, e) =>
-            MapEntry(k, BridgeMethodDef.fromJson(e as Map<String, dynamic>)),
-      ),
-      fields: (json['fields'] as Map<String, dynamic>).map(
-        (k, e) =>
-            MapEntry(k, BridgeFieldDef.fromJson(e as Map<String, dynamic>)),
-      ),
+      values: (json['values'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+      methods: (json['methods'] as Map<String, dynamic>?)?.map(
+            (k, e) => MapEntry(
+                k, BridgeMethodDef.fromJson(e as Map<String, dynamic>)),
+          ) ??
+          const {},
+      getters: (json['getters'] as Map<String, dynamic>?)?.map(
+            (k, e) => MapEntry(
+                k, BridgeMethodDef.fromJson(e as Map<String, dynamic>)),
+          ) ??
+          const {},
+      setters: (json['setters'] as Map<String, dynamic>?)?.map(
+            (k, e) => MapEntry(
+                k, BridgeMethodDef.fromJson(e as Map<String, dynamic>)),
+          ) ??
+          const {},
+      fields: (json['fields'] as Map<String, dynamic>?)?.map(
+            (k, e) =>
+                MapEntry(k, BridgeFieldDef.fromJson(e as Map<String, dynamic>)),
+          ) ??
+          const {},
     );
 
 Map<String, dynamic> _$BridgeEnumDefToJson(BridgeEnumDef instance) =>
     <String, dynamic>{
-      'type': instance.type,
+      'type': instance.type.toJson(),
       'values': instance.values,
-      'methods': instance.methods,
-      'getters': instance.getters,
-      'setters': instance.setters,
-      'fields': instance.fields,
+      'methods': instance.methods.map((k, e) => MapEntry(k, e.toJson())),
+      'getters': instance.getters.map((k, e) => MapEntry(k, e.toJson())),
+      'setters': instance.setters.map((k, e) => MapEntry(k, e.toJson())),
+      'fields': instance.fields.map((k, e) => MapEntry(k, e.toJson())),
     };

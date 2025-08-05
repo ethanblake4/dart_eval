@@ -12,6 +12,27 @@ static void configureForRuntime(Runtime runtime) {
 }
 ''';
 
+String bindConfigureEnumForRuntime(BindgenContext ctx, EnumElement2 element) =>
+    '''
+static void configureForRuntime(Runtime runtime) {
+  ${enumValuesForRuntime(ctx, element)}
+  ${staticMethodsForRuntime(ctx, element)}
+  ${staticGettersForRuntime(ctx, element)}
+  ${staticSettersForRuntime(ctx, element)}
+}
+''';
+
+String enumValuesForRuntime(BindgenContext ctx, EnumElement2 element) {
+  final uri = ctx.libOverrides[element.name3] ?? ctx.uri;
+  return '''
+    runtime.registerBridgeEnumValues(
+      '$uri',
+      '${element.name3}',
+      \$${element.name3}._\$values
+    );
+  ''';
+}
+
 String constructorsForRuntime(BindgenContext ctx, ClassElement2 element,
     {bool isBridge = false}) {
   return element.constructors2
@@ -44,7 +65,7 @@ String constructorForRuntime(
   ''';
 }
 
-String staticMethodsForRuntime(BindgenContext ctx, ClassElement2 element,
+String staticMethodsForRuntime(BindgenContext ctx, InterfaceElement2 element,
     {bool isBridge = false}) {
   return element.methods2
       .where((e) => e.isStatic && !e.isOperator && !e.isPrivate)
@@ -53,7 +74,7 @@ String staticMethodsForRuntime(BindgenContext ctx, ClassElement2 element,
 }
 
 String staticMethodForRuntime(
-    BindgenContext ctx, ClassElement2 element, MethodElement2 method,
+    BindgenContext ctx, InterfaceElement2 element, MethodElement2 method,
     {bool isBridge = false}) {
   final uri = ctx.libOverrides[element.name3] ?? ctx.uri;
   return '''
@@ -65,16 +86,20 @@ String staticMethodForRuntime(
   ''';
 }
 
-String staticGettersForRuntime(BindgenContext ctx, ClassElement2 element,
+String staticGettersForRuntime(BindgenContext ctx, InterfaceElement2 element,
     {bool isBridge = false}) {
   return element.getters2
-      .where((e) => e.isStatic && !e.isPrivate)
+      .where((e) =>
+          e.isStatic &&
+          !e.isPrivate &&
+          (e.nonSynthetic2 is! FieldElement2 ||
+              !(e.nonSynthetic2 as FieldElement2).isEnumConstant))
       .map((e) => staticGetterForRuntime(ctx, element, e, isBridge: isBridge))
       .join('\n');
 }
 
-String staticGetterForRuntime(
-    BindgenContext ctx, ClassElement2 element, PropertyAccessorElement2 getter,
+String staticGetterForRuntime(BindgenContext ctx, InterfaceElement2 element,
+    PropertyAccessorElement2 getter,
     {bool isBridge = false}) {
   final uri = ctx.libOverrides[element.name3] ?? ctx.uri;
   return '''
@@ -86,7 +111,7 @@ String staticGetterForRuntime(
   ''';
 }
 
-String staticSettersForRuntime(BindgenContext ctx, ClassElement2 element,
+String staticSettersForRuntime(BindgenContext ctx, InterfaceElement2 element,
     {bool isBridge = false}) {
   return element.setters2
       .where((e) => e.isStatic && !e.isPrivate)
@@ -94,8 +119,8 @@ String staticSettersForRuntime(BindgenContext ctx, ClassElement2 element,
       .join('\n');
 }
 
-String staticSetterForRuntime(
-    BindgenContext ctx, ClassElement2 element, PropertyAccessorElement2 setter,
+String staticSetterForRuntime(BindgenContext ctx, InterfaceElement2 element,
+    PropertyAccessorElement2 setter,
     {bool isBridge = false}) {
   final uri = ctx.libOverrides[element.name3] ?? ctx.uri;
   return '''

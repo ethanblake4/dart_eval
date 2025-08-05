@@ -4,10 +4,11 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
-import 'package:dart_eval/src/eval/compiler/expression/funcexpr_invocation.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/closure.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/equality.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/offset_tracker.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
@@ -62,7 +63,7 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
   if (method.callingConvention == CallingConvention.dynamic ||
       (method.type == CoreTypes.function.ref(ctx) &&
           method.methodOffset == null)) {
-    return invokeClosure(ctx, null, method, e.argumentList);
+    return invokeClosure(ctx, null, method, e.argumentList).result;
   }
 
   if (method.methodOffset == null) {

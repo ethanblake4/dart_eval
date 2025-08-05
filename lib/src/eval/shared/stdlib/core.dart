@@ -114,6 +114,9 @@ class DartCorePlugin implements EvalPlugin {
     runtime.registerBridgeFunc('dart:core', 'RangeError.checkNotNegative',
         $RangeError.$checkNotNegative);
     runtime.registerBridgeFunc('dart:core', 'Symbol.', $Symbol.$new);
+    runtime.registerBridgeFunc('dart:core', 'double.nan*g', $double.$nan);
+    runtime.registerBridgeFunc('dart:core', 'double.infinity*g', $double.$infinity);
+    runtime.registerBridgeFunc('dart:core', 'double.negativeInfinity*g', $double.$negativeInfinity);
     $StackTrace.configureForRuntime(runtime);
     $Error.configureForRuntime(runtime);
     $UnimplementedError.configureForRuntime(runtime);

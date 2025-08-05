@@ -8,7 +8,8 @@ import 'package:path/path.dart';
 import 'package:pubspec_parse/pubspec_parse.dart';
 
 void cliCompile(String outputName) {
-  final compiler = Compiler();
+  final compiler = Compiler()
+    ..diagnosticMode = DiagnosticMode.throwErrorPrintAll;
 
   print('Loading files...');
   var commandRoot = Directory(current);

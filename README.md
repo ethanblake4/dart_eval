@@ -20,7 +20,7 @@ can be used outside it by creating an interface and [bridge class](#bridge-inter
 dart_eval's compiler is powered under the hood by the Dart 
 [analyzer](https://pub.dev/packages/analyzer), so it achieves 100% correct and 
 up-to-date parsing. While compilation and execution aren't quite there yet, dart_eval
-has over 250 tests that are run in CI to ensure correctness.
+has over 300 tests that are run in CI to ensure correctness.
 
 Currently dart_eval implements a majority of the Dart spec, but there 
 are still missing features like generators and extension methods.
@@ -340,7 +340,7 @@ final program = compiler.compile({'my_package': {
 final runtime = Runtime.ofProgram(program);
 runtime.addPlugin(MyAppPlugin()); // MyAppPlugin is the generated plugin
 
-final book = runtime.executeLib('package:my_package/main.dart', 'main') as Book;
+final book = runtime.executeLib('package:my_package/main.dart', 'main').$value as Book;
 print(book.getPage(0)); // prints 'Page 1'
 ```
 
@@ -395,6 +395,10 @@ annotation, which creates bindings for all inherited methods and properties.
 The binding generator also supports binding classes that rely on an
 existing plugin by using JSON binding files. To add these, create a folder in your project 
 root called `.dart_eval`, add a `bindings` subfolder, and place JSON binding files there.
+
+Currently, the binding generator does not support directly creating JSON bindings, but
+they can be created by first generating Dart bindings and then making a script to convert them 
+to JSON with a `BridgeSerializer`.
 
 For some specialized use cases, bindings may need to be manually adjusted or written from scratch.
 For information about this, refer to the 
