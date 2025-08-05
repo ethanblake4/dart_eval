@@ -647,13 +647,14 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
             : (declaration as EnumDeclaration).members;
 
         if (declaration is EnumDeclaration) {
+          _ctx.enumValueIndices[libraryIndex] ??= {};
+          _ctx.enumValueIndices[libraryIndex]![declaration.name.lexeme] = {};
           for (final constant in declaration.constants) {
             if (!_topLevelGlobalIndices.containsKey(libraryIndex)) {
               _topLevelGlobalIndices[libraryIndex] = {};
               _ctx.topLevelGlobalInitializers[libraryIndex] = {};
               _ctx.topLevelVariableInferredTypes[libraryIndex] = {};
             }
-
             final name = '${declaration.name.lexeme}.${constant.name.lexeme}';
             if (_topLevelDeclarationsMap[libraryIndex]!.containsKey(name)) {
               throw CompileError(
@@ -664,7 +665,9 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
 
             _topLevelDeclarationsMap[libraryIndex]![name] =
                 DeclarationOrBridge(libraryIndex, declaration: constant);
-            _topLevelGlobalIndices[libraryIndex]![name] = _ctx.globalIndex++;
+            final globalIndex = _ctx.globalIndex++;
+            _topLevelGlobalIndices[libraryIndex]![name] = globalIndex;
+            _ctx.enumValueIndices[libraryIndex]![declaration.name.lexeme]![constant.name.lexeme] = globalIndex;
           }
         }
 
