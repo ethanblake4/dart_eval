@@ -562,7 +562,8 @@ void main() {
       });
 
       final runtime = Runtime.ofProgram(program);
-      expect(runtime.executeLib('package:example/main.dart', 'main'), double.infinity);
+      expect(runtime.executeLib('package:example/main.dart', 'main'),
+          double.infinity);
     });
   });
 }

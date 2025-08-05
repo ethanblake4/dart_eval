@@ -834,7 +834,7 @@ class TypeRef {
     }
   }
 
-  static loadTemporaryTypes(
+  static void loadTemporaryTypes(
       CompilerContext ctx, List<TypeParameter>? typeParams,
       [int? library]) {
     if (typeParams != null) {

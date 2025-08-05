@@ -592,18 +592,17 @@ class $double extends $num<double> {
       fields: {},
       wrap: true);
 
-  static $Value? $nan(Runtime runtime, $Value? target,
-      List<$Value?> args) {
+  static $Value? $nan(Runtime runtime, $Value? target, List<$Value?> args) {
     return $double(double.nan);
   }
 
-  static $Value? $infinity(Runtime runtime, $Value? target,
-      List<$Value?> args) {
+  static $Value? $infinity(
+      Runtime runtime, $Value? target, List<$Value?> args) {
     return $double(double.infinity);
   }
 
-  static $Value? $negativeInfinity(Runtime runtime, $Value? target,
-      List<$Value?> args) {
+  static $Value? $negativeInfinity(
+      Runtime runtime, $Value? target, List<$Value?> args) {
     return $double(double.negativeInfinity);
   }
 

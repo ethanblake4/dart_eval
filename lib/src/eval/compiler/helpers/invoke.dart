@@ -174,7 +174,7 @@ extension Invoke on Variable {
       }
 
       final invokeOp = InvokeDynamic.make(
-          $this.scopeFrameOffset, ctx.constantPool.addOrGet(method!));
+          $this.scopeFrameOffset, ctx.constantPool.addOrGet(method));
       ctx.pushOp(invokeOp, InvokeDynamic.len(invokeOp));
     }
 

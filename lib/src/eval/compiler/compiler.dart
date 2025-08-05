@@ -667,7 +667,8 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
                 DeclarationOrBridge(libraryIndex, declaration: constant);
             final globalIndex = _ctx.globalIndex++;
             _topLevelGlobalIndices[libraryIndex]![name] = globalIndex;
-            _ctx.enumValueIndices[libraryIndex]![declaration.name.lexeme]![constant.name.lexeme] = globalIndex;
+            _ctx.enumValueIndices[libraryIndex]![declaration.name.lexeme]![
+                constant.name.lexeme] = globalIndex;
           }
         }
 

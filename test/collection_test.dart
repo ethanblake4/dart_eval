@@ -1,7 +1,5 @@
 import 'package:dart_eval/dart_eval.dart';
-import 'package:dart_eval/src/eval/runtime/function.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/base.dart';
-import 'package:dart_eval/src/eval/shared/stdlib/core/collection.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
 import 'package:test/expect.dart';
 import 'package:test/scaffolding.dart';

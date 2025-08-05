@@ -121,7 +121,8 @@ void main() {
         }
       });
 
-      final result = runtime.executeLib('package:my_test_package/main.dart', 'main');
+      final result =
+          runtime.executeLib('package:my_test_package/main.dart', 'main');
       expect(result, 1);
     });
   });
