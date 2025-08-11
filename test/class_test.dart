@@ -620,5 +620,49 @@ void main() {
       final result = runtime.executeLib('package:example/main.dart', 'main');
       expect(result, 42);
     });
+    test('Static const field with forward reference', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main() {
+              return A.c.a;
+            }
+
+            class A {
+              const A(this.a);
+
+              static const A c = A(b * 2);
+              static const int b = 4;
+
+              final int a;
+            }
+          ''',
+        }
+      });
+
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 8);
+    });
+    test('Static const field with circular dependency should fail', () {
+      final source ={
+        'example': {
+          'main.dart': '''
+          void main() {
+            A(1);
+          }
+
+          class A {
+            const A(this.a);
+
+            static const A c = A(b);
+            static const int b = c.a;
+
+            final int a;
+          }
+          ''',
+        }
+      };
+      expect(() => compiler.compileWriteAndLoad(source),
+          throwsA(isA<CompileError>()));
+    });
   });
 }
