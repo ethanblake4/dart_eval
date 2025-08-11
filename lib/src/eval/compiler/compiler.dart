@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:collection/collection.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
@@ -446,45 +447,135 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     _ctx.topLevelGlobalIndices = _topLevelGlobalIndices;
 
     try {
-      /// Compile statics first so we can infer their type
-      _topLevelDeclarationsMap.forEach((key, value) {
-        final visibleInLibrary = visibleDeclarationsByIndex[key];
-        if (visibleInLibrary == null) {
-          return;
-        }
-        value.forEach((name, tlDeclaration) {
-          if (tlDeclaration.isBridge || !visibleInLibrary.containsKey(name)) {
-            return;
-          }
-          final declaration = tlDeclaration.declaration!;
-          _ctx.library = key;
+      // Keep track of declarations we've already compiled to avoid processing them in the final pass.
+      final alreadyCompiled = <AstNode>{};
+
+      // We iterate once to gather consts for sorting and compile non-const statics immediately.
+      final constDeclarationsByContainer =
+          <AstNode, List<_ConstDeclarationInfo>>{};
+
+      _topLevelDeclarationsMap.forEach((libraryIndex, declarations) {
+        declarations.forEach((name, declOrBridge) {
+          if (declOrBridge.isBridge) return;
+          final declaration = declOrBridge.declaration!;
+
+          // Handle top-level variables
           if (declaration is VariableDeclaration &&
-              declaration.parent!.parent is TopLevelVariableDeclaration) {
-            compileDeclaration(declaration, _ctx);
-            _ctx.resetStack();
-          } else if (declaration is ClassDeclaration) {
-            _ctx.currentClass = declaration;
-            for (final d in declaration.members
-                .whereType<FieldDeclaration>()
-                .where((e) => e.isStatic)) {
-              compileFieldDeclaration(-1, d, _ctx, declaration);
+              declaration.parent?.parent is TopLevelVariableDeclaration) {
+            final topLevelVarDecl =
+                declaration.parent!.parent as TopLevelVariableDeclaration;
+            if (topLevelVarDecl.variables.isConst) {
+              (constDeclarationsByContainer[topLevelVarDecl] ??= []).add(
+                  _ConstDeclarationInfo(
+                      declaration, topLevelVarDecl, declOrBridge.sourceLib));
+            } else {
+              _ctx.library = declOrBridge.sourceLib;
+              compileDeclaration(declaration, _ctx);
+              alreadyCompiled.add(declaration);
               _ctx.resetStack();
             }
-            _ctx.currentClass = null;
-          } else if (declaration is EnumDeclaration) {
+          } else if (declaration is ClassDeclaration) {
             _ctx.currentClass = declaration;
-            for (final d in declaration.members
-                .whereType<FieldDeclaration>()
-                .where((e) => e.isStatic)) {
-              compileFieldDeclaration(-1, d, _ctx, declaration);
-              _ctx.resetStack();
+            for (final member
+                in declaration.members.whereType<FieldDeclaration>()) {
+              if (member.isStatic) {
+                if (member.fields.isConst) {
+                  for (final fieldVar in member.fields.variables) {
+                    final fqName =
+                        '${declaration.name.lexeme}.${fieldVar.name.lexeme}';
+                    final fieldDeclOrBridge =
+                        _topLevelDeclarationsMap[libraryIndex]![fqName];
+                    if (fieldDeclOrBridge != null) {
+                      (constDeclarationsByContainer[declaration] ??= []).add(
+                          _ConstDeclarationInfo(fieldVar, declaration,
+                              fieldDeclOrBridge.sourceLib));
+                    }
+                  }
+                } else {
+                  _ctx.library = libraryIndex;
+                  compileFieldDeclaration(-1, member, _ctx, declaration);
+                  alreadyCompiled.add(member);
+                  _ctx.resetStack();
+                }
+              }
             }
             _ctx.currentClass = null;
           }
         });
       });
 
-      /// Compile the rest of the declarations
+      constDeclarationsByContainer.forEach((container, constDecls) {
+        if (constDecls.isEmpty) return;
+
+        _ctx.library = constDecls.first.libraryIndex;
+
+        final fieldMap = {for (var d in constDecls) d.name: d};
+        final fieldNames = fieldMap.keys.toSet();
+        final Map<String, Set<String>> adjList = {
+          for (var name in fieldNames) name: {}
+        };
+        final Map<String, int> inDegrees = {
+          for (var name in fieldNames) name: 0
+        };
+
+        // Build dependency graph
+        for (final constDeclInfo in constDecls) {
+          final dependerName = constDeclInfo.name;
+          final initializer = constDeclInfo.variable.initializer;
+          if (initializer != null) {
+            final dependencyVisitor = _DependencyVisitor(fieldNames);
+            initializer.visitChildren(dependencyVisitor);
+            for (final dependencyName in dependencyVisitor.dependencies) {
+              if (adjList[dependencyName]!.add(dependerName)) {
+                inDegrees[dependerName] = (inDegrees[dependerName] ?? 0) + 1;
+              }
+            }
+          }
+        }
+
+        // Perform topological sort
+        final sortedOrder = <_ConstDeclarationInfo>[];
+        final queue = <String>[];
+        fieldNames.where((name) => inDegrees[name] == 0).forEach(queue.add);
+
+        while (queue.isNotEmpty) {
+          final currentName = queue.removeAt(0);
+          sortedOrder.add(fieldMap[currentName]!);
+          for (final neighborName in adjList[currentName]!) {
+            inDegrees[neighborName] = inDegrees[neighborName]! - 1;
+            if (inDegrees[neighborName] == 0) {
+              queue.add(neighborName);
+            }
+          }
+        }
+
+        if (sortedOrder.length < constDecls.length) {
+          final containerName = container is NamedCompilationUnitMember
+              ? '"${container.name.lexeme}"'
+              : 'the library';
+          throw CompileError(
+              'Circular dependency detected in const declarations in $containerName.');
+        }
+
+        // Compile sorted consts
+        for (final declInfo in sortedOrder) {
+          final parentNode = declInfo.variable.parent!.parent!;
+          if (parentNode is TopLevelVariableDeclaration) {
+            compileDeclaration(declInfo.variable, _ctx);
+            alreadyCompiled.add(declInfo.variable);
+          } else if (parentNode is FieldDeclaration &&
+              declInfo.parent is ClassDeclaration) {
+            _ctx.currentClass = declInfo.parent as ClassDeclaration;
+            compileFieldDeclaration(
+                -1, parentNode, _ctx, declInfo.parent as ClassDeclaration);
+            _ctx.currentClass = null;
+            alreadyCompiled.add(parentNode);
+          }
+          _ctx.resetStack();
+        }
+      });
+
+      // Compile non-statics
       _topLevelDeclarationsMap.forEach((key, value) {
         _ctx.topLevelDeclarationPositions[key] = {};
         _ctx.instanceDeclarationPositions[key] = {};
@@ -498,11 +589,18 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
             return;
           }
           final declaration = tlDeclaration.declaration!;
+
+          // We've already compiled all variable declarations that are top-level or static fields.
+          // This pass is for compiling the bodies of classes and functions.
           if (declaration is ConstructorDeclaration ||
               declaration is MethodDeclaration ||
               declaration is VariableDeclaration) {
+            // This skips top-level vars that were already compiled.
             return;
           }
+
+          if (alreadyCompiled.contains(declaration)) return;
+
           _ctx.library = key;
           compileDeclaration(declaration, _ctx);
           _ctx.resetStack();
@@ -1214,5 +1312,33 @@ class _Import {
     final uri = Uri.parse(import.uri.stringValue!);
     return _Import(
         base.resolveUri(uri), import.prefix?.name, import.combinators);
+  }
+}
+
+class _ConstDeclarationInfo {
+  _ConstDeclarationInfo(this.variable, this.parent, this.libraryIndex);
+
+  final VariableDeclaration variable;
+
+  final AstNode parent;
+
+  final int libraryIndex;
+
+  String get name => variable.name.lexeme;
+}
+
+class _DependencyVisitor extends RecursiveAstVisitor<void> {
+  _DependencyVisitor(this.availableNames);
+
+  final Set<String> availableNames;
+
+  final Set<String> dependencies = {};
+
+  @override
+  void visitSimpleIdentifier(SimpleIdentifier node) {
+    if (availableNames.contains(node.name)) {
+      dependencies.add(node.name);
+    }
+    super.visitSimpleIdentifier(node);
   }
 }
