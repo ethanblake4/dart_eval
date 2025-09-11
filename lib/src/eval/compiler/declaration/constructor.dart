@@ -349,6 +349,16 @@ void compileConstructorDeclaration(
       argTypes.addAll(args.map((e) => e.type).toList());
       namedArgTypes
           .addAll(namedArgs.map((key, value) => MapEntry(key, value.type)));
+    } else if (superParams.isNotEmpty) {
+      final constructor = bridge.constructors[constructorName]!;
+      final argsPair = compileSuperParamsWithBridge(
+          ctx, constructor.functionDescriptor,
+          superParams: superParams);
+      final args = argsPair.first;
+      final namedArgs = argsPair.second;
+      argTypes.addAll(args.map((e) => e.type).toList());
+      namedArgTypes
+          .addAll(namedArgs.map((key, value) => MapEntry(key, value.type)));
     }
 
     final op = BridgeInstantiate.make(

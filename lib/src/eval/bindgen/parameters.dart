@@ -41,9 +41,11 @@ String _parameterFrom(BindgenContext ctx, FormalParameterElement parameter) {
 
 String argumentAccessors(
     BindgenContext ctx, List<FormalParameterElement> params,
-    {Map<String, String> paramMapping = const {}}) {
+    {Map<String, String> paramMapping = const {},
+    bool isBridgeMethod = false}) {
   final paramBuffer = StringBuffer();
   for (var i = 0; i < params.length; i++) {
+    final idx = i + (isBridgeMethod ? 1 : 0);
     final param = params[i];
     if (param.isNamed) {
       paramBuffer.write('${paramMapping[param.name3] ?? param.name3}: ');
@@ -62,7 +64,8 @@ String argumentAccessors(
       }
       final q = (param.isRequired ? '' : '?');
       final call = (param.isRequired ? '' : '?.call');
-      paramBuffer.write('(args[$i]! as EvalCallable$q)$call(runtime, null, [');
+      paramBuffer
+          .write('(args[$idx]! as EvalCallable$q)$call(runtime, null, [');
       if (type is FunctionType) {
         for (var j = 0; j < type.formalParameters.length; j++) {
           final ftParam = type.formalParameters[j];
@@ -89,7 +92,7 @@ String argumentAccessors(
       if (needsCast) {
         paramBuffer.write('(');
       }
-      paramBuffer.write('args[$i]');
+      paramBuffer.write('args[$idx]');
       final accessor = needsCast ? 'reified' : 'value';
       if (param.isRequired) {
         paramBuffer.write('!.\$$accessor');

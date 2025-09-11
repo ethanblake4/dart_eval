@@ -13,9 +13,9 @@ written in Dart, enabling dynamic execution and codepush for Flutter and Dart AO
 | eval_annotation | [![pub package](https://img.shields.io/pub/v/eval_annotation.svg?label=eval_annotation&color=orange)](https://pub.dev/packages/eval_annotation) |
 
 The primary aspect of `dart_eval`'s goal is to be interoperable with real 
-Dart code. Classes created in 'real Dart' can be used inside the interpreter 
-with a [wrapper](#wrapper-interop), and classes created in the interpreter 
-can be used outside it by creating an interface and [bridge class](#bridge-interop).
+Dart code. The automated [interop and binding](#interop-and-binding) generation system allows
+classes created in 'real Dart' to be used inside the interpreter, and classes
+created in the interpreter to be used outside it.
 
 dart_eval's compiler is powered under the hood by the Dart 
 [analyzer](https://pub.dev/packages/analyzer), so it achieves 100% correct and 

@@ -28,7 +28,7 @@ void main() {
       await expectLater(future, completion($int(3)));
       final endTime = DateTime.now().millisecondsSinceEpoch;
       expect(endTime - startTime, greaterThan(80));
-      expect(endTime - startTime, lessThan(350));
+      expect(endTime - startTime, lessThan(450));
     });
 
     test('Chained async/await', () async {

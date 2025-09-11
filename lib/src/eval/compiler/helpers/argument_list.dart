@@ -273,6 +273,50 @@ Pair<List<Variable>, Map<String, Variable>> compileSuperParams(
   return Pair(args, namedArgs);
 }
 
+Pair<List<Variable>, Map<String, Variable>> compileSuperParamsWithBridge(
+    CompilerContext ctx, BridgeFunctionDef function,
+    {List<Variable> before = const [], List<String> superParams = const []}) {
+  final args = <Variable>[];
+  final push = <Variable>[];
+  final namedArgs = <String, Variable>{};
+
+  Variable? $null;
+
+  for (final param in function.params) {
+    // First check super params. Super params do not contain an expression.
+    if (superParams.contains(param.name)) {
+      final V = ctx.lookupLocal(param.name)!;
+      push.add(V);
+      args.add(V);
+    } else {
+      if (param.optional) {
+        $null ??= BuiltinValue().push(ctx);
+        push.add($null);
+      } else {
+        throw CompileError('Not enough positional arguments');
+      }
+    }
+  }
+
+  for (final param in function.namedParams) {
+    if (superParams.contains(param.name)) {
+      final V = ctx.lookupLocal(param.name)!;
+      push.add(V);
+      namedArgs[param.name] = V;
+    } else {
+      $null ??= BuiltinValue().push(ctx);
+      push.add($null);
+    }
+  }
+
+  for (final restArg in <Variable>[...before, ...push]) {
+    final argOp = PushArg.make(restArg.scopeFrameOffset);
+    ctx.pushOp(argOp, PushArg.LEN);
+  }
+
+  return Pair(args, namedArgs);
+}
+
 /// Best effort method to compile an argument list against a dynamic target.
 /// This will not always work, but it's better than nothing for simple cases.
 Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithDynamic(

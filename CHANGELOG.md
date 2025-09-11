@@ -1,3 +1,8 @@
+## 0.8.2
+- Fix incorrect accessor index when creating bridge classes 
+  with the binding generator
+- Fix super parameters not being set when extending a bridge class
+
 ## 0.8.1
 - Added support for configurable parser error handling
 - Fix accessing enum index values from an imported enum (thanks @jacksonrl)

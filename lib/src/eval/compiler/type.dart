@@ -1041,10 +1041,6 @@ class GenericParam {
   final TypeRef? extendsType;
 }
 
-class C<T extends R, R extends int> {
-  const C();
-}
-
 extension Refify on BridgeTypeSpec {
   TypeRef ref(CompilerContext ctx,
       [List<BridgeTypeAnnotation> typeArgs = const []]) {

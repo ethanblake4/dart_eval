@@ -56,7 +56,7 @@ String propertyGetters(BindgenContext ctx, InterfaceElement2 element,
         case '${e.displayName}':
           return \$Function((runtime, target, args) {
             ${assertMethodPermissions(e)}
-            ${returnsValue ? 'final result = ' : ''}super.${e.displayName}(${argumentAccessors(ctx, e.formalParameters)});
+            ${returnsValue ? 'final result = ' : ''}super.${e.displayName}(${argumentAccessors(ctx, e.formalParameters, isBridgeMethod: true)});
             return ${wrapVar(ctx, e.returnType, 'result')};
           });''';
     }).join('\n')}\n}';
