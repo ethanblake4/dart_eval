@@ -1,5 +1,5 @@
 /// Provides dart:core bridge classes and wrappers
-library dart_eval.stdlib.core;
+library;
 
 export '../src/eval/shared/stdlib/core/base.dart';
 export '../src/eval/shared/stdlib/core/collection.dart';

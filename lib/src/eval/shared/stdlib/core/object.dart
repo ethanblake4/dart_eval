@@ -135,7 +135,7 @@ class $Object implements $Instance {
         return $int($value.hashCode);
     }
 
-    throw UnimplementedError();
+    throw UnimplementedError("\$Object.$identifier");
   }
 
   /// dart_eval implementation of [Object.hash]
@@ -284,7 +284,7 @@ class $Object implements $Instance {
 
   @override
   void $setProperty(Runtime runtime, String identifier, $Value value) {
-    throw UnimplementedError();
+    throw UnimplementedError("set \$Object.$identifier");
   }
 
   @override

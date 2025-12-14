@@ -1,5 +1,5 @@
 /// Provides dart:convert bridge classes and wrappers
-library dart_eval.stdlib.convert;
+library;
 
 export '../src/eval/shared/stdlib/convert/codec.dart';
 export '../src/eval/shared/stdlib/convert/converter.dart';

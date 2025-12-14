@@ -155,15 +155,21 @@ class Bindgen implements BridgeDeclarationRegistry {
 
       final units = analysisResult.unit.declarations;
 
-      final resolved = units
-          .where((declaration) => declaration.declaredFragment != null)
-          .map((declaration) => declaration is ClassDeclaration
-              ? _$instance(ctx, declaration.declaredFragment!.element)
-              : (declaration is EnumDeclaration
-                  ? _$enum(ctx, declaration.declaredFragment!.element)
-                  : null))
-          .toList()
-          .nonNulls;
+      final Iterable<String> resolved;
+      try {
+        resolved = units
+            .where((declaration) => declaration.declaredFragment != null)
+            .map((declaration) => declaration is ClassDeclaration
+                ? _$instance(ctx, declaration.declaredFragment!.element)
+                : (declaration is EnumDeclaration
+                    ? _$enum(ctx, declaration.declaredFragment!.element)
+                    : null))
+            .toList()
+            .nonNulls;
+      } on Error {
+        print('Failed to resolve $filePath:');
+        rethrow;
+      }
 
       if (resolved.isEmpty) {
         return null;

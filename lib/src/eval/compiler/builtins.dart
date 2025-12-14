@@ -96,7 +96,7 @@ class KnownMethodArg {
 
 Map<TypeRef, Map<String, KnownMethod>>? _knownMethods;
 
-Map<TypeRef, Map<String, KnownMethod>> getKnownMethods(ctx) {
+Map<TypeRef, Map<String, KnownMethod>> getKnownMethods(CompilerContext ctx) {
   if (_knownMethods != null) {
     return _knownMethods!;
   }

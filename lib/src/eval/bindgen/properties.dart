@@ -1,6 +1,7 @@
 import 'package:analyzer/dart/element/element2.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
+import 'package:dart_eval/src/eval/bindgen/operator.dart';
 import 'package:dart_eval/src/eval/bindgen/parameters.dart';
 import 'package:dart_eval/src/eval/bindgen/permission.dart';
 import 'package:dart_eval/src/eval/bindgen/type.dart';
@@ -52,11 +53,12 @@ String propertyGetters(BindgenContext ctx, InterfaceElement2 element,
       ''').join('\n')}${methods0.map((e) {
       final returnsValue =
           e.returnType is! VoidType && !e.returnType.isDartCoreNull;
+      final op = resolveMethodOperator(e.displayName);
       return '''
         case '${e.displayName}':
           return \$Function((runtime, target, args) {
             ${assertMethodPermissions(e)}
-            ${returnsValue ? 'final result = ' : ''}super.${e.displayName}(${argumentAccessors(ctx, e.formalParameters, isBridgeMethod: true)});
+            ${returnsValue ? 'final result = ' : ''}${op.format('super', argumentAccessors(ctx, e.formalParameters, isBridgeMethod: true))};
             return ${wrapVar(ctx, e.returnType, 'result')};
           });''';
     }).join('\n')}\n}';
@@ -67,7 +69,7 @@ String propertyGetters(BindgenContext ctx, InterfaceElement2 element,
         return ${wrapVar(ctx, e.type.returnType, '_${e.name3}', metadata: e.metadata2.annotations)};
       ''').join('\n')}${methods0.map((e) => '''
       case '${e.name3}':
-        return __${e.name3};
+        return __${resolveMethodOperator(e.name3!).name};
       ''').join('\n')}\n}';
 }
 

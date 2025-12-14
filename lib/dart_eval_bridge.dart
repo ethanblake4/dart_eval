@@ -1,4 +1,4 @@
-library dart_eval.bridge;
+library;
 
 export 'package:pub_semver/pub_semver.dart' show Version;
 export 'src/eval/runtime/runtime.dart' show Runtime;

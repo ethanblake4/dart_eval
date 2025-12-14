@@ -1,5 +1,5 @@
 @TestOn('vm')
-library convert_test;
+library;
 
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
