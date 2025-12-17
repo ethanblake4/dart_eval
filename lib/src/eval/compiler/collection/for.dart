@@ -84,8 +84,8 @@ List<TypeRef> compileForElementForList(
             ? null
             : (ctx) => compileExpression(parts.condition!, ctx),
         body: (ctx, ert) {
-          potentialReturnTypes.addAll(
-              compileListElement(e.body, list, ctx, box));
+          potentialReturnTypes
+              .addAll(compileListElement(e.body, list, ctx, box));
           return StatementInfo(-1);
         },
         update: (ctx) {
