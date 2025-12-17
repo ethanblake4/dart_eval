@@ -22,6 +22,16 @@ static void configureForRuntime(Runtime runtime) {
 }
 ''';
 
+String bindConfigureFunctionForRuntime(
+    BindgenContext ctx, TopLevelFunctionElement element) {
+  final uri = ctx.libOverrides[element.name3] ?? ctx.uri;
+  return '''
+static void configureForRuntime(Runtime runtime) {
+  return runtime.registerBridgeFunc('$uri', '${element.name3!.replaceAll(r'$', r'\$')}', const \$${element.name3}Fn().call);
+}
+''';
+}
+
 String enumValuesForRuntime(BindgenContext ctx, EnumElement2 element) {
   final uri = ctx.libOverrides[element.name3] ?? ctx.uri;
   return '''
