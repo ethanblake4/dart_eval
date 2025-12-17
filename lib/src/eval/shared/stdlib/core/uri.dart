@@ -140,7 +140,7 @@ class $Uri implements $Instance {
             isStatic: true),
         'dataFromBytes': BridgeMethodDef(
             BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+                returns: BridgeTypeAnnotation($type),
                 params: [
                   BridgeParameter(
                       'bytes',
@@ -171,7 +171,7 @@ class $Uri implements $Instance {
             isStatic: true),
         'dataFromString': BridgeMethodDef(
             BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+                returns: BridgeTypeAnnotation($type),
                 params: [
                   BridgeParameter(
                       'content',
@@ -202,7 +202,7 @@ class $Uri implements $Instance {
             isStatic: true),
         'directory': BridgeMethodDef(
             BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+                returns: BridgeTypeAnnotation($type),
                 params: [
                   BridgeParameter(
                       'path',
@@ -216,7 +216,7 @@ class $Uri implements $Instance {
             isStatic: true),
         'file': BridgeMethodDef(
             BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+                returns: BridgeTypeAnnotation($type),
                 params: [
                   BridgeParameter(
                       'path',
@@ -230,7 +230,7 @@ class $Uri implements $Instance {
             isStatic: true),
         'http': BridgeMethodDef(
             BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+                returns: BridgeTypeAnnotation($type),
                 params: [
                   BridgeParameter(
                       'authority',
@@ -256,7 +256,7 @@ class $Uri implements $Instance {
             isStatic: true),
         'https': BridgeMethodDef(
             BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+                returns: BridgeTypeAnnotation($type),
                 params: [
                   BridgeParameter(
                       'authority',
