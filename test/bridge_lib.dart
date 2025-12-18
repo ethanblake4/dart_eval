@@ -65,8 +65,8 @@ class $TestClass extends TestClass with $Bridge {
           returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future,
               [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType))])),
           params: [
-            BridgeParameter('a',
-                BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), false),
+            BridgeParameter(
+                'a', BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), false),
           ],
         )),
       },
