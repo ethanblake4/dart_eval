@@ -13,6 +13,8 @@ class TestClass {
   bool runTest(int a, {String b = 'hello'}) {
     return a + someNumber > b.length;
   }
+
+  Future<void> runAsyncTest(int a) async {}
 }
 
 class $TestClass extends TestClass with $Bridge {
@@ -58,7 +60,15 @@ class $TestClass extends TestClass with $Bridge {
             namedParams: [
               BridgeParameter('b',
                   BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false),
-            ]))
+            ])),
+        'runAsyncTest': BridgeMethodDef(BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future,
+              [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType))])),
+          params: [
+            BridgeParameter('a',
+                BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), false),
+          ],
+        )),
       },
       getters: {},
       setters: {},
@@ -96,6 +106,11 @@ class $TestClass extends TestClass with $Bridge {
   @override
   bool runTest(int a, {String b = 'hello'}) {
     return $_invoke('runTest', [$int(a), $String(b)]);
+  }
+
+  @override
+  Future<void> runAsyncTest(int a) {
+    return $_invoke('runAsyncTest', [$int(a)]);
   }
 
   @override

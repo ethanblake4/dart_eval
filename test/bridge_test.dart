@@ -332,5 +332,41 @@ void main() {
       expect(caughtException, isA<Exception>());
       expect(caughtException.toString(), contains('Bridge error'));
     });
+
+    test('Void async function in a subclassed bridge class', () async {
+      compiler.defineBridgeClasses([$TestClass.$declaration]);
+
+      final program = compiler.compile({
+        'example': {
+          'main.dart': '''
+            import 'package:bridge_lib/bridge_lib.dart';
+
+            class MyTestClass extends TestClass {
+              MyTestClass(int someNumber) : super(someNumber);
+
+              @override
+              Future<void> runAsyncTest(int a) async {
+                print('called \$a');
+              }
+            }
+
+            TestClass main() {
+              return MyTestClass(0);
+            }
+          '''
+        }
+      });
+
+      final runtime = Runtime.ofProgram(program);
+
+      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart',
+          'TestClass.', $TestClass.$construct,
+          isBridge: true);
+
+      final res = runtime.executeLib('package:example/main.dart', 'main');
+
+      expect(res is TestClass, true);
+      expect(() async => await res.runAsyncTest(1), prints("called 1\n"));
+    });
   });
 }
