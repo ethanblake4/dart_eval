@@ -6,8 +6,10 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bindgen/bindgen.dart';
 import 'package:dart_eval/src/eval/cli/utils.dart';
 import 'package:dart_style/dart_style.dart';
+import 'package:glob/glob.dart';
 import 'package:path/path.dart';
 import 'package:pubspec_parse/pubspec_parse.dart';
+import 'package:yaml/yaml.dart' show loadYaml, YamlList;
 
 const defaultImports = '''
 // ignore_for_file: unused_import, unnecessary_import
@@ -78,6 +80,9 @@ void cliBind(
   var singleResult = '';
   var numBound = 0;
 
+  final analyzePath = join(projectRoot.path, 'analysis_options.yaml');
+  final excludes = readAnalyzerExcludes(File(analyzePath));
+
   Future<void> bindLoop(String pkg, Directory dir, String root) async {
     if (!dir.existsSync()) return;
     for (final file in dir.listSync()) {
@@ -86,6 +91,7 @@ void cliBind(
           filename.endsWith('.dart') &&
           !filename.endsWith('.eval.dart')) {
         final p = relative(file.path, from: root).replaceAll('\\', '/');
+        if (excludes.any((e) => e.matches(p))) continue;
         final uri = 'package:${posix.join(packageName, p)}';
         final output = await bindgen.parse(file, filename, uri, all);
         if (output != null) {
@@ -160,4 +166,17 @@ class ${packageName.toPascalCase()}Plugin implements EvalPlugin {
   } else {
     print('Created bindings for $numBound files.');
   }
+}
+
+List<Glob> readAnalyzerExcludes(File path) {
+  if (!path.existsSync()) return [];
+  final doc = loadYaml(path.readAsStringSync());
+  final excludes = (doc['analyzer'] ?? <String, dynamic>{})['exclude'];
+  if (excludes == null || excludes is! YamlList) return [];
+  final reLib = RegExp(r'^lib/');
+  return excludes
+      .whereType<String>()
+      .where((value) => value.startsWith('lib/'))
+      .map((value) => Glob(value.replaceFirst(reLib, '')))
+      .toList();
 }

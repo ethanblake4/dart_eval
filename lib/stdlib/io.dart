@@ -1,5 +1,5 @@
 /// Provides dart:io bridge classes and wrappers
-library dart_eval.stdlib.io;
+library;
 
 export '../src/eval/shared/stdlib/io/directory.dart';
 export '../src/eval/shared/stdlib/io/file_system_entity.dart';

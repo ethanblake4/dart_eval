@@ -47,7 +47,7 @@ String _$constructor(
   static \$Value? \$$name(Runtime runtime, \$Value? thisValue, List<\$Value?> args) {
     return ${!isBridge ? '\$${element.name3}.wrap(' : ''}
       $fullyQualifiedConstructorId(
-        ${argumentAccessors(ctx, constructor.formalParameters)}
+        ${argumentAccessors(ctx, constructor.formalParameters).join(', ')}
       ${!isBridge ? '),' : ''}
     );
   }
@@ -68,7 +68,7 @@ String _$staticMethod(
   static \$Value? \$${method.name3}(Runtime runtime, \$Value? target, List<\$Value?> args) {
     ${assertMethodPermissions(method)}
     final value = ${element.name3}.${method.name3}(
-      ${argumentAccessors(ctx, method.formalParameters)}
+      ${argumentAccessors(ctx, method.formalParameters).join(', ')}
     );
     return ${wrapVar(ctx, method.returnType, "value")};
   }

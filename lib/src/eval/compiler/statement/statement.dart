@@ -20,39 +20,43 @@ import 'block.dart';
 
 StatementInfo compileStatement(
     Statement s, AlwaysReturnType? expectedReturnType, CompilerContext ctx) {
-  if (s is Block) {
-    return compileBlock(s, expectedReturnType, ctx);
-  } else if (s is VariableDeclarationStatement) {
-    return compileVariableDeclarationStatement(s, ctx);
-  } else if (s is ExpressionStatement) {
-    final V = compileExpressionAndDiscardResult(s.expression, ctx);
-    if (V != null && V.type == CoreTypes.never.ref(ctx)) {
-      return StatementInfo(-1, willAlwaysThrow: true);
+  try {
+    if (s is Block) {
+      return compileBlock(s, expectedReturnType, ctx);
+    } else if (s is VariableDeclarationStatement) {
+      return compileVariableDeclarationStatement(s, ctx);
+    } else if (s is ExpressionStatement) {
+      final V = compileExpressionAndDiscardResult(s.expression, ctx);
+      if (V != null && V.type == CoreTypes.never.ref(ctx)) {
+        return StatementInfo(-1, willAlwaysThrow: true);
+      }
+      return StatementInfo(-1);
+    } else if (s is ReturnStatement) {
+      return compileReturn(ctx, s, expectedReturnType);
+    } else if (s is ForStatement) {
+      return compileForStatement(s, ctx, expectedReturnType);
+    } else if (s is WhileStatement) {
+      return compileWhileStatement(s, ctx, expectedReturnType);
+    } else if (s is DoStatement) {
+      return compileDoStatement(s, ctx, expectedReturnType);
+    } else if (s is IfStatement) {
+      return compileIfStatement(s, ctx, expectedReturnType);
+    } else if (s is SwitchStatement) {
+      return compileSwitchStatement(s, ctx, expectedReturnType);
+    } else if (s is TryStatement) {
+      return compileTryStatement(s, ctx, expectedReturnType);
+    } else if (s is AssertStatement) {
+      return compileAssertStatement(s, ctx, expectedReturnType);
+    } else if (s is BreakStatement) {
+      return compileBreakStatement(s, ctx);
+    } else if (s is PatternVariableDeclarationStatement) {
+      return compilePatternVariableDeclarationStatement(s, ctx);
     }
-    return StatementInfo(-1);
-  } else if (s is ReturnStatement) {
-    return compileReturn(ctx, s, expectedReturnType);
-  } else if (s is ForStatement) {
-    return compileForStatement(s, ctx, expectedReturnType);
-  } else if (s is WhileStatement) {
-    return compileWhileStatement(s, ctx, expectedReturnType);
-  } else if (s is DoStatement) {
-    return compileDoStatement(s, ctx, expectedReturnType);
-  } else if (s is IfStatement) {
-    return compileIfStatement(s, ctx, expectedReturnType);
-  } else if (s is SwitchStatement) {
-    return compileSwitchStatement(s, ctx, expectedReturnType);
-  } else if (s is TryStatement) {
-    return compileTryStatement(s, ctx, expectedReturnType);
-  } else if (s is AssertStatement) {
-    return compileAssertStatement(s, ctx, expectedReturnType);
-  } else if (s is BreakStatement) {
-    return compileBreakStatement(s, ctx);
-  } else if (s is PatternVariableDeclarationStatement) {
-    return compilePatternVariableDeclarationStatement(s, ctx);
-  } else {
-    throw CompileError('Unknown statement type ${s.runtimeType}');
+  } on Error {
+    print('Failed to compile a statement "$s"');
+    rethrow;
   }
+  throw CompileError('Unknown statement type ${s.runtimeType}');
 }
 
 class StatementInfo {

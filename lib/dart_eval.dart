@@ -1,5 +1,5 @@
 /// A library providing a Dart bytecode compiler and interpreter.
-library dart_eval;
+library;
 
 export 'src/eval/eval.dart';
 export 'src/eval/runtime/runtime.dart' show Runtime;

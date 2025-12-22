@@ -245,8 +245,11 @@ class TypeRef {
       }
       final lib = ctx.libraryMap[spec.library] ??
           (throw CompileError('Bridge: cannot find library ${spec.library}'));
-      return ctx.visibleTypes[lib]![spec.name]!
-          .copyWith(specifiedTypeArgs: specifiedTypeArgs, boxed: true);
+      final typeSpec = ctx.visibleTypes[lib]![spec.name] ??
+          (throw CompileError(
+              'Bridge: cannot find type ${spec.name} in library ${spec.library}'));
+      return typeSpec.copyWith(
+          specifiedTypeArgs: specifiedTypeArgs, boxed: true);
     }
     final ref = typeReference.ref;
     if (ref != null) {

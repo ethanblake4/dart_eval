@@ -1,4 +1,4 @@
-library dart_eval.security;
+library;
 
 export 'src/eval/runtime/security/permission.dart';
 export 'src/eval/runtime/security/permissions/filesystem.dart';

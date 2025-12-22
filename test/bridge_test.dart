@@ -23,7 +23,7 @@ void main() {
         'example': {
           'main.dart': '''
             import 'package:bridge_lib/bridge_lib.dart';
-            
+
             bool main() {
               final test = TestClass(4);
               return test.runTest(5, b: 'hi');
@@ -48,19 +48,56 @@ void main() {
         'example': {
           'main.dart': '''
             import 'package:bridge_lib/bridge_lib.dart';
-            
+
             class MyTestClass extends TestClass {
               MyTestClass(int someNumber) : super(someNumber);
-            
+
               @override
               bool runTest(int a, {String b = 'wow'}) {
                 return super.runTest(a + 2 + someNumber, b: b);
               }
             }
-            
+
             bool main() {
               final test = MyTestClass(18);
               return test.runTest(5, b: 'cool');
+            }
+          '''
+        }
+      });
+
+      final runtime = Runtime.ofProgram(program);
+
+      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart',
+          'TestClass.', $TestClass.$construct,
+          isBridge: true);
+
+      expect(runtime.executeLib('package:example/main.dart', 'main'), true);
+    });
+
+    test('Changing a field in the constructor of a subclassed bridge class', () {
+      compiler.defineBridgeClasses([$TestClass.$declaration]);
+
+      final program = compiler.compile({
+        'example': {
+          'main.dart': '''
+            import 'package:bridge_lib/bridge_lib.dart';
+
+            class MyTestClass extends TestClass {
+              MyTestClass(int someNumber) : super(someNumber) {
+                someNumber = 4;
+              }
+
+              @override
+              bool runTest(int a, {String b = 'wow'}) {
+                return super.runTest(a + 2, b: b);
+              }
+            }
+
+            bool main() {
+              final test = MyTestClass(1);
+              // 1 + 2 + (someNumber == 4) = 7 > b.length
+              return test.runTest(1, b: '123456');
             }
           '''
         }
@@ -82,16 +119,16 @@ void main() {
         'example': {
           'main.dart': '''
             import 'package:bridge_lib/bridge_lib.dart';
-            
+
             class MyTestClass extends TestClass {
               MyTestClass(int someNumber) : super(someNumber);
-            
+
               @override
               bool runTest(int a, {String b = 'wow'}) {
                 return super.runTest(a + 2, b: b);
               }
             }
-            
+
             TestClass main() {
               final test = MyTestClass(0, b: 'hello');
               return test;
@@ -120,7 +157,7 @@ void main() {
         'example': {
           'main.dart': '''
             import 'package:bridge_lib/bridge_lib.dart';
-            
+
             bool main() {
               return TestClass.runStaticTest('Okay');
             }
@@ -145,7 +182,7 @@ void main() {
         'example': {
           'main.dart': '''
             import 'package:bridge_lib/bridge_lib.dart';
-            
+
             TestEnum main() {
               final map = {
                 'one': TestEnum.one,
@@ -228,7 +265,7 @@ void main() {
         'example': {
           'main.dart': '''
             import 'dart:async';
-            
+
             void main(Function callback) async {
               callback('a');
               await callback('w');

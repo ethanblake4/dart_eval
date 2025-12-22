@@ -275,7 +275,7 @@ void main() {
         'package:extensions_test/main.dart',
         'main',
       );
-      expect((value as RegExpMatch).group(0), '1');
+      expect((value as Match).group(0), '1');
     });
 
     test('Bridged enum equality ternary assignment', () {

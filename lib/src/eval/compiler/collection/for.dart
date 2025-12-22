@@ -69,32 +69,31 @@ List<TypeRef> compileForElementForList(
         update: (ctx) =>
             loopVariable.setValue(ctx, iterator.getProperty(ctx, 'current')),
         updateBeforeBody: true);
-  }
-
-  parts as ForParts;
-
-  macroLoop(ctx, null,
-      initialization: (ctx) {
-        if (parts is ForPartsWithDeclarations) {
-          compileVariableDeclarationList(parts.variables, ctx);
-        } else if (parts is ForPartsWithExpression) {
-          if (parts.initialization != null) {
-            compileExpressionAndDiscardResult(parts.initialization!, ctx);
+  } else if (parts is ForParts) {
+    macroLoop(ctx, null,
+        initialization: (ctx) {
+          if (parts is ForPartsWithDeclarations) {
+            compileVariableDeclarationList(parts.variables, ctx);
+          } else if (parts is ForPartsWithExpression) {
+            if (parts.initialization != null) {
+              compileExpressionAndDiscardResult(parts.initialization!, ctx);
+            }
           }
-        }
-      },
-      condition: parts.condition == null
-          ? null
-          : (ctx) => compileExpression(parts.condition!, ctx),
-      body: (ctx, ert) {
-        potentialReturnTypes.addAll(compileListElement(e.body, list, ctx, box));
-        return StatementInfo(-1);
-      },
-      update: (ctx) {
-        for (final u in parts.updaters) {
-          compileExpressionAndDiscardResult(u, ctx);
-        }
-      });
+        },
+        condition: parts.condition == null
+            ? null
+            : (ctx) => compileExpression(parts.condition!, ctx),
+        body: (ctx, ert) {
+          potentialReturnTypes
+              .addAll(compileListElement(e.body, list, ctx, box));
+          return StatementInfo(-1);
+        },
+        update: (ctx) {
+          for (final u in parts.updaters) {
+            compileExpressionAndDiscardResult(u, ctx);
+          }
+        });
+  }
 
   return potentialReturnTypes;
 }

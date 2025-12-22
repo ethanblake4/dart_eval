@@ -139,146 +139,99 @@ class $Uri implements $Instance {
                 ]),
             isStatic: true),
         'dataFromBytes': BridgeMethodDef(
-            BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-                params: [
-                  BridgeParameter(
-                      'bytes',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list, [
-                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int))
-                      ])),
-                      false),
-                ],
-                namedParams: [
-                  BridgeParameter(
-                      'mimeType',
+            BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [
+              BridgeParameter(
+                  'bytes',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list,
+                      [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int))])),
+                  false),
+            ], namedParams: [
+              BridgeParameter('mimeType',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), true),
+              BridgeParameter(
+                  'parameters',
+                  BridgeTypeAnnotation(
+                    BridgeTypeRef(CoreTypes.map, [
                       BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-                      true),
-                  BridgeParameter(
-                      'parameters',
-                      BridgeTypeAnnotation(
-                        BridgeTypeRef(CoreTypes.map, [
-                          BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-                          BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string))
-                        ]),
-                      ),
-                      true),
-                  BridgeParameter(
-                      'percentEncoded',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
-                      true),
-                ]),
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string))
+                    ]),
+                  ),
+                  true),
+              BridgeParameter('percentEncoded',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true),
+            ]),
             isStatic: true),
         'dataFromString': BridgeMethodDef(
-            BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-                params: [
-                  BridgeParameter(
-                      'content',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-                      false),
-                ],
-                namedParams: [
-                  BridgeParameter(
-                      'mimeType',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-                      true),
-                  BridgeParameter(
-                      'parameters',
-                      BridgeTypeAnnotation(
-                          BridgeTypeRef(CoreTypes.map, [
-                            BridgeTypeAnnotation(
-                                BridgeTypeRef(CoreTypes.string)),
-                            BridgeTypeAnnotation(
-                                BridgeTypeRef(CoreTypes.string))
-                          ]),
-                          nullable: true),
-                      true),
-                  BridgeParameter(
-                      'base64',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
-                      true),
-                ]),
+            BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [
+              BridgeParameter('content',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false),
+            ], namedParams: [
+              BridgeParameter('mimeType',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), true),
+              BridgeParameter(
+                  'parameters',
+                  BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.map, [
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string))
+                      ]),
+                      nullable: true),
+                  true),
+              BridgeParameter('base64',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true),
+            ]),
             isStatic: true),
         'directory': BridgeMethodDef(
-            BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-                params: [
-                  BridgeParameter(
-                      'path',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-                      false),
-                ],
-                namedParams: [
-                  BridgeParameter('windows',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true)
-                ]),
+            BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [
+              BridgeParameter('path',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false),
+            ], namedParams: [
+              BridgeParameter('windows',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true)
+            ]),
             isStatic: true),
         'file': BridgeMethodDef(
-            BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-                params: [
-                  BridgeParameter(
-                      'path',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-                      false),
-                ],
-                namedParams: [
-                  BridgeParameter('windows',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true)
-                ]),
+            BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [
+              BridgeParameter('path',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false),
+            ], namedParams: [
+              BridgeParameter('windows',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true)
+            ]),
             isStatic: true),
         'http': BridgeMethodDef(
-            BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-                params: [
-                  BridgeParameter(
-                      'authority',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-                      false),
-                  BridgeParameter(
-                      'unencodedPath',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-                      true),
-                  BridgeParameter(
-                      'queryParameters',
-                      BridgeTypeAnnotation(
-                          BridgeTypeRef(CoreTypes.map, [
-                            BridgeTypeAnnotation(
-                                BridgeTypeRef(CoreTypes.string)),
-                            BridgeTypeAnnotation(
-                                BridgeTypeRef(CoreTypes.dynamic))
-                          ]),
-                          nullable: true),
-                      true),
-                ],
-                namedParams: []),
+            BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [
+              BridgeParameter('authority',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false),
+              BridgeParameter('unencodedPath',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), true),
+              BridgeParameter(
+                  'queryParameters',
+                  BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.map, [
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic))
+                      ]),
+                      nullable: true),
+                  true),
+            ], namedParams: []),
             isStatic: true),
         'https': BridgeMethodDef(
-            BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-                params: [
-                  BridgeParameter(
-                      'authority',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-                      false),
-                  BridgeParameter(
-                      'unencodedPath',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-                      true),
-                  BridgeParameter(
-                      'queryParameters',
-                      BridgeTypeAnnotation(
-                          BridgeTypeRef(CoreTypes.map, [
-                            BridgeTypeAnnotation(
-                                BridgeTypeRef(CoreTypes.string)),
-                            BridgeTypeAnnotation(
-                                BridgeTypeRef(CoreTypes.dynamic))
-                          ]),
-                          nullable: true),
-                      true),
-                ],
-                namedParams: []),
+            BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [
+              BridgeParameter('authority',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false),
+              BridgeParameter('unencodedPath',
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), true),
+              BridgeParameter(
+                  'queryParameters',
+                  BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.map, [
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic))
+                      ]),
+                      nullable: true),
+                  true),
+            ], namedParams: []),
             isStatic: true),
         'parseIPv4Address': BridgeMethodDef(
             BridgeFunctionDef(

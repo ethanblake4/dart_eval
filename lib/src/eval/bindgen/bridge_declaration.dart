@@ -96,6 +96,7 @@ ${fields(ctx, element)}
 
 String constructors(BindgenContext ctx, InterfaceElement2 element) {
   return element.constructors2
+      .where((e) => !e.isPrivate)
       .map((e) => bridgeConstructorDef(ctx, constructor: e))
       .join('\n');
 }
@@ -111,6 +112,7 @@ String methods(BindgenContext ctx, InterfaceElement2 element) {
   return methods.values
       .where(
           (m) => !(const ['==', 'toString', 'noSuchMethod'].contains(m.name3)))
+      .where((m) => !m.isPrivate)
       .map((m) => bridgeMethodDef(ctx, method: m))
       .join('\n');
 }
@@ -126,6 +128,7 @@ String getters(BindgenContext ctx, InterfaceElement2 element) {
 
   return getters.values
       .where((m) => !(const ['hashCode', 'runtimeType'].contains(m.name3)))
+      .where((element) => !element.isPrivate)
       .where((element) =>
           !element.isSynthetic ||
           (element is EnumElement2 &&
@@ -145,7 +148,7 @@ String setters(BindgenContext ctx, InterfaceElement2 element) {
   };
 
   return setters.values
-      .where((element) => !element.isSynthetic)
+      .where((element) => !element.isSynthetic && !element.isPrivate)
       .map((e) => bridgeSetterDef(ctx, setter: e))
       .join('\n');
 }
@@ -161,8 +164,8 @@ String fields(BindgenContext ctx, InterfaceElement2 element) {
     for (final f in element.fields2) f.name3: f
   };
 
-  final fields = allFields.values
-      .where((element) => !element.isSynthetic && !element.isEnumConstant);
+  final fields = allFields.values.where((element) =>
+      !element.isSynthetic && !element.isEnumConstant && !element.isPrivate);
 
   return fields
       .map(
