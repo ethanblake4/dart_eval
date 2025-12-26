@@ -636,7 +636,10 @@ Variable _declarationToVariable(
 
   if (decl is VariableDeclaration) {
     final type = ctx.topLevelVariableInferredTypes[decOrBridge.sourceLib]![
-        decl.name.lexeme]!;
+        decl.name.lexeme];
+    if (type == null) {
+      throw CompileError('Cannot resolve top level variable ${decl.name.lexeme}', source);
+    }
     final gIndex =
         ctx.topLevelGlobalIndices[decOrBridge.sourceLib]![decl.name.lexeme]!;
     ctx.pushOp(LoadGlobal.make(gIndex), LoadGlobal.LEN);
