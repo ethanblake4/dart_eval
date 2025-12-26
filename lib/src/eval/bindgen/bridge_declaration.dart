@@ -19,7 +19,8 @@ String bindBridgeType(BindgenContext ctx, InterfaceElement2 element) {
 ''';
 }
 
-String bindFunctionDeclaration(BindgenContext ctx, TopLevelFunctionElement element) {
+String bindFunctionDeclaration(
+    BindgenContext ctx, TopLevelFunctionElement element) {
   final uri = ctx.libOverrides[element.name3] ?? ctx.uri;
   return '''
   static const \$declaration = BridgeFunctionDeclaration(
@@ -199,7 +200,8 @@ String bridgeConstructorDef(BindgenContext ctx,
       ''';
 }
 
-String bridgeFunctionDef(BindgenContext ctx, {required ExecutableElement2 function}) {
+String bridgeFunctionDef(BindgenContext ctx,
+    {required ExecutableElement2 function}) {
   return '''
         BridgeFunctionDef(
           returns: ${bridgeTypeAnnotationFrom(ctx, function.returnType)},
