@@ -76,8 +76,6 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx,
     throw CompileError('Unknown function body type ${b.runtimeType}');
   }
 
-  ctx.endAllocScope();
-
   if (!(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
     if (b.isAsynchronous) {
       asyncComplete(ctx, -1);
@@ -85,6 +83,8 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx,
       ctx.pushOp(Return.make(-1), Return.LEN);
     }
   }
+
+  ctx.endAllocScope();
 
   if (d.isStatic) {
     ctx.topLevelDeclarationPositions[ctx.library]!['$parentName.$methodName'] =
