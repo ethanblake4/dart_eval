@@ -10,6 +10,7 @@ import 'package:dart_eval/src/eval/bindgen/bridge_declaration.dart';
 import 'package:dart_eval/src/eval/bindgen/configure.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
 import 'package:dart_eval/src/eval/bindgen/enum.dart';
+import 'package:dart_eval/src/eval/bindgen/function.dart';
 import 'package:dart_eval/src/eval/bindgen/methods.dart';
 import 'package:dart_eval/src/eval/bindgen/properties.dart';
 import 'package:dart_eval/src/eval/bindgen/statics.dart';
@@ -29,6 +30,7 @@ class Bindgen implements BridgeDeclarationRegistry {
   final _exportedLibMappings = <String, String>{};
   final List<({String file, String uri, String name})> registerClasses = [];
   final List<({String file, String uri, String name})> registerEnums = [];
+  final List<({String file, String uri, String name})> registerFunctions = [];
 
   AnalysisContextCollection? _contextCollection;
 
@@ -159,11 +161,16 @@ class Bindgen implements BridgeDeclarationRegistry {
       try {
         resolved = units
             .where((declaration) => declaration.declaredFragment != null)
-            .map((declaration) => declaration is ClassDeclaration
-                ? _$instance(ctx, declaration.declaredFragment!.element)
-                : (declaration is EnumDeclaration
-                    ? _$enum(ctx, declaration.declaredFragment!.element)
-                    : null))
+            .map((declaration) {
+              if (declaration is ClassDeclaration) {
+                return _$instance(ctx, declaration.declaredFragment!.element);
+              } else if (declaration is EnumDeclaration) {
+                return _$enum(ctx, declaration.declaredFragment!.element);
+              } else if (declaration is FunctionDeclaration) {
+                return _$function(ctx, declaration.declaredFragment!.element);
+              }
+              return null;
+            })
             .toList()
             .nonNulls;
       } on Error {
@@ -188,7 +195,7 @@ class Bindgen implements BridgeDeclarationRegistry {
   }
 
   ({bool process, bool isBridge}) _shouldProcess(
-      BindgenContext ctx, TypeDefiningElement2 element) {
+      BindgenContext ctx, Annotatable element) {
     final metadata = element.metadata2;
     final bindAnno = metadata.annotations
         .firstWhereOrNull((element) => element.element2?.displayName == 'Bind');
@@ -201,10 +208,10 @@ class Bindgen implements BridgeDeclarationRegistry {
         bindAnnoValue?.getField('implicitSupers')?.toBoolValue() ?? false;
     ctx.implicitSupers = implicitSupers;
     final override = bindAnnoValue?.getField('overrideLibrary');
-    if (override != null && !override.isNull) {
+    if (override != null && !override.isNull && element is Element2) {
       final overrideUri = override.toStringValue();
       if (overrideUri != null) {
-        ctx.libOverrides[element.name3!] = overrideUri;
+        ctx.libOverrides[(element as Element2).name3!] = overrideUri;
       }
     }
 
@@ -312,6 +319,31 @@ class \$${element.name3} implements \$Instance {
   ${$getProperty(ctx, element)}
   ${$methods(ctx, element)}
   ${$setProperty(ctx, element)}
+}
+''';
+  }
+
+  String? _$function(BindgenContext ctx, ExecutableElement2 element) {
+    if (element is! TopLevelFunctionElement) return null;
+    final (:process, :isBridge) = _shouldProcess(ctx, element);
+    if (!process) {
+      return null;
+    }
+
+    registerFunctions.add((
+      file: ctx.filename,
+      uri: ctx.libOverrides[element.name3!] ?? ctx.uri,
+      name: element.name3!,
+    ));
+
+    return '''
+/// dart_eval function wrapper binding for [${element.name3}]
+class \$${element.name3}Fn implements EvalCallable {
+  const \$${element.name3}Fn();
+
+  ${bindConfigureFunctionForRuntime(ctx, element)}
+  ${bindFunctionDeclaration(ctx, element)}
+  ${$function(ctx, element)}
 }
 ''';
   }

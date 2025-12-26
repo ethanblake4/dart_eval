@@ -19,6 +19,18 @@ String bindBridgeType(BindgenContext ctx, InterfaceElement2 element) {
 ''';
 }
 
+String bindFunctionDeclaration(
+    BindgenContext ctx, TopLevelFunctionElement element) {
+  final uri = ctx.libOverrides[element.name3] ?? ctx.uri;
+  return '''
+  static const \$declaration = BridgeFunctionDeclaration(
+    '$uri',
+    '${element.name3!.replaceAll(r'$', r'\$')}',
+    ${bridgeFunctionDef(ctx, function: element)}
+  );
+''';
+}
+
 String? bindBridgeDeclaration(BindgenContext ctx, InterfaceElement2 element,
     {bool isBridge = false}) {
   if (element is ClassElement2 && element.constructors2.isEmpty) {
@@ -188,14 +200,21 @@ String bridgeConstructorDef(BindgenContext ctx,
       ''';
 }
 
+String bridgeFunctionDef(BindgenContext ctx,
+    {required ExecutableElement2 function}) {
+  return '''
+        BridgeFunctionDef(
+          returns: ${bridgeTypeAnnotationFrom(ctx, function.returnType)},
+          namedParams: [${namedParameters(ctx, element: function)}],
+          params: [${positionalParameters(ctx, element: function)}],
+        ),
+''';
+}
+
 String bridgeMethodDef(BindgenContext ctx, {required MethodElement2 method}) {
   return '''
       '${method.name3}': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: ${bridgeTypeAnnotationFrom(ctx, method.returnType)},
-          namedParams: [${namedParameters(ctx, element: method)}],
-          params: [${positionalParameters(ctx, element: method)}],
-        ),
+        ${bridgeFunctionDef(ctx, function: method)}
         ${method.isStatic ? 'isStatic: true,' : ''}
       ),
 ''';
@@ -205,11 +224,7 @@ String bridgeGetterDef(BindgenContext ctx,
     {required PropertyAccessorElement2 getter}) {
   return '''
       '${getter.name3}': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: ${bridgeTypeAnnotationFrom(ctx, getter.returnType)},
-          namedParams: [${namedParameters(ctx, element: getter)}],
-          params: [${positionalParameters(ctx, element: getter)}],
-        ),
+        ${bridgeFunctionDef(ctx, function: getter)}
         ${getter.isStatic ? 'isStatic: true,' : ''}
       ),
 ''';
@@ -219,11 +234,7 @@ String bridgeSetterDef(BindgenContext ctx,
     {required PropertyAccessorElement2 setter}) {
   return '''
       '${setter.name3}': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: ${bridgeTypeAnnotationFrom(ctx, setter.returnType)},
-          namedParams: [${namedParameters(ctx, element: setter)}],
-          params: [${positionalParameters(ctx, element: setter)}],
-        ),
+        ${bridgeFunctionDef(ctx, function: setter)}
         ${setter.isStatic ? 'isStatic: true,' : ''}
       ),
 ''';
