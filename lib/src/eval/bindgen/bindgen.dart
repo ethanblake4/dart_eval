@@ -239,37 +239,6 @@ class Bindgen implements BridgeDeclarationRegistry {
 
     String code = '';
 
-    if (!isBridge || alsoWrap) {
-      registerClasses.add((
-        file: ctx.filename,
-        uri: ctx.libOverrides[element.name3!] ?? ctx.uri,
-        name: element.name3!,
-      ));
-
-      code += '''
-/// dart_eval wrapper binding for [${element.name3}]
-class \$${element.name3} implements \$Instance {
-/// Configure this class for use in a [Runtime]
-${bindConfigureForRuntime(ctx, element)}
-/// Compile-time type specification of [\$${element.name3}]
-${bindTypeSpec(ctx, element)}
-/// Compile-time type declaration of [\$${element.name3}]
-${bindBridgeType(ctx, element)}
-/// Compile-time class declaration of [\$${element.name3}]
-${bindBridgeDeclaration(ctx, element)}
-${$constructors(ctx, element)}
-${$staticMethods(ctx, element)}
-${$staticGetters(ctx, element)}
-${$staticSetters(ctx, element)}
-${$wrap(ctx, element)}
-${$getRuntimeType(element)}
-${$getProperty(ctx, element)}
-${$methods(ctx, element)}
-${$setProperty(ctx, element)}
-}
-''';
-    }
-
     if (isBridge) {
       registerClasses.add((
         file: ctx.filename,
@@ -297,6 +266,50 @@ ${$bridgeGet(ctx, element)}
 ${$bridgeSet(ctx, element)}
 ${bindDecoratorProperties(ctx, element)}
 ${bindDecoratorMethods(ctx, element)}
+}
+''';
+
+      if (alsoWrap) {
+        // Add a rudimentary wrapper, because you cannot wrap things in a bridge.
+        code += '''
+/// dart_eval wrapper binding for [${element.name3}]
+class \$${element.name3} implements \$Instance {
+${bindTypeSpec(ctx, element)}
+${$wrap(ctx, element)}
+${$getRuntimeType(element)}
+${$getProperty(ctx, element)}
+${$methods(ctx, element)}
+${$setProperty(ctx, element)}
+}
+''';
+      }
+    } else {
+      registerClasses.add((
+        file: ctx.filename,
+        uri: ctx.libOverrides[element.name3!] ?? ctx.uri,
+        name: element.name3!,
+      ));
+
+      code += '''
+/// dart_eval wrapper binding for [${element.name3}]
+class \$${element.name3} implements \$Instance {
+/// Configure this class for use in a [Runtime]
+${bindConfigureForRuntime(ctx, element)}
+/// Compile-time type specification of [\$${element.name3}]
+${bindTypeSpec(ctx, element)}
+/// Compile-time type declaration of [\$${element.name3}]
+${bindBridgeType(ctx, element)}
+/// Compile-time class declaration of [\$${element.name3}]
+${bindBridgeDeclaration(ctx, element)}
+${$constructors(ctx, element)}
+${$staticMethods(ctx, element)}
+${$staticGetters(ctx, element)}
+${$staticSetters(ctx, element)}
+${$wrap(ctx, element)}
+${$getRuntimeType(element)}
+${$getProperty(ctx, element)}
+${$methods(ctx, element)}
+${$setProperty(ctx, element)}
 }
 ''';
     }
