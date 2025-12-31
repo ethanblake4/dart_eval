@@ -237,16 +237,14 @@ class Bindgen implements BridgeDeclarationRegistry {
           'Please remove the @Bind annotation, use a wrapper, or make the class non-sealed.');
     }
 
-    String code = '';
+    registerClasses.add((
+      file: ctx.filename,
+      uri: ctx.libOverrides[element.name3!] ?? ctx.uri,
+      name: '${element.name3!}${isBridge ? '\$bridge' : ''}',
+    ));
 
     if (isBridge) {
-      registerClasses.add((
-        file: ctx.filename,
-        uri: ctx.libOverrides[element.name3!] ?? ctx.uri,
-        name: '${element.name3!}\$bridge',
-      ));
-
-      code += '''
+      String code = '''
 /// dart_eval bridge binding for [${element.name3}]
 class \$${element.name3}\$bridge extends ${element.name3} with \$Bridge<${element.name3}> {
 ${bindForwardedConstructors(ctx, element)}
@@ -283,14 +281,11 @@ ${$setProperty(ctx, element)}
 }
 ''';
       }
-    } else {
-      registerClasses.add((
-        file: ctx.filename,
-        uri: ctx.libOverrides[element.name3!] ?? ctx.uri,
-        name: element.name3!,
-      ));
 
-      code += '''
+      return code;
+    }
+
+    return '''
 /// dart_eval wrapper binding for [${element.name3}]
 class \$${element.name3} implements \$Instance {
 /// Configure this class for use in a [Runtime]
@@ -312,9 +307,6 @@ ${$methods(ctx, element)}
 ${$setProperty(ctx, element)}
 }
 ''';
-    }
-
-    return code;
   }
 
   String? _$enum(BindgenContext ctx, EnumElement2 element) {
