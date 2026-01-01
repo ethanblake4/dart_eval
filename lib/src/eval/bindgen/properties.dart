@@ -102,13 +102,13 @@ String propertySetters(BindgenContext ctx, InterfaceElement2 element,
   if (isBridge) {
     return 'switch (identifier) {\n${setters.map((e) => '''
         case '${e.displayName}':
-          super.${e.displayName} = value.${e.displayName};
+          super.${e.displayName} = value.\$reified;
           return;
         ''').join('\n')}\n}';
   }
   return 'switch (identifier) {\n${setters.map((e) => '''
         case '${e.displayName}':
-          \$value.${e.displayName} = value.\$value;
+          \$value.${e.displayName} = value.\$reified;
           return;
         ''').join('\n')}\n}';
 }
