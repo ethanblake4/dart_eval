@@ -270,12 +270,12 @@ ${bindDecoratorMethods(ctx, element)}
       if (alsoWrap) {
         // Add a rudimentary wrapper, because you cannot wrap things in a bridge.
         code += '''
-/// dart_eval wrapper binding for [${element.name3}]
+/// dart_eval lightweight wrapper binding for [${element.name3}]
 class \$${element.name3} implements \$Instance {
 /// Compile-time type specification of [\$${element.name3}]
 ${bindTypeSpec(ctx, element)}
 /// Compile-time type declaration of [\$${element.name3}]
-${bindTypeSpec(ctx, element)}
+${bindBridgeType(ctx, element)}
 ${$wrap(ctx, element)}
 ${$getRuntimeType(element)}
 ${$getProperty(ctx, element)}
