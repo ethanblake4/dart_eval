@@ -1,4 +1,4 @@
-import 'package:analyzer/dart/element/element2.dart';
+import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:collection/collection.dart';
 import 'package:dart_eval/src/eval/bindgen/bridge.dart';
@@ -6,7 +6,7 @@ import 'package:dart_eval/src/eval/bindgen/context.dart';
 import 'package:dart_eval/src/eval/bindgen/type.dart';
 
 String namedParameters(BindgenContext ctx,
-    {required ExecutableElement2 element}) {
+    {required ExecutableElement element}) {
   final params = element.formalParameters.where((e) => e.isNamed);
   if (params.isEmpty) {
     return '';
@@ -16,7 +16,7 @@ String namedParameters(BindgenContext ctx,
 }
 
 String positionalParameters(BindgenContext ctx,
-    {required ExecutableElement2 element}) {
+    {required ExecutableElement element}) {
   final params = element.formalParameters.where((e) => e.isPositional);
   if (params.isEmpty) {
     return '';
@@ -33,7 +33,7 @@ String parameters(BindgenContext ctx, List<FormalParameterElement> params) {
 String _parameterFrom(BindgenContext ctx, FormalParameterElement parameter) {
   return '''
     BridgeParameter(
-      '${parameter.name3}',
+      '${parameter.name}',
       ${bridgeTypeAnnotationFrom(ctx, parameter.type)},
       ${parameter.isOptional ? 'true' : 'false'},
     ),
@@ -47,7 +47,7 @@ String argumentAccessor(
   final paramBuffer = StringBuffer();
   final idx = index + (isBridgeMethod ? 1 : 0);
   if (param.isNamed) {
-    paramBuffer.write('${paramMapping[param.name3] ?? param.name3}: ');
+    paramBuffer.write('${paramMapping[param.name] ?? param.name}: ');
   }
   final type = param.type;
   if (type.isDartCoreFunction || type is FunctionType) {
@@ -67,9 +67,9 @@ String argumentAccessor(
     if (type is FunctionType) {
       for (var j = 0; j < type.formalParameters.length; j++) {
         final ftParam = type.formalParameters[j];
-        final name = ftParam.name3 == null || ftParam.name3!.isEmpty
+        final name = ftParam.name == null || ftParam.name!.isEmpty
             ? 'arg$j'
-            : ftParam.name3!;
+            : ftParam.name!;
         paramBuffer
             .write(wrapVar(ctx, ftParam.type, name, forCollection: true));
         if (j < type.formalParameters.length - 1) {
@@ -102,7 +102,7 @@ String argumentAccessor(
     }
     if (needsCast) {
       final q = (param.isRequired ? '' : '?');
-      paramBuffer.write(' as ${type.element3!.name3}$q');
+      paramBuffer.write(' as ${type.element!.name}$q');
       paramBuffer.write(')$q.cast()');
     }
   }

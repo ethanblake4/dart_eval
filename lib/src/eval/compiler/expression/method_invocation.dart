@@ -177,7 +177,7 @@ Variable compileMethodInvocation(CompilerContext ctx, MethodInvocation e,
         resolveGenerics: resolveGenerics);
 
     if (returnAnnotation != null && returnAnnotation is NamedType) {
-      final g = resolveGenerics[returnAnnotation.name2.value()];
+      final g = resolveGenerics[returnAnnotation.name.value()];
       if (g != null) {
         mReturnType = AlwaysReturnType(g, returnAnnotation.question != null);
       }
@@ -376,7 +376,7 @@ DeclarationOrBridge<MethodDeclaration, BridgeMethodDef> resolveInstanceMethod(
           ctx, CoreTypes.object.ref(ctx), methodName, source, bottomType0);
     }
     final $supertype = ctx.visibleTypes[instanceType.file]![
-        $class.extendsClause!.superclass.name2.value()]!;
+        $class.extendsClause!.superclass.name.value()]!;
     return resolveInstanceMethod(
         ctx, $supertype, methodName, source, bottomType0);
   }

@@ -3,6 +3,7 @@
 - Support for top level functions in the binding generator
 - Support for operator overloads in the binding generator
 - Fix return types of Uri constructors
+- Update analyzer to v8.
 - Improve error messages
 
 ## 0.8.2

@@ -1,7 +1,7 @@
-import 'package:analyzer/dart/element/element2.dart';
+import 'package:analyzer/dart/element/element.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
 
-String bindConfigureForRuntime(BindgenContext ctx, ClassElement2 element,
+String bindConfigureForRuntime(BindgenContext ctx, ClassElement element,
         {bool isBridge = false}) =>
     '''
 static void configureForRuntime(Runtime runtime) {
@@ -12,7 +12,7 @@ static void configureForRuntime(Runtime runtime) {
 }
 ''';
 
-String bindConfigureEnumForRuntime(BindgenContext ctx, EnumElement2 element) =>
+String bindConfigureEnumForRuntime(BindgenContext ctx, EnumElement element) =>
     '''
 static void configureForRuntime(Runtime runtime) {
   ${enumValuesForRuntime(ctx, element)}
@@ -24,28 +24,28 @@ static void configureForRuntime(Runtime runtime) {
 
 String bindConfigureFunctionForRuntime(
     BindgenContext ctx, TopLevelFunctionElement element) {
-  final uri = ctx.libOverrides[element.name3] ?? ctx.uri;
+  final uri = ctx.libOverrides[element.name] ?? ctx.uri;
   return '''
 static void configureForRuntime(Runtime runtime) {
-  return runtime.registerBridgeFunc('$uri', '${element.name3!.replaceAll(r'$', r'\$')}', const \$${element.name3}Fn().call);
+  return runtime.registerBridgeFunc('$uri', '${element.name!.replaceAll(r'$', r'\$')}', const \$${element.name}Fn().call);
 }
 ''';
 }
 
-String enumValuesForRuntime(BindgenContext ctx, EnumElement2 element) {
-  final uri = ctx.libOverrides[element.name3] ?? ctx.uri;
+String enumValuesForRuntime(BindgenContext ctx, EnumElement element) {
+  final uri = ctx.libOverrides[element.name] ?? ctx.uri;
   return '''
     runtime.registerBridgeEnumValues(
       '$uri',
-      '${element.name3}',
-      \$${element.name3}._\$values
+      '${element.name}',
+      \$${element.name}._\$values
     );
   ''';
 }
 
-String constructorsForRuntime(BindgenContext ctx, ClassElement2 element,
+String constructorsForRuntime(BindgenContext ctx, ClassElement element,
     {bool isBridge = false}) {
-  return element.constructors2
+  return element.constructors
       .where(
           (cstr) => (!element.isAbstract || cstr.isFactory) && !cstr.isPrivate)
       .map((e) => constructorForRuntime(ctx, element, e, isBridge: isBridge))
@@ -53,91 +53,91 @@ String constructorsForRuntime(BindgenContext ctx, ClassElement2 element,
 }
 
 String constructorForRuntime(
-    BindgenContext ctx, ClassElement2 element, ConstructorElement2 constructor,
+    BindgenContext ctx, ClassElement element, ConstructorElement constructor,
     {bool isBridge = false}) {
-  var name = constructor.name3 ?? '';
+  var name = constructor.name ?? '';
   if (name == 'new') {
     name = '';
   }
-  final fullyQualifiedConstructorId = '${element.name3}.$name';
+  final fullyQualifiedConstructorId = '${element.name}.$name';
 
-  final staticName = constructor.name3 ?? '';
-  final uri = ctx.libOverrides[element.name3] ?? ctx.uri;
+  final staticName = constructor.name ?? '';
+  final uri = ctx.libOverrides[element.name] ?? ctx.uri;
   final bridgeParam = isBridge ? ', isBridge: true' : '';
 
   return '''
     runtime.registerBridgeFunc(
       '$uri',
       '$fullyQualifiedConstructorId',
-      \$${element.name3}${isBridge ? '\$bridge' : ''}.\$$staticName
+      \$${element.name}${isBridge ? '\$bridge' : ''}.\$$staticName
       $bridgeParam
     );
   ''';
 }
 
-String staticMethodsForRuntime(BindgenContext ctx, InterfaceElement2 element,
+String staticMethodsForRuntime(BindgenContext ctx, InterfaceElement element,
     {bool isBridge = false}) {
-  return element.methods2
+  return element.methods
       .where((e) => e.isStatic && !e.isOperator && !e.isPrivate)
       .map((e) => staticMethodForRuntime(ctx, element, e, isBridge: isBridge))
       .join('\n');
 }
 
 String staticMethodForRuntime(
-    BindgenContext ctx, InterfaceElement2 element, MethodElement2 method,
+    BindgenContext ctx, InterfaceElement element, MethodElement method,
     {bool isBridge = false}) {
-  final uri = ctx.libOverrides[element.name3] ?? ctx.uri;
+  final uri = ctx.libOverrides[element.name] ?? ctx.uri;
   return '''
     runtime.registerBridgeFunc(
       '$uri',
-      '${element.name3}.${method.name3}',
-      \$${element.name3}${isBridge ? '\$bridge' : ''}.\$${method.name3}
+      '${element.name}.${method.name}',
+      \$${element.name}${isBridge ? '\$bridge' : ''}.\$${method.name}
     );
   ''';
 }
 
-String staticGettersForRuntime(BindgenContext ctx, InterfaceElement2 element,
+String staticGettersForRuntime(BindgenContext ctx, InterfaceElement element,
     {bool isBridge = false}) {
-  return element.getters2
+  return element.getters
       .where((e) =>
           e.isStatic &&
           !e.isPrivate &&
-          (e.nonSynthetic2 is! FieldElement2 ||
-              !(e.nonSynthetic2 as FieldElement2).isEnumConstant))
+          (e.nonSynthetic is! FieldElement ||
+              !(e.nonSynthetic as FieldElement).isEnumConstant))
       .map((e) => staticGetterForRuntime(ctx, element, e, isBridge: isBridge))
       .join('\n');
 }
 
-String staticGetterForRuntime(BindgenContext ctx, InterfaceElement2 element,
-    PropertyAccessorElement2 getter,
+String staticGetterForRuntime(BindgenContext ctx, InterfaceElement element,
+    PropertyAccessorElement getter,
     {bool isBridge = false}) {
-  final uri = ctx.libOverrides[element.name3] ?? ctx.uri;
+  final uri = ctx.libOverrides[element.name] ?? ctx.uri;
   return '''
     runtime.registerBridgeFunc(
       '$uri',
-      '${element.name3}.${getter.name3}*g',
-      \$${element.name3}${isBridge ? '\$bridge' : ''}.\$${getter.name3}
+      '${element.name}.${getter.name}*g',
+      \$${element.name}${isBridge ? '\$bridge' : ''}.\$${getter.name}
     );
   ''';
 }
 
-String staticSettersForRuntime(BindgenContext ctx, InterfaceElement2 element,
+String staticSettersForRuntime(BindgenContext ctx, InterfaceElement element,
     {bool isBridge = false}) {
-  return element.setters2
+  return element.setters
       .where((e) => e.isStatic && !e.isPrivate)
       .map((e) => staticSetterForRuntime(ctx, element, e, isBridge: isBridge))
       .join('\n');
 }
 
-String staticSetterForRuntime(BindgenContext ctx, InterfaceElement2 element,
-    PropertyAccessorElement2 setter,
+String staticSetterForRuntime(BindgenContext ctx, InterfaceElement element,
+    PropertyAccessorElement setter,
     {bool isBridge = false}) {
-  final uri = ctx.libOverrides[element.name3] ?? ctx.uri;
+  final uri = ctx.libOverrides[element.name] ?? ctx.uri;
   return '''
     runtime.registerBridgeFunc(
       '$uri',
-      '${element.name3}.${setter.name3}*s',
-      \$${element.name3}${isBridge ? '\$bridge' : ''}.set\$${setter.name3}
+      '${element.name}.${setter.name}*s',
+      \$${element.name}${isBridge ? '\$bridge' : ''}.set\$${setter.name}
     );
   ''';
 }

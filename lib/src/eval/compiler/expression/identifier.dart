@@ -104,7 +104,7 @@ Pair<TypeRef, DeclarationOrBridge>? resolveInstanceDeclaration(
   final $extendsClause = $dec is ClassDeclaration ? $dec.extendsClause : null;
   if ($withClause != null) {
     for (final $mixin in $withClause.mixinTypes) {
-      final mixinType = ctx.visibleTypes[library]![$mixin.name2.stringValue!]!;
+      final mixinType = ctx.visibleTypes[library]![$mixin.name.stringValue!]!;
       final result =
           resolveInstanceDeclaration(ctx, mixinType.file, mixinType.name, name);
       if (result != null) {
@@ -116,7 +116,7 @@ Pair<TypeRef, DeclarationOrBridge>? resolveInstanceDeclaration(
     final prefix = $extendsClause.superclass.importPrefix;
     final extendsType = ctx.visibleTypes[library]![
         '${prefix != null ? '${prefix.name.value()}.' : ''}'
-            '${$extendsClause.superclass.name2.value()}']!;
+            '${$extendsClause.superclass.name.value()}']!;
     return resolveInstanceDeclaration(
         ctx, extendsType.file, extendsType.name, name);
   } else {

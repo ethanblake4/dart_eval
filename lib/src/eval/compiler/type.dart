@@ -188,7 +188,7 @@ class TypeRef {
           nullable: typeAnnotation.question != null);
     }
     typeAnnotation as NamedType;
-    final n = typeAnnotation.name2.stringValue ?? typeAnnotation.name2.value();
+    final n = typeAnnotation.name.stringValue ?? typeAnnotation.name.value();
     final unspecifiedType =
         ctx.temporaryTypes[library]?[n] ?? ctx.visibleTypes[library]?[n];
     if (unspecifiedType == null) {
@@ -293,7 +293,7 @@ class TypeRef {
         }
         final syExtends = syDec.extendsClause;
         if (syExtends != null &&
-            syExtends.superclass.name2.stringValue == specifiedType.name) {
+            syExtends.superclass.name.stringValue == specifiedType.name) {
           final declaredType =
               syExtends.superclass.typeArguments?.arguments[genericIndex];
           if (declaredType != null) {
@@ -461,8 +461,8 @@ class TypeRef {
         return TypeRef.lookupFieldType(ctx, CoreTypes.object.ref(ctx), field);
       } else {
         final $super = ctx.visibleTypes[$class.file]![
-            $extends.superclass.name2.stringValue ??
-                $extends.superclass.name2.value()]!;
+            $extends.superclass.name.stringValue ??
+                $extends.superclass.name.value()]!;
         return TypeRef.lookupFieldType(
             ctx, $super.inheritTypeArgsFrom(ctx, $class), field);
       }
@@ -596,10 +596,9 @@ class TypeRef {
       final prefix = superName.importPrefix;
       final superPrefix = prefix != null ? '${prefix.name.value()}.' : '';
       $super =
-          (ctx.visibleTypes[file]!['$superPrefix${superName.name2.lexeme}'] ??
+          (ctx.visibleTypes[file]!['$superPrefix${superName.name.lexeme}'] ??
                   (throw CompileError(
-                      'Superclass ${superName.name2.lexeme} not found',
-                      source)))
+                      'Superclass ${superName.name.lexeme} not found', source)))
               .copyWith(specifiedTypeArgs: typeParams)
               .resolveTypeChain(ctx,
                   recursionGuard: rg, stack: stack0, source: source);
@@ -618,7 +617,7 @@ class TypeRef {
                       recursionGuard: rg, stack: stack0, source: source))
               .toList() ??
           [];
-      $with.add(ctx.visibleTypes[file]![withName.name2.value()]!
+      $with.add(ctx.visibleTypes[file]![withName.name.value()]!
           .copyWith(specifiedTypeArgs: typeParams)
           .resolveTypeChain(ctx,
               recursionGuard: rg, stack: stack0, source: source));
@@ -633,7 +632,7 @@ class TypeRef {
                       recursionGuard: rg, stack: stack0, source: source))
               .toList() ??
           [];
-      $implements.add(ctx.visibleTypes[file]![implementsName.name2.value()]!
+      $implements.add(ctx.visibleTypes[file]![implementsName.name.value()]!
           .copyWith(specifiedTypeArgs: typeParams)
           .resolveTypeChain(ctx,
               recursionGuard: rg, stack: stack0, source: source));
