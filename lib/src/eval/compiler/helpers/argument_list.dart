@@ -115,7 +115,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
 
       if (typeAnnotation != null) {
         final n = typeAnnotation is NamedType
-            ? (typeAnnotation.name2.stringValue ?? typeAnnotation.name2.lexeme)
+            ? (typeAnnotation.name.stringValue ?? typeAnnotation.name.lexeme)
             : null;
         if (n != null && resolveGenerics.containsKey(n)) {
           resolveGenericsMap[n] ??= {};
@@ -186,7 +186,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
 
       if (typeAnnotation != null) {
         final n = typeAnnotation is NamedType
-            ? (typeAnnotation.name2.stringValue ?? typeAnnotation.name2.lexeme)
+            ? (typeAnnotation.name.stringValue ?? typeAnnotation.name.lexeme)
             : null;
         if (n != null && resolveGenerics.containsKey(n)) {
           resolveGenericsMap[n] ??= {};

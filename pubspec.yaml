@@ -24,7 +24,7 @@ executables:
 
 dependencies:
   args: ^2.4.0
-  analyzer: ^7.0.0
+  analyzer: ^8.2.0
   collection: ^1.18.0
   directed_graph: '>=0.3.9 <0.5.0'
   glob: ^2.1.3

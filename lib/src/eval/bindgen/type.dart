@@ -1,4 +1,4 @@
-import 'package:analyzer/dart/element/element2.dart';
+import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:change_case/change_case.dart';
@@ -10,7 +10,7 @@ import 'package:path/path.dart' as path;
 
 String bridgeTypeRefFromType(BindgenContext ctx, DartType type) {
   if (type is TypeParameterType) {
-    return 'BridgeTypeRef.ref(\'${type.element3.name3}\')';
+    return 'BridgeTypeRef.ref(\'${type.element.name}\')';
   } else if (type is FunctionType) {
     return '''BridgeTypeRef.genericFunction(BridgeFunctionDef(
       returns: ${bridgeTypeAnnotationFrom(ctx, type.returnType)},
@@ -42,10 +42,10 @@ String bridgeTypeSpecFrom(BindgenContext ctx, DartType type) {
   if (builtin != null) {
     return builtin;
   }
-  final element = type.element3!;
-  final lib = element.library2!;
-  final uri = ctx.libOverrides[element.name3] ?? lib.uri.toString();
-  return 'BridgeTypeSpec(\'$uri\', \'${element.name3!.replaceAll(r'$', r'\$')}\')';
+  final element = type.element!;
+  final lib = element.library!;
+  final uri = ctx.libOverrides[element.name] ?? lib.uri.toString();
+  return 'BridgeTypeSpec(\'$uri\', \'${element.name!.replaceAll(r'$', r'\$')}\')';
 }
 
 String? builtinTypeFrom(DartType type) {
@@ -68,9 +68,9 @@ String? builtinTypeFrom(DartType type) {
     return 'CoreTypes.record';
   }
 
-  final element = type.element3!;
-  final lib = element.library2!;
-  final name = element.name3 ?? ' ';
+  final element = type.element!;
+  final lib = element.library!;
+  final name = element.name ?? ' ';
   final lowerCamelCaseName = name.toCamelCase();
 
   if (!lib.isInSdk) {
@@ -126,8 +126,8 @@ String? wrapVar(BindgenContext ctx, DartType type, String expr,
       wrapType(ctx, type, expr, metadata: metadata, wrapList: wrapList);
 
   if (wrapped == null) {
-    if (ctx.unknownTypes.add(type.element3!.name3!)) {
-      print('Warning: type ${type.element3!.name3} is not bound, '
+    if (ctx.unknownTypes.add(type.element!.name!)) {
+      print('Warning: type ${type.element!.name} is not bound, '
           'falling back to wrapAlways()');
     }
     wrapped = 'runtime.wrapAlways($expr)';
@@ -146,7 +146,7 @@ String? wrapVar(BindgenContext ctx, DartType type, String expr,
 String? wrapType(BindgenContext ctx, DartType type, String expr,
     {bool wrapList = false, List<ElementAnnotation>? metadata}) {
   final union =
-      metadata?.firstWhereOrNull((e) => e.element2?.displayName == 'UnionOf');
+      metadata?.firstWhereOrNull((e) => e.element?.displayName == 'UnionOf');
   String unionStr = '';
   if (union != null) {
     final types =
@@ -157,10 +157,10 @@ String? wrapType(BindgenContext ctx, DartType type, String expr,
         if (type0 == null) {
           continue;
         }
-        ctx.imports.add(type0.element3!.library2!.uri.toString());
+        ctx.imports.add(type0.element!.library!.uri.toString());
         final wrapper = wrapVar(ctx, type0, expr);
 
-        unionStr += '$expr is ${type0.element3!.name3} ? $wrapper : ';
+        unionStr += '$expr is ${type0.element!.name} ? $wrapper : ';
       }
     }
   }
@@ -184,10 +184,10 @@ String? wrapType(BindgenContext ctx, DartType type, String expr,
     return '$unionStr\$Function((runtime, target, args) => $expr())';
   }
 
-  final element = type.element3 ??
+  final element = type.element ??
       (throw BindingGenerationError('Type $type has no element'));
-  final lib = element.library2!;
-  final name = element.name3 ?? ' ';
+  final lib = element.library!;
+  final name = element.name ?? ' ';
 
   final defaultCstr = {'int', 'num', 'double', 'bool', 'String', 'Object'};
 
@@ -219,11 +219,11 @@ String? wrapType(BindgenContext ctx, DartType type, String expr,
     return '$unionStr\$$name.wrap($expr)';
   }
 
-  final typeEl = type.element3!;
-  if (typeEl is InterfaceElement2) {
-    final uri = typeEl.library2.uri.toString();
-    final hasAnno = typeEl.metadata2.annotations
-        .any((e) => e.element2?.displayName == 'Bind');
+  final typeEl = type.element!;
+  if (typeEl is InterfaceElement) {
+    final uri = typeEl.library.uri.toString();
+    final hasAnno = typeEl.metadata.annotations
+        .any((e) => e.element?.displayName == 'Bind');
     if (hasAnno) {
       ctx.imports.add(uri.replaceAll('.dart', '.eval.dart'));
       return '$unionStr\$$name.wrap($expr)';

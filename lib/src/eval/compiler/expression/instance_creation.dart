@@ -16,8 +16,8 @@ Variable compileInstanceCreation(
   final type = e.constructorName.type;
   final name = type.importPrefix == null
       ? (e.constructorName.name?.name ?? '')
-      : type.name2.lexeme;
-  final typeName = type.importPrefix?.name.lexeme ?? type.name2.lexeme;
+      : type.name.lexeme;
+  final typeName = type.importPrefix?.name.lexeme ?? type.name.lexeme;
   final $resolved = IdentifierReference(null, typeName).getValue(ctx);
 
   if ($resolved.concreteTypes.isEmpty) {

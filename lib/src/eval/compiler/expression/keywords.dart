@@ -22,7 +22,7 @@ Variable compileSuperExpression(SuperExpression e, CompilerContext ctx) {
   final extendsClause = (ctx.currentClass as ClassDeclaration).extendsClause;
   if (extendsClause != null) {
     type =
-        ctx.visibleTypes[ctx.library]![extendsClause.superclass.name2.value()]!;
+        ctx.visibleTypes[ctx.library]![extendsClause.superclass.name.value()]!;
   }
 
   final $this = ctx.lookupLocal('#this')!;

@@ -1,10 +1,10 @@
-import 'package:analyzer/dart/element/element2.dart';
+import 'package:analyzer/dart/element/element.dart';
 
-String assertMethodPermissions(MethodElement2 element) {
-  final metadata = element.metadata2;
+String assertMethodPermissions(MethodElement element) {
+  final metadata = element.metadata;
 
   final permissions = metadata.annotations
-      .where((e) => e.element2?.displayName == 'AssertPermission');
+      .where((e) => e.element?.displayName == 'AssertPermission');
 
   String output = '';
   for (final permission in permissions) {
@@ -26,7 +26,7 @@ String assertMethodPermissions(MethodElement2 element) {
       final params = element.formalParameters;
       for (var i = 0; i < params.length; i++) {
         final param = params[i];
-        if (param.name3 == paramData) {
+        if (param.name == paramData) {
           final nullCheck = param.isRequired ? '!' : '?';
           final defaultValue =
               param.hasDefaultValue ? ' ?? ${param.defaultValueCode}' : '';

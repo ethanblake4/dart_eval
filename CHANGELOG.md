@@ -1,3 +1,6 @@
+## 0.8.4
+- Update analyzer to v8.
+
 ## 0.8.3
 - Support for Dart 3.10
 - Support for top level functions in the binding generator
