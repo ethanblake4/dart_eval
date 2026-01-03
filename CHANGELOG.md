@@ -1,3 +1,10 @@
+## 0.8.3
+- Support for Dart 3.10
+- Support for top level functions in the binding generator
+- Support for operator overloads in the binding generator
+- Fix return types of Uri constructors
+- Improve error messages
+
 ## 0.8.2
 - Fix incorrect accessor index when creating bridge classes 
   with the binding generator

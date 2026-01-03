@@ -194,7 +194,7 @@ class Bindgen implements BridgeDeclarationRegistry {
     return null;
   }
 
-  ({bool process, bool isBridge}) _shouldProcess(
+  ({bool process, bool isBridge, bool alsoWrap}) _shouldProcess(
       BindgenContext ctx, Annotatable element) {
     final metadata = element.metadata2;
     final bindAnno = metadata.annotations
@@ -202,7 +202,7 @@ class Bindgen implements BridgeDeclarationRegistry {
     final bindAnnoValue = bindAnno?.computeConstantValue();
 
     if (bindAnnoValue == null && !ctx.all) {
-      return (process: false, isBridge: false);
+      return (process: false, isBridge: false, alsoWrap: false);
     }
     final implicitSupers =
         bindAnnoValue?.getField('implicitSupers')?.toBoolValue() ?? false;
@@ -216,17 +216,22 @@ class Bindgen implements BridgeDeclarationRegistry {
     }
 
     final isBridge = bindAnnoValue?.getField('bridge')?.toBoolValue() ?? false;
+    final alsoWrap = bindAnnoValue?.getField('wrap')?.toBoolValue() ?? false;
 
-    return (process: ctx.all || bindAnnoValue != null, isBridge: isBridge);
+    return (
+      process: ctx.all || bindAnnoValue != null,
+      isBridge: isBridge,
+      alsoWrap: alsoWrap,
+    );
   }
 
   String? _$instance(BindgenContext ctx, ClassElement2 element) {
-    final (:process, :isBridge) = _shouldProcess(ctx, element);
+    final (:process, :isBridge, :alsoWrap) = _shouldProcess(ctx, element);
     if (!process) {
       return null;
     }
 
-    if (element.isSealed) {
+    if (isBridge && element.isSealed) {
       throw CompileError(
           'Cannot bind sealed class ${element.name3} as a bridge type. '
           'Please remove the @Bind annotation, use a wrapper, or make the class non-sealed.');
@@ -239,7 +244,7 @@ class Bindgen implements BridgeDeclarationRegistry {
     ));
 
     if (isBridge) {
-      return '''
+      String code = '''
 /// dart_eval bridge binding for [${element.name3}]
 class \$${element.name3}\$bridge extends ${element.name3} with \$Bridge<${element.name3}> {
 ${bindForwardedConstructors(ctx, element)}
@@ -261,6 +266,26 @@ ${bindDecoratorProperties(ctx, element)}
 ${bindDecoratorMethods(ctx, element)}
 }
 ''';
+
+      if (alsoWrap) {
+        // Add a rudimentary wrapper, because you cannot wrap things in a bridge.
+        code += '''
+/// dart_eval lightweight wrapper binding for [${element.name3}]
+class \$${element.name3} implements \$Instance {
+/// Compile-time type specification of [\$${element.name3}]
+${bindTypeSpec(ctx, element)}
+/// Compile-time type declaration of [\$${element.name3}]
+${bindBridgeType(ctx, element)}
+${$wrap(ctx, element)}
+${$getRuntimeType(element)}
+${$getProperty(ctx, element)}
+${$methods(ctx, element)}
+${$setProperty(ctx, element)}
+}
+''';
+      }
+
+      return code;
     }
 
     return '''
@@ -288,7 +313,7 @@ ${$setProperty(ctx, element)}
   }
 
   String? _$enum(BindgenContext ctx, EnumElement2 element) {
-    final (:process, :isBridge) = _shouldProcess(ctx, element);
+    final (:process, :isBridge, :alsoWrap) = _shouldProcess(ctx, element);
     if (!process) {
       return null;
     }
@@ -296,7 +321,7 @@ ${$setProperty(ctx, element)}
     registerEnums.add((
       file: ctx.filename,
       uri: ctx.libOverrides[element.name3!] ?? ctx.uri,
-      name: '${element.name3!}${isBridge ? '\$bridge' : ''}',
+      name: element.name3!,
     ));
 
     return '''
@@ -325,7 +350,7 @@ class \$${element.name3} implements \$Instance {
 
   String? _$function(BindgenContext ctx, ExecutableElement2 element) {
     if (element is! TopLevelFunctionElement) return null;
-    final (:process, :isBridge) = _shouldProcess(ctx, element);
+    final (:process, :isBridge, :alsoWrap) = _shouldProcess(ctx, element);
     if (!process) {
       return null;
     }
