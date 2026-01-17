@@ -865,9 +865,9 @@ List<Library> _buildLibraries(Iterable<DartCompilationUnit> units) {
     /// Establish a mapping relationship
     compilationUnitMap[i] = unit;
     uriMap[unit.uri.toString()] = i;
-    if (unit.library != null && unit.library!.name2 != null) {
+    if (unit.library != null && unit.library!.name != null) {
       /// Library instruction for source files that start with "library *****"
-      libraryIdMap[unit.library!.name2!.name] = i;
+      libraryIdMap[unit.library!.name!.name] = i;
     }
     i++;
   }
@@ -891,7 +891,7 @@ List<Library> _buildLibraries(Iterable<DartCompilationUnit> units) {
         : group.firstWhere((e) => compilationUnitMap[e]!.partOf == null);
     final primary = compilationUnitMap[primaryId]!;
     final library = Library(primary.uri,
-        library: primary.library?.name2?.name,
+        library: primary.library?.name?.name,
         imports: primary.imports,
         exports: primary.exports,
         declarations: group.map((e) => compilationUnitMap[e]!).fold(

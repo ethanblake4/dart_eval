@@ -1,46 +1,45 @@
-import 'package:analyzer/dart/element/element2.dart';
+import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
 import 'package:dart_eval/src/eval/bindgen/type.dart';
 
-String bindForwardedConstructors(BindgenContext ctx, ClassElement2 element,
+String bindForwardedConstructors(BindgenContext ctx, ClassElement element,
     {bool isBridge = false}) {
-  return element.constructors2
+  return element.constructors
       .where((cstr) => !cstr.isPrivate)
       .map((e) => _$forwardedConstructor(ctx, element, e, isBridge: isBridge))
       .join('\n');
 }
 
 String _$forwardedConstructor(
-    BindgenContext ctx, ClassElement2 element, ConstructorElement2 constructor,
+    BindgenContext ctx, ClassElement element, ConstructorElement constructor,
     {bool isBridge = false}) {
-  final name = constructor.name3 ?? '';
-  final namedConstructor =
-      constructor.name3 != null && constructor.name3 != 'new'
-          ? '.${constructor.name3}'
-          : '';
+  final name = constructor.name ?? '';
+  final namedConstructor = constructor.name != null && constructor.name != 'new'
+      ? '.${constructor.name}'
+      : '';
   final fullyQualifiedConstructorId =
-      '\$${element.name3}\$bridge$namedConstructor';
+      '\$${element.name}\$bridge$namedConstructor';
 
   return '''
-  /// Forwarded constructor for [${element.name3}.$name]
+  /// Forwarded constructor for [${element.name}.$name]
   $fullyQualifiedConstructorId(${parameterHeader(constructor.formalParameters, forConstructor: true)});
 ''';
 }
 
-String bindDecoratorMethods(BindgenContext ctx, ClassElement2 element) {
+String bindDecoratorMethods(BindgenContext ctx, ClassElement element) {
   final methods = {
     if (ctx.implicitSupers)
       for (var s in element.allSupertypes)
-        for (final m in s.element3.methods2) m.name3: m,
-    for (final m in element.methods2) m.name3: m
+        for (final m in s.element.methods) m.name: m,
+    for (final m in element.methods) m.name: m
   };
 
   return methods.values
       .where((method) => !method.isPrivate && !method.isStatic)
       .where(
-          (m) => !(const ['==', 'toString', 'noSuchMethod'].contains(m.name3)))
+          (m) => !(const ['==', 'toString', 'noSuchMethod'].contains(m.name)))
       .map((e) {
     final returnType = e.returnType;
     final needsCast = returnType.isDartCoreList ||
@@ -53,18 +52,18 @@ String bindDecoratorMethods(BindgenContext ctx, ClassElement2 element) {
         @override
         $returnType ${e.displayName}(${parameterHeader(e.formalParameters)}) =>
           ${needsCast ? '(' : ''}\$_invoke('${e.displayName}', [
-            ${e.formalParameters.map((p) => wrapVar(ctx, p.type, p.name3 ?? '')).join(', ')}
-          ])${needsCast ? 'as ${returnType.element3!.name3}$q)$q.cast()' : ''};
+            ${e.formalParameters.map((p) => wrapVar(ctx, p.type, p.name ?? '')).join(', ')}
+          ])${needsCast ? 'as ${returnType.element!.name}$q)$q.cast()' : ''};
         ''';
   }).join('\n');
 }
 
-String bindDecoratorProperties(BindgenContext ctx, ClassElement2 element) {
+String bindDecoratorProperties(BindgenContext ctx, ClassElement element) {
   final properties = {
     if (ctx.implicitSupers)
       for (var s in element.allSupertypes)
-        for (final p in s.element3.fields2) p.name3: p,
-    for (final p in element.fields2) p.name3: p
+        for (final p in s.element.fields) p.name: p,
+    for (final p in element.fields) p.name: p
   };
 
   return properties.values
@@ -109,7 +108,7 @@ String parameterHeader(List<FormalParameterElement> params,
         }
     }
     paramBuffer.write(
-        param.name3 == null || param.name3!.isEmpty ? 'arg$i' : param.name3);
+        param.name == null || param.name!.isEmpty ? 'arg$i' : param.name);
     if (i < params.length - 1) {
       paramBuffer.write(', ');
     }

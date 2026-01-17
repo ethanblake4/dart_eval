@@ -200,7 +200,7 @@ void compileConstructorDeclaration(
     $super = BuiltinValue().push(ctx);
   } else {
     final prefix = $extends.superclass.importPrefix;
-    final clsName = $extends.superclass.name2.lexeme;
+    final clsName = $extends.superclass.name.lexeme;
     extendsWhat = (prefix != null
             ? ctx.visibleDeclarations[ctx.library]![prefix.name.value()]
             : ctx.visibleDeclarations[ctx.library]![clsName]) ??
@@ -364,7 +364,7 @@ void compileConstructorDeclaration(
     final op = BridgeInstantiate.make(
         instOffset,
         ctx.bridgeStaticFunctionIndices[extendsDecl.sourceLib]![
-            '${$extends.superclass.name2.value()}.$constructorName']!);
+            '${$extends.superclass.name.value()}.$constructorName']!);
     ctx.pushOp(op, BridgeInstantiate.len(op));
     final bridgeInst = Variable.alloc(ctx, CoreTypes.dynamic.ref(ctx));
 
@@ -412,7 +412,7 @@ void compileDefaultConstructor(CompilerContext ctx,
     $super = BuiltinValue().push(ctx);
   } else {
     final prefix = $extends.superclass.importPrefix;
-    final clsName = $extends.superclass.name2.lexeme;
+    final clsName = $extends.superclass.name.lexeme;
     extendsWhat = (prefix != null
             ? ctx.visibleDeclarations[ctx.library]![prefix.name.value()]
             : ctx.visibleDeclarations[ctx.library]![clsName]) ??
@@ -483,7 +483,7 @@ void compileDefaultConstructor(CompilerContext ctx,
     final op = BridgeInstantiate.make(
         instOffset,
         ctx.bridgeStaticFunctionIndices[extendsDecl.sourceLib]![
-            '${$extends.superclass.name2.lexeme}.$constructorName']!);
+            '${$extends.superclass.name.lexeme}.$constructorName']!);
     ctx.pushOp(op, BridgeInstantiate.len(op));
     final bridgeInst = Variable.alloc(ctx, CoreTypes.dynamic.ref(ctx));
 

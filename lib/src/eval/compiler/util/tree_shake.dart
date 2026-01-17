@@ -13,7 +13,7 @@ class TreeShakeVisitor extends RecursiveAstVisitor<TreeShakeContext?> {
 
   @override
   TreeShakeContext? visitNamedType(NamedType node) {
-    output(node.name2.lexeme);
+    output(node.name.lexeme);
     super.visitNamedType(node);
     return ctx;
   }

@@ -1,4 +1,4 @@
-import 'package:analyzer/dart/element/element2.dart';
+import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
 import 'package:dart_eval/src/eval/bindgen/operator.dart';
@@ -6,7 +6,7 @@ import 'package:dart_eval/src/eval/bindgen/parameters.dart';
 import 'package:dart_eval/src/eval/bindgen/permission.dart';
 import 'package:dart_eval/src/eval/bindgen/type.dart';
 
-String $getProperty(BindgenContext ctx, InterfaceElement2 element) {
+String $getProperty(BindgenContext ctx, InterfaceElement element) {
   return '''
   @override
   \$Value? \$getProperty(Runtime runtime, String identifier) {
@@ -16,7 +16,7 @@ String $getProperty(BindgenContext ctx, InterfaceElement2 element) {
 ''';
 }
 
-String $bridgeGet(BindgenContext ctx, ClassElement2 element) {
+String $bridgeGet(BindgenContext ctx, ClassElement element) {
   return '''
   @override
   \$Value? \$bridgeGet(String identifier) {
@@ -26,22 +26,22 @@ String $bridgeGet(BindgenContext ctx, ClassElement2 element) {
 ''';
 }
 
-String propertyGetters(BindgenContext ctx, InterfaceElement2 element,
+String propertyGetters(BindgenContext ctx, InterfaceElement element,
     {bool isBridge = false}) {
   final methods = {
     if (ctx.implicitSupers)
       for (var s in element.allSupertypes)
-        for (final m in s.element3.methods2) m.name3: m,
-    for (final m in element.methods2) m.name3: m
+        for (final m in s.element.methods) m.name: m,
+    for (final m in element.methods) m.name: m
   };
-  final getters = element.getters2
+  final getters = element.getters
       .where((accessor) => !accessor.isStatic && !accessor.isPrivate)
-      .where((a) => !(const ['hashCode', 'runtimeType'].contains(a.name3)));
+      .where((a) => !(const ['hashCode', 'runtimeType'].contains(a.name)));
 
   final methods0 = methods.values
       .where((method) => !method.isPrivate && !method.isStatic)
       .where(
-          (m) => !(const ['==', 'toString', 'noSuchMethod'].contains(m.name3)));
+          (m) => !(const ['==', 'toString', 'noSuchMethod'].contains(m.name)));
   if (getters.isEmpty && methods0.isEmpty) {
     return '';
   }
@@ -49,7 +49,7 @@ String propertyGetters(BindgenContext ctx, InterfaceElement2 element,
     return 'switch (identifier) {\n${getters.map((e) => '''
       case '${e.displayName}':
         final _${e.displayName} = super.${e.displayName};
-        return ${wrapVar(ctx, e.type.returnType, '_${e.displayName}', metadata: e.metadata2.annotations)};
+        return ${wrapVar(ctx, e.type.returnType, '_${e.displayName}', metadata: e.metadata.annotations)};
       ''').join('\n')}${methods0.map((e) {
       final returnsValue =
           e.returnType is! VoidType && !e.returnType.isDartCoreNull;
@@ -64,16 +64,16 @@ String propertyGetters(BindgenContext ctx, InterfaceElement2 element,
     }).join('\n')}\n}';
   }
   return 'switch (identifier) {\n${getters.map((e) => '''
-      case '${e.name3}':
-        final _${e.name3} = \$value.${e.name3};
-        return ${wrapVar(ctx, e.type.returnType, '_${e.name3}', metadata: e.metadata2.annotations)};
+      case '${e.name}':
+        final _${e.name} = \$value.${e.name};
+        return ${wrapVar(ctx, e.type.returnType, '_${e.name}', metadata: e.metadata.annotations)};
       ''').join('\n')}${methods0.map((e) => '''
-      case '${e.name3}':
-        return __${resolveMethodOperator(e.name3!).name};
+      case '${e.name}':
+        return __${resolveMethodOperator(e.name!).name};
       ''').join('\n')}\n}';
 }
 
-String $setProperty(BindgenContext ctx, InterfaceElement2 element) {
+String $setProperty(BindgenContext ctx, InterfaceElement element) {
   return '''
   @override
   void \$setProperty(Runtime runtime, String identifier, \$Value value) {
@@ -83,7 +83,7 @@ String $setProperty(BindgenContext ctx, InterfaceElement2 element) {
 ''';
 }
 
-String $bridgeSet(BindgenContext ctx, ClassElement2 element) {
+String $bridgeSet(BindgenContext ctx, ClassElement element) {
   return '''
   @override
   void \$bridgeSet(String identifier, \$Value value) {
@@ -92,9 +92,9 @@ String $bridgeSet(BindgenContext ctx, ClassElement2 element) {
 ''';
 }
 
-String propertySetters(BindgenContext ctx, InterfaceElement2 element,
+String propertySetters(BindgenContext ctx, InterfaceElement element,
     {bool isBridge = false}) {
-  final setters = element.setters2
+  final setters = element.setters
       .where((element) => !element.isStatic && !element.isPrivate);
   if (setters.isEmpty) {
     return '';

@@ -1,10 +1,10 @@
-import 'package:analyzer/dart/element/element2.dart';
+import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
 import 'package:dart_eval/src/eval/bindgen/parameters.dart';
 import 'package:dart_eval/src/eval/bindgen/type.dart';
 
-String $function(BindgenContext ctx, ExecutableElement2 element) {
+String $function(BindgenContext ctx, ExecutableElement element) {
   final returnsValue =
       element.returnType is! VoidType && !element.returnType.isDartCoreNull;
   return '''
