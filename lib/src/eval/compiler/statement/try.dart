@@ -93,8 +93,10 @@ StatementInfo _compileCatchClause(
         IsType.length);
     return Variable.alloc(ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
   }, thenBranch: (ctx, expectedReturnType) {
-    ctx.setLocal(catchClause.exceptionParameter!.name.lexeme,
-        exceptionVar.copyWith(type: slot));
+    if (catchClause.exceptionParameter != null) {
+      ctx.setLocal(catchClause.exceptionParameter!.name.lexeme,
+          exceptionVar.copyWith(type: slot));
+    }
     return compileBlock(catchClause.body, expectedReturnType, ctx);
   },
       elseBranch: clauses.length <= index + 1

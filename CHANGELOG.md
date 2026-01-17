@@ -1,5 +1,6 @@
 ## 0.8.4
 - Update analyzer to v8.
+- Fixed try without catch.
 
 ## 0.8.3
 - Support for Dart 3.10

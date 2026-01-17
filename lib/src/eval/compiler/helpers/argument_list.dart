@@ -341,7 +341,9 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithDynamic(
     var arg0 = compileExpression(arg, ctx);
     if (arg0.type.isUnboxedAcrossFunctionBoundaries) {
       arg0 = arg0.boxIfNeeded(ctx);
-    } else {
+      // TODO: functions and some other types do not need to be unboxed,
+      // but due to them being dynamic it's hard to know ahead.
+    } else if (!arg0.type.isAssignableTo(ctx, CoreTypes.function.ref(ctx))) {
       arg0 = arg0.unboxIfNeeded(ctx);
     }
 
