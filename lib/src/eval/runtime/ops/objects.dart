@@ -113,6 +113,11 @@ class InvokeDynamic implements EvcOp {
   String toString() => 'InvokeDynamic (L$_location.C$_methodIdx)';
 }
 
+/// Checks values on the runtime frame for equality. Those can be boxed
+/// or not, including nulls. In case the first value is [$Instance],
+/// tries to call its `operator==` method, going up the inheritance chain.
+/// Does not alter the runtime frame, but puts a boxed boolean value to
+/// [Runtime.returnValue].
 class CheckEq implements EvcOp {
   CheckEq(Runtime runtime)
       : _value1 = runtime._readInt16(),
@@ -130,7 +135,17 @@ class CheckEq implements EvcOp {
     final v1 = runtime.frame[_value1];
     final v2 = runtime.frame[_value2];
 
-    var vx = v1;
+    if (v1 == null || v2 == null) {
+      runtime.returnValue = $bool(v1 == v2);
+      return;
+    }
+
+    if (v2 is $null) {
+      runtime.returnValue = $bool(v1 is $null);
+      return;
+    }
+
+    Object? vx = v1;
 
     while (true) {
       if (vx is $InstanceImpl) {
@@ -140,7 +155,7 @@ class CheckEq implements EvcOp {
           vx = vx.evalSuperclass;
           continue;
         }
-        runtime.args = [v2];
+        runtime.args = [vx, v2];
         runtime.callStack.add(runtime._prOffset);
         runtime.catchStack.add([]);
         runtime._prOffset = offset;
@@ -152,13 +167,13 @@ class CheckEq implements EvcOp {
         final method = vx.$getProperty(runtime, '==') as EvalFunction;
 
         runtime.returnValue = method
-            .call(runtime, vx, [v2 == null ? null : v2 as $Value])!.$value;
+            .call(runtime, vx, [v2 as $Value])!;
         runtime.args = [];
 
         return;
       }
 
-      runtime.returnValue = v1 == v2;
+      runtime.returnValue = $bool(v1 == v2);
       return;
     }
   }

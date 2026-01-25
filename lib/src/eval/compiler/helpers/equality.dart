@@ -10,7 +10,8 @@ Variable checkNotEqual(CompilerContext ctx, Variable L, Variable R) {
   ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
   final cond = Variable.alloc(ctx, CoreTypes.bool.ref(ctx));
   ctx.pushOp(LogicalNot.make(cond.scopeFrameOffset), LogicalNot.LEN);
-  return Variable.alloc(ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
+  return Variable.alloc(ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: true))
+      .unboxIfNeeded(ctx);
 }
 
 Variable checkNotNull(CompilerContext ctx, Variable L) {

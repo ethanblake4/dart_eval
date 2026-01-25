@@ -3,17 +3,16 @@ import 'package:dart_eval/stdlib/core.dart';
 import 'package:test/test.dart';
 
 void main() {
-  group('Operator method tests', () {
-    late Compiler compiler;
+  late Compiler compiler;
 
-    setUp(() {
-      compiler = Compiler();
-    });
+  setUp(() {
+    compiler = Compiler();
+  });
 
-    test('Operator ==', () {
-      final runtime = compiler.compileWriteAndLoad({
-        'operator_test': {
-          'main.dart': '''
+  test('Operator ==', () {
+    final runtime = compiler.compileWriteAndLoad({
+      'operator_test': {
+        'main.dart': '''
             class MyClass {
               final int value;
               
@@ -33,36 +32,39 @@ void main() {
               ];
             }
           '''
-        }
-      });
+      }
+    });
 
-      expect(runtime.executeLib('package:operator_test/main.dart', 'main'), [
-        $bool(false), $bool(false), $bool(true), $bool(true),
-      ]);
-    }, skip: true);
+    expect(runtime.executeLib('package:operator_test/main.dart', 'main'), [
+      $bool(false),
+      $bool(false),
+      $bool(true),
+      $bool(true),
+    ]);
+  });
 
-    test('Operator has object context', () {
-      final runtime = compiler.compileWriteAndLoad({
-        'operator_test': {
-          'main.dart': '''
+  test('Operator +', () {
+    final runtime = compiler.compileWriteAndLoad({
+      'operator_test': {
+        'main.dart': '''
             class MyClass {
               final int value = 1;
               int operator+(int add) => value + add;
             }
             int main() => MyClass() + 1;
           '''
-        }
-      });
+      }
+    });
 
-      expect(runtime.executeLib('package:operator_test/main.dart', 'main'), 4);
-    }, skip: true);
+    expect(runtime.executeLib('package:operator_test/main.dart', 'main'), 4);
+  }, skip: true);
 
-    test('Operator []', () {
-      final runtime = compiler.compileWriteAndLoad({
-        'operator_test': {
-          'main.dart': '''
+  test('Operator []', () {
+    final runtime = compiler.compileWriteAndLoad({
+      'operator_test': {
+        'main.dart': '''
             class MyClass {
-              final value = [1, 2];
+              final List<int> value = [1, 2];
               
               MyClass();
               
@@ -79,12 +81,12 @@ void main() {
               return [cls[0], cls[1]];
             }
           '''
-        }
-      });
+      }
+    });
 
-      expect(runtime.executeLib('package:operator_test/main.dart', 'main'), [
-        $int(1), $int(2),
-      ]);
-    }, skip: true);
-  });
+    expect(runtime.executeLib('package:operator_test/main.dart', 'main'), [
+      $int(1),
+      $int(2),
+    ]);
+  }, skip: true);
 }

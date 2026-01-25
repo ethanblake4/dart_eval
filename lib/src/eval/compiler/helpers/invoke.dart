@@ -77,10 +77,9 @@ extension Invoke on Variable {
           ctx, $this.type, method, [...args0.map((e) => e.type)], {});
     }
 
-    final v = Variable.alloc(
-        ctx,
-        (returnType?.type ?? CoreTypes.dynamic.ref(ctx))
-            .copyWith(boxed: !(checkEq || checkNotEq)));
+    final v = Variable.alloc(ctx,
+        (returnType?.type ?? CoreTypes.dynamic.ref(ctx)).copyWith(boxed: true));
+
     return InvokeResult($this, v, args0);
   }
 
