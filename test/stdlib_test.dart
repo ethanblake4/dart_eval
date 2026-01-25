@@ -109,6 +109,7 @@ void main() {
             $bool(false));
       }, prints('false\ntrue\n'));
     });
+
     test('String interpolation', () {
       final runtime = compiler.compileWriteAndLoad({
         'example': {
@@ -126,6 +127,27 @@ void main() {
         runtime.executeLib('package:example/main.dart', 'main');
       }, prints('FluffyHello2, says the cat\n'));
     });
+
+
+    test('toString inside interpolation', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'eval_test': {
+          'main.dart': '''
+            class X {
+              toString() => 'string';
+            }
+
+            void main() {
+              print('test \${X()}');
+            }
+          '''
+        }
+      });
+
+      expect(() {
+        runtime.executeLib('package:eval_test/main.dart', 'main');
+      }, prints('test string\n'));
+    }, skip: true);
 
     test('dart:math Point', () {
       final runtime = compiler.compileWriteAndLoad({
