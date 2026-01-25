@@ -10,6 +10,14 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'errors.dart';
 import 'offset_tracker.dart';
 
+/// Tracks a variable on the runtime frame.
+///
+/// Contains methods to manipulate context frame and operators,
+/// simplifying tracking variable properties in the context dictionaries
+/// and generating opcodes to use this variable.
+///
+/// Usually instantiated with [Variable.alloc] to automate [ScopeContext] updates.
+/// Expression parser in [compileExpression] returns an instance of this class.
 class Variable {
   Variable(this.scopeFrameOffset, this.type,
       {this.methodOffset,
@@ -25,6 +33,8 @@ class Variable {
         todo: assert(!type.nullable || type.boxed)*/
   ;
 
+  /// Allocates a variable of the given [type] on the scope frame.
+  /// Automatically increases the frame offset and [ScopeContext.allocNest].
   factory Variable.alloc(ScopeContext ctx, TypeRef type,
       {DeferredOrOffset? methodOffset,
       ReturnType? methodReturnType,
@@ -53,6 +63,9 @@ class Variable {
   String? name;
   int? frameIndex;
 
+  /// Boxes the variable, if it isn't yet. Does nothing with a dynamic
+  /// type. Pushes a proper operator to box this value on the frame, and
+  /// returns this instance with the type marked as boxed.
   Variable boxIfNeeded(ScopeContext ctx, [AstNode? source]) {
     if (boxed) {
       return this;
@@ -94,6 +107,11 @@ class Variable {
     return copyWithUpdate(ctx, type: type.copyWith(boxed: true));
   }
 
+  /// Unboxes this variable, if it isn't yet. Unlike [boxIfNeeded],
+  /// pushes the [Unbox] operator also for dynamic variables.
+  ///
+  /// By default updates the variable in the context locals.
+  /// Set [update] to false if that's not desired.
   Variable unboxIfNeeded(ScopeContext ctx, [bool update = true]) {
     if (!boxed) {
       return this;
@@ -105,6 +123,9 @@ class Variable {
     return copyWithUpdate(ctx, type: type.copyWith(boxed: false));
   }
 
+  /// Returns a variable with the same name from the context locals.
+  /// Iterates over all frames and returns the first found one.
+  /// If not found, returns this instance.
   Variable updated(ScopeContext ctx) {
     if (name == null) {
       return this;
@@ -115,6 +136,7 @@ class Variable {
   void pushArg(CompilerContext ctx) =>
       ctx.pushOp(PushArg.make(scopeFrameOffset), PushArg.LEN);
 
+  /// Makes a copy of the variable with some fields updated.
   Variable copyWith(
       {int? scopeFrameOffset,
       TypeRef? type,
@@ -134,6 +156,8 @@ class Variable {
       ..frameIndex = frameIndex ?? this.frameIndex;
   }
 
+  /// Makes a copy of the variable with some fields updated, and also
+  /// updates the reference on the context frame.
   Variable copyWithUpdate(ScopeContext? ctx,
       {int? scopeFrameOffset,
       TypeRef? type,
@@ -142,13 +166,15 @@ class Variable {
       String? name,
       int? frameIndex,
       List<TypeRef>? concreteTypes}) {
-    var uV = Variable(
-        scopeFrameOffset ?? this.scopeFrameOffset, type ?? this.type,
-        methodOffset: methodOffset ?? this.methodOffset,
-        methodReturnType: methodReturnType ?? this.methodReturnType,
-        concreteTypes: concreteTypes ?? this.concreteTypes)
-      ..name = name ?? this.name
-      ..frameIndex = frameIndex ?? this.frameIndex;
+    var uV = copyWith(
+      scopeFrameOffset: scopeFrameOffset,
+      type: type,
+      methodOffset: methodOffset,
+      methodReturnType: methodReturnType,
+      name: name,
+      frameIndex: frameIndex,
+      concreteTypes: concreteTypes,
+    );
 
     if (uV.name != null && ctx != null) {
       ctx.locals[uV.frameIndex!][uV.name!] = uV;

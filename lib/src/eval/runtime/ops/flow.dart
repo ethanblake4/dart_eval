@@ -224,6 +224,13 @@ class Return implements EvcOp {
   String toString() => 'Return (L$_location)';
 }
 
+/// Return from an async function. Expects the return value to be
+/// wrapped in a [Future]. Has two arguments:
+///
+/// 1. Frame position for the return value, or -1 if it's void.
+/// 2. Frame position for a [$Completer] instance.
+///
+/// See [Return] for additional insights.
 class ReturnAsync implements EvcOp {
   ReturnAsync(Runtime exec)
       : _location = exec._readInt16(),

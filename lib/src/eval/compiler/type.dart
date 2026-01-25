@@ -725,6 +725,16 @@ class TypeRef {
   bool get isUnboxedAcrossFunctionBoundaries =>
       unboxedAcrossFunctionBoundaries.contains(this) && !nullable;
 
+  /// Checks whether a value of this type can be assigned to the
+  /// field of the type [slot]. This is the main check for assignments,
+  /// but also useful to check for function types.
+  ///
+  /// When [forceAllowDynamic] is set (which is the default), immediately
+  /// returns "true" if [this] or [slot] are of the dynamic type. Disable
+  /// when needed to enforce type strictness.
+  ///
+  /// You most likely won't need to use [overrideGenerics]: it uses the
+  /// type arguments by default, as it should.
   bool isAssignableTo(CompilerContext ctx, TypeRef slot,
       {List<TypeRef>? overrideGenerics, bool forceAllowDynamic = true}) {
     if (forceAllowDynamic &&

@@ -1,7 +1,9 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/runtime/class.dart';
 
-/// A class is an instance of [Type]
+/// Type definition (see [Type]) for a class declared in the evaluated code.
+/// Serialized to a program, contains mappings from method and field names
+/// to implementation locations in the code.
 class EvalClass extends $InstanceImpl {
   EvalClass(this.delegatedType, this.superclass, this.mixins, this.getters,
       this.setters, this.methods)
