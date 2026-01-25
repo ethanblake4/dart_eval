@@ -2,6 +2,10 @@
 
 part of '../runtime.dart';
 
+/// Appends an unboxed value from [Runtime.constantPool] at the given index
+/// to the runtime frame. Those constants are collected at compile time
+/// with [ConstantPool] in [CompilerContext.constantPool] and stored as a list
+/// in the compiled program.
 class PushConstant implements EvcOp {
   PushConstant(Runtime runtime) : _const = runtime._readInt32();
 
@@ -21,6 +25,8 @@ class PushConstant implements EvcOp {
   String toString() => 'PushConstant (C$_const)';
 }
 
+/// Appends an unboxed int32 value to the runtime frame.
+/// See [BoxInt] for boxing it.
 class PushConstantInt implements EvcOp {
   PushConstantInt(Runtime exec) : _value = exec._readInt32();
 
@@ -40,6 +46,8 @@ class PushConstantInt implements EvcOp {
   String toString() => 'PushConstantInt ($_value)';
 }
 
+/// Appends an unboxed float32 (as Dart double) value to the runtime frame.
+/// See [BoxDouble] for boxing it.
 class PushConstantDouble implements EvcOp {
   PushConstantDouble(Runtime exec) : _value = exec._readFloat32();
 
@@ -59,6 +67,8 @@ class PushConstantDouble implements EvcOp {
   String toString() => 'PushConstantDouble ($_value)';
 }
 
+/// Appends an unboxed null value to the runtime frame.
+/// See [BoxNull] for boxing it.
 class PushNull implements EvcOp {
   PushNull(Runtime exec);
 
@@ -76,6 +86,8 @@ class PushNull implements EvcOp {
   String toString() => 'PushNull ()';
 }
 
+/// Takes two unboxed numbers (integer or double) from the given locations
+/// on the runtime frame, and appends their sum to the frame.
 class NumAdd implements EvcOp {
   NumAdd(Runtime runtime)
       : _location1 = runtime._readInt16(),
@@ -88,7 +100,6 @@ class NumAdd implements EvcOp {
 
   static const int LEN = Evc.BASE_OPLEN + Evc.I16_LEN * 2;
 
-  // Add value A + B
   @override
   void run(Runtime runtime) {
     runtime.frame[runtime.frameOffset++] =
@@ -99,6 +110,8 @@ class NumAdd implements EvcOp {
   String toString() => 'NumAdd (L$_location1 + L$_location2)';
 }
 
+/// Takes two unboxed numbers (integer or double) from the given locations
+/// on the runtime frame, and appends their difference (A-B) to the frame.
 class NumSub implements EvcOp {
   NumSub(Runtime runtime)
       : _location1 = runtime._readInt16(),
@@ -111,7 +124,6 @@ class NumSub implements EvcOp {
 
   static const int LEN = Evc.BASE_OPLEN + Evc.I16_LEN * 2;
 
-  // Add value A + B
   @override
   void run(Runtime runtime) {
     runtime.frame[runtime.frameOffset++] =
@@ -122,6 +134,9 @@ class NumSub implements EvcOp {
   String toString() => 'NumSub (L$_location1 - L$_location2)';
 }
 
+/// Takes two unboxed numbers (integer or double) from the given locations
+/// on the runtime frame, and appends an unboxed boolean value marking
+/// whether the first number is smaller than the second.
 class NumLt implements EvcOp {
   NumLt(Runtime runtime)
       : _location1 = runtime._readInt16(),
@@ -144,6 +159,9 @@ class NumLt implements EvcOp {
   String toString() => 'NumLt (L$_location1 < L$_location2)';
 }
 
+/// Takes two unboxed numbers (integer or double) from the given locations
+/// on the runtime frame, and appends an unboxed boolean value marking
+/// whether the first number is smaller or equal to the second.
 class NumLtEq implements EvcOp {
   NumLtEq(Runtime runtime)
       : _location1 = runtime._readInt16(),
@@ -166,6 +184,7 @@ class NumLtEq implements EvcOp {
   String toString() => 'NumLtEq (L$_location1 <= L$_location2)';
 }
 
+/// Boxes an integer number at the given location on the runtime frame.
 class BoxInt implements EvcOp {
   BoxInt(Runtime runtime) : _reg = runtime._readInt16();
 
@@ -185,6 +204,7 @@ class BoxInt implements EvcOp {
   String toString() => 'BoxInt (L$_reg)';
 }
 
+/// Boxes a double number at the given location on the runtime frame.
 class BoxDouble implements EvcOp {
   BoxDouble(Runtime runtime) : _reg = runtime._readInt16();
 
@@ -204,6 +224,8 @@ class BoxDouble implements EvcOp {
   String toString() => 'BoxDouble (L$_reg)';
 }
 
+/// Boxes a [num] instance (integer or double) at the given location
+/// on the runtime frame. Replaces it with a [$num] instance.
 class BoxNum implements EvcOp {
   BoxNum(Runtime runtime) : _reg = runtime._readInt16();
 
@@ -223,6 +245,7 @@ class BoxNum implements EvcOp {
   String toString() => 'BoxNum (L$_reg)';
 }
 
+/// Boxes a string at the given location on the runtime frame.
 class BoxString implements EvcOp {
   BoxString(Runtime runtime) : _reg = runtime._readInt16();
 
@@ -242,6 +265,9 @@ class BoxString implements EvcOp {
   String toString() => 'BoxString (L$_reg)';
 }
 
+/// Boxes a list at the given location on the runtime frame.
+/// Expects all elements of the list already boxed, inheriting
+/// from [$Value].
 class BoxList implements EvcOp {
   BoxList(Runtime runtime) : _reg = runtime._readInt16();
 
@@ -261,6 +287,9 @@ class BoxList implements EvcOp {
   String toString() => 'BoxList (L$_reg)';
 }
 
+/// Boxes a null values at the given location on the runtime frame.
+/// Does not actually check for the existing value, just overwrites it
+/// with a [$null] instance.
 class BoxNull implements EvcOp {
   BoxNull(Runtime runtime) : _reg = runtime._readInt16();
 
@@ -280,6 +309,9 @@ class BoxNull implements EvcOp {
   String toString() => 'BoxNull (L$_reg)';
 }
 
+/// Boxes a map at the given location on the runtime frame.
+/// Expects all keys and values of the map already boxed, inheriting
+/// from [$Value].
 class BoxMap implements EvcOp {
   BoxMap(Runtime runtime) : _reg = runtime._readInt16();
 
@@ -300,6 +332,9 @@ class BoxMap implements EvcOp {
   String toString() => 'BoxMap (L$_reg)';
 }
 
+/// Boxes a set at the given location on the runtime frame.
+/// Expects all elements of the set already boxed, inheriting
+/// from [$Value].
 class BoxSet implements EvcOp {
   BoxSet(Runtime runtime) : _reg = runtime._readInt16();
 
@@ -319,6 +354,8 @@ class BoxSet implements EvcOp {
   String toString() => 'BoxSet (L$_reg)';
 }
 
+/// Boxes a value at the given location on the runtime frame,
+/// but only if it's a null. Used for nullable properties.
 class MaybeBoxNull implements EvcOp {
   MaybeBoxNull(Runtime runtime) : _reg = runtime._readInt16();
 
@@ -342,6 +379,8 @@ class MaybeBoxNull implements EvcOp {
   String toString() => 'MaybeBoxNull (L$_reg)';
 }
 
+/// Unboxes a [$Value] at the given location on the runtime frame.
+/// Does not check whether it's been unboxed already.
 class Unbox implements EvcOp {
   Unbox(Runtime runtime) : _reg = runtime._readInt16();
 
@@ -360,6 +399,7 @@ class Unbox implements EvcOp {
   String toString() => 'Unbox (L$_reg)';
 }
 
+/// Appends an empty unboxed untyped list to the runtime frame.
 class PushList extends EvcOp {
   PushList(Runtime runtime);
 
@@ -376,6 +416,9 @@ class PushList extends EvcOp {
   String toString() => 'PushList ()';
 }
 
+/// Takes a value from the runtime frame, and appends it to a list
+/// (boxed or unboxed) in a different location on the frame. Does not care
+/// whether the value is boxed or not.
 class ListAppend extends EvcOp {
   ListAppend(Runtime runtime)
       : _reg = runtime._readInt16(),
@@ -397,6 +440,9 @@ class ListAppend extends EvcOp {
   String toString() => 'ListAppend (L$_reg[] = L$_value)';
 }
 
+/// Gets an unboxed integer value from the runtime frame, and uses it
+/// as an index for a list (boxed or unboxed) on the frame. Appends the received
+/// value to the runtime frame.
 class IndexList extends EvcOp {
   IndexList(Runtime runtime)
       : _position = runtime._readInt16(),
@@ -419,6 +465,10 @@ class IndexList extends EvcOp {
   String toString() => 'IndexList (L$_position[L$_index])';
 }
 
+/// Gets an unboxed integer value from the runtime frame ([_index]), and uses it
+/// as an index for a list (boxed or unboxed, [_position]) on the frame.
+/// Finds another value on the frame of whatever type ([_value]) and assigns
+/// it to the list in the given position.
 class ListSetIndexed extends EvcOp {
   ListSetIndexed(Runtime runtime)
       : _position = runtime._readInt16(),
@@ -443,6 +493,7 @@ class ListSetIndexed extends EvcOp {
   String toString() => 'ListSetIndexed (L$_position[L$_index] = L$_value)';
 }
 
+/// Gets a length of an iterable and appends it unboxed to the runtime frame.
 class PushIterableLength extends EvcOp {
   PushIterableLength(Runtime runtime) : _position = runtime._readInt16();
 
@@ -462,6 +513,7 @@ class PushIterableLength extends EvcOp {
   String toString() => 'PushIterableLength (L$_position)';
 }
 
+/// Appends an empty unboxed untyped map to the runtime frame.
 class PushMap extends EvcOp {
   PushMap(Runtime runtime);
 
@@ -478,6 +530,9 @@ class PushMap extends EvcOp {
   String toString() => 'PushMap ()';
 }
 
+/// Takes a key and a value from the runtime frame, and adds those to a map
+/// in a different location on the frame. Does not care whether any of those
+/// are boxed.
 class MapSet extends EvcOp {
   MapSet(Runtime runtime)
       : _map = runtime._readInt16(),
@@ -502,6 +557,9 @@ class MapSet extends EvcOp {
   String toString() => 'MapSet (L$_map[L$_index] = L$_value)';
 }
 
+/// Gets a  value from the runtime frame, and uses it
+/// as an index for a map (boxed or unboxed) on the frame. Appends the received
+/// value to the runtime frame.
 class IndexMap extends EvcOp {
   IndexMap(Runtime runtime)
       : _map = runtime._readInt16(),
@@ -524,6 +582,7 @@ class IndexMap extends EvcOp {
   String toString() => 'IndexMap (L$_map[L$_index])';
 }
 
+/// Appends an empty unboxed untyped set to the runtime frame.
 class PushSet extends EvcOp {
   PushSet(Runtime runtime);
 
@@ -540,6 +599,9 @@ class PushSet extends EvcOp {
   String toString() => 'PushSet ()';
 }
 
+/// Takes a value from the runtime frame, and adds it to a set
+/// (boxed or unboxed) in a different location on the frame. Does not care
+/// whether the value is boxed or not.
 class SetAdd extends EvcOp {
   SetAdd(Runtime runtime)
       : _set = runtime._readInt16(),
@@ -561,6 +623,9 @@ class SetAdd extends EvcOp {
   String toString() => 'SetAdd (L$_set, L$_value)';
 }
 
+/// Pushes an unboxed `true` boolean value to the frame,
+/// increasing the frame offset. For pushing `false`, call
+/// [LogicalNot] right after this op.
 class PushTrue extends EvcOp {
   PushTrue(Runtime runtime);
 
@@ -578,6 +643,8 @@ class PushTrue extends EvcOp {
   String toString() => 'PushTrue ()';
 }
 
+/// Inverts the boolean value at the given [_index] on the frame.
+/// Works regardless of whether the value is boxed or not.
 class LogicalNot extends EvcOp {
   LogicalNot(Runtime runtime) : _index = runtime._readInt16();
 
@@ -590,13 +657,16 @@ class LogicalNot extends EvcOp {
   @override
   void run(Runtime runtime) {
     final frame = runtime.frame;
-    frame[runtime.frameOffset++] = !(frame[_index] as bool);
+    final boxed = frame[_index] is $bool;
+    frame[runtime.frameOffset++] = boxed ? $bool(!(frame[_index] as $bool).$value) : !(frame[_index] as bool);
   }
 
   @override
   String toString() => 'LogicalNot (L$_index)';
 }
 
+/// Boxes a boolean value at the [_reg] location on the frame into [$bool].
+/// Expects an unboxed bool at that location.
 class BoxBool implements EvcOp {
   BoxBool(Runtime runtime) : _reg = runtime._readInt16();
 
@@ -616,6 +686,10 @@ class BoxBool implements EvcOp {
   String toString() => 'BoxBool (L$_reg)';
 }
 
+/// Appends a boxed [$Record] to the runtime frame.
+/// For field values, expects a list in the given location on the frame,
+/// and for the field mapping (strings to list indices), a map on the
+/// constant pool.
 class PushRecord implements EvcOp {
   PushRecord(Runtime runtime)
       : _fields = runtime._readInt16(),
@@ -640,5 +714,5 @@ class PushRecord implements EvcOp {
   }
 
   @override
-  String toString() => 'PushRecord ()';
+  String toString() => 'PushRecord (L$_fields, C$_const)';
 }

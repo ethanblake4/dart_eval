@@ -43,12 +43,14 @@ class EvalUnknownPropertyException implements Exception {
 }
 
 class InvalidUnboxedValueException implements Exception {
-  const InvalidUnboxedValueException(this.value);
+  const InvalidUnboxedValueException(this.message, this.value);
 
-  final Object value;
+  final String message;
+  final Object? value;
 
   @override
-  String toString() => 'InvalidUnboxedValueException: $value';
+  String toString() =>
+      'InvalidUnboxedValueException: $message (${value?.runtimeType})';
 }
 
 class ProgramExit implements Exception {
