@@ -8,7 +8,7 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'statement.dart';
 
 StatementInfo compileReturn(CompilerContext ctx, ReturnStatement s,
-    AlwaysReturnType? expectedReturnType) {
+    AlwaysReturnType? expectedReturnType, {bool skipClassBoxing = false}) {
   AstNode? e = s;
   while (e != null) {
     if (e is FunctionBody) {
@@ -26,5 +26,6 @@ StatementInfo compileReturn(CompilerContext ctx, ReturnStatement s,
       ctx,
       expectedReturnType ?? AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true),
       value,
-      isAsync: (e as FunctionBody).isAsynchronous);
+      isAsync: (e as FunctionBody).isAsynchronous,
+      skipClassBoxing: skipClassBoxing);
 }

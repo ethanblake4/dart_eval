@@ -8,7 +8,7 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 StatementInfo doReturn(
     CompilerContext ctx, AlwaysReturnType expectedReturnType, Variable? value,
-    {bool isAsync = false}) {
+    {bool isAsync = false, bool skipClassBoxing = false}) {
   if (value == null) {
     if (isAsync) {
       final completer = ctx.lookupLocal('#completer')!;
@@ -57,7 +57,13 @@ StatementInfo doReturn(
       throw CompileError('Cannot return ${value0.type} (expected: $expected)');
     }
     if (expected.isUnboxedAcrossFunctionBoundaries &&
-        ctx.currentClass == null) {
+        // Return types must be boxed when returning from instance methods, even if
+        // the return type can be unboxed across function boundaries, because
+        // the method may be called in a dynamic context where we have no information
+        // about the expected return type.
+        // We skip this if the skipClassBoxing flag is set, which is used
+        // for operators as they can be statically guaranteed to return an unboxed type.
+        (ctx.currentClass == null || skipClassBoxing)) {
       value0 = value0.unboxIfNeeded(ctx);
     } else {
       value0 = value0.boxIfNeeded(ctx);

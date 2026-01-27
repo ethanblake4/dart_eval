@@ -67,7 +67,10 @@ int compileMethodDeclaration(MethodDeclaration d, CompilerContext ctx,
         AlwaysReturnType.fromAnnotation(
             ctx, ctx.library, d.returnType, CoreTypes.dynamic.ref(ctx)),
         V,
-        isAsync: b.isAsynchronous);
+        isAsync: b.isAsynchronous,
+        // == and != operators are statically guaranteed to return bools,
+        // so we can optimize boxing away here.
+        skipClassBoxing: d.name.lexeme == '==' || d.name.lexeme == '!=');
     ctx.endAllocScope();
   } else if (b is EmptyFunctionBody) {
     ctx.endAllocScope();

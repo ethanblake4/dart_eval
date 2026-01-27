@@ -19,10 +19,10 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'block.dart';
 
 StatementInfo compileStatement(
-    Statement s, AlwaysReturnType? expectedReturnType, CompilerContext ctx) {
+    Statement s, AlwaysReturnType? expectedReturnType, CompilerContext ctx, {bool skipClassBoxing = false}) {
   try {
     if (s is Block) {
-      return compileBlock(s, expectedReturnType, ctx);
+      return compileBlock(s, expectedReturnType, ctx, skipClassBoxing: skipClassBoxing);
     } else if (s is VariableDeclarationStatement) {
       return compileVariableDeclarationStatement(s, ctx);
     } else if (s is ExpressionStatement) {
@@ -32,7 +32,7 @@ StatementInfo compileStatement(
       }
       return StatementInfo(-1);
     } else if (s is ReturnStatement) {
-      return compileReturn(ctx, s, expectedReturnType);
+      return compileReturn(ctx, s, expectedReturnType, skipClassBoxing: skipClassBoxing);
     } else if (s is ForStatement) {
       return compileForStatement(s, ctx, expectedReturnType);
     } else if (s is WhileStatement) {

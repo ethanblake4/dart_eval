@@ -140,7 +140,7 @@ class CheckEq implements EvcOp {
           vx = vx.evalSuperclass;
           continue;
         }
-        runtime.args = [v2];
+        runtime.args = [vx, v2];
         runtime.callStack.add(runtime._prOffset);
         runtime.catchStack.add([]);
         runtime._prOffset = offset;

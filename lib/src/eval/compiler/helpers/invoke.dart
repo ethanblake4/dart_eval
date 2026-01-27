@@ -38,6 +38,8 @@ extension Invoke on Variable {
     final checkEq = method == '==' && args0.length == 1;
     final checkNotEq = method == '!=' && args0.length == 1;
     if (checkEq || checkNotEq) {
+      // The == and != operators are *always* guaranteed to return a bool in all cases,
+      // so we can optimize them here.
       if ($this.scopeFrameOffset == -1 && args0[0].scopeFrameOffset == -1) {
         final result = $this.methodOffset! == args0[0].methodOffset!;
         final rV = BuiltinValue(boolval: result).push(ctx);

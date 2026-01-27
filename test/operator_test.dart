@@ -39,7 +39,7 @@ void main() {
       expect(runtime.executeLib('package:operator_test/main.dart', 'main'), [
         $bool(false), $bool(false), $bool(true), $bool(true),
       ]);
-    }, skip: true);
+    });
 
     test('Operator has object context', () {
       final runtime = compiler.compileWriteAndLoad({
