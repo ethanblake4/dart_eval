@@ -582,7 +582,7 @@ class $File implements $Instance {
   static $Value? __writeAsBytes(
       Runtime runtime, $Value? target, List<$Value?> args) {
     final entity = target!.$value as File;
-    final bytes = args[0]!.$value as List<int>;
+    final bytes = (args[0]!.$value as List).map<int>((v) => (v as $int).$value).toList();
     //final mode = args[1]!.$value as FileMode;
     runtime.assertPermission('filesystem:write', entity.path);
     return $Future.wrap(entity.writeAsBytes(bytes /*, mode: mode*/));
@@ -593,7 +593,7 @@ class $File implements $Instance {
   static $Value? __writeAsBytesSync(
       Runtime runtime, $Value? target, List<$Value?> args) {
     final entity = target!.$value as File;
-    final bytes = args[0]!.$value as List<int>;
+    final bytes = (args[0]!.$value as List).map<int>((v) => (v as $int).$value).toList();
     //final mode = args[1]!.$value as FileMode;
     runtime.assertPermission('filesystem:write', entity.path);
     entity.writeAsBytesSync(bytes /*, mode: mode*/);
