@@ -4,6 +4,7 @@ import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/collection/list.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
+import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
@@ -64,6 +65,10 @@ class Variable {
   final ReturnType? methodReturnType;
   final bool isFinal;
   final CallingConvention callingConvention;
+
+  // If this variable is a reference to a variable in a previous stack frame,
+  // this holds the reference to the list and the index of the variable in that list.
+  final IndexedReference? frameRef;
 
   bool get boxed => type.boxed;
 

@@ -370,6 +370,26 @@ void main() {
       expect(runtime.executeLib('package:example/main.dart', 'main'), 2);
     });
 
+    test('Closure can modify variable outside its scope', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            num main() {
+              var k = 17;
+              final f = () {
+                k++;
+              };
+
+              f();
+                
+              return k;
+            }
+          ''',
+        },
+      });
+      expect(runtime.executeLib('package:example/main.dart', 'main'), $int(18));
+    });
+
     test('Default positional args', () {
       final runtime = compiler.compileWriteAndLoad({
         'example': {

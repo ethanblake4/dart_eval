@@ -7,6 +7,7 @@ import 'package:dart_eval/src/eval/compiler/constant_pool.dart';
 import 'package:dart_eval/src/eval/compiler/model/label.dart';
 import 'package:dart_eval/src/eval/compiler/model/override_spec.dart';
 import 'package:dart_eval/src/eval/compiler/optimizer/prescan.dart';
+import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/source.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/util.dart';
@@ -251,9 +252,16 @@ class CompilerContext with ScopeContext {
   @override
   Variable? lookupLocal(String name) {
     final frameRef = <Variable>[];
+
+    /// Iterate backwards through the scopes to find the most
+    /// recently declared variable with the given name
     for (var i = locals.length - 1; i >= 0; i--) {
       if (locals[i].containsKey(name)) {
         final v = locals[i][name]!;
+
+        // If we have a non-empty frame reference chain (ie, we're inside one or more closures),
+        // we need to build an IndexList chain to access the variable from the
+        // correct stack frame
         if (frameRef.isNotEmpty) {
           var frOffset = frameRef[0].scopeFrameOffset;
           for (var i = 0; i < frameRef.length - 1; i++) {
@@ -275,12 +283,24 @@ class CompilerContext with ScopeContext {
           );
           allocNest.last++;
 
-          return v.copyWith(scopeFrameOffset: scopeFrameOffset++);
+          final frameListVar = Variable(
+            frOffset,
+            CoreTypes.list
+                .ref(this)
+                .copyWith(boxed: false, specifiedTypeArgs: [v.type]),
+          );
+          return v.copyWith(
+            scopeFrameOffset: scopeFrameOffset++,
+            frameRef: IndexedReference(frameListVar, index),
+          );
         }
         return v
           ..name = name
           ..frameIndex = i;
       }
+
+      // If this scope is a closure, we can reference the previous stack frame to get
+      // parent variables
       if (scopeDoesClose[i]) {
         frameRef.add(locals[i]['#prev']!);
       }

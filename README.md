@@ -517,7 +517,7 @@ may vary when bridging.
 | Prefixed imports | ✅ | [1 test](https://github.com/ethanblake4/dart_eval/blob/master/test/class_test#L568) |
 | Deferred imports | ❌ | N/A |
 | Functions | ✅ | [4 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L36) |
-| Anonymous functions | ✅ | [6 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L104) |
+| Anonymous functions | ✅ | [7 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L104) |
 | Arrow functions | ✅ | [2 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/function_test.dart#L237) |
 | Sync generators | ❌ | N/A |
 | Async generators | ❌ | N/A |

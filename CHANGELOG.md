@@ -1,3 +1,6 @@
+## 0.8.5
+- Fix variables not being updated from within closures.
+
 ## 0.8.4
 - Update analyzer to v8.
 - Fixed try without catch.
