@@ -28,6 +28,7 @@ class Variable {
     this.isFinal = false,
     this.concreteTypes = const [],
     CallingConvention? callingConvention,
+    this.frameRef,
   }) : callingConvention =
            callingConvention ??
            ((type == TypeRef(dartCoreFile, 'Function') && methodOffset == null)
@@ -158,6 +159,7 @@ class Variable {
     String? name,
     int? frameIndex,
     List<TypeRef>? concreteTypes,
+    IndexedReference? frameRef,
   }) {
     return Variable(
         scopeFrameOffset ?? this.scopeFrameOffset,
@@ -166,6 +168,7 @@ class Variable {
         isFinal: isFinal ?? this.isFinal,
         methodReturnType: methodReturnType ?? this.methodReturnType,
         concreteTypes: concreteTypes ?? this.concreteTypes,
+        frameRef: frameRef ?? this.frameRef,
       )
       ..name = name ?? this.name
       ..frameIndex = frameIndex ?? this.frameIndex;
@@ -182,6 +185,7 @@ class Variable {
     String? name,
     int? frameIndex,
     List<TypeRef>? concreteTypes,
+    IndexedReference? frameRef,
   }) {
     var uV = copyWith(
       scopeFrameOffset: scopeFrameOffset,
@@ -191,6 +195,7 @@ class Variable {
       name: name,
       frameIndex: frameIndex,
       concreteTypes: concreteTypes,
+      frameRef: frameRef,
     );
 
     if (uV.name != null && ctx != null) {

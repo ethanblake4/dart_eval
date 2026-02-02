@@ -1,7 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
-import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
@@ -174,6 +173,10 @@ class IdentifierReference implements Reference {
           'Cannot modify value of final variable $name',
           source,
         );
+      }
+
+      if (local.frameRef != null) {
+        return local.frameRef!.setValue(ctx, value);
       }
 
       ctx.pushOp(
