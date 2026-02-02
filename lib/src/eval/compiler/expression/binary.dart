@@ -33,13 +33,17 @@ final binaryOpMap = {
   TokenType.GT_GT: '>>',
   TokenType.BANG_EQ: '!=',
   TokenType.CARET: '^',
-  TokenType.TILDE_SLASH: '~/'
+  TokenType.TILDE_SLASH: '~/',
 };
 
 /// Compile a [BinaryExpression] to EVC bytecode
-Variable compileBinaryExpression(CompilerContext ctx, BinaryExpression e,
-    [TypeRef? boundType]) {
-  final method = binaryOpMap[e.operator.type] ??
+Variable compileBinaryExpression(
+  CompilerContext ctx,
+  BinaryExpression e, [
+  TypeRef? boundType,
+]) {
+  final method =
+      binaryOpMap[e.operator.type] ??
       (throw CompileError('Unknown binary operator ${e.operator.type}'));
   var L = compileExpression(e.leftOperand, ctx, boundType);
 
@@ -56,45 +60,64 @@ Variable compileBinaryExpression(CompilerContext ctx, BinaryExpression e,
 }
 
 Variable _compileShortCircuit(
-    CompilerContext ctx, Variable L, Expression right, String operator) {
+  CompilerContext ctx,
+  Variable L,
+  Expression right,
+  String operator,
+) {
   late TypeRef rightType;
   var outVar = BuiltinValue().push(ctx);
   L = L.boxIfNeeded(ctx);
-  ctx.pushOp(CopyValue.make(outVar.scopeFrameOffset, L.scopeFrameOffset),
-      CopyValue.LEN);
+  ctx.pushOp(
+    CopyValue.make(outVar.scopeFrameOffset, L.scopeFrameOffset),
+    CopyValue.LEN,
+  );
 
-  macroBranch(ctx, null, condition: (ctx) {
-    final Variable $comparison;
-    switch (operator) {
-      case '??':
-        $comparison = BuiltinValue().push(ctx).boxIfNeeded(ctx);
-        break;
-      case '&&':
-        $comparison = BuiltinValue(boolval: true).push(ctx).boxIfNeeded(ctx);
-        break;
-      case '||':
-        $comparison = BuiltinValue(boolval: false).push(ctx).boxIfNeeded(ctx);
-        break;
-      default:
-        throw CompileError('Unknown short-circuit operator $operator');
-    }
-    ctx.pushOp(CheckEq.make(L.scopeFrameOffset, $comparison.scopeFrameOffset),
-        CheckEq.LEN);
-    ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-    return Variable.alloc(ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
-  }, thenBranch: (ctx, rt) {
-    // Short-circuit: we only execute the RHS if the LHS is null
-    final R = compileExpression(right, ctx).boxIfNeeded(ctx);
-    rightType = R.type;
-    ctx.pushOp(CopyValue.make(outVar.scopeFrameOffset, R.scopeFrameOffset),
-        CopyValue.LEN);
-    return StatementInfo(-1);
-  });
+  macroBranch(
+    ctx,
+    null,
+    condition: (ctx) {
+      final Variable $comparison;
+      switch (operator) {
+        case '??':
+          $comparison = BuiltinValue().push(ctx).boxIfNeeded(ctx);
+          break;
+        case '&&':
+          $comparison = BuiltinValue(boolval: true).push(ctx).boxIfNeeded(ctx);
+          break;
+        case '||':
+          $comparison = BuiltinValue(boolval: false).push(ctx).boxIfNeeded(ctx);
+          break;
+        default:
+          throw CompileError('Unknown short-circuit operator $operator');
+      }
+      ctx.pushOp(
+        CheckEq.make(L.scopeFrameOffset, $comparison.scopeFrameOffset),
+        CheckEq.LEN,
+      );
+      ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
+      return Variable.alloc(
+        ctx,
+        CoreTypes.bool.ref(ctx).copyWith(boxed: false),
+      );
+    },
+    thenBranch: (ctx, rt) {
+      // Short-circuit: we only execute the RHS if the LHS is null
+      final R = compileExpression(right, ctx).boxIfNeeded(ctx);
+      rightType = R.type;
+      ctx.pushOp(
+        CopyValue.make(outVar.scopeFrameOffset, R.scopeFrameOffset),
+        CopyValue.LEN,
+      );
+      return StatementInfo(-1);
+    },
+  );
 
   final outType = operator == '??'
-      ? TypeRef.commonBaseType(
-              ctx, {L.type.copyWith(nullable: false), rightType})
-          .copyWith(boxed: true)
+      ? TypeRef.commonBaseType(ctx, {
+          L.type.copyWith(nullable: false),
+          rightType,
+        }).copyWith(boxed: true)
       : CoreTypes.bool.ref(ctx).copyWith(boxed: true);
 
   return outVar.copyWith(type: outType);

@@ -26,9 +26,9 @@ class Call implements EvcOp {
 /// Push a new frame onto the stack, populated with any current args
 class PushScope implements EvcOp {
   PushScope(Runtime runtime)
-      : sourceFile = runtime._readInt32(),
-        sourceOffset = runtime._readInt32(),
-        frName = runtime._readString();
+    : sourceFile = runtime._readInt32(),
+      sourceOffset = runtime._readInt32(),
+      frName = runtime._readString();
 
   PushScope.make(this.sourceFile, this.sourceOffset, this.frName);
 
@@ -102,8 +102,8 @@ class PopScope implements EvcOp {
 /// Jump to constant program offset if [_location] is not null
 class JumpIfNonNull implements EvcOp {
   JumpIfNonNull(Runtime exec)
-      : _location = exec._readInt16(),
-        _offset = exec._readInt32();
+    : _location = exec._readInt16(),
+      _offset = exec._readInt32();
 
   JumpIfNonNull.make(this._location, this._offset);
 
@@ -127,8 +127,8 @@ class JumpIfNonNull implements EvcOp {
 /// Jump to constant program offset if [_location] is false
 class JumpIfFalse implements EvcOp {
   JumpIfFalse(Runtime exec)
-      : _location = exec._readInt16(),
-        _offset = exec._readInt32();
+    : _location = exec._readInt16(),
+      _offset = exec._readInt32();
 
   JumpIfFalse.make(this._location, this._offset);
 
@@ -233,8 +233,8 @@ class Return implements EvcOp {
 /// See [Return] for additional insights.
 class ReturnAsync implements EvcOp {
   ReturnAsync(Runtime exec)
-      : _location = exec._readInt16(),
-        _completerOffset = exec._readInt16();
+    : _location = exec._readInt16(),
+      _completerOffset = exec._readInt16();
 
   ReturnAsync.make(this._location, this._completerOffset);
 
@@ -321,22 +321,61 @@ class PushFunctionPtr implements EvcOp {
     final posArgTypes = [for (final json in pAT) RuntimeType.fromJson(json)];
     final snAT = runtime.constantPool[args[3] as int] as List;
     final sortedNamedArgTypes = [
-      for (final json in snAT) RuntimeType.fromJson(json)
+      for (final json in snAT) RuntimeType.fromJson(json),
     ];
 
     runtime.frame[runtime.frameOffset++] = EvalFunctionPtr(
-        runtime.frame,
-        _offset,
-        args[0] as int,
-        posArgTypes,
-        (runtime.constantPool[args[2] as int] as List).cast(),
-        sortedNamedArgTypes);
+      runtime.frame,
+      _offset,
+      args[0] as int,
+      posArgTypes,
+      (runtime.constantPool[args[2] as int] as List).cast(),
+      sortedNamedArgTypes,
+    );
 
     runtime.args = [];
   }
 
   @override
   String toString() => 'PushFunctionPtr (@$_offset)';
+}
+
+class PushFunctionPtrCopyCapture implements EvcOp {
+  PushFunctionPtrCopyCapture(Runtime exec) : _offset = exec._readInt32();
+
+  PushFunctionPtrCopyCapture.make(this._offset);
+
+  static const int LEN = Evc.BASE_OPLEN + Evc.I32_LEN;
+
+  final int _offset;
+
+  @override
+  void run(Runtime runtime) {
+    final args = runtime.args;
+    final pAT = runtime.constantPool[args[1] as int] as List;
+    final posArgTypes = [for (final json in pAT) RuntimeType.fromJson(json)];
+    final snAT = runtime.constantPool[args[3] as int] as List;
+    final sortedNamedArgTypes = [
+      for (final json in snAT) RuntimeType.fromJson(json),
+    ];
+
+    runtime.frame[runtime.frameOffset++] = EvalFunctionPtr(
+      // Copy the captured frame here. For closures in loops, this ensures that each closure
+      // gets its own copy of the captured variables, rather than all closures sharing
+      // the same captured frame which changes over time.
+      [...runtime.frame],
+      _offset,
+      args[0] as int,
+      posArgTypes,
+      (runtime.constantPool[args[2] as int] as List).cast(),
+      sortedNamedArgTypes,
+    );
+
+    runtime.args = [];
+  }
+
+  @override
+  String toString() => 'PushFunctionPtrCopyCapture (@$_offset)';
 }
 
 class Try implements EvcOp {
@@ -395,8 +434,8 @@ class PopCatch implements EvcOp {
 
 class Assert implements EvcOp {
   Assert(Runtime exec)
-      : _valueOffset = exec._readInt16(),
-        _exceptionOffset = exec._readInt16();
+    : _valueOffset = exec._readInt16(),
+      _exceptionOffset = exec._readInt16();
 
   Assert.make(this._valueOffset, this._exceptionOffset);
 

@@ -14,17 +14,20 @@ import 'errors.dart';
 /// to fill in information such as [extendsType], [implementsType], and
 /// [withType].
 class TypeRef {
-  const TypeRef(this.file, this.name,
-      {this.extendsType,
-      this.implementsType = const [],
-      this.withType = const [],
-      this.genericParams = const [],
-      this.specifiedTypeArgs = const [],
-      this.recordFields = const [],
-      this.resolved = false,
-      this.functionType,
-      this.boxed = true,
-      this.nullable = false});
+  const TypeRef(
+    this.file,
+    this.name, {
+    this.extendsType,
+    this.implementsType = const [],
+    this.withType = const [],
+    this.genericParams = const [],
+    this.specifiedTypeArgs = const [],
+    this.recordFields = const [],
+    this.resolved = false,
+    this.functionType,
+    this.boxed = true,
+    this.nullable = false,
+  });
 
   /// Cache mapping file/library IDs to type names to [TypeRef]s.
   static final _cache = <int, Map<String, TypeRef>>{};
@@ -47,8 +50,12 @@ class TypeRef {
 
   /// Create and cache a [TypeRef] given a [file] and [name].
   /// This type ref contains only basic info and can be resolved later.
-  factory TypeRef.cache(CompilerContext ctx, int file, String name,
-      {int? fileRef}) {
+  factory TypeRef.cache(
+    CompilerContext ctx,
+    int file,
+    String name, {
+    int? fileRef,
+  }) {
     TypeRef $type;
     if (!_cache.containsKey(file)) {
       _cache[file] = {};
@@ -85,8 +92,9 @@ class TypeRef {
     if (types.length == 1) {
       return makeNullable ? types.first.copyWith(nullable: true) : types.first;
     }
-    final chains =
-        types.map((e) => e.resolveTypeChain(ctx).getTypeChain(ctx)).toList();
+    final chains = types
+        .map((e) => e.resolveTypeChain(ctx).getTypeChain(ctx))
+        .toList();
 
     // Cross-level type deduplication
     for (final chain in chains) {
@@ -142,7 +150,10 @@ class TypeRef {
 
   /// Create a [TypeRef] from a [TypeAnnotation] and library ID.
   factory TypeRef.fromAnnotation(
-      CompilerContext ctx, int library, TypeAnnotation typeAnnotation) {
+    CompilerContext ctx,
+    int library,
+    TypeAnnotation typeAnnotation,
+  ) {
     if (typeAnnotation is GenericFunctionType) {
       return CoreTypes.function.ref(ctx);
     }
@@ -154,15 +165,17 @@ class TypeRef {
       for (var i = 0; i < typeAnnotation.positionalFields.length; i++) {
         final field = typeAnnotation.positionalFields[i];
         final fType = TypeRef.fromAnnotation(ctx, library, field.type);
-        fields
-            .add(RecordParameterType('\$${positionalFields++}', fType, false));
+        fields.add(
+          RecordParameterType('\$${positionalFields++}', fType, false),
+        );
         name += '$fType';
         if (i < typeAnnotation.positionalFields.length - 1) {
           name += ',';
         }
       }
 
-      final namedFields = typeAnnotation.namedFields?.fields ??
+      final namedFields =
+          typeAnnotation.namedFields?.fields ??
           <RecordTypeAnnotationNamedField>[];
       if (namedFields.isNotEmpty) {
         name += ',{';
@@ -180,12 +193,15 @@ class TypeRef {
         name += '}';
       }
       name += '>';
-      return TypeRef(-1, name,
-          recordFields: fields,
-          extendsType: CoreTypes.record.ref(ctx),
-          resolved: true,
-          boxed: false,
-          nullable: typeAnnotation.question != null);
+      return TypeRef(
+        -1,
+        name,
+        recordFields: fields,
+        extendsType: CoreTypes.record.ref(ctx),
+        resolved: true,
+        boxed: false,
+        nullable: typeAnnotation.question != null,
+      );
     }
     typeAnnotation as NamedType;
     final n = typeAnnotation.name.stringValue ?? typeAnnotation.name.value();
@@ -193,7 +209,11 @@ class TypeRef {
         ctx.temporaryTypes[library]?[n] ?? ctx.visibleTypes[library]?[n];
     if (unspecifiedType == null) {
       throw CompileError(
-          'Unknown type $n', typeAnnotation.parent, library, ctx);
+        'Unknown type $n',
+        typeAnnotation.parent,
+        library,
+        ctx,
+      );
     }
     final typeArgs = typeAnnotation.typeArguments;
     if (typeArgs != null) {
@@ -202,30 +222,37 @@ class TypeRef {
         resolved.add(TypeRef.fromAnnotation(ctx, library, arg));
       }
       return unspecifiedType.copyWith(
-          specifiedTypeArgs: resolved,
-          nullable: typeAnnotation.question != null);
+        specifiedTypeArgs: resolved,
+        nullable: typeAnnotation.question != null,
+      );
     }
     return unspecifiedType.copyWith(nullable: typeAnnotation.question != null);
   }
 
   /// Create a [TypeRef] from a [BridgeTypeAnnotation].
   factory TypeRef.fromBridgeAnnotation(
-      CompilerContext ctx, BridgeTypeAnnotation typeAnnotation,
-      {TypeRef? specifyingType,
-      TypeRef? specifiedType,
-      bool staticSource = true}) {
-    return TypeRef.fromBridgeTypeRef(ctx, typeAnnotation.type,
-            staticSource: staticSource,
-            specifyingType: specifyingType,
-            specifiedType: specifiedType)
-        .copyWith(nullable: typeAnnotation.nullable);
+    CompilerContext ctx,
+    BridgeTypeAnnotation typeAnnotation, {
+    TypeRef? specifyingType,
+    TypeRef? specifiedType,
+    bool staticSource = true,
+  }) {
+    return TypeRef.fromBridgeTypeRef(
+      ctx,
+      typeAnnotation.type,
+      staticSource: staticSource,
+      specifyingType: specifyingType,
+      specifiedType: specifiedType,
+    ).copyWith(nullable: typeAnnotation.nullable);
   }
 
   factory TypeRef.fromBridgeTypeRef(
-      CompilerContext ctx, BridgeTypeRef typeReference,
-      {bool staticSource = true,
-      TypeRef? specifyingType,
-      TypeRef? specifiedType}) {
+    CompilerContext ctx,
+    BridgeTypeRef typeReference, {
+    bool staticSource = true,
+    TypeRef? specifyingType,
+    TypeRef? specifiedType,
+  }) {
     final cacheId = typeReference.cacheId;
     if (cacheId != null) {
       final t = ctx.runtimeTypeList[cacheId];
@@ -240,16 +267,27 @@ class TypeRef {
     if (spec != null) {
       final specifiedTypeArgs = <TypeRef>[];
       for (final arg in typeReference.typeArgs) {
-        specifiedTypeArgs.add(TypeRef.fromBridgeAnnotation(ctx, arg,
-            staticSource: staticSource, specifiedType: specifiedType));
+        specifiedTypeArgs.add(
+          TypeRef.fromBridgeAnnotation(
+            ctx,
+            arg,
+            staticSource: staticSource,
+            specifiedType: specifiedType,
+          ),
+        );
       }
-      final lib = ctx.libraryMap[spec.library] ??
+      final lib =
+          ctx.libraryMap[spec.library] ??
           (throw CompileError('Bridge: cannot find library ${spec.library}'));
-      final typeSpec = ctx.visibleTypes[lib]![spec.name] ??
+      final typeSpec =
+          ctx.visibleTypes[lib]![spec.name] ??
           (throw CompileError(
-              'Bridge: cannot find type ${spec.name} in library ${spec.library}'));
+            'Bridge: cannot find type ${spec.name} in library ${spec.library}',
+          ));
       return typeSpec.copyWith(
-          specifiedTypeArgs: specifiedTypeArgs, boxed: true);
+        specifiedTypeArgs: specifiedTypeArgs,
+        boxed: true,
+      );
     }
     final ref = typeReference.ref;
     if (ref != null) {
@@ -264,16 +302,19 @@ class TypeRef {
           ctx.topLevelDeclarationsMap[specifiedType.file]![specifiedType.name]!;
       if (!declaration.isBridge) {
         throw CompileError(
-            'Trying to resolve bridged generic type $ref on $specifiedType, which is not a bridge class');
+          'Trying to resolve bridged generic type $ref on $specifiedType, which is not a bridge class',
+        );
       }
       final dec = declaration.bridge!;
       if (dec is! BridgeClassDef) {
         throw CompileError(
-            'Trying to resolve bridged generic type $ref on $specifiedType, which is not a bridge class');
+          'Trying to resolve bridged generic type $ref on $specifiedType, which is not a bridge class',
+        );
       }
 
-      final genericIndex =
-          dec.type.generics.keys.toList().indexWhere((key) => key == ref);
+      final genericIndex = dec.type.generics.keys.toList().indexWhere(
+        (key) => key == ref,
+      );
       if (specifiedType.specifiedTypeArgs.isNotEmpty) {
         return specifiedType.specifiedTypeArgs[genericIndex];
       }
@@ -284,8 +325,9 @@ class TypeRef {
           : TypeRef.fromBridgeTypeRef(ctx, $extends);
 
       if (specifyingType != null) {
-        final syDeclaration = ctx.topLevelDeclarationsMap[specifyingType.file]![
-            specifyingType.name]!;
+        final syDeclaration =
+            ctx.topLevelDeclarationsMap[specifyingType.file]![specifyingType
+                .name]!;
         final syDec = syDeclaration.declaration!;
 
         if (syDec is! ClassDeclaration) {
@@ -297,12 +339,16 @@ class TypeRef {
           final declaredType =
               syExtends.superclass.typeArguments?.arguments[genericIndex];
           if (declaredType != null) {
-            final resolvedDeclaredType =
-                TypeRef.fromAnnotation(ctx, specifyingType.file, declaredType);
+            final resolvedDeclaredType = TypeRef.fromAnnotation(
+              ctx,
+              specifyingType.file,
+              declaredType,
+            );
             if (!resolvedDeclaredType.isAssignableTo(ctx, boundType)) {
               throw CompileError(
-                  "Type argument $resolvedDeclaredType does not conform to type parameter $ref's"
-                  "bound ($boundType)");
+                "Type argument $resolvedDeclaredType does not conform to type parameter $ref's"
+                "bound ($boundType)",
+              );
             }
             return resolvedDeclaredType;
           }
@@ -313,11 +359,15 @@ class TypeRef {
     }
     final gft = typeReference.gft;
     if (gft != null) {
-      return CoreTypes.function.ref(ctx).copyWith(
-          functionType: EvalFunctionType.fromBridgeFunctionDef(ctx, gft));
+      return CoreTypes.function
+          .ref(ctx)
+          .copyWith(
+            functionType: EvalFunctionType.fromBridgeFunctionDef(ctx, gft),
+          );
     }
     throw CompileError(
-        'No support for looking up types by other bridge annotation types');
+      'No support for looking up types by other bridge annotation types',
+    );
   }
 
   static TypeRef? $this(CompilerContext ctx) {
@@ -328,16 +378,24 @@ class TypeRef {
   }
 
   factory TypeRef.lookupDeclaration(
-      CompilerContext ctx, int library, NamedCompilationUnitMember dec,
-      {String? prefix}) {
-    return ctx.visibleTypes[library]![
-            '${prefix != null ? '$prefix.' : ''}${dec.name.lexeme}'] ??
+    CompilerContext ctx,
+    int library,
+    NamedCompilationUnitMember dec, {
+    String? prefix,
+  }) {
+    return ctx
+            .visibleTypes[library]!['${prefix != null ? '$prefix.' : ''}${dec.name.lexeme}'] ??
         (throw CompileError('Class/enum ${dec.name.value()} not found'));
   }
 
   static TypeRef? lookupFieldType(
-      CompilerContext ctx, TypeRef $class, String field,
-      {bool forFieldFormal = false, bool forSet = false, AstNode? source}) {
+    CompilerContext ctx,
+    TypeRef $class,
+    String field, {
+    bool forFieldFormal = false,
+    bool forSet = false,
+    AstNode? source,
+  }) {
     if ($class == CoreTypes.dynamic.ref(ctx)) {
       return null;
     }
@@ -351,8 +409,9 @@ class TypeRef {
     }
 
     if ($class.recordFields.isNotEmpty) {
-      final field0 =
-          $class.recordFields.firstWhereOrNull((f) => f.name == field);
+      final field0 = $class.recordFields.firstWhereOrNull(
+        (f) => f.name == field,
+      );
       if (field0 != null) {
         return field0.type.copyWith(boxed: true);
       }
@@ -365,8 +424,9 @@ class TypeRef {
           final f = $declarations['$field*s'];
           if (f is! MethodDeclaration) {
             throw CompileError(
-                'Cannot query setter type of F${$class.file}:${$class.name}.$field, which is not a method',
-                source);
+              'Cannot query setter type of F${$class.file}:${$class.name}.$field, which is not a method',
+              source,
+            );
           }
           final parameter =
               f.parameters!.parameters.first as SimpleFormalParameter;
@@ -384,18 +444,23 @@ class TypeRef {
         }
         if (f is! VariableDeclaration) {
           throw CompileError(
-              'Cannot query field type of ${$class.name}.$field, which is not a field',
-              source);
+            'Cannot query field type of ${$class.name}.$field, which is not a field',
+            source,
+          );
         }
         final annotation = (f.parent as VariableDeclarationList).type;
         if (annotation != null) {
-          return TypeRef.fromAnnotation(ctx, $class.file, annotation)
-              .copyWith(boxed: true);
+          return TypeRef.fromAnnotation(
+            ctx,
+            $class.file,
+            annotation,
+          ).copyWith(boxed: true);
         }
         if (ctx.inferredFieldTypes.containsKey($class.file) &&
             ctx.inferredFieldTypes[$class.file]!.containsKey($class.name) &&
-            ctx.inferredFieldTypes[$class.file]![$class.name]!
-                .containsKey(field)) {
+            ctx.inferredFieldTypes[$class.file]![$class.name]!.containsKey(
+              field,
+            )) {
           return ctx.inferredFieldTypes[$class.file]![$class.name]![field]!;
         }
         return null;
@@ -403,8 +468,9 @@ class TypeRef {
         final f = $declarations['$field*g'];
         if (f is! MethodDeclaration) {
           throw CompileError(
-              'Cannot query getter type of F${$class.file}:${$class.name}.$field, which is not a method',
-              source);
+            'Cannot query getter type of F${$class.file}:${$class.name}.$field, which is not a method',
+            source,
+          );
         }
         final annotation = f.returnType;
         if (annotation == null) {
@@ -419,52 +485,74 @@ class TypeRef {
       final br = dec.bridge as BridgeClassDef;
       final fd = br.fields[field];
       if (fd != null) {
-        return TypeRef.fromBridgeAnnotation(ctx, fd.type,
-            specifiedType: $class);
+        return TypeRef.fromBridgeAnnotation(
+          ctx,
+          fd.type,
+          specifiedType: $class,
+        );
       }
       final get = br.getters[field];
       if (get != null) {
-        return TypeRef.fromBridgeAnnotation(ctx, get.functionDescriptor.returns,
-            specifiedType: $class);
+        return TypeRef.fromBridgeAnnotation(
+          ctx,
+          get.functionDescriptor.returns,
+          specifiedType: $class,
+        );
       }
       final set = br.getters[field];
       if (set != null) {
-        return TypeRef.fromBridgeAnnotation(ctx, set.functionDescriptor.returns,
-            specifiedType: $class);
+        return TypeRef.fromBridgeAnnotation(
+          ctx,
+          set.functionDescriptor.returns,
+          specifiedType: $class,
+        );
       }
       final $extends = br.type.$extends;
       if ($extends == null) {
         throw CompileError(
-            'Field $field not found in bridge class ${$class}', source);
+          'Field $field not found in bridge class ${$class}',
+          source,
+        );
       } else {
         final $super = TypeRef.fromBridgeTypeRef(ctx, $extends);
         return TypeRef.lookupFieldType(
-            ctx, $super.inheritTypeArgsFrom(ctx, $class), field,
-            source: source);
+          ctx,
+          $super.inheritTypeArgsFrom(ctx, $class),
+          field,
+          source: source,
+        );
       }
     } else if (dec.declaration is EnumDeclaration && field == 'index') {
       return CoreTypes.int.ref(ctx);
     } else {
       if (forFieldFormal) {
         throw CompileError(
-            'Field formals did not find field $field in class ${$class}',
-            source);
+          'Field formals did not find field $field in class ${$class}',
+          source,
+        );
       }
       final dec0 = dec.declaration as NamedCompilationUnitMember;
       final $extends = dec0 is ClassDeclaration ? dec0.extendsClause : null;
       if ($extends == null) {
         if ($class == CoreTypes.object.ref(ctx)) {
           throw CompileError(
-              'Field $field not found in class ${$class} or its superclasses',
-              source);
+            'Field $field not found in class ${$class} or its superclasses',
+            source,
+          );
         }
         return TypeRef.lookupFieldType(ctx, CoreTypes.object.ref(ctx), field);
       } else {
-        final $super = ctx.visibleTypes[$class.file]![
-            $extends.superclass.name.stringValue ??
+        final $super =
+            ctx.visibleTypes[$class.file]![$extends
+                    .superclass
+                    .name
+                    .stringValue ??
                 $extends.superclass.name.value()]!;
         return TypeRef.lookupFieldType(
-            ctx, $super.inheritTypeArgsFrom(ctx, $class), field);
+          ctx,
+          $super.inheritTypeArgsFrom(ctx, $class),
+          field,
+        );
       }
     }
   }
@@ -472,21 +560,26 @@ class TypeRef {
   /// Resolve the full type chain of this [TypeRef]. If it or its supertypes
   /// have already been resolved, it will return a copy of the resolved type
   /// from the cache.
-  TypeRef resolveTypeChain(CompilerContext ctx,
-      {int recursionGuard = 0,
-      Set<TypeRef> stack = const {},
-      AstNode? source}) {
+  TypeRef resolveTypeChain(
+    CompilerContext ctx, {
+    int recursionGuard = 0,
+    Set<TypeRef> stack = const {},
+    AstNode? source,
+  }) {
     if (recursionGuard > 500) {
       throw CompileError(
-          'Reached max limit on recursion while resolving types. '
-          'Your type hierarchy is probably recursive (caught while resolving $this)');
+        'Reached max limit on recursion while resolving types. '
+        'Your type hierarchy is probably recursive (caught while resolving $this)',
+      );
     }
     final stack0 = {...stack, this};
     final rg = recursionGuard + 1;
     final resolvedSpecifiedTypeArgs = specifiedTypeArgs
-        .map((e) => stack.contains(e)
-            ? e
-            : e.resolveTypeChain(ctx, recursionGuard: rg, stack: stack0))
+        .map(
+          (e) => stack.contains(e)
+              ? e
+              : e.resolveTypeChain(ctx, recursionGuard: rg, stack: stack0),
+        )
         .toList();
     if (resolved) {
       return copyWith(specifiedTypeArgs: resolvedSpecifiedTypeArgs);
@@ -494,16 +587,19 @@ class TypeRef {
 
     if (recordFields.isNotEmpty) {
       return copyWith(
-          resolved: true,
-          extendsType: CoreTypes.record.ref(ctx),
-          specifiedTypeArgs: resolvedSpecifiedTypeArgs,
-          boxed: false);
+        resolved: true,
+        extendsType: CoreTypes.record.ref(ctx),
+        specifiedTypeArgs: resolvedSpecifiedTypeArgs,
+        boxed: false,
+      );
     }
 
     final $cached = _cache[file]![name]!;
     if ($cached.resolved) {
       return $cached.copyWith(
-          boxed: boxed, specifiedTypeArgs: resolvedSpecifiedTypeArgs);
+        boxed: boxed,
+        specifiedTypeArgs: resolvedSpecifiedTypeArgs,
+      );
     }
 
     TypeRef? $super;
@@ -529,23 +625,47 @@ class TypeRef {
         final type = br.type;
 
         if (type.$extends != null) {
-          $super = TypeRef.fromBridgeTypeRef(ctx, type.$extends!,
-                  specifiedType: this)
-              .resolveTypeChain(ctx,
-                  recursionGuard: rg, stack: stack0, source: source);
+          $super =
+              TypeRef.fromBridgeTypeRef(
+                ctx,
+                type.$extends!,
+                specifiedType: this,
+              ).resolveTypeChain(
+                ctx,
+                recursionGuard: rg,
+                stack: stack0,
+                source: source,
+              );
         }
 
         for (final $i in type.$implements) {
           $implements.add(
-              TypeRef.fromBridgeTypeRef(ctx, $i, specifiedType: this)
-                  .resolveTypeChain(ctx,
-                      recursionGuard: rg, stack: stack0, source: source));
+            TypeRef.fromBridgeTypeRef(
+              ctx,
+              $i,
+              specifiedType: this,
+            ).resolveTypeChain(
+              ctx,
+              recursionGuard: rg,
+              stack: stack0,
+              source: source,
+            ),
+          );
         }
 
         for (final $i in type.$with) {
-          $with.add(TypeRef.fromBridgeTypeRef(ctx, $i, specifiedType: this)
-              .resolveTypeChain(ctx,
-                  recursionGuard: rg, stack: stack0, source: source));
+          $with.add(
+            TypeRef.fromBridgeTypeRef(
+              ctx,
+              $i,
+              specifiedType: this,
+            ).resolveTypeChain(
+              ctx,
+              recursionGuard: rg,
+              stack: stack0,
+              source: source,
+            ),
+          );
         }
 
         for (final $g in type.generics.entries) {
@@ -553,10 +673,17 @@ class TypeRef {
           final type0 = gExtends == null
               ? null
               : TypeRef.fromBridgeTypeRef(ctx, gExtends);
-          generics.add(GenericParam(
+          generics.add(
+            GenericParam(
               $g.key,
-              type0?.resolveTypeChain(ctx,
-                  recursionGuard: rg, stack: stack0, source: source)));
+              type0?.resolveTypeChain(
+                ctx,
+                recursionGuard: rg,
+                stack: stack0,
+                source: source,
+              ),
+            ),
+          );
         }
       }
     } else {
@@ -574,23 +701,34 @@ class TypeRef {
       superName = extendsClause?.superclass;
       withNames = withClause?.mixinTypes.toList() ?? [];
       implementsNames = implementsClause?.interfaces.toList() ?? [];
-      generics = typeParameters?.typeParameters
-              .map((t) => GenericParam(
+      generics =
+          typeParameters?.typeParameters
+              .map(
+                (t) => GenericParam(
                   t.name.lexeme,
                   t.bound == null
                       ? null
-                      : TypeRef.fromAnnotation(ctx, file, t.bound!)))
+                      : TypeRef.fromAnnotation(ctx, file, t.bound!),
+                ),
+              )
               .toList() ??
           [];
     }
 
     if (superName != null) {
-      final typeParams = superName.typeArguments?.arguments
+      final typeParams =
+          superName.typeArguments?.arguments
               .map((a) => TypeRef.fromAnnotation(ctx, file, a))
-              .map((a) => stack.contains(a)
-                  ? a
-                  : a.resolveTypeChain(ctx,
-                      recursionGuard: rg, stack: stack0, source: source))
+              .map(
+                (a) => stack.contains(a)
+                    ? a
+                    : a.resolveTypeChain(
+                        ctx,
+                        recursionGuard: rg,
+                        stack: stack0,
+                        source: source,
+                      ),
+              )
               .toList() ??
           [];
       final prefix = superName.importPrefix;
@@ -598,10 +736,16 @@ class TypeRef {
       $super =
           (ctx.visibleTypes[file]!['$superPrefix${superName.name.lexeme}'] ??
                   (throw CompileError(
-                      'Superclass ${superName.name.lexeme} not found', source)))
+                    'Superclass ${superName.name.lexeme} not found',
+                    source,
+                  )))
               .copyWith(specifiedTypeArgs: typeParams)
-              .resolveTypeChain(ctx,
-                  recursionGuard: rg, stack: stack0, source: source);
+              .resolveTypeChain(
+                ctx,
+                recursionGuard: rg,
+                stack: stack0,
+                source: source,
+              );
     } else if (declaration.declaration is EnumDeclaration) {
       $super = CoreTypes.enumType.ref(ctx);
     } else if (!declaration.isBridge) {
@@ -609,43 +753,72 @@ class TypeRef {
     }
 
     for (final withName in withNames) {
-      final typeParams = withName.typeArguments?.arguments
+      final typeParams =
+          withName.typeArguments?.arguments
               .map((a) => TypeRef.fromAnnotation(ctx, file, a))
-              .map((a) => stack.contains(a)
-                  ? a
-                  : a.resolveTypeChain(ctx,
-                      recursionGuard: rg, stack: stack0, source: source))
+              .map(
+                (a) => stack.contains(a)
+                    ? a
+                    : a.resolveTypeChain(
+                        ctx,
+                        recursionGuard: rg,
+                        stack: stack0,
+                        source: source,
+                      ),
+              )
               .toList() ??
           [];
-      $with.add(ctx.visibleTypes[file]![withName.name.value()]!
-          .copyWith(specifiedTypeArgs: typeParams)
-          .resolveTypeChain(ctx,
-              recursionGuard: rg, stack: stack0, source: source));
+      $with.add(
+        ctx.visibleTypes[file]![withName.name.value()]!
+            .copyWith(specifiedTypeArgs: typeParams)
+            .resolveTypeChain(
+              ctx,
+              recursionGuard: rg,
+              stack: stack0,
+              source: source,
+            ),
+      );
     }
 
     for (final implementsName in implementsNames) {
-      final typeParams = implementsName.typeArguments?.arguments
+      final typeParams =
+          implementsName.typeArguments?.arguments
               .map((a) => TypeRef.fromAnnotation(ctx, file, a))
-              .map((a) => stack.contains(a)
-                  ? a
-                  : a.resolveTypeChain(ctx,
-                      recursionGuard: rg, stack: stack0, source: source))
+              .map(
+                (a) => stack.contains(a)
+                    ? a
+                    : a.resolveTypeChain(
+                        ctx,
+                        recursionGuard: rg,
+                        stack: stack0,
+                        source: source,
+                      ),
+              )
               .toList() ??
           [];
-      $implements.add(ctx.visibleTypes[file]![implementsName.name.value()]!
-          .copyWith(specifiedTypeArgs: typeParams)
-          .resolveTypeChain(ctx,
-              recursionGuard: rg, stack: stack0, source: source));
+      $implements.add(
+        ctx.visibleTypes[file]![implementsName.name.value()]!
+            .copyWith(specifiedTypeArgs: typeParams)
+            .resolveTypeChain(
+              ctx,
+              recursionGuard: rg,
+              stack: stack0,
+              source: source,
+            ),
+      );
     }
 
-    final resolvedRef = TypeRef(file, name,
-        extendsType: $super,
-        withType: $with,
-        implementsType: $implements,
-        genericParams: generics,
-        resolved: true,
-        boxed: boxed,
-        specifiedTypeArgs: resolvedSpecifiedTypeArgs);
+    final resolvedRef = TypeRef(
+      file,
+      name,
+      extendsType: $super,
+      withType: $with,
+      implementsType: $implements,
+      genericParams: generics,
+      resolved: true,
+      boxed: boxed,
+      specifiedTypeArgs: resolvedSpecifiedTypeArgs,
+    );
 
     for (final $file in _inverseCache[this]!) {
       ctx.visibleTypes[$file]![name] ??= resolvedRef;
@@ -662,7 +835,7 @@ class TypeRef {
   Set<int> getRuntimeIndices(CompilerContext ctx) {
     return {
       ctx.typeRefIndexMap[this]!,
-      for (final a in allSupertypes) ...a.getRuntimeIndices(ctx)
+      for (final a in allSupertypes) ...a.getRuntimeIndices(ctx),
     };
   }
 
@@ -671,13 +844,16 @@ class TypeRef {
     return RuntimeType(ctx.typeRefIndexMap[this]!, ta);
   }
 
-  List<TypeRef> get allSupertypes =>
-      [if (extendsType != null) extendsType!, ...implementsType, ...withType];
+  List<TypeRef> get allSupertypes => [
+    if (extendsType != null) extendsType!,
+    ...implementsType,
+    ...withType,
+  ];
 
   List<TypeRef> get extendsChain => [
-        if (extendsType != null) extendsType!,
-        if (extendsType != null) ...extendsType!.extendsChain
-      ];
+    if (extendsType != null) extendsType!,
+    if (extendsType != null) ...extendsType!.extendsChain,
+  ];
 
   List<List<TypeRef>> getTypeChain(CompilerContext ctx) {
     final l1extends = extendsType;
@@ -685,7 +861,7 @@ class TypeRef {
         extendsType?.resolveTypeChain(ctx).getTypeChain(ctx) ?? [];
     final chain = <List<TypeRef>>[
       if (l1extends != null && l2extends.isEmpty) [l1extends],
-      ...l2extends
+      ...l2extends,
     ];
 
     for (final imp in implementsType.reversed) {
@@ -718,7 +894,7 @@ class TypeRef {
 
     return [
       [this],
-      ...chain
+      ...chain,
     ];
   }
 
@@ -735,8 +911,12 @@ class TypeRef {
   ///
   /// You most likely won't need to use [overrideGenerics]: it uses the
   /// type arguments by default, as it should.
-  bool isAssignableTo(CompilerContext ctx, TypeRef slot,
-      {List<TypeRef>? overrideGenerics, bool forceAllowDynamic = true}) {
+  bool isAssignableTo(
+    CompilerContext ctx,
+    TypeRef slot, {
+    List<TypeRef>? overrideGenerics,
+    bool forceAllowDynamic = true,
+  }) {
     if (forceAllowDynamic &&
         (this == CoreTypes.dynamic.ref(ctx) ||
             slot == CoreTypes.dynamic.ref(ctx))) {
@@ -761,8 +941,12 @@ class TypeRef {
     }
 
     for (final type in resolveTypeChain(ctx).allSupertypes) {
-      if (type.isAssignableTo(ctx, slot,
-          overrideGenerics: generics, forceAllowDynamic: false)) {
+      if (type.isAssignableTo(
+        ctx,
+        slot,
+        overrideGenerics: generics,
+        forceAllowDynamic: false,
+      )) {
         return true;
       }
     }
@@ -788,30 +972,34 @@ class TypeRef {
     return resolveTypeChain(ctx).copyWith(specifiedTypeArgs: resolvedGenerics);
   }
 
-  TypeRef copyWith(
-      {int? file,
-      String? name,
-      TypeRef? extendsType,
-      List<TypeRef>? implementsType,
-      List<TypeRef>? withType,
-      List<GenericParam>? genericParams,
-      List<TypeRef>? specifiedTypeArgs,
-      List<RecordParameterType>? recordFields,
-      EvalFunctionType? functionType,
-      bool? boxed,
-      bool? resolved,
-      bool? nullable}) {
-    return TypeRef(file ?? this.file, name ?? this.name,
-        extendsType: extendsType ?? this.extendsType,
-        implementsType: implementsType ?? this.implementsType,
-        withType: withType ?? this.withType,
-        genericParams: genericParams ?? this.genericParams,
-        specifiedTypeArgs: specifiedTypeArgs ?? this.specifiedTypeArgs,
-        functionType: functionType ?? this.functionType,
-        recordFields: recordFields ?? this.recordFields,
-        boxed: boxed ?? this.boxed,
-        resolved: resolved ?? this.resolved,
-        nullable: nullable ?? this.nullable);
+  TypeRef copyWith({
+    int? file,
+    String? name,
+    TypeRef? extendsType,
+    List<TypeRef>? implementsType,
+    List<TypeRef>? withType,
+    List<GenericParam>? genericParams,
+    List<TypeRef>? specifiedTypeArgs,
+    List<RecordParameterType>? recordFields,
+    EvalFunctionType? functionType,
+    bool? boxed,
+    bool? resolved,
+    bool? nullable,
+  }) {
+    return TypeRef(
+      file ?? this.file,
+      name ?? this.name,
+      extendsType: extendsType ?? this.extendsType,
+      implementsType: implementsType ?? this.implementsType,
+      withType: withType ?? this.withType,
+      genericParams: genericParams ?? this.genericParams,
+      specifiedTypeArgs: specifiedTypeArgs ?? this.specifiedTypeArgs,
+      functionType: functionType ?? this.functionType,
+      recordFields: recordFields ?? this.recordFields,
+      boxed: boxed ?? this.boxed,
+      resolved: resolved ?? this.resolved,
+      nullable: nullable ?? this.nullable,
+    );
   }
 
   @override
@@ -847,8 +1035,10 @@ class TypeRef {
   }
 
   static void loadTemporaryTypes(
-      CompilerContext ctx, List<TypeParameter>? typeParams,
-      [int? library]) {
+    CompilerContext ctx,
+    List<TypeParameter>? typeParams, [
+    int? library,
+  ]) {
     if (typeParams != null) {
       for (final param in typeParams) {
         ctx.temporaryTypes[library ?? ctx.library] ??= {};
@@ -858,8 +1048,8 @@ class TypeRef {
           ctx.temporaryTypes[library ?? ctx.library]![name] =
               TypeRef.fromAnnotation(ctx, library ?? ctx.library, bound);
         } else {
-          ctx.temporaryTypes[library ?? ctx.library]![name] =
-              CoreTypes.dynamic.ref(ctx);
+          ctx.temporaryTypes[library ?? ctx.library]![name] = CoreTypes.dynamic
+              .ref(ctx);
         }
       }
     }
@@ -880,9 +1070,13 @@ class RecordParameterType {
 }
 
 abstract class ReturnType {
-  AlwaysReturnType? toAlwaysReturnType(CompilerContext ctx, TypeRef? targetType,
-      List<TypeRef?> argTypes, Map<String, TypeRef?> namedArgTypes,
-      {List<TypeRef> typeArgs = const []});
+  AlwaysReturnType? toAlwaysReturnType(
+    CompilerContext ctx,
+    TypeRef? targetType,
+    List<TypeRef?> argTypes,
+    Map<String, TypeRef?> namedArgTypes, {
+    List<TypeRef> typeArgs = const [],
+  });
 }
 
 class BridgedReturnType implements ReturnType {
@@ -892,9 +1086,13 @@ class BridgedReturnType implements ReturnType {
   BridgedReturnType(this.spec, this.nullable);
 
   @override
-  AlwaysReturnType? toAlwaysReturnType(CompilerContext ctx, TypeRef? targetType,
-      List<TypeRef?> argTypes, Map<String, TypeRef?> namedArgTypes,
-      {List<TypeRef> typeArgs = const []}) {
+  AlwaysReturnType? toAlwaysReturnType(
+    CompilerContext ctx,
+    TypeRef? targetType,
+    List<TypeRef?> argTypes,
+    Map<String, TypeRef?> namedArgTypes, {
+    List<TypeRef> typeArgs = const [],
+  }) {
     final rt = TypeRef.fromBridgeTypeRef(ctx, BridgeTypeRef(spec));
     return AlwaysReturnType(rt, nullable);
   }
@@ -903,32 +1101,50 @@ class BridgedReturnType implements ReturnType {
 class AlwaysReturnType implements ReturnType {
   const AlwaysReturnType(this.type, this.nullable);
 
-  factory AlwaysReturnType.fromAnnotation(CompilerContext ctx, int library,
-      TypeAnnotation? typeAnnotation, TypeRef? fallback) {
+  factory AlwaysReturnType.fromAnnotation(
+    CompilerContext ctx,
+    int library,
+    TypeAnnotation? typeAnnotation,
+    TypeRef? fallback,
+  ) {
     final rt = typeAnnotation;
     if (rt != null) {
       return AlwaysReturnType(
-          TypeRef.fromAnnotation(ctx, library, rt), rt.question != null);
+        TypeRef.fromAnnotation(ctx, library, rt),
+        rt.question != null,
+      );
     } else {
       return AlwaysReturnType(fallback, true);
     }
   }
 
   factory AlwaysReturnType.fromInstanceMethod(
-      CompilerContext ctx, TypeRef type, String method, TypeRef? fallback) {
+    CompilerContext ctx,
+    TypeRef type,
+    String method,
+    TypeRef? fallback,
+  ) {
     final m = resolveInstanceMethod(ctx, type, method);
     if (m.isBridge) {
       return AlwaysReturnType(
-          TypeRef.fromBridgeAnnotation(
-              ctx, m.bridge!.functionDescriptor.returns),
-          true);
+        TypeRef.fromBridgeAnnotation(ctx, m.bridge!.functionDescriptor.returns),
+        true,
+      );
     }
     return AlwaysReturnType.fromAnnotation(
-        ctx, type.file, m.declaration!.returnType, fallback);
+      ctx,
+      type.file,
+      m.declaration!.returnType,
+      fallback,
+    );
   }
 
   factory AlwaysReturnType.fromStaticMethod(
-      CompilerContext ctx, TypeRef type, String method, TypeRef? fallback) {
+    CompilerContext ctx,
+    TypeRef type,
+    String method,
+    TypeRef? fallback,
+  ) {
     final m = resolveStaticMethod(ctx, type, method);
     if (m.isBridge) {
       if (m.bridge is! BridgeMethodDef) {
@@ -936,24 +1152,31 @@ class AlwaysReturnType implements ReturnType {
       }
       final fn = (m.bridge as BridgeMethodDef).functionDescriptor;
       return AlwaysReturnType(
-          TypeRef.fromBridgeAnnotation(ctx, fn.returns), fn.returns.nullable);
+        TypeRef.fromBridgeAnnotation(ctx, fn.returns),
+        fn.returns.nullable,
+      );
     }
     final d = m.declaration!;
     if (d is ConstructorDeclaration) {
       return AlwaysReturnType(type, false);
     }
     return AlwaysReturnType.fromAnnotation(
-        ctx, type.file, (d as MethodDeclaration).returnType, fallback);
+      ctx,
+      type.file,
+      (d as MethodDeclaration).returnType,
+      fallback,
+    );
   }
 
   static AlwaysReturnType? fromInstanceMethodOrBuiltin(
-      CompilerContext ctx,
-      TypeRef type,
-      String method,
-      List<TypeRef?> argTypes,
-      Map<String, TypeRef?> namedArgTypes,
-      {List<TypeRef> typeArgs = const [],
-      bool $static = false}) {
+    CompilerContext ctx,
+    TypeRef type,
+    String method,
+    List<TypeRef?> argTypes,
+    Map<String, TypeRef?> namedArgTypes, {
+    List<TypeRef> typeArgs = const [],
+    bool $static = false,
+  }) {
     final resolvedType = type.resolveTypeChain(ctx);
     final knownType = resolvedType.extendsType == CoreTypes.enumType.ref(ctx)
         ? CoreTypes.enumType.ref(ctx)
@@ -967,8 +1190,12 @@ class AlwaysReturnType implements ReturnType {
         return null;
       }
       return returnType.toAlwaysReturnType(
-          ctx, knownType, argTypes, namedArgTypes,
-          typeArgs: typeArgs);
+        ctx,
+        knownType,
+        argTypes,
+        namedArgTypes,
+        typeArgs: typeArgs,
+      );
     }
 
     if (type == CoreTypes.dynamic.ref(ctx)) {
@@ -977,25 +1204,41 @@ class AlwaysReturnType implements ReturnType {
 
     return $static
         ? AlwaysReturnType.fromStaticMethod(
-            ctx, type, method, CoreTypes.dynamic.ref(ctx))
+            ctx,
+            type,
+            method,
+            CoreTypes.dynamic.ref(ctx),
+          )
         : AlwaysReturnType.fromInstanceMethod(
-            ctx, type, method, CoreTypes.dynamic.ref(ctx));
+            ctx,
+            type,
+            method,
+            CoreTypes.dynamic.ref(ctx),
+          );
   }
 
   final TypeRef? type;
   final bool nullable;
 
   @override
-  AlwaysReturnType? toAlwaysReturnType(CompilerContext ctx, TypeRef? targetType,
-      List<TypeRef?> argTypes, Map<String, TypeRef?> namedArgTypes,
-      {List<TypeRef> typeArgs = const []}) {
+  AlwaysReturnType? toAlwaysReturnType(
+    CompilerContext ctx,
+    TypeRef? targetType,
+    List<TypeRef?> argTypes,
+    Map<String, TypeRef?> namedArgTypes, {
+    List<TypeRef> typeArgs = const [],
+  }) {
     return this;
   }
 }
 
 class ParameterTypeDependentReturnType implements ReturnType {
-  const ParameterTypeDependentReturnType(this.map,
-      {this.paramIndex, this.paramName, this.fallback});
+  const ParameterTypeDependentReturnType(
+    this.map, {
+    this.paramIndex,
+    this.paramName,
+    this.fallback,
+  });
 
   final int? paramIndex;
   final String? paramName;
@@ -1003,9 +1246,13 @@ class ParameterTypeDependentReturnType implements ReturnType {
   final AlwaysReturnType? fallback;
 
   @override
-  AlwaysReturnType? toAlwaysReturnType(CompilerContext ctx, TypeRef? targetType,
-      List<TypeRef?> argTypes, Map<String, TypeRef?> namedArgTypes,
-      {List<TypeRef> typeArgs = const []}) {
+  AlwaysReturnType? toAlwaysReturnType(
+    CompilerContext ctx,
+    TypeRef? targetType,
+    List<TypeRef?> argTypes,
+    Map<String, TypeRef?> namedArgTypes, {
+    List<TypeRef> typeArgs = const [],
+  }) {
     AlwaysReturnType? resolvedType;
     if (paramIndex != null) {
       resolvedType = map[argTypes[paramIndex!]];
@@ -1026,9 +1273,13 @@ class TargetTypeArgDependentReturnType implements ReturnType {
   final int typeArgIndex;
 
   @override
-  AlwaysReturnType? toAlwaysReturnType(CompilerContext ctx, TypeRef? targetType,
-      List<TypeRef?> argTypes, Map<String, TypeRef?> namedArgTypes,
-      {List<TypeRef> typeArgs = const []}) {
+  AlwaysReturnType? toAlwaysReturnType(
+    CompilerContext ctx,
+    TypeRef? targetType,
+    List<TypeRef?> argTypes,
+    Map<String, TypeRef?> namedArgTypes, {
+    List<TypeRef> typeArgs = const [],
+  }) {
     return AlwaysReturnType(targetType!.specifiedTypeArgs[typeArgIndex], false);
   }
 }
@@ -1039,9 +1290,13 @@ class TypeArgDependentReturnType implements ReturnType {
   final int typeArgIndex;
 
   @override
-  AlwaysReturnType? toAlwaysReturnType(CompilerContext ctx, TypeRef? targetType,
-      List<TypeRef?> argTypes, Map<String, TypeRef?> namedArgTypes,
-      {List<TypeRef> typeArgs = const []}) {
+  AlwaysReturnType? toAlwaysReturnType(
+    CompilerContext ctx,
+    TypeRef? targetType,
+    List<TypeRef?> argTypes,
+    Map<String, TypeRef?> namedArgTypes, {
+    List<TypeRef> typeArgs = const [],
+  }) {
     return AlwaysReturnType(typeArgs[typeArgIndex], false);
   }
 }
@@ -1054,8 +1309,10 @@ class GenericParam {
 }
 
 extension Refify on BridgeTypeSpec {
-  TypeRef ref(CompilerContext ctx,
-      [List<BridgeTypeAnnotation> typeArgs = const []]) {
+  TypeRef ref(
+    CompilerContext ctx, [
+    List<BridgeTypeAnnotation> typeArgs = const [],
+  ]) {
     final res = TypeRef.fromBridgeTypeRef(ctx, BridgeTypeRef(this, typeArgs));
     if (library == 'dart:core') {
       dartCoreFile = res.file;

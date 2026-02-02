@@ -1,4 +1,5 @@
 import 'package:dart_eval/dart_eval.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/stdlib/core.dart';
 import 'package:test/test.dart';
 
@@ -20,10 +21,12 @@ void main() {
               return i;
             }
           ''',
-        }
+        },
       });
       expect(
-          runtime.executeLib('package:example/main.dart', 'main'), $int(555));
+        runtime.executeLib('package:example/main.dart', 'main'),
+        $int(555),
+      );
     });
 
     test('For loop + branching', () {
@@ -43,12 +46,14 @@ void main() {
             
             return count;
           }
-        '''
-        }
+        ''',
+        },
       });
 
-      expect(runtime.executeLib('package:example/main.dart', 'doThing'),
-          $int(499472));
+      expect(
+        runtime.executeLib('package:example/main.dart', 'doThing'),
+        $int(499472),
+      );
     });
 
     test('Simple foreach', () {
@@ -63,7 +68,7 @@ void main() {
               return i;
             }
           ''',
-        }
+        },
       });
       expect(runtime.executeLib('package:example/main.dart', 'main'), $int(15));
     });
@@ -82,7 +87,7 @@ void main() {
               return i;
             }
           ''',
-        }
+        },
       });
       expect(runtime.executeLib('package:example/main.dart', 'main'), $int(10));
     });
@@ -99,10 +104,12 @@ void main() {
               return i;
             }
           ''',
-        }
+        },
       });
       expect(
-          runtime.executeLib('package:example/main.dart', 'main'), $int(555));
+        runtime.executeLib('package:example/main.dart', 'main'),
+        $int(555),
+      );
     });
 
     test('Simple do-while loop', () {
@@ -117,10 +124,12 @@ void main() {
               return i;
             }
           ''',
-        }
+        },
       });
       expect(
-          runtime.executeLib('package:example/main.dart', 'main'), $int(555));
+        runtime.executeLib('package:example/main.dart', 'main'),
+        $int(555),
+      );
     });
 
     test('For loop with break', () {
@@ -138,7 +147,7 @@ void main() {
               return i;
             }
           ''',
-        }
+        },
       });
       expect(runtime.executeLib('package:example/main.dart', 'main'), $int(5));
     });
@@ -163,10 +172,12 @@ void main() {
               return i * 1000 + j;
             }
           ''',
-        }
+        },
       });
-      expect(runtime.executeLib('package:example/main.dart', 'main'),
-          $int(100100));
+      expect(
+        runtime.executeLib('package:example/main.dart', 'main'),
+        $int(100100),
+      );
     });
   });
 }

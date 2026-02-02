@@ -75,9 +75,7 @@ class SetReturnValue implements EvcOp {
 }
 
 class CopyValue implements EvcOp {
-  CopyValue(Runtime exec)
-      : _to = exec._readInt16(),
-        _from = exec._readInt16();
+  CopyValue(Runtime exec) : _to = exec._readInt16(), _from = exec._readInt16();
 
   CopyValue.make(this._to, this._from);
 
@@ -124,8 +122,8 @@ class LoadGlobal implements EvcOp {
 
 class SetGlobal implements EvcOp {
   SetGlobal(Runtime runtime)
-      : _index = runtime._readInt32(),
-        _value = runtime._readInt16();
+    : _index = runtime._readInt32(),
+      _value = runtime._readInt16();
 
   final int _index;
   final int _value;

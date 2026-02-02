@@ -178,7 +178,7 @@ class TimeDriftException implements Exception {
   String get message =>
       'TimeDriftException: The received clock\'s time drift exceeds the maximum.';
 }
-          '''
+          ''',
       },
       'eval_test': {
         'main.dart': '''
@@ -187,11 +187,13 @@ class TimeDriftException implements Exception {
             final hlc = HLC.unpack('001697431030337:00001:time');
             return hlc.increment().pack();
           }
-        '''
-      }
+        ''',
+      },
     });
 
-    expect(runtime.executeLib('package:eval_test/main.dart', 'main'),
-        $String('001697431030337:00002:time'));
+    expect(
+      runtime.executeLib('package:eval_test/main.dart', 'main'),
+      $String('001697431030337:00002:time'),
+    );
   });
 }

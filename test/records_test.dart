@@ -18,16 +18,13 @@ void main() {
               print(numbers.$1);
               print(numbers.$2);
             }
-          '''
-        }
+          ''',
+        },
       });
 
-      expect(
-        () {
-          runtime.executeLib('package:eval_test/main.dart', 'main');
-        },
-        prints('0\n1\n'),
-      );
+      expect(() {
+        runtime.executeLib('package:eval_test/main.dart', 'main');
+      }, prints('0\n1\n'));
     });
 
     test('Returning record from function', () {
@@ -43,15 +40,12 @@ void main() {
               print(result.$1);
               print(result.$2);
             }
-          '''
-        }
-      });
-      expect(
-        () {
-          runtime.executeLib('package:eval_test/main.dart', 'main');
+          ''',
         },
-        prints('2\n3\n'),
-      );
+      });
+      expect(() {
+        runtime.executeLib('package:eval_test/main.dart', 'main');
+      }, prints('2\n3\n'));
     });
 
     test('Record with named fields', () {
@@ -63,15 +57,12 @@ void main() {
               print(person.name);
               print(person.age);
             }
-          '''
-        }
-      });
-      expect(
-        () {
-          runtime.executeLib('package:eval_test/main.dart', 'main');
+          ''',
         },
-        prints('Alice\n30\n'),
-      );
+      });
+      expect(() {
+        runtime.executeLib('package:eval_test/main.dart', 'main');
+      }, prints('Alice\n30\n'));
     });
 
     test('Record with mixed fields', () {
@@ -84,15 +75,12 @@ void main() {
               print(mixed.name);
               print(mixed.$2);
             }
-          '''
-        }
-      });
-      expect(
-        () {
-          runtime.executeLib('package:eval_test/main.dart', 'main');
+          ''',
         },
-        prints('1\nBob\n3.5\n'),
-      );
+      });
+      expect(() {
+        runtime.executeLib('package:eval_test/main.dart', 'main');
+      }, prints('1\nBob\n3.5\n'));
     });
   });
 }

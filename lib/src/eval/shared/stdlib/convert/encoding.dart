@@ -15,7 +15,10 @@ class $Encoding implements $Instance {
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFunc(
-        'dart:convert', 'Encoding.getByName', $Encoding.$getByName);
+      'dart:convert',
+      'Encoding.getByName',
+      $Encoding.$getByName,
+    );
   }
 
   /// Compile-time type specification of [$Encoding]
@@ -31,8 +34,11 @@ class $Encoding implements $Instance {
       isAbstract: true,
       $extends: BridgeTypeRef(ConvertTypes.codec, [
         BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
-        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list,
-            [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, []))]))
+        BridgeTypeAnnotation(
+          BridgeTypeRef(CoreTypes.list, [
+            BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+          ]),
+        ),
       ]),
     ),
     constructors: {
@@ -48,16 +54,24 @@ class $Encoding implements $Instance {
     methods: {
       'decodeStream': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future,
-              [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, []))])),
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.future, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+            ]),
+          ),
           namedParams: [],
           params: [
             BridgeParameter(
               'byteStream',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.stream, [
-                BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list,
-                    [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, []))]))
-              ])),
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.stream, [
+                  BridgeTypeAnnotation(
+                    BridgeTypeRef(CoreTypes.list, [
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                    ]),
+                  ),
+                ]),
+              ),
               false,
             ),
           ],
@@ -66,14 +80,17 @@ class $Encoding implements $Instance {
       'getByName': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(
-              BridgeTypeRef(BridgeTypeSpec('dart:convert', 'Encoding'), []),
-              nullable: true),
+            BridgeTypeRef(BridgeTypeSpec('dart:convert', 'Encoding'), []),
+            nullable: true,
+          ),
           namedParams: [],
           params: [
             BridgeParameter(
               'name',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, []),
-                  nullable: true),
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string, []),
+                nullable: true,
+              ),
               false,
             ),
           ],
@@ -84,22 +101,32 @@ class $Encoding implements $Instance {
     getters: {
       'encoder': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.converter, [
-            BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
-            BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list,
-                [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, []))]))
-          ])),
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(ConvertTypes.converter, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.list, [
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                ]),
+              ),
+            ]),
+          ),
           namedParams: [],
           params: [],
         ),
       ),
       'decoder': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.converter, [
-            BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list,
-                [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, []))])),
-            BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, []))
-          ])),
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(ConvertTypes.converter, [
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.list, [
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                ]),
+              ),
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+            ]),
+          ),
           namedParams: [],
           params: [],
         ),
@@ -119,7 +146,10 @@ class $Encoding implements $Instance {
 
   /// Wrapper for the [Encoding.getByName] method
   static $Value? $getByName(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final value = Encoding.getByName(args[0]!.$value);
     return value == null ? $null() : $Encoding.wrap(value);
   }
@@ -160,7 +190,10 @@ class $Encoding implements $Instance {
 
   static const $Function __decodeStream = $Function(_decodeStream);
   static $Value? _decodeStream(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final self = target as $Encoding;
     final result = self.$value.decodeStream(args[0]!.$value);
     return $Future.wrap(result.then((e) => $String(e)));

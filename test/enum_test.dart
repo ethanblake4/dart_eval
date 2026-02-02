@@ -21,8 +21,8 @@ void main() {
             int main() {
               return MyEnum.B.index + MyEnum.C.index;
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 3);
@@ -40,8 +40,8 @@ void main() {
             int main() {
               return MyEnum.B.index + MyEnum.A.x;
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 2);
@@ -58,20 +58,26 @@ void main() {
               print(MyEnum.B == MyEnum.C);
               print(MyEnum.B == MyEnum.B);
             }
-          '''
-        }
+          ''',
+        },
       });
 
-      expect(() => runtime.executeLib('package:example/main.dart', 'main'),
-          prints('false\ntrue\n'));
+      expect(
+        () => runtime.executeLib('package:example/main.dart', 'main'),
+        prints('false\ntrue\n'),
+      );
     });
 
     test('Enum boxing error', () {
       final compiler2 = Compiler();
-      compiler2.defineBridgeEnum(BridgeEnumDef(
+      compiler2.defineBridgeEnum(
+        BridgeEnumDef(
           BridgeTypeRef(
-              BridgeTypeSpec('package:my_package/show.dart', 'ShowType')),
-          values: ['Movie', 'Series']));
+            BridgeTypeSpec('package:my_package/show.dart', 'ShowType'),
+          ),
+          values: ['Movie', 'Series'],
+        ),
+      );
       final program = compiler2.compile({
         'my_package': {
           'main.dart': r'''
@@ -89,12 +95,15 @@ void main() {
               final media = Media(type, 'example.com');
               print(media.url);
             }
-          '''
-        }
+          ''',
+        },
       });
       final runtime = Runtime.ofProgram(program);
-      runtime.registerBridgeEnumValues('package:my_package/show.dart',
-          'ShowType', {'Movie': $int(0), 'Series': $int(1)});
+      runtime.registerBridgeEnumValues(
+        'package:my_package/show.dart',
+        'ShowType',
+        {'Movie': $int(0), 'Series': $int(1)},
+      );
       runtime.executeLib('package:my_package/main.dart', 'main');
     });
 
@@ -115,14 +124,13 @@ void main() {
       ''';
 
       final runtime = compiler.compileWriteAndLoad({
-        'my_test_package': {
-          'main.dart': mainSource,
-          'lib.dart': libSource,
-        }
+        'my_test_package': {'main.dart': mainSource, 'lib.dart': libSource},
       });
 
-      final result =
-          runtime.executeLib('package:my_test_package/main.dart', 'main');
+      final result = runtime.executeLib(
+        'package:my_test_package/main.dart',
+        'main',
+      );
       expect(result, 1);
     });
   });

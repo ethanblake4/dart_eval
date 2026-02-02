@@ -21,7 +21,7 @@ void main() {
 
     compiler.defineBridgeClasses([$WrapTest.$declaration]);
     final runtime = compiler.compileWriteAndLoad({
-      'test': {'main.dart': source}
+      'test': {'main.dart': source},
     });
 
     final wrap = WrapTest(1);
@@ -50,7 +50,7 @@ void main() {
 
       compiler.defineBridgeClasses([$WrapTest.$declaration]);
       runtime = compiler.compileWriteAndLoad({
-        'test': {'main.dart': source}
+        'test': {'main.dart': source},
       });
     });
 
@@ -78,14 +78,16 @@ class WrapTest {
 
 class $WrapTest implements $Instance {
   static const $type = BridgeTypeRef(
-      BridgeTypeSpec('package:wrap_test/wrap_test.dart', 'WrapTest'));
+    BridgeTypeSpec('package:wrap_test/wrap_test.dart', 'WrapTest'),
+  );
 
   static const $declaration = BridgeClassDef(
     BridgeClassType($type),
     constructors: {},
     fields: {
-      'value':
-          BridgeFieldDef(BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int))),
+      'value': BridgeFieldDef(
+        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+      ),
     },
     wrap: true,
   );

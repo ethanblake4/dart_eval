@@ -7,7 +7,7 @@ class FastCrawler<T extends Object> extends GraphCrawler<T> {
   @override
   List<Set<T>> tree(T start, [T? target]) {
     final result = <Set<T>>[
-      for (final connected in edges(start)) {connected}
+      for (final connected in edges(start)) {connected},
     ];
 
     if (result.isEmpty) return result;

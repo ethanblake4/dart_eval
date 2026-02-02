@@ -7,8 +7,11 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
 
-Variable compileRecordLiteral(RecordLiteral l, CompilerContext ctx,
-    [TypeRef? bound]) {
+Variable compileRecordLiteral(
+  RecordLiteral l,
+  CompilerContext ctx, [
+  TypeRef? bound,
+]) {
   final fields = <String, int>{};
 
   if (!(bound?.isAssignableTo(ctx, CoreTypes.record.ref(ctx)) ?? true)) {
@@ -26,25 +29,31 @@ Variable compileRecordLiteral(RecordLiteral l, CompilerContext ctx,
   if (boundRecordFields != null &&
       l.fields.length != boundRecordFields.length) {
     throw CompileError(
-        'Record literal has ${l.fields.length} fields, expected ${boundRecordFields.length} from type bound',
-        l);
+      'Record literal has ${l.fields.length} fields, expected ${boundRecordFields.length} from type bound',
+      l,
+    );
   }
   var processingNamed = false;
   for (var i = 0; i < l.fields.length; i++) {
     final field = l.fields[i];
     if (field is NamedExpression) {
       final name = field.name.label.name;
-      final fieldBound =
-          boundRecordFields == null ? null : boundRecordFields[i];
-      final value = compileExpression(field.expression, ctx, fieldBound?.type)
-          .boxIfNeeded(ctx);
+      final fieldBound = boundRecordFields == null
+          ? null
+          : boundRecordFields[i];
+      final value = compileExpression(
+        field.expression,
+        ctx,
+        fieldBound?.type,
+      ).boxIfNeeded(ctx);
       if (fieldBound != null &&
           (!fieldBound.isNamed ||
               fieldBound.name != name ||
               !value.type.isAssignableTo(ctx, fieldBound.type))) {
         throw CompileError(
-            'A value of type $name: ${value.type} is not assignable to $fieldBound',
-            field);
+          'A value of type $name: ${value.type} is not assignable to $fieldBound',
+          field,
+        );
       } else if (boundRecordFields == null) {
         inferredRecordFields.add(RecordParameterType(name, value.type, true));
         if (i > 0) {
@@ -57,22 +66,28 @@ Variable compileRecordLiteral(RecordLiteral l, CompilerContext ctx,
         inferredTypeName.write('$name:${value.type}');
       }
       ctx.pushOp(
-          ListAppend.make(fieldList.scopeFrameOffset, value.scopeFrameOffset),
-          ListAppend.LEN);
+        ListAppend.make(fieldList.scopeFrameOffset, value.scopeFrameOffset),
+        ListAppend.LEN,
+      );
       fields[name] = i;
     } else {
       // Positional field
-      final fieldBound =
-          boundRecordFields == null ? null : boundRecordFields[i];
-      final value =
-          compileExpression(field, ctx, fieldBound?.type).boxIfNeeded(ctx);
+      final fieldBound = boundRecordFields == null
+          ? null
+          : boundRecordFields[i];
+      final value = compileExpression(
+        field,
+        ctx,
+        fieldBound?.type,
+      ).boxIfNeeded(ctx);
       final name = '\$${positionalFields++}';
       if (fieldBound != null &&
           (fieldBound.isNamed ||
               !value.type.isAssignableTo(ctx, fieldBound.type))) {
         throw CompileError(
-            'A value of type ${value.type} is not assignable to $fieldBound',
-            field);
+          'A value of type ${value.type} is not assignable to $fieldBound',
+          field,
+        );
       } else if (boundRecordFields == null) {
         inferredRecordFields.add(RecordParameterType(name, value.type, false));
         if (i > 0) {
@@ -81,8 +96,9 @@ Variable compileRecordLiteral(RecordLiteral l, CompilerContext ctx,
         inferredTypeName.write('${value.type}');
       }
       ctx.pushOp(
-          ListAppend.make(fieldList.scopeFrameOffset, value.scopeFrameOffset),
-          ListAppend.LEN);
+        ListAppend.make(fieldList.scopeFrameOffset, value.scopeFrameOffset),
+        ListAppend.LEN,
+      );
       fields[name] = i;
     }
   }
@@ -93,12 +109,18 @@ Variable compileRecordLiteral(RecordLiteral l, CompilerContext ctx,
 
   inferredTypeName.write('>');
 
-  final type = bound ??
-      TypeRef(ctx.library, inferredTypeName.toString(),
-          extendsType: CoreTypes.record.ref(ctx),
-          recordFields: inferredRecordFields);
+  final type =
+      bound ??
+      TypeRef(
+        ctx.library,
+        inferredTypeName.toString(),
+        extendsType: CoreTypes.record.ref(ctx),
+        recordFields: inferredRecordFields,
+      );
   final constIndex = ctx.constantPool.addOrGet(fields);
-  ctx.pushOp(PushRecord.make(fieldList.scopeFrameOffset, constIndex, -1),
-      PushRecord.LEN);
+  ctx.pushOp(
+    PushRecord.make(fieldList.scopeFrameOffset, constIndex, -1),
+    PushRecord.LEN,
+  );
   return Variable.alloc(ctx, type);
 }

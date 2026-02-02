@@ -20,16 +20,13 @@ void main() {
               print(a);
               print(name);
             }
-          '''
-        }
+          ''',
+        },
       });
 
-      expect(
-        () {
-          runtime.executeLib('package:eval_test/main.dart', 'main');
-        },
-        prints('1\nElise\n'),
-      );
+      expect(() {
+        runtime.executeLib('package:eval_test/main.dart', 'main');
+      }, prints('1\nElise\n'));
     });
 
     test('Destructure record with variable assignment pattern', () {
@@ -44,16 +41,13 @@ void main() {
               print(a);
               print(name);
             }
-          '''
-        }
+          ''',
+        },
       });
 
-      expect(
-        () {
-          runtime.executeLib('package:eval_test/main.dart', 'main');
-        },
-        prints('1\nElise\n'),
-      );
+      expect(() {
+        runtime.executeLib('package:eval_test/main.dart', 'main');
+      }, prints('1\nElise\n'));
     });
 
     test('Destructure record across function boundary', () {
@@ -69,16 +63,13 @@ void main() {
               print(number);
               print(greeting);
             }
-          '''
-        }
+          ''',
+        },
       });
 
-      expect(
-        () {
-          runtime.executeLib('package:eval_test/main.dart', 'main');
-        },
-        prints('42\nHello\n'),
-      );
+      expect(() {
+        runtime.executeLib('package:eval_test/main.dart', 'main');
+      }, prints('42\nHello\n'));
     });
 
     test('Destructure list with variable declaration pattern', () {
@@ -91,15 +82,12 @@ void main() {
               print(first);
               print(third);
             }
-          '''
-        }
-      });
-      expect(
-        () {
-          runtime.executeLib('package:eval_test/main.dart', 'main');
+          ''',
         },
-        prints('1\n3\n'),
-      );
+      });
+      expect(() {
+        runtime.executeLib('package:eval_test/main.dart', 'main');
+      }, prints('1\n3\n'));
     });
   });
 
@@ -126,10 +114,12 @@ void main() {
               }
             }
           ''',
-        }
+        },
       });
-      expect(runtime.executeLib('package:example/main.dart', 'main'),
-          $String('Elise is the name'));
+      expect(
+        runtime.executeLib('package:example/main.dart', 'main'),
+        $String('Elise is the name'),
+      );
     });
 
     test('Switch matching list pattern', () {
@@ -148,10 +138,12 @@ void main() {
               }
             }
           ''',
-        }
+        },
       });
-      expect(runtime.executeLib('package:example/main.dart', 'main'),
-          $String('Matched with x = 3'));
+      expect(
+        runtime.executeLib('package:example/main.dart', 'main'),
+        $String('Matched with x = 3'),
+      );
     });
 
     test('Switch with pattern guard', () {
@@ -168,10 +160,12 @@ void main() {
               }
             }
           ''',
-        }
+        },
       });
-      expect(runtime.executeLib('package:example/main.dart', 'main'),
-          $String('No match'));
+      expect(
+        runtime.executeLib('package:example/main.dart', 'main'),
+        $String('No match'),
+      );
     });
 
     test('Switch with relational pattern', () {
@@ -190,10 +184,12 @@ void main() {
               }
             }
           ''',
-        }
+        },
       });
-      expect(runtime.executeLib('package:example/main.dart', 'main'),
-          $String('Greater than 5'));
+      expect(
+        runtime.executeLib('package:example/main.dart', 'main'),
+        $String('Greater than 5'),
+      );
     });
   });
 }

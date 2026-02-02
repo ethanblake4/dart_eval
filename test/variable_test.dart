@@ -18,12 +18,14 @@ void main() {
               x = 3;
               print(x);
             }
-          '''
-        }
+          ''',
+        },
       });
 
-      expect(() => runtime.executeLib('package:eval_test/main.dart', 'main'),
-          prints('3\n'));
+      expect(
+        () => runtime.executeLib('package:eval_test/main.dart', 'main'),
+        prints('3\n'),
+      );
     });
   });
 }

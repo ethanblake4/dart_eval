@@ -227,6 +227,9 @@ class Evc {
   /// [BoxSet]
   static const OP_BOXSET = 72;
 
+  /// [PushFunctionPtrCopyCapture]
+  static const OP_PUSH_FUNCTION_PTR_COPY_CAPTURE = 73;
+
   static List<int> i16b(int i16) {
     final x = ByteData(2);
     x.setInt16(0, i16);
@@ -343,4 +346,5 @@ final List<OpLoader> ops = [
   (Runtime rt) => PushSet(rt), // 70
   (Runtime rt) => SetAdd(rt), // 71
   (Runtime rt) => BoxSet(rt), // 72
+  (Runtime rt) => PushFunctionPtrCopyCapture(rt), // 73
 ];

@@ -20,12 +20,14 @@ void main() {
               final list = [1, 2, 3, 4, 5];
               return list.join();
             }
-          '''
-        }
+          ''',
+        },
       });
 
-      expect(runtime.executeLib('package:eval_test/main.dart', 'main'),
-          $String('12345'));
+      expect(
+        runtime.executeLib('package:eval_test/main.dart', 'main'),
+        $String('12345'),
+      );
     });
 
     test('Iterable.map()', () {
@@ -36,12 +38,14 @@ void main() {
               final list = [1, 2, 3, 4, 5];
               return list.map((e) => e * 2).join();
             }
-          '''
-        }
+          ''',
+        },
       });
 
-      expect(runtime.executeLib('package:eval_test/main.dart', 'main'),
-          $String('246810'));
+      expect(
+        runtime.executeLib('package:eval_test/main.dart', 'main'),
+        $String('246810'),
+      );
     });
 
     test('List.length', () {
@@ -52,12 +56,14 @@ void main() {
               final list = [1, 2, 3, 4, 5];
               return list.length.toString();
             }
-          '''
-        }
+          ''',
+        },
       });
 
-      expect(runtime.executeLib('package:eval_test/main.dart', 'main'),
-          $String('5'));
+      expect(
+        runtime.executeLib('package:eval_test/main.dart', 'main'),
+        $String('5'),
+      );
     });
 
     test('List.add()', () {
@@ -69,12 +75,14 @@ void main() {
               list.add(6);
               return list.join();
             }
-          '''
-        }
+          ''',
+        },
       });
 
-      expect(runtime.executeLib('package:eval_test/main.dart', 'main'),
-          $String('123456'));
+      expect(
+        runtime.executeLib('package:eval_test/main.dart', 'main'),
+        $String('123456'),
+      );
     });
   });
 
@@ -102,12 +110,14 @@ void main() {
 
               return list.join();
             }
-          '''
-        }
+          ''',
+        },
       });
 
-      expect(runtime.executeLib('package:eval_test/main.dart', 'main'),
-          $String('12368'));
+      expect(
+        runtime.executeLib('package:eval_test/main.dart', 'main'),
+        $String('12368'),
+      );
     });
 
     test('Collection for', () {
@@ -127,12 +137,14 @@ void main() {
 
               return list.join();
             }
-          '''
-        }
+          ''',
+        },
       });
 
-      expect(runtime.executeLib('package:eval_test/main.dart', 'main'),
-          $String('012103223312'));
+      expect(
+        runtime.executeLib('package:eval_test/main.dart', 'main'),
+        $String('012103223312'),
+      );
     });
 
     test('Basic spread operator with list literal', () {
@@ -145,7 +157,7 @@ void main() {
       ''';
 
       final runtime = compiler.compileWriteAndLoad({
-        'test': {'main.dart': source}
+        'test': {'main.dart': source},
       });
 
       final result = runtime.executeLib('package:test/main.dart', 'test');
@@ -164,7 +176,7 @@ void main() {
 
       final compiler = Compiler();
       final runtime = compiler.compileWriteAndLoad({
-        'test': {'main.dart': source}
+        'test': {'main.dart': source},
       });
 
       final result = runtime.executeLib('package:test/main.dart', 'test');
@@ -182,7 +194,7 @@ void main() {
       ''';
 
       final runtime = compiler.compileWriteAndLoad({
-        'test': {'main.dart': source}
+        'test': {'main.dart': source},
       });
 
       final result = runtime.executeLib('package:test/main.dart', 'test');
@@ -206,8 +218,8 @@ void main() {
               final testMap = {'name': 'Jon', 'id':0};
               return testMap.containsKey('id');
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(runtime.executeLib('package:eval_test/main.dart', 'main'), true);
@@ -221,8 +233,8 @@ void main() {
               final testMap = {};
               return testMap.isEmpty;
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(runtime.executeLib('package:eval_test/main.dart', 'main'), true);
@@ -237,8 +249,8 @@ void main() {
               testMap['name'] = 'Jon';
               return testMap.isNotEmpty;
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(runtime.executeLib('package:eval_test/main.dart', 'main'), true);
@@ -254,8 +266,8 @@ void main() {
               testMap['a']['name'] = 'Jon';
               return testMap[a].length == 2;
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(runtime.executeLib('package:eval_test/main.dart', 'main'), true);
@@ -272,8 +284,8 @@ void main() {
                 return ifNull; 
               }
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(runtime.executeLib('package:eval_test/main.dart', 'main'), true);
@@ -289,8 +301,8 @@ void main() {
               map1.addAll(map2);
               return map1.length;
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(runtime.executeLib('package:eval_test/main.dart', 'main'), 4);
@@ -307,13 +319,15 @@ void main() {
               print('length: \${map.length}');
               return removed;
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(() {
-        final result =
-            runtime.executeLib('package:eval_test/main.dart', 'main');
+        final result = runtime.executeLib(
+          'package:eval_test/main.dart',
+          'main',
+        );
         expect(result, $int(2));
       }, prints('removed: 2\nlength: 2\n'));
     });
@@ -326,8 +340,8 @@ void main() {
               final map = {'a': 1, 'b': 2, 'c': 3};
               return map.length;
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(runtime.executeLib('package:eval_test/main.dart', 'main'), 3);
@@ -341,12 +355,14 @@ void main() {
               final map = {'name': 'Alice', 'age': 30};
               return map['name'];
             }
-          '''
-        }
+          ''',
+        },
       });
 
-      expect(runtime.executeLib('package:eval_test/main.dart', 'main'),
-          $String('Alice'));
+      expect(
+        runtime.executeLib('package:eval_test/main.dart', 'main'),
+        $String('Alice'),
+      );
     });
 
     test('Access null value from map', () {
@@ -369,8 +385,8 @@ void main() {
 
               return title;
             }
-          '''
-        }
+          ''',
+        },
       });
 
       final value = runtime.executeLib('package:example/main.dart', 'main');
@@ -387,12 +403,14 @@ void main() {
               keys.sort();
               return keys.join(',');
             }
-          '''
-        }
+          ''',
+        },
       });
 
-      expect(runtime.executeLib('package:eval_test/main.dart', 'main'),
-          $String('a,b,c'));
+      expect(
+        runtime.executeLib('package:eval_test/main.dart', 'main'),
+        $String('a,b,c'),
+      );
     });
 
     test('Map.values', () {
@@ -405,12 +423,14 @@ void main() {
               values.sort();
               return values.join(',');
             }
-          '''
-        }
+          ''',
+        },
       });
 
-      expect(runtime.executeLib('package:eval_test/main.dart', 'main'),
-          $String('1,2,3'));
+      expect(
+        runtime.executeLib('package:eval_test/main.dart', 'main'),
+        $String('1,2,3'),
+      );
     });
 
     test('Map.entries', () {
@@ -423,8 +443,8 @@ void main() {
                 print('\${entry.key}:\${entry.value}');
               }
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(() {
@@ -441,8 +461,8 @@ void main() {
               final castMap = map.cast<String, int>();
               return castMap['a'];
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(runtime.executeLib('package:eval_test/main.dart', 'main'), 1);

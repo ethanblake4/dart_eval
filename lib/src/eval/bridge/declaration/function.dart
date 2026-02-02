@@ -29,11 +29,12 @@ class BridgeParameter {
 /// A bridged function definition.
 @JsonSerializable(explicitToJson: true)
 class BridgeFunctionDef {
-  const BridgeFunctionDef(
-      {required this.returns,
-      this.params = const [],
-      this.namedParams = const [],
-      this.generics = const {}});
+  const BridgeFunctionDef({
+    required this.returns,
+    this.params = const [],
+    this.namedParams = const [],
+    this.generics = const {},
+  });
 
   /// The return type of the function.
   final BridgeTypeAnnotation returns;

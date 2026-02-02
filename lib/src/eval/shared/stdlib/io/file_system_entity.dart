@@ -18,68 +18,121 @@ class $FileSystemEntity implements $Instance {
   static const $type = BridgeTypeRef(IoTypes.fileSystemEntity);
 
   /// Compile-time bridged class declaration for [$FileSystemEntity]
-  static const $declaration = BridgeClassDef(BridgeClassType($type),
-      constructors: {
-        '': BridgeConstructorDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation($type), params: [], namedParams: []))
-      },
-      methods: {
-        'exists': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future,
-                [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool))])),
-            params: [],
-            namedParams: [])),
-        'existsSync': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
-            params: [],
-            namedParams: [])),
-        'delete': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future,
-                [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType))])),
-            params: [],
-            namedParams: [
-              BridgeParameter('recursive',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true)
-            ])),
-        'deleteSync': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
-            params: [],
-            namedParams: [
-              BridgeParameter('recursive',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true)
-            ])),
-        'rename': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future, [
-              BridgeTypeAnnotation(BridgeTypeRef(IoTypes.fileSystemEntity))
-            ])),
-            params: [
-              BridgeParameter('newPath', BridgeTypeAnnotation($type), false)
-            ],
-            namedParams: [])),
-        'renameSync': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation($type),
-            params: [
-              BridgeParameter('newPath', BridgeTypeAnnotation($type), false)
-            ],
-            namedParams: [])),
-      },
-      getters: {
-        'path': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-            params: [],
-            namedParams: [])),
-        'absolute': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation($type), params: [], namedParams: [])),
-        'parent': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(IoTypes.directory)),
-            params: [],
-            namedParams: [])),
-        'uri': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.uri)),
-            params: [],
-            namedParams: [])),
-      },
-      wrap: true);
+  static const $declaration = BridgeClassDef(
+    BridgeClassType($type),
+    constructors: {
+      '': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          params: [],
+          namedParams: [],
+        ),
+      ),
+    },
+    methods: {
+      'exists': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.future, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+            ]),
+          ),
+          params: [],
+          namedParams: [],
+        ),
+      ),
+      'existsSync': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+          params: [],
+          namedParams: [],
+        ),
+      ),
+      'delete': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.future, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+            ]),
+          ),
+          params: [],
+          namedParams: [
+            BridgeParameter(
+              'recursive',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+              true,
+            ),
+          ],
+        ),
+      ),
+      'deleteSync': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          params: [],
+          namedParams: [
+            BridgeParameter(
+              'recursive',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+              true,
+            ),
+          ],
+        ),
+      ),
+      'rename': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.future, [
+              BridgeTypeAnnotation(BridgeTypeRef(IoTypes.fileSystemEntity)),
+            ]),
+          ),
+          params: [
+            BridgeParameter('newPath', BridgeTypeAnnotation($type), false),
+          ],
+          namedParams: [],
+        ),
+      ),
+      'renameSync': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          params: [
+            BridgeParameter('newPath', BridgeTypeAnnotation($type), false),
+          ],
+          namedParams: [],
+        ),
+      ),
+    },
+    getters: {
+      'path': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+          params: [],
+          namedParams: [],
+        ),
+      ),
+      'absolute': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          params: [],
+          namedParams: [],
+        ),
+      ),
+      'parent': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(IoTypes.directory)),
+          params: [],
+          namedParams: [],
+        ),
+      ),
+      'uri': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.uri)),
+          params: [],
+          namedParams: [],
+        ),
+      ),
+    },
+    wrap: true,
+  );
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
@@ -120,7 +173,10 @@ class $FileSystemEntity implements $Instance {
   static const $Function _existsSync = $Function(__existsSync);
 
   static $Value? __existsSync(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final entity = target!.$value as FileSystemEntity;
     runtime.assertPermission('filesystem:read', entity.path);
     return $bool(entity.existsSync());
@@ -132,15 +188,20 @@ class $FileSystemEntity implements $Instance {
     final entity = target!.$value as FileSystemEntity;
     runtime.assertPermission('filesystem:write', entity.path);
     final recursive = args[0]?.$value as bool?;
-    return $Future.wrap(entity
-        .delete(recursive: recursive ?? false)
-        .then((value) => $FileSystemEntity.wrap(value)));
+    return $Future.wrap(
+      entity
+          .delete(recursive: recursive ?? false)
+          .then((value) => $FileSystemEntity.wrap(value)),
+    );
   }
 
   static const $Function _deleteSync = $Function(__deleteSync);
 
   static $Value? __deleteSync(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final entity = target!.$value as FileSystemEntity;
     runtime.assertPermission('filesystem:write', entity.path);
     final recursive = args[0]?.$value as bool?;
@@ -155,13 +216,17 @@ class $FileSystemEntity implements $Instance {
     runtime.assertPermission('filesystem:write', entity.path);
     final newPath = args[0]!.$value as String;
     return $Future.wrap(
-        entity.rename(newPath).then((value) => $FileSystemEntity.wrap(value)));
+      entity.rename(newPath).then((value) => $FileSystemEntity.wrap(value)),
+    );
   }
 
   static const $Function _renameSync = $Function(__renameSync);
 
   static $Value? __renameSync(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final entity = target!.$value as FileSystemEntity;
     runtime.assertPermission('filesystem:write', entity.path);
     final newPath = args[0]!.$value as String;

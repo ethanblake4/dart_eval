@@ -7,8 +7,8 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/object.dart';
 import '../../../dart_eval_bridge.dart';
 
 /// Typedef of a function that can be called by dart_eval.
-typedef EvalCallableFunc = $Value? Function(
-    Runtime runtime, $Value? target, List<$Value?> args);
+typedef EvalCallableFunc =
+    $Value? Function(Runtime runtime, $Value? target, List<$Value?> args);
 
 /// Abstract supertype for values representing a callable in dart_eval.
 abstract class EvalCallable {
@@ -45,8 +45,14 @@ abstract class EvalFunction implements $Instance, EvalCallable {
 }
 
 class EvalFunctionPtr extends EvalFunction {
-  EvalFunctionPtr(this.$prev, this.offset, this.requiredPositionalArgCount,
-      this.positionalArgTypes, this.sortedNamedArgs, this.sortedNamedArgTypes);
+  EvalFunctionPtr(
+    this.$prev,
+    this.offset,
+    this.requiredPositionalArgCount,
+    this.positionalArgTypes,
+    this.sortedNamedArgs,
+    this.sortedNamedArgTypes,
+  );
 
   final int offset;
   final List<Object?>? $prev;
@@ -128,7 +134,8 @@ class EvalStaticFunctionPtr extends EvalFunction {
           }
           final other = args[0];
           return $bool(
-              other is EvalStaticFunctionPtr && other.offset == offset);
+            other is EvalStaticFunctionPtr && other.offset == offset,
+          );
         });
       case '!=':
         return $Function((runtime, target, args) {
@@ -137,7 +144,8 @@ class EvalStaticFunctionPtr extends EvalFunction {
           }
           final other = args[0];
           return $bool(
-              other is EvalStaticFunctionPtr && other.offset != offset);
+            other is EvalStaticFunctionPtr && other.offset != offset,
+          );
         });
       case 'hashCode':
         return $int(hashCode ^ offset.hashCode);
@@ -165,9 +173,10 @@ class $Function extends EvalFunction {
   const $Function(this.func);
 
   static const $declaration = BridgeClassDef(
-      BridgeClassType(BridgeTypeRef(CoreTypes.function)),
-      constructors: {},
-      wrap: true);
+    BridgeClassType(BridgeTypeRef(CoreTypes.function)),
+    constructors: {},
+    wrap: true,
+  );
 
   final EvalCallableFunc func;
 

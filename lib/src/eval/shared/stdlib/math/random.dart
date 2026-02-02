@@ -12,11 +12,17 @@ class $Random implements Random, $Instance {
 
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFunc(
-        $type.spec!.library, 'Random.', __$Random$new.call,
-        isBridge: false);
+      $type.spec!.library,
+      'Random.',
+      __$Random$new.call,
+      isBridge: false,
+    );
     runtime.registerBridgeFunc(
-        $type.spec!.library, 'Random.secure', __$Random$secure.call,
-        isBridge: false);
+      $type.spec!.library,
+      'Random.secure',
+      __$Random$secure.call,
+      isBridge: false,
+    );
   }
 
   late final $Instance _superclass = $Object($value);
@@ -24,22 +30,20 @@ class $Random implements Random, $Instance {
   static const $type = BridgeTypeRef(MathTypes.random);
 
   static const $declaration = BridgeClassDef(
-    BridgeClassType(
-      $type,
-      $extends: null,
-      $implements: [],
-      isAbstract: true,
-    ),
+    BridgeClassType($type, $extends: null, $implements: [], isAbstract: true),
     constructors: {
       '': BridgeConstructorDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation($type),
           params: [
             BridgeParameter(
-                'seed',
-                BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, []),
-                    nullable: true),
-                true)
+              'seed',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.int, []),
+                nullable: true,
+              ),
+              true,
+            ),
           ],
           namedParams: [],
         ),
@@ -52,40 +56,52 @@ class $Random implements Random, $Instance {
           namedParams: [],
         ),
         isFactory: true,
-      )
+      ),
     },
     fields: {},
     methods: {
       'nextInt': BridgeMethodDef(
-          BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, []),
-                nullable: false),
-            params: [
-              BridgeParameter(
-                  'max',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, []),
-                      nullable: false),
-                  false)
-            ],
-            namedParams: [],
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.int, []),
+            nullable: false,
           ),
-          isStatic: false),
+          params: [
+            BridgeParameter(
+              'max',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.int, []),
+                nullable: false,
+              ),
+              false,
+            ),
+          ],
+          namedParams: [],
+        ),
+        isStatic: false,
+      ),
       'nextDouble': BridgeMethodDef(
-          BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double, []),
-                nullable: false),
-            params: [],
-            namedParams: [],
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.double, []),
+            nullable: false,
           ),
-          isStatic: false),
+          params: [],
+          namedParams: [],
+        ),
+        isStatic: false,
+      ),
       'nextBool': BridgeMethodDef(
-          BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, []),
-                nullable: false),
-            params: [],
-            namedParams: [],
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.bool, []),
+            nullable: false,
           ),
-          isStatic: false),
+          params: [],
+          namedParams: [],
+        ),
+        isStatic: false,
+      ),
     },
     getters: {},
     setters: {},
@@ -127,7 +143,10 @@ class $Random implements Random, $Instance {
   int nextInt(int max) => $value.nextInt(max);
   static const __$nextInt = $Function(_$nextInt);
   static $Value? _$nextInt(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final $this = target?.$value as Random;
     final max = args[0]?.$value as int;
     final $result = $this.nextInt(max);
@@ -138,7 +157,10 @@ class $Random implements Random, $Instance {
   double nextDouble() => $value.nextDouble();
   static const __$nextDouble = $Function(_$nextDouble);
   static $Value? _$nextDouble(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final $this = target?.$value as Random;
     final $result = $this.nextDouble();
     return $double($result);
@@ -148,7 +170,10 @@ class $Random implements Random, $Instance {
   bool nextBool() => $value.nextBool();
   static const __$nextBool = $Function(_$nextBool);
   static $Value? _$nextBool(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final $this = target?.$value as Random;
     final $result = $this.nextBool();
     return $bool($result);
@@ -156,14 +181,20 @@ class $Random implements Random, $Instance {
 
   static const __$Random$new = $Function(_$Random$new);
   static $Value? _$Random$new(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final seed = args[0]?.$value as int?;
     return $Random.wrap(Random(seed));
   }
 
   static const __$Random$secure = $Function(_$Random$secure);
   static $Value? _$Random$secure(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     return $Random.wrap(Random.secure());
   }
 }

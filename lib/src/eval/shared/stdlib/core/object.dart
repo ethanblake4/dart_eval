@@ -8,113 +8,179 @@ class $Object implements $Instance {
   $Object(this.$value);
 
   static const $declaration = BridgeClassDef(
-      BridgeClassType(BridgeTypeRef(CoreTypes.object),
-          $extends: BridgeTypeRef(CoreTypes.dynamic), isAbstract: true),
-      constructors: {},
-      methods: {
-        '!=': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
-            params: [
-              BridgeParameter(
-                  'other',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic),
-                      nullable: true),
-                  false)
-            ])),
-        '==': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
-            params: [
-              BridgeParameter(
-                  'other',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic),
-                      nullable: true),
-                  false)
-            ])),
-        'toString': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-            params: [])),
-        'hash': BridgeMethodDef(
-            BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
-                params: [
-                  BridgeParameter(
-                      'object1',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
-                          nullable: true),
-                      false),
-                  BridgeParameter(
-                      'object2',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
-                          nullable: true),
-                      false),
-                  BridgeParameter(
-                      'object3',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
-                          nullable: true),
-                      true),
-                  BridgeParameter(
-                      'object4',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
-                          nullable: true),
-                      true),
-                  BridgeParameter(
-                      'object5',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
-                          nullable: true),
-                      true),
-                  BridgeParameter(
-                      'object6',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
-                          nullable: true),
-                      true),
-                  BridgeParameter(
-                      'object7',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
-                          nullable: true),
-                      true),
-                  BridgeParameter(
-                      'object8',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
-                          nullable: true),
-                      true),
-                  BridgeParameter(
-                      'object9',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
-                          nullable: true),
-                      true),
-                  BridgeParameter(
-                      'object10',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
-                          nullable: true),
-                      true),
-                  BridgeParameter(
-                      'object11',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
-                          nullable: true),
-                      true),
-                  BridgeParameter(
-                      'object12',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
-                          nullable: true),
-                      true),
-                  BridgeParameter(
-                      'object13',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
-                          nullable: true),
-                      true),
-                ],
-                namedParams: []),
-            isStatic: true),
-      },
-      getters: {
-        'hashCode': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
-            params: [])),
-        'runtimeType': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.type)),
-            params: [])),
-      },
-      wrap: true);
+    BridgeClassType(
+      BridgeTypeRef(CoreTypes.object),
+      $extends: BridgeTypeRef(CoreTypes.dynamic),
+      isAbstract: true,
+    ),
+    constructors: {},
+    methods: {
+      '!=': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.dynamic),
+                nullable: true,
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+      '==': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.dynamic),
+                nullable: true,
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+      'toString': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+          params: [],
+        ),
+      ),
+      'hash': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+          params: [
+            BridgeParameter(
+              'object1',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object),
+                nullable: true,
+              ),
+              false,
+            ),
+            BridgeParameter(
+              'object2',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object),
+                nullable: true,
+              ),
+              false,
+            ),
+            BridgeParameter(
+              'object3',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object),
+                nullable: true,
+              ),
+              true,
+            ),
+            BridgeParameter(
+              'object4',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object),
+                nullable: true,
+              ),
+              true,
+            ),
+            BridgeParameter(
+              'object5',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object),
+                nullable: true,
+              ),
+              true,
+            ),
+            BridgeParameter(
+              'object6',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object),
+                nullable: true,
+              ),
+              true,
+            ),
+            BridgeParameter(
+              'object7',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object),
+                nullable: true,
+              ),
+              true,
+            ),
+            BridgeParameter(
+              'object8',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object),
+                nullable: true,
+              ),
+              true,
+            ),
+            BridgeParameter(
+              'object9',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object),
+                nullable: true,
+              ),
+              true,
+            ),
+            BridgeParameter(
+              'object10',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object),
+                nullable: true,
+              ),
+              true,
+            ),
+            BridgeParameter(
+              'object11',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object),
+                nullable: true,
+              ),
+              true,
+            ),
+            BridgeParameter(
+              'object12',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object),
+                nullable: true,
+              ),
+              true,
+            ),
+            BridgeParameter(
+              'object13',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+          namedParams: [],
+        ),
+        isStatic: true,
+      ),
+    },
+    getters: {
+      'hashCode': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+          params: [],
+        ),
+      ),
+      'runtimeType': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.type)),
+          params: [],
+        ),
+      ),
+    },
+    wrap: true,
+  );
 
   @override
   final Object $value;
@@ -165,22 +231,35 @@ class $Object implements $Instance {
     }
     if (null == args[4]) {
       return $int(
-          Object.hash(object1, object2, object3!.$value, object4!.$value));
+        Object.hash(object1, object2, object3!.$value, object4!.$value),
+      );
     }
     if (null == args[5]) {
-      return $int(Object.hash(
-          object1, object2, object3!.$value, object4!.$value, object5!.$value));
+      return $int(
+        Object.hash(
+          object1,
+          object2,
+          object3!.$value,
+          object4!.$value,
+          object5!.$value,
+        ),
+      );
     }
     if (null == args[6]) {
-      return $int(Object.hash(object1, object2, object3!.$value,
-          object4!.$value, object5!.$value, object6!.$value));
+      return $int(
+        Object.hash(
+          object1,
+          object2,
+          object3!.$value,
+          object4!.$value,
+          object5!.$value,
+          object6!.$value,
+        ),
+      );
     }
     if (null == args[7]) {
-      return $int(Object.hash(object1, object2, object3!.$value,
-          object4!.$value, object5!.$value, object6!.$value, object7!.$value));
-    }
-    if (null == args[8]) {
-      return $int(Object.hash(
+      return $int(
+        Object.hash(
           object1,
           object2,
           object3!.$value,
@@ -188,10 +267,12 @@ class $Object implements $Instance {
           object5!.$value,
           object6!.$value,
           object7!.$value,
-          object8!.$value));
+        ),
+      );
     }
-    if (null == args[9]) {
-      return $int(Object.hash(
+    if (null == args[8]) {
+      return $int(
+        Object.hash(
           object1,
           object2,
           object3!.$value,
@@ -200,10 +281,12 @@ class $Object implements $Instance {
           object6!.$value,
           object7!.$value,
           object8!.$value,
-          object9!.$value));
+        ),
+      );
     }
-    if (null == args[10]) {
-      return $int(Object.hash(
+    if (null == args[9]) {
+      return $int(
+        Object.hash(
           object1,
           object2,
           object3!.$value,
@@ -213,10 +296,12 @@ class $Object implements $Instance {
           object7!.$value,
           object8!.$value,
           object9!.$value,
-          object10!.$value));
+        ),
+      );
     }
-    if (null == args[11]) {
-      return $int(Object.hash(
+    if (null == args[10]) {
+      return $int(
+        Object.hash(
           object1,
           object2,
           object3!.$value,
@@ -227,10 +312,12 @@ class $Object implements $Instance {
           object8!.$value,
           object9!.$value,
           object10!.$value,
-          object11!.$value));
+        ),
+      );
     }
-    if (null == args[12]) {
-      return $int(Object.hash(
+    if (null == args[11]) {
+      return $int(
+        Object.hash(
           object1,
           object2,
           object3!.$value,
@@ -242,9 +329,29 @@ class $Object implements $Instance {
           object9!.$value,
           object10!.$value,
           object11!.$value,
-          object12!.$value));
+        ),
+      );
     }
-    return $int(Object.hash(
+    if (null == args[12]) {
+      return $int(
+        Object.hash(
+          object1,
+          object2,
+          object3!.$value,
+          object4!.$value,
+          object5!.$value,
+          object6!.$value,
+          object7!.$value,
+          object8!.$value,
+          object9!.$value,
+          object10!.$value,
+          object11!.$value,
+          object12!.$value,
+        ),
+      );
+    }
+    return $int(
+      Object.hash(
         object1,
         object2,
         object3!.$value,
@@ -257,7 +364,9 @@ class $Object implements $Instance {
         object10!.$value,
         object11!.$value,
         object12!.$value,
-        object13!.$value));
+        object13!.$value,
+      ),
+    );
   }
 
   static const $Function __equals = $Function(_equals);
@@ -270,7 +379,10 @@ class $Object implements $Instance {
   static const $Function __not_equals = $Function(_not_equals);
 
   static $Value? _not_equals(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final other = args[0];
     return $bool(target!.$value != other!.$value);
   }
@@ -278,7 +390,10 @@ class $Object implements $Instance {
   static const $Function __toString = $Function(_toString);
 
   static $Value? _toString(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     return $String(target!.$reified.toString());
   }
 

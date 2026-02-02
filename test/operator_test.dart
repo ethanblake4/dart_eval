@@ -32,12 +32,15 @@ void main() {
                 cls == cls,
               ];
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(runtime.executeLib('package:operator_test/main.dart', 'main'), [
-        $bool(false), $bool(false), $bool(true), $bool(true),
+        $bool(false),
+        $bool(false),
+        $bool(true),
+        $bool(true),
       ]);
     });
 
@@ -50,8 +53,8 @@ void main() {
               int operator+(int add) => value + add;
             }
             int main() => MyClass() + 1;
-          '''
-        }
+          ''',
+        },
       });
 
       expect(runtime.executeLib('package:operator_test/main.dart', 'main'), 4);
@@ -78,12 +81,13 @@ void main() {
               cls[0] = 3;
               return [cls[0], cls[1]];
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(runtime.executeLib('package:operator_test/main.dart', 'main'), [
-        $int(1), $int(2),
+        $int(1),
+        $int(2),
       ]);
     }, skip: true);
   });

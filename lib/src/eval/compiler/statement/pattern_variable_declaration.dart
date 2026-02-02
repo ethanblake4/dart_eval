@@ -7,17 +7,25 @@ import 'package:dart_eval/src/eval/compiler/helpers/pattern.dart';
 import 'statement.dart';
 
 StatementInfo compilePatternVariableDeclarationStatement(
-    PatternVariableDeclarationStatement s, CompilerContext ctx) {
+  PatternVariableDeclarationStatement s,
+  CompilerContext ctx,
+) {
   compilePatternVariableDeclaration(s.declaration, ctx);
   return StatementInfo(-1);
 }
 
 void compilePatternVariableDeclaration(
-    PatternVariableDeclaration dec, CompilerContext ctx) {
+  PatternVariableDeclaration dec,
+  CompilerContext ctx,
+) {
   final bound = patternTypeBound(ctx, dec.pattern, source: dec);
   final result = compileExpression(dec.expression, ctx, bound);
-  patternMatchAndBind(ctx, dec.pattern, result,
-      patternContext: dec.keyword.keyword == Keyword.FINAL
-          ? PatternBindContext.declareFinal
-          : PatternBindContext.declare);
+  patternMatchAndBind(
+    ctx,
+    dec.pattern,
+    result,
+    patternContext: dec.keyword.keyword == Keyword.FINAL
+        ? PatternBindContext.declareFinal
+        : PatternBindContext.declare,
+  );
 }

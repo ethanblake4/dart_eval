@@ -21,7 +21,8 @@ const _opMap = {
 
 /// Compile a [PrefixExpression] to EVC bytecode
 Variable compilePrefixExpression(CompilerContext ctx, PrefixExpression e) {
-  final method = _opMap[e.operator.type] ??
+  final method =
+      _opMap[e.operator.type] ??
       (throw CompileError('Unknown unary operator ${e.operator.type}'));
 
   if ([TokenType.PLUS_PLUS, TokenType.MINUS_MINUS].contains(e.operator.type)) {
@@ -36,12 +37,14 @@ Variable compilePrefixExpression(CompilerContext ctx, PrefixExpression e) {
       V.type != CoreTypes.int.ref(ctx) &&
       V.type != CoreTypes.double.ref(ctx)) {
     throw CompileError(
-        'Unary prefix "-" is currently only supported for ints and doubles (type: ${V.type})',
-        e);
+      'Unary prefix "-" is currently only supported for ints and doubles (type: ${V.type})',
+      e,
+    );
   } else if (method == '!' && V.type != CoreTypes.bool.ref(ctx)) {
     throw CompileError(
-        'Unary prefix "!" is currently only supported for bools (type: ${V.type})',
-        e);
+      'Unary prefix "!" is currently only supported for bools (type: ${V.type})',
+      e,
+    );
   }
 
   if (method == "!") {
@@ -53,13 +56,13 @@ Variable compilePrefixExpression(CompilerContext ctx, PrefixExpression e) {
 
 BuiltinValue _zeroForType(TypeRef type, CompilerContext ctx) =>
     type == CoreTypes.int.ref(ctx)
-        ? BuiltinValue(intval: 0)
-        : BuiltinValue(doubleval: 0.0);
+    ? BuiltinValue(intval: 0)
+    : BuiltinValue(doubleval: 0.0);
 
 BuiltinValue _oneForType(TypeRef type, CompilerContext ctx) =>
     type == CoreTypes.int.ref(ctx)
-        ? BuiltinValue(intval: 1)
-        : BuiltinValue(doubleval: 1.0);
+    ? BuiltinValue(intval: 1)
+    : BuiltinValue(doubleval: 1.0);
 
 Variable _handleDoubleOperands(
   PrefixExpression e,
@@ -76,11 +79,9 @@ Variable _handleDoubleOperands(
     CopyValue.LEN,
   );
 
-  final result = l.invoke(
-    ctx,
-    _opMap[e.operator.type]!,
-    [_oneForType(l.type, ctx).push(ctx)],
-  ).result;
+  final result = l.invoke(ctx, _opMap[e.operator.type]!, [
+    _oneForType(l.type, ctx).push(ctx),
+  ]).result;
 
   return V.setValue(ctx, result);
 }

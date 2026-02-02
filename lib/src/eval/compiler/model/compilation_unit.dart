@@ -8,13 +8,15 @@ import 'package:analyzer/dart/ast/ast.dart';
 /// after the Dart analyzer has parsed the source code into an AST, but before
 /// libraries are created from the AST declarations.
 class DartCompilationUnit {
-  DartCompilationUnit(this.uri,
-      {required this.imports,
-      required this.exports,
-      required this.parts,
-      required this.declarations,
-      this.library,
-      this.partOf});
+  DartCompilationUnit(
+    this.uri, {
+    required this.imports,
+    required this.exports,
+    required this.parts,
+    required this.declarations,
+    this.library,
+    this.partOf,
+  });
 
   /// A `package`, `dart`, or `file` URI identifying the source file,
   /// such as 'package:example/main.dart'

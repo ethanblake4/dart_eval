@@ -4,8 +4,8 @@ part of '../runtime.dart';
 
 class BridgeInstantiate implements EvcOp {
   BridgeInstantiate(Runtime exec)
-      : _subclass = exec._readInt16(),
-        _constructor = exec._readInt32();
+    : _subclass = exec._readInt16(),
+      _constructor = exec._readInt32();
 
   BridgeInstantiate.make(this._subclass, this._constructor);
 
@@ -34,8 +34,11 @@ class BridgeInstantiate implements EvcOp {
     final instance =
         runtime._bridgeFunctions[_constructor](runtime, null, mappedArgs)
             as $Instance;
-    Runtime.bridgeData[instance] =
-        BridgeData(runtime, $runtimeType, $subclass ?? BridgeDelegatingShim());
+    Runtime.bridgeData[instance] = BridgeData(
+      runtime,
+      $runtimeType,
+      $subclass ?? BridgeDelegatingShim(),
+    );
 
     runtime.frame[runtime.frameOffset++] = instance;
   }
@@ -63,8 +66,8 @@ class PushBridgeSuperShim extends EvcOp {
 
 class ParentBridgeSuperShim extends EvcOp {
   ParentBridgeSuperShim(Runtime exec)
-      : _shimOffset = exec._readInt16(),
-        _bridgeOffset = exec._readInt16();
+    : _shimOffset = exec._readInt16(),
+      _bridgeOffset = exec._readInt16();
 
   ParentBridgeSuperShim.make(this._shimOffset, this._bridgeOffset);
 
@@ -105,8 +108,11 @@ class InvokeExternal implements EvcOp {
 
     runtime.args = [];
     runtime.returnValue = null;
-    final result =
-        runtime._bridgeFunctions[_function](runtime, null, mappedArgs);
+    final result = runtime._bridgeFunctions[_function](
+      runtime,
+      null,
+      mappedArgs,
+    );
     if (result != null) {
       runtime.returnValue = result;
     }
@@ -118,8 +124,8 @@ class InvokeExternal implements EvcOp {
 
 class Await implements EvcOp {
   Await(Runtime runtime)
-      : _completerOffset = runtime._readInt16(),
-        _futureOffset = runtime._readInt16();
+    : _completerOffset = runtime._readInt16(),
+      _futureOffset = runtime._readInt16();
 
   Await.make(this._completerOffset, this._futureOffset);
 
@@ -135,10 +141,11 @@ class Await implements EvcOp {
     // Create a continuation that holds the current program state, allowing us to resume this function after we've
     // finished awaiting the future
     final continuation = Continuation(
-        programOffset: runtime._prOffset,
-        frame: runtime.frame,
-        frameOffset: runtime.frameOffset,
-        args: []);
+      programOffset: runtime._prOffset,
+      frame: runtime.frame,
+      frameOffset: runtime.frameOffset,
+      args: [],
+    );
 
     var future = runtime.frame[_futureOffset] as $Future;
     _suspend(runtime, continuation, future, completer);
@@ -160,8 +167,12 @@ class Await implements EvcOp {
     runtime._prOffset = prOffset;
   }
 
-  void _suspend(Runtime runtime, Continuation continuation, $Future future,
-      Completer completer) async {
+  void _suspend(
+    Runtime runtime,
+    Continuation continuation,
+    $Future future,
+    Completer completer,
+  ) async {
     try {
       final result = await future.$value;
       runtime.returnValue = result;

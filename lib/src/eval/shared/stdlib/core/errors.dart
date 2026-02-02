@@ -15,11 +15,20 @@ class $Error implements Error, $Instance {
 
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFunc(
-        _$type.spec!.library, 'Error.', __$Error$new.call);
-    runtime.registerBridgeFunc(_$type.spec!.library, 'Error.safeToString',
-        __$static$method$safeToString.call);
-    runtime.registerBridgeFunc(_$type.spec!.library,
-        'Error.throwWithStackTrace', __$static$method$throwWithStackTrace.call);
+      _$type.spec!.library,
+      'Error.',
+      __$Error$new.call,
+    );
+    runtime.registerBridgeFunc(
+      _$type.spec!.library,
+      'Error.safeToString',
+      __$static$method$safeToString.call,
+    );
+    runtime.registerBridgeFunc(
+      _$type.spec!.library,
+      'Error.throwWithStackTrace',
+      __$static$method$throwWithStackTrace.call,
+    );
   }
 
   late final $Instance _superclass = $Object($value);
@@ -27,12 +36,7 @@ class $Error implements Error, $Instance {
   static const _$type = BridgeTypeRef(CoreTypes.error);
 
   static const $declaration = BridgeClassDef(
-    BridgeClassType(
-      _$type,
-      $extends: null,
-      $implements: [],
-      isAbstract: false,
-    ),
+    BridgeClassType(_$type, $extends: null, $implements: [], isAbstract: false),
     constructors: {
       '': BridgeConstructorDef(
         BridgeFunctionDef(
@@ -41,54 +45,71 @@ class $Error implements Error, $Instance {
           namedParams: [],
         ),
         isFactory: false,
-      )
+      ),
     },
     fields: {},
     methods: {
       'safeToString': BridgeMethodDef(
-          BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, []),
-                nullable: false),
-            params: [
-              BridgeParameter(
-                  'object',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object, []),
-                      nullable: true),
-                  false)
-            ],
-            namedParams: [],
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.string, []),
+            nullable: false,
           ),
-          isStatic: true),
+          params: [
+            BridgeParameter(
+              'object',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object, []),
+                nullable: true,
+              ),
+              false,
+            ),
+          ],
+          namedParams: [],
+        ),
+        isStatic: true,
+      ),
       'throwWithStackTrace': BridgeMethodDef(
-          BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.never, []),
-                nullable: false),
-            params: [
-              BridgeParameter(
-                  'error',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object, []),
-                      nullable: false),
-                  false),
-              BridgeParameter(
-                  'stackTrace',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.stackTrace, []),
-                      nullable: false),
-                  false)
-            ],
-            namedParams: [],
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.never, []),
+            nullable: false,
           ),
-          isStatic: true),
+          params: [
+            BridgeParameter(
+              'error',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object, []),
+                nullable: false,
+              ),
+              false,
+            ),
+            BridgeParameter(
+              'stackTrace',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.stackTrace, []),
+                nullable: false,
+              ),
+              false,
+            ),
+          ],
+          namedParams: [],
+        ),
+        isStatic: true,
+      ),
     },
     getters: {
       'stackTrace': BridgeMethodDef(
-          BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.stackTrace, []),
-                nullable: true),
-            params: [],
-            namedParams: [],
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.stackTrace, []),
+            nullable: true,
           ),
-          isStatic: false),
+          params: [],
+          namedParams: [],
+        ),
+        isStatic: false,
+      ),
     },
     setters: {},
     bridge: false,
@@ -130,19 +151,27 @@ class $Error implements Error, $Instance {
   @override
   StackTrace? get stackTrace => $value.stackTrace;
 
-  static const __$static$method$safeToString =
-      $Function(_$static$method$safeToString);
+  static const __$static$method$safeToString = $Function(
+    _$static$method$safeToString,
+  );
   static $Value? _$static$method$safeToString(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final object = args[0]?.$value as Object;
     final $result = Error.safeToString(object);
     return $String($result);
   }
 
-  static const __$static$method$throwWithStackTrace =
-      $Function(_$static$method$throwWithStackTrace);
+  static const __$static$method$throwWithStackTrace = $Function(
+    _$static$method$throwWithStackTrace,
+  );
   static $Value? _$static$method$throwWithStackTrace(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final error = args[0]?.$value as Object;
     final stackTrace = args[1]?.$reified as StackTrace;
     return Error.throwWithStackTrace(error, stackTrace);
@@ -150,7 +179,10 @@ class $Error implements Error, $Instance {
 
   static const __$Error$new = $Function(_$Error$new);
   static $Value? _$Error$new(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     return $Error.wrap(Error());
   }
 }
@@ -163,8 +195,11 @@ class $UnsupportedError implements UnsupportedError, $Instance {
   }
 
   static void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFunc(_$type.spec!.library, 'UnsupportedError.',
-        __$UnsupportedError$new.call);
+    runtime.registerBridgeFunc(
+      _$type.spec!.library,
+      'UnsupportedError.',
+      __$UnsupportedError$new.call,
+    );
   }
 
   late final $Instance _superclass = $Error.wrap($value);
@@ -184,21 +219,27 @@ class $UnsupportedError implements UnsupportedError, $Instance {
           returns: BridgeTypeAnnotation(_$type),
           params: [
             BridgeParameter(
-                'message',
-                BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, []),
-                    nullable: false),
-                false)
+              'message',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string, []),
+                nullable: false,
+              ),
+              false,
+            ),
           ],
           namedParams: [],
         ),
         isFactory: false,
-      )
+      ),
     },
     fields: {
       'message': BridgeFieldDef(
-          BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, []),
-              nullable: true),
-          isStatic: false),
+        BridgeTypeAnnotation(
+          BridgeTypeRef(CoreTypes.string, []),
+          nullable: true,
+        ),
+        isStatic: false,
+      ),
     },
     methods: {},
     getters: {},
@@ -242,7 +283,10 @@ class $UnsupportedError implements UnsupportedError, $Instance {
 
   static const __$UnsupportedError$new = $Function(_$UnsupportedError$new);
   static $Value? _$UnsupportedError$new(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final message = args[0]?.$value as String;
     return $UnsupportedError.wrap(UnsupportedError(message));
   }
@@ -259,8 +303,11 @@ class $UnimplementedError implements UnimplementedError, $Instance {
   }
 
   static void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFunc(_$type.spec!.library, 'UnimplementedError.',
-        __$UnimplementedError$new.call);
+    runtime.registerBridgeFunc(
+      _$type.spec!.library,
+      'UnimplementedError.',
+      __$UnimplementedError$new.call,
+    );
   }
 
   late final $Instance _superclass = $Error.wrap($value);
@@ -271,9 +318,7 @@ class $UnimplementedError implements UnimplementedError, $Instance {
     BridgeClassType(
       _$type,
       $extends: BridgeTypeRef(CoreTypes.error, []),
-      $implements: [
-        BridgeTypeRef(CoreTypes.unsupportedError, []),
-      ],
+      $implements: [BridgeTypeRef(CoreTypes.unsupportedError, [])],
       isAbstract: false,
     ),
     constructors: {
@@ -282,21 +327,27 @@ class $UnimplementedError implements UnimplementedError, $Instance {
           returns: BridgeTypeAnnotation(_$type),
           params: [
             BridgeParameter(
-                'message',
-                BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, []),
-                    nullable: true),
-                true)
+              'message',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string, []),
+                nullable: true,
+              ),
+              true,
+            ),
           ],
           namedParams: [],
         ),
         isFactory: false,
-      )
+      ),
     },
     fields: {
       'message': BridgeFieldDef(
-          BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, []),
-              nullable: true),
-          isStatic: false),
+        BridgeTypeAnnotation(
+          BridgeTypeRef(CoreTypes.string, []),
+          nullable: true,
+        ),
+        isStatic: false,
+      ),
     },
     methods: {},
     getters: {},
@@ -340,7 +391,10 @@ class $UnimplementedError implements UnimplementedError, $Instance {
 
   static const __$UnimplementedError$new = $Function(_$UnimplementedError$new);
   static $Value? _$UnimplementedError$new(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final message = args[0]?.$value as String;
     return $UnimplementedError.wrap(UnimplementedError(message));
   }
@@ -353,31 +407,43 @@ class $UnimplementedError implements UnimplementedError, $Instance {
 class $AssertionError implements AssertionError, $Instance {
   /// Compile-time class definition for [$AssertionError]
   static const $declaration = BridgeClassDef(
-      BridgeClassType(BridgeTypeRef(CoreTypes.assertionError)),
-      constructors: {
-        '': BridgeConstructorDef(BridgeFunctionDef(
-            returns:
-                BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.assertionError)),
-            params: [
-              BridgeParameter(
-                  'message',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
-                      nullable: true),
-                  true)
-            ]))
-      },
-      methods: {},
-      getters: {
-        'message': BridgeMethodDef(
-            BridgeFunctionDef(
-                params: [],
-                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
-                    nullable: true)),
-            isStatic: false),
-      },
-      setters: {},
-      fields: {},
-      wrap: true);
+    BridgeClassType(BridgeTypeRef(CoreTypes.assertionError)),
+    constructors: {
+      '': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.assertionError),
+          ),
+          params: [
+            BridgeParameter(
+              'message',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+        ),
+      ),
+    },
+    methods: {},
+    getters: {
+      'message': BridgeMethodDef(
+        BridgeFunctionDef(
+          params: [],
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.object),
+            nullable: true,
+          ),
+        ),
+        isStatic: false,
+      ),
+    },
+    setters: {},
+    fields: {},
+    wrap: true,
+  );
 
   final $Instance _superclass;
 
@@ -386,7 +452,10 @@ class $AssertionError implements AssertionError, $Instance {
 
   /// Create a new [$AssertionError] wrapping [AssertionError.new]
   static $AssertionError $new(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     return $AssertionError.wrap(AssertionError(args[0]?.$value));
   }
 
@@ -424,180 +493,255 @@ class $AssertionError implements AssertionError, $Instance {
 class $RangeError implements RangeError, $Instance {
   /// Compile-time class definition for [$RangeError]
   static const $declaration = BridgeClassDef(
-      BridgeClassType(BridgeTypeRef(CoreTypes.rangeError)),
-      constructors: {
-        '': BridgeConstructorDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.rangeError)),
-            params: [
-              BridgeParameter(
-                  'message',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic),
-                      nullable: true),
-                  true),
-            ])),
-        'value': BridgeConstructorDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.rangeError)),
-            params: [
-              BridgeParameter(
-                  'value',
-                  BridgeTypeAnnotation(
-                    BridgeTypeRef(CoreTypes.num),
-                  ),
-                  false),
-              BridgeParameter(
-                  'name',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string),
-                      nullable: true),
-                  true),
-              BridgeParameter(
-                  'message',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string),
-                      nullable: true),
-                  true),
-            ])),
-        'range': BridgeConstructorDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.rangeError)),
-            params: [
-              BridgeParameter(
-                  'invalidValue',
-                  BridgeTypeAnnotation(
-                    BridgeTypeRef(CoreTypes.object),
-                  ),
-                  false),
-              BridgeParameter(
-                  'minValue',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
-                      nullable: true),
-                  false),
-              BridgeParameter(
-                  'maxValue',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
-                      nullable: true),
-                  false),
-              BridgeParameter(
-                  'name',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string),
-                      nullable: true),
-                  true),
-              BridgeParameter(
-                  'message',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string),
-                      nullable: true),
-                  true),
-            ])),
-      },
-      methods: {
-        'checkValidIndex': BridgeMethodDef(
-            BridgeFunctionDef(params: [
-              BridgeParameter(
-                  'index',
-                  BridgeTypeAnnotation(
-                    BridgeTypeRef(CoreTypes.int),
-                  ),
-                  false),
-              BridgeParameter(
-                  'indexable',
-                  BridgeTypeAnnotation(
-                    BridgeTypeRef(CoreTypes.dynamic),
-                  ),
-                  false),
-              BridgeParameter(
-                  'name',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string),
-                      nullable: true),
-                  true),
-              BridgeParameter(
-                  'length',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string),
-                      nullable: true),
-                  true),
-              BridgeParameter(
-                  'message',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string),
-                      nullable: true),
-                  true),
-            ], returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int))),
-            isStatic: true),
-        'checkValidRange': BridgeMethodDef(
-            BridgeFunctionDef(params: [
-              BridgeParameter(
-                  'start',
-                  BridgeTypeAnnotation(
-                    BridgeTypeRef(CoreTypes.int),
-                  ),
-                  false),
-              BridgeParameter(
-                  'end',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int),
-                      nullable: true),
-                  false),
-              BridgeParameter(
-                  'length',
-                  BridgeTypeAnnotation(
-                    BridgeTypeRef(CoreTypes.int),
-                  ),
-                  false),
-              BridgeParameter(
-                  'startName',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string),
-                      nullable: true),
-                  true),
-              BridgeParameter(
-                  'endName',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string),
-                      nullable: true),
-                  true),
-              BridgeParameter(
-                  'message',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string),
-                      nullable: true),
-                  true),
-            ], returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int))),
-            isStatic: true),
-        'checkNotNegative': BridgeMethodDef(
-            BridgeFunctionDef(params: [
-              BridgeParameter(
-                  'value',
-                  BridgeTypeAnnotation(
-                    BridgeTypeRef(CoreTypes.num),
-                  ),
-                  false),
-              BridgeParameter(
-                  'name',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string),
-                      nullable: true),
-                  true),
-              BridgeParameter(
-                  'message',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string),
-                      nullable: true),
-                  true),
-            ], returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num))),
-            isStatic: true),
-      },
-      getters: {
-        'message': BridgeMethodDef(
-            BridgeFunctionDef(
-                params: [],
-                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
-                    nullable: true)),
-            isStatic: false),
-        'invalidValue': BridgeMethodDef(
-            BridgeFunctionDef(
-                params: [],
-                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
-                    nullable: true)),
-            isStatic: false),
-        'name': BridgeMethodDef(
-            BridgeFunctionDef(
-                params: [],
-                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
-                    nullable: true)),
-            isStatic: false),
-      },
-      setters: {},
-      fields: {},
-      wrap: true);
+    BridgeClassType(BridgeTypeRef(CoreTypes.rangeError)),
+    constructors: {
+      '': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.rangeError)),
+          params: [
+            BridgeParameter(
+              'message',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.dynamic),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+        ),
+      ),
+      'value': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.rangeError)),
+          params: [
+            BridgeParameter(
+              'value',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              false,
+            ),
+            BridgeParameter(
+              'name',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string),
+                nullable: true,
+              ),
+              true,
+            ),
+            BridgeParameter(
+              'message',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+        ),
+      ),
+      'range': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.rangeError)),
+          params: [
+            BridgeParameter(
+              'invalidValue',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object)),
+              false,
+            ),
+            BridgeParameter(
+              'minValue',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object),
+                nullable: true,
+              ),
+              false,
+            ),
+            BridgeParameter(
+              'maxValue',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object),
+                nullable: true,
+              ),
+              false,
+            ),
+            BridgeParameter(
+              'name',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string),
+                nullable: true,
+              ),
+              true,
+            ),
+            BridgeParameter(
+              'message',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+        ),
+      ),
+    },
+    methods: {
+      'checkValidIndex': BridgeMethodDef(
+        BridgeFunctionDef(
+          params: [
+            BridgeParameter(
+              'index',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              false,
+            ),
+            BridgeParameter(
+              'indexable',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
+              false,
+            ),
+            BridgeParameter(
+              'name',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string),
+                nullable: true,
+              ),
+              true,
+            ),
+            BridgeParameter(
+              'length',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string),
+                nullable: true,
+              ),
+              true,
+            ),
+            BridgeParameter(
+              'message',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+        ),
+        isStatic: true,
+      ),
+      'checkValidRange': BridgeMethodDef(
+        BridgeFunctionDef(
+          params: [
+            BridgeParameter(
+              'start',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              false,
+            ),
+            BridgeParameter(
+              'end',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.int),
+                nullable: true,
+              ),
+              false,
+            ),
+            BridgeParameter(
+              'length',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              false,
+            ),
+            BridgeParameter(
+              'startName',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string),
+                nullable: true,
+              ),
+              true,
+            ),
+            BridgeParameter(
+              'endName',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string),
+                nullable: true,
+              ),
+              true,
+            ),
+            BridgeParameter(
+              'message',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+        ),
+        isStatic: true,
+      ),
+      'checkNotNegative': BridgeMethodDef(
+        BridgeFunctionDef(
+          params: [
+            BridgeParameter(
+              'value',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              false,
+            ),
+            BridgeParameter(
+              'name',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string),
+                nullable: true,
+              ),
+              true,
+            ),
+            BridgeParameter(
+              'message',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+        ),
+        isStatic: true,
+      ),
+    },
+    getters: {
+      'message': BridgeMethodDef(
+        BridgeFunctionDef(
+          params: [],
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.object),
+            nullable: true,
+          ),
+        ),
+        isStatic: false,
+      ),
+      'invalidValue': BridgeMethodDef(
+        BridgeFunctionDef(
+          params: [],
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.object),
+            nullable: true,
+          ),
+        ),
+        isStatic: false,
+      ),
+      'name': BridgeMethodDef(
+        BridgeFunctionDef(
+          params: [],
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.object),
+            nullable: true,
+          ),
+        ),
+        isStatic: false,
+      ),
+    },
+    setters: {},
+    fields: {},
+    wrap: true,
+  );
 
   final $Instance _superclass;
 
@@ -615,33 +759,76 @@ class $RangeError implements RangeError, $Instance {
   }
 
   static $RangeError $_value(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     return $RangeError.wrap(
-        RangeError.value(args[0]?.$value, args[1]?.$value, args[2]?.$value));
+      RangeError.value(args[0]?.$value, args[1]?.$value, args[2]?.$value),
+    );
   }
 
   static $RangeError $_range(
-      Runtime runtime, $Value? target, List<$Value?> args) {
-    return $RangeError.wrap(RangeError.range(args[0]?.$value, args[1]?.$value,
-        args[2]?.$value, args[3]?.$value, args[4]?.$value));
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
+    return $RangeError.wrap(
+      RangeError.range(
+        args[0]?.$value,
+        args[1]?.$value,
+        args[2]?.$value,
+        args[3]?.$value,
+        args[4]?.$value,
+      ),
+    );
   }
 
   static $Value? $checkValidIndex(
-      Runtime runtime, $Value? target, List<$Value?> args) {
-    return $int(RangeError.checkValidIndex(args[0]?.$value, args[1]?.$value,
-        args[2]?.$value, args[3]?.$value, args[4]?.$value));
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
+    return $int(
+      RangeError.checkValidIndex(
+        args[0]?.$value,
+        args[1]?.$value,
+        args[2]?.$value,
+        args[3]?.$value,
+        args[4]?.$value,
+      ),
+    );
   }
 
   static $Value? $checkValidRange(
-      Runtime runtime, $Value? target, List<$Value?> args) {
-    return $int(RangeError.checkValidRange(args[0]?.$value, args[1]?.$value,
-        args[2]?.$value, args[3]?.$value, args[4]?.$value, args[5]?.$value));
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
+    return $int(
+      RangeError.checkValidRange(
+        args[0]?.$value,
+        args[1]?.$value,
+        args[2]?.$value,
+        args[3]?.$value,
+        args[4]?.$value,
+        args[5]?.$value,
+      ),
+    );
   }
 
   static $Value? $checkNotNegative(
-      Runtime runtime, $Value? target, List<$Value?> args) {
-    return $num(RangeError.checkNotNegative(
-        args[0]?.$value, args[1]?.$value, args[2]?.$value));
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
+    return $num(
+      RangeError.checkNotNegative(
+        args[0]?.$value,
+        args[1]?.$value,
+        args[2]?.$value,
+      ),
+    );
   }
 
   @override
@@ -690,75 +877,101 @@ class $RangeError implements RangeError, $Instance {
 /// dart_eval wrapper for [ArgumentError]
 class $ArgumentError implements ArgumentError, $Instance {
   static const $declaration = BridgeClassDef(
-      BridgeClassType(BridgeTypeRef(CoreTypes.argumentError)),
-      constructors: {
-        '': BridgeConstructorDef(BridgeFunctionDef(
-            returns:
-                BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.argumentError)),
-            params: [
-              BridgeParameter(
-                  'message',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
-                      nullable: true),
-                  true)
-            ])),
-        'value': BridgeConstructorDef(BridgeFunctionDef(
-            returns:
-                BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.argumentError)),
-            params: [
-              BridgeParameter(
-                  'value',
-                  BridgeTypeAnnotation(
-                    BridgeTypeRef(CoreTypes.object),
-                  ),
-                  false),
-              BridgeParameter(
-                  'name',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string),
-                      nullable: true),
-                  true),
-              BridgeParameter(
-                  'message',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string),
-                      nullable: true),
-                  true),
-            ])),
-        'notNull': BridgeConstructorDef(BridgeFunctionDef(
-            returns:
-                BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.argumentError)),
-            params: [
-              BridgeParameter(
-                  'name',
-                  BridgeTypeAnnotation(
-                    BridgeTypeRef(CoreTypes.string),
-                  ),
-                  false),
-            ])),
-      },
-      methods: {},
-      getters: {
-        'message': BridgeMethodDef(
-            BridgeFunctionDef(
-                params: [],
-                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
-                    nullable: true)),
-            isStatic: false),
-        'name': BridgeMethodDef(
-            BridgeFunctionDef(
-                params: [],
-                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
-                    nullable: true)),
-            isStatic: false),
-        'invalidValue': BridgeMethodDef(
-            BridgeFunctionDef(
-                params: [],
-                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
-                    nullable: true)),
-            isStatic: false),
-      },
-      setters: {},
-      fields: {},
-      wrap: true);
+    BridgeClassType(BridgeTypeRef(CoreTypes.argumentError)),
+    constructors: {
+      '': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.argumentError)),
+          params: [
+            BridgeParameter(
+              'message',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+        ),
+      ),
+      'value': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.argumentError)),
+          params: [
+            BridgeParameter(
+              'value',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object)),
+              false,
+            ),
+            BridgeParameter(
+              'name',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string),
+                nullable: true,
+              ),
+              true,
+            ),
+            BridgeParameter(
+              'message',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+        ),
+      ),
+      'notNull': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.argumentError)),
+          params: [
+            BridgeParameter(
+              'name',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              false,
+            ),
+          ],
+        ),
+      ),
+    },
+    methods: {},
+    getters: {
+      'message': BridgeMethodDef(
+        BridgeFunctionDef(
+          params: [],
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.object),
+            nullable: true,
+          ),
+        ),
+        isStatic: false,
+      ),
+      'name': BridgeMethodDef(
+        BridgeFunctionDef(
+          params: [],
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.object),
+            nullable: true,
+          ),
+        ),
+        isStatic: false,
+      ),
+      'invalidValue': BridgeMethodDef(
+        BridgeFunctionDef(
+          params: [],
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.object),
+            nullable: true,
+          ),
+        ),
+        isStatic: false,
+      ),
+    },
+    setters: {},
+    fields: {},
+    wrap: true,
+  );
 
   final $Instance _superclass;
 
@@ -773,20 +986,30 @@ class $ArgumentError implements ArgumentError, $Instance {
 
   /// Create a new [$ArgumentError] wrapping [ArgumentError.new]
   static $ArgumentError $new(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     return $ArgumentError.wrap(ArgumentError(args[0]?.$value));
   }
 
   /// Create a new [$ArgumentError] wrapping [ArgumentError.value]
   static $ArgumentError $_value(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     return $ArgumentError.wrap(
-        ArgumentError.value(args[0]?.$value, args[1]?.$value, args[2]?.$value));
+      ArgumentError.value(args[0]?.$value, args[1]?.$value, args[2]?.$value),
+    );
   }
 
   /// Create a new [$ArgumentError] wrapping [ArgumentError.notNull]
   static $ArgumentError $notNull(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     return $ArgumentError.wrap(ArgumentError.notNull(args[0]?.$value));
   }
 
@@ -829,29 +1052,36 @@ class $ArgumentError implements ArgumentError, $Instance {
 
 /// dart_eval wrapper for [StateError]
 class $StateError implements $Instance, StateError {
-  static const $declaration =
-      BridgeClassDef(BridgeClassType(BridgeTypeRef(CoreTypes.stateError)),
-          constructors: {
-            '': BridgeConstructorDef(BridgeFunctionDef(
-                returns:
-                    BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.stateError)),
-                params: [
-                  BridgeParameter(
-                      'message',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
-                          nullable: true),
-                      true)
-                ])),
-          },
-          methods: {},
-          getters: {},
-          setters: {},
-          fields: {
-            'message': BridgeFieldDef(
-                BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-                isStatic: false),
-          },
-          wrap: true);
+  static const $declaration = BridgeClassDef(
+    BridgeClassType(BridgeTypeRef(CoreTypes.stateError)),
+    constructors: {
+      '': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.stateError)),
+          params: [
+            BridgeParameter(
+              'message',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+        ),
+      ),
+    },
+    methods: {},
+    getters: {},
+    setters: {},
+    fields: {
+      'message': BridgeFieldDef(
+        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+        isStatic: false,
+      ),
+    },
+    wrap: true,
+  );
 
   final $Instance _superclass;
 

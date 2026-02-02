@@ -6,8 +6,12 @@ import 'statement.dart';
 import '../type.dart';
 
 StatementInfo compileBlock(
-    Block b, AlwaysReturnType? expectedReturnType, CompilerContext ctx,
-    {String name = '<block>', bool skipClassBoxing = false}) {
+  Block b,
+  AlwaysReturnType? expectedReturnType,
+  CompilerContext ctx, {
+  String name = '<block>',
+  bool skipClassBoxing = false,
+}) {
   final position = ctx.out.length;
   ctx.beginAllocScope();
 
@@ -16,7 +20,12 @@ StatementInfo compileBlock(
 
   ctx.labels.add(SimpleCompilerLabel());
   for (final s in b.statements) {
-    final stInfo = compileStatement(s, expectedReturnType, ctx, skipClassBoxing: skipClassBoxing);
+    final stInfo = compileStatement(
+      s,
+      expectedReturnType,
+      ctx,
+      skipClassBoxing: skipClassBoxing,
+    );
 
     if (stInfo.willAlwaysThrow) {
       willAlwaysThrow = true;
@@ -31,6 +40,9 @@ StatementInfo compileBlock(
 
   ctx.endAllocScope(popValues: !willAlwaysThrow && !willAlwaysReturn);
 
-  return StatementInfo(position,
-      willAlwaysReturn: willAlwaysReturn, willAlwaysThrow: willAlwaysThrow);
+  return StatementInfo(
+    position,
+    willAlwaysReturn: willAlwaysReturn,
+    willAlwaysThrow: willAlwaysThrow,
+  );
 }

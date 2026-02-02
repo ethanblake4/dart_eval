@@ -7,31 +7,40 @@ import 'package:dart_eval/stdlib/core.dart';
 class $Zone implements $Instance {
   static const _$type = BridgeTypeRef(AsyncTypes.zone);
 
-  static const $declaration = BridgeClassDef(BridgeClassType(_$type),
-      constructors: {},
-      methods: {
-        '[]': BridgeMethodDef(BridgeFunctionDef(
+  static const $declaration = BridgeClassDef(
+    BridgeClassType(_$type),
+    constructors: {},
+    methods: {
+      '[]': BridgeMethodDef(
+        BridgeFunctionDef(
           returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
           params: [
             BridgeParameter(
-                'key',
-                BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
-                    nullable: true),
-                false)
+              'key',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object),
+                nullable: true,
+              ),
+              false,
+            ),
           ],
-        )),
-      },
-      getters: {
-        'current': BridgeMethodDef(
-            BridgeFunctionDef(returns: BridgeTypeAnnotation(_$type)),
-            isStatic: true),
-        'root': BridgeMethodDef(
-            BridgeFunctionDef(returns: BridgeTypeAnnotation(_$type)),
-            isStatic: true),
-      },
-      setters: {},
-      fields: {},
-      wrap: true);
+        ),
+      ),
+    },
+    getters: {
+      'current': BridgeMethodDef(
+        BridgeFunctionDef(returns: BridgeTypeAnnotation(_$type)),
+        isStatic: true,
+      ),
+      'root': BridgeMethodDef(
+        BridgeFunctionDef(returns: BridgeTypeAnnotation(_$type)),
+        isStatic: true,
+      ),
+    },
+    setters: {},
+    fields: {},
+    wrap: true,
+  );
 
   static $Value? $current(Runtime runtime, $Value? target, List<$Value?> args) {
     return $Zone.wrap(Zone.current[1]);

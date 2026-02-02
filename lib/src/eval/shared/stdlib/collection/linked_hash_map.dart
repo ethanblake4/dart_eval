@@ -10,144 +10,189 @@ class $LinkedHashMap implements $Instance {
 
   /// Compile-time bridge class declaration for [$LinkedHashMap]
   static const $declaration = BridgeClassDef(
-      BridgeClassType($type, isAbstract: true, generics: {
-        'K': BridgeGenericParam(),
-        'V': BridgeGenericParam(),
-      }, $implements: [
+    BridgeClassType(
+      $type,
+      isAbstract: true,
+      generics: {'K': BridgeGenericParam(), 'V': BridgeGenericParam()},
+      $implements: [
         BridgeTypeRef(CoreTypes.map, [
           BridgeTypeAnnotation(BridgeTypeRef.ref('K')),
-          BridgeTypeAnnotation(BridgeTypeRef.ref('V'))
-        ])
-      ]),
-      constructors: {
-        '': BridgeConstructorDef(
-            BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(
-                    BridgeTypeRef(CollectionTypes.linkedHashMap)),
-                namedParams: [
-                  BridgeParameter(
-                      'equals',
-                      BridgeTypeAnnotation(
-                          BridgeTypeRef.genericFunction(
-                            BridgeFunctionDef(
-                                returns: BridgeTypeAnnotation(
-                                    BridgeTypeRef(CoreTypes.bool)),
-                                params: [
-                                  BridgeParameter(
-                                      'a',
-                                      BridgeTypeAnnotation(
-                                          BridgeTypeRef.ref('K')),
-                                      false),
-                                  BridgeParameter(
-                                      'b',
-                                      BridgeTypeAnnotation(
-                                          BridgeTypeRef.ref('K')),
-                                      false),
-                                ]),
-                          ),
-                          nullable: true),
-                      true),
-                  BridgeParameter(
-                      'hashCode',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
-                      true),
-                  BridgeParameter(
-                      'isValidKey',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
-                      true),
-                ]),
-            isFactory: true),
-        'identity': BridgeConstructorDef(
-            BridgeFunctionDef(
-              returns: BridgeTypeAnnotation(
-                  BridgeTypeRef(CollectionTypes.linkedHashMap)),
+          BridgeTypeAnnotation(BridgeTypeRef.ref('V')),
+        ]),
+      ],
+    ),
+    constructors: {
+      '': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CollectionTypes.linkedHashMap),
+          ),
+          namedParams: [
+            BridgeParameter(
+              'equals',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.bool),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'a',
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('K')),
+                        false,
+                      ),
+                      BridgeParameter(
+                        'b',
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('K')),
+                        false,
+                      ),
+                    ],
+                  ),
+                ),
+                nullable: true,
+              ),
+              true,
             ),
-            isFactory: true),
-        'from': BridgeConstructorDef(
-            BridgeFunctionDef(
-              returns: BridgeTypeAnnotation(
-                  BridgeTypeRef(CollectionTypes.linkedHashMap)),
-              params: [
-                BridgeParameter('other',
-                    BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.map)), false)
-              ],
+            BridgeParameter(
+              'hashCode',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
+              true,
             ),
-            isFactory: true),
-        'of': BridgeConstructorDef(
-            BridgeFunctionDef(
-              returns: BridgeTypeAnnotation(
-                  BridgeTypeRef(CollectionTypes.linkedHashMap)),
-              params: [
-                BridgeParameter('other',
-                    BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.map)), false)
-              ],
+            BridgeParameter(
+              'isValidKey',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
+              true,
             ),
-            isFactory: true),
-        'fromIterable': BridgeConstructorDef(
-            BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(
-                    BridgeTypeRef(CollectionTypes.linkedHashMap)),
-                params: [
-                  BridgeParameter(
-                      'iterable',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.iterable)),
-                      false)
-                ],
-                namedParams: [
-                  BridgeParameter(
-                      'key',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
-                      true),
-                  BridgeParameter(
-                      'value',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
-                      true),
+          ],
+        ),
+        isFactory: true,
+      ),
+      'identity': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CollectionTypes.linkedHashMap),
+          ),
+        ),
+        isFactory: true,
+      ),
+      'from': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CollectionTypes.linkedHashMap),
+          ),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.map)),
+              false,
+            ),
+          ],
+        ),
+        isFactory: true,
+      ),
+      'of': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CollectionTypes.linkedHashMap),
+          ),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.map)),
+              false,
+            ),
+          ],
+        ),
+        isFactory: true,
+      ),
+      'fromIterable': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CollectionTypes.linkedHashMap),
+          ),
+          params: [
+            BridgeParameter(
+              'iterable',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.iterable)),
+              false,
+            ),
+          ],
+          namedParams: [
+            BridgeParameter(
+              'key',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
+              true,
+            ),
+            BridgeParameter(
+              'value',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
+              true,
+            ),
+          ],
+        ),
+        isFactory: true,
+      ),
+      'fromIterables': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CollectionTypes.linkedHashMap),
+          ),
+          params: [
+            BridgeParameter(
+              'keys',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.iterable, [])),
+              false,
+            ),
+            BridgeParameter(
+              'values',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.iterable, [
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('V')),
                 ]),
-            isFactory: true),
-        'fromIterables': BridgeConstructorDef(
-            BridgeFunctionDef(
-                returns: BridgeTypeAnnotation(
-                    BridgeTypeRef(CollectionTypes.linkedHashMap)),
-                params: [
-                  BridgeParameter(
-                      'keys',
-                      BridgeTypeAnnotation(
-                          BridgeTypeRef(CoreTypes.iterable, [])),
-                      false),
-                  BridgeParameter(
-                      'values',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.iterable,
-                          [BridgeTypeAnnotation(BridgeTypeRef.ref('V'))])),
-                      false)
-                ]),
-            isFactory: true),
-      },
-      methods: {},
-      getters: {},
-      wrap: true);
+              ),
+              false,
+            ),
+          ],
+        ),
+        isFactory: true,
+      ),
+    },
+    methods: {},
+    getters: {},
+    wrap: true,
+  );
 
   /// Wrapper for [LinkedHashMap.new]
   static $Value? $new(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $LinkedHashMap.wrap(LinkedHashMap(
-      equals: args[0] == null
-          ? null
-          : (a, b) => (args[0] as EvalCallable)(
-                  runtime, null, [runtime.wrap(a), runtime.wrap(b)])!
-              .$value,
-      hashCode: args[1] == null
-          ? null
-          : (a) => (args[1] as EvalCallable)(runtime, null, [runtime.wrap(a)])!
-              .$value,
-      isValidKey: args[2] == null
-          ? null
-          : (a) => (args[2] as EvalCallable)(runtime, null, [runtime.wrap(a)])!
-              .$value,
-    ));
+    return $LinkedHashMap.wrap(
+      LinkedHashMap(
+        equals: args[0] == null
+            ? null
+            : (a, b) => (args[0] as EvalCallable)(runtime, null, [
+                runtime.wrap(a),
+                runtime.wrap(b),
+              ])!.$value,
+        hashCode: args[1] == null
+            ? null
+            : (a) => (args[1] as EvalCallable)(runtime, null, [
+                runtime.wrap(a),
+              ])!.$value,
+        isValidKey: args[2] == null
+            ? null
+            : (a) => (args[2] as EvalCallable)(runtime, null, [
+                runtime.wrap(a),
+              ])!.$value,
+      ),
+    );
   }
 
   /// Wrapper for [LinkedHashMap.identity]
   static $Value? $identity(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     return $LinkedHashMap.wrap(LinkedHashMap.identity());
   }
 
@@ -163,26 +208,39 @@ class $LinkedHashMap implements $Instance {
 
   /// Wrapper for [LinkedHashMap.fromIterable]
   static $Value? $fromIterable(
-      Runtime runtime, $Value? target, List<$Value?> args) {
-    return $LinkedHashMap.wrap(LinkedHashMap.fromIterable(
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
+    return $LinkedHashMap.wrap(
+      LinkedHashMap.fromIterable(
         (args[0] as $Iterable).$value,
         key: args[1] == null
             ? null
-            : (a) =>
-                (args[1] as EvalCallable)(runtime, null, [runtime.wrap(a)])!
-                    .$value,
+            : (a) => (args[1] as EvalCallable)(runtime, null, [
+                runtime.wrap(a),
+              ])!.$value,
         value: args[2] == null
             ? null
-            : (a) =>
-                (args[2] as EvalCallable)(runtime, null, [runtime.wrap(a)])!
-                    .$value));
+            : (a) => (args[2] as EvalCallable)(runtime, null, [
+                runtime.wrap(a),
+              ])!.$value,
+      ),
+    );
   }
 
   /// Wrapper for [LinkedHashMap.fromIterables]
   static $Value? $fromIterables(
-      Runtime runtime, $Value? target, List<$Value?> args) {
-    return $LinkedHashMap.wrap(LinkedHashMap.fromIterables(
-        (args[0] as $Iterable).$value, (args[1] as $Iterable).$value));
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
+    return $LinkedHashMap.wrap(
+      LinkedHashMap.fromIterables(
+        (args[0] as $Iterable).$value,
+        (args[1] as $Iterable).$value,
+      ),
+    );
   }
 
   /// Wrap a [LinkedHashMap] in a [$LinkedHashMap].

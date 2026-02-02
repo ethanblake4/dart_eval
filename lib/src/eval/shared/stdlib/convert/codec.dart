@@ -11,42 +11,64 @@ class $Codec implements $Instance {
 
   /// Compile-time bridge class declaration for [$Codec]
   static const $declaration = BridgeClassDef(
-      BridgeClassType($type, isAbstract: true, generics: {
-        'S': BridgeGenericParam(),
-        'T': BridgeGenericParam(),
-      }),
-      constructors: {},
-      methods: {
-        'encode': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
-            params: [
-              BridgeParameter(
-                  'input', BridgeTypeAnnotation(BridgeTypeRef.ref('S')), false)
-            ])),
-        'decode': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef.ref('S')),
-            params: [
-              BridgeParameter('encoded',
-                  BridgeTypeAnnotation(BridgeTypeRef.ref('T')), false)
-            ])),
-      },
-      getters: {
-        'encoder': BridgeMethodDef(BridgeFunctionDef(
-            returns:
-                BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.converter, [
+    BridgeClassType(
+      $type,
+      isAbstract: true,
+      generics: {'S': BridgeGenericParam(), 'T': BridgeGenericParam()},
+    ),
+    constructors: {},
+    methods: {
+      'encode': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+          params: [
+            BridgeParameter(
+              'input',
               BridgeTypeAnnotation(BridgeTypeRef.ref('S')),
-              BridgeTypeAnnotation(BridgeTypeRef.ref('T'))
-            ])),
-            params: [])),
-        'decoder': BridgeMethodDef(BridgeFunctionDef(
-            returns:
-                BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.converter, [
+              false,
+            ),
+          ],
+        ),
+      ),
+      'decode': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef.ref('S')),
+          params: [
+            BridgeParameter(
+              'encoded',
               BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
-              BridgeTypeAnnotation(BridgeTypeRef.ref('S'))
-            ])),
-            params: [])),
-      },
-      wrap: true);
+              false,
+            ),
+          ],
+        ),
+      ),
+    },
+    getters: {
+      'encoder': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(ConvertTypes.converter, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('S')),
+              BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+            ]),
+          ),
+          params: [],
+        ),
+      ),
+      'decoder': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(ConvertTypes.converter, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+              BridgeTypeAnnotation(BridgeTypeRef.ref('S')),
+            ]),
+          ),
+          params: [],
+        ),
+      ),
+    },
+    wrap: true,
+  );
 
   /// Wrap a [Codec] in a [$Codec].
   $Codec.wrap(this.$value);

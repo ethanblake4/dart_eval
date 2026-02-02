@@ -39,8 +39,11 @@ part 'ops/bridge.dart';
 typedef TypeAutowrapper = $Value? Function(dynamic);
 
 class ScopeFrame {
-  const ScopeFrame(this.stackOffset, this.scopeStackOffset,
-      [this.entrypoint = false]);
+  const ScopeFrame(
+    this.stackOffset,
+    this.scopeStackOffset, [
+    this.entrypoint = false,
+  ]);
 
   final int stackOffset;
   final int scopeStackOffset;
@@ -87,17 +90,16 @@ class _UnloadedEnumValues {
 ///
 class Runtime {
   /// The current runtime version code
-  static const int versionCode = 80;
+  static const int versionCode = 81;
 
   /// Construct a runtime from EVC bytecode. When possible, use the
   /// [Runtime.ofProgram] constructor instead to reduce loading time.
-  Runtime(this._evc)
-      : id = _id++,
-        _fromEvc = true;
+  Runtime(this._evc) : id = _id++, _fromEvc = true;
 
   static $Value? _fn(Runtime rt, $Value? target, List<$Value?> args) {
     throw UnimplementedError(
-        'Tried to invoke a nonexistent external function; did you forget to add it with registerBridgeFunc()?');
+      'Tried to invoke a nonexistent external function; did you forget to add it with registerBridgeFunc()?',
+    );
   }
 
   static const _defaultFunction = $Function(_fn);
@@ -105,17 +107,17 @@ class Runtime {
   /// Create a [Runtime] from a [Program]. This constructor should be preferred
   /// where possible as it avoids overhead of loading bytecode.
   Runtime.ofProgram(Program program)
-      : id = _id++,
-        _fromEvc = false,
-        typeTypes = program.typeTypes,
-        //typeNames = program.typeNames,
-        typeIds = program.typeIds,
-        runtimeTypes = program.runtimeTypes,
-        _bridgeLibraryMappings = program.bridgeLibraryMappings,
-        bridgeFuncMappings = program.bridgeFunctionMappings,
-        bridgeEnumMappings = program.enumMappings,
-        globalInitializers = program.globalInitializers,
-        overrideMap = program.overrideMap {
+    : id = _id++,
+      _fromEvc = false,
+      typeTypes = program.typeTypes,
+      //typeNames = program.typeNames,
+      typeIds = program.typeIds,
+      runtimeTypes = program.runtimeTypes,
+      _bridgeLibraryMappings = program.bridgeLibraryMappings,
+      bridgeFuncMappings = program.bridgeFunctionMappings,
+      bridgeEnumMappings = program.enumMappings,
+      globalInitializers = program.globalInitializers,
+      overrideMap = program.overrideMap {
     declarations = program.topLevelDeclarations;
     constantPool.addAll(program.constantPool);
     program.instanceDeclarations.forEach((file, $class) {
@@ -127,8 +129,9 @@ class Runtime {
         final methods = (declarations[2] as Map).cast<String, int>();
         final type = (declarations[3] as int);
 
-        final cls =
-            EvalClass(type, null, [], {...getters}, {...setters}, {...methods});
+        final cls = EvalClass(type, null, [], {...getters}, {...setters}, {
+          ...methods,
+        });
         decls[name] = cls;
       });
 
@@ -146,7 +149,8 @@ class Runtime {
     final version = _readInt32();
     if (m1 != 0x45 || m2 != 0x56 || m3 != 0x43 || m4 != 0x00) {
       throw Exception(
-          'dart_eval runtime error: Not an EVC file or bytecode version older than 064');
+        'dart_eval runtime error: Not an EVC file or bytecode version older than 064',
+      );
     }
     if (version != versionCode) {
       var vstr = version.toString();
@@ -154,8 +158,9 @@ class Runtime {
         vstr = '0$vstr';
       }
       throw Exception(
-          'dart_eval runtime error: EVC bytecode is version $vstr, but runtime supports version $versionCode.\n'
-          'Try using the same version of dart_eval for compiling as the version in your application.');
+        'dart_eval runtime error: EVC bytecode is version $vstr, but runtime supports version $versionCode.\n'
+        'Try using the same version of dart_eval for compiling as the version in your application.',
+      );
     }
     final encodedToplevelDecs = _readString();
     final encodedInstanceDecs = _readString();
@@ -170,54 +175,75 @@ class Runtime {
     final encodedBridgeEnumMappings = _readString();
     final encodedOverrideMap = _readString();
 
-    declarations = (json.decode(encodedToplevelDecs).map((k, v) =>
-            MapEntry(int.parse(k), (v as Map).cast<String, int>())) as Map)
-        .cast<int, Map<String, int>>();
+    declarations =
+        (json
+                    .decode(encodedToplevelDecs)
+                    .map(
+                      (k, v) => MapEntry(
+                        int.parse(k),
+                        (v as Map).cast<String, int>(),
+                      ),
+                    )
+                as Map)
+            .cast<int, Map<String, int>>();
 
-    final classes = (json.decode(encodedInstanceDecs).map((k, v) =>
-            MapEntry(int.parse(k), (v as Map).cast<String, List>())) as Map)
-        .cast<int, Map<String, List>>();
+    final classes =
+        (json
+                    .decode(encodedInstanceDecs)
+                    .map(
+                      (k, v) => MapEntry(
+                        int.parse(k),
+                        (v as Map).cast<String, List>(),
+                      ),
+                    )
+                as Map)
+            .cast<int, Map<String, List>>();
 
     bridgeEnumMappings = (json.decode(encodedBridgeEnumMappings) as Map).map(
-        (k, v) => MapEntry(
-            int.parse(k),
-            (v as Map)
-                .map((key, value) =>
-                    MapEntry(key, (value as Map).cast<String, int>()))
-                .cast<String, Map<String, int>>()));
+      (k, v) => MapEntry(
+        int.parse(k),
+        (v as Map)
+            .map(
+              (key, value) => MapEntry(key, (value as Map).cast<String, int>()),
+            )
+            .cast<String, Map<String, int>>(),
+      ),
+    );
 
     classes.forEach((file, $class) {
       declaredClasses[file] = {
         for (final decl in $class.entries)
-          decl.key: EvalClass.fromJson(decl.value)
+          decl.key: EvalClass.fromJson(decl.value),
       };
     });
 
     typeTypes = [
       for (final s in (json.decode(encodedTypeTypes) as List))
-        (s as List).cast<int>().toSet()
+        (s as List).cast<int>().toSet(),
     ];
 
     typeIds = (json.decode(encodedTypeIds) as Map).cast<String, Map>().map(
-        (key, value) => MapEntry(int.parse(key), value.cast<String, int>()));
+      (key, value) => MapEntry(int.parse(key), value.cast<String, int>()),
+    );
 
-    _bridgeLibraryMappings =
-        (json.decode(encodedBridgeLibraryMappings) as Map).cast();
+    _bridgeLibraryMappings = (json.decode(encodedBridgeLibraryMappings) as Map)
+        .cast();
 
     bridgeFuncMappings = (json.decode(encodedBridgeFuncMappings) as Map)
         .cast<String, Map>()
-        .map((key, value) =>
-            MapEntry(int.parse(key), value.cast<String, int>()));
+        .map(
+          (key, value) => MapEntry(int.parse(key), value.cast<String, int>()),
+        );
 
     constantPool.addAll((json.decode(encodedConstantPool) as List).cast());
 
     runtimeTypes = [
       for (final s in (json.decode(encodedRuntimeTypes) as List))
-        RuntimeTypeSet.fromJson(s as List)
+        RuntimeTypeSet.fromJson(s as List),
     ];
 
     globalInitializers = [
-      for (final i in json.decode(encodedGlobalInitializers) as List) i as int
+      for (final i in json.decode(encodedGlobalInitializers) as List) i as int,
     ];
 
     overrideMap = (json.decode(encodedOverrideMap) as Map)
@@ -257,15 +283,23 @@ class Runtime {
   }
 
   /// Register a bridged runtime top-level/static function or class constructor.
-  void registerBridgeFunc(String library, String name, EvalCallableFunc fn,
-      {bool isBridge = false}) {
-    _unloadedBrFunc
-        .add(_UnloadedBridgeFunction(library, isBridge ? '#$name' : name, fn));
+  void registerBridgeFunc(
+    String library,
+    String name,
+    EvalCallableFunc fn, {
+    bool isBridge = false,
+  }) {
+    _unloadedBrFunc.add(
+      _UnloadedBridgeFunction(library, isBridge ? '#$name' : name, fn),
+    );
   }
 
   /// Register bridged runtime enum values.
   void registerBridgeEnumValues(
-      String library, String name, Map<String, $Value> values) {
+    String library,
+    String name,
+    Map<String, $Value> values,
+  ) {
     _unloadedEnumValues.add(_UnloadedEnumValues(library, name, values));
   }
 
@@ -314,10 +348,11 @@ class Runtime {
   void assertPermission(String domain, [Object? data]) {
     if (!checkPermission(domain, data)) {
       throw Exception(
-          "Permission '$domain' denied${data == null ? '' : " for '$data'"}.\n"
-          "To grant permissions, use Runtime.grant() or add the permission "
-          "to the permissions array of your HotSwapLoader, EvalWidget, "
-          "or eval() function.");
+        "Permission '$domain' denied${data == null ? '' : " for '$data'"}.\n"
+        "To grant permissions, use Runtime.grant() or add the permission "
+        "to the permissions array of your HotSwapLoader, EvalWidget, "
+        "or eval() function.",
+      );
     }
   }
 
@@ -370,8 +405,14 @@ class Runtime {
           : $List.wrap(value);
     } else if (value is Map) {
       return recursive
-          ? $Map.wrap(value.map((key, value) => MapEntry(
-              wrap(key, recursive: true), wrap(value, recursive: true))))
+          ? $Map.wrap(
+              value.map(
+                (key, value) => MapEntry(
+                  wrap(key, recursive: true),
+                  wrap(value, recursive: true),
+                ),
+              ),
+            )
           : $Map.wrap(value);
     }
     for (final wrapper in _typeAutowrappers) {
@@ -381,10 +422,12 @@ class Runtime {
       }
     }
     return wrapPrimitive(value) ??
-        (throw Exception('Cannot wrap $value (${value.runtimeType}).'
-            'If the type is known explicitly, use \${TypeName}.wrap(value); '
-            'otherwise, try adding a type autowrapper with '
-            'runtime.addTypeAutowrapper().'));
+        (throw Exception(
+          'Cannot wrap $value (${value.runtimeType}).'
+          'If the type is known explicitly, use \${TypeName}.wrap(value); '
+          'otherwise, try adding a type autowrapper with '
+          'runtime.addTypeAutowrapper().',
+        ));
   }
 
   /// Attempt to wrap a Dart value into a [$Value], falling back to wrapping
@@ -410,8 +453,10 @@ class Runtime {
 
   var _didSetup = false;
   var _bridgeLibraryMappings = <String, int>{};
-  final _bridgeFunctions =
-      List<EvalCallableFunc>.filled(3000, _defaultFunction.call);
+  final _bridgeFunctions = List<EvalCallableFunc>.filled(
+    3000,
+    _defaultFunction.call,
+  );
   final _unloadedBrFunc = <_UnloadedBridgeFunction>[];
   final _unloadedEnumValues = <_UnloadedEnumValues>[];
   final _plugins = <EvalPlugin>[
@@ -445,13 +490,13 @@ class Runtime {
         return [
           Evc.OP_ADDVV,
           ...Evc.i16b(op._location1),
-          ...Evc.i16b(op._location2)
+          ...Evc.i16b(op._location2),
         ];
       case NumSub op:
         return [
           Evc.OP_NUM_SUB,
           ...Evc.i16b(op._location1),
-          ...Evc.i16b(op._location2)
+          ...Evc.i16b(op._location2),
         ];
       case BoxInt op:
         return [Evc.OP_BOXINT, ...Evc.i16b(op._reg)];
@@ -467,7 +512,7 @@ class Runtime {
         return [
           Evc.OP_JUMP_IF_FALSE,
           ...Evc.i16b(op._location),
-          ...Evc.i32b(op._offset)
+          ...Evc.i32b(op._offset),
         ];
       case PushConstantInt op:
         return [Evc.OP_SETVC, ...Evc.i32b(op._value)];
@@ -476,7 +521,7 @@ class Runtime {
           Evc.OP_PUSHSCOPE,
           ...Evc.i32b(op.sourceFile),
           ...Evc.i32b(op.sourceOffset),
-          ...Evc.istr(op.frName)
+          ...Evc.istr(op.frName),
         ];
       case PopScope _:
         return [Evc.OP_POPSCOPE];
@@ -490,7 +535,7 @@ class Runtime {
         return [
           Evc.OP_RETURN_ASYNC,
           ...Evc.i16b(op._location),
-          ...Evc.i16b(op._completerOffset)
+          ...Evc.i16b(op._completerOffset),
         ];
       case Pop op:
         return [Evc.OP_POP, op._amount];
@@ -500,33 +545,33 @@ class Runtime {
         return [
           Evc.OP_INVOKE_DYNAMIC,
           ...Evc.i16b(op._location),
-          ...Evc.i32b(op._methodIdx)
+          ...Evc.i32b(op._methodIdx),
         ];
       case SetObjectProperty op:
         return [
           Evc.OP_SET_OBJECT_PROP,
           ...Evc.i16b(op._location),
           ...Evc.istr(op._property),
-          ...Evc.i16b(op._valueOffset)
+          ...Evc.i16b(op._valueOffset),
         ];
       case PushObjectProperty op:
         return [
           Evc.OP_PUSH_OBJECT_PROP,
           ...Evc.i16b(op._location),
-          ...Evc.i32b(op._propertyIdx)
+          ...Evc.i32b(op._propertyIdx),
         ];
       case PushObjectPropertyImpl op:
         return [
           Evc.OP_PUSH_OBJECT_PROP_IMPL,
           ...Evc.i16b(op.objectOffset),
-          ...Evc.i16b(op._propertyIndex)
+          ...Evc.i16b(op._propertyIndex),
         ];
       case SetObjectPropertyImpl op:
         return [
           Evc.OP_SET_OBJECT_PROP_IMPL,
           ...Evc.i16b(op._objectOffset),
           ...Evc.i16b(op._propertyIndex),
-          ...Evc.i16b(op._valueOffset)
+          ...Evc.i16b(op._valueOffset),
         ];
       case PushNull _:
         return [Evc.OP_PUSH_NULL];
@@ -536,20 +581,20 @@ class Runtime {
           ...Evc.i32b(op._library),
           ...Evc.i16b(op._super),
           ...Evc.istr(op._name),
-          ...Evc.i16b(op._valuesLen)
+          ...Evc.i16b(op._valuesLen),
         ];
 
       case NumLt op:
         return [
           Evc.OP_NUM_LT,
           ...Evc.i16b(op._location1),
-          ...Evc.i16b(op._location2)
+          ...Evc.i16b(op._location2),
         ];
       case NumLtEq op:
         return [
           Evc.OP_NUM_LT_EQ,
           ...Evc.i16b(op._location1),
-          ...Evc.i16b(op._location2)
+          ...Evc.i16b(op._location2),
         ];
       case PushSuper op:
         return [Evc.OP_PUSH_SUPER, ...Evc.i16b(op._objectOffset)];
@@ -557,7 +602,7 @@ class Runtime {
         return [
           Evc.OP_BRIDGE_INSTANTIATE,
           ...Evc.i16b(op._subclass),
-          ...Evc.i32b(op._constructor)
+          ...Evc.i32b(op._constructor),
         ];
       case PushBridgeSuperShim _:
         return [Evc.OP_PUSH_SUPER_SHIM];
@@ -565,7 +610,7 @@ class Runtime {
         return [
           Evc.OP_PARENT_SUPER_SHIM,
           ...Evc.i16b(op._shimOffset),
-          ...Evc.i16b(op._bridgeOffset)
+          ...Evc.i16b(op._bridgeOffset),
         ];
       case PushList _:
         return [Evc.OP_PUSH_LIST];
@@ -573,13 +618,13 @@ class Runtime {
         return [
           Evc.OP_LIST_APPEND,
           ...Evc.i16b(op._reg),
-          ...Evc.i16b(op._value)
+          ...Evc.i16b(op._value),
         ];
       case IndexList op:
         return [
           Evc.OP_INDEX_LIST,
           ...Evc.i16b(op._position),
-          ...Evc.i32b(op._index)
+          ...Evc.i32b(op._index),
         ];
       case PushIterableLength op:
         return [Evc.OP_ITER_LENGTH, ...Evc.i16b(op._position)];
@@ -588,7 +633,7 @@ class Runtime {
           Evc.OP_LIST_SETINDEXED,
           ...Evc.i16b(op._position),
           ...Evc.i32b(op._index),
-          ...Evc.i16b(op._value)
+          ...Evc.i16b(op._value),
         ];
       case BoxString op:
         return [Evc.OP_BOXSTRING, ...Evc.i16b(op._reg)];
@@ -608,13 +653,15 @@ class Runtime {
         return [Evc.OP_PUSH_CONST, ...Evc.i32b(op._const)];
       case PushFunctionPtr op:
         return [Evc.OP_PUSH_FUNCTION_PTR, ...Evc.i32b(op._offset)];
+      case PushFunctionPtrCopyCapture op:
+        return [Evc.OP_PUSH_FUNCTION_PTR_COPY_CAPTURE, ...Evc.i32b(op._offset)];
       case InvokeExternal op:
         return [Evc.OP_INVOKE_EXTERNAL, ...Evc.i32b(op._function)];
       case Await op:
         return [
           Evc.OP_AWAIT,
           ...Evc.i16b(op._completerOffset),
-          ...Evc.i16b(op._futureOffset)
+          ...Evc.i16b(op._futureOffset),
         ];
       case PushMap _:
         return [Evc.OP_PUSH_MAP];
@@ -623,7 +670,7 @@ class Runtime {
           Evc.OP_MAP_SET,
           ...Evc.i16b(op._map),
           ...Evc.i16b(op._index),
-          ...Evc.i16b(op._value)
+          ...Evc.i16b(op._value),
         ];
       case IndexMap op:
         return [Evc.OP_INDEX_MAP, ...Evc.i16b(op._map), ...Evc.i16b(op._index)];
@@ -637,7 +684,7 @@ class Runtime {
         return [
           Evc.OP_SET_GLOBAL,
           ...Evc.i32b(op._index),
-          ...Evc.i16b(op._value)
+          ...Evc.i16b(op._value),
         ];
       case LoadGlobal op:
         return [Evc.OP_LOAD_GLOBAL, ...Evc.i32b(op._index)];
@@ -649,7 +696,7 @@ class Runtime {
         return [
           Evc.OP_CHECK_EQ,
           ...Evc.i16b(op._value1),
-          ...Evc.i16b(op._value2)
+          ...Evc.i16b(op._value2),
         ];
       case Try op:
         return [Evc.OP_TRY, ...Evc.i32b(op._catchOffset)];
@@ -662,13 +709,13 @@ class Runtime {
           Evc.OP_IS_TYPE,
           ...Evc.i16b(op._objectOffset),
           ...Evc.i32b(op._type),
-          op._not ? 1 : 0
+          op._not ? 1 : 0,
         ];
       case Assert op:
         return [
           Evc.OP_ASSERT,
           ...Evc.i16b(op._valueOffset),
-          ...Evc.i16b(op._exceptionOffset)
+          ...Evc.i16b(op._exceptionOffset),
         ];
       case PushFinally op:
         return [Evc.OP_PUSH_FINALLY, ...Evc.i32b(op._tryOffset)];
@@ -685,7 +732,7 @@ class Runtime {
           Evc.OP_PUSH_RECORD,
           ...Evc.i16b(op._fields),
           ...Evc.i32b(op._const),
-          ...Evc.i32b(op._type)
+          ...Evc.i32b(op._type),
         ];
       default:
         throw ArgumentError('Not a valid op $op');
@@ -787,12 +834,17 @@ class Runtime {
       this.args = args;
     }
     if (declarations[_bridgeLibraryMappings[library]] == null) {
-      throw ArgumentError('Cannot find $library, maybe it wasn\'t declared as'
-          ' an entrypoint?');
+      throw ArgumentError(
+        'Cannot find $library, maybe it wasn\'t declared as'
+        ' an entrypoint?',
+      );
     }
-    return execute(declarations[_bridgeLibraryMappings[library]!]![name] ??
-        (throw ArgumentError(
-            'Unable to find "$name()" from $library, maybe it wasn\'t declared as an entrypoint?')));
+    return execute(
+      declarations[_bridgeLibraryMappings[library]!]![name] ??
+          (throw ArgumentError(
+            'Unable to find "$name()" from $library, maybe it wasn\'t declared as an entrypoint?',
+          )),
+    );
   }
 
   /// Start program execution at a specific bytecode offset.
@@ -872,8 +924,9 @@ class Runtime {
       inCatch = true;
     }
     frameOffset = frameOffsetStack.last;
-    returnValue =
-        exception is WrappedException ? exception.exception : exception;
+    returnValue = exception is WrappedException
+        ? exception.exception
+        : exception;
     _prOffset = catchOffset;
   }
 

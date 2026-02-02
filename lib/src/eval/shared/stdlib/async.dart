@@ -24,15 +24,24 @@ class DartAsyncPlugin implements EvalPlugin {
   @override
   void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFunc(
-        'dart:async', 'Completer.', const $Completer_new().call);
+      'dart:async',
+      'Completer.',
+      const $Completer_new().call,
+    );
     runtime.registerBridgeFunc(
-        'dart:async', 'StreamController.', $StreamController.$new);
+      'dart:async',
+      'StreamController.',
+      $StreamController.$new,
+    );
     runtime.registerBridgeFunc('dart:async', 'Zone.current*g', $Zone.$current);
     runtime.registerBridgeFunc('dart:async', 'Zone.root*g', $Zone.$root);
     runtime.registerBridgeFunc('dart:async', 'StreamView.', $StreamView.$new);
     runtime.registerBridgeFunc('dart:async', 'Timer.', $Timer.$new);
     runtime.registerBridgeFunc(
-        'dart:async', 'Timer.periodic', $Timer.$periodic);
+      'dart:async',
+      'Timer.periodic',
+      $Timer.$periodic,
+    );
     runtime.registerBridgeFunc('dart:async', 'Timer.run', $Timer.$run);
   }
 }

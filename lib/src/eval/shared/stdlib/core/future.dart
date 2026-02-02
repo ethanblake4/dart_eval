@@ -10,35 +10,49 @@ class $Future<T> implements Future<T>, $Instance {
   /// Configure [$Future] for runtime in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFunc(
-        'dart:core', 'Future.delayed', const _$Future_delayed().call);
+      'dart:core',
+      'Future.delayed',
+      const _$Future_delayed().call,
+    );
   }
 
   static const $declaration = BridgeClassDef(
-      BridgeClassType(BridgeTypeRef(CoreTypes.future), isAbstract: true),
-      constructors: {
-        'delayed': BridgeConstructorDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future)),
-            params: [
-              BridgeParameter(
-                  'duration', BridgeTypeAnnotation($Duration.$type), false)
-            ],
-            namedParams: []))
-      },
-      methods: {
-        'then': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future)),
-            params: [
-              BridgeParameter(
-                  'onValue',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
-                  false)
-            ],
-            namedParams: []))
-      },
-      getters: {},
-      setters: {},
-      fields: {},
-      wrap: true);
+    BridgeClassType(BridgeTypeRef(CoreTypes.future), isAbstract: true),
+    constructors: {
+      'delayed': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future)),
+          params: [
+            BridgeParameter(
+              'duration',
+              BridgeTypeAnnotation($Duration.$type),
+              false,
+            ),
+          ],
+          namedParams: [],
+        ),
+      ),
+    },
+    methods: {
+      'then': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future)),
+          params: [
+            BridgeParameter(
+              'onValue',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
+              false,
+            ),
+          ],
+          namedParams: [],
+        ),
+      ),
+    },
+    getters: {},
+    setters: {},
+    fields: {},
+    wrap: true,
+  );
 
   $Future.wrap(this.$value) : _superclass = $Object($value);
 
@@ -79,15 +93,17 @@ class $Future<T> implements Future<T>, $Instance {
   static $Value? _then(Runtime runtime, $Value? target, List<$Value?> args) {
     final $t = target as $Future;
     final $then = args[0] as EvalFunction;
-    final $result = ($t.$value)
-        .then((value) => $then.call(runtime, target, [runtime.wrap(value)]));
+    final $result = ($t.$value).then(
+      (value) => $then.call(runtime, target, [runtime.wrap(value)]),
+    );
     return $Future.wrap($result);
   }
 
   @override
-  Future<R> then<R>(FutureOr<R> Function(T value) onValue,
-          {Function? onError}) =>
-      $value.then(onValue, onError: onError);
+  Future<R> then<R>(
+    FutureOr<R> Function(T value) onValue, {
+    Function? onError,
+  }) => $value.then(onValue, onError: onError);
 
   @override
   Future<T> timeout(Duration timeLimit, {FutureOr<T> Function()? onTimeout}) =>

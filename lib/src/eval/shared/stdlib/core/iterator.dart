@@ -3,22 +3,31 @@ import 'package:dart_eval/stdlib/core.dart';
 
 class $Iterator<E> implements Iterator<E>, $Instance {
   static const $declaration = BridgeClassDef(
-      BridgeClassType(BridgeTypeRef(CoreTypes.iterator),
-          generics: {'E': BridgeGenericParam()}),
-      constructors: {},
-      methods: {
-        'moveNext': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool))))
-      },
-      getters: {
-        'current': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef.ref('E'))))
-      },
-      setters: {},
-      fields: {},
-      wrap: true);
+    BridgeClassType(
+      BridgeTypeRef(CoreTypes.iterator),
+      generics: {'E': BridgeGenericParam()},
+    ),
+    constructors: {},
+    methods: {
+      'moveNext': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+        ),
+      ),
+    },
+    getters: {
+      'current': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+        ),
+      ),
+    },
+    setters: {},
+    fields: {},
+    wrap: true,
+  );
   $Iterator(String id, Iterator<E> value)
-      : $value = runtimeOverride(id) as Iterator<E>? ?? value;
+    : $value = runtimeOverride(id) as Iterator<E>? ?? value;
 
   $Iterator.wrap(this.$value);
 
@@ -52,7 +61,10 @@ class $Iterator<E> implements Iterator<E>, $Instance {
   static const $Function __moveNext = $Function(_moveNext);
 
   static $Value? _moveNext(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     return $bool((target!.$value as Iterator).moveNext());
   }
 

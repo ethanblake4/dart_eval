@@ -23,8 +23,8 @@ void main() {
                 return k;
               }
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(runtime.executeLib('package:eval_test/main.dart', 'main'), 3);
@@ -41,8 +41,8 @@ void main() {
             int x() {
               return 7;
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(runtime.executeLib('package:eval_test/main.dart', 'main'), 7);
@@ -60,8 +60,8 @@ void main() {
             int main () {
               return fib(24);
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 75025);
@@ -95,12 +95,14 @@ void main() {
               var ra = 99;
               return ra;
             }
-          '''
-        }
+          ''',
+        },
       });
 
-      expect(runtime.executeLib('package:example/main.dart', 'main'),
-          $num<num>(7));
+      expect(
+        runtime.executeLib('package:example/main.dart', 'main'),
+        $num<num>(7),
+      );
     });
 
     test('Basic anonymous function', () {
@@ -116,8 +118,8 @@ void main() {
             int main () {
               return r()();
             }
-           '''
-        }
+           ''',
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 2);
@@ -133,8 +135,8 @@ void main() {
               };
               return r();
             }
-           '''
-        }
+           ''',
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 2);
@@ -151,8 +153,8 @@ void main() {
               
               return myfunc(2);
             }
-           '''
-        }
+           ''',
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 3);
@@ -169,19 +171,22 @@ void main() {
               
               return myfunc(a: 2, b: 4);
             }
-          '''
-        }
+          ''',
+        },
       });
 
-      expect(runtime.executeLib('package:example/main.dart', 'main'),
-          $double(1.5));
+      expect(
+        runtime.executeLib('package:example/main.dart', 'main'),
+        $double(1.5),
+      );
     });
 
-    test('Anonymous function with named args, different sorting from call site',
-        () {
-      final runtime = compiler.compileWriteAndLoad({
-        'example': {
-          'main.dart': '''
+    test(
+      'Anonymous function with named args, different sorting from call site',
+      () {
+        final runtime = compiler.compileWriteAndLoad({
+          'example': {
+            'main.dart': '''
             num main () {
               var myfunc = ({b, a}) {
                 return a / b + 1;
@@ -189,13 +194,16 @@ void main() {
               
               return myfunc(a: 2, b: 4);
             }
-          '''
-        }
-      });
+          ''',
+          },
+        });
 
-      expect(runtime.executeLib('package:example/main.dart', 'main'),
-          $double(1.5));
-    });
+        expect(
+          runtime.executeLib('package:example/main.dart', 'main'),
+          $double(1.5),
+        );
+      },
+    );
 
     test('Anonymous function with named args, one unspecified', () {
       final runtime = compiler.compileWriteAndLoad({
@@ -208,8 +216,8 @@ void main() {
               
               return myfunc(a: 2);
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), $int(3));
@@ -226,12 +234,14 @@ void main() {
 
               return myfunc(a: 2, b: 4, c: 2, d: 3, e: 4);
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(
-          runtime.executeLib('package:example/main.dart', 'main'), $double(17));
+        runtime.executeLib('package:example/main.dart', 'main'),
+        $double(17),
+      );
     });
 
     test('Closure with arg', () {
@@ -251,8 +261,8 @@ void main() {
               
               return myfunc;
             }
-           '''
-        }
+           ''',
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 18);
@@ -263,8 +273,8 @@ void main() {
         'example': {
           'main.dart': '''
             int main (int y) => 2 + y;
-           '''
-        }
+           ''',
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main', [4]), 6);
@@ -278,8 +288,8 @@ void main() {
               var fn = (a) => a + 1;
               return fn(4);
             }
-           '''
-        }
+           ''',
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 5);
@@ -299,8 +309,8 @@ void main() {
               }
               return a;
             }
-           '''
-        }
+           ''',
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 2);
@@ -316,12 +326,14 @@ void main() {
             }
             
             String fun() => 'Hello Worl';
-           '''
-        }
+           ''',
+        },
       });
 
-      expect(runtime.executeLib('package:example/main.dart', 'main'),
-          $String('Hello World'));
+      expect(
+        runtime.executeLib('package:example/main.dart', 'main'),
+        $String('Hello World'),
+      );
     });
 
     test('Basic generic function type', () {
@@ -335,8 +347,8 @@ void main() {
             int fun(void Function() a) {
               return a();
             }
-           '''
-        }
+           ''',
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 3);
@@ -351,8 +363,8 @@ void main() {
               var fn = () => list[1];
               return fn();
             }
-           '''
-        }
+           ''',
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 2);
@@ -369,8 +381,8 @@ void main() {
             int fun(int a, [int b = 2]) {
               return a + b;
             }
-           '''
-        }
+           ''',
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 3);
@@ -402,18 +414,19 @@ void main() {
             }
             
             int fun() => 1;
-           '''
-        }
+           ''',
+        },
       });
 
       expect(
-          () => runtime.executeLib('package:example/main.dart', 'main', [
-                $Closure((runtime, target, args) {
-                  print(args[0]!.$value + '!');
-                  return null;
-                })
-              ]),
-          prints('Hello!\ntrue\nfalse\n'));
+        () => runtime.executeLib('package:example/main.dart', 'main', [
+          $Closure((runtime, target, args) {
+            print(args[0]!.$value + '!');
+            return null;
+          }),
+        ]),
+        prints('Hello!\ntrue\nfalse\n'),
+      );
     });
 
     test('Simple function call on dynamic type', () {
@@ -432,8 +445,8 @@ void main() {
             class C {
               int call(int a) => a + 1;
             }
-           '''
-        }
+           ''',
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 3);

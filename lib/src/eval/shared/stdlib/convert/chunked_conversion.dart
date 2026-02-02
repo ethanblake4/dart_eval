@@ -14,9 +14,10 @@ class $ChunkedConversionSink implements $Instance {
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFunc(
-        'dart:convert',
-        'ChunkedConversionSink.withCallback',
-        $ChunkedConversionSink.$withCallback);
+      'dart:convert',
+      'ChunkedConversionSink.withCallback',
+      $ChunkedConversionSink.$withCallback,
+    );
   }
 
   /// Compile-time type specification of [$ChunkedConversionSink]
@@ -50,18 +51,22 @@ class $ChunkedConversionSink implements $Instance {
             BridgeParameter(
               'callback',
               BridgeTypeAnnotation(
-                  BridgeTypeRef.genericFunction(BridgeFunctionDef(
-                returns:
-                    BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
-                params: [
-                  BridgeParameter(
-                    'accumulated',
-                    BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list)),
-                    false,
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.voidType),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'accumulated',
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list)),
+                        false,
+                      ),
+                    ],
+                    namedParams: [],
                   ),
-                ],
-                namedParams: [],
-              ))),
+                ),
+              ),
               false,
             ),
           ],
@@ -99,12 +104,15 @@ class $ChunkedConversionSink implements $Instance {
 
   /// Wrapper for the [ChunkedConversionSink.withCallback] constructor
   static $Value? $withCallback(
-      Runtime runtime, $Value? thisValue, List<$Value?> args) {
+    Runtime runtime,
+    $Value? thisValue,
+    List<$Value?> args,
+  ) {
     return $ChunkedConversionSink.wrap(
       ChunkedConversionSink.withCallback((v0) {
-        (args[0] as EvalCallable)(
-                runtime, null, [$List.view(v0, (e) => runtime.wrapAlways(e))])
-            ?.$value;
+        (args[0] as EvalCallable)(runtime, null, [
+          $List.view(v0, (e) => runtime.wrapAlways(e)),
+        ])?.$value;
       }),
     );
   }

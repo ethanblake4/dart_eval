@@ -67,7 +67,7 @@ void main(List<String> args) {
   // In a real app, you could also compile the Eval code separately and output
   // it to a file using program.write().
   final program = compiler.compile({
-    'example': {'main.dart': source}
+    'example': {'main.dart': source},
   });
 
   // Create a runtime from the compiled program, and add our plugin.
@@ -75,16 +75,20 @@ void main(List<String> args) {
   runtime.addPlugin(ExamplePlugin());
 
   // Call the function and cast the result to the desired type
-  final timeTracker = runtime.executeLib(
-    'package:example/main.dart',
-    'fn',
-    // Wrap args in $Value wrappers except int, double, bool, and List
-    [$String('USA')],
-  ) as WorldTimeTracker;
+  final timeTracker =
+      runtime.executeLib(
+            'package:example/main.dart',
+            'fn',
+            // Wrap args in $Value wrappers except int, double, bool, and List
+            [$String('USA')],
+          )
+          as WorldTimeTracker;
 
   // We can now utilize the returned bridge class
-  print('UK timezone offset: ${timeTracker.getTimeFor('UK').timezoneOffset}'
-      ' (from outside Eval!)');
+  print(
+    'UK timezone offset: ${timeTracker.getTimeFor('UK').timezoneOffset}'
+    ' (from outside Eval!)',
+  );
 }
 
 /// ******************************************************* ///
@@ -114,16 +118,20 @@ class $TimestampedTime implements TimestampedTime, $Instance {
     BridgeClassType($type),
     constructors: {
       // Define the default constructor with an empty string
-      '': BridgeFunctionDef(returns: $type.annotate, params: [
-        // Parameters using built-in types can use [CoreTypes]
-        'utcTime'.param(CoreTypes.int.ref.annotate)
-      ], namedParams: [
-        'timezoneOffset'.paramOptional(CoreTypes.int.ref.annotate)
-      ]).asConstructor
+      '': BridgeFunctionDef(
+        returns: $type.annotate,
+        params: [
+          // Parameters using built-in types can use [CoreTypes]
+          'utcTime'.param(CoreTypes.int.ref.annotate),
+        ],
+        namedParams: [
+          'timezoneOffset'.paramOptional(CoreTypes.int.ref.annotate),
+        ],
+      ).asConstructor,
     },
     fields: {
       'utcTime': BridgeFieldDef(CoreTypes.int.ref.annotate),
-      'timezoneOffset': BridgeFieldDef(CoreTypes.int.ref.annotate)
+      'timezoneOffset': BridgeFieldDef(CoreTypes.int.ref.annotate),
     },
     wrap: true,
   );
@@ -132,10 +140,9 @@ class $TimestampedTime implements TimestampedTime, $Instance {
   /// constructors. This is for the default constructor and is what the runtime
   /// will use to create an instance of this class.
   static $Value? $new(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $TimestampedTime.wrap(TimestampedTime(
-      args[0]!.$value,
-      timezoneOffset: args[1]?.$value ?? 0,
-    ));
+    return $TimestampedTime.wrap(
+      TimestampedTime(args[0]!.$value, timezoneOffset: args[1]?.$value ?? 0),
+    );
   }
 
   /// The underlying Dart instance that this wrapper wraps
@@ -209,13 +216,13 @@ class $WorldTimeTracker$bridge
     constructors: {
       // Even though this class is abstract, we currently need to define
       // the default constructor anyway.
-      '': BridgeFunctionDef(returns: $type.annotate).asConstructor
+      '': BridgeFunctionDef(returns: $type.annotate).asConstructor,
     },
     methods: {
       'getTimeFor': BridgeFunctionDef(
         returns: $TimestampedTime.$type.annotate,
         params: ['country'.param(CoreTypes.string.ref.annotate)],
-      ).asMethod
+      ).asMethod,
     },
     bridge: true,
   );
@@ -241,10 +248,7 @@ class $WorldTimeTracker$bridge
   }
 
   @override
-  void $bridgeSet(
-    String identifier,
-    $Value value,
-  ) {
+  void $bridgeSet(String identifier, $Value value) {
     /// Same idea here.
     throw UnimplementedError(
       'Cannot set property "$identifier" on abstract class WorldTimeTracker',
@@ -255,10 +259,8 @@ class $WorldTimeTracker$bridge
   /// [$_get], and [$_set]. This allows us to override the methods by extending
   /// the class in dart_eval.
   @override
-  TimestampedTime getTimeFor(String country) => $_invoke(
-        'getTimeFor',
-        [$String(country)],
-      );
+  TimestampedTime getTimeFor(String country) =>
+      $_invoke('getTimeFor', [$String(country)]);
 }
 
 /// The plugin for this example package. This is used to register the
@@ -276,10 +278,16 @@ class ExamplePlugin implements EvalPlugin {
   @override
   void configureForRuntime(Runtime runtime) {
     runtime
-      ..registerBridgeFunc('package:example/bridge.dart', 'TimestampedTime.',
-          $TimestampedTime.$new)
-      ..registerBridgeFunc('package:example/bridge.dart', 'WorldTimeTracker.',
-          $WorldTimeTracker$bridge.$new,
-          isBridge: true);
+      ..registerBridgeFunc(
+        'package:example/bridge.dart',
+        'TimestampedTime.',
+        $TimestampedTime.$new,
+      )
+      ..registerBridgeFunc(
+        'package:example/bridge.dart',
+        'WorldTimeTracker.',
+        $WorldTimeTracker$bridge.$new,
+        isBridge: true,
+      );
   }
 }

@@ -6,11 +6,14 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 List<PossiblyValuedParameter> resolveFPLDefaults(
-    CompilerContext ctx, FormalParameterList? fpl, bool isInstanceMethod,
-    {bool allowUnboxed = true,
-    bool sortNamed = false,
-    bool ignoreDefaults = false,
-    bool isEnum = false}) {
+  CompilerContext ctx,
+  FormalParameterList? fpl,
+  bool isInstanceMethod, {
+  bool allowUnboxed = true,
+  bool sortNamed = false,
+  bool ignoreDefaults = false,
+  bool isEnum = false,
+}) {
   final normalized = <PossiblyValuedParameter>[];
   var hasEncounteredOptionalPositionalParam = false;
   var hasEncounteredNamedParam = false;
@@ -23,7 +26,8 @@ List<PossiblyValuedParameter> resolveFPLDefaults(
     if (param.isNamed) {
       if (hasEncounteredOptionalPositionalParam) {
         throw CompileError(
-            'Cannot mix named and optional positional parameters');
+          'Cannot mix named and optional positional parameters',
+        );
       }
       hasEncounteredNamedParam = true;
       named.add(param);
@@ -31,7 +35,8 @@ List<PossiblyValuedParameter> resolveFPLDefaults(
       if (param.isOptionalPositional) {
         if (hasEncounteredNamedParam) {
           throw CompileError(
-              'Cannot mix named and optional positional parameters');
+            'Cannot mix named and optional positional parameters',
+          );
         }
         hasEncounteredOptionalPositionalParam = true;
       }
@@ -56,13 +61,18 @@ List<PossiblyValuedParameter> resolveFPLDefaults(
           V = V.unboxIfNeeded(ctx);
         }
         ctx.pushOp(
-            CopyValue.make(paramIndex, V.scopeFrameOffset), CopyValue.LEN);
+          CopyValue.make(paramIndex, V.scopeFrameOffset),
+          CopyValue.LEN,
+        );
         ctx.endAllocScope();
         ctx.rewriteOp(
-            reserveOffset, JumpIfNonNull.make(paramIndex, ctx.out.length), 0);
+          reserveOffset,
+          JumpIfNonNull.make(paramIndex, ctx.out.length),
+          0,
+        );
         normalized.add(PossiblyValuedParameter(param.parameter, V));
       } else {
-        if (param.defaultValue == null /* todo && param.type.nullable */) {
+        if (param.defaultValue == null /* todo && param.type.nullable */ ) {
           ctx.pushOp(MaybeBoxNull.make(paramIndex), MaybeBoxNull.LEN);
         }
         normalized.add(PossiblyValuedParameter(param.parameter, null));

@@ -92,8 +92,11 @@ StatementInfo macroLoop(
   }
 
   if (rewritePos != null) {
-    ctx.rewriteOp(rewritePos,
-        JumpIfFalse.make(conditionResult!.scopeFrameOffset, ctx.out.length), 0);
+    ctx.rewriteOp(
+      rewritePos,
+      JumpIfFalse.make(conditionResult!.scopeFrameOffset, ctx.out.length),
+      0,
+    );
   }
 
   if (conditionSaveState != null) {

@@ -5,8 +5,10 @@ import 'package:dart_eval/src/eval/bindgen/bridge.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
 import 'package:dart_eval/src/eval/bindgen/type.dart';
 
-String namedParameters(BindgenContext ctx,
-    {required ExecutableElement element}) {
+String namedParameters(
+  BindgenContext ctx, {
+  required ExecutableElement element,
+}) {
   final params = element.formalParameters.where((e) => e.isNamed);
   if (params.isEmpty) {
     return '';
@@ -15,8 +17,10 @@ String namedParameters(BindgenContext ctx,
   return parameters(ctx, params.toList());
 }
 
-String positionalParameters(BindgenContext ctx,
-    {required ExecutableElement element}) {
+String positionalParameters(
+  BindgenContext ctx, {
+  required ExecutableElement element,
+}) {
   final params = element.formalParameters.where((e) => e.isPositional);
   if (params.isEmpty) {
     return '';
@@ -27,7 +31,9 @@ String positionalParameters(BindgenContext ctx,
 
 String parameters(BindgenContext ctx, List<FormalParameterElement> params) {
   return List.generate(
-      params.length, (index) => _parameterFrom(ctx, params[index])).join('\n');
+    params.length,
+    (index) => _parameterFrom(ctx, params[index]),
+  ).join('\n');
 }
 
 String _parameterFrom(BindgenContext ctx, FormalParameterElement parameter) {
@@ -41,9 +47,12 @@ String _parameterFrom(BindgenContext ctx, FormalParameterElement parameter) {
 }
 
 String argumentAccessor(
-    BindgenContext ctx, int index, FormalParameterElement param,
-    {Map<String, String> paramMapping = const {},
-    bool isBridgeMethod = false}) {
+  BindgenContext ctx,
+  int index,
+  FormalParameterElement param, {
+  Map<String, String> paramMapping = const {},
+  bool isBridgeMethod = false,
+}) {
   final paramBuffer = StringBuffer();
   final idx = index + (isBridgeMethod ? 1 : 0);
   if (param.isNamed) {
@@ -70,8 +79,9 @@ String argumentAccessor(
         final name = ftParam.name == null || ftParam.name!.isEmpty
             ? 'arg$j'
             : ftParam.name!;
-        paramBuffer
-            .write(wrapVar(ctx, ftParam.type, name, forCollection: true));
+        paramBuffer.write(
+          wrapVar(ctx, ftParam.type, name, forCollection: true),
+        );
         if (j < type.formalParameters.length - 1) {
           paramBuffer.write(', ');
         }
@@ -110,11 +120,20 @@ String argumentAccessor(
 }
 
 List<String> argumentAccessors(
-    BindgenContext ctx, List<FormalParameterElement> params,
-    {Map<String, String> paramMapping = const {},
-    bool isBridgeMethod = false}) {
+  BindgenContext ctx,
+  List<FormalParameterElement> params, {
+  Map<String, String> paramMapping = const {},
+  bool isBridgeMethod = false,
+}) {
   return params
-      .mapIndexed((i, p) => argumentAccessor(ctx, i, p,
-          paramMapping: paramMapping, isBridgeMethod: isBridgeMethod))
+      .mapIndexed(
+        (i, p) => argumentAccessor(
+          ctx,
+          i,
+          p,
+          paramMapping: paramMapping,
+          isBridgeMethod: isBridgeMethod,
+        ),
+      )
       .toList();
 }

@@ -19,7 +19,9 @@ class $Record implements $Instance {
       final value = fields[index];
       if (value is! $Value) {
         throw InvalidUnboxedValueException(
-            'Record field "$identifier" is not a \$Value', value);
+          'Record field "$identifier" is not a \$Value',
+          value,
+        );
       }
       return value;
     }

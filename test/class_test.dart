@@ -26,8 +26,8 @@ void main() {
               final cls = MyClass();
               return cls.someMethod() + 2;
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(runtime.executeLib('package:dbc_test/main.dart', 'main'), 10);
@@ -54,8 +54,8 @@ void main() {
                 return 11;
               }
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), $int(19));
@@ -76,17 +76,23 @@ void main() {
               final cls = MyClass();
               return cls.someMethod() + cls.someOtherMethod();
             }
-          '''
-        }
+          ''',
+        },
       };
 
-      expect(() => compiler.compileWriteAndLoad(packages),
-          throwsA(isA<CompileError>()));
-      expect(() => compiler.compileWriteAndLoad(packages),
-          throwsA(predicate((CompileError e) {
-        return e.toString().contains('someOtherMethod') &&
-            e.toString().contains('file package:example/main.dart');
-      })));
+      expect(
+        () => compiler.compileWriteAndLoad(packages),
+        throwsA(isA<CompileError>()),
+      );
+      expect(
+        () => compiler.compileWriteAndLoad(packages),
+        throwsA(
+          predicate((CompileError e) {
+            return e.toString().contains('someOtherMethod') &&
+                e.toString().contains('file package:example/main.dart');
+          }),
+        ),
+      );
     });
 
     test('"this" keyword', () {
@@ -109,8 +115,8 @@ void main() {
                 return this.number * times;
               }
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 8);
@@ -140,8 +146,8 @@ void main() {
                 return f(times);
               }
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 12);
@@ -160,8 +166,8 @@ void main() {
                 return 12 - b;
               }
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 10);
@@ -188,8 +194,8 @@ void main() {
               return getNum(5 + x);
             }
           }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 3);
@@ -213,8 +219,8 @@ void main() {
               }
             }
             
-          '''
-        }
+          ''',
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 9);
@@ -237,8 +243,8 @@ void main() {
               set x(int value) => _x = value;
             }
             
-          '''
-        }
+          ''',
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 6);
@@ -262,8 +268,8 @@ void main() {
             class OldCat extends Cat {
               OldCat(super.name) : super(age: 10);
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 16);
@@ -286,8 +292,8 @@ void main() {
                 return _list[1] + _list2[1];
               }
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 7);
@@ -312,12 +318,14 @@ void main() {
                 };
               }
             }
-          '''
-        }
+          ''',
+        },
       });
 
-      expect(runtime.executeLib('package:example/main.dart', 'main'),
-          $String('d'));
+      expect(
+        runtime.executeLib('package:example/main.dart', 'main'),
+        $String('d'),
+      );
     });
 
     test('Accessing methods and fields on super', () {
@@ -345,12 +353,14 @@ void main() {
               final c = Cat('Julian');
               return c.getLabel();
             }
-          '''
-        }
+          ''',
+        },
       });
 
-      expect(runtime.executeLib('package:example/main.dart', 'main'),
-          $String('Julian the animal (cat)'));
+      expect(
+        runtime.executeLib('package:example/main.dart', 'main'),
+        $String('Julian the animal (cat)'),
+      );
     });
 
     test('Constructor field initializers', () {
@@ -368,8 +378,8 @@ void main() {
               final String _b;
               void printValues() => print(_a + _b.length);
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(() {
@@ -395,8 +405,8 @@ void main() {
               final String _b;
               void printValues() => print(_a + _b.length);
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(() {
@@ -420,8 +430,8 @@ void main() {
             class X {
               X();
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(() {
@@ -441,8 +451,8 @@ void main() {
               TestA.value = 22;
               return TestA.value;
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 22);
@@ -464,8 +474,8 @@ void main() {
               var a = TestA();
               return a.value;
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 23);
@@ -486,8 +496,8 @@ void main() {
               var a = TestA(4);
               return a.value + a.value2;
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 15);
@@ -505,8 +515,8 @@ void main() {
                 TestA.value = 22;
                 return TestA.value;
               }
-        '''
-        }
+        ''',
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), $int(22));
@@ -526,8 +536,8 @@ void main() {
               print('hashCode \${testClass.tempValue}');
               return true;
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(() {
@@ -556,8 +566,8 @@ void main() {
               print(r.method);
               print(r.url);
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(() {
@@ -589,7 +599,7 @@ void main() {
               int number() => 4;
             }
           ''',
-        }
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 10);
@@ -612,8 +622,8 @@ void main() {
               testClass.update();
               return testClass.value!;
             }
-          '''
-        }
+          ''',
+        },
       });
 
       final runtime = Runtime.ofProgram(program);

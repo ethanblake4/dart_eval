@@ -4,8 +4,8 @@ part of '../runtime.dart';
 
 class InvokeDynamic implements EvcOp {
   InvokeDynamic(Runtime runtime)
-      : _location = runtime._readInt16(),
-        _methodIdx = runtime._readInt32();
+    : _location = runtime._readInt16(),
+      _methodIdx = runtime._readInt32();
 
   InvokeDynamic.make(this._location, this._methodIdx);
 
@@ -49,15 +49,17 @@ class InvokeDynamic implements EvcOp {
         if (csPosArgTypes.length < object.requiredPositionalArgCount ||
             csPosArgTypes.length > totalPositionalArgCount) {
           throw ArgumentError(
-              'FunctionPtr: Cannot invoke function with the given arguments (unacceptable # of positional arguments). '
-              '$totalPositionalArgCount >= ${csPosArgTypes.length} >= ${object.requiredPositionalArgCount}');
+            'FunctionPtr: Cannot invoke function with the given arguments (unacceptable # of positional arguments). '
+            '$totalPositionalArgCount >= ${csPosArgTypes.length} >= ${object.requiredPositionalArgCount}',
+          );
         }
 
         var i = 0, j = 0;
         while (i < csPosArgTypes.length) {
           if (!csPosArgTypes[i].isAssignableTo(object.positionalArgTypes[i])) {
             throw ArgumentError(
-                'FunctionPtr: Cannot invoke function with the given arguments');
+              'FunctionPtr: Cannot invoke function with the given arguments',
+            );
           }
           i++;
         }
@@ -70,7 +72,8 @@ class InvokeDynamic implements EvcOp {
         while (j < cl) {
           if (i > tl) {
             throw ArgumentError(
-                'FunctionPtr: Cannot invoke function with the given arguments');
+              'FunctionPtr: Cannot invoke function with the given arguments',
+            );
           }
           final t = csNamedArgTypes[j];
           final ti = object.sortedNamedArgTypes[i];
@@ -85,20 +88,23 @@ class InvokeDynamic implements EvcOp {
           if (object.$prev != null) object.$prev,
           for (i = 0; i < object.requiredPositionalArgCount; i++)
             runtime.args[i + 3],
-          for (i = object.requiredPositionalArgCount;
-              i < totalPositionalArgCount;
-              i++)
+          for (
+            i = object.requiredPositionalArgCount;
+            i < totalPositionalArgCount;
+            i++
+          )
             if (cp > i) runtime.args[i + 3] else null,
           for (i = 0; i < object.sortedNamedArgs.length; i++)
-            if (cl > i) runtime.args[i + 3 + totalPositionalArgCount] else null
+            if (cl > i) runtime.args[i + 3 + totalPositionalArgCount] else null,
         ];
         runtime.callStack.add(runtime._prOffset);
         runtime.catchStack.add([]);
         runtime._prOffset = object.offset;
         return;
       }
-      final method = ((object as $Instance).$getProperty(runtime, method0)
-          as EvalFunction);
+      final method =
+          ((object as $Instance).$getProperty(runtime, method0)
+              as EvalFunction);
       try {
         runtime.returnValue = method.call(runtime, object, runtime.args.cast());
       } catch (e) {
@@ -115,8 +121,8 @@ class InvokeDynamic implements EvcOp {
 
 class CheckEq implements EvcOp {
   CheckEq(Runtime runtime)
-      : _value1 = runtime._readInt16(),
-        _value2 = runtime._readInt16();
+    : _value1 = runtime._readInt16(),
+      _value2 = runtime._readInt16();
 
   CheckEq.make(this._value1, this._value2);
 
@@ -151,8 +157,9 @@ class CheckEq implements EvcOp {
       if (vx is $Instance) {
         final method = vx.$getProperty(runtime, '==') as EvalFunction;
 
-        runtime.returnValue = method
-            .call(runtime, vx, [v2 == null ? null : v2 as $Value])!.$value;
+        runtime.returnValue = method.call(runtime, vx, [
+          v2 == null ? null : v2 as $Value,
+        ])!.$value;
         runtime.args = [];
 
         return;
@@ -170,10 +177,10 @@ class CheckEq implements EvcOp {
 // Create a class
 class CreateClass implements EvcOp {
   CreateClass(Runtime runtime)
-      : _library = runtime._readInt32(),
-        _super = runtime._readInt16(),
-        _name = runtime._readString(),
-        _valuesLen = runtime._readInt16();
+    : _library = runtime._readInt32(),
+      _super = runtime._readInt16(),
+      _name = runtime._readString(),
+      _valuesLen = runtime._readInt16();
 
   CreateClass.make(this._library, this._super, this._name, this._valuesLen);
 
@@ -205,9 +212,9 @@ class CreateClass implements EvcOp {
 
 class SetObjectProperty implements EvcOp {
   SetObjectProperty(Runtime runtime)
-      : _location = runtime._readInt16(),
-        _property = runtime._readString(),
-        _valueOffset = runtime._readInt16();
+    : _location = runtime._readInt16(),
+      _property = runtime._readString(),
+      _valueOffset = runtime._readInt16();
 
   SetObjectProperty.make(this._location, this._property, this._valueOffset);
 
@@ -226,7 +233,10 @@ class SetObjectProperty implements EvcOp {
   void run(Runtime runtime) {
     final object = runtime.frame[_location];
     (object as $Instance).$setProperty(
-        runtime, _property, runtime.frame[_valueOffset] as $Value);
+      runtime,
+      _property,
+      runtime.frame[_valueOffset] as $Value,
+    );
   }
 
   @override
@@ -236,8 +246,8 @@ class SetObjectProperty implements EvcOp {
 
 class PushObjectProperty implements EvcOp {
   PushObjectProperty(Runtime runtime)
-      : _location = runtime._readInt16(),
-        _propertyIdx = runtime._readInt32();
+    : _location = runtime._readInt16(),
+      _propertyIdx = runtime._readInt32();
 
   PushObjectProperty.make(this._location, this._propertyIdx);
 
@@ -264,8 +274,8 @@ class PushObjectProperty implements EvcOp {
           if (method == null) {
             object = object.evalSuperclass;
             if (object == null) {
-              runtime.returnValue =
-                  (base as $InstanceImpl).getCoreObjectProperty(property);
+              runtime.returnValue = (base as $InstanceImpl)
+                  .getCoreObjectProperty(property);
               return;
             }
             continue;
@@ -294,8 +304,8 @@ class PushObjectProperty implements EvcOp {
 
 class PushObjectPropertyImpl implements EvcOp {
   PushObjectPropertyImpl(Runtime runtime)
-      : objectOffset = runtime._readInt16(),
-        _propertyIndex = runtime._readInt16();
+    : objectOffset = runtime._readInt16(),
+      _propertyIndex = runtime._readInt16();
 
   final int objectOffset;
   final int _propertyIndex;
@@ -317,16 +327,19 @@ class PushObjectPropertyImpl implements EvcOp {
 
 class SetObjectPropertyImpl implements EvcOp {
   SetObjectPropertyImpl(Runtime runtime)
-      : _objectOffset = runtime._readInt16(),
-        _propertyIndex = runtime._readInt16(),
-        _valueOffset = runtime._readInt16();
+    : _objectOffset = runtime._readInt16(),
+      _propertyIndex = runtime._readInt16(),
+      _valueOffset = runtime._readInt16();
 
   final int _objectOffset;
   final int _propertyIndex;
   final int _valueOffset;
 
   SetObjectPropertyImpl.make(
-      this._objectOffset, this._propertyIndex, this._valueOffset);
+    this._objectOffset,
+    this._propertyIndex,
+    this._valueOffset,
+  );
 
   static int length = Evc.BASE_OPLEN + Evc.I16_LEN * 3;
 
@@ -371,9 +384,9 @@ class PushSuper implements EvcOp {
 
 class IsType implements EvcOp {
   IsType(Runtime runtime)
-      : _objectOffset = runtime._readInt16(),
-        _type = runtime._readInt32(),
-        _not = runtime._readUint8() > 0;
+    : _objectOffset = runtime._readInt16(),
+      _type = runtime._readInt32(),
+      _not = runtime._readUint8() > 0;
 
   final int _objectOffset;
   final int _type;
@@ -413,8 +426,9 @@ class PushRuntimeType implements EvcOp {
   @override
   void run(Runtime runtime) {
     final value = runtime.frame[_value] as $Value;
-    runtime.frame[runtime.frameOffset++] =
-        $TypeImpl(value.$getRuntimeType(runtime));
+    runtime.frame[runtime.frameOffset++] = $TypeImpl(
+      value.$getRuntimeType(runtime),
+    );
   }
 
   @override

@@ -13,8 +13,11 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
-Variable compilePropertyAccess(PropertyAccess pa, CompilerContext ctx,
-    {Variable? cascadeTarget}) {
+Variable compilePropertyAccess(
+  PropertyAccess pa,
+  CompilerContext ctx, {
+  Variable? cascadeTarget,
+}) {
   final L = cascadeTarget ?? compileExpression(pa.realTarget, ctx);
 
   if (pa.operator.type == TokenType.QUESTION_PERIOD) {
@@ -23,15 +26,23 @@ Variable compilePropertyAccess(PropertyAccess pa, CompilerContext ctx,
         L.concreteTypes[0] == CoreTypes.nullType.ref(ctx)) {
       return out;
     }
-    macroBranch(ctx, null, condition: (ctx) {
-      return checkNotEqual(ctx, L, out);
-    }, thenBranch: (ctx, rt) {
-      final V = L.getProperty(ctx, pa.propertyName.name).boxIfNeeded(ctx);
-      out = out.copyWith(type: V.type.copyWith(nullable: true));
-      ctx.pushOp(CopyValue.make(out.scopeFrameOffset, V.scopeFrameOffset),
-          CopyValue.LEN);
-      return StatementInfo(-1);
-    }, source: pa);
+    macroBranch(
+      ctx,
+      null,
+      condition: (ctx) {
+        return checkNotEqual(ctx, L, out);
+      },
+      thenBranch: (ctx, rt) {
+        final V = L.getProperty(ctx, pa.propertyName.name).boxIfNeeded(ctx);
+        out = out.copyWith(type: V.type.copyWith(nullable: true));
+        ctx.pushOp(
+          CopyValue.make(out.scopeFrameOffset, V.scopeFrameOffset),
+          CopyValue.LEN,
+        );
+        return StatementInfo(-1);
+      },
+      source: pa,
+    );
     return out;
   }
 
@@ -39,8 +50,10 @@ Variable compilePropertyAccess(PropertyAccess pa, CompilerContext ctx,
 }
 
 Reference compilePropertyAccessAsReference(
-    PropertyAccess pa, CompilerContext ctx,
-    {Variable? cascadeTarget}) {
+  PropertyAccess pa,
+  CompilerContext ctx, {
+  Variable? cascadeTarget,
+}) {
   final L = cascadeTarget ?? compileExpression(pa.realTarget, ctx);
   return IdentifierReference(L, pa.propertyName.name);
 }

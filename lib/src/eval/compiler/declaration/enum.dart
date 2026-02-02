@@ -11,8 +11,11 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
-void compileEnumDeclaration(CompilerContext ctx, EnumDeclaration d,
-    {bool statics = false}) {
+void compileEnumDeclaration(
+  CompilerContext ctx,
+  EnumDeclaration d, {
+  bool statics = false,
+}) {
   final type = TypeRef.lookupDeclaration(ctx, ctx.library, d);
   final $runtimeType = ctx.typeRefIndexMap[type];
   final clsName = d.name.lexeme;
@@ -20,7 +23,7 @@ void compileEnumDeclaration(CompilerContext ctx, EnumDeclaration d,
     {},
     {},
     {},
-    $runtimeType
+    $runtimeType,
   ];
   ctx.instanceGetterIndices[ctx.library]![clsName] = {};
   final constructors = <ConstructorDeclaration>[];
@@ -55,10 +58,11 @@ void compileEnumDeclaration(CompilerContext ctx, EnumDeclaration d,
 
   for (final m in <ClassMember>[...fields, ...methods, ...constructors]) {
     ctx.resetStack(
-        position: m is ConstructorDeclaration ||
-                (m is MethodDeclaration && m.isStatic)
-            ? 0
-            : 1);
+      position:
+          m is ConstructorDeclaration || (m is MethodDeclaration && m.isStatic)
+          ? 0
+          : 1,
+    );
     ctx.currentClass = d;
     compileDeclaration(m, ctx, parent: d, fieldIndex: i, fields: fields);
     if (m is FieldDeclaration) {
@@ -73,9 +77,11 @@ void compileEnumDeclaration(CompilerContext ctx, EnumDeclaration d,
     final pos = beginMethod(ctx, constant, constant.offset, '$cName*i');
     final cstrName = constant.arguments?.constructorSelector?.name.name ?? '';
     final method = IdentifierReference(null, d.name.lexeme).getValue(ctx);
-    final offset = method.methodOffset ??
+    final offset =
+        method.methodOffset ??
         (throw CompileError(
-            'Cannot instantiate enum $clsName (no valid constructor $cstrName)'));
+          'Cannot instantiate enum $clsName (no valid constructor $cstrName)',
+        ));
 
     final cstr =
         ctx.topLevelDeclarationsMap[offset.file]![offset.name ?? '$clsName.'];
@@ -90,8 +96,13 @@ void compileEnumDeclaration(CompilerContext ctx, EnumDeclaration d,
     if (constant.arguments != null && dec != null) {
       final fpl = (dec as ConstructorDeclaration).parameters.parameters;
       compileArgumentList(
-          ctx, constant.arguments!.argumentList, ctx.library, fpl, dec,
-          source: constant);
+        ctx,
+        constant.arguments!.argumentList,
+        ctx.library,
+        fpl,
+        dec,
+        source: constant,
+      );
     }
 
     final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.length);

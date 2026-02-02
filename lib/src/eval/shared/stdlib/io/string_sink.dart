@@ -10,58 +10,89 @@ class $StringSink implements $Instance {
 
   /// Compile-time bridged class declaration for [$StringSink]
   static const $declaration = BridgeClassDef(
-      BridgeClassType($type, isAbstract: true),
-      constructors: {
-        '': BridgeConstructorDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation($type), params: [], namedParams: []))
-      },
-      methods: {
-        'write': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
-            params: [
-              BridgeParameter(
-                  'object',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
-                      nullable: true),
-                  false),
-            ],
-            namedParams: [])),
-        'writeAll': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
-            params: [
-              BridgeParameter(
-                  'objects',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.iterable)),
-                  false),
-              BridgeParameter(
-                  'separator',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string),
-                      nullable: true),
-                  true),
-            ],
-            namedParams: [])),
-        'writeln': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
-            params: [
-              BridgeParameter(
-                  'object',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
-                      nullable: true),
-                  true),
-            ],
-            namedParams: [])),
-        'writeCharCode': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
-            params: [
-              BridgeParameter('charCode',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), false),
-            ],
-            namedParams: [])),
-      },
-      getters: {},
-      setters: {},
-      fields: {},
-      wrap: true);
+    BridgeClassType($type, isAbstract: true),
+    constructors: {
+      '': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          params: [],
+          namedParams: [],
+        ),
+      ),
+    },
+    methods: {
+      'write': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          params: [
+            BridgeParameter(
+              'object',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object),
+                nullable: true,
+              ),
+              false,
+            ),
+          ],
+          namedParams: [],
+        ),
+      ),
+      'writeAll': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          params: [
+            BridgeParameter(
+              'objects',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.iterable)),
+              false,
+            ),
+            BridgeParameter(
+              'separator',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+          namedParams: [],
+        ),
+      ),
+      'writeln': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          params: [
+            BridgeParameter(
+              'object',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+          namedParams: [],
+        ),
+      ),
+      'writeCharCode': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          params: [
+            BridgeParameter(
+              'charCode',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              false,
+            ),
+          ],
+          namedParams: [],
+        ),
+      ),
+    },
+    getters: {},
+    setters: {},
+    fields: {},
+    wrap: true,
+  );
 
   late final $Instance _superclass = $Object($value);
 
@@ -100,7 +131,10 @@ class $StringSink implements $Instance {
   static final $Function __writeAll = $Function(_writeAll);
 
   static $Value? _writeAll(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final objects = args[0]!.$value;
     final separator = args[1]?.$value;
     (target!.$value as StringSink).writeAll(objects!.$reified, separator);
@@ -111,15 +145,19 @@ class $StringSink implements $Instance {
 
   static $Value? _writeln(Runtime runtime, $Value? target, List<$Value?> args) {
     final object = args[0];
-    (target!.$value as StringSink)
-        .writeln(object == null ? "" : runtime.valueToString(object));
+    (target!.$value as StringSink).writeln(
+      object == null ? "" : runtime.valueToString(object),
+    );
     return null;
   }
 
   static final $Function _writeCharCode = $Function(__writeCharCode);
 
   static $Value? __writeCharCode(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final charCode = args[0]!.$value;
     (target!.$value as StringSink).writeCharCode(charCode);
     return null;

@@ -49,11 +49,8 @@ class NotReferencableError extends CompileError {
 }
 
 class PrefixError extends CompileError {
-  const PrefixError({
-    AstNode? node,
-    int? library,
-    CompilerContext? context,
-  }) : super("[internal] unexpected prefix", node, library, context);
+  const PrefixError({AstNode? node, int? library, CompilerContext? context})
+    : super("[internal] unexpected prefix", node, library, context);
 
   @override
   String toString() {

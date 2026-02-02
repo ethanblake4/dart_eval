@@ -12,156 +12,230 @@ class $Set<E> implements Set<E>, $Instance {
   static const $type = BridgeTypeRef(CoreTypes.set);
 
   static const $declaration = BridgeClassDef(
-      BridgeClassType(BridgeTypeRef(CoreTypes.set),
-          $extends: BridgeTypeRef(CoreTypes.iterable,
-              [BridgeTypeAnnotation(BridgeTypeRef.ref('E'))]),
-          generics: {'E': BridgeGenericParam()}),
-      constructors: {
-        'from': BridgeConstructorDef(
-          BridgeFunctionDef(
-            returns: BridgeTypeAnnotation($type),
-            params: [
-              BridgeParameter(
-                'elements',
-                BridgeTypeAnnotation(
-                    BridgeTypeRef(CoreTypes.iterable,
-                        [BridgeTypeAnnotation(BridgeTypeRef.ref('E'))]),
-                    nullable: false),
-                false,
-              )
-            ],
-            generics: {'E': BridgeGenericParam()},
-          ),
-          isFactory: true,
-        ),
-      },
-      methods: {
-        // Most methods are inherited from Iterable, so we don't need to
-        // redefine them here.
-        'add': BridgeMethodDef(
-            BridgeFunctionDef(params: [
-              BridgeParameter(
-                  'value', BridgeTypeAnnotation(BridgeTypeRef.ref('E')), false),
-            ], returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool))),
-            isStatic: false),
-        'addAll': BridgeMethodDef(
-            BridgeFunctionDef(
-                params: [
-                  BridgeParameter(
-                      'other',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.iterable,
-                          [BridgeTypeAnnotation(BridgeTypeRef.ref('E'))])),
-                      false),
-                ],
-                returns:
-                    BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType))),
-            isStatic: false),
-        'contains': BridgeMethodDef(
-          BridgeFunctionDef(params: [
+    BridgeClassType(
+      BridgeTypeRef(CoreTypes.set),
+      $extends: BridgeTypeRef(CoreTypes.iterable, [
+        BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+      ]),
+      generics: {'E': BridgeGenericParam()},
+    ),
+    constructors: {
+      'from': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          params: [
             BridgeParameter(
-                'value',
-                BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
-                    nullable: true),
-                false),
-          ], returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool))),
-          isStatic: false,
+              'elements',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.iterable, [
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+                ]),
+                nullable: false,
+              ),
+              false,
+            ),
+          ],
+          generics: {'E': BridgeGenericParam()},
         ),
-        'remove': BridgeMethodDef(
-            BridgeFunctionDef(params: [
-              BridgeParameter(
-                  'value',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
-                      nullable: true),
-                  false),
-            ], returns: BridgeTypeAnnotation(BridgeTypeRef.ref('E'))),
-            isStatic: false),
-        'clear': BridgeMethodDef(
-            BridgeFunctionDef(
-                returns:
-                    BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType))),
-            isStatic: false),
-        'lookup': BridgeMethodDef(
-            BridgeFunctionDef(
-                params: [
-                  BridgeParameter(
-                      'value',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
-                          nullable: true),
-                      false),
-                ],
-                returns: BridgeTypeAnnotation(BridgeTypeRef.ref('E'),
-                    nullable: true)),
-            isStatic: false),
-        'removeAll': BridgeMethodDef(
-            BridgeFunctionDef(
-                params: [
-                  BridgeParameter(
-                      'elements',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.iterable,
-                          [BridgeTypeAnnotation(BridgeTypeRef.ref('E'))])),
-                      false),
-                ],
-                returns:
-                    BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType))),
-            isStatic: false),
-        'retainAll': BridgeMethodDef(
-            BridgeFunctionDef(
-                params: [
-                  BridgeParameter(
-                      'elements',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.iterable,
-                          [BridgeTypeAnnotation(BridgeTypeRef.ref('E'))])),
-                      false),
-                ],
-                returns:
-                    BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType))),
-            isStatic: false),
-        'intersection': BridgeMethodDef(
-            BridgeFunctionDef(
-                params: [
-                  BridgeParameter(
-                      'other',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.set, [
-                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object))
-                      ])),
-                      false),
-                ],
-                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.set,
-                    [BridgeTypeAnnotation(BridgeTypeRef.ref('E'))]))),
-            isStatic: false),
-        'union': BridgeMethodDef(
-            BridgeFunctionDef(
-                params: [
-                  BridgeParameter(
-                      'other',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.set,
-                          [BridgeTypeAnnotation(BridgeTypeRef.ref('E'))])),
-                      false),
-                ],
-                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.set,
-                    [BridgeTypeAnnotation(BridgeTypeRef.ref('E'))]))),
-            isStatic: false),
-        'difference': BridgeMethodDef(
-            BridgeFunctionDef(
-                params: [
-                  BridgeParameter(
-                      'other',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.set, [
-                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object))
-                      ])),
-                      false),
-                ],
-                returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.set,
-                    [BridgeTypeAnnotation(BridgeTypeRef.ref('E'))]))),
-            isStatic: false),
-      },
-      getters: {},
-      setters: {},
-      fields: {},
-      wrap: true);
+        isFactory: true,
+      ),
+    },
+    methods: {
+      // Most methods are inherited from Iterable, so we don't need to
+      // redefine them here.
+      'add': BridgeMethodDef(
+        BridgeFunctionDef(
+          params: [
+            BridgeParameter(
+              'value',
+              BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+              false,
+            ),
+          ],
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+        ),
+        isStatic: false,
+      ),
+      'addAll': BridgeMethodDef(
+        BridgeFunctionDef(
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.iterable, [
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+                ]),
+              ),
+              false,
+            ),
+          ],
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+        ),
+        isStatic: false,
+      ),
+      'contains': BridgeMethodDef(
+        BridgeFunctionDef(
+          params: [
+            BridgeParameter(
+              'value',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object),
+                nullable: true,
+              ),
+              false,
+            ),
+          ],
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+        ),
+        isStatic: false,
+      ),
+      'remove': BridgeMethodDef(
+        BridgeFunctionDef(
+          params: [
+            BridgeParameter(
+              'value',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object),
+                nullable: true,
+              ),
+              false,
+            ),
+          ],
+          returns: BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+        ),
+        isStatic: false,
+      ),
+      'clear': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+        ),
+        isStatic: false,
+      ),
+      'lookup': BridgeMethodDef(
+        BridgeFunctionDef(
+          params: [
+            BridgeParameter(
+              'value',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object),
+                nullable: true,
+              ),
+              false,
+            ),
+          ],
+          returns: BridgeTypeAnnotation(BridgeTypeRef.ref('E'), nullable: true),
+        ),
+        isStatic: false,
+      ),
+      'removeAll': BridgeMethodDef(
+        BridgeFunctionDef(
+          params: [
+            BridgeParameter(
+              'elements',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.iterable, [
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+                ]),
+              ),
+              false,
+            ),
+          ],
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+        ),
+        isStatic: false,
+      ),
+      'retainAll': BridgeMethodDef(
+        BridgeFunctionDef(
+          params: [
+            BridgeParameter(
+              'elements',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.iterable, [
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+                ]),
+              ),
+              false,
+            ),
+          ],
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+        ),
+        isStatic: false,
+      ),
+      'intersection': BridgeMethodDef(
+        BridgeFunctionDef(
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.set, [
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object)),
+                ]),
+              ),
+              false,
+            ),
+          ],
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.set, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+            ]),
+          ),
+        ),
+        isStatic: false,
+      ),
+      'union': BridgeMethodDef(
+        BridgeFunctionDef(
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.set, [
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+                ]),
+              ),
+              false,
+            ),
+          ],
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.set, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+            ]),
+          ),
+        ),
+        isStatic: false,
+      ),
+      'difference': BridgeMethodDef(
+        BridgeFunctionDef(
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.set, [
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object)),
+                ]),
+              ),
+              false,
+            ),
+          ],
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.set, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+            ]),
+          ),
+        ),
+        isStatic: false,
+      ),
+    },
+    getters: {},
+    setters: {},
+    fields: {},
+    wrap: true,
+  );
 
   static $Value? __$Set$from(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final other = args[0]?.$value as Set;
 
     return $Set.wrap(Set.from(other));
@@ -221,7 +295,10 @@ class $Set<E> implements Set<E>, $Instance {
   static const $Function __contains = $Function(_contains);
 
   static $Value? _contains(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     return $bool((target!.$value as Set).contains(args[0]));
   }
 
@@ -250,14 +327,20 @@ class $Set<E> implements Set<E>, $Instance {
 
   static const $Function __difference = $Function(_difference);
   static $Value? _difference(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final other = args[0]!.$value as Set<Object?>;
     return $Set.wrap((target!.$value as Set).difference(other));
   }
 
   static const $Function __intersection = $Function(_intersection);
   static $Value? _intersection(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final other = args[0]!.$value as Set<Object?>;
     return $Set.wrap((target!.$value as Set).intersection(other));
   }

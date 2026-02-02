@@ -32,10 +32,12 @@ class DartIoPlugin implements EvalPlugin {
     $InternetAddress.configureForCompile(registry);
     $InternetAddressType.configureForCompile(registry);
     registry.addSource($HttpStatusSource());
-    registry.addSource(DartSource('dart:io', '''
+    registry.addSource(
+      DartSource('dart:io', '''
     library dart.io;
     export 'dart:io/http_status.dart';
-    '''));
+    '''),
+    );
   }
 
   @override

@@ -5,18 +5,28 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/object.dart';
 /// Wrapper for [Comparable]
 class $Comparable<T> implements Comparable<T>, $Instance {
   static const $declaration = BridgeClassDef(
-      BridgeClassType(BridgeTypeRef(CoreTypes.comparable),
-          isAbstract: true, generics: {'T': BridgeGenericParam()}),
-      constructors: {},
-      methods: {
-        'compareTo': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
-            params: [
-              BridgeParameter(
-                  'other', BridgeTypeAnnotation(BridgeTypeRef.ref('T')), false)
-            ]))
-      },
-      wrap: true);
+    BridgeClassType(
+      BridgeTypeRef(CoreTypes.comparable),
+      isAbstract: true,
+      generics: {'T': BridgeGenericParam()},
+    ),
+    constructors: {},
+    methods: {
+      'compareTo': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+              false,
+            ),
+          ],
+        ),
+      ),
+    },
+    wrap: true,
+  );
 
   /// Wrap a [Comparable] in a [$Comparable].
   $Comparable.wrap(this.$value) : _superclass = $Object($value);
@@ -49,7 +59,10 @@ class $Comparable<T> implements Comparable<T>, $Instance {
   static const $Function __compareTo = $Function(_compareTo);
 
   static $Value? _compareTo(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final other = args[0];
     final evalResult = target!.$value.compareTo(other!.$value);
 

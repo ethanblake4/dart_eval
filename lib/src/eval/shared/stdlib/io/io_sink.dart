@@ -13,22 +13,35 @@ class $IOSink implements $Instance {
 
   /// Compile-time bridged class declaration for [$IOSink]
   static const $declaration = BridgeClassDef(
-      BridgeClassType($type, isAbstract: true, $implements: [
+    BridgeClassType(
+      $type,
+      isAbstract: true,
+      $implements: [
         $StringSink.$type,
         BridgeTypeRef(AsyncTypes.streamSink, [
-          BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list,
-              [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int))]))
-        ])
-      ]),
-      constructors: {
-        '': BridgeConstructorDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation($type), params: [], namedParams: []))
-      },
-      methods: {},
-      getters: {},
-      setters: {},
-      fields: {},
-      wrap: true);
+          BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.list, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+            ]),
+          ),
+        ]),
+      ],
+    ),
+    constructors: {
+      '': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          params: [],
+          namedParams: [],
+        ),
+      ),
+    },
+    methods: {},
+    getters: {},
+    setters: {},
+    fields: {},
+    wrap: true,
+  );
 
   late final $Instance _stringSink = $StringSink.wrap($value);
 

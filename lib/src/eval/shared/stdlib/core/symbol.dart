@@ -5,19 +5,28 @@ import 'package:dart_eval/stdlib/core.dart';
 class $Symbol implements $Instance {
   static const _$type = BridgeTypeRef(CoreTypes.symbol);
 
-  static const $declaration = BridgeClassDef(BridgeClassType(_$type),
-      constructors: {
-        '': BridgeConstructorDef(
-            BridgeFunctionDef(returns: BridgeTypeAnnotation(_$type), params: [
-          BridgeParameter('name',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false),
-        ]))
-      },
-      methods: {},
-      getters: {},
-      setters: {},
-      fields: {},
-      wrap: true);
+  static const $declaration = BridgeClassDef(
+    BridgeClassType(_$type),
+    constructors: {
+      '': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(_$type),
+          params: [
+            BridgeParameter(
+              'name',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              false,
+            ),
+          ],
+        ),
+      ),
+    },
+    methods: {},
+    getters: {},
+    setters: {},
+    fields: {},
+    wrap: true,
+  );
 
   static $Value? $new(Runtime runtime, $Value? target, List<$Value?> args) {
     return $Symbol.wrap(Symbol(args[0]!.$value));

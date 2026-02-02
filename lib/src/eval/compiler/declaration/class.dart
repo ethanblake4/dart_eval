@@ -4,8 +4,11 @@ import 'package:dart_eval/src/eval/compiler/declaration/constructor.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 
-void compileClassDeclaration(CompilerContext ctx, ClassDeclaration d,
-    {bool statics = false}) {
+void compileClassDeclaration(
+  CompilerContext ctx,
+  ClassDeclaration d, {
+  bool statics = false,
+}) {
   final $runtimeType =
       ctx.typeRefIndexMap[TypeRef.lookupDeclaration(ctx, ctx.library, d)];
   final clsName = d.name.lexeme;
@@ -13,7 +16,7 @@ void compileClassDeclaration(CompilerContext ctx, ClassDeclaration d,
     {},
     {},
     {},
-    $runtimeType
+    $runtimeType,
   ];
   ctx.instanceGetterIndices[ctx.library]![clsName] = {};
   final constructors = <ConstructorDeclaration>[];
@@ -39,10 +42,11 @@ void compileClassDeclaration(CompilerContext ctx, ClassDeclaration d,
   }
   for (final m in <ClassMember>[...fields, ...methods, ...constructors]) {
     ctx.resetStack(
-        position: m is ConstructorDeclaration ||
-                (m is MethodDeclaration && m.isStatic)
-            ? 0
-            : 1);
+      position:
+          m is ConstructorDeclaration || (m is MethodDeclaration && m.isStatic)
+          ? 0
+          : 1,
+    );
     ctx.currentClass = d;
     compileDeclaration(m, ctx, parent: d, fieldIndex: i, fields: fields);
     if (m is FieldDeclaration) {

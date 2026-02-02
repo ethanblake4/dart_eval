@@ -13,9 +13,12 @@ Variable compileSymbolLiteral(SymbolLiteral l, CompilerContext ctx) {
   }
   BuiltinValue(stringval: name).push(ctx).pushArg(ctx);
   ctx.pushOp(
-      InvokeExternal.make(ctx.bridgeStaticFunctionIndices[
-          ctx.libraryMap['dart:core']!]!['Symbol.']!),
-      InvokeExternal.LEN);
+    InvokeExternal.make(
+      ctx.bridgeStaticFunctionIndices[ctx
+          .libraryMap['dart:core']!]!['Symbol.']!,
+    ),
+    InvokeExternal.LEN,
+  );
   ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
   return Variable.alloc(ctx, CoreTypes.symbol.ref(ctx));
 }

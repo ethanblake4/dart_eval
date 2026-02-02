@@ -12,7 +12,7 @@ class BridgeDeclaration {
 /// dart_eval bridge declaration.
 class DeclarationOrBridge<T extends Declaration, R extends BridgeDeclaration> {
   DeclarationOrBridge(this.sourceLib, {this.declaration, this.bridge})
-      : assert(declaration != null || bridge != null);
+    : assert(declaration != null || bridge != null);
 
   int sourceLib;
   T? declaration;
@@ -52,7 +52,8 @@ class DeclarationOrBridge<T extends Declaration, R extends BridgeDeclaration> {
   /// For example, for a class `A` with a static method `foo`, this will return
   /// `['A', A]` and `['A.foo', foo]`
   static Iterable<Pair<String, DeclarationOrBridge>> expand(
-      List<DeclarationOrBridge> declarations) sync* {
+    List<DeclarationOrBridge> declarations,
+  ) sync* {
     /// Traverse declarations
     for (final d in declarations) {
       if (d.isBridge) {
@@ -70,15 +71,20 @@ class DeclarationOrBridge<T extends Declaration, R extends BridgeDeclaration> {
           if (declaration is ClassDeclaration ||
               declaration is EnumDeclaration) {
             /// Then also yield the static class members
-            for (final member in (declaration is ClassDeclaration
-                ? declaration.members
-                : (declaration as EnumDeclaration).members)) {
+            for (final member
+                in (declaration is ClassDeclaration
+                    ? declaration.members
+                    : (declaration as EnumDeclaration).members)) {
               if (member is ConstructorDeclaration) {
-                yield Pair('$dName.${member.name?.lexeme ?? ""}',
-                    DeclarationOrBridge(-1, declaration: member));
+                yield Pair(
+                  '$dName.${member.name?.lexeme ?? ""}',
+                  DeclarationOrBridge(-1, declaration: member),
+                );
               } else if (member is MethodDeclaration && member.isStatic) {
-                yield Pair('$dName.${member.name.lexeme}',
-                    DeclarationOrBridge(-1, declaration: member));
+                yield Pair(
+                  '$dName.${member.name.lexeme}',
+                  DeclarationOrBridge(-1, declaration: member),
+                );
               }
             }
           }

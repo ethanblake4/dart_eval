@@ -4,21 +4,27 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/object.dart';
 /// dart_eval wrapper for [Exception]
 class $Exception implements Exception, $Instance {
   /// Compile-time class definition for [$Exception]
-  static const $declaration =
-      BridgeClassDef(BridgeClassType(BridgeTypeRef(CoreTypes.exception)),
-          constructors: {
-            '': BridgeConstructorDef(BridgeFunctionDef(
-                returns:
-                    BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.exception)),
-                params: [
-                  BridgeParameter(
-                      'message',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object),
-                          nullable: true),
-                      true)
-                ]))
-          },
-          wrap: true);
+  static const $declaration = BridgeClassDef(
+    BridgeClassType(BridgeTypeRef(CoreTypes.exception)),
+    constructors: {
+      '': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.exception)),
+          params: [
+            BridgeParameter(
+              'message',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+        ),
+      ),
+    },
+    wrap: true,
+  );
 
   final $Instance _superclass;
 
@@ -55,24 +61,39 @@ class $Exception implements Exception, $Instance {
 class $FormatException implements FormatException, $Instance {
   /// Compile-time class definition for [$FormatException]
   static const $declaration = BridgeClassDef(
-      BridgeClassType(BridgeTypeRef(CoreTypes.formatException),
-          $implements: [BridgeTypeRef(CoreTypes.exception)]),
-      constructors: {
-        '': BridgeConstructorDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.exception)),
-            params: [
-              BridgeParameter('message',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object)), true),
-              BridgeParameter('source',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)), true),
-              BridgeParameter(
-                  'offset',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int),
-                      nullable: true),
-                  true),
-            ]))
-      },
-      wrap: true);
+    BridgeClassType(
+      BridgeTypeRef(CoreTypes.formatException),
+      $implements: [BridgeTypeRef(CoreTypes.exception)],
+    ),
+    constructors: {
+      '': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.exception)),
+          params: [
+            BridgeParameter(
+              'message',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object)),
+              true,
+            ),
+            BridgeParameter(
+              'source',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
+              true,
+            ),
+            BridgeParameter(
+              'offset',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.int),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+        ),
+      ),
+    },
+    wrap: true,
+  );
 
   final $Instance _superclass;
 
@@ -81,9 +102,13 @@ class $FormatException implements FormatException, $Instance {
 
   /// Create a new [$FormatException] wrapping [FormatException.new]
   static $FormatException $new(
-      Runtime runtime, $Value? target, List<$Value?> args) {
-    return $FormatException.wrap(FormatException(
-        args[0]?.$value ?? '', args[1]?.$value, args[2]?.$value));
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
+    return $FormatException.wrap(
+      FormatException(args[0]?.$value ?? '', args[1]?.$value, args[2]?.$value),
+    );
   }
 
   @override

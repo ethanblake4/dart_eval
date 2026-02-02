@@ -110,12 +110,16 @@ class CoreTypes {
   static const formatException = BridgeTypeSpec('dart:core', 'FormatException');
 
   /// Bridge type spec for [$UnsupportedError]
-  static const unsupportedError =
-      BridgeTypeSpec('dart:core', 'UnsupportedError');
+  static const unsupportedError = BridgeTypeSpec(
+    'dart:core',
+    'UnsupportedError',
+  );
 
   /// Bridge type spec for [$UnimplementedError]
-  static const unimplementedError =
-      BridgeTypeSpec('dart:core', 'UnimplementedError');
+  static const unimplementedError = BridgeTypeSpec(
+    'dart:core',
+    'UnimplementedError',
+  );
 
   /// Bridge type spec for [AssertionError]
   static const assertionError = BridgeTypeSpec('dart:core', 'AssertionError');
@@ -142,16 +146,22 @@ class AsyncTypes {
   static const completer = BridgeTypeSpec('dart:async', 'Completer');
 
   /// Bridge type spec for [$StreamTransformer]
-  static const streamTransformer =
-      BridgeTypeSpec('dart:async', 'StreamTransformer');
+  static const streamTransformer = BridgeTypeSpec(
+    'dart:async',
+    'StreamTransformer',
+  );
 
   /// Bridge type spec for [$StreamController]
-  static const streamController =
-      BridgeTypeSpec('dart:async', 'StreamController');
+  static const streamController = BridgeTypeSpec(
+    'dart:async',
+    'StreamController',
+  );
 
   /// Bridge type spec for [$StreamSubscription]
-  static const streamSubscription =
-      BridgeTypeSpec('dart:async', 'StreamSubscription');
+  static const streamSubscription = BridgeTypeSpec(
+    'dart:async',
+    'StreamSubscription',
+  );
 
   /// Bridge type spec for [$StreamSink]
   static const streamSink = BridgeTypeSpec('dart:async', 'StreamSink');
@@ -184,20 +194,28 @@ class CollectionTypes {
   static const setBase = BridgeTypeSpec('dart:collection', 'SetBase');
 
   /// Bridge type spec for [$LinkedHashMap]
-  static const linkedHashMap =
-      BridgeTypeSpec('dart:collection', 'LinkedHashMap');
+  static const linkedHashMap = BridgeTypeSpec(
+    'dart:collection',
+    'LinkedHashMap',
+  );
 
   /// Bridge type spec for [$LinkedHashSet]
-  static const linkedHashSet =
-      BridgeTypeSpec('dart:collection', 'LinkedHashSet');
+  static const linkedHashSet = BridgeTypeSpec(
+    'dart:collection',
+    'LinkedHashSet',
+  );
 
   /// Bridge type spec for [$DoubleLinkedQueue]
-  static const doubleLinkedQueue =
-      BridgeTypeSpec('dart:collection', 'DoubleLinkedQueue');
+  static const doubleLinkedQueue = BridgeTypeSpec(
+    'dart:collection',
+    'DoubleLinkedQueue',
+  );
 
   /// Bridge type spec for [$DoubleLinkedQueueEntry]
-  static const doubleLinkedQueueEntry =
-      BridgeTypeSpec('dart:collection', 'DoubleLinkedQueueEntry');
+  static const doubleLinkedQueueEntry = BridgeTypeSpec(
+    'dart:collection',
+    'DoubleLinkedQueueEntry',
+  );
 
   /// Bridge type spec for [$HashMap]
   static const hashMap = BridgeTypeSpec('dart:collection', 'HashMap');
@@ -251,12 +269,16 @@ class ConvertTypes {
   static const base64Codec = BridgeTypeSpec('dart:convert', 'Base64Codec');
 
   /// Bridge type spec for [ByteConversionSink]
-  static const byteConversionSink =
-      BridgeTypeSpec('dart:convert', 'ByteConversionSink');
+  static const byteConversionSink = BridgeTypeSpec(
+    'dart:convert',
+    'ByteConversionSink',
+  );
 
   /// Bridge type spec for [ChunkedConversionSink]
-  static const chunkedConversionSink =
-      BridgeTypeSpec('dart:convert', 'ChunkedConversionSink');
+  static const chunkedConversionSink = BridgeTypeSpec(
+    'dart:convert',
+    'ChunkedConversionSink',
+  );
 }
 
 /// This class contains dart:io bridge type specs for convenience
@@ -271,15 +293,19 @@ class IoTypes {
   static const fileSystemEntity = BridgeTypeSpec('dart:io', 'FileSystemEntity');
 
   /// Bridge type spec for [$FileSystemEntityType]
-  static const fileSystemEntityType =
-      BridgeTypeSpec('dart:io', 'FileSystemEntityType');
+  static const fileSystemEntityType = BridgeTypeSpec(
+    'dart:io',
+    'FileSystemEntityType',
+  );
 
   /// Bridge type spec for [$FileStat]
   static const fileStat = BridgeTypeSpec('dart:io', 'FileStat');
 
   /// Bridge type spec for [$FileSystemException]
-  static const fileSystemException =
-      BridgeTypeSpec('dart:io', 'FileSystemException');
+  static const fileSystemException = BridgeTypeSpec(
+    'dart:io',
+    'FileSystemException',
+  );
 
   /// Bridge type spec for [$FileMode]
   static const fileMode = BridgeTypeSpec('dart:io', 'FileMode');
@@ -291,8 +317,10 @@ class IoTypes {
   static const stringSink = BridgeTypeSpec('dart:io', 'StringSink');
 
   /// Bridge type spec for [$InternetAddressType]
-  static const internetAddressType =
-      BridgeTypeSpec('dart:io', 'InternetAddressType');
+  static const internetAddressType = BridgeTypeSpec(
+    'dart:io',
+    'InternetAddressType',
+  );
 
   /// Bridge type spec for [$InternetAddress]
   static const internetAddress = BridgeTypeSpec('dart:io', 'InternetAddress');
@@ -301,16 +329,22 @@ class IoTypes {
   static const httpClient = BridgeTypeSpec('dart:io', 'HttpClient');
 
   /// Bridge type spec for [$HttpClientRequest]
-  static const httpClientRequest =
-      BridgeTypeSpec('dart:io', 'HttpClientRequest');
+  static const httpClientRequest = BridgeTypeSpec(
+    'dart:io',
+    'HttpClientRequest',
+  );
 
   /// Bridge type spec for [$HttpClientResponse]
-  static const httpClientResponse =
-      BridgeTypeSpec('dart:io', 'HttpClientResponse');
+  static const httpClientResponse = BridgeTypeSpec(
+    'dart:io',
+    'HttpClientResponse',
+  );
 
   /// Bridge type spec for [$HttpStatus]
-  static const httpStatus =
-      BridgeTypeSpec('dart:io/http_status.dart', 'HttpStatus');
+  static const httpStatus = BridgeTypeSpec(
+    'dart:io/http_status.dart',
+    'HttpStatus',
+  );
 }
 
 class MathTypes {

@@ -9,5 +9,5 @@ enum DiagnosticMode {
   printErrors,
   printErrorsAndWarnings,
   printAll,
-  ignore
+  ignore,
 }

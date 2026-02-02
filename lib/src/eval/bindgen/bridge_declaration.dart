@@ -20,7 +20,9 @@ String bindBridgeType(BindgenContext ctx, InterfaceElement element) {
 }
 
 String bindFunctionDeclaration(
-    BindgenContext ctx, TopLevelFunctionElement element) {
+  BindgenContext ctx,
+  TopLevelFunctionElement element,
+) {
   final uri = ctx.libOverrides[element.name] ?? ctx.uri;
   return '''
   static const \$declaration = BridgeFunctionDeclaration(
@@ -31,8 +33,11 @@ String bindFunctionDeclaration(
 ''';
 }
 
-String? bindBridgeDeclaration(BindgenContext ctx, InterfaceElement element,
-    {bool isBridge = false}) {
+String? bindBridgeDeclaration(
+  BindgenContext ctx,
+  InterfaceElement element, {
+  bool isBridge = false,
+}) {
   if (element is ClassElement && element.constructors.isEmpty) {
     return null;
   }
@@ -40,13 +45,12 @@ String? bindBridgeDeclaration(BindgenContext ctx, InterfaceElement element,
   var genericsStr = '';
   final typeParams = element.typeParameters;
   if (typeParams.isNotEmpty && element is ClassElement) {
-    genericsStr = '''\ngenerics: {
+    genericsStr =
+        '''\ngenerics: {
       ${typeParams.map((e) {
-      final boundStr = e.bound != null && !ctx.implicitSupers
-          ? '\$extends: ${bridgeTypeRefFromType(ctx, e.bound!)}'
-          : '';
-      return '\'${e.name}\': BridgeGenericParam($boundStr)';
-    }).join(',')}
+          final boundStr = e.bound != null && !ctx.implicitSupers ? '\$extends: ${bridgeTypeRefFromType(ctx, e.bound!)}' : '';
+          return '\'${e.name}\': BridgeGenericParam($boundStr)';
+        }).join(',')}
     },''';
   }
 
@@ -67,7 +71,8 @@ String? bindBridgeDeclaration(BindgenContext ctx, InterfaceElement element,
 
   var enumValuesStr = '';
   if (element is EnumElement) {
-    enumValuesStr = '''
+    enumValuesStr =
+        '''
     values: [${element.constants.map((e) => "'${e.name}'").join(', ')}],
     ''';
   }
@@ -118,11 +123,12 @@ String methods(BindgenContext ctx, InterfaceElement element) {
     if (ctx.implicitSupers)
       for (var s in element.allSupertypes)
         for (final m in s.element.methods.where((m) => !m.isStatic)) m.name: m,
-    for (final m in element.methods) m.name: m
+    for (final m in element.methods) m.name: m,
   };
   return methods.values
       .where(
-          (m) => !(const ['==', 'toString', 'noSuchMethod'].contains(m.name)))
+        (m) => !(const ['==', 'toString', 'noSuchMethod'].contains(m.name)),
+      )
       .where((m) => !m.isPrivate)
       .map((m) => bridgeMethodDef(ctx, method: m))
       .join('\n');
@@ -133,17 +139,19 @@ String getters(BindgenContext ctx, InterfaceElement element) {
     if (ctx.implicitSupers)
       for (var s in element.allSupertypes)
         for (final a in s.element.getters.where((a) => !a.isStatic)) a.name: a,
-    for (final a in element.getters) a.name: a
+    for (final a in element.getters) a.name: a,
   };
 
   return getters.values
       .where((m) => !(const ['hashCode', 'runtimeType'].contains(m.name)))
       .where((element) => !element.isPrivate)
-      .where((element) =>
-          !element.isSynthetic ||
-          (element is EnumElement &&
-              element.nonSynthetic is FieldElement &&
-              !(element.nonSynthetic as FieldElement).isEnumConstant))
+      .where(
+        (element) =>
+            !element.isSynthetic ||
+            (element is EnumElement &&
+                element.nonSynthetic is FieldElement &&
+                !(element.nonSynthetic as FieldElement).isEnumConstant),
+      )
       .map((e) => bridgeGetterDef(ctx, getter: e))
       .join('\n');
 }
@@ -153,7 +161,7 @@ String setters(BindgenContext ctx, InterfaceElement element) {
     if (ctx.implicitSupers)
       for (var s in element.allSupertypes)
         for (final a in s.element.setters.where((a) => !a.isStatic)) a.name: a,
-    for (final a in element.setters) a.name: a
+    for (final a in element.setters) a.name: a,
   };
 
   return setters.values
@@ -169,21 +177,21 @@ String fields(BindgenContext ctx, InterfaceElement element) {
         if (s is ClassElement)
           for (final f in (s as ClassElement).fields.where((f) => !f.isStatic))
             f.name: f,
-    for (final f in element.fields) f.name: f
+    for (final f in element.fields) f.name: f,
   };
 
-  final fields = allFields.values.where((element) =>
-      !element.isSynthetic && !element.isEnumConstant && !element.isPrivate);
+  final fields = allFields.values.where(
+    (element) =>
+        !element.isSynthetic && !element.isEnumConstant && !element.isPrivate,
+  );
 
-  return fields
-      .map(
-        (e) => bridgeFieldDef(ctx, field: e),
-      )
-      .join('\n');
+  return fields.map((e) => bridgeFieldDef(ctx, field: e)).join('\n');
 }
 
-String bridgeConstructorDef(BindgenContext ctx,
-    {required ConstructorElement constructor}) {
+String bridgeConstructorDef(
+  BindgenContext ctx, {
+  required ConstructorElement constructor,
+}) {
   return '''
       '${constructor.name == 'new' ? '' : constructor.name}': BridgeConstructorDef(
           BridgeFunctionDef(
@@ -196,18 +204,19 @@ String bridgeConstructorDef(BindgenContext ctx,
       ''';
 }
 
-String bridgeFunctionDef(BindgenContext ctx,
-    {required ExecutableElement function}) {
+String bridgeFunctionDef(
+  BindgenContext ctx, {
+  required ExecutableElement function,
+}) {
   var genericsStr = '';
   final typeParams = function.typeParameters;
   if (typeParams.isNotEmpty) {
-    genericsStr = '''\ngenerics: {
+    genericsStr =
+        '''\ngenerics: {
       ${typeParams.map((e) {
-      final boundStr = e.bound != null
-          ? '\$extends: ${bridgeTypeRefFromType(ctx, e.bound!)}'
-          : '';
-      return '\'${e.name}\': BridgeGenericParam($boundStr)';
-    }).join(',')}
+          final boundStr = e.bound != null ? '\$extends: ${bridgeTypeRefFromType(ctx, e.bound!)}' : '';
+          return '\'${e.name}\': BridgeGenericParam($boundStr)';
+        }).join(',')}
     },''';
   }
 
@@ -230,8 +239,10 @@ String bridgeMethodDef(BindgenContext ctx, {required MethodElement method}) {
 ''';
 }
 
-String bridgeGetterDef(BindgenContext ctx,
-    {required PropertyAccessorElement getter}) {
+String bridgeGetterDef(
+  BindgenContext ctx, {
+  required PropertyAccessorElement getter,
+}) {
   return '''
       '${getter.name}': BridgeMethodDef(
         ${bridgeFunctionDef(ctx, function: getter)}
@@ -240,8 +251,10 @@ String bridgeGetterDef(BindgenContext ctx,
 ''';
 }
 
-String bridgeSetterDef(BindgenContext ctx,
-    {required PropertyAccessorElement setter}) {
+String bridgeSetterDef(
+  BindgenContext ctx, {
+  required PropertyAccessorElement setter,
+}) {
   return '''
       '${setter.name}': BridgeMethodDef(
         ${bridgeFunctionDef(ctx, function: setter)}

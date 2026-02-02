@@ -20,8 +20,9 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   final pos = beginMethod(ctx, d, d.offset, '${d.name.lexeme}()');
   ctx.topLevelDeclarationPositions[ctx.library]![d.name.lexeme] = pos;
 
-  final overrideAnno = d.metadata
-      .firstWhereOrNull((element) => element.name.name == 'RuntimeOverride');
+  final overrideAnno = d.metadata.firstWhereOrNull(
+    (element) => element.name.name == 'RuntimeOverride',
+  );
   if (overrideAnno != null) {
     final oArgs = overrideAnno.arguments!.arguments;
     final name = oArgs.first as StringLiteral;
@@ -30,14 +31,20 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
       final exp = (oArgs[1] as NamedExpression);
       if (exp.name.label.name != 'version') {
         throw CompileError(
-            'Invalid @RuntimeOverride annotation', d, ctx.library, ctx);
+          'Invalid @RuntimeOverride annotation',
+          d,
+          ctx.library,
+          ctx,
+        );
       }
       final version0 = exp.expression as StringLiteral;
       version = version0.stringValue;
     }
     final overrideName = name.stringValue!;
-    ctx.runtimeOverrideMap[overrideName] =
-        OverrideSpec(pos, version ?? '<${ctx.version}');
+    ctx.runtimeOverrideMap[overrideName] = OverrideSpec(
+      pos,
+      version ?? '<${ctx.version}',
+    );
   }
 
   final existingAllocs =
@@ -45,13 +52,18 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   ctx.beginAllocScope(existingAllocLen: existingAllocs);
   ctx.scopeFrameOffset += existingAllocs;
   final resolvedParams = resolveFPLDefaults(
-      ctx, d.functionExpression.parameters, false,
-      allowUnboxed: true);
+    ctx,
+    d.functionExpression.parameters,
+    false,
+    allowUnboxed: true,
+  );
 
   var i = 0;
 
   TypeRef.loadTemporaryTypes(
-      ctx, d.functionExpression.typeParameters?.typeParameters);
+    ctx,
+    d.functionExpression.typeParameters?.typeParameters,
+  );
 
   for (final param in resolvedParams) {
     final p = param.parameter;
@@ -63,8 +75,9 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
       type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
     }
     vRep = Variable(
-        i, type.copyWith(boxed: !type.isUnboxedAcrossFunctionBoundaries))
-      ..name = p.name!.lexeme;
+      i,
+      type.copyWith(boxed: !type.isUnboxedAcrossFunctionBoundaries),
+    )..name = p.name!.lexeme;
 
     ctx.setLocal(vRep.name!, vRep);
 
@@ -78,16 +91,27 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   }
 
   final expectedReturnType = AlwaysReturnType.fromAnnotation(
-      ctx, ctx.library, d.returnType, CoreTypes.dynamic.ref(ctx));
+    ctx,
+    ctx.library,
+    d.returnType,
+    CoreTypes.dynamic.ref(ctx),
+  );
   StatementInfo? stInfo;
   if (b is BlockFunctionBody) {
-    stInfo = compileBlock(b.block, expectedReturnType, ctx,
-        name: '${d.name.lexeme}()');
+    stInfo = compileBlock(
+      b.block,
+      expectedReturnType,
+      ctx,
+      name: '${d.name.lexeme}()',
+    );
   } else if (b is ExpressionFunctionBody) {
     ctx.beginAllocScope();
-    stInfo = doReturn(ctx, expectedReturnType,
-        compileExpression(b.expression, ctx, expectedReturnType.type),
-        isAsync: b.isAsynchronous);
+    stInfo = doReturn(
+      ctx,
+      expectedReturnType,
+      compileExpression(b.expression, ctx, expectedReturnType.type),
+      isAsync: b.isAsynchronous,
+    );
     stInfo = StatementInfo(-1, willAlwaysReturn: true);
     ctx.endAllocScope(popValues: false);
   } else {

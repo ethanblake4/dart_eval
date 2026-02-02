@@ -13,8 +13,11 @@ import '../context.dart';
 import '../errors.dart';
 import '../variable.dart';
 
-BuiltinValue parseConstLiteral(Literal l, CompilerContext ctx,
-    [TypeRef? bound]) {
+BuiltinValue parseConstLiteral(
+  Literal l,
+  CompilerContext ctx, [
+  TypeRef? bound,
+]) {
   if (l is IntegerLiteral) {
     if (bound != null && bound == CoreTypes.double.ref(ctx)) {
       return BuiltinValue(doubleval: l.value!.toDouble());

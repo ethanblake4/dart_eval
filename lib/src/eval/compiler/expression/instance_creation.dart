@@ -12,7 +12,9 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 Variable compileInstanceCreation(
-    CompilerContext ctx, InstanceCreationExpression e) {
+  CompilerContext ctx,
+  InstanceCreationExpression e,
+) {
   final type = e.constructorName.type;
   final name = type.importPrefix == null
       ? (e.constructorName.name?.name ?? '')
@@ -41,8 +43,14 @@ Variable compileInstanceCreation(
     final dec = dec0.declaration!;
     final fpl = (dec as ConstructorDeclaration).parameters.parameters;
 
-    compileArgumentList(ctx, e.argumentList, staticType.file, fpl, dec,
-        source: e);
+    compileArgumentList(
+      ctx,
+      e.argumentList,
+      staticType.file,
+      fpl,
+      dec,
+      source: e,
+    );
     //_args = argsPair.first;
     //_namedArgs = argsPair.second;
   }
@@ -56,18 +64,26 @@ Variable compileInstanceCreation(
       final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type.type);
 
       final $null = BuiltinValue().push(ctx);
-      final op = BridgeInstantiate.make($null.scopeFrameOffset,
-          ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.']!);
+      final op = BridgeInstantiate.make(
+        $null.scopeFrameOffset,
+        ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.']!,
+      );
       ctx.pushOp(op, BridgeInstantiate.len(op));
     } else {
-      final op = InvokeExternal.make(ctx.bridgeStaticFunctionIndices[
-          staticType.file]!['${staticType.name}.$name']!);
+      final op = InvokeExternal.make(
+        ctx.bridgeStaticFunctionIndices[staticType
+            .file]!['${staticType.name}.$name']!,
+      );
       ctx.pushOp(op, InvokeExternal.LEN);
       ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
     }
   } else {
     final offset = DeferredOrOffset.lookupStatic(
-        ctx, staticType.file, staticType.name, name);
+      ctx,
+      staticType.file,
+      staticType.name,
+      name,
+    );
     final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.length);
     if (offset.offset == null) {
       ctx.offsetTracker.setOffset(loc, offset);
@@ -76,5 +92,7 @@ Variable compileInstanceCreation(
   }
 
   return Variable.alloc(
-      ctx, $resolved.concreteTypes.first.copyWith(boxed: true));
+    ctx,
+    $resolved.concreteTypes.first.copyWith(boxed: true),
+  );
 }

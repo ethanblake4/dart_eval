@@ -12,11 +12,17 @@ import 'package:dart_eval/stdlib/core.dart';
 class $ByteConversionSink implements $Instance {
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFunc('dart:convert',
-        'ByteConversionSink.withCallback', $ByteConversionSink.$withCallback);
+    runtime.registerBridgeFunc(
+      'dart:convert',
+      'ByteConversionSink.withCallback',
+      $ByteConversionSink.$withCallback,
+    );
 
     runtime.registerBridgeFunc(
-        'dart:convert', 'ByteConversionSink.from', $ByteConversionSink.$from);
+      'dart:convert',
+      'ByteConversionSink.from',
+      $ByteConversionSink.$from,
+    );
   }
 
   /// Compile-time type specification of [$ByteConversionSink]
@@ -32,8 +38,11 @@ class $ByteConversionSink implements $Instance {
       isAbstract: true,
       $implements: [
         BridgeTypeRef(ConvertTypes.chunkedConversionSink, [
-          BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list,
-              [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int))]))
+          BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.list, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+            ]),
+          ),
         ]),
       ],
     ),
@@ -54,18 +63,22 @@ class $ByteConversionSink implements $Instance {
             BridgeParameter(
               'callback',
               BridgeTypeAnnotation(
-                  BridgeTypeRef.genericFunction(BridgeFunctionDef(
-                returns:
-                    BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
-                params: [
-                  BridgeParameter(
-                    'accumulated',
-                    BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list)),
-                    false,
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.voidType),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'accumulated',
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list)),
+                        false,
+                      ),
+                    ],
+                    namedParams: [],
                   ),
-                ],
-                namedParams: [],
-              ))),
+                ),
+              ),
               false,
             ),
           ],
@@ -125,20 +138,22 @@ class $ByteConversionSink implements $Instance {
 
   /// Wrapper for the [ByteConversionSink.withCallback] constructor
   static $Value? $withCallback(
-      Runtime runtime, $Value? thisValue, List<$Value?> args) {
+    Runtime runtime,
+    $Value? thisValue,
+    List<$Value?> args,
+  ) {
     return $ByteConversionSink.wrap(
       ByteConversionSink.withCallback((accumulated) {
-        (args[0] as EvalCallable)(
-            runtime, null, [$List.view(accumulated, (e) => $int(e))])?.$value;
+        (args[0] as EvalCallable)(runtime, null, [
+          $List.view(accumulated, (e) => $int(e)),
+        ])?.$value;
       }),
     );
   }
 
   /// Wrapper for the [ByteConversionSink.from] constructor
   static $Value? $from(Runtime runtime, $Value? thisValue, List<$Value?> args) {
-    return $ByteConversionSink.wrap(
-      ByteConversionSink.from(args[0]!.$value),
-    );
+    return $ByteConversionSink.wrap(ByteConversionSink.from(args[0]!.$value));
   }
 
   final $Instance _superclass;
@@ -166,10 +181,17 @@ class $ByteConversionSink implements $Instance {
 
   static const $Function __addSlice = $Function(_addSlice);
   static $Value? _addSlice(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final self = target as $ByteConversionSink;
-    self.$value.addSlice((args[0]!.$reified as List).cast(), args[1]!.$value,
-        args[2]!.$value, args[3]!.$value);
+    self.$value.addSlice(
+      (args[0]!.$reified as List).cast(),
+      args[1]!.$value,
+      args[2]!.$value,
+      args[3]!.$value,
+    );
     return null;
   }
 

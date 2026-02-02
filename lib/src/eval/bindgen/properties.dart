@@ -26,13 +26,16 @@ String $bridgeGet(BindgenContext ctx, ClassElement element) {
 ''';
 }
 
-String propertyGetters(BindgenContext ctx, InterfaceElement element,
-    {bool isBridge = false}) {
+String propertyGetters(
+  BindgenContext ctx,
+  InterfaceElement element, {
+  bool isBridge = false,
+}) {
   final methods = {
     if (ctx.implicitSupers)
       for (var s in element.allSupertypes)
         for (final m in s.element.methods) m.name: m,
-    for (final m in element.methods) m.name: m
+    for (final m in element.methods) m.name: m,
   };
   final getters = element.getters
       .where((accessor) => !accessor.isStatic && !accessor.isPrivate)
@@ -41,7 +44,8 @@ String propertyGetters(BindgenContext ctx, InterfaceElement element,
   final methods0 = methods.values
       .where((method) => !method.isPrivate && !method.isStatic)
       .where(
-          (m) => !(const ['==', 'toString', 'noSuchMethod'].contains(m.name)));
+        (m) => !(const ['==', 'toString', 'noSuchMethod'].contains(m.name)),
+      );
   if (getters.isEmpty && methods0.isEmpty) {
     return '';
   }
@@ -51,8 +55,7 @@ String propertyGetters(BindgenContext ctx, InterfaceElement element,
         final _${e.displayName} = super.${e.displayName};
         return ${wrapVar(ctx, e.type.returnType, '_${e.displayName}', metadata: e.metadata.annotations)};
       ''').join('\n')}${methods0.map((e) {
-      final returnsValue =
-          e.returnType is! VoidType && !e.returnType.isDartCoreNull;
+      final returnsValue = e.returnType is! VoidType && !e.returnType.isDartCoreNull;
       final op = resolveMethodOperator(e.displayName);
       return '''
         case '${e.displayName}':
@@ -92,10 +95,14 @@ String $bridgeSet(BindgenContext ctx, ClassElement element) {
 ''';
 }
 
-String propertySetters(BindgenContext ctx, InterfaceElement element,
-    {bool isBridge = false}) {
-  final setters = element.setters
-      .where((element) => !element.isStatic && !element.isPrivate);
+String propertySetters(
+  BindgenContext ctx,
+  InterfaceElement element, {
+  bool isBridge = false,
+}) {
+  final setters = element.setters.where(
+    (element) => !element.isStatic && !element.isPrivate,
+  );
   if (setters.isEmpty) {
     return '';
   }

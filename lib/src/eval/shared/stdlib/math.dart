@@ -27,109 +27,192 @@ class DartMathPlugin implements EvalPlugin {
     $Point.configureForCompile(registry);
     $Random.configureForCompile(registry);
     registry.addSource(DartSource('dart:math', mathSource));
-    registry.defineBridgeTopLevelFunction(BridgeFunctionDeclaration(
+    registry.defineBridgeTopLevelFunction(
+      BridgeFunctionDeclaration(
         'dart:math',
         'atan2',
         BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
-            params: [
-              BridgeParameter('a',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)), false),
-              BridgeParameter('b',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)), false)
-            ])));
-    registry.defineBridgeTopLevelFunction(BridgeFunctionDeclaration(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
+          params: [
+            BridgeParameter(
+              'a',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              false,
+            ),
+            BridgeParameter(
+              'b',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              false,
+            ),
+          ],
+        ),
+      ),
+    );
+    registry.defineBridgeTopLevelFunction(
+      BridgeFunctionDeclaration(
         'dart:math',
         'pow',
         BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
-            params: [
-              BridgeParameter('x',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)), false),
-              BridgeParameter('exponent',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)), false)
-            ])));
-    registry.defineBridgeTopLevelFunction(BridgeFunctionDeclaration(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+          params: [
+            BridgeParameter(
+              'x',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              false,
+            ),
+            BridgeParameter(
+              'exponent',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              false,
+            ),
+          ],
+        ),
+      ),
+    );
+    registry.defineBridgeTopLevelFunction(
+      BridgeFunctionDeclaration(
         'dart:math',
         'cos',
         BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
-            params: [
-              BridgeParameter('radians',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)), false)
-            ])));
-    registry.defineBridgeTopLevelFunction(BridgeFunctionDeclaration(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
+          params: [
+            BridgeParameter(
+              'radians',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              false,
+            ),
+          ],
+        ),
+      ),
+    );
+    registry.defineBridgeTopLevelFunction(
+      BridgeFunctionDeclaration(
         'dart:math',
         'sin',
         BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
-            params: [
-              BridgeParameter('radians',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)), false)
-            ])));
-    registry.defineBridgeTopLevelFunction(BridgeFunctionDeclaration(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
+          params: [
+            BridgeParameter(
+              'radians',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              false,
+            ),
+          ],
+        ),
+      ),
+    );
+    registry.defineBridgeTopLevelFunction(
+      BridgeFunctionDeclaration(
         'dart:math',
         'tan',
         BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
-            params: [
-              BridgeParameter('radians',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)), false)
-            ])));
-    registry.defineBridgeTopLevelFunction(BridgeFunctionDeclaration(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
+          params: [
+            BridgeParameter(
+              'radians',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              false,
+            ),
+          ],
+        ),
+      ),
+    );
+    registry.defineBridgeTopLevelFunction(
+      BridgeFunctionDeclaration(
         'dart:math',
         'acos',
         BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
-            params: [
-              BridgeParameter('x',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)), false)
-            ])));
-    registry.defineBridgeTopLevelFunction(BridgeFunctionDeclaration(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
+          params: [
+            BridgeParameter(
+              'x',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              false,
+            ),
+          ],
+        ),
+      ),
+    );
+    registry.defineBridgeTopLevelFunction(
+      BridgeFunctionDeclaration(
         'dart:math',
         'asin',
         BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
-            params: [
-              BridgeParameter('x',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)), false)
-            ])));
-    registry.defineBridgeTopLevelFunction(BridgeFunctionDeclaration(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
+          params: [
+            BridgeParameter(
+              'x',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              false,
+            ),
+          ],
+        ),
+      ),
+    );
+    registry.defineBridgeTopLevelFunction(
+      BridgeFunctionDeclaration(
         'dart:math',
         'atan',
         BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
-            params: [
-              BridgeParameter('x',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)), false)
-            ])));
-    registry.defineBridgeTopLevelFunction(BridgeFunctionDeclaration(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
+          params: [
+            BridgeParameter(
+              'x',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              false,
+            ),
+          ],
+        ),
+      ),
+    );
+    registry.defineBridgeTopLevelFunction(
+      BridgeFunctionDeclaration(
         'dart:math',
         'sqrt',
         BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
-            params: [
-              BridgeParameter('x',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)), false)
-            ])));
-    registry.defineBridgeTopLevelFunction(BridgeFunctionDeclaration(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
+          params: [
+            BridgeParameter(
+              'x',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              false,
+            ),
+          ],
+        ),
+      ),
+    );
+    registry.defineBridgeTopLevelFunction(
+      BridgeFunctionDeclaration(
         'dart:math',
         'exp',
         BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
-            params: [
-              BridgeParameter('x',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)), false)
-            ])));
-    registry.defineBridgeTopLevelFunction(BridgeFunctionDeclaration(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
+          params: [
+            BridgeParameter(
+              'x',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              false,
+            ),
+          ],
+        ),
+      ),
+    );
+    registry.defineBridgeTopLevelFunction(
+      BridgeFunctionDeclaration(
         'dart:math',
         'log',
         BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
-            params: [
-              BridgeParameter('x',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)), false)
-            ])));
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
+          params: [
+            BridgeParameter(
+              'x',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              false,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override

@@ -26,7 +26,8 @@ void cliCompile(String outputName) {
 
     for (final file in files) {
       print(
-          'Found binding file: ${relative(file.path, from: projectRoot.path)}');
+        'Found binding file: ${relative(file.path, from: projectRoot.path)}',
+      );
       final data0 = file.readAsStringSync();
       final decoded = (json.decode(data0) as Map).cast<String, dynamic>();
       final classList = (decoded['classes'] as List);
@@ -41,7 +42,8 @@ void cliCompile(String outputName) {
       }
       for (final $function in (decoded['functions'] as List).cast<Map>()) {
         compiler.defineBridgeTopLevelFunction(
-            BridgeFunctionDeclaration.fromJson($function.cast()));
+          BridgeFunctionDeclaration.fromJson($function.cast()),
+        );
       }
     }
 
@@ -132,5 +134,6 @@ void cliCompile(String outputName) {
 
   final timeElapsed = DateTime.now().millisecondsSinceEpoch - ts;
   print(
-      'Compiled $sourceLength characters Dart to ${out.length} bytes EVC in $timeElapsed ms: $outputName');
+    'Compiled $sourceLength characters Dart to ${out.length} bytes EVC in $timeElapsed ms: $outputName',
+  );
 }

@@ -29,16 +29,13 @@ void main() {
             const minus = 0x2d;
             const period = 0x2e;
             const slash = 0x2f;
-          '''
-        }
+          ''',
+        },
       });
 
-      expect(
-        () {
-          runtime.executeLib('package:eval_test/main.dart', 'main');
-        },
-        prints('Plus is correct\n'),
-      );
+      expect(() {
+        runtime.executeLib('package:eval_test/main.dart', 'main');
+      }, prints('Plus is correct\n'));
     });
   });
 }

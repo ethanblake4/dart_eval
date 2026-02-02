@@ -18,13 +18,14 @@ void main() {
             await Future.delayed(Duration(milliseconds: milliseconds));
             return 3;
           }
-          '''
-        }
+          ''',
+        },
       });
 
       final startTime = DateTime.now().millisecondsSinceEpoch;
-      final future = runtime
-          .executeLib('package:example/main.dart', 'main', [150]) as Future;
+      final future =
+          runtime.executeLib('package:example/main.dart', 'main', [150])
+              as Future;
       await expectLater(future, completion($int(3)));
       final endTime = DateTime.now().millisecondsSinceEpoch;
       expect(endTime - startTime, greaterThan(80));
@@ -41,8 +42,8 @@ void main() {
           Future fun() async {
             return 3;
           }
-          '''
-        }
+          ''',
+        },
       });
 
       final future =
@@ -60,8 +61,8 @@ void main() {
           Future fun() async {
             return 3;
           }
-          '''
-        }
+          ''',
+        },
       });
 
       final future =
@@ -76,13 +77,14 @@ void main() {
           Future main(int milliseconds) {
             return Future.delayed(Duration(milliseconds: milliseconds));
           }
-          '''
-        }
+          ''',
+        },
       });
 
       final startTime = DateTime.now().millisecondsSinceEpoch;
-      final future = runtime
-          .executeLib('package:example/main.dart', 'main', [150]) as Future;
+      final future =
+          runtime.executeLib('package:example/main.dart', 'main', [150])
+              as Future;
       await expectLater(future, completion(null));
       final endTime = DateTime.now().millisecondsSinceEpoch;
       expect(endTime - startTime, greaterThan(100));
@@ -103,12 +105,13 @@ void main() {
             await Future.delayed(Duration(milliseconds: milliseconds));
             return Point(5, 5);
           }
-          '''
-        }
+          ''',
+        },
       });
 
-      final value = await (runtime
-          .executeLib('package:example/main.dart', 'main', [150]) as Future);
+      final value =
+          await (runtime.executeLib('package:example/main.dart', 'main', [150])
+              as Future);
       expect(value, $int(11));
     });
   });

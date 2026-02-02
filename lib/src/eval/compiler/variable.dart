@@ -19,35 +19,42 @@ import 'offset_tracker.dart';
 /// Usually instantiated with [Variable.alloc] to automate [ScopeContext] updates.
 /// Expression parser in [compileExpression] returns an instance of this class.
 class Variable {
-  Variable(this.scopeFrameOffset, this.type,
-      {this.methodOffset,
-      this.methodReturnType,
-      this.isFinal = false,
-      this.concreteTypes = const [],
-      CallingConvention? callingConvention})
-      : callingConvention = callingConvention ??
-            ((type == TypeRef(dartCoreFile, 'Function') && methodOffset == null)
-                ? CallingConvention.dynamic
-                : CallingConvention
-                    .static) /*,
-        todo: assert(!type.nullable || type.boxed)*/
-  ;
+  Variable(
+    this.scopeFrameOffset,
+    this.type, {
+    this.methodOffset,
+    this.methodReturnType,
+    this.isFinal = false,
+    this.concreteTypes = const [],
+    CallingConvention? callingConvention,
+  }) : callingConvention =
+           callingConvention ??
+           ((type == TypeRef(dartCoreFile, 'Function') && methodOffset == null)
+               ? CallingConvention.dynamic
+               : CallingConvention.static) /*,
+        todo: assert(!type.nullable || type.boxed)*/;
 
   /// Allocates a variable of the given [type] on the scope frame.
   /// Automatically increases the frame offset and [ScopeContext.allocNest].
-  factory Variable.alloc(ScopeContext ctx, TypeRef type,
-      {DeferredOrOffset? methodOffset,
-      ReturnType? methodReturnType,
-      bool isFinal = false,
-      List<TypeRef> concreteTypes = const [],
-      CallingConvention callingConvention = CallingConvention.static}) {
+  factory Variable.alloc(
+    ScopeContext ctx,
+    TypeRef type, {
+    DeferredOrOffset? methodOffset,
+    ReturnType? methodReturnType,
+    bool isFinal = false,
+    List<TypeRef> concreteTypes = const [],
+    CallingConvention callingConvention = CallingConvention.static,
+  }) {
     ctx.allocNest.last++;
-    return Variable(ctx.scopeFrameOffset++, type,
-        methodOffset: methodOffset,
-        methodReturnType: methodReturnType,
-        isFinal: isFinal,
-        concreteTypes: concreteTypes,
-        callingConvention: callingConvention);
+    return Variable(
+      ctx.scopeFrameOffset++,
+      type,
+      methodOffset: methodOffset,
+      methodReturnType: methodReturnType,
+      isFinal: isFinal,
+      concreteTypes: concreteTypes,
+      callingConvention: callingConvention,
+    );
   }
 
   final int scopeFrameOffset;
@@ -137,35 +144,40 @@ class Variable {
       ctx.pushOp(PushArg.make(scopeFrameOffset), PushArg.LEN);
 
   /// Makes a copy of the variable with some fields updated.
-  Variable copyWith(
-      {int? scopeFrameOffset,
-      TypeRef? type,
-      DeferredOrOffset? methodOffset,
-      ReturnType? methodReturnType,
-      bool? isFinal,
-      String? name,
-      int? frameIndex,
-      List<TypeRef>? concreteTypes}) {
+  Variable copyWith({
+    int? scopeFrameOffset,
+    TypeRef? type,
+    DeferredOrOffset? methodOffset,
+    ReturnType? methodReturnType,
+    bool? isFinal,
+    String? name,
+    int? frameIndex,
+    List<TypeRef>? concreteTypes,
+  }) {
     return Variable(
-        scopeFrameOffset ?? this.scopeFrameOffset, type ?? this.type,
+        scopeFrameOffset ?? this.scopeFrameOffset,
+        type ?? this.type,
         methodOffset: methodOffset ?? this.methodOffset,
         isFinal: isFinal ?? this.isFinal,
         methodReturnType: methodReturnType ?? this.methodReturnType,
-        concreteTypes: concreteTypes ?? this.concreteTypes)
+        concreteTypes: concreteTypes ?? this.concreteTypes,
+      )
       ..name = name ?? this.name
       ..frameIndex = frameIndex ?? this.frameIndex;
   }
 
   /// Makes a copy of the variable with some fields updated, and also
   /// updates the reference on the context frame.
-  Variable copyWithUpdate(ScopeContext? ctx,
-      {int? scopeFrameOffset,
-      TypeRef? type,
-      DeferredOrOffset? methodOffset,
-      ReturnType? methodReturnType,
-      String? name,
-      int? frameIndex,
-      List<TypeRef>? concreteTypes}) {
+  Variable copyWithUpdate(
+    ScopeContext? ctx, {
+    int? scopeFrameOffset,
+    TypeRef? type,
+    DeferredOrOffset? methodOffset,
+    ReturnType? methodReturnType,
+    String? name,
+    int? frameIndex,
+    List<TypeRef>? concreteTypes,
+  }) {
     var uV = copyWith(
       scopeFrameOffset: scopeFrameOffset,
       type: type,
@@ -186,8 +198,9 @@ class Variable {
   void inferType(CompilerContext ctx, TypeRef type) {
     if (name != null && ctx.typeInferenceSaveStates.isNotEmpty) {
       final locals = ctx.typeInferenceSaveStates.last.locals;
-      locals[frameIndex!][name!] =
-          locals[frameIndex!][name!]!.copyWith(type: type);
+      locals[frameIndex!][name!] = locals[frameIndex!][name!]!.copyWith(
+        type: type,
+      );
     }
   }
 
@@ -195,15 +208,22 @@ class Variable {
     if (name == 'runtimeType') {
       if (concreteTypes.isNotEmpty) {
         final concrete = concreteTypes[0];
-        ctx.pushOp(PushConstantType.make(concrete.toRuntimeType(ctx).type),
-            PushConstantType.LEN);
+        ctx.pushOp(
+          PushConstantType.make(concrete.toRuntimeType(ctx).type),
+          PushConstantType.LEN,
+        );
         return Variable.alloc(ctx, CoreTypes.type.ref(ctx));
       }
       ctx.pushOp(PushRuntimeType.make(scopeFrameOffset), PushRuntimeType.LEN);
       return Variable.alloc(ctx, CoreTypes.type.ref(ctx));
     }
-    final fieldType = TypeRef.lookupFieldType(ctx, type, name, source: source)
-            ?.resolveTypeChain(ctx) ??
+    final fieldType =
+        TypeRef.lookupFieldType(
+          ctx,
+          type,
+          name,
+          source: source,
+        )?.resolveTypeChain(ctx) ??
         CoreTypes.dynamic.ref(ctx);
     if (concreteTypes.length == 1) {
       // If the concrete type is known we can access the field directly by
@@ -216,16 +236,23 @@ class Variable {
       final isBridge = declaration?.isBridge ?? true;
       if (!isBridge && fieldDeclaration != null) {
         final offset = DeferredOrOffset(
-            file: actualType.file, className: actualType.name, name: name);
-        final op =
-            PushObjectPropertyImpl.make(scopeFrameOffset, offset.offset ?? -1);
+          file: actualType.file,
+          className: actualType.name,
+          name: name,
+        );
+        final op = PushObjectPropertyImpl.make(
+          scopeFrameOffset,
+          offset.offset ?? -1,
+        );
         final loc = ctx.pushOp(op, PushObjectPropertyImpl.length);
         ctx.offsetTracker.setOffset(loc, offset);
         return Variable.alloc(ctx, fieldType);
       }
     }
     final op = PushObjectProperty.make(
-        scopeFrameOffset, ctx.constantPool.addOrGet(name));
+      scopeFrameOffset,
+      ctx.constantPool.addOrGet(name),
+    );
     ctx.pushOp(op, PushObjectProperty.len(op));
 
     ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
@@ -233,7 +260,10 @@ class Variable {
   }
 
   static List<Variable> boxUnboxMultiple(
-      CompilerContext ctx, List<Variable> variables, bool boxed) {
+    CompilerContext ctx,
+    List<Variable> variables,
+    bool boxed,
+  ) {
     final vlist = [...variables];
     final out = <Variable>[];
 
@@ -263,8 +293,12 @@ class Variable {
 }
 
 class InvokeResult {
-  const InvokeResult(this.target, this.result, this.args,
-      {this.namedArgs = const {}});
+  const InvokeResult(
+    this.target,
+    this.result,
+    this.args, {
+    this.namedArgs = const {},
+  });
 
   final Variable? target;
   final Variable result;

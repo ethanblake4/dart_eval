@@ -18,83 +18,156 @@ class $HttpClient implements $Instance {
   static const $type = BridgeTypeRef(BridgeTypeSpec('dart:io', 'HttpClient'));
 
   /// Compile-time bridged class declaration for [$HttpClient]
-  static const $declaration = BridgeClassDef(BridgeClassType($type),
-      constructors: {
-        '': BridgeConstructorDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation($type), params: [], namedParams: []))
-      },
-      methods: {
-        'get': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future, [
-              BridgeTypeAnnotation(BridgeTypeRef(IoTypes.httpClientRequest))
-            ])),
-            params: [
-              BridgeParameter('url',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false),
-              BridgeParameter('port',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), false),
-              BridgeParameter('path',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false)
-            ],
-            namedParams: [])),
-        'post': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future, [
-              BridgeTypeAnnotation(BridgeTypeRef(IoTypes.httpClientRequest))
-            ])),
-            params: [
-              BridgeParameter('url',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false),
-              BridgeParameter('port',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), false),
-              BridgeParameter('path',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false)
-            ],
-            namedParams: [])),
-        'put': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future, [
-              BridgeTypeAnnotation(BridgeTypeRef(IoTypes.httpClientRequest))
-            ])),
-            params: [
-              BridgeParameter('url',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false),
-              BridgeParameter('port',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)), false),
-              BridgeParameter('path',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false)
-            ],
-            namedParams: [])),
-        'getUrl': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future, [
-              BridgeTypeAnnotation(BridgeTypeRef(IoTypes.httpClientRequest))
-            ])),
-            params: [
-              BridgeParameter('url',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.uri)), false)
-            ],
-            namedParams: [])),
-        'postUrl': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future, [
-              BridgeTypeAnnotation(BridgeTypeRef(IoTypes.httpClientRequest))
-            ])),
-            params: [
-              BridgeParameter('url',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.uri)), false)
-            ],
-            namedParams: [])),
-        'putUrl': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future, [
-              BridgeTypeAnnotation(BridgeTypeRef(IoTypes.httpClientRequest))
-            ])),
-            params: [
-              BridgeParameter('url',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.uri)), false)
-            ],
-            namedParams: [])),
-      },
-      getters: {},
-      setters: {},
-      fields: {},
-      wrap: true);
+  static const $declaration = BridgeClassDef(
+    BridgeClassType($type),
+    constructors: {
+      '': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          params: [],
+          namedParams: [],
+        ),
+      ),
+    },
+    methods: {
+      'get': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.future, [
+              BridgeTypeAnnotation(BridgeTypeRef(IoTypes.httpClientRequest)),
+            ]),
+          ),
+          params: [
+            BridgeParameter(
+              'url',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              false,
+            ),
+            BridgeParameter(
+              'port',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              false,
+            ),
+            BridgeParameter(
+              'path',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              false,
+            ),
+          ],
+          namedParams: [],
+        ),
+      ),
+      'post': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.future, [
+              BridgeTypeAnnotation(BridgeTypeRef(IoTypes.httpClientRequest)),
+            ]),
+          ),
+          params: [
+            BridgeParameter(
+              'url',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              false,
+            ),
+            BridgeParameter(
+              'port',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              false,
+            ),
+            BridgeParameter(
+              'path',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              false,
+            ),
+          ],
+          namedParams: [],
+        ),
+      ),
+      'put': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.future, [
+              BridgeTypeAnnotation(BridgeTypeRef(IoTypes.httpClientRequest)),
+            ]),
+          ),
+          params: [
+            BridgeParameter(
+              'url',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              false,
+            ),
+            BridgeParameter(
+              'port',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              false,
+            ),
+            BridgeParameter(
+              'path',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              false,
+            ),
+          ],
+          namedParams: [],
+        ),
+      ),
+      'getUrl': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.future, [
+              BridgeTypeAnnotation(BridgeTypeRef(IoTypes.httpClientRequest)),
+            ]),
+          ),
+          params: [
+            BridgeParameter(
+              'url',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.uri)),
+              false,
+            ),
+          ],
+          namedParams: [],
+        ),
+      ),
+      'postUrl': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.future, [
+              BridgeTypeAnnotation(BridgeTypeRef(IoTypes.httpClientRequest)),
+            ]),
+          ),
+          params: [
+            BridgeParameter(
+              'url',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.uri)),
+              false,
+            ),
+          ],
+          namedParams: [],
+        ),
+      ),
+      'putUrl': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.future, [
+              BridgeTypeAnnotation(BridgeTypeRef(IoTypes.httpClientRequest)),
+            ]),
+          ),
+          params: [
+            BridgeParameter(
+              'url',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.uri)),
+              false,
+            ),
+          ],
+          namedParams: [],
+        ),
+      ),
+    },
+    getters: {},
+    setters: {},
+    fields: {},
+    wrap: true,
+  );
 
   static $HttpClient $new(Runtime runtime, $Value? target, List<$Value?> args) {
     return $HttpClient.wrap(HttpClient());
@@ -130,8 +203,9 @@ class $HttpClient implements $Instance {
       runtime.assertPermission('network', '$url:$port/$path');
     }
     final request = (target!.$value as HttpClient).get(url, port, path);
-    return $Future
-        .wrap(request.then((value) => $HttpClientRequest.wrap(value)));
+    return $Future.wrap(
+      request.then((value) => $HttpClientRequest.wrap(value)),
+    );
   }
 
   static const $Function __post = $Function(_post);
@@ -144,8 +218,9 @@ class $HttpClient implements $Instance {
       runtime.assertPermission('network', '$url:$port/$path');
     }
     final request = (target!.$value as HttpClient).post(url, port, path);
-    return $Future
-        .wrap(request.then((value) => $HttpClientRequest.wrap(value)));
+    return $Future.wrap(
+      request.then((value) => $HttpClientRequest.wrap(value)),
+    );
   }
 
   static const $Function __put = $Function(_put);
@@ -158,8 +233,9 @@ class $HttpClient implements $Instance {
       runtime.assertPermission('network', '$url:$port/$path');
     }
     final request = (target!.$value as HttpClient).put(url, port, path);
-    return $Future
-        .wrap(request.then((value) => $HttpClientRequest.wrap(value)));
+    return $Future.wrap(
+      request.then((value) => $HttpClientRequest.wrap(value)),
+    );
   }
 
   static const $Function __getUrl = $Function(_getUrl);
@@ -168,8 +244,9 @@ class $HttpClient implements $Instance {
     final url = args[0]!.$value as Uri;
     runtime.assertPermission('network', url.toString());
     final request = (target!.$value as HttpClient).getUrl(url);
-    return $Future
-        .wrap(request.then((value) => $HttpClientRequest.wrap(value)));
+    return $Future.wrap(
+      request.then((value) => $HttpClientRequest.wrap(value)),
+    );
   }
 
   static const $Function __postUrl = $Function(_postUrl);
@@ -178,8 +255,9 @@ class $HttpClient implements $Instance {
     final url = args[0]!.$value as Uri;
     runtime.assertPermission('network', url.toString());
     final request = (target!.$value as HttpClient).postUrl(url);
-    return $Future
-        .wrap(request.then((value) => $HttpClientRequest.wrap(value)));
+    return $Future.wrap(
+      request.then((value) => $HttpClientRequest.wrap(value)),
+    );
   }
 
   static const $Function __putUrl = $Function(_putUrl);
@@ -188,8 +266,9 @@ class $HttpClient implements $Instance {
     final url = args[0]!.$value as Uri;
     runtime.assertPermission('network', url.toString());
     final request = (target!.$value as HttpClient).putUrl(url);
-    return $Future
-        .wrap(request.then((value) => $HttpClientRequest.wrap(value)));
+    return $Future.wrap(
+      request.then((value) => $HttpClientRequest.wrap(value)),
+    );
   }
 
   @override
@@ -210,23 +289,30 @@ class $HttpClientRequest implements $Instance {
   final HttpClientRequest $value;
 
   /// Compile-time bridged type reference for [$HttpClientRequest]
-  static const $type =
-      BridgeTypeRef(BridgeTypeSpec('dart:io', 'HttpClientRequest'));
+  static const $type = BridgeTypeRef(
+    BridgeTypeSpec('dart:io', 'HttpClientRequest'),
+  );
 
   /// Compile-time bridged class declaration for [$HttpClientRequest]
   static const $declaration = BridgeClassDef(
-      BridgeClassType($type, isAbstract: true, $implements: [$IOSink.$type]),
-      constructors: {},
-      methods: {
-        'close': BridgeMethodDef(BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future,
-              [BridgeTypeAnnotation($HttpClientResponse.$type)])),
-        )),
-      },
-      getters: {},
-      setters: {},
-      fields: {},
-      wrap: true);
+    BridgeClassType($type, isAbstract: true, $implements: [$IOSink.$type]),
+    constructors: {},
+    methods: {
+      'close': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.future, [
+              BridgeTypeAnnotation($HttpClientResponse.$type),
+            ]),
+          ),
+        ),
+      ),
+    },
+    getters: {},
+    setters: {},
+    fields: {},
+    wrap: true,
+  );
 
   late final _superclass = $IOSink.wrap($value);
 
@@ -244,8 +330,9 @@ class $HttpClientRequest implements $Instance {
 
   static $Value? _close(Runtime runtime, $Value? target, List<$Value?> args) {
     final request = target!.$value as HttpClientRequest;
-    return $Future
-        .wrap(request.close().then((value) => $HttpClientResponse.wrap(value)));
+    return $Future.wrap(
+      request.close().then((value) => $HttpClientResponse.wrap(value)),
+    );
   }
 
   @override
@@ -268,23 +355,30 @@ class $HttpClientResponse implements $Instance {
   final HttpClientResponse $value;
 
   /// Compile-time bridged type reference for [$HttpClientResponse]
-  static const $type =
-      BridgeTypeRef(BridgeTypeSpec('dart:io', 'HttpClientResponse'));
+  static const $type = BridgeTypeRef(
+    BridgeTypeSpec('dart:io', 'HttpClientResponse'),
+  );
 
   /// Compile-time bridged class declaration for [$HttpClientResponse]
   static const $declaration = BridgeClassDef(
-      BridgeClassType($type,
-          isAbstract: true,
-          $extends: BridgeTypeRef(CoreTypes.stream, [
-            BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list,
-                [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int))]))
-          ])),
-      constructors: {},
-      methods: {},
-      getters: {},
-      setters: {},
-      fields: {},
-      wrap: true);
+    BridgeClassType(
+      $type,
+      isAbstract: true,
+      $extends: BridgeTypeRef(CoreTypes.stream, [
+        BridgeTypeAnnotation(
+          BridgeTypeRef(CoreTypes.list, [
+            BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+          ]),
+        ),
+      ]),
+    ),
+    constructors: {},
+    methods: {},
+    getters: {},
+    setters: {},
+    fields: {},
+    wrap: true,
+  );
 
   late final _superclass = $Stream.wrap($value);
 

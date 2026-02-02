@@ -27,16 +27,13 @@ void main() {
               print(++list[0]);
               print(list[0]);
             }
-          '''
-        }
+          ''',
+        },
       });
 
-      expect(
-        () {
-          runtime.executeLib('package:eval_test/main.dart', 'main');
-        },
-        prints('1.0\n1.0\n1\n1\n1\n1\n'),
-      );
+      expect(() {
+        runtime.executeLib('package:eval_test/main.dart', 'main');
+      }, prints('1.0\n1.0\n1\n1\n1\n1\n'));
     });
 
     test('--i', () {
@@ -56,16 +53,13 @@ void main() {
               print(--list[0]);
               print(list[0]);
             }
-          '''
-        }
+          ''',
+        },
       });
 
-      expect(
-        () {
-          runtime.executeLib('package:eval_test/main.dart', 'main');
-        },
-        prints('0.0\n0.0\n0\n0\n0\n0\n'),
-      );
+      expect(() {
+        runtime.executeLib('package:eval_test/main.dart', 'main');
+      }, prints('0.0\n0.0\n0\n0\n0\n0\n'));
     });
   });
 }

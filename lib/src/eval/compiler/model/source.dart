@@ -10,14 +10,14 @@ import 'package:dart_eval/src/eval/compiler/model/diagnostic_mode.dart';
 /// A unit of Dart source code, from a file or String.
 class DartSource {
   DartSource(String uri, String source)
-      : uri = Uri.parse(uri),
-        stringSource = source,
-        fileSource = null;
+    : uri = Uri.parse(uri),
+      stringSource = source,
+      fileSource = null;
 
   DartSource.file(String uri, File file)
-      : uri = Uri.parse(uri),
-        fileSource = file,
-        stringSource = null;
+    : uri = Uri.parse(uri),
+      fileSource = file,
+      stringSource = null;
 
   /// A `package`, `dart`, or `file` URI
   final Uri uri;
@@ -45,13 +45,15 @@ class DartSource {
       } else if (directive is PartOfDirective) {
         if (partOfDirective != null) {
           throw CompileError(
-              'Library $uri must not contain multiple "part of" directives');
+            'Library $uri must not contain multiple "part of" directives',
+          );
         }
         partOfDirective = directive;
       } else if (directive is LibraryDirective) {
         if (libraryDirective != null) {
           throw CompileError(
-              'Library $uri must not contain multiple "library" directives');
+            'Library $uri must not contain multiple "library" directives',
+          );
         }
         libraryDirective = directive;
       }
@@ -59,26 +61,31 @@ class DartSource {
 
     if (partOfDirective != null && imports.isNotEmpty) {
       throw CompileError(
-          "Library $uri is a part, so it can't have 'import' directives");
+        "Library $uri is a part, so it can't have 'import' directives",
+      );
     }
 
     if (partOfDirective != null && exports.isNotEmpty) {
       throw CompileError(
-          "Library $uri is a part, so it can't have 'export' directives");
+        "Library $uri is a part, so it can't have 'export' directives",
+      );
     }
 
     if (partOfDirective != null && parts.isNotEmpty) {
       throw CompileError(
-          "Library $uri is a part, so it can't have 'part' directives");
+        "Library $uri is a part, so it can't have 'part' directives",
+      );
     }
 
-    return DartCompilationUnit(uri,
-        imports: imports,
-        exports: exports,
-        parts: parts,
-        declarations: unit.declarations,
-        library: libraryDirective,
-        partOf: partOfDirective);
+    return DartCompilationUnit(
+      uri,
+      imports: imports,
+      exports: exports,
+      parts: parts,
+      declarations: unit.declarations,
+      library: libraryDirective,
+      partOf: partOfDirective,
+    );
   }
 
   @override

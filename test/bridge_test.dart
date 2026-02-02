@@ -28,15 +28,18 @@ void main() {
               final test = TestClass(4);
               return test.runTest(5, b: 'hi');
             }
-          '''
-        }
+          ''',
+        },
       });
 
       final runtime = Runtime.ofProgram(program);
 
-      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart',
-          'TestClass.', $TestClass.$construct,
-          isBridge: true);
+      runtime.registerBridgeFunc(
+        'package:bridge_lib/bridge_lib.dart',
+        'TestClass.',
+        $TestClass.$construct,
+        isBridge: true,
+      );
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), true);
     });
@@ -62,25 +65,30 @@ void main() {
               final test = MyTestClass(18);
               return test.runTest(5, b: 'cool');
             }
-          '''
-        }
+          ''',
+        },
       });
 
       final runtime = Runtime.ofProgram(program);
 
-      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart',
-          'TestClass.', $TestClass.$construct,
-          isBridge: true);
+      runtime.registerBridgeFunc(
+        'package:bridge_lib/bridge_lib.dart',
+        'TestClass.',
+        $TestClass.$construct,
+        isBridge: true,
+      );
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), true);
     });
 
-    test('Changing a field in the constructor of a subclassed bridge class', () {
-      compiler.defineBridgeClasses([$TestClass.$declaration]);
+    test(
+      'Changing a field in the constructor of a subclassed bridge class',
+      () {
+        compiler.defineBridgeClasses([$TestClass.$declaration]);
 
-      final program = compiler.compile({
-        'example': {
-          'main.dart': '''
+        final program = compiler.compile({
+          'example': {
+            'main.dart': '''
             import 'package:bridge_lib/bridge_lib.dart';
 
             class MyTestClass extends TestClass {
@@ -99,18 +107,22 @@ void main() {
               // 1 + 2 + (someNumber == 4) = 7 > b.length
               return test.runTest(1, b: '123456');
             }
-          '''
-        }
-      });
+          ''',
+          },
+        });
 
-      final runtime = Runtime.ofProgram(program);
+        final runtime = Runtime.ofProgram(program);
 
-      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart',
-          'TestClass.', $TestClass.$construct,
-          isBridge: true);
+        runtime.registerBridgeFunc(
+          'package:bridge_lib/bridge_lib.dart',
+          'TestClass.',
+          $TestClass.$construct,
+          isBridge: true,
+        );
 
-      expect(runtime.executeLib('package:example/main.dart', 'main'), true);
-    });
+        expect(runtime.executeLib('package:example/main.dart', 'main'), true);
+      },
+    );
 
     test('Using a subclassed bridge class outside the runtime', () {
       compiler.defineBridgeClasses([$TestClass.$declaration]);
@@ -133,15 +145,18 @@ void main() {
               final test = MyTestClass(0, b: 'hello');
               return test;
             }
-          '''
-        }
+          ''',
+        },
       });
 
       final runtime = Runtime.ofProgram(program);
 
-      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart',
-          'TestClass.', $TestClass.$construct,
-          isBridge: true);
+      runtime.registerBridgeFunc(
+        'package:bridge_lib/bridge_lib.dart',
+        'TestClass.',
+        $TestClass.$construct,
+        isBridge: true,
+      );
 
       final res = runtime.executeLib('package:example/main.dart', 'main');
 
@@ -161,17 +176,23 @@ void main() {
             bool main() {
               return TestClass.runStaticTest('Okay');
             }
-          '''
-        }
+          ''',
+        },
       });
 
       final runtime = Runtime.ofProgram(program);
 
-      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart',
-          'TestClass.', $TestClass.$construct,
-          isBridge: true);
-      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart',
-          'TestClass.runStaticTest', $TestClass.$runStaticTest);
+      runtime.registerBridgeFunc(
+        'package:bridge_lib/bridge_lib.dart',
+        'TestClass.',
+        $TestClass.$construct,
+        isBridge: true,
+      );
+      runtime.registerBridgeFunc(
+        'package:bridge_lib/bridge_lib.dart',
+        'TestClass.runStaticTest',
+        $TestClass.$runStaticTest,
+      );
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), false);
     });
@@ -191,17 +212,22 @@ void main() {
 
               return map['two'];
             }
-          '''
-        }
+          ''',
+        },
       });
 
       final runtime = Runtime.ofProgram(program);
 
       runtime.registerBridgeEnumValues(
-          'package:bridge_lib/bridge_lib.dart', 'TestEnum', $TestEnum.$values);
+        'package:bridge_lib/bridge_lib.dart',
+        'TestEnum',
+        $TestEnum.$values,
+      );
 
-      expect(runtime.executeLib('package:example/main.dart', 'main').$value,
-          TestEnum.two);
+      expect(
+        runtime.executeLib('package:example/main.dart', 'main').$value,
+        TestEnum.two,
+      );
     });
 
     test('Passing a map to a function externally', () {
@@ -211,17 +237,18 @@ void main() {
             int main(Map<String, int> map) {
               return map['hi'];
             }
-          '''
-        }
+          ''',
+        },
       });
 
       final runtime = Runtime.ofProgram(program);
 
       expect(
-          runtime.executeLib('package:example/main.dart', 'main', [
-            $Map<$String, $int>.wrap({$String('hi'): $int(5)})
-          ]),
-          5);
+        runtime.executeLib('package:example/main.dart', 'main', [
+          $Map<$String, $int>.wrap({$String('hi'): $int(5)}),
+        ]),
+        5,
+      );
     });
 
     test('Runtime overrides', () {
@@ -232,8 +259,8 @@ void main() {
             List<int> getList() {
               return [1, 2, 3];
             }
-          '''
-        }
+          ''',
+        },
       });
 
       runtime.loadGlobalOverrides();
@@ -248,8 +275,8 @@ void main() {
             List<int> getList() {
               return [1, 2, 3];
             }
-          '''
-        }
+          ''',
+        },
       });
 
       runtime.loadGlobalOverrides();
@@ -271,8 +298,8 @@ void main() {
               await callback('w');
               callback('b');
             }
-          '''
-        }
+          ''',
+        },
       });
 
       final callback = $Closure((runtime, target, args) {
@@ -286,15 +313,20 @@ void main() {
             break;
           case 'w':
             return $Future.wrap(
-                Future.delayed(const Duration(milliseconds: 10), () => 5));
+              Future.delayed(const Duration(milliseconds: 10), () => 5),
+            );
         }
         return null;
       });
 
       expect(
-          () async => (await runtime
-              .executeLib('package:example/main.dart', 'main', [callback])),
-          prints('a\nb\n'));
+        () async => (await runtime.executeLib(
+          'package:example/main.dart',
+          'main',
+          [callback],
+        )),
+        prints('a\nb\n'),
+      );
     });
 
     test('Should catch bridge future error', () async {
@@ -306,8 +338,8 @@ void main() {
             void main(Function callback) async {
               await callback();
             }
-          '''
-        }
+          ''',
+        },
       });
 
       bool callbackExecuted = false;
@@ -318,8 +350,9 @@ void main() {
 
       Exception? caughtException;
       try {
-        await runtime
-            .executeLib('package:example/main.dart', 'main', [callback]);
+        await runtime.executeLib('package:example/main.dart', 'main', [
+          callback,
+        ]);
         fail('Expected exception was not thrown');
       } catch (e) {
         caughtException = e as Exception;
@@ -353,15 +386,18 @@ void main() {
             TestClass main() {
               return MyTestClass(0);
             }
-          '''
-        }
+          ''',
+        },
       });
 
       final runtime = Runtime.ofProgram(program);
 
-      runtime.registerBridgeFunc('package:bridge_lib/bridge_lib.dart',
-          'TestClass.', $TestClass.$construct,
-          isBridge: true);
+      runtime.registerBridgeFunc(
+        'package:bridge_lib/bridge_lib.dart',
+        'TestClass.',
+        $TestClass.$construct,
+        isBridge: true,
+      );
 
       final res = runtime.executeLib('package:example/main.dart', 'main');
 

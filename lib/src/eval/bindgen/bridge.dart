@@ -4,8 +4,11 @@ import 'package:analyzer/dart/element/type.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
 import 'package:dart_eval/src/eval/bindgen/type.dart';
 
-String bindForwardedConstructors(BindgenContext ctx, ClassElement element,
-    {bool isBridge = false}) {
+String bindForwardedConstructors(
+  BindgenContext ctx,
+  ClassElement element, {
+  bool isBridge = false,
+}) {
   return element.constructors
       .where((cstr) => !cstr.isPrivate)
       .map((e) => _$forwardedConstructor(ctx, element, e, isBridge: isBridge))
@@ -13,8 +16,11 @@ String bindForwardedConstructors(BindgenContext ctx, ClassElement element,
 }
 
 String _$forwardedConstructor(
-    BindgenContext ctx, ClassElement element, ConstructorElement constructor,
-    {bool isBridge = false}) {
+  BindgenContext ctx,
+  ClassElement element,
+  ConstructorElement constructor, {
+  bool isBridge = false,
+}) {
   final name = constructor.name ?? '';
   final namedConstructor = constructor.name != null && constructor.name != 'new'
       ? '.${constructor.name}'
@@ -33,29 +39,33 @@ String bindDecoratorMethods(BindgenContext ctx, ClassElement element) {
     if (ctx.implicitSupers)
       for (var s in element.allSupertypes)
         for (final m in s.element.methods) m.name: m,
-    for (final m in element.methods) m.name: m
+    for (final m in element.methods) m.name: m,
   };
 
   return methods.values
       .where((method) => !method.isPrivate && !method.isStatic)
       .where(
-          (m) => !(const ['==', 'toString', 'noSuchMethod'].contains(m.name)))
+        (m) => !(const ['==', 'toString', 'noSuchMethod'].contains(m.name)),
+      )
       .map((e) {
-    final returnType = e.returnType;
-    final needsCast = returnType.isDartCoreList ||
-        returnType.isDartCoreMap ||
-        returnType.isDartCoreSet;
-    final q =
-        returnType.nullabilitySuffix == NullabilitySuffix.question ? '?' : '';
+        final returnType = e.returnType;
+        final needsCast =
+            returnType.isDartCoreList ||
+            returnType.isDartCoreMap ||
+            returnType.isDartCoreSet;
+        final q = returnType.nullabilitySuffix == NullabilitySuffix.question
+            ? '?'
+            : '';
 
-    return '''
+        return '''
         @override
         $returnType ${e.displayName}(${parameterHeader(e.formalParameters)}) =>
           ${needsCast ? '(' : ''}\$_invoke('${e.displayName}', [
             ${e.formalParameters.map((p) => wrapVar(ctx, p.type, p.name ?? '')).join(', ')}
           ])${needsCast ? 'as ${returnType.element!.name}$q)$q.cast()' : ''};
         ''';
-  }).join('\n');
+      })
+      .join('\n');
 }
 
 String bindDecoratorProperties(BindgenContext ctx, ClassElement element) {
@@ -63,23 +73,26 @@ String bindDecoratorProperties(BindgenContext ctx, ClassElement element) {
     if (ctx.implicitSupers)
       for (var s in element.allSupertypes)
         for (final p in s.element.fields) p.name: p,
-    for (final p in element.fields) p.name: p
+    for (final p in element.fields) p.name: p,
   };
 
   return properties.values
       .where((property) => !property.isPrivate && !property.isStatic)
       .map((e) {
-    final type = e.type;
+        final type = e.type;
 
-    return '''
+        return '''
         @override
         $type get ${e.displayName} => \$_get('${e.displayName}');
         ''';
-  }).join('\n');
+      })
+      .join('\n');
 }
 
-String parameterHeader(List<FormalParameterElement> params,
-    {bool forConstructor = false}) {
+String parameterHeader(
+  List<FormalParameterElement> params, {
+  bool forConstructor = false,
+}) {
   final paramBuffer = StringBuffer();
   var inNonPositional = false;
   for (var i = 0; i < params.length; i++) {
@@ -108,7 +121,8 @@ String parameterHeader(List<FormalParameterElement> params,
         }
     }
     paramBuffer.write(
-        param.name == null || param.name!.isEmpty ? 'arg$i' : param.name);
+      param.name == null || param.name!.isEmpty ? 'arg$i' : param.name,
+    );
     if (i < params.length - 1) {
       paramBuffer.write(', ');
     }

@@ -19,12 +19,14 @@ void main() {
               final parsedUri = Uri.parse(uri);
               return parsedUri.authority;
             }
-           '''
-        }
+           ''',
+        },
       });
 
-      expect(runtime.executeLib('package:example/main.dart', 'main'),
-          $String('username:password@example.com'));
+      expect(
+        runtime.executeLib('package:example/main.dart', 'main'),
+        $String('username:password@example.com'),
+      );
     });
 
     test('Uri().userInfo', () {
@@ -36,12 +38,14 @@ void main() {
               final parsedUri = Uri.parse(uri);
               return parsedUri.userInfo;
             }
-           '''
-        }
+           ''',
+        },
       });
 
-      expect(runtime.executeLib('package:example/main.dart', 'main'),
-          $String('username:password'));
+      expect(
+        runtime.executeLib('package:example/main.dart', 'main'),
+        $String('username:password'),
+      );
     });
     test('Uri().host', () {
       final runtime = compiler.compileWriteAndLoad({
@@ -52,12 +56,14 @@ void main() {
               final parsedUri = Uri.parse(uri);
               return parsedUri.host;
             }
-           '''
-        }
+           ''',
+        },
       });
 
-      expect(runtime.executeLib('package:example/main.dart', 'main'),
-          $String('example.com'));
+      expect(
+        runtime.executeLib('package:example/main.dart', 'main'),
+        $String('example.com'),
+      );
     });
     test('Uri().path', () {
       final runtime = compiler.compileWriteAndLoad({
@@ -68,12 +74,14 @@ void main() {
               final parsedUri = Uri.parse(uri);
               return parsedUri.path;
             }
-           '''
-        }
+           ''',
+        },
       });
 
-      expect(runtime.executeLib('package:example/main.dart', 'main'),
-          $String('/path/to/resource'));
+      expect(
+        runtime.executeLib('package:example/main.dart', 'main'),
+        $String('/path/to/resource'),
+      );
     });
 
     test('Uri().query', () {
@@ -85,12 +93,14 @@ void main() {
               final parsedUri = Uri.parse(uri);
               return parsedUri.query;
             }
-           '''
-        }
+           ''',
+        },
       });
 
-      expect(runtime.executeLib('package:example/main.dart', 'main'),
-          $String('query=value'));
+      expect(
+        runtime.executeLib('package:example/main.dart', 'main'),
+        $String('query=value'),
+      );
     });
 
     test('Uri().fragment', () {
@@ -102,12 +112,14 @@ void main() {
               final parsedUri = Uri.parse(uri);
               return parsedUri.fragment;
             }
-          '''
-        }
+          ''',
+        },
       });
 
-      expect(runtime.executeLib('package:example/main.dart', 'main'),
-          $String('fragment'));
+      expect(
+        runtime.executeLib('package:example/main.dart', 'main'),
+        $String('fragment'),
+      );
     });
 
     test('Uri().port', () {
@@ -119,8 +131,8 @@ void main() {
               final parsedUri = Uri.parse(uri);
               return parsedUri.port;
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 8080);
@@ -135,12 +147,15 @@ void main() {
               final parsedUri = Uri.parse(uri);
               return parsedUri.pathSegments;
             }
-          '''
-        }
+          ''',
+        },
       });
 
-      expect(runtime.executeLib('package:example/main.dart', 'main'),
-          [$String("path"), $String("to"), $String("resource")]);
+      expect(runtime.executeLib('package:example/main.dart', 'main'), [
+        $String("path"),
+        $String("to"),
+        $String("resource"),
+      ]);
     });
 
     test('Uri().queryParameters', () {
@@ -152,12 +167,13 @@ void main() {
               final parsedUri = Uri.parse(uri);
               return parsedUri.queryParameters;
             }
-          '''
-        }
+          ''',
+        },
       });
 
-      expect(runtime.executeLib('package:example/main.dart', 'main'),
-          {$String("query"): $String("value")});
+      expect(runtime.executeLib('package:example/main.dart', 'main'), {
+        $String("query"): $String("value"),
+      });
     });
 
     test('Uri().queryParametersAll', () {
@@ -169,12 +185,12 @@ void main() {
               final parsedUri = Uri.parse(uri);
               return parsedUri.queryParametersAll;
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), {
-        $String("query"): [$String("value")]
+        $String("query"): [$String("value")],
       });
     });
 
@@ -196,8 +212,8 @@ void main() {
                 parsedUri.hasAbsolutePath,
               ];
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), [

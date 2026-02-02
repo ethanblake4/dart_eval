@@ -13,34 +13,43 @@ import 'expression.dart';
 
 /// Compile a [ConditionalExpression] to EVC bytecode
 Variable compileConditionalExpression(
-    CompilerContext ctx, ConditionalExpression e,
-    [TypeRef? boundType]) {
+  CompilerContext ctx,
+  ConditionalExpression e, [
+  TypeRef? boundType,
+]) {
   ctx.setLocal('#conditional', BuiltinValue().push(ctx));
   final vRef = IdentifierReference(null, '#conditional');
   final types = <TypeRef>{if (boundType != null) boundType};
 
   macroBranch(
-      ctx, boundType == null ? null : AlwaysReturnType(boundType, false),
-      condition: (ctx) {
-    var c = compileExpression(e.condition, ctx);
-    if (!c.type.isAssignableTo(ctx, CoreTypes.bool.ref(ctx))) {
-      throw CompileError('Condition must be a boolean');
-    }
+    ctx,
+    boundType == null ? null : AlwaysReturnType(boundType, false),
+    condition: (ctx) {
+      var c = compileExpression(e.condition, ctx);
+      if (!c.type.isAssignableTo(ctx, CoreTypes.bool.ref(ctx))) {
+        throw CompileError('Condition must be a boolean');
+      }
 
-    return c;
-  }, thenBranch: (ctx, rt) {
-    final v = compileExpression(e.thenExpression, ctx, boundType);
-    types.add(v.type);
-    vRef.setValue(ctx, v);
-    return StatementInfo(-1);
-  }, elseBranch: (ctx, rt) {
-    final v = compileExpression(e.elseExpression, ctx, boundType);
-    types.add(v.type);
-    vRef.setValue(ctx, v);
-    return StatementInfo(-1);
-  }, resolveStateToThen: true, source: e);
+      return c;
+    },
+    thenBranch: (ctx, rt) {
+      final v = compileExpression(e.thenExpression, ctx, boundType);
+      types.add(v.type);
+      vRef.setValue(ctx, v);
+      return StatementInfo(-1);
+    },
+    elseBranch: (ctx, rt) {
+      final v = compileExpression(e.elseExpression, ctx, boundType);
+      types.add(v.type);
+      vRef.setValue(ctx, v);
+      return StatementInfo(-1);
+    },
+    resolveStateToThen: true,
+    source: e,
+  );
 
   final val = vRef.getValue(ctx).updated(ctx);
   return val.copyWith(
-      type: TypeRef.commonBaseType(ctx, types).copyWith(boxed: val.boxed));
+    type: TypeRef.commonBaseType(ctx, types).copyWith(boxed: val.boxed),
+  );
 }

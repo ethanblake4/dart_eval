@@ -23,17 +23,23 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
   }
 
   // Otherwise type-test
-  ctx.pushOp(IsType.make(V.scopeFrameOffset, ctx.typeRefIndexMap[slot]!, false),
-      IsType.length);
-  final vIs =
-      Variable.alloc(ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
+  ctx.pushOp(
+    IsType.make(V.scopeFrameOffset, ctx.typeRefIndexMap[slot]!, false),
+    IsType.length,
+  );
+  final vIs = Variable.alloc(
+    ctx,
+    CoreTypes.bool.ref(ctx).copyWith(boxed: false),
+  );
 
   // And assert
-  final errMsg =
-      BuiltinValue(stringval: "TypeError: Not a subtype of type ${slot.name}")
-          .push(ctx);
+  final errMsg = BuiltinValue(
+    stringval: "TypeError: Not a subtype of type ${slot.name}",
+  ).push(ctx);
   ctx.pushOp(
-      Assert.make(vIs.scopeFrameOffset, errMsg.scopeFrameOffset), Assert.LEN);
+    Assert.make(vIs.scopeFrameOffset, errMsg.scopeFrameOffset),
+    Assert.LEN,
+  );
 
   // If the type changes between num and int/double, unbox/box
   if (slot == CoreTypes.num.ref(ctx)) {

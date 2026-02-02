@@ -14,37 +14,55 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 enum PatternBindContext { none, declare, declareFinal, matching }
 
-TypeRef patternTypeBound(CompilerContext ctx, ListPatternElement pattern,
-    {AstNode? source, TypeRef? bound}) {
+TypeRef patternTypeBound(
+  CompilerContext ctx,
+  ListPatternElement pattern, {
+  AstNode? source,
+  TypeRef? bound,
+}) {
   switch (pattern) {
     case ListPattern pat:
       TypeRef? specifiedTypeArg;
       if (pat.typeArguments != null) {
         if (pat.typeArguments!.arguments.length != 1) {
           throw CompileError(
-              'List pattern must have exactly one type argument', source);
+            'List pattern must have exactly one type argument',
+            source,
+          );
         }
         specifiedTypeArg = TypeRef.fromAnnotation(
-            ctx, ctx.library, pat.typeArguments!.arguments[0]);
+          ctx,
+          ctx.library,
+          pat.typeArguments!.arguments[0],
+        );
       }
 
       for (final element in pat.elements) {
-        final elementType = patternTypeBound(ctx, element,
-            source: source, bound: specifiedTypeArg);
+        final elementType = patternTypeBound(
+          ctx,
+          element,
+          source: source,
+          bound: specifiedTypeArg,
+        );
         if (specifiedTypeArg != null &&
             !elementType.isAssignableTo(ctx, specifiedTypeArg)) {
           throw CompileError(
-              'List pattern element type $elementType is not assignable to $specifiedTypeArg',
-              source);
+            'List pattern element type $elementType is not assignable to $specifiedTypeArg',
+            source,
+          );
         }
       }
 
-      final result = CoreTypes.list.ref(ctx).copyWith(
-          specifiedTypeArgs: [if (specifiedTypeArg != null) specifiedTypeArg]);
+      final result = CoreTypes.list
+          .ref(ctx)
+          .copyWith(
+            specifiedTypeArgs: [if (specifiedTypeArg != null) specifiedTypeArg],
+          );
       if (bound != null && !result.isAssignableTo(ctx, bound)) {
         throw CompileError(
-            'List pattern type $result is not assignable to bound type $bound',
-            source);
+          'List pattern type $result is not assignable to bound type $bound',
+          source,
+        );
       }
       return result;
     case RecordPattern pat:
@@ -60,14 +78,15 @@ TypeRef patternTypeBound(CompilerContext ctx, ListPatternElement pattern,
         );
       }
 
-      final result = CoreTypes.record.ref(ctx).copyWith(
-            recordFields: recordFields,
-          );
+      final result = CoreTypes.record
+          .ref(ctx)
+          .copyWith(recordFields: recordFields);
 
       if (bound != null && !result.isAssignableTo(ctx, bound)) {
         throw CompileError(
-            'Record pattern type $result is not assignable to bound type $bound',
-            source);
+          'Record pattern type $result is not assignable to bound type $bound',
+          source,
+        );
       }
       return result;
     case DeclaredVariablePattern pat:
@@ -75,16 +94,19 @@ TypeRef patternTypeBound(CompilerContext ctx, ListPatternElement pattern,
           ? TypeRef.fromAnnotation(ctx, ctx.library, pat.type!)
           : bound ?? CoreTypes.dynamic.ref(ctx);
     case AssignedVariablePattern pat:
-      return IdentifierReference(null, pat.name.lexeme)
-          .resolveType(ctx, forSet: true, source: source);
+      return IdentifierReference(
+        null,
+        pat.name.lexeme,
+      ).resolveType(ctx, forSet: true, source: source);
     case ParenthesizedPattern pat:
       return patternTypeBound(ctx, pat.pattern, source: source, bound: bound);
     case ObjectPattern pat:
       final type = TypeRef.fromAnnotation(ctx, ctx.library, pat.type);
       if (bound != null && !type.isAssignableTo(ctx, bound)) {
         throw CompileError(
-            'Object pattern type $type is not assignable to bound type $bound',
-            source);
+          'Object pattern type $type is not assignable to bound type $bound',
+          source,
+        );
       }
       return type;
     case WildcardPattern pat:
@@ -95,21 +117,26 @@ TypeRef patternTypeBound(CompilerContext ctx, ListPatternElement pattern,
       final type = TypeRef.fromAnnotation(ctx, ctx.library, typeAnnotation);
       if (bound != null && !type.isAssignableTo(ctx, bound)) {
         throw CompileError(
-            'Wildcard pattern type $type is not assignable to bound type $bound',
-            source);
+          'Wildcard pattern type $type is not assignable to bound type $bound',
+          source,
+        );
       }
       return type;
     default:
       throw CompileError(
-          "Refutable patterns can't be used in an irrefutable context."
-          "Try using an if-case, a 'switch' statement, or a 'switch' expression instead.",
-          source);
+        "Refutable patterns can't be used in an irrefutable context."
+        "Try using an if-case, a 'switch' statement, or a 'switch' expression instead.",
+        source,
+      );
   }
 }
 
 Variable patternMatchAndBind(
-    CompilerContext ctx, ListPatternElement pattern, Variable V,
-    {PatternBindContext patternContext = PatternBindContext.none}) {
+  CompilerContext ctx,
+  ListPatternElement pattern,
+  Variable V, {
+  PatternBindContext patternContext = PatternBindContext.none,
+}) {
   switch (pattern) {
     case ConstantPattern pat:
       final constant = compileExpression(pat.expression, ctx);
@@ -120,8 +147,11 @@ Variable patternMatchAndBind(
       for (final field in pat.fields) {
         final fieldName = field.effectiveName ?? '\$${positionalFields++}';
         final fieldResult = patternMatchAndBind(
-            ctx, field.pattern, V.getProperty(ctx, fieldName),
-            patternContext: patternContext);
+          ctx,
+          field.pattern,
+          V.getProperty(ctx, fieldName),
+          patternContext: patternContext,
+        );
         if (result == null) {
           result = fieldResult;
         } else {
@@ -130,7 +160,9 @@ Variable patternMatchAndBind(
       }
       return result ??
           (throw CompileError(
-              'Record pattern matching failed, no fields matched', pattern));
+            'Record pattern matching failed, no fields matched',
+            pattern,
+          ));
     case ListPattern pat:
       if (pat.elements.isEmpty) {
         return BuiltinValue(boolval: true).push(ctx);
@@ -138,10 +170,16 @@ Variable patternMatchAndBind(
       Variable? result;
       for (var i = 0; i < pat.elements.length; i++) {
         final element = pat.elements[i];
-        final listEl = IndexedReference(V, BuiltinValue(intval: i).push(ctx))
-            .getValue(ctx);
-        final elementResult = patternMatchAndBind(ctx, element, listEl,
-            patternContext: patternContext);
+        final listEl = IndexedReference(
+          V,
+          BuiltinValue(intval: i).push(ctx),
+        ).getValue(ctx);
+        final elementResult = patternMatchAndBind(
+          ctx,
+          element,
+          listEl,
+          patternContext: patternContext,
+        );
         if (result == null) {
           result = elementResult;
         } else {
@@ -150,18 +188,24 @@ Variable patternMatchAndBind(
       }
       return result ??
           (throw CompileError(
-              'List pattern matching failed, no elements matched', pattern));
+            'List pattern matching failed, no elements matched',
+            pattern,
+          ));
     case VariablePattern pat:
       final variableName = pat.name.lexeme;
-      final declare = patternContext == PatternBindContext.declare ||
+      final declare =
+          patternContext == PatternBindContext.declare ||
           patternContext == PatternBindContext.declareFinal ||
           (patternContext == PatternBindContext.matching &&
               pat is DeclaredVariablePattern);
       if (declare && ctx.locals.last.containsKey(variableName)) {
-        throw CompileError('Cannot declare variable $variableName'
-            ' multiple times in the same scope');
+        throw CompileError(
+          'Cannot declare variable $variableName'
+          ' multiple times in the same scope',
+        );
       }
-      final isFinal = patternContext == PatternBindContext.declareFinal ||
+      final isFinal =
+          patternContext == PatternBindContext.declareFinal ||
           (pat is DeclaredVariablePattern &&
               pat.keyword != null &&
               pat.keyword!.keyword == Keyword.FINAL);
@@ -172,8 +216,10 @@ Variable patternMatchAndBind(
         }
         var v = Variable.alloc(ctx, V.type, isFinal: isFinal);
         ctx.pushOp(PushNull.make(), PushNull.LEN);
-        ctx.pushOp(CopyValue.make(v.scopeFrameOffset, V.scopeFrameOffset),
-            CopyValue.LEN);
+        ctx.pushOp(
+          CopyValue.make(v.scopeFrameOffset, V.scopeFrameOffset),
+          CopyValue.LEN,
+        );
         ctx.setLocal(variableName, v);
       } else {
         ctx.setLocal(variableName, V.copyWith(isFinal: isFinal));
@@ -186,15 +232,21 @@ Variable patternMatchAndBind(
       return BuiltinValue(boolval: true).push(ctx);
     case RelationalPattern pat:
       final operand = compileExpression(pat.operand, ctx);
-      final operator = binaryOpMap[pat.operator.type] ??
+      final operator =
+          binaryOpMap[pat.operator.type] ??
           (throw CompileError(
-              'Unknown relational operator ${pat.operator.type}'));
+            'Unknown relational operator ${pat.operator.type}',
+          ));
       return V.invoke(ctx, operator, [operand]).result;
     case WildcardPattern pat:
       return _typeTest(ctx, pat.type, V);
     case ParenthesizedPattern pat:
-      return patternMatchAndBind(ctx, pat.pattern, V,
-          patternContext: patternContext);
+      return patternMatchAndBind(
+        ctx,
+        pat.pattern,
+        V,
+        patternContext: patternContext,
+      );
     default:
       throw CompileError('Unsupported pattern type: ${pattern.runtimeType}');
   }
@@ -210,7 +262,9 @@ Variable _typeTest(CompilerContext ctx, TypeAnnotation? patType, Variable V) {
     return BuiltinValue(boolval: true).push(ctx);
   }
 
-  ctx.pushOp(IsType.make(V.scopeFrameOffset, ctx.typeRefIndexMap[slot]!, false),
-      IsType.length);
+  ctx.pushOp(
+    IsType.make(V.scopeFrameOffset, ctx.typeRefIndexMap[slot]!, false),
+    IsType.length,
+  );
   return Variable.alloc(ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
 }

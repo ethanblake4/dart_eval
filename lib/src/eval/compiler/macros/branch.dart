@@ -9,12 +9,14 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 StatementInfo macroBranch(
-    CompilerContext ctx, AlwaysReturnType? expectedReturnType,
-    {required MacroVariableClosure condition,
-    required MacroStatementClosure thenBranch,
-    MacroStatementClosure? elseBranch,
-    bool resolveStateToThen = false,
-    AstNode? source}) {
+  CompilerContext ctx,
+  AlwaysReturnType? expectedReturnType, {
+  required MacroVariableClosure condition,
+  required MacroStatementClosure thenBranch,
+  MacroStatementClosure? elseBranch,
+  bool resolveStateToThen = false,
+  AstNode? source,
+}) {
   ctx.beginAllocScope();
   ctx.enterTypeInferenceContext();
 
@@ -55,8 +57,11 @@ StatementInfo macroBranch(
     rewriteOut = ctx.pushOp(JumpConstant.make(-1), JumpConstant.LEN);
   }
 
-  ctx.rewriteOp(rewritePos,
-      JumpIfFalse.make(conditionResult.scopeFrameOffset, ctx.out.length), 0);
+  ctx.rewriteOp(
+    rewritePos,
+    JumpIfFalse.make(conditionResult.scopeFrameOffset, ctx.out.length),
+    0,
+  );
 
   if (elseBranch != null) {
     ctx.beginAllocScope();
@@ -79,6 +84,9 @@ StatementInfo macroBranch(
   ctx.endAllocScope();
 
   return thenResult |
-      StatementInfo(thenResult.position,
-          willAlwaysThrow: false, willAlwaysReturn: false);
+      StatementInfo(
+        thenResult.position,
+        willAlwaysThrow: false,
+        willAlwaysReturn: false,
+      );
 }

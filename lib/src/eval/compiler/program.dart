@@ -12,19 +12,20 @@ import 'package:dart_eval/src/eval/runtime/type.dart';
 class Program {
   /// Construct a [Program] with bytecode and metadata.
   Program(
-      this.topLevelDeclarations,
-      this.instanceDeclarations,
-      this.typeIds,
-      //this.typeNames,
-      this.typeTypes,
-      this.ops,
-      this.bridgeLibraryMappings,
-      this.bridgeFunctionMappings,
-      this.constantPool,
-      this.runtimeTypes,
-      this.globalInitializers,
-      this.enumMappings,
-      this.overrideMap);
+    this.topLevelDeclarations,
+    this.instanceDeclarations,
+    this.typeIds,
+    //this.typeNames,
+    this.typeTypes,
+    this.ops,
+    this.bridgeLibraryMappings,
+    this.bridgeFunctionMappings,
+    this.constantPool,
+    this.runtimeTypes,
+    this.globalInitializers,
+    this.enumMappings,
+    this.overrideMap,
+  );
 
   /// Global bytecode offsets of the program's top-level declarations.
   Map<int, Map<String, int>> topLevelDeclarations;
@@ -82,31 +83,39 @@ class Program {
     b.add(Evc.i32b(Runtime.versionCode)); // version
 
     _writeMetaBlock(
-        b,
-        topLevelDeclarations
-            .map((key, value) => MapEntry(key.toString(), value)));
+      b,
+      topLevelDeclarations.map((key, value) => MapEntry(key.toString(), value)),
+    );
     _writeMetaBlock(
-        b,
-        instanceDeclarations
-            .map((key, value) => MapEntry(key.toString(), value)));
+      b,
+      instanceDeclarations.map((key, value) => MapEntry(key.toString(), value)),
+    );
     //_writeMetaBlock(b, typeNames);
     _writeMetaBlock(b, [for (final t in typeTypes) t.toList()]);
     _writeMetaBlock(
-        b, typeIds.map((key, value) => MapEntry(key.toString(), value)));
+      b,
+      typeIds.map((key, value) => MapEntry(key.toString(), value)),
+    );
     _writeMetaBlock(b, bridgeLibraryMappings);
     _writeMetaBlock(
-        b,
-        bridgeFunctionMappings
-            .map((key, value) => MapEntry(key.toString(), value)));
+      b,
+      bridgeFunctionMappings.map(
+        (key, value) => MapEntry(key.toString(), value),
+      ),
+    );
     _writeMetaBlock(b, constantPool);
     _writeMetaBlock(b, [for (final rt in runtimeTypes) rt.toJson()]);
     _writeMetaBlock(b, globalInitializers);
     _writeMetaBlock(
-        b, enumMappings.map((key, value) => MapEntry(key.toString(), value)));
+      b,
+      enumMappings.map((key, value) => MapEntry(key.toString(), value)),
+    );
     _writeMetaBlock(
-        b,
-        overrideMap.map((key, value) =>
-            MapEntry(key, [value.offset, value.versionConstraint])));
+      b,
+      overrideMap.map(
+        (key, value) => MapEntry(key, [value.offset, value.versionConstraint]),
+      ),
+    );
 
     for (final op in ops) {
       b.add(Runtime.opcodeFrom(op));

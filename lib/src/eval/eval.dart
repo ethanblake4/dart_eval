@@ -13,12 +13,14 @@ import 'package:dart_eval/dart_eval_security.dart';
 /// file.
 ///
 /// The eval() function automatically unboxes return values for convenience.
-dynamic eval(String source,
-    {String function = 'main',
-    List args = const [],
-    List<EvalPlugin> plugins = const [],
-    List<Permission> permissions = const [],
-    String? outputFile}) {
+dynamic eval(
+  String source, {
+  String function = 'main',
+  List args = const [],
+  List<EvalPlugin> plugins = const [],
+  List<Permission> permissions = const [],
+  String? outputFile,
+}) {
   final compiler = Compiler();
   for (final plugin in plugins) {
     plugin.configureForCompile(compiler);
@@ -26,8 +28,9 @@ dynamic eval(String source,
 
   var source0 = source;
 
-  if (!RegExp(r'(?:\w* )?' + function + r'\s?\([\s\S]*?\)\s?({|=>)')
-      .hasMatch(source0)) {
+  if (!RegExp(
+    r'(?:\w* )?' + function + r'\s?\([\s\S]*?\)\s?({|=>)',
+  ).hasMatch(source0)) {
     if (!source0.contains(';')) {
       source0 = '$source0;';
       if (!source0.contains('return')) {
@@ -38,7 +41,7 @@ dynamic eval(String source,
   }
 
   final program = compiler.compile({
-    'default': {'main.dart': source0}
+    'default': {'main.dart': source0},
   });
 
   if (outputFile != null) {

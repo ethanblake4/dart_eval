@@ -21,9 +21,9 @@ class SimpleCompilerLabel implements CompilerLabel {
 
   @override
   get cleanup => (CompilerContext ctx) {
-        ctx.endAllocScopeQuiet();
-        return -1;
-      };
+    ctx.endAllocScopeQuiet();
+    return -1;
+  };
 }
 
 enum LabelType { loop, branch, block }

@@ -74,7 +74,9 @@ class $InstanceImpl implements $Instance {
       return runtime.returnValue as $Value;
     } on TypeError {
       throw InvalidUnboxedValueException(
-          'Expected \$Value for "$identifier" field', runtime.returnValue);
+        'Expected \$Value for "$identifier" field',
+        runtime.returnValue,
+      );
     }
   }
 
@@ -121,7 +123,10 @@ class $InstanceImpl implements $Instance {
   static const $Function __notEquals = $Function(_notEquals);
 
   static $Value? _notEquals(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final other = args[0];
     return $bool(target != other);
   }
@@ -129,7 +134,10 @@ class $InstanceImpl implements $Instance {
   static const $Function __toString = $Function(_toString);
 
   static $Value? _toString(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     return $String('object Object');
   }
 

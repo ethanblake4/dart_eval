@@ -43,7 +43,8 @@ void main(List<String> args) {
     print('   help Print this help message.');
     print('');
     print(
-        'For more information, use dart_eval <command> --help on an individual command.');
+      'For more information, use dart_eval <command> --help on an individual command.',
+    );
     exit(1);
   }
 
@@ -80,7 +81,8 @@ void main(List<String> args) {
 
       print('Usage:');
       print(
-          '   dart_eval run <file> [-l, --library <library>] [-f, --function <function>] [-h, --help]');
+        '   dart_eval run <file> [-l, --library <library>] [-f, --function <function>] [-h, --help]',
+      );
       if (command['help']) {
         print('\nNote that bindings are not supported in the run command.');
       }
@@ -88,9 +90,11 @@ void main(List<String> args) {
     }
     if (command['library'] == null) {
       print(
-          'You must pass the library parameter with the name of the library to run.');
+        'You must pass the library parameter with the name of the library to run.',
+      );
       print(
-          'Example: dart_eval run program.evc --library package:my_package/main.dart');
+        'Example: dart_eval run program.evc --library package:my_package/main.dart',
+      );
       exit(1);
     }
     cliRun(command.rest[0], command['library'], command['function'] ?? 'main');
@@ -114,13 +118,15 @@ void main(List<String> args) {
       print('bind: Generate bindings for a Dart project');
       print('Usage:');
       print(
-          '   dart_eval bind [-h, --help] [-a, --all] [-s, --single-file] [--[no-]plugin]');
+        '   dart_eval bind [-h, --help] [-a, --all] [-s, --single-file] [--[no-]plugin]',
+      );
       exit(0);
     }
 
     cliBind(
-        singleFile: command['single-file'],
-        all: command['all'],
-        generatePlugin: command['plugin']);
+      singleFile: command['single-file'],
+      all: command['all'],
+      generatePlugin: command['plugin'],
+    );
   }
 }

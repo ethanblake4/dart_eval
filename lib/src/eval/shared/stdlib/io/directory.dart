@@ -24,67 +24,126 @@ class $Directory implements $Instance {
 
   /// Compile-time bridged class declaration for [$Directory]
   static const $declaration = BridgeClassDef(
-      BridgeClassType($type, $extends: $FileSystemEntity.$type),
-      constructors: {
-        '': BridgeConstructorDef(
-            BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [
-          BridgeParameter('path',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false)
-        ], namedParams: []))
-      },
-      methods: {
-        'create': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future,
-                [BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType))])),
-            params: [],
-            namedParams: [
-              BridgeParameter('recursive',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true),
-            ])),
-        'createSync': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
-            params: [],
-            namedParams: [
-              BridgeParameter('recursive',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true),
-            ])),
-        'rename': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.future, [BridgeTypeAnnotation($type)])),
-            params: [
-              BridgeParameter('newPath',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false)
-            ],
-            namedParams: [])),
-        'renameSync': BridgeMethodDef(
-            BridgeFunctionDef(returns: BridgeTypeAnnotation($type), params: [
-          BridgeParameter('newPath',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)), false)
-        ], namedParams: [])),
-        'list': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(
-              BridgeTypeRef(CoreTypes.stream, [
-                BridgeTypeAnnotation(BridgeTypeRef(IoTypes.fileSystemEntity))
-              ]),
+    BridgeClassType($type, $extends: $FileSystemEntity.$type),
+    constructors: {
+      '': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          params: [
+            BridgeParameter(
+              'path',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              false,
             ),
-            namedParams: [
-              BridgeParameter('recursive',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true),
-              BridgeParameter('followLinks',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true),
-            ])),
-        'listSync': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list, [
-              BridgeTypeAnnotation(BridgeTypeRef(IoTypes.fileSystemEntity))
-            ])),
-            namedParams: [
-              BridgeParameter('recursive',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true),
-              BridgeParameter('followLinks',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)), true),
-            ])),
-      },
-      wrap: true);
+          ],
+          namedParams: [],
+        ),
+      ),
+    },
+    methods: {
+      'create': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.future, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+            ]),
+          ),
+          params: [],
+          namedParams: [
+            BridgeParameter(
+              'recursive',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+              true,
+            ),
+          ],
+        ),
+      ),
+      'createSync': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          params: [],
+          namedParams: [
+            BridgeParameter(
+              'recursive',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+              true,
+            ),
+          ],
+        ),
+      ),
+      'rename': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.future, [BridgeTypeAnnotation($type)]),
+          ),
+          params: [
+            BridgeParameter(
+              'newPath',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              false,
+            ),
+          ],
+          namedParams: [],
+        ),
+      ),
+      'renameSync': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          params: [
+            BridgeParameter(
+              'newPath',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              false,
+            ),
+          ],
+          namedParams: [],
+        ),
+      ),
+      'list': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.stream, [
+              BridgeTypeAnnotation(BridgeTypeRef(IoTypes.fileSystemEntity)),
+            ]),
+          ),
+          namedParams: [
+            BridgeParameter(
+              'recursive',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+              true,
+            ),
+            BridgeParameter(
+              'followLinks',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+              true,
+            ),
+          ],
+        ),
+      ),
+      'listSync': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.list, [
+              BridgeTypeAnnotation(BridgeTypeRef(IoTypes.fileSystemEntity)),
+            ]),
+          ),
+          namedParams: [
+            BridgeParameter(
+              'recursive',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+              true,
+            ),
+            BridgeParameter(
+              'followLinks',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+              true,
+            ),
+          ],
+        ),
+      ),
+    },
+    wrap: true,
+  );
 
   static $Directory $new(Runtime runtime, $Value? target, List<$Value?> args) {
     return $Directory.wrap(Directory(args[0]!.$value));
@@ -119,14 +178,18 @@ class $Directory implements $Instance {
   static $Value? __create(Runtime runtime, $Value? target, List<$Value?> args) {
     final entity = target!.$value as Directory;
     runtime.assertPermission('filesystem:write', entity.path);
-    return $Future
-        .wrap(entity.create().then((value) => $Directory.wrap(value)));
+    return $Future.wrap(
+      entity.create().then((value) => $Directory.wrap(value)),
+    );
   }
 
   static const $Function _createSync = $Function(__createSync);
 
   static $Value? __createSync(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final entity = target!.$value as Directory;
     runtime.assertPermission('filesystem:write', entity.path);
     entity.createSync();
@@ -140,14 +203,18 @@ class $Directory implements $Instance {
     runtime.assertPermission('filesystem:write', entity.path);
     final newPath = args[0]!.$value as String;
     runtime.assertPermission('filesystem:write', newPath);
-    return $Future
-        .wrap(entity.rename(newPath).then((value) => $Directory.wrap(value)));
+    return $Future.wrap(
+      entity.rename(newPath).then((value) => $Directory.wrap(value)),
+    );
   }
 
   static const $Function _renameSync = $Function(__renameSync);
 
   static $Value? __renameSync(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final entity = target!.$value as Directory;
     runtime.assertPermission('filesystem:write', entity.path);
     final newPath = args[0]!.$value as String;
@@ -160,25 +227,34 @@ class $Directory implements $Instance {
   static $Value? __list(Runtime runtime, $Value? target, List<$Value?> args) {
     final entity = target!.$value as Directory;
     runtime.assertPermission('filesystem:read', entity.path);
-    return $Stream.wrap(entity
-        .list(
+    return $Stream.wrap(
+      entity
+          .list(
             recursive: args[0]?.$value as bool? ?? false,
-            followLinks: args[1]?.$value as bool? ?? false)
-        .map((event) => $FileSystemEntity.wrap(event)));
+            followLinks: args[1]?.$value as bool? ?? false,
+          )
+          .map((event) => $FileSystemEntity.wrap(event)),
+    );
   }
 
   static const $Function _listSync = $Function(__listSync);
 
   static $Value? __listSync(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final entity = target!.$value as Directory;
     runtime.assertPermission('filesystem:read', entity.path);
-    return $List.wrap(entity
-        .listSync(
+    return $List.wrap(
+      entity
+          .listSync(
             recursive: args[0]?.$value as bool? ?? false,
-            followLinks: args[1]?.$value as bool? ?? false)
-        .map((item) => $FileSystemEntity.wrap(item))
-        .toList());
+            followLinks: args[1]?.$value as bool? ?? false,
+          )
+          .map((item) => $FileSystemEntity.wrap(item))
+          .toList(),
+    );
   }
 
   @override

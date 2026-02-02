@@ -7,14 +7,20 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 void doAssert(CompilerContext ctx, Variable condition, Variable message) {
   message.boxIfNeeded(ctx).pushArg(ctx);
   ctx.pushOp(
-      InvokeExternal.make(ctx.bridgeStaticFunctionIndices[
-          ctx.libraryMap['dart:core']]!['AssertionError.']!),
-      InvokeExternal.LEN);
+    InvokeExternal.make(
+      ctx.bridgeStaticFunctionIndices[ctx
+          .libraryMap['dart:core']]!['AssertionError.']!,
+    ),
+    InvokeExternal.LEN,
+  );
   ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-  final assertionErr = Variable.alloc(ctx,
-      TypeRef.fromBridgeTypeRef(ctx, BridgeTypeRef(CoreTypes.assertionError)));
+  final assertionErr = Variable.alloc(
+    ctx,
+    TypeRef.fromBridgeTypeRef(ctx, BridgeTypeRef(CoreTypes.assertionError)),
+  );
 
   ctx.pushOp(
-      Assert.make(condition.scopeFrameOffset, assertionErr.scopeFrameOffset),
-      Assert.LEN);
+    Assert.make(condition.scopeFrameOffset, assertionErr.scopeFrameOffset),
+    Assert.LEN,
+  );
 }

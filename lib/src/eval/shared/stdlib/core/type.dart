@@ -6,9 +6,10 @@ class $Type implements $Instance, Type {
   $Type(this.$value) : _superclass = $Object($value);
 
   static const $declaration = BridgeClassDef(
-      BridgeClassType(BridgeTypeRef(CoreTypes.type), isAbstract: true),
-      constructors: {},
-      wrap: true);
+    BridgeClassType(BridgeTypeRef(CoreTypes.type), isAbstract: true),
+    constructors: {},
+    wrap: true,
+  );
 
   final $Instance _superclass;
 
@@ -67,7 +68,8 @@ class $TypeImpl implements $Type {
     switch (identifier) {
       case 'toString':
         return $Function(
-            ((runtime, target, args) => $String("Instance of 'Type'")));
+          ((runtime, target, args) => $String("Instance of 'Type'")),
+        );
       case '==':
         return $Function((runtime, target, args) {
           final other = args[0];

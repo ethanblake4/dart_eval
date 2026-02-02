@@ -18,8 +18,8 @@ void main() {
             int main() {
               return -5;
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), -5);
@@ -32,8 +32,8 @@ void main() {
             double main() {
               return 4.5 % 2;
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 0.5);
@@ -47,8 +47,8 @@ void main() {
               final a =  45 ~/ 21;
               return a;
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 2);
@@ -61,8 +61,8 @@ void main() {
           void main(int whatToSay) {
             print(whatToSay);
           }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(() {
@@ -82,7 +82,7 @@ void main() {
               return b;
             }
           ''',
-        }
+        },
       });
       expect(() {
         final a = runtime.executeLib('package:example/main.dart', 'main');
@@ -102,11 +102,13 @@ void main() {
               return b && a;
             }
           ''',
-        }
+        },
       });
       expect(() {
-        expect(runtime.executeLib('package:example/main.dart', 'main'),
-            $bool(false));
+        expect(
+          runtime.executeLib('package:example/main.dart', 'main'),
+          $bool(false),
+        );
       }, prints('false\ntrue\n'));
     });
 
@@ -121,13 +123,12 @@ void main() {
               return 2;
             }
           ''',
-        }
+        },
       });
       expect(() {
         runtime.executeLib('package:example/main.dart', 'main');
       }, prints('FluffyHello2, says the cat\n'));
     });
-
 
     test('toString inside interpolation', () {
       final runtime = compiler.compileWriteAndLoad({
@@ -140,8 +141,8 @@ void main() {
             void main() {
               print('test \${X()}');
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(() {
@@ -160,7 +161,7 @@ void main() {
               print(a.distanceTo(b));
             }
           ''',
-        }
+        },
       });
       expect(() {
         runtime.executeLib('package:example/main.dart', 'main');
@@ -180,7 +181,7 @@ void main() {
               return x + 2.0;
             }
           ''',
-        }
+        },
       });
       expect(runtime.executeLib('package:example/main.dart', 'main'), 14.0);
     });
@@ -201,11 +202,13 @@ void main() {
               };
             }
           ''',
-        }
+        },
       });
       expect(() {
         expect(
-            runtime.executeLib('package:example/main.dart', 'main'), $null());
+          runtime.executeLib('package:example/main.dart', 'main'),
+          $null(),
+        );
       }, prints('null\n'));
     });
 
@@ -224,7 +227,7 @@ void main() {
               };
             }
           ''',
-        }
+        },
       });
       expect(() {
         runtime.executeLib('package:example/main.dart', 'main');
@@ -240,13 +243,15 @@ void main() {
               return a.where((element) => element == 1);
             }
           ''',
-        }
+        },
       });
       expect(
-          ((runtime.executeLib('package:example/main.dart', 'main') as $Value)
-                  .$reified as Iterable)
-              .toList(),
-          [$int(1), $int(1), $int(1)]);
+        ((runtime.executeLib('package:example/main.dart', 'main') as $Value)
+                    .$reified
+                as Iterable)
+            .toList(),
+        [$int(1), $int(1), $int(1)],
+      );
     });
 
     test('StreamController and Stream.listen()', () {
@@ -265,7 +270,7 @@ void main() {
               await controller.close();
             }
           ''',
-        }
+        },
       });
       expect(() async {
         await runtime.executeLib('package:example/main.dart', 'main').$value;
@@ -285,7 +290,7 @@ void main() {
               print(tan(0));
             }
           ''',
-        }
+        },
       });
       expect(() {
         runtime.executeLib('package:example/main.dart', 'main');
@@ -302,7 +307,7 @@ void main() {
               print(rg.hasMatch('moon'));
             }
           ''',
-        }
+        },
       });
       expect(() {
         runtime.executeLib('package:example/main.dart', 'main');
@@ -319,7 +324,7 @@ void main() {
               print(rg.hasMatch('moon'));
             }
           ''',
-        }
+        },
       });
       expect(() {
         runtime.executeLib('package:example/main.dart', 'main');
@@ -340,7 +345,7 @@ void main() {
               }
             }
           ''',
-        }
+        },
       });
       expect(() {
         runtime.executeLib('package:example/main.dart', 'main');
@@ -358,7 +363,7 @@ void main() {
               print(ADD(3,4));
             }
           ''',
-        }
+        },
       });
       expect(() {
         runtime.executeLib('package:example/main.dart', 'main');
@@ -380,8 +385,8 @@ void main() {
               print(int.tryParse('3.5a'));
               print(int.tryParse('11', radix: 2));
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(() {
@@ -398,8 +403,8 @@ void main() {
               final b = a.split(':');
               print(int.parse(b[0]));
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(() {
@@ -416,7 +421,7 @@ void main() {
               print(Iterable.generate(2, (i) => 'test'));
             }
           ''',
-        }
+        },
       });
       expect(() {
         runtime.executeLib('package:example/main.dart', 'main');
@@ -431,7 +436,7 @@ void main() {
               print(Iterable.generate(3));
             }
           ''',
-        }
+        },
       });
       expect(() {
         runtime.executeLib('package:example/main.dart', 'main');
@@ -446,7 +451,7 @@ void main() {
               print(List.generate(3, (i) => i));
             }
           ''',
-        }
+        },
       });
       expect(() {
         runtime.executeLib('package:example/main.dart', 'main');
@@ -461,7 +466,7 @@ void main() {
               print(List.of([0, 1, 2], growable: true));
             }
           ''',
-        }
+        },
       });
       expect(() {
         runtime.executeLib('package:example/main.dart', 'main');
@@ -476,7 +481,7 @@ void main() {
               print(List<int>.from([0, 1, 2], growable: true));
             }
           ''',
-        }
+        },
       });
       expect(() {
         runtime.executeLib('package:example/main.dart', 'main');
@@ -492,13 +497,17 @@ void main() {
               print(Object.hash(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, null));
             }
           ''',
-        }
+        },
       });
-      expect(() {
-        runtime.executeLib('package:example/main.dart', 'main');
-      },
-          prints('${Object.hash(1, 2, 3)}\n'
-              '${Object.hash(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, null)}\n'));
+      expect(
+        () {
+          runtime.executeLib('package:example/main.dart', 'main');
+        },
+        prints(
+          '${Object.hash(1, 2, 3)}\n'
+          '${Object.hash(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, null)}\n',
+        ),
+      );
     });
 
     test('int.compareTo', () {
@@ -511,7 +520,7 @@ void main() {
               print(1.compareTo(1));
             }
           ''',
-        }
+        },
       });
       expect(() {
         runtime.executeLib('package:example/main.dart', 'main');
@@ -528,7 +537,7 @@ void main() {
               print(1.toDouble());
             }
           ''',
-        }
+        },
       });
       expect(() {
         runtime.executeLib('package:example/main.dart', 'main');
@@ -547,7 +556,7 @@ void main() {
               print((1.5).abs());
             }
           ''',
-        }
+        },
       });
       expect(() {
         runtime.executeLib('package:example/main.dart', 'main');
@@ -564,8 +573,8 @@ void main() {
               print('hashCode \$valueHashCode');
               return true;
             }
-          '''
-        }
+          ''',
+        },
       });
 
       final runtime = Runtime.ofProgram(program);
@@ -579,13 +588,15 @@ void main() {
             double main() {
               return double.infinity;
             }
-          '''
-        }
+          ''',
+        },
       });
 
       final runtime = Runtime.ofProgram(program);
-      expect(runtime.executeLib('package:example/main.dart', 'main'),
-          double.infinity);
+      expect(
+        runtime.executeLib('package:example/main.dart', 'main'),
+        double.infinity,
+      );
     });
   });
 }

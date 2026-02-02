@@ -5,13 +5,24 @@ import 'package:dart_eval/src/eval/runtime/class.dart';
 /// Serialized to a program, contains mappings from method and field names
 /// to implementation locations in the code.
 class EvalClass extends $InstanceImpl {
-  EvalClass(this.delegatedType, this.superclass, this.mixins, this.getters,
-      this.setters, this.methods)
-      : super(EvalClassClass.instance, null, const []);
+  EvalClass(
+    this.delegatedType,
+    this.superclass,
+    this.mixins,
+    this.getters,
+    this.setters,
+    this.methods,
+  ) : super(EvalClassClass.instance, null, const []);
 
   factory EvalClass.fromJson(List def) {
-    return EvalClass(def[3] as int, null, [], (def[0] as Map).cast(),
-        (def[1] as Map).cast(), (def[2] as Map).cast());
+    return EvalClass(
+      def[3] as int,
+      null,
+      [],
+      (def[0] as Map).cast(),
+      (def[1] as Map).cast(),
+      (def[2] as Map).cast(),
+    );
   }
 
   final int delegatedType;

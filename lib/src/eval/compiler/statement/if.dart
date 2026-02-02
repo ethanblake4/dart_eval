@@ -6,7 +6,10 @@ import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 
 StatementInfo compileIfStatement(
-    IfStatement s, CompilerContext ctx, AlwaysReturnType? expectedReturnType) {
+  IfStatement s,
+  CompilerContext ctx,
+  AlwaysReturnType? expectedReturnType,
+) {
   final elseStatement = s.elseStatement;
   return macroBranch(
     ctx,
@@ -17,7 +20,7 @@ StatementInfo compileIfStatement(
     elseBranch: elseStatement == null
         ? null
         : (ctx, expectedReturnType) =>
-            compileStatement(elseStatement, expectedReturnType, ctx),
+              compileStatement(elseStatement, expectedReturnType, ctx),
     source: s,
   );
 }

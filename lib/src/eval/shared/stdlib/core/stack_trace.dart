@@ -9,12 +9,21 @@ class $StackTrace implements StackTrace, $Instance {
   }
 
   static void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFunc($type.spec!.library, 'StackTrace.fromString',
-        __$StackTrace$fromString.call);
     runtime.registerBridgeFunc(
-        $type.spec!.library, 'StackTrace.empty*g', __$static$empty.call);
-    runtime.registerBridgeFunc($type.spec!.library, 'StackTrace.current*g',
-        __$static$getter$current.call);
+      $type.spec!.library,
+      'StackTrace.fromString',
+      __$StackTrace$fromString.call,
+    );
+    runtime.registerBridgeFunc(
+      $type.spec!.library,
+      'StackTrace.empty*g',
+      __$static$empty.call,
+    );
+    runtime.registerBridgeFunc(
+      $type.spec!.library,
+      'StackTrace.current*g',
+      __$static$getter$current.call,
+    );
   }
 
   late final $Instance _superclass = $Object($value);
@@ -22,12 +31,7 @@ class $StackTrace implements StackTrace, $Instance {
   static const $type = BridgeTypeRef(CoreTypes.stackTrace);
 
   static const $declaration = BridgeClassDef(
-    BridgeClassType(
-      $type,
-      $extends: null,
-      $implements: [],
-      isAbstract: true,
-    ),
+    BridgeClassType($type, $extends: null, $implements: [], isAbstract: true),
     constructors: {
       '': BridgeConstructorDef(
         BridgeFunctionDef(
@@ -42,42 +46,53 @@ class $StackTrace implements StackTrace, $Instance {
           returns: BridgeTypeAnnotation($type),
           params: [
             BridgeParameter(
-                'stackTraceString',
-                BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, []),
-                    nullable: false),
-                false)
+              'stackTraceString',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string, []),
+                nullable: false,
+              ),
+              false,
+            ),
           ],
           namedParams: [],
         ),
         isFactory: true,
-      )
+      ),
     },
     fields: {
       'empty': BridgeFieldDef(
-          BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.stackTrace, []),
-              nullable: false),
-          isStatic: true),
+        BridgeTypeAnnotation(
+          BridgeTypeRef(CoreTypes.stackTrace, []),
+          nullable: false,
+        ),
+        isStatic: true,
+      ),
     },
     methods: {
       'toString': BridgeMethodDef(
-          BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, []),
-                nullable: false),
-            params: [],
-            namedParams: [],
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.string, []),
+            nullable: false,
           ),
-          isStatic: false),
+          params: [],
+          namedParams: [],
+        ),
+        isStatic: false,
+      ),
     },
     getters: {
       'current': BridgeMethodDef(
-          BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.stackTrace, []),
-                nullable: false),
-            params: [],
-            namedParams: [],
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.stackTrace, []),
+            nullable: false,
           ),
-          isStatic: false),
+          params: [],
+          namedParams: [],
+        ),
+        isStatic: false,
+      ),
     },
     setters: {},
     bridge: false,
@@ -114,23 +129,30 @@ class $StackTrace implements StackTrace, $Instance {
 
   static const __$static$empty = $Function(_$static$empty);
   static $Value? _$static$empty(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final $result = StackTrace.empty;
     return $StackTrace.wrap($result);
   }
 
   static const __$static$getter$current = $Function(_$static$getter$current);
   static $Value? _$static$getter$current(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     return $StackTrace.wrap(StackTrace.current);
   }
 
   static const __$StackTrace$fromString = $Function(_$StackTrace$fromString);
   static $Value? _$StackTrace$fromString(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final stackTraceString = args[0]?.$value as String;
-    return $StackTrace.wrap(StackTrace.fromString(
-      stackTraceString,
-    ));
+    return $StackTrace.wrap(StackTrace.fromString(stackTraceString));
   }
 }

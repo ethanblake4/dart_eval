@@ -94,9 +94,15 @@ class DartCorePlugin implements EvalPlugin {
     $Set.configureForRuntime(runtime);
     runtime.registerBridgeFunc('dart:core', 'RegExp.', $RegExp.$new);
     runtime.registerBridgeFunc(
-        'dart:core', 'AssertionError.', $AssertionError.$new);
+      'dart:core',
+      'AssertionError.',
+      $AssertionError.$new,
+    );
     runtime.registerBridgeFunc(
-        'dart:core', 'StringBuffer.', $StringBuffer.$new);
+      'dart:core',
+      'StringBuffer.',
+      $StringBuffer.$new,
+    );
     runtime.registerBridgeFunc('dart:core', 'num.parse', $num.$parse);
     runtime.registerBridgeFunc('dart:core', 'num.tryParse', $num.$tryParse);
     runtime.registerBridgeFunc('dart:core', 'int.parse', $int.$parse);
@@ -104,39 +110,78 @@ class DartCorePlugin implements EvalPlugin {
     runtime.registerBridgeFunc('dart:core', 'Object.hash', $Object.$hash);
     runtime.registerBridgeFunc('dart:core', 'RangeError.', $RangeError.$new);
     runtime.registerBridgeFunc(
-        'dart:core', 'RangeError.value', $RangeError.$_value);
+      'dart:core',
+      'RangeError.value',
+      $RangeError.$_value,
+    );
     runtime.registerBridgeFunc(
-        'dart:core', 'RangeError.range', $RangeError.$_range);
-    runtime.registerBridgeFunc('dart:core', 'RangeError.checkValidIndex',
-        $RangeError.$checkValidIndex);
-    runtime.registerBridgeFunc('dart:core', 'RangeError.checkValidRange',
-        $RangeError.$checkValidRange);
-    runtime.registerBridgeFunc('dart:core', 'RangeError.checkNotNegative',
-        $RangeError.$checkNotNegative);
+      'dart:core',
+      'RangeError.range',
+      $RangeError.$_range,
+    );
+    runtime.registerBridgeFunc(
+      'dart:core',
+      'RangeError.checkValidIndex',
+      $RangeError.$checkValidIndex,
+    );
+    runtime.registerBridgeFunc(
+      'dart:core',
+      'RangeError.checkValidRange',
+      $RangeError.$checkValidRange,
+    );
+    runtime.registerBridgeFunc(
+      'dart:core',
+      'RangeError.checkNotNegative',
+      $RangeError.$checkNotNegative,
+    );
     runtime.registerBridgeFunc('dart:core', 'Symbol.', $Symbol.$new);
     runtime.registerBridgeFunc('dart:core', 'double.nan*g', $double.$nan);
     runtime.registerBridgeFunc(
-        'dart:core', 'double.infinity*g', $double.$infinity);
+      'dart:core',
+      'double.infinity*g',
+      $double.$infinity,
+    );
     runtime.registerBridgeFunc(
-        'dart:core', 'double.negativeInfinity*g', $double.$negativeInfinity);
+      'dart:core',
+      'double.negativeInfinity*g',
+      $double.$negativeInfinity,
+    );
     $StackTrace.configureForRuntime(runtime);
     $Error.configureForRuntime(runtime);
     $UnimplementedError.configureForRuntime(runtime);
     $UnsupportedError.configureForRuntime(runtime);
     runtime.registerBridgeFunc(
-        'dart:core', 'FormatException.', $FormatException.$new);
+      'dart:core',
+      'FormatException.',
+      $FormatException.$new,
+    );
     runtime.registerBridgeFunc(
-        'dart:core', 'ArgumentError.', $ArgumentError.$new);
+      'dart:core',
+      'ArgumentError.',
+      $ArgumentError.$new,
+    );
     runtime.registerBridgeFunc(
-        'dart:core', 'ArgumentError.notNull', $ArgumentError.$notNull);
+      'dart:core',
+      'ArgumentError.notNull',
+      $ArgumentError.$notNull,
+    );
     runtime.registerBridgeFunc(
-        'dart:core', 'ArgumentError.value', $ArgumentError.$_value);
+      'dart:core',
+      'ArgumentError.value',
+      $ArgumentError.$_value,
+    );
     runtime.registerBridgeFunc('dart:core', 'StateError.', $StateError.$new);
     runtime.registerBridgeFunc('dart:async', 'Stream.empty', $Stream.$empty);
     runtime.registerBridgeFunc('dart:async', 'Stream.value', $Stream.$_value);
     runtime.registerBridgeFunc(
-        'dart:async', 'Stream.fromIterable', $Stream.$fromIterable);
+      'dart:async',
+      'Stream.fromIterable',
+      $Stream.$fromIterable,
+    );
     runtime.registerBridgeFunc(
-        'dart:async', 'Stream.periodic', $Stream.$periodic);
+      'dart:async',
+      'Stream.periodic',
+      $Stream.$periodic,
+    );
   }
 }

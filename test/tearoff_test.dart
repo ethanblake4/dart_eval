@@ -21,8 +21,8 @@ void main() {
             int fun(int a) {
               return a + 1;
             }
-           '''
-        }
+           ''',
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 5);
@@ -43,8 +43,8 @@ void main() {
             int fun2(int a) {
               return a + 2;
             }
-           '''
-        }
+           ''',
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 7);
@@ -76,8 +76,8 @@ void main() {
               }
             }
             
-          '''
-        }
+          ''',
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 10);

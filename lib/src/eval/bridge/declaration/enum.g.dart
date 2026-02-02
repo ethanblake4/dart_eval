@@ -6,34 +6,38 @@ part of 'enum.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-BridgeEnumDef _$BridgeEnumDefFromJson(Map<String, dynamic> json) =>
-    BridgeEnumDef(
-      BridgeTypeRef.fromJson(json['type'] as Map<String, dynamic>),
-      values: (json['values'] as List<dynamic>?)
-              ?.map((e) => e as String)
-              .toList() ??
-          const [],
-      methods: (json['methods'] as Map<String, dynamic>?)?.map(
-            (k, e) => MapEntry(
-                k, BridgeMethodDef.fromJson(e as Map<String, dynamic>)),
-          ) ??
-          const {},
-      getters: (json['getters'] as Map<String, dynamic>?)?.map(
-            (k, e) => MapEntry(
-                k, BridgeMethodDef.fromJson(e as Map<String, dynamic>)),
-          ) ??
-          const {},
-      setters: (json['setters'] as Map<String, dynamic>?)?.map(
-            (k, e) => MapEntry(
-                k, BridgeMethodDef.fromJson(e as Map<String, dynamic>)),
-          ) ??
-          const {},
-      fields: (json['fields'] as Map<String, dynamic>?)?.map(
-            (k, e) =>
-                MapEntry(k, BridgeFieldDef.fromJson(e as Map<String, dynamic>)),
-          ) ??
-          const {},
-    );
+BridgeEnumDef _$BridgeEnumDefFromJson(
+  Map<String, dynamic> json,
+) => BridgeEnumDef(
+  BridgeTypeRef.fromJson(json['type'] as Map<String, dynamic>),
+  values:
+      (json['values'] as List<dynamic>?)?.map((e) => e as String).toList() ??
+      const [],
+  methods:
+      (json['methods'] as Map<String, dynamic>?)?.map(
+        (k, e) =>
+            MapEntry(k, BridgeMethodDef.fromJson(e as Map<String, dynamic>)),
+      ) ??
+      const {},
+  getters:
+      (json['getters'] as Map<String, dynamic>?)?.map(
+        (k, e) =>
+            MapEntry(k, BridgeMethodDef.fromJson(e as Map<String, dynamic>)),
+      ) ??
+      const {},
+  setters:
+      (json['setters'] as Map<String, dynamic>?)?.map(
+        (k, e) =>
+            MapEntry(k, BridgeMethodDef.fromJson(e as Map<String, dynamic>)),
+      ) ??
+      const {},
+  fields:
+      (json['fields'] as Map<String, dynamic>?)?.map(
+        (k, e) =>
+            MapEntry(k, BridgeFieldDef.fromJson(e as Map<String, dynamic>)),
+      ) ??
+      const {},
+);
 
 Map<String, dynamic> _$BridgeEnumDefToJson(BridgeEnumDef instance) =>
     <String, dynamic>{

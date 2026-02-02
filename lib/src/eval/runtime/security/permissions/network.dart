@@ -15,16 +15,21 @@ class NetworkPermission implements Permission {
   /// RegExp [Pattern] directly.
   factory NetworkPermission.url(String url) {
     final uri = Uri.parse(url);
-    final schemePattern =
-        uri.scheme == '' ? r'[-a-zA-Z0-9@:%._\+~#=]{0,256}' : uri.scheme;
-    final hostPattern =
-        uri.host == '' ? r'[-a-zA-Z0-9@:%._\+~#=]{1,256}' : uri.host;
-    final pathPattern =
-        uri.path == '' ? r'[-a-zA-Z0-9@:%_\+.~&//=]*' : uri.path;
-    final queryPattern =
-        uri.query == '' ? r'[-a-zA-Z0-9@:%_\+.~?&//=]*' : uri.query;
-    final fragmentPattern =
-        uri.fragment == '' ? r'[-a-zA-Z0-9@:%_\+.~#?&//=]*' : uri.fragment;
+    final schemePattern = uri.scheme == ''
+        ? r'[-a-zA-Z0-9@:%._\+~#=]{0,256}'
+        : uri.scheme;
+    final hostPattern = uri.host == ''
+        ? r'[-a-zA-Z0-9@:%._\+~#=]{1,256}'
+        : uri.host;
+    final pathPattern = uri.path == ''
+        ? r'[-a-zA-Z0-9@:%_\+.~&//=]*'
+        : uri.path;
+    final queryPattern = uri.query == ''
+        ? r'[-a-zA-Z0-9@:%_\+.~?&//=]*'
+        : uri.query;
+    final fragmentPattern = uri.fragment == ''
+        ? r'[-a-zA-Z0-9@:%_\+.~#?&//=]*'
+        : uri.fragment;
     final pattern =
         '^$schemePattern:?\\/*$hostPattern\\/?$pathPattern\\??$queryPattern\\#?$fragmentPattern\$';
     return NetworkPermission(RegExp(pattern));

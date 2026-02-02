@@ -96,7 +96,7 @@ void main() {
       }''';
 
       final runtime = compiler.compileWriteAndLoad({
-        'example': {'main.dart': source}
+        'example': {'main.dart': source},
       });
 
       final result = runtime.executeLib('package:example/main.dart', 'main');
@@ -122,7 +122,7 @@ void main() {
       }''';
 
       final runtime = compiler.compileWriteAndLoad({
-        'example': {'main.dart': source}
+        'example': {'main.dart': source},
       });
 
       expect(() {
@@ -166,12 +166,14 @@ void main() {
       ''';
 
       final runtime = compiler.compileWriteAndLoad({
-        'example': {'main.dart': source}
+        'example': {'main.dart': source},
       });
 
       expect(() async {
-        expect(await runtime.executeLib('package:example/main.dart', 'main'),
-            $int(1));
+        expect(
+          await runtime.executeLib('package:example/main.dart', 'main'),
+          $int(1),
+        );
       }, prints('func3\nfunc2\nfunc1\ncomplete\nfunc4 start\nfunc4 end\n'));
     });
 
@@ -192,7 +194,7 @@ void main() {
       ''';
 
       final runtime = compiler.compileWriteAndLoad({
-        'example': {'main.dart': source}
+        'example': {'main.dart': source},
       });
 
       expect(() {
@@ -222,8 +224,8 @@ void main() {
                 return matches.map((match) => match.start).toList();
               }
             }
-        '''
-        }
+        ''',
+        },
       });
       expect(() {
         runtime.executeLib('package:my_package/main.dart', 'main');
@@ -252,8 +254,8 @@ void main() {
                 return matches.map((match) => match.start).toList();
               }
             }
-        '''
-        }
+        ''',
+        },
       });
       final runtime = Runtime.ofProgram(program);
       expect(() {
@@ -268,8 +270,8 @@ void main() {
           'main.dart': '''main() {
             var episode = RegExp(r'\\d+').firstMatch('episode 1');
             return episode;
-          }'''
-        }
+          }''',
+        },
       });
       final value = runtime.executeLib(
         'package:extensions_test/main.dart',
@@ -280,10 +282,14 @@ void main() {
 
     test('Bridged enum equality ternary assignment', () {
       final compiler2 = Compiler();
-      compiler2.defineBridgeEnum(BridgeEnumDef(
+      compiler2.defineBridgeEnum(
+        BridgeEnumDef(
           BridgeTypeRef(
-              BridgeTypeSpec('package:my_package/show.dart', 'ShowType')),
-          values: ['Movie', 'Series']));
+            BridgeTypeSpec('package:my_package/show.dart', 'ShowType'),
+          ),
+          values: ['Movie', 'Series'],
+        ),
+      );
       final program = compiler2.compile({
         'my_package': {
           'main.dart': r'''
@@ -299,12 +305,15 @@ void main() {
                 media.url = 'movie.com' : null;
               print(url);
             }
-          '''
-        }
+          ''',
+        },
       });
       final runtime = Runtime.ofProgram(program);
-      runtime.registerBridgeEnumValues('package:my_package/show.dart',
-          'ShowType', {'Movie': $int(0), 'Series': $int(1)});
+      runtime.registerBridgeEnumValues(
+        'package:my_package/show.dart',
+        'ShowType',
+        {'Movie': $int(0), 'Series': $int(1)},
+      );
       runtime.executeLib('package:my_package/main.dart', 'main');
     });
 
@@ -342,24 +351,28 @@ void main() {
       ''';
 
       final runtime = compiler.compileWriteAndLoad({
-        'example': {'main.dart': source}
+        'example': {'main.dart': source},
       });
 
-      expect(() {
-        runtime.executeLib('package:example/main.dart', 'main');
-      },
-          prints('3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n'
-              '3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n'
-              '3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n'
-              '3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n'
-              '3\n3\n3\n3\n3\n3\n'
-              '1220110121120211111110021120111022111121111111211220122111211122'
-              '2112111122110111120111202111221111111211101111210110001110212202'
-              '2201112211220111201120111112100111011122111101111200100111120011'
-              '1121111120101101011011110021112211220111201120112201001110111110'
-              '0211122110221112011201200111211212112011011110010112002222211110'
-              '0001102011120101101110111210202210102101021010212121221122121211'
-              '12112001122112201221\n'));
+      expect(
+        () {
+          runtime.executeLib('package:example/main.dart', 'main');
+        },
+        prints(
+          '3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n'
+          '3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n'
+          '3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n'
+          '3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n'
+          '3\n3\n3\n3\n3\n3\n'
+          '1220110121120211111110021120111022111121111111211220122111211122'
+          '2112111122110111120111202111221111111211101111210110001110212202'
+          '2201112211220111201120111112100111011122111101111200100111120011'
+          '1121111120101101011011110021112211220111201120112201001110111110'
+          '0211122110221112011201200111211212112011011110010112002222211110'
+          '0001102011120101101110111210202210102101021010212121221122121211'
+          '12112001122112201221\n',
+        ),
+      );
     });
 
     test('Default parameter boxing error', () {
@@ -386,7 +399,7 @@ void main() {
       ''';
 
       final runtime = compiler.compileWriteAndLoad({
-        'example': {'main.dart': source}
+        'example': {'main.dart': source},
       });
 
       expect(() async {

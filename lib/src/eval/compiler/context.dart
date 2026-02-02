@@ -42,8 +42,10 @@ mixin ScopeContext on Object implements AbstractScopeContext {
   @override
   List<int> allocNest = [0];
 
-  void beginAllocScope(
-      {int existingAllocLen = 0, bool requireNonlinearAccess = false}) {
+  void beginAllocScope({
+    int existingAllocLen = 0,
+    bool requireNonlinearAccess = false,
+  }) {
     allocNest.add(existingAllocLen);
     locals.add({});
   }
@@ -106,8 +108,10 @@ mixin ScopeContext on Object implements AbstractScopeContext {
 
   void resolveNonlinearity([int depth = 1]) {
     for (var i = 0; i < depth; i++) {
-      <String, Variable>{...(locals[locals.length - depth])}
-          .forEach((key, value) {
+      <String, Variable>{...(locals[locals.length - depth])}.forEach((
+        key,
+        value,
+      ) {
         locals[locals.length - depth][key] = value.unboxIfNeeded(this);
       });
     }
@@ -151,11 +155,13 @@ mixin ScopeContext on Object implements AbstractScopeContext {
       otherLocalsMap.forEach((key, value) {
         final myLocal = myLocalsMap[key]!;
         if (!myLocal.boxed && value.boxed) {
-          locals[i][key] =
-              myLocal.copyWith(type: myLocal.type.copyWith(boxed: true));
+          locals[i][key] = myLocal.copyWith(
+            type: myLocal.type.copyWith(boxed: true),
+          );
         } else if (myLocal.boxed && !value.boxed) {
-          locals[i][key] =
-              myLocal.copyWith(type: myLocal.type.copyWith(boxed: false));
+          locals[i][key] = myLocal.copyWith(
+            type: myLocal.type.copyWith(boxed: false),
+          );
         }
       });
     }
@@ -224,13 +230,15 @@ class CompilerContext with ScopeContext {
   }
 
   @override
-  void beginAllocScope(
-      {int existingAllocLen = 0,
-      bool requireNonlinearAccess = false,
-      bool closure = false}) {
+  void beginAllocScope({
+    int existingAllocLen = 0,
+    bool requireNonlinearAccess = false,
+    bool closure = false,
+  }) {
     super.beginAllocScope(
-        existingAllocLen: existingAllocLen,
-        requireNonlinearAccess: requireNonlinearAccess);
+      existingAllocLen: existingAllocLen,
+      requireNonlinearAccess: requireNonlinearAccess,
+    );
     if (preScan?.closedFrames.contains(locals.length - 1) ?? false) {
       final ps = PushScope.make(sourceFile, -1, '#');
       pushOp(ps, PushScope.len(ps));
@@ -249,17 +257,22 @@ class CompilerContext with ScopeContext {
         if (frameRef.isNotEmpty) {
           var frOffset = frameRef[0].scopeFrameOffset;
           for (var i = 0; i < frameRef.length - 1; i++) {
-            final index = BuiltinValue(intval: frameRef[i + 1].scopeFrameOffset)
-                .push(this);
-            pushOp(IndexList.make(frOffset, index.scopeFrameOffset),
-                IndexList.LEN);
+            final index = BuiltinValue(
+              intval: frameRef[i + 1].scopeFrameOffset,
+            ).push(this);
+            pushOp(
+              IndexList.make(frOffset, index.scopeFrameOffset),
+              IndexList.LEN,
+            );
             frOffset = scopeFrameOffset++;
             allocNest.last++;
           }
 
           final index = BuiltinValue(intval: v.scopeFrameOffset).push(this);
           pushOp(
-              IndexList.make(frOffset, index.scopeFrameOffset), IndexList.LEN);
+            IndexList.make(frOffset, index.scopeFrameOffset),
+            IndexList.LEN,
+          );
           allocNest.last++;
 
           return v.copyWith(scopeFrameOffset: scopeFrameOffset++);
@@ -318,8 +331,9 @@ class CompilerContext with ScopeContext {
       inferredLocalsMap.forEach((key, value) {
         final myLocal = myLocalsMap[key];
         if (myLocal != null && myLocal.type != value.type) {
-          locals[i][key] =
-              myLocal.copyWith(type: value.type.copyWith(boxed: myLocal.boxed));
+          locals[i][key] = myLocal.copyWith(
+            type: value.type.copyWith(boxed: myLocal.boxed),
+          );
         }
       });
     }
@@ -328,17 +342,20 @@ class CompilerContext with ScopeContext {
   void uninferTypes() {
     final uninferredLocals = typeUninferenceSaveStates.removeLast().locals;
     final myLocals = [...locals];
-    for (var i = 0;
-        i < math.min(uninferredLocals.length, myLocals.length);
-        i++) {
+    for (
+      var i = 0;
+      i < math.min(uninferredLocals.length, myLocals.length);
+      i++
+    ) {
       final uninferredLocalsMap = uninferredLocals[i];
       final myLocalsMap = myLocals[i];
 
       uninferredLocalsMap.forEach((key, value) {
         final myLocal = myLocalsMap[key];
         if (myLocal != null && myLocal.type != value.type) {
-          locals[i][key] =
-              myLocal.copyWith(type: value.type.copyWith(boxed: myLocal.boxed));
+          locals[i][key] = myLocal.copyWith(
+            type: value.type.copyWith(boxed: myLocal.boxed),
+          );
         }
       });
     }
@@ -357,12 +374,13 @@ class CompilerContext with ScopeContext {
 
 class ContextSaveState with ScopeContext {
   ContextSaveState.of(AbstractScopeContext context)
-      : locals = [
-          ...context.locals.map((e) => {...e})
-        ],
-        scopeDoesClose =
-            context is CompilerContext ? [...context.scopeDoesClose] : [],
-        allocNest = [...context.allocNest];
+    : locals = [
+        ...context.locals.map((e) => {...e}),
+      ],
+      scopeDoesClose = context is CompilerContext
+          ? [...context.scopeDoesClose]
+          : [],
+      allocNest = [...context.allocNest];
   @override
   // ignore: overridden_fields
   List<Map<String, Variable>> locals;

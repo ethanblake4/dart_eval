@@ -10,10 +10,10 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 Variable compileAdjacentStrings(CompilerContext ctx, AdjacentStrings str) {
   if (str.strings.every((element) => element is SimpleStringLiteral)) {
     final el = BuiltinValue(
-            stringval: str.strings
-                .map((e) => (e as SimpleStringLiteral).stringValue)
-                .join(''))
-        .push(ctx);
+      stringval: str.strings
+          .map((e) => (e as SimpleStringLiteral).stringValue)
+          .join(''),
+    ).push(ctx);
     return el;
   }
 

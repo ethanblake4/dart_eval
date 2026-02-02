@@ -14,9 +14,9 @@ Variable compilePostfixExpression(PostfixExpression e, CompilerContext ctx) {
     // Null assertion (!)
     final L = compileExpression(e.operand, ctx);
     final result = checkNotNull(ctx, L);
-    final msg =
-        BuiltinValue(stringval: 'Null check operator used on a null value')
-            .push(ctx);
+    final msg = BuiltinValue(
+      stringval: 'Null check operator used on a null value',
+    ).push(ctx);
     doAssert(ctx, result, msg);
     return L.copyWith(type: L.type.copyWith(nullable: false));
   }
@@ -28,7 +28,9 @@ Variable compilePostfixExpression(PostfixExpression e, CompilerContext ctx) {
   out = Variable.alloc(ctx, L.type);
   ctx.pushOp(PushNull.make(), PushNull.LEN);
   ctx.pushOp(
-      CopyValue.make(out.scopeFrameOffset, L.scopeFrameOffset), CopyValue.LEN);
+    CopyValue.make(out.scopeFrameOffset, L.scopeFrameOffset),
+    CopyValue.LEN,
+  );
 
   const opMap = {TokenType.PLUS_PLUS: '+', TokenType.MINUS_MINUS: '-'};
 
@@ -38,11 +40,9 @@ Variable compilePostfixExpression(PostfixExpression e, CompilerContext ctx) {
 
   V.setValue(
     ctx,
-    L.invoke(
-      ctx,
-      opMap[e.operator.type]!,
-      [BuiltinValue(intval: 1).push(ctx)],
-    ).result,
+    L.invoke(ctx, opMap[e.operator.type]!, [
+      BuiltinValue(intval: 1).push(ctx),
+    ]).result,
   );
 
   return out;

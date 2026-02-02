@@ -18,14 +18,29 @@ class DartTypedDataPlugin implements EvalPlugin {
   void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFunc('dart:typed_data', 'ByteData.', $ByteData.$new);
     runtime.registerBridgeFunc(
-        'dart:typed_data', 'ByteData.view', $ByteData.$view);
+      'dart:typed_data',
+      'ByteData.view',
+      $ByteData.$view,
+    );
     runtime.registerBridgeFunc(
-        'dart:typed_data', 'Uint8List.', $Uint8List.$new);
+      'dart:typed_data',
+      'Uint8List.',
+      $Uint8List.$new,
+    );
     runtime.registerBridgeFunc(
-        'dart:typed_data', 'Uint8List.fromList', $Uint8List.$fromList);
+      'dart:typed_data',
+      'Uint8List.fromList',
+      $Uint8List.$fromList,
+    );
     runtime.registerBridgeFunc(
-        'dart:typed_data', 'Uint8List.view', $Uint8List.$view);
+      'dart:typed_data',
+      'Uint8List.view',
+      $Uint8List.$view,
+    );
     runtime.registerBridgeFunc(
-        'dart:typed_data', 'Uint8List.sublistView', $Uint8List.$sublistView);
+      'dart:typed_data',
+      'Uint8List.sublistView',
+      $Uint8List.$sublistView,
+    );
   }
 }

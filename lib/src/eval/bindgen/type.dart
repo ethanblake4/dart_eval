@@ -106,11 +106,15 @@ String? builtinTypeFrom(DartType type) {
   return null;
 }
 
-String? wrapVar(BindgenContext ctx, DartType type, String expr,
-    {bool func = false,
-    bool wrapList = false,
-    List<ElementAnnotation>? metadata,
-    bool forCollection = false}) {
+String? wrapVar(
+  BindgenContext ctx,
+  DartType type,
+  String expr, {
+  bool func = false,
+  bool wrapList = false,
+  List<ElementAnnotation>? metadata,
+  bool forCollection = false,
+}) {
   if (type is VoidType) {
     if (func) {
       return 'const \$null()';
@@ -122,13 +126,20 @@ String? wrapVar(BindgenContext ctx, DartType type, String expr,
     return 'const \$null()';
   }
 
-  var wrapped =
-      wrapType(ctx, type, expr, metadata: metadata, wrapList: wrapList);
+  var wrapped = wrapType(
+    ctx,
+    type,
+    expr,
+    metadata: metadata,
+    wrapList: wrapList,
+  );
 
   if (wrapped == null) {
     if (ctx.unknownTypes.add(type.element!.name!)) {
-      print('Warning: type ${type.element!.name} is not bound, '
-          'falling back to wrapAlways()');
+      print(
+        'Warning: type ${type.element!.name} is not bound, '
+        'falling back to wrapAlways()',
+      );
     }
     wrapped = 'runtime.wrapAlways($expr)';
   }
@@ -143,14 +154,22 @@ String? wrapVar(BindgenContext ctx, DartType type, String expr,
   return wrapped;
 }
 
-String? wrapType(BindgenContext ctx, DartType type, String expr,
-    {bool wrapList = false, List<ElementAnnotation>? metadata}) {
-  final union =
-      metadata?.firstWhereOrNull((e) => e.element?.displayName == 'UnionOf');
+String? wrapType(
+  BindgenContext ctx,
+  DartType type,
+  String expr, {
+  bool wrapList = false,
+  List<ElementAnnotation>? metadata,
+}) {
+  final union = metadata?.firstWhereOrNull(
+    (e) => e.element?.displayName == 'UnionOf',
+  );
   String unionStr = '';
   if (union != null) {
-    final types =
-        union.computeConstantValue()?.getField('types')?.toListValue();
+    final types = union
+        .computeConstantValue()
+        ?.getField('types')
+        ?.toListValue();
     if (types != null && types.isNotEmpty) {
       for (final type in types) {
         final type0 = type.toTypeValue();
@@ -184,7 +203,8 @@ String? wrapType(BindgenContext ctx, DartType type, String expr,
     return '$unionStr\$Function((runtime, target, args) => $expr())';
   }
 
-  final element = type.element ??
+  final element =
+      type.element ??
       (throw BindingGenerationError('Type $type has no element'));
   final lib = element.library!;
   final name = element.name ?? ' ';
@@ -222,8 +242,9 @@ String? wrapType(BindgenContext ctx, DartType type, String expr,
   final typeEl = type.element!;
   if (typeEl is InterfaceElement) {
     final uri = typeEl.library.uri.toString();
-    final hasAnno = typeEl.metadata.annotations
-        .any((e) => e.element?.displayName == 'Bind');
+    final hasAnno = typeEl.metadata.annotations.any(
+      (e) => e.element?.displayName == 'Bind',
+    );
     if (hasAnno) {
       ctx.imports.add(uri.replaceAll('.dart', '.eval.dart'));
       return '$unionStr\$$name.wrap($expr)';
@@ -234,8 +255,9 @@ String? wrapType(BindgenContext ctx, DartType type, String expr,
       String? mappedUri;
       // walk up the path until we find a match in ctx.exportedLibMappings
       while (current != path.dirname(current)) {
-        if (ctx.exportedLibMappings
-            .containsKey('${parsedUri.scheme}:$current')) {
+        if (ctx.exportedLibMappings.containsKey(
+          '${parsedUri.scheme}:$current',
+        )) {
           mappedUri = ctx.exportedLibMappings['${parsedUri.scheme}:$current']!;
           break;
         }
@@ -321,6 +343,7 @@ String wrapFunctionType(BindgenContext ctx, FunctionType type, String expr) {
     });
   }
   buffer.write(
-      '); return ${wrapVar(ctx, type.returnType, 'funcResult', func: true)}; })');
+    '); return ${wrapVar(ctx, type.returnType, 'funcResult', func: true)}; })',
+  );
   return buffer.toString();
 }

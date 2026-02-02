@@ -18,7 +18,7 @@ void main() {
               if (cat.isNotEmpty) return 1;
             }
           ''',
-        }
+        },
       });
       expect(runtime.executeLib('package:example/main.dart', 'main'), 1);
     });
@@ -31,7 +31,7 @@ void main() {
               return cat.length;
             }
           ''',
-        }
+        },
       });
       expect(runtime.executeLib('package:example/main.dart', 'main'), 6);
     });
@@ -45,7 +45,7 @@ void main() {
               print(sub);
             }
           ''',
-        }
+        },
       });
       expect(() {
         runtime.executeLib('package:example/main.dart', 'main');
@@ -61,7 +61,7 @@ void main() {
               print(sub);
             }
           ''',
-        }
+        },
       });
       expect(() {
         runtime.executeLib('package:example/main.dart', 'main');
@@ -77,7 +77,7 @@ void main() {
               return cat.compareTo(cat2);
             }
           ''',
-        }
+        },
       });
       expect(runtime.executeLib('package:example/main.dart', 'main'), -1);
     });
@@ -91,7 +91,7 @@ void main() {
               if (cat.endsWith(fin)) return 1; else return 0;
             }
           ''',
-        }
+        },
       });
       expect(runtime.executeLib('package:example/main.dart', 'main'), 1);
     });
@@ -104,7 +104,7 @@ void main() {
               return cat.codeUnitAt(3);
             }
           ''',
-        }
+        },
       });
       expect(runtime.executeLib('package:example/main.dart', 'main'), 102);
     });
@@ -118,7 +118,7 @@ void main() {
               return cat.contains("fy");
             }
           ''',
-        }
+        },
       });
       expect(runtime.executeLib('package:example/main.dart', 'main'), true);
     });
@@ -131,7 +131,7 @@ void main() {
               return cat.indexOf("uf");
             }
           ''',
-        }
+        },
       });
       expect(runtime.executeLib('package:example/main.dart', 'main'), 2);
     });
@@ -144,7 +144,7 @@ void main() {
               return cat.indexOf("uf", 3);
             }
           ''',
-        }
+        },
       });
       expect(runtime.executeLib('package:example/main.dart', 'main'), -1);
     });
@@ -157,7 +157,7 @@ void main() {
               return cat.lastIndexOf("f");
             }
           ''',
-        }
+        },
       });
       expect(runtime.executeLib('package:example/main.dart', 'main'), 4);
     });
@@ -170,7 +170,7 @@ void main() {
               return cat.lastIndexOf("f", 2);
             }
           ''',
-        }
+        },
       });
       expect(runtime.executeLib('package:example/main.dart', 'main'), -1);
     });
@@ -183,12 +183,13 @@ void main() {
               return str.padLeft(4);
             }
           ''',
-        }
+        },
       });
       expect(
-          (runtime.executeLib('package:example/main.dart', 'test') as $String)
-              .$value,
-          '   D');
+        (runtime.executeLib('package:example/main.dart', 'test') as $String)
+            .$value,
+        '   D',
+      );
     });
     test('String padLeft method formats with given padding', () {
       final runtime = compiler.compileWriteAndLoad({
@@ -199,12 +200,13 @@ void main() {
               return str.padLeft(4, "y");
             }
           ''',
-        }
+        },
       });
       expect(
-          (runtime.executeLib('package:example/main.dart', 'test') as $String)
-              .$value,
-          'yyyD');
+        (runtime.executeLib('package:example/main.dart', 'test') as $String)
+            .$value,
+        'yyyD',
+      );
     });
     test('String padRight method formats with default padding', () {
       final runtime = compiler.compileWriteAndLoad({
@@ -215,12 +217,13 @@ void main() {
               return str.padRight(4);
             }
           ''',
-        }
+        },
       });
       expect(
-          (runtime.executeLib('package:example/main.dart', 'test') as $String)
-              .$value,
-          'D   ');
+        (runtime.executeLib('package:example/main.dart', 'test') as $String)
+            .$value,
+        'D   ',
+      );
     });
     test('String padRight method formats with given padding', () {
       final runtime = compiler.compileWriteAndLoad({
@@ -231,12 +234,13 @@ void main() {
               return str.padRight(4, "y");
             }
           ''',
-        }
+        },
       });
       expect(
-          (runtime.executeLib('package:example/main.dart', 'test') as $String)
-              .$value,
-          'Dyyy');
+        (runtime.executeLib('package:example/main.dart', 'test') as $String)
+            .$value,
+        'Dyyy',
+      );
     });
     test('String replaceAll method replaces text', () {
       final runtime = compiler.compileWriteAndLoad({
@@ -247,12 +251,13 @@ void main() {
               return cat.replaceAll("f", "z");
             }
           ''',
-        }
+        },
       });
       expect(
-          (runtime.executeLib('package:example/main.dart', 'test') as $String)
-              .$value,
-          'Fluzzy');
+        (runtime.executeLib('package:example/main.dart', 'test') as $String)
+            .$value,
+        'Fluzzy',
+      );
     });
     test('String replaceFirst method replaces with default start index', () {
       final runtime = compiler.compileWriteAndLoad({
@@ -263,12 +268,13 @@ void main() {
               return cat.replaceFirst('f', 'z');
             }
           ''',
-        }
+        },
       });
       expect(
-          (runtime.executeLib('package:example/main.dart', 'test') as $String)
-              .$value,
-          'Fluzfy');
+        (runtime.executeLib('package:example/main.dart', 'test') as $String)
+            .$value,
+        'Fluzfy',
+      );
     });
     test('String replaceFirst method replaces with given start index', () {
       final runtime = compiler.compileWriteAndLoad({
@@ -279,12 +285,13 @@ void main() {
               return cat.replaceFirst('f', 'z', 4);
             }
           ''',
-        }
+        },
       });
       expect(
-          (runtime.executeLib('package:example/main.dart', 'test') as $String)
-              .$value,
-          'Flufzy');
+        (runtime.executeLib('package:example/main.dart', 'test') as $String)
+            .$value,
+        'Flufzy',
+      );
     });
     test('String toString method returns same string', () {
       final runtime = compiler.compileWriteAndLoad({
@@ -295,12 +302,13 @@ void main() {
               return cat.toString();
             }
           ''',
-        }
+        },
       });
       expect(
-          (runtime.executeLib('package:example/main.dart', 'test') as $String)
-              .$value,
-          'Fluffy');
+        (runtime.executeLib('package:example/main.dart', 'test') as $String)
+            .$value,
+        'Fluffy',
+      );
     });
     test('String replaceRange method replaces default range', () {
       final runtime = compiler.compileWriteAndLoad({
@@ -311,12 +319,13 @@ void main() {
               return cat.replaceRange(4, null, 'z');
             }
           ''',
-        }
+        },
       });
       expect(
-          (runtime.executeLib('package:example/main.dart', 'test') as $String)
-              .$value,
-          'Flufz');
+        (runtime.executeLib('package:example/main.dart', 'test') as $String)
+            .$value,
+        'Flufz',
+      );
     });
     test('String replaceRange method replaces given range', () {
       final runtime = compiler.compileWriteAndLoad({
@@ -327,12 +336,13 @@ void main() {
               return cat.replaceRange(4, 6, 'z');
             }
           ''',
-        }
+        },
       });
       expect(
-          (runtime.executeLib('package:example/main.dart', 'test') as $String)
-              .$value,
-          'Flufz');
+        (runtime.executeLib('package:example/main.dart', 'test') as $String)
+            .$value,
+        'Flufz',
+      );
     });
     test('String startsWith method finds match', () {
       final runtime = compiler.compileWriteAndLoad({
@@ -343,10 +353,12 @@ void main() {
               return cat.startsWith('Flu');
             }
           ''',
-        }
+        },
       });
-      expect((runtime.executeLib('package:example/main.dart', 'test') as bool),
-          true);
+      expect(
+        (runtime.executeLib('package:example/main.dart', 'test') as bool),
+        true,
+      );
     });
     test('String trimLeft method trims whitespace', () {
       final runtime = compiler.compileWriteAndLoad({
@@ -357,12 +369,13 @@ void main() {
               return cat.trimLeft();
             }
           ''',
-        }
+        },
       });
       expect(
-          (runtime.executeLib('package:example/main.dart', 'test') as $String)
-              .$value,
-          "Fluffy ");
+        (runtime.executeLib('package:example/main.dart', 'test') as $String)
+            .$value,
+        "Fluffy ",
+      );
     });
     test('String split splits on given pattern', () {
       final runtime = compiler.compileWriteAndLoad({
@@ -373,14 +386,20 @@ void main() {
               return cat.split("ff");
             }
           ''',
-        }
+        },
       });
       expect(
-          (runtime.executeLib('package:example/main.dart', 'test')).length, 2);
-      expect((runtime.executeLib('package:example/main.dart', 'test'))[0],
-          $String("Flu"));
-      expect((runtime.executeLib('package:example/main.dart', 'test'))[1],
-          $String("y"));
+        (runtime.executeLib('package:example/main.dart', 'test')).length,
+        2,
+      );
+      expect(
+        (runtime.executeLib('package:example/main.dart', 'test'))[0],
+        $String("Flu"),
+      );
+      expect(
+        (runtime.executeLib('package:example/main.dart', 'test'))[1],
+        $String("y"),
+      );
     });
     test('String trimRight method trims whitespace', () {
       final runtime = compiler.compileWriteAndLoad({
@@ -391,12 +410,13 @@ void main() {
               return cat.trimRight();
             }
           ''',
-        }
+        },
       });
       expect(
-          (runtime.executeLib('package:example/main.dart', 'test') as $String)
-              .$value,
-          "  Fluffy");
+        (runtime.executeLib('package:example/main.dart', 'test') as $String)
+            .$value,
+        "  Fluffy",
+      );
     });
   });
 }

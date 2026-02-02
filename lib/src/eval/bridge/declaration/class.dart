@@ -15,16 +15,19 @@ part 'class.g.dart';
 ///
 @JsonSerializable(explicitToJson: true)
 class BridgeClassDef implements BridgeDeclaration {
-  const BridgeClassDef(this.type,
-      {required this.constructors,
-      this.methods = const {},
-      this.getters = const {},
-      this.setters = const {},
-      this.fields = const {},
-      this.bridge = false,
-      this.wrap = false})
-      : assert(bridge != wrap,
-            'You must specify either bridge or wrap as true (but not both)');
+  const BridgeClassDef(
+    this.type, {
+    required this.constructors,
+    this.methods = const {},
+    this.getters = const {},
+    this.setters = const {},
+    this.fields = const {},
+    this.bridge = false,
+    this.wrap = false,
+  }) : assert(
+         bridge != wrap,
+         'You must specify either bridge or wrap as true (but not both)',
+       );
 
   final BridgeClassType type;
   final Map<String, BridgeConstructorDef> constructors;
@@ -43,15 +46,16 @@ class BridgeClassDef implements BridgeDeclaration {
   /// Connect the generated [_$BridgeClassDeclarationToJson] function to the `toJson` method.
   Map<String, dynamic> toJson() => _$BridgeClassDefToJson(this);
 
-  BridgeClassDef copyWith({BridgeClassType? type}) =>
-      BridgeClassDef(type ?? this.type,
-          constructors: constructors,
-          methods: methods,
-          getters: getters,
-          setters: setters,
-          fields: fields,
-          bridge: bridge,
-          wrap: wrap);
+  BridgeClassDef copyWith({BridgeClassType? type}) => BridgeClassDef(
+    type ?? this.type,
+    constructors: constructors,
+    methods: methods,
+    getters: getters,
+    setters: setters,
+    fields: fields,
+    bridge: bridge,
+    wrap: wrap,
+  );
 }
 
 /// A bridged method definition, used to inform the dart_eval compiler about

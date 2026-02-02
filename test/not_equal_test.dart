@@ -14,15 +14,10 @@ void main() {
       ''';
     final compiler = Compiler();
     final program = compiler.compile({
-      'my_package': {
-        'main.dart': source,
-      }
+      'my_package': {'main.dart': source},
     });
     var runtime = Runtime.ofProgram(program);
-    var result = runtime.executeLib(
-      "package:my_package/main.dart",
-      "fn",
-    );
+    var result = runtime.executeLib("package:my_package/main.dart", "fn");
     assert(result);
   });
   test('not equal for string', () async {
@@ -37,15 +32,10 @@ void main() {
       ''';
     final compiler = Compiler();
     final program = compiler.compile({
-      'my_package': {
-        'main.dart': source,
-      }
+      'my_package': {'main.dart': source},
     });
     var runtime = Runtime.ofProgram(program);
-    var result = runtime.executeLib(
-      "package:my_package/main.dart",
-      "fn",
-    );
+    var result = runtime.executeLib("package:my_package/main.dart", "fn");
     assert(result);
   });
 
@@ -67,15 +57,10 @@ void main() {
       ''';
     final compiler = Compiler();
     final program = compiler.compile({
-      'my_package': {
-        'main.dart': source,
-      }
+      'my_package': {'main.dart': source},
     });
     var runtime = Runtime.ofProgram(program);
-    var result = runtime.executeLib(
-      "package:my_package/main.dart",
-      "fn",
-    );
+    var result = runtime.executeLib("package:my_package/main.dart", "fn");
     assert(result);
   });
 }

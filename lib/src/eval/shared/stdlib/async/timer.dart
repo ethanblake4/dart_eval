@@ -6,67 +6,109 @@ import 'package:dart_eval/stdlib/core.dart';
 class $Timer implements $Instance {
   static const _$type = BridgeTypeRef(AsyncTypes.timer);
 
-  static const $declaration = BridgeClassDef(BridgeClassType(_$type),
-      constructors: {
-        '': BridgeConstructorDef(
-            BridgeFunctionDef(returns: BridgeTypeAnnotation(_$type), params: [
-              BridgeParameter(
-                  'duration',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.duration)),
-                  false),
-              BridgeParameter(
-                  'callback',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
-                  false)
-            ], namedParams: []),
-            isFactory: true),
-        'periodic': BridgeConstructorDef(
-            BridgeFunctionDef(returns: BridgeTypeAnnotation(_$type), params: [
-          BridgeParameter('duration',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.duration)), false),
-          BridgeParameter('callback',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)), false)
-        ], namedParams: [])),
-      },
-      methods: {
-        'run': BridgeMethodDef(
-            BridgeFunctionDef(
-                returns:
-                    BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
-                params: [
-                  BridgeParameter(
-                      'callback',
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
-                      false)
-                ],
-                namedParams: []),
-            isStatic: true),
-        'cancel': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)))),
-      },
-      getters: {
-        'tick': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)))),
-        'isActive': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)))),
-      },
-      setters: {},
-      fields: {},
-      wrap: true);
+  static const $declaration = BridgeClassDef(
+    BridgeClassType(_$type),
+    constructors: {
+      '': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(_$type),
+          params: [
+            BridgeParameter(
+              'duration',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.duration)),
+              false,
+            ),
+            BridgeParameter(
+              'callback',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
+              false,
+            ),
+          ],
+          namedParams: [],
+        ),
+        isFactory: true,
+      ),
+      'periodic': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(_$type),
+          params: [
+            BridgeParameter(
+              'duration',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.duration)),
+              false,
+            ),
+            BridgeParameter(
+              'callback',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
+              false,
+            ),
+          ],
+          namedParams: [],
+        ),
+      ),
+    },
+    methods: {
+      'run': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          params: [
+            BridgeParameter(
+              'callback',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
+              false,
+            ),
+          ],
+          namedParams: [],
+        ),
+        isStatic: true,
+      ),
+      'cancel': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+        ),
+      ),
+    },
+    getters: {
+      'tick': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+        ),
+      ),
+      'isActive': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+        ),
+      ),
+    },
+    setters: {},
+    fields: {},
+    wrap: true,
+  );
 
   /// Create a new [Timer] with [args]
   static $Value? $new(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $Timer.wrap(Timer(Duration(milliseconds: args[0]!.$value as int),
-        () => (args[1]!.$value as EvalFunction).call(runtime, null, [])));
+    return $Timer.wrap(
+      Timer(
+        Duration(milliseconds: args[0]!.$value as int),
+        () => (args[1]!.$value as EvalFunction).call(runtime, null, []),
+      ),
+    );
   }
 
   /// Create a new [Timer.periodic] with [args]
   static $Value? $periodic(
-      Runtime runtime, $Value? target, List<$Value?> args) {
-    return $Timer.wrap(Timer.periodic(
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
+    return $Timer.wrap(
+      Timer.periodic(
         Duration(milliseconds: args[0]!.$value as int),
-        (timer) => (args[1]!.$value as EvalFunction)
-            .call(runtime, null, [$Timer.wrap(timer)])));
+        (timer) => (args[1]!.$value as EvalFunction).call(runtime, null, [
+          $Timer.wrap(timer),
+        ]),
+      ),
+    );
   }
 
   /// Run a [Timer] with [args]

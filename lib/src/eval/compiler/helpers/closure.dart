@@ -23,19 +23,21 @@ InvokeResult invokeClosure(
 
   ctx.pushOp(PushList.make(), PushList.LEN);
   final csPosArgTypes = Variable.alloc(
-      ctx,
-      CoreTypes.list
-          .ref(ctx)
-          .copyWith(specifiedTypeArgs: [CoreTypes.int.ref(ctx)]));
+    ctx,
+    CoreTypes.list
+        .ref(ctx)
+        .copyWith(specifiedTypeArgs: [CoreTypes.int.ref(ctx)]),
+  );
 
   final positionalArgs = <Variable>[];
 
   ctx.pushOp(PushList.make(), PushList.LEN);
   final csNamedArgTypes = Variable.alloc(
-      ctx,
-      CoreTypes.list
-          .ref(ctx)
-          .copyWith(specifiedTypeArgs: [CoreTypes.int.ref(ctx)]));
+    ctx,
+    CoreTypes.list
+        .ref(ctx)
+        .copyWith(specifiedTypeArgs: [CoreTypes.int.ref(ctx)]),
+  );
 
   final namedArgs = <String, Variable>{};
   final namedArgsRttiMap = <String, int>{};
@@ -55,10 +57,13 @@ InvokeResult invokeClosure(
     final type = argVar.type.resolveTypeChain(ctx);
     final rtti = type.getRuntimeIndices(ctx);
 
-    final rttiIndex = ctx.runtimeTypes
-        .addOrGet(RuntimeTypeSet(type.toRuntimeType(ctx).type, rtti, []));
-    final la = ListAppend.make(csPosArgTypes.scopeFrameOffset,
-        BuiltinValue(intval: rttiIndex).push(ctx).scopeFrameOffset);
+    final rttiIndex = ctx.runtimeTypes.addOrGet(
+      RuntimeTypeSet(type.toRuntimeType(ctx).type, rtti, []),
+    );
+    final la = ListAppend.make(
+      csPosArgTypes.scopeFrameOffset,
+      BuiltinValue(intval: rttiIndex).push(ctx).scopeFrameOffset,
+    );
 
     ctx.pushOp(la, ListAppend.LEN);
 
@@ -71,8 +76,9 @@ InvokeResult invokeClosure(
     final type = argVar.type.resolveTypeChain(ctx);
     final rtti = type.getRuntimeIndices(ctx);
 
-    final rttiIndex = ctx.runtimeTypes
-        .addOrGet(RuntimeTypeSet(type.toRuntimeType(ctx).type, rtti, []));
+    final rttiIndex = ctx.runtimeTypes.addOrGet(
+      RuntimeTypeSet(type.toRuntimeType(ctx).type, rtti, []),
+    );
     namedArgsRttiMap[name] = rttiIndex;
     namedArgs[name] = argVar;
   }
@@ -81,20 +87,22 @@ InvokeResult invokeClosure(
 
   for (final name in namedArgNames) {
     final la = ListAppend.make(
-        csNamedArgTypes.scopeFrameOffset,
-        BuiltinValue(intval: namedArgsRttiMap[name])
-            .push(ctx)
-            .scopeFrameOffset);
+      csNamedArgTypes.scopeFrameOffset,
+      BuiltinValue(intval: namedArgsRttiMap[name]).push(ctx).scopeFrameOffset,
+    );
     ctx.pushOp(la, ListAppend.LEN);
   }
 
-  ctx.pushOp(PushConstant.make(ctx.constantPool.addOrGet(namedArgNames)),
-      PushConstant.LEN);
+  ctx.pushOp(
+    PushConstant.make(ctx.constantPool.addOrGet(namedArgNames)),
+    PushConstant.LEN,
+  );
   final alConstVar = Variable.alloc(
-      ctx,
-      CoreTypes.list
-          .ref(ctx)
-          .copyWith(specifiedTypeArgs: [CoreTypes.string.ref(ctx)]));
+    ctx,
+    CoreTypes.list
+        .ref(ctx)
+        .copyWith(specifiedTypeArgs: [CoreTypes.string.ref(ctx)]),
+  );
 
   ctx.pushOp(PushArg.make(csPosArgTypes.scopeFrameOffset), PushArg.LEN);
   ctx.pushOp(PushArg.make(alConstVar.scopeFrameOffset), PushArg.LEN);
@@ -114,8 +122,10 @@ InvokeResult invokeClosure(
     final loc = ctx.pushOp(Call.make(sd.offset.offset ?? -1), Call.length);
     ctx.offsetTracker.setOffset(loc, sd.offset);
     ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-    final res =
-        Variable.alloc(ctx, CoreTypes.dynamic.ref(ctx).copyWith(boxed: true));
+    final res = Variable.alloc(
+      ctx,
+      CoreTypes.dynamic.ref(ctx).copyWith(boxed: true),
+    );
     return InvokeResult(null, res, positionalArgs, namedArgs: namedArgs);
   } else {
     // Fallback to dynamic dispatch

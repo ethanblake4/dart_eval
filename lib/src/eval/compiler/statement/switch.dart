@@ -9,23 +9,36 @@ import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 
-StatementInfo compileSwitchStatement(SwitchStatement s, CompilerContext ctx,
-    AlwaysReturnType? expectedReturnType) {
+StatementInfo compileSwitchStatement(
+  SwitchStatement s,
+  CompilerContext ctx,
+  AlwaysReturnType? expectedReturnType,
+) {
   final switchExpr = compileExpression(s.expression, ctx).boxIfNeeded(ctx);
 
   // Validate switch cases for proper Dart semantics
   _validateSwitchCases(s.members);
 
   final result = _compileSwitchCases(
-      ctx, switchExpr, s.members, 0, expectedReturnType,
-      source: s);
+    ctx,
+    switchExpr,
+    s.members,
+    0,
+    expectedReturnType,
+    source: s,
+  );
 
   return result;
 }
 
-StatementInfo _compileSwitchCases(CompilerContext ctx, Variable switchExpr,
-    List<SwitchMember> cases, int index, AlwaysReturnType? expectedReturnType,
-    {AstNode? source}) {
+StatementInfo _compileSwitchCases(
+  CompilerContext ctx,
+  Variable switchExpr,
+  List<SwitchMember> cases,
+  int index,
+  AlwaysReturnType? expectedReturnType, {
+  AstNode? source,
+}) {
   if (index >= cases.length) {
     // No more cases, return empty statement
     return StatementInfo(-1);
@@ -47,7 +60,10 @@ StatementInfo _compileSwitchCases(CompilerContext ctx, Variable switchExpr,
         return switchExpr.invoke(ctx, '==', [caseVar]).result;
       } else if (currentCase is SwitchPatternCase) {
         final matches = patternMatchAndBind(
-            ctx, currentCase.guardedPattern.pattern, switchExpr);
+          ctx,
+          currentCase.guardedPattern.pattern,
+          switchExpr,
+        );
         final guard = currentCase.guardedPattern.whenClause;
         if (guard != null) {
           // If there's a guard, we need to compile it and check if it matches
@@ -57,8 +73,9 @@ StatementInfo _compileSwitchCases(CompilerContext ctx, Variable switchExpr,
         return matches;
       } else {
         throw CompileError(
-            'Unsupported switch case type: ${currentCase.runtimeType}',
-            currentCase);
+          'Unsupported switch case type: ${currentCase.runtimeType}',
+          currentCase,
+        );
       }
     },
     thenBranch: (ctx, expectedReturnType) {
@@ -68,17 +85,23 @@ StatementInfo _compileSwitchCases(CompilerContext ctx, Variable switchExpr,
     elseBranch: (ctx, expectedReturnType) {
       // Try next case
       return _compileSwitchCases(
-          ctx, switchExpr, cases, index + 1, expectedReturnType);
+        ctx,
+        switchExpr,
+        cases,
+        index + 1,
+        expectedReturnType,
+      );
     },
     source: source,
   );
 }
 
 StatementInfo _executeMatchingCases(
-    CompilerContext ctx,
-    List<SwitchMember> cases,
-    int startIndex,
-    AlwaysReturnType? expectedReturnType) {
+  CompilerContext ctx,
+  List<SwitchMember> cases,
+  int startIndex,
+  AlwaysReturnType? expectedReturnType,
+) {
   var willAlwaysReturn = false;
   var willAlwaysThrow = false;
   var position = ctx.out.length;
@@ -95,18 +118,27 @@ StatementInfo _executeMatchingCases(
   // Execute the case with statements (if found)
   if (executionIndex < cases.length) {
     final member = cases[executionIndex];
-    final stmtInfo =
-        _executeSwitchBlock(ctx, member.statements, expectedReturnType);
+    final stmtInfo = _executeSwitchBlock(
+      ctx,
+      member.statements,
+      expectedReturnType,
+    );
     willAlwaysReturn = stmtInfo.willAlwaysReturn;
     willAlwaysThrow = stmtInfo.willAlwaysThrow;
   }
 
-  return StatementInfo(position,
-      willAlwaysReturn: willAlwaysReturn, willAlwaysThrow: willAlwaysThrow);
+  return StatementInfo(
+    position,
+    willAlwaysReturn: willAlwaysReturn,
+    willAlwaysThrow: willAlwaysThrow,
+  );
 }
 
-StatementInfo _executeSwitchBlock(CompilerContext ctx,
-    List<Statement> statements, AlwaysReturnType? expectedReturnType) {
+StatementInfo _executeSwitchBlock(
+  CompilerContext ctx,
+  List<Statement> statements,
+  AlwaysReturnType? expectedReturnType,
+) {
   var willAlwaysReturn = false;
   var willAlwaysThrow = false;
   final position = ctx.out.length;
@@ -128,8 +160,11 @@ StatementInfo _executeSwitchBlock(CompilerContext ctx,
 
   ctx.endAllocScope(popValues: !willAlwaysThrow && !willAlwaysReturn);
 
-  return StatementInfo(position,
-      willAlwaysReturn: willAlwaysReturn, willAlwaysThrow: willAlwaysThrow);
+  return StatementInfo(
+    position,
+    willAlwaysReturn: willAlwaysReturn,
+    willAlwaysThrow: willAlwaysThrow,
+  );
 }
 
 void _validateSwitchCases(List<SwitchMember> cases) {
@@ -143,8 +178,9 @@ void _validateSwitchCases(List<SwitchMember> cases) {
     if (currentCase.statements.isNotEmpty) {
       if (!_caseProperlyTerminates(currentCase.statements)) {
         throw CompileError(
-            "The 'case' shouldn't complete normally. Try adding 'break', 'return', or 'throw'.",
-            currentCase);
+          "The 'case' shouldn't complete normally. Try adding 'break', 'return', or 'throw'.",
+          currentCase,
+        );
       }
     }
   }

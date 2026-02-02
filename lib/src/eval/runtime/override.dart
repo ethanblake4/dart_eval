@@ -24,8 +24,9 @@ Object? runtimeOverride(String id, [Iterable<Object?> args = const []]) {
   }
 
   if (runtimeOverrideVersion != null && spec.versionConstraint != null) {
-    if (!VersionConstraint.parse(spec.versionConstraint!)
-        .allows(runtimeOverrideVersion!)) {
+    if (!VersionConstraint.parse(
+      spec.versionConstraint!,
+    ).allows(runtimeOverrideVersion!)) {
       return null;
     }
   }

@@ -8,121 +8,146 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/collection.dart';
 class $ListQueue<E> implements $Instance {
   static const $type = BridgeTypeRef(CollectionTypes.listQueue);
   static const $declaration = BridgeClassDef(
-      BridgeClassType($type,
-          $extends: BridgeTypeRef(CoreTypes.iterable),
-          generics: {'E': BridgeGenericParam()}),
-      constructors: {},
-      methods: {
-        'add': BridgeMethodDef(
-            BridgeFunctionDef(
-              returns: BridgeTypeAnnotation(
-                  BridgeTypeRef(CoreTypes.voidType, []),
-                  nullable: false),
-              params: [
-                BridgeParameter(
-                    'value',
-                    BridgeTypeAnnotation(BridgeTypeRef.ref('E', []),
-                        nullable: false),
-                    false)
-              ],
-              namedParams: [],
+    BridgeClassType(
+      $type,
+      $extends: BridgeTypeRef(CoreTypes.iterable),
+      generics: {'E': BridgeGenericParam()},
+    ),
+    constructors: {},
+    methods: {
+      'add': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.voidType, []),
+            nullable: false,
+          ),
+          params: [
+            BridgeParameter(
+              'value',
+              BridgeTypeAnnotation(BridgeTypeRef.ref('E', []), nullable: false),
+              false,
             ),
-            isStatic: false),
-        'addAll': BridgeMethodDef(
-            BridgeFunctionDef(
-              returns: BridgeTypeAnnotation(
-                  BridgeTypeRef(CoreTypes.voidType, []),
-                  nullable: false),
-              params: [
-                BridgeParameter(
-                    'iterable',
-                    BridgeTypeAnnotation(
-                        BridgeTypeRef(CoreTypes.iterable, [
-                          BridgeTypeAnnotation(BridgeTypeRef.ref('E', [])),
-                        ]),
-                        nullable: false),
-                    false)
-              ],
-              namedParams: [],
+          ],
+          namedParams: [],
+        ),
+        isStatic: false,
+      ),
+      'addAll': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.voidType, []),
+            nullable: false,
+          ),
+          params: [
+            BridgeParameter(
+              'iterable',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.iterable, [
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('E', [])),
+                ]),
+                nullable: false,
+              ),
+              false,
             ),
-            isStatic: false),
-        'addFirst': BridgeMethodDef(
-            BridgeFunctionDef(
-              returns: BridgeTypeAnnotation(
-                  BridgeTypeRef(CoreTypes.voidType, []),
-                  nullable: false),
-              params: [
-                BridgeParameter(
-                    'value',
-                    BridgeTypeAnnotation(BridgeTypeRef.ref('E', []),
-                        nullable: false),
-                    false)
-              ],
-              namedParams: [],
+          ],
+          namedParams: [],
+        ),
+        isStatic: false,
+      ),
+      'addFirst': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.voidType, []),
+            nullable: false,
+          ),
+          params: [
+            BridgeParameter(
+              'value',
+              BridgeTypeAnnotation(BridgeTypeRef.ref('E', []), nullable: false),
+              false,
             ),
-            isStatic: false),
-        'addLast': BridgeMethodDef(
-            BridgeFunctionDef(
-              returns: BridgeTypeAnnotation(
-                  BridgeTypeRef(CoreTypes.voidType, []),
-                  nullable: false),
-              params: [
-                BridgeParameter(
-                    'value',
-                    BridgeTypeAnnotation(BridgeTypeRef.ref('E', []),
-                        nullable: false),
-                    false)
-              ],
-              namedParams: [],
+          ],
+          namedParams: [],
+        ),
+        isStatic: false,
+      ),
+      'addLast': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.voidType, []),
+            nullable: false,
+          ),
+          params: [
+            BridgeParameter(
+              'value',
+              BridgeTypeAnnotation(BridgeTypeRef.ref('E', []), nullable: false),
+              false,
             ),
-            isStatic: false),
-        'remove': BridgeMethodDef(
-            BridgeFunctionDef(
-              returns: BridgeTypeAnnotation(
-                  BridgeTypeRef(CoreTypes.voidType, []),
-                  nullable: false),
-              params: [
-                BridgeParameter(
-                    'value',
-                    BridgeTypeAnnotation(BridgeTypeRef.ref('E', []),
-                        nullable: false),
-                    false)
-              ],
-              namedParams: [],
+          ],
+          namedParams: [],
+        ),
+        isStatic: false,
+      ),
+      'remove': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.voidType, []),
+            nullable: false,
+          ),
+          params: [
+            BridgeParameter(
+              'value',
+              BridgeTypeAnnotation(BridgeTypeRef.ref('E', []), nullable: false),
+              false,
             ),
-            isStatic: false),
-        'retainWhere': BridgeMethodDef(
-            BridgeFunctionDef(
-              returns: BridgeTypeAnnotation(
-                  BridgeTypeRef(CoreTypes.voidType, []),
-                  nullable: false),
-              params: [
-                BridgeParameter(
-                    'test',
-                    BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function, []),
-                        nullable: false),
-                    false)
-              ],
-              namedParams: [],
+          ],
+          namedParams: [],
+        ),
+        isStatic: false,
+      ),
+      'retainWhere': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.voidType, []),
+            nullable: false,
+          ),
+          params: [
+            BridgeParameter(
+              'test',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.function, []),
+                nullable: false,
+              ),
+              false,
             ),
-            isStatic: false),
-        'removeWhere': BridgeMethodDef(
-            BridgeFunctionDef(
-              returns: BridgeTypeAnnotation(
-                  BridgeTypeRef(CoreTypes.voidType, []),
-                  nullable: false),
-              params: [
-                BridgeParameter(
-                    'test',
-                    BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function, []),
-                        nullable: false),
-                    false)
-              ],
-              namedParams: [],
+          ],
+          namedParams: [],
+        ),
+        isStatic: false,
+      ),
+      'removeWhere': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.voidType, []),
+            nullable: false,
+          ),
+          params: [
+            BridgeParameter(
+              'test',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.function, []),
+                nullable: false,
+              ),
+              false,
             ),
-            isStatic: false),
-      },
-      wrap: true);
+          ],
+          namedParams: [],
+        ),
+        isStatic: false,
+      ),
+    },
+    wrap: true,
+  );
 
   $ListQueue(this.$value, this.mapper) : _superclass = $Iterable.wrap($value);
 
@@ -185,7 +210,10 @@ class $ListQueue<E> implements $Instance {
 
   static const $Function __addFirst = $Function(_addFirst);
   static $Value? _addFirst(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final value = args[0]!;
     (target! as ListQueue).addFirst(value.$value);
     return null;
@@ -209,44 +237,60 @@ class $ListQueue<E> implements $Instance {
   static $Value? _where(Runtime runtime, $Value? target, List<$Value?> args) {
     final test = args[0] as EvalCallable;
     final view = target! as $ListQueue;
-    return $Iterable.wrap(view.$value
-        .where((e) => test.call(runtime, null, [e])!.$value as bool)
-        .map((e) => view.$map(e)));
+    return $Iterable.wrap(
+      view.$value
+          .where((e) => test.call(runtime, null, [e])!.$value as bool)
+          .map((e) => view.$map(e)),
+    );
   }
 
   static const $Function __retainWhere = $Function(_retainWhere);
 
   static $Value? _retainWhere(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final test = args[0] as EvalCallable;
     final view = (target! as $ListQueue);
 
     view.$value.retainWhere(
-        (e) => test.call(runtime, null, [view.$map(e)])!.$value as bool);
+      (e) => test.call(runtime, null, [view.$map(e)])!.$value as bool,
+    );
     return null;
   }
 
   static const $Function __removeWhere = $Function(_removeWhere);
 
   static $Value? _removeWhere(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final test = args[0] as EvalCallable;
     final view = (target! as $ListQueue);
 
     view.$value.removeWhere(
-        (e) => test.call(runtime, null, [view.$map(e)])!.$value as bool);
+      (e) => test.call(runtime, null, [view.$map(e)])!.$value as bool,
+    );
     return null;
   }
 
   static const $Function __takeWhile = $Function(_takeWhile);
 
   static $Value? _takeWhile(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final test = args[0] as EvalCallable;
     final view = (target! as $ListQueue);
 
-    return $Iterable.wrap(view.$value
-        .takeWhile((e) => test.call(runtime, null, [view.$map(e)])!.$value));
+    return $Iterable.wrap(
+      view.$value.takeWhile(
+        (e) => test.call(runtime, null, [view.$map(e)])!.$value,
+      ),
+    );
   }
 
   @override

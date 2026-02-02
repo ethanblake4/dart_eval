@@ -10,27 +10,27 @@ class $ProcessInfo implements $Instance {
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFunc(
-        'dart:io', 'ProcessInfo.currentRss*g', $ProcessInfo.$currentRss);
+      'dart:io',
+      'ProcessInfo.currentRss*g',
+      $ProcessInfo.$currentRss,
+    );
 
     runtime.registerBridgeFunc(
-        'dart:io', 'ProcessInfo.maxRss*g', $ProcessInfo.$maxRss);
+      'dart:io',
+      'ProcessInfo.maxRss*g',
+      $ProcessInfo.$maxRss,
+    );
   }
 
   /// Compile-time type specification of [$ProcessInfo]
-  static const $spec = BridgeTypeSpec(
-    'dart:io',
-    'ProcessInfo',
-  );
+  static const $spec = BridgeTypeSpec('dart:io', 'ProcessInfo');
 
   /// Compile-time type declaration of [$ProcessInfo]
   static const $type = BridgeTypeRef($spec);
 
   /// Compile-time class declaration of [$ProcessInfo]
   static const $declaration = BridgeClassDef(
-    BridgeClassType(
-      $type,
-      isAbstract: true,
-    ),
+    BridgeClassType($type, isAbstract: true),
     constructors: {
       '': BridgeConstructorDef(
         BridgeFunctionDef(
@@ -67,7 +67,10 @@ class $ProcessInfo implements $Instance {
 
   /// Wrapper for the [ProcessInfo.currentRss] getter
   static $Value? $currentRss(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final value = ProcessInfo.currentRss;
     return $int(value);
   }
@@ -108,38 +111,45 @@ class $ProcessStartMode implements $Instance {
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFunc(
-        'dart:io', 'ProcessStartMode.normal*g', $ProcessStartMode.$normal);
-
-    runtime.registerBridgeFunc('dart:io', 'ProcessStartMode.inheritStdio*g',
-        $ProcessStartMode.$inheritStdio);
-
-    runtime.registerBridgeFunc(
-        'dart:io', 'ProcessStartMode.detached*g', $ProcessStartMode.$detached);
+      'dart:io',
+      'ProcessStartMode.normal*g',
+      $ProcessStartMode.$normal,
+    );
 
     runtime.registerBridgeFunc(
-        'dart:io',
-        'ProcessStartMode.detachedWithStdio*g',
-        $ProcessStartMode.$detachedWithStdio);
+      'dart:io',
+      'ProcessStartMode.inheritStdio*g',
+      $ProcessStartMode.$inheritStdio,
+    );
 
     runtime.registerBridgeFunc(
-        'dart:io', 'ProcessStartMode.values*g', $ProcessStartMode.$values);
+      'dart:io',
+      'ProcessStartMode.detached*g',
+      $ProcessStartMode.$detached,
+    );
+
+    runtime.registerBridgeFunc(
+      'dart:io',
+      'ProcessStartMode.detachedWithStdio*g',
+      $ProcessStartMode.$detachedWithStdio,
+    );
+
+    runtime.registerBridgeFunc(
+      'dart:io',
+      'ProcessStartMode.values*g',
+      $ProcessStartMode.$values,
+    );
   }
 
   /// Compile-time type specification of [$ProcessStartMode]
-  static const $spec = BridgeTypeSpec(
-    'dart:io',
-    'ProcessStartMode',
-  );
+  static const $spec = BridgeTypeSpec('dart:io', 'ProcessStartMode');
 
   /// Compile-time type declaration of [$ProcessStartMode]
   static const $type = BridgeTypeRef($spec);
 
   /// Compile-time class declaration of [$ProcessStartMode]
   static const $declaration = BridgeClassDef(
-    BridgeClassType(
-      $type,
-      isAbstract: false,
-    ),
+    BridgeClassType($type, isAbstract: false),
     constructors: {
       '_internal': BridgeConstructorDef(
         BridgeFunctionDef(
@@ -179,22 +189,26 @@ class $ProcessStartMode implements $Instance {
     fields: {
       'normal': BridgeFieldDef(
         BridgeTypeAnnotation(
-            BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessStartMode'))),
+          BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessStartMode')),
+        ),
         isStatic: true,
       ),
       'inheritStdio': BridgeFieldDef(
         BridgeTypeAnnotation(
-            BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessStartMode'))),
+          BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessStartMode')),
+        ),
         isStatic: true,
       ),
       'detached': BridgeFieldDef(
         BridgeTypeAnnotation(
-            BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessStartMode'))),
+          BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessStartMode')),
+        ),
         isStatic: true,
       ),
       'detachedWithStdio': BridgeFieldDef(
         BridgeTypeAnnotation(
-            BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessStartMode'))),
+          BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessStartMode')),
+        ),
         isStatic: true,
       ),
       '_mode': BridgeFieldDef(
@@ -213,21 +227,30 @@ class $ProcessStartMode implements $Instance {
 
   /// Wrapper for the [ProcessStartMode.inheritStdio] getter
   static $Value? $inheritStdio(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final value = ProcessStartMode.inheritStdio;
     return $ProcessStartMode.wrap(value);
   }
 
   /// Wrapper for the [ProcessStartMode.detached] getter
   static $Value? $detached(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final value = ProcessStartMode.detached;
     return $ProcessStartMode.wrap(value);
   }
 
   /// Wrapper for the [ProcessStartMode.detachedWithStdio] getter
   static $Value? $detachedWithStdio(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final value = ProcessStartMode.detachedWithStdio;
     return $ProcessStartMode.wrap(value);
   }
@@ -263,7 +286,10 @@ class $ProcessStartMode implements $Instance {
 
   static const $Function __toString = $Function(_toString);
   static $Value? _toString(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final self = target as $ProcessStartMode;
     final result = self.$value.toString();
     return $String(result);
@@ -289,20 +315,14 @@ class $Process implements $Instance {
   }
 
   /// Compile-time type specification of [$Process]
-  static const $spec = BridgeTypeSpec(
-    'dart:io',
-    'Process',
-  );
+  static const $spec = BridgeTypeSpec('dart:io', 'Process');
 
   /// Compile-time type declaration of [$Process]
   static const $type = BridgeTypeRef($spec);
 
   /// Compile-time class declaration of [$Process]
   static const $declaration = BridgeClassDef(
-    BridgeClassType(
-      $type,
-      isAbstract: true,
-    ),
+    BridgeClassType($type, isAbstract: true),
     constructors: {
       '': BridgeConstructorDef(
         BridgeFunctionDef(
@@ -320,14 +340,18 @@ class $Process implements $Instance {
           namedParams: [
             BridgeParameter(
               'workingDirectory',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string),
-                  nullable: true),
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string),
+                nullable: true,
+              ),
               true,
             ),
             BridgeParameter(
               'environment',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.map),
-                  nullable: true),
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.map),
+                nullable: true,
+              ),
               true,
             ),
             BridgeParameter(
@@ -343,7 +367,8 @@ class $Process implements $Instance {
             BridgeParameter(
               'mode',
               BridgeTypeAnnotation(
-                  BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessStartMode'))),
+                BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessStartMode')),
+              ),
               true,
             ),
           ],
@@ -368,14 +393,18 @@ class $Process implements $Instance {
           namedParams: [
             BridgeParameter(
               'workingDirectory',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string),
-                  nullable: true),
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string),
+                nullable: true,
+              ),
               true,
             ),
             BridgeParameter(
               'environment',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.map),
-                  nullable: true),
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.map),
+                nullable: true,
+              ),
               true,
             ),
             BridgeParameter(
@@ -390,14 +419,18 @@ class $Process implements $Instance {
             ),
             BridgeParameter(
               'stdoutEncoding',
-              BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.encoding),
-                  nullable: true),
+              BridgeTypeAnnotation(
+                BridgeTypeRef(ConvertTypes.encoding),
+                nullable: true,
+              ),
               true,
             ),
             BridgeParameter(
               'stderrEncoding',
-              BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.encoding),
-                  nullable: true),
+              BridgeTypeAnnotation(
+                BridgeTypeRef(ConvertTypes.encoding),
+                nullable: true,
+              ),
               true,
             ),
           ],
@@ -418,19 +451,29 @@ class $Process implements $Instance {
       ),
       'runSync': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(BridgeTypeSpec(
-              'package:debug_test/process.dart', 'ProcessResult'))),
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(
+              BridgeTypeSpec(
+                'package:debug_test/process.dart',
+                'ProcessResult',
+              ),
+            ),
+          ),
           namedParams: [
             BridgeParameter(
               'workingDirectory',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string),
-                  nullable: true),
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string),
+                nullable: true,
+              ),
               true,
             ),
             BridgeParameter(
               'environment',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.map),
-                  nullable: true),
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.map),
+                nullable: true,
+              ),
               true,
             ),
             BridgeParameter(
@@ -445,14 +488,18 @@ class $Process implements $Instance {
             ),
             BridgeParameter(
               'stdoutEncoding',
-              BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.encoding),
-                  nullable: true),
+              BridgeTypeAnnotation(
+                BridgeTypeRef(ConvertTypes.encoding),
+                nullable: true,
+              ),
               true,
             ),
             BridgeParameter(
               'stderrEncoding',
-              BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.encoding),
-                  nullable: true),
+              BridgeTypeAnnotation(
+                BridgeTypeRef(ConvertTypes.encoding),
+                nullable: true,
+              ),
               true,
             ),
           ],
@@ -483,8 +530,14 @@ class $Process implements $Instance {
             ),
             BridgeParameter(
               'signal',
-              BridgeTypeAnnotation(BridgeTypeRef(BridgeTypeSpec(
-                  'package:debug_test/process.dart', 'ProcessSignal'))),
+              BridgeTypeAnnotation(
+                BridgeTypeRef(
+                  BridgeTypeSpec(
+                    'package:debug_test/process.dart',
+                    'ProcessSignal',
+                  ),
+                ),
+              ),
               true,
             ),
           ],
@@ -498,8 +551,14 @@ class $Process implements $Instance {
           params: [
             BridgeParameter(
               'signal',
-              BridgeTypeAnnotation(BridgeTypeRef(BridgeTypeSpec(
-                  'package:debug_test/process.dart', 'ProcessSignal'))),
+              BridgeTypeAnnotation(
+                BridgeTypeRef(
+                  BridgeTypeSpec(
+                    'package:debug_test/process.dart',
+                    'ProcessSignal',
+                  ),
+                ),
+              ),
               true,
             ),
           ],
@@ -552,12 +611,14 @@ class $Process implements $Instance {
   static $Value? $start(Runtime runtime, $Value? target, List<$Value?> args) {
     runtime.assertPermission('process:run', args[0]!.$value);
     final value = Process.start(
-        args[0]!.$value, (args[1]!.$reified as List).cast(),
-        workingDirectory: args[2]?.$value,
-        environment: (args[3]?.$reified as Map?)?.cast(),
-        includeParentEnvironment: args[4]?.$value ?? true,
-        runInShell: args[5]?.$value ?? false,
-        mode: args[6]?.$value ?? ProcessStartMode.normal);
+      args[0]!.$value,
+      (args[1]!.$reified as List).cast(),
+      workingDirectory: args[2]?.$value,
+      environment: (args[3]?.$reified as Map?)?.cast(),
+      includeParentEnvironment: args[4]?.$value ?? true,
+      runInShell: args[5]?.$value ?? false,
+      mode: args[6]?.$value ?? ProcessStartMode.normal,
+    );
     return $Future.wrap(value.then((e) => $Process.wrap(e)));
   }
 
@@ -565,13 +626,15 @@ class $Process implements $Instance {
   static $Value? $run(Runtime runtime, $Value? target, List<$Value?> args) {
     runtime.assertPermission('process:run', args[0]!.$value);
     final value = Process.run(
-        args[0]!.$value, (args[1]!.$reified as List).cast(),
-        workingDirectory: args[2]?.$value,
-        environment: (args[3]?.$reified as Map?)?.cast(),
-        includeParentEnvironment: args[4]?.$value ?? true,
-        runInShell: args[5]?.$value ?? false,
-        stdoutEncoding: args[6]?.$value ?? systemEncoding,
-        stderrEncoding: args[7]?.$value ?? systemEncoding);
+      args[0]!.$value,
+      (args[1]!.$reified as List).cast(),
+      workingDirectory: args[2]?.$value,
+      environment: (args[3]?.$reified as Map?)?.cast(),
+      includeParentEnvironment: args[4]?.$value ?? true,
+      runInShell: args[5]?.$value ?? false,
+      stdoutEncoding: args[6]?.$value ?? systemEncoding,
+      stderrEncoding: args[7]?.$value ?? systemEncoding,
+    );
     return $Future.wrap(value.then((e) => $ProcessResult.wrap(e)));
   }
 
@@ -579,13 +642,15 @@ class $Process implements $Instance {
   static $Value? $runSync(Runtime runtime, $Value? target, List<$Value?> args) {
     runtime.assertPermission('process:run', args[0]!.$value);
     final value = Process.runSync(
-        args[0]!.$value, (args[1]!.$reified as List).cast(),
-        workingDirectory: args[2]?.$value,
-        environment: (args[3]?.$reified as Map?)?.cast(),
-        includeParentEnvironment: args[4]?.$value ?? true,
-        runInShell: args[5]?.$value ?? false,
-        stdoutEncoding: args[6]?.$value ?? systemEncoding,
-        stderrEncoding: args[7]?.$value ?? systemEncoding);
+      args[0]!.$value,
+      (args[1]!.$reified as List).cast(),
+      workingDirectory: args[2]?.$value,
+      environment: (args[3]?.$reified as Map?)?.cast(),
+      includeParentEnvironment: args[4]?.$value ?? true,
+      runInShell: args[5]?.$value ?? false,
+      stdoutEncoding: args[6]?.$value ?? systemEncoding,
+      stderrEncoding: args[7]?.$value ?? systemEncoding,
+    );
     return $ProcessResult.wrap(value);
   }
 
@@ -593,7 +658,9 @@ class $Process implements $Instance {
   static $Value? $killPid(Runtime runtime, $Value? target, List<$Value?> args) {
     runtime.assertPermission('process:kill', args[0]!.$value);
     final value = Process.killPid(
-        args[0]!.$value, args[1]?.$value ?? ProcessSignal.sigterm);
+      args[0]!.$value,
+      args[1]?.$value ?? ProcessSignal.sigterm,
+    );
     return $bool(value);
   }
 
@@ -657,24 +724,21 @@ class $ProcessResult implements $Instance {
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFunc(
-        'dart:io', 'ProcessResult.', $ProcessResult.$new);
+      'dart:io',
+      'ProcessResult.',
+      $ProcessResult.$new,
+    );
   }
 
   /// Compile-time type specification of [$ProcessResult]
-  static const $spec = BridgeTypeSpec(
-    'dart:io',
-    'ProcessResult',
-  );
+  static const $spec = BridgeTypeSpec('dart:io', 'ProcessResult');
 
   /// Compile-time type declaration of [$ProcessResult]
   static const $type = BridgeTypeRef($spec);
 
   /// Compile-time class declaration of [$ProcessResult]
   static const $declaration = BridgeClassDef(
-    BridgeClassType(
-      $type,
-      isAbstract: false,
-    ),
+    BridgeClassType($type, isAbstract: false),
     constructors: {
       '': BridgeConstructorDef(
         BridgeFunctionDef(
@@ -734,7 +798,11 @@ class $ProcessResult implements $Instance {
   static $Value? $new(Runtime runtime, $Value? thisValue, List<$Value?> args) {
     return $ProcessResult.wrap(
       ProcessResult(
-          args[0]!.$value, args[1]!.$value, args[2]!.$value, args[3]!.$value),
+        args[0]!.$value,
+        args[1]!.$value,
+        args[2]!.$value,
+        args[3]!.$value,
+      ),
     );
   }
 
@@ -764,16 +832,16 @@ class $ProcessResult implements $Instance {
         return stdout is String
             ? $String(stdout)
             : stdout is List<int>
-                ? $List.view(stdout, (e) => $int(e))
-                : $Object(stdout);
+            ? $List.view(stdout, (e) => $int(e))
+            : $Object(stdout);
 
       case 'stderr':
         final stderr = $value.stderr;
         return stderr is String
             ? $String(stderr)
             : stderr is List<int>
-                ? $List.view(stderr, (e) => $int(e))
-                : $Object(stderr);
+            ? $List.view(stderr, (e) => $int(e))
+            : $Object(stderr);
 
       case 'pid':
         final pid = $value.pid;
@@ -793,108 +861,189 @@ class $ProcessSignal implements $Instance {
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFunc(
-        'dart:io', 'ProcessSignal.sighup*g', $ProcessSignal.$sighup);
+      'dart:io',
+      'ProcessSignal.sighup*g',
+      $ProcessSignal.$sighup,
+    );
 
     runtime.registerBridgeFunc(
-        'dart:io', 'ProcessSignal.sigint*g', $ProcessSignal.$sigint);
+      'dart:io',
+      'ProcessSignal.sigint*g',
+      $ProcessSignal.$sigint,
+    );
 
     runtime.registerBridgeFunc(
-        'dart:io', 'ProcessSignal.sigquit*g', $ProcessSignal.$sigquit);
+      'dart:io',
+      'ProcessSignal.sigquit*g',
+      $ProcessSignal.$sigquit,
+    );
 
     runtime.registerBridgeFunc(
-        'dart:io', 'ProcessSignal.sigill*g', $ProcessSignal.$sigill);
+      'dart:io',
+      'ProcessSignal.sigill*g',
+      $ProcessSignal.$sigill,
+    );
 
     runtime.registerBridgeFunc(
-        'dart:io', 'ProcessSignal.sigtrap*g', $ProcessSignal.$sigtrap);
+      'dart:io',
+      'ProcessSignal.sigtrap*g',
+      $ProcessSignal.$sigtrap,
+    );
 
     runtime.registerBridgeFunc(
-        'dart:io', 'ProcessSignal.sigabrt*g', $ProcessSignal.$sigabrt);
+      'dart:io',
+      'ProcessSignal.sigabrt*g',
+      $ProcessSignal.$sigabrt,
+    );
 
     runtime.registerBridgeFunc(
-        'dart:io', 'ProcessSignal.sigbus*g', $ProcessSignal.$sigbus);
+      'dart:io',
+      'ProcessSignal.sigbus*g',
+      $ProcessSignal.$sigbus,
+    );
 
     runtime.registerBridgeFunc(
-        'dart:io', 'ProcessSignal.sigfpe*g', $ProcessSignal.$sigfpe);
+      'dart:io',
+      'ProcessSignal.sigfpe*g',
+      $ProcessSignal.$sigfpe,
+    );
 
     runtime.registerBridgeFunc(
-        'dart:io', 'ProcessSignal.sigkill*g', $ProcessSignal.$sigkill);
+      'dart:io',
+      'ProcessSignal.sigkill*g',
+      $ProcessSignal.$sigkill,
+    );
 
     runtime.registerBridgeFunc(
-        'dart:io', 'ProcessSignal.sigusr1*g', $ProcessSignal.$sigusr1);
+      'dart:io',
+      'ProcessSignal.sigusr1*g',
+      $ProcessSignal.$sigusr1,
+    );
 
     runtime.registerBridgeFunc(
-        'dart:io', 'ProcessSignal.sigsegv*g', $ProcessSignal.$sigsegv);
+      'dart:io',
+      'ProcessSignal.sigsegv*g',
+      $ProcessSignal.$sigsegv,
+    );
 
     runtime.registerBridgeFunc(
-        'dart:io', 'ProcessSignal.sigusr2*g', $ProcessSignal.$sigusr2);
+      'dart:io',
+      'ProcessSignal.sigusr2*g',
+      $ProcessSignal.$sigusr2,
+    );
 
     runtime.registerBridgeFunc(
-        'dart:io', 'ProcessSignal.sigpipe*g', $ProcessSignal.$sigpipe);
+      'dart:io',
+      'ProcessSignal.sigpipe*g',
+      $ProcessSignal.$sigpipe,
+    );
 
     runtime.registerBridgeFunc(
-        'dart:io', 'ProcessSignal.sigalrm*g', $ProcessSignal.$sigalrm);
+      'dart:io',
+      'ProcessSignal.sigalrm*g',
+      $ProcessSignal.$sigalrm,
+    );
 
     runtime.registerBridgeFunc(
-        'dart:io', 'ProcessSignal.sigterm*g', $ProcessSignal.$sigterm);
+      'dart:io',
+      'ProcessSignal.sigterm*g',
+      $ProcessSignal.$sigterm,
+    );
 
     runtime.registerBridgeFunc(
-        'dart:io', 'ProcessSignal.sigchld*g', $ProcessSignal.$sigchld);
+      'dart:io',
+      'ProcessSignal.sigchld*g',
+      $ProcessSignal.$sigchld,
+    );
 
     runtime.registerBridgeFunc(
-        'dart:io', 'ProcessSignal.sigcont*g', $ProcessSignal.$sigcont);
+      'dart:io',
+      'ProcessSignal.sigcont*g',
+      $ProcessSignal.$sigcont,
+    );
 
     runtime.registerBridgeFunc(
-        'dart:io', 'ProcessSignal.sigstop*g', $ProcessSignal.$sigstop);
+      'dart:io',
+      'ProcessSignal.sigstop*g',
+      $ProcessSignal.$sigstop,
+    );
 
     runtime.registerBridgeFunc(
-        'dart:io', 'ProcessSignal.sigtstp*g', $ProcessSignal.$sigtstp);
+      'dart:io',
+      'ProcessSignal.sigtstp*g',
+      $ProcessSignal.$sigtstp,
+    );
 
     runtime.registerBridgeFunc(
-        'dart:io', 'ProcessSignal.sigttin*g', $ProcessSignal.$sigttin);
+      'dart:io',
+      'ProcessSignal.sigttin*g',
+      $ProcessSignal.$sigttin,
+    );
 
     runtime.registerBridgeFunc(
-        'dart:io', 'ProcessSignal.sigttou*g', $ProcessSignal.$sigttou);
+      'dart:io',
+      'ProcessSignal.sigttou*g',
+      $ProcessSignal.$sigttou,
+    );
 
     runtime.registerBridgeFunc(
-        'dart:io', 'ProcessSignal.sigurg*g', $ProcessSignal.$sigurg);
+      'dart:io',
+      'ProcessSignal.sigurg*g',
+      $ProcessSignal.$sigurg,
+    );
 
     runtime.registerBridgeFunc(
-        'dart:io', 'ProcessSignal.sigxcpu*g', $ProcessSignal.$sigxcpu);
+      'dart:io',
+      'ProcessSignal.sigxcpu*g',
+      $ProcessSignal.$sigxcpu,
+    );
 
     runtime.registerBridgeFunc(
-        'dart:io', 'ProcessSignal.sigxfsz*g', $ProcessSignal.$sigxfsz);
+      'dart:io',
+      'ProcessSignal.sigxfsz*g',
+      $ProcessSignal.$sigxfsz,
+    );
 
     runtime.registerBridgeFunc(
-        'dart:io', 'ProcessSignal.sigvtalrm*g', $ProcessSignal.$sigvtalrm);
+      'dart:io',
+      'ProcessSignal.sigvtalrm*g',
+      $ProcessSignal.$sigvtalrm,
+    );
 
     runtime.registerBridgeFunc(
-        'dart:io', 'ProcessSignal.sigprof*g', $ProcessSignal.$sigprof);
+      'dart:io',
+      'ProcessSignal.sigprof*g',
+      $ProcessSignal.$sigprof,
+    );
 
     runtime.registerBridgeFunc(
-        'dart:io', 'ProcessSignal.sigwinch*g', $ProcessSignal.$sigwinch);
+      'dart:io',
+      'ProcessSignal.sigwinch*g',
+      $ProcessSignal.$sigwinch,
+    );
 
     runtime.registerBridgeFunc(
-        'dart:io', 'ProcessSignal.sigpoll*g', $ProcessSignal.$sigpoll);
+      'dart:io',
+      'ProcessSignal.sigpoll*g',
+      $ProcessSignal.$sigpoll,
+    );
 
     runtime.registerBridgeFunc(
-        'dart:io', 'ProcessSignal.sigsys*g', $ProcessSignal.$sigsys);
+      'dart:io',
+      'ProcessSignal.sigsys*g',
+      $ProcessSignal.$sigsys,
+    );
   }
 
   /// Compile-time type specification of [$ProcessSignal]
-  static const $spec = BridgeTypeSpec(
-    'dart:io',
-    'ProcessSignal',
-  );
+  static const $spec = BridgeTypeSpec('dart:io', 'ProcessSignal');
 
   /// Compile-time type declaration of [$ProcessSignal]
   static const $type = BridgeTypeRef($spec);
 
   /// Compile-time class declaration of [$ProcessSignal]
   static const $declaration = BridgeClassDef(
-    BridgeClassType(
-      $type,
-      isAbstract: false,
-    ),
+    BridgeClassType($type, isAbstract: false),
     constructors: {
       '_': BridgeConstructorDef(
         BridgeFunctionDef(
@@ -937,147 +1086,176 @@ class $ProcessSignal implements $Instance {
     fields: {
       'sighup': BridgeFieldDef(
         BridgeTypeAnnotation(
-            BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal'))),
+          BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal')),
+        ),
         isStatic: true,
       ),
       'sigint': BridgeFieldDef(
         BridgeTypeAnnotation(
-            BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal'))),
+          BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal')),
+        ),
         isStatic: true,
       ),
       'sigquit': BridgeFieldDef(
         BridgeTypeAnnotation(
-            BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal'))),
+          BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal')),
+        ),
         isStatic: true,
       ),
       'sigill': BridgeFieldDef(
         BridgeTypeAnnotation(
-            BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal'))),
+          BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal')),
+        ),
         isStatic: true,
       ),
       'sigtrap': BridgeFieldDef(
         BridgeTypeAnnotation(
-            BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal'))),
+          BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal')),
+        ),
         isStatic: true,
       ),
       'sigabrt': BridgeFieldDef(
         BridgeTypeAnnotation(
-            BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal'))),
+          BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal')),
+        ),
         isStatic: true,
       ),
       'sigbus': BridgeFieldDef(
         BridgeTypeAnnotation(
-            BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal'))),
+          BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal')),
+        ),
         isStatic: true,
       ),
       'sigfpe': BridgeFieldDef(
         BridgeTypeAnnotation(
-            BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal'))),
+          BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal')),
+        ),
         isStatic: true,
       ),
       'sigkill': BridgeFieldDef(
         BridgeTypeAnnotation(
-            BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal'))),
+          BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal')),
+        ),
         isStatic: true,
       ),
       'sigusr1': BridgeFieldDef(
         BridgeTypeAnnotation(
-            BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal'))),
+          BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal')),
+        ),
         isStatic: true,
       ),
       'sigsegv': BridgeFieldDef(
         BridgeTypeAnnotation(
-            BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal'))),
+          BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal')),
+        ),
         isStatic: true,
       ),
       'sigusr2': BridgeFieldDef(
         BridgeTypeAnnotation(
-            BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal'))),
+          BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal')),
+        ),
         isStatic: true,
       ),
       'sigpipe': BridgeFieldDef(
         BridgeTypeAnnotation(
-            BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal'))),
+          BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal')),
+        ),
         isStatic: true,
       ),
       'sigalrm': BridgeFieldDef(
         BridgeTypeAnnotation(
-            BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal'))),
+          BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal')),
+        ),
         isStatic: true,
       ),
       'sigterm': BridgeFieldDef(
         BridgeTypeAnnotation(
-            BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal'))),
+          BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal')),
+        ),
         isStatic: true,
       ),
       'sigchld': BridgeFieldDef(
         BridgeTypeAnnotation(
-            BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal'))),
+          BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal')),
+        ),
         isStatic: true,
       ),
       'sigcont': BridgeFieldDef(
         BridgeTypeAnnotation(
-            BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal'))),
+          BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal')),
+        ),
         isStatic: true,
       ),
       'sigstop': BridgeFieldDef(
         BridgeTypeAnnotation(
-            BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal'))),
+          BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal')),
+        ),
         isStatic: true,
       ),
       'sigtstp': BridgeFieldDef(
         BridgeTypeAnnotation(
-            BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal'))),
+          BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal')),
+        ),
         isStatic: true,
       ),
       'sigttin': BridgeFieldDef(
         BridgeTypeAnnotation(
-            BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal'))),
+          BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal')),
+        ),
         isStatic: true,
       ),
       'sigttou': BridgeFieldDef(
         BridgeTypeAnnotation(
-            BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal'))),
+          BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal')),
+        ),
         isStatic: true,
       ),
       'sigurg': BridgeFieldDef(
         BridgeTypeAnnotation(
-            BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal'))),
+          BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal')),
+        ),
         isStatic: true,
       ),
       'sigxcpu': BridgeFieldDef(
         BridgeTypeAnnotation(
-            BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal'))),
+          BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal')),
+        ),
         isStatic: true,
       ),
       'sigxfsz': BridgeFieldDef(
         BridgeTypeAnnotation(
-            BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal'))),
+          BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal')),
+        ),
         isStatic: true,
       ),
       'sigvtalrm': BridgeFieldDef(
         BridgeTypeAnnotation(
-            BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal'))),
+          BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal')),
+        ),
         isStatic: true,
       ),
       'sigprof': BridgeFieldDef(
         BridgeTypeAnnotation(
-            BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal'))),
+          BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal')),
+        ),
         isStatic: true,
       ),
       'sigwinch': BridgeFieldDef(
         BridgeTypeAnnotation(
-            BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal'))),
+          BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal')),
+        ),
         isStatic: true,
       ),
       'sigpoll': BridgeFieldDef(
         BridgeTypeAnnotation(
-            BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal'))),
+          BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal')),
+        ),
         isStatic: true,
       ),
       'sigsys': BridgeFieldDef(
         BridgeTypeAnnotation(
-            BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal'))),
+          BridgeTypeRef(BridgeTypeSpec('dart:io', 'ProcessSignal')),
+        ),
         isStatic: true,
       ),
       'signalNumber': BridgeFieldDef(
@@ -1238,7 +1416,10 @@ class $ProcessSignal implements $Instance {
 
   /// Wrapper for the [ProcessSignal.sigvtalrm] getter
   static $Value? $sigvtalrm(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final value = ProcessSignal.sigvtalrm;
     return $ProcessSignal.wrap(value);
   }
@@ -1251,7 +1432,10 @@ class $ProcessSignal implements $Instance {
 
   /// Wrapper for the [ProcessSignal.sigwinch] getter
   static $Value? $sigwinch(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final value = ProcessSignal.sigwinch;
     return $ProcessSignal.wrap(value);
   }
@@ -1303,7 +1487,10 @@ class $ProcessSignal implements $Instance {
 
   static const $Function __toString = $Function(_toString);
   static $Value? _toString(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final self = target as $ProcessSignal;
     final result = self.$value.toString();
     return $String(result);

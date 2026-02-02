@@ -12,30 +12,30 @@ void main() {
       }
       ''';
     expect(
-        () => compiler.compile({
-              'my_package': {
-                'main.dart': source,
-              }
-            }),
-        prints(isEmpty));
+      () => compiler.compile({
+        'my_package': {'main.dart': source},
+      }),
+      prints(isEmpty),
+    );
   });
 
-  test('diagnostic mode printErrorsAndWarnings prints parse warnings',
-      () async {
-    final compiler = Compiler()
-      ..diagnosticMode = DiagnosticMode.printErrorsAndWarnings;
-    final source = '''
+  test(
+    'diagnostic mode printErrorsAndWarnings prints parse warnings',
+    () async {
+      final compiler = Compiler()
+        ..diagnosticMode = DiagnosticMode.printErrorsAndWarnings;
+      final source = '''
       /// {@nodoc}
       bool fn(){ 
         return true;
       }
       ''';
-    expect(
+      expect(
         () => compiler.compile({
-              'my_package': {
-                'main.dart': source,
-              }
-            }),
-        prints(contains('Parsing warning:')));
-  });
+          'my_package': {'main.dart': source},
+        }),
+        prints(contains('Parsing warning:')),
+      );
+    },
+  );
 }

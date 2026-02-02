@@ -16,16 +16,34 @@ class DartCollectionPlugin implements EvalPlugin {
   @override
   void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFunc(
-        'dart:collection', 'LinkedHashMap.', $LinkedHashMap.$new);
+      'dart:collection',
+      'LinkedHashMap.',
+      $LinkedHashMap.$new,
+    );
     runtime.registerBridgeFunc(
-        'dart:collection', 'LinkedHashMap.identity', $LinkedHashMap.$identity);
+      'dart:collection',
+      'LinkedHashMap.identity',
+      $LinkedHashMap.$identity,
+    );
     runtime.registerBridgeFunc(
-        'dart:collection', 'LinkedHashMap.from', $LinkedHashMap.$from);
+      'dart:collection',
+      'LinkedHashMap.from',
+      $LinkedHashMap.$from,
+    );
     runtime.registerBridgeFunc(
-        'dart:collection', 'LinkedHashMap.of', $LinkedHashMap.$of);
-    runtime.registerBridgeFunc('dart:collection', 'LinkedHashMap.fromIterable',
-        $LinkedHashMap.$fromIterable);
-    runtime.registerBridgeFunc('dart:collection', 'LinkedHashMap.fromIterables',
-        $LinkedHashMap.$fromIterables);
+      'dart:collection',
+      'LinkedHashMap.of',
+      $LinkedHashMap.$of,
+    );
+    runtime.registerBridgeFunc(
+      'dart:collection',
+      'LinkedHashMap.fromIterable',
+      $LinkedHashMap.$fromIterable,
+    );
+    runtime.registerBridgeFunc(
+      'dart:collection',
+      'LinkedHashMap.fromIterables',
+      $LinkedHashMap.$fromIterables,
+    );
   }
 }

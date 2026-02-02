@@ -27,10 +27,12 @@ void main() {
               return 'none';
             }
           ''',
-        }
+        },
       });
-      expect(runtime.executeLib('package:example/main.dart', 'main'),
-          $String('two'));
+      expect(
+        runtime.executeLib('package:example/main.dart', 'main'),
+        $String('two'),
+      );
     });
 
     test('Switch with default case', () {
@@ -49,10 +51,12 @@ void main() {
               }
             }
           ''',
-        }
+        },
       });
-      expect(runtime.executeLib('package:example/main.dart', 'main'),
-          $String('default'));
+      expect(
+        runtime.executeLib('package:example/main.dart', 'main'),
+        $String('default'),
+      );
     });
 
     test('Switch with string cases', () {
@@ -73,7 +77,7 @@ void main() {
               }
             }
           ''',
-        }
+        },
       });
       expect(runtime.executeLib('package:example/main.dart', 'main'), 1);
     });
@@ -97,12 +101,12 @@ void main() {
               }
             }
           ''',
-        }
+        },
       });
       expect(
-          runtime.executeLib('package:example/main.dart', 'main'),
-          $String(
-              'weekday')); // x=1 falls through empty cases to execute 'weekday'
+        runtime.executeLib('package:example/main.dart', 'main'),
+        $String('weekday'),
+      ); // x=1 falls through empty cases to execute 'weekday'
     });
 
     test('Switch with invalid fall-through should throw error', () {
@@ -122,7 +126,7 @@ void main() {
                 }
               }
             ''',
-          }
+          },
         });
       }, throwsA(isA<Exception>()));
     });
@@ -150,7 +154,7 @@ void main() {
               return result;
             }
           ''',
-        }
+        },
       });
       expect(runtime.executeLib('package:example/main.dart', 'main'), 20);
     });
@@ -177,10 +181,12 @@ void main() {
               return result;
             }
           ''',
-        }
+        },
       });
-      expect(runtime.executeLib('package:example/main.dart', 'main'),
-          13); // (0 + 5) * 2 + 3 = 13
+      expect(
+        runtime.executeLib('package:example/main.dart', 'main'),
+        13,
+      ); // (0 + 5) * 2 + 3 = 13
     });
 
     test('Switch with no matching case and no default', () {
@@ -201,7 +207,7 @@ void main() {
               return result;
             }
           ''',
-        }
+        },
       });
       expect(runtime.executeLib('package:example/main.dart', 'main'), 42);
     });
@@ -225,7 +231,7 @@ void main() {
               }
             }
           ''',
-        }
+        },
       });
       expect(runtime.executeLib('package:example/main.dart', 'main'), 50);
     });
@@ -245,10 +251,12 @@ void main() {
               return 'unknown';
             }
           ''',
-        }
+        },
       });
-      expect(runtime.executeLib('package:example/main.dart', 'main'),
-          $String('yes'));
+      expect(
+        runtime.executeLib('package:example/main.dart', 'main'),
+        $String('yes'),
+      );
     });
 
     test('Nested switch statements', () {
@@ -270,7 +278,7 @@ void main() {
               }
             }
           ''',
-        }
+        },
       });
       expect(runtime.executeLib('package:example/main.dart', 'main'), 12);
     });
@@ -297,7 +305,7 @@ void main() {
               return result;
             }
           ''',
-        }
+        },
       });
       expect(runtime.executeLib('package:example/main.dart', 'main'), 40);
     });
@@ -322,7 +330,7 @@ void main() {
               }
             }
           ''',
-        }
+        },
       });
       expect(runtime.executeLib('package:example/main.dart', 'main'), 50);
     });
@@ -343,10 +351,12 @@ void main() {
               }
             }
           ''',
-        }
+        },
       });
-      expect(runtime.executeLib('package:example/main.dart', 'main'),
-          $String('unknown value'));
+      expect(
+        runtime.executeLib('package:example/main.dart', 'main'),
+        $String('unknown value'),
+      );
     });
 
     test('Switch with multiple empty cases (enum-like)', () {
@@ -370,10 +380,12 @@ void main() {
               }
             }
           ''',
-        }
+        },
       });
-      expect(runtime.executeLib('package:example/main.dart', 'main'),
-          $String('weekday')); // Day 2 falls through to 'weekday'
+      expect(
+        runtime.executeLib('package:example/main.dart', 'main'),
+        $String('weekday'),
+      ); // Day 2 falls through to 'weekday'
     });
 
     test('Switch with const expression case', () {
@@ -394,7 +406,7 @@ void main() {
               }
             }
           ''',
-        }
+        },
       });
       expect(runtime.executeLib('package:example/main.dart', 'main'), 100);
     });
@@ -411,7 +423,7 @@ void main() {
               return result;
             }
           ''',
-        }
+        },
       });
       expect(runtime.executeLib('package:example/main.dart', 'main'), 42);
     });
@@ -450,10 +462,12 @@ void main() {
               return saudacao(DiaDaSemana.terca);
             }
           ''',
-        }
+        },
       });
-      expect(runtime.executeLib('package:example/main.dart', 'main'),
-          $String('Dia útil. Vamos trabalhar!'));
+      expect(
+        runtime.executeLib('package:example/main.dart', 'main'),
+        $String('Dia útil. Vamos trabalhar!'),
+      );
     });
 
     test('Switch with enum weekend case', () {
@@ -490,10 +504,12 @@ void main() {
               return saudacao(DiaDaSemana.domingo);
             }
           ''',
-        }
+        },
       });
-      expect(runtime.executeLib('package:example/main.dart', 'main'),
-          $String('Final de semana! Aproveite!'));
+      expect(
+        runtime.executeLib('package:example/main.dart', 'main'),
+        $String('Final de semana! Aproveite!'),
+      );
     });
 
     test('Switch with enum and vowel/consonant classification', () {
@@ -522,10 +538,12 @@ void main() {
               return classificar(Letra.e);
             }
           ''',
-        }
+        },
       });
-      expect(runtime.executeLib('package:example/main.dart', 'main'),
-          $String('Vogal'));
+      expect(
+        runtime.executeLib('package:example/main.dart', 'main'),
+        $String('Vogal'),
+      );
     });
   });
 }

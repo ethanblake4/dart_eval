@@ -28,17 +28,26 @@ Reference compileIdentifierAsReference(Identifier id, CompilerContext ctx) {
 }
 
 Variable compilePrefixedIdentifier(
-    String prefix, String name, CompilerContext ctx) {
+  String prefix,
+  String name,
+  CompilerContext ctx,
+) {
   return compilePrefixedIdentifierAsReference(prefix, name).getValue(ctx);
 }
 
 Reference compilePrefixedIdentifierAsReference(
-    String prefix, String identifier) {
+  String prefix,
+  String identifier,
+) {
   return PrefixedIdentifierReference(prefix, identifier);
 }
 
 Pair<TypeRef, DeclarationOrBridge>? resolveInstanceDeclaration(
-    CompilerContext ctx, int library, String $class, String name) {
+  CompilerContext ctx,
+  int library,
+  String $class,
+  String name,
+) {
   final dec = ctx.instanceDeclarationsMap[library]![$class]?[name];
 
   if (dec != null) {
@@ -62,8 +71,10 @@ Pair<TypeRef, DeclarationOrBridge>? resolveInstanceDeclaration(
       final $type = ctx.visibleTypes[library]![$class]!;
       final setter0 = setter == null
           ? null
-          : DeclarationOrBridge<MethodDeclaration, BridgeMethodDef>(-1,
-              bridge: setter);
+          : DeclarationOrBridge<MethodDeclaration, BridgeMethodDef>(
+              -1,
+              bridge: setter,
+            );
       return Pair($type, GetSet(-1, bridge: getter, setter: setter0));
     }
 
@@ -88,12 +99,13 @@ Pair<TypeRef, DeclarationOrBridge>? resolveInstanceDeclaration(
     final setter = ctx.instanceDeclarationsMap[library]![$class]?['$name*s'];
     if (getter != null || setter != null) {
       final $type = ctx.visibleTypes[library]![$class]!;
-      final getset = GetSet(-1,
-          declaration: getter as MethodDeclaration,
-          setter: setter == null
-              ? null
-              : DeclarationOrBridge(-1,
-                  declaration: setter as MethodDeclaration));
+      final getset = GetSet(
+        -1,
+        declaration: getter as MethodDeclaration,
+        setter: setter == null
+            ? null
+            : DeclarationOrBridge(-1, declaration: setter as MethodDeclaration),
+      );
       return Pair($type, getset);
     }
   }
@@ -105,8 +117,12 @@ Pair<TypeRef, DeclarationOrBridge>? resolveInstanceDeclaration(
   if ($withClause != null) {
     for (final $mixin in $withClause.mixinTypes) {
       final mixinType = ctx.visibleTypes[library]![$mixin.name.stringValue!]!;
-      final result =
-          resolveInstanceDeclaration(ctx, mixinType.file, mixinType.name, name);
+      final result = resolveInstanceDeclaration(
+        ctx,
+        mixinType.file,
+        mixinType.name,
+        name,
+      );
       if (result != null) {
         return result;
       }
@@ -114,11 +130,15 @@ Pair<TypeRef, DeclarationOrBridge>? resolveInstanceDeclaration(
   }
   if ($extendsClause != null) {
     final prefix = $extendsClause.superclass.importPrefix;
-    final extendsType = ctx.visibleTypes[library]![
-        '${prefix != null ? '${prefix.name.value()}.' : ''}'
+    final extendsType =
+        ctx.visibleTypes[library]!['${prefix != null ? '${prefix.name.value()}.' : ''}'
             '${$extendsClause.superclass.name.value()}']!;
     return resolveInstanceDeclaration(
-        ctx, extendsType.file, extendsType.name, name);
+      ctx,
+      extendsType.file,
+      extendsType.name,
+      name,
+    );
   } else {
     final $type = ctx.visibleTypes[library]![$class]!;
     final objectType = CoreTypes.object.ref(ctx);
@@ -136,6 +156,10 @@ class GetSet extends DeclarationOrBridge<MethodDeclaration, BridgeMethodDef> {
 }
 
 DeclarationOrBridge<Declaration, BridgeDeclaration>? resolveStaticDeclaration(
-    CompilerContext ctx, int library, String $class, String name) {
+  CompilerContext ctx,
+  int library,
+  String $class,
+  String name,
+) {
   return ctx.topLevelDeclarationsMap[library]!['${$class}.$name'];
 }

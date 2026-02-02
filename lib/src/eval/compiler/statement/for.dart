@@ -12,7 +12,10 @@ import 'package:dart_eval/src/eval/compiler/statement/variable_declaration.dart'
 import 'package:dart_eval/src/eval/compiler/type.dart';
 
 StatementInfo compileForStatement(
-    ForStatement s, CompilerContext ctx, AlwaysReturnType? expectedReturnType) {
+  ForStatement s,
+  CompilerContext ctx,
+  AlwaysReturnType? expectedReturnType,
+) {
   final parts = s.forLoopParts;
 
   if (parts is ForEachParts) {
@@ -20,7 +23,11 @@ StatementInfo compileForStatement(
     final itype = iterable.type;
     if (!itype.isAssignableTo(ctx, CoreTypes.iterable.ref(ctx))) {
       throw CompileError(
-          'Cannot iterate over ${iterable.type}', parts, ctx.library, ctx);
+        'Cannot iterate over ${iterable.type}',
+        parts,
+        ctx.library,
+        ctx,
+      );
     }
 
     var elementType = itype.specifiedTypeArgs.isEmpty
@@ -30,69 +37,89 @@ StatementInfo compileForStatement(
     var iterator = iterable.getProperty(ctx, 'iterator');
     late Reference loopVariable;
 
-    return macroLoop(ctx, expectedReturnType,
-        initialization: (ctx) {
-          if (parts is ForEachPartsWithDeclaration) {
-            final declaredType = parts.loopVariable.type == null
-                ? CoreTypes.dynamic.ref(ctx)
-                : TypeRef.fromAnnotation(
-                    ctx, ctx.library, parts.loopVariable.type!);
-            if (parts.loopVariable.type != null &&
-                !elementType.isAssignableTo(ctx, declaredType)) {
-              throw CompileError(
-                  'Cannot assign $elementType to ${parts.loopVariable.type}',
-                  parts,
+    return macroLoop(
+      ctx,
+      expectedReturnType,
+      initialization: (ctx) {
+        if (parts is ForEachPartsWithDeclaration) {
+          final declaredType = parts.loopVariable.type == null
+              ? CoreTypes.dynamic.ref(ctx)
+              : TypeRef.fromAnnotation(
+                  ctx,
                   ctx.library,
-                  ctx);
-            }
-
-            if (itype.specifiedTypeArgs.isEmpty) {
-              elementType = declaredType.copyWith(boxed: true);
-            }
-
-            iterator = iterator.copyWith(
-                type: CoreTypes.iterator.ref(ctx).copyWith(
-                    specifiedTypeArgs: [elementType.copyWith(boxed: true)]));
-
-            final name = parts.loopVariable.name.lexeme;
-            ctx.setLocal(
-                name, BuiltinValue().push(ctx).copyWith(type: elementType));
-            loopVariable = IdentifierReference(null, name);
-          } else if (parts is ForEachPartsWithIdentifier) {
-            loopVariable = compileExpressionAsReference(parts.identifier, ctx);
-            final type = loopVariable.resolveType(ctx);
-            if (!elementType.isAssignableTo(ctx, type)) {
-              throw CompileError('Cannot assign $elementType to $type', parts,
-                  ctx.library, ctx);
-            }
+                  parts.loopVariable.type!,
+                );
+          if (parts.loopVariable.type != null &&
+              !elementType.isAssignableTo(ctx, declaredType)) {
+            throw CompileError(
+              'Cannot assign $elementType to ${parts.loopVariable.type}',
+              parts,
+              ctx.library,
+              ctx,
+            );
           }
-        },
-        condition: (ctx) => iterator.invoke(ctx, 'moveNext', []).result,
-        body: (ctx, ert) => compileStatement(s.body, ert, ctx),
-        update: (ctx) =>
-            loopVariable.setValue(ctx, iterator.getProperty(ctx, 'current')),
-        updateBeforeBody: true);
+
+          if (itype.specifiedTypeArgs.isEmpty) {
+            elementType = declaredType.copyWith(boxed: true);
+          }
+
+          iterator = iterator.copyWith(
+            type: CoreTypes.iterator
+                .ref(ctx)
+                .copyWith(
+                  specifiedTypeArgs: [elementType.copyWith(boxed: true)],
+                ),
+          );
+
+          final name = parts.loopVariable.name.lexeme;
+          ctx.setLocal(
+            name,
+            BuiltinValue().push(ctx).copyWith(type: elementType),
+          );
+          loopVariable = IdentifierReference(null, name);
+        } else if (parts is ForEachPartsWithIdentifier) {
+          loopVariable = compileExpressionAsReference(parts.identifier, ctx);
+          final type = loopVariable.resolveType(ctx);
+          if (!elementType.isAssignableTo(ctx, type)) {
+            throw CompileError(
+              'Cannot assign $elementType to $type',
+              parts,
+              ctx.library,
+              ctx,
+            );
+          }
+        }
+      },
+      condition: (ctx) => iterator.invoke(ctx, 'moveNext', []).result,
+      body: (ctx, ert) => compileStatement(s.body, ert, ctx),
+      update: (ctx) =>
+          loopVariable.setValue(ctx, iterator.getProperty(ctx, 'current')),
+      updateBeforeBody: true,
+    );
   }
 
   parts as ForParts;
 
-  return macroLoop(ctx, expectedReturnType,
-      initialization: (ctx) {
-        if (parts is ForPartsWithDeclarations) {
-          compileVariableDeclarationList(parts.variables, ctx);
-        } else if (parts is ForPartsWithExpression) {
-          if (parts.initialization != null) {
-            compileExpressionAndDiscardResult(parts.initialization!, ctx);
-          }
+  return macroLoop(
+    ctx,
+    expectedReturnType,
+    initialization: (ctx) {
+      if (parts is ForPartsWithDeclarations) {
+        compileVariableDeclarationList(parts.variables, ctx);
+      } else if (parts is ForPartsWithExpression) {
+        if (parts.initialization != null) {
+          compileExpressionAndDiscardResult(parts.initialization!, ctx);
         }
-      },
-      condition: parts.condition == null
-          ? null
-          : (ctx) => compileExpression(parts.condition!, ctx),
-      body: (ctx, ert) => compileStatement(s.body, ert, ctx),
-      update: (ctx) {
-        for (final u in parts.updaters) {
-          compileExpressionAndDiscardResult(u, ctx);
-        }
-      });
+      }
+    },
+    condition: parts.condition == null
+        ? null
+        : (ctx) => compileExpression(parts.condition!, ctx),
+    body: (ctx, ert) => compileStatement(s.body, ert, ctx),
+    update: (ctx) {
+      for (final u in parts.updaters) {
+        compileExpressionAndDiscardResult(u, ctx);
+      }
+    },
+  );
 }

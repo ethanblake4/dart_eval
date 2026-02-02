@@ -7,7 +7,9 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 
 /// Compile a [FunctionExpressionInvocation]
 Variable compileFunctionExpressionInvocation(
-    FunctionExpressionInvocation e, CompilerContext ctx) {
+  FunctionExpressionInvocation e,
+  CompilerContext ctx,
+) {
   Reference? target;
   Variable? fallback;
 

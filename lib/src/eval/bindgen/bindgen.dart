@@ -49,14 +49,16 @@ class Bindgen implements BridgeDeclarationRegistry {
   void defineBridgeClass(BridgeClassDef classDef) {
     if (!classDef.bridge && !classDef.wrap) {
       throw CompileError(
-          'Cannot define a bridge class that\'s not either bridge or wrap');
+        'Cannot define a bridge class that\'s not either bridge or wrap',
+      );
     }
     final type = classDef.type;
     final spec = type.type.spec;
 
     if (spec == null) {
       throw CompileError(
-          'Cannot define a bridge class that\'s already resolved, a ref, or a generic function type');
+        'Cannot define a bridge class that\'s already resolved, a ref, or a generic function type',
+      );
     }
 
     final libraryDeclarations = _bridgeDeclarations[spec.library];
@@ -73,7 +75,8 @@ class Bindgen implements BridgeDeclarationRegistry {
     final spec = enumDef.type.spec;
     if (spec == null) {
       throw CompileError(
-          'Cannot define a bridge enum that\'s already resolved, a ref, or a generic function type');
+        'Cannot define a bridge enum that\'s already resolved, a ref, or a generic function type',
+      );
     }
 
     final libraryDeclarations = _bridgeDeclarations[spec.library];
@@ -113,7 +116,11 @@ class Bindgen implements BridgeDeclarationRegistry {
   }
 
   Future<String?> parse(
-      io.File src, String filename, String uri, bool all) async {
+    io.File src,
+    String filename,
+    String uri,
+    bool all,
+  ) async {
     final resourceProvider = PhysicalResourceProvider.INSTANCE;
     if (_contextCollection == null) {
       _contextCollection = AnalysisContextCollection(
@@ -127,10 +134,13 @@ class Bindgen implements BridgeDeclarationRegistry {
     final analysisContext = _contextCollection!.contextFor(filePath);
     final session = analysisContext.currentSession;
     final analysisResult = await session.getResolvedUnit(filePath);
-    final ctx = BindgenContext(filename, uri,
-        all: all,
-        bridgeDeclarations: _bridgeDeclarations,
-        exportedLibMappings: _exportedLibMappings);
+    final ctx = BindgenContext(
+      filename,
+      uri,
+      all: all,
+      bridgeDeclarations: _bridgeDeclarations,
+      exportedLibMappings: _exportedLibMappings,
+    );
 
     if (analysisResult is ResolvedUnitResult) {
       // Access the resolved unit and analyze it
@@ -139,9 +149,11 @@ class Bindgen implements BridgeDeclarationRegistry {
       bool partOf = false;
 
       if (!all &&
-          analysisResult.unit.directives.any((element) =>
-              element is PartDirective &&
-              element.uri.stringValue == evalOutput)) {
+          analysisResult.unit.directives.any(
+            (element) =>
+                element is PartDirective &&
+                element.uri.stringValue == evalOutput,
+          )) {
         partOf = true;
       } else {
         for (final directive in analysisResult.unit.directives) {
@@ -195,10 +207,13 @@ class Bindgen implements BridgeDeclarationRegistry {
   }
 
   ({bool process, bool isBridge, bool alsoWrap}) _shouldProcess(
-      BindgenContext ctx, Element element) {
+    BindgenContext ctx,
+    Element element,
+  ) {
     final metadata = element.metadata;
-    final bindAnno = metadata.annotations
-        .firstWhereOrNull((element) => element.element?.displayName == 'Bind');
+    final bindAnno = metadata.annotations.firstWhereOrNull(
+      (element) => element.element?.displayName == 'Bind',
+    );
     final bindAnnoValue = bindAnno?.computeConstantValue();
 
     if (bindAnnoValue == null && !ctx.all) {
@@ -233,8 +248,9 @@ class Bindgen implements BridgeDeclarationRegistry {
 
     if (isBridge && element.isSealed) {
       throw CompileError(
-          'Cannot bind sealed class ${element.name} as a bridge type. '
-          'Please remove the @Bind annotation, use a wrapper, or make the class non-sealed.');
+        'Cannot bind sealed class ${element.name} as a bridge type. '
+        'Please remove the @Bind annotation, use a wrapper, or make the class non-sealed.',
+      );
     }
 
     registerClasses.add((
@@ -244,7 +260,8 @@ class Bindgen implements BridgeDeclarationRegistry {
     ));
 
     if (isBridge) {
-      String code = '''
+      String code =
+          '''
 /// dart_eval bridge binding for [${element.name}]
 class \$${element.name}\$bridge extends ${element.name} with \$Bridge<${element.name}> {
 ${bindForwardedConstructors(ctx, element)}
@@ -269,7 +286,8 @@ ${bindDecoratorMethods(ctx, element)}
 
       if (alsoWrap) {
         // Add a rudimentary wrapper, because you cannot wrap things in a bridge.
-        code += '''
+        code +=
+            '''
 /// dart_eval lightweight wrapper binding for [${element.name}]
 class \$${element.name} implements \$Instance {
 /// Compile-time type specification of [\$${element.name}]
@@ -382,9 +400,11 @@ class \$${element.name}Fn implements EvalCallable {
     }
     final narrowWrapper = wrapType(ctx, supertype, '\$value');
     if (narrowWrapper == null) {
-      print('Warning: Could not wrap supertype $supertype of ${element.name},'
-          ' falling back to \$Object. Add a @Bind annotation to $supertype'
-          ' or set `implicitSupers: true`');
+      print(
+        'Warning: Could not wrap supertype $supertype of ${element.name},'
+        ' falling back to \$Object. Add a @Bind annotation to $supertype'
+        ' or set `implicitSupers: true`',
+      );
       ctx.imports.add('package:dart_eval/stdlib/core.dart');
       return objectWrapper;
     }

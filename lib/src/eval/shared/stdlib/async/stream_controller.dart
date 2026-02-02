@@ -10,46 +10,76 @@ class $StreamController implements $Instance {
   $StreamController.wrap(this.$value);
 
   /// Compile-time bridged type reference for [$StreamController]
-  static const $type =
-      BridgeTypeRef(BridgeTypeSpec('dart:async', 'StreamController'));
+  static const $type = BridgeTypeRef(
+    BridgeTypeSpec('dart:async', 'StreamController'),
+  );
 
   /// Compile-time bridged class declaration for [$StreamController]
   static const $declaration = BridgeClassDef(
-      BridgeClassType($type, isAbstract: true, generics: {
-        'T': BridgeGenericParam()
-      }, $implements: [
-        BridgeTypeRef(AsyncTypes.streamSink,
-            [BridgeTypeAnnotation(BridgeTypeRef.ref('T'))])
-      ]),
-      constructors: {
-        '': BridgeConstructorDef(
-            BridgeFunctionDef(returns: BridgeTypeAnnotation($type)))
-      },
-      methods: {
-        'add': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
-            params: [
-              BridgeParameter(
-                  'event', BridgeTypeAnnotation(BridgeTypeRef.ref('T')), false)
-            ])),
-        'addError': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)))),
-        'close': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future)))),
-      },
-      getters: {
-        'done': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future)))),
-        'sink': BridgeMethodDef(BridgeFunctionDef(
-            returns:
-                BridgeTypeAnnotation(BridgeTypeRef(AsyncTypes.streamSink)))),
-        'stream': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.stream,
-                [BridgeTypeAnnotation(BridgeTypeRef.ref('T'))])))),
-      },
-      setters: {},
-      fields: {},
-      wrap: true);
+    BridgeClassType(
+      $type,
+      isAbstract: true,
+      generics: {'T': BridgeGenericParam()},
+      $implements: [
+        BridgeTypeRef(AsyncTypes.streamSink, [
+          BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+        ]),
+      ],
+    ),
+    constructors: {
+      '': BridgeConstructorDef(
+        BridgeFunctionDef(returns: BridgeTypeAnnotation($type)),
+      ),
+    },
+    methods: {
+      'add': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          params: [
+            BridgeParameter(
+              'event',
+              BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+              false,
+            ),
+          ],
+        ),
+      ),
+      'addError': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+        ),
+      ),
+      'close': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future)),
+        ),
+      ),
+    },
+    getters: {
+      'done': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future)),
+        ),
+      ),
+      'sink': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(AsyncTypes.streamSink)),
+        ),
+      ),
+      'stream': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.stream, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+            ]),
+          ),
+        ),
+      ),
+    },
+    setters: {},
+    fields: {},
+    wrap: true,
+  );
 
   late final $Instance _superclass = $Object($value);
 
@@ -97,7 +127,10 @@ class $StreamController implements $Instance {
   static const $Function __addError = $Function(_addError);
 
   static $Value? _addError(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final $StreamController $target = target as $StreamController;
     final $Value $event = args[0]!;
     final $Value? $stackTrace = args[1];

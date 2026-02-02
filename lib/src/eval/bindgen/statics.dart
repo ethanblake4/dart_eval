@@ -4,18 +4,25 @@ import 'package:dart_eval/src/eval/bindgen/parameters.dart';
 import 'package:dart_eval/src/eval/bindgen/permission.dart';
 import 'package:dart_eval/src/eval/bindgen/type.dart';
 
-String $constructors(BindgenContext ctx, ClassElement element,
-    {bool isBridge = false}) {
+String $constructors(
+  BindgenContext ctx,
+  ClassElement element, {
+  bool isBridge = false,
+}) {
   return element.constructors
       .where(
-          (cstr) => !cstr.isPrivate && (cstr.isFactory || !element.isAbstract))
+        (cstr) => !cstr.isPrivate && (cstr.isFactory || !element.isAbstract),
+      )
       .map((e) => _$constructor(ctx, element, e, isBridge: isBridge))
       .join('\n');
 }
 
 String _$constructor(
-    BindgenContext ctx, ClassElement element, ConstructorElement constructor,
-    {bool isBridge = false}) {
+  BindgenContext ctx,
+  ClassElement element,
+  ConstructorElement constructor, {
+  bool isBridge = false,
+}) {
   final name = constructor.name ?? '';
   final namedConstructor = constructor.name != null && constructor.name != 'new'
       ? '.${constructor.name}'
@@ -61,7 +68,10 @@ String $staticMethods(BindgenContext ctx, InterfaceElement element) {
 }
 
 String _$staticMethod(
-    BindgenContext ctx, InterfaceElement element, MethodElement method) {
+  BindgenContext ctx,
+  InterfaceElement element,
+  MethodElement method,
+) {
   return '''
   /// Wrapper for the [${element.name}.${method.name}] method
   static \$Value? \$${method.name}(Runtime runtime, \$Value? target, List<\$Value?> args) {
@@ -76,17 +86,22 @@ String _$staticMethod(
 
 String $staticGetters(BindgenContext ctx, InterfaceElement element) {
   return element.getters
-      .where((e) =>
-          e.isStatic &&
-          !e.isPrivate &&
-          (e.nonSynthetic is! FieldElement ||
-              !(e.nonSynthetic as FieldElement).isEnumConstant))
+      .where(
+        (e) =>
+            e.isStatic &&
+            !e.isPrivate &&
+            (e.nonSynthetic is! FieldElement ||
+                !(e.nonSynthetic as FieldElement).isEnumConstant),
+      )
       .map((e) => _$staticGetter(ctx, element, e))
       .join('\n');
 }
 
-String _$staticGetter(BindgenContext ctx, InterfaceElement element,
-    PropertyAccessorElement getter) {
+String _$staticGetter(
+  BindgenContext ctx,
+  InterfaceElement element,
+  PropertyAccessorElement getter,
+) {
   return '''
   /// Wrapper for the [${element.name}.${getter.name}] getter
   static \$Value? \$${getter.name}(Runtime runtime, \$Value? target, List<\$Value?> args) {
@@ -103,8 +118,11 @@ String $staticSetters(BindgenContext ctx, InterfaceElement element) {
       .join('\n');
 }
 
-String _$staticSetter(BindgenContext ctx, InterfaceElement element,
-    PropertyAccessorElement setter) {
+String _$staticSetter(
+  BindgenContext ctx,
+  InterfaceElement element,
+  PropertyAccessorElement setter,
+) {
   return '''
   /// Wrapper for the [${element.name}.${setter.name}] setter
   static \$Value? set\$${setter.name}(Runtime runtime, \$Value? target, List<\$Value?> args) {

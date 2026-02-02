@@ -1,7 +1,7 @@
 import 'package:dart_eval/dart_eval.dart';
 import 'package:test/test.dart';
 
-void main () {
+void main() {
   group('Regular classes test', () {
     late Compiler compiler;
 
@@ -28,7 +28,7 @@ void main () {
             print(Test2().value);
           }
           ''',
-        }
+        },
       });
 
       expect(() {
@@ -59,7 +59,7 @@ void main () {
             print(Test2().value);
           }
           ''',
-        }
+        },
       });
 
       expect(() {

@@ -24,10 +24,6 @@ extension BridgeParameterExt on String {
   /// See [paramOptional] for optional named param
   /// See [paramOptionalNullable] for nullable param
   BridgeParameter paramOptional(BridgeTypeAnnotation type) {
-    return BridgeParameter(
-      this,
-      type,
-      true,
-    );
+    return BridgeParameter(this, type, true);
   }
 }

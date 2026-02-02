@@ -7,8 +7,12 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 StatementInfo doReturn(
-    CompilerContext ctx, AlwaysReturnType expectedReturnType, Variable? value,
-    {bool isAsync = false, bool skipClassBoxing = false}) {
+  CompilerContext ctx,
+  AlwaysReturnType expectedReturnType,
+  Variable? value, {
+  bool isAsync = false,
+  bool skipClassBoxing = false,
+}) {
   if (value == null) {
     if (isAsync) {
       final completer = ctx.lookupLocal('#completer')!;
@@ -19,8 +23,9 @@ StatementInfo doReturn(
   } else {
     if (isAsync) {
       final ta = expectedReturnType.type?.specifiedTypeArgs;
-      final expected =
-          (ta?.isEmpty ?? true) ? CoreTypes.dynamic.ref(ctx) : ta![0];
+      final expected = (ta?.isEmpty ?? true)
+          ? CoreTypes.dynamic.ref(ctx)
+          : ta![0];
       var value0 = value.boxIfNeeded(ctx);
 
       if (!value0.type.isAssignableTo(ctx, expected)) {
@@ -29,25 +34,32 @@ StatementInfo doReturn(
           final vtype = vta.isEmpty ? CoreTypes.dynamic.ref(ctx) : vta[0];
           if (vtype.isAssignableTo(ctx, expected)) {
             final completer = ctx.lookupLocal('#completer')!;
-            final awaitOp =
-                Await.make(completer.scopeFrameOffset, value0.scopeFrameOffset);
+            final awaitOp = Await.make(
+              completer.scopeFrameOffset,
+              value0.scopeFrameOffset,
+            );
             ctx.pushOp(awaitOp, Await.LEN);
             ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
             final result = Variable.alloc(ctx, CoreTypes.dynamic.ref(ctx));
             ctx.pushOp(
-                ReturnAsync.make(
-                    result.scopeFrameOffset, completer.scopeFrameOffset),
-                ReturnAsync.LEN);
+              ReturnAsync.make(
+                result.scopeFrameOffset,
+                completer.scopeFrameOffset,
+              ),
+              ReturnAsync.LEN,
+            );
             return StatementInfo(-1, willAlwaysReturn: true);
           }
         }
         throw CompileError(
-            'Cannot return ${value0.type} (expected: $expected)');
+          'Cannot return ${value0.type} (expected: $expected)',
+        );
       }
       final completer = ctx.lookupLocal('#completer')!;
       ctx.pushOp(
-          ReturnAsync.make(value0.scopeFrameOffset, completer.scopeFrameOffset),
-          ReturnAsync.LEN);
+        ReturnAsync.make(value0.scopeFrameOffset, completer.scopeFrameOffset),
+        ReturnAsync.LEN,
+      );
       return StatementInfo(-1, willAlwaysReturn: true);
     }
 

@@ -11,28 +11,45 @@ class $Completer<T> implements Completer<T>, $Instance {
 
   static const _$type = BridgeTypeRef(AsyncTypes.completer, []);
 
-  static const $declaration = BridgeClassDef(BridgeClassType(_$type),
-      constructors: {
-        '': BridgeConstructorDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(_$type), params: [], namedParams: []))
-      },
-      methods: {
-        'complete': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
-            params: [
-              BridgeParameter('value',
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)), false)
-            ],
-            namedParams: []))
-      },
-      getters: {
-        'future': BridgeMethodDef(BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(
-                BridgeTypeRef(BridgeTypeSpec('dart:core', 'Future')))))
-      },
-      setters: {},
-      fields: {},
-      wrap: true);
+  static const $declaration = BridgeClassDef(
+    BridgeClassType(_$type),
+    constructors: {
+      '': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(_$type),
+          params: [],
+          namedParams: [],
+        ),
+      ),
+    },
+    methods: {
+      'complete': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          params: [
+            BridgeParameter(
+              'value',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
+              false,
+            ),
+          ],
+          namedParams: [],
+        ),
+      ),
+    },
+    getters: {
+      'future': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(BridgeTypeSpec('dart:core', 'Future')),
+          ),
+        ),
+      ),
+    },
+    setters: {},
+    fields: {},
+    wrap: true,
+  );
 
   @override
   final Completer<T> $value;

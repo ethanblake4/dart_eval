@@ -33,8 +33,8 @@ void main() {
               ClassB();
               int number() { return 8; }
             }
-          '''
-        }
+          ''',
+        },
       });
 
       final runtime = Runtime.ofProgram(program);
@@ -64,8 +64,8 @@ void main() {
               ClassB();
               int number() { return 8; }
             }
-          '''
-        }
+          ''',
+        },
       });
 
       final runtime = Runtime.ofProgram(program);
@@ -93,12 +93,13 @@ void main() {
               return str.length;
             }
           ''',
-        }
+        },
       });
 
       final runtime = Runtime.ofProgram(program);
-      final result = runtime.executeLib(
-          'package:example/main.dart', 'main', [$String('Test45678')]);
+      final result = runtime.executeLib('package:example/main.dart', 'main', [
+        $String('Test45678'),
+      ]);
       expect(result, 9);
     });
 
@@ -116,7 +117,7 @@ void main() {
               return str.length;
             }
           ''',
-        }
+        },
       };
 
       expect(() => compiler.compile(packages), throwsA(isA<CompileError>()));
@@ -132,14 +133,15 @@ void main() {
             return arg.length;
           }
           ''',
-        }
+        },
       };
 
       final program = compiler.compile(packages);
       final runtime = Runtime.ofProgram(program);
 
-      final result = runtime.executeLib(
-          'package:example/main.dart', 'main', [$String('Test45678')]);
+      final result = runtime.executeLib('package:example/main.dart', 'main', [
+        $String('Test45678'),
+      ]);
       expect(result, 9);
     });
 
@@ -166,8 +168,8 @@ void main() {
               ClassC();
               int number() { return 6; }
             }
-          '''
-        }
+          ''',
+        },
       });
 
       final runtime = Runtime.ofProgram(program);
@@ -191,7 +193,7 @@ void main() {
               int number() { return 4; }
             }
           ''',
-        }
+        },
       });
 
       final runtime = Runtime.ofProgram(program);
@@ -220,8 +222,8 @@ void main() {
                 invalidVariable.makeError(); // Should not be compiled
               }
             }
-          '''
-        }
+          ''',
+        },
       });
 
       final runtime = Runtime.ofProgram(program);
@@ -248,7 +250,7 @@ void main() {
               int number() { return 4; }
             }
           ''',
-        }
+        },
       });
 
       final runtime = Runtime.ofProgram(program);
@@ -281,7 +283,7 @@ void main() {
               int number() { return 8 + ClassB.constant; }
             }
           ''',
-        }
+        },
       });
 
       final runtime = Runtime.ofProgram(program);
@@ -289,17 +291,18 @@ void main() {
       expect(result, 16);
     });
 
-    test('Correct tree shaking of long reference chains within a single file',
-        () {
-      final program = compiler.compile({
-        'example': {
-          'main.dart': '''
+    test(
+      'Correct tree shaking of long reference chains within a single file',
+      () {
+        final program = compiler.compile({
+          'example': {
+            'main.dart': '''
             import 'package:example/file.dart';
             int main() {
               return getClass().number();
             }
           ''',
-          'file.dart': '''
+            'file.dart': '''
             Cls getClass() {
               return getClass2();
             }
@@ -322,13 +325,14 @@ void main() {
               }
             }
           ''',
-        }
-      });
+          },
+        });
 
-      final runtime = Runtime.ofProgram(program);
-      final result = runtime.executeLib('package:example/main.dart', 'main');
-      expect(result, 42);
-    });
+        final runtime = Runtime.ofProgram(program);
+        final result = runtime.executeLib('package:example/main.dart', 'main');
+        expect(result, 42);
+      },
+    );
 
     test("Tree shaking doesn't hide top level declarations", () {
       final program = compiler.compile({
@@ -360,7 +364,7 @@ void main() {
               const _MustCallSuper();
             }
           ''',
-        }
+        },
       });
 
       final runtime = Runtime.ofProgram(program);

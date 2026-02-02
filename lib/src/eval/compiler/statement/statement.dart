@@ -19,10 +19,19 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'block.dart';
 
 StatementInfo compileStatement(
-    Statement s, AlwaysReturnType? expectedReturnType, CompilerContext ctx, {bool skipClassBoxing = false}) {
+  Statement s,
+  AlwaysReturnType? expectedReturnType,
+  CompilerContext ctx, {
+  bool skipClassBoxing = false,
+}) {
   try {
     if (s is Block) {
-      return compileBlock(s, expectedReturnType, ctx, skipClassBoxing: skipClassBoxing);
+      return compileBlock(
+        s,
+        expectedReturnType,
+        ctx,
+        skipClassBoxing: skipClassBoxing,
+      );
     } else if (s is VariableDeclarationStatement) {
       return compileVariableDeclarationStatement(s, ctx);
     } else if (s is ExpressionStatement) {
@@ -32,7 +41,12 @@ StatementInfo compileStatement(
       }
       return StatementInfo(-1);
     } else if (s is ReturnStatement) {
-      return compileReturn(ctx, s, expectedReturnType, skipClassBoxing: skipClassBoxing);
+      return compileReturn(
+        ctx,
+        s,
+        expectedReturnType,
+        skipClassBoxing: skipClassBoxing,
+      );
     } else if (s is ForStatement) {
       return compileForStatement(s, ctx, expectedReturnType);
     } else if (s is WhileStatement) {
@@ -60,23 +74,33 @@ StatementInfo compileStatement(
 }
 
 class StatementInfo {
-  StatementInfo(this.position,
-      {this.willAlwaysReturn = false, this.willAlwaysThrow = false});
+  StatementInfo(
+    this.position, {
+    this.willAlwaysReturn = false,
+    this.willAlwaysThrow = false,
+  });
 
   final int position;
   final bool willAlwaysReturn;
   final bool willAlwaysThrow;
 
   StatementInfo operator |(StatementInfo other) {
-    return StatementInfo(position,
-        willAlwaysReturn: willAlwaysReturn && other.willAlwaysReturn,
-        willAlwaysThrow: willAlwaysThrow && other.willAlwaysThrow);
+    return StatementInfo(
+      position,
+      willAlwaysReturn: willAlwaysReturn && other.willAlwaysReturn,
+      willAlwaysThrow: willAlwaysThrow && other.willAlwaysThrow,
+    );
   }
 
-  StatementInfo copyWith(
-      {int? position, bool? willAlwaysReturn, bool? willAlwaysThrow}) {
-    return StatementInfo(position ?? this.position,
-        willAlwaysReturn: willAlwaysReturn ?? this.willAlwaysReturn,
-        willAlwaysThrow: willAlwaysThrow ?? this.willAlwaysThrow);
+  StatementInfo copyWith({
+    int? position,
+    bool? willAlwaysReturn,
+    bool? willAlwaysThrow,
+  }) {
+    return StatementInfo(
+      position ?? this.position,
+      willAlwaysReturn: willAlwaysReturn ?? this.willAlwaysReturn,
+      willAlwaysThrow: willAlwaysThrow ?? this.willAlwaysThrow,
+    );
   }
 }

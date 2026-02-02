@@ -90,8 +90,8 @@ class PushNull implements EvcOp {
 /// on the runtime frame, and appends their sum to the frame.
 class NumAdd implements EvcOp {
   NumAdd(Runtime runtime)
-      : _location1 = runtime._readInt16(),
-        _location2 = runtime._readInt16();
+    : _location1 = runtime._readInt16(),
+      _location2 = runtime._readInt16();
 
   NumAdd.make(this._location1, this._location2);
 
@@ -114,8 +114,8 @@ class NumAdd implements EvcOp {
 /// on the runtime frame, and appends their difference (A-B) to the frame.
 class NumSub implements EvcOp {
   NumSub(Runtime runtime)
-      : _location1 = runtime._readInt16(),
-        _location2 = runtime._readInt16();
+    : _location1 = runtime._readInt16(),
+      _location2 = runtime._readInt16();
 
   NumSub.make(this._location1, this._location2);
 
@@ -139,8 +139,8 @@ class NumSub implements EvcOp {
 /// whether the first number is smaller than the second.
 class NumLt implements EvcOp {
   NumLt(Runtime runtime)
-      : _location1 = runtime._readInt16(),
-        _location2 = runtime._readInt16();
+    : _location1 = runtime._readInt16(),
+      _location2 = runtime._readInt16();
 
   NumLt.make(this._location1, this._location2);
 
@@ -164,8 +164,8 @@ class NumLt implements EvcOp {
 /// whether the first number is smaller or equal to the second.
 class NumLtEq implements EvcOp {
   NumLtEq(Runtime runtime)
-      : _location1 = runtime._readInt16(),
-        _location2 = runtime._readInt16();
+    : _location1 = runtime._readInt16(),
+      _location2 = runtime._readInt16();
 
   NumLtEq.make(this._location1, this._location2);
 
@@ -176,7 +176,8 @@ class NumLtEq implements EvcOp {
 
   @override
   void run(Runtime runtime) {
-    runtime.frame[runtime.frameOffset++] = (runtime.frame[_location1] as num) <=
+    runtime.frame[runtime.frameOffset++] =
+        (runtime.frame[_location1] as num) <=
         (runtime.frame[_location2] as num);
   }
 
@@ -324,8 +325,9 @@ class BoxMap implements EvcOp {
   @override
   void run(Runtime runtime) {
     final reg = _reg;
-    runtime.frame[reg] =
-        $Map.wrap(<$Value, $Value>{...(runtime.frame[reg] as Map)});
+    runtime.frame[reg] = $Map.wrap(<$Value, $Value>{
+      ...(runtime.frame[reg] as Map),
+    });
   }
 
   @override
@@ -421,8 +423,8 @@ class PushList extends EvcOp {
 /// whether the value is boxed or not.
 class ListAppend extends EvcOp {
   ListAppend(Runtime runtime)
-      : _reg = runtime._readInt16(),
-        _value = runtime._readInt16();
+    : _reg = runtime._readInt16(),
+      _value = runtime._readInt16();
 
   ListAppend.make(this._reg, this._value);
 
@@ -445,8 +447,8 @@ class ListAppend extends EvcOp {
 /// value to the runtime frame.
 class IndexList extends EvcOp {
   IndexList(Runtime runtime)
-      : _position = runtime._readInt16(),
-        _index = runtime._readInt32();
+    : _position = runtime._readInt16(),
+      _index = runtime._readInt32();
 
   IndexList.make(this._position, this._index);
 
@@ -471,9 +473,9 @@ class IndexList extends EvcOp {
 /// it to the list in the given position.
 class ListSetIndexed extends EvcOp {
   ListSetIndexed(Runtime runtime)
-      : _position = runtime._readInt16(),
-        _index = runtime._readInt32(),
-        _value = runtime._readInt16();
+    : _position = runtime._readInt16(),
+      _index = runtime._readInt32(),
+      _value = runtime._readInt16();
 
   ListSetIndexed.make(this._position, this._index, this._value);
 
@@ -535,9 +537,9 @@ class PushMap extends EvcOp {
 /// are boxed.
 class MapSet extends EvcOp {
   MapSet(Runtime runtime)
-      : _map = runtime._readInt16(),
-        _index = runtime._readInt16(),
-        _value = runtime._readInt16();
+    : _map = runtime._readInt16(),
+      _index = runtime._readInt16(),
+      _value = runtime._readInt16();
 
   MapSet.make(this._map, this._index, this._value);
 
@@ -562,8 +564,8 @@ class MapSet extends EvcOp {
 /// value to the runtime frame.
 class IndexMap extends EvcOp {
   IndexMap(Runtime runtime)
-      : _map = runtime._readInt16(),
-        _index = runtime._readInt16();
+    : _map = runtime._readInt16(),
+      _index = runtime._readInt16();
 
   IndexMap.make(this._map, this._index);
 
@@ -604,8 +606,8 @@ class PushSet extends EvcOp {
 /// whether the value is boxed or not.
 class SetAdd extends EvcOp {
   SetAdd(Runtime runtime)
-      : _set = runtime._readInt16(),
-        _value = runtime._readInt16();
+    : _set = runtime._readInt16(),
+      _value = runtime._readInt16();
 
   SetAdd.make(this._set, this._value);
 
@@ -691,9 +693,9 @@ class BoxBool implements EvcOp {
 /// constant pool.
 class PushRecord implements EvcOp {
   PushRecord(Runtime runtime)
-      : _fields = runtime._readInt16(),
-        _const = runtime._readInt32(),
-        _type = runtime._readInt32();
+    : _fields = runtime._readInt16(),
+      _const = runtime._readInt32(),
+      _type = runtime._readInt32();
 
   PushRecord.make(this._fields, this._const, this._type);
 

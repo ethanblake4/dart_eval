@@ -18,12 +18,14 @@ void main() {
               final set = {1, 2, 3, 4, 5};
               return set.contains(3).toString();
             }
-          '''
-        }
+          ''',
+        },
       });
 
-      expect(runtime.executeLib('package:eval_test/main.dart', 'main'),
-          $String('true'));
+      expect(
+        runtime.executeLib('package:eval_test/main.dart', 'main'),
+        $String('true'),
+      );
     });
 
     test('Adding elements to a set', () {
@@ -36,12 +38,14 @@ void main() {
               set.add(2);
               return set.contains(2).toString();
             }
-          '''
-        }
+          ''',
+        },
       });
 
-      expect(runtime.executeLib('package:eval_test/main.dart', 'main'),
-          $String('true'));
+      expect(
+        runtime.executeLib('package:eval_test/main.dart', 'main'),
+        $String('true'),
+      );
     });
 
     test('Removing elements from a set', () {
@@ -53,12 +57,14 @@ void main() {
               set.remove(2);
               return set.contains(2).toString();
             }
-          '''
-        }
+          ''',
+        },
       });
 
-      expect(runtime.executeLib('package:eval_test/main.dart', 'main'),
-          $String('false'));
+      expect(
+        runtime.executeLib('package:eval_test/main.dart', 'main'),
+        $String('false'),
+      );
     });
 
     test('Set union operation', () {
@@ -71,12 +77,14 @@ void main() {
               final unionSet = set1.union(set2);
               return unionSet.toString();
             }
-          '''
-        }
+          ''',
+        },
       });
 
-      expect(runtime.executeLib('package:eval_test/main.dart', 'main'),
-          $String('{1, 2, 3, 4, 5}'));
+      expect(
+        runtime.executeLib('package:eval_test/main.dart', 'main'),
+        $String('{1, 2, 3, 4, 5}'),
+      );
     });
 
     test('Set intersection operation', () {
@@ -89,12 +97,14 @@ void main() {
               final intersectionSet = set1.intersection(set2);
               return intersectionSet.toString();
             }
-          '''
-        }
+          ''',
+        },
       });
 
-      expect(runtime.executeLib('package:eval_test/main.dart', 'main'),
-          $String('{2, 3}'));
+      expect(
+        runtime.executeLib('package:eval_test/main.dart', 'main'),
+        $String('{2, 3}'),
+      );
     });
 
     test('Nested set', () {
@@ -106,12 +116,14 @@ void main() {
               final nestedSet = {{1, 2}, s, {3, 4}};
               return nestedSet.contains(s).toString();
             }
-          '''
-        }
+          ''',
+        },
       });
 
-      expect(runtime.executeLib('package:eval_test/main.dart', 'main'),
-          $String('true'));
+      expect(
+        runtime.executeLib('package:eval_test/main.dart', 'main'),
+        $String('true'),
+      );
     });
 
     test('Set with type parameters', () {
@@ -122,12 +134,14 @@ void main() {
               final set = <double>{1};
               return set.contains(1.0).toString();
             }
-          '''
-        }
+          ''',
+        },
       });
 
-      expect(runtime.executeLib('package:eval_test/main.dart', 'main'),
-          $String('true'));
+      expect(
+        runtime.executeLib('package:eval_test/main.dart', 'main'),
+        $String('true'),
+      );
     });
   });
 }

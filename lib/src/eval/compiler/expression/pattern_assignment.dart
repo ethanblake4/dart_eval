@@ -15,8 +15,12 @@ Variable compilePatternAssignment(CompilerContext ctx, PatternAssignment e) {
     );
   }
 
-  patternMatchAndBind(ctx, e.pattern, result,
-      patternContext: PatternBindContext.none);
+  patternMatchAndBind(
+    ctx,
+    e.pattern,
+    result,
+    patternContext: PatternBindContext.none,
+  );
 
   return result;
 }

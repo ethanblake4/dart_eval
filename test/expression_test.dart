@@ -32,8 +32,8 @@ void main() {
             class Y extends X {
               Y();
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(() {
@@ -54,12 +54,14 @@ void main() {
               };
               return myfunc(2);
             }
-          '''
-        }
+          ''',
+        },
       });
 
-      expect(runtime.executeLib('package:eval_test/main.dart', 'main'),
-          $num<num>(6));
+      expect(
+        runtime.executeLib('package:eval_test/main.dart', 'main'),
+        $num<num>(6),
+      );
     });
 
     test('Null coalescing operator', () {
@@ -70,8 +72,8 @@ void main() {
               print(null ?? 1);
               print(2 ?? 1);
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(() {
@@ -103,8 +105,8 @@ void main() {
               print(X(a: 1, b: 2).copy(b: 3));
               print(X(a: 1, b: 2).copy(a: 3, b: 4));
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(() {
@@ -123,8 +125,8 @@ void main() {
               x ??= 2;
               print(x);
             }
-           '''
-        }
+           ''',
+        },
       });
 
       expect(() {
@@ -140,8 +142,8 @@ void main() {
               print(!true);
               print(!false);
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(() {
@@ -160,8 +162,8 @@ void main() {
               print(1 >> 2);
               print(1 ^ 2);
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(() {
@@ -180,8 +182,8 @@ void main() {
             int fun(int a) {
               return a > 2 ? 1 : 2;
             }
-           '''
-        }
+           ''',
+        },
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 1);
@@ -202,8 +204,8 @@ void main() {
               int a = 0;
               int b = 0;
             }
-           '''
-        }
+           ''',
+        },
       });
 
       expect(() {
@@ -228,8 +230,8 @@ void main() {
                 print(b);
               }
             }
-           '''
-        }
+           ''',
+        },
       });
 
       expect(() {
@@ -249,8 +251,8 @@ void main() {
             class X {
               String getName() => 'X class';
             }
-           '''
-        }
+           ''',
+        },
       });
 
       expect(() {
@@ -266,8 +268,8 @@ void main() {
               num x = 1;
               print((x as int) + 1);
             }
-           '''
-        }
+           ''',
+        },
       });
 
       expect(() {
@@ -286,8 +288,8 @@ void main() {
             
             class X { String getName() => 'X class'; }
             class Y { String getName() => 'Y class'; }
-           '''
-        }
+           ''',
+        },
       });
 
       expect(() {
@@ -309,8 +311,8 @@ void main() {
           class X {
             int a = 1;
           }
-         '''
-        }
+         ''',
+        },
       });
 
       expect(() {
@@ -332,8 +334,8 @@ void main() {
           class X {
             int a() => 1;
           }
-         '''
-        }
+         ''',
+        },
       });
 
       expect(() {
@@ -354,14 +356,14 @@ void main() {
               return (encrypt) ? 'utf8' : 'base64';
             }
             
-         '''
-        }
+         ''',
+        },
       });
 
       expect(
-          runtime
-              .executeLib('package:example/main.dart', 'main', [true])?.$value,
-          'utf8');
+        runtime.executeLib('package:example/main.dart', 'main', [true])?.$value,
+        'utf8',
+      );
     });
 
     test('Null assertion', () {
@@ -377,12 +379,14 @@ void main() {
           class X {
             int a = 1;
           }
-         '''
-        }
+         ''',
+        },
       });
 
-      expect(() => runtime.executeLib('package:example/main.dart', 'main'),
-          prints('1\n'));
+      expect(
+        () => runtime.executeLib('package:example/main.dart', 'main'),
+        prints('1\n'),
+      );
     });
 
     test('Short-circuiting logical operators', () {
@@ -405,8 +409,8 @@ void main() {
             x = doFalse() && doTrue();
             print(x);
           }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(() {

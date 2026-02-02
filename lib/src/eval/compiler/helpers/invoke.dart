@@ -12,23 +12,35 @@ import 'package:dart_eval/src/eval/shared/types.dart';
 extension Invoke on Variable {
   /// Warning! Calling invoke() may modify the state of input variables. They should be refreshed
   /// after use.
-  InvokeResult invoke(CompilerContext ctx, String? method, List<Variable> args,
-      {Map<String, Variable>? namedArgs}) {
+  InvokeResult invoke(
+    CompilerContext ctx,
+    String? method,
+    List<Variable> args, {
+    Map<String, Variable>? namedArgs,
+  }) {
     if (method == null) return _invokeAsFunction(ctx, args, namedArgs);
 
     final supportedNumIntrinsicOps = {'+', '-', '<', '>', '<=', '>='};
     final supportedBoolIntrinsicOps = {'!'};
-    if (type.isAssignableTo(ctx, CoreTypes.num.ref(ctx),
-            forceAllowDynamic: false) &&
+    if (type.isAssignableTo(
+          ctx,
+          CoreTypes.num.ref(ctx),
+          forceAllowDynamic: false,
+        ) &&
         supportedNumIntrinsicOps.contains(method)) {
       return _invokeBinaryNumeric(ctx, method, args);
-    } else if (type.isAssignableTo(ctx, CoreTypes.bool.ref(ctx),
-            forceAllowDynamic: false) &&
+    } else if (type.isAssignableTo(
+          ctx,
+          CoreTypes.bool.ref(ctx),
+          forceAllowDynamic: false,
+        ) &&
         supportedBoolIntrinsicOps.contains(method)) {
       final $this = unboxIfNeeded(ctx);
       ctx.pushOp(LogicalNot.make($this.scopeFrameOffset), LogicalNot.LEN);
-      var result =
-          Variable.alloc(ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
+      var result = Variable.alloc(
+        ctx,
+        CoreTypes.bool.ref(ctx).copyWith(boxed: false),
+      );
       return InvokeResult($this, result, []);
     }
 
@@ -50,15 +62,18 @@ extension Invoke on Variable {
         args0[0] = args0[0].tearOff(ctx);
       }
       ctx.pushOp(
-          CheckEq.make($this.scopeFrameOffset, args0[0].scopeFrameOffset),
-          CheckEq.LEN);
+        CheckEq.make($this.scopeFrameOffset, args0[0].scopeFrameOffset),
+        CheckEq.LEN,
+      );
     } else {
       for (final invokeArg in args0) {
         ctx.pushOp(PushArg.make(invokeArg.scopeFrameOffset), PushArg.LEN);
       }
 
       final invokeOp = InvokeDynamic.make(
-          $this.scopeFrameOffset, ctx.constantPool.addOrGet(method));
+        $this.scopeFrameOffset,
+        ctx.constantPool.addOrGet(method),
+      );
       ctx.pushOp(invokeOp, InvokeDynamic.len(invokeOp));
     }
 
@@ -76,31 +91,52 @@ extension Invoke on Variable {
       returnType = AlwaysReturnType(CoreTypes.bool.ref(ctx), false);
     } else {
       returnType = AlwaysReturnType.fromInstanceMethodOrBuiltin(
-          ctx, $this.type, method, [...args0.map((e) => e.type)], {});
+        ctx,
+        $this.type,
+        method,
+        [...args0.map((e) => e.type)],
+        {},
+      );
     }
 
     final v = Variable.alloc(
-        ctx,
-        (returnType?.type ?? CoreTypes.dynamic.ref(ctx))
-            .copyWith(boxed: !(checkEq || checkNotEq)));
+      ctx,
+      (returnType?.type ?? CoreTypes.dynamic.ref(ctx)).copyWith(
+        boxed: !(checkEq || checkNotEq),
+      ),
+    );
     return InvokeResult($this, v, args0);
   }
 
-  InvokeResult _invokeAsFunction(CompilerContext ctx, List<Variable> args,
-      Map<String, Variable>? namedArgs) {
+  InvokeResult _invokeAsFunction(
+    CompilerContext ctx,
+    List<Variable> args,
+    Map<String, Variable>? namedArgs,
+  ) {
     if (!type.isAssignableTo(ctx, CoreTypes.function.ref(ctx))) {
       throw CompileError(
-          'Cannot invoke variable of type $type as it is not a function');
+        'Cannot invoke variable of type $type as it is not a function',
+      );
     }
 
     var $this = this;
 
     if (callingConvention == CallingConvention.dynamic ||
         (type == CoreTypes.function.ref(ctx) && methodOffset == null)) {
-      final result = invokeClosure(ctx, null, this, null,
-          positional: args, named: namedArgs);
-      return InvokeResult($this, result.result, result.args,
-          namedArgs: result.namedArgs);
+      final result = invokeClosure(
+        ctx,
+        null,
+        this,
+        null,
+        positional: args,
+        named: namedArgs,
+      );
+      return InvokeResult(
+        $this,
+        result.result,
+        result.args,
+        namedArgs: result.namedArgs,
+      );
     }
 
     if (methodOffset == null) {
@@ -129,24 +165,29 @@ extension Invoke on Variable {
     }
     ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
 
-    final returnType = methodReturnType
+    final returnType =
+        methodReturnType
             ?.toAlwaysReturnType(ctx, type, argTypes, namedArgTypes)
             ?.type ??
         CoreTypes.dynamic.ref(ctx);
     final v = Variable.alloc(
-        ctx,
-        returnType.copyWith(
-            boxed: !returnType.isUnboxedAcrossFunctionBoundaries));
+      ctx,
+      returnType.copyWith(boxed: !returnType.isUnboxedAcrossFunctionBoundaries),
+    );
 
     return InvokeResult($this, v, args, namedArgs: namedArgs ?? {});
   }
 
   InvokeResult _invokeBinaryNumeric(
-      CompilerContext ctx, String method, List<Variable> args) {
+    CompilerContext ctx,
+    String method,
+    List<Variable> args,
+  ) {
     final $this = unboxIfNeeded(ctx);
     if (args.length != 1) {
       throw CompileError(
-          'Cannot invoke method "$method" on variable of type $type with args count: ${args.length} (required: 1)');
+        'Cannot invoke method "$method" on variable of type $type with args count: ${args.length} (required: 1)',
+      );
     }
     var R = args[0];
     if (R.scopeFrameOffset == scopeFrameOffset) {
@@ -159,50 +200,76 @@ extension Invoke on Variable {
     switch (method) {
       case '+':
         // Num intrinsic add
-        ctx.pushOp(NumAdd.make($this.scopeFrameOffset, R.scopeFrameOffset),
-            NumAdd.LEN);
+        ctx.pushOp(
+          NumAdd.make($this.scopeFrameOffset, R.scopeFrameOffset),
+          NumAdd.LEN,
+        );
         result = Variable.alloc(
-            ctx,
-            TypeRef.commonBaseType(ctx, {$this.type, R.type})
-                .copyWith(boxed: false));
+          ctx,
+          TypeRef.commonBaseType(ctx, {
+            $this.type,
+            R.type,
+          }).copyWith(boxed: false),
+        );
         break;
       case '-':
         // Num intrinsic sub
-        ctx.pushOp(NumSub.make($this.scopeFrameOffset, R.scopeFrameOffset),
-            NumSub.LEN);
+        ctx.pushOp(
+          NumSub.make($this.scopeFrameOffset, R.scopeFrameOffset),
+          NumSub.LEN,
+        );
         result = Variable.alloc(
-            ctx,
-            TypeRef.commonBaseType(ctx, {$this.type, R.type})
-                .copyWith(boxed: false));
+          ctx,
+          TypeRef.commonBaseType(ctx, {
+            $this.type,
+            R.type,
+          }).copyWith(boxed: false),
+        );
         break;
 
       case '<':
         // Num intrinsic less than
         ctx.pushOp(
-            NumLt.make($this.scopeFrameOffset, R.scopeFrameOffset), NumLt.LEN);
-        result =
-            Variable.alloc(ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
+          NumLt.make($this.scopeFrameOffset, R.scopeFrameOffset),
+          NumLt.LEN,
+        );
+        result = Variable.alloc(
+          ctx,
+          CoreTypes.bool.ref(ctx).copyWith(boxed: false),
+        );
         break;
       case '>':
         // Num intrinsic greater than
-        ctx.pushOp(NumLt.make(R.scopeFrameOffset, $this.scopeFrameOffset),
-            NumLtEq.LEN);
-        result =
-            Variable.alloc(ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
+        ctx.pushOp(
+          NumLt.make(R.scopeFrameOffset, $this.scopeFrameOffset),
+          NumLtEq.LEN,
+        );
+        result = Variable.alloc(
+          ctx,
+          CoreTypes.bool.ref(ctx).copyWith(boxed: false),
+        );
         break;
       case '<=':
         // Num intrinsic less than equal to
-        ctx.pushOp(NumLtEq.make($this.scopeFrameOffset, R.scopeFrameOffset),
-            NumLtEq.LEN);
-        result =
-            Variable.alloc(ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
+        ctx.pushOp(
+          NumLtEq.make($this.scopeFrameOffset, R.scopeFrameOffset),
+          NumLtEq.LEN,
+        );
+        result = Variable.alloc(
+          ctx,
+          CoreTypes.bool.ref(ctx).copyWith(boxed: false),
+        );
         break;
       case '>=':
         // Num intrinsic greater than equal to
-        ctx.pushOp(NumLtEq.make(R.scopeFrameOffset, $this.scopeFrameOffset),
-            NumLt.LEN);
-        result =
-            Variable.alloc(ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
+        ctx.pushOp(
+          NumLtEq.make(R.scopeFrameOffset, $this.scopeFrameOffset),
+          NumLt.LEN,
+        );
+        result = Variable.alloc(
+          ctx,
+          CoreTypes.bool.ref(ctx).copyWith(boxed: false),
+        );
         break;
 
       default:

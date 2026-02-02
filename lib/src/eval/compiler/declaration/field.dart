@@ -7,8 +7,12 @@ import 'package:dart_eval/src/eval/compiler/scope.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
-void compileFieldDeclaration(int fieldIndex, FieldDeclaration d,
-    CompilerContext ctx, NamedCompilationUnitMember parent) {
+void compileFieldDeclaration(
+  int fieldIndex,
+  FieldDeclaration d,
+  CompilerContext ctx,
+  NamedCompilationUnitMember parent,
+) {
   final parentName = parent.name.lexeme;
   var fieldIndex0 = fieldIndex;
   for (final field in d.fields.variables) {
@@ -27,8 +31,9 @@ void compileFieldDeclaration(int fieldIndex, FieldDeclaration d,
         if (type != null) {
           if (!V.type.isAssignableTo(ctx, type)) {
             throw CompileError(
-                'Static field $parentName.$fieldName of inferred type ${V.type} '
-                'does not conform to type $type');
+              'Static field $parentName.$fieldName of inferred type ${V.type} '
+              'does not conform to type $type',
+            );
           }
         } else {
           type = V.type;
@@ -49,27 +54,38 @@ void compileFieldDeclaration(int fieldIndex, FieldDeclaration d,
         ctx.pushOp(Return.make(V.scopeFrameOffset), Return.LEN);
         ctx.endAllocScope(popValues: false);
       } else {
-        ctx.topLevelVariableInferredTypes[ctx.library]![
-            '$parentName.$fieldName'] = type ?? CoreTypes.dynamic.ref(ctx);
+        ctx.topLevelVariableInferredTypes[ctx
+                .library]!['$parentName.$fieldName'] =
+            type ?? CoreTypes.dynamic.ref(ctx);
       }
     } else {
       final pos = beginMethod(ctx, d, d.offset, '$parentName.$fieldName (get)');
-      ctx.pushOp(PushObjectPropertyImpl.make(0, fieldIndex0),
-          PushObjectPropertyImpl.length);
+      ctx.pushOp(
+        PushObjectPropertyImpl.make(0, fieldIndex0),
+        PushObjectPropertyImpl.length,
+      );
       ctx.pushOp(Return.make(1), Return.LEN);
-      ctx.instanceDeclarationPositions[ctx.library]![parentName]![0]
-          [fieldName] = pos;
+      ctx.instanceDeclarationPositions[ctx
+              .library]![parentName]![0][fieldName] =
+          pos;
       ctx.instanceGetterIndices[ctx.library]![parentName]![fieldName] =
           fieldIndex0;
 
       if (!(field.isFinal || field.isConst)) {
-        final setterPos =
-            beginMethod(ctx, d, d.offset, '$parentName.$fieldName (set)');
-        ctx.pushOp(SetObjectPropertyImpl.make(0, fieldIndex0, 1),
-            SetObjectPropertyImpl.length);
+        final setterPos = beginMethod(
+          ctx,
+          d,
+          d.offset,
+          '$parentName.$fieldName (set)',
+        );
+        ctx.pushOp(
+          SetObjectPropertyImpl.make(0, fieldIndex0, 1),
+          SetObjectPropertyImpl.length,
+        );
         ctx.pushOp(Return.make(1), Return.LEN);
-        ctx.instanceDeclarationPositions[ctx.library]![parentName]![1]
-            [fieldName] = setterPos;
+        ctx.instanceDeclarationPositions[ctx
+                .library]![parentName]![1][fieldName] =
+            setterPos;
       }
 
       fieldIndex0++;

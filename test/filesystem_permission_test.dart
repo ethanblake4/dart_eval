@@ -49,8 +49,9 @@ void main() {
     test('should handle relative paths by converting to absolute', () {
       // FilesystemPermission resolves paths based on the actual current working directory,
       // not the dart_eval runtime's currentDir
-      final permission =
-          FilesystemPermission.file(p.join(tempDirPath, 'test.txt'));
+      final permission = FilesystemPermission.file(
+        p.join(tempDirPath, 'test.txt'),
+      );
       final absolutePath = p.join(tempDirPath, 'test.txt');
 
       // The permission was created with absolute path, so it should match the absolute path
@@ -120,11 +121,12 @@ void main() {
       expect(perm1, isNot(equals(perm2)));
     });
 
-    test('should allow file read/write/delete using IOOverrides for currentDir',
-        () async {
-      final runtime = compiler.compileWriteAndLoad({
-        'example': {
-          'main.dart': '''
+    test(
+      'should allow file read/write/delete using IOOverrides for currentDir',
+      () async {
+        final runtime = compiler.compileWriteAndLoad({
+          'example': {
+            'main.dart': '''
             import 'dart:io';
 
             Future<String> main() async {
@@ -138,27 +140,28 @@ void main() {
                 return 'error: \$e';
               }
             }
-          '''
-        }
-      });
+          ''',
+          },
+        });
 
-      runtime.grant(FilesystemPermission.directory(tempDirPath));
+        runtime.grant(FilesystemPermission.directory(tempDirPath));
 
-      final result = await IOOverrides.runWithIOOverrides<Future<dynamic>>(
-        () async =>
-            await runtime.executeLib('package:example/main.dart', 'main'),
-        CurrentDirIOOverrides(tempDirPath),
-      );
+        final result = await IOOverrides.runWithIOOverrides<Future<dynamic>>(
+          () async =>
+              await runtime.executeLib('package:example/main.dart', 'main'),
+          CurrentDirIOOverrides(tempDirPath),
+        );
 
-      expect(result.$value, 'Testing permissions');
-    });
+        expect(result.$value, 'Testing permissions');
+      },
+    );
 
     test(
-        'should allow file operations in subdirectory using relative path when currentDir is set and permission is granted for parent directory',
-        () async {
-      final runtime = compiler.compileWriteAndLoad({
-        'example': {
-          'main.dart': '''
+      'should allow file operations in subdirectory using relative path when currentDir is set and permission is granted for parent directory',
+      () async {
+        final runtime = compiler.compileWriteAndLoad({
+          'example': {
+            'main.dart': '''
         import 'dart:io';
 
         Future<String> main() async {
@@ -168,35 +171,37 @@ void main() {
           await file.delete();
           return content;
         }
-        '''
-        }
-      });
+        ''',
+          },
+        });
 
-      // Create subdirectory in tempDir
-      final subDir = Directory(p.join(tempDirPath, 'subdir'));
-      await subDir.create();
+        // Create subdirectory in tempDir
+        final subDir = Directory(p.join(tempDirPath, 'subdir'));
+        await subDir.create();
 
-      // Grant permission for the entire temp directory
-      runtime.grant(FilesystemPermission.directory(tempDirPath));
+        // Grant permission for the entire temp directory
+        runtime.grant(FilesystemPermission.directory(tempDirPath));
 
-      // Set runtime's currentDir to the temp directory
-      final result = await IOOverrides.runWithIOOverrides<Future<dynamic>>(
-        () async =>
-            await runtime.executeLib('package:example/main.dart', 'main'),
-        CurrentDirIOOverrides(tempDirPath),
-      );
+        // Set runtime's currentDir to the temp directory
+        final result = await IOOverrides.runWithIOOverrides<Future<dynamic>>(
+          () async =>
+              await runtime.executeLib('package:example/main.dart', 'main'),
+          CurrentDirIOOverrides(tempDirPath),
+        );
 
-      expect(result.$value, 'Relative path with currentDir');
+        expect(result.$value, 'Relative path with currentDir');
 
-      // Clean up
-      await subDir.delete();
-    });
+        // Clean up
+        await subDir.delete();
+      },
+    );
 
-    test('resolves relative file paths using currentDir with permissions',
-        () async {
-      final runtime = compiler.compileWriteAndLoad({
-        'example': {
-          'main.dart': '''
+    test(
+      'resolves relative file paths using currentDir with permissions',
+      () async {
+        final runtime = compiler.compileWriteAndLoad({
+          'example': {
+            'main.dart': '''
             import 'dart:io';
 
             Future<String> main() async {
@@ -212,26 +217,27 @@ void main() {
 
               return '\$content||\$absolutePath';
             }
-          '''
-        }
-      });
+          ''',
+          },
+        });
 
-      // Grant permission for the temp directory where files will actually be created
-      runtime.grant(FilesystemPermission.directory(tempDirPath));
+        // Grant permission for the temp directory where files will actually be created
+        runtime.grant(FilesystemPermission.directory(tempDirPath));
 
-      final result = await IOOverrides.runWithIOOverrides<Future<dynamic>>(
-        () async =>
-            await runtime.executeLib('package:example/main.dart', 'main'),
-        CurrentDirIOOverrides(tempDirPath),
-      );
+        final result = await IOOverrides.runWithIOOverrides<Future<dynamic>>(
+          () async =>
+              await runtime.executeLib('package:example/main.dart', 'main'),
+          CurrentDirIOOverrides(tempDirPath),
+        );
 
-      final parts = (result.$value as String).split('||');
+        final parts = (result.$value as String).split('||');
 
-      expect(parts[0], 'File resolved through currentDir');
-      expect(
+        expect(parts[0], 'File resolved through currentDir');
+        expect(
           parts[1],
-          contains(
-              tempDirPath)); // The absolute path should contain our temp directory
-    });
+          contains(tempDirPath),
+        ); // The absolute path should contain our temp directory
+      },
+    );
   });
 }

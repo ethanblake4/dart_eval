@@ -18,14 +18,9 @@ void main() {
       }
       ''';
     final runtime = compiler.compileWriteAndLoad({
-      'my_package': {
-        'main.dart': source,
-      }
+      'my_package': {'main.dart': source},
     });
-    var result = runtime.executeLib(
-      "package:my_package/main.dart",
-      "fn",
-    );
+    var result = runtime.executeLib("package:my_package/main.dart", "fn");
     assert(result);
   });
 
@@ -46,14 +41,9 @@ void main() {
       }
       ''';
     final runtime = compiler.compileWriteAndLoad({
-      'my_package': {
-        'main.dart': source,
-      }
+      'my_package': {'main.dart': source},
     });
-    var result = runtime.executeLib(
-      "package:my_package/main.dart",
-      "fn",
-    );
+    var result = runtime.executeLib("package:my_package/main.dart", "fn");
     assert(result);
   });
 
@@ -78,14 +68,9 @@ void main() {
       }
       ''';
     final runtime = compiler.compileWriteAndLoad({
-      'my_package': {
-        'main.dart': source,
-      }
+      'my_package': {'main.dart': source},
     });
-    var result = runtime.executeLib(
-      "package:my_package/main.dart",
-      "fn",
-    );
+    var result = runtime.executeLib("package:my_package/main.dart", "fn");
     assert(result);
   });
 
@@ -112,14 +97,9 @@ void main() {
       }
       ''';
     final runtime = compiler.compileWriteAndLoad({
-      'my_package': {
-        'main.dart': source,
-      }
+      'my_package': {'main.dart': source},
     });
-    var result = runtime.executeLib(
-      "package:my_package/main.dart",
-      "fn",
-    );
+    var result = runtime.executeLib("package:my_package/main.dart", "fn");
     assert(result);
   });
 
@@ -142,14 +122,9 @@ void main() {
       }
       ''';
     final runtime = compiler.compileWriteAndLoad({
-      'my_package': {
-        'main.dart': source,
-      }
+      'my_package': {'main.dart': source},
     });
-    var result = runtime.executeLib(
-      "package:my_package/main.dart",
-      "fn",
-    );
+    var result = runtime.executeLib("package:my_package/main.dart", "fn");
     assert(result);
   });
 
@@ -168,14 +143,9 @@ void main() {
       }
       ''';
     final runtime = compiler.compileWriteAndLoad({
-      'my_package': {
-        'main.dart': source,
-      }
+      'my_package': {'main.dart': source},
     });
-    var result = runtime.executeLib(
-      "package:my_package/main.dart",
-      "fn",
-    );
+    var result = runtime.executeLib("package:my_package/main.dart", "fn");
     assert(result);
   });
 
@@ -208,14 +178,9 @@ void main() {
       }
       ''';
     final runtime = compiler.compileWriteAndLoad({
-      'my_package': {
-        'main.dart': source,
-      }
+      'my_package': {'main.dart': source},
     });
-    var result = runtime.executeLib(
-      "package:my_package/main.dart",
-      "fn",
-    );
+    var result = runtime.executeLib("package:my_package/main.dart", "fn");
     assert(result);
   });
 }

@@ -27,18 +27,14 @@ void main() {
               final body = await response.transform(utf8.decoder).join();
               return body;
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(
-          () => runtime
-              .executeLib(
-                'package:example/main.dart',
-                'main',
-              )
-              .$value,
-          throwsA(isA<Exception>()));
+        () => runtime.executeLib('package:example/main.dart', 'main').$value,
+        throwsA(isA<Exception>()),
+      );
     });
 
     test('HttpClient get()', () async {
@@ -55,8 +51,8 @@ void main() {
               final body = await response.transform(utf8.decoder).join();
               return body;
             }
-          '''
-        }
+          ''',
+        },
       });
 
       runtime.grant(NetworkPermission.url('https://example.com'));
@@ -64,8 +60,7 @@ void main() {
       final result = (await runtime.executeLib(
         'package:example/main.dart',
         'main',
-      ))
-          .$value;
+      )).$value;
 
       expect(result, contains('Example Domain'));
     });
@@ -85,8 +80,8 @@ void main() {
             file.delete();
             return contents;
           }
-        '''
-        }
+        ''',
+        },
       });
 
       runtime.grant(FilesystemPermission.any);
@@ -94,8 +89,7 @@ void main() {
       final result = (await runtime.executeLib(
         'package:example/main.dart',
         'main',
-      ))
-          .$value;
+      )).$value;
 
       expect(result, 'Hello, World!');
     });
@@ -110,8 +104,8 @@ void main() {
               print(HttpStatus.ok);
               print(HttpStatus.movedPermanently);
             }
-          '''
-        }
+          ''',
+        },
       });
 
       expect(
