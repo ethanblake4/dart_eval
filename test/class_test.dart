@@ -630,5 +630,41 @@ void main() {
       final result = runtime.executeLib('package:example/main.dart', 'main');
       expect(result, 42);
     });
+
+
+    test('Null value for internal field', () {
+      final program = compiler.compile({
+        'example': {
+          'main.dart': '''
+            class Widget {
+              int? _value;
+
+              void update() {
+                _value = 42;
+              }
+              
+              List<int> getValues() {
+                return [
+                  1,
+                  if (_value != null) _value,
+                ];
+              }
+            }
+            
+            List<bool> main() {
+              final w = Widget();
+              final b1 = w.getValues().length == 1;
+              w.update();
+              final b2 = w.getValues().last == 42;
+              return [b1, b2];
+            }
+          '''
+        }
+      });
+
+      final runtime = Runtime.ofProgram(program);
+      final result = runtime.executeLib('package:example/main.dart', 'main');
+      expect(result, [$bool(true), $bool(true)]);
+    });
   });
 }
