@@ -2,7 +2,6 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/field.dart';
 import 'package:dart_eval/src/eval/runtime/exception.dart';
 import 'package:dart_eval/src/eval/runtime/function.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/base.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/type.dart';

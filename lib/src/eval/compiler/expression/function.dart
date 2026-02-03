@@ -8,7 +8,6 @@ import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/fpl.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/return.dart';
 import 'package:dart_eval/src/eval/compiler/model/function_type.dart';
-import 'package:dart_eval/src/eval/compiler/model/label.dart';
 import 'package:dart_eval/src/eval/compiler/offset_tracker.dart';
 import 'package:dart_eval/src/eval/compiler/scope.dart';
 import 'package:dart_eval/src/eval/compiler/statement/block.dart';

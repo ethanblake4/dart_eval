@@ -845,13 +845,13 @@ class TypeRef {
   }
 
   List<TypeRef> get allSupertypes => [
-    if (extendsType != null) extendsType!,
+    ?extendsType,
     ...implementsType,
     ...withType,
   ];
 
   List<TypeRef> get extendsChain => [
-    if (extendsType != null) extendsType!,
+    ?extendsType,
     if (extendsType != null) ...extendsType!.extendsChain,
   ];
 
