@@ -403,5 +403,25 @@ void main() {
         runtime.executeLib('package:example/main.dart', 'main');
       }, prints('try catch finally\n'));
     });
+
+    test('Code runs after caught exception', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              try {
+                throw 'err';
+              } catch (e) {
+                print('caught');
+              }
+              print('after');
+            }
+          ''',
+        },
+      });
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('caught\nafter\n'));
+    });
   });
 }

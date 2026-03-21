@@ -73,10 +73,19 @@ StatementInfo compileTryStatement(
     ctx.caughtExceptions.removeLast();
     ctx.endAllocScope();
     ctx.resolveBranchStateDiscontinuity(state);
-    ctx.pushOp(Return.make(-3), Return.LEN);
+    if (s.finallyBlock != null) {
+      ctx.pushOp(Return.make(-3), Return.LEN);
+    }
   }
 
+  final catchJumpOver = s.catchClauses.isNotEmpty && s.finallyBlock == null
+      ? ctx.pushOp(JumpConstant.make(-1), JumpConstant.LEN)
+      : -1;
+
   ctx.rewriteOp(jumpOver, JumpConstant.make(ctx.out.length), 0);
+  if (catchJumpOver != -1) {
+    ctx.rewriteOp(catchJumpOver, JumpConstant.make(ctx.out.length), 0);
+  }
 
   return bodyInfo | catchInfo.copyWith(willAlwaysThrow: false);
 }
