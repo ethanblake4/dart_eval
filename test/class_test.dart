@@ -250,6 +250,52 @@ void main() {
       expect(runtime.executeLib('package:example/main.dart', 'main'), 6);
     });
 
+    test('Int assigned to double setter', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            class Foo {
+              double _value = 0;
+              double get value => _value;
+              set value(double v) {
+                if (v >= 0) _value = v;
+              }
+            }
+            void main() {
+              var f = Foo();
+              f.value = 100;
+              f.value = -50;
+              print(f.value);
+            }
+          ''',
+        },
+      });
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('100.0\n'));
+    });
+
+    test('Int variable not assignable to double setter', () {
+      expect(
+        () => compiler.compileWriteAndLoad({
+          'example': {
+            'main.dart': '''
+              class Foo {
+                double _value = 0;
+                set value(double v) { _value = v; }
+              }
+              void main() {
+                var f = Foo();
+                int a = 1;
+                f.value = a;
+              }
+            ''',
+          },
+        }),
+        throwsA(anything),
+      );
+    });
+
     test('New-style super constructor parameters', () {
       final runtime = compiler.compileWriteAndLoad({
         'example': {

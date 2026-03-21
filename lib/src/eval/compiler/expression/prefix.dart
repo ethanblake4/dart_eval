@@ -20,7 +20,11 @@ const _opMap = {
 };
 
 /// Compile a [PrefixExpression] to EVC bytecode
-Variable compilePrefixExpression(CompilerContext ctx, PrefixExpression e) {
+Variable compilePrefixExpression(
+  CompilerContext ctx,
+  PrefixExpression e, [
+  TypeRef? bound,
+]) {
   final method =
       _opMap[e.operator.type] ??
       (throw CompileError('Unknown unary operator ${e.operator.type}'));
@@ -31,7 +35,7 @@ Variable compilePrefixExpression(CompilerContext ctx, PrefixExpression e) {
     return _handleDoubleOperands(e, ctx, V, L);
   }
 
-  final V = compileExpression(e.operand, ctx);
+  final V = compileExpression(e.operand, ctx, bound);
 
   if (method == '-' &&
       V.type != CoreTypes.int.ref(ctx) &&
