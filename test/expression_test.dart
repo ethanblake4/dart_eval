@@ -41,6 +41,24 @@ void main() {
       }, prints('true\ntrue\ntrue\ntrue\nfalse\nfalse\ntrue\nfalse\n'));
     });
 
+    test('Is with Object type and branch', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'eval_test': {
+          'main.dart': '''
+            void main() {
+              Object x = 42;
+              if (x is int) {
+                print(x + 1);
+              }
+            }
+          ''',
+        },
+      });
+      expect(() {
+        runtime.executeLib('package:eval_test/main.dart', 'main');
+      }, prints('43\n'));
+    });
+
     test('Is num', () {
       final runtime = compiler.compileWriteAndLoad({
         'eval_test': {
