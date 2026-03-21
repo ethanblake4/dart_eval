@@ -1312,7 +1312,7 @@ class $List<E> implements List<E>, $Instance {
         args[0] as EvalFunction? ??
         $Function(
           (runtime, target, args) =>
-              $int(Comparable.compare(args[0]?.$value, args[0]?.$value)),
+              $int(Comparable.compare(args[0]?.$value, args[1]?.$value)),
         );
     $this.sort((a, b) => compare.call(runtime, null, [a, b])?.$value as int);
     return null;
