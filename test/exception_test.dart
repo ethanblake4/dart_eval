@@ -379,5 +379,29 @@ void main() {
         throwsA($String('error')),
       );
     });
+
+    test('try-catch-finally with Exception constructor', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              var log = '';
+              try {
+                log += 'try ';
+                throw Exception('oops');
+              } catch (e) {
+                log += 'catch ';
+              } finally {
+                log += 'finally';
+              }
+              print(log);
+            }
+          ''',
+        },
+      });
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('try catch finally\n'));
+    });
   });
 }
