@@ -3,6 +3,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
+import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/statement/assert.dart';
 import 'package:dart_eval/src/eval/compiler/statement/break.dart';
 import 'package:dart_eval/src/eval/compiler/statement/do.dart';
@@ -65,6 +66,15 @@ StatementInfo compileStatement(
       return compileBreakStatement(s, ctx);
     } else if (s is PatternVariableDeclarationStatement) {
       return compilePatternVariableDeclarationStatement(s, ctx);
+    } else if (s is FunctionDeclarationStatement) {
+      final decl = s.functionDeclaration;
+      final variable = compileFunctionExpression(
+        decl.functionExpression,
+        ctx,
+      );
+      variable.name = decl.name.lexeme;
+      ctx.setLocal(decl.name.lexeme, variable);
+      return StatementInfo(-1);
     }
   } on Error {
     print('Failed to compile a statement "$s"');
