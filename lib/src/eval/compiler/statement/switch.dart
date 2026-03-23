@@ -5,9 +5,11 @@ import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/pattern.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
+import 'package:dart_eval/src/eval/compiler/model/label.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 StatementInfo compileSwitchStatement(
   SwitchStatement s,
@@ -19,6 +21,12 @@ StatementInfo compileSwitchStatement(
   // Validate switch cases for proper Dart semantics
   _validateSwitchCases(s.members);
 
+  final label = CompilerLabel(LabelType.switchCase, -1, (ctx) {
+    final result = ctx.pushOp(JumpConstant.make(-1), JumpConstant.LEN);
+    return result;
+  });
+  ctx.labels.add(label);
+
   final result = _compileSwitchCases(
     ctx,
     switchExpr,
@@ -27,6 +35,9 @@ StatementInfo compileSwitchStatement(
     expectedReturnType,
     source: s,
   );
+
+  ctx.labels.removeLast();
+  ctx.resolveLabel(label);
 
   return result;
 }
