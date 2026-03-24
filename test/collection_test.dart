@@ -452,6 +452,40 @@ void main() {
       }, prints('a:1\nb:2\n'));
     });
 
+    test('Map field on instance supports index set and get', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'eval_test': {
+          'main.dart': '''
+            class A {
+              final Map<String, int> _m;
+              A() : _m = {};
+
+              void put(String k, int v) {
+                _m[k] = v;
+              }
+
+              int get(String k) {
+                return _m[k]!;
+              }
+            }
+
+            void main() {
+              final a = A();
+              a.put('x', 10);
+              a.put('y', 20);
+              print(a.get('x'));
+              print(a.get('y'));
+            }
+          ''',
+        },
+      });
+
+      expect(
+        () => runtime.executeLib('package:eval_test/main.dart', 'main'),
+        prints('10\n20\n'),
+      );
+    });
+
     test('Map.cast()', () {
       final runtime = compiler.compileWriteAndLoad({
         'eval_test': {
