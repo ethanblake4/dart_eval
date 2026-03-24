@@ -160,6 +160,7 @@ class Variable {
     int? frameIndex,
     List<TypeRef>? concreteTypes,
     IndexedReference? frameRef,
+    CallingConvention? callingConvention,
   }) {
     return Variable(
         scopeFrameOffset ?? this.scopeFrameOffset,
@@ -169,6 +170,7 @@ class Variable {
         methodReturnType: methodReturnType ?? this.methodReturnType,
         concreteTypes: concreteTypes ?? this.concreteTypes,
         frameRef: frameRef ?? this.frameRef,
+        callingConvention: callingConvention ?? this.callingConvention,
       )
       ..name = name ?? this.name
       ..frameIndex = frameIndex ?? this.frameIndex;
