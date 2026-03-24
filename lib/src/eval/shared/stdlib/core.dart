@@ -152,6 +152,7 @@ class DartCorePlugin implements EvalPlugin {
     $Error.configureForRuntime(runtime);
     $UnimplementedError.configureForRuntime(runtime);
     $UnsupportedError.configureForRuntime(runtime);
+    runtime.registerBridgeFunc('dart:core', 'Exception.', $Exception.$new);
     runtime.registerBridgeFunc(
       'dart:core',
       'FormatException.',
