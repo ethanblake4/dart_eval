@@ -196,6 +196,12 @@ extension Invoke on Variable {
       R = R.unboxIfNeeded(ctx);
     }
 
+    // For numeric ops, determine result type from concrete operand types.
+    // Avoids widening to dynamic when one operand is dynamic.
+    final numericResultType = R.type == CoreTypes.dynamic.ref(ctx)
+        ? $this.type
+        : TypeRef.commonBaseType(ctx, {$this.type, R.type});
+
     Variable result;
     switch (method) {
       case '+':
@@ -206,10 +212,7 @@ extension Invoke on Variable {
         );
         result = Variable.alloc(
           ctx,
-          TypeRef.commonBaseType(ctx, {
-            $this.type,
-            R.type,
-          }).copyWith(boxed: false),
+          numericResultType.copyWith(boxed: false),
         );
         break;
       case '-':
@@ -220,10 +223,7 @@ extension Invoke on Variable {
         );
         result = Variable.alloc(
           ctx,
-          TypeRef.commonBaseType(ctx, {
-            $this.type,
-            R.type,
-          }).copyWith(boxed: false),
+          numericResultType.copyWith(boxed: false),
         );
         break;
 

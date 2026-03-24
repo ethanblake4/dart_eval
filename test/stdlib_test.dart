@@ -1149,5 +1149,63 @@ void main() {
       final result = runtime.executeLib('package:example/main.dart', 'main');
       expect(result is $String ? result.$reified : result, '1.23e+2');
     });
+
+    test('int.parse in map chain with accumulation', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              var raw = '10,20,30,40,50';
+              var values = raw.split(',').map((s) => int.parse(s));
+              var total = 0;
+              for (final v in values) {
+                total += v;
+              }
+              print(total);
+            }
+          ''',
+        },
+      });
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('150\n'));
+    });
+
+    test('double + dynamic', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              var x = 1.5;
+              dynamic y = 2;
+              print(x + y);
+            }
+          ''',
+        },
+      });
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('3.5\n'));
+    });
+
+    test('num -= dynamic in loop', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              num x = 100;
+              List<dynamic> nums = [10, 20, 30];
+              for (final v in nums) {
+                x -= v;
+              }
+              print(x);
+            }
+          ''',
+        },
+      });
+      expect(() {
+        runtime.executeLib('package:example/main.dart', 'main');
+      }, prints('40\n'));
+    });
   });
 }
