@@ -29,6 +29,10 @@ class InvokeDynamic implements EvcOp {
           object = object.evalSuperclass;
           continue;
         }
+        // Ensure `this` is the first arg (some callers already prepend it)
+        if (runtime.args.isEmpty || !identical(runtime.args[0], object)) {
+          runtime.args = [object, ...runtime.args];
+        }
         runtime.callStack.add(runtime._prOffset);
         runtime.catchStack.add([]);
         runtime._prOffset = offset;
