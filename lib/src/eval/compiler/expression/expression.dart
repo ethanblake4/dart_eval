@@ -43,7 +43,7 @@ Variable compileExpression(
   } else if (e is BinaryExpression) {
     return compileBinaryExpression(ctx, e, bound);
   } else if (e is PrefixExpression) {
-    return compilePrefixExpression(ctx, e);
+    return compilePrefixExpression(ctx, e, bound);
   } else if (e is PropertyAccess) {
     return compilePropertyAccess(e, ctx);
   } else if (e is ThisExpression) {
