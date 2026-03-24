@@ -756,6 +756,28 @@ class IndexedReference implements Reference {
   }
 }
 
+/// Resolve the [DeferredOrOffset] for a default constructor.
+DeferredOrOffset _resolveDefaultConstructorOffset(
+  CompilerContext ctx,
+  DeclarationOrBridge decOrBridge,
+  String name,
+) {
+  // Direct instantiation passes 'C', super constructor resolution passes
+  // 'C.' — normalize to the registered key format 'C.'.
+  final className =
+      name.endsWith('.') ? name.substring(0, name.length - 1) : name;
+  final key = '$className.';
+  final positions = ctx.topLevelDeclarationPositions[decOrBridge.sourceLib];
+
+  if (positions?.containsKey(key) ?? false) {
+    return DeferredOrOffset(
+      file: decOrBridge.sourceLib,
+      offset: positions![key],
+    );
+  }
+  return DeferredOrOffset(file: decOrBridge.sourceLib, name: key);
+}
+
 Variable _declarationToVariable(
   DeclarationOrBridge decOrBridge,
   String name,
@@ -839,20 +861,7 @@ Variable _declarationToVariable(
       decOrBridge.sourceLib,
       decl,
     );
-    final DeferredOrOffset offset;
-
-    if (ctx.topLevelDeclarationPositions[decOrBridge.sourceLib]?.containsKey(
-          '$name.',
-        ) ??
-        false) {
-      offset = DeferredOrOffset(
-        file: decOrBridge.sourceLib,
-        offset:
-            ctx.topLevelDeclarationPositions[decOrBridge.sourceLib]!['$name.'],
-      );
-    } else {
-      offset = DeferredOrOffset(file: decOrBridge.sourceLib, name: '$name.');
-    }
+    final offset = _resolveDefaultConstructorOffset(ctx, decOrBridge, name);
 
     return Variable(
       -1,
@@ -935,21 +944,7 @@ StaticDispatch? _declarationToStaticDispatch(
   if (decl is! FunctionDeclaration && decl is! ConstructorDeclaration) {
     decl as ClassDeclaration;
 
-    final DeferredOrOffset offset;
-
-    if (ctx.topLevelDeclarationPositions[decOrBridge.sourceLib]?.containsKey(
-          '$name.',
-        ) ??
-        false) {
-      offset = DeferredOrOffset(
-        file: decOrBridge.sourceLib,
-        offset:
-            ctx.topLevelDeclarationPositions[decOrBridge.sourceLib]!['$name.'],
-      );
-    } else {
-      offset = DeferredOrOffset(file: decOrBridge.sourceLib, name: '$name.');
-    }
-
+    final offset = _resolveDefaultConstructorOffset(ctx, decOrBridge, name);
     final rt = AlwaysReturnType(
       TypeRef.lookupDeclaration(ctx, decOrBridge.sourceLib, decl),
       false,

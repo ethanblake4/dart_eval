@@ -630,5 +630,31 @@ void main() {
       final result = runtime.executeLib('package:example/main.dart', 'main');
       expect(result, 42);
     });
+
+    test('Polymorphic call through abstract type', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            abstract class Shape {
+              int area();
+            }
+            class Square extends Shape {
+              final int side;
+              Square(this.side);
+              @override
+              int area() => side * side;
+            }
+            void main() {
+              Shape s = Square(10);
+              print(s.area());
+            }
+          ''',
+        },
+      });
+      expect(
+        () => runtime.executeLib('package:example/main.dart', 'main'),
+        prints('100\n'),
+      );
+    });
   });
 }
