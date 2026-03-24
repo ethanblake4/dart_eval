@@ -467,5 +467,22 @@ void main() {
 
       expect(runtime.executeLib('package:eval_test/main.dart', 'main'), 1);
     });
+
+    test('List.sort() default comparator', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'eval_test': {
+          'main.dart': '''
+            void main() {
+              var nums = [5, 2, 8, 1, 9, 3];
+              nums.sort();
+              print(nums.join(','));
+            }
+          ''',
+        },
+      });
+      expect(() {
+        runtime.executeLib('package:eval_test/main.dart', 'main');
+      }, prints('1,2,3,5,8,9\n'));
+    });
   });
 }
