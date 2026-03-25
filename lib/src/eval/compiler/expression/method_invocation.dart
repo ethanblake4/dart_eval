@@ -396,6 +396,7 @@ Variable _invokeWithTarget(
     final op = InvokeDynamic.make(
       L.boxIfNeeded(ctx).scopeFrameOffset,
       ctx.constantPool.addOrGet(e.methodName.name),
+      hasReceiver: dec0?.isBridge != true,
     );
     ctx.pushOp(op, InvokeDynamic.len(op));
   }

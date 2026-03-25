@@ -127,6 +127,7 @@ extension TearOff on Variable {
       final invokeOp = InvokeDynamic.make(
         $target.scopeFrameOffset,
         ctx.constantPool.addOrGet(methodName),
+        hasReceiver: true,
       );
       ctx.pushOp(invokeOp, InvokeDynamic.len(invokeOp));
     } else {
