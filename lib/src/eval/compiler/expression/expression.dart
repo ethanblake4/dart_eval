@@ -8,6 +8,7 @@ import 'package:dart_eval/src/eval/compiler/expression/binary.dart';
 import 'package:dart_eval/src/eval/compiler/expression/cascade.dart';
 import 'package:dart_eval/src/eval/compiler/expression/conditional.dart';
 import 'package:dart_eval/src/eval/compiler/expression/funcexpr_invocation.dart';
+import 'package:dart_eval/src/eval/compiler/expression/function_reference.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/expression/identifier.dart';
 import 'package:dart_eval/src/eval/compiler/expression/index.dart';
@@ -78,6 +79,8 @@ Variable compileExpression(
     return compileRethrowExpression(ctx, e);
   } else if (e is PatternAssignment) {
     return compilePatternAssignment(ctx, e);
+  } else if (e is FunctionReference) {
+    return compileFunctionReference(e, ctx);
   }
 
   throw CompileError('Unknown expression type ${e.runtimeType}');

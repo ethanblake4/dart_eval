@@ -417,5 +417,23 @@ void main() {
         runtime.executeLib('package:example/main.dart', 'main');
       }, prints('True executed\ntrue\nFalse executed\nfalse\n'));
     });
+
+    test('parameterized type literal as variable initializer', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              var t = List<int>;
+              print(t == List);
+            }
+          ''',
+        },
+      });
+
+      expect(
+        () => runtime.executeLib('package:example/main.dart', 'main'),
+        prints('true\n'),
+      );
+    });
   });
 }
