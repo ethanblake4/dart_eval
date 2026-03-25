@@ -629,6 +629,11 @@ class IndexedReference implements Reference {
           ? _variable.type.specifiedTypeArgs[0]
           : CoreTypes.dynamic.ref(ctx);
     }
+    if (_variable.type.isAssignableTo(ctx, CoreTypes.map.ref(ctx))) {
+      return _variable.type.specifiedTypeArgs.length >= 2
+          ? _variable.type.specifiedTypeArgs[1]
+          : CoreTypes.dynamic.ref(ctx);
+    }
     return getValue(ctx).type;
   }
 
