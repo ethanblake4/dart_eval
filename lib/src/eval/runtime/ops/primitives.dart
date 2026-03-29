@@ -281,7 +281,14 @@ class BoxList implements EvcOp {
   @override
   void run(Runtime runtime) {
     final reg = _reg;
-    runtime.frame[reg] = $List.wrap(<$Value>[...(runtime.frame[reg] as List)]);
+    // Wrap the existing list in-place rather than copying its contents.
+    // Copying creates a new List object that is disconnected from any
+    // module-level global that holds the original — mutations via .add()
+    // on the boxed wrapper would be lost when the frame slot is discarded.
+    // Wrapping in-place preserves the reference: mutations on the $List
+    // (e.g. via ctx.setDatasource) are visible through the original
+    // global after the method call returns.
+    runtime.frame[reg] = $List.wrap(runtime.frame[reg] as List);
   }
 
   @override

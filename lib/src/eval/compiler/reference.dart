@@ -629,6 +629,21 @@ class IndexedReference implements Reference {
           ? _variable.type.specifiedTypeArgs[0]
           : CoreTypes.dynamic.ref(ctx);
     }
+    // Resolve Map value type from type args without calling getValue().
+    // getValue() emits bytecode (Unbox + IndexMap) as a side effect.
+    // compileAssignmentExpression calls resolveType() twice for simple `=`
+    // assignments, which would emit Unbox twice on the same slot: the second
+    // Unbox crashes because frame[slot] is already a raw Map<$V,$V>, not
+    // a $Value.
+    if (_variable.type.isAssignableTo(
+      ctx,
+      CoreTypes.map.ref(ctx),
+      forceAllowDynamic: false,
+    )) {
+      return _variable.type.specifiedTypeArgs.length >= 2
+          ? _variable.type.specifiedTypeArgs[1]
+          : CoreTypes.dynamic.ref(ctx);
+    }
     return getValue(ctx).type;
   }
 
