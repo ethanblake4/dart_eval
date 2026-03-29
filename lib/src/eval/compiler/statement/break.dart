@@ -11,9 +11,19 @@ StatementInfo compileBreakStatement(BreakStatement s, CompilerContext ctx) {
 
   final currentState = ctx.saveState();
 
-  var index = ctx.labels.lastIndexWhere(
+  // If we're inside a switch case, break is a no-op — the switch is compiled
+  // as if/else branches, so control flow is already handled by macroBranch.
+  final switchIndex = ctx.labels.lastIndexWhere(
+    (label) => label.type == LabelType.switchCase,
+  );
+  final loopIndex = ctx.labels.lastIndexWhere(
     (label) => label.type == LabelType.loop,
   );
+  if (switchIndex != -1 && switchIndex > loopIndex) {
+    return StatementInfo(-1);
+  }
+
+  var index = loopIndex;
 
   if (index == -1) {
     index = ctx.labels.lastIndexWhere(

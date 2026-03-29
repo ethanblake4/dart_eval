@@ -26,4 +26,4 @@ class SimpleCompilerLabel implements CompilerLabel {
   };
 }
 
-enum LabelType { loop, branch, block }
+enum LabelType { loop, branch, block, switchCase }
