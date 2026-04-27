@@ -11,7 +11,7 @@ Variable compileSymbolLiteral(SymbolLiteral l, CompilerContext ctx) {
   if (name.startsWith('_')) {
     name = name.substring(1);
   }
-  BuiltinValue(stringval: name).push(ctx).pushArg(ctx);
+  BuiltinValue(stringval: name).push(ctx).boxIfNeeded(ctx).pushArg(ctx);
   ctx.pushOp(
     InvokeExternal.make(
       ctx.bridgeStaticFunctionIndices[ctx
