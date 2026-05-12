@@ -90,7 +90,7 @@ class _UnloadedEnumValues {
 ///
 class Runtime {
   /// The current runtime version code
-  static const int versionCode = 81;
+  static const int versionCode = 82;
 
   /// Construct a runtime from EVC bytecode. When possible, use the
   /// [Runtime.ofProgram] constructor instead to reduce loading time.
@@ -546,6 +546,7 @@ class Runtime {
           Evc.OP_INVOKE_DYNAMIC,
           ...Evc.i16b(op._location),
           ...Evc.i32b(op._methodIdx),
+          op._hasReceiver ? 1 : 0,
         ];
       case SetObjectProperty op:
         return [

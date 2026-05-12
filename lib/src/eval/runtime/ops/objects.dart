@@ -5,15 +5,21 @@ part of '../runtime.dart';
 class InvokeDynamic implements EvcOp {
   InvokeDynamic(Runtime runtime)
     : _location = runtime._readInt16(),
-      _methodIdx = runtime._readInt32();
+      _methodIdx = runtime._readInt32(),
+      _hasReceiver = runtime._readUint8() == 1;
 
-  InvokeDynamic.make(this._location, this._methodIdx);
+  InvokeDynamic.make(
+    this._location,
+    this._methodIdx, {
+    required bool hasReceiver,
+  }) : _hasReceiver = hasReceiver;
 
   final int _location;
   final int _methodIdx;
+  final bool _hasReceiver;
 
   static int len(InvokeDynamic s) {
-    return Evc.BASE_OPLEN + Evc.I16_LEN + Evc.I32_LEN;
+    return Evc.BASE_OPLEN + Evc.I16_LEN + Evc.I32_LEN + Evc.I8_LEN;
   }
 
   @override
@@ -28,6 +34,9 @@ class InvokeDynamic implements EvcOp {
         if (offset == null) {
           object = object.evalSuperclass;
           continue;
+        }
+        if (!_hasReceiver) {
+          runtime.args = [object, ...runtime.args];
         }
         runtime.callStack.add(runtime._prOffset);
         runtime.catchStack.add([]);
