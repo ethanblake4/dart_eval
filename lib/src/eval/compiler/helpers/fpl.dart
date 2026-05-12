@@ -2,6 +2,8 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
+import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
@@ -85,4 +87,35 @@ List<PossiblyValuedParameter> resolveFPLDefaults(
     paramIndex++;
   }
   return normalized;
+}
+
+(TypeRef?, TypeAnnotation?) getFormalParameterType(CompilerContext ctx,
+    FormalParameter param, int decLibrary, Declaration? parameterHost) {
+  if (param is SimpleFormalParameter) {
+    final type = param.type;
+    return type == null
+        ? (null, null)
+        : (TypeRef.fromAnnotation(ctx, decLibrary, type), type);
+  } else if (param is FieldFormalParameter) {
+    return (
+      resolveFieldFormalType(ctx, decLibrary, param, parameterHost!),
+      null
+    );
+  } else if (param is SuperFormalParameter) {
+    return (
+      resolveSuperFormalType(ctx, decLibrary, param, parameterHost!),
+      null
+    );
+  } else if (param is DefaultFormalParameter) {
+    final p = param.parameter;
+    if (p is! SimpleFormalParameter) {
+      return (null, null);
+    }
+    final type = p.type;
+    return type == null
+        ? (null, null)
+        : (TypeRef.fromAnnotation(ctx, decLibrary, type), type);
+  } else {
+    throw CompileError('Unknown formal type ${param.runtimeType}');
+  }
 }

@@ -406,5 +406,9 @@ void main() {
         await runtime.executeLib('package:example/main.dart', 'main');
       }, prints('refreshed\n'));
     });
+
+    test('a', () {
+      print(Uri.parse('https://example.com/path?query=123#fragment').path);
+    });
   });
 }

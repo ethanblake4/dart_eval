@@ -48,6 +48,7 @@ class EvalFunctionPtr extends EvalFunction {
   EvalFunctionPtr(
     this.$prev,
     this.offset,
+    this.frameLen,
     this.requiredPositionalArgCount,
     this.positionalArgTypes,
     this.sortedNamedArgs,
@@ -55,6 +56,7 @@ class EvalFunctionPtr extends EvalFunction {
   );
 
   final int offset;
+  final int frameLen;
   final List<Object?>? $prev;
   final int requiredPositionalArgCount;
   final List<RuntimeType> positionalArgTypes;

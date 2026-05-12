@@ -2,6 +2,7 @@
 
 part of '../runtime.dart';
 
+/*
 class InvokeDynamic implements EvcOp {
   InvokeDynamic(Runtime runtime)
     : _location = runtime._readInt16(),
@@ -452,3 +453,4 @@ class PushConstantType implements EvcOp {
   @override
   String toString() => 'PushConstantType (ID $_typeId)';
 }
+*/

@@ -73,14 +73,14 @@ class Program {
   Map<String, OverrideSpec> overrideMap;
 
   /// The program's bytecode.
-  List<EvcOp> ops;
+  List<int> ops;
 
   /// Write the program to a [Uint8List], to be loaded by a [Runtime].
   Uint8List write() {
     final b = BytesBuilder(copy: false);
 
-    b.add([0x45, 0x56, 0x43, 0x00]); // EVC\0
-    b.add(Evc.i32b(Runtime.versionCode)); // version
+    b.add([0x58, 0x56, 0x43]); // EVC\1
+    b.add(Evc.i16b(Runtime.versionCode)); // version
 
     _writeMetaBlock(
       b,
@@ -118,7 +118,7 @@ class Program {
     );
 
     for (final op in ops) {
-      b.add(Runtime.opcodeFrom(op));
+      //b.add(Runtime.opcodeFrom(op));
     }
     final res = b.takeBytes();
 

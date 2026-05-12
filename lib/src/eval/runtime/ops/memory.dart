@@ -2,6 +2,7 @@
 
 part of '../runtime.dart';
 
+/*
 class PushArg implements EvcOp {
   PushArg(Runtime runtime) : _location = runtime._readInt16();
 
@@ -141,3 +142,4 @@ class SetGlobal implements EvcOp {
   @override
   String toString() => 'SetGlobal (G$_index = L$_value)';
 }
+*/

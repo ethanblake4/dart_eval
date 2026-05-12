@@ -1,14 +1,21 @@
+import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
+import 'package:dart_eval/src/eval/ir/memory.dart';
 
 var dartCoreFile = -1;
 
 class BuiltinValue {
-  BuiltinValue({this.intval, this.doubleval, this.stringval, this.boolval}) {
+  BuiltinValue({
+    this.intval,
+    this.doubleval,
+    this.stringval,
+    this.boolval,
+    this.name,
+  }) {
     if (intval != null) {
       type = BuiltinValueType.intType;
     } else if (stringval != null) {
@@ -22,46 +29,56 @@ class BuiltinValue {
     }
   }
 
+  String? name;
   late BuiltinValueType type;
   final int? intval;
   final double? doubleval;
   final String? stringval;
   final bool? boolval;
 
-  Variable _push(CompilerContext ctx) {
+  Variable _push(CompilerContext ctx, SSA target) {
     if (type == BuiltinValueType.intType) {
-      ctx.pushOp(PushConstantInt.make(intval!), PushConstantInt.LEN);
       final type = CoreTypes.int.ref(ctx).copyWith(boxed: false);
-      return Variable.alloc(ctx, type, concreteTypes: [type]);
+      return Variable.ssa(
+        ctx,
+        LoadInt(target, intval!),
+        type,
+        concreteTypes: [type],
+      );
     } else if (type == BuiltinValueType.doubleType) {
-      ctx.pushOp(PushConstantDouble.make(doubleval!), PushConstantDouble.LEN);
       final type = CoreTypes.double.ref(ctx).copyWith(boxed: false);
-      return Variable.alloc(ctx, type, concreteTypes: [type]);
+      return Variable.ssa(
+        ctx,
+        LoadDouble(target, doubleval!),
+        type,
+        concreteTypes: [type],
+      );
     } else if (type == BuiltinValueType.stringType) {
-      final op = PushConstant.make(ctx.constantPool.addOrGet(stringval!));
-      ctx.pushOp(op, PushConstant.LEN);
       final type = CoreTypes.string.ref(ctx).copyWith(boxed: false);
-      return Variable.alloc(ctx, type, concreteTypes: [type]);
+      return Variable.ssa(
+        ctx,
+        LoadString(target, stringval!),
+        type,
+        concreteTypes: [type],
+      );
     } else if (type == BuiltinValueType.boolType) {
-      ctx.pushOp(PushTrue.make(), PushTrue.LEN);
       final type = CoreTypes.bool.ref(ctx).copyWith(boxed: false);
-      var value = Variable.alloc(ctx, type, concreteTypes: [type]);
-      if (!boolval!) {
-        ctx.pushOp(LogicalNot.make(value.scopeFrameOffset), LogicalNot.LEN);
-        value = Variable.alloc(ctx, type, concreteTypes: [type]);
-      }
-      return value;
+      return Variable.ssa(
+        ctx,
+        LoadBool(target, boolval!),
+        type,
+        concreteTypes: [type],
+      );
     } else if (type == BuiltinValueType.nullType) {
-      final op = PushNull.make();
-      ctx.pushOp(op, PushNull.LEN);
       final type = CoreTypes.nullType.ref(ctx).copyWith(boxed: false);
-      return Variable.alloc(ctx, type, concreteTypes: [type]);
+      return Variable.ssa(ctx, LoadNull(target), type, concreteTypes: [type]);
     } else {
       throw CompileError('Cannot push unknown builtin value type $type');
     }
   }
 
-  Variable push(CompilerContext ctx) => _push(ctx);
+  Variable push(CompilerContext ctx, [SSA? ssa]) =>
+      _push(ctx, ssa ?? ctx.svar(name ?? 'var'));
 }
 
 enum BuiltinValueType { intType, stringType, doubleType, boolType, nullType }

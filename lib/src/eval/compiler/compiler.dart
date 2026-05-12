@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:collection/collection.dart';
+import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/declaration.dart';
@@ -468,6 +469,9 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       }
     }
 
+    final programRoot = BasicBlock<Operation>([]);
+    _ctx.builder = ControlFlowGraph.builder().root(programRoot);
+
     _ctx.topLevelGlobalIndices = _topLevelGlobalIndices;
 
     try {
@@ -533,11 +537,25 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
           _ctx.library = key;
           compileDeclaration(declaration, _ctx);
           _ctx.resetStack();
+          if (_ctx.hasBegunMethod) {
+            final methodBlock = _ctx.commitBlock();
+            if (_ctx.entrypoint) {
+              _ctx.builder = _ctx.builder.merge(methodBlock).root;
+            } else {
+              _ctx.builder = _ctx.builder.float(methodBlock).root;
+            }
+          }
         });
       });
     } on CompileError catch (e, stk) {
       Error.throwWithStackTrace(e.copyWithContext(_ctx), stk);
     }
+
+    final cfg = _ctx.builder.build();
+    print(cfg);
+    cfg.insertPhiNodes();
+    cfg.computeSemiPrunedSSA();
+    print(cfg);
 
     for (final library in reachableLibraries) {
       for (final dec in library.declarations) {
@@ -572,7 +590,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       typeIds,
       //ctx.typeNames,
       _ctx.typeTypes,
-      _ctx.offsetTracker.apply(_ctx.out),
+      [ /* TODO ops */],
       libraryMapString,
       _ctx.bridgeStaticFunctionIndices,
       _ctx.constantPool.pool,
@@ -590,7 +608,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
 
     final ob = program.write();
 
-    return Runtime(ob.buffer.asByteData());
+    return Runtime(ob.buffer);
   }
 
   void _populateLookupTablesForDeclaration(

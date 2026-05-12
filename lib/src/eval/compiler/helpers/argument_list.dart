@@ -11,7 +11,15 @@ import '../type.dart';
 import '../util.dart';
 import '../variable.dart';
 
-Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
+class ArgumentListResult {
+  final List<String> ssa;
+  final List<Variable> args;
+  final Map<String, Variable> namedArgs;
+
+  ArgumentListResult(this.ssa, this.args, this.namedArgs);
+}
+
+ArgumentListResult compileArgumentList(
   CompilerContext ctx,
   ArgumentList argumentList,
   int decLibrary,
@@ -22,6 +30,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
   List<String> superParams = const [],
   AstNode? source,
 }) {
+  final ssa = <String>[];
   final args = <Variable>[];
   final push = <Variable>[];
   final namedArgs = <String, Variable>{};
@@ -61,6 +70,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
       } else {
         $null ??= BuiltinValue().push(ctx);
         push.add($null);
+        ssa.add($null.name!);
       }
     } else if (arg == null) {
       if (param.isRequired) {
@@ -69,39 +79,17 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
         // Default parameter values are handled at the call site
         $null ??= BuiltinValue().push(ctx);
         push.add($null);
+        ssa.add($null.name!);
       } else {
         $null ??= BuiltinValue().push(ctx);
         push.add($null);
+        ssa.add($null.name!);
       }
     } else {
-      var paramType = CoreTypes.dynamic.ref(ctx);
-      TypeAnnotation? typeAnnotation;
-      if (param is SimpleFormalParameter) {
-        typeAnnotation = param.type;
-      } else if (param is FieldFormalParameter) {
-        paramType = _resolveFieldFormalType(
-          ctx,
-          decLibrary,
-          param,
-          parameterHost,
-        );
-      } else if (param is SuperFormalParameter) {
-        paramType = resolveSuperFormalType(
-          ctx,
-          decLibrary,
-          param,
-          parameterHost,
-        );
-      } else if (param is DefaultFormalParameter) {
-        final p = param.parameter;
-        typeAnnotation = p is SimpleFormalParameter ? p.type : null;
-      } else {
-        throw CompileError('Unknown formal type ${param.runtimeType}');
-      }
-
-      if (typeAnnotation != null) {
-        paramType = TypeRef.fromAnnotation(ctx, decLibrary, typeAnnotation);
-      }
+      var (paramType, typeAnnotation) =
+          getFormalParameterType(ctx, param, decLibrary, parameterHost);
+      
+      paramType ??= CoreTypes.dynamic.ref(ctx);
 
       var arg0 = compileExpression(arg, ctx, paramType);
       if (parameterHost is MethodDeclaration ||
@@ -134,6 +122,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
         }
       }
 
+      ssa.add(arg0.name!);
       args.add(arg0);
       push.add(arg0);
     }
@@ -154,6 +143,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
       final V = ctx.lookupLocal(name)!;
       push.add(V);
       namedArgs[name] = V;
+      ssa.add(name);
       continue;
     }
     final param =
@@ -167,7 +157,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
         paramType = TypeRef.fromAnnotation(ctx, decLibrary, typeAnnotation);
       }
     } else if (param is FieldFormalParameter) {
-      paramType = _resolveFieldFormalType(
+      paramType = resolveFieldFormalType(
         ctx,
         decLibrary,
         param,
@@ -213,9 +203,11 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
 
       push.add(arg0);
       namedArgs[name] = arg0;
+      ssa.add(name);
     } else {
       $null ??= BuiltinValue().push(ctx);
       push.add($null);
+      ssa.add($null.name!);
     }
   }
 
@@ -226,15 +218,10 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentList(
     );
   }
 
-  for (final restArg in <Variable>[...before, ...push]) {
-    final argOp = PushArg.make(restArg.scopeFrameOffset);
-    ctx.pushOp(argOp, PushArg.LEN);
-  }
-
-  return Pair(args, namedArgs);
+  return ArgumentListResult(ssa, args, namedArgs);
 }
 
-Pair<List<Variable>, Map<String, Variable>> compileSuperParams(
+ArgumentListResult compileSuperParams(
   CompilerContext ctx,
   List<FormalParameter> fpl,
   Declaration parameterHost, {
@@ -242,6 +229,7 @@ Pair<List<Variable>, Map<String, Variable>> compileSuperParams(
   List<String> superParams = const [],
   AstNode? source,
 }) {
+  final ssa = <String>[];
   final args = <Variable>[];
   final push = <Variable>[];
   final namedArgs = <String, Variable>{};
@@ -265,12 +253,14 @@ Pair<List<Variable>, Map<String, Variable>> compileSuperParams(
       final V = ctx.lookupLocal(param.name!.lexeme)!;
       push.add(V);
       args.add(V);
+      ssa.add(V.name!);
     } else {
       if (param.isRequired) {
         throw CompileError('Not enough positional arguments');
       } else {
         $null ??= BuiltinValue().push(ctx);
         push.add($null);
+        ssa.add($null.name!);
       }
     }
   }
@@ -281,26 +271,24 @@ Pair<List<Variable>, Map<String, Variable>> compileSuperParams(
       final V = ctx.lookupLocal(name)!;
       push.add(V);
       namedArgs[name] = V;
+      ssa.add(name);
     } else {
       $null ??= BuiltinValue().push(ctx);
       push.add($null);
+      ssa.add($null.name!);
     }
   }
 
-  for (final restArg in <Variable>[...before, ...push]) {
-    final argOp = PushArg.make(restArg.scopeFrameOffset);
-    ctx.pushOp(argOp, PushArg.LEN);
-  }
-
-  return Pair(args, namedArgs);
+  return ArgumentListResult(ssa, args, namedArgs);
 }
 
-Pair<List<Variable>, Map<String, Variable>> compileSuperParamsWithBridge(
+ArgumentListResult compileSuperParamsWithBridge(
   CompilerContext ctx,
   BridgeFunctionDef function, {
   List<Variable> before = const [],
   List<String> superParams = const [],
 }) {
+  final ssa = <String>[];
   final args = <Variable>[];
   final push = <Variable>[];
   final namedArgs = <String, Variable>{};
@@ -313,10 +301,12 @@ Pair<List<Variable>, Map<String, Variable>> compileSuperParamsWithBridge(
       final V = ctx.lookupLocal(param.name)!;
       push.add(V);
       args.add(V);
+      ssa.add(V.name!);
     } else {
       if (param.optional) {
         $null ??= BuiltinValue().push(ctx);
         push.add($null);
+        ssa.add($null.name!);
       } else {
         throw CompileError('Not enough positional arguments');
       }
@@ -328,29 +318,27 @@ Pair<List<Variable>, Map<String, Variable>> compileSuperParamsWithBridge(
       final V = ctx.lookupLocal(param.name)!;
       push.add(V);
       namedArgs[param.name] = V;
+      ssa.add(param.name);
     } else {
       $null ??= BuiltinValue().push(ctx);
       push.add($null);
+      ssa.add($null.name!);
     }
   }
 
-  for (final restArg in <Variable>[...before, ...push]) {
-    final argOp = PushArg.make(restArg.scopeFrameOffset);
-    ctx.pushOp(argOp, PushArg.LEN);
-  }
-
-  return Pair(args, namedArgs);
+  return ArgumentListResult(ssa, args, namedArgs);
 }
 
 /// Best effort method to compile an argument list against a dynamic target.
 /// This will not always work, but it's better than nothing for simple cases.
-Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithDynamic(
+ArgumentListResult compileArgumentListWithDynamic(
   CompilerContext ctx,
   ArgumentList argumentList, {
   List<Variable> before = const [],
   Map<String, TypeRef> resolveGenerics = const {},
   AstNode? source,
 }) {
+  final ssa = <String>[];
   final args = <Variable>[];
   final push = <Variable>[];
   final namedArgs = <String, Variable>{};
@@ -382,18 +370,13 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithDynamic(
 
     args.add(arg0);
     push.add(arg0);
+    ssa.add(arg0.name!);
   }
 
-  for (final restArg in <Variable>[...before, ...push]) {
-    final argOp = PushArg.make(restArg.scopeFrameOffset);
-    ctx.pushOp(argOp, PushArg.LEN);
-  }
-
-  return Pair(args, namedArgs);
+  return ArgumentListResult(ssa, args, namedArgs);
 }
 
-Pair<List<Variable>, Map<String, Variable>>
-compileArgumentListWithKnownMethodArgs(
+ArgumentListResult compileArgumentListWithKnownMethodArgs(
   CompilerContext ctx,
   ArgumentList argumentList,
   List<KnownMethodArg> params,
@@ -401,6 +384,7 @@ compileArgumentListWithKnownMethodArgs(
   List<Variable> before = const [],
   AstNode? source,
 }) {
+  final ssa = <String>[];
   final args = <Variable>[];
   final push = <Variable>[];
   final namedArgs = <String, Variable>{};
@@ -440,6 +424,7 @@ compileArgumentListWithKnownMethodArgs(
       }
       args.add(arg0);
       push.add(arg0);
+      ssa.add(arg0.name!);
     }
 
     i++;
@@ -467,27 +452,25 @@ compileArgumentListWithKnownMethodArgs(
       }
       push.add(arg0);
       namedArgs[param.name] = arg0;
+      ssa.add(param.name);
     } else {
       $null ??= BuiltinValue().push(ctx);
       push.add($null);
+      ssa.add($null.name!);
     }
   }
 
-  for (final restArg in [...before, ...push]) {
-    final argOp = PushArg.make(restArg.scopeFrameOffset);
-    ctx.pushOp(argOp, PushArg.LEN);
-  }
-
-  return Pair(args, namedArgs);
+  return ArgumentListResult(ssa, args, namedArgs);
 }
 
-Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
+ArgumentListResult compileArgumentListWithBridge(
   CompilerContext ctx,
   ArgumentList argumentList,
   BridgeFunctionDef function, {
   List<Variable> before = const [],
   List<String> superParams = const [],
 }) {
+  final ssa = <String>[];
   final args = <Variable>[];
   final push = <Variable>[];
   final namedArgs = <String, Variable>{};
@@ -501,12 +484,14 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
       final V = ctx.lookupLocal(param.name)!;
       push.add(V);
       args.add(V);
+      ssa.add(V.name!);
       i++;
       continue;
     }
     if (param.optional && argumentList.arguments.length <= i) {
       $null ??= BuiltinValue().push(ctx);
       push.add($null);
+      ssa.add($null.name!);
       continue;
     }
     final arg = argumentList.arguments[i];
@@ -516,6 +501,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
       } else {
         $null ??= BuiltinValue().push(ctx);
         push.add($null);
+        ssa.add($null.name!);
       }
     } else {
       var paramType = TypeRef.fromBridgeAnnotation(ctx, param.type);
@@ -535,6 +521,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
       }
       args.add(arg0);
       push.add(arg0);
+      ssa.add(arg0.name!);
     }
 
     i++;
@@ -551,6 +538,7 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
       final V = ctx.lookupLocal(param.name)!;
       push.add(V);
       namedArgs[param.name] = V;
+      ssa.add(param.name);
     }
     var paramType = TypeRef.fromBridgeAnnotation(ctx, param.type);
     if (namedExpr.containsKey(param.name)) {
@@ -571,21 +559,18 @@ Pair<List<Variable>, Map<String, Variable>> compileArgumentListWithBridge(
       }
       push.add(arg0);
       namedArgs[param.name] = arg0;
+      ssa.add(param.name);
     } else {
       $null ??= BuiltinValue().push(ctx);
       push.add($null);
+      ssa.add($null.name!);
     }
   }
 
-  for (final restArg in [...before, ...push]) {
-    final argOp = PushArg.make(restArg.scopeFrameOffset);
-    ctx.pushOp(argOp, PushArg.LEN);
-  }
-
-  return Pair(args, namedArgs);
+  return ArgumentListResult(ssa, args, namedArgs);
 }
 
-TypeRef _resolveFieldFormalType(
+TypeRef resolveFieldFormalType(
   CompilerContext ctx,
   int decLibrary,
   FieldFormalParameter param,
@@ -655,7 +640,7 @@ TypeRef resolveSuperFormalType(
         }
         return TypeRef.fromAnnotation(ctx, $super.file, type0);
       } else if (param0 is FieldFormalParameter) {
-        return _resolveFieldFormalType(ctx, decLibrary, param0, cstr);
+        return resolveFieldFormalType(ctx, decLibrary, param0, cstr);
       } else if (param0 is SuperFormalParameter) {
         return resolveSuperFormalType(ctx, decLibrary, param0, cstr);
       } else {

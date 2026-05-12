@@ -3,6 +3,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
+import 'package:dart_eval/src/eval/ir/memory.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 import '../errors.dart';
@@ -55,12 +56,8 @@ void compileVariableDeclarationList(
           type0.isUnboxedAcrossFunctionBoundaries
               ? type0.copyWith(boxed: false)
               : type0,
-        );
-        ctx.pushOp(PushNull.make(), PushNull.LEN);
-        ctx.pushOp(
-          CopyValue.make(v.scopeFrameOffset, res.scopeFrameOffset),
-          CopyValue.LEN,
-        );
+        )..name = ctx.svar(li.name.lexeme).name;
+        ctx.pushOp(Assign(v.ssa, res.ssa));
         ctx.setLocal(li.name.lexeme, v);
       } else {
         ctx.setLocal(

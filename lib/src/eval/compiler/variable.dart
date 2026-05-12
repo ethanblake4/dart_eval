@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/collection/list.dart';
@@ -6,8 +7,10 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
+import 'package:dart_eval/src/eval/ir/objects.dart';
+import 'package:dart_eval/src/eval/ir/primitives.dart';
+import 'package:dart_eval/src/eval/ir/types.dart';
 
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'errors.dart';
 import 'offset_tracker.dart';
 
@@ -59,6 +62,37 @@ class Variable {
     );
   }
 
+    factory Variable.ssa(CompilerContext ctx, Operation op, TypeRef type,
+      {DeferredOrOffset? methodOffset,
+      ReturnType? methodReturnType,
+      bool isFinal = false,
+      List<TypeRef> concreteTypes = const [],
+      CallingConvention callingConvention = CallingConvention.static}) {
+    ctx.pushOp(op);
+    return Variable(-1, type,
+        methodOffset: methodOffset,
+        methodReturnType: methodReturnType,
+        isFinal: isFinal,
+        concreteTypes: concreteTypes,
+        callingConvention: callingConvention)
+      ..name = op.writesTo!.name;
+  }
+
+  factory Variable.of(CompilerContext ctx, SSA ssa, TypeRef type,
+      {DeferredOrOffset? methodOffset,
+      ReturnType? methodReturnType,
+      bool isFinal = false,
+      List<TypeRef> concreteTypes = const [],
+      CallingConvention callingConvention = CallingConvention.static}) {
+    return Variable(-1, type,
+        methodOffset: methodOffset,
+        methodReturnType: methodReturnType,
+        isFinal: isFinal,
+        concreteTypes: concreteTypes,
+        callingConvention: callingConvention)
+      ..name = ssa.name;
+  }
+
   final int scopeFrameOffset;
   final TypeRef type;
   final List<TypeRef> concreteTypes;
@@ -76,6 +110,8 @@ class Variable {
   String? name;
   int? frameIndex;
 
+  SSA get ssa => SSA(name!);
+
   /// Boxes the variable, if it isn't yet. Does nothing with a dynamic
   /// type. Pushes a proper operator to box this value on the frame, and
   /// returns this instance with the type marked as boxed.
@@ -90,29 +126,31 @@ class Variable {
       return copyWith(type: type.copyWith(boxed: true));
     }
 
+    final result = ctx.svar('boxed_${name ?? 'result'}');
+
     Variable v2 = this;
 
     if (type == CoreTypes.int.ref(ctx)) {
-      ctx.pushOp(BoxInt.make(scopeFrameOffset), BoxInt.LEN);
+      ctx.pushOp(BoxInt(result, ssa));
     } else if (type == CoreTypes.num.ref(ctx)) {
-      ctx.pushOp(BoxNum.make(scopeFrameOffset), BoxNum.LEN);
+      ctx.pushOp(BoxNum(result, ssa));
     } else if (type == CoreTypes.double.ref(ctx)) {
-      ctx.pushOp(BoxDouble.make(scopeFrameOffset), BoxDouble.LEN);
+      ctx.pushOp(BoxDouble(result, ssa));
     } else if (type == CoreTypes.bool.ref(ctx)) {
-      ctx.pushOp(BoxBool.make(scopeFrameOffset), BoxBool.LEN);
+      ctx.pushOp(BoxBool(result, ssa));
     } else if (type == CoreTypes.list.ref(ctx)) {
       if (!type.specifiedTypeArgs[0].boxed) {
         v2 = boxListContents(ctx, this);
       }
-      ctx.pushOp(BoxList.make(v2.scopeFrameOffset), BoxList.LEN);
+      ctx.pushOp(BoxList(result, v2.ssa));
     } else if (type == CoreTypes.map.ref(ctx)) {
-      ctx.pushOp(BoxMap.make(scopeFrameOffset), BoxMap.LEN);
-    } else if (type == CoreTypes.set.ref(ctx)) {
-      ctx.pushOp(BoxSet.make(scopeFrameOffset), BoxSet.LEN);
-    } else if (type == CoreTypes.string.ref(ctx)) {
-      ctx.pushOp(BoxString.make(scopeFrameOffset), BoxString.LEN);
+      ctx.pushOp(BoxMap(result, ssa));
+    } /*else if (type == CoreTypes.set.ref(ctx)) {
+      ctx.pushOp(BoxSet(result, ssa));
+    }*/ else if (type == CoreTypes.string.ref(ctx)) {
+      ctx.pushOp(BoxString(result, ssa));
     } else if (type == CoreTypes.nullType.ref(ctx)) {
-      ctx.pushOp(BoxNull.make(scopeFrameOffset), BoxNull.LEN);
+      ctx.pushOp(BoxNull(result));
     } else {
       throw CompileError('Cannot box $type', source);
     }
@@ -125,15 +163,15 @@ class Variable {
   ///
   /// By default updates the variable in the context locals.
   /// Set [update] to false if that's not desired.
-  Variable unboxIfNeeded(ScopeContext ctx, [bool update = true]) {
+  Variable unboxIfNeeded(CompilerContext ctx, [bool update = true]) {
     if (!boxed) {
       return this;
     }
-    ctx.pushOp(Unbox.make(scopeFrameOffset), Unbox.LEN);
-    if (!update) {
-      return copyWith(type: type.copyWith(boxed: false));
+    if (update) {
+      copyWithUpdate(ctx, type: type.copyWith(boxed: false));
     }
-    return copyWithUpdate(ctx, type: type.copyWith(boxed: false));
+    return Variable.ssa(ctx, Unbox(ctx.svar(name ?? 'unboxed'), ssa),
+        type.copyWith(boxed: false));
   }
 
   /// Returns a variable with the same name from the context locals.
@@ -145,9 +183,6 @@ class Variable {
     }
     return ctx.lookupLocal(name!) ?? this;
   }
-
-  void pushArg(CompilerContext ctx) =>
-      ctx.pushOp(PushArg.make(scopeFrameOffset), PushArg.LEN);
 
   /// Makes a copy of the variable with some fields updated.
   Variable copyWith({
@@ -220,14 +255,13 @@ class Variable {
     if (name == 'runtimeType') {
       if (concreteTypes.isNotEmpty) {
         final concrete = concreteTypes[0];
-        ctx.pushOp(
-          PushConstantType.make(concrete.toRuntimeType(ctx).type),
-          PushConstantType.LEN,
-        );
-        return Variable.alloc(ctx, CoreTypes.type.ref(ctx));
+        return Variable.ssa(
+            ctx,
+            LoadConstantType(
+                ctx.svar('var_type'), concrete.toRuntimeType(ctx).type),
+            CoreTypes.type.ref(ctx));
       }
-      ctx.pushOp(PushRuntimeType.make(scopeFrameOffset), PushRuntimeType.LEN);
-      return Variable.alloc(ctx, CoreTypes.type.ref(ctx));
+      return Variable.ssa(ctx, LoadRuntimeType(ctx.svar('runtime_type'), ssa), CoreTypes.type.ref(ctx));
     }
     final fieldType =
         TypeRef.lookupFieldType(
@@ -252,23 +286,13 @@ class Variable {
           className: actualType.name,
           name: name,
         );
-        final op = PushObjectPropertyImpl.make(
-          scopeFrameOffset,
-          offset.offset ?? -1,
-        );
-        final loc = ctx.pushOp(op, PushObjectPropertyImpl.length);
-        ctx.offsetTracker.setOffset(loc, offset);
-        return Variable.alloc(ctx, fieldType);
+        // TODO offset should be a DeferredOrOffset
+        return Variable.ssa(
+            ctx, LoadPropertyStatic(ctx.svar(name), ssa, offset.offset!), type);
       }
     }
-    final op = PushObjectProperty.make(
-      scopeFrameOffset,
-      ctx.constantPool.addOrGet(name),
-    );
-    ctx.pushOp(op, PushObjectProperty.len(op));
-
-    ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-    return Variable.alloc(ctx, fieldType);
+    return Variable.ssa(
+        ctx, LoadPropertyDynamic(ctx.svar(name), ssa, name), fieldType);
   }
 
   static List<Variable> boxUnboxMultiple(

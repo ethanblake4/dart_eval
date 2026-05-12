@@ -4,9 +4,16 @@ import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
+import 'package:dart_eval/src/eval/ir/primitives.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
+import 'package:dart_eval/src/eval/ir/bridge.dart';
+import 'package:dart_eval/src/eval/ir/collection.dart';
+import 'package:dart_eval/src/eval/ir/globals.dart';
+import 'package:dart_eval/src/eval/ir/memory.dart';
+import 'package:dart_eval/src/eval/ir/objects.dart';
 import 'package:dart_eval/src/eval/compiler/expression/identifier.dart';
 import 'package:dart_eval/src/eval/compiler/offset_tracker.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -133,10 +140,7 @@ class IdentifierReference implements Reference {
         final formattedValue = type.boxed
             ? value.boxIfNeeded(ctx, source)
             : value.unboxIfNeeded(ctx);
-        ctx.pushOp(
-          SetGlobal.make(gIndex, formattedValue.scopeFrameOffset),
-          SetGlobal.LEN,
-        );
+        ctx.pushOp(SetGlobal(gIndex, formattedValue.ssa));
         return formattedValue;
       }
       object = object!.boxIfNeeded(ctx, source);
@@ -156,12 +160,8 @@ class IdentifierReference implements Reference {
         );
       }
       final val = value.boxIfNeeded(ctx, source);
-      final op = SetObjectProperty.make(
-        object!.scopeFrameOffset,
-        name,
-        val.scopeFrameOffset,
-      );
-      ctx.pushOp(op, SetObjectProperty.len(op));
+      final op = SetPropertyDynamic(object!.ssa, name, val.ssa);
+      ctx.pushOp(op);
       return val;
     }
 
@@ -179,10 +179,7 @@ class IdentifierReference implements Reference {
         return local.frameRef!.setValue(ctx, value);
       }
 
-      ctx.pushOp(
-        CopyValue.make(local.scopeFrameOffset, value.scopeFrameOffset),
-        CopyValue.LEN,
-      );
+      ctx.pushOp(Assign(local.ssa, value.ssa));
       final type = TypeRef.commonBaseType(ctx, {local.type, value.type});
       local.copyWithUpdate(
         ctx,
@@ -218,12 +215,12 @@ class IdentifierReference implements Reference {
           );
         }
         final $this = ctx.lookupLocal('#this')!;
-        final op = SetObjectProperty.make(
-          $this.scopeFrameOffset,
+        final op = SetPropertyDynamic(
+          $this.ssa,
           name,
-          value.boxIfNeeded(ctx, source).scopeFrameOffset,
+          value.boxIfNeeded(ctx, source).ssa,
         );
-        ctx.pushOp(op, SetObjectProperty.len(op));
+        ctx.pushOp(op);
         return value;
       }
     }
@@ -242,7 +239,7 @@ class IdentifierReference implements Reference {
           ctx.topLevelGlobalIndices[declarationValue.sourceLib]![decl
               .name
               .lexeme]!;
-      ctx.pushOp(SetGlobal.make(gIndex, value.scopeFrameOffset), SetGlobal.LEN);
+      ctx.pushOp(SetGlobal(gIndex, value.ssa));
       return value;
     }
 
@@ -270,9 +267,7 @@ class IdentifierReference implements Reference {
           final gIndex =
               ctx.enumValueIndices[classType.file]?[type.name]?[name];
           if (gIndex != null) {
-            ctx.pushOp(LoadGlobal.make(gIndex), LoadGlobal.LEN);
-            ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-            return Variable.alloc(ctx, type);
+            return Variable.ssa(ctx, LoadGlobal(ctx.svar(name), gIndex), type);
           }
         }
         final decOrBridge =
@@ -286,28 +281,30 @@ class IdentifierReference implements Reference {
                 ctx,
                 getter.functionDescriptor.returns,
               );
-              ctx.pushOp(
-                InvokeExternal.make(
+              return Variable.ssa(
+                ctx,
+                InvokeExternal(
+                  ctx.svar(name),
                   ctx.bridgeStaticFunctionIndices[classType
                       .file]!['${classType.name}.$name*g']!,
+                  [],
                 ),
-                InvokeExternal.LEN,
+                getterType,
               );
-              ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-              return Variable.alloc(ctx, getterType);
             }
             final field = br.fields[name];
             if (field != null) {
               final fieldType = TypeRef.fromBridgeAnnotation(ctx, field.type);
-              ctx.pushOp(
-                InvokeExternal.make(
+              return Variable.ssa(
+                ctx,
+                InvokeExternal(
+                  ctx.svar(name),
                   ctx.bridgeStaticFunctionIndices[classType
                       .file]!['${classType.name}.$name*g']!,
+                  [],
                 ),
-                InvokeExternal.LEN,
+                fieldType,
               );
-              ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-              return Variable.alloc(ctx, fieldType);
             }
 
             throw CompileError(
@@ -332,9 +329,7 @@ class IdentifierReference implements Reference {
         }
 
         final gIndex = ctx.topLevelGlobalIndices[classType.file]![fqName]!;
-        ctx.pushOp(LoadGlobal.make(gIndex), LoadGlobal.LEN);
-        ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-        return Variable.alloc(ctx, type);
+        return Variable.ssa(ctx, LoadGlobal(ctx.svar(name), gIndex), type);
       }
       object = object!.boxIfNeeded(ctx, source);
       return object!.getProperty(ctx, name);
@@ -379,12 +374,8 @@ class IdentifierReference implements Reference {
           }
         }
 
-        final op = PushObjectProperty.make(
-          $this.scopeFrameOffset,
-          ctx.constantPool.addOrGet(name),
-        );
-        ctx.pushOp(op, PushObjectProperty.len(op));
-        ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
+        final resvar = ctx.svar(name);
+        ctx.pushOp(LoadPropertyDynamic(resvar, $this.ssa, name));
 
         if (decOrBridge.isBridge) {
           if (decOrBridge is GetSet) {
@@ -394,8 +385,9 @@ class IdentifierReference implements Reference {
                   'Property "$name" has a setter but no getter, so it cannot be accessed',
                   source,
                 ));
-            return Variable.alloc(
+            return Variable.of(
               ctx,
+              resvar,
               TypeRef.fromBridgeAnnotation(
                 ctx,
                 getter.functionDescriptor.returns,
@@ -422,8 +414,9 @@ class IdentifierReference implements Reference {
             );
           }
           if (bridge is BridgeFieldDef) {
-            return Variable.alloc(
+            return Variable.of(
               ctx,
+              resvar,
               TypeRef.fromBridgeAnnotation(
                 ctx,
                 bridge.type,
@@ -475,10 +468,11 @@ class IdentifierReference implements Reference {
               '${ctx.currentClass!.name.lexeme}.${staticDec.name.lexeme}';
           final type = ctx.topLevelVariableInferredTypes[ctx.library]![name]!;
           final gIndex = ctx.topLevelGlobalIndices[ctx.library]![name]!;
-          ctx.pushOp(LoadGlobal.make(gIndex), LoadGlobal.LEN);
-          ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-
-          return Variable.alloc(ctx, type);
+          return Variable.ssa(
+            ctx,
+            LoadGlobal(ctx.svar(staticDec.name.lexeme), gIndex),
+            type,
+          );
         }
       }
     }
@@ -650,14 +644,14 @@ class IndexedReference implements Reference {
 
       final list = _variable.unboxIfNeeded(ctx);
       _index = _index.unboxIfNeeded(ctx);
-      ctx.pushOp(
-        IndexList.make(list.scopeFrameOffset, _index.scopeFrameOffset),
-        IndexList.LEN,
-      );
       final listElementType = _variable.type.specifiedTypeArgs.isNotEmpty
           ? _variable.type.specifiedTypeArgs[0]
           : CoreTypes.dynamic.ref(ctx);
-      return Variable.alloc(ctx, listElementType);
+      return Variable.ssa(
+        ctx,
+        IndexList(ctx.svar('list'), list.ssa, _index.ssa),
+        listElementType,
+      );
     }
 
     if (_variable.type.isAssignableTo(
@@ -682,23 +676,23 @@ class IndexedReference implements Reference {
               _variable.type.specifiedTypeArgs[0].boxed)
           ? _index.boxIfNeeded(ctx, source)
           : _index.unboxIfNeeded(ctx);
-      ctx.pushOp(
-        IndexMap.make(map.scopeFrameOffset, _index.scopeFrameOffset),
-        IndexMap.LEN,
-      );
 
-      final mapResult = Variable.alloc(
+      final mapType = _variable.type.specifiedTypeArgs.length < 2
+          ? CoreTypes.dynamic.ref(ctx)
+          : _variable.type.specifiedTypeArgs[1];
+
+      final mapResult = Variable.ssa(
         ctx,
-        _variable.type.specifiedTypeArgs.length < 2
-            ? CoreTypes.dynamic.ref(ctx)
-            : _variable.type.specifiedTypeArgs[1],
+        IndexMap(ctx.svar('map'), map.ssa, _index.ssa),
+        mapType,
       );
 
       if (_variable.type.specifiedTypeArgs.isEmpty ||
           _variable.type.specifiedTypeArgs[1].boxed) {
-        ctx.pushOp(
-          MaybeBoxNull.make(mapResult.scopeFrameOffset),
-          MaybeBoxNull.LEN,
+        return Variable.ssa(
+          ctx,
+          MaybeBoxNull(ctx.svar('map'), mapResult.ssa),
+          mapType,
         );
       }
 
@@ -733,14 +727,7 @@ class IndexedReference implements Reference {
       } else {
         formattedValue = formattedValue.unboxIfNeeded(ctx);
       }
-      ctx.pushOp(
-        ListSetIndexed.make(
-          list.scopeFrameOffset,
-          _index.scopeFrameOffset,
-          value.scopeFrameOffset,
-        ),
-        IndexList.LEN,
-      );
+      ctx.pushOp(ListSet(list.ssa, _index.ssa, value.ssa));
       return formattedValue;
     }
 
@@ -825,10 +812,12 @@ Variable _declarationToVariable(
     }
     final gIndex =
         ctx.topLevelGlobalIndices[decOrBridge.sourceLib]![decl.name.lexeme]!;
-    ctx.pushOp(LoadGlobal.make(gIndex), LoadGlobal.LEN);
-    ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
 
-    return Variable.alloc(ctx, type);
+    return Variable.ssa(
+      ctx,
+      LoadGlobal(ctx.svar(decl.name.lexeme), gIndex),
+      type,
+    );
   }
 
   if (decl is! FunctionDeclaration && decl is! ConstructorDeclaration) {
@@ -839,20 +828,10 @@ Variable _declarationToVariable(
       decOrBridge.sourceLib,
       decl,
     );
-    final DeferredOrOffset offset;
-
-    if (ctx.topLevelDeclarationPositions[decOrBridge.sourceLib]?.containsKey(
-          '$name.',
-        ) ??
-        false) {
-      offset = DeferredOrOffset(
-        file: decOrBridge.sourceLib,
-        offset:
-            ctx.topLevelDeclarationPositions[decOrBridge.sourceLib]!['$name.'],
-      );
-    } else {
-      offset = DeferredOrOffset(file: decOrBridge.sourceLib, name: '$name.');
-    }
+    final offset = DeferredOrOffset(
+      file: decOrBridge.sourceLib,
+      name: '$name.',
+    );
 
     return Variable(
       -1,
@@ -886,22 +865,7 @@ Variable _declarationToVariable(
     );
   }
 
-  final DeferredOrOffset offset;
-  if (ctx.topLevelDeclarationsMap[decOrBridge.sourceLib]?.containsKey(name) ??
-      false) {
-    offset = DeferredOrOffset(file: decOrBridge.sourceLib, name: name);
-  } else {
-    final cls = decl.parent;
-    String? className;
-    if (cls is NamedCompilationUnitMember) {
-      className = cls.name.lexeme;
-    }
-    offset = DeferredOrOffset(
-      file: decOrBridge.sourceLib,
-      name: name,
-      className: className,
-    );
-  }
+  final offset = DeferredOrOffset(file: decOrBridge.sourceLib, name: name);
 
   final fn = Variable(
     -1,
@@ -935,20 +899,7 @@ StaticDispatch? _declarationToStaticDispatch(
   if (decl is! FunctionDeclaration && decl is! ConstructorDeclaration) {
     decl as ClassDeclaration;
 
-    final DeferredOrOffset offset;
-
-    if (ctx.topLevelDeclarationPositions[decOrBridge.sourceLib]?.containsKey(
-          '$name.',
-        ) ??
-        false) {
-      offset = DeferredOrOffset(
-        file: decOrBridge.sourceLib,
-        offset:
-            ctx.topLevelDeclarationPositions[decOrBridge.sourceLib]!['$name.'],
-      );
-    } else {
-      offset = DeferredOrOffset(file: decOrBridge.sourceLib, name: '$name.');
-    }
+    final offset = DeferredOrOffset(file: decOrBridge.sourceLib, name: '$name.');
 
     final rt = AlwaysReturnType(
       TypeRef.lookupDeclaration(ctx, decOrBridge.sourceLib, decl),
@@ -975,18 +926,7 @@ StaticDispatch? _declarationToStaticDispatch(
     );
   }
 
-  final DeferredOrOffset offset;
-  if (ctx.topLevelDeclarationPositions[decOrBridge.sourceLib]?.containsKey(
-        name,
-      ) ??
-      false) {
-    offset = DeferredOrOffset(
-      file: decOrBridge.sourceLib,
-      offset: ctx.topLevelDeclarationPositions[ctx.library]![name],
-    );
-  } else {
-    offset = DeferredOrOffset(file: decOrBridge.sourceLib, name: name);
-  }
+  final offset = DeferredOrOffset(file: decOrBridge.sourceLib, name: name);
 
   return StaticDispatch(offset, AlwaysReturnType(returnType, nullable));
 }

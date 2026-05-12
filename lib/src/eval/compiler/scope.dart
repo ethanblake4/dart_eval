@@ -2,34 +2,42 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/ir/bridge.dart';
 import 'context.dart';
 
-int beginMethod(
+void beginMethod(
   CompilerContext ctx,
   AstNode scopeHost,
   int offset,
-  String name,
-) {
-  final position = ctx.out.length;
-  var op = PushScope.make(ctx.library, offset, name);
-  ctx.pushOp(op, PushScope.len(op));
-  return position;
+  String name, [
+  bool isRoot = false,
+]) {
+  if (ctx.hasBegunMethod) {
+    final methodBlock = ctx.commitBlock();
+    if (ctx.entrypoint) {
+      ctx.builder = ctx.builder.merge(methodBlock).root;
+    } else {
+      ctx.builder = ctx.builder.float(methodBlock).root;
+    }
+  }
+  ctx.funcLabel = name;
+  ctx.entrypoint = ctx.entrypoints.contains(scopeHost);
+  ctx.hasBegunMethod = true;
 }
 
 void setupAsyncFunction(CompilerContext ctx) {
-  ctx.pushOp(
-    InvokeExternal.make(
-      ctx.bridgeStaticFunctionIndices[ctx
-          .libraryMap['dart:async']!]!['Completer.']!,
-    ),
-    InvokeExternal.LEN,
-  );
-  ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
   ctx.setLocal(
     '#completer',
-    Variable.alloc(ctx, AsyncTypes.completer.ref(ctx)),
+    Variable.ssa(
+      ctx,
+      InvokeExternal(
+        ctx.svar('#completer'),
+        ctx.bridgeStaticFunctionIndices[ctx
+            .libraryMap['dart:async']!]!['Completer.']!,
+        [],
+      ),
+      AsyncTypes.completer.ref(ctx),
+    ),
   );
   ctx.nearestAsyncFrame = ctx.locals.length - 1;
 }

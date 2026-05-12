@@ -2,6 +2,7 @@
 
 part of '../runtime.dart';
 
+/*
 /// Static call opcode that jumps to another location in the program and adds the prior location to the call stack.
 class Call implements EvcOp {
   Call(Runtime runtime) : _offset = runtime._readInt32();
@@ -494,3 +495,4 @@ class PushReturnFromCatch implements EvcOp {
   @override
   String toString() => 'PushReturnFromCatch ()';
 }
+*/

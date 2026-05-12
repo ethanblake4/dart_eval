@@ -1,7 +1,7 @@
 // ignore_for_file: constant_identifier_names
 
 part of '../runtime.dart';
-
+/*
 /// Appends an unboxed value from [Runtime.constantPool] at the given index
 /// to the runtime frame. Those constants are collected at compile time
 /// with [ConstantPool] in [CompilerContext.constantPool] and stored as a list
@@ -717,3 +717,4 @@ class PushRecord implements EvcOp {
   @override
   String toString() => 'PushRecord (L$_fields, C$_const)';
 }
+*/
