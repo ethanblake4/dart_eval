@@ -66,6 +66,12 @@ extension Invoke on Variable {
         CheckEq.LEN,
       );
     } else {
+      final isInstanceClass = type != CoreTypes.dynamic.ref(ctx) &&
+          ctx.topLevelDeclarationsMap[type.file]?[type.name]?.isBridge == false;
+
+      if (isInstanceClass) {
+        ctx.pushOp(PushArg.make($this.scopeFrameOffset), PushArg.LEN);
+      }
       for (final invokeArg in args0) {
         ctx.pushOp(PushArg.make(invokeArg.scopeFrameOffset), PushArg.LEN);
       }
@@ -73,6 +79,7 @@ extension Invoke on Variable {
       final invokeOp = InvokeDynamic.make(
         $this.scopeFrameOffset,
         ctx.constantPool.addOrGet(method),
+        hasReceiver: isInstanceClass,
       );
       ctx.pushOp(invokeOp, InvokeDynamic.len(invokeOp));
     }

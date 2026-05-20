@@ -90,5 +90,62 @@ void main() {
         $int(2),
       ]);
     }, skip: true);
+
+    test('operator [] dispatches to the correct receiver', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'operator_test': {
+          'main.dart': '''
+            class A {
+              final List<String> _items;
+              A() : _items = ['a', 'b', 'c'];
+
+              String operator [](int i) => _items[i];
+            }
+
+            void main() {
+              final a = A();
+              print(a[0]);
+              print(a[2]);
+            }
+          ''',
+        },
+      });
+
+      expect(
+        () => runtime.executeLib('package:operator_test/main.dart', 'main'),
+        prints('a\nc\n'),
+      );
+    });
+
+    test('custom class operators dispatch to the correct receiver', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'operator_test': {
+          'main.dart': '''
+            class A {
+              final int v;
+              A(this.v);
+              A operator +(A o) => A(v + o.v);
+              A operator *(A o) => A(v * o.v);
+              A operator /(A o) => A(v ~/ o.v);
+              A operator %(A o) => A(v % o.v);
+            }
+
+            void main() {
+              final a = A(10);
+              final b = A(3);
+              print((a + b).v);
+              print((a * b).v);
+              print((a / b).v);
+              print((a % b).v);
+            }
+          ''',
+        },
+      });
+
+      expect(
+        () => runtime.executeLib('package:operator_test/main.dart', 'main'),
+        prints('13\n30\n3\n1\n'),
+      );
+    });
   });
 }
