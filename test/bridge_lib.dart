@@ -157,6 +157,94 @@ class $TestClass extends TestClass with $Bridge {
   set someNumber(int someNumber) => $_set('someNumber', $int(someNumber));
 }
 
+abstract class AbstractTestClass {
+  AbstractTestClass(this.baseValue);
+
+  final int baseValue;
+
+  int compute(int input);
+}
+
+class $AbstractTestClass$bridge extends AbstractTestClass with $Bridge {
+  $AbstractTestClass$bridge(super.baseValue);
+
+  static $AbstractTestClass$bridge $construct(
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) => $AbstractTestClass$bridge(args[0]!.$value);
+
+  static const $type = BridgeTypeRef(
+    BridgeTypeSpec('package:bridge_lib/bridge_lib.dart', 'AbstractTestClass'),
+  );
+
+  static const $declaration = BridgeClassDef(
+    BridgeClassType($type, isAbstract: true),
+    constructors: {
+      '': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          params: [
+            BridgeParameter(
+              'baseValue',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              false,
+            ),
+          ],
+          namedParams: [],
+        ),
+      ),
+    },
+    methods: {
+      'compute': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+          params: [
+            BridgeParameter(
+              'input',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              false,
+            ),
+          ],
+          namedParams: [],
+        ),
+      ),
+    },
+    getters: {},
+    setters: {},
+    fields: {
+      'baseValue': BridgeFieldDef(
+        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+      ),
+    },
+    bridge: true,
+  );
+
+  @override
+  $Value? $bridgeGet(String identifier) {
+    switch (identifier) {
+      case 'baseValue':
+        return $int(super.baseValue);
+    }
+    throw UnimplementedError(
+      'Cannot get property "$identifier" on abstract class AbstractTestClass',
+    );
+  }
+
+  @override
+  void $bridgeSet(String identifier, $Value value) {
+    throw UnimplementedError(
+      'Cannot set property "$identifier" on abstract class AbstractTestClass',
+    );
+  }
+
+  @override
+  int compute(int input) => $_invoke('compute', [$int(input)]);
+
+  @override
+  int get baseValue => $_get('baseValue');
+}
+
 enum TestEnum { one, two, three }
 
 class $TestEnum implements $Instance {

@@ -11,7 +11,9 @@ String $constructors(
 }) {
   return element.constructors
       .where(
-        (cstr) => !cstr.isPrivate && (cstr.isFactory || !element.isAbstract),
+        (cstr) =>
+            !cstr.isPrivate &&
+            (cstr.isFactory || !element.isAbstract || isBridge),
       )
       .map((e) => _$constructor(ctx, element, e, isBridge: isBridge))
       .join('\n');

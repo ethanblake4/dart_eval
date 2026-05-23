@@ -366,6 +366,130 @@ void main() {
       expect(caughtException.toString(), contains('Bridge error'));
     });
 
+    test('Subclassing an abstract bridge class in the runtime', () {
+      compiler.defineBridgeClasses([
+        $TestClass.$declaration,
+        $AbstractTestClass$bridge.$declaration,
+      ]);
+
+      final program = compiler.compile({
+        'example': {
+          'main.dart': '''
+            import 'package:bridge_lib/bridge_lib.dart';
+
+            class MyAbstractSub extends AbstractTestClass {
+              MyAbstractSub(int baseValue) : super(baseValue);
+
+              @override
+              int compute(int input) {
+                return baseValue + input * 2;
+              }
+            }
+
+            int main() {
+              final instance = MyAbstractSub(10);
+              return instance.compute(5);
+            }
+          ''',
+        },
+      });
+
+      final runtime = Runtime.ofProgram(program);
+
+      runtime.registerBridgeFunc(
+        'package:bridge_lib/bridge_lib.dart',
+        'AbstractTestClass.',
+        $AbstractTestClass$bridge.$construct,
+        isBridge: true,
+      );
+
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 20);
+    });
+
+    test('Subclassing an abstract bridge class with required super params', () {
+      compiler.defineBridgeClasses([
+        $TestClass.$declaration,
+        $AbstractTestClass$bridge.$declaration,
+      ]);
+
+      final program = compiler.compile({
+        'example': {
+          'main.dart': '''
+            import 'package:bridge_lib/bridge_lib.dart';
+
+            class MultiplierSub extends AbstractTestClass {
+              final int multiplier;
+
+              MultiplierSub({required int baseValue, required this.multiplier})
+                  : super(baseValue);
+
+              @override
+              int compute(int input) {
+                return baseValue * multiplier + input;
+              }
+            }
+
+            int main() {
+              final instance = MultiplierSub(baseValue: 5, multiplier: 3);
+              return instance.compute(7);
+            }
+          ''',
+        },
+      });
+
+      final runtime = Runtime.ofProgram(program);
+
+      runtime.registerBridgeFunc(
+        'package:bridge_lib/bridge_lib.dart',
+        'AbstractTestClass.',
+        $AbstractTestClass$bridge.$construct,
+        isBridge: true,
+      );
+
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 22);
+    });
+
+    test('Subclassing an abstract bridge class and using from outside', () {
+      compiler.defineBridgeClasses([
+        $AbstractTestClass$bridge.$declaration,
+      ]);
+
+      final program = compiler.compile({
+        'example': {
+          'main.dart': '''
+            import 'package:bridge_lib/bridge_lib.dart';
+
+            class DoublerSub extends AbstractTestClass {
+              DoublerSub(int baseValue) : super(baseValue);
+
+              @override
+              int compute(int input) {
+                return input * 2 + baseValue;
+              }
+            }
+
+            AbstractTestClass main() {
+              return DoublerSub(100);
+            }
+          ''',
+        },
+      });
+
+      final runtime = Runtime.ofProgram(program);
+
+      runtime.registerBridgeFunc(
+        'package:bridge_lib/bridge_lib.dart',
+        'AbstractTestClass.',
+        $AbstractTestClass$bridge.$construct,
+        isBridge: true,
+      );
+
+      final res = runtime.executeLib('package:example/main.dart', 'main');
+
+      expect(res is AbstractTestClass, true);
+      expect((res as AbstractTestClass).compute(3), 106);
+    });
+
     test('Void async function in a subclassed bridge class', () async {
       compiler.defineBridgeClasses([$TestClass.$declaration]);
 
