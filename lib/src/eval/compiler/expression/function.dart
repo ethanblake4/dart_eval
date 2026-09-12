@@ -46,7 +46,7 @@ Variable compileFunctionExpression(
   ctx.resetStack();
   ctx.locals = [];
   ctx.nearestAsyncFrame = -1;
-  final existingAllocs = 1 + (e.parameters?.parameters.length ?? 0);
+  final existingAllocs = e.parameters?.parameters.length ?? 0;
   ctx.beginAllocScope(existingAllocLen: existingAllocs, closure: true);
   var captureIndex = 0;
   for (final capture in captures.entries) {
@@ -102,7 +102,7 @@ Variable compileFunctionExpression(
         type = fType.type!;
       }
     }
-    vRep = Variable.of(ctx, SSA('arg_${i + 1}'), type.copyWith(boxed: true));
+    vRep = Variable.of(ctx, SSA('arg_$i'), type.copyWith(boxed: true));
 
     ctx.setLocal(p.name!.lexeme, vRep);
 

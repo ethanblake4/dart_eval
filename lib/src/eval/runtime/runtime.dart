@@ -1,5 +1,8 @@
+import 'package:dart_eval/src/eval/runtime/ops/register_ops.dart';
+import 'package:dart_eval/src/eval/runtime/record.dart';
+import 'package:dart_eval/src/eval/runtime/class.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/type.dart';
 import 'dart:async';
-import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -21,7 +24,8 @@ import 'package:dart_eval/stdlib/core.dart';
 import 'package:dart_eval/src/eval/runtime/type.dart';
 
 import 'exception.dart';
-import 'ops/all_ops.dart';
+
+part 'register_machine.dart';
 
 part 'ops/primitives.dart';
 
@@ -36,8 +40,11 @@ part 'ops/bridge.dart';
 typedef TypeAutowrapper = $Value? Function(dynamic);
 
 class ScopeFrame {
-  const ScopeFrame(this.stackOffset, this.scopeStackOffset,
-      [this.entrypoint = false]);
+  const ScopeFrame(
+    this.stackOffset,
+    this.scopeStackOffset, [
+    this.entrypoint = false,
+  ]);
 
   final int stackOffset;
   final int scopeStackOffset;
@@ -84,346 +91,56 @@ class _UnloadedEnumValues {
 ///
 class Runtime {
   /// The current runtime version code
-  static const int versionCode = 100;
+  static const int versionCode = 101;
 
   /// Construct a runtime from an XEVC buffer. When possible, use the
   /// [Runtime.ofProgram] constructor instead to reduce loading time.
-  Runtime(this._buffer)
-      : id = _id++,
-        _fromEvc = true;
+  Runtime(this._buffer) : id = _id++, _fromEvc = true;
 
   static $Value? _fn(Runtime rt, $Value? target, List<$Value?> args) {
     throw UnimplementedError(
-        'Tried to invoke a nonexistent external function; did you forget to add it with registerBridgeFunc()?');
+      'Tried to invoke a nonexistent external function; did you forget to add it with registerBridgeFunc()?',
+    );
   }
 
   static const _defaultFunction = $Function(_fn);
 
   /// Create a [Runtime] from a [Program]. This constructor should be preferred
   /// where possible as it avoids overhead of loading bytecode.
-  Runtime.ofProgram(Program program)
-      : id = _id++,
-        _fromEvc = false,
-        _typeTypes = program.typeTypes,
-        //typeNames = program.typeNames,
-        typeIds = program.typeIds,
-        _runtimeTypes = program.runtimeTypes,
-        _libraryMap = program.bridgeLibraryMappings,
-        _externalFunctionMap = program.bridgeFunctionMappings,
-        _bridgeEnumMappings = program.enumMappings,
-        _globalInitializers = program.globalInitializers,
-        overrideMap = program.overrideMap {
-    _constantPool.addAll(program.constantPool);
-    program.instanceDeclarations.forEach((file, $class) {
-      final decls = <String, EvalClass>{};
+  Runtime.ofProgram(Program program) : id = _id++, _fromEvc = false {
+    _loadProgram(program);
+  }
 
-      $class.forEach((name, declarations) {
+  void _loadProgram(Program program) {
+    _typeTypes = program.typeTypes;
+    typeIds = program.typeIds;
+    _runtimeTypes = program.runtimeTypes;
+    _libraryMap = program.bridgeLibraryMappings;
+    _externalFunctionMap = program.bridgeFunctionMappings;
+    _bridgeEnumMappings = program.enumMappings;
+    _globalInitializers = program.globalInitializers;
+    overrideMap = program.overrideMap;
+    _declarations = program.topLevelDeclarations;
+    _constantPool = [...program.constantPool];
+    program.instanceDeclarations.forEach((file, classes) {
+      declaredClasses[file] = classes.map((name, declarations) {
         final getters = (declarations[0] as Map).cast<String, int>();
         final setters = (declarations[1] as Map).cast<String, int>();
         final methods = (declarations[2] as Map).cast<String, int>();
-        final type = (declarations[3] as int);
-
-        final cls =
-            EvalClass(type, null, [], {...getters}, {...setters}, {...methods});
-        decls[name] = cls;
+        final type = declarations[3] as int;
+        return MapEntry(
+          name,
+          EvalClass(type, null, [], {...getters}, {...setters}, {...methods}),
+        );
       });
-
-      declaredClasses[file] = decls;
     });
-
-    pr.addAll(program.ops);
+    pr
+      ..clear()
+      ..addAll(program.ops);
   }
 
   void _load() {
-    final xevc = Uint8List.view(_buffer);
-
-    // header: xvc##{ver}###{ctlen}##{ft64_ct}##{it64_ct}##{it32_ct}##{f16_ct}
-    final m1 = xevc[0], m2 = xevc[1], m3 = xevc[2];
-    final version = xevc[3] << 8 | xevc[4];
-
-    if (m1 != 0x58 || m2 != 0x56 || m3 != 0x43) {
-      throw Exception('dart_eval runtime error: Not an XEVC file');
-    }
-    if (version != versionCode) {
-      var vstr = version.toString();
-      if (vstr.length < 3) {
-        vstr = '0$vstr';
-      }
-      throw Exception(
-          'dart_eval runtime error: XEVC bytecode is version $vstr, but runtime'
-          ' supports version $versionCode.\n'
-          'Try using the same version of dart_eval for compiling as the version'
-          ' in your application.');
-    }
-
-    final ctlen = xevc[5] << 16 | xevc[6] << 8 | xevc[7];
-    final ft64ct = xevc[8] << 8 | xevc[9];
-    final it64ct = xevc[10] << 8 | xevc[11];
-    final it32ct = xevc[12] << 8 | xevc[13];
-    final f32ct = xevc[14] << 8 | xevc[15];
-
-    var offset = 16;
-
-    // longlist: ########{int1}########{int2}
-    // doublelist: ########{float1}########{float2}
-    // intlist: ####{int1}####{int2}
-    // floatlist: ####{float1}####{float2}
-
-    _longlist = _buffer.asInt64List(offset, offset += it64ct * 8);
-    _doublelist = _buffer.asFloat64List(offset, offset += ft64ct * 8);
-    _intlist = _buffer.asInt32List(offset, offset += it32ct * 4);
-    _floatlist = _buffer.asFloat32List(offset, offset += f32ct * 4);
-
-    final utf8decoder = utf8.decoder;
-
-    // idt: ##{count}#{len1}identifier1#{len2}ident2
-    var idtCount = xevc[offset++] << 8 | xevc[offset++];
-    final idt = List.filled(idtCount, "");
-    for (var i = 0; i < idtCount; i++) {
-      final len = xevc[offset++];
-      idt[i] = utf8decoder.convert(xevc, offset, offset += len);
-    }
-
-    _identifierTable = idt;
-
-    // ct: ["json"]
-    _constantPool = const JsonDecoder()
-        .convert(utf8decoder.convert(xevc, offset, offset += ctlen));
-
-    // ** declarations: ##{count}##{lib1}##{idt1}####{off1}##{lib2}##{idt2}####{off2} **
-    final decCount = xevc[offset++] << 8 | xevc[offset++];
-    final decs = <int, Map<String, int>>{};
-    for (var i = 0; i < decCount; i++) {
-      final lib = xevc[offset++] << 8 | xevc[offset++];
-      final idtCount = xevc[offset++] << 8 | xevc[offset++];
-      final idts = <String, int>{};
-      for (var j = 0; j < idtCount; j++) {
-        final idtIndex = xevc[offset++] << 8 | xevc[offset++];
-        final off = xevc[offset++] << 24 |
-            xevc[offset++] << 16 |
-            xevc[offset++] << 8 |
-            xevc[offset++];
-        idts[idt[idtIndex]] = off;
-      }
-      decs[lib] = idts;
-    }
-
-    _declarations = decs;
-
-    final dynamicType = 0;
-    final objectType = 1;
-
-    // ** typeTypes: ###{typecount}#{kbyte}###{type1} **
-    final typecount =
-        xevc[offset++] << 16 | xevc[offset++] << 8 | xevc[offset++];
-    final typeTypes = List.generate(
-        typecount, (i) => <int>{i, objectType, dynamicType},
-        growable: false);
-    typeTypes[0].remove(objectType);
-
-    // (kbyte 0 = end,  <= 32 = skipN + 2, > 32 = typelen + 32)
-    for (var i = 2;; i++) {
-      final kbyte = xevc[offset++];
-      if (kbyte == 0) {
-        break;
-      }
-      if (kbyte <= 32) {
-        i += kbyte - 2;
-      } else {
-        final typelen = kbyte - 32;
-        final end = offset + typelen * 3;
-        while (offset < end) {
-          typeTypes[i]
-              .add(xevc[offset++] << 16 | xevc[offset++] << 8 | xevc[offset++]);
-        }
-      }
-    }
-
-    _typeTypes = typeTypes;
-
-    // ** typeIds: ##{start}#{kbyte}##{len1}##{idt1} **
-    final ti = <int, Map<String, int>>{};
-    final start = xevc[offset++] << 8 | xevc[offset++];
-
-    // (id increments by 1)
-    // (kbyte 0 = accept, 1 = end, >0 = iinc + 127)
-    for (var lib = start, type = 0;; lib++) {
-      final kbyte = xevc[offset++];
-      if (kbyte == 1) {
-        break;
-      }
-      if (kbyte > 0) {
-        lib += kbyte - 127;
-        break;
-      }
-      final len = (xevc[offset++] << 8 | xevc[offset++]) + type;
-      final ids = <String, int>{};
-      for (; type < len; type++) {
-        final idtIndex = xevc[offset++] << 8 | xevc[offset++];
-        final idtName = idt[idtIndex];
-        ids[idtName] = type;
-      }
-      ti[lib] = ids;
-    }
-
-    typeIds = ti;
-
-    // ** libraryMap: #{dLen}#{d1len}string#{d2len}string#{kbyte}filepath **
-    final definesLen = xevc[offset++];
-    final libraryMap = <String, int>{};
-
-    var defines = List.filled(definesLen, "");
-    for (var i = 0; i < definesLen; i++) {
-      final dlen = xevc[offset++];
-      defines[i] = (utf8decoder.convert(xevc, offset, offset += dlen));
-    }
-
-    // (kbyte 0 = defineend, 1-5 = definestart, 6-128 = strlen - 6,
-    // 128-192= iinc + 160, 192-255=(iinc + 224) >> 4, 255 = end)
-    // iinc 1/iteration by default
-
-    var lib = "";
-    var end = "";
-    loop:
-    for (var i = 0;;) {
-      final kbyte = xevc[offset++];
-      switch (kbyte) {
-        case 255:
-          break loop;
-        case 0:
-          end = defines[0];
-          break;
-        case < 5:
-          lib = defines[kbyte - 1];
-          break;
-        case <= 128:
-          final len = kbyte + 6;
-          lib += utf8decoder.convert(xevc, offset, offset += len) + end;
-          libraryMap[lib] = i++;
-          end = "";
-          break;
-        case <= 192:
-          i += kbyte - 160;
-          break;
-        default:
-          i += (kbyte - 224) << 4;
-          break;
-      }
-    }
-
-    _libraryMap = libraryMap;
-
-    // ** externalFuncMap: ##{count}##{libId}#{kbyte}##{idt} **
-    final externalFuncMap = <int, Map<String, int>>{};
-    final count = xevc[offset++] << 8 | xevc[offset++];
-
-    // (auto increment +1)
-    // (kbyte 0 = end, 1 = setprefix, 2 = *g, 3 = *s, 4 = clear,
-    // 5-100 = execN + 5, >100 = execNdot + 5)
-    final blank = "";
-    var postfix = blank, prefix = blank;
-    for (var id = 0, i = 0, lib = 0; i < count; i++) {
-      libloop:
-      while (true) {
-        final kbyte = xevc[offset++];
-        switch (kbyte) {
-          case 0:
-            break libloop;
-          case 1:
-            final sid = xevc[offset++] << 8 | xevc[offset++];
-            prefix = idt[sid];
-            break;
-          case 2:
-            postfix = "*g";
-            break;
-          case 3:
-            postfix = "*s";
-            break;
-          case 4:
-            prefix = postfix = blank;
-            break;
-          case <= 100:
-            final it = kbyte - 5;
-            for (var j = 0; j < it; j++) {
-              final idtIndex = xevc[offset++] << 8 | xevc[offset++];
-              final name = prefix + idt[idtIndex] + postfix;
-              externalFuncMap[lib]![name] = id++;
-              postfix = blank;
-            }
-            break;
-          default:
-            final it = kbyte - 105;
-            for (var j = 0; j < it; j++) {
-              final idtIndex = xevc[offset++] << 8 | xevc[offset++];
-              final name = prefix + '.' + idt[idtIndex] + postfix;
-              externalFuncMap[lib]![name] = id++;
-              postfix = blank;
-            }
-            break;
-        }
-      }
-    }
-
-    _externalFunctionMap = externalFuncMap;
-
-    // globalInitializers: ##{start}##{kbyte} (0 = end, > 0 = iinc)
-    final gstart = xevc[offset++] << 8 | xevc[offset++];
-    var gi = <int>[];
-    for (var i = gstart;;) {
-      final kbyte = xevc[offset++] << 8 | xevc[offset++];
-      if (kbyte == 0) {
-        break;
-      }
-      i += kbyte;
-      gi.add(i);
-    }
-
-    _globalInitializers = gi.toList(growable: false);
-
-    // overrideMap: ##{length}json
-    final overridesLength = xevc[offset++] << 8 | xevc[offset++];
-    final encodedOverrideMap =
-        utf8decoder.convert(xevc, offset, offset += overridesLength);
-
-    overrideMap = (json.decode(encodedOverrideMap) as Map)
-        .cast<String, List>()
-        .map((key, value) => MapEntry(key, OverrideSpec(value[0], value[1])));
-
-    // enumMappings: ##{length}json
-    final enumMappingsLength = xevc[offset++] << 8 | xevc[offset++];
-    final encodedEnumMappings =
-        utf8decoder.convert(xevc, offset, offset += enumMappingsLength);
-
-    // runtimeTypes: ##{length}json
-    final runtimeTypesLength = xevc[offset++] << 8 | xevc[offset++];
-    final encodedRuntimeTypes =
-        utf8decoder.convert(xevc, offset, offset += runtimeTypesLength);
-
-    _bridgeEnumMappings = (json.decode(encodedEnumMappings) as Map).map(
-        (k, v) => MapEntry(
-            int.parse(k),
-            (v as Map)
-                .map((key, value) =>
-                    MapEntry(key, (value as Map).cast<String, int>()))
-                .cast<String, Map<String, int>>()));
-
-    final classes = /* TODO (json.decode(encodedInstanceDecs).map((k, v) =>
-            MapEntry(int.parse(k), (v as Map).cast<String, List>())) as Map)
-        .cast<int, Map<String, List>>(); */
-        {};
-
-    classes.forEach((file, $class) {
-      declaredClasses[file] = {
-        for (final decl in $class.entries)
-          decl.key: EvalClass.fromJson(decl.value)
-      };
-    });
-
-    _runtimeTypes = [
-      for (final s in (json.decode(encodedRuntimeTypes) as List))
-        RuntimeTypeSet.fromJson(s as List)
-    ];
-
+    _loadProgram(Program.read(_buffer));
     _setupBridging();
   }
 
@@ -452,15 +169,23 @@ class Runtime {
   }
 
   /// Register a bridged runtime top-level/static function or class constructor.
-  void registerBridgeFunc(String library, String name, EvalCallableFunc fn,
-      {bool isBridge = false}) {
-    _unloadedBrFunc
-        .add(_UnloadedBridgeFunction(library, isBridge ? '#$name' : name, fn));
+  void registerBridgeFunc(
+    String library,
+    String name,
+    EvalCallableFunc fn, {
+    bool isBridge = false,
+  }) {
+    _unloadedBrFunc.add(
+      _UnloadedBridgeFunction(library, isBridge ? '#$name' : name, fn),
+    );
   }
 
   /// Register bridged runtime enum values.
   void registerBridgeEnumValues(
-      String library, String name, Map<String, $Value> values) {
+    String library,
+    String name,
+    Map<String, $Value> values,
+  ) {
     _unloadedEnumValues.add(_UnloadedEnumValues(library, name, values));
   }
 
@@ -513,10 +238,11 @@ class Runtime {
   void assertPermission(String domain, [Object? data]) {
     if (!checkPermission(domain, data)) {
       throw Exception(
-          "Permission '$domain' denied${data == null ? '' : " for '$data'"}.\n"
-          "To grant permissions, use Runtime.grant() or add the permission "
-          "to the permissions array of your HotSwapLoader, EvalWidget, "
-          "or eval() function.");
+        "Permission '$domain' denied${data == null ? '' : " for '$data'"}.\n"
+        "To grant permissions, use Runtime.grant() or add the permission "
+        "to the permissions array of your HotSwapLoader, EvalWidget, "
+        "or eval() function.",
+      );
     }
   }
 
@@ -569,8 +295,14 @@ class Runtime {
           : $List.wrap(value);
     } else if (value is Map) {
       return recursive
-          ? $Map.wrap(value.map((key, value) => MapEntry(
-              wrap(key, recursive: true), wrap(value, recursive: true))))
+          ? $Map.wrap(
+              value.map(
+                (key, value) => MapEntry(
+                  wrap(key, recursive: true),
+                  wrap(value, recursive: true),
+                ),
+              ),
+            )
           : $Map.wrap(value);
     }
     for (final wrapper in _typeAutowrappers) {
@@ -580,10 +312,12 @@ class Runtime {
       }
     }
     return wrapPrimitive(value) ??
-        (throw Exception('Cannot wrap $value (${value.runtimeType}).'
-            'If the type is known explicitly, use \${TypeName}.wrap(value); '
-            'otherwise, try adding a type autowrapper with '
-            'runtime.addTypeAutowrapper().'));
+        (throw Exception(
+          'Cannot wrap $value (${value.runtimeType}).'
+          'If the type is known explicitly, use \${TypeName}.wrap(value); '
+          'otherwise, try adding a type autowrapper with '
+          'runtime.addTypeAutowrapper().',
+        ));
   }
 
   /// Attempt to wrap a Dart value into a [$Value], falling back to wrapping
@@ -609,8 +343,10 @@ class Runtime {
 
   var _didSetup = false;
   var _libraryMap = <String, int>{};
-  final _bridgeFunctions =
-      List<EvalCallableFunc>.filled(1000, _defaultFunction.call);
+  final _bridgeFunctions = List<EvalCallableFunc>.filled(
+    1000,
+    _defaultFunction.call,
+  );
   final _unloadedBrFunc = <_UnloadedBridgeFunction>[];
   final _unloadedEnumValues = <_UnloadedEnumValues>[];
   final _plugins = <EvalPlugin>[
@@ -629,6 +365,10 @@ class Runtime {
   var _doublelist = Float64List(0);
   var _constantPool = List<dynamic>.filled(0, null);
   final globals = List<Object?>.filled(20000, null);
+  final _initializedRegisterGlobals = <int>{};
+  int _registerFailureOffset = -1;
+  List<Object?> _registerFailureFrame = [];
+  List<Object?> _registerFailureArguments = [];
   var _globalInitializers = <int>[];
   var overrideMap = <String, OverrideSpec>{};
   final _permissions = <String, List<Permission>>{};
@@ -723,12 +463,12 @@ class Runtime {
   /// and function [name], with optional [args].
   dynamic executeLib(String library, String name, [List? args]) {
     _setup();
-    if (args != null) {
-      this.args = args;
-    }
+    this.args = args ?? [];
     if (_declarations[_libraryMap[library]] == null) {
-      throw ArgumentError('Cannot find $library, maybe it wasn\'t declared as'
-          ' an entrypoint?');
+      throw ArgumentError(
+        'Cannot find $library, maybe it wasn\'t declared as'
+        ' an entrypoint?',
+      );
     }
     return execute(_declarations[_libraryMap[library]!]![name]!);
   }
@@ -737,26 +477,24 @@ class Runtime {
   /// Users should use [executeLib] instead.
   dynamic execute(int entrypoint) {
     _setup();
-    _prOffset = entrypoint;
+    _registerFailureOffset = -1;
+    _registerFailureFrame = [];
+    _registerFailureArguments = [];
+    final arguments = List<Object?>.of(args);
+    args = [];
     try {
-      callStack.add(-1);
-      catchStack.add([]);
-      while (true) {
-        final op = pr[_prOffset++];
-        op.run(this);
-      }
-    } on ProgramExit catch (_) {
+      returnValue = _executeRegisters(entrypoint, arguments);
       return returnValue;
-    } on RuntimeException catch (_) {
+    } on RuntimeException {
       rethrow;
-    } on WrappedException catch (e) {
-      throw e.exception;
-    } catch (e, stk) {
-      throw RuntimeException(this, e, stk);
+    } on WrappedException catch (error) {
+      throw error.exception;
+    } catch (error, trace) {
+      throw RuntimeException(this, error, trace);
     }
   }
 
-/*
+  /*
 %a -> alu acc, %b -> alu 2
 %l -> loop counter
 %f -> fpu acc, %g -> fpu 2
@@ -777,28 +515,29 @@ class Runtime {
   /// fis: Frame index stack
   /// args: Arguments
   dynamic _run(
-      Uint8List pr,
-      List<int> cs,
-      List<int> fis,
-      List<List<int>> ts,
-      List<List<Object?>> st,
-      List<String> t,
-      int pc,
-      int si,
-      int fi,
-      int a,
-      int b,
-      int l,
-      double f,
-      double g,
-      String u,
-      String v,
-      bool e,
-      bool x,
-      Object? r,
-      Object? rs,
-      Object? c,
-      List<Object?> args) {
+    Uint8List pr,
+    List<int> cs,
+    List<int> fis,
+    List<List<int>> ts,
+    List<List<Object?>> st,
+    List<String> t,
+    int pc,
+    int si,
+    int fi,
+    int a,
+    int b,
+    int l,
+    double f,
+    double g,
+    String u,
+    String v,
+    bool e,
+    bool x,
+    Object? r,
+    Object? rs,
+    Object? c,
+    List<Object?> args,
+  ) {
     // current stack frame
     var fr = st[si];
 
@@ -2212,8 +1951,16 @@ class Runtime {
   }
 
   @pragma('vm:prefer-inline')
-  void _call(int framelen, List<int> fis, int fi, List<List<Object?>> s, int si,
-      List<int> cs, List<List<int>> ts, int pc) {
+  void _call(
+    int framelen,
+    List<int> fis,
+    int fi,
+    List<List<Object?>> s,
+    int si,
+    List<int> cs,
+    List<List<int>> ts,
+    int pc,
+  ) {
     fis.add(fi);
     s[si++] = List.filled(framelen, null);
     cs.add(pc);
@@ -2234,15 +1981,17 @@ class Runtime {
     if (csPosArgTypes.length < object.requiredPositionalArgCount ||
         csPosArgTypes.length > totalPositionalArgCount) {
       throw ArgumentError(
-          'FunctionPtr: Cannot invoke function with the given arguments (unacceptable # of positional arguments). '
-          '$totalPositionalArgCount >= ${csPosArgTypes.length} >= ${object.requiredPositionalArgCount}');
+        'FunctionPtr: Cannot invoke function with the given arguments (unacceptable # of positional arguments). '
+        '$totalPositionalArgCount >= ${csPosArgTypes.length} >= ${object.requiredPositionalArgCount}',
+      );
     }
 
     var i = 0, j = 0;
     while (i < csPosArgTypes.length) {
       if (!csPosArgTypes[i].isAssignableTo(object.positionalArgTypes[i])) {
         throw ArgumentError(
-            'FunctionPtr: Cannot invoke function with the given arguments');
+          'FunctionPtr: Cannot invoke function with the given arguments',
+        );
       }
       i++;
     }
@@ -2255,7 +2004,8 @@ class Runtime {
     while (j < cl) {
       if (i > tl) {
         throw ArgumentError(
-            'FunctionPtr: Cannot invoke function with the given arguments');
+          'FunctionPtr: Cannot invoke function with the given arguments',
+        );
       }
       final _t = csNamedArgTypes[j];
       final _ti = object.sortedNamedArgTypes[i];
@@ -2269,72 +2019,31 @@ class Runtime {
     return [
       if (object.$prev != null) object.$prev,
       for (i = 0; i < object.requiredPositionalArgCount; i++) args[i + 3],
-      for (i = object.requiredPositionalArgCount;
-          i < totalPositionalArgCount;
-          i++)
+      for (
+        i = object.requiredPositionalArgCount;
+        i < totalPositionalArgCount;
+        i++
+      )
         if (cp > i) args[i + 3] else null,
       for (i = 0; i < object.sortedNamedArgs.length; i++)
-        if (cl > i) args[i + 3 + totalPositionalArgCount] else null
+        if (cl > i) args[i + 3 + totalPositionalArgCount] else null,
     ];
   }
 
   /// Run the VM in a 'sub-state' of a parent invocation of the VM. Used for bridge calls.
   /// For performance reasons, avoid making excessive use of this pattern, despite its convenience
   void bridgeCall(int $offset) {
-    final _savedOffset = _prOffset;
-    _prOffset = $offset;
-    callStack.add(-1);
-    catchStack.add([]);
-    try {
-      while (true) {
-        final op = pr[_prOffset++];
-        op.run(this);
-      }
-    } on ProgramExit catch (_) {
-      _prOffset = _savedOffset;
-      return;
-    } on RuntimeException catch (_) {
-      rethrow;
-    } on WrappedException catch (e) {
-      throw e.exception;
-    } catch (e, stk) {
-      throw RuntimeException(this, e, stk);
-    }
+    final arguments = List<Object?>.of(args);
+    args = [];
+    returnValue = _executeRegisters($offset, arguments);
   }
 
   /// Throw an exception from the VM. This will unwind the stack until a
   /// catch block is found.
-  void $throw(dynamic exception) {
-    List<int> catchFrame;
-    while (true) {
-      catchFrame = catchStack.last;
-      if (catchFrame.isNotEmpty) {
-        break;
-      }
-      stack.removeLast();
-      if (stack.isNotEmpty) {
-        frame = stack.last;
-        frameOffset = frameOffsetStack.removeLast();
-      }
-
-      catchStack.removeLast();
-      if (callStack.removeLast() == -1) {
-        throw exception is WrappedException
-            ? exception
-            : WrappedException(exception);
-      }
-    }
-    var catchOffset = catchFrame.removeLast();
-    if (catchOffset < 0) {
-      _rethrowException = exception;
-      catchOffset = -catchOffset;
-    } else {
-      _inCatch = true;
-    }
-    frameOffset = frameOffsetStack.last;
-    returnValue =
-        exception is WrappedException ? exception.exception : exception;
-    _prOffset = catchOffset;
+  Never $throw(dynamic exception) {
+    throw exception is WrappedException
+        ? exception
+        : WrappedException(exception as Object);
   }
 
   @override
@@ -2362,11 +2071,14 @@ class RuntimeException implements Exception {
   @override
   String toString() {
     var prStr = '';
-    final maxIdx = min(runtime.pr.length - 1, runtime._prOffset + 3);
+    final offset = runtime._registerFailureOffset >= 0
+        ? runtime._registerFailureOffset
+        : runtime._prOffset - 1;
+    final maxIdx = min(runtime.pr.length - 1, offset + 4);
 
-    for (var i = max(0, runtime._prOffset - 7); i < maxIdx; i++) {
+    for (var i = max(0, offset - 6); i < maxIdx; i++) {
       prStr += '$i: ${runtime.pr[i]}';
-      if (i == runtime._prOffset - 1) {
+      if (i == offset) {
         prStr += '  <<< EXCEPTION';
       }
       prStr += '\n';
@@ -2396,9 +2108,9 @@ class RuntimeException implements Exception {
         '$scopeNames\n'
         'RUNTIME STATE\n'
         '=============\n'
-        'Program offset: ${runtime._prOffset - 1}\n'
-        'Stack sample: ${formatStackSample(runtime.stack.last, 10, runtime.frameOffset)}\n'
-        'Args sample: ${formatStackSample(runtime.args, 6)}\n'
+        'Program offset: ${offset}\n'
+        'Stack sample: ${formatStackSample(runtime._registerFailureFrame.isNotEmpty ? runtime._registerFailureFrame : (runtime.stack.isEmpty ? runtime.frame : runtime.stack.last), 10, runtime.frameOffset)}\n'
+        'Args sample: ${formatStackSample(runtime._registerFailureArguments.isNotEmpty ? runtime._registerFailureArguments : runtime.args, 6)}\n'
         'Call stack: ${runtime.callStack}\n'
         'TRACE:\n$prStr';
   }

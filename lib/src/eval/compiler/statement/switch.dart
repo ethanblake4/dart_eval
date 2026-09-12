@@ -22,8 +22,12 @@ StatementInfo compileSwitchStatement(
   _validateSwitchCases(s.members);
 
   final endBlock = BasicBlock<Operation>([], label: ctx.label('switch_end'));
+  final initialState = ctx.saveState();
   ctx.labels.add(
-    CompilerLabel(LabelType.branch, -1, (_) => -1, breakTarget: endBlock),
+    CompilerLabel(LabelType.branch, -1, (ctx) {
+      ctx.resolveBranchStateDiscontinuity(initialState);
+      return -1;
+    }, breakTarget: endBlock),
   );
   final result = _compileSwitchCases(
     ctx,
@@ -37,6 +41,7 @@ StatementInfo compileSwitchStatement(
   ctx.labels.removeLast();
   ctx.flushBlock();
   ctx.builder = ctx.builder.then(endBlock);
+  ctx.restoreState(initialState);
   return result.copyWith(willAlwaysBreak: false);
 }
 

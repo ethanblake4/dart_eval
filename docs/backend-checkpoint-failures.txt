@@ -1,0 +1,299 @@
+00:00 +3 -1: test\bridge_test.dart: Bridge tests Using a subclassed bridge class inside the runtime [E]
+  dart_eval runtime exception: type '$TestClass' is not a subtype of type '$InstanceImpl' in type cast
+  #0      _RegisterExecution._resumeRegisters (package:dart_eval/src/eval/runtime/register_machine.dart:536:39)
+  #1      _RegisterExecution._executeRegisters (package:dart_eval/src/eval/runtime/register_machine.dart:220:12)
+  #2      _RegisterExecution._resumeRegisters (package:dart_eval/src/eval/runtime/register_machine.dart:438:24)
+
+  RUNTIME STATE
+  =============
+  Program offset: 561
+
+00:00 +7 -2: test\bridge_test.dart: Bridge tests Changing a field in the constructor of a subclassed bridge class [E]
+  dart_eval runtime exception: type '$TestClass' is not a subtype of type '$InstanceImpl' in type cast
+  #0      _RegisterExecution._resumeRegisters (package:dart_eval/src/eval/runtime/register_machine.dart:536:39)
+  #1      _RegisterExecution._executeRegisters (package:dart_eval/src/eval/runtime/register_machine.dart:220:12)
+  #2      _RegisterExecution._resumeRegisters (package:dart_eval/src/eval/runtime/register_machine.dart:438:24)
+
+  RUNTIME STATE
+  =============
+  Program offset: 561
+
+00:00 +9 -3: test\bridge_test.dart: Bridge tests Using a subclassed bridge class outside the runtime [E]
+  type '$TestClass' is not a subtype of type '$InstanceImpl' in type cast
+  package:dart_eval/src/eval/runtime/register_machine.dart 536:39  _RegisterExecution._resumeRegisters
+  package:dart_eval/src/eval/runtime/register_machine.dart 220:12  _RegisterExecution._executeRegisters
+  package:dart_eval/src/eval/runtime/runtime.dart 2038:19          Runtime.bridgeCall
+  package:dart_eval/src/eval/runtime/function.dart 121:13          EvalStaticFunctionPtr.call
+  package:dart_eval/src/eval/bridge/runtime_bridge.dart 49:60      $Bridge.$_invoke
+  test\bridge_lib.dart 145:12                                      $TestClass.runTest
+  test\bridge_test.dart 164:33                                     main.<fn>.<fn>
+
+00:00 +19 -4: test\bridge_test.dart: Bridge tests Passing a map to a function externally [E]
+  CompileError: Unknown method num.< at unknown (file dart:math)
+  package:dart_eval/src/eval/compiler/expression/method_invocation.dart 454:9   resolveInstanceMethod
+  package:dart_eval/src/eval/compiler/expression/method_invocation.dart 459:14  resolveInstanceMethod
+  package:dart_eval/src/eval/compiler/expression/method_invocation.dart 459:14  resolveInstanceMethod
+  package:dart_eval/src/eval/compiler/type.dart 1127:15                         new AlwaysReturnType.fromInstanceMethod
+  package:dart_eval/src/eval/compiler/type.dart 1212:28                         AlwaysReturnType.fromInstanceMethodOrBuiltin
+  package:dart_eval/src/eval/compiler/helpers/invoke.dart 126:34                Invoke.invoke
+  package:dart_eval/src/eval/compiler/expression/binary.dart 60:12              compileBinaryExpression
+
+00:00 +22 -5: test\bridge_test.dart: Bridge tests Runtime overrides [E]
+  CompileError: Unknown method num.< at unknown (file dart:math)
+  package:dart_eval/src/eval/compiler/expression/method_invocation.dart 454:9   resolveInstanceMethod
+  package:dart_eval/src/eval/compiler/expression/method_invocation.dart 459:14  resolveInstanceMethod
+  package:dart_eval/src/eval/compiler/expression/method_invocation.dart 459:14  resolveInstanceMethod
+  package:dart_eval/src/eval/compiler/type.dart 1127:15                         new AlwaysReturnType.fromInstanceMethod
+  package:dart_eval/src/eval/compiler/type.dart 1212:28                         AlwaysReturnType.fromInstanceMethodOrBuiltin
+  package:dart_eval/src/eval/compiler/helpers/invoke.dart 126:34                Invoke.invoke
+  package:dart_eval/src/eval/compiler/expression/binary.dart 60:12              compileBinaryExpression
+
+00:00 +22 -6: test\bridge_test.dart: Bridge tests Versioned runtime overrides [E]
+  CompileError: Unknown method num.< at unknown (file dart:math)
+  package:dart_eval/src/eval/compiler/expression/method_invocation.dart 454:9   resolveInstanceMethod
+  package:dart_eval/src/eval/compiler/expression/method_invocation.dart 459:14  resolveInstanceMethod
+  package:dart_eval/src/eval/compiler/expression/method_invocation.dart 459:14  resolveInstanceMethod
+  package:dart_eval/src/eval/compiler/type.dart 1127:15                         new AlwaysReturnType.fromInstanceMethod
+  package:dart_eval/src/eval/compiler/type.dart 1212:28                         AlwaysReturnType.fromInstanceMethodOrBuiltin
+  package:dart_eval/src/eval/compiler/helpers/invoke.dart 126:34                Invoke.invoke
+  package:dart_eval/src/eval/compiler/expression/binary.dart 60:12              compileBinaryExpression
+
+00:00 +23 -7: test\bridge_test.dart: Bridge tests Awaiting a callback [E]
+  CompileError: Unknown method num.< at unknown (file dart:math)
+  package:dart_eval/src/eval/compiler/expression/method_invocation.dart 454:9   resolveInstanceMethod
+  package:dart_eval/src/eval/compiler/expression/method_invocation.dart 459:14  resolveInstanceMethod
+  package:dart_eval/src/eval/compiler/expression/method_invocation.dart 459:14  resolveInstanceMethod
+  package:dart_eval/src/eval/compiler/type.dart 1127:15                         new AlwaysReturnType.fromInstanceMethod
+  package:dart_eval/src/eval/compiler/type.dart 1212:28                         AlwaysReturnType.fromInstanceMethodOrBuiltin
+  package:dart_eval/src/eval/compiler/helpers/invoke.dart 126:34                Invoke.invoke
+  package:dart_eval/src/eval/compiler/expression/binary.dart 60:12              compileBinaryExpression
+
+00:00 +26 -8: test\bridge_test.dart: Bridge tests Should catch bridge future error [E]
+  CompileError: Unknown method num.< at unknown (file dart:math)
+  package:dart_eval/src/eval/compiler/expression/method_invocation.dart 454:9   resolveInstanceMethod
+  package:dart_eval/src/eval/compiler/expression/method_invocation.dart 459:14  resolveInstanceMethod
+  package:dart_eval/src/eval/compiler/expression/method_invocation.dart 459:14  resolveInstanceMethod
+  package:dart_eval/src/eval/compiler/type.dart 1127:15                         new AlwaysReturnType.fromInstanceMethod
+  package:dart_eval/src/eval/compiler/type.dart 1212:28                         AlwaysReturnType.fromInstanceMethodOrBuiltin
+  package:dart_eval/src/eval/compiler/helpers/invoke.dart 126:34                Invoke.invoke
+  package:dart_eval/src/eval/compiler/expression/binary.dart 60:12              compileBinaryExpression
+
+00:02 +152 ~1 -9: test\enum_test.dart: Enum tests Enum boxing error [E]
+  CompileError: Unknown method num.< at unknown (file dart:math)
+  package:dart_eval/src/eval/compiler/expression/method_invocation.dart 454:9   resolveInstanceMethod
+  package:dart_eval/src/eval/compiler/expression/method_invocation.dart 459:14  resolveInstanceMethod
+  package:dart_eval/src/eval/compiler/expression/method_invocation.dart 459:14  resolveInstanceMethod
+  package:dart_eval/src/eval/compiler/type.dart 1127:15                         new AlwaysReturnType.fromInstanceMethod
+  package:dart_eval/src/eval/compiler/type.dart 1212:28                         AlwaysReturnType.fromInstanceMethodOrBuiltin
+  package:dart_eval/src/eval/compiler/helpers/invoke.dart 126:34                Invoke.invoke
+  package:dart_eval/src/eval/compiler/expression/binary.dart 60:12              compileBinaryExpression
+
+00:02 +153 ~1 -10: test\exception_test.dart: Exception tests Nested try/catch [E]
+  Expected: 'error2'
+    Actual: <null>
+     Which: not an <Instance of 'String'>
+
+  package:matcher                expect
+  test\exception_test.dart 68:7  main.<fn>.<fn>
+
+00:02 +154 ~1 -10: test\field_test.dart: Regular classes test Final fields test
+
+00:02 +154 ~1 -11: test\expression_test.dart: Expression tests Is num [E]
+  Null check operator used on a null value
+  package:dart_eval/src/eval/compiler/context.dart 328:40                        CompilerContext.lookupLocal
+  package:dart_eval/src/eval/compiler/reference.dart 337:23                      IdentifierReference.getValue
+  package:dart_eval/src/eval/compiler/expression/identifier.dart 13:48           compileIdentifier
+  package:dart_eval/src/eval/compiler/expression/expression.dart 42:19           compileExpression
+  package:dart_eval/src/eval/compiler/expression/is.dart 11:11                   compileIsExpression
+  package:dart_eval/src/eval/compiler/expression/expression.dart 80:12           compileExpression
+  package:dart_eval/src/eval/compiler/expression/binary.dart 49:11               compileBinaryExpression
+
+00:02 +160 ~2 -12: test\exception_test.dart: Exception tests Return from catch is preceded by finally return [E]
+  Bad state: Missing handler finally
+  package:dart_eval/src/eval/compiler/optimizer/validate.dart 20:33  validateControlFlowGraph
+  package:dart_eval/src/eval/compiler/compiler.dart 564:7            Compiler.compileSources
+  package:dart_eval/src/eval/compiler/compiler.dart 191:12           Compiler.compile
+  package:dart_eval/src/eval/compiler/compiler.dart 645:21           Compiler.compileWriteAndLoad
+  test\exception_test.dart 163:32                                    main.<fn>.<fn>
+
+00:02 +161 ~2 -12: test\filesystem_permission_test.dart: FilesystemPermission Tests should allow file read/write/delete using IOOverrides for currentDir
+
+00:02 +163 ~2 -13: test\exception_test.dart: Exception tests Finally can do work and return value from catch [E]
+  Bad state: Missing handler finally
+  package:dart_eval/src/eval/compiler/optimizer/validate.dart 20:33  validateControlFlowGraph
+  package:dart_eval/src/eval/compiler/compiler.dart 564:7            Compiler.compileSources
+  package:dart_eval/src/eval/compiler/compiler.dart 191:12           Compiler.compile
+  package:dart_eval/src/eval/compiler/compiler.dart 645:21           Compiler.compileWriteAndLoad
+  test\exception_test.dart 185:32                                    main.<fn>.<fn>
+
+00:02 +164 ~2 -13: test\functional1_test.dart: Functional tests Functional test 1
+
+00:02 +227 ~2 -14: test\exception_test.dart: Exception tests Nested try/catch/finally [E]
+  Expected: <11>
+    Actual: <12>
+
+  package:matcher                 expect
+  test\exception_test.dart 279:7  main.<fn>.<fn>
+
+00:02 +228 ~2 -14: test\functional1_test.dart: Functional tests Functional test 1
+00:02 +229 ~2 -14: test\functional1_test.dart: Functional tests Functional test 1
+
+00:02 +244 ~2 -15: test\functional1_test.dart: Functional tests Functional test 1 [E]
+  Expected: $int:<45646>
+    Actual: $int:<32966>
+
+  package:matcher                   expect
+  test\functional1_test.dart 103:7  main.<fn>.<fn>
+
+00:02 +245 ~2 -15: test\lib_composition_test.dart: File and library composition Import hiding
+00:02 +246 ~2 -15: test\lib_composition_test.dart: File and library composition Import hiding
+
+00:03 +262 ~2 -16: test\function_test.dart: Function tests Multiple files, boxed ints and correct stack handling [E]
+  Expected: <Instance of '$num<num>'>
+    Actual: $int:<7>
+
+  package:matcher                expect
+  test\function_test.dart 102:7  main.<fn>.<fn>
+
+00:03 +263 ~2 -16: test\loop_test.dart: Loop tests For loop
+00:03 +264 ~2 -16: test\loop_test.dart: Loop tests For loop
+
+00:03 +273 ~2 -17: test\functional1_test.dart: Functional tests Bridged enum equality ternary assignment [E]
+  CompileError: Unknown method num.< at unknown (file dart:math)
+  package:dart_eval/src/eval/compiler/expression/method_invocation.dart 454:9   resolveInstanceMethod
+  package:dart_eval/src/eval/compiler/expression/method_invocation.dart 459:14  resolveInstanceMethod
+  package:dart_eval/src/eval/compiler/expression/method_invocation.dart 459:14  resolveInstanceMethod
+  package:dart_eval/src/eval/compiler/type.dart 1127:15                         new AlwaysReturnType.fromInstanceMethod
+  package:dart_eval/src/eval/compiler/type.dart 1212:28                         AlwaysReturnType.fromInstanceMethodOrBuiltin
+  package:dart_eval/src/eval/compiler/helpers/invoke.dart 126:34                Invoke.invoke
+  package:dart_eval/src/eval/compiler/expression/binary.dart 60:12              compileBinaryExpression
+
+00:03 +279 ~2 -19: test\functional1_test.dart: Functional tests Regex replacement loop [E]
+  dart_eval runtime exception: type '$int' is not a subtype of type 'int' in type cast
+  #0      _RegisterExecution._resumeRegisters (package:dart_eval/src/eval/runtime/register_machine.dart:315:35)
+  #1      _RegisterExecution._executeRegisters (package:dart_eval/src/eval/runtime/register_machine.dart:220:12)
+  #2      _RegisterExecution._resumeRegisters (package:dart_eval/src/eval/runtime/register_machine.dart:438:24)
+
+  RUNTIME STATE
+  =============
+  Program offset: 1172
+
+00:03 +281 ~4 -19: test\pattern_test.dart: Patterns Destructure record with variable declaration pattern [E]
+  Null check operator used on a null value
+  package:dart_eval/src/eval/compiler/type.dart 844:49                           TypeRef.toRuntimeType
+  package:dart_eval/src/eval/compiler/expression/record.dart 124:12              compileRecordLiteral
+  package:dart_eval/src/eval/compiler/expression/literal.dart 62:12              parseLiteral
+  package:dart_eval/src/eval/compiler/expression/expression.dart 38:12           compileExpression
+  package:dart_eval/src/eval/compiler/statement/variable_declaration.dart 39:17  compileVariableDeclarationList
+  package:dart_eval/src/eval/compiler/statement/variable_declaration.dart 16:3   compileVariableDeclarationStatement
+  package:dart_eval/src/eval/compiler/statement/statement.dart 38:14             compileStatement
+
+00:03 +282 ~4 -20: test\pattern_test.dart: Patterns Destructure record with variable assignment pattern [E]
+  Null check operator used on a null value
+  package:dart_eval/src/eval/compiler/type.dart 844:49                           TypeRef.toRuntimeType
+  package:dart_eval/src/eval/compiler/expression/record.dart 124:12              compileRecordLiteral
+  package:dart_eval/src/eval/compiler/expression/literal.dart 62:12              parseLiteral
+  package:dart_eval/src/eval/compiler/expression/expression.dart 38:12           compileExpression
+  package:dart_eval/src/eval/compiler/statement/variable_declaration.dart 39:17  compileVariableDeclarationList
+  package:dart_eval/src/eval/compiler/statement/variable_declaration.dart 16:3   compileVariableDeclarationStatement
+  package:dart_eval/src/eval/compiler/statement/statement.dart 38:14             compileStatement
+
+00:03 +287 ~4 -21: test\pattern_test.dart: Patterns Destructure record across function boundary [E]
+  Null check operator used on a null value
+  package:dart_eval/src/eval/compiler/type.dart 844:49                   TypeRef.toRuntimeType
+  package:dart_eval/src/eval/compiler/expression/record.dart 124:12      compileRecordLiteral
+  package:dart_eval/src/eval/compiler/expression/literal.dart 62:12      parseLiteral
+  package:dart_eval/src/eval/compiler/expression/expression.dart 38:12   compileExpression
+  package:dart_eval/src/eval/compiler/statement/return.dart 28:9         compileReturn
+  package:dart_eval/src/eval/compiler/statement/statement.dart 46:14     compileStatement
+  package:dart_eval/src/eval/compiler/statement/block.dart 24:20         compileBlock
+
+00:03 +304 ~4 -22: test\pattern_test.dart: Switch pattern tests Switch matching record pattern [E]
+  Null check operator used on a null value
+  package:dart_eval/src/eval/compiler/type.dart 844:49                           TypeRef.toRuntimeType
+  package:dart_eval/src/eval/compiler/expression/record.dart 124:12              compileRecordLiteral
+  package:dart_eval/src/eval/compiler/expression/literal.dart 62:12              parseLiteral
+  package:dart_eval/src/eval/compiler/expression/expression.dart 38:12           compileExpression
+  package:dart_eval/src/eval/compiler/statement/variable_declaration.dart 39:17  compileVariableDeclarationList
+  package:dart_eval/src/eval/compiler/statement/variable_declaration.dart 16:3   compileVariableDeclarationStatement
+  package:dart_eval/src/eval/compiler/statement/statement.dart 38:14             compileStatement
+
+00:03 +315 ~4 -23: test\pattern_test.dart: Switch pattern tests Switch with pattern guard [E]
+  Null check operator used on a null value
+  package:dart_eval/src/eval/compiler/type.dart 844:49                           TypeRef.toRuntimeType
+  package:dart_eval/src/eval/compiler/expression/record.dart 124:12              compileRecordLiteral
+  package:dart_eval/src/eval/compiler/expression/literal.dart 62:12              parseLiteral
+  package:dart_eval/src/eval/compiler/expression/expression.dart 38:12           compileExpression
+  package:dart_eval/src/eval/compiler/statement/variable_declaration.dart 39:17  compileVariableDeclarationList
+  package:dart_eval/src/eval/compiler/statement/variable_declaration.dart 16:3   compileVariableDeclarationStatement
+  package:dart_eval/src/eval/compiler/statement/statement.dart 38:14             compileStatement
+
+00:03 +315 ~4 -24: test\function_test.dart: Function tests Closure can modify variable outside its scope [E]
+  Expected: $int:<18>
+    Actual: $int:<17>
+
+  package:matcher                expect
+  test\function_test.dart 390:7  main.<fn>.<fn>
+
+00:03 +316 ~4 -24: test\prefix_test.dart: Prefix ++i
+00:03 +317 ~4 -24: test\prefix_test.dart: Prefix ++i
+
+00:03 +317 ~4 -25: test\function_test.dart: Function tests Function equality test [E]
+  dart_eval runtime exception: RangeError (start): Invalid value: Not in inclusive range 0..1: 3
+  #0      RangeError.checkValidRange (dart:core/errors.dart:387:7)
+  #1      List.sublist (dart:core-patch/growable_array.dart:84:38)
+  #2      $Closure.call (package:dart_eval/src/eval/runtime/function.dart:244:48)
+
+  RUNTIME STATE
+  =============
+  Program offset: 679
+
+00:03 +323 ~4 -26: test\records_test.dart: Records Create and access records [E]
+  Null check operator used on a null value
+  package:dart_eval/src/eval/compiler/type.dart 844:49                           TypeRef.toRuntimeType
+  package:dart_eval/src/eval/compiler/expression/record.dart 124:12              compileRecordLiteral
+  package:dart_eval/src/eval/compiler/expression/literal.dart 62:12              parseLiteral
+  package:dart_eval/src/eval/compiler/expression/expression.dart 38:12           compileExpression
+  package:dart_eval/src/eval/compiler/statement/variable_declaration.dart 39:17  compileVariableDeclarationList
+  package:dart_eval/src/eval/compiler/statement/variable_declaration.dart 16:3   compileVariableDeclarationStatement
+  package:dart_eval/src/eval/compiler/statement/statement.dart 38:14             compileStatement
+
+00:03 +324 ~4 -27: test\records_test.dart: Records Returning record from function [E]
+  Null check operator used on a null value
+  package:dart_eval/src/eval/compiler/type.dart 844:49                   TypeRef.toRuntimeType
+  package:dart_eval/src/eval/compiler/expression/record.dart 124:12      compileRecordLiteral
+  package:dart_eval/src/eval/compiler/expression/literal.dart 62:12      parseLiteral
+  package:dart_eval/src/eval/compiler/expression/expression.dart 38:12   compileExpression
+  package:dart_eval/src/eval/compiler/statement/return.dart 28:9         compileReturn
+  package:dart_eval/src/eval/compiler/statement/statement.dart 46:14     compileStatement
+  package:dart_eval/src/eval/compiler/statement/block.dart 24:20         compileBlock
+
+00:03 +325 ~4 -28: test\records_test.dart: Records Record with named fields [E]
+  Null check operator used on a null value
+  package:dart_eval/src/eval/compiler/type.dart 844:49                           TypeRef.toRuntimeType
+  package:dart_eval/src/eval/compiler/expression/record.dart 124:12              compileRecordLiteral
+  package:dart_eval/src/eval/compiler/expression/literal.dart 62:12              parseLiteral
+  package:dart_eval/src/eval/compiler/expression/expression.dart 38:12           compileExpression
+  package:dart_eval/src/eval/compiler/statement/variable_declaration.dart 39:17  compileVariableDeclarationList
+  package:dart_eval/src/eval/compiler/statement/variable_declaration.dart 16:3   compileVariableDeclarationStatement
+  package:dart_eval/src/eval/compiler/statement/statement.dart 38:14             compileStatement
+
+00:03 +325 ~4 -29: test\records_test.dart: Records Record with mixed fields [E]
+  Null check operator used on a null value
+  package:dart_eval/src/eval/compiler/type.dart 844:49                           TypeRef.toRuntimeType
+  package:dart_eval/src/eval/compiler/expression/record.dart 124:12              compileRecordLiteral
+  package:dart_eval/src/eval/compiler/expression/literal.dart 62:12              parseLiteral
+  package:dart_eval/src/eval/compiler/expression/expression.dart 38:12           compileExpression
+  package:dart_eval/src/eval/compiler/statement/variable_declaration.dart 39:17  compileVariableDeclarationList
+  package:dart_eval/src/eval/compiler/statement/variable_declaration.dart 16:3   compileVariableDeclarationStatement
+  package:dart_eval/src/eval/compiler/statement/statement.dart 38:14             compileStatement
+
+00:05 +440 ~6 -30: test\stdlib_test.dart: Standard library tests Object.hash [E]
+  Expected: prints '20843011\n'
+              '370702575\n'
+              ''
+    Actual: <Closure: () => Null>
+     Which: printed '20843011\n'
+                      '276558578\n'
+                      ''
+              which is different.

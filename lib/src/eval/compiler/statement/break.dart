@@ -16,6 +16,7 @@ StatementInfo compileBreakStatement(BreakStatement s, CompilerContext ctx) {
       s,
     ),
   );
+  label.cleanup(ctx);
   final target = label.breakTarget!;
   ctx.pushOp(Jump(target.label!));
   final tail = ctx.flushBlock();

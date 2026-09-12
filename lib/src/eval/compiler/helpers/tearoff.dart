@@ -39,20 +39,14 @@ extension TearOff on Variable {
     named.sort(
       (left, right) => left.name!.lexeme.compareTo(right.name!.lexeme),
     );
-    Object parameterType(FormalParameter parameter) {
+    TypeRef parameterType(FormalParameter parameter) {
       final normal = parameter is DefaultFormalParameter
           ? parameter.parameter
           : parameter;
       final annotation = normal is SimpleFormalParameter ? normal.type : null;
-      return (annotation == null
-              ? CoreTypes.dynamic.ref(ctx)
-              : TypeRef.fromAnnotation(
-                  ctx,
-                  offset.file ?? ctx.library,
-                  annotation,
-                ))
-          .toRuntimeType(ctx)
-          .toJson();
+      return annotation == null
+          ? CoreTypes.dynamic.ref(ctx)
+          : TypeRef.fromAnnotation(ctx, offset.file ?? ctx.library, annotation);
     }
 
     final captures = <SSA>[];
@@ -74,9 +68,29 @@ extension TearOff on Variable {
         requiredPositional: positional
             .where((param) => param.isRequired)
             .length,
-        positionalTypes: positional.map(parameterType).toList(),
+        positionalTypes: positional
+            .map((param) => parameterType(param).toRuntimeType(ctx).toJson())
+            .toList(),
         namedNames: named.map((param) => param.name!.lexeme).toList(),
-        namedTypes: named.map(parameterType).toList(),
+        namedTypes: named
+            .map((param) => parameterType(param).toRuntimeType(ctx).toJson())
+            .toList(),
+        boundReceiver:
+            declaration is MethodDeclaration && !declaration.isStatic,
+        positionalUnboxed: positional
+            .map(
+              (param) =>
+                  declaration is FunctionDeclaration &&
+                  parameterType(param).isUnboxedAcrossFunctionBoundaries,
+            )
+            .toList(),
+        namedUnboxed: named
+            .map(
+              (param) =>
+                  declaration is FunctionDeclaration &&
+                  parameterType(param).isUnboxedAcrossFunctionBoundaries,
+            )
+            .toList(),
       ),
       CoreTypes.function.ref(ctx),
       methodReturnType:

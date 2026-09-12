@@ -26,6 +26,8 @@ import 'package:dart_eval/src/eval/compiler/expression/throw.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 
 Variable compileExpression(
   Expression e,
@@ -37,7 +39,13 @@ Variable compileExpression(
   } else if (e is AssignmentExpression) {
     return compileAssignmentExpression(e, ctx);
   } else if (e is Identifier) {
-    return compileIdentifier(e, ctx);
+    final value = compileIdentifier(e, ctx);
+    if (value.name == null &&
+        value.methodOffset != null &&
+        value.type == CoreTypes.function.ref(ctx)) {
+      return value.tearOff(ctx);
+    }
+    return value;
   } else if (e is MethodInvocation) {
     return compileMethodInvocation(ctx, e, bound: bound);
   } else if (e is BinaryExpression) {

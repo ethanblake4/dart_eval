@@ -293,29 +293,6 @@ class Variable {
           source: source,
         )?.resolveTypeChain(ctx) ??
         CoreTypes.dynamic.ref(ctx);
-    if (concreteTypes.length == 1) {
-      // If the concrete type is known we can access the field directly by
-      // its index
-      final actualType = concreteTypes[0];
-      final declaration =
-          ctx.topLevelDeclarationsMap[actualType.file]?[actualType.name];
-      final fieldDeclaration =
-          ctx.instanceDeclarationsMap[actualType.file]?[actualType.name]?[name];
-      final isBridge = declaration?.isBridge ?? true;
-      if (!isBridge && fieldDeclaration != null) {
-        final offset = DeferredOrOffset(
-          file: actualType.file,
-          className: actualType.name,
-          name: name,
-        );
-        // TODO offset should be a DeferredOrOffset
-        return Variable.ssa(
-          ctx,
-          LoadPropertyStatic(ctx.svar(name), ssa, offset.offset!),
-          type,
-        );
-      }
-    }
     return Variable.ssa(
       ctx,
       LoadPropertyDynamic(ctx.svar(name), ssa, name),

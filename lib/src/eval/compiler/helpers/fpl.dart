@@ -26,7 +26,7 @@ List<PossiblyValuedParameter> resolveFPLDefaults(
   final normalized = <PossiblyValuedParameter>[];
   var hasEncounteredOptionalPositionalParam = false;
   var hasEncounteredNamedParam = false;
-  var paramIndex = isEnum ? 2 : (isInstanceMethod || sortNamed ? 1 : 0);
+  var paramIndex = isEnum ? 2 : (isInstanceMethod ? 1 : 0);
 
   final named = <FormalParameter>[];
   final positional = <FormalParameter>[];

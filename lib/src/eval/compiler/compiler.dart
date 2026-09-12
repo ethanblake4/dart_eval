@@ -3,11 +3,13 @@ import 'package:collection/collection.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
+import 'package:dart_eval/src/eval/compiler/backend/register_backend.dart';
 import 'package:dart_eval/src/eval/compiler/optimizer/validate.dart';
 import 'package:dart_eval/src/eval/compiler/optimizer/ssa.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/field.dart';
 import 'package:dart_eval/src/eval/compiler/model/diagnostic_mode.dart';
+import 'package:dart_eval/src/eval/compiler/model/override_spec.dart';
 import 'package:dart_eval/src/eval/compiler/model/library.dart';
 import 'package:dart_eval/src/eval/compiler/source.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -593,20 +595,47 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       final type = t.key;
       typeIds.putIfAbsent(type.file, () => {})[type.name] = t.value;
     }
+    final backend = RegisterBackend(_ctx).compile();
+    int relocate(int id) =>
+        backend.functionOffsets[id] ??
+        (throw StateError('No bytecode for function $id'));
     return Program(
-      _ctx.topLevelDeclarationPositions,
-      _ctx.instanceDeclarationPositions,
+      _ctx.topLevelDeclarationPositions.map(
+        (library, entries) => MapEntry(
+          library,
+          entries.map((name, id) => MapEntry(name, relocate(id))),
+        ),
+      ),
+      _ctx.instanceDeclarationPositions.map(
+        (library, classes) => MapEntry(
+          library,
+          classes.map(
+            (name, parts) => MapEntry(name, [
+              for (var kind = 0; kind < 3; kind++)
+                (parts[kind] as Map).cast<String, int>().map(
+                  (member, id) => MapEntry(member, relocate(id)),
+                ),
+              ...parts.skip(3),
+            ]),
+          ),
+        ),
+      ),
       typeIds,
       //ctx.typeNames,
       _ctx.typeTypes,
-      [/* TODO ops */],
+      backend.words,
       libraryMapString,
       _ctx.bridgeStaticFunctionIndices,
       _ctx.constantPool.pool,
       _ctx.runtimeTypes.pool,
-      globalInitializers,
+      [for (final id in globalInitializers) relocate(id)],
       _ctx.enumValueIndices,
-      _ctx.runtimeOverrideMap,
+      _ctx.runtimeOverrideMap.map(
+        (name, spec) => MapEntry(
+          name,
+          OverrideSpec(relocate(spec.offset), spec.versionConstraint),
+        ),
+      ),
     );
   }
 

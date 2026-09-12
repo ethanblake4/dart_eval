@@ -1,10 +1,10 @@
 # Compiler migration to control_flow_graph
 
-The xv2 branch is an in-progress replacement of direct bytecode emission with
-an intermediate representation (IR). This change completes the frontend API
-migration and establishes analyzable IR. It does not complete an executable
-replacement compiler: instruction selection, runtime integration, and bytecode
-relocation remain separate work.
+The xv2 branch replaces direct bytecode emission with a control-flow graph and
+SSA pipeline. Stages 1–3 are committed. The current stage 4 checkpoint emits
+executable register instructions and integrates serialization and the public
+runtime. Runtime parity is incomplete: see [the resume notes](backend-checkpoint.md)
+for verified results, remaining failures, and the next steps.
 
 ## What to reuse
 
@@ -87,6 +87,8 @@ blocks. Labeled break and continue remain unsupported.
 
 ## Validation for this pass
 
+This section records the initial frontend pass, before the executable backend.
+
 - Full `dart analyze --format machine`: zero errors. Warnings remain in the
   unfinished runtime/serialization code and for the local path dependency.
 - Twenty focused tests pass across `compiler_cfg_test.dart`,
@@ -126,3 +128,17 @@ versions. It preserves terminal blocks during trimming. Pure dead chains can be
 removed without deleting calls or potentially throwing operations. Ten targeted
 package regression tests pass. Copy propagation and block trimming remain
 outside the compiler pipeline until their further transformations are validated.
+
+## Stage 4 checkpoint: executable register backend
+
+Instruction lowering now runs through the package's SSA, dead-definition removal,
+spilling, phi elimination, register allocation, and assembler. Function and block
+addresses are relocated after layout. The runtime executes a bounded general
+register file with separate call frames; programs round-trip through the version
+101 codec. This is an executable checkpoint, not a claim of completed parity.
+
+All 24 new machine/backend/codec tests pass. The full dart_eval suite has 485
+passing tests, 30 failures, and 6 skips. Full analysis reports zero errors, with
+warnings and lint infos remaining. The companion package has 21 passing targeted
+tests and zero analyzer errors or warnings. Work stops here at the user's request;
+resume from [backend-checkpoint.md](backend-checkpoint.md).

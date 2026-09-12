@@ -10,6 +10,9 @@ final class CreateClosure extends Operation {
   final List<Object?> positionalTypes;
   final List<String> namedNames;
   final List<Object?> namedTypes;
+  final bool boundReceiver;
+  final List<bool> positionalUnboxed;
+  final List<bool> namedUnboxed;
 
   CreateClosure(
     this.result,
@@ -19,6 +22,9 @@ final class CreateClosure extends Operation {
     this.positionalTypes = const [],
     this.namedNames = const [],
     this.namedTypes = const [],
+    this.boundReceiver = false,
+    this.positionalUnboxed = const [],
+    this.namedUnboxed = const [],
   });
 
   @override
@@ -38,6 +44,9 @@ final class CreateClosure extends Operation {
       positionalTypes: positionalTypes,
       namedNames: namedNames,
       namedTypes: namedTypes,
+      boundReceiver: boundReceiver,
+      positionalUnboxed: positionalUnboxed,
+      namedUnboxed: namedUnboxed,
     );
   }
 
