@@ -1,15 +1,25 @@
 import 'package:dart_eval/src/eval/compiler/context.dart';
+import 'package:control_flow_graph/control_flow_graph.dart';
 
 class CompilerLabel {
   final int offset;
   final int Function(CompilerContext ctx) cleanup;
   final String? name;
   final LabelType type;
+  final BasicBlock? breakTarget;
 
-  const CompilerLabel(this.type, this.offset, this.cleanup, {this.name});
+  const CompilerLabel(
+    this.type,
+    this.offset,
+    this.cleanup, {
+    this.name,
+    this.breakTarget,
+  });
 }
 
 class SimpleCompilerLabel implements CompilerLabel {
+  @override
+  BasicBlock? get breakTarget => null;
   @override
   get offset => -1;
   @override

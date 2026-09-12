@@ -10,6 +10,7 @@ class DeferredOrOffset {
     this.className,
     this.methodType,
     this.targetScopeFrameOffset,
+    this.targetName,
   }) : assert(offset != null || name != null);
 
   final int? offset;
@@ -18,6 +19,7 @@ class DeferredOrOffset {
   final int? methodType;
   final String? name;
   final int? targetScopeFrameOffset;
+  final String? targetName;
 
   factory DeferredOrOffset.lookupStatic(
     CompilerContext ctx,

@@ -25,13 +25,16 @@ final class AssertType extends Operation {
   }
 }
 
-/// TODO fix add result object
 final class IsType extends Operation {
+  final SSA result;
   final SSA object;
   final int typeId;
   final bool not;
 
-  IsType(this.object, this.typeId, this.not);
+  IsType(this.result, this.object, this.typeId, this.not);
+
+  @override
+  SSA get writesTo => result;
 
   @override
   Set<SSA> get readsFrom => {object};
@@ -41,14 +44,18 @@ final class IsType extends Operation {
 
   @override
   bool operator ==(Object other) =>
-      other is IsType && object == other.object && typeId == other.typeId;
+      other is IsType &&
+      result == other.result &&
+      object == other.object &&
+      typeId == other.typeId &&
+      not == other.not;
 
   @override
-  int get hashCode => object.hashCode ^ typeId.hashCode;
+  int get hashCode => Object.hash(result, object, typeId, not);
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
-    return IsType(readsFrom?.first ?? object, typeId, not);
+    return IsType(writesTo ?? result, readsFrom?.first ?? object, typeId, not);
   }
 }
 

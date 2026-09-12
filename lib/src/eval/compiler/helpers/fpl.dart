@@ -5,7 +5,14 @@ import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:control_flow_graph/control_flow_graph.dart';
+import 'package:dart_eval/src/eval/ir/function.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/ir/primitives.dart';
+import 'package:dart_eval/src/eval/compiler/builtins.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
+import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
+import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 
 List<PossiblyValuedParameter> resolveFPLDefaults(
   CompilerContext ctx,
@@ -51,46 +58,50 @@ List<PossiblyValuedParameter> resolveFPLDefaults(
   }
 
   for (final param in [...positional, ...named]) {
+    final argument = SSA('arg_$paramIndex');
+    ctx.pushOp(Parameter(argument, paramIndex));
     if (param is DefaultFormalParameter) {
+      Variable? defaultValue;
       if (param.defaultValue != null && !ignoreDefaults) {
-        ctx.beginAllocScope();
-        final reserve = JumpIfNonNull.make(paramIndex, -1);
-        final reserveOffset = ctx.pushOp(reserve, JumpIfNonNull.LEN);
-        var V = compileExpression(param.defaultValue!, ctx);
-        if (!allowUnboxed || !V.type.isUnboxedAcrossFunctionBoundaries) {
-          V = V.boxIfNeeded(ctx);
-        } else if (allowUnboxed && V.type.isUnboxedAcrossFunctionBoundaries) {
-          V = V.unboxIfNeeded(ctx);
-        }
-        ctx.pushOp(
-          CopyValue.make(paramIndex, V.scopeFrameOffset),
-          CopyValue.LEN,
+        macroBranch(
+          ctx,
+          null,
+          condition: (ctx) => Variable.of(
+            ctx,
+            argument,
+            CoreTypes.dynamic.ref(ctx),
+          ).invoke(ctx, '==', [BuiltinValue().push(ctx)]).result,
+          thenBranch: (ctx, _) {
+            var value = compileExpression(param.defaultValue!, ctx);
+            value =
+                !allowUnboxed || !value.type.isUnboxedAcrossFunctionBoundaries
+                ? value.boxIfNeeded(ctx)
+                : value.unboxIfNeeded(ctx);
+            ctx.pushOp(Assign(argument, value.ssa));
+            defaultValue = value;
+            return StatementInfo(-1);
+          },
         );
-        ctx.endAllocScope();
-        ctx.rewriteOp(
-          reserveOffset,
-          JumpIfNonNull.make(paramIndex, ctx.out.length),
-          0,
-        );
-        normalized.add(PossiblyValuedParameter(param.parameter, V));
-      } else {
-        if (param.defaultValue == null /* todo && param.type.nullable */ ) {
-          ctx.pushOp(MaybeBoxNull.make(paramIndex), MaybeBoxNull.LEN);
-        }
-        normalized.add(PossiblyValuedParameter(param.parameter, null));
+      } else if (param.defaultValue == null) {
+        ctx.pushOp(MaybeBoxNull(argument, argument));
       }
+      normalized.add(PossiblyValuedParameter(param.parameter, defaultValue));
     } else {
-      param as NormalFormalParameter;
-      normalized.add(PossiblyValuedParameter(param, null));
+      normalized.add(
+        PossiblyValuedParameter(param as NormalFormalParameter, null),
+      );
     }
-
     paramIndex++;
   }
   return normalized;
 }
 
-(TypeRef?, TypeAnnotation?) getFormalParameterType(CompilerContext ctx,
-    FormalParameter param, int decLibrary, Declaration? parameterHost) {
+(TypeRef?, TypeAnnotation?) getFormalParameterType(
+  CompilerContext ctx,
+  FormalParameter param,
+  int decLibrary,
+  Declaration? parameterHost,
+) {
   if (param is SimpleFormalParameter) {
     final type = param.type;
     return type == null
@@ -99,12 +110,12 @@ List<PossiblyValuedParameter> resolveFPLDefaults(
   } else if (param is FieldFormalParameter) {
     return (
       resolveFieldFormalType(ctx, decLibrary, param, parameterHost!),
-      null
+      null,
     );
   } else if (param is SuperFormalParameter) {
     return (
       resolveSuperFormalType(ctx, decLibrary, param, parameterHost!),
-      null
+      null,
     );
   } else if (param is DefaultFormalParameter) {
     final p = param.parameter;

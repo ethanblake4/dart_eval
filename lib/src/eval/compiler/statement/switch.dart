@@ -1,4 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:control_flow_graph/control_flow_graph.dart';
+import 'package:dart_eval/src/eval/compiler/model/label.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
@@ -19,6 +21,10 @@ StatementInfo compileSwitchStatement(
   // Validate switch cases for proper Dart semantics
   _validateSwitchCases(s.members);
 
+  final endBlock = BasicBlock<Operation>([], label: ctx.label('switch_end'));
+  ctx.labels.add(
+    CompilerLabel(LabelType.branch, -1, (_) => -1, breakTarget: endBlock),
+  );
   final result = _compileSwitchCases(
     ctx,
     switchExpr,
@@ -28,7 +34,10 @@ StatementInfo compileSwitchStatement(
     source: s,
   );
 
-  return result;
+  ctx.labels.removeLast();
+  ctx.flushBlock();
+  ctx.builder = ctx.builder.then(endBlock);
+  return result.copyWith(willAlwaysBreak: false);
 }
 
 StatementInfo _compileSwitchCases(
@@ -104,7 +113,8 @@ StatementInfo _executeMatchingCases(
 ) {
   var willAlwaysReturn = false;
   var willAlwaysThrow = false;
-  var position = ctx.out.length;
+  var willAlwaysBreak = false;
+  var position = ctx.blockCode.length;
 
   // Find the first case with statements starting from startIndex
   int executionIndex = startIndex;
@@ -125,12 +135,14 @@ StatementInfo _executeMatchingCases(
     );
     willAlwaysReturn = stmtInfo.willAlwaysReturn;
     willAlwaysThrow = stmtInfo.willAlwaysThrow;
+    willAlwaysBreak = stmtInfo.willAlwaysBreak;
   }
 
   return StatementInfo(
     position,
     willAlwaysReturn: willAlwaysReturn,
     willAlwaysThrow: willAlwaysThrow,
+    willAlwaysBreak: willAlwaysBreak,
   );
 }
 
@@ -141,13 +153,18 @@ StatementInfo _executeSwitchBlock(
 ) {
   var willAlwaysReturn = false;
   var willAlwaysThrow = false;
-  final position = ctx.out.length;
+  var willAlwaysBreak = false;
+  final position = ctx.blockCode.length;
 
   ctx.beginAllocScope();
 
   for (final stmt in statements) {
     final stmtInfo = compileStatement(stmt, expectedReturnType, ctx);
 
+    if (stmtInfo.willAlwaysBreak) {
+      willAlwaysBreak = true;
+      break;
+    }
     if (stmtInfo.willAlwaysThrow) {
       willAlwaysThrow = true;
       break;
@@ -164,6 +181,7 @@ StatementInfo _executeSwitchBlock(
     position,
     willAlwaysReturn: willAlwaysReturn,
     willAlwaysThrow: willAlwaysThrow,
+    willAlwaysBreak: willAlwaysBreak,
   );
 }
 

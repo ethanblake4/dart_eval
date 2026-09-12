@@ -1,6 +1,7 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:control_flow_graph/control_flow_graph.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/fpl.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
 
 import '../../../../dart_eval_bridge.dart';
@@ -8,11 +9,11 @@ import '../builtins.dart';
 import '../context.dart';
 import '../errors.dart';
 import '../type.dart';
-import '../util.dart';
+
 import '../variable.dart';
 
 class ArgumentListResult {
-  final List<String> ssa;
+  final List<SSA> ssa;
   final List<Variable> args;
   final Map<String, Variable> namedArgs;
 
@@ -30,9 +31,9 @@ ArgumentListResult compileArgumentList(
   List<String> superParams = const [],
   AstNode? source,
 }) {
-  final ssa = <String>[];
+  final ssa = <SSA>[];
   final args = <Variable>[];
-  final push = <Variable>[];
+  final push = <Variable>[...before];
   final namedArgs = <String, Variable>{};
 
   final positional = <FormalParameter>[];
@@ -70,7 +71,6 @@ ArgumentListResult compileArgumentList(
       } else {
         $null ??= BuiltinValue().push(ctx);
         push.add($null);
-        ssa.add($null.name!);
       }
     } else if (arg == null) {
       if (param.isRequired) {
@@ -79,16 +79,18 @@ ArgumentListResult compileArgumentList(
         // Default parameter values are handled at the call site
         $null ??= BuiltinValue().push(ctx);
         push.add($null);
-        ssa.add($null.name!);
       } else {
         $null ??= BuiltinValue().push(ctx);
         push.add($null);
-        ssa.add($null.name!);
       }
     } else {
-      var (paramType, typeAnnotation) =
-          getFormalParameterType(ctx, param, decLibrary, parameterHost);
-      
+      var (paramType, typeAnnotation) = getFormalParameterType(
+        ctx,
+        param,
+        decLibrary,
+        parameterHost,
+      );
+
       paramType ??= CoreTypes.dynamic.ref(ctx);
 
       var arg0 = compileExpression(arg, ctx, paramType);
@@ -100,7 +102,8 @@ ArgumentListResult compileArgumentList(
       }
 
       if (arg0.type == CoreTypes.function.ref(ctx) &&
-          arg0.scopeFrameOffset == -1) {
+          arg0.name == null &&
+          arg0.methodOffset != null) {
         arg0 = arg0.tearOff(ctx);
       }
 
@@ -122,7 +125,6 @@ ArgumentListResult compileArgumentList(
         }
       }
 
-      ssa.add(arg0.name!);
       args.add(arg0);
       push.add(arg0);
     }
@@ -143,7 +145,7 @@ ArgumentListResult compileArgumentList(
       final V = ctx.lookupLocal(name)!;
       push.add(V);
       namedArgs[name] = V;
-      ssa.add(name);
+
       continue;
     }
     final param =
@@ -157,12 +159,7 @@ ArgumentListResult compileArgumentList(
         paramType = TypeRef.fromAnnotation(ctx, decLibrary, typeAnnotation);
       }
     } else if (param is FieldFormalParameter) {
-      paramType = resolveFieldFormalType(
-        ctx,
-        decLibrary,
-        param,
-        parameterHost,
-      );
+      paramType = resolveFieldFormalType(ctx, decLibrary, param, parameterHost);
     } else if (param is SuperFormalParameter) {
       paramType = resolveSuperFormalType(ctx, decLibrary, param, parameterHost);
     } else {
@@ -179,7 +176,8 @@ ArgumentListResult compileArgumentList(
       }
 
       if (arg0.type == CoreTypes.function.ref(ctx) &&
-          arg0.scopeFrameOffset == -1) {
+          arg0.name == null &&
+          arg0.methodOffset != null) {
         arg0 = arg0.tearOff(ctx);
       }
 
@@ -203,11 +201,9 @@ ArgumentListResult compileArgumentList(
 
       push.add(arg0);
       namedArgs[name] = arg0;
-      ssa.add(name);
     } else {
       $null ??= BuiltinValue().push(ctx);
       push.add($null);
-      ssa.add($null.name!);
     }
   }
 
@@ -218,6 +214,7 @@ ArgumentListResult compileArgumentList(
     );
   }
 
+  ssa.addAll(push.map((argument) => argument.ssa));
   return ArgumentListResult(ssa, args, namedArgs);
 }
 
@@ -229,9 +226,9 @@ ArgumentListResult compileSuperParams(
   List<String> superParams = const [],
   AstNode? source,
 }) {
-  final ssa = <String>[];
+  final ssa = <SSA>[];
   final args = <Variable>[];
-  final push = <Variable>[];
+  final push = <Variable>[...before];
   final namedArgs = <String, Variable>{};
 
   final positional = <FormalParameter>[];
@@ -253,14 +250,12 @@ ArgumentListResult compileSuperParams(
       final V = ctx.lookupLocal(param.name!.lexeme)!;
       push.add(V);
       args.add(V);
-      ssa.add(V.name!);
     } else {
       if (param.isRequired) {
         throw CompileError('Not enough positional arguments');
       } else {
         $null ??= BuiltinValue().push(ctx);
         push.add($null);
-        ssa.add($null.name!);
       }
     }
   }
@@ -271,14 +266,13 @@ ArgumentListResult compileSuperParams(
       final V = ctx.lookupLocal(name)!;
       push.add(V);
       namedArgs[name] = V;
-      ssa.add(name);
     } else {
       $null ??= BuiltinValue().push(ctx);
       push.add($null);
-      ssa.add($null.name!);
     }
   }
 
+  ssa.addAll(push.map((argument) => argument.ssa));
   return ArgumentListResult(ssa, args, namedArgs);
 }
 
@@ -288,9 +282,9 @@ ArgumentListResult compileSuperParamsWithBridge(
   List<Variable> before = const [],
   List<String> superParams = const [],
 }) {
-  final ssa = <String>[];
+  final ssa = <SSA>[];
   final args = <Variable>[];
-  final push = <Variable>[];
+  final push = <Variable>[...before];
   final namedArgs = <String, Variable>{};
 
   Variable? $null;
@@ -301,12 +295,10 @@ ArgumentListResult compileSuperParamsWithBridge(
       final V = ctx.lookupLocal(param.name)!;
       push.add(V);
       args.add(V);
-      ssa.add(V.name!);
     } else {
       if (param.optional) {
         $null ??= BuiltinValue().push(ctx);
         push.add($null);
-        ssa.add($null.name!);
       } else {
         throw CompileError('Not enough positional arguments');
       }
@@ -318,14 +310,13 @@ ArgumentListResult compileSuperParamsWithBridge(
       final V = ctx.lookupLocal(param.name)!;
       push.add(V);
       namedArgs[param.name] = V;
-      ssa.add(param.name);
     } else {
       $null ??= BuiltinValue().push(ctx);
       push.add($null);
-      ssa.add($null.name!);
     }
   }
 
+  ssa.addAll(push.map((argument) => argument.ssa));
   return ArgumentListResult(ssa, args, namedArgs);
 }
 
@@ -338,9 +329,9 @@ ArgumentListResult compileArgumentListWithDynamic(
   Map<String, TypeRef> resolveGenerics = const {},
   AstNode? source,
 }) {
-  final ssa = <String>[];
+  final ssa = <SSA>[];
   final args = <Variable>[];
-  final push = <Variable>[];
+  final push = <Variable>[...before];
   final namedArgs = <String, Variable>{};
 
   for (var i = 0; i < argumentList.arguments.length; i++) {
@@ -364,15 +355,16 @@ ArgumentListResult compileArgumentListWithDynamic(
     }
 
     if (arg0.type == CoreTypes.function.ref(ctx) &&
-        arg0.scopeFrameOffset == -1) {
+        arg0.name == null &&
+        arg0.methodOffset != null) {
       arg0 = arg0.tearOff(ctx);
     }
 
     args.add(arg0);
     push.add(arg0);
-    ssa.add(arg0.name!);
   }
 
+  ssa.addAll(push.map((argument) => argument.ssa));
   return ArgumentListResult(ssa, args, namedArgs);
 }
 
@@ -384,9 +376,9 @@ ArgumentListResult compileArgumentListWithKnownMethodArgs(
   List<Variable> before = const [],
   AstNode? source,
 }) {
-  final ssa = <String>[];
+  final ssa = <SSA>[];
   final args = <Variable>[];
-  final push = <Variable>[];
+  final push = <Variable>[...before];
   final namedArgs = <String, Variable>{};
   final namedExpr = <String, Expression>{};
 
@@ -412,7 +404,8 @@ ArgumentListResult compileArgumentListWithKnownMethodArgs(
       arg0 = arg0.boxIfNeeded(ctx);
 
       if (arg0.type == CoreTypes.function.ref(ctx) &&
-          arg0.scopeFrameOffset == -1) {
+          arg0.name == null &&
+          arg0.methodOffset != null) {
         arg0 = arg0.tearOff(ctx);
       }
 
@@ -424,7 +417,6 @@ ArgumentListResult compileArgumentListWithKnownMethodArgs(
       }
       args.add(arg0);
       push.add(arg0);
-      ssa.add(arg0.name!);
     }
 
     i++;
@@ -452,14 +444,13 @@ ArgumentListResult compileArgumentListWithKnownMethodArgs(
       }
       push.add(arg0);
       namedArgs[param.name] = arg0;
-      ssa.add(param.name);
     } else {
       $null ??= BuiltinValue().push(ctx);
       push.add($null);
-      ssa.add($null.name!);
     }
   }
 
+  ssa.addAll(push.map((argument) => argument.ssa));
   return ArgumentListResult(ssa, args, namedArgs);
 }
 
@@ -470,9 +461,9 @@ ArgumentListResult compileArgumentListWithBridge(
   List<Variable> before = const [],
   List<String> superParams = const [],
 }) {
-  final ssa = <String>[];
+  final ssa = <SSA>[];
   final args = <Variable>[];
-  final push = <Variable>[];
+  final push = <Variable>[...before];
   final namedArgs = <String, Variable>{};
   final namedExpr = <String, Expression>{};
 
@@ -484,14 +475,14 @@ ArgumentListResult compileArgumentListWithBridge(
       final V = ctx.lookupLocal(param.name)!;
       push.add(V);
       args.add(V);
-      ssa.add(V.name!);
+
       i++;
       continue;
     }
     if (param.optional && argumentList.arguments.length <= i) {
       $null ??= BuiltinValue().push(ctx);
       push.add($null);
-      ssa.add($null.name!);
+
       continue;
     }
     final arg = argumentList.arguments[i];
@@ -501,7 +492,6 @@ ArgumentListResult compileArgumentListWithBridge(
       } else {
         $null ??= BuiltinValue().push(ctx);
         push.add($null);
-        ssa.add($null.name!);
       }
     } else {
       var paramType = TypeRef.fromBridgeAnnotation(ctx, param.type);
@@ -509,7 +499,8 @@ ArgumentListResult compileArgumentListWithBridge(
       var arg0 = compileExpression(arg, ctx, paramType);
       arg0 = arg0.boxIfNeeded(ctx);
       if (arg0.type == CoreTypes.function.ref(ctx) &&
-          arg0.scopeFrameOffset == -1) {
+          arg0.name == null &&
+          arg0.methodOffset != null) {
         arg0 = arg0.tearOff(ctx);
       }
       if (!(param.type.nullable && arg0.type == CoreTypes.nullType.ref(ctx)) &&
@@ -521,7 +512,6 @@ ArgumentListResult compileArgumentListWithBridge(
       }
       args.add(arg0);
       push.add(arg0);
-      ssa.add(arg0.name!);
     }
 
     i++;
@@ -538,7 +528,6 @@ ArgumentListResult compileArgumentListWithBridge(
       final V = ctx.lookupLocal(param.name)!;
       push.add(V);
       namedArgs[param.name] = V;
-      ssa.add(param.name);
     }
     var paramType = TypeRef.fromBridgeAnnotation(ctx, param.type);
     if (namedExpr.containsKey(param.name)) {
@@ -548,7 +537,8 @@ ArgumentListResult compileArgumentListWithBridge(
         paramType,
       ).boxIfNeeded(ctx);
       if (arg0.type == CoreTypes.function.ref(ctx) &&
-          arg0.scopeFrameOffset == -1) {
+          arg0.name == null &&
+          arg0.methodOffset != null) {
         arg0 = arg0.tearOff(ctx);
       }
       if (!arg0.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
@@ -559,14 +549,13 @@ ArgumentListResult compileArgumentListWithBridge(
       }
       push.add(arg0);
       namedArgs[param.name] = arg0;
-      ssa.add(param.name);
     } else {
       $null ??= BuiltinValue().push(ctx);
       push.add($null);
-      ssa.add($null.name!);
     }
   }
 
+  ssa.addAll(push.map((argument) => argument.ssa));
   return ArgumentListResult(ssa, args, namedArgs);
 }
 

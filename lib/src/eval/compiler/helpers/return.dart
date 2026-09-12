@@ -4,7 +4,8 @@ import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/ir/flow.dart';
+import 'package:dart_eval/src/eval/ir/async.dart';
 
 StatementInfo doReturn(
   CompilerContext ctx,
@@ -16,9 +17,9 @@ StatementInfo doReturn(
   if (value == null) {
     if (isAsync) {
       final completer = ctx.lookupLocal('#completer')!;
-      ctx.pushOp(ReturnAsync.make(-1, completer.scopeFrameOffset), Return.LEN);
+      ctx.pushOp(ReturnAsync(null, completer.ssa));
     } else {
-      ctx.pushOp(Return.make(-1), Return.LEN);
+      ctx.pushOp(Return(null));
     }
   } else {
     if (isAsync) {
@@ -34,20 +35,12 @@ StatementInfo doReturn(
           final vtype = vta.isEmpty ? CoreTypes.dynamic.ref(ctx) : vta[0];
           if (vtype.isAssignableTo(ctx, expected)) {
             final completer = ctx.lookupLocal('#completer')!;
-            final awaitOp = Await.make(
-              completer.scopeFrameOffset,
-              value0.scopeFrameOffset,
+            final result = Variable.ssa(
+              ctx,
+              Await(ctx.svar('await_result'), completer.ssa, value0.ssa),
+              CoreTypes.dynamic.ref(ctx),
             );
-            ctx.pushOp(awaitOp, Await.LEN);
-            ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-            final result = Variable.alloc(ctx, CoreTypes.dynamic.ref(ctx));
-            ctx.pushOp(
-              ReturnAsync.make(
-                result.scopeFrameOffset,
-                completer.scopeFrameOffset,
-              ),
-              ReturnAsync.LEN,
-            );
+            ctx.pushOp(ReturnAsync(result.ssa, completer.ssa));
             return StatementInfo(-1, willAlwaysReturn: true);
           }
         }
@@ -56,10 +49,7 @@ StatementInfo doReturn(
         );
       }
       final completer = ctx.lookupLocal('#completer')!;
-      ctx.pushOp(
-        ReturnAsync.make(value0.scopeFrameOffset, completer.scopeFrameOffset),
-        ReturnAsync.LEN,
-      );
+      ctx.pushOp(ReturnAsync(value0.ssa, completer.ssa));
       return StatementInfo(-1, willAlwaysReturn: true);
     }
 
@@ -80,7 +70,7 @@ StatementInfo doReturn(
     } else {
       value0 = value0.boxIfNeeded(ctx);
     }
-    ctx.pushOp(Return.make(value.scopeFrameOffset), Return.LEN);
+    ctx.pushOp(Return(value0.ssa));
   }
 
   return StatementInfo(-1, willAlwaysReturn: true);

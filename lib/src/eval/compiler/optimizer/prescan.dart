@@ -5,7 +5,6 @@ import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/runtime/ops/all_ops.dart';
 
 class PrescanVisitor extends RecursiveAstVisitor<PrescanContext?> {
   final PrescanContext ctx = PrescanContext();
@@ -85,9 +84,4 @@ class PrescanContext with ScopeContext {
   var inClosure = false;
   List<Variable> localsReferencedFromClosure = [];
   Set<int> closedFrames = {};
-
-  @override
-  int pushOp(EvcOp op, int length) {
-    return 0;
-  }
 }

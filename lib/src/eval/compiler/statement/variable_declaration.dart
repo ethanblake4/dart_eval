@@ -4,11 +4,9 @@ import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/ir/memory.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 import '../errors.dart';
 import '../type.dart';
-import '../variable.dart';
 import 'statement.dart';
 
 StatementInfo compileVariableDeclarationStatement(
@@ -49,29 +47,13 @@ void compileVariableDeclarationList(
       if (!((type ?? res.type).isUnboxedAcrossFunctionBoundaries)) {
         res = res.boxIfNeeded(ctx);
       }
-      if (res.name != null) {
-        final type0 = type ?? res.type;
-        var v = Variable.alloc(
-          ctx,
-          type0.isUnboxedAcrossFunctionBoundaries
-              ? type0.copyWith(boxed: false)
-              : type0,
-        )..name = ctx.svar(li.name.lexeme).name;
-        ctx.pushOp(Assign(v.ssa, res.ssa));
-        ctx.setLocal(li.name.lexeme, v);
-      } else {
-        ctx.setLocal(
-          li.name.lexeme,
-          Variable(
-            res.scopeFrameOffset,
-            (type ?? res.type).copyWith(boxed: res.boxed),
-            isFinal: l.isFinal || l.isConst,
-            methodOffset: res.methodOffset,
-            methodReturnType: res.methodReturnType,
-            callingConvention: res.callingConvention,
-          ),
-        );
-      }
+      final local = res.copyWith(
+        name: ctx.svar(li.name.lexeme).name,
+        type: (type ?? res.type).copyWith(boxed: res.boxed),
+        isFinal: l.isFinal || l.isConst,
+      );
+      ctx.pushOp(Assign(local.ssa, res.ssa));
+      ctx.setLocal(li.name.lexeme, local);
     } else {
       ctx.setLocal(
         li.name.lexeme,

@@ -4,7 +4,7 @@ import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/ir/collection.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
 
 Variable compileRecordLiteral(
@@ -18,8 +18,11 @@ Variable compileRecordLiteral(
     throw CompileError('Incompatible record type', l);
   }
 
-  ctx.pushOp(PushList.make(), PushList.LEN);
-  final fieldList = Variable.alloc(ctx, CoreTypes.list.ref(ctx));
+  final fieldList = Variable.ssa(
+    ctx,
+    NewList(ctx.svar('record_fields')),
+    CoreTypes.list.ref(ctx),
+  );
 
   var positionalFields = 1;
 
@@ -65,10 +68,7 @@ Variable compileRecordLiteral(
         }
         inferredTypeName.write('$name:${value.type}');
       }
-      ctx.pushOp(
-        ListAppend.make(fieldList.scopeFrameOffset, value.scopeFrameOffset),
-        ListAppend.LEN,
-      );
+      ctx.pushOp(ListAppend(fieldList.ssa, value.ssa));
       fields[name] = i;
     } else {
       // Positional field
@@ -95,10 +95,7 @@ Variable compileRecordLiteral(
         }
         inferredTypeName.write('${value.type}');
       }
-      ctx.pushOp(
-        ListAppend.make(fieldList.scopeFrameOffset, value.scopeFrameOffset),
-        ListAppend.LEN,
-      );
+      ctx.pushOp(ListAppend(fieldList.ssa, value.ssa));
       fields[name] = i;
     }
   }
@@ -118,9 +115,14 @@ Variable compileRecordLiteral(
         recordFields: inferredRecordFields,
       );
   final constIndex = ctx.constantPool.addOrGet(fields);
-  ctx.pushOp(
-    PushRecord.make(fieldList.scopeFrameOffset, constIndex, -1),
-    PushRecord.LEN,
+  return Variable.ssa(
+    ctx,
+    NewRecord(
+      ctx.svar('record'),
+      fieldList.ssa,
+      constIndex,
+      type.toRuntimeType(ctx).type,
+    ),
+    type,
   );
-  return Variable.alloc(ctx, type);
 }

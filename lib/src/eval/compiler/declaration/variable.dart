@@ -4,7 +4,8 @@ import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/scope.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/ir/flow.dart';
+import 'package:dart_eval/src/eval/ir/globals.dart';
 
 void compileTopLevelVariableDeclaration(
   VariableDeclaration v,
@@ -37,10 +38,10 @@ void compileTopLevelVariableDeclaration(
       type = type.copyWith(boxed: false);
     }
     final index = ctx.topLevelGlobalIndices[ctx.library]![varName]!;
-    ctx.pushOp(SetGlobal.make(index, V.scopeFrameOffset), SetGlobal.LEN);
+    ctx.pushOp(SetGlobal(index, V.ssa));
     ctx.topLevelVariableInferredTypes[ctx.library]![varName] = type;
     ctx.topLevelGlobalInitializers[ctx.library]![varName] = pos;
     ctx.runtimeGlobalInitializerMap[index] = pos;
-    ctx.pushOp(Return.make(V.scopeFrameOffset), Return.LEN);
+    ctx.pushOp(Return(V.ssa));
   }
 }

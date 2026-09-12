@@ -1,5 +1,7 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
+import 'package:collection/collection.dart';
 import 'package:dart_eval/src/eval/compiler/offset_tracker.dart';
+import 'operands.dart';
 
 final class Return extends Operation {
   final SSA? value;
@@ -20,7 +22,7 @@ final class Return extends Operation {
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
-    return Return(readsFrom?.first ?? value);
+    return Return(readsFrom?.firstOrNull ?? value);
   }
 }
 
@@ -47,13 +49,20 @@ final class ReturnAsync extends Operation {
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
-    final newReadsFrom = readsFrom?.toList() ?? [if (value != null) value!, completer];
-    return ReturnAsync(newReadsFrom.length > 1 ? newReadsFrom[0] : null, newReadsFrom.last);
+    final newReadsFrom = renameOperands(
+      [if (value != null) value!, completer],
+      this.readsFrom,
+      readsFrom,
+    );
+    return ReturnAsync(
+      newReadsFrom.length > 1 ? newReadsFrom[0] : null,
+      newReadsFrom.last,
+    );
   }
 }
 
 final class Jump extends Operation {
-  final int target;
+  final String target;
 
   Jump(this.target);
 
@@ -74,7 +83,7 @@ final class Jump extends Operation {
 
 final class JumpIfFalse extends Operation {
   final SSA condition;
-  final int target;
+  final String target;
 
   JumpIfFalse(this.condition, this.target);
 
@@ -98,13 +107,13 @@ final class JumpIfFalse extends Operation {
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
-    return this;
+    return JumpIfFalse(readsFrom?.single ?? condition, target);
   }
 }
 
 final class JumpIfNonNull extends Operation {
   final SSA condition;
-  final int target;
+  final String target;
 
   JumpIfNonNull(this.condition, this.target);
 
@@ -128,13 +137,13 @@ final class JumpIfNonNull extends Operation {
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
-    return this;
+    return JumpIfNonNull(readsFrom?.single ?? condition, target);
   }
 }
 
 final class JumpIfNull extends Operation {
   final SSA condition;
-  final int target;
+  final String target;
 
   JumpIfNull(this.condition, this.target);
 
@@ -158,7 +167,7 @@ final class JumpIfNull extends Operation {
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
-    return this;
+    return JumpIfNull(readsFrom?.single ?? condition, target);
   }
 }
 
@@ -166,7 +175,12 @@ final class Call extends Operation {
   final DeferredOrOffset target;
   final List<SSA> arguments;
 
-  Call(this.target, this.arguments);
+  final SSA? result;
+
+  Call(this.target, this.arguments, {this.result});
+
+  @override
+  SSA? get writesTo => result;
 
   @override
   Set<SSA> get readsFrom => Set.from(arguments);
@@ -178,15 +192,19 @@ final class Call extends Operation {
   bool operator ==(Object other) =>
       other is Call &&
       target == other.target &&
-      arguments.length == other.arguments.length &&
-      arguments.every((e) => other.arguments.contains(e));
+      result == other.result &&
+      const ListEquality<SSA>().equals(arguments, other.arguments);
 
   @override
-  int get hashCode => target.hashCode ^ arguments.hashCode;
+  int get hashCode => Object.hash(target, result, Object.hashAll(arguments));
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
-    return Call(target, readsFrom?.toList() ?? arguments);
+    return Call(
+      target,
+      renameOperands(arguments, this.readsFrom, readsFrom),
+      result: writesTo ?? result,
+    );
   }
 }
 
@@ -213,7 +231,33 @@ final class Assert extends Operation {
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
-    final newReadsFrom = readsFrom?.toList() ?? [condition, errorMessage];
+    final newReadsFrom = renameOperands(
+      [condition, errorMessage],
+      this.readsFrom,
+      readsFrom,
+    );
     return Assert(newReadsFrom[0], newReadsFrom[1]);
   }
+}
+
+/// Raises a value through the active exception handlers.
+final class Throw extends Operation {
+  final SSA value;
+  Throw(this.value);
+  @override
+  Set<SSA> get readsFrom => {value};
+  @override
+  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) =>
+      Throw(readsFrom?.single ?? value);
+}
+
+/// Rethrows the active exception, preserving its stack trace.
+final class Rethrow extends Operation {
+  final SSA value;
+  Rethrow(this.value);
+  @override
+  Set<SSA> get readsFrom => {value};
+  @override
+  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) =>
+      Rethrow(readsFrom?.single ?? value);
 }

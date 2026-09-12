@@ -1,4 +1,5 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
+import 'operands.dart';
 
 final class CreateClass extends Operation {
   final SSA target;
@@ -8,7 +9,12 @@ final class CreateClass extends Operation {
   final int valuesLength;
 
   CreateClass(
-      this.target, this.library, this.name, this.$super, this.valuesLength);
+    this.target,
+    this.library,
+    this.name,
+    this.$super,
+    this.valuesLength,
+  );
 
   @override
   Set<SSA> get readsFrom => {$super};
@@ -26,6 +32,7 @@ final class CreateClass extends Operation {
       target == other.target &&
       library == other.library &&
       name == other.name &&
+      $super == other.$super &&
       valuesLength == other.valuesLength;
 
   @override
@@ -33,6 +40,7 @@ final class CreateClass extends Operation {
       target.hashCode ^
       library.hashCode ^
       name.hashCode ^
+      $super.hashCode ^
       valuesLength.hashCode;
 
   @override
@@ -72,11 +80,8 @@ final class SetPropertyStatic extends Operation {
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
-    return SetPropertyStatic(
-      readsFrom?.first ?? object,
-      index,
-      readsFrom?.last ?? value,
-    );
+    final inputs = renameOperands([object, value], this.readsFrom, readsFrom);
+    return SetPropertyStatic(inputs[0], index, inputs[1]);
   }
 }
 
@@ -287,11 +292,12 @@ final class InvokeDynamic extends Operation {
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
+    final inputs = renameOperands([object, ...args], this.readsFrom, readsFrom);
     return InvokeDynamic(
       writesTo ?? target,
-      readsFrom?.first ?? object,
+      inputs[0],
       name,
-      args,
+      inputs.sublist(1),
     );
   }
 }

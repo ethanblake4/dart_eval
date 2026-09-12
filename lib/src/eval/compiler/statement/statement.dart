@@ -68,11 +68,7 @@ StatementInfo compileStatement(
       return compilePatternVariableDeclarationStatement(s, ctx);
     } else if (s is FunctionDeclarationStatement) {
       final decl = s.functionDeclaration;
-      final variable = compileFunctionExpression(
-        decl.functionExpression,
-        ctx,
-      );
-      variable.name = decl.name.lexeme;
+      final variable = compileFunctionExpression(decl.functionExpression, ctx);
       ctx.setLocal(decl.name.lexeme, variable);
       return StatementInfo(-1);
     }
@@ -88,17 +84,20 @@ class StatementInfo {
     this.position, {
     this.willAlwaysReturn = false,
     this.willAlwaysThrow = false,
+    this.willAlwaysBreak = false,
   });
 
   final int position;
   final bool willAlwaysReturn;
   final bool willAlwaysThrow;
+  final bool willAlwaysBreak;
 
   StatementInfo operator |(StatementInfo other) {
     return StatementInfo(
       position,
       willAlwaysReturn: willAlwaysReturn && other.willAlwaysReturn,
       willAlwaysThrow: willAlwaysThrow && other.willAlwaysThrow,
+      willAlwaysBreak: willAlwaysBreak && other.willAlwaysBreak,
     );
   }
 
@@ -106,11 +105,13 @@ class StatementInfo {
     int? position,
     bool? willAlwaysReturn,
     bool? willAlwaysThrow,
+    bool? willAlwaysBreak,
   }) {
     return StatementInfo(
       position ?? this.position,
       willAlwaysReturn: willAlwaysReturn ?? this.willAlwaysReturn,
       willAlwaysThrow: willAlwaysThrow ?? this.willAlwaysThrow,
+      willAlwaysBreak: willAlwaysBreak ?? this.willAlwaysBreak,
     );
   }
 }

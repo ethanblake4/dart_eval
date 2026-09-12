@@ -7,9 +7,9 @@ import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/offset_tracker.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
-import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/ir/bridge.dart';
+import 'package:dart_eval/src/eval/ir/flow.dart';
 
 Variable compileInstanceCreation(
   CompilerContext ctx,
@@ -29,13 +29,16 @@ Variable compileInstanceCreation(
   final staticType = $resolved.concreteTypes.first;
   final dec0 = resolveStaticMethod(ctx, staticType, name);
 
-  //final List<Variable> _args;
-  //final Map<String, Variable> _namedArgs;
+  final ArgumentListResult arguments;
 
   if (dec0.isBridge) {
     final bridge = dec0.bridge;
     final fnDescriptor = (bridge as BridgeConstructorDef).functionDescriptor;
-    compileArgumentListWithBridge(ctx, e.argumentList, fnDescriptor);
+    arguments = compileArgumentListWithBridge(
+      ctx,
+      e.argumentList,
+      fnDescriptor,
+    );
 
     //_args = argsPair.first;
     //_namedArgs = argsPair.second;
@@ -43,7 +46,7 @@ Variable compileInstanceCreation(
     final dec = dec0.declaration!;
     final fpl = (dec as ConstructorDeclaration).parameters.parameters;
 
-    compileArgumentList(
+    arguments = compileArgumentList(
       ctx,
       e.argumentList,
       staticType.file,
@@ -55,27 +58,20 @@ Variable compileInstanceCreation(
     //_namedArgs = argsPair.second;
   }
 
-  //final _argTypes = _args.map((e) => e.type).toList();
-  //final _namedArgTypes = _namedArgs.map((key, value) => MapEntry(key, value.type));
-
+  final result = ctx.svar('instance');
   if (dec0.isBridge) {
-    final bridge = dec0.bridge!;
-    if (bridge is BridgeClassDef && !bridge.wrap) {
-      final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type.type);
-
-      final $null = BuiltinValue().push(ctx);
-      final op = BridgeInstantiate.make(
-        $null.scopeFrameOffset,
-        ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.']!,
-      );
-      ctx.pushOp(op, BridgeInstantiate.len(op));
-    } else {
-      final op = InvokeExternal.make(
+    final classBridge =
+        ctx.topLevelDeclarationsMap[staticType.file]![staticType.name]?.bridge;
+    final externalId =
         ctx.bridgeStaticFunctionIndices[staticType
-            .file]!['${staticType.name}.$name']!,
+            .file]!['${staticType.name}.$name']!;
+    if (classBridge is BridgeClassDef && !classBridge.wrap) {
+      final subclass = BuiltinValue().push(ctx);
+      ctx.pushOp(
+        BridgeInstantiate(result, externalId, subclass.ssa, arguments.ssa),
       );
-      ctx.pushOp(op, InvokeExternal.LEN);
-      ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
+    } else {
+      ctx.pushOp(InvokeExternal(result, externalId, arguments.ssa));
     }
   } else {
     final offset = DeferredOrOffset.lookupStatic(
@@ -84,15 +80,12 @@ Variable compileInstanceCreation(
       staticType.name,
       name,
     );
-    final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.length);
-    if (offset.offset == null) {
-      ctx.offsetTracker.setOffset(loc, offset);
-    }
-    ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
+    ctx.pushOp(Call(offset, arguments.ssa, result: result));
   }
-
-  return Variable.alloc(
+  return Variable.of(
     ctx,
-    $resolved.concreteTypes.first.copyWith(boxed: true),
+    result,
+    staticType.copyWith(boxed: true),
+    concreteTypes: [staticType],
   );
 }

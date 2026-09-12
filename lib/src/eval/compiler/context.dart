@@ -13,6 +13,7 @@ import 'package:dart_eval/src/eval/compiler/util.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'package:dart_eval/src/eval/runtime/type.dart';
+import 'package:dart_eval/src/eval/ir/flow.dart';
 
 abstract class AbstractScopeContext {
   int get scopeFrameOffset;
@@ -27,8 +28,6 @@ abstract class AbstractScopeContext {
 }
 
 mixin ScopeContext on Object implements AbstractScopeContext {
-  final ControlFlowGraph cfg = ControlFlowGraph();
-
   @override
   int scopeFrameOffset = 0;
   @override
@@ -36,8 +35,10 @@ mixin ScopeContext on Object implements AbstractScopeContext {
   @override
   List<int> allocNest = [0];
 
-  void beginAllocScope(
-      {int existingAllocLen = 0, bool requireNonlinearAccess = false}) {
+  void beginAllocScope({
+    int existingAllocLen = 0,
+    bool requireNonlinearAccess = false,
+  }) {
     allocNest.add(existingAllocLen);
     locals.add({});
   }
@@ -57,24 +58,28 @@ mixin ScopeContext on Object implements AbstractScopeContext {
     return nestCount;
   }
 
-   void resetStack({int position = 0}) {
+  void resetStack({int position = 0}) {
     allocNest = [position];
     scopeFrameOffset = position;
   }
 
   Variable setLocal(String name, Variable v, {int? frame}) {
     if (frame != null) {
-      return locals[frame][name] = v..frameIndex = frame;
+      return locals[frame][name] = v
+        ..frameIndex = frame
+        ..localName = name;
     }
 
-    return locals.last[name] = v..frameIndex = locals.length - 1;
+    return locals.last[name] = v
+      ..frameIndex = locals.length - 1
+      ..localName = name;
   }
 
   Variable? lookupLocal(String name) {
     for (var i = locals.length - 1; i >= 0; i--) {
       if (locals[i].containsKey(name)) {
         return locals[i][name]!
-          ..name = name
+          ..localName = name
           ..frameIndex = i;
       }
     }
@@ -97,15 +102,17 @@ mixin ScopeContext on Object implements AbstractScopeContext {
         if (!myLocal.boxed && value.boxed) {
           locals[i][key] = myLocal.boxIfNeeded(this);
         } else if (myLocal.boxed && !value.boxed) {
-          locals[i][key] = myLocal.unboxIfNeeded(this);
+          locals[i][key] = myLocal.unboxIfNeeded(this as CompilerContext);
         }
       });
     }
   }
 
   void restoreState(ContextSaveState initial) {
-    allocNest = initial.allocNest;
-    locals = initial.locals;
+    allocNest = [...initial.allocNest];
+    locals = [
+      for (final scope in initial.locals) {...scope},
+    ];
   }
 
   void restoreBoxingState(ContextSaveState initial) {
@@ -136,6 +143,48 @@ class CompilerContext with ScopeContext {
 
   late BasicBlockBuilder builder;
   var blockCode = <Operation>[];
+  final Map<int, ControlFlowGraph> functionGraphs = {};
+  final Map<int, String> functionNames = {};
+  int? currentFunctionId;
+  int _nextFunctionId = 0;
+  late ControlFlowGraph activeGraph;
+
+  bool get blockEndsControlFlow =>
+      blockCode.isNotEmpty &&
+      (blockCode.last is Return ||
+          blockCode.last is ReturnAsync ||
+          blockCode.last is Throw ||
+          blockCode.last is Rethrow ||
+          blockCode.last is Jump);
+
+  int beginFunction(String name) {
+    finishMethod();
+    final id = _nextFunctionId++;
+    currentFunctionId = id;
+    funcLabel = label(name);
+    functionNames[id] = funcLabel!;
+    activeGraph = ControlFlowGraph();
+    final root = BasicBlock<Operation>([], label: funcLabel);
+    activeGraph.append(root);
+    activeGraph.root = root;
+    builder = BasicBlockBuilder(activeGraph, [root], null);
+    hasBegunMethod = true;
+    return id;
+  }
+
+  void finishMethod() {
+    if (!hasBegunMethod) return;
+    if (blockCode.isNotEmpty) flushBlock();
+    functionGraphs[currentFunctionId!] = activeGraph;
+    hasBegunMethod = false;
+    currentFunctionId = null;
+  }
+
+  BasicBlock flushBlock([String? name]) {
+    final block = commitBlock(name);
+    builder = builder.then(block);
+    return block;
+  }
 
   int library = 0;
   int position = 0;
@@ -173,7 +222,6 @@ class CompilerContext with ScopeContext {
   List<ContextSaveState> typeInferenceSaveStates = [];
   List<ContextSaveState> typeUninferenceSaveStates = [];
   List<CompilerLabel> labels = [];
-  Map<CompilerLabel, Set<int>> labelReferences = {};
   Set<Declaration> entrypoints = {};
   final List<Variable> caughtExceptions = [];
   PrescanContext? preScan;
@@ -216,14 +264,15 @@ class CompilerContext with ScopeContext {
   }
 
   BasicBlock commitBlock([String? label]) {
-    return BasicBlock(commit(), label: label ?? funcLabel);
+    return BasicBlock(commit(), label: label);
   }
 
-  @override
   void resolveNonlinearity([int depth = 1]) {
     for (var i = 0; i < depth; i++) {
-      <String, Variable>{...(locals[locals.length - depth])}
-          .forEach((key, value) {
+      <String, Variable>{...(locals[locals.length - depth])}.forEach((
+        key,
+        value,
+      ) {
         locals[locals.length - depth][key] = value.unboxIfNeeded(this);
       });
     }
@@ -236,8 +285,9 @@ class CompilerContext with ScopeContext {
     bool closure = false,
   }) {
     super.beginAllocScope(
-        existingAllocLen: existingAllocLen,
-        requireNonlinearAccess: requireNonlinearAccess);
+      existingAllocLen: existingAllocLen,
+      requireNonlinearAccess: requireNonlinearAccess,
+    );
     if (preScan?.closedFrames.contains(locals.length - 1) ?? false) {
       //final ps = PushScope.make(sourceFile, -1, '#');
       //pushOp(ps, PushScope.len(ps));
@@ -304,7 +354,7 @@ class CompilerContext with ScopeContext {
   @override
   void restoreState(ContextSaveState initial) {
     super.restoreState(initial);
-    scopeDoesClose = initial.scopeDoesClose;
+    scopeDoesClose = [...initial.scopeDoesClose];
   }
 
   void enterTypeInferenceContext() {
@@ -349,16 +399,6 @@ class CompilerContext with ScopeContext {
           );
         }
       });
-    }
-  }
-
-  void resolveLabel(CompilerLabel label) {
-    final references = labelReferences[label];
-    if (references != null) {
-      for (final ref in references) {
-        /* TODO final jump = JumpConstant.make(out.length);
-        rewriteOp(ref, jump, 0);*/
-      }
     }
   }
 }

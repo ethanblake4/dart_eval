@@ -1,7 +1,7 @@
+import 'package:control_flow_graph/control_flow_graph.dart' show SSA;
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:collection/collection.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
@@ -15,7 +15,8 @@ import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/util.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/ir/closures.dart';
+import 'package:dart_eval/src/eval/ir/flow.dart';
 
 enum CallingConvention { static, dynamic }
 
@@ -24,22 +25,37 @@ Variable compileFunctionExpression(
   CompilerContext ctx, [
   TypeRef? bound,
 ]) {
-  final jumpOver = ctx.pushOp(JumpConstant.make(-1), JumpConstant.LEN);
-
-  final fnOffset = ctx.out.length;
-  beginMethod(ctx, e, e.offset, '<anonymous closure>');
-
   final ctxSaveState = ctx.saveState();
   final sfo = ctx.scopeFrameOffset;
+  final outerGraph = ctx.activeGraph;
+  final outerFunctionId = ctx.currentFunctionId;
+  final outerFunctionLabel = ctx.funcLabel;
+  final outerAsyncFrame = ctx.nearestAsyncFrame;
+  final outerEntrypoint = ctx.entrypoint;
+  final captures = <String, Variable>{};
+  for (final scope in ctx.locals) {
+    captures.addAll(scope);
+  }
+  ctx.finishMethod();
+  final outerBuilder = ctx.builder;
+  final fnOffset = beginMethod(ctx, e, e.offset, '<anonymous closure>');
   ctx.resetStack();
-
+  ctx.locals = [];
+  ctx.nearestAsyncFrame = -1;
   final existingAllocs = 1 + (e.parameters?.parameters.length ?? 0);
   ctx.beginAllocScope(existingAllocLen: existingAllocs, closure: true);
-
-  final $prev = Variable(0, CoreTypes.list.ref(ctx), isFinal: true);
-
-  ctx.setLocal('#prev', $prev);
-
+  var captureIndex = 0;
+  for (final capture in captures.entries) {
+    ctx.setLocal(
+      capture.key,
+      Variable.ssa(
+        ctx,
+        LoadCapture(ctx.svar('capture'), captureIndex++),
+        capture.value.type,
+        isFinal: capture.value.isFinal,
+      ),
+    );
+  }
   ctx.scopeFrameOffset += existingAllocs;
   final resolvedParams = resolveFPLDefaults(
     ctx,
@@ -82,9 +98,9 @@ Variable compileFunctionExpression(
         type = fType.type!;
       }
     }
-    vRep = Variable(i + 1, type.copyWith(boxed: true))..name = p.name!.lexeme;
+    vRep = Variable.of(ctx, SSA('arg_${i + 1}'), type.copyWith(boxed: true));
 
-    ctx.setLocal(vRep.name!, vRep);
+    ctx.setLocal(p.name!.lexeme, vRep);
 
     i++;
   }
@@ -120,15 +136,22 @@ Variable compileFunctionExpression(
 
   if (!(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
     if (b.isAsynchronous) {
-      asyncComplete(ctx, -1);
+      asyncComplete(ctx, null);
       ctx.endAllocScope(popValues: false);
     } else {
       ctx.endAllocScope();
-      ctx.pushOp(Return.make(-1), Return.LEN);
+      ctx.pushOp(Return(null));
     }
   }
 
-  ctx.rewriteOp(jumpOver, JumpConstant.make(ctx.out.length), 0);
+  ctx.finishMethod();
+  ctx.activeGraph = outerGraph;
+  ctx.builder = outerBuilder;
+  ctx.currentFunctionId = outerFunctionId;
+  ctx.funcLabel = outerFunctionLabel;
+  ctx.hasBegunMethod = true;
+  ctx.nearestAsyncFrame = outerAsyncFrame;
+  ctx.entrypoint = outerEntrypoint;
 
   ctx.restoreState(ctxSaveState);
   ctx.scopeFrameOffset = sfo;
@@ -189,30 +212,21 @@ Variable compileFunctionExpression(
       .map((rt) => rt.toJson())
       .toList();
 
-  BuiltinValue(intval: requiredPositionalArgCount).push(ctx).pushArg(ctx);
-  BuiltinValue(
-    intval: ctx.constantPool.addOrGet(positionalArgTypes),
-  ).push(ctx).pushArg(ctx);
-  BuiltinValue(
-    intval: ctx.constantPool.addOrGet(sortedNamedArgNames),
-  ).push(ctx).pushArg(ctx);
-  BuiltinValue(
-    intval: ctx.constantPool.addOrGet(sortedNamedArgTypes),
-  ).push(ctx).pushArg(ctx);
-
-  ctx.pushOp(PushFunctionPtr.make(fnOffset), PushFunctionPtr.LEN);
-
-  /*if (ctx.labels.any((label) => label.type == LabelType.loop)) {
-    ctx.pushOp(PushFunctionPtrCopyCapture.make(fnOffset), PushFunctionPtr.LEN);
-  } else {
-    ctx.pushOp(PushFunctionPtr.make(fnOffset), PushFunctionPtr.LEN);
-  }*/
-
-  return Variable.alloc(
+  final target = DeferredOrOffset(offset: fnOffset);
+  return Variable.ssa(
     ctx,
+    CreateClosure(
+      ctx.svar('closure'),
+      target,
+      captures.values.map((v) => v.ssa).toList(),
+      requiredPositional: requiredPositionalArgCount,
+      positionalTypes: positionalArgTypes,
+      namedNames: sortedNamedArgNames,
+      namedTypes: sortedNamedArgTypes,
+    ),
     CoreTypes.function.ref(ctx),
     methodReturnType: AlwaysReturnType(CoreTypes.dynamic.ref(ctx), false),
-    methodOffset: DeferredOrOffset(offset: fnOffset),
+    methodOffset: target,
     callingConvention: CallingConvention.dynamic,
   );
 }

@@ -1,10 +1,10 @@
+import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/macros/macro.dart';
 import 'package:dart_eval/src/eval/compiler/model/label.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
-import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/ir/flow.dart';
 
 StatementInfo macroLoop(
   CompilerContext ctx,
@@ -18,98 +18,63 @@ StatementInfo macroLoop(
   bool updateBeforeBody = false,
 }) {
   ctx.beginAllocScope();
+  initialization?.call(ctx);
+  final initialState = ctx.saveState();
+  final header = BasicBlock<Operation>([], label: ctx.label('loop_header'));
+  final bodyBlock = BasicBlock<Operation>([], label: ctx.label('loop_body'));
+  final exit = BasicBlock<Operation>([], label: ctx.label('loop_exit'));
+  ctx.flushBlock();
+  final parent = ctx.builder;
+  ctx.builder = ctx.builder.then(alwaysLoopOnce ? bodyBlock : header);
 
-  if (initialization != null) {
-    initialization(ctx);
+  if (!alwaysLoopOnce) {
+    if (condition != null) {
+      final value = condition(ctx).unboxIfNeeded(ctx);
+      ctx.pushOp(JumpIfFalse(value.ssa, exit.label!));
+      ctx.flushBlock();
+      ctx.builder = ctx.builder.split(bodyBlock, exit).block(0);
+    } else {
+      ctx.builder = ctx.builder.then(bodyBlock);
+    }
   }
-
-  /// Make a save-state of the box/unbox status of all locals
-  final save = ctx.saveState();
-
-  JumpIfFalse? rewriteCond;
-  int? rewritePos;
-  Variable? conditionResult;
-  ContextSaveState? conditionSaveState;
-  var loopStart = ctx.out.length;
 
   ctx.beginAllocScope();
-
-  if (!alwaysLoopOnce && condition != null) {
-    conditionResult = condition(ctx).unboxIfNeeded(ctx);
-    conditionSaveState = ctx.saveState();
-    rewriteCond = JumpIfFalse.make(conditionResult.scopeFrameOffset, -1);
-    rewritePos = ctx.pushOp(rewriteCond, JumpIfFalse.LEN);
-  }
-
-  var pops = ctx.peekAllocPops();
-
-  if (update != null && updateBeforeBody) {
-    update(ctx);
-  }
-
-  final label = CompilerLabel(LabelType.loop, loopStart, (ctx) {
-    ctx.endAllocScopeQuiet();
-
-    /// Box/unbox variables that were declared outside the loop and changed in
-    /// the loop body to match the save state
-    ctx.resolveBranchStateDiscontinuity(save);
-
-    if (conditionSaveState != null) {
-      ctx.restoreBoxingState(conditionSaveState);
-      ctx.resolveBranchStateDiscontinuity(save);
-    }
-
-    ctx.endAllocScopeQuiet();
-    final result = ctx.pushOp(JumpConstant.make(-1), JumpConstant.LEN);
-    return result;
-  });
-
+  if (updateBeforeBody) update?.call(ctx);
+  final label = CompilerLabel(LabelType.loop, -1, (_) => -1, breakTarget: exit);
   ctx.labels.add(label);
-  final statementResult = body(ctx, expectedReturnType);
+  final result = body(ctx, expectedReturnType);
   ctx.labels.removeLast();
-
-  if (!(statementResult.willAlwaysThrow || statementResult.willAlwaysReturn)) {
-    if (update != null && !updateBeforeBody) {
-      update(ctx);
-    }
-
-    /// For do-while type loops, execute the condition check after the body
+  ctx.endAllocScope();
+  if (!result.willAlwaysReturn &&
+      !result.willAlwaysThrow &&
+      !result.willAlwaysBreak &&
+      !ctx.blockEndsControlFlow) {
+    if (!updateBeforeBody) update?.call(ctx);
+    ctx.resolveBranchStateDiscontinuity(initialState);
     if (alwaysLoopOnce && condition != null) {
-      conditionResult = condition(ctx).unboxIfNeeded(ctx);
-      rewriteCond = JumpIfFalse.make(conditionResult.scopeFrameOffset, -1);
-      rewritePos = ctx.pushOp(rewriteCond, JumpIfFalse.LEN);
+      ctx.builder = ctx.builder.then(header);
+      final value = condition(ctx).unboxIfNeeded(ctx);
+      ctx.pushOp(JumpIfFalse(value.ssa, exit.label!));
+      final tail = ctx.flushBlock();
+      ctx.builder.link(tail, exit);
+      ctx.builder.link(tail, bodyBlock);
+    } else {
+      final target = alwaysLoopOnce ? bodyBlock : header;
+      ctx.pushOp(Jump(target.label!));
+      final tail = ctx.flushBlock();
+      ctx.builder.link(tail, target);
     }
-
-    ctx.endAllocScope();
-
-    /// Box/unbox variables that were declared outside the loop and changed in
-    /// the loop body to match the save state
-    ctx.resolveBranchStateDiscontinuity(save);
-
-    ctx.pushOp(JumpConstant.make(loopStart), JumpConstant.LEN);
-  } else {
-    pops = 0;
+  } else if (ctx.blockCode.isNotEmpty) {
+    ctx.flushBlock();
   }
 
-  if (rewritePos != null) {
-    ctx.rewriteOp(
-      rewritePos,
-      JumpIfFalse.make(conditionResult!.scopeFrameOffset, ctx.out.length),
-      0,
-    );
-  }
-
-  if (conditionSaveState != null) {
-    ctx.restoreBoxingState(conditionSaveState);
-    ctx.resolveBranchStateDiscontinuity(save);
-  }
-
-  if (after != null) {
-    after(ctx);
-  }
-
-  ctx.endAllocScope(popAdjust: pops);
-  ctx.resolveLabel(label);
-
-  return statementResult;
+  ctx.builder.float(exit);
+  ctx.builder = BasicBlockBuilder(ctx.activeGraph, [exit], parent);
+  ctx.restoreState(initialState);
+  after?.call(ctx);
+  ctx.endAllocScope();
+  // A while/for body can be skipped even when it always returns.
+  return alwaysLoopOnce
+      ? result.copyWith(willAlwaysBreak: false)
+      : StatementInfo(result.position);
 }

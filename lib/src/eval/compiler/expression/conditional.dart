@@ -3,7 +3,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
-import 'package:dart_eval/src/eval/compiler/reference.dart';
+import 'package:dart_eval/src/eval/ir/memory.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
@@ -17,8 +17,7 @@ Variable compileConditionalExpression(
   ConditionalExpression e, [
   TypeRef? boundType,
 ]) {
-  ctx.setLocal('#conditional', BuiltinValue().push(ctx));
-  final vRef = IdentifierReference(null, '#conditional');
+  final output = BuiltinValue().push(ctx).boxIfNeeded(ctx);
   final types = <TypeRef>{?boundType};
 
   macroBranch(
@@ -35,21 +34,20 @@ Variable compileConditionalExpression(
     thenBranch: (ctx, rt) {
       final v = compileExpression(e.thenExpression, ctx, boundType);
       types.add(v.type);
-      vRef.setValue(ctx, v);
+      ctx.pushOp(Assign(output.ssa, v.boxIfNeeded(ctx).ssa));
       return StatementInfo(-1);
     },
     elseBranch: (ctx, rt) {
       final v = compileExpression(e.elseExpression, ctx, boundType);
       types.add(v.type);
-      vRef.setValue(ctx, v);
+      ctx.pushOp(Assign(output.ssa, v.boxIfNeeded(ctx).ssa));
       return StatementInfo(-1);
     },
     resolveStateToThen: true,
     source: e,
   );
 
-  final val = vRef.getValue(ctx).updated(ctx);
-  return val.copyWith(
-    type: TypeRef.commonBaseType(ctx, types).copyWith(boxed: val.boxed),
+  return output.copyWith(
+    type: TypeRef.commonBaseType(ctx, types).copyWith(boxed: true),
   );
 }

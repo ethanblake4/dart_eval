@@ -1,3 +1,4 @@
+import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:collection/collection.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
@@ -13,7 +14,7 @@ import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/util.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/ir/flow.dart';
 
 void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   //ctx.runPrescan(d);
@@ -74,12 +75,13 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
     if (p.type != null) {
       type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
     }
-    vRep = Variable(
-      i,
+    vRep = Variable.of(
+      ctx,
+      SSA('arg_$i'),
       type.copyWith(boxed: !type.isUnboxedAcrossFunctionBoundaries),
-    )..name = p.name!.lexeme;
+    );
 
-    ctx.setLocal(vRep.name!, vRep);
+    ctx.setLocal(p.name!.lexeme, vRep);
 
     i++;
   }
@@ -122,7 +124,7 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
 
   if (!(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
     if (b.isAsynchronous) {
-      asyncComplete(ctx, -1);
+      asyncComplete(ctx, null);
       return;
     }
   }
@@ -130,6 +132,6 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   ctx.endAllocScope();
 
   if (!(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
-    ctx.pushOp(Return.make(-1), Return.LEN);
+    ctx.pushOp(Return(null));
   }
 }

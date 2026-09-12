@@ -1,4 +1,5 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
+import 'operands.dart';
 
 final class NewList extends Operation {
   final SSA target;
@@ -54,7 +55,11 @@ final class IndexList extends Operation {
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
-    final newReadsFrom = readsFrom?.toList() ?? [list, index];
+    final newReadsFrom = renameOperands(
+      [list, index],
+      this.readsFrom,
+      readsFrom,
+    );
     return IndexList(writesTo ?? target, newReadsFrom[0], newReadsFrom[1]);
   }
 }
@@ -113,7 +118,7 @@ final class IndexMap extends Operation {
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
-    final newReadsFrom = readsFrom?.toList() ?? [map, key];
+    final newReadsFrom = renameOperands([map, key], this.readsFrom, readsFrom);
     return IndexMap(writesTo ?? target, newReadsFrom[0], newReadsFrom[1]);
   }
 }
@@ -146,8 +151,12 @@ final class ListSet extends Operation {
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
-    final newReadsFrom = readsFrom?.toList() ?? [list, index, value];
-    return ListSet(newReadsFrom[0], newReadsFrom[1], writesTo ?? newReadsFrom[2]);
+    final newReadsFrom = renameOperands(
+      [list, index, value],
+      this.readsFrom,
+      readsFrom,
+    );
+    return ListSet(newReadsFrom[0], newReadsFrom[1], newReadsFrom[2]);
   }
 }
 
@@ -179,7 +188,112 @@ final class MapSet extends Operation {
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
-    final newReadsFrom = readsFrom?.toList() ?? [map, key, value];
-    return MapSet(newReadsFrom[0], newReadsFrom[1], writesTo ?? newReadsFrom[2]);
+    final newReadsFrom = renameOperands(
+      [map, key, value],
+      this.readsFrom,
+      readsFrom,
+    );
+    return MapSet(newReadsFrom[0], newReadsFrom[1], newReadsFrom[2]);
   }
+}
+
+/// Appends a value to an existing list; the list identity does not change.
+final class ListAppend extends Operation {
+  final SSA list;
+  final SSA value;
+
+  ListAppend(this.list, this.value);
+
+  @override
+  Set<SSA> get readsFrom => {list, value};
+
+  @override
+  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
+    final inputs = renameOperands([list, value], this.readsFrom, readsFrom);
+    return ListAppend(inputs[0], inputs[1]);
+  }
+
+  @override
+  String toString() => 'append $list, $value';
+}
+
+final class NewRecord extends Operation {
+  final SSA target;
+  final SSA fields;
+  final int fieldIndices;
+  final int typeId;
+
+  NewRecord(this.target, this.fields, this.fieldIndices, this.typeId);
+
+  @override
+  SSA get writesTo => target;
+
+  @override
+  Set<SSA> get readsFrom => {fields};
+
+  @override
+  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) => NewRecord(
+    writesTo ?? target,
+    readsFrom?.single ?? fields,
+    fieldIndices,
+    typeId,
+  );
+
+  @override
+  String toString() => '$target = record $fields, $fieldIndices, $typeId';
+}
+
+final class NewSet extends Operation {
+  final SSA target;
+
+  NewSet(this.target);
+
+  @override
+  SSA get writesTo => target;
+
+  @override
+  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) =>
+      NewSet(writesTo ?? target);
+
+  @override
+  String toString() => '$target = set {}';
+}
+
+final class SetAdd extends Operation {
+  final SSA set;
+  final SSA value;
+
+  SetAdd(this.set, this.value);
+
+  @override
+  Set<SSA> get readsFrom => {set, value};
+
+  @override
+  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
+    final inputs = renameOperands([set, value], this.readsFrom, readsFrom);
+    return SetAdd(inputs[0], inputs[1]);
+  }
+
+  @override
+  String toString() => 'setadd $set, $value';
+}
+
+final class IterableLength extends Operation {
+  final SSA target;
+  final SSA iterable;
+
+  IterableLength(this.target, this.iterable);
+
+  @override
+  SSA get writesTo => target;
+
+  @override
+  Set<SSA> get readsFrom => {iterable};
+
+  @override
+  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) =>
+      IterableLength(writesTo ?? target, readsFrom?.single ?? iterable);
+
+  @override
+  String toString() => '$target = length $iterable';
 }

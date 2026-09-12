@@ -20,7 +20,7 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/ir/bridge.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/ir/function.dart';
 
 import '../variable.dart';
 
@@ -39,7 +39,7 @@ void compileConstructorDeclaration(
     throw CompileError('Factory constructors cannot have initializers', d);
   }
 
-  beginMethod(
+  ctx.topLevelDeclarationPositions[ctx.library]![n] = beginMethod(
     ctx,
     d,
     d.offset,
@@ -50,6 +50,11 @@ void compileConstructorDeclaration(
     existingAllocLen: d.parameters.parameters.length + (isEnum ? 2 : 0),
   );
   ctx.scopeFrameOffset = d.parameters.parameters.length + (isEnum ? 2 : 0);
+
+  if (isEnum) {
+    ctx.pushOp(Parameter(SSA('arg_0'), 0));
+    ctx.pushOp(Parameter(SSA('arg_1'), 1));
+  }
 
   SuperConstructorInvocation? $superInitializer;
   RedirectingConstructorInvocation? $redirectingInitializer;
@@ -118,18 +123,20 @@ void compileConstructorDeclaration(
       type0 ??= V?.type;
       type0 ??= CoreTypes.dynamic.ref(ctx);
 
-      vrep = Variable(
-        i,
+      vrep = Variable.of(
+        ctx,
+        SSA('arg_$i'),
         type0.copyWith(boxed: !type0.isUnboxedAcrossFunctionBoundaries),
-      ).boxIfNeeded(ctx)..name = p.name.lexeme;
+      ).boxIfNeeded(ctx);
 
       fieldFormalNames.add(p.name.lexeme);
     } else if (p is SuperFormalParameter) {
       final type = resolveSuperFormalType(ctx, ctx.library, p, d);
-      vrep = Variable(
-        i,
+      vrep = Variable.of(
+        ctx,
+        SSA('arg_$i'),
         type.copyWith(boxed: !type.isUnboxedAcrossFunctionBoundaries),
-      ).boxIfNeeded(ctx)..name = p.name.lexeme;
+      ).boxIfNeeded(ctx);
       superParams.add(p.name.lexeme);
     } else {
       p as SimpleFormalParameter;
@@ -140,7 +147,7 @@ void compileConstructorDeclaration(
       type = type.copyWith(
         boxed: !unboxedAcrossFunctionBoundaries.contains(type),
       );
-      vrep = Variable(i, type)..name = p.name!.lexeme;
+      vrep = Variable.of(ctx, SSA('arg_$i'), type);
     }
 
     ctx.setLocal(p.name!.lexeme, vrep);
@@ -217,11 +224,11 @@ void compileConstructorDeclaration(
       clsType.name,
       name,
     );
-    ctx.pushOp(Call(offset, [
-      for (final name in result.ssa) SSA(name),
-    ]));
-
-    final V = Variable.alloc(ctx, clsType);
+    final V = Variable.ssa(
+      ctx,
+      Call(offset, result.ssa, result: ctx.svar('redirected')),
+      clsType,
+    );
     doReturn(ctx, AlwaysReturnType(clsType, false), V);
     return;
   }
@@ -256,8 +263,11 @@ void compileConstructorDeclaration(
         (throw CompileError('Cannot find superclass $clsName', $extends));
 
     if (extendsDecl.isBridge) {
-      $super = Variable.ssa(ctx, NewBridgeSuperShim(ctx.svar('shim')),
-        CoreTypes.dynamic.ref(ctx));
+      $super = Variable.ssa(
+        ctx,
+        NewBridgeSuperShim(ctx.svar('shim')),
+        CoreTypes.dynamic.ref(ctx),
+      );
     } else {
       final extendsType = TypeRef.lookupDeclaration(
         ctx,
@@ -274,12 +284,18 @@ void compileConstructorDeclaration(
                 .sourceLib]!['${extendsType.name}.$constructorName']!;
         final constructor = constructor0.declaration as ConstructorDeclaration;
 
-        final argres = compileArgumentList(ctx, $superInitializer.argumentList,
-            extendsDecl.sourceLib, constructor.parameters.parameters, constructor,
-            superParams: superParams, source: $superInitializer);
+        final argres = compileArgumentList(
+          ctx,
+          $superInitializer.argumentList,
+          extendsDecl.sourceLib,
+          constructor.parameters.parameters,
+          constructor,
+          superParams: superParams,
+          source: $superInitializer,
+        );
         final args = argres.args;
         final namedArgs = argres.namedArgs;
-        ssa.addAll([for (final name in argres.ssa) SSA(name)]);
+        ssa.addAll(argres.ssa);
 
         argTypes.addAll(args.map((e) => e.type).toList());
         namedArgTypes.addAll(
@@ -300,7 +316,7 @@ void compileConstructorDeclaration(
         );
         final args = argres.args;
         final namedArgs = argres.namedArgs;
-        ssa.addAll([for (final name in argres.ssa) SSA(name)]);
+        ssa.addAll(argres.ssa);
 
         argTypes.addAll(args.map((e) => e.type).toList());
         namedArgTypes.addAll(
@@ -329,23 +345,38 @@ void compileConstructorDeclaration(
           ) ??
           AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
 
-      $super = Variable.ssa(ctx, Call(offset, ssa), mReturnType.type ?? CoreTypes.dynamic.ref(ctx));
+      $super = Variable.ssa(
+        ctx,
+        Call(offset, ssa, result: ctx.svar('super')),
+        mReturnType.type ?? CoreTypes.dynamic.ref(ctx),
+      );
     }
   }
 
   final inst = Variable.ssa(
-      ctx,
-      CreateClass(ctx.svar('inst'), ctx.library, parent.name.lexeme, $super.ssa,
-          fieldIdx + (isEnum ? 2 : 0)),
-      TypeRef.$this(ctx)!);
+    ctx,
+    CreateClass(
+      ctx.svar('inst'),
+      ctx.library,
+      parent.name.lexeme,
+      $super.ssa,
+      fieldIdx,
+    ),
+    TypeRef.$this(ctx)!,
+  );
 
   if (parent is EnumDeclaration) {
     _setupEnum(ctx, parent, inst.ssa);
   }
 
   for (final fieldFormal in fieldFormalNames) {
-    ctx.pushOp(SetPropertyStatic(inst.ssa, fieldIndices[fieldFormal]!,
-        ctx.lookupLocal(fieldFormal)!.ssa));
+    ctx.pushOp(
+      SetPropertyStatic(
+        inst.ssa,
+        fieldIndices[fieldFormal]!,
+        ctx.lookupLocal(fieldFormal)!.ssa,
+      ),
+    );
   }
 
   final usedNames = {...fieldFormalNames};
@@ -359,15 +390,16 @@ void compileConstructorDeclaration(
         source: init,
       );
       final V = compileExpression(init.expression, ctx, fType).boxIfNeeded(ctx);
-      ctx.pushOp(SetPropertyStatic(
-          inst.ssa, fieldIndices[init.fieldName.name]!, V.ssa));
+      ctx.pushOp(
+        SetPropertyStatic(inst.ssa, fieldIndices[init.fieldName.name]!, V.ssa),
+      );
       usedNames.add(init.fieldName.name);
     } else {
       throw CompileError('${init.runtimeType} initializer is not supported');
     }
   }
 
-  _compileUnusedFields(ctx, fields, {}, inst);
+  _compileUnusedFields(ctx, fields, usedNames, inst.ssa, isEnum ? 2 : 0);
 
   final body = d.body;
   if (d.factoryKeyword == null && body is! EmptyFunctionBody) {
@@ -403,6 +435,7 @@ void compileConstructorDeclaration(
         $superInitializer.argumentList,
         constructor.functionDescriptor,
       );
+      ssa.addAll(argsPair.ssa);
       final args = argsPair.args;
       final namedArgs = argsPair.namedArgs;
       argTypes.addAll(args.map((e) => e.type).toList());
@@ -416,6 +449,7 @@ void compileConstructorDeclaration(
         constructor.functionDescriptor,
         superParams: superParams,
       );
+      ssa.addAll(argsPair.ssa);
       final args = argsPair.args;
       final namedArgs = argsPair.namedArgs;
       argTypes.addAll(args.map((e) => e.type).toList());
@@ -424,27 +458,21 @@ void compileConstructorDeclaration(
       );
     }
 
-    /* TODO
-
-    final op = BridgeInstantiate.make(
-      instOffset,
-      ctx.bridgeStaticFunctionIndices[extendsDecl
-          .sourceLib]!['${$extends.superclass.name.value()}.$constructorName']!,
-    );
-    ctx.pushOp(op, BridgeInstantiate.len(op));
-    final bridgeInst = Variable.alloc(ctx, CoreTypes.dynamic.ref(ctx)); */
-
-    ctx.pushOp(
-      ParentBridgeSuperShim.make(
-        $super.scopeFrameOffset,
-        bridgeInst.scopeFrameOffset,
+    final bridgeInst = Variable.ssa(
+      ctx,
+      BridgeInstantiate(
+        ctx.svar('bridge_instance'),
+        ctx.bridgeStaticFunctionIndices[extendsDecl
+            .sourceLib]!['${$extends.superclass.name.lexeme}.$constructorName']!,
+        inst.ssa,
+        ssa,
       ),
-      ParentBridgeSuperShim.LEN,
+      CoreTypes.dynamic.ref(ctx),
     );
-
-    ctx.pushOp(Return.make(bridgeInst.scopeFrameOffset), Return.LEN);
+    ctx.pushOp(ParentBridgeSuperShim($super.ssa, bridgeInst.ssa));
+    ctx.pushOp(Return(bridgeInst.ssa));
   } else {
-    ctx.pushOp(Return.make(instOffset), Return.LEN);
+    ctx.pushOp(Return(inst.ssa));
   }
 
   ctx.endAllocScope(popValues: false);
@@ -468,6 +496,10 @@ void compileDefaultConstructor(
   final isEnum = parent is EnumDeclaration;
   ctx.beginAllocScope(existingAllocLen: isEnum ? 2 : 0);
   ctx.scopeFrameOffset += isEnum ? 2 : 0;
+  if (isEnum) {
+    ctx.pushOp(Parameter(SSA('arg_0'), 0));
+    ctx.pushOp(Parameter(SSA('arg_1'), 1));
+  }
 
   final fieldIndices = _getFieldIndices(fields);
   final fieldIdx = fieldIndices.length;
@@ -501,8 +533,11 @@ void compileDefaultConstructor(
         (throw CompileError('Cannot find superclass $clsName', $extends));
 
     if (extendsDecl.isBridge) {
-      ctx.pushOp(PushBridgeSuperShim.make(), PushBridgeSuperShim.length);
-      $super = Variable.alloc(ctx, CoreTypes.dynamic.ref(ctx));
+      $super = Variable.ssa(
+        ctx,
+        NewBridgeSuperShim(ctx.svar('shim')),
+        CoreTypes.dynamic.ref(ctx),
+      );
     } else {
       final extendsType = TypeRef.lookupDeclaration(
         ctx,
@@ -524,10 +559,6 @@ void compileDefaultConstructor(
       }
 
       final offset = method.methodOffset!;
-      final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.length);
-      if (offset.offset == null) {
-        ctx.offsetTracker.setOffset(loc, offset);
-      }
       final clsType = TypeRef.lookupDeclaration(ctx, ctx.library, parent);
       mReturnType =
           method.methodReturnType?.toAlwaysReturnType(
@@ -538,32 +569,34 @@ void compileDefaultConstructor(
           ) ??
           AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
 
-      ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-      $super = Variable.alloc(
+      $super = Variable.ssa(
         ctx,
+        Call(offset, [], result: ctx.svar('super')),
         mReturnType.type ?? CoreTypes.dynamic.ref(ctx),
       );
     }
   }
 
-  final op = CreateClass.make(
-    ctx.library,
-    $super.scopeFrameOffset,
-    parent.name.lexeme,
-    fieldIdx + (isEnum ? 2 : 0),
+  final inst = ctx.svar('instance');
+  ctx.pushOp(
+    CreateClass(
+      inst,
+      ctx.library,
+      parent.name.lexeme,
+      $super.ssa,
+      fieldIdx + (isEnum ? 2 : 0),
+    ),
   );
-  ctx.pushOp(op, CreateClass.len(op));
-  final instOffset = ctx.scopeFrameOffset++;
 
   if (parent is EnumDeclaration) {
-    _setupEnum(ctx, parent, instOffset);
+    _setupEnum(ctx, parent, inst);
   }
 
   _compileUnusedFields(
     ctx,
     fields,
     parent is EnumDeclaration ? {'index', 'name'} : {},
-    instOffset,
+    inst,
     parent is EnumDeclaration ? 2 : 0,
   );
 
@@ -576,25 +609,20 @@ void compileDefaultConstructor(
       );
     }
 
-    final op = BridgeInstantiate.make(
-      instOffset,
-      ctx.bridgeStaticFunctionIndices[extendsDecl
-          .sourceLib]!['${$extends.superclass.name.lexeme}.$constructorName']!,
-    );
-    ctx.pushOp(op, BridgeInstantiate.len(op));
-    final bridgeInst = Variable.alloc(ctx, CoreTypes.dynamic.ref(ctx));
-
+    final bridgeInst = ctx.svar('bridge_instance');
     ctx.pushOp(
-      ParentBridgeSuperShim.make(
-        $super.scopeFrameOffset,
-        bridgeInst.scopeFrameOffset,
+      BridgeInstantiate(
+        bridgeInst,
+        ctx.bridgeStaticFunctionIndices[extendsDecl
+            .sourceLib]!['${$extends.superclass.name.lexeme}.$constructorName']!,
+        inst,
+        [],
       ),
-      ParentBridgeSuperShim.LEN,
     );
-
-    ctx.pushOp(Return.make(bridgeInst.scopeFrameOffset), Return.LEN);
+    ctx.pushOp(ParentBridgeSuperShim($super.ssa, bridgeInst));
+    ctx.pushOp(Return(bridgeInst));
   } else {
-    ctx.pushOp(Return.make(instOffset), Return.LEN);
+    ctx.pushOp(Return(inst));
   }
 
   ctx.endAllocScope(popValues: false);
@@ -619,7 +647,7 @@ void _compileUnusedFields(
   CompilerContext ctx,
   List<FieldDeclaration> fields,
   Set<String> usedNames,
-  int instOffset, [
+  SSA inst, [
   int fieldIdx = 0,
 ]) {
   var fieldIdx0 = fieldIdx;
@@ -634,17 +662,14 @@ void _compileUnusedFields(
                   () => {},
                 )[field.name.lexeme] =
             V.type;
-        ctx.pushOp(
-          SetObjectPropertyImpl.make(instOffset, fieldIdx0, V.scopeFrameOffset),
-          SetObjectPropertyImpl.length,
-        );
+        ctx.pushOp(SetPropertyStatic(inst, fieldIdx0, V.ssa));
       }
       fieldIdx0++;
     }
   }
 }
 
-void _setupEnum(CompilerContext ctx, EnumDeclaration parent, SSA? inst) {
+void _setupEnum(CompilerContext ctx, EnumDeclaration parent, SSA inst) {
   /// Add implicit index and name fields
   ctx.inferredFieldTypes
       .putIfAbsent(ctx.library, () => {})
@@ -652,12 +677,6 @@ void _setupEnum(CompilerContext ctx, EnumDeclaration parent, SSA? inst) {
     ..['index'] = CoreTypes.int.ref(ctx)
     ..['name'] = CoreTypes.string.ref(ctx);
 
-  ctx.pushOp(
-    SetObjectPropertyImpl.make(instOffset, 0, 0),
-    SetObjectPropertyImpl.length,
-  );
-  ctx.pushOp(
-    SetObjectPropertyImpl.make(instOffset, 1, 1),
-    SetObjectPropertyImpl.length,
-  );
+  ctx.pushOp(SetPropertyStatic(inst, 0, SSA('arg_0')));
+  ctx.pushOp(SetPropertyStatic(inst, 1, SSA('arg_1')));
 }

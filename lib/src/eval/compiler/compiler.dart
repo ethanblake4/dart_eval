@@ -53,6 +53,13 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
 
   var _ctx = CompilerContext(0);
 
+  /// Typed control-flow graphs from the last compilation, keyed by function ID.
+  /// These precede SSA conversion, register allocation, and bytecode lowering.
+  Map<int, ControlFlowGraph> get functionGraphs =>
+      Map.unmodifiable(_ctx.functionGraphs);
+
+  Map<int, String> get functionNames => Map.unmodifiable(_ctx.functionNames);
+
   /// List of additional [DartSource] files to be compiled when [compile] is run
   final additionalSources = <DartSource>[];
   final _cachedParsedSources = <DartSource, DartCompilationUnit>{};
@@ -469,9 +476,6 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       }
     }
 
-    final programRoot = BasicBlock<Operation>([]);
-    _ctx.builder = ControlFlowGraph.builder().root(programRoot);
-
     _ctx.topLevelGlobalIndices = _topLevelGlobalIndices;
 
     try {
@@ -537,25 +541,17 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
           _ctx.library = key;
           compileDeclaration(declaration, _ctx);
           _ctx.resetStack();
-          if (_ctx.hasBegunMethod) {
-            final methodBlock = _ctx.commitBlock();
-            if (_ctx.entrypoint) {
-              _ctx.builder = _ctx.builder.merge(methodBlock).root;
-            } else {
-              _ctx.builder = _ctx.builder.float(methodBlock).root;
-            }
-          }
+          _ctx.finishMethod();
         });
       });
     } on CompileError catch (e, stk) {
       Error.throwWithStackTrace(e.copyWithContext(_ctx), stk);
     }
 
-    final cfg = _ctx.builder.build();
-    print(cfg);
-    cfg.insertPhiNodes();
-    cfg.computeSemiPrunedSSA();
-    print(cfg);
+    _ctx.finishMethod();
+
+    // Optimization and lowering are separate stages. Keep the typed graphs
+    // available for inspection while the register VM backend is being built.
 
     for (final library in reachableLibraries) {
       for (final dec in library.declarations) {
@@ -590,7 +586,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       typeIds,
       //ctx.typeNames,
       _ctx.typeTypes,
-      [ /* TODO ops */],
+      [/* TODO ops */],
       libraryMapString,
       _ctx.bridgeStaticFunctionIndices,
       _ctx.constantPool.pool,

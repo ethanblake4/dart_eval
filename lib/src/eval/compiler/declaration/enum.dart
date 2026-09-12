@@ -1,15 +1,18 @@
+import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/constructor.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/declaration.dart';
-import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
-import 'package:dart_eval/src/eval/compiler/reference.dart';
+import 'package:dart_eval/src/eval/compiler/offset_tracker.dart';
 import 'package:dart_eval/src/eval/compiler/scope.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/ir/flow.dart';
+import 'package:dart_eval/src/eval/ir/globals.dart';
+import 'package:dart_eval/src/eval/ir/objects.dart';
+import 'package:dart_eval/src/eval/ir/function.dart';
 
 void compileEnumDeclaration(
   CompilerContext ctx,
@@ -50,8 +53,11 @@ void compileEnumDeclaration(
 
   ctx.resetStack(position: 0);
   final pos = beginMethod(ctx, d, d.offset, '$clsName.index (get)');
-  ctx.pushOp(PushObjectPropertyImpl.make(0, 0), PushObjectPropertyImpl.length);
-  ctx.pushOp(Return.make(1), Return.LEN);
+  final receiver = SSA('arg_0');
+  ctx.pushOp(Parameter(receiver, 0));
+  final enumIndex = ctx.svar('enum_index');
+  ctx.pushOp(LoadPropertyStatic(enumIndex, receiver, 0));
+  ctx.pushOp(Return(enumIndex));
   ctx.instanceDeclarationPositions[ctx.library]![clsName]![0]['index'] = pos;
   i++;
   i++;
@@ -76,12 +82,12 @@ void compileEnumDeclaration(
     ctx.resetStack(position: 0);
     final pos = beginMethod(ctx, constant, constant.offset, '$cName*i');
     final cstrName = constant.arguments?.constructorSelector?.name.name ?? '';
-    final method = IdentifierReference(null, d.name.lexeme).getValue(ctx);
-    final offset =
-        method.methodOffset ??
-        (throw CompileError(
-          'Cannot instantiate enum $clsName (no valid constructor $cstrName)',
-        ));
+    final offset = DeferredOrOffset.lookupStatic(
+      ctx,
+      ctx.library,
+      clsName,
+      cstrName,
+    );
 
     final cstr =
         ctx.topLevelDeclarationsMap[offset.file]![offset.name ?? '$clsName.'];
@@ -89,13 +95,12 @@ void compileEnumDeclaration(
     final vIndex = BuiltinValue(intval: idx).push(ctx).boxIfNeeded(ctx);
     final vName = BuiltinValue(stringval: cName).push(ctx);
 
-    ctx.pushOp(PushArg.make(vIndex.scopeFrameOffset), PushArg.LEN);
-    ctx.pushOp(PushArg.make(vName.scopeFrameOffset), PushArg.LEN);
+    final arguments = <SSA>[vIndex.ssa, vName.ssa];
 
     final dec = cstr?.declaration;
     if (constant.arguments != null && dec != null) {
       final fpl = (dec as ConstructorDeclaration).parameters.parameters;
-      compileArgumentList(
+      final result = compileArgumentList(
         ctx,
         constant.arguments!.argumentList,
         ctx.library,
@@ -103,21 +108,21 @@ void compileEnumDeclaration(
         dec,
         source: constant,
       );
+      arguments.addAll(result.ssa);
     }
 
-    final loc = ctx.pushOp(Call.make(offset.offset ?? -1), Call.length);
-    if (offset.offset == null) {
-      ctx.offsetTracker.setOffset(loc, offset);
-    }
-    ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-    final V = Variable.alloc(ctx, type);
+    final V = Variable.ssa(
+      ctx,
+      Call(offset, arguments, result: ctx.svar('enum_value')),
+      type,
+    );
     final name = '$clsName.$cName';
     final index = ctx.topLevelGlobalIndices[ctx.library]![name]!;
-    ctx.pushOp(SetGlobal.make(index, V.scopeFrameOffset), SetGlobal.LEN);
+    ctx.pushOp(SetGlobal(index, V.ssa));
     ctx.topLevelVariableInferredTypes[ctx.library]![name] = type;
     ctx.topLevelGlobalInitializers[ctx.library]![name] = pos;
     ctx.runtimeGlobalInitializerMap[index] = pos;
-    ctx.pushOp(Return.make(V.scopeFrameOffset), Return.LEN);
+    ctx.pushOp(Return(V.ssa));
     idx++;
   }
 

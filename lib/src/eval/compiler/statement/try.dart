@@ -1,11 +1,13 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
-import 'package:dart_eval/src/eval/compiler/model/label.dart';
 import 'package:dart_eval/src/eval/compiler/statement/block.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:control_flow_graph/control_flow_graph.dart';
+import 'package:dart_eval/src/eval/ir/exception.dart';
+import 'package:dart_eval/src/eval/ir/flow.dart';
+import 'package:dart_eval/src/eval/ir/types.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
 
 import '../variable.dart';
@@ -15,79 +17,98 @@ StatementInfo compileTryStatement(
   CompilerContext ctx,
   AlwaysReturnType? expectedReturnType,
 ) {
-  int jumpOver = -1;
-  if (s.finallyBlock != null) {
-    final loc = ctx.pushOp(PushFinally.make(-1), PushFinally.LEN);
-    ctx.pushOp(PushReturnFromCatch.make(), PushReturnFromCatch.LEN);
-    ctx.beginAllocScope();
-    final bodyInfo = compileBlock(s.finallyBlock!, expectedReturnType, ctx);
-    if (!bodyInfo.willAlwaysReturn && !bodyInfo.willAlwaysThrow) {
-      /// If the finally block doesn't return, we may need to return the value from the try block
-      ctx.pushOp(Return.make(-2), Return.LEN);
-    }
-    ctx.endAllocScope(popValues: true);
-    jumpOver = ctx.pushOp(JumpConstant.make(-1), JumpConstant.LEN);
-    ctx.rewriteOp(loc, PushFinally.make(ctx.out.length), 0);
-  }
-
-  final tryOp = ctx.pushOp(Try.make(-1), Try.LEN);
-
-  final initialState = ctx.saveState();
-
-  ctx.beginAllocScope();
-  ctx.labels.add(SimpleCompilerLabel());
-  final bodyInfo = compileBlock(s.body, expectedReturnType, ctx);
-  ctx.labels.removeLast();
-  ctx.endAllocScope();
-
-  ctx.resolveBranchStateDiscontinuity(initialState);
-
-  ctx.pushOp(PopCatch.make(), PopCatch.LEN);
-
-  if (s.finallyBlock == null) {
-    jumpOver = ctx.pushOp(JumpConstant.make(-1), JumpConstant.LEN);
-  } else {
-    ctx.pushOp(Return.make(-3), JumpConstant.LEN);
-  }
-
-  ctx.rewriteOp(
-    tryOp,
-    Try.make(s.catchClauses.isNotEmpty ? ctx.out.length : -1),
-    0,
+  final catchBlock = s.catchClauses.isEmpty
+      ? null
+      : BasicBlock<Operation>([], label: ctx.label('catch'));
+  final finallyBlock = s.finallyBlock == null
+      ? null
+      : BasicBlock<Operation>([], label: ctx.label('finally'));
+  final endBlock = BasicBlock<Operation>([], label: ctx.label('try_end'));
+  ctx.pushOp(
+    EnterTry(
+      catchTarget: catchBlock?.label,
+      finallyTarget: finallyBlock?.label,
+    ),
   );
+  final entry = ctx.flushBlock();
+  final parent = ctx.builder;
+  final initialState = ctx.saveState();
+  final firstProtectedId = ctx.activeGraph.lastBlockId;
+  final bodyInfo = compileBlock(s.body, expectedReturnType, ctx);
+  ctx.resolveBranchStateDiscontinuity(initialState);
+  if (!bodyInfo.willAlwaysReturn &&
+      !bodyInfo.willAlwaysThrow &&
+      !bodyInfo.willAlwaysBreak) {
+    ctx.pushOp(LeaveTry());
+    ctx.pushOp(Jump((finallyBlock ?? endBlock).label!));
+  }
+  final tryTail = ctx.flushBlock();
+  final lastProtectedId = ctx.activeGraph.lastBlockId;
+  if (!bodyInfo.willAlwaysReturn &&
+      !bodyInfo.willAlwaysThrow &&
+      !bodyInfo.willAlwaysBreak) {
+    ctx.builder.link(tryTail, finallyBlock ?? endBlock);
+  }
+  final handler = catchBlock ?? finallyBlock;
+  if (handler != null) {
+    ctx.builder.link(entry, handler);
+    for (var id = firstProtectedId; id < lastProtectedId; id++) {
+      ctx.builder.link(ctx.activeGraph[id]!, handler);
+    }
+  }
 
   var catchInfo = StatementInfo(-1);
-  if (s.catchClauses.isNotEmpty) {
-    final state = ctx.saveState();
+  if (catchBlock != null) {
+    ctx.restoreState(initialState);
+    ctx.builder = BasicBlockBuilder(ctx.activeGraph, [catchBlock], parent);
     ctx.beginAllocScope();
-    ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-    final v = Variable.alloc(ctx, CoreTypes.dynamic.ref(ctx));
-    ctx.caughtExceptions.add(v);
+    final exception = Variable.ssa(
+      ctx,
+      CaughtException(ctx.svar('exception')),
+      CoreTypes.dynamic.ref(ctx),
+    );
+    ctx.caughtExceptions.add(exception);
     catchInfo = _compileCatchClause(
       ctx,
       s.catchClauses,
       0,
-      v,
+      exception,
       expectedReturnType,
     );
     ctx.caughtExceptions.removeLast();
     ctx.endAllocScope();
-    ctx.resolveBranchStateDiscontinuity(state);
-    if (s.finallyBlock != null) {
-      ctx.pushOp(Return.make(-3), Return.LEN);
+    ctx.resolveBranchStateDiscontinuity(initialState);
+    if (!catchInfo.willAlwaysReturn &&
+        !catchInfo.willAlwaysThrow &&
+        !catchInfo.willAlwaysBreak) {
+      ctx.pushOp(LeaveTry());
+      ctx.pushOp(Jump((finallyBlock ?? endBlock).label!));
+      final tail = ctx.flushBlock();
+      ctx.builder.link(tail, finallyBlock ?? endBlock);
+    } else if (ctx.blockCode.isNotEmpty) {
+      ctx.flushBlock();
     }
   }
 
-  final catchJumpOver = s.catchClauses.isNotEmpty && s.finallyBlock == null
-      ? ctx.pushOp(JumpConstant.make(-1), JumpConstant.LEN)
-      : -1;
-
-  ctx.rewriteOp(jumpOver, JumpConstant.make(ctx.out.length), 0);
-  if (catchJumpOver != -1) {
-    ctx.rewriteOp(catchJumpOver, JumpConstant.make(ctx.out.length), 0);
+  if (finallyBlock != null) {
+    ctx.restoreState(initialState);
+    ctx.builder.float(finallyBlock);
+    ctx.builder = BasicBlockBuilder(ctx.activeGraph, [finallyBlock], parent);
+    final finalInfo = compileBlock(s.finallyBlock!, expectedReturnType, ctx);
+    if (!finalInfo.willAlwaysReturn &&
+        !finalInfo.willAlwaysThrow &&
+        !finalInfo.willAlwaysBreak) {
+      ctx.pushOp(ResumeCompletion());
+      final tail = ctx.flushBlock();
+      ctx.builder.link(tail, endBlock);
+    } else if (ctx.blockCode.isNotEmpty) {
+      ctx.flushBlock();
+    }
   }
-
-  return bodyInfo | catchInfo.copyWith(willAlwaysThrow: false);
+  ctx.builder.float(endBlock);
+  ctx.builder = BasicBlockBuilder(ctx.activeGraph, [endBlock], parent);
+  ctx.restoreState(initialState);
+  return bodyInfo | catchInfo;
 }
 
 // Catch clauses are compiled into a single effective catch clause
@@ -103,7 +124,10 @@ StatementInfo _compileCatchClause(
   final exceptionType = catchClause.exceptionType;
 
   if (exceptionType == null) {
-    ctx.setLocal(catchClause.exceptionParameter!.name.lexeme, exceptionVar);
+    if (catchClause.exceptionParameter != null) {
+      ctx.setLocal(catchClause.exceptionParameter!.name.lexeme, exceptionVar);
+    }
+    _bindStackTrace(ctx, catchClause);
     return compileBlock(catchClause.body, expectedReturnType, ctx);
   }
   final slot = TypeRef.fromAnnotation(ctx, ctx.library, exceptionType);
@@ -111,16 +135,14 @@ StatementInfo _compileCatchClause(
     ctx,
     expectedReturnType,
     condition: (ctx) {
-      ctx.pushOp(
-        IsType.make(
-          exceptionVar.scopeFrameOffset,
-          ctx.typeRefIndexMap[slot]!,
+      return Variable.ssa(
+        ctx,
+        IsType(
+          ctx.svar('is_exception_type'),
+          exceptionVar.ssa,
+          slot.toRuntimeType(ctx).type,
           false,
         ),
-        IsType.length,
-      );
-      return Variable.alloc(
-        ctx,
         CoreTypes.bool.ref(ctx).copyWith(boxed: false),
       );
     },
@@ -131,10 +153,14 @@ StatementInfo _compileCatchClause(
           exceptionVar.copyWith(type: slot),
         );
       }
+      _bindStackTrace(ctx, catchClause);
       return compileBlock(catchClause.body, expectedReturnType, ctx);
     },
     elseBranch: clauses.length <= index + 1
-        ? null
+        ? (ctx, _) {
+            ctx.pushOp(Rethrow(exceptionVar.ssa));
+            return StatementInfo(-1, willAlwaysThrow: true);
+          }
         : (ctx, expectedReturnType) {
             return _compileCatchClause(
               ctx,
@@ -148,4 +174,16 @@ StatementInfo _compileCatchClause(
   );
 }
 
-///
+void _bindStackTrace(CompilerContext ctx, CatchClause clause) {
+  final parameter = clause.stackTraceParameter;
+  if (parameter != null) {
+    ctx.setLocal(
+      parameter.name.lexeme,
+      Variable.ssa(
+        ctx,
+        CaughtStackTrace(ctx.svar('stack_trace')),
+        CoreTypes.stackTrace.ref(ctx),
+      ),
+    );
+  }
+}

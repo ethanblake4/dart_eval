@@ -1,3 +1,4 @@
+import 'package:dart_eval/src/eval/ir/async.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
@@ -5,7 +6,6 @@ import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 Variable compileAwaitExpression(AwaitExpression e, CompilerContext ctx) {
   AstNode? e0 = e;
@@ -29,16 +29,9 @@ Variable compileAwaitExpression(AwaitExpression e, CompilerContext ctx) {
 
   var completer = ctx.lookupLocal('#completer');
 
-  final awaitOp = Await.make(
-    completer!.scopeFrameOffset,
-    subject.scopeFrameOffset,
-  );
-  ctx.pushOp(awaitOp, Await.LEN);
-
-  ctx.pushOp(PushReturnValue.make(), PushReturnValue.LEN);
-
-  return Variable.alloc(
+  return Variable.ssa(
     ctx,
+    Await(ctx.svar('await_result'), completer!.ssa, subject.ssa),
     type.specifiedTypeArgs.isNotEmpty
         ? type.specifiedTypeArgs[0]
         : CoreTypes.dynamic.ref(ctx),

@@ -5,10 +5,8 @@ import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
 import 'package:dart_eval/src/eval/ir/primitives.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
 import 'package:dart_eval/src/eval/ir/bridge.dart';
 import 'package:dart_eval/src/eval/ir/collection.dart';
 import 'package:dart_eval/src/eval/ir/globals.dart';
@@ -367,7 +365,7 @@ class IdentifierReference implements Reference {
                 file: ctx.library,
                 className: ctx.currentClass!.name.lexeme,
                 name: _refName,
-                targetScopeFrameOffset: $this.scopeFrameOffset,
+                targetName: $this.name,
               ),
               callingConvention: CallingConvention.static,
             );
@@ -899,7 +897,10 @@ StaticDispatch? _declarationToStaticDispatch(
   if (decl is! FunctionDeclaration && decl is! ConstructorDeclaration) {
     decl as ClassDeclaration;
 
-    final offset = DeferredOrOffset(file: decOrBridge.sourceLib, name: '$name.');
+    final offset = DeferredOrOffset(
+      file: decOrBridge.sourceLib,
+      name: '$name.',
+    );
 
     final rt = AlwaysReturnType(
       TypeRef.lookupDeclaration(ctx, decOrBridge.sourceLib, decl),

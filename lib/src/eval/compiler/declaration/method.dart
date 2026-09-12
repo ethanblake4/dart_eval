@@ -1,3 +1,4 @@
+import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
@@ -11,7 +12,8 @@ import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/util.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/ir/flow.dart';
+import 'package:dart_eval/src/eval/ir/function.dart';
 
 int compileMethodDeclaration(
   MethodDeclaration d,
@@ -26,10 +28,13 @@ int compileMethodDeclaration(
 
   ctx.beginAllocScope(existingAllocLen: (d.parameters?.parameters.length ?? 0));
   ctx.scopeFrameOffset += d.parameters?.parameters.length ?? 0;
-  ctx.setLocal('#this', Variable(0, TypeRef.$this(ctx)!));
+  if (!d.isStatic) {
+    ctx.pushOp(Parameter(SSA('arg_0'), 0));
+    ctx.setLocal('#this', Variable.of(ctx, SSA('arg_0'), TypeRef.$this(ctx)!));
+  }
   final resolvedParams = d.parameters == null
       ? <PossiblyValuedParameter>[]
-      : resolveFPLDefaults(ctx, d.parameters, true, allowUnboxed: false);
+      : resolveFPLDefaults(ctx, d.parameters, !d.isStatic, allowUnboxed: false);
 
   if (b.isAsynchronous) {
     setupAsyncFunction(ctx);
@@ -52,7 +57,7 @@ int compileMethodDeclaration(
       ).copyWith(boxed: true);
     }
 
-    ctx.setLocal(p.name!.lexeme, Variable(i, type));
+    ctx.setLocal(p.name!.lexeme, Variable.of(ctx, SSA('arg_$i'), type));
 
     i++;
   }
@@ -97,9 +102,9 @@ int compileMethodDeclaration(
 
   if (!(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
     if (b.isAsynchronous) {
-      asyncComplete(ctx, -1);
+      asyncComplete(ctx, null);
     } else {
-      ctx.pushOp(Return.make(-1), Return.LEN);
+      ctx.pushOp(Return(null));
     }
   }
 

@@ -12,11 +12,12 @@ StatementInfo compileBlock(
   String name = '<block>',
   bool skipClassBoxing = false,
 }) {
-  final position = ctx.out.length;
+  final position = ctx.blockCode.length;
   ctx.beginAllocScope();
 
   var willAlwaysReturn = false;
   var willAlwaysThrow = false;
+  var willAlwaysBreak = false;
 
   ctx.labels.add(SimpleCompilerLabel());
   for (final s in b.statements) {
@@ -27,6 +28,10 @@ StatementInfo compileBlock(
       skipClassBoxing: skipClassBoxing,
     );
 
+    if (stInfo.willAlwaysBreak) {
+      willAlwaysBreak = true;
+      break;
+    }
     if (stInfo.willAlwaysThrow) {
       willAlwaysThrow = true;
       break;
@@ -44,5 +49,6 @@ StatementInfo compileBlock(
     position,
     willAlwaysReturn: willAlwaysReturn,
     willAlwaysThrow: willAlwaysThrow,
+    willAlwaysBreak: willAlwaysBreak,
   );
 }

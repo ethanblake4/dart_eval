@@ -62,35 +62,47 @@ class Variable {
     );
   }
 
-    factory Variable.ssa(CompilerContext ctx, Operation op, TypeRef type,
-      {DeferredOrOffset? methodOffset,
-      ReturnType? methodReturnType,
-      bool isFinal = false,
-      List<TypeRef> concreteTypes = const [],
-      CallingConvention callingConvention = CallingConvention.static}) {
+  factory Variable.ssa(
+    CompilerContext ctx,
+    Operation op,
+    TypeRef type, {
+    DeferredOrOffset? methodOffset,
+    ReturnType? methodReturnType,
+    bool isFinal = false,
+    List<TypeRef> concreteTypes = const [],
+    CallingConvention callingConvention = CallingConvention.static,
+  }) {
     ctx.pushOp(op);
-    return Variable(-1, type,
-        methodOffset: methodOffset,
-        methodReturnType: methodReturnType,
-        isFinal: isFinal,
-        concreteTypes: concreteTypes,
-        callingConvention: callingConvention)
-      ..name = op.writesTo!.name;
+    return Variable(
+      -1,
+      type,
+      methodOffset: methodOffset,
+      methodReturnType: methodReturnType,
+      isFinal: isFinal,
+      concreteTypes: concreteTypes,
+      callingConvention: callingConvention,
+    )..name = op.writesTo!.name;
   }
 
-  factory Variable.of(CompilerContext ctx, SSA ssa, TypeRef type,
-      {DeferredOrOffset? methodOffset,
-      ReturnType? methodReturnType,
-      bool isFinal = false,
-      List<TypeRef> concreteTypes = const [],
-      CallingConvention callingConvention = CallingConvention.static}) {
-    return Variable(-1, type,
-        methodOffset: methodOffset,
-        methodReturnType: methodReturnType,
-        isFinal: isFinal,
-        concreteTypes: concreteTypes,
-        callingConvention: callingConvention)
-      ..name = ssa.name;
+  factory Variable.of(
+    CompilerContext ctx,
+    SSA ssa,
+    TypeRef type, {
+    DeferredOrOffset? methodOffset,
+    ReturnType? methodReturnType,
+    bool isFinal = false,
+    List<TypeRef> concreteTypes = const [],
+    CallingConvention callingConvention = CallingConvention.static,
+  }) {
+    return Variable(
+      -1,
+      type,
+      methodOffset: methodOffset,
+      methodReturnType: methodReturnType,
+      isFinal: isFinal,
+      concreteTypes: concreteTypes,
+      callingConvention: callingConvention,
+    )..name = ssa.name;
   }
 
   final int scopeFrameOffset;
@@ -108,6 +120,9 @@ class Variable {
   bool get boxed => type.boxed;
 
   String? name;
+
+  /// Source binding name, independent of the SSA temporary name.
+  String? localName;
   int? frameIndex;
 
   SSA get ssa => SSA(name!);
@@ -126,7 +141,7 @@ class Variable {
       return copyWith(type: type.copyWith(boxed: true));
     }
 
-    final result = ctx.svar('boxed_${name ?? 'result'}');
+    final result = ssa;
 
     Variable v2 = this;
 
@@ -167,21 +182,19 @@ class Variable {
     if (!boxed) {
       return this;
     }
-    if (update) {
-      copyWithUpdate(ctx, type: type.copyWith(boxed: false));
-    }
-    return Variable.ssa(ctx, Unbox(ctx.svar(name ?? 'unboxed'), ssa),
-        type.copyWith(boxed: false));
+    final target = update ? ssa : ctx.svar('unboxed');
+    ctx.pushOp(Unbox(target, ssa));
+    return update
+        ? copyWithUpdate(ctx, type: type.copyWith(boxed: false))
+        : Variable.of(ctx, target, type.copyWith(boxed: false));
   }
 
   /// Returns a variable with the same name from the context locals.
   /// Iterates over all frames and returns the first found one.
   /// If not found, returns this instance.
   Variable updated(ScopeContext ctx) {
-    if (name == null) {
-      return this;
-    }
-    return ctx.lookupLocal(name!) ?? this;
+    if (localName == null) return this;
+    return ctx.lookupLocal(localName!) ?? this;
   }
 
   /// Makes a copy of the variable with some fields updated.
@@ -208,7 +221,8 @@ class Variable {
         callingConvention: callingConvention ?? this.callingConvention,
       )
       ..name = name ?? this.name
-      ..frameIndex = frameIndex ?? this.frameIndex;
+      ..frameIndex = frameIndex ?? this.frameIndex
+      ..localName = localName;
   }
 
   /// Makes a copy of the variable with some fields updated, and also
@@ -235,19 +249,20 @@ class Variable {
       frameRef: frameRef,
     );
 
-    if (uV.name != null && ctx != null) {
-      ctx.locals[uV.frameIndex!][uV.name!] = uV;
+    if (uV.localName != null && uV.frameIndex != null && ctx != null) {
+      ctx.locals[uV.frameIndex!][uV.localName!] = uV;
     }
 
     return uV;
   }
 
   void inferType(CompilerContext ctx, TypeRef type) {
-    if (name != null && ctx.typeInferenceSaveStates.isNotEmpty) {
+    if (localName != null &&
+        frameIndex != null &&
+        ctx.typeInferenceSaveStates.isNotEmpty) {
       final locals = ctx.typeInferenceSaveStates.last.locals;
-      locals[frameIndex!][name!] = locals[frameIndex!][name!]!.copyWith(
-        type: type,
-      );
+      locals[frameIndex!][localName!] = locals[frameIndex!][localName!]!
+          .copyWith(type: type);
     }
   }
 
@@ -256,12 +271,19 @@ class Variable {
       if (concreteTypes.isNotEmpty) {
         final concrete = concreteTypes[0];
         return Variable.ssa(
-            ctx,
-            LoadConstantType(
-                ctx.svar('var_type'), concrete.toRuntimeType(ctx).type),
-            CoreTypes.type.ref(ctx));
+          ctx,
+          LoadConstantType(
+            ctx.svar('var_type'),
+            concrete.toRuntimeType(ctx).type,
+          ),
+          CoreTypes.type.ref(ctx),
+        );
       }
-      return Variable.ssa(ctx, LoadRuntimeType(ctx.svar('runtime_type'), ssa), CoreTypes.type.ref(ctx));
+      return Variable.ssa(
+        ctx,
+        LoadRuntimeType(ctx.svar('runtime_type'), ssa),
+        CoreTypes.type.ref(ctx),
+      );
     }
     final fieldType =
         TypeRef.lookupFieldType(
@@ -288,11 +310,17 @@ class Variable {
         );
         // TODO offset should be a DeferredOrOffset
         return Variable.ssa(
-            ctx, LoadPropertyStatic(ctx.svar(name), ssa, offset.offset!), type);
+          ctx,
+          LoadPropertyStatic(ctx.svar(name), ssa, offset.offset!),
+          type,
+        );
       }
     }
     return Variable.ssa(
-        ctx, LoadPropertyDynamic(ctx.svar(name), ssa, name), fieldType);
+      ctx,
+      LoadPropertyDynamic(ctx.svar(name), ssa, name),
+      fieldType,
+    );
   }
 
   static List<Variable> boxUnboxMultiple(
@@ -310,7 +338,7 @@ class Variable {
       for (var j = i + 1; j < vlist.length; j++) {
         final v2 = vlist[j];
         // not great for large variable lists, but since most variable lists are small...
-        if (v2.scopeFrameOffset == v.scopeFrameOffset) {
+        if (v2.name == v.name) {
           vlist[j] = set;
         }
       }

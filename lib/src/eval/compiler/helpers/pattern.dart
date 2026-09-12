@@ -1,3 +1,5 @@
+import 'package:dart_eval/src/eval/ir/memory.dart';
+import 'package:dart_eval/src/eval/ir/types.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
@@ -10,7 +12,6 @@ import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 enum PatternBindContext { none, declare, declareFinal, matching }
 
@@ -212,11 +213,11 @@ Variable patternMatchAndBind(
         if (!(V.type.isUnboxedAcrossFunctionBoundaries)) {
           V = V.boxIfNeeded(ctx);
         }
-        var v = Variable.alloc(ctx, V.type, isFinal: isFinal);
-        ctx.pushOp(PushNull.make(), PushNull.LEN);
-        ctx.pushOp(
-          CopyValue.make(v.scopeFrameOffset, V.scopeFrameOffset),
-          CopyValue.LEN,
+        final v = Variable.ssa(
+          ctx,
+          Assign(ctx.svar(variableName), V.ssa),
+          V.type,
+          isFinal: isFinal,
         );
         ctx.setLocal(variableName, v);
       } else {
@@ -260,9 +261,14 @@ Variable _typeTest(CompilerContext ctx, TypeAnnotation? patType, Variable V) {
     return BuiltinValue(boolval: true).push(ctx);
   }
 
-  ctx.pushOp(
-    IsType.make(V.scopeFrameOffset, ctx.typeRefIndexMap[slot]!, false),
-    IsType.length,
+  return Variable.ssa(
+    ctx,
+    IsType(
+      ctx.svar('pattern_type'),
+      V.ssa,
+      slot.toRuntimeType(ctx).type,
+      false,
+    ),
+    CoreTypes.bool.ref(ctx).copyWith(boxed: false),
   );
-  return Variable.alloc(ctx, CoreTypes.bool.ref(ctx).copyWith(boxed: false));
 }

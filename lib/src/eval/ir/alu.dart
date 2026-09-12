@@ -1,4 +1,5 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
+import 'operands.dart';
 
 final class IntAdd extends Operation {
   final SSA target;
@@ -31,7 +32,11 @@ final class IntAdd extends Operation {
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
-    final newReadsFrom = readsFrom?.toList() ?? [left, right];
+    final newReadsFrom = renameOperands(
+      [left, right],
+      this.readsFrom,
+      readsFrom,
+    );
     return IntAdd(writesTo ?? target, newReadsFrom[0], newReadsFrom[1]);
   }
 }
@@ -67,7 +72,11 @@ final class IntSub extends Operation {
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
-    final newReadsFrom = readsFrom?.toList() ?? [left, right];
+    final newReadsFrom = renameOperands(
+      [left, right],
+      this.readsFrom,
+      readsFrom,
+    );
     return IntSub(writesTo ?? target, newReadsFrom[0], newReadsFrom[1]);
   }
 }
@@ -103,7 +112,11 @@ final class IntLessThan extends Operation {
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
-    final newReadsFrom = readsFrom?.toList() ?? [left, right];
+    final newReadsFrom = renameOperands(
+      [left, right],
+      this.readsFrom,
+      readsFrom,
+    );
     return IntLessThan(writesTo ?? target, newReadsFrom[0], newReadsFrom[1]);
   }
 }
@@ -139,7 +152,11 @@ final class IntEqual extends Operation {
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
-    final newReadsFrom = readsFrom?.toList() ?? [left, right];
+    final newReadsFrom = renameOperands(
+      [left, right],
+      this.readsFrom,
+      readsFrom,
+    );
     return IntEqual(writesTo ?? target, newReadsFrom[0], newReadsFrom[1]);
   }
 }
@@ -175,7 +192,11 @@ final class IntNotEqual extends Operation {
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
-    final newReadsFrom = readsFrom?.toList() ?? [left, right];
+    final newReadsFrom = renameOperands(
+      [left, right],
+      this.readsFrom,
+      readsFrom,
+    );
     return IntNotEqual(writesTo ?? target, newReadsFrom[0], newReadsFrom[1]);
   }
 }
@@ -211,8 +232,16 @@ final class IntLessThanOrEqual extends Operation {
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
-    final newReadsFrom = readsFrom?.toList() ?? [left, right];
-    return IntLessThanOrEqual(writesTo ?? target, newReadsFrom[0], newReadsFrom[1]);
+    final newReadsFrom = renameOperands(
+      [left, right],
+      this.readsFrom,
+      readsFrom,
+    );
+    return IntLessThanOrEqual(
+      writesTo ?? target,
+      newReadsFrom[0],
+      newReadsFrom[1],
+    );
   }
 }
 
@@ -247,7 +276,11 @@ final class IntGreaterThan extends Operation {
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
-    final newReadsFrom = readsFrom?.toList() ?? [left, right];
+    final newReadsFrom = renameOperands(
+      [left, right],
+      this.readsFrom,
+      readsFrom,
+    );
     return IntGreaterThan(writesTo ?? target, newReadsFrom[0], newReadsFrom[1]);
   }
 }
@@ -283,18 +316,28 @@ final class IntGreaterThanOrEqual extends Operation {
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
-    final newReadsFrom = readsFrom?.toList() ?? [left, right];
-    return IntGreaterThanOrEqual(writesTo ?? target, newReadsFrom[0], newReadsFrom[1]);
+    final newReadsFrom = renameOperands(
+      [left, right],
+      this.readsFrom,
+      readsFrom,
+    );
+    return IntGreaterThanOrEqual(
+      writesTo ?? target,
+      newReadsFrom[0],
+      newReadsFrom[1],
+    );
   }
 }
 
 final class Increment extends Operation {
   final SSA target;
 
-  Increment(this.target);
+  final SSA source;
+
+  Increment(this.target, [SSA? source]) : source = source ?? target;
 
   @override
-  Set<SSA> get readsFrom => {target};
+  Set<SSA> get readsFrom => {source};
 
   @override
   SSA? get writesTo => target;
@@ -303,18 +346,18 @@ final class Increment extends Operation {
   OpType get type => AssignmentOp.addAssign;
 
   @override
-  String toString() => '++ $target';
+  String toString() => '$target = increment $source';
 
   @override
   bool operator ==(Object other) =>
-      other is Increment && target == other.target;
+      other is Increment && target == other.target && source == other.source;
 
   @override
-  int get hashCode => target.hashCode;
+  int get hashCode => Object.hash(target, source);
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
-    return Increment(writesTo ?? target);
+    return Increment(writesTo ?? target, readsFrom?.single ?? source);
   }
 }
 
@@ -349,7 +392,11 @@ final class LessThan extends Operation {
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
-    final newReadsFrom = readsFrom?.toList() ?? [left, right];
+    final newReadsFrom = renameOperands(
+      [left, right],
+      this.readsFrom,
+      readsFrom,
+    );
     return LessThan(writesTo ?? target, newReadsFrom[0], newReadsFrom[1]);
   }
 }

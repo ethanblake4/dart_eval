@@ -1,4 +1,22 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
+import 'operands.dart';
+
+final class ParentBridgeSuperShim extends Operation {
+  final SSA shim;
+  final SSA parent;
+
+  ParentBridgeSuperShim(this.shim, this.parent);
+
+  @override
+  Set<SSA> get readsFrom => {shim, parent};
+
+  @override
+  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) =>
+      ParentBridgeSuperShim(
+        readsFrom?.first ?? shim,
+        readsFrom?.last ?? parent,
+      );
+}
 
 final class NewBridgeSuperShim extends Operation {
   final SSA target;
@@ -31,7 +49,11 @@ final class BridgeInstantiate extends Operation {
   final int externalFunctionId;
 
   BridgeInstantiate(
-      this.target, this.externalFunctionId, this.subclass, this.args);
+    this.target,
+    this.externalFunctionId,
+    this.subclass,
+    this.args,
+  );
 
   @override
   SSA? get writesTo => target;
@@ -60,7 +82,11 @@ final class BridgeInstantiate extends Operation {
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
-    final newReadsFrom = readsFrom?.toList() ?? [subclass, ...args];
+    final newReadsFrom = renameOperands(
+      [subclass, ...args],
+      this.readsFrom,
+      readsFrom,
+    );
     return BridgeInstantiate(
       writesTo ?? target,
       externalFunctionId,
@@ -100,11 +126,7 @@ final class InvokeExternal extends Operation {
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
-    final newReadsFrom = readsFrom?.toList() ?? args;
-    return InvokeExternal(
-      writesTo ?? target,
-      externalFunctionId,
-      newReadsFrom,
-    );
+    final newReadsFrom = renameOperands(args, this.readsFrom, readsFrom);
+    return InvokeExternal(writesTo ?? target, externalFunctionId, newReadsFrom);
   }
 }
