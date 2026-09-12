@@ -82,8 +82,8 @@ regions without patching bytecode offsets. Exception operations describe handler
 entry and pending completion. Their runtime behavior, especially nested finally
 blocks and abrupt completion, still needs lowering and semantic tests. Closures
 currently capture values; mutable captured locals need shared cells before
-execution parity. Collection spreads and continue statements remain unsupported
-in this migration.
+execution parity. Collection spreads and continue statements now use explicit loop and branch
+blocks. Labeled break and continue remain unsupported.
 
 ## Validation for this pass
 
@@ -98,3 +98,17 @@ in this migration.
 
 Package reference: [control_flow_graph](https://pub.dev/packages/control_flow_graph).
 Implementation decisions use the adjacent checkout selected by `pubspec.yaml`.
+
+## Milestone 2: graph construction
+
+Completed control-flow validation before transformations, unreachable-block
+pruning, continue targets for each loop form, short-circuit expressions, and
+list/set/map spreads. Closure compilation isolates loop and exception contexts.
+A field-read path now preserves its SSA result. Fifty-two dart_eval frontend
+and IR tests pass, including declarations, defaults, exceptions, and async IR.
+
+The companion control_flow_graph changes add unreachable-block pruning, register
+single-block roots, and fix dominator convergence. Both new regression tests
+pass. The full package suite currently has ten golden-output failures in the
+preexisting edited for-loop fixture: it adds a subtraction but expects the old
+loop output. Those existing allocator/test changes remain outside this commit.

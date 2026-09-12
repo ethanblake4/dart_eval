@@ -47,7 +47,8 @@ void main() {
       'main()',
     );
     for (var id = 0; id < graph.lastBlockId; id++) {
-      final block = graph[id]!;
+      final block = graph[id];
+      if (block == null) continue;
       if (block.code.isNotEmpty && block.code.last is Return) {
         expect(graph.graph.successorsOf(id), isEmpty);
       }

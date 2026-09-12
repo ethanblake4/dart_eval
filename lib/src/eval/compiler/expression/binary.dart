@@ -9,7 +9,7 @@ import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/memory.dart';
-import 'package:dart_eval/src/eval/ir/objects.dart';
+import 'package:dart_eval/src/eval/ir/logic.dart';
 
 import '../errors.dart';
 import 'expression.dart';
@@ -75,29 +75,31 @@ Variable _compileShortCircuit(
     ctx,
     null,
     condition: (ctx) {
-      final Variable $comparison;
-      switch (operator) {
-        case '??':
-          $comparison = BuiltinValue().push(ctx).boxIfNeeded(ctx);
-          break;
-        case '&&':
-          $comparison = BuiltinValue(boolval: true).push(ctx).boxIfNeeded(ctx);
-          break;
-        case '||':
-          $comparison = BuiltinValue(boolval: false).push(ctx).boxIfNeeded(ctx);
-          break;
-        default:
-          throw CompileError('Unknown short-circuit operator $operator');
+      if (operator == '??') {
+        return Variable.ssa(
+          ctx,
+          IsNull(ctx.svar('short_circuit_test'), L.ssa),
+          CoreTypes.bool.ref(ctx).copyWith(boxed: false),
+        );
       }
+      if (!L.type.isAssignableTo(ctx, CoreTypes.bool.ref(ctx))) {
+        throw CompileError('Operands of $operator must be boolean', right);
+      }
+      final value = L.unboxIfNeeded(ctx, false);
+      if (operator == '&&') return value;
       return Variable.ssa(
         ctx,
-        DynamicEquals(ctx.svar('short_circuit_test'), L.ssa, $comparison.ssa),
-        CoreTypes.bool.ref(ctx).copyWith(boxed: false),
+        LogicalNot(ctx.svar('short_circuit_test'), value.ssa),
+        value.type,
       );
     },
     thenBranch: (ctx, rt) {
       // Short-circuit: we only execute the RHS if the LHS is null
       final R = compileExpression(right, ctx).boxIfNeeded(ctx);
+      if (operator != '??' &&
+          !R.type.isAssignableTo(ctx, CoreTypes.bool.ref(ctx))) {
+        throw CompileError('Operands of $operator must be boolean', right);
+      }
       rightType = R.type;
       ctx.pushOp(Assign(outVar.ssa, R.ssa));
       return StatementInfo(-1);

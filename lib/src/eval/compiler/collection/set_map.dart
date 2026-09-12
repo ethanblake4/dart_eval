@@ -1,3 +1,4 @@
+import 'package:dart_eval/src/eval/compiler/collection/spread.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
@@ -15,11 +16,24 @@ Variable compileSetOrMapLiteral(SetOrMapLiteral literal, CompilerContext ctx) {
   final explicitValue = annotations == null || annotations.length < 2
       ? null
       : TypeRef.fromAnnotation(ctx, ctx.library, annotations[1]);
+  Variable? firstSpread;
+  final first = literal.elements.firstOrNull;
+  if (annotations == null && first is SpreadElement) {
+    firstSpread = compileExpression(first.expression, ctx);
+  }
   final isMap =
       explicitValue != null ||
       (annotations == null &&
           (literal.elements.isEmpty ||
-              literal.elements.first is MapLiteralEntry));
+              literal.elements.first is MapLiteralEntry ||
+              (firstSpread?.type
+                      .copyWith(nullable: false)
+                      .isAssignableTo(
+                        ctx,
+                        CoreTypes.map.ref(ctx),
+                        forceAllowDynamic: false,
+                      ) ??
+                  false)));
   final keyTypes = <TypeRef>{};
   final valueTypes = <TypeRef>{};
   final target = ctx.svar(isMap ? 'map' : 'set');
@@ -36,7 +50,18 @@ Variable compileSetOrMapLiteral(SetOrMapLiteral literal, CompilerContext ctx) {
     ),
   );
   for (final element in literal.elements) {
-    if (isMap && element is MapLiteralEntry) {
+    if (element is SpreadElement) {
+      final types = compileCollectionSpread(
+        element,
+        collection,
+        ctx,
+        isMap: isMap,
+        isSet: !isMap,
+        source: identical(element, first) ? firstSpread : null,
+      );
+      keyTypes.add(types.first);
+      if (isMap) valueTypes.add(types[1]);
+    } else if (isMap && element is MapLiteralEntry) {
       var key = compileExpression(element.key, ctx, explicitKey);
       var value = compileExpression(element.value, ctx, explicitValue);
       if (explicitKey != null && !key.type.isAssignableTo(ctx, explicitKey)) {

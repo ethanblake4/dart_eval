@@ -434,8 +434,9 @@ class IdentifierReference implements Reference {
           );
         }
 
-        return Variable.alloc(
+        return Variable.of(
           ctx,
+          resvar,
           TypeRef.lookupFieldType(ctx, $type, name, source: source) ??
               CoreTypes.dynamic.ref(ctx),
         );

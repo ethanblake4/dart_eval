@@ -1,132 +1,128 @@
-/*import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
+import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/macros/loop.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';*/
-/* TODO
-/// Compiles a spread element in a list literal.
+import 'package:dart_eval/src/eval/ir/collection.dart';
+import 'package:dart_eval/src/eval/ir/logic.dart';
+import 'package:dart_eval/src/eval/ir/memory.dart';
+
+/// Iterates a spread source once, placing iterator creation inside the null guard.
+List<TypeRef> compileCollectionSpread(
+  SpreadElement element,
+  Variable target,
+  CompilerContext ctx, {
+  required bool isMap,
+  required bool isSet,
+  bool box = true,
+  Variable? source,
+}) {
+  final collection = source ?? compileExpression(element.expression, ctx);
+  if (element.isNullAware && collection.type == CoreTypes.nullType.ref(ctx)) {
+    return target.type.specifiedTypeArgs;
+  }
+  final sourceType = collection.type
+      .copyWith(nullable: false)
+      .resolveTypeChain(ctx);
+  final requiredType = (isMap ? CoreTypes.map : CoreTypes.iterable).ref(ctx);
+  if (!sourceType.isAssignableTo(ctx, requiredType)) {
+    throw CompileError(
+      'Cannot spread ${collection.type} into ${target.type}',
+      element,
+    );
+  }
+  final sourceArgs = sourceType.specifiedTypeArgs;
+  final types = [
+    for (var i = 0; i < (isMap ? 2 : 1); i++)
+      sourceArgs.length > i ? sourceArgs[i] : CoreTypes.dynamic.ref(ctx),
+  ];
+  for (var i = 0; i < types.length; i++) {
+    if (!types[i].isAssignableTo(ctx, target.type.specifiedTypeArgs[i])) {
+      throw CompileError(
+        'Spread element type ${types[i]} is not assignable to ${target.type.specifiedTypeArgs[i]}',
+        element,
+      );
+    }
+  }
+  StatementInfo append(CompilerContext ctx, AlwaysReturnType? _) {
+    final nonNull = collection
+        .copyWith(type: collection.type.copyWith(nullable: false))
+        .boxIfNeeded(ctx);
+    final iterable = isMap ? nonNull.getProperty(ctx, 'entries') : nonNull;
+    final iterator = iterable.getProperty(ctx, 'iterator');
+    return macroLoop(
+      ctx,
+      null,
+      condition: (ctx) => iterator.invoke(ctx, 'moveNext', []).result,
+      body: (ctx, _) {
+        final current = iterator.getProperty(ctx, 'current');
+        if (isMap) {
+          var key = current.getProperty(ctx, 'key');
+          var value = current.getProperty(ctx, 'value');
+          if (box) {
+            key = key.boxIfNeeded(ctx);
+            value = value.boxIfNeeded(ctx);
+          }
+          ctx.pushOp(MapSet(target.ssa, key.ssa, value.ssa));
+        } else {
+          final value = box ? current.boxIfNeeded(ctx) : current;
+          ctx.pushOp(
+            isSet
+                ? SetAdd(target.ssa, value.ssa)
+                : ListAppend(target.ssa, value.ssa),
+          );
+        }
+        return StatementInfo(-1);
+      },
+    );
+  }
+
+  if (element.isNullAware) {
+    macroBranch(
+      ctx,
+      null,
+      condition: (ctx) {
+        final nullTest = Variable.ssa(
+          ctx,
+          IsNull(ctx.svar('spread_is_null'), collection.ssa),
+          CoreTypes.bool.ref(ctx).copyWith(boxed: false),
+        );
+        return Variable.ssa(
+          ctx,
+          LogicalNot(ctx.svar('spread_not_null'), nullTest.ssa),
+          nullTest.type,
+        );
+      },
+      thenBranch: append,
+    );
+  } else {
+    if (collection.type.nullable) {
+      throw CompileError(
+        'A nullable collection requires a null-aware spread',
+        element,
+      );
+    }
+    append(ctx, null);
+  }
+  return types.map((type) => type.copyWith(boxed: box || type.boxed)).toList();
+}
+
 List<TypeRef> compileSpreadElementForList(
-  SpreadElement e,
+  SpreadElement element,
   Variable list,
   CompilerContext ctx,
   bool box,
-) {
-  final listType = list.type.specifiedTypeArgs[0];
-  final expression = e.expression;
-  final isNullAware = e.isNullAware;
-
-  // Compile the expression to get the spreaded collection
-  var collection = compileExpression(expression, ctx, list.type);
-
-  if (isNullAware) {
-    // For null-aware spread, we need to check if the collection is not null
-    // TODO: implement null check for ...? operator
-    // For now, treat it as a normal spread
-  }
-
-  // Check if the collection is iterable
-  final iterableType = CoreTypes.iterable.ref(ctx);
-  if (!collection.type
-      .resolveTypeChain(ctx)
-      .isAssignableTo(ctx, iterableType)) {
-    throw CompileError(
-      'Cannot spread non-iterable type ${collection.type} in list literal',
-    );
-  }
-
-  // Get the element type of the collection
-  var collectionElementType = CoreTypes.dynamic.ref(ctx);
-  if (collection.type.specifiedTypeArgs.isNotEmpty) {
-    collectionElementType = collection.type.specifiedTypeArgs[0];
-  }
-
-  // Check if the collection elements are compatible with the list type
-  if (!collectionElementType
-      .resolveTypeChain(ctx)
-      .isAssignableTo(ctx, listType)) {
-    throw CompileError(
-      'Cannot spread collection of type $collectionElementType in list of type $listType',
-    );
-  }
-
-  // Implement the spread using a loop similar to boxListContents
-  late Variable $i, $1, len;
-
-  // Initialize loop variables
-  $i = BuiltinValue(intval: 0).push(ctx);
-  $1 = BuiltinValue(intval: 1).push(ctx);
-
-  // Get the length of the collection
-  len = Variable.alloc(ctx, CoreTypes.int.ref(ctx).copyWith(boxed: false));
-  ctx.pushOp(
-    PushIterableLength.make(collection.scopeFrameOffset),
-    PushIterableLength.LEN,
-  );
-
-  // Loop to add each element
-  macroLoop(
-    ctx,
-    AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true),
-    initialization: (ctx) {
-      // We have already initialized the variables above
-    },
-    condition: (ctx) {
-      // i < len
-      final v = Variable.alloc(
-        ctx,
-        CoreTypes.bool.ref(ctx).copyWith(boxed: false),
-      );
-      ctx.pushOp(
-        NumLt.make($i.scopeFrameOffset, len.scopeFrameOffset),
-        NumLt.LEN,
-      );
-      return v;
-    },
-    body: (ctx, rt) {
-      // Get the element at index i
-      final element = Variable.alloc(ctx, collectionElementType);
-      ctx.pushOp(
-        IndexList.make(collection.scopeFrameOffset, $i.scopeFrameOffset),
-        IndexList.LEN,
-      );
-
-      // Boxing if needed
-      final elementToAdd = box ? element.boxIfNeeded(ctx) : element;
-
-      // Add the element to the list
-      ctx.pushOp(
-        ListAppend.make(list.scopeFrameOffset, elementToAdd.scopeFrameOffset),
-        ListAppend.LEN,
-      );
-
-      return StatementInfo(-1);
-    },
-    update: (ctx) {
-      // i++
-      final ip1 = Variable.alloc(
-        ctx,
-        CoreTypes.int.ref(ctx).copyWith(boxed: false),
-      );
-      ctx.pushOp(
-        NumAdd.make($i.scopeFrameOffset, $1.scopeFrameOffset),
-        NumAdd.LEN,
-      );
-      ctx.pushOp(
-        CopyValue.make($i.scopeFrameOffset, ip1.scopeFrameOffset),
-        CopyValue.LEN,
-      );
-    },
-    after: (ctx) {
-      // Nothing additional needed after the loop
-    },
-  );
-
-  return [collectionElementType];
-}
-*/
+) => compileCollectionSpread(
+  element,
+  list,
+  ctx,
+  isMap: false,
+  isSet: false,
+  box: box,
+);

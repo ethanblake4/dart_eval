@@ -1,3 +1,4 @@
+import 'package:dart_eval/src/eval/compiler/collection/spread.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/macros/loop.dart';
@@ -56,7 +57,11 @@ Variable compileListLiteral(
     CoreTypes.list
         .ref(ctx)
         .copyWith(
-          specifiedTypeArgs: [listSpecifiedType ?? CoreTypes.dynamic.ref(ctx)],
+          specifiedTypeArgs: [
+            (listSpecifiedType ?? CoreTypes.dynamic.ref(ctx)).copyWith(
+              boxed: _boxListElements,
+            ),
+          ],
           boxed: false,
         ),
   );
@@ -155,10 +160,7 @@ List<TypeRef> compileListElement(
   } else if (e is ForElement) {
     return compileForElementForList(e, list, ctx, box);
   } else if (e is SpreadElement) {
-    throw CompileError(
-      'Spread elements are not implemented in the CFG compiler',
-      e,
-    );
+    return compileSpreadElementForList(e, list, ctx, box);
   }
   throw CompileError('Unknown list collection element ${e.runtimeType}');
 }

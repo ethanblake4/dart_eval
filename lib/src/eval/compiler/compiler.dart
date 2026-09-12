@@ -3,6 +3,7 @@ import 'package:collection/collection.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
+import 'package:dart_eval/src/eval/compiler/optimizer/validate.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/field.dart';
 import 'package:dart_eval/src/eval/compiler/model/diagnostic_mode.dart';
@@ -549,6 +550,11 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     }
 
     _ctx.finishMethod();
+
+    for (final graph in _ctx.functionGraphs.values) {
+      graph.removeUnreachableBlocks();
+      validateControlFlowGraph(graph);
+    }
 
     // Optimization and lowering are separate stages. Keep the typed graphs
     // available for inspection while the register VM backend is being built.

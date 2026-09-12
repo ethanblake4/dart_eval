@@ -7,6 +7,7 @@ class CompilerLabel {
   final String? name;
   final LabelType type;
   final BasicBlock? breakTarget;
+  final BasicBlock? continueTarget;
 
   const CompilerLabel(
     this.type,
@@ -14,12 +15,15 @@ class CompilerLabel {
     this.cleanup, {
     this.name,
     this.breakTarget,
+    this.continueTarget,
   });
 }
 
 class SimpleCompilerLabel implements CompilerLabel {
   @override
   BasicBlock? get breakTarget => null;
+  @override
+  BasicBlock? get continueTarget => null;
   @override
   get offset => -1;
   @override

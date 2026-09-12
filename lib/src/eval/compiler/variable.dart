@@ -160,9 +160,9 @@ class Variable {
       ctx.pushOp(BoxList(result, v2.ssa));
     } else if (type == CoreTypes.map.ref(ctx)) {
       ctx.pushOp(BoxMap(result, ssa));
-    } /*else if (type == CoreTypes.set.ref(ctx)) {
+    } else if (type == CoreTypes.set.ref(ctx)) {
       ctx.pushOp(BoxSet(result, ssa));
-    }*/ else if (type == CoreTypes.string.ref(ctx)) {
+    } else if (type == CoreTypes.string.ref(ctx)) {
       ctx.pushOp(BoxString(result, ssa));
     } else if (type == CoreTypes.nullType.ref(ctx)) {
       ctx.pushOp(BoxNull(result));

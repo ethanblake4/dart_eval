@@ -26,6 +26,10 @@ Variable compileFunctionExpression(
   TypeRef? bound,
 ]) {
   final ctxSaveState = ctx.saveState();
+  final outerLabels = [...ctx.labels];
+  final outerExceptions = [...ctx.caughtExceptions];
+  ctx.labels.clear();
+  ctx.caughtExceptions.clear();
   final sfo = ctx.scopeFrameOffset;
   final outerGraph = ctx.activeGraph;
   final outerFunctionId = ctx.currentFunctionId;
@@ -153,6 +157,8 @@ Variable compileFunctionExpression(
   ctx.nearestAsyncFrame = outerAsyncFrame;
   ctx.entrypoint = outerEntrypoint;
 
+  ctx.labels.addAll(outerLabels);
+  ctx.caughtExceptions.addAll(outerExceptions);
   ctx.restoreState(ctxSaveState);
   ctx.scopeFrameOffset = sfo;
 

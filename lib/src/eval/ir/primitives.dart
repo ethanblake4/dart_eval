@@ -1,5 +1,18 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
 
+final class BoxSet extends Operation {
+  final SSA target;
+  final SSA source;
+  BoxSet(this.target, this.source);
+  @override
+  SSA get writesTo => target;
+  @override
+  Set<SSA> get readsFrom => {source};
+  @override
+  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) =>
+      BoxSet(writesTo ?? target, readsFrom?.single ?? source);
+}
+
 final class BoxInt extends Operation {
   final SSA target;
   final SSA source;

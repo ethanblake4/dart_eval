@@ -23,6 +23,10 @@ StatementInfo macroLoop(
   final header = BasicBlock<Operation>([], label: ctx.label('loop_header'));
   final bodyBlock = BasicBlock<Operation>([], label: ctx.label('loop_body'));
   final exit = BasicBlock<Operation>([], label: ctx.label('loop_exit'));
+  final updateBlock = update != null && !updateBeforeBody
+      ? BasicBlock<Operation>([], label: ctx.label('loop_update'))
+      : null;
+  final continueTarget = updateBlock ?? header;
   ctx.flushBlock();
   final parent = ctx.builder;
   ctx.builder = ctx.builder.then(alwaysLoopOnce ? bodyBlock : header);
@@ -40,7 +44,16 @@ StatementInfo macroLoop(
 
   ctx.beginAllocScope();
   if (updateBeforeBody) update?.call(ctx);
-  final label = CompilerLabel(LabelType.loop, -1, (_) => -1, breakTarget: exit);
+  final label = CompilerLabel(
+    LabelType.loop,
+    -1,
+    (ctx) {
+      ctx.resolveBranchStateDiscontinuity(initialState);
+      return -1;
+    },
+    breakTarget: exit,
+    continueTarget: continueTarget,
+  );
   ctx.labels.add(label);
   final result = body(ctx, expectedReturnType);
   ctx.labels.removeLast();
@@ -49,23 +62,39 @@ StatementInfo macroLoop(
       !result.willAlwaysThrow &&
       !result.willAlwaysBreak &&
       !ctx.blockEndsControlFlow) {
-    if (!updateBeforeBody) update?.call(ctx);
     ctx.resolveBranchStateDiscontinuity(initialState);
-    if (alwaysLoopOnce && condition != null) {
-      ctx.builder = ctx.builder.then(header);
+    ctx.pushOp(Jump(continueTarget.label!));
+    final tail = ctx.flushBlock();
+    ctx.builder.link(tail, continueTarget);
+  } else if (ctx.blockCode.isNotEmpty) {
+    ctx.flushBlock();
+  }
+
+  // A continue edge can reach the update/condition even if the body never
+  // falls through. Emit these blocks independently of the body's exit flags.
+  if (updateBlock?.id != null) {
+    ctx.restoreState(initialState);
+    ctx.builder = BasicBlockBuilder(ctx.activeGraph, [updateBlock!], parent);
+    update!.call(ctx);
+    ctx.resolveBranchStateDiscontinuity(initialState);
+    ctx.pushOp(Jump(header.label!));
+    final tail = ctx.flushBlock();
+    ctx.builder.link(tail, header);
+  }
+  if (alwaysLoopOnce && header.id != null) {
+    ctx.restoreState(initialState);
+    ctx.builder = BasicBlockBuilder(ctx.activeGraph, [header], parent);
+    if (condition != null) {
       final value = condition(ctx).unboxIfNeeded(ctx);
       ctx.pushOp(JumpIfFalse(value.ssa, exit.label!));
       final tail = ctx.flushBlock();
       ctx.builder.link(tail, exit);
       ctx.builder.link(tail, bodyBlock);
     } else {
-      final target = alwaysLoopOnce ? bodyBlock : header;
-      ctx.pushOp(Jump(target.label!));
+      ctx.pushOp(Jump(bodyBlock.label!));
       final tail = ctx.flushBlock();
-      ctx.builder.link(tail, target);
+      ctx.builder.link(tail, bodyBlock);
     }
-  } else if (ctx.blockCode.isNotEmpty) {
-    ctx.flushBlock();
   }
 
   ctx.builder.float(exit);
@@ -73,7 +102,6 @@ StatementInfo macroLoop(
   ctx.restoreState(initialState);
   after?.call(ctx);
   ctx.endAllocScope();
-  // A while/for body can be skipped even when it always returns.
   return alwaysLoopOnce
       ? result.copyWith(willAlwaysBreak: false)
       : StatementInfo(result.position);
