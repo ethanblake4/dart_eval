@@ -112,3 +112,17 @@ single-block roots, and fix dominator convergence. Both new regression tests
 pass. The full package suite currently has ten golden-output failures in the
 preexisting edited for-loop fixture: it adds a subtraction but expects the old
 loop output. Those existing allocator/test changes remain outside this commit.
+
+## Milestone 3: SSA invariants and effects
+
+The compiler now retains frontend graphs and creates transformed copies in
+`Compiler.ssaFunctionGraphs`. It runs phi insertion, SSA conversion, dominance
+validation, conservative dead-definition removal, and a second validation.
+The complete frontend/IR suite has 115 passing tests.
+
+The companion package now defaults operations to effectful, tracks uses from
+return/effect-only operations, and copies shared operands before assigning SSA
+versions. It preserves terminal blocks during trimming. Pure dead chains can be
+removed without deleting calls or potentially throwing operations. Ten targeted
+package regression tests pass. Copy propagation and block trimming remain
+outside the compiler pipeline until their further transformations are validated.

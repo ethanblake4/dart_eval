@@ -1,6 +1,9 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
 
 final class LogicalNot extends Operation {
+  @override
+  bool get isPure => true;
+
   final SSA target;
   final SSA source;
 
@@ -32,6 +35,9 @@ final class LogicalNot extends Operation {
 }
 
 final class LogicalAnd extends Operation {
+  @override
+  bool get isPure => true;
+
   final SSA target;
   final SSA left;
   final SSA right;
@@ -62,11 +68,18 @@ final class LogicalAnd extends Operation {
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
-    return LogicalAnd(writesTo ?? target, readsFrom?.first ?? left, readsFrom?.last ?? right);
+    return LogicalAnd(
+      writesTo ?? target,
+      readsFrom?.first ?? left,
+      readsFrom?.last ?? right,
+    );
   }
 }
 
 final class LogicalOr extends Operation {
+  @override
+  bool get isPure => true;
+
   final SSA target;
   final SSA left;
   final SSA right;
@@ -97,6 +110,10 @@ final class LogicalOr extends Operation {
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
-    return LogicalOr(writesTo ?? target, readsFrom?.first ?? left, readsFrom?.last ?? right);
+    return LogicalOr(
+      writesTo ?? target,
+      readsFrom?.first ?? left,
+      readsFrom?.last ?? right,
+    );
   }
 }

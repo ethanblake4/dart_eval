@@ -1,4 +1,5 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
+import 'operands.dart';
 
 final class Await extends Operation {
   final SSA result;
@@ -19,18 +20,20 @@ final class Await extends Operation {
   @override
   bool operator ==(Object other) =>
       other is Await &&
+      result == other.result &&
       completer == other.completer &&
       subject == other.subject;
 
   @override
-  int get hashCode => completer.hashCode ^ subject.hashCode;
+  int get hashCode => Object.hash(result, completer, subject);
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
-    return Await(
-      writesTo ?? result,
-      readsFrom?.firstWhere((s) => s == completer) ?? completer,
-      readsFrom?.firstWhere((s) => s == subject) ?? subject,
+    final inputs = renameOperands(
+      [completer, subject],
+      this.readsFrom,
+      readsFrom,
     );
+    return Await(writesTo ?? result, inputs[0], inputs[1]);
   }
 }

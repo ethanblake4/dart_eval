@@ -1,6 +1,9 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
 
 final class LoadInt extends Operation {
+  @override
+  bool get isPure => true;
+
   final SSA target;
   final int value;
 
@@ -26,6 +29,9 @@ final class LoadInt extends Operation {
 }
 
 final class LoadDouble extends Operation {
+  @override
+  bool get isPure => true;
+
   final SSA target;
   final double value;
 
@@ -51,6 +57,9 @@ final class LoadDouble extends Operation {
 }
 
 final class LoadString extends Operation {
+  @override
+  bool get isPure => true;
+
   final SSA target;
   final String value;
 
@@ -76,6 +85,9 @@ final class LoadString extends Operation {
 }
 
 final class LoadBool extends Operation {
+  @override
+  bool get isPure => true;
+
   final SSA target;
   final bool value;
 
@@ -101,6 +113,9 @@ final class LoadBool extends Operation {
 }
 
 final class LoadNull extends Operation {
+  @override
+  bool get isPure => true;
+
   final SSA target;
 
   LoadNull(this.target);
@@ -124,6 +139,9 @@ final class LoadNull extends Operation {
 }
 
 final class Assign extends Operation {
+  @override
+  bool get isPure => true;
+
   final SSA target;
   final SSA source;
 
@@ -155,13 +173,13 @@ final class Assign extends Operation {
 }
 
 final class IsNull extends Operation {
+  @override
+  bool get isPure => true;
+
   final SSA result;
   final SSA object;
 
-  IsNull(
-    this.result,
-    this.object,
-  );
+  IsNull(this.result, this.object);
 
   @override
   Set<SSA> get readsFrom => {object};

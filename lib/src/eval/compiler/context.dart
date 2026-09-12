@@ -144,6 +144,7 @@ class CompilerContext with ScopeContext {
   late BasicBlockBuilder builder;
   var blockCode = <Operation>[];
   final Map<int, ControlFlowGraph> functionGraphs = {};
+  final Map<int, ControlFlowGraph> ssaFunctionGraphs = {};
   final Map<int, String> functionNames = {};
   int? currentFunctionId;
   int _nextFunctionId = 0;

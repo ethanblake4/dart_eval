@@ -2,6 +2,9 @@ import 'package:control_flow_graph/control_flow_graph.dart';
 import 'operands.dart';
 
 final class IntAdd extends Operation {
+  @override
+  bool get isPure => true;
+
   final SSA target;
   final SSA left;
   final SSA right;
@@ -42,6 +45,9 @@ final class IntAdd extends Operation {
 }
 
 final class IntSub extends Operation {
+  @override
+  bool get isPure => true;
+
   final SSA target;
   final SSA left;
   final SSA right;
@@ -82,6 +88,9 @@ final class IntSub extends Operation {
 }
 
 final class IntLessThan extends Operation {
+  @override
+  bool get isPure => true;
+
   final SSA target;
   final SSA left;
   final SSA right;
@@ -122,6 +131,9 @@ final class IntLessThan extends Operation {
 }
 
 final class IntEqual extends Operation {
+  @override
+  bool get isPure => true;
+
   final SSA target;
   final SSA left;
   final SSA right;
@@ -162,6 +174,9 @@ final class IntEqual extends Operation {
 }
 
 final class IntNotEqual extends Operation {
+  @override
+  bool get isPure => true;
+
   final SSA target;
   final SSA left;
   final SSA right;
@@ -202,6 +217,9 @@ final class IntNotEqual extends Operation {
 }
 
 final class IntLessThanOrEqual extends Operation {
+  @override
+  bool get isPure => true;
+
   final SSA target;
   final SSA left;
   final SSA right;
@@ -246,6 +264,9 @@ final class IntLessThanOrEqual extends Operation {
 }
 
 final class IntGreaterThan extends Operation {
+  @override
+  bool get isPure => true;
+
   final SSA target;
   final SSA left;
   final SSA right;
@@ -286,6 +307,9 @@ final class IntGreaterThan extends Operation {
 }
 
 final class IntGreaterThanOrEqual extends Operation {
+  @override
+  bool get isPure => true;
+
   final SSA target;
   final SSA left;
   final SSA right;

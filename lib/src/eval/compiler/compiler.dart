@@ -4,6 +4,7 @@ import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/optimizer/validate.dart';
+import 'package:dart_eval/src/eval/compiler/optimizer/ssa.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/field.dart';
 import 'package:dart_eval/src/eval/compiler/model/diagnostic_mode.dart';
@@ -60,6 +61,10 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       Map.unmodifiable(_ctx.functionGraphs);
 
   Map<int, String> get functionNames => Map.unmodifiable(_ctx.functionNames);
+
+  /// Per-function SSA graphs prepared for instruction selection.
+  Map<int, ControlFlowGraph> get ssaFunctionGraphs =>
+      Map.unmodifiable(_ctx.ssaFunctionGraphs);
 
   /// List of additional [DartSource] files to be compiled when [compile] is run
   final additionalSources = <DartSource>[];
@@ -551,9 +556,11 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
 
     _ctx.finishMethod();
 
-    for (final graph in _ctx.functionGraphs.values) {
+    for (final entry in _ctx.functionGraphs.entries) {
+      final graph = entry.value;
       graph.removeUnreachableBlocks();
       validateControlFlowGraph(graph);
+      _ctx.ssaFunctionGraphs[entry.key] = buildSSA(graph);
     }
 
     // Optimization and lowering are separate stages. Keep the typed graphs
