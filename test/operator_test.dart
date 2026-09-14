@@ -37,10 +37,10 @@ void main() {
       });
 
       expect(runtime.executeLib('package:operator_test/main.dart', 'main'), [
-        $bool(false),
-        $bool(false),
-        $bool(true),
-        $bool(true),
+        false,
+        false,
+        true,
+        true,
       ]);
     });
 
@@ -86,8 +86,8 @@ void main() {
       });
 
       expect(runtime.executeLib('package:operator_test/main.dart', 'main'), [
-        $int(1),
-        $int(2),
+        1,
+        2,
       ]);
     }, skip: true);
   });

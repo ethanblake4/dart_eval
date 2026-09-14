@@ -1,7 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
-import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart'
@@ -10,11 +9,6 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/src/eval/ir/function.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/ir/primitives.dart';
-import 'package:dart_eval/src/eval/compiler/builtins.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
-import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
-import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 
 List<PossiblyValuedParameter> resolveFPLDefaults(
   CompilerContext ctx,
@@ -59,6 +53,8 @@ List<PossiblyValuedParameter> resolveFPLDefaults(
     named.sort((a, b) => (a.name!.lexeme).compareTo(b.name!.lexeme));
   }
 
+  ctx.functionParameters[ctx.currentFunctionId!] = [...positional, ...named];
+
   for (final param in [...positional, ...named]) {
     final argument = SSA('arg_$paramIndex');
     final normal = param is DefaultFormalParameter ? param.parameter : param;
@@ -78,31 +74,9 @@ List<PossiblyValuedParameter> resolveFPLDefaults(
       ),
     );
     if (param is DefaultFormalParameter) {
-      Variable? defaultValue;
-      if (param.defaultValue != null && !ignoreDefaults) {
-        macroBranch(
-          ctx,
-          null,
-          condition: (ctx) => Variable.of(
-            ctx,
-            argument,
-            CoreTypes.dynamic.ref(ctx),
-          ).invoke(ctx, '==', [BuiltinValue().push(ctx)]).result,
-          thenBranch: (ctx, _) {
-            var value = compileExpression(param.defaultValue!, ctx);
-            value =
-                !allowUnboxed || !value.type.isUnboxedAcrossFunctionBoundaries
-                ? value.boxIfNeeded(ctx)
-                : value.unboxIfNeeded(ctx);
-            ctx.pushOp(Assign(argument, value.ssa));
-            defaultValue = value;
-            return StatementInfo(-1);
-          },
-        );
-      } else if (param.defaultValue == null) {
-        ctx.pushOp(MaybeBoxNull(argument, argument));
-      }
-      normalized.add(PossiblyValuedParameter(param.parameter, defaultValue));
+      // Callers bind omitted arguments before entering typed registers. Null is
+      // an actual argument value and must never act as a missing-value sentinel.
+      normalized.add(PossiblyValuedParameter(param.parameter, null));
     } else {
       normalized.add(
         PossiblyValuedParameter(param as NormalFormalParameter, null),
@@ -135,14 +109,12 @@ List<PossiblyValuedParameter> resolveFPLDefaults(
       null,
     );
   } else if (param is DefaultFormalParameter) {
-    final p = param.parameter;
-    if (p is! SimpleFormalParameter) {
-      return (null, null);
-    }
-    final type = p.type;
-    return type == null
-        ? (null, null)
-        : (TypeRef.fromAnnotation(ctx, decLibrary, type), type);
+    return getFormalParameterType(
+      ctx,
+      param.parameter,
+      decLibrary,
+      parameterHost,
+    );
   } else {
     throw CompileError('Unknown formal type ${param.runtimeType}');
   }

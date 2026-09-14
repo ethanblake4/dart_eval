@@ -100,7 +100,7 @@ void main() {
       });
 
       final result = runtime.executeLib('package:example/main.dart', 'main');
-      expect(result, $int(45646));
+      expect(result, 45646);
     });
 
     test('Sum to', () {

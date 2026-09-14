@@ -4,7 +4,7 @@ import 'package:test/test.dart';
 
 Object? runSource(
   String source, {
-  List<Object?> args = const [],
+  Map<String, Object?> args = const {},
   bool serialized = false,
 }) {
   final program = Compiler().compile({
@@ -16,9 +16,9 @@ Object? runSource(
   final result = runtime.executeLib(
     'package:backend_test/main.dart',
     'main',
-    args,
+    arguments: args,
   );
-  return result is $Value ? result.$value : result;
+  return result is $Value ? result : result;
 }
 
 void main() {
@@ -26,7 +26,7 @@ void main() {
     expect(
       runSource(
         'int main(int a, int b) => (a - b) * 3 + a ~/ b;',
-        args: [17, 4],
+        args: {'a': 17, 'b': 4},
       ),
       43,
     );
@@ -41,8 +41,8 @@ void main() {
         return result + 3;
       }
     ''';
-    expect(runSource(source, args: [true]), 13);
-    expect(runSource(source, args: [false]), 23);
+    expect(runSource(source, args: {'choose': true}), 13);
+    expect(runSource(source, args: {'choose': false}), 23);
   });
 
   test('for and do-while continue execute updates and conditions', () {
@@ -107,8 +107,8 @@ void main() {
         return sum;
       }
     ''';
-      expect(runSource(source, args: [5]), 30);
-      expect(runSource(source, args: [5], serialized: true), 30);
+      expect(runSource(source, args: {'count': 5}), 30);
+      expect(runSource(source, args: {'count': 5}, serialized: true), 30);
     },
   );
 

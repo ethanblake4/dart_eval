@@ -26,9 +26,11 @@ void main() {
 
     final wrap = WrapTest(1);
     expect(wrap.value, 1);
-    final result = runtime.executeLib('package:test/main.dart', 'test', [
-      $WrapTest.wrap(wrap),
-    ]);
+    final result = runtime.executeLib(
+      'package:test/main.dart',
+      'test',
+      arguments: {'inp': $WrapTest.wrap(wrap)},
+    );
 
     expect(result, equals(2));
   });
@@ -55,17 +57,23 @@ void main() {
     });
 
     test('\$List.wrap()', () {
-      final result = runtime.executeLib('package:test/main.dart', 'test', [
-        $List.wrap(list.map((e) => $WrapTest.wrap(e)).toList()),
-      ]);
+      final result = runtime.executeLib(
+        'package:test/main.dart',
+        'test',
+        arguments: {
+          'inp': $List.wrap(list.map((e) => $WrapTest.wrap(e)).toList()),
+        },
+      );
       expect(result, equals(2));
     });
 
     test('\$List.view()', () {
       // Fails with 'WrapTest' is not a subtype of '$Value' at BoxList.run().
-      final result = runtime.executeLib('package:test/main.dart', 'test', [
-        $List.view(list, (e) => $WrapTest.wrap(e)),
-      ]);
+      final result = runtime.executeLib(
+        'package:test/main.dart',
+        'test',
+        arguments: {'inp': $List.view(list, (e) => $WrapTest.wrap(e))},
+      );
       expect(result, equals(2));
     }, skip: true);
   });

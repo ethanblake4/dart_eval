@@ -248,3 +248,28 @@ Final validation: 624 passes, six skips, 28 existing reference failure names,
 zero analyzer errors, generated files current. The earlier Functional test 1
 failure now passes. Class tests include serialization and inheritance; boundary
 tests cover callable fields and bridge method overrides.
+
+## Export API integration
+
+Map binding and host conversion now prepare a `TypedEntry` outside the switch.
+The production loop is `TypedMachine.runEntry`; `runRaw` and `run` delegate to
+it after preparing arguments. No export metadata or argument-map lookup is live
+inside the loop. No opcodes or registers were added, leaving 196 opcodes and
+60 byte values for future intrinsics.
+
+With Dart 3.10.7 and the full Linux ARM64 probe, integer/double add still takes
+38 instructions: 32 dispatch, four handler, two common tail. Stack traffic stays
+at 11 stores and two loads on this path. The loop symbol is 19,368 bytes, down
+332 bytes from the class checkpoint because entry preparation moved out of the
+function. This does not measure total boundary cost or ARM64 execution time.
+
+Recorded range: `0x17ad94` to `0x17f93c` exclusive. Dispatch:
+`0x17ae90` through `0x17af0c`. Integer add: `0x17b048` through `0x17b054`.
+Double add: `0x17b0b8` through `0x17b0c4`. Common tail:
+`0x17f3dc` through `0x17f3e0`. The inspection script selects `runEntry`.
+
+The public API and existing suite now use the typed backend exclusively.
+Validation: 416 passes, 263 failures in unfinished compiler/runtime features,
+six skips, zero analyzer errors. Export binding, codec and host identity tests
+pass. See [the migration baseline](typed-migration-failures.md) for failed names
+and their first reported errors. No speedup is claimed from these code counts.

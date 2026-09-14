@@ -79,6 +79,31 @@ class TypedEntry {
     return TypedEntry._(registers);
   }
 
+  /// Values already have the physical representations in the signature.
+  /// No boxing, argument rebinding, or host conversion occurs here.
+  factory TypedEntry.fromValues(TypedFunction function, List<Object?> values) {
+    if (values.length != function.argumentKinds.length) {
+      throw ArgumentError(
+        'Expected ${function.argumentKinds.length} arguments, got ${values.length}',
+      );
+    }
+    final layout = function.callLayout;
+    final registers = <Object?>[0, 0, 0.0, 0.0, false, false, null, null, null];
+    final overflow = layout.overflowCount == 0
+        ? null
+        : List<Object?>.filled(layout.overflowCount, null);
+    for (var i = 0; i < values.length; i++) {
+      final location = layout.arguments[i];
+      if (location.overflowIndex case final index?) {
+        overflow![index] = values[i];
+      } else {
+        registers[location.bank.index * 2 + location.index] = values[i];
+      }
+    }
+    if (overflow != null) registers[8] = overflow;
+    return TypedEntry._(registers);
+  }
+
   final int a, b;
   final double f, g;
   final bool e, x;

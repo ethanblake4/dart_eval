@@ -27,7 +27,7 @@ void main() {
       });
 
       expect(
-        runtime.executeLib('package:example/main.dart', 'main').$value,
+        runtime.executeLib('package:example/main.dart', 'main'),
         '{"a":1,"b":2}',
       );
     });
@@ -46,7 +46,7 @@ void main() {
       });
 
       expect(
-        runtime.executeLib('package:example/main.dart', 'main').$value,
+        runtime.executeLib('package:example/main.dart', 'main'),
         '{"a":1,"b":2}',
       );
     });
@@ -64,7 +64,7 @@ void main() {
         },
       });
 
-      expect(runtime.executeLib('package:example/main.dart', 'main').$reified, {
+      expect(runtime.executeLib('package:example/main.dart', 'main'), {
         'a': 1,
         'b': 2,
       });
@@ -83,7 +83,7 @@ void main() {
         },
       });
 
-      expect(runtime.executeLib('package:example/main.dart', 'main').$reified, {
+      expect(runtime.executeLib('package:example/main.dart', 'main'), {
         'a': 1,
         'b': 2,
       });
@@ -141,7 +141,7 @@ void main() {
       });
 
       expect(
-        runtime.executeLib('package:example/main.dart', 'main').$reified,
+        runtime.executeLib('package:example/main.dart', 'main'),
         "Hello world",
       );
     });
@@ -158,11 +158,7 @@ void main() {
         },
       });
 
-      expect(
-        (runtime.executeLib('package:example/main.dart', 'main') as $Value)
-            .$reified,
-        'NJV+',
-      );
+      expect((runtime.executeLib('package:example/main.dart', 'main')), 'NJV+');
     });
 
     test('base64.decode()', () async {
@@ -199,11 +195,7 @@ void main() {
         },
       });
 
-      expect(
-        (runtime.executeLib('package:example/main.dart', 'main') as $Value)
-            .$reified,
-        'NJV-',
-      );
+      expect((runtime.executeLib('package:example/main.dart', 'main')), 'NJV-');
     });
 
     test('base64Url.decode()', () async {

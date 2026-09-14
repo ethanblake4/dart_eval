@@ -186,8 +186,7 @@ void main() {
         },
       });
       expect(
-        (runtime.executeLib('package:example/main.dart', 'test') as $String)
-            .$value,
+        (runtime.executeLib('package:example/main.dart', 'test') as String),
         '   D',
       );
     });
@@ -203,8 +202,7 @@ void main() {
         },
       });
       expect(
-        (runtime.executeLib('package:example/main.dart', 'test') as $String)
-            .$value,
+        (runtime.executeLib('package:example/main.dart', 'test') as String),
         'yyyD',
       );
     });
@@ -220,8 +218,7 @@ void main() {
         },
       });
       expect(
-        (runtime.executeLib('package:example/main.dart', 'test') as $String)
-            .$value,
+        (runtime.executeLib('package:example/main.dart', 'test') as String),
         'D   ',
       );
     });
@@ -237,8 +234,7 @@ void main() {
         },
       });
       expect(
-        (runtime.executeLib('package:example/main.dart', 'test') as $String)
-            .$value,
+        (runtime.executeLib('package:example/main.dart', 'test') as String),
         'Dyyy',
       );
     });
@@ -254,8 +250,7 @@ void main() {
         },
       });
       expect(
-        (runtime.executeLib('package:example/main.dart', 'test') as $String)
-            .$value,
+        (runtime.executeLib('package:example/main.dart', 'test') as String),
         'Fluzzy',
       );
     });
@@ -271,8 +266,7 @@ void main() {
         },
       });
       expect(
-        (runtime.executeLib('package:example/main.dart', 'test') as $String)
-            .$value,
+        (runtime.executeLib('package:example/main.dart', 'test') as String),
         'Fluzfy',
       );
     });
@@ -288,8 +282,7 @@ void main() {
         },
       });
       expect(
-        (runtime.executeLib('package:example/main.dart', 'test') as $String)
-            .$value,
+        (runtime.executeLib('package:example/main.dart', 'test') as String),
         'Flufzy',
       );
     });
@@ -305,8 +298,7 @@ void main() {
         },
       });
       expect(
-        (runtime.executeLib('package:example/main.dart', 'test') as $String)
-            .$value,
+        (runtime.executeLib('package:example/main.dart', 'test') as String),
         'Fluffy',
       );
     });
@@ -322,8 +314,7 @@ void main() {
         },
       });
       expect(
-        (runtime.executeLib('package:example/main.dart', 'test') as $String)
-            .$value,
+        (runtime.executeLib('package:example/main.dart', 'test') as String),
         'Flufz',
       );
     });
@@ -339,8 +330,7 @@ void main() {
         },
       });
       expect(
-        (runtime.executeLib('package:example/main.dart', 'test') as $String)
-            .$value,
+        (runtime.executeLib('package:example/main.dart', 'test') as String),
         'Flufz',
       );
     });
@@ -372,8 +362,7 @@ void main() {
         },
       });
       expect(
-        (runtime.executeLib('package:example/main.dart', 'test') as $String)
-            .$value,
+        (runtime.executeLib('package:example/main.dart', 'test') as String),
         "Fluffy ",
       );
     });
@@ -394,12 +383,9 @@ void main() {
       );
       expect(
         (runtime.executeLib('package:example/main.dart', 'test'))[0],
-        $String("Flu"),
+        "Flu",
       );
-      expect(
-        (runtime.executeLib('package:example/main.dart', 'test'))[1],
-        $String("y"),
-      );
+      expect((runtime.executeLib('package:example/main.dart', 'test'))[1], "y");
     });
     test('String trimRight method trims whitespace', () {
       final runtime = compiler.compileWriteAndLoad({
@@ -413,8 +399,7 @@ void main() {
         },
       });
       expect(
-        (runtime.executeLib('package:example/main.dart', 'test') as $String)
-            .$value,
+        (runtime.executeLib('package:example/main.dart', 'test') as String),
         "  Fluffy",
       );
     });

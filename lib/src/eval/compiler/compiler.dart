@@ -3,7 +3,6 @@ import 'package:collection/collection.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
-import 'package:dart_eval/src/eval/compiler/backend/register_backend.dart';
 import 'package:dart_eval/src/eval/compiler/backend/typed_backend.dart';
 import 'package:dart_eval/src/eval/ir/representation.dart';
 import 'package:dart_eval/src/eval/runtime/typed/typed_program.dart';
@@ -45,6 +44,7 @@ import 'errors.dart';
 ///
 /// Additional sources can be added with [addSource].
 class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
+  Set<String> _entrypointLibraries = {};
   var _bridgeStaticFunctionIdx = 0;
   final _bridgeDeclarations = <String, List<BridgeDeclaration>>{};
 
@@ -217,13 +217,15 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     ),
     false,
     () => TypedBackend(_ctx).compile(entrypoint, function),
+    extraEntrypoints: {entrypoint},
   );
 
   T _compileSources<T>(
     Iterable<DartSource> sources,
     bool debugPerf,
-    T Function() emit,
-  ) {
+    T Function() emit, {
+    Set<String> extraEntrypoints = const {},
+  }) {
     _topLevelDeclarationsMap = <int, Map<String, DeclarationOrBridge>>{};
     _topLevelGlobalIndices = <int, Map<String, int>>{};
     _instanceDeclarationsMap = <int, Map<String, Map<String, Declaration>>>{};
@@ -337,7 +339,8 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
 
       inverseIndexMap[libraryIndexMap[library]!] = library;
 
-      var isEntrypoint = false;
+      var isEntrypoint = extraEntrypoints.contains(library.uri.toString());
+      if (isEntrypoint) computedEntrypoints.add(library.uri);
       for (final entrypoint in entrypoints) {
         if (library.uri.toString().endsWith(entrypoint)) {
           computedEntrypoints.add(library.uri);
@@ -369,6 +372,14 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       libraries,
       computedEntrypoints,
     ).toSet();
+    _entrypointLibraries = {
+      for (final library in libraries)
+        if (extraEntrypoints.contains(library.uri.toString()) ||
+            entrypoints.any(
+              (suffix) => library.uri.toString().endsWith(suffix),
+            ))
+          library.uri.toString(),
+    };
 
     final discoveredIdentifiers = <Library, Map<String, Set<String>>>{};
 
@@ -493,7 +504,6 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       CoreTypes.int.ref(_ctx),
       CoreTypes.double.ref(_ctx),
       CoreTypes.bool.ref(_ctx),
-      CoreTypes.list.ref(_ctx),
     };
 
     for (final library in reachableLibraries) {
@@ -627,47 +637,65 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       final type = t.key;
       typeIds.putIfAbsent(type.file, () => {})[type.name] = t.value;
     }
-    final backend = RegisterBackend(_ctx).compile();
+    final backend = TypedBackend(_ctx);
+    final typed = backend.compileEntrypoints([
+      for (final library in _entrypointLibraries)
+        for (final name
+            in _ctx
+                    .topLevelDeclarationPositions[_ctx.libraryMap[library]]
+                    ?.keys ??
+                const <String>[])
+          (library, name),
+    ]);
     int relocate(int id) =>
-        backend.functionOffsets[id] ??
+        backend.functionIndices[id] ??
         (throw StateError('No bytecode for function $id'));
     return Program(
       _ctx.topLevelDeclarationPositions.map(
-        (library, entries) => MapEntry(
-          library,
-          entries.map((name, id) => MapEntry(name, relocate(id))),
-        ),
+        (library, entries) => MapEntry(library, {
+          for (final entry in entries.entries)
+            if (backend.functionIndices.containsKey(entry.value))
+              entry.key: relocate(entry.value),
+        }),
       ),
       _ctx.instanceDeclarationPositions.map(
-        (library, classes) => MapEntry(
-          library,
-          classes.map(
-            (name, parts) => MapEntry(name, [
-              for (var kind = 0; kind < 3; kind++)
-                (parts[kind] as Map).cast<String, int>().map(
-                  (member, id) => MapEntry(member, relocate(id)),
-                ),
-              ...parts.skip(3),
-            ]),
-          ),
-        ),
+        (library, classes) => MapEntry(library, {
+          for (final entry in classes.entries)
+            if (typed.classes.any(
+              (type) =>
+                  type.library ==
+                      _ctx.libraryMap.entries
+                          .firstWhere((entry) => entry.value == library)
+                          .key &&
+                  type.name == entry.key,
+            ))
+              entry.key: [
+                for (var kind = 0; kind < 3; kind++)
+                  (entry.value[kind] as Map).cast<String, int>().map(
+                    (member, id) => MapEntry(member, relocate(id)),
+                  ),
+                ...entry.value.skip(3),
+              ],
+        }),
       ),
       typeIds,
       //ctx.typeNames,
       _ctx.typeTypes,
-      backend.words,
+      typed,
       _ctx.libraryMap,
       _ctx.bridgeStaticFunctionIndices,
       _ctx.constantPool.pool,
       _ctx.runtimeTypes.pool,
-      [for (final id in globalInitializers) relocate(id)],
+      [for (final id in globalInitializers) backend.functionIndices[id] ?? -1],
       _ctx.enumValueIndices,
-      _ctx.runtimeOverrideMap.map(
-        (name, spec) => MapEntry(
-          name,
-          OverrideSpec(relocate(spec.offset), spec.versionConstraint),
-        ),
-      ),
+      {
+        for (final entry in _ctx.runtimeOverrideMap.entries)
+          if (backend.functionIndices.containsKey(entry.value.offset))
+            entry.key: OverrideSpec(
+              relocate(entry.value.offset),
+              entry.value.versionConstraint,
+            ),
+      },
     );
   }
 

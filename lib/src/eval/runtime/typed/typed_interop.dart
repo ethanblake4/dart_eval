@@ -4,6 +4,7 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/stdlib/core.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
 import 'typed_instance.dart';
+import 'typed_host_collections.dart';
 
 /// The dynamic-call boundary uses boxed language values exclusively.
 ///
@@ -63,7 +64,7 @@ abstract final class TypedInterop {
     // $Object is the explicit adapter for a native host object's operators.
     // Subclasses may override bridge dispatch and must use their own methods.
     if (a.runtimeType == $Object) {
-      return (a as $Object).$value == exportExternal(b);
+      return (a as $Object).$value == exportExternal(b, runtime: runtime);
     }
     return toBool(invoke(runtime, a, '==', [b]));
   }
@@ -89,19 +90,23 @@ abstract final class TypedInterop {
         bool() => $bool(value),
         String() => $String(value),
         Function() => TypedHostFunction(value),
+        List() || Map() || Set() => TypedHostCollections.box(value, runtime),
         _ => runtime == null ? $Object(value) : runtime.wrap(value),
       };
 
   /// Export scalar wrappers once when control returns to host Dart.
   /// Evaluated instances retain their identity and never read $value.
-  static Object? exportExternal(Object? value) => switch (value) {
-    $null() => null,
-    $num() => value.$value,
-    $bool() => value.$value,
-    $String() => value.$value,
-    $Object() => value.$value,
-    _ => value,
-  };
+  static Object? exportExternal(Object? value, {Runtime? runtime}) =>
+      switch (value) {
+        $null() => null,
+        TypedHostFunction() => value.function,
+        TypedInstance() || $InstanceImpl() || EvalFunction() => value,
+        $List() => TypedHostCollections.export(value.$value, value, runtime),
+        $Map() => TypedHostCollections.export(value.$value, value, runtime),
+        $Set() => TypedHostCollections.export(value.$value, value, runtime),
+        $Value() => value.$value,
+        _ => value,
+      };
 
   static Runtime _runtime(Runtime? runtime) =>
       runtime ??
@@ -117,7 +122,11 @@ final class TypedHostFunction extends EvalFunction {
       TypedInterop.boxExternal(
         Function.apply(
           function,
-          arguments.map(TypedInterop.exportExternal).toList(),
+          arguments
+              .map(
+                (value) => TypedInterop.exportExternal(value, runtime: runtime),
+              )
+              .toList(),
         ),
         runtime: runtime,
       );

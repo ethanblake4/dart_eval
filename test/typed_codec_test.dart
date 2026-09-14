@@ -54,6 +54,264 @@ TypedProgram _recursive() {
 }
 
 void main() {
+  test('export signatures preserve defaults and freeze named parameters', () {
+    final parameters = [
+      const TypedExportParameter(
+        'count',
+        isRequired: true,
+        nullable: false,
+        typeName: 'int',
+        typeLibrary: 'dart:core',
+      ),
+      const TypedExportParameter(
+        'label',
+        isRequired: false,
+        nullable: false,
+        typeName: 'String',
+        typeLibrary: 'dart:core',
+        defaultValue: 'hello \ud800',
+      ),
+      const TypedExportParameter(
+        'ratio',
+        isRequired: false,
+        nullable: false,
+        typeName: 'double',
+        typeLibrary: 'dart:core',
+        defaultValue: -0.0,
+      ),
+      const TypedExportParameter(
+        'enabled',
+        isRequired: false,
+        nullable: false,
+        typeName: 'bool',
+        typeLibrary: 'dart:core',
+        defaultValue: true,
+      ),
+      const TypedExportParameter(
+        'other',
+        isRequired: false,
+        nullable: true,
+        typeName: 'Counter',
+        typeLibrary: 'package:test/main.dart',
+      ),
+    ];
+    final exports = [
+      TypedExport('package:test/main.dart', 'main', 0, parameters: parameters),
+    ];
+    final p = TypedProgram(
+      Uint8List.fromList([TypedOp.returnNull]),
+      exports: exports,
+      functions: const [
+        TypedFunction(
+          0,
+          resultKind: null,
+          argumentKinds: [
+            TypedArgumentKind.integer,
+            TypedArgumentKind.string,
+            TypedArgumentKind.doublePrecision,
+            TypedArgumentKind.boolean,
+            TypedArgumentKind.object,
+          ],
+        ),
+      ],
+    );
+    parameters.clear();
+    exports.clear();
+    final restored = TypedProgram.read(p.write().buffer);
+    final declaration = restored.exports.single;
+    expect(declaration.library, 'package:test/main.dart');
+    expect(declaration.name, 'main');
+    expect(declaration.functionId, 0);
+    expect(
+      declaration.parameters.map(
+        (p) => (p.name, p.isRequired, p.nullable, p.typeName, p.typeLibrary),
+      ),
+      p.exports.single.parameters.map(
+        (p) => (p.name, p.isRequired, p.nullable, p.typeName, p.typeLibrary),
+      ),
+    );
+    expect(declaration.parameters[1].defaultValue, 'hello \ud800');
+    expect(
+      (declaration.parameters[2].defaultValue as double).isNegative,
+      isTrue,
+    );
+    expect(declaration.parameters[3].defaultValue, isTrue);
+    expect(declaration.parameters[4].defaultValue, isNull);
+    expect(() => declaration.parameters.clear(), throwsUnsupportedError);
+    expect(() => restored.exports.clear(), throwsUnsupportedError);
+  });
+
+  test(
+    'export validation rejects ambiguous names and malformed signatures',
+    () {
+      const parameter = TypedExportParameter(
+        'value',
+        isRequired: true,
+        nullable: false,
+        typeName: 'int',
+        typeLibrary: 'dart:core',
+      );
+      TypedProgram program(List<TypedExport> exports) => TypedProgram(
+        Uint8List.fromList([TypedOp.returnNull]),
+        exports: exports,
+        functions: const [
+          TypedFunction(0, argumentKinds: [TypedArgumentKind.integer]),
+        ],
+      );
+      final valid = TypedExport('test', 'main', 0, parameters: [parameter]);
+      for (final exports in [
+        [valid, valid],
+        [
+          TypedExport('test', 'main', 1, parameters: [parameter]),
+        ],
+        [TypedExport('test', 'main', 0, parameters: [])],
+      ]) {
+        expect(() => program(exports), throwsFormatException);
+      }
+      expect(
+        () => TypedProgram(
+          Uint8List.fromList([TypedOp.returnNull]),
+          functions: const [
+            TypedFunction(
+              0,
+              argumentKinds: [
+                TypedArgumentKind.integer,
+                TypedArgumentKind.integer,
+              ],
+            ),
+          ],
+          exports: [
+            TypedExport('test', 'main', 0, parameters: [parameter, parameter]),
+          ],
+        ),
+        throwsFormatException,
+      );
+      expect(
+        () => program([
+          TypedExport(
+            'test',
+            'main',
+            0,
+            parameters: [
+              TypedExportParameter(
+                'value',
+                isRequired: false,
+                nullable: false,
+                typeName: 'int',
+                typeLibrary: 'dart:core',
+                defaultValue: [],
+              ),
+            ],
+          ),
+        ]),
+        throwsFormatException,
+      );
+    },
+  );
+
+  test('export metadata rejects incompatible scalar and nullable banks', () {
+    for (final kind in TypedArgumentKind.values.where(
+      (k) => k != TypedArgumentKind.object,
+    )) {
+      final name = switch (kind) {
+        TypedArgumentKind.integer => 'int',
+        TypedArgumentKind.doublePrecision => 'double',
+        TypedArgumentKind.boolean => 'bool',
+        TypedArgumentKind.string => 'String',
+        TypedArgumentKind.object => 'Object',
+      };
+      for (final parameter in [
+        TypedExportParameter(
+          'p',
+          isRequired: true,
+          nullable: true,
+          typeName: name,
+          typeLibrary: 'dart:core',
+        ),
+        TypedExportParameter(
+          'p',
+          isRequired: true,
+          nullable: false,
+          typeName: 'Object',
+          typeLibrary: 'dart:core',
+        ),
+        TypedExportParameter(
+          'p',
+          isRequired: true,
+          nullable: false,
+          typeName: name,
+          typeLibrary: 'package:other/main.dart',
+        ),
+      ]) {
+        expect(
+          () => TypedProgram(
+            Uint8List.fromList([TypedOp.returnNull]),
+            functions: [
+              TypedFunction(0, argumentKinds: [kind]),
+            ],
+            exports: [
+              TypedExport('test', 'f', 0, parameters: [parameter]),
+            ],
+          ),
+          throwsFormatException,
+        );
+      }
+    }
+  });
+
+  test('export codec bounds counts, strings, flags and default payloads', () {
+    final p = TypedProgram(
+      Uint8List.fromList([TypedOp.returnNull]),
+      functions: const [
+        TypedFunction(0, argumentKinds: [TypedArgumentKind.integer]),
+      ],
+      exports: [
+        TypedExport(
+          'l',
+          'f',
+          0,
+          parameters: [
+            const TypedExportParameter(
+              'p',
+              isRequired: false,
+              nullable: false,
+              typeName: 'int',
+              typeLibrary: 'dart:core',
+              defaultValue: 42,
+            ),
+          ],
+        ),
+      ],
+    );
+    final bytes = p.write().buffer.asUint8List();
+    // Metadata begins after the 52-byte header, 29-byte layout and one argument.
+    const metadata = 82;
+    for (final offset in [
+      48,
+      metadata,
+      metadata + 12,
+      metadata + 16,
+      metadata + 20,
+      metadata + 26,
+      metadata + 62,
+    ]) {
+      final bad = Uint8List.fromList(bytes);
+      ByteData.sublistView(bad).setUint32(offset, 0xffffffff, Endian.little);
+      expect(() => TypedProgram.read(bad.buffer), throwsFormatException);
+    }
+    final oldVersion = Uint8List.fromList(bytes);
+    ByteData.sublistView(oldVersion).setUint32(4, 106, Endian.little);
+    expect(() => TypedProgram.read(oldVersion.buffer), throwsFormatException);
+    for (var length = metadata; length < bytes.length; length++) {
+      expect(
+        () => TypedProgram.read(
+          Uint8List.fromList(bytes.take(length).toList()).buffer,
+        ),
+        throwsFormatException,
+      );
+    }
+  });
+
   test('codec preserves immutable classes, call sites and result kinds', () {
     final methods = <String, int>{'read': 0};
     final classes = [
@@ -209,14 +467,14 @@ void main() {
         Uint8List.fromList([TypedOp.rReturn]),
         classes: [TypedClass('C', library: 'test', valueCount: 0)],
       ).write().buffer.asUint8List();
-      for (final offset in [36, 40, 44, 77]) {
+      for (final offset in [36, 40, 44, 48, 81]) {
         final bad = Uint8List.fromList(bytes);
         ByteData.sublistView(bad).setUint32(offset, 0xffffffff, Endian.little);
         expect(() => TypedProgram.read(bad.buffer), throwsFormatException);
       }
-      final badResult = Uint8List.fromList(bytes)..[76] = 254;
+      final badResult = Uint8List.fromList(bytes)..[80] = 254;
       expect(() => TypedProgram.read(badResult.buffer), throwsFormatException);
-      for (var length = 48; length < bytes.length; length++) {
+      for (var length = 52; length < bytes.length; length++) {
         expect(
           () => TypedProgram.read(
             Uint8List.fromList(bytes.take(length).toList()).buffer,
@@ -447,10 +705,10 @@ void main() {
         TypedFunction(0, argumentKinds: [TypedArgumentKind.string]),
       ],
     ).write().buffer.asUint8List();
-    final badKind = Uint8List.fromList(bytes)..[77] = 255;
+    final badKind = Uint8List.fromList(bytes)..[81] = 255;
     expect(() => TypedProgram.read(badKind.buffer), throwsFormatException);
     final badCount = Uint8List.fromList(bytes);
-    ByteData.sublistView(badCount).setUint32(72, 2, Endian.little);
+    ByteData.sublistView(badCount).setUint32(76, 2, Endian.little);
     expect(() => TypedProgram.read(badCount.buffer), throwsFormatException);
   });
   test('calls need outgoing storage only beyond the register capacity', () {
@@ -503,11 +761,11 @@ void main() {
       Uint8List.fromList([TypedOp.aReturn]),
       objects: ['abc'],
     ).write().buffer.asUint8List();
-    // The object pool follows the 48-byte header and 29-byte function layout.
-    final badTag = Uint8List.fromList(bytes)..[77] = 255;
+    // The object pool follows the 52-byte header and 29-byte function layout.
+    final badTag = Uint8List.fromList(bytes)..[81] = 255;
     expect(() => TypedProgram.read(badTag.buffer), throwsFormatException);
     final badString = Uint8List.fromList(bytes);
-    ByteData.sublistView(badString).setUint32(78, 0xffffffff, Endian.little);
+    ByteData.sublistView(badString).setUint32(82, 0xffffffff, Endian.little);
     expect(() => TypedProgram.read(badString.buffer), throwsFormatException);
     final badCount = Uint8List.fromList(bytes);
     ByteData.sublistView(badCount).setUint32(28, 0, Endian.little);

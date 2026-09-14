@@ -25,7 +25,7 @@ void main() {
           ''',
         },
       });
-      expect(runtime.executeLib('package:example/main.dart', 'main'), $int(5));
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 5);
     });
 
     test('Try/catch no error', () {
@@ -43,7 +43,7 @@ void main() {
           ''',
         },
       });
-      expect(runtime.executeLib('package:example/main.dart', 'main'), $int(2));
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 2);
     });
 
     test('Nested try/catch', () {
@@ -65,10 +65,7 @@ void main() {
           ''',
         },
       });
-      expect(
-        runtime.executeLib('package:example/main.dart', 'main').$value,
-        'error2',
-      );
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 'error2');
     });
 
     test('Try/catch across function boundaries', () {
@@ -90,7 +87,7 @@ void main() {
         },
       });
       expect(
-        runtime.executeLib('package:example/main.dart', 'main').$value,
+        runtime.executeLib('package:example/main.dart', 'main'),
         'errorno',
       );
     });
@@ -116,7 +113,7 @@ void main() {
         },
       });
       expect(
-        runtime.executeLib('package:example/main.dart', 'main').$value,
+        runtime.executeLib('package:example/main.dart', 'main'),
         'errorno',
       );
     });
@@ -136,7 +133,7 @@ void main() {
         },
       });
       expect(
-        runtime.executeLib('package:example/main.dart', 'main').$value,
+        runtime.executeLib('package:example/main.dart', 'main'),
         'finally',
       );
     });
@@ -176,7 +173,7 @@ void main() {
         },
       });
       expect(
-        runtime.executeLib('package:example/main.dart', 'main').$value,
+        runtime.executeLib('package:example/main.dart', 'main'),
         'finally',
       );
     });
@@ -200,7 +197,7 @@ void main() {
       });
       expect(
         () => expect(
-          runtime.executeLib('package:example/main.dart', 'main').$value,
+          runtime.executeLib('package:example/main.dart', 'main'),
           'catch',
         ),
         prints('finally\n'),

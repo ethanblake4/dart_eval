@@ -20,7 +20,7 @@ class _EqualInstance implements $Instance {
   @override
   int $getRuntimeType(Runtime runtime) => throw UnimplementedError();
   @override
-  Object get $value => throw StateError('Must preserve instance');
+  Object get $value => this;
   @override
   Object get $reified => throw StateError('Must preserve instance');
 }
@@ -42,7 +42,7 @@ class _BridgeParent implements $Instance {
   @override
   int $getRuntimeType(Runtime runtime) => throw UnimplementedError();
   @override
-  Object get $value => throw StateError('Must preserve instance');
+  Object get $value => this;
   @override
   Object get $reified => throw StateError('Must preserve instance');
 }

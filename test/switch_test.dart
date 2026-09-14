@@ -29,10 +29,7 @@ void main() {
           ''',
         },
       });
-      expect(
-        runtime.executeLib('package:example/main.dart', 'main'),
-        $String('two'),
-      );
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 'two');
     });
 
     test('Switch with default case', () {
@@ -55,7 +52,7 @@ void main() {
       });
       expect(
         runtime.executeLib('package:example/main.dart', 'main'),
-        $String('default'),
+        'default',
       );
     });
 
@@ -105,7 +102,7 @@ void main() {
       });
       expect(
         runtime.executeLib('package:example/main.dart', 'main'),
-        $String('weekday'),
+        'weekday',
       ); // x=1 falls through empty cases to execute 'weekday'
     });
 
@@ -253,10 +250,7 @@ void main() {
           ''',
         },
       });
-      expect(
-        runtime.executeLib('package:example/main.dart', 'main'),
-        $String('yes'),
-      );
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 'yes');
     });
 
     test('Nested switch statements', () {
@@ -355,7 +349,7 @@ void main() {
       });
       expect(
         runtime.executeLib('package:example/main.dart', 'main'),
-        $String('unknown value'),
+        'unknown value',
       );
     });
 
@@ -384,7 +378,7 @@ void main() {
       });
       expect(
         runtime.executeLib('package:example/main.dart', 'main'),
-        $String('weekday'),
+        'weekday',
       ); // Day 2 falls through to 'weekday'
     });
 
@@ -466,7 +460,7 @@ void main() {
       });
       expect(
         runtime.executeLib('package:example/main.dart', 'main'),
-        $String('Dia útil. Vamos trabalhar!'),
+        'Dia útil. Vamos trabalhar!',
       );
     });
 
@@ -508,7 +502,7 @@ void main() {
       });
       expect(
         runtime.executeLib('package:example/main.dart', 'main'),
-        $String('Final de semana! Aproveite!'),
+        'Final de semana! Aproveite!',
       );
     });
 
@@ -540,10 +534,7 @@ void main() {
           ''',
         },
       });
-      expect(
-        runtime.executeLib('package:example/main.dart', 'main'),
-        $String('Vogal'),
-      );
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 'Vogal');
     });
   });
 }

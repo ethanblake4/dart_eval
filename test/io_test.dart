@@ -32,7 +32,7 @@ void main() {
       });
 
       expect(
-        () => runtime.executeLib('package:example/main.dart', 'main').$value,
+        () => runtime.executeLib('package:example/main.dart', 'main'),
         throwsA(isA<Exception>()),
       );
     });

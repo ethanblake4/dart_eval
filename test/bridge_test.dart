@@ -225,7 +225,7 @@ void main() {
       );
 
       expect(
-        runtime.executeLib('package:example/main.dart', 'main').$value,
+        runtime.executeLib('package:example/main.dart', 'main'),
         TestEnum.two,
       );
     });
@@ -244,9 +244,13 @@ void main() {
       final runtime = Runtime.ofProgram(program);
 
       expect(
-        runtime.executeLib('package:example/main.dart', 'main', [
-          $Map<$String, $int>.wrap({$String('hi'): $int(5)}),
-        ]),
+        runtime.executeLib(
+          'package:example/main.dart',
+          'main',
+          arguments: {
+            'map': $Map<$String, $int>.wrap({$String('hi'): $int(5)}),
+          },
+        ),
         5,
       );
     });
@@ -323,7 +327,7 @@ void main() {
         () async => (await runtime.executeLib(
           'package:example/main.dart',
           'main',
-          [callback],
+          arguments: {'callback': callback},
         )),
         prints('a\nb\n'),
       );
@@ -350,9 +354,11 @@ void main() {
 
       Exception? caughtException;
       try {
-        await runtime.executeLib('package:example/main.dart', 'main', [
-          callback,
-        ]);
+        await runtime.executeLib(
+          'package:example/main.dart',
+          'main',
+          arguments: {'callback': callback},
+        );
         fail('Expected exception was not thrown');
       } catch (e) {
         caughtException = e as Exception;

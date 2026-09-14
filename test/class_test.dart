@@ -58,7 +58,7 @@ void main() {
         },
       });
 
-      expect(runtime.executeLib('package:example/main.dart', 'main'), $int(19));
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 19);
     });
 
     test('Trying to access nonexistent method throws error', () {
@@ -368,10 +368,7 @@ void main() {
         },
       });
 
-      expect(
-        runtime.executeLib('package:example/main.dart', 'main'),
-        $String('d'),
-      );
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 'd');
     });
 
     test('Accessing methods and fields on super', () {
@@ -405,7 +402,7 @@ void main() {
 
       expect(
         runtime.executeLib('package:example/main.dart', 'main'),
-        $String('Julian the animal (cat)'),
+        'Julian the animal (cat)',
       );
     });
 
@@ -565,7 +562,7 @@ void main() {
         },
       });
 
-      expect(runtime.executeLib('package:example/main.dart', 'main'), $int(22));
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 22);
     });
 
     test('Using set value', () {

@@ -79,8 +79,7 @@ void main(List<String> args) {
       runtime.executeLib(
             'package:example/main.dart',
             'fn',
-            // Wrap args in $Value wrappers except int, double, bool, and List
-            [$String('USA')],
+            arguments: {'country': 'USA'},
           )
           as WorldTimeTracker;
 

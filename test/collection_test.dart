@@ -26,7 +26,7 @@ void main() {
 
       expect(
         runtime.executeLib('package:eval_test/main.dart', 'main'),
-        $String('12345'),
+        '12345',
       );
     });
 
@@ -44,7 +44,7 @@ void main() {
 
       expect(
         runtime.executeLib('package:eval_test/main.dart', 'main'),
-        $String('246810'),
+        '246810',
       );
     });
 
@@ -60,10 +60,7 @@ void main() {
         },
       });
 
-      expect(
-        runtime.executeLib('package:eval_test/main.dart', 'main'),
-        $String('5'),
-      );
+      expect(runtime.executeLib('package:eval_test/main.dart', 'main'), '5');
     });
 
     test('List.add()', () {
@@ -81,7 +78,7 @@ void main() {
 
       expect(
         runtime.executeLib('package:eval_test/main.dart', 'main'),
-        $String('123456'),
+        '123456',
       );
     });
   });
@@ -116,7 +113,7 @@ void main() {
 
       expect(
         runtime.executeLib('package:eval_test/main.dart', 'main'),
-        $String('12368'),
+        '12368',
       );
     });
 
@@ -143,7 +140,7 @@ void main() {
 
       expect(
         runtime.executeLib('package:eval_test/main.dart', 'main'),
-        $String('012103223312'),
+        '012103223312',
       );
     });
 
@@ -162,7 +159,7 @@ void main() {
 
       final result = runtime.executeLib('package:test/main.dart', 'test');
 
-      expect(result, equals([0, 1, 2, 3, 4].map((e) => $int(e)).toList()));
+      expect(result, equals([0, 1, 2, 3, 4]));
     });
 
     test('Spread operator with empty list', () {
@@ -180,7 +177,7 @@ void main() {
       });
 
       final result = runtime.executeLib('package:test/main.dart', 'test');
-      expect(result, equals([1, 2].map((e) => $int(e)).toList()));
+      expect(result, equals([1, 2]));
     });
 
     test('Multiple spread operators', () {
@@ -199,7 +196,7 @@ void main() {
 
       final result = runtime.executeLib('package:test/main.dart', 'test');
 
-      expect(result, equals([1, 2, 3, 4].map((e) => $int(e)).toList()));
+      expect(result, equals([1, 2, 3, 4]));
     });
   });
 
@@ -328,7 +325,7 @@ void main() {
           'package:eval_test/main.dart',
           'main',
         );
-        expect(result, $int(2));
+        expect(result, 2);
       }, prints('removed: 2\nlength: 2\n'));
     });
 
@@ -361,7 +358,7 @@ void main() {
 
       expect(
         runtime.executeLib('package:eval_test/main.dart', 'main'),
-        $String('Alice'),
+        'Alice',
       );
     });
 
@@ -390,7 +387,7 @@ void main() {
       });
 
       final value = runtime.executeLib('package:example/main.dart', 'main');
-      expect(value, $String('One Piece Movie 01'));
+      expect(value, 'One Piece Movie 01');
     });
 
     test('Map.keys', () {
@@ -409,7 +406,7 @@ void main() {
 
       expect(
         runtime.executeLib('package:eval_test/main.dart', 'main'),
-        $String('a,b,c'),
+        'a,b,c',
       );
     });
 
@@ -429,7 +426,7 @@ void main() {
 
       expect(
         runtime.executeLib('package:eval_test/main.dart', 'main'),
-        $String('1,2,3'),
+        '1,2,3',
       );
     });
 

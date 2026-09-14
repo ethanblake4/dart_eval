@@ -1,5 +1,11 @@
 # Typed backend implementation
 
+Current production integration: [exported function API](typed-exports.md).
+`Compiler.compile` and `Runtime.executeLib` now use the typed backend exclusively.
+`executeLib` and `eval` bind a parameter-name map and return normalized host values.
+The checkpoints below preserve the implementation history; the reference backend
+has since been removed. See the typed migration failure report for current gaps.
+
 The user approved implementation on 2026-09-13. This supersedes the pause and
 generic-runtime-first order in backend-checkpoint.md. Commit and push each
 verified stage in both repositories. Preserve the adjacent package's unrelated
@@ -157,13 +163,13 @@ final object = Object();
 assert(identical(TypedMachine.run(program, objectArguments: [object]), object));
 ```
 
-Typed codec version 106 intentionally rejects earlier typed bytecode, because
+Typed codec version 107 intentionally rejects earlier typed bytecode, because
 opcode numbering and class/signature metadata changed. It serializes scalar/null/string
 object constants, preserving UTF-16 code units and numeric bits. Live application
 objects remain valid arguments/in-memory constants but are rejected by the codec
 rather than being serialized into a lossy replacement.
 
-`compile` still uses the reference backend. Typed Map/Set construction, closure
+`compile` uses the typed backend. Typed Map/Set construction, closure
 creation, optional/named dynamic arguments, exception handling and async/suspension
 remain unfinished. Existing reference-evaluated method offsets refer to the
 supplied reference Runtime. Typed class members use their own function table.

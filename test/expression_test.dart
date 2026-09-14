@@ -58,10 +58,7 @@ void main() {
         },
       });
 
-      expect(
-        runtime.executeLib('package:eval_test/main.dart', 'main'),
-        $num<num>(6),
-      );
+      expect(runtime.executeLib('package:eval_test/main.dart', 'main'), 6);
     });
 
     test('Null coalescing operator', () {
@@ -361,7 +358,11 @@ void main() {
       });
 
       expect(
-        runtime.executeLib('package:example/main.dart', 'main', [true])?.$value,
+        runtime.executeLib(
+          'package:example/main.dart',
+          'main',
+          arguments: {'encrypt': true},
+        ),
         'utf8',
       );
     });

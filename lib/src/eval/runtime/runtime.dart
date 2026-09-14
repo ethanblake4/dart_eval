@@ -1,7 +1,4 @@
-import 'package:dart_eval/src/eval/runtime/ops/register_ops.dart';
-import 'package:dart_eval/src/eval/runtime/record.dart';
 import 'package:dart_eval/src/eval/runtime/class.dart';
-import 'package:dart_eval/src/eval/shared/stdlib/core/type.dart';
 import 'dart:async';
 import 'dart:math';
 import 'dart:typed_data';
@@ -24,8 +21,11 @@ import 'package:dart_eval/stdlib/core.dart';
 import 'package:dart_eval/src/eval/runtime/type.dart';
 
 import 'exception.dart';
+import 'typed/typed_export_adapter.dart';
+import 'typed/typed_frame.dart';
+import 'typed/typed_interop.dart';
+import 'typed/typed_function.dart';
 
-part 'register_machine.dart';
 part 'typed_interop_runtime.dart';
 
 part 'ops/primitives.dart';
@@ -92,7 +92,7 @@ class _UnloadedEnumValues {
 ///
 class Runtime {
   /// The current runtime version code
-  static const int versionCode = 101;
+  static const int versionCode = 102;
 
   /// Construct a runtime from an XEVC buffer. When possible, use the
   /// [Runtime.ofProgram] constructor instead to reduce loading time.
@@ -113,6 +113,11 @@ class Runtime {
   }
 
   void _loadProgram(Program program) {
+    _typedProgram = program.typedProgram;
+    _exports.clear();
+    for (final declaration in _typedProgram.exports) {
+      (_exports[declaration.library] ??= {})[declaration.name] = declaration;
+    }
     _typeTypes = program.typeTypes;
     typeIds = program.typeIds;
     _runtimeTypes = program.runtimeTypes;
@@ -121,7 +126,6 @@ class Runtime {
     _bridgeEnumMappings = program.enumMappings;
     _globalInitializers = program.globalInitializers;
     overrideMap = program.overrideMap;
-    _declarations = program.topLevelDeclarations;
     _constantPool = [...program.constantPool];
     program.instanceDeclarations.forEach((file, classes) {
       declaredClasses[file] = classes.map((name, declarations) {
@@ -137,7 +141,7 @@ class Runtime {
     });
     pr
       ..clear()
-      ..addAll(program.ops);
+      ..addAll(program.typedProgram.code);
   }
 
   void _load() {
@@ -366,7 +370,6 @@ class Runtime {
   var _doublelist = Float64List(0);
   var _constantPool = List<dynamic>.filled(0, null);
   final globals = List<Object?>.filled(20000, null);
-  final _initializedRegisterGlobals = <int>{};
   int _registerFailureOffset = -1;
   List<Object?> _registerFailureFrame = [];
   List<Object?> _registerFailureArguments = [];
@@ -428,7 +431,6 @@ class Runtime {
   /// element from this stack and set [_prOffset] to the popped value.
   final catchStack = <List<int>>[];
 
-  var _declarations = <int, Map<String, int>>{};
   final declaredClasses = <int, Map<String, EvalClass>>{};
   final xdeclaredClasses = <EvalClass>[];
   //late final List<String> typeNames;
@@ -460,32 +462,60 @@ class Runtime {
     }
   }
 
-  /// Execute a function in the current runtime, from a passed [library] URI
-  /// and function [name], with optional [args].
-  dynamic executeLib(String library, String name, [List? args]) {
+  late TypedProgram _typedProgram;
+  final _exports = <String, Map<String, TypedExport>>{};
+
+  /// Invoke an exported function by declared parameter names. Missing optional
+  /// parameters use their defaults; an explicitly supplied null stays null.
+  dynamic executeLib(
+    String library,
+    String name, {
+    Map<String, Object?> arguments = const {},
+  }) {
     _setup();
-    this.args = args ?? [];
-    if (_declarations[_libraryMap[library]] == null) {
-      throw ArgumentError(
-        'Cannot find $library, maybe it wasn\'t declared as'
-        ' an entrypoint?',
+    final declaration = _exports[library]?[name];
+    if (declaration != null) {
+      final entry = TypedExportAdapter.bind(
+        _typedProgram,
+        declaration,
+        arguments,
+        runtime: this,
       );
+      returnValue = TypedInterop.exportExternal(
+        _executeTypedEntry(declaration.functionId, entry),
+        runtime: this,
+      );
+      return returnValue;
     }
-    return execute(_declarations[_libraryMap[library]!]![name]!);
+    throw ArgumentError(
+      'No exported function $library::$name. Check Compiler.entrypoints.',
+    );
   }
 
-  /// Start program execution at a specific bytecode offset.
+  /// Start execution at a typed function ID with already represented arguments.
   /// Users should use [executeLib] instead.
   dynamic execute(int entrypoint) {
     _setup();
+    final arguments = List<Object?>.of(args);
+    args = [];
+    returnValue = _executeTypedEntry(
+      entrypoint,
+      TypedEntry.fromValues(_typedProgram.functions[entrypoint], arguments),
+    );
+    return returnValue;
+  }
+
+  Object? _executeTypedEntry(int functionId, TypedEntry entry) {
     _registerFailureOffset = -1;
     _registerFailureFrame = [];
     _registerFailureArguments = [];
-    final arguments = List<Object?>.of(args);
-    args = [];
     try {
-      returnValue = _executeRegisters(entrypoint, arguments);
-      return returnValue;
+      return TypedMachine.runEntry(
+        _typedProgram,
+        entry,
+        functionId,
+        runtime: this,
+      );
     } on RuntimeException {
       rethrow;
     } on WrappedException catch (error) {
@@ -2034,9 +2064,9 @@ class Runtime {
   /// Run the VM in a 'sub-state' of a parent invocation of the VM. Used for bridge calls.
   /// For performance reasons, avoid making excessive use of this pattern, despite its convenience
   void bridgeCall(int $offset) {
-    final arguments = List<Object?>.of(args);
+    final arguments = List<$Value?>.from(args);
     args = [];
-    returnValue = _executeRegisters($offset, arguments);
+    returnValue = _invokeTypedFunction($offset, arguments);
   }
 
   /// Throw an exception from the VM. This will unwind the stack until a

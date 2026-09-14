@@ -66,7 +66,11 @@ void main() {
       });
 
       expect(() {
-        runtime.executeLib('package:example/main.dart', 'main', [56890]);
+        runtime.executeLib(
+          'package:example/main.dart',
+          'main',
+          arguments: {'whatToSay': 56890},
+        );
       }, prints('56890\n'));
     });
 
@@ -105,10 +109,7 @@ void main() {
         },
       });
       expect(() {
-        expect(
-          runtime.executeLib('package:example/main.dart', 'main'),
-          $bool(false),
-        );
+        expect(runtime.executeLib('package:example/main.dart', 'main'), false);
       }, prints('false\ntrue\n'));
     });
 
@@ -205,10 +206,7 @@ void main() {
         },
       });
       expect(() {
-        expect(
-          runtime.executeLib('package:example/main.dart', 'main'),
-          $null(),
-        );
+        expect(runtime.executeLib('package:example/main.dart', 'main'), null);
       }, prints('null\n'));
     });
 
@@ -246,9 +244,7 @@ void main() {
         },
       });
       expect(
-        ((runtime.executeLib('package:example/main.dart', 'main') as $Value)
-                    .$reified
-                as Iterable)
+        ((runtime.executeLib('package:example/main.dart', 'main')) as Iterable)
             .toList(),
         [$int(1), $int(1), $int(1)],
       );
@@ -273,7 +269,7 @@ void main() {
         },
       });
       expect(() async {
-        await runtime.executeLib('package:example/main.dart', 'main').$value;
+        await runtime.executeLib('package:example/main.dart', 'main');
       }, prints('1\n2\n3\n'));
     });
 
@@ -653,7 +649,7 @@ void main() {
       });
 
       final result = runtime.executeLib('package:example/main.dart', 'main');
-      expect(result is $num ? result.$value : result, 3);
+      expect(result is $num ? result : result, 3);
     });
 
     test('num.remainder()', () {
@@ -668,7 +664,7 @@ void main() {
       });
 
       final result = runtime.executeLib('package:example/main.dart', 'main');
-      expect(result is $num ? result.$value : result, 2);
+      expect(result is $num ? result : result, 2);
     });
 
     test('num.toStringAsFixed()', () {
@@ -684,7 +680,7 @@ void main() {
       });
 
       final result = runtime.executeLib('package:example/main.dart', 'main');
-      expect(result is $String ? result.$reified : result, '3.14');
+      expect(result is $String ? result : result, '3.14');
     });
 
     test('num.toStringAsExponential()', () {
@@ -700,7 +696,7 @@ void main() {
       });
 
       final result = runtime.executeLib('package:example/main.dart', 'main');
-      expect(result is $String ? result.$reified : result, '1.23e+3');
+      expect(result is $String ? result : result, '1.23e+3');
     });
 
     test('num.toStringAsPrecision()', () {
@@ -716,7 +712,7 @@ void main() {
       });
 
       final result = runtime.executeLib('package:example/main.dart', 'main');
-      expect(result is $String ? result.$reified : result, '0.00012');
+      expect(result is $String ? result : result, '0.00012');
     });
 
     test('num.ceilToDouble()', () {
@@ -1010,7 +1006,7 @@ void main() {
       });
 
       final result = runtime.executeLib('package:example/main.dart', 'main');
-      expect(result is $double ? result.$value : result, 3.14);
+      expect(result is $double ? result : result, 3.14);
     });
 
     test('double.tryParse() returns null for invalid input', () {
@@ -1059,7 +1055,7 @@ void main() {
       });
 
       final result = runtime.executeLib('package:example/main.dart', 'main');
-      expect(result is $String ? result.$reified : result, 'caught exception');
+      expect(result is $String ? result : result, 'caught exception');
     });
 
     test('num.floor() with negative number', () {
@@ -1130,7 +1126,7 @@ void main() {
       });
 
       final result = runtime.executeLib('package:example/main.dart', 'main');
-      final stringResult = result is $String ? result.$reified : result;
+      final stringResult = result is $String ? result : result;
       expect(stringResult, contains('e'));
       expect(stringResult, contains('1.23456'));
     });
@@ -1147,7 +1143,7 @@ void main() {
       });
 
       final result = runtime.executeLib('package:example/main.dart', 'main');
-      expect(result is $String ? result.$reified : result, '1.23e+2');
+      expect(result is $String ? result : result, '1.23e+2');
     });
 
     test('int.parse in map chain with accumulation', () {

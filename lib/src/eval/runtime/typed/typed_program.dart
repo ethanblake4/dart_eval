@@ -4,6 +4,7 @@ import 'typed_ops.g.dart';
 import 'typed_class.dart';
 import 'typed_call_site.dart';
 import 'typed_function.dart';
+import 'typed_export.dart';
 import 'typed_codec.dart';
 
 /// Validated immutable bytecode for the typed-bank execution loop.
@@ -20,8 +21,10 @@ class TypedProgram {
     List<TypedFunction>? functions,
     List<TypedClass> classes = const [],
     List<TypedCallSite> callSites = const [],
+    List<TypedExport> exports = const [],
     this.entryFunction = 0,
   }) : code = Uint8List.fromList(code).asUnmodifiableView(),
+       exports = List.unmodifiable(exports),
        classes = List.unmodifiable(
          classes.map(
            (type) => TypedClass(
@@ -94,10 +97,61 @@ class TypedProgram {
   final List<TypedFunction> functions;
   final List<TypedClass> classes;
   final List<TypedCallSite> callSites;
+  final List<TypedExport> exports;
   final int entryFunction;
 
   ByteData write() => TypedCodec.write(this);
   factory TypedProgram.read(ByteBuffer buffer) => TypedCodec.read(buffer);
+
+  void _validateExports() {
+    final names = <(String, String)>{};
+    for (final declaration in exports) {
+      if (!names.add((declaration.library, declaration.name)) ||
+          declaration.functionId < 0 ||
+          declaration.functionId >= functions.length) {
+        throw const FormatException('Invalid or duplicate typed export');
+      }
+      if (declaration.parameters.length !=
+          functions[declaration.functionId].argumentKinds.length) {
+        throw const FormatException('Invalid typed export parameter count');
+      }
+      final parameterNames = <String>{};
+      for (var i = 0; i < declaration.parameters.length; i++) {
+        final parameter = declaration.parameters[i];
+        final kind = functions[declaration.functionId].argumentKinds[i];
+        if (kind != TypedArgumentKind.object &&
+            (parameter.nullable ||
+                parameter.typeLibrary != 'dart:core' ||
+                parameter.typeName !=
+                    switch (kind) {
+                      TypedArgumentKind.integer => 'int',
+                      TypedArgumentKind.doublePrecision => 'double',
+                      TypedArgumentKind.boolean => 'bool',
+                      TypedArgumentKind.string => 'String',
+                      TypedArgumentKind.object => throw StateError(
+                        'Unreachable',
+                      ),
+                    })) {
+          throw const FormatException(
+            'Incompatible typed export parameter representation',
+          );
+        }
+        if (parameter.name.isEmpty || !parameterNames.add(parameter.name)) {
+          throw const FormatException(
+            'Invalid or duplicate typed parameter name',
+          );
+        }
+        if (parameter.defaultValue case final value?) {
+          if (value is! int &&
+              value is! double &&
+              value is! bool &&
+              value is! String) {
+            throw const FormatException('Unsupported typed parameter default');
+          }
+        }
+      }
+    }
+  }
 
   void _validateClasses() {
     if (classes.length > 65536 || callSites.length > 65536) {
@@ -161,6 +215,7 @@ class TypedProgram {
       }
     }
     _validateClasses();
+    _validateExports();
     if (code.isEmpty) throw const FormatException('Empty typed program');
     final boundaries = <int>{};
     final branches = <(int, int)>[];

@@ -60,12 +60,9 @@ void main() {
 ```
 
 ## Passing arguments
-In most cases, you should wrap arguments you pass to dart_eval in `$Value`
-wrappers, such as `$String` or `$Map`. These 'boxed types' have information 
-about what they are and how to modify them, and you can access their underlying
-value with the `$value` property. However, ints, doubles, bools, 
-and Lists are treated as primitives and should be passed without wrapping
-when their exact type is specified in the function signature:
+Pass ordinary Dart values in an `arguments` map keyed by the function's declared
+parameter names. This works for positional and named parameters. The compiler's
+export metadata determines their types and register locations:
 
 ```dart
 final program = '''
@@ -74,13 +71,21 @@ final program = '''
   }
 ''';
 
-print(eval(program, function: 'main', args: [1, $String('Hi!')])); // -> 4
+print(eval(program, function: 'main', arguments: {'count': 1, 'str': 'Hi!'})); // -> 4
 ```
 
-When calling a function or constructor externally, you must specify all arguments - even optional and named ones - in order, using null to indicate the absence of an argument (whereas $null() indicates a null value).
+Omit optional parameters to use their defaults. An explicitly supplied `null`
+means null, and is rejected for a non-nullable parameter. Missing required names
+and unknown names produce argument errors. Scalar and null defaults are supported;
+non-scalar default constants currently produce a compile error.
+
+The same convention applies to `runtime.executeLib(library, name,
+arguments: {...})`. Results are normalized to Dart values. Bridged objects expose
+their host object, while evaluated classes remain `TypedInstance` handles.
+Collection views preserve mutation and identity across the boundary.
 
 ## Passing callbacks
-You can pass callbacks as arguments to dart_eval using `$Closure`:
+You can pass native Dart callbacks in the argument map:
   
 ```dart
 import 'package:dart_eval/dart_eval.dart';
@@ -93,12 +98,9 @@ void main() {
     }
   ''';
 
-  eval(program, function: 'main', args: [
-    $Closure((runtime, target, args) {
-      print(args[0]!.$value + '!');
-      return null;
-    })
-  ]); // -> prints 'Hello!'
+  eval(program, function: 'main', arguments: {
+    'callback': (String message) => print('$message!'),
+  }); // -> prints 'Hello!'
 }
 ```
 

@@ -118,7 +118,7 @@ void main() {
       });
       expect(
         runtime.executeLib('package:example/main.dart', 'main'),
-        $String('Elise is the name'),
+        'Elise is the name',
       );
     });
 
@@ -142,7 +142,7 @@ void main() {
       });
       expect(
         runtime.executeLib('package:example/main.dart', 'main'),
-        $String('Matched with x = 3'),
+        'Matched with x = 3',
       );
     });
 
@@ -164,7 +164,7 @@ void main() {
       });
       expect(
         runtime.executeLib('package:example/main.dart', 'main'),
-        $String('No match'),
+        'No match',
       );
     });
 
@@ -188,7 +188,7 @@ void main() {
       });
       expect(
         runtime.executeLib('package:example/main.dart', 'main'),
-        $String('Greater than 5'),
+        'Greater than 5',
       );
     });
   });

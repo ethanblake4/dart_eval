@@ -1,11 +1,18 @@
 part of 'runtime.dart';
 
-final _typedAdapters = Expando<Map<int, _TypedLegacyAdapter>>();
-
-/// Dynamic calls use boxed values, including when entering reference bytecode.
+/// The bridge boundary accepts canonical language values. Function signatures
+/// prescribe every conversion before entering the typed register loop.
 extension TypedRuntimeInterop on Runtime {
-  /// Reference functions require a complete positional argument vector.
-  /// Optional defaults and named argument binding need compiler-side lowering.
+  bool isTypedExternalAssignable($Value value, String library, String name) {
+    _setup();
+    final expected = lookupType(BridgeTypeSpec(library, name));
+    final actual = value.$getRuntimeType(this);
+    return actual == expected ||
+        (actual >= 0 &&
+            actual < _typeTypes.length &&
+            _typeTypes[actual].contains(expected));
+  }
+
   $Value? invokeTypedObject(
     Object? receiver,
     String name,
@@ -21,37 +28,24 @@ extension TypedRuntimeInterop on Runtime {
     String name,
     List<$Value?> arguments,
   ) {
+    if (receiver is TypedInstance) {
+      return receiver.invoke(name, arguments, runtime: this);
+    }
     if (name == 'call') {
-      if (receiver is _RegisterClosure) {
-        return _invokeTypedReference(receiver.offset, [
-          if (receiver.boundReceiver) receiver.captures.first as $Value?,
-          ...arguments,
-        ], receiver.captures);
-      }
       if (receiver is EvalStaticFunctionPtr) {
-        return _invokeTypedReference(receiver.offset, [
+        return _invokeTypedFunction(receiver.offset, [
           if (receiver.$this != null) receiver.$this,
           ...arguments,
         ]);
       }
       if (receiver is $Closure) {
-        // $Closure.call expects the old VM's three signature-header arguments.
-        // Its bridge function already has the canonical boxed signature.
         return receiver.func(this, receiver.$this, arguments);
       }
       if (receiver is EvalCallable) {
         return receiver.call(this, receiver as $Value?, arguments);
       }
     }
-    var object = receiver as $Instance;
-    while (object is $InstanceImpl) {
-      final offset = object.evalClass.methods[name];
-      if (offset != null) {
-        return _invokeTypedReference(offset, [object, ...arguments]);
-      }
-      if (object.evalSuperclass == null) break;
-      object = object.evalSuperclass!;
-    }
+    final object = receiver as $Instance;
     final callable = object.$getProperty(this, name);
     if (callable is! EvalCallable) throw StateError('$name is not callable');
     if (callable is $Closure) {
@@ -60,78 +54,37 @@ extension TypedRuntimeInterop on Runtime {
     return (callable as EvalCallable).call(this, object, arguments);
   }
 
-  $Value? _invokeTypedReference(
-    int offset,
-    List<$Value?> arguments, [
-    List<Object?> captures = const [],
-  ]) {
-    final cache = _typedAdapters[this] ??= {};
-    final adapter = cache.putIfAbsent(
-      offset,
-      () => _TypedLegacyAdapter.read(pr, offset),
-    );
-    return adapter.boxResult(
-      _executeRegisters(offset, adapter.prepare(arguments), captures),
-    );
-  }
-}
-
-/// A conversion plan emitted by the compiler, never inferred from argument values.
-final class _TypedLegacyAdapter {
-  _TypedLegacyAdapter(this.parameters, this.result);
-  final List<int> parameters;
-  final int result;
-
-  factory _TypedLegacyAdapter.read(List<Object?> words, int offset) {
-    if (offset < 0 ||
-        offset + 4 > words.length ||
-        words[offset] != RegisterOp.entry.index) {
-      throw StateError('Invalid reference function entry $offset');
-    }
-    final dataStart = offset + 4 + (words[offset + 2] as int);
-    final dataCount = words[dataStart - 1] as int;
-    if (dataCount < 5 || words[dataStart + 2] != 104) {
-      throw StateError(
-        'Reference function $offset has no typed-call signature. Recompile the program.',
-      );
-    }
-    final count = words[dataStart + 3] as int;
-    if (count < 0 || dataCount != count + 5) {
-      throw StateError('Invalid typed-call signature at $offset');
-    }
-    return _TypedLegacyAdapter([
-      for (var i = 0; i < count; i++) words[dataStart + 4 + i] as int,
-    ], words[dataStart + 4 + count] as int);
-  }
-
-  List<Object?> prepare(List<$Value?> arguments) {
-    if (arguments.length != parameters.length) {
+  $Value? _invokeTypedFunction(int functionId, List<$Value?> arguments) {
+    _setup();
+    final function = _typedProgram.functions[functionId];
+    if (arguments.length != function.argumentKinds.length) {
       throw ArgumentError(
-        'Expected ${parameters.length} arguments, got ${arguments.length}',
+        'Invalid argument count for typed function $functionId',
       );
     }
-    return [
+    final entry = TypedEntry.fromValues(function, [
       for (var i = 0; i < arguments.length; i++)
-        switch (parameters[i]) {
-          0 => (arguments[i] as $int).$value,
-          1 => (arguments[i] as $double).$value,
-          2 => (arguments[i] as $bool).$value,
-          3 => (arguments[i] as $String).$value,
-          4 => arguments[i],
-          _ => throw StateError(
-            'Invalid argument representation ${parameters[i]}',
-          ),
+        switch (function.argumentKinds[i]) {
+          TypedArgumentKind.integer => (arguments[i] as $int).$value,
+          TypedArgumentKind.doublePrecision => (arguments[i] as $double).$value,
+          TypedArgumentKind.boolean => (arguments[i] as $bool).$value,
+          TypedArgumentKind.string => (arguments[i] as $String).$value,
+          TypedArgumentKind.object => arguments[i],
         },
-    ];
+    ]);
+    final result = TypedMachine.runEntry(
+      _typedProgram,
+      entry,
+      functionId,
+      runtime: this,
+    );
+    return switch (function.resultKind) {
+      null => null,
+      TypedArgumentKind.integer => $int(result as int),
+      TypedArgumentKind.doublePrecision => $double(result as double),
+      TypedArgumentKind.boolean => $bool(result as bool),
+      TypedArgumentKind.string => $String(result as String),
+      TypedArgumentKind.object => result as $Value?,
+    };
   }
-
-  $Value? boxResult(Object? value) => switch (result) {
-    -1 => null,
-    0 => $int(value as int),
-    1 => $double(value as double),
-    2 => $bool(value as bool),
-    3 => $String(value as String),
-    4 => value as $Value?,
-    _ => throw StateError('Invalid result representation $result'),
-  };
 }

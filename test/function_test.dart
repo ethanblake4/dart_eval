@@ -99,10 +99,7 @@ void main() {
         },
       });
 
-      expect(
-        runtime.executeLib('package:example/main.dart', 'main'),
-        $num<num>(7),
-      );
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 7);
     });
 
     test('Basic anonymous function', () {
@@ -175,10 +172,7 @@ void main() {
         },
       });
 
-      expect(
-        runtime.executeLib('package:example/main.dart', 'main'),
-        $double(1.5),
-      );
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 1.5);
     });
 
     test(
@@ -198,10 +192,7 @@ void main() {
           },
         });
 
-        expect(
-          runtime.executeLib('package:example/main.dart', 'main'),
-          $double(1.5),
-        );
+        expect(runtime.executeLib('package:example/main.dart', 'main'), 1.5);
       },
     );
 
@@ -220,7 +211,7 @@ void main() {
         },
       });
 
-      expect(runtime.executeLib('package:example/main.dart', 'main'), $int(3));
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 3);
     });
 
     test('Anonymous function with many unordered named args', () {
@@ -238,10 +229,7 @@ void main() {
         },
       });
 
-      expect(
-        runtime.executeLib('package:example/main.dart', 'main'),
-        $double(17),
-      );
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 17);
     });
 
     test('Closure with arg', () {
@@ -277,7 +265,14 @@ void main() {
         },
       });
 
-      expect(runtime.executeLib('package:example/main.dart', 'main', [4]), 6);
+      expect(
+        runtime.executeLib(
+          'package:example/main.dart',
+          'main',
+          arguments: {'y': 4},
+        ),
+        6,
+      );
     });
 
     test('Arrow function expression', () {
@@ -332,7 +327,7 @@ void main() {
 
       expect(
         runtime.executeLib('package:example/main.dart', 'main'),
-        $String('Hello World'),
+        'Hello World',
       );
     });
 
@@ -387,7 +382,7 @@ void main() {
           ''',
         },
       });
-      expect(runtime.executeLib('package:example/main.dart', 'main'), $int(18));
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 18);
     });
 
     test('Default positional args', () {
@@ -439,12 +434,16 @@ void main() {
       });
 
       expect(
-        () => runtime.executeLib('package:example/main.dart', 'main', [
-          $Closure((runtime, target, args) {
-            print(args[0]!.$value + '!');
-            return null;
-          }),
-        ]),
+        () => runtime.executeLib(
+          'package:example/main.dart',
+          'main',
+          arguments: {
+            'callback': $Closure((runtime, target, args) {
+              print(args[0]!.$value + '!');
+              return null;
+            }),
+          },
+        ),
         prints('Hello!\ntrue\nfalse\n'),
       );
     });

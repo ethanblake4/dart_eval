@@ -28,7 +28,14 @@ Program fixture() => Program(
     {0, 1},
     {0, 1, 2},
   ],
-  [0, 1, -1, -0x80000000, 0x7fffffff],
+  TypedProgram(
+    Uint8List.fromList([TypedOp.aConstant, 0, 0, TypedOp.aReturn]),
+    integers: [-9223372036854775808],
+    functions: const [TypedFunction(0, resultKind: TypedArgumentKind.integer)],
+    exports: [
+      TypedExport('package:codec/main.dart', 'main', 0, parameters: []),
+    ],
+  ),
   {'package:codec/main.dart': 7},
   {
     7: {'external': 8},
@@ -63,14 +70,6 @@ Program fixture() => Program(
   },
 );
 
-class OffsetRuntime extends Runtime {
-  OffsetRuntime.ofProgram(super.program) : super.ofProgram();
-  OffsetRuntime.bytes(super.buffer);
-
-  @override
-  int execute(int entrypoint) => entrypoint;
-}
-
 Uint8List replaceFirstMetadata(Uint8List bytes, Object? metadata) {
   final originalLength = ByteData.sublistView(bytes).getInt32(5);
   final replacement = utf8.encode(jsonEncode(metadata));
@@ -86,7 +85,7 @@ Uint8List replaceFirstMetadata(Uint8List bytes, Object? metadata) {
 
 void main() {
   test(
-    'round-trip preserves every metadata block and signed instruction word',
+    'round-trip preserves shared metadata and the typed executable payload',
     () {
       final original = fixture();
       final encoded = original.write();
@@ -107,32 +106,13 @@ void main() {
       expect(decoded.overrideMap['override']!.offset, 3);
       expect(decoded.overrideMap['override']!.versionConstraint, '>=1.0.0');
       expect(decoded.overrideMap['unversioned']!.versionConstraint, isNull);
-      expect(decoded.ops, original.ops);
+      expect(decoded.typedProgram.code, original.typedProgram.code);
+      expect(decoded.typedProgram.integers, original.typedProgram.integers);
+      expect(decoded.typedProgram.exports.single.name, 'main');
+      expect(TypedMachine.run(decoded.typedProgram), -9223372036854775808);
       expect(decoded.write(), encoded);
     },
   );
-
-  test(
-    'in-memory and serialized runtime loading populate declarations and words',
-    () {
-      final original = fixture();
-      for (final runtime in [
-        OffsetRuntime.ofProgram(original),
-        OffsetRuntime.bytes(original.write().buffer),
-      ]) {
-        expect(runtime.executeLib('package:codec/main.dart', 'main'), 3);
-        expect(runtime.pr, original.ops);
-        expect(runtime.typeIds, original.typeIds);
-        expect(runtime.declaredClasses[7]!.keys, ['Counter']);
-        expect(runtime.overrideMap['override']!.offset, 3);
-      }
-    },
-  );
-
-  test('empty instruction streams round-trip', () {
-    final program = fixture()..ops = [];
-    expect(Program.read(program.write().buffer).ops, isEmpty);
-  });
 
   test('every truncated prefix is rejected with a format error', () {
     final encoded = fixture().write();
@@ -165,7 +145,9 @@ void main() {
     final trailing = Uint8List.fromList([...fixture().write(), 0]);
     expect(() => Program.read(trailing.buffer), throwsFormatException);
     final badCount = fixture().write();
-    ByteData.sublistView(badCount).setInt32(badCount.length - 24, -1);
+    final payloadOffset =
+        badCount.length - fixture().typedProgram.write().lengthInBytes;
+    ByteData.sublistView(badCount).setInt32(payloadOffset - 4, -1);
     expect(() => Program.read(badCount.buffer), throwsFormatException);
   });
 
@@ -187,10 +169,17 @@ void main() {
     expect(() => Program.read(invalidJson.buffer), throwsFormatException);
   });
 
-  test('writer rejects words outside signed 32-bit range', () {
-    for (final word in [-0x80000001, 0x80000000]) {
-      final program = fixture()..ops = [word];
-      expect(program.write, throwsRangeError);
-    }
+  test('envelope rejects reference instruction payloads', () {
+    final bytes = fixture().write();
+    final payloadOffset =
+        bytes.length - fixture().typedProgram.write().lengthInBytes;
+    final invalid = BytesBuilder()
+      ..add(bytes.sublist(0, payloadOffset - 4))
+      ..add((ByteData(4)..setInt32(0, 4)).buffer.asUint8List())
+      ..add([0, 0, 0, 0]);
+    expect(
+      () => Program.read(invalid.takeBytes().buffer),
+      throwsFormatException,
+    );
   });
 }

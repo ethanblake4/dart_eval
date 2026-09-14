@@ -22,10 +22,7 @@ void main() {
         },
       });
 
-      expect(
-        runtime.executeLib('package:eval_test/main.dart', 'main'),
-        $String('true'),
-      );
+      expect(runtime.executeLib('package:eval_test/main.dart', 'main'), 'true');
     });
 
     test('Adding elements to a set', () {
@@ -42,10 +39,7 @@ void main() {
         },
       });
 
-      expect(
-        runtime.executeLib('package:eval_test/main.dart', 'main'),
-        $String('true'),
-      );
+      expect(runtime.executeLib('package:eval_test/main.dart', 'main'), 'true');
     });
 
     test('Removing elements from a set', () {
@@ -63,7 +57,7 @@ void main() {
 
       expect(
         runtime.executeLib('package:eval_test/main.dart', 'main'),
-        $String('false'),
+        'false',
       );
     });
 
@@ -83,7 +77,7 @@ void main() {
 
       expect(
         runtime.executeLib('package:eval_test/main.dart', 'main'),
-        $String('{1, 2, 3, 4, 5}'),
+        '{1, 2, 3, 4, 5}',
       );
     });
 
@@ -103,7 +97,7 @@ void main() {
 
       expect(
         runtime.executeLib('package:eval_test/main.dart', 'main'),
-        $String('{2, 3}'),
+        '{2, 3}',
       );
     });
 
@@ -120,10 +114,7 @@ void main() {
         },
       });
 
-      expect(
-        runtime.executeLib('package:eval_test/main.dart', 'main'),
-        $String('true'),
-      );
+      expect(runtime.executeLib('package:eval_test/main.dart', 'main'), 'true');
     });
 
     test('Set with type parameters', () {
@@ -138,10 +129,7 @@ void main() {
         },
       });
 
-      expect(
-        runtime.executeLib('package:eval_test/main.dart', 'main'),
-        $String('true'),
-      );
+      expect(runtime.executeLib('package:eval_test/main.dart', 'main'), 'true');
     });
   });
 }

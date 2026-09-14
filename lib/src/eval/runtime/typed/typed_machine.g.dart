@@ -16,17 +16,24 @@ abstract final class TypedMachine {
       List<bool> boolArguments = const [], List<Object?> objectArguments = const [], Runtime? runtime}) =>
     TypedInterop.exportExternal(runRaw(program, intArguments: intArguments,
       doubleArguments: doubleArguments, boolArguments: boolArguments,
-      objectArguments: objectArguments, runtime: runtime));
+      objectArguments: objectArguments, runtime: runtime), runtime: runtime);
 
-  /// Fixed scalar banks stay in typed locals across the dispatch loop.
-  @pragma('vm:never-inline')
+  /// Convenience entry for callers that already group arguments by bank.
   static Object? runRaw(TypedProgram program, {
       int? entryFunction,
       List<int> intArguments = const [], List<double> doubleArguments = const [],
       List<bool> boolArguments = const [], List<Object?> objectArguments = const [], Runtime? runtime}) {
-    final code = program.code;
-    final entry = program.functions[entryFunction ?? program.entryFunction];
+    final functionId = entryFunction ?? program.entryFunction;
+    final entry = program.functions[functionId];
     final arguments = TypedEntry.prepare(entry, intArguments, doubleArguments, boolArguments, objectArguments, runtime);
+    return runEntry(program, arguments, functionId, runtime: runtime);
+  }
+
+  /// Prepared host entry. Internal calls remain in this typed dispatch loop.
+  @pragma('vm:never-inline')
+  static Object? runEntry(TypedProgram program, TypedEntry arguments, int functionId, {Runtime? runtime}) {
+    final code = program.code;
+    final entry = program.functions[functionId];
     var frame = TypedFrame(entry);
     Object? r = arguments.r, s = arguments.s, c = arguments.c;
     var a = arguments.a, b = arguments.b;

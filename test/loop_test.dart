@@ -22,10 +22,7 @@ void main() {
           ''',
         },
       });
-      expect(
-        runtime.executeLib('package:example/main.dart', 'main'),
-        $int(555),
-      );
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 555);
     });
 
     test('For loop + branching', () {
@@ -51,7 +48,7 @@ void main() {
 
       expect(
         runtime.executeLib('package:example/main.dart', 'doThing'),
-        $int(499472),
+        499472,
       );
     });
 
@@ -69,7 +66,7 @@ void main() {
           ''',
         },
       });
-      expect(runtime.executeLib('package:example/main.dart', 'main'), $int(15));
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 15);
     });
 
     test('Foreach with dynamic iterable, specifying type in loop', () {
@@ -88,7 +85,7 @@ void main() {
           ''',
         },
       });
-      expect(runtime.executeLib('package:example/main.dart', 'main'), $int(10));
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 10);
     });
 
     test('Simple while loop', () {
@@ -105,10 +102,7 @@ void main() {
           ''',
         },
       });
-      expect(
-        runtime.executeLib('package:example/main.dart', 'main'),
-        $int(555),
-      );
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 555);
     });
 
     test('Simple do-while loop', () {
@@ -125,10 +119,7 @@ void main() {
           ''',
         },
       });
-      expect(
-        runtime.executeLib('package:example/main.dart', 'main'),
-        $int(555),
-      );
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 555);
     });
 
     test('For loop with break', () {
@@ -148,7 +139,7 @@ void main() {
           ''',
         },
       });
-      expect(runtime.executeLib('package:example/main.dart', 'main'), $int(5));
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 5);
     });
 
     test('Nested for loop with break', () {
@@ -173,10 +164,7 @@ void main() {
           ''',
         },
       });
-      expect(
-        runtime.executeLib('package:example/main.dart', 'main'),
-        $int(100100),
-      );
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 100100);
     });
   });
 }

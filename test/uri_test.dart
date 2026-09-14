@@ -25,7 +25,7 @@ void main() {
 
       expect(
         runtime.executeLib('package:example/main.dart', 'main'),
-        $String('username:password@example.com'),
+        'username:password@example.com',
       );
     });
 
@@ -44,7 +44,7 @@ void main() {
 
       expect(
         runtime.executeLib('package:example/main.dart', 'main'),
-        $String('username:password'),
+        'username:password',
       );
     });
     test('Uri().host', () {
@@ -62,7 +62,7 @@ void main() {
 
       expect(
         runtime.executeLib('package:example/main.dart', 'main'),
-        $String('example.com'),
+        'example.com',
       );
     });
     test('Uri().path', () {
@@ -80,7 +80,7 @@ void main() {
 
       expect(
         runtime.executeLib('package:example/main.dart', 'main'),
-        $String('/path/to/resource'),
+        '/path/to/resource',
       );
     });
 
@@ -99,7 +99,7 @@ void main() {
 
       expect(
         runtime.executeLib('package:example/main.dart', 'main'),
-        $String('query=value'),
+        'query=value',
       );
     });
 
@@ -118,7 +118,7 @@ void main() {
 
       expect(
         runtime.executeLib('package:example/main.dart', 'main'),
-        $String('fragment'),
+        'fragment',
       );
     });
 
@@ -152,9 +152,9 @@ void main() {
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), [
-        $String("path"),
-        $String("to"),
-        $String("resource"),
+        "path",
+        "to",
+        "resource",
       ]);
     });
 
@@ -172,7 +172,7 @@ void main() {
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), {
-        $String("query"): $String("value"),
+        "query": "value",
       });
     });
 
@@ -190,7 +190,7 @@ void main() {
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), {
-        $String("query"): [$String("value")],
+        "query": ["value"],
       });
     });
 
@@ -217,14 +217,14 @@ void main() {
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), [
-        $bool(false),
-        $bool(true),
-        $bool(true),
-        $bool(true),
-        $bool(true),
-        $bool(true),
-        $bool(false),
-        $bool(true),
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
       ]);
     });
   });

@@ -5,11 +5,12 @@ import 'dart:typed_data';
 import 'package:dart_eval/src/eval/compiler/model/override_spec.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart' show Runtime;
 import 'package:dart_eval/src/eval/runtime/type.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_program.dart';
 
 /// A Program is a compiled EVC bytecode program that can be executed using
 /// a [Runtime].
 class Program {
-  /// Read the versioned metadata and signed 32-bit instruction words.
+  /// Read shared runtime metadata and its typed bytecode payload.
   factory Program.read(ByteBuffer buffer) {
     final reader = _ProgramReader(buffer);
     reader.readHeader();
@@ -59,7 +60,7 @@ class Program {
       instances,
       typeIds,
       types,
-      reader.readInstructions(),
+      reader.readTypedProgram(),
       libraries,
       functions,
       constants,
@@ -77,7 +78,7 @@ class Program {
     this.typeIds,
     //this.typeNames,
     this.typeTypes,
-    this.ops,
+    this.typedProgram,
     this.bridgeLibraryMappings,
     this.bridgeFunctionMappings,
     this.constantPool,
@@ -87,10 +88,10 @@ class Program {
     this.overrideMap,
   );
 
-  /// Global bytecode offsets of the program's top-level declarations.
+  /// Typed function IDs of the program's top-level declarations.
   Map<int, Map<String, int>> topLevelDeclarations;
 
-  /// Global bytecode offsets of the program's instance-level declarations.
+  /// Typed function IDs of the program's instance-level declarations.
   ///
   /// Example instance declaration:
   /// 1: { // file
@@ -123,7 +124,7 @@ class Program {
   List<Object> constantPool;
   List<RuntimeTypeSet> runtimeTypes;
 
-  /// Bytecode offsets to initializers for global variables.
+  /// Typed function IDs of initializers for global variables.
   List<int> globalInitializers;
 
   /// Mappings from enums to globals.
@@ -132,8 +133,8 @@ class Program {
   /// Runtime override map
   Map<String, OverrideSpec> overrideMap;
 
-  /// The program's bytecode.
-  List<int> ops;
+  /// The executable typed bytecode, including exported declarations.
+  final TypedProgram typedProgram;
 
   /// Write the program to a [Uint8List], to be loaded by a [Runtime].
   Uint8List write() {
@@ -179,10 +180,9 @@ class Program {
       ),
     );
 
-    _writeInt32(b, ops.length);
-    for (final op in ops) {
-      _writeInt32(b, op);
-    }
+    final payload = typedProgram.write().buffer.asUint8List();
+    _writeInt32(b, payload.length);
+    b.add(payload);
     final res = b.takeBytes();
 
     return res;
@@ -286,12 +286,14 @@ class _ProgramReader {
     return jsonDecode(utf8.decode(bytes));
   }
 
-  List<int> readInstructions() {
-    final count = readInt32();
-    require(count * 4);
-    if (count * 4 != data.lengthInBytes - offset) {
+  TypedProgram readTypedProgram() {
+    final length = readInt32();
+    require(length);
+    if (length != data.lengthInBytes - offset) {
       throw const FormatException('Unexpected trailing XVC data');
     }
-    return List.generate(count, (_) => readInt32(), growable: false);
+    final bytes = Uint8List.fromList(data.buffer.asUint8List(offset, length));
+    offset += length;
+    return TypedProgram.read(bytes.buffer);
   }
 }

@@ -148,6 +148,7 @@ class CompilerContext with ScopeContext {
   final Map<int, ControlFlowGraph> ssaFunctionGraphs = {};
   final Map<int, String> functionNames = {};
   final Map<int, MachineFunctionSignature> functionSignatures = {};
+  final Map<int, List<FormalParameter>> functionParameters = {};
   int? currentFunctionId;
   int _nextFunctionId = 0;
   late ControlFlowGraph activeGraph;

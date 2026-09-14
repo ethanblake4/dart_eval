@@ -3,6 +3,7 @@ import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/fpl.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
+import 'default_value.dart';
 
 import '../../../../dart_eval_bridge.dart';
 import '../builtins.dart';
@@ -18,6 +19,39 @@ class ArgumentListResult {
   final Map<String, Variable> namedArgs;
 
   ArgumentListResult(this.ssa, this.args, this.namedArgs);
+}
+
+Variable _omittedArgument(
+  CompilerContext ctx,
+  int library,
+  FormalParameter parameter,
+  Declaration host,
+) {
+  if (parameter.isRequired) {
+    throw CompileError(
+      'Missing required argument ${parameter.name!.lexeme}',
+      parameter,
+    );
+  }
+  final (declaredType, _) = getFormalParameterType(
+    ctx,
+    parameter,
+    library,
+    host,
+  );
+  final type = declaredType ?? CoreTypes.dynamic.ref(ctx);
+  var value = evaluateDefaultValue(
+    ctx,
+    library,
+    parameter is DefaultFormalParameter ? parameter.defaultValue : null,
+  );
+  if (value is int && type.file == dartCoreFile && type.name == 'double') {
+    value = value.toDouble();
+  }
+  final variable = pushDefaultValue(ctx, value);
+  return host is MethodDeclaration || !type.isUnboxedAcrossFunctionBoundaries
+      ? variable.boxIfNeeded(ctx)
+      : variable.unboxIfNeeded(ctx);
 }
 
 ArgumentListResult compileArgumentList(
@@ -49,7 +83,6 @@ ArgumentListResult compileArgumentList(
   }
 
   var i = 0;
-  Variable? $null;
 
   final resolveGenericsMap = <String, Set<TypeRef>>{};
 
@@ -69,19 +102,17 @@ ArgumentListResult compileArgumentList(
       if (param.isRequired) {
         throw CompileError('Not enough positional arguments');
       } else {
-        $null ??= BuiltinValue().push(ctx);
-        push.add($null);
+        final value = _omittedArgument(ctx, decLibrary, param, parameterHost);
+        push.add(value);
+        args.add(value);
       }
     } else if (arg == null) {
       if (param.isRequired) {
         throw CompileError('Not enough positional arguments');
-      } else if (param is DefaultFormalParameter) {
-        // Default parameter values are handled at the call site
-        $null ??= BuiltinValue().push(ctx);
-        push.add($null);
       } else {
-        $null ??= BuiltinValue().push(ctx);
-        push.add($null);
+        final value = _omittedArgument(ctx, decLibrary, param, parameterHost);
+        push.add(value);
+        args.add(value);
       }
     } else {
       var (paramType, typeAnnotation) = getFormalParameterType(
@@ -134,6 +165,12 @@ ArgumentListResult compileArgumentList(
 
   for (final arg in argumentList.arguments) {
     if (arg is NamedExpression) {
+      if (!named.containsKey(arg.name.label.name)) {
+        throw CompileError(
+          'Unknown named argument ${arg.name.label.name}',
+          arg,
+        );
+      }
       namedExpr[arg.name.label.name] = arg.expression;
     }
   }
@@ -202,8 +239,9 @@ ArgumentListResult compileArgumentList(
       push.add(arg0);
       namedArgs[name] = arg0;
     } else {
-      $null ??= BuiltinValue().push(ctx);
-      push.add($null);
+      final value = _omittedArgument(ctx, decLibrary, param0, parameterHost);
+      push.add(value);
+      namedArgs[name] = value;
     }
   }
 
@@ -242,8 +280,6 @@ ArgumentListResult compileSuperParams(
     }
   }
 
-  Variable? $null;
-
   for (final param in positional) {
     // First check super params. Super params do not contain an expression.
     if (superParams.contains(param.name!.lexeme)) {
@@ -254,8 +290,9 @@ ArgumentListResult compileSuperParams(
       if (param.isRequired) {
         throw CompileError('Not enough positional arguments');
       } else {
-        $null ??= BuiltinValue().push(ctx);
-        push.add($null);
+        final value = _omittedArgument(ctx, ctx.library, param, parameterHost);
+        push.add(value);
+        args.add(value);
       }
     }
   }
@@ -267,8 +304,9 @@ ArgumentListResult compileSuperParams(
       push.add(V);
       namedArgs[name] = V;
     } else {
-      $null ??= BuiltinValue().push(ctx);
-      push.add($null);
+      final value = _omittedArgument(ctx, ctx.library, n.value, parameterHost);
+      push.add(value);
+      namedArgs[name] = value;
     }
   }
 

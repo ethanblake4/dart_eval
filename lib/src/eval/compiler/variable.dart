@@ -181,7 +181,10 @@ class Variable {
   /// By default updates the variable in the context locals.
   /// Set [update] to false if that's not desired.
   Variable unboxIfNeeded(CompilerContext ctx, [bool update = true]) {
-    if (!boxed) {
+    // List instructions accept the canonical wrapper's List interface. Keeping
+    // that wrapper avoids treating a representation-preserving move as unboxing
+    // and then wrapping it a second time when the value leaves this function.
+    if (!boxed || type == CoreTypes.list.ref(ctx)) {
       return this;
     }
     final target = update ? ssa : ctx.svar('unboxed');

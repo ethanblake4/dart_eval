@@ -21,11 +21,7 @@ void main() {
           }''',
         },
       });
-      expect(
-        (runtime.executeLib('package:example/main.dart', 'main') as $String)
-            .$value,
-        'chat',
-      );
+      expect((runtime.executeLib('package:example/main.dart', 'main')), 'chat');
     });
 
     test('RegExp.allMatches()', () {
@@ -69,11 +65,7 @@ void main() {
           ''',
         },
       });
-      expect(
-        (runtime.executeLib('package:example/main.dart', 'main') as $String)
-            .$value,
-        'bird',
-      );
+      expect((runtime.executeLib('package:example/main.dart', 'main')), 'bird');
     });
 
     test('RegExp.stringMatch() if no match', () {
@@ -89,11 +81,7 @@ void main() {
           ''',
         },
       });
-      expect(
-        (runtime.executeLib('package:example/main.dart', 'main') as $null)
-            .$value,
-        null,
-      );
+      expect((runtime.executeLib('package:example/main.dart', 'main')), null);
     });
 
     test('RegExp.groups', () {
@@ -114,8 +102,7 @@ void main() {
         },
       });
       expect(
-        (runtime.executeLib('package:example/main.dart', 'main') as $String)
-            .$value,
+        (runtime.executeLib('package:example/main.dart', 'main')),
         '["00","13","37","This is a chat message."]',
       );
     });
@@ -172,8 +159,7 @@ void main() {
       },
     });
     expect(
-      (runtime.executeLib('package:example/main.dart', 'main') as $RegExp)
-          .$value,
+      (runtime.executeLib('package:example/main.dart', 'main')),
       RegExp(r'c\w*'),
     );
   });
@@ -192,8 +178,7 @@ void main() {
       },
     });
     expect(
-      (runtime.executeLib('package:example/main.dart', 'main') as $String)
-          .$value,
+      (runtime.executeLib('package:example/main.dart', 'main')),
       '[00:13.37] This is a chat message.',
     );
   });

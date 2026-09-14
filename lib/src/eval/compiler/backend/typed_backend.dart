@@ -17,6 +17,13 @@ import '../../runtime/typed/typed_program.dart';
 import '../../runtime/typed/typed_function.dart';
 import '../../runtime/typed/typed_class.dart';
 import '../../runtime/typed/typed_call_site.dart';
+import '../../runtime/typed/typed_export.dart';
+import 'package:analyzer/dart/ast/ast.dart';
+import '../helpers/default_value.dart';
+import '../helpers/fpl.dart';
+import '../type.dart';
+import '../builtins.dart';
+import 'package:dart_eval/dart_eval_bridge.dart' show CoreTypes;
 import '../context.dart';
 import '../offset_tracker.dart';
 import 'representation.dart';
@@ -94,6 +101,7 @@ class TypedBackend {
   final objects = <Object?>[];
   final _classIndices = <(int, String), int>{};
   final _callSites = <TypedCallSite>[];
+  Map<int, int> functionIndices = {};
 
   static final _codes = {
     for (var i = 0; i < TypedOp.instructions.length; i++)
@@ -111,11 +119,23 @@ class TypedBackend {
   ];
 
   TypedProgram compile(String library, String function) {
-    final libraryId = context.libraryMap[library];
-    final id = context.topLevelDeclarationPositions[libraryId]?[function];
-    if (id == null)
-      throw ArgumentError('Unknown entrypoint $library::$function');
-    final reachable = <int>[id];
+    return compileEntrypoints([(library, function)]);
+  }
+
+  TypedProgram compileEntrypoints(Iterable<(String, String)> entrypoints) {
+    final roots = entrypoints.toList();
+    final reachable = <int>[];
+    for (final (library, function) in roots) {
+      final libraryId = context.libraryMap[library];
+      final id = context.topLevelDeclarationPositions[libraryId]?[function];
+      if (id == null) {
+        throw ArgumentError('Unknown entrypoint $library::$function');
+      }
+      if (!reachable.contains(id)) reachable.add(id);
+    }
+    if (reachable.isEmpty) {
+      throw ArgumentError('No typed entrypoints were found');
+    }
     final classAllocations = <objects_ir.CreateClass>[];
     for (var next = 0; next < reachable.length; next++) {
       final graph = context.ssaFunctionGraphs[reachable[next]]!;
@@ -145,6 +165,7 @@ class TypedBackend {
     final indices = {
       for (var i = 0; i < reachable.length; i++) reachable[i]: i,
     };
+    functionIndices = indices;
     final libraries = {
       for (final entry in context.libraryMap.entries) entry.value: entry.key,
     };
@@ -201,6 +222,73 @@ class TypedBackend {
       functions: functions,
       classes: classes,
       callSites: _callSites,
+      exports: [
+        for (final (library, name) in roots) _export(library, name, indices),
+      ],
+    );
+  }
+
+  TypedExport _export(String library, String name, Map<int, int> indices) {
+    final libraryId = context.libraryMap[library]!;
+    final functionId = context.topLevelDeclarationPositions[libraryId]![name]!;
+    final parameters =
+        context.functionParameters[functionId] ?? const <FormalParameter>[];
+    final declarations = context.topLevelDeclarationsMap[libraryId]!;
+    final declaration = declarations[name]?.declaration;
+    final previousTypes = {...?context.temporaryTypes[libraryId]};
+    TypeRef.loadTemporaryTypes(context, switch (declaration) {
+      FunctionDeclaration(:final functionExpression) =>
+        functionExpression.typeParameters?.typeParameters,
+      MethodDeclaration(:final typeParameters) =>
+        typeParameters?.typeParameters,
+      _ => null,
+    }, libraryId);
+    try {
+      return TypedExport(
+        library,
+        name,
+        indices[functionId]!,
+        parameters: [
+          for (final parameter in parameters)
+            _exportParameter(libraryId, parameter, declaration),
+        ],
+      );
+    } finally {
+      context.temporaryTypes[libraryId] = previousTypes;
+    }
+  }
+
+  TypedExportParameter _exportParameter(
+    int library,
+    FormalParameter parameter,
+    Declaration? host,
+  ) {
+    final (declared, _) = getFormalParameterType(
+      context,
+      parameter,
+      library,
+      host,
+    );
+    final type = declared ?? CoreTypes.dynamic.ref(context);
+    var defaultValue = evaluateDefaultValue(
+      context,
+      library,
+      parameter is DefaultFormalParameter ? parameter.defaultValue : null,
+    );
+    if (defaultValue is int &&
+        type.file == dartCoreFile &&
+        type.name == 'double') {
+      defaultValue = defaultValue.toDouble();
+    }
+    return TypedExportParameter(
+      parameter.name!.lexeme,
+      isRequired: parameter.isRequired,
+      nullable: type.nullable || type.name == 'dynamic' || type.name == 'Null',
+      typeName: type.name,
+      typeLibrary: context.libraryMap.entries
+          .firstWhere((entry) => entry.value == type.file)
+          .key,
+      defaultValue: defaultValue,
     );
   }
 
@@ -473,8 +561,9 @@ class TypedBackend {
               ),
             );
           }
-          if (arguments.length > outgoingCount)
+          if (arguments.length > outgoingCount) {
             outgoingCount = arguments.length;
+          }
           lowered.add(
             TypedOperation(
               _named(['callHost']),
@@ -864,8 +953,9 @@ class TypedBackend {
     );
     graph.performRegisterAllocation();
     _Bytes spill(cfg.AllocatedSSA variable, int slot, bool reload) {
-      if (slot + 1 > spillCounts[variable.type])
+      if (slot + 1 > spillCounts[variable.type]) {
         spillCounts[variable.type] = slot + 1;
+      }
       return _Bytes(
         _codes['${_registerNames[variable.register]}${reload ? 'Reload' : 'Spill'}']!,
         slot,
