@@ -120,10 +120,10 @@ At five million iterations and seven samples:
 
 The register ABI run, also five million iterations and seven samples, produced:
 
-| Workload | Median ms | Min–max ms |
+| Workload | Median ms | Min-max ms |
 | --- | ---: | ---: |
-| Register ABI primitive call loop | 492.983 | 381.712–720.593 |
-| Register ABI mixed object/primitive call loop | 1245.398 | 968.621–1985.247 |
+| Register ABI primitive call loop | 492.983 | 381.712-720.593 |
+| Register ABI mixed object/primitive call loop | 1245.398 | 968.621-1985.247 |
 
 The checksum was 157522500. These were separate runs under variable host load,
 so the lower medians are not a controlled speedup comparison.
@@ -179,7 +179,7 @@ Dispatch: `0x2500e0` through `0x25015c`. Integer add: `0x2502f0` through
 
 A Windows x64 AOT smoke benchmark at one million iterations, three samples,
 produced typed medians of 11.566 ms integer, 11.060 ms double, and 11.735 ms mixed.
-Ranges were 11.383–11.603, 10.124–11.407, and 11.295–12.511 ms. Checksum:
+Ranges were 11.383-11.603, 10.124-11.407, and 11.295-12.511 ms. Checksum:
 544359285. These are independent host runs, not a controlled speedup comparison.
 
 The separate [String-register experiment](typed-string-registers.md) measures the
@@ -190,3 +190,61 @@ in existing object registers and supplies dedicated operations on them.
 Validation after the List/String update: 594 passes, six skips, 29 existing
 reference failures, zero analyzer errors. The regex replacement loop now passes.
 The updated failure baseline is backend-checkpoint-failures.txt.
+
+## Native class checkpoint
+
+The 196-opcode loop supports linked class construction, field storage, lexical
+superclass access and register-ABI virtual calls. A first ARM64 build increased
+the arithmetic path to 43 instructions. Dart hoisted class and call-site table
+bases and lengths into the loop, requiring six loads in the common tail.
+
+Class construction now stays behind a non-inlined constructor. Call-site indexing
+happens inside the non-inlined dispatch resolver and bridge fallback. Resolved
+members hold the immutable function descriptor directly, avoiding another indexed
+lookup on every invocation. The table bases and lengths no longer remain live
+across every bytecode. The public export adapter is outside `runRaw`, so internal
+returns retain their compiler-selected representation.
+
+Using the same Dart 3.10.7 Linux ARM64 probe, the final arithmetic path has 38
+instructions: 32 dispatch, four integer/double add, and two common tail. It still
+has 11 stack stores and two stack loads. The previous List/String checkpoint had
+39 instructions. The full loop is 19,700 bytes, up 444 bytes from 19,256.
+These are static native-code measurements, not ARM64 cycle or cache measurements.
+
+Recorded `TypedMachine.runRaw` range is `0x140690` to `0x145384` exclusive.
+Dispatch runs from `0x1408d8` through `0x140954`; integer add from `0x140a90`
+through `0x140a9c`; double add from `0x140b00` through `0x140b0c`; common tail
+from `0x144e24` through `0x144e28`. The inspection script now selects `runRaw`.
+
+Same-program ordinary virtual calls perform cached member resolution and enter
+a frame in this loop. They do not construct an argument list when receiver and
+arguments fit R/S/C, nor inspect values to decide boxing. Overflow borrows the
+caller's existing list. Resolution, initial member-cache population, frame entry
+and return still cost work. Alternating functions can replace the single cached
+child frame. Bridge calls, bound tear-offs and scalar operator adapters remain
+separate host invocation paths.
+
+The expanded `typed_calls.dart` benchmark verifies checksums for class mutation,
+alternating receiver classes at one call site, arbitrary boxed arguments and
+overflow. Windows x64 AOT, one million iterations and five samples, after the
+full test run completed:
+
+| Workload | Median ms | Min to max ms |
+| --- | ---: | ---: |
+| Primitive direct call | 88.717 | 84.997 to 109.279 |
+| Mixed object/primitive direct call | 194.072 | 170.170 to 288.638 |
+| Class method with field mutation | 570.560 | 482.156 to 861.287 |
+| Alternating receiver classes | 289.809 | 271.368 to 291.109 |
+| Boxed object arguments | 325.081 | 303.176 to 383.399 |
+| Four integer method arguments | 460.470 | 347.680 to 477.528 |
+
+Checksum: `5000085080000`. An odd-count 1,001-iteration smoke run also passes.
+These workloads include different method bodies and dispatch patterns, so their
+timings are not comparable as isolated call latencies. Host variability remains
+large, including across successive runs. Use them as reproducible workloads for
+future controlled profiling, not as evidence of a speedup over the prior commit.
+
+Final validation: 624 passes, six skips, 28 existing reference failure names,
+zero analyzer errors, generated files current. The earlier Functional test 1
+failure now passes. Class tests include serialization and inheritance; boundary
+tests cover callable fields and bridge method overrides.

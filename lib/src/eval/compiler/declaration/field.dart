@@ -10,6 +10,7 @@ import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/globals.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
 import 'package:dart_eval/src/eval/ir/function.dart';
+import 'package:dart_eval/src/eval/ir/representation.dart';
 
 void compileFieldDeclaration(
   int fieldIndex,
@@ -64,6 +65,9 @@ void compileFieldDeclaration(
       }
     } else {
       final pos = beginMethod(ctx, d, d.offset, '$parentName.$fieldName (get)');
+      ctx.functionSignatures[pos] = MachineFunctionSignature([
+        MachineRepresentation.object,
+      ], MachineRepresentation.object);
       final receiver = SSA('arg_0');
       ctx.pushOp(Parameter(receiver, 0));
       final value = ctx.svar('field');
@@ -83,6 +87,10 @@ void compileFieldDeclaration(
           '$parentName.$fieldName (set)',
         );
         final receiver = SSA('arg_0');
+        ctx.functionSignatures[setterPos] = MachineFunctionSignature([
+          MachineRepresentation.object,
+          MachineRepresentation.object,
+        ], MachineRepresentation.object);
         final value = SSA('arg_1');
         ctx.pushOp(Parameter(receiver, 0));
         ctx.pushOp(Parameter(value, 1));

@@ -240,6 +240,7 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
           objects.LoadPropertyStatic() ||
           objects.LoadPropertyDynamic() ||
           objects.LoadSuper() ||
+          objects.LoadThis() ||
           types.LoadRuntimeType() ||
           bridge.BridgeInstantiate() ||
           async.Await():

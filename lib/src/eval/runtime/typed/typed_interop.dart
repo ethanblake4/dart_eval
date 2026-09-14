@@ -3,6 +3,7 @@ import 'package:dart_eval/src/eval/runtime/function.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/stdlib/core.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
+import 'typed_instance.dart';
 
 /// The dynamic-call boundary uses boxed language values exclusively.
 ///
@@ -14,9 +15,12 @@ abstract final class TypedInterop {
     Runtime? runtime,
     Object? receiver,
     List<$Value?> arguments,
-  ) => receiver is TypedHostFunction
-      ? receiver.invokeHost(runtime, arguments)
-      : _runtime(runtime).invokeTypedObject(receiver, 'call', arguments);
+  ) => switch (receiver) {
+    TypedHostFunction() => receiver.invokeHost(runtime, arguments),
+    TypedMember() => receiver.invoke(arguments, runtime: runtime),
+    TypedInstance() => receiver.invoke('call', arguments, runtime: runtime),
+    _ => _runtime(runtime).invokeTypedObject(receiver, 'call', arguments),
+  };
 
   @pragma('vm:never-inline')
   static $Value? invoke(
@@ -24,7 +28,33 @@ abstract final class TypedInterop {
     Object? receiver,
     String name,
     List<$Value?> arguments,
-  ) => _runtime(runtime).invokeTypedObject(receiver, name, arguments);
+  ) => receiver is TypedInstance
+      ? receiver.invoke(name, arguments, runtime: runtime)
+      : _runtime(runtime).invokeTypedObject(receiver, name, arguments);
+
+  static $Value? getProperty(Runtime? runtime, Object? receiver, String name) {
+    final value = receiver is TypedInstance
+        ? receiver.getProperty(name, runtime: runtime)
+        : (receiver as $Instance).$getProperty(_runtime(runtime), name);
+    return value is $null ? null : value;
+  }
+
+  static void setProperty(
+    Runtime? runtime,
+    Object? receiver,
+    String name,
+    $Value? value,
+  ) {
+    if (receiver is TypedInstance) {
+      receiver.setProperty(name, value, runtime: runtime);
+    } else {
+      (receiver as $Instance).$setProperty(
+        _runtime(runtime),
+        name,
+        value ?? const $null(),
+      );
+    }
+  }
 
   @pragma('vm:never-inline')
   static bool equals(Runtime? runtime, Object? left, Object? right) {
@@ -35,7 +65,7 @@ abstract final class TypedInterop {
     if (a.runtimeType == $Object) {
       return (a as $Object).$value == exportExternal(b);
     }
-    return toBool(_runtime(runtime).invokeTypedObject(a, '==', [b]));
+    return toBool(invoke(runtime, a, '==', [b]));
   }
 
   static bool isNull(Object? value) => value == null;

@@ -40,11 +40,82 @@ void main(List<String> args) {
     }
   ''');
   const objects = [Payload('first'), Payload('second')];
+  final method = compile('''
+    class Counter {
+      int value;
+      Counter(this.value);
+      int add(int amount) { value = value + amount; return value; }
+    }
+    int main(int n) {
+      final counter = Counter(0);
+      var result = 0;
+      for (var i = 0; i < n; i++) { result = counter.add(3); }
+      return result;
+    }
+  ''');
+  final polymorphic = compile('''
+    class First { int value(int n) => n + 1; }
+    class Second { int value(int n) => n + 3; }
+    int main(int n) {
+      final first = First();
+      final second = Second();
+      dynamic receiver = first;
+      var sum = 0;
+      for (var i = 0; i < n; i++) {
+        if (i % 2 == 0) { receiver = first; } else { receiver = second; }
+        int value = receiver.value(i);
+        sum += value;
+      }
+      return sum;
+    }
+  ''');
+  final boxedArguments = compile('''
+    class Selector {
+      Object choose(Object first, Object second, bool chooseFirst) {
+        if (chooseFirst) return first;
+        return second;
+      }
+    }
+    int main(int n, Object first, Object second) {
+      final selector = Selector();
+      var sum = 0;
+      for (var i = 0; i < n; i++) {
+        var selected = selector.choose(first, second, i % 2 == 0);
+        if (selected == first) { sum += 1; } else { sum += 2; }
+      }
+      return sum;
+    }
+  ''');
+  final overflowArguments = compile('''
+    class Combiner {
+      int combine(int a, int b, int c, int d) => a + b + c + d;
+    }
+    int main(int n) {
+      final combiner = Combiner();
+      var sum = 0;
+      for (var i = 0; i < n; i++) { sum += combiner.combine(i, 1, 2, 3); }
+      return sum;
+    }
+  ''');
   var checksum = 0;
   print('typed_calls iterations=$iterations samples=$samples');
   for (final (name, program, expected, objectArguments) in [
     ('primitive', primitive, iterations * 3, const <Object?>[]),
     ('mixed', mixed, iterations + iterations ~/ 2, objects),
+    ('method', method, iterations * 3, const <Object?>[]),
+    (
+      'polymorphic',
+      polymorphic,
+      iterations * (iterations - 1) ~/ 2 + iterations + 2 * (iterations ~/ 2),
+      const <Object?>[],
+    ),
+    ('boxed-arguments', boxedArguments, iterations + iterations ~/ 2, objects),
+    (
+      'overflow-arguments',
+      overflowArguments,
+      iterations * (iterations - 1) ~/ 2 + 6 * iterations,
+      const <Object?>[],
+    ),
   ]) {
     for (var warm = 0; warm < 5; warm++) {
       checksum +=

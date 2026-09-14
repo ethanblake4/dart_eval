@@ -15,6 +15,8 @@ import '../../ir/closures.dart' as closures;
 import '../../runtime/typed/typed_ops.g.dart';
 import '../../runtime/typed/typed_program.dart';
 import '../../runtime/typed/typed_function.dart';
+import '../../runtime/typed/typed_class.dart';
+import '../../runtime/typed/typed_call_site.dart';
 import '../context.dart';
 import '../offset_tracker.dart';
 import 'representation.dart';
@@ -90,6 +92,8 @@ class TypedBackend {
   final integers = <int>[];
   final doubles = <double>[];
   final objects = <Object?>[];
+  final _classIndices = <(int, String), int>{};
+  final _callSites = <TypedCallSite>[];
 
   static final _codes = {
     for (var i = 0; i < TypedOp.instructions.length; i++)
@@ -112,18 +116,49 @@ class TypedBackend {
     if (id == null)
       throw ArgumentError('Unknown entrypoint $library::$function');
     final reachable = <int>[id];
+    final classAllocations = <objects_ir.CreateClass>[];
     for (var next = 0; next < reachable.length; next++) {
       final graph = context.ssaFunctionGraphs[reachable[next]]!;
       for (final block in graph.graph.vertices) {
-        for (final op in graph[block]!.code.whereType<flow.Call>()) {
-          final callee = _resolveFunction(op.target);
-          if (!reachable.contains(callee)) reachable.add(callee);
+        for (final op in graph[block]!.code) {
+          if (op is flow.Call) {
+            final callee = _resolveFunction(op.target);
+            if (!reachable.contains(callee)) reachable.add(callee);
+          } else if (op is objects_ir.CreateClass) {
+            final key = (op.library, op.name);
+            if (_classIndices.containsKey(key)) continue;
+            _classIndices[key] = classAllocations.length;
+            classAllocations.add(op);
+            final members =
+                context.instanceDeclarationPositions[op.library]![op.name]!;
+            for (var kind = 0; kind < 3; kind++) {
+              for (final target in (members[kind] as Map).values.cast<int>()) {
+                if (target >= 0 && !reachable.contains(target)) {
+                  reachable.add(target);
+                }
+              }
+            }
+          }
         }
       }
     }
     final indices = {
       for (var i = 0; i < reachable.length; i++) reachable[i]: i,
     };
+    final libraries = {
+      for (final entry in context.libraryMap.entries) entry.value: entry.key,
+    };
+    final classes = <TypedClass>[
+      for (final allocation in classAllocations)
+        TypedClass(
+          allocation.name,
+          library: libraries[allocation.library]!,
+          valueCount: allocation.valuesLength,
+          getters: _classMembers(allocation, 0, indices),
+          setters: _classMembers(allocation, 1, indices),
+          methods: _classMembers(allocation, 2, indices),
+        ),
+    ];
     final compiled = [
       for (final functionId in reachable) _compileFunction(functionId, indices),
     ];
@@ -152,6 +187,7 @@ class TypedBackend {
           boolSpillCount: function.spills[2],
           objectSpillCount: function.spills[3],
           argumentKinds: function.argumentKinds,
+          resultKind: function.resultKind,
           objectOutgoingCount: function.outgoing,
         ),
       );
@@ -163,13 +199,43 @@ class TypedBackend {
       doubles: doubles,
       objects: objects,
       functions: functions,
+      classes: classes,
+      callSites: _callSites,
     );
   }
 
+  Map<String, int> _classMembers(
+    objects_ir.CreateClass allocation,
+    int kind,
+    Map<int, int> indices,
+  ) {
+    final members =
+        context.instanceDeclarationPositions[allocation.library]![allocation
+                .name]![kind]
+            as Map;
+    return {
+      for (final entry in members.entries)
+        if (entry.value as int >= 0) entry.key as String: indices[entry.value]!,
+    };
+  }
+
   int _resolveFunction(DeferredOrOffset target) {
-    final id =
-        target.offset ??
-        context.topLevelDeclarationPositions[target.file]?[target.name];
+    var id = target.offset;
+    if (id == null && target.className != null) {
+      final members =
+          context.instanceDeclarationPositions[target.file]?[target.className];
+      if (members != null) {
+        final kind = target.methodType;
+        if (kind != null) {
+          id = (members[kind] as Map)[target.name] as int?;
+        } else {
+          for (var kind = 0; kind < 3; kind++) {
+            id ??= (members[kind] as Map)[target.name] as int?;
+          }
+        }
+      }
+    }
+    id ??= context.topLevelDeclarationPositions[target.file]?[target.name];
     if (id == null || !context.ssaFunctionGraphs.containsKey(id)) {
       throw UnsupportedError('Typed direct-call target $target');
     }
@@ -179,7 +245,6 @@ class TypedBackend {
   _FunctionCode _compileFunction(int id, Map<int, int> functionIndices) {
     final spillCounts = [0, 0, 0, 0];
     var outgoingCount = 0;
-    var methodCounter = 0;
     final sourceGraph = context.ssaFunctionGraphs[id]!;
     final representations = analyzeRepresentations(
       sourceGraph,
@@ -296,7 +361,90 @@ class TypedBackend {
           }
           continue;
         }
-        if (op is closures.InvokeClosure || op is objects_ir.InvokeDynamic) {
+        if (op is objects_ir.InvokeDynamic ||
+            op is objects_ir.LoadPropertyDynamic ||
+            op is objects_ir.SetPropertyDynamic) {
+          final (receiver, name, arguments, kind) = switch (op) {
+            objects_ir.InvokeDynamic(:final object, :final name, :final args) =>
+              (object, name, args, TypedMemberKind.method),
+            objects_ir.LoadPropertyDynamic(:final object, :final name) => (
+              object,
+              name,
+              <cfg.SSA>[],
+              TypedMemberKind.getter,
+            ),
+            objects_ir.SetPropertyDynamic(
+              :final object,
+              :final name,
+              :final variable,
+            ) =>
+              (object, name, [variable], TypedMemberKind.setter),
+            _ => throw StateError('Unreachable member operation'),
+          };
+          final callLayout = TypedCallLayout(
+            List.filled(arguments.length + 1, TypedArgumentKind.object),
+          );
+          final registerArguments = <cfg.SSA>[];
+          final argumentRegisters = <int>[];
+          final inputs = [receiver, ...arguments];
+          for (var index = 0; index < inputs.length; index++) {
+            final input = value(inputs[index]);
+            final location = callLayout.arguments[index];
+            if (location.overflowIndex == null) {
+              registerArguments.add(input);
+              argumentRegisters.add(
+                _banks[location.bank.index][location.index],
+              );
+            } else {
+              lowered.add(
+                TypedOperation(
+                  _named(['rOutgoing', 'sOutgoing', 'cOutgoing']),
+                  null,
+                  [input],
+                  immediate: location.overflowIndex,
+                ),
+              );
+            }
+          }
+          if (callLayout.overflowCount > 0) {
+            final overflow = temporary('virtualOutgoing');
+            lowered.add(
+              TypedOperation(_named(['cLoadOutgoing']), overflow, []),
+            );
+            registerArguments.add(overflow);
+            argumentRegisters.add(8);
+            if (callLayout.overflowCount > outgoingCount) {
+              outgoingCount = callLayout.overflowCount;
+            }
+          }
+          var siteIndex = _callSites.indexWhere(
+            (site) =>
+                site.name == name &&
+                site.argumentCount == arguments.length &&
+                site.kind == kind,
+          );
+          if (siteIndex < 0) {
+            siteIndex = _callSites.length;
+            _callSites.add(
+              TypedCallSite(name, argumentCount: arguments.length, kind: kind),
+            );
+          }
+          lowered.add(
+            TypedOperation(
+              _named(['callVirtual']),
+              op.writesTo == null ? null : value(op.writesTo!),
+              registerArguments,
+              fixedVariant: cfg.Variant(
+                result: op.writesTo == null ? null : 6,
+                arguments: argumentRegisters,
+              ),
+              immediate: siteIndex,
+              clobbers: {0, 1, 2, 3, 4, 5, 6, 7, 8},
+            ),
+          );
+          continue;
+        }
+        if (op is closures.InvokeClosure) {
           final (receiver, arguments) = switch (op) {
             closures.InvokeClosure(
               :final closure,
@@ -305,10 +453,6 @@ class TypedBackend {
             )
                 when named.isEmpty =>
               (closure, positional),
-            objects_ir.InvokeDynamic(:final object, :final args) => (
-              object,
-              args,
-            ),
             _ => throw UnsupportedError(
               'Typed host calls require positional arguments',
             ),
@@ -331,24 +475,11 @@ class TypedBackend {
           }
           if (arguments.length > outgoingCount)
             outgoingCount = arguments.length;
-          final method = op is objects_ir.InvokeDynamic && op.name != 'call'
-              ? cfg.SSA('typed:method${methodCounter++}', version: 0, type: 3)
-              : null;
-          if (method != null) {
-            lowered.add(
-              TypedOperation(
-                _named(['rConstant', 'sConstant', 'cConstant']),
-                method,
-                [],
-                immediate: _object((op as objects_ir.InvokeDynamic).name),
-              ),
-            );
-          }
           lowered.add(
             TypedOperation(
-              _named([method == null ? 'callHost' : 'callMethod']),
-              value(op.writesTo!),
-              [value(receiver), if (method != null) method],
+              _named(['callHost']),
+              value(op.writesTo),
+              [value(receiver)],
               immediate: arguments.length,
               clobbers: {0, 1, 2, 3, 4, 5, 6, 7, 8},
             ),
@@ -556,6 +687,28 @@ class TypedBackend {
           ),
           collection.ListLength(:final list) => make(['aListLengthR'], [list]),
           primitives.BoxList(:final source) => make(['rBoxList'], [source]),
+          objects_ir.CreateClass(:final library, :final name, :final $super) =>
+            make(
+              ['rCreateClassR'],
+              [$super],
+              immediate: _classIndices[(library, name)],
+            ),
+          objects_ir.LoadPropertyStatic(:final object, :final index) => make(
+            ['rLoadPropertyR'],
+            [object],
+            immediate: index,
+          ),
+          objects_ir.SetPropertyStatic(
+            :final object,
+            :final index,
+            :final value,
+          ) =>
+            make(['setPropertyRS'], [object, value], immediate: index),
+          objects_ir.LoadSuper(:final object) => make(
+            ['rLoadSuperR'],
+            [object],
+          ),
+          objects_ir.LoadThis(:final object) => make(['rLoadThisR'], [object]),
           objects_ir.DynamicEquals(:final left, :final right) => make(
             [
               for (final flag in ['e', 'x'])
@@ -620,6 +773,7 @@ class TypedBackend {
             [value],
             terminal: true,
           ),
+          flow.Return(value: null) => make(['returnNull'], [], terminal: true),
           flow.Jump(:final target) => make(
             ['jump'],
             [],
@@ -822,6 +976,9 @@ class TypedBackend {
       spillCounts,
       argumentKinds,
       outgoingCount,
+      signature.result == null
+          ? null
+          : TypedArgumentKind.values[signature.result!.index],
     );
   }
 
@@ -885,9 +1042,16 @@ class TypedBackend {
 }
 
 class _FunctionCode {
-  _FunctionCode(this.code, this.spills, this.argumentKinds, this.outgoing);
+  _FunctionCode(
+    this.code,
+    this.spills,
+    this.argumentKinds,
+    this.outgoing,
+    this.resultKind,
+  );
   final Uint8List code;
   final List<int> spills;
   final List<TypedArgumentKind> argumentKinds;
   final int outgoing;
+  final TypedArgumentKind? resultKind;
 }

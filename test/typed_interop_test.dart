@@ -25,12 +25,60 @@ class _EqualInstance implements $Instance {
   Object get $reified => throw StateError('Must preserve instance');
 }
 
+class _BridgeParent implements $Instance {
+  @override
+  $Value? $getProperty(Runtime runtime, String identifier) =>
+      switch (identifier) {
+        'echo' => $Function((runtime, target, args) => args.single),
+        'toString' => $Function(
+          (runtime, target, args) => $String('bridge parent'),
+        ),
+        '==' => $Function((runtime, target, args) => $bool(true)),
+        _ => throw StateError('Unknown bridge property $identifier'),
+      };
+  @override
+  void $setProperty(Runtime runtime, String identifier, $Value value) =>
+      throw UnimplementedError();
+  @override
+  int $getRuntimeType(Runtime runtime) => throw UnimplementedError();
+  @override
+  Object get $value => throw StateError('Must preserve instance');
+  @override
+  Object get $reified => throw StateError('Must preserve instance');
+}
+
 void main() {
   final runtime = Runtime.ofProgram(
     Compiler().compile({
       'interop': {'main.dart': 'int main() => 0;'},
     }),
   );
+  test(
+    'typed children invoke inherited bridge methods and Object overrides',
+    () {
+      final program = TypedProgram(
+        Uint8List.fromList([TypedOp.returnNull]),
+        classes: [TypedClass('Child', library: 'test', valueCount: 0)],
+      );
+      final parent = TypedInstance(program, 0, _BridgeParent());
+      final child = TypedInstance(program, 0, parent);
+      final argument = _EqualInstance();
+      expect(
+        identical(
+          TypedInterop.invoke(runtime, child, 'echo', [argument]),
+          argument,
+        ),
+        isTrue,
+      );
+      expect(TypedInterop.invoke(runtime, child, 'echo', [null]), isNull);
+      expect(
+        (TypedInterop.invoke(runtime, child, 'toString', []) as $String).$value,
+        'bridge parent',
+      );
+      expect(TypedInterop.equals(runtime, child, argument), isTrue);
+    },
+  );
+
   test('typed methods invoke an existing evaluated class instance', () {
     final existing = Runtime.ofProgram(
       Compiler().compile({

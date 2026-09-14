@@ -65,11 +65,15 @@ class TypedFunction {
     this.objectSpillCount = 0,
     this.argumentKinds = const [],
     this.objectOutgoingCount = 0,
+    this.resultKind = TypedArgumentKind.object,
   });
 
   final int entry;
   final int intSpillCount, doubleSpillCount, boolSpillCount, objectSpillCount;
   final List<TypedArgumentKind> argumentKinds;
+
+  /// Null denotes a void result.
+  final TypedArgumentKind? resultKind;
 
   /// Capacity of the single list used to stage overflow and host arguments.
   final int objectOutgoingCount;

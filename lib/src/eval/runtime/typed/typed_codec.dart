@@ -1,24 +1,28 @@
 import 'dart:typed_data';
 
 import 'typed_function.dart';
+import 'typed_class.dart';
+import 'typed_call_site.dart';
 import 'typed_program.dart';
 
 /// Versioned little-endian format, separate from the generic register format.
 abstract final class TypedCodec {
   static const magic = 0x54564544; // DEVT
-  static const version = 105;
+  static const version = 106;
 
   static ByteData write(TypedProgram program) {
     final objects = _writeObjects(program.objects);
+    final metadata = _writeMetadata(program);
     final result = ByteData(
-      36 +
+      48 +
           program.functions.fold<int>(
             0,
-            (size, f) => size + 28 + f.argumentKinds.length,
+            (size, f) => size + 29 + f.argumentKinds.length,
           ) +
           program.integers.length * 8 +
           program.doubles.length * 8 +
           objects.length +
+          metadata.length +
           program.code.length,
     );
     var offset = 0;
@@ -36,15 +40,21 @@ abstract final class TypedCodec {
     u32(program.code.length);
     u32(program.objects.length);
     u32(objects.length);
+    u32(program.classes.length);
+    u32(program.callSites.length);
+    u32(metadata.length);
     for (final function in program.functions) {
       for (final value in function.layout) {
         u32(value);
       }
       u32(function.argumentKinds.length);
+      result.setUint8(offset++, function.resultKind?.index ?? 255);
       for (final kind in function.argumentKinds) {
         result.setUint8(offset++, kind.index);
       }
     }
+    result.buffer.asUint8List(offset, metadata.length).setAll(0, metadata);
+    offset += metadata.length;
     for (final value in program.integers) {
       result.setInt64(offset, value, Endian.little);
       offset += 8;
@@ -61,7 +71,7 @@ abstract final class TypedCodec {
 
   static TypedProgram read(ByteBuffer buffer) {
     final input = ByteData.view(buffer);
-    if (input.lengthInBytes < 36) {
+    if (input.lengthInBytes < 48) {
       throw const FormatException('Truncated typed program header');
     }
     var offset = 0;
@@ -78,25 +88,33 @@ abstract final class TypedCodec {
     final functionCount = u32(), integerCount = u32(), doubleCount = u32();
     final codeLength = u32();
     final objectCount = u32(), objectLength = u32();
+    final classCount = u32(), callSiteCount = u32(), metadataLength = u32();
     final sectionsLength =
-        integerCount * 8 + doubleCount * 8 + objectLength + codeLength;
-    final minimumLength =
-        36 +
-        functionCount * 28 +
         integerCount * 8 +
         doubleCount * 8 +
         objectLength +
-        codeLength;
-    if (minimumLength > input.lengthInBytes || objectCount > objectLength) {
+        codeLength +
+        metadataLength;
+    final minimumLength = 48 + functionCount * 29 + sectionsLength;
+    if (functionCount == 0 ||
+        functionCount > 65536 ||
+        classCount > 65536 ||
+        callSiteCount > 65536 ||
+        minimumLength > input.lengthInBytes ||
+        objectCount > objectLength) {
       throw const FormatException('Invalid typed bytecode section lengths');
     }
     final functions = <TypedFunction>[];
     for (var i = 0; i < functionCount; i++) {
-      if (offset + 28 > input.lengthInBytes - sectionsLength) {
+      if (offset + 29 > input.lengthInBytes - sectionsLength) {
         throw const FormatException('Truncated typed function layout');
       }
       final layout = List.generate(6, (_) => u32());
       final kindCount = u32();
+      final resultTag = input.getUint8(offset++);
+      if (resultTag != 255 && resultTag >= TypedArgumentKind.values.length) {
+        throw const FormatException('Invalid result representation');
+      }
       if (kindCount > 65544 ||
           kindCount > input.lengthInBytes - sectionsLength - offset) {
         throw const FormatException('Invalid argument representation count');
@@ -118,12 +136,21 @@ abstract final class TypedCodec {
           objectSpillCount: layout[4],
           objectOutgoingCount: layout[5],
           argumentKinds: List.unmodifiable(kinds),
+          resultKind: resultTag == 255
+              ? null
+              : TypedArgumentKind.values[resultTag],
         ),
       );
     }
     if (offset + sectionsLength != input.lengthInBytes) {
       throw const FormatException('Invalid typed bytecode section lengths');
     }
+    final (classes, callSites) = _readMetadata(
+      ByteData.view(buffer, offset, metadataLength),
+      classCount,
+      callSiteCount,
+    );
+    offset += metadataLength;
     final integers = List.generate(integerCount, (_) {
       final value = input.getInt64(offset, Endian.little);
       offset += 8;
@@ -145,8 +172,132 @@ abstract final class TypedCodec {
       doubles: doubles,
       objects: objects,
       functions: functions,
+      classes: classes,
+      callSites: callSites,
       entryFunction: entry,
     );
+  }
+
+  static Uint8List _writeMetadata(TypedProgram program) {
+    final bytes = BytesBuilder(copy: false);
+    void u32(int value) {
+      bytes.add(
+        (ByteData(4)..setUint32(0, value, Endian.little)).buffer.asUint8List(),
+      );
+    }
+
+    void string(String value) {
+      u32(value.length);
+      final data = ByteData(value.length * 2);
+      for (var i = 0; i < value.length; i++) {
+        data.setUint16(i * 2, value.codeUnitAt(i), Endian.little);
+      }
+      bytes.add(data.buffer.asUint8List());
+    }
+
+    void members(Map<String, int> values) {
+      u32(values.length);
+      for (final entry in values.entries) {
+        string(entry.key);
+        u32(entry.value);
+      }
+    }
+
+    for (final type in program.classes) {
+      string(type.name);
+      string(type.library);
+      u32(type.valueCount);
+      members(type.methods);
+      members(type.getters);
+      members(type.setters);
+    }
+    for (final site in program.callSites) {
+      string(site.name);
+      u32(site.argumentCount);
+      u32(site.kind.index);
+    }
+    return bytes.takeBytes();
+  }
+
+  static (List<TypedClass>, List<TypedCallSite>) _readMetadata(
+    ByteData input,
+    int classCount,
+    int callSiteCount,
+  ) {
+    var offset = 0;
+    void require(int count) {
+      if (count > input.lengthInBytes - offset) {
+        throw const FormatException('Truncated typed class metadata');
+      }
+    }
+
+    int u32() {
+      require(4);
+      final value = input.getUint32(offset, Endian.little);
+      offset += 4;
+      return value;
+    }
+
+    String string() {
+      final length = u32();
+      require(length * 2);
+      final value = String.fromCharCodes(
+        List.generate(
+          length,
+          (i) => input.getUint16(offset + i * 2, Endian.little),
+        ),
+      );
+      offset += length * 2;
+      return value;
+    }
+
+    Map<String, int> members() {
+      final count = u32();
+      require(count * 8);
+      final values = <String, int>{};
+      for (var i = 0; i < count; i++) {
+        final name = string();
+        if (values.containsKey(name)) {
+          throw const FormatException('Duplicate typed class member');
+        }
+        values[name] = u32();
+      }
+      return values;
+    }
+
+    require(classCount * 24 + callSiteCount * 12);
+    final classes = <TypedClass>[];
+    for (var i = 0; i < classCount; i++) {
+      classes.add(
+        TypedClass(
+          string(),
+          library: string(),
+          valueCount: u32(),
+          methods: members(),
+          getters: members(),
+          setters: members(),
+        ),
+      );
+    }
+    final callSites = <TypedCallSite>[];
+    for (var i = 0; i < callSiteCount; i++) {
+      final name = string(), argumentCount = u32();
+      final kind = u32();
+      if (kind >= TypedMemberKind.values.length) {
+        throw const FormatException('Invalid typed member kind');
+      }
+      callSites.add(
+        TypedCallSite(
+          name,
+          argumentCount: argumentCount,
+          kind: TypedMemberKind.values[kind],
+        ),
+      );
+    }
+    if (offset != input.lengthInBytes) {
+      throw const FormatException('Invalid typed class metadata length');
+    }
+    return (classes, callSites);
   }
 
   // Tags: null, false, true, int64, float64, UTF-16 string. Live objects

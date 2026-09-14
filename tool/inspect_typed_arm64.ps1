@@ -13,8 +13,8 @@ $symbolsPath = Join-Path $Output 'symbols.txt'
 if ($LASTEXITCODE -ne 0) { throw 'ARM64 cross-compilation failed' }
 & $Objdump --syms $snapshotPath | Set-Content $symbolsPath
 if ($LASTEXITCODE -ne 0) { throw 'Symbol extraction failed' }
-$symbol = Select-String -Path $symbolsPath -Pattern '^([0-9a-f]+)\s+.*\.text\s+([0-9a-f]+)\s+TypedMachine\.run$'
-if (-not $symbol) { throw 'TypedMachine.run symbol not found' }
+$symbol = Select-String -Path $symbolsPath -Pattern '^([0-9a-f]+)\s+.*\.text\s+([0-9a-f]+)\s+TypedMachine\.runRaw$'
+if (-not $symbol) { throw 'TypedMachine.runRaw symbol not found' }
 $start = [Convert]::ToInt64($symbol.Matches[0].Groups[1].Value, 16)
 $size = [Convert]::ToInt64($symbol.Matches[0].Groups[2].Value, 16)
 $startOption = '--start-address=0x{0:x}' -f $start

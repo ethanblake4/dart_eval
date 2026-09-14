@@ -193,6 +193,22 @@ final class SetPropertyDynamic extends Operation {
   }
 }
 
+/// The source-level receiver, distinct from its lexical superclass field view.
+final class LoadThis extends Operation {
+  LoadThis(this.target, this.object);
+  final SSA target;
+  final SSA object;
+  @override
+  Set<SSA> get readsFrom => {object};
+  @override
+  SSA get writesTo => target;
+  @override
+  String toString() => '$target = loadthis $object';
+  @override
+  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) =>
+      LoadThis(writesTo ?? target, readsFrom?.first ?? object);
+}
+
 final class LoadSuper extends Operation {
   final SSA target;
   final SSA object;

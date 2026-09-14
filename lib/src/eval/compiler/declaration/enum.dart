@@ -13,6 +13,7 @@ import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/globals.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
 import 'package:dart_eval/src/eval/ir/function.dart';
+import 'package:dart_eval/src/eval/ir/representation.dart';
 
 void compileEnumDeclaration(
   CompilerContext ctx,
@@ -53,6 +54,9 @@ void compileEnumDeclaration(
 
   ctx.resetStack(position: 0);
   final pos = beginMethod(ctx, d, d.offset, '$clsName.index (get)');
+  ctx.functionSignatures[pos] = const MachineFunctionSignature([
+    MachineRepresentation.object,
+  ], MachineRepresentation.object);
   final receiver = SSA('arg_0');
   ctx.pushOp(Parameter(receiver, 0));
   final enumIndex = ctx.svar('enum_index');

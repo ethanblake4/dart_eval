@@ -10,7 +10,12 @@ Variable compileThisExpression(ThisExpression e, CompilerContext ctx) {
   if (ctx.currentClass == null) {
     throw CompileError("Cannot use 'this' outside of a class context");
   }
-  return ctx.lookupLocal('#this')!;
+  final receiver = ctx.lookupLocal('#this')!;
+  return Variable.ssa(
+    ctx,
+    LoadThis(ctx.svar('this'), receiver.ssa),
+    receiver.type,
+  );
 }
 
 Variable compileSuperExpression(SuperExpression e, CompilerContext ctx) {
@@ -26,6 +31,11 @@ Variable compileSuperExpression(SuperExpression e, CompilerContext ctx) {
   }
 
   final $this = ctx.lookupLocal('#this')!;
-  final v = Variable.ssa(ctx, LoadSuper(ctx.svar('super'), $this.ssa), type);
+  final v = Variable.ssa(
+    ctx,
+    LoadSuper(ctx.svar('super'), $this.ssa),
+    type,
+    concreteTypes: [type],
+  );
   return v;
 }

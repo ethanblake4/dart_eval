@@ -21,6 +21,7 @@ import 'package:dart_eval/src/eval/ir/bridge.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
 import 'package:dart_eval/src/eval/ir/function.dart';
+import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 
 import '../variable.dart';
 
@@ -97,6 +98,9 @@ void compileConstructorDeclaration(
   );
 
   final superParams = <String>[];
+  final parameterRepresentations = <MachineRepresentation>[
+    if (isEnum) ...[MachineRepresentation.object, MachineRepresentation.object],
+  ];
   var i = parent is EnumDeclaration ? 2 : 0;
 
   for (final param in resolvedParams) {
@@ -122,6 +126,11 @@ void compileConstructorDeclaration(
       );
       type0 ??= V?.type;
       type0 ??= CoreTypes.dynamic.ref(ctx);
+      parameterRepresentations.add(
+        representationForType(
+          type0.copyWith(boxed: !type0.isUnboxedAcrossFunctionBoundaries),
+        ),
+      );
 
       vrep = Variable.of(
         ctx,
@@ -132,6 +141,11 @@ void compileConstructorDeclaration(
       fieldFormalNames.add(p.name.lexeme);
     } else if (p is SuperFormalParameter) {
       final type = resolveSuperFormalType(ctx, ctx.library, p, d);
+      parameterRepresentations.add(
+        representationForType(
+          type.copyWith(boxed: !type.isUnboxedAcrossFunctionBoundaries),
+        ),
+      );
       vrep = Variable.of(
         ctx,
         SSA('arg_$i'),
@@ -148,6 +162,7 @@ void compileConstructorDeclaration(
         boxed: !unboxedAcrossFunctionBoundaries.contains(type),
       );
       vrep = Variable.of(ctx, SSA('arg_$i'), type);
+      parameterRepresentations.add(representationForType(type));
     }
 
     ctx.setLocal(p.name!.lexeme, vrep);
@@ -156,6 +171,11 @@ void compileConstructorDeclaration(
   }
 
   final clsType = TypeRef.lookupDeclaration(ctx, ctx.library, parent);
+  ctx.functionSignatures[ctx.topLevelDeclarationPositions[ctx.library]![n]!] =
+      MachineFunctionSignature(
+        parameterRepresentations,
+        MachineRepresentation.object,
+      );
 
   // Handle factory constructor
   if (d.factoryKeyword != null) {
@@ -494,6 +514,11 @@ void compileDefaultConstructor(
   );
 
   final isEnum = parent is EnumDeclaration;
+  ctx.functionSignatures[ctx.topLevelDeclarationPositions[ctx
+      .library]![n]!] = MachineFunctionSignature(
+    isEnum ? [MachineRepresentation.object, MachineRepresentation.object] : [],
+    MachineRepresentation.object,
+  );
   ctx.beginAllocScope(existingAllocLen: isEnum ? 2 : 0);
   ctx.scopeFrameOffset += isEnum ? 2 : 0;
   if (isEnum) {

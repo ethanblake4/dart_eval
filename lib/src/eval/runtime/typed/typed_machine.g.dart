@@ -3,17 +3,29 @@ import 'typed_ops.g.dart';
 import 'typed_program.dart';
 import 'typed_frame.dart';
 import 'typed_interop.dart';
+import 'typed_instance.dart';
+import 'typed_dispatch.dart';
+import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/stdlib/core.dart';
 
 abstract final class TypedMachine {
+  /// Public host boundary. Internal calls keep their machine representation.
+  static Object? run(TypedProgram program, {
+      List<int> intArguments = const [], List<double> doubleArguments = const [],
+      List<bool> boolArguments = const [], List<Object?> objectArguments = const [], Runtime? runtime}) =>
+    TypedInterop.exportExternal(runRaw(program, intArguments: intArguments,
+      doubleArguments: doubleArguments, boolArguments: boolArguments,
+      objectArguments: objectArguments, runtime: runtime));
+
   /// Fixed scalar banks stay in typed locals across the dispatch loop.
   @pragma('vm:never-inline')
-  static Object? run(TypedProgram program, {
+  static Object? runRaw(TypedProgram program, {
+      int? entryFunction,
       List<int> intArguments = const [], List<double> doubleArguments = const [],
       List<bool> boolArguments = const [], List<Object?> objectArguments = const [], Runtime? runtime}) {
     final code = program.code;
-    final entry = program.functions[program.entryFunction];
+    final entry = program.functions[entryFunction ?? program.entryFunction];
     final arguments = TypedEntry.prepare(entry, intArguments, doubleArguments, boolArguments, objectArguments, runtime);
     var frame = TypedFrame(entry);
     Object? r = arguments.r, s = arguments.s, c = arguments.c;
@@ -454,7 +466,7 @@ abstract final class TypedMachine {
           r = frame.objectSpills[index];
           continue dispatch;
         case TypedOp.rReturn:
-          if (frame.parent == null) return TypedInterop.exportExternal(r);
+          if (frame.parent == null) return r;
           final returned = r;
           pc = frame.returnPc;
           frame = frame.leave();
@@ -474,7 +486,7 @@ abstract final class TypedMachine {
           s = frame.objectSpills[index];
           continue dispatch;
         case TypedOp.sReturn:
-          if (frame.parent == null) return TypedInterop.exportExternal(s);
+          if (frame.parent == null) return s;
           final returned = s;
           pc = frame.returnPc;
           frame = frame.leave();
@@ -494,7 +506,7 @@ abstract final class TypedMachine {
           c = frame.objectSpills[index];
           continue dispatch;
         case TypedOp.cReturn:
-          if (frame.parent == null) return TypedInterop.exportExternal(c);
+          if (frame.parent == null) return c;
           final returned = c;
           pc = frame.returnPc;
           frame = frame.leave();
@@ -655,6 +667,43 @@ abstract final class TypedMachine {
           continue dispatch;
         case TypedOp.rBoxList:
           r = $List.wrap(r as List);
+          continue dispatch;
+        case TypedOp.rCreateClassR:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          r = TypedInstance(program, index, r as $Instance?);
+          continue dispatch;
+        case TypedOp.rLoadPropertyR:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          r = (r as TypedInstance).values[index];
+          continue dispatch;
+        case TypedOp.setPropertyRS:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          (r as TypedInstance).values[index] = s;
+          continue dispatch;
+        case TypedOp.rLoadSuperR:
+          r = (r as TypedInstance).superclass;
+          continue dispatch;
+        case TypedOp.rLoadThisR:
+          r = (r as TypedInstance).dispatchRoot;
+          continue dispatch;
+        case TypedOp.returnNull:
+          if (frame.parent == null) return null;
+          pc = frame.returnPc;
+          frame = frame.leave();
+          r = null; s = null; c = null;
+          continue dispatch;
+        case TypedOp.callVirtual:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          final member = TypedDispatch.resolve(program, r, index);
+          if (member != null) {
+            final function = member.function;
+            r = member.receiver;
+            frame = frame.enter(function, pc);
+            pc = function.entry;
+          } else {
+            r = TypedDispatch.invoke(program, runtime, r, s, c, index);
+            s = null; c = null;
+          }
           continue dispatch;
         case TypedOp.jumpETrueShort:
           if (e) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }

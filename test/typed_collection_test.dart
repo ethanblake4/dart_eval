@@ -28,15 +28,40 @@ void main() {
     """);
     expect(TypedMachine.run(program, boolArguments: [false]), 1);
     expect(TypedMachine.run(program, boolArguments: [true]), 2);
-    expect(
-      () => compile("""
+    final mixed = compile("""
       int main(bool choose, List<int> external) {
         var values = [1];
         if (choose) { values = external; }
         return values.length;
       }
-    """),
-      throwsUnsupportedError,
+    """);
+    expect(opNames(mixed), contains('callVirtual'));
+    final runtime = Runtime.ofProgram(
+      Compiler().compile({
+        'typed': {'main.dart': 'void main() {}'},
+      }),
+    );
+    expect(
+      TypedMachine.run(
+        mixed,
+        boolArguments: [false],
+        runtime: runtime,
+        objectArguments: [
+          $List.wrap([$int(2), $int(3)]),
+        ],
+      ),
+      1,
+    );
+    expect(
+      TypedMachine.run(
+        mixed,
+        boolArguments: [true],
+        runtime: runtime,
+        objectArguments: [
+          $List.wrap([$int(2), $int(3)]),
+        ],
+      ),
+      2,
     );
   });
 

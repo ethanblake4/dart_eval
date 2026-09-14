@@ -129,7 +129,7 @@ through boxing, assignments and joins where every source is known. It does not
 replace an unknown List implementation's getter with a host List cast. Raw host
 list arguments must use the existing canonical wrapper convention, for example
 `$List.wrap([$int(7)])`, or the registered bridge conversion. Typed general List
-getter dispatch remains unfinished when allocation provenance is unknown.
+getter dispatch uses the registered bridge when allocation provenance is unknown.
 
 Dedicated String registers are deferred. The full-loop experiment found shorter
 String handlers but an extra unconditional spill store on every dispatch for each
@@ -157,19 +157,69 @@ final object = Object();
 assert(identical(TypedMachine.run(program, objectArguments: [object]), object));
 ```
 
-Typed codec version 105 intentionally rejects earlier typed bytecode, because
-opcode numbering and frame layout changed. It serializes scalar/null/string
+Typed codec version 106 intentionally rejects earlier typed bytecode, because
+opcode numbering and class/signature metadata changed. It serializes scalar/null/string
 object constants, preserving UTF-16 code units and numeric bits. Live application
 objects remain valid arguments/in-memory constants but are rejected by the codec
 rather than being serialized into a lossy replacement.
 
-`compile` still uses the reference backend. Creating typed classes, maps/sets
-and closures, named callback arguments, exception handling and async/suspension
-remain unfinished. Existing evaluated method offsets refer to the supplied
-reference Runtime; this checkpoint does not link newly compiled typed class
-methods. The new bridge path is compatibility plumbing, not full typed parity.
+`compile` still uses the reference backend. Typed Map/Set construction, closure
+creation, optional/named dynamic arguments, exception handling and async/suspension
+remain unfinished. Existing reference-evaluated method offsets refer to the
+supplied reference Runtime. Typed class members use their own function table.
+
+## Native class checkpoint
+
+The compiler links reachable constructors and the members of allocated classes.
+Class tables contain library/name identity, field counts, and getter/setter/method
+function IDs. Call sites record member kind, name and positional argument count;
+unrelated classes may use the same method name with different signatures. The
+codec preserves these tables and explicit result representations.
+
+`TypedInstance` implements the existing `$Instance` bridge contract. Fields keep
+canonical language values. Superclass storage uses separate owner views, as in
+the reference runtime; source-level `this` resolves to the most-derived instance.
+Member resolution caches the owner and function, including inherited members.
+Callable fields/getters and inherited bridge methods also resolve through the
+explicit invocation adapter. Dynamic operations on standard-library wrappers
+still need a matching Runtime when they use the bridge path, including arithmetic
+whose result has remained dynamic instead of being converted to a native scalar.
+
+Ordinary same-program virtual calls enter a typed frame in the current switch.
+The receiver occupies R, the first argument S, and the second C. With more than
+two arguments, C carries the caller frame's single overflow list, starting at
+the second argument. Arguments/results use the canonical object representation;
+the compiler emits primitive boxing/unboxing. All registers are caller-clobbered,
+so the allocator saves live values. Constructors and explicit superclass calls
+use direct function IDs. Void returns have an explicit null-return instruction.
+
+Bridge and cross-program calls need argument snapshots and explicit entry/result
+adapters. Bound method tear-offs currently use this adapter path too. Operators
+with scalar return signatures also use the explicit adapter when called virtually.
+These paths can reenter a Dart invocation; ordinary same-program methods do not.
+The one-child frame cache still reallocates when alternating target functions at
+the same depth. These are specific targets for subsequent call optimization.
+
+Seven class/call instructions bring the table to 196 entries. This leaves 60
+one-byte values available. Future Map/Set intrinsics should be added to the same
+generator with explicit inputs, outputs, representation, clobbers and exception
+behavior. They can use C for a collection and R/S for keys/elements, following
+List's convention, without adding permanent loop registers. Only substitute a
+native intrinsic when the compiler proves the required storage representation;
+custom collection implementations must retain virtual dispatch. Class/member
+metadata does not consume an opcode per class or method. Reinspect full-loop AOT
+output after additions: even handler-local table accesses can become loop-wide
+live registers under Dart's optimizer.
 
 ## Checkpoint and next work
+
+Native class checkpoint validation: 624 passes, 28 existing reference failures,
+six skips, zero analyzer errors. Failure names match the updated baseline. The
+previously failing Functional test 1 now passes after inherited receiver dispatch
+was corrected. Class tests execute both freshly compiled and serialized programs.
+Call benchmarks pass all checksums, including odd iteration counts. The generated
+files pass `--check`; full ARM64 add dispatch takes 38 native instructions, with
+19,700 bytes in the loop. See the assembly report for addresses and timing limits.
 
 List/String checkpoint validation: full suite 594 passes, 29 existing reference
 failures, six skips; analysis has zero errors. The regex replacement loop now
@@ -189,10 +239,17 @@ The full run function is 19,256 bytes versus 17,592, reflecting the larger
 String/List handlers. These are code measurements, not ARM64 timings.
 See [the assembly and timing report](typed-arm64-optimization.md).
 
-Next work is typed class/method linking, closure/exception conventions, and
+Next work is closure/exception conventions and
 compiler lowering for optional/named dynamic calls. Multiple-register record
 results need explicit result layouts and allocator support for multiple outputs;
 use the same register-first rule with C overflow rather than typed return lists.
 The reference VM still has its older representation helpers; typed calls no longer
 use those helpers. Continue comparing numeric and object/call workloads when
-changing the 189-case loop or extending instruction selection.
+changing the 196-case loop or extending instruction selection.
+
+For the next implementation milestone, define closure capture storage and typed
+entry signatures first, then lower creation and invocation using the register ABI.
+Keep captured language values in their compiler-selected representation and
+preserve mutation/identity across escaping closures. Measure direct, bound and
+polymorphic calls before choosing a wider frame cache or dispatch cache. Exception
+handlers need explicit spill and restoration rules before suspension is added.

@@ -54,6 +54,179 @@ TypedProgram _recursive() {
 }
 
 void main() {
+  test('codec preserves immutable classes, call sites and result kinds', () {
+    final methods = <String, int>{'read': 0};
+    final classes = [
+      TypedClass(
+        'Counter',
+        library: 'package:test/counter.dart',
+        valueCount: 2,
+        methods: methods,
+      ),
+    ];
+    final sites = [const TypedCallSite('read', argumentCount: 0)];
+    final p = TypedProgram(
+      Uint8List.fromList([TypedOp.rReturn]),
+      classes: classes,
+      callSites: sites,
+      functions: const [
+        TypedFunction(0, argumentKinds: [TypedArgumentKind.object]),
+      ],
+    );
+    methods.clear();
+    classes.clear();
+    sites.clear();
+    final restored = TypedProgram.read(p.write().buffer);
+    expect(restored.classes.single.name, 'Counter');
+    expect(restored.classes.single.library, 'package:test/counter.dart');
+    expect(restored.classes.single.valueCount, 2);
+    expect(restored.classes.single.methods, {'read': 0});
+    expect(restored.callSites.single.name, 'read');
+    expect(restored.callSites.single.argumentCount, 0);
+    expect(restored.callSites.single.kind, TypedMemberKind.method);
+    expect(restored.functions.single.resultKind, TypedArgumentKind.object);
+    expect(
+      () => restored.classes.single.methods.clear(),
+      throwsUnsupportedError,
+    );
+    expect(() => restored.callSites.clear(), throwsUnsupportedError);
+    final voidProgram = TypedProgram(
+      Uint8List.fromList([TypedOp.rReturn]),
+      functions: const [TypedFunction(0, resultKind: null)],
+    );
+    expect(
+      TypedProgram.read(voidProgram.write().buffer).functions.single.resultKind,
+      isNull,
+    );
+  });
+
+  test('validator rejects malformed class and call site signatures', () {
+    TypedProgram program({
+      List<TypedClass> classes = const [],
+      List<TypedCallSite> sites = const [],
+      List<TypedArgumentKind> args = const [TypedArgumentKind.object],
+      TypedArgumentKind? result = TypedArgumentKind.object,
+    }) => TypedProgram(
+      Uint8List.fromList([TypedOp.rReturn]),
+      classes: classes,
+      callSites: sites,
+      functions: [TypedFunction(0, argumentKinds: args, resultKind: result)],
+    );
+    for (final type in [
+      TypedClass('C', library: 'test', valueCount: -1),
+      TypedClass('C', library: 'test', valueCount: 65537),
+      TypedClass('C', library: 'test', valueCount: 0, methods: {'m': 1}),
+      TypedClass('C', library: 'test', valueCount: 0, setters: {'m': 0}),
+    ]) {
+      expect(() => program(classes: [type]), throwsFormatException);
+    }
+    final type = TypedClass(
+      'C',
+      library: 'test',
+      valueCount: 0,
+      methods: {'m': 0},
+    );
+    expect(
+      () => program(classes: [type], args: [TypedArgumentKind.integer]),
+      throwsFormatException,
+    );
+    expect(
+      () => program(
+        sites: [
+          const TypedCallSite(
+            'm',
+            argumentCount: 1,
+            kind: TypedMemberKind.getter,
+          ),
+        ],
+      ),
+      throwsFormatException,
+    );
+  });
+
+  test(
+    'unrelated classes may use the same member name with different arity',
+    () {
+      final p = TypedProgram(
+        Uint8List.fromList([TypedOp.rReturn, TypedOp.rReturn]),
+        classes: [
+          TypedClass(
+            'One',
+            library: 'test',
+            valueCount: 0,
+            methods: {'foo': 0},
+          ),
+          TypedClass(
+            'Two',
+            library: 'test',
+            valueCount: 0,
+            methods: {'foo': 1},
+          ),
+        ],
+        callSites: const [
+          TypedCallSite('foo', argumentCount: 0),
+          TypedCallSite('foo', argumentCount: 1),
+        ],
+        functions: const [
+          TypedFunction(0, argumentKinds: [TypedArgumentKind.object]),
+          TypedFunction(
+            1,
+            argumentKinds: [TypedArgumentKind.object, TypedArgumentKind.object],
+          ),
+        ],
+      );
+      expect(TypedProgram.read(p.write().buffer).callSites.length, 2);
+    },
+  );
+
+  test('class instructions validate indices and member outgoing storage', () {
+    TypedProgram program(int opcode, int index, {int outgoing = 0}) =>
+        TypedProgram(
+          Uint8List.fromList([opcode, index, 0, TypedOp.rReturn]),
+          classes: [TypedClass('C', library: 'test', valueCount: 1)],
+          callSites: const [TypedCallSite('foo', argumentCount: 3)],
+          functions: [TypedFunction(0, objectOutgoingCount: outgoing)],
+        );
+    for (final opcode in [
+      TypedOp.rCreateClassR,
+      TypedOp.rLoadPropertyR,
+      TypedOp.setPropertyRS,
+      TypedOp.callVirtual,
+    ]) {
+      expect(() => program(opcode, 1), throwsFormatException);
+    }
+    expect(
+      () => program(TypedOp.callVirtual, 0, outgoing: 1),
+      throwsFormatException,
+    );
+    expect(program(TypedOp.callVirtual, 0, outgoing: 2).callSites.length, 1);
+  });
+
+  test(
+    'codec bounds class metadata before allocation and validates result tags',
+    () {
+      final bytes = TypedProgram(
+        Uint8List.fromList([TypedOp.rReturn]),
+        classes: [TypedClass('C', library: 'test', valueCount: 0)],
+      ).write().buffer.asUint8List();
+      for (final offset in [36, 40, 44, 77]) {
+        final bad = Uint8List.fromList(bytes);
+        ByteData.sublistView(bad).setUint32(offset, 0xffffffff, Endian.little);
+        expect(() => TypedProgram.read(bad.buffer), throwsFormatException);
+      }
+      final badResult = Uint8List.fromList(bytes)..[76] = 254;
+      expect(() => TypedProgram.read(badResult.buffer), throwsFormatException);
+      for (var length = 48; length < bytes.length; length++) {
+        expect(
+          () => TypedProgram.read(
+            Uint8List.fromList(bytes.take(length).toList()).buffer,
+          ),
+          throwsFormatException,
+        );
+      }
+    },
+  );
+
   test('program freezes argument signatures before validation', () {
     final kinds = [TypedArgumentKind.integer];
     final function = TypedFunction(0, argumentKinds: kinds);
@@ -274,10 +447,10 @@ void main() {
         TypedFunction(0, argumentKinds: [TypedArgumentKind.string]),
       ],
     ).write().buffer.asUint8List();
-    final badKind = Uint8List.fromList(bytes)..[64] = 255;
+    final badKind = Uint8List.fromList(bytes)..[77] = 255;
     expect(() => TypedProgram.read(badKind.buffer), throwsFormatException);
     final badCount = Uint8List.fromList(bytes);
-    ByteData.sublistView(badCount).setUint32(60, 2, Endian.little);
+    ByteData.sublistView(badCount).setUint32(72, 2, Endian.little);
     expect(() => TypedProgram.read(badCount.buffer), throwsFormatException);
   });
   test('calls need outgoing storage only beyond the register capacity', () {
@@ -330,11 +503,11 @@ void main() {
       Uint8List.fromList([TypedOp.aReturn]),
       objects: ['abc'],
     ).write().buffer.asUint8List();
-    // The object pool follows the 36-byte header and 28-byte function layout.
-    final badTag = Uint8List.fromList(bytes)..[64] = 255;
+    // The object pool follows the 48-byte header and 29-byte function layout.
+    final badTag = Uint8List.fromList(bytes)..[77] = 255;
     expect(() => TypedProgram.read(badTag.buffer), throwsFormatException);
     final badString = Uint8List.fromList(bytes);
-    ByteData.sublistView(badString).setUint32(65, 0xffffffff, Endian.little);
+    ByteData.sublistView(badString).setUint32(78, 0xffffffff, Endian.little);
     expect(() => TypedProgram.read(badString.buffer), throwsFormatException);
     final badCount = Uint8List.fromList(bytes);
     ByteData.sublistView(badCount).setUint32(28, 0, Endian.little);

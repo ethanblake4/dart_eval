@@ -19,6 +19,9 @@ Variable compilePropertyAccess(
   Variable? cascadeTarget,
 }) {
   final L = cascadeTarget ?? compileExpression(pa.realTarget, ctx);
+  if (pa.realTarget is SuperExpression) {
+    return SuperPropertyReference(L, pa.propertyName.name).getValue(ctx, pa);
+  }
 
   if (pa.operator.type == TokenType.QUESTION_PERIOD) {
     var out = BuiltinValue().push(ctx).boxIfNeeded(ctx);
@@ -52,5 +55,8 @@ Reference compilePropertyAccessAsReference(
   Variable? cascadeTarget,
 }) {
   final L = cascadeTarget ?? compileExpression(pa.realTarget, ctx);
+  if (pa.realTarget is SuperExpression) {
+    return SuperPropertyReference(L, pa.propertyName.name);
+  }
   return IdentifierReference(L, pa.propertyName.name);
 }

@@ -35,6 +35,25 @@ Variable compileMethodInvocation(
   if (e.target != null && cascadeTarget == null) {
     try {
       L = compileExpression(e.target!, ctx);
+      if (e.target is SuperExpression) {
+        var owner = L.type.resolveTypeChain(ctx);
+        while (!(ctx.instanceDeclarationsMap[owner.file]?[owner.name]
+                ?.containsKey(e.methodName.name) ??
+            false)) {
+          final parent = owner.extendsType;
+          if (parent == null ||
+              !ctx.instanceDeclarationsMap.containsKey(parent.file)) {
+            break;
+          }
+          owner = parent.resolveTypeChain(ctx);
+          L = Variable.ssa(
+            ctx,
+            LoadSuper(ctx.svar('super'), L!.ssa),
+            owner,
+            concreteTypes: [owner],
+          );
+        }
+      }
     } on PrefixError {
       isPrefix = true;
     }
@@ -392,7 +411,16 @@ Variable _invokeWithTarget(
       );
       ctx.pushOp(Call(offset, argsPair.ssa, result: result));
     }
-  } else if (L.concreteTypes.length == 1 && dec0?.isBridge == false) {
+  } else if (L.concreteTypes.length == 1 &&
+      dec0?.isBridge == false &&
+      (e.target is SuperExpression ||
+          (ctx.instanceDeclarationPositions[L.concreteTypes.single.file]?[L
+                          .concreteTypes
+                          .single
+                          .name]?[2]
+                      as Map?)
+                  ?.containsKey(e.methodName.name) ==
+              true)) {
     final actualType = L.concreteTypes[0];
     final offset = DeferredOrOffset(
       file: actualType.file,

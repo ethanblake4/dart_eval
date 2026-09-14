@@ -12,6 +12,7 @@ import 'package:dart_eval/src/eval/ir/collection.dart';
 import 'package:dart_eval/src/eval/ir/globals.dart';
 import 'package:dart_eval/src/eval/ir/memory.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
+import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/compiler/expression/identifier.dart';
 import 'package:dart_eval/src/eval/compiler/offset_tracker.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -36,8 +37,94 @@ abstract class Reference {
   StaticDispatch? getStaticDispatch(CompilerContext ctx, [AstNode? source]);
 }
 
-/// A [Reference] with a String identifier and optional target object. Accessing its value may, depending on state and
-/// context: access a local variable, access an instance field/method, or access a global variable/top-level function.
+/// A property whose getter and setter resolve from the lexical superclass.
+class SuperPropertyReference extends IdentifierReference {
+  SuperPropertyReference(Variable super.object, super.name);
+
+  Variable _owner(CompilerContext ctx, bool forSet) {
+    var receiver = object!;
+    var type = receiver.type.resolveTypeChain(ctx);
+    while (true) {
+      final declarations = ctx.instanceDeclarationsMap[type.file]?[type.name];
+      if (declarations == null ||
+          declarations.containsKey(name) ||
+          declarations.containsKey('$name*${forSet ? 's' : 'g'}')) {
+        return receiver;
+      }
+      final parent = type.extendsType;
+      if (parent == null) return receiver;
+      type = parent.resolveTypeChain(ctx);
+      receiver = Variable.ssa(
+        ctx,
+        LoadSuper(ctx.svar('super'), receiver.ssa),
+        type,
+      );
+    }
+  }
+
+  @override
+  Variable getValue(CompilerContext ctx, [AstNode? source]) {
+    final receiver = _owner(ctx, false);
+    if (ctx
+            .topLevelDeclarationsMap[receiver.type.file]?[receiver.type.name]
+            ?.isBridge ??
+        false) {
+      return receiver.getProperty(ctx, name, source: source);
+    }
+    return Variable.ssa(
+      ctx,
+      Call(
+        DeferredOrOffset(
+          file: receiver.type.file,
+          className: receiver.type.name,
+          name: name,
+          methodType: 0,
+        ),
+        [receiver.ssa],
+        result: ctx.svar(name),
+      ),
+      resolveType(ctx, source: source).copyWith(boxed: true),
+    );
+  }
+
+  @override
+  Variable setValue(CompilerContext ctx, Variable value, [AstNode? source]) {
+    final receiver = _owner(ctx, true);
+    if (ctx
+            .topLevelDeclarationsMap[receiver.type.file]?[receiver.type.name]
+            ?.isBridge ??
+        false) {
+      return IdentifierReference(receiver, name).setValue(ctx, value, source);
+    }
+    final type = resolveType(ctx, forSet: true, source: source);
+    if (!value.type.resolveTypeChain(ctx).isAssignableTo(ctx, type)) {
+      throw CompileError(
+        'Cannot assign ${value.type} to super.$name of type $type',
+        source,
+      );
+    }
+    final boxed = value.boxIfNeeded(ctx, source);
+    ctx.pushOp(
+      Call(
+        DeferredOrOffset(
+          file: receiver.type.file,
+          className: receiver.type.name,
+          name: name,
+          methodType: 1,
+        ),
+        [receiver.ssa, boxed.ssa],
+        result: ctx.svar('super_set'),
+      ),
+    );
+    return boxed;
+  }
+
+  @override
+  StaticDispatch? getStaticDispatch(CompilerContext ctx, [AstNode? source]) =>
+      null;
+}
+
+/// A local, instance, or top-level reference with an optional target object.
 class IdentifierReference implements Reference {
   IdentifierReference(this.object, this.name);
 
@@ -513,12 +600,9 @@ class IdentifierReference implements Reference {
             offset: methodsMap[name],
           );
         } else {
-          offset = DeferredOrOffset(
-            file: actualType.file,
-            className: actualType.name,
-            methodType: 2,
-            name: name,
-          );
+          // An inherited method needs the owner's field view as its receiver.
+          // Dynamic dispatch resolves that view as well as the method offset.
+          return null;
         }
 
         return StaticDispatch(offset, returnType);
@@ -829,7 +913,7 @@ Variable _declarationToVariable(
     );
     final offset = DeferredOrOffset(
       file: decOrBridge.sourceLib,
-      name: '$name.',
+      name: '${returnType.name}.',
     );
 
     return Variable(

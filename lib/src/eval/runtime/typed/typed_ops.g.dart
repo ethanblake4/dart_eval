@@ -7,7 +7,8 @@ abstract final class TypedRegister {
 
 enum TypedImmediate { none, intConstant, doubleConstant,
   intSpill, doubleSpill, boolSpill, branch,
-  function, objectConstant, objectSpill, objectOutgoing, hostCall, shortBranch, integer, overflow }
+  function, objectConstant, objectSpill, objectOutgoing, hostCall, shortBranch, integer, overflow,
+  classIndex, field, callSite }
 
 class TypedInstruction {
   const TypedInstruction(this.name, this.inputs, this.outputs, this.immediate,
@@ -21,7 +22,7 @@ class TypedInstruction {
   /// Operand order may change during allocation without changing the result.
   /// Floating operations retain order, including NaN payload propagation.
   final bool commutative;
-  List<int> get clobberedRegisters => (immediate == TypedImmediate.function || immediate == TypedImmediate.hostCall)
+  List<int> get clobberedRegisters => (immediate == TypedImmediate.function || immediate == TypedImmediate.hostCall || immediate == TypedImmediate.callSite)
       ? const [0, 1, 2, 3, 4, 5, 6, 7, 8] : const [];
   int get length => immediate == TypedImmediate.none ? 1
       : immediate == TypedImmediate.branch ? 5 : 3;
@@ -212,11 +213,18 @@ abstract final class TypedOp {
   static const listSetCAR = 181;
   static const listAppendCR = 182;
   static const rBoxList = 183;
-  static const jumpETrueShort = 184;
-  static const jumpEFalseShort = 185;
-  static const jumpXTrueShort = 186;
-  static const jumpXFalseShort = 187;
-  static const jumpShort = 188;
+  static const rCreateClassR = 184;
+  static const rLoadPropertyR = 185;
+  static const setPropertyRS = 186;
+  static const rLoadSuperR = 187;
+  static const rLoadThisR = 188;
+  static const returnNull = 189;
+  static const callVirtual = 190;
+  static const jumpETrueShort = 191;
+  static const jumpEFalseShort = 192;
+  static const jumpXTrueShort = 193;
+  static const jumpXFalseShort = 194;
+  static const jumpShort = 195;
   static const instructions = <TypedInstruction>[
     TypedInstruction('eTrue', [], [4], TypedImmediate.none, false, false, false),
     TypedInstruction('eFalse', [], [4], TypedImmediate.none, false, false, false),
@@ -402,6 +410,13 @@ abstract final class TypedOp {
     TypedInstruction('listSetCAR', [8, 0, 6], [], TypedImmediate.none, true, false, false),
     TypedInstruction('listAppendCR', [8, 6], [], TypedImmediate.none, true, false, false),
     TypedInstruction('rBoxList', [6], [6], TypedImmediate.none, true, false, false),
+    TypedInstruction('rCreateClassR', [6], [6], TypedImmediate.classIndex, true, false, false),
+    TypedInstruction('rLoadPropertyR', [6], [6], TypedImmediate.field, true, false, false),
+    TypedInstruction('setPropertyRS', [6, 7], [], TypedImmediate.field, true, false, false),
+    TypedInstruction('rLoadSuperR', [6], [6], TypedImmediate.none, true, false, false),
+    TypedInstruction('rLoadThisR', [6], [6], TypedImmediate.none, true, false, false),
+    TypedInstruction('returnNull', [], [], TypedImmediate.none, false, true, false),
+    TypedInstruction('callVirtual', [], [], TypedImmediate.callSite, true, false, false),
     TypedInstruction('jumpETrueShort', [4], [], TypedImmediate.shortBranch, false, false, false),
     TypedInstruction('jumpEFalseShort', [4], [], TypedImmediate.shortBranch, false, false, false),
     TypedInstruction('jumpXTrueShort', [5], [], TypedImmediate.shortBranch, false, false, false),

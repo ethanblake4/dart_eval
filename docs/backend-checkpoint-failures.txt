@@ -138,13 +138,6 @@
 00:02 +228 ~2 -14: test\functional1_test.dart: Functional tests Functional test 1
 00:02 +229 ~2 -14: test\functional1_test.dart: Functional tests Functional test 1
 
-00:02 +244 ~2 -15: test\functional1_test.dart: Functional tests Functional test 1 [E]
-  Expected: $int:<45646>
-    Actual: $int:<32966>
-
-  package:matcher                   expect
-  test\functional1_test.dart 103:7  main.<fn>.<fn>
-
 00:02 +245 ~2 -15: test\lib_composition_test.dart: File and library composition Import hiding
 00:02 +246 ~2 -15: test\lib_composition_test.dart: File and library composition Import hiding
 

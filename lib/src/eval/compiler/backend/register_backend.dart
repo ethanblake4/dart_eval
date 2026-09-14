@@ -258,6 +258,9 @@ class RegisterBackend {
       objects.LoadSuper(:final object) => [
         make(RegisterOp.loadSuper, [object]),
       ],
+      objects.LoadThis(:final object) => [
+        make(RegisterOp.move, [object]),
+      ],
       types.LoadRuntimeType(:final object) => [
         make(RegisterOp.loadRuntimeType, [object]),
       ],
@@ -622,8 +625,13 @@ class RegisterBackend {
         final methods =
             context.instanceDeclarationPositions[library]?[className];
         if (methods != null) {
-          for (var kind = 0; kind < 3; kind++) {
-            id ??= (methods[kind] as Map).cast<String, int>()[target.name];
+          final kind = target.methodType;
+          if (kind != null) {
+            id = (methods[kind] as Map).cast<String, int>()[target.name];
+          } else {
+            for (var kind = 0; kind < 3; kind++) {
+              id ??= (methods[kind] as Map).cast<String, int>()[target.name];
+            }
           }
         }
       }

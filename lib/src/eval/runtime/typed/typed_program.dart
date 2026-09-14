@@ -1,6 +1,8 @@
 import 'dart:typed_data';
 
 import 'typed_ops.g.dart';
+import 'typed_class.dart';
+import 'typed_call_site.dart';
 import 'typed_function.dart';
 import 'typed_codec.dart';
 
@@ -16,8 +18,31 @@ class TypedProgram {
     int boolSpillCount = 0,
     int objectSpillCount = 0,
     List<TypedFunction>? functions,
+    List<TypedClass> classes = const [],
+    List<TypedCallSite> callSites = const [],
     this.entryFunction = 0,
   }) : code = Uint8List.fromList(code).asUnmodifiableView(),
+       classes = List.unmodifiable(
+         classes.map(
+           (type) => TypedClass(
+             type.name,
+             library: type.library,
+             valueCount: type.valueCount,
+             methods: type.methods,
+             getters: type.getters,
+             setters: type.setters,
+           ),
+         ),
+       ),
+       callSites = List.unmodifiable(
+         callSites.map(
+           (site) => TypedCallSite(
+             site.name,
+             argumentCount: site.argumentCount,
+             kind: site.kind,
+           ),
+         ),
+       ),
        functions = List.unmodifiable(
          (functions ??
                  [
@@ -37,6 +62,7 @@ class TypedProgram {
                  boolSpillCount: function.boolSpillCount,
                  objectSpillCount: function.objectSpillCount,
                  argumentKinds: List.unmodifiable(function.argumentKinds),
+                 resultKind: function.resultKind,
                  objectOutgoingCount: function.objectOutgoingCount,
                ),
              ),
@@ -66,10 +92,53 @@ class TypedProgram {
   int get boolSpillCount => functions[entryFunction].boolSpillCount;
   int get objectSpillCount => functions[entryFunction].objectSpillCount;
   final List<TypedFunction> functions;
+  final List<TypedClass> classes;
+  final List<TypedCallSite> callSites;
   final int entryFunction;
 
   ByteData write() => TypedCodec.write(this);
   factory TypedProgram.read(ByteBuffer buffer) => TypedCodec.read(buffer);
+
+  void _validateClasses() {
+    if (classes.length > 65536 || callSites.length > 65536) {
+      throw const FormatException('Too many typed classes or call sites');
+    }
+    for (final type in classes) {
+      if (type.valueCount < 0 || type.valueCount > 65536) {
+        throw const FormatException('Invalid typed class field count');
+      }
+      for (final (kind, members) in [
+        (TypedMemberKind.method, type.methods),
+        (TypedMemberKind.getter, type.getters),
+        (TypedMemberKind.setter, type.setters),
+      ]) {
+        for (final entry in members.entries) {
+          if (entry.value < 0 || entry.value >= functions.length) {
+            throw const FormatException('Invalid typed member function');
+          }
+          final function = functions[entry.value];
+          if (function.argumentKinds.isEmpty ||
+              function.argumentKinds.any(
+                (kind) => kind != TypedArgumentKind.object,
+              ) ||
+              (kind == TypedMemberKind.getter &&
+                  function.argumentKinds.length != 1) ||
+              (kind == TypedMemberKind.setter &&
+                  function.argumentKinds.length != 2)) {
+            throw const FormatException('Invalid typed member signature');
+          }
+        }
+      }
+    }
+    for (final site in callSites) {
+      if (site.argumentCount < 0 ||
+          site.argumentCount > 65537 ||
+          (site.kind == TypedMemberKind.getter && site.argumentCount != 0) ||
+          (site.kind == TypedMemberKind.setter && site.argumentCount != 1)) {
+        throw const FormatException('Invalid typed call site signature');
+      }
+    }
+  }
 
   void _validate() {
     if (functions.isEmpty ||
@@ -91,6 +160,7 @@ class TypedProgram {
         throw const FormatException('Too many typed function arguments');
       }
     }
+    _validateClasses();
     if (code.isEmpty) throw const FormatException('Empty typed program');
     final boundaries = <int>{};
     final branches = <(int, int)>[];
@@ -151,6 +221,12 @@ class TypedProgram {
           TypedImmediate.objectOutgoing => function.objectOutgoingCount,
           TypedImmediate.overflow => function.callLayout.overflowCount,
           TypedImmediate.function => functions.length,
+          TypedImmediate.classIndex => classes.length,
+          TypedImmediate.callSite => callSites.length,
+          TypedImmediate.field => classes.fold<int>(
+            0,
+            (n, type) => type.valueCount > n ? type.valueCount : n,
+          ),
           _ => null,
         };
         if (limit != null && index >= limit) {
@@ -165,6 +241,15 @@ class TypedProgram {
           throw const FormatException(
             'Insufficient outgoing object storage for host call',
           );
+        }
+        if (last.immediate == TypedImmediate.callSite) {
+          final site = callSites[index];
+          final overflow = site.argumentCount > 2 ? site.argumentCount - 1 : 0;
+          if (overflow > function.objectOutgoingCount) {
+            throw const FormatException(
+              'Insufficient outgoing storage for member call',
+            );
+          }
         }
         if (last.immediate == TypedImmediate.function) {
           final callee = functions[index];

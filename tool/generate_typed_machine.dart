@@ -93,7 +93,7 @@ List<Instruction> specification() {
         : 'r';
     add(
       '${name}Return',
-      '''if (frame.parent == null) return ${bank == 'object' ? 'TypedInterop.exportExternal($name)' : name};
+      '''if (frame.parent == null) return $name;
           final returned = $name;
           pc = frame.returnPc;
           frame = frame.leave();
@@ -445,6 +445,62 @@ List<Instruction> specification() {
     output: 6,
     mayThrow: true,
   );
+  add(
+    'rCreateClassR',
+    'r = TypedInstance(program, index, r as \$Instance?);',
+    inputs: [6],
+    output: 6,
+    immediate: 'classIndex',
+    mayThrow: true,
+  );
+  add(
+    'rLoadPropertyR',
+    'r = (r as TypedInstance).values[index];',
+    inputs: [6],
+    output: 6,
+    immediate: 'field',
+    mayThrow: true,
+  );
+  add(
+    'setPropertyRS',
+    '(r as TypedInstance).values[index] = s;',
+    inputs: [6, 7],
+    immediate: 'field',
+    mayThrow: true,
+  );
+  add(
+    'rLoadSuperR',
+    'r = (r as TypedInstance).superclass;',
+    inputs: [6],
+    output: 6,
+    mayThrow: true,
+  );
+  add(
+    'rLoadThisR',
+    'r = (r as TypedInstance).dispatchRoot;',
+    inputs: [6],
+    output: 6,
+    mayThrow: true,
+  );
+  add('returnNull', '''if (frame.parent == null) return null;
+          pc = frame.returnPc;
+          frame = frame.leave();
+          r = null; s = null; c = null;''', terminates: true);
+  add(
+    'callVirtual',
+    '''final member = TypedDispatch.resolve(program, r, index);
+          if (member != null) {
+            final function = member.function;
+            r = member.receiver;
+            frame = frame.enter(function, pc);
+            pc = function.entry;
+          } else {
+            r = TypedDispatch.invoke(program, runtime, r, s, c, index);
+            s = null; c = null;
+          }''',
+    immediate: 'callSite',
+    mayThrow: true,
+  );
   for (final op in [...ops]) {
     if (op.immediate != 'branch') continue;
     add(
@@ -483,7 +539,8 @@ abstract final class TypedRegister {
 
 enum TypedImmediate { none, intConstant, doubleConstant,
   intSpill, doubleSpill, boolSpill, branch,
-  function, objectConstant, objectSpill, objectOutgoing, hostCall, shortBranch, integer, overflow }
+  function, objectConstant, objectSpill, objectOutgoing, hostCall, shortBranch, integer, overflow,
+  classIndex, field, callSite }
 
 class TypedInstruction {
   const TypedInstruction(this.name, this.inputs, this.outputs, this.immediate,
@@ -497,7 +554,7 @@ class TypedInstruction {
   /// Operand order may change during allocation without changing the result.
   /// Floating operations retain order, including NaN payload propagation.
   final bool commutative;
-  List<int> get clobberedRegisters => (immediate == TypedImmediate.function || immediate == TypedImmediate.hostCall)
+  List<int> get clobberedRegisters => (immediate == TypedImmediate.function || immediate == TypedImmediate.hostCall || immediate == TypedImmediate.callSite)
       ? const [0, 1, 2, 3, 4, 5, 6, 7, 8] : const [];
   int get length => immediate == TypedImmediate.none ? 1
       : immediate == TypedImmediate.branch ? 5 : 3;
@@ -525,17 +582,29 @@ import 'typed_ops.g.dart';
 import 'typed_program.dart';
 import 'typed_frame.dart';
 import 'typed_interop.dart';
+import 'typed_instance.dart';
+import 'typed_dispatch.dart';
+import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/stdlib/core.dart';
 
 abstract final class TypedMachine {
+  /// Public host boundary. Internal calls keep their machine representation.
+  static Object? run(TypedProgram program, {
+      List<int> intArguments = const [], List<double> doubleArguments = const [],
+      List<bool> boolArguments = const [], List<Object?> objectArguments = const [], Runtime? runtime}) =>
+    TypedInterop.exportExternal(runRaw(program, intArguments: intArguments,
+      doubleArguments: doubleArguments, boolArguments: boolArguments,
+      objectArguments: objectArguments, runtime: runtime));
+
   /// Fixed scalar banks stay in typed locals across the dispatch loop.
   @pragma('vm:never-inline')
-  static Object? run(TypedProgram program, {
+  static Object? runRaw(TypedProgram program, {
+      int? entryFunction,
       List<int> intArguments = const [], List<double> doubleArguments = const [],
       List<bool> boolArguments = const [], List<Object?> objectArguments = const [], Runtime? runtime}) {
     final code = program.code;
-    final entry = program.functions[program.entryFunction];
+    final entry = program.functions[entryFunction ?? program.entryFunction];
     final arguments = TypedEntry.prepare(entry, intArguments, doubleArguments, boolArguments, objectArguments, runtime);
     var frame = TypedFrame(entry);
     Object? r = arguments.r, s = arguments.s, c = arguments.c;
