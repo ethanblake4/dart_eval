@@ -8,6 +8,8 @@ import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/alu.dart';
+import 'package:dart_eval/src/eval/ir/numeric.dart';
+import 'package:dart_eval/src/eval/ir/representation.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/logic.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
@@ -76,6 +78,71 @@ extension Invoke on Variable {
         ),
         [right],
       );
+    }
+    const numericOperators = {
+      '+': NumericOperator.add,
+      '-': NumericOperator.subtract,
+      '*': NumericOperator.multiply,
+      '/': NumericOperator.divide,
+      '~/': NumericOperator.truncatingDivide,
+      '%': NumericOperator.modulo,
+      '<': NumericOperator.lessThan,
+      '<=': NumericOperator.lessThanOrEqual,
+      '>': NumericOperator.greaterThan,
+      '>=': NumericOperator.greaterThanOrEqual,
+      '==': NumericOperator.equal,
+      '!=': NumericOperator.notEqual,
+    };
+    final numericOperator = numericOperators[method];
+    if (args.length == 1 && numericOperator != null) {
+      final integerOperands =
+          type.isAssignableTo(
+            ctx,
+            CoreTypes.int.ref(ctx),
+            forceAllowDynamic: false,
+          ) &&
+          args.single.type.isAssignableTo(
+            ctx,
+            CoreTypes.int.ref(ctx),
+            forceAllowDynamic: false,
+          );
+      final doubleOperands =
+          type.isAssignableTo(
+            ctx,
+            CoreTypes.double.ref(ctx),
+            forceAllowDynamic: false,
+          ) &&
+          args.single.type.isAssignableTo(
+            ctx,
+            CoreTypes.double.ref(ctx),
+            forceAllowDynamic: false,
+          );
+      if ((integerOperands && method != '/') ||
+          (doubleOperands && method != '~/' && method != '%')) {
+        final receiver = unboxIfNeeded(ctx);
+        final right = args.single.ssa == ssa
+            ? receiver
+            : args.single.unboxIfNeeded(ctx);
+        final operation = NumericBinary(
+          ctx.svar('numeric_result'),
+          receiver.ssa,
+          right.ssa,
+          integerOperands
+              ? MachineRepresentation.integer
+              : MachineRepresentation.doublePrecision,
+          numericOperator,
+        );
+        final resultType = numericOperator.isComparison
+            ? CoreTypes.bool.ref(ctx)
+            : integerOperands
+            ? CoreTypes.int.ref(ctx)
+            : CoreTypes.double.ref(ctx);
+        return InvokeResult(
+          receiver,
+          Variable.ssa(ctx, operation, resultType.copyWith(boxed: false)),
+          [right],
+        );
+      }
     }
     var receiver = this;
     final values = [...args];

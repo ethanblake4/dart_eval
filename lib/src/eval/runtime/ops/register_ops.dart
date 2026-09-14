@@ -87,4 +87,15 @@ enum RegisterOp {
   caughtStackTrace,
   resumeCompletion,
   awaitValue, // inputs: completer, subject
+  doubleAdd,
+  doubleSub,
+  doubleMul,
+  doubleDiv,
+  numericMod,
+  numericLt,
+  numericLte,
+  numericGt,
+  numericGte,
+  numericEq,
+  numericNe,
 }

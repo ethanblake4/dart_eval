@@ -18,6 +18,8 @@ import '../../ir/memory.dart' as memory;
 import '../../ir/objects.dart' as objects;
 import '../../ir/primitives.dart' as primitives;
 import '../../ir/types.dart' as types;
+import '../../ir/numeric.dart';
+import '../../ir/representation.dart';
 
 sealed class Relocation {
   const Relocation();
@@ -152,6 +154,40 @@ class RegisterBackend {
     }
 
     return switch (op) {
+      NumericBinary(
+        :final left,
+        :final right,
+        :final operandRepresentation,
+        :final operator,
+      ) =>
+        [
+          make(
+            switch (operator) {
+              NumericOperator.add =>
+                operandRepresentation == MachineRepresentation.integer
+                    ? RegisterOp.intAdd
+                    : RegisterOp.doubleAdd,
+              NumericOperator.subtract =>
+                operandRepresentation == MachineRepresentation.integer
+                    ? RegisterOp.intSub
+                    : RegisterOp.doubleSub,
+              NumericOperator.multiply =>
+                operandRepresentation == MachineRepresentation.integer
+                    ? RegisterOp.intMul
+                    : RegisterOp.doubleMul,
+              NumericOperator.divide => RegisterOp.doubleDiv,
+              NumericOperator.truncatingDivide => RegisterOp.intDiv,
+              NumericOperator.modulo => RegisterOp.numericMod,
+              NumericOperator.lessThan => RegisterOp.numericLt,
+              NumericOperator.lessThanOrEqual => RegisterOp.numericLte,
+              NumericOperator.greaterThan => RegisterOp.numericGt,
+              NumericOperator.greaterThanOrEqual => RegisterOp.numericGte,
+              NumericOperator.equal => RegisterOp.numericEq,
+              NumericOperator.notEqual => RegisterOp.numericNe,
+            },
+            [left, right],
+          ),
+        ],
       memory.LoadInt(:final value) => [
         make(RegisterOp.constant, [], [constant(value)]),
       ],

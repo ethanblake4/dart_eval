@@ -14,6 +14,7 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'package:dart_eval/src/eval/runtime/type.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
+import 'package:dart_eval/src/eval/ir/representation.dart';
 
 abstract class AbstractScopeContext {
   int get scopeFrameOffset;
@@ -146,6 +147,7 @@ class CompilerContext with ScopeContext {
   final Map<int, ControlFlowGraph> functionGraphs = {};
   final Map<int, ControlFlowGraph> ssaFunctionGraphs = {};
   final Map<int, String> functionNames = {};
+  final Map<int, MachineFunctionSignature> functionSignatures = {};
   int? currentFunctionId;
   int _nextFunctionId = 0;
   late ControlFlowGraph activeGraph;

@@ -323,6 +323,39 @@ extension _RegisterExecution on Runtime {
             case RegisterOp.intDiv:
               result = (inputs[0] as int) ~/ (inputs[1] as int);
               break;
+            case RegisterOp.doubleAdd:
+              result = (inputs[0] as num).toDouble() + (inputs[1] as num);
+              break;
+            case RegisterOp.doubleSub:
+              result = (inputs[0] as num).toDouble() - (inputs[1] as num);
+              break;
+            case RegisterOp.doubleMul:
+              result = (inputs[0] as num).toDouble() * (inputs[1] as num);
+              break;
+            case RegisterOp.doubleDiv:
+              result = (inputs[0] as num) / (inputs[1] as num);
+              break;
+            case RegisterOp.numericMod:
+              result = (inputs[0] as num) % (inputs[1] as num);
+              break;
+            case RegisterOp.numericLt:
+              result = (inputs[0] as num) < (inputs[1] as num);
+              break;
+            case RegisterOp.numericLte:
+              result = (inputs[0] as num) <= (inputs[1] as num);
+              break;
+            case RegisterOp.numericGt:
+              result = (inputs[0] as num) > (inputs[1] as num);
+              break;
+            case RegisterOp.numericGte:
+              result = (inputs[0] as num) >= (inputs[1] as num);
+              break;
+            case RegisterOp.numericEq:
+              result = (inputs[0] as num) == (inputs[1] as num);
+              break;
+            case RegisterOp.numericNe:
+              result = (inputs[0] as num) != (inputs[1] as num);
+              break;
             case RegisterOp.intLt:
               result = (inputs[0] as int) < (inputs[1] as int);
               break;

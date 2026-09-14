@@ -15,6 +15,9 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/util.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
+import 'package:dart_eval/src/eval/ir/representation.dart';
+import 'package:dart_eval/src/eval/compiler/backend/representation.dart'
+    show representationForType;
 
 void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   //ctx.runPrescan(d);
@@ -52,6 +55,11 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
       d.functionExpression.parameters?.parameters.length ?? 0;
   ctx.beginAllocScope(existingAllocLen: existingAllocs);
   ctx.scopeFrameOffset += existingAllocs;
+  TypeRef.loadTemporaryTypes(
+    ctx,
+    d.functionExpression.typeParameters?.typeParameters,
+  );
+
   final resolvedParams = resolveFPLDefaults(
     ctx,
     d.functionExpression.parameters,
@@ -60,11 +68,7 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   );
 
   var i = 0;
-
-  TypeRef.loadTemporaryTypes(
-    ctx,
-    d.functionExpression.typeParameters?.typeParameters,
-  );
+  final parameterRepresentations = <MachineRepresentation>[];
 
   for (final param in resolvedParams) {
     final p = param.parameter;
@@ -82,6 +86,7 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
     );
 
     ctx.setLocal(p.name!.lexeme, vRep);
+    parameterRepresentations.add(representationForType(vRep.type));
 
     i++;
   }
@@ -97,6 +102,19 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
     ctx.library,
     d.returnType,
     CoreTypes.dynamic.ref(ctx),
+  );
+  final returnType = expectedReturnType.type;
+  ctx.functionSignatures[pos] = MachineFunctionSignature(
+    parameterRepresentations,
+    returnType == CoreTypes.voidType.ref(ctx)
+        ? null
+        : representationForType(
+            (returnType ?? CoreTypes.dynamic.ref(ctx)).copyWith(
+              boxed:
+                  b.isAsynchronous ||
+                  !(returnType?.isUnboxedAcrossFunctionBoundaries ?? false),
+            ),
+          ),
   );
   StatementInfo? stInfo;
   if (b is BlockFunctionBody) {

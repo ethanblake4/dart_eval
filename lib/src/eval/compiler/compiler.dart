@@ -4,6 +4,9 @@ import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/backend/register_backend.dart';
+import 'package:dart_eval/src/eval/compiler/backend/typed_backend.dart';
+import 'package:dart_eval/src/eval/ir/representation.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_program.dart';
 import 'package:dart_eval/src/eval/compiler/optimizer/validate.dart';
 import 'package:dart_eval/src/eval/compiler/optimizer/ssa.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/declaration.dart';
@@ -63,6 +66,9 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       Map.unmodifiable(_ctx.functionGraphs);
 
   Map<int, String> get functionNames => Map.unmodifiable(_ctx.functionNames);
+
+  Map<int, MachineFunctionSignature> get functionSignatures =>
+      Map.unmodifiable(_ctx.functionSignatures);
 
   /// Per-function SSA graphs prepared for instruction selection.
   Map<int, ControlFlowGraph> get ssaFunctionGraphs =>
@@ -195,7 +201,29 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
   Program compileSources([
     Iterable<DartSource> sources = const [],
     bool debugPerf = true,
-  ]) {
+  ]) => _compileSources(sources, debugPerf, _emitProgram);
+
+  /// Compile a primitive entrypoint to the compact typed-register backend.
+  /// Unsupported language operations fail explicitly during lowering.
+  TypedProgram compileTyped(
+    Map<String, Map<String, String>> packages, {
+    required String entrypoint,
+    String function = 'main',
+  }) => _compileSources(
+    packages.entries.expand(
+      (package) => package.value.entries.map(
+        (file) => DartSource('package:${package.key}/${file.key}', file.value),
+      ),
+    ),
+    false,
+    () => TypedBackend(_ctx).compile(entrypoint, function),
+  );
+
+  T _compileSources<T>(
+    Iterable<DartSource> sources,
+    bool debugPerf,
+    T Function() emit,
+  ) {
     _topLevelDeclarationsMap = <int, Map<String, DeclarationOrBridge>>{};
     _topLevelGlobalIndices = <int, Map<String, int>>{};
     _instanceDeclarationsMap = <int, Map<String, Map<String, Declaration>>>{};
@@ -583,6 +611,10 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       _ctx.typeTypes.add(type.resolveTypeChain(_ctx).getRuntimeIndices(_ctx));
     }
 
+    return emit();
+  }
+
+  Program _emitProgram() {
     final globalInitializers = List<int>.filled(_ctx.globalIndex, 0);
 
     for (final gi in _ctx.runtimeGlobalInitializerMap.entries) {
@@ -624,7 +656,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       //ctx.typeNames,
       _ctx.typeTypes,
       backend.words,
-      libraryMapString,
+      _ctx.libraryMap,
       _ctx.bridgeStaticFunctionIndices,
       _ctx.constantPool.pool,
       _ctx.runtimeTypes.pool,

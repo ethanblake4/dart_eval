@@ -1,4 +1,5 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
+import 'representation.dart';
 
 final class LoadFunctionPointer extends Operation {
   final SSA result;
@@ -31,15 +32,20 @@ final class LoadFunctionPointer extends Operation {
 final class Parameter extends Operation {
   final SSA target;
   final int index;
+  final MachineRepresentation representation;
 
-  Parameter(this.target, this.index);
+  Parameter(
+    this.target,
+    this.index, {
+    this.representation = MachineRepresentation.object,
+  });
 
   @override
   SSA get writesTo => target;
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) =>
-      Parameter(writesTo ?? target, index);
+      Parameter(writesTo ?? target, index, representation: representation);
 
   @override
   String toString() => '$target = parameter $index';

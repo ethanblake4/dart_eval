@@ -6,7 +6,8 @@ abstract final class TypedRegister {
 }
 
 enum TypedImmediate { none, intConstant, doubleConstant, intArgument,
-  doubleArgument, boolArgument, intSpill, doubleSpill, boolSpill, branch }
+  doubleArgument, boolArgument, intSpill, doubleSpill, boolSpill, branch,
+  intOutgoing, doubleOutgoing, boolOutgoing, function }
 
 class TypedInstruction {
   const TypedInstruction(this.name, this.inputs, this.outputs, this.immediate,
@@ -17,6 +18,8 @@ class TypedInstruction {
   final TypedImmediate immediate;
   final bool mayThrow;
   final bool terminates;
+  List<int> get clobberedRegisters => immediate == TypedImmediate.function
+      ? const [0, 1, 2, 3, 4, 5] : const [];
   int get length => immediate == TypedImmediate.none ? 1
       : immediate == TypedImmediate.branch ? 5 : 3;
 }
@@ -174,6 +177,15 @@ abstract final class TypedOp {
   static const gFromB = 149;
   static const bFromG = 150;
   static const jump = 151;
+  static const aOutgoing = 152;
+  static const bOutgoing = 153;
+  static const fOutgoing = 154;
+  static const gOutgoing = 155;
+  static const eOutgoing = 156;
+  static const xOutgoing = 157;
+  static const callInt = 158;
+  static const callDouble = 159;
+  static const callBool = 160;
   static const instructions = <TypedInstruction>[
     TypedInstruction('aConstant', [], [0], TypedImmediate.intConstant, false, false),
     TypedInstruction('aArgument', [], [0], TypedImmediate.intArgument, true, false),
@@ -327,5 +339,14 @@ abstract final class TypedOp {
     TypedInstruction('gFromB', [1], [3], TypedImmediate.none, false, false),
     TypedInstruction('bFromG', [3], [1], TypedImmediate.none, true, false),
     TypedInstruction('jump', [], [], TypedImmediate.branch, false, true),
+    TypedInstruction('aOutgoing', [0], [], TypedImmediate.intOutgoing, false, false),
+    TypedInstruction('bOutgoing', [1], [], TypedImmediate.intOutgoing, false, false),
+    TypedInstruction('fOutgoing', [2], [], TypedImmediate.doubleOutgoing, false, false),
+    TypedInstruction('gOutgoing', [3], [], TypedImmediate.doubleOutgoing, false, false),
+    TypedInstruction('eOutgoing', [4], [], TypedImmediate.boolOutgoing, false, false),
+    TypedInstruction('xOutgoing', [5], [], TypedImmediate.boolOutgoing, false, false),
+    TypedInstruction('callInt', [], [0], TypedImmediate.function, true, false),
+    TypedInstruction('callDouble', [], [2], TypedImmediate.function, true, false),
+    TypedInstruction('callBool', [], [4], TypedImmediate.function, true, false),
   ];
 }

@@ -4,6 +4,8 @@ import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
+import 'package:dart_eval/src/eval/compiler/backend/representation.dart'
+    show representationForType;
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/src/eval/ir/function.dart';
@@ -59,7 +61,22 @@ List<PossiblyValuedParameter> resolveFPLDefaults(
 
   for (final param in [...positional, ...named]) {
     final argument = SSA('arg_$paramIndex');
-    ctx.pushOp(Parameter(argument, paramIndex));
+    final normal = param is DefaultFormalParameter ? param.parameter : param;
+    final annotation = normal is SimpleFormalParameter ? normal.type : null;
+    final type = !allowUnboxed || annotation == null
+        ? CoreTypes.dynamic.ref(ctx)
+        : TypeRef.fromAnnotation(ctx, ctx.library, annotation);
+    ctx.pushOp(
+      Parameter(
+        argument,
+        paramIndex,
+        representation: representationForType(
+          type.copyWith(
+            boxed: !allowUnboxed || !type.isUnboxedAcrossFunctionBoundaries,
+          ),
+        ),
+      ),
+    );
     if (param is DefaultFormalParameter) {
       Variable? defaultValue;
       if (param.defaultValue != null && !ignoreDefaults) {
