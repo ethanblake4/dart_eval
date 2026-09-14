@@ -3,6 +3,41 @@ part of 'runtime.dart';
 /// The bridge boundary accepts canonical language values. Function signatures
 /// prescribe every conversion before entering the typed register loop.
 extension TypedRuntimeInterop on Runtime {
+  $Value? invokeTypedExternal(
+    int functionId,
+    int argumentCount,
+    Object? first,
+    Object? second,
+    Object? rest,
+  ) {
+    _setup();
+    if (functionId < 0 || functionId >= _bridgeFunctions.length) {
+      throw ArgumentError.value(functionId, 'functionId', 'Invalid bridge ID');
+    }
+    final direct = _bridgeRegisterFunctions[functionId];
+    final $Value? result;
+    if (direct != null) {
+      result = direct(this, first, second, rest);
+    } else {
+      // Legacy callbacks may retain or mutate their argument vector. This is
+      // the only external-call path that materializes a fresh list.
+      final arguments = switch (argumentCount) {
+        0 => <$Value?>[],
+        1 => <$Value?>[first as $Value?],
+        2 => <$Value?>[first as $Value?, second as $Value?],
+        3 => <$Value?>[first as $Value?, second as $Value?, rest as $Value?],
+        _ => <$Value?>[
+          first as $Value?,
+          second as $Value?,
+          for (var i = 0; i < argumentCount - 2; i++)
+            (rest as List<Object?>)[i] as $Value?,
+        ],
+      };
+      result = _bridgeFunctions[functionId](this, null, arguments);
+    }
+    return result is $null ? null : result;
+  }
+
   bool isTypedExternalAssignable($Value value, String library, String name) {
     _setup();
     final expected = lookupType(BridgeTypeSpec(library, name));

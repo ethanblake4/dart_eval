@@ -1,6 +1,24 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'operands.dart';
 
+/// Preserve a supplied null as $null at a bridge boundary. Raw null in a
+/// bridge parameter slot means that the optional argument was omitted.
+final class PrepareBridgeArgument extends Operation {
+  PrepareBridgeArgument(this.target, this.source);
+  final SSA target;
+  final SSA source;
+
+  @override
+  SSA get writesTo => target;
+  @override
+  Set<SSA> get readsFrom => {source};
+  @override
+  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) =>
+      PrepareBridgeArgument(writesTo ?? target, readsFrom?.first ?? source);
+  @override
+  String toString() => '$target = bridgeArgument $source';
+}
+
 final class ParentBridgeSuperShim extends Operation {
   final SSA shim;
   final SSA parent;

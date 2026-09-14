@@ -8,7 +8,7 @@ abstract final class TypedRegister {
 enum TypedImmediate { none, intConstant, doubleConstant,
   intSpill, doubleSpill, boolSpill, branch,
   function, objectConstant, objectSpill, objectOutgoing, hostCall, shortBranch, integer, overflow,
-  classIndex, field, callSite }
+  classIndex, field, callSite, externalCall }
 
 class TypedInstruction {
   const TypedInstruction(this.name, this.inputs, this.outputs, this.immediate,
@@ -22,7 +22,7 @@ class TypedInstruction {
   /// Operand order may change during allocation without changing the result.
   /// Floating operations retain order, including NaN payload propagation.
   final bool commutative;
-  List<int> get clobberedRegisters => (immediate == TypedImmediate.function || immediate == TypedImmediate.hostCall || immediate == TypedImmediate.callSite)
+  List<int> get clobberedRegisters => (immediate == TypedImmediate.function || immediate == TypedImmediate.hostCall || immediate == TypedImmediate.callSite || immediate == TypedImmediate.externalCall)
       ? const [0, 1, 2, 3, 4, 5, 6, 7, 8] : const [];
   int get length => immediate == TypedImmediate.none ? 1
       : immediate == TypedImmediate.branch ? 5 : 3;
@@ -131,100 +131,102 @@ abstract final class TypedOp {
   static const rBoxE = 99;
   static const rFromX = 100;
   static const rBoxX = 101;
-  static const aConstant = 102;
-  static const aSpill = 103;
-  static const aReload = 104;
-  static const aReturn = 105;
-  static const bConstant = 106;
-  static const bSpill = 107;
-  static const bReload = 108;
-  static const bReturn = 109;
-  static const fConstant = 110;
-  static const fSpill = 111;
-  static const fReload = 112;
-  static const fReturn = 113;
-  static const gConstant = 114;
-  static const gSpill = 115;
-  static const gReload = 116;
-  static const gReturn = 117;
-  static const eSpill = 118;
-  static const eReload = 119;
-  static const eReturn = 120;
-  static const xSpill = 121;
-  static const xReload = 122;
-  static const xReturn = 123;
-  static const rConstant = 124;
-  static const rSpill = 125;
-  static const rReload = 126;
-  static const rReturn = 127;
-  static const sConstant = 128;
-  static const sSpill = 129;
-  static const sReload = 130;
-  static const sReturn = 131;
-  static const cConstant = 132;
-  static const cSpill = 133;
-  static const cReload = 134;
-  static const cReturn = 135;
-  static const aDivB = 136;
-  static const bDivA = 137;
-  static const aModB = 138;
-  static const bModA = 139;
-  static const aShiftLeftB = 140;
-  static const bShiftLeftA = 141;
-  static const aShiftRightB = 142;
-  static const bShiftRightA = 143;
-  static const aUnsignedShiftRightB = 144;
-  static const bUnsignedShiftRightA = 145;
-  static const aImmediate = 146;
-  static const bImmediate = 147;
-  static const jumpETrue = 148;
-  static const jumpEFalse = 149;
-  static const jumpXTrue = 150;
-  static const jumpXFalse = 151;
-  static const aFromF = 152;
-  static const aFromG = 153;
-  static const bFromF = 154;
-  static const bFromG = 155;
-  static const jump = 156;
-  static const rOutgoing = 157;
-  static const sOutgoing = 158;
-  static const cOutgoing = 159;
-  static const rOverflow = 160;
-  static const call = 161;
-  static const eEqRS = 162;
-  static const xEqRS = 163;
-  static const aFromR = 164;
-  static const aNativeFromR = 165;
-  static const fFromR = 166;
-  static const fNativeFromR = 167;
-  static const eFromR = 168;
-  static const eNativeFromR = 169;
-  static const rBoxString = 170;
-  static const rUnboxString = 171;
-  static const callHost = 172;
-  static const callMethod = 173;
-  static const aStringLengthR = 174;
-  static const rStringConcatS = 175;
-  static const aStringCodeUnitR = 176;
-  static const rStringIndexA = 177;
-  static const cNewList = 178;
-  static const aListLengthR = 179;
-  static const rListIndexCA = 180;
-  static const listSetCAR = 181;
-  static const listAppendCR = 182;
-  static const rBoxList = 183;
-  static const rCreateClassR = 184;
-  static const rLoadPropertyR = 185;
-  static const setPropertyRS = 186;
-  static const rLoadSuperR = 187;
-  static const rLoadThisR = 188;
-  static const returnNull = 189;
-  static const callVirtual = 190;
-  static const jumpETrueShort = 191;
-  static const jumpEFalseShort = 192;
-  static const jumpXTrueShort = 193;
-  static const jumpXFalseShort = 194;
-  static const jumpShort = 195;
+  static const rBridgeArgument = 102;
+  static const aConstant = 103;
+  static const aSpill = 104;
+  static const aReload = 105;
+  static const aReturn = 106;
+  static const bConstant = 107;
+  static const bSpill = 108;
+  static const bReload = 109;
+  static const bReturn = 110;
+  static const fConstant = 111;
+  static const fSpill = 112;
+  static const fReload = 113;
+  static const fReturn = 114;
+  static const gConstant = 115;
+  static const gSpill = 116;
+  static const gReload = 117;
+  static const gReturn = 118;
+  static const eSpill = 119;
+  static const eReload = 120;
+  static const eReturn = 121;
+  static const xSpill = 122;
+  static const xReload = 123;
+  static const xReturn = 124;
+  static const rConstant = 125;
+  static const rSpill = 126;
+  static const rReload = 127;
+  static const rReturn = 128;
+  static const sConstant = 129;
+  static const sSpill = 130;
+  static const sReload = 131;
+  static const sReturn = 132;
+  static const cConstant = 133;
+  static const cSpill = 134;
+  static const cReload = 135;
+  static const cReturn = 136;
+  static const aDivB = 137;
+  static const bDivA = 138;
+  static const aModB = 139;
+  static const bModA = 140;
+  static const aShiftLeftB = 141;
+  static const bShiftLeftA = 142;
+  static const aShiftRightB = 143;
+  static const bShiftRightA = 144;
+  static const aUnsignedShiftRightB = 145;
+  static const bUnsignedShiftRightA = 146;
+  static const aImmediate = 147;
+  static const bImmediate = 148;
+  static const jumpETrue = 149;
+  static const jumpEFalse = 150;
+  static const jumpXTrue = 151;
+  static const jumpXFalse = 152;
+  static const aFromF = 153;
+  static const aFromG = 154;
+  static const bFromF = 155;
+  static const bFromG = 156;
+  static const jump = 157;
+  static const rOutgoing = 158;
+  static const sOutgoing = 159;
+  static const cOutgoing = 160;
+  static const rOverflow = 161;
+  static const call = 162;
+  static const eEqRS = 163;
+  static const xEqRS = 164;
+  static const aFromR = 165;
+  static const aNativeFromR = 166;
+  static const fFromR = 167;
+  static const fNativeFromR = 168;
+  static const eFromR = 169;
+  static const eNativeFromR = 170;
+  static const rBoxString = 171;
+  static const rUnboxString = 172;
+  static const callExternal = 173;
+  static const callHost = 174;
+  static const callMethod = 175;
+  static const aStringLengthR = 176;
+  static const rStringConcatS = 177;
+  static const aStringCodeUnitR = 178;
+  static const rStringIndexA = 179;
+  static const cNewList = 180;
+  static const aListLengthR = 181;
+  static const rListIndexCA = 182;
+  static const listSetCAR = 183;
+  static const listAppendCR = 184;
+  static const rBoxList = 185;
+  static const rCreateClassR = 186;
+  static const rLoadPropertyR = 187;
+  static const setPropertyRS = 188;
+  static const rLoadSuperR = 189;
+  static const rLoadThisR = 190;
+  static const returnNull = 191;
+  static const callVirtual = 192;
+  static const jumpETrueShort = 193;
+  static const jumpEFalseShort = 194;
+  static const jumpXTrueShort = 195;
+  static const jumpXFalseShort = 196;
+  static const jumpShort = 197;
   static const instructions = <TypedInstruction>[
     TypedInstruction('eTrue', [], [4], TypedImmediate.none, false, false, false),
     TypedInstruction('eFalse', [], [4], TypedImmediate.none, false, false, false),
@@ -328,6 +330,7 @@ abstract final class TypedOp {
     TypedInstruction('rBoxE', [4], [6], TypedImmediate.none, false, false, false),
     TypedInstruction('rFromX', [5], [6], TypedImmediate.none, false, false, false),
     TypedInstruction('rBoxX', [5], [6], TypedImmediate.none, false, false, false),
+    TypedInstruction('rBridgeArgument', [6], [6], TypedImmediate.none, false, false, false),
     TypedInstruction('aConstant', [], [0], TypedImmediate.intConstant, false, false, false),
     TypedInstruction('aSpill', [0], [], TypedImmediate.intSpill, false, false, false),
     TypedInstruction('aReload', [], [0], TypedImmediate.intSpill, false, false, false),
@@ -398,6 +401,7 @@ abstract final class TypedOp {
     TypedInstruction('eNativeFromR', [6], [4], TypedImmediate.none, true, false, false),
     TypedInstruction('rBoxString', [6], [6], TypedImmediate.none, true, false, false),
     TypedInstruction('rUnboxString', [6], [6], TypedImmediate.none, true, false, false),
+    TypedInstruction('callExternal', [], [6], TypedImmediate.externalCall, true, false, false),
     TypedInstruction('callHost', [6], [6], TypedImmediate.hostCall, true, false, false),
     TypedInstruction('callMethod', [6, 7], [6], TypedImmediate.hostCall, true, false, false),
     TypedInstruction('aStringLengthR', [6], [0], TypedImmediate.none, true, false, false),

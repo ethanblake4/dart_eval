@@ -1,6 +1,10 @@
 import 'package:analyzer/dart/element/element.dart';
+import 'parameters.dart';
 
-String assertMethodPermissions(MethodElement element) {
+String assertMethodPermissions(
+  MethodElement element, {
+  bool registers = false,
+}) {
   final metadata = element.metadata;
 
   final permissions = metadata.annotations.where(
@@ -30,10 +34,13 @@ String assertMethodPermissions(MethodElement element) {
         final param = params[i];
         if (param.name == paramData) {
           final nullCheck = param.isRequired ? '!' : '?';
-          final defaultValue = param.hasDefaultValue
-              ? ' ?? ${param.defaultValueCode}'
-              : '';
-          data = ', args[$i]$nullCheck.\$value$defaultValue';
+          final source = registers
+              ? registerArgumentSource(i, params.length)
+              : 'args[$i]';
+          final value = '$source$nullCheck.\$value';
+          data = param.hasDefaultValue
+              ? ', ($source == null ? ${param.defaultValueCode} : $value)'
+              : ', $value';
           break;
         }
       }

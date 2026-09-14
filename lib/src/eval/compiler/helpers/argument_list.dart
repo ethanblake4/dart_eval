@@ -12,6 +12,21 @@ import '../errors.dart';
 import '../type.dart';
 
 import '../variable.dart';
+import '../../ir/bridge.dart' show PrepareBridgeArgument;
+
+Variable _providedBridgeArgument(CompilerContext ctx, Variable argument) {
+  final type = argument.type;
+  if (!type.nullable &&
+      type != CoreTypes.nullType.ref(ctx) &&
+      type != CoreTypes.dynamic.ref(ctx)) {
+    return argument;
+  }
+  return Variable.ssa(
+    ctx,
+    PrepareBridgeArgument(ctx.svar('bridgeArgument'), argument.ssa),
+    type,
+  );
+}
 
 class ArgumentListResult {
   final List<SSA> ssa;
@@ -510,7 +525,7 @@ ArgumentListResult compileArgumentListWithBridge(
 
   for (final param in function.params) {
     if (superParams.contains(param.name)) {
-      final V = ctx.lookupLocal(param.name)!;
+      final V = _providedBridgeArgument(ctx, ctx.lookupLocal(param.name)!);
       push.add(V);
       args.add(V);
 
@@ -548,6 +563,7 @@ ArgumentListResult compileArgumentListWithBridge(
           argumentList,
         );
       }
+      arg0 = _providedBridgeArgument(ctx, arg0);
       args.add(arg0);
       push.add(arg0);
     }
@@ -563,9 +579,10 @@ ArgumentListResult compileArgumentListWithBridge(
 
   for (final param in function.namedParams) {
     if (superParams.contains(param.name)) {
-      final V = ctx.lookupLocal(param.name)!;
+      final V = _providedBridgeArgument(ctx, ctx.lookupLocal(param.name)!);
       push.add(V);
       namedArgs[param.name] = V;
+      continue;
     }
     var paramType = TypeRef.fromBridgeAnnotation(ctx, param.type);
     if (namedExpr.containsKey(param.name)) {
@@ -585,6 +602,7 @@ ArgumentListResult compileArgumentListWithBridge(
           argumentList,
         );
       }
+      arg0 = _providedBridgeArgument(ctx, arg0);
       push.add(arg0);
       namedArgs[param.name] = arg0;
     } else {

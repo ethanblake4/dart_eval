@@ -1,6 +1,7 @@
 # Typed backend implementation
 
 Current production integration: [exported function API](typed-exports.md).
+Latest checkpoint: [external bridge calls](typed-external-calls.md).
 `Compiler.compile` and `Runtime.executeLib` now use the typed backend exclusively.
 `executeLib` and `eval` bind a parameter-name map and return normalized host values.
 The checkpoints below preserve the implementation history; the reference backend
@@ -17,8 +18,8 @@ The production dispatch loop uses a dense integer switch over bytecode and named
 non-nullable typed scalar registers. Arithmetic handlers must not decode register
 arrays, recover operand types, allocate instruction objects, or call generic
 arithmetic helpers. Fixed operand and destination combinations are encoded in
-the opcode. The existing general-object register machine is a semantic reference
-while the typed backend reaches parity.
+the opcode. The general-object register machine has been removed; existing source
+tests are the parity reference.
 
 The register bank has two integer, two double, two boolean, and three general
 object registers. Strings and nullable values use the object bank alongside

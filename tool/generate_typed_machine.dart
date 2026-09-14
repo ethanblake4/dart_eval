@@ -368,6 +368,14 @@ List<Instruction> specification() {
     mayThrow: true,
   );
   add(
+    'callExternal',
+    'r = TypedInterop.invokeExternal(program, runtime, r, s, c, index); s = null; c = null;',
+    output: 6,
+    immediate: 'externalCall',
+    mayThrow: true,
+  );
+  add('rBridgeArgument', r'r ??= const $null();', inputs: [6], output: 6);
+  add(
     'callHost',
     'final result = TypedInterop.call(runtime, r, frame.takeObjectArguments(index)); r = result; s = null; c = null; ',
     inputs: [6],
@@ -540,7 +548,7 @@ abstract final class TypedRegister {
 enum TypedImmediate { none, intConstant, doubleConstant,
   intSpill, doubleSpill, boolSpill, branch,
   function, objectConstant, objectSpill, objectOutgoing, hostCall, shortBranch, integer, overflow,
-  classIndex, field, callSite }
+  classIndex, field, callSite, externalCall }
 
 class TypedInstruction {
   const TypedInstruction(this.name, this.inputs, this.outputs, this.immediate,
@@ -554,7 +562,7 @@ class TypedInstruction {
   /// Operand order may change during allocation without changing the result.
   /// Floating operations retain order, including NaN payload propagation.
   final bool commutative;
-  List<int> get clobberedRegisters => (immediate == TypedImmediate.function || immediate == TypedImmediate.hostCall || immediate == TypedImmediate.callSite)
+  List<int> get clobberedRegisters => (immediate == TypedImmediate.function || immediate == TypedImmediate.hostCall || immediate == TypedImmediate.callSite || immediate == TypedImmediate.externalCall)
       ? const [0, 1, 2, 3, 4, 5, 6, 7, 8] : const [];
   int get length => immediate == TypedImmediate.none ? 1
       : immediate == TypedImmediate.branch ? 5 : 3;

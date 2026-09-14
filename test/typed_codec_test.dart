@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+
 import 'package:dart_eval/src/eval/runtime/typed/typed.dart';
 import 'package:test/test.dart';
 
@@ -54,6 +55,79 @@ TypedProgram _recursive() {
 }
 
 void main() {
+  test('external call descriptors round trip and keep the table immutable', () {
+    final calls = [const TypedExternalCall(0xffffffff, 4)];
+    final p = TypedProgram(
+      Uint8List.fromList([TypedOp.callExternal, 0, 0, TypedOp.rReturn]),
+      functions: const [TypedFunction(0, objectOutgoingCount: 2)],
+      externalCalls: calls,
+    );
+    calls.clear();
+    expect(p.externalCalls.single.externalFunctionId, 0xffffffff);
+    expect(() => p.externalCalls.clear(), throwsUnsupportedError);
+    final restored = TypedProgram.read(p.write().buffer);
+    expect(restored.externalCalls.single.externalFunctionId, 0xffffffff);
+    expect(restored.externalCalls.single.argumentCount, 4);
+    expect(restored.externalCalls.single.overflowCount, 2);
+    expect(restored.code, p.code);
+  });
+  test(
+    'external calls validate IDs, counts, table references and overflow',
+    () {
+      final code = Uint8List.fromList([
+        TypedOp.callExternal,
+        0,
+        0,
+        TypedOp.rReturn,
+      ]);
+      for (final count in [0, 1, 2, 3]) {
+        expect(
+          TypedProgram(
+            code,
+            externalCalls: [TypedExternalCall(0, count)],
+          ).externalCalls.single.overflowCount,
+          0,
+        );
+      }
+      expect(() => TypedProgram(code), throwsFormatException);
+      expect(
+        () =>
+            TypedProgram(code, externalCalls: [const TypedExternalCall(0, 4)]),
+        throwsFormatException,
+      );
+      for (final call in [
+        const TypedExternalCall(-1, 0),
+        const TypedExternalCall(0x100000000, 0),
+        const TypedExternalCall(0, -1),
+        const TypedExternalCall(0, 65539),
+      ]) {
+        expect(
+          () => TypedProgram(code, externalCalls: [call]),
+          throwsFormatException,
+        );
+      }
+      final bytes = TypedProgram(
+        Uint8List.fromList([TypedOp.rReturn]),
+        externalCalls: const [TypedExternalCall(0, 4)],
+      ).write().buffer.asUint8List();
+      // Metadata follows the 56-byte header and 29-byte function layout.
+      final badArguments = Uint8List.fromList(bytes);
+      ByteData.sublistView(badArguments).setUint32(89, 65539, Endian.little);
+      expect(
+        () => TypedProgram.read(badArguments.buffer),
+        throwsFormatException,
+      );
+      final badCount = Uint8List.fromList(bytes);
+      ByteData.sublistView(badCount).setUint32(52, 65537, Endian.little);
+      expect(() => TypedProgram.read(badCount.buffer), throwsFormatException);
+      final missingDescriptor = Uint8List.fromList(bytes);
+      ByteData.sublistView(missingDescriptor).setUint32(52, 2, Endian.little);
+      expect(
+        () => TypedProgram.read(missingDescriptor.buffer),
+        throwsFormatException,
+      );
+    },
+  );
   test('export signatures preserve defaults and freeze named parameters', () {
     final parameters = [
       const TypedExportParameter(
@@ -284,8 +358,8 @@ void main() {
       ],
     );
     final bytes = p.write().buffer.asUint8List();
-    // Metadata begins after the 52-byte header, 29-byte layout and one argument.
-    const metadata = 82;
+    // Metadata begins after the 56-byte header, 29-byte layout and one argument.
+    const metadata = 86;
     for (final offset in [
       48,
       metadata,
@@ -467,14 +541,14 @@ void main() {
         Uint8List.fromList([TypedOp.rReturn]),
         classes: [TypedClass('C', library: 'test', valueCount: 0)],
       ).write().buffer.asUint8List();
-      for (final offset in [36, 40, 44, 48, 81]) {
+      for (final offset in [36, 40, 44, 48, 52, 85]) {
         final bad = Uint8List.fromList(bytes);
         ByteData.sublistView(bad).setUint32(offset, 0xffffffff, Endian.little);
         expect(() => TypedProgram.read(bad.buffer), throwsFormatException);
       }
-      final badResult = Uint8List.fromList(bytes)..[80] = 254;
+      final badResult = Uint8List.fromList(bytes)..[84] = 254;
       expect(() => TypedProgram.read(badResult.buffer), throwsFormatException);
-      for (var length = 52; length < bytes.length; length++) {
+      for (var length = 56; length < bytes.length; length++) {
         expect(
           () => TypedProgram.read(
             Uint8List.fromList(bytes.take(length).toList()).buffer,
@@ -705,10 +779,10 @@ void main() {
         TypedFunction(0, argumentKinds: [TypedArgumentKind.string]),
       ],
     ).write().buffer.asUint8List();
-    final badKind = Uint8List.fromList(bytes)..[81] = 255;
+    final badKind = Uint8List.fromList(bytes)..[85] = 255;
     expect(() => TypedProgram.read(badKind.buffer), throwsFormatException);
     final badCount = Uint8List.fromList(bytes);
-    ByteData.sublistView(badCount).setUint32(76, 2, Endian.little);
+    ByteData.sublistView(badCount).setUint32(80, 2, Endian.little);
     expect(() => TypedProgram.read(badCount.buffer), throwsFormatException);
   });
   test('calls need outgoing storage only beyond the register capacity', () {
@@ -761,11 +835,11 @@ void main() {
       Uint8List.fromList([TypedOp.aReturn]),
       objects: ['abc'],
     ).write().buffer.asUint8List();
-    // The object pool follows the 52-byte header and 29-byte function layout.
-    final badTag = Uint8List.fromList(bytes)..[81] = 255;
+    // The object pool follows the 56-byte header and 29-byte function layout.
+    final badTag = Uint8List.fromList(bytes)..[85] = 255;
     expect(() => TypedProgram.read(badTag.buffer), throwsFormatException);
     final badString = Uint8List.fromList(bytes);
-    ByteData.sublistView(badString).setUint32(82, 0xffffffff, Endian.little);
+    ByteData.sublistView(badString).setUint32(86, 0xffffffff, Endian.little);
     expect(() => TypedProgram.read(badString.buffer), throwsFormatException);
     final badCount = Uint8List.fromList(bytes);
     ByteData.sublistView(badCount).setUint32(28, 0, Endian.little);

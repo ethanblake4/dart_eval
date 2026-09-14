@@ -5,12 +5,35 @@ import 'package:dart_eval/stdlib/core.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
 import 'typed_instance.dart';
 import 'typed_host_collections.dart';
+import 'typed_program.dart';
 
 /// The dynamic-call boundary uses boxed language values exclusively.
 ///
 /// The compiler emits every scalar box and unbox operation. Host functions must
 /// use an explicit bridge wrapper, such as $Function or $Closure.
 abstract final class TypedInterop {
+  /// Resolve metadata outside the switch so its table does not stay live in
+  /// the arithmetic loop. Generated bridges consume canonical R/S/C directly.
+  @pragma('vm:never-inline')
+  static $Value? invokeExternal(
+    TypedProgram program,
+    Runtime? runtime,
+    Object? first,
+    Object? second,
+    Object? rest,
+    int siteIndex,
+  ) {
+    final target = _runtime(runtime);
+    final site = program.externalCalls[siteIndex];
+    return target.invokeTypedExternal(
+      site.externalFunctionId,
+      site.argumentCount,
+      first,
+      second,
+      rest,
+    );
+  }
+
   @pragma('vm:never-inline')
   static $Value? call(
     Runtime? runtime,

@@ -58,11 +58,18 @@ class ScopeFrame {
 }
 
 class _UnloadedBridgeFunction {
-  const _UnloadedBridgeFunction(this.library, this.name, this.func);
+  const _UnloadedBridgeFunction(this.library, this.name, this.func)
+    : registers = null;
+  const _UnloadedBridgeFunction.registers(
+    this.library,
+    this.name,
+    this.registers,
+  ) : func = null;
 
   final String library;
   final String name;
-  final EvalCallableFunc func;
+  final EvalCallableFunc? func;
+  final EvalRegisterFunc? registers;
 }
 
 class _UnloadedEnumValues {
@@ -156,7 +163,9 @@ class Runtime {
           _externalFunctionMap[libIndex]?[ulb.name] == null) {
         continue;
       }
-      _bridgeFunctions[_externalFunctionMap[libIndex]![ulb.name]!] = ulb.func;
+      final id = _externalFunctionMap[libIndex]![ulb.name]!;
+      _bridgeFunctions[id] = ulb.func ?? _defaultFunction.call;
+      _bridgeRegisterFunctions[id] = ulb.registers;
     }
 
     for (final ule in _unloadedEnumValues) {
@@ -182,6 +191,23 @@ class Runtime {
   }) {
     _unloadedBrFunc.add(
       _UnloadedBridgeFunction(library, isBridge ? '#$name' : name, fn),
+    );
+  }
+
+  /// Register a generated bridge that consumes canonical R/S/C arguments.
+  /// C is borrowed overflow storage when the signature has over three arguments.
+  void registerBridgeFuncRegisters(
+    String library,
+    String name,
+    EvalRegisterFunc fn, {
+    bool isBridge = false,
+  }) {
+    _unloadedBrFunc.add(
+      _UnloadedBridgeFunction.registers(
+        library,
+        isBridge ? '#$name' : name,
+        fn,
+      ),
     );
   }
 
@@ -352,6 +378,7 @@ class Runtime {
     1000,
     _defaultFunction.call,
   );
+  final _bridgeRegisterFunctions = List<EvalRegisterFunc?>.filled(1000, null);
   final _unloadedBrFunc = <_UnloadedBridgeFunction>[];
   final _unloadedEnumValues = <_UnloadedEnumValues>[];
   final _plugins = <EvalPlugin>[

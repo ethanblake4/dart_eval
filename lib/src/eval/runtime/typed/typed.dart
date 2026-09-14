@@ -6,5 +6,6 @@ export 'typed_class.dart';
 export 'typed_instance.dart';
 
 export 'typed_call_site.dart';
+export 'typed_external_call.dart';
 
 export 'typed_export.dart';

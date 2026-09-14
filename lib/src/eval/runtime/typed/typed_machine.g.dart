@@ -348,6 +348,9 @@ abstract final class TypedMachine {
         case TypedOp.rBoxX:
           r = $bool(x);
           continue dispatch;
+        case TypedOp.rBridgeArgument:
+          r ??= const $null();
+          continue dispatch;
         case TypedOp.aConstant:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           a = program.integerAt(index);
@@ -636,6 +639,10 @@ abstract final class TypedMachine {
           continue dispatch;
         case TypedOp.rUnboxString:
           r = TypedInterop.toStringValue(r);
+          continue dispatch;
+        case TypedOp.callExternal:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          r = TypedInterop.invokeExternal(program, runtime, r, s, c, index); s = null; c = null;
           continue dispatch;
         case TypedOp.callHost:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;

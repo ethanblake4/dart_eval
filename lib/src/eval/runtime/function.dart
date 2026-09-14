@@ -10,6 +10,13 @@ import '../../../dart_eval_bridge.dart';
 typedef EvalCallableFunc =
     $Value? Function(Runtime runtime, $Value? target, List<$Value?> args);
 
+/// Generated static bridge entry. Arguments are canonical language values.
+/// Up to three arguments occupy R/S/C. Beyond three, R/S hold the first two
+/// and C holds a borrowed `List<Object?>` with the remaining arguments.
+/// Read overflow arguments before calling host code; never retain that list.
+typedef EvalRegisterFunc =
+    $Value? Function(Runtime runtime, Object? r, Object? s, Object? c);
+
 /// Abstract supertype for values representing a callable in dart_eval.
 abstract class EvalCallable {
   $Value? call(Runtime runtime, $Value? target, List<$Value?> args);

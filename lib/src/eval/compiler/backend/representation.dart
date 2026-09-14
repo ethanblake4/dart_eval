@@ -230,7 +230,7 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
           types.LoadConstantType() ||
           globals.LoadGlobal():
         output(operation, object);
-      case primitives.MaybeBoxNull():
+      case primitives.MaybeBoxNull() || bridge.PrepareBridgeArgument():
         inputs(operation, object);
         output(operation, object);
       case primitives.BoxList() ||

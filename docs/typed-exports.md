@@ -53,7 +53,7 @@ not regroup arguments into separate primitive lists. `TypedMachine.runEntry`
 starts the typed switch with the prepared registers. Internal calls bypass map
 binding and use the existing register ABI, including one C overflow list.
 
-The Program envelope version is 102 and the typed payload version is 107. Old
+The Program envelope version is 102 and the typed payload version is 108. Old
 bytecode must be recompiled. Both in-memory and serialized loading retain library,
 type and bridge metadata. There is no backend selector or reference fallback.
 
@@ -91,12 +91,12 @@ Follow the failures in `typed-migration-failures.md` when resuming compiler work
 The earlier 28-failure reference baseline is historical and is not a passing gate
 for the new backend.
 
-Final run: 416 passed, 263 failed, six skipped; zero analyzer errors. The failure
+API merge checkpoint: 416 passed, 263 failed, six skipped; zero analyzer errors. The failure
 report groups every failed test. All export/default/identity and codec tests pass.
 The full ARM64 arithmetic path remains 38 instructions, and the opcode table
 remains at 196 entries. See `typed-arm64-optimization.md` for the measurement.
 
-Next work should begin with `InvokeExternal` lowering, which is the first blocker
-in 110 tests, then closure/global conventions and the remaining representation
-mismatches. Non-scalar defaults need a shared immutable constant pool before they
-can join the external argument contract. These tasks were not started here.
+The subsequent [external-call checkpoint](typed-external-calls.md) implements
+`InvokeExternal`, generated register callbacks and explicit bridge-null handling.
+Closure/global conventions and representation mismatches remain. Non-scalar
+defaults need a shared immutable constant pool before joining the export contract.

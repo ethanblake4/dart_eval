@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
+import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:collection/collection.dart';
 import 'package:dart_eval/src/eval/bindgen/bridge.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
@@ -52,14 +53,23 @@ String argumentAccessor(
   FormalParameterElement param, {
   Map<String, String> paramMapping = const {},
   bool isBridgeMethod = false,
+  String? argumentSource,
+  String? primitiveSource,
 }) {
   final paramBuffer = StringBuffer();
   final idx = index + (isBridgeMethod ? 1 : 0);
+  final source = argumentSource ?? 'args[$idx]';
   if (param.isNamed) {
     paramBuffer.write('${paramMapping[param.name] ?? param.name}: ');
   }
   final type = param.type;
+  if (param.hasDefaultValue) {
+    paramBuffer.write('$source == null ? ${param.defaultValueCode} : ');
+  }
   if (type.isDartCoreFunction || type is FunctionType) {
+    if (type.nullabilitySuffix == NullabilitySuffix.question) {
+      paramBuffer.write('$source == null || $source is \$null ? null : ');
+    }
     paramBuffer.write('(');
     if (type is FunctionType) {
       paramBuffer.write(parameterHeader(type.formalParameters));
@@ -72,7 +82,7 @@ String argumentAccessor(
     }
     final q = (param.isRequired ? '' : '?');
     final call = (param.isRequired ? '' : '?.call');
-    paramBuffer.write('(args[$idx]! as EvalCallable$q)$call(runtime, null, [');
+    paramBuffer.write('($source! as EvalCallable$q)$call(runtime, null, [');
     if (type is FunctionType) {
       for (var j = 0; j < type.formalParameters.length; j++) {
         final ftParam = type.formalParameters[j];
@@ -95,20 +105,31 @@ String argumentAccessor(
     }
     paramBuffer.write(';\n}');
   } else {
+    final primitiveName = type.element?.name;
+    if (primitiveSource != null &&
+        type.nullabilitySuffix == NullabilitySuffix.none &&
+        type.element?.library?.uri.toString() == 'dart:core' &&
+        const {
+          'int',
+          'double',
+          'num',
+          'bool',
+          'String',
+        }.contains(primitiveName)) {
+      paramBuffer.write('($primitiveSource as \$$primitiveName).\$value');
+      return paramBuffer.toString();
+    }
     final needsCast =
         type.isDartCoreList || type.isDartCoreMap || type.isDartCoreSet;
     if (needsCast) {
       paramBuffer.write('(');
     }
-    paramBuffer.write('args[$idx]');
+    paramBuffer.write(source);
     final accessor = needsCast ? 'reified' : 'value';
     if (param.isRequired) {
       paramBuffer.write('!.\$$accessor');
     } else {
       paramBuffer.write('?.\$$accessor');
-      if (param.hasDefaultValue) {
-        paramBuffer.write(' ?? ${param.defaultValueCode}');
-      }
     }
     if (needsCast) {
       final q = (param.isRequired ? '' : '?');
@@ -124,6 +145,7 @@ List<String> argumentAccessors(
   List<FormalParameterElement> params, {
   Map<String, String> paramMapping = const {},
   bool isBridgeMethod = false,
+  bool registers = false,
 }) {
   return params
       .mapIndexed(
@@ -133,7 +155,34 @@ List<String> argumentAccessors(
           p,
           paramMapping: paramMapping,
           isBridgeMethod: isBridgeMethod,
+          argumentSource: registers
+              ? registerArgumentSource(i, params.length)
+              : null,
+          primitiveSource: registers
+              ? registerRawArgumentSource(i, params.length)
+              : null,
         ),
       )
       .toList();
 }
+
+/// Sources in the canonical register-call ABI. Overflow values are captured in
+/// scalar locals so a generated native callback never retains the borrowed C list.
+String registerArgumentSource(int index, int count) => switch (index) {
+  0 => r'(r as $Value?)',
+  1 => r'(s as $Value?)',
+  2 when count <= 3 => '(c as \$Value?)',
+  _ => '_arg$index',
+};
+
+String registerArgumentPreamble(int count) => [
+  for (var index = 2; index < count && count > 3; index++)
+    'final _arg$index = (c as List<Object?>)[${index - 2}] as \$Value?;',
+].join('\n');
+
+String registerRawArgumentSource(int index, int count) => switch (index) {
+  0 => 'r',
+  1 => 's',
+  2 when count <= 3 => 'c',
+  _ => '_arg$index',
+};

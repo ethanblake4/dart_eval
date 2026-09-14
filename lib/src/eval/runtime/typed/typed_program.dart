@@ -5,6 +5,7 @@ import 'typed_class.dart';
 import 'typed_call_site.dart';
 import 'typed_function.dart';
 import 'typed_export.dart';
+import 'typed_external_call.dart';
 import 'typed_codec.dart';
 
 /// Validated immutable bytecode for the typed-bank execution loop.
@@ -22,9 +23,11 @@ class TypedProgram {
     List<TypedClass> classes = const [],
     List<TypedCallSite> callSites = const [],
     List<TypedExport> exports = const [],
+    List<TypedExternalCall> externalCalls = const [],
     this.entryFunction = 0,
   }) : code = Uint8List.fromList(code).asUnmodifiableView(),
        exports = List.unmodifiable(exports),
+       externalCalls = List.unmodifiable(externalCalls),
        classes = List.unmodifiable(
          classes.map(
            (type) => TypedClass(
@@ -98,6 +101,7 @@ class TypedProgram {
   final List<TypedClass> classes;
   final List<TypedCallSite> callSites;
   final List<TypedExport> exports;
+  final List<TypedExternalCall> externalCalls;
   final int entryFunction;
 
   ByteData write() => TypedCodec.write(this);
@@ -194,6 +198,20 @@ class TypedProgram {
     }
   }
 
+  void _validateExternalCalls() {
+    if (externalCalls.length > 65536) {
+      throw const FormatException('Too many typed external calls');
+    }
+    for (final call in externalCalls) {
+      if (call.externalFunctionId < 0 ||
+          call.externalFunctionId > 0xffffffff ||
+          call.argumentCount < 0 ||
+          call.argumentCount > 65538) {
+        throw const FormatException('Invalid typed external call');
+      }
+    }
+  }
+
   void _validate() {
     if (functions.isEmpty ||
         functions.length > 65536 ||
@@ -216,6 +234,7 @@ class TypedProgram {
     }
     _validateClasses();
     _validateExports();
+    _validateExternalCalls();
     if (code.isEmpty) throw const FormatException('Empty typed program');
     final boundaries = <int>{};
     final branches = <(int, int)>[];
@@ -278,6 +297,7 @@ class TypedProgram {
           TypedImmediate.function => functions.length,
           TypedImmediate.classIndex => classes.length,
           TypedImmediate.callSite => callSites.length,
+          TypedImmediate.externalCall => externalCalls.length,
           TypedImmediate.field => classes.fold<int>(
             0,
             (n, type) => type.valueCount > n ? type.valueCount : n,
@@ -295,6 +315,12 @@ class TypedProgram {
             index > function.objectOutgoingCount) {
           throw const FormatException(
             'Insufficient outgoing object storage for host call',
+          );
+        }
+        if (last.immediate == TypedImmediate.externalCall &&
+            externalCalls[index].overflowCount > function.objectOutgoingCount) {
+          throw const FormatException(
+            'Insufficient outgoing storage for external call',
           );
         }
         if (last.immediate == TypedImmediate.callSite) {

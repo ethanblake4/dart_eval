@@ -3,6 +3,7 @@ import '../../ir/collection.dart' as collection;
 import 'dart:typed_data';
 import 'package:control_flow_graph/control_flow_graph.dart' as cfg;
 import '../../ir/alu.dart' as alu;
+import '../../ir/bridge.dart' as bridge;
 import '../../ir/flow.dart' as flow;
 import '../../ir/function.dart' as fn;
 import '../../ir/logic.dart' as logic;
@@ -17,6 +18,7 @@ import '../../runtime/typed/typed_program.dart';
 import '../../runtime/typed/typed_function.dart';
 import '../../runtime/typed/typed_class.dart';
 import '../../runtime/typed/typed_call_site.dart';
+import '../../runtime/typed/typed_external_call.dart';
 import '../../runtime/typed/typed_export.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import '../helpers/default_value.dart';
@@ -101,6 +103,7 @@ class TypedBackend {
   final objects = <Object?>[];
   final _classIndices = <(int, String), int>{};
   final _callSites = <TypedCallSite>[];
+  final _externalCalls = <TypedExternalCall>[];
   Map<int, int> functionIndices = {};
 
   static final _codes = {
@@ -222,6 +225,7 @@ class TypedBackend {
       functions: functions,
       classes: classes,
       callSites: _callSites,
+      externalCalls: _externalCalls,
       exports: [
         for (final (library, name) in roots) _export(library, name, indices),
       ],
@@ -447,6 +451,74 @@ class TypedBackend {
           if (target != length) {
             lowered.add(TypedOperation(_named(['rBoxA']), target, [length]));
           }
+          continue;
+        }
+        if (op is bridge.InvokeExternal) {
+          final callLayout = TypedCallLayout(
+            List.filled(op.args.length, TypedArgumentKind.object),
+          );
+          final registerArguments = <cfg.SSA>[];
+          final argumentRegisters = <int>[];
+          for (var index = 0; index < op.args.length; index++) {
+            final input = value(op.args[index]);
+            if (representations[op.args[index]] !=
+                MachineRepresentation.object) {
+              throw StateError(
+                'External call argument requires explicit boxing',
+              );
+            }
+            final location = callLayout.arguments[index];
+            if (location.overflowIndex == null) {
+              registerArguments.add(input);
+              argumentRegisters.add(
+                _banks[location.bank.index][location.index],
+              );
+            } else {
+              lowered.add(
+                TypedOperation(
+                  _named(['rOutgoing', 'sOutgoing', 'cOutgoing']),
+                  null,
+                  [input],
+                  immediate: location.overflowIndex,
+                ),
+              );
+            }
+          }
+          if (callLayout.overflowCount > 0) {
+            final overflow = temporary('externalOutgoing');
+            lowered.add(
+              TypedOperation(_named(['cLoadOutgoing']), overflow, []),
+            );
+            registerArguments.add(overflow);
+            argumentRegisters.add(8);
+            if (callLayout.overflowCount > outgoingCount) {
+              outgoingCount = callLayout.overflowCount;
+            }
+          }
+          var callIndex = _externalCalls.indexWhere(
+            (call) =>
+                call.externalFunctionId == op.externalFunctionId &&
+                call.argumentCount == op.args.length,
+          );
+          if (callIndex < 0) {
+            callIndex = _externalCalls.length;
+            _externalCalls.add(
+              TypedExternalCall(op.externalFunctionId, op.args.length),
+            );
+          }
+          lowered.add(
+            TypedOperation(
+              _named(['callExternal']),
+              value(op.target),
+              registerArguments,
+              fixedVariant: cfg.Variant(
+                result: 6,
+                arguments: argumentRegisters,
+              ),
+              immediate: callIndex,
+              clobbers: {0, 1, 2, 3, 4, 5, 6, 7, 8},
+            ),
+          );
           continue;
         }
         if (op is objects_ir.InvokeDynamic ||
@@ -719,6 +791,10 @@ class TypedBackend {
             ['rConstant', 'sConstant', 'cConstant'],
             [],
             immediate: _object(value),
+          ),
+          bridge.PrepareBridgeArgument(:final source) => make(
+            ['rBridgeArgument'],
+            [source],
           ),
           memory.LoadNull() ||
           primitives.BoxNull() => make(['rNull', 'sNull', 'cNull'], []),

@@ -273,3 +273,46 @@ Validation: 416 passes, 263 failures in unfinished compiler/runtime features,
 six skips, zero analyzer errors. Export binding, codec and host identity tests
 pass. See [the migration baseline](typed-migration-failures.md) for failed names
 and their first reported errors. No speedup is claimed from these code counts.
+
+## External bridge checkpoint
+
+`callExternal` resolves its descriptor inside a non-inlined helper. Generated
+bridges consume R/S/C directly, while legacy registrations receive a snapshot
+list. `rBridgeArgument` is an explicit nullable-argument conversion emitted by
+the compiler. No new permanent registers or loop-wide metadata tables were added.
+There are 198 opcodes, leaving 58 byte values available for future intrinsics.
+
+The final Dart 3.10.7 Linux ARM64 probe retains both legacy callbacks and direct
+register callbacks. Its arithmetic path is unchanged at 38 instructions: 32
+dispatch, four integer/double add and two common tail, with 11 stack stores and
+two stack loads. The loop occupies 19,600 bytes, up 232 from the export checkpoint.
+
+Recorded `TypedMachine.runEntry` range: `0x13f1f8` to `0x143e88` exclusive.
+Dispatch: `0x13f2f4` through `0x13f370`. Integer add: `0x13f4ac` through
+`0x13f4b8`. Double add: `0x13f51c` through `0x13f528`. Common tail:
+`0x143920` through `0x143924`. These are static instruction counts, not ARM64
+execution timings or an isolated measurement of external-call latency.
+
+`benchmark/typed_external_calls.dart` executes identical bytecode with either
+registration path. Its loop passes opaque object references and verifies identity
+inside the callback; compilation and runtime construction are outside timing.
+Windows x64 AOT, one million iterations, five samples, final standalone run:
+
+| Arguments | Registration | Median ms | Min to max ms |
+| --- | --- | ---: | ---: |
+| 3 | Legacy list | 223.797 | 107.724 to 268.513 |
+| 3 | Registers | 102.493 | 95.243 to 107.629 |
+| 6 | Legacy list | 423.709 | 239.808 to 670.144 |
+| 6 | Registers | 201.612 | 197.635 to 234.446 |
+
+Checksum: `10000120110000`. An odd-count 1,001-iteration smoke run also passes.
+Host variability is too large to attribute these timing differences to this
+change: an earlier run measured 101.003/99.158 ms for three arguments and
+246.772/432.720 ms for six. Direct callbacks avoid argument-vector allocation by
+construction, but a throughput improvement has not been established.
+
+Full validation: 514 passes, 185 failures, six skips, zero analyzer errors and
+generated files current. Of the failures, 184 are unfinished compiler/runtime
+features; `Future.delayed` exceeds its 200 ms full-suite timing threshold but
+passes in isolation. 77 formerly failing tests now pass in the full run, with
+no regressions among previously passing tests. See the current migration report.

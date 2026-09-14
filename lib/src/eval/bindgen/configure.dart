@@ -32,7 +32,7 @@ String bindConfigureFunctionForRuntime(
   final uri = ctx.libOverrides[element.name] ?? ctx.uri;
   return '''
 static void configureForRuntime(Runtime runtime) {
-  return runtime.registerBridgeFunc('$uri', '${element.name!.replaceAll(r'$', r'\$')}', const \$${element.name}Fn().call);
+  return runtime.registerBridgeFuncRegisters('$uri', '${element.name!.replaceAll(r'$', r'\$')}', \$${element.name}Fn.callRegisters);
 }
 ''';
 }
@@ -78,10 +78,10 @@ String constructorForRuntime(
   final bridgeParam = isBridge ? ', isBridge: true' : '';
 
   return '''
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       '$uri',
       '$fullyQualifiedConstructorId',
-      \$${element.name}${isBridge ? '\$bridge' : ''}.\$$staticName
+      \$${element.name}${isBridge ? '\$bridge' : ''}.\$$staticName\$registers
       $bridgeParam
     );
   ''';
@@ -106,10 +106,10 @@ String staticMethodForRuntime(
 }) {
   final uri = ctx.libOverrides[element.name] ?? ctx.uri;
   return '''
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       '$uri',
       '${element.name}.${method.name}',
-      \$${element.name}${isBridge ? '\$bridge' : ''}.\$${method.name}
+      \$${element.name}${isBridge ? '\$bridge' : ''}.\$${method.name}\$registers
     );
   ''';
 }
@@ -139,10 +139,10 @@ String staticGetterForRuntime(
 }) {
   final uri = ctx.libOverrides[element.name] ?? ctx.uri;
   return '''
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       '$uri',
       '${element.name}.${getter.name}*g',
-      \$${element.name}${isBridge ? '\$bridge' : ''}.\$${getter.name}
+      \$${element.name}${isBridge ? '\$bridge' : ''}.\$${getter.name}\$registers
     );
   ''';
 }
@@ -166,10 +166,10 @@ String staticSetterForRuntime(
 }) {
   final uri = ctx.libOverrides[element.name] ?? ctx.uri;
   return '''
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       '$uri',
       '${element.name}.${setter.name}*s',
-      \$${element.name}${isBridge ? '\$bridge' : ''}.set\$${setter.name}
+      \$${element.name}${isBridge ? '\$bridge' : ''}.set\$${setter.name}\$registers
     );
   ''';
 }

@@ -5,17 +5,18 @@ import 'typed_class.dart';
 import 'typed_call_site.dart';
 import 'typed_program.dart';
 import 'typed_export.dart';
+import 'typed_external_call.dart';
 
 /// Versioned little-endian format, separate from the generic register format.
 abstract final class TypedCodec {
   static const magic = 0x54564544; // DEVT
-  static const version = 107;
+  static const version = 108;
 
   static ByteData write(TypedProgram program) {
     final objects = _writeObjects(program.objects);
     final metadata = _writeMetadata(program);
     final result = ByteData(
-      52 +
+      56 +
           program.functions.fold<int>(
             0,
             (size, f) => size + 29 + f.argumentKinds.length,
@@ -45,6 +46,7 @@ abstract final class TypedCodec {
     u32(program.callSites.length);
     u32(metadata.length);
     u32(program.exports.length);
+    u32(program.externalCalls.length);
     for (final function in program.functions) {
       for (final value in function.layout) {
         u32(value);
@@ -73,7 +75,7 @@ abstract final class TypedCodec {
 
   static TypedProgram read(ByteBuffer buffer) {
     final input = ByteData.view(buffer);
-    if (input.lengthInBytes < 52) {
+    if (input.lengthInBytes < 56) {
       throw const FormatException('Truncated typed program header');
     }
     var offset = 0;
@@ -91,18 +93,19 @@ abstract final class TypedCodec {
     final codeLength = u32();
     final objectCount = u32(), objectLength = u32();
     final classCount = u32(), callSiteCount = u32(), metadataLength = u32();
-    final exportCount = u32();
+    final exportCount = u32(), externalCallCount = u32();
     final sectionsLength =
         integerCount * 8 +
         doubleCount * 8 +
         objectLength +
         codeLength +
         metadataLength;
-    final minimumLength = 52 + functionCount * 29 + sectionsLength;
+    final minimumLength = 56 + functionCount * 29 + sectionsLength;
     if (functionCount == 0 ||
         functionCount > 65536 ||
         classCount > 65536 ||
         callSiteCount > 65536 ||
+        externalCallCount > 65536 ||
         minimumLength > input.lengthInBytes ||
         objectCount > objectLength) {
       throw const FormatException('Invalid typed bytecode section lengths');
@@ -148,11 +151,12 @@ abstract final class TypedCodec {
     if (offset + sectionsLength != input.lengthInBytes) {
       throw const FormatException('Invalid typed bytecode section lengths');
     }
-    final (classes, callSites, exports) = _readMetadata(
+    final (classes, callSites, exports, externalCalls) = _readMetadata(
       ByteData.view(buffer, offset, metadataLength),
       classCount,
       callSiteCount,
       exportCount,
+      externalCallCount,
     );
     offset += metadataLength;
     final integers = List.generate(integerCount, (_) {
@@ -179,6 +183,7 @@ abstract final class TypedCodec {
       classes: classes,
       callSites: callSites,
       exports: exports,
+      externalCalls: externalCalls,
       entryFunction: entry,
     );
   }
@@ -236,15 +241,25 @@ abstract final class TypedCodec {
         bytes.add(value);
       }
     }
+    for (final call in program.externalCalls) {
+      u32(call.externalFunctionId);
+      u32(call.argumentCount);
+    }
     return bytes.takeBytes();
   }
 
-  static (List<TypedClass>, List<TypedCallSite>, List<TypedExport>)
+  static (
+    List<TypedClass>,
+    List<TypedCallSite>,
+    List<TypedExport>,
+    List<TypedExternalCall>,
+  )
   _readMetadata(
     ByteData input,
     int classCount,
     int callSiteCount,
     int exportCount,
+    int externalCallCount,
   ) {
     var offset = 0;
     void require(int count) {
@@ -287,7 +302,12 @@ abstract final class TypedCodec {
       return values;
     }
 
-    require(classCount * 24 + callSiteCount * 12 + exportCount * 16);
+    require(
+      classCount * 24 +
+          callSiteCount * 12 +
+          exportCount * 16 +
+          externalCallCount * 8,
+    );
     final classes = <TypedClass>[];
     for (var i = 0; i < classCount; i++) {
       classes.add(
@@ -357,10 +377,14 @@ abstract final class TypedCodec {
         TypedExport(library, name, functionId, parameters: parameters),
       );
     }
+    final externalCalls = <TypedExternalCall>[];
+    for (var i = 0; i < externalCallCount; i++) {
+      externalCalls.add(TypedExternalCall(u32(), u32()));
+    }
     if (offset != input.lengthInBytes) {
       throw const FormatException('Invalid typed class metadata length');
     }
-    return (classes, callSites, exports);
+    return (classes, callSites, exports, externalCalls);
   }
 
   // Tags: null, false, true, int64, float64, UTF-16 string. Live objects
