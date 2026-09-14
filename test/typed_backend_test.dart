@@ -34,7 +34,7 @@ void main() {
     );
   });
   test('branches widen when a compiled target exceeds signed16 reach', () {
-    final body = List.filled(5500, 'n = increment(n);').join();
+    final body = List.filled(12000, 'n = increment(n);').join();
     final program = compile('''int increment(int n) => n + 1;
       int main(int n, bool run) { if (run) { $body } return n; }
     ''');
@@ -51,7 +51,7 @@ void main() {
     );
     expect(
       TypedMachine.run(program, intArguments: [7], boolArguments: [true]),
-      5507,
+      12007,
     );
   });
   test('small integer literals use immediates and preserve signed results', () {
@@ -169,7 +169,144 @@ void main() {
       8.25,
     );
   });
-  test('many arguments are staged independently of register capacity', () {
+  test('register calls preserve reversed arguments and live caller values', () {
+    final program = compile('''int difference(int x, int y) => x - y;
+      int main(int x, int y) {
+        var reversed = difference(y, x);
+        return reversed + x + y;
+      }''');
+    expect(TypedMachine.run(program, intArguments: [13, 4]), 8);
+    expect(program.functions.first.objectOutgoingCount, 0);
+    expect(program.functions.last.objectOutgoingCount, 0);
+  });
+  test('repeated call arguments occupy separate incoming registers', () {
+    final program = compile('''int combine(int x, int y) => x + y;
+      int main(int x) => combine(x, x);''');
+    expect(TypedMachine.run(program, intArguments: [17]), 34);
+    expect(program.functions.first.objectOutgoingCount, 0);
+  });
+  test('unused parameters retain their positions in the register ABI', () {
+    final program = compile(
+      '''int last(int unused, int second, int third) => third;
+      int main(int unused, int second, int third) => last(unused, second, third);''',
+    );
+    expect(TypedMachine.run(program, intArguments: [3, 7, 19]), 19);
+    expect(
+      program.functions.first.argumentKinds,
+      List.filled(3, TypedArgumentKind.integer),
+    );
+    expect(program.functions.first.objectOutgoingCount, 0);
+    expect(
+      program.functions.last.argumentKinds,
+      List.filled(3, TypedArgumentKind.integer),
+    );
+  });
+  test('incoming register definitions emit no argument loads', () {
+    final program = compile(
+      'int main(int first, int second) => second - first;',
+    );
+    final names = <String>[];
+    for (var pc = 0; pc < program.code.length;) {
+      final instruction = TypedOp.instructions[program.code[pc]];
+      names.add(instruction.name);
+      pc += instruction.length;
+    }
+    expect(names.any((name) => name.endsWith('Argument')), isFalse);
+    expect(TypedMachine.run(program, intArguments: [6, 21]), 15);
+  });
+  test('excess double and boolean arguments use spare object registers', () {
+    final program = compile('''double choose(double a, bool x, double b,
+          bool y, double c, bool z) {
+        if (x) return a;
+        if (y) return b;
+        if (z) return c;
+        return 0.0;
+      }
+      double main(double a, double b, double c, bool x, bool y, bool z) =>
+          choose(c, z, a, x, b, y);''');
+    expect(
+      TypedMachine.run(
+        program,
+        doubleArguments: [2.5, 7.5, 9.5],
+        boolArguments: [false, true, false],
+      ),
+      7.5,
+    );
+    expect(program.functions.first.objectOutgoingCount, 0);
+  });
+  test(
+    'string and boxed parameters share object registers and one overflow list',
+    () {
+      final program = compile('''String choose(String a, Object b, String c,
+          Object d) => c;
+      String main(String a, Object b, String c, Object d) =>
+          choose(c, d, a, b);''');
+      expect(
+        TypedMachine.run(
+          program,
+          objectArguments: ['first', Object(), 'third', Object()],
+        ),
+        'first',
+      );
+      expect(program.functions.first.objectOutgoingCount, 2);
+      expect(program.functions.first.argumentKinds, [
+        TypedArgumentKind.object,
+        TypedArgumentKind.object,
+        TypedArgumentKind.object,
+        TypedArgumentKind.object,
+      ]);
+    },
+  );
+  test('five integer arguments fit dedicated and object registers', () {
+    final program = compile('''int sum(int a, int b, int c, int d, int e) =>
+          a + b + c + d + e;
+      int main() => sum(1, 2, 3, 4, 5);''');
+    expect(TypedMachine.run(program), 15);
+    expect(program.functions.first.objectOutgoingCount, 0);
+    final names = <String>[];
+    for (var pc = 0; pc < program.code.length;) {
+      final instruction = TypedOp.instructions[program.code[pc]];
+      names.add(instruction.name);
+      pc += instruction.length;
+    }
+    expect(names, contains(anyOf('rFromA', 'rFromB')));
+    expect(names.any((name) => name.startsWith('rBox')), isFalse);
+    expect(names, isNot(contains('cLoadOutgoing')));
+  });
+  test('six integer arguments preserve overflow across recursive calls', () {
+    final program = compile(
+      '''int recur(int n, int a, int b, int c, int d, int e) {
+        if (n == 0) return a + b + c + d + e;
+        return recur(n - 1, e, d, c, b, a) + a + e;
+      }
+      int main(int n) => recur(n, 1, 2, 3, 4, 5);''',
+    );
+    expect(TypedMachine.run(program, intArguments: [2]), 27);
+    expect(TypedMachine.run(program, intArguments: [3]), 33);
+    expect(program.functions.first.objectOutgoingCount, 2);
+    expect(program.functions.last.objectOutgoingCount, 2);
+  });
+  test('one C list carries mixed primitive excess arguments', () {
+    final program = compile('''double choose(Object first, Object second,
+          double a, double b, double c, bool x, bool y, bool z) {
+        if (z) return c;
+        return a;
+      }
+      double main(Object first, Object second,
+          double a, double b, double c, bool x, bool y, bool z) =>
+          choose(second, first, a, b, c, x, y, z);''');
+    expect(
+      TypedMachine.run(
+        program,
+        objectArguments: [Object(), Object()],
+        doubleArguments: [1.5, 2.5, 9.5],
+        boolArguments: [false, false, true],
+      ),
+      9.5,
+    );
+    expect(program.functions.first.objectOutgoingCount, 2);
+  });
+  test('only arguments beyond register capacity use outgoing slots', () {
     final arguments = List.generate(12, (i) => 'int a$i').join(', ');
     final sum = List.generate(12, (i) => 'a$i').join(' + ');
     final values = List.generate(12, (i) => '${i + 1}').join(', ');
@@ -177,6 +314,7 @@ void main() {
       'int sum($arguments) => $sum; int main() => sum($values);',
     );
     expect(TypedMachine.run(program), 78);
+    expect(program.functions.first.objectOutgoingCount, 8);
   });
   test('general object identity survives direct calls and caller spills', () {
     final program = compile(

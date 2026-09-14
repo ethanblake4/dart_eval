@@ -27,6 +27,7 @@ final class TypedOperation extends cfg.Operation {
     this.otherTarget,
     this.terminal = false,
     this.clobbers = const {},
+    this.fixedVariant,
   });
   final List<int> codes;
   final cfg.SSA? result;
@@ -35,6 +36,7 @@ final class TypedOperation extends cfg.Operation {
   final int? otherTarget;
   final bool terminal;
   final Set<int> clobbers;
+  final cfg.Variant? fixedVariant;
   @override
   cfg.SSA? get writesTo => result;
   @override
@@ -61,6 +63,7 @@ final class TypedOperation extends cfg.Operation {
     otherTarget: otherTarget,
     terminal: terminal,
     clobbers: clobbers,
+    fixedVariant: fixedVariant,
   );
 }
 
@@ -146,14 +149,8 @@ class TypedBackend {
           doubleSpillCount: function.spills[1],
           boolSpillCount: function.spills[2],
           objectSpillCount: function.spills[3],
-          intArgumentCount: function.arguments[0],
-          doubleArgumentCount: function.arguments[1],
-          boolArgumentCount: function.arguments[2],
-          objectArgumentCount: function.arguments[3],
-          intOutgoingCount: function.outgoing[0],
-          doubleOutgoingCount: function.outgoing[1],
-          boolOutgoingCount: function.outgoing[2],
-          objectOutgoingCount: function.outgoing[3],
+          argumentKinds: function.argumentKinds,
+          objectOutgoingCount: function.outgoing,
         ),
       );
       bytes.add(code);
@@ -179,7 +176,7 @@ class TypedBackend {
 
   _FunctionCode _compileFunction(int id, Map<int, int> functionIndices) {
     final spillCounts = [0, 0, 0, 0];
-    final outgoingCounts = [0, 0, 0, 0];
+    var outgoingCount = 0;
     var methodCounter = 0;
     final sourceGraph = context.ssaFunctionGraphs[id]!;
     final representations = analyzeRepresentations(
@@ -203,19 +200,40 @@ class TypedBackend {
       );
     }
 
-    final argumentIndices = <int, int>{};
-    final argumentCounts = [0, 0, 0, 0];
-    final parameters = [
-      for (final block in graph.graph.vertices)
-        ...graph[block]!.code.whereType<fn.Parameter>(),
-    ]..sort((a, b) => a.index.compareTo(b.index));
-    for (final parameter in parameters) {
-      final bank = value(parameter.target).type;
-      argumentIndices[parameter.index] = argumentCounts[bank]++;
-    }
+    final signature = context.functionSignatures[id]!;
+    final argumentKinds = [
+      for (final representation in signature.parameters)
+        TypedArgumentKind.values[representation.index],
+    ];
+    final layout = TypedCallLayout(argumentKinds);
+    var temporaryCounter = 0;
+    cfg.SSA temporary(String name) =>
+        cfg.SSA('typed:$name${temporaryCounter++}', version: 0, type: 3);
+    final overflowInput = layout.overflowCount == 0
+        ? null
+        : temporary('overflow');
+    final parameterInputs = <int, cfg.SSA>{};
     for (final blockId in graph.graph.vertices.toList()) {
       final block = graph[blockId]!;
       final lowered = <cfg.Operation>[];
+      final parameters = block.code.whereType<fn.Parameter>().toList();
+      if (parameters.any(
+        (op) => layout.arguments[op.index].overflowIndex != null,
+      )) {
+        lowered.add(cfg.RegisterInput(overflowInput!, 8));
+      }
+      for (final op in parameters) {
+        final location = layout.arguments[op.index];
+        if (location.overflowIndex != null) continue;
+        final target = value(op.target);
+        final input = location.bank.index == target.type
+            ? target
+            : temporary('parameter');
+        parameterInputs[op.index] = input;
+        lowered.add(
+          cfg.RegisterInput(input, _banks[location.bank.index][location.index]),
+        );
+      }
       for (final op in block.code) {
         if (op is cfg.PhiNode) {
           lowered.add(
@@ -262,8 +280,8 @@ class TypedBackend {
               ),
             );
           }
-          if (arguments.length > outgoingCounts[3])
-            outgoingCounts[3] = arguments.length;
+          if (arguments.length > outgoingCount)
+            outgoingCount = arguments.length;
           final method = op is objects_ir.InvokeDynamic && op.name != 'call'
               ? cfg.SSA('typed:method${methodCounter++}', version: 0, type: 3)
               : null;
@@ -289,43 +307,95 @@ class TypedBackend {
           continue;
         }
         if (op is flow.Call) {
-          final outgoing = [0, 0, 0, 0];
-          for (final argument in op.arguments) {
-            final input = value(argument);
-            final index = outgoing[input.type]++;
-            lowered.add(
-              TypedOperation(
-                _named([
-                  for (final r in _banks[input.type])
-                    '${_registerNames[r]}Outgoing',
-                ]),
-                null,
-                [input],
-                immediate: index,
-              ),
-            );
+          final callee = _resolveFunction(op.target);
+          final callLayout = TypedCallLayout([
+            for (final representation
+                in context.functionSignatures[callee]!.parameters)
+              TypedArgumentKind.values[representation.index],
+          ]);
+          final registerArguments = <cfg.SSA>[];
+          final argumentRegisters = <int>[];
+          for (var index = 0; index < op.arguments.length; index++) {
+            var input = value(op.arguments[index]);
+            final location = callLayout.arguments[index];
+            if (location.bank == TypedRegisterBank.object && input.type != 3) {
+              final native = temporary('native');
+              lowered.add(
+                TypedOperation(
+                  _named([
+                    for (final register in _banks[input.type])
+                      'rFrom${_registerNames[register].toUpperCase()}',
+                  ]),
+                  native,
+                  [input],
+                ),
+              );
+              input = native;
+            }
+            if (location.overflowIndex == null) {
+              registerArguments.add(input);
+              argumentRegisters.add(
+                _banks[location.bank.index][location.index],
+              );
+            } else {
+              lowered.add(
+                TypedOperation(
+                  _named(['rOutgoing', 'sOutgoing', 'cOutgoing']),
+                  null,
+                  [input],
+                  immediate: location.overflowIndex,
+                ),
+              );
+            }
           }
-          for (var bank = 0; bank < 4; bank++) {
-            if (outgoing[bank] > outgoingCounts[bank])
-              outgoingCounts[bank] = outgoing[bank];
+          if (callLayout.overflowCount > 0) {
+            final list = temporary('outgoing');
+            lowered.add(TypedOperation(_named(['cLoadOutgoing']), list, []));
+            registerArguments.add(list);
+            argumentRegisters.add(8);
+          }
+          if (callLayout.overflowCount > outgoingCount) {
+            outgoingCount = callLayout.overflowCount;
           }
           final result = value(op.writesTo!);
           lowered.add(
             TypedOperation(
-              _named([
-                [
-                  'callInt',
-                  'callDouble',
-                  'callBool',
-                  'callObject',
-                ][result.type],
-              ]),
+              _named(['call']),
               result,
-              [],
+              registerArguments,
+              fixedVariant: cfg.Variant(
+                result: _banks[result.type].first,
+                arguments: argumentRegisters,
+              ),
               immediate: functionIndices[_resolveFunction(op.target)],
               clobbers: {0, 1, 2, 3, 4, 5, 6, 7, 8},
             ),
           );
+          continue;
+        }
+        if (op is fn.Parameter) {
+          final target = value(op.target);
+          final location = layout.arguments[op.index];
+          var input = parameterInputs[op.index];
+          if (location.overflowIndex != null) {
+            input = target.type == 3 ? target : temporary('parameter');
+            lowered.add(
+              TypedOperation(_named(['rOverflow']), input, [
+                overflowInput!,
+              ], immediate: location.overflowIndex),
+            );
+          }
+          if (location.bank.index != target.type) {
+            lowered.add(
+              TypedOperation(
+                _named([
+                  ['aNativeFromR', 'fNativeFromR', 'eNativeFromR'][target.type],
+                ]),
+                target,
+                [input!],
+              ),
+            );
+          }
           continue;
         }
         TypedOperation make(
@@ -383,11 +453,11 @@ class TypedBackend {
           ),
           memory.LoadNull() ||
           primitives.BoxNull() => make(['rNull', 'sNull', 'cNull'], []),
-          primitives.BoxString(:final target, :final source) ||
-          primitives.MaybeBoxNull(
-            :final target,
-            :final source,
-          ) => cfg.Assign(value(target), value(source)),
+          primitives.BoxString(:final source) => make(['rBoxString'], [source]),
+          primitives.MaybeBoxNull(:final target, :final source) => cfg.Assign(
+            value(target),
+            value(source),
+          ),
           primitives.BoxInt(:final source) ||
           primitives.BoxDouble(:final source) ||
           primitives.BoxBool(:final source) ||
@@ -395,12 +465,14 @@ class TypedBackend {
             [
               for (final target in ['r'])
                 for (final r in _banks[value(source).type])
-                  '${target}From${_registerNames[r].toUpperCase()}',
+                  '${target}Box${_registerNames[r].toUpperCase()}',
             ],
             [source],
           ),
           primitives.Unbox(:final target, :final source) =>
-            value(target).type == 3
+            representations[target] == MachineRepresentation.string
+                ? make(['rUnboxString'], [source])
+                : value(target).type == 3
                 ? cfg.Assign(value(target), value(source))
                 : make(
                     [
@@ -421,11 +493,6 @@ class TypedBackend {
                 for (final r in ['R', 'S', 'C']) '${flag}IsNull$r',
             ],
             [object],
-          ),
-          fn.Parameter(:final target, :final index) => make(
-            bankNames(target, 'Argument'),
-            [],
-            immediate: argumentIndices[index],
           ),
           cfg.Assign(:final target, :final source) => cfg.Assign(
             value(target),
@@ -512,14 +579,19 @@ class TypedBackend {
     graph.opCreators[TypedOperation] = cfg.Creator<TypedOperation, void>(
       variants: {},
       selectClobbers: (op) => op.clobbers,
-      selectVariants: (op) => {
-        for (final code in op.codes)
-          cfg.Variant(
-            result: TypedOp.instructions[code].outputs.firstOrNull,
-            arguments: TypedOp.instructions[code].inputs,
-          ),
-      },
+      selectVariants: (op) => op.fixedVariant == null
+          ? {
+              for (final code in op.codes)
+                cfg.Variant(
+                  result: TypedOp.instructions[code].outputs.firstOrNull,
+                  arguments: TypedOp.instructions[code].inputs,
+                ),
+            }
+          : {op.fixedVariant!},
       create: (op, _) {
+        if (op.fixedVariant != null) {
+          return _Bytes(op.codes.single, op.immediate);
+        }
         final code = op.codes.firstWhere((code) {
           final spec = TypedOp.instructions[code];
           return spec.outputs.firstOrNull == op.result?.alloc.register &&
@@ -663,8 +735,8 @@ class TypedBackend {
     return _FunctionCode(
       bytes.takeBytes(),
       spillCounts,
-      argumentCounts,
-      outgoingCounts,
+      argumentKinds,
+      outgoingCount,
     );
   }
 
@@ -725,9 +797,9 @@ class TypedBackend {
 }
 
 class _FunctionCode {
-  _FunctionCode(this.code, this.spills, this.arguments, this.outgoing);
+  _FunctionCode(this.code, this.spills, this.argumentKinds, this.outgoing);
   final Uint8List code;
   final List<int> spills;
-  final List<int> arguments;
-  final List<int> outgoing;
+  final List<TypedArgumentKind> argumentKinds;
+  final int outgoing;
 }

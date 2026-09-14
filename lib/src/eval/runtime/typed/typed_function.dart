@@ -1,5 +1,61 @@
-/// Layout of a function's private typed storage. Registers are clobbered
-/// by calls, so values live across a call belong in the caller's spill banks.
+/// Representation of an argument before assigning call registers.
+enum TypedArgumentKind { integer, doublePrecision, boolean, string, object }
+
+enum TypedRegisterBank { integer, doublePrecision, boolean, object }
+
+/// A register location, or an element of the overflow list in object register C.
+class TypedArgumentLocation {
+  const TypedArgumentLocation(this.bank, this.index, {this.overflowIndex});
+
+  final TypedRegisterBank bank;
+  final int index;
+  final int? overflowIndex;
+}
+
+/// The common calling convention used by the compiler and public entry adapter.
+class TypedCallLayout {
+  factory TypedCallLayout(List<TypedArgumentKind> kinds) {
+    final counts = <TypedRegisterBank, int>{};
+    final locations = List<TypedArgumentLocation?>.filled(kinds.length, null);
+    final objectIndices = <int>[];
+    for (var i = 0; i < kinds.length; i++) {
+      final bank = switch (kinds[i]) {
+        TypedArgumentKind.integer => TypedRegisterBank.integer,
+        TypedArgumentKind.doublePrecision => TypedRegisterBank.doublePrecision,
+        TypedArgumentKind.boolean => TypedRegisterBank.boolean,
+        TypedArgumentKind.string ||
+        TypedArgumentKind.object => TypedRegisterBank.object,
+      };
+      final index = counts[bank] ?? 0;
+      if (bank != TypedRegisterBank.object && index < 2) {
+        locations[i] = TypedArgumentLocation(bank, index);
+        counts[bank] = index + 1;
+      } else {
+        objectIndices.add(i);
+      }
+    }
+    final hasOverflow = objectIndices.length > 3;
+    for (var i = 0; i < objectIndices.length; i++) {
+      locations[objectIndices[i]] = TypedArgumentLocation(
+        TypedRegisterBank.object,
+        hasOverflow && i >= 2 ? 2 : i,
+        overflowIndex: hasOverflow && i >= 2 ? i - 2 : null,
+      );
+    }
+    return TypedCallLayout._(
+      List.unmodifiable(locations.cast<TypedArgumentLocation>()),
+      hasOverflow ? objectIndices.length - 2 : 0,
+    );
+  }
+
+  const TypedCallLayout._(this.arguments, this.overflowCount);
+
+  final List<TypedArgumentLocation> arguments;
+  final int overflowCount;
+}
+
+/// Layout of a function's private storage and source-order argument signature.
+/// Calls clobber registers; values live across calls belong in caller spills.
 class TypedFunction {
   const TypedFunction(
     this.entry, {
@@ -7,26 +63,18 @@ class TypedFunction {
     this.doubleSpillCount = 0,
     this.boolSpillCount = 0,
     this.objectSpillCount = 0,
-    this.intArgumentCount = 0,
-    this.doubleArgumentCount = 0,
-    this.boolArgumentCount = 0,
-    this.objectArgumentCount = 0,
-    this.intOutgoingCount = 0,
-    this.doubleOutgoingCount = 0,
-    this.boolOutgoingCount = 0,
+    this.argumentKinds = const [],
     this.objectOutgoingCount = 0,
   });
 
   final int entry;
   final int intSpillCount, doubleSpillCount, boolSpillCount, objectSpillCount;
-  final int intArgumentCount,
-      doubleArgumentCount,
-      boolArgumentCount,
-      objectArgumentCount;
-  final int intOutgoingCount,
-      doubleOutgoingCount,
-      boolOutgoingCount,
-      objectOutgoingCount;
+  final List<TypedArgumentKind> argumentKinds;
+
+  /// Capacity of the single list used to stage overflow and host arguments.
+  final int objectOutgoingCount;
+
+  TypedCallLayout get callLayout => TypedCallLayout(argumentKinds);
 
   List<int> get layout => [
     entry,
@@ -34,13 +82,6 @@ class TypedFunction {
     doubleSpillCount,
     boolSpillCount,
     objectSpillCount,
-    intArgumentCount,
-    doubleArgumentCount,
-    boolArgumentCount,
-    objectArgumentCount,
-    intOutgoingCount,
-    doubleOutgoingCount,
-    boolOutgoingCount,
     objectOutgoingCount,
   ];
 }

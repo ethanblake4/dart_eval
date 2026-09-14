@@ -4,6 +4,7 @@ import 'typed_program.dart';
 import 'typed_frame.dart';
 import 'typed_interop.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/stdlib/core.dart';
 
 abstract final class TypedMachine {
   /// Fixed scalar banks stay in typed locals across the dispatch loop.
@@ -13,11 +14,12 @@ abstract final class TypedMachine {
       List<bool> boolArguments = const [], List<Object?> objectArguments = const [], Runtime? runtime}) {
     final code = program.code;
     final entry = program.functions[program.entryFunction];
-    var frame = TypedFrame.entry(entry, intArguments, doubleArguments, boolArguments, objectArguments);
-    Object? r, s, c;
-    var a = 0, b = 0;
-    var f = 0.0, g = 0.0;
-    var e = false, x = false;
+    final arguments = TypedEntry.prepare(entry, intArguments, doubleArguments, boolArguments, objectArguments, runtime);
+    var frame = TypedFrame(entry);
+    Object? r = arguments.r, s = arguments.s, c = arguments.c;
+    var a = arguments.a, b = arguments.b;
+    var f = arguments.f, g = arguments.g;
+    var e = arguments.e, x = arguments.x;
     var pc = entry.entry;
     dispatch: while (true) {
       switch (code[pc++]) {
@@ -291,6 +293,9 @@ abstract final class TypedMachine {
         case TypedOp.gFromB:
           g = b.toDouble();
           continue dispatch;
+        case TypedOp.cLoadOutgoing:
+          c = frame.objectOutgoing;
+          continue dispatch;
         case TypedOp.rNull:
           r = null;
           continue dispatch;
@@ -321,28 +326,42 @@ abstract final class TypedMachine {
         case TypedOp.rFromA:
           r = a;
           continue dispatch;
+        case TypedOp.rBoxA:
+          r = $int(a);
+          continue dispatch;
         case TypedOp.rFromB:
           r = b;
+          continue dispatch;
+        case TypedOp.rBoxB:
+          r = $int(b);
           continue dispatch;
         case TypedOp.rFromF:
           r = f;
           continue dispatch;
+        case TypedOp.rBoxF:
+          r = $double(f);
+          continue dispatch;
         case TypedOp.rFromG:
           r = g;
+          continue dispatch;
+        case TypedOp.rBoxG:
+          r = $double(g);
           continue dispatch;
         case TypedOp.rFromE:
           r = e;
           continue dispatch;
+        case TypedOp.rBoxE:
+          r = $bool(e);
+          continue dispatch;
         case TypedOp.rFromX:
           r = x;
+          continue dispatch;
+        case TypedOp.rBoxX:
+          r = $bool(x);
           continue dispatch;
         case TypedOp.aConstant:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           a = program.integerAt(index);
-          continue dispatch;
-        case TypedOp.aArgument:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          a = frame.intArguments[index];
           continue dispatch;
         case TypedOp.aSpill:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
@@ -354,7 +373,6 @@ abstract final class TypedMachine {
           continue dispatch;
         case TypedOp.aReturn:
           if (frame.parent == null) return a;
-          if (frame.returnBank != 0) throw StateError('Typed return bank mismatch');
           final returned = a;
           pc = frame.returnPc;
           frame = frame.leave();
@@ -364,10 +382,6 @@ abstract final class TypedMachine {
         case TypedOp.bConstant:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           b = program.integerAt(index);
-          continue dispatch;
-        case TypedOp.bArgument:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          b = frame.intArguments[index];
           continue dispatch;
         case TypedOp.bSpill:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
@@ -379,7 +393,6 @@ abstract final class TypedMachine {
           continue dispatch;
         case TypedOp.bReturn:
           if (frame.parent == null) return b;
-          if (frame.returnBank != 0) throw StateError('Typed return bank mismatch');
           final returned = b;
           pc = frame.returnPc;
           frame = frame.leave();
@@ -389,10 +402,6 @@ abstract final class TypedMachine {
         case TypedOp.fConstant:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           f = program.doubleAt(index);
-          continue dispatch;
-        case TypedOp.fArgument:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          f = frame.doubleArguments[index];
           continue dispatch;
         case TypedOp.fSpill:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
@@ -404,7 +413,6 @@ abstract final class TypedMachine {
           continue dispatch;
         case TypedOp.fReturn:
           if (frame.parent == null) return f;
-          if (frame.returnBank != 1) throw StateError('Typed return bank mismatch');
           final returned = f;
           pc = frame.returnPc;
           frame = frame.leave();
@@ -414,10 +422,6 @@ abstract final class TypedMachine {
         case TypedOp.gConstant:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           g = program.doubleAt(index);
-          continue dispatch;
-        case TypedOp.gArgument:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          g = frame.doubleArguments[index];
           continue dispatch;
         case TypedOp.gSpill:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
@@ -429,16 +433,11 @@ abstract final class TypedMachine {
           continue dispatch;
         case TypedOp.gReturn:
           if (frame.parent == null) return g;
-          if (frame.returnBank != 1) throw StateError('Typed return bank mismatch');
           final returned = g;
           pc = frame.returnPc;
           frame = frame.leave();
           r = null; s = null; c = null;
           f = returned;
-          continue dispatch;
-        case TypedOp.eArgument:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          e = frame.boolArguments[index] != 0;
           continue dispatch;
         case TypedOp.eSpill:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
@@ -450,16 +449,11 @@ abstract final class TypedMachine {
           continue dispatch;
         case TypedOp.eReturn:
           if (frame.parent == null) return e;
-          if (frame.returnBank != 2) throw StateError('Typed return bank mismatch');
           final returned = e;
           pc = frame.returnPc;
           frame = frame.leave();
           r = null; s = null; c = null;
           e = returned;
-          continue dispatch;
-        case TypedOp.xArgument:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          x = frame.boolArguments[index] != 0;
           continue dispatch;
         case TypedOp.xSpill:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
@@ -471,7 +465,6 @@ abstract final class TypedMachine {
           continue dispatch;
         case TypedOp.xReturn:
           if (frame.parent == null) return x;
-          if (frame.returnBank != 2) throw StateError('Typed return bank mismatch');
           final returned = x;
           pc = frame.returnPc;
           frame = frame.leave();
@@ -482,10 +475,6 @@ abstract final class TypedMachine {
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           r = program.objectAt(index);
           continue dispatch;
-        case TypedOp.rArgument:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          r = frame.objectArguments[index];
-          continue dispatch;
         case TypedOp.rSpill:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           frame.objectSpills[index] = r;
@@ -495,8 +484,7 @@ abstract final class TypedMachine {
           r = frame.objectSpills[index];
           continue dispatch;
         case TypedOp.rReturn:
-          if (frame.parent == null) return r;
-          if (frame.returnBank != 3) throw StateError('Typed return bank mismatch');
+          if (frame.parent == null) return TypedInterop.exportExternal(r);
           final returned = r;
           pc = frame.returnPc;
           frame = frame.leave();
@@ -507,10 +495,6 @@ abstract final class TypedMachine {
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           s = program.objectAt(index);
           continue dispatch;
-        case TypedOp.sArgument:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          s = frame.objectArguments[index];
-          continue dispatch;
         case TypedOp.sSpill:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           frame.objectSpills[index] = s;
@@ -520,8 +504,7 @@ abstract final class TypedMachine {
           s = frame.objectSpills[index];
           continue dispatch;
         case TypedOp.sReturn:
-          if (frame.parent == null) return s;
-          if (frame.returnBank != 3) throw StateError('Typed return bank mismatch');
+          if (frame.parent == null) return TypedInterop.exportExternal(s);
           final returned = s;
           pc = frame.returnPc;
           frame = frame.leave();
@@ -532,10 +515,6 @@ abstract final class TypedMachine {
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           c = program.objectAt(index);
           continue dispatch;
-        case TypedOp.cArgument:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          c = frame.objectArguments[index];
-          continue dispatch;
         case TypedOp.cSpill:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           frame.objectSpills[index] = c;
@@ -545,8 +524,7 @@ abstract final class TypedMachine {
           c = frame.objectSpills[index];
           continue dispatch;
         case TypedOp.cReturn:
-          if (frame.parent == null) return c;
-          if (frame.returnBank != 3) throw StateError('Typed return bank mismatch');
+          if (frame.parent == null) return TypedInterop.exportExternal(c);
           final returned = c;
           pc = frame.returnPc;
           frame = frame.leave();
@@ -618,30 +596,6 @@ abstract final class TypedMachine {
         case TypedOp.jump:
           pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24);
           continue dispatch;
-        case TypedOp.aOutgoing:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          frame.intOutgoing[index] = a;
-          continue dispatch;
-        case TypedOp.bOutgoing:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          frame.intOutgoing[index] = b;
-          continue dispatch;
-        case TypedOp.fOutgoing:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          frame.doubleOutgoing[index] = f;
-          continue dispatch;
-        case TypedOp.gOutgoing:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          frame.doubleOutgoing[index] = g;
-          continue dispatch;
-        case TypedOp.eOutgoing:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          frame.boolOutgoing[index] = e ? 1 : 0;
-          continue dispatch;
-        case TypedOp.xOutgoing:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          frame.boolOutgoing[index] = x ? 1 : 0;
-          continue dispatch;
         case TypedOp.rOutgoing:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           frame.objectOutgoing[index] = r;
@@ -654,32 +608,14 @@ abstract final class TypedMachine {
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           frame.objectOutgoing[index] = c;
           continue dispatch;
-        case TypedOp.callInt:
+        case TypedOp.rOverflow:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          final function = program.functions[index];
-          frame = frame.enter(function, pc, 0);
-          r = null; s = null; c = null;
-          pc = function.entry;
+          r = (c as List<Object?>)[index];
           continue dispatch;
-        case TypedOp.callDouble:
+        case TypedOp.call:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           final function = program.functions[index];
-          frame = frame.enter(function, pc, 1);
-          r = null; s = null; c = null;
-          pc = function.entry;
-          continue dispatch;
-        case TypedOp.callBool:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          final function = program.functions[index];
-          frame = frame.enter(function, pc, 2);
-          r = null; s = null; c = null;
-          pc = function.entry;
-          continue dispatch;
-        case TypedOp.callObject:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          final function = program.functions[index];
-          frame = frame.enter(function, pc, 3);
-          r = null; s = null; c = null;
+          frame = frame.enter(function, pc);
           pc = function.entry;
           continue dispatch;
         case TypedOp.eEqRS:
@@ -691,11 +627,26 @@ abstract final class TypedMachine {
         case TypedOp.aFromR:
           a = TypedInterop.toInt(r);
           continue dispatch;
+        case TypedOp.aNativeFromR:
+          a = r as int;
+          continue dispatch;
         case TypedOp.fFromR:
           f = TypedInterop.toDouble(r);
           continue dispatch;
+        case TypedOp.fNativeFromR:
+          f = r as double;
+          continue dispatch;
         case TypedOp.eFromR:
           e = TypedInterop.toBool(r);
+          continue dispatch;
+        case TypedOp.eNativeFromR:
+          e = r as bool;
+          continue dispatch;
+        case TypedOp.rBoxString:
+          r = $String(r as String);
+          continue dispatch;
+        case TypedOp.rUnboxString:
+          r = TypedInterop.toStringValue(r);
           continue dispatch;
         case TypedOp.callHost:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;

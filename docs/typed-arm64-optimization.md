@@ -7,7 +7,7 @@ hardware timing was performed. The reference source checkpoint is `5a02f83`.
 
 The current probe loads bytecode and every argument bank from files. An optional
 reference Runtime keeps evaluated-object and bridge invocation reachable during
-AOT compilation. The final runtime has 194 opcodes and named registers `a/b`,
+AOT compilation. The register ABI runtime has 189 opcodes and named registers `a/b`,
 `f/g`, `e/x`, and `r/s/c`.
 
 | Ordinary arithmetic path | Previous primitive runtime | Current object-capable runtime |
@@ -19,7 +19,7 @@ AOT compilation. The final runtime has 194 opcodes and named registers `a/b`,
 | Complete double add | 53 | 40 |
 | Stack stores on this path | 11 | 11 |
 | Stack loads on this path | 12 | 2 |
-| Entire run function, including cold paths | 16,108 bytes | 19,780 bytes |
+| Entire run function, including cold paths | 16,108 bytes | 17,592 bytes |
 
 Stack loads count the header as well as the shared tail. These are host compiler
 spills/reloads, separate from bytecode spill instructions. Native instruction
@@ -27,16 +27,16 @@ counts are not cycles. The function now implements substantially more behavior,
 so its larger total size is not a regression comparison of identical features.
 The jump table and separately compiled helpers are outside the function size.
 
-In the final recorded binary, `TypedMachine.run` begins at `0x250068`, size
-`0x4d44`. The repeated header spans `0x250128` through `0x2501a4`; the common tail
-spans `0x254688` through `0x254690`. The double-add handler at `0x250428` is:
+In the final recorded binary, `TypedMachine.run` begins at `0x24feec`, size
+`0x44b8`. The repeated header spans `0x250000` through `0x25007c`; the common tail
+spans `0x253e24` through `0x253e2c`. The double-add handler at `0x250300` is:
 
 ```asm
 fadd d2, d1, d0
 mov  v1.16b, v2.16b
-mov  x5, x14
-mov  x4, x3
-b    0x254688
+mov  x3, x14
+mov  x10, x9
+b    0x253e24
 ```
 
 Numeric arithmetic still has no dynamic operand dispatch or boxing. The switch
@@ -73,25 +73,30 @@ The restricted third integer register and fused comparisons remain unmeasured.
 
 ## Calls and existing objects
 
-Internal calls borrow the suspended caller's typed/object outgoing buffers as
-read-only arguments. Callees have independent outgoing buffers, including under
-recursion. A parent caches one child frame; consecutive calls to the same function
-at that depth reuse its storage. This removes the old temporary sublists,
-argument copies and repeated frame allocations for those calls. A different
-callee replaces the cached child. Entry storage still copies user argument lists.
+Internal calls now pass register arguments directly. Dedicated scalar registers
+fill first, then spare object registers hold native scalars or boxed references.
+Only excess arguments use a single list in C. The previous four outgoing buffers
+and all per-bank argument-load opcodes are gone. A single call opcode replaces
+four return-bank call opcodes, and returns no longer check `returnBank`.
 
-All registers are caller-clobbered; numeric registers need not be zeroed after
-calls. Spills and outgoing storage reset on frame reuse. Inactive object spills
-and consumed object argument buffers are cleared to release references. Host
-calls take an independent argument snapshot before clearing outgoing storage, so
-callbacks can retain their arguments or reenter safely.
+A parent caches one child frame. Callees have independent outgoing lists for
+recursion, and borrow the parent's list without copying. Numeric spill slots
+are initialized by compiler-emitted stores rather than cleared on frame reuse.
+Object spills and consumed outgoing lists are cleared to release references.
+Host callbacks still receive independent boxed argument snapshots because the
+existing bridge API requires lists and permits retention and reentry.
 
-Objects are existing Dart/$Value/$Instance references, not a new object model.
-The supplied Runtime initializes itself and dispatches through its existing
-method/bridge machinery. Tests exercise a real evaluated class instance, a custom
-$Instance, $Function callbacks, primitive wrappers and reentrant calls. Newly
-compiled typed class construction/method linking and closure creation remain
-unfinished; existing evaluated method offsets belong to the supplied Runtime.
+Internal language values are `$Value?`, preserving evaluated-instance identity.
+Explicit box/unbox instructions perform compiler-selected conversions. Native
+scalars placed in spare object registers use separate raw moves and exact casts.
+Conversion at the external host boundary remains necessary. Reference bytecode
+adapters use compiler-emitted signature metadata rather than inspecting values.
+Typed class construction/method linking and closure creation remain unfinished.
+
+Compared with checkpoint `89eb7d6`, the arithmetic path remains 40 instructions
+and the run function shrinks by 2,188 bytes, about 11%. The emitted instruction
+table has 189 entries instead of 194. This does not include helper functions or
+prove improved cache behavior on ARM hardware.
 
 ## Windows x64 timing observations
 
@@ -105,11 +110,21 @@ At five million iterations and seven samples:
 | Workload | Median ms | Min–max ms |
 | --- | ---: | ---: |
 | `5a02f83` primitive call loop | 1150.441 | 695.908–1538.804 |
-| Current primitive call loop | 664.591 | 418.364–810.315 |
-| Current mixed object/primitive call loop | 1458.219 | 930.487–1607.632 |
-| Current integer dispatch benchmark | 51.518 | 44.103–64.021 |
-| Current double dispatch benchmark | 43.916 | 41.471–61.193 |
-| Current mixed dispatch benchmark | 97.345 | 93.151–157.139 |
+| `89eb7d6` primitive call loop | 664.591 | 418.364–810.315 |
+| `89eb7d6` mixed object/primitive call loop | 1458.219 | 930.487–1607.632 |
+| `89eb7d6` integer dispatch benchmark | 51.518 | 44.103–64.021 |
+| `89eb7d6` double dispatch benchmark | 43.916 | 41.471–61.193 |
+| `89eb7d6` mixed dispatch benchmark | 97.345 | 93.151–157.139 |
+
+The register ABI run, also five million iterations and seven samples, produced:
+
+| Workload | Median ms | Min�max ms |
+| --- | ---: | ---: |
+| Register ABI primitive call loop | 492.983 | 381.712�720.593 |
+| Register ABI mixed object/primitive call loop | 1245.398 | 968.621�1985.247 |
+
+The checksum was 157522500. These were separate runs under variable host load,
+so the lower medians are not a controlled speedup comparison.
 
 Earlier one-million-iteration runs had overlapping ranges and inconsistent
 rankings. The large spread prevents a reliable call-speedup claim. Structural
@@ -136,8 +151,8 @@ symbols can make LLVM print executable instructions as `.word`. Addresses can
 change between SDKs and entry points. The original baseline and intermediate
 experiment artifacts are retained locally under `.dart_tool`.
 
-Validation includes 79 focused tests, zero analyzer errors, and the full suite
-with 564 passes, six skips, and the same 30 reference-backend failures listed in
-backend-checkpoint-failures.txt. Tests cover mixed recursive calls, three-object
-phi cycles, buffer lifetime, bridge semantics, signed branch endpoints, branch
-widening over 5,500 calls, serialization, and invalid input rejection.
+Validation reports zero analyzer errors and the full suite with 581 passes,
+six skips, and the same 30 reference-backend failure names listed in
+backend-checkpoint-failures.txt. Tests include mixed recursive calls, three-object
+phi cycles, overflow lifetime, explicit bridge semantics, signed branch endpoints,
+branch widening over 12,000 calls, serialization, and invalid input rejection.

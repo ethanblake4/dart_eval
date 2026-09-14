@@ -26,6 +26,7 @@ import 'package:dart_eval/src/eval/runtime/type.dart';
 import 'exception.dart';
 
 part 'register_machine.dart';
+part 'typed_interop_runtime.dart';
 
 part 'ops/primitives.dart';
 

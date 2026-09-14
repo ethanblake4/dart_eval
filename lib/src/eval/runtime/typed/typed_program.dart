@@ -19,32 +19,27 @@ class TypedProgram {
     this.entryFunction = 0,
   }) : code = Uint8List.fromList(code).asUnmodifiableView(),
        functions = List.unmodifiable(
-         functions ??
-             [
-               TypedFunction(
-                 0,
-                 intSpillCount: intSpillCount,
-                 doubleSpillCount: doubleSpillCount,
-                 boolSpillCount: boolSpillCount,
-                 objectSpillCount: objectSpillCount,
-                 intArgumentCount: _argumentCount(
-                   code,
-                   TypedImmediate.intArgument,
-                 ),
-                 doubleArgumentCount: _argumentCount(
-                   code,
-                   TypedImmediate.doubleArgument,
-                 ),
-                 objectArgumentCount: _argumentCount(
-                   code,
-                   TypedImmediate.objectArgument,
-                 ),
-                 boolArgumentCount: _argumentCount(
-                   code,
-                   TypedImmediate.boolArgument,
-                 ),
+         (functions ??
+                 [
+                   TypedFunction(
+                     0,
+                     intSpillCount: intSpillCount,
+                     doubleSpillCount: doubleSpillCount,
+                     boolSpillCount: boolSpillCount,
+                     objectSpillCount: objectSpillCount,
+                   ),
+                 ])
+             .map(
+               (function) => TypedFunction(
+                 function.entry,
+                 intSpillCount: function.intSpillCount,
+                 doubleSpillCount: function.doubleSpillCount,
+                 boolSpillCount: function.boolSpillCount,
+                 objectSpillCount: function.objectSpillCount,
+                 argumentKinds: List.unmodifiable(function.argumentKinds),
+                 objectOutgoingCount: function.objectOutgoingCount,
                ),
-             ],
+             ),
        ),
        integers = Int64List.fromList(integers).asUnmodifiableView(),
        doubles = Float64List.fromList(doubles).asUnmodifiableView(),
@@ -76,21 +71,6 @@ class TypedProgram {
   ByteData write() => TypedCodec.write(this);
   factory TypedProgram.read(ByteBuffer buffer) => TypedCodec.read(buffer);
 
-  static int _argumentCount(Uint8List code, TypedImmediate kind) {
-    var count = 0;
-    for (var pc = 0; pc < code.length;) {
-      if (code[pc] >= TypedOp.instructions.length) break;
-      final instruction = TypedOp.instructions[code[pc]];
-      if (pc + instruction.length > code.length) break;
-      if (instruction.immediate == kind) {
-        final needed = (code[pc + 1] | (code[pc + 2] << 8)) + 1;
-        if (needed > count) count = needed;
-      }
-      pc += instruction.length;
-    }
-    return count;
-  }
-
   void _validate() {
     if (functions.isEmpty ||
         functions.length > 65536 ||
@@ -103,6 +83,12 @@ class TypedProgram {
     )) {
       if (count < 0 || count > 65536) {
         throw ArgumentError.value(count, 'spillCount', 'Must fit a u16 index');
+      }
+    }
+    for (final function in functions) {
+      if (function.argumentKinds.length > 65544 ||
+          function.callLayout.overflowCount > 65536) {
+        throw const FormatException('Too many typed function arguments');
       }
     }
     if (code.isEmpty) throw const FormatException('Empty typed program');
@@ -162,14 +148,8 @@ class TypedProgram {
           TypedImmediate.doubleSpill => function.doubleSpillCount,
           TypedImmediate.boolSpill => function.boolSpillCount,
           TypedImmediate.objectSpill => function.objectSpillCount,
-          TypedImmediate.intOutgoing => function.intOutgoingCount,
-          TypedImmediate.doubleOutgoing => function.doubleOutgoingCount,
-          TypedImmediate.boolOutgoing => function.boolOutgoingCount,
           TypedImmediate.objectOutgoing => function.objectOutgoingCount,
-          TypedImmediate.intArgument => function.intArgumentCount,
-          TypedImmediate.doubleArgument => function.doubleArgumentCount,
-          TypedImmediate.boolArgument => function.boolArgumentCount,
-          TypedImmediate.objectArgument => function.objectArgumentCount,
+          TypedImmediate.overflow => function.callLayout.overflowCount,
           TypedImmediate.function => functions.length,
           _ => null,
         };
@@ -188,10 +168,7 @@ class TypedProgram {
         }
         if (last.immediate == TypedImmediate.function) {
           final callee = functions[index];
-          if (callee.intArgumentCount > function.intOutgoingCount ||
-              callee.doubleArgumentCount > function.doubleOutgoingCount ||
-              callee.boolArgumentCount > function.boolOutgoingCount ||
-              callee.objectArgumentCount > function.objectOutgoingCount) {
+          if (callee.callLayout.overflowCount > function.objectOutgoingCount) {
             throw FormatException(
               'Insufficient outgoing argument storage for function $index',
             );

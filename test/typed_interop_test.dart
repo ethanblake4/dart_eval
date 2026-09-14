@@ -115,7 +115,10 @@ void main() {
     );
     Object? host(Object? value) => value;
     expect(
-      identical(TypedInterop.call(null, host, [instance]), instance),
+      identical(
+        TypedInterop.call(null, TypedHostFunction(host), [instance]),
+        instance,
+      ),
       isTrue,
     );
     final bridge = $Function((runtime, target, args) => args.single);
@@ -127,7 +130,10 @@ void main() {
   });
   test('typed host calls preserve objects through bridge and reentry', () {
     final identity = TypedProgram(
-      Uint8List.fromList([TypedOp.rArgument, 0, 0, TypedOp.rReturn]),
+      Uint8List.fromList([TypedOp.rReturn]),
+      functions: const [
+        TypedFunction(0, argumentKinds: [TypedArgumentKind.object]),
+      ],
     );
     final bridge = $Function(
       (runtime, target, args) =>
@@ -140,13 +146,7 @@ void main() {
     );
     final call = TypedProgram(
       Uint8List.fromList([
-        TypedOp.rArgument,
-        1,
-        0,
-        TypedOp.rOutgoing,
-        0,
-        0,
-        TypedOp.rArgument,
+        TypedOp.sOutgoing,
         0,
         0,
         TypedOp.callHost,
@@ -155,7 +155,11 @@ void main() {
         TypedOp.rReturn,
       ]),
       functions: const [
-        TypedFunction(0, objectArgumentCount: 2, objectOutgoingCount: 1),
+        TypedFunction(
+          0,
+          argumentKinds: [TypedArgumentKind.object, TypedArgumentKind.object],
+          objectOutgoingCount: 1,
+        ),
       ],
     );
     final instance = $InstanceImpl(
@@ -179,15 +183,15 @@ void main() {
     final bridge = $Function((runtime, target, args) => $int(37));
     final call = TypedProgram(
       Uint8List.fromList([
-        TypedOp.rArgument,
-        0,
-        0,
         TypedOp.callHost,
         0,
         0,
         TypedOp.aFromR,
         TypedOp.aReturn,
       ]),
+      functions: const [
+        TypedFunction(0, argumentKinds: [TypedArgumentKind.object]),
+      ],
     );
     expect(
       TypedMachine.run(call, objectArguments: [bridge], runtime: runtime),
@@ -195,28 +199,36 @@ void main() {
     );
     expect(
       () => TypedProgram(
-        Uint8List.fromList([
-          TypedOp.rArgument,
-          0,
-          0,
-          TypedOp.callHost,
-          1,
-          0,
-          TypedOp.rReturn,
-        ]),
+        Uint8List.fromList([TypedOp.callHost, 1, 0, TypedOp.rReturn]),
       ),
       throwsFormatException,
     );
   });
-  test('scalar conversions accept existing bridge wrappers', () {
+  test('scalar conversions require explicit bridge wrappers', () {
+    expect(() => TypedInterop.toInt(3), throwsA(isA<TypeError>()));
+    expect(() => TypedInterop.toDouble(1.5), throwsA(isA<TypeError>()));
+    expect(() => TypedInterop.toBool(true), throwsA(isA<TypeError>()));
     expect(TypedInterop.toInt($int(3)), 3);
     expect(TypedInterop.toDouble($double(1.5)), 1.5);
     expect(TypedInterop.toBool($bool(true)), isTrue);
-    expect(TypedInterop.equals(null, $String('a'), 'a'), isTrue);
-    expect(TypedInterop.equals(null, const $null(), null), isTrue);
+    expect(TypedInterop.equals(runtime, $String('a'), $String('a')), isTrue);
+    expect(TypedInterop.equals(null, null, null), isTrue);
     expect(
       () => TypedInterop.toInt(_EqualInstance()),
       throwsA(isA<TypeError>()),
+    );
+  });
+  test('host boundary normalizes scalars without reading instance values', () {
+    final instance = _EqualInstance();
+    expect(identical(TypedInterop.boxExternal(instance), instance), isTrue);
+    expect(identical(TypedInterop.exportExternal(instance), instance), isTrue);
+    expect(TypedInterop.boxExternal(3), isA<$int>());
+    expect(TypedInterop.boxExternal(const $null()), isNull);
+    expect(TypedInterop.exportExternal($String('value')), 'value');
+    final closure = $Closure((runtime, target, args) => args.single);
+    expect(
+      identical(TypedInterop.call(runtime, closure, [instance]), instance),
+      isTrue,
     );
   });
   test('equality uses instance dispatch and preserves evaluated identity', () {

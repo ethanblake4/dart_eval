@@ -578,10 +578,17 @@ class RegisterBackend {
     final words = <Object>[];
     for (final function in emitted.entries) {
       offsets[function.key] = words.length;
+      final signature = context.functionSignatures[function.key];
       words.addAll(
         WordInstruction(RegisterOp.entry, -1, [], [
           registerCount,
           spillCounts[function.key]!,
+          if (signature != null) ...[
+            104,
+            signature.parameters.length,
+            for (final parameter in signature.parameters) parameter.index,
+            signature.result?.index ?? -1,
+          ],
         ]).words,
       );
       for (final block in function.value.entries) {

@@ -14,6 +14,9 @@ import 'package:dart_eval/src/eval/compiler/util.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/function.dart';
+import 'package:dart_eval/src/eval/ir/representation.dart';
+import 'package:dart_eval/src/eval/compiler/backend/representation.dart'
+    show representationForType;
 
 int compileMethodDeclaration(
   MethodDeclaration d,
@@ -62,16 +65,35 @@ int compileMethodDeclaration(
     i++;
   }
 
+  final expectedReturnType = AlwaysReturnType.fromAnnotation(
+    ctx,
+    ctx.library,
+    d.returnType,
+    CoreTypes.dynamic.ref(ctx),
+  );
+  final returnType = expectedReturnType.type;
+  final unboxedOperatorReturn =
+      b is ExpressionFunctionBody &&
+      !b.isAsynchronous &&
+      (methodName == '==' || methodName == '!=') &&
+      (returnType?.isUnboxedAcrossFunctionBoundaries ?? false);
+  ctx.functionSignatures[pos] = MachineFunctionSignature(
+    List.filled(
+      resolvedParams.length + (d.isStatic ? 0 : 1),
+      MachineRepresentation.object,
+    ),
+    returnType == CoreTypes.voidType.ref(ctx)
+        ? null
+        : unboxedOperatorReturn
+        ? representationForType(returnType!.copyWith(boxed: false))
+        : MachineRepresentation.object,
+  );
+
   StatementInfo? stInfo;
   if (b is BlockFunctionBody) {
     stInfo = compileBlock(
       b.block,
-      AlwaysReturnType.fromAnnotation(
-        ctx,
-        ctx.library,
-        d.returnType,
-        CoreTypes.dynamic.ref(ctx),
-      ),
+      expectedReturnType,
       ctx,
       name: '$methodName()',
     );
@@ -80,12 +102,7 @@ int compileMethodDeclaration(
     final V = compileExpression(b.expression, ctx);
     stInfo = doReturn(
       ctx,
-      AlwaysReturnType.fromAnnotation(
-        ctx,
-        ctx.library,
-        d.returnType,
-        CoreTypes.dynamic.ref(ctx),
-      ),
+      expectedReturnType,
       V,
       isAsync: b.isAsynchronous,
       // == and != operators are statically guaranteed to return bools,

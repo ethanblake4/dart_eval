@@ -7,6 +7,7 @@ import 'package:dart_eval/src/eval/runtime/typed/typed.dart';
 @pragma('vm:never-inline')
 Object genericReference(TypedProgram program, int iterations) {
   final r = List<Object?>.filled(6, null);
+  r[0] = iterations;
   final code = program.code;
   var pc = 0;
   while (true) {
@@ -16,9 +17,8 @@ Object genericReference(TypedProgram program, int iterations) {
         pc += 2;
         r[0] = program.integers[index];
         break;
-      case TypedOp.bArgument:
-        pc += 2;
-        r[1] = iterations;
+      case TypedOp.bFromA:
+        r[1] = r[0];
         break;
       case TypedOp.fConstant:
         final index = code[pc] | (code[pc + 1] << 8);
@@ -107,10 +107,8 @@ TypedProgram loopProgram(
   bool mixed = false,
 }) {
   final bytes = <int>[
+    TypedOp.bFromA,
     TypedOp.aConstant,
-    0,
-    0,
-    TypedOp.bArgument,
     0,
     0,
     if (floating || mixed) ...[
@@ -138,6 +136,9 @@ TypedProgram loopProgram(
     Uint8List.fromList(bytes),
     integers: [0],
     doubles: [0.0, 0.25],
+    functions: const [
+      TypedFunction(0, argumentKinds: [TypedArgumentKind.integer]),
+    ],
   );
 }
 

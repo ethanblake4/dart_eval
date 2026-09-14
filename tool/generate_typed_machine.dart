@@ -69,13 +69,6 @@ List<Instruction> specification() {
       add('${name}False', '$name = false;', output: register);
     }
     add(
-      '${name}Argument',
-      '$name = frame.${bank}Arguments[index]${bank == 'bool' ? ' != 0' : ''};',
-      output: register,
-      immediate: '${bank}Argument',
-      mayThrow: true,
-    );
-    add(
       '${name}Spill',
       'frame.${bank}Spills[index] = ${bank == 'bool' ? '$name ? 1 : 0' : name};',
       inputs: [register],
@@ -94,11 +87,9 @@ List<Instruction> specification() {
         : bank == 'bool'
         ? 'e'
         : 'r';
-    final resultBank = register < 6 ? register ~/ 2 : 3;
     add(
       '${name}Return',
-      '''if (frame.parent == null) return $name;
-          if (frame.returnBank != $resultBank) throw StateError('Typed return bank mismatch');
+      '''if (frame.parent == null) return ${bank == 'object' ? 'TypedInterop.exportExternal($name)' : name};
           final returned = $name;
           pc = frame.returnPc;
           frame = frame.leave();
@@ -269,39 +260,32 @@ List<Instruction> specification() {
     }
   }
   add('jump', 'pc = address;', immediate: 'branch', terminates: true);
-  for (var register = 0; register < names.length; register++) {
+  for (var register = 6; register < names.length; register++) {
     final name = names[register];
-    final bank = register < 2
-        ? 'int'
-        : register < 4
-        ? 'double'
-        : register < 6
-        ? 'bool'
-        : 'object';
     add(
       '${name}Outgoing',
-      'frame.${bank}Outgoing[index] = ${bank == 'bool' ? '$name ? 1 : 0' : name};',
+      'frame.objectOutgoing[index] = $name;',
       inputs: [register],
-      immediate: '${bank}Outgoing',
+      immediate: 'objectOutgoing',
     );
   }
-  for (final (bank, name) in [
-    (0, 'Int'),
-    (1, 'Double'),
-    (2, 'Bool'),
-    (3, 'Object'),
-  ]) {
-    add(
-      'call$name',
-      '''final function = program.functions[index];
-          frame = frame.enter(function, pc, $bank);
-          r = null; s = null; c = null;
+  add('cLoadOutgoing', 'c = frame.objectOutgoing;', output: 8);
+  add(
+    'rOverflow',
+    'r = (c as List<Object?>)[index];',
+    inputs: [8],
+    output: 6,
+    immediate: 'overflow',
+    mayThrow: true,
+  );
+  add(
+    'call',
+    '''final function = program.functions[index];
+          frame = frame.enter(function, pc);
           pc = function.entry;''',
-      immediate: 'function',
-      mayThrow: true,
-      output: bank * 2,
-    );
-  }
+    immediate: 'function',
+    mayThrow: true,
+  );
   for (final register in [6, 7, 8]) {
     final name = names[register];
     add('${name}Null', '$name = null;', output: register);
@@ -330,6 +314,17 @@ List<Instruction> specification() {
       inputs: [register],
       output: 6,
     );
+    final wrapper = register < 2
+        ? r'$int'
+        : register < 4
+        ? r'$double'
+        : r'$bool';
+    add(
+      'rBox${names[register].toUpperCase()}',
+      'r = $wrapper(${names[register]});',
+      inputs: [register],
+      output: 6,
+    );
   }
   for (final (register, type) in [(0, 'Int'), (2, 'Double'), (4, 'Bool')]) {
     add(
@@ -339,7 +334,28 @@ List<Instruction> specification() {
       output: register,
       mayThrow: true,
     );
+    add(
+      '${names[register]}NativeFromR',
+      '${names[register]} = r as ${type.toLowerCase()};',
+      inputs: [6],
+      output: register,
+      mayThrow: true,
+    );
   }
+  add(
+    'rBoxString',
+    r'r = $String(r as String);',
+    inputs: [6],
+    output: 6,
+    mayThrow: true,
+  );
+  add(
+    'rUnboxString',
+    'r = TypedInterop.toStringValue(r);',
+    inputs: [6],
+    output: 6,
+    mayThrow: true,
+  );
   add(
     'callHost',
     'final result = TypedInterop.call(runtime, r, frame.takeObjectArguments(index)); r = result; s = null; c = null; ',
@@ -392,9 +408,9 @@ abstract final class TypedRegister {
   static const a = 0, b = 1, f = 2, g = 3, e = 4, x = 5, r = 6, s = 7, c = 8;
 }
 
-enum TypedImmediate { none, intConstant, doubleConstant, intArgument,
-  doubleArgument, boolArgument, intSpill, doubleSpill, boolSpill, branch,
-  intOutgoing, doubleOutgoing, boolOutgoing, function, objectConstant, objectArgument, objectSpill, objectOutgoing, hostCall, shortBranch, integer }
+enum TypedImmediate { none, intConstant, doubleConstant,
+  intSpill, doubleSpill, boolSpill, branch,
+  function, objectConstant, objectSpill, objectOutgoing, hostCall, shortBranch, integer, overflow }
 
 class TypedInstruction {
   const TypedInstruction(this.name, this.inputs, this.outputs, this.immediate,
@@ -434,6 +450,7 @@ import 'typed_program.dart';
 import 'typed_frame.dart';
 import 'typed_interop.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/stdlib/core.dart';
 
 abstract final class TypedMachine {
   /// Fixed scalar banks stay in typed locals across the dispatch loop.
@@ -443,11 +460,12 @@ abstract final class TypedMachine {
       List<bool> boolArguments = const [], List<Object?> objectArguments = const [], Runtime? runtime}) {
     final code = program.code;
     final entry = program.functions[program.entryFunction];
-    var frame = TypedFrame.entry(entry, intArguments, doubleArguments, boolArguments, objectArguments);
-    Object? r, s, c;
-    var a = 0, b = 0;
-    var f = 0.0, g = 0.0;
-    var e = false, x = false;
+    final arguments = TypedEntry.prepare(entry, intArguments, doubleArguments, boolArguments, objectArguments, runtime);
+    var frame = TypedFrame(entry);
+    Object? r = arguments.r, s = arguments.s, c = arguments.c;
+    var a = arguments.a, b = arguments.b;
+    var f = arguments.f, g = arguments.g;
+    var e = arguments.e, x = arguments.x;
     var pc = entry.entry;
     dispatch: while (true) {
       switch (code[pc++]) {

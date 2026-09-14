@@ -11,6 +11,7 @@ TypedProgram program(
   int intSpills = 0,
   int doubleSpills = 0,
   int boolSpills = 0,
+  List<TypedArgumentKind> arguments = const [],
 }) => TypedProgram(
   Uint8List.fromList(code),
   integers: integers,
@@ -18,6 +19,15 @@ TypedProgram program(
   intSpillCount: intSpills,
   doubleSpillCount: doubleSpills,
   boolSpillCount: boolSpills,
+  functions: [
+    TypedFunction(
+      0,
+      argumentKinds: arguments,
+      intSpillCount: intSpills,
+      doubleSpillCount: doubleSpills,
+      boolSpillCount: boolSpills,
+    ),
+  ],
 );
 
 void main() {
@@ -178,21 +188,20 @@ void main() {
   test('typed argument banks do not alias', () {
     expect(
       TypedMachine.run(
-        program([
-          TypedOp.aArgument,
-          0,
-          0,
-          TypedOp.bArgument,
-          1,
-          0,
-          TypedOp.aSubB,
-          TypedOp.fFromA,
-          TypedOp.gArgument,
-          0,
-          0,
-          TypedOp.fAddG,
-          TypedOp.fReturn,
-        ]),
+        program(
+          [
+            TypedOp.gFromF,
+            TypedOp.aSubB,
+            TypedOp.fFromA,
+            TypedOp.fAddG,
+            TypedOp.fReturn,
+          ],
+          arguments: [
+            TypedArgumentKind.integer,
+            TypedArgumentKind.integer,
+            TypedArgumentKind.doublePrecision,
+          ],
+        ),
         intArguments: [10, 2],
         doubleArguments: [0.5],
       ),
@@ -200,7 +209,7 @@ void main() {
     );
     expect(
       TypedMachine.run(
-        program([TypedOp.xArgument, 0, 0, TypedOp.xReturn]),
+        program([TypedOp.eReturn], arguments: [TypedArgumentKind.boolean]),
         boolArguments: [true],
       ),
       true,
@@ -211,23 +220,22 @@ void main() {
       TypedMachine.run(
         program(
           [
+            TypedOp.bFromA,
             TypedOp.aConstant,
-            0,
-            0,
-            TypedOp.bArgument,
             0,
             0,
             TypedOp.aAddB,
             TypedOp.bDecrement,
             TypedOp.eBPositive,
             TypedOp.jumpETrue,
-            6,
+            4,
             0,
             0,
             0,
             TypedOp.aReturn,
           ],
           integers: [0],
+          arguments: [TypedArgumentKind.integer],
         ),
         intArguments: [100],
       ),

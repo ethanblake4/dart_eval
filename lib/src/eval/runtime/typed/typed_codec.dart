@@ -6,13 +6,16 @@ import 'typed_program.dart';
 /// Versioned little-endian format, separate from the generic register format.
 abstract final class TypedCodec {
   static const magic = 0x54564544; // DEVT
-  static const version = 103;
+  static const version = 104;
 
   static ByteData write(TypedProgram program) {
     final objects = _writeObjects(program.objects);
     final result = ByteData(
       36 +
-          program.functions.length * 52 +
+          program.functions.fold<int>(
+            0,
+            (size, f) => size + 28 + f.argumentKinds.length,
+          ) +
           program.integers.length * 8 +
           program.doubles.length * 8 +
           objects.length +
@@ -36,6 +39,10 @@ abstract final class TypedCodec {
     for (final function in program.functions) {
       for (final value in function.layout) {
         u32(value);
+      }
+      u32(function.argumentKinds.length);
+      for (final kind in function.argumentKinds) {
+        result.setUint8(offset++, kind.index);
       }
     }
     for (final value in program.integers) {
@@ -71,35 +78,51 @@ abstract final class TypedCodec {
     final functionCount = u32(), integerCount = u32(), doubleCount = u32();
     final codeLength = u32();
     final objectCount = u32(), objectLength = u32();
-    final expected =
+    final sectionsLength =
+        integerCount * 8 + doubleCount * 8 + objectLength + codeLength;
+    final minimumLength =
         36 +
-        functionCount * 52 +
+        functionCount * 28 +
         integerCount * 8 +
         doubleCount * 8 +
         objectLength +
         codeLength;
-    if (expected != input.lengthInBytes || objectCount > objectLength) {
+    if (minimumLength > input.lengthInBytes || objectCount > objectLength) {
       throw const FormatException('Invalid typed bytecode section lengths');
     }
     final functions = <TypedFunction>[];
     for (var i = 0; i < functionCount; i++) {
+      if (offset + 28 > input.lengthInBytes - sectionsLength) {
+        throw const FormatException('Truncated typed function layout');
+      }
+      final layout = List.generate(6, (_) => u32());
+      final kindCount = u32();
+      if (kindCount > 65544 ||
+          kindCount > input.lengthInBytes - sectionsLength - offset) {
+        throw const FormatException('Invalid argument representation count');
+      }
+      final kinds = <TypedArgumentKind>[];
+      for (var k = 0; k < kindCount; k++) {
+        final kind = input.getUint8(offset++);
+        if (kind >= TypedArgumentKind.values.length) {
+          throw FormatException('Unknown argument representation $kind');
+        }
+        kinds.add(TypedArgumentKind.values[kind]);
+      }
       functions.add(
         TypedFunction(
-          u32(),
-          intSpillCount: u32(),
-          doubleSpillCount: u32(),
-          boolSpillCount: u32(),
-          objectSpillCount: u32(),
-          intArgumentCount: u32(),
-          doubleArgumentCount: u32(),
-          boolArgumentCount: u32(),
-          objectArgumentCount: u32(),
-          intOutgoingCount: u32(),
-          doubleOutgoingCount: u32(),
-          boolOutgoingCount: u32(),
-          objectOutgoingCount: u32(),
+          layout[0],
+          intSpillCount: layout[1],
+          doubleSpillCount: layout[2],
+          boolSpillCount: layout[3],
+          objectSpillCount: layout[4],
+          objectOutgoingCount: layout[5],
+          argumentKinds: List.unmodifiable(kinds),
         ),
       );
+    }
+    if (offset + sectionsLength != input.lengthInBytes) {
+      throw const FormatException('Invalid typed bytecode section lengths');
     }
     final integers = List.generate(integerCount, (_) {
       final value = input.getInt64(offset, Endian.little);

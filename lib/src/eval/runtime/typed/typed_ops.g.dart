@@ -5,9 +5,9 @@ abstract final class TypedRegister {
   static const a = 0, b = 1, f = 2, g = 3, e = 4, x = 5, r = 6, s = 7, c = 8;
 }
 
-enum TypedImmediate { none, intConstant, doubleConstant, intArgument,
-  doubleArgument, boolArgument, intSpill, doubleSpill, boolSpill, branch,
-  intOutgoing, doubleOutgoing, boolOutgoing, function, objectConstant, objectArgument, objectSpill, objectOutgoing, hostCall, shortBranch, integer }
+enum TypedImmediate { none, intConstant, doubleConstant,
+  intSpill, doubleSpill, boolSpill, branch,
+  function, objectConstant, objectSpill, objectOutgoing, hostCall, shortBranch, integer, overflow }
 
 class TypedInstruction {
   const TypedInstruction(this.name, this.inputs, this.outputs, this.immediate,
@@ -115,110 +115,105 @@ abstract final class TypedOp {
   static const gFromA = 87;
   static const fFromB = 88;
   static const gFromB = 89;
-  static const rNull = 90;
-  static const eIsNullR = 91;
-  static const xIsNullR = 92;
-  static const sNull = 93;
-  static const eIsNullS = 94;
-  static const xIsNullS = 95;
-  static const cNull = 96;
-  static const eIsNullC = 97;
-  static const xIsNullC = 98;
-  static const rFromA = 99;
-  static const rFromB = 100;
-  static const rFromF = 101;
-  static const rFromG = 102;
-  static const rFromE = 103;
-  static const rFromX = 104;
-  static const aConstant = 105;
-  static const aArgument = 106;
-  static const aSpill = 107;
-  static const aReload = 108;
-  static const aReturn = 109;
-  static const bConstant = 110;
-  static const bArgument = 111;
-  static const bSpill = 112;
-  static const bReload = 113;
-  static const bReturn = 114;
-  static const fConstant = 115;
-  static const fArgument = 116;
-  static const fSpill = 117;
-  static const fReload = 118;
-  static const fReturn = 119;
-  static const gConstant = 120;
-  static const gArgument = 121;
-  static const gSpill = 122;
-  static const gReload = 123;
-  static const gReturn = 124;
-  static const eArgument = 125;
-  static const eSpill = 126;
-  static const eReload = 127;
-  static const eReturn = 128;
-  static const xArgument = 129;
-  static const xSpill = 130;
-  static const xReload = 131;
-  static const xReturn = 132;
-  static const rConstant = 133;
-  static const rArgument = 134;
+  static const cLoadOutgoing = 90;
+  static const rNull = 91;
+  static const eIsNullR = 92;
+  static const xIsNullR = 93;
+  static const sNull = 94;
+  static const eIsNullS = 95;
+  static const xIsNullS = 96;
+  static const cNull = 97;
+  static const eIsNullC = 98;
+  static const xIsNullC = 99;
+  static const rFromA = 100;
+  static const rBoxA = 101;
+  static const rFromB = 102;
+  static const rBoxB = 103;
+  static const rFromF = 104;
+  static const rBoxF = 105;
+  static const rFromG = 106;
+  static const rBoxG = 107;
+  static const rFromE = 108;
+  static const rBoxE = 109;
+  static const rFromX = 110;
+  static const rBoxX = 111;
+  static const aConstant = 112;
+  static const aSpill = 113;
+  static const aReload = 114;
+  static const aReturn = 115;
+  static const bConstant = 116;
+  static const bSpill = 117;
+  static const bReload = 118;
+  static const bReturn = 119;
+  static const fConstant = 120;
+  static const fSpill = 121;
+  static const fReload = 122;
+  static const fReturn = 123;
+  static const gConstant = 124;
+  static const gSpill = 125;
+  static const gReload = 126;
+  static const gReturn = 127;
+  static const eSpill = 128;
+  static const eReload = 129;
+  static const eReturn = 130;
+  static const xSpill = 131;
+  static const xReload = 132;
+  static const xReturn = 133;
+  static const rConstant = 134;
   static const rSpill = 135;
   static const rReload = 136;
   static const rReturn = 137;
   static const sConstant = 138;
-  static const sArgument = 139;
-  static const sSpill = 140;
-  static const sReload = 141;
-  static const sReturn = 142;
-  static const cConstant = 143;
-  static const cArgument = 144;
-  static const cSpill = 145;
-  static const cReload = 146;
-  static const cReturn = 147;
-  static const aDivB = 148;
-  static const bDivA = 149;
-  static const aModB = 150;
-  static const bModA = 151;
-  static const aShiftLeftB = 152;
-  static const bShiftLeftA = 153;
-  static const aShiftRightB = 154;
-  static const bShiftRightA = 155;
-  static const aUnsignedShiftRightB = 156;
-  static const bUnsignedShiftRightA = 157;
-  static const aImmediate = 158;
-  static const bImmediate = 159;
-  static const jumpETrue = 160;
-  static const jumpEFalse = 161;
-  static const jumpXTrue = 162;
-  static const jumpXFalse = 163;
-  static const aFromF = 164;
-  static const aFromG = 165;
-  static const bFromF = 166;
-  static const bFromG = 167;
-  static const jump = 168;
-  static const aOutgoing = 169;
-  static const bOutgoing = 170;
-  static const fOutgoing = 171;
-  static const gOutgoing = 172;
-  static const eOutgoing = 173;
-  static const xOutgoing = 174;
-  static const rOutgoing = 175;
-  static const sOutgoing = 176;
-  static const cOutgoing = 177;
-  static const callInt = 178;
-  static const callDouble = 179;
-  static const callBool = 180;
-  static const callObject = 181;
-  static const eEqRS = 182;
-  static const xEqRS = 183;
-  static const aFromR = 184;
-  static const fFromR = 185;
-  static const eFromR = 186;
-  static const callHost = 187;
-  static const callMethod = 188;
-  static const jumpETrueShort = 189;
-  static const jumpEFalseShort = 190;
-  static const jumpXTrueShort = 191;
-  static const jumpXFalseShort = 192;
-  static const jumpShort = 193;
+  static const sSpill = 139;
+  static const sReload = 140;
+  static const sReturn = 141;
+  static const cConstant = 142;
+  static const cSpill = 143;
+  static const cReload = 144;
+  static const cReturn = 145;
+  static const aDivB = 146;
+  static const bDivA = 147;
+  static const aModB = 148;
+  static const bModA = 149;
+  static const aShiftLeftB = 150;
+  static const bShiftLeftA = 151;
+  static const aShiftRightB = 152;
+  static const bShiftRightA = 153;
+  static const aUnsignedShiftRightB = 154;
+  static const bUnsignedShiftRightA = 155;
+  static const aImmediate = 156;
+  static const bImmediate = 157;
+  static const jumpETrue = 158;
+  static const jumpEFalse = 159;
+  static const jumpXTrue = 160;
+  static const jumpXFalse = 161;
+  static const aFromF = 162;
+  static const aFromG = 163;
+  static const bFromF = 164;
+  static const bFromG = 165;
+  static const jump = 166;
+  static const rOutgoing = 167;
+  static const sOutgoing = 168;
+  static const cOutgoing = 169;
+  static const rOverflow = 170;
+  static const call = 171;
+  static const eEqRS = 172;
+  static const xEqRS = 173;
+  static const aFromR = 174;
+  static const aNativeFromR = 175;
+  static const fFromR = 176;
+  static const fNativeFromR = 177;
+  static const eFromR = 178;
+  static const eNativeFromR = 179;
+  static const rBoxString = 180;
+  static const rUnboxString = 181;
+  static const callHost = 182;
+  static const callMethod = 183;
+  static const jumpETrueShort = 184;
+  static const jumpEFalseShort = 185;
+  static const jumpXTrueShort = 186;
+  static const jumpXFalseShort = 187;
+  static const jumpShort = 188;
   static const instructions = <TypedInstruction>[
     TypedInstruction('eTrue', [], [4], TypedImmediate.none, false, false),
     TypedInstruction('eFalse', [], [4], TypedImmediate.none, false, false),
@@ -310,6 +305,7 @@ abstract final class TypedOp {
     TypedInstruction('gFromA', [0], [3], TypedImmediate.none, false, false),
     TypedInstruction('fFromB', [1], [2], TypedImmediate.none, false, false),
     TypedInstruction('gFromB', [1], [3], TypedImmediate.none, false, false),
+    TypedInstruction('cLoadOutgoing', [], [8], TypedImmediate.none, false, false),
     TypedInstruction('rNull', [], [6], TypedImmediate.none, false, false),
     TypedInstruction('eIsNullR', [6], [4], TypedImmediate.none, false, false),
     TypedInstruction('xIsNullR', [6], [5], TypedImmediate.none, false, false),
@@ -320,51 +316,48 @@ abstract final class TypedOp {
     TypedInstruction('eIsNullC', [8], [4], TypedImmediate.none, false, false),
     TypedInstruction('xIsNullC', [8], [5], TypedImmediate.none, false, false),
     TypedInstruction('rFromA', [0], [6], TypedImmediate.none, false, false),
+    TypedInstruction('rBoxA', [0], [6], TypedImmediate.none, false, false),
     TypedInstruction('rFromB', [1], [6], TypedImmediate.none, false, false),
+    TypedInstruction('rBoxB', [1], [6], TypedImmediate.none, false, false),
     TypedInstruction('rFromF', [2], [6], TypedImmediate.none, false, false),
+    TypedInstruction('rBoxF', [2], [6], TypedImmediate.none, false, false),
     TypedInstruction('rFromG', [3], [6], TypedImmediate.none, false, false),
+    TypedInstruction('rBoxG', [3], [6], TypedImmediate.none, false, false),
     TypedInstruction('rFromE', [4], [6], TypedImmediate.none, false, false),
+    TypedInstruction('rBoxE', [4], [6], TypedImmediate.none, false, false),
     TypedInstruction('rFromX', [5], [6], TypedImmediate.none, false, false),
+    TypedInstruction('rBoxX', [5], [6], TypedImmediate.none, false, false),
     TypedInstruction('aConstant', [], [0], TypedImmediate.intConstant, false, false),
-    TypedInstruction('aArgument', [], [0], TypedImmediate.intArgument, true, false),
     TypedInstruction('aSpill', [0], [], TypedImmediate.intSpill, false, false),
     TypedInstruction('aReload', [], [0], TypedImmediate.intSpill, false, false),
     TypedInstruction('aReturn', [0], [], TypedImmediate.none, false, true),
     TypedInstruction('bConstant', [], [1], TypedImmediate.intConstant, false, false),
-    TypedInstruction('bArgument', [], [1], TypedImmediate.intArgument, true, false),
     TypedInstruction('bSpill', [1], [], TypedImmediate.intSpill, false, false),
     TypedInstruction('bReload', [], [1], TypedImmediate.intSpill, false, false),
     TypedInstruction('bReturn', [1], [], TypedImmediate.none, false, true),
     TypedInstruction('fConstant', [], [2], TypedImmediate.doubleConstant, false, false),
-    TypedInstruction('fArgument', [], [2], TypedImmediate.doubleArgument, true, false),
     TypedInstruction('fSpill', [2], [], TypedImmediate.doubleSpill, false, false),
     TypedInstruction('fReload', [], [2], TypedImmediate.doubleSpill, false, false),
     TypedInstruction('fReturn', [2], [], TypedImmediate.none, false, true),
     TypedInstruction('gConstant', [], [3], TypedImmediate.doubleConstant, false, false),
-    TypedInstruction('gArgument', [], [3], TypedImmediate.doubleArgument, true, false),
     TypedInstruction('gSpill', [3], [], TypedImmediate.doubleSpill, false, false),
     TypedInstruction('gReload', [], [3], TypedImmediate.doubleSpill, false, false),
     TypedInstruction('gReturn', [3], [], TypedImmediate.none, false, true),
-    TypedInstruction('eArgument', [], [4], TypedImmediate.boolArgument, true, false),
     TypedInstruction('eSpill', [4], [], TypedImmediate.boolSpill, false, false),
     TypedInstruction('eReload', [], [4], TypedImmediate.boolSpill, false, false),
     TypedInstruction('eReturn', [4], [], TypedImmediate.none, false, true),
-    TypedInstruction('xArgument', [], [5], TypedImmediate.boolArgument, true, false),
     TypedInstruction('xSpill', [5], [], TypedImmediate.boolSpill, false, false),
     TypedInstruction('xReload', [], [5], TypedImmediate.boolSpill, false, false),
     TypedInstruction('xReturn', [5], [], TypedImmediate.none, false, true),
     TypedInstruction('rConstant', [], [6], TypedImmediate.objectConstant, false, false),
-    TypedInstruction('rArgument', [], [6], TypedImmediate.objectArgument, true, false),
     TypedInstruction('rSpill', [6], [], TypedImmediate.objectSpill, false, false),
     TypedInstruction('rReload', [], [6], TypedImmediate.objectSpill, false, false),
     TypedInstruction('rReturn', [6], [], TypedImmediate.none, false, true),
     TypedInstruction('sConstant', [], [7], TypedImmediate.objectConstant, false, false),
-    TypedInstruction('sArgument', [], [7], TypedImmediate.objectArgument, true, false),
     TypedInstruction('sSpill', [7], [], TypedImmediate.objectSpill, false, false),
     TypedInstruction('sReload', [], [7], TypedImmediate.objectSpill, false, false),
     TypedInstruction('sReturn', [7], [], TypedImmediate.none, false, true),
     TypedInstruction('cConstant', [], [8], TypedImmediate.objectConstant, false, false),
-    TypedInstruction('cArgument', [], [8], TypedImmediate.objectArgument, true, false),
     TypedInstruction('cSpill', [8], [], TypedImmediate.objectSpill, false, false),
     TypedInstruction('cReload', [], [8], TypedImmediate.objectSpill, false, false),
     TypedInstruction('cReturn', [8], [], TypedImmediate.none, false, true),
@@ -389,24 +382,21 @@ abstract final class TypedOp {
     TypedInstruction('bFromF', [2], [1], TypedImmediate.none, true, false),
     TypedInstruction('bFromG', [3], [1], TypedImmediate.none, true, false),
     TypedInstruction('jump', [], [], TypedImmediate.branch, false, true),
-    TypedInstruction('aOutgoing', [0], [], TypedImmediate.intOutgoing, false, false),
-    TypedInstruction('bOutgoing', [1], [], TypedImmediate.intOutgoing, false, false),
-    TypedInstruction('fOutgoing', [2], [], TypedImmediate.doubleOutgoing, false, false),
-    TypedInstruction('gOutgoing', [3], [], TypedImmediate.doubleOutgoing, false, false),
-    TypedInstruction('eOutgoing', [4], [], TypedImmediate.boolOutgoing, false, false),
-    TypedInstruction('xOutgoing', [5], [], TypedImmediate.boolOutgoing, false, false),
     TypedInstruction('rOutgoing', [6], [], TypedImmediate.objectOutgoing, false, false),
     TypedInstruction('sOutgoing', [7], [], TypedImmediate.objectOutgoing, false, false),
     TypedInstruction('cOutgoing', [8], [], TypedImmediate.objectOutgoing, false, false),
-    TypedInstruction('callInt', [], [0], TypedImmediate.function, true, false),
-    TypedInstruction('callDouble', [], [2], TypedImmediate.function, true, false),
-    TypedInstruction('callBool', [], [4], TypedImmediate.function, true, false),
-    TypedInstruction('callObject', [], [6], TypedImmediate.function, true, false),
+    TypedInstruction('rOverflow', [8], [6], TypedImmediate.overflow, true, false),
+    TypedInstruction('call', [], [], TypedImmediate.function, true, false),
     TypedInstruction('eEqRS', [6, 7], [4], TypedImmediate.none, true, false),
     TypedInstruction('xEqRS', [6, 7], [5], TypedImmediate.none, true, false),
     TypedInstruction('aFromR', [6], [0], TypedImmediate.none, true, false),
+    TypedInstruction('aNativeFromR', [6], [0], TypedImmediate.none, true, false),
     TypedInstruction('fFromR', [6], [2], TypedImmediate.none, true, false),
+    TypedInstruction('fNativeFromR', [6], [2], TypedImmediate.none, true, false),
     TypedInstruction('eFromR', [6], [4], TypedImmediate.none, true, false),
+    TypedInstruction('eNativeFromR', [6], [4], TypedImmediate.none, true, false),
+    TypedInstruction('rBoxString', [6], [6], TypedImmediate.none, true, false),
+    TypedInstruction('rUnboxString', [6], [6], TypedImmediate.none, true, false),
     TypedInstruction('callHost', [6], [6], TypedImmediate.hostCall, true, false),
     TypedInstruction('callMethod', [6, 7], [6], TypedImmediate.hostCall, true, false),
     TypedInstruction('jumpETrueShort', [4], [], TypedImmediate.shortBranch, false, false),
