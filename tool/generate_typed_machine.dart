@@ -42,19 +42,25 @@ List<Instruction> specification() {
       terminates: terminates,
     ),
   );
-  const names = ['a', 'b', 'f', 'g', 'e', 'x'];
+  const names = ['a', 'b', 'f', 'g', 'e', 'x', 'r', 's', 'c'];
   for (var register = 0; register < names.length; register++) {
     final name = names[register];
     final bank = register < 2
         ? 'int'
         : register < 4
         ? 'double'
-        : 'bool';
-    final pool = bank == 'int' ? 'integers' : 'doubles';
+        : register < 6
+        ? 'bool'
+        : 'object';
+    final pool = bank == 'int'
+        ? 'program.integerAt'
+        : bank == 'double'
+        ? 'program.doubleAt'
+        : 'program.objectAt';
     if (bank != 'bool') {
       add(
         '${name}Constant',
-        '$name = $pool[index];',
+        '$name = $pool(index);',
         output: register,
         immediate: '${bank}Constant',
       );
@@ -71,13 +77,13 @@ List<Instruction> specification() {
     );
     add(
       '${name}Spill',
-      '${bank}Spills[index] = ${bank == 'bool' ? '$name ? 1 : 0' : name};',
+      'frame.${bank}Spills[index] = ${bank == 'bool' ? '$name ? 1 : 0' : name};',
       inputs: [register],
       immediate: '${bank}Spill',
     );
     add(
       '${name}Reload',
-      '$name = ${bank}Spills[index]${bank == 'bool' ? ' != 0' : ''};',
+      '$name = frame.${bank}Spills[index]${bank == 'bool' ? ' != 0' : ''};',
       output: register,
       immediate: '${bank}Spill',
     );
@@ -85,23 +91,31 @@ List<Instruction> specification() {
         ? 'a'
         : bank == 'double'
         ? 'f'
-        : 'e';
-    final resultBank = register ~/ 2;
+        : bank == 'bool'
+        ? 'e'
+        : 'r';
+    final resultBank = register < 6 ? register ~/ 2 : 3;
     add(
       '${name}Return',
       '''if (frame.parent == null) return $name;
           if (frame.returnBank != $resultBank) throw StateError('Typed return bank mismatch');
           final returned = $name;
           pc = frame.returnPc;
-          frame = frame.parent!;
-          intSpills = frame.intSpills; doubleSpills = frame.doubleSpills; boolSpills = frame.boolSpills;
-          a = 0; b = 0; f = 0.0; g = 0.0; e = false; x = false;
+          frame = frame.leave();
+          r = null; s = null; c = null;
           $resultName = returned;''',
       inputs: [register],
       terminates: true,
     );
   }
-  for (final (first, second) in [(0, 1), (2, 3), (4, 5)]) {
+  for (final (first, second) in [
+    (0, 1),
+    (2, 3),
+    (4, 5),
+    (6, 7),
+    (6, 8),
+    (7, 8),
+  ]) {
     final left = names[first], right = names[second];
     add(
       '${left}From${right.toUpperCase()}',
@@ -171,6 +185,12 @@ List<Instruction> specification() {
   }
   for (final target in [0, 1]) {
     final name = names[target];
+    add(
+      '${name}Immediate',
+      '$name = index.toSigned(16);',
+      output: target,
+      immediate: 'integer',
+    );
     add('${name}Increment', '$name++;', inputs: [target], output: target);
     add('${name}Decrement', '$name--;', inputs: [target], output: target);
     add('${name}Negate', '$name = -$name;', inputs: [target], output: target);
@@ -186,7 +206,7 @@ List<Instruction> specification() {
       'Gt': '>',
       'Gte': '>=',
     }.entries) {
-      for (final (left, right) in [(0, 1), (1, 0), (2, 3), (3, 2)]) {
+      for (final (left, right) in [(0, 1), (2, 3)]) {
         add(
           '$result${entry.key}${names[left].toUpperCase()}${names[right].toUpperCase()}',
           '$result = ${names[left]} ${entry.value} ${names[right]};',
@@ -255,7 +275,9 @@ List<Instruction> specification() {
         ? 'int'
         : register < 4
         ? 'double'
-        : 'bool';
+        : register < 6
+        ? 'bool'
+        : 'object';
     add(
       '${name}Outgoing',
       'frame.${bank}Outgoing[index] = ${bank == 'bool' ? '$name ? 1 : 0' : name};',
@@ -263,23 +285,96 @@ List<Instruction> specification() {
       immediate: '${bank}Outgoing',
     );
   }
-  for (final (bank, name) in [(0, 'Int'), (1, 'Double'), (2, 'Bool')]) {
+  for (final (bank, name) in [
+    (0, 'Int'),
+    (1, 'Double'),
+    (2, 'Bool'),
+    (3, 'Object'),
+  ]) {
     add(
       'call$name',
       '''final function = program.functions[index];
-          frame = TypedFrame(function,
-            frame.intOutgoing.sublist(0, function.intArgumentCount),
-            frame.doubleOutgoing.sublist(0, function.doubleArgumentCount),
-            frame.boolOutgoing.sublist(0, function.boolArgumentCount),
-            parent: frame, returnPc: pc, returnBank: $bank);
-          intSpills = frame.intSpills; doubleSpills = frame.doubleSpills; boolSpills = frame.boolSpills;
-          a = 0; b = 0; f = 0.0; g = 0.0; e = false; x = false;
+          frame = frame.enter(function, pc, $bank);
+          r = null; s = null; c = null;
           pc = function.entry;''',
       immediate: 'function',
       mayThrow: true,
       output: bank * 2,
     );
   }
+  for (final register in [6, 7, 8]) {
+    final name = names[register];
+    add('${name}Null', '$name = null;', output: register);
+    for (final flag in [4, 5]) {
+      add(
+        '${names[flag]}IsNull${name.toUpperCase()}',
+        '${names[flag]} = TypedInterop.isNull($name);',
+        inputs: [register],
+        output: flag,
+      );
+    }
+  }
+  for (final flag in [4, 5]) {
+    add(
+      '${names[flag]}EqRS',
+      '${names[flag]} = TypedInterop.equals(runtime, r, s);',
+      inputs: [6, 7],
+      output: flag,
+      mayThrow: true,
+    );
+  }
+  for (var register = 0; register < 6; register++) {
+    add(
+      'rFrom${names[register].toUpperCase()}',
+      'r = ${names[register]};',
+      inputs: [register],
+      output: 6,
+    );
+  }
+  for (final (register, type) in [(0, 'Int'), (2, 'Double'), (4, 'Bool')]) {
+    add(
+      '${names[register]}FromR',
+      '${names[register]} = TypedInterop.to$type(r);',
+      inputs: [6],
+      output: register,
+      mayThrow: true,
+    );
+  }
+  add(
+    'callHost',
+    'final result = TypedInterop.call(runtime, r, frame.takeObjectArguments(index)); r = result; s = null; c = null; ',
+    inputs: [6],
+    output: 6,
+    immediate: 'hostCall',
+    mayThrow: true,
+  );
+  add(
+    'callMethod',
+    'final result = TypedInterop.invoke(runtime, r, s as String, frame.takeObjectArguments(index)); r = result; s = null; c = null; ',
+    inputs: [6, 7],
+    output: 6,
+    immediate: 'hostCall',
+    mayThrow: true,
+  );
+  for (final op in [...ops]) {
+    if (op.immediate != 'branch') continue;
+    add(
+      '${op.name}Short',
+      op.body,
+      inputs: op.inputs,
+      immediate: 'shortBranch',
+      terminates: op.terminates,
+    );
+  }
+  // AOT allocation follows the numeric case order. Keep simple register-only
+  // operations ahead of handlers with decoding, calls and exceptional edges.
+  final originalOrder = {for (var i = 0; i < ops.length; i++) ops[i]: i};
+  int rank(Instruction op) =>
+      op.immediate == 'none' && !op.terminates && !op.mayThrow ? 0 : 1;
+  ops.sort((a, b) {
+    final r = rank(a).compareTo(rank(b));
+    return r != 0 ? r : originalOrder[a]!.compareTo(originalOrder[b]!);
+  });
   return ops;
 }
 
@@ -294,12 +389,12 @@ void main(List<String> arguments) {
 
 /// Physical scalar banks; these IDs are allocator-visible, never value storage.
 abstract final class TypedRegister {
-  static const a = 0, b = 1, f = 2, g = 3, e = 4, x = 5;
+  static const a = 0, b = 1, f = 2, g = 3, e = 4, x = 5, r = 6, s = 7, c = 8;
 }
 
 enum TypedImmediate { none, intConstant, doubleConstant, intArgument,
   doubleArgument, boolArgument, intSpill, doubleSpill, boolSpill, branch,
-  intOutgoing, doubleOutgoing, boolOutgoing, function }
+  intOutgoing, doubleOutgoing, boolOutgoing, function, objectConstant, objectArgument, objectSpill, objectOutgoing, hostCall, shortBranch, integer }
 
 class TypedInstruction {
   const TypedInstruction(this.name, this.inputs, this.outputs, this.immediate,
@@ -310,8 +405,8 @@ class TypedInstruction {
   final TypedImmediate immediate;
   final bool mayThrow;
   final bool terminates;
-  List<int> get clobberedRegisters => immediate == TypedImmediate.function
-      ? const [0, 1, 2, 3, 4, 5] : const [];
+  List<int> get clobberedRegisters => (immediate == TypedImmediate.function || immediate == TypedImmediate.hostCall)
+      ? const [0, 1, 2, 3, 4, 5, 6, 7, 8] : const [];
   int get length => immediate == TypedImmediate.none ? 1
       : immediate == TypedImmediate.branch ? 5 : 3;
 }
@@ -337,46 +432,53 @@ abstract final class TypedOp {
 import 'typed_ops.g.dart';
 import 'typed_program.dart';
 import 'typed_frame.dart';
+import 'typed_interop.dart';
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 abstract final class TypedMachine {
   /// Fixed scalar banks stay in typed locals across the dispatch loop.
   @pragma('vm:never-inline')
-  static Object run(TypedProgram program, {
+  static Object? run(TypedProgram program, {
       List<int> intArguments = const [], List<double> doubleArguments = const [],
-      List<bool> boolArguments = const []}) {
+      List<bool> boolArguments = const [], List<Object?> objectArguments = const [], Runtime? runtime}) {
     final code = program.code;
-    final integers = program.integers;
-    final doubles = program.doubles;
     final entry = program.functions[program.entryFunction];
-    if (intArguments.length < entry.intArgumentCount || doubleArguments.length < entry.doubleArgumentCount || boolArguments.length < entry.boolArgumentCount) {
-      throw ArgumentError('Insufficient typed entry arguments');
-    }
-    var frame = TypedFrame(entry, intArguments, doubleArguments,
-      [for (final value in boolArguments) value ? 1 : 0]);
-    var intSpills = frame.intSpills;
-    var doubleSpills = frame.doubleSpills;
-    var boolSpills = frame.boolSpills;
+    var frame = TypedFrame.entry(entry, intArguments, doubleArguments, boolArguments, objectArguments);
+    Object? r, s, c;
     var a = 0, b = 0;
     var f = 0.0, g = 0.0;
     var e = false, x = false;
     var pc = entry.entry;
-    while (true) {
+    dispatch: while (true) {
       switch (code[pc++]) {
 ''',
   );
   for (final op in ops) {
     machine.writeln('        case TypedOp.${op.name}:');
-    if (op.immediate == 'branch') {
+    if (op.immediate == 'branch' || op.immediate == 'shortBranch') {
+      final short = op.immediate == 'shortBranch';
+      final width = short ? 2 : 4;
+      final expression = short
+          ? 'pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16)'
+          : 'code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24)';
+      final condition = RegExp(
+        r'^if \((.+)\) pc = address;$',
+      ).firstMatch(op.body)?.group(1);
       machine.writeln(
-        '          final address = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); pc += 4;',
+        condition == null
+            ? '          pc = $expression;'
+            : '          if ($condition) { pc = $expression; } else { pc += $width; }',
       );
+      machine.writeln('          continue dispatch;');
+      continue;
     } else if (op.immediate != 'none') {
       machine.writeln(
         '          final index = code[pc] | (code[pc + 1] << 8); pc += 2;',
       );
     }
-    machine.writeln('          ${op.body}');
-    if (!op.body.startsWith('return ')) machine.writeln('          break;');
+    machine.writeln('          ${op.body.trimRight()}');
+    if (!op.body.startsWith('return '))
+      machine.writeln('          continue dispatch;');
   }
   machine.writeln(
     "        default: throw StateError('Invalid typed opcode at byte \${pc - 1}');\n      }\n    }\n  }\n}",

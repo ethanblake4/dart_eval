@@ -2,12 +2,12 @@
 
 /// Physical scalar banks; these IDs are allocator-visible, never value storage.
 abstract final class TypedRegister {
-  static const a = 0, b = 1, f = 2, g = 3, e = 4, x = 5;
+  static const a = 0, b = 1, f = 2, g = 3, e = 4, x = 5, r = 6, s = 7, c = 8;
 }
 
 enum TypedImmediate { none, intConstant, doubleConstant, intArgument,
   doubleArgument, boolArgument, intSpill, doubleSpill, boolSpill, branch,
-  intOutgoing, doubleOutgoing, boolOutgoing, function }
+  intOutgoing, doubleOutgoing, boolOutgoing, function, objectConstant, objectArgument, objectSpill, objectOutgoing, hostCall, shortBranch, integer }
 
 class TypedInstruction {
   const TypedInstruction(this.name, this.inputs, this.outputs, this.immediate,
@@ -18,175 +18,313 @@ class TypedInstruction {
   final TypedImmediate immediate;
   final bool mayThrow;
   final bool terminates;
-  List<int> get clobberedRegisters => immediate == TypedImmediate.function
-      ? const [0, 1, 2, 3, 4, 5] : const [];
+  List<int> get clobberedRegisters => (immediate == TypedImmediate.function || immediate == TypedImmediate.hostCall)
+      ? const [0, 1, 2, 3, 4, 5, 6, 7, 8] : const [];
   int get length => immediate == TypedImmediate.none ? 1
       : immediate == TypedImmediate.branch ? 5 : 3;
 }
 
 abstract final class TypedOp {
-  static const aConstant = 0;
-  static const aArgument = 1;
-  static const aSpill = 2;
-  static const aReload = 3;
-  static const aReturn = 4;
-  static const bConstant = 5;
-  static const bArgument = 6;
-  static const bSpill = 7;
-  static const bReload = 8;
-  static const bReturn = 9;
-  static const fConstant = 10;
-  static const fArgument = 11;
-  static const fSpill = 12;
-  static const fReload = 13;
-  static const fReturn = 14;
-  static const gConstant = 15;
-  static const gArgument = 16;
-  static const gSpill = 17;
-  static const gReload = 18;
-  static const gReturn = 19;
-  static const eTrue = 20;
-  static const eFalse = 21;
-  static const eArgument = 22;
-  static const eSpill = 23;
-  static const eReload = 24;
-  static const eReturn = 25;
-  static const xTrue = 26;
-  static const xFalse = 27;
-  static const xArgument = 28;
-  static const xSpill = 29;
-  static const xReload = 30;
-  static const xReturn = 31;
-  static const aFromB = 32;
-  static const bFromA = 33;
-  static const aBSwap = 34;
-  static const fFromG = 35;
-  static const gFromF = 36;
-  static const fGSwap = 37;
-  static const eFromX = 38;
-  static const xFromE = 39;
-  static const eXSwap = 40;
-  static const aAddB = 41;
-  static const bAddA = 42;
-  static const aSubB = 43;
-  static const bSubA = 44;
-  static const aMulB = 45;
-  static const bMulA = 46;
-  static const aDivB = 47;
-  static const bDivA = 48;
-  static const aModB = 49;
-  static const bModA = 50;
-  static const aAndB = 51;
-  static const bAndA = 52;
-  static const aOrB = 53;
-  static const bOrA = 54;
-  static const aXorB = 55;
-  static const bXorA = 56;
-  static const aShiftLeftB = 57;
-  static const bShiftLeftA = 58;
-  static const aShiftRightB = 59;
-  static const bShiftRightA = 60;
-  static const aUnsignedShiftRightB = 61;
-  static const bUnsignedShiftRightA = 62;
-  static const fAddG = 63;
-  static const gAddF = 64;
-  static const fSubG = 65;
-  static const gSubF = 66;
-  static const fMulG = 67;
-  static const gMulF = 68;
-  static const fDivG = 69;
-  static const gDivF = 70;
-  static const aIncrement = 71;
-  static const aDecrement = 72;
-  static const aNegate = 73;
-  static const aBitNot = 74;
-  static const bIncrement = 75;
-  static const bDecrement = 76;
-  static const bNegate = 77;
-  static const bBitNot = 78;
-  static const eEqAB = 79;
-  static const eEqBA = 80;
-  static const eEqFG = 81;
-  static const eEqGF = 82;
-  static const eNeAB = 83;
-  static const eNeBA = 84;
-  static const eNeFG = 85;
-  static const eNeGF = 86;
-  static const eLtAB = 87;
-  static const eLtBA = 88;
-  static const eLtFG = 89;
-  static const eLtGF = 90;
-  static const eLteAB = 91;
-  static const eLteBA = 92;
-  static const eLteFG = 93;
-  static const eLteGF = 94;
-  static const eGtAB = 95;
-  static const eGtBA = 96;
-  static const eGtFG = 97;
-  static const eGtGF = 98;
-  static const eGteAB = 99;
-  static const eGteBA = 100;
-  static const eGteFG = 101;
-  static const eGteGF = 102;
-  static const eAPositive = 103;
-  static const eBPositive = 104;
-  static const eNot = 105;
-  static const eAndX = 106;
-  static const eOrX = 107;
-  static const eXorX = 108;
-  static const jumpETrue = 109;
-  static const jumpEFalse = 110;
-  static const xEqAB = 111;
-  static const xEqBA = 112;
-  static const xEqFG = 113;
-  static const xEqGF = 114;
-  static const xNeAB = 115;
-  static const xNeBA = 116;
-  static const xNeFG = 117;
-  static const xNeGF = 118;
-  static const xLtAB = 119;
-  static const xLtBA = 120;
-  static const xLtFG = 121;
-  static const xLtGF = 122;
-  static const xLteAB = 123;
-  static const xLteBA = 124;
-  static const xLteFG = 125;
-  static const xLteGF = 126;
-  static const xGtAB = 127;
-  static const xGtBA = 128;
-  static const xGtFG = 129;
-  static const xGtGF = 130;
-  static const xGteAB = 131;
-  static const xGteBA = 132;
-  static const xGteFG = 133;
-  static const xGteGF = 134;
-  static const xAPositive = 135;
-  static const xBPositive = 136;
-  static const xNot = 137;
-  static const xAndE = 138;
-  static const xOrE = 139;
-  static const xXorE = 140;
-  static const jumpXTrue = 141;
-  static const jumpXFalse = 142;
-  static const fFromA = 143;
-  static const aFromF = 144;
-  static const gFromA = 145;
-  static const aFromG = 146;
-  static const fFromB = 147;
-  static const bFromF = 148;
-  static const gFromB = 149;
-  static const bFromG = 150;
-  static const jump = 151;
-  static const aOutgoing = 152;
-  static const bOutgoing = 153;
-  static const fOutgoing = 154;
-  static const gOutgoing = 155;
-  static const eOutgoing = 156;
-  static const xOutgoing = 157;
-  static const callInt = 158;
-  static const callDouble = 159;
-  static const callBool = 160;
+  static const eTrue = 0;
+  static const eFalse = 1;
+  static const xTrue = 2;
+  static const xFalse = 3;
+  static const aFromB = 4;
+  static const bFromA = 5;
+  static const aBSwap = 6;
+  static const fFromG = 7;
+  static const gFromF = 8;
+  static const fGSwap = 9;
+  static const eFromX = 10;
+  static const xFromE = 11;
+  static const eXSwap = 12;
+  static const rFromS = 13;
+  static const sFromR = 14;
+  static const rSSwap = 15;
+  static const rFromC = 16;
+  static const cFromR = 17;
+  static const rCSwap = 18;
+  static const sFromC = 19;
+  static const cFromS = 20;
+  static const sCSwap = 21;
+  static const aAddB = 22;
+  static const bAddA = 23;
+  static const aSubB = 24;
+  static const bSubA = 25;
+  static const aMulB = 26;
+  static const bMulA = 27;
+  static const aAndB = 28;
+  static const bAndA = 29;
+  static const aOrB = 30;
+  static const bOrA = 31;
+  static const aXorB = 32;
+  static const bXorA = 33;
+  static const fAddG = 34;
+  static const gAddF = 35;
+  static const fSubG = 36;
+  static const gSubF = 37;
+  static const fMulG = 38;
+  static const gMulF = 39;
+  static const fDivG = 40;
+  static const gDivF = 41;
+  static const aIncrement = 42;
+  static const aDecrement = 43;
+  static const aNegate = 44;
+  static const aBitNot = 45;
+  static const bIncrement = 46;
+  static const bDecrement = 47;
+  static const bNegate = 48;
+  static const bBitNot = 49;
+  static const eEqAB = 50;
+  static const eEqFG = 51;
+  static const eNeAB = 52;
+  static const eNeFG = 53;
+  static const eLtAB = 54;
+  static const eLtFG = 55;
+  static const eLteAB = 56;
+  static const eLteFG = 57;
+  static const eGtAB = 58;
+  static const eGtFG = 59;
+  static const eGteAB = 60;
+  static const eGteFG = 61;
+  static const eAPositive = 62;
+  static const eBPositive = 63;
+  static const eNot = 64;
+  static const eAndX = 65;
+  static const eOrX = 66;
+  static const eXorX = 67;
+  static const xEqAB = 68;
+  static const xEqFG = 69;
+  static const xNeAB = 70;
+  static const xNeFG = 71;
+  static const xLtAB = 72;
+  static const xLtFG = 73;
+  static const xLteAB = 74;
+  static const xLteFG = 75;
+  static const xGtAB = 76;
+  static const xGtFG = 77;
+  static const xGteAB = 78;
+  static const xGteFG = 79;
+  static const xAPositive = 80;
+  static const xBPositive = 81;
+  static const xNot = 82;
+  static const xAndE = 83;
+  static const xOrE = 84;
+  static const xXorE = 85;
+  static const fFromA = 86;
+  static const gFromA = 87;
+  static const fFromB = 88;
+  static const gFromB = 89;
+  static const rNull = 90;
+  static const eIsNullR = 91;
+  static const xIsNullR = 92;
+  static const sNull = 93;
+  static const eIsNullS = 94;
+  static const xIsNullS = 95;
+  static const cNull = 96;
+  static const eIsNullC = 97;
+  static const xIsNullC = 98;
+  static const rFromA = 99;
+  static const rFromB = 100;
+  static const rFromF = 101;
+  static const rFromG = 102;
+  static const rFromE = 103;
+  static const rFromX = 104;
+  static const aConstant = 105;
+  static const aArgument = 106;
+  static const aSpill = 107;
+  static const aReload = 108;
+  static const aReturn = 109;
+  static const bConstant = 110;
+  static const bArgument = 111;
+  static const bSpill = 112;
+  static const bReload = 113;
+  static const bReturn = 114;
+  static const fConstant = 115;
+  static const fArgument = 116;
+  static const fSpill = 117;
+  static const fReload = 118;
+  static const fReturn = 119;
+  static const gConstant = 120;
+  static const gArgument = 121;
+  static const gSpill = 122;
+  static const gReload = 123;
+  static const gReturn = 124;
+  static const eArgument = 125;
+  static const eSpill = 126;
+  static const eReload = 127;
+  static const eReturn = 128;
+  static const xArgument = 129;
+  static const xSpill = 130;
+  static const xReload = 131;
+  static const xReturn = 132;
+  static const rConstant = 133;
+  static const rArgument = 134;
+  static const rSpill = 135;
+  static const rReload = 136;
+  static const rReturn = 137;
+  static const sConstant = 138;
+  static const sArgument = 139;
+  static const sSpill = 140;
+  static const sReload = 141;
+  static const sReturn = 142;
+  static const cConstant = 143;
+  static const cArgument = 144;
+  static const cSpill = 145;
+  static const cReload = 146;
+  static const cReturn = 147;
+  static const aDivB = 148;
+  static const bDivA = 149;
+  static const aModB = 150;
+  static const bModA = 151;
+  static const aShiftLeftB = 152;
+  static const bShiftLeftA = 153;
+  static const aShiftRightB = 154;
+  static const bShiftRightA = 155;
+  static const aUnsignedShiftRightB = 156;
+  static const bUnsignedShiftRightA = 157;
+  static const aImmediate = 158;
+  static const bImmediate = 159;
+  static const jumpETrue = 160;
+  static const jumpEFalse = 161;
+  static const jumpXTrue = 162;
+  static const jumpXFalse = 163;
+  static const aFromF = 164;
+  static const aFromG = 165;
+  static const bFromF = 166;
+  static const bFromG = 167;
+  static const jump = 168;
+  static const aOutgoing = 169;
+  static const bOutgoing = 170;
+  static const fOutgoing = 171;
+  static const gOutgoing = 172;
+  static const eOutgoing = 173;
+  static const xOutgoing = 174;
+  static const rOutgoing = 175;
+  static const sOutgoing = 176;
+  static const cOutgoing = 177;
+  static const callInt = 178;
+  static const callDouble = 179;
+  static const callBool = 180;
+  static const callObject = 181;
+  static const eEqRS = 182;
+  static const xEqRS = 183;
+  static const aFromR = 184;
+  static const fFromR = 185;
+  static const eFromR = 186;
+  static const callHost = 187;
+  static const callMethod = 188;
+  static const jumpETrueShort = 189;
+  static const jumpEFalseShort = 190;
+  static const jumpXTrueShort = 191;
+  static const jumpXFalseShort = 192;
+  static const jumpShort = 193;
   static const instructions = <TypedInstruction>[
+    TypedInstruction('eTrue', [], [4], TypedImmediate.none, false, false),
+    TypedInstruction('eFalse', [], [4], TypedImmediate.none, false, false),
+    TypedInstruction('xTrue', [], [5], TypedImmediate.none, false, false),
+    TypedInstruction('xFalse', [], [5], TypedImmediate.none, false, false),
+    TypedInstruction('aFromB', [1], [0], TypedImmediate.none, false, false),
+    TypedInstruction('bFromA', [0], [1], TypedImmediate.none, false, false),
+    TypedInstruction('aBSwap', [0, 1], [0, 1], TypedImmediate.none, false, false),
+    TypedInstruction('fFromG', [3], [2], TypedImmediate.none, false, false),
+    TypedInstruction('gFromF', [2], [3], TypedImmediate.none, false, false),
+    TypedInstruction('fGSwap', [2, 3], [2, 3], TypedImmediate.none, false, false),
+    TypedInstruction('eFromX', [5], [4], TypedImmediate.none, false, false),
+    TypedInstruction('xFromE', [4], [5], TypedImmediate.none, false, false),
+    TypedInstruction('eXSwap', [4, 5], [4, 5], TypedImmediate.none, false, false),
+    TypedInstruction('rFromS', [7], [6], TypedImmediate.none, false, false),
+    TypedInstruction('sFromR', [6], [7], TypedImmediate.none, false, false),
+    TypedInstruction('rSSwap', [6, 7], [6, 7], TypedImmediate.none, false, false),
+    TypedInstruction('rFromC', [8], [6], TypedImmediate.none, false, false),
+    TypedInstruction('cFromR', [6], [8], TypedImmediate.none, false, false),
+    TypedInstruction('rCSwap', [6, 8], [6, 8], TypedImmediate.none, false, false),
+    TypedInstruction('sFromC', [8], [7], TypedImmediate.none, false, false),
+    TypedInstruction('cFromS', [7], [8], TypedImmediate.none, false, false),
+    TypedInstruction('sCSwap', [7, 8], [7, 8], TypedImmediate.none, false, false),
+    TypedInstruction('aAddB', [0, 1], [0], TypedImmediate.none, false, false),
+    TypedInstruction('bAddA', [1, 0], [1], TypedImmediate.none, false, false),
+    TypedInstruction('aSubB', [0, 1], [0], TypedImmediate.none, false, false),
+    TypedInstruction('bSubA', [1, 0], [1], TypedImmediate.none, false, false),
+    TypedInstruction('aMulB', [0, 1], [0], TypedImmediate.none, false, false),
+    TypedInstruction('bMulA', [1, 0], [1], TypedImmediate.none, false, false),
+    TypedInstruction('aAndB', [0, 1], [0], TypedImmediate.none, false, false),
+    TypedInstruction('bAndA', [1, 0], [1], TypedImmediate.none, false, false),
+    TypedInstruction('aOrB', [0, 1], [0], TypedImmediate.none, false, false),
+    TypedInstruction('bOrA', [1, 0], [1], TypedImmediate.none, false, false),
+    TypedInstruction('aXorB', [0, 1], [0], TypedImmediate.none, false, false),
+    TypedInstruction('bXorA', [1, 0], [1], TypedImmediate.none, false, false),
+    TypedInstruction('fAddG', [2, 3], [2], TypedImmediate.none, false, false),
+    TypedInstruction('gAddF', [3, 2], [3], TypedImmediate.none, false, false),
+    TypedInstruction('fSubG', [2, 3], [2], TypedImmediate.none, false, false),
+    TypedInstruction('gSubF', [3, 2], [3], TypedImmediate.none, false, false),
+    TypedInstruction('fMulG', [2, 3], [2], TypedImmediate.none, false, false),
+    TypedInstruction('gMulF', [3, 2], [3], TypedImmediate.none, false, false),
+    TypedInstruction('fDivG', [2, 3], [2], TypedImmediate.none, false, false),
+    TypedInstruction('gDivF', [3, 2], [3], TypedImmediate.none, false, false),
+    TypedInstruction('aIncrement', [0], [0], TypedImmediate.none, false, false),
+    TypedInstruction('aDecrement', [0], [0], TypedImmediate.none, false, false),
+    TypedInstruction('aNegate', [0], [0], TypedImmediate.none, false, false),
+    TypedInstruction('aBitNot', [0], [0], TypedImmediate.none, false, false),
+    TypedInstruction('bIncrement', [1], [1], TypedImmediate.none, false, false),
+    TypedInstruction('bDecrement', [1], [1], TypedImmediate.none, false, false),
+    TypedInstruction('bNegate', [1], [1], TypedImmediate.none, false, false),
+    TypedInstruction('bBitNot', [1], [1], TypedImmediate.none, false, false),
+    TypedInstruction('eEqAB', [0, 1], [4], TypedImmediate.none, false, false),
+    TypedInstruction('eEqFG', [2, 3], [4], TypedImmediate.none, false, false),
+    TypedInstruction('eNeAB', [0, 1], [4], TypedImmediate.none, false, false),
+    TypedInstruction('eNeFG', [2, 3], [4], TypedImmediate.none, false, false),
+    TypedInstruction('eLtAB', [0, 1], [4], TypedImmediate.none, false, false),
+    TypedInstruction('eLtFG', [2, 3], [4], TypedImmediate.none, false, false),
+    TypedInstruction('eLteAB', [0, 1], [4], TypedImmediate.none, false, false),
+    TypedInstruction('eLteFG', [2, 3], [4], TypedImmediate.none, false, false),
+    TypedInstruction('eGtAB', [0, 1], [4], TypedImmediate.none, false, false),
+    TypedInstruction('eGtFG', [2, 3], [4], TypedImmediate.none, false, false),
+    TypedInstruction('eGteAB', [0, 1], [4], TypedImmediate.none, false, false),
+    TypedInstruction('eGteFG', [2, 3], [4], TypedImmediate.none, false, false),
+    TypedInstruction('eAPositive', [0], [4], TypedImmediate.none, false, false),
+    TypedInstruction('eBPositive', [1], [4], TypedImmediate.none, false, false),
+    TypedInstruction('eNot', [4], [4], TypedImmediate.none, false, false),
+    TypedInstruction('eAndX', [4, 5], [4], TypedImmediate.none, false, false),
+    TypedInstruction('eOrX', [4, 5], [4], TypedImmediate.none, false, false),
+    TypedInstruction('eXorX', [4, 5], [4], TypedImmediate.none, false, false),
+    TypedInstruction('xEqAB', [0, 1], [5], TypedImmediate.none, false, false),
+    TypedInstruction('xEqFG', [2, 3], [5], TypedImmediate.none, false, false),
+    TypedInstruction('xNeAB', [0, 1], [5], TypedImmediate.none, false, false),
+    TypedInstruction('xNeFG', [2, 3], [5], TypedImmediate.none, false, false),
+    TypedInstruction('xLtAB', [0, 1], [5], TypedImmediate.none, false, false),
+    TypedInstruction('xLtFG', [2, 3], [5], TypedImmediate.none, false, false),
+    TypedInstruction('xLteAB', [0, 1], [5], TypedImmediate.none, false, false),
+    TypedInstruction('xLteFG', [2, 3], [5], TypedImmediate.none, false, false),
+    TypedInstruction('xGtAB', [0, 1], [5], TypedImmediate.none, false, false),
+    TypedInstruction('xGtFG', [2, 3], [5], TypedImmediate.none, false, false),
+    TypedInstruction('xGteAB', [0, 1], [5], TypedImmediate.none, false, false),
+    TypedInstruction('xGteFG', [2, 3], [5], TypedImmediate.none, false, false),
+    TypedInstruction('xAPositive', [0], [5], TypedImmediate.none, false, false),
+    TypedInstruction('xBPositive', [1], [5], TypedImmediate.none, false, false),
+    TypedInstruction('xNot', [5], [5], TypedImmediate.none, false, false),
+    TypedInstruction('xAndE', [5, 4], [5], TypedImmediate.none, false, false),
+    TypedInstruction('xOrE', [5, 4], [5], TypedImmediate.none, false, false),
+    TypedInstruction('xXorE', [5, 4], [5], TypedImmediate.none, false, false),
+    TypedInstruction('fFromA', [0], [2], TypedImmediate.none, false, false),
+    TypedInstruction('gFromA', [0], [3], TypedImmediate.none, false, false),
+    TypedInstruction('fFromB', [1], [2], TypedImmediate.none, false, false),
+    TypedInstruction('gFromB', [1], [3], TypedImmediate.none, false, false),
+    TypedInstruction('rNull', [], [6], TypedImmediate.none, false, false),
+    TypedInstruction('eIsNullR', [6], [4], TypedImmediate.none, false, false),
+    TypedInstruction('xIsNullR', [6], [5], TypedImmediate.none, false, false),
+    TypedInstruction('sNull', [], [7], TypedImmediate.none, false, false),
+    TypedInstruction('eIsNullS', [7], [4], TypedImmediate.none, false, false),
+    TypedInstruction('xIsNullS', [7], [5], TypedImmediate.none, false, false),
+    TypedInstruction('cNull', [], [8], TypedImmediate.none, false, false),
+    TypedInstruction('eIsNullC', [8], [4], TypedImmediate.none, false, false),
+    TypedInstruction('xIsNullC', [8], [5], TypedImmediate.none, false, false),
+    TypedInstruction('rFromA', [0], [6], TypedImmediate.none, false, false),
+    TypedInstruction('rFromB', [1], [6], TypedImmediate.none, false, false),
+    TypedInstruction('rFromF', [2], [6], TypedImmediate.none, false, false),
+    TypedInstruction('rFromG', [3], [6], TypedImmediate.none, false, false),
+    TypedInstruction('rFromE', [4], [6], TypedImmediate.none, false, false),
+    TypedInstruction('rFromX', [5], [6], TypedImmediate.none, false, false),
     TypedInstruction('aConstant', [], [0], TypedImmediate.intConstant, false, false),
     TypedInstruction('aArgument', [], [0], TypedImmediate.intArgument, true, false),
     TypedInstruction('aSpill', [0], [], TypedImmediate.intSpill, false, false),
@@ -207,136 +345,48 @@ abstract final class TypedOp {
     TypedInstruction('gSpill', [3], [], TypedImmediate.doubleSpill, false, false),
     TypedInstruction('gReload', [], [3], TypedImmediate.doubleSpill, false, false),
     TypedInstruction('gReturn', [3], [], TypedImmediate.none, false, true),
-    TypedInstruction('eTrue', [], [4], TypedImmediate.none, false, false),
-    TypedInstruction('eFalse', [], [4], TypedImmediate.none, false, false),
     TypedInstruction('eArgument', [], [4], TypedImmediate.boolArgument, true, false),
     TypedInstruction('eSpill', [4], [], TypedImmediate.boolSpill, false, false),
     TypedInstruction('eReload', [], [4], TypedImmediate.boolSpill, false, false),
     TypedInstruction('eReturn', [4], [], TypedImmediate.none, false, true),
-    TypedInstruction('xTrue', [], [5], TypedImmediate.none, false, false),
-    TypedInstruction('xFalse', [], [5], TypedImmediate.none, false, false),
     TypedInstruction('xArgument', [], [5], TypedImmediate.boolArgument, true, false),
     TypedInstruction('xSpill', [5], [], TypedImmediate.boolSpill, false, false),
     TypedInstruction('xReload', [], [5], TypedImmediate.boolSpill, false, false),
     TypedInstruction('xReturn', [5], [], TypedImmediate.none, false, true),
-    TypedInstruction('aFromB', [1], [0], TypedImmediate.none, false, false),
-    TypedInstruction('bFromA', [0], [1], TypedImmediate.none, false, false),
-    TypedInstruction('aBSwap', [0, 1], [0, 1], TypedImmediate.none, false, false),
-    TypedInstruction('fFromG', [3], [2], TypedImmediate.none, false, false),
-    TypedInstruction('gFromF', [2], [3], TypedImmediate.none, false, false),
-    TypedInstruction('fGSwap', [2, 3], [2, 3], TypedImmediate.none, false, false),
-    TypedInstruction('eFromX', [5], [4], TypedImmediate.none, false, false),
-    TypedInstruction('xFromE', [4], [5], TypedImmediate.none, false, false),
-    TypedInstruction('eXSwap', [4, 5], [4, 5], TypedImmediate.none, false, false),
-    TypedInstruction('aAddB', [0, 1], [0], TypedImmediate.none, false, false),
-    TypedInstruction('bAddA', [1, 0], [1], TypedImmediate.none, false, false),
-    TypedInstruction('aSubB', [0, 1], [0], TypedImmediate.none, false, false),
-    TypedInstruction('bSubA', [1, 0], [1], TypedImmediate.none, false, false),
-    TypedInstruction('aMulB', [0, 1], [0], TypedImmediate.none, false, false),
-    TypedInstruction('bMulA', [1, 0], [1], TypedImmediate.none, false, false),
+    TypedInstruction('rConstant', [], [6], TypedImmediate.objectConstant, false, false),
+    TypedInstruction('rArgument', [], [6], TypedImmediate.objectArgument, true, false),
+    TypedInstruction('rSpill', [6], [], TypedImmediate.objectSpill, false, false),
+    TypedInstruction('rReload', [], [6], TypedImmediate.objectSpill, false, false),
+    TypedInstruction('rReturn', [6], [], TypedImmediate.none, false, true),
+    TypedInstruction('sConstant', [], [7], TypedImmediate.objectConstant, false, false),
+    TypedInstruction('sArgument', [], [7], TypedImmediate.objectArgument, true, false),
+    TypedInstruction('sSpill', [7], [], TypedImmediate.objectSpill, false, false),
+    TypedInstruction('sReload', [], [7], TypedImmediate.objectSpill, false, false),
+    TypedInstruction('sReturn', [7], [], TypedImmediate.none, false, true),
+    TypedInstruction('cConstant', [], [8], TypedImmediate.objectConstant, false, false),
+    TypedInstruction('cArgument', [], [8], TypedImmediate.objectArgument, true, false),
+    TypedInstruction('cSpill', [8], [], TypedImmediate.objectSpill, false, false),
+    TypedInstruction('cReload', [], [8], TypedImmediate.objectSpill, false, false),
+    TypedInstruction('cReturn', [8], [], TypedImmediate.none, false, true),
     TypedInstruction('aDivB', [0, 1], [0], TypedImmediate.none, true, false),
     TypedInstruction('bDivA', [1, 0], [1], TypedImmediate.none, true, false),
     TypedInstruction('aModB', [0, 1], [0], TypedImmediate.none, true, false),
     TypedInstruction('bModA', [1, 0], [1], TypedImmediate.none, true, false),
-    TypedInstruction('aAndB', [0, 1], [0], TypedImmediate.none, false, false),
-    TypedInstruction('bAndA', [1, 0], [1], TypedImmediate.none, false, false),
-    TypedInstruction('aOrB', [0, 1], [0], TypedImmediate.none, false, false),
-    TypedInstruction('bOrA', [1, 0], [1], TypedImmediate.none, false, false),
-    TypedInstruction('aXorB', [0, 1], [0], TypedImmediate.none, false, false),
-    TypedInstruction('bXorA', [1, 0], [1], TypedImmediate.none, false, false),
     TypedInstruction('aShiftLeftB', [0, 1], [0], TypedImmediate.none, true, false),
     TypedInstruction('bShiftLeftA', [1, 0], [1], TypedImmediate.none, true, false),
     TypedInstruction('aShiftRightB', [0, 1], [0], TypedImmediate.none, true, false),
     TypedInstruction('bShiftRightA', [1, 0], [1], TypedImmediate.none, true, false),
     TypedInstruction('aUnsignedShiftRightB', [0, 1], [0], TypedImmediate.none, true, false),
     TypedInstruction('bUnsignedShiftRightA', [1, 0], [1], TypedImmediate.none, true, false),
-    TypedInstruction('fAddG', [2, 3], [2], TypedImmediate.none, false, false),
-    TypedInstruction('gAddF', [3, 2], [3], TypedImmediate.none, false, false),
-    TypedInstruction('fSubG', [2, 3], [2], TypedImmediate.none, false, false),
-    TypedInstruction('gSubF', [3, 2], [3], TypedImmediate.none, false, false),
-    TypedInstruction('fMulG', [2, 3], [2], TypedImmediate.none, false, false),
-    TypedInstruction('gMulF', [3, 2], [3], TypedImmediate.none, false, false),
-    TypedInstruction('fDivG', [2, 3], [2], TypedImmediate.none, false, false),
-    TypedInstruction('gDivF', [3, 2], [3], TypedImmediate.none, false, false),
-    TypedInstruction('aIncrement', [0], [0], TypedImmediate.none, false, false),
-    TypedInstruction('aDecrement', [0], [0], TypedImmediate.none, false, false),
-    TypedInstruction('aNegate', [0], [0], TypedImmediate.none, false, false),
-    TypedInstruction('aBitNot', [0], [0], TypedImmediate.none, false, false),
-    TypedInstruction('bIncrement', [1], [1], TypedImmediate.none, false, false),
-    TypedInstruction('bDecrement', [1], [1], TypedImmediate.none, false, false),
-    TypedInstruction('bNegate', [1], [1], TypedImmediate.none, false, false),
-    TypedInstruction('bBitNot', [1], [1], TypedImmediate.none, false, false),
-    TypedInstruction('eEqAB', [0, 1], [4], TypedImmediate.none, false, false),
-    TypedInstruction('eEqBA', [1, 0], [4], TypedImmediate.none, false, false),
-    TypedInstruction('eEqFG', [2, 3], [4], TypedImmediate.none, false, false),
-    TypedInstruction('eEqGF', [3, 2], [4], TypedImmediate.none, false, false),
-    TypedInstruction('eNeAB', [0, 1], [4], TypedImmediate.none, false, false),
-    TypedInstruction('eNeBA', [1, 0], [4], TypedImmediate.none, false, false),
-    TypedInstruction('eNeFG', [2, 3], [4], TypedImmediate.none, false, false),
-    TypedInstruction('eNeGF', [3, 2], [4], TypedImmediate.none, false, false),
-    TypedInstruction('eLtAB', [0, 1], [4], TypedImmediate.none, false, false),
-    TypedInstruction('eLtBA', [1, 0], [4], TypedImmediate.none, false, false),
-    TypedInstruction('eLtFG', [2, 3], [4], TypedImmediate.none, false, false),
-    TypedInstruction('eLtGF', [3, 2], [4], TypedImmediate.none, false, false),
-    TypedInstruction('eLteAB', [0, 1], [4], TypedImmediate.none, false, false),
-    TypedInstruction('eLteBA', [1, 0], [4], TypedImmediate.none, false, false),
-    TypedInstruction('eLteFG', [2, 3], [4], TypedImmediate.none, false, false),
-    TypedInstruction('eLteGF', [3, 2], [4], TypedImmediate.none, false, false),
-    TypedInstruction('eGtAB', [0, 1], [4], TypedImmediate.none, false, false),
-    TypedInstruction('eGtBA', [1, 0], [4], TypedImmediate.none, false, false),
-    TypedInstruction('eGtFG', [2, 3], [4], TypedImmediate.none, false, false),
-    TypedInstruction('eGtGF', [3, 2], [4], TypedImmediate.none, false, false),
-    TypedInstruction('eGteAB', [0, 1], [4], TypedImmediate.none, false, false),
-    TypedInstruction('eGteBA', [1, 0], [4], TypedImmediate.none, false, false),
-    TypedInstruction('eGteFG', [2, 3], [4], TypedImmediate.none, false, false),
-    TypedInstruction('eGteGF', [3, 2], [4], TypedImmediate.none, false, false),
-    TypedInstruction('eAPositive', [0], [4], TypedImmediate.none, false, false),
-    TypedInstruction('eBPositive', [1], [4], TypedImmediate.none, false, false),
-    TypedInstruction('eNot', [4], [4], TypedImmediate.none, false, false),
-    TypedInstruction('eAndX', [4, 5], [4], TypedImmediate.none, false, false),
-    TypedInstruction('eOrX', [4, 5], [4], TypedImmediate.none, false, false),
-    TypedInstruction('eXorX', [4, 5], [4], TypedImmediate.none, false, false),
+    TypedInstruction('aImmediate', [], [0], TypedImmediate.integer, false, false),
+    TypedInstruction('bImmediate', [], [1], TypedImmediate.integer, false, false),
     TypedInstruction('jumpETrue', [4], [], TypedImmediate.branch, false, false),
     TypedInstruction('jumpEFalse', [4], [], TypedImmediate.branch, false, false),
-    TypedInstruction('xEqAB', [0, 1], [5], TypedImmediate.none, false, false),
-    TypedInstruction('xEqBA', [1, 0], [5], TypedImmediate.none, false, false),
-    TypedInstruction('xEqFG', [2, 3], [5], TypedImmediate.none, false, false),
-    TypedInstruction('xEqGF', [3, 2], [5], TypedImmediate.none, false, false),
-    TypedInstruction('xNeAB', [0, 1], [5], TypedImmediate.none, false, false),
-    TypedInstruction('xNeBA', [1, 0], [5], TypedImmediate.none, false, false),
-    TypedInstruction('xNeFG', [2, 3], [5], TypedImmediate.none, false, false),
-    TypedInstruction('xNeGF', [3, 2], [5], TypedImmediate.none, false, false),
-    TypedInstruction('xLtAB', [0, 1], [5], TypedImmediate.none, false, false),
-    TypedInstruction('xLtBA', [1, 0], [5], TypedImmediate.none, false, false),
-    TypedInstruction('xLtFG', [2, 3], [5], TypedImmediate.none, false, false),
-    TypedInstruction('xLtGF', [3, 2], [5], TypedImmediate.none, false, false),
-    TypedInstruction('xLteAB', [0, 1], [5], TypedImmediate.none, false, false),
-    TypedInstruction('xLteBA', [1, 0], [5], TypedImmediate.none, false, false),
-    TypedInstruction('xLteFG', [2, 3], [5], TypedImmediate.none, false, false),
-    TypedInstruction('xLteGF', [3, 2], [5], TypedImmediate.none, false, false),
-    TypedInstruction('xGtAB', [0, 1], [5], TypedImmediate.none, false, false),
-    TypedInstruction('xGtBA', [1, 0], [5], TypedImmediate.none, false, false),
-    TypedInstruction('xGtFG', [2, 3], [5], TypedImmediate.none, false, false),
-    TypedInstruction('xGtGF', [3, 2], [5], TypedImmediate.none, false, false),
-    TypedInstruction('xGteAB', [0, 1], [5], TypedImmediate.none, false, false),
-    TypedInstruction('xGteBA', [1, 0], [5], TypedImmediate.none, false, false),
-    TypedInstruction('xGteFG', [2, 3], [5], TypedImmediate.none, false, false),
-    TypedInstruction('xGteGF', [3, 2], [5], TypedImmediate.none, false, false),
-    TypedInstruction('xAPositive', [0], [5], TypedImmediate.none, false, false),
-    TypedInstruction('xBPositive', [1], [5], TypedImmediate.none, false, false),
-    TypedInstruction('xNot', [5], [5], TypedImmediate.none, false, false),
-    TypedInstruction('xAndE', [5, 4], [5], TypedImmediate.none, false, false),
-    TypedInstruction('xOrE', [5, 4], [5], TypedImmediate.none, false, false),
-    TypedInstruction('xXorE', [5, 4], [5], TypedImmediate.none, false, false),
     TypedInstruction('jumpXTrue', [5], [], TypedImmediate.branch, false, false),
     TypedInstruction('jumpXFalse', [5], [], TypedImmediate.branch, false, false),
-    TypedInstruction('fFromA', [0], [2], TypedImmediate.none, false, false),
     TypedInstruction('aFromF', [2], [0], TypedImmediate.none, true, false),
-    TypedInstruction('gFromA', [0], [3], TypedImmediate.none, false, false),
     TypedInstruction('aFromG', [3], [0], TypedImmediate.none, true, false),
-    TypedInstruction('fFromB', [1], [2], TypedImmediate.none, false, false),
     TypedInstruction('bFromF', [2], [1], TypedImmediate.none, true, false),
-    TypedInstruction('gFromB', [1], [3], TypedImmediate.none, false, false),
     TypedInstruction('bFromG', [3], [1], TypedImmediate.none, true, false),
     TypedInstruction('jump', [], [], TypedImmediate.branch, false, true),
     TypedInstruction('aOutgoing', [0], [], TypedImmediate.intOutgoing, false, false),
@@ -345,8 +395,24 @@ abstract final class TypedOp {
     TypedInstruction('gOutgoing', [3], [], TypedImmediate.doubleOutgoing, false, false),
     TypedInstruction('eOutgoing', [4], [], TypedImmediate.boolOutgoing, false, false),
     TypedInstruction('xOutgoing', [5], [], TypedImmediate.boolOutgoing, false, false),
+    TypedInstruction('rOutgoing', [6], [], TypedImmediate.objectOutgoing, false, false),
+    TypedInstruction('sOutgoing', [7], [], TypedImmediate.objectOutgoing, false, false),
+    TypedInstruction('cOutgoing', [8], [], TypedImmediate.objectOutgoing, false, false),
     TypedInstruction('callInt', [], [0], TypedImmediate.function, true, false),
     TypedInstruction('callDouble', [], [2], TypedImmediate.function, true, false),
     TypedInstruction('callBool', [], [4], TypedImmediate.function, true, false),
+    TypedInstruction('callObject', [], [6], TypedImmediate.function, true, false),
+    TypedInstruction('eEqRS', [6, 7], [4], TypedImmediate.none, true, false),
+    TypedInstruction('xEqRS', [6, 7], [5], TypedImmediate.none, true, false),
+    TypedInstruction('aFromR', [6], [0], TypedImmediate.none, true, false),
+    TypedInstruction('fFromR', [6], [2], TypedImmediate.none, true, false),
+    TypedInstruction('eFromR', [6], [4], TypedImmediate.none, true, false),
+    TypedInstruction('callHost', [6], [6], TypedImmediate.hostCall, true, false),
+    TypedInstruction('callMethod', [6, 7], [6], TypedImmediate.hostCall, true, false),
+    TypedInstruction('jumpETrueShort', [4], [], TypedImmediate.shortBranch, false, false),
+    TypedInstruction('jumpEFalseShort', [4], [], TypedImmediate.shortBranch, false, false),
+    TypedInstruction('jumpXTrueShort', [5], [], TypedImmediate.shortBranch, false, false),
+    TypedInstruction('jumpXFalseShort', [5], [], TypedImmediate.shortBranch, false, false),
+    TypedInstruction('jumpShort', [], [], TypedImmediate.shortBranch, false, true),
   ];
 }

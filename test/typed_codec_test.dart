@@ -129,6 +129,114 @@ void main() {
       expect(TypedMachine.run(restored, doubleArguments: [3.5]), 3.5);
     },
   );
+  test('codec preserves object layout and scalar object constants', () {
+    final p = TypedProgram(
+      Uint8List.fromList([TypedOp.aReturn]),
+      objects: [
+        null,
+        false,
+        true,
+        -9223372036854775808,
+        1.5,
+        double.nan,
+        -0.0,
+        double.infinity,
+        'hello \u{1f600}',
+        '\ud800',
+      ],
+      functions: const [
+        TypedFunction(
+          0,
+          objectSpillCount: 3,
+          objectArgumentCount: 2,
+          objectOutgoingCount: 4,
+        ),
+      ],
+    );
+    final restored = TypedProgram.read(p.write().buffer);
+    expect(restored.functions.single.layout, p.functions.single.layout);
+    expect(restored.objectSpillCount, 3);
+    expect(restored.objects.take(5), p.objects.take(5));
+    expect((restored.objects[5] as double).isNaN, isTrue);
+    expect((restored.objects[6] as double).isNegative, isTrue);
+    expect(restored.objects.skip(7), p.objects.skip(7));
+  });
+  test('object pools retain live identity but reject live serialization', () {
+    final live = <int>[1];
+    final source = <Object?>[live];
+    final p = TypedProgram(
+      Uint8List.fromList([TypedOp.aReturn]),
+      objects: source,
+    );
+    source.clear();
+    live.add(2);
+    expect(identical(p.objects.single, live), isTrue);
+    expect(() => p.objects.add(null), throwsUnsupportedError);
+    expect(
+      () => p.write(),
+      throwsA(
+        isA<UnsupportedError>().having(
+          (error) => error.message,
+          'message',
+          contains('objectArguments'),
+        ),
+      ),
+    );
+  });
+  test('codec rejects malformed object sections', () {
+    final bytes = TypedProgram(
+      Uint8List.fromList([TypedOp.aReturn]),
+      objects: ['abc'],
+    ).write().buffer.asUint8List();
+    // The object pool follows the 36-byte header and 52-byte function layout.
+    final badTag = Uint8List.fromList(bytes)..[88] = 255;
+    expect(() => TypedProgram.read(badTag.buffer), throwsFormatException);
+    final badString = Uint8List.fromList(bytes);
+    ByteData.sublistView(badString).setUint32(89, 0xffffffff, Endian.little);
+    expect(() => TypedProgram.read(badString.buffer), throwsFormatException);
+    final badCount = Uint8List.fromList(bytes);
+    ByteData.sublistView(badCount).setUint32(28, 0, Endian.little);
+    expect(() => TypedProgram.read(badCount.buffer), throwsFormatException);
+  });
+  test('short branches preserve signed displacement endpoints', () {
+    final forward = Uint8List(32771)..fillRange(0, 32771, TypedOp.eTrue);
+    forward.setAll(0, [TypedOp.jumpShort, 255, 127]);
+    forward[32770] = TypedOp.aReturn;
+    final p = TypedProgram(forward);
+    expect(TypedProgram.read(p.write().buffer).code, forward);
+    expect(TypedMachine.run(p), 0);
+
+    final backward = Uint8List(32768)..fillRange(0, 32768, TypedOp.eTrue);
+    backward.setAll(32765, [TypedOp.jumpShort, 0, 128]);
+    expect(TypedProgram(backward).code, backward);
+  });
+  test('short branches reject invalid targets and truncated operands', () {
+    for (final code in [
+      [TypedOp.jumpShort, 0],
+      [TypedOp.jumpShort, 255, 127],
+      [TypedOp.jumpShort, 0, 128],
+      [TypedOp.jumpShort, 254, 255], // Into the displacement itself.
+    ]) {
+      expect(
+        () => TypedProgram(Uint8List.fromList(code)),
+        throwsFormatException,
+      );
+    }
+    expect(
+      () => TypedProgram(
+        Uint8List.fromList([TypedOp.jumpShort, 0, 0, TypedOp.aReturn]),
+        functions: const [TypedFunction(0), TypedFunction(3)],
+      ),
+      throwsFormatException,
+    );
+    expect(
+      () => TypedProgram(
+        Uint8List.fromList([TypedOp.aReturn, TypedOp.jumpShort, 252, 255]),
+        functions: const [TypedFunction(0), TypedFunction(1)],
+      ),
+      throwsFormatException,
+    );
+  });
   test('codec rejects corruption before allocating section arrays', () {
     final bytes = _recursive().write().buffer.asUint8List();
     for (final size in [0, 12, bytes.length - 1]) {

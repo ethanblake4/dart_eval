@@ -14,9 +14,10 @@ arithmetic helpers. Fixed operand and destination combinations are encoded in
 the opcode. The existing general-object register machine is a semantic reference
 while the typed backend reaches parity.
 
-The initial register bank has two integer, two double, and two boolean registers.
-Object/string banks, restricted loop registers, and instruction fusion follow
-measured requirements. Spills use typed backing storage. Language types, wrapper
+The register bank has two integer, two double, two boolean, and three general
+object registers. Strings and nullable values use the object bank alongside
+existing $Instance and $Value objects. Restricted loop registers and instruction
+fusion still need measurement. Spills use typed backing storage. Language types, wrapper
 objects, and machine representations must remain distinct. Representation changes
 are explicit at SSA definitions, phi edges, calls, and suspension boundaries.
 
@@ -62,61 +63,77 @@ Do not refresh the preexisting package golden strings merely to silence failures
 - Package `0436280`: carry resident registers across linear block boundaries.
 - Package `104c802`: execution stress tests for clobbers, phi swaps, and joins.
 
-The compiler now exposes `compileTyped` and selects reachable direct callees.
-It preserves per-version representations, assigns fixed scalar register variants,
-and emits bytecode with separate argument/spill banks. Calls execute in the same
-dispatch loop. Caller values survive in typed spills; callee argument buffers are
-independent, including under recursion. The format-102 typed codec preserves
-signed 64-bit integers and floating-point bit patterns.
+The primitive compiler/call checkpoint is `5a02f83`. The current checkpoint
+extends that pipeline with three object registers and tunes dispatch/calls using
+ARM64 AOT output. See [the assembly and timing report](typed-arm64-optimization.md).
+
+## Current runtime and compiler
+
+`Compiler.compileTyped` lowers reachable direct functions from SSA to fixed
+register operands. Numeric registers remain typed Dart locals; object registers
+`r/s/c` hold arbitrary references. Spills use separate numeric and object banks.
+The generator emits 194 instruction forms, prioritizing simple operations in
+opcode order. It removes redundant reversed primitive comparisons, supplies
+signed16 integer immediates, and emits short relative branches with automatic
+absolute32 widening. Conditional branches decode their target only when taken.
+
+Calls clobber all nine registers. Their previous values are unspecified, and the
+allocator spills caller values that remain live. Numeric locals are not reset
+on every call; object locals are cleared to avoid retaining dead references.
+Arguments are separated by bank, not restricted to numeric values. An internal
+callee borrows the suspended caller's outgoing buffers read-only. It owns its
+own spill/outgoing buffers, so recursion cannot overwrite its arguments. One
+cached child per call depth removes repeated allocation for consecutive calls to
+the same function. Calls to a different function replace that cached child.
+Spills/outgoing storage starts empty on reuse, and consumed object arguments and
+inactive object spills are cleared. Host calls receive independent argument
+snapshots because a callback may retain its list or reenter the runtime.
+
+Source support includes the previous numeric/control-flow subset plus object,
+string, nullable and dynamic parameters/results, object identity through SSA
+phis and calls, object equality, positional callbacks and dynamic method calls.
+Interop reuses `Runtime`'s existing invocation path, including `$InstanceImpl`,
+`$Instance`, `EvalCallable`, and bridge wrappers. It never blindly unwraps an
+`$InstanceImpl`. Pass an existing matching `Runtime` as `runtime:` when invoking
+its evaluated/bridge objects. Raw Dart functions can be called without it.
+Arbitrary host object methods still require the existing wrapping/bridge setup.
 
 ```dart
 final program = Compiler().compileTyped({
-  'example': {'main.dart': '''
-    int fib(int n) {
-      if (n < 2) return n;
-      return fib(n - 1) + fib(n - 2);
-    }
-    int main(int n) => fib(n);
-  '''},
+  'example': {'main.dart': 'Object main(Object value) => value;'},
 }, entrypoint: 'package:example/main.dart');
-final result = TypedMachine.run(program, intArguments: [10]); // 55
-final restored = TypedProgram.read(program.write().buffer);
+final object = Object();
+assert(identical(TypedMachine.run(program, objectArguments: [object]), object));
 ```
 
-Supported source operations include integer addition/subtraction/multiplication,
-truncating division/modulo, homogeneous double arithmetic, numeric comparisons,
-boolean negation, branches, loops, break/continue, and direct primitive calls.
-The generated runtime has 161 instruction forms. Compiler and runtime tests cover
-register pressure, duplicate operands, mixed banks, recursion, more arguments
-than registers, IEEE edge cases, codec validation, and serialization round trips.
+Typed codec version 103 intentionally rejects version 102 bytecode, because
+opcode numbering and frame layout changed. It serializes scalar/null/string
+object constants, preserving UTF-16 code units and numeric bits. Live application
+objects remain valid arguments/in-memory constants but are rejected by the codec
+rather than being serialized into a lossy replacement.
 
-`compile` still uses the reference backend while the typed backend reaches parity.
-Unsupported typed operations fail during compilation. Optional-argument presence,
-nullable values, objects, strings, dynamic dispatch, exceptions, closures, and
-async remain unfinished on this path. Linear edges retain registers; loop/join
-edges currently spill conservatively. Primitive source semantics and the existing
-30 reference-backend failures remain the correctness baseline, not a claim of
-completed runtime parity. Analysis has zero errors; inherited warnings remain.
+`compile` still uses the reference backend. Creating typed classes, collections
+and closures, named callback arguments, exception handling and async/suspension
+remain unfinished. Existing evaluated method offsets refer to the supplied
+reference Runtime; this checkpoint does not link newly compiled typed class
+methods. The new bridge path is compatibility plumbing, not full typed parity.
 
-## Pause and resume
+## Checkpoint and next work
 
-The user requested a pause after this checkpoint on 2026-09-13. Stop after commit
-and push; resume only when asked. All 51 focused typed machine, codec, compiler,
-numeric, and representation tests pass. The latest full suite before the final
-six codec/call tests were added had 530 passes, 30 known failures, and six skips.
-The added tests pass separately. Full analysis reports zero errors.
+Validation: 79 focused tests pass; full suite 564 passes, 30 existing reference
+failures, six skips. Analysis has zero errors. This checkpoint changes dart_eval
+only; control_flow_graph remains at `104c802`, with the user's fixture edits
+untouched. The full-suite failures match backend-checkpoint-failures.txt.
 
-Next work is stage 4 representation/runtime coverage above. Before tuning loop
-performance, preserve the measured baseline: the compiled integer sum loop's hot
-cycle currently has 20 instructions, including seven reloads and four spills.
-Choosing the register for constant 1 more carefully in the update could avoid
-spilling/reloading the constant and reloading the counter. Increment-immediate
-selection or a restricted third integer loop register may offer more value than
-complex global register-map reconciliation. No speculative allocator change was
-kept; the package is committed through 104c802 with only the original fixture
-edits remaining dirty.
+The runtime probe and PowerShell disassembly script reproduce ARM64 inspection.
+The arithmetic path is 40 native instructions versus 52 at `5a02f83`, despite the
+added object bank and interop paths. This is an instruction count, not an ARM64
+speedup measurement. The host benchmarks are Windows x64 and show substantial
+run-to-run noise; their raw ranges are in the report.
 
-The 161-opcode runtime now has call frames, so the earlier 152-opcode assembly
-and timings describe the baseline checkpoint, not a remeasurement of the current
-loop. Recompile and inspect the current AOT output before drawing new performance
-conclusions. Local benchmark/disassembly artifacts are under .dart_tool/.
+Next useful work is typed class/method linking and closure/exception conventions,
+plus instruction selection that reduces conservative loop/join spills. Measure
+restricted `%l` and fused comparisons before spending more opcode space. The
+194-case layout stays below 200 today; expanding symmetric families indiscriminately
+would consume the remaining space. Preserve the current ARM64 probe and compare
+both numeric and object/call workloads after each change.

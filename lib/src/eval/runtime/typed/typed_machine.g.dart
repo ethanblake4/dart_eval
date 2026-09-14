@@ -2,616 +2,724 @@
 import 'typed_ops.g.dart';
 import 'typed_program.dart';
 import 'typed_frame.dart';
+import 'typed_interop.dart';
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 abstract final class TypedMachine {
   /// Fixed scalar banks stay in typed locals across the dispatch loop.
   @pragma('vm:never-inline')
-  static Object run(TypedProgram program, {
+  static Object? run(TypedProgram program, {
       List<int> intArguments = const [], List<double> doubleArguments = const [],
-      List<bool> boolArguments = const []}) {
+      List<bool> boolArguments = const [], List<Object?> objectArguments = const [], Runtime? runtime}) {
     final code = program.code;
-    final integers = program.integers;
-    final doubles = program.doubles;
     final entry = program.functions[program.entryFunction];
-    if (intArguments.length < entry.intArgumentCount || doubleArguments.length < entry.doubleArgumentCount || boolArguments.length < entry.boolArgumentCount) {
-      throw ArgumentError('Insufficient typed entry arguments');
-    }
-    var frame = TypedFrame(entry, intArguments, doubleArguments,
-      [for (final value in boolArguments) value ? 1 : 0]);
-    var intSpills = frame.intSpills;
-    var doubleSpills = frame.doubleSpills;
-    var boolSpills = frame.boolSpills;
+    var frame = TypedFrame.entry(entry, intArguments, doubleArguments, boolArguments, objectArguments);
+    Object? r, s, c;
     var a = 0, b = 0;
     var f = 0.0, g = 0.0;
     var e = false, x = false;
     var pc = entry.entry;
-    while (true) {
+    dispatch: while (true) {
       switch (code[pc++]) {
+        case TypedOp.eTrue:
+          e = true;
+          continue dispatch;
+        case TypedOp.eFalse:
+          e = false;
+          continue dispatch;
+        case TypedOp.xTrue:
+          x = true;
+          continue dispatch;
+        case TypedOp.xFalse:
+          x = false;
+          continue dispatch;
+        case TypedOp.aFromB:
+          a = b;
+          continue dispatch;
+        case TypedOp.bFromA:
+          b = a;
+          continue dispatch;
+        case TypedOp.aBSwap:
+          final temporary = a; a = b; b = temporary;
+          continue dispatch;
+        case TypedOp.fFromG:
+          f = g;
+          continue dispatch;
+        case TypedOp.gFromF:
+          g = f;
+          continue dispatch;
+        case TypedOp.fGSwap:
+          final temporary = f; f = g; g = temporary;
+          continue dispatch;
+        case TypedOp.eFromX:
+          e = x;
+          continue dispatch;
+        case TypedOp.xFromE:
+          x = e;
+          continue dispatch;
+        case TypedOp.eXSwap:
+          final temporary = e; e = x; x = temporary;
+          continue dispatch;
+        case TypedOp.rFromS:
+          r = s;
+          continue dispatch;
+        case TypedOp.sFromR:
+          s = r;
+          continue dispatch;
+        case TypedOp.rSSwap:
+          final temporary = r; r = s; s = temporary;
+          continue dispatch;
+        case TypedOp.rFromC:
+          r = c;
+          continue dispatch;
+        case TypedOp.cFromR:
+          c = r;
+          continue dispatch;
+        case TypedOp.rCSwap:
+          final temporary = r; r = c; c = temporary;
+          continue dispatch;
+        case TypedOp.sFromC:
+          s = c;
+          continue dispatch;
+        case TypedOp.cFromS:
+          c = s;
+          continue dispatch;
+        case TypedOp.sCSwap:
+          final temporary = s; s = c; c = temporary;
+          continue dispatch;
+        case TypedOp.aAddB:
+          a = a + b;
+          continue dispatch;
+        case TypedOp.bAddA:
+          b = b + a;
+          continue dispatch;
+        case TypedOp.aSubB:
+          a = a - b;
+          continue dispatch;
+        case TypedOp.bSubA:
+          b = b - a;
+          continue dispatch;
+        case TypedOp.aMulB:
+          a = a * b;
+          continue dispatch;
+        case TypedOp.bMulA:
+          b = b * a;
+          continue dispatch;
+        case TypedOp.aAndB:
+          a = a & b;
+          continue dispatch;
+        case TypedOp.bAndA:
+          b = b & a;
+          continue dispatch;
+        case TypedOp.aOrB:
+          a = a | b;
+          continue dispatch;
+        case TypedOp.bOrA:
+          b = b | a;
+          continue dispatch;
+        case TypedOp.aXorB:
+          a = a ^ b;
+          continue dispatch;
+        case TypedOp.bXorA:
+          b = b ^ a;
+          continue dispatch;
+        case TypedOp.fAddG:
+          f = f + g;
+          continue dispatch;
+        case TypedOp.gAddF:
+          g = g + f;
+          continue dispatch;
+        case TypedOp.fSubG:
+          f = f - g;
+          continue dispatch;
+        case TypedOp.gSubF:
+          g = g - f;
+          continue dispatch;
+        case TypedOp.fMulG:
+          f = f * g;
+          continue dispatch;
+        case TypedOp.gMulF:
+          g = g * f;
+          continue dispatch;
+        case TypedOp.fDivG:
+          f = f / g;
+          continue dispatch;
+        case TypedOp.gDivF:
+          g = g / f;
+          continue dispatch;
+        case TypedOp.aIncrement:
+          a++;
+          continue dispatch;
+        case TypedOp.aDecrement:
+          a--;
+          continue dispatch;
+        case TypedOp.aNegate:
+          a = -a;
+          continue dispatch;
+        case TypedOp.aBitNot:
+          a = ~a;
+          continue dispatch;
+        case TypedOp.bIncrement:
+          b++;
+          continue dispatch;
+        case TypedOp.bDecrement:
+          b--;
+          continue dispatch;
+        case TypedOp.bNegate:
+          b = -b;
+          continue dispatch;
+        case TypedOp.bBitNot:
+          b = ~b;
+          continue dispatch;
+        case TypedOp.eEqAB:
+          e = a == b;
+          continue dispatch;
+        case TypedOp.eEqFG:
+          e = f == g;
+          continue dispatch;
+        case TypedOp.eNeAB:
+          e = a != b;
+          continue dispatch;
+        case TypedOp.eNeFG:
+          e = f != g;
+          continue dispatch;
+        case TypedOp.eLtAB:
+          e = a < b;
+          continue dispatch;
+        case TypedOp.eLtFG:
+          e = f < g;
+          continue dispatch;
+        case TypedOp.eLteAB:
+          e = a <= b;
+          continue dispatch;
+        case TypedOp.eLteFG:
+          e = f <= g;
+          continue dispatch;
+        case TypedOp.eGtAB:
+          e = a > b;
+          continue dispatch;
+        case TypedOp.eGtFG:
+          e = f > g;
+          continue dispatch;
+        case TypedOp.eGteAB:
+          e = a >= b;
+          continue dispatch;
+        case TypedOp.eGteFG:
+          e = f >= g;
+          continue dispatch;
+        case TypedOp.eAPositive:
+          e = a > 0;
+          continue dispatch;
+        case TypedOp.eBPositive:
+          e = b > 0;
+          continue dispatch;
+        case TypedOp.eNot:
+          e = !e;
+          continue dispatch;
+        case TypedOp.eAndX:
+          e = e && x;
+          continue dispatch;
+        case TypedOp.eOrX:
+          e = e || x;
+          continue dispatch;
+        case TypedOp.eXorX:
+          e = e != x;
+          continue dispatch;
+        case TypedOp.xEqAB:
+          x = a == b;
+          continue dispatch;
+        case TypedOp.xEqFG:
+          x = f == g;
+          continue dispatch;
+        case TypedOp.xNeAB:
+          x = a != b;
+          continue dispatch;
+        case TypedOp.xNeFG:
+          x = f != g;
+          continue dispatch;
+        case TypedOp.xLtAB:
+          x = a < b;
+          continue dispatch;
+        case TypedOp.xLtFG:
+          x = f < g;
+          continue dispatch;
+        case TypedOp.xLteAB:
+          x = a <= b;
+          continue dispatch;
+        case TypedOp.xLteFG:
+          x = f <= g;
+          continue dispatch;
+        case TypedOp.xGtAB:
+          x = a > b;
+          continue dispatch;
+        case TypedOp.xGtFG:
+          x = f > g;
+          continue dispatch;
+        case TypedOp.xGteAB:
+          x = a >= b;
+          continue dispatch;
+        case TypedOp.xGteFG:
+          x = f >= g;
+          continue dispatch;
+        case TypedOp.xAPositive:
+          x = a > 0;
+          continue dispatch;
+        case TypedOp.xBPositive:
+          x = b > 0;
+          continue dispatch;
+        case TypedOp.xNot:
+          x = !x;
+          continue dispatch;
+        case TypedOp.xAndE:
+          x = x && e;
+          continue dispatch;
+        case TypedOp.xOrE:
+          x = x || e;
+          continue dispatch;
+        case TypedOp.xXorE:
+          x = x != e;
+          continue dispatch;
+        case TypedOp.fFromA:
+          f = a.toDouble();
+          continue dispatch;
+        case TypedOp.gFromA:
+          g = a.toDouble();
+          continue dispatch;
+        case TypedOp.fFromB:
+          f = b.toDouble();
+          continue dispatch;
+        case TypedOp.gFromB:
+          g = b.toDouble();
+          continue dispatch;
+        case TypedOp.rNull:
+          r = null;
+          continue dispatch;
+        case TypedOp.eIsNullR:
+          e = TypedInterop.isNull(r);
+          continue dispatch;
+        case TypedOp.xIsNullR:
+          x = TypedInterop.isNull(r);
+          continue dispatch;
+        case TypedOp.sNull:
+          s = null;
+          continue dispatch;
+        case TypedOp.eIsNullS:
+          e = TypedInterop.isNull(s);
+          continue dispatch;
+        case TypedOp.xIsNullS:
+          x = TypedInterop.isNull(s);
+          continue dispatch;
+        case TypedOp.cNull:
+          c = null;
+          continue dispatch;
+        case TypedOp.eIsNullC:
+          e = TypedInterop.isNull(c);
+          continue dispatch;
+        case TypedOp.xIsNullC:
+          x = TypedInterop.isNull(c);
+          continue dispatch;
+        case TypedOp.rFromA:
+          r = a;
+          continue dispatch;
+        case TypedOp.rFromB:
+          r = b;
+          continue dispatch;
+        case TypedOp.rFromF:
+          r = f;
+          continue dispatch;
+        case TypedOp.rFromG:
+          r = g;
+          continue dispatch;
+        case TypedOp.rFromE:
+          r = e;
+          continue dispatch;
+        case TypedOp.rFromX:
+          r = x;
+          continue dispatch;
         case TypedOp.aConstant:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          a = integers[index];
-          break;
+          a = program.integerAt(index);
+          continue dispatch;
         case TypedOp.aArgument:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           a = frame.intArguments[index];
-          break;
+          continue dispatch;
         case TypedOp.aSpill:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          intSpills[index] = a;
-          break;
+          frame.intSpills[index] = a;
+          continue dispatch;
         case TypedOp.aReload:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          a = intSpills[index];
-          break;
+          a = frame.intSpills[index];
+          continue dispatch;
         case TypedOp.aReturn:
           if (frame.parent == null) return a;
           if (frame.returnBank != 0) throw StateError('Typed return bank mismatch');
           final returned = a;
           pc = frame.returnPc;
-          frame = frame.parent!;
-          intSpills = frame.intSpills; doubleSpills = frame.doubleSpills; boolSpills = frame.boolSpills;
-          a = 0; b = 0; f = 0.0; g = 0.0; e = false; x = false;
+          frame = frame.leave();
+          r = null; s = null; c = null;
           a = returned;
-          break;
+          continue dispatch;
         case TypedOp.bConstant:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          b = integers[index];
-          break;
+          b = program.integerAt(index);
+          continue dispatch;
         case TypedOp.bArgument:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           b = frame.intArguments[index];
-          break;
+          continue dispatch;
         case TypedOp.bSpill:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          intSpills[index] = b;
-          break;
+          frame.intSpills[index] = b;
+          continue dispatch;
         case TypedOp.bReload:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          b = intSpills[index];
-          break;
+          b = frame.intSpills[index];
+          continue dispatch;
         case TypedOp.bReturn:
           if (frame.parent == null) return b;
           if (frame.returnBank != 0) throw StateError('Typed return bank mismatch');
           final returned = b;
           pc = frame.returnPc;
-          frame = frame.parent!;
-          intSpills = frame.intSpills; doubleSpills = frame.doubleSpills; boolSpills = frame.boolSpills;
-          a = 0; b = 0; f = 0.0; g = 0.0; e = false; x = false;
+          frame = frame.leave();
+          r = null; s = null; c = null;
           a = returned;
-          break;
+          continue dispatch;
         case TypedOp.fConstant:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          f = doubles[index];
-          break;
+          f = program.doubleAt(index);
+          continue dispatch;
         case TypedOp.fArgument:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           f = frame.doubleArguments[index];
-          break;
+          continue dispatch;
         case TypedOp.fSpill:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          doubleSpills[index] = f;
-          break;
+          frame.doubleSpills[index] = f;
+          continue dispatch;
         case TypedOp.fReload:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          f = doubleSpills[index];
-          break;
+          f = frame.doubleSpills[index];
+          continue dispatch;
         case TypedOp.fReturn:
           if (frame.parent == null) return f;
           if (frame.returnBank != 1) throw StateError('Typed return bank mismatch');
           final returned = f;
           pc = frame.returnPc;
-          frame = frame.parent!;
-          intSpills = frame.intSpills; doubleSpills = frame.doubleSpills; boolSpills = frame.boolSpills;
-          a = 0; b = 0; f = 0.0; g = 0.0; e = false; x = false;
+          frame = frame.leave();
+          r = null; s = null; c = null;
           f = returned;
-          break;
+          continue dispatch;
         case TypedOp.gConstant:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          g = doubles[index];
-          break;
+          g = program.doubleAt(index);
+          continue dispatch;
         case TypedOp.gArgument:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           g = frame.doubleArguments[index];
-          break;
+          continue dispatch;
         case TypedOp.gSpill:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          doubleSpills[index] = g;
-          break;
+          frame.doubleSpills[index] = g;
+          continue dispatch;
         case TypedOp.gReload:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          g = doubleSpills[index];
-          break;
+          g = frame.doubleSpills[index];
+          continue dispatch;
         case TypedOp.gReturn:
           if (frame.parent == null) return g;
           if (frame.returnBank != 1) throw StateError('Typed return bank mismatch');
           final returned = g;
           pc = frame.returnPc;
-          frame = frame.parent!;
-          intSpills = frame.intSpills; doubleSpills = frame.doubleSpills; boolSpills = frame.boolSpills;
-          a = 0; b = 0; f = 0.0; g = 0.0; e = false; x = false;
+          frame = frame.leave();
+          r = null; s = null; c = null;
           f = returned;
-          break;
-        case TypedOp.eTrue:
-          e = true;
-          break;
-        case TypedOp.eFalse:
-          e = false;
-          break;
+          continue dispatch;
         case TypedOp.eArgument:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           e = frame.boolArguments[index] != 0;
-          break;
+          continue dispatch;
         case TypedOp.eSpill:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          boolSpills[index] = e ? 1 : 0;
-          break;
+          frame.boolSpills[index] = e ? 1 : 0;
+          continue dispatch;
         case TypedOp.eReload:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          e = boolSpills[index] != 0;
-          break;
+          e = frame.boolSpills[index] != 0;
+          continue dispatch;
         case TypedOp.eReturn:
           if (frame.parent == null) return e;
           if (frame.returnBank != 2) throw StateError('Typed return bank mismatch');
           final returned = e;
           pc = frame.returnPc;
-          frame = frame.parent!;
-          intSpills = frame.intSpills; doubleSpills = frame.doubleSpills; boolSpills = frame.boolSpills;
-          a = 0; b = 0; f = 0.0; g = 0.0; e = false; x = false;
+          frame = frame.leave();
+          r = null; s = null; c = null;
           e = returned;
-          break;
-        case TypedOp.xTrue:
-          x = true;
-          break;
-        case TypedOp.xFalse:
-          x = false;
-          break;
+          continue dispatch;
         case TypedOp.xArgument:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           x = frame.boolArguments[index] != 0;
-          break;
+          continue dispatch;
         case TypedOp.xSpill:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          boolSpills[index] = x ? 1 : 0;
-          break;
+          frame.boolSpills[index] = x ? 1 : 0;
+          continue dispatch;
         case TypedOp.xReload:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          x = boolSpills[index] != 0;
-          break;
+          x = frame.boolSpills[index] != 0;
+          continue dispatch;
         case TypedOp.xReturn:
           if (frame.parent == null) return x;
           if (frame.returnBank != 2) throw StateError('Typed return bank mismatch');
           final returned = x;
           pc = frame.returnPc;
-          frame = frame.parent!;
-          intSpills = frame.intSpills; doubleSpills = frame.doubleSpills; boolSpills = frame.boolSpills;
-          a = 0; b = 0; f = 0.0; g = 0.0; e = false; x = false;
+          frame = frame.leave();
+          r = null; s = null; c = null;
           e = returned;
-          break;
-        case TypedOp.aFromB:
-          a = b;
-          break;
-        case TypedOp.bFromA:
-          b = a;
-          break;
-        case TypedOp.aBSwap:
-          final temporary = a; a = b; b = temporary;
-          break;
-        case TypedOp.fFromG:
-          f = g;
-          break;
-        case TypedOp.gFromF:
-          g = f;
-          break;
-        case TypedOp.fGSwap:
-          final temporary = f; f = g; g = temporary;
-          break;
-        case TypedOp.eFromX:
-          e = x;
-          break;
-        case TypedOp.xFromE:
-          x = e;
-          break;
-        case TypedOp.eXSwap:
-          final temporary = e; e = x; x = temporary;
-          break;
-        case TypedOp.aAddB:
-          a = a + b;
-          break;
-        case TypedOp.bAddA:
-          b = b + a;
-          break;
-        case TypedOp.aSubB:
-          a = a - b;
-          break;
-        case TypedOp.bSubA:
-          b = b - a;
-          break;
-        case TypedOp.aMulB:
-          a = a * b;
-          break;
-        case TypedOp.bMulA:
-          b = b * a;
-          break;
+          continue dispatch;
+        case TypedOp.rConstant:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          r = program.objectAt(index);
+          continue dispatch;
+        case TypedOp.rArgument:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          r = frame.objectArguments[index];
+          continue dispatch;
+        case TypedOp.rSpill:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          frame.objectSpills[index] = r;
+          continue dispatch;
+        case TypedOp.rReload:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          r = frame.objectSpills[index];
+          continue dispatch;
+        case TypedOp.rReturn:
+          if (frame.parent == null) return r;
+          if (frame.returnBank != 3) throw StateError('Typed return bank mismatch');
+          final returned = r;
+          pc = frame.returnPc;
+          frame = frame.leave();
+          r = null; s = null; c = null;
+          r = returned;
+          continue dispatch;
+        case TypedOp.sConstant:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          s = program.objectAt(index);
+          continue dispatch;
+        case TypedOp.sArgument:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          s = frame.objectArguments[index];
+          continue dispatch;
+        case TypedOp.sSpill:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          frame.objectSpills[index] = s;
+          continue dispatch;
+        case TypedOp.sReload:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          s = frame.objectSpills[index];
+          continue dispatch;
+        case TypedOp.sReturn:
+          if (frame.parent == null) return s;
+          if (frame.returnBank != 3) throw StateError('Typed return bank mismatch');
+          final returned = s;
+          pc = frame.returnPc;
+          frame = frame.leave();
+          r = null; s = null; c = null;
+          r = returned;
+          continue dispatch;
+        case TypedOp.cConstant:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          c = program.objectAt(index);
+          continue dispatch;
+        case TypedOp.cArgument:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          c = frame.objectArguments[index];
+          continue dispatch;
+        case TypedOp.cSpill:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          frame.objectSpills[index] = c;
+          continue dispatch;
+        case TypedOp.cReload:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          c = frame.objectSpills[index];
+          continue dispatch;
+        case TypedOp.cReturn:
+          if (frame.parent == null) return c;
+          if (frame.returnBank != 3) throw StateError('Typed return bank mismatch');
+          final returned = c;
+          pc = frame.returnPc;
+          frame = frame.leave();
+          r = null; s = null; c = null;
+          r = returned;
+          continue dispatch;
         case TypedOp.aDivB:
           a = a ~/ b;
-          break;
+          continue dispatch;
         case TypedOp.bDivA:
           b = b ~/ a;
-          break;
+          continue dispatch;
         case TypedOp.aModB:
           a = a % b;
-          break;
+          continue dispatch;
         case TypedOp.bModA:
           b = b % a;
-          break;
-        case TypedOp.aAndB:
-          a = a & b;
-          break;
-        case TypedOp.bAndA:
-          b = b & a;
-          break;
-        case TypedOp.aOrB:
-          a = a | b;
-          break;
-        case TypedOp.bOrA:
-          b = b | a;
-          break;
-        case TypedOp.aXorB:
-          a = a ^ b;
-          break;
-        case TypedOp.bXorA:
-          b = b ^ a;
-          break;
+          continue dispatch;
         case TypedOp.aShiftLeftB:
           a = a << b;
-          break;
+          continue dispatch;
         case TypedOp.bShiftLeftA:
           b = b << a;
-          break;
+          continue dispatch;
         case TypedOp.aShiftRightB:
           a = a >> b;
-          break;
+          continue dispatch;
         case TypedOp.bShiftRightA:
           b = b >> a;
-          break;
+          continue dispatch;
         case TypedOp.aUnsignedShiftRightB:
           a = a >>> b;
-          break;
+          continue dispatch;
         case TypedOp.bUnsignedShiftRightA:
           b = b >>> a;
-          break;
-        case TypedOp.fAddG:
-          f = f + g;
-          break;
-        case TypedOp.gAddF:
-          g = g + f;
-          break;
-        case TypedOp.fSubG:
-          f = f - g;
-          break;
-        case TypedOp.gSubF:
-          g = g - f;
-          break;
-        case TypedOp.fMulG:
-          f = f * g;
-          break;
-        case TypedOp.gMulF:
-          g = g * f;
-          break;
-        case TypedOp.fDivG:
-          f = f / g;
-          break;
-        case TypedOp.gDivF:
-          g = g / f;
-          break;
-        case TypedOp.aIncrement:
-          a++;
-          break;
-        case TypedOp.aDecrement:
-          a--;
-          break;
-        case TypedOp.aNegate:
-          a = -a;
-          break;
-        case TypedOp.aBitNot:
-          a = ~a;
-          break;
-        case TypedOp.bIncrement:
-          b++;
-          break;
-        case TypedOp.bDecrement:
-          b--;
-          break;
-        case TypedOp.bNegate:
-          b = -b;
-          break;
-        case TypedOp.bBitNot:
-          b = ~b;
-          break;
-        case TypedOp.eEqAB:
-          e = a == b;
-          break;
-        case TypedOp.eEqBA:
-          e = b == a;
-          break;
-        case TypedOp.eEqFG:
-          e = f == g;
-          break;
-        case TypedOp.eEqGF:
-          e = g == f;
-          break;
-        case TypedOp.eNeAB:
-          e = a != b;
-          break;
-        case TypedOp.eNeBA:
-          e = b != a;
-          break;
-        case TypedOp.eNeFG:
-          e = f != g;
-          break;
-        case TypedOp.eNeGF:
-          e = g != f;
-          break;
-        case TypedOp.eLtAB:
-          e = a < b;
-          break;
-        case TypedOp.eLtBA:
-          e = b < a;
-          break;
-        case TypedOp.eLtFG:
-          e = f < g;
-          break;
-        case TypedOp.eLtGF:
-          e = g < f;
-          break;
-        case TypedOp.eLteAB:
-          e = a <= b;
-          break;
-        case TypedOp.eLteBA:
-          e = b <= a;
-          break;
-        case TypedOp.eLteFG:
-          e = f <= g;
-          break;
-        case TypedOp.eLteGF:
-          e = g <= f;
-          break;
-        case TypedOp.eGtAB:
-          e = a > b;
-          break;
-        case TypedOp.eGtBA:
-          e = b > a;
-          break;
-        case TypedOp.eGtFG:
-          e = f > g;
-          break;
-        case TypedOp.eGtGF:
-          e = g > f;
-          break;
-        case TypedOp.eGteAB:
-          e = a >= b;
-          break;
-        case TypedOp.eGteBA:
-          e = b >= a;
-          break;
-        case TypedOp.eGteFG:
-          e = f >= g;
-          break;
-        case TypedOp.eGteGF:
-          e = g >= f;
-          break;
-        case TypedOp.eAPositive:
-          e = a > 0;
-          break;
-        case TypedOp.eBPositive:
-          e = b > 0;
-          break;
-        case TypedOp.eNot:
-          e = !e;
-          break;
-        case TypedOp.eAndX:
-          e = e && x;
-          break;
-        case TypedOp.eOrX:
-          e = e || x;
-          break;
-        case TypedOp.eXorX:
-          e = e != x;
-          break;
+          continue dispatch;
+        case TypedOp.aImmediate:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          a = index.toSigned(16);
+          continue dispatch;
+        case TypedOp.bImmediate:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          b = index.toSigned(16);
+          continue dispatch;
         case TypedOp.jumpETrue:
-          final address = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); pc += 4;
-          if (e) pc = address;
-          break;
+          if (e) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+          continue dispatch;
         case TypedOp.jumpEFalse:
-          final address = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); pc += 4;
-          if (!e) pc = address;
-          break;
-        case TypedOp.xEqAB:
-          x = a == b;
-          break;
-        case TypedOp.xEqBA:
-          x = b == a;
-          break;
-        case TypedOp.xEqFG:
-          x = f == g;
-          break;
-        case TypedOp.xEqGF:
-          x = g == f;
-          break;
-        case TypedOp.xNeAB:
-          x = a != b;
-          break;
-        case TypedOp.xNeBA:
-          x = b != a;
-          break;
-        case TypedOp.xNeFG:
-          x = f != g;
-          break;
-        case TypedOp.xNeGF:
-          x = g != f;
-          break;
-        case TypedOp.xLtAB:
-          x = a < b;
-          break;
-        case TypedOp.xLtBA:
-          x = b < a;
-          break;
-        case TypedOp.xLtFG:
-          x = f < g;
-          break;
-        case TypedOp.xLtGF:
-          x = g < f;
-          break;
-        case TypedOp.xLteAB:
-          x = a <= b;
-          break;
-        case TypedOp.xLteBA:
-          x = b <= a;
-          break;
-        case TypedOp.xLteFG:
-          x = f <= g;
-          break;
-        case TypedOp.xLteGF:
-          x = g <= f;
-          break;
-        case TypedOp.xGtAB:
-          x = a > b;
-          break;
-        case TypedOp.xGtBA:
-          x = b > a;
-          break;
-        case TypedOp.xGtFG:
-          x = f > g;
-          break;
-        case TypedOp.xGtGF:
-          x = g > f;
-          break;
-        case TypedOp.xGteAB:
-          x = a >= b;
-          break;
-        case TypedOp.xGteBA:
-          x = b >= a;
-          break;
-        case TypedOp.xGteFG:
-          x = f >= g;
-          break;
-        case TypedOp.xGteGF:
-          x = g >= f;
-          break;
-        case TypedOp.xAPositive:
-          x = a > 0;
-          break;
-        case TypedOp.xBPositive:
-          x = b > 0;
-          break;
-        case TypedOp.xNot:
-          x = !x;
-          break;
-        case TypedOp.xAndE:
-          x = x && e;
-          break;
-        case TypedOp.xOrE:
-          x = x || e;
-          break;
-        case TypedOp.xXorE:
-          x = x != e;
-          break;
+          if (!e) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+          continue dispatch;
         case TypedOp.jumpXTrue:
-          final address = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); pc += 4;
-          if (x) pc = address;
-          break;
+          if (x) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+          continue dispatch;
         case TypedOp.jumpXFalse:
-          final address = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); pc += 4;
-          if (!x) pc = address;
-          break;
-        case TypedOp.fFromA:
-          f = a.toDouble();
-          break;
+          if (!x) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+          continue dispatch;
         case TypedOp.aFromF:
           a = f.toInt();
-          break;
-        case TypedOp.gFromA:
-          g = a.toDouble();
-          break;
+          continue dispatch;
         case TypedOp.aFromG:
           a = g.toInt();
-          break;
-        case TypedOp.fFromB:
-          f = b.toDouble();
-          break;
+          continue dispatch;
         case TypedOp.bFromF:
           b = f.toInt();
-          break;
-        case TypedOp.gFromB:
-          g = b.toDouble();
-          break;
+          continue dispatch;
         case TypedOp.bFromG:
           b = g.toInt();
-          break;
+          continue dispatch;
         case TypedOp.jump:
-          final address = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); pc += 4;
-          pc = address;
-          break;
+          pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24);
+          continue dispatch;
         case TypedOp.aOutgoing:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           frame.intOutgoing[index] = a;
-          break;
+          continue dispatch;
         case TypedOp.bOutgoing:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           frame.intOutgoing[index] = b;
-          break;
+          continue dispatch;
         case TypedOp.fOutgoing:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           frame.doubleOutgoing[index] = f;
-          break;
+          continue dispatch;
         case TypedOp.gOutgoing:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           frame.doubleOutgoing[index] = g;
-          break;
+          continue dispatch;
         case TypedOp.eOutgoing:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           frame.boolOutgoing[index] = e ? 1 : 0;
-          break;
+          continue dispatch;
         case TypedOp.xOutgoing:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           frame.boolOutgoing[index] = x ? 1 : 0;
-          break;
+          continue dispatch;
+        case TypedOp.rOutgoing:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          frame.objectOutgoing[index] = r;
+          continue dispatch;
+        case TypedOp.sOutgoing:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          frame.objectOutgoing[index] = s;
+          continue dispatch;
+        case TypedOp.cOutgoing:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          frame.objectOutgoing[index] = c;
+          continue dispatch;
         case TypedOp.callInt:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           final function = program.functions[index];
-          frame = TypedFrame(function,
-            frame.intOutgoing.sublist(0, function.intArgumentCount),
-            frame.doubleOutgoing.sublist(0, function.doubleArgumentCount),
-            frame.boolOutgoing.sublist(0, function.boolArgumentCount),
-            parent: frame, returnPc: pc, returnBank: 0);
-          intSpills = frame.intSpills; doubleSpills = frame.doubleSpills; boolSpills = frame.boolSpills;
-          a = 0; b = 0; f = 0.0; g = 0.0; e = false; x = false;
+          frame = frame.enter(function, pc, 0);
+          r = null; s = null; c = null;
           pc = function.entry;
-          break;
+          continue dispatch;
         case TypedOp.callDouble:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           final function = program.functions[index];
-          frame = TypedFrame(function,
-            frame.intOutgoing.sublist(0, function.intArgumentCount),
-            frame.doubleOutgoing.sublist(0, function.doubleArgumentCount),
-            frame.boolOutgoing.sublist(0, function.boolArgumentCount),
-            parent: frame, returnPc: pc, returnBank: 1);
-          intSpills = frame.intSpills; doubleSpills = frame.doubleSpills; boolSpills = frame.boolSpills;
-          a = 0; b = 0; f = 0.0; g = 0.0; e = false; x = false;
+          frame = frame.enter(function, pc, 1);
+          r = null; s = null; c = null;
           pc = function.entry;
-          break;
+          continue dispatch;
         case TypedOp.callBool:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           final function = program.functions[index];
-          frame = TypedFrame(function,
-            frame.intOutgoing.sublist(0, function.intArgumentCount),
-            frame.doubleOutgoing.sublist(0, function.doubleArgumentCount),
-            frame.boolOutgoing.sublist(0, function.boolArgumentCount),
-            parent: frame, returnPc: pc, returnBank: 2);
-          intSpills = frame.intSpills; doubleSpills = frame.doubleSpills; boolSpills = frame.boolSpills;
-          a = 0; b = 0; f = 0.0; g = 0.0; e = false; x = false;
+          frame = frame.enter(function, pc, 2);
+          r = null; s = null; c = null;
           pc = function.entry;
-          break;
+          continue dispatch;
+        case TypedOp.callObject:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          final function = program.functions[index];
+          frame = frame.enter(function, pc, 3);
+          r = null; s = null; c = null;
+          pc = function.entry;
+          continue dispatch;
+        case TypedOp.eEqRS:
+          e = TypedInterop.equals(runtime, r, s);
+          continue dispatch;
+        case TypedOp.xEqRS:
+          x = TypedInterop.equals(runtime, r, s);
+          continue dispatch;
+        case TypedOp.aFromR:
+          a = TypedInterop.toInt(r);
+          continue dispatch;
+        case TypedOp.fFromR:
+          f = TypedInterop.toDouble(r);
+          continue dispatch;
+        case TypedOp.eFromR:
+          e = TypedInterop.toBool(r);
+          continue dispatch;
+        case TypedOp.callHost:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          final result = TypedInterop.call(runtime, r, frame.takeObjectArguments(index)); r = result; s = null; c = null;
+          continue dispatch;
+        case TypedOp.callMethod:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          final result = TypedInterop.invoke(runtime, r, s as String, frame.takeObjectArguments(index)); r = result; s = null; c = null;
+          continue dispatch;
+        case TypedOp.jumpETrueShort:
+          if (e) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
+          continue dispatch;
+        case TypedOp.jumpEFalseShort:
+          if (!e) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
+          continue dispatch;
+        case TypedOp.jumpXTrueShort:
+          if (x) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
+          continue dispatch;
+        case TypedOp.jumpXFalseShort:
+          if (!x) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
+          continue dispatch;
+        case TypedOp.jumpShort:
+          pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16);
+          continue dispatch;
         default: throw StateError('Invalid typed opcode at byte ${pc - 1}');
       }
     }

@@ -206,7 +206,7 @@ void main(List<String> args) {
     );
     measure(
       '$name typed',
-      () => TypedMachine.run(program, intArguments: [iterations]),
+      () => TypedMachine.run(program, intArguments: [iterations])!,
       expected,
       iterations,
       instructionCount,

@@ -1,5 +1,18 @@
 part of 'runtime.dart';
 
+/// Reuses the register runtime's evaluated and bridge method dispatch.
+extension TypedRuntimeInterop on Runtime {
+  Object? invokeTypedObject(
+    Object? receiver,
+    String name,
+    List<Object?> arguments,
+  ) {
+    _setup();
+    return _registerInvoke(receiver, name, arguments);
+  }
+}
+
+
 /// Physical machine state owned by one invocation. Values never address SSA IDs.
 final class _RegisterFrame {
   _RegisterFrame(

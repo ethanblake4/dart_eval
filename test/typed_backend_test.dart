@@ -7,6 +7,74 @@ TypedProgram compile(String source) => Compiler().compileTyped({
 }, entrypoint: 'package:typed/main.dart');
 
 void main() {
+  test('small loops use relative branches after function relocation', () {
+    final program = compile('''
+      int sum(int n) {
+        var result = 0;
+        for (var i = 0; i < n; i++) { result += i; }
+        return result;
+      }
+      int main(int n) => sum(n);
+    ''');
+    final instructions = <String>[];
+    for (var pc = 0; pc < program.code.length;) {
+      final instruction = TypedOp.instructions[program.code[pc]];
+      instructions.add(instruction.immediate.name);
+      pc += instruction.length;
+    }
+    expect(instructions.contains('shortBranch'), isTrue);
+    expect(instructions.contains('branch'), isFalse);
+    expect(TypedMachine.run(program, intArguments: [10]), 45);
+    expect(
+      TypedMachine.run(
+        TypedProgram.read(program.write().buffer),
+        intArguments: [0],
+      ),
+      0,
+    );
+  });
+  test('branches widen when a compiled target exceeds signed16 reach', () {
+    final body = List.filled(5500, 'n = increment(n);').join();
+    final program = compile('''int increment(int n) => n + 1;
+      int main(int n, bool run) { if (run) { $body } return n; }
+    ''');
+    var hasLongBranch = false;
+    for (var pc = 0; pc < program.code.length;) {
+      final instruction = TypedOp.instructions[program.code[pc]];
+      hasLongBranch |= instruction.immediate == TypedImmediate.branch;
+      pc += instruction.length;
+    }
+    expect(hasLongBranch, isTrue);
+    expect(
+      TypedMachine.run(program, intArguments: [7], boolArguments: [false]),
+      7,
+    );
+    expect(
+      TypedMachine.run(program, intArguments: [7], boolArguments: [true]),
+      5507,
+    );
+  });
+  test('small integer literals use immediates and preserve signed results', () {
+    for (final value in [-32767, -1, 0, 32767]) {
+      final program = compile('int main() => $value;');
+      expect(program.integers, isEmpty);
+      expect(
+        TypedOp.instructions[program.code.first].name,
+        anyOf('aImmediate', 'bImmediate'),
+      );
+      expect(TypedMachine.run(program), value);
+      expect(
+        TypedMachine.run(TypedProgram.read(program.write().buffer)),
+        value,
+      );
+    }
+    for (final value in [-32769, -32768, 32768]) {
+      final program = compile('int main() => $value;');
+      // Unary minus currently lowers as zero minus the positive literal.
+      expect(program.integers, contains(value.abs()));
+      expect(TypedMachine.run(program), value);
+    }
+  });
   test('source arithmetic lowers to fixed operand bytecodes', () {
     final program = compile('int main(int x, int y) => x - y;');
     expect(TypedMachine.run(program, intArguments: [27, 8]), 19);
@@ -59,11 +127,8 @@ void main() {
     expect(TypedMachine.run(program, boolArguments: [true]), false);
     expect(TypedMachine.run(program, boolArguments: [false]), true);
   });
-  test('unsupported dynamic behavior fails before execution', () {
-    expect(
-      () => compile('dynamic main(dynamic x) => x.foo();'),
-      throwsUnsupportedError,
-    );
+  test('unsupported collection construction fails before execution', () {
+    expect(() => compile('dynamic main() => [1, 2];'), throwsUnsupportedError);
   });
   test('direct recursive calls preserve caller values in typed spills', () {
     final program = compile('''
@@ -113,4 +178,155 @@ void main() {
     );
     expect(TypedMachine.run(program), 78);
   });
+  test('general object identity survives direct calls and caller spills', () {
+    final program = compile(
+      '''Object choose(Object a, Object b, Object c, Object d, bool first) {
+      if (first) return a;
+      return d;
+    }
+    Object main(Object a, Object b, Object c, Object d) {
+      var selected = choose(a, b, c, d, false);
+      return choose(a, b, c, selected, false);
+    }''',
+    );
+    final values = [
+      Object(),
+      <int>[1],
+      {'x': 2},
+      Object(),
+    ];
+    expect(
+      identical(TypedMachine.run(program, objectArguments: values), values[3]),
+      isTrue,
+    );
+    expect(program.functions.first.objectSpillCount, greaterThan(0));
+  });
+  test('three live object registers rotate across loop phis', () {
+    final program = compile(
+      '''Object main(Object a, Object b, Object c, int n) {
+      var x = a; var y = b; var z = c;
+      for (var i = 0; i < n; i++) {
+        var previous = x; x = y; y = z; z = previous;
+      }
+      return x;
+    }''',
+    );
+    final values = [Object(), Object(), Object()];
+    for (var count = 0; count < 7; count++) {
+      expect(
+        identical(
+          TypedMachine.run(
+            program,
+            objectArguments: values,
+            intArguments: [count],
+          ),
+          values[count % 3],
+        ),
+        isTrue,
+      );
+    }
+  });
+  test('nullable references and strings travel in the object bank', () {
+    final program = compile('''Object? echo(Object? value) => value;
+      Object? main(Object? value) => echo(value);''');
+    expect(TypedMachine.run(program, objectArguments: [null]), isNull);
+    final value = Object();
+    expect(
+      identical(TypedMachine.run(program, objectArguments: [value]), value),
+      isTrue,
+    );
+    expect(TypedMachine.run(compile("String main() => 'hello';")), 'hello');
+  });
+  test('mixed calls retain arbitrary objects and box primitive arguments', () {
+    final program = compile(
+      '''dynamic choose(int n, Object value, double d, bool keep) {
+      if (keep) return value;
+      return n;
+    }
+    dynamic main(int n, Object value, double d, bool keep) => choose(n, value, d, keep);''',
+    );
+    final value = Object();
+    expect(
+      identical(
+        TypedMachine.run(
+          program,
+          intArguments: [12],
+          objectArguments: [value],
+          doubleArguments: [1.5],
+          boolArguments: [true],
+        ),
+        value,
+      ),
+      isTrue,
+    );
+    expect(
+      TypedMachine.run(
+        program,
+        intArguments: [12],
+        objectArguments: [value],
+        doubleArguments: [1.5],
+        boolArguments: [false],
+      ),
+      12,
+    );
+  });
+  test('object equality retains the left receiver semantics', () {
+    final program = compile(
+      'bool main(Object left, Object right) => left == right;',
+    );
+    expect(
+      TypedMachine.run(program, objectArguments: [_EqualsAnything(), Object()]),
+      isTrue,
+    );
+    expect(
+      TypedMachine.run(program, objectArguments: [Object(), _EqualsAnything()]),
+      isFalse,
+    );
+  });
+  test('nullable reference branches preserve values', () {
+    final program = compile(
+      'Object? main(Object? value) { if (value == null) return null; return value; }',
+    );
+    expect(TypedMachine.run(program, objectArguments: [null]), isNull);
+    final value = Object();
+    expect(
+      identical(TypedMachine.run(program, objectArguments: [value]), value),
+      isTrue,
+    );
+  });
+  test('host callback result can return through a primitive bank', () {
+    final program = compile(
+      'int main(Function callback, dynamic value) => callback(value);',
+    );
+    expect(
+      TypedMachine.run(
+        program,
+        objectArguments: [(Object? value) => 42, Object()],
+      ),
+      42,
+    );
+  });
+  test('host callback receives arbitrary positional references', () {
+    final program = compile(
+      'dynamic main(Function callback, dynamic value) => callback(value);',
+    );
+    final value = Object();
+    expect(
+      identical(
+        TypedMachine.run(
+          program,
+          objectArguments: [(Object? argument) => argument, value],
+        ),
+        value,
+      ),
+      isTrue,
+    );
+  });
+}
+
+class _EqualsAnything {
+  @override
+  bool operator ==(Object other) => true;
+  @override
+  int get hashCode => 0;
 }

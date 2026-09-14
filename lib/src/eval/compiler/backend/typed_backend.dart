@@ -7,6 +7,9 @@ import '../../ir/logic.dart' as logic;
 import '../../ir/memory.dart' as memory;
 import '../../ir/operands.dart';
 import '../../ir/numeric.dart';
+import '../../ir/objects.dart' as objects_ir;
+import '../../ir/primitives.dart' as primitives;
+import '../../ir/closures.dart' as closures;
 import '../../runtime/typed/typed_ops.g.dart';
 import '../../runtime/typed/typed_program.dart';
 import '../../runtime/typed/typed_function.dart';
@@ -63,7 +66,7 @@ final class TypedOperation extends cfg.Operation {
 
 final class _Bytes extends cfg.Instruction {
   _Bytes(this.code, [this.immediate, this.otherTarget]);
-  final int code;
+  int code;
   final int? immediate;
   final int? otherTarget;
   int get length => code < 0
@@ -74,19 +77,26 @@ final class _Bytes extends cfg.Instruction {
                 : TypedOp.instructions[TypedOp.jump].length);
 }
 
-/// Lowers a primitive entrypoint to fixed typed registers and byte instructions.
+/// Lowers an entrypoint to fixed typed registers and byte instructions.
 /// Unsupported operations are rejected before a program can execute.
 class TypedBackend {
   TypedBackend(this.context);
   final CompilerContext context;
   final integers = <int>[];
   final doubles = <double>[];
+  final objects = <Object?>[];
 
   static final _codes = {
     for (var i = 0; i < TypedOp.instructions.length; i++)
       TypedOp.instructions[i].name: i,
   };
-  static const _registerNames = ['a', 'b', 'f', 'g', 'e', 'x'];
+  static const _registerNames = ['a', 'b', 'f', 'g', 'e', 'x', 'r', 's', 'c'];
+  static const _banks = [
+    [0, 1],
+    [2, 3],
+    [4, 5],
+    [6, 7, 8],
+  ];
   List<int> _named(Iterable<String> names) => [
     for (final name in names) _codes[name]!,
   ];
@@ -135,12 +145,15 @@ class TypedBackend {
           intSpillCount: function.spills[0],
           doubleSpillCount: function.spills[1],
           boolSpillCount: function.spills[2],
+          objectSpillCount: function.spills[3],
           intArgumentCount: function.arguments[0],
           doubleArgumentCount: function.arguments[1],
           boolArgumentCount: function.arguments[2],
+          objectArgumentCount: function.arguments[3],
           intOutgoingCount: function.outgoing[0],
           doubleOutgoingCount: function.outgoing[1],
           boolOutgoingCount: function.outgoing[2],
+          objectOutgoingCount: function.outgoing[3],
         ),
       );
       bytes.add(code);
@@ -149,6 +162,7 @@ class TypedBackend {
       bytes.takeBytes(),
       integers: integers,
       doubles: doubles,
+      objects: objects,
       functions: functions,
     );
   }
@@ -164,8 +178,9 @@ class TypedBackend {
   }
 
   _FunctionCode _compileFunction(int id, Map<int, int> functionIndices) {
-    final spillCounts = [0, 0, 0];
-    final outgoingCounts = [0, 0, 0];
+    final spillCounts = [0, 0, 0, 0];
+    final outgoingCounts = [0, 0, 0, 0];
+    var methodCounter = 0;
     final sourceGraph = context.ssaFunctionGraphs[id]!;
     final representations = analyzeRepresentations(
       sourceGraph,
@@ -176,7 +191,7 @@ class TypedBackend {
     final graph = sourceGraph.clone();
     cfg.SSA value(cfg.SSA input) {
       final representation = representations[input];
-      if (representation == null || representation.index > 2) {
+      if (representation == null) {
         throw UnsupportedError(
           'Typed register representation for $input: $representation',
         );
@@ -184,12 +199,12 @@ class TypedBackend {
       return cfg.SSA(
         input.name,
         version: input.version,
-        type: representation.index,
+        type: representation.index < 3 ? representation.index : 3,
       );
     }
 
     final argumentIndices = <int, int>{};
-    final argumentCounts = [0, 0, 0];
+    final argumentCounts = [0, 0, 0, 0];
     final parameters = [
       for (final block in graph.graph.vertices)
         ...graph[block]!.code.whereType<fn.Parameter>(),
@@ -214,15 +229,74 @@ class TypedBackend {
           );
           continue;
         }
+        if (op is closures.InvokeClosure || op is objects_ir.InvokeDynamic) {
+          final (receiver, arguments) = switch (op) {
+            closures.InvokeClosure(
+              :final closure,
+              :final positional,
+              :final named,
+            )
+                when named.isEmpty =>
+              (closure, positional),
+            objects_ir.InvokeDynamic(:final object, :final args) => (
+              object,
+              args,
+            ),
+            _ => throw UnsupportedError(
+              'Typed host calls require positional arguments',
+            ),
+          };
+          for (var index = 0; index < arguments.length; index++) {
+            final argument = value(arguments[index]);
+            if (argument.type != 3) {
+              throw StateError(
+                'Host call argument requires object representation',
+              );
+            }
+            lowered.add(
+              TypedOperation(
+                _named(['rOutgoing', 'sOutgoing', 'cOutgoing']),
+                null,
+                [argument],
+                immediate: index,
+              ),
+            );
+          }
+          if (arguments.length > outgoingCounts[3])
+            outgoingCounts[3] = arguments.length;
+          final method = op is objects_ir.InvokeDynamic && op.name != 'call'
+              ? cfg.SSA('typed:method${methodCounter++}', version: 0, type: 3)
+              : null;
+          if (method != null) {
+            lowered.add(
+              TypedOperation(
+                _named(['rConstant', 'sConstant', 'cConstant']),
+                method,
+                [],
+                immediate: _object((op as objects_ir.InvokeDynamic).name),
+              ),
+            );
+          }
+          lowered.add(
+            TypedOperation(
+              _named([method == null ? 'callHost' : 'callMethod']),
+              value(op.writesTo!),
+              [value(receiver), if (method != null) method],
+              immediate: arguments.length,
+              clobbers: {0, 1, 2, 3, 4, 5, 6, 7, 8},
+            ),
+          );
+          continue;
+        }
         if (op is flow.Call) {
-          final outgoing = [0, 0, 0];
+          final outgoing = [0, 0, 0, 0];
           for (final argument in op.arguments) {
             final input = value(argument);
             final index = outgoing[input.type]++;
             lowered.add(
               TypedOperation(
                 _named([
-                  for (var r = input.type * 2; r < input.type * 2 + 2; r++)
+                  for (final r in _banks[input.type])
                     '${_registerNames[r]}Outgoing',
                 ]),
                 null,
@@ -231,7 +305,7 @@ class TypedBackend {
               ),
             );
           }
-          for (var bank = 0; bank < 3; bank++) {
+          for (var bank = 0; bank < 4; bank++) {
             if (outgoing[bank] > outgoingCounts[bank])
               outgoingCounts[bank] = outgoing[bank];
           }
@@ -239,12 +313,17 @@ class TypedBackend {
           lowered.add(
             TypedOperation(
               _named([
-                ['callInt', 'callDouble', 'callBool'][result.type],
+                [
+                  'callInt',
+                  'callDouble',
+                  'callBool',
+                  'callObject',
+                ][result.type],
               ]),
               result,
               [],
               immediate: functionIndices[_resolveFunction(op.target)],
-              clobbers: {0, 1, 2, 3, 4, 5},
+              clobbers: {0, 1, 2, 3, 4, 5, 6, 7, 8},
             ),
           );
           continue;
@@ -266,16 +345,12 @@ class TypedBackend {
           otherTarget: otherTarget,
         );
         List<String> bankNames(cfg.SSA source, String suffix) => [
-          for (
-            var r = value(source).type * 2;
-            r < value(source).type * 2 + 2;
-            r++
-          )
+          for (final r in _banks[value(source).type])
             '${_registerNames[r]}$suffix',
         ];
         List<String> compareNames(String condition) => [
           for (final flag in ['e', 'x'])
-            for (final order in ['AB', 'BA']) '$flag$condition$order',
+            for (final order in ['AB']) '$flag$condition$order',
         ];
         lowered.add(switch (op) {
           NumericBinary(
@@ -285,6 +360,8 @@ class TypedBackend {
             :final operator,
           ) =>
             make(_numericNames(operandRepresentation, operator), [left, right]),
+          memory.LoadInt(:final value) when value >= -32768 && value <= 32767 =>
+            make(['aImmediate', 'bImmediate'], [], immediate: value & 65535),
           memory.LoadInt(:final value) => make(
             ['aConstant', 'bConstant'],
             [],
@@ -298,6 +375,52 @@ class TypedBackend {
           memory.LoadBool(:final value) => make(
             value ? ['eTrue', 'xTrue'] : ['eFalse', 'xFalse'],
             [],
+          ),
+          memory.LoadString(:final value) => make(
+            ['rConstant', 'sConstant', 'cConstant'],
+            [],
+            immediate: _object(value),
+          ),
+          memory.LoadNull() ||
+          primitives.BoxNull() => make(['rNull', 'sNull', 'cNull'], []),
+          primitives.BoxString(:final target, :final source) ||
+          primitives.MaybeBoxNull(
+            :final target,
+            :final source,
+          ) => cfg.Assign(value(target), value(source)),
+          primitives.BoxInt(:final source) ||
+          primitives.BoxDouble(:final source) ||
+          primitives.BoxBool(:final source) ||
+          primitives.BoxNum(:final source) => make(
+            [
+              for (final target in ['r'])
+                for (final r in _banks[value(source).type])
+                  '${target}From${_registerNames[r].toUpperCase()}',
+            ],
+            [source],
+          ),
+          primitives.Unbox(:final target, :final source) =>
+            value(target).type == 3
+                ? cfg.Assign(value(target), value(source))
+                : make(
+                    [
+                      ['aFromR', 'fFromR', 'eFromR'][value(target).type],
+                    ],
+                    [source],
+                  ),
+          objects_ir.DynamicEquals(:final left, :final right) => make(
+            [
+              for (final flag in ['e', 'x'])
+                for (final order in ['RS']) '${flag}Eq$order',
+            ],
+            [left, right],
+          ),
+          memory.IsNull(:final object) => make(
+            [
+              for (final flag in ['e', 'x'])
+                for (final r in ['R', 'S', 'C']) '${flag}IsNull$r',
+            ],
+            [object],
           ),
           fn.Parameter(:final target, :final index) => make(
             bankNames(target, 'Argument'),
@@ -378,11 +501,11 @@ class TypedBackend {
         ..clear()
         ..addAll(lowered);
     }
-    for (var bank = 0; bank < 3; bank++) {
+    for (var bank = 0; bank < 4; bank++) {
       graph.registerRegType(
         bank,
         cfg.RegType(bank, 'bank$bank', {
-          cfg.RegisterGroup({bank * 2, bank * 2 + 1}),
+          cfg.RegisterGroup(_banks[bank].toSet()),
         }),
       );
     }
@@ -457,36 +580,84 @@ class TypedBackend {
         onJump: (target, _) => _Bytes(TypedOp.jump, target),
       ),
     );
+    // Expand the second edge before relaxation so both branch distances use
+    // the final instruction positions. Every branch starts short and can only
+    // widen, guaranteeing that this layout process terminates.
+    final assembled = {
+      for (final block in blocks.entries)
+        block.key: <_Bytes>[
+          for (final instruction in block.value.cast<_Bytes>()) ...[
+            if (instruction.code >= 0)
+              _Bytes(instruction.code, instruction.immediate),
+            if (instruction.otherTarget != null)
+              _Bytes(TypedOp.jump, instruction.otherTarget),
+          ],
+        ],
+    };
+    final shortToLong = <int, int>{};
+    for (final block in assembled.values) {
+      for (final instruction in block) {
+        final spec = TypedOp.instructions[instruction.code];
+        if (spec.immediate == TypedImmediate.branch) {
+          final short = _codes['${spec.name}Short']!;
+          shortToLong[short] = instruction.code;
+          instruction.code = short;
+        }
+      }
+    }
     final offsets = <int, int>{};
-    var offset = 0;
-    for (final block in blocks.entries) {
-      offsets[block.key] = offset;
-      for (final instruction in block.value.cast<_Bytes>()) {
-        offset += instruction.length;
+    bool widened;
+    do {
+      var offset = 0;
+      for (final block in assembled.entries) {
+        offsets[block.key] = offset;
+        for (final instruction in block.value) {
+          offset += instruction.length;
+        }
       }
-    }
+      widened = false;
+      offset = 0;
+      for (final block in assembled.values) {
+        for (final instruction in block) {
+          final length = instruction.length;
+          final long = shortToLong[instruction.code];
+          if (long != null) {
+            final distance =
+                offsets[instruction.immediate]! - (offset + length);
+            if (distance < -32768 || distance > 32767) {
+              instruction.code = long;
+              widened = true;
+            }
+          }
+          // All positions in this pass refer to the same layout. Widening is
+          // reflected when offsets are recomputed on the next pass.
+          offset += length;
+        }
+      }
+    } while (widened);
     final bytes = BytesBuilder();
-    void emit(int code, int? immediate) {
-      if (code < 0) return;
-      bytes.addByte(code);
-      final spec = TypedOp.instructions[code];
-      if (spec.immediate == TypedImmediate.none) return;
-      final number = spec.immediate == TypedImmediate.branch
-          ? offsets[immediate]!
-          : immediate!;
-      if (number < 0 || (spec.length == 3 && number > 65535)) {
-        throw UnsupportedError('Typed immediate exceeds encoding: $number');
-      }
-      for (var byte = 0; byte < spec.length - 1; byte++) {
-        bytes.addByte((number >> (byte * 8)) & 255);
-      }
-    }
-
-    for (final block in blocks.values) {
-      for (final instruction in block.cast<_Bytes>()) {
-        emit(instruction.code, instruction.immediate);
-        if (instruction.otherTarget != null)
-          emit(TypedOp.jump, instruction.otherTarget);
+    for (final block in assembled.values) {
+      for (final instruction in block) {
+        final code = instruction.code;
+        final spec = TypedOp.instructions[code];
+        final end = bytes.length + spec.length;
+        bytes.addByte(code);
+        if (spec.immediate == TypedImmediate.none) continue;
+        final number = switch (spec.immediate) {
+          TypedImmediate.branch => offsets[instruction.immediate]!,
+          TypedImmediate.shortBranch => offsets[instruction.immediate]! - end,
+          _ => instruction.immediate!,
+        };
+        if (spec.immediate == TypedImmediate.shortBranch) {
+          if (number < -32768 || number > 32767) {
+            throw StateError('Short branch exceeds encoding: $number');
+          }
+        } else if (number < 0 || (spec.length == 3 && number > 65535)) {
+          throw UnsupportedError('Typed immediate exceeds encoding: $number');
+        }
+        for (var byte = 0; byte < spec.length - 1; byte++) {
+          bytes.addByte((number >> (byte * 8)) & 255);
+        }
       }
     }
     return _FunctionCode(
@@ -495,6 +666,13 @@ class TypedBackend {
       argumentCounts,
       outgoingCounts,
     );
+  }
+
+  int _object(Object? value) {
+    final old = objects.indexOf(value);
+    if (old >= 0) return old;
+    objects.add(value);
+    return objects.length - 1;
   }
 
   int _integer(int value) {
@@ -521,7 +699,7 @@ class TypedBackend {
     if (comparison != null) {
       return [
         for (final flag in ['e', 'x'])
-          for (final order in integer ? ['AB', 'BA'] : ['FG', 'GF'])
+          for (final order in integer ? ['AB'] : ['FG'])
             '$flag$comparison$order',
       ];
     }
