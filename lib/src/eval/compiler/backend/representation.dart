@@ -1,3 +1,4 @@
+import '../../ir/string.dart';
 import 'package:control_flow_graph/control_flow_graph.dart' as cfg;
 import '../offset_tracker.dart';
 import '../builtins.dart' show dartCoreFile;
@@ -88,6 +89,22 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
   hints.forEach(constrain);
   for (final operation in operations) {
     switch (operation) {
+      case StringOperation(:final string, :final argument, :final operator):
+        constrain(string, MachineRepresentation.string);
+        if (argument != null)
+          constrain(
+            argument,
+            operator == StringOperator.concatenate
+                ? MachineRepresentation.string
+                : integer,
+          );
+        output(
+          operation,
+          operator == StringOperator.length ||
+                  operator == StringOperator.codeUnitAt
+              ? integer
+              : MachineRepresentation.string,
+        );
       case NumericBinary(
         :final operandRepresentation,
         :final resultRepresentation,
@@ -192,7 +209,7 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
       case objects.DynamicEquals() || types.IsType():
         inputs(operation, object);
         output(operation, boolean);
-      case collection.IterableLength():
+      case collection.IterableLength() || collection.ListLength():
         inputs(operation, object);
         output(operation, integer);
       case objects.InvokeDynamic() ||

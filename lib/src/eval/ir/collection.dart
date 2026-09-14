@@ -297,3 +297,23 @@ final class IterableLength extends Operation {
   @override
   String toString() => '$target = length $iterable';
 }
+
+final class ListLength extends Operation {
+  final SSA target;
+  final SSA list;
+
+  ListLength(this.target, this.list);
+
+  @override
+  SSA get writesTo => target;
+
+  @override
+  Set<SSA> get readsFrom => {list};
+
+  @override
+  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) =>
+      ListLength(writesTo ?? target, readsFrom?.single ?? list);
+
+  @override
+  String toString() => '$target = length $list';
+}

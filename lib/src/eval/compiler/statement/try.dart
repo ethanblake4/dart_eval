@@ -35,7 +35,7 @@ StatementInfo compileTryStatement(
   final initialState = ctx.saveState();
   final firstProtectedId = ctx.activeGraph.lastBlockId;
   final bodyInfo = compileBlock(s.body, expectedReturnType, ctx);
-  ctx.resolveBranchStateDiscontinuity(initialState);
+  _resolveHandlerState(ctx, initialState);
   if (!bodyInfo.willAlwaysReturn &&
       !bodyInfo.willAlwaysThrow &&
       !bodyInfo.willAlwaysBreak) {
@@ -77,7 +77,7 @@ StatementInfo compileTryStatement(
     );
     ctx.caughtExceptions.removeLast();
     ctx.endAllocScope();
-    ctx.resolveBranchStateDiscontinuity(initialState);
+    _resolveHandlerState(ctx, initialState);
     if (!catchInfo.willAlwaysReturn &&
         !catchInfo.willAlwaysThrow &&
         !catchInfo.willAlwaysBreak) {
@@ -184,6 +184,41 @@ void _bindStackTrace(CompilerContext ctx, CatchClause clause) {
         CaughtStackTrace(ctx.svar('stack_trace')),
         CoreTypes.stackTrace.ref(ctx),
       ),
+    );
+  }
+}
+
+// Handler edges leave through throw/return terminators too. Reconcile the
+// visible locals before the terminator, never by appending unreachable code.
+void _resolveHandlerState(CompilerContext ctx, ContextSaveState initialState) {
+  final terminator = ctx.blockEndsControlFlow
+      ? ctx.blockCode.removeLast()
+      : null;
+  final normalizationStart = ctx.blockCode.length;
+  ctx.resolveBranchStateDiscontinuity(initialState);
+  if (terminator != null) {
+    final rewritten = {
+      for (final operation in ctx.blockCode.skip(normalizationStart))
+        if (operation.writesTo case final target?) target,
+    };
+    final captures = <SSA, SSA>{
+      for (final input in terminator.readsFrom)
+        if (rewritten.contains(input)) input: ctx.svar('completion_value'),
+    };
+    // Pre-SSA boxing rewrites a local's name. Snapshot a completion operand
+    // before that rewrite so throw/return keeps its required representation.
+    ctx.blockCode.insertAll(normalizationStart, [
+      for (final entry in captures.entries) Assign(entry.value, entry.key),
+    ]);
+    ctx.pushOp(
+      captures.isEmpty
+          ? terminator
+          : terminator.copyWith(
+              readsFrom: {
+                for (final input in terminator.readsFrom)
+                  captures[input] ?? input,
+              },
+            ),
     );
   }
 }

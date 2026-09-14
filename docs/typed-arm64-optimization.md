@@ -1,6 +1,8 @@
 # ARM64 dispatch and object-call checkpoint
 
-Inspected with Dart 3.10.7 on Windows x64, cross-compiling Linux ARM64. No ARM64
+Inspected with Dart 3.10.7 on Windows x64, cross-compiling Linux ARM64.
+The main report records the `d51f120` register ABI checkpoint; the List/String
+instruction update is recorded at the end. No ARM64
 hardware timing was performed. The reference source checkpoint is `5a02f83`.
 
 ## Emitted loop
@@ -156,3 +158,35 @@ six skips, and the same 30 reference-backend failure names listed in
 backend-checkpoint-failures.txt. Tests include mixed recursive calls, three-object
 phi cycles, overflow lifetime, explicit bridge semantics, signed branch endpoints,
 branch widening over 12,000 calls, serialization, and invalid input rejection.
+
+## List and String instructions
+
+Ten reverse commutative forms were replaced with ten List/String operations,
+leaving the table at 189 entries. The compiler can reverse integer/boolean input
+placement while emitting the same opcode, and preserves floating operand order.
+
+The new whole-loop symbol is 19,256 bytes, up from 17,592 at `d51f120`, because
+String/List handlers need casts, indexing checks and method/allocation code.
+The ordinary add path has 39 instructions: 32 in dispatch, five in the handler,
+and two in the common tail. It still performs 11 stack stores and two stack loads.
+One handler instruction now loads a constant-pool value where the earlier layout
+moved a register. Fewer instructions does not imply fewer cycles.
+
+Recorded `TypedMachine.run` range: `0x24ffcc` to `0x254b04` exclusive.
+Dispatch: `0x2500e0` through `0x25015c`. Integer add: `0x2502f0` through
+`0x250300`. Double add: `0x25037c` through `0x25038c`. Shared tail:
+`0x254584` through `0x254588`. Addresses depend on the full probe and SDK.
+
+A Windows x64 AOT smoke benchmark at one million iterations, three samples,
+produced typed medians of 11.566 ms integer, 11.060 ms double, and 11.735 ms mixed.
+Ranges were 11.383–11.603, 10.124–11.407, and 11.295–12.511 ms. Checksum:
+544359285. These are independent host runs, not a controlled speedup comparison.
+
+The separate [String-register experiment](typed-string-registers.md) measures the
+cost of adding one or two String locals to a frozen full dispatch loop. Each adds
+one unconditional stack store per dispatch. The production update keeps Strings
+in existing object registers and supplies dedicated operations on them.
+
+Validation after the List/String update: 594 passes, six skips, 29 existing
+reference failures, zero analyzer errors. The regex replacement loop now passes.
+The updated failure baseline is backend-checkpoint-failures.txt.

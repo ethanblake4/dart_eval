@@ -110,6 +110,30 @@ because bridge APIs take lists and callbacks may retain them or reenter.
 Source support includes the previous numeric/control-flow subset plus object,
 string, nullable and dynamic parameters/results, object identity through SSA
 phis and calls, object equality, positional callbacks and dynamic method calls.
+
+The List/String checkpoint removes ten reverse commutative forms: integer add, multiply,
+and/or/xor; floating add/multiply; boolean and/or/xor. Integer and boolean operand
+permutations are allocator choices, with one canonical result register. Floating
+operand order remains unchanged to preserve NaN payload propagation. Subtraction,
+division, modulo and shifts retain operand-order-specific forms.
+
+Ten List/String instructions replace those ten slots, keeping 189 opcodes:
+String length, concatenation, codeUnitAt, indexing; List creation, length, indexing,
+indexed assignment, append, and explicit boxing. String operations consume native
+Strings in R/S. Compiler-emitted unboxing selects that representation first.
+Indexed List instructions use C for the collection, A for an index, and R for an element.
+List elements retain the compiler-selected language representation.
+
+List length requires proof of native list storage. The compiler tracks allocations
+through boxing, assignments and joins where every source is known. It does not
+replace an unknown List implementation's getter with a host List cast. Raw host
+list arguments must use the existing canonical wrapper convention, for example
+`$List.wrap([$int(7)])`, or the registered bridge conversion. Typed general List
+getter dispatch remains unfinished when allocation provenance is unknown.
+
+Dedicated String registers are deferred. The full-loop experiment found shorter
+String handlers but an extra unconditional spill store on every dispatch for each
+added String local. See [String register measurements](typed-string-registers.md).
 Dynamic invocation uses canonical boxed `$Value?` arguments and results, with raw
 null as the internal null representation. It preserves `$InstanceImpl` and custom
 `$Instance` identities. There is no per-call representation guessing or
@@ -133,13 +157,13 @@ final object = Object();
 assert(identical(TypedMachine.run(program, objectArguments: [object]), object));
 ```
 
-Typed codec version 104 intentionally rejects earlier typed bytecode, because
+Typed codec version 105 intentionally rejects earlier typed bytecode, because
 opcode numbering and frame layout changed. It serializes scalar/null/string
 object constants, preserving UTF-16 code units and numeric bits. Live application
 objects remain valid arguments/in-memory constants but are rejected by the codec
 rather than being serialized into a lossy replacement.
 
-`compile` still uses the reference backend. Creating typed classes, collections
+`compile` still uses the reference backend. Creating typed classes, maps/sets
 and closures, named callback arguments, exception handling and async/suspension
 remain unfinished. Existing evaluated method offsets refer to the supplied
 reference Runtime; this checkpoint does not link newly compiled typed class
@@ -147,8 +171,11 @@ methods. The new bridge path is compatibility plumbing, not full typed parity.
 
 ## Checkpoint and next work
 
-Register ABI checkpoint validation: full suite 581 passes, 30 existing reference
-failures, six skips; analysis has zero errors. The failure names match
+List/String checkpoint validation: full suite 594 passes, 29 existing reference
+failures, six skips; analysis has zero errors. The regex replacement loop now
+passes. Representation normalization before throw/return preserves completion
+operands when a handler needs the same local in a different representation.
+The remaining failure names match
 backend-checkpoint-failures.txt. Focused tests cover argument permutations,
 repeated values, unused parameters, five-scalar register calls, recursive overflow,
 boxed interop, and serialized reference conversion metadata.
@@ -157,8 +184,9 @@ Package `cf63c11` adds simultaneous incoming-register definitions to the constra
 allocator. Its eight focused allocator tests pass. The user's package fixture
 edits remain untouched.
 
-The ARM64 arithmetic path remains 40 native instructions. The full run function
-shrinks from 19,780 to 17,592 bytes. These are code measurements, not ARM64 timings.
+The ARM64 arithmetic path is 39 native instructions versus 40 at `d51f120`.
+The full run function is 19,256 bytes versus 17,592, reflecting the larger
+String/List handlers. These are code measurements, not ARM64 timings.
 See [the assembly and timing report](typed-arm64-optimization.md).
 
 Next work is typed class/method linking, closure/exception conventions, and

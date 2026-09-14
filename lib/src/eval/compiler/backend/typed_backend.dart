@@ -1,3 +1,5 @@
+import '../../ir/string.dart';
+import '../../ir/collection.dart' as collection;
 import 'dart:typed_data';
 import 'package:control_flow_graph/control_flow_graph.dart' as cfg;
 import '../../ir/alu.dart' as alu;
@@ -185,6 +187,32 @@ class TypedBackend {
       functionId: id,
       resolveFunction: _resolveFunction,
     );
+    // Native allocation provenance is independent of the public List type:
+    // evaluated implementations can override getters and are not host Lists.
+    final nativeLists = <cfg.SSA>{};
+    final sourceOperations = [
+      for (final blockId in sourceGraph.graph.vertices)
+        ...sourceGraph[blockId]!.code,
+    ];
+    var addedNativeList = true;
+    while (addedNativeList) {
+      addedNativeList = false;
+      for (final operation in sourceOperations) {
+        final target = operation.writesTo;
+        if (target == null || nativeLists.contains(target)) continue;
+        final proven = switch (operation) {
+          collection.NewList() => true,
+          primitives.BoxList(:final source) ||
+          primitives.Unbox(:final source) ||
+          memory.Assign(:final source) ||
+          cfg.Assign(:final source) => nativeLists.contains(source),
+          cfg.PhiNode(:final sources) =>
+            sources.isNotEmpty && sources.every(nativeLists.contains),
+          _ => false,
+        };
+        if (proven) addedNativeList |= nativeLists.add(target);
+      }
+    }
     final graph = sourceGraph.clone();
     cfg.SSA value(cfg.SSA input) {
       final representation = representations[input];
@@ -245,6 +273,27 @@ class TypedBackend {
               ),
             ),
           );
+          continue;
+        }
+        if (op is objects_ir.LoadPropertyDynamic &&
+            op.name == 'length' &&
+            nativeLists.contains(op.object)) {
+          final target = value(op.target);
+          final length = target.type == 0
+              ? target
+              : cfg.SSA(
+                  'typed:listLength${temporaryCounter++}',
+                  version: 0,
+                  type: 0,
+                );
+          lowered.add(
+            TypedOperation(_named(['aListLengthR']), length, [
+              value(op.object),
+            ]),
+          );
+          if (target != length) {
+            lowered.add(TypedOperation(_named(['rBoxA']), target, [length]));
+          }
           continue;
         }
         if (op is closures.InvokeClosure || op is objects_ir.InvokeDynamic) {
@@ -480,6 +529,33 @@ class TypedBackend {
                     ],
                     [source],
                   ),
+          StringOperation(:final string, :final argument, :final operator) =>
+            make(
+              [
+                switch (operator) {
+                  StringOperator.length => 'aStringLengthR',
+                  StringOperator.concatenate => 'rStringConcatS',
+                  StringOperator.codeUnitAt => 'aStringCodeUnitR',
+                  StringOperator.indexAt => 'rStringIndexA',
+                },
+              ],
+              [string, if (argument != null) argument],
+            ),
+          collection.NewList() => make(['cNewList'], []),
+          collection.IndexList(:final list, :final index) => make(
+            ['rListIndexCA'],
+            [list, index],
+          ),
+          collection.ListSet(:final list, :final index, :final value) => make(
+            ['listSetCAR'],
+            [list, index, value],
+          ),
+          collection.ListAppend(:final list, :final value) => make(
+            ['listAppendCR'],
+            [list, value],
+          ),
+          collection.ListLength(:final list) => make(['aListLengthR'], [list]),
+          primitives.BoxList(:final source) => make(['rBoxList'], [source]),
           objects_ir.DynamicEquals(:final left, :final right) => make(
             [
               for (final flag in ['e', 'x'])
@@ -503,7 +579,7 @@ class TypedBackend {
             value(source),
           ),
           alu.IntAdd(:final left, :final right) => make(
-            ['aAddB', 'bAddA'],
+            ['aAddB'],
             [left, right],
           ),
           alu.IntSub(:final left, :final right) => make(
@@ -581,11 +657,18 @@ class TypedBackend {
       selectClobbers: (op) => op.clobbers,
       selectVariants: (op) => op.fixedVariant == null
           ? {
-              for (final code in op.codes)
+              for (final code in op.codes) ...[
                 cfg.Variant(
                   result: TypedOp.instructions[code].outputs.firstOrNull,
                   arguments: TypedOp.instructions[code].inputs,
                 ),
+                if (TypedOp.instructions[code].commutative)
+                  cfg.Variant(
+                    result: TypedOp.instructions[code].outputs.firstOrNull,
+                    arguments: TypedOp.instructions[code].inputs.reversed
+                        .toList(),
+                  ),
+              ],
             }
           : {op.fixedVariant!},
       create: (op, _) {
@@ -594,11 +677,13 @@ class TypedBackend {
         }
         final code = op.codes.firstWhere((code) {
           final spec = TypedOp.instructions[code];
+          if (spec.inputs.length != op.inputs.length) return false;
+          bool matches(Iterable<int> registers) => registers.indexed.every(
+            (entry) => entry.$2 == op.inputs[entry.$1].alloc.register,
+          );
           return spec.outputs.firstOrNull == op.result?.alloc.register &&
-              spec.inputs.length == op.inputs.length &&
-              Iterable<int>.generate(
-                op.inputs.length,
-              ).every((i) => spec.inputs[i] == op.inputs[i].alloc.register);
+              (matches(spec.inputs) ||
+                  spec.commutative && matches(spec.inputs.reversed));
         }, orElse: () => throw StateError('No opcode matches allocated $op'));
         return _Bytes(code, op.immediate, op.otherTarget);
       },
@@ -786,7 +871,10 @@ class TypedBackend {
         'Typed numeric operation $representation $operator',
       ),
     };
-    return integer ? ['a${name}B', 'b${name}A'] : ['f${name}G', 'g${name}F'];
+    final commutative = name == 'Add' || name == 'Mul';
+    return integer
+        ? ['a${name}B', if (!commutative) 'b${name}A']
+        : ['f${name}G', if (!commutative) 'g${name}F'];
   }
 
   int _double(double value) {

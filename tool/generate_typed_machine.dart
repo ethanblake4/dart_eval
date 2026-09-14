@@ -11,6 +11,7 @@ class Instruction {
     this.immediate = 'none',
     this.mayThrow = false,
     this.terminates = false,
+    this.commutative = false,
   });
   final String name;
   final String body;
@@ -19,6 +20,7 @@ class Instruction {
   final String immediate;
   final bool mayThrow;
   final bool terminates;
+  final bool commutative;
 }
 
 List<Instruction> specification() {
@@ -31,6 +33,7 @@ List<Instruction> specification() {
     String immediate = 'none',
     bool mayThrow = false,
     bool terminates = false,
+    bool commutative = false,
   }) => ops.add(
     Instruction(
       name,
@@ -40,6 +43,7 @@ List<Instruction> specification() {
       immediate: immediate,
       mayThrow: mayThrow,
       terminates: terminates,
+      commutative: commutative,
     ),
   );
   const names = ['a', 'b', 'f', 'g', 'e', 'x', 'r', 's', 'c'];
@@ -141,13 +145,15 @@ List<Instruction> specification() {
     'UnsignedShiftRight': '>>>',
   };
   for (final entry in integerOperators.entries) {
-    for (final (target, other) in [(0, 1), (1, 0)]) {
+    final commutative = {'Add', 'Mul', 'And', 'Or', 'Xor'}.contains(entry.key);
+    for (final (target, other) in [(0, 1), if (!commutative) (1, 0)]) {
       final left = names[target], right = names[other];
       add(
         '$left${entry.key}${right.toUpperCase()}',
         '$left = $left ${entry.value} $right;',
         inputs: [target, other],
         output: target,
+        commutative: commutative,
         mayThrow: {
           'Div',
           'Mod',
@@ -164,7 +170,10 @@ List<Instruction> specification() {
     'Mul': '*',
     'Div': '/',
   }.entries) {
-    for (final (target, other) in [(2, 3), (3, 2)]) {
+    for (final (target, other) in [
+      (2, 3),
+      if (entry.key != 'Add' && entry.key != 'Mul') (3, 2),
+    ]) {
       final left = names[target], right = names[other];
       add(
         '$left${entry.key}${right.toUpperCase()}',
@@ -221,12 +230,14 @@ List<Instruction> specification() {
       output: output,
     );
     for (final entry in {'And': '&&', 'Or': '||', 'Xor': '!='}.entries) {
+      if (output != 4) continue;
       final other = output == 4 ? 5 : 4;
       add(
         '$result${entry.key}${names[other].toUpperCase()}',
         '$result = $result ${entry.value} ${names[other]};',
         inputs: [output, other],
         output: output,
+        commutative: true,
       );
     }
     add(
@@ -372,6 +383,68 @@ List<Instruction> specification() {
     immediate: 'hostCall',
     mayThrow: true,
   );
+  add(
+    'aStringLengthR',
+    'a = (r as String).length;',
+    inputs: [6],
+    output: 0,
+    mayThrow: true,
+  );
+  add(
+    'rStringConcatS',
+    'r = (r as String) + (s as String);',
+    inputs: [6, 7],
+    output: 6,
+    mayThrow: true,
+  );
+  add(
+    'aStringCodeUnitR',
+    'a = (r as String).codeUnitAt(a);',
+    inputs: [6, 0],
+    output: 0,
+    mayThrow: true,
+  );
+  add(
+    'rStringIndexA',
+    'r = (r as String)[a];',
+    inputs: [6, 0],
+    output: 6,
+    mayThrow: true,
+  );
+  add('cNewList', 'c = <Object?>[];', output: 8, mayThrow: true);
+  add(
+    'aListLengthR',
+    'a = (r as List).length;',
+    inputs: [6],
+    output: 0,
+    mayThrow: true,
+  );
+  add(
+    'rListIndexCA',
+    'r = (c as List<Object?>)[a];',
+    inputs: [8, 0],
+    output: 6,
+    mayThrow: true,
+  );
+  add(
+    'listSetCAR',
+    '(c as List<Object?>)[a] = r;',
+    inputs: [8, 0, 6],
+    mayThrow: true,
+  );
+  add(
+    'listAppendCR',
+    '(c as List<Object?>).add(r);',
+    inputs: [8, 6],
+    mayThrow: true,
+  );
+  add(
+    'rBoxList',
+    r'r = $List.wrap(r as List);',
+    inputs: [6],
+    output: 6,
+    mayThrow: true,
+  );
   for (final op in [...ops]) {
     if (op.immediate != 'branch') continue;
     add(
@@ -414,13 +487,16 @@ enum TypedImmediate { none, intConstant, doubleConstant,
 
 class TypedInstruction {
   const TypedInstruction(this.name, this.inputs, this.outputs, this.immediate,
-      this.mayThrow, this.terminates);
+      this.mayThrow, this.terminates, this.commutative);
   final String name;
   final List<int> inputs;
   final List<int> outputs;
   final TypedImmediate immediate;
   final bool mayThrow;
   final bool terminates;
+  /// Operand order may change during allocation without changing the result.
+  /// Floating operations retain order, including NaN payload propagation.
+  final bool commutative;
   List<int> get clobberedRegisters => (immediate == TypedImmediate.function || immediate == TypedImmediate.hostCall)
       ? const [0, 1, 2, 3, 4, 5, 6, 7, 8] : const [];
   int get length => immediate == TypedImmediate.none ? 1
@@ -439,7 +515,7 @@ abstract final class TypedOp {
         ? op.inputs
         : [if (op.output != null) op.output!];
     constants.writeln(
-      "    TypedInstruction('${op.name}', ${op.inputs}, $outputs, TypedImmediate.${op.immediate}, ${op.mayThrow}, ${op.terminates}),",
+      "    TypedInstruction('${op.name}', ${op.inputs}, $outputs, TypedImmediate.${op.immediate}, ${op.mayThrow}, ${op.terminates}, ${op.commutative}),",
     );
   }
   constants.writeln('  ];\n}');

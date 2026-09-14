@@ -92,9 +92,6 @@ abstract final class TypedMachine {
         case TypedOp.aAddB:
           a = a + b;
           continue dispatch;
-        case TypedOp.bAddA:
-          b = b + a;
-          continue dispatch;
         case TypedOp.aSubB:
           a = a - b;
           continue dispatch;
@@ -104,32 +101,17 @@ abstract final class TypedMachine {
         case TypedOp.aMulB:
           a = a * b;
           continue dispatch;
-        case TypedOp.bMulA:
-          b = b * a;
-          continue dispatch;
         case TypedOp.aAndB:
           a = a & b;
-          continue dispatch;
-        case TypedOp.bAndA:
-          b = b & a;
           continue dispatch;
         case TypedOp.aOrB:
           a = a | b;
           continue dispatch;
-        case TypedOp.bOrA:
-          b = b | a;
-          continue dispatch;
         case TypedOp.aXorB:
           a = a ^ b;
           continue dispatch;
-        case TypedOp.bXorA:
-          b = b ^ a;
-          continue dispatch;
         case TypedOp.fAddG:
           f = f + g;
-          continue dispatch;
-        case TypedOp.gAddF:
-          g = g + f;
           continue dispatch;
         case TypedOp.fSubG:
           f = f - g;
@@ -139,9 +121,6 @@ abstract final class TypedMachine {
           continue dispatch;
         case TypedOp.fMulG:
           f = f * g;
-          continue dispatch;
-        case TypedOp.gMulF:
-          g = g * f;
           continue dispatch;
         case TypedOp.fDivG:
           f = f / g;
@@ -271,15 +250,6 @@ abstract final class TypedMachine {
           continue dispatch;
         case TypedOp.xNot:
           x = !x;
-          continue dispatch;
-        case TypedOp.xAndE:
-          x = x && e;
-          continue dispatch;
-        case TypedOp.xOrE:
-          x = x || e;
-          continue dispatch;
-        case TypedOp.xXorE:
-          x = x != e;
           continue dispatch;
         case TypedOp.fFromA:
           f = a.toDouble();
@@ -655,6 +625,36 @@ abstract final class TypedMachine {
         case TypedOp.callMethod:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           final result = TypedInterop.invoke(runtime, r, s as String, frame.takeObjectArguments(index)); r = result; s = null; c = null;
+          continue dispatch;
+        case TypedOp.aStringLengthR:
+          a = (r as String).length;
+          continue dispatch;
+        case TypedOp.rStringConcatS:
+          r = (r as String) + (s as String);
+          continue dispatch;
+        case TypedOp.aStringCodeUnitR:
+          a = (r as String).codeUnitAt(a);
+          continue dispatch;
+        case TypedOp.rStringIndexA:
+          r = (r as String)[a];
+          continue dispatch;
+        case TypedOp.cNewList:
+          c = <Object?>[];
+          continue dispatch;
+        case TypedOp.aListLengthR:
+          a = (r as List).length;
+          continue dispatch;
+        case TypedOp.rListIndexCA:
+          r = (c as List<Object?>)[a];
+          continue dispatch;
+        case TypedOp.listSetCAR:
+          (c as List<Object?>)[a] = r;
+          continue dispatch;
+        case TypedOp.listAppendCR:
+          (c as List<Object?>).add(r);
+          continue dispatch;
+        case TypedOp.rBoxList:
+          r = $List.wrap(r as List);
           continue dispatch;
         case TypedOp.jumpETrueShort:
           if (e) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }

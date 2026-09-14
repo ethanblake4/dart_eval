@@ -168,16 +168,6 @@
   package:dart_eval/src/eval/compiler/helpers/invoke.dart 126:34                Invoke.invoke
   package:dart_eval/src/eval/compiler/expression/binary.dart 60:12              compileBinaryExpression
 
-00:03 +279 ~2 -19: test\functional1_test.dart: Functional tests Regex replacement loop [E]
-  dart_eval runtime exception: type '$int' is not a subtype of type 'int' in type cast
-  #0      _RegisterExecution._resumeRegisters (package:dart_eval/src/eval/runtime/register_machine.dart:315:35)
-  #1      _RegisterExecution._executeRegisters (package:dart_eval/src/eval/runtime/register_machine.dart:220:12)
-  #2      _RegisterExecution._resumeRegisters (package:dart_eval/src/eval/runtime/register_machine.dart:438:24)
-
-  RUNTIME STATE
-  =============
-  Program offset: 1172
-
 00:03 +281 ~4 -19: test\pattern_test.dart: Patterns Destructure record with variable declaration pattern [E]
   Null check operator used on a null value
   package:dart_eval/src/eval/compiler/type.dart 844:49                           TypeRef.toRuntimeType

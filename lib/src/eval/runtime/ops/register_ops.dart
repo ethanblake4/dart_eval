@@ -98,4 +98,8 @@ enum RegisterOp {
   numericGte,
   numericEq,
   numericNe,
+  stringLength,
+  stringConcat,
+  stringCodeUnit,
+  stringIndex,
 }

@@ -608,6 +608,18 @@ extension _RegisterExecution on Runtime {
               globals[data.single] = inputs.single;
               _initializedRegisterGlobals.add(data.single);
               break;
+            case RegisterOp.stringLength:
+              result = (inputs[0] as String).length;
+              break;
+            case RegisterOp.stringConcat:
+              result = (inputs[0] as String) + (inputs[1] as String);
+              break;
+            case RegisterOp.stringCodeUnit:
+              result = (inputs[0] as String).codeUnitAt(inputs[1] as int);
+              break;
+            case RegisterOp.stringIndex:
+              result = (inputs[0] as String)[inputs[1] as int];
+              break;
             case RegisterOp.newList:
               result = <Object?>[];
               break;

@@ -6,7 +6,7 @@ import 'typed_program.dart';
 /// Versioned little-endian format, separate from the generic register format.
 abstract final class TypedCodec {
   static const magic = 0x54564544; // DEVT
-  static const version = 104;
+  static const version = 105;
 
   static ByteData write(TypedProgram program) {
     final objects = _writeObjects(program.objects);

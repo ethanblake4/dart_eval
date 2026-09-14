@@ -1,3 +1,4 @@
+import '../../ir/string.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
@@ -24,6 +25,54 @@ extension Invoke on Variable {
   }) {
     if (method == null) return _invokeAsFunction(ctx, args, namedArgs);
     final boolType = CoreTypes.bool.ref(ctx).copyWith(boxed: false);
+    if ((namedArgs == null || namedArgs.isEmpty) &&
+        args.length == 1 &&
+        type.isAssignableTo(
+          ctx,
+          CoreTypes.string.ref(ctx),
+          forceAllowDynamic: false,
+        ) &&
+        ((method == '+' &&
+                args.single.type.isAssignableTo(
+                  ctx,
+                  CoreTypes.string.ref(ctx),
+                  forceAllowDynamic: false,
+                )) ||
+            ((method == 'codeUnitAt' || method == '[]') &&
+                args.single.type.isAssignableTo(
+                  ctx,
+                  CoreTypes.int.ref(ctx),
+                  forceAllowDynamic: false,
+                )))) {
+      final receiver = unboxIfNeeded(ctx);
+      final argument = args.single.ssa == ssa
+          ? receiver
+          : args.single.unboxIfNeeded(ctx);
+      final operator = switch (method) {
+        '+' => StringOperator.concatenate,
+        'codeUnitAt' => StringOperator.codeUnitAt,
+        _ => StringOperator.indexAt,
+      };
+      return InvokeResult(
+        receiver,
+        Variable.ssa(
+          ctx,
+          StringOperation(
+            ctx.svar('string_result'),
+            operator,
+            receiver.ssa,
+            argument.ssa,
+          ),
+          (operator == StringOperator.codeUnitAt
+                  ? CoreTypes.int
+                  : CoreTypes.string)
+              .ref(ctx)
+              .copyWith(boxed: false),
+        ),
+        [argument],
+      );
+    }
+
     if (method == '!' &&
         type.isAssignableTo(
           ctx,

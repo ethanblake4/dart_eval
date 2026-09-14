@@ -1,3 +1,4 @@
+import '../../ir/string.dart';
 import 'package:control_flow_graph/control_flow_graph.dart' as cfg;
 import '../context.dart';
 import '../offset_tracker.dart';
@@ -420,6 +421,17 @@ class RegisterBackend {
       globals.SetGlobal(:final index, :final source) => [
         make(RegisterOp.setGlobal, [source], [index]),
       ],
+      StringOperation(:final string, :final argument, :final operator) => [
+        make(
+          switch (operator) {
+            StringOperator.length => RegisterOp.stringLength,
+            StringOperator.concatenate => RegisterOp.stringConcat,
+            StringOperator.codeUnitAt => RegisterOp.stringCodeUnit,
+            StringOperator.indexAt => RegisterOp.stringIndex,
+          },
+          [string, if (argument != null) argument],
+        ),
+      ],
       collection.NewList() => [make(RegisterOp.newList, [])],
       collection.NewMap() => [make(RegisterOp.newMap, [])],
       collection.NewSet() => [make(RegisterOp.newSet, [])],
@@ -440,6 +452,9 @@ class RegisterBackend {
       ],
       collection.SetAdd(:final set, :final value) => [
         make(RegisterOp.setAdd, [set, value]),
+      ],
+      collection.ListLength(:final list) => [
+        make(RegisterOp.iterableLength, [list]),
       ],
       collection.IterableLength(:final iterable) => [
         make(RegisterOp.iterableLength, [iterable]),

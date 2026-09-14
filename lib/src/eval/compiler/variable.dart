@@ -1,3 +1,5 @@
+import '../ir/string.dart';
+import '../ir/collection.dart' show ListLength;
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
@@ -267,6 +269,30 @@ class Variable {
   }
 
   Variable getProperty(CompilerContext ctx, String name, {AstNode? source}) {
+    if (name == 'length' && !type.nullable) {
+      final isString = type.isAssignableTo(
+        ctx,
+        CoreTypes.string.ref(ctx),
+        forceAllowDynamic: false,
+      );
+      // A declared List may be an evaluated class with an overridden getter.
+      // Only an unboxed core List proves native storage at this point.
+      final isList = !type.boxed && type == CoreTypes.list.ref(ctx);
+      if (isString || isList) {
+        final receiver = unboxIfNeeded(ctx);
+        return Variable.ssa(
+          ctx,
+          isString
+              ? StringOperation(
+                  ctx.svar('string_length'),
+                  StringOperator.length,
+                  receiver.ssa,
+                )
+              : ListLength(ctx.svar('list_length'), receiver.ssa),
+          CoreTypes.int.ref(ctx).copyWith(boxed: false),
+        );
+      }
+    }
     if (name == 'runtimeType') {
       if (concreteTypes.isNotEmpty) {
         final concrete = concreteTypes[0];

@@ -127,8 +127,8 @@ void main() {
     expect(TypedMachine.run(program, boolArguments: [true]), false);
     expect(TypedMachine.run(program, boolArguments: [false]), true);
   });
-  test('unsupported collection construction fails before execution', () {
-    expect(() => compile('dynamic main() => [1, 2];'), throwsUnsupportedError);
+  test('unsupported map construction fails before execution', () {
+    expect(() => compile('dynamic main() => {1: 2};'), throwsUnsupportedError);
   });
   test('direct recursive calls preserve caller values in typed spills', () {
     final program = compile('''

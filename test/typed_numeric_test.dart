@@ -7,6 +7,38 @@ TypedProgram compileNumeric(String source) => Compiler().compileTyped({
 
 void main() {
   test(
+    'commutative operands use one opcode without swapping resident inputs',
+    () {
+      final program = compileNumeric('int main(int a, int b) => b * a;');
+      expect(program.code, [TypedOp.aMulB, TypedOp.aReturn]);
+      expect(TypedMachine.run(program, intArguments: [7, 11]), 77);
+
+      final live = compileNumeric('int main(int a, int b) => b * a + a;');
+      expect(TypedMachine.run(live, intArguments: [7, 11]), 84);
+    },
+  );
+
+  test('canonical double arithmetic retains signed zeros and NaNs', () {
+    final sum = compileNumeric('double main(double a, double b) => b + a;');
+    final product = compileNumeric('double main(double a, double b) => b * a;');
+    expect(
+      (TypedMachine.run(sum, doubleArguments: [-0.0, -0.0]) as double)
+          .isNegative,
+      isTrue,
+    );
+    expect(
+      (TypedMachine.run(product, doubleArguments: [-0.0, 2.0]) as double)
+          .isNegative,
+      isTrue,
+    );
+    expect(TypedMachine.run(sum, doubleArguments: [double.nan, 1.0]), isNaN);
+    expect(
+      TypedMachine.run(product, doubleArguments: [1.0, double.nan]),
+      isNaN,
+    );
+  });
+
+  test(
     'integer multiplication division and modulo preserve signed semantics',
     () {
       final program = compileNumeric(
