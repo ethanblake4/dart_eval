@@ -96,6 +96,14 @@ class Runtime {
     typeIds = program.typeIds;
     _libraryMap = program.bridgeLibraryMappings;
     _externalFunctionMap = program.bridgeFunctionMappings;
+    var bridgeCount = 0;
+    for (final library in _externalFunctionMap.values) {
+      for (final id in library.values) {
+        if (id >= bridgeCount) bridgeCount = id + 1;
+      }
+    }
+    _bridgeFunctions = List.filled(bridgeCount, _defaultFunction.call);
+    _bridgeRegisterFunctions = List.filled(bridgeCount, null);
     _bridgeEnumMappings = program.enumMappings;
     overrideMap = program.overrideMap;
     _constantPool = [...program.constantPool];
@@ -320,11 +328,8 @@ class Runtime {
 
   var _didSetup = false;
   var _libraryMap = <String, int>{};
-  final _bridgeFunctions = List<EvalCallableFunc>.filled(
-    1000,
-    _defaultFunction.call,
-  );
-  final _bridgeRegisterFunctions = List<EvalRegisterFunc?>.filled(1000, null);
+  late final List<EvalCallableFunc> _bridgeFunctions;
+  late final List<EvalRegisterFunc?> _bridgeRegisterFunctions;
   final _unloadedBrFunc = <_UnloadedBridgeFunction>[];
   final _unloadedEnumValues = <_UnloadedEnumValues>[];
   final _plugins = <EvalPlugin>[

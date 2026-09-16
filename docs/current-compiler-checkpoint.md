@@ -1,6 +1,6 @@
 # Current compiler checkpoint
 
-The `xv2` branch uses one typed register backend. After cleanup, 801 tests pass
+The `xv2` branch uses one typed register backend. After cleanup, 802 tests pass
 with zero failures or skips. Analysis reports no errors or code warnings; the
 remaining warning is the intentional local `control_flow_graph` path dependency.
 The generated runtime check passes with 243 opcodes and 13 one-byte slots free.
@@ -52,3 +52,10 @@ Run `dart test`, `dart analyze`, and
 
 The adjacent `D:\Projects\control_flow_graph` checkout remains the local path
 dependency. Its preexisting test-fixture changes and deleted test remain untouched.
+
+The sibling flutter_eval package passes 18 tests on FVM Flutter 3.35.2 / Dart 3.9
+against this checkout, including widget callbacks, state updates, navigation,
+MethodChannel, asset loading, and hot-swap overrides. Its entrypoint adapters now
+use named argument maps and normalized returns. Runtime bridge tables are sized
+from program metadata instead of a fixed 1,000-entry limit; a large-plugin
+regression covers both list and register callbacks above that limit.

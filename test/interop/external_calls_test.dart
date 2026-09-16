@@ -56,6 +56,31 @@ class _Opaque implements $Instance {
 }
 
 void main() {
+  test(
+    'large plugins register list and register callbacks beyond 1000 IDs',
+    () {
+      final program = _compile('int main() => fn1098() + fn1099();', [
+        for (var i = 0; i < 1100; i++) _function('fn$i', 0),
+      ]);
+      for (final runtime in [
+        Runtime.ofProgram(program),
+        Runtime(program.write().buffer),
+      ]) {
+        runtime.registerBridgeFunc(
+          _bridge,
+          'fn1098',
+          (runtime, target, args) => $int(40),
+        );
+        runtime.registerBridgeFuncRegisters(
+          _bridge,
+          'fn1099',
+          (runtime, r, s, c) => $int(2),
+        );
+        expect(runtime.executeLib(_library, 'main'), 42);
+      }
+    },
+  );
+
   test('external calls require a Runtime and a registered bridge', () {
     final program = _compile('int main() => absent();', [
       _function('absent', 0),
