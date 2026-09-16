@@ -1,10 +1,10 @@
 # Compiler migration to control_flow_graph
 
-The xv2 branch replaces direct bytecode emission with a control-flow graph and
-SSA pipeline. Stages 1–3 are committed. The current stage 4 checkpoint emits
-executable register instructions and integrates serialization and the public
-runtime. Runtime parity is incomplete: see [the resume notes](backend-checkpoint.md)
-for verified results, remaining failures, and the next steps.
+The xv2 branch now uses the typed register backend throughout the public
+compiler/runtime API. The existing suite and restored skipped tests pass:
+856 tests, zero failures, zero skips. See [the current checkpoint](current-compiler-checkpoint.md)
+for implementation state, verification, performance evidence, and remaining
+language limitations. The stages below record the original migration plan.
 
 ## What to reuse
 

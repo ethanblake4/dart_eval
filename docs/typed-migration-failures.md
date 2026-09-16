@@ -1,17 +1,19 @@
 # Typed migration test baseline
 
-Production typed backend, after the bridge checkpoint.
-845 passed, 0 failed, 6 skipped. Analysis reports zero errors and 50 warnings/info.
+The final restored-coverage checkpoint passes 856 tests with zero failures and
+zero skips. All six preexisting skips are enabled. `dart analyze` reports zero
+errors and 50 warnings/info. Generated runtime files match their generator.
 
-All nine failing tests from the async/record checkpoint now pass. There are no
-regressions among previously passing tests. The delayed-Future tests now use a
-monotonic clock to verify the delay, without an OS scheduling deadline.
+Reproduce with:
 
-Reproduce with `dart test --reporter json`, `dart analyze`, and
-`dart run tool/generate_typed_machine.dart --check`. Local test events are in
-`.dart_tool/bridge-tests-final.jsonl`.
+- `dart test --reporter json`
+- `dart analyze`
+- `dart run tool/generate_typed_machine.dart --check`
 
-Six preexisting skips remain for the next checkpoint: nested map mutation, late
-fields, custom arithmetic and indexing operators, interpolation calling
-`toString`, and `$List.view`. A separate `--run-skipped` run identifies stale
-fixture expectations and gaps in late fields, indexing, and mapped List views.
+Local evidence: `.dart_tool/restored-tests-final.jsonl` and
+`.dart_tool/restored-analyze.txt`. Tests include fresh and serialized programs,
+async suspension and exceptions, bridge inheritance, generic call representations,
+record fields, late fields, and mapped host collections.
+
+See [the current checkpoint](current-compiler-checkpoint.md) for saved state and
+[restored coverage](typed-restored-tests.md) for the final changes.

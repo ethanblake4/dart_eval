@@ -1,8 +1,8 @@
 # Executable backend checkpoint — 2026-09-12
 
-The user asked to stop after the next commit and save progress. Do not continue
-the migration automatically after this checkpoint. On resumption, complete stage
-4 and then stage 5 from compiler-migration.md, committing at each milestone.
+This is a historical checkpoint. The migration has continued through the typed
+register runtime and full test parity. Use [the current checkpoint](current-compiler-checkpoint.md)
+for resumption; the implementation details below describe the earlier backend.
 
 ## Checkouts and saved work
 

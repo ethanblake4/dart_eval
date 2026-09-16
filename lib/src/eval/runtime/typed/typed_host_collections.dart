@@ -48,6 +48,9 @@ abstract final class TypedHostCollections {
     $Value owner,
     Runtime? requestedRuntime,
   ) {
+    if (owner case final $MappedListView<Object?> mapped) {
+      return mapped.hostBacking;
+    }
     // A statically boxed collection may already be a bridge wrapper when it
     // entered through a host adapter. Peel that layer before cache lookup so
     // returning a host collection preserves its original identity.

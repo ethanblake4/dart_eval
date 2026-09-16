@@ -68,14 +68,117 @@ void main() {
     });
 
     test('\$List.view()', () {
-      // Fails with 'WrapTest' is not a subtype of '$Value' at BoxList.run().
       final result = runtime.executeLib(
         'package:test/main.dart',
         'test',
         arguments: {'inp': $List.view(list, (e) => $WrapTest.wrap(e))},
       );
       expect(result, equals(2));
-    }, skip: true);
+    });
+  });
+
+  test('\$List.view is lazy and writes through, fresh and serialized', () {
+    const source = '''
+      import 'package:wrap_test/wrap_test.dart';
+
+      int readAt(List<WrapTest> values, int index) => values[index].value;
+
+      int replace(List<WrapTest> values) {
+        values[1] = values[0];
+        return values[1].value;
+      }
+
+      int append(List<WrapTest> values) {
+        values.add(values[0]);
+        return values.length;
+      }
+
+      bool copyNull(List<WrapTest?> values) {
+        values[1] = values[0];
+        return values[1] == null;
+      }
+
+      List<WrapTest> echo(List<WrapTest> values) => values;
+    ''';
+    compiler.defineBridgeClasses([$WrapTest.$declaration]);
+    final program = compiler.compile({
+      'test': {'main.dart': source},
+    });
+    for (final (kind, candidate) in [
+      ('fresh', program),
+      ('serialized', Program.read(program.write().buffer)),
+    ]) {
+      final runtime = Runtime.ofProgram(candidate);
+      final backing = [WrapTest(2), WrapTest(3)];
+      var mappings = 0;
+      final view = $List.view(backing, (value) {
+        mappings++;
+        return $WrapTest.wrap(value);
+      });
+
+      expect(
+        runtime.executeLib(
+          'package:test/main.dart',
+          'readAt',
+          arguments: {'values': view, 'index': 1},
+        ),
+        3,
+        reason: kind,
+      );
+      expect(mappings, 1, reason: '$kind maps only the indexed element');
+
+      expect(
+        runtime.executeLib(
+          'package:test/main.dart',
+          'replace',
+          arguments: {'values': view},
+        ),
+        2,
+        reason: kind,
+      );
+      expect(identical(backing[0], backing[1]), isTrue, reason: kind);
+
+      expect(
+        runtime.executeLib(
+          'package:test/main.dart',
+          'append',
+          arguments: {'values': view},
+        ),
+        3,
+        reason: kind,
+      );
+      expect(identical(backing[0], backing[2]), isTrue, reason: kind);
+      expect(
+        identical(
+          runtime.executeLib(
+            'package:test/main.dart',
+            'echo',
+            arguments: {'values': view},
+          ),
+          backing,
+        ),
+        isTrue,
+        reason: '$kind preserves the host backing identity',
+      );
+
+      final nullableBacking = <WrapTest?>[null, WrapTest(8)];
+      var nullableMappings = 0;
+      final nullableView = $List.view(nullableBacking, (value) {
+        nullableMappings++;
+        return $WrapTest.wrap(value!);
+      });
+      expect(
+        runtime.executeLib(
+          'package:test/main.dart',
+          'copyNull',
+          arguments: {'values': nullableView},
+        ),
+        isTrue,
+        reason: kind,
+      );
+      expect(nullableBacking, [null, null], reason: kind);
+      expect(nullableMappings, 0, reason: '$kind null bypasses the mapper');
+    }
   });
 }
 

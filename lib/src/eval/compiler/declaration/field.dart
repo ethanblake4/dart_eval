@@ -74,7 +74,14 @@ void compileFieldDeclaration(
       final receiver = SSA('arg_0');
       ctx.pushOp(Parameter(receiver, 0));
       final value = ctx.svar('field');
-      ctx.pushOp(LoadPropertyStatic(value, receiver, fieldIndex0));
+      ctx.pushOp(
+        LoadPropertyStatic(
+          value,
+          receiver,
+          fieldIndex0,
+          isLate: d.fields.isLate,
+        ),
+      );
       ctx.pushOp(Return(value));
       ctx.instanceDeclarationPositions[ctx
               .library]![parentName]![0][fieldName] =
@@ -82,7 +89,8 @@ void compileFieldDeclaration(
       ctx.instanceGetterIndices[ctx.library]![parentName]![fieldName] =
           fieldIndex0;
 
-      if (!(field.isFinal || field.isConst)) {
+      if (!(field.isFinal || field.isConst) ||
+          (d.fields.isLate && field.initializer == null)) {
         final setterPos = beginMethod(
           ctx,
           d,
@@ -97,7 +105,14 @@ void compileFieldDeclaration(
         final value = SSA('arg_1');
         ctx.pushOp(Parameter(receiver, 0));
         ctx.pushOp(Parameter(value, 1));
-        ctx.pushOp(SetPropertyStatic(receiver, fieldIndex0, value));
+        ctx.pushOp(
+          SetPropertyStatic(
+            receiver,
+            fieldIndex0,
+            value,
+            isLateFinal: d.fields.isLate && field.isFinal,
+          ),
+        );
         ctx.pushOp(Return(value));
         ctx.instanceDeclarationPositions[ctx
                 .library]![parentName]![1][fieldName] =

@@ -728,11 +728,18 @@ class IndexedReference implements Reference {
     bool forSet = false,
     AstNode? source,
   }) {
-    if (_variable.type.isAssignableTo(ctx, CoreTypes.list.ref(ctx))) {
+    if (_variable.type.isAssignableTo(
+      ctx,
+      CoreTypes.list.ref(ctx),
+      forceAllowDynamic: false,
+    )) {
       return _variable.type.specifiedTypeArgs.isNotEmpty
           ? _variable.type.specifiedTypeArgs[0]
           : CoreTypes.dynamic.ref(ctx);
     }
+    // A write's contextual type must not execute the indexed getter. Dynamic
+    // receivers and custom operators are checked by their invocation path.
+    if (forSet) return CoreTypes.dynamic.ref(ctx);
     return getValue(ctx).type;
   }
 
@@ -821,7 +828,11 @@ class IndexedReference implements Reference {
     _variable = _variable.updated(ctx);
     _index = _index.updated(ctx);
 
-    if (_variable.type.isAssignableTo(ctx, CoreTypes.list.ref(ctx))) {
+    if (_variable.type.isAssignableTo(
+      ctx,
+      CoreTypes.list.ref(ctx),
+      forceAllowDynamic: false,
+    )) {
       if (!_index.type.isAssignableTo(ctx, CoreTypes.int.ref(ctx))) {
         throw CompileError(
           'TypeError: Cannot use variable of type ${_index.type} as list index',
@@ -830,14 +841,17 @@ class IndexedReference implements Reference {
       }
 
       final list = _variable.unboxIfNeeded(ctx);
-      final elementType = list.type.specifiedTypeArgs[0];
+      final elementType = list.type.specifiedTypeArgs.isEmpty
+          ? CoreTypes.dynamic.ref(ctx)
+          : list.type.specifiedTypeArgs[0];
       var formattedValue = value;
       if (elementType.boxed) {
         formattedValue = formattedValue.boxIfNeeded(ctx, source);
       } else {
         formattedValue = formattedValue.unboxIfNeeded(ctx);
       }
-      ctx.pushOp(ListSet(list.ssa, _index.ssa, value.ssa));
+      _index = _index.unboxIfNeeded(ctx, false);
+      ctx.pushOp(ListSet(list.ssa, _index.ssa, formattedValue.ssa));
       return formattedValue;
     }
 

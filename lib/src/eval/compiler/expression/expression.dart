@@ -128,8 +128,11 @@ Variable? compileExpressionAndDiscardResult(
   Variable? cascadeTarget,
 }) {
   if (canReference(e)) {
-    compileExpressionAsReference(e, ctx, cascadeTarget: cascadeTarget);
-    return null;
+    return compileExpressionAsReference(
+      e,
+      ctx,
+      cascadeTarget: cascadeTarget,
+    ).getValue(ctx, e);
   } else {
     return compileExpression(e, ctx, bound);
   }

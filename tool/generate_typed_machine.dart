@@ -713,6 +713,22 @@ List<Instruction> specification() {
     output: 6,
     mayThrow: true,
   );
+  add('rUninitializedField', 'r = TypedLateField.uninitialized;', output: 6);
+  add(
+    'rLoadLatePropertyR',
+    'r = TypedLateField.read(r, index);',
+    inputs: [6],
+    output: 6,
+    immediate: 'field',
+    mayThrow: true,
+  );
+  add(
+    'setLateFinalPropertyRS',
+    'TypedLateField.writeFinal(r, index, s);',
+    inputs: [6, 7],
+    immediate: 'field',
+    mayThrow: true,
+  );
   add(
     'rLoadThisR',
     'r = (r as TypedInstance).dispatchRoot;',
@@ -822,6 +838,7 @@ import 'typed_program.dart';
 import 'typed_frame.dart';
 import 'typed_interop.dart';
 import 'typed_instance.dart';
+import 'typed_late_field.dart';
 import 'typed_dispatch.dart';
 import 'typed_closure.dart';
 import 'typed_global_state.dart';

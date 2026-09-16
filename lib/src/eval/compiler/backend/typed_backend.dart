@@ -1364,17 +1364,30 @@ class TypedBackend {
               [$super],
               immediate: _classIndices[(library, name)],
             ),
-          objects_ir.LoadPropertyStatic(:final object, :final index) => make(
-            ['rLoadPropertyR'],
-            [object],
-            immediate: index,
-          ),
+          objects_ir.LoadUninitializedField() => make([
+            'rUninitializedField',
+          ], []),
+          objects_ir.LoadPropertyStatic(
+            :final object,
+            :final index,
+            :final isLate,
+          ) =>
+            make(
+              [isLate ? 'rLoadLatePropertyR' : 'rLoadPropertyR'],
+              [object],
+              immediate: index,
+            ),
           objects_ir.SetPropertyStatic(
             :final object,
             :final index,
             :final value,
+            :final isLateFinal,
           ) =>
-            make(['setPropertyRS'], [object, value], immediate: index),
+            make(
+              [isLateFinal ? 'setLateFinalPropertyRS' : 'setPropertyRS'],
+              [object, value],
+              immediate: index,
+            ),
           objects_ir.LoadSuper(:final object) => make(
             ['rLoadSuperR'],
             [object],

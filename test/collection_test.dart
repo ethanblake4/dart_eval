@@ -261,14 +261,14 @@ void main() {
               final testMap = <String, Map>{};
               testMap['a'] = {'b': 'c'};
               testMap['a']['name'] = 'Jon';
-              return testMap[a].length == 2;
+              return testMap['a'].length == 2;
             }
           ''',
         },
       });
 
       expect(runtime.executeLib('package:eval_test/main.dart', 'main'), true);
-    }, skip: true);
+    });
 
     test('Map null values == null', () {
       final runtime = compiler.compileWriteAndLoad({

@@ -688,6 +688,13 @@ void _compileUnusedFields(
   var fieldIdx0 = fieldIdx;
   for (final fd in fields) {
     for (final field in fd.fields.variables) {
+      if (!usedNames.contains(field.name.lexeme) &&
+          fd.fields.isLate &&
+          field.initializer == null) {
+        final marker = ctx.svar('uninitialized_field');
+        ctx.pushOp(LoadUninitializedField(marker));
+        ctx.pushOp(SetPropertyStatic(inst, fieldIdx0, marker));
+      }
       if (!usedNames.contains(field.name.lexeme) && field.initializer != null) {
         final V = compileExpression(field.initializer!, ctx).boxIfNeeded(ctx);
         ctx.inferredFieldTypes

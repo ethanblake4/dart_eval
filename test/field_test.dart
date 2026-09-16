@@ -65,6 +65,6 @@ void main() {
       expect(() {
         runtime.executeLib('package:field_test/main.dart', 'main');
       }, prints('3\n2\n'));
-    }, skip: true);
+    });
   });
 }

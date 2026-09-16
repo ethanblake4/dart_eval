@@ -4,6 +4,7 @@ import 'typed_program.dart';
 import 'typed_frame.dart';
 import 'typed_interop.dart';
 import 'typed_instance.dart';
+import 'typed_late_field.dart';
 import 'typed_dispatch.dart';
 import 'typed_closure.dart';
 import 'typed_global_state.dart';
@@ -406,6 +407,9 @@ abstract final class TypedMachine {
           continue dispatch;
         case TypedOp.rCaughtStackTrace:
           r = TypedExceptions.trace(frame);
+          continue dispatch;
+        case TypedOp.rUninitializedField:
+          r = TypedLateField.uninitialized;
           continue dispatch;
         case TypedOp.aConstant:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
@@ -903,6 +907,14 @@ abstract final class TypedMachine {
           continue dispatch;
         case TypedOp.rLoadSuperR:
           r = (r as TypedInstance).superclass;
+          continue dispatch;
+        case TypedOp.rLoadLatePropertyR:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          r = TypedLateField.read(r, index);
+          continue dispatch;
+        case TypedOp.setLateFinalPropertyRS:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          TypedLateField.writeFinal(r, index, s);
           continue dispatch;
         case TypedOp.rLoadThisR:
           r = (r as TypedInstance).dispatchRoot;

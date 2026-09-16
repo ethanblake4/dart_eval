@@ -149,7 +149,7 @@ void main() {
       expect(() {
         runtime.executeLib('package:eval_test/main.dart', 'main');
       }, prints('test string\n'));
-    }, skip: true);
+    });
 
     test('dart:math Point', () {
       final runtime = compiler.compileWriteAndLoad({

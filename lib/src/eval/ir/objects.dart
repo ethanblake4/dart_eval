@@ -1,6 +1,17 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'operands.dart';
 
+/// A private field-slot marker, distinct from an initialized nullable value.
+final class LoadUninitializedField extends Operation {
+  LoadUninitializedField(this.target);
+  final SSA target;
+  @override
+  SSA get writesTo => target;
+  @override
+  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) =>
+      LoadUninitializedField(writesTo ?? target);
+}
+
 final class CreateClass extends Operation {
   final SSA target;
   final int library;
@@ -59,8 +70,14 @@ final class SetPropertyStatic extends Operation {
   final SSA object;
   final int index;
   final SSA value;
+  final bool isLateFinal;
 
-  SetPropertyStatic(this.object, this.index, this.value);
+  SetPropertyStatic(
+    this.object,
+    this.index,
+    this.value, {
+    this.isLateFinal = false,
+  });
 
   @override
   Set<SSA> get readsFrom => {value, object};
@@ -73,15 +90,22 @@ final class SetPropertyStatic extends Operation {
       other is SetPropertyStatic &&
       object == other.object &&
       index == other.index &&
+      isLateFinal == other.isLateFinal &&
       value == other.value;
 
   @override
-  int get hashCode => object.hashCode ^ index.hashCode ^ value.hashCode;
+  int get hashCode =>
+      object.hashCode ^ index.hashCode ^ value.hashCode ^ isLateFinal.hashCode;
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
     final inputs = renameOperands([object, value], this.readsFrom, readsFrom);
-    return SetPropertyStatic(inputs[0], index, inputs[1]);
+    return SetPropertyStatic(
+      inputs[0],
+      index,
+      inputs[1],
+      isLateFinal: isLateFinal,
+    );
   }
 }
 
@@ -89,8 +113,14 @@ final class LoadPropertyStatic extends Operation {
   final SSA target;
   final SSA object;
   final int index;
+  final bool isLate;
 
-  LoadPropertyStatic(this.target, this.object, this.index);
+  LoadPropertyStatic(
+    this.target,
+    this.object,
+    this.index, {
+    this.isLate = false,
+  });
 
   @override
   Set<SSA> get readsFrom => {object};
@@ -106,10 +136,12 @@ final class LoadPropertyStatic extends Operation {
       other is LoadPropertyStatic &&
       target == other.target &&
       object == other.object &&
-      index == other.index;
+      index == other.index &&
+      isLate == other.isLate;
 
   @override
-  int get hashCode => target.hashCode ^ object.hashCode ^ index.hashCode;
+  int get hashCode =>
+      target.hashCode ^ object.hashCode ^ index.hashCode ^ isLate.hashCode;
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
@@ -117,6 +149,7 @@ final class LoadPropertyStatic extends Operation {
       writesTo ?? target,
       readsFrom?.first ?? object,
       index,
+      isLate: isLate,
     );
   }
 }

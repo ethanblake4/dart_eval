@@ -223,6 +223,7 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
         inputs(operation, object);
         output(operation, object);
       case memory.LoadNull() ||
+          objects.LoadUninitializedField() ||
           primitives.BoxNull() ||
           collection.NewList() ||
           collection.NewMap() ||
