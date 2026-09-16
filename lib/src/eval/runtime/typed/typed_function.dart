@@ -27,7 +27,8 @@ class TypedCallLayout {
         TypedArgumentKind.object => TypedRegisterBank.object,
       };
       final index = counts[bank] ?? 0;
-      if (bank != TypedRegisterBank.object && index < 2) {
+      if (bank != TypedRegisterBank.object &&
+          index < (bank == TypedRegisterBank.boolean ? 1 : 2)) {
         locations[i] = TypedArgumentLocation(bank, index);
         counts[bank] = index + 1;
       } else {
@@ -90,7 +91,7 @@ class TypedFunction {
         case TypedArgumentKind.doublePrecision:
           if (++doubles > 2) objects++;
         case TypedArgumentKind.boolean:
-          if (++booleans > 2) objects++;
+          if (++booleans > 1) objects++;
         case TypedArgumentKind.string || TypedArgumentKind.object:
           objects++;
       }

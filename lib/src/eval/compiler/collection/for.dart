@@ -103,9 +103,7 @@ List<TypeRef> compileForElementForList(
           }
         }
       },
-      condition: parts.condition == null
-          ? null
-          : (ctx) => compileExpression(parts.condition!, ctx),
+      conditionExpression: parts.condition,
       body: (ctx, ert) {
         potentialReturnTypes.addAll(compileListElement(e.body, list, ctx, box));
         return StatementInfo();

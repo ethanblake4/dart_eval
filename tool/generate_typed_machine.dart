@@ -46,9 +46,11 @@ List<Instruction> specification() {
       commutative: commutative,
     ),
   );
-  const names = ['a', 'b', 'f', 'g', 'e', 'x', 'r', 's', 'c'];
+  // Register ID 5 is retired; keep the remaining allocator IDs stable.
+  const names = ['a', 'b', 'f', 'g', 'e', '', 'r', 's', 'c'];
   for (var register = 0; register < names.length; register++) {
     final name = names[register];
+    if (name.isEmpty) continue;
     final bank = register < 2
         ? 'int'
         : register < 4
@@ -103,14 +105,7 @@ List<Instruction> specification() {
       terminates: true,
     );
   }
-  for (final (first, second) in [
-    (0, 1),
-    (2, 3),
-    (4, 5),
-    (6, 7),
-    (6, 8),
-    (7, 8),
-  ]) {
+  for (final (first, second) in [(0, 1), (2, 3), (6, 7), (6, 8), (7, 8)]) {
     final left = names[first], right = names[second];
     add(
       '${left}From${right.toUpperCase()}',
@@ -196,7 +191,7 @@ List<Instruction> specification() {
     add('${name}Negate', '$name = -$name;', inputs: [target], output: target);
     add('${name}BitNot', '$name = ~$name;', inputs: [target], output: target);
   }
-  for (final output in [4, 5]) {
+  for (final output in [4]) {
     final result = names[output];
     for (final entry in {
       'Eq': '==',
@@ -229,17 +224,6 @@ List<Instruction> specification() {
       inputs: [output],
       output: output,
     );
-    for (final entry in {'And': '&&', 'Or': '||', 'Xor': '!='}.entries) {
-      if (output != 4) continue;
-      final other = output == 4 ? 5 : 4;
-      add(
-        '$result${entry.key}${names[other].toUpperCase()}',
-        '$result = $result ${entry.value} ${names[other]};',
-        inputs: [output, other],
-        output: output,
-        commutative: true,
-      );
-    }
     add(
       'jump${result.toUpperCase()}True',
       'if ($result) pc = address;',
@@ -299,7 +283,7 @@ List<Instruction> specification() {
   for (final register in [6, 7, 8]) {
     final name = names[register];
     add('${name}Null', '$name = null;', output: register);
-    for (final flag in [4, 5]) {
+    for (final flag in [4]) {
       add(
         '${names[flag]}IsNull${name.toUpperCase()}',
         '${names[flag]} = TypedInterop.isNull($name);',
@@ -308,7 +292,7 @@ List<Instruction> specification() {
       );
     }
   }
-  for (final flag in [4, 5]) {
+  for (final flag in [4]) {
     add(
       '${names[flag]}EqRS',
       '${names[flag]} = TypedInterop.equals(runtime, r, s);',
@@ -317,7 +301,7 @@ List<Instruction> specification() {
       mayThrow: true,
     );
   }
-  for (var register = 0; register < 6; register++) {
+  for (final register in [0, 1, 2, 3, 4]) {
     add(
       'rFrom${names[register].toUpperCase()}',
       'r = ${names[register]};',
@@ -755,6 +739,24 @@ List<Instruction> specification() {
     immediate: 'callSite',
     mayThrow: true,
   );
+  // Branch on the negated comparison, preserving unordered NaN semantics.
+  for (final comparison in {
+    'Eq': '==',
+    'Ne': '!=',
+    'Lt': '<',
+    'Lte': '<=',
+    'Gt': '>',
+    'Gte': '>=',
+  }.entries) {
+    for (final (left, right) in [(0, 1), (2, 3)]) {
+      add(
+        'jumpNot${comparison.key}${names[left].toUpperCase()}${names[right].toUpperCase()}',
+        'if (!(${names[left]} ${comparison.value} ${names[right]})) pc = address;',
+        inputs: [left, right],
+        immediate: 'branch',
+      );
+    }
+  }
   for (final op in [...ops]) {
     if (op.immediate != 'branch') continue;
     add(
@@ -788,7 +790,7 @@ void main(List<String> arguments) {
 
 /// Physical scalar banks; these IDs are allocator-visible, never value storage.
 abstract final class TypedRegister {
-  static const a = 0, b = 1, f = 2, g = 3, e = 4, x = 5, r = 6, s = 7, c = 8;
+  static const a = 0, b = 1, f = 2, g = 3, e = 4, r = 6, s = 7, c = 8;
 }
 
 enum TypedImmediate { none, intConstant, doubleConstant,
@@ -810,7 +812,7 @@ class TypedInstruction {
   /// Floating operations retain order, including NaN payload propagation.
   final bool commutative;
   List<int> get clobberedRegisters => (immediate == TypedImmediate.function || immediate == TypedImmediate.hostCall || immediate == TypedImmediate.callSite || immediate == TypedImmediate.externalCall || immediate == TypedImmediate.closureCall)
-      ? const [0, 1, 2, 3, 4, 5, 6, 7, 8] : const [];
+      ? const [0, 1, 2, 3, 4, 6, 7, 8] : const [];
   int get length => immediate == TypedImmediate.none ? 1
       : immediate == TypedImmediate.branch ? 5 : 3;
 }
@@ -918,7 +920,7 @@ abstract final class TypedMachine {
     Object? r = arguments.r, s = arguments.s, c = arguments.c;
     var a = arguments.a, b = arguments.b;
     var f = arguments.f, g = arguments.g;
-    var e = arguments.e, x = arguments.x;
+    var e = arguments.e;
       dispatch: while (true) {
       switch (code[pc++]) {
 ''',

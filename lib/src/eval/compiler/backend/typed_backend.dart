@@ -69,7 +69,8 @@ final class TypedOperation extends cfg.Operation {
   @override
   bool get isConditionalBranch =>
       terminal &&
-      inputs.length == 1 &&
+      otherTarget != null &&
+      inputs.isNotEmpty &&
       codes.every(
         (code) =>
             TypedOp.instructions[code].immediate == TypedImmediate.branch ||
@@ -202,11 +203,12 @@ class TypedBackend {
     for (var i = 0; i < TypedOp.instructions.length; i++)
       TypedOp.instructions[i].name: i,
   };
-  static const _registerNames = ['a', 'b', 'f', 'g', 'e', 'x', 'r', 's', 'c'];
+  // Register ID 5 is retired; preserve the remaining allocator IDs.
+  static const _registerNames = ['a', 'b', 'f', 'g', 'e', '', 'r', 's', 'c'];
   static const _banks = [
     [0, 1],
     [2, 3],
-    [4, 5],
+    [4],
     [6, 7, 8],
   ];
   List<int> _named(Iterable<String> names) => [
@@ -680,7 +682,7 @@ class TypedBackend {
               _named(['rAwait']),
               value(op.result),
               [value(op.subject)],
-              clobbers: {0, 1, 2, 3, 4, 5, 6, 7, 8},
+              clobbers: {0, 1, 2, 3, 4, 6, 7, 8},
             ),
           );
           continue;
@@ -731,9 +733,7 @@ class TypedBackend {
             ], immediate: op.typeId),
           );
           if (op.not) {
-            lowered.add(
-              TypedOperation(_named(['eNot', 'xNot']), target, [test]),
-            );
+            lowered.add(TypedOperation(_named(['eNot']), target, [test]));
           }
           continue;
         }
@@ -865,7 +865,7 @@ class TypedBackend {
                 arguments: argumentRegisters,
               ),
               immediate: callIndex,
-              clobbers: {0, 1, 2, 3, 4, 5, 6, 7, 8},
+              clobbers: {0, 1, 2, 3, 4, 6, 7, 8},
             ),
           );
           if (creation != null) {
@@ -959,7 +959,7 @@ class TypedBackend {
                 arguments: argumentRegisters,
               ),
               immediate: siteIndex,
-              clobbers: {0, 1, 2, 3, 4, 5, 6, 7, 8},
+              clobbers: {0, 1, 2, 3, 4, 6, 7, 8},
             ),
           );
           continue;
@@ -1146,7 +1146,7 @@ class TypedBackend {
                 arguments: argumentRegisters,
               ),
               immediate: site,
-              clobbers: {0, 1, 2, 3, 4, 5, 6, 7, 8},
+              clobbers: {0, 1, 2, 3, 4, 6, 7, 8},
             ),
           );
           continue;
@@ -1213,7 +1213,7 @@ class TypedBackend {
                 arguments: argumentRegisters,
               ),
               immediate: functionIndices[_resolveFunction(op.target)],
-              clobbers: {0, 1, 2, 3, 4, 5, 6, 7, 8},
+              clobbers: {0, 1, 2, 3, 4, 6, 7, 8},
             ),
           );
           continue;
@@ -1263,10 +1263,7 @@ class TypedBackend {
           for (final r in _banks[value(source).type])
             '${_registerNames[r]}$suffix',
         ];
-        List<String> compareNames(String condition) => [
-          for (final flag in ['e', 'x'])
-            for (final order in ['AB']) '$flag$condition$order',
-        ];
+        List<String> compareNames(String condition) => ['e${condition}AB'];
         lowered.add(switch (op) {
           async_ir.BeginAsync() => make(['rBeginAsync'], []),
           flow.ReturnAsync(:final value) when value != null => make(
@@ -1328,7 +1325,7 @@ class TypedBackend {
             immediate: _double(value),
           ),
           memory.LoadBool(:final value) => make(
-            value ? ['eTrue', 'xTrue'] : ['eFalse', 'xFalse'],
+            value ? ['eTrue'] : ['eFalse'],
             [],
           ),
           memory.LoadString(:final value) => make(
@@ -1477,16 +1474,12 @@ class TypedBackend {
           ),
           objects_ir.LoadThis(:final object) => make(['rLoadThisR'], [object]),
           objects_ir.DynamicEquals(:final left, :final right) => make(
-            [
-              for (final flag in ['e', 'x'])
-                for (final order in ['RS']) '${flag}Eq$order',
-            ],
+            ['eEqRS'],
             [left, right],
           ),
           memory.IsNull(:final object) => make(
             [
-              for (final flag in ['e', 'x'])
-                for (final r in ['R', 'S', 'C']) '${flag}IsNull$r',
+              for (final r in ['R', 'S', 'C']) 'eIsNull$r',
             ],
             [object],
           ),
@@ -1534,7 +1527,7 @@ class TypedBackend {
             ['aIncrement', 'bIncrement'],
             [source],
           ),
-          logic.LogicalNot(:final source) => make(['eNot', 'xNot'], [source]),
+          logic.LogicalNot(:final source) => make(['eNot'], [source]),
           flow.Return(:final value) when value != null => make(
             bankNames(value, 'Return'),
             [value],
@@ -1548,7 +1541,7 @@ class TypedBackend {
             terminal: true,
           ),
           flow.JumpIfFalse(:final condition, :final target) => make(
-            ['jumpEFalse', 'jumpXFalse'],
+            ['jumpEFalse'],
             [condition],
             immediate: graph[target]!.id!,
             terminal: true,
@@ -1564,6 +1557,100 @@ class TypedBackend {
       block.code
         ..clear()
         ..addAll(lowered);
+    }
+    // Fuse only adjacent pure comparisons whose entire SSA lifetime ends at
+    // this branch. Count uses across all blocks, including phi edge inputs.
+    final uses = <cfg.SSA, int>{};
+    final definitions = <cfg.SSA, int>{};
+    for (final blockId in graph.graph.vertices) {
+      for (final op in graph[blockId]!.code) {
+        final reads = {
+          ...op.readsFrom,
+          if (op is cfg.PhiNode) ...op.incoming.values,
+        };
+        for (final input in reads) {
+          uses.update(input, (count) => count + 1, ifAbsent: () => 1);
+        }
+        final output = op.writesTo;
+        if (output != null) {
+          definitions.update(output, (count) => count + 1, ifAbsent: () => 1);
+        }
+      }
+    }
+    final comparisonName = RegExp(r'^e(Eq|Ne|Lt|Lte|Gt|Gte)(AB|FG)$');
+    for (final blockId in graph.graph.vertices) {
+      final code = graph[blockId]!.code;
+      if (code.length < 2) continue;
+      final branch = code.last;
+      if (branch is! TypedOperation ||
+          !branch.isConditionalBranch ||
+          branch.inputs.length != 1 ||
+          !branch.codes.every((opcode) => opcode == TypedOp.jumpEFalse)) {
+        continue;
+      }
+      final successors = graph.graph.successorsOf(blockId).toSet();
+      if (successors.length != 2 ||
+          branch.immediate == branch.otherTarget ||
+          !successors.contains(branch.immediate) ||
+          !successors.contains(branch.otherTarget)) {
+        continue;
+      }
+      var condition = branch.inputs.single;
+      var comparisonIndex = code.length - 2;
+      var comparison = code[comparisonIndex];
+      var negated = false;
+      if (comparison is TypedOperation &&
+          comparison.codes.isNotEmpty &&
+          comparison.codes.every((opcode) => opcode == TypedOp.eNot)) {
+        if (comparisonIndex == 0 ||
+            comparison.result != condition ||
+            comparison.inputs.length != 1 ||
+            comparison.terminal ||
+            comparison.clobbers.isNotEmpty ||
+            comparison.fixedVariant != null ||
+            uses[condition] != 1 ||
+            definitions[condition] != 1) {
+          continue;
+        }
+        condition = comparison.inputs.single;
+        comparison = code[--comparisonIndex];
+        negated = true;
+      }
+      if (comparison is! TypedOperation ||
+          comparison.result == null ||
+          comparison.result != condition ||
+          comparison.inputs.length != 2 ||
+          comparison.terminal ||
+          comparison.clobbers.isNotEmpty ||
+          comparison.fixedVariant != null ||
+          uses[condition] != 1 ||
+          definitions[condition] != 1) {
+        continue;
+      }
+      final fusedNames = <String>{};
+      for (final opcode in comparison.codes) {
+        final spec = TypedOp.instructions[opcode];
+        final match = comparisonName.firstMatch(spec.name);
+        if (match == null || spec.mayThrow || spec.terminates) {
+          fusedNames.clear();
+          break;
+        }
+        fusedNames.add('jumpNot${match[1]}${match[2]}');
+      }
+      if (fusedNames.isEmpty || !fusedNames.every(_codes.containsKey)) continue;
+      // Negation swaps the CFG edges, never the numerical predicate. In
+      // particular, !(a < b) cannot become a >= b when either input is NaN.
+      code.removeRange(comparisonIndex, code.length);
+      code.add(
+        TypedOperation(
+          _named(fusedNames.toList()),
+          null,
+          comparison.inputs,
+          immediate: negated ? branch.otherTarget : branch.immediate,
+          otherTarget: negated ? branch.immediate : branch.otherTarget,
+          terminal: true,
+        ),
+      );
     }
     for (var bank = 0; bank < 4; bank++) {
       graph.registerRegType(
@@ -1819,11 +1906,7 @@ class TypedBackend {
       _ => null,
     };
     if (comparison != null) {
-      return [
-        for (final flag in ['e', 'x'])
-          for (final order in integer ? ['AB'] : ['FG'])
-            '$flag$comparison$order',
-      ];
+      return ['e$comparison${integer ? 'AB' : 'FG'}'];
     }
     final name = switch (operator) {
       NumericOperator.add => 'Add',

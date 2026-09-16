@@ -2,6 +2,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
+import 'package:dart_eval/src/eval/compiler/expression/condition.dart';
 import 'package:dart_eval/src/eval/compiler/macros/macro.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -11,32 +12,42 @@ import 'package:dart_eval/src/eval/ir/flow.dart';
 StatementInfo macroBranch(
   CompilerContext ctx,
   AlwaysReturnType? expectedReturnType, {
-  required MacroVariableClosure condition,
+  MacroVariableClosure? condition,
+  Expression? conditionExpression,
   required MacroStatementClosure thenBranch,
   MacroStatementClosure? elseBranch,
   bool resolveStateToThen = false,
   AstNode? source,
   bool testNullish = false,
 }) {
+  assert((condition == null) != (conditionExpression == null));
+  assert(!testNullish || conditionExpression == null);
   ctx.beginScope();
   ctx.enterTypeInferenceContext();
-
-  final conditionResult = condition(ctx).unboxIfNeeded(ctx);
-  if (!testNullish &&
-      !conditionResult.type.isAssignableTo(ctx, CoreTypes.bool.ref(ctx))) {
-    throw CompileError("Conditions must have a static type of 'bool'", source);
-  }
 
   final thenBlock = BasicBlock<Operation>([], label: ctx.label('if_true'));
   final elseBlock = BasicBlock<Operation>([], label: ctx.label('if_false'));
   final endBlock = BasicBlock<Operation>([], label: ctx.label('if_end'));
-  ctx.pushOp(
-    testNullish
-        ? JumpIfNonNull(conditionResult.ssa, elseBlock.label!)
-        : JumpIfFalse(conditionResult.ssa, elseBlock.label!),
-  );
-  ctx.flushBlock();
-  final branches = ctx.builder.split(thenBlock, elseBlock);
+  final BasicBlockBuilder branches;
+  if (conditionExpression != null) {
+    branches = compileCondition(conditionExpression, ctx, thenBlock, elseBlock);
+  } else {
+    final conditionResult = condition!(ctx).unboxIfNeeded(ctx);
+    if (!testNullish &&
+        !conditionResult.type.isAssignableTo(ctx, CoreTypes.bool.ref(ctx))) {
+      throw CompileError(
+        "Conditions must have a static type of 'bool'",
+        source,
+      );
+    }
+    ctx.pushOp(
+      testNullish
+          ? JumpIfNonNull(conditionResult.ssa, elseBlock.label!)
+          : JumpIfFalse(conditionResult.ssa, elseBlock.label!),
+    );
+    ctx.flushBlock();
+    branches = ctx.builder.split(thenBlock, elseBlock);
+  }
   final initialState = ctx.saveState();
 
   ctx.builder = branches.block(0);

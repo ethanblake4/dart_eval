@@ -241,11 +241,12 @@ void main() {
         'a': 1,
       });
       expect(
-        [entry.a, entry.b, entry.r, entry.s, entry.e, entry.x],
-        [1, 2, 3, 'text', true, false],
+        [entry.a, entry.b, entry.r, entry.s, entry.e],
+        [1, 2, 3, 'text', true],
       );
       final overflow = entry.c as List<Object?>;
-      expect((overflow.first as $int).$value, 42);
+      expect(overflow.first, false);
+      expect((overflow[1] as $int).$value, 42);
       expect(overflow.last, isNull);
     },
   );

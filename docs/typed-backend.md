@@ -16,10 +16,12 @@ arithmetic helpers. Fixed operand and destination combinations are encoded in
 the opcode. The general-object register machine has been removed; existing source
 tests are the parity reference.
 
-The register bank has two integer, two double, two boolean, and three general
+The register bank has two integer, two double, one boolean, and three general
 object registers. Strings and nullable values use the object bank alongside
-existing $Instance and $Value objects. Restricted loop registers and instruction
-fusion still need measurement. Spills use typed backing storage. Language types, wrapper
+existing $Instance and $Value objects. Numeric comparisons used only by a branch
+fuse into that branch. Condition-only logical operators branch directly between
+their operands. See [register measurements](register-affinity-experiments-2026-09-16.md).
+Spills use typed backing storage. Language types, wrapper
 objects, and machine representations must remain distinct. Representation changes
 are explicit at SSA definitions, phi edges, calls, and suspension boundaries.
 
@@ -74,18 +76,20 @@ ARM64 AOT output. See [the assembly and timing report](typed-arm64-optimization.
 `Compiler.compileTyped` lowers reachable direct functions from SSA to fixed
 register operands. Numeric registers remain typed Dart locals; object registers
 `r/s/c` hold arbitrary references. Spills use separate numeric and object banks.
-The generator emits 189 instruction forms, prioritizing simple operations in
+The generator emits 231 instruction forms, prioritizing simple operations in
 opcode order. It removes redundant reversed primitive comparisons, supplies
 signed16 integer immediates, and emits short relative branches with automatic
 absolute32 widening. Conditional branches decode their target only when taken.
 
-Calls clobber all nine registers. The allocator assigns all call arguments
-simultaneously, resolves permutations, and saves caller values that remain live.
+Calls clobber all eight registers. The allocator assigns all call arguments
+to their fixed locations and saves caller values that remain live. Its current
+constrained path resolves cycles through spills, copies, and reloads; emitting
+the available swap instructions for resident cycles is a pending optimization.
 The callee receives register parameters without argument-load instructions.
 
 The complete signature determines argument locations, including unused parameters:
 
-- The first two integers use A/B, doubles F/G, and booleans E/X.
+- The first two integers use A/B, doubles F/G, and the first boolean uses E.
 - Remaining parameters, including excess native scalars, use R/S/C in source order.
 - If more than three parameters need object registers, the first two use R/S and
   C holds one `List<Object?>` for the rest. Five integers fit without a list;

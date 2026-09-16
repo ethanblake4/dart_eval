@@ -1,5 +1,9 @@
 # Register affinity experiments
 
+This report records the experiments before promotion. The subsequent
+[production checkpoint](register-branch-checkpoint-2026-09-16.md) adopts no X,
+full numeric fusion, and direct short-circuit conditions.
+
 These experiments compare against dart_eval `7ee5a3e` and control_flow_graph
 `9e96620`, with Dart 3.10.7. Production sources remain unchanged while the
 variants are measured. Each variant has its own source snapshot, package

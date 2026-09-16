@@ -1,7 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/collection/list.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
-import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -19,7 +18,7 @@ List<TypeRef> compileIfElementForList(
   macroBranch(
     ctx,
     null,
-    condition: (ctx) => compileExpression(e.expression, ctx),
+    conditionExpression: e.expression,
     thenBranch: (ctx, _) {
       potentialReturnTypes.addAll(
         compileListElement(e.thenElement, list, ctx, box),

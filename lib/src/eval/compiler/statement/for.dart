@@ -121,9 +121,7 @@ StatementInfo compileForStatement(
         }
       }
     },
-    condition: parts.condition == null
-        ? null
-        : (ctx) => compileExpression(parts.condition!, ctx),
+    conditionExpression: parts.condition,
     body: (ctx, ert) => compileStatement(s.body, ert, ctx),
     update: (ctx) {
       if (parts is ForPartsWithDeclarations) {

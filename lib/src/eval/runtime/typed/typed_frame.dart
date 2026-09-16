@@ -18,7 +18,6 @@ class TypedEntry {
       f = 0.0,
       g = 0.0,
       e = false,
-      x = false,
       s = null,
       c = null,
       environment = const [];
@@ -29,7 +28,6 @@ class TypedEntry {
       f = 0.0,
       g = 0.0,
       e = false,
-      x = false,
       r = null,
       s = null,
       c = null,
@@ -41,7 +39,6 @@ class TypedEntry {
     this.f = 0.0,
     this.g = 0.0,
     this.e = false,
-    this.x = false,
     this.r,
     this.s,
     this.c,
@@ -59,7 +56,7 @@ class TypedEntry {
     final layout = function.callLayout;
     var a = 0, b = 0;
     var f = 0.0, g = 0.0;
-    var e = false, x = false;
+    var e = false;
     Object? r, s, c;
     final overflow = layout.overflowCount == 0
         ? null
@@ -112,11 +109,7 @@ class TypedEntry {
               g = value as double;
             }
           case TypedRegisterBank.boolean:
-            if (location.index == 0) {
-              e = value as bool;
-            } else {
-              x = value as bool;
-            }
+            e = value as bool;
           case TypedRegisterBank.object:
             if (location.index == 0) {
               r = value;
@@ -135,17 +128,7 @@ class TypedEntry {
       throw ArgumentError('Too many typed entry arguments');
     }
     if (overflow != null) c = overflow;
-    return TypedEntry.direct(
-      a: a,
-      b: b,
-      f: f,
-      g: g,
-      e: e,
-      x: x,
-      r: r,
-      s: s,
-      c: c,
-    );
+    return TypedEntry.direct(a: a, b: b, f: f, g: g, e: e, r: r, s: s, c: c);
   }
 
   /// Values already have the physical representations in the signature.
@@ -163,7 +146,7 @@ class TypedEntry {
     final layout = function.callLayout;
     var a = 0, b = 0;
     var f = 0.0, g = 0.0;
-    var e = false, x = false;
+    var e = false;
     Object? r, s, c;
     final overflow = layout.overflowCount == 0
         ? null
@@ -188,11 +171,7 @@ class TypedEntry {
               g = value as double;
             }
           case TypedRegisterBank.boolean:
-            if (location.index == 0) {
-              e = value as bool;
-            } else {
-              x = value as bool;
-            }
+            e = value as bool;
           case TypedRegisterBank.object:
             if (location.index == 0) {
               r = value;
@@ -211,7 +190,6 @@ class TypedEntry {
       f: f,
       g: g,
       e: e,
-      x: x,
       r: r,
       s: s,
       c: c,
@@ -221,7 +199,7 @@ class TypedEntry {
 
   final int a, b;
   final double f, g;
-  final bool e, x;
+  final bool e;
   final Object? r, s, c;
   final List<Object?> environment;
 }

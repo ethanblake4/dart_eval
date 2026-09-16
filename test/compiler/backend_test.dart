@@ -365,7 +365,7 @@ void main() {
       ),
       9.5,
     );
-    expect(program.functions.first.objectOutgoingCount, 2);
+    expect(program.functions.first.objectOutgoingCount, 3);
   });
   test('only arguments beyond register capacity use outgoing slots', () {
     final arguments = List.generate(12, (i) => 'int a$i').join(', ');

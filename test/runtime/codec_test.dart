@@ -633,7 +633,7 @@ void main() {
       expect(() => TypedProgram.read(bad.buffer), throwsFormatException);
     }
     final oldVersion = Uint8List.fromList(bytes);
-    ByteData.sublistView(oldVersion).setUint32(4, 106, Endian.little);
+    ByteData.sublistView(oldVersion).setUint32(4, 115, Endian.little);
     expect(() => TypedProgram.read(oldVersion.buffer), throwsFormatException);
     for (var length = metadata; length < bytes.length; length++) {
       expect(
@@ -937,8 +937,7 @@ void main() {
       a.op(TypedOp.fAddG);
       a.op(TypedOp.fReturn);
       final boolEntry = a.pc;
-      a.op(TypedOp.xFromE);
-      a.op(TypedOp.xReturn);
+      a.op(TypedOp.eReturn);
       final p = TypedProgram(
         Uint8List.fromList(a.bytes),
         doubles: [1.25, -1.0],
@@ -1063,7 +1062,6 @@ void main() {
             TypedArgumentKind.integer,
             TypedArgumentKind.doublePrecision,
             TypedArgumentKind.doublePrecision,
-            TypedArgumentKind.boolean,
             TypedArgumentKind.boolean,
             TypedArgumentKind.object,
             TypedArgumentKind.object,

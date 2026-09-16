@@ -166,16 +166,15 @@ void main() {
             as double;
     expect(result.isNegative, true);
   });
-  test('boolean banks swap and spill independently', () {
+  test('boolean register spills and reloads', () {
     expect(
       TypedMachine.run(
         program([
           TypedOp.eTrue,
-          TypedOp.xFalse,
-          TypedOp.eXSwap,
-          TypedOp.xSpill,
+          TypedOp.eSpill,
           0,
           0,
+          TypedOp.eFalse,
           TypedOp.eReload,
           0,
           0,

@@ -84,7 +84,7 @@ abstract final class TypedMachine {
     Object? r = arguments.r, s = arguments.s, c = arguments.c;
     var a = arguments.a, b = arguments.b;
     var f = arguments.f, g = arguments.g;
-    var e = arguments.e, x = arguments.x;
+    var e = arguments.e;
       dispatch: while (true) {
       switch (code[pc++]) {
         case TypedOp.eTrue:
@@ -92,12 +92,6 @@ abstract final class TypedMachine {
           continue dispatch;
         case TypedOp.eFalse:
           e = false;
-          continue dispatch;
-        case TypedOp.xTrue:
-          x = true;
-          continue dispatch;
-        case TypedOp.xFalse:
-          x = false;
           continue dispatch;
         case TypedOp.aFromB:
           a = b;
@@ -116,15 +110,6 @@ abstract final class TypedMachine {
           continue dispatch;
         case TypedOp.fGSwap:
           final temporary = f; f = g; g = temporary;
-          continue dispatch;
-        case TypedOp.eFromX:
-          e = x;
-          continue dispatch;
-        case TypedOp.xFromE:
-          x = e;
-          continue dispatch;
-        case TypedOp.eXSwap:
-          final temporary = e; e = x; x = temporary;
           continue dispatch;
         case TypedOp.rFromS:
           r = s;
@@ -261,60 +246,6 @@ abstract final class TypedMachine {
         case TypedOp.eNot:
           e = !e;
           continue dispatch;
-        case TypedOp.eAndX:
-          e = e && x;
-          continue dispatch;
-        case TypedOp.eOrX:
-          e = e || x;
-          continue dispatch;
-        case TypedOp.eXorX:
-          e = e != x;
-          continue dispatch;
-        case TypedOp.xEqAB:
-          x = a == b;
-          continue dispatch;
-        case TypedOp.xEqFG:
-          x = f == g;
-          continue dispatch;
-        case TypedOp.xNeAB:
-          x = a != b;
-          continue dispatch;
-        case TypedOp.xNeFG:
-          x = f != g;
-          continue dispatch;
-        case TypedOp.xLtAB:
-          x = a < b;
-          continue dispatch;
-        case TypedOp.xLtFG:
-          x = f < g;
-          continue dispatch;
-        case TypedOp.xLteAB:
-          x = a <= b;
-          continue dispatch;
-        case TypedOp.xLteFG:
-          x = f <= g;
-          continue dispatch;
-        case TypedOp.xGtAB:
-          x = a > b;
-          continue dispatch;
-        case TypedOp.xGtFG:
-          x = f > g;
-          continue dispatch;
-        case TypedOp.xGteAB:
-          x = a >= b;
-          continue dispatch;
-        case TypedOp.xGteFG:
-          x = f >= g;
-          continue dispatch;
-        case TypedOp.xAPositive:
-          x = a > 0;
-          continue dispatch;
-        case TypedOp.xBPositive:
-          x = b > 0;
-          continue dispatch;
-        case TypedOp.xNot:
-          x = !x;
-          continue dispatch;
         case TypedOp.fFromA:
           f = a.toDouble();
           continue dispatch;
@@ -336,26 +267,17 @@ abstract final class TypedMachine {
         case TypedOp.eIsNullR:
           e = TypedInterop.isNull(r);
           continue dispatch;
-        case TypedOp.xIsNullR:
-          x = TypedInterop.isNull(r);
-          continue dispatch;
         case TypedOp.sNull:
           s = null;
           continue dispatch;
         case TypedOp.eIsNullS:
           e = TypedInterop.isNull(s);
           continue dispatch;
-        case TypedOp.xIsNullS:
-          x = TypedInterop.isNull(s);
-          continue dispatch;
         case TypedOp.cNull:
           c = null;
           continue dispatch;
         case TypedOp.eIsNullC:
           e = TypedInterop.isNull(c);
-          continue dispatch;
-        case TypedOp.xIsNullC:
-          x = TypedInterop.isNull(c);
           continue dispatch;
         case TypedOp.rFromA:
           r = a;
@@ -386,12 +308,6 @@ abstract final class TypedMachine {
           continue dispatch;
         case TypedOp.rBoxE:
           r = $bool(e);
-          continue dispatch;
-        case TypedOp.rFromX:
-          r = x;
-          continue dispatch;
-        case TypedOp.rBoxX:
-          r = $bool(x);
           continue dispatch;
         case TypedOp.rBridgeArgument:
           r ??= const $null();
@@ -507,22 +423,6 @@ abstract final class TypedMachine {
           r = null; s = null; c = null;
           e = returned;
           continue dispatch;
-        case TypedOp.xSpill:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          frame.boolSpills[index] = x ? 1 : 0;
-          continue dispatch;
-        case TypedOp.xReload:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          x = frame.boolSpills[index] != 0;
-          continue dispatch;
-        case TypedOp.xReturn:
-          if (frame.parent == null) return x;
-          final returned = x;
-          pc = frame.returnPc;
-          frame = frame.leave();
-          r = null; s = null; c = null;
-          e = returned;
-          continue dispatch;
         case TypedOp.rConstant:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           r = program.objectAt(index);
@@ -627,12 +527,6 @@ abstract final class TypedMachine {
         case TypedOp.jumpEFalse:
           if (!e) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
           continue dispatch;
-        case TypedOp.jumpXTrue:
-          if (x) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
-          continue dispatch;
-        case TypedOp.jumpXFalse:
-          if (!x) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
-          continue dispatch;
         case TypedOp.aFromF:
           a = f.toInt();
           continue dispatch;
@@ -671,9 +565,6 @@ abstract final class TypedMachine {
           continue dispatch;
         case TypedOp.eEqRS:
           e = TypedInterop.equals(runtime, r, s);
-          continue dispatch;
-        case TypedOp.xEqRS:
-          x = TypedInterop.equals(runtime, r, s);
           continue dispatch;
         case TypedOp.aFromR:
           a = TypedInterop.toInt(r);
@@ -938,20 +829,86 @@ abstract final class TypedMachine {
             s = null; c = null;
           }
           continue dispatch;
+        case TypedOp.jumpNotEqAB:
+          if (!(a == b)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+          continue dispatch;
+        case TypedOp.jumpNotEqFG:
+          if (!(f == g)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+          continue dispatch;
+        case TypedOp.jumpNotNeAB:
+          if (!(a != b)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+          continue dispatch;
+        case TypedOp.jumpNotNeFG:
+          if (!(f != g)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+          continue dispatch;
+        case TypedOp.jumpNotLtAB:
+          if (!(a < b)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+          continue dispatch;
+        case TypedOp.jumpNotLtFG:
+          if (!(f < g)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+          continue dispatch;
+        case TypedOp.jumpNotLteAB:
+          if (!(a <= b)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+          continue dispatch;
+        case TypedOp.jumpNotLteFG:
+          if (!(f <= g)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+          continue dispatch;
+        case TypedOp.jumpNotGtAB:
+          if (!(a > b)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+          continue dispatch;
+        case TypedOp.jumpNotGtFG:
+          if (!(f > g)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+          continue dispatch;
+        case TypedOp.jumpNotGteAB:
+          if (!(a >= b)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+          continue dispatch;
+        case TypedOp.jumpNotGteFG:
+          if (!(f >= g)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+          continue dispatch;
         case TypedOp.jumpETrueShort:
           if (e) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
           continue dispatch;
         case TypedOp.jumpEFalseShort:
           if (!e) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
           continue dispatch;
-        case TypedOp.jumpXTrueShort:
-          if (x) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
-          continue dispatch;
-        case TypedOp.jumpXFalseShort:
-          if (!x) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
-          continue dispatch;
         case TypedOp.jumpShort:
           pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16);
+          continue dispatch;
+        case TypedOp.jumpNotEqABShort:
+          if (!(a == b)) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
+          continue dispatch;
+        case TypedOp.jumpNotEqFGShort:
+          if (!(f == g)) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
+          continue dispatch;
+        case TypedOp.jumpNotNeABShort:
+          if (!(a != b)) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
+          continue dispatch;
+        case TypedOp.jumpNotNeFGShort:
+          if (!(f != g)) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
+          continue dispatch;
+        case TypedOp.jumpNotLtABShort:
+          if (!(a < b)) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
+          continue dispatch;
+        case TypedOp.jumpNotLtFGShort:
+          if (!(f < g)) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
+          continue dispatch;
+        case TypedOp.jumpNotLteABShort:
+          if (!(a <= b)) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
+          continue dispatch;
+        case TypedOp.jumpNotLteFGShort:
+          if (!(f <= g)) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
+          continue dispatch;
+        case TypedOp.jumpNotGtABShort:
+          if (!(a > b)) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
+          continue dispatch;
+        case TypedOp.jumpNotGtFGShort:
+          if (!(f > g)) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
+          continue dispatch;
+        case TypedOp.jumpNotGteABShort:
+          if (!(a >= b)) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
+          continue dispatch;
+        case TypedOp.jumpNotGteFGShort:
+          if (!(f >= g)) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
           continue dispatch;
         default: throw StateError('Invalid typed opcode at byte ${pc - 1}');
       }

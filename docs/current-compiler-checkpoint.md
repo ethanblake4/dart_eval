@@ -1,9 +1,22 @@
 # Current compiler checkpoint
 
-The `xv2` branch uses one typed register backend. After cleanup, 802 tests pass
+The `xv2` branch uses one typed register backend. At this checkpoint, 865 tests pass
 with zero failures or skips. Analysis reports no errors or code warnings; the
 remaining warning is the intentional local `control_flow_graph` path dependency.
-The generated runtime check passes with 243 opcodes and 13 one-byte slots free.
+The generated runtime check passes with 231 opcodes and 25 one-byte slots free.
+
+The runtime has eight registers: A/B integers, F/G doubles, E boolean, and R/S/C
+objects. X is removed from dispatch, argument binding, frame state, and allocator
+metadata. Excess boolean arguments use the object registers and existing single
+overflow list. All six numeric comparisons in both scalar banks have fused
+conditional branches, with short relative and wide absolute encodings. Fusion
+requires a single-use comparison and preserves NaN behavior by swapping edges
+when negating a condition.
+
+Condition-only `&&`, `||`, and `!` lower directly to CFG edges in statements,
+loops, ternaries, and collections. Expression-valued logic retains its value;
+conditions containing type tests retain the existing promotion path. See
+[production measurements](register-branch-checkpoint-2026-09-16.md).
 
 The legacy interpreter, prototype loop, opcode classes, continuations, frame
 state, function pointers, instance implementation, and prescan are removed.
@@ -14,9 +27,8 @@ The CLI `dump` command decodes the current bytecode directly. A serialized
 loop program verified both execution and dumping; mixed-call, external-call,
 and async benchmark smoke runs also passed their checksum checks.
 
-Program envelope version: 103. Typed payload version: 115. Recompile bytecode
-produced before this cleanup; obsolete declaration, initializer, and runtime-type
-metadata blocks are no longer serialized.
+Program envelope version: 104. Typed payload version: 116. Recompile earlier
+bytecode: removing X changes opcode numbering and boolean argument locations.
 
 Tests are grouped under compiler, runtime, language, interop, standard library,
 security, and packages; shared fixtures live under support. See
@@ -51,7 +63,9 @@ Run `dart test`, `dart analyze`, and
 `benchmark/`; ARM64 inspection uses `tool/inspect_typed_arm64.ps1`.
 
 The adjacent `D:\Projects\control_flow_graph` checkout remains the local path
-dependency. Its preexisting test-fixture changes and deleted test remain untouched.
+dependency at `9e96620`. This checkpoint does not change it. The constrained
+allocator emits same-bank copies for fixed placements, but still resolves
+resident argument permutations through spills and reloads instead of swaps.
 
 The sibling flutter_eval package passes 18 tests on FVM Flutter 3.35.2 / Dart 3.9
 against this checkout, including widget callbacks, state updates, navigation,

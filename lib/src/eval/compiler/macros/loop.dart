@@ -1,4 +1,6 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
+import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/src/eval/compiler/expression/condition.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/macros/macro.dart';
 import 'package:dart_eval/src/eval/compiler/model/label.dart';
@@ -12,11 +14,13 @@ StatementInfo macroLoop(
   required MacroStatementClosure body,
   MacroClosure? initialization,
   MacroVariableClosure? condition,
+  Expression? conditionExpression,
   MacroClosure? update,
   MacroClosure? after,
   bool alwaysLoopOnce = false,
   bool updateBeforeBody = false,
 }) {
+  assert(condition == null || conditionExpression == null);
   ctx.beginScope();
   initialization?.call(ctx);
   final initialState = ctx.saveState();
@@ -32,7 +36,14 @@ StatementInfo macroLoop(
   ctx.builder = ctx.builder.then(alwaysLoopOnce ? bodyBlock : header);
 
   if (!alwaysLoopOnce) {
-    if (condition != null) {
+    if (conditionExpression != null) {
+      ctx.builder = compileCondition(
+        conditionExpression,
+        ctx,
+        bodyBlock,
+        exit,
+      ).block(0);
+    } else if (condition != null) {
       final value = condition(ctx).unboxIfNeeded(ctx);
       ctx.pushOp(JumpIfFalse(value.ssa, exit.label!));
       ctx.flushBlock();
@@ -82,7 +93,9 @@ StatementInfo macroLoop(
   if (alwaysLoopOnce && header.id != null) {
     ctx.restoreState(initialState);
     ctx.builder = BasicBlockBuilder(ctx.activeGraph, [header], parent);
-    if (condition != null) {
+    if (conditionExpression != null) {
+      compileCondition(conditionExpression, ctx, bodyBlock, exit);
+    } else if (condition != null) {
       final value = condition(ctx).unboxIfNeeded(ctx);
       ctx.pushOp(JumpIfFalse(value.ssa, exit.label!));
       final tail = ctx.flushBlock();
