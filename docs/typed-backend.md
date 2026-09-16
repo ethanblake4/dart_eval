@@ -82,9 +82,9 @@ signed16 integer immediates, and emits short relative branches with automatic
 absolute32 widening. Conditional branches decode their target only when taken.
 
 Calls clobber all eight registers. The allocator assigns all call arguments
-to their fixed locations and saves caller values that remain live. Its current
-constrained path resolves cycles through spills, copies, and reloads; emitting
-the available swap instructions for resident cycles is a pending optimization.
+to their fixed locations together, resolves compatible resident cycles with
+swaps, and saves caller values that remain live. Other placements schedule safe
+copies before overwriting their sources. See [allocator measurements](allocator-swaps-2026-09-16.md).
 The callee receives register parameters without argument-load instructions.
 
 The complete signature determines argument locations, including unused parameters:

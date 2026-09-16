@@ -5,6 +5,20 @@ TypedProgram compile(String source) => Compiler().compileTyped({
   'typed': {'main.dart': source},
 }, entrypoint: 'package:typed/main.dart');
 
+List<String> callSetup(TypedProgram program) {
+  final result = <String>[];
+  for (
+    var pc = program.functions[program.entryFunction].entry;
+    pc < program.code.length;
+  ) {
+    final instruction = TypedOp.instructions[program.code[pc]];
+    if (program.code[pc] == TypedOp.call) return result;
+    result.add(instruction.name);
+    pc += instruction.length;
+  }
+  throw StateError('Expected a direct call');
+}
+
 void main() {
   test('inferred generic return type retains the declared callee ABI', () {
     final program = Compiler().compile({
@@ -227,8 +241,83 @@ void main() {
         return reversed + x + y;
       }''');
     expect(TypedMachine.run(program, intArguments: [13, 4]), 8);
+    expect(
+      TypedMachine.run(
+        TypedProgram.read(program.write().buffer),
+        intArguments: [13, 4],
+      ),
+      8,
+    );
+    expect(callSetup(program), contains('aBSwap'));
     expect(program.functions.first.objectOutgoingCount, 0);
     expect(program.functions.last.objectOutgoingCount, 0);
+  });
+  for (final (type, swap) in [('int', 'aBSwap'), ('double', 'fGSwap')]) {
+    test('$type reversed call arguments swap without spilling', () {
+      final program = compile('''
+        $type difference($type a, $type b) => a - b;
+        $type main($type a, $type b) => difference(b, a);
+      ''');
+      expect(callSetup(program), [swap]);
+      for (final executable in [
+        program,
+        TypedProgram.read(program.write().buffer),
+      ]) {
+        expect(
+          TypedMachine.run(
+            executable,
+            intArguments: type == 'int' ? [13, 4] : [],
+            doubleArguments: type == 'double' ? [13.5, 4.25] : [],
+          ),
+          type == 'int' ? -9 : -9.25,
+        );
+      }
+    });
+  }
+  test('three object call arguments rotate with two swaps', () {
+    final values = [
+      Object(),
+      <int>[1, 2],
+      {'value': 3},
+    ];
+    for (final order in [
+      [1, 2, 0],
+      [2, 0, 1],
+    ]) {
+      final arguments = order.map((index) => ['a', 'b', 'c'][index]).join(', ');
+      final program = compile('''
+        Object select(Object a, Object b, Object c, int index) {
+          if (index == 0) return a;
+          if (index == 1) return b;
+          return c;
+        }
+        Object main(Object a, Object b, Object c, int index) =>
+            select($arguments, index);
+      ''');
+      final setup = callSetup(program);
+      expect(setup.where((name) => name.endsWith('Swap')), hasLength(2));
+      expect(
+        setup.where(
+          (name) => name.endsWith('Spill') || name.endsWith('Reload'),
+        ),
+        isEmpty,
+      );
+      for (final executable in [
+        program,
+        TypedProgram.read(program.write().buffer),
+      ]) {
+        for (var index = 0; index < 3; index++) {
+          expect(
+            TypedMachine.run(
+              executable,
+              intArguments: [index],
+              objectArguments: values,
+            ),
+            same(values[order[index]]),
+          );
+        }
+      }
+    }
   });
   test('repeated call arguments occupy separate incoming registers', () {
     final program = compile('''int combine(int x, int y) => x + y;

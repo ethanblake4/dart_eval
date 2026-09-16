@@ -1,6 +1,6 @@
 # Current compiler checkpoint
 
-The `xv2` branch uses one typed register backend. At this checkpoint, 865 tests pass
+The `xv2` branch uses one typed register backend. At this checkpoint, 868 tests pass
 with zero failures or skips. Analysis reports no errors or code warnings; the
 remaining warning is the intentional local `control_flow_graph` path dependency.
 The generated runtime check passes with 231 opcodes and 25 one-byte slots free.
@@ -63,9 +63,9 @@ Run `dart test`, `dart analyze`, and
 `benchmark/`; ARM64 inspection uses `tool/inspect_typed_arm64.ps1`.
 
 The adjacent `D:\Projects\control_flow_graph` checkout remains the local path
-dependency at `9e96620`. This checkpoint does not change it. The constrained
-allocator emits same-bank copies for fixed placements, but still resolves
-resident argument permutations through spills and reloads instead of swaps.
+dependency at `f77d892`. Its constrained allocator places operands together,
+using swaps for resident permutations and safe copies for other placements.
+The CFG suite passes 74 tests. See [allocator measurements](allocator-swaps-2026-09-16.md).
 
 The sibling flutter_eval package passes 18 tests on FVM Flutter 3.35.2 / Dart 3.9
 against this checkout, including widget callbacks, state updates, navigation,
