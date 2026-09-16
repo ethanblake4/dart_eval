@@ -429,6 +429,31 @@ List<Instruction> specification() {
     mayThrow: true,
   );
   add('leaveTry', 'TypedExceptions.leave(frame);');
+  add('rBeginAsync', 'r = TypedAsync.begin(frame);', output: 6);
+  add(
+    'rAwait',
+    '''final caller = frame.parent;
+          final returnPc = frame.returnPc;
+          final future = TypedAsync.suspend(program, frame, pc, r, runtime, _resumeAsync);
+          if (caller == null) return future;
+          frame = caller; pc = returnPc;
+          r = future; s = null; c = null;''',
+    inputs: [6],
+    output: 6,
+    mayThrow: true,
+  );
+  for (final withValue in [true, false]) {
+    add(
+      withValue ? 'rReturnAsync' : 'returnAsyncNull',
+      '''final returned = TypedAsync.complete(frame, ${withValue ? 'r' : 'null'});
+          if (frame.parent == null) return returned;
+          pc = frame.returnPc;
+          frame = frame.leave();
+          r = returned; s = null; c = null;''',
+      inputs: withValue ? [6] : [],
+      terminates: true,
+    );
+  }
   add(
     'completeJump',
     'pc = TypedExceptions.jump(program, frame, index);',
@@ -468,6 +493,22 @@ List<Instruction> specification() {
     'e = runtime!.isTypedValueType(r, index);',
     inputs: [6],
     output: 4,
+    immediate: 'typeId',
+    mayThrow: true,
+  );
+  add(
+    'rCreateRecord',
+    'r = TypedRecords.create(runtime!, r, index);',
+    inputs: [6],
+    output: 6,
+    immediate: 'runtimeConstant',
+    mayThrow: true,
+  );
+  add('rLoadType', r'r = $TypeImpl(index);', output: 6, immediate: 'typeId');
+  add(
+    'rAssertType',
+    'TypedRecords.assertType(runtime!, r, index);',
+    inputs: [6],
     immediate: 'typeId',
     mayThrow: true,
   );
@@ -711,7 +752,7 @@ enum TypedImmediate { none, intConstant, doubleConstant,
   intSpill, doubleSpill, boolSpill, branch,
   function, objectConstant, objectSpill, objectOutgoing, hostCall, shortBranch, integer, overflow,
   classIndex, field, callSite, externalCall, closureIndex, captureIndex, closureCall, globalIndex,
-  exceptionRegion, completionJump, typeId }
+  exceptionRegion, completionJump, typeId, runtimeConstant }
 
 class TypedInstruction {
   const TypedInstruction(this.name, this.inputs, this.outputs, this.immediate,
@@ -759,8 +800,11 @@ import 'typed_closure.dart';
 import 'typed_global_state.dart';
 import 'typed_exception_state.dart';
 import 'typed_collections.dart';
+import 'typed_records.dart';
+import 'typed_async.dart';
 import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/type.dart';
 import 'package:dart_eval/stdlib/core.dart';
 
 abstract final class TypedMachine {
@@ -789,16 +833,34 @@ abstract final class TypedMachine {
     runtime?.prepareTypedRuntime();
     final entry = program.functions[functionId];
     final root = TypedFrame(entry)..environment = arguments.environment;
+    return _drive(program, arguments, root, entry.entry, runtime);
+  }
+
+  static void _resumeAsync(TypedProgram program, TypedFrame root, int pc,
+      Object? value, Object? error, StackTrace? trace, Runtime? runtime) {
+    if (error != null) {
+      final transfer = TypedExceptions.handle(root.activeFrame, error, trace!, runtime);
+      if (transfer == null) Error.throwWithStackTrace(error, trace);
+      if (transfer.frame == null) return;
+      _drive(program, TypedEntry.result(transfer.result), transfer.frame!, transfer.pc, runtime);
+      return;
+    }
+    _drive(program, TypedEntry.result(value), root, pc, runtime);
+  }
+
+  @pragma('vm:never-inline')
+  static Object? _drive(TypedProgram program, TypedEntry arguments,
+      TypedFrame root, int pc, Runtime? runtime) {
     var frame = root;
-    var pc = entry.entry;
     while (true) {
       try {
         return _dispatch(program, arguments, frame, pc, runtime: runtime);
       } catch (error, trace) {
         final transfer = TypedExceptions.handle(root.activeFrame, error, trace, runtime);
         if (transfer == null) rethrow;
-        frame = transfer.frame; pc = transfer.pc;
-        arguments = const TypedEntry.empty();
+        if (transfer.frame == null) return transfer.result;
+        frame = transfer.frame!; pc = transfer.pc;
+        arguments = TypedEntry.result(transfer.result);
       }
     }
   }

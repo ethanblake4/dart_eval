@@ -5,7 +5,7 @@ import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
-import 'package:dart_eval/src/eval/ir/async.dart';
+import 'async_return.dart';
 import 'package:dart_eval/src/eval/ir/exception.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart'
@@ -18,11 +18,10 @@ StatementInfo doReturn(
   bool isAsync = false,
   bool skipClassBoxing = false,
 }) {
+  if (isAsync) return doAsyncReturn(ctx, expectedReturnType, value);
+  if (expectedReturnType.type == CoreTypes.voidType.ref(ctx)) value = null;
   if (value == null) {
-    if (isAsync) {
-      final completer = ctx.lookupLocal('#completer')!;
-      ctx.pushOp(ReturnAsync(null, completer.ssa));
-    } else if (ctx.exceptionDepth > 0) {
+    if (ctx.exceptionDepth > 0) {
       final continuation = BasicBlock<Operation>([
         Return(null),
       ], label: ctx.label('return_completion'));
@@ -34,37 +33,6 @@ StatementInfo doReturn(
       ctx.pushOp(Return(null));
     }
   } else {
-    if (isAsync) {
-      final ta = expectedReturnType.type?.specifiedTypeArgs;
-      final expected = (ta?.isEmpty ?? true)
-          ? CoreTypes.dynamic.ref(ctx)
-          : ta![0];
-      var value0 = value.boxIfNeeded(ctx);
-
-      if (!value0.type.isAssignableTo(ctx, expected)) {
-        if (value0.type.isAssignableTo(ctx, CoreTypes.future.ref(ctx))) {
-          final vta = value0.type.specifiedTypeArgs;
-          final vtype = vta.isEmpty ? CoreTypes.dynamic.ref(ctx) : vta[0];
-          if (vtype.isAssignableTo(ctx, expected)) {
-            final completer = ctx.lookupLocal('#completer')!;
-            final result = Variable.ssa(
-              ctx,
-              Await(ctx.svar('await_result'), completer.ssa, value0.ssa),
-              CoreTypes.dynamic.ref(ctx),
-            );
-            ctx.pushOp(ReturnAsync(result.ssa, completer.ssa));
-            return StatementInfo(-1, willAlwaysReturn: true);
-          }
-        }
-        throw CompileError(
-          'Cannot return ${value0.type} (expected: $expected)',
-        );
-      }
-      final completer = ctx.lookupLocal('#completer')!;
-      ctx.pushOp(ReturnAsync(value0.ssa, completer.ssa));
-      return StatementInfo(-1, willAlwaysReturn: true);
-    }
-
     final expected = expectedReturnType.type ?? CoreTypes.dynamic.ref(ctx);
     var value0 = value;
     if (!value0.type.isAssignableTo(ctx, expected)) {

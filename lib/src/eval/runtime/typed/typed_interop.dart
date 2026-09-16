@@ -86,6 +86,7 @@ abstract final class TypedInterop {
   static bool equals(Runtime? runtime, Object? left, Object? right) {
     final a = left as $Value?, b = right as $Value?;
     if (isNull(a) || isNull(b)) return isNull(a) && isNull(b);
+    if (a is EvalFunction) return a == b;
     // $Object is the explicit adapter for a native host object's operators.
     // Subclasses may override bridge dispatch and must use their own methods.
     if (a.runtimeType == $Object) {

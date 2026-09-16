@@ -34,6 +34,10 @@ abstract class EvalFunction implements $Instance, EvalCallable {
     switch (identifier) {
       case 'call':
         return this;
+      case '==':
+        return $Function((runtime, target, args) => $bool(this == args[0]));
+      case 'hashCode':
+        return $int(hashCode);
       default:
         throw EvalUnknownPropertyException(identifier);
     }

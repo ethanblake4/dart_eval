@@ -21,7 +21,9 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
     return V.copyWithUpdate(ctx, type: slot);
   }
 
-  ctx.pushOp(AssertType(V.boxIfNeeded(ctx).ssa, slot.toRuntimeType(ctx).type));
+  V = V.boxIfNeeded(ctx);
+  ctx.pushOp(AssertType(V.ssa, slot.toRuntimeType(ctx).type));
+  V = V.copyWithUpdate(ctx, type: slot.copyWith(boxed: true));
 
   // If the type changes between num and int/double, unbox/box
   if (slot == CoreTypes.num.ref(ctx)) {

@@ -17,13 +17,13 @@ class $Record implements $Instance {
     final index = mapping[identifier];
     if (index != null) {
       final value = fields[index];
-      if (value is! $Value) {
+      if (value != null && value is! $Value) {
         throw InvalidUnboxedValueException(
           'Record field "$identifier" is not a \$Value',
           value,
         );
       }
-      return value;
+      return value as $Value?;
     }
     throw EvalUnknownPropertyException(identifier);
   }

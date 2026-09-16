@@ -85,7 +85,7 @@ int compileMethodDeclaration(
       resolvedParams.length + (d.isStatic ? 0 : 1),
       MachineRepresentation.object,
     ),
-    returnType == CoreTypes.voidType.ref(ctx)
+    returnType == CoreTypes.voidType.ref(ctx) && !b.isAsynchronous
         ? null
         : unboxedOperatorReturn
         ? representationForType(returnType!.copyWith(boxed: false))

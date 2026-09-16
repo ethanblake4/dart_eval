@@ -2,7 +2,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/ir/bridge.dart';
+import 'package:dart_eval/src/eval/ir/async.dart';
 import 'context.dart';
 
 int beginMethod(
@@ -21,12 +21,7 @@ void setupAsyncFunction(CompilerContext ctx) {
     '#completer',
     Variable.ssa(
       ctx,
-      InvokeExternal(
-        ctx.svar('#completer'),
-        ctx.bridgeStaticFunctionIndices[ctx
-            .libraryMap['dart:async']!]!['Completer.']!,
-        [],
-      ),
+      BeginAsync(ctx.svar('#completer')),
       AsyncTypes.completer.ref(ctx),
     ),
   );

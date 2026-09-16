@@ -66,7 +66,7 @@ TypeRef patternTypeBound(
       return result;
     case RecordPattern pat:
       final recordFields = <RecordParameterType>[];
-      var positionalFields = 0;
+      var positionalFields = 1;
       for (final field in pat.fields) {
         recordFields.add(
           RecordParameterType(

@@ -827,6 +827,11 @@ class TypeRef {
   }
 
   RuntimeType toRuntimeType(CompilerContext ctx) {
+    if (name.startsWith('@record') && !ctx.typeRefIndexMap.containsKey(this)) {
+      ctx.typeRefIndexMap[this] = ctx.typeNames.length;
+      ctx.runtimeTypeList.add(this);
+      ctx.typeNames.add(name);
+    }
     final ta = [for (final t in specifiedTypeArgs) t.toRuntimeType(ctx)];
     return RuntimeType(ctx.typeRefIndexMap[this]!, ta);
   }
@@ -998,7 +1003,9 @@ class TypeRef {
           name == other.name;
 
   @override
-  int get hashCode => file.hashCode ^ name.hashCode;
+  int get hashCode => name.startsWith('@record')
+      ? name.hashCode
+      : file.hashCode ^ name.hashCode;
 
   @override
   String toString() {

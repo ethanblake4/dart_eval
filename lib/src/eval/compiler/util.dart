@@ -1,10 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
-import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
-import 'package:dart_eval/src/eval/compiler/type.dart';
-import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/ir/bridge.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 
 class Pair<T, T2> {
@@ -37,14 +33,5 @@ class FunctionSignaturePool {
 }
 
 void asyncComplete(CompilerContext ctx, SSA? value) {
-  var completer = ctx.lookupLocal('#completer');
-  completer ??= Variable.ssa(
-        ctx,
-        InvokeExternal(
-            ctx.svar('#completer'),
-            ctx.bridgeStaticFunctionIndices[ctx.libraryMap['dart:async']!]![
-                'Completer.']!,
-            []),
-        AsyncTypes.completer.ref(ctx));
-  ctx.pushOp(ReturnAsync(value, completer.ssa));
+  ctx.pushOp(ReturnAsync(value, ctx.lookupLocal('#completer')!.ssa));
 }

@@ -1,6 +1,17 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'operands.dart';
 
+/// Starts an async invocation without going through the bridge call ABI.
+final class BeginAsync extends Operation {
+  BeginAsync(this.result);
+  final SSA result;
+  @override
+  SSA get writesTo => result;
+  @override
+  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) =>
+      BeginAsync(writesTo ?? result);
+}
+
 final class Await extends Operation {
   final SSA result;
   final SSA completer;

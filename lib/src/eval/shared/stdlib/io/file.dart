@@ -784,7 +784,9 @@ class $File implements $Instance {
     //final encoding = args[2]!.$value as Encoding;
     runtime.assertPermission('filesystem:write', entity.path);
     return $Future.wrap(
-      entity.writeAsString(contents /*, mode: mode, encoding: encoding*/),
+      entity
+          .writeAsString(contents /*, mode: mode, encoding: encoding*/)
+          .then($File.wrap),
     );
   }
 
@@ -815,7 +817,9 @@ class $File implements $Instance {
     final bytes = args[0]!.$value as List<int>;
     //final mode = args[1]!.$value as FileMode;
     runtime.assertPermission('filesystem:write', entity.path);
-    return $Future.wrap(entity.writeAsBytes(bytes /*, mode: mode*/));
+    return $Future.wrap(
+      entity.writeAsBytes(bytes /*, mode: mode*/).then($File.wrap),
+    );
   }
 
   static const $Function _writeAsBytesSync = $Function(__writeAsBytesSync);

@@ -59,7 +59,7 @@ Variable parseLiteral(Literal l, CompilerContext ctx, [TypeRef? bound]) {
     return compileSymbolLiteral(l, ctx);
   }
   if (l is RecordLiteral) {
-    return compileRecordLiteral(l, ctx);
+    return compileRecordLiteral(l, ctx, bound);
   }
   throw CompileError('Unknown literal type ${l.runtimeType}');
 }

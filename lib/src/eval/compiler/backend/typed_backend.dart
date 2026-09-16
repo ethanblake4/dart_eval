@@ -15,6 +15,7 @@ import '../../ir/primitives.dart' as primitives;
 import '../../ir/closures.dart' as closures;
 import '../../ir/globals.dart' as globals;
 import '../../ir/exception.dart' as exceptions;
+import '../../ir/async.dart' as async_ir;
 import '../../ir/types.dart' as types_ir;
 import '../../runtime/typed/typed_ops.g.dart';
 import '../../runtime/typed/typed_program.dart';
@@ -590,6 +591,17 @@ class TypedBackend {
         );
       }
       for (final op in block.code) {
+        if (op is async_ir.Await) {
+          lowered.add(
+            TypedOperation(
+              _named(['rAwait']),
+              value(op.result),
+              [value(op.subject)],
+              clobbers: {0, 1, 2, 3, 4, 5, 6, 7, 8},
+            ),
+          );
+          continue;
+        }
         if (op is exceptions.EnterTry) {
           lowered.add(
             TypedOperation(
@@ -1130,6 +1142,17 @@ class TypedBackend {
             for (final order in ['AB']) '$flag$condition$order',
         ];
         lowered.add(switch (op) {
+          async_ir.BeginAsync() => make(['rBeginAsync'], []),
+          flow.ReturnAsync(:final value) when value != null => make(
+            ['rReturnAsync'],
+            [value],
+            terminal: true,
+          ),
+          flow.ReturnAsync(value: null) => make(
+            ['returnAsyncNull'],
+            [],
+            terminal: true,
+          ),
           exceptions.StoreExceptionSlot(:final slot, :final value) => make(
             bankNames(value, 'Spill'),
             [value],
@@ -1238,6 +1261,26 @@ class TypedBackend {
               [string, if (argument != null) argument],
             ),
           collection.NewList() => make(['cNewList'], []),
+          collection.NewRecord(
+            :final fields,
+            :final fieldIndices,
+            :final typeId,
+          ) =>
+            make(
+              ['rCreateRecord'],
+              [fields],
+              immediate: context.constantPool.addOrGet([fieldIndices, typeId]),
+            ),
+          types_ir.LoadConstantType(:final typeId) => make(
+            ['rLoadType'],
+            [],
+            immediate: typeId,
+          ),
+          types_ir.AssertType(:final object, :final typeId) => make(
+            ['rAssertType'],
+            [object],
+            immediate: typeId,
+          ),
           collection.NewMap() => make(['cNewMap'], []),
           collection.NewSet() => make(['cNewSet'], []),
           collection.IndexMap(:final map, :final key) => make(

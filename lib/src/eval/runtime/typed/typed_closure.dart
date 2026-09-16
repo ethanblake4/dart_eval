@@ -24,6 +24,29 @@ final class TypedClosure extends EvalFunction {
   final TypedFunction function;
   final List<Object?> captures;
   final Runtime? runtime;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TypedClosure &&
+          identical(program, other.program) &&
+          identical(runtime, other.runtime) &&
+          descriptor.functionId == other.descriptor.functionId &&
+          !descriptor.hasEnvironment &&
+          !other.descriptor.hasEnvironment &&
+          descriptor.boundReceiver == other.descriptor.boundReceiver &&
+          (!descriptor.boundReceiver ||
+              identical(captures.single, other.captures.single));
+
+  @override
+  int get hashCode => descriptor.hasEnvironment
+      ? identityHashCode(this)
+      : Object.hash(
+          identityHashCode(program),
+          identityHashCode(runtime),
+          descriptor.functionId,
+          descriptor.boundReceiver ? identityHashCode(captures.single) : null,
+        );
   static TypedClosure bind(
     TypedProgram program,
     TypedClosureDescriptor descriptor,

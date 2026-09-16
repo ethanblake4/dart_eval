@@ -157,6 +157,15 @@ final class TypedInstance implements $Instance {
 
 /// A resolved member also serves as an explicit bound method bridge adapter.
 final class TypedMember extends EvalFunction {
+  @override
+  bool operator ==(Object other) =>
+      other is TypedMember &&
+      identical(receiver, other.receiver) &&
+      functionId == other.functionId;
+
+  @override
+  int get hashCode => Object.hash(identityHashCode(receiver), functionId);
+
   TypedMember(this.receiver, this.functionId)
     : function = receiver.program.functions[functionId];
 

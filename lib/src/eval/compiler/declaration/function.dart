@@ -106,7 +106,7 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   final returnType = expectedReturnType.type;
   ctx.functionSignatures[pos] = MachineFunctionSignature(
     parameterRepresentations,
-    returnType == CoreTypes.voidType.ref(ctx)
+    returnType == CoreTypes.voidType.ref(ctx) && !b.isAsynchronous
         ? null
         : representationForType(
             (returnType ?? CoreTypes.dynamic.ref(ctx)).copyWith(
@@ -143,6 +143,7 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   if (!(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
     if (b.isAsynchronous) {
       asyncComplete(ctx, null);
+      ctx.endAllocScope();
       return;
     }
   }

@@ -3,6 +3,7 @@
 import 'dart:async';
 
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/runtime/runtime.dart' show WrappedException;
 import 'package:dart_eval/stdlib/core.dart';
 
 /// Wrapper for [Future]
@@ -93,9 +94,13 @@ class $Future<T> implements Future<T>, $Instance {
   static $Value? _then(Runtime runtime, $Value? target, List<$Value?> args) {
     final $t = target as $Future;
     final $then = args[0] as EvalFunction;
-    final $result = ($t.$value).then(
-      (value) => $then.call(runtime, target, [runtime.wrap(value)]),
-    );
+    final $result = ($t.$value).then((value) {
+      try {
+        return $then.call(runtime, target, [runtime.wrap(value)]);
+      } on WrappedException catch (error, trace) {
+        Error.throwWithStackTrace(error.exception, trace);
+      }
+    });
     return $Future.wrap($result);
   }
 

@@ -5,11 +5,24 @@ import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'typed_function.dart';
 import 'typed_exception_state.dart';
+import 'typed_async.dart';
 import 'typed_program.dart';
 
 /// Register initialization happens once at the public host boundary. Internal
 /// calls already have their arguments in the compiler-assigned registers.
 class TypedEntry {
+  /// Recovery and await continuations have a single boxed result in R.
+  const TypedEntry.result(this.r)
+    : a = 0,
+      b = 0,
+      f = 0.0,
+      g = 0.0,
+      e = false,
+      x = false,
+      s = null,
+      c = null,
+      environment = const [];
+
   const TypedEntry.empty()
     : a = 0,
       b = 0,
@@ -223,9 +236,25 @@ class TypedFrame {
 
   final TypedFunction function;
   TypedExceptionState? exceptions;
-  final TypedFrame? parent;
+  TypedAsyncState? asyncState;
+  TypedFrame? parent;
   TypedFrame? _child;
   int returnPc = -1;
+
+  /// A suspended invocation must never be reused by its former caller.
+  /// Ordinary calls and returns do not inspect async state.
+  @pragma('vm:never-inline')
+  void detachAsync() {
+    final caller = parent;
+    if (caller != null) {
+      if (identical(caller._child, this)) caller._child = null;
+      if (caller.objectOutgoing.isNotEmpty) {
+        caller.objectOutgoing.fillRange(0, caller.objectOutgoing.length, null);
+      }
+    }
+    parent = null;
+    returnPc = -1;
+  }
 
   /// Only consulted after a native unwind. An inactive cached child has no
   /// return address; calls already set that address as part of their ABI.

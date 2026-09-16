@@ -20,20 +20,25 @@ Variable compileAwaitExpression(AwaitExpression e, CompilerContext ctx) {
     e0 = e0.parent;
   }
 
-  final subject = compileExpression(e.expression, ctx);
+  final subject = compileExpression(e.expression, ctx).boxIfNeeded(ctx);
   final type = subject.type.resolveTypeChain(ctx);
 
-  if (!type.isAssignableTo(ctx, CoreTypes.future.ref(ctx))) {
-    throw CompileError("Cannot await something that isn't a Future");
-  }
-
-  var completer = ctx.lookupLocal('#completer');
+  final completer = ctx.lookupLocal('#completer')!;
+  final isFuture = type
+      .copyWith(nullable: false)
+      .isAssignableTo(ctx, CoreTypes.future.ref(ctx));
+  final resultType = isFuture
+      ? type.specifiedTypeArgs.isNotEmpty
+            ? type.specifiedTypeArgs.first
+            : CoreTypes.dynamic.ref(ctx)
+      : type;
 
   return Variable.ssa(
     ctx,
-    Await(ctx.svar('await_result'), completer!.ssa, subject.ssa),
-    type.specifiedTypeArgs.isNotEmpty
-        ? type.specifiedTypeArgs[0]
-        : CoreTypes.dynamic.ref(ctx),
+    Await(ctx.svar('await_result'), completer.ssa, subject.ssa),
+    resultType.copyWith(
+      boxed: true,
+      nullable: resultType.nullable || isFuture && type.nullable,
+    ),
   );
 }

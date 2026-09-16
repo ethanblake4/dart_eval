@@ -9,8 +9,11 @@ import 'typed_closure.dart';
 import 'typed_global_state.dart';
 import 'typed_exception_state.dart';
 import 'typed_collections.dart';
+import 'typed_records.dart';
+import 'typed_async.dart';
 import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/type.dart';
 import 'package:dart_eval/stdlib/core.dart';
 
 abstract final class TypedMachine {
@@ -39,16 +42,34 @@ abstract final class TypedMachine {
     runtime?.prepareTypedRuntime();
     final entry = program.functions[functionId];
     final root = TypedFrame(entry)..environment = arguments.environment;
+    return _drive(program, arguments, root, entry.entry, runtime);
+  }
+
+  static void _resumeAsync(TypedProgram program, TypedFrame root, int pc,
+      Object? value, Object? error, StackTrace? trace, Runtime? runtime) {
+    if (error != null) {
+      final transfer = TypedExceptions.handle(root.activeFrame, error, trace!, runtime);
+      if (transfer == null) Error.throwWithStackTrace(error, trace);
+      if (transfer.frame == null) return;
+      _drive(program, TypedEntry.result(transfer.result), transfer.frame!, transfer.pc, runtime);
+      return;
+    }
+    _drive(program, TypedEntry.result(value), root, pc, runtime);
+  }
+
+  @pragma('vm:never-inline')
+  static Object? _drive(TypedProgram program, TypedEntry arguments,
+      TypedFrame root, int pc, Runtime? runtime) {
     var frame = root;
-    var pc = entry.entry;
     while (true) {
       try {
         return _dispatch(program, arguments, frame, pc, runtime: runtime);
       } catch (error, trace) {
         final transfer = TypedExceptions.handle(root.activeFrame, error, trace, runtime);
         if (transfer == null) rethrow;
-        frame = transfer.frame; pc = transfer.pc;
-        arguments = const TypedEntry.empty();
+        if (transfer.frame == null) return transfer.result;
+        frame = transfer.frame!; pc = transfer.pc;
+        arguments = TypedEntry.result(transfer.result);
       }
     }
   }
@@ -376,6 +397,9 @@ abstract final class TypedMachine {
           continue dispatch;
         case TypedOp.leaveTry:
           TypedExceptions.leave(frame);
+          continue dispatch;
+        case TypedOp.rBeginAsync:
+          r = TypedAsync.begin(frame);
           continue dispatch;
         case TypedOp.rCaughtException:
           r = TypedExceptions.caught(frame);
@@ -708,6 +732,28 @@ abstract final class TypedMachine {
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           TypedExceptions.enter(program, frame, index);
           continue dispatch;
+        case TypedOp.rAwait:
+          final caller = frame.parent;
+          final returnPc = frame.returnPc;
+          final future = TypedAsync.suspend(program, frame, pc, r, runtime, _resumeAsync);
+          if (caller == null) return future;
+          frame = caller; pc = returnPc;
+          r = future; s = null; c = null;
+          continue dispatch;
+        case TypedOp.rReturnAsync:
+          final returned = TypedAsync.complete(frame, r);
+          if (frame.parent == null) return returned;
+          pc = frame.returnPc;
+          frame = frame.leave();
+          r = returned; s = null; c = null;
+          continue dispatch;
+        case TypedOp.returnAsyncNull:
+          final returned = TypedAsync.complete(frame, null);
+          if (frame.parent == null) return returned;
+          pc = frame.returnPc;
+          frame = frame.leave();
+          r = returned; s = null; c = null;
+          continue dispatch;
         case TypedOp.completeJump:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           pc = TypedExceptions.jump(program, frame, index);
@@ -726,6 +772,18 @@ abstract final class TypedMachine {
         case TypedOp.eIsTypeR:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           e = runtime!.isTypedValueType(r, index);
+          continue dispatch;
+        case TypedOp.rCreateRecord:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          r = TypedRecords.create(runtime!, r, index);
+          continue dispatch;
+        case TypedOp.rLoadType:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          r = $TypeImpl(index);
+          continue dispatch;
+        case TypedOp.rAssertType:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          TypedRecords.assertType(runtime!, r, index);
           continue dispatch;
         case TypedOp.aLoadGlobal:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;

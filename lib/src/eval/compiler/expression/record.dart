@@ -14,6 +14,8 @@ Variable compileRecordLiteral(
 ]) {
   final fields = <String, int>{};
 
+  if (bound != null && !bound.name.startsWith('@record')) bound = null;
+
   if (!(bound?.isAssignableTo(ctx, CoreTypes.record.ref(ctx)) ?? true)) {
     throw CompileError('Incompatible record type', l);
   }
@@ -107,7 +109,7 @@ Variable compileRecordLiteral(
   inferredTypeName.write('>');
 
   final type =
-      bound ??
+      bound?.copyWith(boxed: true) ??
       TypeRef(
         ctx.library,
         inferredTypeName.toString(),

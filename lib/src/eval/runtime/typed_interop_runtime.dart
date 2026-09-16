@@ -3,6 +3,8 @@ part of 'runtime.dart';
 /// The bridge boundary accepts canonical language values. Function signatures
 /// prescribe every conversion before entering the typed register loop.
 extension TypedRuntimeInterop on Runtime {
+  Object? typedConstant(int index) => _constantPool[index];
+
   /// Prepare bridge registrations and runtime-owned globals at a VM entry.
   @pragma('vm:never-inline')
   void prepareTypedRuntime() => _setup();

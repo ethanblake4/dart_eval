@@ -5,6 +5,7 @@ import 'typed_exception.dart';
 import 'typed_frame.dart';
 import 'typed_interop.dart';
 import 'typed_program.dart';
+import 'typed_async.dart';
 
 final class _Handler {
   late TypedExceptionRegion region;
@@ -133,9 +134,10 @@ final class TypedExceptionState {
 }
 
 final class TypedExceptionTransfer {
-  const TypedExceptionTransfer(this.frame, this.pc);
-  final TypedFrame frame;
+  const TypedExceptionTransfer(this.frame, this.pc, [this.result]);
+  final TypedFrame? frame;
   final int pc;
+  final Object? result;
 }
 
 abstract final class TypedExceptions {
@@ -173,6 +175,14 @@ abstract final class TypedExceptions {
     while (true) {
       final target = frame.exceptions?.handle(error, trace, runtime) ?? -1;
       if (target >= 0) return TypedExceptionTransfer(frame, target);
+      if (frame.asyncState != null) {
+        final future = TypedAsync.fail(frame, error, trace);
+        if (frame.parent == null) {
+          return TypedExceptionTransfer(null, -1, future);
+        }
+        final pc = frame.returnPc;
+        return TypedExceptionTransfer(frame.leave(), pc, future);
+      }
       if (frame.parent == null) return null;
       frame = frame.leave();
     }
