@@ -7,6 +7,17 @@ extension TypedRuntimeInterop on Runtime {
   @pragma('vm:never-inline')
   void prepareTypedRuntime() => _setup();
 
+  @pragma('vm:never-inline')
+  bool isTypedValueType(Object? value, int expected) {
+    final actual = value == null
+        ? lookupType(CoreTypes.nullType)
+        : (value as $Value).$getRuntimeType(this);
+    return actual == expected ||
+        (actual >= 0 &&
+            actual < _typeTypes.length &&
+            _typeTypes[actual].contains(expected));
+  }
+
   $Value? invokeTypedExternal(
     int functionId,
     int argumentCount,

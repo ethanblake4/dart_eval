@@ -254,6 +254,6 @@ The reference VM still has its older representation helpers; typed calls no long
 use those helpers. Continue comparing numeric and object/call workloads when
 changing the 196-case loop or extending instruction selection.
 
-Closure capture storage and global initialization are now implemented. See the
-[global checkpoint](typed-globals.md) for current behavior and saved next steps.
-Exception handlers need explicit spill and restoration rules before suspension.
+Closure capture storage, global initialization and synchronous exceptions are
+implemented. See the [exception checkpoint](typed-exceptions.md) for current
+preservation rules, runtime recovery, format changes and the suspension plan.

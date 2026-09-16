@@ -11,6 +11,7 @@ import 'package:dart_eval/src/eval/ir/types.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
 
 import '../variable.dart';
+import '../backend/representation.dart';
 
 StatementInfo compileTryStatement(
   TryStatement s,
@@ -24,63 +25,68 @@ StatementInfo compileTryStatement(
       ? null
       : BasicBlock<Operation>([], label: ctx.label('finally'));
   final endBlock = BasicBlock<Operation>([], label: ctx.label('try_end'));
+  final bodyBlock = BasicBlock<Operation>([], label: ctx.label('try_body'));
+  final outerState = ctx.saveState();
+  final captureSlots = <(int, String), ExceptionSlot>{};
+  // Mutable bindings crossing a handler boundary live in typed frame slots.
+  // An exception can leave between any two operations, so edge phi copies
+  // cannot preserve the current value of a binding.
+  for (var frame = 0; frame < ctx.locals.length; frame++) {
+    for (final entry in ctx.locals[frame].entries.toList()) {
+      final binding = entry.value;
+      if (binding.captureCell != null) {
+        final slot = ExceptionSlot(
+          ctx.svar('handler_cell').name,
+          MachineRepresentation.object,
+        );
+        captureSlots[(frame, entry.key)] = slot;
+        ctx.pushOp(StoreExceptionSlot(slot, binding.captureCell!));
+        ctx.locals[frame][entry.key] = binding.copyWith()
+          ..captureCellSlot = slot;
+      } else if (binding.exceptionSlot == null) {
+        final slot = ExceptionSlot(
+          ctx.svar('handler_local').name,
+          representationForType(binding.type),
+        );
+        ctx.pushOp(StoreExceptionSlot(slot, binding.ssa));
+        ctx.locals[frame][entry.key] = binding.copyWith()..exceptionSlot = slot;
+      }
+    }
+  }
+  final initialState = ctx.saveState();
+  void restoreBindings({bool leaving = false}) {
+    ctx.restoreState(leaving ? outerState : initialState);
+    for (var frame = 0; frame < ctx.locals.length; frame++) {
+      for (final entry in ctx.locals[frame].entries.toList()) {
+        final binding = entry.value;
+        final cellSlot = captureSlots[(frame, entry.key)];
+        final slot =
+            cellSlot ?? initialState.locals[frame][entry.key]!.exceptionSlot;
+        if (slot == null) continue;
+        final loaded = cellSlot == null ? binding.ssa : binding.captureCell!;
+        ctx.pushOp(LoadExceptionSlot(loaded, slot));
+      }
+    }
+  }
+
   ctx.pushOp(
     EnterTry(
       catchTarget: catchBlock?.label,
       finallyTarget: finallyBlock?.label,
     ),
   );
+  ctx.pushOp(Jump(bodyBlock.label!));
   final entry = ctx.flushBlock();
   final parent = ctx.builder;
-  final initialState = ctx.saveState();
-  final firstProtectedId = ctx.activeGraph.lastBlockId;
-  final bodyInfo = compileBlock(s.body, expectedReturnType, ctx);
-  _resolveHandlerState(ctx, initialState);
-  if (!bodyInfo.willAlwaysReturn &&
-      !bodyInfo.willAlwaysThrow &&
-      !bodyInfo.willAlwaysBreak) {
-    ctx.pushOp(LeaveTry());
-    ctx.pushOp(Jump((finallyBlock ?? endBlock).label!));
-  }
-  final tryTail = ctx.flushBlock();
-  final lastProtectedId = ctx.activeGraph.lastBlockId;
-  if (!bodyInfo.willAlwaysReturn &&
-      !bodyInfo.willAlwaysThrow &&
-      !bodyInfo.willAlwaysBreak) {
-    ctx.builder.link(tryTail, finallyBlock ?? endBlock);
-  }
-  final handler = catchBlock ?? finallyBlock;
-  if (handler != null) {
-    ctx.builder.link(entry, handler);
-    for (var id = firstProtectedId; id < lastProtectedId; id++) {
-      ctx.builder.link(ctx.activeGraph[id]!, handler);
-    }
-  }
-
-  var catchInfo = StatementInfo(-1);
-  if (catchBlock != null) {
-    ctx.restoreState(initialState);
-    ctx.builder = BasicBlockBuilder(ctx.activeGraph, [catchBlock], parent);
-    ctx.beginAllocScope();
-    final exception = Variable.ssa(
-      ctx,
-      CaughtException(ctx.svar('exception')),
-      CoreTypes.dynamic.ref(ctx),
-    );
-    ctx.caughtExceptions.add(exception);
-    catchInfo = _compileCatchClause(
-      ctx,
-      s.catchClauses,
-      0,
-      exception,
-      expectedReturnType,
-    );
-    ctx.caughtExceptions.removeLast();
-    ctx.endAllocScope();
-    _resolveHandlerState(ctx, initialState);
-    if (!catchInfo.willAlwaysReturn &&
-        !catchInfo.willAlwaysThrow &&
-        !catchInfo.willAlwaysBreak) {
+  ctx.builder.link(entry, bodyBlock);
+  if (catchBlock != null) ctx.builder.link(entry, catchBlock);
+  if (finallyBlock != null) ctx.builder.link(entry, finallyBlock);
+  ctx.builder = BasicBlockBuilder(ctx.activeGraph, [bodyBlock], parent);
+  ctx.exceptionDepth++;
+  bool completes(StatementInfo info) =>
+      !info.willAlwaysReturn && !info.willAlwaysThrow && !info.willAlwaysBreak;
+  void finishProtected(StatementInfo info) {
+    if (completes(info)) {
       ctx.pushOp(LeaveTry());
       ctx.pushOp(Jump((finallyBlock ?? endBlock).label!));
       final tail = ctx.flushBlock();
@@ -90,25 +96,52 @@ StatementInfo compileTryStatement(
     }
   }
 
+  final bodyInfo = compileBlock(s.body, expectedReturnType, ctx);
+  finishProtected(bodyInfo);
+  var catchInfo = StatementInfo(-1, willAlwaysThrow: true);
+  if (catchBlock != null) {
+    ctx.builder = BasicBlockBuilder(ctx.activeGraph, [catchBlock], parent);
+    restoreBindings();
+    ctx.beginAllocScope();
+    final exception = Variable.ssa(
+      ctx,
+      CaughtException(ctx.svar('exception')),
+      CoreTypes.dynamic.ref(ctx),
+    );
+    ctx.caughtExceptionTargets.add(catchBlock.label!);
+    catchInfo = _compileCatchClause(
+      ctx,
+      s.catchClauses,
+      0,
+      exception,
+      expectedReturnType,
+    );
+    ctx.caughtExceptionTargets.removeLast();
+    ctx.endAllocScope();
+    finishProtected(catchInfo);
+  }
+  StatementInfo? finalInfo;
   if (finallyBlock != null) {
-    ctx.restoreState(initialState);
-    ctx.builder.float(finallyBlock);
     ctx.builder = BasicBlockBuilder(ctx.activeGraph, [finallyBlock], parent);
-    final finalInfo = compileBlock(s.finallyBlock!, expectedReturnType, ctx);
-    if (!finalInfo.willAlwaysReturn &&
-        !finalInfo.willAlwaysThrow &&
-        !finalInfo.willAlwaysBreak) {
-      ctx.pushOp(ResumeCompletion());
+    restoreBindings();
+    finalInfo = compileBlock(s.finallyBlock!, expectedReturnType, ctx);
+    if (completes(finalInfo)) {
+      final normalCompletion =
+          completes(bodyInfo) || catchBlock != null && completes(catchInfo);
+      ctx.pushOp(ResumeCompletion(terminal: !normalCompletion));
+      if (normalCompletion) ctx.pushOp(Jump(endBlock.label!));
       final tail = ctx.flushBlock();
-      ctx.builder.link(tail, endBlock);
+      if (normalCompletion) ctx.builder.link(tail, endBlock);
     } else if (ctx.blockCode.isNotEmpty) {
       ctx.flushBlock();
     }
   }
+  ctx.exceptionDepth--;
   ctx.builder.float(endBlock);
   ctx.builder = BasicBlockBuilder(ctx.activeGraph, [endBlock], parent);
-  ctx.restoreState(initialState);
-  return bodyInfo | catchInfo;
+  restoreBindings(leaving: true);
+  if (finalInfo != null && !completes(finalInfo)) return finalInfo;
+  return catchBlock == null ? bodyInfo : bodyInfo | catchInfo;
 }
 
 // Catch clauses are compiled into a single effective catch clause
@@ -125,7 +158,7 @@ StatementInfo _compileCatchClause(
 
   if (exceptionType == null) {
     if (catchClause.exceptionParameter != null) {
-      ctx.setLocal(catchClause.exceptionParameter!.name.lexeme, exceptionVar);
+      _bindException(ctx, catchClause, exceptionVar, exceptionVar.type);
     }
     _bindStackTrace(ctx, catchClause);
     return compileBlock(catchClause.body, expectedReturnType, ctx);
@@ -148,17 +181,14 @@ StatementInfo _compileCatchClause(
     },
     thenBranch: (ctx, expectedReturnType) {
       if (catchClause.exceptionParameter != null) {
-        ctx.setLocal(
-          catchClause.exceptionParameter!.name.lexeme,
-          exceptionVar.copyWith(type: slot),
-        );
+        _bindException(ctx, catchClause, exceptionVar, slot);
       }
       _bindStackTrace(ctx, catchClause);
       return compileBlock(catchClause.body, expectedReturnType, ctx);
     },
     elseBranch: clauses.length <= index + 1
         ? (ctx, _) {
-            ctx.pushOp(Rethrow(exceptionVar.ssa));
+            ctx.pushOp(Rethrow(ctx.caughtExceptionTargets.last));
             return StatementInfo(-1, willAlwaysThrow: true);
           }
         : (ctx, expectedReturnType) {
@@ -174,6 +204,23 @@ StatementInfo _compileCatchClause(
   );
 }
 
+void _bindException(
+  CompilerContext ctx,
+  CatchClause clause,
+  Variable exception,
+  TypeRef type,
+) {
+  // Assigning to a catch parameter must not replace the value of `rethrow`.
+  ctx.setLocal(
+    clause.exceptionParameter!.name.lexeme,
+    Variable.ssa(
+      ctx,
+      Assign(ctx.svar('catch_parameter'), exception.readBinding(ctx).ssa),
+      type,
+    ),
+  );
+}
+
 void _bindStackTrace(CompilerContext ctx, CatchClause clause) {
   final parameter = clause.stackTraceParameter;
   if (parameter != null) {
@@ -184,41 +231,6 @@ void _bindStackTrace(CompilerContext ctx, CatchClause clause) {
         CaughtStackTrace(ctx.svar('stack_trace')),
         CoreTypes.stackTrace.ref(ctx),
       ),
-    );
-  }
-}
-
-// Handler edges leave through throw/return terminators too. Reconcile the
-// visible locals before the terminator, never by appending unreachable code.
-void _resolveHandlerState(CompilerContext ctx, ContextSaveState initialState) {
-  final terminator = ctx.blockEndsControlFlow
-      ? ctx.blockCode.removeLast()
-      : null;
-  final normalizationStart = ctx.blockCode.length;
-  ctx.resolveBranchStateDiscontinuity(initialState);
-  if (terminator != null) {
-    final rewritten = {
-      for (final operation in ctx.blockCode.skip(normalizationStart))
-        if (operation.writesTo case final target?) target,
-    };
-    final captures = <SSA, SSA>{
-      for (final input in terminator.readsFrom)
-        if (rewritten.contains(input)) input: ctx.svar('completion_value'),
-    };
-    // Pre-SSA boxing rewrites a local's name. Snapshot a completion operand
-    // before that rewrite so throw/return keeps its required representation.
-    ctx.blockCode.insertAll(normalizationStart, [
-      for (final entry in captures.entries) Assign(entry.value, entry.key),
-    ]);
-    ctx.pushOp(
-      captures.isEmpty
-          ? terminator
-          : terminator.copyWith(
-              readsFrom: {
-                for (final input in terminator.readsFrom)
-                  captures[input] ?? input,
-              },
-            ),
     );
   }
 }

@@ -251,13 +251,10 @@ final class Throw extends Operation {
       Throw(readsFrom?.single ?? value);
 }
 
-/// Rethrows the active exception, preserving its stack trace.
+/// Rethrows the exception from its lexical catch, preserving its stack trace.
 final class Rethrow extends Operation {
-  final SSA value;
-  Rethrow(this.value);
+  final String catchTarget;
+  Rethrow(this.catchTarget);
   @override
-  Set<SSA> get readsFrom => {value};
-  @override
-  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) =>
-      Rethrow(readsFrom?.single ?? value);
+  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) => this;
 }

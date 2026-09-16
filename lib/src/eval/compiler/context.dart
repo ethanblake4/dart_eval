@@ -15,6 +15,7 @@ import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'package:dart_eval/src/eval/runtime/type.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/representation.dart';
+import 'package:dart_eval/src/eval/ir/exception.dart';
 
 abstract class AbstractScopeContext {
   int get scopeFrameOffset;
@@ -165,6 +166,7 @@ class CompilerContext with ScopeContext {
           blockCode.last is ReturnAsync ||
           blockCode.last is Throw ||
           blockCode.last is Rethrow ||
+          blockCode.last is CompleteJump ||
           blockCode.last is Jump);
 
   int beginFunction(String name) {
@@ -234,7 +236,8 @@ class CompilerContext with ScopeContext {
   List<ContextSaveState> typeUninferenceSaveStates = [];
   List<CompilerLabel> labels = [];
   Set<Declaration> entrypoints = {};
-  final List<Variable> caughtExceptions = [];
+  final List<String> caughtExceptionTargets = [];
+  int exceptionDepth = 0;
   PrescanContext? preScan;
   int nearestAsyncFrame = -1;
   int globalIndex = 0;

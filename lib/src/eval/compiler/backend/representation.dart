@@ -90,6 +90,10 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
   hints.forEach(constrain);
   for (final operation in operations) {
     switch (operation) {
+      case exceptions.LoadExceptionSlot(:final slot):
+        output(operation, slot.representation);
+      case exceptions.StoreExceptionSlot(:final slot):
+        inputs(operation, slot.representation);
       case StringOperation(:final string, :final argument, :final operator):
         constrain(string, MachineRepresentation.string);
         if (argument != null)
@@ -273,6 +277,7 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
         inputs(operation, object);
         output(operation, object);
       case flow.Jump() ||
+          exceptions.CompleteJump() ||
           exceptions.EnterTry() ||
           exceptions.LeaveTry() ||
           exceptions.ResumeCompletion():

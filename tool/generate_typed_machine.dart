@@ -291,9 +291,8 @@ List<Instruction> specification() {
   );
   add(
     'call',
-    '''final function = program.functions[index];
-          frame = frame.enter(function, pc);
-          pc = function.entry;''',
+    '''frame = frame.enterStatic(program, index, pc);
+          pc = frame.function.entry;''',
     immediate: 'function',
     mayThrow: true,
   );
@@ -423,6 +422,55 @@ List<Instruction> specification() {
     mayThrow: true,
   );
   add('rBridgeArgument', r'r ??= const $null();', inputs: [6], output: 6);
+  add(
+    'enterTry',
+    'TypedExceptions.enter(program, frame, index);',
+    immediate: 'exceptionRegion',
+    mayThrow: true,
+  );
+  add('leaveTry', 'TypedExceptions.leave(frame);');
+  add(
+    'completeJump',
+    'pc = TypedExceptions.jump(program, frame, index);',
+    immediate: 'completionJump',
+    terminates: true,
+  );
+  add(
+    'resumeCompletion',
+    'pc = TypedExceptions.resume(frame, pc);',
+    mayThrow: true,
+    terminates: true,
+  );
+  add(
+    'eAssertR',
+    'if (!e) throw WrappedException(r!);',
+    inputs: [4, 6],
+    mayThrow: true,
+  );
+  add('rCaughtException', 'r = TypedExceptions.caught(frame);', output: 6);
+  add('rCaughtStackTrace', 'r = TypedExceptions.trace(frame);', output: 6);
+  add(
+    'rThrow',
+    'throw WrappedException(r!);',
+    inputs: [6],
+    mayThrow: true,
+    terminates: true,
+  );
+  add(
+    'rethrowCaught',
+    'TypedExceptions.rethrowCaught(program, frame, index);',
+    immediate: 'exceptionRegion',
+    mayThrow: true,
+    terminates: true,
+  );
+  add(
+    'eIsTypeR',
+    'e = runtime!.isTypedValueType(r, index);',
+    inputs: [6],
+    output: 4,
+    immediate: 'typeId',
+    mayThrow: true,
+  );
   for (final (register, index, type) in [
     ('a', 0, 'Integer'),
     ('f', 2, 'Double'),
@@ -617,7 +665,8 @@ abstract final class TypedRegister {
 enum TypedImmediate { none, intConstant, doubleConstant,
   intSpill, doubleSpill, boolSpill, branch,
   function, objectConstant, objectSpill, objectOutgoing, hostCall, shortBranch, integer, overflow,
-  classIndex, field, callSite, externalCall, closureIndex, captureIndex, closureCall, globalIndex }
+  classIndex, field, callSite, externalCall, closureIndex, captureIndex, closureCall, globalIndex,
+  exceptionRegion, completionJump, typeId }
 
 class TypedInstruction {
   const TypedInstruction(this.name, this.inputs, this.outputs, this.immediate,
@@ -663,6 +712,7 @@ import 'typed_instance.dart';
 import 'typed_dispatch.dart';
 import 'typed_closure.dart';
 import 'typed_global_state.dart';
+import 'typed_exception_state.dart';
 import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/stdlib/core.dart';
@@ -691,15 +741,33 @@ abstract final class TypedMachine {
   @pragma('vm:never-inline')
   static Object? runEntry(TypedProgram program, TypedEntry arguments, int functionId, {Runtime? runtime}) {
     runtime?.prepareTypedRuntime();
-    final code = program.code;
     final entry = program.functions[functionId];
-    var frame = TypedFrame(entry)..environment = arguments.environment;
+    final root = TypedFrame(entry)..environment = arguments.environment;
+    var frame = root;
+    var pc = entry.entry;
+    while (true) {
+      try {
+        return _dispatch(program, arguments, frame, pc, runtime: runtime);
+      } catch (error, trace) {
+        final transfer = TypedExceptions.handle(root.activeFrame, error, trace, runtime);
+        if (transfer == null) rethrow;
+        frame = transfer.frame; pc = transfer.pc;
+        arguments = const TypedEntry.empty();
+      }
+    }
+  }
+
+  // A catch region around this switch makes the AOT compiler reserve large
+  // catch spill areas. Recover in runEntry and reenter only after a throw.
+  @pragma('vm:never-inline')
+  static Object? _dispatch(TypedProgram program, TypedEntry arguments,
+      TypedFrame frame, int pc, {Runtime? runtime}) {
+    final code = program.code;
     Object? r = arguments.r, s = arguments.s, c = arguments.c;
     var a = arguments.a, b = arguments.b;
     var f = arguments.f, g = arguments.g;
     var e = arguments.e, x = arguments.x;
-    var pc = entry.entry;
-    dispatch: while (true) {
+      dispatch: while (true) {
       switch (code[pc++]) {
 ''',
   );
@@ -727,15 +795,24 @@ abstract final class TypedMachine {
       );
     }
     machine.writeln('          ${op.body.trimRight()}');
-    if (!op.body.startsWith('return '))
+    if (!op.body.startsWith('return ') &&
+        op.name != 'rThrow' &&
+        op.name != 'rethrowCaught') {
       machine.writeln('          continue dispatch;');
+    }
   }
   machine.writeln(
-    "        default: throw StateError('Invalid typed opcode at byte \${pc - 1}');\n      }\n    }\n  }\n}",
+    """        default: throw StateError('Invalid typed opcode at byte \${pc - 1}');
+      }
+    }
+  }
+}
+""",
   );
   final outputs = {
     'lib/src/eval/runtime/typed/typed_ops.g.dart': constants.toString(),
-    'lib/src/eval/runtime/typed/typed_machine.g.dart': machine.toString(),
+    'lib/src/eval/runtime/typed/typed_machine.g.dart':
+        '${machine.toString().trimRight()}\n',
   };
   for (final output in outputs.entries) {
     final file = File(output.key);

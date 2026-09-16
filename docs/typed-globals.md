@@ -89,6 +89,9 @@ files are current and the ARM64 arithmetic path remains at 38 instructions.
 
 ## Next checkpoint
 
+Completed by the [exception checkpoint](typed-exceptions.md). The plan below is
+retained as the scope of that follow-up.
+
 Implement exception handling and finally blocks before suspension. Define handler
 metadata and frame unwinding, preserve values used by catch/finally blocks in
 spills, and ensure return, break, continue and rethrow retain their pending

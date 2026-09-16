@@ -1,37 +1,33 @@
 # Typed migration test baseline
 
-2026-09-15. Production typed backend, after the global storage checkpoint.
-665 passed, 128 failed, six skipped. Analysis reports zero errors.
+2026-09-15. Production typed backend, after the exception checkpoint.
+725 passed, 95 failed, six skipped. Analysis reports zero errors.
 
-23 tests that failed at the closure checkpoint now pass. No previously passing
-test regressed. Global load/store lowering failures are gone. Enum initializer
-linking, constructor exports and compiler-context cache isolation are corrected.
+33 tests that failed at the global checkpoint now pass. No previously passing
+test regressed. Synchronous try/catch/finally, throw/rethrow, assert and type-test
+lowering are implemented. Async suspension remains unsupported.
 
-There are 127 errors in unfinished compiler/runtime features and one timing
+There are 94 errors in unfinished compiler/runtime features and one timing
 assertion failure. Future.delayed requires a 150 ms timer plus runtime setup to
-finish within 200 ms. It passes in isolation and passed one intermediate full
-run, but failed the final full run. The test remains unchanged.
+finish within 200 ms. It passes in isolation. The test remains unchanged.
 
 Reproduce with `dart test --reporter json` and `dart analyze`. Full local events
-are in `.dart_tool/globals-tests-final.jsonl`; the prior baseline is in
-`.dart_tool/closure-tests-final.jsonl`. The failed names and first errors below
+are in `.dart_tool/exception-tests-final.jsonl`; the prior baseline is in
+`.dart_tool/globals-tests-final.jsonl`. The failed names and first errors below
 preserve the checkpoint independently of those ignored logs.
 
 ## Failure groups
 
 | First reported failure | Tests |
 | --- | ---: |
-| Unsupported lowering: EnterTry | 24 |
-| Representation mismatch | 21 |
 | Unsupported lowering: NewMap | 20 |
-| Unsupported lowering: Await | 15 |
+| Representation mismatch | 20 |
+| Unsupported lowering: Await | 16 |
 | Null assertion | 9 |
-| Other execution or linking errors | 8 |
 | Unsupported lowering: NewSet | 8 |
-| Unsupported lowering: Assert | 5 |
+| Other execution or linking errors | 7 |
 | Unsupported lowering: ReturnAsync | 3 |
 | Frontend compilation | 3 |
-| Unsupported lowering: IsType | 3 |
 | Unsupported lowering: AssertType | 3 |
 | Unsupported lowering: IndexMap | 2 |
 | Future.delayed timing threshold | 1 |
@@ -74,8 +70,6 @@ preserve the checkpoint independently of those ignored logs.
 - Bridge tests Void async function in a subclassed bridge class. Unsupported operation: Typed backend does not yet lower NewBridgeSuperShim: shim₀ = #shim
 
 ### class_test.dart
-
-- Class tests Assigning to default null field. Unsupported operation: Typed backend does not yet lower Assert: assert not_equal₀, assertion_error₀
 
 - Class tests Constructor field initializers. Bad state: Void function 17 returns a value
 
@@ -121,27 +115,13 @@ preserve the checkpoint independently of those ignored logs.
 
 - read definitions and SSA conversion: Set<int> main(Set<int> input) => <int>{0, ...input};. Unsupported operation: Typed backend does not yet lower NewSet: set₀ = set {}
 
-### compiler_control_flow_test.dart
-
-- try finally handler is reachable without a self edge. Unsupported operation: Typed backend does not yet lower EnterTry: Instance of 'EnterTry'
-
 ### compiler_declarations_cfg_test.dart
 
 - Future<int> f() async => 1; Future<int> main() async { return await f(); }. Unsupported operation: Typed backend does not yet lower ReturnAsync: returnasync var_12₁, #completer₀
 
-- int main() { try { return 1; } finally { print(2); } }. Unsupported operation: Typed backend does not yet lower EnterTry: Instance of 'EnterTry'
-
-- int main() { try { throw 1; } catch (e) { return 2; } }. Unsupported operation: Typed backend does not yet lower EnterTry: Instance of 'EnterTry'
-
-- int main() { try { throw 1; } on String catch (e) { return 2; } catch (e, s) { return 3; } }. Unsupported operation: Typed backend does not yet lower EnterTry: Instance of 'EnterTry'
-
 ### compiler_ssa_test.dart
 
 - SSA dominance: async await preserves explicit results. Unsupported operation: Typed backend does not yet lower ReturnAsync: returnasync var_12₁, #completer₀
-
-- SSA dominance: finally executes around early return. Unsupported operation: Typed backend does not yet lower EnterTry: Instance of 'EnterTry'
-
-- SSA dominance: typed catch with local mutation. Unsupported operation: Typed backend does not yet lower EnterTry: Instance of 'EnterTry'
 
 ### convert_test.dart
 
@@ -161,65 +141,17 @@ preserve the checkpoint independently of those ignored logs.
 
 - dart:convert tests utf8.encode(). Bad state: Incompatible representations for var_12₀: string and object; an explicit conversion is required
 
-### exception_representation_test.dart
-
-- return preserves its representation across handler normalization. Unsupported operation: Typed backend does not yet lower EnterTry: Instance of 'EnterTry'
-
-- throw preserves the local value across handler normalization. Unsupported operation: Typed backend does not yet lower EnterTry: Instance of 'EnterTry'
-
-- throwing an unboxed parameter preserves boxed exception ABI. Unsupported operation: Typed backend does not yet lower EnterTry: Instance of 'EnterTry'
-
 ### exception_test.dart
-
-- Exception tests Basic try/catch. Unsupported operation: Typed backend does not yet lower EnterTry: Instance of 'EnterTry'
 
 - Exception tests Catching exception after await. Unsupported operation: Typed backend does not yet lower Await: await_result₀ = await method_result_1₀, completer: #completer₀
 
-- Exception tests Code runs after caught exception. Unsupported operation: Typed backend does not yet lower EnterTry: Instance of 'EnterTry'
-
-- Exception tests DateTime.parse throwing exception. Unsupported operation: Typed backend does not yet lower EnterTry: Instance of 'EnterTry'
-
-- Exception tests Error propagates through empty finally. Unsupported operation: Typed backend does not yet lower EnterTry: Instance of 'EnterTry'
-
 - Exception tests Exception bubbles through asynchronous gap. Unsupported operation: Typed backend does not yet lower Await: await_result₀ = await method_result_1₀, completer: #completer₀
 
-- Exception tests Finally can do work and return value from catch. Bad state: Missing handler finally
-
-- Exception tests Manipulating local variables in catch and finally. Unsupported operation: Typed backend does not yet lower EnterTry: Instance of 'EnterTry'
-
-- Exception tests Nested try/catch. Unsupported operation: Typed backend does not yet lower EnterTry: Instance of 'EnterTry'
-
-- Exception tests Nested try/catch/finally. Unsupported operation: Typed backend does not yet lower EnterTry: Instance of 'EnterTry'
-
-- Exception tests Rethrow. Unsupported operation: Typed backend does not yet lower EnterTry: Instance of 'EnterTry'
-
-- Exception tests Return from catch is preceded by finally return. Bad state: Missing handler finally
-
-- Exception tests Return from finally precedes error. Unsupported operation: Typed backend does not yet lower EnterTry: Instance of 'EnterTry'
-
-- Exception tests Simple assert. Unsupported operation: Typed backend does not yet lower Assert: assert var_12₀, assertion_error₀
-
-- Exception tests Try without throw skips catch but executes finally. Unsupported operation: Typed backend does not yet lower EnterTry: Instance of 'EnterTry'
-
-- Exception tests Try/catch across function boundaries. Unsupported operation: Typed backend does not yet lower EnterTry: Instance of 'EnterTry'
-
-- Exception tests Try/catch no error. Unsupported operation: Typed backend does not yet lower EnterTry: Instance of 'EnterTry'
-
-- Exception tests Try/catch with on. Unsupported operation: Typed backend does not yet lower EnterTry: Instance of 'EnterTry'
-
-- Exception tests try-catch-finally with Exception constructor. Bad state: Assignment or phi has incompatible representations: log₉, string_result_2₀ (object, string)
-
 ### expression_test.dart
-
-- Expression tests "is" expression. Unsupported operation: Typed backend does not yet lower IsType: istype var_14₁ is! 14
 
 - Expression tests Class cast. Unsupported operation: Typed backend does not yet lower AssertType: asserttype x₀ is 86
 
 - Expression tests Failing cast. Unsupported operation: Typed backend does not yet lower AssertType: asserttype x₀ is 87
-
-- Expression tests Is num. Unsupported operation: Typed backend does not yet lower IsType: istype arg_1₀ is 11
-
-- Expression tests Null assertion. Unsupported operation: Typed backend does not yet lower Assert: assert not_equal₀, assertion_error₀
 
 - Expression tests Num cast. Unsupported operation: Typed backend does not yet lower AssertType: asserttype x₀ is 12
 
@@ -229,11 +161,11 @@ preserve the checkpoint independently of those ignored logs.
 
 - FilesystemPermission Tests should allow file operations in subdirectory using relative path when currentDir is set and permission is granted for parent directory. Unsupported operation: Typed backend does not yet lower Await: await_result₀ = await method_result_1₀, completer: #completer₀
 
-- FilesystemPermission Tests should allow file read/write/delete using IOOverrides for currentDir. Unsupported operation: Typed backend does not yet lower EnterTry: Instance of 'EnterTry'
+- FilesystemPermission Tests should allow file read/write/delete using IOOverrides for currentDir. Unsupported operation: Typed backend does not yet lower Await: await_result₀ = await method_result_1₀, completer: #completer₀
 
 ### function_test.dart
 
-- Function tests Function equality test. Unsupported operation: Typed backend does not yet lower Assert: assert not_equal₀, assertion_error₀
+- Function tests Function equality test. dart_eval runtime exception: EvalUnknownPropertyException (==)
 
 ### functional1_test.dart
 
@@ -250,10 +182,6 @@ preserve the checkpoint independently of those ignored logs.
 - dart:io tests HttpClient get() permission denied. Unsupported operation: Typed backend does not yet lower Await: await_result₀ = await method_result_2₀, completer: #completer₀
 
 - dart:io tests Write/read a file. Unsupported operation: Typed backend does not yet lower Await: await_result₀ = await method_result_1₀, completer: #completer₀
-
-### operator_test.dart
-
-- Operator method tests Operator ==. Unsupported operation: Typed backend does not yet lower IsType: istype arg_1₀ is 86
 
 ### packages/hlc_test.dart
 
@@ -289,8 +217,6 @@ preserve the checkpoint independently of those ignored logs.
 
 - Regex Tests RegExp.allMatches(). type 'Null' is not a subtype of type '_Mismatch' in type cast
 
-- Regex Tests RegExp.firstMatch(). Unsupported operation: Typed backend does not yet lower Assert: assert not_equal₀, assertion_error₀
-
 ### set_test.dart
 
 - Set tests Adding elements to a set. Unsupported operation: Typed backend does not yet lower NewSet: set₀ = set {}
@@ -312,8 +238,6 @@ preserve the checkpoint independently of those ignored logs.
 - Standard library tests Boxed null. Unsupported operation: Typed backend does not yet lower IndexMap: map₀ = indexmap a₁[var_12₁]
 
 - Standard library tests StreamController and Stream.listen(). Unsupported operation: Typed backend does not yet lower Await: await_result₀ = await method_result_5₀, completer: #completer₀
-
-- Standard library tests double.parse() throws FormatException without onError. Unsupported operation: Typed backend does not yet lower EnterTry: Instance of 'EnterTry'
 
 - Standard library tests dynamic.toString. Unsupported operation: Typed backend does not yet lower NewMap: map₀ = {}
 

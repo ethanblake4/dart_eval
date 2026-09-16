@@ -4,10 +4,24 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'typed_function.dart';
+import 'typed_exception_state.dart';
+import 'typed_program.dart';
 
 /// Register initialization happens once at the public host boundary. Internal
 /// calls already have their arguments in the compiler-assigned registers.
 class TypedEntry {
+  const TypedEntry.empty()
+    : a = 0,
+      b = 0,
+      f = 0.0,
+      g = 0.0,
+      e = false,
+      x = false,
+      r = null,
+      s = null,
+      c = null,
+      environment = const [];
+
   TypedEntry._(List<Object?> registers, {this.environment = const []})
     : a = registers[0] as int,
       b = registers[1] as int,
@@ -131,6 +145,18 @@ class TypedFrame {
   /// Reuse a frame for repeated calls at the same depth. Recursive invocations
   /// still have distinct storage, and every run owns its entire frame chain.
   @pragma('vm:never-inline')
+  TypedFrame enterStatic(TypedProgram program, int index, int pc) {
+    final callee = program.functions[index];
+    var child = _child;
+    if (child == null || !identical(child.function, callee)) {
+      child = _child = TypedFrame(callee, this);
+    }
+    child.returnPc = pc;
+    child.environment = const [];
+    return child;
+  }
+
+  @pragma('vm:never-inline')
   TypedFrame enter(TypedFunction callee, int pc) {
     var child = _child;
     if (child == null || !identical(child.function, callee)) {
@@ -162,6 +188,9 @@ class TypedFrame {
 
   @pragma('vm:never-inline')
   TypedFrame leave() {
+    returnPc = -1;
+    // Compiler continuations and exception unwinding have already popped this
+    // frame's handlers. Ordinary returns need no handler-state check.
     environment = const [];
     // Cached inactive frames must not retain arbitrary application objects.
     if (objectSpills.isNotEmpty) {
@@ -193,9 +222,22 @@ class TypedFrame {
   }
 
   final TypedFunction function;
+  TypedExceptionState? exceptions;
   final TypedFrame? parent;
   TypedFrame? _child;
-  int returnPc = 0;
+  int returnPc = -1;
+
+  /// Only consulted after a native unwind. An inactive cached child has no
+  /// return address; calls already set that address as part of their ABI.
+  TypedFrame get activeFrame {
+    var frame = this;
+    while (true) {
+      final child = frame._child;
+      if (child == null || child.returnPc < 0) return frame;
+      frame = child;
+    }
+  }
+
   List<Object?> environment = const [];
   final Int64List intSpills;
   final Float64List doubleSpills;

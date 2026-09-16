@@ -24,10 +24,16 @@ StatementInfo compileSwitchStatement(
   final endBlock = BasicBlock<Operation>([], label: ctx.label('switch_end'));
   final initialState = ctx.saveState();
   ctx.labels.add(
-    CompilerLabel(LabelType.branch, -1, (ctx) {
-      ctx.resolveBranchStateDiscontinuity(initialState);
-      return -1;
-    }, breakTarget: endBlock),
+    CompilerLabel(
+      LabelType.branch,
+      -1,
+      (ctx) {
+        ctx.resolveBranchStateDiscontinuity(initialState);
+        return -1;
+      },
+      exceptionDepth: ctx.exceptionDepth,
+      breakTarget: endBlock,
+    ),
   );
   final result = _compileSwitchCases(
     ctx,

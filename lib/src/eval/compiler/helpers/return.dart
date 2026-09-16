@@ -6,6 +6,10 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/async.dart';
+import 'package:dart_eval/src/eval/ir/exception.dart';
+import 'package:control_flow_graph/control_flow_graph.dart';
+import 'package:dart_eval/src/eval/compiler/backend/representation.dart'
+    show representationForType;
 
 StatementInfo doReturn(
   CompilerContext ctx,
@@ -18,6 +22,14 @@ StatementInfo doReturn(
     if (isAsync) {
       final completer = ctx.lookupLocal('#completer')!;
       ctx.pushOp(ReturnAsync(null, completer.ssa));
+    } else if (ctx.exceptionDepth > 0) {
+      final continuation = BasicBlock<Operation>([
+        Return(null),
+      ], label: ctx.label('return_completion'));
+      ctx.pushOp(CompleteJump(continuation.label!, 0));
+      final tail = ctx.flushBlock();
+      ctx.builder.float(continuation);
+      ctx.builder.link(tail, continuation);
     } else {
       ctx.pushOp(Return(null));
     }
@@ -70,7 +82,25 @@ StatementInfo doReturn(
     } else {
       value0 = value0.boxIfNeeded(ctx);
     }
-    ctx.pushOp(Return(value0.ssa));
+    if (ctx.exceptionDepth == 0) {
+      ctx.pushOp(Return(value0.ssa));
+    } else {
+      final slot = ExceptionSlot(
+        ctx.svar('completion_slot').name,
+        ctx.functionSignatures[ctx.currentFunctionId]?.result ??
+            representationForType(value0.type),
+      );
+      final continuation = BasicBlock<Operation>([
+        LoadExceptionSlot(ctx.svar('completion_value'), slot),
+      ], label: ctx.label('return_completion'));
+      final loaded = continuation.code.single.writesTo!;
+      continuation.code.add(Return(loaded));
+      ctx.pushOp(StoreExceptionSlot(slot, value0.ssa));
+      ctx.pushOp(CompleteJump(continuation.label!, 0));
+      final tail = ctx.flushBlock();
+      ctx.builder.float(continuation);
+      ctx.builder.link(tail, continuation);
+    }
   }
 
   return StatementInfo(-1, willAlwaysReturn: true);

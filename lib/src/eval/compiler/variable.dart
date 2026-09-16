@@ -2,6 +2,7 @@ import '../ir/string.dart';
 import '../ir/closures.dart';
 import 'backend/representation.dart' show representationForType;
 import 'helpers/captures.dart';
+import '../ir/exception.dart';
 import '../ir/collection.dart' show ListLength;
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
@@ -130,6 +131,8 @@ class Variable {
   String? localName;
   int? frameIndex;
   SSA? captureCell;
+  ExceptionSlot? exceptionSlot;
+  ExceptionSlot? captureCellSlot;
 
   Variable captureBinding(CompilerContext ctx, AstNode declaration) {
     if (!capturesFor(declaration).captured.contains(declaration)) return this;
@@ -138,7 +141,16 @@ class Variable {
     return copyWith()..captureCell = cell;
   }
 
-  Variable readBinding(CompilerContext ctx) => captureCell == null
+  Variable readBinding(CompilerContext ctx) => exceptionSlot != null
+      ? Variable.ssa(
+          ctx,
+          LoadExceptionSlot(ctx.svar('protected'), exceptionSlot!),
+          type,
+          isFinal: isFinal,
+          callingConvention: callingConvention,
+          methodReturnType: methodReturnType,
+        )
+      : captureCell == null
       ? this
       : Variable.ssa(
           ctx,
@@ -262,7 +274,9 @@ class Variable {
       ..name = name ?? this.name
       ..frameIndex = frameIndex ?? this.frameIndex
       ..localName = localName
-      ..captureCell = captureCell;
+      ..captureCell = captureCell
+      ..exceptionSlot = exceptionSlot
+      ..captureCellSlot = captureCellSlot;
   }
 
   /// Makes a copy of the variable with some fields updated, and also

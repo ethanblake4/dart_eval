@@ -6,6 +6,6 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 
 Variable compileRethrowExpression(CompilerContext ctx, RethrowExpression e) {
-  ctx.pushOp(Rethrow(ctx.caughtExceptions.last.ssa));
+  ctx.pushOp(Rethrow(ctx.caughtExceptionTargets.last));
   return Variable(-1, CoreTypes.never.ref(ctx));
 }

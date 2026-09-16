@@ -9,6 +9,7 @@ import 'typed_external_call.dart';
 import 'typed_closure_descriptor.dart';
 import 'typed_codec.dart';
 import 'typed_global.dart';
+import 'typed_exception.dart';
 
 /// Validated immutable bytecode for the typed-bank execution loop.
 class TypedProgram {
@@ -29,6 +30,8 @@ class TypedProgram {
     List<TypedClosureDescriptor> closures = const [],
     List<TypedClosureCall> closureCalls = const [],
     List<TypedGlobal> globals = const [],
+    List<TypedExceptionRegion> exceptionRegions = const [],
+    List<TypedCompletionJump> completionJumps = const [],
     this.entryFunction = 0,
   }) : code = Uint8List.fromList(code).asUnmodifiableView(),
        exports = List.unmodifiable(exports),
@@ -36,6 +39,8 @@ class TypedProgram {
        closures = List.unmodifiable(closures),
        closureCalls = List.unmodifiable(closureCalls),
        globals = List.unmodifiable(globals),
+       exceptionRegions = List.unmodifiable(exceptionRegions),
+       completionJumps = List.unmodifiable(completionJumps),
        classes = List.unmodifiable(
          classes.map(
            (type) => TypedClass(
@@ -113,6 +118,8 @@ class TypedProgram {
   final List<TypedClosureDescriptor> closures;
   final List<TypedClosureCall> closureCalls;
   final List<TypedGlobal> globals;
+  final List<TypedExceptionRegion> exceptionRegions;
+  final List<TypedCompletionJump> completionJumps;
   final int entryFunction;
 
   ByteData write() => TypedCodec.write(this);
@@ -358,6 +365,9 @@ class TypedProgram {
     _validateExports();
     _validateExternalCalls();
     _validateGlobals();
+    if (exceptionRegions.length > 65536 || completionJumps.length > 65536) {
+      throw const FormatException('Too many exception regions or completions');
+    }
     final captureCounts = _validateClosures();
     if (code.isEmpty) throw const FormatException('Empty typed program');
     final boundaries = <int>{};
@@ -426,6 +436,8 @@ class TypedProgram {
           TypedImmediate.closureCall => closureCalls.length,
           TypedImmediate.captureIndex => captureCounts[function.entry] ?? 0,
           TypedImmediate.globalIndex => globals.length,
+          TypedImmediate.exceptionRegion => exceptionRegions.length,
+          TypedImmediate.completionJump => completionJumps.length,
           TypedImmediate.field => classes.fold<int>(
             0,
             (n, type) => type.valueCount > n ? type.valueCount : n,
@@ -438,6 +450,19 @@ class TypedProgram {
             code,
             pc,
           );
+        }
+        if (last.immediate == TypedImmediate.exceptionRegion ||
+            last.immediate == TypedImmediate.completionJump) {
+          final owner = last.immediate == TypedImmediate.exceptionRegion
+              ? exceptionRegions[index].functionId
+              : completionJumps[index].functionId;
+          if (owner < 0 ||
+              owner >= functions.length ||
+              functions[owner].entry != function.entry) {
+            throw const FormatException(
+              'Exception metadata belongs to another function',
+            );
+          }
         }
         if (last.immediate == TypedImmediate.globalIndex) {
           final register = last.inputs.isEmpty
@@ -514,6 +539,35 @@ class TypedProgram {
       );
       if (!boundaries.contains(address) || owner.entry != entry) {
         throw FormatException('Branch target $address is not an instruction');
+      }
+    }
+    void target(int functionId, int address) {
+      if (functionId < 0 ||
+          functionId >= functions.length ||
+          !boundaries.contains(address) ||
+          ordered.lastWhere((f) => f.entry <= address).entry !=
+              functions[functionId].entry) {
+        throw const FormatException('Invalid exception destination');
+      }
+    }
+
+    for (final region in exceptionRegions) {
+      if (region.catchTarget < -1 ||
+          region.finallyTarget < -1 ||
+          (region.catchTarget == -1 && region.finallyTarget == -1)) {
+        throw const FormatException('Exception region has no valid handler');
+      }
+      if (region.catchTarget >= 0) {
+        target(region.functionId, region.catchTarget);
+      }
+      if (region.finallyTarget >= 0) {
+        target(region.functionId, region.finallyTarget);
+      }
+    }
+    for (final completion in completionJumps) {
+      target(completion.functionId, completion.target);
+      if (completion.targetDepth < 0 || completion.targetDepth > 65535) {
+        throw const FormatException('Invalid completion depth');
       }
     }
   }

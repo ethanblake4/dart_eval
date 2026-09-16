@@ -14,6 +14,8 @@ import '../../ir/objects.dart' as objects_ir;
 import '../../ir/primitives.dart' as primitives;
 import '../../ir/closures.dart' as closures;
 import '../../ir/globals.dart' as globals;
+import '../../ir/exception.dart' as exceptions;
+import '../../ir/types.dart' as types_ir;
 import '../../runtime/typed/typed_ops.g.dart';
 import '../../runtime/typed/typed_program.dart';
 import '../../runtime/typed/typed_function.dart';
@@ -23,6 +25,7 @@ import '../../runtime/typed/typed_external_call.dart';
 import '../../runtime/typed/typed_closure_descriptor.dart';
 import '../../runtime/typed/typed_export.dart';
 import '../../runtime/typed/typed_global.dart';
+import '../../runtime/typed/typed_exception.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import '../helpers/default_value.dart';
 import '../helpers/fpl.dart';
@@ -109,6 +112,8 @@ class TypedBackend {
   final _closures = <TypedClosureDescriptor>[];
   final _closureCalls = <TypedClosureCall>[];
   final _externalCalls = <TypedExternalCall>[];
+  final _exceptionRegions = <TypedExceptionRegion>[];
+  final _completionJumps = <TypedCompletionJump>[];
   Map<int, int> functionIndices = {};
 
   static final _codes = {
@@ -300,6 +305,26 @@ class TypedBackend {
       externalCalls: _externalCalls,
       closures: _closures,
       closureCalls: _closureCalls,
+      exceptionRegions: [
+        for (final region in _exceptionRegions)
+          TypedExceptionRegion(
+            region.functionId,
+            catchTarget: region.catchTarget < 0
+                ? -1
+                : region.catchTarget + functions[region.functionId].entry,
+            finallyTarget: region.finallyTarget < 0
+                ? -1
+                : region.finallyTarget + functions[region.functionId].entry,
+          ),
+      ],
+      completionJumps: [
+        for (final jump in _completionJumps)
+          TypedCompletionJump(
+            jump.functionId,
+            jump.target + functions[jump.functionId].entry,
+            jump.targetDepth,
+          ),
+      ],
       globals: [
         for (var index = 0; index < context.globalIndex; index++)
           TypedGlobal(
@@ -440,6 +465,8 @@ class TypedBackend {
   }
 
   _FunctionCode _compileFunction(int id, Map<int, int> functionIndices) {
+    final firstRegion = _exceptionRegions.length;
+    final firstCompletion = _completionJumps.length;
     final spillCounts = [0, 0, 0, 0];
     var outgoingCount = 0;
     final sourceGraph = context.ssaFunctionGraphs[id]!;
@@ -457,6 +484,23 @@ class TypedBackend {
       for (final blockId in sourceGraph.graph.vertices)
         ...sourceGraph[blockId]!.code,
     ];
+    final exceptionSlotCounts = [0, 0, 0, 0];
+    final exceptionSlots = <exceptions.ExceptionSlot, int>{};
+    for (final operation in sourceOperations) {
+      final slot = switch (operation) {
+        exceptions.StoreExceptionSlot(:final slot) ||
+        exceptions.LoadExceptionSlot(:final slot) => slot,
+        _ => null,
+      };
+      if (slot == null || exceptionSlots.containsKey(slot)) continue;
+      final bank = slot.representation.index < 3
+          ? slot.representation.index
+          : 3;
+      exceptionSlots[slot] = exceptionSlotCounts[bank]++;
+    }
+    for (var bank = 0; bank < 4; bank++) {
+      spillCounts[bank] = exceptionSlotCounts[bank];
+    }
     var addedNativeList = true;
     while (addedNativeList) {
       addedNativeList = false;
@@ -477,6 +521,26 @@ class TypedBackend {
       }
     }
     final graph = sourceGraph.clone();
+    final regionIndices = <exceptions.EnterTry, int>{};
+    final catchRegionIndices = <String, int>{};
+    for (final blockId in graph.graph.vertices) {
+      for (final op in graph[blockId]!.code.whereType<exceptions.EnterTry>()) {
+        final index = _exceptionRegions.length;
+        regionIndices[op] = index;
+        if (op.catchTarget != null) catchRegionIndices[op.catchTarget!] = index;
+        _exceptionRegions.add(
+          TypedExceptionRegion(
+            functionIndices[id]!,
+            catchTarget: op.catchTarget == null
+                ? -1
+                : graph[op.catchTarget!]!.id!,
+            finallyTarget: op.finallyTarget == null
+                ? -1
+                : graph[op.finallyTarget!]!.id!,
+          ),
+        );
+      }
+    }
     cfg.SSA value(cfg.SSA input) {
       final representation = representations[input];
       if (representation == null) {
@@ -526,6 +590,58 @@ class TypedBackend {
         );
       }
       for (final op in block.code) {
+        if (op is exceptions.EnterTry) {
+          lowered.add(
+            TypedOperation(
+              _named(['enterTry']),
+              null,
+              [],
+              immediate: regionIndices[op],
+            ),
+          );
+          continue;
+        }
+        if (op is exceptions.CompleteJump) {
+          final index = _completionJumps.length;
+          _completionJumps.add(
+            TypedCompletionJump(
+              functionIndices[id]!,
+              graph[op.target]!.id!,
+              op.targetDepth,
+            ),
+          );
+          lowered.add(
+            TypedOperation(
+              _named(['completeJump']),
+              null,
+              [],
+              immediate: index,
+              terminal: true,
+            ),
+          );
+          continue;
+        }
+        if (op is types_ir.IsType) {
+          final target = value(op.result);
+          final test = op.not
+              ? cfg.SSA(
+                  'typed:isType${temporaryCounter++}',
+                  version: 0,
+                  type: 2,
+                )
+              : target;
+          lowered.add(
+            TypedOperation(_named(['eIsTypeR']), test, [
+              value(op.object),
+            ], immediate: op.typeId),
+          );
+          if (op.not) {
+            lowered.add(
+              TypedOperation(_named(['eNot', 'xNot']), target, [test]),
+            );
+          }
+          continue;
+        }
         if (op is cfg.PhiNode) {
           lowered.add(
             cfg.PhiNode(
@@ -1014,6 +1130,35 @@ class TypedBackend {
             for (final order in ['AB']) '$flag$condition$order',
         ];
         lowered.add(switch (op) {
+          exceptions.StoreExceptionSlot(:final slot, :final value) => make(
+            bankNames(value, 'Spill'),
+            [value],
+            immediate: exceptionSlots[slot],
+          ),
+          exceptions.LoadExceptionSlot(:final slot, :final result) => make(
+            bankNames(result, 'Reload'),
+            [],
+            immediate: exceptionSlots[slot],
+          ),
+          exceptions.LeaveTry() => make(['leaveTry'], []),
+          exceptions.ResumeCompletion(:final terminal) => make(
+            ['resumeCompletion'],
+            [],
+            terminal: terminal,
+          ),
+          exceptions.CaughtException() => make(['rCaughtException'], []),
+          exceptions.CaughtStackTrace() => make(['rCaughtStackTrace'], []),
+          flow.Throw(:final value) => make(['rThrow'], [value], terminal: true),
+          flow.Rethrow(:final catchTarget) => make(
+            ['rethrowCaught'],
+            [],
+            immediate: catchRegionIndices[catchTarget]!,
+            terminal: true,
+          ),
+          flow.Assert(:final condition, :final errorMessage) => make(
+            ['eAssertR'],
+            [condition, errorMessage],
+          ),
           NumericBinary(
             :final left,
             :final right,
@@ -1270,6 +1415,23 @@ class TypedBackend {
         for (var i = 0; i < code.length; i++) {
           final op = code[i];
           if (op is TypedOperation && op.terminal) {
+            if (op.codes.contains(_codes['completeJump'])) {
+              final jump = _completionJumps[op.immediate!];
+              if (jump.target == old) {
+                _completionJumps[op.immediate!] = TypedCompletionJump(
+                  jump.functionId,
+                  replacement,
+                  jump.targetDepth,
+                );
+              }
+              continue;
+            }
+            if (!op.codes.any(
+              (code) =>
+                  TypedOp.instructions[code].immediate == TypedImmediate.branch,
+            )) {
+              continue;
+            }
             code[i] = TypedOperation(
               op.codes,
               op.result,
@@ -1284,6 +1446,7 @@ class TypedBackend {
     );
     graph.performRegisterAllocation();
     _Bytes spill(cfg.AllocatedSSA variable, int slot, bool reload) {
+      slot += exceptionSlotCounts[variable.type];
       if (slot + 1 > spillCounts[variable.type]) {
         spillCounts[variable.type] = slot + 1;
       }
@@ -1367,6 +1530,28 @@ class TypedBackend {
         }
       }
     } while (widened);
+    for (var index = firstRegion; index < _exceptionRegions.length; index++) {
+      final region = _exceptionRegions[index];
+      _exceptionRegions[index] = TypedExceptionRegion(
+        region.functionId,
+        catchTarget: region.catchTarget < 0 ? -1 : offsets[region.catchTarget]!,
+        finallyTarget: region.finallyTarget < 0
+            ? -1
+            : offsets[region.finallyTarget]!,
+      );
+    }
+    for (
+      var index = firstCompletion;
+      index < _completionJumps.length;
+      index++
+    ) {
+      final jump = _completionJumps[index];
+      _completionJumps[index] = TypedCompletionJump(
+        jump.functionId,
+        offsets[jump.target]!,
+        jump.targetDepth,
+      );
+    }
     final bytes = BytesBuilder();
     for (final block in assembled.values) {
       for (final instruction in block) {

@@ -8,17 +8,18 @@ import 'typed_export.dart';
 import 'typed_external_call.dart';
 import 'typed_closure_descriptor.dart';
 import 'typed_global.dart';
+import 'typed_exception.dart';
 
 /// Versioned little-endian format, separate from the generic register format.
 abstract final class TypedCodec {
   static const magic = 0x54564544; // DEVT
-  static const version = 110;
+  static const version = 111;
 
   static ByteData write(TypedProgram program) {
     final objects = _writeObjects(program.objects);
     final metadata = _writeMetadata(program);
     final result = ByteData(
-      68 +
+      76 +
           program.functions.fold<int>(
             0,
             (size, f) => size + 29 + f.argumentKinds.length,
@@ -52,6 +53,8 @@ abstract final class TypedCodec {
     u32(program.closures.length);
     u32(program.closureCalls.length);
     u32(program.globals.length);
+    u32(program.exceptionRegions.length);
+    u32(program.completionJumps.length);
     for (final function in program.functions) {
       for (final value in function.layout) {
         u32(value);
@@ -80,7 +83,7 @@ abstract final class TypedCodec {
 
   static TypedProgram read(ByteBuffer buffer) {
     final input = ByteData.view(buffer);
-    if (input.lengthInBytes < 68) {
+    if (input.lengthInBytes < 76) {
       throw const FormatException('Truncated typed program header');
     }
     var offset = 0;
@@ -101,13 +104,14 @@ abstract final class TypedCodec {
     final exportCount = u32(), externalCallCount = u32();
     final closureCount = u32(), closureCallCount = u32();
     final globalCount = u32();
+    final exceptionRegionCount = u32(), completionJumpCount = u32();
     final sectionsLength =
         integerCount * 8 +
         doubleCount * 8 +
         objectLength +
         codeLength +
         metadataLength;
-    final minimumLength = 68 + functionCount * 29 + sectionsLength;
+    final minimumLength = 76 + functionCount * 29 + sectionsLength;
     if (functionCount == 0 ||
         functionCount > 65536 ||
         classCount > 65536 ||
@@ -116,6 +120,8 @@ abstract final class TypedCodec {
         closureCount > 65536 ||
         closureCallCount > 65536 ||
         globalCount > 65536 ||
+        exceptionRegionCount > 65536 ||
+        completionJumpCount > 65536 ||
         minimumLength > input.lengthInBytes ||
         objectCount > objectLength) {
       throw const FormatException('Invalid typed bytecode section lengths');
@@ -169,6 +175,8 @@ abstract final class TypedCodec {
       closures,
       closureCalls,
       globals,
+      exceptionRegions,
+      completionJumps,
     ) = _readMetadata(
       ByteData.view(buffer, offset, metadataLength),
       classCount,
@@ -178,6 +186,8 @@ abstract final class TypedCodec {
       closureCount,
       closureCallCount,
       globalCount,
+      exceptionRegionCount,
+      completionJumpCount,
     );
     offset += metadataLength;
     final integers = List.generate(integerCount, (_) {
@@ -208,6 +218,8 @@ abstract final class TypedCodec {
       closures: closures,
       closureCalls: closureCalls,
       globals: globals,
+      exceptionRegions: exceptionRegions,
+      completionJumps: completionJumps,
       entryFunction: entry,
     );
   }
@@ -306,6 +318,16 @@ abstract final class TypedCodec {
       u32((global.isLate ? 1 : 0) | (global.isFinal ? 2 : 0));
       string(global.name);
     }
+    for (final region in program.exceptionRegions) {
+      u32(region.functionId);
+      u32(region.catchTarget + 1);
+      u32(region.finallyTarget + 1);
+    }
+    for (final completion in program.completionJumps) {
+      u32(completion.functionId);
+      u32(completion.target);
+      u32(completion.targetDepth);
+    }
     return bytes.takeBytes();
   }
 
@@ -317,6 +339,8 @@ abstract final class TypedCodec {
     List<TypedClosureDescriptor>,
     List<TypedClosureCall>,
     List<TypedGlobal>,
+    List<TypedExceptionRegion>,
+    List<TypedCompletionJump>,
   )
   _readMetadata(
     ByteData input,
@@ -327,6 +351,8 @@ abstract final class TypedCodec {
     int closureCount,
     int closureCallCount,
     int globalCount,
+    int exceptionRegionCount,
+    int completionJumpCount,
   ) {
     var offset = 0;
     void require(int count) {
@@ -375,7 +401,10 @@ abstract final class TypedCodec {
           exportCount * 16 +
           externalCallCount * 8 +
           closureCount * 36 +
-          closureCallCount * 8,
+          closureCallCount * 8 +
+          globalCount * 16 +
+          exceptionRegionCount * 12 +
+          completionJumpCount * 12,
     );
     final classes = <TypedClass>[];
     for (var i = 0; i < classCount; i++) {
@@ -521,6 +550,18 @@ abstract final class TypedCodec {
         ),
       );
     }
+    final exceptionRegions = List.generate(
+      exceptionRegionCount,
+      (_) => TypedExceptionRegion(
+        u32(),
+        catchTarget: u32() - 1,
+        finallyTarget: u32() - 1,
+      ),
+    );
+    final completionJumps = List.generate(
+      completionJumpCount,
+      (_) => TypedCompletionJump(u32(), u32(), u32()),
+    );
     if (offset != input.lengthInBytes) {
       throw const FormatException('Invalid typed class metadata length');
     }
@@ -532,6 +573,8 @@ abstract final class TypedCodec {
       closures,
       closureCalls,
       globals,
+      exceptionRegions,
+      completionJumps,
     );
   }
 

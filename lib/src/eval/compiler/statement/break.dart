@@ -1,6 +1,7 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/complete_jump.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 
@@ -18,8 +19,12 @@ StatementInfo compileBreakStatement(BreakStatement s, CompilerContext ctx) {
   );
   label.cleanup(ctx);
   final target = label.breakTarget!;
-  ctx.pushOp(Jump(target.label!));
-  final tail = ctx.flushBlock();
-  ctx.builder.link(tail, target);
+  if (ctx.exceptionDepth > label.exceptionDepth) {
+    completeJump(ctx, target, label.exceptionDepth);
+  } else {
+    ctx.pushOp(Jump(target.label!));
+    final tail = ctx.flushBlock();
+    ctx.builder.link(tail, target);
+  }
   return StatementInfo(-1, willAlwaysBreak: true);
 }

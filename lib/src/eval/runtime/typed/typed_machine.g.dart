@@ -7,6 +7,7 @@ import 'typed_instance.dart';
 import 'typed_dispatch.dart';
 import 'typed_closure.dart';
 import 'typed_global_state.dart';
+import 'typed_exception_state.dart';
 import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/stdlib/core.dart';
@@ -35,15 +36,33 @@ abstract final class TypedMachine {
   @pragma('vm:never-inline')
   static Object? runEntry(TypedProgram program, TypedEntry arguments, int functionId, {Runtime? runtime}) {
     runtime?.prepareTypedRuntime();
-    final code = program.code;
     final entry = program.functions[functionId];
-    var frame = TypedFrame(entry)..environment = arguments.environment;
+    final root = TypedFrame(entry)..environment = arguments.environment;
+    var frame = root;
+    var pc = entry.entry;
+    while (true) {
+      try {
+        return _dispatch(program, arguments, frame, pc, runtime: runtime);
+      } catch (error, trace) {
+        final transfer = TypedExceptions.handle(root.activeFrame, error, trace, runtime);
+        if (transfer == null) rethrow;
+        frame = transfer.frame; pc = transfer.pc;
+        arguments = const TypedEntry.empty();
+      }
+    }
+  }
+
+  // A catch region around this switch makes the AOT compiler reserve large
+  // catch spill areas. Recover in runEntry and reenter only after a throw.
+  @pragma('vm:never-inline')
+  static Object? _dispatch(TypedProgram program, TypedEntry arguments,
+      TypedFrame frame, int pc, {Runtime? runtime}) {
+    final code = program.code;
     Object? r = arguments.r, s = arguments.s, c = arguments.c;
     var a = arguments.a, b = arguments.b;
     var f = arguments.f, g = arguments.g;
     var e = arguments.e, x = arguments.x;
-    var pc = entry.entry;
-    dispatch: while (true) {
+      dispatch: while (true) {
       switch (code[pc++]) {
         case TypedOp.eTrue:
           e = true;
@@ -354,6 +373,15 @@ abstract final class TypedMachine {
         case TypedOp.rBridgeArgument:
           r ??= const $null();
           continue dispatch;
+        case TypedOp.leaveTry:
+          TypedExceptions.leave(frame);
+          continue dispatch;
+        case TypedOp.rCaughtException:
+          r = TypedExceptions.caught(frame);
+          continue dispatch;
+        case TypedOp.rCaughtStackTrace:
+          r = TypedExceptions.trace(frame);
+          continue dispatch;
         case TypedOp.aConstant:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           a = program.integerAt(index);
@@ -609,9 +637,8 @@ abstract final class TypedMachine {
           continue dispatch;
         case TypedOp.call:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          final function = program.functions[index];
-          frame = frame.enter(function, pc);
-          pc = function.entry;
+          frame = frame.enterStatic(program, index, pc);
+          pc = frame.function.entry;
           continue dispatch;
         case TypedOp.eEqRS:
           e = TypedInterop.equals(runtime, r, s);
@@ -675,6 +702,29 @@ abstract final class TypedMachine {
             r = TypedClosure.invokeAt(program, runtime, r, s, c, index);
             s = null; c = null;
           }
+          continue dispatch;
+        case TypedOp.enterTry:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          TypedExceptions.enter(program, frame, index);
+          continue dispatch;
+        case TypedOp.completeJump:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          pc = TypedExceptions.jump(program, frame, index);
+          continue dispatch;
+        case TypedOp.resumeCompletion:
+          pc = TypedExceptions.resume(frame, pc);
+          continue dispatch;
+        case TypedOp.eAssertR:
+          if (!e) throw WrappedException(r!);
+          continue dispatch;
+        case TypedOp.rThrow:
+          throw WrappedException(r!);
+        case TypedOp.rethrowCaught:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          TypedExceptions.rethrowCaught(program, frame, index);
+        case TypedOp.eIsTypeR:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          e = runtime!.isTypedValueType(r, index);
           continue dispatch;
         case TypedOp.aLoadGlobal:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;

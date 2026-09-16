@@ -8,7 +8,8 @@ abstract final class TypedRegister {
 enum TypedImmediate { none, intConstant, doubleConstant,
   intSpill, doubleSpill, boolSpill, branch,
   function, objectConstant, objectSpill, objectOutgoing, hostCall, shortBranch, integer, overflow,
-  classIndex, field, callSite, externalCall, closureIndex, captureIndex, closureCall, globalIndex }
+  classIndex, field, callSite, externalCall, closureIndex, captureIndex, closureCall, globalIndex,
+  exceptionRegion, completionJump, typeId }
 
 class TypedInstruction {
   const TypedInstruction(this.name, this.inputs, this.outputs, this.immediate,
@@ -132,115 +133,125 @@ abstract final class TypedOp {
   static const rFromX = 100;
   static const rBoxX = 101;
   static const rBridgeArgument = 102;
-  static const aConstant = 103;
-  static const aSpill = 104;
-  static const aReload = 105;
-  static const aReturn = 106;
-  static const bConstant = 107;
-  static const bSpill = 108;
-  static const bReload = 109;
-  static const bReturn = 110;
-  static const fConstant = 111;
-  static const fSpill = 112;
-  static const fReload = 113;
-  static const fReturn = 114;
-  static const gConstant = 115;
-  static const gSpill = 116;
-  static const gReload = 117;
-  static const gReturn = 118;
-  static const eSpill = 119;
-  static const eReload = 120;
-  static const eReturn = 121;
-  static const xSpill = 122;
-  static const xReload = 123;
-  static const xReturn = 124;
-  static const rConstant = 125;
-  static const rSpill = 126;
-  static const rReload = 127;
-  static const rReturn = 128;
-  static const sConstant = 129;
-  static const sSpill = 130;
-  static const sReload = 131;
-  static const sReturn = 132;
-  static const cConstant = 133;
-  static const cSpill = 134;
-  static const cReload = 135;
-  static const cReturn = 136;
-  static const aDivB = 137;
-  static const bDivA = 138;
-  static const aModB = 139;
-  static const bModA = 140;
-  static const aShiftLeftB = 141;
-  static const bShiftLeftA = 142;
-  static const aShiftRightB = 143;
-  static const bShiftRightA = 144;
-  static const aUnsignedShiftRightB = 145;
-  static const bUnsignedShiftRightA = 146;
-  static const aImmediate = 147;
-  static const bImmediate = 148;
-  static const jumpETrue = 149;
-  static const jumpEFalse = 150;
-  static const jumpXTrue = 151;
-  static const jumpXFalse = 152;
-  static const aFromF = 153;
-  static const aFromG = 154;
-  static const bFromF = 155;
-  static const bFromG = 156;
-  static const jump = 157;
-  static const rOutgoing = 158;
-  static const sOutgoing = 159;
-  static const cOutgoing = 160;
-  static const rOverflow = 161;
-  static const call = 162;
-  static const eEqRS = 163;
-  static const xEqRS = 164;
-  static const aFromR = 165;
-  static const aNativeFromR = 166;
-  static const fFromR = 167;
-  static const fNativeFromR = 168;
-  static const eFromR = 169;
-  static const eNativeFromR = 170;
-  static const rBoxString = 171;
-  static const rUnboxString = 172;
-  static const callExternal = 173;
-  static const rNewCaptureCell = 174;
-  static const rReadCaptureCell = 175;
-  static const writeCaptureCellRS = 176;
-  static const rCreateClosure = 177;
-  static const rLoadCapture = 178;
-  static const callClosure = 179;
-  static const aLoadGlobal = 180;
-  static const aSetGlobal = 181;
-  static const fLoadGlobal = 182;
-  static const fSetGlobal = 183;
-  static const eLoadGlobal = 184;
-  static const eSetGlobal = 185;
-  static const rLoadGlobal = 186;
-  static const rSetGlobal = 187;
-  static const callHost = 188;
-  static const callMethod = 189;
-  static const aStringLengthR = 190;
-  static const rStringConcatS = 191;
-  static const aStringCodeUnitR = 192;
-  static const rStringIndexA = 193;
-  static const cNewList = 194;
-  static const aListLengthR = 195;
-  static const rListIndexCA = 196;
-  static const listSetCAR = 197;
-  static const listAppendCR = 198;
-  static const rBoxList = 199;
-  static const rCreateClassR = 200;
-  static const rLoadPropertyR = 201;
-  static const setPropertyRS = 202;
-  static const rLoadSuperR = 203;
-  static const rLoadThisR = 204;
-  static const returnNull = 205;
-  static const callVirtual = 206;
-  static const jumpETrueShort = 207;
-  static const jumpEFalseShort = 208;
-  static const jumpXTrueShort = 209;
-  static const jumpXFalseShort = 210;
-  static const jumpShort = 211;
+  static const leaveTry = 103;
+  static const rCaughtException = 104;
+  static const rCaughtStackTrace = 105;
+  static const aConstant = 106;
+  static const aSpill = 107;
+  static const aReload = 108;
+  static const aReturn = 109;
+  static const bConstant = 110;
+  static const bSpill = 111;
+  static const bReload = 112;
+  static const bReturn = 113;
+  static const fConstant = 114;
+  static const fSpill = 115;
+  static const fReload = 116;
+  static const fReturn = 117;
+  static const gConstant = 118;
+  static const gSpill = 119;
+  static const gReload = 120;
+  static const gReturn = 121;
+  static const eSpill = 122;
+  static const eReload = 123;
+  static const eReturn = 124;
+  static const xSpill = 125;
+  static const xReload = 126;
+  static const xReturn = 127;
+  static const rConstant = 128;
+  static const rSpill = 129;
+  static const rReload = 130;
+  static const rReturn = 131;
+  static const sConstant = 132;
+  static const sSpill = 133;
+  static const sReload = 134;
+  static const sReturn = 135;
+  static const cConstant = 136;
+  static const cSpill = 137;
+  static const cReload = 138;
+  static const cReturn = 139;
+  static const aDivB = 140;
+  static const bDivA = 141;
+  static const aModB = 142;
+  static const bModA = 143;
+  static const aShiftLeftB = 144;
+  static const bShiftLeftA = 145;
+  static const aShiftRightB = 146;
+  static const bShiftRightA = 147;
+  static const aUnsignedShiftRightB = 148;
+  static const bUnsignedShiftRightA = 149;
+  static const aImmediate = 150;
+  static const bImmediate = 151;
+  static const jumpETrue = 152;
+  static const jumpEFalse = 153;
+  static const jumpXTrue = 154;
+  static const jumpXFalse = 155;
+  static const aFromF = 156;
+  static const aFromG = 157;
+  static const bFromF = 158;
+  static const bFromG = 159;
+  static const jump = 160;
+  static const rOutgoing = 161;
+  static const sOutgoing = 162;
+  static const cOutgoing = 163;
+  static const rOverflow = 164;
+  static const call = 165;
+  static const eEqRS = 166;
+  static const xEqRS = 167;
+  static const aFromR = 168;
+  static const aNativeFromR = 169;
+  static const fFromR = 170;
+  static const fNativeFromR = 171;
+  static const eFromR = 172;
+  static const eNativeFromR = 173;
+  static const rBoxString = 174;
+  static const rUnboxString = 175;
+  static const callExternal = 176;
+  static const rNewCaptureCell = 177;
+  static const rReadCaptureCell = 178;
+  static const writeCaptureCellRS = 179;
+  static const rCreateClosure = 180;
+  static const rLoadCapture = 181;
+  static const callClosure = 182;
+  static const enterTry = 183;
+  static const completeJump = 184;
+  static const resumeCompletion = 185;
+  static const eAssertR = 186;
+  static const rThrow = 187;
+  static const rethrowCaught = 188;
+  static const eIsTypeR = 189;
+  static const aLoadGlobal = 190;
+  static const aSetGlobal = 191;
+  static const fLoadGlobal = 192;
+  static const fSetGlobal = 193;
+  static const eLoadGlobal = 194;
+  static const eSetGlobal = 195;
+  static const rLoadGlobal = 196;
+  static const rSetGlobal = 197;
+  static const callHost = 198;
+  static const callMethod = 199;
+  static const aStringLengthR = 200;
+  static const rStringConcatS = 201;
+  static const aStringCodeUnitR = 202;
+  static const rStringIndexA = 203;
+  static const cNewList = 204;
+  static const aListLengthR = 205;
+  static const rListIndexCA = 206;
+  static const listSetCAR = 207;
+  static const listAppendCR = 208;
+  static const rBoxList = 209;
+  static const rCreateClassR = 210;
+  static const rLoadPropertyR = 211;
+  static const setPropertyRS = 212;
+  static const rLoadSuperR = 213;
+  static const rLoadThisR = 214;
+  static const returnNull = 215;
+  static const callVirtual = 216;
+  static const jumpETrueShort = 217;
+  static const jumpEFalseShort = 218;
+  static const jumpXTrueShort = 219;
+  static const jumpXFalseShort = 220;
+  static const jumpShort = 221;
   static const instructions = <TypedInstruction>[
     TypedInstruction('eTrue', [], [4], TypedImmediate.none, false, false, false),
     TypedInstruction('eFalse', [], [4], TypedImmediate.none, false, false, false),
@@ -345,6 +356,9 @@ abstract final class TypedOp {
     TypedInstruction('rFromX', [5], [6], TypedImmediate.none, false, false, false),
     TypedInstruction('rBoxX', [5], [6], TypedImmediate.none, false, false, false),
     TypedInstruction('rBridgeArgument', [6], [6], TypedImmediate.none, false, false, false),
+    TypedInstruction('leaveTry', [], [], TypedImmediate.none, false, false, false),
+    TypedInstruction('rCaughtException', [], [6], TypedImmediate.none, false, false, false),
+    TypedInstruction('rCaughtStackTrace', [], [6], TypedImmediate.none, false, false, false),
     TypedInstruction('aConstant', [], [0], TypedImmediate.intConstant, false, false, false),
     TypedInstruction('aSpill', [0], [], TypedImmediate.intSpill, false, false, false),
     TypedInstruction('aReload', [], [0], TypedImmediate.intSpill, false, false, false),
@@ -422,6 +436,13 @@ abstract final class TypedOp {
     TypedInstruction('rCreateClosure', [], [6], TypedImmediate.closureIndex, true, false, false),
     TypedInstruction('rLoadCapture', [], [6], TypedImmediate.captureIndex, true, false, false),
     TypedInstruction('callClosure', [], [], TypedImmediate.closureCall, true, false, false),
+    TypedInstruction('enterTry', [], [], TypedImmediate.exceptionRegion, true, false, false),
+    TypedInstruction('completeJump', [], [], TypedImmediate.completionJump, false, true, false),
+    TypedInstruction('resumeCompletion', [], [], TypedImmediate.none, true, true, false),
+    TypedInstruction('eAssertR', [4, 6], [], TypedImmediate.none, true, false, false),
+    TypedInstruction('rThrow', [6], [], TypedImmediate.none, true, true, false),
+    TypedInstruction('rethrowCaught', [], [], TypedImmediate.exceptionRegion, true, true, false),
+    TypedInstruction('eIsTypeR', [6], [4], TypedImmediate.typeId, true, false, false),
     TypedInstruction('aLoadGlobal', [], [0], TypedImmediate.globalIndex, true, false, false),
     TypedInstruction('aSetGlobal', [0], [], TypedImmediate.globalIndex, true, false, false),
     TypedInstruction('fLoadGlobal', [], [2], TypedImmediate.globalIndex, true, false, false),

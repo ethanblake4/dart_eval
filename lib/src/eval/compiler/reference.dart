@@ -1,5 +1,6 @@
 import 'helpers/global.dart';
 import '../ir/closures.dart';
+import '../ir/exception.dart';
 import 'backend/representation.dart' show representationForType;
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
@@ -256,6 +257,13 @@ class IdentifierReference implements Reference {
         return local.frameRef!.setValue(ctx, value);
       }
 
+      if (local.exceptionSlot != null) {
+        final stored = local.boxed
+            ? value.boxIfNeeded(ctx)
+            : value.unboxIfNeeded(ctx, false);
+        ctx.pushOp(StoreExceptionSlot(local.exceptionSlot!, stored.ssa));
+        return stored;
+      }
       if (local.captureCell != null) {
         final stored = local.boxed
             ? value.boxIfNeeded(ctx)

@@ -8,6 +8,7 @@ class CompilerLabel {
   final LabelType type;
   final BasicBlock? breakTarget;
   final BasicBlock? continueTarget;
+  final int exceptionDepth;
 
   const CompilerLabel(
     this.type,
@@ -16,6 +17,7 @@ class CompilerLabel {
     this.name,
     this.breakTarget,
     this.continueTarget,
+    required this.exceptionDepth,
   });
 }
 
@@ -24,6 +26,8 @@ class SimpleCompilerLabel implements CompilerLabel {
   BasicBlock? get breakTarget => null;
   @override
   BasicBlock? get continueTarget => null;
+  @override
+  int get exceptionDepth => 0;
   @override
   get offset => -1;
   @override

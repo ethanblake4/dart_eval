@@ -397,3 +397,57 @@ and a runtime identity check to direct method resolution.
 
 See [the global checkpoint](typed-globals.md) for semantics and saved next steps,
 and [the migration report](typed-migration-failures.md) for full-suite results.
+
+## Exception checkpoint
+
+The VM now has 222 opcodes and 34 free byte values. Handler and completion
+metadata stays behind non-inlined helpers. Protected exits use compiler-generated
+continuations and typed spills; ordinary return instructions contain no handler
+checks. Static call lookup moved into `TypedFrame.enterStatic`, retaining one
+frame-entry helper call while removing the function table from loop-wide state.
+
+Putting the Dart catch boundary inside the switch initially grew its native stack
+frame to 416 bytes. Recovery now lives in `TypedMachine.runEntry`, outside the
+non-inlined `_dispatch` loop. On a throw it walks the active cached frame chain,
+unwinds handlers and reenters at the selected handler with empty registers.
+Calls already write their return PC; returning marks that PC inactive. There is
+no additional active-frame pointer to update or keep live in dispatch.
+
+Final Dart 3.10.7 Linux ARM64 probe: the integer/double add path is **41 native
+instructions**, versus 38 at the global checkpoint. It consists of 31 dispatch,
+five handler and five common-tail instructions. Stack traffic is 11 stores and
+three loads, versus 11 and two previously. All arithmetic values retain their
+typed registers. The dispatch stack frame is 176 bytes. `_dispatch` occupies
+22,856 bytes; the separate recovery wrapper is 460 bytes. Together they occupy
+23,316 bytes versus the previous 21,800-byte combined entry/loop function.
+
+Recorded switch range: `0x180bf0` to `0x186538` exclusive. Dispatch:
+`0x180c8c..0x180d04`; integer add: `0x180e98..0x180ea8`; double add:
+`0x180f24..0x180f34`; common tail: `0x185ea4..0x185eb4`. Recovery wrapper:
+`0x180a24..0x180bf0`. `tool/inspect_typed_arm64.ps1` now selects `_dispatch`.
+These are static instruction counts, not ARM64 execution timings. Reducing the
+remaining tail reloads is separate optimization work.
+
+`benchmark/typed_exceptions.dart` compiles before timing, warms each independent
+runtime, and checks every result. Final Windows x64 AOT run, 100,001 iterations
+and three samples:
+
+| Workload | Median ms | Min to max ms |
+| --- | ---: | ---: |
+| No try | 7.485 | 6.746 to 7.613 |
+| Try/finally without throwing | 20.596 | 20.556 to 21.169 |
+| Handled throw | 300.565 | 285.664 to 300.707 |
+| Call inside try/finally | 20.994 | 20.893 to 21.213 |
+| Callee return through finally | 15.669 | 15.621 to 15.887 |
+
+Checksum: `4575120`. The 1,001-iteration smoke run gives `90090`. Timings vary
+substantially across runs on this host (an earlier no-try median was 3.564 ms),
+so these workloads provide profiling baselines rather than evidence of a speedup.
+Try-entry spill preservation is conservative and remains an optimization target.
+
+Full validation: 725 passes, 95 failures and six skips, zero analyzer errors and
+generated files current. There are 33 recovered tests and no regressions among
+previously passing tests. The remaining failures are 94 unfinished-feature errors
+and the existing Future.delayed timing threshold, which passes in isolation.
+The [exception checkpoint](typed-exceptions.md) records the runtime/compiler
+contract and next suspension milestone.

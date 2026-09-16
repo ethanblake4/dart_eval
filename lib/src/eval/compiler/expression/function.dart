@@ -32,15 +32,16 @@ Variable compileFunctionExpression(
 ]) {
   final ctxSaveState = ctx.saveState();
   final outerLabels = [...ctx.labels];
-  final outerExceptions = [...ctx.caughtExceptions];
+  final outerExceptions = [...ctx.caughtExceptionTargets];
   ctx.labels.clear();
-  ctx.caughtExceptions.clear();
+  ctx.caughtExceptionTargets.clear();
   final sfo = ctx.scopeFrameOffset;
   final outerGraph = ctx.activeGraph;
   final outerFunctionId = ctx.currentFunctionId;
   final outerFunctionLabel = ctx.funcLabel;
   final outerAsyncFrame = ctx.nearestAsyncFrame;
   final outerEntrypoint = ctx.entrypoint;
+  final outerExceptionDepth = ctx.exceptionDepth;
   final captures = <String, Variable>{};
   final analysis = capturesFor(e);
   final freeNames = {...?analysis.free[e]};
@@ -67,6 +68,7 @@ Variable compileFunctionExpression(
   ctx.resetStack();
   ctx.locals = [];
   ctx.nearestAsyncFrame = -1;
+  ctx.exceptionDepth = 0;
   final existingAllocs = e.parameters?.parameters.length ?? 0;
   ctx.beginAllocScope(existingAllocLen: existingAllocs, closure: true);
   ctx.pushOp(
@@ -192,9 +194,10 @@ Variable compileFunctionExpression(
   ctx.hasBegunMethod = true;
   ctx.nearestAsyncFrame = outerAsyncFrame;
   ctx.entrypoint = outerEntrypoint;
+  ctx.exceptionDepth = outerExceptionDepth;
 
   ctx.labels.addAll(outerLabels);
-  ctx.caughtExceptions.addAll(outerExceptions);
+  ctx.caughtExceptionTargets.addAll(outerExceptions);
   ctx.restoreState(ctxSaveState);
   ctx.scopeFrameOffset = sfo;
 

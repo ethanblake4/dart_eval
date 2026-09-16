@@ -51,6 +51,7 @@ StatementInfo macroLoop(
       ctx.resolveBranchStateDiscontinuity(initialState);
       return -1;
     },
+    exceptionDepth: ctx.exceptionDepth,
     breakTarget: exit,
     continueTarget: continueTarget,
   );
