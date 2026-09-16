@@ -280,8 +280,7 @@ class $Set<E> implements Set<E>, $Instance {
 
   static $Value? _add(Runtime runtime, $Value? target, List<$Value?> args) {
     final value = args[0]!;
-    (target!.$value as Set).add(value);
-    return null;
+    return $bool((target!.$value as Set).add(value));
   }
 
   static const $Function __addAll = $Function(_addAll);
@@ -349,7 +348,7 @@ class $Set<E> implements Set<E>, $Instance {
   Set get $reified => Set.from($value.map((e) => e is $Value ? e.$reified : e));
 
   @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType(CoreTypes.map);
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType(CoreTypes.set);
 
   @override
   void clear() {

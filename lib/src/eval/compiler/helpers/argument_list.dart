@@ -399,19 +399,14 @@ ArgumentListResult compileArgumentListWithDynamic(
     }
 
     var arg0 = compileExpression(arg, ctx);
-    if (arg0.type.isUnboxedAcrossFunctionBoundaries) {
-      arg0 = arg0.boxIfNeeded(ctx);
-      // TODO: functions and some other types do not need to be unboxed,
-      // but due to them being dynamic it's hard to know ahead.
-    } else if (!arg0.type.isAssignableTo(ctx, CoreTypes.function.ref(ctx))) {
-      arg0 = arg0.unboxIfNeeded(ctx);
-    }
-
     if (arg0.type == CoreTypes.function.ref(ctx) &&
         arg0.name == null &&
         arg0.methodOffset != null) {
       arg0 = arg0.tearOff(ctx);
     }
+    // Dynamic calls use canonical object values for every argument. Their
+    // signature cannot justify unboxing a scalar or a collection here.
+    arg0 = arg0.boxIfNeeded(ctx);
 
     args.add(arg0);
     push.add(arg0);

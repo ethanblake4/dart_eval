@@ -538,6 +538,51 @@ List<Instruction> specification() {
   );
   add('cNewList', 'c = <Object?>[];', output: 8, mayThrow: true);
   add(
+    'cNewMap',
+    'c = TypedCollections.newMap(runtime);',
+    output: 8,
+    mayThrow: true,
+  );
+  add(
+    'cNewSet',
+    'c = TypedCollections.newSet(runtime);',
+    output: 8,
+    mayThrow: true,
+  );
+  add(
+    'rMapIndexCS',
+    'r = (c as Map<Object?, Object?>)[s];',
+    inputs: [8, 7],
+    output: 6,
+    mayThrow: true,
+  );
+  add(
+    'mapSetCSR',
+    '(c as Map<Object?, Object?>)[s] = r;',
+    inputs: [8, 7, 6],
+    mayThrow: true,
+  );
+  add(
+    'setAddCR',
+    '(c as Set<Object?>).add(r);',
+    inputs: [8, 6],
+    mayThrow: true,
+  );
+  add(
+    'rBoxMap',
+    r'r = $Map.wrap(r as Map<Object?, Object?>);',
+    inputs: [6],
+    output: 6,
+    mayThrow: true,
+  );
+  add(
+    'rBoxSet',
+    r'r = $Set.wrap(r as Set<Object?>);',
+    inputs: [6],
+    output: 6,
+    mayThrow: true,
+  );
+  add(
     'aListLengthR',
     'a = (r as List).length;',
     inputs: [6],
@@ -713,6 +758,7 @@ import 'typed_dispatch.dart';
 import 'typed_closure.dart';
 import 'typed_global_state.dart';
 import 'typed_exception_state.dart';
+import 'typed_collections.dart';
 import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/stdlib/core.dart';

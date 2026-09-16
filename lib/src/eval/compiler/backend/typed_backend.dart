@@ -1238,6 +1238,20 @@ class TypedBackend {
               [string, if (argument != null) argument],
             ),
           collection.NewList() => make(['cNewList'], []),
+          collection.NewMap() => make(['cNewMap'], []),
+          collection.NewSet() => make(['cNewSet'], []),
+          collection.IndexMap(:final map, :final key) => make(
+            ['rMapIndexCS'],
+            [map, key],
+          ),
+          collection.MapSet(:final map, :final key, :final value) => make(
+            ['mapSetCSR'],
+            [map, key, value],
+          ),
+          collection.SetAdd(:final set, :final value) => make(
+            ['setAddCR'],
+            [set, value],
+          ),
           collection.IndexList(:final list, :final index) => make(
             ['rListIndexCA'],
             [list, index],
@@ -1252,6 +1266,8 @@ class TypedBackend {
           ),
           collection.ListLength(:final list) => make(['aListLengthR'], [list]),
           primitives.BoxList(:final source) => make(['rBoxList'], [source]),
+          primitives.BoxMap(:final source) => make(['rBoxMap'], [source]),
+          primitives.BoxSet(:final source) => make(['rBoxSet'], [source]),
           objects_ir.CreateClass(:final library, :final name, :final $super) =>
             make(
               ['rCreateClassR'],

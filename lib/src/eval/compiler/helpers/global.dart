@@ -105,6 +105,13 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
     return CoreTypes.dynamic.ref(ctx);
   }
   if (expression is FunctionExpression) return CoreTypes.function.ref(ctx);
+  if (expression is InstanceCreationExpression) {
+    return TypeRef.fromAnnotation(
+      ctx,
+      library,
+      expression.constructorName.type,
+    );
+  }
   if (expression is BinaryExpression) {
     final operator = expression.operator.lexeme;
     if (['==', '!=', '&&', '||'].contains(operator)) {
@@ -146,6 +153,13 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
         .visibleDeclarations[library]?[expression.methodName.name]
         ?.declaration;
     final function = declaration?.declaration;
+    final bridge = declaration?.bridge;
+    if (bridge is BridgeClassDef) {
+      return TypeRef.fromBridgeTypeRef(ctx, bridge.type.type);
+    }
+    if (function is ClassDeclaration) {
+      return TypeRef.lookupDeclaration(ctx, declaration!.sourceLib, function);
+    }
     if (function is FunctionDeclaration && function.returnType != null) {
       return TypeRef.fromAnnotation(
         ctx,

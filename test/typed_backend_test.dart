@@ -127,8 +127,10 @@ void main() {
     expect(TypedMachine.run(program, boolArguments: [true]), false);
     expect(TypedMachine.run(program, boolArguments: [false]), true);
   });
-  test('unsupported map construction fails before execution', () {
-    expect(() => compile('dynamic main() => {1: 2};'), throwsUnsupportedError);
+  test('map construction executes through the typed backend', () {
+    final program = compile('dynamic main() => {1: 2};');
+    expect(TypedMachine.run(program), {1: 2});
+    expect(TypedMachine.run(TypedProgram.read(program.write().buffer)), {1: 2});
   });
   test('direct recursive calls preserve caller values in typed spills', () {
     final program = compile('''

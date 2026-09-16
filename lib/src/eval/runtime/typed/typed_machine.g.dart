@@ -8,6 +8,7 @@ import 'typed_dispatch.dart';
 import 'typed_closure.dart';
 import 'typed_global_state.dart';
 import 'typed_exception_state.dart';
+import 'typed_collections.dart';
 import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/stdlib/core.dart';
@@ -780,6 +781,27 @@ abstract final class TypedMachine {
           continue dispatch;
         case TypedOp.cNewList:
           c = <Object?>[];
+          continue dispatch;
+        case TypedOp.cNewMap:
+          c = TypedCollections.newMap(runtime);
+          continue dispatch;
+        case TypedOp.cNewSet:
+          c = TypedCollections.newSet(runtime);
+          continue dispatch;
+        case TypedOp.rMapIndexCS:
+          r = (c as Map<Object?, Object?>)[s];
+          continue dispatch;
+        case TypedOp.mapSetCSR:
+          (c as Map<Object?, Object?>)[s] = r;
+          continue dispatch;
+        case TypedOp.setAddCR:
+          (c as Set<Object?>).add(r);
+          continue dispatch;
+        case TypedOp.rBoxMap:
+          r = $Map.wrap(r as Map<Object?, Object?>);
+          continue dispatch;
+        case TypedOp.rBoxSet:
+          r = $Set.wrap(r as Set<Object?>);
           continue dispatch;
         case TypedOp.aListLengthR:
           a = (r as List).length;

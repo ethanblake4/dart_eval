@@ -1,35 +1,28 @@
 # Typed migration test baseline
 
-2026-09-15. Production typed backend, after the exception checkpoint.
-725 passed, 95 failed, six skipped. Analysis reports zero errors.
+Production typed backend, after the maps checkpoint.
+781 passed, 45 failed, 6 skipped. Analysis reports zero errors.
 
-33 tests that failed at the global checkpoint now pass. No previously passing
-test regressed. Synchronous try/catch/finally, throw/rethrow, assert and type-test
-lowering are implemented. Async suspension remains unsupported.
+50 previously failing tests recovered since exception; 0 regressions among previously passing tests.
 
-There are 94 errors in unfinished compiler/runtime features and one timing
-assertion failure. Future.delayed requires a 150 ms timer plus runtime setup to
-finish within 200 ms. It passes in isolation. The test remains unchanged.
+The Future.delayed timing assertion includes compilation/runtime setup in a
+200 ms limit around a 150 ms delay and may fail under full-suite contention.
 
-Reproduce with `dart test --reporter json` and `dart analyze`. Full local events
-are in `.dart_tool/exception-tests-final.jsonl`; the prior baseline is in
-`.dart_tool/globals-tests-final.jsonl`. The failed names and first errors below
-preserve the checkpoint independently of those ignored logs.
+Reproduce with `dart test --reporter json` and `dart analyze`. Local events are
+in `.dart_tool/maps-tests-final.jsonl`; the preceding baseline is
+`.dart_tool/exception-tests-final.jsonl`. Names and errors are preserved below.
 
 ## Failure groups
 
 | First reported failure | Tests |
 | --- | ---: |
-| Unsupported lowering: NewMap | 20 |
-| Representation mismatch | 20 |
 | Unsupported lowering: Await | 16 |
 | Null assertion | 9 |
-| Unsupported lowering: NewSet | 8 |
-| Other execution or linking errors | 7 |
+| Other execution or linking errors | 5 |
 | Unsupported lowering: ReturnAsync | 3 |
 | Frontend compilation | 3 |
 | Unsupported lowering: AssertType | 3 |
-| Unsupported lowering: IndexMap | 2 |
+| Representation mismatch | 2 |
 | Future.delayed timing threshold | 1 |
 | Unsupported lowering: BridgeInstantiate | 1 |
 | Unsupported lowering: NewBridgeSuperShim | 1 |
@@ -55,13 +48,9 @@ preserve the checkpoint independently of those ignored logs.
 
 - Bridge tests Changing a field in the constructor of a subclassed bridge class. CompileError: dart_eval does not support passing named arguments to dynamic targets. at "(a + 2, b: b)" (file package:example/main.dart)
 
-- Bridge tests Passing a map to a function externally. Unsupported operation: Typed backend does not yet lower IndexMap: map₀ = indexmap arg_0₁[var_12₁]
-
 - Bridge tests Should catch bridge future error. Unsupported operation: Typed backend does not yet lower Await: await_result₀ = await closure_result₀, completer: #completer₀
 
 - Bridge tests Using a bridge class. Unsupported operation: Typed backend does not yet lower BridgeInstantiate: call_3₀ = newbridge 205, var_13₀ [var_12₁]
-
-- Bridge tests Using a bridged enum. Unsupported operation: Typed backend does not yet lower NewMap: map₀ = {}
 
 - Bridge tests Using a subclassed bridge class inside the runtime. CompileError: dart_eval does not support passing named arguments to dynamic targets. at "(a + 2 + someNumber,..." (file package:example/main.dart)
 
@@ -77,44 +66,6 @@ preserve the checkpoint independently of those ignored logs.
 
 - Class tests runtimeType. Unsupported operation: Typed backend does not yet lower LoadConstantType: var_type₀ = loadconstanttype 86
 
-### collection_test.dart
-
-- Map tests Access null value from map. Unsupported operation: Typed backend does not yet lower NewMap: map₀ = {}
-
-- Map tests Add key to empty map. Unsupported operation: Typed backend does not yet lower NewMap: map₀ = {}
-
-- Map tests Empty map literal. Unsupported operation: Typed backend does not yet lower NewMap: map₀ = {}
-
-- Map tests Map index access []. Unsupported operation: Typed backend does not yet lower NewMap: map₀ = {}
-
-- Map tests Map null values == null. Unsupported operation: Typed backend does not yet lower NewMap: map₀ = {}
-
-- Map tests Map.addAll(). Unsupported operation: Typed backend does not yet lower NewMap: map₀ = {}
-
-- Map tests Map.cast(). Unsupported operation: Typed backend does not yet lower NewMap: map₀ = {}
-
-- Map tests Map.containsKey(). Unsupported operation: Typed backend does not yet lower NewMap: map₀ = {}
-
-- Map tests Map.entries. Unsupported operation: Typed backend does not yet lower NewMap: map₀ = {}
-
-- Map tests Map.keys. Unsupported operation: Typed backend does not yet lower NewMap: map₀ = {}
-
-- Map tests Map.length. Unsupported operation: Typed backend does not yet lower NewMap: map₀ = {}
-
-- Map tests Map.remove(). Unsupported operation: Typed backend does not yet lower NewMap: map₀ = {}
-
-- Map tests Map.values. Unsupported operation: Typed backend does not yet lower NewMap: map₀ = {}
-
-### compiler_cfg_expressions_test.dart
-
-- read definitions and SSA conversion: Map<String, int> main(Map<String, int> input) => <String, int>{...input};. Unsupported operation: Typed backend does not yet lower NewMap: map₀ = {}
-
-- read definitions and SSA conversion: Map<String, int> main(Map<String, int> input) => {...input};. Unsupported operation: Typed backend does not yet lower NewMap: map₀ = {}
-
-- read definitions and SSA conversion: Map<String, int> main(Map<String, int>? input) => <String, int>{...?input};. Unsupported operation: Typed backend does not yet lower NewMap: map₀ = {}
-
-- read definitions and SSA conversion: Set<int> main(Set<int> input) => <int>{0, ...input};. Unsupported operation: Typed backend does not yet lower NewSet: set₀ = set {}
-
 ### compiler_declarations_cfg_test.dart
 
 - Future<int> f() async => 1; Future<int> main() async { return await f(); }. Unsupported operation: Typed backend does not yet lower ReturnAsync: returnasync var_12₁, #completer₀
@@ -122,24 +73,6 @@ preserve the checkpoint independently of those ignored logs.
 ### compiler_ssa_test.dart
 
 - SSA dominance: async await preserves explicit results. Unsupported operation: Typed backend does not yet lower ReturnAsync: returnasync var_12₁, #completer₀
-
-### convert_test.dart
-
-- dart:convert tests Accessing results of json.decode(). Bad state: Incompatible representations for var_12₀: string and object; an explicit conversion is required
-
-- dart:convert tests base64.decode(). Bad state: Incompatible representations for var_12₀: string and object; an explicit conversion is required
-
-- dart:convert tests base64.encode(). dart_eval runtime exception: type 'List<Object?>' is not a subtype of type '$Value?' in type cast
-
-- dart:convert tests json.decode(). Bad state: Incompatible representations for var_12₀: string and object; an explicit conversion is required
-
-- dart:convert tests json.encode(). Unsupported operation: Typed backend does not yet lower NewMap: map₀ = {}
-
-- dart:convert tests jsonEncode(). Unsupported operation: Typed backend does not yet lower NewMap: map₀ = {}
-
-- dart:convert tests utf8.decode(). dart_eval runtime exception: type 'List<Object?>' is not a subtype of type '$Value?' in type cast
-
-- dart:convert tests utf8.encode(). Bad state: Incompatible representations for var_12₀: string and object; an explicit conversion is required
 
 ### exception_test.dart
 
@@ -199,8 +132,6 @@ preserve the checkpoint independently of those ignored logs.
 
 - Switch pattern tests Switch with pattern guard. Null check operator used on a null value
 
-- Switch pattern tests Switch with relational pattern. Bad state: Incompatible representations for data₂: integer and object; an explicit conversion is required
-
 ### records_test.dart
 
 - Records Create and access records. Null check operator used on a null value
@@ -217,54 +148,6 @@ preserve the checkpoint independently of those ignored logs.
 
 - Regex Tests RegExp.allMatches(). type 'Null' is not a subtype of type '_Mismatch' in type cast
 
-### set_test.dart
-
-- Set tests Adding elements to a set. Unsupported operation: Typed backend does not yet lower NewSet: set₀ = set {}
-
-- Set tests Creating a set. Unsupported operation: Typed backend does not yet lower NewSet: set₀ = set {}
-
-- Set tests Nested set. Unsupported operation: Typed backend does not yet lower NewSet: set₀ = set {}
-
-- Set tests Removing elements from a set. Unsupported operation: Typed backend does not yet lower NewSet: set₀ = set {}
-
-- Set tests Set intersection operation. Unsupported operation: Typed backend does not yet lower NewSet: set₀ = set {}
-
-- Set tests Set union operation. Unsupported operation: Typed backend does not yet lower NewSet: set₀ = set {}
-
-- Set tests Set with type parameters. Unsupported operation: Typed backend does not yet lower NewSet: set₀ = set {}
-
 ### stdlib_test.dart
 
-- Standard library tests Boxed null. Unsupported operation: Typed backend does not yet lower IndexMap: map₀ = indexmap a₁[var_12₁]
-
 - Standard library tests StreamController and Stream.listen(). Unsupported operation: Typed backend does not yet lower Await: await_result₀ = await method_result_5₀, completer: #completer₀
-
-- Standard library tests dynamic.toString. Unsupported operation: Typed backend does not yet lower NewMap: map₀ = {}
-
-### switch_test.dart
-
-- Switch statement tests Basic switch with int cases. Bad state: Incompatible representations for x₂: integer and object; an explicit conversion is required
-
-- Switch statement tests Nested switch statements. Bad state: Incompatible representations for x₂: integer and object; an explicit conversion is required
-
-- Switch statement tests Switch with break statements. Bad state: Incompatible representations for x₂: integer and object; an explicit conversion is required
-
-- Switch statement tests Switch with const expression case. Bad state: Incompatible representations for x₂: integer and object; an explicit conversion is required
-
-- Switch statement tests Switch with default case. Bad state: Incompatible representations for x₂: integer and object; an explicit conversion is required
-
-- Switch statement tests Switch with expression evaluation. Bad state: Incompatible representations for numeric_result₂: integer and object; an explicit conversion is required
-
-- Switch statement tests Switch with function calls in cases. Bad state: Incompatible representations for x₂: integer and object; an explicit conversion is required
-
-- Switch statement tests Switch with multiple empty cases (enum-like). Bad state: Incompatible representations for day₂: integer and object; an explicit conversion is required
-
-- Switch statement tests Switch with multiple statements per case. Bad state: Incompatible representations for x₂: integer and object; an explicit conversion is required
-
-- Switch statement tests Switch with no matching case and no default. Bad state: Incompatible representations for x₂: integer and object; an explicit conversion is required
-
-- Switch statement tests Switch with proper fall-through (empty cases). Bad state: Incompatible representations for x₂: integer and object; an explicit conversion is required
-
-- Switch statement tests Switch with return in default case. Bad state: Incompatible representations for x₂: integer and object; an explicit conversion is required
-
-- Switch statement tests Switch with variable assignment in cases. Bad state: Incompatible representations for x₂: integer and object; an explicit conversion is required

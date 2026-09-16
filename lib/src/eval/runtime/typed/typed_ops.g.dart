@@ -235,23 +235,30 @@ abstract final class TypedOp {
   static const aStringCodeUnitR = 202;
   static const rStringIndexA = 203;
   static const cNewList = 204;
-  static const aListLengthR = 205;
-  static const rListIndexCA = 206;
-  static const listSetCAR = 207;
-  static const listAppendCR = 208;
-  static const rBoxList = 209;
-  static const rCreateClassR = 210;
-  static const rLoadPropertyR = 211;
-  static const setPropertyRS = 212;
-  static const rLoadSuperR = 213;
-  static const rLoadThisR = 214;
-  static const returnNull = 215;
-  static const callVirtual = 216;
-  static const jumpETrueShort = 217;
-  static const jumpEFalseShort = 218;
-  static const jumpXTrueShort = 219;
-  static const jumpXFalseShort = 220;
-  static const jumpShort = 221;
+  static const cNewMap = 205;
+  static const cNewSet = 206;
+  static const rMapIndexCS = 207;
+  static const mapSetCSR = 208;
+  static const setAddCR = 209;
+  static const rBoxMap = 210;
+  static const rBoxSet = 211;
+  static const aListLengthR = 212;
+  static const rListIndexCA = 213;
+  static const listSetCAR = 214;
+  static const listAppendCR = 215;
+  static const rBoxList = 216;
+  static const rCreateClassR = 217;
+  static const rLoadPropertyR = 218;
+  static const setPropertyRS = 219;
+  static const rLoadSuperR = 220;
+  static const rLoadThisR = 221;
+  static const returnNull = 222;
+  static const callVirtual = 223;
+  static const jumpETrueShort = 224;
+  static const jumpEFalseShort = 225;
+  static const jumpXTrueShort = 226;
+  static const jumpXFalseShort = 227;
+  static const jumpShort = 228;
   static const instructions = <TypedInstruction>[
     TypedInstruction('eTrue', [], [4], TypedImmediate.none, false, false, false),
     TypedInstruction('eFalse', [], [4], TypedImmediate.none, false, false, false),
@@ -458,6 +465,13 @@ abstract final class TypedOp {
     TypedInstruction('aStringCodeUnitR', [6, 0], [0], TypedImmediate.none, true, false, false),
     TypedInstruction('rStringIndexA', [6, 0], [6], TypedImmediate.none, true, false, false),
     TypedInstruction('cNewList', [], [8], TypedImmediate.none, true, false, false),
+    TypedInstruction('cNewMap', [], [8], TypedImmediate.none, true, false, false),
+    TypedInstruction('cNewSet', [], [8], TypedImmediate.none, true, false, false),
+    TypedInstruction('rMapIndexCS', [8, 7], [6], TypedImmediate.none, true, false, false),
+    TypedInstruction('mapSetCSR', [8, 7, 6], [], TypedImmediate.none, true, false, false),
+    TypedInstruction('setAddCR', [8, 6], [], TypedImmediate.none, true, false, false),
+    TypedInstruction('rBoxMap', [6], [6], TypedImmediate.none, true, false, false),
+    TypedInstruction('rBoxSet', [6], [6], TypedImmediate.none, true, false, false),
     TypedInstruction('aListLengthR', [6], [0], TypedImmediate.none, true, false, false),
     TypedInstruction('rListIndexCA', [8, 0], [6], TypedImmediate.none, true, false, false),
     TypedInstruction('listSetCAR', [8, 0, 6], [], TypedImmediate.none, true, false, false),

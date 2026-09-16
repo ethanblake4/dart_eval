@@ -48,6 +48,18 @@ abstract final class TypedHostCollections {
     $Value owner,
     Runtime? requestedRuntime,
   ) {
+    // A statically boxed collection may already be a bridge wrapper when it
+    // entered through a host adapter. Peel that layer before cache lookup so
+    // returning a host collection preserves its original identity.
+    if (collection case final $List nested) {
+      return export(nested.$value, nested, requestedRuntime);
+    }
+    if (collection case final $Map nested) {
+      return export(nested.$value, nested, requestedRuntime);
+    }
+    if (collection case final $Set nested) {
+      return export(nested.$value, nested, requestedRuntime);
+    }
     final origin = _origins[collection];
     if (origin != null) return origin;
     final runtime = requestedRuntime ?? _contexts[owner]?.runtime;

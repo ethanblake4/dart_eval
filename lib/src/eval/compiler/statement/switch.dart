@@ -10,13 +10,21 @@ import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
+import 'package:dart_eval/src/eval/ir/flow.dart';
 
 StatementInfo compileSwitchStatement(
   SwitchStatement s,
   CompilerContext ctx,
   AlwaysReturnType? expectedReturnType,
 ) {
-  final switchExpr = compileExpression(s.expression, ctx).boxIfNeeded(ctx);
+  final expression = compileExpression(s.expression, ctx);
+  // Evaluate once. Cases may change their operand representation without
+  // rewriting the source binding or the value inspected by later cases.
+  final switchExpr = Variable.ssa(
+    ctx,
+    Assign(ctx.svar('switch_value'), expression.ssa),
+    expression.type,
+  );
 
   // Validate switch cases for proper Dart semantics
   _validateSwitchCases(s.members);
@@ -75,14 +83,19 @@ StatementInfo _compileSwitchCases(
     ctx,
     expectedReturnType,
     condition: (ctx) {
+      final subject = Variable.ssa(
+        ctx,
+        Assign(ctx.svar('case_value'), switchExpr.ssa),
+        switchExpr.type,
+      );
       if (currentCase is SwitchCase) {
         final caseVar = compileExpression(currentCase.expression, ctx);
-        return switchExpr.invoke(ctx, '==', [caseVar]).result;
+        return subject.invoke(ctx, '==', [caseVar]).result;
       } else if (currentCase is SwitchPatternCase) {
         final matches = patternMatchAndBind(
           ctx,
           currentCase.guardedPattern.pattern,
-          switchExpr,
+          subject,
         );
         final guard = currentCase.guardedPattern.whenClause;
         if (guard != null) {
