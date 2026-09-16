@@ -15,6 +15,9 @@ The variants are:
 | Optional S field reads | Offer both forms to the existing constrained allocator | 244 |
 | Combined | E-only comparisons plus optional S field reads | 232 |
 | No X register | Remove X from dispatch, allocator, entry state, and argument layout | 207 |
+| Fused full | E-only comparisons plus all twelve numeric fused branches and short forms | 255 |
+| Fused integer less-than | Reference plus integer `<` branch and short form | 245 |
+| No X plus fused full | No-X register bank plus all twelve fused branches and short forms | 231 |
 
 The no-X variant passes only the first boolean argument in E. Additional
 booleans use the existing object registers and, when needed, the single
@@ -149,9 +152,99 @@ Keep the production register bank and opcode table for this checkpoint.
   boolean-pressure cost and mixed x64 results. ARM hardware timings would help
   decide whether that trade is worthwhile for Flutter deployments.
 
-The next experiment fuses numeric comparisons used only by their following
-branch. It tests whether eliminating a dispatch is more valuable than changing
-boolean register availability alone.
+## Fused comparisons and branches
+
+The fusion pass runs before register allocation. It replaces an adjacent pure
+numeric comparison and final false-branch only when the comparison result has
+one definition and one use across the entire function, including phi inputs.
+It validates both CFG successors. Materialized booleans remain available to
+their other users. A fused floating comparison branches on `!(left < right)`
+where appropriate, preserving unordered NaN semantics rather than substituting
+`left >= right`.
+
+All three fused variants pass **839 tests**, including seventeen additional
+cases for comparison semantics, serialization, NaN/infinities, nested branches,
+loop backedges, reused booleans, side effects, exceptions, wide branch targets,
+and six boolean parameters through calls.
+
+| Variant | ARM64 dispatch bytes | Header instructions | Integer add path | Fused short `<` path |
+|---|---:|---:|---:|---:|
+| Reference | 25,664 | 31 | 41 | 121 across two dispatches |
+| Fused integer less-than | 25,804 | 31 | 39 | 80 |
+| Fused full | 30,676 | 31 | 39 | 85 |
+| No X plus fused full | 27,524 | 30 | 38 | 78 |
+
+The reference pair consists of a 44-instruction comparison path and a
+77-instruction short-branch path under the same counting convention. The
+limited variant adds only 140 native bytes, about 0.5%, and two opcodes. It
+leaves eleven primary opcode slots available. The full variant leaves one;
+combining the full family with no X leaves twenty-five.
+
+The integer-sum loop drops from eleven bytecodes per iteration to ten, reducing
+executed instructions from 22,000,011 to 20,000,010. Double recurrence drops from
+14,000,011 to 13,000,010; integer mixing from 18,000,011 to 17,000,010. Full fusion
+also eliminates another 128,000 comparisons in particles and 15,000 in checkout
+compared with the limited variant. Tree traversal has few eligible numeric
+branches, so its instruction count barely changes.
+
+These warmed audit sweeps use twenty-one samples, reverse variant order, and
+rotate workload order. Each cell lists the two run medians in milliseconds.
+
+| Workload | Reference | Fused integer `<` | Fused full | No X plus fused full |
+|---|---:|---:|---:|---:|
+| Integer sum | 38.115 / 38.901 | 35.917 / 36.148 | 35.546 / 35.659 | 35.593 / 35.019 |
+| Double recurrence | 25.235 / 25.636 | 24.130 / 24.247 | 23.898 / 24.032 | 23.822 / 23.605 |
+| Integer mixing | 31.720 / 32.557 | 31.169 / 31.176 | 30.753 / 31.018 | 30.264 / 30.831 |
+| Particles | 34.181 / 34.220 | 34.241 / 34.610 | 34.289 / 34.107 | 33.771 / 33.580 |
+| Checkout | 33.800 / 33.845 | 33.617 / 33.767 | 33.570 / 33.425 | 33.104 / 33.435 |
+| Events | 6.131 / 6.144 | 6.270 / 6.413 | 6.910 / 6.428 | 6.316 / 6.113 |
+| Word counting | 28.886 / 29.075 | 28.636 / 28.755 | 28.984 / 28.820 | 29.495 / 29.134 |
+| Recursive tree | 95.361 / 96.371 | 97.111 / 99.569 | 97.310 / 100.533 | 95.840 / 95.189 |
+
+The targeted source workloads used two warmed fifteen-sample sweeps, also in
+opposite variant orders. These are fresh-program medians in milliseconds.
+
+| Workload | Reference | Fused integer `<` | Fused full | No X plus fused full |
+|---|---:|---:|---:|---:|
+| Fields | 103.173 / 105.445 | 104.191 / 106.337 | 112.204 / 106.951 | 104.425 / 104.485 |
+| Maps | 39.925 / 40.630 | 40.806 / 40.441 | 39.908 / 40.096 | 39.228 / 39.316 |
+| Booleans and calls | 81.143 / 81.279 | 80.757 / 82.114 | 81.515 / 82.586 | 84.255 / 83.287 |
+| Nested comparisons | 65.454 / 65.510 | 64.292 / 64.952 | 63.892 / 65.538 | 63.041 / 62.986 |
+
+Fusion is a stronger optimization target than register redistribution alone.
+The limited variant repeatedly improves integer sum by 6–7% and double
+recurrence by 4–5%. Adding the full family without removing X does not justify
+its much larger dispatch and near-exhausted opcode budget on these workloads.
+It also retains the cost of losing the ordinary X-targeted comparisons.
+
+No X plus full fusion gives the strongest arithmetic results: integer sum
+improves 7–10%, double recurrence 6–8%, and integer mixing about 5%. Most OOP
+results are close to baseline or modestly better, but the boolean-heavy workload
+remains 2.5–4% slower. The limited variant retains the existing ABI but events
+and tree traversal are a few percent slower in these runs. The counts establish
+the dispatch saving; the mixed broader results still matter.
+
+Production remains unchanged. My next implementation candidate is the limited
+fused branch, with the event/tree regressions investigated before promotion.
+The no-X/full-fusion variant is worth an ARM hardware comparison because it
+combines fewer dispatches with one fewer saved register, but static ARM64 counts
+alone cannot settle its wider performance tradeoff.
+
+A further extension handles one intervening logical-not by swapping the two
+branch destinations. It adds no opcodes. The variant retaining X with only fused
+integer `<` passes 846 tests; the no-X/full-family variant passes 857, including
+negated floating comparisons with NaN. Both analyzers are clean. All eight audit
+payloads and the complete affinity bytecode are byte-identical to their parent
+variants, so there was no reason to repeat timings. Explicit
+`if (!(a < b))` exercises the extension; the measured workloads do not.
+
+This also identifies an IR opportunity. The frontend introduces a logical-not
+for `||`, but short-circuit expressions often retain their left operand as part
+of the expression result. That additional use correctly prevents this local
+fusion. Lowering condition-only expressions directly to control flow could
+avoid those boolean values and phi inputs, making more comparisons eligible.
+That is a separate compiler change, rather than a reason to weaken the safety
+check or add more opcode variants.
 
 The committed `register-affinity-evidence.zip` contains source snapshots,
 variant overlays, test logs, raw timings, executed-opcode counts, ARM64
