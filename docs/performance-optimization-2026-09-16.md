@@ -28,4 +28,20 @@ The first sweep predates removal of unreachable trampolines and the overflow-cou
 
 On identical preexisting payloads, read/validate medians for the 1,001-function branch fixture fell from 14.086 to 2.396 ms, and the 3,001-function fixture from 116.334 to 10.382 ms. The 1,001-function straight-line fixture changed from 1.961 to 2.202 ms. The algorithmic loading improvement is concentrated in branch-heavy programs; the remaining linear metadata costs still matter.
 
-Targets six and seven are being evaluated separately. A native-to-guest callback benchmark has been added before changing callback entry so that the next checkpoint has a comparable baseline. Register/opcode/inlining experiments must measure source-generated workloads as well as dispatch kernels, and preserve room for future collection intrinsics.
+## Callback entry
+
+Typed entry construction now assigns typed fields directly, removing the temporary nine-element object list. Zero-argument callbacks with no optional/named adapter enter directly with their environment and bound receiver. Other signatures retain their existing validation and compiler-generated adapters.
+
+The AOT callback benchmark compiles once, resolves each callback once, reuses argument lists, and checks the result after every sample. These are native-to-guest boundary costs including the guest body, not dispatch-only timings. Eleven samples, 300,000 calls per zero-argument case and 100,000 per other case:
+
+| Callback | Before ns/call | After ns/call |
+|---|---:|---:|
+| Void, updating a global | 91.04 | 60.06 |
+| Captured integer result | 112.28 | 82.41 |
+| One integer argument | 130.71 | 122.81 |
+| Optional argument adapter | 103.58 | 99.46 |
+| Bound instance method | 244.35 | 217.69 |
+
+The callback changes and current allocator work pass all 817 dart_eval tests. Focused callback coverage includes fresh and serialized closures, captures, bound receivers, reentrancy, exceptions, and asynchronous results. Scoped analysis is clean.
+
+Register/opcode/inlining experiments are isolated from production. They measure source-generated workloads as well as call benchmarks, and must preserve room for future collection intrinsics.

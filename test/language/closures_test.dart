@@ -187,6 +187,75 @@ void main() {
       expect(_value(closure.invoke([])), 7);
     });
     test(
+      'host zero-argument entry preserves captures and bound receivers, encoded=$encoded',
+      () {
+        final runtime = _runtime(r'''
+          class Counter {
+            int value;
+            Counter(this.value);
+            int next() { value = value + 1; return value; }
+          }
+
+          List<Function> main() {
+            var captured = 3;
+            final counter = Counter(8);
+            return [
+              () { captured = captured + 1; return captured; },
+              counter.next,
+            ];
+          }
+        ''', encoded);
+        final callbacks = runtime.executeLib(_library, 'main') as List;
+        final captured = callbacks[0] as TypedClosure;
+        final bound = callbacks[1] as EvalCallable;
+        expect(_value(captured.invoke([])), 4);
+        expect(_value(captured.call(runtime, null, const [])), 5);
+        expect(_value(bound.call(runtime, null, const [])), 9);
+        expect(_value(bound.call(runtime, null, const [])), 10);
+      },
+    );
+    test('host zero-argument entry permits reentry, encoded=$encoded', () {
+      final runtime = _runtime(r'''
+        Function main(Function reenter) {
+          var depth = 0;
+          return () {
+            depth = depth + 1;
+            if (depth == 1) reenter();
+            final result = depth;
+            depth = depth - 1;
+            return result;
+          };
+        }
+      ''', encoded);
+      late TypedClosure callback;
+      callback =
+          runtime.executeLib(
+                _library,
+                'main',
+                arguments: {'reenter': () => callback.invoke([])},
+              )
+              as TypedClosure;
+      expect(_value(callback.invoke([])), 1);
+      expect(_value(callback.invoke([])), 1);
+    });
+    test(
+      'host zero-argument entry preserves errors and async results, encoded=$encoded',
+      () async {
+        final runtime = _runtime(r'''
+          List<Function> main() => [
+            () { throw 'guest error'; },
+            () async => 11,
+          ];
+        ''', encoded);
+        final callbacks = runtime.executeLib(_library, 'main') as List;
+        final throwing = callbacks[0] as TypedClosure;
+        final asynchronous = callbacks[1] as TypedClosure;
+        expect(() => throwing.invoke(const []), throwsA(isA<Exception>()));
+        final future = asynchronous.invoke(const [])!.$value as Future<Object?>;
+        expect(_value(await future as $Value?), 11);
+      },
+    );
+    test(
       'optional closure arguments preserve omitted versus explicit null, encoded=$encoded',
       () {
         final runtime = _runtime(r'''

@@ -35,16 +35,18 @@ class TypedEntry {
       c = null,
       environment = const [];
 
-  TypedEntry._(List<Object?> registers, {this.environment = const []})
-    : a = registers[0] as int,
-      b = registers[1] as int,
-      f = registers[2] as double,
-      g = registers[3] as double,
-      e = registers[4] as bool,
-      x = registers[5] as bool,
-      r = registers[6],
-      s = registers[7],
-      c = registers[8];
+  const TypedEntry.direct({
+    this.a = 0,
+    this.b = 0,
+    this.f = 0.0,
+    this.g = 0.0,
+    this.e = false,
+    this.x = false,
+    this.r,
+    this.s,
+    this.c,
+    this.environment = const [],
+  });
 
   static TypedEntry prepare(
     TypedFunction function,
@@ -55,7 +57,10 @@ class TypedEntry {
     Runtime? runtime,
   ) {
     final layout = function.callLayout;
-    final registers = <Object?>[0, 0, 0.0, 0.0, false, false, null, null, null];
+    var a = 0, b = 0;
+    var f = 0.0, g = 0.0;
+    var e = false, x = false;
+    Object? r, s, c;
     final overflow = layout.overflowCount == 0
         ? null
         : List<Object?>.filled(layout.overflowCount, null);
@@ -93,7 +98,34 @@ class TypedEntry {
       if (location.overflowIndex case final index?) {
         overflow![index] = value;
       } else {
-        registers[location.bank.index * 2 + location.index] = value;
+        switch (location.bank) {
+          case TypedRegisterBank.integer:
+            if (location.index == 0) {
+              a = value as int;
+            } else {
+              b = value as int;
+            }
+          case TypedRegisterBank.doublePrecision:
+            if (location.index == 0) {
+              f = value as double;
+            } else {
+              g = value as double;
+            }
+          case TypedRegisterBank.boolean:
+            if (location.index == 0) {
+              e = value as bool;
+            } else {
+              x = value as bool;
+            }
+          case TypedRegisterBank.object:
+            if (location.index == 0) {
+              r = value;
+            } else if (location.index == 1) {
+              s = value;
+            } else {
+              c = value;
+            }
+        }
       }
     }
     if (integer != integers.length ||
@@ -102,8 +134,18 @@ class TypedEntry {
         object != objects.length) {
       throw ArgumentError('Too many typed entry arguments');
     }
-    if (overflow != null) registers[8] = overflow;
-    return TypedEntry._(registers);
+    if (overflow != null) c = overflow;
+    return TypedEntry.direct(
+      a: a,
+      b: b,
+      f: f,
+      g: g,
+      e: e,
+      x: x,
+      r: r,
+      s: s,
+      c: c,
+    );
   }
 
   /// Values already have the physical representations in the signature.
@@ -119,7 +161,10 @@ class TypedEntry {
       );
     }
     final layout = function.callLayout;
-    final registers = <Object?>[0, 0, 0.0, 0.0, false, false, null, null, null];
+    var a = 0, b = 0;
+    var f = 0.0, g = 0.0;
+    var e = false, x = false;
+    Object? r, s, c;
     final overflow = layout.overflowCount == 0
         ? null
         : List<Object?>.filled(layout.overflowCount, null);
@@ -128,11 +173,50 @@ class TypedEntry {
       if (location.overflowIndex case final index?) {
         overflow![index] = values[i];
       } else {
-        registers[location.bank.index * 2 + location.index] = values[i];
+        final value = values[i];
+        switch (location.bank) {
+          case TypedRegisterBank.integer:
+            if (location.index == 0) {
+              a = value as int;
+            } else {
+              b = value as int;
+            }
+          case TypedRegisterBank.doublePrecision:
+            if (location.index == 0) {
+              f = value as double;
+            } else {
+              g = value as double;
+            }
+          case TypedRegisterBank.boolean:
+            if (location.index == 0) {
+              e = value as bool;
+            } else {
+              x = value as bool;
+            }
+          case TypedRegisterBank.object:
+            if (location.index == 0) {
+              r = value;
+            } else if (location.index == 1) {
+              s = value;
+            } else {
+              c = value;
+            }
+        }
       }
     }
-    if (overflow != null) registers[8] = overflow;
-    return TypedEntry._(registers, environment: environment);
+    if (overflow != null) c = overflow;
+    return TypedEntry.direct(
+      a: a,
+      b: b,
+      f: f,
+      g: g,
+      e: e,
+      x: x,
+      r: r,
+      s: s,
+      c: c,
+      environment: environment,
+    );
   }
 
   final int a, b;

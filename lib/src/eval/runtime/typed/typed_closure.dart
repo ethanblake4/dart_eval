@@ -189,6 +189,33 @@ final class TypedClosure extends EvalFunction {
       }
     }
     final context = this.runtime ?? runtime;
+    final hiddenCount =
+        (descriptor.hasEnvironment ? 1 : 0) +
+        (descriptor.boundReceiver ? 1 : 0);
+    assert(
+      function.argumentKinds
+          .take(hiddenCount)
+          .every((kind) => kind == TypedArgumentKind.object),
+    );
+    if (arguments.isEmpty &&
+        named.isEmpty &&
+        descriptor.positionalCount == 0 &&
+        descriptor.namedNames.isEmpty &&
+        function.argumentKinds.length == hiddenCount) {
+      final Object? first = descriptor.hasEnvironment
+          ? this
+          : descriptor.boundReceiver
+          ? captures.single
+          : null;
+      final Object? second =
+          descriptor.hasEnvironment && descriptor.boundReceiver
+          ? captures.single
+          : null;
+      return _run(
+        TypedEntry.direct(r: first, s: second, environment: captures),
+        context,
+      );
+    }
     final values = <Object?>[
       if (descriptor.hasEnvironment) this,
       if (descriptor.boundReceiver) captures.single,
@@ -209,9 +236,16 @@ final class TypedClosure extends EvalFunction {
         TypedArgumentKind.object => values[i],
       };
     }
+    return _run(
+      TypedEntry.fromValues(function, values, environment: captures),
+      context,
+    );
+  }
+
+  $Value? _run(TypedEntry entry, Runtime? context) {
     final result = TypedMachine.runEntry(
       program,
-      TypedEntry.fromValues(function, values, environment: captures),
+      entry,
       descriptor.functionId,
       runtime: context,
     );
