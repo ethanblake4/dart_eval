@@ -1,5 +1,8 @@
 # External bridge checkpoint
 
+This checkpoint is followed by [closure support](typed-closures.md). Current
+payload version, test totals and opcode counts are recorded there.
+
 `InvokeExternal` now lowers to `callExternal` with a u16 index into an immutable
 `TypedExternalCall` table. Each descriptor records the registered function ID and
 argument count. The compiler preserves source argument order and repeated SSA

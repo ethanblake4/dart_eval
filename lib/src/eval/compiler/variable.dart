@@ -1,4 +1,7 @@
 import '../ir/string.dart';
+import '../ir/closures.dart';
+import 'backend/representation.dart' show representationForType;
+import 'helpers/captures.dart';
 import '../ir/collection.dart' show ListLength;
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
@@ -126,6 +129,37 @@ class Variable {
   /// Source binding name, independent of the SSA temporary name.
   String? localName;
   int? frameIndex;
+  SSA? captureCell;
+
+  Variable captureBinding(CompilerContext ctx, AstNode declaration) {
+    if (!capturesFor(declaration).captured.contains(declaration)) return this;
+    final cell = ctx.svar('cell');
+    ctx.pushOp(NewCaptureCell(cell, ssa, representationForType(type)));
+    return copyWith()..captureCell = cell;
+  }
+
+  Variable readBinding(CompilerContext ctx) => captureCell == null
+      ? this
+      : Variable.ssa(
+          ctx,
+          ReadCaptureCell(
+            ctx.svar('captured'),
+            captureCell!,
+            representationForType(type),
+          ),
+          type,
+          isFinal: isFinal,
+          callingConvention: callingConvention,
+          methodReturnType: methodReturnType,
+        );
+
+  void renewCaptureCell(CompilerContext ctx) {
+    if (captureCell == null) return;
+    final previous = readBinding(ctx);
+    ctx.pushOp(
+      NewCaptureCell(captureCell!, previous.ssa, representationForType(type)),
+    );
+  }
 
   SSA get ssa => SSA(name!);
 
@@ -227,7 +261,8 @@ class Variable {
       )
       ..name = name ?? this.name
       ..frameIndex = frameIndex ?? this.frameIndex
-      ..localName = localName;
+      ..localName = localName
+      ..captureCell = captureCell;
   }
 
   /// Makes a copy of the variable with some fields updated, and also

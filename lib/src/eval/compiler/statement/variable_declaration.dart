@@ -53,14 +53,15 @@ void compileVariableDeclarationList(
         isFinal: l.isFinal || l.isConst,
       );
       ctx.pushOp(Assign(local.ssa, res.ssa));
-      ctx.setLocal(li.name.lexeme, local);
+      ctx.setLocal(li.name.lexeme, local.captureBinding(ctx, li));
     } else {
       ctx.setLocal(
         li.name.lexeme,
         BuiltinValue()
             .push(ctx)
             .boxIfNeeded(ctx)
-            .copyWith(type: type ?? CoreTypes.dynamic.ref(ctx)),
+            .copyWith(type: type ?? CoreTypes.dynamic.ref(ctx))
+            .captureBinding(ctx, li),
       );
     }
   }

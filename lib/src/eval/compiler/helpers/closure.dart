@@ -1,3 +1,4 @@
+import '../../ir/memory.dart' show Assign;
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
@@ -16,22 +17,38 @@ InvokeResult invokeClosure(
   List<Variable>? positional,
   Map<String, Variable>? named,
 }) {
-  final positionalArgs = [...?positional];
-  final namedArgs = {...?named};
+  final dispatch = closureRef?.getStaticDispatch(ctx);
+  final callable = dispatch == null
+      ? (closureRef?.getValue(ctx) ?? closureVar!)
+      : null;
+  final closure = callable == null
+      ? null
+      : Variable.ssa(
+          ctx,
+          Assign(ctx.svar('closure_target'), callable.ssa),
+          callable.type,
+        );
+  Variable snapshot(Variable argument) => Variable.ssa(
+    ctx,
+    Assign(ctx.svar('closure_argument'), argument.ssa),
+    argument.type,
+  ).boxIfNeeded(ctx);
+  final positionalArgs = [
+    for (final argument in positional ?? <Variable>[]) snapshot(argument),
+  ];
+  final namedArgs = {
+    for (final entry in (named ?? <String, Variable>{}).entries)
+      entry.key: snapshot(entry.value),
+  };
   for (final arg in argumentList?.arguments ?? <Expression>[]) {
     if (arg is NamedExpression) {
-      namedArgs[arg.name.label.name] = compileExpression(arg.expression, ctx);
+      namedArgs[arg.name.label.name] = snapshot(
+        compileExpression(arg.expression, ctx),
+      );
     } else {
-      positionalArgs.add(compileExpression(arg, ctx));
+      positionalArgs.add(snapshot(compileExpression(arg, ctx)));
     }
   }
-  for (var i = 0; i < positionalArgs.length; i++) {
-    positionalArgs[i] = positionalArgs[i].boxIfNeeded(ctx);
-  }
-  for (final name in namedArgs.keys.toList()) {
-    namedArgs[name] = namedArgs[name]!.boxIfNeeded(ctx);
-  }
-  final dispatch = closureRef?.getStaticDispatch(ctx);
   final target = ctx.svar('closure_result');
   final positionalSsa = positionalArgs.map((arg) => arg.ssa).toList();
   final namedSsa = namedArgs.map((key, arg) => MapEntry(key, arg.ssa));
@@ -43,8 +60,7 @@ InvokeResult invokeClosure(
       ], result: target),
     );
   } else {
-    final closure = closureRef?.getValue(ctx) ?? closureVar!;
-    ctx.pushOp(InvokeClosure(target, closure.ssa, positionalSsa, namedSsa));
+    ctx.pushOp(InvokeClosure(target, closure!.ssa, positionalSsa, namedSsa));
   }
   return InvokeResult(
     null,

@@ -93,7 +93,8 @@ Variable compileMethodInvocation(
         )
       : compileIdentifier(e.methodName, ctx);
 
-  if (method.callingConvention == CallingConvention.dynamic ||
+  if (method.type == CoreTypes.dynamic.ref(ctx) ||
+      method.callingConvention == CallingConvention.dynamic ||
       (method.type == CoreTypes.function.ref(ctx) &&
           method.methodOffset == null)) {
     return invokeClosure(ctx, null, method, e.argumentList).result;

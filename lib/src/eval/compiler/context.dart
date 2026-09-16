@@ -147,6 +147,7 @@ class CompilerContext with ScopeContext {
   final Map<int, ControlFlowGraph> functionGraphs = {};
   final Map<int, ControlFlowGraph> ssaFunctionGraphs = {};
   final Map<int, String> functionNames = {};
+  final Map<int, int> functionLibraries = {};
   final Map<int, MachineFunctionSignature> functionSignatures = {};
   final Map<int, List<FormalParameter>> functionParameters = {};
   int? currentFunctionId;
@@ -167,6 +168,7 @@ class CompilerContext with ScopeContext {
     currentFunctionId = id;
     funcLabel = label(name);
     functionNames[id] = funcLabel!;
+    functionLibraries[id] = library;
     activeGraph = ControlFlowGraph();
     final root = BasicBlock<Operation>([], label: funcLabel);
     activeGraph.append(root);
@@ -303,34 +305,11 @@ class CompilerContext with ScopeContext {
 
   @override
   Variable? lookupLocal(String name) {
-    final frameRef = <Variable>[];
     for (var i = locals.length - 1; i >= 0; i--) {
-      if (locals[i].containsKey(name)) {
-        final v = locals[i][name]!;
-        /*if (frameRef.isNotEmpty) {
-          var frOffset = frameRef[0].scopeFrameOffset;
-          for (var i = 0; i < frameRef.length - 1; i++) {
-            final _index =
-                BuiltinValue(intval: frameRef[i + 1].scopeFrameOffset)
-                    .push(this);
-            blockCode.add(
-                IndexList(frOffset, _index.scopeFrameOffset), IndexList.LEN);
-            frOffset = scopeFrameOffset++;
-            allocNest.last++;
-          }
-
-          final _index = BuiltinValue(intval: v.scopeFrameOffset).push(this);
-          pushOp(IndexList(frOffset, _index.scopeFrameOffset), IndexList.LEN);
-          allocNest.last++;
-
-          return v.copyWith(scopeFrameOffset: scopeFrameOffset++);
-        }*/
-        return v..frameIndex = i;
-      }
-      if (scopeDoesClose[i]) {
-        frameRef.add(locals[i]['#prev']!);
-      }
+      final local = locals[i][name];
+      if (local != null) return local..frameIndex = i;
     }
+    return null;
   }
 
   @override

@@ -6,6 +6,7 @@ import 'package:dart_eval/src/eval/shared/types.dart';
 import 'typed_instance.dart';
 import 'typed_host_collections.dart';
 import 'typed_program.dart';
+import 'typed_closure.dart';
 
 /// The dynamic-call boundary uses boxed language values exclusively.
 ///
@@ -40,8 +41,9 @@ abstract final class TypedInterop {
     Object? receiver,
     List<$Value?> arguments,
   ) => switch (receiver) {
+    TypedClosure() => receiver.invoke(arguments, runtime: runtime),
     TypedHostFunction() => receiver.invokeHost(runtime, arguments),
-    TypedMember() => receiver.invoke(arguments, runtime: runtime),
+    TypedMember() => receiver.invokeClosure(arguments, runtime: runtime),
     TypedInstance() => receiver.invoke('call', arguments, runtime: runtime),
     _ => _runtime(runtime).invokeTypedObject(receiver, 'call', arguments),
   };
@@ -141,18 +143,28 @@ final class TypedHostFunction extends EvalFunction {
   TypedHostFunction(this.function);
   final Function function;
 
-  $Value? invokeHost(Runtime? runtime, List<$Value?> arguments) =>
-      TypedInterop.boxExternal(
-        Function.apply(
-          function,
-          arguments
-              .map(
-                (value) => TypedInterop.exportExternal(value, runtime: runtime),
-              )
-              .toList(),
-        ),
-        runtime: runtime,
-      );
+  $Value? invokeHost(
+    Runtime? runtime,
+    List<$Value?> arguments, {
+    Map<String, $Value?> named = const {},
+  }) => TypedInterop.boxExternal(
+    Function.apply(
+      function,
+      arguments
+          .map((value) => TypedInterop.exportExternal(value, runtime: runtime))
+          .toList(),
+      named.isEmpty
+          ? null
+          : {
+              for (final entry in named.entries)
+                Symbol(entry.key): TypedInterop.exportExternal(
+                  entry.value,
+                  runtime: runtime,
+                ),
+            },
+    ),
+    runtime: runtime,
+  );
 
   @override
   $Value? call(Runtime runtime, $Value? target, List<$Value?> args) =>

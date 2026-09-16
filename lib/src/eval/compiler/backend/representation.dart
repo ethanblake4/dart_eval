@@ -247,7 +247,21 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
         inputs(operation, object);
         output(operation, object);
       case closures.CreateClosure():
+        inputs(operation, object);
         output(operation, object);
+      case closures.NewCaptureCell(:final value, :final representation):
+        constrain(value, representation);
+        output(operation, object);
+      case closures.ReadCaptureCell(:final cell, :final representation):
+        constrain(cell, object);
+        output(operation, representation);
+      case closures.WriteCaptureCell(
+        :final cell,
+        :final value,
+        :final representation,
+      ):
+        constrain(cell, object);
+        constrain(value, representation);
       case collection.IndexList(:final list, :final index):
         constrain(list, object);
         constrain(index, integer);

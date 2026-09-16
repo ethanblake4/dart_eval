@@ -1,7 +1,7 @@
 # Typed backend implementation
 
 Current production integration: [exported function API](typed-exports.md).
-Latest checkpoint: [external bridge calls](typed-external-calls.md).
+Latest checkpoint: [closures and captures](typed-closures.md).
 `Compiler.compile` and `Runtime.executeLib` now use the typed backend exclusively.
 `executeLib` and `eval` bind a parameter-name map and return normalized host values.
 The checkpoints below preserve the implementation history; the reference backend
@@ -254,9 +254,7 @@ The reference VM still has its older representation helpers; typed calls no long
 use those helpers. Continue comparing numeric and object/call workloads when
 changing the 196-case loop or extending instruction selection.
 
-For the next implementation milestone, define closure capture storage and typed
-entry signatures first, then lower creation and invocation using the register ABI.
-Keep captured language values in their compiler-selected representation and
-preserve mutation/identity across escaping closures. Measure direct, bound and
-polymorphic calls before choosing a wider frame cache or dispatch cache. Exception
-handlers need explicit spill and restoration rules before suspension is added.
+Closure capture storage and invocation are now implemented. See the latest
+[closure checkpoint](typed-closures.md) for its calling convention, measured
+limits and saved next steps. Global storage and initialization are next;
+exception handlers need explicit spill and restoration rules before suspension.

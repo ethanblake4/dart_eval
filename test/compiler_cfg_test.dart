@@ -116,7 +116,8 @@ void main() {
       expect(operations(outer).whereType<CreateClosure>(), hasLength(1));
       expect(operations(outer).whereType<InvokeClosure>(), hasLength(1));
       expect(operations(inner).whereType<LoadCapture>(), isNotEmpty);
-      expect(operations(inner).whereType<Parameter>(), hasLength(1));
+      // The closure receiver is the first register argument, before user args.
+      expect(operations(inner).whereType<Parameter>(), hasLength(2));
       expect(operations(outer).whereType<LoadCapture>(), isEmpty);
       expectDefinedReads(outer);
       expectDefinedReads(inner);

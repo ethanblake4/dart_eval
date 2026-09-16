@@ -8,7 +8,7 @@ import 'typed_function.dart';
 /// Register initialization happens once at the public host boundary. Internal
 /// calls already have their arguments in the compiler-assigned registers.
 class TypedEntry {
-  TypedEntry._(List<Object?> registers)
+  TypedEntry._(List<Object?> registers, {this.environment = const []})
     : a = registers[0] as int,
       b = registers[1] as int,
       f = registers[2] as double,
@@ -81,7 +81,11 @@ class TypedEntry {
 
   /// Values already have the physical representations in the signature.
   /// No boxing, argument rebinding, or host conversion occurs here.
-  factory TypedEntry.fromValues(TypedFunction function, List<Object?> values) {
+  factory TypedEntry.fromValues(
+    TypedFunction function,
+    List<Object?> values, {
+    List<Object?> environment = const [],
+  }) {
     if (values.length != function.argumentKinds.length) {
       throw ArgumentError(
         'Expected ${function.argumentKinds.length} arguments, got ${values.length}',
@@ -101,13 +105,14 @@ class TypedEntry {
       }
     }
     if (overflow != null) registers[8] = overflow;
-    return TypedEntry._(registers);
+    return TypedEntry._(registers, environment: environment);
   }
 
   final int a, b;
   final double f, g;
   final bool e, x;
   final Object? r, s, c;
+  final List<Object?> environment;
 }
 
 /// Each active invocation owns spills and one optional outgoing list. A callee
@@ -132,11 +137,32 @@ class TypedFrame {
       child = _child = TypedFrame(callee, this);
     }
     child.returnPc = pc;
+    child.environment = const [];
     return child;
   }
 
   @pragma('vm:never-inline')
+  TypedFrame enterClosure(
+    TypedFunction callee,
+    int pc,
+    List<Object?> captures,
+  ) {
+    // Keep the cached-frame path in one Dart call, just like ordinary calls.
+    var child = _child;
+    if (child == null || !identical(child.function, callee)) {
+      child = _child = TypedFrame(callee, this);
+    }
+    child.returnPc = pc;
+    child.environment = captures;
+    return child;
+  }
+
+  @pragma('vm:never-inline')
+  Object? captureAt(int index) => environment[index];
+
+  @pragma('vm:never-inline')
   TypedFrame leave() {
+    environment = const [];
     // Cached inactive frames must not retain arbitrary application objects.
     if (objectSpills.isNotEmpty) {
       objectSpills.fillRange(0, objectSpills.length, null);
@@ -170,6 +196,7 @@ class TypedFrame {
   final TypedFrame? parent;
   TypedFrame? _child;
   int returnPc = 0;
+  List<Object?> environment = const [];
   final Int64List intSpills;
   final Float64List doubleSpills;
   final Uint8List boolSpills;

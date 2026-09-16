@@ -55,6 +55,248 @@ TypedProgram _recursive() {
 }
 
 void main() {
+  test(
+    'closure signatures and ordered calls round trip with immutable defaults',
+    () {
+      final names = ['z', 'a'];
+      final defaults = <Object?>[null, -0.0];
+      final descriptor = TypedClosureDescriptor(
+        1,
+        captureCount: 1,
+        positionalCount: 2,
+        requiredPositional: 1,
+        positionalDefaults: defaults,
+        namedNames: names,
+        requiredNamed: ['z'],
+        namedDefaults: [null, 'value'],
+      );
+      names.clear();
+      defaults.clear();
+      final p = TypedProgram(
+        Uint8List.fromList([TypedOp.rReturn, TypedOp.rReturn]),
+        functions: [
+          const TypedFunction(0),
+          TypedFunction(
+            1,
+            argumentKinds: List.filled(5, TypedArgumentKind.object),
+            resultKind: TypedArgumentKind.object,
+          ),
+        ],
+        closures: [descriptor],
+        closureCalls: [
+          TypedClosureCall(1, namedNames: ['a', 'z']),
+        ],
+      );
+      final restored = TypedProgram.read(p.write().buffer);
+      final closure = restored.closures.single;
+      expect(closure.namedNames, ['z', 'a']);
+      expect(closure.requiredNamed, ['z']);
+      expect((closure.positionalDefaults[1] as double).isNegative, isTrue);
+      expect(closure.namedDefaults, [null, 'value']);
+      expect(restored.closureCalls.single.namedNames, ['a', 'z']);
+      expect(restored.closureCalls.single.overflowCount, 2);
+      expect(() => closure.namedNames.clear(), throwsUnsupportedError);
+      expect(() => closure.positionalDefaults.clear(), throwsUnsupportedError);
+      expect(() => restored.closures.clear(), throwsUnsupportedError);
+    },
+  );
+  test(
+    'closure descriptors validate signatures, flags, names and defaults',
+    () {
+      final function = TypedFunction(
+        0,
+        argumentKinds: [TypedArgumentKind.object],
+      );
+      for (final descriptor in [
+        TypedClosureDescriptor(
+          1,
+          captureCount: 0,
+          positionalCount: 0,
+          requiredPositional: 0,
+        ),
+        TypedClosureDescriptor(
+          0,
+          captureCount: 0,
+          positionalCount: 0,
+          requiredPositional: 0,
+          boundReceiver: true,
+        ),
+        TypedClosureDescriptor(
+          0,
+          captureCount: -1,
+          positionalCount: 0,
+          requiredPositional: 0,
+        ),
+        TypedClosureDescriptor(
+          0,
+          captureCount: 0,
+          positionalCount: 1,
+          requiredPositional: 0,
+        ),
+        TypedClosureDescriptor(
+          0,
+          captureCount: 0,
+          positionalCount: 0,
+          requiredPositional: 0,
+          requiredNamed: ['missing'],
+        ),
+        TypedClosureDescriptor(
+          0,
+          captureCount: 0,
+          positionalCount: 0,
+          requiredPositional: 0,
+          namedNames: ['x', 'x'],
+          namedDefaults: [null, null],
+        ),
+        TypedClosureDescriptor(
+          0,
+          captureCount: 0,
+          positionalCount: 0,
+          requiredPositional: 0,
+          namedNames: ['x'],
+          namedDefaults: [<int>[]],
+        ),
+      ]) {
+        expect(
+          () => TypedProgram(
+            Uint8List.fromList([TypedOp.rReturn]),
+            functions: [function],
+            closures: [descriptor],
+          ),
+          throwsFormatException,
+        );
+      }
+      expect(
+        () => TypedProgram(
+          Uint8List.fromList([TypedOp.rReturn]),
+          closureCalls: [
+            TypedClosureCall(0, namedNames: ['x', 'x']),
+          ],
+        ),
+        throwsFormatException,
+      );
+    },
+  );
+  test(
+    'closure instructions check capture ownership and outgoing capacity',
+    () {
+      final descriptor = TypedClosureDescriptor(
+        1,
+        captureCount: 1,
+        positionalCount: 0,
+        requiredPositional: 0,
+      );
+      final code = Uint8List.fromList([
+        TypedOp.rCreateClosure,
+        0,
+        0,
+        TypedOp.rReturn,
+        TypedOp.rLoadCapture,
+        0,
+        0,
+        TypedOp.rReturn,
+      ]);
+      final target = const TypedFunction(
+        4,
+        argumentKinds: [TypedArgumentKind.object],
+      );
+      final p = TypedProgram(
+        code,
+        functions: [const TypedFunction(0, objectOutgoingCount: 1), target],
+        closures: [descriptor],
+      );
+      expect(TypedProgram.read(p.write().buffer).code, code);
+      expect(
+        () => TypedProgram(
+          code,
+          functions: [const TypedFunction(0), target],
+          closures: [descriptor],
+        ),
+        throwsFormatException,
+      );
+      final badCapture = Uint8List.fromList(code)..[5] = 1;
+      expect(
+        () => TypedProgram(
+          badCapture,
+          functions: p.functions,
+          closures: [descriptor],
+        ),
+        throwsFormatException,
+      );
+      expect(
+        () => TypedProgram(
+          code,
+          functions: p.functions,
+          closures: [
+            descriptor,
+            TypedClosureDescriptor(
+              1,
+              captureCount: 2,
+              positionalCount: 0,
+              requiredPositional: 0,
+            ),
+          ],
+        ),
+        throwsFormatException,
+      );
+      expect(
+        () => TypedProgram(
+          Uint8List.fromList([TypedOp.rLoadCapture, 0, 0, TypedOp.rReturn]),
+        ),
+        throwsFormatException,
+      );
+      final callCode = Uint8List.fromList([
+        TypedOp.callClosure,
+        0,
+        0,
+        TypedOp.rReturn,
+      ]);
+      expect(() => TypedProgram(callCode), throwsFormatException);
+      expect(
+        () => TypedProgram(callCode, closureCalls: [TypedClosureCall(3)]),
+        throwsFormatException,
+      );
+      expect(
+        TypedProgram(
+          callCode,
+          functions: const [TypedFunction(0, objectOutgoingCount: 2)],
+          closureCalls: [TypedClosureCall(3)],
+        ).closureCalls.single.argumentCount,
+        3,
+      );
+    },
+  );
+  test('closure codec bounds counts, flags and default payloads', () {
+    final p = TypedProgram(
+      Uint8List.fromList([TypedOp.rReturn]),
+      functions: const [
+        TypedFunction(0, argumentKinds: [TypedArgumentKind.object]),
+      ],
+      closures: [
+        TypedClosureDescriptor(
+          0,
+          captureCount: 0,
+          positionalCount: 0,
+          requiredPositional: 0,
+        ),
+      ],
+    );
+    final bytes = p.write().buffer.asUint8List();
+    // One argument puts descriptor metadata at 64 + 29 + 1 = 94.
+    for (final (offset, value) in [
+      (56, 65537),
+      (60, 65537),
+      (94, 1),
+      (110, 3),
+      (114, 0xffffffff),
+      (122, 0xffffffff),
+    ]) {
+      final bad = Uint8List.fromList(bytes);
+      ByteData.sublistView(bad).setUint32(offset, value, Endian.little);
+      expect(() => TypedProgram.read(bad.buffer), throwsFormatException);
+    }
+  });
+
   test('external call descriptors round trip and keep the table immutable', () {
     final calls = [const TypedExternalCall(0xffffffff, 4)];
     final p = TypedProgram(
@@ -110,9 +352,9 @@ void main() {
         Uint8List.fromList([TypedOp.rReturn]),
         externalCalls: const [TypedExternalCall(0, 4)],
       ).write().buffer.asUint8List();
-      // Metadata follows the 56-byte header and 29-byte function layout.
+      // Metadata follows the 64-byte header and 29-byte function layout.
       final badArguments = Uint8List.fromList(bytes);
-      ByteData.sublistView(badArguments).setUint32(89, 65539, Endian.little);
+      ByteData.sublistView(badArguments).setUint32(97, 65539, Endian.little);
       expect(
         () => TypedProgram.read(badArguments.buffer),
         throwsFormatException,
@@ -358,8 +600,8 @@ void main() {
       ],
     );
     final bytes = p.write().buffer.asUint8List();
-    // Metadata begins after the 56-byte header, 29-byte layout and one argument.
-    const metadata = 86;
+    // Metadata begins after the 64-byte header, 29-byte layout and one argument.
+    const metadata = 94;
     for (final offset in [
       48,
       metadata,
@@ -541,14 +783,14 @@ void main() {
         Uint8List.fromList([TypedOp.rReturn]),
         classes: [TypedClass('C', library: 'test', valueCount: 0)],
       ).write().buffer.asUint8List();
-      for (final offset in [36, 40, 44, 48, 52, 85]) {
+      for (final offset in [36, 40, 44, 48, 52, 56, 60, 93]) {
         final bad = Uint8List.fromList(bytes);
         ByteData.sublistView(bad).setUint32(offset, 0xffffffff, Endian.little);
         expect(() => TypedProgram.read(bad.buffer), throwsFormatException);
       }
-      final badResult = Uint8List.fromList(bytes)..[84] = 254;
+      final badResult = Uint8List.fromList(bytes)..[92] = 254;
       expect(() => TypedProgram.read(badResult.buffer), throwsFormatException);
-      for (var length = 56; length < bytes.length; length++) {
+      for (var length = 64; length < bytes.length; length++) {
         expect(
           () => TypedProgram.read(
             Uint8List.fromList(bytes.take(length).toList()).buffer,
@@ -779,10 +1021,10 @@ void main() {
         TypedFunction(0, argumentKinds: [TypedArgumentKind.string]),
       ],
     ).write().buffer.asUint8List();
-    final badKind = Uint8List.fromList(bytes)..[85] = 255;
+    final badKind = Uint8List.fromList(bytes)..[93] = 255;
     expect(() => TypedProgram.read(badKind.buffer), throwsFormatException);
     final badCount = Uint8List.fromList(bytes);
-    ByteData.sublistView(badCount).setUint32(80, 2, Endian.little);
+    ByteData.sublistView(badCount).setUint32(88, 2, Endian.little);
     expect(() => TypedProgram.read(badCount.buffer), throwsFormatException);
   });
   test('calls need outgoing storage only beyond the register capacity', () {
@@ -835,11 +1077,11 @@ void main() {
       Uint8List.fromList([TypedOp.aReturn]),
       objects: ['abc'],
     ).write().buffer.asUint8List();
-    // The object pool follows the 56-byte header and 29-byte function layout.
-    final badTag = Uint8List.fromList(bytes)..[85] = 255;
+    // The object pool follows the 64-byte header and 29-byte function layout.
+    final badTag = Uint8List.fromList(bytes)..[93] = 255;
     expect(() => TypedProgram.read(badTag.buffer), throwsFormatException);
     final badString = Uint8List.fromList(bytes);
-    ByteData.sublistView(badString).setUint32(86, 0xffffffff, Endian.little);
+    ByteData.sublistView(badString).setUint32(94, 0xffffffff, Endian.little);
     expect(() => TypedProgram.read(badString.buffer), throwsFormatException);
     final badCount = Uint8List.fromList(bytes);
     ByteData.sublistView(badCount).setUint32(28, 0, Endian.little);

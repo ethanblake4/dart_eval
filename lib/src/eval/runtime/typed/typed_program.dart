@@ -6,6 +6,7 @@ import 'typed_call_site.dart';
 import 'typed_function.dart';
 import 'typed_export.dart';
 import 'typed_external_call.dart';
+import 'typed_closure_descriptor.dart';
 import 'typed_codec.dart';
 
 /// Validated immutable bytecode for the typed-bank execution loop.
@@ -24,10 +25,14 @@ class TypedProgram {
     List<TypedCallSite> callSites = const [],
     List<TypedExport> exports = const [],
     List<TypedExternalCall> externalCalls = const [],
+    List<TypedClosureDescriptor> closures = const [],
+    List<TypedClosureCall> closureCalls = const [],
     this.entryFunction = 0,
   }) : code = Uint8List.fromList(code).asUnmodifiableView(),
        exports = List.unmodifiable(exports),
        externalCalls = List.unmodifiable(externalCalls),
+       closures = List.unmodifiable(closures),
+       closureCalls = List.unmodifiable(closureCalls),
        classes = List.unmodifiable(
          classes.map(
            (type) => TypedClass(
@@ -102,6 +107,8 @@ class TypedProgram {
   final List<TypedCallSite> callSites;
   final List<TypedExport> exports;
   final List<TypedExternalCall> externalCalls;
+  final List<TypedClosureDescriptor> closures;
+  final List<TypedClosureCall> closureCalls;
   final int entryFunction;
 
   ByteData write() => TypedCodec.write(this);
@@ -212,6 +219,89 @@ class TypedProgram {
     }
   }
 
+  Map<int, int> _validateClosures() {
+    if (closures.length > 65536 || closureCalls.length > 65536) {
+      throw const FormatException('Too many typed closures or closure calls');
+    }
+    bool namesValid(List<String> names) =>
+        names.every((name) => name.isNotEmpty) &&
+        names.toSet().length == names.length;
+    bool scalar(Object? value) =>
+        value == null ||
+        value is int ||
+        value is double ||
+        value is bool ||
+        value is String;
+    final captures = <int, int>{};
+    for (final descriptor in closures) {
+      if (descriptor.functionId < 0 ||
+          descriptor.functionId >= functions.length ||
+          descriptor.captureCount < 0 ||
+          descriptor.captureCount > 65536 ||
+          descriptor.positionalCount < 0 ||
+          descriptor.argumentCount > 65537 ||
+          descriptor.requiredPositional < 0 ||
+          descriptor.requiredPositional > descriptor.positionalCount ||
+          !namesValid(descriptor.namedNames) ||
+          !namesValid(descriptor.requiredNamed) ||
+          !descriptor.requiredNamed.every(descriptor.namedNames.contains) ||
+          descriptor.positionalDefaults.length != descriptor.positionalCount ||
+          descriptor.namedDefaults.length != descriptor.namedNames.length ||
+          !descriptor.positionalDefaults.every(scalar) ||
+          !descriptor.namedDefaults.every(scalar) ||
+          (descriptor.hasEnvironment && descriptor.boundReceiver) ||
+          (!descriptor.hasEnvironment &&
+              descriptor.captureCount != (descriptor.boundReceiver ? 1 : 0))) {
+        throw const FormatException('Invalid typed closure descriptor');
+      }
+      for (var i = 0; i < descriptor.requiredPositional; i++) {
+        if (descriptor.positionalDefaults[i] != null) {
+          throw const FormatException(
+            'Required closure parameter has a default',
+          );
+        }
+      }
+      for (final name in descriptor.requiredNamed) {
+        if (descriptor.namedDefaults[descriptor.namedNames.indexOf(name)] !=
+            null) {
+          throw const FormatException(
+            'Required closure parameter has a default',
+          );
+        }
+      }
+      final function = functions[descriptor.functionId];
+      final hidden = descriptor.hasEnvironment || descriptor.boundReceiver
+          ? 1
+          : 0;
+      if (function.argumentKinds.length != descriptor.argumentCount + hidden ||
+          (descriptor.hasEnvironment &&
+              (function.argumentKinds.any(
+                    (kind) => kind != TypedArgumentKind.object,
+                  ) ||
+                  (function.resultKind != null &&
+                      function.resultKind != TypedArgumentKind.object))) ||
+          (descriptor.boundReceiver &&
+              function.argumentKinds.first != TypedArgumentKind.object)) {
+        throw const FormatException('Invalid typed closure function signature');
+      }
+      if (descriptor.hasEnvironment) {
+        final previous = captures[function.entry];
+        if (previous != null && previous != descriptor.captureCount) {
+          throw const FormatException('Conflicting closure capture counts');
+        }
+        captures[function.entry] = descriptor.captureCount;
+      }
+    }
+    for (final call in closureCalls) {
+      if (call.positionalCount < 0 ||
+          call.argumentCount > 65537 ||
+          !namesValid(call.namedNames)) {
+        throw const FormatException('Invalid typed closure call signature');
+      }
+    }
+    return captures;
+  }
+
   void _validate() {
     if (functions.isEmpty ||
         functions.length > 65536 ||
@@ -235,6 +325,7 @@ class TypedProgram {
     _validateClasses();
     _validateExports();
     _validateExternalCalls();
+    final captureCounts = _validateClosures();
     if (code.isEmpty) throw const FormatException('Empty typed program');
     final boundaries = <int>{};
     final branches = <(int, int)>[];
@@ -298,6 +389,9 @@ class TypedProgram {
           TypedImmediate.classIndex => classes.length,
           TypedImmediate.callSite => callSites.length,
           TypedImmediate.externalCall => externalCalls.length,
+          TypedImmediate.closureIndex => closures.length,
+          TypedImmediate.closureCall => closureCalls.length,
+          TypedImmediate.captureIndex => captureCounts[function.entry] ?? 0,
           TypedImmediate.field => classes.fold<int>(
             0,
             (n, type) => type.valueCount > n ? type.valueCount : n,
@@ -315,6 +409,15 @@ class TypedProgram {
             index > function.objectOutgoingCount) {
           throw const FormatException(
             'Insufficient outgoing object storage for host call',
+          );
+        }
+        if ((last.immediate == TypedImmediate.closureIndex &&
+                closures[index].captureCount > function.objectOutgoingCount) ||
+            (last.immediate == TypedImmediate.closureCall &&
+                closureCalls[index].overflowCount >
+                    function.objectOutgoingCount)) {
+          throw const FormatException(
+            'Insufficient outgoing storage for closure',
           );
         }
         if (last.immediate == TypedImmediate.externalCall &&

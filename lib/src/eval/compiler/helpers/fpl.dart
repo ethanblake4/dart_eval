@@ -18,11 +18,12 @@ List<PossiblyValuedParameter> resolveFPLDefaults(
   bool sortNamed = false,
   bool ignoreDefaults = false,
   bool isEnum = false,
+  int parameterOffset = 0,
 }) {
   final normalized = <PossiblyValuedParameter>[];
   var hasEncounteredOptionalPositionalParam = false;
   var hasEncounteredNamedParam = false;
-  var paramIndex = isEnum ? 2 : (isInstanceMethod ? 1 : 0);
+  var paramIndex = parameterOffset + (isEnum ? 2 : (isInstanceMethod ? 1 : 0));
 
   final named = <FormalParameter>[];
   final positional = <FormalParameter>[];

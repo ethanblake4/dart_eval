@@ -1,3 +1,5 @@
+import '../ir/closures.dart';
+import 'backend/representation.dart' show representationForType;
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
@@ -264,6 +266,19 @@ class IdentifierReference implements Reference {
         return local.frameRef!.setValue(ctx, value);
       }
 
+      if (local.captureCell != null) {
+        final stored = local.boxed
+            ? value.boxIfNeeded(ctx)
+            : value.unboxIfNeeded(ctx, false);
+        ctx.pushOp(
+          WriteCaptureCell(
+            local.captureCell!,
+            stored.ssa,
+            representationForType(local.type),
+          ),
+        );
+        return stored;
+      }
       ctx.pushOp(Assign(local.ssa, value.ssa));
       final type = TypeRef.commonBaseType(ctx, {local.type, value.type});
       local.copyWithUpdate(
@@ -423,7 +438,7 @@ class IdentifierReference implements Reference {
     // First look at locals
     final local = ctx.lookupLocal(name);
     if (local != null) {
-      return local;
+      return local.readBinding(ctx);
     }
 
     // Next, the instance (if available)

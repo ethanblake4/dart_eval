@@ -1,3 +1,6 @@
+import '../helpers/captures.dart';
+import '../builtins.dart';
+import '../reference.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
@@ -71,8 +74,19 @@ StatementInfo compileStatement(
       return compilePatternVariableDeclarationStatement(s, ctx);
     } else if (s is FunctionDeclarationStatement) {
       final decl = s.functionDeclaration;
+      final captured = capturesFor(decl).captured.contains(decl);
+      if (captured) {
+        final placeholder = BuiltinValue()
+            .push(ctx)
+            .copyWith(type: CoreTypes.function.ref(ctx));
+        ctx.setLocal(decl.name.lexeme, placeholder.captureBinding(ctx, decl));
+      }
       final variable = compileFunctionExpression(decl.functionExpression, ctx);
-      ctx.setLocal(decl.name.lexeme, variable);
+      if (captured) {
+        IdentifierReference(null, decl.name.lexeme).setValue(ctx, variable);
+      } else {
+        ctx.setLocal(decl.name.lexeme, variable);
+      }
       return StatementInfo(-1);
     }
   } on Error {

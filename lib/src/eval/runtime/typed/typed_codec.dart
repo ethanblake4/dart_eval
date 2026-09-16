@@ -6,17 +6,18 @@ import 'typed_call_site.dart';
 import 'typed_program.dart';
 import 'typed_export.dart';
 import 'typed_external_call.dart';
+import 'typed_closure_descriptor.dart';
 
 /// Versioned little-endian format, separate from the generic register format.
 abstract final class TypedCodec {
   static const magic = 0x54564544; // DEVT
-  static const version = 108;
+  static const version = 109;
 
   static ByteData write(TypedProgram program) {
     final objects = _writeObjects(program.objects);
     final metadata = _writeMetadata(program);
     final result = ByteData(
-      56 +
+      64 +
           program.functions.fold<int>(
             0,
             (size, f) => size + 29 + f.argumentKinds.length,
@@ -47,6 +48,8 @@ abstract final class TypedCodec {
     u32(metadata.length);
     u32(program.exports.length);
     u32(program.externalCalls.length);
+    u32(program.closures.length);
+    u32(program.closureCalls.length);
     for (final function in program.functions) {
       for (final value in function.layout) {
         u32(value);
@@ -75,7 +78,7 @@ abstract final class TypedCodec {
 
   static TypedProgram read(ByteBuffer buffer) {
     final input = ByteData.view(buffer);
-    if (input.lengthInBytes < 56) {
+    if (input.lengthInBytes < 64) {
       throw const FormatException('Truncated typed program header');
     }
     var offset = 0;
@@ -94,18 +97,21 @@ abstract final class TypedCodec {
     final objectCount = u32(), objectLength = u32();
     final classCount = u32(), callSiteCount = u32(), metadataLength = u32();
     final exportCount = u32(), externalCallCount = u32();
+    final closureCount = u32(), closureCallCount = u32();
     final sectionsLength =
         integerCount * 8 +
         doubleCount * 8 +
         objectLength +
         codeLength +
         metadataLength;
-    final minimumLength = 56 + functionCount * 29 + sectionsLength;
+    final minimumLength = 64 + functionCount * 29 + sectionsLength;
     if (functionCount == 0 ||
         functionCount > 65536 ||
         classCount > 65536 ||
         callSiteCount > 65536 ||
         externalCallCount > 65536 ||
+        closureCount > 65536 ||
+        closureCallCount > 65536 ||
         minimumLength > input.lengthInBytes ||
         objectCount > objectLength) {
       throw const FormatException('Invalid typed bytecode section lengths');
@@ -151,12 +157,21 @@ abstract final class TypedCodec {
     if (offset + sectionsLength != input.lengthInBytes) {
       throw const FormatException('Invalid typed bytecode section lengths');
     }
-    final (classes, callSites, exports, externalCalls) = _readMetadata(
+    final (
+      classes,
+      callSites,
+      exports,
+      externalCalls,
+      closures,
+      closureCalls,
+    ) = _readMetadata(
       ByteData.view(buffer, offset, metadataLength),
       classCount,
       callSiteCount,
       exportCount,
       externalCallCount,
+      closureCount,
+      closureCallCount,
     );
     offset += metadataLength;
     final integers = List.generate(integerCount, (_) {
@@ -184,6 +199,8 @@ abstract final class TypedCodec {
       callSites: callSites,
       exports: exports,
       externalCalls: externalCalls,
+      closures: closures,
+      closureCalls: closureCalls,
       entryFunction: entry,
     );
   }
@@ -245,6 +262,37 @@ abstract final class TypedCodec {
       u32(call.externalFunctionId);
       u32(call.argumentCount);
     }
+    void strings(List<String> values) {
+      u32(values.length);
+      for (final value in values) {
+        string(value);
+      }
+    }
+
+    void defaults(List<Object?> values) {
+      final data = _writeObjects(values);
+      u32(data.length);
+      bytes.add(data);
+    }
+
+    for (final descriptor in program.closures) {
+      u32(descriptor.functionId);
+      u32(descriptor.captureCount);
+      u32(descriptor.positionalCount);
+      u32(descriptor.requiredPositional);
+      u32(
+        (descriptor.hasEnvironment ? 1 : 0) |
+            (descriptor.boundReceiver ? 2 : 0),
+      );
+      strings(descriptor.namedNames);
+      strings(descriptor.requiredNamed);
+      defaults(descriptor.positionalDefaults);
+      defaults(descriptor.namedDefaults);
+    }
+    for (final call in program.closureCalls) {
+      u32(call.positionalCount);
+      strings(call.namedNames);
+    }
     return bytes.takeBytes();
   }
 
@@ -253,6 +301,8 @@ abstract final class TypedCodec {
     List<TypedCallSite>,
     List<TypedExport>,
     List<TypedExternalCall>,
+    List<TypedClosureDescriptor>,
+    List<TypedClosureCall>,
   )
   _readMetadata(
     ByteData input,
@@ -260,6 +310,8 @@ abstract final class TypedCodec {
     int callSiteCount,
     int exportCount,
     int externalCallCount,
+    int closureCount,
+    int closureCallCount,
   ) {
     var offset = 0;
     void require(int count) {
@@ -306,7 +358,9 @@ abstract final class TypedCodec {
       classCount * 24 +
           callSiteCount * 12 +
           exportCount * 16 +
-          externalCallCount * 8,
+          externalCallCount * 8 +
+          closureCount * 36 +
+          closureCallCount * 8,
     );
     final classes = <TypedClass>[];
     for (var i = 0; i < classCount; i++) {
@@ -381,10 +435,63 @@ abstract final class TypedCodec {
     for (var i = 0; i < externalCallCount; i++) {
       externalCalls.add(TypedExternalCall(u32(), u32()));
     }
+    List<String> strings() {
+      final count = u32();
+      if (count > 65537) {
+        throw const FormatException('Too many closure parameter names');
+      }
+      require(count * 4);
+      return List.generate(count, (_) => string());
+    }
+
+    List<Object?> defaults(int count) {
+      final length = u32();
+      require(length);
+      if (count > length) {
+        throw const FormatException('Truncated closure defaults');
+      }
+      final values = _readObjects(
+        ByteData.view(input.buffer, input.offsetInBytes + offset, length),
+        count,
+      );
+      offset += length;
+      return values;
+    }
+
+    final closures = <TypedClosureDescriptor>[];
+    for (var i = 0; i < closureCount; i++) {
+      final functionId = u32(),
+          captureCount = u32(),
+          positionalCount = u32(),
+          requiredPositional = u32(),
+          flags = u32();
+      if (flags > 2 || positionalCount > 65537 || captureCount > 65536) {
+        throw const FormatException('Invalid typed closure descriptor');
+      }
+      final namedNames = strings(), requiredNamed = strings();
+      closures.add(
+        TypedClosureDescriptor(
+          functionId,
+          captureCount: captureCount,
+          positionalCount: positionalCount,
+          requiredPositional: requiredPositional,
+          hasEnvironment: flags & 1 != 0,
+          boundReceiver: flags & 2 != 0,
+          namedNames: namedNames,
+          requiredNamed: requiredNamed,
+          positionalDefaults: defaults(positionalCount),
+          namedDefaults: defaults(namedNames.length),
+        ),
+      );
+    }
+    final closureCalls = <TypedClosureCall>[];
+    for (var i = 0; i < closureCallCount; i++) {
+      closureCalls.add(TypedClosureCall(u32(), namedNames: strings()));
+    }
     if (offset != input.lengthInBytes) {
       throw const FormatException('Invalid typed class metadata length');
     }
-    return (classes, callSites, exports, externalCalls);
+    return (classes, callSites, exports, externalCalls, closures, closureCalls);
   }
 
   // Tags: null, false, true, int64, float64, UTF-16 string. Live objects

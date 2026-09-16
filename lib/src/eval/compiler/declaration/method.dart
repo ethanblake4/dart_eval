@@ -60,7 +60,10 @@ int compileMethodDeclaration(
       ).copyWith(boxed: true);
     }
 
-    ctx.setLocal(p.name!.lexeme, Variable.of(ctx, SSA('arg_$i'), type));
+    ctx.setLocal(
+      p.name!.lexeme,
+      Variable.of(ctx, SSA('arg_$i'), type).captureBinding(ctx, p),
+    );
 
     i++;
   }

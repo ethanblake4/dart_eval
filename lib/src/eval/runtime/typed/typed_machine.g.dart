@@ -5,6 +5,7 @@ import 'typed_frame.dart';
 import 'typed_interop.dart';
 import 'typed_instance.dart';
 import 'typed_dispatch.dart';
+import 'typed_closure.dart';
 import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/stdlib/core.dart';
@@ -34,7 +35,7 @@ abstract final class TypedMachine {
   static Object? runEntry(TypedProgram program, TypedEntry arguments, int functionId, {Runtime? runtime}) {
     final code = program.code;
     final entry = program.functions[functionId];
-    var frame = TypedFrame(entry);
+    var frame = TypedFrame(entry)..environment = arguments.environment;
     Object? r = arguments.r, s = arguments.s, c = arguments.c;
     var a = arguments.a, b = arguments.b;
     var f = arguments.f, g = arguments.g;
@@ -643,6 +644,35 @@ abstract final class TypedMachine {
         case TypedOp.callExternal:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           r = TypedInterop.invokeExternal(program, runtime, r, s, c, index); s = null; c = null;
+          continue dispatch;
+        case TypedOp.rNewCaptureCell:
+          r = TypedCaptureCell(r);
+          continue dispatch;
+        case TypedOp.rReadCaptureCell:
+          r = (r as TypedCaptureCell).value;
+          continue dispatch;
+        case TypedOp.writeCaptureCellRS:
+          (r as TypedCaptureCell).value = s;
+          continue dispatch;
+        case TypedOp.rCreateClosure:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          r = TypedClosure.create(program, index, frame.objectOutgoing, runtime);
+          continue dispatch;
+        case TypedOp.rLoadCapture:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          r = frame.captureAt(index);
+          continue dispatch;
+        case TypedOp.callClosure:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          final closure = TypedClosure.resolve(program, r, index);
+          if (closure != null) {
+            final function = closure.function;
+            frame = frame.enterClosure(function, pc, closure.captures);
+            pc = function.entry;
+          } else {
+            r = TypedClosure.invokeAt(program, runtime, r, s, c, index);
+            s = null; c = null;
+          }
           continue dispatch;
         case TypedOp.callHost:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;

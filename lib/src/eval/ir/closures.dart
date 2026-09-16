@@ -1,5 +1,6 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/src/eval/compiler/offset_tracker.dart';
+import 'representation.dart';
 
 /// Creates a callable value with an explicit environment and call signature.
 final class CreateClosure extends Operation {
@@ -11,6 +12,10 @@ final class CreateClosure extends Operation {
   final List<String> namedNames;
   final List<Object?> namedTypes;
   final bool boundReceiver;
+  final bool hasEnvironment;
+  final List<Object?> positionalDefaults;
+  final List<Object?> namedDefaults;
+  final List<String> requiredNamed;
   final List<bool> positionalUnboxed;
   final List<bool> namedUnboxed;
 
@@ -23,6 +28,10 @@ final class CreateClosure extends Operation {
     this.namedNames = const [],
     this.namedTypes = const [],
     this.boundReceiver = false,
+    this.hasEnvironment = true,
+    this.positionalDefaults = const [],
+    this.namedDefaults = const [],
+    this.requiredNamed = const [],
     this.positionalUnboxed = const [],
     this.namedUnboxed = const [],
   });
@@ -45,6 +54,10 @@ final class CreateClosure extends Operation {
       namedNames: namedNames,
       namedTypes: namedTypes,
       boundReceiver: boundReceiver,
+      hasEnvironment: hasEnvironment,
+      positionalDefaults: positionalDefaults,
+      namedDefaults: namedDefaults,
+      requiredNamed: requiredNamed,
       positionalUnboxed: positionalUnboxed,
       namedUnboxed: namedUnboxed,
     );
@@ -97,4 +110,56 @@ final class LoadCapture extends Operation {
       LoadCapture(writesTo ?? result, index);
   @override
   String toString() => '$result = capture[$index]';
+}
+
+/// A shared lexical binding with an explicit payload representation.
+final class NewCaptureCell extends Operation {
+  NewCaptureCell(this.result, this.value, this.representation);
+  final SSA result, value;
+  final MachineRepresentation representation;
+  @override
+  SSA get writesTo => result;
+  @override
+  Set<SSA> get readsFrom => {value};
+  @override
+  Operation copyWith({SSA? writesTo, Set<SSA>? readsFrom}) => NewCaptureCell(
+    writesTo ?? result,
+    readsFrom?.single ?? value,
+    representation,
+  );
+}
+
+final class ReadCaptureCell extends Operation {
+  ReadCaptureCell(this.result, this.cell, this.representation);
+  final SSA result, cell;
+  final MachineRepresentation representation;
+  @override
+  SSA get writesTo => result;
+  @override
+  Set<SSA> get readsFrom => {cell};
+  @override
+  Operation copyWith({SSA? writesTo, Set<SSA>? readsFrom}) => ReadCaptureCell(
+    writesTo ?? result,
+    readsFrom?.single ?? cell,
+    representation,
+  );
+}
+
+final class WriteCaptureCell extends Operation {
+  WriteCaptureCell(this.cell, this.value, this.representation);
+  final SSA cell, value;
+  final MachineRepresentation representation;
+  @override
+  Set<SSA> get readsFrom => {cell, value};
+  @override
+  Operation copyWith({SSA? writesTo, Set<SSA>? readsFrom}) {
+    final mapping = readsFrom == null
+        ? <SSA, SSA>{}
+        : Map<SSA, SSA>.fromIterables(this.readsFrom, readsFrom);
+    return WriteCaptureCell(
+      mapping[cell] ?? cell,
+      mapping[value] ?? value,
+      representation,
+    );
+  }
 }

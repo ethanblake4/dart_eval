@@ -3,6 +3,7 @@ import 'package:dart_eval/src/eval/runtime/exception.dart';
 import 'package:dart_eval/stdlib/core.dart';
 
 import 'typed_call_site.dart';
+import 'typed_closure.dart';
 import 'typed_class.dart';
 import 'typed_function.dart';
 import 'typed_interop.dart';
@@ -161,6 +162,29 @@ final class TypedMember extends EvalFunction {
   final TypedInstance receiver;
   final int functionId;
   final TypedFunction function;
+  late final TypedClosure? _closure = _bindClosure();
+
+  TypedClosure? _bindClosure() {
+    for (final descriptor in receiver.program.closures) {
+      if (descriptor.functionId == functionId && descriptor.boundReceiver) {
+        return TypedClosure.bind(receiver.program, descriptor, receiver);
+      }
+    }
+    return null;
+  }
+
+  $Value? invokeClosure(
+    List<$Value?> arguments, {
+    Map<String, $Value?> named = const {},
+    Runtime? runtime,
+  }) {
+    final closure = _closure;
+    if (closure != null)
+      return closure.invoke(arguments, named: named, runtime: runtime);
+    if (named.isNotEmpty)
+      throw UnsupportedError('Method has no named argument metadata');
+    return invoke(arguments, runtime: runtime);
+  }
 
   $Value? invoke(List<$Value?> arguments, {Runtime? runtime}) {
     final result = TypedMachine.runRaw(
@@ -181,7 +205,7 @@ final class TypedMember extends EvalFunction {
 
   @override
   $Value? call(Runtime runtime, $Value? target, List<$Value?> args) =>
-      invoke(args, runtime: runtime);
+      invokeClosure(args, runtime: runtime);
 
   @override
   int $getRuntimeType(Runtime runtime) =>

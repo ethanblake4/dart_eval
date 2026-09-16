@@ -8,7 +8,7 @@ abstract final class TypedRegister {
 enum TypedImmediate { none, intConstant, doubleConstant,
   intSpill, doubleSpill, boolSpill, branch,
   function, objectConstant, objectSpill, objectOutgoing, hostCall, shortBranch, integer, overflow,
-  classIndex, field, callSite, externalCall }
+  classIndex, field, callSite, externalCall, closureIndex, captureIndex, closureCall }
 
 class TypedInstruction {
   const TypedInstruction(this.name, this.inputs, this.outputs, this.immediate,
@@ -22,7 +22,7 @@ class TypedInstruction {
   /// Operand order may change during allocation without changing the result.
   /// Floating operations retain order, including NaN payload propagation.
   final bool commutative;
-  List<int> get clobberedRegisters => (immediate == TypedImmediate.function || immediate == TypedImmediate.hostCall || immediate == TypedImmediate.callSite || immediate == TypedImmediate.externalCall)
+  List<int> get clobberedRegisters => (immediate == TypedImmediate.function || immediate == TypedImmediate.hostCall || immediate == TypedImmediate.callSite || immediate == TypedImmediate.externalCall || immediate == TypedImmediate.closureCall)
       ? const [0, 1, 2, 3, 4, 5, 6, 7, 8] : const [];
   int get length => immediate == TypedImmediate.none ? 1
       : immediate == TypedImmediate.branch ? 5 : 3;
@@ -203,30 +203,36 @@ abstract final class TypedOp {
   static const rBoxString = 171;
   static const rUnboxString = 172;
   static const callExternal = 173;
-  static const callHost = 174;
-  static const callMethod = 175;
-  static const aStringLengthR = 176;
-  static const rStringConcatS = 177;
-  static const aStringCodeUnitR = 178;
-  static const rStringIndexA = 179;
-  static const cNewList = 180;
-  static const aListLengthR = 181;
-  static const rListIndexCA = 182;
-  static const listSetCAR = 183;
-  static const listAppendCR = 184;
-  static const rBoxList = 185;
-  static const rCreateClassR = 186;
-  static const rLoadPropertyR = 187;
-  static const setPropertyRS = 188;
-  static const rLoadSuperR = 189;
-  static const rLoadThisR = 190;
-  static const returnNull = 191;
-  static const callVirtual = 192;
-  static const jumpETrueShort = 193;
-  static const jumpEFalseShort = 194;
-  static const jumpXTrueShort = 195;
-  static const jumpXFalseShort = 196;
-  static const jumpShort = 197;
+  static const rNewCaptureCell = 174;
+  static const rReadCaptureCell = 175;
+  static const writeCaptureCellRS = 176;
+  static const rCreateClosure = 177;
+  static const rLoadCapture = 178;
+  static const callClosure = 179;
+  static const callHost = 180;
+  static const callMethod = 181;
+  static const aStringLengthR = 182;
+  static const rStringConcatS = 183;
+  static const aStringCodeUnitR = 184;
+  static const rStringIndexA = 185;
+  static const cNewList = 186;
+  static const aListLengthR = 187;
+  static const rListIndexCA = 188;
+  static const listSetCAR = 189;
+  static const listAppendCR = 190;
+  static const rBoxList = 191;
+  static const rCreateClassR = 192;
+  static const rLoadPropertyR = 193;
+  static const setPropertyRS = 194;
+  static const rLoadSuperR = 195;
+  static const rLoadThisR = 196;
+  static const returnNull = 197;
+  static const callVirtual = 198;
+  static const jumpETrueShort = 199;
+  static const jumpEFalseShort = 200;
+  static const jumpXTrueShort = 201;
+  static const jumpXFalseShort = 202;
+  static const jumpShort = 203;
   static const instructions = <TypedInstruction>[
     TypedInstruction('eTrue', [], [4], TypedImmediate.none, false, false, false),
     TypedInstruction('eFalse', [], [4], TypedImmediate.none, false, false, false),
@@ -402,6 +408,12 @@ abstract final class TypedOp {
     TypedInstruction('rBoxString', [6], [6], TypedImmediate.none, true, false, false),
     TypedInstruction('rUnboxString', [6], [6], TypedImmediate.none, true, false, false),
     TypedInstruction('callExternal', [], [6], TypedImmediate.externalCall, true, false, false),
+    TypedInstruction('rNewCaptureCell', [6], [6], TypedImmediate.none, true, false, false),
+    TypedInstruction('rReadCaptureCell', [6], [6], TypedImmediate.none, true, false, false),
+    TypedInstruction('writeCaptureCellRS', [6, 7], [], TypedImmediate.none, true, false, false),
+    TypedInstruction('rCreateClosure', [], [6], TypedImmediate.closureIndex, true, false, false),
+    TypedInstruction('rLoadCapture', [], [6], TypedImmediate.captureIndex, true, false, false),
+    TypedInstruction('callClosure', [], [], TypedImmediate.closureCall, true, false, false),
     TypedInstruction('callHost', [6], [6], TypedImmediate.hostCall, true, false, false),
     TypedInstruction('callMethod', [6, 7], [6], TypedImmediate.hostCall, true, false, false),
     TypedInstruction('aStringLengthR', [6], [0], TypedImmediate.none, true, false, false),

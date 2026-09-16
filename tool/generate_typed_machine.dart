@@ -374,6 +374,54 @@ List<Instruction> specification() {
     immediate: 'externalCall',
     mayThrow: true,
   );
+  add(
+    'rNewCaptureCell',
+    'r = TypedCaptureCell(r);',
+    inputs: [6],
+    output: 6,
+    mayThrow: true,
+  );
+  add(
+    'rReadCaptureCell',
+    'r = (r as TypedCaptureCell).value;',
+    inputs: [6],
+    output: 6,
+    mayThrow: true,
+  );
+  add(
+    'writeCaptureCellRS',
+    '(r as TypedCaptureCell).value = s;',
+    inputs: [6, 7],
+    mayThrow: true,
+  );
+  add(
+    'rCreateClosure',
+    'r = TypedClosure.create(program, index, frame.objectOutgoing, runtime);',
+    output: 6,
+    immediate: 'closureIndex',
+    mayThrow: true,
+  );
+  add(
+    'rLoadCapture',
+    'r = frame.captureAt(index);',
+    output: 6,
+    immediate: 'captureIndex',
+    mayThrow: true,
+  );
+  add(
+    'callClosure',
+    '''final closure = TypedClosure.resolve(program, r, index);
+          if (closure != null) {
+            final function = closure.function;
+            frame = frame.enterClosure(function, pc, closure.captures);
+            pc = function.entry;
+          } else {
+            r = TypedClosure.invokeAt(program, runtime, r, s, c, index);
+            s = null; c = null;
+          }''',
+    immediate: 'closureCall',
+    mayThrow: true,
+  );
   add('rBridgeArgument', r'r ??= const $null();', inputs: [6], output: 6);
   add(
     'callHost',
@@ -548,7 +596,7 @@ abstract final class TypedRegister {
 enum TypedImmediate { none, intConstant, doubleConstant,
   intSpill, doubleSpill, boolSpill, branch,
   function, objectConstant, objectSpill, objectOutgoing, hostCall, shortBranch, integer, overflow,
-  classIndex, field, callSite, externalCall }
+  classIndex, field, callSite, externalCall, closureIndex, captureIndex, closureCall }
 
 class TypedInstruction {
   const TypedInstruction(this.name, this.inputs, this.outputs, this.immediate,
@@ -562,7 +610,7 @@ class TypedInstruction {
   /// Operand order may change during allocation without changing the result.
   /// Floating operations retain order, including NaN payload propagation.
   final bool commutative;
-  List<int> get clobberedRegisters => (immediate == TypedImmediate.function || immediate == TypedImmediate.hostCall || immediate == TypedImmediate.callSite || immediate == TypedImmediate.externalCall)
+  List<int> get clobberedRegisters => (immediate == TypedImmediate.function || immediate == TypedImmediate.hostCall || immediate == TypedImmediate.callSite || immediate == TypedImmediate.externalCall || immediate == TypedImmediate.closureCall)
       ? const [0, 1, 2, 3, 4, 5, 6, 7, 8] : const [];
   int get length => immediate == TypedImmediate.none ? 1
       : immediate == TypedImmediate.branch ? 5 : 3;
@@ -592,6 +640,7 @@ import 'typed_frame.dart';
 import 'typed_interop.dart';
 import 'typed_instance.dart';
 import 'typed_dispatch.dart';
+import 'typed_closure.dart';
 import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/stdlib/core.dart';
@@ -621,7 +670,7 @@ abstract final class TypedMachine {
   static Object? runEntry(TypedProgram program, TypedEntry arguments, int functionId, {Runtime? runtime}) {
     final code = program.code;
     final entry = program.functions[functionId];
-    var frame = TypedFrame(entry);
+    var frame = TypedFrame(entry)..environment = arguments.environment;
     Object? r = arguments.r, s = arguments.s, c = arguments.c;
     var a = arguments.a, b = arguments.b;
     var f = arguments.f, g = arguments.g;

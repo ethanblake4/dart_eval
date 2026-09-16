@@ -1,37 +1,45 @@
 # Typed migration test baseline
 
-2026-09-14. Production typed backend, after the external bridge checkpoint.
-514 passed, 185 failed, six skipped. Analysis reports zero errors.
+2026-09-15. Production typed backend, after the closure checkpoint.
+606 passed, 151 failed, six skipped. Analysis reports zero errors.
 
-77 tests that failed at the export API checkpoint now pass. No previously passing test regressed. All InvokeExternal lowering failures are gone; remaining failures identify the next unsupported operation or representation issue.
+34 tests that failed at the external bridge checkpoint now pass. No previously
+passing test regressed. Closure creation lowering failures are gone. The stricter
+bound-method adapter also exposed and fixed a duplicate receiver argument in
+the print bridge's `toString` call.
 
-There are 184 test errors and one timing assertion failure. The Future.delayed test requires a 150 ms timer plus runtime setup to finish within 200 ms; it passes when rerun in isolation. The full-suite failure is retained here rather than changing that unrelated test.
+There are 150 test errors in unfinished compiler/runtime features and one
+timing assertion failure. The Future.delayed test requires a 150 ms timer plus
+runtime setup to finish within 200 ms; it passes in isolation. Its full-suite
+failure is retained without changing that unrelated test.
 
-Reproduce with `dart test --reporter json` and `dart analyze`. Local full events are saved in `.dart_tool/external-tests-final.jsonl`. Earlier export checkpoint events remain in `.dart_tool/export-tests-final.jsonl`.
+Reproduce with `dart test --reporter json` and `dart analyze`. Full local events
+are in `.dart_tool/closure-tests-final.jsonl`; the previous baseline remains in
+`.dart_tool/external-tests-final.jsonl`. The failed names and first errors below
+preserve the checkpoint independently of those ignored local logs.
 
 ## Failure groups
 
 | First reported failure | Tests |
 | --- | ---: |
-| Unsupported lowering: CreateClosure | 35 |
 | Unsupported lowering: EnterTry | 24 |
 | Representation mismatch | 22 |
 | Unsupported lowering: LoadGlobal | 21 |
 | Unsupported lowering: NewMap | 19 |
-| Unsupported lowering: Await | 11 |
+| Unsupported lowering: Await | 13 |
 | Frontend compilation | 10 |
-| Null assertion | 10 |
+| Null assertion | 9 |
 | Unsupported lowering: NewSet | 8 |
-| Other execution or linking errors | 7 |
+| Other execution or linking errors | 6 |
 | Unsupported lowering: Assert | 4 |
 | Unsupported lowering: ReturnAsync | 3 |
+| Unsupported lowering: IsType | 3 |
 | Unsupported lowering: AssertType | 3 |
-| Unsupported lowering: IsType | 2 |
-| Unsupported lowering: BridgeInstantiate | 1 |
 | Future.delayed timing threshold | 1 |
+| Unsupported lowering: BridgeInstantiate | 1 |
 | Unsupported lowering: NewBridgeSuperShim | 1 |
-| Unsupported lowering: LoadConstantType | 1 |
 | Unsupported lowering: SetGlobal | 1 |
+| Unsupported lowering: LoadConstantType | 1 |
 | Unsupported lowering: IndexMap | 1 |
 
 ## Failed tests
@@ -46,7 +54,7 @@ Reproduce with `dart test --reporter json` and `dart analyze`. Local full events
 
 - Async tests Simple async/await. Unsupported operation: Typed backend does not yet lower Await: await_result₀ = await method_result_1₀, completer: #completer₀
 
-- Async tests Using a Future result. Unsupported operation: Typed backend does not yet lower CreateClosure: closure₀ = closure DeferredOrOffset{offset: 15, file: null, name: null} captures [arg_0₀, #completer₀]
+- Async tests Using a Future result. Unsupported operation: Typed backend does not yet lower Await: await_result₀ = await method_result_1₀, completer: #completer₀
 
 ### bridge_test.dart
 
@@ -80,10 +88,6 @@ Reproduce with `dart test --reporter json` and `dart analyze`. Local full events
 
 - Class tests Factory constructor. Bad state: Void function 17 returns a value
 
-- Class tests Implicit and "this" field access from closure. Unsupported operation: Typed backend does not yet lower CreateClosure: closure₀ = closure DeferredOrOffset{offset: 19, file: null, name: null} captures [arg_0₀, arg_1₀]
-
-- Class tests Method call on field with inferred type from closure. Unsupported operation: Typed backend does not yet lower CreateClosure: closure₀ = closure DeferredOrOffset{offset: 18, file: null, name: null} captures [arg_0₀]
-
 - Class tests Modifying static class field. Bad state: Incompatible representations for value₀: object and integer; an explicit conversion is required
 
 - Class tests Nullable static value. Unsupported operation: Typed backend does not yet lower SetGlobal: setglobal 12 = var_13₁
@@ -91,8 +95,6 @@ Reproduce with `dart test --reporter json` and `dart analyze`. Local full events
 - Class tests runtimeType. Unsupported operation: Typed backend does not yet lower LoadConstantType: var_type₀ = loadconstanttype 86
 
 ### collection_test.dart
-
-- Iterable tests Iterable.map(). Unsupported operation: Typed backend does not yet lower CreateClosure: closure₀ = closure DeferredOrOffset{offset: 15, file: null, name: null} captures [list_1₀]
 
 - Map tests Access null value from map. Unsupported operation: Typed backend does not yet lower NewMap: map₀ = {}
 
@@ -130,10 +132,6 @@ Reproduce with `dart test --reporter json` and `dart analyze`. Local full events
 
 - read definitions and SSA conversion: Set<int> main(Set<int> input) => <int>{0, ...input};. Unsupported operation: Typed backend does not yet lower NewSet: set₀ = set {}
 
-### compiler_cfg_test.dart
-
-- closure captures and parameters belong to a separate function graph. Unsupported operation: Typed backend does not yet lower CreateClosure: closure₀ = closure DeferredOrOffset{offset: 15, file: null, name: null} captures [arg_0₀]
-
 ### compiler_control_flow_test.dart
 
 - try finally handler is reachable without a self edge. Unsupported operation: Typed backend does not yet lower EnterTry: Instance of 'EnterTry'
@@ -157,8 +155,6 @@ Reproduce with `dart test --reporter json` and `dart analyze`. Local full events
 - SSA dominance: enum instance and getter. Unsupported operation: Typed backend does not yet lower LoadGlobal: active₀ = loadglobal 13
 
 - SSA dominance: finally executes around early return. Unsupported operation: Typed backend does not yet lower EnterTry: Instance of 'EnterTry'
-
-- SSA dominance: mutable local captured by a closure. Unsupported operation: Typed backend does not yet lower CreateClosure: closure₀ = closure DeferredOrOffset{offset: 15, file: null, name: null} captures [count₀]
 
 - SSA dominance: typed catch with local mutation. Unsupported operation: Typed backend does not yet lower EnterTry: Instance of 'EnterTry'
 
@@ -252,11 +248,9 @@ Reproduce with `dart test --reporter json` and `dart analyze`. Local full events
 
 - Expression tests Failing cast. Unsupported operation: Typed backend does not yet lower AssertType: asserttype x₀ is 87
 
-- Expression tests Is num. Null check operator used on a null value
+- Expression tests Is num. Unsupported operation: Typed backend does not yet lower IsType: istype arg_1₀ is 11
 
 - Expression tests Null assertion. Unsupported operation: Typed backend does not yet lower Assert: assert not_equal₀, assertion_error₀
-
-- Expression tests Null coalescing copy method. dart_eval runtime exception: Invalid argument(s): Too many typed entry arguments
 
 - Expression tests Num cast. Unsupported operation: Typed backend does not yet lower AssertType: asserttype x₀ is 12
 
@@ -270,31 +264,7 @@ Reproduce with `dart test --reporter json` and `dart analyze`. Local full events
 
 ### function_test.dart
 
-- Function tests Anonymous function with arg. Unsupported operation: Typed backend does not yet lower CreateClosure: closure₀ = closure DeferredOrOffset{offset: 15, file: null, name: null} captures []
-
-- Function tests Anonymous function with many unordered named args. Unsupported operation: Typed backend does not yet lower CreateClosure: closure₀ = closure DeferredOrOffset{offset: 15, file: null, name: null} captures []
-
-- Function tests Anonymous function with named args, different sorting from call site. Unsupported operation: Typed backend does not yet lower CreateClosure: closure₀ = closure DeferredOrOffset{offset: 15, file: null, name: null} captures []
-
-- Function tests Anonymous function with named args, one unspecified. Unsupported operation: Typed backend does not yet lower CreateClosure: closure₀ = closure DeferredOrOffset{offset: 15, file: null, name: null} captures []
-
-- Function tests Anonymous function with named args, same sorting as call site. Unsupported operation: Typed backend does not yet lower CreateClosure: closure₀ = closure DeferredOrOffset{offset: 15, file: null, name: null} captures []
-
-- Function tests Arrow function expression. Unsupported operation: Typed backend does not yet lower CreateClosure: closure₀ = closure DeferredOrOffset{offset: 15, file: null, name: null} captures []
-
-- Function tests Basic anonymous function. Unsupported operation: Typed backend does not yet lower CreateClosure: closure₀ = closure DeferredOrOffset{offset: 15, file: null, name: null} captures []
-
-- Function tests Basic generic function type. Unsupported operation: Typed backend does not yet lower CreateClosure: closure₀ = closure DeferredOrOffset{offset: 15, file: null, name: null} captures []
-
-- Function tests Basic inline anonymous function. Unsupported operation: Typed backend does not yet lower CreateClosure: closure₀ = closure DeferredOrOffset{offset: 15, file: null, name: null} captures []
-
-- Function tests Closure can modify variable outside its scope. Unsupported operation: Typed backend does not yet lower CreateClosure: closure₀ = closure DeferredOrOffset{offset: 15, file: null, name: null} captures [k₀]
-
-- Function tests Closure with arg. Unsupported operation: Typed backend does not yet lower CreateClosure: closure₀ = closure DeferredOrOffset{offset: 16, file: null, name: null} captures [b₀]
-
 - Function tests Function equality test. Unsupported operation: Typed backend does not yet lower LoadGlobal: instance_1₀ = loadglobal 12
-
-- Function tests Indexing outer list from a closure. Unsupported operation: Typed backend does not yet lower CreateClosure: closure₀ = closure DeferredOrOffset{offset: 15, file: null, name: null} captures [list_1₀]
 
 ### functional1_test.dart
 
@@ -303,10 +273,6 @@ Reproduce with `dart test --reporter json` and `dart analyze`. Local full events
 - Functional tests Bridged enum equality ternary assignment. CompileError: Unknown method num.< at unknown (file dart:math)
 
 - Functional tests Default parameter boxing error. Unsupported operation: Typed backend does not yet lower Await: await_result₀ = await method_result_1₀, completer: #completer₀
-
-- Functional tests Matches test from Readme. Unsupported operation: Typed backend does not yet lower CreateClosure: closure₀ = closure DeferredOrOffset{offset: 17, file: null, name: null} captures [arg_0₀, regex₀, matches₀]
-
-- Functional tests Matches test from Readme using ofProgram. Unsupported operation: Typed backend does not yet lower CreateClosure: closure₀ = closure DeferredOrOffset{offset: 17, file: null, name: null} captures [arg_0₀, regex₀, matches₀]
 
 - Functional tests Regex replacement loop. Bad state: Assignment or phi has incompatible representations: arg_2₁, arg_2₀, arg_2₆ (object, string)
 
@@ -323,16 +289,6 @@ Reproduce with `dart test --reporter json` and `dart analyze`. Local full events
 ### lib_composition_test.dart
 
 - File and library composition Cyclic imports. Bad state: Incompatible representations for constant₀: object and integer; an explicit conversion is required
-
-### local_fn_test.dart
-
-- local function accessing outer variable. Unsupported operation: Typed backend does not yet lower CreateClosure: closure₀ = closure DeferredOrOffset{offset: 15, file: null, name: null} captures [multiplier₀]
-
-- local function calling another local function. Unsupported operation: Typed backend does not yet lower CreateClosure: closure₀ = closure DeferredOrOffset{offset: 15, file: null, name: null} captures []
-
-- local function with block body. Unsupported operation: Typed backend does not yet lower CreateClosure: closure₀ = closure DeferredOrOffset{offset: 15, file: null, name: null} captures []
-
-- simple local function. Unsupported operation: Typed backend does not yet lower CreateClosure: closure₀ = closure DeferredOrOffset{offset: 15, file: null, name: null} captures []
 
 ### operator_test.dart
 
@@ -380,12 +336,6 @@ Reproduce with `dart test --reporter json` and `dart analyze`. Local full events
 
 - Regex Tests RegExp.groups. Unsupported operation: Typed backend does not yet lower LoadGlobal: json₀ = loadglobal 1
 
-### register_backend_test.dart
-
-- anonymous and local functions receive zero-based boxed arguments. Unsupported operation: Typed backend does not yet lower CreateClosure: closure₀ = closure DeferredOrOffset{offset: 15, file: null, name: null} captures []
-
-- top-level tearoffs adapt primitive arguments and named defaults. Unsupported operation: Typed backend does not yet lower CreateClosure: tearoff₀ = closure DeferredOrOffset{offset: null, file: 7, name: add} captures []
-
 ### set_test.dart
 
 - Set tests Adding elements to a set. Unsupported operation: Typed backend does not yet lower NewSet: set₀ = set {}
@@ -406,23 +356,13 @@ Reproduce with `dart test --reporter json` and `dart analyze`. Local full events
 
 - Standard library tests Boxed null. Unsupported operation: Typed backend does not yet lower IndexMap: map₀ = indexmap a₁[var_12₁]
 
-- Standard library tests Iterable.generate. Unsupported operation: Typed backend does not yet lower CreateClosure: closure₀ = closure DeferredOrOffset{offset: 15, file: null, name: null} captures []
-
-- Standard library tests List.generate. Unsupported operation: Typed backend does not yet lower CreateClosure: closure₀ = closure DeferredOrOffset{offset: 15, file: null, name: null} captures []
-
-- Standard library tests List.where. Unsupported operation: Typed backend does not yet lower CreateClosure: closure₀ = closure DeferredOrOffset{offset: 15, file: null, name: null} captures [a₀]
-
-- Standard library tests StreamController and Stream.listen(). Unsupported operation: Typed backend does not yet lower CreateClosure: closure₀ = closure DeferredOrOffset{offset: 15, file: null, name: null} captures [#completer₀, controller₀]
+- Standard library tests StreamController and Stream.listen(). Unsupported operation: Typed backend does not yet lower Await: await_result₀ = await method_result_5₀, completer: #completer₀
 
 - Standard library tests dart:math. Bad state: Incompatible representations for pi₀: object and doublePrecision; an explicit conversion is required
 
 - Standard library tests double.parse() throws FormatException without onError. Unsupported operation: Typed backend does not yet lower EnterTry: Instance of 'EnterTry'
 
-- Standard library tests double.parse() with onError callback. Unsupported operation: Typed backend does not yet lower CreateClosure: closure₀ = closure DeferredOrOffset{offset: 15, file: null, name: null} captures []
-
 - Standard library tests dynamic.toString. Unsupported operation: Typed backend does not yet lower NewMap: map₀ = {}
-
-- Standard library tests int.parse in map chain with accumulation. Unsupported operation: Typed backend does not yet lower CreateClosure: closure₀ = closure DeferredOrOffset{offset: 15, file: null, name: null} captures [raw₀]
 
 ### switch_test.dart
 
@@ -457,14 +397,6 @@ Reproduce with `dart test --reporter json` and `dart analyze`. Local full events
 - Switch statement tests Switch with return in default case. Bad state: Incompatible representations for x₂: integer and object; an explicit conversion is required
 
 - Switch statement tests Switch with variable assignment in cases. Bad state: Incompatible representations for x₂: integer and object; an explicit conversion is required
-
-### tearoff_test.dart
-
-- Function tests Method tearoffs. Unsupported operation: Typed backend does not yet lower CreateClosure: tearoff₀ = closure DeferredOrOffset{offset: null, file: 7, name: add} captures [arg_0₀]
-
-- Function tests Simple tearoff. Unsupported operation: Typed backend does not yet lower CreateClosure: tearoff₀ = closure DeferredOrOffset{offset: null, file: 7, name: fun} captures []
-
-- Function tests Tearoff as argument. Unsupported operation: Typed backend does not yet lower CreateClosure: tearoff₀ = closure DeferredOrOffset{offset: null, file: 7, name: fun2} captures []
 
 ### variable_test.dart
 

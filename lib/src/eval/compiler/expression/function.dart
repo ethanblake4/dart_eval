@@ -1,3 +1,8 @@
+import 'identifier.dart' show resolveInstanceDeclaration;
+import '../helpers/captures.dart';
+import '../helpers/default_value.dart';
+import '../../ir/function.dart' as function_ir;
+import '../../ir/representation.dart';
 import 'package:control_flow_graph/control_flow_graph.dart' show SSA;
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:collection/collection.dart';
@@ -37,8 +42,24 @@ Variable compileFunctionExpression(
   final outerAsyncFrame = ctx.nearestAsyncFrame;
   final outerEntrypoint = ctx.entrypoint;
   final captures = <String, Variable>{};
-  for (final scope in ctx.locals) {
-    captures.addAll(scope);
+  final analysis = capturesFor(e);
+  final freeNames = {...?analysis.free[e]};
+  if (ctx.currentClass != null && ctx.lookupLocal('#this') != null) {
+    for (final name in analysis.unresolved[e] ?? <String>{}) {
+      if (resolveInstanceDeclaration(
+            ctx,
+            ctx.library,
+            ctx.currentClass!.name.lexeme,
+            name,
+          ) !=
+          null) {
+        freeNames.add('#this');
+      }
+    }
+  }
+  for (final name in freeNames) {
+    final binding = ctx.lookupLocal(name);
+    if (binding != null) captures[name] = binding;
   }
   ctx.finishMethod();
   final outerBuilder = ctx.builder;
@@ -48,17 +69,27 @@ Variable compileFunctionExpression(
   ctx.nearestAsyncFrame = -1;
   final existingAllocs = e.parameters?.parameters.length ?? 0;
   ctx.beginAllocScope(existingAllocLen: existingAllocs, closure: true);
+  ctx.pushOp(
+    function_ir.Parameter(
+      SSA('arg_0'),
+      0,
+      representation: MachineRepresentation.object,
+    ),
+  );
   var captureIndex = 0;
   for (final capture in captures.entries) {
-    ctx.setLocal(
-      capture.key,
-      Variable.ssa(
-        ctx,
-        LoadCapture(ctx.svar('capture'), captureIndex++),
-        capture.value.type,
-        isFinal: capture.value.isFinal,
-      ),
+    final loaded = ctx.svar('capture');
+    ctx.pushOp(LoadCapture(loaded, captureIndex++));
+    final binding = Variable.of(
+      ctx,
+      loaded,
+      capture.value.type,
+      isFinal: capture.value.isFinal,
+      callingConvention: capture.value.callingConvention,
+      methodReturnType: capture.value.methodReturnType,
     );
+    if (capture.value.captureCell != null) binding.captureCell = loaded;
+    ctx.setLocal(capture.key, binding);
   }
   ctx.scopeFrameOffset += existingAllocs;
   final resolvedParams = resolveFPLDefaults(
@@ -67,6 +98,7 @@ Variable compileFunctionExpression(
     false,
     allowUnboxed: false,
     sortNamed: true,
+    parameterOffset: 1,
   );
 
   List<FunctionFormalParameter> boundNormalParams = [];
@@ -102,13 +134,17 @@ Variable compileFunctionExpression(
         type = fType.type!;
       }
     }
-    vRep = Variable.of(ctx, SSA('arg_$i'), type.copyWith(boxed: true));
+    vRep = Variable.of(ctx, SSA('arg_${i + 1}'), type.copyWith(boxed: true));
 
-    ctx.setLocal(p.name!.lexeme, vRep);
+    ctx.setLocal(p.name!.lexeme, vRep.captureBinding(ctx, p));
 
     i++;
   }
 
+  ctx.functionSignatures[fnOffset] = MachineFunctionSignature(
+    List.filled(resolvedParams.length + 1, MachineRepresentation.object),
+    MachineRepresentation.object,
+  );
   final b = e.body;
 
   if (b.isAsynchronous) {
@@ -218,17 +254,42 @@ Variable compileFunctionExpression(
       .map((rt) => rt.toJson())
       .toList();
 
+  Object? parameterDefault(FormalParameter parameter) {
+    final value = evaluateDefaultValue(
+      ctx,
+      ctx.library,
+      parameter is DefaultFormalParameter ? parameter.defaultValue : null,
+    );
+    final normal = parameter is DefaultFormalParameter
+        ? parameter.parameter
+        : parameter;
+    if (value is int &&
+        normal is SimpleFormalParameter &&
+        normal.type != null &&
+        TypeRef.fromAnnotation(ctx, ctx.library, normal.type!) ==
+            CoreTypes.double.ref(ctx)) {
+      return value.toDouble();
+    }
+    return value;
+  }
+
   final target = DeferredOrOffset(offset: fnOffset);
   return Variable.ssa(
     ctx,
     CreateClosure(
       ctx.svar('closure'),
       target,
-      captures.values.map((v) => v.ssa).toList(),
+      captures.values.map((v) => v.captureCell ?? v.ssa).toList(),
       requiredPositional: requiredPositionalArgCount,
       positionalTypes: positionalArgTypes,
       namedNames: sortedNamedArgNames,
       namedTypes: sortedNamedArgTypes,
+      positionalDefaults: positional.map(parameterDefault).toList(),
+      namedDefaults: sortedNamedArgs.map(parameterDefault).toList(),
+      requiredNamed: [
+        for (final parameter in sortedNamedArgs)
+          if (parameter.isRequired) parameter.name!.lexeme,
+      ],
     ),
     CoreTypes.function.ref(ctx),
     methodReturnType: AlwaysReturnType(CoreTypes.dynamic.ref(ctx), false),

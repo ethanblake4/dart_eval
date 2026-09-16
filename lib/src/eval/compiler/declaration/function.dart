@@ -85,7 +85,7 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
       type.copyWith(boxed: !type.isUnboxedAcrossFunctionBoundaries),
     );
 
-    ctx.setLocal(p.name!.lexeme, vRep);
+    ctx.setLocal(p.name!.lexeme, vRep.captureBinding(ctx, p));
     parameterRepresentations.add(representationForType(vRep.type));
 
     i++;

@@ -19,6 +19,7 @@ import '../../runtime/typed/typed_function.dart';
 import '../../runtime/typed/typed_class.dart';
 import '../../runtime/typed/typed_call_site.dart';
 import '../../runtime/typed/typed_external_call.dart';
+import '../../runtime/typed/typed_closure_descriptor.dart';
 import '../../runtime/typed/typed_export.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import '../helpers/default_value.dart';
@@ -103,6 +104,8 @@ class TypedBackend {
   final objects = <Object?>[];
   final _classIndices = <(int, String), int>{};
   final _callSites = <TypedCallSite>[];
+  final _closures = <TypedClosureDescriptor>[];
+  final _closureCalls = <TypedClosureCall>[];
   final _externalCalls = <TypedExternalCall>[];
   Map<int, int> functionIndices = {};
 
@@ -144,8 +147,12 @@ class TypedBackend {
       final graph = context.ssaFunctionGraphs[reachable[next]]!;
       for (final block in graph.graph.vertices) {
         for (final op in graph[block]!.code) {
-          if (op is flow.Call) {
-            final callee = _resolveFunction(op.target);
+          if (op is flow.Call || op is closures.CreateClosure) {
+            final callee = _resolveFunction(switch (op) {
+              flow.Call(:final target) => target,
+              closures.CreateClosure(:final target) => target,
+              _ => throw StateError('Unreachable callable'),
+            });
             if (!reachable.contains(callee)) reachable.add(callee);
           } else if (op is objects_ir.CreateClass) {
             final key = (op.library, op.name);
@@ -186,6 +193,57 @@ class TypedBackend {
     final compiled = [
       for (final functionId in reachable) _compileFunction(functionId, indices),
     ];
+    for (final allocation in classAllocations) {
+      final members =
+          context.instanceDeclarationPositions[allocation.library]![allocation
+                  .name]![2]
+              as Map;
+      for (final id in members.values.cast<int>()) {
+        if (id < 0 ||
+            _closures.any(
+              (d) => d.functionId == indices[id] && d.boundReceiver,
+            ))
+          continue;
+        final parameters =
+            context.functionParameters[id] ?? const <FormalParameter>[];
+        final positional = parameters.where((p) => p.isPositional).toList();
+        final named = parameters.where((p) => p.isNamed).toList();
+        Object? defaultValue(FormalParameter p) {
+          final value = evaluateDefaultValue(
+            context,
+            allocation.library,
+            p is DefaultFormalParameter ? p.defaultValue : null,
+          );
+          final normal = p is DefaultFormalParameter ? p.parameter : p;
+          final annotation = normal is SimpleFormalParameter
+              ? normal.type
+              : null;
+          return value is int &&
+                  annotation is NamedType &&
+                  annotation.name.lexeme == 'double'
+              ? value.toDouble()
+              : value;
+        }
+
+        _closures.add(
+          TypedClosureDescriptor(
+            indices[id]!,
+            captureCount: 1,
+            positionalCount: positional.length,
+            requiredPositional: positional.where((p) => p.isRequired).length,
+            namedNames: named.map((p) => p.name!.lexeme).toList(),
+            requiredNamed: named
+                .where((p) => p.isRequired)
+                .map((p) => p.name!.lexeme)
+                .toList(),
+            positionalDefaults: positional.map(defaultValue).toList(),
+            namedDefaults: named.map(defaultValue).toList(),
+            hasEnvironment: false,
+            boundReceiver: true,
+          ),
+        );
+      }
+    }
     final bytes = BytesBuilder();
     final functions = <TypedFunction>[];
     for (final function in compiled) {
@@ -226,6 +284,8 @@ class TypedBackend {
       classes: classes,
       callSites: _callSites,
       externalCalls: _externalCalls,
+      closures: _closures,
+      closureCalls: _closureCalls,
       exports: [
         for (final (library, name) in roots) _export(library, name, indices),
       ],
@@ -604,44 +664,162 @@ class TypedBackend {
           );
           continue;
         }
-        if (op is closures.InvokeClosure) {
-          final (receiver, arguments) = switch (op) {
-            closures.InvokeClosure(
-              :final closure,
-              :final positional,
-              :final named,
-            )
-                when named.isEmpty =>
-              (closure, positional),
-            _ => throw UnsupportedError(
-              'Typed host calls require positional arguments',
-            ),
-          };
-          for (var index = 0; index < arguments.length; index++) {
-            final argument = value(arguments[index]);
-            if (argument.type != 3) {
-              throw StateError(
-                'Host call argument requires object representation',
-              );
-            }
+        if (op is closures.CreateClosure) {
+          for (var i = 0; i < op.captures.length; i++) {
             lowered.add(
               TypedOperation(
                 _named(['rOutgoing', 'sOutgoing', 'cOutgoing']),
                 null,
-                [argument],
-                immediate: index,
+                [value(op.captures[i])],
+                immediate: i,
               ),
             );
           }
-          if (arguments.length > outgoingCount) {
-            outgoingCount = arguments.length;
+          if (op.captures.length > outgoingCount) {
+            outgoingCount = op.captures.length;
           }
+          final index = _closures.length;
+          _closures.add(
+            TypedClosureDescriptor(
+              functionIndices[_resolveFunction(op.target)]!,
+              captureCount: op.captures.length,
+              positionalCount: op.positionalTypes.length,
+              requiredPositional: op.requiredPositional,
+              namedNames: op.namedNames,
+              requiredNamed: op.requiredNamed,
+              hasEnvironment: op.hasEnvironment,
+              boundReceiver: op.boundReceiver,
+              positionalDefaults: op.positionalDefaults.isEmpty
+                  ? List.filled(op.positionalTypes.length, null)
+                  : op.positionalDefaults,
+              namedDefaults: op.namedDefaults.isEmpty
+                  ? List.filled(op.namedNames.length, null)
+                  : op.namedDefaults,
+            ),
+          );
           lowered.add(
             TypedOperation(
-              _named(['callHost']),
-              value(op.writesTo),
-              [value(receiver)],
-              immediate: arguments.length,
+              _named(['rCreateClosure']),
+              value(op.result),
+              [],
+              immediate: index,
+            ),
+          );
+          continue;
+        }
+        if (op is closures.NewCaptureCell || op is closures.WriteCaptureCell) {
+          var input = value(switch (op) {
+            closures.NewCaptureCell(:final value) => value,
+            closures.WriteCaptureCell(:final value) => value,
+            _ => throw StateError('Unreachable cell write'),
+          });
+          if (input.type < 3) {
+            final native = temporary('cellValue');
+            lowered.add(
+              TypedOperation(
+                _named([
+                  for (final register in _banks[input.type])
+                    'rFrom${_registerNames[register].toUpperCase()}',
+                ]),
+                native,
+                [input],
+              ),
+            );
+            input = native;
+          }
+          lowered.add(switch (op) {
+            closures.NewCaptureCell(:final result) => TypedOperation(
+              _named(['rNewCaptureCell']),
+              value(result),
+              [input],
+            ),
+            closures.WriteCaptureCell(:final cell) => TypedOperation(
+              _named(['writeCaptureCellRS']),
+              null,
+              [value(cell), input],
+            ),
+            _ => throw StateError('Unreachable cell write'),
+          });
+          continue;
+        }
+        if (op is closures.ReadCaptureCell) {
+          final result = value(op.result);
+          final native = result.type < 3 ? temporary('cellRead') : result;
+          lowered.add(
+            TypedOperation(_named(['rReadCaptureCell']), native, [
+              value(op.cell),
+            ]),
+          );
+          if (result.type < 3) {
+            lowered.add(
+              TypedOperation(
+                _named([
+                  '${_registerNames[_banks[result.type].first]}NativeFromR',
+                ]),
+                result,
+                [native],
+              ),
+            );
+          }
+          continue;
+        }
+        if (op is closures.InvokeClosure) {
+          // The frontend has already evaluated and snapshotted arguments in
+          // source order. Canonical names allow exact named calls to stay in VM.
+          final names = op.named.keys.toList()..sort();
+          final inputs = [
+            op.closure,
+            ...op.positional,
+            for (final name in names) op.named[name]!,
+          ];
+          final callLayout = TypedCallLayout(
+            List.filled(inputs.length, TypedArgumentKind.object),
+          );
+          final registerArguments = <cfg.SSA>[];
+          final argumentRegisters = <int>[];
+          for (var i = 0; i < inputs.length; i++) {
+            final location = callLayout.arguments[i];
+            if (location.overflowIndex == null) {
+              registerArguments.add(value(inputs[i]));
+              argumentRegisters.add(
+                _banks[location.bank.index][location.index],
+              );
+            } else {
+              lowered.add(
+                TypedOperation(
+                  _named(['rOutgoing', 'sOutgoing', 'cOutgoing']),
+                  null,
+                  [value(inputs[i])],
+                  immediate: location.overflowIndex,
+                ),
+              );
+            }
+          }
+          if (callLayout.overflowCount > 0) {
+            final overflow = temporary('closureOutgoing');
+            lowered.add(
+              TypedOperation(_named(['cLoadOutgoing']), overflow, []),
+            );
+            registerArguments.add(overflow);
+            argumentRegisters.add(8);
+            if (callLayout.overflowCount > outgoingCount) {
+              outgoingCount = callLayout.overflowCount;
+            }
+          }
+          final site = _closureCalls.length;
+          _closureCalls.add(
+            TypedClosureCall(op.positional.length, namedNames: names),
+          );
+          lowered.add(
+            TypedOperation(
+              _named(['callClosure']),
+              value(op.result),
+              registerArguments,
+              fixedVariant: cfg.Variant(
+                result: 6,
+                arguments: argumentRegisters,
+              ),
+              immediate: site,
               clobbers: {0, 1, 2, 3, 4, 5, 6, 7, 8},
             ),
           );
@@ -791,6 +969,11 @@ class TypedBackend {
             ['rConstant', 'sConstant', 'cConstant'],
             [],
             immediate: _object(value),
+          ),
+          closures.LoadCapture(:final index) => make(
+            ['rLoadCapture'],
+            [],
+            immediate: index,
           ),
           bridge.PrepareBridgeArgument(:final source) => make(
             ['rBridgeArgument'],

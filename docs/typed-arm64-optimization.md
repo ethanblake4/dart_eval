@@ -316,3 +316,46 @@ generated files current. Of the failures, 184 are unfinished compiler/runtime
 features; `Future.delayed` exceeds its 200 ms full-suite timing threshold but
 passes in isolation. 77 formerly failing tests now pass in the full run, with
 no regressions among previously passing tests. See the current migration report.
+
+## Closure checkpoint
+
+Closures add six instructions and a frame environment field. The exact-call
+handler resolves a same-program closure, then enters its frame in the existing
+switch. Signature lookup and capture loads use non-inlined helpers. No new
+registers are live across arithmetic dispatch. There are 204 opcodes and 52
+unused byte values.
+
+The final Dart 3.10.7 Linux ARM64 probe has the same 38-instruction arithmetic
+path: 32 dispatch, four integer/double add and two common tail. Stack traffic
+remains 11 stores and two loads. `TypedMachine.runEntry` occupies 20,548 bytes,
+948 more than the external-call checkpoint.
+
+Recorded range: `0x152834` to `0x157878` exclusive. Dispatch: `0x152950` through
+`0x1529cc`. Integer add: `0x152b08` through `0x152b14`. Double add:
+`0x152b78` through `0x152b84`. Common tail: `0x1572f8` through `0x1572fc`.
+These are static counts, not ARM64 execution timings.
+
+`benchmark/typed_closures.dart` compiles source before timing and constructs
+closures outside its interpreted loop. Every workload checks its result.
+Windows x64 AOT, one million iterations, five samples:
+
+| Workload | Calls per iteration | Median ms | Min to max ms |
+| --- | ---: | ---: | ---: |
+| Direct source function | 1 | 60.361 | 60.179 to 129.428 |
+| Exact noncapturing closure | 1 | 134.062 | 133.304 to 142.444 |
+| Shared mutable sibling captures | 2 | 405.396 | 308.450 to 475.158 |
+| Closure with four arguments | 1 | 470.917 | 435.108 to 494.820 |
+| Closure using named default | 1 | 776.739 | 753.009 to 811.938 |
+
+Checksum: `90090000`. An odd 1,001-iteration smoke run gives `108018`.
+The shared-capture case alternates two callees and therefore replaces the single
+cached child frame. The default case uses the allocating signature adapter.
+These workloads do different work, and repeated runs have varied substantially.
+They establish reproducible profiling cases, not an isolated closure-call cost
+or a reliable speedup over earlier checkpoints.
+
+Full validation: 606 passes, 151 failures, six skips, zero analyzer errors,
+generated files current. 34 formerly failing tests now pass; no previously
+passing test regressed. 150 errors concern unfinished features and the remaining
+failure is the existing Future.delayed timing threshold, passing in isolation.
+The closure contract and next checkpoint are saved in [typed-closures.md](typed-closures.md).

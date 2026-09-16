@@ -165,7 +165,7 @@ void compileConstructorDeclaration(
       parameterRepresentations.add(representationForType(type));
     }
 
-    ctx.setLocal(p.name!.lexeme, vrep);
+    ctx.setLocal(p.name!.lexeme, vrep.captureBinding(ctx, p));
 
     i++;
   }

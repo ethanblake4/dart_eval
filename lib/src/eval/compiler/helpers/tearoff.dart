@@ -1,3 +1,4 @@
+import 'default_value.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
@@ -36,9 +37,6 @@ extension TearOff on Variable {
     final named =
         parameters?.parameters.where((param) => param.isNamed).toList() ??
         <FormalParameter>[];
-    named.sort(
-      (left, right) => left.name!.lexeme.compareTo(right.name!.lexeme),
-    );
     TypeRef parameterType(FormalParameter parameter) {
       final normal = parameter is DefaultFormalParameter
           ? parameter.parameter
@@ -49,10 +47,22 @@ extension TearOff on Variable {
           : TypeRef.fromAnnotation(ctx, offset.file ?? ctx.library, annotation);
     }
 
+    Object? parameterDefault(FormalParameter parameter) {
+      final value = evaluateDefaultValue(
+        ctx,
+        offset.file ?? ctx.library,
+        parameter is DefaultFormalParameter ? parameter.defaultValue : null,
+      );
+      return value is int &&
+              parameterType(parameter) == CoreTypes.double.ref(ctx)
+          ? value.toDouble()
+          : value;
+    }
+
     final captures = <SSA>[];
     if (declaration is MethodDeclaration && !declaration.isStatic) {
       final receiver = offset.targetName == null
-          ? ctx.lookupLocal('#this')?.ssa
+          ? ctx.lookupLocal('#this')?.readBinding(ctx).ssa
           : SSA(offset.targetName!);
       if (receiver == null) {
         throw CompileError('Missing receiver for method tearoff');
@@ -75,6 +85,13 @@ extension TearOff on Variable {
         namedTypes: named
             .map((param) => parameterType(param).toRuntimeType(ctx).toJson())
             .toList(),
+        hasEnvironment: false,
+        positionalDefaults: positional.map(parameterDefault).toList(),
+        namedDefaults: named.map(parameterDefault).toList(),
+        requiredNamed: [
+          for (final parameter in named)
+            if (parameter.isRequired) parameter.name!.lexeme,
+        ],
         boundReceiver:
             declaration is MethodDeclaration && !declaration.isStatic,
         positionalUnboxed: positional

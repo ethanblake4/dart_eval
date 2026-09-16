@@ -74,7 +74,10 @@ StatementInfo compileForStatement(
           final name = parts.loopVariable.name.lexeme;
           ctx.setLocal(
             name,
-            BuiltinValue().push(ctx).copyWith(type: elementType),
+            BuiltinValue()
+                .push(ctx)
+                .copyWith(type: elementType)
+                .captureBinding(ctx, parts.loopVariable),
           );
           loopVariable = IdentifierReference(null, name);
         } else if (parts is ForEachPartsWithIdentifier) {
@@ -92,8 +95,14 @@ StatementInfo compileForStatement(
       },
       condition: (ctx) => iterator.invoke(ctx, 'moveNext', []).result,
       body: (ctx, ert) => compileStatement(s.body, ert, ctx),
-      update: (ctx) =>
-          loopVariable.setValue(ctx, iterator.getProperty(ctx, 'current')),
+      update: (ctx) {
+        if (parts is ForEachPartsWithDeclaration) {
+          ctx
+              .lookupLocal(parts.loopVariable.name.lexeme)!
+              .renewCaptureCell(ctx);
+        }
+        loopVariable.setValue(ctx, iterator.getProperty(ctx, 'current'));
+      },
       updateBeforeBody: true,
     );
   }
@@ -117,6 +126,11 @@ StatementInfo compileForStatement(
         : (ctx) => compileExpression(parts.condition!, ctx),
     body: (ctx, ert) => compileStatement(s.body, ert, ctx),
     update: (ctx) {
+      if (parts is ForPartsWithDeclarations) {
+        for (final variable in parts.variables.variables) {
+          ctx.lookupLocal(variable.name.lexeme)!.renewCaptureCell(ctx);
+        }
+      }
       for (final u in parts.updaters) {
         compileExpressionAndDiscardResult(u, ctx);
       }
