@@ -37,7 +37,7 @@ Variable compileAssignmentExpression(
       },
       thenBranch: (ctx, rt) {
         result = L.setValue(ctx, R.boxIfNeeded(ctx));
-        return StatementInfo(-1);
+        return StatementInfo();
       },
     );
     return result;

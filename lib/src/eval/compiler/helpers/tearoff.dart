@@ -78,13 +78,8 @@ extension TearOff on Variable {
         requiredPositional: positional
             .where((param) => param.isRequired)
             .length,
-        positionalTypes: positional
-            .map((param) => parameterType(param).toRuntimeType(ctx).toJson())
-            .toList(),
+        positionalCount: positional.length,
         namedNames: named.map((param) => param.name!.lexeme).toList(),
-        namedTypes: named
-            .map((param) => parameterType(param).toRuntimeType(ctx).toJson())
-            .toList(),
         hasEnvironment: false,
         positionalDefaults: positional.map(parameterDefault).toList(),
         namedDefaults: named.map(parameterDefault).toList(),

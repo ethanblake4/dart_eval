@@ -17,7 +17,7 @@ StatementInfo macroLoop(
   bool alwaysLoopOnce = false,
   bool updateBeforeBody = false,
 }) {
-  ctx.beginAllocScope();
+  ctx.beginScope();
   initialization?.call(ctx);
   final initialState = ctx.saveState();
   final header = BasicBlock<Operation>([], label: ctx.label('loop_header'));
@@ -42,14 +42,11 @@ StatementInfo macroLoop(
     }
   }
 
-  ctx.beginAllocScope();
+  ctx.beginScope();
   if (updateBeforeBody) update?.call(ctx);
   final label = CompilerLabel(
-    LabelType.loop,
-    -1,
     (ctx) {
       ctx.resolveBranchStateDiscontinuity(initialState);
-      return -1;
     },
     exceptionDepth: ctx.exceptionDepth,
     breakTarget: exit,
@@ -58,7 +55,7 @@ StatementInfo macroLoop(
   ctx.labels.add(label);
   final result = body(ctx, expectedReturnType);
   ctx.labels.removeLast();
-  ctx.endAllocScope();
+  ctx.endScope();
   if (!result.willAlwaysReturn &&
       !result.willAlwaysThrow &&
       !result.willAlwaysBreak &&
@@ -102,8 +99,8 @@ StatementInfo macroLoop(
   ctx.builder = BasicBlockBuilder(ctx.activeGraph, [exit], parent);
   ctx.restoreState(initialState);
   after?.call(ctx);
-  ctx.endAllocScope();
+  ctx.endScope();
   return alwaysLoopOnce
       ? result.copyWith(willAlwaysBreak: false)
-      : StatementInfo(result.position);
+      : StatementInfo();
 }

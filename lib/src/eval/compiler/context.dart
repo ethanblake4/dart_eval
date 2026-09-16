@@ -2,68 +2,28 @@
 import 'dart:math' as math;
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
-import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/constant_pool.dart';
 import 'package:dart_eval/src/eval/compiler/model/label.dart';
 import 'package:dart_eval/src/eval/compiler/model/override_spec.dart';
-import 'package:dart_eval/src/eval/compiler/optimizer/prescan.dart';
 import 'package:dart_eval/src/eval/compiler/source.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
-import 'package:dart_eval/src/eval/compiler/util.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
-import 'package:dart_eval/src/eval/runtime/type.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/representation.dart';
 import 'package:dart_eval/src/eval/ir/exception.dart';
 
 abstract class AbstractScopeContext {
-  int get scopeFrameOffset;
-
-  set scopeFrameOffset(int s);
-
   List<Map<String, Variable>> get locals;
-
-  List<int> get allocNest;
-
-  set allocNest(List<int> a);
 }
 
 mixin ScopeContext on Object implements AbstractScopeContext {
   @override
-  int scopeFrameOffset = 0;
-  @override
   List<Map<String, Variable>> locals = [];
-  @override
-  List<int> allocNest = [0];
 
-  void beginAllocScope({
-    int existingAllocLen = 0,
-    bool requireNonlinearAccess = false,
-  }) {
-    allocNest.add(existingAllocLen);
-    locals.add({});
-  }
+  void beginScope() => locals.add({});
 
-  int peekAllocPops({int popAdjust = 0}) {
-    return allocNest.last;
-  }
-
-  int endAllocScope({bool popValues = true, int popAdjust = 0}) {
-    locals.removeLast();
-    final nestCount = allocNest.removeLast();
-    return nestCount;
-  }
-
-  int endAllocScopeQuiet({bool popValues = true, int popAdjust = 0}) {
-    final nestCount = allocNest.removeLast();
-    return nestCount;
-  }
-
-  void resetStack({int position = 0}) {
-    allocNest = [position];
-    scopeFrameOffset = position;
-  }
+  void endScope() => locals.removeLast();
 
   Variable setLocal(String name, Variable v, {int? frame}) {
     if (frame != null) {
@@ -111,7 +71,6 @@ mixin ScopeContext on Object implements AbstractScopeContext {
   }
 
   void restoreState(ContextSaveState initial) {
-    allocNest = [...initial.allocNest];
     locals = [
       for (final scope in initial.locals) {...scope},
     ];
@@ -141,7 +100,7 @@ mixin ScopeContext on Object implements AbstractScopeContext {
 }
 
 class CompilerContext with ScopeContext {
-  CompilerContext(this.sourceFile, {this.version});
+  CompilerContext({this.version});
 
   late BasicBlockBuilder builder;
   var blockCode = <Operation>[];
@@ -200,7 +159,6 @@ class CompilerContext with ScopeContext {
   }
 
   int library = 0;
-  int position = 0;
 
   Map<String, int> tempVarMap = {};
   Map<String, int> labelMap = {};
@@ -222,7 +180,6 @@ class CompilerContext with ScopeContext {
   Map<int, Map<String, Map<String, int>>> instanceGetterIndices = {};
   Map<int, Map<String, Map<String, TypeRef>>> inferredFieldTypes = {};
   Map<int, Map<String, int>> topLevelGlobalIndices = {};
-  Map<int, Map<String, int>> topLevelGlobalInitializers = {};
   Map<int, Map<String, Map<String, int>>> enumValueIndices = {};
   Map<int, int> runtimeGlobalInitializerMap = {};
   Map<int, Map<String, TypeRef>> topLevelVariableInferredTypes = {};
@@ -231,29 +188,20 @@ class CompilerContext with ScopeContext {
   List<TypeRef> runtimeTypeList = [];
   List<String> typeNames = [];
   List<Set<int>> typeTypes = [];
-  List<bool> scopeDoesClose = [];
   List<ContextSaveState> typeInferenceSaveStates = [];
   List<ContextSaveState> typeUninferenceSaveStates = [];
   List<CompilerLabel> labels = [];
-  Set<Declaration> entrypoints = {};
   final List<String> caughtExceptionTargets = [];
   int exceptionDepth = 0;
-  PrescanContext? preScan;
-  int nearestAsyncFrame = -1;
   int globalIndex = 0;
   String? version;
   String? funcLabel;
-  bool entrypoint = false;
   bool hasBegunMethod = false;
 
-  final signaturePool = FunctionSignaturePool();
   final constantPool = ConstantPool<Object>();
-  final runtimeTypes = ConstantPool<RuntimeTypeSet>();
 
-  /// A map of String IDs to bytecode offsets used for runtime overrides
+  /// A map of String IDs to function IDs used for runtime overrides
   Map<String, OverrideSpec> runtimeOverrideMap = {};
-
-  int sourceFile;
 
   SSA svar([String name = 'var']) {
     final tvi = tempVarMap.putIfAbsent(name, () => 0);
@@ -281,36 +229,6 @@ class CompilerContext with ScopeContext {
     return BasicBlock(commit(), label: label);
   }
 
-  void resolveNonlinearity([int depth = 1]) {
-    for (var i = 0; i < depth; i++) {
-      <String, Variable>{...(locals[locals.length - depth])}.forEach((
-        key,
-        value,
-      ) {
-        locals[locals.length - depth][key] = value.unboxIfNeeded(this);
-      });
-    }
-  }
-
-  @override
-  void beginAllocScope({
-    int existingAllocLen = 0,
-    bool requireNonlinearAccess = false,
-    bool closure = false,
-  }) {
-    super.beginAllocScope(
-      existingAllocLen: existingAllocLen,
-      requireNonlinearAccess: requireNonlinearAccess,
-    );
-    if (preScan?.closedFrames.contains(locals.length - 1) ?? false) {
-      //final ps = PushScope.make(sourceFile, -1, '#');
-      //pushOp(ps, PushScope.len(ps));
-      scopeDoesClose.add(true);
-    } else {
-      scopeDoesClose.add(closure);
-    }
-  }
-
   @override
   Variable? lookupLocal(String name) {
     for (var i = locals.length - 1; i >= 0; i--) {
@@ -318,34 +236,6 @@ class CompilerContext with ScopeContext {
       if (local != null) return local..frameIndex = i;
     }
     return null;
-  }
-
-  @override
-  int endAllocScope({bool popValues = true, int popAdjust = 0}) {
-    /*TODO if (preScan?.closedFrames.contains(locals.length - 1) ?? false) {
-      pushOp(PopScope.make(), PopScope.LEN);
-      popValues = false;
-    }*/
-    scopeDoesClose.removeLast();
-    return super.endAllocScope(popValues: popValues, popAdjust: popAdjust);
-  }
-
-  int rewriteOp(int where, Operation newOp) {
-    blockCode[where] = newOp;
-    return where;
-  }
-
-  void runPrescan(Declaration d) {
-    final preScanner = PrescanVisitor();
-    preScanner.dynamicType = CoreTypes.dynamic.ref(this);
-    d.visitChildren(preScanner);
-    preScan = preScanner.ctx;
-  }
-
-  @override
-  void restoreState(ContextSaveState initial) {
-    super.restoreState(initial);
-    scopeDoesClose = [...initial.scopeDoesClose];
   }
 
   void enterTypeInferenceContext() {
@@ -395,19 +285,9 @@ class CompilerContext with ScopeContext {
 }
 
 class ContextSaveState with ScopeContext {
-  ContextSaveState.of(AbstractScopeContext context)
-    : locals = [
-        ...context.locals.map((e) => {...e}),
-      ],
-      scopeDoesClose = context is CompilerContext
-          ? [...context.scopeDoesClose]
-          : [],
-      allocNest = [...context.allocNest];
-  @override
-  // ignore: overridden_fields
-  List<Map<String, Variable>> locals;
-  List<bool> scopeDoesClose;
-  @override
-  // ignore: overridden_fields
-  List<int> allocNest;
+  ContextSaveState.of(AbstractScopeContext context) {
+    locals = [
+      for (final scope in context.locals) {...scope},
+    ];
+  }
 }

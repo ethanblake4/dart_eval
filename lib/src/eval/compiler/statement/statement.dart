@@ -42,9 +42,9 @@ StatementInfo compileStatement(
     } else if (s is ExpressionStatement) {
       final V = compileExpressionAndDiscardResult(s.expression, ctx);
       if (V != null && V.type == CoreTypes.never.ref(ctx)) {
-        return StatementInfo(-1, willAlwaysThrow: true);
+        return StatementInfo(willAlwaysThrow: true);
       }
-      return StatementInfo(-1);
+      return StatementInfo();
     } else if (s is ReturnStatement) {
       return compileReturn(
         ctx,
@@ -87,7 +87,7 @@ StatementInfo compileStatement(
       } else {
         ctx.setLocal(decl.name.lexeme, variable);
       }
-      return StatementInfo(-1);
+      return StatementInfo();
     }
   } on Error {
     print('Failed to compile a statement "$s"');
@@ -97,21 +97,18 @@ StatementInfo compileStatement(
 }
 
 class StatementInfo {
-  StatementInfo(
-    this.position, {
+  StatementInfo({
     this.willAlwaysReturn = false,
     this.willAlwaysThrow = false,
     this.willAlwaysBreak = false,
   });
 
-  final int position;
   final bool willAlwaysReturn;
   final bool willAlwaysThrow;
   final bool willAlwaysBreak;
 
   StatementInfo operator |(StatementInfo other) {
     return StatementInfo(
-      position,
       willAlwaysReturn: willAlwaysReturn && other.willAlwaysReturn,
       willAlwaysThrow: willAlwaysThrow && other.willAlwaysThrow,
       willAlwaysBreak: willAlwaysBreak && other.willAlwaysBreak,
@@ -119,13 +116,11 @@ class StatementInfo {
   }
 
   StatementInfo copyWith({
-    int? position,
     bool? willAlwaysReturn,
     bool? willAlwaysThrow,
     bool? willAlwaysBreak,
   }) {
     return StatementInfo(
-      position ?? this.position,
       willAlwaysReturn: willAlwaysReturn ?? this.willAlwaysReturn,
       willAlwaysThrow: willAlwaysThrow ?? this.willAlwaysThrow,
       willAlwaysBreak: willAlwaysBreak ?? this.willAlwaysBreak,

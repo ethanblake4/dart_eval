@@ -78,7 +78,7 @@ List<TypeRef> compileCollectionSpread(
                 : ListAppend(target.ssa, value.ssa),
           );
         }
-        return StatementInfo(-1);
+        return StatementInfo();
       },
     );
   }

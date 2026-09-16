@@ -4,7 +4,6 @@ import 'dart:typed_data';
 
 import 'package:dart_eval/src/eval/compiler/model/override_spec.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart' show Runtime;
-import 'package:dart_eval/src/eval/runtime/type.dart';
 import 'package:dart_eval/src/eval/runtime/typed/typed_program.dart';
 
 /// A Program is a compiled EVC bytecode program that can be executed using
@@ -14,22 +13,6 @@ class Program {
   factory Program.read(ByteBuffer buffer) {
     final reader = _ProgramReader(buffer);
     reader.readHeader();
-    final declarations = _intMap(reader.readMeta(), _stringIntMap);
-    final instances = _intMap(
-      reader.readMeta(),
-      (value) => _stringMap(value, (value) {
-        final fields = _list(value);
-        if (fields.length != 4) {
-          throw const FormatException('Invalid instance declaration');
-        }
-        return <Object>[
-          _stringIntMap(fields[0]),
-          _stringIntMap(fields[1]),
-          _stringIntMap(fields[2]),
-          _integer(fields[3]),
-        ];
-      }),
-    );
     final types = _list(
       reader.readMeta(),
     ).map((value) => _list(value).map(_integer).toSet()).toList();
@@ -42,8 +25,6 @@ class Program {
       }
       return value;
     }).toList();
-    final runtimeTypes = _list(reader.readMeta()).map(_runtimeType).toList();
-    final globals = _list(reader.readMeta()).map(_integer).toList();
     final enums = _intMap(
       reader.readMeta(),
       (value) => _stringMap(value, _stringIntMap),
@@ -56,16 +37,12 @@ class Program {
       return OverrideSpec(_integer(fields[0]), fields[1] as String?);
     });
     return Program(
-      declarations,
-      instances,
       typeIds,
       types,
       reader.readTypedProgram(),
       libraries,
       functions,
       constants,
-      runtimeTypes,
-      globals,
       enums,
       overrides,
     );
@@ -73,39 +50,15 @@ class Program {
 
   /// Construct a [Program] with bytecode and metadata.
   Program(
-    this.topLevelDeclarations,
-    this.instanceDeclarations,
     this.typeIds,
-    //this.typeNames,
     this.typeTypes,
     this.typedProgram,
     this.bridgeLibraryMappings,
     this.bridgeFunctionMappings,
     this.constantPool,
-    this.runtimeTypes,
-    this.globalInitializers,
     this.enumMappings,
     this.overrideMap,
   );
-
-  /// Typed function IDs of the program's top-level declarations.
-  Map<int, Map<String, int>> topLevelDeclarations;
-
-  /// Typed function IDs of the program's instance-level declarations.
-  ///
-  /// Example instance declaration:
-  /// 1: { // file
-  ///    "SomeClass": [
-  ///       { "someProp": 221 }, // getters
-  ///       { "someProp": 254 }, // setters
-  ///       { "someMethod": 288 }, // methods
-  ///    ]
-  /// }
-  Map<int, Map<String, List>> instanceDeclarations;
-
-  /// The ordered list of type names used in the program, with the index
-  /// corresponding to the type ID.
-  //List<String> typeNames;
 
   /// The ordered list of type supertype sets used in the program, with the index
   /// corresponding to the type ID.
@@ -122,10 +75,6 @@ class Program {
 
   /// The program's constant pool.
   List<Object> constantPool;
-  List<RuntimeTypeSet> runtimeTypes;
-
-  /// Typed function IDs of initializers for global variables.
-  List<int> globalInitializers;
 
   /// Mappings from enums to globals.
   Map<int, Map<String, Map<String, int>>> enumMappings;
@@ -145,15 +94,6 @@ class Program {
       (ByteData(2)..setUint16(0, Runtime.versionCode)).buffer.asUint8List(),
     );
 
-    _writeMetaBlock(
-      b,
-      topLevelDeclarations.map((key, value) => MapEntry(key.toString(), value)),
-    );
-    _writeMetaBlock(
-      b,
-      instanceDeclarations.map((key, value) => MapEntry(key.toString(), value)),
-    );
-    //_writeMetaBlock(b, typeNames);
     _writeMetaBlock(b, [for (final t in typeTypes) t.toList()]);
     _writeMetaBlock(
       b,
@@ -167,8 +107,6 @@ class Program {
       ),
     );
     _writeMetaBlock(b, constantPool);
-    _writeMetaBlock(b, [for (final rt in runtimeTypes) rt.toJson()]);
-    _writeMetaBlock(b, globalInitializers);
     _writeMetaBlock(
       b,
       enumMappings.map((key, value) => MapEntry(key.toString(), value)),
@@ -231,16 +169,6 @@ Map<int, T> _intMap<T>(Object? value, T Function(Object?) decode) {
     }
     return MapEntry(id, value);
   });
-}
-
-RuntimeTypeSet _runtimeType(Object? value) {
-  final fields = _list(value);
-  if (fields.length != 3) throw const FormatException('Invalid runtime type');
-  return RuntimeTypeSet(
-    _integer(fields[0]),
-    _list(fields[1]).map(_integer).toSet(),
-    _list(fields[2]).map(_runtimeType).toList(),
-  );
 }
 
 class _ProgramReader {

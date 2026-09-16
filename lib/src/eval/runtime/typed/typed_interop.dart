@@ -41,7 +41,7 @@ abstract final class TypedInterop {
     Runtime.bridgeData[instance] = BridgeData(
       target,
       typeId,
-      subclass as $Instance? ?? const BridgeDelegatingShim(),
+      subclass as $Instance?,
     );
     return instance;
   }
@@ -161,7 +161,7 @@ abstract final class TypedInterop {
         $null() => null,
         TypedHostFunction() => value.function,
         TypedInstance() => value.bridge ?? value,
-        $InstanceImpl() || EvalFunction() => value,
+        EvalFunction() => value,
         $List() => TypedHostCollections.export(value.$value, value, runtime),
         $Map() => TypedHostCollections.export(value.$value, value, runtime),
         $Set() => TypedHostCollections.export(value.$value, value, runtime),

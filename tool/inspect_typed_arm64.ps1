@@ -9,7 +9,7 @@ New-Item -ItemType Directory -Force -Path $Output | Out-Null
 $snapshotPath = Join-Path $Output 'typed_runtime.aot'
 $assemblyPath = Join-Path $Output 'typed_runtime.txt'
 $symbolsPath = Join-Path $Output 'symbols.txt'
-& dart compile aot-snapshot --target-os=linux --target-arch=arm64 benchmark/typed_runtime_probe.dart -o $snapshotPath
+& dart compile aot-snapshot --target-os=linux --target-arch=arm64 benchmark/runtime_probe.dart -o $snapshotPath
 if ($LASTEXITCODE -ne 0) { throw 'ARM64 cross-compilation failed' }
 & $Objdump --syms $snapshotPath | Set-Content $symbolsPath
 if ($LASTEXITCODE -ne 0) { throw 'Symbol extraction failed' }

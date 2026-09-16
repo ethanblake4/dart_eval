@@ -56,5 +56,5 @@ StatementInfo doAsyncReturn(
     ctx.builder.float(continuation);
     ctx.builder.link(tail, continuation);
   }
-  return StatementInfo(-1, willAlwaysReturn: true);
+  return StatementInfo(willAlwaysReturn: true);
 }

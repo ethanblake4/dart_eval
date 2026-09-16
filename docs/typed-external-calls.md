@@ -1,5 +1,9 @@
 # External bridge checkpoint
 
+This document records the design and measurements at successive checkpoints.
+For current format versions and suite results, see the
+[current checkpoint](current-compiler-checkpoint.md).
+
 This checkpoint is followed by [closure support](typed-closures.md). Current
 payload version, test totals and opcode counts are recorded there.
 
@@ -65,13 +69,13 @@ capacity. Old payloads must be recompiled. The Program envelope remains 102.
 Tests cover direct and legacy calls, arities 0/1/2/3/6, repeated operands, opaque
 object identity, nullable/default parameters, serialization, reentry, retained
 legacy lists and generated native callbacks. The bindgen test compiles and runs
-the generated Dart source. `benchmark/typed_external_calls.dart` compares identical
+the generated Dart source. `benchmark/external_calls.dart` compares identical
 bytecode with legacy and direct registrations and checks results explicitly.
 
 The loop has 198 opcodes, leaving 58 byte values for future intrinsics, including
 Map/Set operations. The ARM64 arithmetic path remains 38 instructions. See
 [assembly measurements](typed-arm64-optimization.md) and the
-[current failure report](typed-migration-failures.md).
+[the current checkpoint](current-compiler-checkpoint.md).
 
 The next bounded compiler checkpoint is closure capture storage and creation.
 Define shared mutable capture cells and typed entry signatures before lowering

@@ -45,5 +45,5 @@ Windows x64 AOT call coverage used 100,001 iterations and three samples, with
 checksum `30010480045`. Median ns/iteration: primitive 115, mixed 311, method
 474, polymorphic 302, boxed arguments 304, overflow arguments 379. Concurrent
 work made these measurements noisy; they are a workload smoke check, not a
-before/after performance claim. Reproduce with `benchmark/typed_calls.dart` on
+before/after performance claim. Reproduce with `benchmark/calls.dart` on
 an idle machine for comparisons.

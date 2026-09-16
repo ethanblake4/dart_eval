@@ -31,8 +31,7 @@ Object? runtimeOverride(String id, [Iterable<Object?> args = const []]) {
     }
   }
 
-  globalRuntime!.args.addAll(args);
-  final result = globalRuntime!.execute(spec.offset);
+  final result = globalRuntime!.execute(spec.offset, arguments: args.toList());
   if (result == null) {
     return $null();
   }

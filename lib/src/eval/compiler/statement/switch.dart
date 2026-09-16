@@ -10,7 +10,6 @@ import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/ir/flow.dart';
 
 StatementInfo compileSwitchStatement(
   SwitchStatement s,
@@ -33,11 +32,8 @@ StatementInfo compileSwitchStatement(
   final initialState = ctx.saveState();
   ctx.labels.add(
     CompilerLabel(
-      LabelType.branch,
-      -1,
       (ctx) {
         ctx.resolveBranchStateDiscontinuity(initialState);
-        return -1;
       },
       exceptionDepth: ctx.exceptionDepth,
       breakTarget: endBlock,
@@ -69,7 +65,7 @@ StatementInfo _compileSwitchCases(
 }) {
   if (index >= cases.length) {
     // No more cases, return empty statement
-    return StatementInfo(-1);
+    return StatementInfo();
   }
 
   final currentCase = cases[index];
@@ -138,7 +134,6 @@ StatementInfo _executeMatchingCases(
   var willAlwaysReturn = false;
   var willAlwaysThrow = false;
   var willAlwaysBreak = false;
-  var position = ctx.blockCode.length;
 
   // Find the first case with statements starting from startIndex
   int executionIndex = startIndex;
@@ -163,7 +158,6 @@ StatementInfo _executeMatchingCases(
   }
 
   return StatementInfo(
-    position,
     willAlwaysReturn: willAlwaysReturn,
     willAlwaysThrow: willAlwaysThrow,
     willAlwaysBreak: willAlwaysBreak,
@@ -178,9 +172,8 @@ StatementInfo _executeSwitchBlock(
   var willAlwaysReturn = false;
   var willAlwaysThrow = false;
   var willAlwaysBreak = false;
-  final position = ctx.blockCode.length;
 
-  ctx.beginAllocScope();
+  ctx.beginScope();
 
   for (final stmt in statements) {
     final stmtInfo = compileStatement(stmt, expectedReturnType, ctx);
@@ -199,10 +192,9 @@ StatementInfo _executeSwitchBlock(
     }
   }
 
-  ctx.endAllocScope(popValues: !willAlwaysThrow && !willAlwaysReturn);
+  ctx.endScope();
 
   return StatementInfo(
-    position,
     willAlwaysReturn: willAlwaysReturn,
     willAlwaysThrow: willAlwaysThrow,
     willAlwaysBreak: willAlwaysBreak,

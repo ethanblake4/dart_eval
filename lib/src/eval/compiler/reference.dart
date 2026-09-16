@@ -253,10 +253,6 @@ class IdentifierReference implements Reference {
         );
       }
 
-      if (local.frameRef != null) {
-        return local.frameRef!.setValue(ctx, value);
-      }
-
       if (local.exceptionSlot != null) {
         final stored = local.boxed
             ? value.boxIfNeeded(ctx)
@@ -473,7 +469,6 @@ class IdentifierReference implements Reference {
               !declaration.isGetter &&
               !declaration.isSetter) {
             return Variable(
-              -1,
               CoreTypes.function.ref(ctx),
               methodOffset: DeferredOrOffset(
                 file: ctx.library,
@@ -515,8 +510,7 @@ class IdentifierReference implements Reference {
           }
           final bridge = decOrBridge.bridge!;
           if (bridge is BridgeMethodDef) {
-            return Variable.alloc(
-              ctx,
+            return Variable(
               CoreTypes.function.ref(ctx),
               methodOffset: DeferredOrOffset(
                 file: ctx.library,
@@ -567,7 +561,6 @@ class IdentifierReference implements Reference {
         final staticDec = staticDeclaration.declaration!;
         if (staticDec is MethodDeclaration) {
           return Variable(
-            -1,
             CoreTypes.function.ref(ctx),
             methodOffset: DeferredOrOffset.lookupStatic(
               ctx,
@@ -880,7 +873,6 @@ Variable _declarationToVariable(
       final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type.type);
 
       return Variable(
-        -1,
         CoreTypes.type.ref(ctx),
         concreteTypes: [type],
         methodOffset: DeferredOrOffset(file: type.file, name: '${type.name}.'),
@@ -891,7 +883,6 @@ Variable _declarationToVariable(
     if (bridge is BridgeEnumDef) {
       final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type);
       return Variable(
-        -1,
         CoreTypes.type.ref(ctx),
         concreteTypes: [type],
         methodOffset: DeferredOrOffset(
@@ -908,7 +899,6 @@ Variable _declarationToVariable(
         bridge.function.returns,
       );
       return Variable(
-        -1,
         CoreTypes.function.ref(ctx),
         methodReturnType: AlwaysReturnType(returnType, false),
         methodOffset: DeferredOrOffset(file: decOrBridge.sourceLib, name: name),
@@ -953,7 +943,6 @@ Variable _declarationToVariable(
     );
 
     return Variable(
-      -1,
       CoreTypes.type.ref(ctx),
       concreteTypes: [returnType],
       methodOffset: offset,
@@ -987,7 +976,6 @@ Variable _declarationToVariable(
   final offset = DeferredOrOffset(file: decOrBridge.sourceLib, name: name);
 
   final fn = Variable(
-    -1,
     decl is FunctionDeclaration
         ? CoreTypes.function.ref(ctx)
         : CoreTypes.type.ref(ctx),

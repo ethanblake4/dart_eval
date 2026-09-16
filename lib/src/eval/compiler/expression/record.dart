@@ -123,7 +123,7 @@ Variable compileRecordLiteral(
       ctx.svar('record'),
       fieldList.ssa,
       constIndex,
-      type.toRuntimeType(ctx).type,
+      type.runtimeTypeId(ctx),
     ),
     type,
   );

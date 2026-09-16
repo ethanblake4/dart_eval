@@ -1,5 +1,9 @@
 # Typed dispatch baseline
 
+This document records the design and measurements at successive checkpoints.
+For current format versions and suite results, see the
+[current checkpoint](current-compiler-checkpoint.md).
+
 Measured on 2026-09-13 with Dart 3.10.7, Windows x64, AMD Ryzen AI Max Pro 390 (12 cores, 24 logical processors). This is an initial scalar dispatch experiment, independent of frontend compilation. No ARM measurement is available.
 
 The generated machine has 152 real instructions and six scalar locals: two integers, two doubles, and two booleans. Bytecode is a `Uint8List`; constants and spills use separate typed banks. Instructions select fixed operands and destinations. The loop does not allocate operand lists or decode instruction objects.
@@ -28,10 +32,10 @@ Run from the repository root in PowerShell:
 
 ```powershell
 dart run tool/generate_typed_machine.dart --check
-dart test test/typed_machine_test.dart
-dart compile exe benchmark/typed_dispatch.dart -o .dart_tool/typed_dispatch.exe
+dart test test/runtime/machine_test.dart
+dart compile exe benchmark/dispatch.dart -o .dart_tool/typed_dispatch.exe
 & ./.dart_tool/typed_dispatch.exe 5000000 7
-dart compile aot-snapshot benchmark/typed_dispatch.dart -o .dart_tool/typed_dispatch.aot
+dart compile aot-snapshot benchmark/dispatch.dart -o .dart_tool/typed_dispatch.aot
 & 'C:/Program Files/AMD/ROCm/6.2/bin/llvm-objdump.exe' --disassemble-symbols=TypedMachine.run --no-show-raw-insn .dart_tool/typed_dispatch.aot
 ```
 

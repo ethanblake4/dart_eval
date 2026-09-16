@@ -1,5 +1,9 @@
 # Typed exception checkpoint
 
+This document records the design and measurements at successive checkpoints.
+For current format versions and suite results, see the
+[current checkpoint](current-compiler-checkpoint.md).
+
 The typed backend now lowers synchronous try/catch/finally, throw/rethrow,
 assertions and runtime type tests. It retains the register ABI: A/B integers,
 F/G doubles, E/X booleans and R/S/C objects. No handler table or completion
@@ -66,7 +70,7 @@ Tests cover fresh and serialized programs, native bridge errors, nested source
 calls and closures, recursive and cached-frame unwinding, every register bank,
 failed global initialization, typed catch selection, original exception/trace
 identity, shadowed locals, and completion replacement through finally. See the
-[failure baseline](typed-migration-failures.md) and
+[the current checkpoint](current-compiler-checkpoint.md) and
 [ARM64 and benchmark report](typed-arm64-optimization.md) for results.
 
 Final full-suite validation: 725 passes, 95 failures and six skips, with zero

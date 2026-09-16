@@ -23,14 +23,12 @@ int compileMethodDeclaration(
   CompilerContext ctx,
   NamedCompilationUnitMember parent,
 ) {
-  ///ctx.runPrescan(d);
   final b = d.body;
   final parentName = parent.name.lexeme;
   final methodName = d.name.lexeme;
-  final pos = beginMethod(ctx, d, d.offset, '$parentName.$methodName()');
+  final pos = ctx.beginFunction('$parentName.$methodName()');
 
-  ctx.beginAllocScope(existingAllocLen: (d.parameters?.parameters.length ?? 0));
-  ctx.scopeFrameOffset += d.parameters?.parameters.length ?? 0;
+  ctx.beginScope();
   if (!d.isStatic) {
     ctx.pushOp(Parameter(SSA('arg_0'), 0));
     ctx.setLocal('#this', Variable.of(ctx, SSA('arg_0'), TypeRef.$this(ctx)!));
@@ -101,7 +99,7 @@ int compileMethodDeclaration(
       name: '$methodName()',
     );
   } else if (b is ExpressionFunctionBody) {
-    ctx.beginAllocScope();
+    ctx.beginScope();
     final V = compileExpression(b.expression, ctx);
     stInfo = doReturn(
       ctx,
@@ -112,9 +110,9 @@ int compileMethodDeclaration(
       // so we can optimize boxing away here.
       skipClassBoxing: d.name.lexeme == '==' || d.name.lexeme == '!=',
     );
-    ctx.endAllocScope();
+    ctx.endScope();
   } else if (b is EmptyFunctionBody) {
-    ctx.endAllocScope();
+    ctx.endScope();
     return -1;
   } else {
     throw CompileError('Unknown function body type ${b.runtimeType}');
@@ -128,7 +126,7 @@ int compileMethodDeclaration(
     }
   }
 
-  ctx.endAllocScope();
+  ctx.endScope();
 
   if (d.isStatic) {
     ctx.topLevelDeclarationPositions[ctx.library]!['$parentName.$methodName'] =

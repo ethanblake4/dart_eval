@@ -12,7 +12,6 @@ import 'package:dart_eval/src/eval/compiler/collection/if.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
-import 'package:dart_eval/src/eval/compiler/model/label.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/collection.dart';
@@ -66,14 +65,12 @@ Variable compileListLiteral(
         ),
   );
 
-  ctx.beginAllocScope();
-  ctx.labels.add(SimpleCompilerLabel());
+  ctx.beginScope();
   final resultTypes = <TypeRef>[];
   for (final e in elements) {
     resultTypes.addAll(compileListElement(e, list, ctx, _boxListElements));
   }
-  ctx.labels.removeLast();
-  ctx.endAllocScope();
+  ctx.endScope();
 
   if (listSpecifiedType == null) {
     return list.copyWith(
@@ -125,7 +122,7 @@ Variable boxListContents(CompilerContext ctx, Variable list) {
         elementType,
       );
       ctx.pushOp(ListAppend(newList.ssa, element.boxIfNeeded(ctx).ssa));
-      return StatementInfo(-1);
+      return StatementInfo();
     },
     update: (ctx) {
       final incremented = ctx.svar('next_index');

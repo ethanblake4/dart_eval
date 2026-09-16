@@ -263,12 +263,7 @@ Variable _typeTest(CompilerContext ctx, TypeAnnotation? patType, Variable V) {
 
   return Variable.ssa(
     ctx,
-    IsType(
-      ctx.svar('pattern_type'),
-      V.ssa,
-      slot.toRuntimeType(ctx).type,
-      false,
-    ),
+    IsType(ctx.svar('pattern_type'), V.ssa, slot.runtimeTypeId(ctx), false),
     CoreTypes.bool.ref(ctx).copyWith(boxed: false),
   );
 }

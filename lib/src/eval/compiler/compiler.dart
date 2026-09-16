@@ -58,7 +58,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
   /// The semantic version of the compiled code, for runtime overrides
   String? version;
 
-  var _ctx = CompilerContext(0);
+  var _ctx = CompilerContext();
 
   /// Typed control-flow graphs from the last compilation, keyed by function ID.
   /// These precede SSA conversion, register allocation, and bytecode lowering.
@@ -203,7 +203,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     bool debugPerf = true,
   ]) => _compileSources(sources, debugPerf, _emitProgram);
 
-  /// Compile a primitive entrypoint to the compact typed-register backend.
+  /// Compile an entrypoint directly to a typed bytecode payload.
   /// Unsupported language operations fail explicitly during lowering.
   TypedProgram compileTyped(
     Map<String, Map<String, String>> packages, {
@@ -232,7 +232,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     _bridgeStaticFunctionIdx = 0;
 
     // Create a compilation context
-    _ctx = CompilerContext(0, version: version);
+    _ctx = CompilerContext(version: version);
 
     for (final plugin in _plugins) {
       if (!_appliedPlugins.contains(plugin.identifier)) {
@@ -540,7 +540,6 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
           if (declaration is VariableDeclaration &&
               declaration.parent!.parent is TopLevelVariableDeclaration) {
             compileDeclaration(declaration, _ctx);
-            _ctx.resetStack();
           } else if (declaration is ClassDeclaration) {
             _ctx.currentClass = declaration;
             for (final d
@@ -548,7 +547,6 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
                   (e) => e.isStatic,
                 )) {
               compileFieldDeclaration(-1, d, _ctx, declaration);
-              _ctx.resetStack();
             }
             _ctx.currentClass = null;
           } else if (declaration is EnumDeclaration) {
@@ -558,7 +556,6 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
                   (e) => e.isStatic,
                 )) {
               compileFieldDeclaration(-1, d, _ctx, declaration);
-              _ctx.resetStack();
             }
             _ctx.currentClass = null;
           }
@@ -586,7 +583,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
           }
           _ctx.library = key;
           compileDeclaration(declaration, _ctx);
-          _ctx.resetStack();
+
           _ctx.finishMethod();
         });
       });
@@ -645,42 +642,12 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
         backend.functionIndices[id] ??
         (throw StateError('No bytecode for function $id'));
     return Program(
-      _ctx.topLevelDeclarationPositions.map(
-        (library, entries) => MapEntry(library, {
-          for (final entry in entries.entries)
-            if (backend.functionIndices.containsKey(entry.value))
-              entry.key: relocate(entry.value),
-        }),
-      ),
-      _ctx.instanceDeclarationPositions.map(
-        (library, classes) => MapEntry(library, {
-          for (final entry in classes.entries)
-            if (typed.classes.any(
-              (type) =>
-                  type.library ==
-                      _ctx.libraryMap.entries
-                          .firstWhere((entry) => entry.value == library)
-                          .key &&
-                  type.name == entry.key,
-            ))
-              entry.key: [
-                for (var kind = 0; kind < 3; kind++)
-                  (entry.value[kind] as Map).cast<String, int>().map(
-                    (member, id) => MapEntry(member, relocate(id)),
-                  ),
-                ...entry.value.skip(3),
-              ],
-        }),
-      ),
       typeIds,
-      //ctx.typeNames,
       _ctx.typeTypes,
       typed,
       _ctx.libraryMap,
       _ctx.bridgeStaticFunctionIndices,
       _ctx.constantPool.pool,
-      _ctx.runtimeTypes.pool,
-      [for (final global in typed.globals) global.initializerFunction],
       _ctx.enumValueIndices,
       {
         for (final entry in _ctx.runtimeOverrideMap.entries)
@@ -749,7 +716,6 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
 
       if (!_topLevelGlobalIndices.containsKey(libraryIndex)) {
         _topLevelGlobalIndices[libraryIndex] = {};
-        _ctx.topLevelGlobalInitializers[libraryIndex] = {};
         _ctx.topLevelVariableInferredTypes[libraryIndex] = {};
       }
 
@@ -799,7 +765,6 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
           for (final constant in declaration.constants) {
             if (!_topLevelGlobalIndices.containsKey(libraryIndex)) {
               _topLevelGlobalIndices[libraryIndex] = {};
-              _ctx.topLevelGlobalInitializers[libraryIndex] = {};
               _ctx.topLevelVariableInferredTypes[libraryIndex] = {};
             }
             final name = '${declaration.name.lexeme}.${constant.name.lexeme}';
@@ -842,7 +807,6 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
             if (member.isStatic) {
               if (!_topLevelGlobalIndices.containsKey(libraryIndex)) {
                 _topLevelGlobalIndices[libraryIndex] = {};
-                _ctx.topLevelGlobalInitializers[libraryIndex] = {};
                 _ctx.topLevelVariableInferredTypes[libraryIndex] = {};
               }
 

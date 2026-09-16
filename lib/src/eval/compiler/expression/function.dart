@@ -35,12 +35,9 @@ Variable compileFunctionExpression(
   final outerExceptions = [...ctx.caughtExceptionTargets];
   ctx.labels.clear();
   ctx.caughtExceptionTargets.clear();
-  final sfo = ctx.scopeFrameOffset;
   final outerGraph = ctx.activeGraph;
   final outerFunctionId = ctx.currentFunctionId;
   final outerFunctionLabel = ctx.funcLabel;
-  final outerAsyncFrame = ctx.nearestAsyncFrame;
-  final outerEntrypoint = ctx.entrypoint;
   final outerExceptionDepth = ctx.exceptionDepth;
   final captures = <String, Variable>{};
   final analysis = capturesFor(e);
@@ -64,13 +61,11 @@ Variable compileFunctionExpression(
   }
   ctx.finishMethod();
   final outerBuilder = ctx.builder;
-  final fnOffset = beginMethod(ctx, e, e.offset, '<anonymous closure>');
-  ctx.resetStack();
+  final fnOffset = ctx.beginFunction('<anonymous closure>');
+
   ctx.locals = [];
-  ctx.nearestAsyncFrame = -1;
   ctx.exceptionDepth = 0;
-  final existingAllocs = e.parameters?.parameters.length ?? 0;
-  ctx.beginAllocScope(existingAllocLen: existingAllocs, closure: true);
+  ctx.beginScope();
   ctx.pushOp(
     function_ir.Parameter(
       SSA('arg_0'),
@@ -93,7 +88,6 @@ Variable compileFunctionExpression(
     if (capture.value.captureCell != null) binding.captureCell = loaded;
     ctx.setLocal(capture.key, binding);
   }
-  ctx.scopeFrameOffset += existingAllocs;
   final resolvedParams = resolveFPLDefaults(
     ctx,
     e.parameters,
@@ -163,7 +157,7 @@ Variable compileFunctionExpression(
       name: '(closure)',
     );
   } else if (b is ExpressionFunctionBody) {
-    ctx.beginAllocScope();
+    ctx.beginScope();
     final V = compileExpression(b.expression, ctx);
     stInfo = doReturn(
       ctx,
@@ -171,7 +165,7 @@ Variable compileFunctionExpression(
       V,
       isAsync: b.isAsynchronous,
     );
-    ctx.endAllocScope();
+    ctx.endScope();
   } else {
     throw CompileError('Unsupported function body type: ${b.runtimeType}');
   }
@@ -179,9 +173,9 @@ Variable compileFunctionExpression(
   if (!(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
     if (b.isAsynchronous) {
       asyncComplete(ctx, null);
-      ctx.endAllocScope(popValues: false);
+      ctx.endScope();
     } else {
-      ctx.endAllocScope();
+      ctx.endScope();
       ctx.pushOp(Return(null));
     }
   }
@@ -192,14 +186,11 @@ Variable compileFunctionExpression(
   ctx.currentFunctionId = outerFunctionId;
   ctx.funcLabel = outerFunctionLabel;
   ctx.hasBegunMethod = true;
-  ctx.nearestAsyncFrame = outerAsyncFrame;
-  ctx.entrypoint = outerEntrypoint;
   ctx.exceptionDepth = outerExceptionDepth;
 
   ctx.labels.addAll(outerLabels);
   ctx.caughtExceptionTargets.addAll(outerExceptions);
   ctx.restoreState(ctxSaveState);
-  ctx.scopeFrameOffset = sfo;
 
   final positional =
       (e.parameters?.parameters.where((element) => element.isPositional) ?? []);
@@ -207,54 +198,12 @@ Variable compileFunctionExpression(
       .where((element) => element.isRequired)
       .length;
 
-  final positionalArgTypes = positional
-      .map(
-        (a) => a is NormalFormalParameter
-            ? a
-            : (a as DefaultFormalParameter).parameter,
-      )
-      .cast<SimpleFormalParameter>()
-      .mapIndexed((i, a) {
-        if (a.type != null) {
-          return TypeRef.fromAnnotation(ctx, ctx.library, a.type!);
-        }
-        if (i < boundPositionalParams.length) {
-          final fType = boundPositionalParams[i].type;
-          if (fType.type != null) {
-            return fType.type!;
-          }
-        }
-        return CoreTypes.dynamic.ref(ctx);
-      })
-      .map((t) => t.toRuntimeType(ctx))
-      .map((rt) => rt.toJson())
-      .toList();
-
   final named =
       (e.parameters?.parameters.where((element) => element.isNamed) ?? []);
   final sortedNamedArgs = named.toList()
     ..sort((e1, e2) => (e1.name!.lexeme).compareTo((e2.name!.lexeme)));
   final sortedNamedArgNames = sortedNamedArgs
       .map((e) => e.name!.lexeme)
-      .toList();
-
-  final sortedNamedArgTypes = sortedNamedArgs
-      .map((e) => e is DefaultFormalParameter ? e.parameter : e)
-      .cast<SimpleFormalParameter>()
-      .mapIndexed((i, a) {
-        if (a.type != null) {
-          return TypeRef.fromAnnotation(ctx, ctx.library, a.type!);
-        }
-        if (i < boundNamedParams.length) {
-          final fType = boundNamedParams[i].type;
-          if (fType.type != null) {
-            return fType.type!;
-          }
-        }
-        return CoreTypes.dynamic.ref(ctx);
-      })
-      .map((t) => t.toRuntimeType(ctx))
-      .map((rt) => rt.toJson())
       .toList();
 
   Object? parameterDefault(FormalParameter parameter) {
@@ -284,9 +233,8 @@ Variable compileFunctionExpression(
       target,
       captures.values.map((v) => v.captureCell ?? v.ssa).toList(),
       requiredPositional: requiredPositionalArgCount,
-      positionalTypes: positionalArgTypes,
+      positionalCount: positional.length,
       namedNames: sortedNamedArgNames,
-      namedTypes: sortedNamedArgTypes,
       positionalDefaults: positional.map(parameterDefault).toList(),
       namedDefaults: sortedNamedArgs.map(parameterDefault).toList(),
       requiredNamed: [

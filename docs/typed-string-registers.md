@@ -21,7 +21,7 @@ To reproduce independently, use a separate checkout at `d51f120`, append six exp
 | 193, concat | `r = (r as String) + (s as String)` | `u = u + (s as String)` | `u = u + v` |
 | 194, export | `r = r` | `r = u` | `r = u` |
 
-Initialize added locals to `''` before dispatch. Build the unchanged file-loading `benchmark/typed_runtime_probe.dart` with `dart compile aot-snapshot --target-os=linux --target-arch=arm64`, then disassemble the `TypedMachine.run` symbol using the existing inspection script's LLVM procedure. The descriptors permit validation of host semantic probes; they do not integrate U/V into the production allocator or calling convention.
+Initialize added locals to `''` before dispatch. Build the unchanged file-loading `benchmark/runtime_probe.dart` with `dart compile aot-snapshot --target-os=linux --target-arch=arm64`, then disassemble the `TypedMachine.run` symbol using the existing inspection script's LLVM procedure. The descriptors permit validation of host semantic probes; they do not integrate U/V into the production allocator or calling convention.
 
 | Variant | run start | run end exclusive | run text bytes | frame bytes |
 |---|---|---|---|---|
@@ -48,6 +48,6 @@ Handler ranges inclusive:
 
 Length full dispatch instruction counts therefore 61/52/54; codeUnitAt 74/65/67; concat 73/65/56 plus callee. Loading u/v requires its own cast and dispatch; exporting u back to r also requires dispatch. A hot scan can amortize that setup, isolated string operations may not. Typed locals do remove repeated type checks, but codeUnitAt still checks bounds and selects one-byte/two-byte storage. All concat versions call the same 128-byte _StringBase.+ body. Allocation/copy cost is outside these counts.
 
-Legacy runtime._run has String u and String v parameters; xval_ops documents dedicated string banks and concat/length/conversion operations. Parameter typing alone does not reserve hardware registers. In this experiment the new typed locals remain live across the whole switch, extending register pressure and forcing more preservation around unrelated calls.
+The earlier prototype used String u and String v parameters and proposed dedicated string banks and concat/length/conversion operations (available in Git history before this cleanup). Parameter typing alone does not reserve hardware registers. In this experiment the new typed locals remain live across the whole switch, extending register pressure and forcing more preservation around unrelated calls.
 
 Recommendation: dedicated native String operations on existing object registers are the smaller first step. Revisit one String accumulator if real programs repeatedly scan or manipulate a retained string. Two persistent String locals are harder to justify without string-heavy measurements because both tax unrelated bytecode dispatch. These counts depend on compiler version and case order; they establish the tradeoff, not a universal break-even point or hardware speedup.

@@ -102,7 +102,7 @@ Variable _compileShortCircuit(
       }
       rightType = R.type;
       ctx.pushOp(Assign(outVar.ssa, R.ssa));
-      return StatementInfo(-1);
+      return StatementInfo();
     },
   );
 

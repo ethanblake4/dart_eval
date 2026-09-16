@@ -66,8 +66,8 @@ completion. They characterize different workloads, not equivalent operations.
 | Await native Future | 34.075 | 340.75 |
 | Await host callback Future | 39.562 | 395.62 |
 
-`benchmark/typed_async.dart` produced checksum `75013262500`. A separate,
-concurrently loaded run of `benchmark/typed_calls.dart` exercised primitive,
+`benchmark/async.dart` produced checksum `75013262500`. A separate,
+concurrently loaded run of `benchmark/calls.dart` exercised primitive,
 mixed, instance, polymorphic, boxed and overflow arguments and produced checksum
 `30010480045`. Its medians ranged from 166 to 388 ns/iteration; this noisy run is
 not evidence of a speedup or regression. The generated ordinary call path keeps

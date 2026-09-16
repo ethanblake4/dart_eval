@@ -12,26 +12,19 @@ mixin $Bridge<T> on Object implements $Value, $Instance {
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
-    try {
-      return Runtime.bridgeData[this]!.subclass!.$getProperty(
-        runtime,
-        identifier,
-      );
-    } on UnimplementedError catch (_) {
-      return $bridgeGet(identifier);
-    }
+    final subclass = Runtime.bridgeData[this]!.subclass;
+    return subclass == null
+        ? $bridgeGet(identifier)
+        : subclass.$getProperty(runtime, identifier);
   }
 
   @override
   void $setProperty(Runtime runtime, String identifier, $Value value) {
-    try {
-      return Runtime.bridgeData[this]!.subclass!.$setProperty(
-        runtime,
-        identifier,
-        value,
-      );
-    } on UnimplementedError catch (_) {
+    final subclass = Runtime.bridgeData[this]!.subclass;
+    if (subclass == null) {
       $bridgeSet(identifier, value);
+    } else {
+      subclass.$setProperty(runtime, identifier, value);
     }
   }
 
@@ -51,10 +44,9 @@ mixin $Bridge<T> on Object implements $Value, $Instance {
     if (subclass is TypedInstance) {
       return subclass.invoke(method, args, runtime: runtime)?.$reified;
     }
-    return ($getProperty(runtime, method) as EvalFunction).call(runtime, this, [
-      this,
-      ...args,
-    ])?.$reified;
+    return ($getProperty(runtime, method) as EvalFunction)
+        .call(runtime, this, args)
+        ?.$reified;
   }
 
   @override
@@ -68,9 +60,7 @@ mixin $Bridge<T> on Object implements $Value, $Instance {
   @override
   int $getRuntimeType(Runtime runtime) {
     final data = Runtime.bridgeData[this]!;
-    return data.subclass is BridgeDelegatingShim
-        ? data.$runtimeType
-        : data.subclass?.$getRuntimeType(runtime) ?? data.$runtimeType;
+    return data.subclass?.$getRuntimeType(runtime) ?? data.$runtimeType;
   }
 }
 
@@ -94,27 +84,6 @@ class BridgeSuperShim implements $Instance {
 
   @override
   int $getRuntimeType(Runtime runtime) => bridge.$getRuntimeType(runtime);
-}
-
-class BridgeDelegatingShim implements $Instance {
-  const BridgeDelegatingShim();
-
-  @override
-  $Value? $getProperty(Runtime runtime, String name) =>
-      throw UnimplementedError();
-
-  @override
-  void $setProperty(Runtime runtime, String name, $Value value) =>
-      throw UnimplementedError();
-
-  @override
-  $Bridge get $reified => throw UnimplementedError();
-
-  @override
-  $Bridge get $value => throw UnimplementedError();
-
-  @override
-  int $getRuntimeType(Runtime runtime) => throw UnimplementedError();
 }
 
 class BridgeData {

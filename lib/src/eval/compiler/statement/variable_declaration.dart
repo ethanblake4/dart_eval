@@ -14,7 +14,7 @@ StatementInfo compileVariableDeclarationStatement(
   CompilerContext ctx,
 ) {
   compileVariableDeclarationList(s.variables, ctx);
-  return StatementInfo(-1);
+  return StatementInfo();
 }
 
 void compileVariableDeclarationList(

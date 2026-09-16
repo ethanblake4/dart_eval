@@ -18,7 +18,7 @@ StatementInfo macroBranch(
   AstNode? source,
   bool testNullish = false,
 }) {
-  ctx.beginAllocScope();
+  ctx.beginScope();
   ctx.enterTypeInferenceContext();
 
   final conditionResult = condition(ctx).unboxIfNeeded(ctx);
@@ -41,9 +41,9 @@ StatementInfo macroBranch(
 
   ctx.builder = branches.block(0);
   ctx.inferTypes();
-  ctx.beginAllocScope();
+  ctx.beginScope();
   final thenResult = thenBranch(ctx, expectedReturnType);
-  ctx.endAllocScope();
+  ctx.endScope();
   ctx.uninferTypes();
   if (!thenResult.willAlwaysReturn &&
       !thenResult.willAlwaysThrow &&
@@ -60,10 +60,10 @@ StatementInfo macroBranch(
   ctx.restoreState(initialState);
 
   ctx.builder = branches.block(1);
-  ctx.beginAllocScope();
+  ctx.beginScope();
   final elseResult =
-      elseBranch?.call(ctx, expectedReturnType) ?? StatementInfo(-1);
-  ctx.endAllocScope();
+      elseBranch?.call(ctx, expectedReturnType) ?? StatementInfo();
+  ctx.endScope();
   if (!elseResult.willAlwaysReturn &&
       !elseResult.willAlwaysThrow &&
       !elseResult.willAlwaysBreak &&
@@ -79,6 +79,6 @@ StatementInfo macroBranch(
   ctx.builder = BasicBlockBuilder(ctx.activeGraph, [endBlock], branches);
   ctx.builder.float(endBlock);
   ctx.restoreState(resolveStateToThen ? thenState : initialState);
-  ctx.endAllocScope();
+  ctx.endScope();
   return thenResult | elseResult;
 }

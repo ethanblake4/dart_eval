@@ -9,5 +9,5 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 Variable compileThrowExpression(CompilerContext ctx, ThrowExpression e) {
   final V = compileExpression(e.expression, ctx).boxIfNeeded(ctx);
   ctx.pushOp(Throw(V.ssa));
-  return Variable(-1, CoreTypes.never.ref(ctx));
+  return Variable(CoreTypes.never.ref(ctx));
 }

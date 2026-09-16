@@ -18,5 +18,5 @@ StatementInfo compileAssertStatement(
 
   doAssert(ctx, cond, msg);
 
-  return StatementInfo(-1);
+  return StatementInfo();
 }

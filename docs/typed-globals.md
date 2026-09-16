@@ -1,5 +1,9 @@
 # Global storage checkpoint
 
+This document records the design and measurements at successive checkpoints.
+For current format versions and suite results, see the
+[current checkpoint](current-compiler-checkpoint.md).
+
 Globals now use runtime-owned storage with lazy initialization. The compiler
 links initializer functions when reachable code loads or stores their slot;
 initializers execute only on the first read. An assignment before that read
@@ -78,7 +82,7 @@ Tests cover lazy execution, dependencies, forward references, write-before-read,
 initialized null, cycles, retries, explicit writes during initialization,
 late-final assignment, statics, enums, primitive conversions, runtime isolation,
 callbacks and serialized execution. The current complete suite is recorded in
-[the migration report](typed-migration-failures.md). Native code measurements and
+[the current checkpoint](current-compiler-checkpoint.md). Native code measurements and
 repeatable profiling workloads are in [the ARM64 report](typed-arm64-optimization.md).
 
 Final validation: 665 passes, 128 failures and six skips, with zero analyzer
@@ -87,20 +91,8 @@ test regressed. The remaining failures include 127 unfinished-feature errors and
 the existing Future.delayed timing assertion, which passes in isolation. Generated
 files are current and the ARM64 arithmetic path remains at 38 instructions.
 
-## Next checkpoint
+## Future optimization
 
-Completed by the [exception checkpoint](typed-exceptions.md). The plan below is
-retained as the scope of that follow-up.
-
-Implement exception handling and finally blocks before suspension. Define handler
-metadata and frame unwinding, preserve values used by catch/finally blocks in
-spills, and ensure return, break, continue and rethrow retain their pending
-completion through finally. Reuse the frontend's existing exception IR. Check
-nested calls, closure frames and failed global initialization across unwinding,
-then rerun the existing exception tests and full suite. Keep handler metadata out
-of the arithmetic loop's live registers and reinspect the full ARM64 probe.
-
-Remaining representation and bridge-method argument failures stay in the migration
-report. Default/tearoff call adapters, frame cache behavior and multiple-register
-record results remain separate performance work. Future Map/Set intrinsics can
-still use existing object registers and the shared instruction generator.
+Default and tearoff call adapters, frame cache behavior, and multiple-register
+record results remain separate performance work. Future collection intrinsics
+can use existing object registers and the shared instruction generator.

@@ -11,7 +11,7 @@ StatementInfo compilePatternVariableDeclarationStatement(
   CompilerContext ctx,
 ) {
   compilePatternVariableDeclaration(s.declaration, ctx);
-  return StatementInfo(-1);
+  return StatementInfo();
 }
 
 void compilePatternVariableDeclaration(

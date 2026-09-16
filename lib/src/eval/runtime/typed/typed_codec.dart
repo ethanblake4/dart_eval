@@ -10,7 +10,7 @@ import 'typed_closure_descriptor.dart';
 import 'typed_global.dart';
 import 'typed_exception.dart';
 
-/// Versioned little-endian format, separate from the generic register format.
+/// Versioned little-endian bytecode payload embedded in a Program.
 abstract final class TypedCodec {
   static const magic = 0x54564544; // DEVT
   static const version = 115;

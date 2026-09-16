@@ -1,9 +1,8 @@
 # Exported function API
 
-This checkpoint makes the typed compiler the only production backend. It replaces
-the old positional host list and return-wrapper convention. The reference
-register emitter, interpreter and opcode table have been removed. The original
-private `_run` prototype and `xval_ops.dart` remain as design references.
+Exported functions accept host values by parameter name and normalize return
+values at the boundary. The compiler and runtime use the same register backend
+for exported and internal calls.
 
 ```dart
 final compiler = Compiler();
@@ -53,7 +52,7 @@ not regroup arguments into separate primitive lists. `TypedMachine.runEntry`
 starts the typed switch with the prepared registers. Internal calls bypass map
 binding and use the existing register ABI, including one C overflow list.
 
-The Program envelope version is 102 and the typed payload version is 110. Old
+The Program envelope version is 103 and the typed payload version is 115. Old
 bytecode must be recompiled. Both in-memory and serialized loading retain library,
 type and bridge metadata. There is no backend selector or reference fallback.
 
@@ -75,28 +74,11 @@ List, Map and Set boundary views convert elements lazily. They preserve aliases,
 cycles and mutation without deep copying. Host-origin collections return their
 original host object. Conversion caches distinguish Runtime contexts so the same
 host collection can use different registered wrappers in different runtimes.
-This does not add Map/Set bytecodes or implement their missing source lowering.
+Map and Set source lowering is described in [collection intrinsics](typed-maps-sets.md).
 
-## Migration scope
+## Validation
 
-Existing language tests now use the map API and normalized return expectations.
-Low-level tests construct typed payloads instead of reference instruction words.
-The removed reference-finally bytecode test has no typed encoding yet; source
-exception tests retain coverage of the required language behavior.
-
-The full suite is run to establish the typed migration baseline. Unsupported
-bridge instructions, globals, closures, exceptions, async, maps/sets and remaining
-representation errors are recorded without being repaired in this checkpoint.
-Follow the failures in `typed-migration-failures.md` when resuming compiler work.
-The earlier 28-failure reference baseline is historical and is not a passing gate
-for the new backend.
-
-API merge checkpoint: 416 passed, 263 failed, six skipped; zero analyzer errors. The failure
-report groups every failed test. All export/default/identity and codec tests pass.
-The full ARM64 arithmetic path remains 38 instructions, and the opcode table
-remains at 196 entries. See `typed-arm64-optimization.md` for the measurement.
-
-The subsequent [external-call checkpoint](typed-external-calls.md) implements
-`InvokeExternal`, generated register callbacks and explicit bridge-null handling.
-Closure/global conventions and representation mismatches remain. Non-scalar
-defaults need a shared immutable constant pool before joining the export contract.
+Export tests cover defaults, named arguments, explicit nulls, host identity,
+serialized programs, and rejected arguments. Internal register calls bypass
+export adapters. See [the current checkpoint](current-compiler-checkpoint.md)
+for full-suite results and remaining limitations.

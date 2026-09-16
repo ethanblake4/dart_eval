@@ -1,5 +1,9 @@
 # ARM64 dispatch and object-call checkpoint
 
+This document records the design and measurements at successive checkpoints.
+For current format versions and suite results, see the
+[current checkpoint](current-compiler-checkpoint.md).
+
 Inspected with Dart 3.10.7 on Windows x64, cross-compiling Linux ARM64.
 The main report records the `d51f120` register ABI checkpoint; the List/String
 instruction update is recorded at the end. No ARM64
@@ -141,9 +145,9 @@ From the repository root, using LLVM tools that support AArch64:
 
 ```powershell
 .\tool\inspect_typed_arm64.ps1 -Objdump 'C:/Program Files/LLVM/bin/llvm-objdump.exe' -Objcopy 'C:/Program Files/LLVM/bin/llvm-objcopy.exe'
-dart compile exe benchmark/typed_calls.dart -o .dart_tool/typed_calls.exe
+dart compile exe benchmark/calls.dart -o .dart_tool/typed_calls.exe
 .dart_tool/typed_calls.exe 5000000 7
-dart compile exe benchmark/typed_dispatch.dart -o .dart_tool/typed_dispatch.exe
+dart compile exe benchmark/dispatch.dart -o .dart_tool/typed_dispatch.exe
 .dart_tool/typed_dispatch.exe 5000000 7
 ```
 
@@ -155,7 +159,7 @@ experiment artifacts are retained locally under `.dart_tool`.
 
 Validation reports zero analyzer errors and the full suite with 581 passes,
 six skips, and the same 30 reference-backend failure names listed in
-backend-checkpoint-failures.txt. Tests include mixed recursive calls, three-object
+the historical failure log in Git. Tests include mixed recursive calls, three-object
 phi cycles, overflow lifetime, explicit bridge semantics, signed branch endpoints,
 branch widening over 12,000 calls, serialization, and invalid input rejection.
 
@@ -189,7 +193,7 @@ in existing object registers and supplies dedicated operations on them.
 
 Validation after the List/String update: 594 passes, six skips, 29 existing
 reference failures, zero analyzer errors. The regex replacement loop now passes.
-The updated failure baseline is backend-checkpoint-failures.txt.
+The updated failure baseline is the historical failure log in Git.
 
 ## Native class checkpoint
 
@@ -224,7 +228,7 @@ and return still cost work. Alternating functions can replace the single cached
 child frame. Bridge calls, bound tear-offs and scalar operator adapters remain
 separate host invocation paths.
 
-The expanded `typed_calls.dart` benchmark verifies checksums for class mutation,
+The expanded `benchmark/calls.dart` benchmark verifies checksums for class mutation,
 alternating receiver classes at one call site, arbitrary boxed arguments and
 overflow. Windows x64 AOT, one million iterations and five samples, after the
 full test run completed:
@@ -271,8 +275,7 @@ Double add: `0x17b0b8` through `0x17b0c4`. Common tail:
 The public API and existing suite now use the typed backend exclusively.
 Validation: 416 passes, 263 failures in unfinished compiler/runtime features,
 six skips, zero analyzer errors. Export binding, codec and host identity tests
-pass. See [the migration baseline](typed-migration-failures.md) for failed names
-and their first reported errors. No speedup is claimed from these code counts.
+pass. The failure baseline at this checkpoint is available in Git history. No speedup is claimed from these code counts.
 
 ## External bridge checkpoint
 
@@ -293,7 +296,7 @@ Dispatch: `0x13f2f4` through `0x13f370`. Integer add: `0x13f4ac` through
 `0x143920` through `0x143924`. These are static instruction counts, not ARM64
 execution timings or an isolated measurement of external-call latency.
 
-`benchmark/typed_external_calls.dart` executes identical bytecode with either
+`benchmark/external_calls.dart` executes identical bytecode with either
 registration path. Its loop passes opaque object references and verifies identity
 inside the callback; compilation and runtime construction are outside timing.
 Windows x64 AOT, one million iterations, five samples, final standalone run:
@@ -335,7 +338,7 @@ Recorded range: `0x152834` to `0x157878` exclusive. Dispatch: `0x152950` through
 `0x152b78` through `0x152b84`. Common tail: `0x1572f8` through `0x1572fc`.
 These are static counts, not ARM64 execution timings.
 
-`benchmark/typed_closures.dart` compiles source before timing and constructs
+`benchmark/closures.dart` compiles source before timing and constructs
 closures outside its interpreted loop. Every workload checks its result.
 Windows x64 AOT, one million iterations, five samples:
 
@@ -378,7 +381,7 @@ Recorded range: `0x167344` to `0x16c86c` exclusive. Dispatch: `0x167488` through
 `0x1676b0` through `0x1676bc`. Common tail: `0x16c2ac` through `0x16c2b0`.
 These are static code measurements, not ARM64 timings.
 
-`benchmark/typed_globals.dart` compares a local accumulator with an initialized
+`benchmark/globals.dart` compares a local accumulator with an initialized
 native integer global and an object-global workload. It compiles before timing,
 uses independent runtimes and verifies that each lazy initializer runs once.
 Windows x64 AOT, one million iterations and five samples:
@@ -396,7 +399,7 @@ access cost. Cross-runtime ownership adds a reference to each evaluated instance
 and a runtime identity check to direct method resolution.
 
 See [the global checkpoint](typed-globals.md) for semantics and saved next steps,
-and [the migration report](typed-migration-failures.md) for full-suite results.
+and [the current checkpoint](current-compiler-checkpoint.md) for full-suite results.
 
 ## Exception checkpoint
 
@@ -428,7 +431,7 @@ Recorded switch range: `0x180bf0` to `0x186538` exclusive. Dispatch:
 These are static instruction counts, not ARM64 execution timings. Reducing the
 remaining tail reloads is separate optimization work.
 
-`benchmark/typed_exceptions.dart` compiles before timing, warms each independent
+`benchmark/exceptions.dart` compiles before timing, warms each independent
 runtime, and checks every result. Final Windows x64 AOT run, 100,001 iterations
 and three samples:
 

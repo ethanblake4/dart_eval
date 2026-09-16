@@ -39,7 +39,7 @@ Variable compilePropertyAccess(
         final V = L.getProperty(ctx, pa.propertyName.name).boxIfNeeded(ctx);
         out = out.copyWith(type: V.type.copyWith(nullable: true));
         ctx.pushOp(Assign(out.ssa, V.ssa));
-        return StatementInfo(-1);
+        return StatementInfo();
       },
       source: pa,
     );

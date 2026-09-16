@@ -24,7 +24,7 @@ List<TypeRef> compileIfElementForList(
       potentialReturnTypes.addAll(
         compileListElement(e.thenElement, list, ctx, box),
       );
-      return StatementInfo(-1);
+      return StatementInfo();
     },
     elseBranch: elseElement == null
         ? null
@@ -32,7 +32,7 @@ List<TypeRef> compileIfElementForList(
             potentialReturnTypes.addAll(
               compileListElement(elseElement, list, ctx, box),
             );
-            return StatementInfo(-1);
+            return StatementInfo();
           },
   );
 

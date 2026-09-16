@@ -220,10 +220,12 @@ final class TypedMember extends EvalFunction {
     Runtime? runtime,
   }) {
     final closure = _closure;
-    if (closure != null)
+    if (closure != null) {
       return closure.invoke(arguments, named: named, runtime: runtime);
-    if (named.isNotEmpty)
+    }
+    if (named.isNotEmpty) {
       throw UnsupportedError('Method has no named argument metadata');
+    }
     return invoke(arguments, runtime: runtime);
   }
 

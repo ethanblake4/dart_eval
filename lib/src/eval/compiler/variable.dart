@@ -11,7 +11,6 @@ import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/collection/list.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
-import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
 import 'package:dart_eval/src/eval/ir/primitives.dart';
@@ -20,53 +19,20 @@ import 'package:dart_eval/src/eval/ir/types.dart';
 import 'errors.dart';
 import 'offset_tracker.dart';
 
-/// Tracks a variable on the runtime frame.
-///
-/// Contains methods to manipulate context frame and operators,
-/// simplifying tracking variable properties in the context dictionaries
-/// and generating opcodes to use this variable.
-///
-/// Usually instantiated with [Variable.alloc] to automate [ScopeContext] updates.
-/// Expression parser in [compileExpression] returns an instance of this class.
+/// A compiler value with an SSA identity, language type and calling convention.
 class Variable {
   Variable(
-    this.scopeFrameOffset,
     this.type, {
     this.methodOffset,
     this.methodReturnType,
     this.isFinal = false,
     this.concreteTypes = const [],
     CallingConvention? callingConvention,
-    this.frameRef,
   }) : callingConvention =
            callingConvention ??
            ((type == TypeRef(dartCoreFile, 'Function') && methodOffset == null)
                ? CallingConvention.dynamic
-               : CallingConvention.static) /*,
-        todo: assert(!type.nullable || type.boxed)*/;
-
-  /// Allocates a variable of the given [type] on the scope frame.
-  /// Automatically increases the frame offset and [ScopeContext.allocNest].
-  factory Variable.alloc(
-    ScopeContext ctx,
-    TypeRef type, {
-    DeferredOrOffset? methodOffset,
-    ReturnType? methodReturnType,
-    bool isFinal = false,
-    List<TypeRef> concreteTypes = const [],
-    CallingConvention callingConvention = CallingConvention.static,
-  }) {
-    ctx.allocNest.last++;
-    return Variable(
-      ctx.scopeFrameOffset++,
-      type,
-      methodOffset: methodOffset,
-      methodReturnType: methodReturnType,
-      isFinal: isFinal,
-      concreteTypes: concreteTypes,
-      callingConvention: callingConvention,
-    );
-  }
+               : CallingConvention.static);
 
   factory Variable.ssa(
     CompilerContext ctx,
@@ -80,7 +46,6 @@ class Variable {
   }) {
     ctx.pushOp(op);
     return Variable(
-      -1,
       type,
       methodOffset: methodOffset,
       methodReturnType: methodReturnType,
@@ -101,7 +66,6 @@ class Variable {
     CallingConvention callingConvention = CallingConvention.static,
   }) {
     return Variable(
-      -1,
       type,
       methodOffset: methodOffset,
       methodReturnType: methodReturnType,
@@ -111,17 +75,12 @@ class Variable {
     )..name = ssa.name;
   }
 
-  final int scopeFrameOffset;
   final TypeRef type;
   final List<TypeRef> concreteTypes;
   final DeferredOrOffset? methodOffset;
   final ReturnType? methodReturnType;
   final bool isFinal;
   final CallingConvention callingConvention;
-
-  // If this variable is a reference to a variable in a previous stack frame,
-  // this holds the reference to the list and the index of the variable in that list.
-  final IndexedReference? frameRef;
 
   bool get boxed => type.boxed;
 
@@ -253,7 +212,6 @@ class Variable {
 
   /// Makes a copy of the variable with some fields updated.
   Variable copyWith({
-    int? scopeFrameOffset,
     TypeRef? type,
     DeferredOrOffset? methodOffset,
     ReturnType? methodReturnType,
@@ -261,17 +219,14 @@ class Variable {
     String? name,
     int? frameIndex,
     List<TypeRef>? concreteTypes,
-    IndexedReference? frameRef,
     CallingConvention? callingConvention,
   }) {
     return Variable(
-        scopeFrameOffset ?? this.scopeFrameOffset,
         type ?? this.type,
         methodOffset: methodOffset ?? this.methodOffset,
         isFinal: isFinal ?? this.isFinal,
         methodReturnType: methodReturnType ?? this.methodReturnType,
         concreteTypes: concreteTypes ?? this.concreteTypes,
-        frameRef: frameRef ?? this.frameRef,
         callingConvention: callingConvention ?? this.callingConvention,
       )
       ..name = name ?? this.name
@@ -286,24 +241,20 @@ class Variable {
   /// updates the reference on the context frame.
   Variable copyWithUpdate(
     ScopeContext? ctx, {
-    int? scopeFrameOffset,
     TypeRef? type,
     DeferredOrOffset? methodOffset,
     ReturnType? methodReturnType,
     String? name,
     int? frameIndex,
     List<TypeRef>? concreteTypes,
-    IndexedReference? frameRef,
   }) {
     var uV = copyWith(
-      scopeFrameOffset: scopeFrameOffset,
       type: type,
       methodOffset: methodOffset,
       methodReturnType: methodReturnType,
       name: name,
       frameIndex: frameIndex,
       concreteTypes: concreteTypes,
-      frameRef: frameRef,
     );
 
     if (uV.localName != null && uV.frameIndex != null && ctx != null) {
@@ -353,10 +304,7 @@ class Variable {
         final concrete = concreteTypes[0];
         return Variable.ssa(
           ctx,
-          LoadConstantType(
-            ctx.svar('var_type'),
-            concrete.toRuntimeType(ctx).type,
-          ),
+          LoadConstantType(ctx.svar('var_type'), concrete.runtimeTypeId(ctx)),
           CoreTypes.type.ref(ctx),
         );
       }
@@ -408,7 +356,7 @@ class Variable {
   @override
   String toString() {
     final varName = name == null ? 'unnamed' : '"$name"';
-    return 'Variable{$varName at L$scopeFrameOffset, $type, '
+    return 'Variable{$varName, $type, '
         '${methodOffset == null ? '' : 'method: $methodReturnType $methodOffset, '}'
         '${boxed ? 'boxed' : 'unboxed'}, F[$frameIndex]}';
   }

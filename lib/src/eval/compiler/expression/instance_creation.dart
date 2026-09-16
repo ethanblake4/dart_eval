@@ -73,7 +73,7 @@ Variable compileInstanceCreation(
           externalId,
           subclass.ssa,
           arguments.ssa,
-          runtimeTypeId: staticType.toRuntimeType(ctx).type,
+          runtimeTypeId: staticType.runtimeTypeId(ctx),
         ),
       );
     } else {

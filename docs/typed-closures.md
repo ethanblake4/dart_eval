@@ -1,5 +1,9 @@
 # Closure checkpoint
 
+This document records the design and measurements at successive checkpoints.
+For current format versions and suite results, see the
+[current checkpoint](current-compiler-checkpoint.md).
+
 The subsequent [global checkpoint](typed-globals.md) adds runtime-owned global
 state and retains the originating runtime across closures and bound methods.
 
@@ -77,15 +81,8 @@ Tests cover shared mutation, escaping and nested closures, shadowing, recursion,
 per-iteration bindings, evaluation order, native captured values, defaults,
 reordered named arguments, overflow, receiver capture, virtual method tearoffs
 and host callbacks. Runtime and codec coverage includes serialized programs.
-See [the current suite report](typed-migration-failures.md) and
+See [the current checkpoint](current-compiler-checkpoint.md) and
 [the ARM64 and benchmark measurements](typed-arm64-optimization.md).
-
-The next bounded checkpoint is global storage and initialization. Define a
-per-runtime global state layout, explicit typed load/store conversions, lazy
-initializer entry and cycle handling. Avoid eager execution of unrelated
-initializers, preserve initialization order and run fresh/serialized tests before
-the full suite. Then address exception frame restoration and finally blocks,
-followed by suspension. Broader dynamic type assertions remain unfinished.
 
 Further closure optimization should specialize defaults and tearoffs at compile
 time where possible, and measure polymorphic calls before widening the frame

@@ -43,8 +43,9 @@ Variable compileMethodInvocation(
           final bridgeOwner =
               ctx.topLevelDeclarationsMap[owner.file]?[owner.name]?.bridge;
           if (bridgeOwner is BridgeClassDef &&
-              bridgeOwner.methods.containsKey(e.methodName.name))
+              bridgeOwner.methods.containsKey(e.methodName.name)) {
             break;
+          }
           final parent = owner.extendsType;
           if (parent == null ||
               !ctx.instanceDeclarationsMap.containsKey(parent.file)) {
@@ -84,7 +85,7 @@ Variable compileMethodInvocation(
           final V = _invokeWithTarget(ctx, L!, e);
           out = out.copyWith(type: V.type.copyWith(nullable: true));
           ctx.pushOp(Assign(out.ssa, V.boxIfNeeded(ctx).ssa));
-          return StatementInfo(-1);
+          return StatementInfo();
         },
       );
       return out;
@@ -275,7 +276,7 @@ Variable compileMethodInvocation(
           ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.']!,
           subclass.ssa,
           callArgs,
-          runtimeTypeId: type.toRuntimeType(ctx).type,
+          runtimeTypeId: type.runtimeTypeId(ctx),
         ),
       );
     } else {

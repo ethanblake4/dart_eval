@@ -20,8 +20,7 @@ import 'package:dart_eval/src/eval/compiler/backend/representation.dart'
     show representationForType;
 
 void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
-  //ctx.runPrescan(d);
-  final pos = beginMethod(ctx, d, d.offset, '${d.name.lexeme}()');
+  final pos = ctx.beginFunction('${d.name.lexeme}()');
   ctx.topLevelDeclarationPositions[ctx.library]![d.name.lexeme] = pos;
 
   final overrideAnno = d.metadata.firstWhereOrNull(
@@ -51,10 +50,7 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
     );
   }
 
-  final existingAllocs =
-      d.functionExpression.parameters?.parameters.length ?? 0;
-  ctx.beginAllocScope(existingAllocLen: existingAllocs);
-  ctx.scopeFrameOffset += existingAllocs;
+  ctx.beginScope();
   TypeRef.loadTemporaryTypes(
     ctx,
     d.functionExpression.typeParameters?.typeParameters,
@@ -125,15 +121,15 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
       name: '${d.name.lexeme}()',
     );
   } else if (b is ExpressionFunctionBody) {
-    ctx.beginAllocScope();
+    ctx.beginScope();
     stInfo = doReturn(
       ctx,
       expectedReturnType,
       compileExpression(b.expression, ctx, expectedReturnType.type),
       isAsync: b.isAsynchronous,
     );
-    stInfo = StatementInfo(-1, willAlwaysReturn: true);
-    ctx.endAllocScope(popValues: false);
+    stInfo = StatementInfo(willAlwaysReturn: true);
+    ctx.endScope();
   } else {
     throw CompileError('Unsupported function body type: ${b.runtimeType}');
   }
@@ -143,12 +139,12 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   if (!(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
     if (b.isAsynchronous) {
       asyncComplete(ctx, null);
-      ctx.endAllocScope();
+      ctx.endScope();
       return;
     }
   }
 
-  ctx.endAllocScope();
+  ctx.endScope();
 
   if (!(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
     ctx.pushOp(Return(null));

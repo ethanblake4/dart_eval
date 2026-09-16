@@ -3,7 +3,6 @@ import 'package:collection/collection.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/compiler/model/function_type.dart';
-import 'package:dart_eval/src/eval/runtime/type.dart';
 
 import 'builtins.dart';
 import 'context.dart';
@@ -826,14 +825,13 @@ class TypeRef {
     };
   }
 
-  RuntimeType toRuntimeType(CompilerContext ctx) {
+  int runtimeTypeId(CompilerContext ctx) {
     if (name.startsWith('@record') && !ctx.typeRefIndexMap.containsKey(this)) {
       ctx.typeRefIndexMap[this] = ctx.typeNames.length;
       ctx.runtimeTypeList.add(this);
       ctx.typeNames.add(name);
     }
-    final ta = [for (final t in specifiedTypeArgs) t.toRuntimeType(ctx)];
-    return RuntimeType(ctx.typeRefIndexMap[this]!, ta);
+    return ctx.typeRefIndexMap[this]!;
   }
 
   List<TypeRef> get allSupertypes => [

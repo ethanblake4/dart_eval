@@ -35,13 +35,13 @@ Variable compileConditionalExpression(
       final v = compileExpression(e.thenExpression, ctx, boundType);
       types.add(v.type);
       ctx.pushOp(Assign(output.ssa, v.boxIfNeeded(ctx).ssa));
-      return StatementInfo(-1);
+      return StatementInfo();
     },
     elseBranch: (ctx, rt) {
       final v = compileExpression(e.elseExpression, ctx, boundType);
       types.add(v.type);
       ctx.pushOp(Assign(output.ssa, v.boxIfNeeded(ctx).ssa));
-      return StatementInfo(-1);
+      return StatementInfo();
     },
     resolveStateToThen: true,
     source: e,

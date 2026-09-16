@@ -222,8 +222,9 @@ class TypedBackend {
         if (id < 0 ||
             _closures.any(
               (d) => d.functionId == indices[id] && d.boundReceiver,
-            ))
+            )) {
           continue;
+        }
         final parameters =
             context.functionParameters[id] ?? const <FormalParameter>[];
         final positional = parameters.where((p) => p.isPositional).toList();
@@ -900,14 +901,14 @@ class TypedBackend {
             TypedClosureDescriptor(
               functionIndices[_resolveFunction(op.target)]!,
               captureCount: op.captures.length,
-              positionalCount: op.positionalTypes.length,
+              positionalCount: op.positionalCount,
               requiredPositional: op.requiredPositional,
               namedNames: op.namedNames,
               requiredNamed: op.requiredNamed,
               hasEnvironment: op.hasEnvironment,
               boundReceiver: op.boundReceiver,
               positionalDefaults: op.positionalDefaults.isEmpty
-                  ? List.filled(op.positionalTypes.length, null)
+                  ? List.filled(op.positionalCount, null)
                   : op.positionalDefaults,
               namedDefaults: op.namedDefaults.isEmpty
                   ? List.filled(op.namedNames.length, null)

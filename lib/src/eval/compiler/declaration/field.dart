@@ -5,7 +5,6 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
-import 'package:dart_eval/src/eval/compiler/scope.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
@@ -35,8 +34,8 @@ void compileFieldDeclaration(
         type = TypeRef.fromAnnotation(ctx, ctx.library, specifiedType);
       }
       if (initializer != null) {
-        final pos = beginMethod(ctx, field, field.offset, '$fieldName*i');
-        ctx.beginAllocScope();
+        final pos = ctx.beginFunction('$fieldName*i');
+        ctx.beginScope();
         ctx.functionSignatures[pos] = MachineFunctionSignature(
           [],
           representationForType(storageType),
@@ -57,17 +56,16 @@ void compileFieldDeclaration(
         final name = '$parentName.$fieldName';
         final index = ctx.topLevelGlobalIndices[ctx.library]![name]!;
         ctx.topLevelVariableInferredTypes[ctx.library]![name] = type;
-        ctx.topLevelGlobalInitializers[ctx.library]![name] = pos;
         ctx.runtimeGlobalInitializerMap[index] = pos;
         ctx.pushOp(Return(V.ssa));
-        ctx.endAllocScope(popValues: false);
+        ctx.endScope();
       } else {
         ctx.topLevelVariableInferredTypes[ctx
                 .library]!['$parentName.$fieldName'] =
             storageType;
       }
     } else {
-      final pos = beginMethod(ctx, d, d.offset, '$parentName.$fieldName (get)');
+      final pos = ctx.beginFunction('$parentName.$fieldName (get)');
       ctx.functionSignatures[pos] = MachineFunctionSignature([
         MachineRepresentation.object,
       ], MachineRepresentation.object);
@@ -91,12 +89,7 @@ void compileFieldDeclaration(
 
       if (!(field.isFinal || field.isConst) ||
           (d.fields.isLate && field.initializer == null)) {
-        final setterPos = beginMethod(
-          ctx,
-          d,
-          d.offset,
-          '$parentName.$fieldName (set)',
-        );
+        final setterPos = ctx.beginFunction('$parentName.$fieldName (set)');
         final receiver = SSA('arg_0');
         ctx.functionSignatures[setterPos] = MachineFunctionSignature([
           MachineRepresentation.object,

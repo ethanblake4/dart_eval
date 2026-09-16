@@ -26,5 +26,5 @@ StatementInfo compileBreakStatement(BreakStatement s, CompilerContext ctx) {
     final tail = ctx.flushBlock();
     ctx.builder.link(tail, target);
   }
-  return StatementInfo(-1, willAlwaysBreak: true);
+  return StatementInfo(willAlwaysBreak: true);
 }

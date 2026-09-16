@@ -236,7 +236,6 @@ class $num<T extends num> implements $Instance {
       );
     } on FormatException catch (e) {
       runtime.$throw($FormatException.wrap(e));
-      return null;
     }
     if (result is int) {
       return $int(result);
@@ -525,7 +524,10 @@ class $num<T extends num> implements $Instance {
 
   static const $Function __truncate = $Function(_truncate);
   static $Value? _truncate(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final evalResult = (target!.$value as num).truncate();
     return $int(evalResult);
   }
@@ -546,7 +548,10 @@ class $num<T extends num> implements $Instance {
 
   static const $Function __remainder = $Function(_remainder);
   static $Value? _remainder(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final other = args[0]!.$value as num;
     final evalResult = (target!.$value as num).remainder(other);
     if (evalResult is int) {
@@ -560,26 +565,38 @@ class $num<T extends num> implements $Instance {
 
   static const $Function __toStringAsFixed = $Function(_toStringAsFixed);
   static $Value? _toStringAsFixed(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final fractionDigits = args[0]!.$value as int;
     final evalResult = (target!.$value as num).toStringAsFixed(fractionDigits);
     return $String(evalResult);
   }
 
-  static const $Function __toStringAsExponential =
-      $Function(_toStringAsExponential);
+  static const $Function __toStringAsExponential = $Function(
+    _toStringAsExponential,
+  );
   static $Value? _toStringAsExponential(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final fractionDigits = args[0]?.$value as int?;
-    final evalResult =
-        (target!.$value as num).toStringAsExponential(fractionDigits);
+    final evalResult = (target!.$value as num).toStringAsExponential(
+      fractionDigits,
+    );
     return $String(evalResult);
   }
 
-  static const $Function __toStringAsPrecision =
-      $Function(_toStringAsPrecision);
+  static const $Function __toStringAsPrecision = $Function(
+    _toStringAsPrecision,
+  );
   static $Value? _toStringAsPrecision(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final precision = args[0]!.$value as int;
     final evalResult = (target!.$value as num).toStringAsPrecision(precision);
     return $String(evalResult);
@@ -587,28 +604,40 @@ class $num<T extends num> implements $Instance {
 
   static const $Function __ceilToDouble = $Function(_ceilToDouble);
   static $Value? _ceilToDouble(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final evalResult = (target!.$value as num).ceilToDouble();
     return $double(evalResult);
   }
 
   static const $Function __floorToDouble = $Function(_floorToDouble);
   static $Value? _floorToDouble(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final evalResult = (target!.$value as num).floorToDouble();
     return $double(evalResult);
   }
 
   static const $Function __roundToDouble = $Function(_roundToDouble);
   static $Value? _roundToDouble(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final evalResult = (target!.$value as num).roundToDouble();
     return $double(evalResult);
   }
 
   static const $Function __truncateToDouble = $Function(_truncateToDouble);
   static $Value? _truncateToDouble(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final evalResult = (target!.$value as num).truncateToDouble();
     return $double(evalResult);
   }
@@ -789,7 +818,6 @@ class $int extends $num<int> {
       result = int.parse(source, radix: radix);
     } on FormatException catch (e) {
       runtime.$throw($FormatException.wrap(e));
-      return null;
     }
 
     return $int(result);
@@ -989,7 +1017,10 @@ class $int extends $num<int> {
 
   static const $Function __modInverse = $Function(_modInverse);
   static $Value? _modInverse(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final modulus = args[0]!.$value as int;
     final evalResult = (target!.$value as int).modInverse(modulus);
     return $int(evalResult);
@@ -997,7 +1028,10 @@ class $int extends $num<int> {
 
   static const $Function __toSigned = $Function(_toSigned);
   static $Value? _toSigned(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final width = args[0]!.$value as int;
     final evalResult = (target!.$value as int).toSigned(width);
     return $int(evalResult);
@@ -1005,7 +1039,10 @@ class $int extends $num<int> {
 
   static const $Function __toUnsigned = $Function(_toUnsigned);
   static $Value? _toUnsigned(
-      Runtime runtime, $Value? target, List<$Value?> args) {
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
     final width = args[0]!.$value as int;
     final evalResult = (target!.$value as int).toUnsigned(width);
     return $int(evalResult);
@@ -1127,7 +1164,6 @@ class $double extends $num<double> {
         }
       }
       runtime.$throw($FormatException.wrap(e));
-      return null;
     }
     return $double(result);
   }

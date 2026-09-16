@@ -1,16 +1,11 @@
 # Typed backend implementation
 
-Current production integration: [exported function API](typed-exports.md).
-Latest checkpoint: [global storage and initialization](typed-globals.md).
-`Compiler.compile` and `Runtime.executeLib` now use the typed backend exclusively.
-`executeLib` and `eval` bind a parameter-name map and return normalized host values.
-The checkpoints below preserve the implementation history; the reference backend
-has since been removed. See the typed migration failure report for current gaps.
-
-The user approved implementation on 2026-09-13. This supersedes the pause and
-generic-runtime-first order in backend-checkpoint.md. Commit and push each
-verified stage in both repositories. Preserve the adjacent package's unrelated
-working-tree fixture edits.
+The compiler and runtime use one register backend. Public host calls bind a
+parameter-name map and return normalized values; internal calls use registers.
+See [the current checkpoint](current-compiler-checkpoint.md) for verification and
+remaining language limitations, and [the exported function API](typed-exports.md)
+for host entrypoints. The implementation checkpoints below retain the design and
+measurement history; counts and versions describe their respective checkpoints.
 
 ## Requirements
 
@@ -142,7 +137,7 @@ Dedicated String registers are deferred. The full-loop experiment found shorter
 String handlers but an extra unconditional spill store on every dispatch for each
 added String local. See [String register measurements](typed-string-registers.md).
 Dynamic invocation uses canonical boxed `$Value?` arguments and results, with raw
-null as the internal null representation. It preserves `$InstanceImpl` and custom
+null as the internal null representation. It preserves guest instances and custom
 `$Instance` identities. There is no per-call representation guessing or
 `wrapAlways` in the typed path. The public host entry adapter normalizes raw host
 objects once; raw Dart functions become explicit `TypedHostFunction` adapters.
@@ -233,7 +228,7 @@ failures, six skips; analysis has zero errors. The regex replacement loop now
 passes. Representation normalization before throw/return preserves completion
 operands when a handler needs the same local in a different representation.
 The remaining failure names match
-backend-checkpoint-failures.txt. Focused tests cover argument permutations,
+the historical failure log in Git. Focused tests cover argument permutations,
 repeated values, unused parameters, five-scalar register calls, recursive overflow,
 boxed interop, and serialized reference conversion metadata.
 

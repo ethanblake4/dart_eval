@@ -1,7 +1,6 @@
 import 'package:dart_eval/src/eval/compiler/context.dart';
 
-/// An structure pointing to a function that may or may not have been generated already. If it hasn't, the exact program
-/// offset will be resolved later by the [OffsetTracker]
+/// A function ID or declaration reference resolved when the backend links calls.
 class DeferredOrOffset {
   DeferredOrOffset({
     this.offset,
@@ -9,7 +8,6 @@ class DeferredOrOffset {
     this.name,
     this.className,
     this.methodType,
-    this.targetScopeFrameOffset,
     this.targetName,
   }) : assert(offset != null || name != null);
 
@@ -18,7 +16,6 @@ class DeferredOrOffset {
   final String? className;
   final int? methodType;
   final String? name;
-  final int? targetScopeFrameOffset;
   final String? targetName;
 
   factory DeferredOrOffset.lookupStatic(

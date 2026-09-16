@@ -71,5 +71,5 @@ StatementInfo doReturn(
     }
   }
 
-  return StatementInfo(-1, willAlwaysReturn: true);
+  return StatementInfo(willAlwaysReturn: true);
 }

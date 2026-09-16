@@ -26,7 +26,7 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
   }
 
   V = V.boxIfNeeded(ctx);
-  final typeId = slot.toRuntimeType(ctx).type;
+  final typeId = slot.runtimeTypeId(ctx);
   if (slot.nullable) {
     macroBranch(
       ctx,
@@ -45,7 +45,7 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
       },
       thenBranch: (ctx, _) {
         ctx.pushOp(AssertType(V.ssa, typeId));
-        return StatementInfo(-1);
+        return StatementInfo();
       },
     );
   } else {

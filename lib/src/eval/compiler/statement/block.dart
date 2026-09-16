@@ -1,5 +1,4 @@
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:dart_eval/src/eval/compiler/model/label.dart';
 
 import '../context.dart';
 import 'statement.dart';
@@ -12,14 +11,12 @@ StatementInfo compileBlock(
   String name = '<block>',
   bool skipClassBoxing = false,
 }) {
-  final position = ctx.blockCode.length;
-  ctx.beginAllocScope();
+  ctx.beginScope();
 
   var willAlwaysReturn = false;
   var willAlwaysThrow = false;
   var willAlwaysBreak = false;
 
-  ctx.labels.add(SimpleCompilerLabel());
   for (final s in b.statements) {
     final stInfo = compileStatement(
       s,
@@ -41,12 +38,10 @@ StatementInfo compileBlock(
       break;
     }
   }
-  ctx.labels.removeLast();
 
-  ctx.endAllocScope(popValues: !willAlwaysThrow && !willAlwaysReturn);
+  ctx.endScope();
 
   return StatementInfo(
-    position,
     willAlwaysReturn: willAlwaysReturn,
     willAlwaysThrow: willAlwaysThrow,
     willAlwaysBreak: willAlwaysBreak,

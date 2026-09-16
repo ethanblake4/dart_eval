@@ -84,7 +84,7 @@ List<TypeRef> compileForElementForList(
       condition: (ctx) => iterator.invoke(ctx, 'moveNext', []).result,
       body: (ctx, ert) {
         potentialReturnTypes.addAll(compileListElement(e.body, list, ctx, box));
-        return StatementInfo(-1);
+        return StatementInfo();
       },
       update: (ctx) =>
           loopVariable.setValue(ctx, iterator.getProperty(ctx, 'current')),
@@ -108,7 +108,7 @@ List<TypeRef> compileForElementForList(
           : (ctx) => compileExpression(parts.condition!, ctx),
       body: (ctx, ert) {
         potentialReturnTypes.addAll(compileListElement(e.body, list, ctx, box));
-        return StatementInfo(-1);
+        return StatementInfo();
       },
       update: (ctx) {
         for (final u in parts.updaters) {

@@ -6,7 +6,6 @@ import 'package:dart_eval/src/eval/compiler/declaration/constructor.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/offset_tracker.dart';
-import 'package:dart_eval/src/eval/compiler/scope.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
@@ -46,13 +45,11 @@ void compileEnumDeclaration(
   }
   var i = 0;
   if (constructors.isEmpty) {
-    ctx.resetStack(position: 0);
     ctx.currentClass = d;
     compileDefaultConstructor(ctx, d, fields);
   }
 
-  ctx.resetStack(position: 0);
-  final pos = beginMethod(ctx, d, d.offset, '$clsName.index (get)');
+  final pos = ctx.beginFunction('$clsName.index (get)');
   ctx.functionSignatures[pos] = const MachineFunctionSignature([
     MachineRepresentation.object,
   ], MachineRepresentation.object);
@@ -66,12 +63,6 @@ void compileEnumDeclaration(
   i++;
 
   for (final m in <ClassMember>[...fields, ...methods, ...constructors]) {
-    ctx.resetStack(
-      position:
-          m is ConstructorDeclaration || (m is MethodDeclaration && m.isStatic)
-          ? 0
-          : 1,
-    );
     ctx.currentClass = d;
     compileDeclaration(m, ctx, parent: d, fieldIndex: i, fields: fields);
     if (m is FieldDeclaration) {
@@ -82,8 +73,8 @@ void compileEnumDeclaration(
   var idx = 0;
   for (final constant in d.constants) {
     final cName = constant.name.lexeme;
-    ctx.resetStack(position: 0);
-    final pos = beginMethod(ctx, constant, constant.offset, '$cName*i');
+
+    final pos = ctx.beginFunction('$cName*i');
     ctx.functionSignatures[pos] = const MachineFunctionSignature(
       [],
       MachineRepresentation.object,
@@ -129,12 +120,10 @@ void compileEnumDeclaration(
     ctx.globalsFinal.add(index);
     ctx.globalNames[index] = name;
     ctx.topLevelVariableInferredTypes[ctx.library]![name] = type;
-    ctx.topLevelGlobalInitializers[ctx.library]![name] = pos;
     ctx.runtimeGlobalInitializerMap[index] = pos;
     ctx.pushOp(Return(V.ssa));
     idx++;
   }
 
   ctx.currentClass = null;
-  ctx.resetStack();
 }

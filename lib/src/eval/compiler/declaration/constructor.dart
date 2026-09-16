@@ -12,7 +12,6 @@ import 'package:dart_eval/src/eval/compiler/helpers/fpl.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/return.dart';
 import 'package:dart_eval/src/eval/compiler/offset_tracker.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
-import 'package:dart_eval/src/eval/compiler/scope.dart';
 import 'package:dart_eval/src/eval/compiler/source.dart';
 import 'package:dart_eval/src/eval/compiler/statement/block.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
@@ -40,17 +39,9 @@ void compileConstructorDeclaration(
     throw CompileError('Factory constructors cannot have initializers', d);
   }
 
-  ctx.topLevelDeclarationPositions[ctx.library]![n] = beginMethod(
-    ctx,
-    d,
-    d.offset,
-    '$n()',
-  );
+  ctx.topLevelDeclarationPositions[ctx.library]![n] = ctx.beginFunction('$n()');
 
-  ctx.beginAllocScope(
-    existingAllocLen: d.parameters.parameters.length + (isEnum ? 2 : 0),
-  );
-  ctx.scopeFrameOffset = d.parameters.parameters.length + (isEnum ? 2 : 0);
+  ctx.beginScope();
 
   if (isEnum) {
     ctx.pushOp(Parameter(SSA('arg_0'), 0));
@@ -198,7 +189,7 @@ void compileConstructorDeclaration(
         name: '$n()',
       );
     } else if (b is ExpressionFunctionBody) {
-      ctx.beginAllocScope();
+      ctx.beginScope();
       final V = compileExpression(b.expression, ctx);
       stInfo = doReturn(
         ctx,
@@ -206,7 +197,7 @@ void compileConstructorDeclaration(
         V,
         isAsync: b.isAsynchronous,
       );
-      ctx.endAllocScope();
+      ctx.endScope();
     } else {
       throw CompileError('Unknown function body type ${b.runtimeType}', d);
     }
@@ -218,7 +209,7 @@ void compileConstructorDeclaration(
       );
     }
 
-    ctx.endAllocScope(popValues: false);
+    ctx.endScope();
     return;
   }
 
@@ -423,7 +414,7 @@ void compileConstructorDeclaration(
 
   final body = d.body;
   if (d.factoryKeyword == null && body is! EmptyFunctionBody) {
-    ctx.beginAllocScope();
+    ctx.beginScope();
     ctx.setLocal('#this', inst);
     if (body is BlockFunctionBody) {
       compileBlock(
@@ -436,7 +427,7 @@ void compileConstructorDeclaration(
       final V = compileExpression(body.expression, ctx);
       doReturn(ctx, AlwaysReturnType(CoreTypes.voidType.ref(ctx), false), V);
     }
-    ctx.endAllocScope();
+    ctx.endScope();
   }
 
   if ($extends != null && extendsDecl!.isBridge) {
@@ -490,7 +481,7 @@ void compileConstructorDeclaration(
           ctx,
           ctx.library,
           $extends.superclass,
-        ).toRuntimeType(ctx).type,
+        ).runtimeTypeId(ctx),
       ),
       CoreTypes.dynamic.ref(ctx),
     );
@@ -500,7 +491,7 @@ void compileConstructorDeclaration(
     ctx.pushOp(Return(inst.ssa));
   }
 
-  ctx.endAllocScope(popValues: false);
+  ctx.endScope();
 }
 
 void compileDefaultConstructor(
@@ -511,12 +502,7 @@ void compileDefaultConstructor(
   final parentName = parent.name.lexeme;
   final n = '$parentName.';
 
-  ctx.topLevelDeclarationPositions[ctx.library]![n] = beginMethod(
-    ctx,
-    parent,
-    parent.offset,
-    '$n()',
-  );
+  ctx.topLevelDeclarationPositions[ctx.library]![n] = ctx.beginFunction('$n()');
 
   final isEnum = parent is EnumDeclaration;
   ctx.functionSignatures[ctx.topLevelDeclarationPositions[ctx
@@ -524,8 +510,7 @@ void compileDefaultConstructor(
     isEnum ? [MachineRepresentation.object, MachineRepresentation.object] : [],
     MachineRepresentation.object,
   );
-  ctx.beginAllocScope(existingAllocLen: isEnum ? 2 : 0);
-  ctx.scopeFrameOffset += isEnum ? 2 : 0;
+  ctx.beginScope();
   if (isEnum) {
     ctx.pushOp(Parameter(SSA('arg_0'), 0));
     ctx.pushOp(Parameter(SSA('arg_1'), 1));
@@ -651,7 +636,7 @@ void compileDefaultConstructor(
           ctx,
           ctx.library,
           $extends.superclass,
-        ).toRuntimeType(ctx).type,
+        ).runtimeTypeId(ctx),
       ),
     );
     ctx.pushOp(ParentBridgeSuperShim($super.ssa, bridgeInst));
@@ -660,7 +645,7 @@ void compileDefaultConstructor(
     ctx.pushOp(Return(inst));
   }
 
-  ctx.endAllocScope(popValues: false);
+  ctx.endScope();
 }
 
 Map<String, int> _getFieldIndices(

@@ -96,13 +96,14 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
         inputs(operation, slot.representation);
       case StringOperation(:final string, :final argument, :final operator):
         constrain(string, MachineRepresentation.string);
-        if (argument != null)
+        if (argument != null) {
           constrain(
             argument,
             operator == StringOperator.concatenate
                 ? MachineRepresentation.string
                 : integer,
           );
+        }
         output(
           operation,
           operator == StringOperator.length ||

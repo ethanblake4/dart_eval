@@ -98,11 +98,11 @@ StatementInfo compileTryStatement(
 
   final bodyInfo = compileBlock(s.body, expectedReturnType, ctx);
   finishProtected(bodyInfo);
-  var catchInfo = StatementInfo(-1, willAlwaysThrow: true);
+  var catchInfo = StatementInfo(willAlwaysThrow: true);
   if (catchBlock != null) {
     ctx.builder = BasicBlockBuilder(ctx.activeGraph, [catchBlock], parent);
     restoreBindings();
-    ctx.beginAllocScope();
+    ctx.beginScope();
     final exception = Variable.ssa(
       ctx,
       CaughtException(ctx.svar('exception')),
@@ -117,7 +117,7 @@ StatementInfo compileTryStatement(
       expectedReturnType,
     );
     ctx.caughtExceptionTargets.removeLast();
-    ctx.endAllocScope();
+    ctx.endScope();
     finishProtected(catchInfo);
   }
   StatementInfo? finalInfo;
@@ -173,7 +173,7 @@ StatementInfo _compileCatchClause(
         IsType(
           ctx.svar('is_exception_type'),
           exceptionVar.ssa,
-          slot.toRuntimeType(ctx).type,
+          slot.runtimeTypeId(ctx),
           false,
         ),
         CoreTypes.bool.ref(ctx).copyWith(boxed: false),
@@ -189,7 +189,7 @@ StatementInfo _compileCatchClause(
     elseBranch: clauses.length <= index + 1
         ? (ctx, _) {
             ctx.pushOp(Rethrow(ctx.caughtExceptionTargets.last));
-            return StatementInfo(-1, willAlwaysThrow: true);
+            return StatementInfo(willAlwaysThrow: true);
           }
         : (ctx, expectedReturnType) {
             return _compileCatchClause(

@@ -1,20 +1,8 @@
-import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/async.dart';
 import 'context.dart';
-
-int beginMethod(
-  CompilerContext ctx,
-  AstNode scopeHost,
-  int offset,
-  String name, [
-  bool isRoot = false,
-]) {
-  ctx.entrypoint = ctx.entrypoints.contains(scopeHost);
-  return ctx.beginFunction(name);
-}
 
 void setupAsyncFunction(CompilerContext ctx) {
   ctx.setLocal(
@@ -25,5 +13,4 @@ void setupAsyncFunction(CompilerContext ctx) {
       AsyncTypes.completer.ref(ctx),
     ),
   );
-  ctx.nearestAsyncFrame = ctx.locals.length - 1;
 }

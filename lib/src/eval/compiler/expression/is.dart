@@ -24,7 +24,7 @@ Variable compileIsExpression(IsExpression e, CompilerContext ctx) {
   /// Otherwise do a runtime test
   return Variable.ssa(
     ctx,
-    IsType(ctx.svar('is_type'), V.ssa, slot.toRuntimeType(ctx).type, not),
+    IsType(ctx.svar('is_type'), V.ssa, slot.runtimeTypeId(ctx), not),
     CoreTypes.bool.ref(ctx).copyWith(boxed: false),
   );
 }

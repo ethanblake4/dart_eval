@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:args/args.dart';
 import 'package:dart_eval/dart_eval.dart';
@@ -111,8 +112,21 @@ void main(List<String> args) {
       exit(command['help'] ? 0 : 1);
     }
     final evc = File(command.rest[0]).readAsBytesSync();
-    final runtime = Runtime(evc.buffer);
-    runtime.printOpcodes();
+    final program = Program.read(evc.buffer).typedProgram;
+    final bytes = ByteData.sublistView(program.code);
+    for (var pc = 0; pc < program.code.length;) {
+      final instruction = TypedOp.instructions[program.code[pc]];
+      final operand = switch (instruction.immediate) {
+        TypedImmediate.none => '',
+        TypedImmediate.branch => ' ${bytes.getUint32(pc + 1, Endian.little)}',
+        TypedImmediate.shortBranch =>
+          ' ${pc + instruction.length + bytes.getInt16(pc + 1, Endian.little)}',
+        TypedImmediate.integer => ' ${bytes.getInt16(pc + 1, Endian.little)}',
+        _ => ' ${bytes.getUint16(pc + 1, Endian.little)}',
+      };
+      print('$pc: ${instruction.name}$operand');
+      pc += instruction.length;
+    }
   } else if (command.name == 'bind') {
     if (command['help']!) {
       print('bind: Generate bindings for a Dart project');

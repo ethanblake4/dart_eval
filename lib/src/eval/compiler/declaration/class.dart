@@ -36,17 +36,10 @@ void compileClassDeclaration(
   }
   var i = 0;
   if (constructors.isEmpty) {
-    ctx.resetStack(position: 0);
     ctx.currentClass = d;
     compileDefaultConstructor(ctx, d, fields);
   }
   for (final m in <ClassMember>[...fields, ...methods, ...constructors]) {
-    ctx.resetStack(
-      position:
-          m is ConstructorDeclaration || (m is MethodDeclaration && m.isStatic)
-          ? 0
-          : 1,
-    );
     ctx.currentClass = d;
     compileDeclaration(m, ctx, parent: d, fieldIndex: i, fields: fields);
     if (m is FieldDeclaration) {
@@ -54,5 +47,4 @@ void compileClassDeclaration(
     }
   }
   ctx.currentClass = null;
-  ctx.resetStack();
 }

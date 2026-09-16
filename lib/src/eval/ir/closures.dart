@@ -8,9 +8,8 @@ final class CreateClosure extends Operation {
   final DeferredOrOffset target;
   final List<SSA> captures;
   final int requiredPositional;
-  final List<Object?> positionalTypes;
+  final int positionalCount;
   final List<String> namedNames;
-  final List<Object?> namedTypes;
   final bool boundReceiver;
   final bool hasEnvironment;
   final List<Object?> positionalDefaults;
@@ -24,9 +23,8 @@ final class CreateClosure extends Operation {
     this.target,
     this.captures, {
     this.requiredPositional = 0,
-    this.positionalTypes = const [],
+    this.positionalCount = 0,
     this.namedNames = const [],
-    this.namedTypes = const [],
     this.boundReceiver = false,
     this.hasEnvironment = true,
     this.positionalDefaults = const [],
@@ -50,9 +48,8 @@ final class CreateClosure extends Operation {
       target,
       captures.map((value) => replacements[value] ?? value).toList(),
       requiredPositional: requiredPositional,
-      positionalTypes: positionalTypes,
+      positionalCount: positionalCount,
       namedNames: namedNames,
-      namedTypes: namedTypes,
       boundReceiver: boundReceiver,
       hasEnvironment: hasEnvironment,
       positionalDefaults: positionalDefaults,
