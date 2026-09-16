@@ -312,13 +312,10 @@ class IdentifierReference implements Reference {
           );
         }
         final $this = ctx.lookupLocal('#this')!;
-        final op = SetPropertyDynamic(
-          $this.ssa,
-          name,
-          value.boxIfNeeded(ctx, source).ssa,
-        );
+        final stored = value.boxIfNeeded(ctx, source);
+        final op = SetPropertyDynamic($this.ssa, name, stored.ssa);
         ctx.pushOp(op);
-        return value;
+        return stored;
       }
     }
 

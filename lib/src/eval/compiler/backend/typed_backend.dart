@@ -67,6 +67,15 @@ final class TypedOperation extends cfg.Operation {
   @override
   bool get isTerminator => terminal;
   @override
+  bool get isConditionalBranch =>
+      terminal &&
+      inputs.length == 1 &&
+      codes.every(
+        (code) =>
+            TypedOp.instructions[code].immediate == TypedImmediate.branch ||
+            TypedOp.instructions[code].immediate == TypedImmediate.shortBranch,
+      );
+  @override
   TypedOperation copyWith({cfg.SSA? writesTo, Set<cfg.SSA>? readsFrom}) =>
       copyWithOperands(
         writesTo: writesTo,

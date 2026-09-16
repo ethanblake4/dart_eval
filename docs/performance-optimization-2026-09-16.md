@@ -45,3 +45,13 @@ The AOT callback benchmark compiles once, resolves each callback once, reuses ar
 The callback changes and current allocator work pass all 817 dart_eval tests. Focused callback coverage includes fresh and serialized closures, captures, bound receivers, reentrancy, exceptions, and asynchronous results. Scoped analysis is clean.
 
 Register/opcode/inlining experiments are isolated from production. They measure source-generated workloads as well as call benchmarks, and must preserve room for future collection intrinsics.
+
+## Conditional register carry and remaining correctness
+
+The constrained allocator now carries registers into each ordinary forward branch successor with one predecessor. Joins and backedges still use canonical spill slots. An explicit operation marker prevents synthetic exception edges from inheriting registers. RPO positions are indexed once rather than searched repeatedly.
+
+The particles workload drops two static spill/reload instructions and four bytes; checkout drops three spill/reloads and eight bytes; events drops one spill/reload and two bytes. Other workloads are mostly unchanged. This is a conservative improvement, not a global register allocator.
+
+An additional correctness regression found while preparing callback workloads is fixed: implicit instance-field assignment now returns the boxed representation actually stored. Prefix and compound updates previously could try to box that value again. Fresh and serialized regression coverage includes fields, captures, and globals.
+
+The sibling control_flow_graph allocator checkpoint is `7dc5626`. Its twelve existing string-fixture failures reproduced exactly against the old library. The subsequent test refactor replaces shared mutable snapshots with independent graph/SSA/liveness/allocation assertions and executable loop cases, including zero, one, and multiple iterations. All 65 CFG tests now pass, with clean analysis of changed test files.

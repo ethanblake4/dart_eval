@@ -26,6 +26,25 @@ void checkBoth(Program program, Object? expected) {
 
 void main() {
   test(
+    'implicit field prefix and compound assignment return stored representation',
+    () {
+      checkBoth(
+        compile('''
+      class Counter {
+        int value=0;
+        int next()=>++value;
+        int add()=>value+=3;
+      }
+      Function callback(){var value=0; return (){value++;return value;};}
+      int global=0;
+      int main(){final c=Counter(); final cb=callback();
+        return c.next()*1000+c.add()*100+(++global)*10+(cb() as int);}
+    '''),
+        1411,
+      );
+    },
+  );
+  test(
     'known integer bitwise and shift operations stay in integer registers',
     () {
       for (final (operator, expected) in [
@@ -86,7 +105,10 @@ void main() {
       final names = opNames(program.typedProgram);
       expect(names.where((name) => name == 'aListLengthR').length, 2);
       // The element 9 escapes to add and must still be boxed. Lengths do not.
-      expect(names.where((name) => name == 'rBoxA' || name == 'rBoxB').length, 1);
+      expect(
+        names.where((name) => name == 'rBoxA' || name == 'rBoxB').length,
+        1,
+      );
       expect(names, isNot(contains('aFromR')));
     },
   );
