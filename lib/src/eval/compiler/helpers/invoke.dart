@@ -135,6 +135,12 @@ extension Invoke on Variable {
       '/': NumericOperator.divide,
       '~/': NumericOperator.truncatingDivide,
       '%': NumericOperator.modulo,
+      '&': NumericOperator.bitAnd,
+      '|': NumericOperator.bitOr,
+      '^': NumericOperator.bitXor,
+      '<<': NumericOperator.shiftLeft,
+      '>>': NumericOperator.shiftRight,
+      '>>>': NumericOperator.unsignedShiftRight,
       '<': NumericOperator.lessThan,
       '<=': NumericOperator.lessThanOrEqual,
       '>': NumericOperator.greaterThan,
@@ -167,7 +173,10 @@ extension Invoke on Variable {
             forceAllowDynamic: false,
           );
       if ((integerOperands && method != '/') ||
-          (doubleOperands && method != '~/' && method != '%')) {
+          (doubleOperands &&
+              !numericOperator.isIntegerOnly &&
+              method != '~/' &&
+              method != '%')) {
         final receiver = unboxIfNeeded(ctx);
         final right = args.single.ssa == ssa
             ? receiver

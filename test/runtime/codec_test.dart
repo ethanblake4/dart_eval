@@ -54,6 +54,24 @@ TypedProgram _recursive() {
 }
 
 void main() {
+  test('target validation uses entry order independently of function IDs', () {
+    TypedProgram make(int displacement, int catchTarget) => TypedProgram(
+      Uint8List.fromList([
+        TypedOp.aReturn,
+        TypedOp.jumpShort,
+        displacement & 255,
+        (displacement >> 8) & 255,
+      ]),
+      functions: const [TypedFunction(1), TypedFunction(0)],
+      exceptionRegions: [TypedExceptionRegion(0, catchTarget: catchTarget)],
+    );
+    final restored = TypedProgram.read(make(-3, 1).write().buffer);
+    expect(restored.functions.first.entry, 1);
+    expect(() => make(-4, 1), throwsFormatException);
+    expect(() => make(-3, 0), throwsFormatException);
+    expect(() => make(-3, 2), throwsFormatException);
+  });
+
   test(
     'closure signatures and ordered calls round trip with immutable defaults',
     () {

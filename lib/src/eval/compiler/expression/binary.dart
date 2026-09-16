@@ -32,6 +32,7 @@ final binaryOpMap = {
   TokenType.AMPERSAND: '&',
   TokenType.LT_LT: '<<',
   TokenType.GT_GT: '>>',
+  TokenType.GT_GT_GT: '>>>',
   TokenType.BANG_EQ: '!=',
   TokenType.CARET: '^',
   TokenType.TILDE_SLASH: '~/',
@@ -55,6 +56,9 @@ Variable compileBinaryExpression(
       return _compileShortCircuit(ctx, L, e.rightOperand, method);
   }
 
+  // Evaluating the right operand can assign or change the representation of a
+  // local used by the left operand. Preserve its already evaluated value.
+  L = Variable.ssa(ctx, Assign(ctx.svar('binary_left'), L.ssa), L.type);
   var R = compileExpression(e.rightOperand, ctx, boundType);
 
   return L.invoke(ctx, method, [R]).result;

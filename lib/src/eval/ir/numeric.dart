@@ -9,6 +9,12 @@ enum NumericOperator {
   divide,
   truncatingDivide,
   modulo,
+  bitAnd,
+  bitOr,
+  bitXor,
+  shiftLeft,
+  shiftRight,
+  unsignedShiftRight,
   lessThan,
   lessThanOrEqual,
   greaterThan,
@@ -17,6 +23,8 @@ enum NumericOperator {
   notEqual;
 
   bool get isComparison => index >= lessThan.index;
+  bool get isIntegerOnly =>
+      index >= bitAnd.index && index <= unsignedShiftRight.index;
 }
 
 /// An operation on two values of the same primitive numeric representation.
@@ -61,7 +69,10 @@ final class NumericBinary extends Operation {
   @override
   bool get isPure =>
       operator != NumericOperator.truncatingDivide &&
-      operator != NumericOperator.modulo;
+      operator != NumericOperator.modulo &&
+      operator != NumericOperator.shiftLeft &&
+      operator != NumericOperator.shiftRight &&
+      operator != NumericOperator.unsignedShiftRight;
   @override
   Operation copyWith({SSA? writesTo, Set<SSA>? readsFrom}) => copyWithOperands(
     writesTo: writesTo,

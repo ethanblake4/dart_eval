@@ -36,6 +36,16 @@ void main() {
     for (var pc = 0; pc < program.code.length;) {
       final instruction = TypedOp.instructions[program.code[pc]];
       instructions.add(instruction.immediate.name);
+      if (instruction.immediate == TypedImmediate.shortBranch) {
+        final encoded = program.code[pc + 1] | (program.code[pc + 2] << 8);
+        final displacement = encoded >= 0x8000 ? encoded - 0x10000 : encoded;
+        final target = pc + instruction.length + displacement;
+        expect(
+          program.code[target],
+          isNot(isIn([TypedOp.jump, TypedOp.jumpShort])),
+          reason: 'Loop branches should bypass jump-only blocks',
+        );
+      }
       pc += instruction.length;
     }
     expect(instructions.contains('shortBranch'), isTrue);

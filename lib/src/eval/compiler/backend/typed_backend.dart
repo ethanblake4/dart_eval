@@ -36,6 +36,7 @@ import 'package:dart_eval/dart_eval_bridge.dart' show CoreTypes;
 import '../context.dart';
 import '../offset_tracker.dart';
 import 'representation.dart';
+import 'primitive_optimization.dart';
 
 /// A fixed-location instruction family before allocation chooses its opcode.
 final class TypedOperation extends cfg.Operation {
@@ -98,6 +99,77 @@ final class _Bytes extends cfg.Instruction {
             (otherTarget == null
                 ? 0
                 : TypedOp.instructions[TypedOp.jump].length);
+}
+
+/// Keep labels, including exception destinations, while choosing fallthroughs.
+Map<int, List<_Bytes>> _layoutBlocks(Map<int, List<_Bytes>> blocks) {
+  final originalOrder = blocks.keys.toList();
+  // The CFG assembler omits jumps for its own layout. Restore those edges
+  // before changing order, including fallthrough through an empty block.
+  for (var i = 0; i + 1 < originalOrder.length; i++) {
+    final code = blocks[originalOrder[i]]!;
+    if (code.isEmpty || !TypedOp.instructions[code.last.code].terminates) {
+      code.add(_Bytes(TypedOp.jump, originalOrder[i + 1]));
+    }
+  }
+  final redirects = <int, int>{};
+  int destination(int target) {
+    final path = <int>{};
+    while (!redirects.containsKey(target) && path.add(target)) {
+      final code = blocks[target]!;
+      if (code.length != 1 || code.single.code != TypedOp.jump) break;
+      target = code.single.immediate!;
+    }
+    final result = redirects[target] ?? target;
+    for (final id in path) {
+      redirects[id] = result;
+    }
+    return result;
+  }
+
+  // Resolve against the original lists, before rewriting any of them.
+  for (final id in originalOrder) {
+    destination(id);
+  }
+  for (final code in blocks.values) {
+    for (var i = 0; i < code.length; i++) {
+      final instruction = code[i];
+      if (TypedOp.instructions[instruction.code].immediate ==
+          TypedImmediate.branch) {
+        code[i] = _Bytes(instruction.code, redirects[instruction.immediate]!);
+      }
+    }
+  }
+  final aliases = <int, List<int>>{};
+  for (final id in originalOrder) {
+    final target = redirects[id]!;
+    if (id != target) (aliases[target] ??= []).add(id);
+  }
+  final ordered = <int, List<_Bytes>>{};
+  for (final start in originalOrder) {
+    var id = redirects[start]!;
+    while (!ordered.containsKey(id)) {
+      final code = blocks[id]!;
+      // Preserve forwarding labels at their destination without emitting
+      // unreachable trampoline instructions. Cycles retain a real self-jump.
+      for (final alias in aliases[id] ?? const <int>[]) {
+        ordered[alias] = [];
+      }
+      ordered[id] = code;
+      if (code.isEmpty || code.last.code != TypedOp.jump) break;
+      id = code.last.immediate!;
+    }
+  }
+  final order = ordered.keys.toList();
+  for (var i = 0; i + 1 < order.length; i++) {
+    final code = ordered[order[i]]!;
+    if (code.isNotEmpty &&
+        code.last.code == TypedOp.jump &&
+        code.last.immediate == redirects[order[i + 1]]) {
+      code.removeLast();
+    }
+  }
+  return ordered;
 }
 
 /// Lowers an entrypoint to fixed typed registers and byte instructions.
@@ -471,7 +543,8 @@ class TypedBackend {
     final firstCompletion = _completionJumps.length;
     final spillCounts = [0, 0, 0, 0];
     var outgoingCount = 0;
-    final sourceGraph = context.ssaFunctionGraphs[id]!;
+    final sourceGraph = context.ssaFunctionGraphs[id]!.clone();
+    optimizePrimitives(sourceGraph);
     final representations = analyzeRepresentations(
       sourceGraph,
       functions: context.functionSignatures,
@@ -1598,7 +1671,7 @@ class TypedBackend {
     // Expand the second edge before relaxation so both branch distances use
     // the final instruction positions. Every branch starts short and can only
     // widen, guaranteeing that this layout process terminates.
-    final assembled = {
+    final assembled = _layoutBlocks({
       for (final block in blocks.entries)
         block.key: <_Bytes>[
           for (final instruction in block.value.cast<_Bytes>()) ...[
@@ -1608,7 +1681,7 @@ class TypedBackend {
               _Bytes(TypedOp.jump, instruction.otherTarget),
           ],
         ],
-    };
+    });
     final shortToLong = <int, int>{};
     for (final block in assembled.values) {
       for (final instruction in block) {
@@ -1750,11 +1823,17 @@ class TypedBackend {
       NumericOperator.divide when !integer => 'Div',
       NumericOperator.truncatingDivide when integer => 'Div',
       NumericOperator.modulo when integer => 'Mod',
+      NumericOperator.bitAnd when integer => 'And',
+      NumericOperator.bitOr when integer => 'Or',
+      NumericOperator.bitXor when integer => 'Xor',
+      NumericOperator.shiftLeft when integer => 'ShiftLeft',
+      NumericOperator.shiftRight when integer => 'ShiftRight',
+      NumericOperator.unsignedShiftRight when integer => 'UnsignedShiftRight',
       _ => throw UnsupportedError(
         'Typed numeric operation $representation $operator',
       ),
     };
-    final commutative = name == 'Add' || name == 'Mul';
+    final commutative = {'Add', 'Mul', 'And', 'Or', 'Xor'}.contains(name);
     return integer
         ? ['a${name}B', if (!commutative) 'b${name}A']
         : ['f${name}G', if (!commutative) 'g${name}F'];

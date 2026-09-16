@@ -80,6 +80,24 @@ class TypedFunction {
 
   TypedCallLayout get callLayout => TypedCallLayout(argumentKinds);
 
+  /// Validation needs the overflow size without allocating argument locations.
+  int get argumentOverflowCount {
+    var integers = 0, doubles = 0, booleans = 0, objects = 0;
+    for (final kind in argumentKinds) {
+      switch (kind) {
+        case TypedArgumentKind.integer:
+          if (++integers > 2) objects++;
+        case TypedArgumentKind.doublePrecision:
+          if (++doubles > 2) objects++;
+        case TypedArgumentKind.boolean:
+          if (++booleans > 2) objects++;
+        case TypedArgumentKind.string || TypedArgumentKind.object:
+          objects++;
+      }
+    }
+    return objects > 3 ? objects - 2 : 0;
+  }
+
   List<int> get layout => [
     entry,
     intSpillCount,

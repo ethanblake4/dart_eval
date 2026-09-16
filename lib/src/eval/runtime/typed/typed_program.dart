@@ -73,18 +73,7 @@ class TypedProgram {
                      objectSpillCount: objectSpillCount,
                    ),
                  ])
-             .map(
-               (function) => TypedFunction(
-                 function.entry,
-                 intSpillCount: function.intSpillCount,
-                 doubleSpillCount: function.doubleSpillCount,
-                 boolSpillCount: function.boolSpillCount,
-                 objectSpillCount: function.objectSpillCount,
-                 argumentKinds: List.unmodifiable(function.argumentKinds),
-                 resultKind: function.resultKind,
-                 objectOutgoingCount: function.objectOutgoingCount,
-               ),
-             ),
+             .map(_ProgramFunction.new),
        ),
        integers = Int64List.fromList(integers).asUnmodifiableView(),
        doubles = Float64List.fromList(doubles).asUnmodifiableView(),
@@ -357,7 +346,7 @@ class TypedProgram {
     }
     for (final function in functions) {
       if (function.argumentKinds.length > 65544 ||
-          function.callLayout.overflowCount > 65536) {
+          function.argumentOverflowCount > 65536) {
         throw const FormatException('Too many typed function arguments');
       }
     }
@@ -380,6 +369,16 @@ class TypedProgram {
         'Function entries must be unique and begin at zero',
       );
     }
+    final functionEnds = <int, int>{
+      for (var i = 0; i < ordered.length; i++)
+        ordered[i].entry: i + 1 < ordered.length
+            ? ordered[i + 1].entry
+            : code.length,
+    };
+    final maxFieldCount = classes.fold<int>(
+      0,
+      (count, type) => type.valueCount > count ? type.valueCount : count,
+    );
     var pc = 0;
     var functionIndex = 0;
     late TypedInstruction last;
@@ -427,7 +426,7 @@ class TypedProgram {
           TypedImmediate.boolSpill => function.boolSpillCount,
           TypedImmediate.objectSpill => function.objectSpillCount,
           TypedImmediate.objectOutgoing => function.objectOutgoingCount,
-          TypedImmediate.overflow => function.callLayout.overflowCount,
+          TypedImmediate.overflow => function.argumentOverflowCount,
           TypedImmediate.function => functions.length,
           TypedImmediate.classIndex => classes.length,
           TypedImmediate.callSite => callSites.length,
@@ -438,10 +437,7 @@ class TypedProgram {
           TypedImmediate.globalIndex => globals.length,
           TypedImmediate.exceptionRegion => exceptionRegions.length,
           TypedImmediate.completionJump => completionJumps.length,
-          TypedImmediate.field => classes.fold<int>(
-            0,
-            (n, type) => type.valueCount > n ? type.valueCount : n,
-          ),
+          TypedImmediate.field => maxFieldCount,
           _ => null,
         };
         if (limit != null && index >= limit) {
@@ -513,7 +509,7 @@ class TypedProgram {
         }
         if (last.immediate == TypedImmediate.function) {
           final callee = functions[index];
-          if (callee.callLayout.overflowCount > function.objectOutgoingCount) {
+          if (callee.argumentOverflowCount > function.objectOutgoingCount) {
             throw FormatException(
               'Insufficient outgoing argument storage for function $index',
             );
@@ -533,20 +529,18 @@ class TypedProgram {
       }
     }
     for (final (entry, address) in branches) {
-      final owner = ordered.lastWhere(
-        (f) => f.entry <= address,
-        orElse: () => ordered.first,
-      );
-      if (!boundaries.contains(address) || owner.entry != entry) {
+      if (address < entry ||
+          address >= functionEnds[entry]! ||
+          !boundaries.contains(address)) {
         throw FormatException('Branch target $address is not an instruction');
       }
     }
     void target(int functionId, int address) {
       if (functionId < 0 ||
           functionId >= functions.length ||
-          !boundaries.contains(address) ||
-          ordered.lastWhere((f) => f.entry <= address).entry !=
-              functions[functionId].entry) {
+          address < functions[functionId].entry ||
+          address >= functionEnds[functions[functionId].entry]! ||
+          !boundaries.contains(address)) {
         throw const FormatException('Invalid exception destination');
       }
     }
@@ -571,4 +565,26 @@ class TypedProgram {
       }
     }
   }
+}
+
+/// Own the signature before caching derived locations. Public TypedFunction
+/// values can be const or refer to a caller-owned mutable argument list.
+final class _ProgramFunction extends TypedFunction {
+  _ProgramFunction(TypedFunction source)
+    : super(
+        source.entry,
+        intSpillCount: source.intSpillCount,
+        doubleSpillCount: source.doubleSpillCount,
+        boolSpillCount: source.boolSpillCount,
+        objectSpillCount: source.objectSpillCount,
+        argumentKinds: List.unmodifiable(source.argumentKinds),
+        resultKind: source.resultKind,
+        objectOutgoingCount: source.objectOutgoingCount,
+      );
+
+  @override
+  late final TypedCallLayout callLayout = super.callLayout;
+
+  @override
+  late final int argumentOverflowCount = super.argumentOverflowCount;
 }
