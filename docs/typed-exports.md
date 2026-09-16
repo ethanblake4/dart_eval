@@ -53,7 +53,7 @@ not regroup arguments into separate primitive lists. `TypedMachine.runEntry`
 starts the typed switch with the prepared registers. Internal calls bypass map
 binding and use the existing register ABI, including one C overflow list.
 
-The Program envelope version is 102 and the typed payload version is 109. Old
+The Program envelope version is 102 and the typed payload version is 110. Old
 bytecode must be recompiled. Both in-memory and serialized loading retain library,
 type and bridge metadata. There is no backend selector or reference fallback.
 

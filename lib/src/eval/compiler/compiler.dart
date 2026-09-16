@@ -625,12 +625,6 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
   }
 
   Program _emitProgram() {
-    final globalInitializers = List<int>.filled(_ctx.globalIndex, 0);
-
-    for (final gi in _ctx.runtimeGlobalInitializerMap.entries) {
-      globalInitializers[gi.key] = gi.value;
-    }
-
     final typeIds = <int, Map<String, int>>{};
 
     for (final t in _ctx.typeRefIndexMap.entries) {
@@ -686,7 +680,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       _ctx.bridgeStaticFunctionIndices,
       _ctx.constantPool.pool,
       _ctx.runtimeTypes.pool,
-      [for (final id in globalInitializers) backend.functionIndices[id] ?? -1],
+      [for (final global in typed.globals) global.initializerFunction],
       _ctx.enumValueIndices,
       {
         for (final entry in _ctx.runtimeOverrideMap.entries)

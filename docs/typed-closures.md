@@ -1,5 +1,8 @@
 # Closure checkpoint
 
+The subsequent [global checkpoint](typed-globals.md) adds runtime-owned global
+state and retains the originating runtime across closures and bound methods.
+
 The compiler now lowers closure creation and invocation to the typed register
 machine. It follows closure targets during reachability analysis and serializes
 their signatures and capture layouts. The production backend remains singular.

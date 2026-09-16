@@ -1,3 +1,4 @@
+import 'helpers/global.dart';
 import '../ir/closures.dart';
 import 'backend/representation.dart' show representationForType;
 import 'package:analyzer/dart/ast/ast.dart';
@@ -187,7 +188,7 @@ class IdentifierReference implements Reference {
         } else if (staticDec is VariableDeclaration) {
           final name =
               '${ctx.currentClass!.name.lexeme}.${staticDec.name.lexeme}';
-          return ctx.topLevelVariableInferredTypes[ctx.library]![name]!;
+          return resolveGlobalType(ctx, ctx.library, name);
         }
       }
     }
@@ -200,9 +201,11 @@ class IdentifierReference implements Reference {
     final decl = declarationValue.declaration!;
 
     if (decl is VariableDeclaration) {
-      return ctx.topLevelVariableInferredTypes[declarationValue.sourceLib]![decl
-          .name
-          .lexeme]!;
+      return resolveGlobalType(
+        ctx,
+        declarationValue.sourceLib,
+        decl.name.lexeme,
+      );
     }
 
     return CoreTypes.type.ref(ctx);
@@ -215,20 +218,7 @@ class IdentifierReference implements Reference {
       if (object!.type == CoreTypes.type.ref(ctx)) {
         final classType = object!.concreteTypes[0].resolveTypeChain(ctx);
         final fqName = '${classType.name}.$name';
-        final type =
-            ctx.topLevelVariableInferredTypes[classType.file]![fqName]!;
-        final gIndex = ctx.topLevelGlobalIndices[classType.file]![fqName]!;
-        if (!value.type.isAssignableTo(ctx, type)) {
-          throw CompileError(
-            'Cannot assign value of type ${value.type} to field "$name" of type $type',
-            source,
-          );
-        }
-        final formattedValue = type.boxed
-            ? value.boxIfNeeded(ctx, source)
-            : value.unboxIfNeeded(ctx);
-        ctx.pushOp(SetGlobal(gIndex, formattedValue.ssa));
-        return formattedValue;
+        return storeGlobalBinding(ctx, classType.file, fqName, value, source);
       }
       object = object!.boxIfNeeded(ctx, source);
       final fieldType =
@@ -325,6 +315,25 @@ class IdentifierReference implements Reference {
       }
     }
 
+    if (ctx.currentClass != null) {
+      final staticDeclaration = resolveStaticDeclaration(
+        ctx,
+        ctx.library,
+        ctx.currentClass!.name.lexeme,
+        name,
+      );
+      final declaration = staticDeclaration?.declaration;
+      if (declaration is VariableDeclaration) {
+        return storeGlobalBinding(
+          ctx,
+          ctx.library,
+          '${ctx.currentClass!.name.lexeme}.${declaration.name.lexeme}',
+          value,
+          source,
+        );
+      }
+    }
+
     final declaration =
         ctx.visibleDeclarations[ctx.library]![name] ??
         (throw CompileError('Could not find declaration "$name"', source));
@@ -333,14 +342,13 @@ class IdentifierReference implements Reference {
     final decl = declarationValue.declaration!;
 
     if (decl is VariableDeclaration) {
-      //final type = ctx
-      //    .topLevelVariableInferredTypes[_decl.sourceLib]![decl.name.lexeme]!;
-      final gIndex =
-          ctx.topLevelGlobalIndices[declarationValue.sourceLib]![decl
-              .name
-              .lexeme]!;
-      ctx.pushOp(SetGlobal(gIndex, value.ssa));
-      return value;
+      return storeGlobalBinding(
+        ctx,
+        declarationValue.sourceLib,
+        decl.name.lexeme,
+        value,
+        source,
+      );
     }
 
     throw CompileError(
@@ -420,14 +428,7 @@ class IdentifierReference implements Reference {
           throw CompileError('Cannot find file types for "$classType"', source);
         }
 
-        final type = cls[fqName];
-        if (type == null) {
-          throw CompileError(
-            'Cannot resolve type of "$fqName" on "$classType"',
-            source,
-          );
-        }
-
+        final type = resolveGlobalType(ctx, classType.file, fqName);
         final gIndex = ctx.topLevelGlobalIndices[classType.file]![fqName]!;
         return Variable.ssa(ctx, LoadGlobal(ctx.svar(name), gIndex), type);
       }
@@ -567,7 +568,7 @@ class IdentifierReference implements Reference {
         } else if (staticDec is VariableDeclaration) {
           final name =
               '${ctx.currentClass!.name.lexeme}.${staticDec.name.lexeme}';
-          final type = ctx.topLevelVariableInferredTypes[ctx.library]![name]!;
+          final type = resolveGlobalType(ctx, ctx.library, name);
           final gIndex = ctx.topLevelGlobalIndices[ctx.library]![name]!;
           return Variable.ssa(
             ctx,
@@ -898,16 +899,11 @@ Variable _declarationToVariable(
   final decl = decOrBridge.declaration!;
 
   if (decl is VariableDeclaration) {
-    final type =
-        ctx.topLevelVariableInferredTypes[decOrBridge.sourceLib]![decl
-            .name
-            .lexeme];
-    if (type == null) {
-      throw CompileError(
-        'Cannot resolve top level variable ${decl.name.lexeme}',
-        source,
-      );
-    }
+    final type = resolveGlobalType(
+      ctx,
+      decOrBridge.sourceLib,
+      decl.name.lexeme,
+    );
     final gIndex =
         ctx.topLevelGlobalIndices[decOrBridge.sourceLib]![decl.name.lexeme]!;
 

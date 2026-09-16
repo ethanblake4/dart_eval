@@ -107,12 +107,11 @@ class KnownMethodArg {
   final bool optional;
 }
 
-Map<TypeRef, Map<String, KnownMethod>>? _knownMethods;
+final _knownMethods = Expando<Map<TypeRef, Map<String, KnownMethod>>>();
 
 Map<TypeRef, Map<String, KnownMethod>> getKnownMethods(CompilerContext ctx) {
-  if (_knownMethods != null) {
-    return _knownMethods!;
-  }
+  final cached = _knownMethods[ctx];
+  if (cached != null) return cached;
 
   final boolBinaryOp = KnownMethod(
     AlwaysReturnType(CoreTypes.bool.ref(ctx), false),
@@ -193,7 +192,7 @@ Map<TypeRef, Map<String, KnownMethod>> getKnownMethods(CompilerContext ctx) {
     {},
   );
 
-  return _knownMethods = {
+  return _knownMethods[ctx] = {
     CoreTypes.nullType.ref(ctx): {...knownObject},
     CoreTypes.int.ref(ctx): {
       ...knownObject,

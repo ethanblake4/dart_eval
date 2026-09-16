@@ -359,3 +359,41 @@ generated files current. 34 formerly failing tests now pass; no previously
 passing test regressed. 150 errors concern unfinished features and the remaining
 failure is the existing Future.delayed timing threshold, passing in isolation.
 The closure contract and next checkpoint are saved in [typed-closures.md](typed-closures.md).
+
+## Global storage checkpoint
+
+Eight typed global load/store instructions bring the table to 212 entries,
+leaving 44 byte values. Their helpers access per-runtime values and initialization
+flags. They do not add permanent register variables or keep a globals table live
+across arithmetic dispatch. Initializer execution uses a separate VM invocation
+on the first read; subsequent reads use the initialized value directly.
+
+Dart 3.10.7, full Linux ARM64 probe: the integer/double add path remains 38
+instructions, consisting of 32 dispatch, four handler and two common tail.
+Stack traffic stays at 11 stores and two loads. `TypedMachine.runEntry` occupies
+21,800 bytes, up 1,252 from the closure checkpoint.
+
+Recorded range: `0x167344` to `0x16c86c` exclusive. Dispatch: `0x167488` through
+`0x167504`. Integer add: `0x167640` through `0x16764c`. Double add:
+`0x1676b0` through `0x1676bc`. Common tail: `0x16c2ac` through `0x16c2b0`.
+These are static code measurements, not ARM64 timings.
+
+`benchmark/typed_globals.dart` compares a local accumulator with an initialized
+native integer global and an object-global workload. It compiles before timing,
+uses independent runtimes and verifies that each lazy initializer runs once.
+Windows x64 AOT, one million iterations and five samples:
+
+| Workload | Median ms | Min to max ms |
+| --- | ---: | ---: |
+| Local accumulator | 44.765 | 43.757 to 46.309 |
+| Integer global read/write | 50.560 | 47.159 to 63.149 |
+| Object globals and identity | 360.113 | 250.042 to 370.322 |
+
+Checksum: `37537530`. A 1,001-iteration smoke run gives `45025`. The object
+workload performs more global accesses and branching than the scalar workloads.
+These results are profiling baselines, not an isolated measurement of global
+access cost. Cross-runtime ownership adds a reference to each evaluated instance
+and a runtime identity check to direct method resolution.
+
+See [the global checkpoint](typed-globals.md) for semantics and saved next steps,
+and [the migration report](typed-migration-failures.md) for full-suite results.

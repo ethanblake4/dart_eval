@@ -13,6 +13,7 @@ import '../../ir/numeric.dart';
 import '../../ir/objects.dart' as objects_ir;
 import '../../ir/primitives.dart' as primitives;
 import '../../ir/closures.dart' as closures;
+import '../../ir/globals.dart' as globals;
 import '../../runtime/typed/typed_ops.g.dart';
 import '../../runtime/typed/typed_program.dart';
 import '../../runtime/typed/typed_function.dart';
@@ -21,6 +22,7 @@ import '../../runtime/typed/typed_call_site.dart';
 import '../../runtime/typed/typed_external_call.dart';
 import '../../runtime/typed/typed_closure_descriptor.dart';
 import '../../runtime/typed/typed_export.dart';
+import '../../runtime/typed/typed_global.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import '../helpers/default_value.dart';
 import '../helpers/fpl.dart';
@@ -143,6 +145,7 @@ class TypedBackend {
       throw ArgumentError('No typed entrypoints were found');
     }
     final classAllocations = <objects_ir.CreateClass>[];
+    final reachableGlobals = <int>{};
     for (var next = 0; next < reachable.length; next++) {
       final graph = context.ssaFunctionGraphs[reachable[next]]!;
       for (final block in graph.graph.vertices) {
@@ -154,6 +157,17 @@ class TypedBackend {
               _ => throw StateError('Unreachable callable'),
             });
             if (!reachable.contains(callee)) reachable.add(callee);
+          } else if (op is globals.LoadGlobal || op is globals.SetGlobal) {
+            final index = switch (op) {
+              globals.LoadGlobal(:final index) => index,
+              globals.SetGlobal(:final index) => index,
+              _ => throw StateError('Unreachable global operation'),
+            };
+            final initializer = context.runtimeGlobalInitializerMap[index];
+            reachableGlobals.add(index);
+            if (initializer != null && !reachable.contains(initializer)) {
+              reachable.add(initializer);
+            }
           } else if (op is objects_ir.CreateClass) {
             final key = (op.library, op.name);
             if (_classIndices.containsKey(key)) continue;
@@ -286,10 +300,41 @@ class TypedBackend {
       externalCalls: _externalCalls,
       closures: _closures,
       closureCalls: _closureCalls,
+      globals: [
+        for (var index = 0; index < context.globalIndex; index++)
+          TypedGlobal(
+            initializerFunction:
+                indices[context.runtimeGlobalInitializerMap[index]] ?? -1,
+            kind: reachableGlobals.contains(index)
+                ? TypedArgumentKind.values[(context
+                              .globalRepresentations[index] ??
+                          MachineRepresentation.object)
+                      .index]
+                : TypedArgumentKind.object,
+            isLate: context.globalsLate.contains(index),
+            isFinal: context.globalsFinal.contains(index),
+            name: context.globalNames[index] ?? '$index',
+          ),
+      ],
       exports: [
-        for (final (library, name) in roots) _export(library, name, indices),
+        for (final (library, name) in roots)
+          if (!_isEnumConstructor(library, name))
+            _export(library, name, indices),
       ],
     );
+  }
+
+  bool _isEnumConstructor(String library, String name) {
+    final declarations =
+        context.topLevelDeclarationsMap[context.libraryMap[library]]!;
+    final declaration = declarations[name]?.declaration;
+    if (declaration is ConstructorDeclaration &&
+        declaration.parent is EnumDeclaration) {
+      return true;
+    }
+    if (!name.endsWith('.')) return false;
+    return declarations[name.substring(0, name.length - 1)]?.declaration
+        is EnumDeclaration;
   }
 
   TypedExport _export(String library, String name, Map<int, int> indices) {
@@ -401,6 +446,7 @@ class TypedBackend {
     final representations = analyzeRepresentations(
       sourceGraph,
       functions: context.functionSignatures,
+      globalRepresentations: context.globalRepresentations,
       functionId: id,
       resolveFunction: _resolveFunction,
     );
@@ -761,6 +807,32 @@ class TypedBackend {
               ),
             );
           }
+          continue;
+        }
+        if (op is globals.LoadGlobal) {
+          final result = value(op.target);
+          lowered.add(
+            TypedOperation(
+              _named([
+                '${_registerNames[_banks[result.type].first]}LoadGlobal',
+              ]),
+              result,
+              [],
+              immediate: op.index,
+            ),
+          );
+          continue;
+        }
+        if (op is globals.SetGlobal) {
+          final source = value(op.source);
+          lowered.add(
+            TypedOperation(
+              _named(['${_registerNames[_banks[source.type].first]}SetGlobal']),
+              null,
+              [source],
+              immediate: op.index,
+            ),
+          );
           continue;
         }
         if (op is closures.InvokeClosure) {

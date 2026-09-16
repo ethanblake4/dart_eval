@@ -10,7 +10,6 @@ import 'package:dart_eval/src/eval/compiler/scope.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
-import 'package:dart_eval/src/eval/ir/globals.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
 import 'package:dart_eval/src/eval/ir/function.dart';
 import 'package:dart_eval/src/eval/ir/representation.dart';
@@ -85,6 +84,10 @@ void compileEnumDeclaration(
     final cName = constant.name.lexeme;
     ctx.resetStack(position: 0);
     final pos = beginMethod(ctx, constant, constant.offset, '$cName*i');
+    ctx.functionSignatures[pos] = const MachineFunctionSignature(
+      [],
+      MachineRepresentation.object,
+    );
     final cstrName = constant.arguments?.constructorSelector?.name.name ?? '';
     final offset = DeferredOrOffset.lookupStatic(
       ctx,
@@ -97,7 +100,7 @@ void compileEnumDeclaration(
         ctx.topLevelDeclarationsMap[offset.file]![offset.name ?? '$clsName.'];
 
     final vIndex = BuiltinValue(intval: idx).push(ctx).boxIfNeeded(ctx);
-    final vName = BuiltinValue(stringval: cName).push(ctx);
+    final vName = BuiltinValue(stringval: cName).push(ctx).boxIfNeeded(ctx);
 
     final arguments = <SSA>[vIndex.ssa, vName.ssa];
 
@@ -122,7 +125,9 @@ void compileEnumDeclaration(
     );
     final name = '$clsName.$cName';
     final index = ctx.topLevelGlobalIndices[ctx.library]![name]!;
-    ctx.pushOp(SetGlobal(index, V.ssa));
+    ctx.globalRepresentations[index] = MachineRepresentation.object;
+    ctx.globalsFinal.add(index);
+    ctx.globalNames[index] = name;
     ctx.topLevelVariableInferredTypes[ctx.library]![name] = type;
     ctx.topLevelGlobalInitializers[ctx.library]![name] = pos;
     ctx.runtimeGlobalInitializerMap[index] = pos;

@@ -27,8 +27,9 @@ final class TypedClosure extends EvalFunction {
   static TypedClosure bind(
     TypedProgram program,
     TypedClosureDescriptor descriptor,
-    Object receiver,
-  ) => TypedClosure._(program, descriptor, [receiver], null);
+    Object receiver, {
+    Runtime? runtime,
+  }) => TypedClosure._(program, descriptor, [receiver], runtime);
   static final _defaultArguments = Expando<List<$Value?>>();
 
   // Scalar constant conversion happens once per compiler descriptor, never on
@@ -70,8 +71,11 @@ final class TypedClosure extends EvalFunction {
     TypedProgram program,
     Object? receiver,
     int index,
+    Runtime? runtime,
   ) {
-    if (receiver is! TypedClosure || !identical(receiver.program, program)) {
+    if (receiver is! TypedClosure ||
+        !identical(receiver.program, program) ||
+        (receiver.runtime != null && !identical(receiver.runtime, runtime))) {
       return null;
     }
     final descriptor = receiver.descriptor;
@@ -161,7 +165,7 @@ final class TypedClosure extends EvalFunction {
         throw ArgumentError('Missing closure argument $name');
       }
     }
-    final context = runtime ?? this.runtime;
+    final context = this.runtime ?? runtime;
     final values = <Object?>[
       if (descriptor.hasEnvironment) this,
       if (descriptor.boundReceiver) captures.single,

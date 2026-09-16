@@ -1,6 +1,5 @@
 import 'dart:typed_data';
 
-
 import 'package:dart_eval/src/eval/runtime/typed/typed.dart';
 import 'package:test/test.dart';
 
@@ -282,14 +281,14 @@ void main() {
       ],
     );
     final bytes = p.write().buffer.asUint8List();
-    // One argument puts descriptor metadata at 64 + 29 + 1 = 94.
+    // One argument puts descriptor metadata at 68 + 29 + 1 = 98.
     for (final (offset, value) in [
       (56, 65537),
       (60, 65537),
-      (94, 1),
-      (110, 3),
-      (114, 0xffffffff),
-      (122, 0xffffffff),
+      (98, 1),
+      (114, 3),
+      (118, 0xffffffff),
+      (126, 0xffffffff),
     ]) {
       final bad = Uint8List.fromList(bytes);
       ByteData.sublistView(bad).setUint32(offset, value, Endian.little);
@@ -352,9 +351,9 @@ void main() {
         Uint8List.fromList([TypedOp.rReturn]),
         externalCalls: const [TypedExternalCall(0, 4)],
       ).write().buffer.asUint8List();
-      // Metadata follows the 64-byte header and 29-byte function layout.
+      // Metadata follows the 68-byte header and 29-byte function layout.
       final badArguments = Uint8List.fromList(bytes);
-      ByteData.sublistView(badArguments).setUint32(97, 65539, Endian.little);
+      ByteData.sublistView(badArguments).setUint32(101, 65539, Endian.little);
       expect(
         () => TypedProgram.read(badArguments.buffer),
         throwsFormatException,
@@ -600,8 +599,8 @@ void main() {
       ],
     );
     final bytes = p.write().buffer.asUint8List();
-    // Metadata begins after the 64-byte header, 29-byte layout and one argument.
-    const metadata = 94;
+    // Metadata begins after the 68-byte header, 29-byte layout and one argument.
+    const metadata = 98;
     for (final offset in [
       48,
       metadata,
@@ -783,14 +782,14 @@ void main() {
         Uint8List.fromList([TypedOp.rReturn]),
         classes: [TypedClass('C', library: 'test', valueCount: 0)],
       ).write().buffer.asUint8List();
-      for (final offset in [36, 40, 44, 48, 52, 56, 60, 93]) {
+      for (final offset in [36, 40, 44, 48, 52, 56, 60, 64, 97]) {
         final bad = Uint8List.fromList(bytes);
         ByteData.sublistView(bad).setUint32(offset, 0xffffffff, Endian.little);
         expect(() => TypedProgram.read(bad.buffer), throwsFormatException);
       }
-      final badResult = Uint8List.fromList(bytes)..[92] = 254;
+      final badResult = Uint8List.fromList(bytes)..[96] = 254;
       expect(() => TypedProgram.read(badResult.buffer), throwsFormatException);
-      for (var length = 64; length < bytes.length; length++) {
+      for (var length = 68; length < bytes.length; length++) {
         expect(
           () => TypedProgram.read(
             Uint8List.fromList(bytes.take(length).toList()).buffer,
@@ -1021,10 +1020,10 @@ void main() {
         TypedFunction(0, argumentKinds: [TypedArgumentKind.string]),
       ],
     ).write().buffer.asUint8List();
-    final badKind = Uint8List.fromList(bytes)..[93] = 255;
+    final badKind = Uint8List.fromList(bytes)..[97] = 255;
     expect(() => TypedProgram.read(badKind.buffer), throwsFormatException);
     final badCount = Uint8List.fromList(bytes);
-    ByteData.sublistView(badCount).setUint32(88, 2, Endian.little);
+    ByteData.sublistView(badCount).setUint32(92, 2, Endian.little);
     expect(() => TypedProgram.read(badCount.buffer), throwsFormatException);
   });
   test('calls need outgoing storage only beyond the register capacity', () {
@@ -1077,11 +1076,11 @@ void main() {
       Uint8List.fromList([TypedOp.aReturn]),
       objects: ['abc'],
     ).write().buffer.asUint8List();
-    // The object pool follows the 64-byte header and 29-byte function layout.
-    final badTag = Uint8List.fromList(bytes)..[93] = 255;
+    // The object pool follows the 68-byte header and 29-byte function layout.
+    final badTag = Uint8List.fromList(bytes)..[97] = 255;
     expect(() => TypedProgram.read(badTag.buffer), throwsFormatException);
     final badString = Uint8List.fromList(bytes);
-    ByteData.sublistView(badString).setUint32(94, 0xffffffff, Endian.little);
+    ByteData.sublistView(badString).setUint32(98, 0xffffffff, Endian.little);
     expect(() => TypedProgram.read(badString.buffer), throwsFormatException);
     final badCount = Uint8List.fromList(bytes);
     ByteData.sublistView(badCount).setUint32(28, 0, Endian.little);

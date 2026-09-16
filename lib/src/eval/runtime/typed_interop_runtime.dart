@@ -3,6 +3,10 @@ part of 'runtime.dart';
 /// The bridge boundary accepts canonical language values. Function signatures
 /// prescribe every conversion before entering the typed register loop.
 extension TypedRuntimeInterop on Runtime {
+  /// Prepare bridge registrations and runtime-owned globals at a VM entry.
+  @pragma('vm:never-inline')
+  void prepareTypedRuntime() => _setup();
+
   $Value? invokeTypedExternal(
     int functionId,
     int argumentCount,

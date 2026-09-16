@@ -8,6 +8,7 @@ import 'typed_export.dart';
 import 'typed_external_call.dart';
 import 'typed_closure_descriptor.dart';
 import 'typed_codec.dart';
+import 'typed_global.dart';
 
 /// Validated immutable bytecode for the typed-bank execution loop.
 class TypedProgram {
@@ -27,12 +28,14 @@ class TypedProgram {
     List<TypedExternalCall> externalCalls = const [],
     List<TypedClosureDescriptor> closures = const [],
     List<TypedClosureCall> closureCalls = const [],
+    List<TypedGlobal> globals = const [],
     this.entryFunction = 0,
   }) : code = Uint8List.fromList(code).asUnmodifiableView(),
        exports = List.unmodifiable(exports),
        externalCalls = List.unmodifiable(externalCalls),
        closures = List.unmodifiable(closures),
        closureCalls = List.unmodifiable(closureCalls),
+       globals = List.unmodifiable(globals),
        classes = List.unmodifiable(
          classes.map(
            (type) => TypedClass(
@@ -109,6 +112,7 @@ class TypedProgram {
   final List<TypedExternalCall> externalCalls;
   final List<TypedClosureDescriptor> closures;
   final List<TypedClosureCall> closureCalls;
+  final List<TypedGlobal> globals;
   final int entryFunction;
 
   ByteData write() => TypedCodec.write(this);
@@ -302,6 +306,34 @@ class TypedProgram {
     return captures;
   }
 
+  void _validateGlobals() {
+    if (globals.length > 65536) {
+      throw const FormatException('Too many typed globals');
+    }
+    for (final global in globals) {
+      final initializer = global.initializerFunction;
+      if (initializer < -1 || initializer >= functions.length) {
+        throw const FormatException('Invalid typed global initializer');
+      }
+      if (initializer == -1 &&
+          !global.isLate &&
+          global.kind != TypedArgumentKind.object) {
+        throw const FormatException(
+          'Nonnullable global requires an initializer or late storage',
+        );
+      }
+      if (initializer >= 0) {
+        final function = functions[initializer];
+        if (function.argumentKinds.isNotEmpty ||
+            function.resultKind != global.kind) {
+          throw const FormatException(
+            'Invalid typed global initializer signature',
+          );
+        }
+      }
+    }
+  }
+
   void _validate() {
     if (functions.isEmpty ||
         functions.length > 65536 ||
@@ -325,6 +357,7 @@ class TypedProgram {
     _validateClasses();
     _validateExports();
     _validateExternalCalls();
+    _validateGlobals();
     final captureCounts = _validateClosures();
     if (code.isEmpty) throw const FormatException('Empty typed program');
     final boundaries = <int>{};
@@ -392,6 +425,7 @@ class TypedProgram {
           TypedImmediate.closureIndex => closures.length,
           TypedImmediate.closureCall => closureCalls.length,
           TypedImmediate.captureIndex => captureCounts[function.entry] ?? 0,
+          TypedImmediate.globalIndex => globals.length,
           TypedImmediate.field => classes.fold<int>(
             0,
             (n, type) => type.valueCount > n ? type.valueCount : n,
@@ -404,6 +438,23 @@ class TypedProgram {
             code,
             pc,
           );
+        }
+        if (last.immediate == TypedImmediate.globalIndex) {
+          final register = last.inputs.isEmpty
+              ? last.outputs.single
+              : last.inputs.single;
+          final expected = switch (globals[index].kind) {
+            TypedArgumentKind.integer => TypedRegister.a,
+            TypedArgumentKind.doublePrecision => TypedRegister.f,
+            TypedArgumentKind.boolean => TypedRegister.e,
+            TypedArgumentKind.string ||
+            TypedArgumentKind.object => TypedRegister.r,
+          };
+          if (register != expected) {
+            throw const FormatException(
+              'Global opcode does not match storage representation',
+            );
+          }
         }
         if (last.immediate == TypedImmediate.hostCall &&
             index > function.objectOutgoingCount) {

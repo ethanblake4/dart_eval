@@ -11,3 +11,5 @@ export 'typed_closure.dart';
 export 'typed_closure_descriptor.dart';
 
 export 'typed_export.dart';
+
+export 'typed_global.dart';

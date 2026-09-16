@@ -149,6 +149,11 @@ class CompilerContext with ScopeContext {
   final Map<int, String> functionNames = {};
   final Map<int, int> functionLibraries = {};
   final Map<int, MachineFunctionSignature> functionSignatures = {};
+  final Map<int, MachineRepresentation> globalRepresentations = {};
+  final Set<int> globalsLate = {};
+  final Set<int> globalsFinal = {};
+  final Set<int> globalsWithInitializer = {};
+  final Map<int, String> globalNames = {};
   final Map<int, List<FormalParameter>> functionParameters = {};
   int? currentFunctionId;
   int _nextFunctionId = 0;

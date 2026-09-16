@@ -1,46 +1,43 @@
 # Typed migration test baseline
 
-2026-09-15. Production typed backend, after the closure checkpoint.
-606 passed, 151 failed, six skipped. Analysis reports zero errors.
+2026-09-15. Production typed backend, after the global storage checkpoint.
+665 passed, 128 failed, six skipped. Analysis reports zero errors.
 
-34 tests that failed at the external bridge checkpoint now pass. No previously
-passing test regressed. Closure creation lowering failures are gone. The stricter
-bound-method adapter also exposed and fixed a duplicate receiver argument in
-the print bridge's `toString` call.
+23 tests that failed at the closure checkpoint now pass. No previously passing
+test regressed. Global load/store lowering failures are gone. Enum initializer
+linking, constructor exports and compiler-context cache isolation are corrected.
 
-There are 150 test errors in unfinished compiler/runtime features and one
-timing assertion failure. The Future.delayed test requires a 150 ms timer plus
-runtime setup to finish within 200 ms; it passes in isolation. Its full-suite
-failure is retained without changing that unrelated test.
+There are 127 errors in unfinished compiler/runtime features and one timing
+assertion failure. Future.delayed requires a 150 ms timer plus runtime setup to
+finish within 200 ms. It passes in isolation and passed one intermediate full
+run, but failed the final full run. The test remains unchanged.
 
 Reproduce with `dart test --reporter json` and `dart analyze`. Full local events
-are in `.dart_tool/closure-tests-final.jsonl`; the previous baseline remains in
-`.dart_tool/external-tests-final.jsonl`. The failed names and first errors below
-preserve the checkpoint independently of those ignored local logs.
+are in `.dart_tool/globals-tests-final.jsonl`; the prior baseline is in
+`.dart_tool/closure-tests-final.jsonl`. The failed names and first errors below
+preserve the checkpoint independently of those ignored logs.
 
 ## Failure groups
 
 | First reported failure | Tests |
 | --- | ---: |
 | Unsupported lowering: EnterTry | 24 |
-| Representation mismatch | 22 |
-| Unsupported lowering: LoadGlobal | 21 |
-| Unsupported lowering: NewMap | 19 |
-| Unsupported lowering: Await | 13 |
-| Frontend compilation | 10 |
+| Representation mismatch | 21 |
+| Unsupported lowering: NewMap | 20 |
+| Unsupported lowering: Await | 15 |
 | Null assertion | 9 |
+| Other execution or linking errors | 8 |
 | Unsupported lowering: NewSet | 8 |
-| Other execution or linking errors | 6 |
-| Unsupported lowering: Assert | 4 |
+| Unsupported lowering: Assert | 5 |
 | Unsupported lowering: ReturnAsync | 3 |
+| Frontend compilation | 3 |
 | Unsupported lowering: IsType | 3 |
 | Unsupported lowering: AssertType | 3 |
+| Unsupported lowering: IndexMap | 2 |
 | Future.delayed timing threshold | 1 |
 | Unsupported lowering: BridgeInstantiate | 1 |
 | Unsupported lowering: NewBridgeSuperShim | 1 |
-| Unsupported lowering: SetGlobal | 1 |
 | Unsupported lowering: LoadConstantType | 1 |
-| Unsupported lowering: IndexMap | 1 |
 
 ## Failed tests
 
@@ -58,15 +55,13 @@ preserve the checkpoint independently of those ignored local logs.
 
 ### bridge_test.dart
 
-- Bridge tests Awaiting a callback. CompileError: Unknown method num.< at unknown (file dart:math)
+- Bridge tests Awaiting a callback. Unsupported operation: Typed backend does not yet lower Await: await_result₀ = await closure_result_1₀, completer: #completer₀
 
 - Bridge tests Changing a field in the constructor of a subclassed bridge class. CompileError: dart_eval does not support passing named arguments to dynamic targets. at "(a + 2, b: b)" (file package:example/main.dart)
 
-- Bridge tests Passing a map to a function externally. CompileError: Unknown method num.< at unknown (file dart:math)
+- Bridge tests Passing a map to a function externally. Unsupported operation: Typed backend does not yet lower IndexMap: map₀ = indexmap arg_0₁[var_12₁]
 
-- Bridge tests Runtime overrides. CompileError: Unknown method num.< at unknown (file dart:math)
-
-- Bridge tests Should catch bridge future error. CompileError: Unknown method num.< at unknown (file dart:math)
+- Bridge tests Should catch bridge future error. Unsupported operation: Typed backend does not yet lower Await: await_result₀ = await closure_result₀, completer: #completer₀
 
 - Bridge tests Using a bridge class. Unsupported operation: Typed backend does not yet lower BridgeInstantiate: call_3₀ = newbridge 205, var_13₀ [var_12₁]
 
@@ -75,8 +70,6 @@ preserve the checkpoint independently of those ignored local logs.
 - Bridge tests Using a subclassed bridge class inside the runtime. CompileError: dart_eval does not support passing named arguments to dynamic targets. at "(a + 2 + someNumber,..." (file package:example/main.dart)
 
 - Bridge tests Using a subclassed bridge class outside the runtime. CompileError: dart_eval does not support passing named arguments to dynamic targets. at "(a + 2, b: b)" (file package:example/main.dart)
-
-- Bridge tests Versioned runtime overrides. CompileError: Unknown method num.< at unknown (file dart:math)
 
 - Bridge tests Void async function in a subclassed bridge class. Unsupported operation: Typed backend does not yet lower NewBridgeSuperShim: shim₀ = #shim
 
@@ -87,10 +80,6 @@ preserve the checkpoint independently of those ignored local logs.
 - Class tests Constructor field initializers. Bad state: Void function 17 returns a value
 
 - Class tests Factory constructor. Bad state: Void function 17 returns a value
-
-- Class tests Modifying static class field. Bad state: Incompatible representations for value₀: object and integer; an explicit conversion is required
-
-- Class tests Nullable static value. Unsupported operation: Typed backend does not yet lower SetGlobal: setglobal 12 = var_13₁
 
 - Class tests runtimeType. Unsupported operation: Typed backend does not yet lower LoadConstantType: var_type₀ = loadconstanttype 86
 
@@ -140,8 +129,6 @@ preserve the checkpoint independently of those ignored local logs.
 
 - Future<int> f() async => 1; Future<int> main() async { return await f(); }. Unsupported operation: Typed backend does not yet lower ReturnAsync: returnasync var_12₁, #completer₀
 
-- enum A { first, second } int main() => A.second.index;. Unsupported operation: Typed backend does not yet lower LoadGlobal: second₀ = loadglobal 13
-
 - int main() { try { return 1; } finally { print(2); } }. Unsupported operation: Typed backend does not yet lower EnterTry: Instance of 'EnterTry'
 
 - int main() { try { throw 1; } catch (e) { return 2; } }. Unsupported operation: Typed backend does not yet lower EnterTry: Instance of 'EnterTry'
@@ -152,45 +139,27 @@ preserve the checkpoint independently of those ignored local logs.
 
 - SSA dominance: async await preserves explicit results. Unsupported operation: Typed backend does not yet lower ReturnAsync: returnasync var_12₁, #completer₀
 
-- SSA dominance: enum instance and getter. Unsupported operation: Typed backend does not yet lower LoadGlobal: active₀ = loadglobal 13
-
 - SSA dominance: finally executes around early return. Unsupported operation: Typed backend does not yet lower EnterTry: Instance of 'EnterTry'
 
 - SSA dominance: typed catch with local mutation. Unsupported operation: Typed backend does not yet lower EnterTry: Instance of 'EnterTry'
 
 ### convert_test.dart
 
-- dart:convert tests Accessing results of json.decode(). Unsupported operation: Typed backend does not yet lower LoadGlobal: json₀ = loadglobal 1
+- dart:convert tests Accessing results of json.decode(). Bad state: Incompatible representations for var_12₀: string and object; an explicit conversion is required
 
-- dart:convert tests base64.decode(). Unsupported operation: Typed backend does not yet lower LoadGlobal: base64₀ = loadglobal 3
+- dart:convert tests base64.decode(). Bad state: Incompatible representations for var_12₀: string and object; an explicit conversion is required
 
-- dart:convert tests base64.encode(). Unsupported operation: Typed backend does not yet lower LoadGlobal: base64₀ = loadglobal 3
+- dart:convert tests base64.encode(). dart_eval runtime exception: type 'List<Object?>' is not a subtype of type '$Value?' in type cast
 
-- dart:convert tests base64Url.decode(). Unsupported operation: Typed backend does not yet lower LoadGlobal: base64Url₀ = loadglobal 2
+- dart:convert tests json.decode(). Bad state: Incompatible representations for var_12₀: string and object; an explicit conversion is required
 
-- dart:convert tests base64Url.encode(). Unsupported operation: Typed backend does not yet lower LoadGlobal: base64Url₀ = loadglobal 2
-
-- dart:convert tests json.decode(). Unsupported operation: Typed backend does not yet lower LoadGlobal: json₀ = loadglobal 1
-
-- dart:convert tests json.encode(). Unsupported operation: Typed backend does not yet lower LoadGlobal: json₀ = loadglobal 1
+- dart:convert tests json.encode(). Unsupported operation: Typed backend does not yet lower NewMap: map₀ = {}
 
 - dart:convert tests jsonEncode(). Unsupported operation: Typed backend does not yet lower NewMap: map₀ = {}
 
-- dart:convert tests utf8.decode(). Unsupported operation: Typed backend does not yet lower LoadGlobal: utf8₀ = loadglobal 0
+- dart:convert tests utf8.decode(). dart_eval runtime exception: type 'List<Object?>' is not a subtype of type '$Value?' in type cast
 
-- dart:convert tests utf8.encode(). Unsupported operation: Typed backend does not yet lower LoadGlobal: utf8₀ = loadglobal 0
-
-### enum_test.dart
-
-- Enum tests Basic enum. Unsupported operation: Typed backend does not yet lower LoadGlobal: B₀ = loadglobal 13
-
-- Enum tests Enum boxing error. CompileError: Unknown method num.< at unknown (file dart:math)
-
-- Enum tests Enum equality. Unsupported operation: Typed backend does not yet lower LoadGlobal: B₀ = loadglobal 13
-
-- Enum tests Enum value index property from imported file. Unsupported operation: Typed backend does not yet lower LoadGlobal: beta₀ = loadglobal 13
-
-- Enum tests Enum with field. Unsupported operation: Typed backend does not yet lower LoadGlobal: B₀ = loadglobal 13
+- dart:convert tests utf8.encode(). Bad state: Incompatible representations for var_12₀: string and object; an explicit conversion is required
 
 ### exception_representation_test.dart
 
@@ -264,13 +233,11 @@ preserve the checkpoint independently of those ignored local logs.
 
 ### function_test.dart
 
-- Function tests Function equality test. Unsupported operation: Typed backend does not yet lower LoadGlobal: instance_1₀ = loadglobal 12
+- Function tests Function equality test. Unsupported operation: Typed backend does not yet lower Assert: assert not_equal₀, assertion_error₀
 
 ### functional1_test.dart
 
 - Functional tests Await chain. Unsupported operation: Typed backend does not yet lower Await: await_result₀ = await method_result_1₀, completer: #completer₀
-
-- Functional tests Bridged enum equality ternary assignment. CompileError: Unknown method num.< at unknown (file dart:math)
 
 - Functional tests Default parameter boxing error. Unsupported operation: Typed backend does not yet lower Await: await_result₀ = await method_result_1₀, completer: #completer₀
 
@@ -282,13 +249,7 @@ preserve the checkpoint independently of those ignored local logs.
 
 - dart:io tests HttpClient get() permission denied. Unsupported operation: Typed backend does not yet lower Await: await_result₀ = await method_result_2₀, completer: #completer₀
 
-- dart:io tests HttpStatus constants. Bad state: Incompatible representations for ok₀: object and integer; an explicit conversion is required
-
 - dart:io tests Write/read a file. Unsupported operation: Typed backend does not yet lower Await: await_result₀ = await method_result_1₀, completer: #completer₀
-
-### lib_composition_test.dart
-
-- File and library composition Cyclic imports. Bad state: Incompatible representations for constant₀: object and integer; an explicit conversion is required
 
 ### operator_test.dart
 
@@ -296,7 +257,7 @@ preserve the checkpoint independently of those ignored local logs.
 
 ### packages/hlc_test.dart
 
-- package:hlc. Unsupported operation: Typed backend does not yet lower LoadGlobal: delimiter_2₀ = loadglobal 12
+- package:hlc. Bad state: Incompatible representations for call_7₀: object and integer; an explicit conversion is required
 
 ### pattern_test.dart
 
@@ -311,10 +272,6 @@ preserve the checkpoint independently of those ignored local logs.
 - Switch pattern tests Switch with pattern guard. Null check operator used on a null value
 
 - Switch pattern tests Switch with relational pattern. Bad state: Incompatible representations for data₂: integer and object; an explicit conversion is required
-
-### prefixed_import_test.dart
-
-- Prefixed imports Importing constant via prefix. Bad state: Incompatible representations for plus₀: object and integer; an explicit conversion is required
 
 ### records_test.dart
 
@@ -333,8 +290,6 @@ preserve the checkpoint independently of those ignored local logs.
 - Regex Tests RegExp.allMatches(). type 'Null' is not a subtype of type '_Mismatch' in type cast
 
 - Regex Tests RegExp.firstMatch(). Unsupported operation: Typed backend does not yet lower Assert: assert not_equal₀, assertion_error₀
-
-- Regex Tests RegExp.groups. Unsupported operation: Typed backend does not yet lower LoadGlobal: json₀ = loadglobal 1
 
 ### set_test.dart
 
@@ -358,8 +313,6 @@ preserve the checkpoint independently of those ignored local logs.
 
 - Standard library tests StreamController and Stream.listen(). Unsupported operation: Typed backend does not yet lower Await: await_result₀ = await method_result_5₀, completer: #completer₀
 
-- Standard library tests dart:math. Bad state: Incompatible representations for pi₀: object and doublePrecision; an explicit conversion is required
-
 - Standard library tests double.parse() throws FormatException without onError. Unsupported operation: Typed backend does not yet lower EnterTry: Instance of 'EnterTry'
 
 - Standard library tests dynamic.toString. Unsupported operation: Typed backend does not yet lower NewMap: map₀ = {}
@@ -372,15 +325,9 @@ preserve the checkpoint independently of those ignored local logs.
 
 - Switch statement tests Switch with break statements. Bad state: Incompatible representations for x₂: integer and object; an explicit conversion is required
 
-- Switch statement tests Switch with const expression case. Bad state: Incompatible representations for VALUE₀: object and integer; an explicit conversion is required
+- Switch statement tests Switch with const expression case. Bad state: Incompatible representations for x₂: integer and object; an explicit conversion is required
 
 - Switch statement tests Switch with default case. Bad state: Incompatible representations for x₂: integer and object; an explicit conversion is required
-
-- Switch statement tests Switch with enum and proper fall-through. Unsupported operation: Typed backend does not yet lower LoadGlobal: segunda₀ = loadglobal 12
-
-- Switch statement tests Switch with enum and vowel/consonant classification. Unsupported operation: Typed backend does not yet lower LoadGlobal: a₀ = loadglobal 12
-
-- Switch statement tests Switch with enum weekend case. Unsupported operation: Typed backend does not yet lower LoadGlobal: segunda₀ = loadglobal 12
 
 - Switch statement tests Switch with expression evaluation. Bad state: Incompatible representations for numeric_result₂: integer and object; an explicit conversion is required
 
@@ -397,7 +344,3 @@ preserve the checkpoint independently of those ignored local logs.
 - Switch statement tests Switch with return in default case. Bad state: Incompatible representations for x₂: integer and object; an explicit conversion is required
 
 - Switch statement tests Switch with variable assignment in cases. Bad state: Incompatible representations for x₂: integer and object; an explicit conversion is required
-
-### variable_test.dart
-
-- Top-level variable tests Assignment to top-level variable. Bad state: Incompatible representations for x₀: object and integer; an explicit conversion is required

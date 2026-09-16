@@ -13,9 +13,12 @@ abstract final class TypedDispatch {
   static TypedMember? resolve(
     TypedProgram program,
     Object? receiver,
-    int siteIndex,
-  ) {
-    if (receiver is! TypedInstance || !identical(receiver.program, program)) {
+    int siteIndex, [
+    Runtime? runtime,
+  ]) {
+    if (receiver is! TypedInstance ||
+        !identical(receiver.program, program) ||
+        (receiver.runtime != null && !identical(receiver.runtime, runtime))) {
       return null;
     }
     final site = program.callSites[siteIndex];

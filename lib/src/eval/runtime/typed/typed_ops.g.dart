@@ -8,7 +8,7 @@ abstract final class TypedRegister {
 enum TypedImmediate { none, intConstant, doubleConstant,
   intSpill, doubleSpill, boolSpill, branch,
   function, objectConstant, objectSpill, objectOutgoing, hostCall, shortBranch, integer, overflow,
-  classIndex, field, callSite, externalCall, closureIndex, captureIndex, closureCall }
+  classIndex, field, callSite, externalCall, closureIndex, captureIndex, closureCall, globalIndex }
 
 class TypedInstruction {
   const TypedInstruction(this.name, this.inputs, this.outputs, this.immediate,
@@ -209,30 +209,38 @@ abstract final class TypedOp {
   static const rCreateClosure = 177;
   static const rLoadCapture = 178;
   static const callClosure = 179;
-  static const callHost = 180;
-  static const callMethod = 181;
-  static const aStringLengthR = 182;
-  static const rStringConcatS = 183;
-  static const aStringCodeUnitR = 184;
-  static const rStringIndexA = 185;
-  static const cNewList = 186;
-  static const aListLengthR = 187;
-  static const rListIndexCA = 188;
-  static const listSetCAR = 189;
-  static const listAppendCR = 190;
-  static const rBoxList = 191;
-  static const rCreateClassR = 192;
-  static const rLoadPropertyR = 193;
-  static const setPropertyRS = 194;
-  static const rLoadSuperR = 195;
-  static const rLoadThisR = 196;
-  static const returnNull = 197;
-  static const callVirtual = 198;
-  static const jumpETrueShort = 199;
-  static const jumpEFalseShort = 200;
-  static const jumpXTrueShort = 201;
-  static const jumpXFalseShort = 202;
-  static const jumpShort = 203;
+  static const aLoadGlobal = 180;
+  static const aSetGlobal = 181;
+  static const fLoadGlobal = 182;
+  static const fSetGlobal = 183;
+  static const eLoadGlobal = 184;
+  static const eSetGlobal = 185;
+  static const rLoadGlobal = 186;
+  static const rSetGlobal = 187;
+  static const callHost = 188;
+  static const callMethod = 189;
+  static const aStringLengthR = 190;
+  static const rStringConcatS = 191;
+  static const aStringCodeUnitR = 192;
+  static const rStringIndexA = 193;
+  static const cNewList = 194;
+  static const aListLengthR = 195;
+  static const rListIndexCA = 196;
+  static const listSetCAR = 197;
+  static const listAppendCR = 198;
+  static const rBoxList = 199;
+  static const rCreateClassR = 200;
+  static const rLoadPropertyR = 201;
+  static const setPropertyRS = 202;
+  static const rLoadSuperR = 203;
+  static const rLoadThisR = 204;
+  static const returnNull = 205;
+  static const callVirtual = 206;
+  static const jumpETrueShort = 207;
+  static const jumpEFalseShort = 208;
+  static const jumpXTrueShort = 209;
+  static const jumpXFalseShort = 210;
+  static const jumpShort = 211;
   static const instructions = <TypedInstruction>[
     TypedInstruction('eTrue', [], [4], TypedImmediate.none, false, false, false),
     TypedInstruction('eFalse', [], [4], TypedImmediate.none, false, false, false),
@@ -414,6 +422,14 @@ abstract final class TypedOp {
     TypedInstruction('rCreateClosure', [], [6], TypedImmediate.closureIndex, true, false, false),
     TypedInstruction('rLoadCapture', [], [6], TypedImmediate.captureIndex, true, false, false),
     TypedInstruction('callClosure', [], [], TypedImmediate.closureCall, true, false, false),
+    TypedInstruction('aLoadGlobal', [], [0], TypedImmediate.globalIndex, true, false, false),
+    TypedInstruction('aSetGlobal', [0], [], TypedImmediate.globalIndex, true, false, false),
+    TypedInstruction('fLoadGlobal', [], [2], TypedImmediate.globalIndex, true, false, false),
+    TypedInstruction('fSetGlobal', [2], [], TypedImmediate.globalIndex, true, false, false),
+    TypedInstruction('eLoadGlobal', [], [4], TypedImmediate.globalIndex, true, false, false),
+    TypedInstruction('eSetGlobal', [4], [], TypedImmediate.globalIndex, true, false, false),
+    TypedInstruction('rLoadGlobal', [], [6], TypedImmediate.globalIndex, true, false, false),
+    TypedInstruction('rSetGlobal', [6], [], TypedImmediate.globalIndex, true, false, false),
     TypedInstruction('callHost', [6], [6], TypedImmediate.hostCall, true, false, false),
     TypedInstruction('callMethod', [6, 7], [6], TypedImmediate.hostCall, true, false, false),
     TypedInstruction('aStringLengthR', [6], [0], TypedImmediate.none, true, false, false),

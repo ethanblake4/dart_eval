@@ -41,6 +41,7 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
   cfg.ControlFlowGraph graph, {
   Map<cfg.SSA, MachineRepresentation> hints = const {},
   Map<int, MachineFunctionSignature> functions = const {},
+  Map<int, MachineRepresentation> globalRepresentations = const {},
   int? functionId,
   int Function(DeferredOrOffset target)? resolveFunction,
 }) {
@@ -227,8 +228,7 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
           closures.LoadCapture() ||
           exceptions.CaughtException() ||
           exceptions.CaughtStackTrace() ||
-          types.LoadConstantType() ||
-          globals.LoadGlobal():
+          types.LoadConstantType():
         output(operation, object);
       case primitives.MaybeBoxNull() || bridge.PrepareBridgeArgument():
         inputs(operation, object);
@@ -295,8 +295,10 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
         constrain(list, object);
         constrain(index, integer);
         constrain(value, object);
-      case globals.SetGlobal():
-        break;
+      case globals.LoadGlobal(:final index):
+        output(operation, globalRepresentations[index] ?? object);
+      case globals.SetGlobal(:final index):
+        inputs(operation, globalRepresentations[index] ?? object);
       default:
         throw UnsupportedError(
           'No representation rule for ${operation.runtimeType}',

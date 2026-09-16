@@ -29,11 +29,9 @@ class TypeRef {
     this.nullable = false,
   });
 
-  /// Cache mapping file/library IDs to type names to [TypeRef]s.
-  static final _cache = <int, Map<String, TypeRef>>{};
-
-  /// Cache mapping [TypeRef]s to file/library IDs.
-  static final _inverseCache = <TypeRef, List<int>>{};
+  // Library IDs are assigned independently in each compilation. A type resolved
+  // for one context must never be reused against another context's library IDs.
+  static final _caches = Expando<_TypeRefCache>();
 
   final int file;
   final String name;
@@ -56,23 +54,11 @@ class TypeRef {
     String name, {
     int? fileRef,
   }) {
-    TypeRef $type;
-    if (!_cache.containsKey(file)) {
-      _cache[file] = {};
-    }
-
-    final fileCache = _cache[file]!;
-    if (!fileCache.containsKey(name)) {
-      $type = (fileCache[name] = TypeRef(file, name));
-    } else {
-      $type = fileCache[name]!;
-    }
-
+    final cache = _caches[ctx] ??= _TypeRefCache();
+    final fileCache = cache.types.putIfAbsent(file, () => {});
+    final $type = fileCache.putIfAbsent(name, () => TypeRef(file, name));
     if (fileRef != null) {
-      if (!_inverseCache.containsKey($type)) {
-        _inverseCache[$type] = [];
-      }
-      _inverseCache[$type]!.add(fileRef);
+      cache.visibleLibraries.putIfAbsent($type, () => []).add(fileRef);
     }
 
     ctx.typeRefIndexMap[$type] = ctx.typeNames.length;
@@ -594,7 +580,8 @@ class TypeRef {
       );
     }
 
-    final $cached = _cache[file]![name]!;
+    final cache = _caches[ctx]!;
+    final $cached = cache.types[file]![name]!;
     if ($cached.resolved) {
       return $cached.copyWith(
         boxed: boxed,
@@ -820,11 +807,11 @@ class TypeRef {
       specifiedTypeArgs: resolvedSpecifiedTypeArgs,
     );
 
-    for (final $file in _inverseCache[this]!) {
+    for (final $file in cache.visibleLibraries[this]!) {
       ctx.visibleTypes[$file]![name] ??= resolvedRef;
     }
 
-    final fileCache = _cache[file]!;
+    final fileCache = cache.types[file]!;
     if (fileCache[name] == null || !fileCache[name]!.resolved) {
       fileCache[name] = resolvedRef.copyWith(boxed: true);
     }
@@ -1319,4 +1306,9 @@ extension Refify on BridgeTypeSpec {
     }
     return res;
   }
+}
+
+final class _TypeRefCache {
+  final types = <int, Map<String, TypeRef>>{};
+  final visibleLibraries = <TypeRef, List<int>>{};
 }

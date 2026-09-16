@@ -25,6 +25,7 @@ import 'typed/typed_export_adapter.dart';
 import 'typed/typed_frame.dart';
 import 'typed/typed_interop.dart';
 import 'typed/typed_function.dart';
+import 'typed/typed_global_state.dart';
 
 part 'typed_interop_runtime.dart';
 
@@ -121,6 +122,7 @@ class Runtime {
 
   void _loadProgram(Program program) {
     _typedProgram = program.typedProgram;
+    typedGlobals = TypedGlobalState(_typedProgram, this);
     _exports.clear();
     for (final declaration in _typedProgram.exports) {
       (_exports[declaration.library] ??= {})[declaration.name] = declaration;
@@ -172,7 +174,7 @@ class Runtime {
       final libIndex = _libraryMap[ule.library]!;
       final mapping = _bridgeEnumMappings[libIndex]![ule.name]!;
       for (final value in ule.values.entries) {
-        globals[mapping[value.key]!] = value.value;
+        typedGlobals.write(mapping[value.key]!, value.value);
       }
     }
   }
@@ -396,7 +398,8 @@ class Runtime {
   var _floatlist = Float32List(0);
   var _doublelist = Float64List(0);
   var _constantPool = List<dynamic>.filled(0, null);
-  final globals = List<Object?>.filled(20000, null);
+  late TypedGlobalState typedGlobals;
+  List<Object?> get globals => typedGlobals.values;
   int _registerFailureOffset = -1;
   List<Object?> _registerFailureFrame = [];
   List<Object?> _registerFailureArguments = [];

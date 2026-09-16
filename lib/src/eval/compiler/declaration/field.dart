@@ -1,13 +1,13 @@
+import '../helpers/global.dart';
+import '../backend/representation.dart' show representationForType;
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/scope.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
-import 'package:dart_eval/src/eval/ir/globals.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
 import 'package:dart_eval/src/eval/ir/function.dart';
 import 'package:dart_eval/src/eval/ir/representation.dart';
@@ -23,6 +23,11 @@ void compileFieldDeclaration(
   for (final field in d.fields.variables) {
     final fieldName = field.name.lexeme;
     if (d.isStatic) {
+      final storageType = resolveGlobalType(
+        ctx,
+        ctx.library,
+        '$parentName.$fieldName',
+      );
       final initializer = field.initializer;
       TypeRef? type;
       final specifiedType = d.fields.type;
@@ -32,6 +37,10 @@ void compileFieldDeclaration(
       if (initializer != null) {
         final pos = beginMethod(ctx, field, field.offset, '$fieldName*i');
         ctx.beginAllocScope();
+        ctx.functionSignatures[pos] = MachineFunctionSignature(
+          [],
+          representationForType(storageType),
+        );
         var V = compileExpression(initializer, ctx, type);
         if (type != null) {
           if (!V.type.isAssignableTo(ctx, type)) {
@@ -43,16 +52,10 @@ void compileFieldDeclaration(
         } else {
           type = V.type;
         }
-        if (!type.isUnboxedAcrossFunctionBoundaries) {
-          V = V.boxIfNeeded(ctx);
-          type = type.copyWith(boxed: true);
-        } else {
-          V = V.unboxIfNeeded(ctx);
-          type = type.copyWith(boxed: false);
-        }
+        V = storageType.boxed ? V.boxIfNeeded(ctx) : V.unboxIfNeeded(ctx);
+        type = storageType;
         final name = '$parentName.$fieldName';
         final index = ctx.topLevelGlobalIndices[ctx.library]![name]!;
-        ctx.pushOp(SetGlobal(index, V.ssa));
         ctx.topLevelVariableInferredTypes[ctx.library]![name] = type;
         ctx.topLevelGlobalInitializers[ctx.library]![name] = pos;
         ctx.runtimeGlobalInitializerMap[index] = pos;
@@ -61,7 +64,7 @@ void compileFieldDeclaration(
       } else {
         ctx.topLevelVariableInferredTypes[ctx
                 .library]!['$parentName.$fieldName'] =
-            type ?? CoreTypes.dynamic.ref(ctx);
+            storageType;
       }
     } else {
       final pos = beginMethod(ctx, d, d.offset, '$parentName.$fieldName (get)');

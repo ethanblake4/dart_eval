@@ -6,6 +6,7 @@ import 'typed_interop.dart';
 import 'typed_instance.dart';
 import 'typed_dispatch.dart';
 import 'typed_closure.dart';
+import 'typed_global_state.dart';
 import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/stdlib/core.dart';
@@ -33,6 +34,7 @@ abstract final class TypedMachine {
   /// Prepared host entry. Internal calls remain in this typed dispatch loop.
   @pragma('vm:never-inline')
   static Object? runEntry(TypedProgram program, TypedEntry arguments, int functionId, {Runtime? runtime}) {
+    runtime?.prepareTypedRuntime();
     final code = program.code;
     final entry = program.functions[functionId];
     var frame = TypedFrame(entry)..environment = arguments.environment;
@@ -664,7 +666,7 @@ abstract final class TypedMachine {
           continue dispatch;
         case TypedOp.callClosure:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          final closure = TypedClosure.resolve(program, r, index);
+          final closure = TypedClosure.resolve(program, r, index, runtime);
           if (closure != null) {
             final function = closure.function;
             frame = frame.enterClosure(function, pc, closure.captures);
@@ -673,6 +675,38 @@ abstract final class TypedMachine {
             r = TypedClosure.invokeAt(program, runtime, r, s, c, index);
             s = null; c = null;
           }
+          continue dispatch;
+        case TypedOp.aLoadGlobal:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          a = TypedGlobalState.loadInteger(runtime, index);
+          continue dispatch;
+        case TypedOp.aSetGlobal:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          TypedGlobalState.storeInteger(runtime, index, a);
+          continue dispatch;
+        case TypedOp.fLoadGlobal:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          f = TypedGlobalState.loadDouble(runtime, index);
+          continue dispatch;
+        case TypedOp.fSetGlobal:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          TypedGlobalState.storeDouble(runtime, index, f);
+          continue dispatch;
+        case TypedOp.eLoadGlobal:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          e = TypedGlobalState.loadBoolean(runtime, index);
+          continue dispatch;
+        case TypedOp.eSetGlobal:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          TypedGlobalState.storeBoolean(runtime, index, e);
+          continue dispatch;
+        case TypedOp.rLoadGlobal:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          r = TypedGlobalState.loadObject(runtime, index);
+          continue dispatch;
+        case TypedOp.rSetGlobal:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          TypedGlobalState.storeObject(runtime, index, r);
           continue dispatch;
         case TypedOp.callHost:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
@@ -714,7 +748,7 @@ abstract final class TypedMachine {
           continue dispatch;
         case TypedOp.rCreateClassR:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          r = TypedInstance(program, index, r as $Instance?);
+          r = TypedInstance(program, index, r as $Instance?, runtime);
           continue dispatch;
         case TypedOp.rLoadPropertyR:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
@@ -738,7 +772,7 @@ abstract final class TypedMachine {
           continue dispatch;
         case TypedOp.callVirtual:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          final member = TypedDispatch.resolve(program, r, index);
+          final member = TypedDispatch.resolve(program, r, index, runtime);
           if (member != null) {
             final function = member.function;
             r = member.receiver;

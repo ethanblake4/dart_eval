@@ -13,7 +13,7 @@ import 'typed_program.dart';
 /// An evaluated object whose members belong to a typed program.
 final class TypedInstance implements $Instance {
   @pragma('vm:never-inline')
-  TypedInstance(this.program, this.classId, [this.superclass])
+  TypedInstance(this.program, this.classId, [this.superclass, this.runtime])
     : values = List<Object?>.filled(program.classes[classId].valueCount, null) {
     var parent = superclass;
     while (parent is TypedInstance) {
@@ -23,6 +23,7 @@ final class TypedInstance implements $Instance {
   }
 
   final TypedProgram program;
+  final Runtime? runtime;
   final int classId;
   final $Instance? superclass;
   final List<Object?> values;
@@ -167,7 +168,12 @@ final class TypedMember extends EvalFunction {
   TypedClosure? _bindClosure() {
     for (final descriptor in receiver.program.closures) {
       if (descriptor.functionId == functionId && descriptor.boundReceiver) {
-        return TypedClosure.bind(receiver.program, descriptor, receiver);
+        return TypedClosure.bind(
+          receiver.program,
+          descriptor,
+          receiver,
+          runtime: receiver.runtime,
+        );
       }
     }
     return null;
@@ -191,7 +197,7 @@ final class TypedMember extends EvalFunction {
       receiver.program,
       entryFunction: functionId,
       objectArguments: [receiver, ...arguments],
-      runtime: runtime,
+      runtime: receiver.runtime ?? runtime,
     );
     return switch (function.resultKind) {
       null => null,

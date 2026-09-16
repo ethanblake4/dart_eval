@@ -410,7 +410,7 @@ List<Instruction> specification() {
   );
   add(
     'callClosure',
-    '''final closure = TypedClosure.resolve(program, r, index);
+    '''final closure = TypedClosure.resolve(program, r, index, runtime);
           if (closure != null) {
             final function = closure.function;
             frame = frame.enterClosure(function, pc, closure.captures);
@@ -423,6 +423,27 @@ List<Instruction> specification() {
     mayThrow: true,
   );
   add('rBridgeArgument', r'r ??= const $null();', inputs: [6], output: 6);
+  for (final (register, index, type) in [
+    ('a', 0, 'Integer'),
+    ('f', 2, 'Double'),
+    ('e', 4, 'Boolean'),
+    ('r', 6, 'Object'),
+  ]) {
+    add(
+      '${register}LoadGlobal',
+      '$register = TypedGlobalState.load$type(runtime, index);',
+      output: index,
+      immediate: 'globalIndex',
+      mayThrow: true,
+    );
+    add(
+      '${register}SetGlobal',
+      'TypedGlobalState.store$type(runtime, index, $register);',
+      inputs: [index],
+      immediate: 'globalIndex',
+      mayThrow: true,
+    );
+  }
   add(
     'callHost',
     'final result = TypedInterop.call(runtime, r, frame.takeObjectArguments(index)); r = result; s = null; c = null; ',
@@ -503,7 +524,7 @@ List<Instruction> specification() {
   );
   add(
     'rCreateClassR',
-    'r = TypedInstance(program, index, r as \$Instance?);',
+    'r = TypedInstance(program, index, r as \$Instance?, runtime);',
     inputs: [6],
     output: 6,
     immediate: 'classIndex',
@@ -544,7 +565,7 @@ List<Instruction> specification() {
           r = null; s = null; c = null;''', terminates: true);
   add(
     'callVirtual',
-    '''final member = TypedDispatch.resolve(program, r, index);
+    '''final member = TypedDispatch.resolve(program, r, index, runtime);
           if (member != null) {
             final function = member.function;
             r = member.receiver;
@@ -596,7 +617,7 @@ abstract final class TypedRegister {
 enum TypedImmediate { none, intConstant, doubleConstant,
   intSpill, doubleSpill, boolSpill, branch,
   function, objectConstant, objectSpill, objectOutgoing, hostCall, shortBranch, integer, overflow,
-  classIndex, field, callSite, externalCall, closureIndex, captureIndex, closureCall }
+  classIndex, field, callSite, externalCall, closureIndex, captureIndex, closureCall, globalIndex }
 
 class TypedInstruction {
   const TypedInstruction(this.name, this.inputs, this.outputs, this.immediate,
@@ -641,6 +662,7 @@ import 'typed_interop.dart';
 import 'typed_instance.dart';
 import 'typed_dispatch.dart';
 import 'typed_closure.dart';
+import 'typed_global_state.dart';
 import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/stdlib/core.dart';
@@ -668,6 +690,7 @@ abstract final class TypedMachine {
   /// Prepared host entry. Internal calls remain in this typed dispatch loop.
   @pragma('vm:never-inline')
   static Object? runEntry(TypedProgram program, TypedEntry arguments, int functionId, {Runtime? runtime}) {
+    runtime?.prepareTypedRuntime();
     final code = program.code;
     final entry = program.functions[functionId];
     var frame = TypedFrame(entry)..environment = arguments.environment;
