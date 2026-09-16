@@ -16,5 +16,6 @@ selecting any scalar unbox instruction.
 
 The existing record, pattern, expression and class tests pass. A focused test
 checks nullable and collection fields across calls in both fresh and serialized
-programs. This checkpoint does not introduce native host Record construction or
-multi-register record returns.
+programs. Exported records retain a `$Record` handle rather than silently
+returning null. Native host Record construction and multi-register record
+returns are not implemented.

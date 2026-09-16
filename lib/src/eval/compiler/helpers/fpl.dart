@@ -92,13 +92,21 @@ List<PossiblyValuedParameter> resolveFPLDefaults(
   CompilerContext ctx,
   FormalParameter param,
   int decLibrary,
-  Declaration? parameterHost,
-) {
+  Declaration? parameterHost, {
+  Map<String, TypeRef> typeParameters = const {},
+}) {
   if (param is SimpleFormalParameter) {
     final type = param.type;
     return type == null
         ? (null, null)
-        : (TypeRef.fromAnnotation(ctx, decLibrary, type), type);
+        : (
+            type is NamedType && typeParameters.containsKey(type.name.lexeme)
+                ? typeParameters[type.name.lexeme]!.copyWith(
+                    nullable: type.question != null,
+                  )
+                : TypeRef.fromAnnotation(ctx, decLibrary, type),
+            type,
+          );
   } else if (param is FieldFormalParameter) {
     return (
       resolveFieldFormalType(ctx, decLibrary, param, parameterHost!),

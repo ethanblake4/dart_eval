@@ -1,5 +1,4 @@
 import 'package:dart_eval/dart_eval.dart';
-import 'package:dart_eval/src/eval/runtime/typed/typed.dart';
 import 'package:test/test.dart';
 
 TypedProgram compile(String source) => Compiler().compileTyped({
@@ -101,6 +100,29 @@ void main() {
     }''');
     expect(TypedMachine.run(program, intArguments: [8, 23]), 15);
     expect(TypedMachine.run(program, intArguments: [23, 8]), 15);
+  });
+  test('loop phi preserves an unboxed string assigned from a bridge call', () {
+    final program = Compiler().compile({
+      'typed': {
+        'main.dart': '''
+          String main() {
+            var value = 'a-a';
+            for (var i = 0; i < 2; i++) {
+              value = value.replaceAll('a', i.toString());
+            }
+            return value;
+          }
+        ''',
+      },
+    });
+    for (final candidate in [program, Program.read(program.write().buffer)]) {
+      expect(
+        Runtime.ofProgram(
+          candidate,
+        ).executeLib('package:typed/main.dart', 'main'),
+        '0-0',
+      );
+    }
   });
   test('loop carries accumulator and counter under register pressure', () {
     final program = compile('''int main(int n) {

@@ -334,7 +334,7 @@ class Variable {
       // Only an unboxed core List proves native storage at this point.
       final isList = !type.boxed && type == CoreTypes.list.ref(ctx);
       if (isString || isList) {
-        final receiver = unboxIfNeeded(ctx);
+        final receiver = unboxIfNeeded(ctx, false);
         return Variable.ssa(
           ctx,
           isString

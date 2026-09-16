@@ -44,10 +44,10 @@ extension Invoke on Variable {
                   CoreTypes.int.ref(ctx),
                   forceAllowDynamic: false,
                 )))) {
-      final receiver = unboxIfNeeded(ctx);
+      final receiver = unboxIfNeeded(ctx, false);
       final argument = args.single.ssa == ssa
           ? receiver
-          : args.single.unboxIfNeeded(ctx);
+          : args.single.unboxIfNeeded(ctx, false);
       final operator = switch (method) {
         '+' => StringOperator.concatenate,
         'codeUnitAt' => StringOperator.codeUnitAt,

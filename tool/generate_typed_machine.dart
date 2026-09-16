@@ -374,6 +374,33 @@ List<Instruction> specification() {
     mayThrow: true,
   );
   add(
+    'rNewBridgeSuperShim',
+    'r = TypedInterop.newBridgeSuperShim();',
+    output: 6,
+    mayThrow: true,
+  );
+  add(
+    'parentBridgeSuperShim',
+    'TypedInterop.parentBridgeSuperShim(r, s);',
+    inputs: [6, 7],
+    mayThrow: true,
+  );
+  add(
+    'rAttachBridge',
+    'r = TypedInterop.attachBridge(runtime, r, s, index);',
+    inputs: [6, 7],
+    output: 6,
+    immediate: 'typeId',
+    mayThrow: true,
+  );
+  add(
+    'rRuntimeType',
+    'r = TypedInterop.runtimeTypeOf(runtime, r);',
+    inputs: [6],
+    output: 6,
+    mayThrow: true,
+  );
+  add(
     'rNewCaptureCell',
     'r = TypedCaptureCell(r);',
     inputs: [6],

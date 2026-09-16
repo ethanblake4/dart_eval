@@ -277,14 +277,17 @@ class IdentifierReference implements Reference {
         );
         return stored;
       }
-      ctx.pushOp(Assign(local.ssa, value.ssa));
-      final type = TypeRef.commonBaseType(ctx, {local.type, value.type});
+      final stored = local.boxed
+          ? value.boxIfNeeded(ctx)
+          : value.unboxIfNeeded(ctx, false);
+      ctx.pushOp(Assign(local.ssa, stored.ssa));
+      final type = TypeRef.commonBaseType(ctx, {local.type, stored.type});
       local.copyWithUpdate(
         ctx,
-        type: type.copyWith(boxed: value.type.boxed),
-        concreteTypes: value.concreteTypes,
+        type: type.copyWith(boxed: local.boxed),
+        concreteTypes: stored.concreteTypes,
       );
-      return value;
+      return stored;
     }
 
     // Instance

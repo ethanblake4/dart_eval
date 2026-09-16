@@ -1,6 +1,5 @@
 import 'package:test/test.dart';
 import 'package:dart_eval/dart_eval.dart';
-import 'package:dart_eval/stdlib/core.dart';
 
 void main() {
   late Compiler compiler;
@@ -42,12 +41,10 @@ void main() {
           ''',
         },
       });
-      expect(
-        (runtime.executeLib('package:example/main.dart', 'main') as List).map(
-          (e) => (e as $String).$value,
-        ),
-        ['a', 'bird'],
-      );
+      expect(runtime.executeLib('package:example/main.dart', 'main'), [
+        'a',
+        'bird',
+      ]);
     });
 
     test('RegExp.stringMatch() if has match', () {
@@ -121,12 +118,11 @@ void main() {
           ''',
       },
     });
-    expect(
-      (runtime.executeLib('package:example/main.dart', 'main') as List).map(
-        (e) => (e as $String).$value,
-      ),
-      ['year', 'month', 'day'],
-    );
+    expect(runtime.executeLib('package:example/main.dart', 'main'), [
+      'year',
+      'month',
+      'day',
+    ]);
   });
 
   test('RegExp.groupCount', () {

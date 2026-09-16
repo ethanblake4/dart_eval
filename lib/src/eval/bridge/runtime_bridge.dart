@@ -1,6 +1,7 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_instance.dart';
 
 /// A bridge class can be extended inside the dart_eval VM and used both in
 /// and outside of it.
@@ -46,6 +47,10 @@ mixin $Bridge<T> on Object implements $Value, $Instance {
 
   dynamic $_invoke(String method, List<$Value?> args) {
     final runtime = Runtime.bridgeData[this]!.runtime;
+    final subclass = Runtime.bridgeData[this]!.subclass;
+    if (subclass is TypedInstance) {
+      return subclass.invoke(method, args, runtime: runtime)?.$reified;
+    }
     return ($getProperty(runtime, method) as EvalFunction).call(runtime, this, [
       this,
       ...args,
@@ -63,7 +68,9 @@ mixin $Bridge<T> on Object implements $Value, $Instance {
   @override
   int $getRuntimeType(Runtime runtime) {
     final data = Runtime.bridgeData[this]!;
-    return data.subclass?.$getRuntimeType(runtime) ?? data.$runtimeType;
+    return data.subclass is BridgeDelegatingShim
+        ? data.$runtimeType
+        : data.subclass?.$getRuntimeType(runtime) ?? data.$runtimeType;
   }
 }
 

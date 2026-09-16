@@ -34,8 +34,8 @@ class $Record implements $Instance {
   }
 
   @override
-  $Value? get $value => null;
+  $Record get $value => this;
 
   @override
-  $Value? get $reified => null;
+  $Record get $reified => this;
 }

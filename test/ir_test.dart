@@ -44,10 +44,13 @@ void main() {
     'bridge calls preserve duplicate inputs across subclass and arguments',
     () {
       final bridge =
-          BridgeInstantiate(result, 7, value, [
+          BridgeInstantiate(
+                result,
+                7,
                 value,
-                value,
-              ]).copyWith(readsFrom: {renamed}, writesTo: output)
+                [value, value],
+                runtimeTypeId: 2,
+              ).copyWith(readsFrom: {renamed}, writesTo: output)
               as BridgeInstantiate;
       expect(bridge.subclass, renamed);
       expect(bridge.args, [renamed, renamed]);

@@ -1,4 +1,6 @@
 import 'package:dart_eval/src/eval/runtime/class.dart';
+import 'package:dart_eval/src/eval/bridge/runtime_bridge.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/type.dart';
 import 'package:dart_eval/src/eval/runtime/function.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/stdlib/core.dart';
@@ -13,6 +15,37 @@ import 'typed_closure.dart';
 /// The compiler emits every scalar box and unbox operation. Host functions must
 /// use an explicit bridge wrapper, such as $Function or $Closure.
 abstract final class TypedInterop {
+  static $Value runtimeTypeOf(Runtime? runtime, Object? value) {
+    final target = _runtime(runtime);
+    return $TypeImpl(
+      value == null
+          ? target.lookupType(CoreTypes.nullType)
+          : (value as $Value).$getRuntimeType(target),
+    );
+  }
+
+  static BridgeSuperShim newBridgeSuperShim() => BridgeSuperShim();
+
+  static void parentBridgeSuperShim(Object? shim, Object? parent) {
+    (shim as BridgeSuperShim).bridge = parent as $Bridge;
+  }
+
+  static $Instance attachBridge(
+    Runtime? runtime,
+    Object? host,
+    Object? subclass,
+    int typeId,
+  ) {
+    final target = _runtime(runtime);
+    final instance = host as $Instance;
+    Runtime.bridgeData[instance] = BridgeData(
+      target,
+      typeId,
+      subclass as $Instance? ?? const BridgeDelegatingShim(),
+    );
+    return instance;
+  }
+
   /// Resolve metadata outside the switch so its table does not stay live in
   /// the arithmetic loop. Generated bridges consume canonical R/S/C directly.
   @pragma('vm:never-inline')
@@ -121,12 +154,14 @@ abstract final class TypedInterop {
       };
 
   /// Export scalar wrappers once when control returns to host Dart.
-  /// Evaluated instances retain their identity and never read $value.
+  /// Guest-only instances retain their identity; bridge subclasses expose their
+  /// existing native bridge object.
   static Object? exportExternal(Object? value, {Runtime? runtime}) =>
       switch (value) {
         $null() => null,
         TypedHostFunction() => value.function,
-        TypedInstance() || $InstanceImpl() || EvalFunction() => value,
+        TypedInstance() => value.bridge ?? value,
+        $InstanceImpl() || EvalFunction() => value,
         $List() => TypedHostCollections.export(value.$value, value, runtime),
         $Map() => TypedHostCollections.export(value.$value, value, runtime),
         $Set() => TypedHostCollections.export(value.$value, value, runtime),

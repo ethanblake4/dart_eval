@@ -486,6 +486,11 @@ void compileConstructorDeclaration(
             .sourceLib]!['${$extends.superclass.name.lexeme}.$constructorName']!,
         inst.ssa,
         ssa,
+        runtimeTypeId: TypeRef.fromAnnotation(
+          ctx,
+          ctx.library,
+          $extends.superclass,
+        ).toRuntimeType(ctx).type,
       ),
       CoreTypes.dynamic.ref(ctx),
     );
@@ -642,6 +647,11 @@ void compileDefaultConstructor(
             .sourceLib]!['${$extends.superclass.name.lexeme}.$constructorName']!,
         inst,
         [],
+        runtimeTypeId: TypeRef.fromAnnotation(
+          ctx,
+          ctx.library,
+          $extends.superclass,
+        ).toRuntimeType(ctx).type,
       ),
     );
     ctx.pushOp(ParentBridgeSuperShim($super.ssa, bridgeInst));

@@ -699,6 +699,19 @@ abstract final class TypedMachine {
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           r = TypedInterop.invokeExternal(program, runtime, r, s, c, index); s = null; c = null;
           continue dispatch;
+        case TypedOp.rNewBridgeSuperShim:
+          r = TypedInterop.newBridgeSuperShim();
+          continue dispatch;
+        case TypedOp.parentBridgeSuperShim:
+          TypedInterop.parentBridgeSuperShim(r, s);
+          continue dispatch;
+        case TypedOp.rAttachBridge:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          r = TypedInterop.attachBridge(runtime, r, s, index);
+          continue dispatch;
+        case TypedOp.rRuntimeType:
+          r = TypedInterop.runtimeTypeOf(runtime, r);
+          continue dispatch;
         case TypedOp.rNewCaptureCell:
           r = TypedCaptureCell(r);
           continue dispatch;

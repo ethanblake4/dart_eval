@@ -687,15 +687,42 @@ class TypedBackend {
           }
           continue;
         }
-        if (op is bridge.InvokeExternal) {
+        if (op is bridge.NewBridgeSuperShim) {
+          lowered.add(
+            TypedOperation(
+              _named(['rNewBridgeSuperShim']),
+              value(op.target),
+              [],
+            ),
+          );
+          continue;
+        }
+        if (op is bridge.ParentBridgeSuperShim) {
+          lowered.add(
+            TypedOperation(_named(['parentBridgeSuperShim']), null, [
+              value(op.shim),
+              value(op.parent),
+            ]),
+          );
+          continue;
+        }
+        if (op is bridge.InvokeExternal || op is bridge.BridgeInstantiate) {
+          final creation = op is bridge.BridgeInstantiate ? op : null;
+          final external = op is bridge.InvokeExternal
+              ? op
+              : bridge.InvokeExternal(
+                  creation!.target,
+                  creation.externalFunctionId,
+                  creation.args,
+                );
           final callLayout = TypedCallLayout(
-            List.filled(op.args.length, TypedArgumentKind.object),
+            List.filled(external.args.length, TypedArgumentKind.object),
           );
           final registerArguments = <cfg.SSA>[];
           final argumentRegisters = <int>[];
-          for (var index = 0; index < op.args.length; index++) {
-            final input = value(op.args[index]);
-            if (representations[op.args[index]] !=
+          for (var index = 0; index < external.args.length; index++) {
+            final input = value(external.args[index]);
+            if (representations[external.args[index]] !=
                 MachineRepresentation.object) {
               throw StateError(
                 'External call argument requires explicit boxing',
@@ -731,19 +758,24 @@ class TypedBackend {
           }
           var callIndex = _externalCalls.indexWhere(
             (call) =>
-                call.externalFunctionId == op.externalFunctionId &&
-                call.argumentCount == op.args.length,
+                call.externalFunctionId == external.externalFunctionId &&
+                call.argumentCount == external.args.length,
           );
           if (callIndex < 0) {
             callIndex = _externalCalls.length;
             _externalCalls.add(
-              TypedExternalCall(op.externalFunctionId, op.args.length),
+              TypedExternalCall(
+                external.externalFunctionId,
+                external.args.length,
+              ),
             );
           }
           lowered.add(
             TypedOperation(
               _named(['callExternal']),
-              value(op.target),
+              creation == null
+                  ? value(external.target)
+                  : temporary('bridgeHost'),
               registerArguments,
               fixedVariant: cfg.Variant(
                 result: 6,
@@ -753,6 +785,17 @@ class TypedBackend {
               clobbers: {0, 1, 2, 3, 4, 5, 6, 7, 8},
             ),
           );
+          if (creation != null) {
+            final host = lowered.last.writesTo!;
+            lowered.add(
+              TypedOperation(
+                _named(['rAttachBridge']),
+                value(creation.target),
+                [host, value(creation.subclass)],
+                immediate: creation.runtimeTypeId,
+              ),
+            );
+          }
           continue;
         }
         if (op is objects_ir.InvokeDynamic ||
@@ -1275,6 +1318,10 @@ class TypedBackend {
             ['rLoadType'],
             [],
             immediate: typeId,
+          ),
+          types_ir.LoadRuntimeType(:final object) => make(
+            ['rRuntimeType'],
+            [object],
           ),
           types_ir.AssertType(:final object, :final typeId) => make(
             ['rAssertType'],

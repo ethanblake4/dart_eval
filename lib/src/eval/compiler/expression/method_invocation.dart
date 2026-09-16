@@ -40,6 +40,11 @@ Variable compileMethodInvocation(
         while (!(ctx.instanceDeclarationsMap[owner.file]?[owner.name]
                 ?.containsKey(e.methodName.name) ??
             false)) {
+          final bridgeOwner =
+              ctx.topLevelDeclarationsMap[owner.file]?[owner.name]?.bridge;
+          if (bridgeOwner is BridgeClassDef &&
+              bridgeOwner.methods.containsKey(e.methodName.name))
+            break;
           final parent = owner.extendsType;
           if (parent == null ||
               !ctx.instanceDeclarationsMap.containsKey(parent.file)) {
@@ -60,6 +65,7 @@ Variable compileMethodInvocation(
   }
 
   AlwaysReturnType? mReturnType;
+  bool? genericReturnBoxed;
 
   if (L != null) {
     if (e.operator?.type == TokenType.QUESTION_PERIOD) {
@@ -223,6 +229,13 @@ Variable compileMethodInvocation(
       }
     }
 
+    if (returnAnnotation is NamedType) {
+      final declaredBound = resolveGenerics[returnAnnotation.name.value()];
+      if (declaredBound != null) {
+        // Inference narrows the language type, not the compiled callee's ABI.
+        genericReturnBoxed = !declaredBound.isUnboxedAcrossFunctionBoundaries;
+      }
+    }
     final argsPair = compileArgumentList(
       ctx,
       e.argumentList,
@@ -262,6 +275,7 @@ Variable compileMethodInvocation(
           ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.']!,
           subclass.ssa,
           callArgs,
+          runtimeTypeId: type.toRuntimeType(ctx).type,
         ),
       );
     } else {
@@ -293,7 +307,8 @@ Variable compileMethodInvocation(
   final returnType = mReturnType.type?.copyWith(
     boxed:
         dec0.isBridge ||
-        !(mReturnType.type?.isUnboxedAcrossFunctionBoundaries ?? false),
+        (genericReturnBoxed ??
+            !(mReturnType.type?.isUnboxedAcrossFunctionBoundaries ?? false)),
   );
 
   final v = Variable.of(
@@ -415,13 +430,14 @@ Variable _invokeWithTarget(
   } else if (L.concreteTypes.length == 1 &&
       dec0?.isBridge == false &&
       (e.target is SuperExpression ||
-          (ctx.instanceDeclarationPositions[L.concreteTypes.single.file]?[L
-                          .concreteTypes
-                          .single
-                          .name]?[2]
-                      as Map?)
-                  ?.containsKey(e.methodName.name) ==
-              true)) {
+          (!_hasBridgeSuperclass(ctx, L.type) &&
+              (ctx.instanceDeclarationPositions[L.concreteTypes.single.file]?[L
+                              .concreteTypes
+                              .single
+                              .name]?[2]
+                          as Map?)
+                      ?.containsKey(e.methodName.name) ==
+                  true))) {
     final actualType = L.concreteTypes[0];
     final offset = DeferredOrOffset(
       file: actualType.file,
@@ -457,6 +473,15 @@ Variable _invokeWithTarget(
   );
 
   return v;
+}
+
+bool _hasBridgeSuperclass(CompilerContext ctx, TypeRef type) {
+  for (final parent in type.resolveTypeChain(ctx).extendsChain) {
+    final bridge =
+        ctx.topLevelDeclarationsMap[parent.file]?[parent.name]?.bridge;
+    if (bridge is BridgeClassDef && bridge.bridge) return true;
+  }
+  return false;
 }
 
 DeclarationOrBridge<MethodDeclaration, BridgeMethodDef> resolveInstanceMethod(

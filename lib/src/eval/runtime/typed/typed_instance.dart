@@ -1,4 +1,5 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/bridge/runtime_bridge.dart';
 import 'package:dart_eval/src/eval/runtime/exception.dart';
 import 'package:dart_eval/stdlib/core.dart';
 
@@ -13,9 +14,27 @@ import 'typed_program.dart';
 /// An evaluated object whose members belong to a typed program.
 final class TypedInstance implements $Instance {
   @pragma('vm:never-inline')
-  TypedInstance(this.program, this.classId, [this.superclass, this.runtime])
-    : values = List<Object?>.filled(program.classes[classId].valueCount, null) {
-    var parent = superclass;
+  TypedInstance(
+    this.program,
+    this.classId, [
+    $Instance? superclass,
+    this.runtime,
+  ]) : superclass = superclass is $Bridge
+           ? Runtime.bridgeData[superclass]!.subclass
+           : superclass,
+       values = List<Object?>.filled(
+         program.classes[classId].valueCount,
+         null,
+       ) {
+    if (superclass is $Bridge) {
+      final data = Runtime.bridgeData[superclass]!;
+      Runtime.bridgeData[superclass] = BridgeData(
+        data.runtime,
+        data.$runtimeType,
+        this,
+      );
+    }
+    var parent = this.superclass;
     while (parent is TypedInstance) {
       parent._dispatchRoot = this;
       parent = parent.superclass;
@@ -146,13 +165,20 @@ final class TypedInstance implements $Instance {
     ),
   );
 
-  @override
-  Never get $value =>
-      throw UnsupportedError('Typed instances have no host value');
+  $Bridge? get bridge {
+    var parent = superclass;
+    while (parent is TypedInstance) {
+      parent = parent.superclass;
+    }
+    return parent is BridgeSuperShim ? parent.bridge : null;
+  }
 
   @override
-  Never get $reified =>
-      throw UnsupportedError('Typed instances cannot be reified');
+  Object get $value =>
+      bridge ?? (throw UnsupportedError('Typed instances have no host value'));
+
+  @override
+  Object get $reified => $value;
 }
 
 /// A resolved member also serves as an explicit bound method bridge adapter.

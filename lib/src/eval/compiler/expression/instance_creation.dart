@@ -68,7 +68,13 @@ Variable compileInstanceCreation(
     if (classBridge is BridgeClassDef && !classBridge.wrap) {
       final subclass = BuiltinValue().push(ctx);
       ctx.pushOp(
-        BridgeInstantiate(result, externalId, subclass.ssa, arguments.ssa),
+        BridgeInstantiate(
+          result,
+          externalId,
+          subclass.ssa,
+          arguments.ssa,
+          runtimeTypeId: staticType.toRuntimeType(ctx).type,
+        ),
       );
     } else {
       ctx.pushOp(InvokeExternal(result, externalId, arguments.ssa));

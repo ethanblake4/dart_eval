@@ -1,4 +1,5 @@
 import 'package:dart_eval/src/eval/runtime/class.dart';
+import 'package:dart_eval/src/eval/bridge/runtime_bridge.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 import 'typed_call_site.dart';
@@ -16,6 +17,10 @@ abstract final class TypedDispatch {
     int siteIndex, [
     Runtime? runtime,
   ]) {
+    if (receiver is! TypedInstance) {
+      if (receiver is! $Bridge) return null;
+      receiver = Runtime.bridgeData[receiver]?.subclass;
+    }
     if (receiver is! TypedInstance ||
         !identical(receiver.program, program) ||
         (receiver.runtime != null && !identical(receiver.runtime, runtime))) {

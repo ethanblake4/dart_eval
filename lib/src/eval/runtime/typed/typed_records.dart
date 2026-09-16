@@ -8,15 +8,17 @@ abstract final class TypedRecords {
   @pragma('vm:never-inline')
   static $Record create(Runtime runtime, Object? fields, int index) {
     final layouts = _layouts[runtime] ??= {};
-    final layout = layouts.putIfAbsent(index, () {
+    var layout = layouts[index];
+    if (layout == null) {
       final descriptor = runtime.typedConstant(index) as List;
-      return (
-        Map<String, int>.from(
+      layout = (
+        Map<String, int>.unmodifiable(
           runtime.typedConstant(descriptor[0] as int) as Map,
         ),
         descriptor[1] as int,
       );
-    });
+      layouts[index] = layout;
+    }
     return $Record(fields as List<Object?>, layout.$1, layout.$2);
   }
 

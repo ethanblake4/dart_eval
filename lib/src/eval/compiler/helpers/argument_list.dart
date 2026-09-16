@@ -135,6 +135,7 @@ ArgumentListResult compileArgumentList(
         param,
         decLibrary,
         parameterHost,
+        typeParameters: resolveGenerics,
       );
 
       paramType ??= CoreTypes.dynamic.ref(ctx);
@@ -208,7 +209,13 @@ ArgumentListResult compileArgumentList(
     if (param is SimpleFormalParameter) {
       typeAnnotation = param.type;
       if (typeAnnotation != null) {
-        paramType = TypeRef.fromAnnotation(ctx, decLibrary, typeAnnotation);
+        paramType =
+            typeAnnotation is NamedType &&
+                resolveGenerics.containsKey(typeAnnotation.name.lexeme)
+            ? resolveGenerics[typeAnnotation.name.lexeme]!.copyWith(
+                nullable: typeAnnotation.question != null,
+              )
+            : TypeRef.fromAnnotation(ctx, decLibrary, typeAnnotation);
       }
     } else if (param is FieldFormalParameter) {
       paramType = resolveFieldFormalType(ctx, decLibrary, param, parameterHost);

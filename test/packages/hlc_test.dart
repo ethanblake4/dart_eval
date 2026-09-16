@@ -1,5 +1,4 @@
 import 'package:dart_eval/dart_eval.dart';
-import 'package:dart_eval/src/eval/shared/stdlib/core/base.dart';
 import 'package:test/expect.dart';
 import 'package:test/scaffolding.dart';
 
@@ -193,7 +192,7 @@ class TimeDriftException implements Exception {
 
     expect(
       runtime.executeLib('package:eval_test/main.dart', 'main'),
-      $String('001697431030337:00002:time'),
+      '001697431030337:00002:time',
     );
   });
 }

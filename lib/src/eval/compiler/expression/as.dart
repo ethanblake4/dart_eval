@@ -6,13 +6,17 @@ import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
+import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
+import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
+import 'package:dart_eval/src/eval/ir/memory.dart';
+import 'package:dart_eval/src/eval/ir/logic.dart';
 
 Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
   var V = compileExpression(e.expression, ctx);
   final slot = TypeRef.fromAnnotation(ctx, ctx.library, e.type);
 
   /// If the type is the slot, we can just return
-  if (V.type == slot) {
+  if (V.type == slot && (!V.type.nullable || slot.nullable)) {
     return V;
   }
 
@@ -22,14 +26,38 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
   }
 
   V = V.boxIfNeeded(ctx);
-  ctx.pushOp(AssertType(V.ssa, slot.toRuntimeType(ctx).type));
+  final typeId = slot.toRuntimeType(ctx).type;
+  if (slot.nullable) {
+    macroBranch(
+      ctx,
+      null,
+      condition: (ctx) {
+        final isNull = Variable.ssa(
+          ctx,
+          IsNull(ctx.svar('cast_null'), V.ssa),
+          CoreTypes.bool.ref(ctx).copyWith(boxed: false),
+        );
+        return Variable.ssa(
+          ctx,
+          LogicalNot(ctx.svar('cast_nonnull'), isNull.ssa),
+          isNull.type,
+        );
+      },
+      thenBranch: (ctx, _) {
+        ctx.pushOp(AssertType(V.ssa, typeId));
+        return StatementInfo(-1);
+      },
+    );
+  } else {
+    ctx.pushOp(AssertType(V.ssa, typeId));
+  }
   V = V.copyWithUpdate(ctx, type: slot.copyWith(boxed: true));
 
   // If the type changes between num and int/double, unbox/box
   if (slot == CoreTypes.num.ref(ctx)) {
     V = V.boxIfNeeded(ctx);
-  } else if (slot == CoreTypes.int.ref(ctx) ||
-      slot == CoreTypes.double.ref(ctx)) {
+  } else if (!slot.nullable &&
+      (slot == CoreTypes.int.ref(ctx) || slot == CoreTypes.double.ref(ctx))) {
     V = V.unboxIfNeeded(ctx);
   }
 

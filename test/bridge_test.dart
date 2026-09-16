@@ -142,7 +142,7 @@ void main() {
             }
 
             TestClass main() {
-              final test = MyTestClass(0, b: 'hello');
+              final test = MyTestClass(0);
               return test;
             }
           ''',

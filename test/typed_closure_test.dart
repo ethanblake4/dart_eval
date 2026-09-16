@@ -138,6 +138,40 @@ void main() {
       93,
     );
 
+    check(
+      'function tear-off equality follows function and receiver identity',
+      r'''
+      int first() => 1;
+      int second() => 1;
+
+      class Counter {
+        int first() => 1;
+        int second() => 1;
+      }
+
+      bool main() {
+        final receiver = Counter();
+        final otherReceiver = Counter();
+        final firstTearOff = first;
+        final sameFirstTearOff = first;
+        final bound = receiver.first;
+        final sameBound = receiver.first;
+        final closure = () => 1;
+        final sameClosure = closure;
+        final otherClosure = () => 1;
+        return firstTearOff == sameFirstTearOff &&
+            firstTearOff != second &&
+            bound == sameBound &&
+            bound.hashCode == sameBound.hashCode &&
+            bound != otherReceiver.first &&
+            bound != receiver.second &&
+            closure == sameClosure &&
+            closure != otherClosure;
+      }
+    ''',
+      true,
+    );
+
     test('escaping closure captures only free variables, encoded=$encoded', () {
       final runtime = _runtime(r'''
         Function main(int used, int unused) => () => used;

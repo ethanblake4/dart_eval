@@ -65,13 +65,15 @@ final class BridgeInstantiate extends Operation {
   final SSA subclass;
   final List<SSA> args;
   final int externalFunctionId;
+  final int runtimeTypeId;
 
   BridgeInstantiate(
     this.target,
     this.externalFunctionId,
     this.subclass,
-    this.args,
-  );
+    this.args, {
+    required this.runtimeTypeId,
+  });
 
   @override
   SSA? get writesTo => target;
@@ -88,6 +90,7 @@ final class BridgeInstantiate extends Operation {
       other is BridgeInstantiate &&
       target == other.target &&
       externalFunctionId == other.externalFunctionId &&
+      runtimeTypeId == other.runtimeTypeId &&
       subclass == other.subclass &&
       args == other.args;
 
@@ -95,6 +98,7 @@ final class BridgeInstantiate extends Operation {
   int get hashCode =>
       target.hashCode ^
       externalFunctionId.hashCode ^
+      runtimeTypeId.hashCode ^
       subclass.hashCode ^
       args.hashCode;
 
@@ -110,6 +114,7 @@ final class BridgeInstantiate extends Operation {
       externalFunctionId,
       newReadsFrom[0],
       newReadsFrom.sublist(1),
+      runtimeTypeId: runtimeTypeId,
     );
   }
 }

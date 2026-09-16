@@ -1,4 +1,5 @@
 import 'package:dart_eval/dart_eval.dart';
+import 'package:dart_eval/src/eval/runtime/record.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -25,6 +26,15 @@ void main() {
         Runtime(program.write().buffer),
       ]) {
         expect(runtime.executeLib('package:records/main.dart', 'main'), 12);
+        final record =
+            runtime.executeLib(
+                  'package:records/main.dart',
+                  'make',
+                  arguments: {'value': 2},
+                )
+                as $Record;
+        expect(record.fields[1], isNull);
+        expect(record.mapping, {r'$1': 0, r'$2': 1, 'values': 2});
       }
     },
   );

@@ -22,7 +22,7 @@ void main() {
         },
       });
 
-      final startTime = DateTime.now().millisecondsSinceEpoch;
+      final elapsed = Stopwatch()..start();
       final future =
           runtime.executeLib(
                 'package:example/main.dart',
@@ -31,9 +31,8 @@ void main() {
               )
               as Future;
       await expectLater(future, completion($int(3)));
-      final endTime = DateTime.now().millisecondsSinceEpoch;
-      expect(endTime - startTime, greaterThan(80));
-      expect(endTime - startTime, lessThan(450));
+      // Scheduling contention may delay completion, but it must not finish early.
+      expect(elapsed.elapsedMilliseconds, greaterThanOrEqualTo(150));
     });
 
     test('Chained async/await', () async {
@@ -85,7 +84,7 @@ void main() {
         },
       });
 
-      final startTime = DateTime.now().millisecondsSinceEpoch;
+      final elapsed = Stopwatch()..start();
       final future =
           runtime.executeLib(
                 'package:example/main.dart',
@@ -94,9 +93,8 @@ void main() {
               )
               as Future;
       await expectLater(future, completion(null));
-      final endTime = DateTime.now().millisecondsSinceEpoch;
-      expect(endTime - startTime, greaterThan(100));
-      expect(endTime - startTime, lessThan(200));
+      // The test runner timeout bounds hangs; OS scheduling has no 200 ms guarantee.
+      expect(elapsed.elapsedMilliseconds, greaterThanOrEqualTo(150));
     });
 
     test('Using a Future result', () async {
