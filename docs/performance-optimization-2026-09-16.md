@@ -55,3 +55,50 @@ The particles workload drops two static spill/reload instructions and four bytes
 An additional correctness regression found while preparing callback workloads is fixed: implicit instance-field assignment now returns the boxed representation actually stored. Prefix and compound updates previously could try to box that value again. Fresh and serialized regression coverage includes fields, captures, and globals.
 
 The sibling control_flow_graph allocator checkpoint is `7dc5626`. Its twelve existing string-fixture failures reproduced exactly against the old library. The subsequent test refactor replaces shared mutable snapshots with independent graph/SSA/liveness/allocation assertions and executable loop cases, including zero, one, and multiple iterations. All 65 CFG tests now pass, with clean analysis of changed test files.
+
+## Frame reuse
+
+Inactive leaf frames now reuse their storage across different callees, growing a spill or outgoing buffer only when necessary. Object buffers are fully cleared on return. Suspended frames detach and cannot be borrowed by the former caller. Frames with cached children keep the old function-specific policy.
+
+That last restriction is measured. Retargeting every inactive frame reduced allocation but slowed recursive trees from about 104–105 ms to 122–126 ms. Caching the previous callee did not solve this. Restricting retargeting to frames without cached children retained the object-workload gains and improved trees too. Buffer capacities remain at their high-water sizes until their frame is released; this trades some retained empty storage for fewer allocations.
+
+The reference below already includes the first five changes, callback entry, and conditional carry. These sequential pinned AOT runs use fifteen samples per workload. The two leaf experiments bracket an additional reference run; the final column is the shipped source, after formatting and making the helper private.
+
+| Workload | Reference runs ms | Leaf-only runs ms | Final source ms |
+|---|---:|---:|---:|
+| Integer mixing | 32.387 / 33.124 | 32.866 / 38.320 | 32.671 |
+| Particles | 44.297 / 45.263 | 35.855 / 36.305 | 35.467 |
+| Checkout | 40.038 / 41.184 | 34.914 / 35.276 | 34.402 |
+| Events | 6.791 / 6.943 | 6.288 / 6.313 | 6.261 |
+| Word counting | 28.507 / 28.907 | 28.897 / 29.466 | 28.757 |
+| Recursive tree | 104.279 / 105.498 | 97.328 / 99.165 | 99.161 |
+
+Particle, checkout, event, and tree improvements repeat. Arithmetic and word-count differences are mostly noise. The final sum/double medians were 76.218/32.198 ms, while warmed reference/leaf runs were about 39–40/26 ms. Native controls again moved with the first two cases, so those final raw numbers cannot establish a regression or a precise speedup. Every audit result matched native Dart.
+
+At 300,000 iterations and 21 samples, the leaf variant's method-call loop took 61.649 ms versus 67.795 ms for the nearby reference; polymorphic calls took 31.640 versus 35.153 ms. Primitive, mixed, boxed-argument, and overflow-argument calls were broadly unchanged. Full sample ranges are preserved; earlier noisy call sweeps are not discarded from the evidence.
+
+## Register, opcode, and inlining experiments
+
+Each variant has an isolated source tree and dependency configuration. All eight source workloads passed their checksum checks. Secondary dispatch also passed explicit tests of extended constants, globals, exceptions, fresh/serialized execution, and invalid encodings. These prototypes retain the current codec version only inside their isolated trees; their payloads must not be mixed with production bytecode.
+
+| Variant | ARM64 dispatch bytes | Common header instructions | Integer add path instructions | Decision |
+|---|---:|---:|---:|---|
+| Current boundaries | 25,664 | 31 | 41 | Keep |
+| Prefer inline frame entry/return | 28,848 | 31 | 43 | Reject: larger loop, no broad workload win |
+| Prefer inline pool access | 25,952 | 31 | 47 | Reject: more register pressure and slower workloads |
+| 200 primary operations plus secondary prefix | 24,696 | 31 | 40 | Keep prototype only: smaller native code, no measured throughput win |
+| Third integer register, hot constant loads | 34,428 | 32 | 41 | Reject this design: larger loop and slower workloads |
+
+These are cross-compiled Dart 3.10.7 Linux ARM64 instructions, not ARM hardware timings. The add count includes one dispatch header and the handler's path back to dispatch, excluding called helper bodies. The baseline header saves eleven stack values per iteration. Its immediate load, reload, and spill paths are approximately 76, 76, and 78 instructions. Frame reuse leaves the final dispatch at 25,664 bytes.
+
+The first third-register experiment misplaced its constant load in the secondary table. A corrected run put that operation in the primary table. It removes one reload from integer mixing and reduces its code from 61 to 58 bytes, but takes 37.141 ms versus reference runs of 32.387/33.124 ms. Particles, checkout, events, word counting, and trees also regress. This measures one additional integer register with a conservative allocator, not every possible larger-bank design. The public argument/return ABI remained unchanged.
+
+Secondary dispatch reserves a primary byte and reads a second selector into a nested integer switch. Its path to the second dispatch adds about 23 instructions before the cold handler in the 200-primary experiment. The primary selection uses static usage in this small workload set, which biases it toward these programs. It is useful evidence for accommodating future Map/Set/List/String intrinsics, not justification for deleting operations absent from eight programs. Production keeps all 243 operations and the existing bytecode format.
+
+For a future allocator pass, loop headers and backedges remain the largest compiler opportunity. The sum loop still spills/reloads six values per successful iteration. Whole-loop register assignment and constant rematerialization should be measured before adding another scalar bank. Exact-class field/method lowering is the next broader OOP target; these measurements do not make dynamic lookup or wrapper costs disappear.
+
+## Final validation and evidence
+
+The final dart_eval suite passes **822 tests**. Five frame-reuse tests cover storage growth and clearing, outgoing overflow, fresh/serialized execution, exceptions/finally, detached asynchronous calls, and recursive sibling calls. Analysis has no code issues; the existing path-dependency publishing warning remains. The generator check passes with 243 instructions. The sibling CFG suite passes **65 tests**, and its fixture-refactor checkpoint is `9e96620`. Flutter performance was not rerun.
+
+Raw results, source snapshots, experiment scripts, emitted IR/bytecode, ARM disassembly, and validation logs are retained in `.dart_tool/performance_optimization_20260916/`. The committed `docs/performance-optimization-evidence.zip` contains the portable evidence, excluding executables, AOT images, package caches, and absolute package configurations. Its README explains reconstruction. Early noisy sweeps and rejected variants remain included.

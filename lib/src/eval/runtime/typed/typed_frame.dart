@@ -245,8 +245,14 @@ class TypedFrame {
   TypedFrame enterStatic(TypedProgram program, int index, int pc) {
     final callee = program.functions[index];
     var child = _child;
-    if (child == null || !identical(child.function, callee)) {
+    if (child == null) {
       child = _child = TypedFrame(callee, this);
+    } else if (!identical(child.function, callee)) {
+      if (child._child == null) {
+        child._retarget(callee);
+      } else {
+        child = _child = TypedFrame(callee, this);
+      }
     }
     child.returnPc = pc;
     child.environment = const [];
@@ -256,8 +262,14 @@ class TypedFrame {
   @pragma('vm:never-inline')
   TypedFrame enter(TypedFunction callee, int pc) {
     var child = _child;
-    if (child == null || !identical(child.function, callee)) {
+    if (child == null) {
       child = _child = TypedFrame(callee, this);
+    } else if (!identical(child.function, callee)) {
+      if (child._child == null) {
+        child._retarget(callee);
+      } else {
+        child = _child = TypedFrame(callee, this);
+      }
     }
     child.returnPc = pc;
     child.environment = const [];
@@ -272,8 +284,14 @@ class TypedFrame {
   ) {
     // Keep the cached-frame path in one Dart call, just like ordinary calls.
     var child = _child;
-    if (child == null || !identical(child.function, callee)) {
+    if (child == null) {
       child = _child = TypedFrame(callee, this);
+    } else if (!identical(child.function, callee)) {
+      if (child._child == null) {
+        child._retarget(callee);
+      } else {
+        child = _child = TypedFrame(callee, this);
+      }
     }
     child.returnPc = pc;
     child.environment = captures;
@@ -318,7 +336,32 @@ class TypedFrame {
     return arguments;
   }
 
-  final TypedFunction function;
+  /// Reuse inactive leaf storage across differing callees. Frames with cached
+  /// children retain function-specific call trees: retargeting those regresses
+  /// recursive workloads even when it reduces allocations.
+  @pragma('vm:never-inline')
+  void _retarget(TypedFunction callee) {
+    assert(returnPc < 0 && asyncState == null);
+    assert(exceptions == null || exceptions!.depth == 0);
+    if (intSpills.length < callee.intSpillCount) {
+      intSpills = Int64List(callee.intSpillCount);
+    }
+    if (doubleSpills.length < callee.doubleSpillCount) {
+      doubleSpills = Float64List(callee.doubleSpillCount);
+    }
+    if (boolSpills.length < callee.boolSpillCount) {
+      boolSpills = Uint8List(callee.boolSpillCount);
+    }
+    if (objectSpills.length < callee.objectSpillCount) {
+      objectSpills = List<Object?>.filled(callee.objectSpillCount, null);
+    }
+    if (objectOutgoing.length < callee.objectOutgoingCount) {
+      objectOutgoing = List<Object?>.filled(callee.objectOutgoingCount, null);
+    }
+    function = callee;
+  }
+
+  TypedFunction function;
   TypedExceptionState? exceptions;
   TypedAsyncState? asyncState;
   TypedFrame? parent;
@@ -352,8 +395,8 @@ class TypedFrame {
   }
 
   List<Object?> environment = const [];
-  final Int64List intSpills;
-  final Float64List doubleSpills;
-  final Uint8List boolSpills;
-  final List<Object?> objectSpills, objectOutgoing;
+  Int64List intSpills;
+  Float64List doubleSpills;
+  Uint8List boolSpills;
+  List<Object?> objectSpills, objectOutgoing;
 }
