@@ -402,6 +402,32 @@ Currently, the binding generator does not support directly creating JSON binding
 they can be created by first generating Dart bindings and then making a script to convert them 
 to JSON with a `BridgeSerializer`.
 
+### Configuring generation with a YAML sidecar
+
+For larger binding surfaces — including SDK (`dart:`) and package (`package:`) libraries —
+generation can be driven by a YAML sidecar instead of annotations. Create
+`.dart_eval/bindgen.yaml` in your project root:
+
+```yaml
+libraries:
+  - uri: package:my_app/api.dart
+    output: lib/src/eval/generated
+    classes:
+      Book:
+        members:
+          getPage:
+            rename: pageAt
+          delete:
+            include: false
+```
+
+Then run `dart_eval bind --config .dart_eval/bindgen.yaml`. The sidecar supports
+including/excluding/renaming members, synthetic members, permission checks, hooks,
+class shaping (extends/implements overrides), return-type overrides, and generating a
+shared `*Types` registry and plugin. Classes with genuinely unique runtime semantics
+can be marked `handMaintained: true` so the generator contributes their type
+declarations without emitting a wrapper.
+
 For some specialized use cases, bindings may need to be manually adjusted or written from scratch.
 For information about this, refer to the 
 [wrapper interop wiki page](https://github.com/ethanblake4/dart_eval/wiki/Wrappers) and 

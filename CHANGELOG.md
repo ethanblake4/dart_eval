@@ -1,3 +1,25 @@
+## Unreleased (0.9.0)
+
+**Breaking changes**
+
+- Generated bindings now use only the register call ABI
+  (`callRegisters`/`registerBridgeFuncRegisters`). The legacy `List<$Value?> args`
+  vector ABI is no longer emitted by the binding generator, though hand-written
+  vector-ABI registrations continue to work at runtime.
+- Removed the compiler-only `KnownMethod`/`KnownField` tables. Intrinsic member
+  semantics now live in real bridge declarations, and parameter-dependent return
+  types are expressed via `BridgeReturnTypeDependency` on `BridgeFunctionDef`.
+
+**New features**
+
+- SDK-driven binding generation: `dart_eval bind --config <yaml>` reads a YAML
+  sidecar (`.dart_eval/bindgen.yaml`) describing libraries (including `dart:` URIs),
+  classes, members, hooks, permissions, synthetic members, and class shaping.
+- The binding generator now emits shared `*Types` registries (e.g. `CoreTypes`,
+  `AsyncTypes`) directly from the sidecar config.
+- Most `dart:` stdlib wrappers are now generated from SDK sources rather than
+  maintained by hand.
+
 ## 0.8.5
 - Fix variables not being updated from within closures.
 
