@@ -34,7 +34,7 @@ import '../type.dart';
 import '../builtins.dart';
 import 'package:dart_eval/dart_eval_bridge.dart' show CoreTypes;
 import '../context.dart';
-import '../offset_tracker.dart';
+import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'representation.dart';
 import 'primitive_optimization.dart';
 
@@ -491,9 +491,7 @@ class TypedBackend {
     }
     if (!name.endsWith('.')) return null;
     final owner = declarations[name.substring(0, name.length - 1)]?.declaration;
-    return owner is ClassDeclaration || owner is EnumDeclaration
-        ? owner
-        : null;
+    return owner is ClassDeclaration || owner is EnumDeclaration ? owner : null;
   }
 
   bool _isEnumConstructor(String library, String name) =>
@@ -509,8 +507,10 @@ class TypedBackend {
     final constructorOwner = _constructorOwner(library, name);
     final previousTypes = {...?context.temporaryTypes[libraryId]};
     final typeParameters = switch (constructorOwner) {
-      ClassDeclaration(:final namePart) => namePart.typeParameters?.typeParameters,
-      EnumDeclaration(:final namePart) => namePart.typeParameters?.typeParameters,
+      ClassDeclaration(:final namePart) =>
+        namePart.typeParameters?.typeParameters,
+      EnumDeclaration(:final namePart) =>
+        namePart.typeParameters?.typeParameters,
       _ => switch (declaration) {
         FunctionDeclaration(:final functionExpression) =>
           functionExpression.typeParameters?.typeParameters,
@@ -1584,7 +1584,7 @@ class TypedBackend {
                   StringOperator.indexAt => 'rStringIndexA',
                 },
               ],
-              [string, if (argument != null) argument],
+              [string, ?argument],
             ),
           collection.NewList() => make(['cNewList'], []),
           collection.NewRecord(

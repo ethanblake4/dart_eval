@@ -1,5 +1,5 @@
 import 'package:control_flow_graph/control_flow_graph.dart' hide Assign;
-import 'package:dart_eval/src/eval/compiler/offset_tracker.dart';
+import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/ir/alu.dart';
 import 'package:dart_eval/src/eval/ir/async.dart';
 import 'package:dart_eval/src/eval/ir/bridge.dart';

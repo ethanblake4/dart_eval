@@ -20,7 +20,6 @@ import 'package:dart_eval/src/eval/ir/memory.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/compiler/expression/identifier.dart';
-import 'package:dart_eval/src/eval/compiler/offset_tracker.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 
@@ -173,7 +172,7 @@ class IdentifierReference implements Reference {
         name,
       );
       if (instanceDeclaration != null) {
-        final $type = instanceDeclaration.first;
+        final $type = instanceDeclaration.$1;
         return TypeRef.lookupFieldType(ctx, $type, name, forSet: forSet) ??
             CoreTypes.dynamic.ref(ctx);
       }
@@ -190,8 +189,7 @@ class IdentifierReference implements Reference {
         if (staticDec is MethodDeclaration) {
           return CoreTypes.function.ref(ctx);
         } else if (staticDec is VariableDeclaration) {
-          final name =
-              '${ctx.currentClassName!}.${staticDec.name.lexeme}';
+          final name = '${ctx.currentClassName!}.${staticDec.name.lexeme}';
           return resolveGlobalType(ctx, ctx.library, name);
         }
       }
@@ -320,7 +318,7 @@ class IdentifierReference implements Reference {
         name,
       );
       if (instanceDeclaration != null) {
-        final $type = instanceDeclaration.first;
+        final $type = instanceDeclaration.$1;
         final fieldType =
             TypeRef.lookupFieldType(
               ctx,
@@ -488,8 +486,8 @@ class IdentifierReference implements Reference {
         name,
       );
       if (instanceDeclaration != null) {
-        final $type = instanceDeclaration.first;
-        final decOrBridge = instanceDeclaration.second;
+        final $type = instanceDeclaration.$1;
+        final decOrBridge = instanceDeclaration.$2;
 
         final $this = ctx.lookupLocal('#this')!;
 
@@ -607,8 +605,7 @@ class IdentifierReference implements Reference {
             ),
           );
         } else if (staticDec is VariableDeclaration) {
-          final name =
-              '${ctx.currentClassName!}.${staticDec.name.lexeme}';
+          final name = '${ctx.currentClassName!}.${staticDec.name.lexeme}';
           final type = resolveGlobalType(ctx, ctx.library, name);
           final gIndex = ctx.topLevelGlobalIndices[ctx.library]![name]!;
           return Variable.ssa(

@@ -13,11 +13,11 @@ final class StringOperation extends Operation {
   @override
   SSA get writesTo => target;
   @override
-  Set<SSA> get readsFrom => {string, if (argument != null) argument!};
+  Set<SSA> get readsFrom => {string, ?argument};
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
     final operands = renameOperands(
-      [string, if (argument != null) argument!],
+      [string, ?argument],
       this.readsFrom,
       readsFrom,
     );

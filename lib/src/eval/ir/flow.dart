@@ -1,6 +1,6 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:collection/collection.dart';
-import 'package:dart_eval/src/eval/compiler/offset_tracker.dart';
+import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'operands.dart';
 
 final class Return extends Operation {
@@ -9,7 +9,7 @@ final class Return extends Operation {
   Return(this.value);
 
   @override
-  Set<SSA> get readsFrom => {if (value != null) value!};
+  Set<SSA> get readsFrom => {?value};
 
   @override
   String toString() => 'return $value';
@@ -33,7 +33,7 @@ final class ReturnAsync extends Operation {
   ReturnAsync(this.value, this.completer);
 
   @override
-  Set<SSA> get readsFrom => {if (value != null) value!, completer};
+  Set<SSA> get readsFrom => {?value, completer};
 
   @override
   String toString() => 'returnasync $value, $completer';
@@ -50,7 +50,7 @@ final class ReturnAsync extends Operation {
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
     final newReadsFrom = renameOperands(
-      [if (value != null) value!, completer],
+      [?value, completer],
       this.readsFrom,
       readsFrom,
     );
@@ -191,10 +191,7 @@ final class Call extends Operation {
   SSA? get writesTo => result;
 
   @override
-  Set<SSA> get readsFrom => {
-    ...arguments,
-    if (typeEnvironmentReceiver != null) typeEnvironmentReceiver!,
-  };
+  Set<SSA> get readsFrom => {...arguments, ?typeEnvironmentReceiver};
 
   @override
   String toString() => 'call $target(${arguments.join(', ')})';
@@ -219,10 +216,7 @@ final class Call extends Operation {
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
-    final operands = [
-      ...arguments,
-      if (typeEnvironmentReceiver != null) typeEnvironmentReceiver!,
-    ];
+    final operands = [...arguments, ?typeEnvironmentReceiver];
     final renamed = renameOperands(operands, this.readsFrom, readsFrom);
     return Call(
       target,

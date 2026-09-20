@@ -7,8 +7,6 @@ import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 
-import '../util.dart';
-
 Variable compileIdentifier(Identifier id, CompilerContext ctx) {
   return compileIdentifierAsReference(id, ctx).getValue(ctx, id);
 }
@@ -42,7 +40,7 @@ Reference compilePrefixedIdentifierAsReference(
   return PrefixedIdentifierReference(prefix, identifier);
 }
 
-Pair<TypeRef, DeclarationOrBridge>? resolveInstanceDeclaration(
+(TypeRef, DeclarationOrBridge)? resolveInstanceDeclaration(
   CompilerContext ctx,
   int library,
   String $class,
@@ -52,7 +50,7 @@ Pair<TypeRef, DeclarationOrBridge>? resolveInstanceDeclaration(
 
   if (dec != null) {
     final $type = ctx.visibleTypes[library]![$class]!;
-    return Pair($type, DeclarationOrBridge(-1, declaration: dec));
+    return ($type, DeclarationOrBridge(-1, declaration: dec));
   }
 
   final $classDec = ctx.topLevelDeclarationsMap[library]![$class]!;
@@ -62,7 +60,7 @@ Pair<TypeRef, DeclarationOrBridge>? resolveInstanceDeclaration(
     final method = bridge.methods[name];
     if (method != null) {
       final $type = ctx.visibleTypes[library]![$class]!;
-      return Pair($type, DeclarationOrBridge(-1, bridge: method));
+      return ($type, DeclarationOrBridge(-1, bridge: method));
     }
     final getter = bridge.getters[name];
     final setter = bridge.setters[name];
@@ -75,13 +73,13 @@ Pair<TypeRef, DeclarationOrBridge>? resolveInstanceDeclaration(
               -1,
               bridge: setter,
             );
-      return Pair($type, GetSet(-1, bridge: getter, setter: setter0));
+      return ($type, GetSet(-1, bridge: getter, setter: setter0));
     }
 
     final field = bridge.fields[name];
     if (field != null) {
       final $type = ctx.visibleTypes[library]![$class]!;
-      return Pair($type, DeclarationOrBridge(-1, bridge: field));
+      return ($type, DeclarationOrBridge(-1, bridge: field));
     }
 
     final $extends = bridge.type.$extends;
@@ -106,7 +104,7 @@ Pair<TypeRef, DeclarationOrBridge>? resolveInstanceDeclaration(
             ? null
             : DeclarationOrBridge(-1, declaration: setter as MethodDeclaration),
       );
-      return Pair($type, getset);
+      return ($type, getset);
     }
   }
   final $dec = $classDec.declaration!;

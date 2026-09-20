@@ -2,6 +2,7 @@ import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/ir/exception.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
+import 'package:dart_eval/src/eval/ir/async.dart';
 import 'package:dart_eval/src/eval/ir/representation.dart';
 import '../context.dart';
 import '../errors.dart';
@@ -57,4 +58,31 @@ StatementInfo doAsyncReturn(
     ctx.builder.link(tail, continuation);
   }
   return StatementInfo(willAlwaysReturn: true);
+}
+
+/// Builds the preamble for an `async` function body: creates the completer,
+/// wraps the body in a catch handler that completes with error, and completes
+/// with `null` if the body falls off the end.
+void setupAsyncFunction(CompilerContext ctx, {TypeRef? returnType}) {
+  final future = CoreTypes.future.ref(ctx);
+  final runtimeType =
+      returnType != null && returnType.hasSameDeclarationAs(future)
+      ? returnType
+      : future.copyWith(specifiedTypeArgs: [CoreTypes.dynamic.ref(ctx)]);
+  ctx.setLocal(
+    '#completer',
+    Variable.ssa(
+      ctx,
+      BeginAsync(
+        ctx.svar('#completer'),
+        runtimeTypeId: runtimeType.runtimeTypeId(ctx),
+      ),
+      AsyncTypes.completer.ref(ctx),
+    ),
+  );
+}
+
+/// Call `Completer.complete` for an async function at the end of its body.
+void asyncComplete(CompilerContext ctx, SSA? value) {
+  ctx.pushOp(ReturnAsync(value, ctx.lookupLocal('#completer')!.ssa));
 }

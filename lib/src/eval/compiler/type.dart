@@ -332,8 +332,7 @@ class TypeRef {
     if (ref != null) {
       final typeParameter = typeParameters[ref];
       if (typeParameter != null) return typeParameter;
-      specifiedType ??=
-          ctx.visibleTypes[ctx.library]![ctx.currentClassName];
+      specifiedType ??= ctx.visibleTypes[ctx.library]![ctx.currentClassName];
 
       if (specifiedType == null) {
         return CoreTypes.dynamic.ref(ctx);
@@ -1044,6 +1043,12 @@ class TypeRef {
   bool get isUnboxedAcrossFunctionBoundaries =>
       unboxedAcrossFunctionBoundaries.contains(this) && !nullable;
 
+  /// This type as it is stored when passed across a function boundary: boxed
+  /// unless it is one of the types that can travel unboxed (e.g. non-nullable
+  /// `int`, `double`, `bool`).
+  TypeRef get typeAcrossFunctionBoundary =>
+      copyWith(boxed: !isUnboxedAcrossFunctionBoundaries);
+
   /// Whether two references name the same declaration. This intentionally
   /// ignores type arguments, nullability, and representation details.
   bool hasSameDeclarationAs(TypeRef other) =>
@@ -1089,7 +1094,8 @@ class TypeRef {
     }
     // Function types are currently represented by their analyzer model. Do not
     // accidentally equate a structural function type with plain Function.
-    return left.functionType?.semanticKey() == right.functionType?.semanticKey();
+    return left.functionType?.semanticKey() ==
+        right.functionType?.semanticKey();
   }
 
   /// Classifies Dart assignment compatibility without conflating `dynamic`

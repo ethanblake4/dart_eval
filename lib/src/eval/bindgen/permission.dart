@@ -34,10 +34,7 @@ String assertConfigPermissions(
   return output;
 }
 
-String assertMethodPermissions(
-  MethodElement element, {
-  bool callable = false,
-}) {
+String assertMethodPermissions(MethodElement element, {bool callable = false}) {
   final metadata = element.metadata;
 
   final permissions = metadata.annotations.where(

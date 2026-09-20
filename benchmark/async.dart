@@ -92,7 +92,7 @@ Future<int> _invoke(
   final result = runtime.executeLib(
     _library,
     name,
-    arguments: {'n': iterations, if (callback != null) 'callback': callback},
+    arguments: {'n': iterations, 'callback': ?callback},
   );
   return _integer(result is Future ? await result : result);
 }

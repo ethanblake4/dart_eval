@@ -1,5 +1,5 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
-import 'package:dart_eval/src/eval/compiler/offset_tracker.dart';
+import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'representation.dart';
 
 /// Creates a callable value with an explicit environment and call signature.

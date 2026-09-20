@@ -47,7 +47,9 @@ InvokeResult invokeClosure(
         compileExpression(arg.argumentExpression, ctx),
       );
     } else {
-      positionalArgs.add(snapshot(compileExpression(arg.argumentExpression, ctx)));
+      positionalArgs.add(
+        snapshot(compileExpression(arg.argumentExpression, ctx)),
+      );
     }
   }
   final target = ctx.svar('closure_result');

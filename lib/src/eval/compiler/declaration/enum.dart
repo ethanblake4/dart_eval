@@ -5,7 +5,7 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/constructor.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
-import 'package:dart_eval/src/eval/compiler/offset_tracker.dart';
+import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
@@ -77,10 +77,9 @@ void compileEnumDeclaration(
 
   if (!methods.any((m) => m.name.lexeme == 'toString')) {
     final toStringPos = ctx.beginFunction('$clsName.toString');
-    ctx.functionSignatures[toStringPos] = const MachineFunctionSignature(
-      [MachineRepresentation.object],
+    ctx.functionSignatures[toStringPos] = const MachineFunctionSignature([
       MachineRepresentation.object,
-    );
+    ], MachineRepresentation.object);
     final tsReceiver = SSA('arg_0');
     ctx.pushOp(Parameter(tsReceiver, 0));
     final tsName = ctx.svar('enum_name');
@@ -103,8 +102,9 @@ void compileEnumDeclaration(
     ctx.instanceDeclarationPositions[ctx.library]![clsName]![2]['toString'] =
         toStringPos;
   }
-  i++;
-  i++;
+  // Every enum value carries two synthetic instance fields (`index` and
+  // `name`) at slots 0 and 1; user-declared fields follow them.
+  i += 2;
 
   for (final m in <ClassMember>[...fields, ...methods, ...constructors]) {
     ctx.currentClass = d;

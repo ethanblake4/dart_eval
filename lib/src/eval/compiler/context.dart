@@ -5,7 +5,6 @@ import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/src/eval/compiler/constant_pool.dart';
 import 'package:dart_eval/src/eval/compiler/model/label.dart';
 import 'package:dart_eval/src/eval/compiler/model/override_spec.dart';
-import 'package:dart_eval/src/eval/compiler/source.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
@@ -52,6 +51,9 @@ mixin ScopeContext on Object implements AbstractScopeContext {
     return state;
   }
 
+  /// Where the current boxing state disagrees with [initial], emits the
+  /// box/unbox operations needed to bring each local back to [initial]'s
+  /// boxing state. Used to reconcile state at control-flow joins.
   void resolveBranchStateDiscontinuity(ContextSaveState initial) {
     final otherLocals = initial.locals;
     final myLocals = [...locals];
@@ -76,6 +78,10 @@ mixin ScopeContext on Object implements AbstractScopeContext {
     ];
   }
 
+  /// Like [resolveBranchStateDiscontinuity] but only rewrites the `boxed` flag
+  /// on each local's type, without emitting box/unbox operations. Use when the
+  /// boxing ops have already been emitted elsewhere and only the compile-time
+  /// bookkeeping needs to catch up.
   void restoreBoxingState(ContextSaveState initial) {
     final otherLocals = initial.locals;
     final myLocals = [...locals];
@@ -107,7 +113,6 @@ class CompilerContext with ScopeContext {
   final Map<int, ControlFlowGraph> functionGraphs = {};
   final Map<int, ControlFlowGraph> ssaFunctionGraphs = {};
   final Map<int, String> functionNames = {};
-  final Map<int, int> functionLibraries = {};
   final Map<int, MachineFunctionSignature> functionSignatures = {};
   final Map<int, MachineRepresentation> globalRepresentations = {};
   final Set<int> globalsLate = {};
@@ -137,7 +142,6 @@ class CompilerContext with ScopeContext {
     currentFunctionId = id;
     funcLabel = label(name);
     functionNames[id] = funcLabel!;
-    functionLibraries[id] = library;
     activeGraph = ControlFlowGraph();
     final root = BasicBlock<Operation>([], label: funcLabel);
     activeGraph.append(root);
@@ -240,51 +244,34 @@ class CompilerContext with ScopeContext {
     return BasicBlock(commit(), label: label);
   }
 
-  @override
-  Variable? lookupLocal(String name) {
-    for (var i = locals.length - 1; i >= 0; i--) {
-      final local = locals[i][name];
-      if (local != null) return local..frameIndex = i;
-    }
-    return null;
-  }
-
   void enterTypeInferenceContext() {
     typeInferenceSaveStates.add(saveState());
   }
 
+  /// Promotes the types saved by [enterTypeInferenceContext] into [locals], and
+  /// records the pre-inference state so [uninferTypes] can restore it.
   void inferTypes() {
     final inferredLocals = typeInferenceSaveStates.removeLast().locals;
     typeUninferenceSaveStates.add(saveState());
-    final myLocals = [...locals];
-    for (var i = 0; i < math.min(inferredLocals.length, myLocals.length); i++) {
-      final inferredLocalsMap = inferredLocals[i];
-      final myLocalsMap = myLocals[i];
-
-      inferredLocalsMap.forEach((key, value) {
-        final myLocal = myLocalsMap[key];
-        if (myLocal != null &&
-            !myLocal.type.isSameSemanticType(this, value.type)) {
-          locals[i][key] = myLocal.copyWith(
-            type: value.type.copyWith(boxed: myLocal.boxed),
-          );
-        }
-      });
-    }
+    _restoreSavedTypes(inferredLocals);
   }
 
+  /// Reverts the type promotion performed by [inferTypes].
   void uninferTypes() {
     final uninferredLocals = typeUninferenceSaveStates.removeLast().locals;
+    _restoreSavedTypes(uninferredLocals);
+  }
+
+  /// For every local in [savedLocals] whose type differs from the current
+  /// binding, write back a copy carrying the saved type (keeping the current
+  /// boxing state).
+  void _restoreSavedTypes(List<Map<String, Variable>> savedLocals) {
     final myLocals = [...locals];
-    for (
-      var i = 0;
-      i < math.min(uninferredLocals.length, myLocals.length);
-      i++
-    ) {
-      final uninferredLocalsMap = uninferredLocals[i];
+    for (var i = 0; i < math.min(savedLocals.length, myLocals.length); i++) {
+      final savedLocalsMap = savedLocals[i];
       final myLocalsMap = myLocals[i];
 
-      uninferredLocalsMap.forEach((key, value) {
+      savedLocalsMap.forEach((key, value) {
         final myLocal = myLocalsMap[key];
         if (myLocal != null &&
             !myLocal.type.isSameSemanticType(this, value.type)) {

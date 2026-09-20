@@ -1,6 +1,6 @@
 import '../../ir/string.dart';
 import 'package:control_flow_graph/control_flow_graph.dart' as cfg;
-import '../offset_tracker.dart';
+import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import '../builtins.dart' show dartCoreFile;
 import '../type.dart';
 import '../../ir/alu.dart' as alu;
