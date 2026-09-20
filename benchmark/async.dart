@@ -123,12 +123,13 @@ Future<void> main(List<String> args) async {
       ),
   ];
   for (final (_, runtime, _) in cases) {
-    runtime.registerBridgeFunc(_bridge, 'nativeCompleted', (
+    runtime.registerBridgeFuncRegisters(_bridge, 'nativeCompleted', (
       runtime,
-      target,
-      arguments,
+      r,
+      s,
+      c,
     ) {
-      return $Future.wrap(Future<$Value?>.value(arguments.single));
+      return $Future.wrap(Future<$Value?>.value(r as $Value?));
     });
   }
 

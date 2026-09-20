@@ -16,10 +16,10 @@ class $Map<K, V> implements Map<K, V>, $Instance {
   int _checkOwnerType = -1;
 
   static void configureForRuntime(Runtime runtime) {
-    return runtime.registerBridgeFunc(
+    return runtime.registerBridgeFuncRegisters(
       'dart:core',
       'Map.from',
-      __$Map$from.call,
+      _$Map$from,
     );
   }
 
@@ -201,13 +201,8 @@ class $Map<K, V> implements Map<K, V>, $Instance {
     wrap: true,
   );
 
-  static const __$Map$from = $Function(_$Map$from);
-  static $Value? _$Map$from(
-    Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
-  ) {
-    final other = args[0]?.$value as Map;
+  static $Value? _$Map$from(Runtime runtime, Object? r, Object? s, Object? c) {
+    final other = (r as $Value?)?.$value as Map;
 
     return $Map.wrap(Map.from(other));
   }

@@ -11,10 +11,10 @@ import 'package:dart_eval/stdlib/core.dart';
 class $Future<T> implements Future<T>, $Instance {
   /// Configure [$Future] for runtime in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:core',
       'Future.delayed',
-      const _$Future_delayed().call,
+      _futureDelayed,
     );
   }
 
@@ -130,11 +130,6 @@ class $Future<T> implements Future<T>, $Instance {
       $value.whenComplete(action);
 }
 
-class _$Future_delayed implements EvalCallable {
-  const _$Future_delayed();
-
-  @override
-  $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $Future.wrap(Future.delayed(args[0]!.$value));
-  }
+$Value? _futureDelayed(Runtime runtime, Object? r, Object? s, Object? c) {
+  return $Future.wrap(Future.delayed((r as $Value).$value));
 }

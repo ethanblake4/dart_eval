@@ -8,34 +8,34 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   }
 
   static void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       $type.spec!.library,
       'Iterable.generate',
-      __$Iterable$generate.call,
+      _$Iterable$generate,
       isBridge: false,
     );
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       $type.spec!.library,
       'Iterable.empty',
-      __$Iterable$empty.call,
+      _$Iterable$empty,
       isBridge: false,
     );
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       $type.spec!.library,
       'Iterable.castFrom',
-      __$static$method$castFrom.call,
+      _$static$method$castFrom,
       isBridge: false,
     );
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       $type.spec!.library,
       'Iterable.iterableToShortString',
-      __$static$method$iterableToShortString.call,
+      _$static$method$iterableToShortString,
       isBridge: false,
     );
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       $type.spec!.library,
       'Iterable.iterableToFullString',
-      __$static$method$iterableToFullString.call,
+      _$static$method$iterableToFullString,
       isBridge: false,
     );
   }
@@ -1214,28 +1214,26 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     return $result;
   }
 
-  static const __$static$method$castFrom = $Function(_$static$method$castFrom);
   static $Value? _$static$method$castFrom(
     Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
-    final source = (args[0]?.$reified as Iterable).cast();
+    final source = ((r as $Value?)?.$reified as Iterable).cast();
     final $result = Iterable.castFrom(source);
     return $Iterable.wrap($result);
   }
 
-  static const __$static$method$iterableToShortString = $Function(
-    _$static$method$iterableToShortString,
-  );
   static $Value? _$static$method$iterableToShortString(
     Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
-    final iterable = (args[0]?.$reified as Iterable).cast();
-    final leftDelimiter = args[1]?.$value as String? ?? '(';
-    final rightDelimiter = args[2]?.$value as String? ?? ')';
+    final iterable = ((r as $Value?)?.$reified as Iterable).cast();
+    final leftDelimiter = (s as $Value?)?.$value as String? ?? '(';
+    final rightDelimiter = (c as $Value?)?.$value as String? ?? ')';
     final $result = Iterable.iterableToShortString(
       iterable,
       leftDelimiter,
@@ -1244,17 +1242,15 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     return $String($result);
   }
 
-  static const __$static$method$iterableToFullString = $Function(
-    _$static$method$iterableToFullString,
-  );
   static $Value? _$static$method$iterableToFullString(
     Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
-    final iterable = (args[0]?.$reified as Iterable).cast();
-    final leftDelimiter = args[1]?.$value as String? ?? '(';
-    final rightDelimiter = args[2]?.$value as String? ?? ')';
+    final iterable = ((r as $Value?)?.$reified as Iterable).cast();
+    final leftDelimiter = (s as $Value?)?.$value as String? ?? '(';
+    final rightDelimiter = (c as $Value?)?.$value as String? ?? ')';
     final $result = Iterable.iterableToFullString(
       iterable,
       leftDelimiter,
@@ -1263,16 +1259,15 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     return $String($result);
   }
 
-  static const __$Iterable$generate = $Function(_$Iterable$generate);
   static $Value? _$Iterable$generate(
     Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
-    final count = args[0]?.$value as int;
+    final count = (r as $Value?)?.$value as int;
     final generator =
-        args[1] as EvalFunction? ??
-        $Function((runtime, target, args) => args[0]);
+        s as EvalFunction? ?? $Function((runtime, target, args) => args[0]);
     return $Iterable.wrap(
       Iterable.generate(
         count,
@@ -1281,11 +1276,11 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     );
   }
 
-  static const __$Iterable$empty = $Function(_$Iterable$empty);
   static $Value? _$Iterable$empty(
     Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     return $Iterable.wrap(Iterable.empty());
   }

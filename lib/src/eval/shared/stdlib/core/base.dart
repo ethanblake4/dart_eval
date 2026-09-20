@@ -562,12 +562,12 @@ class $String implements $Instance {
   final $Instance _superclass;
 
   static void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:core',
       'String.fromCharCode',
       _fromCharCode,
     );
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:core',
       'String.fromCharCodes',
       _fromCharCodes,
@@ -576,25 +576,29 @@ class $String implements $Instance {
 
   static $Value? _fromCharCode(
     final Runtime runtime,
-    final $Value? target,
-    final List<$Value?> args,
+    final Object? r,
+    final Object? s,
+    final Object? c,
   ) {
-    return $String(String.fromCharCode(args[0]?.$value));
+    return $String(String.fromCharCode((r as $Value?)?.$value));
   }
 
   static $Value? _fromCharCodes(
     final Runtime runtime,
-    final $Value? target,
-    final List<$Value?> args,
+    final Object? r,
+    final Object? s,
+    final Object? c,
   ) {
-    final charCodes = (args[0]!.$value as Iterable).map(
+    final charCodes = ((r as $Value).$value as Iterable).map(
       (e) => (e is $Value ? e.$reified : e) as int,
     );
     int? end;
     try {
-      end = args[2]?.$value as int?;
+      end = (c as $Value?)?.$value as int?;
     } catch (_) {}
-    return $String(String.fromCharCodes(charCodes, args[1]?.$value ?? 0, end));
+    return $String(
+      String.fromCharCodes(charCodes, (s as $Value?)?.$value ?? 0, end),
+    );
   }
 
   @override
@@ -746,9 +750,7 @@ class $String implements $Instance {
   ) {
     target as $String;
     final other = args[0]!;
-    final start = args.length > 1 && args[1] is $int
-        ? args[1] as $int
-        : null;
+    final start = args.length > 1 && args[1] is $int ? args[1] as $int : null;
     if (start != null) {
       return $int(target.$value.indexOf(other.$value, start.$value));
     } else {
@@ -765,9 +767,7 @@ class $String implements $Instance {
   ) {
     target as $String;
     final other = args[0]!;
-    final start = args.length > 1 && args[1] is $int
-        ? args[1] as $int
-        : null;
+    final start = args.length > 1 && args[1] is $int ? args[1] as $int : null;
     if (start != null) {
       return $int(target.$value.lastIndexOf(other.$value, start.$value));
     } else {
@@ -871,9 +871,7 @@ class $String implements $Instance {
   ) {
     target as $String;
     final pattern = args[0] as $String;
-    final index = args.length > 1 && args[1] is $int
-        ? args[1] as $int
-        : null;
+    final index = args.length > 1 && args[1] is $int ? args[1] as $int : null;
     if (index != null) {
       return $bool(target.$value.startsWith(pattern.$value, index.$value));
     } else {
@@ -904,9 +902,7 @@ class $String implements $Instance {
   ) {
     target as $String;
     final start = args[0] as $int;
-    final end = args.length > 1 && args[1] is $int
-        ? args[1] as $int
-        : null;
+    final end = args.length > 1 && args[1] is $int ? args[1] as $int : null;
     return $String(target.$value.substring(start.$value, end?.$value));
   }
 

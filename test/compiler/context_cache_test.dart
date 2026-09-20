@@ -20,10 +20,10 @@ Program _compile(Compiler compiler, String source) => compiler.compile({
 });
 Object? _execute(Program program) {
   final runtime = Runtime.ofProgram(program)
-    ..registerBridgeFunc(
+    ..registerBridgeFuncRegisters(
       _host,
       'initializeFromHost',
-      (runtime, target, args) => $int(11),
+      (runtime, r, s, c) => $int(11),
     );
   return runtime.executeLib(_library, 'main');
 }

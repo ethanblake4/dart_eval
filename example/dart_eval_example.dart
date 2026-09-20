@@ -135,12 +135,15 @@ class $TimestampedTime implements TimestampedTime, $Instance {
     wrap: true,
   );
 
-  /// Define static [EvalCallableFunc] functions for all static methods and
+  /// Define static [EvalRegisterFunc] functions for all static methods and
   /// constructors. This is for the default constructor and is what the runtime
   /// will use to create an instance of this class.
-  static $Value? $new(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
     return $TimestampedTime.wrap(
-      TimestampedTime(args[0]!.$value, timezoneOffset: args[1]?.$value ?? 0),
+      TimestampedTime(
+        (r as $Value).$value,
+        timezoneOffset: (s as $Value?)?.$value ?? 0,
+      ),
     );
   }
 
@@ -226,10 +229,10 @@ class $WorldTimeTracker$bridge
     bridge: true,
   );
 
-  /// Define static [EvalCallableFunc] functions for all static methods and
+  /// Define static [EvalRegisterFunc] functions for all static methods and
   /// constructors. This is for the default constructor and is what the runtime
   /// will use to create an instance of this class.
-  static $Value? $new(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
     return $WorldTimeTracker$bridge();
   }
 
@@ -277,12 +280,12 @@ class ExamplePlugin implements EvalPlugin {
   @override
   void configureForRuntime(Runtime runtime) {
     runtime
-      ..registerBridgeFunc(
+      ..registerBridgeFuncRegisters(
         'package:example/bridge.dart',
         'TimestampedTime.',
         $TimestampedTime.$new,
       )
-      ..registerBridgeFunc(
+      ..registerBridgeFuncRegisters(
         'package:example/bridge.dart',
         'WorldTimeTracker.',
         $WorldTimeTracker$bridge.$new,

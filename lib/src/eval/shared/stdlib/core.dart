@@ -105,24 +105,44 @@ class DartCorePlugin implements EvalPlugin {
     $FormatException.configureForRuntime(runtime);
     $ArgumentError.configureForRuntime(runtime);
     $StateError.configureForRuntime(runtime);
-    runtime.registerBridgeFunc('dart:core', 'num.parse', $num.$parse);
-    runtime.registerBridgeFunc('dart:core', 'num.tryParse', $num.$tryParse);
-    runtime.registerBridgeFunc('dart:core', 'int.parse', $int.$parse);
-    runtime.registerBridgeFunc('dart:core', 'int.tryParse', $int.$tryParse);
-    runtime.registerBridgeFunc('dart:core', 'Object.hash', $Object.$hash);
-    runtime.registerBridgeFunc('dart:core', 'double.nan*g', $double.$nan);
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters('dart:core', 'num.parse', $num.$parse);
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'num.tryParse',
+      $num.$tryParse,
+    );
+    runtime.registerBridgeFuncRegisters('dart:core', 'int.parse', $int.$parse);
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'int.tryParse',
+      $int.$tryParse,
+    );
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'Object.hash',
+      $Object.$hash,
+    );
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'double.nan*g',
+      $double.$nan,
+    );
+    runtime.registerBridgeFuncRegisters(
       'dart:core',
       'double.infinity*g',
       $double.$infinity,
     );
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:core',
       'double.negativeInfinity*g',
       $double.$negativeInfinity,
     );
-    runtime.registerBridgeFunc('dart:core', 'double.parse', $double.$parse);
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'double.parse',
+      $double.$parse,
+    );
+    runtime.registerBridgeFuncRegisters(
       'dart:core',
       'double.tryParse',
       $double.$tryParse,
@@ -131,14 +151,22 @@ class DartCorePlugin implements EvalPlugin {
     $Error.configureForRuntime(runtime);
     $UnimplementedError.configureForRuntime(runtime);
     $UnsupportedError.configureForRuntime(runtime);
-    runtime.registerBridgeFunc('dart:async', 'Stream.empty', $Stream.$empty);
-    runtime.registerBridgeFunc('dart:async', 'Stream.value', $Stream.$_value);
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
+      'dart:async',
+      'Stream.empty',
+      $Stream.$empty,
+    );
+    runtime.registerBridgeFuncRegisters(
+      'dart:async',
+      'Stream.value',
+      $Stream.$_value,
+    );
+    runtime.registerBridgeFuncRegisters(
       'dart:async',
       'Stream.fromIterable',
       $Stream.$fromIterable,
     );
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:async',
       'Stream.periodic',
       $Stream.$periodic,

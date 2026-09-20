@@ -8,58 +8,58 @@ class $List<E> implements List<E>, $Instance {
   }
 
   static void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       $type.spec!.library,
       'List.filled',
-      __$List$filled.call,
+      _$List$filled,
       isBridge: false,
     );
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       $type.spec!.library,
       'List.empty',
-      __$List$empty.call,
+      _$List$empty,
       isBridge: false,
     );
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       $type.spec!.library,
       'List.from',
-      __$List$from.call,
+      _$List$from,
       isBridge: false,
     );
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       $type.spec!.library,
       'List.of',
-      __$List$of.call,
+      _$List$of,
       isBridge: false,
     );
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       $type.spec!.library,
       'List.generate',
-      __$List$generate.call,
+      _$List$generate,
       isBridge: false,
     );
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       $type.spec!.library,
       'List.unmodifiable',
-      __$List$unmodifiable.call,
+      _$List$unmodifiable,
       isBridge: false,
     );
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       $type.spec!.library,
       'List.castFrom',
-      __$static$method$castFrom.call,
+      _$static$method$castFrom,
       isBridge: false,
     );
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       $type.spec!.library,
       'List.copyRange',
-      __$static$method$copyRange.call,
+      _$static$method$copyRange,
       isBridge: false,
     );
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       $type.spec!.library,
       'List.writeIterable',
-      __$static$method$writeIterable.call,
+      _$static$method$writeIterable,
       isBridge: false,
     );
   }
@@ -1717,102 +1717,89 @@ class $List<E> implements List<E>, $Instance {
     });
   }
 
-  static const __$static$method$castFrom = $Function(_$static$method$castFrom);
   static $Value? _$static$method$castFrom(
     Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
-    final source = args[0]?.$value;
+    final source = (r as $Value?)?.$value;
     final $result = List.castFrom(source);
     return $List.wrap($result);
   }
 
-  static const __$static$method$copyRange = $Function(
-    _$static$method$copyRange,
-  );
   static $Value? _$static$method$copyRange(
     Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
-    final target = args[0]?.$value as List;
-    final at = args[1]?.$value as int;
-    final source = args[2]?.$value as List;
-    final start = args[3]?.$value as int?;
-    final end = args[4]?.$value as int?;
+    final rest = c as List<Object?>;
+    final target = (r as $Value?)?.$value as List;
+    final at = (s as $Value?)?.$value as int;
+    final source = (rest[0] as $Value?)?.$value as List;
+    final start = (rest[1] as $Value?)?.$value as int?;
+    final end = (rest[2] as $Value?)?.$value as int?;
     List.copyRange(target, at, source, start, end);
     return null;
   }
 
-  static const __$static$method$writeIterable = $Function(
-    _$static$method$writeIterable,
-  );
   static $Value? _$static$method$writeIterable(
     Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
-    final target = args[0]?.$value as List;
-    final at = args[1]?.$value as int;
-    final source = args[2]?.$value as Iterable;
+    final target = (r as $Value?)?.$value as List;
+    final at = (s as $Value?)?.$value as int;
+    final source = (c as $Value?)?.$value as Iterable;
     List.writeIterable(target, at, source);
     return null;
   }
 
-  static const __$List$filled = $Function(_$List$filled);
   static $Value? _$List$filled(
     Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
-    final length = args[0]?.$value as int;
-    final fill = args[1];
-    final growable = args[2]?.$value as bool? ?? false;
+    final length = (r as $Value?)?.$value as int;
+    final fill = s as $Value?;
+    final growable = (c as $Value?)?.$value as bool? ?? false;
     return $List.wrap(List.filled(length, fill, growable: growable));
   }
 
-  static const __$List$empty = $Function(_$List$empty);
   static $Value? _$List$empty(
     Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
-    final growable = args[0]?.$value as bool? ?? false;
+    final growable = (r as $Value?)?.$value as bool? ?? false;
     return $List.wrap(List.empty(growable: growable));
   }
 
-  static const __$List$from = $Function(_$List$from);
-  static $Value? _$List$from(
-    Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
-  ) {
-    final elements = args[0]?.$value as Iterable;
-    final growable = args[1]?.$value as bool? ?? true;
+  static $Value? _$List$from(Runtime runtime, Object? r, Object? s, Object? c) {
+    final elements = (r as $Value?)?.$value as Iterable;
+    final growable = (s as $Value?)?.$value as bool? ?? true;
     return $List.wrap(List.from(elements, growable: growable));
   }
 
-  static const __$List$of = $Function(_$List$of);
-  static $Value? _$List$of(
-    Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
-  ) {
-    final elements = args[0]?.$value;
-    final growable = args[1]?.$value as bool? ?? true;
+  static $Value? _$List$of(Runtime runtime, Object? r, Object? s, Object? c) {
+    final elements = (r as $Value?)?.$value;
+    final growable = (s as $Value?)?.$value as bool? ?? true;
     return $List.wrap(List.of(elements, growable: growable));
   }
 
-  static const __$List$generate = $Function(_$List$generate);
   static $Value? _$List$generate(
     Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
-    final length = args[0]?.$value as int;
-    final generator = args[1] as EvalCallable;
-    final growable = args[2]?.$value as bool? ?? true;
+    final length = (r as $Value?)?.$value as int;
+    final generator = s as EvalCallable;
+    final growable = (c as $Value?)?.$value as bool? ?? true;
     return $List.wrap(
       List.generate(
         length,
@@ -1822,13 +1809,13 @@ class $List<E> implements List<E>, $Instance {
     );
   }
 
-  static const __$List$unmodifiable = $Function(_$List$unmodifiable);
   static $Value? _$List$unmodifiable(
     Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
-    final elements = args[0]?.$value as Iterable;
+    final elements = (r as $Value?)?.$value as Iterable;
     return $List.wrap(List.unmodifiable(elements));
   }
 

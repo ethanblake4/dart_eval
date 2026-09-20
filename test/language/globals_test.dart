@@ -59,10 +59,11 @@ void main() {
           encoded ? Program.read(compiled.write().buffer) : compiled,
         );
         var attempts = 0;
-        runtime.registerBridgeFunc(bridge, 'initializeFromHost', (
+        runtime.registerBridgeFuncRegisters(bridge, 'initializeFromHost', (
           runtime,
-          target,
-          args,
+          r,
+          s,
+          c,
         ) {
           attempts++;
           if (attempts == 1) throw StateError('Retry initialization');

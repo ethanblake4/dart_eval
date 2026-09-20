@@ -16,7 +16,11 @@ class $Set<E> implements Set<E>, $Instance {
   int _checkOwnerType = -1;
 
   static void configureForRuntime(Runtime runtime) {
-    return runtime.registerBridgeFunc('dart:core', 'Set.from', __$Set$from);
+    return runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'Set.from',
+      __$Set$from,
+    );
   }
 
   static const $type = BridgeTypeRef(CoreTypes.set);
@@ -241,12 +245,8 @@ class $Set<E> implements Set<E>, $Instance {
     wrap: true,
   );
 
-  static $Value? __$Set$from(
-    Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
-  ) {
-    final other = args[0]?.$value as Set;
+  static $Value? __$Set$from(Runtime runtime, Object? r, Object? s, Object? c) {
+    final other = (r as $Value?)?.$value as Set;
 
     return $Set.wrap(Set.from(other));
   }

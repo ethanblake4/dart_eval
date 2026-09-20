@@ -439,8 +439,8 @@ class $File implements $Instance {
     wrap: true,
   );
 
-  static $File $new(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $File.wrap(File(args[0]!.$value));
+  static $File $new(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $File.wrap(File((r as $Value).$value));
   }
 
   @override

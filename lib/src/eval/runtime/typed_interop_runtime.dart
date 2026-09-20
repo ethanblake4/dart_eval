@@ -366,8 +366,9 @@ extension TypedRuntimeInterop on Runtime {
     if (cached != null) return cached;
     if (descriptor[2] == RuntimeTypeDescriptorTag.typeParameter) return true;
     _typeEnvironmentRequirements[type] = false;
-    return _typeEnvironmentRequirements[type] =
-        _descriptorChildren(descriptor).any(_requiresTypeEnvironment);
+    return _typeEnvironmentRequirements[type] = _descriptorChildren(
+      descriptor,
+    ).any(_requiresTypeEnvironment);
   }
 
   Iterable<int> _descriptorChildren(List<int> descriptor) sync* {
@@ -377,12 +378,20 @@ extension TypedRuntimeInterop on Runtime {
     } else if (descriptor[2] == RuntimeTypeDescriptorTag.function) {
       yield descriptor[3];
       yield* descriptor.skip(7).take(descriptor[5]);
-      for (var index = 7 + descriptor[5]; index < descriptor.length; index += 3) {
+      for (
+        var index = 7 + descriptor[5];
+        index < descriptor.length;
+        index += 3
+      ) {
         yield descriptor[index + 2];
       }
     } else if (descriptor[2] == RuntimeTypeDescriptorTag.record) {
       yield* descriptor.skip(5).take(descriptor[3]);
-      for (var index = 5 + descriptor[3]; index < descriptor.length; index += 2) {
+      for (
+        var index = 5 + descriptor[3];
+        index < descriptor.length;
+        index += 2
+      ) {
         yield descriptor[index + 1];
       }
     }
@@ -856,27 +865,13 @@ extension TypedRuntimeInterop on Runtime {
     if (functionId < 0 || functionId >= _bridgeFunctions.length) {
       throw ArgumentError.value(functionId, 'functionId', 'Invalid bridge ID');
     }
-    final direct = _bridgeRegisterFunctions[functionId];
-    final $Value? result;
-    if (direct != null) {
-      result = direct(this, first, second, rest);
-    } else {
-      // List-based callbacks may retain or mutate their argument vector. This is
-      // the only external-call path that materializes a fresh list.
-      final arguments = switch (argumentCount) {
-        0 => <$Value?>[],
-        1 => <$Value?>[first as $Value?],
-        2 => <$Value?>[first as $Value?, second as $Value?],
-        3 => <$Value?>[first as $Value?, second as $Value?, rest as $Value?],
-        _ => <$Value?>[
-          first as $Value?,
-          second as $Value?,
-          for (var i = 0; i < argumentCount - 2; i++)
-            (rest as List<Object?>)[i] as $Value?,
-        ],
-      };
-      result = _bridgeFunctions[functionId](this, null, arguments);
+    final direct = _bridgeFunctions[functionId];
+    if (direct == null) {
+      throw UnimplementedError(
+        'Tried to invoke a nonexistent external function; did you forget to add it with registerBridgeFuncRegisters()?',
+      );
     }
+    final result = direct(this, first, second, rest);
     return result is $null ? null : result;
   }
 

@@ -231,6 +231,9 @@ libraries:
         file: byte_conversion.dart
       ChunkedConversionSink:
         file: chunked_conversion.dart
+    functions:
+      - jsonEncode
+      - jsonDecode
   - uri: dart:io
     outDir: lib/src/eval/shared/stdlib/io
     registry:
@@ -280,6 +283,18 @@ libraries:
     registry:
       file: lib/src/eval/shared/types.dart
       class: MathTypes
+    functions:
+      - atan2
+      - pow
+      - cos
+      - sin
+      - tan
+      - acos
+      - asin
+      - atan
+      - sqrt
+      - exp
+      - log
     classes:
       Point:
         file: point.dart

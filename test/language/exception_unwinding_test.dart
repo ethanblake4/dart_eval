@@ -70,10 +70,11 @@ void main() {
         }
       ''', nativeFailure: true);
     for (final (kind, runtime) in _runtimes(program)) {
-      runtime.registerBridgeFunc(_bridge, 'failFromHost', (
+      runtime.registerBridgeFuncRegisters(_bridge, 'failFromHost', (
         runtime,
-        target,
-        arguments,
+        r,
+        s,
+        c,
       ) {
         throw StateError('native failure');
       });
@@ -292,10 +293,11 @@ void main() {
       ''', nativeFailure: true);
     for (final (kind, runtime) in _runtimes(program)) {
       final failure = StateError('same instance');
-      runtime.registerBridgeFunc(_bridge, 'failFromHost', (
+      runtime.registerBridgeFuncRegisters(_bridge, 'failFromHost', (
         runtime,
-        target,
-        arguments,
+        r,
+        s,
+        c,
       ) {
         throw failure;
       });

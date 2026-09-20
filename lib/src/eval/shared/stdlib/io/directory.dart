@@ -145,8 +145,8 @@ class $Directory implements $Instance {
     wrap: true,
   );
 
-  static $Directory $new(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $Directory.wrap(Directory(args[0]!.$value));
+  static $Directory $new(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $Directory.wrap(Directory((r as $Value).$value));
   }
 
   @override

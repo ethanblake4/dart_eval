@@ -25,18 +25,11 @@ part 'typed_interop_runtime.dart';
 typedef TypeAutowrapper = $Value? Function(dynamic);
 
 class _UnloadedBridgeFunction {
-  const _UnloadedBridgeFunction(this.library, this.name, this.func)
-    : registers = null;
-  const _UnloadedBridgeFunction.registers(
-    this.library,
-    this.name,
-    this.registers,
-  ) : func = null;
+  const _UnloadedBridgeFunction(this.library, this.name, this.registers);
 
   final String library;
   final String name;
-  final EvalCallableFunc? func;
-  final EvalRegisterFunc? registers;
+  final EvalRegisterFunc registers;
 }
 
 class _UnloadedEnumValues {
@@ -54,7 +47,7 @@ class _UnloadedEnumValues {
 /// avoids overhead of loading bytecode.
 ///
 /// After creating a Runtime, register bridge functions using
-/// [registerBridgeFunc] or [addPlugin].
+/// [registerBridgeFuncRegisters] or [addPlugin].
 ///
 /// Once setup is complete, call [executeLib] to execute a function in the
 /// program.
@@ -71,14 +64,6 @@ class Runtime {
   /// Construct a runtime from a typed bytecode buffer. When possible, use the
   /// [Runtime.ofProgram] constructor instead to reduce loading time.
   Runtime(this._buffer) : id = _id++, _fromBytes = true;
-
-  static $Value? _fn(Runtime rt, $Value? target, List<$Value?> args) {
-    throw UnimplementedError(
-      'Tried to invoke a nonexistent external function; did you forget to add it with registerBridgeFunc()?',
-    );
-  }
-
-  static const _defaultFunction = $Function(_fn);
 
   /// Create a [Runtime] from a [Program]. This constructor should be preferred
   /// where possible as it avoids overhead of loading bytecode.
@@ -107,7 +92,11 @@ class Runtime {
     _typeTableVersion++;
     typeIds = program.typeIds;
     _libraryMap = program.bridgeLibraryMappings;
-    _typeIdentities = List.filled(_typeDescriptors.length, null, growable: true);
+    _typeIdentities = List.filled(
+      _typeDescriptors.length,
+      null,
+      growable: true,
+    );
     _typeEnvironmentRequirements.clear();
     _nominalTypeIds.clear();
     for (final library in _libraryMap.entries) {
@@ -127,8 +116,7 @@ class Runtime {
         if (id >= bridgeCount) bridgeCount = id + 1;
       }
     }
-    _bridgeFunctions = List.filled(bridgeCount, _defaultFunction.call);
-    _bridgeRegisterFunctions = List.filled(bridgeCount, null);
+    _bridgeFunctions = List.filled(bridgeCount, null);
     _bridgeEnumMappings = program.enumMappings;
     overrideMap = program.overrideMap;
     _constantPool = [...program.constantPool];
@@ -147,8 +135,7 @@ class Runtime {
         continue;
       }
       final id = _externalFunctionMap[libIndex]![ulb.name]!;
-      _bridgeFunctions[id] = ulb.func ?? _defaultFunction.call;
-      _bridgeRegisterFunctions[id] = ulb.registers;
+      _bridgeFunctions[id] = ulb.registers;
     }
 
     for (final ule in _unloadedEnumValues) {
@@ -165,19 +152,8 @@ class Runtime {
     _plugins.add(plugin);
   }
 
-  /// Register a bridged runtime top-level/static function or class constructor.
-  void registerBridgeFunc(
-    String library,
-    String name,
-    EvalCallableFunc fn, {
-    bool isBridge = false,
-  }) {
-    _unloadedBrFunc.add(
-      _UnloadedBridgeFunction(library, isBridge ? '#$name' : name, fn),
-    );
-  }
-
-  /// Register a generated bridge that consumes canonical R/S/C arguments.
+  /// Register a bridged runtime top-level/static function or class
+  /// constructor consuming canonical R/S/C arguments.
   /// C is borrowed overflow storage when the signature has over three arguments.
   void registerBridgeFuncRegisters(
     String library,
@@ -186,11 +162,7 @@ class Runtime {
     bool isBridge = false,
   }) {
     _unloadedBrFunc.add(
-      _UnloadedBridgeFunction.registers(
-        library,
-        isBridge ? '#$name' : name,
-        fn,
-      ),
+      _UnloadedBridgeFunction(library, isBridge ? '#$name' : name, fn),
     );
   }
 
@@ -345,7 +317,10 @@ class Runtime {
 
   // Recursive wrapping erases arbitrary host generic arguments. Preserve the
   // String-key witness used by JSON maps; never infer arguments from contents.
-  int _wrappedCollectionType(BridgeTypeSpec type, List<BridgeTypeSpec> arguments) {
+  int _wrappedCollectionType(
+    BridgeTypeSpec type,
+    List<BridgeTypeSpec> arguments,
+  ) {
     _setup();
     final nominal = lookupType(type);
     return _internResolvedType(
@@ -380,8 +355,7 @@ class Runtime {
 
   var _didSetup = false;
   var _libraryMap = <String, int>{};
-  late final List<EvalCallableFunc> _bridgeFunctions;
-  late final List<EvalRegisterFunc?> _bridgeRegisterFunctions;
+  late final List<EvalRegisterFunc?> _bridgeFunctions;
   final _unloadedBrFunc = <_UnloadedBridgeFunction>[];
   final _unloadedEnumValues = <_UnloadedEnumValues>[];
   final _plugins = <EvalPlugin>[
@@ -583,8 +557,7 @@ class Runtime {
   /// table first when an import or interned resolution needs to mutate it.
   Set<int> _mutableTypeTypes(int id) {
     var types = _typeTypes[id];
-    if (id < _programTypeCount &&
-        (_detachedTypeRows ??= <int>{}).add(id)) {
+    if (id < _programTypeCount && (_detachedTypeRows ??= <int>{}).add(id)) {
       types = _typeTypes[id] = {...types};
     }
     return types;

@@ -57,10 +57,11 @@ void main() {
     ]) {
       var count = 0;
       final shared = $String('same exception');
-      runtime.registerBridgeFunc(bridgeLibrary, 'fail', (
+      runtime.registerBridgeFuncRegisters(bridgeLibrary, 'fail', (
         runtime,
-        target,
-        arguments,
+        r,
+        s,
+        c,
       ) {
         Error.throwWithStackTrace(
           shared,

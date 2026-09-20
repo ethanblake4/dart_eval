@@ -169,7 +169,7 @@ class $HttpClient implements $Instance {
     wrap: true,
   );
 
-  static $HttpClient $new(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $HttpClient $new(Runtime runtime, Object? r, Object? s, Object? c) {
     return $HttpClient.wrap(HttpClient());
   }
 

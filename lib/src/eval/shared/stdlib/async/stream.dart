@@ -717,29 +717,26 @@ class $Stream implements $Instance {
   late final $Instance _superclass = $Object($value);
 
   /// Creates a new empty [$Stream]
-  static $Value? $empty(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? $empty(Runtime runtime, Object? r, Object? s, Object? c) {
     return $Stream.wrap(Stream.empty());
   }
 
   /// Creates a new [$Stream] from an [Iterable]
   static $Value? $fromIterable(
     Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
-    return $Stream.wrap(Stream.fromIterable(args[0]!.$value as Iterable));
+    return $Stream.wrap(Stream.fromIterable((r as $Value).$value as Iterable));
   }
 
   /// Creates a new [$Stream] that runs periodically
-  static $Value? $periodic(
-    Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
-  ) {
-    final computation = args[1]?.$value as EvalCallable?;
+  static $Value? $periodic(Runtime runtime, Object? r, Object? s, Object? c) {
+    final computation = (s as $Value?)?.$value as EvalCallable?;
     return $Stream.wrap(
       Stream.periodic(
-        args[0]!.$value as Duration,
+        (r as $Value).$value as Duration,
         computation == null
             ? null
             : (i) => runtime.wrap(computation.call(runtime, null, [$int(i)])),
@@ -748,8 +745,8 @@ class $Stream implements $Instance {
   }
 
   /// Creates a new [$Stream] that emits a single value
-  static $Value? $_value(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $Stream.wrap(Stream.value(args[0]!.$value));
+  static $Value? $_value(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $Stream.wrap(Stream.value((r as $Value).$value));
   }
 
   @override

@@ -208,145 +208,146 @@ class $Object implements $Instance {
   ///
   /// Strange implementation is due to the use of internal-only APIs in the
   /// original method
-  static $int $hash(Runtime runtime, $Value? target, List<$Value?> args) {
-    final object1 = args[0]?.$value;
-    final object2 = args[1]?.$value;
-    final object3 = args.length > 2 ? args[2] : null;
-    final object4 = args.length > 3 ? args[3] : null;
-    final object5 = args.length > 4 ? args[4] : null;
-    final object6 = args.length > 5 ? args[5] : null;
-    final object7 = args.length > 6 ? args[6] : null;
-    final object8 = args.length > 7 ? args[7] : null;
-    final object9 = args.length > 8 ? args[8] : null;
-    final object10 = args.length > 9 ? args[9] : null;
-    final object11 = args.length > 10 ? args[10] : null;
-    final object12 = args.length > 11 ? args[11] : null;
-    final object13 = args.length > 12 ? args[12] : null;
+  static $int $hash(Runtime runtime, Object? r, Object? s, Object? c) {
+    final object1 = (r as $Value?)?.$value;
+    final object2 = (s as $Value?)?.$value;
+    final rest = c as List<Object?>;
+    final object3 = rest[0] as $Value?;
+    final object4 = rest[1] as $Value?;
+    final object5 = rest[2] as $Value?;
+    final object6 = rest[3] as $Value?;
+    final object7 = rest[4] as $Value?;
+    final object8 = rest[5] as $Value?;
+    final object9 = rest[6] as $Value?;
+    final object10 = rest[7] as $Value?;
+    final object11 = rest[8] as $Value?;
+    final object12 = rest[9] as $Value?;
+    final object13 = rest[10] as $Value?;
 
-    if (null == args[2]) {
+    if (null == object3) {
       return $int(Object.hash(object1, object2));
     }
-    if (null == args[3]) {
-      return $int(Object.hash(object1, object2, object3!.$value));
+    if (null == object4) {
+      return $int(Object.hash(object1, object2, object3.$value));
     }
-    if (null == args[4]) {
+    if (null == object5) {
       return $int(
-        Object.hash(object1, object2, object3!.$value, object4!.$value),
+        Object.hash(object1, object2, object3.$value, object4.$value),
       );
     }
-    if (null == args[5]) {
+    if (null == object6) {
       return $int(
         Object.hash(
           object1,
           object2,
-          object3!.$value,
-          object4!.$value,
-          object5!.$value,
+          object3.$value,
+          object4.$value,
+          object5.$value,
         ),
       );
     }
-    if (null == args[6]) {
+    if (null == object7) {
       return $int(
         Object.hash(
           object1,
           object2,
-          object3!.$value,
-          object4!.$value,
-          object5!.$value,
-          object6!.$value,
+          object3.$value,
+          object4.$value,
+          object5.$value,
+          object6.$value,
         ),
       );
     }
-    if (null == args[7]) {
+    if (null == object8) {
       return $int(
         Object.hash(
           object1,
           object2,
-          object3!.$value,
-          object4!.$value,
-          object5!.$value,
-          object6!.$value,
-          object7!.$value,
+          object3.$value,
+          object4.$value,
+          object5.$value,
+          object6.$value,
+          object7.$value,
         ),
       );
     }
-    if (null == args[8]) {
+    if (null == object9) {
       return $int(
         Object.hash(
           object1,
           object2,
-          object3!.$value,
-          object4!.$value,
-          object5!.$value,
-          object6!.$value,
-          object7!.$value,
-          object8!.$value,
+          object3.$value,
+          object4.$value,
+          object5.$value,
+          object6.$value,
+          object7.$value,
+          object8.$value,
         ),
       );
     }
-    if (null == args[9]) {
+    if (null == object10) {
       return $int(
         Object.hash(
           object1,
           object2,
-          object3!.$value,
-          object4!.$value,
-          object5!.$value,
-          object6!.$value,
-          object7!.$value,
-          object8!.$value,
-          object9!.$value,
+          object3.$value,
+          object4.$value,
+          object5.$value,
+          object6.$value,
+          object7.$value,
+          object8.$value,
+          object9.$value,
         ),
       );
     }
-    if (null == args[10]) {
+    if (null == object11) {
       return $int(
         Object.hash(
           object1,
           object2,
-          object3!.$value,
-          object4!.$value,
-          object5!.$value,
-          object6!.$value,
-          object7!.$value,
-          object8!.$value,
-          object9!.$value,
-          object10!.$value,
+          object3.$value,
+          object4.$value,
+          object5.$value,
+          object6.$value,
+          object7.$value,
+          object8.$value,
+          object9.$value,
+          object10.$value,
         ),
       );
     }
-    if (null == args[11]) {
+    if (null == object12) {
       return $int(
         Object.hash(
           object1,
           object2,
-          object3!.$value,
-          object4!.$value,
-          object5!.$value,
-          object6!.$value,
-          object7!.$value,
-          object8!.$value,
-          object9!.$value,
-          object10!.$value,
-          object11!.$value,
+          object3.$value,
+          object4.$value,
+          object5.$value,
+          object6.$value,
+          object7.$value,
+          object8.$value,
+          object9.$value,
+          object10.$value,
+          object11.$value,
         ),
       );
     }
-    if (null == args[12]) {
+    if (null == object13) {
       return $int(
         Object.hash(
           object1,
           object2,
-          object3!.$value,
-          object4!.$value,
-          object5!.$value,
-          object6!.$value,
-          object7!.$value,
-          object8!.$value,
-          object9!.$value,
-          object10!.$value,
-          object11!.$value,
-          object12!.$value,
+          object3.$value,
+          object4.$value,
+          object5.$value,
+          object6.$value,
+          object7.$value,
+          object8.$value,
+          object9.$value,
+          object10.$value,
+          object11.$value,
+          object12.$value,
         ),
       );
     }
@@ -354,17 +355,17 @@ class $Object implements $Instance {
       Object.hash(
         object1,
         object2,
-        object3!.$value,
-        object4!.$value,
-        object5!.$value,
-        object6!.$value,
-        object7!.$value,
-        object8!.$value,
-        object9!.$value,
-        object10!.$value,
-        object11!.$value,
-        object12!.$value,
-        object13!.$value,
+        object3.$value,
+        object4.$value,
+        object5.$value,
+        object6.$value,
+        object7.$value,
+        object8.$value,
+        object9.$value,
+        object10.$value,
+        object11.$value,
+        object12.$value,
+        object13.$value,
       ),
     );
   }

@@ -42,9 +42,17 @@ class DartIoPlugin implements EvalPlugin {
 
   @override
   void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFunc('dart:io', 'HttpClient.', $HttpClient.$new);
-    runtime.registerBridgeFunc('dart:io', 'File.', $File.$new);
-    runtime.registerBridgeFunc('dart:io', 'Directory.', $Directory.$new);
+    runtime.registerBridgeFuncRegisters(
+      'dart:io',
+      'HttpClient.',
+      $HttpClient.$new,
+    );
+    runtime.registerBridgeFuncRegisters('dart:io', 'File.', $File.$new);
+    runtime.registerBridgeFuncRegisters(
+      'dart:io',
+      'Directory.',
+      $Directory.$new,
+    );
     $InternetAddress.configureForRuntime(runtime);
     $InternetAddressType.configureForRuntime(runtime);
     $Process.configureForRuntime(runtime);

@@ -34,7 +34,7 @@ void main() {
 
       final runtime = Runtime.ofProgram(program);
 
-      runtime.registerBridgeFunc(
+      runtime.registerBridgeFuncRegisters(
         'package:bridge_lib/bridge_lib.dart',
         'TestClass.',
         $TestClass.$construct,
@@ -71,7 +71,7 @@ void main() {
 
       final runtime = Runtime.ofProgram(program);
 
-      runtime.registerBridgeFunc(
+      runtime.registerBridgeFuncRegisters(
         'package:bridge_lib/bridge_lib.dart',
         'TestClass.',
         $TestClass.$construct,
@@ -113,7 +113,7 @@ void main() {
 
         final runtime = Runtime.ofProgram(program);
 
-        runtime.registerBridgeFunc(
+        runtime.registerBridgeFuncRegisters(
           'package:bridge_lib/bridge_lib.dart',
           'TestClass.',
           $TestClass.$construct,
@@ -151,7 +151,7 @@ void main() {
 
       final runtime = Runtime.ofProgram(program);
 
-      runtime.registerBridgeFunc(
+      runtime.registerBridgeFuncRegisters(
         'package:bridge_lib/bridge_lib.dart',
         'TestClass.',
         $TestClass.$construct,
@@ -182,13 +182,13 @@ void main() {
 
       final runtime = Runtime.ofProgram(program);
 
-      runtime.registerBridgeFunc(
+      runtime.registerBridgeFuncRegisters(
         'package:bridge_lib/bridge_lib.dart',
         'TestClass.',
         $TestClass.$construct,
         isBridge: true,
       );
-      runtime.registerBridgeFunc(
+      runtime.registerBridgeFuncRegisters(
         'package:bridge_lib/bridge_lib.dart',
         'TestClass.runStaticTest',
         $TestClass.$runStaticTest,
@@ -398,7 +398,7 @@ void main() {
 
       final runtime = Runtime.ofProgram(program);
 
-      runtime.registerBridgeFunc(
+      runtime.registerBridgeFuncRegisters(
         'package:bridge_lib/bridge_lib.dart',
         'TestClass.',
         $TestClass.$construct,

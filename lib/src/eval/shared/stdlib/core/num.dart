@@ -404,9 +404,9 @@ class $num<T extends num> implements $Instance {
   );
 
   /// Wrapper of [num.parse]
-  static $num? $parse(Runtime runtime, $Value? target, List<$Value?> args) {
-    final source = args[0]!.$value as String;
-    final onError = args[1]?.$value as EvalCallable?;
+  static $num? $parse(Runtime runtime, Object? r, Object? s, Object? c) {
+    final source = (r as $Value).$value as String;
+    final onError = (s as $Value?)?.$value as EvalCallable?;
     final num result;
     try {
       result = num.parse(
@@ -430,8 +430,8 @@ class $num<T extends num> implements $Instance {
   }
 
   /// Wrapper of [num.tryParse]
-  static $Value $tryParse(Runtime runtime, $Value? target, List<$Value?> args) {
-    final source = args[0]!.$value as String;
+  static $Value $tryParse(Runtime runtime, Object? r, Object? s, Object? c) {
+    final source = (r as $Value).$value as String;
     final result = num.tryParse(source);
     if (result == null) {
       return $null();
@@ -1219,9 +1219,9 @@ class $int extends $num<int> {
     wrap: true,
   );
 
-  static $int? $parse(Runtime runtime, $Value? target, List<$Value?> args) {
-    final source = args[0]!.$value as String;
-    final radix = args[1]?.$value as int?;
+  static $int? $parse(Runtime runtime, Object? r, Object? s, Object? c) {
+    final source = (r as $Value).$value as String;
+    final radix = (s as $Value?)?.$value as int?;
     final int result;
 
     try {
@@ -1233,9 +1233,9 @@ class $int extends $num<int> {
     return $int(result);
   }
 
-  static $Value $tryParse(Runtime runtime, $Value? target, List<$Value?> args) {
-    final source = args[0]!.$value as String;
-    final radix = args[1]?.$value as int?;
+  static $Value $tryParse(Runtime runtime, Object? r, Object? s, Object? c) {
+    final source = (r as $Value).$value as String;
+    final radix = (s as $Value?)?.$value as int?;
 
     final result = int.tryParse(source, radix: radix);
 
@@ -1612,29 +1612,26 @@ class $double extends $num<double> {
     wrap: true,
   );
 
-  static $Value? $nan(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? $nan(Runtime runtime, Object? r, Object? s, Object? c) {
     return $double(double.nan);
   }
 
-  static $Value? $infinity(
-    Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
-  ) {
+  static $Value? $infinity(Runtime runtime, Object? r, Object? s, Object? c) {
     return $double(double.infinity);
   }
 
   static $Value? $negativeInfinity(
     Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     return $double(double.negativeInfinity);
   }
 
-  static $double? $parse(Runtime runtime, $Value? target, List<$Value?> args) {
-    final source = args[0]!.$value as String;
-    final onError = args[1] as EvalCallable?;
+  static $double? $parse(Runtime runtime, Object? r, Object? s, Object? c) {
+    final source = (r as $Value).$value as String;
+    final onError = s as EvalCallable?;
     final double result;
     try {
       result = double.parse(source);
@@ -1650,8 +1647,8 @@ class $double extends $num<double> {
     return $double(result);
   }
 
-  static $Value $tryParse(Runtime runtime, $Value? target, List<$Value?> args) {
-    final source = args[0]!.$value as String;
+  static $Value $tryParse(Runtime runtime, Object? r, Object? s, Object? c) {
+    final source = (r as $Value).$value as String;
     final result = double.tryParse(source);
     if (result == null) {
       return $null();

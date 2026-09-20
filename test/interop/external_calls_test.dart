@@ -56,30 +56,27 @@ class _Opaque implements $Instance {
 }
 
 void main() {
-  test(
-    'large plugins register list and register callbacks beyond 1000 IDs',
-    () {
-      final program = _compile('int main() => fn1098() + fn1099();', [
-        for (var i = 0; i < 1100; i++) _function('fn$i', 0),
-      ]);
-      for (final runtime in [
-        Runtime.ofProgram(program),
-        Runtime(program.write().buffer),
-      ]) {
-        runtime.registerBridgeFunc(
-          _bridge,
-          'fn1098',
-          (runtime, target, args) => $int(40),
-        );
-        runtime.registerBridgeFuncRegisters(
-          _bridge,
-          'fn1099',
-          (runtime, r, s, c) => $int(2),
-        );
-        expect(runtime.executeLib(_library, 'main'), 42);
-      }
-    },
-  );
+  test('large plugins register callbacks beyond 1000 IDs', () {
+    final program = _compile('int main() => fn1098() + fn1099();', [
+      for (var i = 0; i < 1100; i++) _function('fn$i', 0),
+    ]);
+    for (final runtime in [
+      Runtime.ofProgram(program),
+      Runtime(program.write().buffer),
+    ]) {
+      runtime.registerBridgeFuncRegisters(
+        _bridge,
+        'fn1098',
+        (runtime, r, s, c) => $int(40),
+      );
+      runtime.registerBridgeFuncRegisters(
+        _bridge,
+        'fn1099',
+        (runtime, r, s, c) => $int(2),
+      );
+      expect(runtime.executeLib(_library, 'main'), 42);
+    }
+  });
 
   test('external calls require a Runtime and a registered bridge', () {
     final program = _compile('int main() => absent();', [
@@ -97,118 +94,92 @@ void main() {
     );
   });
 
-  for (final registers in [false, true]) {
-    test(
-      '${registers ? 'register' : 'legacy'} bridge distinguishes provided null from omitted defaults',
-      () {
-        const nullable = BridgeTypeAnnotation(
-          BridgeTypeRef(CoreTypes.object),
-          nullable: true,
-        );
-        const dynamicType = BridgeTypeAnnotation(
-          BridgeTypeRef(CoreTypes.dynamic),
-        );
-        final program = _compile(
-          '''dynamic main() => optional();
+  test('bridge distinguishes provided null from omitted defaults', () {
+    const nullable = BridgeTypeAnnotation(
+      BridgeTypeRef(CoreTypes.object),
+      nullable: true,
+    );
+    const dynamicType = BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic));
+    final program = _compile(
+      '''dynamic main() => optional();
         dynamic explicitNull() => optional(null);
         dynamic nullableEntry(Object? value) => optional(value);
         dynamic dynamicEntry(dynamic value) => optional(value);
         dynamic namedNull() => named(second: null);
         dynamic namedValue() => named(first: 7);
       ''',
-          [
-            const BridgeFunctionDeclaration(
-              _bridge,
-              'optional',
-              BridgeFunctionDef(
-                returns: dynamicType,
-                params: [BridgeParameter('value', nullable, true)],
-              ),
-            ),
-            const BridgeFunctionDeclaration(
-              _bridge,
-              'named',
-              BridgeFunctionDef(
-                returns: dynamicType,
-                namedParams: [
-                  BridgeParameter('first', nullable, true),
-                  BridgeParameter('second', nullable, true),
-                ],
-              ),
-            ),
-          ],
-        );
-        for (final candidate in [
-          program,
-          Program.read(program.write().buffer),
-        ]) {
-          final runtime = Runtime.ofProgram(candidate);
-          final observed = <List<Object?>>[];
-          $Value? optional(Object? value) {
-            observed.add([value]);
-            return value == null ? $int(41) : value as $Value;
-          }
-
-          $Value? named(Object? first, Object? second) {
-            observed.add([first, second]);
-            return first == null ? $int(41) : first as $Value;
-          }
-
-          if (registers) {
-            runtime.registerBridgeFuncRegisters(
-              _bridge,
-              'optional',
-              (runtime, r, s, c) => optional(r),
-            );
-            runtime.registerBridgeFuncRegisters(
-              _bridge,
-              'named',
-              (runtime, r, s, c) => named(r, s),
-            );
-          } else {
-            runtime.registerBridgeFunc(
-              _bridge,
-              'optional',
-              (runtime, target, args) => optional(args.single),
-            );
-            runtime.registerBridgeFunc(
-              _bridge,
-              'named',
-              (runtime, target, args) => named(args[0], args[1]),
-            );
-          }
-          expect(runtime.executeLib(_library, 'main'), 41);
-          expect(observed.removeLast(), [null]);
-          expect(runtime.executeLib(_library, 'explicitNull'), isNull);
-          expect(observed.removeLast().single, isA<$null>());
-          for (final entry in ['nullableEntry', 'dynamicEntry']) {
-            expect(
-              runtime.executeLib(_library, entry, arguments: {'value': null}),
-              isNull,
-            );
-            expect(observed.removeLast().single, isA<$null>());
-            expect(
-              runtime.executeLib(_library, entry, arguments: {'value': 9}),
-              9,
-            );
-            expect(observed.removeLast().single, isA<$int>());
-          }
-          expect(runtime.executeLib(_library, 'namedNull'), 41);
-          final explicitNamed = observed.removeLast();
-          expect(explicitNamed[0], isNull);
-          expect(explicitNamed[1], isA<$null>());
-          expect(runtime.executeLib(_library, 'namedValue'), 7);
-          final providedNamed = observed.removeLast();
-          expect(providedNamed[0], isA<$int>());
-          expect(providedNamed[1], isNull);
-        }
-      },
+      [
+        const BridgeFunctionDeclaration(
+          _bridge,
+          'optional',
+          BridgeFunctionDef(
+            returns: dynamicType,
+            params: [BridgeParameter('value', nullable, true)],
+          ),
+        ),
+        const BridgeFunctionDeclaration(
+          _bridge,
+          'named',
+          BridgeFunctionDef(
+            returns: dynamicType,
+            namedParams: [
+              BridgeParameter('first', nullable, true),
+              BridgeParameter('second', nullable, true),
+            ],
+          ),
+        ),
+      ],
     );
-  }
+    for (final candidate in [program, Program.read(program.write().buffer)]) {
+      final runtime = Runtime.ofProgram(candidate);
+      final observed = <List<Object?>>[];
+      $Value? optional(Object? value) {
+        observed.add([value]);
+        return value == null ? $int(41) : value as $Value;
+      }
+
+      $Value? named(Object? first, Object? second) {
+        observed.add([first, second]);
+        return first == null ? $int(41) : first as $Value;
+      }
+
+      runtime.registerBridgeFuncRegisters(
+        _bridge,
+        'optional',
+        (runtime, r, s, c) => optional(r),
+      );
+      runtime.registerBridgeFuncRegisters(
+        _bridge,
+        'named',
+        (runtime, r, s, c) => named(r, s),
+      );
+      expect(runtime.executeLib(_library, 'main'), 41);
+      expect(observed.removeLast(), [null]);
+      expect(runtime.executeLib(_library, 'explicitNull'), isNull);
+      expect(observed.removeLast().single, isA<$null>());
+      for (final entry in ['nullableEntry', 'dynamicEntry']) {
+        expect(
+          runtime.executeLib(_library, entry, arguments: {'value': null}),
+          isNull,
+        );
+        expect(observed.removeLast().single, isA<$null>());
+        expect(runtime.executeLib(_library, entry, arguments: {'value': 9}), 9);
+        expect(observed.removeLast().single, isA<$int>());
+      }
+      expect(runtime.executeLib(_library, 'namedNull'), 41);
+      final explicitNamed = observed.removeLast();
+      expect(explicitNamed[0], isNull);
+      expect(explicitNamed[1], isA<$null>());
+      expect(runtime.executeLib(_library, 'namedValue'), 7);
+      final providedNamed = observed.removeLast();
+      expect(providedNamed[0], isA<$int>());
+      expect(providedNamed[1], isNull);
+    }
+  });
 
   for (final arity in [0, 1, 2, 3, 6]) {
     test(
-      'external legacy callback preserves $arity arguments after serialization',
+      'external callback preserves $arity arguments after serialization',
       () {
         final args = List.generate(arity, (i) => '${i + 1}').join(',');
         final program = _compile('int main() => capture($args);', [
@@ -219,12 +190,17 @@ void main() {
           Program.read(program.write().buffer),
         ]) {
           final runtime = Runtime.ofProgram(candidate);
-          runtime.registerBridgeFunc(_bridge, 'capture', (
+          runtime.registerBridgeFuncRegisters(_bridge, 'capture', (
             runtime,
-            target,
-            args,
+            r,
+            s,
+            c,
           ) {
-            expect(target, isNull);
+            final args = <Object?>[
+              if (arity > 0) r,
+              if (arity > 1) s,
+              if (arity > 2) ...(arity > 3 ? (c as List<Object?>) : [c]),
+            ];
             expect(
               args.map((arg) => (arg as $int).$value),
               List.generate(arity, (i) => i + 1),
@@ -317,11 +293,16 @@ void main() {
     }''',
         [_function('capture', 6)],
       );
-      final retained = <List<$Value?>>[];
+      final retained = <List<Object?>>[];
       final runtime = Runtime.ofProgram(program);
-      runtime.registerBridgeFunc(_bridge, 'capture', (runtime, target, args) {
-        retained.add(args);
-        return $int((args.first as $int).$value);
+      runtime.registerBridgeFuncRegisters(_bridge, 'capture', (
+        runtime,
+        r,
+        s,
+        c,
+      ) {
+        retained.add([r, s, ...(c as List<Object?>)]);
+        return $int((r as $int).$value);
       });
       expect(
         runtime.executeLib(_library, 'main', arguments: {'x': 7, 'y': 11}),
@@ -343,13 +324,14 @@ void main() {
         [_function('capture', 6, objects: true)],
       ),
     );
-    runtime.registerBridgeFunc(_bridge, 'capture', (runtime, target, args) {
-      expect(args[0], isA<$int>());
-      expect(args[1], isA<$double>());
-      expect(args[2], isA<$bool>());
-      expect(args[3], isA<$String>());
-      expect(identical(args[4], opaque), isTrue);
-      expect(identical(args[5], opaque), isTrue);
+    runtime.registerBridgeFuncRegisters(_bridge, 'capture', (runtime, r, s, c) {
+      final rest = c as List<Object?>;
+      expect(r, isA<$int>());
+      expect(s, isA<$double>());
+      expect(rest[0], isA<$bool>());
+      expect(rest[1], isA<$String>());
+      expect(identical(rest[2], opaque), isTrue);
+      expect(identical(rest[3], opaque), isTrue);
       return $bool(true);
     });
     expect(
@@ -358,29 +340,27 @@ void main() {
     );
   });
 
-  test(
-    'external callback reentry preserves caller values and legacy snapshots',
-    () {
-      final runtime = Runtime.ofProgram(
-        _compile(
-          '''int nested() => capture(1,2,3,4,5,6);
+  test('external callback reentry preserves caller values', () {
+    final runtime = Runtime.ofProgram(
+      _compile(
+        '''int nested() => capture(1,2,3,4,5,6);
       int main(int x) { var result = capture(x,2,3,4,5,6); return result + x; }''',
-          [_function('capture', 6)],
-        ),
-      );
-      var inside = false;
-      List<$Value?>? retained;
-      runtime.registerBridgeFunc(_bridge, 'capture', (runtime, target, args) {
-        if (inside) return $int(9);
-        retained = args;
-        inside = true;
-        final nested = runtime.executeLib(_library, 'nested');
-        inside = false;
-        expect(args.map((v) => (v as $int).$value), [17, 2, 3, 4, 5, 6]);
-        return $int(nested as int);
-      });
-      expect(runtime.executeLib(_library, 'main', arguments: {'x': 17}), 26);
-      expect(retained!.map((v) => (v as $int).$value), [17, 2, 3, 4, 5, 6]);
-    },
-  );
+        [_function('capture', 6)],
+      ),
+    );
+    var inside = false;
+    List<Object?>? retained;
+    runtime.registerBridgeFuncRegisters(_bridge, 'capture', (runtime, r, s, c) {
+      final args = <Object?>[r, s, ...(c as List<Object?>)];
+      if (inside) return $int(9);
+      retained = List.of(args);
+      inside = true;
+      final nested = runtime.executeLib(_library, 'nested');
+      inside = false;
+      expect(args.map((v) => (v as $int).$value), [17, 2, 3, 4, 5, 6]);
+      return $int(nested as int);
+    });
+    expect(runtime.executeLib(_library, 'main', arguments: {'x': 17}), 26);
+    expect(retained!.map((v) => (v as $int).$value), [17, 2, 3, 4, 5, 6]);
+  });
 }

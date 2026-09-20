@@ -13,25 +13,25 @@ class $InternetAddressType implements $Instance {
   }
 
   static void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       $type.spec!.library,
       'InternetAddressType.IPv4*g',
-      __$static$IPv4.call,
+      _$static$IPv4,
     );
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       $type.spec!.library,
       'InternetAddressType.IPv6*g',
-      __$static$IPv6.call,
+      _$static$IPv6,
     );
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       $type.spec!.library,
       'InternetAddressType.unix*g',
-      __$static$unix.call,
+      _$static$unix,
     );
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       $type.spec!.library,
       'InternetAddressType.any*g',
-      __$static$any.call,
+      _$static$any,
     );
   }
 
@@ -135,41 +135,41 @@ class $InternetAddressType implements $Instance {
   @override
   final InternetAddressType $value;
 
-  static const __$static$IPv4 = $Function(_$static$IPv4);
   static $Value? _$static$IPv4(
     Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final $result = InternetAddressType.IPv4;
     return $InternetAddressType.wrap($result);
   }
 
-  static const __$static$IPv6 = $Function(_$static$IPv6);
   static $Value? _$static$IPv6(
     Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final $result = InternetAddressType.IPv6;
     return $InternetAddressType.wrap($result);
   }
 
-  static const __$static$unix = $Function(_$static$unix);
   static $Value? _$static$unix(
     Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final $result = InternetAddressType.unix;
     return $InternetAddressType.wrap($result);
   }
 
-  static const __$static$any = $Function(_$static$any);
   static $Value? _$static$any(
     Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final $result = InternetAddressType.any;
     return $InternetAddressType.wrap($result);
@@ -197,45 +197,45 @@ class $InternetAddress implements InternetAddress, $Instance {
   }
 
   static void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       $type.spec!.library,
       'InternetAddress.',
-      __$InternetAddress$new.call,
+      _$InternetAddress$new,
     );
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       $type.spec!.library,
       'InternetAddress.fromRawAddress',
-      __$InternetAddress$fromRawAddress.call,
+      _$InternetAddress$fromRawAddress,
     );
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       $type.spec!.library,
       'InternetAddress.loopbackIPv4*g',
-      __$static$getter$loopbackIPv4.call,
+      _$static$getter$loopbackIPv4,
     );
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       $type.spec!.library,
       'InternetAddress.loopbackIPv6*g',
-      __$static$getter$loopbackIPv6.call,
+      _$static$getter$loopbackIPv6,
     );
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       $type.spec!.library,
       'InternetAddress.anyIPv4*g',
-      __$static$getter$anyIPv4.call,
+      _$static$getter$anyIPv4,
     );
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       $type.spec!.library,
       'InternetAddress.anyIPv6*g',
-      __$static$getter$anyIPv6.call,
+      _$static$getter$anyIPv6,
     );
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       $type.spec!.library,
       'InternetAddress.lookup',
-      __$static$method$lookup.call,
+      _$static$method$lookup,
     );
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       $type.spec!.library,
       'InternetAddress.tryParse',
-      __$static$method$tryParse.call,
+      _$static$method$tryParse,
     );
   }
 
@@ -565,42 +565,38 @@ class $InternetAddress implements InternetAddress, $Instance {
   @override
   bool get isMulticast => $value.isMulticast;
 
-  static const __$static$getter$loopbackIPv4 = $Function(
-    _$static$getter$loopbackIPv4,
-  );
   static $Value? _$static$getter$loopbackIPv4(
     Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     return $InternetAddress.wrap(InternetAddress.loopbackIPv4);
   }
 
-  static const __$static$getter$loopbackIPv6 = $Function(
-    _$static$getter$loopbackIPv6,
-  );
   static $Value? _$static$getter$loopbackIPv6(
     Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     return $InternetAddress.wrap(InternetAddress.loopbackIPv6);
   }
 
-  static const __$static$getter$anyIPv4 = $Function(_$static$getter$anyIPv4);
   static $Value? _$static$getter$anyIPv4(
     Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     return $InternetAddress.wrap(InternetAddress.anyIPv4);
   }
 
-  static const __$static$getter$anyIPv6 = $Function(_$static$getter$anyIPv6);
   static $Value? _$static$getter$anyIPv6(
     Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     return $InternetAddress.wrap(InternetAddress.anyIPv6);
   }
@@ -618,15 +614,16 @@ class $InternetAddress implements InternetAddress, $Instance {
     return $Future.wrap($result.then((value) => $InternetAddress.wrap(value)));
   }
 
-  static const __$static$method$lookup = $Function(_$static$method$lookup);
   static $Value? _$static$method$lookup(
     Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
-    final host = args[0]?.$value as String;
+    final host = (r as $Value?)?.$value as String;
     final type =
-        args[1]?.$reified as InternetAddressType? ?? InternetAddressType.any;
+        (s as $Value?)?.$reified as InternetAddressType? ??
+        InternetAddressType.any;
     final $result = InternetAddress.lookup(host, type: type);
     return $Future.wrap(
       $result.then(
@@ -639,38 +636,36 @@ class $InternetAddress implements InternetAddress, $Instance {
     );
   }
 
-  static const __$static$method$tryParse = $Function(_$static$method$tryParse);
   static $Value? _$static$method$tryParse(
     Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
-    final address = args[0]?.$value as String;
+    final address = (r as $Value?)?.$value as String;
     final $result = InternetAddress.tryParse(address);
     return $result == null ? $null() : $InternetAddress.wrap($result);
   }
 
-  static const __$InternetAddress$new = $Function(_$InternetAddress$new);
   static $Value? _$InternetAddress$new(
     Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
-    final address = args[0]?.$value as String;
-    final type = args[1]?.$value as InternetAddressType;
+    final address = (r as $Value?)?.$value as String;
+    final type = (s as $Value?)?.$value as InternetAddressType;
     return $InternetAddress.wrap(InternetAddress(address, type: type));
   }
 
-  static const __$InternetAddress$fromRawAddress = $Function(
-    _$InternetAddress$fromRawAddress,
-  );
   static $Value? _$InternetAddress$fromRawAddress(
     Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
-    final rawAddress = args[0]?.$reified as Uint8List;
-    final type = args[1]?.$value as InternetAddressType;
+    final rawAddress = (r as $Value?)?.$reified as Uint8List;
+    final type = (s as $Value?)?.$value as InternetAddressType;
     return $InternetAddress.wrap(
       InternetAddress.fromRawAddress(rawAddress, type: type),
     );

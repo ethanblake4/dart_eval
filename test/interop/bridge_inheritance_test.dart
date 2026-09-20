@@ -19,7 +19,7 @@ Iterable<(String, Runtime)> _runtimes(Program program) sync* {
     ('serialized', Program.read(program.write().buffer)),
   ]) {
     final runtime = Runtime.ofProgram(candidate);
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       _bridgeLibrary,
       'TestClass.',
       $TestClass.$construct,

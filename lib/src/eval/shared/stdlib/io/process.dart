@@ -9,13 +9,13 @@ import 'dart:core';
 class $ProcessInfo implements $Instance {
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:io',
       'ProcessInfo.currentRss*g',
       $ProcessInfo.$currentRss,
     );
 
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:io',
       'ProcessInfo.maxRss*g',
       $ProcessInfo.$maxRss,
@@ -66,17 +66,13 @@ class $ProcessInfo implements $Instance {
   );
 
   /// Wrapper for the [ProcessInfo.currentRss] getter
-  static $Value? $currentRss(
-    Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
-  ) {
+  static $Value? $currentRss(Runtime runtime, Object? r, Object? s, Object? c) {
     final value = ProcessInfo.currentRss;
     return $int(value);
   }
 
   /// Wrapper for the [ProcessInfo.maxRss] getter
-  static $Value? $maxRss(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? $maxRss(Runtime runtime, Object? r, Object? s, Object? c) {
     final value = ProcessInfo.maxRss;
     return $int(value);
   }
@@ -110,31 +106,31 @@ class $ProcessInfo implements $Instance {
 class $ProcessStartMode implements $Instance {
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:io',
       'ProcessStartMode.normal*g',
       $ProcessStartMode.$normal,
     );
 
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:io',
       'ProcessStartMode.inheritStdio*g',
       $ProcessStartMode.$inheritStdio,
     );
 
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:io',
       'ProcessStartMode.detached*g',
       $ProcessStartMode.$detached,
     );
 
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:io',
       'ProcessStartMode.detachedWithStdio*g',
       $ProcessStartMode.$detachedWithStdio,
     );
 
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:io',
       'ProcessStartMode.values*g',
       $ProcessStartMode.$values,
@@ -220,7 +216,7 @@ class $ProcessStartMode implements $Instance {
   );
 
   /// Wrapper for the [ProcessStartMode.normal] getter
-  static $Value? $normal(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? $normal(Runtime runtime, Object? r, Object? s, Object? c) {
     final value = ProcessStartMode.normal;
     return $ProcessStartMode.wrap(value);
   }
@@ -228,19 +224,16 @@ class $ProcessStartMode implements $Instance {
   /// Wrapper for the [ProcessStartMode.inheritStdio] getter
   static $Value? $inheritStdio(
     Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final value = ProcessStartMode.inheritStdio;
     return $ProcessStartMode.wrap(value);
   }
 
   /// Wrapper for the [ProcessStartMode.detached] getter
-  static $Value? $detached(
-    Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
-  ) {
+  static $Value? $detached(Runtime runtime, Object? r, Object? s, Object? c) {
     final value = ProcessStartMode.detached;
     return $ProcessStartMode.wrap(value);
   }
@@ -248,15 +241,16 @@ class $ProcessStartMode implements $Instance {
   /// Wrapper for the [ProcessStartMode.detachedWithStdio] getter
   static $Value? $detachedWithStdio(
     Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final value = ProcessStartMode.detachedWithStdio;
     return $ProcessStartMode.wrap(value);
   }
 
   /// Wrapper for the [ProcessStartMode.values] getter
-  static $Value? $values(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? $values(Runtime runtime, Object? r, Object? s, Object? c) {
     final value = ProcessStartMode.values;
     return $List.view(value, (e) => $ProcessStartMode.wrap(e));
   }
@@ -305,13 +299,29 @@ class $ProcessStartMode implements $Instance {
 class $Process implements $Instance {
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFunc('dart:io', 'Process.start', $Process.$start);
+    runtime.registerBridgeFuncRegisters(
+      'dart:io',
+      'Process.start',
+      $Process.$start,
+    );
 
-    runtime.registerBridgeFunc('dart:io', 'Process.run', $Process.$run);
+    runtime.registerBridgeFuncRegisters(
+      'dart:io',
+      'Process.run',
+      $Process.$run,
+    );
 
-    runtime.registerBridgeFunc('dart:io', 'Process.runSync', $Process.$runSync);
+    runtime.registerBridgeFuncRegisters(
+      'dart:io',
+      'Process.runSync',
+      $Process.$runSync,
+    );
 
-    runtime.registerBridgeFunc('dart:io', 'Process.killPid', $Process.$killPid);
+    runtime.registerBridgeFuncRegisters(
+      'dart:io',
+      'Process.killPid',
+      $Process.$killPid,
+    );
   }
 
   /// Compile-time type specification of [$Process]
@@ -608,58 +618,61 @@ class $Process implements $Instance {
   );
 
   /// Wrapper for the [Process.start] method
-  static $Value? $start(Runtime runtime, $Value? target, List<$Value?> args) {
-    runtime.assertPermission('process:run', args[0]!.$value);
+  static $Value? $start(Runtime runtime, Object? r, Object? s, Object? c) {
+    final rest = c as List<Object?>;
+    runtime.assertPermission('process:run', (r as $Value).$value);
     final value = Process.start(
-      args[0]!.$value,
-      (args[1]!.$reified as List).cast(),
-      workingDirectory: args[2]?.$value,
-      environment: (args[3]?.$reified as Map?)?.cast(),
-      includeParentEnvironment: args[4]?.$value ?? true,
-      runInShell: args[5]?.$value ?? false,
-      mode: args[6]?.$value ?? ProcessStartMode.normal,
+      r.$value,
+      ((s as $Value).$reified as List).cast(),
+      workingDirectory: (rest[0] as $Value?)?.$value,
+      environment: ((rest[1] as $Value?)?.$reified as Map?)?.cast(),
+      includeParentEnvironment: (rest[2] as $Value?)?.$value ?? true,
+      runInShell: (rest[3] as $Value?)?.$value ?? false,
+      mode: (rest[4] as $Value?)?.$value ?? ProcessStartMode.normal,
     );
     return $Future.wrap(value.then((e) => $Process.wrap(e)));
   }
 
   /// Wrapper for the [Process.run] method
-  static $Value? $run(Runtime runtime, $Value? target, List<$Value?> args) {
-    runtime.assertPermission('process:run', args[0]!.$value);
+  static $Value? $run(Runtime runtime, Object? r, Object? s, Object? c) {
+    final rest = c as List<Object?>;
+    runtime.assertPermission('process:run', (r as $Value).$value);
     final value = Process.run(
-      args[0]!.$value,
-      (args[1]!.$reified as List).cast(),
-      workingDirectory: args[2]?.$value,
-      environment: (args[3]?.$reified as Map?)?.cast(),
-      includeParentEnvironment: args[4]?.$value ?? true,
-      runInShell: args[5]?.$value ?? false,
-      stdoutEncoding: args[6]?.$value ?? systemEncoding,
-      stderrEncoding: args[7]?.$value ?? systemEncoding,
+      r.$value,
+      ((s as $Value).$reified as List).cast(),
+      workingDirectory: (rest[0] as $Value?)?.$value,
+      environment: ((rest[1] as $Value?)?.$reified as Map?)?.cast(),
+      includeParentEnvironment: (rest[2] as $Value?)?.$value ?? true,
+      runInShell: (rest[3] as $Value?)?.$value ?? false,
+      stdoutEncoding: (rest[4] as $Value?)?.$value ?? systemEncoding,
+      stderrEncoding: (rest[5] as $Value?)?.$value ?? systemEncoding,
     );
     return $Future.wrap(value.then((e) => $ProcessResult.wrap(e)));
   }
 
   /// Wrapper for the [Process.runSync] method
-  static $Value? $runSync(Runtime runtime, $Value? target, List<$Value?> args) {
-    runtime.assertPermission('process:run', args[0]!.$value);
+  static $Value? $runSync(Runtime runtime, Object? r, Object? s, Object? c) {
+    final rest = c as List<Object?>;
+    runtime.assertPermission('process:run', (r as $Value).$value);
     final value = Process.runSync(
-      args[0]!.$value,
-      (args[1]!.$reified as List).cast(),
-      workingDirectory: args[2]?.$value,
-      environment: (args[3]?.$reified as Map?)?.cast(),
-      includeParentEnvironment: args[4]?.$value ?? true,
-      runInShell: args[5]?.$value ?? false,
-      stdoutEncoding: args[6]?.$value ?? systemEncoding,
-      stderrEncoding: args[7]?.$value ?? systemEncoding,
+      r.$value,
+      ((s as $Value).$reified as List).cast(),
+      workingDirectory: (rest[0] as $Value?)?.$value,
+      environment: ((rest[1] as $Value?)?.$reified as Map?)?.cast(),
+      includeParentEnvironment: (rest[2] as $Value?)?.$value ?? true,
+      runInShell: (rest[3] as $Value?)?.$value ?? false,
+      stdoutEncoding: (rest[4] as $Value?)?.$value ?? systemEncoding,
+      stderrEncoding: (rest[5] as $Value?)?.$value ?? systemEncoding,
     );
     return $ProcessResult.wrap(value);
   }
 
   /// Wrapper for the [Process.killPid] method
-  static $Value? $killPid(Runtime runtime, $Value? target, List<$Value?> args) {
-    runtime.assertPermission('process:kill', args[0]!.$value);
+  static $Value? $killPid(Runtime runtime, Object? r, Object? s, Object? c) {
+    runtime.assertPermission('process:kill', (r as $Value).$value);
     final value = Process.killPid(
-      args[0]!.$value,
-      args[1]?.$value ?? ProcessSignal.sigterm,
+      r.$value,
+      (s as $Value?)?.$value ?? ProcessSignal.sigterm,
     );
     return $bool(value);
   }
@@ -723,7 +736,7 @@ class $Process implements $Instance {
 class $ProcessResult implements $Instance {
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:io',
       'ProcessResult.',
       $ProcessResult.$new,
@@ -795,13 +808,14 @@ class $ProcessResult implements $Instance {
   );
 
   /// Wrapper for the [ProcessResult.new] constructor
-  static $Value? $new(Runtime runtime, $Value? thisValue, List<$Value?> args) {
+  static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
+    final rest = c as List<Object?>;
     return $ProcessResult.wrap(
       ProcessResult(
-        args[0]!.$value,
-        args[1]!.$value,
-        args[2]!.$value,
-        args[3]!.$value,
+        (r as $Value).$value,
+        (s as $Value).$value,
+        (rest[0] as $Value).$value,
+        (rest[1] as $Value).$value,
       ),
     );
   }
@@ -860,175 +874,175 @@ class $ProcessResult implements $Instance {
 class $ProcessSignal implements $Instance {
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:io',
       'ProcessSignal.sighup*g',
       $ProcessSignal.$sighup,
     );
 
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:io',
       'ProcessSignal.sigint*g',
       $ProcessSignal.$sigint,
     );
 
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:io',
       'ProcessSignal.sigquit*g',
       $ProcessSignal.$sigquit,
     );
 
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:io',
       'ProcessSignal.sigill*g',
       $ProcessSignal.$sigill,
     );
 
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:io',
       'ProcessSignal.sigtrap*g',
       $ProcessSignal.$sigtrap,
     );
 
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:io',
       'ProcessSignal.sigabrt*g',
       $ProcessSignal.$sigabrt,
     );
 
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:io',
       'ProcessSignal.sigbus*g',
       $ProcessSignal.$sigbus,
     );
 
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:io',
       'ProcessSignal.sigfpe*g',
       $ProcessSignal.$sigfpe,
     );
 
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:io',
       'ProcessSignal.sigkill*g',
       $ProcessSignal.$sigkill,
     );
 
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:io',
       'ProcessSignal.sigusr1*g',
       $ProcessSignal.$sigusr1,
     );
 
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:io',
       'ProcessSignal.sigsegv*g',
       $ProcessSignal.$sigsegv,
     );
 
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:io',
       'ProcessSignal.sigusr2*g',
       $ProcessSignal.$sigusr2,
     );
 
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:io',
       'ProcessSignal.sigpipe*g',
       $ProcessSignal.$sigpipe,
     );
 
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:io',
       'ProcessSignal.sigalrm*g',
       $ProcessSignal.$sigalrm,
     );
 
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:io',
       'ProcessSignal.sigterm*g',
       $ProcessSignal.$sigterm,
     );
 
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:io',
       'ProcessSignal.sigchld*g',
       $ProcessSignal.$sigchld,
     );
 
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:io',
       'ProcessSignal.sigcont*g',
       $ProcessSignal.$sigcont,
     );
 
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:io',
       'ProcessSignal.sigstop*g',
       $ProcessSignal.$sigstop,
     );
 
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:io',
       'ProcessSignal.sigtstp*g',
       $ProcessSignal.$sigtstp,
     );
 
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:io',
       'ProcessSignal.sigttin*g',
       $ProcessSignal.$sigttin,
     );
 
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:io',
       'ProcessSignal.sigttou*g',
       $ProcessSignal.$sigttou,
     );
 
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:io',
       'ProcessSignal.sigurg*g',
       $ProcessSignal.$sigurg,
     );
 
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:io',
       'ProcessSignal.sigxcpu*g',
       $ProcessSignal.$sigxcpu,
     );
 
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:io',
       'ProcessSignal.sigxfsz*g',
       $ProcessSignal.$sigxfsz,
     );
 
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:io',
       'ProcessSignal.sigvtalrm*g',
       $ProcessSignal.$sigvtalrm,
     );
 
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:io',
       'ProcessSignal.sigprof*g',
       $ProcessSignal.$sigprof,
     );
 
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:io',
       'ProcessSignal.sigwinch*g',
       $ProcessSignal.$sigwinch,
     );
 
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:io',
       'ProcessSignal.sigpoll*g',
       $ProcessSignal.$sigpoll,
     );
 
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:io',
       'ProcessSignal.sigsys*g',
       $ProcessSignal.$sigsys,
@@ -1271,183 +1285,175 @@ class $ProcessSignal implements $Instance {
   );
 
   /// Wrapper for the [ProcessSignal.sighup] getter
-  static $Value? $sighup(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? $sighup(Runtime runtime, Object? r, Object? s, Object? c) {
     final value = ProcessSignal.sighup;
     return $ProcessSignal.wrap(value);
   }
 
   /// Wrapper for the [ProcessSignal.sigint] getter
-  static $Value? $sigint(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? $sigint(Runtime runtime, Object? r, Object? s, Object? c) {
     final value = ProcessSignal.sigint;
     return $ProcessSignal.wrap(value);
   }
 
   /// Wrapper for the [ProcessSignal.sigquit] getter
-  static $Value? $sigquit(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? $sigquit(Runtime runtime, Object? r, Object? s, Object? c) {
     final value = ProcessSignal.sigquit;
     return $ProcessSignal.wrap(value);
   }
 
   /// Wrapper for the [ProcessSignal.sigill] getter
-  static $Value? $sigill(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? $sigill(Runtime runtime, Object? r, Object? s, Object? c) {
     final value = ProcessSignal.sigill;
     return $ProcessSignal.wrap(value);
   }
 
   /// Wrapper for the [ProcessSignal.sigtrap] getter
-  static $Value? $sigtrap(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? $sigtrap(Runtime runtime, Object? r, Object? s, Object? c) {
     final value = ProcessSignal.sigtrap;
     return $ProcessSignal.wrap(value);
   }
 
   /// Wrapper for the [ProcessSignal.sigabrt] getter
-  static $Value? $sigabrt(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? $sigabrt(Runtime runtime, Object? r, Object? s, Object? c) {
     final value = ProcessSignal.sigabrt;
     return $ProcessSignal.wrap(value);
   }
 
   /// Wrapper for the [ProcessSignal.sigbus] getter
-  static $Value? $sigbus(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? $sigbus(Runtime runtime, Object? r, Object? s, Object? c) {
     final value = ProcessSignal.sigbus;
     return $ProcessSignal.wrap(value);
   }
 
   /// Wrapper for the [ProcessSignal.sigfpe] getter
-  static $Value? $sigfpe(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? $sigfpe(Runtime runtime, Object? r, Object? s, Object? c) {
     final value = ProcessSignal.sigfpe;
     return $ProcessSignal.wrap(value);
   }
 
   /// Wrapper for the [ProcessSignal.sigkill] getter
-  static $Value? $sigkill(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? $sigkill(Runtime runtime, Object? r, Object? s, Object? c) {
     final value = ProcessSignal.sigkill;
     return $ProcessSignal.wrap(value);
   }
 
   /// Wrapper for the [ProcessSignal.sigusr1] getter
-  static $Value? $sigusr1(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? $sigusr1(Runtime runtime, Object? r, Object? s, Object? c) {
     final value = ProcessSignal.sigusr1;
     return $ProcessSignal.wrap(value);
   }
 
   /// Wrapper for the [ProcessSignal.sigsegv] getter
-  static $Value? $sigsegv(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? $sigsegv(Runtime runtime, Object? r, Object? s, Object? c) {
     final value = ProcessSignal.sigsegv;
     return $ProcessSignal.wrap(value);
   }
 
   /// Wrapper for the [ProcessSignal.sigusr2] getter
-  static $Value? $sigusr2(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? $sigusr2(Runtime runtime, Object? r, Object? s, Object? c) {
     final value = ProcessSignal.sigusr2;
     return $ProcessSignal.wrap(value);
   }
 
   /// Wrapper for the [ProcessSignal.sigpipe] getter
-  static $Value? $sigpipe(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? $sigpipe(Runtime runtime, Object? r, Object? s, Object? c) {
     final value = ProcessSignal.sigpipe;
     return $ProcessSignal.wrap(value);
   }
 
   /// Wrapper for the [ProcessSignal.sigalrm] getter
-  static $Value? $sigalrm(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? $sigalrm(Runtime runtime, Object? r, Object? s, Object? c) {
     final value = ProcessSignal.sigalrm;
     return $ProcessSignal.wrap(value);
   }
 
   /// Wrapper for the [ProcessSignal.sigterm] getter
-  static $Value? $sigterm(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? $sigterm(Runtime runtime, Object? r, Object? s, Object? c) {
     final value = ProcessSignal.sigterm;
     return $ProcessSignal.wrap(value);
   }
 
   /// Wrapper for the [ProcessSignal.sigchld] getter
-  static $Value? $sigchld(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? $sigchld(Runtime runtime, Object? r, Object? s, Object? c) {
     final value = ProcessSignal.sigchld;
     return $ProcessSignal.wrap(value);
   }
 
   /// Wrapper for the [ProcessSignal.sigcont] getter
-  static $Value? $sigcont(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? $sigcont(Runtime runtime, Object? r, Object? s, Object? c) {
     final value = ProcessSignal.sigcont;
     return $ProcessSignal.wrap(value);
   }
 
   /// Wrapper for the [ProcessSignal.sigstop] getter
-  static $Value? $sigstop(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? $sigstop(Runtime runtime, Object? r, Object? s, Object? c) {
     final value = ProcessSignal.sigstop;
     return $ProcessSignal.wrap(value);
   }
 
   /// Wrapper for the [ProcessSignal.sigtstp] getter
-  static $Value? $sigtstp(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? $sigtstp(Runtime runtime, Object? r, Object? s, Object? c) {
     final value = ProcessSignal.sigtstp;
     return $ProcessSignal.wrap(value);
   }
 
   /// Wrapper for the [ProcessSignal.sigttin] getter
-  static $Value? $sigttin(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? $sigttin(Runtime runtime, Object? r, Object? s, Object? c) {
     final value = ProcessSignal.sigttin;
     return $ProcessSignal.wrap(value);
   }
 
   /// Wrapper for the [ProcessSignal.sigttou] getter
-  static $Value? $sigttou(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? $sigttou(Runtime runtime, Object? r, Object? s, Object? c) {
     final value = ProcessSignal.sigttou;
     return $ProcessSignal.wrap(value);
   }
 
   /// Wrapper for the [ProcessSignal.sigurg] getter
-  static $Value? $sigurg(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? $sigurg(Runtime runtime, Object? r, Object? s, Object? c) {
     final value = ProcessSignal.sigurg;
     return $ProcessSignal.wrap(value);
   }
 
   /// Wrapper for the [ProcessSignal.sigxcpu] getter
-  static $Value? $sigxcpu(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? $sigxcpu(Runtime runtime, Object? r, Object? s, Object? c) {
     final value = ProcessSignal.sigxcpu;
     return $ProcessSignal.wrap(value);
   }
 
   /// Wrapper for the [ProcessSignal.sigxfsz] getter
-  static $Value? $sigxfsz(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? $sigxfsz(Runtime runtime, Object? r, Object? s, Object? c) {
     final value = ProcessSignal.sigxfsz;
     return $ProcessSignal.wrap(value);
   }
 
   /// Wrapper for the [ProcessSignal.sigvtalrm] getter
-  static $Value? $sigvtalrm(
-    Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
-  ) {
+  static $Value? $sigvtalrm(Runtime runtime, Object? r, Object? s, Object? c) {
     final value = ProcessSignal.sigvtalrm;
     return $ProcessSignal.wrap(value);
   }
 
   /// Wrapper for the [ProcessSignal.sigprof] getter
-  static $Value? $sigprof(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? $sigprof(Runtime runtime, Object? r, Object? s, Object? c) {
     final value = ProcessSignal.sigprof;
     return $ProcessSignal.wrap(value);
   }
 
   /// Wrapper for the [ProcessSignal.sigwinch] getter
-  static $Value? $sigwinch(
-    Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
-  ) {
+  static $Value? $sigwinch(Runtime runtime, Object? r, Object? s, Object? c) {
     final value = ProcessSignal.sigwinch;
     return $ProcessSignal.wrap(value);
   }
 
   /// Wrapper for the [ProcessSignal.sigpoll] getter
-  static $Value? $sigpoll(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? $sigpoll(Runtime runtime, Object? r, Object? s, Object? c) {
     final value = ProcessSignal.sigpoll;
     return $ProcessSignal.wrap(value);
   }
 
   /// Wrapper for the [ProcessSignal.sigsys] getter
-  static $Value? $sigsys(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? $sigsys(Runtime runtime, Object? r, Object? s, Object? c) {
     final value = ProcessSignal.sigsys;
     return $ProcessSignal.wrap(value);
   }

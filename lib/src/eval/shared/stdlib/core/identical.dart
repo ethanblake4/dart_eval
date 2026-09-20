@@ -33,18 +33,9 @@ void configureIdenticalForCompile(BridgeDeclarationRegistry registry) {
 }
 
 void configureIdenticalForRuntime(Runtime runtime) {
-  runtime.registerBridgeFunc(
-    'dart:core',
-    'identical',
-    const _$identical().call,
-  );
+  runtime.registerBridgeFuncRegisters('dart:core', 'identical', _identical);
 }
 
-class _$identical implements EvalCallable {
-  const _$identical();
-
-  @override
-  $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $bool(identical(args[0]?.$value, args[1]?.$value));
-  }
+$Value? _identical(Runtime runtime, Object? r, Object? s, Object? c) {
+  return $bool(identical((r as $Value?)?.$value, (s as $Value?)?.$value));
 }

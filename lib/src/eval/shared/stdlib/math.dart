@@ -1,8 +1,7 @@
-import 'dart:math' as math;
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
-import 'package:dart_eval/src/eval/shared/stdlib/math/random.dart';
+import 'math/functions.dart';
 import 'math/point.dart';
+import 'math/random.dart';
 
 const mathSource = '''
 const double e = 2.718281828459045;
@@ -27,307 +26,33 @@ class DartMathPlugin implements EvalPlugin {
     $Point.configureForCompile(registry);
     $Random.configureForCompile(registry);
     registry.addSource(DartSource('dart:math', mathSource));
-    registry.defineBridgeTopLevelFunction(
-      BridgeFunctionDeclaration(
-        'dart:math',
-        'atan2',
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
-          params: [
-            BridgeParameter(
-              'a',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
-              false,
-            ),
-            BridgeParameter(
-              'b',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
-              false,
-            ),
-          ],
-        ),
-      ),
-    );
-    registry.defineBridgeTopLevelFunction(
-      BridgeFunctionDeclaration(
-        'dart:math',
-        'pow',
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
-          params: [
-            BridgeParameter(
-              'x',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
-              false,
-            ),
-            BridgeParameter(
-              'exponent',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
-              false,
-            ),
-          ],
-        ),
-      ),
-    );
-    registry.defineBridgeTopLevelFunction(
-      BridgeFunctionDeclaration(
-        'dart:math',
-        'cos',
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
-          params: [
-            BridgeParameter(
-              'radians',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
-              false,
-            ),
-          ],
-        ),
-      ),
-    );
-    registry.defineBridgeTopLevelFunction(
-      BridgeFunctionDeclaration(
-        'dart:math',
-        'sin',
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
-          params: [
-            BridgeParameter(
-              'radians',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
-              false,
-            ),
-          ],
-        ),
-      ),
-    );
-    registry.defineBridgeTopLevelFunction(
-      BridgeFunctionDeclaration(
-        'dart:math',
-        'tan',
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
-          params: [
-            BridgeParameter(
-              'radians',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
-              false,
-            ),
-          ],
-        ),
-      ),
-    );
-    registry.defineBridgeTopLevelFunction(
-      BridgeFunctionDeclaration(
-        'dart:math',
-        'acos',
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
-          params: [
-            BridgeParameter(
-              'x',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
-              false,
-            ),
-          ],
-        ),
-      ),
-    );
-    registry.defineBridgeTopLevelFunction(
-      BridgeFunctionDeclaration(
-        'dart:math',
-        'asin',
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
-          params: [
-            BridgeParameter(
-              'x',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
-              false,
-            ),
-          ],
-        ),
-      ),
-    );
-    registry.defineBridgeTopLevelFunction(
-      BridgeFunctionDeclaration(
-        'dart:math',
-        'atan',
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
-          params: [
-            BridgeParameter(
-              'x',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
-              false,
-            ),
-          ],
-        ),
-      ),
-    );
-    registry.defineBridgeTopLevelFunction(
-      BridgeFunctionDeclaration(
-        'dart:math',
-        'sqrt',
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
-          params: [
-            BridgeParameter(
-              'x',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
-              false,
-            ),
-          ],
-        ),
-      ),
-    );
-    registry.defineBridgeTopLevelFunction(
-      BridgeFunctionDeclaration(
-        'dart:math',
-        'exp',
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
-          params: [
-            BridgeParameter(
-              'x',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
-              false,
-            ),
-          ],
-        ),
-      ),
-    );
-    registry.defineBridgeTopLevelFunction(
-      BridgeFunctionDeclaration(
-        'dart:math',
-        'log',
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
-          params: [
-            BridgeParameter(
-              'x',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
-              false,
-            ),
-          ],
-        ),
-      ),
-    );
+    registry.defineBridgeTopLevelFunction($atan2Fn.$declaration);
+    registry.defineBridgeTopLevelFunction($powFn.$declaration);
+    registry.defineBridgeTopLevelFunction($cosFn.$declaration);
+    registry.defineBridgeTopLevelFunction($sinFn.$declaration);
+    registry.defineBridgeTopLevelFunction($tanFn.$declaration);
+    registry.defineBridgeTopLevelFunction($acosFn.$declaration);
+    registry.defineBridgeTopLevelFunction($asinFn.$declaration);
+    registry.defineBridgeTopLevelFunction($atanFn.$declaration);
+    registry.defineBridgeTopLevelFunction($sqrtFn.$declaration);
+    registry.defineBridgeTopLevelFunction($expFn.$declaration);
+    registry.defineBridgeTopLevelFunction($logFn.$declaration);
   }
 
   @override
   void configureForRuntime(Runtime runtime) {
     $Point.configureForRuntime(runtime);
     $Random.configureForRuntime(runtime);
-    runtime.registerBridgeFunc('dart:math', 'atan2', const _$atan2().call);
-    runtime.registerBridgeFunc('dart:math', 'pow', const _$pow().call);
-    runtime.registerBridgeFunc('dart:math', 'cos', const _$cos().call);
-    runtime.registerBridgeFunc('dart:math', 'sin', const _$sin().call);
-    runtime.registerBridgeFunc('dart:math', 'tan', const _$tan().call);
-    runtime.registerBridgeFunc('dart:math', 'acos', const _$acos().call);
-    runtime.registerBridgeFunc('dart:math', 'asin', const _$asin().call);
-    runtime.registerBridgeFunc('dart:math', 'atan', const _$atan().call);
-    runtime.registerBridgeFunc('dart:math', 'sqrt', const _$sqrt().call);
-    runtime.registerBridgeFunc('dart:math', 'exp', const _$exp().call);
-    runtime.registerBridgeFunc('dart:math', 'log', const _$log().call);
-  }
-}
-
-class _$atan2 implements EvalCallable {
-  const _$atan2();
-
-  @override
-  $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $double(math.atan2(args[0]?.$value, args[1]?.$value));
-  }
-}
-
-class _$pow implements EvalCallable {
-  const _$pow();
-
-  @override
-  $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $num(math.pow(args[0]?.$value, args[1]?.$value));
-  }
-}
-
-class _$cos implements EvalCallable {
-  const _$cos();
-
-  @override
-  $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $double(math.cos(args[0]?.$value));
-  }
-}
-
-class _$sin implements EvalCallable {
-  const _$sin();
-
-  @override
-  $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $double(math.sin(args[0]?.$value));
-  }
-}
-
-class _$tan implements EvalCallable {
-  const _$tan();
-
-  @override
-  $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $double(math.tan(args[0]?.$value));
-  }
-}
-
-class _$acos implements EvalCallable {
-  const _$acos();
-
-  @override
-  $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $double(math.acos(args[0]?.$value));
-  }
-}
-
-class _$asin implements EvalCallable {
-  const _$asin();
-
-  @override
-  $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $double(math.asin(args[0]?.$value));
-  }
-}
-
-class _$atan implements EvalCallable {
-  const _$atan();
-
-  @override
-  $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $double(math.atan(args[0]?.$value));
-  }
-}
-
-class _$sqrt implements EvalCallable {
-  const _$sqrt();
-
-  @override
-  $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $double(math.sqrt(args[0]?.$value));
-  }
-}
-
-class _$exp implements EvalCallable {
-  const _$exp();
-
-  @override
-  $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $double(math.exp(args[0]?.$value));
-  }
-}
-
-class _$log implements EvalCallable {
-  const _$log();
-
-  @override
-  $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $double(math.log(args[0]?.$value));
+    $atan2Fn.configureForRuntime(runtime);
+    $powFn.configureForRuntime(runtime);
+    $cosFn.configureForRuntime(runtime);
+    $sinFn.configureForRuntime(runtime);
+    $tanFn.configureForRuntime(runtime);
+    $acosFn.configureForRuntime(runtime);
+    $asinFn.configureForRuntime(runtime);
+    $atanFn.configureForRuntime(runtime);
+    $sqrtFn.configureForRuntime(runtime);
+    $expFn.configureForRuntime(runtime);
+    $logFn.configureForRuntime(runtime);
   }
 }

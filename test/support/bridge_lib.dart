@@ -22,15 +22,17 @@ class $TestClass extends TestClass with $Bridge {
 
   static $TestClass $construct(
     Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
-  ) => $TestClass(args[0]!.$value);
+    Object? r,
+    Object? s,
+    Object? c,
+  ) => $TestClass((r as $Value).$value);
 
   static $bool $runStaticTest(
     Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
-  ) => $bool(TestClass.runStaticTest(args[0]!.$value));
+    Object? r,
+    Object? s,
+    Object? c,
+  ) => $bool(TestClass.runStaticTest((r as $Value).$value));
 
   static const $type = BridgeTypeRef(
     BridgeTypeSpec('package:bridge_lib/bridge_lib.dart', 'TestClass'),

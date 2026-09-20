@@ -98,35 +98,18 @@ void main(List<String> args) {
       );
     }
 
-    for (final direct in [false, true]) {
+    {
       final runtime = Runtime.ofProgram(program);
-      if (direct) {
-        runtime.registerBridgeFuncRegisters(
-          _bridge,
-          'capture',
-          arity == 3
-              ? (runtime, r, s, c) => small(r, s, c)
-              : (runtime, r, s, c) {
-                  final rest = c as List<Object?>;
-                  return overflow(r, s, rest[0], rest[1], rest[2], rest[3]);
-                },
-        );
-      } else {
-        runtime.registerBridgeFunc(
-          _bridge,
-          'capture',
-          arity == 3
-              ? (runtime, target, args) => small(args[0], args[1], args[2])
-              : (runtime, target, args) => overflow(
-                  args[0],
-                  args[1],
-                  args[2],
-                  args[3],
-                  args[4],
-                  args[5],
-                ),
-        );
-      }
+      runtime.registerBridgeFuncRegisters(
+        _bridge,
+        'capture',
+        arity == 3
+            ? (runtime, r, s, c) => small(r, s, c)
+            : (runtime, r, s, c) {
+                final rest = c as List<Object?>;
+                return overflow(r, s, rest[0], rest[1], rest[2], rest[3]);
+              },
+      );
       for (var warm = 0; warm < 5; warm++) {
         checksum +=
             runtime.executeLib(
@@ -146,9 +129,7 @@ void main(List<String> args) {
         );
         watch.stop();
         if (result != expected) {
-          throw StateError(
-            'arity=$arity direct=$direct returned $result, expected $expected',
-          );
+          throw StateError('arity=$arity returned $result, expected $expected');
         }
         checksum += result as int;
         times.add(watch.elapsedMicroseconds / 1000);
@@ -157,7 +138,7 @@ void main(List<String> args) {
       times.sort();
       final median = times[times.length ~/ 2];
       print(
-        'arity=$arity ${direct ? 'registers' : 'legacy'} '
+        'arity=$arity registers '
         'median_ms=${median.toStringAsFixed(3)} '
         'min_ms=${times.first.toStringAsFixed(3)} '
         'max_ms=${times.last.toStringAsFixed(3)} '

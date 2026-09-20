@@ -221,10 +221,11 @@ void main() {
       }
     ''', nativeFuture: true);
     for (final (kind, runtime) in _runtimes(program)) {
-      runtime.registerBridgeFunc(_bridge, 'nativeFailure', (
+      runtime.registerBridgeFuncRegisters(_bridge, 'nativeFailure', (
         runtime,
-        target,
-        arguments,
+        r,
+        s,
+        c,
       ) {
         return $Future.wrap(Future<int>.error(StateError('native failure')));
       });
