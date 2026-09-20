@@ -144,6 +144,94 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
       return resolveGlobalType(ctx, declaration!.sourceLib, expression.name);
     }
   }
+  if (expression is ConditionalExpression) {
+    return TypeRef.commonBaseType(ctx, {
+      _infer(ctx, library, expression.thenExpression),
+      _infer(ctx, library, expression.elseExpression),
+    });
+  }
+  if (expression is AwaitExpression) {
+    final inner = _infer(
+      ctx,
+      library,
+      expression.expression,
+    ).resolveTypeChain(ctx);
+    if (inner.isAssignableTo(
+          ctx,
+          CoreTypes.future.ref(ctx),
+          forceAllowDynamic: false,
+        ) &&
+        inner.specifiedTypeArgs.isNotEmpty) {
+      return inner.specifiedTypeArgs.first;
+    }
+    return inner;
+  }
+  if (expression is CascadeExpression) {
+    return _infer(ctx, library, expression.target);
+  }
+  if (expression is PostfixExpression) {
+    final operand = _infer(ctx, library, expression.operand);
+    return expression.operator.lexeme == '!'
+        ? operand.copyWith(nullable: false)
+        : operand;
+  }
+  if (expression is IsExpression) return CoreTypes.bool.ref(ctx);
+  if (expression is AsExpression) {
+    return TypeRef.fromAnnotation(ctx, library, expression.type);
+  }
+  if (expression is ThrowExpression) return CoreTypes.never.ref(ctx);
+  if (expression is IndexExpression) {
+    final target = _infer(
+      ctx,
+      library,
+      expression.target,
+    ).resolveTypeChain(ctx);
+    final args = target.specifiedTypeArgs;
+    if (target.isAssignableTo(
+          ctx,
+          CoreTypes.list.ref(ctx),
+          forceAllowDynamic: false,
+        ) &&
+        args.isNotEmpty) {
+      return args[0];
+    }
+    if (target.isAssignableTo(
+          ctx,
+          CoreTypes.map.ref(ctx),
+          forceAllowDynamic: false,
+        ) &&
+        args.length >= 2) {
+      return args[1];
+    }
+    return CoreTypes.dynamic.ref(ctx);
+  }
+  if (expression is ListLiteral) {
+    return _collectionType(ctx, library, CoreTypes.list, expression.elements);
+  }
+  if (expression is SetOrMapLiteral) {
+    final isMap =
+        expression.typeArguments?.arguments.length == 2 ||
+        expression.elements.any((e) => e is MapLiteralEntry);
+    if (!isMap) {
+      return _collectionType(ctx, library, CoreTypes.set, expression.elements);
+    }
+    return _mapType(ctx, library, expression.elements);
+  }
+  if (expression is PropertyAccess && expression.target != null) {
+    final receiver = _infer(ctx, library, expression.target!);
+    if (receiver != CoreTypes.dynamic.ref(ctx)) {
+      try {
+        return TypeRef.lookupFieldType(
+              ctx,
+              receiver.resolveTypeChain(ctx),
+              expression.propertyName.name,
+            )?.resolveTypeChain(ctx) ??
+            CoreTypes.dynamic.ref(ctx);
+      } on CompileError {
+        return CoreTypes.dynamic.ref(ctx);
+      }
+    }
+  }
   if (expression is MethodInvocation && expression.target == null) {
     final declaration = ctx
         .visibleDeclarations[library]?[expression.methodName.name]
@@ -164,7 +252,99 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
       );
     }
   }
+  if (expression is MethodInvocation && expression.target != null) {
+    // Receiver calls: infer the target, then ask the member signature for the
+    // return type. Inference failures must not break compilation.
+    final receiver = _infer(
+      ctx,
+      library,
+      expression.target!,
+    ).resolveTypeChain(ctx);
+    if (receiver != CoreTypes.dynamic.ref(ctx)) {
+      try {
+        return AlwaysReturnType.fromInstanceMethodOrBuiltin(
+              ctx,
+              receiver,
+              expression.methodName.name,
+              [
+                for (final arg in expression.argumentList.arguments)
+                  if (arg is! NamedArgument)
+                    _infer(ctx, library, arg.argumentExpression),
+              ],
+              {
+                for (final arg in expression.argumentList.arguments)
+                  if (arg is NamedArgument)
+                    arg.name.lexeme: _infer(
+                      ctx,
+                      library,
+                      arg.argumentExpression,
+                    ),
+              },
+            )?.type ??
+            CoreTypes.dynamic.ref(ctx);
+      } on Object {
+        return CoreTypes.dynamic.ref(ctx);
+      }
+    }
+  }
   return CoreTypes.dynamic.ref(ctx);
+}
+
+/// Infers the element types of a collection literal, or null when an element
+/// isn't a plain expression (spread/if/for), making the literal's element type
+/// undeterminable statically.
+Set<TypeRef>? _elementTypes(
+  CompilerContext ctx,
+  int library,
+  NodeList<CollectionElement> elements,
+) {
+  final types = <TypeRef>{};
+  for (final element in elements) {
+    if (element is! Expression) return null;
+    types.add(_infer(ctx, library, element));
+  }
+  return types;
+}
+
+/// The type of a List/Set literal: bare [core] when the element type is
+/// unknown, otherwise [core] parameterized by the elements' common base type.
+TypeRef _collectionType(
+  CompilerContext ctx,
+  int library,
+  BridgeTypeSpec core,
+  NodeList<CollectionElement> elements,
+) {
+  final elementTypes = _elementTypes(ctx, library, elements);
+  if (elementTypes == null || elementTypes.isEmpty) return core.ref(ctx);
+  return core
+      .ref(ctx)
+      .copyWith(specifiedTypeArgs: [TypeRef.commonBaseType(ctx, elementTypes)]);
+}
+
+/// The type of a map literal: bare `Map` when the entry types are unknown,
+/// otherwise `Map` parameterized by the keys' and values' common base types.
+TypeRef _mapType(
+  CompilerContext ctx,
+  int library,
+  NodeList<CollectionElement> elements,
+) {
+  final keyTypes = <TypeRef>{};
+  final valueTypes = <TypeRef>{};
+  for (final element in elements) {
+    // Spread/if/for elements — bail to untyped map.
+    if (element is! MapLiteralEntry) return CoreTypes.map.ref(ctx);
+    keyTypes.add(_infer(ctx, library, element.key));
+    valueTypes.add(_infer(ctx, library, element.value));
+  }
+  if (keyTypes.isEmpty) return CoreTypes.map.ref(ctx);
+  return CoreTypes.map
+      .ref(ctx)
+      .copyWith(
+        specifiedTypeArgs: [
+          TypeRef.commonBaseType(ctx, keyTypes),
+          TypeRef.commonBaseType(ctx, valueTypes),
+        ],
+      );
 }
 
 Variable storeGlobalBinding(

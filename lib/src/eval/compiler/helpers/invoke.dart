@@ -252,19 +252,37 @@ extension Invoke on Variable {
         ),
       );
     }
-    final returnType = equality
-        ? boolType
-        : (receiver.type == CoreTypes.function.ref(ctx) && method == 'call'
-              ? CoreTypes.dynamic.ref(ctx)
-              : AlwaysReturnType.fromInstanceMethodOrBuiltin(
-                      ctx,
-                      receiver.type,
-                      method,
-                      prepared.map((arg) => arg.type).toList(),
-                      namedArgs?.map((key, arg) => MapEntry(key, arg.type)) ??
-                          {},
-                    )?.type ??
-                    CoreTypes.dynamic.ref(ctx));
+    final argTypes = prepared.map((arg) => arg.type).toList();
+    final namedArgTypes =
+        namedArgs?.map((key, arg) => MapEntry(key, arg.type)) ?? {};
+    // The '.call' member on a bare Function-typed receiver can't resolve an
+    // instance method; the callee's own signature carries the result type.
+    final isBareCall =
+        receiver.type == CoreTypes.function.ref(ctx) && method == 'call';
+    final TypeRef returnType;
+    if (equality) {
+      returnType = boolType;
+    } else if (isBareCall) {
+      returnType =
+          resolveCallResultType(
+            ctx,
+            callee: receiver,
+            dispatch: null,
+            argTypes: argTypes,
+            namedArgTypes: namedArgTypes,
+          ) ??
+          CoreTypes.dynamic.ref(ctx);
+    } else {
+      returnType =
+          AlwaysReturnType.fromInstanceMethodOrBuiltin(
+            ctx,
+            receiver.type,
+            method,
+            argTypes,
+            namedArgTypes,
+          )?.type ??
+          CoreTypes.dynamic.ref(ctx);
+    }
     return InvokeResult(
       receiver,
       Variable.of(ctx, result, returnType.copyWith(boxed: !equality)),

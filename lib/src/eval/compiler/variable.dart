@@ -14,6 +14,8 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/expression/identifier.dart'
     show resolveInstanceDeclaration;
+import 'package:dart_eval/src/eval/compiler/model/function_type.dart'
+    show declaredFunctionType;
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
 import 'package:dart_eval/src/eval/ir/primitives.dart';
@@ -372,22 +374,63 @@ class Variable {
       name,
       source: source,
     );
+    final member =
+        resolvedField == null && resolvedReceiver != CoreTypes.dynamic.ref(ctx)
+        ? resolveInstanceDeclaration(
+            ctx,
+            resolvedReceiver.file,
+            resolvedReceiver.name,
+            name,
+          )
+        : null;
     if (resolvedField == null &&
         resolvedReceiver != CoreTypes.dynamic.ref(ctx) &&
-        resolveInstanceDeclaration(
-              ctx,
-              resolvedReceiver.file,
-              resolvedReceiver.name,
-              name,
-            ) ==
-            null) {
+        member == null) {
       throw CompileError(
         'Member "$name" is not defined for type $resolvedReceiver',
         source,
       );
     }
-    final fieldType =
-        resolvedField?.resolveTypeChain(ctx) ?? CoreTypes.dynamic.ref(ctx);
+    final method = member?.$2.declaration;
+    final bridge = member?.$2.bridge;
+    // Generic method signatures can't be resolved outside their own scope.
+    final isDeclaredMethod =
+        method is MethodDeclaration &&
+        !method.isGetter &&
+        !method.isSetter &&
+        method.typeParameters == null;
+    final isBridgeMethod = bridge is BridgeMethodDef;
+
+    // A method member read produces a tear-off; carry its signature so calls
+    // through the result stay typed.
+    final TypeRef fieldType;
+    final ReturnType? methodReturnType;
+    if (isDeclaredMethod) {
+      fieldType = declaredFunctionType(
+        ctx,
+        resolvedReceiver.file,
+        method.parameters,
+        method.returnType,
+        method.typeParameters,
+      );
+      methodReturnType = AlwaysReturnType.fromInstanceMethod(
+        ctx,
+        resolvedReceiver,
+        name,
+        CoreTypes.dynamic.ref(ctx),
+      );
+    } else if (isBridgeMethod) {
+      fieldType = CoreTypes.function.ref(ctx);
+      methodReturnType = bridgeFunctionReturnType(
+        ctx,
+        bridge.functionDescriptor,
+        specifiedType: resolvedReceiver,
+      );
+    } else {
+      fieldType =
+          resolvedField?.resolveTypeChain(ctx) ?? CoreTypes.dynamic.ref(ctx);
+      methodReturnType = null;
+    }
     final receiver = boxIfNeeded(ctx);
     return Variable.ssa(
       ctx,
@@ -398,6 +441,10 @@ class Variable {
         callerLibrary: ctx.library,
       ),
       fieldType,
+      methodReturnType: methodReturnType,
+      callingConvention: isDeclaredMethod || isBridgeMethod
+          ? CallingConvention.dynamic
+          : CallingConvention.static,
     );
   }
 

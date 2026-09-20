@@ -2,6 +2,7 @@ import '../../ir/memory.dart' show Assign;
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
+import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
@@ -87,12 +88,55 @@ InvokeResult invokeClosure(
       ),
     );
   }
+  final resultType =
+      resolveCallResultType(
+        ctx,
+        callee: callable,
+        dispatch: dispatch,
+        argTypes: positionalArgs.map((arg) => arg.type).toList(),
+        namedArgTypes: namedArgs.map((key, arg) => MapEntry(key, arg.type)),
+      ) ??
+      CoreTypes.dynamic.ref(ctx);
   return InvokeResult(
     null,
-    Variable.of(ctx, target, CoreTypes.dynamic.ref(ctx).copyWith(boxed: true)),
+    Variable.of(ctx, target, resultType.copyWith(boxed: true)),
     positionalArgs,
     namedArgs: namedArgs,
   );
+}
+
+/// Resolves the result type of calling a function-typed value with the given
+/// argument types, or null when it can't be determined.
+///
+/// A statically dispatched [dispatch] signature wins over the [callee]'s own
+/// callable metadata (tear-off `methodReturnType`), and both win over the
+/// callee's declared function type. A resolved 'void' result is unusable as a
+/// value, so null is returned and callers fall back to dynamic — preserving
+/// the permissive semantics of consuming the runtime result anyway.
+TypeRef? resolveCallResultType(
+  CompilerContext ctx, {
+  required Variable? callee,
+  required StaticDispatch? dispatch,
+  required List<TypeRef> argTypes,
+  required Map<String, TypeRef> namedArgTypes,
+}) {
+  final voidType = CoreTypes.voidType.ref(ctx);
+  final signature = dispatch?.returnType ?? callee?.methodReturnType;
+  if (signature != null) {
+    final resolved = signature.toAlwaysReturnType(
+      ctx,
+      dispatch == null ? callee?.type : null,
+      argTypes,
+      namedArgTypes,
+    );
+    if (resolved != null && resolved.type != voidType) return resolved.type;
+  }
+  final declared = callee?.type
+      .resolveTypeChain(ctx)
+      .functionType
+      ?.returnType
+      .type;
+  return declared == voidType ? null : declared;
 }
 
 /// Whether the runtime can skip per-argument checks for a closure invocation:
