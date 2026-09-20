@@ -2,10 +2,15 @@
 
 **Breaking changes**
 
-- Generated bindings now use only the register call ABI
-  (`callRegisters`/`registerBridgeFuncRegisters`). The legacy `List<$Value?> args`
-  vector ABI is no longer emitted by the binding generator, though hand-written
-  vector-ABI registrations continue to work at runtime.
+- All bridge and callable dispatch now uses register-style ABIs. The legacy
+  `(runtime, target, List<$Value?> args)` ABI and its dual storage/dispatch are
+  removed entirely: `EvalCallable.call` is now
+  `(runtime, target, r, s, c)` where `r`/`s` carry arguments 0/1 and `c` carries
+  the argument count (`0`–`2`) or a tail list of arguments from index 2 onward;
+  named arguments ride the tail in callee declaration order. Registered
+  `EvalRegisterFunc` statics keep the `(runtime, r, s, c)` signature. Per-call
+  `List<$Value?>` allocation is eliminated for calls of up to two arguments.
+- Bumped `Runtime.versionCode` to 106; recompile serialized programs.
 - Removed the compiler-only `KnownMethod`/`KnownField` tables. Intrinsic member
   semantics now live in real bridge declarations, and parameter-dependent return
   types are expressed via `BridgeReturnTypeDependency` on `BridgeFunctionDef`.

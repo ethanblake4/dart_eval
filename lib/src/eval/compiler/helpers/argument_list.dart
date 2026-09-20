@@ -35,18 +35,11 @@ class ArgumentListResult {
   final List<Variable> args;
   final Map<String, Variable> namedArgs;
 
-  /// The full positional argument vector including null placeholders for
-  /// omitted optional positional parameters (used by the bridge padded ABI).
-  /// When the callee declares named parameters this also contains entries for
-  /// them, padded in declaration order.
-  final List<Variable> paddedArgs;
-
-  ArgumentListResult(
-    this.ssa,
-    this.args,
-    this.namedArgs, [
-    List<Variable>? paddedArgs,
-  ]) : paddedArgs = paddedArgs ?? args;
+  /// `ssa` contains the complete flattened argument vector — provided
+  /// positionals padded with null placeholders for omitted parameters, then
+  /// named arguments in declaration order — which is the wire format bridge
+  /// members consume. `args` holds only the provided positional arguments.
+  ArgumentListResult(this.ssa, this.args, this.namedArgs);
 }
 
 Variable _omittedArgument(
@@ -576,12 +569,7 @@ ArgumentListResult compileArgumentListWithBridge(
   }
 
   ssa.addAll(push.map((argument) => argument.ssa));
-  return ArgumentListResult(
-    ssa,
-    args,
-    namedArgs,
-    push.sublist(before.length),
-  );
+  return ArgumentListResult(ssa, args, namedArgs);
 }
 
 TypeRef resolveFieldFormalType(

@@ -1764,7 +1764,7 @@ class $List<E> implements List<E>, $Instance {
     final $this = wrapper.$value;
     final start = (r as $Value?)?.$value as int;
     final end = (s as $Value?)?.$value as int;
-    final fillValue = ((c as List<Object?>)[0] as $Value?);
+    final fillValue = c is List && c.isNotEmpty ? c[0] as $Value? : null;
     wrapper._checkElement(runtime, fillValue);
     $this.fillRange(start, end, fillValue);
     return null;

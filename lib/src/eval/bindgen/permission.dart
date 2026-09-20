@@ -10,7 +10,6 @@ String assertConfigPermissions(
   BindgenContext ctx,
   BindgenMemberConfig? member,
   List<String> paramNames, {
-  bool registers = false,
   bool callable = false,
   int paramCount = 0,
 }) {
@@ -24,11 +23,9 @@ String assertConfigPermissions(
       final index = paramNames.indexOf(permission.paramData!);
       if (index != -1) {
         final count = paramCount == 0 ? paramNames.length : paramCount;
-        final source = registers
-            ? registerArgumentSource(index, count)
-            : callable
+        final source = callable
             ? callSlotSource(index)
-            : 'args[$index]';
+            : registerArgumentSource(index, count);
         data = ', $source?.\$value';
       }
     }
@@ -39,7 +36,6 @@ String assertConfigPermissions(
 
 String assertMethodPermissions(
   MethodElement element, {
-  bool registers = false,
   bool callable = false,
 }) {
   final metadata = element.metadata;
@@ -71,11 +67,9 @@ String assertMethodPermissions(
         final param = params[i];
         if (param.name == paramData) {
           final nullCheck = param.isRequired ? '!' : '?';
-          final source = registers
-              ? registerArgumentSource(i, params.length)
-              : callable
+          final source = callable
               ? callSlotSource(i)
-              : 'args[$i]';
+              : registerArgumentSource(i, params.length);
           final value = '$source$nullCheck.\$value';
           data = param.hasDefaultValue
               ? ', ($source == null ? ${param.defaultValueCode} : $value)'

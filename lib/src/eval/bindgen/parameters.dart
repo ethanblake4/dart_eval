@@ -93,14 +93,9 @@ String argumentAccessor(
   BindgenParamConfig? paramConfig,
 }) {
   final paramBuffer = StringBuffer();
-  final idx = index + (isBridgeMethod ? 1 : 0);
   // Optional params may be absent when the call site sends only provided
   // arguments, so access must be bounds-safe.
-  final source =
-      argumentSource ??
-      (param.isOptional
-          ? '(args.length > $idx ? args[$idx] : null)'
-          : 'args[$idx]');
+  final source = argumentSource!;
   if (param.isNamed) {
     paramBuffer.write(
       '${paramMapping[param.name] ?? param.name?.replaceFirst(RegExp('^_'), '')}: ',

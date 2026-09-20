@@ -61,7 +61,7 @@ String _$constructor(
     body =
         '''
     ${registerArgumentPreamble(constructor.formalParameters)}
-    ${assertConfigPermissions(ctx, member, constructor.formalParameters.map((p) => p.name ?? '').toList(), registers: true, paramCount: constructor.formalParameters.length)}
+    ${assertConfigPermissions(ctx, member, constructor.formalParameters.map((p) => p.name ?? '').toList(), paramCount: constructor.formalParameters.length)}
     return ${!isBridge ? '\$${element.name}.wrap(' : ''}
       $fullyQualifiedConstructorId(
         ${argumentAccessors(ctx, constructor.formalParameters, registers: true, member: member).join(', ')}
@@ -137,8 +137,8 @@ String _$staticMethod(
     body =
         '''
     ${registerArgumentPreamble(method.formalParameters)}
-    ${assertMethodPermissions(method, registers: true)}
-    ${assertConfigPermissions(ctx, member, method.formalParameters.map((p) => p.name ?? '').toList(), registers: true, paramCount: method.formalParameters.length)}
+    ${assertMethodPermissions(method)}
+    ${assertConfigPermissions(ctx, member, method.formalParameters.map((p) => p.name ?? '').toList(), paramCount: method.formalParameters.length)}
     ${method.returnType is VoidType ? '' : 'final value = '}${element.name}.${method.name}(
       ${argumentAccessors(ctx, method.formalParameters, registers: true, member: member).join(', ')}
     );

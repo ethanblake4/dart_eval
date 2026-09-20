@@ -1119,8 +1119,10 @@ class $Stream implements $Instance {
     final $Stream $target = target as $Stream;
     final onData = (r as $Value?) as EvalCallable;
     final onDone = (s as $Value?) as EvalCallable?;
-    final onError = ((c as List<Object?>)[0] as $Value?) as EvalCallable?;
-    final cancelOnError = (c[1] as $Value?) as $bool?;
+    final onError =
+        (c is List && c.isNotEmpty ? c[0] as $Value? : null) as EvalCallable?;
+    final cancelOnError =
+        (c is List && c.length > 1 ? c[1] as $Value? : null) as $bool?;
     return $StreamSubscription.wrap(
       $target.$value.listen(
         (event) {

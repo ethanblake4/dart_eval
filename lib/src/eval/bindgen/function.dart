@@ -26,7 +26,7 @@ String _function(BindgenContext ctx, ExecutableElement element) {
     body =
         '''
           ${registerArgumentPreamble(element.formalParameters)}
-          ${assertConfigPermissions(ctx, member, element.formalParameters.map((p) => p.name ?? '').toList(), registers: true, paramCount: element.formalParameters.length)}
+          ${assertConfigPermissions(ctx, member, element.formalParameters.map((p) => p.name ?? '').toList(), paramCount: element.formalParameters.length)}
           ${returnsValue ? 'final result = ' : ''}${element.displayName}(${argumentAccessors(ctx, element.formalParameters, registers: true, member: member).join(', ')});
           return ${wrapVar(ctx, element.returnType, 'result', unionTypeNames: member?.returns?.union)};''';
   }

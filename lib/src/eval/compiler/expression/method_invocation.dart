@@ -513,7 +513,7 @@ Variable _invokeWithTarget(
         e.typeArguments == null &&
         argsPair.namedArgs.isEmpty) {
       final invokeResult =
-          L.invoke(ctx, e.methodName.name, argsPair.paddedArgs).result;
+          L.invoke(ctx, e.methodName.name, argsPair.args).result;
       final preciseType = mReturnType?.type;
       if (preciseType != null) {
         return invokeResult.copyWith(
