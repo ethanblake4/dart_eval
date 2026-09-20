@@ -391,28 +391,46 @@ class Variable {
         source,
       );
     }
+    final method = member?.$2.declaration;
+    final bridge = member?.$2.bridge;
+    // Generic method signatures can't be resolved outside their own scope.
+    final isDeclaredMethod =
+        method is MethodDeclaration &&
+        !method.isGetter &&
+        !method.isSetter &&
+        method.typeParameters == null;
+    final isBridgeMethod = bridge is BridgeMethodDef;
+
     // A method member read produces a tear-off; carry its signature so calls
     // through the result stay typed.
-    final method = member?.$2.declaration;
-    final bridgeMethod = member?.$2.bridge;
-    // Generic method signatures can't be resolved outside their own scope.
-    final isMethod =
-        (method is MethodDeclaration &&
-            !method.isGetter &&
-            !method.isSetter &&
-            method.typeParameters == null) ||
-        bridgeMethod is BridgeMethodDef;
-    final fieldType = isMethod
-        ? (method is MethodDeclaration
-              ? declaredFunctionType(
-                  ctx,
-                  resolvedReceiver.file,
-                  method.parameters,
-                  method.returnType,
-                  method.typeParameters,
-                )
-              : CoreTypes.function.ref(ctx))
-        : resolvedField?.resolveTypeChain(ctx) ?? CoreTypes.dynamic.ref(ctx);
+    final TypeRef fieldType;
+    final ReturnType? methodReturnType;
+    if (isDeclaredMethod) {
+      fieldType = declaredFunctionType(
+        ctx,
+        resolvedReceiver.file,
+        method.parameters,
+        method.returnType,
+        method.typeParameters,
+      );
+      methodReturnType = AlwaysReturnType.fromInstanceMethod(
+        ctx,
+        resolvedReceiver,
+        name,
+        CoreTypes.dynamic.ref(ctx),
+      );
+    } else if (isBridgeMethod) {
+      fieldType = CoreTypes.function.ref(ctx);
+      methodReturnType = bridgeFunctionReturnType(
+        ctx,
+        bridge.functionDescriptor,
+        specifiedType: resolvedReceiver,
+      );
+    } else {
+      fieldType =
+          resolvedField?.resolveTypeChain(ctx) ?? CoreTypes.dynamic.ref(ctx);
+      methodReturnType = null;
+    }
     final receiver = boxIfNeeded(ctx);
     return Variable.ssa(
       ctx,
@@ -423,21 +441,8 @@ class Variable {
         callerLibrary: ctx.library,
       ),
       fieldType,
-      methodReturnType: isMethod
-          ? (bridgeMethod is BridgeMethodDef
-                ? bridgeFunctionReturnType(
-                    ctx,
-                    bridgeMethod.functionDescriptor,
-                    specifiedType: resolvedReceiver,
-                  )
-                : AlwaysReturnType.fromInstanceMethod(
-                    ctx,
-                    resolvedReceiver,
-                    name,
-                    CoreTypes.dynamic.ref(ctx),
-                  ))
-          : null,
-      callingConvention: isMethod
+      methodReturnType: methodReturnType,
+      callingConvention: isDeclaredMethod || isBridgeMethod
           ? CallingConvention.dynamic
           : CallingConvention.static,
     );

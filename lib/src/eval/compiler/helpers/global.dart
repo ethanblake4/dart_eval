@@ -206,62 +206,16 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
     return CoreTypes.dynamic.ref(ctx);
   }
   if (expression is ListLiteral) {
-    final elementTypes = {
-      for (final element in expression.elements)
-        if (element is Expression) _infer(ctx, library, element),
-    };
-    return elementTypes.isEmpty ||
-            expression.elements.length != elementTypes.length
-        ? CoreTypes.list.ref(ctx)
-        : CoreTypes.list
-              .ref(ctx)
-              .copyWith(
-                specifiedTypeArgs: [TypeRef.commonBaseType(ctx, elementTypes)],
-              );
+    return _collectionType(ctx, library, CoreTypes.list, expression.elements);
   }
   if (expression is SetOrMapLiteral) {
     final isMap =
         expression.typeArguments?.arguments.length == 2 ||
         expression.elements.any((e) => e is MapLiteralEntry);
     if (!isMap) {
-      final elementTypes = {
-        for (final element in expression.elements)
-          if (element is Expression) _infer(ctx, library, element),
-      };
-      return elementTypes.isEmpty ||
-              expression.elements.length != elementTypes.length
-          ? CoreTypes.set.ref(ctx)
-          : CoreTypes.set
-                .ref(ctx)
-                .copyWith(
-                  specifiedTypeArgs: [
-                    TypeRef.commonBaseType(ctx, elementTypes),
-                  ],
-                );
+      return _collectionType(ctx, library, CoreTypes.set, expression.elements);
     }
-    final keyTypes = <TypeRef>{};
-    final valueTypes = <TypeRef>{};
-    for (final element in expression.elements) {
-      if (element is MapLiteralEntry) {
-        keyTypes.add(_infer(ctx, library, element.key));
-        valueTypes.add(_infer(ctx, library, element.value));
-      } else {
-        // Spread/if/for elements — bail to untyped map.
-        keyTypes.clear();
-        valueTypes.clear();
-        break;
-      }
-    }
-    return keyTypes.isEmpty
-        ? CoreTypes.map.ref(ctx)
-        : CoreTypes.map
-              .ref(ctx)
-              .copyWith(
-                specifiedTypeArgs: [
-                  TypeRef.commonBaseType(ctx, keyTypes),
-                  TypeRef.commonBaseType(ctx, valueTypes),
-                ],
-              );
+    return _mapType(ctx, library, expression.elements);
   }
   if (expression is PropertyAccess && expression.target != null) {
     final receiver = _infer(ctx, library, expression.target!);
@@ -334,6 +288,63 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
     }
   }
   return CoreTypes.dynamic.ref(ctx);
+}
+
+/// Infers the element types of a collection literal, or null when an element
+/// isn't a plain expression (spread/if/for), making the literal's element type
+/// undeterminable statically.
+Set<TypeRef>? _elementTypes(
+  CompilerContext ctx,
+  int library,
+  NodeList<CollectionElement> elements,
+) {
+  final types = <TypeRef>{};
+  for (final element in elements) {
+    if (element is! Expression) return null;
+    types.add(_infer(ctx, library, element));
+  }
+  return types;
+}
+
+/// The type of a List/Set literal: bare [core] when the element type is
+/// unknown, otherwise [core] parameterized by the elements' common base type.
+TypeRef _collectionType(
+  CompilerContext ctx,
+  int library,
+  BridgeTypeSpec core,
+  NodeList<CollectionElement> elements,
+) {
+  final elementTypes = _elementTypes(ctx, library, elements);
+  if (elementTypes == null || elementTypes.isEmpty) return core.ref(ctx);
+  return core
+      .ref(ctx)
+      .copyWith(specifiedTypeArgs: [TypeRef.commonBaseType(ctx, elementTypes)]);
+}
+
+/// The type of a map literal: bare `Map` when the entry types are unknown,
+/// otherwise `Map` parameterized by the keys' and values' common base types.
+TypeRef _mapType(
+  CompilerContext ctx,
+  int library,
+  NodeList<CollectionElement> elements,
+) {
+  final keyTypes = <TypeRef>{};
+  final valueTypes = <TypeRef>{};
+  for (final element in elements) {
+    // Spread/if/for elements — bail to untyped map.
+    if (element is! MapLiteralEntry) return CoreTypes.map.ref(ctx);
+    keyTypes.add(_infer(ctx, library, element.key));
+    valueTypes.add(_infer(ctx, library, element.value));
+  }
+  if (keyTypes.isEmpty) return CoreTypes.map.ref(ctx);
+  return CoreTypes.map
+      .ref(ctx)
+      .copyWith(
+        specifiedTypeArgs: [
+          TypeRef.commonBaseType(ctx, keyTypes),
+          TypeRef.commonBaseType(ctx, valueTypes),
+        ],
+      );
 }
 
 Variable storeGlobalBinding(
