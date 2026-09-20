@@ -1,5 +1,18 @@
 ## Unreleased (0.9.0)
 
+**Fixes and features ported from the 0.8.x master line**
+
+- Support for using a Type as a value, eg `var t = List<int>` (thanks @khoadng)
+- `TypeError` and `NoSuchMethodError` bridge classes are registered for
+  runtime construction, and missing-member dynamic access throws
+  `NoSuchMethodError` (thanks @marcov-dart)
+- Fix `is` tests boxing `Object`-typed variables (thanks @khoadng)
+- Fix indexed assignment to `Map` instance fields (thanks @khoadng)
+- Permission objects use const domain lists so they compare by identity
+  (thanks @wrbl606)
+- Migrated to `analyzer` ^13.0.0 and `directed_graph` ^0.5.5
+  (thanks @marcov-dart)
+
 **Breaking changes**
 
 - All bridge and callable dispatch now uses register-style ABIs. The legacy

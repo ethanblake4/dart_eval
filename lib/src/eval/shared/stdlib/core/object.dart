@@ -201,7 +201,10 @@ class $Object implements $Instance {
         return $int($value.hashCode);
     }
 
-    throw UnimplementedError("\$Object.$identifier");
+    throw NoSuchMethodError.withInvocation(
+      $value,
+      Invocation.method(Symbol(identifier), null),
+    );
   }
 
   /// dart_eval implementation of [Object.hash]
@@ -410,7 +413,10 @@ class $Object implements $Instance {
 
   @override
   void $setProperty(Runtime runtime, String identifier, $Value value) {
-    throw UnimplementedError("set \$Object.$identifier");
+    throw NoSuchMethodError.withInvocation(
+      $value,
+      Invocation.setter(Symbol(identifier), value),
+    );
   }
 
   @override
