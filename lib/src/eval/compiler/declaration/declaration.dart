@@ -34,6 +34,8 @@ int? compileDeclaration(
     compileTopLevelVariableDeclaration(d, ctx);
   } else if (d is EnumConstantDeclaration) {
     // do nothing
+  } else if (d is TypeAlias) {
+    // Typedefs are compile-time-only; resolved lazily in TypeRef.fromAnnotation.
   } else {
     throw CompileError('No support for ${d.runtimeType}');
   }

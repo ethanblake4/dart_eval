@@ -236,6 +236,15 @@ class TypeRef {
         ctx.temporaryTypes[library]?[n] ??
         ctx.visibleTypes[library]?[n];
     if (unspecifiedType == null) {
+      final alias = ctx.typeAliases[library]?[n];
+      if (alias != null) {
+        return resolveTypeAlias(
+          ctx,
+          library,
+          alias,
+          nullable: typeAnnotation.question != null,
+        );
+      }
       throw CompileError(
         'Unknown type $n',
         typeAnnotation.parent,
@@ -570,7 +579,11 @@ class TypeRef {
           source,
         );
       } else {
-        final $super = TypeRef.fromBridgeTypeRef(ctx, $extends);
+        final $super = TypeRef.fromBridgeTypeRef(
+          ctx,
+          $extends,
+          specifiedType: $class,
+        );
         return TypeRef.lookupFieldType(
           ctx,
           $super.inheritTypeArgsFrom(ctx, $class),
@@ -770,22 +783,47 @@ class TypeRef {
           [];
     }
 
+    // Type arguments in `extends`/`with`/`implements` clauses may mention the
+    // class's own type parameters (`class D<T> extends C<T>`). Seed a lookup
+    // so [TypeRef.fromAnnotation] resolves them even though the class's
+    // temporary-type scope is not active when the chain resolves lazily.
+    final ownTypeParams = <String, TypeRef>{
+      for (var i = 0; i < generics.length; i++)
+        generics[i].name: TypeRef(
+          file,
+          generics[i].name,
+          resolved: true,
+          typeParameterOwner: 'class:$file:$name',
+          typeParameterIndex: i,
+          typeParameterBound:
+              generics[i].extendsType ?? CoreTypes.dynamic.ref(ctx),
+        ),
+    };
+    List<TypeRef> resolveClauseTypeArgs(NamedType clauseName) =>
+        clauseName.typeArguments?.arguments
+            .map(
+              (a) => TypeRef.fromAnnotation(
+                ctx,
+                file,
+                a,
+                typeParameters: ownTypeParams,
+              ),
+            )
+            .map(
+              (a) => stack.contains(a)
+                  ? a
+                  : a.resolveTypeChain(
+                      ctx,
+                      recursionGuard: rg,
+                      stack: stack0,
+                      source: source,
+                    ),
+            )
+            .toList() ??
+        [];
+
     if (superName != null) {
-      final typeParams =
-          superName.typeArguments?.arguments
-              .map((a) => TypeRef.fromAnnotation(ctx, file, a))
-              .map(
-                (a) => stack.contains(a)
-                    ? a
-                    : a.resolveTypeChain(
-                        ctx,
-                        recursionGuard: rg,
-                        stack: stack0,
-                        source: source,
-                      ),
-              )
-              .toList() ??
-          [];
+      final typeParams = resolveClauseTypeArgs(superName);
       final prefix = superName.importPrefix;
       final superPrefix = prefix != null ? '${prefix.name.value()}.' : '';
       $super =
@@ -808,21 +846,7 @@ class TypeRef {
     }
 
     for (final withName in withNames) {
-      final typeParams =
-          withName.typeArguments?.arguments
-              .map((a) => TypeRef.fromAnnotation(ctx, file, a))
-              .map(
-                (a) => stack.contains(a)
-                    ? a
-                    : a.resolveTypeChain(
-                        ctx,
-                        recursionGuard: rg,
-                        stack: stack0,
-                        source: source,
-                      ),
-              )
-              .toList() ??
-          [];
+      final typeParams = resolveClauseTypeArgs(withName);
       $with.add(
         ctx.visibleTypes[file]![withName.name.value()]!
             .copyWith(specifiedTypeArgs: typeParams)
@@ -836,21 +860,7 @@ class TypeRef {
     }
 
     for (final implementsName in implementsNames) {
-      final typeParams =
-          implementsName.typeArguments?.arguments
-              .map((a) => TypeRef.fromAnnotation(ctx, file, a))
-              .map(
-                (a) => stack.contains(a)
-                    ? a
-                    : a.resolveTypeChain(
-                        ctx,
-                        recursionGuard: rg,
-                        stack: stack0,
-                        source: source,
-                      ),
-              )
-              .toList() ??
-          [];
+      final typeParams = resolveClauseTypeArgs(implementsName);
       $implements.add(
         ctx.visibleTypes[file]![implementsName.name.value()]!
             .copyWith(specifiedTypeArgs: typeParams)
@@ -1153,6 +1163,18 @@ class TypeRef {
     }
     if (nullable && !slot.nullable) return false;
 
+    if (isTypeParameter) {
+      // Same parameter: identical owner and index.
+      if (this == slot) return true;
+      // A type parameter is assignable to [slot] iff its declared bound is.
+      return typeParameterBound?.isAssignableTo(
+            ctx,
+            slot,
+            forceAllowDynamic: forceAllowDynamic,
+          ) ??
+          false;
+    }
+
     final generics = overrideGenerics ?? specifiedTypeArgs;
 
     if (hasSameDeclarationAs(slot) &&
@@ -1195,6 +1217,17 @@ class TypeRef {
         forceAllowDynamic: false,
       )) {
         return true;
+      }
+    }
+
+    // A type with a `.call` method is assignable to `Function` (implicit
+    // call — `Function f = callableObject`).
+    if (slot == CoreTypes.function.ref(ctx)) {
+      final chain = [this, ...resolveTypeChain(ctx).allSupertypes];
+      for (final t in chain) {
+        if (ctx.instanceDeclarationsMap[t.file]?[t.name]?['call'] != null) {
+          return true;
+        }
       }
     }
     return false;
@@ -1509,10 +1542,15 @@ class AlwaysReturnType implements ReturnType {
         specifiedType: type,
       ).toAlwaysReturnType(ctx, type, const [], const {})!;
     }
+    final d = m.declaration!;
+    if (d is! MethodDeclaration) {
+      // A field holding a callable — its call signature isn't modelled here.
+      return AlwaysReturnType(fallback ?? CoreTypes.dynamic.ref(ctx), true);
+    }
     return AlwaysReturnType.fromAnnotation(
       ctx,
       type.file,
-      m.declaration!.returnType,
+      d.returnType,
       fallback,
     );
   }
@@ -1610,10 +1648,15 @@ class AlwaysReturnType implements ReturnType {
         typeArgs: typeArgs,
       );
     }
+    final d = m.declaration!;
+    if (d is! MethodDeclaration) {
+      // A field holding a callable — its call signature isn't modelled here.
+      return AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
+    }
     return AlwaysReturnType.fromAnnotation(
       ctx,
       lookupType.file,
-      m.declaration!.returnType,
+      d.returnType,
       CoreTypes.dynamic.ref(ctx),
     );
   }
@@ -1725,4 +1768,24 @@ extension Refify on BridgeTypeSpec {
 final class _TypeRefCache {
   final types = <int, Map<String, TypeRef>>{};
   final visibleLibraries = <TypeRef, List<int>>{};
+}
+
+/// Resolves a `typedef` use to the type it aliases. Function-type aliases
+/// (`typedef void F()`, `typedef F = void Function()`) map to `Function`;
+/// named-type aliases (`typedef X = List<int>`) resolve recursively. Type
+/// parameters on the alias are not substituted — the underlying annotation is
+/// resolved as-is.
+TypeRef resolveTypeAlias(
+  CompilerContext ctx,
+  int library,
+  TypeAlias alias, {
+  bool nullable = false,
+}) {
+  final TypeRef target;
+  if (alias is GenericTypeAlias && alias.functionType == null) {
+    target = TypeRef.fromAnnotation(ctx, library, alias.type);
+  } else {
+    target = CoreTypes.function.ref(ctx);
+  }
+  return target.copyWith(nullable: nullable || target.nullable);
 }

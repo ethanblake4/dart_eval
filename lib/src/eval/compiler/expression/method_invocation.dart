@@ -113,9 +113,17 @@ Variable compileMethodInvocation(
   }
 
   if (method.methodOffset == null) {
-    throw CompileError(
-      'Cannot call ${e.methodName.name} as it is not a valid method',
-    );
+    // The receiver isn't a known function — it may still be a callable object
+    // (an implicit `.call` invocation, e.g. `c1(1)` on `C1 c1`). Dispatch
+    // dynamically: objects without a `call` method raise NoSuchMethodError at
+    // runtime, matching Dart semantics.
+    return invokeClosure(
+      ctx,
+      null,
+      method,
+      e.argumentList,
+      typeArguments: e.typeArguments?.arguments.toList(),
+    ).result;
   }
 
   final offset = method.methodOffset!;
@@ -409,10 +417,49 @@ Variable _invokeWithTarget(
   if (L.type == CoreTypes.type.ref(ctx) && L.concreteTypes.length == 1) {
     // Static method
     staticType = L.concreteTypes[0];
+    if (ctx.topLevelDeclarationsMap[staticType
+            .file]!['${staticType.name}.${e.methodName.name}'] ==
+        null) {
+      // Not a static member of the class — it's an instance method of the
+      // `Type` object itself (`Foo.toString()`, `Foo.hashCode`, ...).
+      final args = [
+        for (final arg in e.argumentList.arguments)
+          if (arg is! NamedArgument)
+            compileExpression(arg.argumentExpression, ctx),
+      ];
+      return L.invoke(ctx, e.methodName.name, args).result;
+    }
     dec0 = resolveStaticMethod(ctx, staticType, e.methodName.name);
     isStatic = true;
+  } else if (L.type == CoreTypes.function.ref(ctx) &&
+      e.methodName.name == 'call') {
+    // `fn.call(...)`: Function has no declared `call` member; the call is the
+    // invocation itself, typed by the callee's own signature.
+    return invokeClosure(
+      ctx,
+      null,
+      L,
+      e.argumentList,
+      typeArguments: e.typeArguments?.arguments.toList(),
+    ).result;
   } else if (L.type != CoreTypes.dynamic.ref(ctx)) {
     dec0 = resolveInstanceMethod(ctx, L.type, e.methodName.name, e);
+    final member = dec0.declaration;
+    final isFieldOrGetter =
+        member is FieldDeclaration ||
+        (member is MethodDeclaration && member.isGetter);
+    if (isFieldOrGetter) {
+      // `receiver.field(...)` / `receiver.getter(...)`: the member's *value* is
+      // invoked, not a method — property read then implicit `.call`.
+      final property = L.getProperty(ctx, e.methodName.name);
+      return invokeClosure(
+        ctx,
+        null,
+        property,
+        e.argumentList,
+        typeArguments: e.typeArguments?.arguments.toList(),
+      ).result;
+    }
     isStatic = false;
   } else {
     isStatic = false;
@@ -718,7 +765,11 @@ bool _hasBridgeSuperclass(CompilerContext ctx, TypeRef type) {
   return false;
 }
 
-DeclarationOrBridge<MethodDeclaration, BridgeMethodDef> resolveInstanceMethod(
+/// Resolves [methodName] on [instanceType] to its declaration or bridge. The
+/// declaration is normally a [MethodDeclaration]; when [methodName] names a
+/// *field* holding a callable (invoked via implicit `.call`), it is the
+/// enclosing [FieldDeclaration] instead.
+DeclarationOrBridge<ClassMember, BridgeMethodDef> resolveInstanceMethod(
   CompilerContext ctx,
   TypeRef instanceType,
   String methodName, [
@@ -767,7 +818,11 @@ DeclarationOrBridge<MethodDeclaration, BridgeMethodDef> resolveInstanceMethod(
       }
       final $extendsType = bridge is BridgeEnumDef
           ? CoreTypes.enumType.ref(ctx)
-          : TypeRef.fromBridgeTypeRef(ctx, $extendsBridgeType!);
+          : TypeRef.fromBridgeTypeRef(
+              ctx,
+              $extendsBridgeType!,
+              specifiedType: bottomType0,
+            );
       return resolveInstanceMethod(
         ctx,
         $extendsType,
@@ -781,12 +836,19 @@ DeclarationOrBridge<MethodDeclaration, BridgeMethodDef> resolveInstanceMethod(
 
   final dec =
       ctx.instanceDeclarationsMap[instanceType.file]![instanceType
-          .name]![methodName];
+          .name]![methodName] ??
+      ctx.instanceDeclarationsMap[instanceType.file]![instanceType
+          .name]!['$methodName*g'];
 
   if (dec != null) {
+    // A field holding a callable resolves to its FieldDeclaration, so callers
+    // can distinguish `a.field()` (invoke `.call` on the field's value) from a
+    // true method invocation.
     return DeclarationOrBridge(
       instanceType.file,
-      declaration: dec as MethodDeclaration,
+      declaration: dec is VariableDeclaration
+          ? dec.parent!.parent as ClassMember
+          : dec as ClassMember,
     );
   } else if (dec0.declaration is EnumDeclaration) {
     // Enum declarations resolve undeclared members through the Enum bridge

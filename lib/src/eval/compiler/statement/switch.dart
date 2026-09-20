@@ -37,6 +37,7 @@ StatementInfo compileSwitchStatement(
       },
       exceptionDepth: ctx.exceptionDepth,
       breakTarget: endBlock,
+      names: ctx.takePendingLabelNames(),
     ),
   );
   final result = _compileSwitchCases(

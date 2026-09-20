@@ -13,6 +13,7 @@ import 'package:dart_eval/src/eval/compiler/statement/continue.dart';
 import 'package:dart_eval/src/eval/compiler/statement/do.dart';
 import 'package:dart_eval/src/eval/compiler/statement/for.dart';
 import 'package:dart_eval/src/eval/compiler/statement/if.dart';
+import 'package:dart_eval/src/eval/compiler/statement/labeled.dart';
 import 'package:dart_eval/src/eval/compiler/statement/pattern_variable_declaration.dart';
 import 'package:dart_eval/src/eval/compiler/statement/return.dart';
 import 'package:dart_eval/src/eval/compiler/statement/switch.dart';
@@ -70,6 +71,8 @@ StatementInfo compileStatement(
       return compileBreakStatement(s, ctx);
     } else if (s is ContinueStatement) {
       return compileContinueStatement(s, ctx);
+    } else if (s is LabeledStatement) {
+      return compileLabeledStatement(s, ctx, expectedReturnType);
     } else if (s is PatternVariableDeclarationStatement) {
       return compilePatternVariableDeclarationStatement(s, ctx);
     } else if (s is FunctionDeclarationStatement) {

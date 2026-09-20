@@ -475,6 +475,12 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
         }
         visibleTypesByIndex[libraryIndex] ??= {};
         final declarationOrBridge = dop.declaration!;
+        if (!declarationOrBridge.isBridge &&
+            declarationOrBridge.declaration is TypeAlias) {
+          _ctx.typeAliases.putIfAbsent(libraryIndex, () => {})[name] =
+              declarationOrBridge.declaration! as TypeAlias;
+          continue;
+        }
         final type = declarationTypes[declarationOrBridge];
         if (type == null) continue;
         if (declarationOrBridge.isBridge) {

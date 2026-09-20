@@ -185,6 +185,10 @@ class CompilerContext with ScopeContext {
 
   Map<int, Map<String, Map<String, Declaration>>> instanceDeclarationsMap = {};
   Map<int, Map<String, TypeRef>> visibleTypes = {};
+
+  /// `typedef` declarations visible per library. Aliases never become runtime
+  /// types; [TypeRef.fromAnnotation] resolves them lazily to their target.
+  Map<int, Map<String, TypeAlias>> typeAliases = {};
   Map<int, Map<String, TypeRef>> temporaryTypes = {};
   Map<int, Map<String, DeclarationOrPrefix>> visibleDeclarations = {};
   Map<int, Map<String, int>> topLevelDeclarationPositions = {};
@@ -206,6 +210,20 @@ class CompilerContext with ScopeContext {
   List<ContextSaveState> typeInferenceSaveStates = [];
   List<ContextSaveState> typeUninferenceSaveStates = [];
   List<CompilerLabel> labels = [];
+
+  /// Label names a `LabeledStatement` is about to attach to the next
+  /// loop/switch label pushed (see `compileLabeledStatement`). Consumed via
+  /// [takePendingLabelNames].
+  final Set<String> pendingLabelNames = {};
+
+  /// Drains [pendingLabelNames] into a fresh set, for a loop/switch attaching
+  /// its enclosing `label:` names to the [CompilerLabel] it pushes.
+  Set<String> takePendingLabelNames() {
+    final taken = Set.of(pendingLabelNames);
+    pendingLabelNames.clear();
+    return taken;
+  }
+
   final List<String> caughtExceptionTargets = [];
   int exceptionDepth = 0;
   int globalIndex = 0;
