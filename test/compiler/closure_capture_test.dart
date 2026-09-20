@@ -61,7 +61,7 @@ void main() {
       final analysis = capturesFor(unit);
       expect(analysis.free[nodes.functions[1]], {'value'});
       expect(analysis.free[nodes.functions[2]], {'value'});
-      expect(analysis.captured.single, isA<SimpleFormalParameter>());
+      expect(analysis.captured.single, isA<RegularFormalParameter>());
     },
   );
   test('property names do not capture unrelated locals', () {

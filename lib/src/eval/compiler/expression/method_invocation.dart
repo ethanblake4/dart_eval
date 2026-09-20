@@ -122,7 +122,7 @@ Variable compileMethodInvocation(
   final offset = method.methodOffset!;
   if (offset.file == ctx.library &&
       offset.className != null &&
-      offset.className == (ctx.currentClass?.name.lexeme)) {
+      offset.className == ctx.currentClassName) {
     final $this = ctx.lookupLocal('#this')!;
     return _invokeWithTarget(ctx, $this, e);
   }
@@ -274,7 +274,7 @@ Variable compileMethodInvocation(
 
   TypeRef? thisType;
   if (ctx.currentClass != null) {
-    thisType = ctx.visibleTypes[ctx.library]![ctx.currentClass!.name.lexeme]!;
+    thisType = ctx.visibleTypes[ctx.library]![ctx.currentClassName!]!;
   }
 
   mReturnType ??=
@@ -766,12 +766,13 @@ Map<String, TypeRef> _classTypeArguments(
   int ownerLibrary,
   MethodDeclaration method,
 ) {
-  final owner = method.parent;
+  final owner = method.parent?.parent;
   if (owner is! ClassDeclaration) return const {};
   TypeRef? current = receiver;
   while (current != null) {
-    if (current.file == ownerLibrary && current.name == owner.name.lexeme) {
-      final parameters = owner.typeParameters?.typeParameters ?? const [];
+    if (current.file == ownerLibrary &&
+        current.name == owner.namePart.typeName.lexeme) {
+      final parameters = owner.namePart.typeParameters?.typeParameters ?? const [];
       return {
         for (var index = 0; index < parameters.length; index++)
           parameters[index].name.lexeme:

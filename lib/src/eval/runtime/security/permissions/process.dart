@@ -18,7 +18,7 @@ class ProcessRunPermission implements Permission {
   }
 
   @override
-  List<String> get domains => ['process:run'];
+  List<String> get domains => const ['process:run'];
 
   @override
   bool match([Object? data]) {
@@ -48,7 +48,7 @@ class ProcessKillPermisssion implements Permission {
   const ProcessKillPermisssion([this.pid]);
 
   @override
-  List<String> get domains => ['process:kill'];
+  List<String> get domains => const ['process:kill'];
 
   @override
   bool match([Object? data]) {

@@ -71,10 +71,9 @@ class CaptureAnalysis extends RecursiveAstVisitor<void> {
     _scope(() {
       if (instance) _declare('#this', node);
       for (final parameter in parameters?.parameters ?? <FormalParameter>[]) {
-        final normal = parameter is DefaultFormalParameter
-            ? parameter.parameter
-            : parameter;
-        if (normal.name != null) _declare(normal.name!.lexeme, normal);
+        if (parameter.name != null) {
+          _declare(parameter.name!.lexeme, parameter);
+        }
       }
       for (final initializer in initializers) {
         initializer.accept(this);
@@ -87,7 +86,7 @@ class CaptureAnalysis extends RecursiveAstVisitor<void> {
   @override
   void visitClassDeclaration(ClassDeclaration node) {
     _members.add({
-      for (final member in node.members)
+      for (final member in node.body.members)
         if (member is MethodDeclaration && !member.isStatic)
           member.name.lexeme
         else if (member is FieldDeclaration && !member.isStatic)

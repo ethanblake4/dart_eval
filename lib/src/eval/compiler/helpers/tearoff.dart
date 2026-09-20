@@ -68,10 +68,7 @@ extension TearOff on Variable {
     TypeRef parameterType(FormalParameter parameter) {
       final compiledType = parameterTypeByNode[parameter];
       if (compiledType != null) return compiledType;
-      final normal = parameter is DefaultFormalParameter
-          ? parameter.parameter
-          : parameter;
-      final annotation = normal is SimpleFormalParameter ? normal.type : null;
+      final annotation = parameter.type;
       return annotation == null
           ? CoreTypes.dynamic.ref(ctx)
           : TypeRef.fromAnnotation(ctx, offset.file ?? ctx.library, annotation);
@@ -81,7 +78,7 @@ extension TearOff on Variable {
       final value = evaluateDefaultValue(
         ctx,
         offset.file ?? ctx.library,
-        parameter is DefaultFormalParameter ? parameter.defaultValue : null,
+        parameter.defaultClause?.value,
       );
       return value is int &&
               parameterType(parameter) == CoreTypes.double.ref(ctx)

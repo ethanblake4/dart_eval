@@ -185,4 +185,31 @@ void main() {
       expect(runtime.executeLib(_library, 'main'), isTrue, reason: kind);
     }
   });
+
+  test('Map field on instance supports index set and get', () {
+    final program = _compile('''
+      class A {
+        final Map<String, int> _m;
+        A() : _m = {};
+
+        void put(String k, int v) {
+          _m[k] = v;
+        }
+
+        int get(String k) {
+          return _m[k]!;
+        }
+      }
+
+      int main() {
+        final a = A();
+        a.put('x', 10);
+        a.put('y', 20);
+        return a.get('x') + a.get('y');
+      }
+    ''');
+    for (final (kind, runtime) in _runtimes(program)) {
+      expect(runtime.executeLib(_library, 'main'), 30, reason: kind);
+    }
+  });
 }

@@ -41,13 +41,13 @@ InvokeResult invokeClosure(
     for (final entry in (named ?? <String, Variable>{}).entries)
       entry.key: snapshot(entry.value),
   };
-  for (final arg in argumentList?.arguments ?? <Expression>[]) {
-    if (arg is NamedExpression) {
-      namedArgs[arg.name.label.name] = snapshot(
-        compileExpression(arg.expression, ctx),
+  for (final arg in argumentList?.arguments ?? <Argument>[]) {
+    if (arg is NamedArgument) {
+      namedArgs[arg.name.lexeme] = snapshot(
+        compileExpression(arg.argumentExpression, ctx),
       );
     } else {
-      positionalArgs.add(snapshot(compileExpression(arg, ctx)));
+      positionalArgs.add(snapshot(compileExpression(arg.argumentExpression, ctx)));
     }
   }
   final target = ctx.svar('closure_result');

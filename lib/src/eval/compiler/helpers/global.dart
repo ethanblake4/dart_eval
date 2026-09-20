@@ -28,8 +28,8 @@ TypeRef resolveGlobalType(CompilerContext ctx, int library, String name) {
           .topLevelDeclarationsMap[library]?[name.substring(0, separator)]
           ?.declaration;
       final members = switch (owner) {
-        ClassDeclaration(:final members) => members,
-        EnumDeclaration(:final members) => members,
+        ClassDeclaration(:final body) => body.members,
+        EnumDeclaration(:final body) => body.members,
         _ => <ClassMember>[],
       };
       for (final field in members.whereType<FieldDeclaration>()) {

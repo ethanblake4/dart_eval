@@ -543,7 +543,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
           } else if (declaration is ClassDeclaration) {
             _ctx.currentClass = declaration;
             for (final d
-                in declaration.members.whereType<FieldDeclaration>().where(
+                in declaration.body.members.whereType<FieldDeclaration>().where(
                   (e) => e.isStatic,
                 )) {
               compileFieldDeclaration(-1, d, _ctx, declaration);
@@ -552,7 +552,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
           } else if (declaration is EnumDeclaration) {
             _ctx.currentClass = declaration;
             for (final d
-                in declaration.members.whereType<FieldDeclaration>().where(
+                in declaration.body.members.whereType<FieldDeclaration>().where(
                   (e) => e.isStatic,
                 )) {
               compileFieldDeclaration(-1, d, _ctx, declaration);
@@ -744,8 +744,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
         _topLevelGlobalIndices[libraryIndex]![name] = _ctx.globalIndex++;
       }
     } else {
-      declaration as NamedCompilationUnitMember;
-      final name = declaration.name.lexeme;
+      final name = declarationName(declaration);
 
       if (_topLevelDeclarationsMap[libraryIndex]!.containsKey(name)) {
         throw CompileError(
@@ -763,35 +762,33 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       if (declaration is ClassDeclaration || declaration is EnumDeclaration) {
         _instanceDeclarationsMap[libraryIndex]![name] = {};
         final members = declaration is ClassDeclaration
-            ? declaration.members
-            : (declaration as EnumDeclaration).members;
+            ? declaration.body.members
+            : (declaration as EnumDeclaration).body.members;
 
         if (declaration is EnumDeclaration) {
           _ctx.enumValueIndices[libraryIndex] ??= {};
-          _ctx.enumValueIndices[libraryIndex]![declaration.name.lexeme] = {};
-          for (final constant in declaration.constants) {
+          _ctx.enumValueIndices[libraryIndex]![name] = {};
+          for (final constant in declaration.body.constants) {
             if (!_topLevelGlobalIndices.containsKey(libraryIndex)) {
               _topLevelGlobalIndices[libraryIndex] = {};
               _ctx.topLevelVariableInferredTypes[libraryIndex] = {};
             }
-            final name = '${declaration.name.lexeme}.${constant.name.lexeme}';
-            if (_topLevelDeclarationsMap[libraryIndex]!.containsKey(name)) {
+            final cname = '$name.${constant.name.lexeme}';
+            if (_topLevelDeclarationsMap[libraryIndex]!.containsKey(cname)) {
               throw CompileError(
-                'Cannot define "$name" twice in the same library',
+                'Cannot define "$cname" twice in the same library',
                 constant,
                 libraryIndex,
               );
             }
 
-            _topLevelDeclarationsMap[libraryIndex]![name] = DeclarationOrBridge(
+            _topLevelDeclarationsMap[libraryIndex]![cname] = DeclarationOrBridge(
               libraryIndex,
               declaration: constant,
             );
             final globalIndex = _ctx.globalIndex++;
-            _topLevelGlobalIndices[libraryIndex]![name] = globalIndex;
-            _ctx.enumValueIndices[libraryIndex]![declaration
-                    .name
-                    .lexeme]![constant.name.lexeme] =
+            _topLevelGlobalIndices[libraryIndex]![cname] = globalIndex;
+            _ctx.enumValueIndices[libraryIndex]![name]![constant.name.lexeme] =
                 globalIndex;
           }
         }
@@ -818,7 +815,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
               }
 
               for (final field in member.fields.variables) {
-                final name = '${declaration.name.lexeme}.${field.name.lexeme}';
+                final name = '${declarationName(declaration)}.${field.name.lexeme}';
 
                 if (_topLevelDeclarationsMap[libraryIndex]!.containsKey(name)) {
                   throw CompileError(
@@ -882,7 +879,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       if (declaration is! ClassDeclaration && declaration is! EnumDeclaration) {
         return null;
       }
-      final name = (declaration as NamedCompilationUnitMember).name.lexeme;
+      final name = declarationName(declaration);
       return TypeRef.cache(_ctx, libraryIndex, name, fileRef: libraryIndex);
     }
   }
@@ -1002,7 +999,7 @@ List<Library> _buildLibraries(Iterable<DartCompilationUnit> units) {
     uriMap[unit.uri.toString()] = i;
     if (unit.library != null && unit.library!.name != null) {
       /// Library instruction for source files that start with "library *****"
-      libraryIdMap[unit.library!.name!.name] = i;
+      libraryIdMap[unit.library!.name!.toString()] = i;
     }
     i++;
   }
@@ -1030,7 +1027,7 @@ List<Library> _buildLibraries(Iterable<DartCompilationUnit> units) {
     final primary = compilationUnitMap[primaryId]!;
     final library = Library(
       primary.uri,
-      library: primary.library?.name?.name,
+      library: primary.library?.name?.toString(),
       imports: primary.imports,
       exports: primary.exports,
       declarations: group

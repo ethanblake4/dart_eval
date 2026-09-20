@@ -22,7 +22,7 @@ void compileEnumDeclaration(
 }) {
   final type = TypeRef.lookupDeclaration(ctx, ctx.library, d);
   final $runtimeType = ctx.typeRefIndexMap[type];
-  final clsName = d.name.lexeme;
+  final clsName = d.namePart.typeName.lexeme;
   ctx.instanceDeclarationPositions[ctx.library]![clsName] = [
     {},
     {},
@@ -33,7 +33,7 @@ void compileEnumDeclaration(
   final constructors = <ConstructorDeclaration>[];
   final fields = <FieldDeclaration>[];
   final methods = <MethodDeclaration>[];
-  for (final m in d.members) {
+  for (final m in d.body.members) {
     if (m is ConstructorDeclaration) {
       constructors.add(m);
     } else if (m is FieldDeclaration) {
@@ -115,7 +115,7 @@ void compileEnumDeclaration(
   }
 
   var idx = 0;
-  for (final constant in d.constants) {
+  for (final constant in d.body.constants) {
     final cName = constant.name.lexeme;
 
     final pos = ctx.beginFunction('$cName*i');

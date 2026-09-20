@@ -105,6 +105,8 @@ class DartCorePlugin implements EvalPlugin {
     $FormatException.configureForRuntime(runtime);
     $ArgumentError.configureForRuntime(runtime);
     $StateError.configureForRuntime(runtime);
+    $TypeError.configureForRuntime(runtime);
+    $NoSuchMethodError.configureForRuntime(runtime);
     runtime.registerBridgeFuncRegisters('dart:core', 'num.parse', $num.$parse);
     runtime.registerBridgeFuncRegisters(
       'dart:core',

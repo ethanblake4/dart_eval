@@ -333,7 +333,7 @@ class TypeRef {
       final typeParameter = typeParameters[ref];
       if (typeParameter != null) return typeParameter;
       specifiedType ??=
-          ctx.visibleTypes[ctx.library]![ctx.currentClass?.name.stringValue];
+          ctx.visibleTypes[ctx.library]![ctx.currentClassName];
 
       if (specifiedType == null) {
         return CoreTypes.dynamic.ref(ctx);
@@ -420,12 +420,13 @@ class TypeRef {
   factory TypeRef.lookupDeclaration(
     CompilerContext ctx,
     int library,
-    NamedCompilationUnitMember dec, {
+    Declaration dec, {
     String? prefix,
   }) {
+    final name = declarationName(dec);
     return ctx
-            .visibleTypes[library]!['${prefix != null ? '$prefix.' : ''}${dec.name.lexeme}'] ??
-        (throw CompileError('Class/enum ${dec.name.value()} not found'));
+            .visibleTypes[library]!['${prefix != null ? '$prefix.' : ''}$name'] ??
+        (throw CompileError('Class/enum $name not found'));
   }
 
   static TypeRef? lookupFieldType(
@@ -460,8 +461,7 @@ class TypeRef {
               source,
             );
           }
-          final parameter =
-              f.parameters!.parameters.first as SimpleFormalParameter;
+          final parameter = f.parameters!.parameters.first;
           final annotation = parameter.type;
           if (annotation == null) {
             return null;
@@ -590,7 +590,7 @@ class TypeRef {
           source,
         );
       }
-      final dec0 = dec.declaration as NamedCompilationUnitMember;
+      final dec0 = dec.declaration as Declaration;
       final $extends = dec0 is ClassDeclaration ? dec0.extendsClause : null;
       if ($extends == null) {
         if ($class == CoreTypes.object.ref(ctx)) {
@@ -752,8 +752,8 @@ class TypeRef {
           ? dec.implementsClause
           : (dec as EnumDeclaration).implementsClause;
       final typeParameters = dec is ClassDeclaration
-          ? dec.typeParameters
-          : (dec as EnumDeclaration).typeParameters;
+          ? dec.namePart.typeParameters
+          : (dec as EnumDeclaration).namePart.typeParameters;
       superName = extendsClause?.superclass;
       withNames = withClause?.mixinTypes.toList() ?? [];
       implementsNames = implementsClause?.interfaces.toList() ?? [];

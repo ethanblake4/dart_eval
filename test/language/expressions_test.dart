@@ -83,6 +83,43 @@ void main() {
       }, prints('true\ntrue\ntrue\ntrue\nfalse\nfalse\ntrue\nfalse\n'));
     });
 
+    test('Is with Object type and branch', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'eval_test': {
+          'main.dart': '''
+            void main() {
+              Object x = 42;
+              if (x is int) {
+                print(x + 1);
+              }
+            }
+          ''',
+        },
+      });
+      expect(() {
+        runtime.executeLib('package:eval_test/main.dart', 'main');
+      }, prints('43\n'));
+    });
+
+    test('parameterized type literal as variable initializer', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            void main() {
+              var t = List<int>;
+              print(t == List<int>);
+              print(t == List);
+            }
+          ''',
+        },
+      });
+
+      expect(
+        () => runtime.executeLib('package:example/main.dart', 'main'),
+        prints('true\nfalse\n'),
+      );
+    });
+
     test('Is num', () {
       final runtime = compiler.compileWriteAndLoad({
         'eval_test': {

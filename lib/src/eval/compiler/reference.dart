@@ -10,6 +10,7 @@ import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
 import 'package:dart_eval/src/eval/ir/primitives.dart';
+import 'package:dart_eval/src/eval/ir/types.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/ir/bridge.dart';
@@ -168,7 +169,7 @@ class IdentifierReference implements Reference {
       final instanceDeclaration = resolveInstanceDeclaration(
         ctx,
         ctx.library,
-        ctx.currentClass!.name.lexeme,
+        ctx.currentClassName!,
         name,
       );
       if (instanceDeclaration != null) {
@@ -180,7 +181,7 @@ class IdentifierReference implements Reference {
       final staticDeclaration = resolveStaticDeclaration(
         ctx,
         ctx.library,
-        ctx.currentClass!.name.lexeme,
+        ctx.currentClassName!,
         name,
       );
 
@@ -190,7 +191,7 @@ class IdentifierReference implements Reference {
           return CoreTypes.function.ref(ctx);
         } else if (staticDec is VariableDeclaration) {
           final name =
-              '${ctx.currentClass!.name.lexeme}.${staticDec.name.lexeme}';
+              '${ctx.currentClassName!}.${staticDec.name.lexeme}';
           return resolveGlobalType(ctx, ctx.library, name);
         }
       }
@@ -315,7 +316,7 @@ class IdentifierReference implements Reference {
       final instanceDeclaration = resolveInstanceDeclaration(
         ctx,
         ctx.library,
-        ctx.currentClass!.name.lexeme,
+        ctx.currentClassName!,
         name,
       );
       if (instanceDeclaration != null) {
@@ -355,7 +356,7 @@ class IdentifierReference implements Reference {
       final staticDeclaration = resolveStaticDeclaration(
         ctx,
         ctx.library,
-        ctx.currentClass!.name.lexeme,
+        ctx.currentClassName!,
         name,
       );
       final declaration = staticDeclaration?.declaration;
@@ -363,7 +364,7 @@ class IdentifierReference implements Reference {
         return storeGlobalBinding(
           ctx,
           ctx.library,
-          '${ctx.currentClass!.name.lexeme}.${declaration.name.lexeme}',
+          '${ctx.currentClassName!}.${declaration.name.lexeme}',
           value,
           source,
         );
@@ -483,7 +484,7 @@ class IdentifierReference implements Reference {
       final instanceDeclaration = resolveInstanceDeclaration(
         ctx,
         ctx.library,
-        ctx.currentClass!.name.lexeme,
+        ctx.currentClassName!,
         name,
       );
       if (instanceDeclaration != null) {
@@ -501,7 +502,7 @@ class IdentifierReference implements Reference {
               CoreTypes.function.ref(ctx),
               methodOffset: DeferredOrOffset(
                 file: ctx.library,
-                className: ctx.currentClass!.name.lexeme,
+                className: ctx.currentClassName!,
                 name: _refName,
                 targetName: $this.name,
               ),
@@ -539,7 +540,7 @@ class IdentifierReference implements Reference {
               ),
               methodOffset: DeferredOrOffset(
                 file: ctx.library,
-                className: ctx.currentClass!.name.lexeme,
+                className: ctx.currentClassName!,
                 name: _refName,
               ),
             );
@@ -550,7 +551,7 @@ class IdentifierReference implements Reference {
               CoreTypes.function.ref(ctx),
               methodOffset: DeferredOrOffset(
                 file: ctx.library,
-                className: ctx.currentClass!.name.lexeme,
+                className: ctx.currentClassName!,
                 name: name,
               ),
             );
@@ -567,7 +568,7 @@ class IdentifierReference implements Reference {
               ),
               methodOffset: DeferredOrOffset(
                 file: ctx.library,
-                className: ctx.currentClass!.name.lexeme,
+                className: ctx.currentClassName!,
                 name: _refName,
               ),
             );
@@ -589,7 +590,7 @@ class IdentifierReference implements Reference {
       final staticDeclaration = resolveStaticDeclaration(
         ctx,
         ctx.library,
-        ctx.currentClass!.name.lexeme,
+        ctx.currentClassName!,
         name,
       );
 
@@ -601,13 +602,13 @@ class IdentifierReference implements Reference {
             methodOffset: DeferredOrOffset.lookupStatic(
               ctx,
               ctx.library,
-              ctx.currentClass!.name.lexeme,
+              ctx.currentClassName!,
               _refName,
             ),
           );
         } else if (staticDec is VariableDeclaration) {
           final name =
-              '${ctx.currentClass!.name.lexeme}.${staticDec.name.lexeme}';
+              '${ctx.currentClassName!}.${staticDec.name.lexeme}';
           final type = resolveGlobalType(ctx, ctx.library, name);
           final gIndex = ctx.topLevelGlobalIndices[ctx.library]![name]!;
           return Variable.ssa(
@@ -766,6 +767,15 @@ class IndexedReference implements Reference {
           ? _variable.type.specifiedTypeArgs[0]
           : CoreTypes.dynamic.ref(ctx);
     }
+    if (_variable.type.isAssignableTo(
+      ctx,
+      CoreTypes.map.ref(ctx),
+      forceAllowDynamic: false,
+    )) {
+      return _variable.type.specifiedTypeArgs.length >= 2
+          ? _variable.type.specifiedTypeArgs[1]
+          : CoreTypes.dynamic.ref(ctx);
+    }
     // A write's contextual type must not execute the indexed getter. Dynamic
     // receivers and custom operators are checked by their invocation path.
     if (forSet) return CoreTypes.dynamic.ref(ctx);
@@ -912,7 +922,9 @@ Variable _declarationToVariable(
     if (bridge is BridgeClassDef) {
       final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type.type);
 
-      return Variable(
+      return Variable.ssa(
+        ctx,
+        LoadConstantType(ctx.svar('type'), type.runtimeTypeId(ctx)),
         CoreTypes.type.ref(ctx),
         concreteTypes: [type],
         methodOffset: DeferredOrOffset(file: type.file, name: '${type.name}.'),
@@ -922,7 +934,9 @@ Variable _declarationToVariable(
 
     if (bridge is BridgeEnumDef) {
       final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type);
-      return Variable(
+      return Variable.ssa(
+        ctx,
+        LoadConstantType(ctx.svar('type'), type.runtimeTypeId(ctx)),
         CoreTypes.type.ref(ctx),
         concreteTypes: [type],
         methodOffset: DeferredOrOffset(
@@ -970,8 +984,6 @@ Variable _declarationToVariable(
   }
 
   if (decl is! FunctionDeclaration && decl is! ConstructorDeclaration) {
-    decl as NamedCompilationUnitMember;
-
     final returnType = TypeRef.lookupDeclaration(
       ctx,
       decOrBridge.sourceLib,
@@ -982,7 +994,9 @@ Variable _declarationToVariable(
       name: '${returnType.name}.',
     );
 
-    return Variable(
+    return Variable.ssa(
+      ctx,
+      LoadConstantType(ctx.svar('type'), returnType.runtimeTypeId(ctx)),
       CoreTypes.type.ref(ctx),
       concreteTypes: [returnType],
       methodOffset: offset,
@@ -1009,7 +1023,7 @@ Variable _declarationToVariable(
     returnType = TypeRef.lookupDeclaration(
       ctx,
       decOrBridge.sourceLib,
-      decl.parent as ClassDeclaration,
+      decl.parent!.parent as ClassDeclaration,
     );
   }
 
@@ -1072,7 +1086,7 @@ StaticDispatch? _declarationToStaticDispatch(
     returnType = TypeRef.lookupDeclaration(
       ctx,
       decOrBridge.sourceLib,
-      decl.parent as ClassDeclaration,
+      decl.parent!.parent as ClassDeclaration,
     );
   }
 

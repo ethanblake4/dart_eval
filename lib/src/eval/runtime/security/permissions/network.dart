@@ -39,7 +39,7 @@ class NetworkPermission implements Permission {
   static final NetworkPermission any = NetworkPermission(RegExp('.*'));
 
   @override
-  List<String> get domains => ['network'];
+  List<String> get domains => const ['network'];
 
   @override
   bool match([Object? data]) {

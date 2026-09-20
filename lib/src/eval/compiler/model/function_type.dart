@@ -88,10 +88,7 @@ class EvalFunctionType {
         );
 
     TypeAnnotation? parameterType(FormalParameter parameter) {
-      final normal = parameter is DefaultFormalParameter
-          ? parameter.parameter
-          : parameter;
-      return normal is SimpleFormalParameter ? normal.type : null;
+      return parameter.type;
     }
 
     final required = <FunctionFormalParameter>[];
@@ -226,10 +223,7 @@ TypeRef declaredFunctionType(
   if (typeParameters != null) return CoreTypes.function.ref(ctx);
 
   TypeRef parameterType(FormalParameter parameter) {
-    final normal = parameter is DefaultFormalParameter
-        ? parameter.parameter
-        : parameter;
-    final annotation = normal is SimpleFormalParameter ? normal.type : null;
+    final annotation = parameter.type;
     return annotation == null
         ? CoreTypes.dynamic.ref(ctx)
         : TypeRef.fromAnnotation(ctx, library, annotation);
