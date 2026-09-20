@@ -676,17 +676,44 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     return Runtime(ob.buffer);
   }
 
+  /// Registers [name] in the library's top-level declaration map, failing on
+  /// duplicate definitions.
+  void _declareTopLevel(
+    int libraryIndex,
+    String name,
+    DeclarationOrBridge value,
+    AstNode source,
+  ) {
+    final map = _topLevelDeclarationsMap[libraryIndex]!;
+    if (map.containsKey(name)) {
+      throw CompileError(
+        'Cannot define "$name" twice in the same library',
+        source,
+        libraryIndex,
+      );
+    }
+    map[name] = value;
+  }
+
+  /// Declares a top-level binding and allocates it a global slot.
+  void _declareGlobal(
+    int libraryIndex,
+    String name,
+    DeclarationOrBridge value,
+    AstNode source,
+  ) {
+    _declareTopLevel(libraryIndex, name, value, source);
+    _topLevelGlobalIndices.putIfAbsent(libraryIndex, () => {})[name] =
+        _ctx.globalIndex++;
+    _ctx.topLevelVariableInferredTypes.putIfAbsent(libraryIndex, () => {});
+  }
+
   void _populateLookupTablesForDeclaration(
     int libraryIndex,
     DeclarationOrBridge declarationOrBridge,
   ) {
-    if (!_topLevelDeclarationsMap.containsKey(libraryIndex)) {
-      _topLevelDeclarationsMap[libraryIndex] = {};
-    }
-
-    if (!_instanceDeclarationsMap.containsKey(libraryIndex)) {
-      _instanceDeclarationsMap[libraryIndex] = {};
-    }
+    _topLevelDeclarationsMap.putIfAbsent(libraryIndex, () => {});
+    _instanceDeclarationsMap.putIfAbsent(libraryIndex, () => {});
 
     if (declarationOrBridge.isBridge) {
       final bridge = declarationOrBridge.bridge!;
@@ -718,134 +745,87 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     final declaration = declarationOrBridge.declaration!;
 
     if (declaration is TopLevelVariableDeclaration) {
-      final vlist = declaration.variables;
-
-      if (!_topLevelGlobalIndices.containsKey(libraryIndex)) {
-        _topLevelGlobalIndices[libraryIndex] = {};
-        _ctx.topLevelVariableInferredTypes[libraryIndex] = {};
-      }
-
-      for (final variable in vlist.variables) {
-        final name = variable.name.lexeme;
-
-        if (_topLevelDeclarationsMap[libraryIndex]!.containsKey(name)) {
-          throw CompileError(
-            'Cannot define "$name" twice in the same library',
-            variable,
-            libraryIndex,
-          );
-        }
-
-        _topLevelDeclarationsMap[libraryIndex]![name] = DeclarationOrBridge(
+      for (final variable in declaration.variables.variables) {
+        _declareGlobal(
           libraryIndex,
-          declaration: variable,
-        );
-        _topLevelGlobalIndices[libraryIndex]![name] = _ctx.globalIndex++;
-      }
-    } else {
-      final name = declarationName(declaration);
-
-      if (_topLevelDeclarationsMap[libraryIndex]!.containsKey(name)) {
-        throw CompileError(
-          'Cannot define "$name" twice in the same library',
-          declaration,
-          libraryIndex,
+          variable.name.lexeme,
+          DeclarationOrBridge(libraryIndex, declaration: variable),
+          variable,
         );
       }
+      return;
+    }
 
-      _topLevelDeclarationsMap[libraryIndex]![name] = DeclarationOrBridge(
-        libraryIndex,
-        declaration: declaration,
-      );
+    final name = declarationName(declaration);
+    _declareTopLevel(
+      libraryIndex,
+      name,
+      DeclarationOrBridge(libraryIndex, declaration: declaration),
+      declaration,
+    );
 
-      if (declaration is ClassDeclaration || declaration is EnumDeclaration) {
-        _instanceDeclarationsMap[libraryIndex]![name] = {};
-        final members = declaration is ClassDeclaration
-            ? declaration.body.members
-            : (declaration as EnumDeclaration).body.members;
+    final members = switch (declaration) {
+      ClassDeclaration d => d.body.members,
+      EnumDeclaration d => d.body.members,
+      _ => null,
+    };
+    if (members == null) return;
 
-        if (declaration is EnumDeclaration) {
-          _ctx.enumValueIndices[libraryIndex] ??= {};
-          _ctx.enumValueIndices[libraryIndex]![name] = {};
-          for (final constant in declaration.body.constants) {
-            if (!_topLevelGlobalIndices.containsKey(libraryIndex)) {
-              _topLevelGlobalIndices[libraryIndex] = {};
-              _ctx.topLevelVariableInferredTypes[libraryIndex] = {};
-            }
-            final cname = '$name.${constant.name.lexeme}';
-            if (_topLevelDeclarationsMap[libraryIndex]!.containsKey(cname)) {
-              throw CompileError(
-                'Cannot define "$cname" twice in the same library',
-                constant,
-                libraryIndex,
-              );
-            }
+    _instanceDeclarationsMap[libraryIndex]![name] = {};
+    final instanceDeclarations = _instanceDeclarationsMap[libraryIndex]![name]!;
 
-            _topLevelDeclarationsMap[libraryIndex]![cname] =
-                DeclarationOrBridge(libraryIndex, declaration: constant);
-            final globalIndex = _ctx.globalIndex++;
-            _topLevelGlobalIndices[libraryIndex]![cname] = globalIndex;
-            _ctx.enumValueIndices[libraryIndex]![name]![constant.name.lexeme] =
-                globalIndex;
+    if (declaration is EnumDeclaration) {
+      _ctx.enumValueIndices.putIfAbsent(libraryIndex, () => {})[name] = {};
+      for (final constant in declaration.body.constants) {
+        final cname = '$name.${constant.name.lexeme}';
+        _declareGlobal(
+          libraryIndex,
+          cname,
+          DeclarationOrBridge(libraryIndex, declaration: constant),
+          constant,
+        );
+        _ctx.enumValueIndices[libraryIndex]![name]![constant.name.lexeme] =
+            _topLevelGlobalIndices[libraryIndex]![cname]!;
+      }
+    }
+
+    for (final member in members) {
+      if (member is MethodDeclaration) {
+        var mName = member.name.lexeme;
+        if (member.isStatic) {
+          _topLevelDeclarationsMap[libraryIndex]!['$name.$mName'] =
+              DeclarationOrBridge(libraryIndex, declaration: member);
+        } else {
+          if (member.isGetter) {
+            mName += '*g';
+          } else if (member.isSetter) {
+            mName += '*s';
           }
+          instanceDeclarations[mName] = member;
         }
-
-        for (var member in members) {
-          if (member is MethodDeclaration) {
-            var mName = member.name.lexeme;
-            if (member.isStatic) {
-              _topLevelDeclarationsMap[libraryIndex]!['$name.$mName'] =
-                  DeclarationOrBridge(libraryIndex, declaration: member);
-            } else {
-              if (member.isGetter) {
-                mName += '*g';
-              } else if (member.isSetter) {
-                mName += '*s';
-              }
-              _instanceDeclarationsMap[libraryIndex]![name]![mName] = member;
-            }
-          } else if (member is FieldDeclaration) {
-            if (member.isStatic) {
-              if (!_topLevelGlobalIndices.containsKey(libraryIndex)) {
-                _topLevelGlobalIndices[libraryIndex] = {};
-                _ctx.topLevelVariableInferredTypes[libraryIndex] = {};
-              }
-
-              for (final field in member.fields.variables) {
-                final name =
-                    '${declarationName(declaration)}.${field.name.lexeme}';
-
-                if (_topLevelDeclarationsMap[libraryIndex]!.containsKey(name)) {
-                  throw CompileError(
-                    'Cannot define "$name" twice in the same library',
-                    field,
-                    libraryIndex,
-                  );
-                }
-
-                _topLevelDeclarationsMap[libraryIndex]![name] =
-                    DeclarationOrBridge(libraryIndex, declaration: field);
-                _topLevelGlobalIndices[libraryIndex]![name] =
-                    _ctx.globalIndex++;
-              }
-            } else {
-              for (final field in member.fields.variables) {
-                final fName = field.name.lexeme;
-                _instanceDeclarationsMap[libraryIndex]![name]![fName] = field;
-              }
-            }
-          } else if (member is ConstructorDeclaration) {
-            final mName = (member.name?.lexeme) ?? "";
-            _topLevelDeclarationsMap[libraryIndex]!['$name.$mName'] =
-                DeclarationOrBridge(libraryIndex, declaration: member);
-          } else {
-            throw CompileError(
-              'Not a NamedCompilationUnitMember',
-              member,
+      } else if (member is FieldDeclaration) {
+        for (final field in member.fields.variables) {
+          if (member.isStatic) {
+            _declareGlobal(
               libraryIndex,
+              '$name.${field.name.lexeme}',
+              DeclarationOrBridge(libraryIndex, declaration: field),
+              field,
             );
+          } else {
+            instanceDeclarations[field.name.lexeme] = field;
           }
         }
+      } else if (member is ConstructorDeclaration) {
+        final mName = (member.name?.lexeme) ?? "";
+        _topLevelDeclarationsMap[libraryIndex]!['$name.$mName'] =
+            DeclarationOrBridge(libraryIndex, declaration: member);
+      } else {
+        throw CompileError(
+          'Not a NamedCompilationUnitMember',
+          member,
+          libraryIndex,
+        );
       }
     }
   }
@@ -882,56 +862,33 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     }
   }
 
+  /// Allocates a bridge static function index to a member key of the form
+  /// `ClassName.member` (with `*g`/`*s` suffixes for accessors).
+  void _assignBridgeIndex(int library, String key) {
+    _ctx.bridgeStaticFunctionIndices.putIfAbsent(library, () => {})[key] =
+        _bridgeStaticFunctionIdx++;
+  }
+
   void _assignBridgeStaticFunctionIndicesForClass(BridgeClassDef classDef) {
     final type = TypeRef.fromBridgeTypeRef(_ctx, classDef.type.type);
     final lib = type.file;
-    if (!_ctx.bridgeStaticFunctionIndices.containsKey(lib)) {
-      _ctx.bridgeStaticFunctionIndices[lib] = <String, int>{};
-    }
-    classDef.constructors.forEach((name, constructor) {
-      if (!_ctx.bridgeStaticFunctionIndices.containsKey(lib)) {
-        _ctx.bridgeStaticFunctionIndices[lib] = <String, int>{};
-      }
-      _ctx.bridgeStaticFunctionIndices[lib]!['${type.name}.$name'] =
-          _bridgeStaticFunctionIdx++;
-    });
-
+    classDef.constructors.forEach(
+      (name, _) => _assignBridgeIndex(lib, '${type.name}.$name'),
+    );
     classDef.methods.forEach((name, method) {
-      if (!method.isStatic) return;
-      if (!_ctx.bridgeStaticFunctionIndices.containsKey(lib)) {
-        _ctx.bridgeStaticFunctionIndices[lib] = <String, int>{};
-      }
-      _ctx.bridgeStaticFunctionIndices[lib]!['${type.name}.$name'] =
-          _bridgeStaticFunctionIdx++;
+      if (method.isStatic) _assignBridgeIndex(lib, '${type.name}.$name');
     });
-
     classDef.getters.forEach((name, getter) {
-      if (!getter.isStatic) return;
-      if (!_ctx.bridgeStaticFunctionIndices.containsKey(lib)) {
-        _ctx.bridgeStaticFunctionIndices[lib] = <String, int>{};
-      }
-      _ctx.bridgeStaticFunctionIndices[lib]!['${type.name}.$name*g'] =
-          _bridgeStaticFunctionIdx++;
+      if (getter.isStatic) _assignBridgeIndex(lib, '${type.name}.$name*g');
     });
-
     classDef.setters.forEach((name, setter) {
-      if (!setter.isStatic) return;
-      if (!_ctx.bridgeStaticFunctionIndices.containsKey(lib)) {
-        _ctx.bridgeStaticFunctionIndices[lib] = <String, int>{};
-      }
-      _ctx.bridgeStaticFunctionIndices[lib]!['${type.name}.$name*s'] =
-          _bridgeStaticFunctionIdx++;
+      if (setter.isStatic) _assignBridgeIndex(lib, '${type.name}.$name*s');
     });
-
     classDef.fields.forEach((name, field) {
-      if (!field.isStatic) return;
-      if (!_ctx.bridgeStaticFunctionIndices.containsKey(lib)) {
-        _ctx.bridgeStaticFunctionIndices[lib] = <String, int>{};
+      if (field.isStatic) {
+        _assignBridgeIndex(lib, '${type.name}.$name*g');
+        _assignBridgeIndex(lib, '${type.name}.$name*s');
       }
-      _ctx.bridgeStaticFunctionIndices[lib]!['${type.name}.$name*g'] =
-          _bridgeStaticFunctionIdx++;
-      _ctx.bridgeStaticFunctionIndices[lib]!['${type.name}.$name*s'] =
-          _bridgeStaticFunctionIdx++;
     });
   }
 
@@ -949,11 +906,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
 
   void _assignBridgeGlobalValueIndicesForEnum(BridgeEnumDef enumDef) {
     final type = TypeRef.fromBridgeTypeRef(_ctx, enumDef.type);
-    final lib = type.file;
-    if (!_ctx.enumValueIndices.containsKey(lib)) {
-      _ctx.enumValueIndices[lib] = {};
-    }
-    _ctx.enumValueIndices[lib]![type.name] = {
+    _ctx.enumValueIndices.putIfAbsent(type.file, () => {})[type.name] = {
       for (final value in enumDef.values) value: _ctx.globalIndex++,
     };
   }
@@ -962,11 +915,10 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     int libraryIndex,
     BridgeFunctionDeclaration functionDef,
   ) {
-    if (!_ctx.bridgeStaticFunctionIndices.containsKey(libraryIndex)) {
-      _ctx.bridgeStaticFunctionIndices[libraryIndex] = <String, int>{};
-    }
-    _ctx.bridgeStaticFunctionIndices[libraryIndex]![functionDef.name] =
-        _bridgeStaticFunctionIdx++;
+    _ctx.bridgeStaticFunctionIndices.putIfAbsent(
+      libraryIndex,
+      () => {},
+    )[functionDef.name] = _bridgeStaticFunctionIdx++;
   }
 
   @override

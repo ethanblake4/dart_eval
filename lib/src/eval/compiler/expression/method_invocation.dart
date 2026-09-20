@@ -27,7 +27,6 @@ import 'identifier.dart';
 Variable compileMethodInvocation(
   CompilerContext ctx,
   MethodInvocation e, {
-  TypeRef? bound,
   Variable? cascadeTarget,
 }) {
   Variable? L = cascadeTarget;
@@ -127,6 +126,8 @@ Variable compileMethodInvocation(
     return _invokeWithTarget(ctx, $this, e);
   }
 
+  // `name` can resolve to a class rather than a callable (e.g. `List()`) —
+  // then the callable declaration lives under the offset's `name.ctor` key.
   var dec0 = ctx.topLevelDeclarationsMap[offset.file]![e.methodName.name];
   if (dec0 == null ||
       (!dec0.isBridge && dec0.declaration! is ClassDeclaration)) {
@@ -151,10 +152,11 @@ Variable compileMethodInvocation(
                 !(mReturnType.type?.isUnboxedAcrossFunctionBoundaries ?? false),
           );
       final instantiatedType = _instantiateConstructorType(ctx, e, returnType);
-      final runtimeType = BuiltinValue(
-        intval: instantiatedType.runtimeTypeId(ctx),
-      ).push(ctx);
-      ctx.pushOp(Call(offset, [runtimeType.ssa], result: result));
+      ctx.pushOp(
+        Call(offset, [
+          _pushRuntimeTypeId(ctx, instantiatedType),
+        ], result: result),
+      );
       final v = Variable.of(
         ctx,
         result,
@@ -170,7 +172,6 @@ Variable compileMethodInvocation(
   final Map<String, Variable> namedArgs;
   final List<SSA> callArgs;
 
-  final resolveGenerics = <String, TypeRef>{};
   var isConstructor = false;
 
   if (dec0.isBridge) {
@@ -199,72 +200,22 @@ Variable compileMethodInvocation(
     isConstructor = bridge is BridgeClassDef;
   } else {
     final dec = dec0.declaration!;
+    isConstructor = dec is ConstructorDeclaration;
 
-    List<FormalParameter> fpl;
-    List<TypeParameter>? typeParams;
-    TypeAnnotation? returnAnnotation;
-    if (dec is FunctionDeclaration) {
-      fpl =
-          dec.functionExpression.parameters?.parameters ?? <FormalParameter>[];
-      typeParams = dec.functionExpression.typeParameters?.typeParameters;
-      returnAnnotation = dec.returnType;
-    } else if (dec is MethodDeclaration) {
-      fpl = dec.parameters?.parameters ?? <FormalParameter>[];
-      typeParams = dec.typeParameters?.typeParameters;
-      returnAnnotation = dec.returnType;
-    } else if (dec is ConstructorDeclaration) {
-      fpl = dec.parameters.parameters;
-      isConstructor = true;
-    } else {
-      throw CompileError('Invalid declaration type ${dec.runtimeType}');
-    }
-
-    final hasExplicitTypeArguments =
-        (dec is FunctionDeclaration || dec is MethodDeclaration) &&
-        e.typeArguments != null;
-    if (dec is FunctionDeclaration || dec is MethodDeclaration) {
-      _resolveInvocationGenerics(
-        ctx,
-        offset.file!,
-        typeParams,
-        e.typeArguments?.arguments.toList(),
-        resolveGenerics,
-        e,
-      );
-    }
-
-    if (returnAnnotation != null &&
-        _annotationUsesTypeParameters(returnAnnotation, resolveGenerics)) {
-      // Substitution narrows the language type, not the compiled callee's ABI.
-      genericReturnBoxed = true;
-    }
-    final argsPair = compileArgumentList(
+    final result = _compileNonBridgeArgs(
       ctx,
-      e.argumentList,
       offset.file!,
-      fpl,
       dec,
+      e.argumentList,
       before: L != null ? [L] : [],
+      typeArguments: e.typeArguments,
       source: e,
-      resolveGenerics: resolveGenerics,
-      inferGenerics: !hasExplicitTypeArguments,
     );
-
-    if (returnAnnotation != null && resolveGenerics.isNotEmpty) {
-      final resolvedReturn = TypeRef.fromAnnotation(
-        ctx,
-        offset.file!,
-        returnAnnotation,
-        typeParameters: resolveGenerics,
-      );
-      mReturnType = AlwaysReturnType(
-        resolvedReturn,
-        returnAnnotation.question != null,
-      );
-    }
-    args = argsPair.args;
-    namedArgs = argsPair.namedArgs;
-    callArgs = argsPair.ssa;
+    mReturnType = result.returnType;
+    genericReturnBoxed = result.boxedBySubstitution;
+    args = result.args.args;
+    namedArgs = result.args.namedArgs;
+    callArgs = result.args.ssa;
   }
 
   final argTypes = args.map((e) => e.type).toList();
@@ -299,11 +250,7 @@ Variable compileMethodInvocation(
   if (isConstructor &&
       declaration is ConstructorDeclaration &&
       declaration.factoryKeyword == null) {
-    effectiveCallArgs.add(
-      BuiltinValue(
-        intval: instantiatedReturnType!.runtimeTypeId(ctx),
-      ).push(ctx).ssa,
-    );
+    effectiveCallArgs.add(_pushRuntimeTypeId(ctx, instantiatedReturnType!));
   }
 
   final result = ctx.svar('call');
@@ -526,56 +473,20 @@ Variable _invokeWithTarget(
     argsPair = compileArgumentListWithDynamic(ctx, e.argumentList, before: [L]);
   } else {
     final dec = dec0!.declaration!;
-    final typeParameters = dec is MethodDeclaration
-        ? dec.typeParameters?.typeParameters
-        : null;
-    final resolveGenerics = <String, TypeRef>{
-      if (!isStatic && dec is MethodDeclaration)
-        ..._classTypeArguments(ctx, L.type, dec0.sourceLib, dec),
-    };
-    final hasExplicitTypeArguments =
-        dec is MethodDeclaration && e.typeArguments != null;
-    if (dec is MethodDeclaration) {
-      _resolveInvocationGenerics(
-        ctx,
-        dec0.sourceLib,
-        typeParameters,
-        e.typeArguments?.arguments.toList(),
-        resolveGenerics,
-        e,
-      );
-    }
-    final fpl =
-        (dec is MethodDeclaration
-            ? dec.parameters?.parameters
-            : (dec as ConstructorDeclaration).parameters.parameters) ??
-        <FormalParameter>[];
-
-    argsPair = compileArgumentList(
+    final result = _compileNonBridgeArgs(
       ctx,
-      e.argumentList,
       dec0.sourceLib,
-      fpl,
       dec,
+      e.argumentList,
       before: [if (!isStatic) L],
+      typeArguments: e.typeArguments,
       source: e,
-      resolveGenerics: resolveGenerics,
-      inferGenerics: !hasExplicitTypeArguments,
+      seedGenerics: !isStatic && dec is MethodDeclaration
+          ? _classTypeArguments(ctx, L.type, dec0.sourceLib, dec)
+          : const {},
     );
-    if (dec is MethodDeclaration &&
-        dec.returnType != null &&
-        resolveGenerics.isNotEmpty) {
-      final resolvedReturn = TypeRef.fromAnnotation(
-        ctx,
-        dec0.sourceLib,
-        dec.returnType!,
-        typeParameters: resolveGenerics,
-      );
-      mReturnType = AlwaysReturnType(
-        resolvedReturn,
-        dec.returnType!.question != null,
-      );
-    }
+    argsPair = result.args;
+    mReturnType = result.returnType;
   }
 
   final args = argsPair.args;
@@ -608,9 +519,7 @@ Variable _invokeWithTarget(
       final declaration = dec0.declaration;
       if (declaration is ConstructorDeclaration &&
           declaration.factoryKeyword == null) {
-        callArguments.add(
-          BuiltinValue(intval: staticType.runtimeTypeId(ctx)).push(ctx).ssa,
-        );
+        callArguments.add(_pushRuntimeTypeId(ctx, staticType));
       }
       ctx.pushOp(
         Call(
@@ -937,3 +846,108 @@ DeclarationOrBridge<ClassMember, BridgeDeclaration> resolveStaticMethod(
 
   throw CompileError('Cannot find static method $classType.$methodName');
 }
+
+/// The callable signature of a function/method/constructor declaration:
+/// (formal parameters, declared type parameters, declared return type).
+(List<FormalParameter>, List<TypeParameter>?, TypeAnnotation?)
+_invocationSignature(Declaration dec) => switch (dec) {
+  FunctionDeclaration() => (
+    dec.functionExpression.parameters?.parameters ?? <FormalParameter>[],
+    dec.functionExpression.typeParameters?.typeParameters,
+    dec.returnType,
+  ),
+  MethodDeclaration() => (
+    dec.parameters?.parameters ?? <FormalParameter>[],
+    dec.typeParameters?.typeParameters,
+    dec.returnType,
+  ),
+  ConstructorDeclaration() => (dec.parameters.parameters, null, null),
+  _ => throw CompileError('Invalid declaration type ${dec.runtimeType}'),
+};
+
+/// The result of [_compileNonBridgeArgs].
+class _ResolvedArgs {
+  _ResolvedArgs(this.args, this.returnType, this.boxedBySubstitution);
+
+  final ArgumentListResult args;
+
+  /// The return type after substituting resolved generics into the declared
+  /// return annotation, or null when the annotation isn't generic-dependent.
+  final AlwaysReturnType? returnType;
+
+  /// Whether generic substitution narrowed the language return type without
+  /// changing the callee's compiled ABI, forcing the result to stay boxed.
+  /// Null when the return annotation doesn't reference type parameters.
+  final bool? boxedBySubstitution;
+}
+
+/// Compiles the argument list for a call to a non-bridge declaration [dec],
+/// resolving generic type parameters at the call site. [seedGenerics] provides
+/// receiver-class type arguments (for instance calls); [typeArguments] are the
+/// call's explicit type arguments, whose presence disables inference.
+_ResolvedArgs _compileNonBridgeArgs(
+  CompilerContext ctx,
+  int sourceLib,
+  Declaration dec,
+  ArgumentList argumentList, {
+  List<Variable> before = const [],
+  TypeArgumentList? typeArguments,
+  AstNode? source,
+  Map<String, TypeRef> seedGenerics = const {},
+}) {
+  final (fpl, typeParams, returnAnnotation) = _invocationSignature(dec);
+  final isCallableDecl = dec is FunctionDeclaration || dec is MethodDeclaration;
+  final resolveGenerics = <String, TypeRef>{...seedGenerics};
+  if (isCallableDecl) {
+    _resolveInvocationGenerics(
+      ctx,
+      sourceLib,
+      typeParams,
+      typeArguments?.arguments.toList(),
+      resolveGenerics,
+      source!,
+    );
+  }
+
+  bool? boxedBySubstitution;
+  if (returnAnnotation != null &&
+      _annotationUsesTypeParameters(returnAnnotation, resolveGenerics)) {
+    // Substitution narrows the language type, not the compiled callee's ABI.
+    boxedBySubstitution = true;
+  }
+
+  final argsPair = compileArgumentList(
+    ctx,
+    argumentList,
+    sourceLib,
+    fpl,
+    dec,
+    before: before,
+    source: source,
+    resolveGenerics: resolveGenerics,
+    // Only function/method declarations take explicit type arguments at the
+    // call site; constructor calls infer regardless (e.g. List<int>() still
+    // infers the constructor's own generics).
+    inferGenerics: !isCallableDecl || typeArguments == null,
+  );
+
+  AlwaysReturnType? returnType;
+  if (returnAnnotation != null && resolveGenerics.isNotEmpty) {
+    final resolvedReturn = TypeRef.fromAnnotation(
+      ctx,
+      sourceLib,
+      returnAnnotation,
+      typeParameters: resolveGenerics,
+    );
+    returnType = AlwaysReturnType(
+      resolvedReturn,
+      returnAnnotation.question != null,
+    );
+  }
+  return _ResolvedArgs(argsPair, returnType, boxedBySubstitution);
+}
+
+/// Pushes an integer constant carrying [type]'s runtime type id. Non-factory
+/// constructors receive it as a trailing argument.
+SSA _pushRuntimeTypeId(CompilerContext ctx, TypeRef type) =>
+    BuiltinValue(intval: type.runtimeTypeId(ctx)).push(ctx).ssa;

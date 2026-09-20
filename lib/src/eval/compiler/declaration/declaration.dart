@@ -38,3 +38,52 @@ int? compileDeclaration(
     throw CompileError('No support for ${d.runtimeType}');
   }
 }
+
+/// Partitions a class-like body's members into constructors, instance fields,
+/// and methods (static fields are handled as globals, not instance members).
+(List<ConstructorDeclaration>, List<FieldDeclaration>, List<MethodDeclaration>)
+partitionClassMembers(List<ClassMember> members) {
+  final constructors = <ConstructorDeclaration>[];
+  final fields = <FieldDeclaration>[];
+  final methods = <MethodDeclaration>[];
+  for (final m in members) {
+    if (m is ConstructorDeclaration) {
+      constructors.add(m);
+    } else if (m is FieldDeclaration) {
+      if (!m.isStatic) {
+        fields.add(m);
+      }
+    } else {
+      m as MethodDeclaration;
+      methods.add(m);
+    }
+  }
+  return (constructors, fields, methods);
+}
+
+/// Compiles members in declaration order — fields first, then methods, then
+/// constructors — tracking [fieldIndex] across field declarations so each
+/// instance field lands at a stable slot.
+void compileClassMembers(
+  CompilerContext ctx,
+  Declaration parent, {
+  required List<ConstructorDeclaration> constructors,
+  required List<FieldDeclaration> fields,
+  required List<MethodDeclaration> methods,
+  int firstFieldIndex = 0,
+}) {
+  var fieldIndex = firstFieldIndex;
+  for (final m in <ClassMember>[...fields, ...methods, ...constructors]) {
+    ctx.currentClass = parent;
+    compileDeclaration(
+      m,
+      ctx,
+      parent: parent,
+      fieldIndex: fieldIndex,
+      fields: fields,
+    );
+    if (m is FieldDeclaration) {
+      fieldIndex += m.fields.variables.length;
+    }
+  }
+}

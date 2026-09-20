@@ -15,11 +15,7 @@ import 'package:dart_eval/src/eval/ir/primitives.dart';
 import 'package:dart_eval/src/eval/ir/representation.dart';
 import 'package:dart_eval/src/eval/ir/string.dart';
 
-void compileEnumDeclaration(
-  CompilerContext ctx,
-  EnumDeclaration d, {
-  bool statics = false,
-}) {
+void compileEnumDeclaration(CompilerContext ctx, EnumDeclaration d) {
   final type = TypeRef.lookupDeclaration(ctx, ctx.library, d);
   final $runtimeType = ctx.typeRefIndexMap[type];
   final clsName = d.namePart.typeName.lexeme;
@@ -30,145 +26,146 @@ void compileEnumDeclaration(
     $runtimeType,
   ];
   ctx.instanceGetterIndices[ctx.library]![clsName] = {};
-  final constructors = <ConstructorDeclaration>[];
-  final fields = <FieldDeclaration>[];
-  final methods = <MethodDeclaration>[];
-  for (final m in d.body.members) {
-    if (m is ConstructorDeclaration) {
-      constructors.add(m);
-    } else if (m is FieldDeclaration) {
-      if (!m.isStatic) {
-        fields.add(m);
-      }
-    } else {
-      m as MethodDeclaration;
-      methods.add(m);
-    }
-  }
-  var i = 0;
+  final (constructors, fields, methods) = partitionClassMembers(d.body.members);
   if (constructors.isEmpty) {
     ctx.currentClass = d;
     compileDefaultConstructor(ctx, d, fields);
   }
 
-  final pos = ctx.beginFunction('$clsName.index (get)');
+  _compileEnumFieldGetter(ctx, clsName, 'index', 0);
+  _compileEnumFieldGetter(ctx, clsName, 'name', 1);
+  if (!methods.any((m) => m.name.lexeme == 'toString')) {
+    _compileEnumToString(ctx, clsName);
+  }
+
+  // Every enum value carries two synthetic instance fields (`index` and
+  // `name`) at slots 0 and 1; user-declared fields follow them.
+  compileClassMembers(
+    ctx,
+    d,
+    constructors: constructors,
+    fields: fields,
+    methods: methods,
+    firstFieldIndex: 2,
+  );
+
+  var idx = 0;
+  for (final constant in d.body.constants) {
+    _compileEnumValue(ctx, type, clsName, constant, idx);
+    idx++;
+  }
+
+  ctx.currentClass = null;
+}
+
+/// Generates the trivial `index`/`name` getter: `return this.<field>`.
+void _compileEnumFieldGetter(
+  CompilerContext ctx,
+  String clsName,
+  String fieldName,
+  int fieldIndex,
+) {
+  final pos = ctx.beginFunction('$clsName.$fieldName (get)');
   ctx.functionSignatures[pos] = const MachineFunctionSignature([
     MachineRepresentation.object,
   ], MachineRepresentation.object);
   final receiver = SSA('arg_0');
   ctx.pushOp(Parameter(receiver, 0));
-  final enumIndex = ctx.svar('enum_index');
-  ctx.pushOp(LoadPropertyStatic(enumIndex, receiver, 0));
-  ctx.pushOp(Return(enumIndex));
-  ctx.instanceDeclarationPositions[ctx.library]![clsName]![0]['index'] = pos;
-  ctx.instanceGetterIndices[ctx.library]![clsName]!['index'] = 0;
+  final value = ctx.svar('enum_$fieldName');
+  ctx.pushOp(LoadPropertyStatic(value, receiver, fieldIndex));
+  ctx.pushOp(Return(value));
+  ctx.instanceDeclarationPositions[ctx.library]![clsName]![0][fieldName] = pos;
+  ctx.instanceGetterIndices[ctx.library]![clsName]![fieldName] = fieldIndex;
+}
 
-  final namePos = ctx.beginFunction('$clsName.name (get)');
-  ctx.functionSignatures[namePos] = const MachineFunctionSignature([
+/// Generates a synthetic `toString` returning `'EnumClass.valueName'`, used
+/// when the enum does not declare its own.
+void _compileEnumToString(CompilerContext ctx, String clsName) {
+  final pos = ctx.beginFunction('$clsName.toString');
+  ctx.functionSignatures[pos] = const MachineFunctionSignature([
     MachineRepresentation.object,
   ], MachineRepresentation.object);
-  final nameReceiver = SSA('arg_0');
-  ctx.pushOp(Parameter(nameReceiver, 0));
-  final enumName = ctx.svar('enum_name');
-  ctx.pushOp(LoadPropertyStatic(enumName, nameReceiver, 1));
-  ctx.pushOp(Return(enumName));
-  ctx.instanceDeclarationPositions[ctx.library]![clsName]![0]['name'] = namePos;
-  ctx.instanceGetterIndices[ctx.library]![clsName]!['name'] = 1;
+  final receiver = SSA('arg_0');
+  ctx.pushOp(Parameter(receiver, 0));
+  final name = ctx.svar('enum_name');
+  ctx.pushOp(LoadPropertyStatic(name, receiver, 1));
+  final nameUnboxed = ctx.svar('enum_name_unboxed');
+  ctx.pushOp(Unbox(nameUnboxed, name, MachineRepresentation.string));
+  final prefix = BuiltinValue(stringval: '$clsName.').push(ctx);
+  final result = ctx.svar('enum_toString');
+  ctx.pushOp(
+    StringOperation(
+      result,
+      StringOperator.concatenate,
+      prefix.ssa,
+      nameUnboxed,
+    ),
+  );
+  final boxed = ctx.svar('enum_toString_boxed');
+  ctx.pushOp(BoxString(boxed, result));
+  ctx.pushOp(Return(boxed));
+  ctx.instanceDeclarationPositions[ctx.library]![clsName]![2]['toString'] = pos;
+}
 
-  if (!methods.any((m) => m.name.lexeme == 'toString')) {
-    final toStringPos = ctx.beginFunction('$clsName.toString');
-    ctx.functionSignatures[toStringPos] = const MachineFunctionSignature([
-      MachineRepresentation.object,
-    ], MachineRepresentation.object);
-    final tsReceiver = SSA('arg_0');
-    ctx.pushOp(Parameter(tsReceiver, 0));
-    final tsName = ctx.svar('enum_name');
-    ctx.pushOp(LoadPropertyStatic(tsName, tsReceiver, 1));
-    final tsNameUnboxed = ctx.svar('enum_name_unboxed');
-    ctx.pushOp(Unbox(tsNameUnboxed, tsName, MachineRepresentation.string));
-    final tsPrefix = BuiltinValue(stringval: '$clsName.').push(ctx);
-    final tsResult = ctx.svar('enum_toString');
-    ctx.pushOp(
-      StringOperation(
-        tsResult,
-        StringOperator.concatenate,
-        tsPrefix.ssa,
-        tsNameUnboxed,
-      ),
-    );
-    final tsBoxed = ctx.svar('enum_toString_boxed');
-    ctx.pushOp(BoxString(tsBoxed, tsResult));
-    ctx.pushOp(Return(tsBoxed));
-    ctx.instanceDeclarationPositions[ctx.library]![clsName]![2]['toString'] =
-        toStringPos;
-  }
-  // Every enum value carries two synthetic instance fields (`index` and
-  // `name`) at slots 0 and 1; user-declared fields follow them.
-  i += 2;
+/// Generates the initializer function for one enum constant: invokes the
+/// selected constructor with the synthetic `index`/`name` arguments followed
+/// by any source-level arguments, and registers the result as a final global.
+void _compileEnumValue(
+  CompilerContext ctx,
+  TypeRef type,
+  String clsName,
+  EnumConstantDeclaration constant,
+  int valueIndex,
+) {
+  final cName = constant.name.lexeme;
 
-  for (final m in <ClassMember>[...fields, ...methods, ...constructors]) {
-    ctx.currentClass = d;
-    compileDeclaration(m, ctx, parent: d, fieldIndex: i, fields: fields);
-    if (m is FieldDeclaration) {
-      i += m.fields.variables.length;
-    }
-  }
+  final pos = ctx.beginFunction('$cName*i');
+  ctx.functionSignatures[pos] = const MachineFunctionSignature(
+    [],
+    MachineRepresentation.object,
+  );
+  final cstrName = constant.arguments?.constructorSelector?.name.name ?? '';
+  final offset = DeferredOrOffset.lookupStatic(
+    ctx,
+    ctx.library,
+    clsName,
+    cstrName,
+  );
 
-  var idx = 0;
-  for (final constant in d.body.constants) {
-    final cName = constant.name.lexeme;
+  final cstr =
+      ctx.topLevelDeclarationsMap[offset.file]![offset.name ?? '$clsName.'];
 
-    final pos = ctx.beginFunction('$cName*i');
-    ctx.functionSignatures[pos] = const MachineFunctionSignature(
-      [],
-      MachineRepresentation.object,
-    );
-    final cstrName = constant.arguments?.constructorSelector?.name.name ?? '';
-    final offset = DeferredOrOffset.lookupStatic(
+  final vIndex = BuiltinValue(intval: valueIndex).push(ctx).boxIfNeeded(ctx);
+  final vName = BuiltinValue(stringval: cName).push(ctx).boxIfNeeded(ctx);
+
+  final arguments = <SSA>[vIndex.ssa, vName.ssa];
+
+  final dec = cstr?.declaration;
+  if (constant.arguments != null && dec != null) {
+    final fpl = (dec as ConstructorDeclaration).parameters.parameters;
+    final result = compileArgumentList(
       ctx,
+      constant.arguments!.argumentList,
       ctx.library,
-      clsName,
-      cstrName,
+      fpl,
+      dec,
+      source: constant,
     );
-
-    final cstr =
-        ctx.topLevelDeclarationsMap[offset.file]![offset.name ?? '$clsName.'];
-
-    final vIndex = BuiltinValue(intval: idx).push(ctx).boxIfNeeded(ctx);
-    final vName = BuiltinValue(stringval: cName).push(ctx).boxIfNeeded(ctx);
-
-    final arguments = <SSA>[vIndex.ssa, vName.ssa];
-
-    final dec = cstr?.declaration;
-    if (constant.arguments != null && dec != null) {
-      final fpl = (dec as ConstructorDeclaration).parameters.parameters;
-      final result = compileArgumentList(
-        ctx,
-        constant.arguments!.argumentList,
-        ctx.library,
-        fpl,
-        dec,
-        source: constant,
-      );
-      arguments.addAll(result.ssa);
-    }
-    arguments.add(BuiltinValue(intval: type.runtimeTypeId(ctx)).push(ctx).ssa);
-
-    final V = Variable.ssa(
-      ctx,
-      Call(offset, arguments, result: ctx.svar('enum_value')),
-      type,
-    );
-    final name = '$clsName.$cName';
-    final index = ctx.topLevelGlobalIndices[ctx.library]![name]!;
-    ctx.globalRepresentations[index] = MachineRepresentation.object;
-    ctx.globalsFinal.add(index);
-    ctx.globalNames[index] = name;
-    ctx.topLevelVariableInferredTypes[ctx.library]![name] = type;
-    ctx.runtimeGlobalInitializerMap[index] = pos;
-    ctx.pushOp(Return(V.ssa));
-    idx++;
+    arguments.addAll(result.ssa);
   }
+  arguments.add(BuiltinValue(intval: type.runtimeTypeId(ctx)).push(ctx).ssa);
 
-  ctx.currentClass = null;
+  final V = Variable.ssa(
+    ctx,
+    Call(offset, arguments, result: ctx.svar('enum_value')),
+    type,
+  );
+  final name = '$clsName.$cName';
+  final index = ctx.topLevelGlobalIndices[ctx.library]![name]!;
+  ctx.globalRepresentations[index] = MachineRepresentation.object;
+  ctx.globalsFinal.add(index);
+  ctx.globalNames[index] = name;
+  ctx.topLevelVariableInferredTypes[ctx.library]![name] = type;
+  ctx.runtimeGlobalInitializerMap[index] = pos;
+  ctx.pushOp(Return(V.ssa));
 }

@@ -165,17 +165,13 @@ class IdentifierReference implements Reference {
 
     // Instance
     if (ctx.currentClass != null) {
-      final instanceDeclaration = resolveInstanceDeclaration(
+      final fieldType = _resolveInstanceFieldType(
         ctx,
-        ctx.library,
-        ctx.currentClassName!,
         name,
+        forSet: forSet,
+        source: source,
       );
-      if (instanceDeclaration != null) {
-        final $type = instanceDeclaration.$1;
-        return TypeRef.lookupFieldType(ctx, $type, name, forSet: forSet) ??
-            CoreTypes.dynamic.ref(ctx);
-      }
+      if (fieldType != null) return fieldType;
 
       final staticDeclaration = resolveStaticDeclaration(
         ctx,
@@ -195,11 +191,7 @@ class IdentifierReference implements Reference {
       }
     }
 
-    final declaration =
-        ctx.visibleDeclarations[ctx.library]![name] ??
-        (throw CompileError('Could not find declaration "$name"', source));
-    final declarationValue = declaration.declaration ?? (throw PrefixError());
-
+    final declarationValue = _lookupVisibleValue(ctx, name, source);
     final decl = declarationValue.declaration!;
 
     if (decl is VariableDeclaration) {
@@ -273,17 +265,14 @@ class IdentifierReference implements Reference {
             'of type ${local.declaredType}',
       );
 
+      final stored = local.representation == MachineRepresentation.object
+          ? value.boxIfNeeded(ctx)
+          : value.unboxIfNeeded(ctx, false);
       if (local.exceptionSlot != null) {
-        final stored = local.representation == MachineRepresentation.object
-            ? value.boxIfNeeded(ctx)
-            : value.unboxIfNeeded(ctx, false);
         ctx.pushOp(StoreExceptionSlot(local.exceptionSlot!, stored.ssa));
         return stored;
       }
       if (local.captureCell != null) {
-        final stored = local.representation == MachineRepresentation.object
-            ? value.boxIfNeeded(ctx)
-            : value.unboxIfNeeded(ctx, false);
         ctx.pushOp(
           WriteCaptureCell(
             local.captureCell!,
@@ -293,9 +282,6 @@ class IdentifierReference implements Reference {
         );
         return stored;
       }
-      final stored = local.representation == MachineRepresentation.object
-          ? value.boxIfNeeded(ctx)
-          : value.unboxIfNeeded(ctx, false);
       ctx.pushOp(Assign(local.ssa, stored.ssa));
       local.copyWithUpdate(
         ctx,
@@ -318,16 +304,12 @@ class IdentifierReference implements Reference {
         name,
       );
       if (instanceDeclaration != null) {
-        final $type = instanceDeclaration.$1;
-        final fieldType =
-            TypeRef.lookupFieldType(
-              ctx,
-              $type,
-              name,
-              forSet: true,
-              source: source,
-            ) ??
-            CoreTypes.dynamic.ref(ctx);
+        final fieldType = _resolveInstanceFieldType(
+          ctx,
+          name,
+          forSet: true,
+          source: source,
+        )!;
         final $this = ctx.lookupLocal('#this')!;
         final stored = convertForAssignment(
           ctx,
@@ -369,11 +351,7 @@ class IdentifierReference implements Reference {
       }
     }
 
-    final declaration =
-        ctx.visibleDeclarations[ctx.library]![name] ??
-        (throw CompileError('Could not find declaration "$name"', source));
-    final declarationValue = declaration.declaration ?? (throw PrefixError());
-
+    final declarationValue = _lookupVisibleValue(ctx, name, source);
     final decl = declarationValue.declaration!;
 
     if (decl is VariableDeclaration) {
@@ -419,25 +397,14 @@ class IdentifierReference implements Reference {
           final br = decOrBridge.bridge;
           if (br is BridgeClassDef) {
             final getter = br.getters[name];
-            if (getter != null) {
-              final getterType = TypeRef.fromBridgeAnnotation(
-                ctx,
-                getter.functionDescriptor.returns,
-              );
-              return Variable.ssa(
-                ctx,
-                InvokeExternal(
-                  ctx.svar(name),
-                  ctx.bridgeStaticFunctionIndices[classType
-                      .file]!['${classType.name}.$name*g']!,
-                  [],
-                ),
-                getterType,
-              );
-            }
             final field = br.fields[name];
-            if (field != null) {
-              final fieldType = TypeRef.fromBridgeAnnotation(ctx, field.type);
+            if (getter != null || field != null) {
+              final type = getter != null
+                  ? TypeRef.fromBridgeAnnotation(
+                      ctx,
+                      getter.functionDescriptor.returns,
+                    )
+                  : TypeRef.fromBridgeAnnotation(ctx, field!.type);
               return Variable.ssa(
                 ctx,
                 InvokeExternal(
@@ -446,7 +413,7 @@ class IdentifierReference implements Reference {
                       .file]!['${classType.name}.$name*g']!,
                   [],
                 ),
-                fieldType,
+                type,
               );
             }
 
@@ -457,15 +424,7 @@ class IdentifierReference implements Reference {
           }
         }
         final fqName = '${classType.name}.$name';
-        final cls = ctx.topLevelVariableInferredTypes[classType.file];
-
-        if (cls == null) {
-          throw CompileError('Cannot find file types for "$classType"', source);
-        }
-
-        final type = resolveGlobalType(ctx, classType.file, fqName);
-        final gIndex = ctx.topLevelGlobalIndices[classType.file]![fqName]!;
-        return Variable.ssa(ctx, LoadGlobal(ctx.svar(name), gIndex), type);
+        return _loadGlobalVariable(ctx, classType.file, fqName, name);
       }
       object = object!.boxIfNeeded(ctx, source);
       return object!.getProperty(ctx, name);
@@ -606,12 +565,11 @@ class IdentifierReference implements Reference {
           );
         } else if (staticDec is VariableDeclaration) {
           final name = '${ctx.currentClassName!}.${staticDec.name.lexeme}';
-          final type = resolveGlobalType(ctx, ctx.library, name);
-          final gIndex = ctx.topLevelGlobalIndices[ctx.library]![name]!;
-          return Variable.ssa(
+          return _loadGlobalVariable(
             ctx,
-            LoadGlobal(ctx.svar(staticDec.name.lexeme), gIndex),
-            type,
+            ctx.library,
+            name,
+            staticDec.name.lexeme,
           );
         }
       }
@@ -918,30 +876,12 @@ Variable _declarationToVariable(
 
     if (bridge is BridgeClassDef) {
       final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type.type);
-
-      return Variable.ssa(
-        ctx,
-        LoadConstantType(ctx.svar('type'), type.runtimeTypeId(ctx)),
-        CoreTypes.type.ref(ctx),
-        concreteTypes: [type],
-        methodOffset: DeferredOrOffset(file: type.file, name: '${type.name}.'),
-        methodReturnType: AlwaysReturnType(type, false),
-      );
+      return _typeLiteral(ctx, type, '${type.name}.');
     }
 
     if (bridge is BridgeEnumDef) {
       final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type);
-      return Variable.ssa(
-        ctx,
-        LoadConstantType(ctx.svar('type'), type.runtimeTypeId(ctx)),
-        CoreTypes.type.ref(ctx),
-        concreteTypes: [type],
-        methodOffset: DeferredOrOffset(
-          file: type.file,
-          name: '${type.name}#wrap',
-        ),
-        methodReturnType: AlwaysReturnType(type, false),
-      );
+      return _typeLiteral(ctx, type, '${type.name}#wrap');
     }
 
     if (bridge is BridgeFunctionDeclaration) {
@@ -965,40 +905,12 @@ Variable _declarationToVariable(
   final decl = decOrBridge.declaration!;
 
   if (decl is VariableDeclaration) {
-    final type = resolveGlobalType(
-      ctx,
-      decOrBridge.sourceLib,
-      decl.name.lexeme,
-    );
-    final gIndex =
-        ctx.topLevelGlobalIndices[decOrBridge.sourceLib]![decl.name.lexeme]!;
-
-    return Variable.ssa(
-      ctx,
-      LoadGlobal(ctx.svar(decl.name.lexeme), gIndex),
-      type,
-    );
+    return _loadGlobalVariable(ctx, decOrBridge.sourceLib, decl.name.lexeme);
   }
 
   if (decl is! FunctionDeclaration && decl is! ConstructorDeclaration) {
-    final returnType = TypeRef.lookupDeclaration(
-      ctx,
-      decOrBridge.sourceLib,
-      decl,
-    );
-    final offset = DeferredOrOffset(
-      file: decOrBridge.sourceLib,
-      name: '${returnType.name}.',
-    );
-
-    return Variable.ssa(
-      ctx,
-      LoadConstantType(ctx.svar('type'), returnType.runtimeTypeId(ctx)),
-      CoreTypes.type.ref(ctx),
-      concreteTypes: [returnType],
-      methodOffset: offset,
-      methodReturnType: AlwaysReturnType(returnType, false),
-    );
+    final type = TypeRef.lookupDeclaration(ctx, decOrBridge.sourceLib, decl);
+    return _typeLiteral(ctx, type, '${type.name}.');
   }
 
   TypeRef? returnType;
@@ -1090,4 +1002,78 @@ StaticDispatch? _declarationToStaticDispatch(
   final offset = DeferredOrOffset(file: decOrBridge.sourceLib, name: name);
 
   return StaticDispatch(offset, AlwaysReturnType(returnType, nullable));
+}
+
+/// Loads a top-level (or static field) global by its qualified [globalName],
+/// using [valueName] (defaults to the unqualified name) for the SSA variable.
+Variable _loadGlobalVariable(
+  CompilerContext ctx,
+  int sourceLib,
+  String globalName, [
+  String? valueName,
+]) {
+  final type = resolveGlobalType(ctx, sourceLib, globalName);
+  final gIndex = ctx.topLevelGlobalIndices[sourceLib]![globalName]!;
+  return Variable.ssa(
+    ctx,
+    LoadGlobal(ctx.svar(valueName ?? globalName), gIndex),
+    type,
+  );
+}
+
+/// A `Type` literal variable for [type]. [constructorKey] is the name used in
+/// [DeferredOrOffset] to resolve the constructor (e.g. `ClassName.` or, for
+/// bridged enums, `EnumName#wrap`).
+Variable _typeLiteral(
+  CompilerContext ctx,
+  TypeRef type,
+  String constructorKey,
+) {
+  return Variable.ssa(
+    ctx,
+    LoadConstantType(ctx.svar('type'), type.runtimeTypeId(ctx)),
+    CoreTypes.type.ref(ctx),
+    concreteTypes: [type],
+    methodOffset: DeferredOrOffset(file: type.file, name: constructorKey),
+    methodReturnType: AlwaysReturnType(type, false),
+  );
+}
+
+/// The declared type of instance member [name] on the enclosing class, or null
+/// when the current class has no such member.
+TypeRef? _resolveInstanceFieldType(
+  CompilerContext ctx,
+  String name, {
+  bool forSet = false,
+  AstNode? source,
+}) {
+  final instanceDeclaration = resolveInstanceDeclaration(
+    ctx,
+    ctx.library,
+    ctx.currentClassName!,
+    name,
+  );
+  if (instanceDeclaration == null) return null;
+  return TypeRef.lookupFieldType(
+        ctx,
+        instanceDeclaration.$1,
+        name,
+        forSet: forSet,
+        source: source,
+      ) ??
+      CoreTypes.dynamic.ref(ctx);
+}
+
+/// Resolves [name] to a top-level declaration visible in the current library.
+/// Throws [PrefixError] when the name resolves to an import prefix rather than
+/// a concrete declaration.
+DeclarationOrBridge _lookupVisibleValue(
+  CompilerContext ctx,
+  String name,
+  AstNode? source,
+) {
+  final declaration =
+      ctx.visibleDeclarations[ctx.library]![name] ??
+      (throw CompileError('Could not find declaration "$name"', source));
+  return declaration.declaration ?? (throw PrefixError());
 }
