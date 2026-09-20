@@ -5,6 +5,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
+import 'package:dart_eval/src/eval/compiler/model/function_type.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/closures.dart';
@@ -37,7 +38,36 @@ extension TearOff on Variable {
     final named =
         parameters?.parameters.where((param) => param.isNamed).toList() ??
         <FormalParameter>[];
+    var functionId = offset.offset;
+    if (functionId == null) {
+      if (offset.className == null) {
+        final positions = ctx.topLevelDeclarationPositions[offset.file];
+        if (positions != null && offset.name != null) {
+          functionId = positions[offset.name];
+        }
+      } else {
+        final classes = ctx.instanceDeclarationPositions[offset.file];
+        final memberGroups = classes == null ? null : classes[offset.className];
+        functionId = memberGroups == null
+            ? null
+            : (memberGroups[2] as Map)[offset.name] as int?;
+      }
+    }
+    final parameterTypes = functionId == null
+        ? const <TypeRef>[]
+        : ctx.functionParameterTypes[functionId] ?? const <TypeRef>[];
+    final allParameters = [...positional, ...named];
+    final parameterTypeByNode = <FormalParameter, TypeRef>{
+      for (
+        var index = 0;
+        index < allParameters.length && index < parameterTypes.length;
+        index++
+      )
+        allParameters[index]: parameterTypes[index],
+    };
     TypeRef parameterType(FormalParameter parameter) {
+      final compiledType = parameterTypeByNode[parameter];
+      if (compiledType != null) return compiledType;
       final normal = parameter is DefaultFormalParameter
           ? parameter.parameter
           : parameter;
@@ -58,6 +88,24 @@ extension TearOff on Variable {
           ? value.toDouble()
           : value;
     }
+
+    final functionType = switch (declaration) {
+      MethodDeclaration() => declaredFunctionType(
+        ctx,
+        offset.file ?? ctx.library,
+        declaration.parameters,
+        declaration.returnType,
+        declaration.typeParameters,
+      ),
+      FunctionDeclaration() => declaredFunctionType(
+        ctx,
+        offset.file ?? ctx.library,
+        declaration.functionExpression.parameters,
+        declaration.returnType,
+        declaration.functionExpression.typeParameters,
+      ),
+      _ => CoreTypes.function.ref(ctx),
+    };
 
     final captures = <SSA>[];
     if (declaration is MethodDeclaration && !declaration.isStatic) {
@@ -103,8 +151,9 @@ extension TearOff on Variable {
                   parameterType(param).isUnboxedAcrossFunctionBoundaries,
             )
             .toList(),
+        runtimeTypeId: functionType.runtimeTypeId(ctx),
       ),
-      CoreTypes.function.ref(ctx),
+      functionType,
       methodReturnType:
           methodReturnType ??
           AlwaysReturnType(CoreTypes.dynamic.ref(ctx), false),

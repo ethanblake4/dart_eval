@@ -3,7 +3,8 @@
 import 'dart:async';
 
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart' show WrappedException;
+import 'package:dart_eval/src/eval/runtime/runtime.dart'
+    show TypedRuntimeInterop, WrappedException;
 import 'package:dart_eval/stdlib/core.dart';
 
 /// Wrapper for [Future]
@@ -55,10 +56,13 @@ class $Future<T> implements Future<T>, $Instance {
     wrap: true,
   );
 
-  $Future.wrap(this.$value) : _superclass = $Object($value);
+  $Future.wrap(this.$value, {this.runtimeTypeId, this.runtime})
+    : _superclass = $Object($value);
 
   @override
   final Future<T> $value;
+  final int? runtimeTypeId;
+  final Runtime? runtime;
 
   @override
   Future get $reified =>
@@ -80,7 +84,9 @@ class $Future<T> implements Future<T>, $Instance {
   void $setProperty(Runtime runtime, String identifier, $Value value) {}
 
   @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType(CoreTypes.future);
+  int $getRuntimeType(Runtime runtime) => runtimeTypeId == null
+      ? runtime.lookupType(CoreTypes.future)
+      : runtime.importRuntimeType(this.runtime ?? runtime, runtimeTypeId!);
 
   @override
   Stream<T> asStream() => $value.asStream();
@@ -94,6 +100,7 @@ class $Future<T> implements Future<T>, $Instance {
   static $Value? _then(Runtime runtime, $Value? target, List<$Value?> args) {
     final $t = target as $Future;
     final $then = args[0] as EvalFunction;
+    final runtimeTypeId = runtime.typedFutureTypeForCallback($then);
     final $result = ($t.$value).then((value) {
       try {
         return $then.call(runtime, target, [runtime.wrap(value)]);
@@ -101,7 +108,11 @@ class $Future<T> implements Future<T>, $Instance {
         Error.throwWithStackTrace(error.exception, trace);
       }
     });
-    return $Future.wrap($result);
+    return $Future.wrap(
+      $result,
+      runtimeTypeId: runtimeTypeId,
+      runtime: runtime,
+    );
   }
 
   @override

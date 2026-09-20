@@ -12,6 +12,7 @@ import 'package:dart_eval/src/eval/ir/logic.dart';
 import 'package:dart_eval/src/eval/ir/memory.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
 import 'package:dart_eval/src/eval/ir/primitives.dart';
+import 'package:dart_eval/src/eval/ir/representation.dart';
 import 'package:dart_eval/src/eval/ir/types.dart';
 import 'package:test/test.dart';
 
@@ -85,9 +86,9 @@ void main() {
     BoxBool(result, input),
     BoxNull(result),
     BoxList(result, input),
-    BoxMap(result, input),
-    BoxSet(result, input),
-    Unbox(result, input),
+    BoxMap(result, input, runtimeTypeId: 0),
+    BoxSet(result, input, runtimeTypeId: 0),
+    Unbox(result, input, MachineRepresentation.integer),
     CreateClosure(result, target, [input]),
     Await(result, input, second),
     SetGlobal(0, input),

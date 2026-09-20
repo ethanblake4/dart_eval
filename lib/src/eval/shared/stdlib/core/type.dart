@@ -40,9 +40,10 @@ class $Type implements $Instance, Type {
 }
 
 class $TypeImpl implements $Type {
-  $TypeImpl(this._typeId) : _superclass = $Object(_typeId);
+  $TypeImpl(this._typeId, [this._runtime]) : _superclass = $Object(_typeId);
 
   final int _typeId;
+  final Runtime? _runtime;
 
   @override
   final $Instance _superclass;
@@ -58,10 +59,13 @@ class $TypeImpl implements $Type {
 
   @override
   bool operator ==(Object other) =>
-      other is $TypeImpl && other._typeId == _typeId;
+      other is $TypeImpl &&
+      (_runtime == null || other._runtime == null
+          ? identical(_runtime, other._runtime) && other._typeId == _typeId
+          : _runtime.runtimeTypesEqual(_typeId, other._runtime, other._typeId));
 
   @override
-  int get hashCode => _typeId;
+  int get hashCode => _runtime?.runtimeTypeHash(_typeId) ?? _typeId;
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
@@ -73,10 +77,10 @@ class $TypeImpl implements $Type {
       case '==':
         return $Function((runtime, target, args) {
           final other = args[0];
-          return $bool(other is $TypeImpl && other._typeId == _typeId);
+          return $bool(this == other);
         });
       case 'hashCode':
-        return $int(_typeId);
+        return $int(hashCode);
     }
     return _superclass.$getProperty(runtime, identifier);
   }

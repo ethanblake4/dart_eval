@@ -42,7 +42,12 @@ abstract final class TypedMachine {
   static Object? runEntry(TypedProgram program, TypedEntry arguments, int functionId, {Runtime? runtime}) {
     runtime?.prepareTypedRuntime();
     final entry = program.functions[functionId];
-    final root = TypedFrame(entry)..environment = arguments.environment;
+    final root = TypedFrame(entry)
+      ..environment = arguments.environment
+      ..typeEnvironmentReceiver = arguments.typeEnvironmentReceiver
+      ..typeArguments = arguments.typeArguments
+      ..lexicalTypeEnvironmentReceiver = arguments.lexicalTypeEnvironmentReceiver
+      ..lexicalTypeArguments = arguments.lexicalTypeArguments;
     return _drive(program, arguments, root, entry.entry, runtime);
   }
 
@@ -261,6 +266,9 @@ abstract final class TypedMachine {
         case TypedOp.cLoadOutgoing:
           c = frame.objectOutgoing;
           continue dispatch;
+        case TypedOp.rSetCallTypeReceiver:
+          frame.pendingTypeEnvironmentReceiver = r;
+          continue dispatch;
         case TypedOp.rNull:
           r = null;
           continue dispatch;
@@ -314,9 +322,6 @@ abstract final class TypedMachine {
           continue dispatch;
         case TypedOp.leaveTry:
           TypedExceptions.leave(frame);
-          continue dispatch;
-        case TypedOp.rBeginAsync:
-          r = TypedAsync.begin(frame);
           continue dispatch;
         case TypedOp.rCaughtException:
           r = TypedExceptions.caught(frame);
@@ -560,8 +565,27 @@ abstract final class TypedMachine {
           continue dispatch;
         case TypedOp.call:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          frame = frame.enterStatic(program, index, pc);
+          final typeEnvironmentReceiver = frame.pendingTypeEnvironmentReceiver;
+          final typeArguments = frame.pendingTypeArguments;
+          frame.pendingTypeEnvironmentReceiver = null;
+          frame.pendingTypeArguments = const [];
+          frame = frame.enterStatic(
+            program,
+            index,
+            pc,
+            typeEnvironmentReceiver: typeEnvironmentReceiver,
+            typeArguments: typeArguments,
+          );
           pc = frame.function.entry;
+          continue dispatch;
+        case TypedOp.setCallTypeArguments:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          final constant = (runtime!.typedConstant(index) as List).cast<int>();
+          frame.pendingTypeArguments = runtime.resolveTypedCallTypeArguments(
+            constant,
+            actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+            callableTypeArguments: frame.effectiveTypeArguments,
+          );
           continue dispatch;
         case TypedOp.eEqRS:
           e = TypedInterop.equals(runtime, r, s);
@@ -618,7 +642,14 @@ abstract final class TypedMachine {
           continue dispatch;
         case TypedOp.rCreateClosure:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          r = TypedClosure.create(program, index, frame.objectOutgoing, runtime);
+          r = TypedClosure.create(
+          program,
+          index,
+          frame.objectOutgoing,
+          runtime,
+          frame.effectiveTypeEnvironmentReceiver,
+          frame.effectiveTypeArguments,
+        );
           continue dispatch;
         case TypedOp.rLoadCapture:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
@@ -626,19 +657,53 @@ abstract final class TypedMachine {
           continue dispatch;
         case TypedOp.callClosure:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          final closure = TypedClosure.resolve(program, r, index, runtime);
+          final site = program.closureCalls[index];
+          final callTypeArguments = runtime == null
+              ? site.typeArguments
+              : runtime.resolveTypedCallTypeArguments(
+                  site.typeArguments,
+                  actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+                  callableTypeArguments: frame.effectiveTypeArguments,
+                );
+          final closure = TypedClosure.resolve(
+            program, r, index, runtime, s, c, callTypeArguments,
+          );
           if (closure != null) {
             final function = closure.function;
-            frame = frame.enterClosure(function, pc, closure.captures);
+            frame = frame.enterClosure(
+              function,
+              pc,
+              closure.captures,
+              typeEnvironmentReceiver: closure.descriptor.boundReceiver
+                  ? closure.captures.single
+                  : null,
+              typeArguments: callTypeArguments,
+              lexicalTypeEnvironmentReceiver:
+                  closure.definingTypeEnvironmentReceiver,
+              lexicalTypeArguments: closure.definingTypeArguments,
+            );
             pc = function.entry;
           } else {
-            r = TypedClosure.invokeAt(program, runtime, r, s, c, index);
+            r = TypedClosure.invokeAt(
+              program, runtime, r, s, c, index, callTypeArguments,
+            );
             s = null; c = null;
           }
           continue dispatch;
         case TypedOp.enterTry:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           TypedExceptions.enter(program, frame, index);
+          continue dispatch;
+        case TypedOp.rBeginAsync:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          final runtimeTypeId = runtime == null
+              ? index
+              : runtime.resolveTypedEnvironmentType(
+                  index,
+                  actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+                  callableTypeArguments: frame.effectiveTypeArguments,
+                );
+          r = TypedAsync.begin(frame, runtimeTypeId, runtime);
           continue dispatch;
         case TypedOp.rAwait:
           final caller = frame.parent;
@@ -679,19 +744,39 @@ abstract final class TypedMachine {
           TypedExceptions.rethrowCaught(program, frame, index);
         case TypedOp.eIsTypeR:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          e = runtime!.isTypedValueType(r, index);
+          e = runtime!.isTypedValueTypeInCallableEnvironment(
+            r,
+            index,
+            frame.effectiveTypeArguments,
+            actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+          );
           continue dispatch;
         case TypedOp.rCreateRecord:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          r = TypedRecords.create(runtime!, r, index);
+          r = TypedRecords.create(
+            runtime!,
+            r,
+            index,
+            actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+            callableTypeArguments: frame.effectiveTypeArguments,
+          );
           continue dispatch;
         case TypedOp.rLoadType:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          r = $TypeImpl(index);
+          r = $TypeImpl(index, runtime);
           continue dispatch;
         case TypedOp.rAssertType:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          TypedRecords.assertType(runtime!, r, index);
+          if (runtime != null) {
+          if (!runtime.isTypedValueTypeInCallableEnvironment(
+            r,
+            index,
+            frame.effectiveTypeArguments,
+            actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+          )) {
+            throw TypeError();
+          }
+        }
           continue dispatch;
         case TypedOp.aLoadGlobal:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
@@ -764,10 +849,34 @@ abstract final class TypedMachine {
           (c as Set<Object?>).add(r);
           continue dispatch;
         case TypedOp.rBoxMap:
-          r = $Map.wrap(r as Map<Object?, Object?>);
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          final runtimeTypeId = runtime == null
+              ? index
+              : runtime.resolveTypedEnvironmentType(
+                  index,
+                  actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+                  callableTypeArguments: frame.effectiveTypeArguments,
+                );
+          r = $Map.wrap(
+            r as Map<Object?, Object?>,
+            runtimeTypeId: runtimeTypeId,
+            runtime: runtime,
+          );
           continue dispatch;
         case TypedOp.rBoxSet:
-          r = $Set.wrap(r as Set<Object?>);
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          final runtimeTypeId = runtime == null
+              ? index
+              : runtime.resolveTypedEnvironmentType(
+                  index,
+                  actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+                  callableTypeArguments: frame.effectiveTypeArguments,
+                );
+          r = $Set.wrap(
+            r as Set<Object?>,
+            runtimeTypeId: runtimeTypeId,
+            runtime: runtime,
+          );
           continue dispatch;
         case TypedOp.aListLengthR:
           a = (r as List).length;
@@ -784,9 +893,37 @@ abstract final class TypedMachine {
         case TypedOp.rBoxList:
           r = $List.wrap(r as List);
           continue dispatch;
-        case TypedOp.rCreateClassR:
+        case TypedOp.rBoxListTyped:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          r = TypedInstance(program, index, r as $Instance?, runtime);
+          final runtimeTypeId = runtime == null
+              ? index
+              : runtime.resolveTypedEnvironmentType(
+                  index,
+                  actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+                  callableTypeArguments: frame.effectiveTypeArguments,
+                );
+          r = $List.wrap(
+            r as List,
+            runtimeTypeId: runtimeTypeId,
+            runtime: runtime,
+          );
+          continue dispatch;
+        case TypedOp.rCreateClassRA:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          final runtimeTypeId = runtime == null
+              ? a
+              : runtime.resolveTypedEnvironmentType(
+                  a,
+                  actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+                  callableTypeArguments: frame.effectiveTypeArguments,
+                );
+          r = TypedInstance(
+            program,
+            index,
+            r as $Instance?,
+            runtime,
+            runtimeTypeId,
+          );
           continue dispatch;
         case TypedOp.rLoadPropertyR:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
@@ -818,14 +955,28 @@ abstract final class TypedMachine {
           continue dispatch;
         case TypedOp.callVirtual:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          final member = TypedDispatch.resolve(program, r, index, runtime);
+          final member = TypedDispatch.resolve(program, r, index, runtime, s, c);
           if (member != null) {
             final function = member.function;
             r = member.receiver;
-            frame = frame.enter(function, pc);
+            frame = frame.enter(
+              function,
+              pc,
+              typeEnvironmentReceiver: member.receiver,
+            );
             pc = function.entry;
           } else {
-            r = TypedDispatch.invoke(program, runtime, r, s, c, index);
+            final site = program.callSites[index];
+            final callTypeArguments = runtime == null
+                ? site.typeArguments
+                : runtime.resolveTypedCallTypeArguments(
+                    site.typeArguments,
+                    actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+                    callableTypeArguments: frame.effectiveTypeArguments,
+                  );
+            r = TypedDispatch.invoke(
+              program, runtime, r, s, c, index, callTypeArguments,
+            );
             s = null; c = null;
           }
           continue dispatch;

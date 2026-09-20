@@ -426,10 +426,17 @@ void main() {
         nullable: true,
         typeName: 'Counter',
         typeLibrary: 'package:test/main.dart',
+        runtimeTypeId: 17,
       ),
     ];
     final exports = [
-      TypedExport('package:test/main.dart', 'main', 0, parameters: parameters),
+      TypedExport(
+        'package:test/main.dart',
+        'main',
+        0,
+        generativeConstructorRuntimeTypeId: 18,
+        parameters: parameters,
+      ),
     ];
     final p = TypedProgram(
       Uint8List.fromList([TypedOp.returnNull]),
@@ -444,6 +451,7 @@ void main() {
             TypedArgumentKind.doublePrecision,
             TypedArgumentKind.boolean,
             TypedArgumentKind.object,
+            TypedArgumentKind.integer,
           ],
         ),
       ],
@@ -455,12 +463,27 @@ void main() {
     expect(declaration.library, 'package:test/main.dart');
     expect(declaration.name, 'main');
     expect(declaration.functionId, 0);
+    expect(declaration.generativeConstructorRuntimeTypeId, 18);
     expect(
       declaration.parameters.map(
-        (p) => (p.name, p.isRequired, p.nullable, p.typeName, p.typeLibrary),
+        (p) => (
+          p.name,
+          p.isRequired,
+          p.nullable,
+          p.typeName,
+          p.typeLibrary,
+          p.runtimeTypeId,
+        ),
       ),
       p.exports.single.parameters.map(
-        (p) => (p.name, p.isRequired, p.nullable, p.typeName, p.typeLibrary),
+        (p) => (
+          p.name,
+          p.isRequired,
+          p.nullable,
+          p.typeName,
+          p.typeLibrary,
+          p.runtimeTypeId,
+        ),
       ),
     );
     expect(declaration.parameters[1].defaultValue, 'hello \ud800');
@@ -533,6 +556,74 @@ void main() {
                 typeName: 'int',
                 typeLibrary: 'dart:core',
                 defaultValue: [],
+              ),
+            ],
+          ),
+        ]),
+        throwsFormatException,
+      );
+      expect(
+        () => program([
+          TypedExport(
+            'test',
+            'main',
+            0,
+            generativeConstructorRuntimeTypeId: -2,
+            parameters: [parameter],
+          ),
+        ]),
+        throwsFormatException,
+      );
+      expect(
+        () => TypedProgram(
+          Uint8List.fromList([TypedOp.returnNull]),
+          functions: const [
+            TypedFunction(
+              0,
+              argumentKinds: [
+                TypedArgumentKind.integer,
+                TypedArgumentKind.object,
+              ],
+            ),
+          ],
+          exports: [
+            TypedExport(
+              'test',
+              'Value.',
+              0,
+              generativeConstructorRuntimeTypeId: 0,
+              parameters: [parameter],
+            ),
+          ],
+        ),
+        throwsFormatException,
+      );
+      expect(
+        () => program([
+          TypedExport(
+            'test',
+            'main',
+            0,
+            generativeConstructorRuntimeTypeId: 0,
+            parameters: [parameter],
+          ),
+        ]),
+        throwsFormatException,
+      );
+      expect(
+        () => program([
+          TypedExport(
+            'test',
+            'main',
+            0,
+            parameters: [
+              const TypedExportParameter(
+                'value',
+                isRequired: true,
+                nullable: false,
+                typeName: 'int',
+                typeLibrary: 'dart:core',
+                runtimeTypeId: -2,
               ),
             ],
           ),
@@ -625,15 +716,19 @@ void main() {
       metadata + 12,
       metadata + 16,
       metadata + 20,
-      metadata + 26,
-      metadata + 62,
+      metadata + 30,
+      metadata + 70,
     ]) {
       final bad = Uint8List.fromList(bytes);
       ByteData.sublistView(bad).setUint32(offset, 0xffffffff, Endian.little);
-      expect(() => TypedProgram.read(bad.buffer), throwsFormatException);
+      expect(
+        () => TypedProgram.read(bad.buffer),
+        throwsFormatException,
+        reason: 'export corruption offset $offset',
+      );
     }
     final oldVersion = Uint8List.fromList(bytes);
-    ByteData.sublistView(oldVersion).setUint32(4, 115, Endian.little);
+    ByteData.sublistView(oldVersion).setUint32(4, 120, Endian.little);
     expect(() => TypedProgram.read(oldVersion.buffer), throwsFormatException);
     for (var length = metadata; length < bytes.length; length++) {
       expect(
@@ -779,7 +874,7 @@ void main() {
           functions: [TypedFunction(0, objectOutgoingCount: outgoing)],
         );
     for (final opcode in [
-      TypedOp.rCreateClassR,
+      TypedOp.rCreateClassRA,
       TypedOp.rLoadPropertyR,
       TypedOp.setPropertyRS,
       TypedOp.callVirtual,

@@ -2,7 +2,9 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
-import 'package:dart_eval/src/eval/compiler/errors.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/promotion.dart';
+import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 
@@ -18,6 +20,7 @@ BasicBlockBuilder compileCondition(
   final parent = ctx.builder;
   final initialState = ctx.saveState();
   final lowerLogical = !_containsTypeTest(expression);
+  recordConditionPromotions(ctx, expression, true);
 
   void emit(
     Expression expression,
@@ -52,13 +55,14 @@ BasicBlockBuilder compileCondition(
         return;
       }
     }
-    final value = compileExpression(expression, ctx).unboxIfNeeded(ctx, false);
-    if (!value.type.isAssignableTo(ctx, CoreTypes.bool.ref(ctx))) {
-      throw CompileError(
-        "Conditions must have a static type of 'bool'",
-        expression,
-      );
-    }
+    final value = convertForAssignment(
+      ctx,
+      compileExpression(expression, ctx),
+      CoreTypes.bool.ref(ctx),
+      representation: MachineRepresentation.boolean,
+      source: expression,
+      description: "Conditions must have a static type of 'bool'",
+    );
     // Every exit sees the same local representations, including a path that
     // skips RHS assignments or calls. The SSA pass still joins their values.
     ctx.resolveBranchStateDiscontinuity(initialState);

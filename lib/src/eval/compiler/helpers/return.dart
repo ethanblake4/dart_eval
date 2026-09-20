@@ -1,15 +1,15 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
-import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'async_return.dart';
 import 'package:dart_eval/src/eval/ir/exception.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart'
-    show representationForType;
+    show MachineRepresentation, representationForType;
 
 StatementInfo doReturn(
   CompilerContext ctx,
@@ -35,9 +35,18 @@ StatementInfo doReturn(
   } else {
     final expected = expectedReturnType.type ?? CoreTypes.dynamic.ref(ctx);
     var value0 = value;
-    if (!value0.type.isAssignableTo(ctx, expected)) {
-      throw CompileError('Cannot return ${value0.type} (expected: $expected)');
-    }
+    final unboxedResult =
+        expected.isUnboxedAcrossFunctionBoundaries &&
+        (ctx.currentClass == null || skipClassBoxing);
+    value0 = convertForAssignment(
+      ctx,
+      value0,
+      expected,
+      representation: unboxedResult
+          ? representationForType(expected.copyWith(boxed: false))
+          : MachineRepresentation.object,
+      description: 'Cannot return ${value0.type} (expected: $expected)',
+    );
     if (expected.isUnboxedAcrossFunctionBoundaries &&
         // Return types must be boxed when returning from instance methods, even if
         // the return type can be unboxed across function boundaries, because

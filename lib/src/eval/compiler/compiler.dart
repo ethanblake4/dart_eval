@@ -614,10 +614,6 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       }
     }
 
-    for (final type in _ctx.runtimeTypeList) {
-      _ctx.typeTypes.add(type.resolveTypeChain(_ctx).getRuntimeIndices(_ctx));
-    }
-
     return emit();
   }
 
@@ -638,6 +634,16 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
                 const <String>[])
           (library, name),
     ]);
+    // Backend metadata can introduce instantiated parameter and collection
+    // types. Build both tables in an index loop: resolving one descriptor can
+    // discover its type arguments or supertypes and append more descriptors.
+    _ctx.typeTypes.clear();
+    _ctx.runtimeTypeDescriptors.clear();
+    for (var i = 0; i < _ctx.runtimeTypeList.length; i++) {
+      final type = _ctx.runtimeTypeList[i];
+      _ctx.typeTypes.add(type.resolveTypeChain(_ctx).getRuntimeIndices(_ctx));
+      _ctx.runtimeTypeDescriptors.add(type.runtimeDescriptor(_ctx));
+    }
     int relocate(int id) =>
         backend.functionIndices[id] ??
         (throw StateError('No bytecode for function $id'));
@@ -657,6 +663,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
               entry.value.versionConstraint,
             ),
       },
+      typeDescriptors: _ctx.runtimeTypeDescriptors,
     );
   }
 

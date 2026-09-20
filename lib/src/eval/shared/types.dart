@@ -52,6 +52,9 @@ class CoreTypes {
   /// Bridge type spec for [Symbol]
   static const symbol = BridgeTypeSpec('dart:core', 'Symbol');
 
+  /// Bridge type spec for [Invocation]
+  static const invocation = BridgeTypeSpec('dart:core', 'Invocation');
+
   /// Bridge type spec for [$Duration]
   static const duration = BridgeTypeSpec('dart:core', 'Duration');
 
@@ -99,6 +102,15 @@ class CoreTypes {
 
   /// Bridge type spec for [Error]
   static const error = BridgeTypeSpec('dart:core', 'Error');
+
+  /// Bridge type spec for [TypeError]
+  static const typeError = BridgeTypeSpec('dart:core', 'TypeError');
+
+  /// Bridge type spec for [NoSuchMethodError]
+  static const noSuchMethodError = BridgeTypeSpec(
+    'dart:core',
+    'NoSuchMethodError',
+  );
 
   /// Bridge type spec for [RangeError]
   static const rangeError = BridgeTypeSpec('dart:core', 'RangeError');

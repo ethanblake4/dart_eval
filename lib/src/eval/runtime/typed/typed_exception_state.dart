@@ -119,6 +119,8 @@ final class TypedExceptionState {
   static $Value? _boxException(Object error, Runtime? runtime) {
     if (error is $Value) return error;
     return switch (error) {
+      TypeError() => $TypeError.wrap(error),
+      NoSuchMethodError() => $NoSuchMethodError.wrap(error),
       StateError() => $StateError.wrap(error),
       RangeError() => $RangeError.wrap(error),
       ArgumentError() => $ArgumentError.wrap(error),

@@ -275,9 +275,35 @@ List<Instruction> specification() {
   );
   add(
     'call',
-    '''frame = frame.enterStatic(program, index, pc);
+    '''final typeEnvironmentReceiver = frame.pendingTypeEnvironmentReceiver;
+          final typeArguments = frame.pendingTypeArguments;
+          frame.pendingTypeEnvironmentReceiver = null;
+          frame.pendingTypeArguments = const [];
+          frame = frame.enterStatic(
+            program,
+            index,
+            pc,
+            typeEnvironmentReceiver: typeEnvironmentReceiver,
+            typeArguments: typeArguments,
+          );
           pc = frame.function.entry;''',
     immediate: 'function',
+    mayThrow: true,
+  );
+  add(
+    'rSetCallTypeReceiver',
+    'frame.pendingTypeEnvironmentReceiver = r;',
+    inputs: [6],
+  );
+  add(
+    'setCallTypeArguments',
+    '''final constant = (runtime!.typedConstant(index) as List).cast<int>();
+          frame.pendingTypeArguments = runtime.resolveTypedCallTypeArguments(
+            constant,
+            actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+            callableTypeArguments: frame.effectiveTypeArguments,
+          );''',
+    immediate: 'runtimeConstant',
     mayThrow: true,
   );
   for (final register in [6, 7, 8]) {
@@ -406,7 +432,14 @@ List<Instruction> specification() {
   );
   add(
     'rCreateClosure',
-    'r = TypedClosure.create(program, index, frame.objectOutgoing, runtime);',
+    '''r = TypedClosure.create(
+          program,
+          index,
+          frame.objectOutgoing,
+          runtime,
+          frame.effectiveTypeEnvironmentReceiver,
+          frame.effectiveTypeArguments,
+        );''',
     output: 6,
     immediate: 'closureIndex',
     mayThrow: true,
@@ -420,13 +453,36 @@ List<Instruction> specification() {
   );
   add(
     'callClosure',
-    '''final closure = TypedClosure.resolve(program, r, index, runtime);
+    '''final site = program.closureCalls[index];
+          final callTypeArguments = runtime == null
+              ? site.typeArguments
+              : runtime.resolveTypedCallTypeArguments(
+                  site.typeArguments,
+                  actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+                  callableTypeArguments: frame.effectiveTypeArguments,
+                );
+          final closure = TypedClosure.resolve(
+            program, r, index, runtime, s, c, callTypeArguments,
+          );
           if (closure != null) {
             final function = closure.function;
-            frame = frame.enterClosure(function, pc, closure.captures);
+            frame = frame.enterClosure(
+              function,
+              pc,
+              closure.captures,
+              typeEnvironmentReceiver: closure.descriptor.boundReceiver
+                  ? closure.captures.single
+                  : null,
+              typeArguments: callTypeArguments,
+              lexicalTypeEnvironmentReceiver:
+                  closure.definingTypeEnvironmentReceiver,
+              lexicalTypeArguments: closure.definingTypeArguments,
+            );
             pc = function.entry;
           } else {
-            r = TypedClosure.invokeAt(program, runtime, r, s, c, index);
+            r = TypedClosure.invokeAt(
+              program, runtime, r, s, c, index, callTypeArguments,
+            );
             s = null; c = null;
           }''',
     immediate: 'closureCall',
@@ -440,7 +496,19 @@ List<Instruction> specification() {
     mayThrow: true,
   );
   add('leaveTry', 'TypedExceptions.leave(frame);');
-  add('rBeginAsync', 'r = TypedAsync.begin(frame);', output: 6);
+  add(
+    'rBeginAsync',
+    '''final runtimeTypeId = runtime == null
+              ? index
+              : runtime.resolveTypedEnvironmentType(
+                  index,
+                  actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+                  callableTypeArguments: frame.effectiveTypeArguments,
+                );
+          r = TypedAsync.begin(frame, runtimeTypeId, runtime);''',
+    output: 6,
+    immediate: 'typeId',
+  );
   add(
     'rAwait',
     '''final caller = frame.parent;
@@ -501,7 +569,12 @@ List<Instruction> specification() {
   );
   add(
     'eIsTypeR',
-    'e = runtime!.isTypedValueType(r, index);',
+    '''e = runtime!.isTypedValueTypeInCallableEnvironment(
+            r,
+            index,
+            frame.effectiveTypeArguments,
+            actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+          );''',
     inputs: [6],
     output: 4,
     immediate: 'typeId',
@@ -509,16 +582,36 @@ List<Instruction> specification() {
   );
   add(
     'rCreateRecord',
-    'r = TypedRecords.create(runtime!, r, index);',
+    '''r = TypedRecords.create(
+            runtime!,
+            r,
+            index,
+            actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+            callableTypeArguments: frame.effectiveTypeArguments,
+          );''',
     inputs: [6],
     output: 6,
     immediate: 'runtimeConstant',
     mayThrow: true,
   );
-  add('rLoadType', r'r = $TypeImpl(index);', output: 6, immediate: 'typeId');
+  add(
+    'rLoadType',
+    r'r = $TypeImpl(index, runtime);',
+    output: 6,
+    immediate: 'typeId',
+  );
   add(
     'rAssertType',
-    'TypedRecords.assertType(runtime!, r, index);',
+    '''if (runtime != null) {
+          if (!runtime.isTypedValueTypeInCallableEnvironment(
+            r,
+            index,
+            frame.effectiveTypeArguments,
+            actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+          )) {
+            throw TypeError();
+          }
+        }''',
     inputs: [6],
     immediate: 'typeId',
     mayThrow: true,
@@ -622,16 +715,40 @@ List<Instruction> specification() {
   );
   add(
     'rBoxMap',
-    r'r = $Map.wrap(r as Map<Object?, Object?>);',
+    r'''final runtimeTypeId = runtime == null
+              ? index
+              : runtime.resolveTypedEnvironmentType(
+                  index,
+                  actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+                  callableTypeArguments: frame.effectiveTypeArguments,
+                );
+          r = $Map.wrap(
+            r as Map<Object?, Object?>,
+            runtimeTypeId: runtimeTypeId,
+            runtime: runtime,
+          );''',
     inputs: [6],
     output: 6,
+    immediate: 'typeId',
     mayThrow: true,
   );
   add(
     'rBoxSet',
-    r'r = $Set.wrap(r as Set<Object?>);',
+    r'''final runtimeTypeId = runtime == null
+              ? index
+              : runtime.resolveTypedEnvironmentType(
+                  index,
+                  actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+                  callableTypeArguments: frame.effectiveTypeArguments,
+                );
+          r = $Set.wrap(
+            r as Set<Object?>,
+            runtimeTypeId: runtimeTypeId,
+            runtime: runtime,
+          );''',
     inputs: [6],
     output: 6,
+    immediate: 'typeId',
     mayThrow: true,
   );
   add(
@@ -668,9 +785,41 @@ List<Instruction> specification() {
     mayThrow: true,
   );
   add(
-    'rCreateClassR',
-    'r = TypedInstance(program, index, r as \$Instance?, runtime);',
+    'rBoxListTyped',
+    r'''final runtimeTypeId = runtime == null
+              ? index
+              : runtime.resolveTypedEnvironmentType(
+                  index,
+                  actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+                  callableTypeArguments: frame.effectiveTypeArguments,
+                );
+          r = $List.wrap(
+            r as List,
+            runtimeTypeId: runtimeTypeId,
+            runtime: runtime,
+          );''',
     inputs: [6],
+    output: 6,
+    immediate: 'typeId',
+    mayThrow: true,
+  );
+  add(
+    'rCreateClassRA',
+    '''final runtimeTypeId = runtime == null
+              ? a
+              : runtime.resolveTypedEnvironmentType(
+                  a,
+                  actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+                  callableTypeArguments: frame.effectiveTypeArguments,
+                );
+          r = TypedInstance(
+            program,
+            index,
+            r as \$Instance?,
+            runtime,
+            runtimeTypeId,
+          );''',
+    inputs: [6, 0],
     output: 6,
     immediate: 'classIndex',
     mayThrow: true,
@@ -726,14 +875,28 @@ List<Instruction> specification() {
           r = null; s = null; c = null;''', terminates: true);
   add(
     'callVirtual',
-    '''final member = TypedDispatch.resolve(program, r, index, runtime);
+    '''final member = TypedDispatch.resolve(program, r, index, runtime, s, c);
           if (member != null) {
             final function = member.function;
             r = member.receiver;
-            frame = frame.enter(function, pc);
+            frame = frame.enter(
+              function,
+              pc,
+              typeEnvironmentReceiver: member.receiver,
+            );
             pc = function.entry;
           } else {
-            r = TypedDispatch.invoke(program, runtime, r, s, c, index);
+            final site = program.callSites[index];
+            final callTypeArguments = runtime == null
+                ? site.typeArguments
+                : runtime.resolveTypedCallTypeArguments(
+                    site.typeArguments,
+                    actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+                    callableTypeArguments: frame.effectiveTypeArguments,
+                  );
+            r = TypedDispatch.invoke(
+              program, runtime, r, s, c, index, callTypeArguments,
+            );
             s = null; c = null;
           }''',
     immediate: 'callSite',
@@ -878,7 +1041,12 @@ abstract final class TypedMachine {
   static Object? runEntry(TypedProgram program, TypedEntry arguments, int functionId, {Runtime? runtime}) {
     runtime?.prepareTypedRuntime();
     final entry = program.functions[functionId];
-    final root = TypedFrame(entry)..environment = arguments.environment;
+    final root = TypedFrame(entry)
+      ..environment = arguments.environment
+      ..typeEnvironmentReceiver = arguments.typeEnvironmentReceiver
+      ..typeArguments = arguments.typeArguments
+      ..lexicalTypeEnvironmentReceiver = arguments.lexicalTypeEnvironmentReceiver
+      ..lexicalTypeArguments = arguments.lexicalTypeArguments;
     return _drive(program, arguments, root, entry.entry, runtime);
   }
 

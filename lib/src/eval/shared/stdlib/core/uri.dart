@@ -532,17 +532,35 @@ class $Uri implements $Instance {
       ),
       'pathSegments': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list)),
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.list, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+            ]),
+          ),
         ),
       ),
       'queryParameters': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.map)),
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.map, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+            ]),
+          ),
         ),
       ),
       'queryParametersAll': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.map)),
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.map, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.list, [
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+                ]),
+              ),
+            ]),
+          ),
         ),
       ),
       'isAbsolute': BridgeMethodDef(

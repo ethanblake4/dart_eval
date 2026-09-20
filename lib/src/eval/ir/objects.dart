@@ -17,6 +17,7 @@ final class CreateClass extends Operation {
   final int library;
   final String name;
   final SSA $super;
+  final SSA runtimeTypeDescriptor;
   final int valuesLength;
 
   CreateClass(
@@ -24,18 +25,19 @@ final class CreateClass extends Operation {
     this.library,
     this.name,
     this.$super,
+    this.runtimeTypeDescriptor,
     this.valuesLength,
   );
 
   @override
-  Set<SSA> get readsFrom => {$super};
+  Set<SSA> get readsFrom => {$super, runtimeTypeDescriptor};
 
   @override
   SSA? get writesTo => target;
 
   @override
   String toString() =>
-      '$target = createclass $library:$name $valuesLength super=${$super}';
+      '$target = createclass $library:$name $valuesLength super=${$super} type=$runtimeTypeDescriptor';
 
   @override
   bool operator ==(Object other) =>
@@ -44,6 +46,7 @@ final class CreateClass extends Operation {
       library == other.library &&
       name == other.name &&
       $super == other.$super &&
+      runtimeTypeDescriptor == other.runtimeTypeDescriptor &&
       valuesLength == other.valuesLength;
 
   @override
@@ -52,15 +55,22 @@ final class CreateClass extends Operation {
       library.hashCode ^
       name.hashCode ^
       $super.hashCode ^
+      runtimeTypeDescriptor.hashCode ^
       valuesLength.hashCode;
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
+    final inputs = renameOperands(
+      [$super, runtimeTypeDescriptor],
+      this.readsFrom,
+      readsFrom,
+    );
     return CreateClass(
       writesTo ?? target,
       library,
       name,
-      readsFrom?.first ?? $super,
+      inputs[0],
+      inputs[1],
       valuesLength,
     );
   }
@@ -158,8 +168,14 @@ final class LoadPropertyDynamic extends Operation {
   final SSA target;
   final SSA object;
   final String name;
+  final int callerLibrary;
 
-  LoadPropertyDynamic(this.target, this.object, this.name);
+  LoadPropertyDynamic(
+    this.target,
+    this.object,
+    this.name, {
+    this.callerLibrary = -1,
+  });
 
   @override
   Set<SSA> get readsFrom => {object};
@@ -175,7 +191,8 @@ final class LoadPropertyDynamic extends Operation {
       other is LoadPropertyDynamic &&
       target == other.target &&
       object == other.object &&
-      name == other.name;
+      name == other.name &&
+      callerLibrary == other.callerLibrary;
 
   @override
   int get hashCode => target.hashCode ^ object.hashCode ^ name.hashCode;
@@ -186,6 +203,7 @@ final class LoadPropertyDynamic extends Operation {
       writesTo ?? target,
       readsFrom?.first ?? object,
       name,
+      callerLibrary: callerLibrary,
     );
   }
 }
@@ -194,8 +212,14 @@ final class SetPropertyDynamic extends Operation {
   final SSA object;
   final String name;
   final SSA variable;
+  final int callerLibrary;
 
-  SetPropertyDynamic(this.object, this.name, this.variable);
+  SetPropertyDynamic(
+    this.object,
+    this.name,
+    this.variable, {
+    this.callerLibrary = -1,
+  });
 
   @override
   Set<SSA> get readsFrom => {object, variable};
@@ -211,7 +235,8 @@ final class SetPropertyDynamic extends Operation {
       other is SetPropertyDynamic &&
       variable == other.variable &&
       object == other.object &&
-      name == other.name;
+      name == other.name &&
+      callerLibrary == other.callerLibrary;
 
   @override
   int get hashCode => variable.hashCode ^ object.hashCode ^ name.hashCode;
@@ -222,6 +247,7 @@ final class SetPropertyDynamic extends Operation {
       readsFrom?.first ?? object,
       name,
       readsFrom?.last ?? variable,
+      callerLibrary: callerLibrary,
     );
   }
 }
@@ -311,8 +337,21 @@ final class InvokeDynamic extends Operation {
   final SSA object;
   final String name;
   final List<SSA> args;
+  final int positionalCount;
+  final List<String> namedNames;
+  final int callerLibrary;
+  final List<int> typeArguments;
 
-  InvokeDynamic(this.target, this.object, this.name, this.args);
+  InvokeDynamic(
+    this.target,
+    this.object,
+    this.name,
+    this.args, {
+    int? positionalCount,
+    this.namedNames = const [],
+    this.callerLibrary = -1,
+    this.typeArguments = const [],
+  }) : positionalCount = positionalCount ?? args.length;
 
   @override
   Set<SSA> get readsFrom => {...args, object};
@@ -329,7 +368,11 @@ final class InvokeDynamic extends Operation {
       target == other.target &&
       object == other.object &&
       name == other.name &&
-      args == other.args;
+      args == other.args &&
+      positionalCount == other.positionalCount &&
+      namedNames == other.namedNames &&
+      callerLibrary == other.callerLibrary &&
+      typeArguments == other.typeArguments;
 
   @override
   int get hashCode =>
@@ -347,6 +390,10 @@ final class InvokeDynamic extends Operation {
       inputs[0],
       name,
       inputs.sublist(1),
+      positionalCount: positionalCount,
+      namedNames: namedNames,
+      callerLibrary: callerLibrary,
+      typeArguments: typeArguments,
     );
   }
 }

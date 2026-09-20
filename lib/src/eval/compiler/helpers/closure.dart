@@ -16,6 +16,7 @@ InvokeResult invokeClosure(
   ArgumentList? argumentList, {
   List<Variable>? positional,
   Map<String, Variable>? named,
+  List<TypeAnnotation>? typeArguments,
 }) {
   final dispatch = closureRef?.getStaticDispatch(ctx);
   final callable = dispatch == null
@@ -52,15 +53,37 @@ InvokeResult invokeClosure(
   final target = ctx.svar('closure_result');
   final positionalSsa = positionalArgs.map((arg) => arg.ssa).toList();
   final namedSsa = namedArgs.map((key, arg) => MapEntry(key, arg.ssa));
+  final runtimeTypeArguments =
+      typeArguments
+          ?.map((type) => TypeRef.fromAnnotation(ctx, ctx.library, type))
+          .map((type) => type.runtimeTypeId(ctx))
+          .toList() ??
+      const <int>[];
   if (dispatch != null) {
     ctx.pushOp(
-      Call(dispatch.offset, [
-        ...positionalSsa,
-        ...namedSsa.values,
-      ], result: target),
+      Call(
+        dispatch.offset,
+        [...positionalSsa, ...namedSsa.values],
+        result: target,
+        typeArguments: runtimeTypeArguments,
+      ),
     );
   } else {
-    ctx.pushOp(InvokeClosure(target, closure!.ssa, positionalSsa, namedSsa));
+    ctx.pushOp(
+      InvokeClosure(
+        target,
+        closure!.ssa,
+        positionalSsa,
+        namedSsa,
+        typeArguments: runtimeTypeArguments,
+        trusted: _closureArgumentsProven(
+          ctx,
+          callable!.type,
+          positionalArgs,
+          namedArgs,
+        ),
+      ),
+    );
   }
   return InvokeResult(
     null,
@@ -68,4 +91,46 @@ InvokeResult invokeClosure(
     positionalArgs,
     namedArgs: namedArgs,
   );
+}
+
+/// Whether the runtime can skip per-argument checks for a closure invocation:
+/// true when the closure's static signature is known and every supplied
+/// argument is provably assignable without a runtime check. Runtime closures
+/// assignable to the static type have parameter types that are supertypes of
+/// the static signature's parameters, so a statically-safe argument always
+/// satisfies them.
+bool _closureArgumentsProven(
+  CompilerContext ctx,
+  TypeRef closureType,
+  List<Variable> positionalArgs,
+  Map<String, Variable> namedArgs,
+) {
+  final signature = closureType.resolveTypeChain(ctx).functionType;
+  if (signature == null) return false;
+  final positional = [
+    ...signature.normalParameters,
+    ...signature.optionalParameters,
+  ];
+  for (var i = 0; i < positionalArgs.length; i++) {
+    if (i >= positional.length) return false;
+    final paramType = positional[i].type.type;
+    if (paramType == null ||
+        positionalArgs[i].type
+                .resolveTypeChain(ctx)
+                .assignmentConversionTo(ctx, paramType) !=
+            AssignmentConversion.none) {
+      return false;
+    }
+  }
+  for (final entry in namedArgs.entries) {
+    final paramType = signature.namedParameters[entry.key]?.type.type;
+    if (paramType == null ||
+        entry.value.type
+                .resolveTypeChain(ctx)
+                .assignmentConversionTo(ctx, paramType) !=
+            AssignmentConversion.none) {
+      return false;
+    }
+  }
+  return true;
 }

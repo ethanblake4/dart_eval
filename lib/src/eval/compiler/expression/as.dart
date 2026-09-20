@@ -16,7 +16,7 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
   final slot = TypeRef.fromAnnotation(ctx, ctx.library, e.type);
 
   /// If the type is the slot, we can just return
-  if (V.type == slot && (!V.type.nullable || slot.nullable)) {
+  if (V.type.isSameSemanticType(ctx, slot)) {
     return V;
   }
 

@@ -88,25 +88,25 @@ abstract final class TypedOp {
   static const fFromB = 55;
   static const gFromB = 56;
   static const cLoadOutgoing = 57;
-  static const rNull = 58;
-  static const eIsNullR = 59;
-  static const sNull = 60;
-  static const eIsNullS = 61;
-  static const cNull = 62;
-  static const eIsNullC = 63;
-  static const rFromA = 64;
-  static const rBoxA = 65;
-  static const rFromB = 66;
-  static const rBoxB = 67;
-  static const rFromF = 68;
-  static const rBoxF = 69;
-  static const rFromG = 70;
-  static const rBoxG = 71;
-  static const rFromE = 72;
-  static const rBoxE = 73;
-  static const rBridgeArgument = 74;
-  static const leaveTry = 75;
-  static const rBeginAsync = 76;
+  static const rSetCallTypeReceiver = 58;
+  static const rNull = 59;
+  static const eIsNullR = 60;
+  static const sNull = 61;
+  static const eIsNullS = 62;
+  static const cNull = 63;
+  static const eIsNullC = 64;
+  static const rFromA = 65;
+  static const rBoxA = 66;
+  static const rFromB = 67;
+  static const rBoxB = 68;
+  static const rFromF = 69;
+  static const rBoxF = 70;
+  static const rFromG = 71;
+  static const rBoxG = 72;
+  static const rFromE = 73;
+  static const rBoxE = 74;
+  static const rBridgeArgument = 75;
+  static const leaveTry = 76;
   static const rCaughtException = 77;
   static const rCaughtStackTrace = 78;
   static const rUninitializedField = 79;
@@ -165,102 +165,105 @@ abstract final class TypedOp {
   static const cOutgoing = 132;
   static const rOverflow = 133;
   static const call = 134;
-  static const eEqRS = 135;
-  static const aFromR = 136;
-  static const aNativeFromR = 137;
-  static const fFromR = 138;
-  static const fNativeFromR = 139;
-  static const eFromR = 140;
-  static const eNativeFromR = 141;
-  static const rBoxString = 142;
-  static const rUnboxString = 143;
-  static const callExternal = 144;
-  static const rNewBridgeSuperShim = 145;
-  static const parentBridgeSuperShim = 146;
-  static const rAttachBridge = 147;
-  static const rRuntimeType = 148;
-  static const rNewCaptureCell = 149;
-  static const rReadCaptureCell = 150;
-  static const writeCaptureCellRS = 151;
-  static const rCreateClosure = 152;
-  static const rLoadCapture = 153;
-  static const callClosure = 154;
-  static const enterTry = 155;
-  static const rAwait = 156;
-  static const rReturnAsync = 157;
-  static const returnAsyncNull = 158;
-  static const completeJump = 159;
-  static const resumeCompletion = 160;
-  static const eAssertR = 161;
-  static const rThrow = 162;
-  static const rethrowCaught = 163;
-  static const eIsTypeR = 164;
-  static const rCreateRecord = 165;
-  static const rLoadType = 166;
-  static const rAssertType = 167;
-  static const aLoadGlobal = 168;
-  static const aSetGlobal = 169;
-  static const fLoadGlobal = 170;
-  static const fSetGlobal = 171;
-  static const eLoadGlobal = 172;
-  static const eSetGlobal = 173;
-  static const rLoadGlobal = 174;
-  static const rSetGlobal = 175;
-  static const callHost = 176;
-  static const callMethod = 177;
-  static const aStringLengthR = 178;
-  static const rStringConcatS = 179;
-  static const aStringCodeUnitR = 180;
-  static const rStringIndexA = 181;
-  static const cNewList = 182;
-  static const cNewMap = 183;
-  static const cNewSet = 184;
-  static const rMapIndexCS = 185;
-  static const mapSetCSR = 186;
-  static const setAddCR = 187;
-  static const rBoxMap = 188;
-  static const rBoxSet = 189;
-  static const aListLengthR = 190;
-  static const rListIndexCA = 191;
-  static const listSetCAR = 192;
-  static const listAppendCR = 193;
-  static const rBoxList = 194;
-  static const rCreateClassR = 195;
-  static const rLoadPropertyR = 196;
-  static const setPropertyRS = 197;
-  static const rLoadSuperR = 198;
-  static const rLoadLatePropertyR = 199;
-  static const setLateFinalPropertyRS = 200;
-  static const rLoadThisR = 201;
-  static const returnNull = 202;
-  static const callVirtual = 203;
-  static const jumpNotEqAB = 204;
-  static const jumpNotEqFG = 205;
-  static const jumpNotNeAB = 206;
-  static const jumpNotNeFG = 207;
-  static const jumpNotLtAB = 208;
-  static const jumpNotLtFG = 209;
-  static const jumpNotLteAB = 210;
-  static const jumpNotLteFG = 211;
-  static const jumpNotGtAB = 212;
-  static const jumpNotGtFG = 213;
-  static const jumpNotGteAB = 214;
-  static const jumpNotGteFG = 215;
-  static const jumpETrueShort = 216;
-  static const jumpEFalseShort = 217;
-  static const jumpShort = 218;
-  static const jumpNotEqABShort = 219;
-  static const jumpNotEqFGShort = 220;
-  static const jumpNotNeABShort = 221;
-  static const jumpNotNeFGShort = 222;
-  static const jumpNotLtABShort = 223;
-  static const jumpNotLtFGShort = 224;
-  static const jumpNotLteABShort = 225;
-  static const jumpNotLteFGShort = 226;
-  static const jumpNotGtABShort = 227;
-  static const jumpNotGtFGShort = 228;
-  static const jumpNotGteABShort = 229;
-  static const jumpNotGteFGShort = 230;
+  static const setCallTypeArguments = 135;
+  static const eEqRS = 136;
+  static const aFromR = 137;
+  static const aNativeFromR = 138;
+  static const fFromR = 139;
+  static const fNativeFromR = 140;
+  static const eFromR = 141;
+  static const eNativeFromR = 142;
+  static const rBoxString = 143;
+  static const rUnboxString = 144;
+  static const callExternal = 145;
+  static const rNewBridgeSuperShim = 146;
+  static const parentBridgeSuperShim = 147;
+  static const rAttachBridge = 148;
+  static const rRuntimeType = 149;
+  static const rNewCaptureCell = 150;
+  static const rReadCaptureCell = 151;
+  static const writeCaptureCellRS = 152;
+  static const rCreateClosure = 153;
+  static const rLoadCapture = 154;
+  static const callClosure = 155;
+  static const enterTry = 156;
+  static const rBeginAsync = 157;
+  static const rAwait = 158;
+  static const rReturnAsync = 159;
+  static const returnAsyncNull = 160;
+  static const completeJump = 161;
+  static const resumeCompletion = 162;
+  static const eAssertR = 163;
+  static const rThrow = 164;
+  static const rethrowCaught = 165;
+  static const eIsTypeR = 166;
+  static const rCreateRecord = 167;
+  static const rLoadType = 168;
+  static const rAssertType = 169;
+  static const aLoadGlobal = 170;
+  static const aSetGlobal = 171;
+  static const fLoadGlobal = 172;
+  static const fSetGlobal = 173;
+  static const eLoadGlobal = 174;
+  static const eSetGlobal = 175;
+  static const rLoadGlobal = 176;
+  static const rSetGlobal = 177;
+  static const callHost = 178;
+  static const callMethod = 179;
+  static const aStringLengthR = 180;
+  static const rStringConcatS = 181;
+  static const aStringCodeUnitR = 182;
+  static const rStringIndexA = 183;
+  static const cNewList = 184;
+  static const cNewMap = 185;
+  static const cNewSet = 186;
+  static const rMapIndexCS = 187;
+  static const mapSetCSR = 188;
+  static const setAddCR = 189;
+  static const rBoxMap = 190;
+  static const rBoxSet = 191;
+  static const aListLengthR = 192;
+  static const rListIndexCA = 193;
+  static const listSetCAR = 194;
+  static const listAppendCR = 195;
+  static const rBoxList = 196;
+  static const rBoxListTyped = 197;
+  static const rCreateClassRA = 198;
+  static const rLoadPropertyR = 199;
+  static const setPropertyRS = 200;
+  static const rLoadSuperR = 201;
+  static const rLoadLatePropertyR = 202;
+  static const setLateFinalPropertyRS = 203;
+  static const rLoadThisR = 204;
+  static const returnNull = 205;
+  static const callVirtual = 206;
+  static const jumpNotEqAB = 207;
+  static const jumpNotEqFG = 208;
+  static const jumpNotNeAB = 209;
+  static const jumpNotNeFG = 210;
+  static const jumpNotLtAB = 211;
+  static const jumpNotLtFG = 212;
+  static const jumpNotLteAB = 213;
+  static const jumpNotLteFG = 214;
+  static const jumpNotGtAB = 215;
+  static const jumpNotGtFG = 216;
+  static const jumpNotGteAB = 217;
+  static const jumpNotGteFG = 218;
+  static const jumpETrueShort = 219;
+  static const jumpEFalseShort = 220;
+  static const jumpShort = 221;
+  static const jumpNotEqABShort = 222;
+  static const jumpNotEqFGShort = 223;
+  static const jumpNotNeABShort = 224;
+  static const jumpNotNeFGShort = 225;
+  static const jumpNotLtABShort = 226;
+  static const jumpNotLtFGShort = 227;
+  static const jumpNotLteABShort = 228;
+  static const jumpNotLteFGShort = 229;
+  static const jumpNotGtABShort = 230;
+  static const jumpNotGtFGShort = 231;
+  static const jumpNotGteABShort = 232;
+  static const jumpNotGteFGShort = 233;
   static const instructions = <TypedInstruction>[
     TypedInstruction('eTrue', [], [4], TypedImmediate.none, false, false, false),
     TypedInstruction('eFalse', [], [4], TypedImmediate.none, false, false, false),
@@ -320,6 +323,7 @@ abstract final class TypedOp {
     TypedInstruction('fFromB', [1], [2], TypedImmediate.none, false, false, false),
     TypedInstruction('gFromB', [1], [3], TypedImmediate.none, false, false, false),
     TypedInstruction('cLoadOutgoing', [], [8], TypedImmediate.none, false, false, false),
+    TypedInstruction('rSetCallTypeReceiver', [6], [], TypedImmediate.none, false, false, false),
     TypedInstruction('rNull', [], [6], TypedImmediate.none, false, false, false),
     TypedInstruction('eIsNullR', [6], [4], TypedImmediate.none, false, false, false),
     TypedInstruction('sNull', [], [7], TypedImmediate.none, false, false, false),
@@ -338,7 +342,6 @@ abstract final class TypedOp {
     TypedInstruction('rBoxE', [4], [6], TypedImmediate.none, false, false, false),
     TypedInstruction('rBridgeArgument', [6], [6], TypedImmediate.none, false, false, false),
     TypedInstruction('leaveTry', [], [], TypedImmediate.none, false, false, false),
-    TypedInstruction('rBeginAsync', [], [6], TypedImmediate.none, false, false, false),
     TypedInstruction('rCaughtException', [], [6], TypedImmediate.none, false, false, false),
     TypedInstruction('rCaughtStackTrace', [], [6], TypedImmediate.none, false, false, false),
     TypedInstruction('rUninitializedField', [], [6], TypedImmediate.none, false, false, false),
@@ -397,6 +400,7 @@ abstract final class TypedOp {
     TypedInstruction('cOutgoing', [8], [], TypedImmediate.objectOutgoing, false, false, false),
     TypedInstruction('rOverflow', [8], [6], TypedImmediate.overflow, true, false, false),
     TypedInstruction('call', [], [], TypedImmediate.function, true, false, false),
+    TypedInstruction('setCallTypeArguments', [], [], TypedImmediate.runtimeConstant, true, false, false),
     TypedInstruction('eEqRS', [6, 7], [4], TypedImmediate.none, true, false, false),
     TypedInstruction('aFromR', [6], [0], TypedImmediate.none, true, false, false),
     TypedInstruction('aNativeFromR', [6], [0], TypedImmediate.none, true, false, false),
@@ -418,6 +422,7 @@ abstract final class TypedOp {
     TypedInstruction('rLoadCapture', [], [6], TypedImmediate.captureIndex, true, false, false),
     TypedInstruction('callClosure', [], [], TypedImmediate.closureCall, true, false, false),
     TypedInstruction('enterTry', [], [], TypedImmediate.exceptionRegion, true, false, false),
+    TypedInstruction('rBeginAsync', [], [6], TypedImmediate.typeId, false, false, false),
     TypedInstruction('rAwait', [6], [6], TypedImmediate.none, true, false, false),
     TypedInstruction('rReturnAsync', [6], [], TypedImmediate.none, false, true, false),
     TypedInstruction('returnAsyncNull', [], [], TypedImmediate.none, false, true, false),
@@ -450,14 +455,15 @@ abstract final class TypedOp {
     TypedInstruction('rMapIndexCS', [8, 7], [6], TypedImmediate.none, true, false, false),
     TypedInstruction('mapSetCSR', [8, 7, 6], [], TypedImmediate.none, true, false, false),
     TypedInstruction('setAddCR', [8, 6], [], TypedImmediate.none, true, false, false),
-    TypedInstruction('rBoxMap', [6], [6], TypedImmediate.none, true, false, false),
-    TypedInstruction('rBoxSet', [6], [6], TypedImmediate.none, true, false, false),
+    TypedInstruction('rBoxMap', [6], [6], TypedImmediate.typeId, true, false, false),
+    TypedInstruction('rBoxSet', [6], [6], TypedImmediate.typeId, true, false, false),
     TypedInstruction('aListLengthR', [6], [0], TypedImmediate.none, true, false, false),
     TypedInstruction('rListIndexCA', [8, 0], [6], TypedImmediate.none, true, false, false),
     TypedInstruction('listSetCAR', [8, 0, 6], [], TypedImmediate.none, true, false, false),
     TypedInstruction('listAppendCR', [8, 6], [], TypedImmediate.none, true, false, false),
     TypedInstruction('rBoxList', [6], [6], TypedImmediate.none, true, false, false),
-    TypedInstruction('rCreateClassR', [6], [6], TypedImmediate.classIndex, true, false, false),
+    TypedInstruction('rBoxListTyped', [6], [6], TypedImmediate.typeId, true, false, false),
+    TypedInstruction('rCreateClassRA', [6, 0], [6], TypedImmediate.classIndex, true, false, false),
     TypedInstruction('rLoadPropertyR', [6], [6], TypedImmediate.field, true, false, false),
     TypedInstruction('setPropertyRS', [6, 7], [], TypedImmediate.field, true, false, false),
     TypedInstruction('rLoadSuperR', [6], [6], TypedImmediate.none, true, false, false),

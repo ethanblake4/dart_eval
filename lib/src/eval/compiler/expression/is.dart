@@ -15,7 +15,9 @@ Variable compileIsExpression(IsExpression e, CompilerContext ctx) {
   V.inferType(ctx, slot);
 
   /// If the type is definitely a subtype of the slot, we can just return true.
-  if (V.type.isAssignableTo(ctx, slot, forceAllowDynamic: false)) {
+  if (slot.functionType == null &&
+      slot.recordFields.isEmpty &&
+      V.type.isAssignableTo(ctx, slot, forceAllowDynamic: false)) {
     return BuiltinValue(boolval: !not).push(ctx);
   }
 

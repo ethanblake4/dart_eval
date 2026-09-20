@@ -240,7 +240,18 @@ class $Iterable<E> implements Iterable<E>, $Instance {
             BridgeParameter(
               'toElement',
               BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.function, []),
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(BridgeTypeRef.ref('T', [])),
+                    params: [
+                      BridgeParameter(
+                        'element',
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('E', [])),
+                        false,
+                      ),
+                    ],
+                  ),
+                ),
                 nullable: false,
               ),
               false,

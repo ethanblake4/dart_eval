@@ -58,6 +58,10 @@ class TypedProgram {
            (site) => TypedCallSite(
              site.name,
              argumentCount: site.argumentCount,
+             positionalCount: site.positionalCount,
+             namedNames: List.unmodifiable(site.namedNames),
+             callerLibrary: site.callerLibrary,
+             typeArguments: List.unmodifiable(site.typeArguments),
              kind: site.kind,
            ),
          ),
@@ -114,6 +118,47 @@ class TypedProgram {
   ByteData write() => TypedCodec.write(this);
   factory TypedProgram.read(ByteBuffer buffer) => TypedCodec.read(buffer);
 
+  Iterable<int> get runtimeTypeReferences sync* {
+    for (final declaration in exports) {
+      if (declaration.generativeConstructorRuntimeTypeId >= 0) {
+        yield declaration.generativeConstructorRuntimeTypeId;
+      }
+      for (final parameter in declaration.parameters) {
+        if (parameter.runtimeTypeId >= 0) yield parameter.runtimeTypeId;
+      }
+    }
+    for (final closure in closures) {
+      yield* closure.parameterTypeIds.where((id) => id >= 0);
+      yield* closure.typeParameterBounds;
+      if (closure.runtimeTypeId >= 0) yield closure.runtimeTypeId;
+    }
+    for (final call in closureCalls) {
+      yield* call.typeArguments;
+    }
+    for (final site in callSites) {
+      yield* site.typeArguments;
+    }
+    for (var pc = 0; pc < code.length;) {
+      final instruction = TypedOp.instructions[code[pc]];
+      if (instruction.immediate == TypedImmediate.typeId) {
+        yield code[pc + 1] | (code[pc + 2] << 8);
+      }
+      pc += instruction.length;
+    }
+  }
+
+  /// Constant-pool entries containing descriptor IDs staged for direct calls.
+  Iterable<int> get callTypeArgumentConstants sync* {
+    for (var pc = 0; pc < code.length;) {
+      final opcode = code[pc];
+      final instruction = TypedOp.instructions[opcode];
+      if (opcode == TypedOp.setCallTypeArguments) {
+        yield code[pc + 1] | (code[pc + 2] << 8);
+      }
+      pc += instruction.length;
+    }
+  }
+
   void _validateExports() {
     final names = <(String, String)>{};
     for (final declaration in exports) {
@@ -122,14 +167,26 @@ class TypedProgram {
           declaration.functionId >= functions.length) {
         throw const FormatException('Invalid or duplicate typed export');
       }
-      if (declaration.parameters.length !=
-          functions[declaration.functionId].argumentKinds.length) {
+      final function = functions[declaration.functionId];
+      final constructorRuntimeTypeId =
+          declaration.generativeConstructorRuntimeTypeId;
+      if (constructorRuntimeTypeId < -1) {
+        throw const FormatException('Invalid constructor runtime type ID');
+      }
+      final hiddenArgumentCount = constructorRuntimeTypeId >= 0 ? 1 : 0;
+      if (declaration.parameters.length + hiddenArgumentCount !=
+              function.argumentKinds.length ||
+          (hiddenArgumentCount == 1 &&
+              function.argumentKinds.last != TypedArgumentKind.integer)) {
         throw const FormatException('Invalid typed export parameter count');
       }
       final parameterNames = <String>{};
       for (var i = 0; i < declaration.parameters.length; i++) {
         final parameter = declaration.parameters[i];
-        final kind = functions[declaration.functionId].argumentKinds[i];
+        if (parameter.runtimeTypeId < -1) {
+          throw const FormatException('Invalid export runtime type ID');
+        }
+        final kind = function.argumentKinds[i];
         if (kind != TypedArgumentKind.object &&
             (parameter.nullable ||
                 parameter.typeLibrary != 'dart:core' ||
@@ -198,6 +255,11 @@ class TypedProgram {
     for (final site in callSites) {
       if (site.argumentCount < 0 ||
           site.argumentCount > 65537 ||
+          site.positionalCount < 0 ||
+          site.positionalCount + site.namedNames.length != site.argumentCount ||
+          site.namedNames.any((name) => name.isEmpty) ||
+          site.namedNames.toSet().length != site.namedNames.length ||
+          site.typeArguments.any((type) => type < 0 || type > 65535) ||
           (site.kind == TypedMemberKind.getter && site.argumentCount != 0) ||
           (site.kind == TypedMemberKind.setter && site.argumentCount != 1)) {
         throw const FormatException('Invalid typed call site signature');
@@ -247,6 +309,18 @@ class TypedProgram {
           !descriptor.requiredNamed.every(descriptor.namedNames.contains) ||
           descriptor.positionalDefaults.length != descriptor.positionalCount ||
           descriptor.namedDefaults.length != descriptor.namedNames.length ||
+          (descriptor.parameterTypeIds.isNotEmpty &&
+              descriptor.parameterTypeIds.length != descriptor.argumentCount) ||
+          descriptor.parameterNullable.length !=
+              descriptor.parameterTypeIds.length ||
+          descriptor.parameterTypeParameterIndices.length !=
+              descriptor.parameterTypeIds.length ||
+          descriptor.parameterTypeIds.any((type) => type < -1) ||
+          descriptor.parameterTypeParameterIndices.any((index) => index < -1) ||
+          descriptor.typeParameterBounds.any(
+            (type) => type < 0 || type > 65535,
+          ) ||
+          descriptor.runtimeTypeId < -1 ||
           !descriptor.positionalDefaults.every(scalar) ||
           !descriptor.namedDefaults.every(scalar) ||
           (descriptor.hasEnvironment && descriptor.boundReceiver) ||
@@ -295,7 +369,8 @@ class TypedProgram {
     for (final call in closureCalls) {
       if (call.positionalCount < 0 ||
           call.argumentCount > 65537 ||
-          !namesValid(call.namedNames)) {
+          !namesValid(call.namedNames) ||
+          call.typeArguments.any((type) => type < 0 || type > 65535)) {
         throw const FormatException('Invalid typed closure call signature');
       }
     }

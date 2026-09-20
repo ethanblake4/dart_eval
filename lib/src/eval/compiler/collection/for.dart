@@ -38,7 +38,7 @@ List<TypeRef> compileForElementForList(
         ? CoreTypes.dynamic.ref(ctx)
         : itype.specifiedTypeArgs[0];
 
-    final iterator = iterable.getProperty(ctx, 'iterator');
+    var iterator = iterable.getProperty(ctx, 'iterator');
     late Reference loopVariable;
 
     macroLoop(
@@ -46,15 +46,15 @@ List<TypeRef> compileForElementForList(
       null,
       initialization: (ctx) {
         if (parts is ForEachPartsWithDeclaration) {
-          if (parts.loopVariable.type != null &&
-              !elementType.isAssignableTo(
-                ctx,
-                TypeRef.fromAnnotation(
+          final declaredType = parts.loopVariable.type == null
+              ? CoreTypes.dynamic.ref(ctx)
+              : TypeRef.fromAnnotation(
                   ctx,
                   ctx.library,
                   parts.loopVariable.type!,
-                ),
-              )) {
+                );
+          if (parts.loopVariable.type != null &&
+              !elementType.isAssignableTo(ctx, declaredType)) {
             throw CompileError(
               'Cannot assign $elementType to ${parts.loopVariable.type}',
               parts,
@@ -62,10 +62,23 @@ List<TypeRef> compileForElementForList(
               ctx,
             );
           }
+          iterator = iterator.copyWith(
+            type: CoreTypes.iterator
+                .ref(ctx)
+                .copyWith(
+                  specifiedTypeArgs: [elementType.copyWith(boxed: true)],
+                ),
+          );
           final name = parts.loopVariable.name.lexeme;
+          final bindingType = parts.loopVariable.type == null
+              ? elementType
+              : declaredType;
           ctx.setLocal(
             name,
-            BuiltinValue().push(ctx).copyWith(type: elementType),
+            BuiltinValue()
+                .push(ctx)
+                .copyWith(type: elementType, declaredType: bindingType)
+                .captureBinding(ctx, parts.loopVariable),
           );
           loopVariable = IdentifierReference(null, name);
         } else if (parts is ForEachPartsWithIdentifier) {

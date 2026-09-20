@@ -104,7 +104,13 @@ Variable compileMethodInvocation(
       method.callingConvention == CallingConvention.dynamic ||
       (method.type == CoreTypes.function.ref(ctx) &&
           method.methodOffset == null)) {
-    return invokeClosure(ctx, null, method, e.argumentList).result;
+    return invokeClosure(
+      ctx,
+      null,
+      method,
+      e.argumentList,
+      typeArguments: e.typeArguments?.arguments.toList(),
+    ).result;
   }
 
   if (method.methodOffset == null) {
@@ -130,7 +136,6 @@ Variable compileMethodInvocation(
     if (dec0 == null) {
       // Call to default constructor
       final result = ctx.svar('constructor');
-      ctx.pushOp(Call(offset, [], result: result));
       mReturnType =
           method.methodReturnType?.toAlwaysReturnType(
             ctx,
@@ -139,22 +144,22 @@ Variable compileMethodInvocation(
             {},
           ) ??
           AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
-      final returnType = mReturnType.type?.copyWith(
-        boxed:
-            L != null ||
-            !(mReturnType.type?.isUnboxedAcrossFunctionBoundaries ?? false),
-      );
+      final returnType = (mReturnType.type ?? CoreTypes.dynamic.ref(ctx))
+          .copyWith(
+            boxed:
+                L != null ||
+                !(mReturnType.type?.isUnboxedAcrossFunctionBoundaries ?? false),
+          );
+      final instantiatedType = _instantiateConstructorType(ctx, e, returnType);
+      final runtimeType = BuiltinValue(
+        intval: instantiatedType.runtimeTypeId(ctx),
+      ).push(ctx);
+      ctx.pushOp(Call(offset, [runtimeType.ssa], result: result));
       final v = Variable.of(
         ctx,
         result,
-        mReturnType.type?.copyWith(
-              boxed:
-                  L != null ||
-                  !(mReturnType.type?.isUnboxedAcrossFunctionBoundaries ??
-                      false),
-            ) ??
-            CoreTypes.dynamic.ref(ctx),
-        concreteTypes: returnType == null ? [] : [returnType],
+        instantiatedType,
+        concreteTypes: [instantiatedType],
       );
 
       return v;
@@ -214,28 +219,24 @@ Variable compileMethodInvocation(
       throw CompileError('Invalid declaration type ${dec.runtimeType}');
     }
 
-    if (typeParams != null) {
-      for (final param in typeParams) {
-        final bound = param.bound;
-        final name = param.name.lexeme;
-        if (bound != null) {
-          resolveGenerics[name] = TypeRef.fromAnnotation(
-            ctx,
-            offset.file!,
-            bound,
-          );
-        } else {
-          resolveGenerics[name] = CoreTypes.dynamic.ref(ctx);
-        }
-      }
+    final hasExplicitTypeArguments =
+        (dec is FunctionDeclaration || dec is MethodDeclaration) &&
+        e.typeArguments != null;
+    if (dec is FunctionDeclaration || dec is MethodDeclaration) {
+      _resolveInvocationGenerics(
+        ctx,
+        offset.file!,
+        typeParams,
+        e.typeArguments?.arguments.toList(),
+        resolveGenerics,
+        e,
+      );
     }
 
-    if (returnAnnotation is NamedType) {
-      final declaredBound = resolveGenerics[returnAnnotation.name.value()];
-      if (declaredBound != null) {
-        // Inference narrows the language type, not the compiled callee's ABI.
-        genericReturnBoxed = !declaredBound.isUnboxedAcrossFunctionBoundaries;
-      }
+    if (returnAnnotation != null &&
+        _annotationUsesTypeParameters(returnAnnotation, resolveGenerics)) {
+      // Substitution narrows the language type, not the compiled callee's ABI.
+      genericReturnBoxed = true;
     }
     final argsPair = compileArgumentList(
       ctx,
@@ -246,13 +247,20 @@ Variable compileMethodInvocation(
       before: L != null ? [L] : [],
       source: e,
       resolveGenerics: resolveGenerics,
+      inferGenerics: !hasExplicitTypeArguments,
     );
 
-    if (returnAnnotation != null && returnAnnotation is NamedType) {
-      final g = resolveGenerics[returnAnnotation.name.value()];
-      if (g != null) {
-        mReturnType = AlwaysReturnType(g, returnAnnotation.question != null);
-      }
+    if (returnAnnotation != null && resolveGenerics.isNotEmpty) {
+      final resolvedReturn = TypeRef.fromAnnotation(
+        ctx,
+        offset.file!,
+        returnAnnotation,
+        typeParameters: resolveGenerics,
+      );
+      mReturnType = AlwaysReturnType(
+        resolvedReturn,
+        returnAnnotation.question != null,
+      );
     }
     args = argsPair.args;
     namedArgs = argsPair.namedArgs;
@@ -263,34 +271,6 @@ Variable compileMethodInvocation(
   final namedArgTypes = namedArgs.map(
     (key, value) => MapEntry(key, value.type),
   );
-
-  final result = ctx.svar('call');
-  if (dec0.isBridge) {
-    final bridge = dec0.bridge!;
-    if (bridge is BridgeClassDef && !bridge.wrap) {
-      final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type.type);
-      final subclass = BuiltinValue().push(ctx);
-      ctx.pushOp(
-        BridgeInstantiate(
-          result,
-          ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.']!,
-          subclass.ssa,
-          callArgs,
-          runtimeTypeId: type.runtimeTypeId(ctx),
-        ),
-      );
-    } else {
-      ctx.pushOp(
-        InvokeExternal(
-          result,
-          ctx.bridgeStaticFunctionIndices[offset.file]![offset.name]!,
-          callArgs,
-        ),
-      );
-    }
-  } else {
-    ctx.pushOp(Call(offset, callArgs, result: result));
-  }
 
   TypeRef? thisType;
   if (ctx.currentClass != null) {
@@ -311,15 +291,158 @@ Variable compileMethodInvocation(
         (genericReturnBoxed ??
             !(mReturnType.type?.isUnboxedAcrossFunctionBoundaries ?? false)),
   );
+  final instantiatedReturnType = isConstructor && returnType != null
+      ? _instantiateConstructorType(ctx, e, returnType)
+      : returnType;
+  final declaration = dec0.isBridge ? null : dec0.declaration;
+  final effectiveCallArgs = [...callArgs];
+  if (isConstructor &&
+      declaration is ConstructorDeclaration &&
+      declaration.factoryKeyword == null) {
+    effectiveCallArgs.add(
+      BuiltinValue(
+        intval: instantiatedReturnType!.runtimeTypeId(ctx),
+      ).push(ctx).ssa,
+    );
+  }
+
+  final result = ctx.svar('call');
+  if (dec0.isBridge) {
+    final bridge = dec0.bridge!;
+    if (bridge is BridgeClassDef && !bridge.wrap) {
+      final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type.type);
+      final subclass = BuiltinValue().push(ctx);
+      ctx.pushOp(
+        BridgeInstantiate(
+          result,
+          ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.']!,
+          subclass.ssa,
+          effectiveCallArgs,
+          runtimeTypeId: type.runtimeTypeId(ctx),
+        ),
+      );
+    } else {
+      ctx.pushOp(
+        InvokeExternal(
+          result,
+          ctx.bridgeStaticFunctionIndices[offset.file]![offset.name]!,
+          effectiveCallArgs,
+        ),
+      );
+    }
+  } else {
+    ctx.pushOp(
+      Call(
+        offset,
+        effectiveCallArgs,
+        result: result,
+        typeArguments: isConstructor ? const [] : _runtimeTypeArguments(ctx, e),
+      ),
+    );
+  }
 
   final v = Variable.of(
     ctx,
     result,
-    returnType ?? CoreTypes.dynamic.ref(ctx),
-    concreteTypes: [if (isConstructor && returnType != null) returnType],
+    instantiatedReturnType ?? CoreTypes.dynamic.ref(ctx),
+    concreteTypes: [
+      if (isConstructor && instantiatedReturnType != null)
+        instantiatedReturnType,
+    ],
   );
 
   return v;
+}
+
+TypeRef _instantiateConstructorType(
+  CompilerContext ctx,
+  MethodInvocation invocation,
+  TypeRef base,
+) {
+  final arguments = invocation.typeArguments?.arguments;
+  if (arguments == null || arguments.isEmpty) return base;
+  return base.copyWith(
+    specifiedTypeArgs: [
+      for (final argument in arguments)
+        TypeRef.fromAnnotation(ctx, ctx.library, argument),
+    ],
+  );
+}
+
+void _resolveInvocationGenerics(
+  CompilerContext ctx,
+  int declarationLibrary,
+  List<TypeParameter>? parameters,
+  List<TypeAnnotation>? explicitArguments,
+  Map<String, TypeRef> resolved,
+  AstNode source,
+) {
+  if (parameters == null || parameters.isEmpty) {
+    if (explicitArguments?.isNotEmpty ?? false) {
+      throw CompileError('Function does not declare type parameters', source);
+    }
+    return;
+  }
+  if (explicitArguments != null &&
+      explicitArguments.length != parameters.length) {
+    throw CompileError(
+      'Expected ${parameters.length} type arguments, '
+      'but found ${explicitArguments.length}',
+      source,
+    );
+  }
+  for (var index = 0; index < parameters.length; index++) {
+    final parameter = parameters[index];
+    final name = parameter.name.lexeme;
+    final boundAnnotation = parameter.bound;
+    final bound = boundAnnotation == null
+        ? CoreTypes.dynamic.ref(ctx)
+        : boundAnnotation is NamedType &&
+              resolved.containsKey(boundAnnotation.name.lexeme)
+        ? resolved[boundAnnotation.name.lexeme]!.copyWith(
+            nullable: boundAnnotation.question != null,
+          )
+        : TypeRef.fromAnnotation(
+            ctx,
+            declarationLibrary,
+            boundAnnotation,
+            typeParameters: resolved,
+          );
+    if (explicitArguments == null) {
+      resolved[name] = bound;
+      continue;
+    }
+    final argument = TypeRef.fromAnnotation(
+      ctx,
+      ctx.library,
+      explicitArguments[index],
+    );
+    if (argument != CoreTypes.dynamic.ref(ctx) &&
+        bound != CoreTypes.dynamic.ref(ctx) &&
+        !argument.isAssignableTo(ctx, bound, forceAllowDynamic: false)) {
+      throw CompileError(
+        'Type argument $argument does not satisfy the bound $bound of $name',
+        source,
+      );
+    }
+    resolved[name] = argument;
+  }
+}
+
+bool _annotationUsesTypeParameters(
+  TypeAnnotation annotation,
+  Map<String, TypeRef> parameters,
+) {
+  if (annotation is NamedType) {
+    if (parameters.containsKey(annotation.name.lexeme)) return true;
+    return annotation.typeArguments?.arguments.any(
+          (argument) => _annotationUsesTypeParameters(argument, parameters),
+        ) ??
+        false;
+  }
+  return annotation.childEntities.whereType<TypeAnnotation>().any(
+    (child) => _annotationUsesTypeParameters(child, parameters),
+  );
 }
 
 Variable _invokeWithTarget(
@@ -328,6 +451,7 @@ Variable _invokeWithTarget(
   MethodInvocation e,
 ) {
   AlwaysReturnType? mReturnType;
+  final bridgeTypeParameters = <String, TypeRef>{};
 
   DeclarationOrBridge<ClassMember, BridgeDeclaration>? dec0;
   final bool isStatic;
@@ -373,16 +497,49 @@ Variable _invokeWithTarget(
     final fd = br is BridgeMethodDef
         ? br.functionDescriptor
         : (br as BridgeConstructorDef).functionDescriptor;
+    final receiverTypeParameters = isStatic
+        ? const <String, TypeRef>{}
+        : _bridgeClassTypeArguments(ctx, L.type, dec0.sourceLib);
     argsPair = compileArgumentListWithBridge(
       ctx,
       e.argumentList,
       fd,
       before: [],
+      typeParameters: receiverTypeParameters,
+    );
+    _inferBridgeTypeParameters(fd, argsPair.args, bridgeTypeParameters);
+    mReturnType = AlwaysReturnType(
+      TypeRef.fromBridgeAnnotation(
+        ctx,
+        fd.returns,
+        specifiedType: isStatic ? staticType : L.type,
+        typeParameters: bridgeTypeParameters,
+      ),
+      fd.returns.nullable,
     );
   } else if (L.type == CoreTypes.dynamic.ref(ctx)) {
     argsPair = compileArgumentListWithDynamic(ctx, e.argumentList, before: [L]);
   } else {
     final dec = dec0!.declaration!;
+    final typeParameters = dec is MethodDeclaration
+        ? dec.typeParameters?.typeParameters
+        : null;
+    final resolveGenerics = <String, TypeRef>{
+      if (!isStatic && dec is MethodDeclaration)
+        ..._classTypeArguments(ctx, L.type, dec0.sourceLib, dec),
+    };
+    final hasExplicitTypeArguments =
+        dec is MethodDeclaration && e.typeArguments != null;
+    if (dec is MethodDeclaration) {
+      _resolveInvocationGenerics(
+        ctx,
+        dec0.sourceLib,
+        typeParameters,
+        e.typeArguments?.arguments.toList(),
+        resolveGenerics,
+        e,
+      );
+    }
     final fpl =
         (dec is MethodDeclaration
             ? dec.parameters?.parameters
@@ -392,12 +549,28 @@ Variable _invokeWithTarget(
     argsPair = compileArgumentList(
       ctx,
       e.argumentList,
-      (isStatic ? staticType! : L.type).file,
+      dec0.sourceLib,
       fpl,
       dec,
       before: [if (!isStatic) L],
       source: e,
+      resolveGenerics: resolveGenerics,
+      inferGenerics: !hasExplicitTypeArguments,
     );
+    if (dec is MethodDeclaration &&
+        dec.returnType != null &&
+        resolveGenerics.isNotEmpty) {
+      final resolvedReturn = TypeRef.fromAnnotation(
+        ctx,
+        dec0.sourceLib,
+        dec.returnType!,
+        typeParameters: resolveGenerics,
+      );
+      mReturnType = AlwaysReturnType(
+        resolvedReturn,
+        dec.returnType!.question != null,
+      );
+    }
   }
 
   final args = argsPair.args;
@@ -426,7 +599,22 @@ Variable _invokeWithTarget(
         staticType.name,
         e.methodName.name,
       );
-      ctx.pushOp(Call(offset, argsPair.ssa, result: result));
+      final callArguments = [...argsPair.ssa];
+      final declaration = dec0.declaration;
+      if (declaration is ConstructorDeclaration &&
+          declaration.factoryKeyword == null) {
+        callArguments.add(
+          BuiltinValue(intval: staticType.runtimeTypeId(ctx)).push(ctx).ssa,
+        );
+      }
+      ctx.pushOp(
+        Call(
+          offset,
+          callArguments,
+          result: result,
+          typeArguments: _runtimeTypeArguments(ctx, e),
+        ),
+      );
     }
   } else if (L.concreteTypes.length == 1 &&
       dec0?.isBridge == false &&
@@ -446,7 +634,15 @@ Variable _invokeWithTarget(
       methodType: 2,
       name: e.methodName.name,
     );
-    ctx.pushOp(Call(offset, argsPair.ssa, result: result));
+    ctx.pushOp(
+      Call(
+        offset,
+        argsPair.ssa,
+        result: result,
+        typeEnvironmentReceiver: L.boxIfNeeded(ctx).ssa,
+        typeArguments: _runtimeTypeArguments(ctx, e),
+      ),
+    );
   } else {
     ctx.pushOp(
       InvokeDynamic(
@@ -454,11 +650,26 @@ Variable _invokeWithTarget(
         L.boxIfNeeded(ctx).ssa,
         e.methodName.name,
         dec0?.isBridge == true ? argsPair.ssa : argsPair.ssa.skip(1).toList(),
+        // Bridge methods use their legacy padded positional ABI. Evaluated
+        // methods keep source-level positional and named call metadata.
+        positionalCount: dec0?.isBridge == true
+            ? argsPair.ssa.length
+            : argsPair.args.length,
+        namedNames: dec0?.isBridge == true
+            ? const []
+            : argsPair.namedArgs.keys.toList(),
+        callerLibrary: ctx.library,
+        typeArguments:
+            e.typeArguments?.arguments
+                .map((type) => TypeRef.fromAnnotation(ctx, ctx.library, type))
+                .map((type) => type.runtimeTypeId(ctx))
+                .toList() ??
+            const [],
       ),
     );
   }
 
-  mReturnType = AlwaysReturnType.fromInstanceMethodOrBuiltin(
+  mReturnType ??= AlwaysReturnType.fromInstanceMethodOrBuiltin(
     ctx,
     isStatic ? staticType! : L.type,
     e.methodName.name,
@@ -474,6 +685,112 @@ Variable _invokeWithTarget(
   );
 
   return v;
+}
+
+Map<String, TypeRef> _bridgeClassTypeArguments(
+  CompilerContext ctx,
+  TypeRef receiver,
+  int declarationLibrary,
+) {
+  final resolved = receiver.resolveTypeChain(ctx);
+  final declaration =
+      ctx.topLevelDeclarationsMap[declarationLibrary]?[resolved.name];
+  final bridge = declaration?.bridge;
+  if (bridge is! BridgeClassDef) return const {};
+  final names = bridge.type.generics.keys.toList();
+  return {
+    for (
+      var index = 0;
+      index < names.length && index < resolved.specifiedTypeArgs.length;
+      index++
+    )
+      names[index]: resolved.specifiedTypeArgs[index],
+  };
+}
+
+void _inferBridgeTypeParameters(
+  BridgeFunctionDef function,
+  List<Variable> arguments,
+  Map<String, TypeRef> inferred,
+) {
+  void infer(BridgeTypeRef formal, TypeRef actual) {
+    final reference = formal.ref;
+    if (reference != null && function.generics.containsKey(reference)) {
+      inferred[reference] = actual;
+      return;
+    }
+    final genericFunction = formal.gft;
+    final actualFunction = actual.functionType;
+    if (genericFunction != null && actualFunction != null) {
+      final actualReturn = actualFunction.returnType.type;
+      if (actualReturn != null) {
+        infer(genericFunction.returns.type, actualReturn);
+      }
+      return;
+    }
+    final formalArguments = formal.typeArgs;
+    final actualArguments = actual.specifiedTypeArgs;
+    for (
+      var index = 0;
+      index < formalArguments.length && index < actualArguments.length;
+      index++
+    ) {
+      infer(formalArguments[index].type, actualArguments[index]);
+    }
+  }
+
+  for (
+    var index = 0;
+    index < function.params.length && index < arguments.length;
+    index++
+  ) {
+    infer(function.params[index].type.type, arguments[index].type);
+  }
+}
+
+List<int> _runtimeTypeArguments(CompilerContext ctx, MethodInvocation call) =>
+    call.typeArguments?.arguments
+        .map((type) => TypeRef.fromAnnotation(ctx, ctx.library, type))
+        .map((type) => type.runtimeTypeId(ctx))
+        .toList() ??
+    const [];
+
+Map<String, TypeRef> _classTypeArguments(
+  CompilerContext ctx,
+  TypeRef receiver,
+  int ownerLibrary,
+  MethodDeclaration method,
+) {
+  final owner = method.parent;
+  if (owner is! ClassDeclaration) return const {};
+  TypeRef? current = receiver;
+  while (current != null) {
+    if (current.file == ownerLibrary && current.name == owner.name.lexeme) {
+      final parameters = owner.typeParameters?.typeParameters ?? const [];
+      return {
+        for (var index = 0; index < parameters.length; index++)
+          parameters[index].name.lexeme:
+              index < current.specifiedTypeArgs.length
+              ? current.specifiedTypeArgs[index]
+              : CoreTypes.dynamic.ref(ctx),
+      };
+    }
+    final resolved = current.resolveTypeChain(ctx);
+    final parent = resolved.extendsType;
+    if (parent == null || parent.hasSameDeclarationAs(current)) break;
+    final parameters = resolved.genericParams;
+    final substitutions = <(String, int), TypeRef>{
+      for (var index = 0; index < parameters.length; index++)
+        (
+          'class:${current.file}:${current.name}',
+          index,
+        ): index < current.specifiedTypeArgs.length
+            ? current.specifiedTypeArgs[index]
+            : parameters[index].extendsType ?? CoreTypes.dynamic.ref(ctx),
+    };
+    current = parent.substituteTypeParameters(substitutions);
+  }
+  return const {};
 }
 
 bool _hasBridgeSuperclass(CompilerContext ctx, TypeRef type) {
@@ -492,8 +809,32 @@ DeclarationOrBridge<MethodDeclaration, BridgeMethodDef> resolveInstanceMethod(
   AstNode? source,
   TypeRef? bottomType,
 ]) {
+  if (instanceType.isTypeParameter) {
+    final bound = instanceType.typeParameterBound ?? CoreTypes.dynamic.ref(ctx);
+    if (bound == CoreTypes.dynamic.ref(ctx)) {
+      throw CompileError(
+        'Cannot resolve $methodName on unbounded type parameter $instanceType',
+        source,
+      );
+    }
+    return resolveInstanceMethod(
+      ctx,
+      bound,
+      methodName,
+      source,
+      bottomType ?? instanceType,
+    );
+  }
   final dec0 =
-      ctx.topLevelDeclarationsMap[instanceType.file]![instanceType.name]!;
+      ctx.topLevelDeclarationsMap[instanceType.file]?[instanceType.name];
+  if (dec0 == null) {
+    throw StateError(
+      'Missing declaration for instance method $methodName on '
+      '${instanceType.name} (file ${instanceType.file}, '
+      'parameter ${instanceType.typeParameterOwner}:'
+      '${instanceType.typeParameterIndex}, key ${instanceType.semanticKey})',
+    );
+  }
   final bottomType0 = bottomType ?? instanceType;
   if (dec0.isBridge) {
     // Bridge

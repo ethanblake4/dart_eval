@@ -3,6 +3,8 @@ import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/fpl.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
+import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 import 'default_value.dart';
 
 import '../../../../dart_eval_bridge.dart';
@@ -77,6 +79,7 @@ ArgumentListResult compileArgumentList(
   Declaration parameterHost, {
   List<Variable> before = const [],
   Map<String, TypeRef> resolveGenerics = const {},
+  bool inferGenerics = true,
   List<String> superParams = const [],
   AstNode? source,
 }) {
@@ -139,9 +142,29 @@ ArgumentListResult compileArgumentList(
       );
 
       paramType ??= CoreTypes.dynamic.ref(ctx);
+      final genericParameter =
+          typeAnnotation is NamedType &&
+          resolveGenerics.containsKey(typeAnnotation.name.lexeme);
 
       var arg0 = compileExpression(arg, ctx, paramType);
+      arg0 = convertForAssignment(
+        ctx,
+        arg0,
+        paramType,
+        representation:
+            parameterHost is MethodDeclaration ||
+                genericParameter ||
+                !paramType.isUnboxedAcrossFunctionBoundaries
+            ? MachineRepresentation.object
+            : representationForType(paramType.copyWith(boxed: false)),
+        source: source ?? parameterHost,
+        description:
+            'Cannot assign argument of type ${arg0.type.toStringClear(ctx, paramType)} '
+            'to parameter "${param.name!.lexeme}" of type '
+            '${paramType.toStringClear(ctx, arg0.type)}',
+      );
       if (parameterHost is MethodDeclaration ||
+          genericParameter ||
           !paramType.isUnboxedAcrossFunctionBoundaries) {
         arg0 = arg0.boxIfNeeded(ctx);
       } else if (paramType.isUnboxedAcrossFunctionBoundaries) {
@@ -154,19 +177,11 @@ ArgumentListResult compileArgumentList(
         arg0 = arg0.tearOff(ctx);
       }
 
-      if (!arg0.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
-        throw CompileError(
-          'Cannot assign argument of type ${arg0.type.toStringClear(ctx, paramType)} '
-          'to parameter "${param.name!.lexeme}" of type ${paramType.toStringClear(ctx, arg0.type)}',
-          source ?? parameterHost,
-        );
-      }
-
       if (typeAnnotation != null) {
         final n = typeAnnotation is NamedType
             ? (typeAnnotation.name.stringValue ?? typeAnnotation.name.lexeme)
             : null;
-        if (n != null && resolveGenerics.containsKey(n)) {
+        if (inferGenerics && n != null && resolveGenerics.containsKey(n)) {
           resolveGenericsMap[n] ??= {};
           resolveGenericsMap[n]!.add(arg0.type);
         }
@@ -209,13 +224,12 @@ ArgumentListResult compileArgumentList(
     if (param is SimpleFormalParameter) {
       typeAnnotation = param.type;
       if (typeAnnotation != null) {
-        paramType =
-            typeAnnotation is NamedType &&
-                resolveGenerics.containsKey(typeAnnotation.name.lexeme)
-            ? resolveGenerics[typeAnnotation.name.lexeme]!.copyWith(
-                nullable: typeAnnotation.question != null,
-              )
-            : TypeRef.fromAnnotation(ctx, decLibrary, typeAnnotation);
+        paramType = TypeRef.fromAnnotation(
+          ctx,
+          decLibrary,
+          typeAnnotation,
+          typeParameters: resolveGenerics,
+        );
       }
     } else if (param is FieldFormalParameter) {
       paramType = resolveFieldFormalType(ctx, decLibrary, param, parameterHost);
@@ -226,8 +240,28 @@ ArgumentListResult compileArgumentList(
     }
 
     if (namedExpr.containsKey(name)) {
+      final genericParameter =
+          typeAnnotation is NamedType &&
+          resolveGenerics.containsKey(typeAnnotation.name.lexeme);
       var arg0 = compileExpression(namedExpr[name]!, ctx, paramType);
+      arg0 = convertForAssignment(
+        ctx,
+        arg0,
+        paramType,
+        representation:
+            parameterHost is MethodDeclaration ||
+                genericParameter ||
+                !paramType.isUnboxedAcrossFunctionBoundaries
+            ? MachineRepresentation.object
+            : representationForType(paramType.copyWith(boxed: false)),
+        source: source ?? parameterHost,
+        description:
+            'Cannot assign argument of type ${arg0.type.toStringClear(ctx, paramType)} '
+            'to parameter "${param.name!.lexeme}" of type '
+            '${paramType.toStringClear(ctx, arg0.type)}',
+      );
       if (parameterHost is MethodDeclaration ||
+          genericParameter ||
           !paramType.isUnboxedAcrossFunctionBoundaries) {
         arg0 = arg0.boxIfNeeded(ctx);
       } else if (paramType.isUnboxedAcrossFunctionBoundaries) {
@@ -240,19 +274,11 @@ ArgumentListResult compileArgumentList(
         arg0 = arg0.tearOff(ctx);
       }
 
-      if (!arg0.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
-        throw CompileError(
-          'Cannot assign argument of type ${arg0.type.toStringClear(ctx, paramType)}'
-          ' to parameter "${param.name!.lexeme}" of type ${paramType.toStringClear(ctx, arg0.type)}',
-          source ?? parameterHost,
-        );
-      }
-
       if (typeAnnotation != null) {
         final n = typeAnnotation is NamedType
             ? (typeAnnotation.name.stringValue ?? typeAnnotation.name.lexeme)
             : null;
-        if (n != null && resolveGenerics.containsKey(n)) {
+        if (inferGenerics && n != null && resolveGenerics.containsKey(n)) {
           resolveGenericsMap[n] ??= {};
           resolveGenericsMap[n]!.add(arg0.type);
         }
@@ -267,11 +293,13 @@ ArgumentListResult compileArgumentList(
     }
   }
 
-  for (final generic in resolveGenericsMap.keys) {
-    resolveGenerics[generic] = TypeRef.commonBaseType(
-      ctx,
-      resolveGenericsMap[generic]!,
-    );
+  if (inferGenerics) {
+    for (final generic in resolveGenericsMap.keys) {
+      resolveGenerics[generic] = TypeRef.commonBaseType(
+        ctx,
+        resolveGenericsMap[generic]!,
+      );
+    }
   }
 
   ssa.addAll(push.map((argument) => argument.ssa));
@@ -380,8 +408,8 @@ ArgumentListResult compileSuperParamsWithBridge(
   return ArgumentListResult(ssa, args, namedArgs);
 }
 
-/// Best effort method to compile an argument list against a dynamic target.
-/// This will not always work, but it's better than nothing for simple cases.
+/// Compile dynamic arguments in source evaluation order. Binding and default
+/// insertion happen after runtime member lookup.
 ArgumentListResult compileArgumentListWithDynamic(
   CompilerContext ctx,
   ArgumentList argumentList, {
@@ -397,15 +425,8 @@ ArgumentListResult compileArgumentListWithDynamic(
   for (var i = 0; i < argumentList.arguments.length; i++) {
     final arg = argumentList.arguments[i];
 
-    if (arg is NamedExpression) {
-      throw CompileError(
-        'dart_eval does not support passing named arguments '
-        'to dynamic targets.',
-        source ?? argumentList,
-      );
-    }
-
-    var arg0 = compileExpression(arg, ctx);
+    final expression = arg is NamedExpression ? arg.expression : arg;
+    var arg0 = compileExpression(expression, ctx);
     if (arg0.type == CoreTypes.function.ref(ctx) &&
         arg0.name == null &&
         arg0.methodOffset != null) {
@@ -415,7 +436,11 @@ ArgumentListResult compileArgumentListWithDynamic(
     // signature cannot justify unboxing a scalar or a collection here.
     arg0 = arg0.boxIfNeeded(ctx);
 
-    args.add(arg0);
+    if (arg is NamedExpression) {
+      namedArgs[arg.name.label.name] = arg0;
+    } else {
+      args.add(arg0);
+    }
     push.add(arg0);
   }
 
@@ -515,6 +540,7 @@ ArgumentListResult compileArgumentListWithBridge(
   BridgeFunctionDef function, {
   List<Variable> before = const [],
   List<String> superParams = const [],
+  Map<String, TypeRef> typeParameters = const {},
 }) {
   final ssa = <SSA>[];
   final args = <Variable>[];
@@ -549,7 +575,15 @@ ArgumentListResult compileArgumentListWithBridge(
         push.add($null);
       }
     } else {
-      var paramType = TypeRef.fromBridgeAnnotation(ctx, param.type);
+      // Resolve the receiver's type arguments for every parameter annotation.
+      // Simple refs (for example E in List.add) need them as much as generic
+      // function types do; dropping them leaves the context type dynamic and
+      // defeats argument conversion and reified checks.
+      var paramType = TypeRef.fromBridgeAnnotation(
+        ctx,
+        param.type,
+        typeParameters: typeParameters,
+      );
 
       var arg0 = compileExpression(arg, ctx, paramType);
       arg0 = arg0.boxIfNeeded(ctx);
@@ -558,13 +592,12 @@ ArgumentListResult compileArgumentListWithBridge(
           arg0.methodOffset != null) {
         arg0 = arg0.tearOff(ctx);
       }
-      if (!(param.type.nullable && arg0.type == CoreTypes.nullType.ref(ctx)) &&
-          !arg0.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
-        throw CompileError(
-          'Cannot assign argument of type ${arg0.type} to parameter of type $paramType',
-          argumentList,
-        );
-      }
+      // Bridge argument conversion lives on the runtime side of the typed
+      // boundary (previously the compiler only boxed). Type parameters that
+      // resolved through the receiver, nullable matches, and dynamic argument
+      // shapes can carry distinct [TypeRef] identities for an equivalent
+      // static type, so a failing compile-time [isAssignableTo] here must
+      // defer to the boundary conversion instead of rejecting.
       arg0 = _providedBridgeArgument(ctx, arg0);
       args.add(arg0);
       push.add(arg0);
@@ -586,7 +619,11 @@ ArgumentListResult compileArgumentListWithBridge(
       namedArgs[param.name] = V;
       continue;
     }
-    var paramType = TypeRef.fromBridgeAnnotation(ctx, param.type);
+    var paramType = TypeRef.fromBridgeAnnotation(
+      ctx,
+      param.type,
+      typeParameters: typeParameters,
+    );
     if (namedExpr.containsKey(param.name)) {
       var arg0 = compileExpression(
         namedExpr[param.name]!,

@@ -6,11 +6,13 @@ class $Record implements $Instance {
   final List<Object?> fields;
   final Map<String, int> mapping;
   final int typeId;
+  final Runtime runtime;
 
-  const $Record(this.fields, this.mapping, this.typeId);
+  const $Record(this.fields, this.mapping, this.typeId, this.runtime);
 
   @override
-  int $getRuntimeType(Runtime runtime) => typeId;
+  int $getRuntimeType(Runtime runtime) =>
+      runtime.importRuntimeType(this.runtime, typeId);
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {

@@ -4,20 +4,23 @@ import 'package:analyzer/dart/ast/token.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/assert.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/equality.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
+import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
+import 'package:dart_eval/src/eval/ir/types.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 
 Variable compilePostfixExpression(PostfixExpression e, CompilerContext ctx) {
   if (e.operator.type == TokenType.BANG) {
     // Null assertion (!)
     final L = compileExpression(e.operand, ctx);
-    final result = checkNotNull(ctx, L);
-    final msg = BuiltinValue(
-      stringval: 'Null check operator used on a null value',
-    ).push(ctx);
-    doAssert(ctx, result, msg);
+    if (L.type.nullable ||
+        L.type.resolveTypeChain(ctx) == CoreTypes.dynamic.ref(ctx)) {
+      final boxed = L.boxIfNeeded(ctx, e.operand);
+      ctx.pushOp(
+        AssertType(boxed.ssa, CoreTypes.object.ref(ctx).runtimeTypeId(ctx)),
+      );
+    }
     return L.copyWith(type: L.type.copyWith(nullable: false));
   }
 

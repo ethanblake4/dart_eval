@@ -78,7 +78,10 @@ StatementInfo compileStatement(
       if (captured) {
         final placeholder = BuiltinValue()
             .push(ctx)
-            .copyWith(type: CoreTypes.function.ref(ctx));
+            .copyWith(
+              type: CoreTypes.function.ref(ctx),
+              declaredType: CoreTypes.function.ref(ctx),
+            );
         ctx.setLocal(decl.name.lexeme, placeholder.captureBinding(ctx, decl));
       }
       final variable = compileFunctionExpression(decl.functionExpression, ctx);

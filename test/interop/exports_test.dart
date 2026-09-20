@@ -1,4 +1,6 @@
 import 'package:dart_eval/dart_eval.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/stdlib/core.dart';
 import 'package:test/test.dart';
 
 Iterable<Runtime> runtimes(String source) sync* {
@@ -25,8 +27,8 @@ void main() {
 
   test('List input and output preserve host identity through direct calls', () {
     for (final runtime in runtimes('''
-      List<int> identity(List<int> values) => values;
-      List<int> main(List<int> values) {
+      List identity(List values) => values;
+      List main(List values) {
         values[0] = values[0] + 3;
         return identity(values);
       }
@@ -41,6 +43,120 @@ void main() {
       expect(input, [7, 8]);
     }
   });
+
+  test('parameterized exports retain guest and host boundary policies', () {
+    final program = Compiler().compile({
+      'typed': {
+        'main.dart': '''
+          int accept(List<int> values) => 7;
+          List<String> strings() => ['bad'];
+        ''',
+      },
+    });
+    final core = program.bridgeLibraryMappings['dart:core']!;
+    final listNominal = program.typeIds[core]!['List']!;
+    final intNominal = program.typeIds[core]!['int']!;
+    final stringNominal = program.typeIds[core]!['String']!;
+    int listDescriptor(int elementNominal) =>
+        program.typeDescriptors.indexWhere(
+          (descriptor) =>
+              descriptor.length == 3 &&
+              descriptor[0] == listNominal &&
+              program.typeDescriptors[descriptor[2]][0] == elementNominal,
+        );
+
+    final intList = listDescriptor(intNominal);
+    final stringList = listDescriptor(stringNominal);
+    expect(intList, isNonNegative);
+    expect(stringList, isNonNegative);
+    final matching = $List.wrap(<$Value?>[$int(1)], runtimeTypeId: intList);
+    final mismatched = $List.wrap(<$Value?>[
+      $String('bad'),
+    ], runtimeTypeId: stringList);
+    for (final runtime in [
+      Runtime.ofProgram(program),
+      Runtime(program.write().buffer),
+    ]) {
+      expect(
+        runtime.executeLib(
+          'package:typed/main.dart',
+          'accept',
+          arguments: {'values': matching},
+        ),
+        7,
+      );
+      expect(
+        () => runtime.executeLib(
+          'package:typed/main.dart',
+          'accept',
+          arguments: {'values': mismatched},
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        runtime.executeLib(
+          'package:typed/main.dart',
+          'accept',
+          arguments: {
+            'values': <int>[1],
+          },
+        ),
+        7,
+      );
+    }
+  });
+
+  test(
+    'Function exports preserve plain callables and adapt legacy structural ones',
+    () {
+      final program = Compiler().compile({
+        'typed': {
+          'main.dart': '''
+            int acceptPlain(Function callback) => 1;
+            int acceptStructural(int Function(int) callback) => 2;
+          ''',
+        },
+      });
+      final closure = $Closure(
+        (runtime, target, arguments) => $String('incompatible'),
+      );
+      final function = $Function(
+        (runtime, target, arguments) => $String('also incompatible'),
+      );
+      for (final (kind, runtime) in [
+        ('fresh', Runtime.ofProgram(program)),
+        ('serialized', Runtime(program.write().buffer)),
+      ]) {
+        expect(
+          runtime.executeLib(
+            'package:typed/main.dart',
+            'acceptPlain',
+            arguments: {'callback': closure},
+          ),
+          1,
+          reason: kind,
+        );
+        expect(
+          runtime.executeLib(
+            'package:typed/main.dart',
+            'acceptPlain',
+            arguments: {'callback': function},
+          ),
+          1,
+          reason: kind,
+        );
+        expect(
+          runtime.executeLib(
+            'package:typed/main.dart',
+            'acceptStructural',
+            arguments: {'callback': closure},
+          ),
+          2,
+          reason: kind,
+        );
+      }
+    },
+  );
 
   test(
     'nested List returns normalize native elements at the host boundary',
@@ -189,7 +305,11 @@ void main() {
     'constructor exports retain field parameter names and declared types',
     () {
       for (final runtime in runtimes('''
-      class Counter { int value; Counter(this.value); }
+      class Counter {
+        int value;
+        Counter(this.value);
+        factory Counter.twice(int value) => Counter(value * 2);
+      }
       int read(Counter counter) => counter.value;
     ''')) {
         final counter = runtime.executeLib(
@@ -204,6 +324,19 @@ void main() {
             arguments: {'counter': counter},
           ),
           12,
+        );
+        final doubled = runtime.executeLib(
+          'package:typed/main.dart',
+          'Counter.twice',
+          arguments: {'value': 12},
+        );
+        expect(
+          runtime.executeLib(
+            'package:typed/main.dart',
+            'read',
+            arguments: {'counter': doubled},
+          ),
+          24,
         );
       }
     },

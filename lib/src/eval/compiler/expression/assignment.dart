@@ -6,7 +6,9 @@ import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
+import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
+import 'package:dart_eval/src/eval/shared/types.dart';
 
 Variable compileAssignmentExpression(
   AssignmentExpression e,
@@ -44,7 +46,16 @@ Variable compileAssignmentExpression(
   } else {
     final method = e.operator.type.binaryOperatorOfCompoundAssignment!.lexeme;
     final V = L.getValue(ctx);
-    final res = V.invoke(ctx, method, [R]).result;
+    var res = V.invoke(ctx, method, [R]).result;
+    // Dart's compound-assignment rules retain the implicit downcast when the
+    // right operand is dynamic. The operator's declared return type alone
+    // (for example num from int.+) must not turn that valid runtime check into
+    // a static rejection.
+    if (R.type.resolveTypeChain(ctx) == CoreTypes.dynamic.ref(ctx)) {
+      res = res.copyWith(
+        type: CoreTypes.dynamic.ref(ctx).copyWith(boxed: true),
+      );
+    }
     final set = res.type != L.resolveType(ctx, forSet: true)
         ? res.boxIfNeeded(ctx)
         : res;

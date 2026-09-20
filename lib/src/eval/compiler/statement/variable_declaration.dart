@@ -3,6 +3,8 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
+import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 import 'package:dart_eval/src/eval/ir/memory.dart';
 
 import '../errors.dart';
@@ -37,11 +39,18 @@ void compileVariableDeclarationList(
 
     if (init != null) {
       var res = compileExpression(init, ctx, type);
-      if (type != null &&
-          !res.type.resolveTypeChain(ctx).isAssignableTo(ctx, type)) {
-        throw CompileError(
-          'Type mismatch: variable "${li.name.lexeme} is specified'
-          ' as type $type, but is initialized to an incompatible value of type ${res.type}',
+      if (type != null) {
+        res = convertForAssignment(
+          ctx,
+          res,
+          type,
+          representation: type.isUnboxedAcrossFunctionBoundaries
+              ? representationForType(type.copyWith(boxed: false))
+              : MachineRepresentation.object,
+          source: li,
+          description:
+              'Type mismatch: variable "${li.name.lexeme}" is specified as '
+              'type $type, but is initialized to ${res.type}',
         );
       }
       if (!((type ?? res.type).isUnboxedAcrossFunctionBoundaries)) {
@@ -50,6 +59,7 @@ void compileVariableDeclarationList(
       final local = res.copyWith(
         name: ctx.svar(li.name.lexeme).name,
         type: (type ?? res.type).copyWith(boxed: res.boxed),
+        declaredType: type ?? res.type,
         isFinal: l.isFinal || l.isConst,
       );
       ctx.pushOp(Assign(local.ssa, res.ssa));
@@ -60,7 +70,11 @@ void compileVariableDeclarationList(
         BuiltinValue()
             .push(ctx)
             .boxIfNeeded(ctx)
-            .copyWith(type: type ?? CoreTypes.dynamic.ref(ctx))
+            .copyWith(
+              type: type ?? CoreTypes.dynamic.ref(ctx),
+              declaredType: type ?? CoreTypes.dynamic.ref(ctx),
+              representation: MachineRepresentation.object,
+            )
             .captureBinding(ctx, li),
       );
     }

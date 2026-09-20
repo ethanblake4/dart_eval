@@ -4,6 +4,8 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
+import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/macros/loop.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
@@ -63,15 +65,29 @@ List<TypeRef> compileCollectionSpread(
       body: (ctx, _) {
         final current = iterator.getProperty(ctx, 'current');
         if (isMap) {
-          var key = current.getProperty(ctx, 'key');
-          var value = current.getProperty(ctx, 'value');
-          if (box) {
-            key = key.boxIfNeeded(ctx);
-            value = value.boxIfNeeded(ctx);
-          }
+          final key = convertForAssignment(
+            ctx,
+            current.getProperty(ctx, 'key'),
+            target.type.specifiedTypeArgs[0],
+            representation: box ? MachineRepresentation.object : null,
+            source: element,
+          );
+          final value = convertForAssignment(
+            ctx,
+            current.getProperty(ctx, 'value'),
+            target.type.specifiedTypeArgs[1],
+            representation: box ? MachineRepresentation.object : null,
+            source: element,
+          );
           ctx.pushOp(MapSet(target.ssa, key.ssa, value.ssa));
         } else {
-          final value = box ? current.boxIfNeeded(ctx) : current;
+          final value = convertForAssignment(
+            ctx,
+            current,
+            target.type.specifiedTypeArgs[0],
+            representation: box ? MachineRepresentation.object : null,
+            source: element,
+          );
           ctx.pushOp(
             isSet
                 ? SetAdd(target.ssa, value.ssa)

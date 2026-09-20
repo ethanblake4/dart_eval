@@ -59,10 +59,6 @@ StatementInfo compileForStatement(
             );
           }
 
-          if (itype.specifiedTypeArgs.isEmpty) {
-            elementType = declaredType.copyWith(boxed: true);
-          }
-
           iterator = iterator.copyWith(
             type: CoreTypes.iterator
                 .ref(ctx)
@@ -72,11 +68,14 @@ StatementInfo compileForStatement(
           );
 
           final name = parts.loopVariable.name.lexeme;
+          final bindingType = parts.loopVariable.type == null
+              ? elementType
+              : declaredType;
           ctx.setLocal(
             name,
             BuiltinValue()
                 .push(ctx)
-                .copyWith(type: elementType)
+                .copyWith(type: elementType, declaredType: bindingType)
                 .captureBinding(ctx, parts.loopVariable),
           );
           loopVariable = IdentifierReference(null, name);

@@ -53,40 +53,28 @@ class $num<T extends num> implements $Instance {
 
       'toInt': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.int),
-            nullable: true,
-          ),
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
           params: [],
         ),
         isStatic: false,
       ),
       'toDouble': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.double),
-            nullable: true,
-          ),
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
           params: [],
         ),
         isStatic: false,
       ),
       'ceil': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.int),
-            nullable: true,
-          ),
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
           params: [],
         ),
         isStatic: false,
       ),
       'abs': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.num),
-            nullable: true,
-          ),
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
           params: [],
         ),
         isStatic: false,
@@ -363,6 +351,10 @@ class $num<T extends num> implements $Instance {
 
   static const $Function __minus = $Function(_minus);
   static $Value? _minus(Runtime runtime, $Value? target, List<$Value?> args) {
+    if (args.isEmpty) {
+      final value = -target!.$value;
+      return value is int ? $int(value) : $double(value);
+    }
     final other = args[0];
     final evalResult = target!.$value - other!.$value;
 

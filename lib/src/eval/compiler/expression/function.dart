@@ -62,6 +62,21 @@ Variable compileFunctionExpression(
   ctx.finishMethod();
   final outerBuilder = ctx.builder;
   final fnOffset = ctx.beginFunction('<anonymous closure>');
+  final previousTypes = {...?ctx.temporaryTypes[ctx.library]};
+  TypeRef.loadTemporaryTypes(
+    ctx,
+    e.typeParameters?.typeParameters,
+    owner: 'function:${ctx.library}:<anonymous>:$fnOffset',
+  );
+  final typeParameters =
+      e.typeParameters?.typeParameters ?? const <TypeParameter>[];
+  ctx.functionTypeParameterBounds[fnOffset] = [
+    for (final parameter in typeParameters)
+      ctx
+              .temporaryTypes[ctx.library]![parameter.name.lexeme]!
+              .typeParameterBound ??
+          CoreTypes.dynamic.ref(ctx),
+  ];
 
   ctx.locals = [];
   ctx.exceptionDepth = 0;
@@ -144,10 +159,11 @@ Variable compileFunctionExpression(
   final b = e.body;
 
   if (b.isAsynchronous) {
-    setupAsyncFunction(ctx);
+    setupAsyncFunction(ctx, returnType: bound?.functionType?.returnType.type);
   }
 
   StatementInfo? stInfo;
+  TypeRef? inferredClosureReturnType;
   if (b is BlockFunctionBody) {
     stInfo = compileBlock(
       b.block,
@@ -159,6 +175,7 @@ Variable compileFunctionExpression(
   } else if (b is ExpressionFunctionBody) {
     ctx.beginScope();
     final V = compileExpression(b.expression, ctx);
+    inferredClosureReturnType = V.type;
     stInfo = doReturn(
       ctx,
       AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true),
@@ -191,6 +208,7 @@ Variable compileFunctionExpression(
   ctx.labels.addAll(outerLabels);
   ctx.caughtExceptionTargets.addAll(outerExceptions);
   ctx.restoreState(ctxSaveState);
+  ctx.temporaryTypes[ctx.library] = previousTypes;
 
   final positional =
       (e.parameters?.parameters.where((element) => element.isPositional) ?? []);
@@ -226,6 +244,74 @@ Variable compileFunctionExpression(
   }
 
   final target = DeferredOrOffset(offset: fnOffset);
+  // A function literal's own type is never nullable, even when its context
+  // type is (for example when assigned to `void Function(int)?`). Reifying
+  // the context's nullability would poison every later subtype check.
+  FunctionTypeAnnotation literalParameterType(FormalParameter parameter) {
+    final normal = parameter is DefaultFormalParameter
+        ? parameter.parameter
+        : parameter;
+    final annotation = normal is SimpleFormalParameter ? normal.type : null;
+    return FunctionTypeAnnotation.type(
+      annotation == null
+          ? CoreTypes.dynamic.ref(ctx)
+          : TypeRef.fromAnnotation(ctx, ctx.library, annotation),
+    );
+  }
+
+  var closureType = bound?.functionType == null
+      ? e.typeParameters == null
+          ? CoreTypes.function.ref(ctx).copyWith(
+              functionType: EvalFunctionType(
+                [
+                  for (final p in positional)
+                    if (p.isRequired)
+                      FunctionFormalParameter(
+                        p.name?.lexeme,
+                        literalParameterType(p),
+                        true,
+                      ),
+                ],
+                [
+                  for (final p in positional)
+                    if (!p.isRequired)
+                      FunctionFormalParameter(
+                        p.name?.lexeme,
+                        literalParameterType(p),
+                        false,
+                      ),
+                ],
+                {
+                  for (final p in sortedNamedArgs)
+                    p.name!.lexeme: FunctionFormalParameter(
+                      p.name!.lexeme,
+                      literalParameterType(p),
+                      p.isRequired,
+                    ),
+                },
+                FunctionTypeAnnotation.type(
+                  inferredClosureReturnType ?? CoreTypes.dynamic.ref(ctx),
+                ),
+                const <FunctionGenericParam>[],
+              ),
+            )
+          : CoreTypes.function.ref(ctx)
+      : bound!.copyWith(boxed: true, nullable: false);
+  final signature = closureType.functionType;
+  if (signature != null &&
+      inferredClosureReturnType != null &&
+      (signature.returnType.type == null ||
+          signature.returnType.type == CoreTypes.dynamic.ref(ctx))) {
+    closureType = closureType.copyWith(
+      functionType: EvalFunctionType(
+        signature.normalParameters,
+        signature.optionalParameters,
+        signature.namedParameters,
+        FunctionTypeAnnotation.type(inferredClosureReturnType),
+        signature.generics,
+      ),
+    );
+  }
   return Variable.ssa(
     ctx,
     CreateClosure(
@@ -241,9 +327,13 @@ Variable compileFunctionExpression(
         for (final parameter in sortedNamedArgs)
           if (parameter.isRequired) parameter.name!.lexeme,
       ],
+      runtimeTypeId: closureType.runtimeTypeId(ctx),
     ),
-    CoreTypes.function.ref(ctx),
-    methodReturnType: AlwaysReturnType(CoreTypes.dynamic.ref(ctx), false),
+    closureType,
+    methodReturnType: AlwaysReturnType(
+      inferredClosureReturnType ?? CoreTypes.dynamic.ref(ctx),
+      false,
+    ),
     methodOffset: target,
     callingConvention: CallingConvention.dynamic,
   );

@@ -9,26 +9,65 @@ final class TypedClosureDescriptor {
     List<String> requiredNamed = const [],
     List<Object?> positionalDefaults = const [],
     List<Object?> namedDefaults = const [],
+    List<int> parameterTypeIds = const [],
+    List<int> parameterTypeParameterIndices = const [],
+    List<bool> parameterNullable = const [],
+    List<int> typeParameterBounds = const [],
+    this.runtimeTypeId = -1,
     this.hasEnvironment = true,
     this.boundReceiver = false,
   }) : namedNames = List.unmodifiable(namedNames),
        requiredNamed = List.unmodifiable(requiredNamed),
        positionalDefaults = List.unmodifiable(positionalDefaults),
-       namedDefaults = List.unmodifiable(namedDefaults);
+       namedDefaults = List.unmodifiable(namedDefaults),
+       parameterTypeIds = List.unmodifiable(parameterTypeIds),
+       parameterTypeParameterIndices = List.unmodifiable(
+         parameterTypeParameterIndices.isEmpty
+             ? List.filled(parameterTypeIds.length, -1)
+             : parameterTypeParameterIndices,
+       ),
+       parameterNullable = List.unmodifiable(parameterNullable),
+       typeParameterBounds = List.unmodifiable(typeParameterBounds);
 
   final int functionId, captureCount, positionalCount, requiredPositional;
   final List<String> namedNames, requiredNamed;
   final List<Object?> positionalDefaults, namedDefaults;
+  final List<int> parameterTypeIds;
+  final List<int> parameterTypeParameterIndices;
+  final List<bool> parameterNullable;
+  final List<int> typeParameterBounds;
   final bool hasEnvironment, boundReceiver;
+  final int runtimeTypeId;
   int get argumentCount => positionalCount + namedNames.length;
+
+  bool accepts(int positionalArguments, Iterable<String> namedArguments) {
+    if (positionalArguments < requiredPositional ||
+        positionalArguments > positionalCount) {
+      return false;
+    }
+    final supplied = namedArguments.toSet();
+    if (supplied.length != namedArguments.length ||
+        supplied.any((name) => !namedNames.contains(name)) ||
+        requiredNamed.any((name) => !supplied.contains(name))) {
+      return false;
+    }
+    return true;
+  }
 }
 
 /// Source-order arguments at a closure call, followed by named argument values.
 final class TypedClosureCall {
-  TypedClosureCall(this.positionalCount, {List<String> namedNames = const []})
-    : namedNames = List.unmodifiable(namedNames);
+  TypedClosureCall(
+    this.positionalCount, {
+    List<String> namedNames = const [],
+    List<int> typeArguments = const [],
+    this.trusted = false,
+  }) : namedNames = List.unmodifiable(namedNames),
+       typeArguments = List.unmodifiable(typeArguments);
   final int positionalCount;
   final List<String> namedNames;
+  final List<int> typeArguments;
+  final bool trusted;
   int get argumentCount => positionalCount + namedNames.length;
   int get overflowCount => argumentCount > 2 ? argumentCount - 1 : 0;
 }

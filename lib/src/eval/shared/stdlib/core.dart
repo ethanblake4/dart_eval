@@ -44,6 +44,7 @@ class DartCorePlugin implements EvalPlugin {
     registry.defineBridgeClass($bool.$declaration);
     registry.defineBridgeClass($Function.$declaration);
     registry.defineBridgeClass($Symbol.$declaration);
+    registry.defineBridgeClass($Invocation.$declaration);
     registry.defineBridgeClass($num.$declaration);
     registry.defineBridgeClass($int.$declaration);
     registry.defineBridgeClass($double.$declaration);
@@ -74,6 +75,8 @@ class DartCorePlugin implements EvalPlugin {
     registry.defineBridgeClass($Sink.$declaration);
     $StackTrace.configureForCompile(registry);
     $Error.configureForCompile(registry);
+    registry.defineBridgeClass($TypeError.$declaration);
+    registry.defineBridgeClass($NoSuchMethodError.$declaration);
     $UnimplementedError.configureForCompile(registry);
     $UnsupportedError.configureForCompile(registry);
   }
@@ -147,7 +150,11 @@ class DartCorePlugin implements EvalPlugin {
       $double.$negativeInfinity,
     );
     runtime.registerBridgeFunc('dart:core', 'double.parse', $double.$parse);
-    runtime.registerBridgeFunc('dart:core', 'double.tryParse', $double.$tryParse);
+    runtime.registerBridgeFunc(
+      'dart:core',
+      'double.tryParse',
+      $double.$tryParse,
+    );
     $StackTrace.configureForRuntime(runtime);
     $Error.configureForRuntime(runtime);
     $UnimplementedError.configureForRuntime(runtime);

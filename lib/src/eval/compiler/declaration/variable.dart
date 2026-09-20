@@ -1,9 +1,9 @@
 import '../helpers/global.dart';
+import '../helpers/conversion.dart';
 import '../backend/representation.dart' show representationForType;
 import '../../ir/representation.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
-import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
@@ -29,15 +29,19 @@ void compileTopLevelVariableDeclaration(
     final specifiedType = parent.variables.type;
     if (specifiedType != null) {
       type = TypeRef.fromAnnotation(ctx, ctx.library, specifiedType);
-      if (!V.type.isAssignableTo(ctx, type)) {
-        throw CompileError(
-          'Variable $varName of inferred type ${V.type} does not conform to type $type',
-        );
-      }
     } else {
       type = V.type;
     }
-    V = storageType.boxed ? V.boxIfNeeded(ctx) : V.unboxIfNeeded(ctx);
+    V = convertForAssignment(
+      ctx,
+      V,
+      type,
+      representation: representationForType(storageType),
+      source: v,
+      description:
+          'Variable $varName of inferred type ${V.type} does not conform to '
+          'type $type',
+    );
     type = storageType;
     final index = ctx.topLevelGlobalIndices[ctx.library]![varName]!;
     ctx.topLevelVariableInferredTypes[ctx.library]![varName] = type;

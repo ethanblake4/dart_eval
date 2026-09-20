@@ -17,6 +17,7 @@ final class CreateClosure extends Operation {
   final List<String> requiredNamed;
   final List<bool> positionalUnboxed;
   final List<bool> namedUnboxed;
+  final int runtimeTypeId;
 
   CreateClosure(
     this.result,
@@ -32,6 +33,7 @@ final class CreateClosure extends Operation {
     this.requiredNamed = const [],
     this.positionalUnboxed = const [],
     this.namedUnboxed = const [],
+    this.runtimeTypeId = -1,
   });
 
   @override
@@ -57,6 +59,7 @@ final class CreateClosure extends Operation {
       requiredNamed: requiredNamed,
       positionalUnboxed: positionalUnboxed,
       namedUnboxed: namedUnboxed,
+      runtimeTypeId: runtimeTypeId,
     );
   }
 
@@ -70,8 +73,17 @@ final class InvokeClosure extends Operation {
   final SSA closure;
   final List<SSA> positional;
   final Map<String, SSA> named;
+  final List<int> typeArguments;
+  final bool trusted;
 
-  InvokeClosure(this.result, this.closure, this.positional, this.named);
+  InvokeClosure(
+    this.result,
+    this.closure,
+    this.positional,
+    this.named, {
+    this.typeArguments = const [],
+    this.trusted = false,
+  });
 
   @override
   SSA get writesTo => result;
@@ -88,6 +100,8 @@ final class InvokeClosure extends Operation {
       replace(closure),
       positional.map(replace).toList(),
       named.map((key, value) => MapEntry(key, replace(value))),
+      typeArguments: typeArguments,
+      trusted: trusted,
     );
   }
 

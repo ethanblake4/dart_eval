@@ -82,13 +82,15 @@ void main(List<String> args) {
     if (runtime.executeLib(_library, 'initializationCount') != 1) {
       throw StateError('$name reran its global initializer');
     }
+    final raw = List<double>.of(times);
     times.sort();
     final median = times[times.length ~/ 2];
     print(
       '$name median_ms=${median.toStringAsFixed(3)} '
       'min_ms=${times.first.toStringAsFixed(3)} '
       'max_ms=${times.last.toStringAsFixed(3)} '
-      'ns/iteration=${(median * 1000000 / iterations).toStringAsFixed(2)}',
+      'ns/iteration=${(median * 1000000 / iterations).toStringAsFixed(2)} '
+      'raw_ms=${raw.map((value) => value.toStringAsFixed(3)).join(',')}',
     );
   }
   print('checksum=$checksum');

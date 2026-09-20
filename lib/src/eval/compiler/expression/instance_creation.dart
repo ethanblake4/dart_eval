@@ -7,6 +7,7 @@ import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/offset_tracker.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
+import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/bridge.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
@@ -27,6 +28,7 @@ Variable compileInstanceCreation(
   }
 
   final staticType = $resolved.concreteTypes.first;
+  final instantiatedType = TypeRef.fromAnnotation(ctx, ctx.library, type);
   final dec0 = resolveStaticMethod(ctx, staticType, name);
 
   final ArgumentListResult arguments;
@@ -80,18 +82,25 @@ Variable compileInstanceCreation(
       ctx.pushOp(InvokeExternal(result, externalId, arguments.ssa));
     }
   } else {
+    final constructor = dec0.declaration! as ConstructorDeclaration;
     final offset = DeferredOrOffset.lookupStatic(
       ctx,
       staticType.file,
       staticType.name,
       name,
     );
-    ctx.pushOp(Call(offset, arguments.ssa, result: result));
+    final callArguments = [...arguments.ssa];
+    if (constructor.factoryKeyword == null) {
+      callArguments.add(
+        BuiltinValue(intval: instantiatedType.runtimeTypeId(ctx)).push(ctx).ssa,
+      );
+    }
+    ctx.pushOp(Call(offset, callArguments, result: result));
   }
   return Variable.of(
     ctx,
     result,
-    staticType.copyWith(boxed: true),
-    concreteTypes: [staticType],
+    instantiatedType.copyWith(boxed: true),
+    concreteTypes: [instantiatedType],
   );
 }

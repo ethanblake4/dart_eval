@@ -55,14 +55,19 @@ List<PossiblyValuedParameter> resolveFPLDefaults(
   }
 
   ctx.functionParameters[ctx.currentFunctionId!] = [...positional, ...named];
+  final declaredTypes = <TypeRef>[];
 
   for (final param in [...positional, ...named]) {
     final argument = SSA('arg_$paramIndex');
     final normal = param is DefaultFormalParameter ? param.parameter : param;
     final annotation = normal is SimpleFormalParameter ? normal.type : null;
-    final type = !allowUnboxed || annotation == null
+    final declaredType = annotation == null
         ? CoreTypes.dynamic.ref(ctx)
         : TypeRef.fromAnnotation(ctx, ctx.library, annotation);
+    declaredTypes.add(declaredType);
+    final type = !allowUnboxed
+        ? declaredType.copyWith(boxed: true)
+        : declaredType;
     ctx.pushOp(
       Parameter(
         argument,
@@ -85,6 +90,7 @@ List<PossiblyValuedParameter> resolveFPLDefaults(
     }
     paramIndex++;
   }
+  ctx.functionParameterTypes[ctx.currentFunctionId!] = declaredTypes;
   return normalized;
 }
 
@@ -100,11 +106,12 @@ List<PossiblyValuedParameter> resolveFPLDefaults(
     return type == null
         ? (null, null)
         : (
-            type is NamedType && typeParameters.containsKey(type.name.lexeme)
-                ? typeParameters[type.name.lexeme]!.copyWith(
-                    nullable: type.question != null,
-                  )
-                : TypeRef.fromAnnotation(ctx, decLibrary, type),
+            TypeRef.fromAnnotation(
+              ctx,
+              decLibrary,
+              type,
+              typeParameters: typeParameters,
+            ),
             type,
           );
   } else if (param is FieldFormalParameter) {
@@ -123,6 +130,7 @@ List<PossiblyValuedParameter> resolveFPLDefaults(
       param.parameter,
       decLibrary,
       parameterHost,
+      typeParameters: typeParameters,
     );
   } else {
     throw CompileError('Unknown formal type ${param.runtimeType}');

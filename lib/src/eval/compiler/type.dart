@@ -3,10 +3,23 @@ import 'package:collection/collection.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/compiler/model/function_type.dart';
+import 'package:dart_eval/src/eval/shared/runtime_type_descriptor.dart';
 
 import 'builtins.dart';
 import 'context.dart';
 import 'errors.dart';
+
+/// The action required to assign a value to a typed slot.
+enum AssignmentConversion {
+  /// The source type is a subtype of the destination type.
+  none,
+
+  /// Dart permits the assignment, but the value must be checked at runtime.
+  runtimeCheck,
+
+  /// Dart rejects the assignment statically.
+  invalid,
+}
 
 /// Reference to a type in the compiler. Types are initially created
 /// with a [file] and [name], and resolved lazily with [resolveTypeChain]
@@ -24,6 +37,9 @@ class TypeRef {
     this.recordFields = const [],
     this.resolved = false,
     this.functionType,
+    this.typeParameterOwner,
+    this.typeParameterIndex,
+    this.typeParameterBound,
     this.boxed = true,
     this.nullable = false,
   });
@@ -41,6 +57,9 @@ class TypeRef {
   final List<TypeRef> specifiedTypeArgs;
   final List<RecordParameterType> recordFields;
   final EvalFunctionType? functionType;
+  final String? typeParameterOwner;
+  final int? typeParameterIndex;
+  final TypeRef? typeParameterBound;
   final bool resolved;
   final bool boxed;
   final bool nullable;
@@ -61,6 +80,8 @@ class TypeRef {
     }
 
     ctx.typeRefIndexMap[$type] = ctx.typeNames.length;
+    ctx.runtimeTypeDescriptorIds[$type._runtimeDescriptorKey] =
+        ctx.typeNames.length;
     ctx.runtimeTypeList.add($type);
     ctx.typeNames.add(name);
 
@@ -137,10 +158,20 @@ class TypeRef {
   factory TypeRef.fromAnnotation(
     CompilerContext ctx,
     int library,
-    TypeAnnotation typeAnnotation,
-  ) {
+    TypeAnnotation typeAnnotation, {
+    Map<String, TypeRef> typeParameters = const {},
+  }) {
     if (typeAnnotation is GenericFunctionType) {
-      return CoreTypes.function.ref(ctx);
+      return CoreTypes.function
+          .ref(ctx)
+          .copyWith(
+            functionType: EvalFunctionType.fromAnnotation(
+              ctx,
+              library,
+              typeAnnotation,
+            ),
+            nullable: typeAnnotation.question != null,
+          );
     }
     if (typeAnnotation is RecordTypeAnnotation) {
       final fields = <RecordParameterType>[];
@@ -149,7 +180,12 @@ class TypeRef {
       var positionalFields = 1;
       for (var i = 0; i < typeAnnotation.positionalFields.length; i++) {
         final field = typeAnnotation.positionalFields[i];
-        final fType = TypeRef.fromAnnotation(ctx, library, field.type);
+        final fType = TypeRef.fromAnnotation(
+          ctx,
+          library,
+          field.type,
+          typeParameters: typeParameters,
+        );
         fields.add(
           RecordParameterType('\$${positionalFields++}', fType, false),
         );
@@ -167,7 +203,12 @@ class TypeRef {
       }
       for (var i = 0; i < namedFields.length; i++) {
         final field = namedFields[i];
-        final fType = TypeRef.fromAnnotation(ctx, library, field.type);
+        final fType = TypeRef.fromAnnotation(
+          ctx,
+          library,
+          field.type,
+          typeParameters: typeParameters,
+        );
         fields.add(RecordParameterType(field.name.lexeme, fType, true));
         name += '${field.name.lexeme}:$fType';
         if (i < namedFields.length - 1) {
@@ -191,7 +232,9 @@ class TypeRef {
     typeAnnotation as NamedType;
     final n = typeAnnotation.name.stringValue ?? typeAnnotation.name.value();
     final unspecifiedType =
-        ctx.temporaryTypes[library]?[n] ?? ctx.visibleTypes[library]?[n];
+        typeParameters[n] ??
+        ctx.temporaryTypes[library]?[n] ??
+        ctx.visibleTypes[library]?[n];
     if (unspecifiedType == null) {
       throw CompileError(
         'Unknown type $n',
@@ -204,7 +247,14 @@ class TypeRef {
     if (typeArgs != null) {
       final resolved = <TypeRef>[];
       for (final arg in typeArgs.arguments) {
-        resolved.add(TypeRef.fromAnnotation(ctx, library, arg));
+        resolved.add(
+          TypeRef.fromAnnotation(
+            ctx,
+            library,
+            arg,
+            typeParameters: typeParameters,
+          ),
+        );
       }
       return unspecifiedType.copyWith(
         specifiedTypeArgs: resolved,
@@ -220,6 +270,7 @@ class TypeRef {
     BridgeTypeAnnotation typeAnnotation, {
     TypeRef? specifyingType,
     TypeRef? specifiedType,
+    Map<String, TypeRef> typeParameters = const {},
     bool staticSource = true,
   }) {
     return TypeRef.fromBridgeTypeRef(
@@ -228,6 +279,7 @@ class TypeRef {
       staticSource: staticSource,
       specifyingType: specifyingType,
       specifiedType: specifiedType,
+      typeParameters: typeParameters,
     ).copyWith(nullable: typeAnnotation.nullable);
   }
 
@@ -237,6 +289,7 @@ class TypeRef {
     bool staticSource = true,
     TypeRef? specifyingType,
     TypeRef? specifiedType,
+    Map<String, TypeRef> typeParameters = const {},
   }) {
     final cacheId = typeReference.cacheId;
     if (cacheId != null) {
@@ -258,6 +311,7 @@ class TypeRef {
             arg,
             staticSource: staticSource,
             specifiedType: specifiedType,
+            typeParameters: typeParameters,
           ),
         );
       }
@@ -276,6 +330,8 @@ class TypeRef {
     }
     final ref = typeReference.ref;
     if (ref != null) {
+      final typeParameter = typeParameters[ref];
+      if (typeParameter != null) return typeParameter;
       specifiedType ??=
           ctx.visibleTypes[ctx.library]![ctx.currentClass?.name.stringValue];
 
@@ -300,43 +356,38 @@ class TypeRef {
       final genericIndex = dec.type.generics.keys.toList().indexWhere(
         (key) => key == ref,
       );
-      if (specifiedType.specifiedTypeArgs.isNotEmpty) {
+      if (genericIndex >= 0 &&
+          genericIndex < specifiedType.specifiedTypeArgs.length) {
         return specifiedType.specifiedTypeArgs[genericIndex];
       }
-      final generic = dec.type.generics[ref]!;
+      final generic = dec.type.generics[ref];
+      if (generic == null) return CoreTypes.dynamic.ref(ctx);
       final $extends = generic.$extends;
       final boundType = $extends == null
           ? CoreTypes.dynamic.ref(ctx)
           : TypeRef.fromBridgeTypeRef(ctx, $extends);
 
-      if (specifyingType != null) {
-        final syDeclaration =
-            ctx.topLevelDeclarationsMap[specifyingType.file]![specifyingType
-                .name]!;
-        final syDec = syDeclaration.declaration!;
-
-        if (syDec is! ClassDeclaration) {
-          throw CompileError('Specifying types from bridge is not supported');
-        }
-        final syExtends = syDec.extendsClause;
-        if (syExtends != null &&
-            syExtends.superclass.name.stringValue == specifiedType.name) {
-          final declaredType =
-              syExtends.superclass.typeArguments?.arguments[genericIndex];
-          if (declaredType != null) {
-            final resolvedDeclaredType = TypeRef.fromAnnotation(
-              ctx,
-              specifyingType.file,
-              declaredType,
+      if (specifyingType != null && genericIndex >= 0) {
+        final resolvedSpecifyingType = specifyingType.resolveTypeChain(ctx);
+        final instantiatedType =
+            [
+              resolvedSpecifyingType,
+              ...resolvedSpecifyingType.extendsChain,
+            ].firstWhereOrNull(
+              (candidate) =>
+                  candidate.hasSameDeclarationAs(specifiedType!) &&
+                  genericIndex < candidate.specifiedTypeArgs.length,
             );
-            if (!resolvedDeclaredType.isAssignableTo(ctx, boundType)) {
-              throw CompileError(
-                "Type argument $resolvedDeclaredType does not conform to type parameter $ref's"
-                "bound ($boundType)",
-              );
-            }
-            return resolvedDeclaredType;
+        if (instantiatedType != null) {
+          final resolvedDeclaredType =
+              instantiatedType.specifiedTypeArgs[genericIndex];
+          if (!resolvedDeclaredType.isAssignableTo(ctx, boundType)) {
+            throw CompileError(
+              "Type argument $resolvedDeclaredType does not conform to type parameter $ref's"
+              "bound ($boundType)",
+            );
           }
+          return resolvedDeclaredType;
         }
       }
 
@@ -347,7 +398,11 @@ class TypeRef {
       return CoreTypes.function
           .ref(ctx)
           .copyWith(
-            functionType: EvalFunctionType.fromBridgeFunctionDef(ctx, gft),
+            functionType: EvalFunctionType.fromBridgeFunctionDef(
+              ctx,
+              gft,
+              typeParameters: typeParameters,
+            ),
           );
     }
     throw CompileError(
@@ -527,17 +582,10 @@ class TypeRef {
         }
         return TypeRef.lookupFieldType(ctx, CoreTypes.object.ref(ctx), field);
       } else {
-        final $super =
-            ctx.visibleTypes[$class.file]![$extends
-                    .superclass
-                    .name
-                    .stringValue ??
-                $extends.superclass.name.value()]!;
-        return TypeRef.lookupFieldType(
-          ctx,
-          $super.inheritTypeArgsFrom(ctx, $class),
-          field,
-        );
+        final $super = $class
+            .resolveTypeChain(ctx, source: source)
+            .extendsType!;
+        return TypeRef.lookupFieldType(ctx, $super, field, source: source);
       }
     }
   }
@@ -551,6 +599,7 @@ class TypeRef {
     Set<TypeRef> stack = const {},
     AstNode? source,
   }) {
+    if (isTypeParameter) return this;
     if (recursionGuard > 500) {
       throw CompileError(
         'Reached max limit on recursion while resolving types. '
@@ -584,7 +633,9 @@ class TypeRef {
     if ($cached.resolved) {
       return $cached.copyWith(
         boxed: boxed,
+        functionType: functionType,
         specifiedTypeArgs: resolvedSpecifiedTypeArgs,
+        nullable: nullable,
       );
     }
 
@@ -797,6 +848,7 @@ class TypeRef {
     final resolvedRef = TypeRef(
       file,
       name,
+      functionType: functionType,
       extendsType: $super,
       withType: $with,
       implementsType: $implements,
@@ -804,6 +856,7 @@ class TypeRef {
       resolved: true,
       boxed: boxed,
       specifiedTypeArgs: resolvedSpecifiedTypeArgs,
+      nullable: nullable,
     );
 
     for (final $file in cache.visibleLibraries[this]!) {
@@ -812,7 +865,7 @@ class TypeRef {
 
     final fileCache = cache.types[file]!;
     if (fileCache[name] == null || !fileCache[name]!.resolved) {
-      fileCache[name] = resolvedRef.copyWith(boxed: true);
+      fileCache[name] = resolvedRef.copyWith(boxed: true, nullable: false);
     }
 
     return resolvedRef;
@@ -820,18 +873,99 @@ class TypeRef {
 
   Set<int> getRuntimeIndices(CompilerContext ctx) {
     return {
-      ctx.typeRefIndexMap[this]!,
+      runtimeTypeId(ctx),
+      ctx.typeRefIndexMap[this] ?? runtimeTypeId(ctx),
       for (final a in allSupertypes) ...a.getRuntimeIndices(ctx),
     };
   }
 
-  int runtimeTypeId(CompilerContext ctx) {
-    if (name.startsWith('@record') && !ctx.typeRefIndexMap.containsKey(this)) {
-      ctx.typeRefIndexMap[this] = ctx.typeNames.length;
-      ctx.runtimeTypeList.add(this);
-      ctx.typeNames.add(name);
+  String get semanticKey =>
+      '${isTypeParameter ? 'parameter:$typeParameterOwner:$typeParameterIndex' : '$file:$name'}${nullable ? '?' : ''}'
+      '${specifiedTypeArgs.isEmpty ? '' : '<${specifiedTypeArgs.map((type) => type.semanticKey).join(',')}>'}'
+      '${recordFields.isEmpty ? '' : ':record:${recordFields.map((field) => '${field.isNamed ? 'n' : 'p'}:${field.name}:${field.type.semanticKey}').join(',')}'}'
+      '${functionType == null ? '' : ':fn:${functionType!.semanticKey()}'}';
+
+  String get _runtimeDescriptorKey => semanticKey;
+
+  List<int> runtimeDescriptor(CompilerContext ctx) {
+    if (isTypeParameter) {
+      final ownerType = isClassTypeParameter
+          ? () {
+              final owner = typeParameterOwner!.split(':');
+              final ownerLibrary = int.parse(owner[1]);
+              return ctx.visibleTypes[ownerLibrary]![owner[2]]!.runtimeTypeId(
+                ctx,
+              );
+            }()
+          : RuntimeTypeDescriptorTag.callableTypeParameterOwner;
+      return [
+        CoreTypes.dynamic.ref(ctx).runtimeTypeId(ctx),
+        nullable ? 1 : 0,
+        RuntimeTypeDescriptorTag.typeParameter,
+        ownerType,
+        typeParameterIndex!,
+        (typeParameterBound ?? CoreTypes.dynamic.ref(ctx)).runtimeTypeId(ctx),
+      ];
     }
-    return ctx.typeRefIndexMap[this]!;
+    if (recordFields.isNotEmpty) {
+      final positional = recordFields.where((field) => !field.isNamed).toList();
+      final named = recordFields.where((field) => field.isNamed).toList()
+        ..sort((a, b) => a.name!.compareTo(b.name!));
+      return [
+        CoreTypes.record.ref(ctx).runtimeTypeId(ctx),
+        nullable ? 1 : 0,
+        RuntimeTypeDescriptorTag.record,
+        positional.length,
+        named.length,
+        for (final field in positional) field.type.runtimeTypeId(ctx),
+        for (final field in named) ...[
+          ctx.constantPool.addOrGet(field.name!),
+          field.type.runtimeTypeId(ctx),
+        ],
+      ];
+    }
+    final signature = functionType;
+    if (signature != null && signature.generics.isEmpty) {
+      TypeRef resolve(FunctionTypeAnnotation annotation) =>
+          annotation.type ?? CoreTypes.dynamic.ref(ctx);
+      final positional = [
+        ...signature.normalParameters,
+        ...signature.optionalParameters,
+      ];
+      final named = signature.namedParameters.entries.toList()
+        ..sort((a, b) => a.key.compareTo(b.key));
+      return [
+        CoreTypes.function.ref(ctx).runtimeTypeId(ctx),
+        nullable ? 1 : 0,
+        RuntimeTypeDescriptorTag.function,
+        resolve(signature.returnType).runtimeTypeId(ctx),
+        signature.normalParameters.length,
+        positional.length,
+        named.length,
+        for (final parameter in positional)
+          resolve(parameter.type).runtimeTypeId(ctx),
+        for (final entry in named) ...[
+          ctx.constantPool.addOrGet(entry.key),
+          entry.value.isRequired ? 1 : 0,
+          resolve(entry.value.type).runtimeTypeId(ctx),
+        ],
+      ];
+    }
+    return [
+      ctx.typeRefIndexMap[this] ?? runtimeTypeId(ctx),
+      nullable ? 1 : 0,
+      for (final argument in specifiedTypeArgs) argument.runtimeTypeId(ctx),
+    ];
+  }
+
+  int runtimeTypeId(CompilerContext ctx) {
+    final existing = ctx.runtimeTypeDescriptorIds[_runtimeDescriptorKey];
+    if (existing != null) return existing;
+    final id = ctx.runtimeTypeList.length;
+    ctx.runtimeTypeDescriptorIds[_runtimeDescriptorKey] = id;
+    ctx.runtimeTypeList.add(this);
+    ctx.typeNames.add(name);
+    return id;
   }
 
   List<TypeRef> get allSupertypes => [
@@ -891,6 +1025,82 @@ class TypeRef {
   bool get isUnboxedAcrossFunctionBoundaries =>
       unboxedAcrossFunctionBoundaries.contains(this) && !nullable;
 
+  /// Whether two references name the same declaration. This intentionally
+  /// ignores type arguments, nullability, and representation details.
+  bool hasSameDeclarationAs(TypeRef other) =>
+      isTypeParameter || other.isTypeParameter
+      ? isTypeParameter &&
+            other.isTypeParameter &&
+            typeParameterOwner == other.typeParameterOwner &&
+            typeParameterIndex == other.typeParameterIndex
+      : (file == other.file || name.startsWith('@record')) &&
+            name == other.name;
+
+  bool get isTypeParameter => typeParameterIndex != null;
+
+  bool get isClassTypeParameter =>
+      isTypeParameter && typeParameterOwner!.startsWith('class:');
+
+  /// Semantic type equality for language checks. Unlike [operator ==], this
+  /// includes nullability, type arguments, record fields, and function shape.
+  bool isSameSemanticType(CompilerContext ctx, TypeRef other) {
+    final left = resolveTypeChain(ctx);
+    final right = other.resolveTypeChain(ctx);
+    if (!left.hasSameDeclarationAs(right) ||
+        left.nullable != right.nullable ||
+        left.specifiedTypeArgs.length != right.specifiedTypeArgs.length ||
+        left.recordFields.length != right.recordFields.length) {
+      return false;
+    }
+    for (var i = 0; i < left.specifiedTypeArgs.length; i++) {
+      if (!left.specifiedTypeArgs[i].isSameSemanticType(
+        ctx,
+        right.specifiedTypeArgs[i],
+      )) {
+        return false;
+      }
+    }
+    for (var i = 0; i < left.recordFields.length; i++) {
+      final a = left.recordFields[i], b = right.recordFields[i];
+      if (a.name != b.name ||
+          a.isNamed != b.isNamed ||
+          !a.type.isSameSemanticType(ctx, b.type)) {
+        return false;
+      }
+    }
+    // Function types are currently represented by their analyzer model. Do not
+    // accidentally equate a structural function type with plain Function.
+    return left.functionType?.semanticKey() == right.functionType?.semanticKey();
+  }
+
+  /// Classifies Dart assignment compatibility without conflating `dynamic`
+  /// with a subtype proof.
+  AssignmentConversion assignmentConversionTo(
+    CompilerContext ctx,
+    TypeRef slot,
+  ) {
+    final dynamicType = CoreTypes.dynamic.ref(ctx);
+    if (slot == dynamicType || slot == CoreTypes.voidType.ref(ctx)) {
+      return AssignmentConversion.none;
+    }
+    if (this == dynamicType) {
+      if (slot == CoreTypes.object.ref(ctx) && slot.nullable) {
+        return AssignmentConversion.none;
+      }
+      return AssignmentConversion.runtimeCheck;
+    }
+    if (nullable &&
+        !slot.nullable &&
+        copyWith(
+          nullable: false,
+        ).isAssignableTo(ctx, slot, forceAllowDynamic: false)) {
+      return AssignmentConversion.runtimeCheck;
+    }
+    return isAssignableTo(ctx, slot, forceAllowDynamic: false)
+        ? AssignmentConversion.none
+        : AssignmentConversion.invalid;
+  }
+
   /// Checks whether a value of this type can be assigned to the
   /// field of the type [slot]. This is the main check for assignments,
   /// but also useful to check for function types.
@@ -907,34 +1117,56 @@ class TypeRef {
     List<TypeRef>? overrideGenerics,
     bool forceAllowDynamic = true,
   }) {
-    if (forceAllowDynamic &&
-        (this == CoreTypes.dynamic.ref(ctx) ||
-            slot == CoreTypes.dynamic.ref(ctx))) {
+    if (slot == CoreTypes.dynamic.ref(ctx) ||
+        slot == CoreTypes.voidType.ref(ctx) ||
+        (forceAllowDynamic && this == CoreTypes.dynamic.ref(ctx))) {
       return true;
     }
 
     if (this == CoreTypes.nullType.ref(ctx)) {
       return slot.nullable || slot == CoreTypes.nullType.ref(ctx);
     }
+    if (nullable && !slot.nullable) return false;
 
     final generics = overrideGenerics ?? specifiedTypeArgs;
 
-    if (this == slot) {
-      for (var i = 0; i < generics.length; i++) {
-        if (slot.specifiedTypeArgs.length - 1 > i) {
-          if (!generics[i].isAssignableTo(ctx, slot.specifiedTypeArgs[i])) {
-            return false;
-          }
+    if (hasSameDeclarationAs(slot) &&
+        (!nullable || slot.nullable || this == CoreTypes.nullType.ref(ctx))) {
+      if (slot.specifiedTypeArgs.isNotEmpty &&
+          generics.length != slot.specifiedTypeArgs.length) {
+        return false;
+      }
+      for (var i = 0; i < slot.specifiedTypeArgs.length; i++) {
+        if (!generics[i].isAssignableTo(
+          ctx,
+          slot.specifiedTypeArgs[i],
+          forceAllowDynamic: false,
+        )) {
+          return false;
         }
       }
       return true;
     }
 
     for (final type in resolveTypeChain(ctx).allSupertypes) {
+      final inheritedGenerics = type.specifiedTypeArgs.isEmpty
+          ? generics
+          : [
+              for (final argument in type.specifiedTypeArgs)
+                if (argument.isTypeParameter &&
+                    argument.typeParameterIndex! < generics.length)
+                  generics[argument.typeParameterIndex!].copyWith(
+                    nullable:
+                        argument.nullable ||
+                        generics[argument.typeParameterIndex!].nullable,
+                  )
+                else
+                  argument,
+            ];
       if (type.isAssignableTo(
         ctx,
         slot,
-        overrideGenerics: generics,
+        overrideGenerics: inheritedGenerics,
         forceAllowDynamic: false,
       )) {
         return true;
@@ -972,6 +1204,9 @@ class TypeRef {
     List<TypeRef>? specifiedTypeArgs,
     List<RecordParameterType>? recordFields,
     EvalFunctionType? functionType,
+    String? typeParameterOwner,
+    int? typeParameterIndex,
+    TypeRef? typeParameterBound,
     bool? boxed,
     bool? resolved,
     bool? nullable,
@@ -985,10 +1220,89 @@ class TypeRef {
       genericParams: genericParams ?? this.genericParams,
       specifiedTypeArgs: specifiedTypeArgs ?? this.specifiedTypeArgs,
       functionType: functionType ?? this.functionType,
+      typeParameterOwner: typeParameterOwner ?? this.typeParameterOwner,
+      typeParameterIndex: typeParameterIndex ?? this.typeParameterIndex,
+      typeParameterBound: typeParameterBound ?? this.typeParameterBound,
       recordFields: recordFields ?? this.recordFields,
       boxed: boxed ?? this.boxed,
       resolved: resolved ?? this.resolved,
       nullable: nullable ?? this.nullable,
+    );
+  }
+
+  /// Replaces retained type-parameter references anywhere inside this type.
+  TypeRef substituteTypeParameters(Map<(String, int), TypeRef> substitutions) {
+    if (isTypeParameter) {
+      final replacement =
+          substitutions[(typeParameterOwner!, typeParameterIndex!)];
+      if (replacement != null) {
+        return replacement.copyWith(nullable: nullable || replacement.nullable);
+      }
+      return this;
+    }
+    if (specifiedTypeArgs.isEmpty &&
+        recordFields.isEmpty &&
+        functionType == null) {
+      return this;
+    }
+
+    FunctionTypeAnnotation substituteAnnotation(FunctionTypeAnnotation value) {
+      final type = value.type;
+      return type == null
+          ? value
+          : FunctionTypeAnnotation.type(
+              type.substituteTypeParameters(substitutions),
+            );
+    }
+
+    FunctionFormalParameter substituteParameter(
+      FunctionFormalParameter value,
+    ) => FunctionFormalParameter(
+      value.name,
+      substituteAnnotation(value.type),
+      value.isRequired,
+    );
+
+    final signature = functionType;
+    return copyWith(
+      specifiedTypeArgs: [
+        for (final argument in specifiedTypeArgs)
+          argument.substituteTypeParameters(substitutions),
+      ],
+      recordFields: [
+        for (final field in recordFields)
+          RecordParameterType(
+            field.name,
+            field.type.substituteTypeParameters(substitutions),
+            field.isNamed,
+          ),
+      ],
+      functionType: signature == null
+          ? null
+          : EvalFunctionType(
+              [
+                for (final parameter in signature.normalParameters)
+                  substituteParameter(parameter),
+              ],
+              [
+                for (final parameter in signature.optionalParameters)
+                  substituteParameter(parameter),
+              ],
+              {
+                for (final entry in signature.namedParameters.entries)
+                  entry.key: substituteParameter(entry.value),
+              },
+              substituteAnnotation(signature.returnType),
+              [
+                for (final generic in signature.generics)
+                  FunctionGenericParam(
+                    generic.name,
+                    bound: generic.bound == null
+                        ? null
+                        : substituteAnnotation(generic.bound!),
+                  ),
+              ],
+            ),
     );
   }
 
@@ -997,11 +1311,16 @@ class TypeRef {
       identical(this, other) ||
       other is TypeRef &&
           runtimeType == other.runtimeType &&
-          (file == other.file || name.startsWith('@record')) &&
-          name == other.name;
+          (isTypeParameter || other.isTypeParameter
+              ? typeParameterOwner == other.typeParameterOwner &&
+                    typeParameterIndex == other.typeParameterIndex
+              : (file == other.file || name.startsWith('@record')) &&
+                    name == other.name);
 
   @override
-  int get hashCode => name.startsWith('@record')
+  int get hashCode => isTypeParameter
+      ? Object.hash(typeParameterOwner, typeParameterIndex)
+      : name.startsWith('@record')
       ? name.hashCode
       : file.hashCode ^ name.hashCode;
 
@@ -1028,21 +1347,28 @@ class TypeRef {
 
   static void loadTemporaryTypes(
     CompilerContext ctx,
-    List<TypeParameter>? typeParams, [
+    List<TypeParameter>? typeParams, {
     int? library,
-  ]) {
+    String? owner,
+  }) {
     if (typeParams != null) {
-      for (final param in typeParams) {
+      for (var index = 0; index < typeParams.length; index++) {
+        final param = typeParams[index];
         ctx.temporaryTypes[library ?? ctx.library] ??= {};
         final bound = param.bound;
         final name = param.name.lexeme;
-        if (bound != null) {
-          ctx.temporaryTypes[library ?? ctx.library]![name] =
-              TypeRef.fromAnnotation(ctx, library ?? ctx.library, bound);
-        } else {
-          ctx.temporaryTypes[library ?? ctx.library]![name] = CoreTypes.dynamic
-              .ref(ctx);
-        }
+        final resolvedBound = bound == null
+            ? CoreTypes.dynamic.ref(ctx)
+            : TypeRef.fromAnnotation(ctx, library ?? ctx.library, bound);
+        ctx.temporaryTypes[library ?? ctx.library]![name] = TypeRef(
+          library ?? ctx.library,
+          name,
+          resolved: true,
+          typeParameterOwner:
+              owner ?? 'function:${ctx.currentFunctionId ?? -1}',
+          typeParameterIndex: index,
+          typeParameterBound: resolvedBound,
+        );
       }
     }
   }
@@ -1119,7 +1445,11 @@ class AlwaysReturnType implements ReturnType {
     final m = resolveInstanceMethod(ctx, type, method);
     if (m.isBridge) {
       return AlwaysReturnType(
-        TypeRef.fromBridgeAnnotation(ctx, m.bridge!.functionDescriptor.returns),
+        TypeRef.fromBridgeAnnotation(
+          ctx,
+          m.bridge!.functionDescriptor.returns,
+          specifiedType: type,
+        ),
         true,
       );
     }
@@ -1169,7 +1499,13 @@ class AlwaysReturnType implements ReturnType {
     List<TypeRef> typeArgs = const [],
     bool $static = false,
   }) {
-    final resolvedType = type.resolveTypeChain(ctx);
+    final lookupType = type.isTypeParameter
+        ? type.typeParameterBound ?? CoreTypes.dynamic.ref(ctx)
+        : type;
+    if (lookupType == CoreTypes.dynamic.ref(ctx)) {
+      return AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
+    }
+    final resolvedType = lookupType.resolveTypeChain(ctx);
     final knownType = resolvedType.extendsType == CoreTypes.enumType.ref(ctx)
         ? CoreTypes.enumType.ref(ctx)
         : resolvedType;
@@ -1190,20 +1526,20 @@ class AlwaysReturnType implements ReturnType {
       );
     }
 
-    if (type == CoreTypes.dynamic.ref(ctx)) {
+    if (lookupType == CoreTypes.dynamic.ref(ctx)) {
       return AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
     }
 
     return $static
         ? AlwaysReturnType.fromStaticMethod(
             ctx,
-            type,
+            lookupType,
             method,
             CoreTypes.dynamic.ref(ctx),
           )
         : AlwaysReturnType.fromInstanceMethod(
             ctx,
-            type,
+            lookupType,
             method,
             CoreTypes.dynamic.ref(ctx),
           );

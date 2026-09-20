@@ -13,7 +13,7 @@ import 'typed_exception.dart';
 /// Versioned little-endian bytecode payload embedded in a Program.
 abstract final class TypedCodec {
   static const magic = 0x54564544; // DEVT
-  static const version = 116;
+  static const version = 124;
 
   static ByteData write(TypedProgram program) {
     final objects = _writeObjects(program.objects);
@@ -249,6 +249,13 @@ abstract final class TypedCodec {
       }
     }
 
+    void strings(List<String> values) {
+      u32(values.length);
+      for (final value in values) {
+        string(value);
+      }
+    }
+
     for (final type in program.classes) {
       string(type.name);
       string(type.library);
@@ -261,17 +268,26 @@ abstract final class TypedCodec {
       string(site.name);
       u32(site.argumentCount);
       u32(site.kind.index);
+      u32(site.positionalCount);
+      string(site.callerLibrary);
+      strings(site.namedNames);
+      u32(site.typeArguments.length);
+      for (final type in site.typeArguments) {
+        u32(type);
+      }
     }
     for (final declaration in program.exports) {
       string(declaration.library);
       string(declaration.name);
       u32(declaration.functionId);
+      u32(declaration.generativeConstructorRuntimeTypeId + 1);
       u32(declaration.parameters.length);
       for (final parameter in declaration.parameters) {
         string(parameter.name);
         u32((parameter.isRequired ? 1 : 0) | (parameter.nullable ? 2 : 0));
         string(parameter.typeName);
         string(parameter.typeLibrary);
+        u32(parameter.runtimeTypeId + 1);
         final value = _writeObjects([parameter.defaultValue]);
         u32(value.length);
         bytes.add(value);
@@ -281,13 +297,6 @@ abstract final class TypedCodec {
       u32(call.externalFunctionId);
       u32(call.argumentCount);
     }
-    void strings(List<String> values) {
-      u32(values.length);
-      for (final value in values) {
-        string(value);
-      }
-    }
-
     void defaults(List<Object?> values) {
       final data = _writeObjects(values);
       u32(data.length);
@@ -307,10 +316,26 @@ abstract final class TypedCodec {
       strings(descriptor.requiredNamed);
       defaults(descriptor.positionalDefaults);
       defaults(descriptor.namedDefaults);
+      u32(descriptor.parameterTypeIds.length);
+      for (var i = 0; i < descriptor.parameterTypeIds.length; i++) {
+        u32(descriptor.parameterTypeIds[i] + 1);
+        u32(descriptor.parameterTypeParameterIndices[i] + 1);
+        u32(descriptor.parameterNullable[i] ? 1 : 0);
+      }
+      u32(descriptor.typeParameterBounds.length);
+      for (final bound in descriptor.typeParameterBounds) {
+        u32(bound);
+      }
+      u32(descriptor.runtimeTypeId + 1);
     }
     for (final call in program.closureCalls) {
       u32(call.positionalCount);
       strings(call.namedNames);
+      u32(call.trusted ? 1 : 0);
+      u32(call.typeArguments.length);
+      for (final type in call.typeArguments) {
+        u32(type);
+      }
     }
     for (final global in program.globals) {
       u32(global.initializerFunction + 1);
@@ -395,12 +420,17 @@ abstract final class TypedCodec {
       return values;
     }
 
+    List<String> callSiteStrings() {
+      final count = u32();
+      return List.generate(count, (_) => string(), growable: false);
+    }
+
     require(
       classCount * 24 +
-          callSiteCount * 12 +
-          exportCount * 16 +
+          callSiteCount * 24 +
+          exportCount * 20 +
           externalCallCount * 8 +
-          closureCount * 36 +
+          closureCount * 40 +
           closureCallCount * 8 +
           globalCount * 16 +
           exceptionRegionCount * 12 +
@@ -426,10 +456,23 @@ abstract final class TypedCodec {
       if (kind >= TypedMemberKind.values.length) {
         throw const FormatException('Invalid typed member kind');
       }
+      final positionalCount = u32();
+      final callerLibrary = string();
+      final namedNames = callSiteStrings();
+      final typeArgumentCount = u32();
+      final typeArguments = List.generate(
+        typeArgumentCount,
+        (_) => u32(),
+        growable: false,
+      );
       callSites.add(
         TypedCallSite(
           name,
           argumentCount: argumentCount,
+          positionalCount: positionalCount,
+          namedNames: namedNames,
+          callerLibrary: callerLibrary,
+          typeArguments: typeArguments,
           kind: TypedMemberKind.values[kind],
         ),
       );
@@ -437,11 +480,13 @@ abstract final class TypedCodec {
     final exports = <TypedExport>[];
     for (var i = 0; i < exportCount; i++) {
       final library = string(), name = string();
-      final functionId = u32(), parameterCount = u32();
+      final functionId = u32();
+      final generativeConstructorRuntimeTypeId = u32() - 1;
+      final parameterCount = u32();
       if (parameterCount > 65544) {
         throw const FormatException('Invalid typed export parameter count');
       }
-      require(parameterCount * 21);
+      require(parameterCount * 25);
       final parameters = <TypedExportParameter>[];
       for (var j = 0; j < parameterCount; j++) {
         final parameterName = string(), flags = u32();
@@ -449,6 +494,7 @@ abstract final class TypedCodec {
           throw const FormatException('Invalid typed parameter flags');
         }
         final typeName = string(), typeLibrary = string();
+        final runtimeTypeId = u32() - 1;
         final valueLength = u32();
         require(valueLength);
         final defaultValue = _readObjects(
@@ -467,12 +513,20 @@ abstract final class TypedCodec {
             nullable: flags & 2 != 0,
             typeName: typeName,
             typeLibrary: typeLibrary,
+            runtimeTypeId: runtimeTypeId,
             defaultValue: defaultValue,
           ),
         );
       }
       exports.add(
-        TypedExport(library, name, functionId, parameters: parameters),
+        TypedExport(
+          library,
+          name,
+          functionId,
+          generativeConstructorRuntimeTypeId:
+              generativeConstructorRuntimeTypeId,
+          parameters: parameters,
+        ),
       );
     }
     final externalCalls = <TypedExternalCall>[];
@@ -513,6 +567,35 @@ abstract final class TypedCodec {
         throw const FormatException('Invalid typed closure descriptor');
       }
       final namedNames = strings(), requiredNamed = strings();
+      final positionalDefaults = defaults(positionalCount);
+      final namedDefaults = defaults(namedNames.length);
+      final parameterTypeCount = u32();
+      if (parameterTypeCount != 0 &&
+          parameterTypeCount != positionalCount + namedNames.length) {
+        throw const FormatException('Invalid closure parameter type count');
+      }
+      final parameterTypeIds = <int>[];
+      final parameterTypeParameterIndices = <int>[];
+      final parameterNullable = <bool>[];
+      for (var j = 0; j < parameterTypeCount; j++) {
+        parameterTypeIds.add(u32() - 1);
+        parameterTypeParameterIndices.add(u32() - 1);
+        final nullable = u32();
+        if (nullable > 1) {
+          throw const FormatException('Invalid closure parameter nullability');
+        }
+        parameterNullable.add(nullable == 1);
+      }
+      final typeParameterCount = u32();
+      if (typeParameterCount > 65536) {
+        throw const FormatException('Too many closure type parameters');
+      }
+      final typeParameterBounds = List.generate(
+        typeParameterCount,
+        (_) => u32(),
+        growable: false,
+      );
+      final runtimeTypeId = u32() - 1;
       closures.add(
         TypedClosureDescriptor(
           functionId,
@@ -523,14 +606,37 @@ abstract final class TypedCodec {
           boundReceiver: flags & 2 != 0,
           namedNames: namedNames,
           requiredNamed: requiredNamed,
-          positionalDefaults: defaults(positionalCount),
-          namedDefaults: defaults(namedNames.length),
+          positionalDefaults: positionalDefaults,
+          namedDefaults: namedDefaults,
+          parameterTypeIds: parameterTypeIds,
+          parameterTypeParameterIndices: parameterTypeParameterIndices,
+          parameterNullable: parameterNullable,
+          typeParameterBounds: typeParameterBounds,
+          runtimeTypeId: runtimeTypeId,
         ),
       );
     }
     final closureCalls = <TypedClosureCall>[];
     for (var i = 0; i < closureCallCount; i++) {
-      closureCalls.add(TypedClosureCall(u32(), namedNames: strings()));
+      final positionalCount = u32();
+      final namedNames = strings();
+      final trusted = u32() != 0;
+      final typeArgumentCount = u32();
+      if (typeArgumentCount > 65536) {
+        throw const FormatException('Too many closure type arguments');
+      }
+      closureCalls.add(
+        TypedClosureCall(
+          positionalCount,
+          namedNames: namedNames,
+          trusted: trusted,
+          typeArguments: List.generate(
+            typeArgumentCount,
+            (_) => u32(),
+            growable: false,
+          ),
+        ),
+      );
     }
     final globals = <TypedGlobal>[];
     for (var i = 0; i < globalCount; i++) {

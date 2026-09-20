@@ -25,6 +25,171 @@ TypedExportParameter parameter(
 final class _HostPayload {}
 
 void main() {
+  test('plain Function descriptor may use a non-nominal slot', () {
+    final declaration = TypedExport(
+      'package:test/main.dart',
+      'main',
+      0,
+      parameters: [
+        TypedExportParameter(
+          'callback',
+          isRequired: true,
+          nullable: false,
+          typeName: 'Function',
+          typeLibrary: 'dart:core',
+          runtimeTypeId: 1,
+        ),
+      ],
+    );
+    final typed = TypedProgram(
+      Uint8List.fromList([TypedOp.returnNull]),
+      functions: const [
+        TypedFunction(
+          0,
+          argumentKinds: [TypedArgumentKind.object],
+          resultKind: null,
+        ),
+      ],
+      exports: [declaration],
+    );
+    final program = Program(
+      {
+        0: {'Function': 0},
+      },
+      [
+        {0},
+        {0},
+      ],
+      typed,
+      {'dart:core': 0},
+      {},
+      [],
+      {},
+      {},
+      typeDescriptors: const [
+        [0, 0],
+        [0, 0],
+      ],
+    );
+    for (final candidate in [program, Program.read(program.write().buffer)]) {
+      final runtime = Runtime.ofProgram(candidate);
+      for (final callable in [
+        $Closure((runtime, target, arguments) => null),
+        $Function((runtime, target, arguments) => null),
+      ]) {
+        expect(
+          identical(
+            TypedExportAdapter.bind(
+              candidate.typedProgram,
+              candidate.typedProgram.exports.single,
+              {'callback': callable},
+              runtime: runtime,
+            ).r,
+            callable,
+          ),
+          isTrue,
+        );
+      }
+    }
+  });
+
+  test('legacy structural callbacks check arguments and results', () {
+    final program = Compiler().compile({
+      'test': {
+        'main.dart': '''
+          int takesArgument(int Function(int) callback) => 0;
+          int takesResult(int Function() callback) => 0;
+          void takesVoid(void Function() callback) {}
+        ''',
+      },
+    });
+    for (final candidate in [program, Program.read(program.write().buffer)]) {
+      final runtime = Runtime.ofProgram(candidate);
+      EvalFunction bind(String name, EvalFunction callback) {
+        final declaration = candidate.typedProgram.exports.firstWhere(
+          (export) => export.name == name,
+        );
+        return TypedExportAdapter.bind(candidate.typedProgram, declaration, {
+              'callback': callback,
+            }, runtime: runtime).r
+            as EvalFunction;
+      }
+
+      var called = false;
+      final argumentChecked = bind(
+        'takesArgument',
+        $Closure((runtime, target, arguments) {
+          called = true;
+          return $int(1);
+        }),
+      );
+      expect(
+        () => argumentChecked.call(runtime, null, [$String('bad')]),
+        throwsA(isA<TypeError>()),
+      );
+      expect(called, isFalse);
+
+      final resultChecked = bind(
+        'takesResult',
+        $Function((runtime, target, arguments) => $String('bad')),
+      );
+      expect(
+        () => resultChecked.call(runtime, null, const []),
+        throwsA(isA<TypeError>()),
+      );
+
+      final voidChecked = bind(
+        'takesVoid',
+        $Closure((runtime, target, arguments) => $String('discarded')),
+      );
+      expect(voidChecked.call(runtime, null, const []), isNull);
+    }
+  });
+
+  test(
+    'structural callback binding rejects unsupported or known bad types',
+    () {
+      final program = Compiler().compile({
+        'test': {
+          'main.dart': '''
+          int takesInt(int Function(int) callback) => 0;
+          int takesNamed(int Function({required int value}) callback) => 0;
+          String Function(String) stringCallback() =>
+              (String value) => value;
+        ''',
+        },
+      });
+      for (final candidate in [program, Program.read(program.write().buffer)]) {
+        final runtime = Runtime.ofProgram(candidate);
+        final typedCallback = runtime.executeLib(
+          'package:test/main.dart',
+          'stringCallback',
+        );
+        TypedExport declaration(String name) => candidate.typedProgram.exports
+            .firstWhere((export) => export.name == name);
+
+        expect(
+          () => TypedExportAdapter.bind(
+            candidate.typedProgram,
+            declaration('takesInt'),
+            {'callback': typedCallback},
+            runtime: runtime,
+          ),
+          throwsArgumentError,
+        );
+        expect(
+          () => TypedExportAdapter.bind(
+            candidate.typedProgram,
+            declaration('takesNamed'),
+            {'callback': $Closure((runtime, target, arguments) => $int(1))},
+            runtime: runtime,
+          ),
+          throwsArgumentError,
+        );
+      }
+    },
+  );
+
   test(
     'collection wrappers and writes use their runtime conversion context',
     () {

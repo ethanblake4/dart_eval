@@ -76,7 +76,6 @@ class $RegExp implements $Instance {
             BridgeTypeRef(CoreTypes.iterable, [
               BridgeTypeAnnotation($RegExpMatch.$type),
             ]),
-            nullable: true,
           ),
           params: [
             BridgeParameter(

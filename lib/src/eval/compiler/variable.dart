@@ -1,6 +1,7 @@
 import '../ir/string.dart';
 import '../ir/closures.dart';
-import 'backend/representation.dart' show representationForType;
+import 'backend/representation.dart'
+    show MachineRepresentation, representationForType;
 import 'helpers/captures.dart';
 import '../ir/exception.dart';
 import '../ir/collection.dart' show ListLength;
@@ -11,6 +12,8 @@ import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/collection/list.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
+import 'package:dart_eval/src/eval/compiler/expression/identifier.dart'
+    show resolveInstanceDeclaration;
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
 import 'package:dart_eval/src/eval/ir/primitives.dart';
@@ -23,12 +26,16 @@ import 'offset_tracker.dart';
 class Variable {
   Variable(
     this.type, {
+    TypeRef? declaredType,
+    MachineRepresentation? representation,
     this.methodOffset,
     this.methodReturnType,
     this.isFinal = false,
     this.concreteTypes = const [],
     CallingConvention? callingConvention,
-  }) : callingConvention =
+  }) : declaredType = declaredType ?? type,
+       representation = representation ?? representationForType(type),
+       callingConvention =
            callingConvention ??
            ((type == TypeRef(dartCoreFile, 'Function') && methodOffset == null)
                ? CallingConvention.dynamic
@@ -38,6 +45,8 @@ class Variable {
     CompilerContext ctx,
     Operation op,
     TypeRef type, {
+    TypeRef? declaredType,
+    MachineRepresentation? representation,
     DeferredOrOffset? methodOffset,
     ReturnType? methodReturnType,
     bool isFinal = false,
@@ -47,6 +56,8 @@ class Variable {
     ctx.pushOp(op);
     return Variable(
       type,
+      declaredType: declaredType,
+      representation: representation,
       methodOffset: methodOffset,
       methodReturnType: methodReturnType,
       isFinal: isFinal,
@@ -59,6 +70,8 @@ class Variable {
     CompilerContext ctx,
     SSA ssa,
     TypeRef type, {
+    TypeRef? declaredType,
+    MachineRepresentation? representation,
     DeferredOrOffset? methodOffset,
     ReturnType? methodReturnType,
     bool isFinal = false,
@@ -67,6 +80,8 @@ class Variable {
   }) {
     return Variable(
       type,
+      declaredType: declaredType,
+      representation: representation,
       methodOffset: methodOffset,
       methodReturnType: methodReturnType,
       isFinal: isFinal,
@@ -76,6 +91,13 @@ class Variable {
   }
 
   final TypeRef type;
+
+  /// The stable source-level type of a binding. For temporaries this is the
+  /// same as [type]; local reads may carry a narrower flow type.
+  final TypeRef declaredType;
+
+  /// Physical representation of this SSA value.
+  final MachineRepresentation representation;
   final List<TypeRef> concreteTypes;
   final DeferredOrOffset? methodOffset;
   final ReturnType? methodReturnType;
@@ -96,7 +118,7 @@ class Variable {
   Variable captureBinding(CompilerContext ctx, AstNode declaration) {
     if (!capturesFor(declaration).captured.contains(declaration)) return this;
     final cell = ctx.svar('cell');
-    ctx.pushOp(NewCaptureCell(cell, ssa, representationForType(type)));
+    ctx.pushOp(NewCaptureCell(cell, ssa, representation));
     return copyWith()..captureCell = cell;
   }
 
@@ -105,6 +127,8 @@ class Variable {
           ctx,
           LoadExceptionSlot(ctx.svar('protected'), exceptionSlot!),
           type,
+          declaredType: declaredType,
+          representation: representation,
           isFinal: isFinal,
           callingConvention: callingConvention,
           methodReturnType: methodReturnType,
@@ -113,12 +137,10 @@ class Variable {
       ? this
       : Variable.ssa(
           ctx,
-          ReadCaptureCell(
-            ctx.svar('captured'),
-            captureCell!,
-            representationForType(type),
-          ),
+          ReadCaptureCell(ctx.svar('captured'), captureCell!, representation),
           type,
+          declaredType: declaredType,
+          representation: representation,
           isFinal: isFinal,
           callingConvention: callingConvention,
           methodReturnType: methodReturnType,
@@ -127,9 +149,7 @@ class Variable {
   void renewCaptureCell(CompilerContext ctx) {
     if (captureCell == null) return;
     final previous = readBinding(ctx);
-    ctx.pushOp(
-      NewCaptureCell(captureCell!, previous.ssa, representationForType(type)),
-    );
+    ctx.pushOp(NewCaptureCell(captureCell!, previous.ssa, representation));
   }
 
   SSA get ssa => SSA(name!);
@@ -145,7 +165,10 @@ class Variable {
     ctx as CompilerContext;
 
     if (type == CoreTypes.dynamic.ref(ctx)) {
-      return copyWith(type: type.copyWith(boxed: true));
+      return copyWith(
+        type: type.copyWith(boxed: true),
+        representation: MachineRepresentation.object,
+      );
     }
 
     final result = ssa;
@@ -164,11 +187,13 @@ class Variable {
       if (!type.specifiedTypeArgs[0].boxed) {
         v2 = boxListContents(ctx, this);
       }
-      ctx.pushOp(BoxList(result, v2.ssa));
+      ctx.pushOp(
+        BoxList(result, v2.ssa, runtimeTypeId: type.runtimeTypeId(ctx)),
+      );
     } else if (type == CoreTypes.map.ref(ctx)) {
-      ctx.pushOp(BoxMap(result, ssa));
+      ctx.pushOp(BoxMap(result, ssa, runtimeTypeId: type.runtimeTypeId(ctx)));
     } else if (type == CoreTypes.set.ref(ctx)) {
-      ctx.pushOp(BoxSet(result, ssa));
+      ctx.pushOp(BoxSet(result, ssa, runtimeTypeId: type.runtimeTypeId(ctx)));
     } else if (type == CoreTypes.string.ref(ctx)) {
       ctx.pushOp(BoxString(result, ssa));
     } else if (type == CoreTypes.nullType.ref(ctx)) {
@@ -177,7 +202,11 @@ class Variable {
       throw CompileError('Cannot box $type', source);
     }
 
-    return copyWithUpdate(ctx, type: type.copyWith(boxed: true));
+    return copyWithUpdate(
+      ctx,
+      type: type.copyWith(boxed: true),
+      representation: MachineRepresentation.object,
+    );
   }
 
   /// Unboxes this variable, if it isn't yet. Unlike [boxIfNeeded],
@@ -196,10 +225,23 @@ class Variable {
       return this;
     }
     final target = update ? ssa : ctx.svar('unboxed');
-    ctx.pushOp(Unbox(target, ssa));
+    final targetRepresentation = representationForType(
+      type.copyWith(boxed: false),
+    );
+    ctx.pushOp(Unbox(target, ssa, targetRepresentation));
     return update
-        ? copyWithUpdate(ctx, type: type.copyWith(boxed: false))
-        : Variable.of(ctx, target, type.copyWith(boxed: false));
+        ? copyWithUpdate(
+            ctx,
+            type: type.copyWith(boxed: false),
+            representation: targetRepresentation,
+          )
+        : Variable.of(
+            ctx,
+            target,
+            type.copyWith(boxed: false),
+            declaredType: declaredType,
+            representation: targetRepresentation,
+          );
   }
 
   /// Returns a variable with the same name from the context locals.
@@ -213,6 +255,8 @@ class Variable {
   /// Makes a copy of the variable with some fields updated.
   Variable copyWith({
     TypeRef? type,
+    TypeRef? declaredType,
+    MachineRepresentation? representation,
     DeferredOrOffset? methodOffset,
     ReturnType? methodReturnType,
     bool? isFinal,
@@ -223,6 +267,8 @@ class Variable {
   }) {
     return Variable(
         type ?? this.type,
+        declaredType: declaredType ?? this.declaredType,
+        representation: representation ?? this.representation,
         methodOffset: methodOffset ?? this.methodOffset,
         isFinal: isFinal ?? this.isFinal,
         methodReturnType: methodReturnType ?? this.methodReturnType,
@@ -242,6 +288,8 @@ class Variable {
   Variable copyWithUpdate(
     ScopeContext? ctx, {
     TypeRef? type,
+    TypeRef? declaredType,
+    MachineRepresentation? representation,
     DeferredOrOffset? methodOffset,
     ReturnType? methodReturnType,
     String? name,
@@ -250,6 +298,8 @@ class Variable {
   }) {
     var uV = copyWith(
       type: type,
+      declaredType: declaredType,
+      representation: representation,
       methodOffset: methodOffset,
       methodReturnType: methodReturnType,
       name: name,
@@ -314,17 +364,37 @@ class Variable {
         CoreTypes.type.ref(ctx),
       );
     }
+    final resolvedReceiver = type.resolveTypeChain(ctx);
+    final resolvedField = TypeRef.lookupFieldType(
+      ctx,
+      resolvedReceiver,
+      name,
+      source: source,
+    );
+    if (resolvedField == null &&
+        resolvedReceiver != CoreTypes.dynamic.ref(ctx) &&
+        resolveInstanceDeclaration(
+              ctx,
+              resolvedReceiver.file,
+              resolvedReceiver.name,
+              name,
+            ) ==
+            null) {
+      throw CompileError(
+        'Member "$name" is not defined for type $resolvedReceiver',
+        source,
+      );
+    }
     final fieldType =
-        TypeRef.lookupFieldType(
-          ctx,
-          type,
-          name,
-          source: source,
-        )?.resolveTypeChain(ctx) ??
-        CoreTypes.dynamic.ref(ctx);
+        resolvedField?.resolveTypeChain(ctx) ?? CoreTypes.dynamic.ref(ctx);
     return Variable.ssa(
       ctx,
-      LoadPropertyDynamic(ctx.svar(name), ssa, name),
+      LoadPropertyDynamic(
+        ctx.svar(name),
+        ssa,
+        name,
+        callerLibrary: ctx.library,
+      ),
       fieldType,
     );
   }

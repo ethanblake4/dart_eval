@@ -4,6 +4,8 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
+import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/collection.dart';
@@ -64,33 +66,42 @@ Variable compileSetOrMapLiteral(SetOrMapLiteral literal, CompilerContext ctx) {
     } else if (isMap && element is MapLiteralEntry) {
       var key = compileExpression(element.key, ctx, explicitKey);
       var value = compileExpression(element.value, ctx, explicitValue);
-      if (explicitKey != null && !key.type.isAssignableTo(ctx, explicitKey)) {
-        throw CompileError(
-          'Cannot use key of type ${key.type} in map of type $explicitKey',
-          element,
+      if (explicitKey != null) {
+        key = convertForAssignment(
+          ctx,
+          key,
+          explicitKey,
+          representation: MachineRepresentation.object,
+          source: element.key,
         );
+      } else {
+        key = key.boxIfNeeded(ctx);
       }
-      if (explicitValue != null &&
-          !value.type.isAssignableTo(ctx, explicitValue)) {
-        throw CompileError(
-          'Cannot use value of type ${value.type} in map of type $explicitValue',
-          element,
+      if (explicitValue != null) {
+        value = convertForAssignment(
+          ctx,
+          value,
+          explicitValue,
+          representation: MachineRepresentation.object,
+          source: element.value,
         );
+      } else {
+        value = value.boxIfNeeded(ctx);
       }
-      key = key.boxIfNeeded(ctx);
-      value = value.boxIfNeeded(ctx);
       keyTypes.add(key.type);
       valueTypes.add(value.type);
       ctx.pushOp(MapSet(target, key.ssa, value.ssa));
     } else if (!isMap && element is Expression) {
       var value = compileExpression(element, ctx, explicitKey);
-      if (explicitKey != null && !value.type.isAssignableTo(ctx, explicitKey)) {
-        throw CompileError(
-          'Cannot use value of type ${value.type} in set of type $explicitKey',
-          element,
-        );
-      }
-      value = value.boxIfNeeded(ctx);
+      value = explicitKey == null
+          ? value.boxIfNeeded(ctx)
+          : convertForAssignment(
+              ctx,
+              value,
+              explicitKey,
+              representation: MachineRepresentation.object,
+              source: element,
+            );
       keyTypes.add(value.type);
       ctx.pushOp(SetAdd(target, value.ssa));
     } else {

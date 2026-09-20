@@ -21,5 +21,11 @@ Variable compileFunctionExpressionInvocation(
     fallback = compileExpression(e.function, ctx);
   }
 
-  return invokeClosure(ctx, target, fallback, e.argumentList).result;
+  return invokeClosure(
+    ctx,
+    target,
+    fallback,
+    e.argumentList,
+    typeArguments: e.typeArguments?.arguments.toList(),
+  ).result;
 }

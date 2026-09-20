@@ -1,5 +1,7 @@
 import 'dart:collection';
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/runtime/runtime.dart'
+    show TypedRuntimeInterop;
 import 'package:dart_eval/stdlib/core.dart';
 import 'typed_interop.dart';
 
@@ -14,10 +16,19 @@ abstract final class TypedHostCollections {
   static final _origins = Expando<Object>();
   static final _contexts = Expando<_CollectionContext>();
 
-  static $Value box(Object collection, Runtime? runtime) {
+  static $Value box(Object collection, Runtime? runtime, {int? runtimeTypeId}) {
     final cache = _cacheFor(runtime);
     final existing = cache.boxed[collection];
-    if (existing != null) return existing;
+    if (existing != null &&
+        (runtimeTypeId == null ||
+            (runtime != null &&
+                runtime.isTypedValueType(existing, runtimeTypeId)))) {
+      return existing;
+    }
+    if (runtimeTypeId case final typeId?) {
+      final typed = cache.typedBoxed[collection]?[typeId];
+      if (typed != null) return typed;
+    }
     Object? read(Object? value) =>
         TypedInterop.boxExternal(value, runtime: runtime);
     Object? write(Object? value) =>
@@ -27,19 +38,98 @@ abstract final class TypedHostCollections {
     switch (collection) {
       case List<Object?>():
         backing = _ListView(collection, read, write);
-        wrapper = $List.wrap(backing as List<Object?>);
+        wrapper = $List.wrap(
+          backing as List<Object?>,
+          runtimeTypeId: runtimeTypeId,
+          runtime: runtime,
+        );
       case Map<Object?, Object?>():
-        backing = _MapView(collection, read, write);
-        wrapper = $Map.wrap(backing as Map<Object?, Object?>);
+        backing = _MapView(collection, read, write, write, write);
+        wrapper = $Map.wrap(
+          backing as Map<Object?, Object?>,
+          runtimeTypeId: runtimeTypeId,
+          runtime: runtime,
+        );
       case Set<Object?>():
-        backing = _SetView(collection, read, write);
-        wrapper = $Set.wrap(backing as Set<Object?>);
+        backing = _SetView(collection, read, write, write);
+        wrapper = $Set.wrap(
+          backing as Set<Object?>,
+          runtimeTypeId: runtimeTypeId,
+          runtime: runtime,
+        );
       default:
         throw ArgumentError.value(collection, 'collection');
     }
-    cache.boxed[collection] = wrapper;
+    cache.boxed[collection] ??= wrapper;
+    if (runtimeTypeId case final typeId?) {
+      (cache.typedBoxed[collection] ??= {})[typeId] = wrapper;
+    }
     _origins[backing] = collection;
     _contexts[wrapper] = _CollectionContext(runtime);
+    return wrapper;
+  }
+
+  /// Attach an export declaration's generic contract to an otherwise raw
+  /// guest collection wrapper without discarding its lazy element adapter.
+  static $Value adoptRuntimeType(
+    $Value value,
+    Runtime runtime,
+    int runtimeTypeId,
+  ) {
+    final cache = _cacheFor(runtime);
+    final cached = cache.typedBoxed[value]?[runtimeTypeId];
+    if (cached != null) return cached;
+
+    Object? check(Object? candidate, int argumentIndex) {
+      runtime.assertTypedTypeArgument(candidate, runtimeTypeId, argumentIndex);
+      return candidate;
+    }
+
+    final Object backing;
+    final $Value wrapper;
+    switch (value) {
+      case $List():
+        backing = _ListView(
+          value.$value.cast<Object?>(),
+          (candidate) => candidate,
+          (candidate) => check(candidate, 0),
+        );
+        wrapper = $List.wrap(
+          backing as List<Object?>,
+          runtimeTypeId: runtimeTypeId,
+          runtime: runtime,
+        );
+      case $Map():
+        backing = _MapView(
+          value.$value.cast<Object?, Object?>(),
+          (candidate) => candidate,
+          (candidate) => candidate,
+          (candidate) => check(candidate, 0),
+          (candidate) => check(candidate, 1),
+        );
+        wrapper = $Map.wrap(
+          backing as Map<Object?, Object?>,
+          runtimeTypeId: runtimeTypeId,
+          runtime: runtime,
+        );
+      case $Set():
+        backing = _SetView(
+          value.$value.cast<Object?>(),
+          (candidate) => candidate,
+          (candidate) => candidate,
+          (candidate) => check(candidate, 0),
+        );
+        wrapper = $Set.wrap(
+          backing as Set<Object?>,
+          runtimeTypeId: runtimeTypeId,
+          runtime: runtime,
+        );
+      default:
+        throw ArgumentError.value(value, 'value', 'Expected a collection');
+    }
+    _origins[backing] = export(value.$value, value, runtime);
+    _contexts[wrapper] = _CollectionContext(runtime);
+    (cache.typedBoxed[value] ??= {})[runtimeTypeId] = wrapper;
     return wrapper;
   }
 
@@ -71,12 +161,39 @@ abstract final class TypedHostCollections {
     if (existing != null) return existing;
     Object? read(Object? value) =>
         TypedInterop.exportExternal(value, runtime: runtime);
-    Object? write(Object? value) =>
+    Object? query(Object? value) =>
         TypedInterop.boxExternal(value, runtime: runtime);
+    Object? write(Object? value, int argumentIndex) {
+      final boxed = TypedInterop.boxExternal(value, runtime: runtime);
+      if (runtime != null) {
+        runtime.assertTypedTypeArgument(
+          boxed,
+          owner.$getRuntimeType(runtime),
+          argumentIndex,
+        );
+      }
+      return boxed;
+    }
+
     final Object view = switch (collection) {
-      List<Object?>() => _ListView(collection, read, write),
-      Map<Object?, Object?>() => _MapView(collection, read, write),
-      Set<Object?>() => _SetView(collection, read, write),
+      List<Object?>() => _ListView(
+        collection,
+        read,
+        (value) => write(value, 0),
+      ),
+      Map<Object?, Object?>() => _MapView(
+        collection,
+        read,
+        query,
+        (value) => write(value, 0),
+        (value) => write(value, 1),
+      ),
+      Set<Object?>() => _SetView(
+        collection,
+        read,
+        query,
+        (value) => write(value, 0),
+      ),
       _ => throw ArgumentError.value(collection, 'collection'),
     };
     cache.exported[collection] = view;
@@ -88,6 +205,7 @@ abstract final class TypedHostCollections {
 
 final class _CollectionCaches {
   final boxed = Expando<$Value>();
+  final typedBoxed = Expando<Map<int, $Value>>();
   final exported = Expando<Object>();
 }
 
@@ -105,7 +223,11 @@ final class _ListView extends ListBase<Object?> {
   @override
   int get length => backing.length;
   @override
-  set length(int value) => backing.length = value;
+  set length(int value) {
+    if (value > length) write(null);
+    backing.length = value;
+  }
+
   @override
   Object? operator [](int index) => read(backing[index]);
   @override
@@ -149,28 +271,34 @@ final class _ListView extends ListBase<Object?> {
 }
 
 final class _MapView extends MapBase<Object?, Object?> {
-  _MapView(this.backing, this.read, this.write);
+  _MapView(
+    this.backing,
+    this.read,
+    this.queryKey,
+    this.writeKey,
+    this.writeValue,
+  );
   final Map<Object?, Object?> backing;
-  final _Convert read, write;
+  final _Convert read, queryKey, writeKey, writeValue;
   @override
   Iterable<Object?> get keys => backing.keys.map(read);
   @override
-  Object? operator [](Object? key) => read(backing[write(key)]);
+  Object? operator [](Object? key) => read(backing[queryKey(key)]);
   @override
   void operator []=(Object? key, Object? value) =>
-      backing[write(key)] = write(value);
+      backing[writeKey(key)] = writeValue(value);
   @override
-  bool containsKey(Object? key) => backing.containsKey(write(key));
+  bool containsKey(Object? key) => backing.containsKey(queryKey(key));
   @override
-  Object? remove(Object? key) => read(backing.remove(write(key)));
+  Object? remove(Object? key) => read(backing.remove(queryKey(key)));
   @override
   void clear() => backing.clear();
 }
 
 final class _SetView extends SetBase<Object?> {
-  _SetView(this.backing, this.read, this.write);
+  _SetView(this.backing, this.read, this.query, this.write);
   final Set<Object?> backing;
-  final _Convert read, write;
+  final _Convert read, query, write;
   @override
   int get length => backing.length;
   @override
@@ -178,11 +306,11 @@ final class _SetView extends SetBase<Object?> {
   @override
   bool add(Object? value) => backing.add(write(value));
   @override
-  bool contains(Object? value) => backing.contains(write(value));
+  bool contains(Object? value) => backing.contains(query(value));
   @override
-  bool remove(Object? value) => backing.remove(write(value));
+  bool remove(Object? value) => backing.remove(query(value));
   @override
-  Object? lookup(Object? value) => read(backing.lookup(write(value)));
+  Object? lookup(Object? value) => read(backing.lookup(query(value)));
   @override
   Set<Object?> toSet() => Set.of(this);
 }

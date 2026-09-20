@@ -38,6 +38,14 @@ import '../offset_tracker.dart';
 import 'representation.dart';
 import 'primitive_optimization.dart';
 
+bool _sameList<T>(List<T> left, List<T> right) {
+  if (left.length != right.length) return false;
+  for (var i = 0; i < left.length; i++) {
+    if (left[i] != right[i]) return false;
+  }
+  return true;
+}
+
 /// A fixed-location instruction family before allocation chooses its opcode.
 final class TypedOperation extends cfg.Operation {
   TypedOperation(
@@ -297,11 +305,13 @@ class TypedBackend {
       for (final functionId in reachable) _compileFunction(functionId, indices),
     ];
     for (final allocation in classAllocations) {
-      final members =
-          context.instanceDeclarationPositions[allocation.library]![allocation
-                  .name]![2]
-              as Map;
-      for (final id in members.values.cast<int>()) {
+      final memberGroups = context
+          .instanceDeclarationPositions[allocation.library]![allocation.name]!;
+      final memberIds = <int>{
+        for (var kind = 0; kind < 3; kind++)
+          ...(memberGroups[kind] as Map).values.cast<int>(),
+      };
+      for (final id in memberIds) {
         if (id < 0 ||
             _closures.any(
               (d) => d.functionId == indices[id] && d.boundReceiver,
@@ -312,6 +322,15 @@ class TypedBackend {
             context.functionParameters[id] ?? const <FormalParameter>[];
         final positional = parameters.where((p) => p.isPositional).toList();
         final named = parameters.where((p) => p.isNamed).toList();
+        final syntheticPositionalCount = parameters.isEmpty
+            ? context.functionSignatures[id]!.parameters.length - 1
+            : 0;
+        final parameterTypes =
+            context.functionParameterTypes[id] ??
+            List.filled(
+              positional.length + named.length + syntheticPositionalCount,
+              CoreTypes.dynamic.ref(context),
+            );
         Object? defaultValue(FormalParameter p) {
           final value = evaluateDefaultValue(
             context,
@@ -333,15 +352,46 @@ class TypedBackend {
           TypedClosureDescriptor(
             indices[id]!,
             captureCount: 1,
-            positionalCount: positional.length,
-            requiredPositional: positional.where((p) => p.isRequired).length,
+            positionalCount: positional.length + syntheticPositionalCount,
+            requiredPositional:
+                positional.where((p) => p.isRequired).length +
+                syntheticPositionalCount,
             namedNames: named.map((p) => p.name!.lexeme).toList(),
             requiredNamed: named
                 .where((p) => p.isRequired)
                 .map((p) => p.name!.lexeme)
                 .toList(),
-            positionalDefaults: positional.map(defaultValue).toList(),
+            positionalDefaults: [
+              ...positional.map(defaultValue),
+              ...List<Object?>.filled(syntheticPositionalCount, null),
+            ],
             namedDefaults: named.map(defaultValue).toList(),
+            parameterTypeIds: [
+              for (final type in parameterTypes)
+                type == CoreTypes.dynamic.ref(context) ||
+                        type == CoreTypes.voidType.ref(context)
+                    ? -1
+                    : type.runtimeTypeId(context),
+            ],
+            parameterTypeParameterIndices: [
+              for (final type in parameterTypes)
+                type.typeParameterOwner?.startsWith('class:') == true
+                    ? type.typeParameterIndex!
+                    : -1,
+            ],
+            parameterNullable: [
+              for (final type in parameterTypes) type.nullable,
+            ],
+            typeParameterBounds: [
+              for (final bound
+                  in context.functionTypeParameterBounds[id] ??
+                      const <TypeRef>[])
+                bound.runtimeTypeId(context),
+            ],
+            runtimeTypeId:
+                (context.functionRuntimeTypes[id] ??
+                        CoreTypes.function.ref(context))
+                    .runtimeTypeId(context),
             hasEnvironment: false,
             boundReceiver: true,
           ),
@@ -434,18 +484,23 @@ class TypedBackend {
     );
   }
 
-  bool _isEnumConstructor(String library, String name) {
+  NamedCompilationUnitMember? _constructorOwner(String library, String name) {
     final declarations =
         context.topLevelDeclarationsMap[context.libraryMap[library]]!;
     final declaration = declarations[name]?.declaration;
-    if (declaration is ConstructorDeclaration &&
-        declaration.parent is EnumDeclaration) {
-      return true;
+    if (declaration is ConstructorDeclaration) {
+      final owner = declaration.parent;
+      return owner is NamedCompilationUnitMember ? owner : null;
     }
-    if (!name.endsWith('.')) return false;
-    return declarations[name.substring(0, name.length - 1)]?.declaration
-        is EnumDeclaration;
+    if (!name.endsWith('.')) return null;
+    final owner = declarations[name.substring(0, name.length - 1)]?.declaration;
+    return owner is ClassDeclaration || owner is EnumDeclaration
+        ? owner as NamedCompilationUnitMember
+        : null;
   }
+
+  bool _isEnumConstructor(String library, String name) =>
+      _constructorOwner(library, name) is EnumDeclaration;
 
   TypedExport _export(String library, String name, Map<int, int> indices) {
     final libraryId = context.libraryMap[library]!;
@@ -454,19 +509,43 @@ class TypedBackend {
         context.functionParameters[functionId] ?? const <FormalParameter>[];
     final declarations = context.topLevelDeclarationsMap[libraryId]!;
     final declaration = declarations[name]?.declaration;
+    final constructorOwner = _constructorOwner(library, name);
     final previousTypes = {...?context.temporaryTypes[libraryId]};
-    TypeRef.loadTemporaryTypes(context, switch (declaration) {
-      FunctionDeclaration(:final functionExpression) =>
-        functionExpression.typeParameters?.typeParameters,
-      MethodDeclaration(:final typeParameters) =>
-        typeParameters?.typeParameters,
-      _ => null,
-    }, libraryId);
+    final typeParameters = switch (constructorOwner) {
+      ClassDeclaration(:final typeParameters) => typeParameters?.typeParameters,
+      EnumDeclaration(:final typeParameters) => typeParameters?.typeParameters,
+      _ => switch (declaration) {
+        FunctionDeclaration(:final functionExpression) =>
+          functionExpression.typeParameters?.typeParameters,
+        MethodDeclaration(:final typeParameters) =>
+          typeParameters?.typeParameters,
+        _ => null,
+      },
+    };
+    TypeRef.loadTemporaryTypes(
+      context,
+      typeParameters,
+      library: libraryId,
+      owner: constructorOwner == null
+          ? null
+          : 'class:$libraryId:${constructorOwner.name.lexeme}',
+    );
     try {
+      final isGenerativeConstructor =
+          constructorOwner is ClassDeclaration &&
+          (declaration is! ConstructorDeclaration ||
+              declaration.factoryKeyword == null);
       return TypedExport(
         library,
         name,
         indices[functionId]!,
+        generativeConstructorRuntimeTypeId: isGenerativeConstructor
+            ? TypeRef.lookupDeclaration(
+                context,
+                libraryId,
+                constructorOwner,
+              ).runtimeTypeId(context)
+            : -1,
         parameters: [
           for (final parameter in parameters)
             _exportParameter(libraryId, parameter, declaration),
@@ -507,6 +586,7 @@ class TypedBackend {
       typeLibrary: context.libraryMap.entries
           .firstWhere((entry) => entry.value == type.file)
           .key,
+      runtimeTypeId: type.runtimeTypeId(context),
       defaultValue: defaultValue,
     );
   }
@@ -884,21 +964,76 @@ class TypedBackend {
         if (op is objects_ir.InvokeDynamic ||
             op is objects_ir.LoadPropertyDynamic ||
             op is objects_ir.SetPropertyDynamic) {
-          final (receiver, name, arguments, kind) = switch (op) {
-            objects_ir.InvokeDynamic(:final object, :final name, :final args) =>
-              (object, name, args, TypedMemberKind.method),
-            objects_ir.LoadPropertyDynamic(:final object, :final name) => (
-              object,
-              name,
-              <cfg.SSA>[],
-              TypedMemberKind.getter,
-            ),
+          final (
+            receiver,
+            name,
+            arguments,
+            positionalCount,
+            namedNames,
+            callerLibrary,
+            typeArguments,
+            kind,
+          ) = switch (op) {
+            objects_ir.InvokeDynamic(
+              :final object,
+              :final name,
+              :final args,
+              :final positionalCount,
+              :final namedNames,
+              :final callerLibrary,
+              :final typeArguments,
+            ) =>
+              (
+                object,
+                name,
+                args,
+                positionalCount,
+                namedNames,
+                context.libraryMap.entries
+                    .singleWhere((entry) => entry.value == callerLibrary)
+                    .key,
+                typeArguments,
+                TypedMemberKind.method,
+              ),
+            objects_ir.LoadPropertyDynamic(
+              :final object,
+              :final name,
+              :final callerLibrary,
+            ) =>
+              (
+                object,
+                name,
+                <cfg.SSA>[],
+                0,
+                const <String>[],
+                callerLibrary < 0
+                    ? ''
+                    : context.libraryMap.entries
+                          .singleWhere((entry) => entry.value == callerLibrary)
+                          .key,
+                const <int>[],
+                TypedMemberKind.getter,
+              ),
             objects_ir.SetPropertyDynamic(
               :final object,
               :final name,
               :final variable,
+              :final callerLibrary,
             ) =>
-              (object, name, [variable], TypedMemberKind.setter),
+              (
+                object,
+                name,
+                [variable],
+                1,
+                const <String>[],
+                callerLibrary < 0
+                    ? ''
+                    : context.libraryMap.entries
+                          .singleWhere((entry) => entry.value == callerLibrary)
+                          .key,
+                const <int>[],
+                TypedMemberKind.setter,
+              ),
             _ => throw StateError('Unreachable member operation'),
           };
           final callLayout = TypedCallLayout(
@@ -941,12 +1076,24 @@ class TypedBackend {
             (site) =>
                 site.name == name &&
                 site.argumentCount == arguments.length &&
+                site.positionalCount == positionalCount &&
+                _sameList(site.namedNames, namedNames) &&
+                site.callerLibrary == callerLibrary &&
+                _sameList(site.typeArguments, typeArguments) &&
                 site.kind == kind,
           );
           if (siteIndex < 0) {
             siteIndex = _callSites.length;
             _callSites.add(
-              TypedCallSite(name, argumentCount: arguments.length, kind: kind),
+              TypedCallSite(
+                name,
+                argumentCount: arguments.length,
+                positionalCount: positionalCount,
+                namedNames: namedNames,
+                callerLibrary: callerLibrary,
+                typeArguments: typeArguments,
+                kind: kind,
+              ),
             );
           }
           lowered.add(
@@ -965,6 +1112,7 @@ class TypedBackend {
           continue;
         }
         if (op is closures.CreateClosure) {
+          final sourceFunctionId = _resolveFunction(op.target);
           for (var i = 0; i < op.captures.length; i++) {
             lowered.add(
               TypedOperation(
@@ -981,7 +1129,7 @@ class TypedBackend {
           final index = _closures.length;
           _closures.add(
             TypedClosureDescriptor(
-              functionIndices[_resolveFunction(op.target)]!,
+              functionIndices[sourceFunctionId]!,
               captureCount: op.captures.length,
               positionalCount: op.positionalCount,
               requiredPositional: op.requiredPositional,
@@ -995,6 +1143,38 @@ class TypedBackend {
               namedDefaults: op.namedDefaults.isEmpty
                   ? List.filled(op.namedNames.length, null)
                   : op.namedDefaults,
+              parameterTypeIds: [
+                for (final type
+                    in context.functionParameterTypes[sourceFunctionId] ??
+                        const <TypeRef>[])
+                  type == CoreTypes.dynamic.ref(context) ||
+                          type == CoreTypes.voidType.ref(context)
+                      ? -1
+                      : type.runtimeTypeId(context),
+              ],
+              parameterTypeParameterIndices: [
+                for (final type
+                    in context.functionParameterTypes[sourceFunctionId] ??
+                        const <TypeRef>[])
+                  type.typeParameterOwner?.startsWith('class:') == true
+                      ? type.typeParameterIndex!
+                      : -1,
+              ],
+              parameterNullable: [
+                for (final type
+                    in context.functionParameterTypes[sourceFunctionId] ??
+                        const <TypeRef>[])
+                  type.nullable,
+              ],
+              typeParameterBounds: [
+                for (final bound
+                    in context.functionTypeParameterBounds[sourceFunctionId] ??
+                        const <TypeRef>[])
+                  bound.runtimeTypeId(context),
+              ],
+              runtimeTypeId: op.runtimeTypeId < 0
+                  ? CoreTypes.function.ref(context).runtimeTypeId(context)
+                  : op.runtimeTypeId,
             ),
           );
           lowered.add(
@@ -1134,7 +1314,12 @@ class TypedBackend {
           }
           final site = _closureCalls.length;
           _closureCalls.add(
-            TypedClosureCall(op.positional.length, namedNames: names),
+            TypedClosureCall(
+              op.positional.length,
+              namedNames: names,
+              typeArguments: op.typeArguments,
+              trusted: op.trusted,
+            ),
           );
           lowered.add(
             TypedOperation(
@@ -1153,6 +1338,23 @@ class TypedBackend {
         }
         if (op is flow.Call) {
           final callee = _resolveFunction(op.target);
+          if (op.typeEnvironmentReceiver != null) {
+            lowered.add(
+              TypedOperation(_named(['rSetCallTypeReceiver']), null, [
+                value(op.typeEnvironmentReceiver!),
+              ]),
+            );
+          }
+          if (op.typeArguments.isNotEmpty) {
+            lowered.add(
+              TypedOperation(
+                _named(['setCallTypeArguments']),
+                null,
+                const [],
+                immediate: context.constantPool.addOrGet(op.typeArguments),
+              ),
+            );
+          }
           final callLayout = TypedCallLayout([
             for (final representation
                 in context.functionSignatures[callee]!.parameters)
@@ -1265,7 +1467,11 @@ class TypedBackend {
         ];
         List<String> compareNames(String condition) => ['e${condition}AB'];
         lowered.add(switch (op) {
-          async_ir.BeginAsync() => make(['rBeginAsync'], []),
+          async_ir.BeginAsync(:final runtimeTypeId) => make(
+            ['rBeginAsync'],
+            [],
+            immediate: runtimeTypeId,
+          ),
           flow.ReturnAsync(:final value) when value != null => make(
             ['rReturnAsync'],
             [value],
@@ -1435,13 +1641,29 @@ class TypedBackend {
             [list, value],
           ),
           collection.ListLength(:final list) => make(['aListLengthR'], [list]),
-          primitives.BoxList(:final source) => make(['rBoxList'], [source]),
-          primitives.BoxMap(:final source) => make(['rBoxMap'], [source]),
-          primitives.BoxSet(:final source) => make(['rBoxSet'], [source]),
-          objects_ir.CreateClass(:final library, :final name, :final $super) =>
+          primitives.BoxList(:final source, :final runtimeTypeId) =>
+            runtimeTypeId == null
+                ? make(['rBoxList'], [source])
+                : make(['rBoxListTyped'], [source], immediate: runtimeTypeId),
+          primitives.BoxMap(:final source, :final runtimeTypeId) => make(
+            ['rBoxMap'],
+            [source],
+            immediate: runtimeTypeId,
+          ),
+          primitives.BoxSet(:final source, :final runtimeTypeId) => make(
+            ['rBoxSet'],
+            [source],
+            immediate: runtimeTypeId,
+          ),
+          objects_ir.CreateClass(
+            :final library,
+            :final name,
+            :final $super,
+            :final runtimeTypeDescriptor,
+          ) =>
             make(
-              ['rCreateClassR'],
-              [$super],
+              ['rCreateClassRA'],
+              [$super, runtimeTypeDescriptor],
               immediate: _classIndices[(library, name)],
             ),
           objects_ir.LoadUninitializedField() => make([

@@ -96,7 +96,11 @@ void main() {
       final graph = singleBlock([
         LoadInt(cfg.SSA('value'), 3),
         BoxInt(cfg.SSA('value'), cfg.SSA('value')),
-        Unbox(cfg.SSA('unboxed'), cfg.SSA('value')),
+        Unbox(
+          cfg.SSA('unboxed'),
+          cfg.SSA('value'),
+          MachineRepresentation.integer,
+        ),
         Return(cfg.SSA('unboxed')),
       ]);
       final representations = analyzeRepresentations(graph);
@@ -195,7 +199,7 @@ void main() {
   test('unbox output uses typed consumers and never defaults to object', () {
     final graph = singleBlock([
       Parameter(cfg.SSA('boxed'), 0),
-      Unbox(cfg.SSA('raw'), cfg.SSA('boxed')),
+      Unbox(cfg.SSA('raw'), cfg.SSA('boxed'), MachineRepresentation.integer),
       LoadInt(cfg.SSA('one'), 1),
       IntAdd(cfg.SSA('sum'), cfg.SSA('raw'), cfg.SSA('one')),
       Return(cfg.SSA('sum')),
@@ -209,10 +213,14 @@ void main() {
     );
     final ambiguous = singleBlock([
       Parameter(cfg.SSA('boxed'), 0),
-      Unbox(cfg.SSA('raw'), cfg.SSA('boxed')),
+      Unbox(cfg.SSA('raw'), cfg.SSA('boxed'), MachineRepresentation.integer),
       Return(cfg.SSA('raw')),
     ]);
-    expect(() => analyzeRepresentations(ambiguous), throwsStateError);
+    final explicit = analyzeRepresentations(ambiguous);
+    expect(
+      explicit.entries.singleWhere((entry) => entry.key.name == 'raw').value,
+      MachineRepresentation.integer,
+    );
   });
 
   test('unknown IR definitions are rejected explicitly', () {

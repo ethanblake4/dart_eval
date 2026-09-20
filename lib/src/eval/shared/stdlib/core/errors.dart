@@ -2,9 +2,11 @@
 
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/base.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/collection.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/object.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/stack_trace.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/symbol.dart';
 
 /// dart_eval bimodal wrapper for [Error]
 class $Error implements Error, $Instance {
@@ -185,6 +187,199 @@ class $Error implements Error, $Instance {
   ) {
     return $Error.wrap(Error());
   }
+}
+
+/// Runtime wrapper that preserves the guest-visible [TypeError] category.
+class $TypeError implements Error, $Instance {
+  $TypeError.wrap(this.$value);
+
+  static const _$type = BridgeTypeRef(CoreTypes.typeError);
+  static const $declaration = BridgeClassDef(
+    BridgeClassType(_$type, $extends: BridgeTypeRef(CoreTypes.error)),
+    constructors: {},
+    fields: {},
+    methods: {},
+    getters: {},
+    setters: {},
+    bridge: false,
+    wrap: true,
+  );
+
+  late final $Error _superclass = $Error.wrap($value);
+
+  @override
+  final TypeError $value;
+
+  @override
+  TypeError get $reified => $value;
+
+  @override
+  $Value? $getProperty(Runtime runtime, String identifier) =>
+      _superclass.$getProperty(runtime, identifier);
+
+  @override
+  void $setProperty(Runtime runtime, String identifier, $Value value) =>
+      _superclass.$setProperty(runtime, identifier, value);
+
+  @override
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType(_$type.spec!);
+
+  @override
+  StackTrace? get stackTrace => $value.stackTrace;
+}
+
+/// Runtime wrapper that preserves the guest-visible [NoSuchMethodError]
+/// category.
+class $NoSuchMethodError implements Error, $Instance {
+  $NoSuchMethodError.wrap(this.$value);
+
+  static const _$type = BridgeTypeRef(CoreTypes.noSuchMethodError);
+  static const $declaration = BridgeClassDef(
+    BridgeClassType(_$type, $extends: BridgeTypeRef(CoreTypes.error)),
+    constructors: {},
+    fields: {},
+    methods: {},
+    getters: {},
+    setters: {},
+    bridge: false,
+    wrap: true,
+  );
+
+  late final $Error _superclass = $Error.wrap($value);
+
+  @override
+  final NoSuchMethodError $value;
+
+  @override
+  NoSuchMethodError get $reified => $value;
+
+  @override
+  $Value? $getProperty(Runtime runtime, String identifier) =>
+      _superclass.$getProperty(runtime, identifier);
+
+  @override
+  void $setProperty(Runtime runtime, String identifier, $Value value) =>
+      _superclass.$setProperty(runtime, identifier, value);
+
+  @override
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType(_$type.spec!);
+
+  @override
+  StackTrace? get stackTrace => $value.stackTrace;
+}
+
+/// Guest-visible invocation metadata passed to `noSuchMethod`.
+class $Invocation implements Invocation, $Instance {
+  $Invocation.wrap(this.$value);
+
+  static const _$type = BridgeTypeRef(CoreTypes.invocation);
+  static const $declaration = BridgeClassDef(
+    BridgeClassType(_$type, isAbstract: true),
+    constructors: {},
+    fields: {},
+    methods: {},
+    getters: {
+      'memberName': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.symbol)),
+        ),
+      ),
+      'positionalArguments': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list)),
+        ),
+      ),
+      'namedArguments': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.map)),
+        ),
+      ),
+      'typeArguments': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list)),
+        ),
+      ),
+      'isMethod': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+        ),
+      ),
+      'isGetter': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+        ),
+      ),
+      'isSetter': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+        ),
+      ),
+      'isAccessor': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+        ),
+      ),
+    },
+    setters: {},
+    bridge: false,
+    wrap: true,
+  );
+
+  late final $Instance _superclass = $Object($value);
+
+  $Value? _wrap(Runtime runtime, Object? value) =>
+      value is $Value ? value : runtime.wrap(value);
+
+  @override
+  $Value? $getProperty(Runtime runtime, String identifier) =>
+      switch (identifier) {
+        'memberName' => $Symbol.wrap(memberName),
+        'positionalArguments' => $List.wrap([
+          for (final value in positionalArguments) _wrap(runtime, value),
+        ]),
+        'namedArguments' => $Map.wrap({
+          for (final entry in namedArguments.entries)
+            $Symbol.wrap(entry.key): _wrap(runtime, entry.value),
+        }),
+        'typeArguments' => $List.wrap([
+          for (final value in typeArguments) _wrap(runtime, value),
+        ]),
+        'isMethod' => $bool(isMethod),
+        'isGetter' => $bool(isGetter),
+        'isSetter' => $bool(isSetter),
+        'isAccessor' => $bool(isAccessor),
+        _ => _superclass.$getProperty(runtime, identifier),
+      };
+
+  @override
+  void $setProperty(Runtime runtime, String identifier, $Value value) =>
+      _superclass.$setProperty(runtime, identifier, value);
+
+  @override
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType(_$type.spec!);
+
+  @override
+  final Invocation $value;
+
+  @override
+  Invocation get $reified => $value;
+
+  @override
+  bool get isAccessor => $value.isAccessor;
+  @override
+  bool get isGetter => $value.isGetter;
+  @override
+  bool get isMethod => $value.isMethod;
+  @override
+  bool get isSetter => $value.isSetter;
+  @override
+  Symbol get memberName => $value.memberName;
+  @override
+  Map<Symbol, dynamic> get namedArguments => $value.namedArguments;
+  @override
+  List<dynamic> get positionalArguments => $value.positionalArguments;
+  @override
+  List<Type> get typeArguments => $value.typeArguments;
 }
 
 /// dart_eval bimodal wrapper for [UnsupportedError]

@@ -115,6 +115,9 @@ class CompilerContext with ScopeContext {
   final Set<int> globalsWithInitializer = {};
   final Map<int, String> globalNames = {};
   final Map<int, List<FormalParameter>> functionParameters = {};
+  final Map<int, List<TypeRef>> functionParameterTypes = {};
+  final Map<int, List<TypeRef>> functionTypeParameterBounds = {};
+  final Map<int, TypeRef> functionRuntimeTypes = {};
   int? currentFunctionId;
   int _nextFunctionId = 0;
   late ControlFlowGraph activeGraph;
@@ -184,10 +187,12 @@ class CompilerContext with ScopeContext {
   Map<int, int> runtimeGlobalInitializerMap = {};
   Map<int, Map<String, TypeRef>> topLevelVariableInferredTypes = {};
   Map<TypeRef, int> typeRefIndexMap = {};
+  Map<String, int> runtimeTypeDescriptorIds = {};
   Map<String, int> libraryMap = {};
   List<TypeRef> runtimeTypeList = [];
   List<String> typeNames = [];
   List<Set<int>> typeTypes = [];
+  List<List<int>> runtimeTypeDescriptors = [];
   List<ContextSaveState> typeInferenceSaveStates = [];
   List<ContextSaveState> typeUninferenceSaveStates = [];
   List<CompilerLabel> labels = [];
@@ -252,7 +257,8 @@ class CompilerContext with ScopeContext {
 
       inferredLocalsMap.forEach((key, value) {
         final myLocal = myLocalsMap[key];
-        if (myLocal != null && myLocal.type != value.type) {
+        if (myLocal != null &&
+            !myLocal.type.isSameSemanticType(this, value.type)) {
           locals[i][key] = myLocal.copyWith(
             type: value.type.copyWith(boxed: myLocal.boxed),
           );
@@ -274,7 +280,8 @@ class CompilerContext with ScopeContext {
 
       uninferredLocalsMap.forEach((key, value) {
         final myLocal = myLocalsMap[key];
-        if (myLocal != null && myLocal.type != value.type) {
+        if (myLocal != null &&
+            !myLocal.type.isSameSemanticType(this, value.type)) {
           locals[i][key] = myLocal.copyWith(
             type: value.type.copyWith(boxed: myLocal.boxed),
           );

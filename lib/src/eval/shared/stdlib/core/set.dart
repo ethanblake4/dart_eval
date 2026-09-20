@@ -3,7 +3,17 @@ part of 'collection.dart';
 /// dart_eval bimodal wrapper for [Set]
 class $Set<E> implements Set<E>, $Instance {
   /// Wrap a [Set] in a [$Set]
-  $Set.wrap(this.$value);
+  $Set.wrap(this.$value, {int? runtimeTypeId, Runtime? runtime})
+    : _runtimeTypeId = runtimeTypeId,
+      _runtime = runtime;
+
+  final int? _runtimeTypeId;
+  final Runtime? _runtime;
+
+  // The translated owner descriptor id is stable per (wrapper, runtime) pair;
+  // keep the last translation instead of importing on every element write.
+  Runtime? _checkRuntime;
+  int _checkOwnerType = -1;
 
   static void configureForRuntime(Runtime runtime) {
     return runtime.registerBridgeFunc('dart:core', 'Set.from', __$Set$from);
@@ -101,7 +111,7 @@ class $Set<E> implements Set<E>, $Instance {
               false,
             ),
           ],
-          returns: BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
         ),
         isStatic: false,
       ),
@@ -279,15 +289,22 @@ class $Set<E> implements Set<E>, $Instance {
   static const $Function __add = $Function(_add);
 
   static $Value? _add(Runtime runtime, $Value? target, List<$Value?> args) {
-    final value = args[0]!;
-    return $bool((target!.$value as Set).add(value));
+    final wrapper = target as $Set;
+    final value = args[0];
+    wrapper._checkElement(runtime, value);
+    return $bool(wrapper.$value.add(value));
   }
 
   static const $Function __addAll = $Function(_addAll);
 
   static $Value? _addAll(Runtime runtime, $Value? target, List<$Value?> args) {
-    final other = args[0]!;
-    (target!.$value as Set).addAll(other.$value);
+    final wrapper = target as $Set;
+    final other = args[0]!.$value as Iterable;
+    final elements = other.toList(growable: false);
+    for (final element in elements) {
+      wrapper._checkElement(runtime, element);
+    }
+    wrapper.$value.addAll(elements);
     return null;
   }
 
@@ -320,8 +337,16 @@ class $Set<E> implements Set<E>, $Instance {
 
   static const $Function __union = $Function(_union);
   static $Value? _union(Runtime runtime, $Value? target, List<$Value?> args) {
+    final wrapper = target as $Set;
     final other = args[0]!.$value as Set<Object?>;
-    return $Set.wrap((target!.$value as Set).union(other));
+    for (final element in other) {
+      wrapper._checkElement(runtime, element);
+    }
+    return $Set.wrap(
+      wrapper.$value.union(other),
+      runtimeTypeId: wrapper._runtimeTypeId,
+      runtime: wrapper._runtime,
+    );
   }
 
   static const $Function __difference = $Function(_difference);
@@ -330,8 +355,13 @@ class $Set<E> implements Set<E>, $Instance {
     $Value? target,
     List<$Value?> args,
   ) {
+    final wrapper = target as $Set;
     final other = args[0]!.$value as Set<Object?>;
-    return $Set.wrap((target!.$value as Set).difference(other));
+    return $Set.wrap(
+      wrapper.$value.difference(other),
+      runtimeTypeId: wrapper._runtimeTypeId,
+      runtime: wrapper._runtime,
+    );
   }
 
   static const $Function __intersection = $Function(_intersection);
@@ -340,15 +370,36 @@ class $Set<E> implements Set<E>, $Instance {
     $Value? target,
     List<$Value?> args,
   ) {
+    final wrapper = target as $Set;
     final other = args[0]!.$value as Set<Object?>;
-    return $Set.wrap((target!.$value as Set).intersection(other));
+    return $Set.wrap(
+      wrapper.$value.intersection(other),
+      runtimeTypeId: wrapper._runtimeTypeId,
+      runtime: wrapper._runtime,
+    );
   }
 
   @override
   Set get $reified => Set.from($value.map((e) => e is $Value ? e.$reified : e));
 
   @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType(CoreTypes.set);
+  int $getRuntimeType(Runtime runtime) {
+    final typeId = _runtimeTypeId;
+    return typeId == null
+        ? runtime.lookupType(CoreTypes.set)
+        : runtime.importRuntimeType(_runtime ?? runtime, typeId);
+  }
+
+  void _checkElement(Runtime runtime, Object? value) {
+    final runtimeTypeId = _runtimeTypeId;
+    if (runtimeTypeId != null) {
+      if (!identical(_checkRuntime, runtime)) {
+        _checkRuntime = runtime;
+        _checkOwnerType = $getRuntimeType(runtime);
+      }
+      runtime.assertTypedTypeArgument(value, _checkOwnerType, 0);
+    }
+  }
 
   @override
   void clear() {

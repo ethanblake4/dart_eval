@@ -1,7 +1,8 @@
 import 'helpers/global.dart';
+import 'helpers/conversion.dart';
 import '../ir/closures.dart';
 import '../ir/exception.dart';
-import 'backend/representation.dart' show representationForType;
+import 'backend/representation.dart' show MachineRepresentation;
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
@@ -101,13 +102,14 @@ class SuperPropertyReference extends IdentifierReference {
       return IdentifierReference(receiver, name).setValue(ctx, value, source);
     }
     final type = resolveType(ctx, forSet: true, source: source);
-    if (!value.type.resolveTypeChain(ctx).isAssignableTo(ctx, type)) {
-      throw CompileError(
-        'Cannot assign ${value.type} to super.$name of type $type',
-        source,
-      );
-    }
-    final boxed = value.boxIfNeeded(ctx, source);
+    final boxed = convertForAssignment(
+      ctx,
+      value,
+      type,
+      representation: MachineRepresentation.object,
+      source: source,
+      description: 'Cannot assign ${value.type} to super.$name of type $type',
+    );
     ctx.pushOp(
       Call(
         DeferredOrOffset(
@@ -231,14 +233,22 @@ class IdentifierReference implements Reference {
             source: source,
           ) ??
           CoreTypes.dynamic.ref(ctx);
-      if (!value.type.resolveTypeChain(ctx).isAssignableTo(ctx, fieldType)) {
-        throw CompileError(
-          'Cannot assign value of type ${value.type} to field "$name" of type $fieldType',
-          source,
-        );
-      }
-      final val = value.boxIfNeeded(ctx, source);
-      final op = SetPropertyDynamic(object!.ssa, name, val.ssa);
+      final val = convertForAssignment(
+        ctx,
+        value,
+        fieldType,
+        representation: MachineRepresentation.object,
+        source: source,
+        description:
+            'Cannot assign value of type ${value.type} to field "$name" '
+            'of type $fieldType',
+      );
+      final op = SetPropertyDynamic(
+        object!.ssa,
+        name,
+        val.ssa,
+        callerLibrary: ctx.library,
+      );
       ctx.pushOp(op);
       return val;
     }
@@ -253,34 +263,48 @@ class IdentifierReference implements Reference {
         );
       }
 
+      value = convertForAssignment(
+        ctx,
+        value,
+        local.declaredType,
+        representation: local.representation,
+        source: source,
+        description:
+            'Cannot assign value of type ${value.type} to variable "$name" '
+            'of type ${local.declaredType}',
+      );
+
       if (local.exceptionSlot != null) {
-        final stored = local.boxed
+        final stored = local.representation == MachineRepresentation.object
             ? value.boxIfNeeded(ctx)
             : value.unboxIfNeeded(ctx, false);
         ctx.pushOp(StoreExceptionSlot(local.exceptionSlot!, stored.ssa));
         return stored;
       }
       if (local.captureCell != null) {
-        final stored = local.boxed
+        final stored = local.representation == MachineRepresentation.object
             ? value.boxIfNeeded(ctx)
             : value.unboxIfNeeded(ctx, false);
         ctx.pushOp(
           WriteCaptureCell(
             local.captureCell!,
             stored.ssa,
-            representationForType(local.type),
+            local.representation,
           ),
         );
         return stored;
       }
-      final stored = local.boxed
+      final stored = local.representation == MachineRepresentation.object
           ? value.boxIfNeeded(ctx)
           : value.unboxIfNeeded(ctx, false);
       ctx.pushOp(Assign(local.ssa, stored.ssa));
-      final type = TypeRef.commonBaseType(ctx, {local.type, stored.type});
       local.copyWithUpdate(
         ctx,
-        type: type.copyWith(boxed: local.boxed),
+        type:
+            (local.declaredType == CoreTypes.dynamic.ref(ctx)
+                    ? local.declaredType
+                    : stored.type)
+                .copyWith(boxed: local.boxed),
         concreteTypes: stored.concreteTypes,
       );
       return stored;
@@ -305,15 +329,23 @@ class IdentifierReference implements Reference {
               source: source,
             ) ??
             CoreTypes.dynamic.ref(ctx);
-        if (!value.type.resolveTypeChain(ctx).isAssignableTo(ctx, fieldType)) {
-          throw CompileError(
-            'Cannot assign value of type ${value.type} to field "$name" of type $fieldType',
-            source,
-          );
-        }
         final $this = ctx.lookupLocal('#this')!;
-        final stored = value.boxIfNeeded(ctx, source);
-        final op = SetPropertyDynamic($this.ssa, name, stored.ssa);
+        final stored = convertForAssignment(
+          ctx,
+          value,
+          fieldType,
+          representation: MachineRepresentation.object,
+          source: source,
+          description:
+              'Cannot assign value of type ${value.type} to field "$name" '
+              'of type $fieldType',
+        );
+        final op = SetPropertyDynamic(
+          $this.ssa,
+          name,
+          stored.ssa,
+          callerLibrary: ctx.library,
+        );
         ctx.pushOp(op);
         return stored;
       }
@@ -479,7 +511,14 @@ class IdentifierReference implements Reference {
         }
 
         final resvar = ctx.svar(name);
-        ctx.pushOp(LoadPropertyDynamic(resvar, $this.ssa, name));
+        ctx.pushOp(
+          LoadPropertyDynamic(
+            resvar,
+            $this.ssa,
+            name,
+            callerLibrary: ctx.library,
+          ),
+        );
 
         if (decOrBridge.isBridge) {
           if (decOrBridge is GetSet) {
@@ -757,7 +796,7 @@ class IndexedReference implements Reference {
       return Variable.ssa(
         ctx,
         IndexList(ctx.svar('list'), list.ssa, _index.ssa),
-        listElementType,
+        listElementType.copyWith(boxed: true),
       );
     }
 
@@ -830,19 +869,23 @@ class IndexedReference implements Reference {
         );
       }
 
-      final list = _variable.unboxIfNeeded(ctx);
-      final elementType = list.type.specifiedTypeArgs.isEmpty
+      final elementType = _variable.type.specifiedTypeArgs.isEmpty
           ? CoreTypes.dynamic.ref(ctx)
-          : list.type.specifiedTypeArgs[0];
-      var formattedValue = value;
-      if (elementType.boxed) {
-        formattedValue = formattedValue.boxIfNeeded(ctx, source);
-      } else {
-        formattedValue = formattedValue.unboxIfNeeded(ctx);
-      }
-      _index = _index.unboxIfNeeded(ctx, false);
-      ctx.pushOp(ListSet(list.ssa, _index.ssa, formattedValue.ssa));
-      return formattedValue;
+          : _variable.type.specifiedTypeArgs[0];
+      final formattedValue = convertForAssignment(
+        ctx,
+        value,
+        elementType,
+        representation: MachineRepresentation.object,
+        source: source,
+      );
+      // Keep the reified wrapper for writes. A List<num> reference can point
+      // at a List<int>; writing directly to its raw backing list would bypass
+      // the actual instance's checked element type.
+      final result = _variable.invoke(ctx, '[]=', [_index, formattedValue]);
+      _variable = result.target!;
+      _index = result.args[0];
+      return result.args[1];
     }
 
     final result = _variable.invoke(ctx, '[]=', [_index, value]);
@@ -953,7 +996,7 @@ Variable _declarationToVariable(
     TypeRef.loadTemporaryTypes(
       ctx,
       decl.functionExpression.typeParameters?.typeParameters,
-      decOrBridge.sourceLib,
+      library: decOrBridge.sourceLib,
     );
     returnType = TypeRef.fromAnnotation(
       ctx,

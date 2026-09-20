@@ -5,6 +5,8 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
+import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
@@ -36,15 +38,17 @@ Variable compilePrefixExpression(
   }
 
   final V = compileExpression(e.operand, ctx, bound);
+  final isDynamic = V.type.resolveTypeChain(ctx) == CoreTypes.dynamic.ref(ctx);
 
   if (method == '-' &&
+      !isDynamic &&
       V.type != CoreTypes.int.ref(ctx) &&
       V.type != CoreTypes.double.ref(ctx)) {
     throw CompileError(
       'Unary prefix "-" is currently only supported for ints and doubles (type: ${V.type})',
       e,
     );
-  } else if (method == '!' && V.type != CoreTypes.bool.ref(ctx)) {
+  } else if (method == '!' && !isDynamic && V.type != CoreTypes.bool.ref(ctx)) {
     throw CompileError(
       'Unary prefix "!" is currently only supported for bools (type: ${V.type})',
       e,
@@ -52,8 +56,18 @@ Variable compilePrefixExpression(
   }
 
   if (method == "!") {
-    return V.invoke(ctx, method, []).result;
+    final boolean = convertForAssignment(
+      ctx,
+      V,
+      CoreTypes.bool.ref(ctx),
+      representation: MachineRepresentation.boolean,
+      source: e.operand,
+      description: 'Operand of ! must be boolean',
+    );
+    return boolean.invoke(ctx, method, []).result;
   }
+
+  if (isDynamic) return V.invoke(ctx, method, []).result;
 
   return _zeroForType(V.type, ctx).push(ctx).invoke(ctx, method, [V]).result;
 }
@@ -63,10 +77,7 @@ BuiltinValue _zeroForType(TypeRef type, CompilerContext ctx) =>
     ? BuiltinValue(intval: 0)
     : BuiltinValue(doubleval: 0.0);
 
-BuiltinValue _oneForType(TypeRef type, CompilerContext ctx) =>
-    type == CoreTypes.int.ref(ctx)
-    ? BuiltinValue(intval: 1)
-    : BuiltinValue(doubleval: 1.0);
+BuiltinValue _incrementValue() => BuiltinValue(intval: 1);
 
 Variable _handleDoubleOperands(
   PrefixExpression e,
@@ -77,7 +88,7 @@ Variable _handleDoubleOperands(
   final l = Variable.ssa(ctx, Assign(ctx.svar('operand'), L.ssa), L.type);
 
   final result = l.invoke(ctx, _opMap[e.operator.type]!, [
-    _oneForType(l.type, ctx).push(ctx),
+    _incrementValue().push(ctx),
   ]).result;
 
   return V.setValue(ctx, result);

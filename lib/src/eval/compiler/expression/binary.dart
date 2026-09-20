@@ -4,6 +4,9 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/promotion.dart';
+import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -53,7 +56,13 @@ Variable compileBinaryExpression(
     case TokenType.AMPERSAND_AMPERSAND:
     case TokenType.BAR_BAR:
     case TokenType.QUESTION_QUESTION:
-      return _compileShortCircuit(ctx, L, e.rightOperand, method);
+      return _compileShortCircuit(
+        ctx,
+        L,
+        e.leftOperand,
+        e.rightOperand,
+        method,
+      );
   }
 
   // Evaluating the right operand can assign or change the representation of a
@@ -67,6 +76,7 @@ Variable compileBinaryExpression(
 Variable _compileShortCircuit(
   CompilerContext ctx,
   Variable L,
+  Expression left,
   Expression right,
   String operator,
 ) {
@@ -86,10 +96,14 @@ Variable _compileShortCircuit(
           CoreTypes.bool.ref(ctx).copyWith(boxed: false),
         );
       }
-      if (!L.type.isAssignableTo(ctx, CoreTypes.bool.ref(ctx))) {
-        throw CompileError('Operands of $operator must be boolean', right);
-      }
-      final value = L.unboxIfNeeded(ctx, false);
+      final value = convertForAssignment(
+        ctx,
+        L,
+        CoreTypes.bool.ref(ctx),
+        representation: MachineRepresentation.boolean,
+        source: right,
+        description: 'Operands of $operator must be boolean',
+      );
       if (operator == '&&') return value;
       return Variable.ssa(
         ctx,
@@ -99,10 +113,21 @@ Variable _compileShortCircuit(
     },
     thenBranch: (ctx, rt) {
       // Short-circuit: we only execute the RHS if the LHS is null
-      final R = compileExpression(right, ctx).boxIfNeeded(ctx);
-      if (operator != '??' &&
-          !R.type.isAssignableTo(ctx, CoreTypes.bool.ref(ctx))) {
-        throw CompileError('Operands of $operator must be boolean', right);
+      if (operator == '&&' || operator == '||') {
+        applyConditionPromotions(ctx, left, operator == '&&');
+      }
+      var R = compileExpression(right, ctx);
+      if (operator != '??') {
+        R = convertForAssignment(
+          ctx,
+          R,
+          CoreTypes.bool.ref(ctx),
+          representation: MachineRepresentation.object,
+          source: right,
+          description: 'Operands of $operator must be boolean',
+        );
+      } else {
+        R = R.boxIfNeeded(ctx);
       }
       rightType = R.type;
       ctx.pushOp(Assign(outVar.ssa, R.ssa));

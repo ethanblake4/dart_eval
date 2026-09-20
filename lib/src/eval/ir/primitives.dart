@@ -1,16 +1,23 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
 
+import 'representation.dart';
+
 final class BoxSet extends Operation {
   final SSA target;
   final SSA source;
-  BoxSet(this.target, this.source);
+  final int runtimeTypeId;
+
+  BoxSet(this.target, this.source, {required this.runtimeTypeId});
   @override
   SSA get writesTo => target;
   @override
   Set<SSA> get readsFrom => {source};
   @override
-  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) =>
-      BoxSet(writesTo ?? target, readsFrom?.single ?? source);
+  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) => BoxSet(
+    writesTo ?? target,
+    readsFrom?.single ?? source,
+    runtimeTypeId: runtimeTypeId,
+  );
 }
 
 final class BoxInt extends Operation {
@@ -210,8 +217,9 @@ final class MaybeBoxNull extends Operation {
 final class BoxList extends Operation {
   final SSA target;
   final SSA source;
+  final int? runtimeTypeId;
 
-  BoxList(this.target, this.source);
+  BoxList(this.target, this.source, {this.runtimeTypeId});
 
   @override
   Set<SSA> get readsFrom => {source};
@@ -224,22 +232,30 @@ final class BoxList extends Operation {
 
   @override
   bool operator ==(Object other) =>
-      other is BoxList && target == other.target && source == other.source;
+      other is BoxList &&
+      target == other.target &&
+      source == other.source &&
+      runtimeTypeId == other.runtimeTypeId;
 
   @override
-  int get hashCode => target.hashCode ^ source.hashCode;
+  int get hashCode => Object.hash(target, source, runtimeTypeId);
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
-    return BoxList(writesTo ?? target, readsFrom?.first ?? source);
+    return BoxList(
+      writesTo ?? target,
+      readsFrom?.first ?? source,
+      runtimeTypeId: runtimeTypeId,
+    );
   }
 }
 
 final class BoxMap extends Operation {
   final SSA target;
   final SSA source;
+  final int runtimeTypeId;
 
-  BoxMap(this.target, this.source);
+  BoxMap(this.target, this.source, {required this.runtimeTypeId});
 
   @override
   Set<SSA> get readsFrom => {source};
@@ -252,22 +268,30 @@ final class BoxMap extends Operation {
 
   @override
   bool operator ==(Object other) =>
-      other is BoxMap && target == other.target && source == other.source;
+      other is BoxMap &&
+      target == other.target &&
+      source == other.source &&
+      runtimeTypeId == other.runtimeTypeId;
 
   @override
-  int get hashCode => target.hashCode ^ source.hashCode;
+  int get hashCode => Object.hash(target, source, runtimeTypeId);
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
-    return BoxMap(writesTo ?? target, readsFrom?.first ?? source);
+    return BoxMap(
+      writesTo ?? target,
+      readsFrom?.first ?? source,
+      runtimeTypeId: runtimeTypeId,
+    );
   }
 }
 
 final class Unbox extends Operation {
   final SSA target;
   final SSA source;
+  final MachineRepresentation representation;
 
-  Unbox(this.target, this.source);
+  Unbox(this.target, this.source, this.representation);
 
   @override
   Set<SSA> get readsFrom => {source};
@@ -280,13 +304,20 @@ final class Unbox extends Operation {
 
   @override
   bool operator ==(Object other) =>
-      other is Unbox && target == other.target && source == other.source;
+      other is Unbox &&
+      target == other.target &&
+      source == other.source &&
+      representation == other.representation;
 
   @override
-  int get hashCode => target.hashCode ^ source.hashCode;
+  int get hashCode => Object.hash(target, source, representation);
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
-    return Unbox(writesTo ?? target, readsFrom?.first ?? source);
+    return Unbox(
+      writesTo ?? target,
+      readsFrom?.first ?? source,
+      representation,
+    );
   }
 }

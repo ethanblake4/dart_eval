@@ -5,6 +5,8 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart'
 import 'typed_export.dart';
 import 'typed_frame.dart';
 import 'typed_function.dart';
+import 'typed_closure.dart';
+import 'typed_host_collections.dart';
 import 'typed_instance.dart';
 import 'typed_interop.dart';
 import 'typed_program.dart';
@@ -29,7 +31,13 @@ abstract final class TypedExportAdapter {
       }
     }
     final function = program.functions[declaration.functionId];
-    if (parameters.length != function.argumentKinds.length) {
+    final constructorRuntimeTypeId =
+        declaration.generativeConstructorRuntimeTypeId;
+    final hasConstructorRuntimeType = constructorRuntimeTypeId >= 0;
+    if (parameters.length + (hasConstructorRuntimeType ? 1 : 0) !=
+            function.argumentKinds.length ||
+        (hasConstructorRuntimeType &&
+            function.argumentKinds.last != TypedArgumentKind.integer)) {
       throw StateError(
         'Export parameter metadata does not match ${declaration.name}',
       );
@@ -83,6 +91,7 @@ abstract final class TypedExportAdapter {
         TypedArgumentKind.object => boxed,
       });
     }
+    if (hasConstructorRuntimeType) values.add(constructorRuntimeTypeId);
     return TypedEntry.fromValues(function, values);
   }
 
@@ -98,6 +107,85 @@ abstract final class TypedExportAdapter {
       parameter.name,
       'Expected ${parameter.typeLibrary}::${parameter.typeName}${parameter.nullable ? '?' : ''}',
     );
+    if (parameter.runtimeTypeId >= 0) {
+      if (runtime == null) invalid();
+      final structuralFunction =
+          parameter.typeLibrary == 'dart:core' &&
+          parameter.typeName == 'Function' &&
+          runtime.isTypedFunctionTypeDescriptor(parameter.runtimeTypeId);
+      if (structuralFunction) {
+        if (original is $Closure || original is $Function) {
+          if (!runtime.isSupportedTypedFunctionAdapterDescriptor(
+            parameter.runtimeTypeId,
+          )) {
+            invalid();
+          }
+          final checked = TypedCheckedFunction(
+            runtime,
+            parameter.runtimeTypeId,
+            original as EvalFunction,
+          );
+          return needsBox ? checked : null;
+        }
+        if (original is TypedClosure ||
+            original is TypedMember ||
+            original is TypedCheckedFunction) {
+          if (!runtime.isTypedValueType(original, parameter.runtimeTypeId)) {
+            invalid();
+          }
+          return needsBox ? original as $Value : null;
+        }
+        if (original is EvalCallable) invalid();
+      }
+      if (value == null) {
+        if (!runtime.isTypedValueType(null, parameter.runtimeTypeId)) invalid();
+        return null;
+      }
+      final rawCollectionTypeId = switch (parameter.typeName) {
+        'List' when value is List => runtime.lookupType(CoreTypes.list),
+        'Map' when value is Map => runtime.lookupType(CoreTypes.map),
+        'Set' when value is Set => runtime.lookupType(CoreTypes.set),
+        _ => null,
+      };
+      final keepOriginal =
+          original is $Value &&
+          parameter.typeName != 'double' &&
+          (rawCollectionTypeId == null ||
+              original.$getRuntimeType(runtime) != rawCollectionTypeId);
+      final boxed = keepOriginal
+          ? original
+          : original is $Value && rawCollectionTypeId != null
+          ? TypedHostCollections.adoptRuntimeType(
+              original,
+              runtime,
+              parameter.runtimeTypeId,
+            )
+          : TypedInterop.boxExternal(
+              value,
+              runtime: runtime,
+              // Raw host collections and untyped collection wrappers have no
+              // generic witness. Trust the public declaration at this
+              // boundary, then keep guest writes checked by its descriptor.
+              // A typed guest wrapper retains its own witness above.
+              runtimeTypeId: rawCollectionTypeId == null
+                  ? null
+                  : parameter.runtimeTypeId,
+            );
+      final acceptsGuestCallable =
+          parameter.typeLibrary == 'dart:core' &&
+          parameter.typeName == 'Function' &&
+          runtime.isTypedNominalTypeDescriptor(
+            parameter.runtimeTypeId,
+            CoreTypes.function,
+          ) &&
+          original is EvalCallable;
+      if (boxed == null ||
+          (!acceptsGuestCallable &&
+              !runtime.isTypedValueType(boxed, parameter.runtimeTypeId))) {
+        invalid();
+      }
+      return needsBox ? boxed : null;
+    }
     if (value == null) {
       if (!parameter.nullable && parameter.typeName != 'dynamic') invalid();
       return null;

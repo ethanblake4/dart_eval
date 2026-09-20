@@ -6,6 +6,7 @@ import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'typed_function.dart';
 import 'typed_exception_state.dart';
 import 'typed_async.dart';
+import 'typed_instance.dart';
 import 'typed_program.dart';
 
 /// Register initialization happens once at the public host boundary. Internal
@@ -20,7 +21,11 @@ class TypedEntry {
       e = false,
       s = null,
       c = null,
-      environment = const [];
+      environment = const [],
+      typeEnvironmentReceiver = null,
+      typeArguments = const [],
+      lexicalTypeEnvironmentReceiver = null,
+      lexicalTypeArguments = const [];
 
   const TypedEntry.empty()
     : a = 0,
@@ -31,7 +36,11 @@ class TypedEntry {
       r = null,
       s = null,
       c = null,
-      environment = const [];
+      environment = const [],
+      typeEnvironmentReceiver = null,
+      typeArguments = const [],
+      lexicalTypeEnvironmentReceiver = null,
+      lexicalTypeArguments = const [];
 
   const TypedEntry.direct({
     this.a = 0,
@@ -43,6 +52,10 @@ class TypedEntry {
     this.s,
     this.c,
     this.environment = const [],
+    this.typeEnvironmentReceiver,
+    this.typeArguments = const [],
+    this.lexicalTypeEnvironmentReceiver,
+    this.lexicalTypeArguments = const [],
   });
 
   static TypedEntry prepare(
@@ -137,6 +150,10 @@ class TypedEntry {
     TypedFunction function,
     List<Object?> values, {
     List<Object?> environment = const [],
+    Object? typeEnvironmentReceiver,
+    List<int> typeArguments = const [],
+    Object? lexicalTypeEnvironmentReceiver,
+    List<int> lexicalTypeArguments = const [],
   }) {
     if (values.length != function.argumentKinds.length) {
       throw ArgumentError(
@@ -194,6 +211,10 @@ class TypedEntry {
       s: s,
       c: c,
       environment: environment,
+      typeEnvironmentReceiver: typeEnvironmentReceiver,
+      typeArguments: typeArguments,
+      lexicalTypeEnvironmentReceiver: lexicalTypeEnvironmentReceiver,
+      lexicalTypeArguments: lexicalTypeArguments,
     );
   }
 
@@ -202,6 +223,10 @@ class TypedEntry {
   final bool e;
   final Object? r, s, c;
   final List<Object?> environment;
+  final Object? typeEnvironmentReceiver;
+  final List<int> typeArguments;
+  final Object? lexicalTypeEnvironmentReceiver;
+  final List<int> lexicalTypeArguments;
 }
 
 /// Each active invocation owns spills and one optional outgoing list. A callee
@@ -220,7 +245,13 @@ class TypedFrame {
   /// Reuse a frame for repeated calls at the same depth. Recursive invocations
   /// still have distinct storage, and every run owns its entire frame chain.
   @pragma('vm:never-inline')
-  TypedFrame enterStatic(TypedProgram program, int index, int pc) {
+  TypedFrame enterStatic(
+    TypedProgram program,
+    int index,
+    int pc, {
+    Object? typeEnvironmentReceiver,
+    List<int> typeArguments = const [],
+  }) {
     final callee = program.functions[index];
     var child = _child;
     if (child == null) {
@@ -234,11 +265,22 @@ class TypedFrame {
     }
     child.returnPc = pc;
     child.environment = const [];
+    child.typeEnvironmentReceiver = typeEnvironmentReceiver;
+    child.typeArguments = typeArguments;
+    child.lexicalTypeEnvironmentReceiver = null;
+    child.lexicalTypeArguments = const [];
+    child.pendingTypeEnvironmentReceiver = null;
+    child.pendingTypeArguments = const [];
     return child;
   }
 
   @pragma('vm:never-inline')
-  TypedFrame enter(TypedFunction callee, int pc) {
+  TypedFrame enter(
+    TypedFunction callee,
+    int pc, {
+    Object? typeEnvironmentReceiver,
+    List<int> typeArguments = const [],
+  }) {
     var child = _child;
     if (child == null) {
       child = _child = TypedFrame(callee, this);
@@ -251,6 +293,12 @@ class TypedFrame {
     }
     child.returnPc = pc;
     child.environment = const [];
+    child.typeEnvironmentReceiver = typeEnvironmentReceiver;
+    child.typeArguments = typeArguments;
+    child.lexicalTypeEnvironmentReceiver = null;
+    child.lexicalTypeArguments = const [];
+    child.pendingTypeEnvironmentReceiver = null;
+    child.pendingTypeArguments = const [];
     return child;
   }
 
@@ -258,8 +306,12 @@ class TypedFrame {
   TypedFrame enterClosure(
     TypedFunction callee,
     int pc,
-    List<Object?> captures,
-  ) {
+    List<Object?> captures, {
+    Object? typeEnvironmentReceiver,
+    List<int> typeArguments = const [],
+    Object? lexicalTypeEnvironmentReceiver,
+    List<int> lexicalTypeArguments = const [],
+  }) {
     // Keep the cached-frame path in one Dart call, just like ordinary calls.
     var child = _child;
     if (child == null) {
@@ -273,6 +325,12 @@ class TypedFrame {
     }
     child.returnPc = pc;
     child.environment = captures;
+    child.typeEnvironmentReceiver = typeEnvironmentReceiver;
+    child.typeArguments = typeArguments;
+    child.lexicalTypeEnvironmentReceiver = lexicalTypeEnvironmentReceiver;
+    child.lexicalTypeArguments = lexicalTypeArguments;
+    child.pendingTypeEnvironmentReceiver = null;
+    child.pendingTypeArguments = const [];
     return child;
   }
 
@@ -285,6 +343,14 @@ class TypedFrame {
     // Compiler continuations and exception unwinding have already popped this
     // frame's handlers. Ordinary returns need no handler-state check.
     environment = const [];
+    typeEnvironmentReceiver = null;
+    typeArguments = const [];
+    _ownerTypeReceiver = null;
+    _ownerTypeId = null;
+    lexicalTypeEnvironmentReceiver = null;
+    lexicalTypeArguments = const [];
+    pendingTypeEnvironmentReceiver = null;
+    pendingTypeArguments = const [];
     // Cached inactive frames must not retain arbitrary application objects.
     if (objectSpills.isNotEmpty) {
       objectSpills.fillRange(0, objectSpills.length, null);
@@ -373,6 +439,36 @@ class TypedFrame {
   }
 
   List<Object?> environment = const [];
+  Object? typeEnvironmentReceiver;
+  List<int> typeArguments = const [];
+  Object? lexicalTypeEnvironmentReceiver;
+  List<int> lexicalTypeArguments = const [];
+
+  Object? get effectiveTypeEnvironmentReceiver =>
+      typeEnvironmentReceiver ?? lexicalTypeEnvironmentReceiver;
+
+  List<int> get effectiveTypeArguments =>
+      typeArguments.isEmpty ? lexicalTypeArguments : typeArguments;
+
+  Object? _ownerTypeReceiver;
+  int? _ownerTypeId;
+
+  /// Resolved `dispatchRoot` runtime type of [effectiveTypeEnvironmentReceiver],
+  /// or null when the receiver is not a TypedInstance. Cached per receiver —
+  /// an instance's runtime type is stable for the frame's lifetime.
+  int? typeEnvironmentOwnerType(Runtime runtime) {
+    final receiver = effectiveTypeEnvironmentReceiver;
+    if (!identical(_ownerTypeReceiver, receiver)) {
+      _ownerTypeReceiver = receiver;
+      _ownerTypeId = receiver is TypedInstance
+          ? receiver.dispatchRoot.$getRuntimeType(runtime)
+          : null;
+    }
+    return _ownerTypeId;
+  }
+
+  Object? pendingTypeEnvironmentReceiver;
+  List<int> pendingTypeArguments = const [];
   Int64List intSpills;
   Float64List doubleSpills;
   Uint8List boolSpills;

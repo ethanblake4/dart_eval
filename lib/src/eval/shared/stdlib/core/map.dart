@@ -3,7 +3,17 @@ part of 'collection.dart';
 /// dart_eval bimodal wrapper for [Map]
 class $Map<K, V> implements Map<K, V>, $Instance {
   /// Wrap a [Map] in a [$Map]
-  $Map.wrap(this.$value);
+  $Map.wrap(this.$value, {int? runtimeTypeId, Runtime? runtime})
+    : _runtimeTypeId = runtimeTypeId,
+      _runtime = runtime;
+
+  final int? _runtimeTypeId;
+  final Runtime? _runtime;
+
+  // The translated owner descriptor id is stable per (wrapper, runtime) pair;
+  // keep the last translation instead of importing on every entry write.
+  Runtime? _checkRuntime;
+  int _checkOwnerType = -1;
 
   static void configureForRuntime(Runtime runtime) {
     return runtime.registerBridgeFunc(
@@ -65,13 +75,6 @@ class $Map<K, V> implements Map<K, V>, $Instance {
             ),
           ],
           returns: BridgeTypeAnnotation(BridgeTypeRef.ref('V')),
-        ),
-        isStatic: false,
-      ),
-      'length': BridgeMethodDef(
-        BridgeFunctionDef(
-          params: [],
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
         ),
         isStatic: false,
       ),
@@ -140,19 +143,42 @@ class $Map<K, V> implements Map<K, V>, $Instance {
       ),
     },
     getters: {
+      'length': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+        ),
+        isStatic: false,
+      ),
       'keys': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.iterable)),
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.iterable, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('K')),
+            ]),
+          ),
         ),
       ),
       'values': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.iterable)),
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.iterable, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('V')),
+            ]),
+          ),
         ),
       ),
       'entries': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.iterable)),
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.iterable, [
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.mapEntry, [
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('K')),
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('V')),
+                ]),
+              ),
+            ]),
+          ),
         ),
       ),
       'isEmpty': BridgeMethodDef(
@@ -246,16 +272,25 @@ class $Map<K, V> implements Map<K, V>, $Instance {
     $Value? target,
     List<$Value?> args,
   ) {
-    final idx = args[0]!;
-    final value = args[1]!;
-    return (target!.$value as Map)[idx] = value;
+    final wrapper = target as $Map;
+    final key = args[0];
+    final value = args[1];
+    wrapper._checkEntry(runtime, key, value);
+    return wrapper.$value[key] = value;
   }
 
   static const $Function __addAll = $Function(_addAll);
 
   static $Value? _addAll(Runtime runtime, $Value? target, List<$Value?> args) {
-    final other = args[0]!;
-    (target!.$value as Map).addAll(other.$value);
+    final wrapper = target as $Map;
+    final other = args[0]!.$value as Map;
+    final entries = other.entries.toList(growable: false);
+    for (final entry in entries) {
+      wrapper._checkEntry(runtime, entry.key, entry.value);
+    }
+    for (final entry in entries) {
+      wrapper.$value[entry.key] = entry.value;
+    }
     return null;
   }
 
@@ -288,7 +323,23 @@ class $Map<K, V> implements Map<K, V>, $Instance {
   );
 
   @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType(CoreTypes.map);
+  int $getRuntimeType(Runtime runtime) {
+    final typeId = _runtimeTypeId;
+    return typeId == null
+        ? runtime.lookupType(CoreTypes.map)
+        : runtime.importRuntimeType(_runtime ?? runtime, typeId);
+  }
+
+  void _checkEntry(Runtime runtime, Object? key, Object? value) {
+    final runtimeTypeId = _runtimeTypeId;
+    if (runtimeTypeId == null) return;
+    if (!identical(_checkRuntime, runtime)) {
+      _checkRuntime = runtime;
+      _checkOwnerType = $getRuntimeType(runtime);
+    }
+    runtime.assertTypedTypeArgument(key, _checkOwnerType, 0);
+    runtime.assertTypedTypeArgument(value, _checkOwnerType, 1);
+  }
 
   @override
   V? operator [](Object? key) {

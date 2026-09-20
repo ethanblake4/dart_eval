@@ -174,16 +174,27 @@ final class JumpIfNull extends Operation {
 final class Call extends Operation {
   final DeferredOrOffset target;
   final List<SSA> arguments;
+  final SSA? typeEnvironmentReceiver;
+  final List<int> typeArguments;
 
   final SSA? result;
 
-  Call(this.target, this.arguments, {this.result});
+  Call(
+    this.target,
+    this.arguments, {
+    this.result,
+    this.typeEnvironmentReceiver,
+    this.typeArguments = const [],
+  });
 
   @override
   SSA? get writesTo => result;
 
   @override
-  Set<SSA> get readsFrom => Set.from(arguments);
+  Set<SSA> get readsFrom => {
+    ...arguments,
+    if (typeEnvironmentReceiver != null) typeEnvironmentReceiver!,
+  };
 
   @override
   String toString() => 'call $target(${arguments.join(', ')})';
@@ -193,17 +204,34 @@ final class Call extends Operation {
       other is Call &&
       target == other.target &&
       result == other.result &&
+      typeEnvironmentReceiver == other.typeEnvironmentReceiver &&
+      const ListEquality<int>().equals(typeArguments, other.typeArguments) &&
       const ListEquality<SSA>().equals(arguments, other.arguments);
 
   @override
-  int get hashCode => Object.hash(target, result, Object.hashAll(arguments));
+  int get hashCode => Object.hash(
+    target,
+    result,
+    typeEnvironmentReceiver,
+    Object.hashAll(typeArguments),
+    Object.hashAll(arguments),
+  );
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
+    final operands = [
+      ...arguments,
+      if (typeEnvironmentReceiver != null) typeEnvironmentReceiver!,
+    ];
+    final renamed = renameOperands(operands, this.readsFrom, readsFrom);
     return Call(
       target,
-      renameOperands(arguments, this.readsFrom, readsFrom),
+      renamed.take(arguments.length).toList(),
       result: writesTo ?? result,
+      typeEnvironmentReceiver: typeEnvironmentReceiver == null
+          ? null
+          : renamed.last,
+      typeArguments: typeArguments,
     );
   }
 }

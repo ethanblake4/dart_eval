@@ -46,6 +46,26 @@ Program fixture() => Program(
   },
 );
 
+Program typedMetadataFixture(
+  TypedProgram typed, {
+  List<List<int>> descriptors = const [
+    [0, 0],
+  ],
+  List<Object> constants = const [],
+}) => Program(
+  const {},
+  [
+    for (var i = 0; i < descriptors.length; i++) {i},
+  ],
+  typed,
+  const {},
+  const {},
+  constants,
+  const {},
+  const {},
+  typeDescriptors: descriptors,
+);
+
 Uint8List replaceFirstMetadata(Uint8List bytes, Object? metadata) {
   final originalLength = ByteData.sublistView(bytes).getInt32(5);
   final replacement = utf8.encode(jsonEncode(metadata));
@@ -60,6 +80,188 @@ Uint8List replaceFirstMetadata(Uint8List bytes, Object? metadata) {
 }
 
 void main() {
+  test(
+    'closure result type references are checked against envelope metadata',
+    () {
+      final typed = TypedProgram(
+        Uint8List.fromList([TypedOp.returnNull]),
+        functions: const [TypedFunction(0)],
+        closures: [
+          TypedClosureDescriptor(
+            0,
+            captureCount: 0,
+            positionalCount: 0,
+            requiredPositional: 0,
+            hasEnvironment: false,
+            runtimeTypeId: 1,
+          ),
+        ],
+      );
+      expect(() => typedMetadataFixture(typed), throwsFormatException);
+      expect(
+        () => typedMetadataFixture(typed, descriptors: const []),
+        throwsFormatException,
+      );
+      final valid = typedMetadataFixture(
+        typed,
+        descriptors: const [
+          [0, 0],
+          [1, 0],
+        ],
+      );
+      // Mutable public metadata can become invalid after initial construction;
+      // decoding must apply the same check as fresh Program construction.
+      valid.typeTypes.removeLast();
+      valid.typeDescriptors = const [
+        [0, 0],
+      ];
+      expect(() => Program.read(valid.write().buffer), throwsFormatException);
+    },
+  );
+
+  test('export parameter type references are checked by the envelope', () {
+    final typed = TypedProgram(
+      Uint8List.fromList([TypedOp.returnNull]),
+      functions: const [
+        TypedFunction(0, argumentKinds: [TypedArgumentKind.object]),
+      ],
+      exports: [
+        TypedExport(
+          'test',
+          'main',
+          0,
+          parameters: const [
+            TypedExportParameter(
+              'value',
+              isRequired: true,
+              nullable: false,
+              typeName: 'Object',
+              typeLibrary: 'dart:core',
+              runtimeTypeId: 1,
+            ),
+          ],
+        ),
+      ],
+    );
+    expect(() => typedMetadataFixture(typed), throwsFormatException);
+
+    final constructor = TypedProgram(
+      Uint8List.fromList([TypedOp.returnNull]),
+      functions: const [
+        TypedFunction(0, argumentKinds: [TypedArgumentKind.integer]),
+      ],
+      exports: [
+        TypedExport(
+          'test',
+          'Value.',
+          0,
+          generativeConstructorRuntimeTypeId: 1,
+          parameters: const [],
+        ),
+      ],
+    );
+    expect(() => typedMetadataFixture(constructor), throwsFormatException);
+  });
+
+  test('runtime descriptor graphs and executable references are validated', () {
+    expect(
+      () => typedMetadataFixture(
+        TypedProgram(Uint8List.fromList([TypedOp.returnNull])),
+        descriptors: const [
+          [0, 0, 1],
+          [1, 0, 0],
+        ],
+      ),
+      throwsFormatException,
+    );
+    expect(
+      () => typedMetadataFixture(
+        TypedProgram(
+          Uint8List.fromList([TypedOp.returnNull]),
+          callSites: const [
+            TypedCallSite('call', argumentCount: 0, typeArguments: [1]),
+          ],
+        ),
+      ),
+      throwsFormatException,
+    );
+    expect(
+      () => typedMetadataFixture(
+        TypedProgram(
+          Uint8List.fromList([TypedOp.rBoxListTyped, 1, 0, TypedOp.returnNull]),
+        ),
+      ),
+      throwsFormatException,
+    );
+    expect(
+      () => typedMetadataFixture(
+        TypedProgram(
+          Uint8List.fromList([
+            TypedOp.setCallTypeArguments,
+            0,
+            0,
+            TypedOp.returnNull,
+          ]),
+        ),
+        constants: const [
+          <int>[1],
+        ],
+      ),
+      throwsFormatException,
+    );
+  });
+
+  test('structural descriptor names are strings, unique, and sorted', () {
+    final typed = TypedProgram(Uint8List.fromList([TypedOp.returnNull]));
+    void rejects(List<int> descriptor, List<Object> constants) {
+      expect(
+        () => typedMetadataFixture(
+          typed,
+          descriptors: [
+            const [0, 0],
+            descriptor,
+          ],
+          constants: constants,
+        ),
+        throwsFormatException,
+      );
+    }
+
+    rejects(const [0, 0, -2, 0, 1, 0, 0], const [7]);
+    rejects(const [0, 0, -2, 0, 2, 0, 0, 0, 0], const ['same']);
+    rejects(const [0, 0, -2, 0, 2, 0, 0, 1, 0], const ['z', 'a']);
+    rejects(const [0, 0, -1, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0], const ['z', 'a']);
+
+    expect(
+      () => typedMetadataFixture(
+        typed,
+        descriptors: const [
+          [0, 0],
+          [0, 0, -2, 0, 2, 0, 0, 1, 0],
+        ],
+        constants: const ['a', 'z'],
+      ),
+      returnsNormally,
+    );
+
+    final serialized = typedMetadataFixture(
+      typed,
+      descriptors: const [
+        [0, 0],
+        [0, 0, -2, 0, 2, 0, 0, 1, 0],
+      ],
+      constants: const ['a', 'z'],
+    );
+    serialized.typeDescriptors = const [
+      [0, 0],
+      [0, 0, -2, 0, 2, 1, 0, 0, 0],
+    ];
+    expect(
+      () => Program.read(serialized.write().buffer),
+      throwsFormatException,
+    );
+  });
+
   test(
     'round-trip preserves shared metadata and the typed executable payload',
     () {

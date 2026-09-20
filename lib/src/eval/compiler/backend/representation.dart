@@ -53,11 +53,6 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
   final operations = <cfg.Operation>[
     for (final id in graph.graph.vertices) ...graph[id]!.code,
   ];
-  final definitions = {
-    for (final operation in operations)
-      if (operation.writesTo != null) operation.writesTo!: operation,
-  };
-
   void constrain(cfg.SSA value, MachineRepresentation representation) {
     final previous = result[value];
     if (previous != null && previous != representation) {
@@ -170,17 +165,9 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
         output(operation, object);
       case primitives.BoxNum():
         output(operation, object);
-      case primitives.Unbox(:final source):
+      case primitives.Unbox(:final source, :final representation):
         constrain(source, object);
-        final producer = definitions[source];
-        final primitive = switch (producer) {
-          primitives.BoxInt() => integer,
-          primitives.BoxDouble() => floating,
-          primitives.BoxBool() => boolean,
-          primitives.BoxString() => string,
-          _ => null,
-        };
-        if (primitive != null) output(operation, primitive);
+        output(operation, representation);
       case flow.Call(:final target, :final arguments):
         final callee = resolveFunction?.call(target) ?? target.offset;
         final signature = functions[callee];
@@ -243,7 +230,6 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
       case primitives.BoxList() ||
           primitives.BoxMap() ||
           primitives.BoxSet() ||
-          objects.CreateClass() ||
           objects.LoadPropertyStatic() ||
           objects.LoadPropertyDynamic() ||
           objects.LoadSuper() ||
@@ -252,6 +238,10 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
           bridge.BridgeInstantiate() ||
           async.Await():
         inputs(operation, object);
+        output(operation, object);
+      case objects.CreateClass(:final $super, :final runtimeTypeDescriptor):
+        constrain($super, object);
+        constrain(runtimeTypeDescriptor, integer);
         output(operation, object);
       case closures.CreateClosure():
         inputs(operation, object);

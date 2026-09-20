@@ -4,6 +4,7 @@ import '../../ir/collection.dart' as collection;
 import '../../ir/memory.dart' as memory;
 import '../../ir/objects.dart' as objects;
 import '../../ir/primitives.dart' as primitives;
+import '../../ir/representation.dart';
 
 /// Simplifies proven primitive conversions on a private SSA graph.
 void optimizePrimitives(cfg.ControlFlowGraph graph) {
@@ -74,11 +75,18 @@ void optimizePrimitives(cfg.ControlFlowGraph graph) {
     for (var i = 0; i < code.length; i++) {
       final op = code[i];
       if (op is primitives.Unbox) {
-        final source = switch (definition(op.source)) {
-          primitives.BoxInt(:final source) ||
-          primitives.BoxDouble(:final source) ||
-          primitives.BoxBool(:final source) ||
-          primitives.BoxString(:final source) => source,
+        final source = switch ((definition(op.source), op.representation)) {
+          (primitives.BoxInt(:final source), MachineRepresentation.integer) =>
+            source,
+          (
+            primitives.BoxDouble(:final source),
+            MachineRepresentation.doublePrecision,
+          ) =>
+            source,
+          (primitives.BoxBool(:final source), MachineRepresentation.boolean) =>
+            source,
+          (primitives.BoxString(:final source), MachineRepresentation.string) =>
+            source,
           _ => null,
         };
         if (source != null) code[i] = cfg.Assign(op.target, source);

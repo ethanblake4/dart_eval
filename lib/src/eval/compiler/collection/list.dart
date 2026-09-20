@@ -12,6 +12,8 @@ import 'package:dart_eval/src/eval/compiler/collection/if.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
+import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/collection.dart';
@@ -142,14 +144,15 @@ List<TypeRef> compileListElement(
   final listType = list.type.specifiedTypeArgs[0];
   if (e is Expression) {
     var result = compileExpression(e, ctx, listType);
-    if (!result.type.resolveTypeChain(ctx).isAssignableTo(ctx, listType)) {
-      throw CompileError(
-        'Cannot use expression of type ${result.type} in list of type $listType',
-      );
-    }
-    if (box) {
-      result = result.boxIfNeeded(ctx);
-    }
+    result = convertForAssignment(
+      ctx,
+      result,
+      listType,
+      representation: box ? MachineRepresentation.object : null,
+      source: e,
+      description:
+          'Cannot use expression of type ${result.type} in list of type $listType',
+    );
     ctx.pushOp(ListAppend(list.ssa, result.ssa));
     return [result.type];
   } else if (e is IfElement) {

@@ -44,7 +44,7 @@ Variable parseLiteral(Literal l, CompilerContext ctx, [TypeRef? bound]) {
     return parseConstLiteral(l, ctx, bound).push(ctx);
   }
   if (l is ListLiteral) {
-    return compileListLiteral(l, ctx);
+    return compileListLiteral(l, ctx, bound);
   }
   if (l is SetOrMapLiteral) {
     return compileSetOrMapLiteral(l, ctx);

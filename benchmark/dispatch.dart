@@ -162,6 +162,7 @@ void measure(
     _sink ^= value.hashCode;
     times.add(watch.elapsedMicroseconds / 1000);
   }
+  final raw = List<double>.of(times);
   times.sort();
   final median = times[times.length ~/ 2];
   final nsPerIteration = median * 1000000 / iterations;
@@ -170,7 +171,8 @@ void measure(
     'min_ms=${times.first.toStringAsFixed(3)} '
     'max_ms=${times.last.toStringAsFixed(3)} '
     'ns/iteration=${nsPerIteration.toStringAsFixed(2)} '
-    'ns/bytecode=${(nsPerIteration / instructionsPerIteration).toStringAsFixed(2)}',
+    'ns/bytecode=${(nsPerIteration / instructionsPerIteration).toStringAsFixed(2)} '
+    'raw_ms=${raw.map((value) => value.toStringAsFixed(3)).join(',')}',
   );
 }
 

@@ -175,31 +175,41 @@ void main() {
     );
   });
   test('list literal mutation and indexed values keep explicit boxing', () {
-    final program = compile('''
-      int main(int value) {
-        final values = [value, value + 1];
-        values[0] = value + 2;
-        return values.length + values[0] + values[1];
-      }
-    ''');
+    final envelope = Compiler().compile({
+      'typed': {
+        'main.dart': '''
+          int main(int value) {
+            final values = [value, value + 1];
+            values[0] = value + 2;
+            return values.length + values[0] + values[1];
+          }
+        ''',
+      },
+    });
+    final program = envelope.typedProgram;
     expect(
       opNames(program),
       containsAll([
         'cNewList',
         'listAppendCR',
-        'listSetCAR',
+        'callVirtual',
         'rListIndexCA',
         'aListLengthR',
       ]),
     );
-    expect(TypedMachine.run(program, intArguments: [4]), 13);
-    expect(
-      TypedMachine.run(
-        TypedProgram.read(program.write().buffer),
-        intArguments: [8],
-      ),
-      21,
-    );
+    for (final (runtime, value, expected) in [
+      (Runtime.ofProgram(envelope), 4, 13),
+      (Runtime(envelope.write().buffer), 8, 21),
+    ]) {
+      expect(
+        runtime.executeLib(
+          'package:typed/main.dart',
+          'main',
+          arguments: {'value': value},
+        ),
+        expected,
+      );
+    }
   });
   test('strings survive calls and repeated operands', () {
     final program = compile('''

@@ -21,6 +21,7 @@ abstract final class TypedInterop {
       value == null
           ? target.lookupType(CoreTypes.nullType)
           : (value as $Value).$getRuntimeType(target),
+      target,
     );
   }
 
@@ -87,11 +88,36 @@ abstract final class TypedInterop {
     Object? receiver,
     String name,
     List<$Value?> arguments,
-  ) => receiver is TypedInstance
-      ? receiver.invoke(name, arguments, runtime: runtime)
-      : _runtime(runtime).invokeTypedObject(receiver, name, arguments);
+  ) {
+    if (receiver == null) {
+      if (name == 'toString' && arguments.isEmpty) return $String('null');
+      throw NoSuchMethodError.withInvocation(
+        null,
+        Invocation.method(Symbol(name), [
+          for (final argument in arguments) argument?.$reified,
+        ]),
+      );
+    }
+    return receiver is TypedInstance
+        ? receiver.invoke(name, arguments, runtime: runtime)
+        : _runtime(runtime).invokeTypedObject(receiver, name, arguments);
+  }
 
   static $Value? getProperty(Runtime? runtime, Object? receiver, String name) {
+    if (receiver == null) {
+      return switch (name) {
+        'hashCode' => $int(null.hashCode),
+        'toString' => $Function(
+          (runtime, target, arguments) => arguments.isEmpty
+              ? $String('null')
+              : throw ArgumentError('Expected no arguments'),
+        ),
+        _ => throw NoSuchMethodError.withInvocation(
+          null,
+          Invocation.getter(Symbol(name)),
+        ),
+      };
+    }
     final value = receiver is TypedInstance
         ? receiver.getProperty(name, runtime: runtime)
         : (receiver as $Instance).$getProperty(_runtime(runtime), name);
@@ -104,6 +130,12 @@ abstract final class TypedInterop {
     String name,
     $Value? value,
   ) {
+    if (receiver == null) {
+      throw NoSuchMethodError.withInvocation(
+        null,
+        Invocation.setter(Symbol('$name='), value?.$reified),
+      );
+    }
     if (receiver is TypedInstance) {
       receiver.setProperty(name, value, runtime: runtime);
     } else {
@@ -140,18 +172,25 @@ abstract final class TypedInterop {
   static String toStringValue(Object? value) => (value as $String).$value;
 
   /// Normalize once when a host enters the typed machine.
-  static $Value? boxExternal(Object? value, {Runtime? runtime}) =>
-      switch (value) {
-        null || $null() => null,
-        $Value() => value,
-        int() => $int(value),
-        double() => $double(value),
-        bool() => $bool(value),
-        String() => $String(value),
-        Function() => TypedHostFunction(value),
-        List() || Map() || Set() => TypedHostCollections.box(value, runtime),
-        _ => runtime == null ? $Object(value) : runtime.wrap(value),
-      };
+  static $Value? boxExternal(
+    Object? value, {
+    Runtime? runtime,
+    int? runtimeTypeId,
+  }) => switch (value) {
+    null || $null() => null,
+    $Value() => value,
+    int() => $int(value),
+    double() => $double(value),
+    bool() => $bool(value),
+    String() => $String(value),
+    Function() => TypedHostFunction(value),
+    List() || Map() || Set() => TypedHostCollections.box(
+      value,
+      runtime,
+      runtimeTypeId: runtimeTypeId,
+    ),
+    _ => runtime == null ? $Object(value) : runtime.wrap(value),
+  };
 
   /// Export scalar wrappers once when control returns to host Dart.
   /// Guest-only instances retain their identity; bridge subclasses expose their
@@ -209,4 +248,51 @@ final class TypedHostFunction extends EvalFunction {
   @override
   int $getRuntimeType(Runtime runtime) =>
       runtime.lookupType(CoreTypes.function);
+}
+
+/// Adds the structural checks missing from legacy [$Closure]/[$Function]
+/// values when they enter through a typed export.
+final class TypedCheckedFunction extends EvalFunction {
+  TypedCheckedFunction(this.runtime, this.expectedType, this.function);
+
+  final Runtime runtime;
+  final int expectedType;
+  final EvalFunction function;
+
+  // Monomorphic cache: if every argument's runtime type matches the last
+  // validated call, the structural argument check repeats a verdict that is
+  // deterministic per (argument runtime type, expected descriptor) pair.
+  List<int>? _lastArgTypeIds;
+
+  @override
+  $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
+    final last = _lastArgTypeIds;
+    var hit = false;
+    if (last != null && last.length == args.length) {
+      hit = true;
+      for (var i = 0; i < args.length; i++) {
+        final arg = args[i];
+        if ((arg == null ? -1 : arg.$getRuntimeType(this.runtime)) != last[i]) {
+          hit = false;
+          break;
+        }
+      }
+    }
+    if (!hit) {
+      // Only a passing check seeds the cache; a throw stores nothing.
+      this.runtime.assertTypedFunctionAdapterArguments(expectedType, args);
+      _lastArgTypeIds = [
+        for (final arg in args)
+          arg == null ? -1 : arg.$getRuntimeType(this.runtime),
+      ];
+    }
+    final result = function.call(this.runtime, target, args);
+    return this.runtime.validateTypedFunctionAdapterResult(
+      expectedType,
+      result,
+    );
+  }
+
+  @override
+  int $getRuntimeType(Runtime runtime) => expectedType;
 }

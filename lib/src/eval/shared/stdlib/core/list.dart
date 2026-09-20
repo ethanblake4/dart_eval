@@ -1124,7 +1124,17 @@ class $List<E> implements List<E>, $Instance {
   );
 
   /// Wrap an [List] in an [$List]
-  $List.wrap(this.$value);
+  $List.wrap(this.$value, {int? runtimeTypeId, Runtime? runtime})
+    : _runtimeTypeId = runtimeTypeId,
+      _runtime = runtime;
+
+  final int? _runtimeTypeId;
+  final Runtime? _runtime;
+
+  // The translated owner descriptor id is stable per (wrapper, runtime) pair;
+  // keep the last translation instead of importing on every element write.
+  Runtime? _checkRuntime;
+  int _checkOwnerType = -1;
 
   /// Create a lazy canonical view of a host [List] (supports writeback).
   ///
@@ -1204,7 +1214,38 @@ class $List<E> implements List<E>, $Instance {
   }
 
   @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType($type.spec!);
+  int $getRuntimeType(Runtime runtime) {
+    final typeId = _runtimeTypeId;
+    return typeId == null
+        ? runtime.lookupType($type.spec!)
+        : runtime.importRuntimeType(_runtime ?? runtime, typeId);
+  }
+
+  void _checkElement(Runtime runtime, Object? value) {
+    final runtimeTypeId = _runtimeTypeId;
+    if (runtimeTypeId != null) {
+      if (!identical(_checkRuntime, runtime)) {
+        _checkRuntime = runtime;
+        _checkOwnerType = $getRuntimeType(runtime);
+      }
+      runtime.assertTypedTypeArgument(value, _checkOwnerType, 0);
+    }
+  }
+
+  List<Object?> _checkedElements(Runtime runtime, Iterable values) {
+    final checked = values.toList(growable: false);
+    for (final value in checked) {
+      _checkElement(runtime, value);
+    }
+    return checked;
+  }
+
+  Iterable<Object?> _checkedIterable(Runtime runtime, Iterable values) sync* {
+    for (final value in values) {
+      _checkElement(runtime, value);
+      yield value;
+    }
+  }
 
   @override
   List get $reified => $value.map((e) => e is $Value ? e.$reified : e).toList();
@@ -1213,13 +1254,17 @@ class $List<E> implements List<E>, $Instance {
   void $setProperty(Runtime runtime, String identifier, $Value value) {
     switch (identifier) {
       case 'first':
+        _checkElement(runtime, value);
         first = value as E;
         break;
       case 'last':
+        _checkElement(runtime, value);
         last = value as E;
         break;
       case 'length':
-        length = value.$value as int;
+        final newLength = value.$value as int;
+        if (newLength > length) _checkElement(runtime, null);
+        length = newLength;
         break;
       default:
         _superclass.$setProperty(runtime, identifier, value);
@@ -1281,9 +1326,11 @@ class $List<E> implements List<E>, $Instance {
     $Value? target,
     List<$Value?> args,
   ) {
-    final $this = target?.$value as List;
+    final wrapper = target as $List;
+    final $this = wrapper.$value;
     final index = args[0]?.$value as int;
     final value = args[1];
+    wrapper._checkElement(runtime, value);
     $this[index] = value;
     return null;
   }
@@ -1292,8 +1339,10 @@ class $List<E> implements List<E>, $Instance {
   void add(E value) => $value.add(value);
   static const __$add = $Function(_$add);
   static $Value? _$add(Runtime runtime, $Value? target, List<$Value?> args) {
-    final $this = target?.$value as List;
+    final wrapper = target as $List;
+    final $this = wrapper.$value;
     final value = args[0];
+    wrapper._checkElement(runtime, value);
     $this.add(value);
     return null;
   }
@@ -1302,9 +1351,10 @@ class $List<E> implements List<E>, $Instance {
   void addAll(Iterable<E> iterable) => $value.addAll(iterable);
   static const __$addAll = $Function(_$addAll);
   static $Value? _$addAll(Runtime runtime, $Value? target, List<$Value?> args) {
-    final $this = target?.$value as List;
+    final wrapper = target as $List;
+    final $this = wrapper.$value;
     final iterable = args[0]?.$value as Iterable;
-    $this.addAll(iterable);
+    $this.addAll(wrapper._checkedElements(runtime, iterable));
     return null;
   }
 
@@ -1419,9 +1469,11 @@ class $List<E> implements List<E>, $Instance {
   void insert(int index, E element) => $value.insert(index, element);
   static const __$insert = $Function(_$insert);
   static $Value? _$insert(Runtime runtime, $Value? target, List<$Value?> args) {
-    final $this = target?.$value as List;
+    final wrapper = target as $List;
+    final $this = wrapper.$value;
     final index = args[0]?.$value as int;
     final element = args[1];
+    wrapper._checkElement(runtime, element);
     $this.insert(index, element);
     return null;
   }
@@ -1435,10 +1487,11 @@ class $List<E> implements List<E>, $Instance {
     $Value? target,
     List<$Value?> args,
   ) {
-    final $this = target?.$value as List;
+    final wrapper = target as $List;
+    final $this = wrapper.$value;
     final index = args[0]?.$value as int;
     final iterable = (args[1]?.$value as Iterable);
-    $this.insertAll(index, iterable);
+    $this.insertAll(index, wrapper._checkedElements(runtime, iterable));
     return null;
   }
 
@@ -1447,10 +1500,11 @@ class $List<E> implements List<E>, $Instance {
       $value.setAll(index, iterable);
   static const __$setAll = $Function(_$setAll);
   static $Value? _$setAll(Runtime runtime, $Value? target, List<$Value?> args) {
-    final $this = target?.$value as List;
+    final wrapper = target as $List;
+    final $this = wrapper.$value;
     final index = args[0]?.$value as int;
     final iterable = args[1]?.$value as Iterable;
-    $this.setAll(index, iterable);
+    $this.setAll(index, wrapper._checkedElements(runtime, iterable));
     return null;
   }
 
@@ -1580,12 +1634,18 @@ class $List<E> implements List<E>, $Instance {
     $Value? target,
     List<$Value?> args,
   ) {
-    final $this = target?.$value as List;
+    final wrapper = target as $List;
+    final $this = wrapper.$value;
     final start = args[0]?.$value as int;
     final end = args[1]?.$value as int;
     final iterable = args[2]?.$value as Iterable;
-    final skipCount = args[3]?.$value as int? ?? 0;
-    $this.setRange(start, end, iterable, skipCount);
+    final skipCount = args.length > 3 ? args[3]?.$value as int? ?? 0 : 0;
+    $this.setRange(
+      start,
+      end,
+      wrapper._checkedIterable(runtime, iterable),
+      skipCount,
+    );
     return null;
   }
 
@@ -1613,10 +1673,12 @@ class $List<E> implements List<E>, $Instance {
     $Value? target,
     List<$Value?> args,
   ) {
-    final $this = target?.$value as List;
+    final wrapper = target as $List;
+    final $this = wrapper.$value;
     final start = args[0]?.$value as int;
     final end = args[1]?.$value as int;
     final fillValue = args[2];
+    wrapper._checkElement(runtime, fillValue);
     $this.fillRange(start, end, fillValue);
     return null;
   }
@@ -1630,11 +1692,16 @@ class $List<E> implements List<E>, $Instance {
     $Value? target,
     List<$Value?> args,
   ) {
-    final $this = target?.$value as List;
+    final wrapper = target as $List;
+    final $this = wrapper.$value;
     final start = args[0]?.$value as int;
     final end = args[1]?.$value as int;
     final replacements = args[2]?.$value as Iterable;
-    $this.replaceRange(start, end, replacements);
+    $this.replaceRange(
+      start,
+      end,
+      wrapper._checkedElements(runtime, replacements),
+    );
     return null;
   }
 

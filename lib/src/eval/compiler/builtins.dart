@@ -177,6 +177,12 @@ Map<TypeRef, Map<String, KnownMethod>> getKnownMethods(CompilerContext ctx) {
     {},
   );
 
+  final truncatingDivideOp = KnownMethod(
+    AlwaysReturnType(CoreTypes.int.ref(ctx), false),
+    [KnownMethodArg('other', CoreTypes.num.ref(ctx), false)],
+    {},
+  );
+
   final numBinaryOp = KnownMethod(
     ParameterTypeDependentReturnType(
       {
@@ -203,7 +209,7 @@ Map<TypeRef, Map<String, KnownMethod>> getKnownMethods(CompilerContext ctx) {
       '%': intBinaryOp,
       '|': intBitwiseOp,
       '&': intBitwiseOp,
-      '~/': intBinaryOp,
+      '~/': truncatingDivideOp,
       '<<': intBitwiseOp,
       '>>': intBitwiseOp,
       '^': intBitwiseOp,
@@ -222,7 +228,7 @@ Map<TypeRef, Map<String, KnownMethod>> getKnownMethods(CompilerContext ctx) {
       '*': doubleBinaryOp,
       '/': doubleBinaryOp,
       '%': doubleBinaryOp,
-      '~/': doubleBinaryOp,
+      '~/': truncatingDivideOp,
       '<': numComparisonOp,
       '>': numComparisonOp,
       '<=': numComparisonOp,
@@ -237,7 +243,7 @@ Map<TypeRef, Map<String, KnownMethod>> getKnownMethods(CompilerContext ctx) {
       '-': numBinaryOp,
       '*': numBinaryOp,
       '/': numBinaryOp,
-      '~/': numBinaryOp,
+      '~/': truncatingDivideOp,
       '%': numBinaryOp,
       '<': numComparisonOp,
       '>': numComparisonOp,
@@ -369,6 +375,33 @@ Map<TypeRef, Map<String, KnownMethod>> getKnownMethods(CompilerContext ctx) {
 }
 
 Map<TypeRef, Map<String, KnownField>> getKnownFields(CompilerContext ctx) => {
+  CoreTypes.num.ref(ctx): {
+    for (final name in ['isNaN', 'isInfinite', 'isNegative', 'isFinite'])
+      name: KnownField(
+        AlwaysReturnType(CoreTypes.bool.ref(ctx), false),
+        true,
+        false,
+      ),
+    'sign': KnownField(
+      AlwaysReturnType(CoreTypes.num.ref(ctx), false),
+      true,
+      false,
+    ),
+  },
+  CoreTypes.int.ref(ctx): {
+    for (final name in ['isEven', 'isOdd'])
+      name: KnownField(
+        AlwaysReturnType(CoreTypes.bool.ref(ctx), false),
+        true,
+        false,
+      ),
+    for (final name in ['bitLength', 'sign'])
+      name: KnownField(
+        AlwaysReturnType(CoreTypes.int.ref(ctx), false),
+        true,
+        false,
+      ),
+  },
   CoreTypes.string.ref(ctx): {
     'length': KnownField(
       AlwaysReturnType(CoreTypes.int.ref(ctx), false),

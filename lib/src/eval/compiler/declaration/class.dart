@@ -9,6 +9,13 @@ void compileClassDeclaration(
   ClassDeclaration d, {
   bool statics = false,
 }) {
+  final previousTypes = {...?ctx.temporaryTypes[ctx.library]};
+  TypeRef.loadTemporaryTypes(
+    ctx,
+    d.typeParameters?.typeParameters,
+    library: ctx.library,
+    owner: 'class:${ctx.library}:${d.name.lexeme}',
+  );
   final $runtimeType =
       ctx.typeRefIndexMap[TypeRef.lookupDeclaration(ctx, ctx.library, d)];
   final clsName = d.name.lexeme;
@@ -47,4 +54,5 @@ void compileClassDeclaration(
     }
   }
   ctx.currentClass = null;
+  ctx.temporaryTypes[ctx.library] = previousTypes;
 }

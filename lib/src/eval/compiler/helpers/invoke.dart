@@ -238,10 +238,18 @@ extension Invoke on Variable {
       }
     } else {
       ctx.pushOp(
-        InvokeDynamic(result, receiver.ssa, method, [
-          ...prepared.map((arg) => arg.ssa),
-          ...?namedArgs?.values.map((arg) => arg.boxIfNeeded(ctx).ssa),
-        ]),
+        InvokeDynamic(
+          result,
+          receiver.ssa,
+          method,
+          [
+            ...prepared.map((arg) => arg.ssa),
+            ...?namedArgs?.values.map((arg) => arg.boxIfNeeded(ctx).ssa),
+          ],
+          positionalCount: prepared.length,
+          namedNames: namedArgs?.keys.toList() ?? const [],
+          callerLibrary: ctx.library,
+        ),
       );
     }
     final returnType = equality

@@ -10,6 +10,7 @@ import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
 import 'package:dart_eval/src/eval/ir/function.dart';
 import 'package:dart_eval/src/eval/ir/representation.dart';
+import 'package:dart_eval/src/eval/shared/types.dart';
 
 void compileFieldDeclaration(
   int fieldIndex,
@@ -65,6 +66,10 @@ void compileFieldDeclaration(
             storageType;
       }
     } else {
+      final fieldType = d.fields.type == null
+          ? (ctx.inferredFieldTypes[ctx.library]?[parentName]?[fieldName] ??
+                CoreTypes.dynamic.ref(ctx))
+          : TypeRef.fromAnnotation(ctx, ctx.library, d.fields.type!);
       final pos = ctx.beginFunction('$parentName.$fieldName (get)');
       ctx.functionSignatures[pos] = MachineFunctionSignature([
         MachineRepresentation.object,
@@ -95,6 +100,7 @@ void compileFieldDeclaration(
           MachineRepresentation.object,
           MachineRepresentation.object,
         ], MachineRepresentation.object);
+        ctx.functionParameterTypes[setterPos] = [fieldType];
         final value = SSA('arg_1');
         ctx.pushOp(Parameter(receiver, 0));
         ctx.pushOp(Parameter(value, 1));

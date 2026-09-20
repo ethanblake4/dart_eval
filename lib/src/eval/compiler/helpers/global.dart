@@ -4,6 +4,7 @@ import '../errors.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import '../backend/representation.dart' show representationForType;
+import 'conversion.dart';
 import '../context.dart';
 import '../type.dart';
 
@@ -185,13 +186,14 @@ Variable storeGlobalBinding(
           ctx.globalsWithInitializer.contains(index))) {
     throw CompileError('Cannot assign final global $name', source);
   }
-  if (!value.type.isAssignableTo(ctx, type)) {
-    throw CompileError(
-      'Cannot assign ${value.type} to global $name of type $type',
-      source,
-    );
-  }
-  final stored = type.boxed ? value.boxIfNeeded(ctx) : value.unboxIfNeeded(ctx);
+  final stored = convertForAssignment(
+    ctx,
+    value,
+    type,
+    representation: representationForType(type),
+    source: source,
+    description: 'Cannot assign ${value.type} to global $name of type $type',
+  );
   ctx.pushOp(SetGlobal(index, stored.ssa));
   return stored;
 }

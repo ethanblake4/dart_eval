@@ -6,7 +6,13 @@ abstract final class TypedRecords {
   static final _layouts = Expando<Map<int, (Map<String, int>, int)>>();
 
   @pragma('vm:never-inline')
-  static $Record create(Runtime runtime, Object? fields, int index) {
+  static $Record create(
+    Runtime runtime,
+    Object? fields,
+    int index, {
+    int? actualOwnerType,
+    List<int> callableTypeArguments = const [],
+  }) {
     final layouts = _layouts[runtime] ??= {};
     var layout = layouts[index];
     if (layout == null) {
@@ -19,7 +25,12 @@ abstract final class TypedRecords {
       );
       layouts[index] = layout;
     }
-    return $Record(fields as List<Object?>, layout.$1, layout.$2);
+    final runtimeTypeId = runtime.resolveTypedEnvironmentType(
+      layout.$2,
+      actualOwnerType: actualOwnerType,
+      callableTypeArguments: callableTypeArguments,
+    );
+    return $Record(fields as List<Object?>, layout.$1, runtimeTypeId, runtime);
   }
 
   @pragma('vm:never-inline')

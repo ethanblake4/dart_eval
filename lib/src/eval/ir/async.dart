@@ -3,13 +3,14 @@ import 'operands.dart';
 
 /// Starts an async invocation without going through the bridge call ABI.
 final class BeginAsync extends Operation {
-  BeginAsync(this.result);
+  BeginAsync(this.result, {required this.runtimeTypeId});
   final SSA result;
+  final int runtimeTypeId;
   @override
   SSA get writesTo => result;
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) =>
-      BeginAsync(writesTo ?? result);
+      BeginAsync(writesTo ?? result, runtimeTypeId: runtimeTypeId);
 }
 
 final class Await extends Operation {

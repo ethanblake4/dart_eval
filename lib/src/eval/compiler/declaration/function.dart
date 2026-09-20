@@ -51,10 +51,22 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   }
 
   ctx.beginScope();
+  final previousTypes = {...?ctx.temporaryTypes[ctx.library]};
   TypeRef.loadTemporaryTypes(
     ctx,
     d.functionExpression.typeParameters?.typeParameters,
+    owner: 'function:${ctx.library}:${d.name.lexeme}:$pos',
   );
+  final typeParameters =
+      d.functionExpression.typeParameters?.typeParameters ??
+      const <TypeParameter>[];
+  ctx.functionTypeParameterBounds[pos] = [
+    for (final parameter in typeParameters)
+      ctx
+              .temporaryTypes[ctx.library]![parameter.name.lexeme]!
+              .typeParameterBound ??
+          CoreTypes.dynamic.ref(ctx),
+  ];
 
   final resolvedParams = resolveFPLDefaults(
     ctx,
@@ -90,7 +102,12 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   final b = d.functionExpression.body;
 
   if (b.isAsynchronous) {
-    setupAsyncFunction(ctx);
+    setupAsyncFunction(
+      ctx,
+      returnType: d.returnType == null
+          ? null
+          : TypeRef.fromAnnotation(ctx, ctx.library, d.returnType!),
+    );
   }
 
   final expectedReturnType = AlwaysReturnType.fromAnnotation(
@@ -134,7 +151,7 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
     throw CompileError('Unsupported function body type: ${b.runtimeType}');
   }
 
-  ctx.temporaryTypes[ctx.library]?.clear();
+  ctx.temporaryTypes[ctx.library] = previousTypes;
 
   if (!(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
     if (b.isAsynchronous) {

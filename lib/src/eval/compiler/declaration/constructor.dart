@@ -162,6 +162,18 @@ void compileConstructorDeclaration(
   }
 
   final clsType = TypeRef.lookupDeclaration(ctx, ctx.library, parent);
+  SSA? runtimeTypeArgument;
+  if (d.factoryKeyword == null) {
+    runtimeTypeArgument = SSA('arg_$i');
+    ctx.pushOp(
+      Parameter(
+        runtimeTypeArgument,
+        i,
+        representation: MachineRepresentation.integer,
+      ),
+    );
+    parameterRepresentations.add(MachineRepresentation.integer);
+  }
   ctx.functionSignatures[ctx.topLevelDeclarationPositions[ctx.library]![n]!] =
       MachineFunctionSignature(
         parameterRepresentations,
@@ -237,7 +249,10 @@ void compileConstructorDeclaration(
     );
     final V = Variable.ssa(
       ctx,
-      Call(offset, result.ssa, result: ctx.svar('redirected')),
+      Call(offset, [
+        ...result.ssa,
+        runtimeTypeArgument!,
+      ], result: ctx.svar('redirected')),
       clsType,
     );
     doReturn(ctx, AlwaysReturnType(clsType, false), V);
@@ -356,9 +371,12 @@ void compileConstructorDeclaration(
           ) ??
           AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
 
+      final superRuntimeType = BuiltinValue(
+        intval: extendsType.runtimeTypeId(ctx),
+      ).push(ctx);
       $super = Variable.ssa(
         ctx,
-        Call(offset, ssa, result: ctx.svar('super')),
+        Call(offset, [...ssa, superRuntimeType.ssa], result: ctx.svar('super')),
         mReturnType.type ?? CoreTypes.dynamic.ref(ctx),
       );
     }
@@ -371,6 +389,7 @@ void compileConstructorDeclaration(
       ctx.library,
       parent.name.lexeme,
       $super.ssa,
+      runtimeTypeArgument!,
       fieldIdx,
     ),
     TypeRef.$this(ctx)!,
@@ -506,15 +525,23 @@ void compileDefaultConstructor(
 
   final isEnum = parent is EnumDeclaration;
   ctx.functionSignatures[ctx.topLevelDeclarationPositions[ctx
-      .library]![n]!] = MachineFunctionSignature(
-    isEnum ? [MachineRepresentation.object, MachineRepresentation.object] : [],
-    MachineRepresentation.object,
-  );
+      .library]![n]!] = MachineFunctionSignature([
+    if (isEnum) ...[MachineRepresentation.object, MachineRepresentation.object],
+    MachineRepresentation.integer,
+  ], MachineRepresentation.object);
   ctx.beginScope();
   if (isEnum) {
     ctx.pushOp(Parameter(SSA('arg_0'), 0));
     ctx.pushOp(Parameter(SSA('arg_1'), 1));
   }
+  final runtimeTypeArgument = SSA('arg_${isEnum ? 2 : 0}');
+  ctx.pushOp(
+    Parameter(
+      runtimeTypeArgument,
+      isEnum ? 2 : 0,
+      representation: MachineRepresentation.integer,
+    ),
+  );
 
   final fieldIndices = _getFieldIndices(fields);
   final fieldIdx = fieldIndices.length;
@@ -584,9 +611,12 @@ void compileDefaultConstructor(
           ) ??
           AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
 
+      final superRuntimeType = BuiltinValue(
+        intval: extendsType.runtimeTypeId(ctx),
+      ).push(ctx);
       $super = Variable.ssa(
         ctx,
-        Call(offset, [], result: ctx.svar('super')),
+        Call(offset, [superRuntimeType.ssa], result: ctx.svar('super')),
         mReturnType.type ?? CoreTypes.dynamic.ref(ctx),
       );
     }
@@ -599,6 +629,7 @@ void compileDefaultConstructor(
       ctx.library,
       parent.name.lexeme,
       $super.ssa,
+      runtimeTypeArgument,
       fieldIdx + (isEnum ? 2 : 0),
     ),
   );

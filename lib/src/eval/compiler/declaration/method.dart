@@ -6,6 +6,7 @@ import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/fpl.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/return.dart';
+import 'package:dart_eval/src/eval/compiler/model/function_type.dart';
 import 'package:dart_eval/src/eval/compiler/scope.dart';
 import 'package:dart_eval/src/eval/compiler/statement/block.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
@@ -27,6 +28,28 @@ int compileMethodDeclaration(
   final parentName = parent.name.lexeme;
   final methodName = d.name.lexeme;
   final pos = ctx.beginFunction('$parentName.$methodName()');
+  final previousTypes = {...?ctx.temporaryTypes[ctx.library]};
+  TypeRef.loadTemporaryTypes(
+    ctx,
+    d.typeParameters?.typeParameters,
+    owner: 'method:${ctx.library}:$parentName.$methodName:$pos',
+  );
+  final typeParameters =
+      d.typeParameters?.typeParameters ?? const <TypeParameter>[];
+  ctx.functionTypeParameterBounds[pos] = [
+    for (final parameter in typeParameters)
+      ctx
+              .temporaryTypes[ctx.library]![parameter.name.lexeme]!
+              .typeParameterBound ??
+          CoreTypes.dynamic.ref(ctx),
+  ];
+  ctx.functionRuntimeTypes[pos] = declaredFunctionType(
+    ctx,
+    ctx.library,
+    d.parameters,
+    d.returnType,
+    d.typeParameters,
+  );
 
   ctx.beginScope();
   if (!d.isStatic) {
@@ -38,7 +61,12 @@ int compileMethodDeclaration(
       : resolveFPLDefaults(ctx, d.parameters, !d.isStatic, allowUnboxed: false);
 
   if (b.isAsynchronous) {
-    setupAsyncFunction(ctx);
+    setupAsyncFunction(
+      ctx,
+      returnType: d.returnType == null
+          ? null
+          : TypeRef.fromAnnotation(ctx, ctx.library, d.returnType!),
+    );
   }
 
   var i = d.isStatic ? 0 : 1;
@@ -113,6 +141,7 @@ int compileMethodDeclaration(
     ctx.endScope();
   } else if (b is EmptyFunctionBody) {
     ctx.endScope();
+    ctx.temporaryTypes[ctx.library] = previousTypes;
     return -1;
   } else {
     throw CompileError('Unknown function body type ${b.runtimeType}');
@@ -127,6 +156,7 @@ int compileMethodDeclaration(
   }
 
   ctx.endScope();
+  ctx.temporaryTypes[ctx.library] = previousTypes;
 
   if (d.isStatic) {
     ctx.topLevelDeclarationPositions[ctx.library]!['$parentName.$methodName'] =

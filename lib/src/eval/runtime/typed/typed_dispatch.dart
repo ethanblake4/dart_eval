@@ -3,6 +3,7 @@ import 'package:dart_eval/src/eval/bridge/runtime_bridge.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 import 'typed_call_site.dart';
+import 'typed_closure.dart';
 import 'typed_function.dart';
 import 'typed_instance.dart';
 import 'typed_interop.dart';
@@ -16,6 +17,8 @@ abstract final class TypedDispatch {
     Object? receiver,
     int siteIndex, [
     Runtime? runtime,
+    Object? argumentsFirst,
+    Object? argumentsRest,
   ]) {
     if (receiver is! TypedInstance) {
       if (receiver is! $Bridge) return null;
@@ -27,14 +30,27 @@ abstract final class TypedDispatch {
       return null;
     }
     final site = program.callSites[siteIndex];
-    final member = receiver.resolve(site.kind, site.name);
+    final member = receiver.resolve(
+      site.kind,
+      site.name,
+      callerLibrary: site.callerLibrary,
+    );
     if (member == null || !identical(member.receiver.program, program)) {
       return null;
     }
     final function = member.function;
-    if (function.argumentKinds.length != site.argumentCount + 1) {
-      throw ArgumentError('Invalid argument count for ${site.name}');
+    if (site.typeArguments.isNotEmpty ||
+        site.namedNames.isNotEmpty ||
+        site.positionalCount != site.argumentCount ||
+        function.argumentKinds.length != site.argumentCount + 1) {
+      return null;
     }
+    member.checkExactArguments(
+      site.argumentCount,
+      argumentsFirst,
+      argumentsRest,
+      runtime,
+    );
     // Ordinary methods share the boxed result ABI. Native scalar operators
     // use the explicit signature adapter until their return adapters are linked.
     if (function.resultKind != TypedArgumentKind.object &&
@@ -53,13 +69,31 @@ abstract final class TypedDispatch {
     Object? receiver,
     Object? first,
     Object? rest,
-    int siteIndex,
-  ) {
+    int siteIndex, [
+    List<int>? resolvedTypeArguments,
+  ]) {
     final site = program.callSites[siteIndex];
+    final typeArguments = resolvedTypeArguments ?? site.typeArguments;
     switch (site.kind) {
       case TypedMemberKind.getter:
+        if (receiver is TypedInstance) {
+          return receiver.getProperty(
+            site.name,
+            callerLibrary: site.callerLibrary,
+            runtime: runtime,
+          );
+        }
         return TypedInterop.getProperty(runtime, receiver, site.name);
       case TypedMemberKind.setter:
+        if (receiver is TypedInstance) {
+          receiver.setProperty(
+            site.name,
+            first as $Value?,
+            callerLibrary: site.callerLibrary,
+            runtime: runtime,
+          );
+          return null;
+        }
         TypedInterop.setProperty(
           runtime,
           receiver,
@@ -78,9 +112,99 @@ abstract final class TypedDispatch {
               (rest as List<Object?>)[i] as $Value?,
           ],
         };
-        return site.name == 'call'
-            ? TypedInterop.call(runtime, receiver, arguments)
-            : TypedInterop.invoke(runtime, receiver, site.name, arguments);
+        // With no named arguments the full vector is already the positional
+        // prefix and no named map needs to be materialized.
+        final positional =
+            site.namedNames.isEmpty &&
+                site.positionalCount == site.argumentCount
+            ? arguments
+            : arguments.sublist(0, site.positionalCount);
+        final named = site.namedNames.isEmpty
+            ? const <String, $Value?>{}
+            : <String, $Value?>{
+                for (var i = 0; i < site.namedNames.length; i++)
+                  site.namedNames[i]: arguments[site.positionalCount + i],
+              };
+        if (receiver is TypedInstance) {
+          return receiver.invoke(
+            site.name,
+            positional,
+            named: named,
+            callerLibrary: site.callerLibrary,
+            typeArguments: typeArguments,
+            runtime: runtime,
+          );
+        }
+        if (site.name == 'call' && receiver is TypedClosure) {
+          if (!receiver.descriptor.accepts(positional.length, named.keys) ||
+              !receiver.acceptsTypeArguments(typeArguments)) {
+            throw NoSuchMethodError.withInvocation(
+              receiver,
+              Invocation.method(Symbol('call'), positional, {
+                for (final entry in named.entries)
+                  Symbol(entry.key): entry.value,
+              }),
+            );
+          }
+          return receiver.invoke(
+            positional,
+            named: named,
+            typeArguments: typeArguments,
+            runtime: runtime,
+          );
+        }
+        if (site.name == 'call' && receiver is TypedMember) {
+          if (!receiver.accepts(positional.length, named.keys) ||
+              !receiver.acceptsTypeArguments(typeArguments)) {
+            throw NoSuchMethodError.withInvocation(
+              receiver,
+              Invocation.method(Symbol('call'), positional, {
+                for (final entry in named.entries)
+                  Symbol(entry.key): entry.value,
+              }),
+            );
+          }
+          return receiver.invokeClosure(
+            positional,
+            named: named,
+            typeArguments: typeArguments,
+            runtime: runtime,
+          );
+        }
+        final bridgeSubclass = receiver is $Bridge
+            ? Runtime.bridgeData[receiver]?.subclass
+            : null;
+        if (bridgeSubclass is TypedInstance) {
+          return named.isEmpty && typeArguments.isEmpty
+              ? bridgeSubclass.invokeBridge(
+                  site.name,
+                  arguments,
+                  runtime: runtime,
+                )
+              : bridgeSubclass.invoke(
+                  site.name,
+                  positional,
+                  named: named,
+                  callerLibrary: site.callerLibrary,
+                  typeArguments: typeArguments,
+                  runtime: runtime,
+                );
+        }
+        if (site.name == 'call' && named.isEmpty && typeArguments.isEmpty) {
+          return TypedInterop.call(runtime, receiver, positional);
+        }
+        if (named.isNotEmpty) {
+          // Bridge definitions lower named parameters into their fixed host
+          // ABI order. A super shim must therefore receive the full flattened
+          // vector, not the source-level positional prefix.
+          if (receiver is BridgeSuperShim && typeArguments.isEmpty) {
+            return TypedInterop.invoke(runtime, receiver, site.name, arguments);
+          }
+          throw UnsupportedError(
+            'Named arguments require an evaluated method or closure',
+          );
+        }
+        return TypedInterop.invoke(runtime, receiver, site.name, positional);
     }
   }
 }

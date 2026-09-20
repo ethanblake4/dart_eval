@@ -4,8 +4,25 @@ library;
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:test/test.dart';
+import '../support/dynamic_fixtures.dart';
 
 void main() {
+  test('JSON collection checks use declared runtime types, not contents', () {
+    for (final (mode, result) in runDynamicFixture('''
+      import 'dart:convert';
+      bool main() {
+        dynamic empty = jsonDecode('[]');
+        dynamic integers = jsonDecode('[1, 2]');
+        dynamic map = jsonDecode('{"a":1}');
+        if (empty is List<int> || integers is List<int> ||
+            map is Map<String, int>) return false;
+        return empty is List<dynamic> && map is Map<String, dynamic>;
+      }
+    ''')) {
+      expect(result, const DynamicFixtureResult.value(true), reason: mode);
+    }
+  });
+
   group('dart:convert tests', () {
     late Compiler compiler;
 
@@ -57,7 +74,7 @@ void main() {
           'main.dart': '''
             import 'dart:convert';
 
-            Map<String, int> main() {
+            Map<String, dynamic> main() {
               return json.decode('{"a":1,"b":2}');
             }
           ''',
@@ -76,7 +93,7 @@ void main() {
           'main.dart': '''
             import 'dart:convert';
 
-            Map<String, int> main() {
+            Map<String, dynamic> main() {
               return jsonDecode('{"a":1,"b":2}');
             }
           ''',

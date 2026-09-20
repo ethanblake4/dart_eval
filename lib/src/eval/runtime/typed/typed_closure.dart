@@ -1,5 +1,6 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/stdlib/core.dart';
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'typed_closure_descriptor.dart';
 import 'typed_frame.dart';
 import 'typed_function.dart';
@@ -16,14 +17,24 @@ final class TypedCaptureCell {
 
 /// An escaping closure owns its environment, independently of cached VM frames.
 final class TypedClosure extends EvalFunction {
-  TypedClosure._(this.program, this.descriptor, this.captures, this.runtime)
-    : function = program.functions[descriptor.functionId];
+  TypedClosure._(
+    this.program,
+    this.descriptor,
+    this.captures,
+    this.runtime,
+    this.definingTypeEnvironmentReceiver,
+    List<int> definingTypeArguments,
+  ) : definingTypeArguments = List.unmodifiable(definingTypeArguments),
+      function = program.functions[descriptor.functionId];
 
   final TypedProgram program;
   final TypedClosureDescriptor descriptor;
   final TypedFunction function;
   final List<Object?> captures;
   final Runtime? runtime;
+  final Object? definingTypeEnvironmentReceiver;
+  final List<int> definingTypeArguments;
+  int? _resolvedRuntimeTypeId;
 
   @override
   bool operator ==(Object other) =>
@@ -52,7 +63,14 @@ final class TypedClosure extends EvalFunction {
     TypedClosureDescriptor descriptor,
     Object receiver, {
     Runtime? runtime,
-  }) => TypedClosure._(program, descriptor, [receiver], runtime);
+  }) => TypedClosure._(
+    program,
+    descriptor,
+    [receiver],
+    runtime,
+    receiver,
+    const [],
+  );
   static final _defaultArguments = Expando<List<$Value?>>();
 
   // Scalar constant conversion happens once per compiler descriptor, never on
@@ -72,6 +90,8 @@ final class TypedClosure extends EvalFunction {
     int index,
     List<Object?> outgoing,
     Runtime? runtime,
+    Object? definingTypeEnvironmentReceiver,
+    List<int> definingTypeArguments,
   ) {
     final descriptor = program.closures[index];
     final captures = descriptor.captureCount == 0
@@ -84,7 +104,14 @@ final class TypedClosure extends EvalFunction {
     if (descriptor.captureCount > 0) {
       outgoing.fillRange(0, descriptor.captureCount, null);
     }
-    return TypedClosure._(program, descriptor, captures, runtime);
+    return TypedClosure._(
+      program,
+      descriptor,
+      captures,
+      runtime,
+      definingTypeEnvironmentReceiver,
+      definingTypeArguments,
+    );
   }
 
   /// Exact calls need no argument vector, signature adapter or recursive Dart
@@ -95,7 +122,10 @@ final class TypedClosure extends EvalFunction {
     Object? receiver,
     int index,
     Runtime? runtime,
-  ) {
+    Object? first,
+    Object? rest, [
+    List<int>? resolvedTypeArguments,
+  ]) {
     if (receiver is! TypedClosure ||
         !identical(receiver.program, program) ||
         (receiver.runtime != null && !identical(receiver.runtime, runtime))) {
@@ -104,14 +134,114 @@ final class TypedClosure extends EvalFunction {
     final descriptor = receiver.descriptor;
     if (!descriptor.hasEnvironment) return null;
     final site = program.closureCalls[index];
+    final typeArguments = resolvedTypeArguments ?? site.typeArguments;
     if (site.positionalCount != descriptor.positionalCount ||
-        site.namedNames.length != descriptor.namedNames.length) {
+        site.namedNames.length != descriptor.namedNames.length ||
+        !receiver.acceptsTypeArguments(typeArguments)) {
       return null;
     }
     for (var i = 0; i < site.namedNames.length; i++) {
       if (site.namedNames[i] != descriptor.namedNames[i]) return null;
     }
+    if (site.trusted) {
+      receiver._checkTypeArguments(typeArguments, runtime);
+    } else {
+      receiver.checkExactArguments(
+        descriptor.argumentCount,
+        first,
+        rest,
+        runtime,
+        typeArguments,
+      );
+    }
     return receiver;
+  }
+
+  void checkExactArguments(
+    int count,
+    Object? first,
+    Object? rest,
+    Runtime? runtime, [
+    List<int> typeArguments = const [],
+  ]) {
+    _checkTypeArguments(typeArguments, runtime);
+    final ownerType = _checkedOwnerType(runtime);
+    for (var i = 0; i < descriptor.parameterTypeIds.length; i++) {
+      final value = i == 0
+          ? first
+          : count == 2
+          ? rest
+          : (rest as List<Object?>)[i - 1];
+      _checkArgument(value, i, runtime, typeArguments, ownerType);
+    }
+  }
+
+  /// The checked-argument owner resolves once per call rather than per
+  /// parameter; its runtime type is stable for the receiver's lifetime.
+  /// Returns null when no parameter actually requires a runtime type check.
+  int? _checkedOwnerType(Runtime? runtime) {
+    if (runtime == null) return null;
+    for (var i = 0; i < descriptor.parameterTypeIds.length; i++) {
+      if (descriptor.parameterTypeIds[i] >= 0) {
+        final typeReceiver = descriptor.boundReceiver
+            ? captures.single
+            : definingTypeEnvironmentReceiver;
+        return typeReceiver is TypedInstance
+            ? typeReceiver.dispatchRoot.$getRuntimeType(runtime)
+            : null;
+      }
+    }
+    return null;
+  }
+
+  bool acceptsTypeArguments(List<int> typeArguments) =>
+      typeArguments.isEmpty ||
+      typeArguments.length == descriptor.typeParameterBounds.length;
+
+  void _checkTypeArguments(List<int> typeArguments, Runtime? runtime) {
+    if (typeArguments.isEmpty || runtime == null) return;
+    final typeReceiver = descriptor.boundReceiver
+        ? captures.single
+        : definingTypeEnvironmentReceiver;
+    final ownerType = typeReceiver is TypedInstance
+        ? typeReceiver.dispatchRoot.$getRuntimeType(runtime)
+        : null;
+    runtime.assertTypedTypeArguments(
+      typeArguments,
+      descriptor.typeParameterBounds,
+      actualOwnerType: ownerType,
+    );
+  }
+
+  void _checkArgument(
+    Object? value,
+    int index,
+    Runtime? runtime,
+    List<int> typeArguments,
+    int? ownerType,
+  ) {
+    final typeId = descriptor.parameterTypeIds[index];
+    if (typeId < 0) return;
+    if (runtime != null) {
+      if (!runtime.isTypedValueTypeInCallableEnvironment(
+        value,
+        typeId,
+        typeArguments.isEmpty ? definingTypeArguments : typeArguments,
+        actualOwnerType: ownerType,
+      )) {
+        throw TypeError();
+      }
+      return;
+    }
+    if (value == null) {
+      if (!descriptor.parameterNullable[index]) {
+        throw TypeError();
+      }
+      return;
+    }
+    // Direct TypedProgram execution has no Runtime metadata. Preserve that
+    // low-level API's existing behavior; Runtime entrypoints always provide
+    // the descriptor service used for language-level checked invocation.
   }
 
   @pragma('vm:never-inline')
@@ -121,9 +251,11 @@ final class TypedClosure extends EvalFunction {
     Object? receiver,
     Object? first,
     Object? rest,
-    int index,
-  ) {
+    int index, [
+    List<int>? resolvedTypeArguments,
+  ]) {
     final site = program.closureCalls[index];
+    final typeArguments = resolvedTypeArguments ?? site.typeArguments;
     final count = site.positionalCount + site.namedNames.length;
     final values = switch (count) {
       0 => <$Value?>[],
@@ -135,31 +267,63 @@ final class TypedClosure extends EvalFunction {
           (rest as List<Object?>)[i] as $Value?,
       ],
     };
-    final named = <String, $Value?>{
-      for (var i = 0; i < site.namedNames.length; i++)
-        site.namedNames[i]: values[site.positionalCount + i],
-    };
+    // The no-named-argument path is the hot one: `values` is already exactly
+    // the positional vector and no named map needs to be materialized.
+    final List<$Value?> positional;
+    final Map<String, $Value?> named;
+    if (site.namedNames.isEmpty) {
+      positional = values;
+      named = const <String, $Value?>{};
+    } else {
+      positional = values.sublist(0, site.positionalCount);
+      named = <String, $Value?>{
+        for (var i = 0; i < site.namedNames.length; i++)
+          site.namedNames[i]: values[site.positionalCount + i],
+      };
+    }
     if (receiver is TypedClosure) {
+      if (!receiver.descriptor.accepts(site.positionalCount, named.keys) ||
+          !receiver.acceptsTypeArguments(typeArguments)) {
+        throw NoSuchMethodError.withInvocation(
+          receiver,
+          Invocation.method(
+            Symbol('call'),
+            positional,
+            {for (final entry in named.entries) Symbol(entry.key): entry.value},
+          ),
+        );
+      }
       return receiver.invoke(
-        values.sublist(0, site.positionalCount),
+        positional,
         named: named,
+        typeArguments: typeArguments,
         runtime: runtime,
+        trusted: site.trusted,
       );
     }
     if (receiver is TypedMember) {
+      if (!receiver.accepts(site.positionalCount, named.keys) ||
+          !receiver.acceptsTypeArguments(typeArguments)) {
+        throw NoSuchMethodError.withInvocation(
+          receiver,
+          Invocation.method(
+            Symbol('call'),
+            positional,
+            {for (final entry in named.entries) Symbol(entry.key): entry.value},
+          ),
+        );
+      }
       return receiver.invokeClosure(
-        values.sublist(0, site.positionalCount),
+        positional,
         named: named,
+        typeArguments: typeArguments,
         runtime: runtime,
+        trusted: site.trusted,
       );
     }
     if (named.isNotEmpty) {
       if (receiver is TypedHostFunction) {
-        return receiver.invokeHost(
-          runtime,
-          values.sublist(0, site.positionalCount),
-          named: named,
-        );
+        return receiver.invokeHost(runtime, positional, named: named);
       }
       throw UnsupportedError(
         'Named arguments require a typed closure or host function',
@@ -171,24 +335,26 @@ final class TypedClosure extends EvalFunction {
   $Value? invoke(
     List<$Value?> arguments, {
     Map<String, $Value?> named = const {},
+    List<int> typeArguments = const [],
     Runtime? runtime,
+    bool trusted = false,
   }) {
     final descriptor = this.descriptor;
-    if (arguments.length < descriptor.requiredPositional ||
-        arguments.length > descriptor.positionalCount) {
+    if (!descriptor.accepts(arguments.length, named.keys) ||
+        !acceptsTypeArguments(typeArguments)) {
       throw ArgumentError('Invalid closure positional argument count');
     }
-    for (final name in named.keys) {
-      if (!descriptor.namedNames.contains(name)) {
-        throw ArgumentError('Unknown closure argument $name');
-      }
-    }
-    for (final name in descriptor.requiredNamed) {
-      if (!named.containsKey(name)) {
-        throw ArgumentError('Missing closure argument $name');
-      }
-    }
     final context = this.runtime ?? runtime;
+    final effectiveTypeArguments =
+        this.runtime != null &&
+            runtime != null &&
+            !identical(this.runtime, runtime)
+        ? [
+            for (final type in typeArguments)
+              this.runtime!.importRuntimeType(runtime, type),
+          ]
+        : typeArguments;
+    _checkTypeArguments(effectiveTypeArguments, context);
     final hiddenCount =
         (descriptor.hasEnvironment ? 1 : 0) +
         (descriptor.boundReceiver ? 1 : 0);
@@ -212,7 +378,17 @@ final class TypedClosure extends EvalFunction {
           ? captures.single
           : null;
       return _run(
-        TypedEntry.direct(r: first, s: second, environment: captures),
+        TypedEntry.direct(
+          r: first,
+          s: second,
+          environment: captures,
+          typeEnvironmentReceiver: descriptor.boundReceiver
+              ? captures.single
+              : null,
+          typeArguments: effectiveTypeArguments,
+          lexicalTypeEnvironmentReceiver: definingTypeEnvironmentReceiver,
+          lexicalTypeArguments: definingTypeArguments,
+        ),
         context,
       );
     }
@@ -227,6 +403,18 @@ final class TypedClosure extends EvalFunction {
             ? named[descriptor.namedNames[i]]
             : defaults[descriptor.positionalCount + i],
     ];
+    if (!trusted) {
+      final ownerType = _checkedOwnerType(context);
+      for (var i = 0; i < descriptor.parameterTypeIds.length; i++) {
+        _checkArgument(
+          values[hiddenCount + i],
+          i,
+          context,
+          effectiveTypeArguments,
+          ownerType,
+        );
+      }
+    }
     for (var i = 0; i < values.length; i++) {
       values[i] = switch (function.argumentKinds[i]) {
         TypedArgumentKind.integer => (values[i] as $int).$value,
@@ -237,7 +425,17 @@ final class TypedClosure extends EvalFunction {
       };
     }
     return _run(
-      TypedEntry.fromValues(function, values, environment: captures),
+      TypedEntry.fromValues(
+        function,
+        values,
+        environment: captures,
+        typeEnvironmentReceiver: descriptor.boundReceiver
+            ? captures.single
+            : null,
+        typeArguments: effectiveTypeArguments,
+        lexicalTypeEnvironmentReceiver: definingTypeEnvironmentReceiver,
+        lexicalTypeArguments: definingTypeArguments,
+      ),
       context,
     );
   }
@@ -263,6 +461,32 @@ final class TypedClosure extends EvalFunction {
   $Value? call(Runtime runtime, $Value? target, List<$Value?> args) =>
       invoke(args, runtime: runtime);
   @override
-  int $getRuntimeType(Runtime runtime) =>
-      runtime.lookupType(CoreTypes.function);
+  int $getRuntimeType(Runtime runtime) {
+    if (descriptor.runtimeTypeId < 0) {
+      return runtime.lookupType(CoreTypes.function);
+    }
+    final definingRuntime = this.runtime ?? runtime;
+    final resolved = this.runtime == null
+        ? _resolveRuntimeType(definingRuntime)
+        : _resolvedRuntimeTypeId ??= _resolveRuntimeType(definingRuntime);
+    return runtime.importRuntimeType(definingRuntime, resolved);
+  }
+
+  int _resolveRuntimeType(Runtime runtime) {
+    final typeReceiver = descriptor.boundReceiver
+        ? captures.single
+        : definingTypeEnvironmentReceiver;
+    final ownerType = typeReceiver is TypedInstance
+        ? typeReceiver.dispatchRoot.$getRuntimeType(runtime)
+        : null;
+    return runtime.resolveTypedEnvironmentType(
+      descriptor.runtimeTypeId,
+      actualOwnerType: ownerType,
+      // A generic callable owns its callable parameter slots. Resolving them
+      // with an enclosing callable's arguments would conflate two owners.
+      callableTypeArguments: descriptor.typeParameterBounds.isEmpty
+          ? definingTypeArguments
+          : const [],
+    );
+  }
 }

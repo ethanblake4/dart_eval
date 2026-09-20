@@ -108,6 +108,7 @@ void compileEnumDeclaration(
       );
       arguments.addAll(result.ssa);
     }
+    arguments.add(BuiltinValue(intval: type.runtimeTypeId(ctx)).push(ctx).ssa);
 
     final V = Variable.ssa(
       ctx,
