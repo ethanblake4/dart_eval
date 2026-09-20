@@ -47,7 +47,7 @@ Variable compileFunctionExpression(
       if (resolveInstanceDeclaration(
             ctx,
             ctx.library,
-            ctx.currentClass!.name.lexeme,
+            ctx.currentClassName!,
             name,
           ) !=
           null) {
@@ -135,7 +135,6 @@ Variable compileFunctionExpression(
     final p = param.parameter;
     Variable vRep;
 
-    p as SimpleFormalParameter;
     var type = CoreTypes.dynamic.ref(ctx);
     if (p.type != null) {
       type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
@@ -228,15 +227,12 @@ Variable compileFunctionExpression(
     final value = evaluateDefaultValue(
       ctx,
       ctx.library,
-      parameter is DefaultFormalParameter ? parameter.defaultValue : null,
+      parameter.defaultClause?.value,
     );
-    final normal = parameter is DefaultFormalParameter
-        ? parameter.parameter
-        : parameter;
+    final annotation = parameter.type;
     if (value is int &&
-        normal is SimpleFormalParameter &&
-        normal.type != null &&
-        TypeRef.fromAnnotation(ctx, ctx.library, normal.type!) ==
+        annotation != null &&
+        TypeRef.fromAnnotation(ctx, ctx.library, annotation) ==
             CoreTypes.double.ref(ctx)) {
       return value.toDouble();
     }
@@ -248,10 +244,7 @@ Variable compileFunctionExpression(
   // type is (for example when assigned to `void Function(int)?`). Reifying
   // the context's nullability would poison every later subtype check.
   FunctionTypeAnnotation literalParameterType(FormalParameter parameter) {
-    final normal = parameter is DefaultFormalParameter
-        ? parameter.parameter
-        : parameter;
-    final annotation = normal is SimpleFormalParameter ? normal.type : null;
+    final annotation = parameter.type;
     return FunctionTypeAnnotation.type(
       annotation == null
           ? CoreTypes.dynamic.ref(ctx)

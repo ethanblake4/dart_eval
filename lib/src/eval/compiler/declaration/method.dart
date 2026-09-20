@@ -22,10 +22,10 @@ import 'package:dart_eval/src/eval/compiler/backend/representation.dart'
 int compileMethodDeclaration(
   MethodDeclaration d,
   CompilerContext ctx,
-  NamedCompilationUnitMember parent,
+  Declaration parent,
 ) {
   final b = d.body;
-  final parentName = parent.name.lexeme;
+  final parentName = declarationName(parent);
   final methodName = d.name.lexeme;
   final pos = ctx.beginFunction('$parentName.$methodName()');
   final previousTypes = {...?ctx.temporaryTypes[ctx.library]};
@@ -74,7 +74,6 @@ int compileMethodDeclaration(
   for (final param in resolvedParams) {
     final p = param.parameter;
 
-    p as SimpleFormalParameter;
     var type = CoreTypes.dynamic.ref(ctx);
     if (p.type != null) {
       // Method args are always boxed to allow for bridge interop to have a

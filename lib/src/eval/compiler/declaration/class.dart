@@ -12,13 +12,13 @@ void compileClassDeclaration(
   final previousTypes = {...?ctx.temporaryTypes[ctx.library]};
   TypeRef.loadTemporaryTypes(
     ctx,
-    d.typeParameters?.typeParameters,
+    d.namePart.typeParameters?.typeParameters,
     library: ctx.library,
-    owner: 'class:${ctx.library}:${d.name.lexeme}',
+    owner: 'class:${ctx.library}:${d.namePart.typeName.lexeme}',
   );
   final $runtimeType =
       ctx.typeRefIndexMap[TypeRef.lookupDeclaration(ctx, ctx.library, d)];
-  final clsName = d.name.lexeme;
+  final clsName = d.namePart.typeName.lexeme;
   ctx.instanceDeclarationPositions[ctx.library]![clsName] = [
     {},
     {},
@@ -29,7 +29,7 @@ void compileClassDeclaration(
   final constructors = <ConstructorDeclaration>[];
   final fields = <FieldDeclaration>[];
   final methods = <MethodDeclaration>[];
-  for (final m in d.members) {
+  for (final m in d.body.members) {
     if (m is ConstructorDeclaration) {
       constructors.add(m);
     } else if (m is FieldDeclaration) {

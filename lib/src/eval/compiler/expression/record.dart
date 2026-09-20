@@ -41,13 +41,13 @@ Variable compileRecordLiteral(
   var processingNamed = false;
   for (var i = 0; i < l.fields.length; i++) {
     final field = l.fields[i];
-    if (field is NamedExpression) {
-      final name = field.name.label.name;
+    if (field is RecordLiteralNamedField) {
+      final name = field.name.lexeme;
       final fieldBound = boundRecordFields == null
           ? null
           : boundRecordFields[i];
       final value = compileExpression(
-        field.expression,
+        field.fieldExpression,
         ctx,
         fieldBound?.type,
       ).boxIfNeeded(ctx);
@@ -78,7 +78,7 @@ Variable compileRecordLiteral(
           ? null
           : boundRecordFields[i];
       final value = compileExpression(
-        field,
+        field.fieldExpression,
         ctx,
         fieldBound?.type,
       ).boxIfNeeded(ctx);

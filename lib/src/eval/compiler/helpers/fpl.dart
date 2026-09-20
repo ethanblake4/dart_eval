@@ -59,8 +59,7 @@ List<PossiblyValuedParameter> resolveFPLDefaults(
 
   for (final param in [...positional, ...named]) {
     final argument = SSA('arg_$paramIndex');
-    final normal = param is DefaultFormalParameter ? param.parameter : param;
-    final annotation = normal is SimpleFormalParameter ? normal.type : null;
+    final annotation = param.type;
     final declaredType = annotation == null
         ? CoreTypes.dynamic.ref(ctx)
         : TypeRef.fromAnnotation(ctx, ctx.library, annotation);
@@ -79,15 +78,9 @@ List<PossiblyValuedParameter> resolveFPLDefaults(
         ),
       ),
     );
-    if (param is DefaultFormalParameter) {
-      // Callers bind omitted arguments before entering typed registers. Null is
-      // an actual argument value and must never act as a missing-value sentinel.
-      normalized.add(PossiblyValuedParameter(param.parameter, null));
-    } else {
-      normalized.add(
-        PossiblyValuedParameter(param as NormalFormalParameter, null),
-      );
-    }
+    // Callers bind omitted arguments before entering typed registers. Null is
+    // an actual argument value and must never act as a missing-value sentinel.
+    normalized.add(PossiblyValuedParameter(param, null));
     paramIndex++;
   }
   ctx.functionParameterTypes[ctx.currentFunctionId!] = declaredTypes;
@@ -101,7 +94,7 @@ List<PossiblyValuedParameter> resolveFPLDefaults(
   Declaration? parameterHost, {
   Map<String, TypeRef> typeParameters = const {},
 }) {
-  if (param is SimpleFormalParameter) {
+  if (param is RegularFormalParameter) {
     final type = param.type;
     return type == null
         ? (null, null)
@@ -123,14 +116,6 @@ List<PossiblyValuedParameter> resolveFPLDefaults(
     return (
       resolveSuperFormalType(ctx, decLibrary, param, parameterHost!),
       null,
-    );
-  } else if (param is DefaultFormalParameter) {
-    return getFormalParameterType(
-      ctx,
-      param.parameter,
-      decLibrary,
-      parameterHost,
-      typeParameters: typeParameters,
     );
   } else {
     throw CompileError('Unknown formal type ${param.runtimeType}');

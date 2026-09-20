@@ -1,6 +1,7 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/util.dart';
+import 'package:dart_eval/src/eval/compiler/errors.dart';
 
 /// A Bridge declaration declares an element that is transferrable between the
 /// Dart and dart_eval VM.
@@ -38,13 +39,18 @@ class DeclarationOrBridge<T extends Declaration, R extends BridgeDeclaration> {
       }
     }
     final declaration = d.declaration!;
-    if (declaration is NamedCompilationUnitMember) {
-      return [declaration.name.lexeme];
+    if (declaration is ClassDeclaration) {
+      return [declaration.namePart.typeName.lexeme];
+    } else if (declaration is EnumDeclaration) {
+      return [declaration.namePart.typeName.lexeme];
+    } else if (declaration is FunctionDeclaration) {
+      return [declaration.name.toString()];
     } else if (declaration is TopLevelVariableDeclaration) {
       /// Top-level variable declaration
       return declaration.variables.variables.map((v) => v.name.lexeme).toList();
+    } else {
+      throw CompileError('Unsupported!');
     }
-    return [];
   }
 
   /// Flatten static nested declarations into an iterable of pairs of compound
@@ -61,31 +67,45 @@ class DeclarationOrBridge<T extends Declaration, R extends BridgeDeclaration> {
       } else {
         // If it is a source code declaration
         final declaration = d.declaration!;
-        if (declaration is NamedCompilationUnitMember) {
-          final dName = declaration.name.lexeme;
+
+        if (declaration is ClassDeclaration) {
+          final dName = declaration.namePart.typeName.lexeme;
 
           /// First yield the declaration itself
           yield Pair(dName, d);
 
-          /// If it is a class declaration
-          if (declaration is ClassDeclaration ||
-              declaration is EnumDeclaration) {
-            /// Then also yield the static class members
-            for (final member
-                in (declaration is ClassDeclaration
-                    ? declaration.members
-                    : (declaration as EnumDeclaration).members)) {
-              if (member is ConstructorDeclaration) {
-                yield Pair(
-                  '$dName.${member.name?.lexeme ?? ""}',
-                  DeclarationOrBridge(-1, declaration: member),
-                );
-              } else if (member is MethodDeclaration && member.isStatic) {
-                yield Pair(
-                  '$dName.${member.name.lexeme}',
-                  DeclarationOrBridge(-1, declaration: member),
-                );
-              }
+          /// Then also yield the static class members
+          for (final member in declaration.body.members) {
+            if (member is ConstructorDeclaration) {
+              yield Pair(
+                '$dName.${member.name?.lexeme ?? ""}',
+                DeclarationOrBridge(-1, declaration: member),
+              );
+            } else if (member is MethodDeclaration && member.isStatic) {
+              yield Pair(
+                '$dName.${member.name.lexeme}',
+                DeclarationOrBridge(-1, declaration: member),
+              );
+            }
+          }
+        } else if (declaration is EnumDeclaration) {
+          final dName = declaration.namePart.typeName.lexeme;
+
+          /// First yield the declaration itself
+          yield Pair(dName, d);
+
+          /// Then also yield the static class members
+          for (final member in declaration.body.members) {
+            if (member is ConstructorDeclaration) {
+              yield Pair(
+                '$dName.${member.name?.lexeme ?? ""}',
+                DeclarationOrBridge(-1, declaration: member),
+              );
+            } else if (member is MethodDeclaration && member.isStatic) {
+              yield Pair(
+                '$dName.${member.name.lexeme}',
+                DeclarationOrBridge(-1, declaration: member),
+              );
             }
           }
         } else if (declaration is TopLevelVariableDeclaration) {
@@ -93,6 +113,12 @@ class DeclarationOrBridge<T extends Declaration, R extends BridgeDeclaration> {
           for (final v in declaration.variables.variables) {
             yield Pair(v.name.lexeme, DeclarationOrBridge(-1, declaration: v));
           }
+        } else if (declaration is FunctionDeclaration) {
+          final dName = declaration.name.toString();
+
+          yield Pair(dName, d);
+        } else {
+          throw CompileError('Unsupported!');
         }
       }
     }

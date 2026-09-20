@@ -166,7 +166,13 @@ class CompilerContext with ScopeContext {
   Map<String, int> tempVarMap = {};
   Map<String, int> labelMap = {};
 
-  NamedCompilationUnitMember? currentClass;
+  Declaration? currentClass;
+
+  String? get currentClassName {
+    final currentClass = this.currentClass;
+    if (currentClass == null) return null;
+    return declarationName(currentClass);
+  }
 
   /// A map of library IDs / indexes to a map of String declaration names to
   /// [DeclarationOrBridge]s. See [Compiler._topLevelDeclarationsMap] from which
@@ -298,3 +304,15 @@ class ContextSaveState with ScopeContext {
     ];
   }
 }
+
+/// The bare declared name of a class-like [Declaration] (e.g. `Foo` for
+/// `class Foo<T>`).
+String declarationName(Declaration d) => switch (d) {
+  ClassDeclaration() => d.namePart.typeName.lexeme,
+  EnumDeclaration() => d.namePart.typeName.lexeme,
+  MixinDeclaration() => d.name.lexeme,
+  ExtensionTypeDeclaration() => d.namePart.typeName.lexeme,
+  FunctionDeclaration() => d.name.lexeme,
+  TypeAlias() => d.name.lexeme,
+  _ => throw UnimplementedError('Cannot determine name of ${d.runtimeType}'),
+};

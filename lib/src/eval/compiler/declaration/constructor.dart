@@ -27,10 +27,10 @@ import '../variable.dart';
 void compileConstructorDeclaration(
   CompilerContext ctx,
   ConstructorDeclaration d,
-  NamedCompilationUnitMember parent,
+  Declaration parent,
   List<FieldDeclaration> fields,
 ) {
-  final parentName = parent.name.lexeme;
+  final parentName = declarationName(parent);
   final dName = (d.name?.lexeme) ?? "";
   final n = '$parentName.$dName';
   final isEnum = parent is EnumDeclaration;
@@ -98,7 +98,7 @@ void compileConstructorDeclaration(
     final p = param.parameter;
     final V = param.V;
     Variable vrep;
-    if ($redirectingInitializer != null && p is! SimpleFormalParameter) {
+    if ($redirectingInitializer != null && p is! RegularFormalParameter) {
       throw CompileError(
         'Redirecting constructor invocation cannot have super or this parameters',
         d,
@@ -144,7 +144,6 @@ void compileConstructorDeclaration(
       ).boxIfNeeded(ctx);
       superParams.add(p.name.lexeme);
     } else {
-      p as SimpleFormalParameter;
       var type = CoreTypes.dynamic.ref(ctx);
       if (p.type != null) {
         type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
@@ -387,7 +386,7 @@ void compileConstructorDeclaration(
     CreateClass(
       ctx.svar('inst'),
       ctx.library,
-      parent.name.lexeme,
+      parentName,
       $super.ssa,
       runtimeTypeArgument!,
       fieldIdx,
@@ -515,10 +514,10 @@ void compileConstructorDeclaration(
 
 void compileDefaultConstructor(
   CompilerContext ctx,
-  NamedCompilationUnitMember parent,
+  Declaration parent,
   List<FieldDeclaration> fields,
 ) {
-  final parentName = parent.name.lexeme;
+  final parentName = declarationName(parent);
   final n = '$parentName.';
 
   ctx.topLevelDeclarationPositions[ctx.library]![n] = ctx.beginFunction('$n()');
@@ -627,7 +626,7 @@ void compileDefaultConstructor(
     CreateClass(
       inst,
       ctx.library,
-      parent.name.lexeme,
+      parentName,
       $super.ssa,
       runtimeTypeArgument,
       fieldIdx + (isEnum ? 2 : 0),
@@ -716,7 +715,7 @@ void _compileUnusedFields(
         ctx.inferredFieldTypes
                 .putIfAbsent(ctx.library, () => {})
                 .putIfAbsent(
-                  ctx.currentClass!.name.lexeme,
+                  ctx.currentClassName!,
                   () => {},
                 )[field.name.lexeme] =
             V.type;
@@ -731,7 +730,7 @@ void _setupEnum(CompilerContext ctx, EnumDeclaration parent, SSA inst) {
   /// Add implicit index and name fields
   ctx.inferredFieldTypes
       .putIfAbsent(ctx.library, () => {})
-      .putIfAbsent(ctx.currentClass!.name.lexeme, () => {})
+      .putIfAbsent(ctx.currentClassName!, () => {})
     ..['index'] = CoreTypes.int.ref(ctx)
     ..['name'] = CoreTypes.string.ref(ctx);
 

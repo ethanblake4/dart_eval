@@ -168,7 +168,7 @@ class IdentifierReference implements Reference {
       final instanceDeclaration = resolveInstanceDeclaration(
         ctx,
         ctx.library,
-        ctx.currentClass!.name.lexeme,
+        ctx.currentClassName!,
         name,
       );
       if (instanceDeclaration != null) {
@@ -180,7 +180,7 @@ class IdentifierReference implements Reference {
       final staticDeclaration = resolveStaticDeclaration(
         ctx,
         ctx.library,
-        ctx.currentClass!.name.lexeme,
+        ctx.currentClassName!,
         name,
       );
 
@@ -190,7 +190,7 @@ class IdentifierReference implements Reference {
           return CoreTypes.function.ref(ctx);
         } else if (staticDec is VariableDeclaration) {
           final name =
-              '${ctx.currentClass!.name.lexeme}.${staticDec.name.lexeme}';
+              '${ctx.currentClassName!}.${staticDec.name.lexeme}';
           return resolveGlobalType(ctx, ctx.library, name);
         }
       }
@@ -315,7 +315,7 @@ class IdentifierReference implements Reference {
       final instanceDeclaration = resolveInstanceDeclaration(
         ctx,
         ctx.library,
-        ctx.currentClass!.name.lexeme,
+        ctx.currentClassName!,
         name,
       );
       if (instanceDeclaration != null) {
@@ -355,7 +355,7 @@ class IdentifierReference implements Reference {
       final staticDeclaration = resolveStaticDeclaration(
         ctx,
         ctx.library,
-        ctx.currentClass!.name.lexeme,
+        ctx.currentClassName!,
         name,
       );
       final declaration = staticDeclaration?.declaration;
@@ -363,7 +363,7 @@ class IdentifierReference implements Reference {
         return storeGlobalBinding(
           ctx,
           ctx.library,
-          '${ctx.currentClass!.name.lexeme}.${declaration.name.lexeme}',
+          '${ctx.currentClassName!}.${declaration.name.lexeme}',
           value,
           source,
         );
@@ -483,7 +483,7 @@ class IdentifierReference implements Reference {
       final instanceDeclaration = resolveInstanceDeclaration(
         ctx,
         ctx.library,
-        ctx.currentClass!.name.lexeme,
+        ctx.currentClassName!,
         name,
       );
       if (instanceDeclaration != null) {
@@ -501,7 +501,7 @@ class IdentifierReference implements Reference {
               CoreTypes.function.ref(ctx),
               methodOffset: DeferredOrOffset(
                 file: ctx.library,
-                className: ctx.currentClass!.name.lexeme,
+                className: ctx.currentClassName!,
                 name: _refName,
                 targetName: $this.name,
               ),
@@ -539,7 +539,7 @@ class IdentifierReference implements Reference {
               ),
               methodOffset: DeferredOrOffset(
                 file: ctx.library,
-                className: ctx.currentClass!.name.lexeme,
+                className: ctx.currentClassName!,
                 name: _refName,
               ),
             );
@@ -550,7 +550,7 @@ class IdentifierReference implements Reference {
               CoreTypes.function.ref(ctx),
               methodOffset: DeferredOrOffset(
                 file: ctx.library,
-                className: ctx.currentClass!.name.lexeme,
+                className: ctx.currentClassName!,
                 name: name,
               ),
             );
@@ -567,7 +567,7 @@ class IdentifierReference implements Reference {
               ),
               methodOffset: DeferredOrOffset(
                 file: ctx.library,
-                className: ctx.currentClass!.name.lexeme,
+                className: ctx.currentClassName!,
                 name: _refName,
               ),
             );
@@ -589,7 +589,7 @@ class IdentifierReference implements Reference {
       final staticDeclaration = resolveStaticDeclaration(
         ctx,
         ctx.library,
-        ctx.currentClass!.name.lexeme,
+        ctx.currentClassName!,
         name,
       );
 
@@ -601,13 +601,13 @@ class IdentifierReference implements Reference {
             methodOffset: DeferredOrOffset.lookupStatic(
               ctx,
               ctx.library,
-              ctx.currentClass!.name.lexeme,
+              ctx.currentClassName!,
               _refName,
             ),
           );
         } else if (staticDec is VariableDeclaration) {
           final name =
-              '${ctx.currentClass!.name.lexeme}.${staticDec.name.lexeme}';
+              '${ctx.currentClassName!}.${staticDec.name.lexeme}';
           final type = resolveGlobalType(ctx, ctx.library, name);
           final gIndex = ctx.topLevelGlobalIndices[ctx.library]![name]!;
           return Variable.ssa(
@@ -970,8 +970,6 @@ Variable _declarationToVariable(
   }
 
   if (decl is! FunctionDeclaration && decl is! ConstructorDeclaration) {
-    decl as NamedCompilationUnitMember;
-
     final returnType = TypeRef.lookupDeclaration(
       ctx,
       decOrBridge.sourceLib,
@@ -1009,7 +1007,7 @@ Variable _declarationToVariable(
     returnType = TypeRef.lookupDeclaration(
       ctx,
       decOrBridge.sourceLib,
-      decl.parent as ClassDeclaration,
+      decl.parent!.parent as ClassDeclaration,
     );
   }
 
@@ -1072,7 +1070,7 @@ StaticDispatch? _declarationToStaticDispatch(
     returnType = TypeRef.lookupDeclaration(
       ctx,
       decOrBridge.sourceLib,
-      decl.parent as ClassDeclaration,
+      decl.parent!.parent as ClassDeclaration,
     );
   }
 

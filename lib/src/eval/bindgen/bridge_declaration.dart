@@ -218,7 +218,7 @@ String getters(BindgenContext ctx, InterfaceElement element) {
       .where((element) => !element.isPrivate)
       .where(
         (element) =>
-            !element.isSynthetic ||
+            !element.isOriginVariable ||
             (element is EnumElement &&
                 element.nonSynthetic is FieldElement &&
                 !(element.nonSynthetic as FieldElement).isEnumConstant),
@@ -242,7 +242,7 @@ String setters(BindgenContext ctx, InterfaceElement element) {
   };
 
   return setters.values
-      .where((element) => !element.isSynthetic && !element.isPrivate)
+      .where((element) => !element.isOriginVariable && !element.isPrivate)
       .where(
         (m) => ctx.memberIncluded(m.name!, m.isStatic ? 'static' : 'setter'),
       )
@@ -270,7 +270,7 @@ String fields(BindgenContext ctx, InterfaceElement element) {
 
   final fields = allFields.values.where(
     (element) =>
-        !element.isSynthetic &&
+        !element.isOriginGetterSetter &&
         !element.isEnumConstant &&
         !element.isPrivate &&
         ctx.memberIncluded(element.name!, 'field'),

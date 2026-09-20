@@ -30,7 +30,8 @@ class CompilationUnitGraph implements Graph<int> {
 
     final partOf = cu.partOf;
     if (partOf != null) {
-      final uriStr = partOf.uri?.stringValue, libId = partOf.libraryName?.name;
+      final uriStr = partOf.uri?.stringValue,
+          libId = partOf.libraryName?.toString();
       if (uriStr != null) {
         final id = uriMap[uriStr];
         if (id != null && compilationUnits.containsKey(id)) {

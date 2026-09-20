@@ -450,6 +450,6 @@ class InvokeResult {
 class PossiblyValuedParameter {
   PossiblyValuedParameter(this.parameter, this.V);
 
-  NormalFormalParameter parameter;
+  FormalParameter parameter;
   Variable? V;
 }

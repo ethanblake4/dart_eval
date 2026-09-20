@@ -335,12 +335,9 @@ class TypedBackend {
           final value = evaluateDefaultValue(
             context,
             allocation.library,
-            p is DefaultFormalParameter ? p.defaultValue : null,
+            p.defaultClause?.value,
           );
-          final normal = p is DefaultFormalParameter ? p.parameter : p;
-          final annotation = normal is SimpleFormalParameter
-              ? normal.type
-              : null;
+          final annotation = p.type;
           return value is int &&
                   annotation is NamedType &&
                   annotation.name.lexeme == 'double'
@@ -484,18 +481,18 @@ class TypedBackend {
     );
   }
 
-  NamedCompilationUnitMember? _constructorOwner(String library, String name) {
+  Declaration? _constructorOwner(String library, String name) {
     final declarations =
         context.topLevelDeclarationsMap[context.libraryMap[library]]!;
     final declaration = declarations[name]?.declaration;
     if (declaration is ConstructorDeclaration) {
-      final owner = declaration.parent;
-      return owner is NamedCompilationUnitMember ? owner : null;
+      final owner = declaration.parent?.parent;
+      return owner is Declaration ? owner : null;
     }
     if (!name.endsWith('.')) return null;
     final owner = declarations[name.substring(0, name.length - 1)]?.declaration;
     return owner is ClassDeclaration || owner is EnumDeclaration
-        ? owner as NamedCompilationUnitMember
+        ? owner
         : null;
   }
 
@@ -512,8 +509,8 @@ class TypedBackend {
     final constructorOwner = _constructorOwner(library, name);
     final previousTypes = {...?context.temporaryTypes[libraryId]};
     final typeParameters = switch (constructorOwner) {
-      ClassDeclaration(:final typeParameters) => typeParameters?.typeParameters,
-      EnumDeclaration(:final typeParameters) => typeParameters?.typeParameters,
+      ClassDeclaration(:final namePart) => namePart.typeParameters?.typeParameters,
+      EnumDeclaration(:final namePart) => namePart.typeParameters?.typeParameters,
       _ => switch (declaration) {
         FunctionDeclaration(:final functionExpression) =>
           functionExpression.typeParameters?.typeParameters,
@@ -528,7 +525,7 @@ class TypedBackend {
       library: libraryId,
       owner: constructorOwner == null
           ? null
-          : 'class:$libraryId:${constructorOwner.name.lexeme}',
+          : 'class:$libraryId:${declarationName(constructorOwner)}',
     );
     try {
       final isGenerativeConstructor =
@@ -571,7 +568,7 @@ class TypedBackend {
     var defaultValue = evaluateDefaultValue(
       context,
       library,
-      parameter is DefaultFormalParameter ? parameter.defaultValue : null,
+      parameter.defaultClause?.value,
     );
     if (defaultValue is int &&
         type.file == dartCoreFile &&
