@@ -144,6 +144,140 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
       return resolveGlobalType(ctx, declaration!.sourceLib, expression.name);
     }
   }
+  if (expression is ConditionalExpression) {
+    return TypeRef.commonBaseType(ctx, {
+      _infer(ctx, library, expression.thenExpression),
+      _infer(ctx, library, expression.elseExpression),
+    });
+  }
+  if (expression is AwaitExpression) {
+    final inner = _infer(
+      ctx,
+      library,
+      expression.expression,
+    ).resolveTypeChain(ctx);
+    if (inner.isAssignableTo(
+          ctx,
+          CoreTypes.future.ref(ctx),
+          forceAllowDynamic: false,
+        ) &&
+        inner.specifiedTypeArgs.isNotEmpty) {
+      return inner.specifiedTypeArgs.first;
+    }
+    return inner;
+  }
+  if (expression is CascadeExpression) {
+    return _infer(ctx, library, expression.target);
+  }
+  if (expression is PostfixExpression) {
+    final operand = _infer(ctx, library, expression.operand);
+    return expression.operator.lexeme == '!'
+        ? operand.copyWith(nullable: false)
+        : operand;
+  }
+  if (expression is IsExpression) return CoreTypes.bool.ref(ctx);
+  if (expression is AsExpression) {
+    return TypeRef.fromAnnotation(ctx, library, expression.type);
+  }
+  if (expression is ThrowExpression) return CoreTypes.never.ref(ctx);
+  if (expression is IndexExpression) {
+    final target = _infer(
+      ctx,
+      library,
+      expression.target,
+    ).resolveTypeChain(ctx);
+    final args = target.specifiedTypeArgs;
+    if (target.isAssignableTo(
+          ctx,
+          CoreTypes.list.ref(ctx),
+          forceAllowDynamic: false,
+        ) &&
+        args.isNotEmpty) {
+      return args[0];
+    }
+    if (target.isAssignableTo(
+          ctx,
+          CoreTypes.map.ref(ctx),
+          forceAllowDynamic: false,
+        ) &&
+        args.length >= 2) {
+      return args[1];
+    }
+    return CoreTypes.dynamic.ref(ctx);
+  }
+  if (expression is ListLiteral) {
+    final elementTypes = {
+      for (final element in expression.elements)
+        if (element is Expression) _infer(ctx, library, element),
+    };
+    return elementTypes.isEmpty ||
+            expression.elements.length != elementTypes.length
+        ? CoreTypes.list.ref(ctx)
+        : CoreTypes.list
+              .ref(ctx)
+              .copyWith(
+                specifiedTypeArgs: [TypeRef.commonBaseType(ctx, elementTypes)],
+              );
+  }
+  if (expression is SetOrMapLiteral) {
+    final isMap =
+        expression.typeArguments?.arguments.length == 2 ||
+        expression.elements.any((e) => e is MapLiteralEntry);
+    if (!isMap) {
+      final elementTypes = {
+        for (final element in expression.elements)
+          if (element is Expression) _infer(ctx, library, element),
+      };
+      return elementTypes.isEmpty ||
+              expression.elements.length != elementTypes.length
+          ? CoreTypes.set.ref(ctx)
+          : CoreTypes.set
+                .ref(ctx)
+                .copyWith(
+                  specifiedTypeArgs: [
+                    TypeRef.commonBaseType(ctx, elementTypes),
+                  ],
+                );
+    }
+    final keyTypes = <TypeRef>{};
+    final valueTypes = <TypeRef>{};
+    for (final element in expression.elements) {
+      if (element is MapLiteralEntry) {
+        keyTypes.add(_infer(ctx, library, element.key));
+        valueTypes.add(_infer(ctx, library, element.value));
+      } else {
+        // Spread/if/for elements — bail to untyped map.
+        keyTypes.clear();
+        valueTypes.clear();
+        break;
+      }
+    }
+    return keyTypes.isEmpty
+        ? CoreTypes.map.ref(ctx)
+        : CoreTypes.map
+              .ref(ctx)
+              .copyWith(
+                specifiedTypeArgs: [
+                  TypeRef.commonBaseType(ctx, keyTypes),
+                  TypeRef.commonBaseType(ctx, valueTypes),
+                ],
+              );
+  }
+  if (expression is PropertyAccess && expression.target != null) {
+    final receiver = _infer(ctx, library, expression.target!);
+    if (receiver != CoreTypes.dynamic.ref(ctx)) {
+      try {
+        return TypeRef.lookupFieldType(
+              ctx,
+              receiver.resolveTypeChain(ctx),
+              expression.propertyName.name,
+            )?.resolveTypeChain(ctx) ??
+            CoreTypes.dynamic.ref(ctx);
+      } on CompileError {
+        return CoreTypes.dynamic.ref(ctx);
+      }
+    }
+  }
   if (expression is MethodInvocation && expression.target == null) {
     final declaration = ctx
         .visibleDeclarations[library]?[expression.methodName.name]
@@ -162,6 +296,41 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
         declaration!.sourceLib,
         function.returnType!,
       );
+    }
+  }
+  if (expression is MethodInvocation && expression.target != null) {
+    // Receiver calls: infer the target, then ask the member signature for the
+    // return type. Inference failures must not break compilation.
+    final receiver = _infer(
+      ctx,
+      library,
+      expression.target!,
+    ).resolveTypeChain(ctx);
+    if (receiver != CoreTypes.dynamic.ref(ctx)) {
+      try {
+        return AlwaysReturnType.fromInstanceMethodOrBuiltin(
+              ctx,
+              receiver,
+              expression.methodName.name,
+              [
+                for (final arg in expression.argumentList.arguments)
+                  if (arg is! NamedArgument)
+                    _infer(ctx, library, arg.argumentExpression),
+              ],
+              {
+                for (final arg in expression.argumentList.arguments)
+                  if (arg is NamedArgument)
+                    arg.name.lexeme: _infer(
+                      ctx,
+                      library,
+                      arg.argumentExpression,
+                    ),
+              },
+            )?.type ??
+            CoreTypes.dynamic.ref(ctx);
+      } on Object {
+        return CoreTypes.dynamic.ref(ctx);
+      }
     }
   }
   return CoreTypes.dynamic.ref(ctx);

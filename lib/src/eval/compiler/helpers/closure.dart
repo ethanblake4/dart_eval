@@ -87,9 +87,37 @@ InvokeResult invokeClosure(
       ),
     );
   }
+  final argTypes = positionalArgs.map((arg) => arg.type).toList();
+  final namedArgTypes = namedArgs.map((key, arg) => MapEntry(key, arg.type));
+  // Prefer the statically dispatched callee's signature, then the closure's
+  // own callable metadata (tear-off or function-typed expression).
+  final resultType =
+      (dispatch != null
+          ? dispatch.returnType
+                .toAlwaysReturnType(ctx, null, argTypes, namedArgTypes)
+                ?.type
+          : callable!.methodReturnType
+                    ?.toAlwaysReturnType(
+                      ctx,
+                      callable.type,
+                      argTypes,
+                      namedArgTypes,
+                    )
+                    ?.type ??
+                callable.type
+                    .resolveTypeChain(ctx)
+                    .functionType
+                    ?.returnType
+                    .type) ??
+      CoreTypes.dynamic.ref(ctx);
+  // A 'void' signature is unusable as a value; dynamic keeps the permissive
+  // semantics of consuming the runtime result anyway.
+  final typedResult = resultType == CoreTypes.voidType.ref(ctx)
+      ? CoreTypes.dynamic.ref(ctx)
+      : resultType;
   return InvokeResult(
     null,
-    Variable.of(ctx, target, CoreTypes.dynamic.ref(ctx).copyWith(boxed: true)),
+    Variable.of(ctx, target, typedResult.copyWith(boxed: true)),
     positionalArgs,
     namedArgs: namedArgs,
   );

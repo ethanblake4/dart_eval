@@ -255,7 +255,23 @@ extension Invoke on Variable {
     final returnType = equality
         ? boolType
         : (receiver.type == CoreTypes.function.ref(ctx) && method == 'call'
-              ? CoreTypes.dynamic.ref(ctx)
+              ? (receiver.methodReturnType
+                        ?.toAlwaysReturnType(
+                          ctx,
+                          receiver.type,
+                          prepared.map((arg) => arg.type).toList(),
+                          namedArgs?.map(
+                                (key, arg) => MapEntry(key, arg.type),
+                              ) ??
+                              {},
+                        )
+                        ?.type ??
+                    receiver.type
+                        .resolveTypeChain(ctx)
+                        .functionType
+                        ?.returnType
+                        .type ??
+                    CoreTypes.dynamic.ref(ctx))
               : AlwaysReturnType.fromInstanceMethodOrBuiltin(
                       ctx,
                       receiver.type,
