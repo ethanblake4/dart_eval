@@ -29,7 +29,7 @@ class FilesystemPermission implements Permission {
   }
 
   @override
-  List<String> get domains => ['filesystem:read', 'filesystem:write'];
+  List<String> get domains => const ['filesystem:read', 'filesystem:write'];
 
   @override
   bool match([Object? data]) {
@@ -76,7 +76,7 @@ class FilesystemReadPermission extends FilesystemPermission {
   }
 
   @override
-  List<String> get domains => ['filesystem:read'];
+  List<String> get domains => const ['filesystem:read'];
 
   @override
   bool match([Object? data]) {
@@ -122,7 +122,7 @@ class FilesystemWritePermission extends FilesystemPermission {
   }
 
   @override
-  List<String> get domains => ['filesystem:write'];
+  List<String> get domains => const ['filesystem:write'];
 
   @override
   bool match([Object? data]) {
