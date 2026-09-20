@@ -254,123 +254,30 @@ void compileConstructorDeclaration(
       ? null
       : (parent as ClassDeclaration).extendsClause;
   Variable $super;
-  DeclarationOrPrefix? extendsWhat;
   DeclarationOrBridge? extendsDecl;
+  ImportPrefixReference? prefix;
 
-  final ssa = <SSA>[];
-  final argTypes = <TypeRef?>[];
-  final namedArgTypes = <String, TypeRef?>{};
-
-  var constructorName = $superInitializer?.constructorName?.name ?? '';
+  final constructorName = $superInitializer?.constructorName?.name ?? '';
 
   if ($extends == null) {
     $super = BuiltinValue().push(ctx);
   } else {
-    final prefix = $extends.superclass.importPrefix;
-    final clsName = $extends.superclass.name.lexeme;
-    extendsWhat =
-        (prefix != null
-            ? ctx.visibleDeclarations[ctx.library]![prefix.name.value()]
-            : ctx.visibleDeclarations[ctx.library]![clsName]) ??
-        (throw CompileError('Cannot find superclass $clsName', $extends));
-
-    extendsDecl =
-        extendsWhat.declaration ??
-        extendsWhat.children?[clsName] ??
-        (throw CompileError('Cannot find superclass $clsName', $extends));
-
-    if (extendsDecl.isBridge) {
-      $super = Variable.ssa(
-        ctx,
-        NewBridgeSuperShim(ctx.svar('shim')),
-        CoreTypes.dynamic.ref(ctx),
-      );
-    } else {
-      final extendsType = TypeRef.lookupDeclaration(
-        ctx,
-        ctx.library,
-        extendsDecl.declaration as ClassDeclaration,
-        prefix: prefix?.name.lexeme,
-      );
-
-      AlwaysReturnType? mReturnType;
-
-      if ($superInitializer != null) {
-        final constructor0 =
-            ctx.topLevelDeclarationsMap[extendsDecl
-                .sourceLib]!['${extendsType.name}.$constructorName']!;
-        final constructor = constructor0.declaration as ConstructorDeclaration;
-
-        final argres = compileArgumentList(
-          ctx,
-          $superInitializer.argumentList,
-          extendsDecl.sourceLib,
-          constructor.parameters.parameters,
-          constructor,
-          superParams: superParams,
-          source: $superInitializer,
-        );
-        final args = argres.args;
-        final namedArgs = argres.namedArgs;
-        ssa.addAll(argres.ssa);
-
-        argTypes.addAll(args.map((e) => e.type).toList());
-        namedArgTypes.addAll(
-          namedArgs.map((key, value) => MapEntry(key, value.type)),
-        );
-      } else if (superParams.isNotEmpty) {
-        // If there are super parameters, compile without an argument list
-        final constructor0 =
-            ctx.topLevelDeclarationsMap[extendsDecl
-                .sourceLib]!['${extendsType.name}.$constructorName']!;
-        final constructor = constructor0.declaration as ConstructorDeclaration;
-        final argres = compileSuperParams(
-          ctx,
-          constructor.parameters.parameters,
-          constructor,
-          superParams: superParams,
-          source: $superInitializer,
-        );
-        final args = argres.args;
-        final namedArgs = argres.namedArgs;
-        ssa.addAll(argres.ssa);
-
-        argTypes.addAll(args.map((e) => e.type).toList());
-        namedArgTypes.addAll(
-          namedArgs.map((key, value) => MapEntry(key, value.type)),
-        );
-      }
-
-      final method = IdentifierReference(
-        null,
-        '${prefix != null ? '${prefix.name.value()}.' : ''}${extendsType.name}.$constructorName',
-      ).getValue(ctx);
-      if (method.methodOffset == null) {
-        throw CompileError(
-          'Cannot call $constructorName as it is not a valid method',
-        );
-      }
-
-      final offset = method.methodOffset!;
-
-      mReturnType =
-          method.methodReturnType?.toAlwaysReturnType(
+    (extendsDecl, prefix) = _resolveSuperclass(ctx, $extends);
+    $super = extendsDecl.isBridge
+        ? Variable.ssa(
             ctx,
-            clsType,
-            argTypes,
-            namedArgTypes,
-          ) ??
-          AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
-
-      final superRuntimeType = BuiltinValue(
-        intval: extendsType.runtimeTypeId(ctx),
-      ).push(ctx);
-      $super = Variable.ssa(
-        ctx,
-        Call(offset, [...ssa, superRuntimeType.ssa], result: ctx.svar('super')),
-        mReturnType.type ?? CoreTypes.dynamic.ref(ctx),
-      );
-    }
+            NewBridgeSuperShim(ctx.svar('shim')),
+            CoreTypes.dynamic.ref(ctx),
+          )
+        : _invokeSuperConstructor(
+            ctx,
+            parent: parent,
+            extendsDecl: extendsDecl,
+            prefix: prefix,
+            constructorName: constructorName,
+            superInitializer: $superInitializer,
+            superParams: superParams,
+          );
   }
 
   final inst = Variable.ssa(
@@ -440,66 +347,25 @@ void compileConstructorDeclaration(
     ctx.endScope();
   }
 
+  var ssa = <SSA>[];
   if ($extends != null && extendsDecl!.isBridge) {
-    final bridge = extendsDecl.bridge! as BridgeClassDef;
-
-    if (!bridge.bridge) {
-      throw CompileError(
-        'Bridge class ${$extends.superclass} is a wrapper, not a bridge, so you can\'t extend it',
-      );
-    }
-
-    if ($superInitializer != null) {
-      final constructor = bridge.constructors[constructorName]!;
-      final argsPair = compileArgumentListWithBridge(
-        ctx,
-        $superInitializer.argumentList,
-        constructor.functionDescriptor,
-      );
-      ssa.addAll(argsPair.ssa);
-      final args = argsPair.args;
-      final namedArgs = argsPair.namedArgs;
-      argTypes.addAll(args.map((e) => e.type).toList());
-      namedArgTypes.addAll(
-        namedArgs.map((key, value) => MapEntry(key, value.type)),
-      );
-    } else if (superParams.isNotEmpty) {
-      final constructor = bridge.constructors[constructorName]!;
-      final argsPair = compileSuperParamsWithBridge(
-        ctx,
-        constructor.functionDescriptor,
-        superParams: superParams,
-      );
-      ssa.addAll(argsPair.ssa);
-      final args = argsPair.args;
-      final namedArgs = argsPair.namedArgs;
-      argTypes.addAll(args.map((e) => e.type).toList());
-      namedArgTypes.addAll(
-        namedArgs.map((key, value) => MapEntry(key, value.type)),
-      );
-    }
-
-    final bridgeInst = Variable.ssa(
+    ssa = _bridgeSuperArgs(
       ctx,
-      BridgeInstantiate(
-        ctx.svar('bridge_instance'),
-        ctx.bridgeStaticFunctionIndices[extendsDecl
-            .sourceLib]!['${$extends.superclass.name.lexeme}.$constructorName']!,
-        inst.ssa,
-        ssa,
-        runtimeTypeId: TypeRef.fromAnnotation(
-          ctx,
-          ctx.library,
-          $extends.superclass,
-        ).runtimeTypeId(ctx),
-      ),
-      CoreTypes.dynamic.ref(ctx),
+      extendsDecl,
+      constructorName,
+      superInitializer: $superInitializer,
+      superParams: superParams,
     );
-    ctx.pushOp(ParentBridgeSuperShim($super.ssa, bridgeInst.ssa));
-    ctx.pushOp(Return(bridgeInst.ssa));
-  } else {
-    ctx.pushOp(Return(inst.ssa));
   }
+  _emitConstructorReturn(
+    ctx,
+    $extends: $extends,
+    extendsDecl: extendsDecl,
+    constructorName: constructorName,
+    inst: inst.ssa,
+    $super: $super.ssa,
+    args: ssa,
+  );
 
   ctx.endScope();
 }
@@ -541,76 +407,28 @@ void compileDefaultConstructor(
       ? null
       : (parent as ClassDeclaration).extendsClause;
   Variable $super;
-  DeclarationOrPrefix? extendsWhat;
   DeclarationOrBridge? extendsDecl;
+  ImportPrefixReference? prefix;
 
-  final argTypes = <TypeRef?>[];
-  final namedArgTypes = <String, TypeRef?>{};
-
-  final constructorName = '';
+  const constructorName = '';
 
   if ($extends == null) {
     $super = BuiltinValue().push(ctx);
   } else {
-    final prefix = $extends.superclass.importPrefix;
-    final clsName = $extends.superclass.name.lexeme;
-    extendsWhat =
-        (prefix != null
-            ? ctx.visibleDeclarations[ctx.library]![prefix.name.value()]
-            : ctx.visibleDeclarations[ctx.library]![clsName]) ??
-        (throw CompileError('Cannot find superclass $clsName', $extends));
-
-    extendsDecl =
-        extendsWhat.declaration ??
-        extendsWhat.children?[clsName] ??
-        (throw CompileError('Cannot find superclass $clsName', $extends));
-
-    if (extendsDecl.isBridge) {
-      $super = Variable.ssa(
-        ctx,
-        NewBridgeSuperShim(ctx.svar('shim')),
-        CoreTypes.dynamic.ref(ctx),
-      );
-    } else {
-      final extendsType = TypeRef.lookupDeclaration(
-        ctx,
-        ctx.library,
-        extendsDecl.declaration as ClassDeclaration,
-        prefix: prefix?.name.lexeme,
-      );
-
-      AlwaysReturnType? mReturnType;
-
-      final method = IdentifierReference(
-        null,
-        '${prefix != null ? '${prefix.name.value()}.' : ''}${extendsType.name}.$constructorName',
-      ).getValue(ctx);
-      if (method.methodOffset == null) {
-        throw CompileError(
-          'Cannot call $constructorName as it is not a valid method',
-        );
-      }
-
-      final offset = method.methodOffset!;
-      final clsType = TypeRef.lookupDeclaration(ctx, ctx.library, parent);
-      mReturnType =
-          method.methodReturnType?.toAlwaysReturnType(
+    (extendsDecl, prefix) = _resolveSuperclass(ctx, $extends);
+    $super = extendsDecl.isBridge
+        ? Variable.ssa(
             ctx,
-            clsType,
-            argTypes,
-            namedArgTypes,
-          ) ??
-          AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
-
-      final superRuntimeType = BuiltinValue(
-        intval: extendsType.runtimeTypeId(ctx),
-      ).push(ctx);
-      $super = Variable.ssa(
-        ctx,
-        Call(offset, [superRuntimeType.ssa], result: ctx.svar('super')),
-        mReturnType.type ?? CoreTypes.dynamic.ref(ctx),
-      );
-    }
+            NewBridgeSuperShim(ctx.svar('shim')),
+            CoreTypes.dynamic.ref(ctx),
+          )
+        : _invokeSuperConstructor(
+            ctx,
+            parent: parent,
+            extendsDecl: extendsDecl,
+            prefix: prefix,
+            constructorName: constructorName,
+          );
   }
 
   final inst = ctx.svar('instance');
@@ -637,35 +455,15 @@ void compileDefaultConstructor(
     parent is EnumDeclaration ? 2 : 0,
   );
 
-  if ($extends != null && extendsDecl!.isBridge) {
-    final bridge = extendsDecl.bridge! as BridgeClassDef;
-
-    if (!bridge.bridge) {
-      throw CompileError(
-        'Bridge class ${$extends.superclass} is a wrapper, not a bridge, so you can\'t extend it',
-      );
-    }
-
-    final bridgeInst = ctx.svar('bridge_instance');
-    ctx.pushOp(
-      BridgeInstantiate(
-        bridgeInst,
-        ctx.bridgeStaticFunctionIndices[extendsDecl
-            .sourceLib]!['${$extends.superclass.name.lexeme}.$constructorName']!,
-        inst,
-        [],
-        runtimeTypeId: TypeRef.fromAnnotation(
-          ctx,
-          ctx.library,
-          $extends.superclass,
-        ).runtimeTypeId(ctx),
-      ),
-    );
-    ctx.pushOp(ParentBridgeSuperShim($super.ssa, bridgeInst));
-    ctx.pushOp(Return(bridgeInst));
-  } else {
-    ctx.pushOp(Return(inst));
-  }
+  _emitConstructorReturn(
+    ctx,
+    $extends: $extends,
+    extendsDecl: extendsDecl,
+    constructorName: constructorName,
+    inst: inst,
+    $super: $super.ssa,
+    args: const [],
+  );
 
   ctx.endScope();
 }
@@ -725,4 +523,179 @@ void _setupEnum(CompilerContext ctx, EnumDeclaration parent, SSA inst) {
 
   ctx.pushOp(SetPropertyStatic(inst, 0, SSA('arg_0')));
   ctx.pushOp(SetPropertyStatic(inst, 1, SSA('arg_1')));
+}
+
+/// Resolves a class's `extends` clause to the superclass's declaration and the
+/// import prefix (if any) it was named through.
+(DeclarationOrBridge, ImportPrefixReference?) _resolveSuperclass(
+  CompilerContext ctx,
+  ExtendsClause $extends,
+) {
+  final prefix = $extends.superclass.importPrefix;
+  final clsName = $extends.superclass.name.lexeme;
+  final extendsWhat =
+      (prefix != null
+          ? ctx.visibleDeclarations[ctx.library]![prefix.name.value()]
+          : ctx.visibleDeclarations[ctx.library]![clsName]) ??
+      (throw CompileError('Cannot find superclass $clsName', $extends));
+
+  final extendsDecl =
+      extendsWhat.declaration ??
+      extendsWhat.children?[clsName] ??
+      (throw CompileError('Cannot find superclass $clsName', $extends));
+  return (extendsDecl, prefix);
+}
+
+/// Emits the call to a non-bridge superclass constructor ([constructorName]) and
+/// returns the resulting `super` value. [superInitializer] is the explicit
+/// `super(...)` call from the constructor's initializer list, if any; otherwise
+/// [superParams] forwards this constructor's super parameters positionally.
+Variable _invokeSuperConstructor(
+  CompilerContext ctx, {
+  required Declaration parent,
+  required DeclarationOrBridge extendsDecl,
+  required ImportPrefixReference? prefix,
+  required String constructorName,
+  SuperConstructorInvocation? superInitializer,
+  List<String> superParams = const [],
+}) {
+  final extendsType = TypeRef.lookupDeclaration(
+    ctx,
+    ctx.library,
+    extendsDecl.declaration as ClassDeclaration,
+    prefix: prefix?.name.lexeme,
+  );
+
+  final ssa = <SSA>[];
+  final argTypes = <TypeRef?>[];
+  final namedArgTypes = <String, TypeRef?>{};
+
+  if (superInitializer != null || superParams.isNotEmpty) {
+    final constructor0 =
+        ctx.topLevelDeclarationsMap[extendsDecl
+            .sourceLib]!['${extendsType.name}.$constructorName']!;
+    final constructor = constructor0.declaration as ConstructorDeclaration;
+    final argres = superInitializer != null
+        ? compileArgumentList(
+            ctx,
+            superInitializer.argumentList,
+            extendsDecl.sourceLib,
+            constructor.parameters.parameters,
+            constructor,
+            superParams: superParams,
+            source: superInitializer,
+          )
+        : compileSuperParams(
+            ctx,
+            constructor.parameters.parameters,
+            constructor,
+            superParams: superParams,
+          );
+    ssa.addAll(argres.ssa);
+    argTypes.addAll(argres.args.map((e) => e.type));
+    namedArgTypes.addAll(
+      argres.namedArgs.map((key, value) => MapEntry(key, value.type)),
+    );
+  }
+
+  final method = IdentifierReference(
+    null,
+    '${prefix != null ? '${prefix.name.value()}.' : ''}${extendsType.name}.$constructorName',
+  ).getValue(ctx);
+  if (method.methodOffset == null) {
+    throw CompileError(
+      'Cannot call $constructorName as it is not a valid method',
+    );
+  }
+
+  final clsType = TypeRef.lookupDeclaration(ctx, ctx.library, parent);
+  final mReturnType =
+      method.methodReturnType?.toAlwaysReturnType(
+        ctx,
+        clsType,
+        argTypes,
+        namedArgTypes,
+      ) ??
+      AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
+
+  final superRuntimeType = BuiltinValue(
+    intval: extendsType.runtimeTypeId(ctx),
+  ).push(ctx);
+  return Variable.ssa(
+    ctx,
+    Call(method.methodOffset!, [
+      ...ssa,
+      superRuntimeType.ssa,
+    ], result: ctx.svar('super')),
+    mReturnType.type ?? CoreTypes.dynamic.ref(ctx),
+  );
+}
+
+/// Compiles the argument list for an explicit `super(...)` call (or super
+/// parameters) targeting a *bridge* superclass constructor.
+List<SSA> _bridgeSuperArgs(
+  CompilerContext ctx,
+  DeclarationOrBridge extendsDecl,
+  String constructorName, {
+  SuperConstructorInvocation? superInitializer,
+  List<String> superParams = const [],
+}) {
+  final bridge = extendsDecl.bridge! as BridgeClassDef;
+  final constructor = bridge.constructors[constructorName]!;
+  return superInitializer != null
+      ? compileArgumentListWithBridge(
+          ctx,
+          superInitializer.argumentList,
+          constructor.functionDescriptor,
+        ).ssa
+      : superParams.isNotEmpty
+      ? compileSuperParamsWithBridge(
+          ctx,
+          constructor.functionDescriptor,
+          superParams: superParams,
+        ).ssa
+      : <SSA>[];
+}
+
+/// Emits the constructor's return. For a bridged superclass this instantiates
+/// the runtime bridge object and returns it; otherwise it returns the newly
+/// created instance.
+void _emitConstructorReturn(
+  CompilerContext ctx, {
+  required ExtendsClause? $extends,
+  required DeclarationOrBridge? extendsDecl,
+  required String constructorName,
+  required SSA inst,
+  required SSA $super,
+  required List<SSA> args,
+}) {
+  if ($extends == null || !extendsDecl!.isBridge) {
+    ctx.pushOp(Return(inst));
+    return;
+  }
+
+  final bridge = extendsDecl.bridge! as BridgeClassDef;
+  if (!bridge.bridge) {
+    throw CompileError(
+      'Bridge class ${$extends.superclass} is a wrapper, not a bridge, so you can\'t extend it',
+    );
+  }
+
+  final bridgeInst = ctx.svar('bridge_instance');
+  ctx.pushOp(
+    BridgeInstantiate(
+      bridgeInst,
+      ctx.bridgeStaticFunctionIndices[extendsDecl
+          .sourceLib]!['${$extends.superclass.name.lexeme}.$constructorName']!,
+      inst,
+      args,
+      runtimeTypeId: TypeRef.fromAnnotation(
+        ctx,
+        ctx.library,
+        $extends.superclass,
+      ).runtimeTypeId(ctx),
+    ),
+  );
+  ctx.pushOp(ParentBridgeSuperShim($super, bridgeInst));
+  ctx.pushOp(Return(bridgeInst));
 }

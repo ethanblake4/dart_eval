@@ -48,7 +48,7 @@ Variable compileExpression(
     }
     return value;
   } else if (e is MethodInvocation) {
-    return compileMethodInvocation(ctx, e, bound: bound);
+    return compileMethodInvocation(ctx, e);
   } else if (e is BinaryExpression) {
     return compileBinaryExpression(ctx, e, bound);
   } else if (e is PrefixExpression) {
