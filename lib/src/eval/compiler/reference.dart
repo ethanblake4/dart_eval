@@ -10,6 +10,7 @@ import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
 import 'package:dart_eval/src/eval/ir/primitives.dart';
+import 'package:dart_eval/src/eval/ir/types.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/ir/bridge.dart';
@@ -766,6 +767,15 @@ class IndexedReference implements Reference {
           ? _variable.type.specifiedTypeArgs[0]
           : CoreTypes.dynamic.ref(ctx);
     }
+    if (_variable.type.isAssignableTo(
+      ctx,
+      CoreTypes.map.ref(ctx),
+      forceAllowDynamic: false,
+    )) {
+      return _variable.type.specifiedTypeArgs.length >= 2
+          ? _variable.type.specifiedTypeArgs[1]
+          : CoreTypes.dynamic.ref(ctx);
+    }
     // A write's contextual type must not execute the indexed getter. Dynamic
     // receivers and custom operators are checked by their invocation path.
     if (forSet) return CoreTypes.dynamic.ref(ctx);
@@ -912,7 +922,9 @@ Variable _declarationToVariable(
     if (bridge is BridgeClassDef) {
       final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type.type);
 
-      return Variable(
+      return Variable.ssa(
+        ctx,
+        LoadConstantType(ctx.svar('type'), type.runtimeTypeId(ctx)),
         CoreTypes.type.ref(ctx),
         concreteTypes: [type],
         methodOffset: DeferredOrOffset(file: type.file, name: '${type.name}.'),
@@ -922,7 +934,9 @@ Variable _declarationToVariable(
 
     if (bridge is BridgeEnumDef) {
       final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type);
-      return Variable(
+      return Variable.ssa(
+        ctx,
+        LoadConstantType(ctx.svar('type'), type.runtimeTypeId(ctx)),
         CoreTypes.type.ref(ctx),
         concreteTypes: [type],
         methodOffset: DeferredOrOffset(
@@ -980,7 +994,9 @@ Variable _declarationToVariable(
       name: '${returnType.name}.',
     );
 
-    return Variable(
+    return Variable.ssa(
+      ctx,
+      LoadConstantType(ctx.svar('type'), returnType.runtimeTypeId(ctx)),
       CoreTypes.type.ref(ctx),
       concreteTypes: [returnType],
       methodOffset: offset,
