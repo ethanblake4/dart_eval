@@ -62,6 +62,7 @@ StatementInfo macroLoop(
     exceptionDepth: ctx.exceptionDepth,
     breakTarget: exit,
     continueTarget: continueTarget,
+    names: ctx.takePendingLabelNames(),
   );
   ctx.labels.add(label);
   final result = body(ctx, expectedReturnType);

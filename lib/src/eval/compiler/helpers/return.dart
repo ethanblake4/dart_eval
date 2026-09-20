@@ -18,6 +18,11 @@ StatementInfo doReturn(
   bool isAsync = false,
   bool skipClassBoxing = false,
 }) {
+  // A Never-typed value means the expression already terminated the block
+  // (e.g. `() => throw e`); nothing follows a terminator, so just mark it.
+  if (value != null && value.type == CoreTypes.never.ref(ctx)) {
+    return StatementInfo(willAlwaysThrow: true);
+  }
   if (isAsync) return doAsyncReturn(ctx, expectedReturnType, value);
   if (expectedReturnType.type == CoreTypes.voidType.ref(ctx)) value = null;
   if (value == null) {

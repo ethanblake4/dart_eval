@@ -48,6 +48,16 @@ class DeclarationOrBridge<T extends Declaration, R extends BridgeDeclaration> {
     } else if (declaration is TopLevelVariableDeclaration) {
       /// Top-level variable declaration
       return declaration.variables.variables.map((v) => v.name.lexeme).toList();
+    } else if (declaration is TypeAlias) {
+      return [declaration.name.lexeme];
+    } else if (declaration is MixinDeclaration) {
+      return [declaration.name.lexeme];
+    } else if (declaration is ExtensionTypeDeclaration) {
+      return [declaration.namePart.typeName.lexeme];
+    } else if (declaration is ExtensionDeclaration) {
+      /// `extension on T` may be unnamed.
+      final name = declaration.name;
+      return name == null ? const [] : [name.lexeme];
     } else {
       throw CompileError('Unsupported!');
     }
@@ -118,7 +128,10 @@ class DeclarationOrBridge<T extends Declaration, R extends BridgeDeclaration> {
 
           yield (dName, d);
         } else {
-          throw CompileError('Unsupported!');
+          // Typedefs, mixins, extension types, etc. contribute no members.
+          for (final name in nameOf(d)) {
+            yield (name, d);
+          }
         }
       }
     }

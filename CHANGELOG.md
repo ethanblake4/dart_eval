@@ -38,6 +38,21 @@
 - Most `dart:` stdlib wrappers are now generated from SDK sources rather than
   maintained by hand.
 
+**Testing**
+
+- `test/sdk_language` runs the real `dart-lang/sdk` `tests/language` suite
+  under dart_eval: the SDK checkout is fetched on demand into
+  `.dart_tool/sdk_language/` at a pinned commit (see `suite.yaml`), no mirror
+  repo required. A fast "core" subset runs under `dart test`; the full suite
+  is tagged `sdk-full` (`dart test -P sdk-full`). Known failures live in
+  `suite.yaml`'s `expect_fail` list — a test that starts passing fails loudly
+  so the list stays accurate.
+- Compiler fixes surfaced by that suite: `extends C<T>` resolves type
+  parameters of the declaring class; `receiver.field(...)`/`receiver.getter(...)`
+  invoke the member's value via implicit `.call`; labeled statements support
+  `break`/`continue`; typedefs resolve as type annotations; implicit default
+  constructors are callable; calling `null` throws `NoSuchMethodError`.
+
 ## 0.8.5
 - Fix variables not being updated from within closures.
 

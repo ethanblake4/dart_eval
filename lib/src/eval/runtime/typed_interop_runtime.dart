@@ -910,6 +910,15 @@ extension TypedRuntimeInterop on Runtime {
     Object? first,
     Object? rest,
   ) {
+    if (receiver == null || receiver is $null) {
+      throw NoSuchMethodError.withInvocation(
+        null,
+        Invocation.method(Symbol(name), [
+          for (final argument in TypedInterop.argList(count, first, rest))
+            argument?.$reified,
+        ]),
+      );
+    }
     if (receiver is TypedInstance) {
       return receiver.invoke(name, count, first, rest, runtime: this);
     }

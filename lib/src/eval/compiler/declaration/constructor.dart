@@ -573,7 +573,16 @@ Variable _invokeSuperConstructor(
   if (superInitializer != null || superParams.isNotEmpty) {
     final constructor0 =
         ctx.topLevelDeclarationsMap[extendsDecl
-            .sourceLib]!['${extendsType.name}.$constructorName']!;
+            .sourceLib]!['${extendsType.name}.$constructorName'];
+    if (constructor0 == null) {
+      throw CompileError(
+        "The superclass '${extendsType.name}' has no constructor "
+        "'$constructorName'",
+        superInitializer ?? parent,
+        ctx.library,
+        ctx,
+      );
+    }
     final constructor = constructor0.declaration as ConstructorDeclaration;
     final argres = superInitializer != null
         ? compileArgumentList(

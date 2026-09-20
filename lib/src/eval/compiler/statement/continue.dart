@@ -1,32 +1,19 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
-import 'package:dart_eval/src/eval/compiler/errors.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/complete_jump.dart';
+import 'package:dart_eval/src/eval/compiler/statement/break.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
-import 'package:dart_eval/src/eval/ir/flow.dart';
 
 StatementInfo compileContinueStatement(
   ContinueStatement s,
   CompilerContext ctx,
 ) {
-  if (s.label != null) {
-    throw CompileError('Continue labels are not currently supported', s);
-  }
-  final label = ctx.labels.lastWhere(
+  final label = findJumpLabel(
+    ctx,
+    s.label?.name.lexeme,
     (label) => label.continueTarget != null,
-    orElse: () => throw CompileError(
-      "Cannot use 'continue' outside of a loop context",
-      s,
-    ),
+    s,
+    kind: 'continue',
   );
-  label.cleanup(ctx);
-  final target = label.continueTarget!;
-  if (ctx.exceptionDepth > label.exceptionDepth) {
-    completeJump(ctx, target, label.exceptionDepth);
-  } else {
-    ctx.pushOp(Jump(target.label!));
-    final tail = ctx.flushBlock();
-    ctx.builder.link(tail, target);
-  }
+  jumpToLabel(ctx, label, label.continueTarget!);
   return StatementInfo(willAlwaysBreak: true);
 }

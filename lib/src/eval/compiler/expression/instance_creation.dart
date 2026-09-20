@@ -29,6 +29,39 @@ Variable compileInstanceCreation(
 
   final staticType = $resolved.concreteTypes.first;
   final instantiatedType = TypeRef.fromAnnotation(ctx, ctx.library, type);
+
+  // A class that declares no constructors gets a synthesized `Name.` body
+  // taking only the runtime-type argument, with no lookup-table entry.
+  if (name.isEmpty &&
+      ctx.topLevelDeclarationsMap[staticType
+              .file]!['${staticType.name}.$name'] ==
+          null &&
+      _hasImplicitDefaultConstructor(ctx, staticType)) {
+    final result = ctx.svar('instance');
+    ctx.pushOp(
+      Call(
+        DeferredOrOffset.lookupStatic(
+          ctx,
+          staticType.file,
+          staticType.name,
+          name,
+        ),
+        [
+          BuiltinValue(
+            intval: instantiatedType.runtimeTypeId(ctx),
+          ).push(ctx).ssa,
+        ],
+        result: result,
+      ),
+    );
+    return Variable.of(
+      ctx,
+      result,
+      instantiatedType.copyWith(boxed: true),
+      concreteTypes: [instantiatedType],
+    );
+  }
+
   final dec0 = resolveStaticMethod(ctx, staticType, name);
 
   final ArgumentListResult arguments;
@@ -103,4 +136,21 @@ Variable compileInstanceCreation(
     instantiatedType.copyWith(boxed: true),
     concreteTypes: [instantiatedType],
   );
+}
+
+/// Whether [classType]'s declaration is a class with no declared constructors
+/// (and no named primary constructor), so `new C()` calls the synthesized
+/// default constructor.
+bool _hasImplicitDefaultConstructor(CompilerContext ctx, TypeRef classType) {
+  final decl =
+      ctx.topLevelDeclarationsMap[classType.file]![classType.name]?.declaration;
+  if (decl is! ClassDeclaration) return false;
+  if (decl.namePart is PrimaryConstructorDeclaration) {
+    final primary = decl.namePart as PrimaryConstructorDeclaration;
+    if (primary.constructorName != null ||
+        primary.formalParameters.parameters.isNotEmpty) {
+      return false;
+    }
+  }
+  return !decl.body.members.any((m) => m is ConstructorDeclaration);
 }

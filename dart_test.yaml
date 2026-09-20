@@ -1,0 +1,14 @@
+tags:
+  sdk-full:
+
+# The sdk_language full suite is slow (several minutes); it stays out of
+# default `dart test` runs. Run it with:
+#   dart test -P sdk-full test/sdk_language/full_test.dart
+exclude_tags: sdk-full
+
+presets:
+  sdk-full:
+    # A preset's exclude_tags replaces the global exclusion; the dummy tag
+    # matches nothing, which is what lets the sdk-full tests run.
+    include_tags: sdk-full
+    exclude_tags: __none

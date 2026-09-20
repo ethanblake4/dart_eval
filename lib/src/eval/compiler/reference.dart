@@ -909,8 +909,10 @@ Variable _declarationToVariable(
   }
 
   if (decl is! FunctionDeclaration && decl is! ConstructorDeclaration) {
-    final type = TypeRef.lookupDeclaration(ctx, decOrBridge.sourceLib, decl);
-    return _typeLiteral(ctx, type, '${type.name}.');
+    final type = decl is TypeAlias
+        ? resolveTypeAlias(ctx, decOrBridge.sourceLib, decl)
+        : TypeRef.lookupDeclaration(ctx, decOrBridge.sourceLib, decl);
+    return _typeLiteral(ctx, type, '${declarationName(decl)}.');
   }
 
   TypeRef? returnType;
@@ -928,12 +930,15 @@ Variable _declarationToVariable(
     );
     nullable = decl.returnType!.question != null;
     ctx.temporaryTypes[ctx.library]?.clear();
-  } else {
+  } else if (decl is ConstructorDeclaration) {
     returnType = TypeRef.lookupDeclaration(
       ctx,
       decOrBridge.sourceLib,
       decl.parent!.parent as ClassDeclaration,
     );
+  } else {
+    // A function without a return type annotation returns dynamic.
+    returnType = CoreTypes.dynamic.ref(ctx);
   }
 
   final offset = DeferredOrOffset(file: decOrBridge.sourceLib, name: name);
@@ -991,12 +996,15 @@ StaticDispatch? _declarationToStaticDispatch(
       decl.returnType!,
     );
     nullable = decl.returnType!.question != null;
-  } else {
+  } else if (decl is ConstructorDeclaration) {
     returnType = TypeRef.lookupDeclaration(
       ctx,
       decOrBridge.sourceLib,
       decl.parent!.parent as ClassDeclaration,
     );
+  } else {
+    // A function without a return type annotation returns dynamic.
+    returnType = CoreTypes.dynamic.ref(ctx);
   }
 
   final offset = DeferredOrOffset(file: decOrBridge.sourceLib, name: name);
