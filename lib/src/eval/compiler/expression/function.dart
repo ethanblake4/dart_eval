@@ -9,16 +9,17 @@ import 'package:collection/collection.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/async.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/fpl.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/return.dart';
 import 'package:dart_eval/src/eval/compiler/model/function_type.dart';
-import 'package:dart_eval/src/eval/compiler/offset_tracker.dart';
-import 'package:dart_eval/src/eval/compiler/scope.dart';
+import 'package:dart_eval/src/eval/compiler/dispatch.dart';
+
 import 'package:dart_eval/src/eval/compiler/statement/block.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
-import 'package:dart_eval/src/eval/compiler/util.dart';
+
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/closures.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
@@ -131,8 +132,7 @@ Variable compileFunctionExpression(
 
   var i = 0;
 
-  for (final param in resolvedParams) {
-    final p = param.parameter;
+  for (final p in resolvedParams) {
     Variable vRep;
 
     var type = CoreTypes.dynamic.ref(ctx);
@@ -254,41 +254,43 @@ Variable compileFunctionExpression(
 
   var closureType = bound?.functionType == null
       ? e.typeParameters == null
-          ? CoreTypes.function.ref(ctx).copyWith(
-              functionType: EvalFunctionType(
-                [
-                  for (final p in positional)
-                    if (p.isRequired)
-                      FunctionFormalParameter(
-                        p.name?.lexeme,
-                        literalParameterType(p),
-                        true,
+            ? CoreTypes.function
+                  .ref(ctx)
+                  .copyWith(
+                    functionType: EvalFunctionType(
+                      [
+                        for (final p in positional)
+                          if (p.isRequired)
+                            FunctionFormalParameter(
+                              p.name?.lexeme,
+                              literalParameterType(p),
+                              true,
+                            ),
+                      ],
+                      [
+                        for (final p in positional)
+                          if (!p.isRequired)
+                            FunctionFormalParameter(
+                              p.name?.lexeme,
+                              literalParameterType(p),
+                              false,
+                            ),
+                      ],
+                      {
+                        for (final p in sortedNamedArgs)
+                          p.name!.lexeme: FunctionFormalParameter(
+                            p.name!.lexeme,
+                            literalParameterType(p),
+                            p.isRequired,
+                          ),
+                      },
+                      FunctionTypeAnnotation.type(
+                        inferredClosureReturnType ?? CoreTypes.dynamic.ref(ctx),
                       ),
-                ],
-                [
-                  for (final p in positional)
-                    if (!p.isRequired)
-                      FunctionFormalParameter(
-                        p.name?.lexeme,
-                        literalParameterType(p),
-                        false,
-                      ),
-                ],
-                {
-                  for (final p in sortedNamedArgs)
-                    p.name!.lexeme: FunctionFormalParameter(
-                      p.name!.lexeme,
-                      literalParameterType(p),
-                      p.isRequired,
+                      const <FunctionGenericParam>[],
                     ),
-                },
-                FunctionTypeAnnotation.type(
-                  inferredClosureReturnType ?? CoreTypes.dynamic.ref(ctx),
-                ),
-                const <FunctionGenericParam>[],
-              ),
-            )
-          : CoreTypes.function.ref(ctx)
+                  )
+            : CoreTypes.function.ref(ctx)
       : bound!.copyWith(boxed: true, nullable: false);
   final signature = closureType.functionType;
   if (signature != null &&

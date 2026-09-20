@@ -1,3 +1,6 @@
+// Formal-parameter-list helpers: normalizing positional/named parameter
+// ordering, assigning argument slots, and resolving declared types.
+
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
@@ -5,12 +8,15 @@ import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart'
     show representationForType;
-import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/src/eval/ir/function.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 
-List<PossiblyValuedParameter> resolveFPLDefaults(
+/// Normalizes a formal parameter list into dart_eval's calling convention —
+/// positional parameters first (sorted named parameters last when [sortNamed]),
+/// records the parameters and their declared types on [ctx], emits a
+/// [Parameter] op for each, and returns the parameters in call order.
+List<FormalParameter> resolveFPLDefaults(
   CompilerContext ctx,
   FormalParameterList? fpl,
   bool isInstanceMethod, {
@@ -20,7 +26,7 @@ List<PossiblyValuedParameter> resolveFPLDefaults(
   bool isEnum = false,
   int parameterOffset = 0,
 }) {
-  final normalized = <PossiblyValuedParameter>[];
+  final normalized = <FormalParameter>[];
   var hasEncounteredOptionalPositionalParam = false;
   var hasEncounteredNamedParam = false;
   var paramIndex = parameterOffset + (isEnum ? 2 : (isInstanceMethod ? 1 : 0));
@@ -80,7 +86,7 @@ List<PossiblyValuedParameter> resolveFPLDefaults(
     );
     // Callers bind omitted arguments before entering typed registers. Null is
     // an actual argument value and must never act as a missing-value sentinel.
-    normalized.add(PossiblyValuedParameter(param, null));
+    normalized.add(param);
     paramIndex++;
   }
   ctx.functionParameterTypes[ctx.currentFunctionId!] = declaredTypes;

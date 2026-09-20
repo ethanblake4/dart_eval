@@ -13,12 +13,11 @@ import 'package:dart_eval/src/eval/compiler/declaration/field.dart';
 import 'package:dart_eval/src/eval/compiler/model/diagnostic_mode.dart';
 import 'package:dart_eval/src/eval/compiler/model/override_spec.dart';
 import 'package:dart_eval/src/eval/compiler/model/library.dart';
-import 'package:dart_eval/src/eval/compiler/source.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/program.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/model/compilation_unit.dart';
-import 'package:dart_eval/src/eval/compiler/util.dart';
+
 import 'package:dart_eval/src/eval/compiler/util/custom_crawler.dart';
 import 'package:dart_eval/src/eval/compiler/util/graph.dart';
 import 'package:dart_eval/src/eval/compiler/util/library_graph.dart';
@@ -782,10 +781,8 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
               );
             }
 
-            _topLevelDeclarationsMap[libraryIndex]![cname] = DeclarationOrBridge(
-              libraryIndex,
-              declaration: constant,
-            );
+            _topLevelDeclarationsMap[libraryIndex]![cname] =
+                DeclarationOrBridge(libraryIndex, declaration: constant);
             final globalIndex = _ctx.globalIndex++;
             _topLevelGlobalIndices[libraryIndex]![cname] = globalIndex;
             _ctx.enumValueIndices[libraryIndex]![name]![constant.name.lexeme] =
@@ -815,7 +812,8 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
               }
 
               for (final field in member.fields.variables) {
-                final name = '${declarationName(declaration)}.${field.name.lexeme}';
+                final name =
+                    '${declarationName(declaration)}.${field.name.lexeme}';
 
                 if (_topLevelDeclarationsMap[libraryIndex]!.containsKey(name)) {
                   throw CompileError(
@@ -1085,7 +1083,7 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
   final worklist = <Library>[];
   final importMap = <Library, List<_Import>>{};
   final importedDeclarationsMap =
-      <Library, Map<Library, Iterable<Pair<String, DeclarationOrBridge>>>>{};
+      <Library, Map<Library, Iterable<(String, DeclarationOrBridge)>>>{};
 
   // Traversing libraries
   for (final l in libraries) {
@@ -1095,8 +1093,8 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
         // Key: the expanded name of the declaration (see [_expandDeclarations])
         // Value: DeclarationOrPrefix (declaration content, and store the ID
         // of the containing library)
-        d.first: DeclarationOrPrefix(
-          declaration: d.second..sourceLib = libraryIds[l]!,
+        d.$1: DeclarationOrPrefix(
+          declaration: d.$2..sourceLib = libraryIds[l]!,
         ),
     };
 
@@ -1162,7 +1160,7 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
         }
       }
 
-      final visibleDeclarations = <Pair<String, DeclarationOrBridge>>{};
+      final visibleDeclarations = <(String, DeclarationOrBridge)>{};
 
       for (final lib in importedLibs) {
         final libId = libraryIds[lib]!;
@@ -1171,31 +1169,28 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
         );
         final importedDeclarations = expandedDeclarations
             .where(
-              (element) => _combinatorListAccepts(
-                import.combinators,
-                element.first,
-                true,
-              ),
+              (element) =>
+                  _combinatorListAccepts(import.combinators, element.$1, true),
             )
             .toList();
         importedDeclarationsMap[l]![lib] = importedDeclarations;
 
-        final result = <Pair<String, DeclarationOrBridge>>{};
+        final result = <(String, DeclarationOrBridge)>{};
 
         for (final declaration in importedDeclarations) {
           if (lib.uri == import.uri) {
-            result.add(declaration..second.sourceLib = libId);
+            result.add(declaration..$2.sourceLib = libId);
           }
           final exports = exportsPerUri[lib.uri] ?? <ExportDirective>[];
           for (final export in exports) {
             final combinators = export.combinators;
-            if (_combinatorListAccepts(combinators, declaration.first, false)) {
-              result.add(declaration..second.sourceLib = libId);
+            if (_combinatorListAccepts(combinators, declaration.$1, false)) {
+              result.add(declaration..$2.sourceLib = libId);
             }
           }
-          if (isEntrypoint && ids!.contains(declaration.first)) {
+          if (isEntrypoint && ids!.contains(declaration.$1)) {
             usedDeclarationsForLibrary[libId] ??= {'main'};
-            usedDeclarationsForLibrary[libId]!.add(declaration.first);
+            usedDeclarationsForLibrary[libId]!.add(declaration.$1);
             if (!worklist.contains(lib)) {
               worklist.add(lib);
             }
@@ -1208,11 +1203,11 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
       final mappedVisibleDeclarations = {
         if (import.prefix != null)
           import.prefix!: DeclarationOrPrefix(
-            children: {for (final d in visibleDeclarations) d.first: d.second},
+            children: {for (final d in visibleDeclarations) d.$1: d.$2},
           )
         else
           for (final d in visibleDeclarations)
-            d.first: DeclarationOrPrefix(declaration: d.second),
+            d.$1: DeclarationOrPrefix(declaration: d.$2),
       };
 
       visibleDeclarationsLib.addAll(mappedVisibleDeclarations);

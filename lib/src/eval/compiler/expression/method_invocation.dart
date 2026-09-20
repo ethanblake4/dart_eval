@@ -10,7 +10,7 @@ import 'package:dart_eval/src/eval/compiler/helpers/closure.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/equality.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
-import 'package:dart_eval/src/eval/compiler/offset_tracker.dart';
+import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
@@ -487,33 +487,33 @@ Variable _invokeWithTarget(
       typeParameters: receiverTypeParameters,
     );
     _inferBridgeTypeParameters(fd, argsPair.args, bridgeTypeParameters);
-    mReturnType = bridgeFunctionReturnType(
-      ctx,
-      fd,
-      specifiedType: isStatic ? staticType : L.type,
-      typeParameters: bridgeTypeParameters,
-    ).toAlwaysReturnType(
-      ctx,
-      isStatic ? staticType : L.type,
-      argsPair.args.map((a) => a.type).toList(),
-      argsPair.namedArgs.map((k, v) => MapEntry(k, v.type)),
-      typeArgs:
-          e.typeArguments?.arguments
-              .map((t) => TypeRef.fromAnnotation(ctx, ctx.library, t))
-              .toList() ??
-          const [],
-    );
+    mReturnType =
+        bridgeFunctionReturnType(
+          ctx,
+          fd,
+          specifiedType: isStatic ? staticType : L.type,
+          typeParameters: bridgeTypeParameters,
+        ).toAlwaysReturnType(
+          ctx,
+          isStatic ? staticType : L.type,
+          argsPair.args.map((a) => a.type).toList(),
+          argsPair.namedArgs.map((k, v) => MapEntry(k, v.type)),
+          typeArgs:
+              e.typeArguments?.arguments
+                  .map((t) => TypeRef.fromAnnotation(ctx, ctx.library, t))
+                  .toList() ??
+              const [],
+        );
     // Instance calls that carry no named or explicit type arguments route
     // through the modern invocation path, which preserves intrinsic
     // optimizations for core types. The argument vector stays padded with
     // null placeholders so generated wrappers keep the legacy flattened ABI.
     // The declared return type (including inferred generics and
     // parameter-type dependencies) still applies to the result.
-    if (!isStatic &&
-        e.typeArguments == null &&
-        argsPair.namedArgs.isEmpty) {
-      final invokeResult =
-          L.invoke(ctx, e.methodName.name, argsPair.args).result;
+    if (!isStatic && e.typeArguments == null && argsPair.namedArgs.isEmpty) {
+      final invokeResult = L
+          .invoke(ctx, e.methodName.name, argsPair.args)
+          .result;
       final preciseType = mReturnType?.type;
       if (preciseType != null) {
         return invokeResult.copyWith(
@@ -772,7 +772,8 @@ Map<String, TypeRef> _classTypeArguments(
   while (current != null) {
     if (current.file == ownerLibrary &&
         current.name == owner.namePart.typeName.lexeme) {
-      final parameters = owner.namePart.typeParameters?.typeParameters ?? const [];
+      final parameters =
+          owner.namePart.typeParameters?.typeParameters ?? const [];
       return {
         for (var index = 0; index < parameters.length; index++)
           parameters[index].name.lexeme:

@@ -4,15 +4,16 @@ import 'package:collection/collection.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/async.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/fpl.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/return.dart';
 import 'package:dart_eval/src/eval/compiler/model/override_spec.dart';
-import 'package:dart_eval/src/eval/compiler/scope.dart';
+
 import 'package:dart_eval/src/eval/compiler/statement/block.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
-import 'package:dart_eval/src/eval/compiler/util.dart';
+
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/representation.dart';
@@ -78,19 +79,14 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   var i = 0;
   final parameterRepresentations = <MachineRepresentation>[];
 
-  for (final param in resolvedParams) {
-    final p = param.parameter;
+  for (final p in resolvedParams) {
     Variable vRep;
 
     var type = CoreTypes.dynamic.ref(ctx);
     if (p.type != null) {
       type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
     }
-    vRep = Variable.of(
-      ctx,
-      SSA('arg_$i'),
-      type.copyWith(boxed: !type.isUnboxedAcrossFunctionBoundaries),
-    );
+    vRep = Variable.of(ctx, SSA('arg_$i'), type.typeAcrossFunctionBoundary);
 
     ctx.setLocal(p.name!.lexeme, vRep.captureBinding(ctx, p));
     parameterRepresentations.add(representationForType(vRep.type));

@@ -99,6 +99,11 @@ StatementInfo compileStatement(
   throw CompileError('Unknown statement type ${s.runtimeType}');
 }
 
+/// Control-flow facts about a compiled statement.
+///
+/// The `willAlwaysX` flags are only set when the statement is guaranteed to
+/// diverge that way on *every* path — used e.g. to decide whether a function
+/// body needs an implicit return appended.
 class StatementInfo {
   StatementInfo({
     this.willAlwaysReturn = false,
@@ -110,6 +115,9 @@ class StatementInfo {
   final bool willAlwaysThrow;
   final bool willAlwaysBreak;
 
+  /// Joins the infos of two alternative control-flow paths (e.g. try body vs.
+  /// catch block): a `willAlwaysX` flag survives only if it holds on *both*
+  /// sides, hence `&&` despite the `|` name.
   StatementInfo operator |(StatementInfo other) {
     return StatementInfo(
       willAlwaysReturn: willAlwaysReturn && other.willAlwaysReturn,

@@ -212,8 +212,7 @@ void cliBindFromConfig(String configPath) async {
     }
 
     Map<String, String> files;
-    if (library.uri.startsWith('dart:') ||
-        library.uri.startsWith('package:')) {
+    if (library.uri.startsWith('dart:') || library.uri.startsWith('package:')) {
       print('Binding ${library.uri}...');
       files = await bindgen.parseLibrary(library.uri, config, library);
     } else {
@@ -224,8 +223,10 @@ void cliBindFromConfig(String configPath) async {
         print('Warning: source file not found: $srcPath');
         continue;
       }
-      final rel = relative(srcPath, from: projectRoot.path)
-          .replaceAll('\\', '/');
+      final rel = relative(
+        srcPath,
+        from: projectRoot.path,
+      ).replaceAll('\\', '/');
       final uri = rel.startsWith('lib/')
           ? 'package:$packageName/${rel.substring(4)}'
           : rel;
@@ -238,8 +239,7 @@ void cliBindFromConfig(String configPath) async {
         libraryConfig: library,
       );
       files = {
-        if (output != null)
-          basename(srcFile.path).replaceAll('.dart', '.eval.dart'): output,
+        basename(srcFile.path).replaceAll('.dart', '.eval.dart'): ?output,
       };
     }
 
@@ -259,17 +259,12 @@ void cliBindFromConfig(String configPath) async {
 
     if (library.plugin != null) {
       final plugin = library.plugin!;
-      final pluginDir = Directory(
-        join(outDir.path, dirname(plugin.out)),
-      );
+      final pluginDir = Directory(join(outDir.path, dirname(plugin.out)));
       if (!pluginDir.existsSync()) pluginDir.createSync(recursive: true);
       final pluginFile = File(join(outDir.path, plugin.out));
       final content = _pluginSource(bindgen, library, files.keys.toSet());
       pluginFile.writeAsStringSync(
-        formatter.format(
-          content,
-          uri: Uri.parse(library.uri),
-        ),
+        formatter.format(content, uri: Uri.parse(library.uri)),
       );
       print(
         'Generated plugin ${relative(pluginFile.path, from: projectRoot.path)}',
@@ -328,13 +323,15 @@ String _pluginSource(
       if (s.import != null) s.import!,
   };
 
-  String evalSources() => plugin.evalSources.map((s) {
+  String evalSources() => plugin.evalSources
+      .map((s) {
         if (s.expression != null) {
           return 'registry.addSource(${s.expression});';
         }
         final text = File(s.file!).readAsStringSync();
         return "registry.addSource(DartSource('${s.uri}', r'''\n$text\n'''));";
-      }).join('\n');
+      })
+      .join('\n');
 
   String extra(String target) => plugin.extraSources
       .where((s) => s.target == target || s.target == 'both')

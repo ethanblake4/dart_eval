@@ -10,9 +10,8 @@ import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/fpl.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/return.dart';
-import 'package:dart_eval/src/eval/compiler/offset_tracker.dart';
+import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
-import 'package:dart_eval/src/eval/compiler/source.dart';
 import 'package:dart_eval/src/eval/compiler/statement/block.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -94,9 +93,7 @@ void compileConstructorDeclaration(
   ];
   var i = parent is EnumDeclaration ? 2 : 0;
 
-  for (final param in resolvedParams) {
-    final p = param.parameter;
-    final V = param.V;
+  for (final p in resolvedParams) {
     Variable vrep;
     if ($redirectingInitializer != null && p is! RegularFormalParameter) {
       throw CompileError(
@@ -115,32 +112,27 @@ void compileConstructorDeclaration(
         p.name.lexeme,
         source: p,
       );
-      type0 ??= V?.type;
       type0 ??= CoreTypes.dynamic.ref(ctx);
       parameterRepresentations.add(
-        representationForType(
-          type0.copyWith(boxed: !type0.isUnboxedAcrossFunctionBoundaries),
-        ),
+        representationForType(type0.typeAcrossFunctionBoundary),
       );
 
       vrep = Variable.of(
         ctx,
         SSA('arg_$i'),
-        type0.copyWith(boxed: !type0.isUnboxedAcrossFunctionBoundaries),
+        type0.typeAcrossFunctionBoundary,
       ).boxIfNeeded(ctx);
 
       fieldFormalNames.add(p.name.lexeme);
     } else if (p is SuperFormalParameter) {
       final type = resolveSuperFormalType(ctx, ctx.library, p, d);
       parameterRepresentations.add(
-        representationForType(
-          type.copyWith(boxed: !type.isUnboxedAcrossFunctionBoundaries),
-        ),
+        representationForType(type.typeAcrossFunctionBoundary),
       );
       vrep = Variable.of(
         ctx,
         SSA('arg_$i'),
-        type.copyWith(boxed: !type.isUnboxedAcrossFunctionBoundaries),
+        type.typeAcrossFunctionBoundary,
       ).boxIfNeeded(ctx);
       superParams.add(p.name.lexeme);
     } else {
@@ -713,12 +705,9 @@ void _compileUnusedFields(
       if (!usedNames.contains(field.name.lexeme) && field.initializer != null) {
         final V = compileExpression(field.initializer!, ctx).boxIfNeeded(ctx);
         ctx.inferredFieldTypes
-                .putIfAbsent(ctx.library, () => {})
-                .putIfAbsent(
-                  ctx.currentClassName!,
-                  () => {},
-                )[field.name.lexeme] =
-            V.type;
+            .putIfAbsent(ctx.library, () => {})
+            .putIfAbsent(ctx.currentClassName!, () => {})[field.name.lexeme] = V
+            .type;
         ctx.pushOp(SetPropertyStatic(inst, fieldIdx0, V.ssa));
       }
       fieldIdx0++;

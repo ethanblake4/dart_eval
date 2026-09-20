@@ -59,12 +59,7 @@ TypeRef resolveGlobalType(CompilerContext ctx, int library, String name) {
     final type = annotation == null
         ? _infer(ctx, library, variable?.initializer)
         : TypeRef.fromAnnotation(ctx, library, annotation);
-    return _record(
-      ctx,
-      library,
-      name,
-      type.copyWith(boxed: !type.isUnboxedAcrossFunctionBoundaries),
-    );
+    return _record(ctx, library, name, type.typeAcrossFunctionBoundary);
   } finally {
     active.remove(key);
   }

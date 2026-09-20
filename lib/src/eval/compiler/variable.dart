@@ -20,7 +20,7 @@ import 'package:dart_eval/src/eval/ir/primitives.dart';
 import 'package:dart_eval/src/eval/ir/types.dart';
 
 import 'errors.dart';
-import 'offset_tracker.dart';
+import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 
 /// A compiler value with an SSA identity, language type and calling convention.
 class Variable {
@@ -446,11 +446,4 @@ class InvokeResult {
   final Variable result;
   final List<Variable> args;
   final Map<String, Variable> namedArgs;
-}
-
-class PossiblyValuedParameter {
-  PossiblyValuedParameter(this.parameter, this.V);
-
-  FormalParameter parameter;
-  Variable? V;
 }

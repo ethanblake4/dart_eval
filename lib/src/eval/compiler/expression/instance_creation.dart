@@ -5,7 +5,7 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
-import 'package:dart_eval/src/eval/compiler/offset_tracker.dart';
+import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';

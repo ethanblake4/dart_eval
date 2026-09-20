@@ -201,10 +201,7 @@ ArgumentListResult compileArgumentList(
   for (final arg in argumentList.arguments) {
     if (arg is NamedArgument) {
       if (!named.containsKey(arg.name.lexeme)) {
-        throw CompileError(
-          'Unknown named argument ${arg.name.lexeme}',
-          arg,
-        );
+        throw CompileError('Unknown named argument ${arg.name.lexeme}', arg);
       }
       namedExpr[arg.name.lexeme] = arg.argumentExpression;
     }

@@ -1,6 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/compiler/util.dart';
+
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 
 /// A Bridge declaration declares an element that is transferrable between the
@@ -57,13 +57,13 @@ class DeclarationOrBridge<T extends Declaration, R extends BridgeDeclaration> {
   /// name to declaration
   /// For example, for a class `A` with a static method `foo`, this will return
   /// `['A', A]` and `['A.foo', foo]`
-  static Iterable<Pair<String, DeclarationOrBridge>> expand(
+  static Iterable<(String, DeclarationOrBridge)> expand(
     List<DeclarationOrBridge> declarations,
   ) sync* {
     /// Traverse declarations
     for (final d in declarations) {
       if (d.isBridge) {
-        yield Pair(nameOf(d)[0], d);
+        yield (nameOf(d)[0], d);
       } else {
         // If it is a source code declaration
         final declaration = d.declaration!;
@@ -72,17 +72,17 @@ class DeclarationOrBridge<T extends Declaration, R extends BridgeDeclaration> {
           final dName = declaration.namePart.typeName.lexeme;
 
           /// First yield the declaration itself
-          yield Pair(dName, d);
+          yield (dName, d);
 
           /// Then also yield the static class members
           for (final member in declaration.body.members) {
             if (member is ConstructorDeclaration) {
-              yield Pair(
+              yield (
                 '$dName.${member.name?.lexeme ?? ""}',
                 DeclarationOrBridge(-1, declaration: member),
               );
             } else if (member is MethodDeclaration && member.isStatic) {
-              yield Pair(
+              yield (
                 '$dName.${member.name.lexeme}',
                 DeclarationOrBridge(-1, declaration: member),
               );
@@ -92,17 +92,17 @@ class DeclarationOrBridge<T extends Declaration, R extends BridgeDeclaration> {
           final dName = declaration.namePart.typeName.lexeme;
 
           /// First yield the declaration itself
-          yield Pair(dName, d);
+          yield (dName, d);
 
           /// Then also yield the static class members
           for (final member in declaration.body.members) {
             if (member is ConstructorDeclaration) {
-              yield Pair(
+              yield (
                 '$dName.${member.name?.lexeme ?? ""}',
                 DeclarationOrBridge(-1, declaration: member),
               );
             } else if (member is MethodDeclaration && member.isStatic) {
-              yield Pair(
+              yield (
                 '$dName.${member.name.lexeme}',
                 DeclarationOrBridge(-1, declaration: member),
               );
@@ -111,16 +111,25 @@ class DeclarationOrBridge<T extends Declaration, R extends BridgeDeclaration> {
         } else if (declaration is TopLevelVariableDeclaration) {
           /// Top-level variable declaration
           for (final v in declaration.variables.variables) {
-            yield Pair(v.name.lexeme, DeclarationOrBridge(-1, declaration: v));
+            yield (v.name.lexeme, DeclarationOrBridge(-1, declaration: v));
           }
         } else if (declaration is FunctionDeclaration) {
           final dName = declaration.name.toString();
 
-          yield Pair(dName, d);
+          yield (dName, d);
         } else {
           throw CompileError('Unsupported!');
         }
       }
     }
   }
+}
+
+/// Either a concrete declaration or a deferred import-prefix namespace
+/// whose [children] are filled in once the library is compiled.
+class DeclarationOrPrefix {
+  DeclarationOrPrefix({this.declaration, this.children});
+
+  DeclarationOrBridge? declaration;
+  Map<String, DeclarationOrBridge>? children;
 }

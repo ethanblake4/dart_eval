@@ -3,15 +3,16 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/async.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/fpl.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/return.dart';
 import 'package:dart_eval/src/eval/compiler/model/function_type.dart';
-import 'package:dart_eval/src/eval/compiler/scope.dart';
+
 import 'package:dart_eval/src/eval/compiler/statement/block.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
-import 'package:dart_eval/src/eval/compiler/util.dart';
+
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/function.dart';
@@ -57,7 +58,7 @@ int compileMethodDeclaration(
     ctx.setLocal('#this', Variable.of(ctx, SSA('arg_0'), TypeRef.$this(ctx)!));
   }
   final resolvedParams = d.parameters == null
-      ? <PossiblyValuedParameter>[]
+      ? <FormalParameter>[]
       : resolveFPLDefaults(ctx, d.parameters, !d.isStatic, allowUnboxed: false);
 
   if (b.isAsynchronous) {
@@ -71,9 +72,7 @@ int compileMethodDeclaration(
 
   var i = d.isStatic ? 0 : 1;
 
-  for (final param in resolvedParams) {
-    final p = param.parameter;
-
+  for (final p in resolvedParams) {
     var type = CoreTypes.dynamic.ref(ctx);
     if (p.type != null) {
       // Method args are always boxed to allow for bridge interop to have a

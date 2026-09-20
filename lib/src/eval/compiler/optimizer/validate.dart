@@ -4,10 +4,7 @@ import 'package:dart_eval/src/eval/ir/flow.dart';
 
 /// Checks the frontend contract before any graph transformations run.
 void validateControlFlowGraph(ControlFlowGraph graph) {
-  final blocks = [
-    for (var id = 0; id < graph.lastBlockId; id++)
-      if (graph[id] case final block?) block,
-  ];
+  final blocks = [for (var id = 0; id < graph.lastBlockId; id++) ?graph[id]];
   final handlers = <int>{};
   final definitions = <String>{};
   for (final block in blocks) {

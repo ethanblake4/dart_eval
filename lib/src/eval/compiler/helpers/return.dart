@@ -5,7 +5,7 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
-import 'async_return.dart';
+import 'async.dart';
 import 'package:dart_eval/src/eval/ir/exception.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart'
