@@ -164,7 +164,8 @@ class Variable {
 
     ctx as CompilerContext;
 
-    if (type == CoreTypes.dynamic.ref(ctx)) {
+    if (type == CoreTypes.dynamic.ref(ctx) ||
+        type == CoreTypes.object.ref(ctx)) {
       return copyWith(
         type: type.copyWith(boxed: true),
         representation: MachineRepresentation.object,
