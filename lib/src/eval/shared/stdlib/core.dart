@@ -22,6 +22,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/type.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/uri.dart';
 import 'core/duration.dart';
 import 'core/future.dart';
+import 'core/map_entry.dart';
 import 'core/print.dart';
 
 /// [EvalPlugin] for the `dart:core` library
@@ -95,49 +96,20 @@ class DartCorePlugin implements EvalPlugin {
     $Uri.configureForRuntime(runtime);
     $Map.configureForRuntime(runtime);
     $Set.configureForRuntime(runtime);
-    runtime.registerBridgeFunc('dart:core', 'RegExp.', $RegExp.$new);
-    runtime.registerBridgeFunc(
-      'dart:core',
-      'AssertionError.',
-      $AssertionError.$new,
-    );
-    runtime.registerBridgeFunc(
-      'dart:core',
-      'StringBuffer.',
-      $StringBuffer.$new,
-    );
+    $RegExp.configureForRuntime(runtime);
+    $AssertionError.configureForRuntime(runtime);
+    $StringBuffer.configureForRuntime(runtime);
+    $RangeError.configureForRuntime(runtime);
+    $Symbol.configureForRuntime(runtime);
+    $Exception.configureForRuntime(runtime);
+    $FormatException.configureForRuntime(runtime);
+    $ArgumentError.configureForRuntime(runtime);
+    $StateError.configureForRuntime(runtime);
     runtime.registerBridgeFunc('dart:core', 'num.parse', $num.$parse);
     runtime.registerBridgeFunc('dart:core', 'num.tryParse', $num.$tryParse);
     runtime.registerBridgeFunc('dart:core', 'int.parse', $int.$parse);
     runtime.registerBridgeFunc('dart:core', 'int.tryParse', $int.$tryParse);
     runtime.registerBridgeFunc('dart:core', 'Object.hash', $Object.$hash);
-    runtime.registerBridgeFunc('dart:core', 'RangeError.', $RangeError.$new);
-    runtime.registerBridgeFunc(
-      'dart:core',
-      'RangeError.value',
-      $RangeError.$_value,
-    );
-    runtime.registerBridgeFunc(
-      'dart:core',
-      'RangeError.range',
-      $RangeError.$_range,
-    );
-    runtime.registerBridgeFunc(
-      'dart:core',
-      'RangeError.checkValidIndex',
-      $RangeError.$checkValidIndex,
-    );
-    runtime.registerBridgeFunc(
-      'dart:core',
-      'RangeError.checkValidRange',
-      $RangeError.$checkValidRange,
-    );
-    runtime.registerBridgeFunc(
-      'dart:core',
-      'RangeError.checkNotNegative',
-      $RangeError.$checkNotNegative,
-    );
-    runtime.registerBridgeFunc('dart:core', 'Symbol.', $Symbol.$new);
     runtime.registerBridgeFunc('dart:core', 'double.nan*g', $double.$nan);
     runtime.registerBridgeFunc(
       'dart:core',
@@ -159,28 +131,6 @@ class DartCorePlugin implements EvalPlugin {
     $Error.configureForRuntime(runtime);
     $UnimplementedError.configureForRuntime(runtime);
     $UnsupportedError.configureForRuntime(runtime);
-    runtime.registerBridgeFunc('dart:core', 'Exception.', $Exception.$new);
-    runtime.registerBridgeFunc(
-      'dart:core',
-      'FormatException.',
-      $FormatException.$new,
-    );
-    runtime.registerBridgeFunc(
-      'dart:core',
-      'ArgumentError.',
-      $ArgumentError.$new,
-    );
-    runtime.registerBridgeFunc(
-      'dart:core',
-      'ArgumentError.notNull',
-      $ArgumentError.$notNull,
-    );
-    runtime.registerBridgeFunc(
-      'dart:core',
-      'ArgumentError.value',
-      $ArgumentError.$_value,
-    );
-    runtime.registerBridgeFunc('dart:core', 'StateError.', $StateError.$new);
     runtime.registerBridgeFunc('dart:async', 'Stream.empty', $Stream.$empty);
     runtime.registerBridgeFunc('dart:async', 'Stream.value', $Stream.$_value);
     runtime.registerBridgeFunc(

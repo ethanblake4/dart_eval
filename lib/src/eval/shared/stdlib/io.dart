@@ -7,7 +7,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/io/http_status.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io/io_sink.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io/process.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io/socket.dart';
-import 'package:dart_eval/src/eval/shared/stdlib/io/string_sink.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/string_sink.dart';
 
 /// [EvalPlugin] for the `dart:io` library
 class DartIoPlugin implements EvalPlugin {

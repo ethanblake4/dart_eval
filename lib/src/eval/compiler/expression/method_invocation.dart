@@ -459,27 +459,6 @@ Variable _invokeWithTarget(
 
   ArgumentListResult argsPair;
 
-  final knownMethod = getKnownMethods(ctx)[L.type]?[e.methodName.name];
-
-  if (knownMethod != null &&
-      L.type != CoreTypes.type.ref(ctx) &&
-      L.type != CoreTypes.dynamic.ref(ctx)) {
-    argsPair = compileArgumentListWithKnownMethodArgs(
-      ctx,
-      e.argumentList,
-      knownMethod.args,
-      knownMethod.namedArgs,
-    );
-    return L
-        .invoke(
-          ctx,
-          e.methodName.name,
-          argsPair.args,
-          namedArgs: argsPair.namedArgs,
-        )
-        .result;
-  }
-
   if (L.type == CoreTypes.type.ref(ctx) && L.concreteTypes.length == 1) {
     // Static method
     staticType = L.concreteTypes[0];
@@ -508,15 +487,41 @@ Variable _invokeWithTarget(
       typeParameters: receiverTypeParameters,
     );
     _inferBridgeTypeParameters(fd, argsPair.args, bridgeTypeParameters);
-    mReturnType = AlwaysReturnType(
-      TypeRef.fromBridgeAnnotation(
-        ctx,
-        fd.returns,
-        specifiedType: isStatic ? staticType : L.type,
-        typeParameters: bridgeTypeParameters,
-      ),
-      fd.returns.nullable,
+    mReturnType = bridgeFunctionReturnType(
+      ctx,
+      fd,
+      specifiedType: isStatic ? staticType : L.type,
+      typeParameters: bridgeTypeParameters,
+    ).toAlwaysReturnType(
+      ctx,
+      isStatic ? staticType : L.type,
+      argsPair.args.map((a) => a.type).toList(),
+      argsPair.namedArgs.map((k, v) => MapEntry(k, v.type)),
+      typeArgs:
+          e.typeArguments?.arguments
+              .map((t) => TypeRef.fromAnnotation(ctx, ctx.library, t))
+              .toList() ??
+          const [],
     );
+    // Instance calls that carry no named or explicit type arguments route
+    // through the modern invocation path, which preserves intrinsic
+    // optimizations for core types. The argument vector stays padded with
+    // null placeholders so generated wrappers keep the legacy flattened ABI.
+    // The declared return type (including inferred generics and
+    // parameter-type dependencies) still applies to the result.
+    if (!isStatic &&
+        e.typeArguments == null &&
+        argsPair.namedArgs.isEmpty) {
+      final invokeResult =
+          L.invoke(ctx, e.methodName.name, argsPair.paddedArgs).result;
+      final preciseType = mReturnType?.type;
+      if (preciseType != null) {
+        return invokeResult.copyWith(
+          type: preciseType.copyWith(boxed: invokeResult.type.boxed),
+        );
+      }
+      return invokeResult;
+    }
   } else if (L.type == CoreTypes.dynamic.ref(ctx)) {
     argsPair = compileArgumentListWithDynamic(ctx, e.argumentList, before: [L]);
   } else {
@@ -871,6 +876,16 @@ DeclarationOrBridge<MethodDeclaration, BridgeMethodDef> resolveInstanceMethod(
     return DeclarationOrBridge(
       instanceType.file,
       declaration: dec as MethodDeclaration,
+    );
+  } else if (dec0.declaration is EnumDeclaration) {
+    // Enum declarations resolve undeclared members through the Enum bridge
+    // declaration (and transitively Object).
+    return resolveInstanceMethod(
+      ctx,
+      CoreTypes.enumType.ref(ctx),
+      methodName,
+      source,
+      bottomType0,
     );
   } else {
     final $class = dec0.declaration as ClassDeclaration;

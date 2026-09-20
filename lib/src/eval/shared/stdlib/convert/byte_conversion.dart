@@ -1,32 +1,62 @@
-// ignore_for_file: unused_import
-// ignore_for_file: unnecessary_import
+// ignore_for_file: unused_import, unnecessary_import
+// ignore_for_file: always_specify_types, avoid_redundant_argument_values
+// ignore_for_file: sort_constructors_first
 // ignore_for_file: no_leading_underscores_for_local_identifiers
+// ignore_for_file: prefer_is_empty
+// ignore_for_file: undefined_hidden_name
+// ignore_for_file: dead_code, unused_local_variable
+// ignore_for_file: unnecessary_type_check, unnecessary_non_null_assertion
+// ignore_for_file: sdk_version_since
+// ignore_for_file: non_constant_identifier_names
+// ignore_for_file: argument_type_not_assignable_to_error_handler
+// ignore_for_file: avoid_function_literals_in_foreach_calls
 
-import 'dart:convert';
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'dart:typed_data';
-import 'package:dart_eval/stdlib/core.dart';
+
+import 'dart:convert';
+import 'package:dart_eval/stdlib/core.dart'
+    hide
+        $Converter,
+        $Codec,
+        $Encoding,
+        $JsonEncoder,
+        $JsonDecoder,
+        $JsonCodec,
+        $Utf8Decoder,
+        $Utf8Codec,
+        $Utf8Encoder,
+        $Base64Encoder,
+        $Base64Decoder,
+        $Base64Codec,
+        $ByteConversionSink,
+        $ChunkedConversionSink;
 
 /// dart_eval wrapper binding for [ByteConversionSink]
 class $ByteConversionSink implements $Instance {
   /// Configure this class for use in a [Runtime]
+  /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:convert',
       'ByteConversionSink.withCallback',
       $ByteConversionSink.$withCallback,
     );
 
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters(
       'dart:convert',
       'ByteConversionSink.from',
       $ByteConversionSink.$from,
     );
   }
 
+  /// Configure this class for use during compilation
+  static void configureForCompile(BridgeDeclarationRegistry registry) {
+    registry.defineBridgeClass($declaration);
+  }
+
   /// Compile-time type specification of [$ByteConversionSink]
-  static const $spec = ConvertTypes.byteConversionSink;
+  static const $spec = BridgeTypeSpec('dart:convert', 'ByteConversionSink');
 
   /// Compile-time type declaration of [$ByteConversionSink]
   static const $type = BridgeTypeRef($spec);
@@ -36,11 +66,19 @@ class $ByteConversionSink implements $Instance {
     BridgeClassType(
       $type,
       isAbstract: true,
+
       $implements: [
         BridgeTypeRef(ConvertTypes.chunkedConversionSink, [
           BridgeTypeAnnotation(
             BridgeTypeRef(CoreTypes.list, [
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+            ]),
+          ),
+        ]),
+        BridgeTypeRef(CoreTypes.sink, [
+          BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.list, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
             ]),
           ),
         ]),
@@ -55,6 +93,7 @@ class $ByteConversionSink implements $Instance {
         ),
         isFactory: false,
       ),
+
       'withCallback': BridgeConstructorDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation($type),
@@ -71,7 +110,13 @@ class $ByteConversionSink implements $Instance {
                     params: [
                       BridgeParameter(
                         'accumulated',
-                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list)),
+                        BridgeTypeAnnotation(
+                          BridgeTypeRef(CoreTypes.list, [
+                            BridgeTypeAnnotation(
+                              BridgeTypeRef(CoreTypes.int, []),
+                            ),
+                          ]),
+                        ),
                         false,
                       ),
                     ],
@@ -85,6 +130,7 @@ class $ByteConversionSink implements $Instance {
         ),
         isFactory: true,
       ),
+
       'from': BridgeConstructorDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation($type),
@@ -92,7 +138,15 @@ class $ByteConversionSink implements $Instance {
           params: [
             BridgeParameter(
               'sink',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.sink)),
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.sink, [
+                  BridgeTypeAnnotation(
+                    BridgeTypeRef(CoreTypes.list, [
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                    ]),
+                  ),
+                ]),
+              ),
               false,
             ),
           ],
@@ -100,7 +154,34 @@ class $ByteConversionSink implements $Instance {
         isFactory: true,
       ),
     },
+
     methods: {
+      'add': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'chunk',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.list, [
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                ]),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'close': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+
       'addSlice': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
@@ -108,22 +189,29 @@ class $ByteConversionSink implements $Instance {
           params: [
             BridgeParameter(
               'chunk',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.list)),
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.list, [
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                ]),
+              ),
               false,
             ),
+
             BridgeParameter(
               'start',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
               false,
             ),
+
             BridgeParameter(
               'end',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
               false,
             ),
+
             BridgeParameter(
               'isLast',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
               false,
             ),
           ],
@@ -134,26 +222,30 @@ class $ByteConversionSink implements $Instance {
     setters: {},
     fields: {},
     wrap: true,
+    bridge: false,
   );
 
   /// Wrapper for the [ByteConversionSink.withCallback] constructor
   static $Value? $withCallback(
     Runtime runtime,
-    $Value? thisValue,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     return $ByteConversionSink.wrap(
-      ByteConversionSink.withCallback((accumulated) {
-        (args[0] as EvalCallable)(runtime, null, [
+      ByteConversionSink.withCallback((List<int> accumulated) {
+        ((r as $Value?)! as EvalCallable)(runtime, null, [
           $List.view(accumulated, (e) => $int(e)),
-        ])?.$value;
+        ]);
       }),
     );
   }
 
   /// Wrapper for the [ByteConversionSink.from] constructor
-  static $Value? $from(Runtime runtime, $Value? thisValue, List<$Value?> args) {
-    return $ByteConversionSink.wrap(ByteConversionSink.from(args[0]!.$value));
+  static $Value? $from(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $ByteConversionSink.wrap(
+      ByteConversionSink.from((r as $Value?)!.$value),
+    );
   }
 
   final $Instance _superclass;
@@ -173,10 +265,30 @@ class $ByteConversionSink implements $Instance {
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
+      case 'add':
+        return __add;
+
+      case 'close':
+        return __close;
+
       case 'addSlice':
         return __addSlice;
     }
     return _superclass.$getProperty(runtime, identifier);
+  }
+
+  static const $Function __add = $Function(_add);
+  static $Value? _add(Runtime runtime, $Value? target, List<$Value?> args) {
+    final self = target! as $ByteConversionSink;
+    self.$value.add((args[0]!.$reified as List).cast<int>());
+    return null;
+  }
+
+  static const $Function __close = $Function(_close);
+  static $Value? _close(Runtime runtime, $Value? target, List<$Value?> args) {
+    final self = target! as $ByteConversionSink;
+    self.$value.close();
+    return null;
   }
 
   static const $Function __addSlice = $Function(_addSlice);
@@ -185,9 +297,9 @@ class $ByteConversionSink implements $Instance {
     $Value? target,
     List<$Value?> args,
   ) {
-    final self = target as $ByteConversionSink;
+    final self = target! as $ByteConversionSink;
     self.$value.addSlice(
-      (args[0]!.$reified as List).cast(),
+      (args[0]!.$reified as List).cast<int>(),
       args[1]!.$value,
       args[2]!.$value,
       args[3]!.$value,

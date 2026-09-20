@@ -8,39 +8,17 @@ class DartTypedDataPlugin implements EvalPlugin {
 
   @override
   void configureForCompile(BridgeDeclarationRegistry registry) {
-    registry.defineBridgeClass($ByteBuffer.$declaration);
-    registry.defineBridgeClass($TypedData.$declaration);
-    registry.defineBridgeClass($ByteData.$declaration);
-    registry.defineBridgeClass($Uint8List.$declaration);
+    $ByteBuffer.configureForCompile(registry);
+    $TypedData.configureForCompile(registry);
+    $ByteData.configureForCompile(registry);
+    $Uint8List.configureForCompile(registry);
   }
 
   @override
   void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFunc('dart:typed_data', 'ByteData.', $ByteData.$new);
-    runtime.registerBridgeFunc(
-      'dart:typed_data',
-      'ByteData.view',
-      $ByteData.$view,
-    );
-    runtime.registerBridgeFunc(
-      'dart:typed_data',
-      'Uint8List.',
-      $Uint8List.$new,
-    );
-    runtime.registerBridgeFunc(
-      'dart:typed_data',
-      'Uint8List.fromList',
-      $Uint8List.$fromList,
-    );
-    runtime.registerBridgeFunc(
-      'dart:typed_data',
-      'Uint8List.view',
-      $Uint8List.$view,
-    );
-    runtime.registerBridgeFunc(
-      'dart:typed_data',
-      'Uint8List.sublistView',
-      $Uint8List.$sublistView,
-    );
+    $ByteBuffer.configureForRuntime(runtime);
+    $TypedData.configureForRuntime(runtime);
+    $ByteData.configureForRuntime(runtime);
+    $Uint8List.configureForRuntime(runtime);
   }
 }

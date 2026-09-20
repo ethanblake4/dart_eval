@@ -42,7 +42,11 @@ class $null implements $Value {
   const $null();
 
   static const $declaration = BridgeClassDef(
-    BridgeClassType(BridgeTypeRef(CoreTypes.nullType), isAbstract: true),
+    BridgeClassType(
+      BridgeTypeRef(CoreTypes.nullType),
+      $extends: BridgeTypeRef(CoreTypes.object),
+      isAbstract: true,
+    ),
     constructors: {},
     wrap: true,
   );
@@ -69,10 +73,43 @@ class $bool implements $Instance {
   $bool(this.$value) : _superclass = $Object($value);
 
   static const $declaration = BridgeClassDef(
-    BridgeClassType(BridgeTypeRef(CoreTypes.bool), isAbstract: true),
+    BridgeClassType(
+      BridgeTypeRef(CoreTypes.bool),
+      $extends: BridgeTypeRef(CoreTypes.object),
+      isAbstract: true,
+    ),
     constructors: {},
     methods: {
-      // Other bool methods defined in builtins.dart
+      '&&': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+              false,
+            ),
+          ],
+        ),
+      ),
+      '||': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+              false,
+            ),
+          ],
+        ),
+      ),
+      '!': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+          params: [],
+        ),
+      ),
     },
     wrap: true,
   );
@@ -147,6 +184,7 @@ class $String implements $Instance {
   static const $declaration = BridgeClassDef(
     BridgeClassType(
       BridgeTypeRef(CoreTypes.string),
+      $extends: BridgeTypeRef(CoreTypes.object),
       $implements: [BridgeTypeRef(CoreTypes.pattern)],
       isAbstract: true,
     ),
@@ -194,7 +232,270 @@ class $String implements $Instance {
       ),
     },
     methods: {
-      // Other string methods defined in builtins.dart
+      '+': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              false,
+            ),
+          ],
+        ),
+      ),
+      'codeUnitAt': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+          params: [
+            BridgeParameter(
+              'index',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              false,
+            ),
+          ],
+        ),
+      ),
+      'compareTo': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              false,
+            ),
+          ],
+        ),
+      ),
+      'contains': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.pattern)),
+              false,
+            ),
+            BridgeParameter(
+              'startIndex',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              true,
+            ),
+          ],
+        ),
+      ),
+      'endsWith': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              false,
+            ),
+          ],
+        ),
+      ),
+      'indexOf': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+          params: [
+            BridgeParameter(
+              'pattern',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.pattern)),
+              false,
+            ),
+            BridgeParameter(
+              'start',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              true,
+            ),
+          ],
+        ),
+      ),
+      'lastIndexOf': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+          params: [
+            BridgeParameter(
+              'pattern',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.pattern)),
+              false,
+            ),
+            BridgeParameter(
+              'start',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              true,
+            ),
+          ],
+        ),
+      ),
+      'padLeft': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+          params: [
+            BridgeParameter(
+              'width',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              false,
+            ),
+            BridgeParameter(
+              'padding',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              true,
+            ),
+          ],
+        ),
+      ),
+      'padRight': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+          params: [
+            BridgeParameter(
+              'width',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              false,
+            ),
+            BridgeParameter(
+              'padding',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              true,
+            ),
+          ],
+        ),
+      ),
+      'replaceAll': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+          params: [
+            BridgeParameter(
+              'from',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.pattern)),
+              false,
+            ),
+            BridgeParameter(
+              'replace',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              false,
+            ),
+          ],
+        ),
+      ),
+      'replaceFirst': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+          params: [
+            BridgeParameter(
+              'from',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.pattern)),
+              false,
+            ),
+            BridgeParameter(
+              'to',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              false,
+            ),
+            BridgeParameter(
+              'startIndex',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              true,
+            ),
+          ],
+        ),
+      ),
+      'replaceRange': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+          params: [
+            BridgeParameter(
+              'start',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              false,
+            ),
+            BridgeParameter(
+              'end',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.int),
+                nullable: true,
+              ),
+              false,
+            ),
+            BridgeParameter(
+              'replacement',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              false,
+            ),
+          ],
+        ),
+      ),
+      'startsWith': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+          params: [
+            BridgeParameter(
+              'pattern',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.pattern)),
+              false,
+            ),
+            BridgeParameter(
+              'index',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              true,
+            ),
+          ],
+        ),
+      ),
+      'substring': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+          params: [
+            BridgeParameter(
+              'start',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              false,
+            ),
+            BridgeParameter(
+              'end',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.int),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+        ),
+      ),
+      'toLowerCase': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+          params: [],
+        ),
+      ),
+      'toUpperCase': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+          params: [],
+        ),
+      ),
+      'trim': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+          params: [],
+        ),
+      ),
+      'trimLeft': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+          params: [],
+        ),
+      ),
+      'trimRight': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+          params: [],
+        ),
+      ),
       'split': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(
@@ -227,6 +528,21 @@ class $String implements $Instance {
       ),
     },
     getters: {
+      'length': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+        ),
+      ),
+      'isEmpty': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+        ),
+      ),
+      'isNotEmpty': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+        ),
+      ),
       'codeUnits': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(
@@ -430,7 +746,9 @@ class $String implements $Instance {
   ) {
     target as $String;
     final other = args[0]!;
-    final start = args.length > 1 ? args[1] as $int : null;
+    final start = args.length > 1 && args[1] is $int
+        ? args[1] as $int
+        : null;
     if (start != null) {
       return $int(target.$value.indexOf(other.$value, start.$value));
     } else {
@@ -447,7 +765,9 @@ class $String implements $Instance {
   ) {
     target as $String;
     final other = args[0]!;
-    final start = args.length > 1 ? args[1] as $int : null;
+    final start = args.length > 1 && args[1] is $int
+        ? args[1] as $int
+        : null;
     if (start != null) {
       return $int(target.$value.lastIndexOf(other.$value, start.$value));
     } else {
@@ -464,7 +784,9 @@ class $String implements $Instance {
   ) {
     target as $String;
     final width = args[0] as $int;
-    final padding = args.length > 1 ? args[1] as $String : null;
+    final padding = args.length > 1 && args[1] is $String
+        ? args[1] as $String
+        : null;
     if (padding != null) {
       return $String(target.$value.padLeft(width.$value, padding.$value));
     } else {
@@ -481,7 +803,9 @@ class $String implements $Instance {
   ) {
     target as $String;
     final width = args[0] as $int;
-    final padding = args.length > 1 ? args[1] as $String : null;
+    final padding = args.length > 1 && args[1] is $String
+        ? args[1] as $String
+        : null;
     if (padding != null) {
       return $String(target.$value.padRight(width.$value, padding.$value));
     } else {
@@ -512,7 +836,9 @@ class $String implements $Instance {
     target as $String;
     final from = args[0]!.$value;
     final to = args[1]!.$value;
-    final startIndex = args.length > 2 ? args[2] as $int : null;
+    final startIndex = args.length > 2 && args[2] is $int
+        ? args[2] as $int
+        : null;
     if (startIndex != null) {
       return $String(target.$value.replaceFirst(from, to, startIndex.$value));
     } else {
@@ -545,7 +871,9 @@ class $String implements $Instance {
   ) {
     target as $String;
     final pattern = args[0] as $String;
-    final index = args.length > 1 ? args[1] as $int : null;
+    final index = args.length > 1 && args[1] is $int
+        ? args[1] as $int
+        : null;
     if (index != null) {
       return $bool(target.$value.startsWith(pattern.$value, index.$value));
     } else {
@@ -576,7 +904,9 @@ class $String implements $Instance {
   ) {
     target as $String;
     final start = args[0] as $int;
-    final end = args.length > 1 ? args[1] as $int : null;
+    final end = args.length > 1 && args[1] is $int
+        ? args[1] as $int
+        : null;
     return $String(target.$value.substring(start.$value, end?.$value));
   }
 

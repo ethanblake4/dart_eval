@@ -1,40 +1,55 @@
-import 'dart:math';
+// ignore_for_file: unused_import, unnecessary_import
+// ignore_for_file: always_specify_types, avoid_redundant_argument_values
+// ignore_for_file: sort_constructors_first
+// ignore_for_file: no_leading_underscores_for_local_identifiers
+// ignore_for_file: prefer_is_empty
+// ignore_for_file: undefined_hidden_name
+// ignore_for_file: dead_code, unused_local_variable
+// ignore_for_file: unnecessary_type_check, unnecessary_non_null_assertion
+// ignore_for_file: sdk_version_since
+// ignore_for_file: non_constant_identifier_names
+// ignore_for_file: argument_type_not_assignable_to_error_handler
+// ignore_for_file: avoid_function_literals_in_foreach_calls
 
+import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/stdlib/core.dart';
 
-/// dart_eval bimodal wrapper for [Random]
-class $Random implements Random, $Instance {
-  /// Configure the [$Random] wrapper for use in a [Runtime]
+import 'dart:math';
+import 'package:dart_eval/stdlib/core.dart' hide $Point, $Random;
+
+/// dart_eval wrapper binding for [Random]
+class $Random implements $Instance {
+  /// Configure this class for use in a [Runtime]
+  /// Configure this class for use in a [Runtime]
+  static void configureForRuntime(Runtime runtime) {
+    runtime.registerBridgeFuncRegisters('dart:math', 'Random.', $Random.$new);
+
+    runtime.registerBridgeFuncRegisters(
+      'dart:math',
+      'Random.secure',
+      $Random.$secure,
+    );
+  }
+
+  /// Configure this class for use during compilation
   static void configureForCompile(BridgeDeclarationRegistry registry) {
     registry.defineBridgeClass($declaration);
   }
 
-  static void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFunc(
-      $type.spec!.library,
-      'Random.',
-      __$Random$new.call,
-      isBridge: false,
-    );
-    runtime.registerBridgeFunc(
-      $type.spec!.library,
-      'Random.secure',
-      __$Random$secure.call,
-      isBridge: false,
-    );
-  }
+  /// Compile-time type specification of [$Random]
+  static const $spec = BridgeTypeSpec('dart:math', 'Random');
 
-  late final $Instance _superclass = $Object($value);
+  /// Compile-time type declaration of [$Random]
+  static const $type = BridgeTypeRef($spec);
 
-  static const $type = BridgeTypeRef(MathTypes.random);
-
+  /// Compile-time class declaration of [$Random]
   static const $declaration = BridgeClassDef(
-    BridgeClassType($type, $extends: null, $implements: [], isAbstract: true),
+    BridgeClassType($type, isAbstract: true),
     constructors: {
       '': BridgeConstructorDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation($type),
+          namedParams: [],
           params: [
             BridgeParameter(
               'seed',
@@ -45,156 +60,128 @@ class $Random implements Random, $Instance {
               true,
             ),
           ],
-          namedParams: [],
         ),
         isFactory: true,
       ),
+
       'secure': BridgeConstructorDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation($type),
-          params: [],
           namedParams: [],
+          params: [],
         ),
         isFactory: true,
       ),
     },
-    fields: {},
+
     methods: {
       'nextInt': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.int, []),
-            nullable: false,
-          ),
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+          namedParams: [],
           params: [
             BridgeParameter(
               'max',
-              BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.int, []),
-                nullable: false,
-              ),
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
               false,
             ),
           ],
-          namedParams: [],
         ),
-        isStatic: false,
       ),
+
       'nextDouble': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.double, []),
-            nullable: false,
-          ),
-          params: [],
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double, [])),
           namedParams: [],
+          params: [],
         ),
-        isStatic: false,
       ),
+
       'nextBool': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.bool, []),
-            nullable: false,
-          ),
-          params: [],
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
           namedParams: [],
+          params: [],
         ),
-        isStatic: false,
       ),
     },
     getters: {},
     setters: {},
-    bridge: false,
+    fields: {},
     wrap: true,
+    bridge: false,
   );
 
-  /// Wrap an [Random] in an [$Random]
-  $Random.wrap(this.$value);
-
-  @override
-  $Value? $getProperty(Runtime runtime, String identifier) {
-    switch (identifier) {
-      case 'nextInt':
-        return __$nextInt;
-      case 'nextDouble':
-        return __$nextDouble;
-      case 'nextBool':
-        return __$nextBool;
-      default:
-        return _superclass.$getProperty(runtime, identifier);
-    }
+  /// Wrapper for the [Random.new] constructor
+  static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $Random.wrap(Random((r is $Value ? r : null)?.$value));
   }
 
-  @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType($type.spec!);
+  /// Wrapper for the [Random.secure] constructor
+  static $Value? $secure(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $Random.wrap(Random.secure());
+  }
 
-  @override
-  Random get $reified => $value;
-
-  @override
-  void $setProperty(Runtime runtime, String identifier, $Value value) =>
-      _superclass.$setProperty(runtime, identifier, value);
+  final $Instance _superclass;
 
   @override
   final Random $value;
 
   @override
-  int nextInt(int max) => $value.nextInt(max);
-  static const __$nextInt = $Function(_$nextInt);
-  static $Value? _$nextInt(
+  Random get $reified => $value;
+
+  /// Wrap a [Random] in a [$Random]
+  $Random.wrap(this.$value) : _superclass = $Object($value);
+
+  @override
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
+
+  @override
+  $Value? $getProperty(Runtime runtime, String identifier) {
+    switch (identifier) {
+      case 'nextInt':
+        return __nextInt;
+
+      case 'nextDouble':
+        return __nextDouble;
+
+      case 'nextBool':
+        return __nextBool;
+    }
+    return _superclass.$getProperty(runtime, identifier);
+  }
+
+  static const $Function __nextInt = $Function(_nextInt);
+  static $Value? _nextInt(Runtime runtime, $Value? target, List<$Value?> args) {
+    final self = target! as $Random;
+    final result = self.$value.nextInt(args[0]!.$value);
+    return $int(result);
+  }
+
+  static const $Function __nextDouble = $Function(_nextDouble);
+  static $Value? _nextDouble(
     Runtime runtime,
     $Value? target,
     List<$Value?> args,
   ) {
-    final $this = target?.$value as Random;
-    final max = args[0]?.$value as int;
-    final $result = $this.nextInt(max);
-    return $int($result);
+    final self = target! as $Random;
+    final result = self.$value.nextDouble();
+    return $double(result);
+  }
+
+  static const $Function __nextBool = $Function(_nextBool);
+  static $Value? _nextBool(
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
+    final self = target! as $Random;
+    final result = self.$value.nextBool();
+    return $bool(result);
   }
 
   @override
-  double nextDouble() => $value.nextDouble();
-  static const __$nextDouble = $Function(_$nextDouble);
-  static $Value? _$nextDouble(
-    Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
-  ) {
-    final $this = target?.$value as Random;
-    final $result = $this.nextDouble();
-    return $double($result);
-  }
-
-  @override
-  bool nextBool() => $value.nextBool();
-  static const __$nextBool = $Function(_$nextBool);
-  static $Value? _$nextBool(
-    Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
-  ) {
-    final $this = target?.$value as Random;
-    final $result = $this.nextBool();
-    return $bool($result);
-  }
-
-  static const __$Random$new = $Function(_$Random$new);
-  static $Value? _$Random$new(
-    Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
-  ) {
-    final seed = args[0]?.$value as int?;
-    return $Random.wrap(Random(seed));
-  }
-
-  static const __$Random$secure = $Function(_$Random$secure);
-  static $Value? _$Random$secure(
-    Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
-  ) {
-    return $Random.wrap(Random.secure());
+  void $setProperty(Runtime runtime, String identifier, $Value value) {
+    return _superclass.$setProperty(runtime, identifier, value);
   }
 }

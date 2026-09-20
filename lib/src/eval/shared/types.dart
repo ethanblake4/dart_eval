@@ -1,382 +1,399 @@
+// ignore_for_file: unused_import, unnecessary_import
+
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/shared/stdlib/async/future.dart';
-import 'package:dart_eval/src/eval/shared/stdlib/async/stream.dart';
-import 'package:dart_eval/src/eval/shared/stdlib/async/stream_controller.dart';
-import 'package:dart_eval/src/eval/shared/stdlib/convert/converter.dart';
-import 'package:dart_eval/stdlib/core.dart';
 
-/// This class contains dart:core bridge type specs for convenience
+/// Bridge type specs for `dart:core`.
 class CoreTypes {
-  /// Bridge type spec for [dynamic]
-  static const dynamic = BridgeTypeSpec('dart:core', 'dynamic');
+  /// Bridge spec for [ArgumentError].
+  static const argumentError = BridgeTypeSpec('dart:core', 'ArgumentError');
 
-  /// Bridge type spec for [void]
-  static const voidType = BridgeTypeSpec('dart:core', 'void');
+  /// Bridge spec for [AssertionError].
+  static const assertionError = BridgeTypeSpec('dart:core', 'AssertionError');
 
-  /// Bridge type spec for [Never]
-  static const never = BridgeTypeSpec('dart:core', 'Never');
-
-  /// Bridge type spec for [Null]
-  static const nullType = BridgeTypeSpec('dart:core', 'Null');
-
-  /// Bridge type spec for [num]
-  static const num = BridgeTypeSpec('dart:core', 'num');
-
-  /// Bridge type spec for [int]
-  static const int = BridgeTypeSpec('dart:core', 'int');
-
-  /// Bridge type spec for [double]
-  static const double = BridgeTypeSpec('dart:core', 'double');
-
-  /// Bridge type spec for [bool]
+  /// Bridge spec for [bool].
   static const bool = BridgeTypeSpec('dart:core', 'bool');
 
-  /// Bridge type spec for [String]
-  static const string = BridgeTypeSpec('dart:core', 'String');
+  /// Bridge spec for [Comparable].
+  static const comparable = BridgeTypeSpec('dart:core', 'Comparable');
 
-  /// Bridge type spec for [Object]
-  static const object = BridgeTypeSpec('dart:core', 'Object');
-
-  /// Bridge type spec for [Function]
-  static const function = BridgeTypeSpec('dart:core', 'Function');
-
-  /// Bridge type spec for [Enum]
-  static const enumType = BridgeTypeSpec('dart:core', 'Enum');
-
-  /// Bridge type spec for [Record]
-  static const record = BridgeTypeSpec('dart:core', 'Record');
-
-  /// Bridge type spec for [Type]
-  static const type = BridgeTypeSpec('dart:core', 'Type');
-
-  /// Bridge type spec for [Symbol]
-  static const symbol = BridgeTypeSpec('dart:core', 'Symbol');
-
-  /// Bridge type spec for [Invocation]
-  static const invocation = BridgeTypeSpec('dart:core', 'Invocation');
-
-  /// Bridge type spec for [$Duration]
-  static const duration = BridgeTypeSpec('dart:core', 'Duration');
-
-  /// Bridge type spec for [$DateTime]
+  /// Bridge spec for [DateTime].
   static const dateTime = BridgeTypeSpec('dart:core', 'DateTime');
 
-  /// Bridge type spec for [$List]
-  static const list = BridgeTypeSpec('dart:core', 'List');
+  /// Bridge spec for [double].
+  static const double = BridgeTypeSpec('dart:core', 'double');
 
-  /// Bridge type spec for [$Map]
-  static const map = BridgeTypeSpec('dart:core', 'Map');
+  /// Bridge spec for [Duration].
+  static const duration = BridgeTypeSpec('dart:core', 'Duration');
 
-  /// Bridge type spec for [$Set]
-  static const set = BridgeTypeSpec('dart:core', 'Set');
+  /// Bridge spec for [dynamic].
+  static const dynamic = BridgeTypeSpec('dart:core', 'dynamic');
 
-  /// Bridge type spec for [$MapEntry]
-  static const mapEntry = BridgeTypeSpec('dart:core', 'MapEntry');
+  /// Bridge spec for [Enum].
+  static const enumType = BridgeTypeSpec('dart:core', 'Enum');
 
-  /// Bridge type spec for [$Iterator]
-  static const iterator = BridgeTypeSpec('dart:core', 'Iterator');
-
-  /// Bridge type spec for [$Iterable]
-  static const iterable = BridgeTypeSpec('dart:core', 'Iterable');
-
-  /// Bridge type spec for [$Future]
-  static const future = BridgeTypeSpec('dart:core', 'Future');
-
-  /// Bridge type spec for [$Stream]
-  static const stream = BridgeTypeSpec('dart:core', 'Stream');
-
-  /// Bridge type spec for [$Uri]
-  static const uri = BridgeTypeSpec('dart:core', 'Uri');
-
-  /// Bridge type spec for [$Pattern]
-  static const pattern = BridgeTypeSpec('dart:core', 'Pattern');
-
-  /// Bridge type spec for [$Match]
-  static const match = BridgeTypeSpec('dart:core', 'Match');
-
-  /// Bridge type spec for [$RegExp]
-  static const regExp = BridgeTypeSpec('dart:core', 'RegExp');
-
-  /// Bridge type spec for [$StackTrace]
-  static const stackTrace = BridgeTypeSpec('dart:core', 'StackTrace');
-
-  /// Bridge type spec for [Error]
+  /// Bridge spec for [Error].
   static const error = BridgeTypeSpec('dart:core', 'Error');
 
-  /// Bridge type spec for [TypeError]
-  static const typeError = BridgeTypeSpec('dart:core', 'TypeError');
+  /// Bridge spec for [Exception].
+  static const exception = BridgeTypeSpec('dart:core', 'Exception');
 
-  /// Bridge type spec for [NoSuchMethodError]
+  /// Bridge spec for [FormatException].
+  static const formatException = BridgeTypeSpec('dart:core', 'FormatException');
+
+  /// Bridge spec for [Function].
+  static const function = BridgeTypeSpec('dart:core', 'Function');
+
+  /// Bridge spec for [Future].
+  static const future = BridgeTypeSpec('dart:core', 'Future');
+
+  /// Bridge spec for [int].
+  static const int = BridgeTypeSpec('dart:core', 'int');
+
+  /// Bridge spec for [Invocation].
+  static const invocation = BridgeTypeSpec('dart:core', 'Invocation');
+
+  /// Bridge spec for [Iterable].
+  static const iterable = BridgeTypeSpec('dart:core', 'Iterable');
+
+  /// Bridge spec for [Iterator].
+  static const iterator = BridgeTypeSpec('dart:core', 'Iterator');
+
+  /// Bridge spec for [List].
+  static const list = BridgeTypeSpec('dart:core', 'List');
+
+  /// Bridge spec for [Map].
+  static const map = BridgeTypeSpec('dart:core', 'Map');
+
+  /// Bridge spec for [MapEntry].
+  static const mapEntry = BridgeTypeSpec('dart:core', 'MapEntry');
+
+  /// Bridge spec for [Match].
+  static const match = BridgeTypeSpec('dart:core', 'Match');
+
+  /// Bridge spec for [Never].
+  static const never = BridgeTypeSpec('dart:core', 'Never');
+
+  /// Bridge spec for [NoSuchMethodError].
   static const noSuchMethodError = BridgeTypeSpec(
     'dart:core',
     'NoSuchMethodError',
   );
 
-  /// Bridge type spec for [RangeError]
+  /// Bridge spec for [Null].
+  static const nullType = BridgeTypeSpec('dart:core', 'Null');
+
+  /// Bridge spec for [num].
+  static const num = BridgeTypeSpec('dart:core', 'num');
+
+  /// Bridge spec for [Object].
+  static const object = BridgeTypeSpec('dart:core', 'Object');
+
+  /// Bridge spec for [Pattern].
+  static const pattern = BridgeTypeSpec('dart:core', 'Pattern');
+
+  /// Bridge spec for [RangeError].
   static const rangeError = BridgeTypeSpec('dart:core', 'RangeError');
 
-  /// Bridge type spec for [Exception]
-  static const exception = BridgeTypeSpec('dart:core', 'Exception');
+  /// Bridge spec for [Record].
+  static const record = BridgeTypeSpec('dart:core', 'Record');
 
-  /// Bridge type spec for [Exception]
-  static const formatException = BridgeTypeSpec('dart:core', 'FormatException');
+  /// Bridge spec for [RegExp].
+  static const regExp = BridgeTypeSpec('dart:core', 'RegExp');
 
-  /// Bridge type spec for [$UnsupportedError]
-  static const unsupportedError = BridgeTypeSpec(
-    'dart:core',
-    'UnsupportedError',
-  );
+  /// Bridge spec for [RegExpMatch].
+  static const regExpMatch = BridgeTypeSpec('dart:core', 'RegExpMatch');
 
-  /// Bridge type spec for [$UnimplementedError]
+  /// Bridge spec for [Set].
+  static const set = BridgeTypeSpec('dart:core', 'Set');
+
+  /// Bridge spec for [Sink].
+  static const sink = BridgeTypeSpec('dart:core', 'Sink');
+
+  /// Bridge spec for [StackTrace].
+  static const stackTrace = BridgeTypeSpec('dart:core', 'StackTrace');
+
+  /// Bridge spec for [StateError].
+  static const stateError = BridgeTypeSpec('dart:core', 'StateError');
+
+  /// Bridge spec for [Stopwatch].
+  static const stopwatch = BridgeTypeSpec('dart:core', 'Stopwatch');
+
+  /// Bridge spec for [Stream].
+  static const stream = BridgeTypeSpec('dart:core', 'Stream');
+
+  /// Bridge spec for [String].
+  static const string = BridgeTypeSpec('dart:core', 'String');
+
+  /// Bridge spec for [StringBuffer].
+  static const stringBuffer = BridgeTypeSpec('dart:core', 'StringBuffer');
+
+  /// Bridge spec for [StringSink].
+  static const stringSink = BridgeTypeSpec('dart:core', 'StringSink');
+
+  /// Bridge spec for [Symbol].
+  static const symbol = BridgeTypeSpec('dart:core', 'Symbol');
+
+  /// Bridge spec for [Type].
+  static const type = BridgeTypeSpec('dart:core', 'Type');
+
+  /// Bridge spec for [TypeError].
+  static const typeError = BridgeTypeSpec('dart:core', 'TypeError');
+
+  /// Bridge spec for [UnimplementedError].
   static const unimplementedError = BridgeTypeSpec(
     'dart:core',
     'UnimplementedError',
   );
 
-  /// Bridge type spec for [AssertionError]
-  static const assertionError = BridgeTypeSpec('dart:core', 'AssertionError');
-
-  /// Bridge type spec for [ArgumentError]
-  static const argumentError = BridgeTypeSpec('dart:core', 'ArgumentError');
-
-  /// Bridge type spec for [StateError]
-  static const stateError = BridgeTypeSpec('dart:core', 'StateError');
-
-  /// Bridge type spec for [Comparable]
-  static const comparable = BridgeTypeSpec('dart:core', 'Comparable');
-
-  /// Bridge type spec for [StringBuffer]
-  static const stringBuffer = BridgeTypeSpec('dart:core', 'StringBuffer');
-
-  /// Bridge type spec for [Sink]
-  static const sink = BridgeTypeSpec('dart:core', 'Sink');
-}
-
-/// This class contains dart:async bridge type specs for convenience
-class AsyncTypes {
-  /// Bridge type spec for [$Completer]
-  static const completer = BridgeTypeSpec('dart:async', 'Completer');
-
-  /// Bridge type spec for [$StreamTransformer]
-  static const streamTransformer = BridgeTypeSpec(
-    'dart:async',
-    'StreamTransformer',
+  /// Bridge spec for [UnsupportedError].
+  static const unsupportedError = BridgeTypeSpec(
+    'dart:core',
+    'UnsupportedError',
   );
 
-  /// Bridge type spec for [$StreamController]
+  /// Bridge spec for [Uri].
+  static const uri = BridgeTypeSpec('dart:core', 'Uri');
+
+  /// Bridge spec for [void].
+  static const voidType = BridgeTypeSpec('dart:core', 'void');
+}
+
+/// Bridge type specs for `dart:async`.
+class AsyncTypes {
+  /// Bridge spec for [Completer].
+  static const completer = BridgeTypeSpec('dart:async', 'Completer');
+
+  /// Bridge spec for [StreamController].
   static const streamController = BridgeTypeSpec(
     'dart:async',
     'StreamController',
   );
 
-  /// Bridge type spec for [$StreamSubscription]
+  /// Bridge spec for [StreamSink].
+  static const streamSink = BridgeTypeSpec('dart:async', 'StreamSink');
+
+  /// Bridge spec for [StreamSubscription].
   static const streamSubscription = BridgeTypeSpec(
     'dart:async',
     'StreamSubscription',
   );
 
-  /// Bridge type spec for [$StreamSink]
-  static const streamSink = BridgeTypeSpec('dart:async', 'StreamSink');
+  /// Bridge spec for [StreamTransformer].
+  static const streamTransformer = BridgeTypeSpec(
+    'dart:async',
+    'StreamTransformer',
+  );
 
-  /// Bridge type spec for [$StreamView]
+  /// Bridge spec for [StreamView].
   static const streamView = BridgeTypeSpec('dart:async', 'StreamView');
 
-  /// Bridge type spec for [$Timer]
+  /// Bridge spec for [Timer].
   static const timer = BridgeTypeSpec('dart:async', 'Timer');
 
-  /// Bridge type spec for [$Zone]
+  /// Bridge spec for [Zone].
   static const zone = BridgeTypeSpec('dart:async', 'Zone');
 }
 
-/// This class contains dart:collection bridge type specs for convenience
+/// Bridge type specs for `dart:collection`.
 class CollectionTypes {
-  /// Bridge type spec for [$IterableBase]
-  static const iterableBase = BridgeTypeSpec('dart:collection', 'IterableBase');
-
-  /// Bridge type spec for [$ListBase]
-  static const listBase = BridgeTypeSpec('dart:collection', 'ListBase');
-
-  /// Bridge type spec for [$MapBase]
-  static const mapBase = BridgeTypeSpec('dart:collection', 'MapBase');
-
-  /// Bridge type spec for [$Queue]
-  static const queue = BridgeTypeSpec('dart:collection', 'Queue');
-
-  /// Bridge type spec for [$SetBase]
-  static const setBase = BridgeTypeSpec('dart:collection', 'SetBase');
-
-  /// Bridge type spec for [$LinkedHashMap]
-  static const linkedHashMap = BridgeTypeSpec(
-    'dart:collection',
-    'LinkedHashMap',
-  );
-
-  /// Bridge type spec for [$LinkedHashSet]
-  static const linkedHashSet = BridgeTypeSpec(
-    'dart:collection',
-    'LinkedHashSet',
-  );
-
-  /// Bridge type spec for [$DoubleLinkedQueue]
+  /// Bridge spec for [DoubleLinkedQueue].
   static const doubleLinkedQueue = BridgeTypeSpec(
     'dart:collection',
     'DoubleLinkedQueue',
   );
 
-  /// Bridge type spec for [$DoubleLinkedQueueEntry]
+  /// Bridge spec for [DoubleLinkedQueueEntry].
   static const doubleLinkedQueueEntry = BridgeTypeSpec(
     'dart:collection',
     'DoubleLinkedQueueEntry',
   );
 
-  /// Bridge type spec for [$HashMap]
+  /// Bridge spec for [HashMap].
   static const hashMap = BridgeTypeSpec('dart:collection', 'HashMap');
 
-  /// Bridge type spec for [$HashSet]
+  /// Bridge spec for [HashSet].
   static const hashSet = BridgeTypeSpec('dart:collection', 'HashSet');
 
-  /// Bridge type spec for [$ListMixin]
+  /// Bridge spec for [IterableBase].
+  static const iterableBase = BridgeTypeSpec('dart:collection', 'IterableBase');
+
+  /// Bridge spec for [LinkedHashMap].
+  static const linkedHashMap = BridgeTypeSpec(
+    'dart:collection',
+    'LinkedHashMap',
+  );
+
+  /// Bridge spec for [LinkedHashSet].
+  static const linkedHashSet = BridgeTypeSpec(
+    'dart:collection',
+    'LinkedHashSet',
+  );
+
+  /// Bridge spec for [ListBase].
+  static const listBase = BridgeTypeSpec('dart:collection', 'ListBase');
+
+  /// Bridge spec for [ListMixin].
   static const listMixin = BridgeTypeSpec('dart:collection', 'ListMixin');
 
-  /// Bridge type spec for [$ListQueue]
+  /// Bridge spec for [ListQueue].
   static const listQueue = BridgeTypeSpec('dart:collection', 'ListQueue');
+
+  /// Bridge spec for [MapBase].
+  static const mapBase = BridgeTypeSpec('dart:collection', 'MapBase');
+
+  /// Bridge spec for [Queue].
+  static const queue = BridgeTypeSpec('dart:collection', 'Queue');
+
+  /// Bridge spec for [SetBase].
+  static const setBase = BridgeTypeSpec('dart:collection', 'SetBase');
 }
 
-/// This class contains dart:convert bridge type specs for convenience
+/// Bridge type specs for `dart:convert`.
 class ConvertTypes {
-  /// Bridge type spec for [$Converter]
-  static const converter = BridgeTypeSpec('dart:convert', 'Converter');
-
-  /// Bridge type spec for [$Codec]
-  static const codec = BridgeTypeSpec('dart:convert', 'Codec');
-
-  /// Bridge type spec for [$Encoding]
-  static const encoding = BridgeTypeSpec('dart:convert', 'Encoding');
-
-  /// Bridge type spec for [$JsonEncoder]
-  static const jsonEncoder = BridgeTypeSpec('dart:convert', 'JsonEncoder');
-
-  /// Bridge type spec for [$JsonDecoder]
-  static const jsonDecoder = BridgeTypeSpec('dart:convert', 'JsonDecoder');
-
-  /// Bridge type spec for [$JsonCodec]
-  static const jsonCodec = BridgeTypeSpec('dart:convert', 'JsonCodec');
-
-  /// Bridge type spec for [$Utf8Encoder]
-  static const utf8Encoder = BridgeTypeSpec('dart:convert', 'Utf8Encoder');
-
-  /// Bridge type spec for [$Utf8Decoder]
-  static const utf8Decoder = BridgeTypeSpec('dart:convert', 'Utf8Decoder');
-
-  /// Bridge type spec for [$Utf8Codec]
-  static const utf8Codec = BridgeTypeSpec('dart:convert', 'Utf8Codec');
-
-  /// Bridge type spec for [$Base64Encoder]
-  static const base64Encoder = BridgeTypeSpec('dart:convert', 'Base64Encoder');
-
-  /// Bridge type spec for [$Base64Decoder]
-  static const base64Decoder = BridgeTypeSpec('dart:convert', 'Base64Decoder');
-
-  /// Bridge type spec for [$Base64Codec]
+  /// Bridge spec for [Base64Codec].
   static const base64Codec = BridgeTypeSpec('dart:convert', 'Base64Codec');
 
-  /// Bridge type spec for [ByteConversionSink]
+  /// Bridge spec for [Base64Decoder].
+  static const base64Decoder = BridgeTypeSpec('dart:convert', 'Base64Decoder');
+
+  /// Bridge spec for [Base64Encoder].
+  static const base64Encoder = BridgeTypeSpec('dart:convert', 'Base64Encoder');
+
+  /// Bridge spec for [ByteConversionSink].
   static const byteConversionSink = BridgeTypeSpec(
     'dart:convert',
     'ByteConversionSink',
   );
 
-  /// Bridge type spec for [ChunkedConversionSink]
+  /// Bridge spec for [ChunkedConversionSink].
   static const chunkedConversionSink = BridgeTypeSpec(
     'dart:convert',
     'ChunkedConversionSink',
   );
+
+  /// Bridge spec for [Codec].
+  static const codec = BridgeTypeSpec('dart:convert', 'Codec');
+
+  /// Bridge spec for [Converter].
+  static const converter = BridgeTypeSpec('dart:convert', 'Converter');
+
+  /// Bridge spec for [Encoding].
+  static const encoding = BridgeTypeSpec('dart:convert', 'Encoding');
+
+  /// Bridge spec for [JsonCodec].
+  static const jsonCodec = BridgeTypeSpec('dart:convert', 'JsonCodec');
+
+  /// Bridge spec for [JsonDecoder].
+  static const jsonDecoder = BridgeTypeSpec('dart:convert', 'JsonDecoder');
+
+  /// Bridge spec for [JsonEncoder].
+  static const jsonEncoder = BridgeTypeSpec('dart:convert', 'JsonEncoder');
+
+  /// Bridge spec for [Utf8Codec].
+  static const utf8Codec = BridgeTypeSpec('dart:convert', 'Utf8Codec');
+
+  /// Bridge spec for [Utf8Decoder].
+  static const utf8Decoder = BridgeTypeSpec('dart:convert', 'Utf8Decoder');
+
+  /// Bridge spec for [Utf8Encoder].
+  static const utf8Encoder = BridgeTypeSpec('dart:convert', 'Utf8Encoder');
 }
 
-/// This class contains dart:io bridge type specs for convenience
+/// Bridge type specs for `dart:io`.
 class IoTypes {
-  /// Bridge type spec for [$File]
-  static const file = BridgeTypeSpec('dart:io', 'File');
-
-  /// Bridge type spec for [$Directory]
+  /// Bridge spec for [Directory].
   static const directory = BridgeTypeSpec('dart:io', 'Directory');
 
-  /// Bridge type spec for [$FileSystemEntity]
+  /// Bridge spec for [File].
+  static const file = BridgeTypeSpec('dart:io', 'File');
+
+  /// Bridge spec for [FileMode].
+  static const fileMode = BridgeTypeSpec('dart:io', 'FileMode');
+
+  /// Bridge spec for [FileStat].
+  static const fileStat = BridgeTypeSpec('dart:io', 'FileStat');
+
+  /// Bridge spec for [FileSystemEntity].
   static const fileSystemEntity = BridgeTypeSpec('dart:io', 'FileSystemEntity');
 
-  /// Bridge type spec for [$FileSystemEntityType]
+  /// Bridge spec for [FileSystemEntityType].
   static const fileSystemEntityType = BridgeTypeSpec(
     'dart:io',
     'FileSystemEntityType',
   );
 
-  /// Bridge type spec for [$FileStat]
-  static const fileStat = BridgeTypeSpec('dart:io', 'FileStat');
-
-  /// Bridge type spec for [$FileSystemException]
+  /// Bridge spec for [FileSystemException].
   static const fileSystemException = BridgeTypeSpec(
     'dart:io',
     'FileSystemException',
   );
 
-  /// Bridge type spec for [$FileMode]
-  static const fileMode = BridgeTypeSpec('dart:io', 'FileMode');
-
-  /// Bridge type spec for [$IOSink]
-  static const ioSink = BridgeTypeSpec('dart:io', 'IOSink');
-
-  /// Bridge type spec for [StringSink]
-  static const stringSink = BridgeTypeSpec('dart:io', 'StringSink');
-
-  /// Bridge type spec for [$InternetAddressType]
-  static const internetAddressType = BridgeTypeSpec(
-    'dart:io',
-    'InternetAddressType',
-  );
-
-  /// Bridge type spec for [$InternetAddress]
-  static const internetAddress = BridgeTypeSpec('dart:io', 'InternetAddress');
-
-  /// Bridge type spec for [$HttpClient]
+  /// Bridge spec for [HttpClient].
   static const httpClient = BridgeTypeSpec('dart:io', 'HttpClient');
 
-  /// Bridge type spec for [$HttpClientRequest]
+  /// Bridge spec for [HttpClientRequest].
   static const httpClientRequest = BridgeTypeSpec(
     'dart:io',
     'HttpClientRequest',
   );
 
-  /// Bridge type spec for [$HttpClientResponse]
+  /// Bridge spec for [HttpClientResponse].
   static const httpClientResponse = BridgeTypeSpec(
     'dart:io',
     'HttpClientResponse',
   );
 
-  /// Bridge type spec for [$HttpStatus]
-  static const httpStatus = BridgeTypeSpec(
-    'dart:io/http_status.dart',
-    'HttpStatus',
+  /// Bridge spec for [HttpStatus].
+  static const httpStatus = BridgeTypeSpec('dart:io', 'HttpStatus');
+
+  /// Bridge spec for [InternetAddress].
+  static const internetAddress = BridgeTypeSpec('dart:io', 'InternetAddress');
+
+  /// Bridge spec for [InternetAddressType].
+  static const internetAddressType = BridgeTypeSpec(
+    'dart:io',
+    'InternetAddressType',
   );
+
+  /// Bridge spec for [IOSink].
+  static const ioSink = BridgeTypeSpec('dart:io', 'IOSink');
+
+  /// Bridge spec for [Process].
+  static const process = BridgeTypeSpec('dart:io', 'Process');
+
+  /// Bridge spec for [ProcessInfo].
+  static const processInfo = BridgeTypeSpec('dart:io', 'ProcessInfo');
+
+  /// Bridge spec for [ProcessResult].
+  static const processResult = BridgeTypeSpec('dart:io', 'ProcessResult');
+
+  /// Bridge spec for [ProcessSignal].
+  static const processSignal = BridgeTypeSpec('dart:io', 'ProcessSignal');
+
+  /// Bridge spec for [ProcessStartMode].
+  static const processStartMode = BridgeTypeSpec('dart:io', 'ProcessStartMode');
 }
 
+/// Bridge type specs for `dart:math`.
 class MathTypes {
-  /// Bridge type spec for [$Point]
+  /// Bridge spec for [Point].
   static const point = BridgeTypeSpec('dart:math', 'Point');
 
-  /// Bridge type spec for [$Random]
+  /// Bridge spec for [Random].
   static const random = BridgeTypeSpec('dart:math', 'Random');
 }
 
+/// Bridge type specs for `dart:typed_data`.
 class TypedDataTypes {
-  /// Bridge type spec for [$ByteBuffer]
+  /// Bridge spec for [ByteBuffer].
   static const byteBuffer = BridgeTypeSpec('dart:typed_data', 'ByteBuffer');
 
-  /// Bridge type spec for [$TypedData]
-  static const typedData = BridgeTypeSpec('dart:typed_data', 'TypedData');
-
-  /// Bridge type spec for [$ByteData]
+  /// Bridge spec for [ByteData].
   static const byteData = BridgeTypeSpec('dart:typed_data', 'ByteData');
 
-  /// Bridge type spec for [$Uint8List]
+  /// Bridge spec for [TypedData].
+  static const typedData = BridgeTypeSpec('dart:typed_data', 'TypedData');
+
+  /// Bridge spec for [Uint8List].
   static const uint8List = BridgeTypeSpec('dart:typed_data', 'Uint8List');
 }

@@ -1,6 +1,5 @@
 import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'package:dart_eval/src/eval/bridge/runtime_bridge.dart';
-import 'package:dart_eval/src/eval/shared/stdlib/core/type.dart';
 import 'package:dart_eval/src/eval/runtime/function.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/stdlib/core.dart';

@@ -27,6 +27,7 @@ void main(List<String> args) {
   bindCmd.addFlag('single-file', abbr: 's');
   bindCmd.addFlag('all', abbr: 'a');
   bindCmd.addFlag('plugin', defaultsTo: true);
+  bindCmd.addOption('config', abbr: 'c');
 
   // ignore: unused_local_variable
   final helpCmd = parser.addCommand('help');
@@ -132,15 +133,19 @@ void main(List<String> args) {
       print('bind: Generate bindings for a Dart project');
       print('Usage:');
       print(
-        '   dart_eval bind [-h, --help] [-a, --all] [-s, --single-file] [--[no-]plugin]',
+        '   dart_eval bind [-h, --help] [-a, --all] [-s, --single-file] [--[no-]plugin] [-c, --config <yaml>]',
       );
       exit(0);
     }
 
-    cliBind(
-      singleFile: command['single-file'],
-      all: command['all'],
-      generatePlugin: command['plugin'],
-    );
+    if (command['config'] != null) {
+      cliBindFromConfig(command['config'] as String);
+    } else {
+      cliBind(
+        singleFile: command['single-file'],
+        all: command['all'],
+        generatePlugin: command['plugin'],
+      );
+    }
   }
 }

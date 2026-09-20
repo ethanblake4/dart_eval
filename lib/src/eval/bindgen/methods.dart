@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
+import 'package:dart_eval/src/eval/bindgen/bridge_declaration.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
 import 'package:dart_eval/src/eval/bindgen/operator.dart';
 import 'package:dart_eval/src/eval/bindgen/parameters.dart';
@@ -7,29 +8,82 @@ import 'package:dart_eval/src/eval/bindgen/permission.dart';
 import 'package:dart_eval/src/eval/bindgen/type.dart';
 
 String $methods(BindgenContext ctx, InterfaceElement element) {
-  final methods = {
+  final methods = [
     if (ctx.implicitSupers)
-      for (var s in element.allSupertypes)
-        for (final m in s.element.methods) m.name: m,
-    for (final m in element.methods) m.name: m,
-  };
+      for (var s in element.allSupertypes.reversed) ...s.methods,
+    ...element.methods,
+  ];
 
-  return methods.values
+  final emitted = dedupeMethods(methods)
       .where((method) => !method.isPrivate && !method.isStatic)
       .where(
-        (m) => !(const ['==', 'toString', 'noSuchMethod'].contains(m.name)),
+        (m) => ctx.memberIncluded(
+          m.name!,
+          'method',
+          isObjectMember: objectMethodNames.contains(m.name),
+        ),
       )
       .map((e) {
+        final member = ctx.memberConfig(e.name!, 'method');
+        final name = member?.rename ?? e.name!;
         final returnsValue =
             e.returnType is! VoidType && !e.returnType.isDartCoreNull;
-        final op = resolveMethodOperator(e.displayName);
+        final op = operatorForArity(name, e.formalParameters.length);
+        // The Dart call must use the real SDK member name even when the
+        // bound name is renamed.
+        final callOp = operatorForArity(
+          e.displayName,
+          e.formalParameters.length,
+        );
+        final hook = member?.hook;
+        final expr = member?.expr;
+        final String body;
+        if (hook != null) {
+          final prefix = ctx.hooksPrefix();
+          body = 'return ${prefix != null ? '$prefix.' : ''}$hook'
+              '(runtime, target, args);';
+        } else if (expr != null) {
+          body = 'final self = target! as \$${element.name};\n'
+              'return $expr;';
+        } else {
+          body = 'final self = target! as \$${element.name};\n'
+              '${returnsValue ? 'final result = ' : ''}'
+              '${callOp.format('self.\$value', argumentAccessors(ctx, e.formalParameters, member: member))};\n'
+              'return ${wrapVar(ctx, e.returnType, 'result', unionTypeNames: member?.returns?.union)};';
+        }
         return '''
         static const \$Function __${op.name} = \$Function(_${op.name});
         static \$Value? _${op.name}(Runtime runtime, \$Value? target, List<\$Value?> args) {
           ${assertMethodPermissions(e)}
-          final self = target! as \$${element.name};
-          ${returnsValue ? 'final result = ' : ''}${op.format('self.\$value', argumentAccessors(ctx, e.formalParameters))};
-          return ${wrapVar(ctx, e.returnType, 'result')};
+          ${assertConfigPermissions(ctx, member, e.formalParameters.map((p) => p.name ?? '').toList())}
+          $body
+        }''';
+      })
+      .join('\n');
+
+  return emitted + _syntheticMethodBodies(ctx, element);
+}
+
+/// Emit `__x`/`_x` function bodies for `synthetic:` methods.
+String _syntheticMethodBodies(BindgenContext ctx, InterfaceElement element) {
+  final synthetic = ctx.classConfig?.synthetic ?? const [];
+  return synthetic
+      .where((s) => s.kind == 'method' && !s.isStatic)
+      .map((s) {
+        final op = operatorForArity(s.name, s.params.length);
+        final prefix = ctx.hooksPrefix();
+        final String body;
+        if (s.hook != null) {
+          body = 'return ${prefix != null ? '$prefix.' : ''}${s.hook}'
+              '(runtime, target, args);';
+        } else {
+          body = 'final self = target! as \$${element.name};\n'
+              'return ${s.expr ?? 'null'};';
+        }
+        return '''
+        static const \$Function __${op.name} = \$Function(_${op.name});
+        static \$Value? _${op.name}(Runtime runtime, \$Value? target, List<\$Value?> args) {
+          $body
         }''';
       })
       .join('\n');

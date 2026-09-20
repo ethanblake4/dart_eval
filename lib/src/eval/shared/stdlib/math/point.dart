@@ -1,243 +1,298 @@
-// ignore_for_file: camel_case_types
-
-import 'dart:math';
+// ignore_for_file: unused_import, unnecessary_import
+// ignore_for_file: always_specify_types, avoid_redundant_argument_values
+// ignore_for_file: sort_constructors_first
+// ignore_for_file: no_leading_underscores_for_local_identifiers
+// ignore_for_file: prefer_is_empty
+// ignore_for_file: undefined_hidden_name
+// ignore_for_file: dead_code, unused_local_variable
+// ignore_for_file: unnecessary_type_check, unnecessary_non_null_assertion
+// ignore_for_file: sdk_version_since
+// ignore_for_file: non_constant_identifier_names
+// ignore_for_file: argument_type_not_assignable_to_error_handler
+// ignore_for_file: avoid_function_literals_in_foreach_calls
 
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/stdlib/core.dart';
 
-/// dart_eval wrapper for [Point]
-class $Point implements Point, $Instance {
-  /// Configure this class for compilation in a [Compiler].
+import 'dart:math';
+import 'dart:core';
+import 'package:dart_eval/stdlib/core.dart' hide $Point, $Random;
+
+/// dart_eval wrapper binding for [Point]
+class $Point<T extends num> implements $Instance {
+  /// Configure this class for use in a [Runtime]
+  /// Configure this class for use in a [Runtime]
+  static void configureForRuntime(Runtime runtime) {
+    runtime.registerBridgeFuncRegisters('dart:math', 'Point.', $Point.$new);
+  }
+
+  /// Configure this class for use during compilation
   static void configureForCompile(BridgeDeclarationRegistry registry) {
     registry.defineBridgeClass($declaration);
   }
 
-  /// Configure this class for runtime in a [Runtime].
-  static void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFunc('dart:math', 'Point.', const _$Point_new().call);
-  }
+  /// Compile-time type specification of [$Point]
+  static const $spec = BridgeTypeSpec('dart:math', 'Point');
 
-  static const _$type = BridgeTypeRef(MathTypes.point);
+  /// Compile-time type declaration of [$Point]
+  static const $type = BridgeTypeRef($spec);
 
-  /// The bridge class definition for this class.
+  /// Compile-time class declaration of [$Point]
   static const $declaration = BridgeClassDef(
-    BridgeClassType(_$type, isAbstract: true),
+    BridgeClassType($type, generics: {'T': BridgeGenericParam()}),
     constructors: {
       '': BridgeConstructorDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(_$type),
+          returns: BridgeTypeAnnotation($type),
+          namedParams: [],
           params: [
             BridgeParameter(
               'x',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
               false,
             ),
+
             BridgeParameter(
               'y',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
               false,
             ),
           ],
-          namedParams: [],
         ),
+        isFactory: false,
       ),
     },
+
     methods: {
+      '+': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(MathTypes.point, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+            ]),
+          ),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(MathTypes.point, [
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+                ]),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      '-': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(MathTypes.point, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+            ]),
+          ),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(MathTypes.point, [
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+                ]),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
       '*': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(_$type),
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(MathTypes.point, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+            ]),
+          ),
+          namedParams: [],
           params: [
             BridgeParameter(
               'factor',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num, [])),
               false,
             ),
           ],
-          namedParams: [],
         ),
       ),
-      '+': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(_$type),
-          params: [
-            BridgeParameter('other', BridgeTypeAnnotation(_$type), false),
-          ],
-          namedParams: [],
-        ),
-      ),
-      '-': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(_$type),
-          params: [
-            BridgeParameter('other', BridgeTypeAnnotation(_$type), false),
-          ],
-          namedParams: [],
-        ),
-      ),
-      'squaredDistanceTo': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
-          params: [
-            BridgeParameter('other', BridgeTypeAnnotation(_$type), false),
-          ],
-          namedParams: [],
-        ),
-      ),
+
       'distanceTo': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
-          params: [
-            BridgeParameter('other', BridgeTypeAnnotation(_$type), false),
-          ],
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double, [])),
           namedParams: [],
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(MathTypes.point, [
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+                ]),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'squaredDistanceTo': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(MathTypes.point, [
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+                ]),
+              ),
+              false,
+            ),
+          ],
         ),
       ),
     },
     getters: {
-      'x': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
-        ),
-      ),
-      'y': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
-        ),
-      ),
       'magnitude': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double, [])),
+          namedParams: [],
+          params: [],
         ),
       ),
     },
     setters: {},
-    fields: {},
+    fields: {
+      'x': BridgeFieldDef(
+        BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+        isStatic: false,
+      ),
+
+      'y': BridgeFieldDef(
+        BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+        isStatic: false,
+      ),
+    },
     wrap: true,
+    bridge: false,
   );
 
-  /// Create a [$Point] wrapping a [Point].
-  $Point.wrap(this.$value) : _superclass = $Object($value);
-
-  @override
-  final Point $value;
-
-  @override
-  Point get $reified => $value;
+  /// Wrapper for the [Point.new] constructor
+  static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $Point.wrap(Point((r as $Value?)!.$value, (s as $Value?)!.$value));
+  }
 
   final $Instance _superclass;
 
   @override
-  $Value? $getProperty(Runtime runtime, String identifier) {
-    switch (identifier) {
-      case '+':
-        return __add;
-      case '-':
-        return __subtract;
-      case '*':
-        return __multiply;
-      case 'squaredDistanceTo':
-        return __squaredDistanceTo;
-      case 'distanceTo':
-        return __distanceTo;
-      case 'x':
-        return $num($value.x);
-      case 'y':
-        return $num($value.y);
-      default:
-        return _superclass.$getProperty(runtime, identifier);
-    }
-  }
+  final Point<T> $value;
 
   @override
-  void $setProperty(Runtime runtime, String identifier, $Value value) {
-    return _superclass.$setProperty(runtime, identifier, value);
+  Point get $reified => $value;
+
+  /// Wrap a [Point] in a [$Point]
+  $Point.wrap(this.$value) : _superclass = $Object($value);
+
+  @override
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
+
+  @override
+  $Value? $getProperty(Runtime runtime, String identifier) {
+    switch (identifier) {
+      case 'x':
+        final _x = $value.x;
+        return runtime.wrapAlways(_x, recursive: true);
+      case 'y':
+        final _y = $value.y;
+        return runtime.wrapAlways(_y, recursive: true);
+      case 'magnitude':
+        final _magnitude = $value.magnitude;
+        return $double(_magnitude);
+      case '+':
+        return __operatorPlus;
+
+      case '-':
+        return __operatorMinus;
+
+      case '*':
+        return __operatorMul;
+
+      case 'distanceTo':
+        return __distanceTo;
+
+      case 'squaredDistanceTo':
+        return __squaredDistanceTo;
+    }
+    return _superclass.$getProperty(runtime, identifier);
   }
 
-  static const $Function __add = $Function(_add);
-
-  static $Value? _add(Runtime runtime, $Value? target, List<$Value?> args) {
-    final $t = target as $Point;
-    return $Point.wrap(($t.$value) + (args[0] as $Point).$value);
-  }
-
-  static const $Function __squaredDistanceTo = $Function(_squaredDistanceTo);
-
-  static $Value? _squaredDistanceTo(
+  static const $Function __operatorPlus = $Function(_operatorPlus);
+  static $Value? _operatorPlus(
     Runtime runtime,
     $Value? target,
     List<$Value?> args,
   ) {
-    final $t = target as $Point;
-    return $num(($t.$value).squaredDistanceTo((args[0] as $Point).$value));
+    final self = target! as $Point;
+    final result = (self.$value + args[0]!.$value);
+    return $Point.wrap(result);
   }
 
-  static const $Function __multiply = $Function(_multiply);
-
-  static $Value? _multiply(
+  static const $Function __operatorMinus = $Function(_operatorMinus);
+  static $Value? _operatorMinus(
     Runtime runtime,
     $Value? target,
     List<$Value?> args,
   ) {
-    final $t = target as $Point;
-    return $Point.wrap(($t.$value) * (args[0] as $num).$value);
+    final self = target! as $Point;
+    final result = (self.$value - args[0]!.$value);
+    return $Point.wrap(result);
   }
 
-  static const $Function __subtract = $Function(_subtract);
-
-  static $Value? _subtract(
+  static const $Function __operatorMul = $Function(_operatorMul);
+  static $Value? _operatorMul(
     Runtime runtime,
     $Value? target,
     List<$Value?> args,
   ) {
-    final $t = target as $Point;
-    return $Point.wrap(($t.$value) - (args[0] as $Point).$value);
+    final self = target! as $Point;
+    final result = (self.$value * args[0]!.$value);
+    return $Point.wrap(result);
   }
 
   static const $Function __distanceTo = $Function(_distanceTo);
-
   static $Value? _distanceTo(
     Runtime runtime,
     $Value? target,
     List<$Value?> args,
   ) {
-    final $t = target as $Point;
-    return $double(($t.$value).distanceTo((args[0] as $Point).$value));
+    final self = target! as $Point;
+    final result = self.$value.distanceTo(args[0]!.$value);
+    return $double(result);
+  }
+
+  static const $Function __squaredDistanceTo = $Function(_squaredDistanceTo);
+  static $Value? _squaredDistanceTo(
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
+    final self = target! as $Point;
+    final result = self.$value.squaredDistanceTo(args[0]!.$value);
+    return runtime.wrapAlways(result, recursive: true);
   }
 
   @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType(_$type.spec!);
-
-  @override
-  Point<num> operator *(num factor) => $value * factor;
-
-  @override
-  Point<num> operator +(Point<num> other) => $value + other;
-
-  @override
-  Point<num> operator -(Point<num> other) => $value - other;
-
-  @override
-  double distanceTo(Point<num> other) => $value.distanceTo(other);
-
-  @override
-  double get magnitude => $value.magnitude;
-
-  @override
-  num squaredDistanceTo(Point<num> other) => $value.squaredDistanceTo(other);
-
-  @override
-  num get x => $value.x;
-
-  @override
-  num get y => $value.y;
-}
-
-class _$Point_new implements EvalCallable {
-  const _$Point_new();
-
-  @override
-  $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $Point.wrap(Point(args[0]!.$value, args[1]!.$value));
+  void $setProperty(Runtime runtime, String identifier, $Value value) {
+    return _superclass.$setProperty(runtime, identifier, value);
   }
 }

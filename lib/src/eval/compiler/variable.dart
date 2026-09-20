@@ -387,11 +387,12 @@ class Variable {
     }
     final fieldType =
         resolvedField?.resolveTypeChain(ctx) ?? CoreTypes.dynamic.ref(ctx);
+    final receiver = boxIfNeeded(ctx);
     return Variable.ssa(
       ctx,
       LoadPropertyDynamic(
         ctx.svar(name),
-        ssa,
+        receiver.ssa,
         name,
         callerLibrary: ctx.library,
       ),

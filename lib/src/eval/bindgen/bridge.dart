@@ -2,6 +2,7 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
+import 'package:dart_eval/src/eval/bindgen/operator.dart';
 import 'package:dart_eval/src/eval/bindgen/type.dart';
 
 String bindForwardedConstructors(
@@ -35,14 +36,13 @@ String _$forwardedConstructor(
 }
 
 String bindDecoratorMethods(BindgenContext ctx, ClassElement element) {
-  final methods = {
+  final methods = [
     if (ctx.implicitSupers)
-      for (var s in element.allSupertypes)
-        for (final m in s.element.methods) m.name: m,
-    for (final m in element.methods) m.name: m,
-  };
+      for (var s in element.allSupertypes.reversed) ...s.methods,
+    ...element.methods,
+  ];
 
-  return methods.values
+  return dedupeMethods(methods)
       .where((method) => !method.isPrivate && !method.isStatic)
       .where(
         (m) => !(const ['==', 'toString', 'noSuchMethod'].contains(m.name)),
@@ -89,6 +89,34 @@ String bindDecoratorProperties(BindgenContext ctx, ClassElement element) {
       .join('\n');
 }
 
+/// Renders [type] as a Dart type with type parameters erased to their bound
+/// (or `dynamic`). Wrapper method bodies are static, so class type parameters
+/// are out of scope, and `$value` is always raw — erased types are correct.
+String dartTypeErased(DartType type) {
+  final suffix =
+      type.nullabilitySuffix == NullabilitySuffix.question ? '?' : '';
+  if (type is TypeParameterType) {
+    final bound = type.bound;
+    if (bound.isDartCoreObject) {
+      return 'dynamic';
+    }
+    return dartTypeErased(bound);
+  }
+  if (type is FunctionType) {
+    return '${dartTypeErased(type.returnType)} Function('
+        '${type.formalParameters.map((p) {
+          final t = dartTypeErased(p.type);
+          final prefix = p.isRequiredNamed ? 'required ' : '';
+          return p.isNamed ? '$prefix$t ${p.name ?? ''}' : t;
+        }).join(', ')})$suffix';
+  }
+  if (type is ParameterizedType && type.typeArguments.isNotEmpty) {
+    final args = type.typeArguments.map(dartTypeErased).join(', ');
+    return '${type.element?.name}<$args>$suffix';
+  }
+  return type.getDisplayString();
+}
+
 String parameterHeader(
   List<FormalParameterElement> params, {
   bool forConstructor = false,
@@ -108,7 +136,7 @@ String parameterHeader(
     }
     switch (param.type) {
       case FunctionType functionType when !forConstructor:
-        paramBuffer.write(functionType.returnType.getDisplayString());
+        paramBuffer.write(dartTypeErased(functionType.returnType));
         paramBuffer.write(' Function(');
         paramBuffer.write(parameterHeader(functionType.formalParameters));
         paramBuffer.write(')');
@@ -117,7 +145,7 @@ String parameterHeader(
         if (forConstructor) {
           paramBuffer.write('super.');
         } else {
-          paramBuffer.write('${param.type.getDisplayString()} ');
+          paramBuffer.write('${dartTypeErased(param.type)} ');
         }
     }
     paramBuffer.write(

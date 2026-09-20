@@ -35,7 +35,18 @@ class ArgumentListResult {
   final List<Variable> args;
   final Map<String, Variable> namedArgs;
 
-  ArgumentListResult(this.ssa, this.args, this.namedArgs);
+  /// The full positional argument vector including null placeholders for
+  /// omitted optional positional parameters (used by the bridge padded ABI).
+  /// When the callee declares named parameters this also contains entries for
+  /// them, padded in declaration order.
+  final List<Variable> paddedArgs;
+
+  ArgumentListResult(
+    this.ssa,
+    this.args,
+    this.namedArgs, [
+    List<Variable>? paddedArgs,
+  ]) : paddedArgs = paddedArgs ?? args;
 }
 
 Variable _omittedArgument(
@@ -448,92 +459,6 @@ ArgumentListResult compileArgumentListWithDynamic(
   return ArgumentListResult(ssa, args, namedArgs);
 }
 
-ArgumentListResult compileArgumentListWithKnownMethodArgs(
-  CompilerContext ctx,
-  ArgumentList argumentList,
-  List<KnownMethodArg> params,
-  Map<String, KnownMethodArg> namedParams, {
-  List<Variable> before = const [],
-  AstNode? source,
-}) {
-  final ssa = <SSA>[];
-  final args = <Variable>[];
-  final push = <Variable>[...before];
-  final namedArgs = <String, Variable>{};
-  final namedExpr = <String, Expression>{};
-
-  var i = 0;
-  Variable? $null;
-
-  for (final param in params) {
-    if (param.optional && argumentList.arguments.length <= i) {
-      break;
-    }
-    final arg = argumentList.arguments[i];
-    if (arg is NamedExpression) {
-      if (!param.optional) {
-        throw CompileError('Not enough positional arguments');
-      } else {
-        $null ??= BuiltinValue().push(ctx);
-        push.add($null);
-      }
-    } else {
-      var paramType = param.type ?? CoreTypes.dynamic.ref(ctx);
-
-      var arg0 = compileExpression(arg, ctx, paramType);
-      arg0 = arg0.boxIfNeeded(ctx);
-
-      if (arg0.type == CoreTypes.function.ref(ctx) &&
-          arg0.name == null &&
-          arg0.methodOffset != null) {
-        arg0 = arg0.tearOff(ctx);
-      }
-
-      if (!arg0.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
-        throw CompileError(
-          'Cannot assign argument of type ${arg0.type} to parameter of type $paramType',
-          argumentList,
-        );
-      }
-      args.add(arg0);
-      push.add(arg0);
-    }
-
-    i++;
-  }
-
-  for (final arg in argumentList.arguments) {
-    if (arg is NamedExpression) {
-      namedExpr[arg.name.label.name] = arg.expression;
-    }
-  }
-
-  for (final param in namedParams.values) {
-    var paramType = param.type ?? CoreTypes.dynamic.ref(ctx);
-    if (namedExpr.containsKey(param.name)) {
-      final arg0 = compileExpression(
-        namedExpr[param.name]!,
-        ctx,
-        paramType,
-      ).boxIfNeeded(ctx);
-      if (!arg0.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
-        throw CompileError(
-          'Cannot assign argument of type ${arg0.type} to parameter of type $paramType',
-          source,
-        );
-      }
-      push.add(arg0);
-      namedArgs[param.name] = arg0;
-    } else {
-      $null ??= BuiltinValue().push(ctx);
-      push.add($null);
-    }
-  }
-
-  ssa.addAll(push.map((argument) => argument.ssa));
-  return ArgumentListResult(ssa, args, namedArgs);
-}
-
 ArgumentListResult compileArgumentListWithBridge(
   CompilerContext ctx,
   ArgumentList argumentList,
@@ -651,7 +576,12 @@ ArgumentListResult compileArgumentListWithBridge(
   }
 
   ssa.addAll(push.map((argument) => argument.ssa));
-  return ArgumentListResult(ssa, args, namedArgs);
+  return ArgumentListResult(
+    ssa,
+    args,
+    namedArgs,
+    push.sublist(before.length),
+  );
 }
 
 TypeRef resolveFieldFormalType(

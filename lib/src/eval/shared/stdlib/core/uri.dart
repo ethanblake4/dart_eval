@@ -1,622 +1,1370 @@
-import 'dart:convert';
+// ignore_for_file: unused_import, unnecessary_import
+// ignore_for_file: always_specify_types, avoid_redundant_argument_values
+// ignore_for_file: sort_constructors_first
+// ignore_for_file: no_leading_underscores_for_local_identifiers
+// ignore_for_file: prefer_is_empty
+// ignore_for_file: undefined_hidden_name
+// ignore_for_file: dead_code, unused_local_variable
+// ignore_for_file: unnecessary_type_check, unnecessary_non_null_assertion
+// ignore_for_file: sdk_version_since
+// ignore_for_file: non_constant_identifier_names
+// ignore_for_file: argument_type_not_assignable_to_error_handler
+// ignore_for_file: avoid_function_literals_in_foreach_calls
 
+import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/utils/wrap_helper.dart';
-import 'package:dart_eval/stdlib/core.dart';
 
-/// dart_eval wrapper for [Uri]
+import 'dart:convert';
+import 'package:dart_eval/stdlib/core.dart'
+    hide
+        $Duration,
+        $DateTime,
+        $Iterator,
+        $Comparable,
+        $Sink,
+        $StackTrace,
+        $StringBuffer,
+        $Symbol,
+        $MapEntry,
+        $Stopwatch,
+        $Error,
+        $TypeError,
+        $NoSuchMethodError,
+        $RangeError,
+        $AssertionError,
+        $ArgumentError,
+        $StateError,
+        $UnsupportedError,
+        $UnimplementedError,
+        $Invocation,
+        $Exception,
+        $FormatException,
+        $Uri,
+        $Pattern,
+        $Match,
+        $RegExp,
+        $RegExpMatch,
+        $StringSink;
+import 'package:dart_eval/src/eval/utils/wrap_helper.dart';
+
+/// dart_eval wrapper binding for [Uri]
 class $Uri implements $Instance {
-  /// Configures the runtime for the [Uri] class
+  /// Configure this class for use in a [Runtime]
+  /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFunc('dart:core', 'Uri.parse', $parse);
-    runtime.registerBridgeFunc('dart:core', 'Uri.tryParse', $tryParse);
-    runtime.registerBridgeFunc('dart:core', 'Uri.encodeFull', $encodeFull);
-    runtime.registerBridgeFunc('dart:core', 'Uri.decodeFull', $decodeFull);
-    runtime.registerBridgeFunc(
+    runtime.registerBridgeFuncRegisters('dart:core', 'Uri.', $Uri.$new);
+
+    runtime.registerBridgeFuncRegisters('dart:core', 'Uri.http', $Uri.$http);
+
+    runtime.registerBridgeFuncRegisters('dart:core', 'Uri.https', $Uri.$https);
+
+    runtime.registerBridgeFuncRegisters('dart:core', 'Uri.file', $Uri.$file);
+
+    runtime.registerBridgeFuncRegisters(
       'dart:core',
-      'Uri.encodeComponent',
-      $encodeComponent,
+      'Uri.directory',
+      $Uri.$directory,
     );
-    runtime.registerBridgeFunc(
-      'dart:core',
-      'Uri.decodeComponent',
-      $decodeComponent,
-    );
-    runtime.registerBridgeFunc(
-      'dart:core',
-      'Uri.decodeQueryComponent',
-      $decodeQueryComponent,
-    );
-    runtime.registerBridgeFunc(
-      'dart:core',
-      'Uri.encodeQueryComponent',
-      $encodeQueryComponent,
-    );
-    runtime.registerBridgeFunc(
-      'dart:core',
-      'Uri.dataFromBytes',
-      $dataFromBytes,
-    );
-    runtime.registerBridgeFunc(
+
+    runtime.registerBridgeFuncRegisters(
       'dart:core',
       'Uri.dataFromString',
-      $dataFromString,
+      $Uri.$dataFromString,
     );
-    runtime.registerBridgeFunc('dart:core', 'Uri.directory', $directory);
-    runtime.registerBridgeFunc('dart:core', 'Uri.file', $file);
-    runtime.registerBridgeFunc('dart:core', 'Uri.http', $http);
-    runtime.registerBridgeFunc('dart:core', 'Uri.https', $https);
-    runtime.registerBridgeFunc(
+
+    runtime.registerBridgeFuncRegisters(
       'dart:core',
-      'Uri.parseIPv4Address',
-      $parseIPv4Address,
+      'Uri.dataFromBytes',
+      $Uri.$dataFromBytes,
     );
-    runtime.registerBridgeFunc(
+
+    runtime.registerBridgeFuncRegisters('dart:core', 'Uri.parse', $Uri.$parse);
+
+    runtime.registerBridgeFuncRegisters(
       'dart:core',
-      'Uri.parseIPv6Address',
-      $parseIPv6Address,
+      'Uri.tryParse',
+      $Uri.$tryParse,
     );
-    runtime.registerBridgeFunc(
+
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'Uri.encodeComponent',
+      $Uri.$encodeComponent,
+    );
+
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'Uri.encodeQueryComponent',
+      $Uri.$encodeQueryComponent,
+    );
+
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'Uri.decodeComponent',
+      $Uri.$decodeComponent,
+    );
+
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'Uri.decodeQueryComponent',
+      $Uri.$decodeQueryComponent,
+    );
+
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'Uri.encodeFull',
+      $Uri.$encodeFull,
+    );
+
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'Uri.decodeFull',
+      $Uri.$decodeFull,
+    );
+
+    runtime.registerBridgeFuncRegisters(
       'dart:core',
       'Uri.splitQueryString',
-      $splitQueryString,
+      $Uri.$splitQueryString,
     );
+
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'Uri.parseIPv4Address',
+      $Uri.$parseIPv4Address,
+    );
+
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'Uri.parseIPv6Address',
+      $Uri.$parseIPv6Address,
+    );
+
+    runtime.registerBridgeFuncRegisters('dart:core', 'Uri.base*g', $Uri.$base);
   }
 
-  /// Bridge type spec for [$Uri]
-  static const $type = BridgeTypeRef(CoreTypes.uri);
+  /// Configure this class for use during compilation
+  static void configureForCompile(BridgeDeclarationRegistry registry) {
+    registry.defineBridgeClass($declaration);
+  }
 
-  /// Bridge class declaration for [$Uri]
+  /// Compile-time type specification of [$Uri]
+  static const $spec = BridgeTypeSpec('dart:core', 'Uri');
+
+  /// Compile-time type declaration of [$Uri]
+  static const $type = BridgeTypeRef($spec);
+
+  /// Compile-time class declaration of [$Uri]
   static const $declaration = BridgeClassDef(
-    BridgeClassType($type),
-    constructors: {},
-    methods: {
-      'parse': BridgeMethodDef(
+    BridgeClassType($type, isAbstract: true),
+    constructors: {
+      '': BridgeConstructorDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation($type),
-          params: [
-            BridgeParameter(
-              'uri',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-              false,
-            ),
-          ],
-          namedParams: [],
-        ),
-        isStatic: true,
-      ),
-      'tryParse': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation($type, nullable: true),
-          params: [
-            BridgeParameter(
-              'uri',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-              false,
-            ),
-          ],
-          namedParams: [],
-        ),
-        isStatic: true,
-      ),
-      'encodeFull': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-          params: [
-            BridgeParameter(
-              'uri',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-              false,
-            ),
-          ],
-          namedParams: [],
-        ),
-        isStatic: true,
-      ),
-      'decodeFull': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-          params: [
-            BridgeParameter(
-              'uri',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-              false,
-            ),
-          ],
-          namedParams: [],
-        ),
-        isStatic: true,
-      ),
-      'encodeComponent': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-          params: [
-            BridgeParameter(
-              'component',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-              false,
-            ),
-          ],
-          namedParams: [],
-        ),
-        isStatic: true,
-      ),
-      'decodeComponent': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-          params: [
-            BridgeParameter(
-              'encodedComponent',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-              false,
-            ),
-          ],
-          namedParams: [],
-        ),
-        isStatic: true,
-      ),
-      'decodeQueryComponent': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-          params: [
-            BridgeParameter(
-              'encodedComponent',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-              false,
-            ),
-          ],
           namedParams: [
             BridgeParameter(
-              'encoding',
-              BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.encoding)),
+              'scheme',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string, []),
+                nullable: true,
+              ),
+              true,
+            ),
+
+            BridgeParameter(
+              'userInfo',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string, []),
+                nullable: true,
+              ),
+              true,
+            ),
+
+            BridgeParameter(
+              'host',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string, []),
+                nullable: true,
+              ),
+              true,
+            ),
+
+            BridgeParameter(
+              'port',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.int, []),
+                nullable: true,
+              ),
+              true,
+            ),
+
+            BridgeParameter(
+              'path',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string, []),
+                nullable: true,
+              ),
+              true,
+            ),
+
+            BridgeParameter(
+              'pathSegments',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.iterable, [
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+                ]),
+                nullable: true,
+              ),
+              true,
+            ),
+
+            BridgeParameter(
+              'query',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string, []),
+                nullable: true,
+              ),
+              true,
+            ),
+
+            BridgeParameter(
+              'queryParameters',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.map, [
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
+                ]),
+                nullable: true,
+              ),
+              true,
+            ),
+
+            BridgeParameter(
+              'fragment',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string, []),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+          params: [],
+        ),
+        isFactory: true,
+      ),
+
+      'http': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'authority',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+              false,
+            ),
+
+            BridgeParameter(
+              'unencodedPath',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+              true,
+            ),
+
+            BridgeParameter(
+              'queryParameters',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.map, [
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
+                ]),
+                nullable: true,
+              ),
               true,
             ),
           ],
         ),
-        isStatic: true,
+        isFactory: true,
       ),
-      'encodeQueryComponent': BridgeMethodDef(
+
+      'https': BridgeConstructorDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+          returns: BridgeTypeAnnotation($type),
+          namedParams: [],
           params: [
             BridgeParameter(
-              'component',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              'authority',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
               false,
             ),
-          ],
-          namedParams: [
+
             BridgeParameter(
-              'encoding',
-              BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.encoding)),
+              'unencodedPath',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+              true,
+            ),
+
+            BridgeParameter(
+              'queryParameters',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.map, [
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
+                ]),
+                nullable: true,
+              ),
               true,
             ),
           ],
         ),
-        isStatic: true,
+        isFactory: true,
       ),
-      'dataFromBytes': BridgeMethodDef(
+
+      'file': BridgeConstructorDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation($type),
+          namedParams: [
+            BridgeParameter(
+              'windows',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.bool, []),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+          params: [
+            BridgeParameter(
+              'path',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+              false,
+            ),
+          ],
+        ),
+        isFactory: true,
+      ),
+
+      'directory': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          namedParams: [
+            BridgeParameter(
+              'windows',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.bool, []),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+          params: [
+            BridgeParameter(
+              'path',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+              false,
+            ),
+          ],
+        ),
+        isFactory: true,
+      ),
+
+      'dataFromString': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          namedParams: [
+            BridgeParameter(
+              'mimeType',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string, []),
+                nullable: true,
+              ),
+              true,
+            ),
+
+            BridgeParameter(
+              'encoding',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(ConvertTypes.encoding, []),
+                nullable: true,
+              ),
+              true,
+            ),
+
+            BridgeParameter(
+              'parameters',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.map, [
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+                ]),
+                nullable: true,
+              ),
+              true,
+            ),
+
+            BridgeParameter(
+              'base64',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
+              true,
+            ),
+          ],
+          params: [
+            BridgeParameter(
+              'content',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+              false,
+            ),
+          ],
+        ),
+        isFactory: true,
+      ),
+
+      'dataFromBytes': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          namedParams: [
+            BridgeParameter(
+              'mimeType',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+              true,
+            ),
+
+            BridgeParameter(
+              'parameters',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.map, [
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+                ]),
+                nullable: true,
+              ),
+              true,
+            ),
+
+            BridgeParameter(
+              'percentEncoded',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
+              true,
+            ),
+          ],
           params: [
             BridgeParameter(
               'bytes',
               BridgeTypeAnnotation(
                 BridgeTypeRef(CoreTypes.list, [
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
                 ]),
               ),
               false,
-            ),
-          ],
-          namedParams: [
-            BridgeParameter(
-              'mimeType',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-              true,
-            ),
-            BridgeParameter(
-              'parameters',
-              BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.map, [
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-                ]),
-              ),
-              true,
-            ),
-            BridgeParameter(
-              'percentEncoded',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
-              true,
             ),
           ],
         ),
-        isStatic: true,
+        isFactory: true,
       ),
-      'dataFromString': BridgeMethodDef(
+    },
+
+    methods: {
+      'isScheme': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation($type),
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
+          namedParams: [],
           params: [
             BridgeParameter(
-              'content',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              'scheme',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
               false,
             ),
           ],
+        ),
+      ),
+
+      'toFilePath': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
           namedParams: [
             BridgeParameter(
-              'mimeType',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              'windows',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.bool, []),
+                nullable: true,
+              ),
               true,
             ),
+          ],
+          params: [],
+        ),
+      ),
+
+      'replace': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.uri, [])),
+          namedParams: [
             BridgeParameter(
-              'parameters',
+              'scheme',
               BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.map, [
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+                BridgeTypeRef(CoreTypes.string, []),
+                nullable: true,
+              ),
+              true,
+            ),
+
+            BridgeParameter(
+              'userInfo',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string, []),
+                nullable: true,
+              ),
+              true,
+            ),
+
+            BridgeParameter(
+              'host',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string, []),
+                nullable: true,
+              ),
+              true,
+            ),
+
+            BridgeParameter(
+              'port',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.int, []),
+                nullable: true,
+              ),
+              true,
+            ),
+
+            BridgeParameter(
+              'path',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string, []),
+                nullable: true,
+              ),
+              true,
+            ),
+
+            BridgeParameter(
+              'pathSegments',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.iterable, [
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
                 ]),
                 nullable: true,
               ),
               true,
             ),
+
             BridgeParameter(
-              'base64',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+              'query',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string, []),
+                nullable: true,
+              ),
               true,
             ),
-          ],
-        ),
-        isStatic: true,
-      ),
-      'directory': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation($type),
-          params: [
-            BridgeParameter(
-              'path',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-              false,
-            ),
-          ],
-          namedParams: [
-            BridgeParameter(
-              'windows',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
-              true,
-            ),
-          ],
-        ),
-        isStatic: true,
-      ),
-      'file': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation($type),
-          params: [
-            BridgeParameter(
-              'path',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-              false,
-            ),
-          ],
-          namedParams: [
-            BridgeParameter(
-              'windows',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
-              true,
-            ),
-          ],
-        ),
-        isStatic: true,
-      ),
-      'http': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation($type),
-          params: [
-            BridgeParameter(
-              'authority',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-              false,
-            ),
-            BridgeParameter(
-              'unencodedPath',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-              true,
-            ),
+
             BridgeParameter(
               'queryParameters',
               BridgeTypeAnnotation(
                 BridgeTypeRef(CoreTypes.map, [
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
                   BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
                 ]),
                 nullable: true,
               ),
               true,
             ),
-          ],
-          namedParams: [],
-        ),
-        isStatic: true,
-      ),
-      'https': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation($type),
-          params: [
+
             BridgeParameter(
-              'authority',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-              false,
-            ),
-            BridgeParameter(
-              'unencodedPath',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-              true,
-            ),
-            BridgeParameter(
-              'queryParameters',
+              'fragment',
               BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.map, [
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
-                ]),
+                BridgeTypeRef(CoreTypes.string, []),
                 nullable: true,
               ),
               true,
             ),
           ],
-          namedParams: [],
+          params: [],
         ),
-        isStatic: true,
       ),
-      'parseIPv4Address': BridgeMethodDef(
+
+      'removeFragment': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.list, [
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
-            ]),
-          ),
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.uri, [])),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+
+      'resolve': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.uri, [])),
+          namedParams: [],
           params: [
             BridgeParameter(
-              'host',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              'reference',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
               false,
             ),
           ],
-          namedParams: [],
         ),
-        isStatic: true,
       ),
-      'parseIPv6Address': BridgeMethodDef(
+
+      'resolveUri': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.list, [
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
-            ]),
-          ),
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.uri, [])),
+          namedParams: [],
           params: [
             BridgeParameter(
-              'host',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              'reference',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.uri, [])),
               false,
             ),
+          ],
+        ),
+      ),
+
+      'normalizePath': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.uri, [])),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+
+      'parse': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.uri, [])),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'uri',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+              false,
+            ),
+
             BridgeParameter(
               'start',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
               true,
             ),
+
             BridgeParameter(
               'end',
               BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.string),
+                BridgeTypeRef(CoreTypes.int, []),
                 nullable: true,
               ),
               true,
             ),
           ],
-          namedParams: [],
         ),
+
         isStatic: true,
       ),
+
+      'tryParse': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.uri, []),
+            nullable: true,
+          ),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'uri',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+              false,
+            ),
+
+            BridgeParameter(
+              'start',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              true,
+            ),
+
+            BridgeParameter(
+              'end',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.int, []),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+        ),
+
+        isStatic: true,
+      ),
+
+      'encodeComponent': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'component',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+              false,
+            ),
+          ],
+        ),
+
+        isStatic: true,
+      ),
+
+      'encodeQueryComponent': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+          namedParams: [
+            BridgeParameter(
+              'encoding',
+              BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.encoding, [])),
+              true,
+            ),
+          ],
+          params: [
+            BridgeParameter(
+              'component',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+              false,
+            ),
+          ],
+        ),
+
+        isStatic: true,
+      ),
+
+      'decodeComponent': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'encodedComponent',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+              false,
+            ),
+          ],
+        ),
+
+        isStatic: true,
+      ),
+
+      'decodeQueryComponent': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+          namedParams: [
+            BridgeParameter(
+              'encoding',
+              BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.encoding, [])),
+              true,
+            ),
+          ],
+          params: [
+            BridgeParameter(
+              'encodedComponent',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+              false,
+            ),
+          ],
+        ),
+
+        isStatic: true,
+      ),
+
+      'encodeFull': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'uri',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+              false,
+            ),
+          ],
+        ),
+
+        isStatic: true,
+      ),
+
+      'decodeFull': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'uri',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+              false,
+            ),
+          ],
+        ),
+
+        isStatic: true,
+      ),
+
       'splitQueryString': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(
             BridgeTypeRef(CoreTypes.map, [
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
             ]),
           ),
-          params: [
-            BridgeParameter(
-              'query',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-              false,
-            ),
-          ],
           namedParams: [
             BridgeParameter(
               'encoding',
-              BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.encoding)),
+              BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.encoding, [])),
+              true,
+            ),
+          ],
+          params: [
+            BridgeParameter(
+              'query',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+              false,
+            ),
+          ],
+        ),
+
+        isStatic: true,
+      ),
+
+      'parseIPv4Address': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.list, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+            ]),
+          ),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'host',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+              false,
+            ),
+
+            BridgeParameter(
+              'start',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              true,
+            ),
+
+            BridgeParameter(
+              'end',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.int, []),
+                nullable: true,
+              ),
               true,
             ),
           ],
         ),
+
         isStatic: true,
       ),
-      'resolve': BridgeMethodDef(
+
+      'parseIPv6Address': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.uri)),
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.list, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+            ]),
+          ),
+          namedParams: [],
           params: [
             BridgeParameter(
-              'reference',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              'host',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
               false,
             ),
-          ],
-          namedParams: [],
-        ),
-        isStatic: true,
-      ),
-      'normalizePath': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.uri)),
-          params: [],
-          namedParams: [],
-        ),
-        isStatic: true,
-      ),
-      'removeFragment': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.uri)),
-          params: [],
-          namedParams: [],
-        ),
-        isStatic: true,
-      ),
-      'resolveUri': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.uri)),
-          params: [
+
             BridgeParameter(
-              'reference',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-              false,
+              'start',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              true,
+            ),
+
+            BridgeParameter(
+              'end',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.int, []),
+                nullable: true,
+              ),
+              true,
             ),
           ],
-          namedParams: [],
         ),
+
         isStatic: true,
       ),
     },
     getters: {
+      'base': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.uri, [])),
+          namedParams: [],
+          params: [],
+        ),
+
+        isStatic: true,
+      ),
+
       'scheme': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+          namedParams: [],
+          params: [],
         ),
       ),
+
       'authority': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+          namedParams: [],
+          params: [],
         ),
       ),
+
       'userInfo': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+          namedParams: [],
+          params: [],
         ),
       ),
+
       'host': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+          namedParams: [],
+          params: [],
         ),
       ),
+
       'port': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+          namedParams: [],
+          params: [],
         ),
       ),
+
       'path': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+          namedParams: [],
+          params: [],
         ),
       ),
+
       'query': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+          namedParams: [],
+          params: [],
         ),
       ),
+
       'fragment': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+          namedParams: [],
+          params: [],
         ),
       ),
+
       'pathSegments': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(
             BridgeTypeRef(CoreTypes.list, [
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
             ]),
           ),
+          namedParams: [],
+          params: [],
         ),
       ),
+
       'queryParameters': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(
             BridgeTypeRef(CoreTypes.map, [
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
             ]),
           ),
+          namedParams: [],
+          params: [],
         ),
       ),
+
       'queryParametersAll': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(
             BridgeTypeRef(CoreTypes.map, [
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
               BridgeTypeAnnotation(
                 BridgeTypeRef(CoreTypes.list, [
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
                 ]),
               ),
             ]),
           ),
+          namedParams: [],
+          params: [],
         ),
       ),
+
       'isAbsolute': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
+          namedParams: [],
+          params: [],
         ),
       ),
+
       'hasScheme': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
+          namedParams: [],
+          params: [],
         ),
       ),
+
       'hasAuthority': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
+          namedParams: [],
+          params: [],
         ),
       ),
+
       'hasPort': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
+          namedParams: [],
+          params: [],
         ),
       ),
+
       'hasQuery': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
+          namedParams: [],
+          params: [],
         ),
       ),
+
       'hasFragment': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
+          namedParams: [],
+          params: [],
         ),
       ),
+
       'hasEmptyPath': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
+          namedParams: [],
+          params: [],
         ),
       ),
+
       'hasAbsolutePath': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
+          namedParams: [],
+          params: [],
         ),
       ),
+
       'origin': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+
+      'data': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.object, []),
+            nullable: true,
+          ),
+          namedParams: [],
+          params: [],
         ),
       ),
     },
     setters: {},
     fields: {},
     wrap: true,
+    bridge: false,
   );
 
-  late final $Instance _superclass = $Object($value);
+  /// Wrapper for the [Uri.new] constructor
+  static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
+    final _arg2OrNull = c is List && c.length > 0 ? c[0] as $Value? : null;
+    final _arg3OrNull = c is List && c.length > 1 ? c[1] as $Value? : null;
+    final _arg4OrNull = c is List && c.length > 2 ? c[2] as $Value? : null;
+    final _arg5OrNull = c is List && c.length > 3 ? c[3] as $Value? : null;
+    final _arg6OrNull = c is List && c.length > 4 ? c[4] as $Value? : null;
+    final _arg7OrNull = c is List && c.length > 5 ? c[5] as $Value? : null;
+    final _arg8OrNull = c is List && c.length > 6 ? c[6] as $Value? : null;
 
-  /// The wrapped [Uri]
+    return $Uri.wrap(
+      Uri(
+        scheme: (r is $Value ? r : null)?.$value,
+        userInfo: (s is $Value ? s : null)?.$value,
+        host: _arg2OrNull?.$value,
+        port: _arg3OrNull?.$value,
+        path: _arg4OrNull?.$value,
+        pathSegments: _arg5OrNull?.$value,
+        query: _arg6OrNull?.$value,
+        queryParameters: (_arg7OrNull?.$reified as Map?)
+            ?.cast<String, dynamic>(),
+        fragment: _arg8OrNull?.$value,
+      ),
+    );
+  }
+
+  /// Wrapper for the [Uri.http] constructor
+  static $Value? $http(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $Uri.wrap(
+      Uri.http(
+        (r as $String).$value,
+        (s as $String).$value,
+        ((c is $Value ? c : null)?.$reified as Map?)?.cast<String, dynamic>(),
+      ),
+    );
+  }
+
+  /// Wrapper for the [Uri.https] constructor
+  static $Value? $https(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $Uri.wrap(
+      Uri.https(
+        (r as $String).$value,
+        (s as $String).$value,
+        ((c is $Value ? c : null)?.$reified as Map?)?.cast<String, dynamic>(),
+      ),
+    );
+  }
+
+  /// Wrapper for the [Uri.file] constructor
+  static $Value? $file(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $Uri.wrap(
+      Uri.file(
+        (r as $String).$value,
+        windows: (s is $Value ? s : null)?.$value,
+      ),
+    );
+  }
+
+  /// Wrapper for the [Uri.directory] constructor
+  static $Value? $directory(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $Uri.wrap(
+      Uri.directory(
+        (r as $String).$value,
+        windows: (s is $Value ? s : null)?.$value,
+      ),
+    );
+  }
+
+  /// Wrapper for the [Uri.dataFromString] constructor
+  static $Value? $dataFromString(
+    Runtime runtime,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final _arg2OrNull = c is List && c.length > 0 ? c[0] as $Value? : null;
+    final _arg3OrNull = c is List && c.length > 1 ? c[1] as $Value? : null;
+    final _arg4OrNull = c is List && c.length > 2 ? c[2] as $Value? : null;
+
+    return $Uri.wrap(
+      Uri.dataFromString(
+        (r as $String).$value,
+        mimeType: (s is $Value ? s : null)?.$value,
+        encoding: _arg2OrNull?.$value,
+        parameters: (_arg3OrNull?.$reified as Map?)?.cast<String, String>(),
+        base64: _arg4OrNull == null ? false : (_arg4OrNull as $bool).$value,
+      ),
+    );
+  }
+
+  /// Wrapper for the [Uri.dataFromBytes] constructor
+  static $Value? $dataFromBytes(
+    Runtime runtime,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final _arg2OrNull = c is List && c.length > 0 ? c[0] as $Value? : null;
+    final _arg3OrNull = c is List && c.length > 1 ? c[1] as $Value? : null;
+
+    return $Uri.wrap(
+      Uri.dataFromBytes(
+        ((r as $Value?)!.$reified as List).cast<int>(),
+        mimeType: (s is $Value ? s : null) == null
+            ? "application/octet-stream"
+            : (s as $String).$value,
+        parameters: (_arg2OrNull?.$reified as Map?)?.cast<String, String>(),
+        percentEncoded: _arg3OrNull == null
+            ? false
+            : (_arg3OrNull as $bool).$value,
+      ),
+    );
+  }
+
+  /// Wrapper for the [Uri.parse] method
+  static $Value? $parse(Runtime runtime, Object? r, Object? s, Object? c) {
+    final value = Uri.parse(
+      (r as $String).$value,
+      (s is $Value ? s : null) == null ? 0 : (s as $int).$value,
+      (c is $Value ? c : null)?.$value,
+    );
+    return $Uri.wrap(value);
+  }
+
+  /// Wrapper for the [Uri.tryParse] method
+  static $Value? $tryParse(Runtime runtime, Object? r, Object? s, Object? c) {
+    final value = Uri.tryParse(
+      (r as $String).$value,
+      (s is $Value ? s : null) == null ? 0 : (s as $int).$value,
+      (c is $Value ? c : null)?.$value,
+    );
+    return value == null ? const $null() : $Uri.wrap(value);
+  }
+
+  /// Wrapper for the [Uri.encodeComponent] method
+  static $Value? $encodeComponent(
+    Runtime runtime,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final value = Uri.encodeComponent((r as $String).$value);
+    return $String(value);
+  }
+
+  /// Wrapper for the [Uri.encodeQueryComponent] method
+  static $Value? $encodeQueryComponent(
+    Runtime runtime,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final value = Uri.encodeQueryComponent(
+      (r as $String).$value,
+      encoding: (s is $Value ? s : null) == null
+          ? utf8
+          : (s is $Value ? s : null)?.$value,
+    );
+    return $String(value);
+  }
+
+  /// Wrapper for the [Uri.decodeComponent] method
+  static $Value? $decodeComponent(
+    Runtime runtime,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final value = Uri.decodeComponent((r as $String).$value);
+    return $String(value);
+  }
+
+  /// Wrapper for the [Uri.decodeQueryComponent] method
+  static $Value? $decodeQueryComponent(
+    Runtime runtime,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final value = Uri.decodeQueryComponent(
+      (r as $String).$value,
+      encoding: (s is $Value ? s : null) == null
+          ? utf8
+          : (s is $Value ? s : null)?.$value,
+    );
+    return $String(value);
+  }
+
+  /// Wrapper for the [Uri.encodeFull] method
+  static $Value? $encodeFull(Runtime runtime, Object? r, Object? s, Object? c) {
+    final value = Uri.encodeFull((r as $String).$value);
+    return $String(value);
+  }
+
+  /// Wrapper for the [Uri.decodeFull] method
+  static $Value? $decodeFull(Runtime runtime, Object? r, Object? s, Object? c) {
+    final value = Uri.decodeFull((r as $String).$value);
+    return $String(value);
+  }
+
+  /// Wrapper for the [Uri.splitQueryString] method
+  static $Value? $splitQueryString(
+    Runtime runtime,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final value = Uri.splitQueryString(
+      (r as $String).$value,
+      encoding: (s is $Value ? s : null) == null
+          ? utf8
+          : (s is $Value ? s : null)?.$value,
+    );
+    return wrapMap(
+      value,
+      (key, value) => MapEntry($String(key), $String(value)),
+    );
+  }
+
+  /// Wrapper for the [Uri.parseIPv4Address] method
+  static $Value? $parseIPv4Address(
+    Runtime runtime,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final value = Uri.parseIPv4Address(
+      (r as $String).$value,
+      (s is $Value ? s : null) == null ? 0 : (s as $int).$value,
+      (c is $Value ? c : null)?.$value,
+    );
+    return $List.view(value, (e) => $int(e));
+  }
+
+  /// Wrapper for the [Uri.parseIPv6Address] method
+  static $Value? $parseIPv6Address(
+    Runtime runtime,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final value = Uri.parseIPv6Address(
+      (r as $String).$value,
+      (s is $Value ? s : null) == null ? 0 : (s as $int).$value,
+      (c is $Value ? c : null)?.$value,
+    );
+    return $List.view(value, (e) => $int(e));
+  }
+
+  /// Wrapper for the [Uri.base] getter
+  static $Value? $base(Runtime runtime, Object? r, Object? s, Object? c) {
+    final value = Uri.base;
+    return $Uri.wrap(value);
+  }
+
+  final $Instance _superclass;
+
   @override
   final Uri $value;
 
@@ -624,309 +1372,192 @@ class $Uri implements $Instance {
   Uri get $reified => $value;
 
   /// Wrap a [Uri] in a [$Uri]
-  $Uri.wrap(this.$value);
+  $Uri.wrap(this.$value) : _superclass = $Object($value);
+
+  @override
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case 'scheme':
-        return $String($value.scheme);
+        final _scheme = $value.scheme;
+        return $String(_scheme);
       case 'authority':
-        return $String($value.authority);
+        final _authority = $value.authority;
+        return $String(_authority);
       case 'userInfo':
-        return $String($value.userInfo);
+        final _userInfo = $value.userInfo;
+        return $String(_userInfo);
       case 'host':
-        return $String($value.host);
+        final _host = $value.host;
+        return $String(_host);
       case 'port':
-        return $int($value.port);
+        final _port = $value.port;
+        return $int(_port);
       case 'path':
-        return $String($value.path);
+        final _path = $value.path;
+        return $String(_path);
       case 'query':
-        return $String($value.query);
+        final _query = $value.query;
+        return $String(_query);
       case 'fragment':
-        return $String($value.fragment);
+        final _fragment = $value.fragment;
+        return $String(_fragment);
       case 'pathSegments':
-        return wrapList<String>($value.pathSegments, (e) => $String(e));
+        final _pathSegments = $value.pathSegments;
+        return $List.view(_pathSegments, (e) => $String(e));
       case 'queryParameters':
-        return wrapMap<String, String>(
-          $value.queryParameters,
+        final _queryParameters = $value.queryParameters;
+        return wrapMap(
+          _queryParameters,
           (key, value) => MapEntry($String(key), $String(value)),
         );
       case 'queryParametersAll':
-        return wrapMap<String, List<String>>(
-          $value.queryParametersAll,
-          (key, value) => MapEntry(
-            $String(key),
-            wrapList<String>(value, (e) => $String(e)),
-          ),
+        final _queryParametersAll = $value.queryParametersAll;
+        return wrapMap(
+          _queryParametersAll,
+          (key, value) =>
+              MapEntry($String(key), $List.view(value, (e) => $String(e))),
         );
       case 'isAbsolute':
-        return $bool($value.isAbsolute);
+        final _isAbsolute = $value.isAbsolute;
+        return $bool(_isAbsolute);
       case 'hasScheme':
-        return $bool($value.hasScheme);
+        final _hasScheme = $value.hasScheme;
+        return $bool(_hasScheme);
       case 'hasAuthority':
-        return $bool($value.hasAuthority);
+        final _hasAuthority = $value.hasAuthority;
+        return $bool(_hasAuthority);
       case 'hasPort':
-        return $bool($value.hasPort);
+        final _hasPort = $value.hasPort;
+        return $bool(_hasPort);
       case 'hasQuery':
-        return $bool($value.hasQuery);
+        final _hasQuery = $value.hasQuery;
+        return $bool(_hasQuery);
       case 'hasFragment':
-        return $bool($value.hasFragment);
+        final _hasFragment = $value.hasFragment;
+        return $bool(_hasFragment);
       case 'hasEmptyPath':
-        return $bool($value.hasEmptyPath);
+        final _hasEmptyPath = $value.hasEmptyPath;
+        return $bool(_hasEmptyPath);
       case 'hasAbsolutePath':
-        return $bool($value.hasAbsolutePath);
+        final _hasAbsolutePath = $value.hasAbsolutePath;
+        return $bool(_hasAbsolutePath);
       case 'origin':
-        return $String($value.origin);
-      case 'resolve':
-        return __resolve;
-      case 'normalizePath':
-        return __normalizePath;
+        final _origin = $value.origin;
+        return $String(_origin);
+      case 'data':
+        final _data = $value.data;
+        return _data == null ? const $null() : $Object(_data);
+      case 'isScheme':
+        return __isScheme;
+
+      case 'toFilePath':
+        return __toFilePath;
+
+      case 'replace':
+        return __replace;
+
       case 'removeFragment':
         return __removeFragment;
+
+      case 'resolve':
+        return __resolve;
+
       case 'resolveUri':
         return __resolveUri;
 
-      default:
-        return _superclass.$getProperty(runtime, identifier);
+      case 'normalizePath':
+        return __normalizePath;
     }
+    return _superclass.$getProperty(runtime, identifier);
+  }
+
+  static const $Function __isScheme = $Function(_isScheme);
+  static $Value? _isScheme(
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
+    final self = target! as $Uri;
+    final result = self.$value.isScheme(args[0]!.$value);
+    return $bool(result);
+  }
+
+  static const $Function __toFilePath = $Function(_toFilePath);
+  static $Value? _toFilePath(
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
+    final self = target! as $Uri;
+    final result = self.$value.toFilePath(
+      windows: (args.length > 0 ? args[0] : null)?.$value,
+    );
+    return $String(result);
+  }
+
+  static const $Function __replace = $Function(_replace);
+  static $Value? _replace(Runtime runtime, $Value? target, List<$Value?> args) {
+    final self = target! as $Uri;
+    final result = self.$value.replace(
+      scheme: (args.length > 0 ? args[0] : null)?.$value,
+      userInfo: (args.length > 1 ? args[1] : null)?.$value,
+      host: (args.length > 2 ? args[2] : null)?.$value,
+      port: (args.length > 3 ? args[3] : null)?.$value,
+      path: (args.length > 4 ? args[4] : null)?.$value,
+      pathSegments: (args.length > 5 ? args[5] : null)?.$value,
+      query: (args.length > 6 ? args[6] : null)?.$value,
+      queryParameters: ((args.length > 7 ? args[7] : null)?.$reified as Map?)
+          ?.cast<String, dynamic>(),
+      fragment: (args.length > 8 ? args[8] : null)?.$value,
+    );
+    return $Uri.wrap(result);
+  }
+
+  static const $Function __removeFragment = $Function(_removeFragment);
+  static $Value? _removeFragment(
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
+    final self = target! as $Uri;
+    final result = self.$value.removeFragment();
+    return $Uri.wrap(result);
+  }
+
+  static const $Function __resolve = $Function(_resolve);
+  static $Value? _resolve(Runtime runtime, $Value? target, List<$Value?> args) {
+    final self = target! as $Uri;
+    final result = self.$value.resolve(args[0]!.$value);
+    return $Uri.wrap(result);
+  }
+
+  static const $Function __resolveUri = $Function(_resolveUri);
+  static $Value? _resolveUri(
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
+    final self = target! as $Uri;
+    final result = self.$value.resolveUri(args[0]!.$value);
+    return $Uri.wrap(result);
+  }
+
+  static const $Function __normalizePath = $Function(_normalizePath);
+  static $Value? _normalizePath(
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
+    final self = target! as $Uri;
+    final result = self.$value.normalizePath();
+    return $Uri.wrap(result);
   }
 
   @override
   void $setProperty(Runtime runtime, String identifier, $Value value) {
     return _superclass.$setProperty(runtime, identifier, value);
   }
-
-  static const $Function __resolve = $Function(_resolve);
-  static $Value? _resolve(
-    final Runtime runtime,
-    final $Value? target,
-    final List<$Value?> args,
-  ) {
-    return $Uri.wrap((target as $Uri).$value.resolve(args[0]!.$value));
-  }
-
-  static const $Function __normalizePath = $Function(_normalizePath);
-  static $Value? _normalizePath(
-    final Runtime runtime,
-    final $Value? target,
-    final List<$Value?> args,
-  ) {
-    return $Uri.wrap((target as $Uri).$value.normalizePath());
-  }
-
-  static const $Function __removeFragment = $Function(_removeFragment);
-  static $Value? _removeFragment(
-    final Runtime runtime,
-    final $Value? target,
-    final List<$Value?> args,
-  ) {
-    return $Uri.wrap((target as $Uri).$value.removeFragment());
-  }
-
-  static const $Function __resolveUri = $Function(_resolveUri);
-  static $Value? _resolveUri(
-    final Runtime runtime,
-    final $Value? target,
-    final List<$Value?> args,
-  ) {
-    return $Uri.wrap((target as $Uri).$value.resolveUri(args[0]!.$value));
-  }
-
-  static $Value? $parse(Runtime runtime, $Value? target, List<$Value?> args) {
-    final uri = args[0]!.$value as String;
-    return $Uri.wrap(Uri.parse(uri));
-  }
-
-  static $Value? $tryParse(
-    Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
-  ) {
-    final uri = args[0]!.$value as String;
-    final result = Uri.tryParse(uri);
-    return result == null ? $null() : $Uri.wrap(result);
-  }
-
-  static $Value? $encodeFull(
-    Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
-  ) {
-    final uri = args[0]!.$value as String;
-    return $String(Uri.encodeFull(uri));
-  }
-
-  static $Value? $decodeFull(
-    Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
-  ) {
-    final uri = args[0]!.$value as String;
-    return $String(Uri.decodeFull(uri));
-  }
-
-  static $Value? $encodeComponent(
-    Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
-  ) {
-    return $String(Uri.encodeComponent(args[0]!.$value));
-  }
-
-  static $Value? $decodeComponent(
-    Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
-  ) {
-    return $String(Uri.decodeComponent(args[0]!.$value));
-  }
-
-  static $Value? $decodeQueryComponent(
-    Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
-  ) {
-    return $String(
-      Uri.decodeQueryComponent(
-        args[0]!.$value,
-        encoding: (args[1]?.$value as Encoding?) ?? utf8,
-      ),
-    );
-  }
-
-  static $Value? $encodeQueryComponent(
-    Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
-  ) {
-    return $String(
-      Uri.encodeQueryComponent(
-        args[0]!.$value,
-        encoding: (args[1]?.$value as Encoding?) ?? utf8,
-      ),
-    );
-  }
-
-  static $Value? $dataFromBytes(
-    Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
-  ) {
-    final bytes = (args[0]!.$value as List)
-        .map((e) => (e is $Value ? e.$reified : e) as int)
-        .toList();
-    final parameters = (args[2]?.$value as Map?)?.map(
-      (key, value) =>
-          MapEntry(key.$reified.toString(), value.$reified.toString()),
-    );
-    return $Uri.wrap(
-      Uri.dataFromBytes(
-        bytes,
-        mimeType: args[1]?.$value ?? "application/octet-stream",
-        parameters: parameters,
-        percentEncoded: args[3]?.$value ?? false,
-      ),
-    );
-  }
-
-  static $Value? $dataFromString(
-    Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
-  ) {
-    final parameters = (args[2]?.$value as Map?)?.map(
-      (key, value) =>
-          MapEntry(key.$reified.toString(), value.$reified.toString()),
-    );
-    return $Uri.wrap(
-      Uri.dataFromString(
-        args[0]!.$value,
-        mimeType: args[1]?.$value ?? "application/octet-stream",
-        parameters: parameters,
-        base64: args[3]?.$value ?? false,
-      ),
-    );
-  }
-
-  static $Value? $directory(
-    Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
-  ) {
-    return $Uri.wrap(
-      Uri.directory(
-        args[0]!.$value,
-        windows: (args[1]?.$value as bool?) ?? false,
-      ),
-    );
-  }
-
-  static $Value? $file(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $Uri.wrap(
-      Uri.file(args[0]!.$value, windows: (args[1]?.$value as bool?) ?? false),
-    );
-  }
-
-  static $Value? $http(Runtime runtime, $Value? target, List<$Value?> args) {
-    final queryParameters = (args[2]?.$value as Map?)?.map(
-      (key, value) => MapEntry(key.$reified.toString(), value.$reified),
-    );
-    return $Uri.wrap(
-      Uri.http(args[0]!.$value, args[1]?.$value ?? "", queryParameters),
-    );
-  }
-
-  static $Value? $https(Runtime runtime, $Value? target, List<$Value?> args) {
-    final queryParameters = (args[2]?.$value as Map?)?.map(
-      (key, value) => MapEntry(key.$reified.toString(), value.$reified),
-    );
-    return $Uri.wrap(
-      Uri.https(args[0]!.$value, args[1]?.$value ?? "", queryParameters),
-    );
-  }
-
-  static $Value? $parseIPv4Address(
-    Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
-  ) {
-    return $List.wrap(
-      Uri.parseIPv4Address(args[0]!.$value).map((e) => $int(e)).toList(),
-    );
-  }
-
-  static $Value? $parseIPv6Address(
-    Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
-  ) {
-    return $List.wrap(
-      Uri.parseIPv6Address(
-        args[0]!.$value,
-        args[1]?.$value ?? 0,
-        args[2]?.$value,
-      ).map((e) => $int(e)).toList(),
-    );
-  }
-
-  static $Value? $splitQueryString(
-    Runtime runtime,
-    $Value? target,
-    List<$Value?> args,
-  ) {
-    return wrapMap<String, String>(
-      Uri.splitQueryString(
-        args[0]!.$value,
-        encoding: (args[1]?.$value as Encoding?) ?? utf8,
-      ),
-      (key, value) => MapEntry($String(key), $String(value)),
-    );
-  }
-
-  @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType($type.spec!);
-
-  @override
-  String toString() => $value.toString();
 }

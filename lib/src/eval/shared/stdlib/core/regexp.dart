@@ -1,242 +1,231 @@
+// ignore_for_file: unused_import, unnecessary_import
+// ignore_for_file: always_specify_types, avoid_redundant_argument_values
+// ignore_for_file: sort_constructors_first
+// ignore_for_file: no_leading_underscores_for_local_identifiers
+// ignore_for_file: prefer_is_empty
+// ignore_for_file: undefined_hidden_name
+// ignore_for_file: dead_code, unused_local_variable
+// ignore_for_file: unnecessary_type_check, unnecessary_non_null_assertion
+// ignore_for_file: sdk_version_since
+// ignore_for_file: non_constant_identifier_names
+// ignore_for_file: argument_type_not_assignable_to_error_handler
+// ignore_for_file: avoid_function_literals_in_foreach_calls
+
+import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/stdlib/core.dart';
 
-/// dart_eval wrapper for [RegExp]
+import 'package:dart_eval/stdlib/core.dart'
+    hide
+        $Duration,
+        $DateTime,
+        $Iterator,
+        $Comparable,
+        $Sink,
+        $StackTrace,
+        $StringBuffer,
+        $Symbol,
+        $MapEntry,
+        $Stopwatch,
+        $Error,
+        $TypeError,
+        $NoSuchMethodError,
+        $RangeError,
+        $AssertionError,
+        $ArgumentError,
+        $StateError,
+        $UnsupportedError,
+        $UnimplementedError,
+        $Invocation,
+        $Exception,
+        $FormatException,
+        $Uri,
+        $Pattern,
+        $Match,
+        $RegExp,
+        $RegExpMatch,
+        $StringSink;
+import 'pattern.dart';
+
+/// dart_eval wrapper binding for [RegExp]
 class $RegExp implements $Instance {
-  /// Compile-time type reference to [RegExp]
-  static const $type = BridgeTypeRef(BridgeTypeSpec('dart:core', 'RegExp'));
+  /// Configure this class for use in a [Runtime]
+  /// Configure this class for use in a [Runtime]
+  static void configureForRuntime(Runtime runtime) {
+    runtime.registerBridgeFuncRegisters('dart:core', 'RegExp.', $RegExp.$new);
 
-  /// Compile-time bridge declaration of [RegExp]
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'RegExp.escape',
+      $RegExp.$escape,
+    );
+  }
+
+  /// Configure this class for use during compilation
+  static void configureForCompile(BridgeDeclarationRegistry registry) {
+    registry.defineBridgeClass($declaration);
+  }
+
+  /// Compile-time type specification of [$RegExp]
+  static const $spec = BridgeTypeSpec('dart:core', 'RegExp');
+
+  /// Compile-time type declaration of [$RegExp]
+  static const $type = BridgeTypeRef($spec);
+
+  /// Compile-time class declaration of [$RegExp]
   static const $declaration = BridgeClassDef(
-    BridgeClassType($type, isAbstract: true, $extends: $Pattern.$type),
+    BridgeClassType(
+      $type,
+      isAbstract: true,
+
+      $implements: [BridgeTypeRef(CoreTypes.pattern, [])],
+    ),
     constructors: {
       '': BridgeConstructorDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation($type),
-          params: [
-            BridgeParameter(
-              'source',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-              false,
-            ),
-          ],
           namedParams: [
             BridgeParameter(
               'multiLine',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
-              false,
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
+              true,
             ),
+
             BridgeParameter(
               'caseSensitive',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
-              false,
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
+              true,
             ),
+
             BridgeParameter(
               'unicode',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
-              false,
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
+              true,
             ),
+
             BridgeParameter(
               'dotAll',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
+              true,
+            ),
+          ],
+          params: [
+            BridgeParameter(
+              'source',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
               false,
             ),
           ],
         ),
+        isFactory: true,
       ),
     },
+
     methods: {
-      'hasMatch': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
-          params: [
-            BridgeParameter(
-              'input',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-              false,
-            ),
-          ],
-        ),
-      ),
-      'firstMatch': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation($RegExpMatch.$type, nullable: true),
-          params: [
-            BridgeParameter(
-              'input',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-              false,
-            ),
-          ],
-        ),
-      ),
       'allMatches': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(
             BridgeTypeRef(CoreTypes.iterable, [
-              BridgeTypeAnnotation($RegExpMatch.$type),
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.regExpMatch, [])),
             ]),
           ),
+          namedParams: [],
           params: [
             BridgeParameter(
               'input',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
               false,
             ),
+
             BridgeParameter(
               'start',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
               true,
             ),
           ],
         ),
       ),
-      'stringMatch': BridgeMethodDef(
+
+      'matchAsPrefix': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.string),
+            BridgeTypeRef(CoreTypes.match, []),
             nullable: true,
           ),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'string',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+              false,
+            ),
+
+            BridgeParameter(
+              'start',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              true,
+            ),
+          ],
+        ),
+      ),
+
+      'escape': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'text',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+              false,
+            ),
+          ],
+        ),
+
+        isStatic: true,
+      ),
+
+      'firstMatch': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.regExpMatch, []),
+            nullable: true,
+          ),
+          namedParams: [],
           params: [
             BridgeParameter(
               'input',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
               false,
             ),
           ],
         ),
       ),
-    },
-    wrap: true,
-  );
 
-  /// Wrap a [RegExp] in a [$RegExp]
-  $RegExp.wrap(this.$value) : _superclass = $Pattern.wrap($value);
-
-  static $Value? $new(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $RegExp.wrap(
-      RegExp(
-        args[0]!.$value,
-        multiLine: args[1]?.$value ?? false,
-        caseSensitive: args[2]?.$value ?? true,
-        unicode: args[3]?.$value ?? false,
-        dotAll: args[4]?.$value ?? false,
-      ),
-    );
-  }
-
-  @override
-  final RegExp $value;
-
-  @override
-  RegExp get $reified => $value;
-
-  final $Instance _superclass;
-
-  @override
-  $Value? $getProperty(Runtime runtime, String identifier) {
-    switch (identifier) {
-      case 'hasMatch':
-        return __hasMatch;
-      case 'firstMatch':
-        return __firstMatch;
-      case 'allMatches':
-        return __allMatches;
-      case 'stringMatch':
-        return __stringMatch;
-
-      default:
-        return _superclass.$getProperty(runtime, identifier);
-    }
-  }
-
-  static const $Function __hasMatch = $Function(_hasMatch);
-
-  static $Value? _hasMatch(
-    final Runtime runtime,
-    final $Value? target,
-    final List<$Value?> args,
-  ) {
-    target as $Value;
-    final input = (args[0] as $String).$value;
-    return $bool((target.$value as RegExp).hasMatch(input));
-  }
-
-  static const $Function __firstMatch = $Function(_firstMatch);
-
-  static $Value? _firstMatch(
-    final Runtime runtime,
-    final $Value? target,
-    final List<$Value?> args,
-  ) {
-    target as $Value;
-    final input = (args[0] as $String).$value;
-    final $result = (target.$value as RegExp).firstMatch(input);
-    return $result == null ? $null() : $RegExpMatch.wrap($result);
-  }
-
-  static const $Function __allMatches = $Function(_allMatches);
-
-  static $Value? _allMatches(
-    final Runtime runtime,
-    final $Value? target,
-    final List<$Value?> args,
-  ) {
-    target as $Value;
-    final string = (args[0] as $String).$value;
-    final start = (args[1] as $int?)?.$value ?? 0;
-    return $Iterable<$RegExpMatch>.wrap(
-      (target.$value as RegExp)
-          .allMatches(string, start)
-          .map((e) => $RegExpMatch.wrap(e)),
-    );
-  }
-
-  static const $Function __stringMatch = $Function(_stringMatch);
-
-  static $Value? _stringMatch(
-    final Runtime runtime,
-    final $Value? target,
-    final List<$Value?> args,
-  ) {
-    target as $Value;
-    final input = (args[0] as $String).$value;
-
-    final $result = (target.$value as RegExp).stringMatch(input);
-
-    return $result == null ? $null() : $String($result);
-  }
-
-  @override
-  void $setProperty(Runtime runtime, String identifier, $Value value) {
-    return _superclass.$setProperty(runtime, identifier, value);
-  }
-
-  @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType($type.spec!);
-}
-
-class $RegExpMatch implements $Instance, Match {
-  /// Compile-time type reference to [RegExpMatch]
-  static const $type = BridgeTypeRef(
-    BridgeTypeSpec('dart:core', 'RegExpMatch'),
-  );
-
-  /// Compile-time bridge declaration of [RegExp]
-  static const $declaration = BridgeClassDef(
-    BridgeClassType($type, isAbstract: true, $extends: $Match.$type),
-    constructors: {},
-    methods: {
-      'namedGroup': BridgeMethodDef(
+      'hasMatch': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.string),
-            nullable: true,
-          ),
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
+          namedParams: [],
           params: [
             BridgeParameter(
-              'name',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              'input',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'stringMatch': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.string, []),
+            nullable: true,
+          ),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'input',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
               false,
             ),
           ],
@@ -245,94 +234,459 @@ class $RegExpMatch implements $Instance, Match {
     },
     getters: {
       'pattern': BridgeMethodDef(
-        BridgeFunctionDef(returns: BridgeTypeAnnotation($RegExp.$type)),
-      ),
-      'groupNames': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.iterable, [
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
-            ]),
-          ),
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+
+      'isMultiLine': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+
+      'isCaseSensitive': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+
+      'isUnicode': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+
+      'isDotAll': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
+          namedParams: [],
+          params: [],
         ),
       ),
     },
+    setters: {},
+    fields: {},
     wrap: true,
+    bridge: false,
   );
 
-  /// Wrap a [RegExpMatch] in a [$RegExpMatch]
-  $RegExpMatch.wrap(this.$value) : _superclass = $Match.wrap($value);
+  /// Wrapper for the [RegExp.new] constructor
+  static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
+    final _arg2OrNull = c is List && c.length > 0 ? c[0] as $Value? : null;
+    final _arg3OrNull = c is List && c.length > 1 ? c[1] as $Value? : null;
+    final _arg4OrNull = c is List && c.length > 2 ? c[2] as $Value? : null;
 
-  @override
-  RegExpMatch get $reified => $value;
+    return $RegExp.wrap(
+      RegExp(
+        (r as $String).$value,
+        multiLine: (s is $Value ? s : null) == null
+            ? false
+            : (s as $bool).$value,
+        caseSensitive: _arg2OrNull == null
+            ? true
+            : (_arg2OrNull as $bool).$value,
+        unicode: _arg3OrNull == null ? false : (_arg3OrNull as $bool).$value,
+        dotAll: _arg4OrNull == null ? false : (_arg4OrNull as $bool).$value,
+      ),
+    );
+  }
 
-  @override
-  final RegExpMatch $value;
+  /// Wrapper for the [RegExp.escape] method
+  static $Value? $escape(Runtime runtime, Object? r, Object? s, Object? c) {
+    final value = RegExp.escape((r as $String).$value);
+    return $String(value);
+  }
 
   final $Instance _superclass;
+
+  @override
+  final RegExp $value;
+
+  @override
+  RegExp get $reified => $value;
+
+  /// Wrap a [RegExp] in a [$RegExp]
+  $RegExp.wrap(this.$value) : _superclass = $Object($value);
+
+  @override
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case 'pattern':
-        return $RegExp.wrap($value.pattern);
+        final _pattern = $value.pattern;
+        return $String(_pattern);
+      case 'isMultiLine':
+        final _isMultiLine = $value.isMultiLine;
+        return $bool(_isMultiLine);
+      case 'isCaseSensitive':
+        final _isCaseSensitive = $value.isCaseSensitive;
+        return $bool(_isCaseSensitive);
+      case 'isUnicode':
+        final _isUnicode = $value.isUnicode;
+        return $bool(_isUnicode);
+      case 'isDotAll':
+        final _isDotAll = $value.isDotAll;
+        return $bool(_isDotAll);
+      case 'allMatches':
+        return __allMatches;
 
-      case 'groupNames':
-        return $Iterable.wrap($value.groupNames.map((e) => $String(e)));
+      case 'matchAsPrefix':
+        return __matchAsPrefix;
 
-      case 'namedGroup':
-        return $Function(__namedGroup.call);
+      case 'firstMatch':
+        return __firstMatch;
+
+      case 'hasMatch':
+        return __hasMatch;
+
+      case 'stringMatch':
+        return __stringMatch;
     }
     return _superclass.$getProperty(runtime, identifier);
   }
 
-  static const $Function __namedGroup = $Function(_namedGroup);
-
-  static $Value _namedGroup(
-    final Runtime runtime,
-    final $Value? target,
-    final List<$Value?> args,
+  static const $Function __allMatches = $Function(_allMatches);
+  static $Value? _allMatches(
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
   ) {
-    final group = (args[0] as $String).$value;
+    final self = target! as $RegExp;
+    final result = self.$value.allMatches(
+      args[0]!.$value,
+      (args.length > 1 ? args[1] : null) == null
+          ? 0
+          : (args.length > 1 ? args[1] : null)?.$value,
+    );
+    return $Iterable.wrap((result).map((e) => $RegExpMatch.wrap(e)));
+  }
 
-    final $result = (target!.$value as RegExpMatch).namedGroup(group);
+  static const $Function __matchAsPrefix = $Function(_matchAsPrefix);
+  static $Value? _matchAsPrefix(
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
+    final self = target! as $RegExp;
+    final result = self.$value.matchAsPrefix(
+      args[0]!.$value,
+      (args.length > 1 ? args[1] : null) == null
+          ? 0
+          : (args.length > 1 ? args[1] : null)?.$value,
+    );
+    return result == null ? const $null() : $Match.wrap(result);
+  }
 
-    return $result == null ? $null() : $String($result);
+  static const $Function __firstMatch = $Function(_firstMatch);
+  static $Value? _firstMatch(
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
+    final self = target! as $RegExp;
+    final result = self.$value.firstMatch(args[0]!.$value);
+    return result == null ? const $null() : $RegExpMatch.wrap(result);
+  }
+
+  static const $Function __hasMatch = $Function(_hasMatch);
+  static $Value? _hasMatch(
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
+    final self = target! as $RegExp;
+    final result = self.$value.hasMatch(args[0]!.$value);
+    return $bool(result);
+  }
+
+  static const $Function __stringMatch = $Function(_stringMatch);
+  static $Value? _stringMatch(
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
+    final self = target! as $RegExp;
+    final result = self.$value.stringMatch(args[0]!.$value);
+    return result == null ? const $null() : $String(result);
   }
 
   @override
   void $setProperty(Runtime runtime, String identifier, $Value value) {
-    _superclass.$setProperty(runtime, identifier, value);
+    return _superclass.$setProperty(runtime, identifier, value);
+  }
+}
+
+/// dart_eval wrapper binding for [RegExpMatch]
+class $RegExpMatch implements $Instance {
+  /// Configure this class for use in a [Runtime]
+  /// Configure this class for use in a [Runtime]
+  static void configureForRuntime(Runtime runtime) {}
+
+  /// Configure this class for use during compilation
+  static void configureForCompile(BridgeDeclarationRegistry registry) {
+    registry.defineBridgeClass($declaration);
+  }
+
+  /// Compile-time type specification of [$RegExpMatch]
+  static const $spec = BridgeTypeSpec('dart:core', 'RegExpMatch');
+
+  /// Compile-time type declaration of [$RegExpMatch]
+  static const $type = BridgeTypeRef($spec);
+
+  /// Compile-time class declaration of [$RegExpMatch]
+  static const $declaration = BridgeClassDef(
+    BridgeClassType(
+      $type,
+      isAbstract: true,
+
+      $implements: [BridgeTypeRef(CoreTypes.match, [])],
+    ),
+    constructors: {
+      '': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          namedParams: [],
+          params: [],
+        ),
+        isFactory: false,
+      ),
+    },
+
+    methods: {
+      'group': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.string, []),
+            nullable: true,
+          ),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'group',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      '[]': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.string, []),
+            nullable: true,
+          ),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'group',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'groups': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.list, [
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string, []),
+                nullable: true,
+              ),
+            ]),
+          ),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'groupIndices',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.list, [
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                ]),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'namedGroup': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.string, []),
+            nullable: true,
+          ),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'name',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+              false,
+            ),
+          ],
+        ),
+      ),
+    },
+    getters: {
+      'start': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+
+      'end': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+
+      'groupCount': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+
+      'input': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+
+      'pattern': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.regExp, [])),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+
+      'groupNames': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.iterable, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+            ]),
+          ),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+    },
+    setters: {},
+    fields: {},
+    wrap: true,
+    bridge: false,
+  );
+
+  final $Instance _superclass;
+
+  @override
+  final RegExpMatch $value;
+
+  @override
+  RegExpMatch get $reified => $value;
+
+  /// Wrap a [RegExpMatch] in a [$RegExpMatch]
+  $RegExpMatch.wrap(this.$value) : _superclass = $Object($value);
+
+  @override
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
+
+  @override
+  $Value? $getProperty(Runtime runtime, String identifier) {
+    switch (identifier) {
+      case 'start':
+        final _start = $value.start;
+        return $int(_start);
+      case 'end':
+        final _end = $value.end;
+        return $int(_end);
+      case 'groupCount':
+        final _groupCount = $value.groupCount;
+        return $int(_groupCount);
+      case 'input':
+        final _input = $value.input;
+        return $String(_input);
+      case 'pattern':
+        final _pattern = $value.pattern;
+        return $RegExp.wrap(_pattern);
+      case 'groupNames':
+        final _groupNames = $value.groupNames;
+        return $Iterable.wrap((_groupNames).map((e) => $String(e)));
+      case 'group':
+        return __group;
+
+      case '[]':
+        return __operatorIndexGet;
+
+      case 'groups':
+        return __groups;
+
+      case 'namedGroup':
+        return __namedGroup;
+    }
+    return _superclass.$getProperty(runtime, identifier);
+  }
+
+  static const $Function __group = $Function(_group);
+  static $Value? _group(Runtime runtime, $Value? target, List<$Value?> args) {
+    final self = target! as $RegExpMatch;
+    final result = self.$value.group(args[0]!.$value);
+    return result == null ? const $null() : $String(result);
+  }
+
+  static const $Function __operatorIndexGet = $Function(_operatorIndexGet);
+  static $Value? _operatorIndexGet(
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
+    final self = target! as $RegExpMatch;
+    final result = self.$value[args[0]!.$value];
+    return result == null ? const $null() : $String(result);
+  }
+
+  static const $Function __groups = $Function(_groups);
+  static $Value? _groups(Runtime runtime, $Value? target, List<$Value?> args) {
+    final self = target! as $RegExpMatch;
+    final result = self.$value.groups((args[0]!.$reified as List).cast<int>());
+    return $List.view(result, (e) => e == null ? const $null() : $String(e));
+  }
+
+  static const $Function __namedGroup = $Function(_namedGroup);
+  static $Value? _namedGroup(
+    Runtime runtime,
+    $Value? target,
+    List<$Value?> args,
+  ) {
+    final self = target! as $RegExpMatch;
+    final result = self.$value.namedGroup(args[0]!.$value);
+    return result == null ? const $null() : $String(result);
   }
 
   @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType($type.spec!);
-
-  @override
-  String? operator [](int group) => $value[group];
-
-  @override
-  int get end => $value.end;
-
-  @override
-  String? group(int group) => $value.group(group);
-
-  @override
-  int get groupCount => $value.groupCount;
-
-  Iterable<String> get groupNames => $value.groupNames;
-
-  @override
-  List<String?> groups(List<int> groupIndices) => $value.groups(groupIndices);
-
-  @override
-  String get input => $value.input;
-
-  String? namedGroup(String name) => $value.namedGroup(name);
-
-  @override
-  RegExp get pattern => $value.pattern;
-
-  @override
-  int get start => $value.start;
+  void $setProperty(Runtime runtime, String identifier, $Value value) {
+    return _superclass.$setProperty(runtime, identifier, value);
+  }
 }

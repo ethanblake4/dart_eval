@@ -1,9 +1,12 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/shared/stdlib/async/stream.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/async/completer.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async/stream_controller.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/async/stream_sink.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/async/stream_subscription.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/async/stream_transformer.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/async/stream_view.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async/timer.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async/zone.dart';
-import 'async/future.dart';
 
 /// [EvalPlugin] for the `dart:async` library
 class DartAsyncPlugin implements EvalPlugin {
@@ -12,36 +15,25 @@ class DartAsyncPlugin implements EvalPlugin {
 
   @override
   void configureForCompile(BridgeDeclarationRegistry registry) {
-    registry.defineBridgeClass($Completer.$declaration);
-    registry.defineBridgeClass($StreamSubscription.$declaration);
-    registry.defineBridgeClass($StreamSink.$declaration);
-    registry.defineBridgeClass($StreamController.$declaration);
-    registry.defineBridgeClass($Zone.$declaration);
-    registry.defineBridgeClass($StreamView.$declaration);
-    registry.defineBridgeClass($Timer.$declaration);
+    $Completer.configureForCompile(registry);
+    $StreamSubscription.configureForCompile(registry);
+    $StreamSink.configureForCompile(registry);
+    $StreamController.configureForCompile(registry);
+    $Zone.configureForCompile(registry);
+    $StreamView.configureForCompile(registry);
+    $Timer.configureForCompile(registry);
+    $StreamTransformer.configureForCompile(registry);
   }
 
   @override
   void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFunc(
-      'dart:async',
-      'Completer.',
-      const $Completer_new().call,
-    );
-    runtime.registerBridgeFunc(
-      'dart:async',
-      'StreamController.',
-      $StreamController.$new,
-    );
-    runtime.registerBridgeFunc('dart:async', 'Zone.current*g', $Zone.$current);
-    runtime.registerBridgeFunc('dart:async', 'Zone.root*g', $Zone.$root);
-    runtime.registerBridgeFunc('dart:async', 'StreamView.', $StreamView.$new);
-    runtime.registerBridgeFunc('dart:async', 'Timer.', $Timer.$new);
-    runtime.registerBridgeFunc(
-      'dart:async',
-      'Timer.periodic',
-      $Timer.$periodic,
-    );
-    runtime.registerBridgeFunc('dart:async', 'Timer.run', $Timer.$run);
+    $Completer.configureForRuntime(runtime);
+    $StreamSubscription.configureForRuntime(runtime);
+    $StreamSink.configureForRuntime(runtime);
+    $StreamController.configureForRuntime(runtime);
+    $Zone.configureForRuntime(runtime);
+    $StreamView.configureForRuntime(runtime);
+    $Timer.configureForRuntime(runtime);
+    $StreamTransformer.configureForRuntime(runtime);
   }
 }

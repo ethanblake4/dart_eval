@@ -1,6 +1,11 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/collection/double_linked_queue.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/collection/hash_map.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/collection/hash_set.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/collection/linked_hash_map.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/collection/linked_hash_set.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/collection/list_queue.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/collection/queue.dart';
 
 /// [EvalPlugin] for the `dart:collection` library
 class DartCollectionPlugin implements EvalPlugin {
@@ -9,41 +14,23 @@ class DartCollectionPlugin implements EvalPlugin {
 
   @override
   void configureForCompile(BridgeDeclarationRegistry registry) {
-    registry.defineBridgeClass($LinkedHashMap.$declaration);
-    registry.defineBridgeClass($ListQueue.$declaration);
+    $LinkedHashMap.configureForCompile(registry);
+    $ListQueue.configureForCompile(registry);
+    $Queue.configureForCompile(registry);
+    $DoubleLinkedQueue.configureForCompile(registry);
+    $HashMap.configureForCompile(registry);
+    $HashSet.configureForCompile(registry);
+    $LinkedHashSet.configureForCompile(registry);
   }
 
   @override
   void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFunc(
-      'dart:collection',
-      'LinkedHashMap.',
-      $LinkedHashMap.$new,
-    );
-    runtime.registerBridgeFunc(
-      'dart:collection',
-      'LinkedHashMap.identity',
-      $LinkedHashMap.$identity,
-    );
-    runtime.registerBridgeFunc(
-      'dart:collection',
-      'LinkedHashMap.from',
-      $LinkedHashMap.$from,
-    );
-    runtime.registerBridgeFunc(
-      'dart:collection',
-      'LinkedHashMap.of',
-      $LinkedHashMap.$of,
-    );
-    runtime.registerBridgeFunc(
-      'dart:collection',
-      'LinkedHashMap.fromIterable',
-      $LinkedHashMap.$fromIterable,
-    );
-    runtime.registerBridgeFunc(
-      'dart:collection',
-      'LinkedHashMap.fromIterables',
-      $LinkedHashMap.$fromIterables,
-    );
+    $LinkedHashMap.configureForRuntime(runtime);
+    $ListQueue.configureForRuntime(runtime);
+    $Queue.configureForRuntime(runtime);
+    $DoubleLinkedQueue.configureForRuntime(runtime);
+    $HashMap.configureForRuntime(runtime);
+    $HashSet.configureForRuntime(runtime);
+    $LinkedHashSet.configureForRuntime(runtime);
   }
 }

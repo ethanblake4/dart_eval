@@ -1013,7 +1013,6 @@ import 'typed_records.dart';
 import 'typed_async.dart';
 import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
-import 'package:dart_eval/src/eval/shared/stdlib/core/type.dart';
 import 'package:dart_eval/stdlib/core.dart';
 
 abstract final class TypedMachine {

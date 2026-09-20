@@ -1,7 +1,6 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bridge/runtime_bridge.dart';
 import 'package:dart_eval/stdlib/core.dart';
-import 'package:dart_eval/src/eval/shared/stdlib/core/type.dart';
 
 import 'typed_call_site.dart';
 import 'typed_closure.dart';

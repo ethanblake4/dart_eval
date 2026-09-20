@@ -1,5 +1,38 @@
 import 'package:analyzer/dart/element/element.dart';
+import 'package:dart_eval/src/eval/bindgen/config.dart';
+import 'package:dart_eval/src/eval/bindgen/context.dart';
 import 'parameters.dart';
+
+/// Emit `runtime.assertPermission(...)` for YAML `permissions:` entries.
+/// [paramNames] is the declaration-order parameter name list used to resolve
+/// `paramData` references.
+String assertConfigPermissions(
+  BindgenContext ctx,
+  BindgenMemberConfig? member,
+  List<String> paramNames, {
+  bool registers = false,
+  int paramCount = 0,
+}) {
+  if (member == null || member.permissions.isEmpty) return '';
+  String output = '';
+  for (final permission in member.permissions) {
+    String data = '';
+    if (permission.constData != null) {
+      data = ", '${permission.constData}'";
+    } else if (permission.paramData != null) {
+      final index = paramNames.indexOf(permission.paramData!);
+      if (index != -1) {
+        final count = paramCount == 0 ? paramNames.length : paramCount;
+        final source = registers
+            ? registerArgumentSource(index, count)
+            : 'args[$index]';
+        data = ', $source?.\$value';
+      }
+    }
+    output += "runtime.assertPermission('${permission.name}'$data);";
+  }
+  return output;
+}
 
 String assertMethodPermissions(
   MethodElement element, {

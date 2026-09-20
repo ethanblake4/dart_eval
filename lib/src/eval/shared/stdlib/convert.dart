@@ -6,6 +6,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/convert/codec.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert/converter.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert/encoding.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert/json.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/convert/json_functions.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert/utf.dart';
 
 const convertSource = '''
@@ -22,46 +23,38 @@ class DartConvertPlugin implements EvalPlugin {
 
   @override
   void configureForCompile(BridgeDeclarationRegistry registry) {
-    registry.defineBridgeClass($Converter.$declaration);
-    registry.defineBridgeClass($Codec.$declaration);
-    registry.defineBridgeClass($Encoding.$declaration);
-    registry.defineBridgeClass($Utf8Decoder.$declaration);
-    registry.defineBridgeClass($Utf8Codec.$declaration);
-    registry.defineBridgeClass($Base64Encoder.$declaration);
-    registry.defineBridgeClass($Base64Decoder.$declaration);
-    registry.defineBridgeClass($Base64Codec.$declaration);
-    registry.defineBridgeClass($JsonDecoder.$declaration);
-    registry.defineBridgeClass($JsonEncoder.$declaration);
-    registry.defineBridgeClass($JsonCodec.$declaration);
-    registry.defineBridgeClass($ChunkedConversionSink.$declaration);
-    registry.defineBridgeClass($ByteConversionSink.$declaration);
+    $Converter.configureForCompile(registry);
+    $Codec.configureForCompile(registry);
+    $Encoding.configureForCompile(registry);
+    $Utf8Decoder.configureForCompile(registry);
+    $Utf8Codec.configureForCompile(registry);
+    $Base64Encoder.configureForCompile(registry);
+    $Base64Decoder.configureForCompile(registry);
+    $Base64Codec.configureForCompile(registry);
+    $JsonDecoder.configureForCompile(registry);
+    $JsonEncoder.configureForCompile(registry);
+    $JsonCodec.configureForCompile(registry);
+    $ChunkedConversionSink.configureForCompile(registry);
+    $ByteConversionSink.configureForCompile(registry);
     registry.addSource(DartSource('dart:convert', convertSource));
     $JsonEncodeAndDecode.configureForCompile(registry);
   }
 
   @override
   void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFunc(
-      'dart:convert',
-      'Utf8Decoder.',
-      $Utf8Decoder.$new,
-    );
-    runtime.registerBridgeFunc('dart:convert', 'Utf8Codec.', $Utf8Codec.$new);
+    $Converter.configureForRuntime(runtime);
+    $Codec.configureForRuntime(runtime);
+    $Encoding.configureForRuntime(runtime);
+    $Utf8Decoder.configureForRuntime(runtime);
+    $Utf8Codec.configureForRuntime(runtime);
+    $Base64Encoder.configureForRuntime(runtime);
+    $Base64Decoder.configureForRuntime(runtime);
     $Base64Codec.configureForRuntime(runtime);
-    runtime.registerBridgeFunc(
-      'dart:convert',
-      'JsonDecoder.',
-      $JsonDecoder.$new,
-    );
-    runtime.registerBridgeFunc(
-      'dart:convert',
-      'JsonEncoder.',
-      $JsonEncoder.$new,
-    );
-    runtime.registerBridgeFunc('dart:convert', 'JsonCodec.', $JsonCodec.$new);
+    $JsonDecoder.configureForRuntime(runtime);
+    $JsonEncoder.configureForRuntime(runtime);
+    $JsonCodec.configureForRuntime(runtime);
     $JsonEncodeAndDecode.configureForRuntime(runtime);
     $ByteConversionSink.configureForRuntime(runtime);
     $ChunkedConversionSink.configureForRuntime(runtime);
-    $Encoding.configureForRuntime(runtime);
   }
 }

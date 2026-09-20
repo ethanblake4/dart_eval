@@ -439,14 +439,6 @@ class TypeRef {
     if ($class == CoreTypes.dynamic.ref(ctx)) {
       return null;
     }
-    final f = getKnownFields(ctx)[$class];
-    if (f != null) {
-      final d = f[field];
-      if (d != null) {
-        return d.fieldType?.toAlwaysReturnType(ctx, $class, [], {})?.type ??
-            CoreTypes.dynamic.ref(ctx);
-      }
-    }
 
     if ($class.recordFields.isNotEmpty) {
       final field0 = $class.recordFields.firstWhereOrNull(
@@ -522,7 +514,32 @@ class TypeRef {
     final dec = ctx.topLevelDeclarationsMap[$class.file]![$class.name]!;
 
     if (dec.isBridge) {
-      final br = dec.bridge as BridgeClassDef;
+      final bridge = dec.bridge!;
+      if (bridge is BridgeEnumDef) {
+        final fd = bridge.fields[field];
+        if (fd != null) {
+          return TypeRef.fromBridgeAnnotation(
+            ctx,
+            fd.type,
+            specifiedType: $class,
+          );
+        }
+        final get = bridge.getters[field];
+        if (get != null) {
+          return TypeRef.fromBridgeAnnotation(
+            ctx,
+            get.functionDescriptor.returns,
+            specifiedType: $class,
+          );
+        }
+        return TypeRef.lookupFieldType(
+          ctx,
+          CoreTypes.enumType.ref(ctx),
+          field,
+          source: source,
+        );
+      }
+      final br = bridge as BridgeClassDef;
       final fd = br.fields[field];
       if (fd != null) {
         return TypeRef.fromBridgeAnnotation(
@@ -564,6 +581,8 @@ class TypeRef {
       }
     } else if (dec.declaration is EnumDeclaration && field == 'index') {
       return CoreTypes.int.ref(ctx);
+    } else if (dec.declaration is EnumDeclaration && field == 'name') {
+      return CoreTypes.string.ref(ctx);
     } else {
       if (forFieldFormal) {
         throw CompileError(
@@ -1387,6 +1406,40 @@ class RecordParameterType {
   }
 }
 
+/// Computes the [ReturnType] of a bridged function descriptor, including
+/// parameter-type-dependent return types carried by
+/// [BridgeFunctionDef.returnTypeDependency].
+ReturnType bridgeFunctionReturnType(
+  CompilerContext ctx,
+  BridgeFunctionDef fd, {
+  TypeRef? specifiedType,
+  Map<String, TypeRef> typeParameters = const {},
+}) {
+  AlwaysReturnType toReturnType(BridgeTypeAnnotation annotation) =>
+      AlwaysReturnType(
+        TypeRef.fromBridgeAnnotation(
+          ctx,
+          annotation,
+          specifiedType: specifiedType,
+          typeParameters: typeParameters,
+        ),
+        annotation.nullable,
+      );
+  final dep = fd.returnTypeDependency;
+  if (dep == null) {
+    return toReturnType(fd.returns);
+  }
+  return ParameterTypeDependentReturnType(
+    {
+      for (final c in dep.cases)
+        TypeRef.fromBridgeTypeRef(ctx, c.when): toReturnType(c.then),
+    },
+    paramIndex: dep.paramIndex,
+    paramName: dep.paramName,
+    fallback: toReturnType(dep.fallback ?? fd.returns),
+  );
+}
+
 abstract class ReturnType {
   AlwaysReturnType? toAlwaysReturnType(
     CompilerContext ctx,
@@ -1444,14 +1497,11 @@ class AlwaysReturnType implements ReturnType {
   ) {
     final m = resolveInstanceMethod(ctx, type, method);
     if (m.isBridge) {
-      return AlwaysReturnType(
-        TypeRef.fromBridgeAnnotation(
-          ctx,
-          m.bridge!.functionDescriptor.returns,
-          specifiedType: type,
-        ),
-        true,
-      );
+      return bridgeFunctionReturnType(
+        ctx,
+        m.bridge!.functionDescriptor,
+        specifiedType: type,
+      ).toAlwaysReturnType(ctx, type, const [], const {})!;
     }
     return AlwaysReturnType.fromAnnotation(
       ctx,
@@ -1473,10 +1523,11 @@ class AlwaysReturnType implements ReturnType {
         return AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
       }
       final fn = (m.bridge as BridgeMethodDef).functionDescriptor;
-      return AlwaysReturnType(
-        TypeRef.fromBridgeAnnotation(ctx, fn.returns),
-        fn.returns.nullable,
-      );
+      return bridgeFunctionReturnType(
+        ctx,
+        fn,
+        specifiedType: type,
+      ).toAlwaysReturnType(ctx, type, const [], const {})!;
     }
     final d = m.declaration!;
     if (d is ConstructorDeclaration) {
@@ -1505,44 +1556,60 @@ class AlwaysReturnType implements ReturnType {
     if (lookupType == CoreTypes.dynamic.ref(ctx)) {
       return AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
     }
-    final resolvedType = lookupType.resolveTypeChain(ctx);
-    final knownType = resolvedType.extendsType == CoreTypes.enumType.ref(ctx)
-        ? CoreTypes.enumType.ref(ctx)
-        : resolvedType;
-    if (!$static &&
-        getKnownMethods(ctx)[knownType] != null &&
-        getKnownMethods(ctx)[knownType]!.containsKey(method)) {
-      final knownMethod = getKnownMethods(ctx)[knownType]![method]!;
-      final returnType = knownMethod.returnType;
-      if (returnType == null) {
-        return null;
+
+    if ($static) {
+      final m = resolveStaticMethod(ctx, lookupType, method);
+      if (m.isBridge) {
+        final bridge = m.bridge!;
+        final fd = bridge is BridgeMethodDef
+            ? bridge.functionDescriptor
+            : bridge is BridgeConstructorDef
+            ? bridge.functionDescriptor
+            : null;
+        if (fd == null) {
+          return AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
+        }
+        return bridgeFunctionReturnType(ctx, fd).toAlwaysReturnType(
+          ctx,
+          lookupType,
+          argTypes,
+          namedArgTypes,
+          typeArgs: typeArgs,
+        );
       }
-      return returnType.toAlwaysReturnType(
+      final d = m.declaration!;
+      if (d is ConstructorDeclaration) {
+        return AlwaysReturnType(lookupType, false);
+      }
+      return AlwaysReturnType.fromAnnotation(
         ctx,
-        knownType,
+        lookupType.file,
+        (d as MethodDeclaration).returnType,
+        CoreTypes.dynamic.ref(ctx),
+      );
+    }
+
+    final m = resolveInstanceMethod(ctx, lookupType, method);
+    if (m.isBridge) {
+      final fd = (m.bridge as BridgeMethodDef).functionDescriptor;
+      return bridgeFunctionReturnType(
+        ctx,
+        fd,
+        specifiedType: lookupType,
+      ).toAlwaysReturnType(
+        ctx,
+        lookupType,
         argTypes,
         namedArgTypes,
         typeArgs: typeArgs,
       );
     }
-
-    if (lookupType == CoreTypes.dynamic.ref(ctx)) {
-      return AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
-    }
-
-    return $static
-        ? AlwaysReturnType.fromStaticMethod(
-            ctx,
-            lookupType,
-            method,
-            CoreTypes.dynamic.ref(ctx),
-          )
-        : AlwaysReturnType.fromInstanceMethod(
-            ctx,
-            lookupType,
-            method,
-            CoreTypes.dynamic.ref(ctx),
-          );
+    return AlwaysReturnType.fromAnnotation(
+      ctx,
+      lookupType.file,
+      m.declaration!.returnType,
+      CoreTypes.dynamic.ref(ctx),
+    );
   }
 
   final TypeRef? type;
@@ -1582,7 +1649,7 @@ class ParameterTypeDependentReturnType implements ReturnType {
     List<TypeRef> typeArgs = const [],
   }) {
     AlwaysReturnType? resolvedType;
-    if (paramIndex != null) {
+    if (paramIndex != null && paramIndex! < argTypes.length) {
       resolvedType = map[argTypes[paramIndex!]];
     } else if (paramName != null) {
       resolvedType = map[namedArgTypes[paramName]];

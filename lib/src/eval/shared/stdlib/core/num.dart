@@ -7,12 +7,181 @@ class $num<T extends num> implements $Instance {
   $num(this.$value) : _superclass = $Object($value);
 
   static const $declaration = BridgeClassDef(
-    BridgeClassType(BridgeTypeRef(CoreTypes.num), isAbstract: true),
+    BridgeClassType(
+      BridgeTypeRef(CoreTypes.num),
+      $extends: BridgeTypeRef(CoreTypes.object),
+      isAbstract: true,
+    ),
     constructors: {},
     methods: {
-      // Other num methods are defined in builtins.dart
-      // since they have special requirements (return types dependent on
-      // argument types, etc.)
+      '+': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              false,
+            ),
+          ],
+          returnTypeDependency: BridgeReturnTypeDependency(
+            paramIndex: 0,
+            cases: [
+              BridgeReturnTypeCase(
+                BridgeTypeRef(CoreTypes.double),
+                BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
+              ),
+            ],
+          ),
+        ),
+      ),
+      '-': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              false,
+            ),
+          ],
+          returnTypeDependency: BridgeReturnTypeDependency(
+            paramIndex: 0,
+            cases: [
+              BridgeReturnTypeCase(
+                BridgeTypeRef(CoreTypes.double),
+                BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
+              ),
+            ],
+          ),
+        ),
+      ),
+      '*': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              false,
+            ),
+          ],
+          returnTypeDependency: BridgeReturnTypeDependency(
+            paramIndex: 0,
+            cases: [
+              BridgeReturnTypeCase(
+                BridgeTypeRef(CoreTypes.double),
+                BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
+              ),
+            ],
+          ),
+        ),
+      ),
+      '%': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              false,
+            ),
+          ],
+          returnTypeDependency: BridgeReturnTypeDependency(
+            paramIndex: 0,
+            cases: [
+              BridgeReturnTypeCase(
+                BridgeTypeRef(CoreTypes.double),
+                BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
+              ),
+            ],
+          ),
+        ),
+      ),
+      '/': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              false,
+            ),
+          ],
+        ),
+      ),
+      '~/': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              false,
+            ),
+          ],
+        ),
+      ),
+      '<': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              false,
+            ),
+          ],
+        ),
+      ),
+      '<=': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              false,
+            ),
+          ],
+        ),
+      ),
+      '>': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              false,
+            ),
+          ],
+        ),
+      ),
+      '>=': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              false,
+            ),
+          ],
+        ),
+      ),
+      'compareTo': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              false,
+            ),
+          ],
+        ),
+      ),
       'parse': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
@@ -202,7 +371,33 @@ class $num<T extends num> implements $Instance {
         isStatic: false,
       ),
     },
-    getters: {},
+    getters: {
+      'isNaN': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+        ),
+      ),
+      'isInfinite': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+        ),
+      ),
+      'isNegative': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+        ),
+      ),
+      'isFinite': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+        ),
+      ),
+      'sign': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+        ),
+      ),
+    },
     setters: {},
     fields: {},
     wrap: true,
@@ -794,8 +989,231 @@ class $int extends $num<int> {
         ),
         isStatic: false,
       ),
+      '+': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              false,
+            ),
+          ],
+          returnTypeDependency: BridgeReturnTypeDependency(
+            paramIndex: 0,
+            cases: [
+              BridgeReturnTypeCase(
+                BridgeTypeRef(CoreTypes.int),
+                BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              ),
+              BridgeReturnTypeCase(
+                BridgeTypeRef(CoreTypes.double),
+                BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
+              ),
+            ],
+          ),
+        ),
+      ),
+      '-': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              false,
+            ),
+          ],
+          returnTypeDependency: BridgeReturnTypeDependency(
+            paramIndex: 0,
+            cases: [
+              BridgeReturnTypeCase(
+                BridgeTypeRef(CoreTypes.int),
+                BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              ),
+              BridgeReturnTypeCase(
+                BridgeTypeRef(CoreTypes.double),
+                BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
+              ),
+            ],
+          ),
+        ),
+      ),
+      '*': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              false,
+            ),
+          ],
+          returnTypeDependency: BridgeReturnTypeDependency(
+            paramIndex: 0,
+            cases: [
+              BridgeReturnTypeCase(
+                BridgeTypeRef(CoreTypes.int),
+                BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              ),
+              BridgeReturnTypeCase(
+                BridgeTypeRef(CoreTypes.double),
+                BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
+              ),
+            ],
+          ),
+        ),
+      ),
+      '%': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              false,
+            ),
+          ],
+          returnTypeDependency: BridgeReturnTypeDependency(
+            paramIndex: 0,
+            cases: [
+              BridgeReturnTypeCase(
+                BridgeTypeRef(CoreTypes.int),
+                BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              ),
+              BridgeReturnTypeCase(
+                BridgeTypeRef(CoreTypes.double),
+                BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
+              ),
+            ],
+          ),
+        ),
+      ),
+      '/': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              false,
+            ),
+          ],
+        ),
+      ),
+      '~/': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              false,
+            ),
+          ],
+        ),
+      ),
+      '&': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              false,
+            ),
+          ],
+        ),
+      ),
+      '|': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              false,
+            ),
+          ],
+        ),
+      ),
+      '^': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              false,
+            ),
+          ],
+        ),
+      ),
+      '~': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+          params: [],
+        ),
+      ),
+      '<<': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+          params: [
+            BridgeParameter(
+              'shiftAmount',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              false,
+            ),
+          ],
+        ),
+      ),
+      '>>': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+          params: [
+            BridgeParameter(
+              'shiftAmount',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              false,
+            ),
+          ],
+        ),
+      ),
+      '>>>': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+          params: [
+            BridgeParameter(
+              'shiftAmount',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              false,
+            ),
+          ],
+        ),
+      ),
     },
-    getters: {},
+    getters: {
+      'isEven': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+        ),
+      ),
+      'isOdd': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+        ),
+      ),
+      'bitLength': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+        ),
+      ),
+      'sign': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+        ),
+      ),
+    },
     setters: {},
     fields: {},
     wrap: true,
@@ -1092,6 +1510,78 @@ class $double extends $num<double> {
           namedParams: [],
         ),
         isStatic: true,
+      ),
+      '+': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              false,
+            ),
+          ],
+        ),
+      ),
+      '-': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              false,
+            ),
+          ],
+        ),
+      ),
+      '*': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              false,
+            ),
+          ],
+        ),
+      ),
+      '/': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              false,
+            ),
+          ],
+        ),
+      ),
+      '%': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              false,
+            ),
+          ],
+        ),
+      ),
+      '~/': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+              false,
+            ),
+          ],
+        ),
       ),
     },
     getters: {

@@ -1,8 +1,8 @@
 import 'dart:io';
 
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/shared/stdlib/async/stream.dart';
-import 'package:dart_eval/src/eval/shared/stdlib/io/string_sink.dart';
+import 'package:dart_eval/stdlib/async.dart';
+import 'package:dart_eval/stdlib/core.dart';
 
 /// dart_eval wrapper for [IOSink]
 class $IOSink implements $Instance {
