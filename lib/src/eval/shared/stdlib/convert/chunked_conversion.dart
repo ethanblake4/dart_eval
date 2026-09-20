@@ -6,6 +6,7 @@
 // ignore_for_file: undefined_hidden_name
 // ignore_for_file: dead_code, unused_local_variable
 // ignore_for_file: unnecessary_type_check, unnecessary_non_null_assertion
+// ignore_for_file: unnecessary_cast
 // ignore_for_file: sdk_version_since
 // ignore_for_file: non_constant_identifier_names
 // ignore_for_file: argument_type_not_assignable_to_error_handler
@@ -154,12 +155,16 @@ class $ChunkedConversionSink<T> implements $Instance {
   ) {
     return $ChunkedConversionSink.wrap(
       ChunkedConversionSink.withCallback((List<dynamic> accumulated) {
-        ((r as $Value?)! as EvalCallable)(runtime, null, [
+        ((r as $Value?)! as EvalCallable)(
+          runtime,
+          null,
           $List.view(
             accumulated,
             (e) => runtime.wrapAlways(e, recursive: true),
           ),
-        ]);
+          null,
+          1,
+        );
       }),
     );
   }
@@ -191,14 +196,26 @@ class $ChunkedConversionSink<T> implements $Instance {
   }
 
   static const $Function __add = $Function(_add);
-  static $Value? _add(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _add(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $ChunkedConversionSink;
-    self.$value.add(args[0]!.$value);
+    self.$value.add((r as $Value?)!.$value);
     return null;
   }
 
   static const $Function __close = $Function(_close);
-  static $Value? _close(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _close(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $ChunkedConversionSink;
     self.$value.close();
     return null;

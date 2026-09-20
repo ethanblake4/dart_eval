@@ -6,6 +6,7 @@
 // ignore_for_file: undefined_hidden_name
 // ignore_for_file: dead_code, unused_local_variable
 // ignore_for_file: unnecessary_type_check, unnecessary_non_null_assertion
+// ignore_for_file: unnecessary_cast
 // ignore_for_file: sdk_version_since
 // ignore_for_file: non_constant_identifier_names
 // ignore_for_file: argument_type_not_assignable_to_error_handler
@@ -360,14 +361,14 @@ class $RegExp implements $Instance {
   static $Value? _allMatches(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $RegExp;
     final result = self.$value.allMatches(
-      args[0]!.$value,
-      (args.length > 1 ? args[1] : null) == null
-          ? 0
-          : (args.length > 1 ? args[1] : null)?.$value,
+      (r as $String).$value,
+      (s is $Value ? s : null) == null ? 0 : (s as $int).$value,
     );
     return $Iterable.wrap((result).map((e) => $RegExpMatch.wrap(e)));
   }
@@ -376,14 +377,14 @@ class $RegExp implements $Instance {
   static $Value? _matchAsPrefix(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $RegExp;
     final result = self.$value.matchAsPrefix(
-      args[0]!.$value,
-      (args.length > 1 ? args[1] : null) == null
-          ? 0
-          : (args.length > 1 ? args[1] : null)?.$value,
+      (r as $String).$value,
+      (s is $Value ? s : null) == null ? 0 : (s as $int).$value,
     );
     return result == null ? const $null() : $Match.wrap(result);
   }
@@ -392,10 +393,12 @@ class $RegExp implements $Instance {
   static $Value? _firstMatch(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $RegExp;
-    final result = self.$value.firstMatch(args[0]!.$value);
+    final result = self.$value.firstMatch((r as $String).$value);
     return result == null ? const $null() : $RegExpMatch.wrap(result);
   }
 
@@ -403,10 +406,12 @@ class $RegExp implements $Instance {
   static $Value? _hasMatch(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $RegExp;
-    final result = self.$value.hasMatch(args[0]!.$value);
+    final result = self.$value.hasMatch((r as $String).$value);
     return $bool(result);
   }
 
@@ -414,10 +419,12 @@ class $RegExp implements $Instance {
   static $Value? _stringMatch(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $RegExp;
-    final result = self.$value.stringMatch(args[0]!.$value);
+    final result = self.$value.stringMatch((r as $String).$value);
     return result == null ? const $null() : $String(result);
   }
 
@@ -650,9 +657,15 @@ class $RegExpMatch implements $Instance {
   }
 
   static const $Function __group = $Function(_group);
-  static $Value? _group(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _group(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $RegExpMatch;
-    final result = self.$value.group(args[0]!.$value);
+    final result = self.$value.group((r as $int).$value);
     return result == null ? const $null() : $String(result);
   }
 
@@ -660,17 +673,27 @@ class $RegExpMatch implements $Instance {
   static $Value? _operatorIndexGet(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $RegExpMatch;
-    final result = self.$value[args[0]!.$value];
+    final result = self.$value[(r as $int).$value];
     return result == null ? const $null() : $String(result);
   }
 
   static const $Function __groups = $Function(_groups);
-  static $Value? _groups(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _groups(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $RegExpMatch;
-    final result = self.$value.groups((args[0]!.$reified as List).cast<int>());
+    final result = self.$value.groups(
+      ((r as $Value?)!.$reified as List).cast<int>(),
+    );
     return $List.view(result, (e) => e == null ? const $null() : $String(e));
   }
 
@@ -678,10 +701,12 @@ class $RegExpMatch implements $Instance {
   static $Value? _namedGroup(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $RegExpMatch;
-    final result = self.$value.namedGroup(args[0]!.$value);
+    final result = self.$value.namedGroup((r as $String).$value);
     return result == null ? const $null() : $String(result);
   }
 

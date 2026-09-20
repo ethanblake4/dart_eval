@@ -6,6 +6,7 @@
 // ignore_for_file: undefined_hidden_name
 // ignore_for_file: dead_code, unused_local_variable
 // ignore_for_file: unnecessary_type_check, unnecessary_non_null_assertion
+// ignore_for_file: unnecessary_cast
 // ignore_for_file: sdk_version_since
 // ignore_for_file: non_constant_identifier_names
 // ignore_for_file: argument_type_not_assignable_to_error_handler
@@ -102,16 +103,17 @@ class $jsonEncodeFn {
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
           : (Object? nonEncodable) {
-              return ((s is $Value ? s : null)! as EvalCallable?)?.call(
-                runtime,
-                null,
-                [
-                  if (nonEncodable == null)
-                    const $null()
-                  else
-                    $Object(nonEncodable),
-                ],
-              )?.$value;
+              return ((s is $Value ? s : null)! as EvalCallable?)
+                  ?.call(
+                    runtime,
+                    null,
+                    (nonEncodable == null
+                        ? const $null()
+                        : $Object(nonEncodable)),
+                    null,
+                    1,
+                  )
+                  ?.$value;
             },
     );
     return $String(result);
@@ -194,14 +196,15 @@ class $jsonDecodeFn {
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
           : (Object? key, Object? value) {
-              return ((s is $Value ? s : null)! as EvalCallable?)?.call(
-                runtime,
-                null,
-                [
-                  if (key == null) const $null() else $Object(key),
-                  if (value == null) const $null() else $Object(value),
-                ],
-              )?.$value;
+              return ((s is $Value ? s : null)! as EvalCallable?)
+                  ?.call(
+                    runtime,
+                    null,
+                    (key == null ? const $null() : $Object(key)),
+                    (value == null ? const $null() : $Object(value)),
+                    2,
+                  )
+                  ?.$value;
             },
     );
     return runtime.wrapAlways(result, recursive: true);

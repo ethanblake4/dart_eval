@@ -253,9 +253,11 @@ class $Map<K, V> implements Map<K, V>, $Instance {
   static $Value? _indexGet(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
-    final idx = args[0]!;
+    final idx = (r as $Value?)!;
     final map = target!.$value as Map;
     return map[idx];
   }
@@ -265,20 +267,28 @@ class $Map<K, V> implements Map<K, V>, $Instance {
   static $Value? _indexSet(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final wrapper = target as $Map;
-    final key = args[0];
-    final value = args[1];
+    final key = (r as $Value?);
+    final value = (s as $Value?);
     wrapper._checkEntry(runtime, key, value);
     return wrapper.$value[key] = value;
   }
 
   static const $Function __addAll = $Function(_addAll);
 
-  static $Value? _addAll(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _addAll(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final wrapper = target as $Map;
-    final other = args[0]!.$value as Map;
+    final other = (r as $Value?)!.$value as Map;
     final entries = other.entries.toList(growable: false);
     for (final entry in entries) {
       wrapper._checkEntry(runtime, entry.key, entry.value);
@@ -291,7 +301,13 @@ class $Map<K, V> implements Map<K, V>, $Instance {
 
   static const $Function __cast = $Function(_cast);
 
-  static $Value? _cast(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _cast(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     return target;
   }
 
@@ -300,15 +316,23 @@ class $Map<K, V> implements Map<K, V>, $Instance {
   static $Value? _containsKey(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
-    return $bool((target!.$value as Map).containsKey(args[0]));
+    return $bool((target!.$value as Map).containsKey((r as $Value?)));
   }
 
   static const $Function __remove = $Function(_remove);
 
-  static $Value? _remove(Runtime runtime, $Value? target, List<$Value?> args) {
-    return (target!.$value as Map).remove(args[0]);
+  static $Value? _remove(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    return (target!.$value as Map).remove((r as $Value?));
   }
 
   @override

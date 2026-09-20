@@ -6,6 +6,7 @@
 // ignore_for_file: undefined_hidden_name
 // ignore_for_file: dead_code, unused_local_variable
 // ignore_for_file: unnecessary_type_check, unnecessary_non_null_assertion
+// ignore_for_file: unnecessary_cast
 // ignore_for_file: sdk_version_since
 // ignore_for_file: non_constant_identifier_names
 // ignore_for_file: argument_type_not_assignable_to_error_handler
@@ -190,7 +191,7 @@ class $Timer implements $Instance {
   static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
     return $Timer.wrap(
       Timer((r as $Value?)!.$value, () {
-        ((s as $Value?)! as EvalCallable)(runtime, null, []);
+        ((s as $Value?)! as EvalCallable)(runtime, null, null, null, 0);
       }),
     );
   }
@@ -199,7 +200,13 @@ class $Timer implements $Instance {
   static $Value? $periodic(Runtime runtime, Object? r, Object? s, Object? c) {
     return $Timer.wrap(
       Timer.periodic((r as $Value?)!.$value, (Timer timer) {
-        ((s as $Value?)! as EvalCallable)(runtime, null, [$Timer.wrap(timer)]);
+        ((s as $Value?)! as EvalCallable)(
+          runtime,
+          null,
+          $Timer.wrap(timer),
+          null,
+          1,
+        );
       }),
     );
   }
@@ -207,7 +214,7 @@ class $Timer implements $Instance {
   /// Wrapper for the [Timer.run] method
   static $Value? $run(Runtime runtime, Object? r, Object? s, Object? c) {
     Timer.run(() {
-      ((r as $Value?)! as EvalCallable)(runtime, null, []);
+      ((r as $Value?)! as EvalCallable)(runtime, null, null, null, 0);
     });
     return null;
   }
@@ -242,7 +249,13 @@ class $Timer implements $Instance {
   }
 
   static const $Function __cancel = $Function(_cancel);
-  static $Value? _cancel(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _cancel(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Timer;
     self.$value.cancel();
     return null;

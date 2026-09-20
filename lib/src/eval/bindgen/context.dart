@@ -55,11 +55,7 @@ class BindgenContext {
   /// Whether [name] (kind: method/getter/setter/field/constructor/static)
   /// should be emitted. Honors `excludeMembers`, per-member `include`,
   /// and `includeObjectMembers` for the Object member set.
-  bool memberIncluded(
-    String name,
-    String kind, {
-    bool isObjectMember = false,
-  }) {
+  bool memberIncluded(String name, String kind, {bool isObjectMember = false}) {
     if (configMode) {
       final cc = classConfig;
       final mc = cc?.memberConfig(kind, name);

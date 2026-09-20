@@ -9,9 +9,9 @@ import 'package:test/test.dart';
 class _EqualInstance implements $Instance {
   @override
   $Value? $getProperty(Runtime runtime, String identifier) => $Function(
-    (runtime, target, args) => identifier == 'echo'
-        ? args.single
-        : $bool(args.single is _EqualInstance),
+    (runtime, target, r, s, c) => identifier == 'echo'
+        ? r as $Value
+        : $bool(r is _EqualInstance),
   );
   @override
   void $setProperty(Runtime runtime, String identifier, $Value value) =>
@@ -28,11 +28,11 @@ class _BridgeParent implements $Instance {
   @override
   $Value? $getProperty(Runtime runtime, String identifier) =>
       switch (identifier) {
-        'echo' => $Function((runtime, target, args) => args.single),
+        'echo' => $Function((runtime, target, r, s, c) => r as $Value?),
         'toString' => $Function(
-          (runtime, target, args) => $String('bridge parent'),
+          (runtime, target, r, s, c) => $String('bridge parent'),
         ),
-        '==' => $Function((runtime, target, args) => $bool(true)),
+        '==' => $Function((runtime, target, r, s, c) => $bool(true)),
         _ => throw StateError('Unknown bridge property $identifier'),
       };
   @override
@@ -64,14 +64,14 @@ void main() {
       final argument = _EqualInstance();
       expect(
         identical(
-          TypedInterop.invoke(runtime, child, 'echo', [argument]),
+          TypedInterop.invoke(runtime, child, 'echo', 1, argument, null),
           argument,
         ),
         isTrue,
       );
-      expect(TypedInterop.invoke(runtime, child, 'echo', [null]), isNull);
+      expect(TypedInterop.invoke(runtime, child, 'echo', 1, null, null), isNull);
       expect(
-        (TypedInterop.invoke(runtime, child, 'toString', []) as $String).$value,
+        (TypedInterop.invoke(runtime, child, 'toString', 0, null, null) as $String).$value,
         'bridge parent',
       );
       expect(TypedInterop.equals(runtime, child, argument), isTrue);
@@ -155,7 +155,7 @@ void main() {
     },
   );
   test('typed calls unbox primitive bridge returns', () {
-    final bridge = $Function((runtime, target, args) => $int(37));
+    final bridge = $Function((runtime, target, r, s, c) => $int(37));
     final call = TypedProgram(
       Uint8List.fromList([
         TypedOp.callHost,
@@ -200,9 +200,9 @@ void main() {
     expect(TypedInterop.boxExternal(3), isA<$int>());
     expect(TypedInterop.boxExternal(const $null()), isNull);
     expect(TypedInterop.exportExternal($String('value')), 'value');
-    final closure = $Closure((runtime, target, args) => args.single);
+    final closure = $Closure((runtime, target, r, s, c) => r as $Value?);
     expect(
-      identical(TypedInterop.call(runtime, closure, [instance]), instance),
+      identical(TypedInterop.call(runtime, closure, 1, instance, null), instance),
       isTrue,
     );
   });

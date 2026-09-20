@@ -93,8 +93,9 @@ String bindDecoratorProperties(BindgenContext ctx, ClassElement element) {
 /// (or `dynamic`). Wrapper method bodies are static, so class type parameters
 /// are out of scope, and `$value` is always raw — erased types are correct.
 String dartTypeErased(DartType type) {
-  final suffix =
-      type.nullabilitySuffix == NullabilitySuffix.question ? '?' : '';
+  final suffix = type.nullabilitySuffix == NullabilitySuffix.question
+      ? '?'
+      : '';
   if (type is TypeParameterType) {
     final bound = type.bound;
     if (bound.isDartCoreObject) {

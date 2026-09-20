@@ -908,7 +908,13 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   @override
   Iterable<R> cast<R>() => $value.cast();
   static const __$cast = $Function(_$cast);
-  static $Value? _$cast(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _$cast(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final $this = target?.$value as Iterable;
     final $result = $this.cast();
     return $Iterable.wrap($result);
@@ -920,10 +926,12 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   static $Value? _$followedBy(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final $this = target?.$value as Iterable;
-    final other = args[0]?.$value as Iterable;
+    final other = (r as $Value?)?.$value as Iterable;
     final $result = $this.followedBy(other);
     return $Iterable.wrap($result);
   }
@@ -931,22 +939,34 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   @override
   Iterable<T> map<T>(T Function(E e) toElement) => $value.map(toElement);
   static const __$map = $Function(_$map);
-  static $Value? _$map(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _$map(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final $this = target?.$value as Iterable;
-    final toElement = args[0] as EvalCallable;
-    final $result = $this.map((e) => toElement.call(runtime, null, [e]));
+    final toElement = (r as $Value?) as EvalCallable;
+    final $result = $this.map((e) => toElement.call(runtime, null, e, null, 1));
     return $Iterable.wrap($result);
   }
 
   @override
   Iterable<E> where(bool Function(E element) test) => $value.where(test);
   static const __$where = $Function(_$where);
-  static $Value? _$where(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _$where(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final $this = target?.$value as Iterable;
-    final test = args[0] as EvalCallable;
+    final test = (r as $Value?) as EvalCallable;
     final $result = $this.where(
       (element) =>
-          test.call(runtime, null, [element as $Value?])!.$value as bool,
+          test.call(runtime, null, element as $Value?, null, 1)!.$value as bool,
     );
     return $Iterable.wrap($result);
   }
@@ -957,7 +977,9 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   static $Value? _$whereType(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final $this = target?.$value as Iterable;
     final $result = $this.whereType();
@@ -968,12 +990,18 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   Iterable<T> expand<T>(Iterable<T> Function(E element) toElements) =>
       $value.expand(toElements);
   static const __$expand = $Function(_$expand);
-  static $Value? _$expand(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _$expand(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final $this = target?.$value as Iterable;
-    final toElements = args[0] as EvalCallable;
+    final toElements = (r as $Value?) as EvalCallable;
     final $result = $this.expand(
       (element) =>
-          toElements.call(runtime, null, [element])!.$value as Iterable,
+          toElements.call(runtime, null, element, null, 1)!.$value as Iterable,
     );
     return $Iterable.wrap($result);
   }
@@ -984,10 +1012,12 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   static $Value? _$contains(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final $this = target?.$value as Iterable;
-    final element = args[0];
+    final element = (r as $Value?);
     final $result = $this.contains(element);
     return $bool($result);
   }
@@ -998,12 +1028,14 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   static $Value? _$forEach(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final $this = target?.$value as Iterable;
-    final action = args[0] as EvalCallable;
+    final action = (r as $Value?) as EvalCallable;
     for (var element in $this) {
-      action.call(runtime, null, [element]);
+      action.call(runtime, null, element, null, 1);
     }
     return null;
   }
@@ -1011,11 +1043,17 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   @override
   E reduce(E Function(E value, E element) combine) => $value.reduce(combine);
   static const __$reduce = $Function(_$reduce);
-  static $Value? _$reduce(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _$reduce(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final $this = target?.$value as Iterable;
-    final combine = args[0] as EvalCallable;
+    final combine = (r as $Value?) as EvalCallable;
     final $result = $this.reduce(
-      (value, element) => combine.call(runtime, null, [value, element]),
+      (value, element) => combine.call(runtime, null, value, element, 2),
     );
     return $result;
   }
@@ -1024,14 +1062,20 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   T fold<T>(T initialValue, T Function(T previousValue, E element) combine) =>
       $value.fold(initialValue, combine);
   static const __$fold = $Function(_$fold);
-  static $Value? _$fold(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _$fold(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final $this = target?.$value as Iterable;
-    final initialValue = args[0];
-    final combine = args[1] as EvalCallable;
+    final initialValue = (r as $Value?);
+    final combine = (s as $Value?) as EvalCallable;
     final $result = $this.fold(
       initialValue,
       (previousValue, element) =>
-          combine.call(runtime, null, [previousValue, element]),
+          combine.call(runtime, null, previousValue, element, 2),
     );
     return $result;
   }
@@ -1039,11 +1083,17 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   @override
   bool every(bool Function(E element) test) => $value.every(test);
   static const __$every = $Function(_$every);
-  static $Value? _$every(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _$every(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final $this = target?.$value as Iterable;
-    final test = args[0] as EvalCallable;
+    final test = (r as $Value?) as EvalCallable;
     final $result = $this.every(
-      (element) => test.call(runtime, null, [element])!.$value as bool,
+      (element) => test.call(runtime, null, element, null, 1)!.$value as bool,
     );
     return $bool($result);
   }
@@ -1051,9 +1101,15 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   @override
   String join([String separator = ""]) => $value.join(separator);
   static const __$join = $Function(_$join);
-  static $Value? _$join(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _$join(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final $this = target?.$value as Iterable;
-    final separator = args[0]?.$value as String? ?? "";
+    final separator = (r as $Value?)?.$value as String? ?? "";
     final $result = $this
         .map((v) => v is $Value ? runtime.valueToString(v) : v)
         .join(separator);
@@ -1063,11 +1119,17 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   @override
   bool any(bool Function(E element) test) => $value.any(test);
   static const __$any = $Function(_$any);
-  static $Value? _$any(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _$any(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final $this = target?.$value as Iterable;
-    final test = args[0] as EvalCallable;
+    final test = (r as $Value?) as EvalCallable;
     final $result = $this.any(
-      (element) => test.call(runtime, null, [element])!.$value as bool,
+      (element) => test.call(runtime, null, element, null, 1)!.$value as bool,
     );
     return $bool($result);
   }
@@ -1075,9 +1137,15 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   @override
   List<E> toList({bool growable = true}) => $value.toList(growable: growable);
   static const __$toList = $Function(_$toList);
-  static $Value? _$toList(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _$toList(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final $this = target?.$value as Iterable;
-    final growable = args[0]?.$value as bool? ?? true;
+    final growable = (r as $Value?)?.$value as bool? ?? true;
     final $result = $this.toList(growable: growable);
     return $List.wrap($result);
   }
@@ -1085,7 +1153,13 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   @override
   Set<E> toSet() => $value.toSet();
   static const __$toSet = $Function(_$toSet);
-  static $Value? _$toSet(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _$toSet(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final $this = target?.$value as Iterable;
     final $result = $this.toList();
     return $List.wrap($result);
@@ -1094,9 +1168,15 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   @override
   Iterable<E> take(int count) => $value.take(count);
   static const __$take = $Function(_$take);
-  static $Value? _$take(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _$take(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final $this = target?.$value as Iterable;
-    final count = args[0]?.$value as int;
+    final count = (r as $Value?)?.$value as int;
     final $result = $this.take(count);
     return $Iterable.wrap($result);
   }
@@ -1107,12 +1187,14 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   static $Value? _$takeWhile(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final $this = target?.$value as Iterable;
-    final test = args[0] as EvalCallable;
+    final test = (r as $Value?) as EvalCallable;
     final $result = $this.takeWhile(
-      (value) => test.call(runtime, null, [value])!.$value as bool,
+      (value) => test.call(runtime, null, value, null, 1)!.$value as bool,
     );
     return $Iterable.wrap($result);
   }
@@ -1120,9 +1202,15 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   @override
   Iterable<E> skip(int count) => $value.skip(count);
   static const __$skip = $Function(_$skip);
-  static $Value? _$skip(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _$skip(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final $this = target?.$value as Iterable;
-    final count = args[0]?.$value as int;
+    final count = (r as $Value?)?.$value as int;
     final $result = $this.skip(count);
     return $Iterable.wrap($result);
   }
@@ -1133,12 +1221,14 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   static $Value? _$skipWhile(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final $this = target?.$value as Iterable;
-    final test = args[0] as EvalCallable;
+    final test = (r as $Value?) as EvalCallable;
     final $result = $this.skipWhile(
-      (value) => test.call(runtime, null, [value])!.$value as bool,
+      (value) => test.call(runtime, null, value, null, 1)!.$value as bool,
     );
     return $Iterable.wrap($result);
   }
@@ -1150,14 +1240,18 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   static $Value? _$firstWhere(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final $this = target?.$value as Iterable;
-    final test = args[0] as EvalCallable;
-    final orElse = args[1] as EvalCallable?;
+    final test = (r as $Value?) as EvalCallable;
+    final orElse = (s as $Value?) as EvalCallable?;
     final $result = $this.firstWhere(
-      (element) => test.call(runtime, null, [element])!.$value as bool,
-      orElse: orElse == null ? null : () => orElse.call(runtime, null, [])!,
+      (element) => test.call(runtime, null, element, null, 1)!.$value as bool,
+      orElse: orElse == null
+          ? null
+          : () => orElse.call(runtime, null, null, null, 0)!,
     );
     return $result;
   }
@@ -1169,14 +1263,18 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   static $Value? _$lastWhere(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final $this = target?.$value as Iterable;
-    final test = args[0] as EvalCallable;
-    final orElse = args[1] as EvalCallable?;
+    final test = (r as $Value?) as EvalCallable;
+    final orElse = (s as $Value?) as EvalCallable?;
     final $result = $this.lastWhere(
-      (element) => test.call(runtime, null, [element])!.$value as bool,
-      orElse: orElse == null ? null : () => orElse.call(runtime, null, [])!,
+      (element) => test.call(runtime, null, element, null, 1)!.$value as bool,
+      orElse: orElse == null
+          ? null
+          : () => orElse.call(runtime, null, null, null, 0)!,
     );
     return $result;
   }
@@ -1188,14 +1286,18 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   static $Value? _$singleWhere(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final $this = target?.$value as Iterable;
-    final test = args[0] as EvalCallable;
-    final orElse = args[1] as EvalCallable?;
+    final test = (r as $Value?) as EvalCallable;
+    final orElse = (s as $Value?) as EvalCallable?;
     final $result = $this.singleWhere(
-      (element) => test.call(runtime, null, [element])!.$value as bool,
-      orElse: orElse == null ? null : () => orElse.call(runtime, null, [])!,
+      (element) => test.call(runtime, null, element, null, 1)!.$value as bool,
+      orElse: orElse == null
+          ? null
+          : () => orElse.call(runtime, null, null, null, 0)!,
     );
     return $result;
   }
@@ -1206,10 +1308,12 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   static $Value? _$elementAt(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final $this = target?.$value as Iterable;
-    final index = args[0]?.$value as int;
+    final index = (r as $Value?)?.$value as int;
     final $result = $this.elementAt(index);
     return $result;
   }
@@ -1267,11 +1371,12 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   ) {
     final count = (r as $Value?)?.$value as int;
     final generator =
-        s as EvalFunction? ?? $Function((runtime, target, args) => args[0]);
+        s as EvalFunction? ??
+        $Function((runtime, target, r, s, c) => (r as $Value?));
     return $Iterable.wrap(
       Iterable.generate(
         count,
-        (index) => generator.call(runtime, null, [$int(index)]),
+        (index) => generator.call(runtime, null, $int(index), null, 1),
       ),
     );
   }

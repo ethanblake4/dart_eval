@@ -6,6 +6,7 @@
 // ignore_for_file: undefined_hidden_name
 // ignore_for_file: dead_code, unused_local_variable
 // ignore_for_file: unnecessary_type_check, unnecessary_non_null_assertion
+// ignore_for_file: unnecessary_cast
 // ignore_for_file: sdk_version_since
 // ignore_for_file: non_constant_identifier_names
 // ignore_for_file: argument_type_not_assignable_to_error_handler
@@ -264,66 +265,113 @@ class $StreamSubscription<T> implements $Instance {
   }
 
   static const $Function __cancel = $Function(_cancel);
-  static $Value? _cancel(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _cancel(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $StreamSubscription;
     final result = self.$value.cancel();
     return $Future.wrap(result.then((e) => null));
   }
 
   static const $Function __onData = $Function(_onData);
-  static $Value? _onData(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _onData(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $StreamSubscription;
     self.$value.onData(
-      args[0] == null || args[0] is $null
+      (r as $Value?) == null || (r as $Value?) is $null
           ? null
           : (dynamic data) {
-              (args[0]! as EvalCallable)(runtime, null, [
+              ((r as $Value?)! as EvalCallable)(
+                runtime,
+                null,
                 runtime.wrapAlways(data, recursive: true),
-              ]);
+                null,
+                1,
+              );
             },
     );
     return null;
   }
 
   static const $Function __onError = $Function(_onError);
-  static $Value? _onError(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _onError(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $StreamSubscription;
     self.$value.onError(
-      args[0] == null || args[0] is $null
+      (r as $Value?) == null || (r as $Value?) is $null
           ? null
           : (a0, [a1, a2]) {
-              (args[0]! as EvalCallable)(runtime, null, [
-                runtime.wrapAlways(a0),
-                if (a1 != null) runtime.wrapAlways(a1),
-                if (a2 != null) runtime.wrapAlways(a2),
-              ]);
+              final _a0 = runtime.wrapAlways(a0);
+              ((r as $Value?)! as EvalCallable)(
+                runtime,
+                null,
+                _a0,
+                a1 != null ? runtime.wrapAlways(a1) : null,
+                a2 != null
+                    ? [runtime.wrapAlways(a2)]
+                    : a1 != null
+                    ? 2
+                    : 1,
+              );
             },
     );
     return null;
   }
 
   static const $Function __onDone = $Function(_onDone);
-  static $Value? _onDone(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _onDone(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $StreamSubscription;
     self.$value.onDone(
-      args[0] == null || args[0] is $null
+      (r as $Value?) == null || (r as $Value?) is $null
           ? null
           : () {
-              (args[0]! as EvalCallable)(runtime, null, []);
+              ((r as $Value?)! as EvalCallable)(runtime, null, null, null, 0);
             },
     );
     return null;
   }
 
   static const $Function __pause = $Function(_pause);
-  static $Value? _pause(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _pause(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $StreamSubscription;
-    self.$value.pause((args.length > 0 ? args[0] : null)?.$value);
+    self.$value.pause((r is $Value ? r : null)?.$value);
     return null;
   }
 
   static const $Function __resume = $Function(_resume);
-  static $Value? _resume(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _resume(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $StreamSubscription;
     self.$value.resume();
     return null;
@@ -333,12 +381,12 @@ class $StreamSubscription<T> implements $Instance {
   static $Value? _asFuture(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $StreamSubscription;
-    final result = self.$value.asFuture(
-      (args.length > 0 ? args[0] : null)?.$value,
-    );
+    final result = self.$value.asFuture((r is $Value ? r : null)?.$value);
     return $Future.wrap(
       result.then((e) => runtime.wrapAlways(e, recursive: true)),
     );

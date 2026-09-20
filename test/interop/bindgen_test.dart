@@ -80,7 +80,7 @@ void main() {
   $assignFn.callRegisters(runtime, $int(10), false, 'unused');
   check(Host.count == 10);
   check($Host.$new(runtime, $int(3), false, 'unused') is $Host);
-  final overflow = <Object?>[$Function((runtime, target, args) => $int((args.single as $int).$value + 7)), $int(0)];
+  final overflow = <Object?>[$Function((runtime, target, r, s, c) => $int((r as $int).$value + 7)), $int(0)];
   $Host.$retain(runtime, $int(1), $int(2), overflow);
   overflow.fillRange(0, overflow.length, null);
   check(Host.invoke(4) == 11);

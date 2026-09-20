@@ -181,7 +181,9 @@ class $InternetAddressType implements $Instance {
   static $Value? _$toString(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final obj = target?.$value as InternetAddressType;
     final $result = obj.toString();
@@ -607,7 +609,9 @@ class $InternetAddress implements InternetAddress, $Instance {
   static $Value? _$reverse(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final obj = target?.$value as InternetAddress;
     final $result = obj.reverse();

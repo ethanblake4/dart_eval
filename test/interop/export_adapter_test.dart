@@ -74,8 +74,8 @@ void main() {
     for (final candidate in [program, Program.read(program.write().buffer)]) {
       final runtime = Runtime.ofProgram(candidate);
       for (final callable in [
-        $Closure((runtime, target, arguments) => null),
-        $Function((runtime, target, arguments) => null),
+        $Closure((runtime, target, r, s, c) => null),
+        $Function((runtime, target, r, s, c) => null),
       ]) {
         expect(
           identical(
@@ -118,31 +118,31 @@ void main() {
       var called = false;
       final argumentChecked = bind(
         'takesArgument',
-        $Closure((runtime, target, arguments) {
+        $Closure((runtime, target, r, s, c) {
           called = true;
           return $int(1);
         }),
       );
       expect(
-        () => argumentChecked.call(runtime, null, [$String('bad')]),
+        () => argumentChecked.call(runtime, null, $String('bad'), null, 1),
         throwsA(isA<TypeError>()),
       );
       expect(called, isFalse);
 
       final resultChecked = bind(
         'takesResult',
-        $Function((runtime, target, arguments) => $String('bad')),
+        $Function((runtime, target, r, s, c) => $String('bad')),
       );
       expect(
-        () => resultChecked.call(runtime, null, const []),
+        () => resultChecked.call(runtime, null, null, null, 0),
         throwsA(isA<TypeError>()),
       );
 
       final voidChecked = bind(
         'takesVoid',
-        $Closure((runtime, target, arguments) => $String('discarded')),
+        $Closure((runtime, target, r, s, c) => $String('discarded')),
       );
-      expect(voidChecked.call(runtime, null, const []), isNull);
+      expect(voidChecked.call(runtime, null, null, null, 0), isNull);
     }
   });
 
@@ -181,7 +181,7 @@ void main() {
           () => TypedExportAdapter.bind(
             candidate.typedProgram,
             declaration('takesNamed'),
-            {'callback': $Closure((runtime, target, arguments) => $int(1))},
+            {'callback': $Closure((runtime, target, r, s, c) => $int(1))},
             runtime: runtime,
           ),
           throwsArgumentError,

@@ -6,6 +6,7 @@
 // ignore_for_file: undefined_hidden_name
 // ignore_for_file: dead_code, unused_local_variable
 // ignore_for_file: unnecessary_type_check, unnecessary_non_null_assertion
+// ignore_for_file: unnecessary_cast
 // ignore_for_file: sdk_version_since
 // ignore_for_file: non_constant_identifier_names
 // ignore_for_file: argument_type_not_assignable_to_error_handler
@@ -487,14 +488,14 @@ class $ByteBuffer implements $Instance {
   static $Value? _asUint8List(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $ByteBuffer;
     final result = self.$value.asUint8List(
-      (args.length > 0 ? args[0] : null) == null
-          ? 0
-          : (args.length > 0 ? args[0] : null)?.$value,
-      (args.length > 1 ? args[1] : null)?.$value,
+      (r is $Value ? r : null) == null ? 0 : (r as $int).$value,
+      (s is $Value ? s : null)?.$value,
     );
     return $Uint8List.wrap(result);
   }
@@ -503,14 +504,14 @@ class $ByteBuffer implements $Instance {
   static $Value? _asInt8List(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $ByteBuffer;
     final result = self.$value.asInt8List(
-      (args.length > 0 ? args[0] : null) == null
-          ? 0
-          : (args.length > 0 ? args[0] : null)?.$value,
-      (args.length > 1 ? args[1] : null)?.$value,
+      (r is $Value ? r : null) == null ? 0 : (r as $int).$value,
+      (s is $Value ? s : null)?.$value,
     );
     return $Object(result);
   }
@@ -519,14 +520,14 @@ class $ByteBuffer implements $Instance {
   static $Value? _asUint8ClampedList(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $ByteBuffer;
     final result = self.$value.asUint8ClampedList(
-      (args.length > 0 ? args[0] : null) == null
-          ? 0
-          : (args.length > 0 ? args[0] : null)?.$value,
-      (args.length > 1 ? args[1] : null)?.$value,
+      (r is $Value ? r : null) == null ? 0 : (r as $int).$value,
+      (s is $Value ? s : null)?.$value,
     );
     return $Object(result);
   }
@@ -535,14 +536,14 @@ class $ByteBuffer implements $Instance {
   static $Value? _asUint16List(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $ByteBuffer;
     final result = self.$value.asUint16List(
-      (args.length > 0 ? args[0] : null) == null
-          ? 0
-          : (args.length > 0 ? args[0] : null)?.$value,
-      (args.length > 1 ? args[1] : null)?.$value,
+      (r is $Value ? r : null) == null ? 0 : (r as $int).$value,
+      (s is $Value ? s : null)?.$value,
     );
     return $Object(result);
   }
@@ -551,14 +552,14 @@ class $ByteBuffer implements $Instance {
   static $Value? _asInt16List(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $ByteBuffer;
     final result = self.$value.asInt16List(
-      (args.length > 0 ? args[0] : null) == null
-          ? 0
-          : (args.length > 0 ? args[0] : null)?.$value,
-      (args.length > 1 ? args[1] : null)?.$value,
+      (r is $Value ? r : null) == null ? 0 : (r as $int).$value,
+      (s is $Value ? s : null)?.$value,
     );
     return $Object(result);
   }
@@ -567,14 +568,14 @@ class $ByteBuffer implements $Instance {
   static $Value? _asUint32List(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $ByteBuffer;
     final result = self.$value.asUint32List(
-      (args.length > 0 ? args[0] : null) == null
-          ? 0
-          : (args.length > 0 ? args[0] : null)?.$value,
-      (args.length > 1 ? args[1] : null)?.$value,
+      (r is $Value ? r : null) == null ? 0 : (r as $int).$value,
+      (s is $Value ? s : null)?.$value,
     );
     return $Object(result);
   }
@@ -583,14 +584,14 @@ class $ByteBuffer implements $Instance {
   static $Value? _asInt32List(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $ByteBuffer;
     final result = self.$value.asInt32List(
-      (args.length > 0 ? args[0] : null) == null
-          ? 0
-          : (args.length > 0 ? args[0] : null)?.$value,
-      (args.length > 1 ? args[1] : null)?.$value,
+      (r is $Value ? r : null) == null ? 0 : (r as $int).$value,
+      (s is $Value ? s : null)?.$value,
     );
     return $Object(result);
   }
@@ -599,14 +600,14 @@ class $ByteBuffer implements $Instance {
   static $Value? _asUint64List(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $ByteBuffer;
     final result = self.$value.asUint64List(
-      (args.length > 0 ? args[0] : null) == null
-          ? 0
-          : (args.length > 0 ? args[0] : null)?.$value,
-      (args.length > 1 ? args[1] : null)?.$value,
+      (r is $Value ? r : null) == null ? 0 : (r as $int).$value,
+      (s is $Value ? s : null)?.$value,
     );
     return $Object(result);
   }
@@ -615,14 +616,14 @@ class $ByteBuffer implements $Instance {
   static $Value? _asInt64List(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $ByteBuffer;
     final result = self.$value.asInt64List(
-      (args.length > 0 ? args[0] : null) == null
-          ? 0
-          : (args.length > 0 ? args[0] : null)?.$value,
-      (args.length > 1 ? args[1] : null)?.$value,
+      (r is $Value ? r : null) == null ? 0 : (r as $int).$value,
+      (s is $Value ? s : null)?.$value,
     );
     return $Object(result);
   }
@@ -631,14 +632,14 @@ class $ByteBuffer implements $Instance {
   static $Value? _asInt32x4List(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $ByteBuffer;
     final result = self.$value.asInt32x4List(
-      (args.length > 0 ? args[0] : null) == null
-          ? 0
-          : (args.length > 0 ? args[0] : null)?.$value,
-      (args.length > 1 ? args[1] : null)?.$value,
+      (r is $Value ? r : null) == null ? 0 : (r as $int).$value,
+      (s is $Value ? s : null)?.$value,
     );
     return $Object(result);
   }
@@ -647,14 +648,14 @@ class $ByteBuffer implements $Instance {
   static $Value? _asFloat32List(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $ByteBuffer;
     final result = self.$value.asFloat32List(
-      (args.length > 0 ? args[0] : null) == null
-          ? 0
-          : (args.length > 0 ? args[0] : null)?.$value,
-      (args.length > 1 ? args[1] : null)?.$value,
+      (r is $Value ? r : null) == null ? 0 : (r as $int).$value,
+      (s is $Value ? s : null)?.$value,
     );
     return $Object(result);
   }
@@ -663,14 +664,14 @@ class $ByteBuffer implements $Instance {
   static $Value? _asFloat64List(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $ByteBuffer;
     final result = self.$value.asFloat64List(
-      (args.length > 0 ? args[0] : null) == null
-          ? 0
-          : (args.length > 0 ? args[0] : null)?.$value,
-      (args.length > 1 ? args[1] : null)?.$value,
+      (r is $Value ? r : null) == null ? 0 : (r as $int).$value,
+      (s is $Value ? s : null)?.$value,
     );
     return $Object(result);
   }
@@ -679,14 +680,14 @@ class $ByteBuffer implements $Instance {
   static $Value? _asFloat32x4List(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $ByteBuffer;
     final result = self.$value.asFloat32x4List(
-      (args.length > 0 ? args[0] : null) == null
-          ? 0
-          : (args.length > 0 ? args[0] : null)?.$value,
-      (args.length > 1 ? args[1] : null)?.$value,
+      (r is $Value ? r : null) == null ? 0 : (r as $int).$value,
+      (s is $Value ? s : null)?.$value,
     );
     return $Object(result);
   }
@@ -695,14 +696,14 @@ class $ByteBuffer implements $Instance {
   static $Value? _asFloat64x2List(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $ByteBuffer;
     final result = self.$value.asFloat64x2List(
-      (args.length > 0 ? args[0] : null) == null
-          ? 0
-          : (args.length > 0 ? args[0] : null)?.$value,
-      (args.length > 1 ? args[1] : null)?.$value,
+      (r is $Value ? r : null) == null ? 0 : (r as $int).$value,
+      (s is $Value ? s : null)?.$value,
     );
     return $Object(result);
   }
@@ -711,14 +712,14 @@ class $ByteBuffer implements $Instance {
   static $Value? _asByteData(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $ByteBuffer;
     final result = self.$value.asByteData(
-      (args.length > 0 ? args[0] : null) == null
-          ? 0
-          : (args.length > 0 ? args[0] : null)?.$value,
-      (args.length > 1 ? args[1] : null)?.$value,
+      (r is $Value ? r : null) == null ? 0 : (r as $int).$value,
+      (s is $Value ? s : null)?.$value,
     );
     return $ByteData.wrap(result);
   }
@@ -1582,7 +1583,9 @@ class $ByteData implements $Instance {
   static $Value? _asUnmodifiableView(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $ByteData;
     final result = self.$value.asUnmodifiableView();
@@ -1590,16 +1593,28 @@ class $ByteData implements $Instance {
   }
 
   static const $Function __getInt8 = $Function(_getInt8);
-  static $Value? _getInt8(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _getInt8(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $ByteData;
-    final result = self.$value.getInt8(args[0]!.$value);
+    final result = self.$value.getInt8((r as $int).$value);
     return $int(result);
   }
 
   static const $Function __setInt8 = $Function(_setInt8);
-  static $Value? _setInt8(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _setInt8(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $ByteData;
-    self.$value.setInt8(args[0]!.$value, args[1]!.$value);
+    self.$value.setInt8((r as $int).$value, (s as $int).$value);
     return null;
   }
 
@@ -1607,10 +1622,12 @@ class $ByteData implements $Instance {
   static $Value? _getUint8(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $ByteData;
-    final result = self.$value.getUint8(args[0]!.$value);
+    final result = self.$value.getUint8((r as $int).$value);
     return $int(result);
   }
 
@@ -1618,10 +1635,12 @@ class $ByteData implements $Instance {
   static $Value? _setUint8(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $ByteData;
-    self.$value.setUint8(args[0]!.$value, args[1]!.$value);
+    self.$value.setUint8((r as $int).$value, (s as $int).$value);
     return null;
   }
 
@@ -1629,14 +1648,16 @@ class $ByteData implements $Instance {
   static $Value? _getInt16(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $ByteData;
     final result = self.$value.getInt16(
-      args[0]!.$value,
-      (args.length > 1 ? args[1] : null) == null
+      (r as $int).$value,
+      (s is $Value ? s : null) == null
           ? Endian.big
-          : (args.length > 1 ? args[1] : null)?.$value,
+          : (s is $Value ? s : null)?.$value,
     );
     return $int(result);
   }
@@ -1645,15 +1666,23 @@ class $ByteData implements $Instance {
   static $Value? _setInt16(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $ByteData;
     self.$value.setInt16(
-      args[0]!.$value,
-      args[1]!.$value,
-      (args.length > 2 ? args[2] : null) == null
+      (r as $int).$value,
+      (s as $int).$value,
+      (c is List && (c as List).length > 0
+                  ? (c as List)[0] as $Value?
+                  : null) ==
+              null
           ? Endian.big
-          : (args.length > 2 ? args[2] : null)?.$value,
+          : (c is List && (c as List).length > 0
+                    ? (c as List)[0] as $Value?
+                    : null)
+                ?.$value,
     );
     return null;
   }
@@ -1662,14 +1691,16 @@ class $ByteData implements $Instance {
   static $Value? _getUint16(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $ByteData;
     final result = self.$value.getUint16(
-      args[0]!.$value,
-      (args.length > 1 ? args[1] : null) == null
+      (r as $int).$value,
+      (s is $Value ? s : null) == null
           ? Endian.big
-          : (args.length > 1 ? args[1] : null)?.$value,
+          : (s is $Value ? s : null)?.$value,
     );
     return $int(result);
   }
@@ -1678,15 +1709,23 @@ class $ByteData implements $Instance {
   static $Value? _setUint16(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $ByteData;
     self.$value.setUint16(
-      args[0]!.$value,
-      args[1]!.$value,
-      (args.length > 2 ? args[2] : null) == null
+      (r as $int).$value,
+      (s as $int).$value,
+      (c is List && (c as List).length > 0
+                  ? (c as List)[0] as $Value?
+                  : null) ==
+              null
           ? Endian.big
-          : (args.length > 2 ? args[2] : null)?.$value,
+          : (c is List && (c as List).length > 0
+                    ? (c as List)[0] as $Value?
+                    : null)
+                ?.$value,
     );
     return null;
   }
@@ -1695,14 +1734,16 @@ class $ByteData implements $Instance {
   static $Value? _getInt32(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $ByteData;
     final result = self.$value.getInt32(
-      args[0]!.$value,
-      (args.length > 1 ? args[1] : null) == null
+      (r as $int).$value,
+      (s is $Value ? s : null) == null
           ? Endian.big
-          : (args.length > 1 ? args[1] : null)?.$value,
+          : (s is $Value ? s : null)?.$value,
     );
     return $int(result);
   }
@@ -1711,15 +1752,23 @@ class $ByteData implements $Instance {
   static $Value? _setInt32(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $ByteData;
     self.$value.setInt32(
-      args[0]!.$value,
-      args[1]!.$value,
-      (args.length > 2 ? args[2] : null) == null
+      (r as $int).$value,
+      (s as $int).$value,
+      (c is List && (c as List).length > 0
+                  ? (c as List)[0] as $Value?
+                  : null) ==
+              null
           ? Endian.big
-          : (args.length > 2 ? args[2] : null)?.$value,
+          : (c is List && (c as List).length > 0
+                    ? (c as List)[0] as $Value?
+                    : null)
+                ?.$value,
     );
     return null;
   }
@@ -1728,14 +1777,16 @@ class $ByteData implements $Instance {
   static $Value? _getUint32(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $ByteData;
     final result = self.$value.getUint32(
-      args[0]!.$value,
-      (args.length > 1 ? args[1] : null) == null
+      (r as $int).$value,
+      (s is $Value ? s : null) == null
           ? Endian.big
-          : (args.length > 1 ? args[1] : null)?.$value,
+          : (s is $Value ? s : null)?.$value,
     );
     return $int(result);
   }
@@ -1744,15 +1795,23 @@ class $ByteData implements $Instance {
   static $Value? _setUint32(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $ByteData;
     self.$value.setUint32(
-      args[0]!.$value,
-      args[1]!.$value,
-      (args.length > 2 ? args[2] : null) == null
+      (r as $int).$value,
+      (s as $int).$value,
+      (c is List && (c as List).length > 0
+                  ? (c as List)[0] as $Value?
+                  : null) ==
+              null
           ? Endian.big
-          : (args.length > 2 ? args[2] : null)?.$value,
+          : (c is List && (c as List).length > 0
+                    ? (c as List)[0] as $Value?
+                    : null)
+                ?.$value,
     );
     return null;
   }
@@ -1761,14 +1820,16 @@ class $ByteData implements $Instance {
   static $Value? _getInt64(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $ByteData;
     final result = self.$value.getInt64(
-      args[0]!.$value,
-      (args.length > 1 ? args[1] : null) == null
+      (r as $int).$value,
+      (s is $Value ? s : null) == null
           ? Endian.big
-          : (args.length > 1 ? args[1] : null)?.$value,
+          : (s is $Value ? s : null)?.$value,
     );
     return $int(result);
   }
@@ -1777,15 +1838,23 @@ class $ByteData implements $Instance {
   static $Value? _setInt64(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $ByteData;
     self.$value.setInt64(
-      args[0]!.$value,
-      args[1]!.$value,
-      (args.length > 2 ? args[2] : null) == null
+      (r as $int).$value,
+      (s as $int).$value,
+      (c is List && (c as List).length > 0
+                  ? (c as List)[0] as $Value?
+                  : null) ==
+              null
           ? Endian.big
-          : (args.length > 2 ? args[2] : null)?.$value,
+          : (c is List && (c as List).length > 0
+                    ? (c as List)[0] as $Value?
+                    : null)
+                ?.$value,
     );
     return null;
   }
@@ -1794,14 +1863,16 @@ class $ByteData implements $Instance {
   static $Value? _getUint64(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $ByteData;
     final result = self.$value.getUint64(
-      args[0]!.$value,
-      (args.length > 1 ? args[1] : null) == null
+      (r as $int).$value,
+      (s is $Value ? s : null) == null
           ? Endian.big
-          : (args.length > 1 ? args[1] : null)?.$value,
+          : (s is $Value ? s : null)?.$value,
     );
     return $int(result);
   }
@@ -1810,15 +1881,23 @@ class $ByteData implements $Instance {
   static $Value? _setUint64(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $ByteData;
     self.$value.setUint64(
-      args[0]!.$value,
-      args[1]!.$value,
-      (args.length > 2 ? args[2] : null) == null
+      (r as $int).$value,
+      (s as $int).$value,
+      (c is List && (c as List).length > 0
+                  ? (c as List)[0] as $Value?
+                  : null) ==
+              null
           ? Endian.big
-          : (args.length > 2 ? args[2] : null)?.$value,
+          : (c is List && (c as List).length > 0
+                    ? (c as List)[0] as $Value?
+                    : null)
+                ?.$value,
     );
     return null;
   }
@@ -1827,14 +1906,16 @@ class $ByteData implements $Instance {
   static $Value? _getFloat32(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $ByteData;
     final result = self.$value.getFloat32(
-      args[0]!.$value,
-      (args.length > 1 ? args[1] : null) == null
+      (r as $int).$value,
+      (s is $Value ? s : null) == null
           ? Endian.big
-          : (args.length > 1 ? args[1] : null)?.$value,
+          : (s is $Value ? s : null)?.$value,
     );
     return $double(result);
   }
@@ -1843,15 +1924,23 @@ class $ByteData implements $Instance {
   static $Value? _setFloat32(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $ByteData;
     self.$value.setFloat32(
-      args[0]!.$value,
-      args[1]!.$value,
-      (args.length > 2 ? args[2] : null) == null
+      (r as $int).$value,
+      (s as $double).$value,
+      (c is List && (c as List).length > 0
+                  ? (c as List)[0] as $Value?
+                  : null) ==
+              null
           ? Endian.big
-          : (args.length > 2 ? args[2] : null)?.$value,
+          : (c is List && (c as List).length > 0
+                    ? (c as List)[0] as $Value?
+                    : null)
+                ?.$value,
     );
     return null;
   }
@@ -1860,14 +1949,16 @@ class $ByteData implements $Instance {
   static $Value? _getFloat64(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $ByteData;
     final result = self.$value.getFloat64(
-      args[0]!.$value,
-      (args.length > 1 ? args[1] : null) == null
+      (r as $int).$value,
+      (s is $Value ? s : null) == null
           ? Endian.big
-          : (args.length > 1 ? args[1] : null)?.$value,
+          : (s is $Value ? s : null)?.$value,
     );
     return $double(result);
   }
@@ -1876,15 +1967,23 @@ class $ByteData implements $Instance {
   static $Value? _setFloat64(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $ByteData;
     self.$value.setFloat64(
-      args[0]!.$value,
-      args[1]!.$value,
-      (args.length > 2 ? args[2] : null) == null
+      (r as $int).$value,
+      (s as $double).$value,
+      (c is List && (c as List).length > 0
+                  ? (c as List)[0] as $Value?
+                  : null) ==
+              null
           ? Endian.big
-          : (args.length > 2 ? args[2] : null)?.$value,
+          : (c is List && (c as List).length > 0
+                    ? (c as List)[0] as $Value?
+                    : null)
+                ?.$value,
     );
     return null;
   }
@@ -3741,7 +3840,13 @@ class $Uint8List implements $Instance {
   }
 
   static const $Function __cast = $Function(_cast);
-  static $Value? _cast(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _cast(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Uint8List;
     final result = self.$value.cast();
     return $List.view(result, (e) => runtime.wrapAlways(e, recursive: true));
@@ -3751,18 +3856,32 @@ class $Uint8List implements $Instance {
   static $Value? _followedBy(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Uint8List;
-    final result = self.$value.followedBy(args[0]!.$value);
+    final result = self.$value.followedBy((r as $Value?)!.$value);
     return $Iterable.wrap((result).map((e) => $int(e)));
   }
 
   static const $Function __map = $Function(_map);
-  static $Value? _map(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _map(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Uint8List;
     final result = self.$value.map((int e) {
-      return (args[0]! as EvalCallable)(runtime, null, [$int(e)])?.$value;
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
+        $int(e),
+        null,
+        1,
+      )?.$value;
     });
     return $Iterable.wrap(
       (result).map((e) => runtime.wrapAlways(e, recursive: true)),
@@ -3770,10 +3889,22 @@ class $Uint8List implements $Instance {
   }
 
   static const $Function __where = $Function(_where);
-  static $Value? _where(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _where(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Uint8List;
     final result = self.$value.where((int element) {
-      return (args[0]! as EvalCallable)(runtime, null, [$int(element)])?.$value;
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
+        $int(element),
+        null,
+        1,
+      )?.$value;
     });
     return $Iterable.wrap((result).map((e) => $int(e)));
   }
@@ -3782,7 +3913,9 @@ class $Uint8List implements $Instance {
   static $Value? _whereType(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Uint8List;
     final result = self.$value.whereType();
@@ -3792,10 +3925,22 @@ class $Uint8List implements $Instance {
   }
 
   static const $Function __expand = $Function(_expand);
-  static $Value? _expand(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _expand(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Uint8List;
     final result = self.$value.expand((int element) {
-      return (args[0]! as EvalCallable)(runtime, null, [$int(element)])?.$value;
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
+        $int(element),
+        null,
+        1,
+      )?.$value;
     });
     return $Iterable.wrap(
       (result).map((e) => runtime.wrapAlways(e, recursive: true)),
@@ -3806,100 +3951,170 @@ class $Uint8List implements $Instance {
   static $Value? _contains(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Uint8List;
-    final result = self.$value.contains(args[0]!.$reified);
+    final result = self.$value.contains((r as $Value?)!.$reified);
     return $bool(result);
   }
 
   static const $Function __forEach = $Function(_forEach);
-  static $Value? _forEach(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _forEach(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Uint8List;
     self.$value.forEach((int element) {
-      (args[0]! as EvalCallable)(runtime, null, [$int(element)]);
+      ((r as $Value?)! as EvalCallable)(runtime, null, $int(element), null, 1);
     });
     return null;
   }
 
   static const $Function __reduce = $Function(_reduce);
-  static $Value? _reduce(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _reduce(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Uint8List;
     final result = self.$value.reduce((int value, int element) {
-      return (args[0]! as EvalCallable)(runtime, null, [
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
         $int(value),
         $int(element),
-      ])?.$value;
+        2,
+      )?.$value;
     });
     return $int(result);
   }
 
   static const $Function __fold = $Function(_fold);
-  static $Value? _fold(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _fold(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Uint8List;
-    final result = self.$value.fold(args[0]!.$value, (
+    final result = self.$value.fold((r as $Value?)!.$value, (
       dynamic previousValue,
       int element,
     ) {
-      return (args[1]! as EvalCallable)(runtime, null, [
+      return ((s as $Value?)! as EvalCallable)(
+        runtime,
+        null,
         runtime.wrapAlways(previousValue, recursive: true),
         $int(element),
-      ])?.$value;
+        2,
+      )?.$value;
     });
     return runtime.wrapAlways(result, recursive: true);
   }
 
   static const $Function __every = $Function(_every);
-  static $Value? _every(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _every(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Uint8List;
     final result = self.$value.every((int element) {
-      return (args[0]! as EvalCallable)(runtime, null, [$int(element)])?.$value;
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
+        $int(element),
+        null,
+        1,
+      )?.$value;
     });
     return $bool(result);
   }
 
   static const $Function __join = $Function(_join);
-  static $Value? _join(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _join(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Uint8List;
     final result = self.$value.join(
-      (args.length > 0 ? args[0] : null) == null
-          ? ""
-          : (args.length > 0 ? args[0] : null)?.$value,
+      (r is $Value ? r : null) == null ? "" : (r as $String).$value,
     );
     return $String(result);
   }
 
   static const $Function __any = $Function(_any);
-  static $Value? _any(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _any(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Uint8List;
     final result = self.$value.any((int element) {
-      return (args[0]! as EvalCallable)(runtime, null, [$int(element)])?.$value;
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
+        $int(element),
+        null,
+        1,
+      )?.$value;
     });
     return $bool(result);
   }
 
   static const $Function __toList = $Function(_toList);
-  static $Value? _toList(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _toList(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Uint8List;
     final result = self.$value.toList(
-      growable: (args.length > 0 ? args[0] : null) == null
-          ? true
-          : (args.length > 0 ? args[0] : null)?.$value,
+      growable: (r is $Value ? r : null) == null ? true : (r as $bool).$value,
     );
     return $List.view(result, (e) => $int(e));
   }
 
   static const $Function __toSet = $Function(_toSet);
-  static $Value? _toSet(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _toSet(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Uint8List;
     final result = self.$value.toSet();
     return $Set.wrap((result).map((e) => $int(e)).toSet());
   }
 
   static const $Function __take = $Function(_take);
-  static $Value? _take(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _take(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Uint8List;
-    final result = self.$value.take(args[0]!.$value);
+    final result = self.$value.take((r as $int).$value);
     return $Iterable.wrap((result).map((e) => $int(e)));
   }
 
@@ -3907,19 +4122,33 @@ class $Uint8List implements $Instance {
   static $Value? _takeWhile(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Uint8List;
     final result = self.$value.takeWhile((int value) {
-      return (args[0]! as EvalCallable)(runtime, null, [$int(value)])?.$value;
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
+        $int(value),
+        null,
+        1,
+      )?.$value;
     });
     return $Iterable.wrap((result).map((e) => $int(e)));
   }
 
   static const $Function __skip = $Function(_skip);
-  static $Value? _skip(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _skip(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Uint8List;
-    final result = self.$value.skip(args[0]!.$value);
+    final result = self.$value.skip((r as $int).$value);
     return $Iterable.wrap((result).map((e) => $int(e)));
   }
 
@@ -3927,11 +4156,19 @@ class $Uint8List implements $Instance {
   static $Value? _skipWhile(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Uint8List;
     final result = self.$value.skipWhile((int value) {
-      return (args[0]! as EvalCallable)(runtime, null, [$int(value)])?.$value;
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
+        $int(value),
+        null,
+        1,
+      )?.$value;
     });
     return $Iterable.wrap((result).map((e) => $int(e)));
   }
@@ -3940,22 +4177,27 @@ class $Uint8List implements $Instance {
   static $Value? _firstWhere(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Uint8List;
     final result = self.$value.firstWhere(
       (int element) {
-        return (args[0]! as EvalCallable)(runtime, null, [
+        return ((r as $Value?)! as EvalCallable)(
+          runtime,
+          null,
           $int(element),
-        ])?.$value;
+          null,
+          1,
+        )?.$value;
       },
       orElse:
-          (args.length > 1 ? args[1] : null) == null ||
-              (args.length > 1 ? args[1] : null) is $null
+          (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
           : () {
-              return ((args.length > 1 ? args[1] : null)! as EvalCallable?)
-                  ?.call(runtime, null, [])
+              return ((s is $Value ? s : null)! as EvalCallable?)
+                  ?.call(runtime, null, null, null, 0)
                   ?.$value;
             },
     );
@@ -3966,22 +4208,27 @@ class $Uint8List implements $Instance {
   static $Value? _lastWhere(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Uint8List;
     final result = self.$value.lastWhere(
       (int element) {
-        return (args[0]! as EvalCallable)(runtime, null, [
+        return ((r as $Value?)! as EvalCallable)(
+          runtime,
+          null,
           $int(element),
-        ])?.$value;
+          null,
+          1,
+        )?.$value;
       },
       orElse:
-          (args.length > 1 ? args[1] : null) == null ||
-              (args.length > 1 ? args[1] : null) is $null
+          (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
           : () {
-              return ((args.length > 1 ? args[1] : null)! as EvalCallable?)
-                  ?.call(runtime, null, [])
+              return ((s is $Value ? s : null)! as EvalCallable?)
+                  ?.call(runtime, null, null, null, 0)
                   ?.$value;
             },
     );
@@ -3992,22 +4239,27 @@ class $Uint8List implements $Instance {
   static $Value? _singleWhere(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Uint8List;
     final result = self.$value.singleWhere(
       (int element) {
-        return (args[0]! as EvalCallable)(runtime, null, [
+        return ((r as $Value?)! as EvalCallable)(
+          runtime,
+          null,
           $int(element),
-        ])?.$value;
+          null,
+          1,
+        )?.$value;
       },
       orElse:
-          (args.length > 1 ? args[1] : null) == null ||
-              (args.length > 1 ? args[1] : null) is $null
+          (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
           : () {
-              return ((args.length > 1 ? args[1] : null)! as EvalCallable?)
-                  ?.call(runtime, null, [])
+              return ((s is $Value ? s : null)! as EvalCallable?)
+                  ?.call(runtime, null, null, null, 0)
                   ?.$value;
             },
     );
@@ -4018,10 +4270,12 @@ class $Uint8List implements $Instance {
   static $Value? _elementAt(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Uint8List;
-    final result = self.$value.elementAt(args[0]!.$value);
+    final result = self.$value.elementAt((r as $int).$value);
     return $int(result);
   }
 
@@ -4029,10 +4283,12 @@ class $Uint8List implements $Instance {
   static $Value? _operatorIndexGet(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Uint8List;
-    final result = self.$value[args[0]!.$value];
+    final result = self.$value[(r as $int).$value];
     return $int(result);
   }
 
@@ -4040,37 +4296,56 @@ class $Uint8List implements $Instance {
   static $Value? _operatorIndexSet(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Uint8List;
-    self.$value[args[0]!.$value] = args[1]!.$value;
+    self.$value[(r as $int).$value] = (s as $int).$value;
     return null;
   }
 
   static const $Function __add = $Function(_add);
-  static $Value? _add(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _add(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Uint8List;
-    self.$value.add(args[0]!.$value);
+    self.$value.add((r as $int).$value);
     return null;
   }
 
   static const $Function __addAll = $Function(_addAll);
-  static $Value? _addAll(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _addAll(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Uint8List;
-    self.$value.addAll(args[0]!.$value);
+    self.$value.addAll((r as $Value?)!.$value);
     return null;
   }
 
   static const $Function __sort = $Function(_sort);
-  static $Value? _sort(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _sort(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Uint8List;
     self.$value.sort(
-      (args.length > 0 ? args[0] : null) == null ||
-              (args.length > 0 ? args[0] : null) is $null
+      (r is $Value ? r : null) == null || (r is $Value ? r : null) is $null
           ? null
           : (int a, int b) {
-              return ((args.length > 0 ? args[0] : null)! as EvalCallable?)
-                  ?.call(runtime, null, [$int(a), $int(b)])
+              return ((r is $Value ? r : null)! as EvalCallable?)
+                  ?.call(runtime, null, $int(a), $int(b), 2)
                   ?.$value;
             },
     );
@@ -4078,20 +4353,30 @@ class $Uint8List implements $Instance {
   }
 
   static const $Function __shuffle = $Function(_shuffle);
-  static $Value? _shuffle(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _shuffle(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Uint8List;
-    self.$value.shuffle((args.length > 0 ? args[0] : null)?.$value);
+    self.$value.shuffle((r is $Value ? r : null)?.$value);
     return null;
   }
 
   static const $Function __indexOf = $Function(_indexOf);
-  static $Value? _indexOf(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _indexOf(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Uint8List;
     final result = self.$value.indexOf(
-      args[0]!.$value,
-      (args.length > 1 ? args[1] : null) == null
-          ? 0
-          : (args.length > 1 ? args[1] : null)?.$value,
+      (r as $int).$value,
+      (s is $Value ? s : null) == null ? 0 : (s as $int).$value,
     );
     return $int(result);
   }
@@ -4100,19 +4385,20 @@ class $Uint8List implements $Instance {
   static $Value? _indexWhere(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Uint8List;
-    final result = self.$value.indexWhere(
-      (int element) {
-        return (args[0]! as EvalCallable)(runtime, null, [
-          $int(element),
-        ])?.$value;
-      },
-      (args.length > 1 ? args[1] : null) == null
-          ? 0
-          : (args.length > 1 ? args[1] : null)?.$value,
-    );
+    final result = self.$value.indexWhere((int element) {
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
+        $int(element),
+        null,
+        1,
+      )?.$value;
+    }, (s is $Value ? s : null) == null ? 0 : (s as $int).$value);
     return $int(result);
   }
 
@@ -4120,12 +4406,20 @@ class $Uint8List implements $Instance {
   static $Value? _lastIndexWhere(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Uint8List;
     final result = self.$value.lastIndexWhere((int element) {
-      return (args[0]! as EvalCallable)(runtime, null, [$int(element)])?.$value;
-    }, (args.length > 1 ? args[1] : null)?.$value);
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
+        $int(element),
+        null,
+        1,
+      )?.$value;
+    }, (s is $Value ? s : null)?.$value);
     return $int(result);
   }
 
@@ -4133,27 +4427,41 @@ class $Uint8List implements $Instance {
   static $Value? _lastIndexOf(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Uint8List;
     final result = self.$value.lastIndexOf(
-      args[0]!.$value,
-      (args.length > 1 ? args[1] : null)?.$value,
+      (r as $int).$value,
+      (s is $Value ? s : null)?.$value,
     );
     return $int(result);
   }
 
   static const $Function __clear = $Function(_clear);
-  static $Value? _clear(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _clear(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Uint8List;
     self.$value.clear();
     return null;
   }
 
   static const $Function __insert = $Function(_insert);
-  static $Value? _insert(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _insert(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Uint8List;
-    self.$value.insert(args[0]!.$value, args[1]!.$value);
+    self.$value.insert((r as $int).$value, (s as $int).$value);
     return null;
   }
 
@@ -4161,24 +4469,38 @@ class $Uint8List implements $Instance {
   static $Value? _insertAll(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Uint8List;
-    self.$value.insertAll(args[0]!.$value, args[1]!.$value);
+    self.$value.insertAll((r as $int).$value, (s as $Value?)!.$value);
     return null;
   }
 
   static const $Function __setAll = $Function(_setAll);
-  static $Value? _setAll(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _setAll(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Uint8List;
-    self.$value.setAll(args[0]!.$value, args[1]!.$value);
+    self.$value.setAll((r as $int).$value, (s as $Value?)!.$value);
     return null;
   }
 
   static const $Function __remove = $Function(_remove);
-  static $Value? _remove(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _remove(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Uint8List;
-    final result = self.$value.remove(args[0]!.$reified);
+    final result = self.$value.remove((r as $Value?)!.$reified);
     return $bool(result);
   }
 
@@ -4186,10 +4508,12 @@ class $Uint8List implements $Instance {
   static $Value? _removeAt(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Uint8List;
-    final result = self.$value.removeAt(args[0]!.$value);
+    final result = self.$value.removeAt((r as $int).$value);
     return $int(result);
   }
 
@@ -4197,7 +4521,9 @@ class $Uint8List implements $Instance {
   static $Value? _removeLast(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Uint8List;
     final result = self.$value.removeLast();
@@ -4208,11 +4534,19 @@ class $Uint8List implements $Instance {
   static $Value? _removeWhere(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Uint8List;
     self.$value.removeWhere((int element) {
-      return (args[0]! as EvalCallable)(runtime, null, [$int(element)])?.$value;
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
+        $int(element),
+        null,
+        1,
+      )?.$value;
     });
     return null;
   }
@@ -4221,11 +4555,19 @@ class $Uint8List implements $Instance {
   static $Value? _retainWhere(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Uint8List;
     self.$value.retainWhere((int element) {
-      return (args[0]! as EvalCallable)(runtime, null, [$int(element)])?.$value;
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
+        $int(element),
+        null,
+        1,
+      )?.$value;
     });
     return null;
   }
@@ -4234,19 +4576,28 @@ class $Uint8List implements $Instance {
   static $Value? _operatorPlus(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Uint8List;
-    final result = (self.$value + (args[0]!.$reified as List).cast<int>());
+    final result =
+        (self.$value + ((r as $Value?)!.$reified as List).cast<int>());
     return $List.view(result, (e) => $int(e));
   }
 
   static const $Function __sublist = $Function(_sublist);
-  static $Value? _sublist(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _sublist(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Uint8List;
     final result = self.$value.sublist(
-      args[0]!.$value,
-      (args.length > 1 ? args[1] : null)?.$value,
+      (r as $int).$value,
+      (s is $Value ? s : null)?.$value,
     );
     return $Uint8List.wrap(result);
   }
@@ -4255,10 +4606,12 @@ class $Uint8List implements $Instance {
   static $Value? _getRange(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Uint8List;
-    final result = self.$value.getRange(args[0]!.$value, args[1]!.$value);
+    final result = self.$value.getRange((r as $int).$value, (s as $int).$value);
     return $Iterable.wrap((result).map((e) => $int(e)));
   }
 
@@ -4266,16 +4619,23 @@ class $Uint8List implements $Instance {
   static $Value? _setRange(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Uint8List;
     self.$value.setRange(
-      args[0]!.$value,
-      args[1]!.$value,
-      args[2]!.$value,
-      (args.length > 3 ? args[3] : null) == null
+      (r as $int).$value,
+      (s as $int).$value,
+      ((c as List<Object?>)[0] as $Value?)!.$value,
+      (c is List && (c as List).length > 1
+                  ? (c as List)[1] as $Value?
+                  : null) ==
+              null
           ? 0
-          : (args.length > 3 ? args[3] : null)?.$value,
+          : ((c is List && (c as List).length > 1 ? (c as List)[1] : null)
+                    as $int)
+                .$value,
     );
     return null;
   }
@@ -4284,10 +4644,12 @@ class $Uint8List implements $Instance {
   static $Value? _removeRange(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Uint8List;
-    self.$value.removeRange(args[0]!.$value, args[1]!.$value);
+    self.$value.removeRange((r as $int).$value, (s as $int).$value);
     return null;
   }
 
@@ -4295,13 +4657,16 @@ class $Uint8List implements $Instance {
   static $Value? _fillRange(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Uint8List;
     self.$value.fillRange(
-      args[0]!.$value,
-      args[1]!.$value,
-      (args.length > 2 ? args[2] : null)?.$value,
+      (r as $int).$value,
+      (s as $int).$value,
+      (c is List && (c as List).length > 0 ? (c as List)[0] as $Value? : null)
+          ?.$value,
     );
     return null;
   }
@@ -4310,15 +4675,27 @@ class $Uint8List implements $Instance {
   static $Value? _replaceRange(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Uint8List;
-    self.$value.replaceRange(args[0]!.$value, args[1]!.$value, args[2]!.$value);
+    self.$value.replaceRange(
+      (r as $int).$value,
+      (s as $int).$value,
+      ((c as List<Object?>)[0] as $Value?)!.$value,
+    );
     return null;
   }
 
   static const $Function __asMap = $Function(_asMap);
-  static $Value? _asMap(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _asMap(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Uint8List;
     final result = self.$value.asMap();
     return wrapMap(result, (key, value) => MapEntry($int(key), $int(value)));
@@ -4328,7 +4705,9 @@ class $Uint8List implements $Instance {
   static $Value? _asUnmodifiableView(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Uint8List;
     final result = self.$value.asUnmodifiableView();

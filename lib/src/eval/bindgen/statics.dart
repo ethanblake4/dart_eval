@@ -7,14 +7,15 @@ import 'package:dart_eval/src/eval/bindgen/type.dart';
 
 /// Reconstruct a `List<$Value?>` of [count] arguments from the register ABI.
 String registerArgsList(int count) => switch (count) {
-      0 => 'const <\$Value?>[]',
-      1 => '[r as \$Value?]',
-      2 => '[r as \$Value?, s as \$Value?]',
-      3 => '[r as \$Value?, s as \$Value?, c as \$Value?]',
-      _ => '[r as \$Value?, s as \$Value?, '
-          '...(c is List ? (c as List).cast<\$Value?>().take(${count - 2}) '
-          ': const <\$Value?>[])]',
-    };
+  0 => 'const <\$Value?>[]',
+  1 => '[r as \$Value?]',
+  2 => '[r as \$Value?, s as \$Value?]',
+  3 => '[r as \$Value?, s as \$Value?, c as \$Value?]',
+  _ =>
+    '[r as \$Value?, s as \$Value?, '
+        '...(c is List ? (c as List).cast<\$Value?>().take(${count - 2}) '
+        ': const <\$Value?>[])]',
+};
 
 String $constructors(
   BindgenContext ctx,
@@ -43,8 +44,8 @@ String _$constructor(
   final name = member?.rename ?? constructor.name ?? '';
   final sdkNamedConstructor =
       constructor.name != null && constructor.name != 'new'
-          ? '.${constructor.name}'
-          : '';
+      ? '.${constructor.name}'
+      : '';
   final fullyQualifiedConstructorId = isBridge
       ? '\$${element.name}\$bridge$sdkNamedConstructor'
       : '${element.name}$sdkNamedConstructor';
@@ -57,7 +58,8 @@ String _$constructor(
         'return ${prefix != null ? '$prefix.' : ''}${member!.hook}(runtime, '
         'null, $argsExpr);';
   } else {
-    body = '''
+    body =
+        '''
     ${registerArgumentPreamble(constructor.formalParameters)}
     ${assertConfigPermissions(ctx, member, constructor.formalParameters.map((p) => p.name ?? '').toList(), registers: true, paramCount: constructor.formalParameters.length)}
     return ${!isBridge ? '\$${element.name}.wrap(' : ''}
@@ -103,11 +105,13 @@ String _syntheticConstructors(BindgenContext ctx, ClassElement element) {
 
 String $staticMethods(BindgenContext ctx, InterfaceElement element) {
   final emitted = element.methods
-      .where((e) =>
-          e.isStatic &&
-          !e.isOperator &&
-          !e.isPrivate &&
-          ctx.memberIncluded(e.name!, 'static'))
+      .where(
+        (e) =>
+            e.isStatic &&
+            !e.isOperator &&
+            !e.isPrivate &&
+            ctx.memberIncluded(e.name!, 'static'),
+      )
       .map((e) => _$staticMethod(ctx, element, e))
       .join('\n');
   return emitted + _syntheticStatics(ctx, element);
@@ -124,12 +128,14 @@ String _$staticMethod(
   if (member?.hook != null) {
     final prefix = ctx.hooksPrefix();
     final argsExpr = registerArgsList(method.formalParameters.length);
-    body = 'return ${prefix != null ? '$prefix.' : ''}${member!.hook}'
+    body =
+        'return ${prefix != null ? '$prefix.' : ''}${member!.hook}'
         '(runtime, null, $argsExpr);';
   } else if (member?.expr != null) {
     body = 'return ${member!.expr};';
   } else {
-    body = '''
+    body =
+        '''
     ${registerArgumentPreamble(method.formalParameters)}
     ${assertMethodPermissions(method, registers: true)}
     ${assertConfigPermissions(ctx, member, method.formalParameters.map((p) => p.name ?? '').toList(), registers: true, paramCount: method.formalParameters.length)}
@@ -197,12 +203,14 @@ String _$staticGetter(
   final String body;
   if (member?.hook != null) {
     final prefix = ctx.hooksPrefix();
-    body = 'return ${prefix != null ? '$prefix.' : ''}${member!.hook}'
+    body =
+        'return ${prefix != null ? '$prefix.' : ''}${member!.hook}'
         '(runtime, null, const <\$Value?>[]);';
   } else if (member?.expr != null) {
     body = 'return ${member!.expr};';
   } else {
-    body = '''
+    body =
+        '''
     final value = ${element.name}.${getter.name};
     return ${wrapVar(ctx, getter.returnType, "value", unionTypeNames: member?.returns?.union)};''';
   }
@@ -242,10 +250,10 @@ String _syntheticStaticGetters(BindgenContext ctx, InterfaceElement element) {
 
 String $staticSetters(BindgenContext ctx, InterfaceElement element) {
   return element.setters
-      .where((e) =>
-          e.isStatic &&
-          !e.isPrivate &&
-          ctx.memberIncluded(e.name!, 'static'))
+      .where(
+        (e) =>
+            e.isStatic && !e.isPrivate && ctx.memberIncluded(e.name!, 'static'),
+      )
       .map((e) => _$staticSetter(ctx, element, e))
       .join('\n');
 }

@@ -164,7 +164,13 @@ class $FileSystemEntity implements $Instance {
 
   static const $Function _exists = $Function(__exists);
 
-  static $Value? __exists(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? __exists(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final entity = target!.$value as FileSystemEntity;
     runtime.assertPermission('filesystem:read', entity.path);
     return $Future.wrap(entity.exists().then((value) => $bool(value)));
@@ -175,7 +181,9 @@ class $FileSystemEntity implements $Instance {
   static $Value? __existsSync(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final entity = target!.$value as FileSystemEntity;
     runtime.assertPermission('filesystem:read', entity.path);
@@ -184,10 +192,16 @@ class $FileSystemEntity implements $Instance {
 
   static const $Function _delete = $Function(__delete);
 
-  static $Value? __delete(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? __delete(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final entity = target!.$value as FileSystemEntity;
     runtime.assertPermission('filesystem:write', entity.path);
-    final recursive = args[0]?.$value as bool?;
+    final recursive = (r as $Value?)?.$value as bool?;
     return $Future.wrap(
       entity
           .delete(recursive: recursive ?? false)
@@ -200,21 +214,29 @@ class $FileSystemEntity implements $Instance {
   static $Value? __deleteSync(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final entity = target!.$value as FileSystemEntity;
     runtime.assertPermission('filesystem:write', entity.path);
-    final recursive = args[0]?.$value as bool?;
+    final recursive = (r as $Value?)?.$value as bool?;
     entity.deleteSync(recursive: recursive ?? false);
     return null;
   }
 
   static const $Function _rename = $Function(__rename);
 
-  static $Value? __rename(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? __rename(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final entity = target!.$value as FileSystemEntity;
     runtime.assertPermission('filesystem:write', entity.path);
-    final newPath = args[0]!.$value as String;
+    final newPath = (r as $Value?)!.$value as String;
     return $Future.wrap(
       entity.rename(newPath).then((value) => $FileSystemEntity.wrap(value)),
     );
@@ -225,11 +247,13 @@ class $FileSystemEntity implements $Instance {
   static $Value? __renameSync(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final entity = target!.$value as FileSystemEntity;
     runtime.assertPermission('filesystem:write', entity.path);
-    final newPath = args[0]!.$value as String;
+    final newPath = (r as $Value?)!.$value as String;
     return $FileSystemEntity.wrap(entity.renameSync(newPath));
   }
 

@@ -120,9 +120,9 @@ class $TestClass extends TestClass with $Bridge {
   $Value? $bridgeGet(String identifier) {
     switch (identifier) {
       case 'runTest':
-        return $Function((Runtime rt, $Value? target, List<$Value?> args) {
+        return $Function((Runtime rt, $Value? target, r, s, c) {
           return $bool(
-            super.runTest(args[0]!.$value, b: args[1]!.$value ?? 'hello'),
+            super.runTest((r as $Value?)!.$value, b: (s as $Value?)!.$value ?? 'hello'),
           );
         });
       case 'someNumber':

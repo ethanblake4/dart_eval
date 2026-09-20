@@ -282,7 +282,9 @@ class $ProcessStartMode implements $Instance {
   static $Value? _toString(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target as $ProcessStartMode;
     final result = self.$value.toString();
@@ -720,9 +722,17 @@ class $Process implements $Instance {
   }
 
   static const $Function __kill = $Function(_kill);
-  static $Value? _kill(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _kill(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target as $Process;
-    final result = self.$value.kill(args[0]?.$value ?? ProcessSignal.sigterm);
+    final result = self.$value.kill(
+      (r as $Value?)?.$value ?? ProcessSignal.sigterm,
+    );
     return $bool(result);
   }
 
@@ -1495,7 +1505,9 @@ class $ProcessSignal implements $Instance {
   static $Value? _toString(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target as $ProcessSignal;
     final result = self.$value.toString();
@@ -1503,7 +1515,13 @@ class $ProcessSignal implements $Instance {
   }
 
   static const $Function __watch = $Function(_watch);
-  static $Value? _watch(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _watch(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target as $ProcessSignal;
     final result = self.$value.watch();
     return $Stream.wrap(result.map((e) => $ProcessSignal.wrap(e)));

@@ -6,6 +6,7 @@
 // ignore_for_file: undefined_hidden_name
 // ignore_for_file: dead_code, unused_local_variable
 // ignore_for_file: unnecessary_type_check, unnecessary_non_null_assertion
+// ignore_for_file: unnecessary_cast
 // ignore_for_file: sdk_version_since
 // ignore_for_file: non_constant_identifier_names
 // ignore_for_file: argument_type_not_assignable_to_error_handler
@@ -359,12 +360,15 @@ class $StreamTransformer<S, T> implements $Instance {
   static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
     return $StreamTransformer.wrap(
       StreamTransformer((Stream<dynamic> stream, bool cancelOnError) {
-        return ((r as $Value?)! as EvalCallable)(runtime, null, [
+        return ((r as $Value?)! as EvalCallable)(
+          runtime,
+          null,
           $Stream.wrap(
             stream.map((e) => runtime.wrapAlways(e, recursive: true)),
           ),
           $bool(cancelOnError),
-        ])?.$value;
+          2,
+        )?.$value;
       }),
     );
   }
@@ -386,7 +390,9 @@ class $StreamTransformer<S, T> implements $Instance {
                 ((r is $Value ? r : null)! as EvalCallable?)?.call(
                   runtime,
                   null,
-                  [runtime.wrapAlways(data, recursive: true), $Object(sink)],
+                  runtime.wrapAlways(data, recursive: true),
+                  $Object(sink),
+                  2,
                 );
               },
         handleError:
@@ -397,7 +403,9 @@ class $StreamTransformer<S, T> implements $Instance {
                 ((s is $Value ? s : null)! as EvalCallable?)?.call(
                   runtime,
                   null,
-                  [$Object(error), $StackTrace.wrap(stackTrace), $Object(sink)],
+                  $Object(error),
+                  $StackTrace.wrap(stackTrace),
+                  [$Object(sink)],
                 );
               },
         handleDone:
@@ -408,7 +416,9 @@ class $StreamTransformer<S, T> implements $Instance {
                 ((c is $Value ? c : null)! as EvalCallable?)?.call(
                   runtime,
                   null,
-                  [$Object(sink)],
+                  $Object(sink),
+                  null,
+                  1,
                 );
               },
       ),
@@ -419,9 +429,13 @@ class $StreamTransformer<S, T> implements $Instance {
   static $Value? $fromBind(Runtime runtime, Object? r, Object? s, Object? c) {
     return $StreamTransformer.wrap(
       StreamTransformer.fromBind((Stream<dynamic> arg0) {
-        return ((r as $Value?)! as EvalCallable)(runtime, null, [
+        return ((r as $Value?)! as EvalCallable)(
+          runtime,
+          null,
           $Stream.wrap(arg0.map((e) => runtime.wrapAlways(e, recursive: true))),
-        ])?.$value;
+          null,
+          1,
+        )?.$value;
       }),
     );
   }
@@ -459,16 +473,28 @@ class $StreamTransformer<S, T> implements $Instance {
   }
 
   static const $Function __bind = $Function(_bind);
-  static $Value? _bind(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _bind(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $StreamTransformer;
-    final result = self.$value.bind(args[0]!.$value);
+    final result = self.$value.bind((r as $Value?)!.$value);
     return $Stream.wrap(
       result.map((e) => runtime.wrapAlways(e, recursive: true)),
     );
   }
 
   static const $Function __cast = $Function(_cast);
-  static $Value? _cast(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _cast(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $StreamTransformer;
     final result = self.$value.cast();
     return $StreamTransformer.wrap(result);

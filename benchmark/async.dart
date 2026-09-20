@@ -105,8 +105,8 @@ Future<void> main(List<String> args) async {
   }
 
   final program = _compile();
-  final callback = $Closure((runtime, target, arguments) {
-    return $Future.wrap(Future<$Value?>.value(arguments.single));
+  final callback = $Closure((runtime, target, r, s, c) {
+    return $Future.wrap(Future<$Value?>.value(r as $Value?));
   });
   final cases = <(String, Runtime, $Closure?)>[
     for (final name in [

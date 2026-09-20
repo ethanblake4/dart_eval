@@ -6,6 +6,7 @@
 // ignore_for_file: undefined_hidden_name
 // ignore_for_file: dead_code, unused_local_variable
 // ignore_for_file: unnecessary_type_check, unnecessary_non_null_assertion
+// ignore_for_file: unnecessary_cast
 // ignore_for_file: sdk_version_since
 // ignore_for_file: non_constant_identifier_names
 // ignore_for_file: argument_type_not_assignable_to_error_handler
@@ -234,9 +235,13 @@ class $ByteConversionSink implements $Instance {
   ) {
     return $ByteConversionSink.wrap(
       ByteConversionSink.withCallback((List<int> accumulated) {
-        ((r as $Value?)! as EvalCallable)(runtime, null, [
+        ((r as $Value?)! as EvalCallable)(
+          runtime,
+          null,
           $List.view(accumulated, (e) => $int(e)),
-        ]);
+          null,
+          1,
+        );
       }),
     );
   }
@@ -278,14 +283,26 @@ class $ByteConversionSink implements $Instance {
   }
 
   static const $Function __add = $Function(_add);
-  static $Value? _add(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _add(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $ByteConversionSink;
-    self.$value.add((args[0]!.$reified as List).cast<int>());
+    self.$value.add(((r as $Value?)!.$reified as List).cast<int>());
     return null;
   }
 
   static const $Function __close = $Function(_close);
-  static $Value? _close(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _close(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $ByteConversionSink;
     self.$value.close();
     return null;
@@ -295,14 +312,16 @@ class $ByteConversionSink implements $Instance {
   static $Value? _addSlice(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $ByteConversionSink;
     self.$value.addSlice(
-      (args[0]!.$reified as List).cast<int>(),
-      args[1]!.$value,
-      args[2]!.$value,
-      args[3]!.$value,
+      ((r as $Value?)!.$reified as List).cast<int>(),
+      (s as $int).$value,
+      ((c as List)[0] as $int).$value,
+      ((c as List)[1] as $bool).$value,
     );
     return null;
   }

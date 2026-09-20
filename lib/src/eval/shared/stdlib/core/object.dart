@@ -372,8 +372,14 @@ class $Object implements $Instance {
 
   static const $Function __equals = $Function(_equals);
 
-  static $Value? _equals(Runtime runtime, $Value? target, List<$Value?> args) {
-    final other = args[0];
+  static $Value? _equals(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final other = (r as $Value?);
     return $bool(target?.$value == other?.$value);
   }
 
@@ -382,9 +388,11 @@ class $Object implements $Instance {
   static $Value? _not_equals(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
-    final other = args[0];
+    final other = (r as $Value?);
     return $bool(target!.$value != other!.$value);
   }
 
@@ -393,7 +401,9 @@ class $Object implements $Instance {
   static $Value? _toString(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     return $String(target!.$reified.toString());
   }

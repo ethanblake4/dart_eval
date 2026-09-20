@@ -288,18 +288,30 @@ class $Set<E> implements Set<E>, $Instance {
 
   static const $Function __add = $Function(_add);
 
-  static $Value? _add(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _add(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final wrapper = target as $Set;
-    final value = args[0];
+    final value = (r as $Value?);
     wrapper._checkElement(runtime, value);
     return $bool(wrapper.$value.add(value));
   }
 
   static const $Function __addAll = $Function(_addAll);
 
-  static $Value? _addAll(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _addAll(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final wrapper = target as $Set;
-    final other = args[0]!.$value as Iterable;
+    final other = (r as $Value?)!.$value as Iterable;
     final elements = other.toList(growable: false);
     for (final element in elements) {
       wrapper._checkElement(runtime, element);
@@ -313,32 +325,58 @@ class $Set<E> implements Set<E>, $Instance {
   static $Value? _contains(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
-    return $bool((target!.$value as Set).contains(args[0]));
+    return $bool((target!.$value as Set).contains((r as $Value?)));
   }
 
   static const $Function __remove = $Function(_remove);
 
-  static $Value? _remove(Runtime runtime, $Value? target, List<$Value?> args) {
-    return $bool((target!.$value as Set).remove(args[0]));
+  static $Value? _remove(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    return $bool((target!.$value as Set).remove((r as $Value?)));
   }
 
   static const $Function __clear = $Function(_clear);
-  static $Value? _clear(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _clear(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     (target!.$value as Set).clear();
     return null;
   }
 
   static const $Function __lookup = $Function(_lookup);
-  static $Value? _lookup(Runtime runtime, $Value? target, List<$Value?> args) {
-    return (target!.$value as Set).lookup(args[0]) as $Value?;
+  static $Value? _lookup(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    return (target!.$value as Set).lookup((r as $Value?)) as $Value?;
   }
 
   static const $Function __union = $Function(_union);
-  static $Value? _union(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _union(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final wrapper = target as $Set;
-    final other = args[0]!.$value as Set<Object?>;
+    final other = (r as $Value?)!.$value as Set<Object?>;
     for (final element in other) {
       wrapper._checkElement(runtime, element);
     }
@@ -353,10 +391,12 @@ class $Set<E> implements Set<E>, $Instance {
   static $Value? _difference(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final wrapper = target as $Set;
-    final other = args[0]!.$value as Set<Object?>;
+    final other = (r as $Value?)!.$value as Set<Object?>;
     return $Set.wrap(
       wrapper.$value.difference(other),
       runtimeTypeId: wrapper._runtimeTypeId,
@@ -368,10 +408,12 @@ class $Set<E> implements Set<E>, $Instance {
   static $Value? _intersection(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final wrapper = target as $Set;
-    final other = args[0]!.$value as Set<Object?>;
+    final other = (r as $Value?)!.$value as Set<Object?>;
     return $Set.wrap(
       wrapper.$value.intersection(other),
       runtimeTypeId: wrapper._runtimeTypeId,

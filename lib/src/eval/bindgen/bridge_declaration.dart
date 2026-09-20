@@ -64,12 +64,10 @@ String? bindBridgeDeclaration(
           final override = cc?.generics[e.name];
           final hasOverride = cc != null && cc.generics.containsKey(e.name);
           final boundStr = hasOverride
-              ? (override == null
-                  ? ''
-                  : '\$extends: ${bridgeTypeRefFromName(ctx, override)}')
+              ? (override == null ? '' : '\$extends: ${bridgeTypeRefFromName(ctx, override)}')
               : e.bound != null && !ctx.implicitSupers
-                  ? '\$extends: ${bridgeTypeRefFromType(ctx, e.bound!)}'
-                  : '';
+              ? '\$extends: ${bridgeTypeRefFromType(ctx, e.bound!)}'
+              : '';
           return '\'${e.name}\': BridgeGenericParam($boundStr)';
         }).join(',')}
     },''';
@@ -118,8 +116,8 @@ String? bindBridgeDeclaration(
     ''';
   }
 
-  final isAbstract = cc?.isAbstract ??
-      (element is ClassElement && element.isAbstract);
+  final isAbstract =
+      cc?.isAbstract ?? (element is ClassElement && element.isAbstract);
 
   return '''
   static const \$declaration = ${element is ClassElement ? 'BridgeClassDef(BridgeClassType(' : 'BridgeEnumDef('}
@@ -246,10 +244,7 @@ String setters(BindgenContext ctx, InterfaceElement element) {
   return setters.values
       .where((element) => !element.isSynthetic && !element.isPrivate)
       .where(
-        (m) => ctx.memberIncluded(
-          m.name!,
-          m.isStatic ? 'static' : 'setter',
-        ),
+        (m) => ctx.memberIncluded(m.name!, m.isStatic ? 'static' : 'setter'),
       )
       .map(
         (e) => bridgeSetterDef(
@@ -451,7 +446,8 @@ bool _syntheticKindMatches(BindgenSyntheticMember s, String kind) =>
     };
 
 String _syntheticParams(BindgenContext ctx, BindgenSyntheticMember s) {
-  String paramSource(BindgenSyntheticParam p) => '''
+  String paramSource(BindgenSyntheticParam p) =>
+      '''
         BridgeParameter(
           '${p.name}',
           ${bridgeTypeAnnotationFromName(ctx, p.type)},
@@ -494,7 +490,8 @@ String _syntheticReturns(BindgenContext ctx, BindgenSyntheticMember s) {
 String _syntheticDeclaration(BindgenContext ctx, BindgenSyntheticMember s) {
   final isStatic = s.isStatic || s.kind == 'static';
   return switch (s.kind) {
-    'method' || 'static' => '''
+    'method' || 'static' =>
+      '''
       '${s.name}': BridgeMethodDef(
         BridgeFunctionDef(
           ${_syntheticReturns(ctx, s)},
@@ -502,14 +499,16 @@ String _syntheticDeclaration(BindgenContext ctx, BindgenSyntheticMember s) {
         ),
         ${isStatic ? 'isStatic: true,' : ''}
       ),''',
-    'getter' => '''
+    'getter' =>
+      '''
       '${s.name}': BridgeMethodDef(
         BridgeFunctionDef(
           ${_syntheticReturns(ctx, s)},
         ),
         ${isStatic ? 'isStatic: true,' : ''}
       ),''',
-    'setter' => '''
+    'setter' =>
+      '''
       '${s.name}': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
@@ -522,12 +521,14 @@ String _syntheticDeclaration(BindgenContext ctx, BindgenSyntheticMember s) {
           ],
         ),
       ),''',
-    'field' => '''
+    'field' =>
+      '''
       '${s.name}': BridgeFieldDef(
         ${s.returns?.type != null ? bridgeTypeAnnotationFromName(ctx, s.returns!.type!) : 'BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic))'},
         isStatic: $isStatic,
       ),''',
-    'constructor' => '''
+    'constructor' =>
+      '''
       '${s.name}': BridgeConstructorDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(\$type),

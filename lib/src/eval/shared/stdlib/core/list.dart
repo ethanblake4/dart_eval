@@ -1298,7 +1298,13 @@ class $List<E> implements List<E>, $Instance {
   @override
   List<R> cast<R>() => $value.cast();
   static const __$cast = $Function(_$cast);
-  static $Value? _$cast(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _$cast(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final $this = target?.$value as List;
     final $result = $this.cast();
     return $List.wrap($result);
@@ -1310,10 +1316,12 @@ class $List<E> implements List<E>, $Instance {
   static $Value? _$indexGet(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final $this = target?.$value as List;
-    final index = args[0]?.$value as int;
+    final index = (r as $Value?)?.$value as int;
     final $result = $this[index];
     return $result;
   }
@@ -1324,12 +1332,14 @@ class $List<E> implements List<E>, $Instance {
   static $Value? _$indexSet(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final wrapper = target as $List;
     final $this = wrapper.$value;
-    final index = args[0]?.$value as int;
-    final value = args[1];
+    final index = (r as $Value?)?.$value as int;
+    final value = (s as $Value?);
     wrapper._checkElement(runtime, value);
     $this[index] = value;
     return null;
@@ -1338,10 +1348,16 @@ class $List<E> implements List<E>, $Instance {
   @override
   void add(E value) => $value.add(value);
   static const __$add = $Function(_$add);
-  static $Value? _$add(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _$add(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final wrapper = target as $List;
     final $this = wrapper.$value;
-    final value = args[0];
+    final value = (r as $Value?);
     wrapper._checkElement(runtime, value);
     $this.add(value);
     return null;
@@ -1350,10 +1366,16 @@ class $List<E> implements List<E>, $Instance {
   @override
   void addAll(Iterable<E> iterable) => $value.addAll(iterable);
   static const __$addAll = $Function(_$addAll);
-  static $Value? _$addAll(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _$addAll(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final wrapper = target as $List;
     final $this = wrapper.$value;
-    final iterable = args[0]?.$value as Iterable;
+    final iterable = (r as $Value?)?.$value as Iterable;
     $this.addAll(wrapper._checkedElements(runtime, iterable));
     return null;
   }
@@ -1361,15 +1383,22 @@ class $List<E> implements List<E>, $Instance {
   @override
   void sort([int Function(E a, E b)? compare]) => $value.sort(compare);
   static const __$sort = $Function(_$sort);
-  static $Value? _$sort(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _$sort(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final $this = target?.$value as List;
     final compare =
-        args[0] as EvalFunction? ??
+        (r as $Value?) as EvalFunction? ??
         $Function(
-          (runtime, target, args) =>
-              $int(Comparable.compare(args[0]?.$value, args[1]?.$value)),
+          (runtime, target, r, s, c) => $int(
+            Comparable.compare((r as $Value?)?.$value, (s as $Value?)?.$value),
+          ),
         );
-    $this.sort((a, b) => compare.call(runtime, null, [a, b])?.$value as int);
+    $this.sort((a, b) => compare.call(runtime, null, a, b, 2)?.$value as int);
     return null;
   }
 
@@ -1379,10 +1408,12 @@ class $List<E> implements List<E>, $Instance {
   static $Value? _$shuffle(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final $this = target?.$value as List;
-    final random = args[0]?.$value as Random?;
+    final random = (r as $Value?)?.$value as Random?;
     $this.shuffle(random);
     return null;
   }
@@ -1393,11 +1424,13 @@ class $List<E> implements List<E>, $Instance {
   static $Value? _$indexOf(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final $this = target?.$value as List;
-    final element = args[0];
-    final start = args[1]?.$value as int? ?? 0;
+    final element = (r as $Value?);
+    final start = (s as $Value?)?.$value as int? ?? 0;
     final $result = $this.indexOf(element, start);
     return $int($result);
   }
@@ -1409,13 +1442,15 @@ class $List<E> implements List<E>, $Instance {
   static $Value? _$indexWhere(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final $this = target?.$value as List;
-    final test = args[0] as EvalCallable;
-    final start = args[1]?.$value as int? ?? 0;
+    final test = (r as $Value?) as EvalCallable;
+    final start = (s as $Value?)?.$value as int? ?? 0;
     final $result = $this.indexWhere(
-      (element) => test.call(runtime, null, [element])!.$value as bool,
+      (element) => test.call(runtime, null, element, null, 1)!.$value as bool,
       start,
     );
     return $int($result);
@@ -1428,13 +1463,15 @@ class $List<E> implements List<E>, $Instance {
   static $Value? _$lastIndexWhere(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final $this = target?.$value as List;
-    final test = args[0] as EvalCallable;
-    final start = args[1]?.$value as int?;
+    final test = (r as $Value?) as EvalCallable;
+    final start = (s as $Value?)?.$value as int?;
     final $result = $this.lastIndexWhere(
-      (element) => test.call(runtime, null, [element])!.$value as bool,
+      (element) => test.call(runtime, null, element, null, 1)!.$value as bool,
       start,
     );
     return $int($result);
@@ -1447,11 +1484,13 @@ class $List<E> implements List<E>, $Instance {
   static $Value? _$lastIndexOf(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final $this = target?.$value as List;
-    final element = args[0];
-    final start = args[1]?.$value as int?;
+    final element = (r as $Value?);
+    final start = (s as $Value?)?.$value as int?;
     final $result = $this.lastIndexOf(element, start);
     return $int($result);
   }
@@ -1459,7 +1498,13 @@ class $List<E> implements List<E>, $Instance {
   @override
   void clear() => $value.clear();
   static const __$clear = $Function(_$clear);
-  static $Value? _$clear(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _$clear(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final $this = target?.$value as List;
     $this.clear();
     return null;
@@ -1468,11 +1513,17 @@ class $List<E> implements List<E>, $Instance {
   @override
   void insert(int index, E element) => $value.insert(index, element);
   static const __$insert = $Function(_$insert);
-  static $Value? _$insert(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _$insert(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final wrapper = target as $List;
     final $this = wrapper.$value;
-    final index = args[0]?.$value as int;
-    final element = args[1];
+    final index = (r as $Value?)?.$value as int;
+    final element = (s as $Value?);
     wrapper._checkElement(runtime, element);
     $this.insert(index, element);
     return null;
@@ -1485,12 +1536,14 @@ class $List<E> implements List<E>, $Instance {
   static $Value? _$insertAll(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final wrapper = target as $List;
     final $this = wrapper.$value;
-    final index = args[0]?.$value as int;
-    final iterable = (args[1]?.$value as Iterable);
+    final index = (r as $Value?)?.$value as int;
+    final iterable = ((s as $Value?)?.$value as Iterable);
     $this.insertAll(index, wrapper._checkedElements(runtime, iterable));
     return null;
   }
@@ -1499,11 +1552,17 @@ class $List<E> implements List<E>, $Instance {
   void setAll(int index, Iterable<E> iterable) =>
       $value.setAll(index, iterable);
   static const __$setAll = $Function(_$setAll);
-  static $Value? _$setAll(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _$setAll(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final wrapper = target as $List;
     final $this = wrapper.$value;
-    final index = args[0]?.$value as int;
-    final iterable = args[1]?.$value as Iterable;
+    final index = (r as $Value?)?.$value as int;
+    final iterable = (s as $Value?)?.$value as Iterable;
     $this.setAll(index, wrapper._checkedElements(runtime, iterable));
     return null;
   }
@@ -1511,9 +1570,15 @@ class $List<E> implements List<E>, $Instance {
   @override
   bool remove(Object? value) => $value.remove(value);
   static const __$remove = $Function(_$remove);
-  static $Value? _$remove(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _$remove(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final $this = target?.$value as List;
-    final value = args[0];
+    final value = (r as $Value?);
     final $result = $this.remove(value);
     return $bool($result);
   }
@@ -1524,10 +1589,12 @@ class $List<E> implements List<E>, $Instance {
   static $Value? _$removeAt(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final $this = target?.$value as List;
-    final index = args[0]?.$value as int;
+    final index = (r as $Value?)?.$value as int;
     final $result = $this.removeAt(index);
     return $result;
   }
@@ -1538,7 +1605,9 @@ class $List<E> implements List<E>, $Instance {
   static $Value? _$removeLast(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final $this = target?.$value as List;
     final $result = $this.removeLast();
@@ -1551,12 +1620,14 @@ class $List<E> implements List<E>, $Instance {
   static $Value? _$removeWhere(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final $this = target?.$value as List;
-    final test = args[0] as EvalCallable;
+    final test = (r as $Value?) as EvalCallable;
     $this.removeWhere(
-      (element) => test.call(runtime, null, [element])!.$value as bool,
+      (element) => test.call(runtime, null, element, null, 1)!.$value as bool,
     );
     return null;
   }
@@ -1567,12 +1638,14 @@ class $List<E> implements List<E>, $Instance {
   static $Value? _$retainWhere(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final $this = target?.$value as List;
-    final test = args[0] as EvalCallable;
+    final test = (r as $Value?) as EvalCallable;
     $this.retainWhere(
-      (element) => test.call(runtime, null, [element])!.$value as bool,
+      (element) => test.call(runtime, null, element, null, 1)!.$value as bool,
     );
     return null;
   }
@@ -1583,10 +1656,12 @@ class $List<E> implements List<E>, $Instance {
   static $Value? _$combine(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final $this = target?.$value as List;
-    final other = args[0]?.$value as List;
+    final other = (r as $Value?)?.$value as List;
     final $result = $this + other;
     return $List.wrap($result);
   }
@@ -1597,11 +1672,13 @@ class $List<E> implements List<E>, $Instance {
   static $Value? _$sublist(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final $this = target?.$value as List;
-    final start = args[0]?.$value as int;
-    final end = args[1]?.$value as int?;
+    final start = (r as $Value?)?.$value as int;
+    final end = (s as $Value?)?.$value as int?;
     final $result = $this.sublist(start, end);
     return $List.wrap($result);
   }
@@ -1612,11 +1689,13 @@ class $List<E> implements List<E>, $Instance {
   static $Value? _$getRange(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final $this = target?.$value as List;
-    final start = args[0]?.$value as int;
-    final end = args[1]?.$value as int;
+    final start = (r as $Value?)?.$value as int;
+    final end = (s as $Value?)?.$value as int;
     final $result = $this.getRange(start, end);
     return $Iterable.wrap($result);
   }
@@ -1632,14 +1711,18 @@ class $List<E> implements List<E>, $Instance {
   static $Value? _$setRange(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final wrapper = target as $List;
     final $this = wrapper.$value;
-    final start = args[0]?.$value as int;
-    final end = args[1]?.$value as int;
-    final iterable = args[2]?.$value as Iterable;
-    final skipCount = args.length > 3 ? args[3]?.$value as int? ?? 0 : 0;
+    final start = (r as $Value?)?.$value as int;
+    final end = (s as $Value?)?.$value as int;
+    final iterable = ((c as List<Object?>)[0] as $Value?)?.$value as Iterable;
+    final skipCount = (c as List).length > 1
+        ? (c[1] as $Value?)?.$value as int? ?? 0
+        : 0;
     $this.setRange(
       start,
       end,
@@ -1655,11 +1738,13 @@ class $List<E> implements List<E>, $Instance {
   static $Value? _$removeRange(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final $this = target?.$value as List;
-    final start = args[0]?.$value as int;
-    final end = args[1]?.$value as int;
+    final start = (r as $Value?)?.$value as int;
+    final end = (s as $Value?)?.$value as int;
     $this.removeRange(start, end);
     return null;
   }
@@ -1671,13 +1756,15 @@ class $List<E> implements List<E>, $Instance {
   static $Value? _$fillRange(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final wrapper = target as $List;
     final $this = wrapper.$value;
-    final start = args[0]?.$value as int;
-    final end = args[1]?.$value as int;
-    final fillValue = args[2];
+    final start = (r as $Value?)?.$value as int;
+    final end = (s as $Value?)?.$value as int;
+    final fillValue = ((c as List<Object?>)[0] as $Value?);
     wrapper._checkElement(runtime, fillValue);
     $this.fillRange(start, end, fillValue);
     return null;
@@ -1690,13 +1777,16 @@ class $List<E> implements List<E>, $Instance {
   static $Value? _$replaceRange(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final wrapper = target as $List;
     final $this = wrapper.$value;
-    final start = args[0]?.$value as int;
-    final end = args[1]?.$value as int;
-    final replacements = args[2]?.$value as Iterable;
+    final start = (r as $Value?)?.$value as int;
+    final end = (s as $Value?)?.$value as int;
+    final replacements =
+        ((c as List<Object?>)[0] as $Value?)?.$value as Iterable;
     $this.replaceRange(
       start,
       end,
@@ -1708,7 +1798,13 @@ class $List<E> implements List<E>, $Instance {
   @override
   Map<int, E> asMap() => $value.asMap();
   static const __$asMap = $Function(_$asMap);
-  static $Value? _$asMap(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _$asMap(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final $this = target?.$value as List;
     final $result = $this.asMap();
     return $Map.wrap({
@@ -1803,7 +1899,7 @@ class $List<E> implements List<E>, $Instance {
     return $List.wrap(
       List.generate(
         length,
-        (index) => generator.call(runtime, null, [$int(index)]),
+        (index) => generator.call(runtime, null, $int(index), null, 1),
         growable: growable,
       ),
     );

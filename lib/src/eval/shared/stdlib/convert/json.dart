@@ -6,6 +6,7 @@
 // ignore_for_file: undefined_hidden_name
 // ignore_for_file: dead_code, unused_local_variable
 // ignore_for_file: unnecessary_type_check, unnecessary_non_null_assertion
+// ignore_for_file: unnecessary_cast
 // ignore_for_file: sdk_version_since
 // ignore_for_file: non_constant_identifier_names
 // ignore_for_file: argument_type_not_assignable_to_error_handler
@@ -147,7 +148,7 @@ class $JsonCodec implements $Instance {
                     ),
                     params: [
                       BridgeParameter(
-                        'object',
+                        'null',
                         BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
                         false,
                       ),
@@ -381,25 +382,30 @@ class $JsonCodec implements $Instance {
                 (r is $Value ? r : null) is $null
             ? null
             : (Object? key, Object? value) {
-                return ((r is $Value ? r : null)! as EvalCallable?)?.call(
-                  runtime,
-                  null,
-                  [
-                    if (key == null) const $null() else $Object(key),
-                    if (value == null) const $null() else $Object(value),
-                  ],
-                )?.$value;
+                return ((r is $Value ? r : null)! as EvalCallable?)
+                    ?.call(
+                      runtime,
+                      null,
+                      (key == null ? const $null() : $Object(key)),
+                      (value == null ? const $null() : $Object(value)),
+                      2,
+                    )
+                    ?.$value;
               },
         toEncodable:
             (s is $Value ? s : null) == null ||
                 (s is $Value ? s : null) is $null
             ? null
-            : (dynamic object) {
-                return ((s is $Value ? s : null)! as EvalCallable?)?.call(
-                  runtime,
-                  null,
-                  [runtime.wrapAlways(object, recursive: true)],
-                )?.$value;
+            : (dynamic arg0) {
+                return ((s is $Value ? s : null)! as EvalCallable?)
+                    ?.call(
+                      runtime,
+                      null,
+                      runtime.wrapAlways(arg0, recursive: true),
+                      null,
+                      1,
+                    )
+                    ?.$value;
               },
       ),
     );
@@ -414,10 +420,13 @@ class $JsonCodec implements $Instance {
   ) {
     return $JsonCodec.wrap(
       JsonCodec.withReviver((Object? key, Object? value) {
-        return ((r as $Value?)! as EvalCallable)(runtime, null, [
-          if (key == null) const $null() else $Object(key),
-          if (value == null) const $null() else $Object(value),
-        ])?.$value;
+        return ((r as $Value?)! as EvalCallable)(
+          runtime,
+          null,
+          (key == null ? const $null() : $Object(key)),
+          (value == null ? const $null() : $Object(value)),
+          2,
+        )?.$value;
       }),
     );
   }
@@ -461,19 +470,28 @@ class $JsonCodec implements $Instance {
   }
 
   static const $Function __encode = $Function(_encode);
-  static $Value? _encode(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _encode(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $JsonCodec;
     final result = self.$value.encode(
-      args[0]!.$reified,
+      (r as $Value?)!.$reified,
       toEncodable:
-          (args.length > 1 ? args[1] : null) == null ||
-              (args.length > 1 ? args[1] : null) is $null
+          (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
           : (dynamic object) {
-              return ((args.length > 1 ? args[1] : null)! as EvalCallable?)
-                  ?.call(runtime, null, [
+              return ((s is $Value ? s : null)! as EvalCallable?)
+                  ?.call(
+                    runtime,
+                    null,
                     runtime.wrapAlways(object, recursive: true),
-                  ])
+                    null,
+                    1,
+                  )
                   ?.$value;
             },
     );
@@ -481,20 +499,28 @@ class $JsonCodec implements $Instance {
   }
 
   static const $Function __decode = $Function(_decode);
-  static $Value? _decode(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _decode(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $JsonCodec;
     final result = self.$value.decode(
-      args[0]!.$value,
+      (r as $String).$value,
       reviver:
-          (args.length > 1 ? args[1] : null) == null ||
-              (args.length > 1 ? args[1] : null) is $null
+          (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
           : (Object? key, Object? value) {
-              return ((args.length > 1 ? args[1] : null)! as EvalCallable?)
-                  ?.call(runtime, null, [
-                    if (key == null) const $null() else $Object(key),
-                    if (value == null) const $null() else $Object(value),
-                  ])
+              return ((s is $Value ? s : null)! as EvalCallable?)
+                  ?.call(
+                    runtime,
+                    null,
+                    (key == null ? const $null() : $Object(key)),
+                    (value == null ? const $null() : $Object(value)),
+                    2,
+                  )
                   ?.$value;
             },
     );
@@ -502,9 +528,15 @@ class $JsonCodec implements $Instance {
   }
 
   static const $Function __fuse = $Function(_fuse);
-  static $Value? _fuse(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _fuse(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $JsonCodec;
-    final result = self.$value.fuse(args[0]!.$value);
+    final result = self.$value.fuse((r as $Value?)!.$value);
     return $Codec.wrap(result);
   }
 
@@ -781,11 +813,15 @@ class $JsonEncoder implements $Instance {
         (r is $Value ? r : null) == null || (r is $Value ? r : null) is $null
             ? null
             : (dynamic object) {
-                return ((r is $Value ? r : null)! as EvalCallable?)?.call(
-                  runtime,
-                  null,
-                  [runtime.wrapAlways(object, recursive: true)],
-                )?.$value;
+                return ((r is $Value ? r : null)! as EvalCallable?)
+                    ?.call(
+                      runtime,
+                      null,
+                      runtime.wrapAlways(object, recursive: true),
+                      null,
+                      1,
+                    )
+                    ?.$value;
               },
       ),
     );
@@ -799,11 +835,15 @@ class $JsonEncoder implements $Instance {
         (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
             ? null
             : (dynamic object) {
-                return ((s is $Value ? s : null)! as EvalCallable?)?.call(
-                  runtime,
-                  null,
-                  [runtime.wrapAlways(object, recursive: true)],
-                )?.$value;
+                return ((s is $Value ? s : null)! as EvalCallable?)
+                    ?.call(
+                      runtime,
+                      null,
+                      runtime.wrapAlways(object, recursive: true),
+                      null,
+                      1,
+                    )
+                    ?.$value;
               },
       ),
     );
@@ -848,30 +888,54 @@ class $JsonEncoder implements $Instance {
   }
 
   static const $Function __bind = $Function(_bind);
-  static $Value? _bind(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _bind(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $JsonEncoder;
-    final result = self.$value.bind(args[0]!.$value);
+    final result = self.$value.bind((r as $Value?)!.$value);
     return $Stream.wrap(result.map((e) => $String(e)));
   }
 
   static const $Function __cast = $Function(_cast);
-  static $Value? _cast(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _cast(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $JsonEncoder;
     final result = self.$value.cast();
     return $Converter.wrap(result);
   }
 
   static const $Function __convert = $Function(_convert);
-  static $Value? _convert(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _convert(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $JsonEncoder;
-    final result = self.$value.convert(args[0]!.$reified);
+    final result = self.$value.convert((r as $Value?)!.$reified);
     return $String(result);
   }
 
   static const $Function __fuse = $Function(_fuse);
-  static $Value? _fuse(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _fuse(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $JsonEncoder;
-    final result = self.$value.fuse(args[0]!.$value);
+    final result = self.$value.fuse((r as $Value?)!.$value);
     return $Converter.wrap(result);
   }
 
@@ -881,10 +945,12 @@ class $JsonEncoder implements $Instance {
   static $Value? _startChunkedConversion(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $JsonEncoder;
-    final result = self.$value.startChunkedConversion(args[0]!.$value);
+    final result = self.$value.startChunkedConversion((r as $Value?)!.$value);
     return $ChunkedConversionSink.wrap(result);
   }
 
@@ -1110,14 +1176,15 @@ class $JsonDecoder implements $Instance {
         (r is $Value ? r : null) == null || (r is $Value ? r : null) is $null
             ? null
             : (Object? key, Object? value) {
-                return ((r is $Value ? r : null)! as EvalCallable?)?.call(
-                  runtime,
-                  null,
-                  [
-                    if (key == null) const $null() else $Object(key),
-                    if (value == null) const $null() else $Object(value),
-                  ],
-                )?.$value;
+                return ((r is $Value ? r : null)! as EvalCallable?)
+                    ?.call(
+                      runtime,
+                      null,
+                      (key == null ? const $null() : $Object(key)),
+                      (value == null ? const $null() : $Object(value)),
+                      2,
+                    )
+                    ?.$value;
               },
       ),
     );
@@ -1159,32 +1226,56 @@ class $JsonDecoder implements $Instance {
   }
 
   static const $Function __bind = $Function(_bind);
-  static $Value? _bind(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _bind(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $JsonDecoder;
-    final result = self.$value.bind(args[0]!.$value);
+    final result = self.$value.bind((r as $Value?)!.$value);
     return $Stream.wrap(
       result.map((e) => e == null ? const $null() : $Object(e)),
     );
   }
 
   static const $Function __cast = $Function(_cast);
-  static $Value? _cast(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _cast(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $JsonDecoder;
     final result = self.$value.cast();
     return $Converter.wrap(result);
   }
 
   static const $Function __convert = $Function(_convert);
-  static $Value? _convert(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _convert(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $JsonDecoder;
-    final result = self.$value.convert(args[0]!.$value);
+    final result = self.$value.convert((r as $String).$value);
     return runtime.wrapAlways(result, recursive: true);
   }
 
   static const $Function __fuse = $Function(_fuse);
-  static $Value? _fuse(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _fuse(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $JsonDecoder;
-    final result = self.$value.fuse(args[0]!.$value);
+    final result = self.$value.fuse((r as $Value?)!.$value);
     return $Converter.wrap(result);
   }
 
@@ -1194,10 +1285,12 @@ class $JsonDecoder implements $Instance {
   static $Value? _startChunkedConversion(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $JsonDecoder;
-    final result = self.$value.startChunkedConversion(args[0]!.$value);
+    final result = self.$value.startChunkedConversion((r as $Value?)!.$value);
     return $Object(result);
   }
 

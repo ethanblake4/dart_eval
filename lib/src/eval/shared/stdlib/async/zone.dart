@@ -6,6 +6,7 @@
 // ignore_for_file: undefined_hidden_name
 // ignore_for_file: dead_code, unused_local_variable
 // ignore_for_file: unnecessary_type_check, unnecessary_non_null_assertion
+// ignore_for_file: unnecessary_cast
 // ignore_for_file: sdk_version_since
 // ignore_for_file: non_constant_identifier_names
 // ignore_for_file: argument_type_not_assignable_to_error_handler
@@ -1062,10 +1063,15 @@ class $Zone implements $Instance {
   static $Value? _handleUncaughtError(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Zone;
-    self.$value.handleUncaughtError(args[0]!.$reified, args[1]!.$value);
+    self.$value.handleUncaughtError(
+      (r as $Value?)!.$reified,
+      (s as $Value?)!.$value,
+    );
     return null;
   }
 
@@ -1073,29 +1079,49 @@ class $Zone implements $Instance {
   static $Value? _inSameErrorZone(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Zone;
-    final result = self.$value.inSameErrorZone(args[0]!.$value);
+    final result = self.$value.inSameErrorZone((r as $Value?)!.$value);
     return $bool(result);
   }
 
   static const $Function __fork = $Function(_fork);
-  static $Value? _fork(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _fork(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Zone;
     final result = self.$value.fork(
-      specification: (args.length > 0 ? args[0] : null)?.$value,
-      zoneValues: ((args.length > 1 ? args[1] : null)?.$reified as Map?)
+      specification: (r is $Value ? r : null)?.$value,
+      zoneValues: ((s is $Value ? s : null)?.$reified as Map?)
           ?.cast<Object?, Object?>(),
     );
     return $Zone.wrap(result);
   }
 
   static const $Function __run = $Function(_run);
-  static $Value? _run(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _run(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Zone;
     final result = self.$value.run(() {
-      return (args[0]! as EvalCallable)(runtime, null, [])?.$value;
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
+        null,
+        null,
+        0,
+      )?.$value;
     });
     return runtime.wrapAlways(result, recursive: true);
   }
@@ -1104,14 +1130,20 @@ class $Zone implements $Instance {
   static $Value? _runUnary(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Zone;
     final result = self.$value.runUnary((dynamic argument) {
-      return (args[0]! as EvalCallable)(runtime, null, [
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
         runtime.wrapAlways(argument, recursive: true),
-      ])?.$value;
-    }, args[1]!.$value);
+        null,
+        1,
+      )?.$value;
+    }, (s as $Value?)!.$value);
     return runtime.wrapAlways(result, recursive: true);
   }
 
@@ -1119,18 +1151,23 @@ class $Zone implements $Instance {
   static $Value? _runBinary(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Zone;
     final result = self.$value.runBinary(
       (dynamic argument1, dynamic argument2) {
-        return (args[0]! as EvalCallable)(runtime, null, [
+        return ((r as $Value?)! as EvalCallable)(
+          runtime,
+          null,
           runtime.wrapAlways(argument1, recursive: true),
           runtime.wrapAlways(argument2, recursive: true),
-        ])?.$value;
+          2,
+        )?.$value;
       },
-      args[1]!.$value,
-      args[2]!.$value,
+      (s as $Value?)!.$value,
+      ((c as List<Object?>)[0] as $Value?)!.$value,
     );
     return runtime.wrapAlways(result, recursive: true);
   }
@@ -1139,11 +1176,13 @@ class $Zone implements $Instance {
   static $Value? _runGuarded(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Zone;
     self.$value.runGuarded(() {
-      (args[0]! as EvalCallable)(runtime, null, []);
+      ((r as $Value?)! as EvalCallable)(runtime, null, null, null, 0);
     });
     return null;
   }
@@ -1152,14 +1191,20 @@ class $Zone implements $Instance {
   static $Value? _runUnaryGuarded(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Zone;
     self.$value.runUnaryGuarded((dynamic argument) {
-      (args[0]! as EvalCallable)(runtime, null, [
+      ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
         runtime.wrapAlways(argument, recursive: true),
-      ]);
-    }, args[1]!.$value);
+        null,
+        1,
+      );
+    }, (s as $Value?)!.$value);
     return null;
   }
 
@@ -1167,18 +1212,23 @@ class $Zone implements $Instance {
   static $Value? _runBinaryGuarded(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Zone;
     self.$value.runBinaryGuarded(
       (dynamic argument1, dynamic argument2) {
-        (args[0]! as EvalCallable)(runtime, null, [
+        ((r as $Value?)! as EvalCallable)(
+          runtime,
+          null,
           runtime.wrapAlways(argument1, recursive: true),
           runtime.wrapAlways(argument2, recursive: true),
-        ]);
+          2,
+        );
       },
-      args[1]!.$value,
-      args[2]!.$value,
+      (s as $Value?)!.$value,
+      ((c as List<Object?>)[0] as $Value?)!.$value,
     );
     return null;
   }
@@ -1187,13 +1237,21 @@ class $Zone implements $Instance {
   static $Value? _registerCallback(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Zone;
     final result = self.$value.registerCallback(() {
-      return (args[0]! as EvalCallable)(runtime, null, [])?.$value;
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
+        null,
+        null,
+        0,
+      )?.$value;
     });
-    return $Function((runtime, target, args) {
+    return $Function((runtime, target, r, s, c) {
       final funcResult = result();
       return runtime.wrapAlways(funcResult, recursive: true);
     });
@@ -1205,16 +1263,22 @@ class $Zone implements $Instance {
   static $Value? _registerUnaryCallback(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Zone;
     final result = self.$value.registerUnaryCallback((dynamic arg) {
-      return (args[0]! as EvalCallable)(runtime, null, [
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
         runtime.wrapAlways(arg, recursive: true),
-      ])?.$value;
+        null,
+        1,
+      )?.$value;
     });
-    return $Function((runtime, target, args) {
-      final funcResult = result(args[0]!.$value);
+    return $Function((runtime, target, r, s, c) {
+      final funcResult = result((r as $Value?)!.$value);
       return runtime.wrapAlways(funcResult, recursive: true);
     });
   }
@@ -1225,20 +1289,25 @@ class $Zone implements $Instance {
   static $Value? _registerBinaryCallback(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Zone;
     final result = self.$value.registerBinaryCallback((
       dynamic arg1,
       dynamic arg2,
     ) {
-      return (args[0]! as EvalCallable)(runtime, null, [
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
         runtime.wrapAlways(arg1, recursive: true),
         runtime.wrapAlways(arg2, recursive: true),
-      ])?.$value;
+        2,
+      )?.$value;
     });
-    return $Function((runtime, target, args) {
-      final funcResult = result(args[0]!.$value, args[1]!.$value);
+    return $Function((runtime, target, r, s, c) {
+      final funcResult = result((r as $Value?)!.$value, (s as $Value?)!.$value);
       return runtime.wrapAlways(funcResult, recursive: true);
     });
   }
@@ -1247,13 +1316,21 @@ class $Zone implements $Instance {
   static $Value? _bindCallback(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Zone;
     final result = self.$value.bindCallback(() {
-      return (args[0]! as EvalCallable)(runtime, null, [])?.$value;
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
+        null,
+        null,
+        0,
+      )?.$value;
     });
-    return $Function((runtime, target, args) {
+    return $Function((runtime, target, r, s, c) {
       final funcResult = result();
       return runtime.wrapAlways(funcResult, recursive: true);
     });
@@ -1263,16 +1340,22 @@ class $Zone implements $Instance {
   static $Value? _bindUnaryCallback(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Zone;
     final result = self.$value.bindUnaryCallback((dynamic argument) {
-      return (args[0]! as EvalCallable)(runtime, null, [
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
         runtime.wrapAlways(argument, recursive: true),
-      ])?.$value;
+        null,
+        1,
+      )?.$value;
     });
-    return $Function((runtime, target, args) {
-      final funcResult = result(args[0]!.$value);
+    return $Function((runtime, target, r, s, c) {
+      final funcResult = result((r as $Value?)!.$value);
       return runtime.wrapAlways(funcResult, recursive: true);
     });
   }
@@ -1281,20 +1364,25 @@ class $Zone implements $Instance {
   static $Value? _bindBinaryCallback(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Zone;
     final result = self.$value.bindBinaryCallback((
       dynamic argument1,
       dynamic argument2,
     ) {
-      return (args[0]! as EvalCallable)(runtime, null, [
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
         runtime.wrapAlways(argument1, recursive: true),
         runtime.wrapAlways(argument2, recursive: true),
-      ])?.$value;
+        2,
+      )?.$value;
     });
-    return $Function((runtime, target, args) {
-      final funcResult = result(args[0]!.$value, args[1]!.$value);
+    return $Function((runtime, target, r, s, c) {
+      final funcResult = result((r as $Value?)!.$value, (s as $Value?)!.$value);
       return runtime.wrapAlways(funcResult, recursive: true);
     });
   }
@@ -1305,13 +1393,15 @@ class $Zone implements $Instance {
   static $Value? _bindCallbackGuarded(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Zone;
     final result = self.$value.bindCallbackGuarded(() {
-      (args[0]! as EvalCallable)(runtime, null, []);
+      ((r as $Value?)! as EvalCallable)(runtime, null, null, null, 0);
     });
-    return $Function((runtime, target, args) {
+    return $Function((runtime, target, r, s, c) {
       result();
       return const $null();
     });
@@ -1323,16 +1413,22 @@ class $Zone implements $Instance {
   static $Value? _bindUnaryCallbackGuarded(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Zone;
     final result = self.$value.bindUnaryCallbackGuarded((dynamic argument) {
-      (args[0]! as EvalCallable)(runtime, null, [
+      ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
         runtime.wrapAlways(argument, recursive: true),
-      ]);
+        null,
+        1,
+      );
     });
-    return $Function((runtime, target, args) {
-      result(args[0]!.$value);
+    return $Function((runtime, target, r, s, c) {
+      result((r as $Value?)!.$value);
       return const $null();
     });
   }
@@ -1343,20 +1439,25 @@ class $Zone implements $Instance {
   static $Value? _bindBinaryCallbackGuarded(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Zone;
     final result = self.$value.bindBinaryCallbackGuarded((
       dynamic argument1,
       dynamic argument2,
     ) {
-      (args[0]! as EvalCallable)(runtime, null, [
+      ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
         runtime.wrapAlways(argument1, recursive: true),
         runtime.wrapAlways(argument2, recursive: true),
-      ]);
+        2,
+      );
     });
-    return $Function((runtime, target, args) {
-      result(args[0]!.$value, args[1]!.$value);
+    return $Function((runtime, target, r, s, c) {
+      result((r as $Value?)!.$value, (s as $Value?)!.$value);
       return const $null();
     });
   }
@@ -1365,12 +1466,14 @@ class $Zone implements $Instance {
   static $Value? _errorCallback(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Zone;
     final result = self.$value.errorCallback(
-      args[0]!.$reified,
-      args[1]!.$value,
+      (r as $Value?)!.$reified,
+      (s as $Value?)!.$value,
     );
     return result == null ? const $null() : $Object(result);
   }
@@ -1379,11 +1482,13 @@ class $Zone implements $Instance {
   static $Value? _scheduleMicrotask(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Zone;
     self.$value.scheduleMicrotask(() {
-      (args[0]! as EvalCallable)(runtime, null, []);
+      ((r as $Value?)! as EvalCallable)(runtime, null, null, null, 0);
     });
     return null;
   }
@@ -1392,11 +1497,13 @@ class $Zone implements $Instance {
   static $Value? _createTimer(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Zone;
-    final result = self.$value.createTimer(args[0]!.$value, () {
-      (args[1]! as EvalCallable)(runtime, null, []);
+    final result = self.$value.createTimer((r as $Value?)!.$value, () {
+      ((s as $Value?)! as EvalCallable)(runtime, null, null, null, 0);
     });
     return $Timer.wrap(result);
   }
@@ -1407,21 +1514,35 @@ class $Zone implements $Instance {
   static $Value? _createPeriodicTimer(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Zone;
-    final result = self.$value.createPeriodicTimer(args[0]!.$value, (
+    final result = self.$value.createPeriodicTimer((r as $Value?)!.$value, (
       Timer timer,
     ) {
-      (args[1]! as EvalCallable)(runtime, null, [$Timer.wrap(timer)]);
+      ((s as $Value?)! as EvalCallable)(
+        runtime,
+        null,
+        $Timer.wrap(timer),
+        null,
+        1,
+      );
     });
     return $Timer.wrap(result);
   }
 
   static const $Function __print = $Function(_print);
-  static $Value? _print(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _print(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Zone;
-    self.$value.print(args[0]!.$value);
+    self.$value.print((r as $String).$value);
     return null;
   }
 
@@ -1429,10 +1550,12 @@ class $Zone implements $Instance {
   static $Value? _operatorIndexGet(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Zone;
-    final result = self.$value[args[0]!.$reified];
+    final result = self.$value[(r as $Value?)!.$reified];
     return runtime.wrapAlways(result, recursive: true);
   }
 

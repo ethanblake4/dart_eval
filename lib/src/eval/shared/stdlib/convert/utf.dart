@@ -6,6 +6,7 @@
 // ignore_for_file: undefined_hidden_name
 // ignore_for_file: dead_code, unused_local_variable
 // ignore_for_file: unnecessary_type_check, unnecessary_non_null_assertion
+// ignore_for_file: unnecessary_cast
 // ignore_for_file: sdk_version_since
 // ignore_for_file: non_constant_identifier_names
 // ignore_for_file: argument_type_not_assignable_to_error_handler
@@ -331,26 +332,44 @@ class $Utf8Codec implements $Instance {
   }
 
   static const $Function __encode = $Function(_encode);
-  static $Value? _encode(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _encode(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Utf8Codec;
-    final result = self.$value.encode(args[0]!.$value);
+    final result = self.$value.encode((r as $String).$value);
     return $Uint8List.wrap(result);
   }
 
   static const $Function __decode = $Function(_decode);
-  static $Value? _decode(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _decode(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Utf8Codec;
     final result = self.$value.decode(
-      (args[0]!.$reified as List).cast<int>(),
-      allowMalformed: (args.length > 1 ? args[1] : null)?.$value,
+      ((r as $Value?)!.$reified as List).cast<int>(),
+      allowMalformed: (s is $Value ? s : null)?.$value,
     );
     return $String(result);
   }
 
   static const $Function __fuse = $Function(_fuse);
-  static $Value? _fuse(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _fuse(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Utf8Codec;
-    final result = self.$value.fuse(args[0]!.$value);
+    final result = self.$value.fuse((r as $Value?)!.$value);
     return $Codec.wrap(result);
   }
 
@@ -358,10 +377,12 @@ class $Utf8Codec implements $Instance {
   static $Value? _decodeStream(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Utf8Codec;
-    final result = self.$value.decodeStream(args[0]!.$value);
+    final result = self.$value.decodeStream((r as $Value?)!.$value);
     return $Future.wrap(result.then((e) => $String(e)));
   }
 
@@ -608,36 +629,59 @@ class $Utf8Encoder implements $Instance {
   }
 
   static const $Function __bind = $Function(_bind);
-  static $Value? _bind(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _bind(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Utf8Encoder;
-    final result = self.$value.bind(args[0]!.$value);
+    final result = self.$value.bind((r as $Value?)!.$value);
     return $Stream.wrap(result.map((e) => $List.view(e, (e) => $int(e))));
   }
 
   static const $Function __cast = $Function(_cast);
-  static $Value? _cast(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _cast(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Utf8Encoder;
     final result = self.$value.cast();
     return $Converter.wrap(result);
   }
 
   static const $Function __convert = $Function(_convert);
-  static $Value? _convert(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _convert(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Utf8Encoder;
     final result = self.$value.convert(
-      args[0]!.$value,
-      (args.length > 1 ? args[1] : null) == null
-          ? 0
-          : (args.length > 1 ? args[1] : null)?.$value,
-      (args.length > 2 ? args[2] : null)?.$value,
+      (r as $String).$value,
+      (s is $Value ? s : null) == null ? 0 : (s as $int).$value,
+      (c is List && (c as List).length > 0 ? (c as List)[0] as $Value? : null)
+          ?.$value,
     );
     return $Uint8List.wrap(result);
   }
 
   static const $Function __fuse = $Function(_fuse);
-  static $Value? _fuse(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _fuse(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Utf8Encoder;
-    final result = self.$value.fuse(args[0]!.$value);
+    final result = self.$value.fuse((r as $Value?)!.$value);
     return $Converter.wrap(result);
   }
 
@@ -647,10 +691,12 @@ class $Utf8Encoder implements $Instance {
   static $Value? _startChunkedConversion(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Utf8Encoder;
-    final result = self.$value.startChunkedConversion(args[0]!.$value);
+    final result = self.$value.startChunkedConversion((r as $Value?)!.$value);
     return $Object(result);
   }
 
@@ -909,36 +955,59 @@ class $Utf8Decoder implements $Instance {
   }
 
   static const $Function __bind = $Function(_bind);
-  static $Value? _bind(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _bind(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Utf8Decoder;
-    final result = self.$value.bind(args[0]!.$value);
+    final result = self.$value.bind((r as $Value?)!.$value);
     return $Stream.wrap(result.map((e) => $String(e)));
   }
 
   static const $Function __cast = $Function(_cast);
-  static $Value? _cast(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _cast(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Utf8Decoder;
     final result = self.$value.cast();
     return $Converter.wrap(result);
   }
 
   static const $Function __convert = $Function(_convert);
-  static $Value? _convert(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _convert(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Utf8Decoder;
     final result = self.$value.convert(
-      (args[0]!.$reified as List).cast<int>(),
-      (args.length > 1 ? args[1] : null) == null
-          ? 0
-          : (args.length > 1 ? args[1] : null)?.$value,
-      (args.length > 2 ? args[2] : null)?.$value,
+      ((r as $Value?)!.$reified as List).cast<int>(),
+      (s is $Value ? s : null) == null ? 0 : (s as $int).$value,
+      (c is List && (c as List).length > 0 ? (c as List)[0] as $Value? : null)
+          ?.$value,
     );
     return $String(result);
   }
 
   static const $Function __fuse = $Function(_fuse);
-  static $Value? _fuse(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _fuse(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Utf8Decoder;
-    final result = self.$value.fuse(args[0]!.$value);
+    final result = self.$value.fuse((r as $Value?)!.$value);
     return $Converter.wrap(result);
   }
 
@@ -948,10 +1017,12 @@ class $Utf8Decoder implements $Instance {
   static $Value? _startChunkedConversion(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Utf8Decoder;
-    final result = self.$value.startChunkedConversion(args[0]!.$value);
+    final result = self.$value.startChunkedConversion((r as $Value?)!.$value);
     return $ByteConversionSink.wrap(result);
   }
 

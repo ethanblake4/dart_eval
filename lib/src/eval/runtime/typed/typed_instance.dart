@@ -12,14 +12,20 @@ import 'typed_program.dart';
 
 Invocation _typedMethodInvocation(
   String name,
-  List<$Value?> arguments,
-  Map<String, $Value?> named,
+  int positionalCount,
+  Object? first,
+  Object? rest,
+  List<String> namedNames,
   List<int> typeArguments,
   Runtime? runtime,
 ) {
+  final count = positionalCount + namedNames.length;
+  final values = TypedInterop.argList(count, first, rest);
   final namedArguments = {
-    for (final entry in named.entries) Symbol(entry.key): entry.value,
+    for (var i = 0; i < namedNames.length; i++)
+      Symbol(namedNames[i]): values[positionalCount + i],
   };
+  final arguments = values.sublist(0, positionalCount);
   return typeArguments.isEmpty
       ? Invocation.method(Symbol(name), arguments, namedArguments)
       : Invocation.genericMethod(
@@ -83,9 +89,12 @@ final class TypedInstance implements $Instance {
   $Value? _noSuchMethod(Invocation invocation, Runtime? runtime) {
     final handler = resolve(TypedMemberKind.method, 'noSuchMethod');
     if (handler != null) {
-      return handler.invokeClosure([
+      return handler.invokeClosure(
+        1,
         $Invocation.wrap(invocation),
-      ], runtime: runtime);
+        null,
+        runtime: runtime,
+      );
     }
     throw NoSuchMethodError.withInvocation(dispatchRoot, invocation);
   }
@@ -120,12 +129,16 @@ final class TypedInstance implements $Instance {
     }
   }
 
-  /// Explicit host entry. Arguments and results are canonical language values.
-  /// Typed bytecode calls enter their callee in the current dispatch loop.
+  /// Explicit host entry. Arguments travel in the register-call layout:
+  /// [first] is argument 0 and [rest] is argument 1 when two arguments are
+  /// supplied or a (borrowed) `List<Object?>` of arguments 1..count-1 for
+  /// more. Typed bytecode calls enter their callee in the dispatch loop.
   $Value? invoke(
     String name,
-    List<$Value?> arguments, {
-    Map<String, $Value?> named = const {},
+    int positionalCount,
+    Object? first,
+    Object? rest, {
+    List<String> namedNames = const [],
     String callerLibrary = '',
     List<int> typeArguments = const [],
     Runtime? runtime,
@@ -136,13 +149,15 @@ final class TypedInstance implements $Instance {
       callerLibrary: callerLibrary,
     );
     if (member != null) {
-      if (!member.accepts(arguments.length, named.keys) ||
+      if (!member.accepts(positionalCount, namedNames) ||
           !member.acceptsTypeArguments(typeArguments)) {
         return _noSuchMethod(
           _typedMethodInvocation(
             name,
-            arguments,
-            named,
+            positionalCount,
+            first,
+            rest,
+            namedNames,
             typeArguments,
             runtime,
           ),
@@ -150,8 +165,10 @@ final class TypedInstance implements $Instance {
         );
       }
       return member.invokeClosure(
-        arguments,
-        named: named,
+        positionalCount,
+        first,
+        rest,
+        namedNames: namedNames,
         typeArguments: typeArguments,
         runtime: runtime,
       );
@@ -162,14 +179,16 @@ final class TypedInstance implements $Instance {
       callerLibrary: callerLibrary,
     );
     if (getter != null) {
-      final callable = getter.invoke(const [], runtime: runtime);
+      final callable = getter.invoke(0, null, null, runtime: runtime);
       if (callable is TypedClosure) {
         if (!callable.acceptsTypeArguments(typeArguments)) {
           return _noSuchMethod(
             _typedMethodInvocation(
               name,
-              arguments,
-              named,
+              positionalCount,
+              first,
+              rest,
+              namedNames,
               typeArguments,
               runtime,
             ),
@@ -177,8 +196,10 @@ final class TypedInstance implements $Instance {
           );
         }
         return callable.invoke(
-          arguments,
-          named: named,
+          positionalCount,
+          first,
+          rest,
+          namedNames: namedNames,
           typeArguments: typeArguments,
           runtime: runtime,
         );
@@ -188,8 +209,10 @@ final class TypedInstance implements $Instance {
           return _noSuchMethod(
             _typedMethodInvocation(
               name,
-              arguments,
-              named,
+              positionalCount,
+              first,
+              rest,
+              namedNames,
               typeArguments,
               runtime,
             ),
@@ -197,17 +220,33 @@ final class TypedInstance implements $Instance {
           );
         }
         return callable.invokeClosure(
-          arguments,
-          named: named,
+          positionalCount,
+          first,
+          rest,
+          namedNames: namedNames,
           typeArguments: typeArguments,
           runtime: runtime,
         );
       }
-      if (named.isEmpty && typeArguments.isEmpty) {
-        return TypedInterop.call(runtime, callable, arguments);
+      if (namedNames.isEmpty && typeArguments.isEmpty) {
+        return TypedInterop.call(
+          runtime,
+          callable,
+          positionalCount,
+          first,
+          rest,
+        );
       }
       return _noSuchMethod(
-        _typedMethodInvocation(name, arguments, named, typeArguments, runtime),
+        _typedMethodInvocation(
+          name,
+          positionalCount,
+          first,
+          rest,
+          namedNames,
+          typeArguments,
+          runtime,
+        ),
         runtime,
       );
     }
@@ -216,27 +255,45 @@ final class TypedInstance implements $Instance {
       parent = parent.superclass;
     }
     if (parent != null) {
-      if (named.isNotEmpty) {
+      if (namedNames.isNotEmpty) {
         throw UnsupportedError('Named bridge method arguments');
       }
-      return TypedInterop.invoke(runtime, parent, name, arguments);
+      return TypedInterop.invoke(
+        runtime,
+        parent,
+        name,
+        positionalCount,
+        first,
+        rest,
+      );
     }
     if (name == '==' || name == '!=') {
-      if (named.isNotEmpty) throw ArgumentError('Unexpected named arguments');
-      if (arguments.length != 1) throw ArgumentError('Expected one argument');
-      final other = arguments.single;
+      if (namedNames.isNotEmpty) {
+        throw ArgumentError('Unexpected named arguments');
+      }
+      if (positionalCount != 1) {
+        throw ArgumentError('Expected one argument');
+      }
+      final other = first;
       final equal = identical(
         dispatchRoot,
         other is TypedInstance ? other.dispatchRoot : other,
       );
       return $bool(name == '==' ? equal : !equal);
     }
-    if (name == 'toString' && arguments.isEmpty) {
-      if (named.isNotEmpty) throw ArgumentError('Unexpected named arguments');
+    if (name == 'toString' && positionalCount == 0 && namedNames.isEmpty) {
       return $String("Instance of '${dispatchRoot.descriptor.name}'");
     }
     return _noSuchMethod(
-      _typedMethodInvocation(name, arguments, named, typeArguments, runtime),
+      _typedMethodInvocation(
+        name,
+        positionalCount,
+        first,
+        rest,
+        namedNames,
+        typeArguments,
+        runtime,
+      ),
       runtime,
     );
   }
@@ -250,9 +307,11 @@ final class TypedInstance implements $Instance {
     Runtime? runtime,
   }) {
     final member = resolve(TypedMemberKind.method, name);
-    return member == null
-        ? invoke(name, arguments, runtime: runtime)
-        : member.invokeBridgeArguments(arguments, runtime: runtime);
+    if (member != null) {
+      return member.invokeBridgeArguments(arguments, runtime: runtime);
+    }
+    final (first, rest) = TypedInterop.splitVector(arguments);
+    return invoke(name, arguments.length, first, rest, runtime: runtime);
   }
 
   @override
@@ -269,7 +328,9 @@ final class TypedInstance implements $Instance {
       identifier,
       callerLibrary: callerLibrary,
     );
-    if (getter != null) return getter.invoke(const [], runtime: runtime);
+    if (getter != null) {
+      return getter.invoke(0, null, null, runtime: runtime);
+    }
     final method = resolve(
       TypedMemberKind.method,
       identifier,
@@ -286,8 +347,13 @@ final class TypedInstance implements $Instance {
     return switch (identifier) {
       'hashCode' => $int(identityHashCode(dispatchRoot)),
       '==' || '!=' || 'toString' => $Function(
-        (runtime, target, arguments) =>
-            invoke(identifier, arguments, runtime: runtime),
+        (runtime, target, r, s, c) => invoke(
+          identifier,
+          TypedInterop.callableCount(c),
+          r,
+          TypedInterop.callableRest(s, c),
+          runtime: runtime,
+        ),
       ),
       _ => _noSuchMethod(Invocation.getter(Symbol(identifier)), runtime),
     };
@@ -309,7 +375,7 @@ final class TypedInstance implements $Instance {
       callerLibrary: callerLibrary,
     );
     if (setter != null) {
-      setter.invokeClosure([value], runtime: runtime);
+      setter.invokeClosure(1, value, null, runtime: runtime);
       return;
     }
     var parent = superclass;
@@ -411,8 +477,10 @@ final class TypedMember extends EvalFunction {
   }
 
   $Value? invokeClosure(
-    List<$Value?> arguments, {
-    Map<String, $Value?> named = const {},
+    int positionalCount,
+    Object? first,
+    Object? rest, {
+    List<String> namedNames = const [],
     List<int> typeArguments = const [],
     Runtime? runtime,
     bool trusted = false,
@@ -420,41 +488,44 @@ final class TypedMember extends EvalFunction {
     final closure = _closure;
     if (closure != null) {
       return closure.invoke(
-        arguments,
-        named: named,
+        positionalCount,
+        first,
+        rest,
+        namedNames: namedNames,
         typeArguments: typeArguments,
         runtime: runtime,
         trusted: trusted,
       );
     }
-    if (named.isNotEmpty) {
+    if (namedNames.isNotEmpty) {
       throw UnsupportedError('Method has no named argument metadata');
     }
-    return invoke(arguments, runtime: runtime);
+    return invoke(positionalCount, first, rest, runtime: runtime);
   }
 
   $Value? invokeBridgeArguments(List<$Value?> arguments, {Runtime? runtime}) {
     final closure = _closure;
+    final (first, rest) = TypedInterop.splitVector(arguments);
     if (closure == null ||
         arguments.length != closure.descriptor.argumentCount) {
-      return invokeClosure(arguments, runtime: runtime);
+      return invokeClosure(arguments.length, first, rest, runtime: runtime);
     }
-    final positionalCount = closure.descriptor.positionalCount;
+    // The vector is in declaration order, so its named tail already matches
+    // the descriptor's names.
     return closure.invoke(
-      arguments.sublist(0, positionalCount),
-      named: {
-        for (var i = 0; i < closure.descriptor.namedNames.length; i++)
-          closure.descriptor.namedNames[i]: arguments[positionalCount + i],
-      },
+      closure.descriptor.positionalCount,
+      first,
+      rest,
+      namedNames: closure.descriptor.namedNames,
       runtime: runtime,
     );
   }
 
-  $Value? invoke(List<$Value?> arguments, {Runtime? runtime}) {
+  $Value? invoke(int count, Object? first, Object? rest, {Runtime? runtime}) {
     final result = TypedMachine.runRaw(
       receiver.program,
       entryFunction: functionId,
-      objectArguments: [receiver, ...arguments],
+      objectArguments: [receiver, ...TypedInterop.argList(count, first, rest)],
       runtime: receiver.runtime ?? runtime,
     );
     return switch (function.resultKind) {
@@ -468,8 +539,18 @@ final class TypedMember extends EvalFunction {
   }
 
   @override
-  $Value? call(Runtime runtime, $Value? target, List<$Value?> args) =>
-      invokeClosure(args, runtime: runtime);
+  $Value? call(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) => invokeClosure(
+    TypedInterop.callableCount(c),
+    r,
+    TypedInterop.callableRest(s, c),
+    runtime: runtime,
+  );
 
   @override
   int $getRuntimeType(Runtime runtime) {

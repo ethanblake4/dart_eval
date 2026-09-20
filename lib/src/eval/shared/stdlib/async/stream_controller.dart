@@ -6,6 +6,7 @@
 // ignore_for_file: undefined_hidden_name
 // ignore_for_file: dead_code, unused_local_variable
 // ignore_for_file: unnecessary_type_check, unnecessary_non_null_assertion
+// ignore_for_file: unnecessary_cast
 // ignore_for_file: sdk_version_since
 // ignore_for_file: non_constant_identifier_names
 // ignore_for_file: argument_type_not_assignable_to_error_handler
@@ -446,7 +447,9 @@ class $StreamController<T> implements $Instance {
                 ((r is $Value ? r : null)! as EvalCallable?)?.call(
                   runtime,
                   null,
-                  [],
+                  null,
+                  null,
+                  0,
                 );
               },
         onPause:
@@ -457,19 +460,27 @@ class $StreamController<T> implements $Instance {
                 ((s is $Value ? s : null)! as EvalCallable?)?.call(
                   runtime,
                   null,
-                  [],
+                  null,
+                  null,
+                  0,
                 );
               },
         onResume: _arg2OrNull == null || _arg2OrNull is $null
             ? null
             : () {
-                (_arg2OrNull! as EvalCallable?)?.call(runtime, null, []);
+                (_arg2OrNull! as EvalCallable?)?.call(
+                  runtime,
+                  null,
+                  null,
+                  null,
+                  0,
+                );
               },
         onCancel: _arg3OrNull == null || _arg3OrNull is $null
             ? null
             : () {
                 return (_arg3OrNull! as EvalCallable?)
-                    ?.call(runtime, null, [])
+                    ?.call(runtime, null, null, null, 0)
                     ?.$value;
               },
         sync: _arg4OrNull == null ? false : (_arg4OrNull as $bool).$value,
@@ -489,7 +500,9 @@ class $StreamController<T> implements $Instance {
                 ((r is $Value ? r : null)! as EvalCallable?)?.call(
                   runtime,
                   null,
-                  [],
+                  null,
+                  null,
+                  0,
                 );
               },
         onCancel:
@@ -500,7 +513,9 @@ class $StreamController<T> implements $Instance {
                 ((s is $Value ? s : null)! as EvalCallable?)?.call(
                   runtime,
                   null,
-                  [],
+                  null,
+                  null,
+                  0,
                 );
               },
         sync: (c is $Value ? c : null) == null ? false : (c as $bool).$value,
@@ -539,7 +554,7 @@ class $StreamController<T> implements $Instance {
         final _onListen = $value.onListen;
         return _onListen == null
             ? const $null()
-            : $Function((runtime, target, args) {
+            : $Function((runtime, target, r, s, c) {
                 _onListen();
                 return const $null();
               });
@@ -547,7 +562,7 @@ class $StreamController<T> implements $Instance {
         final _onPause = $value.onPause;
         return _onPause == null
             ? const $null()
-            : $Function((runtime, target, args) {
+            : $Function((runtime, target, r, s, c) {
                 _onPause();
                 return const $null();
               });
@@ -555,7 +570,7 @@ class $StreamController<T> implements $Instance {
         final _onResume = $value.onResume;
         return _onResume == null
             ? const $null()
-            : $Function((runtime, target, args) {
+            : $Function((runtime, target, r, s, c) {
                 _onResume();
                 return const $null();
               });
@@ -563,7 +578,7 @@ class $StreamController<T> implements $Instance {
         final _onCancel = $value.onCancel;
         return _onCancel == null
             ? const $null()
-            : $Function((runtime, target, args) {
+            : $Function((runtime, target, r, s, c) {
                 final funcResult = _onCancel();
                 return (funcResult is Future
                     ? $Future.wrap(funcResult)
@@ -600,12 +615,14 @@ class $StreamController<T> implements $Instance {
   static $Value? _addStream(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $StreamController;
     final result = self.$value.addStream(
-      args[0]!.$value,
-      cancelOnError: (args.length > 1 ? args[1] : null)?.$value,
+      (r as $Value?)!.$value,
+      cancelOnError: (s is $Value ? s : null)?.$value,
     );
     return $Future.wrap(
       result.then((e) => runtime.wrapAlways(e, recursive: true)),
@@ -613,7 +630,13 @@ class $StreamController<T> implements $Instance {
   }
 
   static const $Function __close = $Function(_close);
-  static $Value? _close(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _close(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $StreamController;
     final result = self.$value.close();
     return $Future.wrap(
@@ -622,9 +645,15 @@ class $StreamController<T> implements $Instance {
   }
 
   static const $Function __add = $Function(_add);
-  static $Value? _add(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _add(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $StreamController;
-    self.$value.add(args[0]!.$value);
+    self.$value.add((r as $Value?)!.$value);
     return null;
   }
 
@@ -632,12 +661,14 @@ class $StreamController<T> implements $Instance {
   static $Value? _addError(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $StreamController;
     self.$value.addError(
-      args[0]!.$reified,
-      (args.length > 1 ? args[1] : null)?.$value,
+      (r as $Value?)!.$reified,
+      (s is $Value ? s : null)?.$value,
     );
     return null;
   }

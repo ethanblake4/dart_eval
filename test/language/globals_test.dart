@@ -165,7 +165,7 @@ void main() {
       ''');
         final first = Runtime.ofProgram(p), second = Runtime.ofProgram(p);
         final closure = first.executeLib(_library, 'main') as EvalCallable;
-        expect((closure.call(second, null, []) as $int).$value, 1);
+        expect((closure.call(second, null, null, null, 0) as $int).$value, 1);
         expect(first.executeLib(_library, 'read'), 1);
         expect(second.executeLib(_library, 'read'), 0);
       },
@@ -180,7 +180,7 @@ void main() {
         final first = Runtime.ofProgram(p), second = Runtime.ofProgram(p);
         final instance = first.executeLib(_library, 'main') as $Instance;
         final method = instance.$getProperty(second, 'next') as EvalCallable;
-        expect((method.call(second, null, []) as $int).$value, 1);
+        expect((method.call(second, null, null, null, 0) as $int).$value, 1);
         expect(first.executeLib(_library, 'read'), 1);
         expect(second.executeLib(_library, 'read'), 0);
       },

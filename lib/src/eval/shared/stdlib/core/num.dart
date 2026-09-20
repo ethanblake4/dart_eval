@@ -415,7 +415,7 @@ class $num<T extends num> implements $Instance {
         onError == null
             ? null
             : (source) =>
-                  onError.call(runtime, null, [$String(source)])?.$value,
+                  onError.call(runtime, null, $String(source), null, 1)?.$value,
       );
     } on FormatException catch (e) {
       runtime.$throw($FormatException.wrap(e));
@@ -529,8 +529,14 @@ class $num<T extends num> implements $Instance {
   T get $reified => $value;
 
   static const $Function __plus = $Function(_plus);
-  static $Value? _plus(Runtime runtime, $Value? target, List<$Value?> args) {
-    final other = args[0];
+  static $Value? _plus(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final other = (r as $Value?);
     final evalResult = target!.$value + other!.$value;
 
     if (evalResult is int) {
@@ -545,12 +551,18 @@ class $num<T extends num> implements $Instance {
   }
 
   static const $Function __minus = $Function(_minus);
-  static $Value? _minus(Runtime runtime, $Value? target, List<$Value?> args) {
-    if (args.isEmpty) {
+  static $Value? _minus(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    if (((c is int ? c : 2 + (c as List).length) == 0)) {
       final value = -target!.$value;
       return value is int ? $int(value) : $double(value);
     }
-    final other = args[0];
+    final other = (r as $Value?);
     final evalResult = target!.$value - other!.$value;
 
     if (evalResult is int) {
@@ -565,8 +577,14 @@ class $num<T extends num> implements $Instance {
   }
 
   static const $Function __mul = $Function(_mul);
-  static $Value? _mul(Runtime runtime, $Value? target, List<$Value?> args) {
-    final other = args[0];
+  static $Value? _mul(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final other = (r as $Value?);
     final evalResult = target!.$value * other!.$value;
 
     if (evalResult is int) {
@@ -581,8 +599,14 @@ class $num<T extends num> implements $Instance {
   }
 
   static const $Function __div = $Function(_div);
-  static $Value? _div(Runtime runtime, $Value? target, List<$Value?> args) {
-    final other = args[0];
+  static $Value? _div(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final other = (r as $Value?);
     final evalResult = target!.$value / other!.$value;
 
     if (evalResult is double) {
@@ -594,8 +618,14 @@ class $num<T extends num> implements $Instance {
 
   static const $Function __mod = $Function(_mod);
 
-  static $Value? _mod(Runtime runtime, $Value? target, List<$Value?> args) {
-    final other = args[0];
+  static $Value? _mod(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final other = (r as $Value?);
     final evalResult = target!.$value % other!.$value;
 
     if (evalResult is int) {
@@ -610,8 +640,14 @@ class $num<T extends num> implements $Instance {
   }
 
   static const $Function __lt = $Function(_lt);
-  static $Value? _lt(Runtime runtime, $Value? target, List<$Value?> args) {
-    final other = args[0];
+  static $Value? _lt(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final other = (r as $Value?);
     final evalResult = target!.$value < other!.$value;
 
     if (evalResult is bool) {
@@ -622,8 +658,14 @@ class $num<T extends num> implements $Instance {
   }
 
   static const $Function __gt = $Function(_gt);
-  static $Value? _gt(Runtime runtime, $Value? target, List<$Value?> args) {
-    final other = args[0];
+  static $Value? _gt(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final other = (r as $Value?);
     final evalResult = target!.$value > other!.$value;
 
     if (evalResult is bool) {
@@ -634,8 +676,14 @@ class $num<T extends num> implements $Instance {
   }
 
   static const $Function __lteq = $Function(_lteq);
-  static $Value? _lteq(Runtime runtime, $Value? target, List<$Value?> args) {
-    final other = args[0];
+  static $Value? _lteq(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final other = (r as $Value?);
     final evalResult = target!.$value <= other!.$value;
 
     if (evalResult is bool) {
@@ -646,8 +694,14 @@ class $num<T extends num> implements $Instance {
   }
 
   static const $Function __gteq = $Function(_gteq);
-  static $Value? _gteq(Runtime runtime, $Value? target, List<$Value?> args) {
-    final other = args[0];
+  static $Value? _gteq(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final other = (r as $Value?);
     final evalResult = target!.$value >= other!.$value;
 
     if (evalResult is bool) {
@@ -658,7 +712,13 @@ class $num<T extends num> implements $Instance {
   }
 
   static const $Function __toInt = $Function(_toInt);
-  static $Value? _toInt(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _toInt(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final evalResult = (target!.$value as num).toInt();
     return $int(evalResult);
   }
@@ -667,20 +727,34 @@ class $num<T extends num> implements $Instance {
   static $Value? _toDouble(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final evalResult = (target!.$value as num).toDouble();
     return $double(evalResult);
   }
 
   static const $Function __abs = $Function(_abs);
-  static $Value? _abs(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _abs(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final evalResult = (target!.$value as num).abs();
     return $num(evalResult);
   }
 
   static const $Function __ceil = $Function(_ceil);
-  static $Value? _ceil(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _ceil(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final evalResult = (target!.$value as num).ceil();
     return $int(evalResult);
   }
@@ -689,22 +763,36 @@ class $num<T extends num> implements $Instance {
   static $Value? _compareTo(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
-    final other = args[0];
+    final other = (r as $Value?);
     final evalResult = target!.$value.compareTo(other!.$value);
 
     return $int(evalResult);
   }
 
   static const $Function __floor = $Function(_floor);
-  static $Value? _floor(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _floor(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final evalResult = (target!.$value as num).floor();
     return $int(evalResult);
   }
 
   static const $Function __round = $Function(_round);
-  static $Value? _round(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _round(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final evalResult = (target!.$value as num).round();
     return $int(evalResult);
   }
@@ -713,16 +801,24 @@ class $num<T extends num> implements $Instance {
   static $Value? _truncate(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final evalResult = (target!.$value as num).truncate();
     return $int(evalResult);
   }
 
   static const $Function __clamp = $Function(_clamp);
-  static $Value? _clamp(Runtime runtime, $Value? target, List<$Value?> args) {
-    final lower = args[0]!.$value as num;
-    final upper = args[1]!.$value as num;
+  static $Value? _clamp(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final lower = (r as $Value?)!.$value as num;
+    final upper = (s as $Value?)!.$value as num;
     final evalResult = (target!.$value as num).clamp(lower, upper);
     if (evalResult is int) {
       return $int(evalResult);
@@ -737,9 +833,11 @@ class $num<T extends num> implements $Instance {
   static $Value? _remainder(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
-    final other = args[0]!.$value as num;
+    final other = (r as $Value?)!.$value as num;
     final evalResult = (target!.$value as num).remainder(other);
     if (evalResult is int) {
       return $int(evalResult);
@@ -754,9 +852,11 @@ class $num<T extends num> implements $Instance {
   static $Value? _toStringAsFixed(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
-    final fractionDigits = args[0]!.$value as int;
+    final fractionDigits = (r as $Value?)!.$value as int;
     final evalResult = (target!.$value as num).toStringAsFixed(fractionDigits);
     return $String(evalResult);
   }
@@ -767,9 +867,11 @@ class $num<T extends num> implements $Instance {
   static $Value? _toStringAsExponential(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
-    final fractionDigits = args[0]?.$value as int?;
+    final fractionDigits = (r as $Value?)?.$value as int?;
     final evalResult = (target!.$value as num).toStringAsExponential(
       fractionDigits,
     );
@@ -782,9 +884,11 @@ class $num<T extends num> implements $Instance {
   static $Value? _toStringAsPrecision(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
-    final precision = args[0]!.$value as int;
+    final precision = (r as $Value?)!.$value as int;
     final evalResult = (target!.$value as num).toStringAsPrecision(precision);
     return $String(evalResult);
   }
@@ -793,7 +897,9 @@ class $num<T extends num> implements $Instance {
   static $Value? _ceilToDouble(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final evalResult = (target!.$value as num).ceilToDouble();
     return $double(evalResult);
@@ -803,7 +909,9 @@ class $num<T extends num> implements $Instance {
   static $Value? _floorToDouble(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final evalResult = (target!.$value as num).floorToDouble();
     return $double(evalResult);
@@ -813,7 +921,9 @@ class $num<T extends num> implements $Instance {
   static $Value? _roundToDouble(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final evalResult = (target!.$value as num).roundToDouble();
     return $double(evalResult);
@@ -823,7 +933,9 @@ class $num<T extends num> implements $Instance {
   static $Value? _truncateToDouble(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final evalResult = (target!.$value as num).truncateToDouble();
     return $double(evalResult);
@@ -1303,9 +1415,11 @@ class $int extends $num<int> {
   static $Value? _toRadixString(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
-    final radix = args[0];
+    final radix = (r as $Value?);
     final evalResult = (target!.$value as int).toRadixString(radix!.$value);
 
     return $String(evalResult);
@@ -1315,9 +1429,11 @@ class $int extends $num<int> {
   static $Value? _bitwiseOr(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
-    final other = args[0];
+    final other = (r as $Value?);
     final evalResult = target!.$value | other!.$value;
 
     if (evalResult is int) {
@@ -1331,9 +1447,11 @@ class $int extends $num<int> {
   static $Value? _bitwiseAnd(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
-    final other = args[0];
+    final other = (r as $Value?);
     final evalResult = target!.$value & other!.$value;
 
     if (evalResult is int) {
@@ -1347,9 +1465,11 @@ class $int extends $num<int> {
   static $Value? _shiftLeft(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
-    final other = args[0];
+    final other = (r as $Value?);
     final evalResult = target!.$value << other!.$value;
 
     if (evalResult is int) {
@@ -1363,9 +1483,11 @@ class $int extends $num<int> {
   static $Value? _shiftRight(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
-    final other = args[0];
+    final other = (r as $Value?);
     final evalResult = target!.$value >> other!.$value;
 
     if (evalResult is int) {
@@ -1380,9 +1502,11 @@ class $int extends $num<int> {
   static $Value? _bitwiseXor(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
-    final other = args[0];
+    final other = (r as $Value?);
     final evalResult = target!.$value ^ other!.$value;
 
     if (evalResult is int) {
@@ -1396,31 +1520,51 @@ class $int extends $num<int> {
   static $Value? _truncatediv(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
-    final other = args[0];
+    final other = (r as $Value?);
     final evalResult = target!.$value ~/ other!.$value;
 
     return $int(evalResult);
   }
 
   static const $Function __absInt = $Function(_absInt);
-  static $Value? _absInt(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _absInt(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final evalResult = (target!.$value as int).abs();
     return $int(evalResult);
   }
 
   static const $Function __gcd = $Function(_gcd);
-  static $Value? _gcd(Runtime runtime, $Value? target, List<$Value?> args) {
-    final other = args[0]!.$value as int;
+  static $Value? _gcd(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final other = (r as $Value?)!.$value as int;
     final evalResult = (target!.$value as int).gcd(other);
     return $int(evalResult);
   }
 
   static const $Function __modPow = $Function(_modPow);
-  static $Value? _modPow(Runtime runtime, $Value? target, List<$Value?> args) {
-    final exponent = args[0]!.$value as int;
-    final modulus = args[1]!.$value as int;
+  static $Value? _modPow(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final exponent = (r as $Value?)!.$value as int;
+    final modulus = (s as $Value?)!.$value as int;
     final evalResult = (target!.$value as int).modPow(exponent, modulus);
     return $int(evalResult);
   }
@@ -1429,9 +1573,11 @@ class $int extends $num<int> {
   static $Value? _modInverse(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
-    final modulus = args[0]!.$value as int;
+    final modulus = (r as $Value?)!.$value as int;
     final evalResult = (target!.$value as int).modInverse(modulus);
     return $int(evalResult);
   }
@@ -1440,9 +1586,11 @@ class $int extends $num<int> {
   static $Value? _toSigned(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
-    final width = args[0]!.$value as int;
+    final width = (r as $Value?)!.$value as int;
     final evalResult = (target!.$value as int).toSigned(width);
     return $int(evalResult);
   }
@@ -1451,9 +1599,11 @@ class $int extends $num<int> {
   static $Value? _toUnsigned(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
-    final width = args[0]!.$value as int;
+    final width = (r as $Value?)!.$value as int;
     final evalResult = (target!.$value as int).toUnsigned(width);
     return $int(evalResult);
   }
@@ -1637,7 +1787,13 @@ class $double extends $num<double> {
       result = double.parse(source);
     } on FormatException catch (e) {
       if (onError != null) {
-        final errorResult = onError.call(runtime, null, [$String(source)]);
+        final errorResult = onError.call(
+          runtime,
+          null,
+          $String(source),
+          null,
+          1,
+        );
         if (errorResult != null) {
           return errorResult as $double?;
         }

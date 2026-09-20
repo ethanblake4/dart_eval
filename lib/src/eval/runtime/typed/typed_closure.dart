@@ -257,90 +257,95 @@ final class TypedClosure extends EvalFunction {
     final site = program.closureCalls[index];
     final typeArguments = resolvedTypeArguments ?? site.typeArguments;
     final count = site.positionalCount + site.namedNames.length;
-    final values = switch (count) {
-      0 => <$Value?>[],
-      1 => <$Value?>[first as $Value?],
-      2 => <$Value?>[first as $Value?, rest as $Value?],
-      _ => <$Value?>[
-        first as $Value?,
-        for (var i = 0; i < count - 1; i++)
-          (rest as List<Object?>)[i] as $Value?,
-      ],
-    };
-    // The no-named-argument path is the hot one: `values` is already exactly
-    // the positional vector and no named map needs to be materialized.
-    final List<$Value?> positional;
-    final Map<String, $Value?> named;
-    if (site.namedNames.isEmpty) {
-      positional = values;
-      named = const <String, $Value?>{};
-    } else {
-      positional = values.sublist(0, site.positionalCount);
-      named = <String, $Value?>{
-        for (var i = 0; i < site.namedNames.length; i++)
-          site.namedNames[i]: values[site.positionalCount + i],
-      };
-    }
     if (receiver is TypedClosure) {
-      if (!receiver.descriptor.accepts(site.positionalCount, named.keys) ||
+      if (!receiver.descriptor.accepts(site.positionalCount, site.namedNames) ||
           !receiver.acceptsTypeArguments(typeArguments)) {
         throw NoSuchMethodError.withInvocation(
           receiver,
-          Invocation.method(
-            Symbol('call'),
-            positional,
-            {for (final entry in named.entries) Symbol(entry.key): entry.value},
-          ),
+          _callInvocation(count, first, rest, site),
         );
       }
       return receiver.invoke(
-        positional,
-        named: named,
+        site.positionalCount,
+        first,
+        rest,
+        namedNames: site.namedNames,
         typeArguments: typeArguments,
         runtime: runtime,
         trusted: site.trusted,
       );
     }
     if (receiver is TypedMember) {
-      if (!receiver.accepts(site.positionalCount, named.keys) ||
+      if (!receiver.accepts(site.positionalCount, site.namedNames) ||
           !receiver.acceptsTypeArguments(typeArguments)) {
         throw NoSuchMethodError.withInvocation(
           receiver,
-          Invocation.method(
-            Symbol('call'),
-            positional,
-            {for (final entry in named.entries) Symbol(entry.key): entry.value},
-          ),
+          _callInvocation(count, first, rest, site),
         );
       }
       return receiver.invokeClosure(
-        positional,
-        named: named,
+        site.positionalCount,
+        first,
+        rest,
+        namedNames: site.namedNames,
         typeArguments: typeArguments,
         runtime: runtime,
         trusted: site.trusted,
       );
     }
-    if (named.isNotEmpty) {
+    if (site.namedNames.isNotEmpty) {
       if (receiver is TypedHostFunction) {
-        return receiver.invokeHost(runtime, positional, named: named);
+        final values = TypedInterop.argList(count, first, rest);
+        return receiver.invokeHost(
+          runtime,
+          values.sublist(0, site.positionalCount),
+          named: {
+            for (var i = 0; i < site.namedNames.length; i++)
+              site.namedNames[i]: values[site.positionalCount + i],
+          },
+        );
       }
       throw UnsupportedError(
         'Named arguments require a typed closure or host function',
       );
     }
-    return TypedInterop.call(runtime, receiver, values);
+    return TypedInterop.call(runtime, receiver, count, first, rest);
   }
 
+  static Invocation _callInvocation(
+    int count,
+    Object? first,
+    Object? rest,
+    TypedClosureCall site,
+  ) {
+    final values = TypedInterop.argList(count, first, rest);
+    return Invocation.method(
+      Symbol('call'),
+      values.sublist(0, site.positionalCount),
+      {
+        for (var i = 0; i < site.namedNames.length; i++)
+          Symbol(site.namedNames[i]): values[site.positionalCount + i],
+      },
+    );
+  }
+
+  /// Invoke with a register call vector: [first] is argument 0 and [rest] is
+  /// argument 1 when `positionalCount + namedNames.length` is 2, or a
+  /// borrowed `List<Object?>` of arguments 1..count-1 for more. Named values
+  /// sit after positionals in the order of [namedNames]; when the call site
+  /// names match the declaration order no map is materialized.
   $Value? invoke(
-    List<$Value?> arguments, {
-    Map<String, $Value?> named = const {},
+    int positionalCount,
+    Object? first,
+    Object? rest, {
+    List<String> namedNames = const [],
     List<int> typeArguments = const [],
     Runtime? runtime,
     bool trusted = false,
   }) {
     final descriptor = this.descriptor;
-    if (!descriptor.accepts(arguments.length, named.keys) ||
+    final count = positionalCount + namedNames.length;
+    if (!descriptor.accepts(positionalCount, namedNames) ||
         !acceptsTypeArguments(typeArguments)) {
       throw ArgumentError('Invalid closure positional argument count');
     }
@@ -363,8 +368,7 @@ final class TypedClosure extends EvalFunction {
           .take(hiddenCount)
           .every((kind) => kind == TypedArgumentKind.object),
     );
-    if (arguments.isEmpty &&
-        named.isEmpty &&
+    if (count == 0 &&
         descriptor.positionalCount == 0 &&
         descriptor.namedNames.isEmpty &&
         function.argumentKinds.length == hiddenCount) {
@@ -392,16 +396,43 @@ final class TypedClosure extends EvalFunction {
         context,
       );
     }
+    Object? slot(int i) => i == 0
+        ? first
+        : count == 2
+        ? rest
+        : (rest as List<Object?>)[i - 1];
+    final declNames = descriptor.namedNames;
+    var namesInOrder = namedNames.length == declNames.length;
+    if (namesInOrder) {
+      for (var i = 0; i < namedNames.length; i++) {
+        if (namedNames[i] != declNames[i]) {
+          namesInOrder = false;
+          break;
+        }
+      }
+    }
+    Object? namedValue(int i) {
+      var supplied = namesInOrder ? i : -1;
+      if (!namesInOrder) {
+        for (var j = 0; j < namedNames.length; j++) {
+          if (namedNames[j] == declNames[i]) {
+            supplied = j;
+            break;
+          }
+        }
+      }
+      return supplied < 0
+          ? defaults[descriptor.positionalCount + i]
+          : slot(positionalCount + supplied);
+    }
+
     final values = <Object?>[
       if (descriptor.hasEnvironment) this,
       if (descriptor.boundReceiver) captures.single,
-      ...arguments,
-      for (var i = arguments.length; i < descriptor.positionalCount; i++)
+      for (var i = 0; i < positionalCount; i++) slot(i),
+      for (var i = positionalCount; i < descriptor.positionalCount; i++)
         defaults[i],
-      for (var i = 0; i < descriptor.namedNames.length; i++)
-        named.containsKey(descriptor.namedNames[i])
-            ? named[descriptor.namedNames[i]]
-            : defaults[descriptor.positionalCount + i],
+      for (var i = 0; i < declNames.length; i++) namedValue(i),
     ];
     if (!trusted) {
       final ownerType = _checkedOwnerType(context);
@@ -458,8 +489,18 @@ final class TypedClosure extends EvalFunction {
   }
 
   @override
-  $Value? call(Runtime runtime, $Value? target, List<$Value?> args) =>
-      invoke(args, runtime: runtime);
+  $Value? call(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) => invoke(
+    TypedInterop.callableCount(c),
+    r,
+    TypedInterop.callableRest(s, c),
+    runtime: runtime,
+  );
   @override
   int $getRuntimeType(Runtime runtime) {
     if (descriptor.runtimeTypeId < 0) {

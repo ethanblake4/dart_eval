@@ -45,7 +45,13 @@ mixin $Bridge<T> on Object implements $Value, $Instance {
       return subclass.invokeBridge(method, args, runtime: runtime)?.$reified;
     }
     return ($getProperty(runtime, method) as EvalFunction)
-        .call(runtime, this, args)
+        .call(
+          runtime,
+          this,
+          args.isEmpty ? null : args[0],
+          args.length > 1 ? args[1] : null,
+          args.length < 3 ? args.length : args.sublist(2),
+        )
         ?.$reified;
   }
 

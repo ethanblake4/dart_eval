@@ -6,6 +6,7 @@
 // ignore_for_file: undefined_hidden_name
 // ignore_for_file: dead_code, unused_local_variable
 // ignore_for_file: unnecessary_type_check, unnecessary_non_null_assertion
+// ignore_for_file: unnecessary_cast
 // ignore_for_file: sdk_version_since
 // ignore_for_file: non_constant_identifier_names
 // ignore_for_file: argument_type_not_assignable_to_error_handler
@@ -812,36 +813,45 @@ class $LinkedHashMap<K, V> implements $Instance {
                 (r is $Value ? r : null) is $null
             ? null
             : (dynamic arg0, dynamic arg1) {
-                return ((r is $Value ? r : null)! as EvalCallable?)?.call(
-                  runtime,
-                  null,
-                  [
-                    runtime.wrapAlways(arg0, recursive: true),
-                    runtime.wrapAlways(arg1, recursive: true),
-                  ],
-                )?.$value;
+                return ((r is $Value ? r : null)! as EvalCallable?)
+                    ?.call(
+                      runtime,
+                      null,
+                      runtime.wrapAlways(arg0, recursive: true),
+                      runtime.wrapAlways(arg1, recursive: true),
+                      2,
+                    )
+                    ?.$value;
               },
         hashCode:
             (s is $Value ? s : null) == null ||
                 (s is $Value ? s : null) is $null
             ? null
             : (dynamic arg0) {
-                return ((s is $Value ? s : null)! as EvalCallable?)?.call(
-                  runtime,
-                  null,
-                  [runtime.wrapAlways(arg0, recursive: true)],
-                )?.$value;
+                return ((s is $Value ? s : null)! as EvalCallable?)
+                    ?.call(
+                      runtime,
+                      null,
+                      runtime.wrapAlways(arg0, recursive: true),
+                      null,
+                      1,
+                    )
+                    ?.$value;
               },
         isValidKey:
             (c is $Value ? c : null) == null ||
                 (c is $Value ? c : null) is $null
             ? null
             : (dynamic arg0) {
-                return ((c is $Value ? c : null)! as EvalCallable?)?.call(
-                  runtime,
-                  null,
-                  [runtime.wrapAlways(arg0, recursive: true)],
-                )?.$value;
+                return ((c is $Value ? c : null)! as EvalCallable?)
+                    ?.call(
+                      runtime,
+                      null,
+                      runtime.wrapAlways(arg0, recursive: true),
+                      null,
+                      1,
+                    )
+                    ?.$value;
               },
       ),
     );
@@ -885,22 +895,30 @@ class $LinkedHashMap<K, V> implements $Instance {
                 (s is $Value ? s : null) is $null
             ? null
             : (dynamic element) {
-                return ((s is $Value ? s : null)! as EvalCallable?)?.call(
-                  runtime,
-                  null,
-                  [runtime.wrapAlways(element, recursive: true)],
-                )?.$value;
+                return ((s is $Value ? s : null)! as EvalCallable?)
+                    ?.call(
+                      runtime,
+                      null,
+                      runtime.wrapAlways(element, recursive: true),
+                      null,
+                      1,
+                    )
+                    ?.$value;
               },
         value:
             (c is $Value ? c : null) == null ||
                 (c is $Value ? c : null) is $null
             ? null
             : (dynamic element) {
-                return ((c is $Value ? c : null)! as EvalCallable?)?.call(
-                  runtime,
-                  null,
-                  [runtime.wrapAlways(element, recursive: true)],
-                )?.$value;
+                return ((c is $Value ? c : null)! as EvalCallable?)
+                    ?.call(
+                      runtime,
+                      null,
+                      runtime.wrapAlways(element, recursive: true),
+                      null,
+                      1,
+                    )
+                    ?.$value;
               },
       ),
     );
@@ -1021,7 +1039,13 @@ class $LinkedHashMap<K, V> implements $Instance {
   }
 
   static const $Function __cast = $Function(_cast);
-  static $Value? _cast(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _cast(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $LinkedHashMap;
     final result = self.$value.cast();
     return wrapMap(
@@ -1037,10 +1061,12 @@ class $LinkedHashMap<K, V> implements $Instance {
   static $Value? _containsValue(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $LinkedHashMap;
-    final result = self.$value.containsValue(args[0]!.$reified);
+    final result = self.$value.containsValue((r as $Value?)!.$reified);
     return $bool(result);
   }
 
@@ -1048,10 +1074,12 @@ class $LinkedHashMap<K, V> implements $Instance {
   static $Value? _containsKey(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $LinkedHashMap;
-    final result = self.$value.containsKey(args[0]!.$reified);
+    final result = self.$value.containsKey((r as $Value?)!.$reified);
     return $bool(result);
   }
 
@@ -1059,10 +1087,12 @@ class $LinkedHashMap<K, V> implements $Instance {
   static $Value? _operatorIndexGet(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $LinkedHashMap;
-    final result = self.$value[args[0]!.$reified];
+    final result = self.$value[(r as $Value?)!.$reified];
     return result == null
         ? const $null()
         : runtime.wrapAlways(result, recursive: true);
@@ -1072,21 +1102,32 @@ class $LinkedHashMap<K, V> implements $Instance {
   static $Value? _operatorIndexSet(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $LinkedHashMap;
-    self.$value[args[0]!.$value] = args[1]!.$value;
+    self.$value[(r as $Value?)!.$value] = (s as $Value?)!.$value;
     return null;
   }
 
   static const $Function __map = $Function(_map);
-  static $Value? _map(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _map(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $LinkedHashMap;
     final result = self.$value.map((dynamic key, dynamic value) {
-      return (args[0]! as EvalCallable)(runtime, null, [
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
         runtime.wrapAlways(key, recursive: true),
         runtime.wrapAlways(value, recursive: true),
-      ])?.$value;
+        2,
+      )?.$value;
     });
     return wrapMap(
       result,
@@ -1101,30 +1142,51 @@ class $LinkedHashMap<K, V> implements $Instance {
   static $Value? _addEntries(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $LinkedHashMap;
-    self.$value.addEntries(args[0]!.$value);
+    self.$value.addEntries((r as $Value?)!.$value);
     return null;
   }
 
   static const $Function __update = $Function(_update);
-  static $Value? _update(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _update(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $LinkedHashMap;
     final result = self.$value.update(
-      args[0]!.$value,
+      (r as $Value?)!.$value,
       (dynamic value) {
-        return (args[1]! as EvalCallable)(runtime, null, [
+        return ((s as $Value?)! as EvalCallable)(
+          runtime,
+          null,
           runtime.wrapAlways(value, recursive: true),
-        ])?.$value;
+          null,
+          1,
+        )?.$value;
       },
       ifAbsent:
-          (args.length > 2 ? args[2] : null) == null ||
-              (args.length > 2 ? args[2] : null) is $null
+          (c is List && (c as List).length > 0
+                      ? (c as List)[0] as $Value?
+                      : null) ==
+                  null ||
+              (c is List && (c as List).length > 0
+                      ? (c as List)[0] as $Value?
+                      : null)
+                  is $null
           ? null
           : () {
-              return ((args.length > 2 ? args[2] : null)! as EvalCallable?)
-                  ?.call(runtime, null, [])
+              return ((c is List && (c as List).length > 0
+                          ? (c as List)[0] as $Value?
+                          : null)!
+                      as EvalCallable?)
+                  ?.call(runtime, null, null, null, 0)
                   ?.$value;
             },
     );
@@ -1135,14 +1197,19 @@ class $LinkedHashMap<K, V> implements $Instance {
   static $Value? _updateAll(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $LinkedHashMap;
     self.$value.updateAll((dynamic key, dynamic value) {
-      return (args[0]! as EvalCallable)(runtime, null, [
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
         runtime.wrapAlways(key, recursive: true),
         runtime.wrapAlways(value, recursive: true),
-      ])?.$value;
+        2,
+      )?.$value;
     });
     return null;
   }
@@ -1151,14 +1218,19 @@ class $LinkedHashMap<K, V> implements $Instance {
   static $Value? _removeWhere(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $LinkedHashMap;
     self.$value.removeWhere((dynamic key, dynamic value) {
-      return (args[0]! as EvalCallable)(runtime, null, [
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
         runtime.wrapAlways(key, recursive: true),
         runtime.wrapAlways(value, recursive: true),
-      ])?.$value;
+        2,
+      )?.$value;
     });
     return null;
   }
@@ -1167,46 +1239,83 @@ class $LinkedHashMap<K, V> implements $Instance {
   static $Value? _putIfAbsent(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $LinkedHashMap;
-    final result = self.$value.putIfAbsent(args[0]!.$value, () {
-      return (args[1]! as EvalCallable)(runtime, null, [])?.$value;
+    final result = self.$value.putIfAbsent((r as $Value?)!.$value, () {
+      return ((s as $Value?)! as EvalCallable)(
+        runtime,
+        null,
+        null,
+        null,
+        0,
+      )?.$value;
     });
     return runtime.wrapAlways(result, recursive: true);
   }
 
   static const $Function __addAll = $Function(_addAll);
-  static $Value? _addAll(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _addAll(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $LinkedHashMap;
-    self.$value.addAll((args[0]!.$reified as Map).cast<dynamic, dynamic>());
+    self.$value.addAll(
+      ((r as $Value?)!.$reified as Map).cast<dynamic, dynamic>(),
+    );
     return null;
   }
 
   static const $Function __remove = $Function(_remove);
-  static $Value? _remove(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _remove(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $LinkedHashMap;
-    final result = self.$value.remove(args[0]!.$reified);
+    final result = self.$value.remove((r as $Value?)!.$reified);
     return result == null
         ? const $null()
         : runtime.wrapAlways(result, recursive: true);
   }
 
   static const $Function __clear = $Function(_clear);
-  static $Value? _clear(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _clear(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $LinkedHashMap;
     self.$value.clear();
     return null;
   }
 
   static const $Function __forEach = $Function(_forEach);
-  static $Value? _forEach(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _forEach(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $LinkedHashMap;
     self.$value.forEach((dynamic key, dynamic value) {
-      (args[0]! as EvalCallable)(runtime, null, [
+      ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
         runtime.wrapAlways(key, recursive: true),
         runtime.wrapAlways(value, recursive: true),
-      ]);
+        2,
+      );
     });
     return null;
   }

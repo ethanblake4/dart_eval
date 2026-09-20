@@ -6,6 +6,7 @@
 // ignore_for_file: undefined_hidden_name
 // ignore_for_file: dead_code, unused_local_variable
 // ignore_for_file: unnecessary_type_check, unnecessary_non_null_assertion
+// ignore_for_file: unnecessary_cast
 // ignore_for_file: sdk_version_since
 // ignore_for_file: non_constant_identifier_names
 // ignore_for_file: argument_type_not_assignable_to_error_handler
@@ -240,10 +241,12 @@ class $Point<T extends num> implements $Instance {
   static $Value? _operatorPlus(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Point;
-    final result = (self.$value + args[0]!.$value);
+    final result = (self.$value + (r as $Value?)!.$value);
     return $Point.wrap(result);
   }
 
@@ -251,10 +254,12 @@ class $Point<T extends num> implements $Instance {
   static $Value? _operatorMinus(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Point;
-    final result = (self.$value - args[0]!.$value);
+    final result = (self.$value - (r as $Value?)!.$value);
     return $Point.wrap(result);
   }
 
@@ -262,10 +267,12 @@ class $Point<T extends num> implements $Instance {
   static $Value? _operatorMul(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Point;
-    final result = (self.$value * args[0]!.$value);
+    final result = (self.$value * (r as $num).$value);
     return $Point.wrap(result);
   }
 
@@ -273,10 +280,12 @@ class $Point<T extends num> implements $Instance {
   static $Value? _distanceTo(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Point;
-    final result = self.$value.distanceTo(args[0]!.$value);
+    final result = self.$value.distanceTo((r as $Value?)!.$value);
     return $double(result);
   }
 
@@ -284,10 +293,12 @@ class $Point<T extends num> implements $Instance {
   static $Value? _squaredDistanceTo(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Point;
-    final result = self.$value.squaredDistanceTo(args[0]!.$value);
+    final result = self.$value.squaredDistanceTo((r as $Value?)!.$value);
     return runtime.wrapAlways(result, recursive: true);
   }
 

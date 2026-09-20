@@ -31,13 +31,13 @@ void main() {
         }),
       );
       expect(
-        (runtime.invokeTypedObject(instance, 'add', [$int(5)]) as $int).$value,
+        (runtime.invokeTypedObject(instance, 'add', 1, $int(5), null) as $int).$value,
         12,
       );
       expect((instance.$getProperty(runtime, 'value') as $int).$value, 12);
       instance.$setProperty(runtime, 'value', $int(19));
       expect((instance.getProperty('value') as $int).$value, 19);
-      expect(identical(instance.invoke('echo', [instance]), instance), isTrue);
+      expect(identical(instance.invoke('echo', 1, instance, null), instance), isTrue);
     },
   );
 
@@ -81,11 +81,11 @@ void main() {
     final receiver = TypedInstance(program, 0);
     final boxed = $int(42);
     expect(receiver, isA<$Instance>());
-    expect(identical(receiver.invoke('echo', [boxed]), boxed), isTrue);
-    expect(identical(receiver.invoke('echo', [receiver]), receiver), isTrue);
+    expect(identical(receiver.invoke('echo', 1, boxed, null), boxed), isTrue);
+    expect(identical(receiver.invoke('echo', 1, receiver, null), receiver), isTrue);
     expect(identical(TypedInterop.boxExternal(receiver), receiver), isTrue);
     expect(identical(TypedInterop.exportExternal(receiver), receiver), isTrue);
-    expect(() => receiver.invoke('echo', const []), throwsArgumentError);
+    expect(() => receiver.invoke('echo', 0, null, null), throwsArgumentError);
   });
 
   test('host adapters box native operator results from signature metadata', () {
@@ -109,7 +109,7 @@ void main() {
     );
     final receiver = TypedInstance(program, 0);
     expect(TypedInterop.equals(null, receiver, $String('anything')), isTrue);
-    expect(receiver.invoke('==', [null]), isA<$bool>());
+    expect(receiver.invoke('==', 1, null, null), isA<$bool>());
   });
 
   test('typed getters and bound methods work without a reference Runtime', () {
@@ -120,7 +120,7 @@ void main() {
     );
     final method = TypedInterop.getProperty(null, receiver, 'echo');
     final value = $String('kept boxed');
-    expect(identical(TypedInterop.call(null, method, [value]), value), isTrue);
+    expect(identical(TypedInterop.call(null, method, 1, value, null), value), isTrue);
     expect(TypedInterop.equals(null, receiver, receiver), isTrue);
     expect(
       TypedInterop.equals(null, receiver, TypedInstance(receiver.program, 0)),
@@ -142,7 +142,7 @@ void main() {
     );
     final inherited = root.resolve(TypedMemberKind.method, 'echo');
     expect(identical(inherited!.receiver, base), isTrue);
-    expect((base.invoke('self', const []) as $int).$value, 73);
+    expect((base.invoke('self', 0, null, null) as $int).$value, 73);
     expect(TypedInterop.equals(null, root, base), isTrue);
   });
 }

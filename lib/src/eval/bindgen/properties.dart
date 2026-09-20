@@ -64,10 +64,12 @@ String propertyGetters(
       );
 
   final synthetic = ctx.classConfig?.synthetic ?? const [];
-  final syntheticGetters =
-      synthetic.where((s) => s.kind == 'getter' && !s.isStatic).toList();
-  final syntheticMethods =
-      synthetic.where((s) => s.kind == 'method' && !s.isStatic).toList();
+  final syntheticGetters = synthetic
+      .where((s) => s.kind == 'getter' && !s.isStatic)
+      .toList();
+  final syntheticMethods = synthetic
+      .where((s) => s.kind == 'method' && !s.isStatic)
+      .toList();
 
   if (getters.isEmpty &&
       methods0.isEmpty &&
@@ -83,48 +85,45 @@ String propertyGetters(
       ''').join('\n')}${methods0.map((e) {
       final member = ctx.memberConfig(e.name!, 'method');
       final returnsValue = e.returnType is! VoidType && !e.returnType.isDartCoreNull;
-      final callOp = operatorForArity(
-        e.displayName,
-        e.formalParameters.length,
-      );
+      final callOp = operatorForArity(e.displayName, e.formalParameters.length);
       return '''
         case '${member?.rename ?? e.displayName}':
-          return \$Function((runtime, target, args) {
-            ${assertMethodPermissions(e)}
-            ${assertConfigPermissions(ctx, member, e.formalParameters.map((p) => p.name ?? '').toList())}
-            ${returnsValue ? 'final result = ' : ''}${callOp.format('super', argumentAccessors(ctx, e.formalParameters, isBridgeMethod: true, member: member))};
+          return \$Function((runtime, target, r, s, c) {
+            ${assertMethodPermissions(e, callable: true)}
+            ${assertConfigPermissions(ctx, member, e.formalParameters.map((p) => p.name ?? '').toList(), callable: true)}
+            ${returnsValue ? 'final result = ' : ''}${callOp.format('super', argumentAccessors(ctx, e.formalParameters, isBridgeMethod: true, callable: true, member: member))};
             return ${wrapVar(ctx, e.returnType, 'result', unionTypeNames: member?.returns?.union)};
           });''';
     }).join('\n')}\n}';
   }
   final prefix = ctx.hooksPrefix();
   return 'switch (identifier) {\n${getters.map((e) {
-      final member = ctx.memberConfig(e.name!, 'getter');
-      final name = member?.rename ?? e.name!;
-      if (member?.hook != null) {
-        return '''
+    final member = ctx.memberConfig(e.name!, 'getter');
+    final name = member?.rename ?? e.name!;
+    if (member?.hook != null) {
+      return '''
       case '$name':
         return ${prefix != null ? '$prefix.' : ''}${member!.hook}(runtime, this);''';
-      }
-      if (member?.expr != null) {
-        return '''
+    }
+    if (member?.expr != null) {
+      return '''
       case '$name':
         return ${member!.expr};''';
-      }
-      return '''
+    }
+    return '''
       case '$name':
         final _$name = \$value.${e.name};
         return ${wrapVar(ctx, e.type.returnType, '_$name', metadata: e.metadata.annotations, unionTypeNames: member?.returns?.union)};''';
-    }).join('\n')}${syntheticGetters.map((s) {
-      if (s.hook != null) {
-        return '''
-      case '${s.name}':
-        return ${prefix != null ? '$prefix.' : ''}${s.hook}(runtime, this);''';
-      }
+  }).join('\n')}${syntheticGetters.map((s) {
+    if (s.hook != null) {
       return '''
       case '${s.name}':
+        return ${prefix != null ? '$prefix.' : ''}${s.hook}(runtime, this);''';
+    }
+    return '''
+      case '${s.name}':
         return ${s.expr ?? 'null'};''';
-    }).join('\n')}${methods0.map((e) => '''
+  }).join('\n')}${methods0.map((e) => '''
       case '${ctx.memberConfig(e.name!, 'method')?.rename ?? e.name}':
         return __${operatorForArity(ctx.memberConfig(e.name!, 'method')?.rename ?? e.name!, e.formalParameters.length).name};
       ''').join('\n')}${syntheticMethods.map((s) => '''
@@ -170,8 +169,9 @@ String propertySetters(
         ctx.memberIncluded(element.name!, 'setter'),
   );
   final synthetic = ctx.classConfig?.synthetic ?? const [];
-  final syntheticSetters =
-      synthetic.where((s) => s.kind == 'setter' && !s.isStatic);
+  final syntheticSetters = synthetic.where(
+    (s) => s.kind == 'setter' && !s.isStatic,
+  );
   if (setters.isEmpty && syntheticSetters.isEmpty) {
     return '';
   }
@@ -184,33 +184,33 @@ String propertySetters(
   }
   final prefix = ctx.hooksPrefix();
   return 'switch (identifier) {\n${setters.map((e) {
-      final member = ctx.memberConfig(e.name!, 'setter');
-      if (member?.hook != null) {
-        return '''
+    final member = ctx.memberConfig(e.name!, 'setter');
+    if (member?.hook != null) {
+      return '''
         case '${member?.rename ?? e.displayName}':
           ${prefix != null ? '$prefix.' : ''}${member!.hook}(runtime, this, value);
           return;''';
-      }
-      if (member?.expr != null) {
-        return '''
+    }
+    if (member?.expr != null) {
+      return '''
         case '${member?.rename ?? e.displayName}':
           ${member!.expr};
           return;''';
-      }
-      return '''
+    }
+    return '''
         case '${member?.rename ?? e.displayName}':
           \$value.${e.displayName} = value.\$reified;
           return;''';
-    }).join('\n')}${syntheticSetters.map((s) {
-      if (s.hook != null) {
-        return '''
+  }).join('\n')}${syntheticSetters.map((s) {
+    if (s.hook != null) {
+      return '''
         case '${s.name}':
           ${prefix != null ? '$prefix.' : ''}${s.hook}(runtime, this, value);
           return;''';
-      }
-      return '''
+    }
+    return '''
         case '${s.name}':
           ${s.expr ?? ''};
           return;''';
-    }).join('\n')}\n}';
+  }).join('\n')}\n}';
 }

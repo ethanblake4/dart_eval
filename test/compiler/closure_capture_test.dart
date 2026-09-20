@@ -112,8 +112,8 @@ void main() {
         final callable =
             runtime.executeLib('package:capture/main.dart', 'main')
                 as EvalCallable;
-        expect((callable.call(runtime, null, []) as $int).$value, 34);
-        expect((TypedInterop.call(runtime, callable, []) as $int).$value, 34);
+        expect((callable.call(runtime, null, null, null, 0) as $int).$value, 34);
+        expect((TypedInterop.call(runtime, callable, 0, null, null) as $int).$value, 34);
       }
     },
   );

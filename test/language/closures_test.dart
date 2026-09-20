@@ -184,7 +184,7 @@ void main() {
               )
               as TypedClosure;
       expect(closure.descriptor.captureCount, 1);
-      expect(_value(closure.invoke([])), 7);
+      expect(_value(closure.invoke(0, null, null)), 7);
     });
     test(
       'host zero-argument entry preserves captures and bound receivers, encoded=$encoded',
@@ -208,10 +208,10 @@ void main() {
         final callbacks = runtime.executeLib(_library, 'main') as List;
         final captured = callbacks[0] as TypedClosure;
         final bound = callbacks[1] as EvalCallable;
-        expect(_value(captured.invoke([])), 4);
-        expect(_value(captured.call(runtime, null, const [])), 5);
-        expect(_value(bound.call(runtime, null, const [])), 9);
-        expect(_value(bound.call(runtime, null, const [])), 10);
+        expect(_value(captured.invoke(0, null, null)), 4);
+        expect(_value(captured.call(runtime, null, null, null, 0)), 5);
+        expect(_value(bound.call(runtime, null, null, null, 0)), 9);
+        expect(_value(bound.call(runtime, null, null, null, 0)), 10);
       },
     );
     test('host zero-argument entry permits reentry, encoded=$encoded', () {
@@ -232,11 +232,11 @@ void main() {
           runtime.executeLib(
                 _library,
                 'main',
-                arguments: {'reenter': () => callback.invoke([])},
+                arguments: {'reenter': () => callback.invoke(0, null, null)},
               )
               as TypedClosure;
-      expect(_value(callback.invoke([])), 1);
-      expect(_value(callback.invoke([])), 1);
+      expect(_value(callback.invoke(0, null, null)), 1);
+      expect(_value(callback.invoke(0, null, null)), 1);
     });
     test(
       'host zero-argument entry preserves errors and async results, encoded=$encoded',
@@ -250,8 +250,8 @@ void main() {
         final callbacks = runtime.executeLib(_library, 'main') as List;
         final throwing = callbacks[0] as TypedClosure;
         final asynchronous = callbacks[1] as TypedClosure;
-        expect(() => throwing.invoke(const []), throwsA(isA<Exception>()));
-        final future = asynchronous.invoke(const [])!.$value as Future<Object?>;
+        expect(() => throwing.invoke(0, null, null), throwsA(isA<Exception>()));
+        final future = asynchronous.invoke(0, null, null)!.$value as Future<Object?>;
         expect(_value(await future as $Value?), 11);
       },
     );
@@ -262,10 +262,10 @@ void main() {
         Function main() => ([String? text = 'default']) => text;
       ''', encoded);
         final closure = runtime.executeLib(_library, 'main') as TypedClosure;
-        expect(_value(closure.invoke([])), 'default');
-        expect(_value(closure.invoke([null])), isNull);
-        expect(_value(closure.invoke([const $null()])), isNull);
-        expect(_value(closure.invoke([$String('given')])), 'given');
+        expect(_value(closure.invoke(0, null, null)), 'default');
+        expect(_value(closure.invoke(1, null, null)), isNull);
+        expect(_value(closure.invoke(1, const $null(), null)), isNull);
+        expect(_value(closure.invoke(1, $String('given'), null)), 'given');
       },
     );
     test(
@@ -275,18 +275,18 @@ void main() {
         Function main() => ({required int x, int y = 4, String? text = 'default'}) => text == null ? x : x + y;
       ''', encoded);
         final closure = runtime.executeLib(_library, 'main') as TypedClosure;
-        expect(_value(closure.invoke([], named: {'x': $int(3)})), 7);
+        expect(_value(closure.invoke(0, $int(3), null, namedNames: ['x'])), 7);
         expect(
-          _value(closure.invoke([], named: {'y': $int(8), 'x': $int(3)})),
+          _value(closure.invoke(0, $int(8), $int(3), namedNames: ['y', 'x'])),
           11,
         );
         expect(
-          _value(closure.invoke([], named: {'x': $int(3), 'text': null})),
+          _value(closure.invoke(0, $int(3), null, namedNames: ['x', 'text'])),
           3,
         );
-        expect(() => closure.invoke([]), throwsArgumentError);
+        expect(() => closure.invoke(0, null, null), throwsArgumentError);
         expect(
-          () => closure.invoke([], named: {'x': $int(3), 'extra': $int(1)}),
+          () => closure.invoke(0, $int(3), $int(1), namedNames: ['x', 'extra']),
           throwsArgumentError,
         );
       },

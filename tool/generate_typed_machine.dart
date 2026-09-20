@@ -639,7 +639,9 @@ List<Instruction> specification() {
   }
   add(
     'callHost',
-    'final result = TypedInterop.call(runtime, r, frame.takeObjectArguments(index)); r = result; s = null; c = null; ',
+    '''final args = frame.takeObjectArguments(index);
+          final (hfirst, hrest) = TypedInterop.splitVector(args);
+          final result = TypedInterop.call(runtime, r, args.length, hfirst, hrest); r = result; s = null; c = null; ''',
     inputs: [6],
     output: 6,
     immediate: 'hostCall',
@@ -647,7 +649,9 @@ List<Instruction> specification() {
   );
   add(
     'callMethod',
-    'final result = TypedInterop.invoke(runtime, r, s as String, frame.takeObjectArguments(index)); r = result; s = null; c = null; ',
+    '''final args = frame.takeObjectArguments(index);
+          final (hfirst, hrest) = TypedInterop.splitVector(args);
+          final result = TypedInterop.invoke(runtime, r, s as String, args.length, hfirst, hrest); r = result; s = null; c = null; ''',
     inputs: [6, 7],
     output: 6,
     immediate: 'hostCall',

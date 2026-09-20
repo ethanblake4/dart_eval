@@ -888,32 +888,44 @@ extension TypedRuntimeInterop on Runtime {
     return _isTypedDescriptorSubtype(actual, expected);
   }
 
+  /// Invoke [name] on [receiver] with a register call vector: [first] is
+  /// argument 0, [rest] is argument 1 when [count] is 2 or a borrowed
+  /// `List<Object?>` of arguments 1..count-1 when [count] exceeds 2.
   $Value? invokeTypedObject(
     Object? receiver,
     String name,
-    List<$Value?> arguments,
+    int count,
+    Object? first,
+    Object? rest,
   ) {
     _setup();
-    final result = _dispatchTypedObject(receiver, name, arguments);
+    final result = _dispatchTypedObject(receiver, name, count, first, rest);
     return result is $null ? null : result;
   }
 
   $Value? _dispatchTypedObject(
     Object? receiver,
     String name,
-    List<$Value?> arguments,
+    int count,
+    Object? first,
+    Object? rest,
   ) {
     if (receiver is TypedInstance) {
-      return receiver.invoke(name, arguments, runtime: this);
+      return receiver.invoke(name, count, first, rest, runtime: this);
     }
-    if (name == 'call') {
-      if (receiver is EvalCallable) {
-        return receiver.call(this, receiver as $Value?, arguments);
-      }
+    if (name == 'call' && receiver is EvalCallable) {
+      return TypedInterop.callCallable(this, receiver, count, first, rest);
     }
     final object = receiver as $Instance;
     final callable = object.$getProperty(this, name);
     if (callable is! EvalCallable) throw StateError('$name is not callable');
-    return (callable as EvalCallable).call(this, object, arguments);
+    return TypedInterop.callCallable(
+      this,
+      object,
+      count,
+      first,
+      rest,
+      callable: callable as EvalCallable,
+    );
   }
 }

@@ -6,8 +6,21 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/object.dart';
 import '../../../dart_eval_bridge.dart';
 
 /// Typedef of a function that can be called by dart_eval.
+///
+/// Arguments travel in the canonical register-call ABI: R and S hold the
+/// first two arguments. C encodes the remainder: an `int` argument count
+/// (0, 1, or 2) when fewer than three arguments are supplied, otherwise a
+/// `List<Object?>` holding arguments 2..n-1. Callees decode the supplied
+/// count as `c is int ? c : 2 + (c as List).length`; implementations with
+/// a fixed signature may read the tail list positionally without decoding.
 typedef EvalCallableFunc =
-    $Value? Function(Runtime runtime, $Value? target, List<$Value?> args);
+    $Value? Function(
+      Runtime runtime,
+      $Value? target,
+      Object? r,
+      Object? s,
+      Object? c,
+    );
 
 /// Generated static bridge entry. Arguments are canonical language values.
 /// Up to three arguments occupy R/S/C. Beyond three, R/S hold the first two
@@ -17,8 +30,18 @@ typedef EvalRegisterFunc =
     $Value? Function(Runtime runtime, Object? r, Object? s, Object? c);
 
 /// Abstract supertype for values representing a callable in dart_eval.
+///
+/// Arguments travel in the [EvalCallableFunc] register-call ABI: R/S hold
+/// arguments 0 and 1, and C is an `int` argument count below three arguments
+/// or a `List<Object?>` of arguments 2..n-1 otherwise.
 abstract class EvalCallable {
-  $Value? call(Runtime runtime, $Value? target, List<$Value?> args);
+  $Value? call(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  );
 }
 
 /// Abstract supertype for values representing a [Function] in dart_eval.
@@ -34,7 +57,7 @@ abstract class EvalFunction implements $Instance, EvalCallable {
       case 'call':
         return this;
       case '==':
-        return $Function((runtime, target, args) => $bool(this == args[0]));
+        return $Function((runtime, target, r, s, c) => $bool(this == r));
       case 'hashCode':
         return $int(hashCode);
       default:
@@ -57,10 +80,7 @@ abstract class EvalFunction implements $Instance, EvalCallable {
 /// An implementation of [EvalFunction] that wraps an existing Dart function for
 /// use in dart_eval.
 ///
-/// The wrapped function should be of the type
-/// ```dart
-/// $Value? Function(Runtime runtime, $Value? target, List<$Value?> args)
-/// ```
+/// The wrapped function should be of the type [EvalCallableFunc].
 ///
 /// The target is the object that the function is being called on, or null if
 /// the function is being called statically.
@@ -98,8 +118,14 @@ class $Function extends EvalFunction {
   }
 
   @override
-  $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
-    return func(runtime, target, args);
+  $Value? call(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    return func(runtime, target, r, s, c);
   }
 
   @override
@@ -138,8 +164,14 @@ class $Closure extends EvalFunction {
   }
 
   @override
-  $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
-    return func(runtime, $this ?? target, args);
+  $Value? call(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    return func(runtime, $this ?? target, r, s, c);
   }
 
   @override

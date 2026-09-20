@@ -346,7 +346,13 @@ class Runtime {
     if (value is $Instance) {
       final toString = value.$getProperty(this, 'toString');
       if (toString != null) {
-        final result = (toString as EvalCallable).call(this, value, const []);
+        final result = (toString as EvalCallable).call(
+          this,
+          value,
+          null,
+          null,
+          0,
+        );
         return result?.$value;
       }
     }

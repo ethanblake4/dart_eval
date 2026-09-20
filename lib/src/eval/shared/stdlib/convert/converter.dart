@@ -6,6 +6,7 @@
 // ignore_for_file: undefined_hidden_name
 // ignore_for_file: dead_code, unused_local_variable
 // ignore_for_file: unnecessary_type_check, unnecessary_non_null_assertion
+// ignore_for_file: unnecessary_cast
 // ignore_for_file: sdk_version_since
 // ignore_for_file: non_constant_identifier_names
 // ignore_for_file: argument_type_not_assignable_to_error_handler
@@ -280,32 +281,56 @@ class $Converter<S, T> implements $Instance {
   }
 
   static const $Function __bind = $Function(_bind);
-  static $Value? _bind(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _bind(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Converter;
-    final result = self.$value.bind(args[0]!.$value);
+    final result = self.$value.bind((r as $Value?)!.$value);
     return $Stream.wrap(
       result.map((e) => runtime.wrapAlways(e, recursive: true)),
     );
   }
 
   static const $Function __cast = $Function(_cast);
-  static $Value? _cast(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _cast(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Converter;
     final result = self.$value.cast();
     return $Converter.wrap(result);
   }
 
   static const $Function __convert = $Function(_convert);
-  static $Value? _convert(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _convert(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Converter;
-    final result = self.$value.convert(args[0]!.$value);
+    final result = self.$value.convert((r as $Value?)!.$value);
     return runtime.wrapAlways(result, recursive: true);
   }
 
   static const $Function __fuse = $Function(_fuse);
-  static $Value? _fuse(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _fuse(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Converter;
-    final result = self.$value.fuse(args[0]!.$value);
+    final result = self.$value.fuse((r as $Value?)!.$value);
     return $Converter.wrap(result);
   }
 
@@ -315,10 +340,12 @@ class $Converter<S, T> implements $Instance {
   static $Value? _startChunkedConversion(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Converter;
-    final result = self.$value.startChunkedConversion(args[0]!.$value);
+    final result = self.$value.startChunkedConversion((r as $Value?)!.$value);
     return $Sink.wrap(result);
   }
 

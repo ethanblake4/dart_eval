@@ -6,6 +6,7 @@
 // ignore_for_file: undefined_hidden_name
 // ignore_for_file: dead_code, unused_local_variable
 // ignore_for_file: unnecessary_type_check, unnecessary_non_null_assertion
+// ignore_for_file: unnecessary_cast
 // ignore_for_file: sdk_version_since
 // ignore_for_file: non_constant_identifier_names
 // ignore_for_file: argument_type_not_assignable_to_error_handler
@@ -216,21 +217,39 @@ class $Stopwatch implements $Instance {
   }
 
   static const $Function __start = $Function(_start);
-  static $Value? _start(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _start(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Stopwatch;
     self.$value.start();
     return null;
   }
 
   static const $Function __stop = $Function(_stop);
-  static $Value? _stop(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _stop(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Stopwatch;
     self.$value.stop();
     return null;
   }
 
   static const $Function __reset = $Function(_reset);
-  static $Value? _reset(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _reset(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Stopwatch;
     self.$value.reset();
     return null;

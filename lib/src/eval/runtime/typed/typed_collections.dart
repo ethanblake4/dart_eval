@@ -29,7 +29,7 @@ abstract final class TypedCollections {
     }
     if (left is TypedInstance) {
       return TypedInterop.toBool(
-        left.invoke('==', [right as $Value?], runtime: left.runtime ?? runtime),
+        left.invoke('==', 1, right, null, runtime: left.runtime ?? runtime),
       );
     }
     if (left.runtimeType == $Object) {

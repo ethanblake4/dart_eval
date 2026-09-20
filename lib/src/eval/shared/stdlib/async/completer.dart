@@ -6,6 +6,7 @@
 // ignore_for_file: undefined_hidden_name
 // ignore_for_file: dead_code, unused_local_variable
 // ignore_for_file: unnecessary_type_check, unnecessary_non_null_assertion
+// ignore_for_file: unnecessary_cast
 // ignore_for_file: sdk_version_since
 // ignore_for_file: non_constant_identifier_names
 // ignore_for_file: argument_type_not_assignable_to_error_handler
@@ -211,10 +212,12 @@ class $Completer<T> implements $Instance {
   static $Value? _complete(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Completer;
-    self.$value.complete((args.length > 0 ? args[0] : null)?.$value);
+    self.$value.complete((r is $Value ? r : null)?.$value);
     return null;
   }
 
@@ -222,12 +225,14 @@ class $Completer<T> implements $Instance {
   static $Value? _completeError(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Completer;
     self.$value.completeError(
-      args[0]!.$reified,
-      (args.length > 1 ? args[1] : null)?.$value,
+      (r as $Value?)!.$reified,
+      (s is $Value ? s : null)?.$value,
     );
     return null;
   }

@@ -164,19 +164,20 @@ class Bindgen implements BridgeDeclarationRegistry {
     final output = <String, String>{};
 
     BindgenContext contextFor(String file) => files.putIfAbsent(
-          file,
-          () => BindgenContext(
-            file,
-            uri,
-            all: false,
-            bridgeDeclarations: _bridgeDeclarations,
-            exportedLibMappings: _exportedLibMappings,
-            config: config,
-          )
+      file,
+      () =>
+          BindgenContext(
+              file,
+              uri,
+              all: false,
+              bridgeDeclarations: _bridgeDeclarations,
+              exportedLibMappings: _exportedLibMappings,
+              config: config,
+            )
             ..libraryConfig = libraryConfig
             ..libraryElement = library
             ..outputFile = file,
-        );
+    );
 
     Future<void> process(Element element, String file) async {
       final ctx = contextFor(file);
@@ -374,9 +375,11 @@ class Bindgen implements BridgeDeclarationRegistry {
       ctx.typeParamNames = element is InterfaceElement
           ? element.typeParameters.map((e) => e.name ?? '').toSet()
           : const {};
-      ctx.implicitSupers = cc?.implicitSupers ??
+      ctx.implicitSupers =
+          cc?.implicitSupers ??
           lc.defaults.implicitSupers ||
-          (bindAnnoValue?.getField('implicitSupers')?.toBoolValue() ?? false);
+              (bindAnnoValue?.getField('implicitSupers')?.toBoolValue() ??
+                  false);
       if (cc?.libOverride != null) {
         ctx.libOverrides[element.name!] = cc!.libOverride!;
       }
@@ -389,16 +392,16 @@ class Bindgen implements BridgeDeclarationRegistry {
       }
 
       final include =
-          (fc?.include ?? cc?.include ?? false) && !(cc?.handMaintained ?? false);
+          (fc?.include ?? cc?.include ?? false) &&
+          !(cc?.handMaintained ?? false);
       if (!include && bindAnnoValue == null && !ctx.all) {
         return (process: false, isBridge: false, alsoWrap: false);
       }
-      final mode = cc?.mode ??
-          lc.defaults.mode;
-      final isBridge = bindAnnoValue?.getField('bridge')?.toBoolValue() ??
-          mode != 'wrap';
-      final alsoWrap = bindAnnoValue?.getField('wrap')?.toBoolValue() ??
-          mode == 'both';
+      final mode = cc?.mode ?? lc.defaults.mode;
+      final isBridge =
+          bindAnnoValue?.getField('bridge')?.toBoolValue() ?? mode != 'wrap';
+      final alsoWrap =
+          bindAnnoValue?.getField('wrap')?.toBoolValue() ?? mode == 'both';
       return (process: true, isBridge: isBridge, alsoWrap: alsoWrap);
     }
 
@@ -448,8 +451,9 @@ class Bindgen implements BridgeDeclarationRegistry {
     }
 
     final wrapperName = _wrapperName(ctx, element);
-    final registerName =
-        wrapperName.startsWith(r'$') ? wrapperName.substring(1) : wrapperName;
+    final registerName = wrapperName.startsWith(r'$')
+        ? wrapperName.substring(1)
+        : wrapperName;
 
     registerClasses.add((
       file: ctx.filename,
@@ -540,8 +544,10 @@ ${implementsSdk ? $sdkInterfaceMembers(ctx, element) : ''}
   String $sdkInterfaceMembers(BindgenContext ctx, InterfaceElement element) {
     final buf = StringBuffer();
     String argList(List<FormalParameterElement> params) {
-      final positional =
-          params.where((p) => !p.isNamed).map((p) => p.name ?? '').join(', ');
+      final positional = params
+          .where((p) => !p.isNamed)
+          .map((p) => p.name ?? '')
+          .join(', ');
       final named = params
           .where((p) => p.isNamed)
           .map((p) => '${p.name}: ${p.name}')
@@ -601,8 +607,9 @@ ${implementsSdk ? $sdkInterfaceMembers(ctx, element) : ''}
       final args = argList(method.formalParameters);
       final call = switch (method.name) {
         '[]' => '\$value[$args]',
-        '[]=' => '\$value[${method.formalParameters.first.name}] = '
-            '${method.formalParameters.last.name}',
+        '[]=' =>
+          '\$value[${method.formalParameters.first.name}] = '
+              '${method.formalParameters.last.name}',
         '-' when method.formalParameters.isEmpty => '-\$value',
         '~' when method.formalParameters.isEmpty => '~\$value',
         _ when method.isOperator => '\$value ${method.name} $args',
@@ -624,8 +631,9 @@ ${implementsSdk ? $sdkInterfaceMembers(ctx, element) : ''}
     }
 
     final wrapperName = _wrapperName(ctx, element);
-    final registerName =
-        wrapperName.startsWith(r'$') ? wrapperName.substring(1) : wrapperName;
+    final registerName = wrapperName.startsWith(r'$')
+        ? wrapperName.substring(1)
+        : wrapperName;
 
     registerEnums.add((
       file: ctx.filename,
@@ -689,18 +697,16 @@ class \$${element.name}Fn {
     final params = element.typeParameters;
     if (params.isEmpty) return '';
     return '<${params.map((p) {
-          final bound = p.bound;
-          if (bound == null ||
-              bound is DynamicType ||
-              bound.isDartCoreObject) {
-            return p.name!;
-          }
-          final boundLib = bound.element?.library;
-          if (boundLib != null) {
-            ctx.imports.add(boundLib.uri.toString());
-          }
-          return '${p.name} extends ${bound.getDisplayString()}';
-        }).join(', ')}>';
+      final bound = p.bound;
+      if (bound == null || bound is DynamicType || bound.isDartCoreObject) {
+        return p.name!;
+      }
+      final boundLib = bound.element?.library;
+      if (boundLib != null) {
+        ctx.imports.add(boundLib.uri.toString());
+      }
+      return '${p.name} extends ${bound.getDisplayString()}';
+    }).join(', ')}>';
   }
 
   /// Bare type-argument list (`<T, S>`) for the wrapped type of a generic
@@ -769,7 +775,8 @@ class \$${element.name}Fn {
   String $wrap(BindgenContext ctx, InterfaceElement element) {
     final cc = ctx.classConfig;
     final reified = cc?.reified;
-    final reifiedExpr = reified?.expr ??
+    final reifiedExpr =
+        reified?.expr ??
         (reified?.hook != null
             ? '${ctx.hooksPrefix()}.${reified!.hook}(this)'
             : '\$value');

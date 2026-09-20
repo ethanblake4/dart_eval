@@ -6,6 +6,7 @@
 // ignore_for_file: undefined_hidden_name
 // ignore_for_file: dead_code, unused_local_variable
 // ignore_for_file: unnecessary_type_check, unnecessary_non_null_assertion
+// ignore_for_file: unnecessary_cast
 // ignore_for_file: sdk_version_since
 // ignore_for_file: non_constant_identifier_names
 // ignore_for_file: argument_type_not_assignable_to_error_handler
@@ -1478,10 +1479,12 @@ class $Uri implements $Instance {
   static $Value? _isScheme(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Uri;
-    final result = self.$value.isScheme(args[0]!.$value);
+    final result = self.$value.isScheme((r as $String).$value);
     return $bool(result);
   }
 
@@ -1489,29 +1492,66 @@ class $Uri implements $Instance {
   static $Value? _toFilePath(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Uri;
     final result = self.$value.toFilePath(
-      windows: (args.length > 0 ? args[0] : null)?.$value,
+      windows: (r is $Value ? r : null)?.$value,
     );
     return $String(result);
   }
 
   static const $Function __replace = $Function(_replace);
-  static $Value? _replace(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _replace(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Uri;
     final result = self.$value.replace(
-      scheme: (args.length > 0 ? args[0] : null)?.$value,
-      userInfo: (args.length > 1 ? args[1] : null)?.$value,
-      host: (args.length > 2 ? args[2] : null)?.$value,
-      port: (args.length > 3 ? args[3] : null)?.$value,
-      path: (args.length > 4 ? args[4] : null)?.$value,
-      pathSegments: (args.length > 5 ? args[5] : null)?.$value,
-      query: (args.length > 6 ? args[6] : null)?.$value,
-      queryParameters: ((args.length > 7 ? args[7] : null)?.$reified as Map?)
-          ?.cast<String, dynamic>(),
-      fragment: (args.length > 8 ? args[8] : null)?.$value,
+      scheme: (r is $Value ? r : null)?.$value,
+      userInfo: (s is $Value ? s : null)?.$value,
+      host:
+          (c is List && (c as List).length > 0
+                  ? (c as List)[0] as $Value?
+                  : null)
+              ?.$value,
+      port:
+          (c is List && (c as List).length > 1
+                  ? (c as List)[1] as $Value?
+                  : null)
+              ?.$value,
+      path:
+          (c is List && (c as List).length > 2
+                  ? (c as List)[2] as $Value?
+                  : null)
+              ?.$value,
+      pathSegments:
+          (c is List && (c as List).length > 3
+                  ? (c as List)[3] as $Value?
+                  : null)
+              ?.$value,
+      query:
+          (c is List && (c as List).length > 4
+                  ? (c as List)[4] as $Value?
+                  : null)
+              ?.$value,
+      queryParameters:
+          ((c is List && (c as List).length > 5
+                          ? (c as List)[5] as $Value?
+                          : null)
+                      ?.$reified
+                  as Map?)
+              ?.cast<String, dynamic>(),
+      fragment:
+          (c is List && (c as List).length > 6
+                  ? (c as List)[6] as $Value?
+                  : null)
+              ?.$value,
     );
     return $Uri.wrap(result);
   }
@@ -1520,7 +1560,9 @@ class $Uri implements $Instance {
   static $Value? _removeFragment(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Uri;
     final result = self.$value.removeFragment();
@@ -1528,9 +1570,15 @@ class $Uri implements $Instance {
   }
 
   static const $Function __resolve = $Function(_resolve);
-  static $Value? _resolve(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _resolve(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Uri;
-    final result = self.$value.resolve(args[0]!.$value);
+    final result = self.$value.resolve((r as $String).$value);
     return $Uri.wrap(result);
   }
 
@@ -1538,10 +1586,12 @@ class $Uri implements $Instance {
   static $Value? _resolveUri(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Uri;
-    final result = self.$value.resolveUri(args[0]!.$value);
+    final result = self.$value.resolveUri((r as $Value?)!.$value);
     return $Uri.wrap(result);
   }
 
@@ -1549,7 +1599,9 @@ class $Uri implements $Instance {
   static $Value? _normalizePath(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Uri;
     final result = self.$value.normalizePath();

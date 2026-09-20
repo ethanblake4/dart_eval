@@ -437,8 +437,8 @@ void main() {
           'package:example/main.dart',
           'main',
           arguments: {
-            'callback': $Closure((runtime, target, args) {
-              print(args[0]!.$value + '!');
+            'callback': $Closure((runtime, target, r, s, c) {
+              print((r as $Value?)!.$value + '!');
               return null;
             }),
           },

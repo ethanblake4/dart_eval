@@ -72,7 +72,13 @@ void main(List<String> args) {
   ) {
     $Value? last;
     for (var i = 0; i < warmupCalls; i++) {
-      last = fn.call(runtime, null, arguments);
+      last = fn.call(
+          runtime,
+          null,
+          arguments.isEmpty ? null : arguments[0],
+          arguments.length > 1 ? arguments[1] : null,
+          arguments.length < 3 ? arguments.length : arguments.sublist(2),
+        );
     }
     updateExpected(expectedDelta * warmupCalls);
     if (name == 'captured-void') {
@@ -146,7 +152,13 @@ void main(List<String> args) {
       $Value? last;
       final watch = Stopwatch()..start();
       for (var i = 0; i < calls; i++) {
-        last = fn.call(runtime, null, arguments);
+        last = fn.call(
+          runtime,
+          null,
+          arguments.isEmpty ? null : arguments[0],
+          arguments.length > 1 ? arguments[1] : null,
+          arguments.length < 3 ? arguments.length : arguments.sublist(2),
+        );
       }
       watch.stop();
       advance(calls);

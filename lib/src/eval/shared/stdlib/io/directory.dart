@@ -175,7 +175,13 @@ class $Directory implements $Instance {
 
   static const $Function _create = $Function(__create);
 
-  static $Value? __create(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? __create(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final entity = target!.$value as Directory;
     runtime.assertPermission('filesystem:write', entity.path);
     return $Future.wrap(
@@ -188,7 +194,9 @@ class $Directory implements $Instance {
   static $Value? __createSync(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final entity = target!.$value as Directory;
     runtime.assertPermission('filesystem:write', entity.path);
@@ -198,10 +206,16 @@ class $Directory implements $Instance {
 
   static const $Function _rename = $Function(__rename);
 
-  static $Value? __rename(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? __rename(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final entity = target!.$value as Directory;
     runtime.assertPermission('filesystem:write', entity.path);
-    final newPath = args[0]!.$value as String;
+    final newPath = (r as $Value?)!.$value as String;
     runtime.assertPermission('filesystem:write', newPath);
     return $Future.wrap(
       entity.rename(newPath).then((value) => $Directory.wrap(value)),
@@ -213,25 +227,33 @@ class $Directory implements $Instance {
   static $Value? __renameSync(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final entity = target!.$value as Directory;
     runtime.assertPermission('filesystem:write', entity.path);
-    final newPath = args[0]!.$value as String;
+    final newPath = (r as $Value?)!.$value as String;
     runtime.assertPermission('filesystem:write', newPath);
     return $Directory.wrap(entity.renameSync(newPath));
   }
 
   static const $Function _list = $Function(__list);
 
-  static $Value? __list(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? __list(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final entity = target!.$value as Directory;
     runtime.assertPermission('filesystem:read', entity.path);
     return $Stream.wrap(
       entity
           .list(
-            recursive: args[0]?.$value as bool? ?? false,
-            followLinks: args[1]?.$value as bool? ?? false,
+            recursive: (r as $Value?)?.$value as bool? ?? false,
+            followLinks: (s as $Value?)?.$value as bool? ?? false,
           )
           .map((event) => $FileSystemEntity.wrap(event)),
     );
@@ -242,15 +264,17 @@ class $Directory implements $Instance {
   static $Value? __listSync(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final entity = target!.$value as Directory;
     runtime.assertPermission('filesystem:read', entity.path);
     return $List.wrap(
       entity
           .listSync(
-            recursive: args[0]?.$value as bool? ?? false,
-            followLinks: args[1]?.$value as bool? ?? false,
+            recursive: (r as $Value?)?.$value as bool? ?? false,
+            followLinks: (s as $Value?)?.$value as bool? ?? false,
           )
           .map((item) => $FileSystemEntity.wrap(item))
           .toList(),

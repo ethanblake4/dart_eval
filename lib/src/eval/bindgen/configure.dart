@@ -86,13 +86,16 @@ String _syntheticConstructorsForRuntime(
   final uri = ctx.libOverrides[element.name] ?? ctx.uri;
   return synthetic
       .where((s) => s.kind == 'constructor')
-      .map((s) => '''
+      .map(
+        (s) =>
+            '''
     runtime.registerBridgeFuncRegisters(
       '$uri',
       '${element.name}.${s.name}',
       \$${element.name}.${memberWrapperName(s.name)}
     );
-  ''')
+  ''',
+      )
       .join('\n');
 }
 
@@ -129,11 +132,13 @@ String staticMethodsForRuntime(
   bool isBridge = false,
 }) {
   final emitted = element.methods
-      .where((e) =>
-          e.isStatic &&
-          !e.isOperator &&
-          !e.isPrivate &&
-          ctx.memberIncluded(e.name!, 'static'))
+      .where(
+        (e) =>
+            e.isStatic &&
+            !e.isOperator &&
+            !e.isPrivate &&
+            ctx.memberIncluded(e.name!, 'static'),
+      )
       .map((e) => staticMethodForRuntime(ctx, element, e, isBridge: isBridge))
       .join('\n');
   return emitted + _syntheticStaticsForRuntime(ctx, element);
@@ -147,13 +152,16 @@ String _syntheticStaticsForRuntime(
   final uri = ctx.libOverrides[element.name] ?? ctx.uri;
   return synthetic
       .where((s) => s.kind == 'static')
-      .map((s) => '''
+      .map(
+        (s) =>
+            '''
     runtime.registerBridgeFuncRegisters(
       '$uri',
       '${element.name}.${s.name}',
       \$${element.name}.${memberWrapperName(s.name)}
     );
-  ''')
+  ''',
+      )
       .join('\n');
 }
 
@@ -202,13 +210,16 @@ String _syntheticStaticGettersForRuntime(
   final uri = ctx.libOverrides[element.name] ?? ctx.uri;
   return synthetic
       .where((s) => s.kind == 'getter' && s.isStatic)
-      .map((s) => '''
+      .map(
+        (s) =>
+            '''
     runtime.registerBridgeFuncRegisters(
       '$uri',
       '${element.name}.${s.name}*g',
       \$${element.name}.${memberWrapperName(s.name)}
     );
-  ''')
+  ''',
+      )
       .join('\n');
 }
 
@@ -236,10 +247,10 @@ String staticSettersForRuntime(
   bool isBridge = false,
 }) {
   return element.setters
-      .where((e) =>
-          e.isStatic &&
-          !e.isPrivate &&
-          ctx.memberIncluded(e.name!, 'static'))
+      .where(
+        (e) =>
+            e.isStatic && !e.isPrivate && ctx.memberIncluded(e.name!, 'static'),
+      )
       .map((e) => staticSetterForRuntime(ctx, element, e, isBridge: isBridge))
       .join('\n');
 }

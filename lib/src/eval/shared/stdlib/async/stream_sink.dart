@@ -6,6 +6,7 @@
 // ignore_for_file: undefined_hidden_name
 // ignore_for_file: dead_code, unused_local_variable
 // ignore_for_file: unnecessary_type_check, unnecessary_non_null_assertion
+// ignore_for_file: unnecessary_cast
 // ignore_for_file: sdk_version_since
 // ignore_for_file: non_constant_identifier_names
 // ignore_for_file: argument_type_not_assignable_to_error_handler
@@ -213,17 +214,25 @@ class $StreamSink<S> implements $Instance {
   static $Value? _addStream(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $StreamSink;
-    final result = self.$value.addStream(args[0]!.$value);
+    final result = self.$value.addStream((r as $Value?)!.$value);
     return $Future.wrap(
       result.then((e) => runtime.wrapAlways(e, recursive: true)),
     );
   }
 
   static const $Function __close = $Function(_close);
-  static $Value? _close(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _close(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $StreamSink;
     final result = self.$value.close();
     return $Future.wrap(
@@ -232,9 +241,15 @@ class $StreamSink<S> implements $Instance {
   }
 
   static const $Function __add = $Function(_add);
-  static $Value? _add(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _add(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $StreamSink;
-    self.$value.add(args[0]!.$value);
+    self.$value.add((r as $Value?)!.$value);
     return null;
   }
 
@@ -242,12 +257,14 @@ class $StreamSink<S> implements $Instance {
   static $Value? _addError(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $StreamSink;
     self.$value.addError(
-      args[0]!.$reified,
-      (args.length > 1 ? args[1] : null)?.$value,
+      (r as $Value?)!.$reified,
+      (s is $Value ? s : null)?.$value,
     );
     return null;
   }

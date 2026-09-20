@@ -40,22 +40,25 @@ String $methods(BindgenContext ctx, InterfaceElement element) {
         final String body;
         if (hook != null) {
           final prefix = ctx.hooksPrefix();
-          body = 'return ${prefix != null ? '$prefix.' : ''}$hook'
-              '(runtime, target, args);';
+          body =
+              'return ${prefix != null ? '$prefix.' : ''}$hook'
+              '(runtime, target, r, s, c);';
         } else if (expr != null) {
-          body = 'final self = target! as \$${element.name};\n'
+          body =
+              'final self = target! as \$${element.name};\n'
               'return $expr;';
         } else {
-          body = 'final self = target! as \$${element.name};\n'
+          body =
+              'final self = target! as \$${element.name};\n'
               '${returnsValue ? 'final result = ' : ''}'
-              '${callOp.format('self.\$value', argumentAccessors(ctx, e.formalParameters, member: member))};\n'
+              '${callOp.format('self.\$value', argumentAccessors(ctx, e.formalParameters, callable: true, member: member))};\n'
               'return ${wrapVar(ctx, e.returnType, 'result', unionTypeNames: member?.returns?.union)};';
         }
         return '''
         static const \$Function __${op.name} = \$Function(_${op.name});
-        static \$Value? _${op.name}(Runtime runtime, \$Value? target, List<\$Value?> args) {
-          ${assertMethodPermissions(e)}
-          ${assertConfigPermissions(ctx, member, e.formalParameters.map((p) => p.name ?? '').toList())}
+        static \$Value? _${op.name}(Runtime runtime, \$Value? target, Object? r, Object? s, Object? c) {
+          ${assertMethodPermissions(e, callable: true)}
+          ${assertConfigPermissions(ctx, member, e.formalParameters.map((p) => p.name ?? '').toList(), callable: true)}
           $body
         }''';
       })
@@ -74,15 +77,17 @@ String _syntheticMethodBodies(BindgenContext ctx, InterfaceElement element) {
         final prefix = ctx.hooksPrefix();
         final String body;
         if (s.hook != null) {
-          body = 'return ${prefix != null ? '$prefix.' : ''}${s.hook}'
-              '(runtime, target, args);';
+          body =
+              'return ${prefix != null ? '$prefix.' : ''}${s.hook}'
+              '(runtime, target, r, s, c);';
         } else {
-          body = 'final self = target! as \$${element.name};\n'
+          body =
+              'final self = target! as \$${element.name};\n'
               'return ${s.expr ?? 'null'};';
         }
         return '''
         static const \$Function __${op.name} = \$Function(_${op.name});
-        static \$Value? _${op.name}(Runtime runtime, \$Value? target, List<\$Value?> args) {
+        static \$Value? _${op.name}(Runtime runtime, \$Value? target, Object? r, Object? s, Object? c) {
           $body
         }''';
       })

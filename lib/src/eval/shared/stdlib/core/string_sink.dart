@@ -6,6 +6,7 @@
 // ignore_for_file: undefined_hidden_name
 // ignore_for_file: dead_code, unused_local_variable
 // ignore_for_file: unnecessary_type_check, unnecessary_non_null_assertion
+// ignore_for_file: unnecessary_cast
 // ignore_for_file: sdk_version_since
 // ignore_for_file: non_constant_identifier_names
 // ignore_for_file: argument_type_not_assignable_to_error_handler
@@ -189,9 +190,15 @@ class $StringSink implements $Instance {
   }
 
   static const $Function __write = $Function(_write);
-  static $Value? _write(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _write(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $StringSink;
-    self.$value.write(args[0]!.$reified);
+    self.$value.write((r as $Value?)!.$reified);
     return null;
   }
 
@@ -199,25 +206,31 @@ class $StringSink implements $Instance {
   static $Value? _writeAll(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $StringSink;
     self.$value.writeAll(
-      args[0]!.$value,
-      (args.length > 1 ? args[1] : null) == null
-          ? ""
-          : (args.length > 1 ? args[1] : null)?.$value,
+      (r as $Value?)!.$value,
+      (s is $Value ? s : null) == null ? "" : (s as $String).$value,
     );
     return null;
   }
 
   static const $Function __writeln = $Function(_writeln);
-  static $Value? _writeln(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _writeln(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $StringSink;
     self.$value.writeln(
-      (args.length > 0 ? args[0] : null) == null
+      (r is $Value ? r : null) == null
           ? ""
-          : (args.length > 0 ? args[0] : null)?.$reified,
+          : (r is $Value ? r : null)?.$reified,
     );
     return null;
   }
@@ -226,10 +239,12 @@ class $StringSink implements $Instance {
   static $Value? _writeCharCode(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $StringSink;
-    self.$value.writeCharCode(args[0]!.$value);
+    self.$value.writeCharCode((r as $int).$value);
     return null;
   }
 

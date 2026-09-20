@@ -6,6 +6,7 @@
 // ignore_for_file: undefined_hidden_name
 // ignore_for_file: dead_code, unused_local_variable
 // ignore_for_file: unnecessary_type_check, unnecessary_non_null_assertion
+// ignore_for_file: unnecessary_cast
 // ignore_for_file: sdk_version_since
 // ignore_for_file: non_constant_identifier_names
 // ignore_for_file: argument_type_not_assignable_to_error_handler
@@ -1361,30 +1362,34 @@ class $StreamView<T> implements $Instance {
   static $Value? _asBroadcastStream(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $StreamView;
     final result = self.$value.asBroadcastStream(
       onListen:
-          (args.length > 0 ? args[0] : null) == null ||
-              (args.length > 0 ? args[0] : null) is $null
+          (r is $Value ? r : null) == null || (r is $Value ? r : null) is $null
           ? null
           : (StreamSubscription<dynamic> subscription) {
-              ((args.length > 0 ? args[0] : null)! as EvalCallable?)?.call(
+              ((r is $Value ? r : null)! as EvalCallable?)?.call(
                 runtime,
                 null,
-                [$StreamSubscription.wrap(subscription)],
+                $StreamSubscription.wrap(subscription),
+                null,
+                1,
               );
             },
       onCancel:
-          (args.length > 1 ? args[1] : null) == null ||
-              (args.length > 1 ? args[1] : null) is $null
+          (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
           : (StreamSubscription<dynamic> subscription) {
-              ((args.length > 1 ? args[1] : null)! as EvalCallable?)?.call(
+              ((s is $Value ? s : null)! as EvalCallable?)?.call(
                 runtime,
                 null,
-                [$StreamSubscription.wrap(subscription)],
+                $StreamSubscription.wrap(subscription),
+                null,
+                1,
               );
             },
     );
@@ -1394,51 +1399,86 @@ class $StreamView<T> implements $Instance {
   }
 
   static const $Function __listen = $Function(_listen);
-  static $Value? _listen(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _listen(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $StreamView;
     final result = self.$value.listen(
-      args[0] == null || args[0] is $null
+      (r as $Value?) == null || (r as $Value?) is $null
           ? null
           : (dynamic value) {
-              (args[0]! as EvalCallable)(runtime, null, [
-                runtime.wrapAlways(value, recursive: true),
-              ]);
-            },
-      onError:
-          (args.length > 1 ? args[1] : null) == null ||
-              (args.length > 1 ? args[1] : null) is $null
-          ? null
-          : (a0, [a1, a2]) {
-              ((args.length > 1 ? args[1] : null)! as EvalCallable?)
-                  ?.call(runtime, null, [
-                    runtime.wrapAlways(a0),
-                    if (a1 != null) runtime.wrapAlways(a1),
-                    if (a2 != null) runtime.wrapAlways(a2),
-                  ]);
-            },
-      onDone:
-          (args.length > 2 ? args[2] : null) == null ||
-              (args.length > 2 ? args[2] : null) is $null
-          ? null
-          : () {
-              ((args.length > 2 ? args[2] : null)! as EvalCallable?)?.call(
+              ((r as $Value?)! as EvalCallable)(
                 runtime,
                 null,
-                [],
+                runtime.wrapAlways(value, recursive: true),
+                null,
+                1,
               );
             },
-      cancelOnError: (args.length > 3 ? args[3] : null)?.$value,
+      onError:
+          (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
+          ? null
+          : (a0, [a1, a2]) {
+              final _a0 = runtime.wrapAlways(a0);
+              ((s is $Value ? s : null)! as EvalCallable?)?.call(
+                runtime,
+                null,
+                _a0,
+                a1 != null ? runtime.wrapAlways(a1) : null,
+                a2 != null
+                    ? [runtime.wrapAlways(a2)]
+                    : a1 != null
+                    ? 2
+                    : 1,
+              );
+            },
+      onDone:
+          (c is List && (c as List).length > 0
+                      ? (c as List)[0] as $Value?
+                      : null) ==
+                  null ||
+              (c is List && (c as List).length > 0
+                      ? (c as List)[0] as $Value?
+                      : null)
+                  is $null
+          ? null
+          : () {
+              ((c is List && (c as List).length > 0
+                          ? (c as List)[0] as $Value?
+                          : null)!
+                      as EvalCallable?)
+                  ?.call(runtime, null, null, null, 0);
+            },
+      cancelOnError:
+          (c is List && (c as List).length > 1
+                  ? (c as List)[1] as $Value?
+                  : null)
+              ?.$value,
     );
     return $StreamSubscription.wrap(result);
   }
 
   static const $Function __where = $Function(_where);
-  static $Value? _where(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _where(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $StreamView;
     final result = self.$value.where((dynamic event) {
-      return (args[0]! as EvalCallable)(runtime, null, [
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
         runtime.wrapAlways(event, recursive: true),
-      ])?.$value;
+        null,
+        1,
+      )?.$value;
     });
     return $Stream.wrap(
       result.map((e) => runtime.wrapAlways(e, recursive: true)),
@@ -1446,12 +1486,22 @@ class $StreamView<T> implements $Instance {
   }
 
   static const $Function __map = $Function(_map);
-  static $Value? _map(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _map(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $StreamView;
     final result = self.$value.map((dynamic event) {
-      return (args[0]! as EvalCallable)(runtime, null, [
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
         runtime.wrapAlways(event, recursive: true),
-      ])?.$value;
+        null,
+        1,
+      )?.$value;
     });
     return $Stream.wrap(
       result.map((e) => runtime.wrapAlways(e, recursive: true)),
@@ -1462,13 +1512,19 @@ class $StreamView<T> implements $Instance {
   static $Value? _asyncMap(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $StreamView;
     final result = self.$value.asyncMap((dynamic event) {
-      return (args[0]! as EvalCallable)(runtime, null, [
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
         runtime.wrapAlways(event, recursive: true),
-      ])?.$value;
+        null,
+        1,
+      )?.$value;
     });
     return $Stream.wrap(
       result.map((e) => runtime.wrapAlways(e, recursive: true)),
@@ -1479,13 +1535,19 @@ class $StreamView<T> implements $Instance {
   static $Value? _asyncExpand(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $StreamView;
     final result = self.$value.asyncExpand((dynamic event) {
-      return (args[0]! as EvalCallable)(runtime, null, [
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
         runtime.wrapAlways(event, recursive: true),
-      ])?.$value;
+        null,
+        1,
+      )?.$value;
     });
     return $Stream.wrap(
       result.map((e) => runtime.wrapAlways(e, recursive: true)),
@@ -1496,26 +1558,38 @@ class $StreamView<T> implements $Instance {
   static $Value? _handleError(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $StreamView;
     final result = self.$value.handleError(
       (a0, [a1, a2]) {
-        (args[0]! as EvalCallable)(runtime, null, [
-          runtime.wrapAlways(a0),
-          if (a1 != null) runtime.wrapAlways(a1),
-          if (a2 != null) runtime.wrapAlways(a2),
-        ]);
+        final _a0 = runtime.wrapAlways(a0);
+        ((r as $Value?)! as EvalCallable)(
+          runtime,
+          null,
+          _a0,
+          a1 != null ? runtime.wrapAlways(a1) : null,
+          a2 != null
+              ? [runtime.wrapAlways(a2)]
+              : a1 != null
+              ? 2
+              : 1,
+        );
       },
       test:
-          (args.length > 1 ? args[1] : null) == null ||
-              (args.length > 1 ? args[1] : null) is $null
+          (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
           : (dynamic error) {
-              return ((args.length > 1 ? args[1] : null)! as EvalCallable?)
-                  ?.call(runtime, null, [
+              return ((s is $Value ? s : null)! as EvalCallable?)
+                  ?.call(
+                    runtime,
+                    null,
                     runtime.wrapAlways(error, recursive: true),
-                  ])
+                    null,
+                    1,
+                  )
                   ?.$value;
             },
     );
@@ -1525,12 +1599,22 @@ class $StreamView<T> implements $Instance {
   }
 
   static const $Function __expand = $Function(_expand);
-  static $Value? _expand(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _expand(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $StreamView;
     final result = self.$value.expand((dynamic element) {
-      return (args[0]! as EvalCallable)(runtime, null, [
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
         runtime.wrapAlways(element, recursive: true),
-      ])?.$value;
+        null,
+        1,
+      )?.$value;
     });
     return $Stream.wrap(
       result.map((e) => runtime.wrapAlways(e, recursive: true)),
@@ -1538,9 +1622,15 @@ class $StreamView<T> implements $Instance {
   }
 
   static const $Function __pipe = $Function(_pipe);
-  static $Value? _pipe(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _pipe(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $StreamView;
-    final result = self.$value.pipe(args[0]!.$value);
+    final result = self.$value.pipe((r as $Value?)!.$value);
     return $Future.wrap(
       result.then((e) => runtime.wrapAlways(e, recursive: true)),
     );
@@ -1550,23 +1640,34 @@ class $StreamView<T> implements $Instance {
   static $Value? _transform(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $StreamView;
-    final result = self.$value.transform(args[0]!.$value);
+    final result = self.$value.transform((r as $Value?)!.$value);
     return $Stream.wrap(
       result.map((e) => runtime.wrapAlways(e, recursive: true)),
     );
   }
 
   static const $Function __reduce = $Function(_reduce);
-  static $Value? _reduce(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _reduce(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $StreamView;
     final result = self.$value.reduce((dynamic previous, dynamic element) {
-      return (args[0]! as EvalCallable)(runtime, null, [
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
         runtime.wrapAlways(previous, recursive: true),
         runtime.wrapAlways(element, recursive: true),
-      ])?.$value;
+        2,
+      )?.$value;
     });
     return $Future.wrap(
       result.then((e) => runtime.wrapAlways(e, recursive: true)),
@@ -1574,16 +1675,25 @@ class $StreamView<T> implements $Instance {
   }
 
   static const $Function __fold = $Function(_fold);
-  static $Value? _fold(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _fold(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $StreamView;
-    final result = self.$value.fold(args[0]!.$value, (
+    final result = self.$value.fold((r as $Value?)!.$value, (
       dynamic previous,
       dynamic element,
     ) {
-      return (args[1]! as EvalCallable)(runtime, null, [
+      return ((s as $Value?)! as EvalCallable)(
+        runtime,
+        null,
         runtime.wrapAlways(previous, recursive: true),
         runtime.wrapAlways(element, recursive: true),
-      ])?.$value;
+        2,
+      )?.$value;
     });
     return $Future.wrap(
       result.then((e) => runtime.wrapAlways(e, recursive: true)),
@@ -1591,12 +1701,16 @@ class $StreamView<T> implements $Instance {
   }
 
   static const $Function __join = $Function(_join);
-  static $Value? _join(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _join(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $StreamView;
     final result = self.$value.join(
-      (args.length > 0 ? args[0] : null) == null
-          ? ""
-          : (args.length > 0 ? args[0] : null)?.$value,
+      (r is $Value ? r : null) == null ? "" : (r as $String).$value,
     );
     return $Future.wrap(result.then((e) => $String(e)));
   }
@@ -1605,48 +1719,86 @@ class $StreamView<T> implements $Instance {
   static $Value? _contains(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $StreamView;
-    final result = self.$value.contains(args[0]!.$reified);
+    final result = self.$value.contains((r as $Value?)!.$reified);
     return $Future.wrap(result.then((e) => $bool(e)));
   }
 
   static const $Function __forEach = $Function(_forEach);
-  static $Value? _forEach(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _forEach(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $StreamView;
     final result = self.$value.forEach((dynamic element) {
-      (args[0]! as EvalCallable)(runtime, null, [
+      ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
         runtime.wrapAlways(element, recursive: true),
-      ]);
+        null,
+        1,
+      );
     });
     return $Future.wrap(result.then((e) => null));
   }
 
   static const $Function __every = $Function(_every);
-  static $Value? _every(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _every(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $StreamView;
     final result = self.$value.every((dynamic element) {
-      return (args[0]! as EvalCallable)(runtime, null, [
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
         runtime.wrapAlways(element, recursive: true),
-      ])?.$value;
+        null,
+        1,
+      )?.$value;
     });
     return $Future.wrap(result.then((e) => $bool(e)));
   }
 
   static const $Function __any = $Function(_any);
-  static $Value? _any(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _any(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $StreamView;
     final result = self.$value.any((dynamic element) {
-      return (args[0]! as EvalCallable)(runtime, null, [
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
         runtime.wrapAlways(element, recursive: true),
-      ])?.$value;
+        null,
+        1,
+      )?.$value;
     });
     return $Future.wrap(result.then((e) => $bool(e)));
   }
 
   static const $Function __cast = $Function(_cast);
-  static $Value? _cast(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _cast(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $StreamView;
     final result = self.$value.cast();
     return $Stream.wrap(
@@ -1655,7 +1807,13 @@ class $StreamView<T> implements $Instance {
   }
 
   static const $Function __toList = $Function(_toList);
-  static $Value? _toList(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _toList(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $StreamView;
     final result = self.$value.toList();
     return $Future.wrap(
@@ -1666,7 +1824,13 @@ class $StreamView<T> implements $Instance {
   }
 
   static const $Function __toSet = $Function(_toSet);
-  static $Value? _toSet(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _toSet(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $StreamView;
     final result = self.$value.toSet();
     return $Future.wrap(
@@ -1679,20 +1843,30 @@ class $StreamView<T> implements $Instance {
   }
 
   static const $Function __drain = $Function(_drain);
-  static $Value? _drain(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _drain(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $StreamView;
-    final result = self.$value.drain(
-      (args.length > 0 ? args[0] : null)?.$value,
-    );
+    final result = self.$value.drain((r is $Value ? r : null)?.$value);
     return $Future.wrap(
       result.then((e) => runtime.wrapAlways(e, recursive: true)),
     );
   }
 
   static const $Function __take = $Function(_take);
-  static $Value? _take(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _take(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $StreamView;
-    final result = self.$value.take(args[0]!.$value);
+    final result = self.$value.take((r as $int).$value);
     return $Stream.wrap(
       result.map((e) => runtime.wrapAlways(e, recursive: true)),
     );
@@ -1702,13 +1876,19 @@ class $StreamView<T> implements $Instance {
   static $Value? _takeWhile(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $StreamView;
     final result = self.$value.takeWhile((dynamic element) {
-      return (args[0]! as EvalCallable)(runtime, null, [
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
         runtime.wrapAlways(element, recursive: true),
-      ])?.$value;
+        null,
+        1,
+      )?.$value;
     });
     return $Stream.wrap(
       result.map((e) => runtime.wrapAlways(e, recursive: true)),
@@ -1716,9 +1896,15 @@ class $StreamView<T> implements $Instance {
   }
 
   static const $Function __skip = $Function(_skip);
-  static $Value? _skip(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _skip(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $StreamView;
-    final result = self.$value.skip(args[0]!.$value);
+    final result = self.$value.skip((r as $int).$value);
     return $Stream.wrap(
       result.map((e) => runtime.wrapAlways(e, recursive: true)),
     );
@@ -1728,13 +1914,19 @@ class $StreamView<T> implements $Instance {
   static $Value? _skipWhile(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $StreamView;
     final result = self.$value.skipWhile((dynamic element) {
-      return (args[0]! as EvalCallable)(runtime, null, [
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
         runtime.wrapAlways(element, recursive: true),
-      ])?.$value;
+        null,
+        1,
+      )?.$value;
     });
     return $Stream.wrap(
       result.map((e) => runtime.wrapAlways(e, recursive: true)),
@@ -1745,19 +1937,23 @@ class $StreamView<T> implements $Instance {
   static $Value? _distinct(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $StreamView;
     final result = self.$value.distinct(
-      (args.length > 0 ? args[0] : null) == null ||
-              (args.length > 0 ? args[0] : null) is $null
+      (r is $Value ? r : null) == null || (r is $Value ? r : null) is $null
           ? null
           : (dynamic previous, dynamic next) {
-              return ((args.length > 0 ? args[0] : null)! as EvalCallable?)
-                  ?.call(runtime, null, [
+              return ((r is $Value ? r : null)! as EvalCallable?)
+                  ?.call(
+                    runtime,
+                    null,
                     runtime.wrapAlways(previous, recursive: true),
                     runtime.wrapAlways(next, recursive: true),
-                  ])
+                    2,
+                  )
                   ?.$value;
             },
     );
@@ -1770,22 +1966,27 @@ class $StreamView<T> implements $Instance {
   static $Value? _firstWhere(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $StreamView;
     final result = self.$value.firstWhere(
       (dynamic element) {
-        return (args[0]! as EvalCallable)(runtime, null, [
+        return ((r as $Value?)! as EvalCallable)(
+          runtime,
+          null,
           runtime.wrapAlways(element, recursive: true),
-        ])?.$value;
+          null,
+          1,
+        )?.$value;
       },
       orElse:
-          (args.length > 1 ? args[1] : null) == null ||
-              (args.length > 1 ? args[1] : null) is $null
+          (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
           : () {
-              return ((args.length > 1 ? args[1] : null)! as EvalCallable?)
-                  ?.call(runtime, null, [])
+              return ((s is $Value ? s : null)! as EvalCallable?)
+                  ?.call(runtime, null, null, null, 0)
                   ?.$value;
             },
     );
@@ -1798,22 +1999,27 @@ class $StreamView<T> implements $Instance {
   static $Value? _lastWhere(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $StreamView;
     final result = self.$value.lastWhere(
       (dynamic element) {
-        return (args[0]! as EvalCallable)(runtime, null, [
+        return ((r as $Value?)! as EvalCallable)(
+          runtime,
+          null,
           runtime.wrapAlways(element, recursive: true),
-        ])?.$value;
+          null,
+          1,
+        )?.$value;
       },
       orElse:
-          (args.length > 1 ? args[1] : null) == null ||
-              (args.length > 1 ? args[1] : null) is $null
+          (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
           : () {
-              return ((args.length > 1 ? args[1] : null)! as EvalCallable?)
-                  ?.call(runtime, null, [])
+              return ((s is $Value ? s : null)! as EvalCallable?)
+                  ?.call(runtime, null, null, null, 0)
                   ?.$value;
             },
     );
@@ -1826,22 +2032,27 @@ class $StreamView<T> implements $Instance {
   static $Value? _singleWhere(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $StreamView;
     final result = self.$value.singleWhere(
       (dynamic element) {
-        return (args[0]! as EvalCallable)(runtime, null, [
+        return ((r as $Value?)! as EvalCallable)(
+          runtime,
+          null,
           runtime.wrapAlways(element, recursive: true),
-        ])?.$value;
+          null,
+          1,
+        )?.$value;
       },
       orElse:
-          (args.length > 1 ? args[1] : null) == null ||
-              (args.length > 1 ? args[1] : null) is $null
+          (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
           : () {
-              return ((args.length > 1 ? args[1] : null)! as EvalCallable?)
-                  ?.call(runtime, null, [])
+              return ((s is $Value ? s : null)! as EvalCallable?)
+                  ?.call(runtime, null, null, null, 0)
                   ?.$value;
             },
     );
@@ -1854,29 +2065,38 @@ class $StreamView<T> implements $Instance {
   static $Value? _elementAt(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $StreamView;
-    final result = self.$value.elementAt(args[0]!.$value);
+    final result = self.$value.elementAt((r as $int).$value);
     return $Future.wrap(
       result.then((e) => runtime.wrapAlways(e, recursive: true)),
     );
   }
 
   static const $Function __timeout = $Function(_timeout);
-  static $Value? _timeout(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _timeout(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $StreamView;
     final result = self.$value.timeout(
-      args[0]!.$value,
+      (r as $Value?)!.$value,
       onTimeout:
-          (args.length > 1 ? args[1] : null) == null ||
-              (args.length > 1 ? args[1] : null) is $null
+          (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
           : (EventSink<dynamic> sink) {
-              ((args.length > 1 ? args[1] : null)! as EvalCallable?)?.call(
+              ((s is $Value ? s : null)! as EvalCallable?)?.call(
                 runtime,
                 null,
-                [$Object(sink)],
+                $Object(sink),
+                null,
+                1,
               );
             },
     );

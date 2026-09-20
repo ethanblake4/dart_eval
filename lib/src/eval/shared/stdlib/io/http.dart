@@ -195,10 +195,16 @@ class $HttpClient implements $Instance {
 
   static const $Function __get = $Function(_get);
 
-  static $Value? _get(Runtime runtime, $Value? target, List<$Value?> args) {
-    final url = args[0]!.$value as String;
-    final port = args[1]!.$value as int;
-    final path = args[2]!.$value as String;
+  static $Value? _get(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final url = (r as $Value?)!.$value as String;
+    final port = (s as $Value?)!.$value as int;
+    final path = ((c as List<Object?>)[0] as $Value?)!.$value as String;
     if (!runtime.checkPermission('network', '$url/$path')) {
       runtime.assertPermission('network', '$url:$port/$path');
     }
@@ -210,10 +216,16 @@ class $HttpClient implements $Instance {
 
   static const $Function __post = $Function(_post);
 
-  static $Value? _post(Runtime runtime, $Value? target, List<$Value?> args) {
-    final url = args[0]!.$value as String;
-    final port = args[1]!.$value as int;
-    final path = args[2]!.$value as String;
+  static $Value? _post(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final url = (r as $Value?)!.$value as String;
+    final port = (s as $Value?)!.$value as int;
+    final path = ((c as List<Object?>)[0] as $Value?)!.$value as String;
     if (!runtime.checkPermission('network', '$url/$path')) {
       runtime.assertPermission('network', '$url:$port/$path');
     }
@@ -225,10 +237,16 @@ class $HttpClient implements $Instance {
 
   static const $Function __put = $Function(_put);
 
-  static $Value? _put(Runtime runtime, $Value? target, List<$Value?> args) {
-    final url = args[0]!.$value as String;
-    final port = args[1]!.$value as int;
-    final path = args[2]!.$value as String;
+  static $Value? _put(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final url = (r as $Value?)!.$value as String;
+    final port = (s as $Value?)!.$value as int;
+    final path = ((c as List<Object?>)[0] as $Value?)!.$value as String;
     if (!runtime.checkPermission('network', '$url/$path')) {
       runtime.assertPermission('network', '$url:$port/$path');
     }
@@ -240,8 +258,14 @@ class $HttpClient implements $Instance {
 
   static const $Function __getUrl = $Function(_getUrl);
 
-  static $Value? _getUrl(Runtime runtime, $Value? target, List<$Value?> args) {
-    final url = args[0]!.$value as Uri;
+  static $Value? _getUrl(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final url = (r as $Value?)!.$value as Uri;
     runtime.assertPermission('network', url.toString());
     final request = (target!.$value as HttpClient).getUrl(url);
     return $Future.wrap(
@@ -251,8 +275,14 @@ class $HttpClient implements $Instance {
 
   static const $Function __postUrl = $Function(_postUrl);
 
-  static $Value? _postUrl(Runtime runtime, $Value? target, List<$Value?> args) {
-    final url = args[0]!.$value as Uri;
+  static $Value? _postUrl(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final url = (r as $Value?)!.$value as Uri;
     runtime.assertPermission('network', url.toString());
     final request = (target!.$value as HttpClient).postUrl(url);
     return $Future.wrap(
@@ -262,8 +292,14 @@ class $HttpClient implements $Instance {
 
   static const $Function __putUrl = $Function(_putUrl);
 
-  static $Value? _putUrl(Runtime runtime, $Value? target, List<$Value?> args) {
-    final url = args[0]!.$value as Uri;
+  static $Value? _putUrl(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final url = (r as $Value?)!.$value as Uri;
     runtime.assertPermission('network', url.toString());
     final request = (target!.$value as HttpClient).putUrl(url);
     return $Future.wrap(
@@ -328,7 +364,13 @@ class $HttpClientRequest implements $Instance {
 
   static const $Function __close = $Function(_close);
 
-  static $Value? _close(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _close(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final request = target!.$value as HttpClientRequest;
     return $Future.wrap(
       request.close().then((value) => $HttpClientResponse.wrap(value)),

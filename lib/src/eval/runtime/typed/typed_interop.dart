@@ -68,17 +68,125 @@ abstract final class TypedInterop {
     );
   }
 
+  /// Materialize a `first`/`rest` register pair as a positional vector.
+  ///
+  /// [first] is argument 0. [rest] is argument 1 when [count] is 2, a
+  /// (possibly borrowed) `List<Object?>` of arguments 1..count-1 when
+  /// [count] exceeds 2, and ignored otherwise. Cold host-facing paths only.
+  static List<$Value?> argList(int count, Object? first, Object? rest) {
+    if (count == 0) return const [];
+    if (count == 1) return [first as $Value?];
+    if (count == 2) return [first as $Value?, rest as $Value?];
+    final tail = rest as List<Object?>;
+    return [
+      first as $Value?,
+      for (var i = 0; i < count - 1; i++) tail[i] as $Value?,
+    ];
+  }
+
+  /// Materialize [EvalCallable.call] R/S/C arguments as a list. Cold paths
+  /// only: `Function.apply`, argument checking, and error construction.
+  static List<$Value?> callableArgs(Object? r, Object? s, Object? c) {
+    if (c is int) {
+      return switch (c) {
+        0 => const [],
+        1 => [r as $Value?],
+        _ => [r as $Value?, s as $Value?],
+      };
+    }
+    final tail = c as List<Object?>;
+    return [
+      r as $Value?,
+      s as $Value?,
+      for (var i = 0; i < tail.length; i++) tail[i] as $Value?,
+    ];
+  }
+
+  /// Supplied argument count encoded in [EvalCallable.call]'s C slot.
+  static int callableCount(Object? c) => c is int ? c : 2 + (c as List).length;
+
+  /// Convert an [EvalCallable.call] S/C pair into the `rest` register form:
+  /// S itself for two arguments, a `List<Object?>` of arguments 1..n-1 for
+  /// more, or null below two.
+  static Object? callableRest(Object? s, Object? c) {
+    if (c is int) return c == 2 ? s : null;
+    return [s, ...c as List<Object?>];
+  }
+
+  /// Split a positional vector into the `first`/`rest` register pair.
+  static (Object?, Object?) splitVector(List<Object?> args) =>
+      switch (args.length) {
+        0 => (null, null),
+        1 => (args[0], null),
+        2 => (args[0], args[1]),
+        _ => (args[0], args.sublist(1)),
+      };
+
+  /// Convert a `first`/`rest`/`count` register call into the
+  /// [EvalCallable.call] ABI (arguments 0/1 in R/S; C is the `int` argument
+  /// count below three arguments, else a `List<Object?>` of arguments 2..n-1).
+  ///
+  /// The tail list is a snapshot: [EvalCallable] implementations may retain
+  /// or reenter past their arguments.
+  static $Value? callCallable(
+    Runtime? runtime,
+    Object? receiver,
+    int count,
+    Object? first,
+    Object? rest, {
+    EvalCallable? callable,
+  }) {
+    final r = count > 0 ? first : null;
+    final s = switch (count) {
+      2 => rest,
+      > 2 => (rest as List<Object?>)[0],
+      _ => null,
+    };
+    final c = count < 3
+        ? count
+        : List<Object?>.generate(
+            count - 2,
+            (i) => (rest as List<Object?>)[i + 1],
+            growable: false,
+          );
+    return (callable ?? receiver as EvalCallable).call(
+      _runtime(runtime),
+      receiver as $Value?,
+      r,
+      s,
+      c,
+    );
+  }
+
   @pragma('vm:never-inline')
   static $Value? call(
     Runtime? runtime,
     Object? receiver,
-    List<$Value?> arguments,
+    int count,
+    Object? first,
+    Object? rest,
   ) => switch (receiver) {
-    TypedClosure() => receiver.invoke(arguments, runtime: runtime),
-    TypedHostFunction() => receiver.invokeHost(runtime, arguments),
-    TypedMember() => receiver.invokeClosure(arguments, runtime: runtime),
-    TypedInstance() => receiver.invoke('call', arguments, runtime: runtime),
-    _ => _runtime(runtime).invokeTypedObject(receiver, 'call', arguments),
+    TypedClosure() => receiver.invoke(count, first, rest, runtime: runtime),
+    TypedHostFunction() => receiver.invokeHost(
+      runtime,
+      argList(count, first, rest),
+    ),
+    TypedMember() => receiver.invokeClosure(
+      count,
+      first,
+      rest,
+      runtime: runtime,
+    ),
+    TypedInstance() => receiver.invoke(
+      'call',
+      count,
+      first,
+      rest,
+      runtime: runtime,
+    ),
+    _ => _runtime(
+      runtime,
+    ).invokeTypedObject(receiver, 'call', count, first, rest),
   };
 
   @pragma('vm:never-inline')
@@ -86,20 +194,38 @@ abstract final class TypedInterop {
     Runtime? runtime,
     Object? receiver,
     String name,
-    List<$Value?> arguments,
-  ) {
+    int positionalCount,
+    Object? first,
+    Object? rest, {
+    List<String> namedNames = const [],
+  }) {
     if (receiver == null) {
-      if (name == 'toString' && arguments.isEmpty) return $String('null');
+      final count = positionalCount + namedNames.length;
+      if (name == 'toString' && count == 0) return $String('null');
       throw NoSuchMethodError.withInvocation(
         null,
         Invocation.method(Symbol(name), [
-          for (final argument in arguments) argument?.$reified,
+          for (final argument in argList(count, first, rest))
+            argument?.$reified,
         ]),
       );
     }
     return receiver is TypedInstance
-        ? receiver.invoke(name, arguments, runtime: runtime)
-        : _runtime(runtime).invokeTypedObject(receiver, name, arguments);
+        ? receiver.invoke(
+            name,
+            positionalCount,
+            first,
+            rest,
+            namedNames: namedNames,
+            runtime: runtime,
+          )
+        : _runtime(runtime).invokeTypedObject(
+            receiver,
+            name,
+            positionalCount + namedNames.length,
+            first,
+            rest,
+          );
   }
 
   static $Value? getProperty(Runtime? runtime, Object? receiver, String name) {
@@ -107,7 +233,7 @@ abstract final class TypedInterop {
       return switch (name) {
         'hashCode' => $int(null.hashCode),
         'toString' => $Function(
-          (runtime, target, arguments) => arguments.isEmpty
+          (runtime, target, r, s, c) => c == 0
               ? $String('null')
               : throw ArgumentError('Expected no arguments'),
         ),
@@ -156,7 +282,7 @@ abstract final class TypedInterop {
     if (a.runtimeType == $Object) {
       return (a as $Object).$value == exportExternal(b, runtime: runtime);
     }
-    return toBool(invoke(runtime, a, '==', [b]));
+    return toBool(invoke(runtime, a, '==', 1, b, null));
   }
 
   static bool isNull(Object? value) => value == null;
@@ -241,8 +367,13 @@ final class TypedHostFunction extends EvalFunction {
   );
 
   @override
-  $Value? call(Runtime runtime, $Value? target, List<$Value?> args) =>
-      invokeHost(runtime, args);
+  $Value? call(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) => invokeHost(runtime, TypedInterop.callableArgs(r, s, c));
 
   @override
   int $getRuntimeType(Runtime runtime) =>
@@ -264,7 +395,14 @@ final class TypedCheckedFunction extends EvalFunction {
   List<int>? _lastArgTypeIds;
 
   @override
-  $Value? call(Runtime runtime, $Value? target, List<$Value?> args) {
+  $Value? call(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final args = TypedInterop.callableArgs(r, s, c);
     final last = _lastArgTypeIds;
     var hit = false;
     if (last != null && last.length == args.length) {
@@ -285,7 +423,7 @@ final class TypedCheckedFunction extends EvalFunction {
           arg == null ? -1 : arg.$getRuntimeType(this.runtime),
       ];
     }
-    final result = function.call(this.runtime, target, args);
+    final result = function.call(this.runtime, target, r, s, c);
     return this.runtime.validateTypedFunctionAdapterResult(
       expectedType,
       result,

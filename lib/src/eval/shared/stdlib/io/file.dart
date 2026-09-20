@@ -504,7 +504,13 @@ class $File implements $Instance {
 
   static const $Function _create = $Function(__create);
 
-  static $Value? __create(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? __create(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final entity = target!.$value as File;
     runtime.assertPermission('filesystem:write', entity.path);
     return $Future.wrap(entity.create().then((value) => $File.wrap(value)));
@@ -515,7 +521,9 @@ class $File implements $Instance {
   static $Value? __createSync(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final entity = target!.$value as File;
     runtime.assertPermission('filesystem:write', entity.path);
@@ -528,7 +536,9 @@ class $File implements $Instance {
   static $Value? __lastAccessed(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final entity = target!.$value as File;
     runtime.assertPermission('filesystem:read', entity.path);
@@ -542,7 +552,9 @@ class $File implements $Instance {
   static $Value? __lastAccessedSync(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final entity = target!.$value as File;
     runtime.assertPermission('filesystem:read', entity.path);
@@ -554,7 +566,9 @@ class $File implements $Instance {
   static $Value? __lastModified(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final entity = target!.$value as File;
     runtime.assertPermission('filesystem:read', entity.path);
@@ -568,7 +582,9 @@ class $File implements $Instance {
   static $Value? __lastModifiedSync(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final entity = target!.$value as File;
     runtime.assertPermission('filesystem:read', entity.path);
@@ -577,7 +593,13 @@ class $File implements $Instance {
 
   static const $Function _length = $Function(__length);
 
-  static $Value? __length(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? __length(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final entity = target!.$value as File;
     runtime.assertPermission('filesystem:read', entity.path);
     return $Future.wrap(entity.length().then((value) => $int(value)));
@@ -588,7 +610,9 @@ class $File implements $Instance {
   static $Value? __lengthSync(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final entity = target!.$value as File;
     runtime.assertPermission('filesystem:read', entity.path);
@@ -597,7 +621,7 @@ class $File implements $Instance {
 
   /*static const $Function _open = $Function(__open);
 
-  static $Value? __open(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? __open(Runtime runtime, $Value? target, Object? r, Object? s, Object? c) {
     final entity = target!.$value as File;
     runtime.assertPermission('filesystem:read', entity.path);
     return $Future.wrap(entity.open().then((value) => $RandomAccessFile.wrap(value)));
@@ -605,7 +629,7 @@ class $File implements $Instance {
 
   static const $Function _openSync = $Function(__openSync);
 
-  static $Value? __openSync(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? __openSync(Runtime runtime, $Value? target, Object? r, Object? s, Object? c) {
     final entity = target!.$value as File;
     runtime.assertPermission('filesystem:read', entity.path);
     return $RandomAccessFile.wrap(entity.openSync());
@@ -616,7 +640,9 @@ class $File implements $Instance {
   static $Value? __readAsString(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final entity = target!.$value as File;
     runtime.assertPermission('filesystem:read', entity.path);
@@ -628,7 +654,9 @@ class $File implements $Instance {
   static $Value? __readAsStringSync(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final entity = target!.$value as File;
     runtime.assertPermission('filesystem:read', entity.path);
@@ -640,7 +668,9 @@ class $File implements $Instance {
   static $Value? __readAsBytes(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final entity = target!.$value as File;
     runtime.assertPermission('filesystem:read', entity.path);
@@ -654,7 +684,9 @@ class $File implements $Instance {
   static $Value? __readAsBytesSync(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final entity = target!.$value as File;
     runtime.assertPermission('filesystem:read', entity.path);
@@ -666,7 +698,9 @@ class $File implements $Instance {
   static $Value? __readAsLines(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final entity = target!.$value as File;
     runtime.assertPermission('filesystem:read', entity.path);
@@ -680,7 +714,9 @@ class $File implements $Instance {
   static $Value? __readAsLinesSync(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final entity = target!.$value as File;
     runtime.assertPermission('filesystem:read', entity.path);
@@ -689,9 +725,15 @@ class $File implements $Instance {
 
   static const $Function _rename = $Function(__rename);
 
-  static $Value? __rename(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? __rename(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final entity = target!.$value as File;
-    final newPath = args[0]!.$value as String;
+    final newPath = (r as $Value?)!.$value as String;
     runtime.assertPermission('filesystem:write', entity.path);
     runtime.assertPermission('filesystem:write', newPath);
     return $Future.wrap(
@@ -704,10 +746,12 @@ class $File implements $Instance {
   static $Value? __renameSync(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final entity = target!.$value as File;
-    final newPath = args[0]!.$value as String;
+    final newPath = (r as $Value?)!.$value as String;
     runtime.assertPermission('filesystem:write', entity.path);
     runtime.assertPermission('filesystem:write', newPath);
     return $File.wrap(entity.renameSync(newPath));
@@ -718,10 +762,12 @@ class $File implements $Instance {
   static $Value? __setLastAccessed(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final entity = target!.$value as File;
-    final time = args[0]!.$value as DateTime;
+    final time = (r as $Value?)!.$value as DateTime;
     runtime.assertPermission('filesystem:write', entity.path);
     return $Future.wrap(entity.setLastAccessed(time));
   }
@@ -733,10 +779,12 @@ class $File implements $Instance {
   static $Value? __setLastAccessedSync(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final entity = target!.$value as File;
-    final time = args[0]!.$value as DateTime;
+    final time = (r as $Value?)!.$value as DateTime;
     runtime.assertPermission('filesystem:write', entity.path);
     entity.setLastAccessedSync(time);
     return null;
@@ -747,10 +795,12 @@ class $File implements $Instance {
   static $Value? __setLastModified(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final entity = target!.$value as File;
-    final time = args[0]!.$value as DateTime;
+    final time = (r as $Value?)!.$value as DateTime;
     runtime.assertPermission('filesystem:write', entity.path);
     return $Future.wrap(entity.setLastModified(time));
   }
@@ -762,10 +812,12 @@ class $File implements $Instance {
   static $Value? __setLastModifiedSync(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final entity = target!.$value as File;
-    final time = args[0]!.$value as DateTime;
+    final time = (r as $Value?)!.$value as DateTime;
     runtime.assertPermission('filesystem:write', entity.path);
     entity.setLastModifiedSync(time);
     return null;
@@ -776,12 +828,14 @@ class $File implements $Instance {
   static $Value? __writeAsString(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final entity = target!.$value as File;
-    final contents = args[0]!.$value as String;
-    //final mode = args[1]!.$value as FileMode;
-    //final encoding = args[2]!.$value as Encoding;
+    final contents = (r as $Value?)!.$value as String;
+    //final mode = (s as $Value?)!.$value as FileMode;
+    //final encoding = ((c as List<Object?>)[0] as $Value?)!.$value as Encoding;
     runtime.assertPermission('filesystem:write', entity.path);
     return $Future.wrap(
       entity
@@ -795,12 +849,14 @@ class $File implements $Instance {
   static $Value? __writeAsStringSync(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final entity = target!.$value as File;
-    final contents = args[0]!.$value as String;
-    //final mode = args[1]!.$value as FileMode;
-    //final encoding = args[2]!.$value as Encoding;
+    final contents = (r as $Value?)!.$value as String;
+    //final mode = (s as $Value?)!.$value as FileMode;
+    //final encoding = ((c as List<Object?>)[0] as $Value?)!.$value as Encoding;
     runtime.assertPermission('filesystem:write', entity.path);
     entity.writeAsStringSync(contents /*, mode: mode, encoding: encoding*/);
     return null;
@@ -811,11 +867,13 @@ class $File implements $Instance {
   static $Value? __writeAsBytes(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final entity = target!.$value as File;
-    final bytes = args[0]!.$value as List<int>;
-    //final mode = args[1]!.$value as FileMode;
+    final bytes = (r as $Value?)!.$value as List<int>;
+    //final mode = (s as $Value?)!.$value as FileMode;
     runtime.assertPermission('filesystem:write', entity.path);
     return $Future.wrap(
       entity.writeAsBytes(bytes /*, mode: mode*/).then($File.wrap),
@@ -827,11 +885,13 @@ class $File implements $Instance {
   static $Value? __writeAsBytesSync(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final entity = target!.$value as File;
-    final bytes = args[0]!.$value as List<int>;
-    //final mode = args[1]!.$value as FileMode;
+    final bytes = (r as $Value?)!.$value as List<int>;
+    //final mode = (s as $Value?)!.$value as FileMode;
     runtime.assertPermission('filesystem:write', entity.path);
     entity.writeAsBytesSync(bytes /*, mode: mode*/);
     return null;

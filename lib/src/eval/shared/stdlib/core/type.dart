@@ -72,11 +72,11 @@ class $TypeImpl implements $Type {
     switch (identifier) {
       case 'toString':
         return $Function(
-          ((runtime, target, args) => $String("Instance of 'Type'")),
+          ((runtime, target, r, s, c) => $String("Instance of 'Type'")),
         );
       case '==':
-        return $Function((runtime, target, args) {
-          final other = args[0];
+        return $Function((runtime, target, r, s, c) {
+          final other = (r as $Value?);
           return $bool(this == other);
         });
       case 'hashCode':

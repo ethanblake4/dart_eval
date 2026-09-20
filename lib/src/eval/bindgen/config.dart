@@ -11,9 +11,7 @@ class BindgenConfig {
   factory BindgenConfig.parse(String source) {
     final doc = loadYaml(source);
     if (doc is! YamlMap) {
-      throw const FormatException(
-        'bindgen config must be a YAML map',
-      );
+      throw const FormatException('bindgen config must be a YAML map');
     }
     final version = doc['version'];
     if (version != null && version != 1) {
@@ -71,22 +69,22 @@ class BindgenDefaults {
   final List<String> excludeMembers;
 
   factory BindgenDefaults.fromYaml(YamlMap yaml) => BindgenDefaults(
-        mode: _str(yaml['mode']) ?? 'wrap',
-        implicitSupers: _bool(yaml['implicitSupers']) ?? false,
-        includeObjectMembers: _bool(yaml['includeObjectMembers']) ?? false,
-        excludeMembers: _strList(yaml['excludeMembers']),
-      );
+    mode: _str(yaml['mode']) ?? 'wrap',
+    implicitSupers: _bool(yaml['implicitSupers']) ?? false,
+    includeObjectMembers: _bool(yaml['includeObjectMembers']) ?? false,
+    excludeMembers: _strList(yaml['excludeMembers']),
+  );
 
   BindgenDefaults merge(BindgenDefaults? overrides) => BindgenDefaults(
-        mode: overrides?.mode ?? mode,
-        implicitSupers: overrides?.implicitSupers ?? implicitSupers,
-        includeObjectMembers:
-            overrides?.includeObjectMembers ?? includeObjectMembers,
-        excludeMembers: [
-          ...excludeMembers,
-          ...overrides?.excludeMembers ?? const [],
-        ],
-      );
+    mode: overrides?.mode ?? mode,
+    implicitSupers: overrides?.implicitSupers ?? implicitSupers,
+    includeObjectMembers:
+        overrides?.includeObjectMembers ?? includeObjectMembers,
+    excludeMembers: [
+      ...excludeMembers,
+      ...overrides?.excludeMembers ?? const [],
+    ],
+  );
 }
 
 /// A single `libraries:` entry.
@@ -162,12 +160,14 @@ class BindgenLibraryConfig {
     final pluginYaml = yaml['plugin'];
     final registryYaml = yaml['registry'];
     return BindgenLibraryConfig(
-      uri: _str(yaml['uri']) ??
+      uri:
+          _str(yaml['uri']) ??
           (throw const FormatException('library entry requires `uri`')),
       outDir: _str(yaml['outDir']),
       imports: _strList(yaml['imports']),
-      plugin:
-          pluginYaml is YamlMap ? BindgenPluginConfig.fromYaml(pluginYaml) : null,
+      plugin: pluginYaml is YamlMap
+          ? BindgenPluginConfig.fromYaml(pluginYaml)
+          : null,
       registry: registryYaml is YamlMap
           ? BindgenRegistryConfig.fromYaml(registryYaml)
           : null,
@@ -175,8 +175,9 @@ class BindgenLibraryConfig {
       functions: _memberMap(yaml['functions']),
       functionsFile: _str(yaml['functionsFile']),
       hooks: _str(yaml['hooks']),
-      overrides:
-          defaultsYaml is YamlMap ? BindgenDefaults.fromYaml(defaultsYaml) : null,
+      overrides: defaultsYaml is YamlMap
+          ? BindgenDefaults.fromYaml(defaultsYaml)
+          : null,
     );
   }
 
@@ -221,16 +222,18 @@ class BindgenPluginConfig {
   final List<String> imports;
 
   factory BindgenPluginConfig.fromYaml(YamlMap yaml) => BindgenPluginConfig(
-        out: _str(yaml['out']) ??
-            (throw const FormatException('plugin requires `out`')),
-        className: _str(yaml['class']) ??
-            (throw const FormatException('plugin requires `class`')),
-        identifier: _str(yaml['identifier']) ?? '',
-        evalSources: _sourceList(yaml['evalSources']),
-        extraDeclarations: _strList(yaml['extraDeclarations']),
-        extraSources: _sourceList(yaml['extraSources']),
-        imports: _strList(yaml['imports']),
-      );
+    out:
+        _str(yaml['out']) ??
+        (throw const FormatException('plugin requires `out`')),
+    className:
+        _str(yaml['class']) ??
+        (throw const FormatException('plugin requires `class`')),
+    identifier: _str(yaml['identifier']) ?? '',
+    evalSources: _sourceList(yaml['evalSources']),
+    extraDeclarations: _strList(yaml['extraDeclarations']),
+    extraSources: _sourceList(yaml['extraSources']),
+    imports: _strList(yaml['imports']),
+  );
 }
 
 /// Emission options for a `*Types` spec-registry class (`registry:` block on a
@@ -257,11 +260,12 @@ class BindgenRegistryConfig {
   final Map<String, String> extra;
 
   factory BindgenRegistryConfig.fromYaml(YamlMap yaml) => BindgenRegistryConfig(
-        file: _str(yaml['file']) ??
-            (throw const FormatException('registry requires `file`')),
-        className: _str(yaml['class']),
-        extra: _strMap(yaml['extra']),
-      );
+    file:
+        _str(yaml['file']) ??
+        (throw const FormatException('registry requires `file`')),
+    className: _str(yaml['class']),
+    extra: _strMap(yaml['extra']),
+  );
 }
 
 /// A reference used by `evalSources`/`extraSources`: either embed a file's
@@ -293,12 +297,12 @@ class BindgenSourceRef {
   final String target;
 
   factory BindgenSourceRef.fromYaml(YamlMap yaml) => BindgenSourceRef(
-        uri: _str(yaml['uri']),
-        file: _str(yaml['file']),
-        import: _str(yaml['import']),
-        expression: _str(yaml['expression']),
-        target: _str(yaml['target']) ?? 'compile',
-      );
+    uri: _str(yaml['uri']),
+    file: _str(yaml['file']),
+    import: _str(yaml['import']),
+    expression: _str(yaml['expression']),
+    target: _str(yaml['target']) ?? 'compile',
+  );
 }
 
 /// Per-class configuration (`classes: <name>:` block).
@@ -406,16 +410,15 @@ class BindgenClassConfig {
 
   /// Look up member config by kind + name. [kind] is one of `method`,
   /// `getter`, `setter`, `field`, `constructor`, `static`.
-  BindgenMemberConfig? memberConfig(String kind, String name) =>
-      switch (kind) {
-        'method' => methods[name],
-        'getter' => getters[name],
-        'setter' => setters[name],
-        'field' => fields[name],
-        'constructor' => constructors[name] ?? statics[name],
-        'static' => statics[name],
-        _ => null,
-      };
+  BindgenMemberConfig? memberConfig(String kind, String name) => switch (kind) {
+    'method' => methods[name],
+    'getter' => getters[name],
+    'setter' => setters[name],
+    'field' => fields[name],
+    'constructor' => constructors[name] ?? statics[name],
+    'static' => statics[name],
+    _ => null,
+  };
 
   factory BindgenClassConfig.fromYaml(String name, YamlMap yaml) =>
       BindgenClassConfig(
@@ -515,10 +518,10 @@ class BindgenEqualityConfig {
   final String? emitToString;
 
   factory BindgenEqualityConfig.fromYaml(YamlMap yaml) => BindgenEqualityConfig(
-        emitEquals: _bool(yaml['equals']),
-        emitHashCode: _bool(yaml['hashCode']),
-        emitToString: _str(yaml['toString']),
-      );
+    emitEquals: _bool(yaml['equals']),
+    emitHashCode: _bool(yaml['hashCode']),
+    emitToString: _str(yaml['toString']),
+  );
 }
 
 /// Per-member configuration (methods/getters/setters/fields/constructors/
@@ -564,22 +567,22 @@ class BindgenMemberConfig {
   final String? type;
 
   factory BindgenMemberConfig.fromYaml(YamlMap yaml) => BindgenMemberConfig(
-        include: _bool(yaml['include']) ?? true,
-        rename: _str(yaml['rename']),
-        returns: yaml['returns'] != null
-            ? BindgenReturnsConfig.fromYamlValue(yaml['returns'])
-            : null,
-        params: _paramMap(yaml['params']),
-        hook: _str(yaml['hook']),
-        permissions: [
-          if (yaml['permissions'] is YamlList)
-            for (final entry in yaml['permissions'] as YamlList)
-              if (entry is YamlMap) BindgenPermissionConfig.fromYaml(entry),
-        ],
-        expr: _str(yaml['expr']),
-        isStatic: _bool(yaml['isStatic']),
-        type: _str(yaml['type']),
-      );
+    include: _bool(yaml['include']) ?? true,
+    rename: _str(yaml['rename']),
+    returns: yaml['returns'] != null
+        ? BindgenReturnsConfig.fromYamlValue(yaml['returns'])
+        : null,
+    params: _paramMap(yaml['params']),
+    hook: _str(yaml['hook']),
+    permissions: [
+      if (yaml['permissions'] is YamlList)
+        for (final entry in yaml['permissions'] as YamlList)
+          if (entry is YamlMap) BindgenPermissionConfig.fromYaml(entry),
+    ],
+    expr: _str(yaml['expr']),
+    isStatic: _bool(yaml['isStatic']),
+    type: _str(yaml['type']),
+  );
 }
 
 /// `returns:` override: a plain type, a parameter-dependent type, or a union.
@@ -656,7 +659,11 @@ class BindgenDependsOnConfig {
 /// `permissions:` entry — `runtime.assertPermission(...)` emitted at the top
 /// of the generated body.
 class BindgenPermissionConfig {
-  const BindgenPermissionConfig({required this.name, this.constData, this.paramData});
+  const BindgenPermissionConfig({
+    required this.name,
+    this.constData,
+    this.paramData,
+  });
 
   final String name;
   final String? constData;
@@ -681,10 +688,10 @@ class BindgenParamConfig {
   final String? defaultValue;
 
   factory BindgenParamConfig.fromYaml(YamlMap yaml) => BindgenParamConfig(
-        type: _str(yaml['type']),
-        optional: _bool(yaml['optional']),
-        defaultValue: _str(yaml['default']),
-      );
+    type: _str(yaml['type']),
+    optional: _bool(yaml['optional']),
+    defaultValue: _str(yaml['default']),
+  );
 }
 
 /// A member absent from the SDK element, declared via `synthetic:`.
@@ -743,12 +750,12 @@ class BindgenSyntheticParam {
   final String? defaultValue;
 
   factory BindgenSyntheticParam.fromYaml(YamlMap yaml) => BindgenSyntheticParam(
-        name: _str(yaml['name']) ?? '',
-        type: _str(yaml['type']) ?? 'dynamic',
-        optional: _bool(yaml['optional']) ?? false,
-        named: _bool(yaml['named']) ?? false,
-        defaultValue: _str(yaml['default']),
-      );
+    name: _str(yaml['name']) ?? '',
+    type: _str(yaml['type']) ?? 'dynamic',
+    optional: _bool(yaml['optional']) ?? false,
+    named: _bool(yaml['named']) ?? false,
+    defaultValue: _str(yaml['default']),
+  );
 }
 
 Map<String, BindgenMemberConfig> _memberMap(Object? value) {
@@ -774,8 +781,9 @@ Map<String, BindgenParamConfig> _paramMap(Object? value) {
   if (value is YamlMap) {
     for (final entry in value.entries) {
       final v = entry.value;
-      result[entry.key.toString()] =
-          v is YamlMap ? BindgenParamConfig.fromYaml(v) : const BindgenParamConfig();
+      result[entry.key.toString()] = v is YamlMap
+          ? BindgenParamConfig.fromYaml(v)
+          : const BindgenParamConfig();
     }
   } else if (value is YamlList) {
     for (final entry in value) {
@@ -786,10 +794,10 @@ Map<String, BindgenParamConfig> _paramMap(Object? value) {
 }
 
 List<BindgenSourceRef> _sourceList(Object? value) => [
-      if (value is YamlList)
-        for (final entry in value)
-          if (entry is YamlMap) BindgenSourceRef.fromYaml(entry),
-    ];
+  if (value is YamlList)
+    for (final entry in value)
+      if (entry is YamlMap) BindgenSourceRef.fromYaml(entry),
+];
 
 Map<String, String?> _nullableStrMap(Object? value) {
   final result = <String, String?>{};
@@ -816,6 +824,6 @@ Map<String, String> _strMap(Object? value) {
 bool? _bool(Object? value) => value is bool ? value : null;
 
 List<String> _strList(Object? value) => [
-      if (value is YamlList)
-        for (final entry in value) entry.toString(),
-    ];
+  if (value is YamlList)
+    for (final entry in value) entry.toString(),
+];

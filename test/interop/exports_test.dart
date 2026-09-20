@@ -118,10 +118,10 @@ void main() {
         },
       });
       final closure = $Closure(
-        (runtime, target, arguments) => $String('incompatible'),
+        (runtime, target, r, s, c) => $String('incompatible'),
       );
       final function = $Function(
-        (runtime, target, arguments) => $String('also incompatible'),
+        (runtime, target, r, s, c) => $String('also incompatible'),
       );
       for (final (kind, runtime) in [
         ('fresh', Runtime.ofProgram(program)),

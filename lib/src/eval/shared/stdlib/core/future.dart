@@ -97,13 +97,19 @@ class $Future<T> implements Future<T>, $Instance {
 
   static const $Function __then = $Function(_then);
 
-  static $Value? _then(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _then(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final $t = target as $Future;
-    final $then = args[0] as EvalFunction;
+    final $then = (r as $Value?) as EvalFunction;
     final runtimeTypeId = runtime.typedFutureTypeForCallback($then);
     final $result = ($t.$value).then((value) {
       try {
-        return $then.call(runtime, target, [runtime.wrap(value)]);
+        return $then.call(runtime, target, runtime.wrap(value), null, 1);
       } on WrappedException catch (error, trace) {
         Error.throwWithStackTrace(error.exception, trace);
       }

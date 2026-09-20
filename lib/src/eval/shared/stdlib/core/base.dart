@@ -137,21 +137,39 @@ class $bool implements $Instance {
 
   static const $Function __and = $Function(_and);
 
-  static $Value? _and(Runtime runtime, $Value? target, List<$Value?> args) {
-    final other = args[0];
+  static $Value? _and(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final other = (r as $Value?);
     return $bool(target!.$value && other!.$value);
   }
 
   static const $Function __or = $Function(_or);
 
-  static $Value? _or(Runtime runtime, $Value? target, List<$Value?> args) {
-    final other = args[0];
+  static $Value? _or(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final other = (r as $Value?);
     return $bool(target!.$value || other!.$value);
   }
 
   static const $Function __not = $Function(_not);
 
-  static $Value? _not(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _not(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     return $bool(!target!.$value);
   }
 
@@ -674,10 +692,12 @@ class $String implements $Instance {
   static $Value? _concat(
     final Runtime runtime,
     final $Value? target,
-    final List<$Value?> args,
+    final Object? r,
+    Object? s,
+    Object? c,
   ) {
     target as $String;
-    final other = args[0] as $String;
+    final other = (r as $Value?) as $String;
     return $String(target.$value + other.$value);
   }
 
@@ -686,10 +706,12 @@ class $String implements $Instance {
   static $Value? _index(
     final Runtime runtime,
     final $Value? target,
-    final List<$Value?> args,
+    final Object? r,
+    Object? s,
+    Object? c,
   ) {
     target as $String;
-    final index = args[0] as $int;
+    final index = (r as $Value?) as $int;
     return $String(target.$value[index.$value]);
   }
 
@@ -698,10 +720,12 @@ class $String implements $Instance {
   static $Value? _codeUnitAt(
     final Runtime runtime,
     final $Value? target,
-    final List<$Value?> args,
+    final Object? r,
+    Object? s,
+    Object? c,
   ) {
     target as $String;
-    final index = args[0] as $int;
+    final index = (r as $Value?) as $int;
     return $int(target.$value.codeUnitAt(index.$value));
   }
 
@@ -710,10 +734,12 @@ class $String implements $Instance {
   static $Value? _compareTo(
     final Runtime runtime,
     final $Value? target,
-    final List<$Value?> args,
+    final Object? r,
+    Object? s,
+    Object? c,
   ) {
     target as $String;
-    final other = args[0] as $String;
+    final other = (r as $Value?) as $String;
     return $int(target.$value.compareTo(other.$value));
   }
 
@@ -722,10 +748,12 @@ class $String implements $Instance {
   static $Value? _contains(
     final Runtime runtime,
     final $Value? target,
-    final List<$Value?> args,
+    final Object? r,
+    Object? s,
+    Object? c,
   ) {
     target as $String;
-    final other = args[0] as $String;
+    final other = (r as $Value?) as $String;
     return $bool(target.$value.contains(other.$value));
   }
 
@@ -734,10 +762,12 @@ class $String implements $Instance {
   static $Value? _endsWith(
     final Runtime runtime,
     final $Value? target,
-    final List<$Value?> args,
+    final Object? r,
+    Object? s,
+    Object? c,
   ) {
     target as $String;
-    final other = args[0] as $String;
+    final other = (r as $Value?) as $String;
     return $bool(target.$value.endsWith(other.$value));
   }
 
@@ -746,11 +776,16 @@ class $String implements $Instance {
   static $Value? _indexOf(
     final Runtime runtime,
     final $Value? target,
-    final List<$Value?> args,
+    final Object? r,
+    Object? s,
+    Object? c,
   ) {
     target as $String;
-    final other = args[0]!;
-    final start = args.length > 1 && args[1] is $int ? args[1] as $int : null;
+    final other = (r as $Value?)!;
+    final start =
+        ((c is int ? c : 2 + (c as List).length) > 1) && (s as $Value?) is $int
+        ? s as $int
+        : null;
     if (start != null) {
       return $int(target.$value.indexOf(other.$value, start.$value));
     } else {
@@ -763,11 +798,16 @@ class $String implements $Instance {
   static $Value? _lastIndexOf(
     final Runtime runtime,
     final $Value? target,
-    final List<$Value?> args,
+    final Object? r,
+    Object? s,
+    Object? c,
   ) {
     target as $String;
-    final other = args[0]!;
-    final start = args.length > 1 && args[1] is $int ? args[1] as $int : null;
+    final other = (r as $Value?)!;
+    final start =
+        ((c is int ? c : 2 + (c as List).length) > 1) && (s as $Value?) is $int
+        ? s as $int
+        : null;
     if (start != null) {
       return $int(target.$value.lastIndexOf(other.$value, start.$value));
     } else {
@@ -780,12 +820,16 @@ class $String implements $Instance {
   static $Value? _padLeft(
     final Runtime runtime,
     final $Value? target,
-    final List<$Value?> args,
+    final Object? r,
+    Object? s,
+    Object? c,
   ) {
     target as $String;
-    final width = args[0] as $int;
-    final padding = args.length > 1 && args[1] is $String
-        ? args[1] as $String
+    final width = (r as $Value?) as $int;
+    final padding =
+        ((c is int ? c : 2 + (c as List).length) > 1) &&
+            (s as $Value?) is $String
+        ? s as $String
         : null;
     if (padding != null) {
       return $String(target.$value.padLeft(width.$value, padding.$value));
@@ -799,12 +843,16 @@ class $String implements $Instance {
   static $Value? _padRight(
     final Runtime runtime,
     final $Value? target,
-    final List<$Value?> args,
+    final Object? r,
+    Object? s,
+    Object? c,
   ) {
     target as $String;
-    final width = args[0] as $int;
-    final padding = args.length > 1 && args[1] is $String
-        ? args[1] as $String
+    final width = (r as $Value?) as $int;
+    final padding =
+        ((c is int ? c : 2 + (c as List).length) > 1) &&
+            (s as $Value?) is $String
+        ? s as $String
         : null;
     if (padding != null) {
       return $String(target.$value.padRight(width.$value, padding.$value));
@@ -818,11 +866,13 @@ class $String implements $Instance {
   static $Value? _replaceAll(
     final Runtime runtime,
     final $Value? target,
-    final List<$Value?> args,
+    final Object? r,
+    Object? s,
+    Object? c,
   ) {
     target as $String;
-    final from = args[0]!.$value;
-    final replace = args[1]!.$value;
+    final from = (r as $Value?)!.$value;
+    final replace = (s as $Value?)!.$value;
     return $String(target.$value.replaceAll(from, replace));
   }
 
@@ -831,13 +881,17 @@ class $String implements $Instance {
   static $Value? _replaceFirst(
     final Runtime runtime,
     final $Value? target,
-    final List<$Value?> args,
+    final Object? r,
+    Object? s,
+    Object? c,
   ) {
     target as $String;
-    final from = args[0]!.$value;
-    final to = args[1]!.$value;
-    final startIndex = args.length > 2 && args[2] is $int
-        ? args[2] as $int
+    final from = (r as $Value?)!.$value;
+    final to = (s as $Value?)!.$value;
+    final startIndex =
+        ((c is int ? c : 2 + (c as List).length) > 2) &&
+            ((c as List<Object?>)[0] as $Value?) is $int
+        ? (c[0] as $Value?) as $int
         : null;
     if (startIndex != null) {
       return $String(target.$value.replaceFirst(from, to, startIndex.$value));
@@ -851,12 +905,14 @@ class $String implements $Instance {
   static $Value? _replaceRange(
     final Runtime runtime,
     final $Value? target,
-    final List<$Value?> args,
+    final Object? r,
+    Object? s,
+    Object? c,
   ) {
     target as $String;
-    final start = args[0] as $int;
-    final end = args[1] is $int ? args[1] as $int : $null();
-    final replacement = args[2] as $String;
+    final start = (r as $Value?) as $int;
+    final end = (s as $Value?) is $int ? s as $int : $null();
+    final replacement = ((c as List<Object?>)[0] as $Value?) as $String;
     return $String(
       target.$value.replaceRange(start.$value, end.$value, replacement.$value),
     );
@@ -867,11 +923,16 @@ class $String implements $Instance {
   static $Value? _startsWith(
     final Runtime runtime,
     final $Value? target,
-    final List<$Value?> args,
+    final Object? r,
+    Object? s,
+    Object? c,
   ) {
     target as $String;
-    final pattern = args[0] as $String;
-    final index = args.length > 1 && args[1] is $int ? args[1] as $int : null;
+    final pattern = (r as $Value?) as $String;
+    final index =
+        ((c is int ? c : 2 + (c as List).length) > 1) && (s as $Value?) is $int
+        ? s as $int
+        : null;
     if (index != null) {
       return $bool(target.$value.startsWith(pattern.$value, index.$value));
     } else {
@@ -884,10 +945,12 @@ class $String implements $Instance {
   static $Value? _split(
     final Runtime runtime,
     final $Value? target,
-    final List<$Value?> args,
+    final Object? r,
+    Object? s,
+    Object? c,
   ) {
     target as $String;
-    final pattern = args[0] as $String;
+    final pattern = (r as $Value?) as $String;
     return $List.wrap(
       target.$value.split(pattern.$value).map((e) => $String(e)).toList(),
     );
@@ -898,11 +961,16 @@ class $String implements $Instance {
   static $Value? _substring(
     final Runtime runtime,
     final $Value? target,
-    final List<$Value?> args,
+    final Object? r,
+    Object? s,
+    Object? c,
   ) {
     target as $String;
-    final start = args[0] as $int;
-    final end = args.length > 1 && args[1] is $int ? args[1] as $int : null;
+    final start = (r as $Value?) as $int;
+    final end =
+        ((c is int ? c : 2 + (c as List).length) > 1) && (s as $Value?) is $int
+        ? s as $int
+        : null;
     return $String(target.$value.substring(start.$value, end?.$value));
   }
 
@@ -911,7 +979,9 @@ class $String implements $Instance {
   static $Value? _toLowerCase(
     final Runtime runtime,
     final $Value? target,
-    final List<$Value?> args,
+    final Object? r,
+    Object? s,
+    Object? c,
   ) {
     return $String((target!.$value as String).toLowerCase());
   }
@@ -921,7 +991,9 @@ class $String implements $Instance {
   static $Value? _toUpperCase(
     final Runtime runtime,
     final $Value? target,
-    final List<$Value?> args,
+    final Object? r,
+    Object? s,
+    Object? c,
   ) {
     return $String((target!.$value as String).toUpperCase());
   }
@@ -931,7 +1003,9 @@ class $String implements $Instance {
   static $Value? _trim(
     final Runtime runtime,
     final $Value? target,
-    final List<$Value?> args,
+    final Object? r,
+    Object? s,
+    Object? c,
   ) {
     return $String((target!.$value as String).trim());
   }
@@ -941,7 +1015,9 @@ class $String implements $Instance {
   static $Value? _trimLeft(
     final Runtime runtime,
     final $Value? target,
-    final List<$Value?> args,
+    final Object? r,
+    Object? s,
+    Object? c,
   ) {
     return $String((target!.$value as String).trimLeft());
   }
@@ -951,7 +1027,9 @@ class $String implements $Instance {
   static $Value? _trimRight(
     final Runtime runtime,
     final $Value? target,
-    final List<$Value?> args,
+    final Object? r,
+    Object? s,
+    Object? c,
   ) {
     return $String((target!.$value as String).trimRight());
   }

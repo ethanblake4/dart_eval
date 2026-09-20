@@ -6,6 +6,7 @@
 // ignore_for_file: undefined_hidden_name
 // ignore_for_file: dead_code, unused_local_variable
 // ignore_for_file: unnecessary_type_check, unnecessary_non_null_assertion
+// ignore_for_file: unnecessary_cast
 // ignore_for_file: sdk_version_since
 // ignore_for_file: non_constant_identifier_names
 // ignore_for_file: argument_type_not_assignable_to_error_handler
@@ -1180,7 +1181,13 @@ class $Queue<E> implements $Instance {
   }
 
   static const $Function __cast = $Function(_cast);
-  static $Value? _cast(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _cast(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Queue;
     final result = self.$value.cast();
     return $Queue.wrap(result);
@@ -1190,22 +1197,34 @@ class $Queue<E> implements $Instance {
   static $Value? _followedBy(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Queue;
-    final result = self.$value.followedBy(args[0]!.$value);
+    final result = self.$value.followedBy((r as $Value?)!.$value);
     return $Iterable.wrap(
       (result).map((e) => runtime.wrapAlways(e, recursive: true)),
     );
   }
 
   static const $Function __map = $Function(_map);
-  static $Value? _map(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _map(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Queue;
     final result = self.$value.map((dynamic e) {
-      return (args[0]! as EvalCallable)(runtime, null, [
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
         runtime.wrapAlways(e, recursive: true),
-      ])?.$value;
+        null,
+        1,
+      )?.$value;
     });
     return $Iterable.wrap(
       (result).map((e) => runtime.wrapAlways(e, recursive: true)),
@@ -1213,12 +1232,22 @@ class $Queue<E> implements $Instance {
   }
 
   static const $Function __where = $Function(_where);
-  static $Value? _where(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _where(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Queue;
     final result = self.$value.where((dynamic element) {
-      return (args[0]! as EvalCallable)(runtime, null, [
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
         runtime.wrapAlways(element, recursive: true),
-      ])?.$value;
+        null,
+        1,
+      )?.$value;
     });
     return $Iterable.wrap(
       (result).map((e) => runtime.wrapAlways(e, recursive: true)),
@@ -1229,7 +1258,9 @@ class $Queue<E> implements $Instance {
   static $Value? _whereType(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Queue;
     final result = self.$value.whereType();
@@ -1239,12 +1270,22 @@ class $Queue<E> implements $Instance {
   }
 
   static const $Function __expand = $Function(_expand);
-  static $Value? _expand(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _expand(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Queue;
     final result = self.$value.expand((dynamic element) {
-      return (args[0]! as EvalCallable)(runtime, null, [
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
         runtime.wrapAlways(element, recursive: true),
-      ])?.$value;
+        null,
+        1,
+      )?.$value;
     });
     return $Iterable.wrap(
       (result).map((e) => runtime.wrapAlways(e, recursive: true)),
@@ -1255,97 +1296,161 @@ class $Queue<E> implements $Instance {
   static $Value? _contains(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Queue;
-    final result = self.$value.contains(args[0]!.$reified);
+    final result = self.$value.contains((r as $Value?)!.$reified);
     return $bool(result);
   }
 
   static const $Function __forEach = $Function(_forEach);
-  static $Value? _forEach(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _forEach(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Queue;
     self.$value.forEach((dynamic element) {
-      (args[0]! as EvalCallable)(runtime, null, [
+      ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
         runtime.wrapAlways(element, recursive: true),
-      ]);
+        null,
+        1,
+      );
     });
     return null;
   }
 
   static const $Function __reduce = $Function(_reduce);
-  static $Value? _reduce(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _reduce(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Queue;
     final result = self.$value.reduce((dynamic value, dynamic element) {
-      return (args[0]! as EvalCallable)(runtime, null, [
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
         runtime.wrapAlways(value, recursive: true),
         runtime.wrapAlways(element, recursive: true),
-      ])?.$value;
+        2,
+      )?.$value;
     });
     return runtime.wrapAlways(result, recursive: true);
   }
 
   static const $Function __fold = $Function(_fold);
-  static $Value? _fold(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _fold(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Queue;
-    final result = self.$value.fold(args[0]!.$value, (
+    final result = self.$value.fold((r as $Value?)!.$value, (
       dynamic previousValue,
       dynamic element,
     ) {
-      return (args[1]! as EvalCallable)(runtime, null, [
+      return ((s as $Value?)! as EvalCallable)(
+        runtime,
+        null,
         runtime.wrapAlways(previousValue, recursive: true),
         runtime.wrapAlways(element, recursive: true),
-      ])?.$value;
+        2,
+      )?.$value;
     });
     return runtime.wrapAlways(result, recursive: true);
   }
 
   static const $Function __every = $Function(_every);
-  static $Value? _every(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _every(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Queue;
     final result = self.$value.every((dynamic element) {
-      return (args[0]! as EvalCallable)(runtime, null, [
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
         runtime.wrapAlways(element, recursive: true),
-      ])?.$value;
+        null,
+        1,
+      )?.$value;
     });
     return $bool(result);
   }
 
   static const $Function __join = $Function(_join);
-  static $Value? _join(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _join(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Queue;
     final result = self.$value.join(
-      (args.length > 0 ? args[0] : null) == null
-          ? ""
-          : (args.length > 0 ? args[0] : null)?.$value,
+      (r is $Value ? r : null) == null ? "" : (r as $String).$value,
     );
     return $String(result);
   }
 
   static const $Function __any = $Function(_any);
-  static $Value? _any(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _any(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Queue;
     final result = self.$value.any((dynamic element) {
-      return (args[0]! as EvalCallable)(runtime, null, [
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
         runtime.wrapAlways(element, recursive: true),
-      ])?.$value;
+        null,
+        1,
+      )?.$value;
     });
     return $bool(result);
   }
 
   static const $Function __toList = $Function(_toList);
-  static $Value? _toList(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _toList(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Queue;
     final result = self.$value.toList(
-      growable: (args.length > 0 ? args[0] : null) == null
-          ? true
-          : (args.length > 0 ? args[0] : null)?.$value,
+      growable: (r is $Value ? r : null) == null ? true : (r as $bool).$value,
     );
     return $List.view(result, (e) => runtime.wrapAlways(e, recursive: true));
   }
 
   static const $Function __toSet = $Function(_toSet);
-  static $Value? _toSet(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _toSet(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Queue;
     final result = self.$value.toSet();
     return $Set.wrap(
@@ -1354,9 +1459,15 @@ class $Queue<E> implements $Instance {
   }
 
   static const $Function __take = $Function(_take);
-  static $Value? _take(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _take(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Queue;
-    final result = self.$value.take(args[0]!.$value);
+    final result = self.$value.take((r as $int).$value);
     return $Iterable.wrap(
       (result).map((e) => runtime.wrapAlways(e, recursive: true)),
     );
@@ -1366,13 +1477,19 @@ class $Queue<E> implements $Instance {
   static $Value? _takeWhile(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Queue;
     final result = self.$value.takeWhile((dynamic value) {
-      return (args[0]! as EvalCallable)(runtime, null, [
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
         runtime.wrapAlways(value, recursive: true),
-      ])?.$value;
+        null,
+        1,
+      )?.$value;
     });
     return $Iterable.wrap(
       (result).map((e) => runtime.wrapAlways(e, recursive: true)),
@@ -1380,9 +1497,15 @@ class $Queue<E> implements $Instance {
   }
 
   static const $Function __skip = $Function(_skip);
-  static $Value? _skip(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _skip(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Queue;
-    final result = self.$value.skip(args[0]!.$value);
+    final result = self.$value.skip((r as $int).$value);
     return $Iterable.wrap(
       (result).map((e) => runtime.wrapAlways(e, recursive: true)),
     );
@@ -1392,13 +1515,19 @@ class $Queue<E> implements $Instance {
   static $Value? _skipWhile(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Queue;
     final result = self.$value.skipWhile((dynamic value) {
-      return (args[0]! as EvalCallable)(runtime, null, [
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
         runtime.wrapAlways(value, recursive: true),
-      ])?.$value;
+        null,
+        1,
+      )?.$value;
     });
     return $Iterable.wrap(
       (result).map((e) => runtime.wrapAlways(e, recursive: true)),
@@ -1409,22 +1538,27 @@ class $Queue<E> implements $Instance {
   static $Value? _firstWhere(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Queue;
     final result = self.$value.firstWhere(
       (dynamic element) {
-        return (args[0]! as EvalCallable)(runtime, null, [
+        return ((r as $Value?)! as EvalCallable)(
+          runtime,
+          null,
           runtime.wrapAlways(element, recursive: true),
-        ])?.$value;
+          null,
+          1,
+        )?.$value;
       },
       orElse:
-          (args.length > 1 ? args[1] : null) == null ||
-              (args.length > 1 ? args[1] : null) is $null
+          (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
           : () {
-              return ((args.length > 1 ? args[1] : null)! as EvalCallable?)
-                  ?.call(runtime, null, [])
+              return ((s is $Value ? s : null)! as EvalCallable?)
+                  ?.call(runtime, null, null, null, 0)
                   ?.$value;
             },
     );
@@ -1435,22 +1569,27 @@ class $Queue<E> implements $Instance {
   static $Value? _lastWhere(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Queue;
     final result = self.$value.lastWhere(
       (dynamic element) {
-        return (args[0]! as EvalCallable)(runtime, null, [
+        return ((r as $Value?)! as EvalCallable)(
+          runtime,
+          null,
           runtime.wrapAlways(element, recursive: true),
-        ])?.$value;
+          null,
+          1,
+        )?.$value;
       },
       orElse:
-          (args.length > 1 ? args[1] : null) == null ||
-              (args.length > 1 ? args[1] : null) is $null
+          (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
           : () {
-              return ((args.length > 1 ? args[1] : null)! as EvalCallable?)
-                  ?.call(runtime, null, [])
+              return ((s is $Value ? s : null)! as EvalCallable?)
+                  ?.call(runtime, null, null, null, 0)
                   ?.$value;
             },
     );
@@ -1461,22 +1600,27 @@ class $Queue<E> implements $Instance {
   static $Value? _singleWhere(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Queue;
     final result = self.$value.singleWhere(
       (dynamic element) {
-        return (args[0]! as EvalCallable)(runtime, null, [
+        return ((r as $Value?)! as EvalCallable)(
+          runtime,
+          null,
           runtime.wrapAlways(element, recursive: true),
-        ])?.$value;
+          null,
+          1,
+        )?.$value;
       },
       orElse:
-          (args.length > 1 ? args[1] : null) == null ||
-              (args.length > 1 ? args[1] : null) is $null
+          (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
           : () {
-              return ((args.length > 1 ? args[1] : null)! as EvalCallable?)
-                  ?.call(runtime, null, [])
+              return ((s is $Value ? s : null)! as EvalCallable?)
+                  ?.call(runtime, null, null, null, 0)
                   ?.$value;
             },
     );
@@ -1487,10 +1631,12 @@ class $Queue<E> implements $Instance {
   static $Value? _elementAt(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Queue;
-    final result = self.$value.elementAt(args[0]!.$value);
+    final result = self.$value.elementAt((r as $int).$value);
     return runtime.wrapAlways(result, recursive: true);
   }
 
@@ -1498,7 +1644,9 @@ class $Queue<E> implements $Instance {
   static $Value? _removeFirst(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Queue;
     final result = self.$value.removeFirst();
@@ -1509,7 +1657,9 @@ class $Queue<E> implements $Instance {
   static $Value? _removeLast(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Queue;
     final result = self.$value.removeLast();
@@ -1520,38 +1670,64 @@ class $Queue<E> implements $Instance {
   static $Value? _addFirst(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Queue;
-    self.$value.addFirst(args[0]!.$value);
+    self.$value.addFirst((r as $Value?)!.$value);
     return null;
   }
 
   static const $Function __addLast = $Function(_addLast);
-  static $Value? _addLast(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _addLast(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Queue;
-    self.$value.addLast(args[0]!.$value);
+    self.$value.addLast((r as $Value?)!.$value);
     return null;
   }
 
   static const $Function __add = $Function(_add);
-  static $Value? _add(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _add(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Queue;
-    self.$value.add(args[0]!.$value);
+    self.$value.add((r as $Value?)!.$value);
     return null;
   }
 
   static const $Function __remove = $Function(_remove);
-  static $Value? _remove(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _remove(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Queue;
-    final result = self.$value.remove(args[0]!.$reified);
+    final result = self.$value.remove((r as $Value?)!.$reified);
     return $bool(result);
   }
 
   static const $Function __addAll = $Function(_addAll);
-  static $Value? _addAll(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _addAll(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Queue;
-    self.$value.addAll(args[0]!.$value);
+    self.$value.addAll((r as $Value?)!.$value);
     return null;
   }
 
@@ -1559,13 +1735,19 @@ class $Queue<E> implements $Instance {
   static $Value? _removeWhere(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Queue;
     self.$value.removeWhere((dynamic element) {
-      return (args[0]! as EvalCallable)(runtime, null, [
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
         runtime.wrapAlways(element, recursive: true),
-      ])?.$value;
+        null,
+        1,
+      )?.$value;
     });
     return null;
   }
@@ -1574,19 +1756,31 @@ class $Queue<E> implements $Instance {
   static $Value? _retainWhere(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Queue;
     self.$value.retainWhere((dynamic element) {
-      return (args[0]! as EvalCallable)(runtime, null, [
+      return ((r as $Value?)! as EvalCallable)(
+        runtime,
+        null,
         runtime.wrapAlways(element, recursive: true),
-      ])?.$value;
+        null,
+        1,
+      )?.$value;
     });
     return null;
   }
 
   static const $Function __clear = $Function(_clear);
-  static $Value? _clear(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _clear(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Queue;
     self.$value.clear();
     return null;

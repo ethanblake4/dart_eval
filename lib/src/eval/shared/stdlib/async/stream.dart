@@ -739,7 +739,9 @@ class $Stream implements $Instance {
         (r as $Value).$value as Duration,
         computation == null
             ? null
-            : (i) => runtime.wrap(computation.call(runtime, null, [$int(i)])),
+            : (i) => runtime.wrap(
+                computation.call(runtime, null, $int(i), null, 1),
+              ),
       ),
     );
   }
@@ -818,22 +820,32 @@ class $Stream implements $Instance {
   static $Value _asBroadcastStream(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final $Stream $target = target as $Stream;
-    final onListen = args[0] != null ? args[0] as EvalCallable : null;
-    final onCancel = args[1] != null ? args[1] as EvalCallable : null;
+    final onListen = r != null ? r as EvalCallable : null;
+    final onCancel = s != null ? s as EvalCallable : null;
     return $Stream.wrap(
       $target.$value.asBroadcastStream(
         onListen: onListen != null
-            ? (subscription) => onListen.call(runtime, null, [
+            ? (subscription) => onListen.call(
+                runtime,
+                null,
                 $StreamSubscription.wrap(subscription),
-              ])
+                null,
+                1,
+              )
             : null,
         onCancel: onCancel != null
-            ? (subscription) => onCancel.call(runtime, null, [
+            ? (subscription) => onCancel.call(
+                runtime,
+                null,
                 $StreamSubscription.wrap(subscription),
-              ])
+                null,
+                1,
+              )
             : null,
       ),
     );
@@ -844,39 +856,61 @@ class $Stream implements $Instance {
   static $Value _asyncExpand(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final $Stream $target = target as $Stream;
-    final convert = args[0] as EvalCallable;
+    final convert = (r as $Value?) as EvalCallable;
     return $Stream.wrap(
       $target.$value.asyncExpand(
-        (event) => convert.call(runtime, null, [event]) as Stream,
+        (event) => convert.call(runtime, null, event, null, 1) as Stream,
       ),
     );
   }
 
   static const $Function __asyncMap = $Function(_asyncMap);
 
-  static $Value _asyncMap(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value _asyncMap(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final $Stream $target = target as $Stream;
-    final convert = args[0] as EvalCallable;
+    final convert = (r as $Value?) as EvalCallable;
     return $Stream.wrap(
-      $target.$value.asyncMap((event) => convert.call(runtime, null, [event])),
+      $target.$value.asyncMap(
+        (event) => convert.call(runtime, null, event, null, 1),
+      ),
     );
   }
 
   static const $Function __cast = $Function(_cast);
 
-  static $Value _cast(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value _cast(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final $Stream $target = target as $Stream;
     return $Stream.wrap($target.$value.cast());
   }
 
   static const $Function __contains = $Function(_contains);
 
-  static $Value _contains(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value _contains(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final $Stream $target = target as $Stream;
-    final needle = args[0];
+    final needle = (r as $Value?);
     return $Future.wrap(
       (() async => $bool(await $target.$value.contains(needle)))(),
     );
@@ -884,14 +918,26 @@ class $Stream implements $Instance {
 
   static const $Function __distinct = $Function(_distinct);
 
-  static $Value _distinct(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value _distinct(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final $Stream $target = target as $Stream;
     return $Stream.wrap($target.$value.distinct());
   }
 
   static const $Function __drain = $Function(_drain);
 
-  static $Value _drain(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value _drain(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final $Stream $target = target as $Stream;
     return $Future.wrap((() async => runtime.wrap($target.$value.drain()))());
   }
@@ -901,10 +947,12 @@ class $Stream implements $Instance {
   static $Value _elementAt(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final $Stream $target = target as $Stream;
-    final index = args[0] as $int;
+    final index = (r as $Value?) as $int;
     return $Future.wrap(
       (() async =>
           runtime.wrap(await $target.$value.elementAt(index.$value)))(),
@@ -913,13 +961,20 @@ class $Stream implements $Instance {
 
   static const $Function __every = $Function(_every);
 
-  static $Value _every(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value _every(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final $Stream $target = target as $Stream;
-    final test = args[0] as EvalCallable;
+    final test = (r as $Value?) as EvalCallable;
     return $Future.wrap(
       (() async => $bool(
         await $target.$value.every(
-          (event) => test.call(runtime, null, [runtime.wrap(event)]) as bool,
+          (event) =>
+              test.call(runtime, null, runtime.wrap(event), null, 1) as bool,
         ),
       ))(),
     );
@@ -927,13 +982,20 @@ class $Stream implements $Instance {
 
   static const $Function __expand = $Function(_expand);
 
-  static $Value _expand(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value _expand(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final $Stream $target = target as $Stream;
-    final convert = args[0] as EvalCallable;
+    final convert = (r as $Value?) as EvalCallable;
     return $Stream.wrap(
       $target.$value.expand(
         (event) =>
-            convert.call(runtime, null, [runtime.wrap(event)]) as Iterable,
+            convert.call(runtime, null, runtime.wrap(event), null, 1)
+                as Iterable,
       ),
     );
   }
@@ -943,40 +1005,54 @@ class $Stream implements $Instance {
   static $Value _firstWhere(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final $Stream $target = target as $Stream;
-    final test = args[0] as EvalCallable;
+    final test = (r as $Value?) as EvalCallable;
     return $Future.wrap(
       (() async => $target.$value.firstWhere(
-        (event) => test.call(runtime, null, [event]) as bool,
+        (event) => test.call(runtime, null, event, null, 1) as bool,
       ))(),
     );
   }
 
   static const $Function __fold = $Function(_fold);
 
-  static $Value _fold(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value _fold(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final $Stream $target = target as $Stream;
-    final initialValue = args[0];
-    final combine = args[1] as EvalCallable;
+    final initialValue = (r as $Value?);
+    final combine = (s as $Value?) as EvalCallable;
     return $Future.wrap(
       (() async => $target.$value.fold(
         initialValue,
         (previous, element) =>
-            combine.call(runtime, null, [previous as dynamic, element]),
+            combine.call(runtime, null, previous as dynamic, element, 2),
       ))(),
     );
   }
 
   static const $Function __forEach = $Function(_forEach);
 
-  static $Value _forEach(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value _forEach(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final $Stream $target = target as $Stream;
-    final action = args[0] as EvalCallable;
+    final action = (r as $Value?) as EvalCallable;
     return $Future.wrap(
       (() async => $target.$value.forEach(
-        (event) => action.call(runtime, null, [runtime.wrap(event)]),
+        (event) => action.call(runtime, null, runtime.wrap(event), null, 1),
       ))(),
     );
   }
@@ -986,22 +1062,30 @@ class $Stream implements $Instance {
   static $Value _handleError(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final $Stream $target = target as $Stream;
-    final onError = args[0] as EvalCallable;
+    final onError = (r as $Value?) as EvalCallable;
     return $Stream.wrap(
       $target.$value.handleError((error /*, stackTrace*/) {
-        onError.call(runtime, null, [error /*, stackTrace*/]);
+        onError.call(runtime, null, error /*, stackTrace*/, null, 1);
       }),
     );
   }
 
   static const $Function __join = $Function(_join);
 
-  static $Value _join(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value _join(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final $target = target!.$value as Stream;
-    final separator = args[0]?.$value ?? "";
+    final separator = (r as $Value?)?.$value ?? "";
     return $Future.wrap((() async => $String(await $target.join(separator)))());
   }
 
@@ -1010,35 +1094,43 @@ class $Stream implements $Instance {
   static $Value _lastWhere(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final $Stream $target = target as $Stream;
-    final test = args[0] as EvalCallable;
+    final test = (r as $Value?) as EvalCallable;
     return $Future.wrap(
       (() async => $target.$value.lastWhere(
-        (event) => test.call(runtime, null, [event]) as bool,
+        (event) => test.call(runtime, null, event, null, 1) as bool,
       ))(),
     );
   }
 
   static const $Function __listen = $Function(_listen);
 
-  static $Value _listen(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value _listen(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final $Stream $target = target as $Stream;
-    final onData = args[0] as EvalCallable;
-    final onDone = args[1] as EvalCallable?;
-    final onError = args[2] as EvalCallable?;
-    final cancelOnError = args[3] as $bool?;
+    final onData = (r as $Value?) as EvalCallable;
+    final onDone = (s as $Value?) as EvalCallable?;
+    final onError = ((c as List<Object?>)[0] as $Value?) as EvalCallable?;
+    final cancelOnError = (c[1] as $Value?) as $bool?;
     return $StreamSubscription.wrap(
       $target.$value.listen(
         (event) {
-          onData.call(runtime, null, [runtime.wrap(event)]);
+          onData.call(runtime, null, runtime.wrap(event), null, 1);
         },
         onDone: () {
-          onDone?.call(runtime, null, []);
+          onDone?.call(runtime, null, null, null, 0);
         },
         onError: (error /*, stackTrace*/) {
-          onError?.call(runtime, null, [error /*, stackTrace*/]);
+          onError?.call(runtime, null, error /*, stackTrace*/, null, 1);
         },
         cancelOnError: cancelOnError?.$value,
       ),
@@ -1047,32 +1139,46 @@ class $Stream implements $Instance {
 
   static const $Function __map = $Function(_map);
 
-  static $Value _map(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value _map(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final $Stream $target = target as $Stream;
-    final convert = args[0] as EvalCallable;
+    final convert = (r as $Value?) as EvalCallable;
     return $Stream.wrap(
       $target.$value.map(
-        (event) => convert.call(runtime, null, [runtime.wrap(event)]) as $Value,
+        (event) =>
+            convert.call(runtime, null, runtime.wrap(event), null, 1) as $Value,
       ),
     );
   }
 
   /*static const $Function __pipe = $Function(_pipe);
 
-  static $Value _pipe(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value _pipe(Runtime runtime, $Value? target, Object? r, Object? s, Object? c) {
     final $Stream $target = target as $Stream;
-    final $StreamConsumer $consumer = args[0] as $StreamConsumer;
+    final $StreamConsumer $consumer = (r as $Value?) as $StreamConsumer;
     return $Future.wrap((() async => $target.$value.pipe($consumer.$value))(), (value) => value as $Value);
   }*/
 
   static const $Function __reduce = $Function(_reduce);
 
-  static $Value _reduce(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value _reduce(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final $Stream $target = target as $Stream;
-    final combine = args[0] as EvalCallable;
+    final combine = (r as $Value?) as EvalCallable;
     return $Future.wrap(
       (() async => $target.$value.reduce(
-        (previous, element) => combine.call(runtime, null, [previous, element]),
+        (previous, element) =>
+            combine.call(runtime, null, previous, element, 2),
       ))(),
     );
   }
@@ -1082,22 +1188,30 @@ class $Stream implements $Instance {
   static $Value _singleWhere(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final $Stream $target = target as $Stream;
-    final test = args[0] as EvalCallable;
+    final test = (r as $Value?) as EvalCallable;
     return $Future.wrap(
       (() async => $target.$value.singleWhere(
-        (event) => test.call(runtime, null, [event]) as bool,
+        (event) => test.call(runtime, null, event, null, 1) as bool,
       ))(),
     );
   }
 
   static const $Function __skip = $Function(_skip);
 
-  static $Value _skip(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value _skip(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final $Stream $target = target as $Stream;
-    final count = args[0] as $int;
+    final count = (r as $Value?) as $int;
     return $Stream.wrap($target.$value.skip(count.$value));
   }
 
@@ -1106,10 +1220,12 @@ class $Stream implements $Instance {
   static $Value _transform(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final $target = target!.$value as Stream;
-    final $transformer = args[0]!.$value as StreamTransformer;
+    final $transformer = (r as $Value?)!.$value as StreamTransformer;
     return $Stream.wrap($target.transform($transformer));
   }
 

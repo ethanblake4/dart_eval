@@ -6,6 +6,7 @@
 // ignore_for_file: undefined_hidden_name
 // ignore_for_file: dead_code, unused_local_variable
 // ignore_for_file: unnecessary_type_check, unnecessary_non_null_assertion
+// ignore_for_file: unnecessary_cast
 // ignore_for_file: sdk_version_since
 // ignore_for_file: non_constant_identifier_names
 // ignore_for_file: argument_type_not_assignable_to_error_handler
@@ -332,23 +333,43 @@ class $Encoding implements $Instance {
   }
 
   static const $Function __encode = $Function(_encode);
-  static $Value? _encode(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _encode(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Encoding;
-    final result = self.$value.encode(args[0]!.$value);
+    final result = self.$value.encode((r as $String).$value);
     return $List.view(result, (e) => $int(e));
   }
 
   static const $Function __decode = $Function(_decode);
-  static $Value? _decode(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _decode(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Encoding;
-    final result = self.$value.decode((args[0]!.$reified as List).cast<int>());
+    final result = self.$value.decode(
+      ((r as $Value?)!.$reified as List).cast<int>(),
+    );
     return $String(result);
   }
 
   static const $Function __fuse = $Function(_fuse);
-  static $Value? _fuse(Runtime runtime, $Value? target, List<$Value?> args) {
+  static $Value? _fuse(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
     final self = target! as $Encoding;
-    final result = self.$value.fuse(args[0]!.$value);
+    final result = self.$value.fuse((r as $Value?)!.$value);
     return $Codec.wrap(result);
   }
 
@@ -356,10 +377,12 @@ class $Encoding implements $Instance {
   static $Value? _decodeStream(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Encoding;
-    final result = self.$value.decodeStream(args[0]!.$value);
+    final result = self.$value.decodeStream((r as $Value?)!.$value);
     return $Future.wrap(result.then((e) => $String(e)));
   }
 

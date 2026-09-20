@@ -102,71 +102,52 @@ abstract final class TypedDispatch {
         );
         return null;
       case TypedMemberKind.method:
-        final arguments = switch (site.argumentCount) {
-          0 => <$Value?>[],
-          1 => <$Value?>[first as $Value?],
-          2 => <$Value?>[first as $Value?, rest as $Value?],
-          _ => <$Value?>[
-            first as $Value?,
-            for (var i = 0; i < site.argumentCount - 1; i++)
-              (rest as List<Object?>)[i] as $Value?,
-          ],
-        };
-        // With no named arguments the full vector is already the positional
-        // prefix and no named map needs to be materialized.
-        final positional =
-            site.namedNames.isEmpty &&
-                site.positionalCount == site.argumentCount
-            ? arguments
-            : arguments.sublist(0, site.positionalCount);
-        final named = site.namedNames.isEmpty
-            ? const <String, $Value?>{}
-            : <String, $Value?>{
-                for (var i = 0; i < site.namedNames.length; i++)
-                  site.namedNames[i]: arguments[site.positionalCount + i],
-              };
+        final count = site.argumentCount;
         if (receiver is TypedInstance) {
           return receiver.invoke(
             site.name,
-            positional,
-            named: named,
+            site.positionalCount,
+            first,
+            rest,
+            namedNames: site.namedNames,
             callerLibrary: site.callerLibrary,
             typeArguments: typeArguments,
             runtime: runtime,
           );
         }
         if (site.name == 'call' && receiver is TypedClosure) {
-          if (!receiver.descriptor.accepts(positional.length, named.keys) ||
+          if (!receiver.descriptor.accepts(
+                site.positionalCount,
+                site.namedNames,
+              ) ||
               !receiver.acceptsTypeArguments(typeArguments)) {
             throw NoSuchMethodError.withInvocation(
               receiver,
-              Invocation.method(Symbol('call'), positional, {
-                for (final entry in named.entries)
-                  Symbol(entry.key): entry.value,
-              }),
+              _callMethodInvocation(count, first, rest, site),
             );
           }
           return receiver.invoke(
-            positional,
-            named: named,
+            site.positionalCount,
+            first,
+            rest,
+            namedNames: site.namedNames,
             typeArguments: typeArguments,
             runtime: runtime,
           );
         }
         if (site.name == 'call' && receiver is TypedMember) {
-          if (!receiver.accepts(positional.length, named.keys) ||
+          if (!receiver.accepts(site.positionalCount, site.namedNames) ||
               !receiver.acceptsTypeArguments(typeArguments)) {
             throw NoSuchMethodError.withInvocation(
               receiver,
-              Invocation.method(Symbol('call'), positional, {
-                for (final entry in named.entries)
-                  Symbol(entry.key): entry.value,
-              }),
+              _callMethodInvocation(count, first, rest, site),
             );
           }
           return receiver.invokeClosure(
-            positional,
-            named: named,
+            site.positionalCount,
+            first,
+            rest,
+            namedNames: site.namedNames,
             typeArguments: typeArguments,
             runtime: runtime,
           );
@@ -175,36 +156,71 @@ abstract final class TypedDispatch {
             ? Runtime.bridgeData[receiver]?.subclass
             : null;
         if (bridgeSubclass is TypedInstance) {
-          return named.isEmpty && typeArguments.isEmpty
+          return site.namedNames.isEmpty && typeArguments.isEmpty
               ? bridgeSubclass.invokeBridge(
                   site.name,
-                  arguments,
+                  TypedInterop.argList(count, first, rest),
                   runtime: runtime,
                 )
               : bridgeSubclass.invoke(
                   site.name,
-                  positional,
-                  named: named,
+                  site.positionalCount,
+                  first,
+                  rest,
+                  namedNames: site.namedNames,
                   callerLibrary: site.callerLibrary,
                   typeArguments: typeArguments,
                   runtime: runtime,
                 );
         }
-        if (site.name == 'call' && named.isEmpty && typeArguments.isEmpty) {
-          return TypedInterop.call(runtime, receiver, positional);
+        if (site.name == 'call' &&
+            site.namedNames.isEmpty &&
+            typeArguments.isEmpty) {
+          return TypedInterop.call(runtime, receiver, count, first, rest);
         }
-        if (named.isNotEmpty) {
+        if (site.namedNames.isNotEmpty) {
           // Bridge definitions lower named parameters into their fixed host
           // ABI order. A super shim must therefore receive the full flattened
           // vector, not the source-level positional prefix.
           if (receiver is BridgeSuperShim && typeArguments.isEmpty) {
-            return TypedInterop.invoke(runtime, receiver, site.name, arguments);
+            return TypedInterop.invoke(
+              runtime,
+              receiver,
+              site.name,
+              count,
+              first,
+              rest,
+            );
           }
           throw UnsupportedError(
             'Named arguments require an evaluated method or closure',
           );
         }
-        return TypedInterop.invoke(runtime, receiver, site.name, positional);
+        return TypedInterop.invoke(
+          runtime,
+          receiver,
+          site.name,
+          site.positionalCount,
+          first,
+          rest,
+        );
     }
+  }
+
+  static Invocation _callMethodInvocation(
+    int count,
+    Object? first,
+    Object? rest,
+    TypedCallSite site,
+  ) {
+    final values = TypedInterop.argList(count, first, rest);
+    return Invocation.method(
+      Symbol('call'),
+      values.sublist(0, site.positionalCount),
+      {
+        for (var i = 0; i < site.namedNames.length; i++)
+          Symbol(site.namedNames[i]): values[site.positionalCount + i],
+      },
+    );
   }
 }

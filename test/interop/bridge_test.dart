@@ -306,8 +306,8 @@ void main() {
         },
       });
 
-      final callback = $Closure((runtime, target, args) {
-        final fn = args[0]!.$value as String;
+      final callback = $Closure((runtime, target, r, s, c) {
+        final fn = (r as $Value?)!.$value as String;
         switch (fn) {
           case 'a':
             print('a');
@@ -347,7 +347,7 @@ void main() {
       });
 
       bool callbackExecuted = false;
-      final callback = $Closure((runtime, target, args) {
+      final callback = $Closure((runtime, target, r, s, c) {
         callbackExecuted = true;
         return $Future.wrap(Future.error(Exception('Bridge error')));
       });

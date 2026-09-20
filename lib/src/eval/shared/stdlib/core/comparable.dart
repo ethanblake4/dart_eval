@@ -6,6 +6,7 @@
 // ignore_for_file: undefined_hidden_name
 // ignore_for_file: dead_code, unused_local_variable
 // ignore_for_file: unnecessary_type_check, unnecessary_non_null_assertion
+// ignore_for_file: unnecessary_cast
 // ignore_for_file: sdk_version_since
 // ignore_for_file: non_constant_identifier_names
 // ignore_for_file: argument_type_not_assignable_to_error_handler
@@ -175,10 +176,12 @@ class $Comparable<T> implements $Instance {
   static $Value? _compareTo(
     Runtime runtime,
     $Value? target,
-    List<$Value?> args,
+    Object? r,
+    Object? s,
+    Object? c,
   ) {
     final self = target! as $Comparable;
-    final result = self.$value.compareTo(args[0]!.$value);
+    final result = self.$value.compareTo((r as $Value?)!.$value);
     return $int(result);
   }
 

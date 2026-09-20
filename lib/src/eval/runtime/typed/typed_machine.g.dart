@@ -811,11 +811,15 @@ abstract final class TypedMachine {
           continue dispatch;
         case TypedOp.callHost:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          final result = TypedInterop.call(runtime, r, frame.takeObjectArguments(index)); r = result; s = null; c = null;
+          final args = frame.takeObjectArguments(index);
+          final (hfirst, hrest) = TypedInterop.splitVector(args);
+          final result = TypedInterop.call(runtime, r, args.length, hfirst, hrest); r = result; s = null; c = null;
           continue dispatch;
         case TypedOp.callMethod:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          final result = TypedInterop.invoke(runtime, r, s as String, frame.takeObjectArguments(index)); r = result; s = null; c = null;
+          final args = frame.takeObjectArguments(index);
+          final (hfirst, hrest) = TypedInterop.splitVector(args);
+          final result = TypedInterop.invoke(runtime, r, s as String, args.length, hfirst, hrest); r = result; s = null; c = null;
           continue dispatch;
         case TypedOp.aStringLengthR:
           a = (r as String).length;

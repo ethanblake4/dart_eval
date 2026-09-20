@@ -135,7 +135,7 @@ void main() {
 
       // synthetic method declaration + hooked body
       expect(generated, contains("'bump': BridgeMethodDef"));
-      expect(generated, contains('hooks.widgetBump(runtime, target, args)'));
+      expect(generated, contains('hooks.widgetBump(runtime, target, r, s, c)'));
 
       // synthetic getter dispatch + expr
       expect(generated, contains("case 'tripleSize':"));
@@ -168,8 +168,13 @@ import 'widget.eval.dart';
 $Value? widgetSize(Runtime runtime, $Value? target) =>
     $int((target!.$value as Widget).size + 1);
 
-$Value? widgetBump(Runtime runtime, $Value? target, List<$Value?> args) =>
-    $int((target!.$value as Widget).count + 10);
+$Value? widgetBump(
+  Runtime runtime,
+  $Value? target,
+  Object? r,
+  Object? s,
+  Object? c,
+) => $int((target!.$value as Widget).count + 10);
 
 $Value? makeWidget(Runtime runtime, $Value? target, List<$Value?> args) =>
     $Widget.wrap(Widget(99));
@@ -219,7 +224,7 @@ void main() {
   var denied = false;
   try {
     (w.$getProperty(runtime, 'scaled') as EvalCallable)
-        .call(runtime, w, [$int(3), $int(0)]);
+        .call(runtime, w, $int(3), $int(0), 2);
   } catch (_) {
     denied = true;
   }
@@ -227,7 +232,7 @@ void main() {
 
   runtime.grant(AllowScale());
   final scaled = (w.$getProperty(runtime, 'scaled') as EvalCallable)
-      .call(runtime, w, [$int(3), $int(0)])!;
+      .call(runtime, w, $int(3), $int(0), 2)!;
   check(scaled.$value == 12);
 
   // hooked getter
@@ -236,7 +241,7 @@ void main() {
 
   // synthetic hooked method + synthetic expr getter
   final bump = (w.$getProperty(runtime, 'bump') as EvalCallable)
-      .call(runtime, w, [])!;
+      .call(runtime, w, null, null, 0)!;
   check(bump.$value == 14);
   final triple = w.$getProperty(runtime, 'tripleSize')!;
   check(triple.$value == 12);

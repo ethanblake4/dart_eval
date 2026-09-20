@@ -44,9 +44,7 @@ String bridgeTypeSpecFrom(BindgenContext ctx, DartType type) {
     return builtin;
   }
   final element = type.element;
-  if (element == null ||
-      element.library == null ||
-      element.name == null) {
+  if (element == null || element.library == null || element.name == null) {
     print(
       'Warning: type ${type.getDisplayString()} ($type, element: '
       '${element?.runtimeType} ${element?.name}) is not spec-able; '
@@ -75,8 +73,7 @@ String registryFieldName(String name) =>
 /// The registry class name for a configured library
 /// (`dart:typed_data` → `TypedDataTypes`).
 String registryClassName(BindgenLibraryConfig lib) =>
-    lib.registry?.className ??
-    '${lib.uri.split(':').last.toPascalCase()}Types';
+    lib.registry?.className ?? '${lib.uri.split(':').last.toPascalCase()}Types';
 
 /// Return `RegistryClass.field` for a type declared in [libUri], or null when
 /// the type is not part of any configured registry (the caller then emits a
@@ -104,9 +101,10 @@ String? _registrySpec(BindgenContext ctx, String libUri, String name) {
 String? _legacyRegistrySpec(String libUri, String name) {
   final camel = name.toCamelCase();
   return switch (libUri) {
-    'dart:async' => name == 'Future' || name == 'Stream'
-        ? 'CoreTypes.$camel'
-        : 'AsyncTypes.$camel',
+    'dart:async' =>
+      name == 'Future' || name == 'Stream'
+          ? 'CoreTypes.$camel'
+          : 'AsyncTypes.$camel',
     'dart:collection' => 'CollectionTypes.$camel',
     'dart:convert' => 'ConvertTypes.$camel',
     'dart:core' => 'CoreTypes.$camel',
@@ -279,7 +277,7 @@ String? wrapType(
   }
 
   if (type.isDartCoreFunction) {
-    return '$unionStr\$Function((runtime, target, args) => $expr())';
+    return '$unionStr\$Function((runtime, target, r, s, c) => $expr())';
   }
 
   // A Never-typed expression never produces a value.
@@ -308,8 +306,8 @@ String? wrapType(
 
   // A class included in the sidecar config for the library currently being
   // bound gets a generated wrapper — prefer it over the stdlib fallback.
-  final configuredClass = ctx.configMode &&
-          element.library?.uri.toString() == ctx.uri
+  final configuredClass =
+      ctx.configMode && element.library?.uri.toString() == ctx.uri
       ? ctx.libraryConfig?.classes[element.name]
       : null;
   if (configuredClass != null &&
@@ -485,12 +483,15 @@ String _bridgeTypeRefFromName(BindgenContext ctx, _TypeName name) {
 
   final element = _resolveTypeElement(ctx, name.name);
   if (element == null) {
-    print('Warning: could not resolve type name ${name.name}; '
-        'falling back to dynamic');
+    print(
+      'Warning: could not resolve type name ${name.name}; '
+      'falling back to dynamic',
+    );
     return 'BridgeTypeRef(CoreTypes.dynamic)';
   }
   final libUri = element.library!.uri.toString();
-  final spec = builtinSpecFromName(ctx, libUri, element.name ?? name.name) ??
+  final spec =
+      builtinSpecFromName(ctx, libUri, element.name ?? name.name) ??
       'BridgeTypeSpec(\'$libUri\', '
           '\'${(element.name ?? name.name).replaceAll(r'$', r'\$')}\')';
   if (name.args.isEmpty) {
@@ -655,15 +656,23 @@ class _TypeName {
   }
 }
 
+/// Read the flat positional/named argument vector of an [EvalCallable.call]
+/// body: slot 0/1 travel in R/S, slot 2+ in the C tail list.
+String _callableArgSource(int slot) => switch (slot) {
+  0 => '(r as \$Value?)',
+  1 => '(s as \$Value?)',
+  _ => '((c as List<Object?>)[${slot - 2}] as \$Value?)',
+};
+
 String wrapFunctionType(BindgenContext ctx, FunctionType type, String expr) {
-  var buffer = StringBuffer('\$Function((runtime, target, args) { ');
+  var buffer = StringBuffer('\$Function((runtime, target, r, s, c) { ');
   if (type.returnType is! VoidType && !type.returnType.isDartCoreNull) {
     buffer.write('final funcResult = ');
   }
   buffer.write('$expr(');
   var i = 0;
   for (; i < type.normalParameterTypes.length; i++) {
-    buffer.write('args[$i]');
+    buffer.write(_callableArgSource(i));
     final type0 = type.normalParameterTypes[i];
     if (type0.nullabilitySuffix == NullabilitySuffix.question) {
       buffer.write('?.\$value');
@@ -681,7 +690,7 @@ String wrapFunctionType(BindgenContext ctx, FunctionType type, String expr) {
         buffer.write(', ');
       }
       final type0 = type.optionalParameterTypes[i];
-      buffer.write('args[$j]');
+      buffer.write(_callableArgSource(j));
       if (type0.nullabilitySuffix == NullabilitySuffix.question) {
         buffer.write('?.\$value');
       } else {
@@ -702,7 +711,7 @@ String wrapFunctionType(BindgenContext ctx, FunctionType type, String expr) {
     var k = i;
     type.namedParameterTypes.forEach((npName, npType) {
       buffer.write(npName);
-      buffer.write(': args[$k]');
+      buffer.write(': ${_callableArgSource(k)}');
       if (type.nullabilitySuffix == NullabilitySuffix.question) {
         buffer.write('?.\$value');
       } else {
