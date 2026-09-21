@@ -67,13 +67,54 @@ extension TearOff on Variable {
       )
         allParameters[index]: parameterTypes[index],
     };
+    // Class member tear-offs resolve the class's own type parameters as
+    // uninstantiated references (`L.foo` on `class L<T>` keeps `T`); a
+    // generic function's own parameters stay resolvable too (`f<X>(X x)`).
+    final memberHost = switch (declaration) {
+      MethodDeclaration() => declaration.parent?.parent,
+      ConstructorDeclaration() => declaration.parent?.parent,
+      _ => null,
+    };
+    final memberParams = <String, TypeRef>{
+      if (memberHost is Declaration)
+        ...classTypeParameterRefs(
+          offset.file ?? ctx.library,
+          declarationName(memberHost),
+          classLikeClauses(memberHost).$4,
+        ),
+    };
+    final ownTypeParams =
+        (switch (declaration) {
+                  MethodDeclaration() => declaration.typeParameters,
+                  FunctionDeclaration() =>
+                    declaration.functionExpression.typeParameters,
+                  _ => null,
+                })
+                ?.typeParameters ??
+            const <TypeParameter>[];
+    for (var i = 0; i < ownTypeParams.length; i++) {
+      final param = ownTypeParams[i];
+      memberParams[param.name.lexeme] = TypeRef(
+        offset.file ?? ctx.library,
+        param.name.lexeme,
+        resolved: true,
+        typeParameterOwner: 'tearoff:${offset.file}:${offset.name}',
+        typeParameterIndex: i,
+      );
+    }
+
     TypeRef parameterType(FormalParameter parameter) {
       final compiledType = parameterTypeByNode[parameter];
       if (compiledType != null) return compiledType;
       final annotation = parameter.type;
       return annotation == null
           ? CoreTypes.dynamic.ref(ctx)
-          : TypeRef.fromAnnotation(ctx, offset.file ?? ctx.library, annotation);
+          : formalParameterAnnotationType(
+              ctx,
+              offset.file ?? ctx.library,
+              parameter,
+              typeParameters: memberParams,
+            );
     }
 
     (Object?, int) parameterDefault(FormalParameter parameter) {
@@ -98,6 +139,7 @@ extension TearOff on Variable {
         declaration.parameters,
         declaration.returnType,
         declaration.typeParameters,
+        memberTypeParameters: memberParams,
       ),
       FunctionDeclaration() => declaredFunctionType(
         ctx,
@@ -112,6 +154,7 @@ extension TearOff on Variable {
         declaration.parameters,
         null,
         null,
+        memberTypeParameters: memberParams,
       ),
       _ => CoreTypes.function.ref(ctx),
     };

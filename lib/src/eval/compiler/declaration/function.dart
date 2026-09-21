@@ -7,6 +7,7 @@ import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/async.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/fpl.dart';
+import 'package:dart_eval/src/eval/compiler/model/function_type.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/return.dart';
 import 'package:dart_eval/src/eval/compiler/model/override_spec.dart';
 
@@ -84,7 +85,7 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
 
     var type = CoreTypes.dynamic.ref(ctx);
     if (p.type != null) {
-      type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
+      type = formalParameterAnnotationType(ctx, ctx.library, p);
     }
     vRep = Variable.of(ctx, SSA('arg_$i'), type.typeAcrossFunctionBoundary);
 

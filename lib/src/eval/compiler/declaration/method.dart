@@ -50,6 +50,14 @@ int compileMethodDeclaration(
     d.parameters,
     d.returnType,
     d.typeParameters,
+    memberTypeParameters: switch (ctx.currentClass) {
+      final host? => classTypeParameterRefs(
+        ctx.library,
+        ctx.currentClassName!,
+        classLikeClauses(host).$4,
+      ),
+      _ => const {},
+    },
   );
 
   ctx.beginScope();
@@ -77,10 +85,10 @@ int compileMethodDeclaration(
     if (p.type != null) {
       // Method args are always boxed to allow for bridge interop to have a
       // consistent interface
-      type = TypeRef.fromAnnotation(
+      type = formalParameterAnnotationType(
         ctx,
         ctx.library,
-        p.type!,
+        p,
       ).copyWith(boxed: true);
     }
 

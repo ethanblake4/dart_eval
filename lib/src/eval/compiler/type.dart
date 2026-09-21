@@ -150,7 +150,9 @@ class TypeRef {
 
     final sorted = refCount.keys.toList()
       ..sort((k1, k2) => layer[k1]! - layer[k2]!);
-
+    if (sorted.isEmpty) {
+      return CoreTypes.dynamic.ref(ctx).copyWith(nullable: makeNullable);
+    }
     return makeNullable ? sorted[0].copyWith(nullable: true) : sorted[0];
   }
 
@@ -1102,7 +1104,15 @@ class TypeRef {
         RuntimeTypeDescriptorTag.typeParameter,
         ownerType,
         typeParameterIndex!,
-        (typeParameterBound ?? CoreTypes.dynamic.ref(ctx)).runtimeTypeId(ctx),
+        // F-bounds reference the parameter itself (`T extends Foo<T>`); erase
+        // the self-reference to dynamic — descriptors can't be cyclic.
+        (typeParameterBound ?? CoreTypes.dynamic.ref(ctx))
+            .substituteTypeParameters({
+              (typeParameterOwner!, typeParameterIndex!): CoreTypes.dynamic.ref(
+                ctx,
+              ),
+            })
+            .runtimeTypeId(ctx),
       ];
     }
     if (recordFields.isNotEmpty) {
@@ -1585,23 +1595,27 @@ class TypeRef {
     int? library,
     String? owner,
   }) {
-    if (typeParams != null) {
-      for (var index = 0; index < typeParams.length; index++) {
-        final param = typeParams[index];
-        ctx.temporaryTypes[library ?? ctx.library] ??= {};
-        final bound = param.bound;
-        final name = param.name.lexeme;
-        final resolvedBound = bound == null
-            ? CoreTypes.dynamic.ref(ctx)
-            : TypeRef.fromAnnotation(ctx, library ?? ctx.library, bound);
-        ctx.temporaryTypes[library ?? ctx.library]![name] = TypeRef(
-          library ?? ctx.library,
-          name,
-          resolved: true,
-          typeParameterOwner:
-              owner ?? 'function:${ctx.currentFunctionId ?? -1}',
-          typeParameterIndex: index,
-          typeParameterBound: resolvedBound,
+    if (typeParams == null) return;
+    final lib = library ?? ctx.library;
+    final temps = ctx.temporaryTypes[lib] ??= {};
+    // First seed every parameter name so F-bounds can self-reference
+    // (`T extends Foo<T>`): the bound resolves while `T` is visible.
+    for (var index = 0; index < typeParams.length; index++) {
+      final param = typeParams[index];
+      temps[param.name.lexeme] = TypeRef(
+        lib,
+        param.name.lexeme,
+        resolved: true,
+        typeParameterOwner: owner ?? 'function:${ctx.currentFunctionId ?? -1}',
+        typeParameterIndex: index,
+      );
+    }
+    for (var index = 0; index < typeParams.length; index++) {
+      final param = typeParams[index];
+      final bound = param.bound;
+      if (bound != null) {
+        temps[param.name.lexeme] = temps[param.name.lexeme]!.copyWith(
+          typeParameterBound: TypeRef.fromAnnotation(ctx, lib, bound),
         );
       }
     }
@@ -1806,6 +1820,102 @@ class BridgedReturnType implements ReturnType {
   }
 }
 
+/// Breadth-first search for [type]'s supertype named `file:name`, returning
+/// it instantiated with the receiver's arguments. Each hop's clause types
+/// are expressed in that hop's own parameters, so they are substituted with
+/// the hop's specified arguments before continuing.
+TypeRef? instantiatedSupertypeView(
+  CompilerContext ctx,
+  TypeRef type,
+  int file,
+  String name,
+) {
+  final visited = <(int, String)>{};
+  final queue = [type];
+  while (queue.isNotEmpty) {
+    final t = queue.removeAt(0);
+    if (t.isTypeParameter || !visited.add((t.file, t.name))) continue;
+    final params = t.specifiedTypeArgs;
+    final subs = params.isEmpty
+        ? const <(String, int), TypeRef>{}
+        : <(String, int), TypeRef>{
+            for (var i = 0; i < params.length; i++)
+              ('class:${t.file}:${t.name}', i): params[i],
+          };
+    for (final sup in t.resolveTypeChain(ctx).allSupertypes) {
+      final next = subs.isEmpty ? sup : sup.substituteTypeParameters(subs);
+      if (!next.isTypeParameter &&
+          next.file == file &&
+          next.name == name) {
+        return next;
+      }
+      queue.add(next);
+    }
+  }
+  return null;
+}
+
+/// Resolves an instance member's declared return type with the declaring
+/// class's type parameters in scope, instantiated to [receiverType]'s
+/// arguments when the member is declared on the receiver's own class.
+AlwaysReturnType _memberReturnAnnotation(
+  CompilerContext ctx,
+  TypeRef receiverType,
+  ClassMember member,
+  TypeRef? fallback, {
+  int? declaringFile,
+}) {
+  final returnType = (member as MethodDeclaration).returnType;
+  final host = member.parent?.parent;
+  final hostName = host is Declaration ? declarationName(host) : null;
+  final hostTypeParams = host is Declaration
+      ? classLikeClauses(host).$4
+      : null;
+  if (hostName == null) {
+    return AlwaysReturnType.fromAnnotation(
+      ctx,
+      receiverType.file,
+      returnType,
+      fallback,
+    );
+  }
+  final hostFile = declaringFile ?? receiverType.file;
+  final rt = AlwaysReturnType.fromAnnotation(
+    ctx,
+    hostFile,
+    returnType,
+    fallback,
+    typeParameters: classTypeParameterRefs(
+      hostFile,
+      hostName,
+      hostTypeParams,
+    ),
+  );
+  if (rt.type == null ||
+      hostTypeParams == null ||
+      hostTypeParams.typeParameters.isEmpty) {
+    return rt;
+  }
+  // Instantiate the declaring class's parameters from the receiver — either
+  // the receiver itself or the matching transitive supertype (`C<E>` in
+  // `class B<T> with M<T>` where `M<S> implements C<S>`).
+  final declaringType = hostName == receiverType.name
+      ? receiverType
+      : instantiatedSupertypeView(ctx, receiverType, hostFile, hostName);
+  if (declaringType == null || declaringType.specifiedTypeArgs.isEmpty) {
+    return rt;
+  }
+  final subs = <(String, int), TypeRef>{
+    for (var i = 0; i < hostTypeParams.typeParameters.length; i++)
+      ('class:$hostFile:$hostName', i): declaringType.specifiedTypeArgs[i],
+  };
+  return AlwaysReturnType(
+    rt.type!.substituteTypeParameters(subs),
+    rt.nullable,
+  );
+}
+
+
 class AlwaysReturnType implements ReturnType {
   const AlwaysReturnType(this.type, this.nullable);
 
@@ -1813,12 +1923,13 @@ class AlwaysReturnType implements ReturnType {
     CompilerContext ctx,
     int library,
     TypeAnnotation? typeAnnotation,
-    TypeRef? fallback,
-  ) {
+    TypeRef? fallback, {
+    Map<String, TypeRef> typeParameters = const {},
+  }) {
     final rt = typeAnnotation;
     if (rt != null) {
       return AlwaysReturnType(
-        TypeRef.fromAnnotation(ctx, library, rt),
+        TypeRef.fromAnnotation(ctx, library, rt, typeParameters: typeParameters),
         rt.question != null,
       );
     } else {
@@ -1845,11 +1956,12 @@ class AlwaysReturnType implements ReturnType {
       // A field holding a callable — its call signature isn't modelled here.
       return AlwaysReturnType(fallback ?? CoreTypes.dynamic.ref(ctx), true);
     }
-    return AlwaysReturnType.fromAnnotation(
+    return _memberReturnAnnotation(
       ctx,
-      type.file,
-      d.returnType,
+      type,
+      d,
       fallback,
+      declaringFile: m.sourceLib,
     );
   }
 
@@ -1951,13 +2063,15 @@ class AlwaysReturnType implements ReturnType {
       // A field holding a callable — its call signature isn't modelled here.
       return AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
     }
-    return AlwaysReturnType.fromAnnotation(
+    return _memberReturnAnnotation(
       ctx,
-      lookupType.file,
-      d.returnType,
+      lookupType,
+      d,
       CoreTypes.dynamic.ref(ctx),
+      declaringFile: m.sourceLib,
     );
   }
+
 
   final TypeRef? type;
   final bool nullable;

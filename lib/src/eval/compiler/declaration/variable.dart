@@ -1,3 +1,4 @@
+import '../builtins.dart';
 import '../helpers/global.dart';
 import '../helpers/conversion.dart';
 import '../backend/representation.dart' show representationForType;
@@ -46,7 +47,11 @@ void compileTopLevelVariableDeclaration(
     final index = ctx.topLevelGlobalIndices[ctx.library]![varName]!;
     ctx.topLevelVariableInferredTypes[ctx.library]![varName] = type;
     ctx.runtimeGlobalInitializerMap[index] = pos;
-    ctx.pushOp(Return(V.ssa));
+    // An initializer that never produces a value (`throw`, `Never`-typed)
+    // still needs a Return operand for the initializer function frame.
+    ctx.pushOp(
+      Return(V.name == null ? BuiltinValue().push(ctx).ssa : V.ssa),
+    );
     ctx.endScope();
   }
 }

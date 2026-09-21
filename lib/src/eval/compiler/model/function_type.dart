@@ -81,12 +81,36 @@ class EvalFunctionType {
     GenericFunctionType annotation, {
     Map<String, TypeRef> typeParameters = const {},
   }) {
+    return EvalFunctionType.fromParts(
+      ctx,
+      library,
+      returnType: annotation.returnType,
+      typeParameterList: annotation.typeParameters,
+      parameterList: annotation.parameters,
+      owner: 'functionType:$library:${annotation.offset}',
+      typeParameters: typeParameters,
+    );
+  }
+
+  /// Shared builder for a function type from its parts — a
+  /// [GenericFunctionType] annotation, or the legacy function-typed formal
+  /// parameter syntax `R f<P>(args)` whose parts live on a
+  /// [FunctionTypedFormalParameterSuffix]. [owner] keys the type's own
+  /// parameters so re-resolving the same source stays canonical.
+  factory EvalFunctionType.fromParts(
+    CompilerContext ctx,
+    int library, {
+    required TypeAnnotation? returnType,
+    required TypeParameterList? typeParameterList,
+    required FormalParameterList? parameterList,
+    required String owner,
+    Map<String, TypeRef> typeParameters = const {},
+  }) {
     // The function type's own type parameters (`Function<A>(A x)`) are
     // resolvable inside its bounds, parameters, and return type, and shadow
-    // outer type parameters. Their owner is the annotation node so
-    // re-resolving the same alias stays canonical.
+    // outer type parameters.
     final ownParams =
-        annotation.typeParameters?.typeParameters ?? const <TypeParameter>[];
+        typeParameterList?.typeParameters ?? const <TypeParameter>[];
     final allTypeParams = <String, TypeRef>{
       ...typeParameters,
       for (var i = 0; i < ownParams.length; i++)
@@ -94,10 +118,27 @@ class EvalFunctionType {
           library,
           ownParams[i].name.lexeme,
           resolved: true,
-          typeParameterOwner: 'functionType:$library:${annotation.offset}',
+          typeParameterOwner: owner,
           typeParameterIndex: i,
         ),
     };
+
+    // Attach bounds in a second pass so F-bounds (`T extends Foo<T>`)
+    // self-reference the already-seeded parameter.
+    for (var i = 0; i < ownParams.length; i++) {
+      final bound = ownParams[i].bound;
+      if (bound != null) {
+        final key = ownParams[i].name.lexeme;
+        allTypeParams[key] = allTypeParams[key]!.copyWith(
+          typeParameterBound: TypeRef.fromAnnotation(
+            ctx,
+            library,
+            bound,
+            typeParameters: allTypeParams,
+          ),
+        );
+      }
+    }
 
     FunctionTypeAnnotation resolve(TypeAnnotation? type) =>
         FunctionTypeAnnotation.type(
@@ -111,17 +152,13 @@ class EvalFunctionType {
                 ),
         );
 
-    TypeAnnotation? parameterType(FormalParameter parameter) {
-      return parameter.type;
-    }
-
     final required = <FunctionFormalParameter>[];
     final optional = <FunctionFormalParameter>[];
     final named = <String, FunctionFormalParameter>{};
-    for (final parameter in annotation.parameters.parameters) {
+    for (final parameter in parameterList?.parameters ?? const <FormalParameter>[]) {
       final model = FunctionFormalParameter(
         parameter.name?.lexeme,
-        resolve(parameterType(parameter)),
+        resolve(parameter.type),
         parameter.isRequired,
       );
       if (parameter.isNamed) {
@@ -133,9 +170,7 @@ class EvalFunctionType {
       }
     }
     final generics = [
-      for (final parameter
-          in annotation.typeParameters?.typeParameters ??
-              const <TypeParameter>[])
+      for (final parameter in ownParams)
         FunctionGenericParam(
           parameter.name.lexeme,
           bound: parameter.bound == null ? null : resolve(parameter.bound),
@@ -145,7 +180,7 @@ class EvalFunctionType {
       required,
       optional,
       named,
-      resolve(annotation.returnType),
+      resolve(returnType),
       generics,
     );
   }
@@ -242,15 +277,23 @@ TypeRef declaredFunctionType(
   int library,
   FormalParameterList? parameters,
   TypeAnnotation? returnType,
-  TypeParameterList? typeParameters,
-) {
+  TypeParameterList? typeParameters, {
+  // The enclosing class's type parameters, name-keyed — a method's
+  // signature resolves them (`MapBase<K, V>.remove` sees `K`).
+  Map<String, TypeRef> memberTypeParameters = const {},
+}) {
   if (typeParameters != null) return CoreTypes.function.ref(ctx);
 
   TypeRef parameterType(FormalParameter parameter) {
     final annotation = parameter.type;
     return annotation == null
         ? CoreTypes.dynamic.ref(ctx)
-        : TypeRef.fromAnnotation(ctx, library, annotation);
+        : formalParameterAnnotationType(
+            ctx,
+            library,
+            parameter,
+            typeParameters: memberTypeParameters,
+          );
   }
 
   final all = parameters?.parameters ?? const <FormalParameter>[];
@@ -281,9 +324,52 @@ TypeRef declaredFunctionType(
           FunctionTypeAnnotation.type(
             returnType == null
                 ? CoreTypes.dynamic.ref(ctx)
-                : TypeRef.fromAnnotation(ctx, library, returnType),
+                : TypeRef.fromAnnotation(
+                    ctx,
+                    library,
+                    returnType,
+                    typeParameters: memberTypeParameters,
+                  ),
           ),
           const [],
         ),
+      );
+}
+
+/// The declared type of a formal parameter's type annotation. Legacy
+/// function-typed parameters (`R f<P>(args)`) carry their parameter list and
+/// type parameters on a [FunctionTypedFormalParameterSuffix] rather than a
+/// [GenericFunctionType], so the function type is assembled from the parts.
+TypeRef formalParameterAnnotationType(
+  CompilerContext ctx,
+  int library,
+  FormalParameter param, {
+  Map<String, TypeRef> typeParameters = const {},
+}) {
+  final annotation = param.type!;
+  final suffix = param is RegularFormalParameter
+      ? param.functionTypedSuffix
+      : null;
+  if (suffix == null) {
+    return TypeRef.fromAnnotation(
+      ctx,
+      library,
+      annotation,
+      typeParameters: typeParameters,
+    );
+  }
+  return CoreTypes.function
+      .ref(ctx)
+      .copyWith(
+        functionType: EvalFunctionType.fromParts(
+          ctx,
+          library,
+          returnType: annotation,
+          typeParameterList: suffix.typeParameters,
+          parameterList: suffix.formalParameters,
+          owner: 'functionTypedParam:$library:${suffix.offset}',
+          typeParameters: typeParameters,
+        ),
+        nullable: suffix.question != null,
       );
 }

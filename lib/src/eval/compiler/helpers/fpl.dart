@@ -6,6 +6,7 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/default_value.dart';
+import 'package:dart_eval/src/eval/compiler/model/function_type.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart'
     show representationForType;
@@ -78,10 +79,10 @@ List<FormalParameter> resolveFPLDefaults(
     final annotation = param.type;
     var declaredType = annotation == null
         ? CoreTypes.dynamic.ref(ctx)
-        : TypeRef.fromAnnotation(
+        : formalParameterAnnotationType(
             ctx,
             decLibrary ?? ctx.library,
-            annotation,
+            param,
             typeParameters: typeParameters,
           );
     if (annotation == null && parameterHost != null) {
@@ -133,10 +134,10 @@ List<FormalParameter> resolveFPLDefaults(
     return type == null
         ? (null, null)
         : (
-            TypeRef.fromAnnotation(
+            formalParameterAnnotationType(
               ctx,
               decLibrary,
-              type,
+              param,
               typeParameters: typeParameters,
             ),
             type,

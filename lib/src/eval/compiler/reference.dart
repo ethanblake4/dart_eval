@@ -407,6 +407,12 @@ class IdentifierReference implements Reference {
     if (object != null) {
       if (object!.type == CoreTypes.type.ref(ctx)) {
         final classType = object!.concreteTypes[0].resolveTypeChain(ctx);
+        if (classType.isTypeParameter) {
+          // `T.member` is an instance access on T's runtime `Type` object,
+          // not a static access — dispatch dynamically.
+          object = object!.boxIfNeeded(ctx, source);
+          return object!.getProperty(ctx, name);
+        }
         if (classType.extendsType == CoreTypes.enumType.ref(ctx)) {
           final type = classType;
           final gIndex =

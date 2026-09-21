@@ -416,12 +416,28 @@ class Variable {
     final TypeRef fieldType;
     final ReturnType? methodReturnType;
     if (isDeclaredMethod) {
+      // The declaring class's type parameters bind to its instantiated view
+      // (`member.$1`) — `b.remove` on `B extends A<int>` sees `T: int`.
+      final methodHost = method.parent?.parent;
+      final hostParams =
+          methodHost is Declaration
+              ? classLikeClauses(methodHost).$4?.typeParameters ?? const []
+              : const <TypeParameter>[];
+      final hostArgs = member!.$1.specifiedTypeArgs;
       fieldType = declaredFunctionType(
         ctx,
         resolvedReceiver.file,
         method.parameters,
         method.returnType,
         method.typeParameters,
+        memberTypeParameters: {
+          for (
+            var i = 0;
+            i < hostParams.length && i < hostArgs.length;
+            i++
+          )
+            hostParams[i].name.lexeme: hostArgs[i],
+        },
       );
       methodReturnType = AlwaysReturnType.fromInstanceMethod(
         ctx,

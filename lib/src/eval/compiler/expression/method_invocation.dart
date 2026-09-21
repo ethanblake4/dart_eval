@@ -525,17 +525,24 @@ void _resolveInvocationGenerics(
       source,
     );
   }
+  // Seed every parameter name before resolving bounds so F-bounds can
+  // self-reference (`f<T extends Foo<T>>(...)`).
+  for (var index = 0; index < parameters.length; index++) {
+    final name = parameters[index].name.lexeme;
+    resolved[name] = TypeRef(
+      declarationLibrary,
+      name,
+      resolved: true,
+      typeParameterOwner: 'call:$declarationLibrary',
+      typeParameterIndex: index,
+    );
+  }
   for (var index = 0; index < parameters.length; index++) {
     final parameter = parameters[index];
     final name = parameter.name.lexeme;
     final boundAnnotation = parameter.bound;
     final bound = boundAnnotation == null
         ? CoreTypes.dynamic.ref(ctx)
-        : boundAnnotation is NamedType &&
-              resolved.containsKey(boundAnnotation.name.lexeme)
-        ? resolved[boundAnnotation.name.lexeme]!.copyWith(
-            nullable: boundAnnotation.question != null,
-          )
         : TypeRef.fromAnnotation(
             ctx,
             declarationLibrary,
@@ -551,9 +558,18 @@ void _resolveInvocationGenerics(
       ctx.library,
       explicitArguments[index],
     );
+    // The bound may self-reference (`T extends Generator<T>`); substitute
+    // the actual argument before checking assignability.
+    final substitutedBound = bound.substituteTypeParameters({
+      ('call:$declarationLibrary', index): argument,
+    });
     if (argument != CoreTypes.dynamic.ref(ctx) &&
-        bound != CoreTypes.dynamic.ref(ctx) &&
-        !argument.isAssignableTo(ctx, bound, forceAllowDynamic: false)) {
+        substitutedBound != CoreTypes.dynamic.ref(ctx) &&
+        !argument.isAssignableTo(
+          ctx,
+          substitutedBound,
+          forceAllowDynamic: false,
+        )) {
       throw CompileError(
         'Type argument $argument does not satisfy the bound $bound of $name',
         source,

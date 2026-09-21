@@ -863,7 +863,15 @@ bool _isObjectWrapper(CompilerContext ctx, BridgeDeclaration bridge) =>
         (throw CompileError('Cannot find superclass $clsName', $extends));
     return (extendsDecl, prefix, resolved);
   }
-  return (extendsDecl, prefix, null);
+  // Resolve the clause's type arguments (`extends A<int>`) so the
+  // superclass's parameters bind inside the super-constructor call.
+  TypeRef? instantiated;
+  try {
+    instantiated = TypeRef.fromAnnotation(ctx, ctx.library, $extends);
+  } on CompileError {
+    instantiated = null;
+  }
+  return (extendsDecl, prefix, instantiated);
 }
 
 /// Emits the call to a non-bridge superclass constructor ([constructorName]) and
@@ -918,6 +926,13 @@ Variable _invokeSuperConstructor(
             constructor.parameters.parameters,
             constructor,
             superParams: superParams,
+            // `extends A<int>` — the superclass's parameters bind to the
+            // clause's arguments so `T z` checks against `int`.
+            resolveGenerics: _superclassGenerics(
+              ctx,
+              extendsDecl,
+              extendsType,
+            ),
             source: superInitializer,
           )
         : compileSuperParams(
@@ -1226,4 +1241,23 @@ void compileAliasForwardingConstructor(
   );
   ctx.pushOp(Return(inst.ssa));
   ctx.endScope();
+}
+
+/// The superclass's type parameters bound to the instantiated `extends`
+/// clause's arguments — `class B extends A<int>` binds `T: int` for the
+/// super-constructor call's parameter types.
+Map<String, TypeRef> _superclassGenerics(
+  CompilerContext ctx,
+  DeclarationOrBridge extendsDecl,
+  TypeRef? extendsType,
+) {
+  final args = extendsType?.specifiedTypeArgs;
+  if (args == null || args.isEmpty) return const {};
+  final params =
+      classLikeClauses(extendsDecl.declaration).$4?.typeParameters ??
+      const <TypeParameter>[];
+  return {
+    for (var i = 0; i < params.length && i < args.length; i++)
+      params[i].name.lexeme: args[i],
+  };
 }

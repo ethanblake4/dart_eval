@@ -106,8 +106,9 @@ Variable compileOmittedArgument(
   CompilerContext ctx,
   int library,
   FormalParameter parameter,
-  Declaration host,
-) {
+  Declaration host, {
+  Map<String, TypeRef> typeParameters = const {},
+}) {
   if (parameter.isRequired) {
     throw CompileError(
       'Missing required argument ${parameter.name!.lexeme}',
@@ -144,6 +145,7 @@ Variable compileOmittedArgument(
     parameter,
     library,
     host,
+    typeParameters: typeParameters,
   );
   final type = declaredType ?? CoreTypes.dynamic.ref(ctx);
   // Scalar defaults push as native constants; anything else (tear-offs, const
@@ -265,6 +267,39 @@ ArgumentListResult compileArgumentList(
           i,
         ): ?resolveGenerics[ctorClassParams[i].name.lexeme],
   };
+  // The same parameters as name-keyed references, so annotations on
+  // ordinary (non-formal) params like `T z` resolve inside the ctor.
+  final ctorClassParamRefs = <String, TypeRef>{};
+  if (ctorClassParams.isNotEmpty) {
+    final hostName = declarationName(
+      parameterHost.parent!.parent! as Declaration,
+    );
+    for (var i = 0; i < ctorClassParams.length; i++) {
+      final param = ctorClassParams[i];
+      ctorClassParamRefs[param.name.lexeme] = TypeRef(
+        decLibrary,
+        param.name.lexeme,
+        resolved: true,
+        typeParameterOwner: 'class:$decLibrary:$hostName',
+        typeParameterIndex: i,
+      );
+    }
+    for (var i = 0; i < ctorClassParams.length; i++) {
+      final bound = ctorClassParams[i].bound;
+      if (bound != null) {
+        final name = ctorClassParams[i].name.lexeme;
+        ctorClassParamRefs[name] = ctorClassParamRefs[name]!.copyWith(
+          typeParameterBound: TypeRef.fromAnnotation(
+            ctx,
+            decLibrary,
+            bound,
+            typeParameters: {...ctorClassParamRefs, ...resolveGenerics},
+          ),
+        );
+      }
+    }
+  }
+  final paramTypeParameters = {...ctorClassParamRefs, ...resolveGenerics};
 
   final resolveGenericsMap = <String, Set<TypeRef>>{};
 
@@ -289,6 +324,7 @@ ArgumentListResult compileArgumentList(
           decLibrary,
           param,
           parameterHost,
+          typeParameters: paramTypeParameters,
         );
         push.add(value);
         args.add(value);
@@ -302,6 +338,7 @@ ArgumentListResult compileArgumentList(
           decLibrary,
           param,
           parameterHost,
+          typeParameters: paramTypeParameters,
         );
         push.add(value);
         args.add(value);
@@ -312,7 +349,7 @@ ArgumentListResult compileArgumentList(
         param,
         decLibrary,
         parameterHost,
-        typeParameters: resolveGenerics,
+        typeParameters: paramTypeParameters,
       );
 
       paramType ??= CoreTypes.dynamic.ref(ctx);
@@ -381,7 +418,7 @@ ArgumentListResult compileArgumentList(
           ctx,
           decLibrary,
           typeAnnotation,
-          typeParameters: resolveGenerics,
+          typeParameters: paramTypeParameters,
         );
       }
     } else if (param is FieldFormalParameter) {
@@ -429,6 +466,7 @@ ArgumentListResult compileArgumentList(
         decLibrary,
         param0,
         parameterHost,
+        typeParameters: paramTypeParameters,
       );
       push.add(value);
       namedArgs[name] = value;
