@@ -287,6 +287,17 @@ Variable patternMatchAndBind(
         result = result.invoke(ctx, '&&', [fieldResult]).result;
       }
       return result;
+    case CastPattern pat:
+      final slot = TypeRef.fromAnnotation(ctx, ctx.library, pat.type);
+      // AssertType needs an object operand; box into a fresh slot.
+      final boxed = V.boxed ? V : V.boxIntoFreshSlot(ctx);
+      ctx.pushOp(AssertType(boxed.ssa, slot.runtimeTypeId(ctx)));
+      return patternMatchAndBind(
+        ctx,
+        pat.pattern,
+        boxed.copyWith(type: slot),
+        patternContext: patternContext,
+      );
     case RelationalPattern pat:
       final operand = compileExpression(pat.operand, ctx);
       final operator =

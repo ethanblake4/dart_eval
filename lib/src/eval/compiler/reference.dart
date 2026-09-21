@@ -499,7 +499,10 @@ class IdentifierReference implements Reference {
         final $type = instanceDeclaration.$1;
         final decOrBridge = instanceDeclaration.$2;
 
-        final $this = ctx.lookupLocal('#this')!;
+        final $this = ctx.lookupLocal('#this') ??
+            (throw CompileError(
+              'Cannot access instance member $name in a static context',
+            ));
 
         if (!decOrBridge.isBridge) {
           final declaration = decOrBridge.declaration;

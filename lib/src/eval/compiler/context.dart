@@ -290,6 +290,16 @@ class CompilerContext with ScopeContext {
   }
 
   void pushOp(Operation op) {
+    if (blockEndsControlFlow) {
+      // A terminator ends the block, but expressions like `f(throw x)` can
+      // emit more ops afterwards. Commit the terminated block and redirect
+      // into a fresh detached block so dead code neither lands after the
+      // terminator nor adds a successor edge out of it.
+      flushBlock();
+      final orphan = BasicBlock<Operation>([], label: label('dead'));
+      builder.float(orphan);
+      builder = BasicBlockBuilder(activeGraph, [orphan], builder);
+    }
     blockCode.add(op);
   }
 

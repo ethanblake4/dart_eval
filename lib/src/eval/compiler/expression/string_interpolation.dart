@@ -21,6 +21,11 @@ Variable compileStringInterpolation(
       }
     } else if (element is InterpolationExpression) {
       final V = compileExpression(element.expression, ctx);
+      // A `throw` inside an interpolation produces no value; the throw
+      // already dominates control flow so nothing further is emitted.
+      if (V.type == CoreTypes.never.ref(ctx)) {
+        continue;
+      }
       Variable vStr;
       if (V.type == CoreTypes.string.ref(ctx)) {
         vStr = V;
@@ -31,5 +36,9 @@ Variable compileStringInterpolation(
     }
   }
 
-  return build!;
+  if (build == null) {
+    // Only reachable when every element threw.
+    return Variable(CoreTypes.never.ref(ctx));
+  }
+  return build;
 }

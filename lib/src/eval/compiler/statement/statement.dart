@@ -38,6 +38,8 @@ StatementInfo compileStatement(
         ctx,
         skipClassBoxing: skipClassBoxing,
       );
+    } else if (s is EmptyStatement) {
+      return StatementInfo();
     } else if (s is VariableDeclarationStatement) {
       return compileVariableDeclarationStatement(s, ctx);
     } else if (s is ExpressionStatement) {

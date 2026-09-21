@@ -20,6 +20,10 @@ Variable compileAdjacentStrings(CompilerContext ctx, AdjacentStrings str) {
   Variable? build;
   for (final string in str.strings) {
     final V = parseLiteral(string, ctx);
+    // An interpolation element that throws produces no value.
+    if (V.type == CoreTypes.never.ref(ctx)) {
+      continue;
+    }
     Variable vStr;
     if (V.type == CoreTypes.string.ref(ctx)) {
       vStr = V;
@@ -29,5 +33,8 @@ Variable compileAdjacentStrings(CompilerContext ctx, AdjacentStrings str) {
     build = build == null ? vStr : build.invoke(ctx, '+', [vStr]).result;
   }
 
-  return build!;
+  if (build == null) {
+    return Variable(CoreTypes.never.ref(ctx));
+  }
+  return build;
 }

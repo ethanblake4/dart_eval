@@ -452,10 +452,13 @@ void compileConstructorDeclaration(
         init.fieldName.name,
         source: init,
       );
+      final fieldIndex = fieldIndices[init.fieldName.name] ??
+          (throw CompileError(
+            'Undefined field ${init.fieldName.name} in initializer',
+            init,
+          ));
       final V = compileExpression(init.expression, ctx, fType).boxIfNeeded(ctx);
-      ctx.pushOp(
-        SetPropertyStatic(inst.ssa, fieldIndices[init.fieldName.name]!, V.ssa),
-      );
+      ctx.pushOp(SetPropertyStatic(inst.ssa, fieldIndex, V.ssa));
     } else if (init is AssertInitializer) {
       final cond = compileExpression(init.condition, ctx);
       final msg = init.message != null
