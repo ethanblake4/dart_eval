@@ -18,6 +18,19 @@ List<TypeRef> compileForElementForList(
   Variable list,
   CompilerContext ctx,
   bool box,
+) =>
+    compileForElement(
+      e,
+      ctx,
+      (element) => compileListElement(element, list, ctx, box),
+    );
+
+/// Compiles a collection `for` element, dispatching its body through
+/// [compileBody] and returning every type it may produce.
+List<TypeRef> compileForElement(
+  ForElement e,
+  CompilerContext ctx,
+  List<TypeRef> Function(CollectionElement) compileBody,
 ) {
   final potentialReturnTypes = <TypeRef>[];
   final parts = e.forLoopParts;
@@ -96,7 +109,7 @@ List<TypeRef> compileForElementForList(
       },
       condition: (ctx) => iterator.invoke(ctx, 'moveNext', []).result,
       body: (ctx, ert) {
-        potentialReturnTypes.addAll(compileListElement(e.body, list, ctx, box));
+        potentialReturnTypes.addAll(compileBody(e.body));
         return StatementInfo();
       },
       update: (ctx) =>
@@ -118,7 +131,7 @@ List<TypeRef> compileForElementForList(
       },
       conditionExpression: parts.condition,
       body: (ctx, ert) {
-        potentialReturnTypes.addAll(compileListElement(e.body, list, ctx, box));
+        potentialReturnTypes.addAll(compileBody(e.body));
         return StatementInfo();
       },
       update: (ctx) {

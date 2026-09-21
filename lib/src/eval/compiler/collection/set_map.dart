@@ -1,3 +1,5 @@
+import 'package:dart_eval/src/eval/compiler/collection/for.dart';
+import 'package:dart_eval/src/eval/compiler/collection/if.dart';
 import 'package:dart_eval/src/eval/compiler/collection/spread.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
@@ -52,64 +54,17 @@ Variable compileSetOrMapLiteral(SetOrMapLiteral literal, CompilerContext ctx) {
     ),
   );
   for (final element in literal.elements) {
-    if (element is SpreadElement) {
-      final types = compileCollectionSpread(
-        element,
-        collection,
-        ctx,
-        isMap: isMap,
-        isSet: !isMap,
-        source: identical(element, first) ? firstSpread : null,
-      );
-      keyTypes.add(types.first);
-      if (isMap) valueTypes.add(types[1]);
-    } else if (isMap && element is MapLiteralEntry) {
-      var key = compileExpression(element.key, ctx, explicitKey);
-      var value = compileExpression(element.value, ctx, explicitValue);
-      if (explicitKey != null) {
-        key = convertForAssignment(
-          ctx,
-          key,
-          explicitKey,
-          representation: MachineRepresentation.object,
-          source: element.key,
-        );
-      } else {
-        key = key.boxIfNeeded(ctx);
-      }
-      if (explicitValue != null) {
-        value = convertForAssignment(
-          ctx,
-          value,
-          explicitValue,
-          representation: MachineRepresentation.object,
-          source: element.value,
-        );
-      } else {
-        value = value.boxIfNeeded(ctx);
-      }
-      keyTypes.add(key.type);
-      valueTypes.add(value.type);
-      ctx.pushOp(MapSet(target, key.ssa, value.ssa));
-    } else if (!isMap && element is Expression) {
-      var value = compileExpression(element, ctx, explicitKey);
-      value = explicitKey == null
-          ? value.boxIfNeeded(ctx)
-          : convertForAssignment(
-              ctx,
-              value,
-              explicitKey,
-              representation: MachineRepresentation.object,
-              source: element,
-            );
-      keyTypes.add(value.type);
-      ctx.pushOp(SetAdd(target, value.ssa));
-    } else {
-      throw CompileError(
-        'Unsupported set or map element ${element.runtimeType}',
-        element,
-      );
-    }
+    final (keys, values) = _compileElement(
+      element,
+      collection,
+      ctx,
+      isMap: isMap,
+      explicitKey: explicitKey,
+      explicitValue: explicitValue,
+      firstSpread: identical(element, first) ? firstSpread : null,
+    );
+    keyTypes.addAll(keys);
+    valueTypes.addAll(values);
   }
   TypeRef infer(TypeRef? explicit, Set<TypeRef> values) =>
       (explicit ??
@@ -125,4 +80,125 @@ Variable compileSetOrMapLiteral(SetOrMapLiteral literal, CompilerContext ctx) {
       ],
     ),
   );
+}
+
+(List<TypeRef>, List<TypeRef>) _compileElement(
+  CollectionElement element,
+  Variable collection,
+  CompilerContext ctx, {
+  required bool isMap,
+  required TypeRef? explicitKey,
+  required TypeRef? explicitValue,
+  Variable? firstSpread,
+}) {
+  final target = collection.ssa;
+  final keys = <TypeRef>[];
+  final values = <TypeRef>[];
+  if (element is SpreadElement) {
+    final types = compileCollectionSpread(
+      element,
+      collection,
+      ctx,
+      isMap: isMap,
+      isSet: !isMap,
+      source: firstSpread,
+    );
+    keys.add(types.first);
+    if (isMap) values.add(types[1]);
+  } else if (element is IfElement) {
+    final types = compileIfElement(
+      element,
+      ctx,
+      (e) {
+        final (k, v) = _compileElement(
+          e,
+          collection,
+          ctx,
+          isMap: isMap,
+          explicitKey: explicitKey,
+          explicitValue: explicitValue,
+        );
+        return isMap ? [...k, ...v] : k;
+      },
+    );
+    if (isMap) {
+      for (var i = 0; i + 1 < types.length; i += 2) {
+        keys.add(types[i]);
+        values.add(types[i + 1]);
+      }
+    } else {
+      keys.addAll(types);
+    }
+  } else if (element is ForElement) {
+    final types = compileForElement(
+      element,
+      ctx,
+      (e) {
+        final (k, v) = _compileElement(
+          e,
+          collection,
+          ctx,
+          isMap: isMap,
+          explicitKey: explicitKey,
+          explicitValue: explicitValue,
+        );
+        return isMap ? [...k, ...v] : k;
+      },
+    );
+    if (isMap) {
+      for (var i = 0; i + 1 < types.length; i += 2) {
+        keys.add(types[i]);
+        values.add(types[i + 1]);
+      }
+    } else {
+      keys.addAll(types);
+    }
+  } else if (isMap && element is MapLiteralEntry) {
+    var key = compileExpression(element.key, ctx, explicitKey);
+    var value = compileExpression(element.value, ctx, explicitValue);
+    if (explicitKey != null) {
+      key = convertForAssignment(
+        ctx,
+        key,
+        explicitKey,
+        representation: MachineRepresentation.object,
+        source: element.key,
+      );
+    } else {
+      key = key.boxIfNeeded(ctx);
+    }
+    if (explicitValue != null) {
+      value = convertForAssignment(
+        ctx,
+        value,
+        explicitValue,
+        representation: MachineRepresentation.object,
+        source: element.value,
+      );
+    } else {
+      value = value.boxIfNeeded(ctx);
+    }
+    keys.add(key.type);
+    values.add(value.type);
+    ctx.pushOp(MapSet(target, key.ssa, value.ssa));
+  } else if (!isMap && element is Expression) {
+    var value = compileExpression(element, ctx, explicitKey);
+    value = explicitKey == null
+        ? value.boxIfNeeded(ctx)
+        : convertForAssignment(
+            ctx,
+            value,
+            explicitKey,
+            representation: MachineRepresentation.object,
+            source: element,
+          );
+    keys.add(value.type);
+    ctx.pushOp(SetAdd(target, value.ssa));
+  } else {
+    throw CompileError(
+      'Unsupported set or map element ${element.runtimeType}',
+      element,
+    );
+  }
+  return (keys, values);
 }

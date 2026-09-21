@@ -234,6 +234,59 @@ Variable patternMatchAndBind(
       }
 
       return BuiltinValue(boolval: true).push(ctx);
+    case LogicalOrPattern pat:
+      final left = patternMatchAndBind(
+        ctx,
+        pat.leftOperand,
+        V,
+        patternContext: patternContext,
+      );
+      final right = patternMatchAndBind(
+        ctx,
+        pat.rightOperand,
+        V,
+        patternContext: patternContext,
+      );
+      return left.invoke(ctx, '||', [right]).result;
+    case LogicalAndPattern pat:
+      final left = patternMatchAndBind(
+        ctx,
+        pat.leftOperand,
+        V,
+        patternContext: patternContext,
+      );
+      final right = patternMatchAndBind(
+        ctx,
+        pat.rightOperand,
+        V,
+        patternContext: patternContext,
+      );
+      return left.invoke(ctx, '&&', [right]).result;
+    case ObjectPattern pat:
+      var result = _typeTest(ctx, pat.type, V);
+      for (final field in pat.fields) {
+        // `(:var x)` shorthand: the getter name is the pattern's own name.
+        final propName =
+            field.name?.name?.lexeme ??
+            (field.pattern is VariablePattern
+                ? (field.pattern as VariablePattern).name.lexeme
+                : null);
+        if (propName == null) {
+          throw CompileError(
+            'Object pattern field requires a name',
+            field,
+          );
+        }
+        final fieldValue = V.getProperty(ctx, propName);
+        final fieldResult = patternMatchAndBind(
+          ctx,
+          field.pattern,
+          fieldValue,
+          patternContext: patternContext,
+        );
+        result = result.invoke(ctx, '&&', [fieldResult]).result;
+      }
+      return result;
     case RelationalPattern pat:
       final operand = compileExpression(pat.operand, ctx);
       final operator =
@@ -266,9 +319,17 @@ Variable _typeTest(CompilerContext ctx, TypeAnnotation? patType, Variable V) {
     return BuiltinValue(boolval: true).push(ctx);
   }
 
+  // IsType takes an object operand; box into a fresh slot so V's own SSA
+  // keeps its (possibly unboxed) representation for other uses.
+  final operand = V.boxed ? V : V.boxIntoFreshSlot(ctx);
   return Variable.ssa(
     ctx,
-    IsType(ctx.svar('pattern_type'), V.ssa, slot.runtimeTypeId(ctx), false),
+    IsType(
+      ctx.svar('pattern_type'),
+      operand.ssa,
+      slot.runtimeTypeId(ctx),
+      false,
+    ),
     CoreTypes.bool.ref(ctx).copyWith(boxed: false),
   );
 }

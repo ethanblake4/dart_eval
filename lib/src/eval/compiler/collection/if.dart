@@ -11,6 +11,19 @@ List<TypeRef> compileIfElementForList(
   Variable list,
   CompilerContext ctx,
   bool box,
+) =>
+    compileIfElement(
+      e,
+      ctx,
+      (element) => compileListElement(element, list, ctx, box),
+    );
+
+/// Compiles a collection `if` element, dispatching its then/else elements
+/// through [compileBody] and returning every type they may produce.
+List<TypeRef> compileIfElement(
+  IfElement e,
+  CompilerContext ctx,
+  List<TypeRef> Function(CollectionElement) compileBody,
 ) {
   final potentialReturnTypes = <TypeRef>[];
   final elseElement = e.elseElement;
@@ -20,17 +33,13 @@ List<TypeRef> compileIfElementForList(
     null,
     conditionExpression: e.expression,
     thenBranch: (ctx, _) {
-      potentialReturnTypes.addAll(
-        compileListElement(e.thenElement, list, ctx, box),
-      );
+      potentialReturnTypes.addAll(compileBody(e.thenElement));
       return StatementInfo();
     },
     elseBranch: elseElement == null
         ? null
         : (ctx, _) {
-            potentialReturnTypes.addAll(
-              compileListElement(elseElement, list, ctx, box),
-            );
+            potentialReturnTypes.addAll(compileBody(elseElement));
             return StatementInfo();
           },
   );

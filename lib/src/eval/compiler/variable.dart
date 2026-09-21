@@ -174,42 +174,77 @@ class Variable {
       );
     }
 
-    final result = ssa;
-
-    Variable v2 = this;
-
-    if (type == CoreTypes.int.ref(ctx)) {
-      ctx.pushOp(BoxInt(result, ssa));
-    } else if (type == CoreTypes.num.ref(ctx)) {
-      ctx.pushOp(BoxNum(result, ssa));
-    } else if (type == CoreTypes.double.ref(ctx)) {
-      ctx.pushOp(BoxDouble(result, ssa));
-    } else if (type == CoreTypes.bool.ref(ctx)) {
-      ctx.pushOp(BoxBool(result, ssa));
-    } else if (type == CoreTypes.list.ref(ctx)) {
-      if (!type.specifiedTypeArgs[0].boxed) {
-        v2 = boxListContents(ctx, this);
-      }
-      ctx.pushOp(
-        BoxList(result, v2.ssa, runtimeTypeId: type.runtimeTypeId(ctx)),
-      );
-    } else if (type == CoreTypes.map.ref(ctx)) {
-      ctx.pushOp(BoxMap(result, ssa, runtimeTypeId: type.runtimeTypeId(ctx)));
-    } else if (type == CoreTypes.set.ref(ctx)) {
-      ctx.pushOp(BoxSet(result, ssa, runtimeTypeId: type.runtimeTypeId(ctx)));
-    } else if (type == CoreTypes.string.ref(ctx)) {
-      ctx.pushOp(BoxString(result, ssa));
-    } else if (type == CoreTypes.nullType.ref(ctx)) {
-      ctx.pushOp(BoxNull(result));
-    } else {
-      throw CompileError('Cannot box $type', source);
-    }
+    _emitBoxOp(ctx, ssa, this, source);
 
     return copyWithUpdate(
       ctx,
       type: type.copyWith(boxed: true),
       representation: MachineRepresentation.object,
     );
+  }
+
+  /// Boxes this value into a fresh SSA slot instead of boxing the current
+  /// slot in place, leaving this variable's SSA representation intact. Used
+  /// when the current slot must keep its unboxed representation (e.g. a local
+  /// that is read again later).
+  Variable boxIntoFreshSlot(CompilerContext ctx, [AstNode? source]) {
+    if (boxed) {
+      return Variable.ssa(
+        ctx,
+        Assign(ctx.svar('box_copy'), ssa),
+        type,
+        methodReturnType: methodReturnType,
+      );
+    }
+    if (type == CoreTypes.dynamic.ref(ctx) ||
+        type == CoreTypes.object.ref(ctx)) {
+      return copyWith(type: type.copyWith(boxed: true));
+    }
+    final result = ctx.svar('boxed');
+    _emitBoxOp(ctx, result, this, source);
+    return Variable.of(
+      ctx,
+      result,
+      type.copyWith(boxed: true),
+      methodReturnType: methodReturnType,
+    );
+  }
+
+  void _emitBoxOp(
+    CompilerContext ctx,
+    SSA result,
+    Variable V,
+    AstNode? source,
+  ) {
+    Variable v2 = V;
+    final source_ = V.ssa;
+
+    if (type == CoreTypes.int.ref(ctx)) {
+      ctx.pushOp(BoxInt(result, source_));
+    } else if (type == CoreTypes.num.ref(ctx)) {
+      ctx.pushOp(BoxNum(result, source_));
+    } else if (type == CoreTypes.double.ref(ctx)) {
+      ctx.pushOp(BoxDouble(result, source_));
+    } else if (type == CoreTypes.bool.ref(ctx)) {
+      ctx.pushOp(BoxBool(result, source_));
+    } else if (type == CoreTypes.list.ref(ctx)) {
+      if (!type.specifiedTypeArgs[0].boxed) {
+        v2 = boxListContents(ctx, V);
+      }
+      ctx.pushOp(
+        BoxList(result, v2.ssa, runtimeTypeId: type.runtimeTypeId(ctx)),
+      );
+    } else if (type == CoreTypes.map.ref(ctx)) {
+      ctx.pushOp(BoxMap(result, source_, runtimeTypeId: type.runtimeTypeId(ctx)));
+    } else if (type == CoreTypes.set.ref(ctx)) {
+      ctx.pushOp(BoxSet(result, source_, runtimeTypeId: type.runtimeTypeId(ctx)));
+    } else if (type == CoreTypes.string.ref(ctx)) {
+      ctx.pushOp(BoxString(result, source_));
+    } else if (type == CoreTypes.nullType.ref(ctx)) {
+      ctx.pushOp(BoxNull(result));
+    } else {
+      throw CompileError('Cannot box $type', source);
+    }
   }
 
   /// Unboxes this variable, if it isn't yet. Unlike [boxIfNeeded],

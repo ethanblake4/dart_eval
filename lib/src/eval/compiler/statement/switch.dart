@@ -7,6 +7,7 @@ import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/pattern.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
+import 'package:dart_eval/src/eval/compiler/statement/break.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
@@ -24,9 +25,6 @@ StatementInfo compileSwitchStatement(
     Assign(ctx.svar('switch_value'), expression.ssa),
     expression.type,
   );
-
-  // Validate switch cases for proper Dart semantics
-  _validateSwitchCases(s.members);
 
   final endBlock = BasicBlock<Operation>([], label: ctx.label('switch_end'));
   final initialState = ctx.saveState();
@@ -196,6 +194,25 @@ StatementInfo _executeSwitchBlock(
 
   ctx.endScope();
 
+  // Dart 3: a non-empty case implicitly breaks — no terminator needed.
+  // Emit the jump to the switch's end so the SSA edge matches an explicit
+  // `break` exactly.
+  if (statements.isNotEmpty &&
+      !willAlwaysReturn &&
+      !willAlwaysThrow &&
+      !willAlwaysBreak &&
+      !ctx.blockEndsControlFlow) {
+    final label = findJumpLabel(
+      ctx,
+      null,
+      (label) => label.breakTarget != null,
+      statements.last,
+      kind: 'break',
+    );
+    jumpToLabel(ctx, label, label.breakTarget!);
+    willAlwaysBreak = true;
+  }
+
   return StatementInfo(
     willAlwaysReturn: willAlwaysReturn,
     willAlwaysThrow: willAlwaysThrow,
@@ -220,68 +237,4 @@ void _checkPrimitiveEquality(
       ctx,
     );
   }
-}
-
-void _validateSwitchCases(List<SwitchMember> cases) {
-  for (int i = 0; i < cases.length; i++) {
-    final currentCase = cases[i];
-
-    // Skip default case - it's always at the end
-    if (currentCase is SwitchDefault) continue;
-
-    // If this case has statements, check if it properly terminates
-    if (currentCase.statements.isNotEmpty) {
-      if (!_caseProperlyTerminates(currentCase.statements)) {
-        throw CompileError(
-          "The 'case' shouldn't complete normally. Try adding 'break', 'return', or 'throw'.",
-          currentCase,
-        );
-      }
-    }
-  }
-}
-
-bool _caseProperlyTerminates(List<Statement> statements) {
-  if (statements.isEmpty) return true; // Empty case is OK
-
-  // Check if any statement in the case would always return/throw
-  for (final statement in statements) {
-    if (statement is ReturnStatement) {
-      return true;
-    }
-    if (statement is ExpressionStatement &&
-        statement.expression is ThrowExpression) {
-      return true;
-    }
-    // Check for switch statements that always return
-    if (statement is SwitchStatement) {
-      if (_switchAlwaysReturns(statement)) {
-        return true;
-      }
-    }
-  }
-
-  final lastStatement = statements.last;
-
-  // Check if last statement is a proper terminator
-  return lastStatement is BreakStatement ||
-      lastStatement is ReturnStatement ||
-      lastStatement is ContinueStatement ||
-      (lastStatement is ExpressionStatement &&
-          lastStatement.expression is ThrowExpression);
-}
-
-bool _switchAlwaysReturns(SwitchStatement switchStmt) {
-  // For simplicity, we'll be conservative and only check obvious cases
-  // A more sophisticated analysis would check if all possible paths return
-  for (final member in switchStmt.members) {
-    if (member.statements.isNotEmpty) {
-      for (final stmt in member.statements) {
-        if (stmt is ReturnStatement) {
-          continue; // This case returns
-        }
-      }
-    }
-  }
-  return false; // Conservative approach - assume it might not always return
 }

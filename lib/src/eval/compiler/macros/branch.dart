@@ -35,6 +35,9 @@ StatementInfo macroBranch(
     branches = compileCondition(conditionExpression, ctx, thenBlock, elseBlock);
   } else {
     final rawCondition = condition!(ctx);
+    if (!testNullish) {
+      enforceConditionType(ctx, rawCondition, source);
+    }
     final conditionResult = testNullish
         ? rawCondition
         : convertForAssignment(

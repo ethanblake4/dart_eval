@@ -23,6 +23,7 @@ import 'package:dart_eval/src/eval/compiler/expression/postfix.dart';
 import 'package:dart_eval/src/eval/compiler/expression/prefix.dart';
 import 'package:dart_eval/src/eval/compiler/expression/property_access.dart';
 import 'package:dart_eval/src/eval/compiler/expression/rethrow.dart';
+import 'package:dart_eval/src/eval/compiler/expression/switch_expression.dart';
 import 'package:dart_eval/src/eval/compiler/expression/throw.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -77,6 +78,8 @@ Variable compileExpression(
     return compileThrowExpression(ctx, e);
   } else if (e is ConditionalExpression) {
     return compileConditionalExpression(ctx, e);
+  } else if (e is SwitchExpression) {
+    return compileSwitchExpression(ctx, e, bound);
   } else if (e is IsExpression) {
     return compileIsExpression(e, ctx);
   } else if (e is CascadeExpression) {

@@ -41,24 +41,9 @@ Variable compilePrefixExpression(
   final V = compileExpression(e.operand, ctx, bound);
   final isDynamic = V.type.resolveTypeChain(ctx) == CoreTypes.dynamic.ref(ctx);
 
-  if (method == '-' &&
-      !isDynamic &&
-      V.type != CoreTypes.int.ref(ctx) &&
-      V.type != CoreTypes.double.ref(ctx)) {
-    throw CompileError(
-      'Unary prefix "-" is currently only supported for ints and doubles (type: ${V.type})',
-      e,
-    );
-  } else if (method == '!' && !isDynamic && V.type != CoreTypes.bool.ref(ctx)) {
+  if (method == '!' && !isDynamic && V.type != CoreTypes.bool.ref(ctx)) {
     throw CompileError(
       'Unary prefix "!" is currently only supported for bools (type: ${V.type})',
-      e,
-    );
-  } else if (method == '~' &&
-      !isDynamic &&
-      V.type != CoreTypes.int.ref(ctx)) {
-    throw CompileError(
-      'Unary prefix "~" is currently only supported for ints (type: ${V.type})',
       e,
     );
   }
@@ -77,8 +62,14 @@ Variable compilePrefixExpression(
 
   if (isDynamic) return V.invoke(ctx, method, []).result;
 
-  // `~x` is a true nullary operator on the operand, not `0 ~ x`.
-  if (method == '~') return V.invoke(ctx, method, []).result;
+  // `~x` and `-x` on user types call the nullary operators `~` and `-`
+  // directly; the `0 - x` rewrite only applies to native ints/doubles.
+  if (method == '~' ||
+      (method == '-' &&
+          V.type != CoreTypes.int.ref(ctx) &&
+          V.type != CoreTypes.double.ref(ctx))) {
+    return V.invoke(ctx, method, []).result;
+  }
 
   return _zeroForType(V.type, ctx).push(ctx).invoke(ctx, method, [V]).result;
 }

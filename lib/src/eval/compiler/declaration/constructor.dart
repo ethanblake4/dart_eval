@@ -3,6 +3,7 @@ import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/assert.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
@@ -455,6 +456,14 @@ void compileConstructorDeclaration(
       ctx.pushOp(
         SetPropertyStatic(inst.ssa, fieldIndices[init.fieldName.name]!, V.ssa),
       );
+    } else if (init is AssertInitializer) {
+      final cond = compileExpression(init.condition, ctx);
+      final msg = init.message != null
+          ? compileExpression(init.message!, ctx)
+          : BuiltinValue().push(ctx);
+      if (msg.type != CoreTypes.never.ref(ctx)) {
+        doAssert(ctx, cond, msg);
+      }
     } else {
       throw CompileError('${init.runtimeType} initializer is not supported');
     }

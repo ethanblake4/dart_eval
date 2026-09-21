@@ -2,10 +2,12 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
+import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/promotion.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
+import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 
 import 'expression.dart';
@@ -55,9 +57,11 @@ BasicBlockBuilder compileCondition(
         return;
       }
     }
+    final compiledValue = compileExpression(expression, ctx);
+    enforceConditionType(ctx, compiledValue, expression);
     final value = convertForAssignment(
       ctx,
-      compileExpression(expression, ctx),
+      compiledValue,
       CoreTypes.bool.ref(ctx),
       representation: MachineRepresentation.boolean,
       source: expression,
@@ -75,6 +79,27 @@ BasicBlockBuilder compileCondition(
 
   emit(expression, whenTrue, whenFalse);
   return BasicBlockBuilder(ctx.activeGraph, [whenTrue, whenFalse], parent);
+}
+
+/// Conditions must have a static type of `bool` or `dynamic`. A runtime
+/// check is only permitted for `dynamic`; anything else (including
+/// `bool?`) is a compile-time error.
+void enforceConditionType(
+  CompilerContext ctx,
+  Variable value,
+  AstNode? source,
+) {
+  final conversion = value.type
+      .resolveTypeChain(ctx)
+      .assignmentConversionTo(ctx, CoreTypes.bool.ref(ctx));
+  if (conversion == AssignmentConversion.invalid ||
+      (conversion == AssignmentConversion.runtimeCheck &&
+          value.type != CoreTypes.dynamic.ref(ctx))) {
+    throw CompileError(
+      "Conditions must have a static type of 'bool'",
+      source,
+    );
+  }
 }
 
 bool _containsTypeTest(AstNode node) =>
