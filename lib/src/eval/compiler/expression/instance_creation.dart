@@ -70,11 +70,7 @@ Variable compileInstanceCreation(
           staticType.name,
           name,
         ),
-        [
-          BuiltinValue(
-            intval: instantiatedType.runtimeTypeId(ctx),
-          ).push(ctx).ssa,
-        ],
+        [pushRuntimeTypeId(ctx, instantiatedType)],
         result: result,
       ),
     );
@@ -181,11 +177,23 @@ Variable compileInstanceCreation(
     );
     final callArguments = [...arguments.ssa];
     if (constructor.factoryKeyword == null) {
-      callArguments.add(
-        BuiltinValue(intval: instantiatedType.runtimeTypeId(ctx)).push(ctx).ssa,
-      );
+      callArguments.add(pushRuntimeTypeId(ctx, instantiatedType));
     }
-    ctx.pushOp(Call(offset, callArguments, result: result));
+    ctx.pushOp(
+      Call(
+        offset,
+        callArguments,
+        result: result,
+        // Factories have no receiver, so the class's instantiated type
+        // arguments are delivered through the callable-type-argument channel.
+        typeArguments: constructor.factoryKeyword != null
+            ? [
+                for (final arg in instantiatedType.specifiedTypeArgs)
+                  arg.runtimeTypeId(ctx),
+              ]
+            : const [],
+      ),
+    );
   }
   return Variable.of(
     ctx,

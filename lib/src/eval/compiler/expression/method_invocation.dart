@@ -28,6 +28,7 @@ Variable compileMethodInvocation(
   CompilerContext ctx,
   MethodInvocation e, {
   Variable? cascadeTarget,
+  TypeRef? bound,
 }) {
   Variable? L = cascadeTarget;
   var isPrefix = false;
@@ -126,7 +127,7 @@ Variable compileMethodInvocation(
     ).result;
   }
 
-  final offset = method.methodOffset!;
+  var offset = method.methodOffset!;
   if (offset.file == ctx.library &&
       offset.className != null &&
       offset.className == ctx.currentClassName) {
@@ -162,7 +163,7 @@ Variable compileMethodInvocation(
       final instantiatedType = _instantiateConstructorType(ctx, e, returnType);
       ctx.pushOp(
         Call(offset, [
-          _pushRuntimeTypeId(ctx, instantiatedType),
+          pushRuntimeTypeId(ctx, instantiatedType),
         ], result: result),
       );
       final v = Variable.of(
@@ -174,6 +175,42 @@ Variable compileMethodInvocation(
 
       return v;
     }
+  }
+
+  // An invocation `T(args)` where `T` is a type alias to a class is a
+  // constructor call on the aliased type.
+  TypeRef? aliasType;
+  if (!dec0.isBridge && dec0.declaration is TypeAlias) {
+    var resolved = resolveTypeAlias(
+      ctx,
+      ctx.library,
+      dec0.declaration! as TypeAlias,
+      typeArgs: e.typeArguments?.arguments.toList(),
+    );
+    // Downward inference: `C<num> x = T(num)` instantiates `T` as `C<num>`.
+    final boundChain = bound?.resolveTypeChain(ctx);
+    if (e.typeArguments == null &&
+        boundChain != null &&
+        boundChain.file == resolved.file &&
+        boundChain.name == resolved.name &&
+        boundChain.specifiedTypeArgs.isNotEmpty) {
+      resolved = resolved.copyWith(
+        specifiedTypeArgs: [
+          for (var i = 0; i < resolved.specifiedTypeArgs.length; i++)
+            resolved.specifiedTypeArgs[i].isTypeParameter &&
+                    i < boundChain.specifiedTypeArgs.length
+                ? boundChain.specifiedTypeArgs[i]
+                : resolved.specifiedTypeArgs[i],
+        ],
+      );
+    }
+    aliasType = resolved;
+    dec0 = ctx.topLevelDeclarationsMap[resolved.file]!['${resolved.name}.'] ??
+        (throw CompileError(
+          'Class "${resolved.name}" does not have a default constructor',
+          e,
+        ));
+    offset = DeferredOrOffset(file: resolved.file, name: '${resolved.name}.');
   }
 
   final List<Variable> args;
@@ -251,14 +288,14 @@ Variable compileMethodInvocation(
             !(mReturnType.type?.isUnboxedAcrossFunctionBoundaries ?? false)),
   );
   final instantiatedReturnType = isConstructor && returnType != null
-      ? _instantiateConstructorType(ctx, e, returnType)
+      ? (aliasType ?? _instantiateConstructorType(ctx, e, returnType))
       : returnType;
   final declaration = dec0.isBridge ? null : dec0.declaration;
   final effectiveCallArgs = [...callArgs];
   if (isConstructor &&
       declaration is ConstructorDeclaration &&
       declaration.factoryKeyword == null) {
-    effectiveCallArgs.add(_pushRuntimeTypeId(ctx, instantiatedReturnType!));
+    effectiveCallArgs.add(pushRuntimeTypeId(ctx, instantiatedReturnType!));
   }
 
   final result = ctx.svar('call');
@@ -291,7 +328,19 @@ Variable compileMethodInvocation(
         offset,
         effectiveCallArgs,
         result: result,
-        typeArguments: isConstructor ? const [] : _runtimeTypeArguments(ctx, e),
+        // Factories have no receiver, so the class's instantiated type
+        // arguments are delivered through the callable-type-argument channel.
+        typeArguments: declaration is ConstructorDeclaration &&
+                declaration.factoryKeyword != null
+            ? [
+                for (final arg
+                    in instantiatedReturnType?.specifiedTypeArgs ??
+                        const <TypeRef>[])
+                  arg.runtimeTypeId(ctx),
+              ]
+            : isConstructor
+            ? const []
+            : _runtimeTypeArguments(ctx, e),
       ),
     );
   }
@@ -570,7 +619,7 @@ Variable _invokeWithTarget(
       final declaration = dec0.declaration;
       if (declaration is ConstructorDeclaration &&
           declaration.factoryKeyword == null) {
-        callArguments.add(_pushRuntimeTypeId(ctx, staticType));
+        callArguments.add(pushRuntimeTypeId(ctx, staticType));
       }
       ctx.pushOp(
         Call(
@@ -585,6 +634,9 @@ Variable _invokeWithTarget(
       dec0?.isBridge == false &&
       (e.target is SuperExpression ||
           (!_hasBridgeSuperclass(ctx, L.type) &&
+              !ctx.subclassedTypes.contains(
+                '${L.concreteTypes.single.file}:${L.concreteTypes.single.name}',
+              ) &&
               (ctx.instanceDeclarationPositions[L.concreteTypes.single.file]?[L
                               .concreteTypes
                               .single
@@ -966,6 +1018,36 @@ _ResolvedArgs _compileNonBridgeArgs(
   final (fpl, typeParams, returnAnnotation) = _invocationSignature(dec);
   final isCallableDecl = dec is FunctionDeclaration || dec is MethodDeclaration;
   final resolveGenerics = <String, TypeRef>{...seedGenerics};
+  if (dec is ConstructorDeclaration) {
+    // Constructor signatures reference the declaring class's type parameters;
+    // seed them from the call's explicit type arguments (or bounds).
+    final owner = dec.thisOrAncestorMatching(
+      (node) => node is ClassDeclaration || node is MixinDeclaration,
+    );
+    final classParams = switch (owner) {
+      ClassDeclaration(:final namePart) =>
+        namePart.typeParameters?.typeParameters,
+      MixinDeclaration(:final typeParameters) => typeParameters?.typeParameters,
+      _ => null,
+    };
+    if (classParams != null) {
+      final explicitArgs = typeArguments?.arguments;
+      for (var i = 0; i < classParams.length; i++) {
+        final bound = classParams[i].bound;
+        resolveGenerics[classParams[i].name.lexeme] =
+            explicitArgs != null && i < explicitArgs.length
+                ? TypeRef.fromAnnotation(ctx, sourceLib, explicitArgs[i])
+                : bound == null
+                ? CoreTypes.dynamic.ref(ctx)
+                : TypeRef.fromAnnotation(
+                    ctx,
+                    sourceLib,
+                    bound,
+                    typeParameters: resolveGenerics,
+                  );
+      }
+    }
+  }
   if (isCallableDecl) {
     _resolveInvocationGenerics(
       ctx,
@@ -1014,8 +1096,3 @@ _ResolvedArgs _compileNonBridgeArgs(
   }
   return _ResolvedArgs(argsPair, returnType, boxedBySubstitution);
 }
-
-/// Pushes an integer constant carrying [type]'s runtime type id. Non-factory
-/// constructors receive it as a trailing argument.
-SSA _pushRuntimeTypeId(CompilerContext ctx, TypeRef type) =>
-    BuiltinValue(intval: type.runtimeTypeId(ctx)).push(ctx).ssa;

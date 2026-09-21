@@ -820,18 +820,7 @@ class TypeRef {
       implementsNames = implementsClause?.interfaces.toList() ?? [];
       // Bounds can reference earlier parameters (`S extends T`), so resolve
       // them with the class's own parameters already seeded.
-      final paramRefs = {
-        for (var i = 0;
-            i < (typeParameters?.typeParameters.length ?? 0);
-            i++)
-          typeParameters!.typeParameters[i].name.lexeme: TypeRef(
-            file,
-            typeParameters.typeParameters[i].name.lexeme,
-            resolved: true,
-            typeParameterOwner: 'class:$file:$name',
-            typeParameterIndex: i,
-          ),
-      };
+      final paramRefs = classTypeParameterRefs(file, name, typeParameters);
       generics =
           typeParameters?.typeParameters
               .map(
@@ -1130,6 +1119,12 @@ class TypeRef {
 
   bool get isClassTypeParameter =>
       isTypeParameter && typeParameterOwner!.startsWith('class:');
+
+  /// Whether the runtime descriptor for this type embeds a type parameter,
+  /// so its id must be resolved against the active type environment.
+  bool get requiresTypeEnvironment =>
+      isTypeParameter ||
+      specifiedTypeArgs.any((arg) => arg.requiresTypeEnvironment);
 
   /// Semantic type equality for language checks. Unlike [operator ==], this
   /// includes nullability, type arguments, record fields, and function shape.
@@ -1830,6 +1825,24 @@ class TypeArgDependentReturnType implements ReturnType {
     return AlwaysReturnType(typeArgs[typeArgIndex], false);
   }
 }
+
+/// Maps each parameter of [typeParameters] to a resolvable [TypeRef] belonging
+/// to the declaring class `file:name` — the scope in which clause types like
+/// `extends C<T>` and parameter bounds are resolved.
+Map<String, TypeRef> classTypeParameterRefs(
+  int file,
+  String name,
+  TypeParameterList? typeParameters,
+) => {
+  for (var i = 0; i < (typeParameters?.typeParameters.length ?? 0); i++)
+    typeParameters!.typeParameters[i].name.lexeme: TypeRef(
+      file,
+      typeParameters.typeParameters[i].name.lexeme,
+      resolved: true,
+      typeParameterOwner: 'class:$file:$name',
+      typeParameterIndex: i,
+    ),
+};
 
 class GenericParam {
   const GenericParam(this.name, this.extendsType);

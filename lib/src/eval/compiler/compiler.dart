@@ -529,6 +529,49 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
 
     _ctx.topLevelGlobalIndices = _topLevelGlobalIndices;
 
+    // Index which types are named in a superinterface position so member
+    // calls on them are not devirtualized by the direct-call fast path.
+    _topLevelDeclarationsMap.forEach((libraryIndex, declarations) {
+      _ctx.library = libraryIndex;
+      for (final tlDeclaration in declarations.values) {
+        if (tlDeclaration.isBridge) continue;
+        final declaration = tlDeclaration.declaration;
+        final (name, typeParameters) = switch (declaration) {
+          ClassDeclaration(:final namePart) => (
+            namePart.typeName.lexeme,
+            namePart.typeParameters,
+          ),
+          MixinDeclaration(:final name, :final typeParameters) => (
+            name.lexeme,
+            typeParameters,
+          ),
+          EnumDeclaration(:final namePart) => (
+            namePart.typeName.lexeme,
+            namePart.typeParameters,
+          ),
+          ClassTypeAlias(:final name, :final typeParameters) => (
+            name.lexeme,
+            typeParameters,
+          ),
+          _ => ('', null),
+        };
+        final ownParams = classTypeParameterRefs(
+          libraryIndex,
+          name,
+          typeParameters,
+        );
+        for (final namedType in superinterfacesOf(declaration)) {
+          final resolved = TypeRef.fromAnnotation(
+            _ctx,
+            libraryIndex,
+            namedType,
+            typeParameters: ownParams,
+          );
+          _ctx.subclassedTypes.add('${resolved.file}:${resolved.name}');
+        }
+      }
+    });
+
     try {
       /// Compile statics first so we can infer their type
       _topLevelDeclarationsMap.forEach((key, value) {
@@ -1346,5 +1389,35 @@ class _Import {
       import.prefix?.name,
       import.combinators,
     );
+  }
+}
+
+/// The named types a class-like declaration places in superinterface position
+/// (`extends`, `with`, `implements`, `on`), used to suppress unsound
+/// devirtualization of member calls on the named types.
+Iterable<NamedType> superinterfacesOf(AstNode? declaration) sync* {
+  switch (declaration) {
+    case ClassDeclaration(
+      :final extendsClause,
+      :final withClause,
+      :final implementsClause,
+    ):
+      if (extendsClause != null) yield extendsClause.superclass;
+      yield* withClause?.mixinTypes ?? const Iterable.empty();
+      yield* implementsClause?.interfaces ?? const Iterable.empty();
+    case MixinDeclaration(:final onClause, :final implementsClause):
+      yield* onClause?.superclassConstraints ?? const Iterable.empty();
+      yield* implementsClause?.interfaces ?? const Iterable.empty();
+    case ClassTypeAlias(
+      :final superclass,
+      :final withClause,
+      :final implementsClause,
+    ):
+      yield superclass;
+      yield* withClause.mixinTypes;
+      yield* implementsClause?.interfaces ?? const Iterable.empty();
+    case EnumDeclaration(:final withClause, :final implementsClause):
+      yield* withClause?.mixinTypes ?? const Iterable.empty();
+      yield* implementsClause?.interfaces ?? const Iterable.empty();
   }
 }

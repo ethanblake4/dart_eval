@@ -601,7 +601,13 @@ extension TypedRuntimeInterop on Runtime {
           ? callableTypeArguments[parameterIndex]
           : descriptor[5];
     }
-    if (actualOwnerType == null) return descriptor[5];
+    // Factory constructors have no receiver, so their class's type arguments
+    // arrive through the callable-type-arguments channel instead.
+    if (actualOwnerType == null) {
+      return parameterIndex < callableTypeArguments.length
+          ? callableTypeArguments[parameterIndex]
+          : descriptor[5];
+    }
     int? instantiatedOwner;
     if (_typeDescriptors[actualOwnerType][0] == ownerNominalType) {
       instantiatedOwner = actualOwnerType;

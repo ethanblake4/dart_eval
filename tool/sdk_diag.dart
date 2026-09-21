@@ -6,6 +6,7 @@
 ///   (no args = every runnable test; may take a while)
 library;
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:dart_eval/dart_eval.dart';
@@ -15,12 +16,37 @@ import 'package:dart_eval/src/eval/runtime/typed/typed_instance.dart';
 
 import '../test/sdk_language/sdk_language.dart';
 
-void main(List<String> args) async {
+/// The suite's eval'd tests can leave pending timers/futures that throw
+/// after `main` returns; guard the zone so one such test can't kill the run.
+Future<void> main(List<String> args) {
+  final done = Completer<void>();
+  runZonedGuarded(() async {
+    try {
+      await _run(args);
+    } finally {
+      done.complete();
+    }
+  }, (e, st) => stderr.writeln('unhandled async error: $e'));
+  return done.future;
+}
+
+Future<void> _run(List<String> args) async {
   final suite = await SdkSuite.load();
   var tests = suite.allTests().where((t) => t.kind == TestKind.runnable);
   if (args.isNotEmpty) {
     tests = tests.where((t) => args.any((a) => t.relPath.startsWith(a)));
   }
+  // DIAG_SKIP='a/,b/c_test.dart' skips tests whose relPath starts with an
+  // entry; DIAG_TRACE=1 echoes each relPath before running it (for locating
+  // tests that crash the isolate outright).
+  final skip = (Platform.environment['DIAG_SKIP'] ?? '')
+      .split(',')
+      .where((s) => s.isNotEmpty)
+      .toList();
+  if (skip.isNotEmpty) {
+    tests = tests.where((t) => !skip.any((s) => t.relPath.startsWith(s)));
+  }
+  final trace = Platform.environment['DIAG_TRACE'] == '1';
   final list = tests.toList();
   stderr.writeln('running ${list.length} tests');
 
@@ -32,6 +58,7 @@ void main(List<String> args) async {
 
   for (final t in list) {
     i++;
+    if (trace) stderr.writeln('#$i ${t.relPath}');
     if (i % 300 == 0) {
       compiler = Compiler();
       stderr.writeln('[$i/${list.length}]');
@@ -58,7 +85,9 @@ void main(List<String> args) async {
     }
   }
 
-  final out = File('/tmp/failures.tsv');
+  final out = File(
+    Platform.environment['DIAG_OUT'] ?? '/tmp/failures.tsv',
+  );
   final buf = StringBuffer();
   for (final e in failures.entries) {
     for (final p in e.value) {

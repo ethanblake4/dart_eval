@@ -460,9 +460,12 @@ class TypedFrame {
     final receiver = effectiveTypeEnvironmentReceiver;
     if (!identical(_ownerTypeReceiver, receiver)) {
       _ownerTypeReceiver = receiver;
-      _ownerTypeId = receiver is TypedInstance
-          ? receiver.dispatchRoot.$getRuntimeType(runtime)
-          : null;
+      _ownerTypeId = switch (receiver) {
+        TypedInstance() => receiver.dispatchRoot.$getRuntimeType(runtime),
+        // Constructors adopt their trailing runtime-type-id argument.
+        int() => receiver,
+        _ => null,
+      };
     }
     return _ownerTypeId;
   }

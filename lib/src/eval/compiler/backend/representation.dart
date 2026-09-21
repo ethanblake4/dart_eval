@@ -205,6 +205,10 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
       case collection.IterableLength() || collection.ListLength():
         inputs(operation, object);
         output(operation, integer);
+      case types.ResolveTypeId():
+        output(operation, integer);
+      case types.SetTypeEnvironment():
+        inputs(operation, integer);
       case objects.InvokeDynamic() ||
           bridge.InvokeExternal() ||
           closures.InvokeClosure():

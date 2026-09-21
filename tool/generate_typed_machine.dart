@@ -601,6 +601,23 @@ List<Instruction> specification() {
     immediate: 'typeId',
   );
   add(
+    'aSetTypeEnvironment',
+    'frame.typeEnvironmentReceiver = a;',
+    inputs: [0],
+  );
+  add(
+    'aResolveType',
+    '''a = runtime == null
+            ? index
+            : runtime.resolveTypedEnvironmentType(
+                index,
+                actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+                callableTypeArguments: frame.effectiveTypeArguments,
+              );''',
+    output: 0,
+    immediate: 'typeId',
+  );
+  add(
     'rLoadTypeParameter',
     '''r = \$TypeImpl(
             runtime!.resolveTypeParameterInEnvironment(

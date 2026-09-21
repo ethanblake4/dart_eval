@@ -199,6 +199,12 @@ class CompilerContext with ScopeContext {
   Map<int, Map<String, int>> topLevelDeclarationPositions = {};
   Map<int, Map<String, int>> bridgeStaticFunctionIndices = {};
   Map<int, Map<String, List>> instanceDeclarationPositions = {};
+
+  /// `'$file:$name'` keys of every class or mixin named as a superinterface
+  /// (extends/implements/with/on) somewhere in the compiled program. Members
+  /// declared on these types must be invoked dynamically since a subclass may
+  /// override them.
+  Set<String> subclassedTypes = {};
   Map<int, Map<String, Map<String, int>>> instanceGetterIndices = {};
   Map<int, Map<String, Map<String, TypeRef>>> inferredFieldTypes = {};
   Map<int, Map<String, int>> topLevelGlobalIndices = {};

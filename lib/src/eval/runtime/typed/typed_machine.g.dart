@@ -328,6 +328,9 @@ abstract final class TypedMachine {
         case TypedOp.rCaughtStackTrace:
           r = TypedExceptions.trace(frame);
           continue dispatch;
+        case TypedOp.aSetTypeEnvironment:
+          frame.typeEnvironmentReceiver = a;
+          continue dispatch;
         case TypedOp.rUninitializedField:
           r = TypedLateField.uninitialized;
           continue dispatch;
@@ -763,6 +766,16 @@ abstract final class TypedMachine {
         case TypedOp.rLoadType:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           r = $TypeImpl(index, runtime);
+          continue dispatch;
+        case TypedOp.aResolveType:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          a = runtime == null
+            ? index
+            : runtime.resolveTypedEnvironmentType(
+                index,
+                actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+                callableTypeArguments: frame.effectiveTypeArguments,
+              );
           continue dispatch;
         case TypedOp.rLoadTypeParameter:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;

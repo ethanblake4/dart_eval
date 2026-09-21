@@ -86,6 +86,61 @@ final class LoadConstantType extends Operation {
   }
 }
 
+/// Adopts an integer runtime type id (a constructor's trailing type argument)
+/// as the frame's type environment, so type parameters of the constructed
+/// class resolve against the instantiated type.
+final class SetTypeEnvironment extends Operation {
+  final SSA typeId;
+
+  SetTypeEnvironment(this.typeId);
+
+  @override
+  Set<SSA> get readsFrom => {typeId};
+
+  @override
+  String toString() => 'settypeenvironment $typeId';
+
+  @override
+  bool operator ==(Object other) =>
+      other is SetTypeEnvironment && typeId == other.typeId;
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
+    return SetTypeEnvironment(readsFrom?.single ?? typeId);
+  }
+}
+
+/// Resolves a runtime type descriptor index against the frame's type
+/// environment, producing the concrete runtime type id as an integer.
+/// Constructor calls use it to deliver the instantiated type to the callee.
+final class ResolveTypeId extends Operation {
+  final SSA result;
+  final int typeId;
+
+  ResolveTypeId(this.result, this.typeId);
+
+  @override
+  SSA? get writesTo => result;
+
+  @override
+  String toString() => '$result = resolvetypeid $typeId';
+
+  @override
+  bool operator ==(Object other) =>
+      other is ResolveTypeId && result == other.result && typeId == other.typeId;
+
+  @override
+  int get hashCode => result.hashCode ^ typeId.hashCode;
+
+  @override
+  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
+    return ResolveTypeId(writesTo ?? result, typeId);
+  }
+}
+
 /// Loads a `Type` object for a type parameter, resolved against the frame's
 /// type environment at runtime. [typeId] is the runtime descriptor index of
 /// the type parameter reference.

@@ -153,7 +153,7 @@ void _compileEnumValue(
     );
     arguments.addAll(result.ssa);
   }
-  arguments.add(BuiltinValue(intval: type.runtimeTypeId(ctx)).push(ctx).ssa);
+  arguments.add(pushRuntimeTypeId(ctx, type));
 
   final V = Variable.ssa(
     ctx,

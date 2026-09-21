@@ -18,6 +18,7 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/ir/bridge.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
+import 'package:dart_eval/src/eval/ir/types.dart';
 import 'package:dart_eval/src/eval/ir/function.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 
@@ -84,7 +85,7 @@ void compileConstructorDeclaration(
   // omitted slots with the target's defaults, so bind incoming slots to the
   // target's parameters.
   final redirectTarget = _redirectTarget(ctx, d);
-  final redirectTargetDecl = redirectTarget?.$4.declaration;
+  final redirectTargetDecl = redirectTarget?.$4?.declaration;
 
   final resolvedParams = resolveFPLDefaults(
     ctx,
@@ -186,6 +187,7 @@ void compileConstructorDeclaration(
         representation: MachineRepresentation.integer,
       ),
     );
+    ctx.pushOp(SetTypeEnvironment(runtimeTypeArgument));
     parameterRepresentations.add(MachineRepresentation.integer);
   }
   ctx.functionSignatures[ctx.topLevelDeclarationPositions[ctx.library]![n]!] =
@@ -203,7 +205,7 @@ void compileConstructorDeclaration(
       // parameter layout; omitted slots use the target's defaults.
       final (targetType, targetRef, ctorName, targetCtor) = redirectTarget;
       final result = ctx.svar('instance');
-      if (targetCtor.isBridge) {
+      if (targetCtor != null && targetCtor.isBridge) {
         final argSsa = <SSA>[];
         final namedParams = <FormalParameter>[];
         for (final p in d.parameters.parameters) {
@@ -224,16 +226,16 @@ void compileConstructorDeclaration(
                 .file]!['${targetRef.name}.$ctorName']!;
         ctx.pushOp(InvokeExternal(result, externalId, argSsa));
       } else {
-        final ctorDecl = targetCtor.declaration! as ConstructorDeclaration;
+        final ctorDecl = targetCtor?.declaration as ConstructorDeclaration?;
         // The callee binds the target's parameter layout, so forwarding is
         // a pass-through of each local in declaration order.
         final argSsa = <SSA>[];
-        for (final p in ctorDecl.parameters.parameters) {
+        for (final p in ctorDecl?.parameters.parameters ?? const <FormalParameter>[]) {
           final (paramType, _) = getFormalParameterType(
             ctx,
             p,
             targetRef.file,
-            ctorDecl,
+            ctorDecl ?? d,
           );
           argSsa.add(
             coerceArgumentForParameter(
@@ -241,17 +243,13 @@ void compileConstructorDeclaration(
               ctx.lookupLocal(p.name!.lexeme)!,
               paramType ?? CoreTypes.dynamic.ref(ctx),
               p,
-              ctorDecl,
+              redirectTargetDecl ?? d,
               source: d,
             ).ssa,
           );
         }
-        if (ctorDecl.factoryKeyword == null) {
-          argSsa.add(
-            BuiltinValue(
-              intval: targetType.runtimeTypeId(ctx),
-            ).push(ctx).ssa,
-          );
+        if (ctorDecl?.factoryKeyword == null) {
+          argSsa.add(pushRuntimeTypeId(ctx, targetType));
         }
         ctx.pushOp(
           Call(
@@ -263,6 +261,14 @@ void compileConstructorDeclaration(
             ),
             argSsa,
             result: result,
+            // A factory callee has no receiver, so the class's instantiated
+            // type arguments go through the callable-type-argument channel.
+            typeArguments: ctorDecl?.factoryKeyword != null
+                ? [
+                    for (final arg in targetType.specifiedTypeArgs)
+                      arg.runtimeTypeId(ctx),
+                  ]
+                : const [],
           ),
         );
       }
@@ -504,6 +510,7 @@ void compileDefaultConstructor(
       representation: MachineRepresentation.integer,
     ),
   );
+  ctx.pushOp(SetTypeEnvironment(runtimeTypeArgument));
 
   final fieldIndices = _getFieldIndices(fields);
   final fieldIdx = fieldIndices.length;
@@ -691,20 +698,25 @@ Variable _invokeSuperConstructor(
   final argTypes = <TypeRef?>[];
   final namedArgTypes = <String, TypeRef?>{};
 
-  if (superInitializer != null || superParams.isNotEmpty) {
-    final constructor0 =
-        ctx.topLevelDeclarationsMap[extendsDecl
-            .sourceLib]!['${extendsType.name}.$constructorName'];
-    if (constructor0 == null) {
-      throw CompileError(
-        "The superclass '${extendsType.name}' has no constructor "
-        "'$constructorName'",
-        superInitializer ?? parent,
-        ctx.library,
-        ctx,
-      );
-    }
-    final constructor = constructor0.declaration as ConstructorDeclaration;
+  final superCtors = ctx.topLevelDeclarationsMap[extendsDecl.sourceLib]!;
+  final constructor0 = superCtors['${extendsType.name}.$constructorName'];
+  if (constructor0 == null &&
+      !(constructorName.isEmpty &&
+          !superCtors.keys.any((k) => k.startsWith('${extendsType.name}.')))) {
+    // An unnamed super constructor on a class that declares none is the
+    // implicit default constructor — it has no declaration entry.
+    throw CompileError(
+      "The superclass '${extendsType.name}' has no constructor "
+      "'$constructorName'",
+      superInitializer ?? parent,
+      ctx.library,
+      ctx,
+    );
+  }
+  final constructor = constructor0?.declaration as ConstructorDeclaration?;
+  if (constructor != null) {
+    // `super()` and the implicit super call bind the callee's declared
+    // defaults; only an implicit target takes no arguments at all.
     final argres = superInitializer != null
         ? compileArgumentList(
             ctx,
@@ -748,14 +760,12 @@ Variable _invokeSuperConstructor(
       ) ??
       AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
 
-  final superRuntimeType = BuiltinValue(
-    intval: extendsType.runtimeTypeId(ctx),
-  ).push(ctx);
+  final superRuntimeType = pushRuntimeTypeId(ctx, extendsType);
   return Variable.ssa(
     ctx,
     Call(method.methodOffset!, [
       ...ssa,
-      superRuntimeType.ssa,
+      superRuntimeType,
     ], result: ctx.svar('super')),
     mReturnType.type ?? CoreTypes.dynamic.ref(ctx),
   );
@@ -833,7 +843,7 @@ void _emitConstructorReturn(
 /// Resolves `factory C.f(...) = T.g` to (instantiated target type, raw target
 /// type, target ctor name, target ctor entry) — or null when [d] isn't a
 /// redirecting factory or the target can't be resolved.
-(TypeRef, TypeRef, String, DeclarationOrBridge)? _redirectTarget(
+(TypeRef, TypeRef, String, DeclarationOrBridge?)? _redirectTarget(
   CompilerContext ctx,
   ConstructorDeclaration d,
 ) {
@@ -852,9 +862,13 @@ void _emitConstructorReturn(
         'Redirecting factory target $typeName not found',
         d,
       ));
-  final targetCtor = ctx.topLevelDeclarationsMap[targetRef
-      .file]!['${targetRef.name}.$ctorName'];
-  if (targetCtor == null) {
+  final targetCtors = ctx.topLevelDeclarationsMap[targetRef.file]!;
+  final targetCtor = targetCtors['${targetRef.name}.$ctorName'];
+  if (targetCtor == null &&
+      !(ctorName.isEmpty &&
+          !targetCtors.keys.any((k) => k.startsWith('${targetRef.name}.')))) {
+    // An unnamed target with no declared constructors resolves to the class's
+    // implicit default constructor, which has no declaration entry.
     throw CompileError(
       'Redirecting factory target ${targetRef.name}.$ctorName not found',
       d,

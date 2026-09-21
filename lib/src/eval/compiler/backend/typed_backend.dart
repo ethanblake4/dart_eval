@@ -1719,6 +1719,15 @@ class _LoweringSession {
             [],
             immediate: typeId,
           ),
+          types_ir.ResolveTypeId(:final typeId) => make(
+            ['aResolveType'],
+            [],
+            immediate: typeId,
+          ),
+          types_ir.SetTypeEnvironment(:final typeId) => make(
+            ['aSetTypeEnvironment'],
+            [typeId],
+          ),
           types_ir.LoadRuntimeType(:final object) => make(
             ['rRuntimeType'],
             [object],

@@ -15,6 +15,7 @@ import '../type.dart';
 
 import '../variable.dart';
 import '../../ir/bridge.dart' show PrepareBridgeArgument;
+import '../../ir/types.dart' show ResolveTypeId;
 
 Variable _providedBridgeArgument(CompilerContext ctx, Variable argument) {
   final type = argument.type;
@@ -85,6 +86,18 @@ Variable coerceArgumentForParameter(
     arg0 = arg0.tearOff(ctx);
   }
   return arg0;
+}
+
+/// Pushes an integer carrying [type]'s runtime type id, resolving embedded
+/// type parameters against the frame's type environment at runtime.
+SSA pushRuntimeTypeId(CompilerContext ctx, TypeRef type) {
+  final typeId = type.runtimeTypeId(ctx);
+  if (!type.requiresTypeEnvironment) {
+    return BuiltinValue(intval: typeId).push(ctx).ssa;
+  }
+  final ssa = ctx.svar('typeId');
+  ctx.pushOp(ResolveTypeId(ssa, typeId));
+  return ssa;
 }
 
 /// Compiles the fallback value for [parameter] when the caller supplies no
