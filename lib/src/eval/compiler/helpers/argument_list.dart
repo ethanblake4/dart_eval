@@ -61,15 +61,31 @@ Variable _omittedArgument(
     host,
   );
   final type = declaredType ?? CoreTypes.dynamic.ref(ctx);
-  var value = evaluateDefaultValue(
-    ctx,
-    library,
-    parameter.defaultClause?.value,
-  );
-  if (value is int && type.file == dartCoreFile && type.name == 'double') {
-    value = value.toDouble();
+  // Scalar defaults push as native constants; anything else (tear-offs, const
+  // objects) compiles the constant expression normally.
+  final defaultExpr = parameter.defaultClause?.value;
+  Object? value;
+  var useExpression = false;
+  if (defaultExpr == null) {
+    value = null;
+  } else {
+    try {
+      value = evaluateDefaultValue(ctx, library, defaultExpr);
+    } on CompileError {
+      useExpression = true;
+    }
   }
-  final variable = pushDefaultValue(ctx, value);
+  Variable variable;
+  if (useExpression) {
+    variable = compileExpression(defaultExpr!, ctx, type);
+  } else {
+    if (value is int &&
+        type.file == dartCoreFile &&
+        type.name == 'double') {
+      value = value.toDouble();
+    }
+    variable = pushDefaultValue(ctx, value);
+  }
   return host is MethodDeclaration || !type.isUnboxedAcrossFunctionBoundaries
       ? variable.boxIfNeeded(ctx)
       : variable.unboxIfNeeded(ctx);

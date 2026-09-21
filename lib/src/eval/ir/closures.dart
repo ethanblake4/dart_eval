@@ -19,6 +19,11 @@ final class CreateClosure extends Operation {
   final List<bool> namedUnboxed;
   final int runtimeTypeId;
 
+  /// Hidden thunk function indices for defaults that can't serialize as
+  /// scalars, parallel to `[...positionalDefaults, ...namedDefaults]`.
+  /// `-1` means the corresponding slot's scalar value is used directly.
+  final List<int> defaultThunks;
+
   CreateClosure(
     this.result,
     this.target,
@@ -34,6 +39,7 @@ final class CreateClosure extends Operation {
     this.positionalUnboxed = const [],
     this.namedUnboxed = const [],
     this.runtimeTypeId = -1,
+    this.defaultThunks = const [],
   });
 
   @override
@@ -60,6 +66,7 @@ final class CreateClosure extends Operation {
       positionalUnboxed: positionalUnboxed,
       namedUnboxed: namedUnboxed,
       runtimeTypeId: runtimeTypeId,
+      defaultThunks: defaultThunks,
     );
   }
 

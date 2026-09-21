@@ -9,6 +9,7 @@ final class TypedClosureDescriptor {
     List<String> requiredNamed = const [],
     List<Object?> positionalDefaults = const [],
     List<Object?> namedDefaults = const [],
+    List<int> defaultThunks = const [],
     List<int> parameterTypeIds = const [],
     List<int> parameterTypeParameterIndices = const [],
     List<bool> parameterNullable = const [],
@@ -20,6 +21,7 @@ final class TypedClosureDescriptor {
        requiredNamed = List.unmodifiable(requiredNamed),
        positionalDefaults = List.unmodifiable(positionalDefaults),
        namedDefaults = List.unmodifiable(namedDefaults),
+       defaultThunks = List.unmodifiable(defaultThunks),
        parameterTypeIds = List.unmodifiable(parameterTypeIds),
        parameterTypeParameterIndices = List.unmodifiable(
          parameterTypeParameterIndices.isEmpty
@@ -32,6 +34,10 @@ final class TypedClosureDescriptor {
   final int functionId, captureCount, positionalCount, requiredPositional;
   final List<String> namedNames, requiredNamed;
   final List<Object?> positionalDefaults, namedDefaults;
+
+  /// Function indices of hidden zero-arg default thunks, parallel to
+  /// `[...positionalDefaults, ...namedDefaults]`; `-1` uses the scalar.
+  final List<int> defaultThunks;
   final List<int> parameterTypeIds;
   final List<int> parameterTypeParameterIndices;
   final List<bool> parameterNullable;

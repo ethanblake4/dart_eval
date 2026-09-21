@@ -209,6 +209,9 @@ class TypedProgram {
             'Invalid or duplicate typed parameter name',
           );
         }
+        if (parameter.defaultThunk >= functions.length) {
+          throw const FormatException('Invalid typed parameter default thunk');
+        }
         if (parameter.defaultValue case final value?) {
           if (value is! int &&
               value is! double &&
@@ -321,6 +324,11 @@ class TypedProgram {
             (type) => type < 0 || type > 65535,
           ) ||
           descriptor.runtimeTypeId < -1 ||
+          (descriptor.defaultThunks.isNotEmpty &&
+              (descriptor.defaultThunks.length != descriptor.argumentCount ||
+                  descriptor.defaultThunks.any(
+                    (thunk) => thunk >= functions.length,
+                  ))) ||
           !descriptor.positionalDefaults.every(scalar) ||
           !descriptor.namedDefaults.every(scalar) ||
           (descriptor.hasEnvironment && descriptor.boundReceiver) ||

@@ -5,6 +5,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/default_value.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart'
     show representationForType;
@@ -61,6 +62,12 @@ List<FormalParameter> resolveFPLDefaults(
   }
 
   ctx.functionParameters[ctx.currentFunctionId!] = [...positional, ...named];
+  // Non-scalar defaults need hidden thunk functions, which must be emitted
+  // while this function is still being compiled — closures, call sites, and
+  // exports all share the cached indices afterwards.
+  for (final param in [...positional, ...named]) {
+    compileParameterDefault(ctx, ctx.library, param);
+  }
   final declaredTypes = <TypeRef>[];
 
   for (final param in [...positional, ...named]) {

@@ -28,6 +28,7 @@ final class TypedExportParameter {
     required this.typeLibrary,
     this.runtimeTypeId = -1,
     this.defaultValue,
+    this.defaultThunk = -1,
   });
 
   final String name;
@@ -37,4 +38,8 @@ final class TypedExportParameter {
   final String typeLibrary;
   final int runtimeTypeId;
   final Object? defaultValue;
+
+  /// Index of a hidden zero-arg function producing the default value, or a
+  /// negative number to use [defaultValue].
+  final int defaultThunk;
 }

@@ -1,4 +1,7 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
+import 'package:dart_eval/src/eval/ir/flow.dart';
+import 'package:dart_eval/src/eval/ir/representation.dart';
 
 import '../builtins.dart';
 import '../context.dart';
@@ -107,3 +110,78 @@ Variable pushDefaultValue(CompilerContext ctx, Object? value) =>
       String value => BuiltinValue(stringval: value),
       _ => throw StateError('Invalid typed default value: $value'),
     }.push(ctx);
+
+/// The constant value an optional parameter takes when the caller omits it.
+///
+/// Scalar constants encode directly in bytecode; everything else (tear-offs,
+/// const objects, const collections) compiles to a hidden zero-argument
+/// *thunk* whose index the closure descriptor stores for lazy evaluation.
+(Object? value, int thunkIndex) compileParameterDefault(
+  CompilerContext ctx,
+  int library,
+  FormalParameter parameter,
+) {
+  final expression = parameter.defaultClause?.value;
+  if (expression == null) return (null, -1);
+  try {
+    return (evaluateDefaultValue(ctx, library, expression), -1);
+  } on CompileError {
+    return (null, _compileDefaultThunk(ctx, expression));
+  }
+}
+
+/// Emits [expression] as a hidden 0-arg function returning its value, and
+/// returns the new function's index. Identical expressions share one thunk
+/// per compilation. Defaults are compile-time constants, so the thunk never
+/// references enclosing locals.
+int _compileDefaultThunk(CompilerContext ctx, Expression expression) {
+  final cached = ctx.defaultThunkCache[expression];
+  if (cached != null) return cached;
+
+  final outerGraph = ctx.activeGraph;
+  final outerBuilder = ctx.builder;
+  final outerBlockCode = ctx.blockCode;
+  final outerFunctionId = ctx.currentFunctionId;
+  final outerFunctionLabel = ctx.funcLabel;
+  final outerHasBegun = ctx.hasBegunMethod;
+  final outerLabels = [...ctx.labels];
+  final outerExceptions = [...ctx.caughtExceptionTargets];
+  final outerExceptionDepth = ctx.exceptionDepth;
+  final saveState = ctx.saveState();
+  final previousTypes = {...?ctx.temporaryTypes[ctx.library]};
+  ctx.blockCode = [];
+  ctx.labels.clear();
+  ctx.caughtExceptionTargets.clear();
+  ctx.finishMethod();
+  try {
+    final thunkId = ctx.beginFunction('<default>');
+    ctx.locals = [];
+    ctx.exceptionDepth = 0;
+    ctx.beginScope();
+    ctx.functionSignatures[thunkId] = const MachineFunctionSignature(
+      [],
+      MachineRepresentation.object,
+    );
+    final value = compileExpression(expression, ctx).boxIfNeeded(ctx);
+    ctx.pushOp(Return(value.ssa));
+    ctx.endScope();
+    ctx.finishMethod();
+    return ctx.defaultThunkCache[expression] = thunkId;
+  } finally {
+    ctx.activeGraph = outerGraph;
+    ctx.builder = outerBuilder;
+    ctx.blockCode = outerBlockCode;
+    ctx.currentFunctionId = outerFunctionId;
+    ctx.funcLabel = outerFunctionLabel;
+    ctx.hasBegunMethod = outerHasBegun;
+    ctx.exceptionDepth = outerExceptionDepth;
+    ctx.labels
+      ..clear()
+      ..addAll(outerLabels);
+    ctx.caughtExceptionTargets
+      ..clear()
+      ..addAll(outerExceptions);
+    ctx.restoreState(saveState);
+    ctx.temporaryTypes[ctx.library] = previousTypes;
+  }
+}

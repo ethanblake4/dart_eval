@@ -585,11 +585,17 @@ class IdentifierReference implements Reference {
     // handles the member suffix via _refName.
     final split = name.split('.');
     final children = declaration.children;
+    final viaPrefix = declaration.declaration == null;
     final activeDec = declaration.declaration ??
         (split.length > 1 && children != null ? children[split[1]] : null) ??
         (throw PrefixError());
 
-    return _declarationToVariable(activeDec, _refName, ctx, source);
+    return _declarationToVariable(
+      activeDec,
+      viaPrefix ? split.sublist(1).join('.') : _refName,
+      ctx,
+      source,
+    );
   }
 
   @override
@@ -922,6 +928,7 @@ Variable _declarationToVariable(
   TypeRef? returnType;
   var nullable = true;
   if (decl is FunctionDeclaration && decl.returnType != null) {
+    final previousTypes = {...?ctx.temporaryTypes[decOrBridge.sourceLib]};
     TypeRef.loadTemporaryTypes(
       ctx,
       decl.functionExpression.typeParameters?.typeParameters,
@@ -933,7 +940,7 @@ Variable _declarationToVariable(
       decl.returnType!,
     );
     nullable = decl.returnType!.question != null;
-    ctx.temporaryTypes[ctx.library]?.clear();
+    ctx.temporaryTypes[decOrBridge.sourceLib] = previousTypes;
   } else if (decl is ConstructorDeclaration) {
     returnType = TypeRef.lookupDeclaration(
       ctx,

@@ -6,12 +6,16 @@ import 'package:dart_eval/src/eval/compiler/model/source.dart';
 
 void main(List<String> args) {
   final compiler = Compiler();
-  compiler.entrypoints.add('/main.dart');
+  compiler.entrypoints.add('package:x/main.dart');
   try {
-    // Each arg is compiled as package:x/<basename>; the first is the entrypoint.
+    // The first arg is the entrypoint (always package:x/main.dart); any extra
+    // args are auxiliary sources named by basename.
     final sources = [
       for (final file in args)
-        DartSource('package:x/${file.split('/').last}', File(file).readAsStringSync()),
+        DartSource(
+          file == args.first ? 'package:x/main.dart' : 'package:x/${file.split('/').last}',
+          File(file).readAsStringSync(),
+        ),
     ];
     final program = compiler.compileSources(sources);
     final runtime = Runtime(program.write().buffer);

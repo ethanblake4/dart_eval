@@ -223,20 +223,20 @@ Variable compileFunctionExpression(
       .map((e) => e.name!.lexeme)
       .toList();
 
-  Object? parameterDefault(FormalParameter parameter) {
-    final value = evaluateDefaultValue(
+  (Object?, int) parameterDefault(FormalParameter parameter) {
+    final (value, thunk) = compileParameterDefault(
       ctx,
       ctx.library,
-      parameter.defaultClause?.value,
+      parameter,
     );
     final annotation = parameter.type;
     if (value is int &&
         annotation != null &&
         TypeRef.fromAnnotation(ctx, ctx.library, annotation) ==
             CoreTypes.double.ref(ctx)) {
-      return value.toDouble();
+      return (value.toDouble(), thunk);
     }
-    return value;
+    return (value, thunk);
   }
 
   final target = DeferredOrOffset(offset: fnOffset);
@@ -307,6 +307,8 @@ Variable compileFunctionExpression(
       ),
     );
   }
+  final positionalDefaults = positional.map(parameterDefault).toList();
+  final namedDefaults = sortedNamedArgs.map(parameterDefault).toList();
   return Variable.ssa(
     ctx,
     CreateClosure(
@@ -316,8 +318,12 @@ Variable compileFunctionExpression(
       requiredPositional: requiredPositionalArgCount,
       positionalCount: positional.length,
       namedNames: sortedNamedArgNames,
-      positionalDefaults: positional.map(parameterDefault).toList(),
-      namedDefaults: sortedNamedArgs.map(parameterDefault).toList(),
+      positionalDefaults: [for (final d in positionalDefaults) d.$1],
+      namedDefaults: [for (final d in namedDefaults) d.$1],
+      defaultThunks: [
+        for (final d in positionalDefaults) d.$2,
+        for (final d in namedDefaults) d.$2,
+      ],
       requiredNamed: [
         for (final parameter in sortedNamedArgs)
           if (parameter.isRequired) parameter.name!.lexeme,

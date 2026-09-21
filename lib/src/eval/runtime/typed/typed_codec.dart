@@ -288,6 +288,7 @@ abstract final class TypedCodec {
         string(parameter.typeName);
         string(parameter.typeLibrary);
         u32(parameter.runtimeTypeId + 1);
+        u32(parameter.defaultThunk + 1);
         final value = _writeObjects([parameter.defaultValue]);
         u32(value.length);
         bytes.add(value);
@@ -316,6 +317,10 @@ abstract final class TypedCodec {
       strings(descriptor.requiredNamed);
       defaults(descriptor.positionalDefaults);
       defaults(descriptor.namedDefaults);
+      u32(descriptor.defaultThunks.length);
+      for (final thunk in descriptor.defaultThunks) {
+        u32(thunk + 1);
+      }
       u32(descriptor.parameterTypeIds.length);
       for (var i = 0; i < descriptor.parameterTypeIds.length; i++) {
         u32(descriptor.parameterTypeIds[i] + 1);
@@ -495,6 +500,7 @@ abstract final class TypedCodec {
         }
         final typeName = string(), typeLibrary = string();
         final runtimeTypeId = u32() - 1;
+        final defaultThunk = u32() - 1;
         final valueLength = u32();
         require(valueLength);
         final defaultValue = _readObjects(
@@ -515,6 +521,7 @@ abstract final class TypedCodec {
             typeLibrary: typeLibrary,
             runtimeTypeId: runtimeTypeId,
             defaultValue: defaultValue,
+            defaultThunk: defaultThunk,
           ),
         );
       }
@@ -569,6 +576,15 @@ abstract final class TypedCodec {
       final namedNames = strings(), requiredNamed = strings();
       final positionalDefaults = defaults(positionalCount);
       final namedDefaults = defaults(namedNames.length);
+      final defaultThunkCount = u32();
+      if (defaultThunkCount > positionalCount + namedNames.length) {
+        throw const FormatException('Invalid closure default thunk count');
+      }
+      final defaultThunks = List.generate(
+        defaultThunkCount,
+        (_) => u32() - 1,
+        growable: false,
+      );
       final parameterTypeCount = u32();
       if (parameterTypeCount != 0 &&
           parameterTypeCount != positionalCount + namedNames.length) {
@@ -608,6 +624,7 @@ abstract final class TypedCodec {
           requiredNamed: requiredNamed,
           positionalDefaults: positionalDefaults,
           namedDefaults: namedDefaults,
+          defaultThunks: defaultThunks,
           parameterTypeIds: parameterTypeIds,
           parameterTypeParameterIndices: parameterTypeParameterIndices,
           parameterNullable: parameterNullable,

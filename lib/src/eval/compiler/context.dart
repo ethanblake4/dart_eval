@@ -122,6 +122,11 @@ class CompilerContext with ScopeContext {
   final Map<int, List<FormalParameter>> functionParameters = {};
   final Map<int, List<TypeRef>> functionParameterTypes = {};
   final Map<int, List<TypeRef>> functionTypeParameterBounds = {};
+
+  /// Hidden zero-arg thunk function per non-scalar parameter default
+  /// expression, so the same default is compiled once for closures, call
+  /// sites, and host exports.
+  final Map<Expression, int> defaultThunkCache = {};
   final Map<int, TypeRef> functionRuntimeTypes = {};
   int? currentFunctionId;
   int _nextFunctionId = 0;

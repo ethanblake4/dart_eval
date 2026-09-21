@@ -169,6 +169,7 @@ class TypeRef {
               ctx,
               library,
               typeAnnotation,
+              typeParameters: typeParameters,
             ),
             nullable: typeAnnotation.question != null,
           );
@@ -246,6 +247,7 @@ class TypeRef {
           library,
           alias,
           nullable: typeAnnotation.question != null,
+          typeArgs: typeAnnotation.typeArguments?.arguments,
         );
       }
       throw CompileError(
@@ -1787,17 +1789,49 @@ final class _TypeRefCache {
 /// Resolves a `typedef` use to the type it aliases. Function-type aliases
 /// (`typedef void F()`, `typedef F = void Function()`) map to `Function`;
 /// named-type aliases (`typedef X = List<int>`) resolve recursively. Type
-/// parameters on the alias are not substituted — the underlying annotation is
-/// resolved as-is.
+/// parameters on the alias are bound (and substituted by any supplied type
+/// arguments) while the underlying annotation resolves.
 TypeRef resolveTypeAlias(
   CompilerContext ctx,
   int library,
   TypeAlias alias, {
   bool nullable = false,
+  List<TypeAnnotation>? typeArgs,
 }) {
+  final typeParameters = switch (alias) {
+        GenericTypeAlias(:final typeParameters) => typeParameters,
+        FunctionTypeAlias(:final typeParameters) => typeParameters,
+        ClassTypeAlias(:final typeParameters) => typeParameters,
+        _ => null,
+      }?.typeParameters ??
+      const <TypeParameter>[];
+  // Bind the alias's own type parameters inside its body. When the alias is
+  // referenced with concrete arguments, substitute them; otherwise the
+  // parameters stay abstract type parameters.
+  final bindings = <String, TypeRef>{};
+  for (var i = 0; i < typeParameters.length; i++) {
+    final arg = typeArgs == null || i >= typeArgs.length
+        ? null
+        : typeArgs[i];
+    bindings[typeParameters[i].name.lexeme] = arg == null
+        ? TypeRef(
+            library,
+            typeParameters[i].name.lexeme,
+            resolved: true,
+            typeParameterOwner: 'typeAlias:$library:${alias.name.lexeme}',
+            typeParameterIndex: i,
+          )
+        : TypeRef.fromAnnotation(ctx, library, arg);
+  }
+
   final TypeRef target;
   if (alias is GenericTypeAlias && alias.functionType == null) {
-    target = TypeRef.fromAnnotation(ctx, library, alias.type);
+    target = TypeRef.fromAnnotation(
+      ctx,
+      library,
+      alias.type,
+      typeParameters: bindings,
+    );
   } else {
     target = CoreTypes.function.ref(ctx);
   }

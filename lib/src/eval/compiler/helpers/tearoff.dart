@@ -74,16 +74,19 @@ extension TearOff on Variable {
           : TypeRef.fromAnnotation(ctx, offset.file ?? ctx.library, annotation);
     }
 
-    Object? parameterDefault(FormalParameter parameter) {
-      final value = evaluateDefaultValue(
+    (Object?, int) parameterDefault(FormalParameter parameter) {
+      final (value, thunk) = compileParameterDefault(
         ctx,
         offset.file ?? ctx.library,
-        parameter.defaultClause?.value,
+        parameter,
       );
-      return value is int &&
-              parameterType(parameter) == CoreTypes.double.ref(ctx)
-          ? value.toDouble()
-          : value;
+      return (
+        value is int &&
+                parameterType(parameter) == CoreTypes.double.ref(ctx)
+            ? value.toDouble()
+            : value,
+        thunk,
+      );
     }
 
     final functionType = switch (declaration) {
@@ -114,6 +117,8 @@ extension TearOff on Variable {
       }
       captures.add(receiver);
     }
+    final positionalDefaults = positional.map(parameterDefault).toList();
+    final namedDefaults = named.map(parameterDefault).toList();
     return Variable.ssa(
       ctx,
       CreateClosure(
@@ -126,8 +131,12 @@ extension TearOff on Variable {
         positionalCount: positional.length,
         namedNames: named.map((param) => param.name!.lexeme).toList(),
         hasEnvironment: false,
-        positionalDefaults: positional.map(parameterDefault).toList(),
-        namedDefaults: named.map(parameterDefault).toList(),
+        positionalDefaults: [for (final d in positionalDefaults) d.$1],
+        namedDefaults: [for (final d in namedDefaults) d.$1],
+        defaultThunks: [
+          for (final d in positionalDefaults) d.$2,
+          for (final d in namedDefaults) d.$2,
+        ],
         requiredNamed: [
           for (final parameter in named)
             if (parameter.isRequired) parameter.name!.lexeme,

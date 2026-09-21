@@ -78,14 +78,17 @@ class EvalFunctionType {
   factory EvalFunctionType.fromAnnotation(
     CompilerContext ctx,
     int library,
-    GenericFunctionType annotation,
-  ) {
+    GenericFunctionType annotation, {
+    Map<String, TypeRef> typeParameters = const {},
+  }) {
     // The function type's own type parameters (`Function<A>(A x)`) are
-    // resolvable inside its bounds, parameters, and return type. Their owner
-    // is the annotation node so re-resolving the same alias stays canonical.
+    // resolvable inside its bounds, parameters, and return type, and shadow
+    // outer type parameters. Their owner is the annotation node so
+    // re-resolving the same alias stays canonical.
     final ownParams =
         annotation.typeParameters?.typeParameters ?? const <TypeParameter>[];
-    final typeParameters = <String, TypeRef>{
+    final allTypeParams = <String, TypeRef>{
+      ...typeParameters,
       for (var i = 0; i < ownParams.length; i++)
         ownParams[i].name.lexeme: TypeRef(
           library,
@@ -104,7 +107,7 @@ class EvalFunctionType {
                   ctx,
                   library,
                   type,
-                  typeParameters: typeParameters,
+                  typeParameters: allTypeParams,
                 ),
         );
 

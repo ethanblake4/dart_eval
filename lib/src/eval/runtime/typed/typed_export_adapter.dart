@@ -10,6 +10,7 @@ import 'typed_host_collections.dart';
 import 'typed_instance.dart';
 import 'typed_interop.dart';
 import 'typed_program.dart';
+import 'typed_machine.g.dart';
 
 /// Bind the public host map once, before entering the register interpreter.
 abstract final class TypedExportAdapter {
@@ -51,6 +52,12 @@ abstract final class TypedExportAdapter {
       }
       final original = supplied
           ? arguments[parameter.name]
+          : parameter.defaultThunk >= 0
+          ? TypedMachine.runRaw(
+              program,
+              entryFunction: parameter.defaultThunk,
+              runtime: runtime,
+            )
           : parameter.defaultValue;
       final needsNativeValidation =
           parameter.typeLibrary == 'dart:core' &&

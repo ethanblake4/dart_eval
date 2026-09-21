@@ -244,7 +244,18 @@ class TypedBackend {
     final classAllocations = <objects_ir.CreateClass>[];
     final reachableGlobals = <int>{};
     for (var next = 0; next < reachable.length; next++) {
-      final graph = context.ssaFunctionGraphs[reachable[next]]!;
+      final functionId = reachable[next];
+      final graph = context.ssaFunctionGraphs[functionId]!;
+      // Hidden default thunks are referenced by closure descriptors and
+      // exports rather than call ops.
+      for (final param
+          in context.functionParameters[functionId] ??
+              const <FormalParameter>[]) {
+        final thunk = context.defaultThunkCache[param.defaultClause?.value];
+        if (thunk != null && !reachable.contains(thunk)) {
+          reachable.add(thunk);
+        }
+      }
       for (final block in graph.graph.vertices) {
         for (final op in graph[block]!.code) {
           if (op is flow.Call || op is closures.CreateClosure) {
@@ -254,6 +265,13 @@ class TypedBackend {
               _ => throw StateError('Unreachable callable'),
             });
             if (!reachable.contains(callee)) reachable.add(callee);
+            if (op is closures.CreateClosure) {
+              for (final thunk in op.defaultThunks) {
+                if (thunk >= 0 && !reachable.contains(thunk)) {
+                  reachable.add(thunk);
+                }
+              }
+            }
           } else if (op is globals.LoadGlobal || op is globals.SetGlobal) {
             final index = switch (op) {
               globals.LoadGlobal(:final index) => index,
@@ -331,19 +349,24 @@ class TypedBackend {
               positional.length + named.length + syntheticPositionalCount,
               CoreTypes.dynamic.ref(context),
             );
-        Object? defaultValue(FormalParameter p) {
-          final value = evaluateDefaultValue(
+        (Object?, int) defaultValue(FormalParameter p) {
+          final (value, thunk) = compileParameterDefault(
             context,
             allocation.library,
-            p.defaultClause?.value,
+            p,
           );
           final annotation = p.type;
-          return value is int &&
-                  annotation is NamedType &&
-                  annotation.name.lexeme == 'double'
-              ? value.toDouble()
-              : value;
+          return (
+            value is int &&
+                    annotation is NamedType &&
+                    annotation.name.lexeme == 'double'
+                ? value.toDouble()
+                : value,
+            thunk,
+          );
         }
+        final positionalDefaults = positional.map(defaultValue).toList();
+        final namedDefaults = named.map(defaultValue).toList();
 
         _closures.add(
           TypedClosureDescriptor(
@@ -359,10 +382,15 @@ class TypedBackend {
                 .map((p) => p.name!.lexeme)
                 .toList(),
             positionalDefaults: [
-              ...positional.map(defaultValue),
+              ...positionalDefaults.map((d) => d.$1),
               ...List<Object?>.filled(syntheticPositionalCount, null),
             ],
-            namedDefaults: named.map(defaultValue).toList(),
+            namedDefaults: [for (final d in namedDefaults) d.$1],
+            defaultThunks: [
+              for (final d in positionalDefaults) d.$2,
+              ...List<int>.filled(syntheticPositionalCount, -1),
+              for (final d in namedDefaults) d.$2,
+            ],
             parameterTypeIds: [
               for (final type in parameterTypes)
                 type == CoreTypes.dynamic.ref(context) ||
@@ -545,7 +573,7 @@ class TypedBackend {
             : -1,
         parameters: [
           for (final parameter in parameters)
-            _exportParameter(libraryId, parameter, declaration),
+            _exportParameter(libraryId, parameter, declaration, indices),
         ],
       );
     } finally {
@@ -557,6 +585,7 @@ class TypedBackend {
     int library,
     FormalParameter parameter,
     Declaration? host,
+    Map<int, int> indices,
   ) {
     final (declared, _) = getFormalParameterType(
       context,
@@ -565,10 +594,10 @@ class TypedBackend {
       host,
     );
     final type = declared ?? CoreTypes.dynamic.ref(context);
-    var defaultValue = evaluateDefaultValue(
+    var (defaultValue, defaultThunk) = compileParameterDefault(
       context,
       library,
-      parameter.defaultClause?.value,
+      parameter,
     );
     if (defaultValue is int &&
         type.file == dartCoreFile &&
@@ -585,6 +614,7 @@ class TypedBackend {
           .key,
       runtimeTypeId: type.runtimeTypeId(context),
       defaultValue: defaultValue,
+      defaultThunk: defaultThunk < 0 ? -1 : indices[defaultThunk]!,
     );
   }
 
@@ -932,6 +962,9 @@ class _LoweringSession {
         namedDefaults: op.namedDefaults.isEmpty
             ? List.filled(op.namedNames.length, null)
             : op.namedDefaults,
+        defaultThunks: op.defaultThunks.every((t) => t < 0)
+            ? const []
+            : [for (final t in op.defaultThunks) t < 0 ? -1 : functionIndices[t]!],
         parameterTypeIds: [
           for (final type
               in b.context.functionParameterTypes[sourceFunctionId] ??

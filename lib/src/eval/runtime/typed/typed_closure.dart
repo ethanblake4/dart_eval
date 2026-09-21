@@ -75,14 +75,37 @@ final class TypedClosure extends EvalFunction {
 
   // Scalar constant conversion happens once per compiler descriptor, never on
   // the exact-call path or repeatedly for each omitted-argument invocation.
-  List<$Value?> get defaults =>
-      _defaultArguments[descriptor] ??= List<$Value?>.unmodifiable([
+  // Thunk-produced defaults (closures, const objects) belong to a runtime, so
+  // they're memoized per closure instance instead of per shared descriptor.
+  List<$Value?>? _resolvedDefaults;
+
+  List<$Value?> get defaults {
+    final thunks = descriptor.defaultThunks;
+    if (thunks.isEmpty) {
+      return _defaultArguments[descriptor] ??= List<$Value?>.unmodifiable([
         for (final value in [
           ...descriptor.positionalDefaults,
           ...descriptor.namedDefaults,
         ])
           TypedInterop.boxExternal(value),
       ]);
+    }
+    return _resolvedDefaults ??= List<$Value?>.unmodifiable([
+      for (final (index, value) in [
+        ...descriptor.positionalDefaults,
+        ...descriptor.namedDefaults,
+      ].indexed)
+        index < thunks.length && thunks[index] >= 0
+            ? TypedInterop.boxExternal(
+                TypedMachine.runRaw(
+                  program,
+                  entryFunction: thunks[index],
+                  runtime: runtime,
+                ),
+              )
+            : TypedInterop.boxExternal(value),
+    ]);
+  }
 
   @pragma('vm:never-inline')
   static TypedClosure create(
