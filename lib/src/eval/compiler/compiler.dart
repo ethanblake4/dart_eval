@@ -476,9 +476,11 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
         visibleTypesByIndex[libraryIndex] ??= {};
         final declarationOrBridge = dop.declaration!;
         if (!declarationOrBridge.isBridge &&
-            declarationOrBridge.declaration is TypeAlias) {
-          _ctx.typeAliases.putIfAbsent(libraryIndex, () => {})[name] =
-              declarationOrBridge.declaration! as TypeAlias;
+            declarationOrBridge.declaration is TypeAlias &&
+            declarationOrBridge.declaration is! ClassTypeAlias) {
+          final alias = declarationOrBridge.declaration! as TypeAlias;
+          _ctx.typeAliases.putIfAbsent(libraryIndex, () => {})[name] = alias;
+          _ctx.typeAliasFiles[alias] = libraryIndex;
           continue;
         }
         final type = declarationTypes[declarationOrBridge];
@@ -504,6 +506,75 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     _ctx.instanceDeclarationsMap = _instanceDeclarationsMap;
     _ctx.visibleDeclarations = visibleDeclarationsByIndex;
     _ctx.visibleTypes = visibleTypesByIndex;
+
+    // Fold `with`-clause mixin members into each applying class's instance
+    // map (own members win; a later mixin shadows an earlier one), and give a
+    // class type alias an entry for each superclass constructor so `C.name`
+    // calls bind against `S.name`'s parameter layout.
+    for (final library in reachableLibraries) {
+      final libraryIndex = libraryIndexMap[library]!;
+      _ctx.library = libraryIndex;
+      for (final dop in library.declarations) {
+        final dec = dop.declaration;
+        if (dec is! ClassDeclaration &&
+            dec is! ClassTypeAlias &&
+            dec is! EnumDeclaration) {
+          continue;
+        }
+        final (superclass, mixins, _, _) = classLikeClauses(dec!);
+        final clsName = declarationName(dec);
+        final classMembers = _instanceDeclarationsMap[libraryIndex]![clsName];
+        for (final mixinType in mixins.reversed) {
+          // Only the mixin's member names matter here, so resolve the bare
+          // name — generic arguments (e.g. `M<T>`) may reference type
+          // parameters that don't resolve during the prepass.
+          final prefix = mixinType.importPrefix;
+          final mixinName = prefix == null
+              ? mixinType.name.lexeme
+              : '${prefix.name.lexeme}.${mixinType.name.lexeme}';
+          final ref = _ctx.visibleTypes[libraryIndex]![mixinName];
+          if (ref == null) {
+            continue;
+          }
+          _instanceDeclarationsMap[ref.file]?[ref.name]?.forEach(
+            (mName, member) =>
+                classMembers?.putIfAbsent(mName, () => member),
+          );
+          // Seed the mixin's type parameters with the application's type
+          // arguments so `T`-annotated signatures in the folded members
+          // resolve to concrete types (or the class's own parameters).
+          _seedMixinTypeParams(_ctx, libraryIndex, clsName, dec, mixinType, ref);
+        }
+        if (dec is ClassTypeAlias && superclass != null) {
+          final prefix = superclass.importPrefix;
+          final superName = prefix == null
+              ? superclass.name.lexeme
+              : '${prefix.name.lexeme}.${superclass.name.lexeme}';
+          final superRef = _ctx.visibleTypes[libraryIndex]![superName];
+          if (superRef != null) {
+            final superCtors = [
+              for (final entry
+                  in _topLevelDeclarationsMap[superRef.file]!.entries)
+                if (entry.key.startsWith('${superRef.name}.') &&
+                    entry.value.declaration is ConstructorDeclaration &&
+                    (entry.value.declaration! as ConstructorDeclaration)
+                            .factoryKeyword ==
+                        null)
+                  entry,
+            ];
+            for (final entry in superCtors) {
+              final ctorName = entry.key.substring(
+                superRef.name.length + 1,
+              );
+              _topLevelDeclarationsMap[libraryIndex]!.putIfAbsent(
+                '$clsName.$ctorName',
+                () => entry.value,
+              );
+            }
+          }
+        }
+      }
+    }
 
     unboxedAcrossFunctionBoundaries = {
       CoreTypes.int.ref(_ctx),
@@ -561,12 +632,20 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
           typeParameters,
         );
         for (final namedType in superinterfacesOf(declaration)) {
-          final resolved = TypeRef.fromAnnotation(
-            _ctx,
-            libraryIndex,
-            namedType,
-            typeParameters: ownParams,
-          );
+          TypeRef? resolved;
+          try {
+            resolved = TypeRef.fromAnnotation(
+              _ctx,
+              libraryIndex,
+              namedType,
+              typeParameters: ownParams,
+            );
+          } on CompileError {
+            // Unresolvable clause types (e.g. mixins that aren't registered
+            // as types yet) — leave the class eligible for devirtualization;
+            // the missing name would fail compilation anyway elsewhere.
+            continue;
+          }
           _ctx.subclassedTypes.add('${resolved.file}:${resolved.name}');
         }
       }
@@ -589,6 +668,15 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
               declaration.parent!.parent is TopLevelVariableDeclaration) {
             compileDeclaration(declaration, _ctx);
           } else if (declaration is ClassDeclaration) {
+            _ctx.currentClass = declaration;
+            for (final d
+                in declaration.body.members.whereType<FieldDeclaration>().where(
+                  (e) => e.isStatic,
+                )) {
+              compileFieldDeclaration(-1, d, _ctx, declaration);
+            }
+            _ctx.currentClass = null;
+          } else if (declaration is MixinDeclaration) {
             _ctx.currentClass = declaration;
             for (final d
                 in declaration.body.members.whereType<FieldDeclaration>().where(
@@ -816,8 +904,13 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     final members = switch (declaration) {
       ClassDeclaration d => d.body.members,
       EnumDeclaration d => d.body.members,
+      MixinDeclaration d => d.body.members,
       _ => null,
     };
+    if (declaration is ClassTypeAlias) {
+      // No own members, but the mixin fold pass writes into this map.
+      _instanceDeclarationsMap[libraryIndex]![name] = {};
+    }
     if (members == null) return;
 
     _instanceDeclarationsMap[libraryIndex]![name] = {};
@@ -903,7 +996,10 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       );
     } else {
       final declaration = declarationOrBridge.declaration!;
-      if (declaration is! ClassDeclaration && declaration is! EnumDeclaration) {
+      if (declaration is! ClassDeclaration &&
+          declaration is! EnumDeclaration &&
+          declaration is! MixinDeclaration &&
+          declaration is! ClassTypeAlias) {
         return null;
       }
       final name = declarationName(declaration);
@@ -1253,7 +1349,10 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
       }
 
       for (final import in importsWithImplicitSelf) {
-        final iid = '${library.uri}:${import.uri}';
+        // The scan of this import's declarations is specific to [dec]: each
+      // used declaration contributes its own identifier set, so dedupe per
+      // (library, import, dec) rather than per (library, import).
+      final iid = '${library.uri}:${import.uri}:$dec';
         if (processedImports.contains(iid)) {
           continue;
         }
@@ -1417,5 +1516,55 @@ Iterable<NamedType> superinterfacesOf(AstNode? declaration) sync* {
     case EnumDeclaration(:final withClause, :final implementsClause):
       yield* withClause?.mixinTypes ?? const Iterable.empty();
       yield* implementsClause?.interfaces ?? const Iterable.empty();
+  }
+}
+
+
+/// Seeds the mixin's type parameters into [ctx.temporaryTypes] so signatures
+/// of its folded members resolve `T`-style annotations to the application's
+/// type arguments — a concrete type for `M<int>`, or the class's own type
+/// parameter for `M<T>`. Entries resolve in the mixin's library, where the
+/// member signatures are interpreted.
+void _seedMixinTypeParams(
+  CompilerContext ctx,
+  int libraryIndex,
+  String clsName,
+  Declaration dec,
+  NamedType mixinType,
+  TypeRef ref,
+) {
+  final mixinDecl =
+      ctx.topLevelDeclarationsMap[ref.file]?[ref.name]?.declaration;
+  final mixinParams = switch (mixinDecl) {
+    MixinDeclaration m => m.typeParameters?.typeParameters,
+    ClassDeclaration c => c.namePart.typeParameters?.typeParameters,
+    _ => null,
+  };
+  if (mixinParams == null || mixinParams.isEmpty) {
+    return;
+  }
+  final classParams = classLikeClauses(dec).$4?.typeParameters;
+  final mixinArgs = mixinType.typeArguments?.arguments;
+  final temps = ctx.temporaryTypes[ref.file] ??= {};
+  for (var i = 0; i < mixinParams.length; i++) {
+    TypeRef? argRef;
+    if (mixinArgs != null && i < mixinArgs.length) {
+      argRef = resolveAppliedTypeArgument(
+        ctx,
+        libraryIndex,
+        clsName,
+        classParams,
+        mixinArgs[i],
+      );
+    }
+    final bound = mixinParams[i].bound;
+    temps.putIfAbsent(
+      mixinParams[i].name.lexeme,
+      () =>
+          argRef ??
+          (bound == null
+              ? CoreTypes.dynamic.ref(ctx)
+              : TypeRef.fromAnnotation(ctx, ref.file, bound)),
+    );
   }
 }

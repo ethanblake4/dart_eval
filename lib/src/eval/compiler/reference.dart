@@ -9,6 +9,7 @@ import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
 import 'package:dart_eval/src/eval/ir/primitives.dart';
 import 'package:dart_eval/src/eval/ir/types.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
@@ -48,6 +49,15 @@ class SuperPropertyReference extends IdentifierReference {
 
   Variable _owner(CompilerContext ctx, bool forSet) {
     var receiver = object!;
+    final mixinOwner = superMixinMemberOwner(ctx, name);
+    if (mixinOwner != null) {
+      return Variable.of(
+        ctx,
+        receiver.ssa,
+        mixinOwner,
+        concreteTypes: [mixinOwner],
+      );
+    }
     var type = receiver.type.resolveTypeChain(ctx);
     while (true) {
       final declarations = ctx.instanceDeclarationsMap[type.file]?[type.name];
@@ -70,6 +80,24 @@ class SuperPropertyReference extends IdentifierReference {
   @override
   Variable getValue(CompilerContext ctx, [AstNode? source]) {
     final receiver = _owner(ctx, false);
+    // A method member read is a tear-off bound to the super receiver.
+    final memberDecl = ctx
+        .instanceDeclarationsMap[receiver.type.file]?[receiver.type.name]
+            ?[name];
+    if (memberDecl is MethodDeclaration &&
+        !memberDecl.isGetter &&
+        !memberDecl.isSetter) {
+      return Variable(
+        CoreTypes.function.ref(ctx),
+        methodOffset: DeferredOrOffset(
+          file: receiver.type.file,
+          className: receiver.type.name,
+          name: name,
+          targetName: receiver.ssa.name,
+        ),
+        callingConvention: CallingConvention.static,
+      ).tearOff(ctx);
+    }
     if (ctx
             .topLevelDeclarationsMap[receiver.type.file]?[receiver.type.name]
             ?.isBridge ??
@@ -173,28 +201,22 @@ class IdentifierReference implements Reference {
       );
       if (fieldType != null) return fieldType;
 
-      final staticDeclaration = resolveStaticDeclaration(
-        ctx,
-        ctx.library,
-        ctx.currentClassName!,
-        name,
-      );
+      final staticDeclaration = resolveScopedStaticDeclaration(ctx, name);
 
-      if (staticDeclaration != null && staticDeclaration.declaration != null) {
-        final staticDec = staticDeclaration.declaration!;
+      if (staticDeclaration != null && staticDeclaration.$1.declaration != null) {
+        final (staticDecl, scopeFile, scopeName) = staticDeclaration;
+        final staticDec = staticDecl.declaration!;
         if (staticDec is MethodDeclaration) {
           return CoreTypes.function.ref(ctx);
         } else if (staticDec is VariableDeclaration) {
-          final name = '${ctx.currentClassName!}.${staticDec.name.lexeme}';
-          return resolveGlobalType(ctx, ctx.library, name);
+          final name = '$scopeName.${staticDec.name.lexeme}';
+          return resolveGlobalType(ctx, scopeFile, name);
         }
       }
     }
 
     final typeParameter = ctx.temporaryTypes[ctx.library]?[name];
-    if (typeParameter != null &&
-        typeParameter.isTypeParameter &&
-        name != '_') {
+    if (typeParameter != null && name != '_') {
       return CoreTypes.type.ref(ctx);
     }
 
@@ -306,7 +328,7 @@ class IdentifierReference implements Reference {
     if (ctx.currentClass != null) {
       final instanceDeclaration = resolveInstanceDeclaration(
         ctx,
-        ctx.library,
+        ctx.enclosingLibrary ?? ctx.library,
         ctx.currentClassName!,
         name,
       );
@@ -340,18 +362,13 @@ class IdentifierReference implements Reference {
     }
 
     if (ctx.currentClass != null) {
-      final staticDeclaration = resolveStaticDeclaration(
-        ctx,
-        ctx.library,
-        ctx.currentClassName!,
-        name,
-      );
-      final declaration = staticDeclaration?.declaration;
+      final staticDeclaration = resolveScopedStaticDeclaration(ctx, name);
+      final declaration = staticDeclaration?.$1.declaration;
       if (declaration is VariableDeclaration) {
         return storeGlobalBinding(
           ctx,
-          ctx.library,
-          '${ctx.currentClassName!}.${declaration.name.lexeme}',
+          staticDeclaration!.$2,
+          '${staticDeclaration.$3}.${declaration.name.lexeme}',
           value,
           source,
         );
@@ -468,7 +485,7 @@ class IdentifierReference implements Reference {
     if (ctx.currentClass != null) {
       final instanceDeclaration = resolveInstanceDeclaration(
         ctx,
-        ctx.library,
+        ctx.enclosingLibrary ?? ctx.library,
         ctx.currentClassName!,
         name,
       );
@@ -572,30 +589,26 @@ class IdentifierReference implements Reference {
         );
       }
 
-      final staticDeclaration = resolveStaticDeclaration(
-        ctx,
-        ctx.library,
-        ctx.currentClassName!,
-        name,
-      );
+      final staticDeclaration = resolveScopedStaticDeclaration(ctx, name);
 
-      if (staticDeclaration != null && staticDeclaration.declaration != null) {
-        final staticDec = staticDeclaration.declaration!;
+      if (staticDeclaration != null && staticDeclaration.$1.declaration != null) {
+        final (staticDecl, scopeFile, scopeName) = staticDeclaration;
+        final staticDec = staticDecl.declaration!;
         if (staticDec is MethodDeclaration) {
           return Variable(
             CoreTypes.function.ref(ctx),
             methodOffset: DeferredOrOffset.lookupStatic(
               ctx,
-              ctx.library,
-              ctx.currentClassName!,
+              scopeFile,
+              scopeName,
               _refName,
             ),
           );
         } else if (staticDec is VariableDeclaration) {
-          final name = '${ctx.currentClassName!}.${staticDec.name.lexeme}';
+          final name = '$scopeName.${staticDec.name.lexeme}';
           return _loadGlobalVariable(
             ctx,
-            ctx.library,
+            scopeFile,
             name,
             staticDec.name.lexeme,
           );
@@ -606,9 +619,7 @@ class IdentifierReference implements Reference {
     // A type parameter in scope evaluates to its bound `Type` object.
     // (`_` is a wildcard type parameter: non-binding.)
     final typeParameter = ctx.temporaryTypes[ctx.library]?[name];
-    if (typeParameter != null &&
-        typeParameter.isTypeParameter &&
-        name != '_') {
+    if (typeParameter != null && name != '_') {
       return Variable.ssa(
         ctx,
         LoadTypeParameter(
@@ -714,12 +725,12 @@ class PrefixedIdentifierReference implements Reference {
       throw CompileError('Cannot use a declaration as a prefix', source);
     }
     final children = dec.children!;
-    return _declarationToStaticDispatch(
-      children[identifier]!,
-      identifier,
-      ctx,
-      source,
-    );
+    final child = children[identifier] ??
+        (throw CompileError(
+          "'$identifier' isn't defined for the prefix '$prefix'",
+          source,
+        ));
+    return _declarationToStaticDispatch(child, identifier, ctx, source);
   }
 
   @override
@@ -731,12 +742,12 @@ class PrefixedIdentifierReference implements Reference {
       throw CompileError('Cannot use a declaration as a prefix', source);
     }
     final children = dec.children!;
-    return _declarationToVariable(
-      children[identifier]!,
-      identifier,
-      ctx,
-      source,
-    );
+    final child = children[identifier] ??
+        (throw CompileError(
+          "'$identifier' isn't defined for the prefix '$prefix'",
+          source,
+        ));
+    return _declarationToVariable(child, identifier, ctx, source);
   }
 
   @override
@@ -964,7 +975,7 @@ Variable _declarationToVariable(
   }
 
   if (decl is! FunctionDeclaration && decl is! ConstructorDeclaration) {
-    final type = decl is TypeAlias
+    final type = decl is TypeAlias && decl is! ClassTypeAlias
         ? resolveTypeAlias(ctx, decOrBridge.sourceLib, decl)
         : TypeRef.lookupDeclaration(ctx, decOrBridge.sourceLib, decl);
     return _typeLiteral(ctx, type, '${declarationName(decl)}.');
@@ -1076,6 +1087,7 @@ Variable _loadGlobalVariable(
   String globalName, [
   String? valueName,
 ]) {
+  ensureGlobalRegistered(ctx, sourceLib, globalName);
   final type = resolveGlobalType(ctx, sourceLib, globalName);
   final gIndex = ctx.topLevelGlobalIndices[sourceLib]![globalName]!;
   return Variable.ssa(
@@ -1093,9 +1105,13 @@ Variable _typeLiteral(
   TypeRef type,
   String constructorKey,
 ) {
+  final typeId = type.runtimeTypeId(ctx);
+  final operation = type.requiresTypeEnvironment
+      ? LoadTypeParameter(ctx.svar('type'), typeId)
+      : LoadConstantType(ctx.svar('type'), typeId);
   return Variable.ssa(
     ctx,
-    LoadConstantType(ctx.svar('type'), type.runtimeTypeId(ctx)),
+    operation,
     CoreTypes.type.ref(ctx),
     concreteTypes: [type],
     methodOffset: DeferredOrOffset(file: type.file, name: constructorKey),

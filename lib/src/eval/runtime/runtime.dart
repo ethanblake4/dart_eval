@@ -593,11 +593,66 @@ class Runtime {
   }
 
   /// Whether two runtime-local descriptor IDs denote the same Dart type.
-  bool runtimeTypesEqual(int id, Runtime otherRuntime, int otherId) =>
-      id == importRuntimeType(otherRuntime, otherId);
+  bool runtimeTypesEqual(int id, Runtime otherRuntime, int otherId) {
+    final imported = importRuntimeType(otherRuntime, otherId);
+    if (id == imported) return true;
+    return false;
+  }
 
   /// A program-independent hash for a runtime type descriptor.
   int runtimeTypeHash(int id) => _runtimeTypeSemanticKey(id).hashCode;
+
+  /// Dart-style display name for a runtime type descriptor (e.g. `List<int>`).
+  String runtimeTypeToString(int id) {
+    final descriptor = _typeDescriptors[id];
+    final suffix = descriptor[1] == 0 ? '' : '?';
+    if (descriptor.length < 3 || descriptor[2] >= 0) {
+      final nominal = _typeIdentities[descriptor[0]];
+      final name = nominal?.name ?? '#${descriptor[0]}';
+      final args = descriptor.skip(2).map(runtimeTypeToString).join(', ');
+      return args.isEmpty ? '$name$suffix' : '$name<$args>$suffix';
+    }
+    switch (descriptor[2]) {
+      case RuntimeTypeDescriptorTag.record:
+        final positional = [
+          for (final type in descriptor.skip(5).take(descriptor[3]))
+            runtimeTypeToString(type),
+        ];
+        final named = [
+          for (
+            var i = 5 + descriptor[3];
+            i < descriptor.length;
+            i += 2
+          )
+            '${_constantPool[descriptor[i]]}: '
+                '${runtimeTypeToString(descriptor[i + 1])}',
+        ];
+        return '(${[...positional, ...named].join(', ')})$suffix';
+      case RuntimeTypeDescriptorTag.function:
+        final positional = [
+          for (final type in descriptor.skip(7).take(descriptor[5]))
+            runtimeTypeToString(type),
+        ];
+        final named = [
+          for (
+            var i = 7 + descriptor[5];
+            i < descriptor.length;
+            i += 3
+          )
+            '${descriptor[i + 1] == 0 ? '' : 'required '}'
+                '${_constantPool[descriptor[i]]}: '
+                '${runtimeTypeToString(descriptor[i + 2])}',
+        ];
+        return '${runtimeTypeToString(descriptor[3])} '
+            'Function(${[...positional, ...named].join(', ')})$suffix';
+      case RuntimeTypeDescriptorTag.typeParameter:
+        return '${runtimeTypeToString(descriptor[5])}$suffix';
+      default:
+        throw StateError(
+          'Unknown runtime type descriptor tag ${descriptor[2]}',
+        );
+    }
+  }
 
   String _runtimeTypeSemanticKey(int id) {
     final descriptor = _typeDescriptors[id];

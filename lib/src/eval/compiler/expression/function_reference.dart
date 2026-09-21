@@ -20,9 +20,13 @@ Variable compileFunctionReference(FunctionReference e, CompilerContext ctx) {
             TypeRef.fromAnnotation(ctx, ctx.library, arg),
         ],
       );
+      final typeId = parameterized.runtimeTypeId(ctx);
+      final operation = parameterized.requiresTypeEnvironment
+          ? LoadTypeParameter(ctx.svar('type'), typeId)
+          : LoadConstantType(ctx.svar('type'), typeId);
       return Variable.ssa(
         ctx,
-        LoadConstantType(ctx.svar('type'), parameterized.runtimeTypeId(ctx)),
+        operation,
         CoreTypes.type.ref(ctx),
         concreteTypes: [parameterized],
       );

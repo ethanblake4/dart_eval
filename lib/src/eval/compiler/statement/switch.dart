@@ -87,6 +87,7 @@ StatementInfo _compileSwitchCases(
       );
       if (currentCase is SwitchCase) {
         final caseVar = compileExpression(currentCase.expression, ctx);
+        _checkPrimitiveEquality(ctx, caseVar, currentCase.expression);
         return subject.invoke(ctx, '==', [caseVar]).result;
       } else if (currentCase is SwitchPatternCase) {
         final matches = patternMatchAndBind(
@@ -200,6 +201,25 @@ StatementInfo _executeSwitchBlock(
     willAlwaysThrow: willAlwaysThrow,
     willAlwaysBreak: willAlwaysBreak,
   );
+}
+
+/// A `case e:` expression must have a primitive `==` — a user-declared
+/// `operator ==` on the expression's static type is a compile-time error.
+void _checkPrimitiveEquality(
+  CompilerContext ctx,
+  Variable caseVar,
+  AstNode source,
+) {
+  final t = caseVar.type.resolveTypeChain(ctx);
+  if (t.isTypeParameter) return;
+  if (ctx.instanceDeclarationsMap[t.file]?[t.name]?['=='] != null) {
+    throw CompileError(
+      "Case expression '$t' does not have a primitive operator '=='.",
+      source,
+      ctx.library,
+      ctx,
+    );
+  }
 }
 
 void _validateSwitchCases(List<SwitchMember> cases) {

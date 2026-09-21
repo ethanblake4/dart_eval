@@ -10,6 +10,7 @@ import 'package:dart_eval/src/eval/compiler/declaration/function.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/method.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/variable.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
+import 'package:dart_eval/src/eval/compiler/type.dart';
 
 int? compileDeclaration(
   Declaration d,
@@ -17,11 +18,16 @@ int? compileDeclaration(
   Declaration? parent,
   int? fieldIndex,
   List<FieldDeclaration>? fields,
+  Map<ClassMember, int> memberLibraries = const {},
 }) {
   if (d is ClassDeclaration) {
     compileClassDeclaration(ctx, d);
   } else if (d is EnumDeclaration) {
     compileEnumDeclaration(ctx, d);
+  } else if (d is MixinDeclaration) {
+    compileMixinDeclaration(ctx, d);
+  } else if (d is ClassTypeAlias) {
+    compileClassTypeAlias(ctx, d);
   } else if (d is MethodDeclaration) {
     return compileMethodDeclaration(d, ctx, parent!);
   } else if (d is FunctionDeclaration) {
@@ -29,7 +35,13 @@ int? compileDeclaration(
   } else if (d is FieldDeclaration) {
     compileFieldDeclaration(fieldIndex!, d, ctx, parent!);
   } else if (d is ConstructorDeclaration) {
-    compileConstructorDeclaration(ctx, d, parent!, fields!);
+    compileConstructorDeclaration(
+      ctx,
+      d,
+      parent!,
+      fields!,
+      memberLibraries: memberLibraries,
+    );
   } else if (d is VariableDeclaration) {
     compileTopLevelVariableDeclaration(d, ctx);
   } else if (d is EnumConstantDeclaration) {
@@ -73,19 +85,50 @@ void compileClassMembers(
   required List<FieldDeclaration> fields,
   required List<MethodDeclaration> methods,
   int firstFieldIndex = 0,
+  // For members folded in from a mixin: the member's declaring library, so
+  // its body resolves identifiers and types where it was written.
+  Map<ClassMember, int> memberLibraries = const {},
 }) {
   var fieldIndex = firstFieldIndex;
   for (final m in <ClassMember>[...fields, ...methods, ...constructors]) {
     ctx.currentClass = parent;
-    compileDeclaration(
-      m,
-      ctx,
-      parent: parent,
-      fieldIndex: fieldIndex,
-      fields: fields,
-    );
+    final previousLibrary = ctx.library;
+    final memberLibrary = memberLibraries[m];
+    ctx.library = memberLibrary ?? previousLibrary;
+    final memberOwner = m.parent?.parent;
+    ctx.memberDeclaringClass =
+        memberLibrary != null && memberOwner is Declaration
+        ? memberOwner
+        : null;
+    // For a member folded in from a mixin (possibly through a chain of
+    // mixin applications), rebind the declaring mixin's type parameters to
+    // this application's arguments so `T` in its body resolves against the
+    // applying class's type environment.
+    if (memberLibrary != null) {
+      seedFoldedMemberTypeParams(
+        ctx,
+        parent,
+        m,
+        memberLibrary,
+        previousLibrary,
+      );
+    }
+    try {
+      compileDeclaration(
+        m,
+        ctx,
+        parent: parent,
+        fieldIndex: fieldIndex,
+        fields: fields,
+        memberLibraries: memberLibraries,
+      );
+    } finally {
+      ctx.library = previousLibrary;
+      ctx.memberDeclaringClass = null;
+    }
     if (m is FieldDeclaration) {
       fieldIndex += m.fields.variables.length;
     }
   }
 }
+

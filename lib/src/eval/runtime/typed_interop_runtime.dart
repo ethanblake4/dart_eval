@@ -511,7 +511,15 @@ extension TypedRuntimeInterop on Runtime {
             );
           }
         case RuntimeTypeDescriptorTag.typeParameter:
-          return type;
+          // Unresolvable in this environment (e.g. a raw generic owner row):
+          // substitute the parameter's bound, matching
+          // resolveTypeParameterInEnvironment's fallback.
+          return _resolveEnvironmentType(
+            descriptor[5],
+            actualOwnerType,
+            callableTypeArguments,
+            resolved,
+          );
       }
     }
     if (_sameTypeDescriptor(descriptor, translated)) return type;
@@ -570,17 +578,24 @@ extension TypedRuntimeInterop on Runtime {
     int? actualOwnerType,
     List<int> callableTypeArguments,
   ) {
-    final resolved = _resolveTypeParameter(
-      type,
-      actualOwnerType,
-      callableTypeArguments,
-    );
-    if (resolved != null) return resolved;
     final descriptor = _typeDescriptors[type];
-    return descriptor.length == 6 &&
-            descriptor[2] == RuntimeTypeDescriptorTag.typeParameter
-        ? descriptor[5]
-        : type;
+    if (descriptor.length != 6 ||
+        descriptor[2] != RuntimeTypeDescriptorTag.typeParameter) {
+      // A composite type still carries nested type-parameter arguments
+      // (e.g. a folded mixin's `T` bound to `Map<List<U>, V>`): substitute
+      // them against the active environments.
+      return resolveTypedEnvironmentType(
+        type,
+        actualOwnerType: actualOwnerType,
+        callableTypeArguments: callableTypeArguments,
+      );
+    }
+    return _resolveTypeParameter(
+          type,
+          actualOwnerType,
+          callableTypeArguments,
+        ) ??
+        descriptor[5];
   }
 
   int? _resolveTypeParameter(
@@ -624,9 +639,15 @@ extension TypedRuntimeInterop on Runtime {
     if (instantiatedOwner == null) return descriptor[5];
     final ownerDescriptor = _typeDescriptors[instantiatedOwner];
     final argumentOffset = parameterIndex + 2;
-    return argumentOffset < ownerDescriptor.length
-        ? ownerDescriptor[argumentOffset]
-        : null;
+    if (argumentOffset >= ownerDescriptor.length) return null;
+    final argument = ownerDescriptor[argumentOffset];
+    // The argument may itself reference the owner's own type parameters
+    // (e.g. `class C<T> = S with M2<T>`) — resolve it in the environment too.
+    return resolveTypedEnvironmentType(
+      argument,
+      actualOwnerType: actualOwnerType,
+      callableTypeArguments: callableTypeArguments,
+    );
   }
 
   bool _isTypedDescriptorSubtypeInEnvironment(

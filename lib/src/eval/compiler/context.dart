@@ -177,6 +177,32 @@ class CompilerContext with ScopeContext {
 
   Declaration? currentClass;
 
+  /// The library of the enclosing class being compiled. During folded mixin
+  /// member compilation, [library] is the member's own library (so bare
+  /// identifiers resolve there) while this stays the applying class's, which
+  /// is where instance-declaration positions must be registered.
+  int? enclosingLibrary;
+
+  /// The declaration a folded member was written in (e.g. the mixin for a
+  /// member folded into a `with` application). Bare identifiers in that
+  /// member resolve statically against this declaration's scope, not the
+  /// applying class's; null for members declared directly by [currentClass].
+  Declaration? memberDeclaringClass;
+
+  String libraryUri(int index) =>
+      libraryMap.entries.firstWhere((e) => e.value == index).key;
+
+  /// The member-table key for [name] as written in the current library. A
+  /// private member folded in from a different library keeps its origin
+  /// library as part of the key so runtime privacy checks scope it correctly.
+  String memberNameKey(String name) {
+    final enclosing = enclosingLibrary;
+    if (!name.startsWith('_') || enclosing == null || enclosing == library) {
+      return name;
+    }
+    return '${libraryUri(library)}::$name';
+  }
+
   String? get currentClassName {
     final currentClass = this.currentClass;
     if (currentClass == null) return null;
@@ -194,6 +220,10 @@ class CompilerContext with ScopeContext {
   /// `typedef` declarations visible per library. Aliases never become runtime
   /// types; [TypeRef.fromAnnotation] resolves them lazily to their target.
   Map<int, Map<String, TypeAlias>> typeAliases = {};
+
+  /// The library index each [TypeAlias] was declared in — an imported alias's
+  /// body resolves against its own file (it may name private types).
+  final typeAliasFiles = Expando<int>();
   Map<int, Map<String, TypeRef>> temporaryTypes = {};
   Map<int, Map<String, DeclarationOrPrefix>> visibleDeclarations = {};
   Map<int, Map<String, int>> topLevelDeclarationPositions = {};
@@ -327,6 +357,7 @@ String declarationName(Declaration d) => switch (d) {
   ClassDeclaration() => d.namePart.typeName.lexeme,
   EnumDeclaration() => d.namePart.typeName.lexeme,
   MixinDeclaration() => d.name.lexeme,
+  ClassTypeAlias() => d.name.lexeme,
   ExtensionTypeDeclaration() => d.namePart.typeName.lexeme,
   FunctionDeclaration() => d.name.lexeme,
   TypeAlias() => d.name.lexeme,

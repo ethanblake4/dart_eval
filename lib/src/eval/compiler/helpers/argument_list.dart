@@ -114,6 +114,31 @@ Variable compileOmittedArgument(
       parameter,
     );
   }
+  // The default expression and parameter annotations resolve in the host
+  // declaration's own library — its private names aren't visible in the
+  // caller's, and the caller's `library` may differ (e.g. class type alias
+  // forwarding ctors expose a foreign host's parameters).
+  final hostParent = switch (host) {
+    ConstructorDeclaration() || MethodDeclaration() => host.parent?.parent,
+    _ => null,
+  };
+  if (hostParent is Declaration) {
+    final memberName = switch (host) {
+      ConstructorDeclaration() => host.name?.lexeme ?? '',
+      MethodDeclaration() => host.name.lexeme,
+      _ => '',
+    };
+    final hostKey = '${declarationName(hostParent)}.$memberName';
+    // A declaration may be registered under alias keys in other libraries
+    // (`P1.` forwards to `B2.`); match the key that is the host's own name.
+    for (final entry in ctx.topLevelDeclarationsMap.entries) {
+      final d = entry.value[hostKey];
+      if (d != null && identical(d.declaration, host)) {
+        library = entry.key;
+        break;
+      }
+    }
+  }
   final (declaredType, _) = getFormalParameterType(
     ctx,
     parameter,
@@ -137,7 +162,15 @@ Variable compileOmittedArgument(
   }
   Variable variable;
   if (useExpression) {
-    variable = compileExpression(defaultExpr!, ctx, type);
+    // The default expression resolves in the declaring library — its private
+    // names aren't visible in the caller's library.
+    final previousLibrary = ctx.library;
+    ctx.library = library;
+    try {
+      variable = compileExpression(defaultExpr!, ctx, type);
+    } finally {
+      ctx.library = previousLibrary;
+    }
   } else {
     if (value is int && type.file == dartCoreFile && type.name == 'double') {
       value = value.toDouble();
@@ -206,6 +239,33 @@ ArgumentListResult compileArgumentList(
 
   var i = 0;
 
+  // Parameters whose annotations name one of the host class's type
+  // parameters use the erased-object ABI — even when the call site supplies
+  // no seed (e.g. an alias constructor whose own class has no parameters).
+  final ctorClassParams =
+      parameterHost is ConstructorDeclaration &&
+              parameterHost.parent?.parent is Declaration
+          ? classLikeClauses(
+                  parameterHost.parent!.parent! as Declaration,
+                ).$4?.typeParameters ??
+              const <TypeParameter>[]
+          : const <TypeParameter>[];
+  final ctorClassParamNames = <String>{
+    for (final p in ctorClassParams) p.name.lexeme,
+  };
+  // Field/super formals resolve to class type-parameter references; the call
+  // site's bindings instantiate them (e.g. `C<num, double>(0, 0.5)` makes
+  // `this.field2`'s declared `S` check against `double`).
+  final ctorClassParamSubs = <(String, int), TypeRef>{
+    if (parameterHost is ConstructorDeclaration &&
+        parameterHost.parent?.parent is Declaration)
+      for (var i = 0; i < ctorClassParams.length; i++)
+        (
+          'class:$decLibrary:${declarationName(parameterHost.parent!.parent! as Declaration)}',
+          i,
+        ): ?resolveGenerics[ctorClassParams[i].name.lexeme],
+  };
+
   final resolveGenericsMap = <String, Set<TypeRef>>{};
 
   for (final param in positional) {
@@ -256,9 +316,13 @@ ArgumentListResult compileArgumentList(
       );
 
       paramType ??= CoreTypes.dynamic.ref(ctx);
+      if (ctorClassParamSubs.isNotEmpty) {
+        paramType = paramType.substituteTypeParameters(ctorClassParamSubs);
+      }
       final genericParameter =
           typeAnnotation is NamedType &&
-          resolveGenerics.containsKey(typeAnnotation.name.lexeme);
+          (resolveGenerics.containsKey(typeAnnotation.name.lexeme) ||
+              ctorClassParamNames.contains(typeAnnotation.name.lexeme));
 
       var arg0 = compileExpression(arg.argumentExpression, ctx, paramType);
       arg0 = coerceArgumentForParameter(
@@ -327,11 +391,15 @@ ArgumentListResult compileArgumentList(
     } else {
       throw CompileError('Unknown formal type ${param.runtimeType}');
     }
+    if (ctorClassParamSubs.isNotEmpty) {
+      paramType = paramType.substituteTypeParameters(ctorClassParamSubs);
+    }
 
     if (namedExpr.containsKey(name)) {
       final genericParameter =
           typeAnnotation is NamedType &&
-          resolveGenerics.containsKey(typeAnnotation.name.lexeme);
+          (resolveGenerics.containsKey(typeAnnotation.name.lexeme) ||
+              ctorClassParamNames.contains(typeAnnotation.name.lexeme));
       var arg0 = compileExpression(namedExpr[name]!, ctx, paramType);
       arg0 = coerceArgumentForParameter(
         ctx,

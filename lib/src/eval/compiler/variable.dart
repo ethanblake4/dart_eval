@@ -355,9 +355,13 @@ class Variable {
     if (name == 'runtimeType') {
       if (concreteTypes.isNotEmpty) {
         final concrete = concreteTypes[0];
+        final typeId = concrete.runtimeTypeId(ctx);
+        final operation = concrete.requiresTypeEnvironment
+            ? LoadTypeParameter(ctx.svar('var_type'), typeId)
+            : LoadConstantType(ctx.svar('var_type'), typeId);
         return Variable.ssa(
           ctx,
-          LoadConstantType(ctx.svar('var_type'), concrete.runtimeTypeId(ctx)),
+          operation,
           CoreTypes.type.ref(ctx),
         );
       }
@@ -367,7 +371,12 @@ class Variable {
         CoreTypes.type.ref(ctx),
       );
     }
-    final resolvedReceiver = type.resolveTypeChain(ctx);
+    var resolvedReceiver = type.resolveTypeChain(ctx);
+    if (resolvedReceiver.isTypeParameter) {
+      resolvedReceiver = resolvedReceiver.typeParameterBound
+              ?.resolveTypeChain(ctx) ??
+          resolvedReceiver;
+    }
     final resolvedField = TypeRef.lookupFieldType(
       ctx,
       resolvedReceiver,
@@ -381,6 +390,7 @@ class Variable {
             resolvedReceiver.file,
             resolvedReceiver.name,
             name,
+            instantiated: resolvedReceiver,
           )
         : null;
     if (resolvedField == null &&

@@ -30,10 +30,27 @@ Variable compileInstanceCreation(
     throw CompileError('Cannot create instance of a non-type $typeName');
   }
 
-  final staticType = $resolved.concreteTypes.first;
+  var staticType = $resolved.concreteTypes.first;
   var instantiatedType = staticType.copyWith(
     nullable: type.question != null,
   );
+  // A typedef instantiation (`P1()` where `P1 = B2<int>`) constructs the
+  // aliased type directly — typedefs register no constructors of their own.
+  final aliasDecl = ctx.topLevelDeclarationsMap[staticType
+          .file]![staticType.name]
+      ?.declaration;
+  if (aliasDecl is TypeAlias && aliasDecl is! ClassTypeAlias) {
+    instantiatedType = staticType = resolveTypeAlias(
+      ctx,
+      staticType.file,
+      aliasDecl,
+      nullable: type.question != null,
+      typeArgs: type.typeArguments?.arguments,
+    ).copyWith(specifiedTypeArgs: [
+      if (type.typeArguments == null)
+        ...staticType.specifiedTypeArgs,
+    ]);
+  }
   if (type.typeArguments != null) {
     instantiatedType = instantiatedType.copyWith(
       specifiedTypeArgs: [
@@ -101,32 +118,34 @@ Variable compileInstanceCreation(
     final dec = dec0.declaration!;
     final fpl = (dec as ConstructorDeclaration).parameters.parameters;
 
-    // Constructor signatures reference the class's type parameters; seed them
-    // from the instantiated type (or bounds for a raw invocation) so argument
-    // types resolve and inference can refine them.
-    final classDecl =
-        ctx.topLevelDeclarationsMap[staticType.file]![staticType
-            .name]
-        ?.declaration;
-    final classTypeParams = switch (classDecl) {
-      ClassDeclaration(:final namePart) =>
-        namePart.typeParameters?.typeParameters,
-      MixinDeclaration(:final typeParameters) =>
-        typeParameters?.typeParameters,
-      _ => null,
-    };
+    // Constructor signatures reference the declaring class's type parameters —
+    // the callee's class (`B2` for `P1 = B2<int> with M`), not necessarily the
+    // invoked name. Seed them from the instantiated type's arguments (or the
+    // parameter bounds) so `T`-annotated parameters resolve.
+    final ctorDecl = dec.parent?.parent;
+    final classTypeParams = ctorDecl is Declaration
+        ? classLikeClauses(ctorDecl).$4?.typeParameters
+        : null;
     final seedGenerics = <String, TypeRef>{};
     if (classTypeParams != null) {
+      final resolvedChain = instantiatedType.resolveTypeChain(ctx);
+      final appliedArgs =
+          resolvedChain.file == dec0.sourceLib &&
+              ctorDecl != null &&
+              resolvedChain.name ==
+                  declarationName(ctorDecl as Declaration)
+          ? resolvedChain.specifiedTypeArgs
+          : instantiatedType.specifiedTypeArgs;
       for (var i = 0; i < classTypeParams.length; i++) {
         final bound = classTypeParams[i].bound;
         seedGenerics[classTypeParams[i].name.lexeme] =
-            i < instantiatedType.specifiedTypeArgs.length
-                ? instantiatedType.specifiedTypeArgs[i]
+            i < appliedArgs.length
+                ? appliedArgs[i]
                 : bound == null
                 ? CoreTypes.dynamic.ref(ctx)
                 : TypeRef.fromAnnotation(
                     ctx,
-                    staticType.file,
+                    dec0.sourceLib,
                     bound,
                     typeParameters: seedGenerics,
                   );
@@ -209,6 +228,19 @@ Variable compileInstanceCreation(
 bool _hasImplicitDefaultConstructor(CompilerContext ctx, TypeRef classType) {
   final decl =
       ctx.topLevelDeclarationsMap[classType.file]![classType.name]?.declaration;
+  if (decl is ClassTypeAlias) {
+    // `C() => S()` — the alias emits a synthesized `C.` exactly when the
+    // superclass has no declared unnamed constructor (see
+    // [compileClassTypeAlias]); a declared `S.` registers a forwarding `C.`
+    // entry instead.
+    final superName = classLikeClauses(decl).$1?.name.lexeme;
+    if (superName == null) return false;
+    return !ctx.topLevelDeclarationsMap[classType.file]!.entries.any(
+      (entry) =>
+          entry.key == '$superName.' &&
+          entry.value.declaration is ConstructorDeclaration,
+    );
+  }
   if (decl is! ClassDeclaration) return false;
   if (decl.namePart is PrimaryConstructorDeclaration) {
     final primary = decl.namePart as PrimaryConstructorDeclaration;

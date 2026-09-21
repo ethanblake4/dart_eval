@@ -514,12 +514,21 @@ class TypedBackend {
         context.topLevelDeclarationsMap[context.libraryMap[library]]!;
     final declaration = declarations[name]?.declaration;
     if (declaration is ConstructorDeclaration) {
-      final owner = declaration.parent?.parent;
+      // The export name's prefix is the owning class — for a class type
+      // alias's forwarding constructor `C.n` that's the alias `C`, not the
+      // class declaring the target constructor `S.n`.
+      final owner = declarations[name.substring(0, name.lastIndexOf('.'))]
+              ?.declaration ??
+          declaration.parent?.parent;
       return owner is Declaration ? owner : null;
     }
     if (!name.endsWith('.')) return null;
     final owner = declarations[name.substring(0, name.length - 1)]?.declaration;
-    return owner is ClassDeclaration || owner is EnumDeclaration ? owner : null;
+    return owner is ClassDeclaration ||
+            owner is EnumDeclaration ||
+            owner is ClassTypeAlias
+        ? owner
+        : null;
   }
 
   bool _isEnumConstructor(String library, String name) =>
@@ -558,17 +567,14 @@ class TypedBackend {
     final constructorOwner = _constructorOwner(library, name);
     final previousTypes = {...?context.temporaryTypes[libraryId]};
     final typeParameters = switch (constructorOwner) {
-      ClassDeclaration(:final namePart) =>
-        namePart.typeParameters?.typeParameters,
-      EnumDeclaration(:final namePart) =>
-        namePart.typeParameters?.typeParameters,
-      _ => switch (declaration) {
+      null => switch (declaration) {
         FunctionDeclaration(:final functionExpression) =>
           functionExpression.typeParameters?.typeParameters,
         MethodDeclaration(:final typeParameters) =>
           typeParameters?.typeParameters,
         _ => null,
       },
+      _ => classLikeClauses(constructorOwner).$4?.typeParameters,
     };
     TypeRef.loadTemporaryTypes(
       context,
@@ -580,7 +586,8 @@ class TypedBackend {
     );
     try {
       final isGenerativeConstructor =
-          constructorOwner is ClassDeclaration &&
+          (constructorOwner is ClassDeclaration ||
+                  constructorOwner is ClassTypeAlias) &&
           (declaration is! ConstructorDeclaration ||
               declaration.factoryKeyword == null);
       return TypedExport(
@@ -591,7 +598,7 @@ class TypedBackend {
             ? TypeRef.lookupDeclaration(
                 context,
                 libraryId,
-                constructorOwner,
+                constructorOwner!,
               ).runtimeTypeId(context)
             : -1,
         parameters: [

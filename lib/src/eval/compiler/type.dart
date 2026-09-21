@@ -362,9 +362,11 @@ class TypeRef {
       final declaration =
           ctx.topLevelDeclarationsMap[specifiedType.file]![specifiedType.name]!;
       if (!declaration.isBridge) {
-        throw CompileError(
-          'Trying to resolve bridged generic type $ref on $specifiedType, which is not a bridge class',
-        );
+        // `ref` is declared on a bridge type, but [specifiedType] is a plain
+        // class — resolve through a bridged ancestor in its chain (e.g. a
+        // Dart class extending `List<T>`), else degrade to dynamic.
+        return bridgedTypeArgument(ctx, specifiedType, ref) ??
+            CoreTypes.dynamic.ref(ctx);
       }
       final dec = declaration.bridge!;
       if (dec is! BridgeClassDef) {
@@ -434,7 +436,11 @@ class TypeRef {
     if (ctx.currentClass == null) {
       return null;
     }
-    return TypeRef.lookupDeclaration(ctx, ctx.library, ctx.currentClass!);
+    return TypeRef.lookupDeclaration(
+      ctx,
+      ctx.enclosingLibrary ?? ctx.library,
+      ctx.currentClass!,
+    );
   }
 
   factory TypeRef.lookupDeclaration(
@@ -456,9 +462,24 @@ class TypeRef {
     bool forFieldFormal = false,
     bool forSet = false,
     AstNode? source,
+    Map<(String, int), TypeRef> substitutions = const {},
   }) {
     if ($class == CoreTypes.dynamic.ref(ctx)) {
       return null;
+    }
+
+    if ($class.isTypeParameter) {
+      final bound = $class.typeParameterBound;
+      if (bound == null) return null;
+      return TypeRef.lookupFieldType(
+            ctx,
+            bound.resolveTypeChain(ctx),
+            field,
+            forFieldFormal: forFieldFormal,
+            forSet: forSet,
+            source: source,
+            substitutions: substitutions,
+          );
     }
 
     if ($class.recordFields.isNotEmpty) {
@@ -476,9 +497,7 @@ class TypeRef {
       // them in the class's type environment rather than the caller's.
       final classDecl =
           ctx.topLevelDeclarationsMap[$class.file]![$class.name]!.declaration;
-      final typeParams = classDecl is ClassDeclaration
-          ? classDecl.namePart.typeParameters?.typeParameters
-          : null;
+      final typeParams = classLikeClauses(classDecl).$4?.typeParameters;
       final previousTypes = {...?ctx.temporaryTypes[$class.file]};
       TypeRef.loadTemporaryTypes(
         ctx,
@@ -489,22 +508,21 @@ class TypeRef {
       // A raw type use substitutes the parameter's bound (instantiate to
       // bounds); otherwise the argument at the same position.
       TypeRef substituteClassTypeArguments(TypeRef resolved) {
-        final substitutions = <(String, int), TypeRef>{};
+        final localSubstitutions = <(String, int), TypeRef>{
+          ...substitutions,
+        };
         for (var i = 0; i < (typeParams?.length ?? 0); i++) {
           final bound = ctx
               .temporaryTypes[$class.file]![typeParams![i].name.lexeme]!
               .typeParameterBound;
-          substitutions[(
-            'class:${$class.file}:${$class.name}',
-            i,
-          )] = i < $class.specifiedTypeArgs.length
+          final arg = i < $class.specifiedTypeArgs.length
               ? $class.specifiedTypeArgs[i]
-              : ((bound ?? CoreTypes.dynamic.ref(ctx)).substituteTypeParameters(
-                  substitutions,
-                ));
+              : (bound ?? CoreTypes.dynamic.ref(ctx));
+          localSubstitutions[('class:${$class.file}:${$class.name}', i)] = arg
+              .substituteTypeParameters(substitutions);
         }
-        if (substitutions.isEmpty) return resolved;
-        return resolved.substituteTypeParameters(substitutions);
+        if (localSubstitutions.isEmpty) return resolved;
+        return resolved.substituteTypeParameters(localSubstitutions);
       }
 
       try {
@@ -656,8 +674,7 @@ class TypeRef {
         );
       }
       final dec0 = dec.declaration as Declaration;
-      final $extends = dec0 is ClassDeclaration ? dec0.extendsClause : null;
-      if ($extends == null) {
+      if (classLikeClauses(dec0).$1 == null) {
         if ($class == CoreTypes.object.ref(ctx)) {
           throw CompileError(
             'Field $field not found in class ${$class} or its superclasses',
@@ -666,10 +683,29 @@ class TypeRef {
         }
         return TypeRef.lookupFieldType(ctx, CoreTypes.object.ref(ctx), field);
       } else {
-        final $super = $class
-            .resolveTypeChain(ctx, source: source)
-            .extendsType!;
-        return TypeRef.lookupFieldType(ctx, $super, field, source: source);
+        final resolved = $class.resolveTypeChain(ctx, source: source);
+        final $super = resolved.extendsType!;
+        // Fold this class's own arguments into the superclass reference and
+        // keep composing substitutions down the chain so e.g. `extends S<T>`
+        // on `C<int>` walks `S<int>` rather than `S<T>`.
+        final levelParams = resolved.genericParams;
+        final levelSubstitutions = {
+          ...substitutions,
+          for (var i = 0; i < levelParams.length; i++)
+            ('class:${$class.file}:${$class.name}', i):
+                (i < $class.specifiedTypeArgs.length
+                        ? $class.specifiedTypeArgs[i]
+                        : levelParams[i].extendsType ??
+                            CoreTypes.dynamic.ref(ctx))
+                    .substituteTypeParameters(substitutions),
+        };
+        return TypeRef.lookupFieldType(
+          ctx,
+          $super.substituteTypeParameters(levelSubstitutions),
+          field,
+          source: source,
+          substitutions: levelSubstitutions,
+        );
       }
     }
   }
@@ -809,19 +845,11 @@ class TypeRef {
       }
     } else {
       final dec = declaration.declaration!;
-      final extendsClause = dec is ClassDeclaration ? dec.extendsClause : null;
-      final withClause = dec is ClassDeclaration
-          ? dec.withClause
-          : (dec as EnumDeclaration).withClause;
-      final implementsClause = dec is ClassDeclaration
-          ? dec.implementsClause
-          : (dec as EnumDeclaration).implementsClause;
-      final typeParameters = dec is ClassDeclaration
-          ? dec.namePart.typeParameters
-          : (dec as EnumDeclaration).namePart.typeParameters;
-      superName = extendsClause?.superclass;
-      withNames = withClause?.mixinTypes.toList() ?? [];
-      implementsNames = implementsClause?.interfaces.toList() ?? [];
+      final (extendsClause, withClause, implementsClause, typeParameters) =
+          classLikeClauses(dec);
+      superName = extendsClause;
+      withNames = withClause;
+      implementsNames = implementsClause;
       // Bounds can reference earlier parameters (`S extends T`), so resolve
       // them with the class's own parameters already seeded.
       final paramRefs = classTypeParameterRefs(file, name, typeParameters);
@@ -892,19 +920,27 @@ class TypeRef {
           : '${prefix.name.lexeme}.${clauseName.name.lexeme}';
     }
 
-    TypeRef resolveClauseType(NamedType clauseName) =>
-        (ctx.visibleTypes[file]![clauseTypeName(clauseName)] ??
-                (throw CompileError(
-                  'Type ${clauseTypeName(clauseName)} not found',
-                  source,
-                )))
-            .copyWith(specifiedTypeArgs: resolveClauseTypeArgs(clauseName))
-            .resolveTypeChain(
-              ctx,
-              recursionGuard: rg,
-              stack: stack0,
-              source: source,
-            );
+    TypeRef resolveClauseType(NamedType clauseName) {
+      final name = clauseTypeName(clauseName);
+      var type = ctx.visibleTypes[file]![name];
+      if (type == null) {
+        final alias = ctx.typeAliases[file]?[name];
+        if (alias != null) {
+          type = resolveTypeAlias(ctx, file, alias);
+        }
+      }
+      if (type == null) {
+        throw CompileError('Type $name not found', source);
+      }
+      return type
+          .copyWith(specifiedTypeArgs: resolveClauseTypeArgs(clauseName))
+          .resolveTypeChain(
+            ctx,
+            recursionGuard: rg,
+            stack: stack0,
+            source: source,
+          );
+    }
 
     if (superName != null) {
       $super = resolveClauseType(superName);
@@ -915,7 +951,59 @@ class TypeRef {
     }
 
     for (final withName in withNames) {
-      $with.add(resolveClauseType(withName));
+      var mixin = resolveClauseType(withName);
+      // Mixin-application inference: `with M` where `M<T> on I<T>` and the
+      // superclass chain provides `I<int>` binds `T → int` from the `on`
+      // constraints.
+      if (withName.typeArguments == null && mixin.specifiedTypeArgs.isEmpty) {
+        final mixinDeclRef = mixin.resolveTypeChain(ctx);
+        final mixinDecl = ctx
+            .topLevelDeclarationsMap[mixinDeclRef.file]?[mixinDeclRef.name]
+            ?.declaration;
+        if (mixinDecl is MixinDeclaration && mixinDecl.onClause != null) {
+          final substitutions = <(String, int), TypeRef>{};
+          final mixinParams = classTypeParameterRefs(
+            mixinDeclRef.file,
+            mixinDeclRef.name,
+            mixinDecl.typeParameters,
+          );
+          final chain = [?$super, ...$with];
+          for (final constraint in mixinDecl.onClause!.superclassConstraints) {
+            final pattern = TypeRef.fromAnnotation(
+              ctx,
+              mixinDeclRef.file,
+              constraint,
+              typeParameters: mixinParams,
+            );
+            for (final sup in chain) {
+              final found = findSupertypeInstantiation(ctx, pattern, sup);
+              if (found != null) {
+                collectTypeParameterSubstitutions(
+                  ctx,
+                  pattern,
+                  found,
+                  substitutions,
+                );
+              }
+            }
+          }
+          if (substitutions.isNotEmpty) {
+            mixin = mixin.copyWith(
+              specifiedTypeArgs: [
+                for (var i = 0; i < mixinDeclRef.genericParams.length; i++)
+                  substitutions[(
+                        'class:${mixinDeclRef.file}:${mixinDeclRef.name}',
+                        i,
+                      )] ??
+                      mixinDeclRef.genericParams[i].extendsType
+                          ?.substituteTypeParameters(substitutions) ??
+                      CoreTypes.dynamic.ref(ctx),
+              ],
+            );
+          }
+        }
+      }
+      $with.add(mixin);
     }
 
     for (final implementsName in implementsNames) {
@@ -949,10 +1037,43 @@ class TypeRef {
   }
 
   Set<int> getRuntimeIndices(CompilerContext ctx) {
-    return {
+    final indices = {
       runtimeTypeId(ctx),
       ctx.typeRefIndexMap[this] ?? runtimeTypeId(ctx),
-      for (final a in allSupertypes) ...a.getRuntimeIndices(ctx),
+    };
+    // Supertypes are declared in each supertype's own parameter keyspace; map
+    // them back through the supertype's applied arguments as we walk.
+    final seen = {semanticKey};
+    final substitutions = appliedTypeArguments(ctx);
+    final worklist = [
+      for (final supertype in allSupertypes)
+        supertype.substituteTypeParameters(substitutions),
+    ];
+    while (worklist.isNotEmpty) {
+      final supertype = worklist.removeLast();
+      if (!seen.add(supertype.semanticKey)) continue;
+      indices.add(supertype.runtimeTypeId(ctx));
+      indices.add(
+        ctx.typeRefIndexMap[supertype] ?? supertype.runtimeTypeId(ctx),
+      );
+      final substitutions = supertype.appliedTypeArguments(ctx);
+      for (final next in supertype.allSupertypes) {
+        worklist.add(next.substituteTypeParameters(substitutions));
+      }
+    }
+    return indices;
+  }
+
+  /// Maps this type's declared parameters to the applied arguments, so that
+  /// members and supertypes declared in its parameter keyspace can be
+  /// resolved through it.
+  Map<(String, int), TypeRef> appliedTypeArguments(CompilerContext ctx) {
+    if (genericParams.isEmpty) return const {};
+    return {
+      for (var i = 0; i < genericParams.length; i++)
+        ('class:$file:$name', i): i < specifiedTypeArgs.length
+            ? specifiedTypeArgs[i]
+            : (genericParams[i].extendsType ?? CoreTypes.dynamic.ref(ctx)),
     };
   }
 
@@ -1086,7 +1207,7 @@ class TypeRef {
       chain[0].add(w);
       final tc = w.resolveTypeChain(ctx).getTypeChain(ctx);
       for (var i = 0; i < tc.length; i++) {
-        if (chain.length < i + 1) {
+        while (chain.length <= i + 1) {
           chain.add([]);
         }
         chain[i + 1].addAll(tc[i]);
@@ -1487,6 +1608,96 @@ class TypeRef {
   }
 }
 
+/// The superclass, mixin, implements, and type-parameter clauses of a
+/// class-like declaration — class, enum, mixin, or class type alias — in one
+/// record. For a mixin the "superclass" is its `on` clause constraint, and for
+/// a class type alias (`class C = S with M`) the clauses come from the alias
+/// itself. Returns nulls for declarations without such clauses.
+(NamedType?, List<NamedType>, List<NamedType>, TypeParameterList?)
+classLikeClauses(Declaration? dec) => switch (dec) {
+  ClassDeclaration(
+    :final extendsClause,
+    :final withClause,
+    :final implementsClause,
+    :final namePart,
+  ) =>
+    (
+      extendsClause?.superclass,
+      withClause?.mixinTypes.toList() ?? const <NamedType>[],
+      implementsClause?.interfaces.toList() ?? const <NamedType>[],
+      namePart.typeParameters,
+    ),
+  EnumDeclaration(
+    :final withClause,
+    :final implementsClause,
+    :final namePart,
+  ) =>
+    (
+      null,
+      withClause?.mixinTypes.toList() ?? const <NamedType>[],
+      implementsClause?.interfaces.toList() ?? const <NamedType>[],
+      namePart.typeParameters,
+    ),
+  MixinDeclaration(:final onClause, :final implementsClause, :final typeParameters) =>
+    (
+      onClause?.superclassConstraints.firstOrNull,
+      const <NamedType>[],
+      implementsClause?.interfaces.toList() ?? const <NamedType>[],
+      typeParameters,
+    ),
+  ClassTypeAlias(
+    :final superclass,
+    :final withClause,
+    :final implementsClause,
+    :final typeParameters,
+  ) =>
+    (
+      superclass,
+      withClause.mixinTypes.toList(),
+      implementsClause?.interfaces.toList() ?? const <NamedType>[],
+      typeParameters,
+    ),
+  _ => (null, const <NamedType>[], const <NamedType>[], null),
+};
+
+/// For `super` in a class declared with `with` mixins, the mixin-application
+/// layer's members are folded into the applying class's declaration maps.
+/// Returns the applying class's [TypeRef] — under which the folded member is
+/// compiled — when [name] resolves to a member of one of those mixins
+/// (checked last-to-first, matching application order). Returns null when the
+/// member being compiled is itself folded in from a mixin — `super` there
+/// refers to the mixin's `on` constraint — or when no mixin declares [name].
+TypeRef? superMixinMemberOwner(CompilerContext ctx, String name) {
+  if (ctx.memberDeclaringClass != null) return null;
+  final hostDecl = ctx.currentClass;
+  if (hostDecl == null) return null;
+  for (final mixinType in classLikeClauses(hostDecl).$2.reversed) {
+    final prefix = mixinType.importPrefix;
+    final mixinName = prefix == null
+        ? mixinType.name.lexeme
+        : '${prefix.name.lexeme}.${mixinType.name.lexeme}';
+    var ref = ctx.visibleTypes[ctx.library]![mixinName];
+    final alias = ctx.typeAliases[ctx.library]?[mixinName];
+    if (ref == null && alias != null) {
+      ref = resolveTypeAlias(
+        ctx,
+        ctx.library,
+        alias,
+        typeArgs: mixinType.typeArguments?.arguments,
+      );
+    }
+    if (ref == null) continue;
+    final declarations = ctx.instanceDeclarationsMap[ref.file]?[ref.name];
+    if (declarations == null) continue;
+    if (declarations.containsKey(name) ||
+        declarations.containsKey('$name*g') ||
+        declarations.containsKey('$name*s')) {
+      return TypeRef.lookupDeclaration(ctx, ctx.library, hostDecl);
+    }
+  }
+  return null;
+}
+
 /// Normalizes a parsed constructor name: `.new` names the unnamed
 /// constructor, whose internal name is the empty string.
 String ctorNameOf(String? name) => name == 'new' ? '' : name ?? '';
@@ -1875,6 +2086,114 @@ final class _TypeRefCache {
   final visibleLibraries = <TypeRef, List<int>>{};
 }
 
+/// Unifies [pattern] against [concrete] positionally, recording the binding
+/// for each type-parameter slot encountered (e.g. unifying `List<X>` with
+/// `List<num>` binds `X → num`). Used to map a type alias's parameters onto a
+/// downward-inference bound.
+void collectTypeParameterSubstitutions(
+  CompilerContext ctx,
+  TypeRef pattern,
+  TypeRef concrete,
+  Map<(String, int), TypeRef> substitutions,
+) {
+  if (pattern.isTypeParameter) {
+    substitutions[(pattern.typeParameterOwner!, pattern.typeParameterIndex!)] =
+        concrete;
+    return;
+  }
+  if (!pattern.hasSameDeclarationAs(concrete)) {
+    _collectViaSupertypes(ctx, pattern, concrete, substitutions);
+    return;
+  }
+  final args = pattern.specifiedTypeArgs;
+  for (var i = 0; i < args.length && i < concrete.specifiedTypeArgs.length; i++) {
+    collectTypeParameterSubstitutions(
+      ctx,
+      args[i],
+      concrete.specifiedTypeArgs[i],
+      substitutions,
+    );
+  }
+}
+
+/// Unifies [pattern] against [concrete] via [pattern]'s declared supertypes
+/// (e.g. `List<X>` against `Iterable<num>` reaches `Iterable<X>`), binding any
+/// type parameters encountered. Declared supertypes live in the declaring
+/// class's parameter keyspace, so each is instantiated through the pattern's
+/// own applied arguments before unifying.
+void _collectViaSupertypes(
+  CompilerContext ctx,
+  TypeRef pattern,
+  TypeRef concrete,
+  Map<(String, int), TypeRef> substitutions,
+) {
+  final queue = <TypeRef>[pattern];
+  final seen = <String>{};
+  while (queue.isNotEmpty) {
+    final current = queue.removeLast();
+    if (!seen.add(current.semanticKey)) continue;
+    if (current.hasSameDeclarationAs(concrete)) {
+      if (current.specifiedTypeArgs.isEmpty &&
+          !identical(current, pattern) &&
+          pattern.specifiedTypeArgs.length == concrete.specifiedTypeArgs.length) {
+        // The declaring class's supertype is raw (e.g. `List<E> $extends
+        // Iterable`); bind `pattern`'s arguments positionally instead.
+        final pArgs = pattern.specifiedTypeArgs;
+        for (var i = 0; i < pArgs.length; i++) {
+          collectTypeParameterSubstitutions(
+            ctx,
+            pArgs[i],
+            concrete.specifiedTypeArgs[i],
+            substitutions,
+          );
+        }
+      } else {
+        collectTypeParameterSubstitutions(ctx, current, concrete, substitutions);
+      }
+      return;
+    }
+    final resolvedChain = current.resolveTypeChain(ctx);
+    // Map the declaring class's parameter slots to `current`'s applied
+    // arguments (use-site refs may not carry `genericParams`).
+    final applied = <(String, int), TypeRef>{
+      for (var i = 0; i < current.specifiedTypeArgs.length; i++)
+        ('class:${resolvedChain.file}:${resolvedChain.name}', i):
+            current.specifiedTypeArgs[i],
+    };
+    for (final sup in resolvedChain.allSupertypes) {
+      queue.add(sup.substituteTypeParameters(applied));
+    }
+  }
+}
+
+/// Finds the instantiation of [target]'s declaration in [concrete]'s supertype
+/// hierarchy (e.g. `I<int>` when target is `I<T>` and concrete is
+/// `C<int> implements I<T>`), or null. Supertypes are instantiated through
+/// each intermediate class's applied arguments.
+TypeRef? findSupertypeInstantiation(
+  CompilerContext ctx,
+  TypeRef target,
+  TypeRef concrete,
+) {
+  final queue = <TypeRef>[concrete];
+  final seen = <String>{};
+  while (queue.isNotEmpty) {
+    final current = queue.removeLast();
+    if (!seen.add(current.semanticKey)) continue;
+    if (current.hasSameDeclarationAs(target)) return current;
+    final resolvedChain = current.resolveTypeChain(ctx);
+    final applied = <(String, int), TypeRef>{
+      for (var i = 0; i < current.specifiedTypeArgs.length; i++)
+        ('class:${resolvedChain.file}:${resolvedChain.name}', i):
+            current.specifiedTypeArgs[i],
+    };
+    for (final sup in resolvedChain.allSupertypes) {
+      queue.add(sup.substituteTypeParameters(applied));
+    }
+  }
+  return null;
+}
+
 /// Resolves a `typedef` use to the type it aliases. Function-type aliases
 /// (`typedef void F()`, `typedef F = void Function()`) map to `Function`;
 /// named-type aliases (`typedef X = List<int>`) resolve recursively. Type
@@ -1887,6 +2206,7 @@ TypeRef resolveTypeAlias(
   bool nullable = false,
   List<TypeAnnotation>? typeArgs,
   Map<String, TypeRef> callerTypeParameters = const {},
+  bool rawParams = false,
 }) {
   final typeParameters =
       switch (alias) {
@@ -1896,33 +2216,59 @@ TypeRef resolveTypeAlias(
         _ => null,
       }?.typeParameters ??
       const <TypeParameter>[];
-  // Bind the alias's own type parameters inside its body. When the alias is
-  // referenced with concrete arguments, substitute them; otherwise the
-  // parameters stay abstract type parameters.
+  // Bind the alias's own type parameters inside its body. With concrete
+  // arguments, substitute them. Without arguments the alias instantiates to
+  // bounds (`typedef TB<T extends C> = T` referenced bare is `TB<C>`); with
+  // [rawParams] the parameters stay abstract type-parameter references so a
+  // caller performing downward inference can substitute them itself. The body
+  // resolves against the alias's own file — it may name types private to that
+  // library.
+  final declLibrary = ctx.typeAliasFiles[alias] ?? library;
   final bindings = <String, TypeRef>{};
   for (var i = 0; i < typeParameters.length; i++) {
+    final param = typeParameters[i];
     final arg = typeArgs == null || i >= typeArgs.length ? null : typeArgs[i];
-    bindings[typeParameters[i].name.lexeme] = arg == null
-        ? TypeRef(
-            library,
-            typeParameters[i].name.lexeme,
-            resolved: true,
-            typeParameterOwner: 'typeAlias:$library:${alias.name.lexeme}',
-            typeParameterIndex: i,
-          )
-        : TypeRef.fromAnnotation(
-            ctx,
-            library,
-            arg,
-            typeParameters: callerTypeParameters,
-          );
+    final bound = param.bound;
+    if (arg != null) {
+      bindings[param.name.lexeme] = TypeRef.fromAnnotation(
+        ctx,
+        library,
+        arg,
+        typeParameters: callerTypeParameters,
+      );
+    } else if (rawParams) {
+      bindings[param.name.lexeme] = TypeRef(
+        declLibrary,
+        param.name.lexeme,
+        resolved: true,
+        typeParameterOwner: 'typeAlias:$declLibrary:${alias.name.lexeme}',
+        typeParameterIndex: i,
+      );
+    } else if (bound == null) {
+      bindings[param.name.lexeme] = CoreTypes.dynamic.ref(ctx);
+    } else {
+      // A recursive bound (`X extends A<X>`) sees the parameter itself.
+      bindings[param.name.lexeme] = TypeRef(
+        declLibrary,
+        param.name.lexeme,
+        resolved: true,
+        typeParameterOwner: 'typeAlias:$declLibrary:${alias.name.lexeme}',
+        typeParameterIndex: i,
+      );
+      bindings[param.name.lexeme] = TypeRef.fromAnnotation(
+        ctx,
+        declLibrary,
+        bound,
+        typeParameters: bindings,
+      );
+    }
   }
 
   final TypeRef target;
   if (alias is GenericTypeAlias && alias.functionType == null) {
     target = TypeRef.fromAnnotation(
       ctx,
-      library,
+      declLibrary,
       alias.type,
       typeParameters: bindings,
     );
@@ -1930,4 +2276,240 @@ TypeRef resolveTypeAlias(
     target = CoreTypes.function.ref(ctx);
   }
   return target.copyWith(nullable: nullable || target.nullable);
+}
+
+/// Resolves a type argument in a `with`/`extends` application: a bare name
+/// matching one of [classParams] resolves to that parameter's [TypeRef];
+/// other named types resolve their arguments recursively (so `List<U>`
+/// resolves when `U` is a parameter of the applying class). Concrete
+/// arguments resolve normally. Returns null when the argument resolves to
+/// none of these.
+TypeRef? resolveAppliedTypeArgument(
+  CompilerContext ctx,
+  int libraryIndex,
+  String ownerClassName,
+  List<TypeParameter>? classParams,
+  TypeAnnotation arg,
+) {
+  if (arg is NamedType) {
+    if (arg.importPrefix == null) {
+      final index = (classParams ?? const <TypeParameter>[]).indexWhere(
+        (p) => p.name.lexeme == arg.name.lexeme,
+      );
+      if (index >= 0) {
+        final bound = classParams![index].bound;
+        return TypeRef(
+          libraryIndex,
+          arg.name.lexeme,
+          resolved: true,
+          typeParameterOwner: 'class:$libraryIndex:$ownerClassName',
+          typeParameterIndex: index,
+          typeParameterBound: bound == null
+              ? CoreTypes.dynamic.ref(ctx)
+              : TypeRef.fromAnnotation(ctx, libraryIndex, bound),
+        );
+      }
+    }
+    final prefix = arg.importPrefix;
+    final name = prefix == null
+        ? arg.name.lexeme
+        : '${prefix.name.lexeme}.${arg.name.lexeme}';
+    final base = ctx.visibleTypes[libraryIndex]?[name];
+    if (base != null) {
+      final nestedArgs = arg.typeArguments?.arguments;
+      if (nestedArgs == null) return base;
+      return base.copyWith(
+        specifiedTypeArgs: [
+          for (final nested in nestedArgs)
+            resolveAppliedTypeArgument(
+                  ctx,
+                  libraryIndex,
+                  ownerClassName,
+                  classParams,
+                  nested,
+                ) ??
+                CoreTypes.dynamic.ref(ctx),
+        ],
+      );
+    }
+  }
+  try {
+    return TypeRef.fromAnnotation(ctx, libraryIndex, arg);
+  } on CompileError {
+    return null;
+  }
+}
+
+/// Finds an application of [mixinOwner] in [decl]'s `with` clause, including
+/// through entries that are themselves mixin applications (`class C = S with
+/// M`, `mixin class`). Returns the mixin's parameter names mapped to their
+/// effective types under [substitutions], or null when [mixinOwner] is not
+/// applied anywhere in the clause.
+Map<String, TypeRef>? findMixinApplication(
+  CompilerContext ctx,
+  Declaration decl,
+  int declFile,
+  String declName,
+  Declaration mixinOwner,
+  int ownerLibrary,
+  Map<(String, int), TypeRef> substitutions,
+) {
+  for (final mixinType in classLikeClauses(decl).$2) {
+    final prefix = mixinType.importPrefix;
+    final mixinName = prefix == null
+        ? mixinType.name.lexeme
+        : '${prefix.name.lexeme}.${mixinType.name.lexeme}';
+    final ref = ctx.visibleTypes[declFile]?[mixinName];
+    if (ref == null) continue;
+    final mixinDecl =
+        ctx.topLevelDeclarationsMap[ref.file]?[ref.name]?.declaration;
+    final mixinParams = switch (mixinDecl) {
+      MixinDeclaration m => m.typeParameters?.typeParameters,
+      ClassDeclaration c => c.namePart.typeParameters?.typeParameters,
+      ClassTypeAlias a => a.typeParameters?.typeParameters,
+      _ => null,
+    } ??
+        const <TypeParameter>[];
+    final appliedArgs = mixinType.typeArguments?.arguments;
+    final classParams = classLikeClauses(decl).$4?.typeParameters;
+    // Each parameter's effective type under the substitutions accumulated so
+    // far (bounds apply when the application omits an argument).
+    final applied = <String, TypeRef>{
+      for (var i = 0; i < mixinParams.length; i++)
+        mixinParams[i].name.lexeme: resolveAppliedMixinArg(
+              ctx,
+              declFile,
+              declName,
+              classParams,
+              appliedArgs != null && i < appliedArgs.length
+                  ? appliedArgs[i]
+                  : null,
+              substitutions,
+            ) ??
+            substitutedParamBound(ctx, declFile, mixinParams[i], substitutions),
+    };
+    if (identical(mixinDecl, mixinOwner)) {
+      return applied;
+    }
+    if (mixinDecl is ClassDeclaration || mixinDecl is ClassTypeAlias) {
+      final inner = findMixinApplication(
+        ctx,
+        mixinDecl!,
+        ref.file,
+        ref.name,
+        mixinOwner,
+        ownerLibrary,
+        {
+          ...substitutions,
+          for (var i = 0; i < mixinParams.length; i++)
+            ('class:${ref.file}:${ref.name}', i):
+                applied[mixinParams[i].name.lexeme]!,
+        },
+      );
+      if (inner != null) return inner;
+    }
+  }
+  return null;
+}
+
+/// Resolves a type argument in a `with` clause entry: a bare name matching
+/// one of the applying class's own type parameters resolves to that
+/// parameter; other named types resolve with their arguments resolved
+/// recursively (so `List<U>` resolves when `U` is the alias's parameter).
+/// [substitutions] are applied to the result.
+TypeRef? resolveAppliedMixinArg(
+  CompilerContext ctx,
+  int declFile,
+  String declName,
+  List<TypeParameter>? classParams,
+  TypeAnnotation? arg,
+  Map<(String, int), TypeRef> substitutions,
+) {
+  if (arg == null) return null;
+  return resolveAppliedTypeArgument(
+    ctx,
+    declFile,
+    declName,
+    classParams,
+    arg,
+  )?.substituteTypeParameters(substitutions);
+}
+
+/// The bound of a mixin type parameter, substituted through [substitutions].
+TypeRef substitutedParamBound(
+  CompilerContext ctx,
+  int file,
+  TypeParameter param,
+  Map<(String, int), TypeRef> substitutions,
+) {
+  final bound = param.bound;
+  return bound == null
+      ? CoreTypes.dynamic.ref(ctx)
+      : TypeRef.fromAnnotation(ctx, file, bound).substituteTypeParameters(
+          substitutions,
+        );
+}
+
+
+/// For [member] folded into [applier] from a mixin or mixin-class (possibly
+/// through a chain of mixin applications), seeds `temporaryTypes` in the
+/// member's declaring library so its type parameters resolve to the applied
+/// arguments, expressed in [applier]'s own type parameters.
+void seedFoldedMemberTypeParams(
+  CompilerContext ctx,
+  Declaration applier,
+  ClassMember member,
+  int memberLibrary,
+  int applierLibrary,
+) {
+  final owner = member.parent?.parent;
+  if (owner is! Declaration || identical(owner, applier)) {
+    return;
+  }
+  final applied = findMixinApplication(
+    ctx,
+    applier,
+    applierLibrary,
+    declarationName(applier),
+    owner,
+    memberLibrary,
+    const {},
+  );
+  if (applied == null) return;
+  ctx.temporaryTypes[memberLibrary] ??= {};
+  ctx.temporaryTypes[memberLibrary]!.addAll(applied);
+}
+
+/// Resolves [ref] — a generic parameter declared by a bridge class — through
+/// [type]'s supertypes when [type] itself is a plain class. A Dart class
+/// extending or mixing a bridged generic (e.g. `class L extends List<T>`)
+/// maps the bridge's parameters to its applied arguments positionally.
+/// Returns null when no bridged ancestor declares [ref].
+TypeRef? bridgedTypeArgument(CompilerContext ctx, TypeRef type, String ref) {
+  final seen = <String>{};
+  final worklist = <TypeRef>[type.resolveTypeChain(ctx)];
+  while (worklist.isNotEmpty) {
+    final current = worklist.removeLast();
+    if (!seen.add('${current.file}:${current.name}')) continue;
+    final declaration =
+        ctx.topLevelDeclarationsMap[current.file]?[current.name];
+    final bridge = declaration?.bridge;
+    if (bridge is BridgeClassDef) {
+      final names = bridge.type.generics.keys.toList();
+      final index = names.indexOf(ref);
+      if (index < 0) continue;
+      if (index < current.specifiedTypeArgs.length) {
+        return current.specifiedTypeArgs[index];
+      }
+      final bound = bridge.type.generics[ref]!.$extends;
+      return bound == null
+          ? CoreTypes.dynamic.ref(ctx)
+          : TypeRef.fromBridgeTypeRef(ctx, bound);
+    }
+    final substitutions = current.appliedTypeArguments(ctx);
+    for (final next in current.resolveTypeChain(ctx).allSupertypes) {
+      worklist.add(next.substituteTypeParameters(substitutions));
+    }
+  }
+  return null;
 }

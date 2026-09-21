@@ -117,10 +117,13 @@ final class TypedInstance implements $Instance {
         TypedMemberKind.getter => owner.descriptor.getters,
         TypedMemberKind.setter => owner.descriptor.setters,
       };
-      final function = members[name];
-      if (function != null &&
-          (!name.startsWith('_') ||
-              owner.descriptor.library == callerLibrary)) {
+      final function = name.startsWith('_')
+          ? members['$callerLibrary::$name'] ??
+                (owner.descriptor.library == callerLibrary
+                    ? members[name]
+                    : null)
+          : members[name];
+      if (function != null) {
         return cache[cacheKey] = TypedMember(owner, function);
       }
       final parent = owner.superclass;

@@ -26,6 +26,9 @@ List<FormalParameter> resolveFPLDefaults(
   bool ignoreDefaults = false,
   bool isEnum = false,
   int parameterOffset = 0,
+  Declaration? parameterHost,
+  int? decLibrary,
+  Map<String, TypeRef> typeParameters = const {},
 }) {
   final normalized = <FormalParameter>[];
   var hasEncounteredOptionalPositionalParam = false;
@@ -73,9 +76,27 @@ List<FormalParameter> resolveFPLDefaults(
   for (final param in [...positional, ...named]) {
     final argument = SSA('arg_$paramIndex');
     final annotation = param.type;
-    final declaredType = annotation == null
+    var declaredType = annotation == null
         ? CoreTypes.dynamic.ref(ctx)
-        : TypeRef.fromAnnotation(ctx, ctx.library, annotation);
+        : TypeRef.fromAnnotation(
+            ctx,
+            decLibrary ?? ctx.library,
+            annotation,
+            typeParameters: typeParameters,
+          );
+    if (annotation == null && parameterHost != null) {
+      // Field and super formal parameters may omit their type, which then
+      // comes from the target field or super-parameter.
+      declaredType =
+          getFormalParameterType(
+            ctx,
+            param,
+            decLibrary ?? ctx.library,
+            parameterHost,
+            typeParameters: typeParameters,
+          ).$1 ??
+          declaredType;
+    }
     declaredTypes.add(declaredType);
     final type = !allowUnboxed
         ? declaredType.copyWith(boxed: true)

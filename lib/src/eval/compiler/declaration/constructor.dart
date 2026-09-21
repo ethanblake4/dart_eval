@@ -11,7 +11,6 @@ import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/fpl.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/return.dart';
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
-import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/statement/block.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -28,8 +27,9 @@ void compileConstructorDeclaration(
   CompilerContext ctx,
   ConstructorDeclaration d,
   Declaration parent,
-  List<FieldDeclaration> fields,
-) {
+  List<FieldDeclaration> fields, {
+  Map<ClassMember, int> memberLibraries = const {},
+}) {
   final parentName = declarationName(parent);
   final dName = ctorNameOf(d.name?.lexeme);
   final n = '$parentName.$dName';
@@ -72,12 +72,16 @@ void compileConstructorDeclaration(
     }
   }
 
+  final fieldIndexInfo = _getFieldIndices(
+    fields,
+    parent is EnumDeclaration ? 2 : 0,
+  );
   final fieldIndices = {
     if (parent is EnumDeclaration) ...{'index': 0, 'name': 1},
-    ..._getFieldIndices(fields, parent is EnumDeclaration ? 2 : 0),
+    ...fieldIndexInfo.indices,
   };
 
-  final fieldIdx = fieldIndices.length;
+  final fieldIdx = fieldIndexInfo.count;
 
   final fieldFormalNames = <String>[];
   // A redirecting factory's call ABI is its redirect target's parameter
@@ -95,6 +99,10 @@ void compileConstructorDeclaration(
     false,
     allowUnboxed: true,
     isEnum: parent is EnumDeclaration,
+    parameterHost: redirectTargetDecl is ConstructorDeclaration
+        ? redirectTargetDecl
+        : d,
+    decLibrary: redirectTarget?.$2.file,
   );
 
   final superParams = <String>[];
@@ -350,22 +358,39 @@ void compileConstructorDeclaration(
       clsType,
     );
     doReturn(ctx, AlwaysReturnType(clsType, false), V);
+    ctx.endScope();
     return;
   }
 
+  // Field initializers run before the superconstructor invocation — evaluate
+  // them now and apply the values once the instance exists.
+  final usedNames = {
+    ...fieldFormalNames,
+    for (final init in otherInitializers)
+      if (init is ConstructorFieldInitializer) init.fieldName.name,
+  };
+  final evaluatedFieldInits = _evalUnusedFieldInitializers(
+    ctx,
+    fields,
+    usedNames,
+    memberLibraries,
+    parent,
+  );
+
   final $extends = parent is EnumDeclaration
       ? null
-      : (parent as ClassDeclaration).extendsClause;
+      : classLikeClauses(parent).$1;
   Variable $super;
   DeclarationOrBridge? extendsDecl;
   ImportPrefixReference? prefix;
 
   final constructorName = ctorNameOf($superInitializer?.constructorName?.name);
 
+  TypeRef? extendsType;
   if ($extends == null) {
     $super = BuiltinValue().push(ctx);
   } else {
-    (extendsDecl, prefix) = _resolveSuperclass(ctx, $extends);
+    (extendsDecl, prefix, extendsType) = _resolveSuperclass(ctx, $extends);
     if (extendsDecl.isBridge && _isObjectWrapper(ctx, extendsDecl.bridge!)) {
       // `extends Object` is the implicit superclass already — elide the
       // wrapper so the class is created as a plain (non-bridge) instance.
@@ -383,6 +408,7 @@ void compileConstructorDeclaration(
             ctx,
             parent: parent,
             extendsDecl: extendsDecl,
+            extendsType: extendsType,
             prefix: prefix,
             constructorName: constructorName,
             superInitializer: $superInitializer,
@@ -417,8 +443,6 @@ void compileConstructorDeclaration(
     );
   }
 
-  final usedNames = {...fieldFormalNames};
-
   for (final init in otherInitializers) {
     if (init is ConstructorFieldInitializer) {
       final fType = TypeRef.lookupFieldType(
@@ -431,13 +455,21 @@ void compileConstructorDeclaration(
       ctx.pushOp(
         SetPropertyStatic(inst.ssa, fieldIndices[init.fieldName.name]!, V.ssa),
       );
-      usedNames.add(init.fieldName.name);
     } else {
       throw CompileError('${init.runtimeType} initializer is not supported');
     }
   }
 
-  _compileUnusedFields(ctx, fields, usedNames, inst.ssa, isEnum ? 2 : 0);
+  _compileUnusedFields(
+    ctx,
+    fields,
+    usedNames,
+    inst.ssa,
+    isEnum ? 2 : 0,
+    memberLibraries,
+    parent,
+    evaluatedFieldInits,
+  );
 
   final body = d.body;
   if (d.factoryKeyword == null && body is! EmptyFunctionBody) {
@@ -483,8 +515,9 @@ void compileConstructorDeclaration(
 void compileDefaultConstructor(
   CompilerContext ctx,
   Declaration parent,
-  List<FieldDeclaration> fields,
-) {
+  List<FieldDeclaration> fields, {
+  Map<ClassMember, int> memberLibraries = const {},
+}) {
   final parentName = declarationName(parent);
   final n = '$parentName.';
 
@@ -511,12 +544,21 @@ void compileDefaultConstructor(
   );
   ctx.pushOp(SetTypeEnvironment(runtimeTypeArgument));
 
-  final fieldIndices = _getFieldIndices(fields);
-  final fieldIdx = fieldIndices.length;
+  final fieldIdx = _getFieldIndices(fields).count;
+
+  // Field initializers run before the superconstructor invocation — evaluate
+  // them now and apply the values once the instance exists.
+  final evaluatedFieldInits = _evalUnusedFieldInitializers(
+    ctx,
+    fields,
+    const {},
+    memberLibraries,
+    parent,
+  );
 
   final $extends = parent is EnumDeclaration
       ? null
-      : (parent as ClassDeclaration).extendsClause;
+      : classLikeClauses(parent).$1;
   Variable $super;
   DeclarationOrBridge? extendsDecl;
   ImportPrefixReference? prefix;
@@ -526,7 +568,8 @@ void compileDefaultConstructor(
   if ($extends == null) {
     $super = BuiltinValue().push(ctx);
   } else {
-    (extendsDecl, prefix) = _resolveSuperclass(ctx, $extends);
+    TypeRef? extendsType;
+    (extendsDecl, prefix, extendsType) = _resolveSuperclass(ctx, $extends);
     if (extendsDecl.isBridge && _isObjectWrapper(ctx, extendsDecl.bridge!)) {
       // `extends Object` is the implicit superclass already — elide the
       // wrapper so the class is created as a plain (non-bridge) instance.
@@ -544,6 +587,7 @@ void compileDefaultConstructor(
             ctx,
             parent: parent,
             extendsDecl: extendsDecl,
+            extendsType: extendsType,
             prefix: prefix,
             constructorName: constructorName,
           );
@@ -571,6 +615,9 @@ void compileDefaultConstructor(
     parent is EnumDeclaration ? {'index', 'name'} : {},
     inst,
     parent is EnumDeclaration ? 2 : 0,
+    memberLibraries,
+    parent,
+    evaluatedFieldInits,
   );
 
   _emitConstructorReturn(
@@ -586,7 +633,11 @@ void compileDefaultConstructor(
   ctx.endScope();
 }
 
-Map<String, int> _getFieldIndices(
+/// Maps each field name to its storage slot. A class can own several fields
+/// with the same name (e.g. `with A, B` where both mixins declare `foo`); the
+/// name index resolves to the last one, but each still gets a slot, so [count]
+/// (the total slot count) can exceed `indices.length`.
+({Map<String, int> indices, int count}) _getFieldIndices(
   List<FieldDeclaration> fields, [
   int fieldIdx = 0,
 ]) {
@@ -598,7 +649,85 @@ Map<String, int> _getFieldIndices(
       fieldIdx0++;
     }
   }
-  return fieldIndices;
+  return (indices: fieldIndices, count: fieldIdx0);
+}
+
+/// Field initializers conform to the field's declared type; `dynamic`
+/// initializer values defer to the runtime field store's type check.
+void _checkFieldInitializerConformance(
+  CompilerContext ctx,
+  FieldDeclaration fd,
+  VariableDeclaration field,
+  Variable V,
+) {
+  final annotation = fd.fields.type;
+  if (annotation == null) return;
+  final declared = TypeRef.fromAnnotation(ctx, ctx.library, annotation);
+  if (!V.type.isAssignableTo(ctx, declared, forceAllowDynamic: true)) {
+    throw CompileError(
+      "A value of type '${V.type}' can't be assigned to a field of type "
+      "'$declared'",
+      field.initializer,
+      ctx.library,
+      ctx,
+    );
+  }
+}
+
+/// Evaluates the initializer expressions of fields not bound by the
+/// constructor's initializer list, storing each result in a local. Field
+/// initializers run before the superconstructor invocation (initializer list
+/// semantics), but the instance does not exist yet — the values are applied
+/// by [_compileUnusedFields] after the instance is created.
+Map<String, Variable> _evalUnusedFieldInitializers(
+  CompilerContext ctx,
+  List<FieldDeclaration> fields,
+  Set<String> usedNames,
+  Map<ClassMember, int> memberLibraries,
+  Declaration? parent,
+) {
+  final evaluated = <String, Variable>{};
+  for (final fd in fields) {
+    for (final field in fd.fields.variables) {
+      if (usedNames.contains(field.name.lexeme) ||
+          field.initializer == null) {
+        continue;
+      }
+      // A folded mixin field's initializer resolves in the mixin's library
+      // and lexical class scope.
+      final prevLibrary = ctx.library;
+      final memberLibrary = memberLibraries[fd];
+      ctx.library = memberLibrary ?? prevLibrary;
+      final memberOwner = fd.parent?.parent;
+      ctx.memberDeclaringClass =
+          memberLibrary != null && memberOwner is Declaration
+          ? memberOwner
+          : null;
+      if (memberLibrary != null && parent != null) {
+        seedFoldedMemberTypeParams(
+          ctx,
+          parent,
+          fd,
+          memberLibrary,
+          prevLibrary,
+        );
+      }
+      final Variable V;
+      try {
+        V = compileExpression(field.initializer!, ctx).boxIfNeeded(ctx);
+        _checkFieldInitializerConformance(ctx, fd, field, V);
+      } finally {
+        ctx.library = prevLibrary;
+        ctx.memberDeclaringClass = null;
+      }
+      ctx.inferredFieldTypes
+          .putIfAbsent(ctx.library, () => {})
+          .putIfAbsent(ctx.currentClassName!, () => {})[field.name.lexeme] = V
+          .type;
+      evaluated[field.name.lexeme] = V;
+    }
+  }
+  return evaluated;
 }
 
 void _compileUnusedFields(
@@ -607,6 +736,9 @@ void _compileUnusedFields(
   Set<String> usedNames,
   SSA inst, [
   int fieldIdx = 0,
+  Map<ClassMember, int> memberLibraries = const {},
+  Declaration? parent,
+  Map<String, Variable> evaluated = const {},
 ]) {
   var fieldIdx0 = fieldIdx;
   for (final fd in fields) {
@@ -619,12 +751,44 @@ void _compileUnusedFields(
         ctx.pushOp(SetPropertyStatic(inst, fieldIdx0, marker));
       }
       if (!usedNames.contains(field.name.lexeme) && field.initializer != null) {
-        final V = compileExpression(field.initializer!, ctx).boxIfNeeded(ctx);
-        ctx.inferredFieldTypes
-            .putIfAbsent(ctx.library, () => {})
-            .putIfAbsent(ctx.currentClassName!, () => {})[field.name.lexeme] = V
-            .type;
-        ctx.pushOp(SetPropertyStatic(inst, fieldIdx0, V.ssa));
+        final V = evaluated[field.name.lexeme];
+        if (V != null) {
+          ctx.pushOp(SetPropertyStatic(inst, fieldIdx0, V.ssa));
+        } else {
+          // A folded mixin field's initializer resolves in the mixin's
+          // library and lexical class scope.
+          final prevLibrary = ctx.library;
+          final memberLibrary = memberLibraries[fd];
+          ctx.library = memberLibrary ?? prevLibrary;
+          final memberOwner = fd.parent?.parent;
+          ctx.memberDeclaringClass =
+              memberLibrary != null && memberOwner is Declaration
+              ? memberOwner
+              : null;
+          if (memberLibrary != null && parent != null) {
+            seedFoldedMemberTypeParams(
+              ctx,
+              parent,
+              fd,
+              memberLibrary,
+              prevLibrary,
+            );
+          }
+          final Variable v0;
+          try {
+            v0 = compileExpression(field.initializer!, ctx).boxIfNeeded(ctx);
+            _checkFieldInitializerConformance(ctx, fd, field, v0);
+          } finally {
+            ctx.library = prevLibrary;
+            ctx.memberDeclaringClass = null;
+          }
+          ctx.inferredFieldTypes
+              .putIfAbsent(ctx.library, () => {})
+              .putIfAbsent(ctx.currentClassName!, () => {})[field
+                  .name
+                  .lexeme] = v0.type;
+          ctx.pushOp(SetPropertyStatic(inst, fieldIdx0, v0.ssa));
+        }
       }
       fieldIdx0++;
     }
@@ -666,23 +830,40 @@ bool _isObjectWrapper(CompilerContext ctx, BridgeDeclaration bridge) =>
 
 /// Resolves a class's `extends` clause to the superclass's declaration and the
 /// import prefix (if any) it was named through.
-(DeclarationOrBridge, ImportPrefixReference?) _resolveSuperclass(
+(DeclarationOrBridge, ImportPrefixReference?, TypeRef?) _resolveSuperclass(
   CompilerContext ctx,
-  ExtendsClause $extends,
+  NamedType $extends,
 ) {
-  final prefix = $extends.superclass.importPrefix;
-  final clsName = $extends.superclass.name.lexeme;
+  final prefix = $extends.importPrefix;
+  final clsName = $extends.name.lexeme;
   final extendsWhat =
       (prefix != null
           ? ctx.visibleDeclarations[ctx.library]![prefix.name.value()]
           : ctx.visibleDeclarations[ctx.library]![clsName]) ??
       (throw CompileError('Cannot find superclass $clsName', $extends));
 
-  final extendsDecl =
+  var extendsDecl =
       extendsWhat.declaration ??
       extendsWhat.children?[clsName] ??
       (throw CompileError('Cannot find superclass $clsName', $extends));
-  return (extendsDecl, prefix);
+
+  // `class D extends PublicClass` where `PublicClass` is a typedef — resolve
+  // to the alias's target class declaration; the alias's target may be private
+  // to its own file, so keep the resolved [TypeRef] for the caller.
+  final extendsDeclAst = extendsDecl.declaration;
+  if (extendsDeclAst is TypeAlias && extendsDeclAst is! ClassTypeAlias) {
+    final resolved = resolveTypeAlias(
+      ctx,
+      ctx.library,
+      extendsDeclAst,
+      typeArgs: $extends.typeArguments?.arguments,
+    );
+    extendsDecl =
+        ctx.topLevelDeclarationsMap[resolved.file]?[resolved.name] ??
+        (throw CompileError('Cannot find superclass $clsName', $extends));
+    return (extendsDecl, prefix, resolved);
+  }
+  return (extendsDecl, prefix, null);
 }
 
 /// Emits the call to a non-bridge superclass constructor ([constructorName]) and
@@ -693,15 +874,16 @@ Variable _invokeSuperConstructor(
   CompilerContext ctx, {
   required Declaration parent,
   required DeclarationOrBridge extendsDecl,
+  TypeRef? extendsType,
   required ImportPrefixReference? prefix,
   required String constructorName,
   SuperConstructorInvocation? superInitializer,
   List<String> superParams = const [],
 }) {
-  final extendsType = TypeRef.lookupDeclaration(
+  extendsType ??= TypeRef.lookupDeclaration(
     ctx,
     ctx.library,
-    extendsDecl.declaration as ClassDeclaration,
+    extendsDecl.declaration!,
     prefix: prefix?.name.lexeme,
   );
 
@@ -751,30 +933,20 @@ Variable _invokeSuperConstructor(
     );
   }
 
-  final method = IdentifierReference(
-    null,
-    '${prefix != null ? '${prefix.name.value()}.' : ''}${extendsType.name}.$constructorName',
-  ).getValue(ctx);
-  if (method.methodOffset == null) {
-    throw CompileError(
-      'Cannot call $constructorName as it is not a valid method',
-    );
-  }
+  final methodOffset = DeferredOrOffset.lookupStatic(
+    ctx,
+    extendsDecl.sourceLib,
+    extendsType.name,
+    constructorName,
+  );
 
-  final clsType = TypeRef.lookupDeclaration(ctx, ctx.library, parent);
-  final mReturnType =
-      method.methodReturnType?.toAlwaysReturnType(
-        ctx,
-        clsType,
-        argTypes,
-        namedArgTypes,
-      ) ??
-      AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
+  // A `super(...)` call produces the superclass's instance.
+  final mReturnType = AlwaysReturnType(extendsType, true);
 
   final superRuntimeType = pushRuntimeTypeId(ctx, extendsType);
   return Variable.ssa(
     ctx,
-    Call(method.methodOffset!, [
+    Call(methodOffset, [
       ...ssa,
       superRuntimeType,
     ], result: ctx.svar('super')),
@@ -813,7 +985,7 @@ List<SSA> _bridgeSuperArgs(
 /// created instance.
 void _emitConstructorReturn(
   CompilerContext ctx, {
-  required ExtendsClause? $extends,
+  required NamedType? $extends,
   required DeclarationOrBridge? extendsDecl,
   required String constructorName,
   required SSA inst,
@@ -828,7 +1000,7 @@ void _emitConstructorReturn(
   final bridge = extendsDecl.bridge! as BridgeClassDef;
   if (!bridge.bridge) {
     throw CompileError(
-      'Bridge class ${$extends!.superclass} is a wrapper, not a bridge, so you can\'t extend it',
+      'Bridge class ${$extends!.name.lexeme} is a wrapper, not a bridge, so you can\'t extend it',
     );
   }
 
@@ -837,13 +1009,13 @@ void _emitConstructorReturn(
     BridgeInstantiate(
       bridgeInst,
       ctx.bridgeStaticFunctionIndices[extendsDecl
-          .sourceLib]!['${$extends!.superclass.name.lexeme}.$constructorName']!,
+          .sourceLib]!['${$extends!.name.lexeme}.$constructorName']!,
       inst,
       args,
       runtimeTypeId: TypeRef.fromAnnotation(
         ctx,
         ctx.library,
-        $extends.superclass,
+        $extends,
       ).runtimeTypeId(ctx),
     ),
   );
@@ -866,10 +1038,19 @@ void _emitConstructorReturn(
     redirected.type,
     redirected.name?.name,
   );
-  final targetType = TypeRef.fromAnnotation(ctx, ctx.library, redirected.type);
   final targetRef =
       ctx.visibleTypes[ctx.library]![typeName] ??
       (throw CompileError('Redirecting factory target $typeName not found', d));
+  var targetType = targetRef;
+  final typeArgs = redirected.type.typeArguments;
+  if (typeArgs != null) {
+    targetType = targetRef.copyWith(
+      specifiedTypeArgs: [
+        for (final arg in typeArgs.arguments)
+          TypeRef.fromAnnotation(ctx, ctx.library, arg),
+      ],
+    );
+  }
   final targetCtors = ctx.topLevelDeclarationsMap[targetRef.file]!;
   final targetCtor = targetCtors['${targetRef.name}.$ctorName'];
   if (targetCtor == null &&
@@ -883,4 +1064,166 @@ void _emitConstructorReturn(
     );
   }
   return (targetType, targetRef, ctorName, targetCtor);
+}
+
+/// Compiles the implicit forwarding constructor `C.name` on a class type
+/// alias (`class C = S with M;`) — binds the superclass constructor's
+/// parameter layout and forwards each argument to `S.name`, returning the
+/// created instance.
+void compileAliasForwardingConstructor(
+  CompilerContext ctx,
+  ClassTypeAlias parent,
+  String constructorName,
+  DeclarationOrBridge target,
+  List<FieldDeclaration> fields,
+  Map<ClassMember, int> memberLibraries,
+) {
+  final parentName = declarationName(parent);
+  final n = '$parentName.$constructorName';
+  final targetDecl = target.declaration as ConstructorDeclaration;
+  final targetType = TypeRef.lookupDeclaration(
+    ctx,
+    target.sourceLib,
+    targetDecl.parent!.parent! as Declaration,
+  );
+  ctx.topLevelDeclarationPositions[ctx.library]![n] = ctx.beginFunction('$n()');
+  ctx.beginScope();
+  // The alias ctor mirrors the callee's erased ABI: `B<T>`'s `T x` stays an
+  // erased `T` even though this alias applies `T = int`. Resolving parameter
+  // types through [calleeTypeParameters] also avoids `temporaryTypes` entries
+  // seeded for a same-file mixin's identically-named parameters.
+  final calleeTypeParameters = classTypeParameterRefs(
+    target.sourceLib,
+    targetType.name,
+    classLikeClauses(targetDecl.parent!.parent! as Declaration).$4,
+  );
+  final previousLibrary = ctx.library;
+  ctx.library = target.sourceLib;
+  final List<FormalParameter> resolvedParams;
+  try {
+    resolvedParams = resolveFPLDefaults(
+      ctx,
+      targetDecl.parameters,
+      false,
+      allowUnboxed: true,
+      parameterHost: targetDecl,
+      decLibrary: target.sourceLib,
+      typeParameters: calleeTypeParameters,
+    );
+  } finally {
+    ctx.library = previousLibrary;
+  }
+  final parameterRepresentations = <MachineRepresentation>[];
+  var i = 0;
+  for (final p in resolvedParams) {
+    final (fieldOrDeclType, _) = getFormalParameterType(
+      ctx,
+      p,
+      target.sourceLib,
+      targetDecl,
+      typeParameters: calleeTypeParameters,
+    );
+    final type = fieldOrDeclType ??
+        ctx.functionParameterTypes[ctx.currentFunctionId!]![i];
+    parameterRepresentations.add(
+      representationForType(type.typeAcrossFunctionBoundary),
+    );
+    ctx.setLocal(
+      p.name!.lexeme,
+      Variable.of(
+        ctx,
+        SSA('arg_$i'),
+        type.typeAcrossFunctionBoundary,
+      ).captureBinding(ctx, p),
+    );
+    i++;
+  }
+  // Generative callees receive the runtime type as a trailing int argument.
+  final result = ctx.svar('instance');
+  final isFactory = targetDecl.factoryKeyword != null;
+  if (!isFactory) {
+    parameterRepresentations.add(MachineRepresentation.integer);
+    ctx.pushOp(
+      Parameter(
+        SSA('arg_$i'),
+        i,
+        representation: MachineRepresentation.integer,
+      ),
+    );
+  }
+  ctx.functionSignatures[ctx.topLevelDeclarationPositions[ctx.library]![n]!] =
+      MachineFunctionSignature(
+        parameterRepresentations,
+        MachineRepresentation.object,
+      );
+  final argSsa = <SSA>[];
+  for (final p in resolvedParams) {
+    final (paramType, _) = getFormalParameterType(
+      ctx,
+      p,
+      target.sourceLib,
+      targetDecl,
+      typeParameters: calleeTypeParameters,
+    );
+    argSsa.add(
+      coerceArgumentForParameter(
+        ctx,
+        ctx.lookupLocal(p.name!.lexeme)!.boxIfNeeded(ctx),
+        paramType ?? CoreTypes.dynamic.ref(ctx),
+        p,
+        targetDecl,
+        source: parent,
+      ).ssa,
+    );
+  }
+  argSsa.add(pushRuntimeTypeId(ctx, targetType));
+  // Field initializers run before the superconstructor invocation — evaluate
+  // them now and apply the values once the instance exists.
+  final evaluatedFieldInits = _evalUnusedFieldInitializers(
+    ctx,
+    fields,
+    const {},
+    memberLibraries,
+    parent,
+  );
+  final superResult = ctx.svar('super');
+  ctx.pushOp(
+    Call(
+      DeferredOrOffset.lookupStatic(
+        ctx,
+        target.sourceLib,
+        targetType.name,
+        constructorName,
+      ),
+      argSsa,
+      result: superResult,
+    ),
+  );
+  // The alias is itself a class: `new C.n()` produces an instance of `C`
+  // whose superclass part is the `S.n` result.
+  final parentType = TypeRef.$this(ctx)!;
+  final inst = Variable.ssa(
+    ctx,
+    CreateClass(
+      result,
+      ctx.library,
+      parentName,
+      superResult,
+      SSA('arg_$i'),
+      _getFieldIndices(fields).count,
+    ),
+    parentType,
+  );
+  _compileUnusedFields(
+    ctx,
+    fields,
+    {},
+    inst.ssa,
+    0,
+    memberLibraries,
+    parent,
+    evaluatedFieldInits,
+  );
+  ctx.pushOp(Return(inst.ssa));
+  ctx.endScope();
 }

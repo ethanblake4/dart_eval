@@ -72,7 +72,9 @@ class $TypeImpl implements $Type {
     switch (identifier) {
       case 'toString':
         return $Function(
-          ((runtime, target, r, s, c) => $String("Instance of 'Type'")),
+          ((runtime, target, r, s, c) => $String(
+            _runtime?.runtimeTypeToString(_typeId) ?? "Instance of 'Type'",
+          )),
         );
       case '==':
         return $Function((runtime, target, r, s, c) {

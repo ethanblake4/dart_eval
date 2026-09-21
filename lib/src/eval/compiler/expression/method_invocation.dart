@@ -21,6 +21,7 @@ import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
 import 'package:dart_eval/src/eval/ir/memory.dart';
 
+import '../reference.dart';
 import 'expression.dart';
 import 'identifier.dart';
 
@@ -36,27 +37,85 @@ Variable compileMethodInvocation(
     try {
       L = compileExpression(e.target!, ctx);
       if (e.target is SuperExpression) {
-        var owner = L.type.resolveTypeChain(ctx);
-        while (!(ctx.instanceDeclarationsMap[owner.file]?[owner.name]
-                ?.containsKey(e.methodName.name) ??
-            false)) {
+        final memberName = e.methodName.name;
+        final lib = ctx.enclosingLibrary ?? ctx.library;
+        final (_, withClause, _, _) = classLikeClauses(ctx.currentClass!);
+        // `with` mixins below the member's own layer, nearest first (all of
+        // them for the class's own members); their members fold onto the
+        // applying class, so a hit dispatches against it. Then the
+        // superclass's own chain.
+        var stop = withClause.length;
+        final declaring = ctx.memberDeclaringClass;
+        if (declaring != null) {
+          final declaringName = switch (declaring) {
+            ClassDeclaration() ||
+            MixinDeclaration() ||
+            ClassTypeAlias() ||
+            EnumDeclaration() => declarationName(declaring),
+            _ => null,
+          };
+          for (var j = 0; j < withClause.length; j++) {
+            if (withClause[j].name.lexeme == declaringName) {
+              stop = j;
+              break;
+            }
+          }
+        }
+        var found = false;
+        for (var j = stop - 1; !found && j >= 0; j--) {
+          final mixinRef = clauseNamedType(ctx, lib, withClause[j]);
+          if (mixinRef == null) continue;
+          final memberDecl = ctx
+              .instanceDeclarationsMap[mixinRef.file]?[mixinRef.name]
+                  ?[memberName] ??
+              ctx.instanceDeclarationsMap[mixinRef
+                  .file]?[mixinRef.name]?['$memberName*g'];
+          if (memberDecl == null) continue;
+          _checkConcreteSuperMember(memberDecl, memberName, e);
+          final appType = TypeRef.lookupDeclaration(
+            ctx,
+            lib,
+            ctx.currentClass!,
+          );
+          L = Variable.of(ctx, L!.ssa, appType, concreteTypes: [appType]);
+          found = true;
+        }
+        var owner = L!.type.resolveTypeChain(ctx);
+        while (!found) {
+          final members =
+              ctx.instanceDeclarationsMap[owner.file]?[owner.name];
+          if (members != null &&
+              (members.containsKey(memberName) ||
+                  members.containsKey('$memberName*g'))) {
+            _checkConcreteSuperMember(
+              members[memberName] ?? members['$memberName*g'],
+              memberName,
+              e,
+            );
+            found = true;
+            break;
+          }
           final bridgeOwner =
               ctx.topLevelDeclarationsMap[owner.file]?[owner.name]?.bridge;
           if (bridgeOwner is BridgeClassDef &&
-              bridgeOwner.methods.containsKey(e.methodName.name)) {
+              bridgeOwner.methods.containsKey(memberName)) {
+            found = true;
             break;
           }
           final parent = owner.extendsType;
-          if (parent == null ||
-              !ctx.instanceDeclarationsMap.containsKey(parent.file)) {
-            break;
-          }
+          if (parent == null) break;
           owner = parent.resolveTypeChain(ctx);
           L = Variable.ssa(
             ctx,
             LoadSuper(ctx.svar('super'), L!.ssa),
             owner,
             concreteTypes: [owner],
+          );
+        }
+        if (!found) {
+          throw CompileError(
+            'Superclass has no member "$memberName"',
+            e,
           );
         }
       }
@@ -139,7 +198,9 @@ Variable compileMethodInvocation(
   // then the callable declaration lives under the offset's `name.ctor` key.
   var dec0 = ctx.topLevelDeclarationsMap[offset.file]![e.methodName.name];
   if (dec0 == null ||
-      (!dec0.isBridge && dec0.declaration! is ClassDeclaration)) {
+      (!dec0.isBridge &&
+          (dec0.declaration! is ClassDeclaration ||
+              dec0.declaration! is ClassTypeAlias))) {
     dec0 =
         ctx.topLevelDeclarationsMap[offset.file]![offset.name ??
             '${e.methodName.name}.'];
@@ -186,32 +247,56 @@ Variable compileMethodInvocation(
       ctx.library,
       dec0.declaration! as TypeAlias,
       typeArgs: e.typeArguments?.arguments.toList(),
+      rawParams: true,
     );
-    // Downward inference: `C<num> x = T(num)` instantiates `T` as `C<num>`.
+    // Downward inference: `C<num> x = T(num)` instantiates `T` as `C<num>`,
+    // matching alias parameters structurally (`T<X> = C<List<X>>` against
+    // `C<List<num>>` binds `X → num`).
     final boundChain = bound?.resolveTypeChain(ctx);
+
     if (e.typeArguments == null &&
         boundChain != null &&
         boundChain.file == resolved.file &&
         boundChain.name == resolved.name &&
         boundChain.specifiedTypeArgs.isNotEmpty) {
-      resolved = resolved.copyWith(
-        specifiedTypeArgs: [
-          for (var i = 0; i < resolved.specifiedTypeArgs.length; i++)
-            resolved.specifiedTypeArgs[i].isTypeParameter &&
-                    i < boundChain.specifiedTypeArgs.length
-                ? boundChain.specifiedTypeArgs[i]
-                : resolved.specifiedTypeArgs[i],
-        ],
-      );
+      final substitutions = <(String, int), TypeRef>{};
+      for (var i = 0;
+          i < resolved.specifiedTypeArgs.length &&
+              i < boundChain.specifiedTypeArgs.length;
+          i++) {
+        collectTypeParameterSubstitutions(
+          ctx,
+          resolved.specifiedTypeArgs[i],
+          boundChain.specifiedTypeArgs[i],
+          substitutions,
+        );
+      }
+      if (substitutions.isNotEmpty) {
+        resolved = resolved.substituteTypeParameters(substitutions);
+      }
     }
     aliasType = resolved;
-    dec0 =
-        ctx.topLevelDeclarationsMap[resolved.file]!['${resolved.name}.'] ??
-        (throw CompileError(
-          'Class "${resolved.name}" does not have a default constructor',
-          e,
-        ));
+    dec0 = ctx.topLevelDeclarationsMap[resolved.file]!['${resolved.name}.'];
     offset = DeferredOrOffset(file: resolved.file, name: '${resolved.name}.');
+    if (dec0 == null) {
+      // The aliased class has an implicit default constructor — call the
+      // synthesized `resolved.` body with just the runtime-type argument.
+      final callResult = ctx.svar('constructor');
+      final boxed = resolved.copyWith(boxed: true);
+      ctx.pushOp(
+        Call(
+          offset,
+          [pushRuntimeTypeId(ctx, resolved)],
+          result: callResult,
+        ),
+      );
+      return Variable.of(
+        ctx,
+        callResult,
+        boxed,
+        concreteTypes: [boxed],
+      );
+    }
   }
 
   final List<Variable> args;
@@ -219,6 +304,7 @@ Variable compileMethodInvocation(
   final List<SSA> callArgs;
 
   var isConstructor = false;
+  List<TypeRef>? inferredCtorArgs;
 
   if (dec0.isBridge) {
     final bridge = dec0.bridge;
@@ -262,6 +348,33 @@ Variable compileMethodInvocation(
     args = result.args.args;
     namedArgs = result.args.namedArgs;
     callArgs = result.args.ssa;
+
+    // Upward inference for constructors: the class type arguments inferred
+    // from the argument list (or the parameters' bounds), in declaration order.
+    if (isConstructor && result.classTypeParameters != null) {
+      inferredCtorArgs = [
+        for (final param in result.classTypeParameters!)
+          result.resolveGenerics[param.name.lexeme] ??
+              CoreTypes.dynamic.ref(ctx),
+      ];
+      if (aliasType != null && e.typeArguments == null) {
+        // The alias's instantiated arguments were left as parameter references
+        // for inference; bind them from what the constructor's arguments gave.
+        final substitutions = <(String, int), TypeRef>{};
+        final aliasArgs = aliasType.specifiedTypeArgs;
+        for (var i = 0; i < aliasArgs.length && i < inferredCtorArgs.length; i++) {
+          collectTypeParameterSubstitutions(
+            ctx,
+            aliasArgs[i],
+            inferredCtorArgs[i],
+            substitutions,
+          );
+        }
+        if (substitutions.isNotEmpty) {
+          aliasType = aliasType.substituteTypeParameters(substitutions);
+        }
+      }
+    }
   }
 
   final argTypes = args.map((e) => e.type).toList();
@@ -271,7 +384,9 @@ Variable compileMethodInvocation(
 
   TypeRef? thisType;
   if (ctx.currentClass != null) {
-    thisType = ctx.visibleTypes[ctx.library]![ctx.currentClassName!]!;
+    thisType =
+        ctx.visibleTypes[ctx.enclosingLibrary ?? ctx.library]![ctx
+            .currentClassName!]!;
   }
 
   mReturnType ??=
@@ -289,7 +404,8 @@ Variable compileMethodInvocation(
             !(mReturnType.type?.isUnboxedAcrossFunctionBoundaries ?? false)),
   );
   final instantiatedReturnType = isConstructor && returnType != null
-      ? (aliasType ?? _instantiateConstructorType(ctx, e, returnType))
+      ? (aliasType ??
+          _instantiateConstructorType(ctx, e, returnType, inferredCtorArgs))
       : returnType;
   final declaration = dec0.isBridge ? null : dec0.declaration;
   final effectiveCallArgs = [...callArgs];
@@ -363,10 +479,22 @@ Variable compileMethodInvocation(
 TypeRef _instantiateConstructorType(
   CompilerContext ctx,
   MethodInvocation invocation,
-  TypeRef base,
-) {
+  TypeRef base, [
+  List<TypeRef>? inferredArgs,
+]) {
   final arguments = invocation.typeArguments?.arguments;
-  if (arguments == null || arguments.isEmpty) return base;
+  if (arguments == null || arguments.isEmpty) {
+    if (inferredArgs == null) return base;
+    final baseArgs = base.specifiedTypeArgs;
+    if (baseArgs.isEmpty || baseArgs.every((a) => a.isTypeParameter)) {
+      return base.copyWith(specifiedTypeArgs: inferredArgs);
+    }
+    return base.substituteTypeParameters({
+      for (var i = 0; i < inferredArgs.length; i++)
+        ('class:${base.resolveTypeChain(ctx).file}:${base.name}', i):
+            inferredArgs[i],
+    });
+  }
   return base.copyWith(
     specifiedTypeArgs: [
       for (final argument in arguments)
@@ -471,8 +599,7 @@ Variable _invokeWithTarget(
   if (L.type == CoreTypes.type.ref(ctx) && L.concreteTypes.length == 1) {
     // Static method
     staticType = L.concreteTypes[0];
-    if (ctx.topLevelDeclarationsMap[staticType
-            .file]!['${staticType.name}.$staticMemberName'] ==
+    if (ctx.topLevelDeclarationsMap[staticType.file]?['${staticType.name}.$staticMemberName'] ==
         null) {
       // Not a static member of the class — it's an instance method of the
       // `Type` object itself (`Foo.toString()`, `Foo.hashCode`, ...).
@@ -484,6 +611,21 @@ Variable _invokeWithTarget(
       return L.invoke(ctx, e.methodName.name, args).result;
     }
     dec0 = resolveStaticMethod(ctx, staticType, staticMemberName);
+    // `C.field(args)` where `field` holds a closure reads the field and
+    // invokes its value rather than calling a function named `C.field`.
+    if (dec0.declaration is FieldDeclaration) {
+      final fieldValue = IdentifierReference(
+        L,
+        staticMemberName,
+      ).getValue(ctx, e);
+      return invokeClosure(
+        ctx,
+        null,
+        fieldValue,
+        e.argumentList,
+        typeArguments: e.typeArguments?.arguments.toList(),
+      ).result;
+    }
     isStatic = true;
   } else if (L.type == CoreTypes.function.ref(ctx) &&
       e.methodName.name == 'call') {
@@ -774,10 +916,18 @@ Map<String, TypeRef> _classTypeArguments(
   MethodDeclaration method,
 ) {
   final owner = method.parent?.parent;
-  if (owner is! ClassDeclaration) return const {};
-  TypeRef? current = receiver;
-  while (current != null) {
-    if (current.file == ownerLibrary &&
+  if (owner is! ClassDeclaration && owner is! MixinDeclaration) {
+    return const {};
+  }
+  // Worklist over supertypes: extends, `with` applications, and implements
+  // edges each carry the substitutions accumulated along their own path.
+  final worklist = <(TypeRef, Map<(String, int), TypeRef>)>[(receiver, {})];
+  final seen = <String>{};
+  while (worklist.isNotEmpty) {
+    final (current, substitutions) = worklist.removeLast();
+    if (!seen.add('${current.file}:${current.name}')) continue;
+    if (owner is ClassDeclaration &&
+        current.file == ownerLibrary &&
         current.name == owner.namePart.typeName.lexeme) {
       final parameters =
           owner.namePart.typeParameters?.typeParameters ?? const [];
@@ -789,23 +939,98 @@ Map<String, TypeRef> _classTypeArguments(
               : CoreTypes.dynamic.ref(ctx),
       };
     }
-    final resolved = current.resolveTypeChain(ctx);
-    final parent = resolved.extendsType;
-    if (parent == null || parent.hasSameDeclarationAs(current)) break;
-    final parameters = resolved.genericParams;
-    final substitutions = <(String, int), TypeRef>{
-      for (var index = 0; index < parameters.length; index++)
+    final decl =
+        ctx.topLevelDeclarationsMap[current.file]?[current.name]?.declaration;
+    if (decl == null) continue;
+    // Fold the current type's arguments into the substitution map so a
+    // `with M<T>` clause resolves `T` to the receiver-provided argument.
+    final levelParams = current.resolveTypeChain(ctx).genericParams;
+    final nextSubstitutions = {
+      ...substitutions,
+      for (var index = 0; index < levelParams.length; index++)
         (
           'class:${current.file}:${current.name}',
           index,
         ): index < current.specifiedTypeArgs.length
             ? current.specifiedTypeArgs[index]
-            : parameters[index].extendsType ?? CoreTypes.dynamic.ref(ctx),
+            : levelParams[index].extendsType ?? CoreTypes.dynamic.ref(ctx),
     };
-    current = parent.substituteTypeParameters(substitutions);
+    if (owner is MixinDeclaration) {
+      // The folded method's owner is a mixin: find the `with M<args>` entry
+      // on the current class (or on a mixin it applies) and map the mixin's
+      // parameters to its applied arguments.
+      final applied = findMixinApplication(
+        ctx,
+        decl,
+        current.file,
+        current.name,
+        owner,
+        ownerLibrary,
+        nextSubstitutions,
+      );
+      if (applied != null) {
+        return applied;
+      }
+    }
+    final resolved = current.resolveTypeChain(ctx);
+    final parent = resolved.extendsType;
+    if (parent != null && !parent.hasSameDeclarationAs(current)) {
+      worklist.add((
+        parent.substituteTypeParameters(nextSubstitutions),
+        nextSubstitutions,
+      ));
+    }
+    final (_, mixinTypes, interfaceTypes, _) = classLikeClauses(decl);
+    for (final supertype in [...mixinTypes, ...interfaceTypes]) {
+      final resolved2 = _resolveAppliedInterface(
+        ctx,
+        current,
+        decl,
+        supertype,
+        nextSubstitutions,
+      );
+      if (resolved2 != null) worklist.add((resolved2, nextSubstitutions));
+    }
   }
   return const {};
 }
+
+/// Resolves an `implements`/`on` entry of [decl] (on receiver [current]) to
+/// a concrete [TypeRef]: bare arguments naming one of [current]'s type
+/// parameters become parameter references, then [substitutions] maps those
+/// to the receiver-provided arguments.
+TypeRef? _resolveAppliedInterface(
+  CompilerContext ctx,
+  TypeRef current,
+  Declaration decl,
+  NamedType interface,
+  Map<(String, int), TypeRef> substitutions,
+) {
+  final prefix = interface.importPrefix;
+  final name = prefix == null
+      ? interface.name.lexeme
+      : '${prefix.name.lexeme}.${interface.name.lexeme}';
+  final base = ctx.visibleTypes[current.file]?[name];
+  if (base == null) return null;
+  final args = interface.typeArguments?.arguments;
+  if (args == null) return base;
+  final classParams = classLikeClauses(decl).$4?.typeParameters;
+  return base.copyWith(
+    specifiedTypeArgs: [
+      for (var i = 0; i < args.length; i++)
+        (resolveAppliedTypeArgument(
+                  ctx,
+                  current.file,
+                  current.name,
+                  classParams,
+                  args[i],
+                ) ??
+                TypeRef.fromAnnotation(ctx, current.file, args[i]))
+            .substituteTypeParameters(substitutions),
+    ],
+  );
+}
+
 
 bool _hasBridgeSuperclass(CompilerContext ctx, TypeRef type) {
   for (final parent in type.resolveTypeChain(ctx).extendsChain) {
@@ -926,31 +1151,86 @@ DeclarationOrBridge<ClassMember, BridgeMethodDef> resolveInstanceMethod(
       bottomType0,
     );
   } else {
-    final $class = dec0.declaration as ClassDeclaration;
-    if ($class.extendsClause == null) {
-      return resolveInstanceMethod(
+    final (extendsNamed, mixins, interfaces, _) = classLikeClauses(
+      dec0.declaration,
+    );
+    TypeRef? resolveClauseType(NamedType named) {
+      final prefix = named.importPrefix;
+      final name = prefix == null
+          ? named.name.lexeme
+          : '${prefix.name.lexeme}.${named.name.lexeme}';
+      final direct = ctx.visibleTypes[instanceType.file]![name];
+      if (direct != null) return direct;
+      final alias = ctx.typeAliases[instanceType.file]?[name];
+      return alias == null
+          ? null
+          : resolveTypeAlias(
+              ctx,
+              instanceType.file,
+              alias,
+              typeArgs: named.typeArguments?.arguments,
+            );
+    }
+
+    if (extendsNamed != null) {
+      final $supertype =
+          resolveClauseType(extendsNamed) ??
+          (throw CompileError(
+            'Superclass ${extendsNamed.name.lexeme} not found',
+            source,
+          ));
+      final result = _tryResolveInstanceMethod(
         ctx,
-        CoreTypes.object.ref(ctx),
+        $supertype,
         methodName,
         source,
         bottomType0,
       );
+      if (result != null) return result;
     }
-    final superclass = $class.extendsClause!.superclass;
-    final prefix = superclass.importPrefix;
-    final superName = prefix == null
-        ? superclass.name.lexeme
-        : '${prefix.name.lexeme}.${superclass.name.lexeme}';
-    final $supertype =
-        ctx.visibleTypes[instanceType.file]![superName] ??
-        (throw CompileError('Superclass $superName not found', source));
+    for (final interface in [...mixins, ...interfaces]) {
+      final ifaceType = resolveClauseType(interface);
+      if (ifaceType == null) continue;
+      final result = _tryResolveInstanceMethod(
+        ctx,
+        ifaceType,
+        methodName,
+        source,
+        bottomType0,
+      );
+      if (result != null) return result;
+    }
     return resolveInstanceMethod(
       ctx,
-      $supertype,
+      CoreTypes.object.ref(ctx),
       methodName,
       source,
       bottomType0,
     );
+  }
+}
+
+/// [resolveInstanceMethod], returning null when [instanceType] and its chain
+/// lack [methodName] instead of throwing.
+DeclarationOrBridge<ClassMember, BridgeMethodDef>?
+_tryResolveInstanceMethod(
+  CompilerContext ctx,
+  TypeRef instanceType,
+  String methodName,
+  AstNode? source,
+  TypeRef bottomType0,
+) {
+  try {
+    return resolveInstanceMethod(
+      ctx,
+      instanceType,
+      methodName,
+      source,
+      bottomType0,
+    );
+  } on CompileError catch (e) {
+    if (e.message.startsWith('Unknown method')) return null;
+    rethrow;
   }
 }
 
@@ -964,9 +1244,13 @@ DeclarationOrBridge<ClassMember, BridgeDeclaration> resolveStaticMethod(
           .file]!['${classType.name}.$methodName'];
   if (method != null) {
     if (method.declaration != null) {
+      final member = method.declaration!;
       return DeclarationOrBridge(
         classType.file,
-        declaration: method.declaration! as ClassMember,
+        declaration:
+            member is VariableDeclaration
+                ? member.parent!.parent as ClassMember
+                : member as ClassMember,
       );
     } else {
       return DeclarationOrBridge(classType.file, bridge: method.bridge!);
@@ -996,7 +1280,13 @@ _invocationSignature(Declaration dec) => switch (dec) {
 
 /// The result of [_compileNonBridgeArgs].
 class _ResolvedArgs {
-  _ResolvedArgs(this.args, this.returnType, this.boxedBySubstitution);
+  _ResolvedArgs(
+    this.args,
+    this.returnType,
+    this.boxedBySubstitution,
+    this.resolveGenerics,
+    this.classTypeParameters,
+  );
 
   final ArgumentListResult args;
 
@@ -1008,6 +1298,15 @@ class _ResolvedArgs {
   /// changing the callee's compiled ABI, forcing the result to stay boxed.
   /// Null when the return annotation doesn't reference type parameters.
   final bool? boxedBySubstitution;
+
+  /// The call's resolved generic bindings by parameter name — for constructor
+  /// calls these hold the class type arguments inferred from the arguments
+  /// (or the parameters' bounds when unconstrained).
+  final Map<String, TypeRef> resolveGenerics;
+
+  /// The declaring class's type parameters, in order, when [args] belongs to
+  /// a constructor declaration.
+  final List<TypeParameter>? classTypeParameters;
 }
 
 /// Compiles the argument list for a call to a non-bridge declaration [dec],
@@ -1027,16 +1326,20 @@ _ResolvedArgs _compileNonBridgeArgs(
   final (fpl, typeParams, returnAnnotation) = _invocationSignature(dec);
   final isCallableDecl = dec is FunctionDeclaration || dec is MethodDeclaration;
   final resolveGenerics = <String, TypeRef>{...seedGenerics};
+  List<TypeParameter>? classParams;
   if (dec is ConstructorDeclaration) {
     // Constructor signatures reference the declaring class's type parameters;
     // seed them from the call's explicit type arguments (or bounds).
     final owner = dec.thisOrAncestorMatching(
-      (node) => node is ClassDeclaration || node is MixinDeclaration,
+      (node) =>
+          node is ClassDeclaration ||
+          node is MixinDeclaration ||
+          node is ClassTypeAlias,
     );
-    final classParams = switch (owner) {
-      ClassDeclaration(:final namePart) =>
-        namePart.typeParameters?.typeParameters,
-      MixinDeclaration(:final typeParameters) => typeParameters?.typeParameters,
+    classParams = switch (owner) {
+      ClassDeclaration() ||
+      MixinDeclaration() ||
+      ClassTypeAlias() => classLikeClauses(owner as Declaration).$4?.typeParameters,
       _ => null,
     };
     if (classParams != null) {
@@ -1103,5 +1406,26 @@ _ResolvedArgs _compileNonBridgeArgs(
       returnAnnotation.question != null,
     );
   }
-  return _ResolvedArgs(argsPair, returnType, boxedBySubstitution);
+  return _ResolvedArgs(
+    argsPair,
+    returnType,
+    boxedBySubstitution,
+    resolveGenerics,
+    classParams,
+  );
+}
+
+/// `super.<name>` must dispatch to a concrete implementation: an abstract
+/// declaration in the searched layer is a compile-time error.
+void _checkConcreteSuperMember(
+  Declaration? member,
+  String memberName,
+  AstNode source,
+) {
+  if (member is MethodDeclaration && member.body is EmptyFunctionBody) {
+    throw CompileError(
+      'Super-invoked member "$memberName" has no concrete implementation',
+      source,
+    );
+  }
 }

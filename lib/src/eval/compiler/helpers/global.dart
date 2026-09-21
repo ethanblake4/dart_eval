@@ -10,8 +10,19 @@ import '../type.dart';
 
 final _resolving = Expando<Set<(int, String)>>();
 
+/// Lazily registers a global that usage analysis missed — e.g. a private
+/// top-level member referenced only from a mixin member folded into a class
+/// in another library.
+void ensureGlobalRegistered(CompilerContext ctx, int library, String name) {
+  final indices = ctx.topLevelGlobalIndices.putIfAbsent(library, () => {});
+  if (indices.containsKey(name)) return;
+  indices[name] = ctx.globalIndex++;
+  ctx.topLevelVariableInferredTypes.putIfAbsent(library, () => {});
+}
+
 /// Chooses a stable storage representation before compiling any initializer.
 TypeRef resolveGlobalType(CompilerContext ctx, int library, String name) {
+  ensureGlobalRegistered(ctx, library, name);
   final known = ctx.topLevelVariableInferredTypes[library]![name];
   if (known != null) return known;
   final active = _resolving[ctx] ??= {};
@@ -365,6 +376,7 @@ Variable storeGlobalBinding(
   Variable value, [
   AstNode? source,
 ]) {
+  ensureGlobalRegistered(ctx, library, name);
   final type = resolveGlobalType(ctx, library, name);
   final index = ctx.topLevelGlobalIndices[library]![name]!;
   if (ctx.globalsFinal.contains(index) &&

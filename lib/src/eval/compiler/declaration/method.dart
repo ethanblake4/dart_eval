@@ -169,7 +169,8 @@ int compileMethodDeclaration(
         ? 1
         : 2;
     ctx.instanceDeclarationPositions[ctx
-            .library]![parentName]![mapIndex][methodName] =
+            .enclosingLibrary ??
+                ctx.library]![parentName]![mapIndex][ctx.memberNameKey(methodName)] =
         pos;
   }
 
