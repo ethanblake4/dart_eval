@@ -105,26 +105,29 @@ void main() {
       ); // x=1 falls through empty cases to execute 'weekday'
     });
 
-    test('Switch with invalid fall-through should throw error', () {
-      expect(() {
-        compiler.compileWriteAndLoad({
-          'example': {
-            'main.dart': '''
-              int main() {
-                var x = 1;
-                switch (x) {
-                  case 1:
-                    print("case 1");  // Code here
-                  case 2:             // Invalid fall-through!
-                    return 2;
-                  default:
-                    return 0;
-                }
+    test('Switch non-empty case without terminator implicitly breaks', () {
+      // Dart 3: a non-empty case body that completes normally exits the
+      // switch rather than falling through to the next case.
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main() {
+              var x = 1;
+              var result = 0;
+              switch (x) {
+                case 1:
+                  result = 10;   // Implicit break — must not fall into case 2
+                case 2:
+                  result = 20;
+                default:
+                  result = 30;
               }
-            ''',
-          },
-        });
-      }, throwsA(isA<Exception>()));
+              return result;
+            }
+          ''',
+        },
+      });
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 10);
     });
 
     test('Switch with break statements', () {

@@ -27,6 +27,22 @@ enum NumericOperator {
       index >= bitAnd.index && index <= unsignedShiftRight.index;
 }
 
+/// `int → double` widening — the only implicit numeric conversion in Dart.
+final class IntToDouble extends Operation {
+  IntToDouble(this.target, this.source);
+
+  final SSA target;
+  final SSA source;
+
+  @override
+  SSA get writesTo => target;
+  @override
+  Set<SSA> get readsFrom => {source};
+  @override
+  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) =>
+      IntToDouble(writesTo ?? target, readsFrom?.single ?? source);
+}
+
 /// An operation on two values of the same primitive numeric representation.
 final class NumericBinary extends Operation {
   NumericBinary(

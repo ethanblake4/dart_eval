@@ -4,6 +4,7 @@ import 'backend/representation.dart'
     show MachineRepresentation, representationForType;
 import 'helpers/captures.dart';
 import '../ir/exception.dart';
+import '../ir/flow.dart' show Call;
 import '../ir/collection.dart' show ListLength;
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
@@ -35,6 +36,8 @@ class Variable {
     this.methodReturnType,
     this.isFinal = false,
     this.concreteTypes = const [],
+    this.exactType,
+    this.isConstInt = false,
     CallingConvention? callingConvention,
   }) : declaredType = declaredType ?? type,
        representation = representation ?? representationForType(type),
@@ -54,6 +57,8 @@ class Variable {
     ReturnType? methodReturnType,
     bool isFinal = false,
     List<TypeRef> concreteTypes = const [],
+    TypeRef? exactType,
+    bool isConstInt = false,
     CallingConvention callingConvention = CallingConvention.static,
   }) {
     ctx.pushOp(op);
@@ -65,6 +70,8 @@ class Variable {
       methodReturnType: methodReturnType,
       isFinal: isFinal,
       concreteTypes: concreteTypes,
+      exactType: exactType,
+      isConstInt: isConstInt,
       callingConvention: callingConvention,
     )..name = op.writesTo!.name;
   }
@@ -79,6 +86,8 @@ class Variable {
     ReturnType? methodReturnType,
     bool isFinal = false,
     List<TypeRef> concreteTypes = const [],
+    TypeRef? exactType,
+    bool isConstInt = false,
     CallingConvention callingConvention = CallingConvention.static,
   }) {
     return Variable(
@@ -89,6 +98,8 @@ class Variable {
       methodReturnType: methodReturnType,
       isFinal: isFinal,
       concreteTypes: concreteTypes,
+      exactType: exactType,
+      isConstInt: isConstInt,
       callingConvention: callingConvention,
     )..name = ssa.name;
   }
@@ -102,6 +113,20 @@ class Variable {
   /// Physical representation of this SSA value.
   final MachineRepresentation representation;
   final List<TypeRef> concreteTypes;
+
+  /// The exact runtime type of the value, when it is provably exactly this
+  /// type (set at allocation sites: literals, constructor calls). Unlike
+  /// [concreteTypes], an exact type can never be a subclass instance, so it
+  /// justifies devirtualization even for classes that are subclassed.
+  /// Not final: reassignment must replace (not merge) the allocation type.
+  TypeRef? exactType;
+
+  /// Whether this value is an integer literal or compile-time constant int
+  /// expression. Dart's `int → double` coercion applies only to such
+  /// expressions (`double d = 5`), never to int-typed variables. Not carried
+  /// by [copyWith]/[widened], so it is dropped as soon as the value is bound
+  /// or transformed.
+  final bool isConstInt;
   final DeferredOrOffset? methodOffset;
   final ReturnType? methodReturnType;
   final bool isFinal;
@@ -113,6 +138,72 @@ class Variable {
   Variable? implicitReceiver;
 
   bool get boxed => type.boxed;
+
+  /// Returns this variable with the allocation proofs that do not survive a
+  /// value change dropped: [exactType], [concreteTypes], and method tear-off
+  /// info are cleared. All SSA identity and binding metadata is preserved.
+  Variable widened() {
+    return Variable(
+        type,
+        declaredType: declaredType,
+        representation: representation,
+        isFinal: isFinal,
+        callingConvention: callingConvention,
+      )
+      ..name = name
+      ..frameIndex = frameIndex
+      ..localName = localName
+      ..captureCell = captureCell
+      ..implicitReceiver = implicitReceiver
+      ..exceptionSlot = exceptionSlot
+      ..captureCellSlot = captureCellSlot;
+  }
+
+  /// Widens this variable's allocation proofs for a control-flow join.
+  /// [incoming] are the variable's counterparts on other incoming edges.
+  /// [exactType] survives only when every edge proves the same one;
+  /// [concreteTypes] become the union across edges (empty on any edge means
+  /// unknown); method tear-off info is dropped when it differs. Returns
+  /// `this` when every edge holds this same variable.
+  Variable joinedWith(Iterable<Variable> incoming) {
+    var exact = exactType;
+    var concrete = concreteTypes;
+    var mOffset = methodOffset;
+    var mReturn = methodReturnType;
+    var changed = false;
+    for (final other in incoming) {
+      if (identical(other, this)) continue;
+      changed = true;
+      if (other.exactType != exact) exact = null;
+      concrete = concrete.isEmpty || other.concreteTypes.isEmpty
+          ? const []
+          : {...concrete, ...other.concreteTypes}.toList();
+      if (other.methodOffset != mOffset ||
+          other.methodReturnType != mReturn) {
+        mOffset = null;
+        mReturn = null;
+      }
+    }
+    if (!changed) return this;
+    return Variable(
+        type,
+        declaredType: declaredType,
+        representation: representation,
+        methodOffset: mOffset,
+        methodReturnType: mReturn,
+        isFinal: isFinal,
+        concreteTypes: concrete,
+        exactType: exact,
+        callingConvention: callingConvention,
+      )
+      ..name = name
+      ..frameIndex = frameIndex
+      ..localName = localName
+      ..captureCell = captureCell
+      ..implicitReceiver = implicitReceiver
+      ..exceptionSlot = exceptionSlot
+      ..captureCellSlot = captureCellSlot;
+  }
 
   String? name;
 
@@ -127,7 +218,9 @@ class Variable {
     if (!capturesFor(declaration).captured.contains(declaration)) return this;
     final cell = ctx.svar('cell');
     ctx.pushOp(NewCaptureCell(cell, ssa, representation));
-    return copyWith()..captureCell = cell;
+    // Captured variables can be reassigned by any closure invocation, so
+    // their allocation proofs are dropped.
+    return widened()..captureCell = cell;
   }
 
   Variable readBinding(CompilerContext ctx) => exceptionSlot != null
@@ -200,6 +293,8 @@ class Variable {
         Assign(ctx.svar('box_copy'), ssa),
         type,
         methodReturnType: methodReturnType,
+        concreteTypes: concreteTypes,
+        exactType: exactType,
       );
     }
     if (type == CoreTypes.dynamic.ref(ctx) ||
@@ -213,6 +308,8 @@ class Variable {
       result,
       type.copyWith(boxed: true),
       methodReturnType: methodReturnType,
+      concreteTypes: concreteTypes,
+      exactType: exactType,
     );
   }
 
@@ -285,6 +382,8 @@ class Variable {
             type.copyWith(boxed: false),
             declaredType: declaredType,
             representation: targetRepresentation,
+            concreteTypes: concreteTypes,
+            exactType: exactType,
           );
   }
 
@@ -307,6 +406,7 @@ class Variable {
     String? name,
     int? frameIndex,
     List<TypeRef>? concreteTypes,
+    TypeRef? exactType,
     CallingConvention? callingConvention,
   }) {
     return Variable(
@@ -317,6 +417,7 @@ class Variable {
         isFinal: isFinal ?? this.isFinal,
         methodReturnType: methodReturnType ?? this.methodReturnType,
         concreteTypes: concreteTypes ?? this.concreteTypes,
+        exactType: exactType ?? this.exactType,
         callingConvention: callingConvention ?? this.callingConvention,
       )
       ..name = name ?? this.name
@@ -510,6 +611,65 @@ class Variable {
       methodReturnType = null;
     }
     final receiver = boxIfNeeded(ctx);
+    final exact = exactType;
+    if (exact != null && resolvedField != null) {
+      // An own field on a value allocated exactly as this type: the field
+      // load itself runs inline — no getter call, no dynamic lookup.
+      final index =
+          ctx.instanceGetterIndices[exact.file]?[exact.name]?[name];
+      if (index != null) {
+        final decl = resolveInstanceDeclaration(
+          ctx,
+          exact.file,
+          exact.name,
+          name,
+          instantiated: exact,
+        )?.$2
+            .declaration;
+        final isLate = decl is FieldDeclaration && decl.fields.isLate;
+        return Variable.ssa(
+          ctx,
+          LoadPropertyStatic(
+            ctx.svar(name),
+            receiver.ssa,
+            index,
+            isLate: isLate,
+          ),
+          fieldType,
+        );
+      }
+    }
+    // A getter declared on the exact allocation type runs a fixed-offset
+    // call. Inexact receivers can't use it: the getter indexes the
+    // receiver's own storage directly, which only the allocation-typed
+    // node lays out correctly.
+    if (exact != null) {
+      final ownerType = exact;
+      final key = name.startsWith('_')
+          ? '${ctx.libraryUri(ownerType.file)}::$name'
+          : name;
+      if ((ctx.instanceDeclarationPositions[ownerType.file]?[ownerType
+                  .name]?[0]
+              as Map?)
+              ?.containsKey(key) ==
+          true) {
+        return Variable.ssa(
+          ctx,
+          Call(
+            DeferredOrOffset(
+              file: ownerType.file,
+              className: ownerType.name,
+              methodType: 0,
+              name: key,
+            ),
+            [receiver.ssa],
+            result: ctx.svar(name),
+            typeEnvironmentReceiver: receiver.ssa,
+          ),
+          fieldType,
+        );
+      }
+    }
     return Variable.ssa(
       ctx,
       LoadPropertyDynamic(

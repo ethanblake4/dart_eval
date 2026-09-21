@@ -1631,6 +1631,10 @@ class _LoweringSession {
               left,
               right,
             ]),
+          IntToDouble(:final source) => make(
+            ['fFromA', 'fFromB', 'gFromA', 'gFromB'],
+            [source],
+          ),
           memory.LoadInt(:final value) when value >= -32768 && value <= 32767 =>
             make(['aImmediate', 'bImmediate'], [], immediate: value & 65535),
           memory.LoadInt(:final value) => make(

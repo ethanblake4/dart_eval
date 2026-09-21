@@ -52,19 +52,21 @@ Variable compileListLiteral(
     listSpecifiedType = boundType;
   }
 
+  final listType = CoreTypes.list
+      .ref(ctx)
+      .copyWith(
+        specifiedTypeArgs: [
+          (listSpecifiedType ?? CoreTypes.dynamic.ref(ctx)).copyWith(
+            boxed: _boxListElements,
+          ),
+        ],
+        boxed: false,
+      );
   var list = Variable.ssa(
     ctx,
     NewList(ctx.svar('list')),
-    CoreTypes.list
-        .ref(ctx)
-        .copyWith(
-          specifiedTypeArgs: [
-            (listSpecifiedType ?? CoreTypes.dynamic.ref(ctx)).copyWith(
-              boxed: _boxListElements,
-            ),
-          ],
-          boxed: false,
-        ),
+    listType,
+    exactType: listType,
   );
 
   ctx.beginScope();

@@ -118,6 +118,9 @@ StatementInfo macroBranch(
         ? thenState
         : initialState,
   );
+  if (thenContinues && elseContinues && !resolveStateToThen) {
+    ctx.mergeBranchState([thenState, elseState]);
+  }
   ctx.endScope();
   return thenResult | elseResult;
 }

@@ -44,6 +44,8 @@ class BuiltinValue {
         LoadInt(target, intval!),
         type,
         concreteTypes: [type],
+        exactType: type,
+        isConstInt: true,
       );
     } else if (type == BuiltinValueType.doubleType) {
       final type = CoreTypes.double.ref(ctx).copyWith(boxed: false);
@@ -52,6 +54,7 @@ class BuiltinValue {
         LoadDouble(target, doubleval!),
         type,
         concreteTypes: [type],
+        exactType: type,
       );
     } else if (type == BuiltinValueType.stringType) {
       final type = CoreTypes.string.ref(ctx).copyWith(boxed: false);
@@ -60,6 +63,7 @@ class BuiltinValue {
         LoadString(target, stringval!),
         type,
         concreteTypes: [type],
+        exactType: type,
       );
     } else if (type == BuiltinValueType.boolType) {
       final type = CoreTypes.bool.ref(ctx).copyWith(boxed: false);
@@ -68,6 +72,7 @@ class BuiltinValue {
         LoadBool(target, boolval!),
         type,
         concreteTypes: [type],
+        exactType: type,
       );
     } else if (type == BuiltinValueType.nullType) {
       final type = CoreTypes.nullType.ref(ctx).copyWith(boxed: false);

@@ -161,38 +161,53 @@ extension Invoke on Variable {
             CoreTypes.int.ref(ctx),
             forceAllowDynamic: false,
           );
+      // `int` counts as a double operand through the implicit int → double
+      // conversion; [widen] emits the IntToDouble op below. TypeRef equality
+      // ignores nullability, so `int?` must be excluded explicitly — a nullable
+      // value has object representation and may hold null.
+      bool isDoubleOperand(TypeRef t) =>
+          !t.nullable &&
+          (t.isAssignableTo(
+                ctx,
+                CoreTypes.double.ref(ctx),
+                forceAllowDynamic: false,
+              ) ||
+              t == CoreTypes.int.ref(ctx));
       final doubleOperands =
-          type.isAssignableTo(
-            ctx,
-            CoreTypes.double.ref(ctx),
-            forceAllowDynamic: false,
-          ) &&
-          args.single.type.isAssignableTo(
-            ctx,
-            CoreTypes.double.ref(ctx),
-            forceAllowDynamic: false,
-          );
-      if ((integerOperands && method != '/') ||
+          isDoubleOperand(type) && isDoubleOperand(args.single.type);
+      final integerOperation = integerOperands && method != '/';
+      if (integerOperation ||
           (doubleOperands &&
               !numericOperator.isIntegerOnly &&
               method != '~/' &&
               method != '%')) {
-        final receiver = unboxIfNeeded(ctx);
+        final operandRepresentation = integerOperation
+            ? MachineRepresentation.integer
+            : MachineRepresentation.doublePrecision;
+        Variable widen(Variable v) =>
+            operandRepresentation == MachineRepresentation.doublePrecision &&
+                v.type == CoreTypes.int.ref(ctx)
+            ? Variable.ssa(
+                ctx,
+                IntToDouble(ctx.svar('widen'), v.ssa),
+                CoreTypes.double.ref(ctx).copyWith(boxed: false),
+                representation: MachineRepresentation.doublePrecision,
+              )
+            : v;
+        final receiver = widen(unboxIfNeeded(ctx));
         final right = args.single.ssa == ssa
             ? receiver
-            : args.single.unboxIfNeeded(ctx);
+            : widen(args.single.unboxIfNeeded(ctx));
         final operation = NumericBinary(
           ctx.svar('numeric_result'),
           receiver.ssa,
           right.ssa,
-          integerOperands
-              ? MachineRepresentation.integer
-              : MachineRepresentation.doublePrecision,
+          operandRepresentation,
           numericOperator,
         );
         final resultType = numericOperator.isComparison
             ? CoreTypes.bool.ref(ctx)
-            : integerOperands
+            : operandRepresentation == MachineRepresentation.integer
             ? CoreTypes.int.ref(ctx)
             : CoreTypes.double.ref(ctx);
         return InvokeResult(

@@ -739,12 +739,23 @@ ArgumentListResult compileArgumentListWithBridge(
           arg0.methodOffset != null) {
         arg0 = arg0.tearOff(ctx);
       }
-      if (!arg0.type.resolveTypeChain(ctx).isAssignableTo(ctx, paramType)) {
+      if (arg0.type.resolveTypeChain(ctx).assignmentConversionTo(
+            ctx,
+            paramType,
+          ) ==
+          AssignmentConversion.invalid) {
         throw CompileError(
           'Cannot assign argument of type ${arg0.type} to parameter of type $paramType',
           argumentList,
         );
       }
+      arg0 = convertForAssignment(
+        ctx,
+        arg0,
+        paramType,
+        representation: MachineRepresentation.object,
+        source: argumentList,
+      );
       arg0 = _providedBridgeArgument(ctx, arg0);
       push.add(arg0);
       namedArgs[param.name] = arg0;

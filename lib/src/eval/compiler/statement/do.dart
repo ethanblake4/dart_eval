@@ -14,6 +14,7 @@ StatementInfo compileDoStatement(
     expectedReturnType,
     conditionExpression: s.condition,
     body: (ctx, ert) => compileStatement(s.body, ert, ctx),
+    assignedNamesScan: [s],
     alwaysLoopOnce: true,
   );
 }

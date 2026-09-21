@@ -28,10 +28,12 @@ StatementInfo compileSwitchStatement(
 
   final endBlock = BasicBlock<Operation>([], label: ctx.label('switch_end'));
   final initialState = ctx.saveState();
+  final breakStates = <ContextSaveState>[];
   ctx.labels.add(
     CompilerLabel(
       (ctx) {
         ctx.resolveBranchStateDiscontinuity(initialState);
+        breakStates.add(ctx.saveState());
       },
       exceptionDepth: ctx.exceptionDepth,
       breakTarget: endBlock,
@@ -50,7 +52,9 @@ StatementInfo compileSwitchStatement(
   ctx.labels.removeLast();
   ctx.flushBlock();
   ctx.builder = ctx.builder.then(endBlock);
+  final fallthroughState = ctx.saveState();
   ctx.restoreState(initialState);
+  ctx.mergeBranchState([fallthroughState, ...breakStates]);
   return result.copyWith(willAlwaysBreak: false);
 }
 

@@ -94,6 +94,7 @@ StatementInfo compileForStatement(
       },
       condition: (ctx) => iterator.invoke(ctx, 'moveNext', []).result,
       body: (ctx, ert) => compileStatement(s.body, ert, ctx),
+    assignedNamesScan: [s],
       update: (ctx) {
         if (parts is ForEachPartsWithDeclaration) {
           ctx
@@ -122,6 +123,7 @@ StatementInfo compileForStatement(
     },
     conditionExpression: parts.condition,
     body: (ctx, ert) => compileStatement(s.body, ert, ctx),
+    assignedNamesScan: [s],
     update: (ctx) {
       if (parts is ForPartsWithDeclarations) {
         for (final variable in parts.variables.variables) {

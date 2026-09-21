@@ -19,6 +19,9 @@ enum AssignmentConversion {
 
   /// Dart rejects the assignment statically.
   invalid,
+
+  /// `int` into a `double` context — requires an `int → double` widening.
+  intToDouble,
 }
 
 /// Reference to a type in the compiler. Types are initially created
@@ -1316,6 +1319,11 @@ class TypeRef {
           nullable: false,
         ).isAssignableTo(ctx, slot, forceAllowDynamic: false)) {
       return AssignmentConversion.runtimeCheck;
+    }
+    if (this == CoreTypes.int.ref(ctx) &&
+        (slot == CoreTypes.double.ref(ctx) ||
+            slot == CoreTypes.double.ref(ctx).copyWith(nullable: true))) {
+      return AssignmentConversion.intToDouble;
     }
     return isAssignableTo(ctx, slot, forceAllowDynamic: false)
         ? AssignmentConversion.none

@@ -420,7 +420,7 @@ void main() {
       });
       expect(() {
         runtime.executeLib('package:example/main.dart', 'main');
-      }, prints('(0, 1, 2)\n(\$"test", \$"test")\n'));
+      }, prints('(0, 1, 2)\n(test, test)\n'));
     });
 
     test('Iterable.generate without generator', () {

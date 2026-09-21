@@ -12,14 +12,37 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/collection.dart';
 
-Variable compileSetOrMapLiteral(SetOrMapLiteral literal, CompilerContext ctx) {
+/// Compiles `{...}` into a Set or Map literal. [bound] is the context type
+/// (e.g. a declared field or parameter type): in Dart it drives literal
+/// inference, so `_m = {}` in a `Map<String, int>` slot infers
+/// `Map<String, int>` rather than `Map<dynamic, dynamic>`.
+Variable compileSetOrMapLiteral(
+  SetOrMapLiteral literal,
+  CompilerContext ctx, [
+  TypeRef? bound,
+]) {
   final annotations = literal.typeArguments?.arguments;
+  final resolvedBound = bound?.resolveTypeChain(ctx);
+  TypeRef? boundKey, boundValue;
+  if (resolvedBound != null) {
+    final boundArgs = resolvedBound.specifiedTypeArgs;
+    if (resolvedBound.hasSameDeclarationAs(CoreTypes.map.ref(ctx)) &&
+        boundArgs.length == 2) {
+      boundKey = boundArgs[0];
+      boundValue = boundArgs[1];
+    } else if (resolvedBound.hasSameDeclarationAs(CoreTypes.set.ref(ctx)) &&
+        boundArgs.length == 1) {
+      boundKey = boundArgs[0];
+    }
+  }
   final explicitKey = annotations == null
-      ? null
+      ? boundKey
       : TypeRef.fromAnnotation(ctx, ctx.library, annotations.first);
-  final explicitValue = annotations == null || annotations.length < 2
-      ? null
-      : TypeRef.fromAnnotation(ctx, ctx.library, annotations[1]);
+  final explicitValue = annotations != null && annotations.length >= 2
+      ? TypeRef.fromAnnotation(ctx, ctx.library, annotations[1])
+      : annotations == null
+      ? boundValue
+      : null;
   Variable? firstSpread;
   final first = literal.elements.firstOrNull;
   if (annotations == null && first is SpreadElement) {
@@ -28,30 +51,36 @@ Variable compileSetOrMapLiteral(SetOrMapLiteral literal, CompilerContext ctx) {
   final isMap =
       explicitValue != null ||
       (annotations == null &&
-          (literal.elements.isEmpty ||
-              literal.elements.first is MapLiteralEntry ||
-              (firstSpread?.type
-                      .copyWith(nullable: false)
-                      .isAssignableTo(
-                        ctx,
-                        CoreTypes.map.ref(ctx),
-                        forceAllowDynamic: false,
-                      ) ??
-                  false)));
+          (literal.elements.isEmpty
+              // A bare `{}` is a Set only when the context says Set;
+              // otherwise it is a Map.
+              ? resolvedBound?.hasSameDeclarationAs(CoreTypes.set.ref(ctx)) !=
+                    true
+              : literal.elements.first is MapLiteralEntry ||
+                  (firstSpread?.type
+                          .copyWith(nullable: false)
+                          .isAssignableTo(
+                            ctx,
+                            CoreTypes.map.ref(ctx),
+                            forceAllowDynamic: false,
+                          ) ??
+                      false)));
   final keyTypes = <TypeRef>{};
   final valueTypes = <TypeRef>{};
   final target = ctx.svar(isMap ? 'map' : 'set');
   final collectionType = (isMap ? CoreTypes.map : CoreTypes.set).ref(ctx);
+  final exactCollectionType = collectionType.copyWith(
+    boxed: false,
+    specifiedTypeArgs: [
+      explicitKey ?? CoreTypes.dynamic.ref(ctx),
+      if (isMap) explicitValue ?? CoreTypes.dynamic.ref(ctx),
+    ],
+  );
   final collection = Variable.ssa(
     ctx,
     isMap ? NewMap(target) : NewSet(target),
-    collectionType.copyWith(
-      boxed: false,
-      specifiedTypeArgs: [
-        explicitKey ?? CoreTypes.dynamic.ref(ctx),
-        if (isMap) explicitValue ?? CoreTypes.dynamic.ref(ctx),
-      ],
-    ),
+    exactCollectionType,
+    exactType: exactCollectionType,
   );
   for (final element in literal.elements) {
     final (keys, values) = _compileElement(

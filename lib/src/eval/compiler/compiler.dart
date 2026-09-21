@@ -641,6 +641,23 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
           name,
           typeParameters,
         );
+        // Member names the class declares, plus its direct superinterface
+        // edges — used to decide whether `this.m()` can devirtualize.
+        if (declaration is ClassDeclaration ||
+            declaration is MixinDeclaration ||
+            declaration is EnumDeclaration) {
+          final members = (declaration as dynamic).body.members
+              as List<ClassMember>;
+          _ctx.declaredInstanceMembers['$libraryIndex:$name'] = {
+            for (final m in members)
+              if (m is MethodDeclaration && !m.isStatic)
+                _ctx.memberNameKey(m.name.lexeme)
+              else if (m is FieldDeclaration && !m.isStatic)
+                for (final v in m.fields.variables)
+                  _ctx.memberNameKey(v.name.lexeme),
+          };
+        }
+        final selfKey = '$libraryIndex:$name';
         for (final namedType in superinterfacesOf(declaration)) {
           TypeRef? resolved;
           try {
@@ -656,7 +673,9 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
             // the missing name would fail compilation anyway elsewhere.
             continue;
           }
-          _ctx.subclassedTypes.add('${resolved.file}:${resolved.name}');
+          final ancestorKey = '${resolved.file}:${resolved.name}';
+          _ctx.subclassedTypes.add(ancestorKey);
+          (_ctx.subclassEdges[selfKey] ??= []).add(ancestorKey);
         }
       }
     });

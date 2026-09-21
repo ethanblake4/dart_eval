@@ -79,6 +79,39 @@ mixin ScopeContext on Object implements AbstractScopeContext {
     ];
   }
 
+  /// Widens local type proofs at a control-flow join. For each local that was
+  /// reassigned on any of the [incoming] edges, keeps only the allocation
+  /// info every edge agrees on (see [Variable.joinedWith]). The current
+  /// state's SSA bindings are authoritative — the incoming states only
+  /// contribute their type proofs.
+  void mergeBranchState(Iterable<ContextSaveState> incoming) {
+    for (var i = 0; i < locals.length; i++) {
+      final frame = locals[i];
+      for (final key in frame.keys.toList()) {
+        final current = frame[key]!;
+        frame[key] = current.joinedWith([
+          for (final state in incoming)
+            if (i < state.locals.length && state.locals[i][key] != null)
+              state.locals[i][key]!,
+        ]);
+      }
+    }
+  }
+
+  /// Drops allocation proofs on the named locals, as they would be after a
+  /// reassignment merge. Used before compiling a loop whose body reassigns
+  /// them — the back edge can make them hold a differently-typed value.
+  void widenAssignedLocals(Set<String> names) {
+    for (var i = 0; i < locals.length; i++) {
+      final frame = locals[i];
+      for (final name in names) {
+        final v = frame[name];
+        if (v == null) continue;
+        frame[name] = v.widened();
+      }
+    }
+  }
+
   /// Like [resolveBranchStateDiscontinuity] but only rewrites the `boxed` flag
   /// on each local's type, without emitting box/unbox operations. Use when the
   /// boxing ops have already been emitted elsewhere and only the compile-time
@@ -241,6 +274,55 @@ class CompilerContext with ScopeContext {
   /// declared on these types must be invoked dynamically since a subclass may
   /// override them.
   Set<String> subclassedTypes = {};
+
+  /// Direct superinterface edges: descendant 'file:class' → ancestor keys.
+  Map<String, List<String>> subclassEdges = {};
+
+  /// Declared instance member names per 'file:class' (privates carry their
+  /// library prefix, matching member-table keys).
+  Map<String, Set<String>> declaredInstanceMembers = {};
+  Map<String, Set<String>>? _descendantMemo;
+
+  /// Whether some descendant of the class `'$file:$cls'` redeclares
+  /// `member`. When false, a call on a receiver that is (or may be) that
+  /// class can devirtualize even though the class is subclassed.
+  bool memberOverriddenInSubclass(int file, String cls, String member) {
+    final descendants = _descendants();
+    final ds = descendants['$file:$cls'];
+    if (ds == null) return false;
+    final privateKey = member.startsWith('_')
+        ? '${libraryUri(file)}::$member'
+        : null;
+    for (final d in ds) {
+      final names = declaredInstanceMembers[d];
+      if (names == null) continue;
+      if (names.contains(member) ||
+          (privateKey != null && names.contains(privateKey))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// Transitive descendant sets keyed by ancestor 'file:class'.
+  Map<String, Set<String>> _descendants() {
+    final memo = _descendantMemo;
+    if (memo != null) return memo;
+    final out = <String, Set<String>>{};
+    for (final d in subclassEdges.keys) {
+      final seen = <String>{};
+      final stack = [...?subclassEdges[d]];
+      while (stack.isNotEmpty) {
+        final a = stack.removeLast();
+        if (seen.add(a)) stack.addAll(subclassEdges[a] ?? const []);
+      }
+      for (final a in seen) {
+        (out[a] ??= {}).add(d);
+      }
+    }
+    return _descendantMemo = out;
+  }
+
   Map<int, Map<String, Map<String, int>>> instanceGetterIndices = {};
   Map<int, Map<String, Map<String, TypeRef>>> inferredFieldTypes = {};
   Map<int, Map<String, int>> topLevelGlobalIndices = {};

@@ -4,6 +4,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/assert.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
@@ -457,7 +458,11 @@ void compileConstructorDeclaration(
             'Undefined field ${init.fieldName.name} in initializer',
             init,
           ));
-      final V = compileExpression(init.expression, ctx, fType).boxIfNeeded(ctx);
+      var V = compileExpression(init.expression, ctx, fType);
+      if (fType != null) {
+        V = convertInitializer(ctx, V, fType, source: init.expression);
+      }
+      V = V.boxIfNeeded(ctx);
       ctx.pushOp(SetPropertyStatic(inst.ssa, fieldIndex, V.ssa));
     } else if (init is AssertInitializer) {
       final cond = compileExpression(init.condition, ctx);
@@ -664,26 +669,26 @@ void compileDefaultConstructor(
   return (indices: fieldIndices, count: fieldIdx0);
 }
 
-/// Field initializers conform to the field's declared type; `dynamic`
-/// initializer values defer to the runtime field store's type check.
-void _checkFieldInitializerConformance(
+/// Applies initializer conversion to a field initializer value (int →
+/// double widening) and rejects values that don't conform to the declared
+/// field type, then boxes for the object field store.
+Variable _convertFieldInitializer(
   CompilerContext ctx,
   FieldDeclaration fd,
   VariableDeclaration field,
   Variable V,
 ) {
   final annotation = fd.fields.type;
-  if (annotation == null) return;
+  if (annotation == null) return V.boxIfNeeded(ctx);
   final declared = TypeRef.fromAnnotation(ctx, ctx.library, annotation);
-  if (!V.type.isAssignableTo(ctx, declared, forceAllowDynamic: true)) {
-    throw CompileError(
-      "A value of type '${V.type}' can't be assigned to a field of type "
-      "'$declared'",
-      field.initializer,
-      ctx.library,
-      ctx,
-    );
-  }
+  return convertInitializer(
+    ctx,
+    V,
+    declared,
+    source: field.initializer,
+    description: "A value of type '${V.type}' can't be assigned to a field "
+        'of type $declared',
+  ).boxIfNeeded(ctx);
 }
 
 /// Evaluates the initializer expressions of fields not bound by the
@@ -726,8 +731,12 @@ Map<String, Variable> _evalUnusedFieldInitializers(
       }
       final Variable V;
       try {
-        V = compileExpression(field.initializer!, ctx).boxIfNeeded(ctx);
-        _checkFieldInitializerConformance(ctx, fd, field, V);
+        V = _convertFieldInitializer(
+          ctx,
+          fd,
+          field,
+          compileExpression(field.initializer!, ctx),
+        );
       } finally {
         ctx.library = prevLibrary;
         ctx.memberDeclaringClass = null;
@@ -788,8 +797,12 @@ void _compileUnusedFields(
           }
           final Variable v0;
           try {
-            v0 = compileExpression(field.initializer!, ctx).boxIfNeeded(ctx);
-            _checkFieldInitializerConformance(ctx, fd, field, v0);
+            v0 = _convertFieldInitializer(
+              ctx,
+              fd,
+              field,
+              compileExpression(field.initializer!, ctx),
+            );
           } finally {
             ctx.library = prevLibrary;
             ctx.memberDeclaringClass = null;

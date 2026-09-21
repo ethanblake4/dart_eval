@@ -1,9 +1,9 @@
+import '../helpers/conversion.dart';
 import '../helpers/global.dart';
 import '../backend/representation.dart' show representationForType;
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
-import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
@@ -43,12 +43,15 @@ void compileFieldDeclaration(
         );
         var V = compileExpression(initializer, ctx, type);
         if (type != null) {
-          if (!V.type.isAssignableTo(ctx, type)) {
-            throw CompileError(
-              'Static field $parentName.$fieldName of inferred type ${V.type} '
-              'does not conform to type $type',
-            );
-          }
+          V = convertInitializer(
+            ctx,
+            V,
+            type,
+            source: initializer,
+            description:
+                'Static field $parentName.$fieldName of inferred type '
+                '${V.type} does not conform to type $type',
+          );
         } else {
           type = V.type;
         }

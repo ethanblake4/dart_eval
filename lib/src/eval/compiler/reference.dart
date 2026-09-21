@@ -265,6 +265,68 @@ class IdentifierReference implements Reference {
             'Cannot assign value of type ${value.type} to field "$name" '
             'of type $fieldType',
       );
+      final exact = object!.exactType;
+      final setterKey = name.startsWith('_')
+          ? '${ctx.libraryUri(exact?.file ?? ctx.library)}::$name'
+          : name;
+      final fieldIndex = exact == null
+          ? null
+          : ctx.instanceGetterIndices[exact.file]?[exact.name]?[name];
+      if (exact != null &&
+          fieldIndex != null &&
+          (ctx.instanceDeclarationPositions[exact.file]?[exact.name]?[1]
+                  as Map?)
+              ?.containsKey(setterKey) ==
+              true) {
+        final decl = resolveInstanceDeclaration(
+          ctx,
+          exact.file,
+          exact.name,
+          name,
+          instantiated: exact,
+        )?.$2
+            .declaration;
+        final isLateFinal =
+            decl is FieldDeclaration &&
+            decl.fields.isLate &&
+            decl.fields.variables.any(
+              (v) => v.name.lexeme == name && (v.isFinal || v.isConst),
+            );
+        ctx.pushOp(
+          SetPropertyStatic(
+            object!.ssa,
+            fieldIndex,
+            val.ssa,
+            isLateFinal: isLateFinal,
+          ),
+        );
+        return val;
+      }
+      // Same restriction as field reads: a synthesized setter indexes the
+      // receiver's own storage, so only an exact allocation type is safe.
+      final ownerType = exact;
+      final key = setterKey;
+      if (ownerType != null &&
+          (ctx.instanceDeclarationPositions[ownerType.file]?[ownerType
+                      .name]?[1]
+                  as Map?)
+              ?.containsKey(key) ==
+              true) {
+        ctx.pushOp(
+          Call(
+            DeferredOrOffset(
+              file: ownerType.file,
+              className: ownerType.name,
+              methodType: 1,
+              name: key,
+            ),
+            [object!.ssa, val.ssa],
+            result: ctx.svar(name),
+            typeEnvironmentReceiver: object!.ssa,
+          ),
+        );
+        return val;
+      }
       final op = SetPropertyDynamic(
         object!.ssa,
         name,
@@ -301,6 +363,9 @@ class IdentifierReference implements Reference {
           : value.unboxIfNeeded(ctx, false);
       if (local.exceptionSlot != null) {
         ctx.pushOp(StoreExceptionSlot(local.exceptionSlot!, stored.ssa));
+        // Slot reads after a handler edge can observe a value written before
+        // the exception — allocation proofs can't be trusted across it.
+        ctx.locals[local.frameIndex!][local.localName!] = local.widened();
         return stored;
       }
       if (local.captureCell != null) {
@@ -311,6 +376,9 @@ class IdentifierReference implements Reference {
             local.representation,
           ),
         );
+        // The cell can also be written by a closure invocation — allocation
+        // proofs can't be trusted across it.
+        ctx.locals[local.frameIndex!][local.localName!] = local.widened();
         return stored;
       }
       ctx.pushOp(Assign(local.ssa, stored.ssa));
@@ -322,7 +390,7 @@ class IdentifierReference implements Reference {
                     : stored.type)
                 .copyWith(boxed: local.boxed),
         concreteTypes: stored.concreteTypes,
-      );
+      ).exactType = stored.exactType;
       return stored;
     }
 
@@ -733,7 +801,12 @@ class IdentifierReference implements Reference {
         final methodsMap =
             ctx.instanceDeclarationPositions[actualType.file]![actualType
                 .name]![2];
-        if (methodsMap.containsKey(name)) {
+        if (methodsMap.containsKey(name) &&
+            !ctx.memberOverriddenInSubclass(
+              actualType.file,
+              actualType.name,
+              name,
+            )) {
           offset = DeferredOrOffset(
             file: actualType.file,
             offset: methodsMap[name],

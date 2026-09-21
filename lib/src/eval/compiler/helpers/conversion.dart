@@ -9,7 +9,40 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/logic.dart';
 import 'package:dart_eval/src/eval/ir/memory.dart';
+import 'package:dart_eval/src/eval/ir/numeric.dart';
 import 'package:dart_eval/src/eval/ir/types.dart';
+
+/// Converts a field/variable initializer value for a slot of type [target].
+/// Rejects statically-invalid initializers and emits the `int → double`
+/// widening when required. Runtime checks are emitted except against
+/// function-typed targets, where an [AssertType] can't validate an
+/// implicitly-instantiated generic tear-off.
+Variable convertInitializer(
+  CompilerContext ctx,
+  Variable value,
+  TypeRef target, {
+  AstNode? source,
+  String? description,
+}) {
+  final conversion = value.type
+      .resolveTypeChain(ctx)
+      .assignmentConversionTo(ctx, target);
+  switch (conversion) {
+    case AssignmentConversion.invalid:
+      throw CompileError(
+        description ?? 'Cannot assign ${value.type} to $target',
+        source,
+      );
+    case AssignmentConversion.intToDouble:
+      return convertForAssignment(ctx, value, target, source: source);
+    case AssignmentConversion.none:
+      return value;
+    case AssignmentConversion.runtimeCheck:
+      return target.functionType != null
+          ? value
+          : convertForAssignment(ctx, value, target, source: source);
+  }
+}
 
 /// Converts [value] for a write or call boundary with Dart assignment rules.
 /// Runtime checks stay explicit in IR and therefore cannot disappear merely
@@ -25,7 +58,11 @@ Variable convertForAssignment(
   final conversion = value.type
       .resolveTypeChain(ctx)
       .assignmentConversionTo(ctx, target);
-  if (conversion == AssignmentConversion.invalid) {
+  // int → double only applies to integer literals and compile-time constant
+  // int expressions — never to an int-typed variable (which is a CE in Dart).
+  if (conversion == AssignmentConversion.invalid ||
+      (conversion == AssignmentConversion.intToDouble &&
+          !value.isConstInt)) {
     throw CompileError(
       description ?? 'Cannot assign ${value.type} to $target',
       source,
@@ -33,6 +70,21 @@ Variable convertForAssignment(
   }
 
   var converted = value;
+  if (conversion == AssignmentConversion.intToDouble) {
+    final intVar = converted.unboxIfNeeded(ctx, false);
+    var widened = Variable.ssa(
+      ctx,
+      IntToDouble(ctx.svar('toDouble'), intVar.ssa),
+      CoreTypes.double.ref(ctx).copyWith(boxed: false),
+      declaredType: target,
+      representation: MachineRepresentation.doublePrecision,
+    );
+    if ((representation ?? representationForType(target)) ==
+        MachineRepresentation.object) {
+      widened = widened.boxIfNeeded(ctx, source);
+    }
+    return widened;
+  }
   if (conversion == AssignmentConversion.runtimeCheck) {
     converted = converted.boxIfNeeded(ctx, source);
     final typeId = target.runtimeTypeId(ctx);

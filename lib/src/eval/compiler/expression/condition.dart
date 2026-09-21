@@ -70,11 +70,13 @@ BasicBlockBuilder compileCondition(
     // Every exit sees the same local representations, including a path that
     // skips RHS assignments or calls. The SSA pass still joins their values.
     ctx.resolveBranchStateDiscontinuity(initialState);
+    final leafState = ctx.saveState();
     ctx.pushOp(JumpIfFalse(value.ssa, no.label!));
     final tail = ctx.flushBlock();
     ctx.builder.link(tail, yes);
     ctx.builder.link(tail, no);
     ctx.restoreState(initialState);
+    ctx.mergeBranchState([leafState]);
   }
 
   emit(expression, whenTrue, whenFalse);

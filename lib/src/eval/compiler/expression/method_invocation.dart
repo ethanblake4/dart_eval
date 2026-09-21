@@ -282,6 +282,7 @@ Variable compileMethodInvocation(
         result,
         instantiatedType,
         concreteTypes: [instantiatedType],
+        exactType: instantiatedType,
       );
 
       return v;
@@ -345,6 +346,7 @@ Variable compileMethodInvocation(
         callResult,
         boxed,
         concreteTypes: [boxed],
+        exactType: boxed,
       );
     }
   }
@@ -513,6 +515,9 @@ Variable compileMethodInvocation(
     );
   }
 
+  final generativeCtor =
+      declaration is ConstructorDeclaration &&
+      declaration.factoryKeyword == null;
   final v = Variable.of(
     ctx,
     result,
@@ -521,6 +526,9 @@ Variable compileMethodInvocation(
       if (isConstructor && instantiatedReturnType != null)
         instantiatedReturnType,
     ],
+    // A factory may return any subtype — the result is not exactly the
+    // declared class.
+    exactType: generativeCtor ? instantiatedReturnType : null,
   );
 
   return v;
@@ -877,15 +885,31 @@ Variable _invokeWithTarget(
         ),
       );
     }
-  } else if (L.concreteTypes.length == 1 &&
-      dec0?.isBridge == false &&
-      (e.target is SuperExpression ||
-          _isDirectlyCallable(
+  } else if (dec0?.isBridge == false &&
+      switch ((
+        e.target is SuperExpression,
+        L.exactType,
+        L.concreteTypes.length == 1 ? L.concreteTypes.single : null,
+      )) {
+        // super.m() statically targets the declaring superclass.
+        (true, _, _?) => true,
+        // An allocation-site exact type can't be a subclass instance, so it
+        // dispatches directly even when the class is subclassed elsewhere.
+        (false, final exactType?, _) => _isDirectlyCallableExact(
             ctx,
-            L.concreteTypes.single,
+            exactType,
             e.methodName.name,
-          ))) {
-    final actualType = L.concreteTypes[0];
+          ),
+        (false, null, final concreteType?) => _isDirectlyCallable(
+            ctx,
+            concreteType,
+            e.methodName.name,
+          ),
+        _ => false,
+      }) {
+    final actualType = e.target is SuperExpression
+        ? L.concreteTypes[0]
+        : L.exactType ?? L.concreteTypes[0];
     final offset = DeferredOrOffset(
       file: actualType.file,
       className: actualType.name,
@@ -1146,12 +1170,22 @@ bool _hasBridgeSuperclass(CompilerContext ctx, TypeRef type) {
 }
 
 /// Whether a call to [method] on a receiver statically known to be [type] can
-/// use a fixed offset: the method must be declared on [type] itself and [type]
-/// must be neither bridged nor subclassed anywhere in the program (a subclass
-/// could override the method, requiring virtual dispatch).
+/// use a fixed offset: the method must be declared on [type] itself, [type]
+/// must be unbridged, and no descendant of [type] may redeclare [method]
+/// (a subclassed class is fine as long as the member isn't overridden).
 bool _isDirectlyCallable(CompilerContext ctx, TypeRef type, String method) {
   if (_hasBridgeSuperclass(ctx, type) ||
-      ctx.subclassedTypes.contains('${type.file}:${type.name}')) {
+      ctx.memberOverriddenInSubclass(type.file, type.name, method)) {
+    return false;
+  }
+  return _isDirectlyCallableExact(ctx, type, method);
+}
+
+/// Like [_isDirectlyCallable], but for a receiver known to be *exactly* [type]
+/// (e.g. a literal or a fresh constructor result). Subclasses elsewhere can't
+/// change which implementation runs, so the subclass check is skipped.
+bool _isDirectlyCallableExact(CompilerContext ctx, TypeRef type, String method) {
+  if (_hasBridgeSuperclass(ctx, type)) {
     return false;
   }
   final methods =

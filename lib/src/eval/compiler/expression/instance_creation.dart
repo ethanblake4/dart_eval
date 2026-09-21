@@ -96,6 +96,7 @@ Variable compileInstanceCreation(
       result,
       instantiatedType.copyWith(boxed: true),
       concreteTypes: [instantiatedType],
+      exactType: instantiatedType,
     );
   }
 
@@ -166,6 +167,10 @@ Variable compileInstanceCreation(
   }
 
   final result = ctx.svar('instance');
+  // A factory may return any subtype — the result is not exactly the
+  // declared class.
+  final isFactory = !dec0.isBridge &&
+      (dec0.declaration! as ConstructorDeclaration).factoryKeyword != null;
   if (dec0.isBridge) {
     final classBridge =
         ctx.topLevelDeclarationsMap[staticType.file]![staticType.name]?.bridge;
@@ -219,6 +224,7 @@ Variable compileInstanceCreation(
     result,
     instantiatedType.copyWith(boxed: true),
     concreteTypes: [instantiatedType],
+    exactType: isFactory ? null : instantiatedType,
   );
 }
 

@@ -112,6 +112,9 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
       ):
         inputs(operation, operandRepresentation);
         output(operation, resultRepresentation);
+      case IntToDouble():
+        inputs(operation, integer);
+        output(operation, floating);
       case memory.LoadInt():
         output(operation, integer);
       case memory.LoadDouble():
