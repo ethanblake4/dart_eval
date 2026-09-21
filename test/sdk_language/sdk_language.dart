@@ -23,6 +23,8 @@ import 'package:yaml/yaml.dart';
 
 import 'shims.dart';
 
+String _normalizeRelPath(String relPath) => relPath.replaceAll('\\', '/');
+
 /// Parsed `suite.yaml`.
 class SuiteConfig {
   SuiteConfig._(
@@ -107,7 +109,8 @@ enum TestKind {
 }
 
 class SdkTest {
-  SdkTest(this.relPath, this.kind, [this.unsupportedReason]);
+  SdkTest(String relPath, this.kind, [this.unsupportedReason])
+    : relPath = _normalizeRelPath(relPath);
 
   /// Path relative to `tests/language`, e.g. `closure/nested_test.dart`.
   final String relPath;
@@ -188,7 +191,7 @@ class SdkSuite {
             .listSync(recursive: true)
             .whereType<File>()
             .where((f) => f.path.endsWith('_test.dart'))
-            .map((f) => p.relative(f.path, from: languageRoot))
+            .map((f) => _normalizeRelPath(p.relative(f.path, from: languageRoot)))
             .toList()
           ..sort();
     return [for (final rel in files) classify(rel)];
@@ -201,6 +204,7 @@ class SdkSuite {
   ];
 
   SdkTest classify(String relPath) {
+    relPath = _normalizeRelPath(relPath);
     final exclusion = config.exclusionReason(relPath);
     if (exclusion != null) {
       return SdkTest(relPath, TestKind.unsupported, 'excluded: $exclusion');
