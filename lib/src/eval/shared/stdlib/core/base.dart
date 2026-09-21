@@ -78,8 +78,42 @@ class $bool implements $Instance {
       $extends: BridgeTypeRef(CoreTypes.object),
       isAbstract: true,
     ),
-    constructors: {},
+    constructors: {
+      'fromEnvironment': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+          params: [
+            BridgeParameter(
+              'name',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              false,
+            ),
+          ],
+          namedParams: [
+            BridgeParameter(
+              'defaultValue',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+              true,
+            ),
+          ],
+        ),
+        isFactory: true,
+      ),
+    },
     methods: {
+      'hasEnvironment': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+          params: [
+            BridgeParameter(
+              'name',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              false,
+            ),
+          ],
+        ),
+        isStatic: true,
+      ),
       '&&': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
@@ -134,6 +168,31 @@ class $bool implements $Instance {
 
   @override
   void $setProperty(Runtime runtime, String identifier, $Value value) {}
+
+  /// Wrapper for the [bool.fromEnvironment] constructor
+  static $Value? $fromEnvironment(
+    Runtime runtime,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    return $bool(
+      bool.fromEnvironment(
+        (r as $Value?)!.$value,
+        defaultValue: (s as $Value?)?.$value ?? false,
+      ),
+    );
+  }
+
+  /// Wrapper for the [bool.hasEnvironment] static method
+  static $Value? $hasEnvironment(
+    Runtime runtime,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    return $bool(bool.hasEnvironment((r as $Value?)!.$value));
+  }
 
   static const $Function __and = $Function(_and);
 
@@ -242,6 +301,26 @@ class $String implements $Instance {
                 BridgeTypeRef(CoreTypes.int),
                 nullable: true,
               ),
+              true,
+            ),
+          ],
+        ),
+        isFactory: true,
+      ),
+      'fromEnvironment': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+          params: [
+            BridgeParameter(
+              'name',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              false,
+            ),
+          ],
+          namedParams: [
+            BridgeParameter(
+              'defaultValue',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
               true,
             ),
           ],
@@ -589,6 +668,25 @@ class $String implements $Instance {
       'dart:core',
       'String.fromCharCodes',
       _fromCharCodes,
+    );
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'String.fromEnvironment',
+      _fromEnvironment,
+    );
+  }
+
+  static $Value? _fromEnvironment(
+    final Runtime runtime,
+    final Object? r,
+    final Object? s,
+    final Object? c,
+  ) {
+    return $String(
+      String.fromEnvironment(
+        (r as $Value?)!.$value,
+        defaultValue: (s as $Value?)?.$value ?? '',
+      ),
     );
   }
 

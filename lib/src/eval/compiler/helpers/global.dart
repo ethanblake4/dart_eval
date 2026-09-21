@@ -102,10 +102,21 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
   }
   if (expression is FunctionExpression) return CoreTypes.function.ref(ctx);
   if (expression is InstanceCreationExpression) {
-    return TypeRef.fromAnnotation(
+    final typeName = splitConstructorTypeName(
       ctx,
       library,
       expression.constructorName.type,
+      expression.constructorName.name?.name,
+    ).$1;
+    final resolved = ctx.visibleTypes[library]?[typeName];
+    if (resolved == null) return CoreTypes.dynamic.ref(ctx);
+    final type = expression.constructorName.type;
+    if (type.typeArguments == null) return resolved;
+    return resolved.copyWith(
+      specifiedTypeArgs: [
+        for (final arg in type.typeArguments!.arguments)
+          TypeRef.fromAnnotation(ctx, library, arg),
+      ],
     );
   }
   if (expression is BinaryExpression) {

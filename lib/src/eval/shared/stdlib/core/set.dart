@@ -55,6 +55,13 @@ class $Set<E> implements Set<E>, $Instance {
       ),
     },
     methods: {
+      'toString': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+          params: [],
+        ),
+        isStatic: false,
+      ),
       // Most methods are inherited from Iterable, so we don't need to
       // redefine them here.
       'add': BridgeMethodDef(
@@ -259,6 +266,8 @@ class $Set<E> implements Set<E>, $Instance {
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
+      case 'toString':
+        return __toString;
       case 'add':
         return __add;
       case 'addAll':
@@ -284,6 +293,18 @@ class $Set<E> implements Set<E>, $Instance {
   @override
   void $setProperty(Runtime runtime, String identifier, $Value value) {
     return _superclass.$setProperty(runtime, identifier, value);
+  }
+
+  static const $Function __toString = $Function(_toString);
+
+  static $Value? _toString(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    return collectionToString(runtime, (target as $Set).$value, '{', '}');
   }
 
   static const $Function __add = $Function(_add);

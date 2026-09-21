@@ -966,7 +966,28 @@ class $int extends $num<int> {
       $extends: BridgeTypeRef(CoreTypes.num),
       isAbstract: true,
     ),
-    constructors: {},
+    constructors: {
+      'fromEnvironment': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+          params: [
+            BridgeParameter(
+              'name',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              false,
+            ),
+          ],
+          namedParams: [
+            BridgeParameter(
+              'defaultValue',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              true,
+            ),
+          ],
+        ),
+        isFactory: true,
+      ),
+    },
     methods: {
       'parse': BridgeMethodDef(
         BridgeFunctionDef(
@@ -1358,6 +1379,21 @@ class $int extends $num<int> {
     return $int(result);
   }
 
+  /// Wrapper for the [int.fromEnvironment] constructor
+  static $Value? $fromEnvironment(
+    Runtime runtime,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    return $int(
+      int.fromEnvironment(
+        (r as $Value?)!.$value,
+        defaultValue: (s as $Value?)?.$value ?? 0,
+      ),
+    );
+  }
+
   @override
   int get $reified => $value;
 
@@ -1384,6 +1420,8 @@ class $int extends $num<int> {
         return __shiftRight;
       case '^':
         return __bitwiseXor;
+      case '~':
+        return __bitwiseNot;
       case '~/':
         return __truncatediv;
       case 'abs':
@@ -1514,6 +1552,18 @@ class $int extends $num<int> {
     }
 
     throw UnimplementedError();
+  }
+
+  static const $Function __bitwiseNot = $Function(_bitwiseNot);
+
+  static $Value? _bitwiseNot(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    return $int(~(target!.$value as int));
   }
 
   static const __truncatediv = $Function(_truncatediv);

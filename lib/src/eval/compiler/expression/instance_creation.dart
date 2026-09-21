@@ -17,10 +17,12 @@ Variable compileInstanceCreation(
   InstanceCreationExpression e,
 ) {
   final type = e.constructorName.type;
-  final name = type.importPrefix == null
-      ? (e.constructorName.name?.name ?? '')
-      : type.name.lexeme;
-  final typeName = type.importPrefix?.name.lexeme ?? type.name.lexeme;
+  final (typeName, name) = splitConstructorTypeName(
+    ctx,
+    ctx.library,
+    type,
+    e.constructorName.name?.name,
+  );
   final $resolved = IdentifierReference(null, typeName).getValue(ctx);
 
   if ($resolved.concreteTypes.isEmpty) {
@@ -28,7 +30,17 @@ Variable compileInstanceCreation(
   }
 
   final staticType = $resolved.concreteTypes.first;
-  final instantiatedType = TypeRef.fromAnnotation(ctx, ctx.library, type);
+  var instantiatedType = staticType.copyWith(
+    nullable: type.question != null,
+  );
+  if (type.typeArguments != null) {
+    instantiatedType = instantiatedType.copyWith(
+      specifiedTypeArgs: [
+        for (final arg in type.typeArguments!.arguments)
+          TypeRef.fromAnnotation(ctx, ctx.library, arg),
+      ],
+    );
+  }
 
   // A class that declares no constructors gets a synthesized `Name.` body
   // taking only the runtime-type argument, with no lookup-table entry.

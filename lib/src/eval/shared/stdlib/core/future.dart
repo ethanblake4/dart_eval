@@ -5,6 +5,8 @@ import 'dart:async';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart'
     show TypedRuntimeInterop, WrappedException;
+import 'package:dart_eval/src/eval/runtime/typed/typed_instance.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/async/stream.dart';
 import 'package:dart_eval/stdlib/core.dart';
 
 /// Wrapper for [Future]
@@ -15,6 +17,26 @@ class $Future<T> implements Future<T>, $Instance {
       'dart:core',
       'Future.delayed',
       _futureDelayed,
+    );
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'Future.value',
+      _futureValue,
+    );
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'Future.error',
+      _futureError,
+    );
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'Future.sync',
+      _futureSync,
+    );
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'Future.microtask',
+      _futureMicrotask,
     );
   }
 
@@ -34,6 +56,73 @@ class $Future<T> implements Future<T>, $Instance {
           namedParams: [],
         ),
       ),
+      'value': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future)),
+          params: [
+            BridgeParameter(
+              'value',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.dynamic),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+          namedParams: [],
+        ),
+        isFactory: true,
+      ),
+      'error': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future)),
+          params: [
+            BridgeParameter(
+              'error',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object)),
+              false,
+            ),
+            BridgeParameter(
+              'stackTrace',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.stackTrace),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+          namedParams: [],
+        ),
+        isFactory: true,
+      ),
+      'sync': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future)),
+          params: [
+            BridgeParameter(
+              'computation',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
+              false,
+            ),
+          ],
+          namedParams: [],
+        ),
+        isFactory: true,
+      ),
+      'microtask': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future)),
+          params: [
+            BridgeParameter(
+              'computation',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
+              false,
+            ),
+          ],
+          namedParams: [],
+        ),
+        isFactory: true,
+      ),
     },
     methods: {
       'then': BridgeMethodDef(
@@ -46,6 +135,13 @@ class $Future<T> implements Future<T>, $Instance {
               false,
             ),
           ],
+          namedParams: [],
+        ),
+      ),
+      'asStream': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.stream)),
+          params: [],
           namedParams: [],
         ),
       ),
@@ -75,6 +171,8 @@ class $Future<T> implements Future<T>, $Instance {
     switch (identifier) {
       case 'then':
         return __then;
+      case 'asStream':
+        return __asStream;
       default:
         return _superclass.$getProperty(runtime, identifier);
     }
@@ -121,6 +219,18 @@ class $Future<T> implements Future<T>, $Instance {
     );
   }
 
+  static const $Function __asStream = $Function(_asStream);
+
+  static $Value? _asStream(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    return $Stream.wrap((target as $Future).$value.asStream());
+  }
+
   @override
   Future<R> then<R>(
     FutureOr<R> Function(T value) onValue, {
@@ -138,4 +248,33 @@ class $Future<T> implements Future<T>, $Instance {
 
 $Value? _futureDelayed(Runtime runtime, Object? r, Object? s, Object? c) {
   return $Future.wrap(Future.delayed((r as $Value).$value));
+}
+
+/// Eval objects ([TypedInstance]) have no host value — the future completes
+/// with the instance itself so `then` hands it back via [Runtime.wrap].
+Object? _futureArg(Object? arg) =>
+    arg is TypedInstance ? arg : (arg is $Value ? arg.$value : arg);
+
+$Value? _futureValue(Runtime runtime, Object? r, Object? s, Object? c) {
+  return $Future.wrap(Future.value(_futureArg(r)));
+}
+
+$Value? _futureError(Runtime runtime, Object? r, Object? s, Object? c) {
+  final error = _futureArg(r);
+  final stackTrace = _futureArg(s);
+  return $Future.wrap(Future.error(error ?? Object(), stackTrace as StackTrace?));
+}
+
+$Value? _futureSync(Runtime runtime, Object? r, Object? s, Object? c) {
+  final computation = r as EvalFunction;
+  return $Future.wrap(
+    Future.sync(() => computation.call(runtime, null, null, null, 0)?.$value),
+  );
+}
+
+$Value? _futureMicrotask(Runtime runtime, Object? r, Object? s, Object? c) {
+  final computation = r as EvalFunction;
+  return $Future.wrap(
+    Future.microtask(() => computation.call(runtime, null, null, null, 0)?.$value),
+  );
 }

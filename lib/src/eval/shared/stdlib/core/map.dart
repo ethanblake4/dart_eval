@@ -16,11 +16,13 @@ class $Map<K, V> implements Map<K, V>, $Instance {
   int _checkOwnerType = -1;
 
   static void configureForRuntime(Runtime runtime) {
-    return runtime.registerBridgeFuncRegisters(
+    runtime.registerBridgeFuncRegisters('dart:core', 'Map.', _$Map$new);
+    runtime.registerBridgeFuncRegisters(
       'dart:core',
       'Map.from',
       _$Map$from,
     );
+    runtime.registerBridgeFuncRegisters('dart:core', 'Map.of', _$Map$of);
   }
 
   static const $type = BridgeTypeRef(CoreTypes.map);
@@ -31,6 +33,28 @@ class $Map<K, V> implements Map<K, V>, $Instance {
       generics: {'K': BridgeGenericParam(), 'V': BridgeGenericParam()},
     ),
     constructors: {
+      '': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          params: [],
+          generics: {'K': BridgeGenericParam(), 'V': BridgeGenericParam()},
+        ),
+        isFactory: true,
+      ),
+      'of': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation($type, nullable: false),
+              false,
+            ),
+          ],
+          generics: {'K': BridgeGenericParam(), 'V': BridgeGenericParam()},
+        ),
+        isFactory: true,
+      ),
       'from': BridgeConstructorDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation($type),
@@ -102,6 +126,67 @@ class $Map<K, V> implements Map<K, V>, $Instance {
                   BridgeTypeAnnotation(BridgeTypeRef.ref('V')),
                 ]),
               ),
+              false,
+            ),
+          ],
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+        ),
+        isStatic: false,
+      ),
+      'toString': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+          params: [],
+        ),
+        isStatic: false,
+      ),
+      'clear': BridgeMethodDef(
+        BridgeFunctionDef(
+          params: [],
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+        ),
+        isStatic: false,
+      ),
+      'containsValue': BridgeMethodDef(
+        BridgeFunctionDef(
+          params: [
+            BridgeParameter(
+              'value',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object),
+                nullable: true,
+              ),
+              false,
+            ),
+          ],
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+        ),
+        isStatic: false,
+      ),
+      'putIfAbsent': BridgeMethodDef(
+        BridgeFunctionDef(
+          params: [
+            BridgeParameter(
+              'key',
+              BridgeTypeAnnotation(BridgeTypeRef.ref('K')),
+              false,
+            ),
+            BridgeParameter(
+              'ifAbsent',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
+              false,
+            ),
+          ],
+          returns: BridgeTypeAnnotation(BridgeTypeRef.ref('V')),
+        ),
+        isStatic: false,
+      ),
+      'forEach': BridgeMethodDef(
+        BridgeFunctionDef(
+          params: [
+            BridgeParameter(
+              'action',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
               false,
             ),
           ],
@@ -201,10 +286,20 @@ class $Map<K, V> implements Map<K, V>, $Instance {
     wrap: true,
   );
 
+  static $Value? _$Map$new(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $Map.wrap({});
+  }
+
   static $Value? _$Map$from(Runtime runtime, Object? r, Object? s, Object? c) {
     final other = (r as $Value?)?.$value as Map;
 
     return $Map.wrap(Map.from(other));
+  }
+
+  static $Value? _$Map$of(Runtime runtime, Object? r, Object? s, Object? c) {
+    final other = (r as $Value?)?.$value as Map;
+
+    return $Map.wrap(Map.of(other));
   }
 
   @override
@@ -225,8 +320,18 @@ class $Map<K, V> implements Map<K, V>, $Instance {
         return __cast;
       case 'length':
         return $int($value.length);
+      case 'toString':
+        return __toString;
+      case 'clear':
+        return __clear;
       case 'containsKey':
         return __containsKey;
+      case 'containsValue':
+        return __containsValue;
+      case 'putIfAbsent':
+        return __putIfAbsent;
+      case 'forEach':
+        return __forEach;
       case 'remove':
         return __remove;
       case 'entries':
@@ -321,6 +426,79 @@ class $Map<K, V> implements Map<K, V>, $Instance {
     Object? c,
   ) {
     return $bool((target!.$value as Map).containsKey((r as $Value?)));
+  }
+
+  static const $Function __toString = $Function(_toString);
+
+  static $Value? _toString(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    return mapToString(runtime, (target as $Map).$value.cast());
+  }
+
+  static const $Function __clear = $Function(_clear);
+
+  static $Value? _clear(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    (target!.$value as Map).clear();
+    return null;
+  }
+
+  static const $Function __containsValue = $Function(_containsValue);
+
+  static $Value? _containsValue(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    return $bool((target!.$value as Map).containsValue((r as $Value?)));
+  }
+
+  static const $Function __putIfAbsent = $Function(_putIfAbsent);
+
+  static $Value? _putIfAbsent(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final wrapper = target as $Map;
+    final key = (r as $Value?);
+    final ifAbsent = (s as $Value?) as EvalFunction;
+    final result = wrapper.$value.putIfAbsent(
+      key,
+      () => ifAbsent.call(runtime, null, null, null, 0),
+    );
+    wrapper._checkEntry(runtime, key, result);
+    return result as $Value?;
+  }
+
+  static const $Function __forEach = $Function(_forEach);
+
+  static $Value? _forEach(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final action = (r as $Value?) as EvalFunction;
+    (target!.$value as Map).forEach(
+      (key, value) => action.call(runtime, null, key as $Value?, value as $Value?, 2),
+    );
+    return null;
   }
 
   static const $Function __remove = $Function(_remove);

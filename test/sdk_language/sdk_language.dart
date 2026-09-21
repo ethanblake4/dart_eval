@@ -224,9 +224,10 @@ class SdkSuite {
     return SdkTest(relPath, TestKind.runnable);
   }
 
-  /// Static-error markers used by the SDK test runner.
+  /// Static-error markers used by the SDK test runner, including multitest
+  /// `//# NN: compile-time error` annotations.
   static final _negativePattern = RegExp(
-    r'//\s*(\[cfe\]|\[analyzer\]|\[error line|\^)',
+    r'//\s*(\[cfe\]|\[analyzer\]|\[error line|\^|#\s*\d+.*compile-time error)',
   );
 
   /// SDK test-harness options dart_eval can't honor.

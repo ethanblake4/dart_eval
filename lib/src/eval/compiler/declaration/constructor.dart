@@ -263,7 +263,14 @@ void compileConstructorDeclaration(
     $super = BuiltinValue().push(ctx);
   } else {
     (extendsDecl, prefix) = _resolveSuperclass(ctx, $extends);
-    $super = extendsDecl.isBridge
+    if (extendsDecl.isBridge && _isObjectWrapper(ctx, extendsDecl.bridge!)) {
+      // `extends Object` is the implicit superclass already — elide the
+      // wrapper so the class is created as a plain (non-bridge) instance.
+      extendsDecl = null;
+    }
+    $super = extendsDecl == null
+        ? BuiltinValue().push(ctx)
+        : extendsDecl.isBridge
         ? Variable.ssa(
             ctx,
             NewBridgeSuperShim(ctx.svar('shim')),
@@ -348,7 +355,7 @@ void compileConstructorDeclaration(
   }
 
   var ssa = <SSA>[];
-  if ($extends != null && extendsDecl!.isBridge) {
+  if ($extends != null && extendsDecl != null && extendsDecl.isBridge) {
     ssa = _bridgeSuperArgs(
       ctx,
       extendsDecl,
@@ -416,7 +423,14 @@ void compileDefaultConstructor(
     $super = BuiltinValue().push(ctx);
   } else {
     (extendsDecl, prefix) = _resolveSuperclass(ctx, $extends);
-    $super = extendsDecl.isBridge
+    if (extendsDecl.isBridge && _isObjectWrapper(ctx, extendsDecl.bridge!)) {
+      // `extends Object` is the implicit superclass already — elide the
+      // wrapper so the class is created as a plain (non-bridge) instance.
+      extendsDecl = null;
+    }
+    $super = extendsDecl == null
+        ? BuiltinValue().push(ctx)
+        : extendsDecl.isBridge
         ? Variable.ssa(
             ctx,
             NewBridgeSuperShim(ctx.svar('shim')),
@@ -524,6 +538,15 @@ void _setupEnum(CompilerContext ctx, EnumDeclaration parent, SSA inst) {
   ctx.pushOp(SetPropertyStatic(inst, 0, SSA('arg_0')));
   ctx.pushOp(SetPropertyStatic(inst, 1, SSA('arg_1')));
 }
+
+/// Whether [bridge] is the `dart:core` `Object` wrapper — the one wrapper a
+/// class may name in an `extends` clause, where it means the same thing as no
+/// superclass at all.
+bool _isObjectWrapper(CompilerContext ctx, BridgeDeclaration bridge) =>
+    bridge is BridgeClassDef &&
+    !bridge.bridge &&
+    TypeRef.fromBridgeTypeRef(ctx, bridge.type.type) ==
+        CoreTypes.object.ref(ctx);
 
 /// Resolves a class's `extends` clause to the superclass's declaration and the
 /// import prefix (if any) it was named through.
@@ -678,7 +701,7 @@ void _emitConstructorReturn(
   required SSA $super,
   required List<SSA> args,
 }) {
-  if ($extends == null || !extendsDecl!.isBridge) {
+  if (extendsDecl == null || !extendsDecl.isBridge) {
     ctx.pushOp(Return(inst));
     return;
   }
@@ -686,7 +709,7 @@ void _emitConstructorReturn(
   final bridge = extendsDecl.bridge! as BridgeClassDef;
   if (!bridge.bridge) {
     throw CompileError(
-      'Bridge class ${$extends.superclass} is a wrapper, not a bridge, so you can\'t extend it',
+      'Bridge class ${$extends!.superclass} is a wrapper, not a bridge, so you can\'t extend it',
     );
   }
 
@@ -695,7 +718,7 @@ void _emitConstructorReturn(
     BridgeInstantiate(
       bridgeInst,
       ctx.bridgeStaticFunctionIndices[extendsDecl
-          .sourceLib]!['${$extends.superclass.name.lexeme}.$constructorName']!,
+          .sourceLib]!['${$extends!.superclass.name.lexeme}.$constructorName']!,
       inst,
       args,
       runtimeTypeId: TypeRef.fromAnnotation(

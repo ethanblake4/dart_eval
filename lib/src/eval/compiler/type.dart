@@ -230,7 +230,10 @@ class TypeRef {
       );
     }
     typeAnnotation as NamedType;
-    final n = typeAnnotation.name.stringValue ?? typeAnnotation.name.value();
+    final prefix = typeAnnotation.importPrefix;
+    final n = prefix == null
+        ? typeAnnotation.name.stringValue ?? typeAnnotation.name.value()
+        : '${prefix.name.lexeme}.${typeAnnotation.name.lexeme}';
     final unspecifiedType =
         typeParameters[n] ??
         ctx.temporaryTypes[library]?[n] ??
@@ -822,23 +825,31 @@ class TypeRef {
             .toList() ??
         [];
 
+    // `extends`/`with`/`implements` targets may be prefixed (`p.C`); the
+    // visible-types map keys prefixed types as 'prefix.Name'.
+    String clauseTypeName(NamedType clauseName) {
+      final prefix = clauseName.importPrefix;
+      return prefix == null
+          ? clauseName.name.lexeme
+          : '${prefix.name.lexeme}.${clauseName.name.lexeme}';
+    }
+
+    TypeRef resolveClauseType(NamedType clauseName) =>
+        (ctx.visibleTypes[file]![clauseTypeName(clauseName)] ??
+                (throw CompileError(
+                  'Type ${clauseTypeName(clauseName)} not found',
+                  source,
+                )))
+            .copyWith(specifiedTypeArgs: resolveClauseTypeArgs(clauseName))
+            .resolveTypeChain(
+              ctx,
+              recursionGuard: rg,
+              stack: stack0,
+              source: source,
+            );
+
     if (superName != null) {
-      final typeParams = resolveClauseTypeArgs(superName);
-      final prefix = superName.importPrefix;
-      final superPrefix = prefix != null ? '${prefix.name.value()}.' : '';
-      $super =
-          (ctx.visibleTypes[file]!['$superPrefix${superName.name.lexeme}'] ??
-                  (throw CompileError(
-                    'Superclass ${superName.name.lexeme} not found',
-                    source,
-                  )))
-              .copyWith(specifiedTypeArgs: typeParams)
-              .resolveTypeChain(
-                ctx,
-                recursionGuard: rg,
-                stack: stack0,
-                source: source,
-              );
+      $super = resolveClauseType(superName);
     } else if (declaration.declaration is EnumDeclaration) {
       $super = CoreTypes.enumType.ref(ctx);
     } else if (!declaration.isBridge) {
@@ -846,31 +857,11 @@ class TypeRef {
     }
 
     for (final withName in withNames) {
-      final typeParams = resolveClauseTypeArgs(withName);
-      $with.add(
-        ctx.visibleTypes[file]![withName.name.value()]!
-            .copyWith(specifiedTypeArgs: typeParams)
-            .resolveTypeChain(
-              ctx,
-              recursionGuard: rg,
-              stack: stack0,
-              source: source,
-            ),
-      );
+      $with.add(resolveClauseType(withName));
     }
 
     for (final implementsName in implementsNames) {
-      final typeParams = resolveClauseTypeArgs(implementsName);
-      $implements.add(
-        ctx.visibleTypes[file]![implementsName.name.value()]!
-            .copyWith(specifiedTypeArgs: typeParams)
-            .resolveTypeChain(
-              ctx,
-              recursionGuard: rg,
-              stack: stack0,
-              source: source,
-            ),
-      );
+      $implements.add(resolveClauseType(implementsName));
     }
 
     final resolvedRef = TypeRef(
@@ -1430,6 +1421,29 @@ class TypeRef {
       }
     }
   }
+}
+
+/// Splits an instance-creation's type head into the class-name key and the
+/// constructor selector. The analyzer represents `p.C()`, `p.C.n()`, and
+/// `C.n()` alike as `NamedType(importPrefix: first, name: second)` plus an
+/// optional trailing selector, so whether the first segment is an import
+/// prefix (vs. the class itself) is decided by [ctx]'s visible declarations.
+(String typeName, String ctorName) splitConstructorTypeName(
+  CompilerContext ctx,
+  int library,
+  NamedType type,
+  String? trailingSelector,
+) {
+  final prefix = type.importPrefix;
+  if (prefix != null &&
+      ctx.visibleDeclarations[library]?[prefix.name.lexeme]?.children !=
+          null) {
+    return ('${prefix.name.lexeme}.${type.name.lexeme}', trailingSelector ?? '');
+  }
+  if (prefix != null) {
+    return (prefix.name.lexeme, type.name.lexeme);
+  }
+  return (type.name.lexeme, trailingSelector ?? '');
 }
 
 class RecordParameterType {

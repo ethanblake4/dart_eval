@@ -46,6 +46,12 @@ Variable compilePropertyAccess(
     return out;
   }
 
+  // `p.C.member` parses as PropertyAccess over the class identifier — static
+  // member access lives in IdentifierReference, same as MethodInvocation.
+  if (L.type == CoreTypes.type.ref(ctx) && L.concreteTypes.length == 1) {
+    return IdentifierReference(L, pa.propertyName.name).getValue(ctx, pa);
+  }
+
   return L.getProperty(ctx, pa.propertyName.name);
 }
 

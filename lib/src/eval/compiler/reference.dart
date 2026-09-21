@@ -580,9 +580,13 @@ class IdentifierReference implements Reference {
         ctx.visibleDeclarations[ctx.library]![name.split('.')[0]] ??
         (throw CompileError('Could not find declaration "$name"', source));
 
-    final activeDec =
-        declaration.declaration ??
-        declaration.children?[name.split('.').sublist(1).join('.')] ??
+    // Prefix children are keyed by declaration name ('B'), so a prefixed
+    // member reference 'p.B.ctor' resolves 'B' here; [_declarationToVariable]
+    // handles the member suffix via _refName.
+    final split = name.split('.');
+    final children = declaration.children;
+    final activeDec = declaration.declaration ??
+        (split.length > 1 && children != null ? children[split[1]] : null) ??
         (throw PrefixError());
 
     return _declarationToVariable(activeDec, _refName, ctx, source);

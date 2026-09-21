@@ -1158,17 +1158,20 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
         visibleDeclarations.addAll(result);
       }
 
-      final mappedVisibleDeclarations = {
-        if (import.prefix != null)
-          import.prefix!: DeclarationOrPrefix(
-            children: {for (final d in visibleDeclarations) d.$1: d.$2},
-          )
-        else
+      if (import.prefix != null) {
+        // Multiple imports may share one prefix (`import a as p; import b as
+        // p;`) — merge their members instead of overwriting.
+        final dop = visibleDeclarationsLib[import.prefix!] ??=
+            DeclarationOrPrefix(children: {});
+        (dop.children ??= {}).addAll({
+          for (final d in visibleDeclarations) d.$1: d.$2,
+        });
+      } else {
+        visibleDeclarationsLib.addAll({
           for (final d in visibleDeclarations)
             d.$1: DeclarationOrPrefix(declaration: d.$2),
-      };
-
-      visibleDeclarationsLib.addAll(mappedVisibleDeclarations);
+        });
+      }
     }
 
     result[l] = visibleDeclarationsLib;

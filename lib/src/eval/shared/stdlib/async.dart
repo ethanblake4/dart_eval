@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async/completer.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async/stream_controller.dart';
@@ -15,6 +17,22 @@ class DartAsyncPlugin implements EvalPlugin {
 
   @override
   void configureForCompile(BridgeDeclarationRegistry registry) {
+    registry.defineBridgeTopLevelFunction(
+      BridgeFunctionDeclaration(
+        'dart:async',
+        'scheduleMicrotask',
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          params: [
+            BridgeParameter(
+              'callback',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
+              false,
+            ),
+          ],
+        ),
+      ),
+    );
     $Completer.configureForCompile(registry);
     $StreamSubscription.configureForCompile(registry);
     $StreamSink.configureForCompile(registry);
@@ -27,6 +45,11 @@ class DartAsyncPlugin implements EvalPlugin {
 
   @override
   void configureForRuntime(Runtime runtime) {
+    runtime.registerBridgeFuncRegisters(
+      'dart:async',
+      'scheduleMicrotask',
+      _scheduleMicrotask,
+    );
     $Completer.configureForRuntime(runtime);
     $StreamSubscription.configureForRuntime(runtime);
     $StreamSink.configureForRuntime(runtime);
@@ -36,4 +59,17 @@ class DartAsyncPlugin implements EvalPlugin {
     $Timer.configureForRuntime(runtime);
     $StreamTransformer.configureForRuntime(runtime);
   }
+}
+
+$Value? _scheduleMicrotask(
+  Runtime runtime,
+  Object? r,
+  Object? s,
+  Object? c,
+) {
+  final callback = r as EvalFunction;
+  scheduleMicrotask(() {
+    callback.call(runtime, null, null, null, 0);
+  });
+  return null;
 }

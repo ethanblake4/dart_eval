@@ -13,7 +13,15 @@ class $Object implements $Instance {
       $extends: BridgeTypeRef(CoreTypes.dynamic),
       isAbstract: true,
     ),
-    constructors: {},
+    constructors: {
+      '': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object)),
+          params: [],
+        ),
+        isFactory: false,
+      ),
+    },
     methods: {
       '!=': BridgeMethodDef(
         BridgeFunctionDef(
@@ -205,6 +213,11 @@ class $Object implements $Instance {
       $value,
       Invocation.method(Symbol(identifier), null),
     );
+  }
+
+  /// Wrapper for the [Object.new] constructor
+  static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $Object(Object());
   }
 
   /// dart_eval implementation of [Object.hash]

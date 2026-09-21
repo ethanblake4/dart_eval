@@ -871,12 +871,14 @@ DeclarationOrBridge<ClassMember, BridgeMethodDef> resolveInstanceMethod(
         bottomType0,
       );
     }
+    final superclass = $class.extendsClause!.superclass;
+    final prefix = superclass.importPrefix;
+    final superName = prefix == null
+        ? superclass.name.lexeme
+        : '${prefix.name.lexeme}.${superclass.name.lexeme}';
     final $supertype =
-        ctx.visibleTypes[instanceType.file]![$class
-            .extendsClause!
-            .superclass
-            .name
-            .value()]!;
+        ctx.visibleTypes[instanceType.file]![superName] ??
+        (throw CompileError('Superclass $superName not found', source));
     return resolveInstanceMethod(
       ctx,
       $supertype,

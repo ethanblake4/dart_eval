@@ -80,11 +80,32 @@ class EvalFunctionType {
     int library,
     GenericFunctionType annotation,
   ) {
+    // The function type's own type parameters (`Function<A>(A x)`) are
+    // resolvable inside its bounds, parameters, and return type. Their owner
+    // is the annotation node so re-resolving the same alias stays canonical.
+    final ownParams =
+        annotation.typeParameters?.typeParameters ?? const <TypeParameter>[];
+    final typeParameters = <String, TypeRef>{
+      for (var i = 0; i < ownParams.length; i++)
+        ownParams[i].name.lexeme: TypeRef(
+          library,
+          ownParams[i].name.lexeme,
+          resolved: true,
+          typeParameterOwner: 'functionType:$library:${annotation.offset}',
+          typeParameterIndex: i,
+        ),
+    };
+
     FunctionTypeAnnotation resolve(TypeAnnotation? type) =>
         FunctionTypeAnnotation.type(
           type == null
               ? CoreTypes.dynamic.ref(ctx)
-              : TypeRef.fromAnnotation(ctx, library, type),
+              : TypeRef.fromAnnotation(
+                  ctx,
+                  library,
+                  type,
+                  typeParameters: typeParameters,
+                ),
         );
 
     TypeAnnotation? parameterType(FormalParameter parameter) {

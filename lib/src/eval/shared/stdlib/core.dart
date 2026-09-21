@@ -116,9 +116,25 @@ class DartCorePlugin implements EvalPlugin {
     runtime.registerBridgeFuncRegisters('dart:core', 'int.parse', $int.$parse);
     runtime.registerBridgeFuncRegisters(
       'dart:core',
+      'int.fromEnvironment',
+      $int.$fromEnvironment,
+    );
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'bool.fromEnvironment',
+      $bool.$fromEnvironment,
+    );
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'bool.hasEnvironment',
+      $bool.$hasEnvironment,
+    );
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
       'int.tryParse',
       $int.$tryParse,
     );
+    runtime.registerBridgeFuncRegisters('dart:core', 'Object.', $Object.$new);
     runtime.registerBridgeFuncRegisters(
       'dart:core',
       'Object.hash',

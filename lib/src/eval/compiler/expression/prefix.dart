@@ -17,6 +17,7 @@ import 'expression.dart';
 const _opMap = {
   TokenType.MINUS: '-',
   TokenType.BANG: '!',
+  TokenType.TILDE: '~',
   TokenType.PLUS_PLUS: '+',
   TokenType.MINUS_MINUS: '-',
 };
@@ -53,6 +54,13 @@ Variable compilePrefixExpression(
       'Unary prefix "!" is currently only supported for bools (type: ${V.type})',
       e,
     );
+  } else if (method == '~' &&
+      !isDynamic &&
+      V.type != CoreTypes.int.ref(ctx)) {
+    throw CompileError(
+      'Unary prefix "~" is currently only supported for ints (type: ${V.type})',
+      e,
+    );
   }
 
   if (method == "!") {
@@ -68,6 +76,9 @@ Variable compilePrefixExpression(
   }
 
   if (isDynamic) return V.invoke(ctx, method, []).result;
+
+  // `~x` is a true nullary operator on the operand, not `0 ~ x`.
+  if (method == '~') return V.invoke(ctx, method, []).result;
 
   return _zeroForType(V.type, ctx).push(ctx).invoke(ctx, method, [V]).result;
 }

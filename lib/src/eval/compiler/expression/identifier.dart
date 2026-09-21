@@ -114,7 +114,11 @@ Reference compilePrefixedIdentifierAsReference(
   final $extendsClause = $dec is ClassDeclaration ? $dec.extendsClause : null;
   if ($withClause != null) {
     for (final $mixin in $withClause.mixinTypes) {
-      final mixinType = ctx.visibleTypes[library]![$mixin.name.stringValue!]!;
+      final mixinPrefix = $mixin.importPrefix;
+      final mixinName = mixinPrefix == null
+          ? $mixin.name.lexeme
+          : '${mixinPrefix.name.lexeme}.${$mixin.name.lexeme}';
+      final mixinType = ctx.visibleTypes[library]![mixinName]!;
       final result = resolveInstanceDeclaration(
         ctx,
         mixinType.file,

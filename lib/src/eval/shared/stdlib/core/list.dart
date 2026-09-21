@@ -239,6 +239,13 @@ class $List<E> implements List<E>, $Instance {
     },
     fields: {},
     methods: {
+      'toString': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+          params: [],
+        ),
+        isStatic: false,
+      ),
       'castFrom': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(
@@ -1150,6 +1157,8 @@ class $List<E> implements List<E>, $Instance {
     switch (identifier) {
       case 'length':
         return $int($value.length);
+      case 'toString':
+        return __toString;
       case 'reversed':
         return $Iterable.wrap($value.reversed);
       case 'cast':
@@ -1297,6 +1306,18 @@ class $List<E> implements List<E>, $Instance {
 
   @override
   List<R> cast<R>() => $value.cast();
+  static const __toString = $Function(_toString);
+
+  static $Value? _toString(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    return collectionToString(runtime, (target as $List).$value, '[', ']');
+  }
+
   static const __$cast = $Function(_$cast);
   static $Value? _$cast(
     Runtime runtime,

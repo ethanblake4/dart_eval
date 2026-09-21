@@ -93,6 +93,13 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     },
     fields: {},
     methods: {
+      'toString': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+          params: [],
+        ),
+        isStatic: false,
+      ),
       'castFrom': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(
@@ -804,6 +811,8 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     switch (identifier) {
       case 'iterator':
         return $Iterator.wrap($value.iterator);
+      case 'toString':
+        return __toString;
       case 'length':
         return $int($value.length);
       case 'isEmpty':
@@ -907,6 +916,18 @@ class $Iterable<E> implements Iterable<E>, $Instance {
 
   @override
   Iterable<R> cast<R>() => $value.cast();
+  static const __toString = $Function(_toString);
+
+  static $Value? _toString(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    return collectionToString(runtime, (target as $Iterable).$value, '(', ')');
+  }
+
   static const __$cast = $Function(_$cast);
   static $Value? _$cast(
     Runtime runtime,
