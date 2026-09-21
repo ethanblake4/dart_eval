@@ -42,7 +42,54 @@ class ArgumentListResult {
   ArgumentListResult(this.ssa, this.args, this.namedArgs);
 }
 
-Variable _omittedArgument(
+/// Converts an already-compiled argument to the representation the callee's
+/// ABI expects for [param]: boxed unless the parameter type crosses the
+/// function boundary unboxed (never for [MethodDeclaration] hosts, whose
+/// dynamic dispatch ABI is always boxed). Tear-offs materialize last.
+Variable coerceArgumentForParameter(
+  CompilerContext ctx,
+  Variable arg0,
+  TypeRef paramType,
+  FormalParameter param,
+  Declaration parameterHost, {
+  bool genericParameter = false,
+  AstNode? source,
+}) {
+  arg0 = convertForAssignment(
+    ctx,
+    arg0,
+    paramType,
+    representation:
+        parameterHost is MethodDeclaration ||
+            genericParameter ||
+            !paramType.isUnboxedAcrossFunctionBoundaries
+        ? MachineRepresentation.object
+        : representationForType(paramType.copyWith(boxed: false)),
+    source: source ?? parameterHost,
+    description:
+        'Cannot assign argument of type ${arg0.type.toStringClear(ctx, paramType)} '
+        'to parameter "${param.name!.lexeme}" of type '
+        '${paramType.toStringClear(ctx, arg0.type)}',
+  );
+  if (parameterHost is MethodDeclaration ||
+      genericParameter ||
+      !paramType.isUnboxedAcrossFunctionBoundaries) {
+    arg0 = arg0.boxIfNeeded(ctx);
+  } else if (paramType.isUnboxedAcrossFunctionBoundaries) {
+    arg0 = arg0.unboxIfNeeded(ctx);
+  }
+
+  if (arg0.type == CoreTypes.function.ref(ctx) &&
+      arg0.name == null &&
+      arg0.methodOffset != null) {
+    arg0 = arg0.tearOff(ctx);
+  }
+  return arg0;
+}
+
+/// Compiles the fallback value for [parameter] when the caller supplies no
+/// argument: the parameter's default expression, or null.
+Variable compileOmittedArgument(
   CompilerContext ctx,
   int library,
   FormalParameter parameter,
@@ -103,6 +150,31 @@ ArgumentListResult compileArgumentList(
   List<String> superParams = const [],
   AstNode? source,
 }) {
+  // A redirecting factory (`factory F(...) = T.g`) exposes the redirect
+  // target's signature to callers: argument binding, conversion, and omitted
+  // defaults all resolve against the target constructor's parameters.
+  if (parameterHost is ConstructorDeclaration &&
+      parameterHost.redirectedConstructor != null) {
+    final redirect = parameterHost.redirectedConstructor!;
+    final (typeName, ctorName) = splitConstructorTypeName(
+      ctx,
+      decLibrary,
+      redirect.type,
+      redirect.name?.name,
+    );
+    final targetRef = ctx.visibleTypes[decLibrary]![typeName];
+    final targetDecl = targetRef == null
+        ? null
+        : ctx.topLevelDeclarationsMap[targetRef
+            .file]!['${targetRef.name}.$ctorName']
+              ?.declaration;
+    if (targetDecl is ConstructorDeclaration) {
+      decLibrary = targetRef!.file;
+      fpl = targetDecl.parameters.parameters;
+      parameterHost = targetDecl;
+    }
+  }
+
   final ssa = <SSA>[];
   final args = <Variable>[];
   final push = <Variable>[...before];
@@ -140,7 +212,7 @@ ArgumentListResult compileArgumentList(
       if (param.isRequired) {
         throw CompileError('Not enough positional arguments');
       } else {
-        final value = _omittedArgument(ctx, decLibrary, param, parameterHost);
+        final value = compileOmittedArgument(ctx, decLibrary, param, parameterHost);
         push.add(value);
         args.add(value);
       }
@@ -148,7 +220,7 @@ ArgumentListResult compileArgumentList(
       if (param.isRequired) {
         throw CompileError('Not enough positional arguments');
       } else {
-        final value = _omittedArgument(ctx, decLibrary, param, parameterHost);
+        final value = compileOmittedArgument(ctx, decLibrary, param, parameterHost);
         push.add(value);
         args.add(value);
       }
@@ -167,35 +239,15 @@ ArgumentListResult compileArgumentList(
           resolveGenerics.containsKey(typeAnnotation.name.lexeme);
 
       var arg0 = compileExpression(arg.argumentExpression, ctx, paramType);
-      arg0 = convertForAssignment(
+      arg0 = coerceArgumentForParameter(
         ctx,
         arg0,
         paramType,
-        representation:
-            parameterHost is MethodDeclaration ||
-                genericParameter ||
-                !paramType.isUnboxedAcrossFunctionBoundaries
-            ? MachineRepresentation.object
-            : representationForType(paramType.copyWith(boxed: false)),
-        source: source ?? parameterHost,
-        description:
-            'Cannot assign argument of type ${arg0.type.toStringClear(ctx, paramType)} '
-            'to parameter "${param.name!.lexeme}" of type '
-            '${paramType.toStringClear(ctx, arg0.type)}',
+        param,
+        parameterHost,
+        genericParameter: genericParameter,
+        source: source,
       );
-      if (parameterHost is MethodDeclaration ||
-          genericParameter ||
-          !paramType.isUnboxedAcrossFunctionBoundaries) {
-        arg0 = arg0.boxIfNeeded(ctx);
-      } else if (paramType.isUnboxedAcrossFunctionBoundaries) {
-        arg0 = arg0.unboxIfNeeded(ctx);
-      }
-
-      if (arg0.type == CoreTypes.function.ref(ctx) &&
-          arg0.name == null &&
-          arg0.methodOffset != null) {
-        arg0 = arg0.tearOff(ctx);
-      }
 
       if (typeAnnotation != null) {
         final n = typeAnnotation is NamedType
@@ -259,35 +311,15 @@ ArgumentListResult compileArgumentList(
           typeAnnotation is NamedType &&
           resolveGenerics.containsKey(typeAnnotation.name.lexeme);
       var arg0 = compileExpression(namedExpr[name]!, ctx, paramType);
-      arg0 = convertForAssignment(
+      arg0 = coerceArgumentForParameter(
         ctx,
         arg0,
         paramType,
-        representation:
-            parameterHost is MethodDeclaration ||
-                genericParameter ||
-                !paramType.isUnboxedAcrossFunctionBoundaries
-            ? MachineRepresentation.object
-            : representationForType(paramType.copyWith(boxed: false)),
-        source: source ?? parameterHost,
-        description:
-            'Cannot assign argument of type ${arg0.type.toStringClear(ctx, paramType)} '
-            'to parameter "${param.name!.lexeme}" of type '
-            '${paramType.toStringClear(ctx, arg0.type)}',
+        param,
+        parameterHost,
+        genericParameter: genericParameter,
+        source: source,
       );
-      if (parameterHost is MethodDeclaration ||
-          genericParameter ||
-          !paramType.isUnboxedAcrossFunctionBoundaries) {
-        arg0 = arg0.boxIfNeeded(ctx);
-      } else if (paramType.isUnboxedAcrossFunctionBoundaries) {
-        arg0 = arg0.unboxIfNeeded(ctx);
-      }
-
-      if (arg0.type == CoreTypes.function.ref(ctx) &&
-          arg0.name == null &&
-          arg0.methodOffset != null) {
-        arg0 = arg0.tearOff(ctx);
-      }
 
       if (typeAnnotation != null) {
         final n = typeAnnotation is NamedType
@@ -302,7 +334,7 @@ ArgumentListResult compileArgumentList(
       push.add(arg0);
       namedArgs[name] = arg0;
     } else {
-      final value = _omittedArgument(ctx, decLibrary, param0, parameterHost);
+      final value = compileOmittedArgument(ctx, decLibrary, param0, parameterHost);
       push.add(value);
       namedArgs[name] = value;
     }
@@ -355,7 +387,7 @@ ArgumentListResult compileSuperParams(
       if (param.isRequired) {
         throw CompileError('Not enough positional arguments');
       } else {
-        final value = _omittedArgument(ctx, ctx.library, param, parameterHost);
+        final value = compileOmittedArgument(ctx, ctx.library, param, parameterHost);
         push.add(value);
         args.add(value);
       }
@@ -369,7 +401,7 @@ ArgumentListResult compileSuperParams(
       push.add(V);
       namedArgs[name] = V;
     } else {
-      final value = _omittedArgument(ctx, ctx.library, n.value, parameterHost);
+      final value = compileOmittedArgument(ctx, ctx.library, n.value, parameterHost);
       push.add(value);
       namedArgs[name] = value;
     }

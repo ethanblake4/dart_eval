@@ -70,7 +70,7 @@ Variable compileExpression(
   } else if (e is AwaitExpression) {
     return compileAwaitExpression(e, ctx);
   } else if (e is InstanceCreationExpression) {
-    return compileInstanceCreation(ctx, e);
+    return compileInstanceCreation(ctx, e, bound);
   } else if (e is ParenthesizedExpression) {
     return compileParenthesizedExpression(e, ctx);
   } else if (e is ThrowExpression) {

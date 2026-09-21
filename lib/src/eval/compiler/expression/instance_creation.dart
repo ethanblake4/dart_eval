@@ -14,8 +14,9 @@ import 'package:dart_eval/src/eval/ir/flow.dart';
 
 Variable compileInstanceCreation(
   CompilerContext ctx,
-  InstanceCreationExpression e,
-) {
+  InstanceCreationExpression e, [
+  TypeRef? bound,
+]) {
   final type = e.constructorName.type;
   final (typeName, name) = splitConstructorTypeName(
     ctx,
@@ -40,6 +41,17 @@ Variable compileInstanceCreation(
           TypeRef.fromAnnotation(ctx, ctx.library, arg),
       ],
     );
+  } else if (bound != null) {
+    // Downward inference: `Optional.absent()` under `Optional<int>` produces
+    // `Optional<int>`.
+    final boundChain = bound.resolveTypeChain(ctx);
+    if (boundChain.file == staticType.file &&
+        boundChain.name == staticType.name &&
+        boundChain.specifiedTypeArgs.isNotEmpty) {
+      instantiatedType = instantiatedType.copyWith(
+        specifiedTypeArgs: boundChain.specifiedTypeArgs,
+      );
+    }
   }
 
   // A class that declares no constructors gets a synthesized `Name.` body
@@ -93,6 +105,38 @@ Variable compileInstanceCreation(
     final dec = dec0.declaration!;
     final fpl = (dec as ConstructorDeclaration).parameters.parameters;
 
+    // Constructor signatures reference the class's type parameters; seed them
+    // from the instantiated type (or bounds for a raw invocation) so argument
+    // types resolve and inference can refine them.
+    final classDecl =
+        ctx.topLevelDeclarationsMap[staticType.file]![staticType
+            .name]
+        ?.declaration;
+    final classTypeParams = switch (classDecl) {
+      ClassDeclaration(:final namePart) =>
+        namePart.typeParameters?.typeParameters,
+      MixinDeclaration(:final typeParameters) =>
+        typeParameters?.typeParameters,
+      _ => null,
+    };
+    final seedGenerics = <String, TypeRef>{};
+    if (classTypeParams != null) {
+      for (var i = 0; i < classTypeParams.length; i++) {
+        final bound = classTypeParams[i].bound;
+        seedGenerics[classTypeParams[i].name.lexeme] =
+            i < instantiatedType.specifiedTypeArgs.length
+                ? instantiatedType.specifiedTypeArgs[i]
+                : bound == null
+                ? CoreTypes.dynamic.ref(ctx)
+                : TypeRef.fromAnnotation(
+                    ctx,
+                    staticType.file,
+                    bound,
+                    typeParameters: seedGenerics,
+                  );
+      }
+    }
+
     arguments = compileArgumentList(
       ctx,
       e.argumentList,
@@ -100,6 +144,7 @@ Variable compileInstanceCreation(
       fpl,
       dec,
       source: e,
+      resolveGenerics: seedGenerics,
     );
     //_args = argsPair.first;
     //_namedArgs = argsPair.second;

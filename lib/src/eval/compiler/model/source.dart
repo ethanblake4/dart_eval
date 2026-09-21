@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:analyzer/dart/analysis/features.dart';
 import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/diagnostic/diagnostic.dart';
@@ -114,7 +115,13 @@ class DartSource {
 }
 
 CompilationUnit _parse(String source, DiagnosticMode diagnosticMode) {
-  final d = parseString(content: source, throwIfDiagnostics: false);
+  final d = parseString(
+    content: source,
+    throwIfDiagnostics: false,
+    // Enable experiments the compiler can parse but doesn't fully implement,
+    // so tests exercising the syntax fail on semantics, not on parsing.
+    featureSet: FeatureSet.latestLanguageVersion(flags: ['variance']),
+  );
   if (d.errors.isNotEmpty) {
     for (final error in d.errors) {
       if (error.severity == Severity.error &&

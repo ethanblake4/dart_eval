@@ -531,7 +531,30 @@ class TypedBackend {
     final parameters =
         context.functionParameters[functionId] ?? const <FormalParameter>[];
     final declarations = context.topLevelDeclarationsMap[libraryId]!;
-    final declaration = declarations[name]?.declaration;
+    var declaration = declarations[name]?.declaration;
+    var parameterLibrary = libraryId;
+    var parameterHost = declaration;
+    if (declaration is ConstructorDeclaration &&
+        declaration.redirectedConstructor != null) {
+      // Redirecting factories bind and forward in the target's signature.
+      final redirect = declaration.redirectedConstructor!;
+      final (redirectTypeName, redirectCtorName) = splitConstructorTypeName(
+        context,
+        libraryId,
+        redirect.type,
+        redirect.name?.name,
+      );
+      final redirectRef = context.visibleTypes[libraryId]![redirectTypeName];
+      final redirectDecl = redirectRef == null
+          ? null
+          : context.topLevelDeclarationsMap[redirectRef
+              .file]!['${redirectRef.name}.$redirectCtorName']
+                ?.declaration;
+      if (redirectDecl is ConstructorDeclaration) {
+        parameterHost = redirectDecl;
+        parameterLibrary = redirectRef!.file;
+      }
+    }
     final constructorOwner = _constructorOwner(library, name);
     final previousTypes = {...?context.temporaryTypes[libraryId]};
     final typeParameters = switch (constructorOwner) {
@@ -573,7 +596,12 @@ class TypedBackend {
             : -1,
         parameters: [
           for (final parameter in parameters)
-            _exportParameter(libraryId, parameter, declaration, indices),
+            _exportParameter(
+              parameterLibrary,
+              parameter,
+              parameterHost,
+              indices,
+            ),
         ],
       );
     } finally {

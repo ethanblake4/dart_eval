@@ -414,11 +414,15 @@ Variable _invokeWithTarget(
 
   ArgumentListResult argsPair;
 
+  // `C.new(...)` invokes the unnamed constructor.
+  final staticMemberName =
+      e.methodName.name == 'new' ? '' : e.methodName.name;
+
   if (L.type == CoreTypes.type.ref(ctx) && L.concreteTypes.length == 1) {
     // Static method
     staticType = L.concreteTypes[0];
     if (ctx.topLevelDeclarationsMap[staticType
-            .file]!['${staticType.name}.${e.methodName.name}'] ==
+            .file]!['${staticType.name}.$staticMemberName'] ==
         null) {
       // Not a static member of the class — it's an instance method of the
       // `Type` object itself (`Foo.toString()`, `Foo.hashCode`, ...).
@@ -429,7 +433,7 @@ Variable _invokeWithTarget(
       ];
       return L.invoke(ctx, e.methodName.name, args).result;
     }
-    dec0 = resolveStaticMethod(ctx, staticType, e.methodName.name);
+    dec0 = resolveStaticMethod(ctx, staticType, staticMemberName);
     isStatic = true;
   } else if (L.type == CoreTypes.function.ref(ctx) &&
       e.methodName.name == 'call') {
@@ -551,7 +555,7 @@ Variable _invokeWithTarget(
         InvokeExternal(
           result,
           ctx.bridgeStaticFunctionIndices[staticType!
-              .file]!['${staticType.name}.${e.methodName.name}']!,
+              .file]!['${staticType.name}.$staticMemberName']!,
           argsPair.ssa,
         ),
       );
@@ -560,7 +564,7 @@ Variable _invokeWithTarget(
         ctx,
         staticType!.file,
         staticType.name,
-        e.methodName.name,
+        staticMemberName,
       );
       final callArguments = [...argsPair.ssa];
       final declaration = dec0.declaration;
@@ -633,7 +637,7 @@ Variable _invokeWithTarget(
   mReturnType ??= AlwaysReturnType.fromInstanceMethodOrBuiltin(
     ctx,
     isStatic ? staticType! : L.type,
-    e.methodName.name,
+    staticMemberName,
     argTypes,
     namedArgTypes,
     $static: isStatic,

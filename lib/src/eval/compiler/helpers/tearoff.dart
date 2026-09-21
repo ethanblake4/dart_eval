@@ -29,9 +29,11 @@ extension TearOff on Variable {
       }
       declaration = declared.declaration!;
     }
-    final parameters = declaration is MethodDeclaration
-        ? declaration.parameters
-        : (declaration as FunctionDeclaration).functionExpression.parameters;
+    final parameters = switch (declaration) {
+      MethodDeclaration() => declaration.parameters,
+      ConstructorDeclaration() => declaration.parameters,
+      _ => (declaration as FunctionDeclaration).functionExpression.parameters,
+    };
     final positional =
         parameters?.parameters.where((param) => param.isPositional).toList() ??
         <FormalParameter>[];
@@ -103,6 +105,13 @@ extension TearOff on Variable {
         declaration.functionExpression.parameters,
         declaration.returnType,
         declaration.functionExpression.typeParameters,
+      ),
+      ConstructorDeclaration() => declaredFunctionType(
+        ctx,
+        offset.file ?? ctx.library,
+        declaration.parameters,
+        null,
+        null,
       ),
       _ => CoreTypes.function.ref(ctx),
     };

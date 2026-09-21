@@ -30,7 +30,7 @@ void compileConstructorDeclaration(
   List<FieldDeclaration> fields,
 ) {
   final parentName = declarationName(parent);
-  final dName = (d.name?.lexeme) ?? "";
+  final dName = d.name?.lexeme == "new" ? "" : (d.name?.lexeme) ?? "";
   final n = '$parentName.$dName';
   final isEnum = parent is EnumDeclaration;
 
@@ -79,9 +79,18 @@ void compileConstructorDeclaration(
   final fieldIdx = fieldIndices.length;
 
   final fieldFormalNames = <String>[];
+  // A redirecting factory's call ABI is its redirect target's parameter
+  // list: callers bind arguments in the target's declaration order and pad
+  // omitted slots with the target's defaults, so bind incoming slots to the
+  // target's parameters.
+  final redirectTarget = _redirectTarget(ctx, d);
+  final redirectTargetDecl = redirectTarget?.$4.declaration;
+
   final resolvedParams = resolveFPLDefaults(
     ctx,
-    d.parameters,
+    redirectTargetDecl is ConstructorDeclaration
+        ? redirectTargetDecl.parameters
+        : d.parameters,
     false,
     allowUnboxed: true,
     isEnum: parent is EnumDeclaration,
@@ -103,15 +112,25 @@ void compileConstructorDeclaration(
     }
     if (p is FieldFormalParameter) {
       TypeRef? type0;
-      if (p.type != null) {
+      if (redirectTargetDecl != null) {
+        // Bound against the redirect target's fields, not this class's.
+        type0 = getFormalParameterType(
+          ctx,
+          p,
+          redirectTarget!.$2.file,
+          redirectTargetDecl,
+        ).$1;
+      } else if (p.type != null) {
         type0 = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
       }
-      type0 ??= TypeRef.lookupFieldType(
-        ctx,
-        TypeRef.lookupDeclaration(ctx, ctx.library, parent),
-        p.name.lexeme,
-        source: p,
-      );
+      if (redirectTargetDecl == null) {
+        type0 ??= TypeRef.lookupFieldType(
+          ctx,
+          TypeRef.lookupDeclaration(ctx, ctx.library, parent),
+          p.name.lexeme,
+          source: p,
+        );
+      }
       type0 ??= CoreTypes.dynamic.ref(ctx);
       parameterRepresentations.add(
         representationForType(type0.typeAcrossFunctionBoundary),
@@ -138,7 +157,11 @@ void compileConstructorDeclaration(
     } else {
       var type = CoreTypes.dynamic.ref(ctx);
       if (p.type != null) {
-        type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
+        type = TypeRef.fromAnnotation(
+          ctx,
+          redirectTarget?.$2.file ?? ctx.library,
+          p.type!,
+        );
       }
       type = type.copyWith(
         boxed: !unboxedAcrossFunctionBoundaries.contains(type),
@@ -174,6 +197,79 @@ void compileConstructorDeclaration(
   // Handle factory constructor
   if (d.factoryKeyword != null) {
     final b = d.body;
+
+    if (redirectTarget != null) {
+      // `factory C.f(...) = D.g;` forwards its parameters along the target's
+      // parameter layout; omitted slots use the target's defaults.
+      final (targetType, targetRef, ctorName, targetCtor) = redirectTarget;
+      final result = ctx.svar('instance');
+      if (targetCtor.isBridge) {
+        final argSsa = <SSA>[];
+        final namedParams = <FormalParameter>[];
+        for (final p in d.parameters.parameters) {
+          if (p.isNamed) {
+            namedParams.add(p);
+          } else {
+            argSsa.add(ctx.lookupLocal(p.name!.lexeme)!.boxIfNeeded(ctx).ssa);
+          }
+        }
+        namedParams.sort((a, b) => a.name!.lexeme.compareTo(b.name!.lexeme));
+        argSsa.addAll(
+          namedParams.map(
+            (p) => ctx.lookupLocal(p.name!.lexeme)!.boxIfNeeded(ctx).ssa,
+          ),
+        );
+        final externalId =
+            ctx.bridgeStaticFunctionIndices[targetRef
+                .file]!['${targetRef.name}.$ctorName']!;
+        ctx.pushOp(InvokeExternal(result, externalId, argSsa));
+      } else {
+        final ctorDecl = targetCtor.declaration! as ConstructorDeclaration;
+        // The callee binds the target's parameter layout, so forwarding is
+        // a pass-through of each local in declaration order.
+        final argSsa = <SSA>[];
+        for (final p in ctorDecl.parameters.parameters) {
+          final (paramType, _) = getFormalParameterType(
+            ctx,
+            p,
+            targetRef.file,
+            ctorDecl,
+          );
+          argSsa.add(
+            coerceArgumentForParameter(
+              ctx,
+              ctx.lookupLocal(p.name!.lexeme)!,
+              paramType ?? CoreTypes.dynamic.ref(ctx),
+              p,
+              ctorDecl,
+              source: d,
+            ).ssa,
+          );
+        }
+        if (ctorDecl.factoryKeyword == null) {
+          argSsa.add(
+            BuiltinValue(
+              intval: targetType.runtimeTypeId(ctx),
+            ).push(ctx).ssa,
+          );
+        }
+        ctx.pushOp(
+          Call(
+            DeferredOrOffset.lookupStatic(
+              ctx,
+              targetRef.file,
+              targetRef.name,
+              ctorName,
+            ),
+            argSsa,
+            result: result,
+          ),
+        );
+      }
+      ctx.pushOp(Return(result));
+      ctx.endScope();
+      return;
+    }
 
     if (b.isAsynchronous || b.isGenerator) {
       throw CompileError(
@@ -218,7 +314,8 @@ void compileConstructorDeclaration(
 
   // Handle redirecting constructor
   if ($redirectingInitializer != null) {
-    final name = $redirectingInitializer.constructorName?.name ?? '';
+    final ctorName0 = $redirectingInitializer.constructorName?.name;
+    final name = ctorName0 == 'new' ? '' : ctorName0 ?? '';
     final dec0 = resolveStaticMethod(ctx, clsType, name);
     final dec = dec0.declaration!;
     final fpl = (dec as ConstructorDeclaration).parameters.parameters;
@@ -257,7 +354,8 @@ void compileConstructorDeclaration(
   DeclarationOrBridge? extendsDecl;
   ImportPrefixReference? prefix;
 
-  final constructorName = $superInitializer?.constructorName?.name ?? '';
+  final ctorName1 = $superInitializer?.constructorName?.name;
+    final constructorName = ctorName1 == 'new' ? '' : ctorName1 ?? '';
 
   if ($extends == null) {
     $super = BuiltinValue().push(ctx);
@@ -730,4 +828,37 @@ void _emitConstructorReturn(
   );
   ctx.pushOp(ParentBridgeSuperShim($super, bridgeInst));
   ctx.pushOp(Return(bridgeInst));
+}
+
+/// Resolves `factory C.f(...) = T.g` to (instantiated target type, raw target
+/// type, target ctor name, target ctor entry) — or null when [d] isn't a
+/// redirecting factory or the target can't be resolved.
+(TypeRef, TypeRef, String, DeclarationOrBridge)? _redirectTarget(
+  CompilerContext ctx,
+  ConstructorDeclaration d,
+) {
+  final redirected = d.redirectedConstructor;
+  if (d.factoryKeyword == null || redirected == null) return null;
+  final (typeName, ctorName) = splitConstructorTypeName(
+    ctx,
+    ctx.library,
+    redirected.type,
+    redirected.name?.name,
+  );
+  final targetType = TypeRef.fromAnnotation(ctx, ctx.library, redirected.type);
+  final targetRef =
+      ctx.visibleTypes[ctx.library]![typeName] ??
+      (throw CompileError(
+        'Redirecting factory target $typeName not found',
+        d,
+      ));
+  final targetCtor = ctx.topLevelDeclarationsMap[targetRef
+      .file]!['${targetRef.name}.$ctorName'];
+  if (targetCtor == null) {
+    throw CompileError(
+      'Redirecting factory target ${targetRef.name}.$ctorName not found',
+      d,
+    );
+  }
+  return (targetType, targetRef, ctorName, targetCtor);
 }

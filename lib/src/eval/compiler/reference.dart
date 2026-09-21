@@ -430,7 +430,28 @@ class IdentifierReference implements Reference {
             );
           }
         }
-        final fqName = '${classType.name}.$name';
+        final fqName = '${classType.name}.${name == 'new' ? '' : name}';
+        final member = ctx.topLevelDeclarationsMap[classType.file]![fqName];
+        final memberDecl = member?.declaration;
+        if (member != null &&
+            !member.isBridge &&
+            memberDecl is! VariableDeclaration) {
+          if (memberDecl is ConstructorDeclaration) {
+            throw CompileError(
+              'Constructor tear-off "$fqName" is not supported',
+              source,
+            );
+          }
+          // Static method tear-off.
+          return Variable(
+            CoreTypes.function.ref(ctx),
+            methodOffset: DeferredOrOffset(
+              file: classType.file,
+              name: fqName,
+            ),
+            callingConvention: CallingConvention.static,
+          );
+        }
         return _loadGlobalVariable(ctx, classType.file, fqName, name);
       }
       object = object!.boxIfNeeded(ctx, source);

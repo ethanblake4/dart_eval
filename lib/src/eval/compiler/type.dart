@@ -248,7 +248,14 @@ class TypeRef {
           alias,
           nullable: typeAnnotation.question != null,
           typeArgs: typeAnnotation.typeArguments?.arguments,
+          callerTypeParameters: typeParameters,
         );
+      }
+      // `FutureOr<T>` is a union type (`Future<T> | T`), which this compiler
+      // cannot represent; it degrades to `dynamic` so `is`/`as` and
+      // assignability checks remain permissive in both directions.
+      if (n == 'FutureOr') {
+        return CoreTypes.dynamic.ref(ctx);
       }
       throw CompileError(
         'Unknown type $n',
@@ -465,6 +472,38 @@ class TypeRef {
     if (ctx.instanceDeclarationsMap[$class.file]!.containsKey($class.name)) {
       final $declarations =
           ctx.instanceDeclarationsMap[$class.file]![$class.name]!;
+      // Member annotations can reference the class's type parameters; resolve
+      // them in the class's type environment rather than the caller's.
+      final classDecl =
+          ctx.topLevelDeclarationsMap[$class.file]![$class.name]!.declaration;
+      final typeParams = classDecl is ClassDeclaration
+          ? classDecl.namePart.typeParameters?.typeParameters
+          : null;
+      final previousTypes = {...?ctx.temporaryTypes[$class.file]};
+      TypeRef.loadTemporaryTypes(
+        ctx,
+        typeParams,
+        library: $class.file,
+        owner: 'class:${$class.file}:${$class.name}',
+      );
+      // A raw type use substitutes the parameter's bound (instantiate to
+      // bounds); otherwise the argument at the same position.
+      TypeRef substituteClassTypeArguments(TypeRef resolved) {
+        final substitutions = <(String, int), TypeRef>{};
+        for (var i = 0; i < (typeParams?.length ?? 0); i++) {
+          final bound = ctx
+              .temporaryTypes[$class.file]![typeParams![i].name.lexeme]!
+              .typeParameterBound;
+          substitutions[('class:${$class.file}:${$class.name}', i)] =
+              i < $class.specifiedTypeArgs.length
+                  ? $class.specifiedTypeArgs[i]
+                  : ((bound ?? CoreTypes.dynamic.ref(ctx))
+                      .substituteTypeParameters(substitutions));
+        }
+        if (substitutions.isEmpty) return resolved;
+        return resolved.substituteTypeParameters(substitutions);
+      }
+      try {
       if (forSet) {
         if ($declarations.containsKey('$field*s')) {
           final f = $declarations['$field*s'];
@@ -479,7 +518,9 @@ class TypeRef {
           if (annotation == null) {
             return null;
           }
-          return TypeRef.fromAnnotation(ctx, $class.file, annotation);
+          return substituteClassTypeArguments(
+            TypeRef.fromAnnotation(ctx, $class.file, annotation),
+          );
         }
       }
       if ($declarations.containsKey(field)) {
@@ -495,10 +536,8 @@ class TypeRef {
         }
         final annotation = (f.parent as VariableDeclarationList).type;
         if (annotation != null) {
-          return TypeRef.fromAnnotation(
-            ctx,
-            $class.file,
-            annotation,
+          return substituteClassTypeArguments(
+            TypeRef.fromAnnotation(ctx, $class.file, annotation),
           ).copyWith(boxed: true);
         }
         if (ctx.inferredFieldTypes.containsKey($class.file) &&
@@ -521,7 +560,12 @@ class TypeRef {
         if (annotation == null) {
           return null;
         }
-        return TypeRef.fromAnnotation(ctx, $class.file, annotation);
+        return substituteClassTypeArguments(
+          TypeRef.fromAnnotation(ctx, $class.file, annotation),
+        );
+      }
+      } finally {
+        ctx.temporaryTypes[$class.file] = previousTypes;
       }
     }
     final dec = ctx.topLevelDeclarationsMap[$class.file]![$class.name]!;
@@ -774,6 +818,20 @@ class TypeRef {
       superName = extendsClause?.superclass;
       withNames = withClause?.mixinTypes.toList() ?? [];
       implementsNames = implementsClause?.interfaces.toList() ?? [];
+      // Bounds can reference earlier parameters (`S extends T`), so resolve
+      // them with the class's own parameters already seeded.
+      final paramRefs = {
+        for (var i = 0;
+            i < (typeParameters?.typeParameters.length ?? 0);
+            i++)
+          typeParameters!.typeParameters[i].name.lexeme: TypeRef(
+            file,
+            typeParameters.typeParameters[i].name.lexeme,
+            resolved: true,
+            typeParameterOwner: 'class:$file:$name',
+            typeParameterIndex: i,
+          ),
+      };
       generics =
           typeParameters?.typeParameters
               .map(
@@ -781,7 +839,12 @@ class TypeRef {
                   t.name.lexeme,
                   t.bound == null
                       ? null
-                      : TypeRef.fromAnnotation(ctx, file, t.bound!),
+                      : TypeRef.fromAnnotation(
+                          ctx,
+                          file,
+                          t.bound!,
+                          typeParameters: paramRefs,
+                        ),
                 ),
               )
               .toList() ??
@@ -1436,16 +1499,23 @@ class TypeRef {
   NamedType type,
   String? trailingSelector,
 ) {
+  // `.new` names the unnamed constructor.
+  final ctorName = trailingSelector == 'new' ? '' : trailingSelector ?? '';
   final prefix = type.importPrefix;
   if (prefix != null &&
       ctx.visibleDeclarations[library]?[prefix.name.lexeme]?.children !=
           null) {
-    return ('${prefix.name.lexeme}.${type.name.lexeme}', trailingSelector ?? '');
+    // `prefix.C.new`: trailing selector already folded into [ctorName].
+    return ('${prefix.name.lexeme}.${type.name.lexeme}', ctorName);
   }
   if (prefix != null) {
+    // `C.new` parses `C` as the prefix and `new` as the type name.
+    if (type.name.lexeme == 'new') {
+      return (prefix.name.lexeme, '');
+    }
     return (prefix.name.lexeme, type.name.lexeme);
   }
-  return (type.name.lexeme, trailingSelector ?? '');
+  return (type.name.lexeme, ctorName);
 }
 
 class RecordParameterType {
@@ -1797,6 +1867,7 @@ TypeRef resolveTypeAlias(
   TypeAlias alias, {
   bool nullable = false,
   List<TypeAnnotation>? typeArgs,
+  Map<String, TypeRef> callerTypeParameters = const {},
 }) {
   final typeParameters = switch (alias) {
         GenericTypeAlias(:final typeParameters) => typeParameters,
@@ -1821,7 +1892,12 @@ TypeRef resolveTypeAlias(
             typeParameterOwner: 'typeAlias:$library:${alias.name.lexeme}',
             typeParameterIndex: i,
           )
-        : TypeRef.fromAnnotation(ctx, library, arg);
+        : TypeRef.fromAnnotation(
+            ctx,
+            library,
+            arg,
+            typeParameters: callerTypeParameters,
+          );
   }
 
   final TypeRef target;

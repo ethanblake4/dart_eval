@@ -15,6 +15,11 @@ class $Future<T> implements Future<T>, $Instance {
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
       'dart:core',
+      'Future.',
+      _futureNew,
+    );
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
       'Future.delayed',
       _futureDelayed,
     );
@@ -43,6 +48,20 @@ class $Future<T> implements Future<T>, $Instance {
   static const $declaration = BridgeClassDef(
     BridgeClassType(BridgeTypeRef(CoreTypes.future), isAbstract: true),
     constructors: {
+      '': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future)),
+          params: [
+            BridgeParameter(
+              'computation',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
+              false,
+            ),
+          ],
+          namedParams: [],
+        ),
+        isFactory: true,
+      ),
       'delayed': BridgeConstructorDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future)),
@@ -263,6 +282,15 @@ $Value? _futureError(Runtime runtime, Object? r, Object? s, Object? c) {
   final error = _futureArg(r);
   final stackTrace = _futureArg(s);
   return $Future.wrap(Future.error(error ?? Object(), stackTrace as StackTrace?));
+}
+
+// `Future(computation)` queues on the event loop (after microtasks), so it
+// must not reuse the microtask/sync paths.
+$Value? _futureNew(Runtime runtime, Object? r, Object? s, Object? c) {
+  final computation = r as EvalFunction;
+  return $Future.wrap(
+    Future(() => computation.call(runtime, null, null, null, 0)?.$value),
+  );
 }
 
 $Value? _futureSync(Runtime runtime, Object? r, Object? s, Object? c) {
