@@ -438,14 +438,26 @@ class TypeRef {
   }
 
   static TypeRef? $this(CompilerContext ctx) {
-    if (ctx.currentClass == null) {
+    final currentClass = ctx.currentClass;
+    if (currentClass == null) {
       return null;
     }
-    return TypeRef.lookupDeclaration(
+    final ref = TypeRef.lookupDeclaration(
       ctx,
       ctx.enclosingLibrary ?? ctx.library,
-      ctx.currentClass!,
+      currentClass,
     );
+    // Inside the class, `this` is self-instantiated: `C<T>` where `T` is the
+    // class's own parameter — not the raw declaration type `C<dynamic>`.
+    final resolved = ref.resolved ? ref : ref.resolveTypeChain(ctx);
+    if (resolved.genericParams.isNotEmpty) {
+      final params = classLikeClauses(currentClass).$4;
+      final refs = classTypeParameterRefs(ref.file, ref.name, params);
+      if (refs.isNotEmpty) {
+        return ref.copyWith(specifiedTypeArgs: refs.values.toList());
+      }
+    }
+    return ref;
   }
 
   factory TypeRef.lookupDeclaration(
@@ -798,6 +810,11 @@ class TypeRef {
                 stack: stack0,
                 source: source,
               );
+          // Null's nominal superclass is Object, but `Null <: T` holds only
+          // when T is nullable or a top type — model that as extends Object?.
+          if (this == CoreTypes.nullType.ref(ctx)) {
+            $super = $super.copyWith(nullable: true);
+          }
         }
 
         for (final $i in type.$implements) {
@@ -1361,12 +1378,14 @@ class TypeRef {
       // Same parameter: identical owner and index.
       if (this == slot) return true;
       // A type parameter is assignable to [slot] iff its declared bound is.
-      return typeParameterBound?.isAssignableTo(
+      // An unbounded parameter (`<T>`) has the implicit bound `Object?`.
+      return (typeParameterBound ??
+              CoreTypes.object.ref(ctx).copyWith(nullable: true))
+          .isAssignableTo(
             ctx,
             slot,
             forceAllowDynamic: forceAllowDynamic,
-          ) ??
-          false;
+          );
     }
 
     final generics = overrideGenerics ?? specifiedTypeArgs;
@@ -1414,16 +1433,6 @@ class TypeRef {
       }
     }
 
-    // A type with a `.call` method is assignable to `Function` (implicit
-    // call — `Function f = callableObject`).
-    if (slot == CoreTypes.function.ref(ctx)) {
-      final chain = [this, ...resolveTypeChain(ctx).allSupertypes];
-      for (final t in chain) {
-        if (ctx.instanceDeclarationsMap[t.file]?[t.name]?['call'] != null) {
-          return true;
-        }
-      }
-    }
     return false;
   }
 
@@ -2330,6 +2339,52 @@ TypeRef resolveTypeAlias(
   Map<String, TypeRef> callerTypeParameters = const {},
   bool rawParams = false,
 }) {
+  // Resolve supplied type arguments first — they are finite annotations that
+  // may legally mention this same alias (`Fcov<Fcov<Never>>`). Only the
+  // alias's own body resolution is guarded against recursion.
+  final argRefs = typeArgs == null
+      ? null
+      : [
+          for (final arg in typeArgs)
+            TypeRef.fromAnnotation(
+              ctx,
+              library,
+              arg,
+              typeParameters: callerTypeParameters,
+            ),
+        ];
+  if (!ctx.resolvingTypeAliases.add(alias)) {
+    throw CompileError(
+      'Type alias ${alias.name.lexeme} references itself recursively',
+      alias,
+      library,
+      ctx,
+    );
+  }
+  try {
+    return _resolveTypeAlias(
+      ctx,
+      library,
+      alias,
+      nullable: nullable,
+      argRefs: argRefs,
+      callerTypeParameters: callerTypeParameters,
+      rawParams: rawParams,
+    );
+  } finally {
+    ctx.resolvingTypeAliases.remove(alias);
+  }
+}
+
+TypeRef _resolveTypeAlias(
+  CompilerContext ctx,
+  int library,
+  TypeAlias alias, {
+  bool nullable = false,
+  List<TypeRef>? argRefs,
+  Map<String, TypeRef> callerTypeParameters = const {},
+  bool rawParams = false,
+}) {
   final typeParameters =
       switch (alias) {
         GenericTypeAlias(:final typeParameters) => typeParameters,
@@ -2349,15 +2404,10 @@ TypeRef resolveTypeAlias(
   final bindings = <String, TypeRef>{};
   for (var i = 0; i < typeParameters.length; i++) {
     final param = typeParameters[i];
-    final arg = typeArgs == null || i >= typeArgs.length ? null : typeArgs[i];
+    final arg = argRefs == null || i >= argRefs.length ? null : argRefs[i];
     final bound = param.bound;
     if (arg != null) {
-      bindings[param.name.lexeme] = TypeRef.fromAnnotation(
-        ctx,
-        library,
-        arg,
-        typeParameters: callerTypeParameters,
-      );
+      bindings[param.name.lexeme] = arg;
     } else if (rawParams) {
       bindings[param.name.lexeme] = TypeRef(
         declLibrary,
@@ -2387,12 +2437,38 @@ TypeRef resolveTypeAlias(
   }
 
   final TypeRef target;
-  if (alias is GenericTypeAlias && alias.functionType == null) {
-    target = TypeRef.fromAnnotation(
-      ctx,
-      declLibrary,
-      alias.type,
-      typeParameters: bindings,
+  if (alias is GenericTypeAlias) {
+    final functionType = alias.functionType;
+    target = functionType == null
+        ? TypeRef.fromAnnotation(
+            ctx,
+            declLibrary,
+            alias.type,
+            typeParameters: bindings,
+          )
+        : CoreTypes.function.ref(ctx).copyWith(
+            functionType: EvalFunctionType.fromAnnotation(
+              ctx,
+              declLibrary,
+              functionType,
+              typeParameters: bindings,
+            ),
+          );
+  } else if (alias is FunctionTypeAlias) {
+    // Legacy `typedef R f(P...)` syntax declares the signature inline. The
+    // alias's parameters become the signature's own generics only under
+    // [rawParams] (downward inference); otherwise [bindings] instantiate
+    // them so the result is a plain function type.
+    target = CoreTypes.function.ref(ctx).copyWith(
+      functionType: EvalFunctionType.fromParts(
+        ctx,
+        declLibrary,
+        returnType: alias.returnType,
+        typeParameterList: rawParams ? alias.typeParameters : null,
+        parameterList: alias.parameters,
+        owner: 'typeAlias:$declLibrary:${alias.name.lexeme}',
+        typeParameters: bindings,
+      ),
     );
   } else {
     target = CoreTypes.function.ref(ctx);

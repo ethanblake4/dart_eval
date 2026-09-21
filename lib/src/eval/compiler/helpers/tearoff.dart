@@ -1,4 +1,5 @@
 import 'default_value.dart';
+import 'extension.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
@@ -23,7 +24,12 @@ extension TearOff on Variable {
                   .name]!
               as MethodDeclaration;
     } else {
-      final declared = ctx.topLevelDeclarationsMap[offset.file]![offset.name]!;
+      final declared = ctx.topLevelDeclarationsMap[offset.file]?[offset.name];
+      if (declared == null) {
+        throw CompileError(
+          'Cannot tear off unresolved member ${offset.name} (file ${offset.file})',
+        );
+      }
       if (declared.isBridge) {
         throw CompileError('Cannot tear off bridged function');
       }
@@ -75,8 +81,16 @@ extension TearOff on Variable {
       ConstructorDeclaration() => declaration.parent?.parent,
       _ => null,
     };
+    // An extension member's host is the extension; its type parameters bind
+    // to the `on` bindings of the tear-off receiver, not the enclosing class.
+    final memberExt =
+        declaration is MethodDeclaration && !declaration.isStatic
+        ? extensionOfMember(ctx, declaration)
+        : null;
     final memberParams = <String, TypeRef>{
-      if (memberHost is Declaration)
+      if (memberExt != null && implicitReceiver != null)
+        ...memberExtParams(ctx, memberExt, implicitReceiver!.type)
+      else if (memberHost is Declaration)
         ...classTypeParameterRefs(
           offset.file ?? ctx.library,
           declarationName(memberHost),
@@ -161,7 +175,9 @@ extension TearOff on Variable {
 
     final captures = <SSA>[];
     if (declaration is MethodDeclaration && !declaration.isStatic) {
-      final receiver = offset.targetName == null
+      final receiver = implicitReceiver != null
+          ? implicitReceiver!.boxIfNeeded(ctx).ssa
+          : offset.targetName == null
           ? ctx.lookupLocal('#this')?.readBinding(ctx).ssa
           : SSA(offset.targetName!);
       if (receiver == null) {

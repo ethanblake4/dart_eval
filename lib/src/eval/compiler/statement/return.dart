@@ -26,11 +26,19 @@ StatementInfo compileReturn(
   final value = expression == null
       ? null
       : compileExpression(s.expression!, ctx, expectedReturnType?.type);
+  final body = e as FunctionBody;
+  if (body.isAsynchronous &&
+      body.parent is FunctionExpression &&
+      ctx.asyncClosureReturnTypes.isNotEmpty) {
+    ctx.asyncClosureReturnTypes.last.add(
+      value?.type ?? CoreTypes.nullType.ref(ctx),
+    );
+  }
   return doReturn(
     ctx,
     expectedReturnType ?? AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true),
     value,
-    isAsync: (e as FunctionBody).isAsynchronous,
+    isAsync: body.isAsynchronous,
     skipClassBoxing: skipClassBoxing,
   );
 }

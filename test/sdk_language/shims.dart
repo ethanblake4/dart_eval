@@ -324,10 +324,10 @@ void asyncMultiTests(List<void Function()> computations) {
 }
 
 FutureOr<void> asyncExpectThrows<T extends Object>(
-    FutureOr<void> Function() computation) async {
+    Object? computation) async {
   var threw = false;
   try {
-    await computation();
+    await (computation is Function ? computation() : computation as FutureOr);
   } catch (e) {
     if (e is T) threw = true;
   }
@@ -335,19 +335,19 @@ FutureOr<void> asyncExpectThrows<T extends Object>(
 }
 
 FutureOr<void> asyncExpectThrowsWhen<T extends Object>(
-    bool condition, FutureOr<void> Function() computation) async {
+    bool condition, Object? computation) async {
   if (!condition) {
-    await computation();
+    await (computation is Function ? computation() : computation as FutureOr);
     return;
   }
   return asyncExpectThrows<T>(computation);
 }
 
 FutureOr<void> asyncExpectThrowsTypeErrorOrNSM(
-    FutureOr<void> Function() computation) async {
+    Object? computation) async {
   var threw = false;
   try {
-    await computation();
+    await (computation is Function ? computation() : computation as FutureOr);
   } catch (e) {
     if (e is TypeError || e is NoSuchMethodError) threw = true;
   }

@@ -237,6 +237,29 @@ EvalExtension? extensionOfMember(CompilerContext ctx, MethodDeclaration member) 
   return null;
 }
 
+/// Maps [ext]'s type parameter names to their bindings on [receiverType]
+/// (declared bound or dynamic where the `on` pattern leaves them free), for
+/// use as the `typeParameters:` argument of annotation resolvers.
+Map<String, TypeRef> memberExtParams(
+  CompilerContext ctx,
+  EvalExtension ext,
+  TypeRef receiverType,
+) {
+  final params =
+      ext.declaration.typeParameters?.typeParameters ?? const <TypeParameter>[];
+  if (params.isEmpty) return const {};
+  final bindings = matchExtensionOn(ctx, receiverType, ext) ?? const [];
+  return {
+    for (var i = 0; i < params.length; i++)
+      params[i].name.lexeme:
+          i < bindings.length
+              ? bindings[i]
+              : (params[i].bound == null
+                  ? CoreTypes.dynamic.ref(ctx)
+                  : TypeRef.fromAnnotation(ctx, ext.library, params[i].bound!)),
+  };
+}
+
 /// Emits a call to an extension getter: `E.name*g(receiver)` is a static
 /// call whose only argument is the receiver. [bindings] holds the resolved
 /// `on` bindings for generic extensions (empty otherwise).

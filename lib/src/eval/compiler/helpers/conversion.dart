@@ -29,10 +29,11 @@ Variable convertInitializer(
       .assignmentConversionTo(ctx, target);
   switch (conversion) {
     case AssignmentConversion.invalid:
-      throw CompileError(
-        description ?? 'Cannot assign ${value.type} to $target',
-        source,
-      );
+      return _implicitCallTearOff(ctx, value, target, source) ??
+          (throw CompileError(
+            description ?? 'Cannot assign ${value.type} to $target',
+            source,
+          ));
     case AssignmentConversion.intToDouble:
       return convertForAssignment(ctx, value, target, source: source);
     case AssignmentConversion.none:
@@ -42,6 +43,32 @@ Variable convertInitializer(
           ? value
           : convertForAssignment(ctx, value, target, source: source);
   }
+}
+
+/// The implicit `.call` tear-off: assigning a value of a class that declares
+/// `call` into a function-typed slot produces a bound `value.call` closure
+/// rather than storing the object. `is`/`as` checks are unaffected — the
+/// object itself is still not a `Function`.
+Variable? _implicitCallTearOff(
+  CompilerContext ctx,
+  Variable value,
+  TypeRef target,
+  AstNode? source,
+) {
+  if (value.type.nullable) return null;
+  if (target.functionType == null &&
+      target != CoreTypes.function.ref(ctx)) {
+    return null;
+  }
+  try {
+    final tearOff = value.getProperty(ctx, 'call', source: source);
+    if (tearOff.type.isAssignableTo(ctx, target, forceAllowDynamic: false)) {
+      return tearOff.copyWith(declaredType: target);
+    }
+  } on CompileError {
+    return null;
+  }
+  return null;
 }
 
 /// Converts [value] for a write or call boundary with Dart assignment rules.
@@ -63,10 +90,11 @@ Variable convertForAssignment(
   if (conversion == AssignmentConversion.invalid ||
       (conversion == AssignmentConversion.intToDouble &&
           !value.isConstInt)) {
-    throw CompileError(
-      description ?? 'Cannot assign ${value.type} to $target',
-      source,
-    );
+    return _implicitCallTearOff(ctx, value, target, source) ??
+        (throw CompileError(
+          description ?? 'Cannot assign ${value.type} to $target',
+          source,
+        ));
   }
 
   var converted = value;

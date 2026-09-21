@@ -263,6 +263,16 @@ class CompilerContext with ScopeContext {
   /// The library index each [TypeAlias] was declared in — an imported alias's
   /// body resolves against its own file (it may name private types).
   final typeAliasFiles = Expando<int>();
+
+  /// Aliases currently being resolved by [resolveTypeAlias], to detect
+  /// recursive typedefs (`typedef F = List<G>; typedef G = List<F>;`).
+  final resolvingTypeAliases = <TypeAlias>{};
+
+  /// Return value types seen while compiling each `async` function literal —
+  /// the closure's signature reifies `Future<S>` where `S` is the inferred
+  /// return type, matching the VM (`() async { return null; }` reifies
+  /// `() => Future<Null>`).
+  final asyncClosureReturnTypes = <List<TypeRef>>[];
   Map<int, Map<String, TypeRef>> temporaryTypes = {};
   Map<int, Map<String, DeclarationOrPrefix>> visibleDeclarations = {};
   Map<int, Map<String, int>> topLevelDeclarationPositions = {};

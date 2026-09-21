@@ -143,8 +143,9 @@ TypeRef? resolveCallResultType(
 /// true when the closure's static signature is known and every supplied
 /// argument is provably assignable without a runtime check. Runtime closures
 /// assignable to the static type have parameter types that are supertypes of
-/// the static signature's parameters, so a statically-safe argument always
-/// satisfies them.
+/// the static signature's parameters — except a `dynamic` parameter admits
+/// narrower closures (`(int)->void` is assignable to `(dynamic)->void`), so
+/// the callee's own parameter check must still run.
 bool _closureArgumentsProven(
   CompilerContext ctx,
   TypeRef closureType,
@@ -161,6 +162,7 @@ bool _closureArgumentsProven(
     if (i >= positional.length) return false;
     final paramType = positional[i].type.type;
     if (paramType == null ||
+        paramType == CoreTypes.dynamic.ref(ctx) ||
         positionalArgs[i].type
                 .resolveTypeChain(ctx)
                 .assignmentConversionTo(ctx, paramType) !=
@@ -171,6 +173,7 @@ bool _closureArgumentsProven(
   for (final entry in namedArgs.entries) {
     final paramType = signature.namedParameters[entry.key]?.type.type;
     if (paramType == null ||
+        paramType == CoreTypes.dynamic.ref(ctx) ||
         entry.value.type
                 .resolveTypeChain(ctx)
                 .assignmentConversionTo(ctx, paramType) !=

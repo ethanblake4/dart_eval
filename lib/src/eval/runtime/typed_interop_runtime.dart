@@ -359,6 +359,15 @@ extension TypedRuntimeInterop on Runtime {
     );
   }
 
+  /// Whether a bound method tear-off declares runtime-checked parameters.
+  /// Method parameters are covariant — a tear-off may be invoked through a
+  /// static signature whose parameters are wider than the callee's own, so a
+  /// trusted call site cannot see the real contract and such closures must
+  /// run their per-argument checks even on trusted calls.
+  bool hasCovariantParameterChecks(TypedClosureDescriptor descriptor) =>
+      descriptor.boundReceiver &&
+      descriptor.parameterTypeIds.any((id) => id >= 0);
+
   bool _requiresTypeEnvironment(int type) {
     final descriptor = _typeDescriptors[type];
     if (descriptor.length == 2) return false;
@@ -697,15 +706,36 @@ extension TypedRuntimeInterop on Runtime {
     final target = _typeDescriptors[expected];
     final sourceNominal = source[0], targetNominal = target[0];
     if (targetNominal == lookupType(CoreTypes.dynamic)) return true;
-    if (sourceNominal == _typedTypeId(CoreTypes.nullType) &&
-        (target[1] == 1 || nullableExpected)) {
-      return true;
+    // Never is a subtype of every type.
+    if (sourceNominal == _typedTypeId(CoreTypes.never)) return true;
+    // Null <: T only when T is nullable or a top type (dynamic handled above).
+    if (sourceNominal == _typedTypeId(CoreTypes.nullType)) {
+      return target[1] == 1 || nullableExpected;
     }
     if (source[1] == 1 && target[1] == 0 && !nullableExpected) return false;
     final targetTag = target.length > 2 && target[2] < 0 ? target[2] : null;
     if (targetTag != null) {
       final sourceTag = source.length > 2 && source[2] < 0 ? source[2] : null;
-      if (sourceTag != targetTag) return false;
+      if (sourceTag != targetTag) {
+        // A class instance satisfies a function type through its `call`
+        // method, whose signature is registered among its supertypes.
+        if (actual < _typeTypes.length) {
+          for (final candidate in _typeTypes[actual]) {
+            if (candidate >= 0 &&
+                candidate != actual &&
+                candidate < _typeDescriptors.length &&
+                _isTypedDescriptorSubtypeInEnvironment(
+                  candidate,
+                  expected,
+                  actual,
+                  callableTypeArguments,
+                )) {
+              return true;
+            }
+          }
+        }
+        return false;
+      }
       return switch (targetTag) {
         RuntimeTypeDescriptorTag.record =>
           _isTypedRecordSubtypeInClassEnvironment(
@@ -878,22 +908,22 @@ extension TypedRuntimeInterop on Runtime {
         _resolveTypeParameter(source, actualOwnerType, callableTypeArguments) ??
         source;
     final sourceDescriptor = _typeDescriptors[resolvedSource];
+    final resolvedTarget =
+        _resolveTypeParameter(
+          target,
+          actualOwnerType,
+          callableTypeArguments,
+        ) ??
+        target;
     if (sourceDescriptor[0] == _typedTypeId(CoreTypes.dynamic)) {
-      final resolvedTarget =
-          _resolveTypeParameter(
-            target,
-            actualOwnerType,
-            callableTypeArguments,
-          ) ??
-          target;
       final targetDescriptor = _typeDescriptors[resolvedTarget];
       return targetDescriptor[0] == _typedTypeId(CoreTypes.dynamic) ||
           (targetDescriptor[0] == _typedTypeId(CoreTypes.object) &&
               targetDescriptor[1] == 1);
     }
     return _isTypedDescriptorSubtypeInEnvironment(
-      source,
-      target,
+      resolvedSource,
+      resolvedTarget,
       actualOwnerType,
       callableTypeArguments,
     );

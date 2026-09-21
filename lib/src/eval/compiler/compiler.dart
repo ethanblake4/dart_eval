@@ -417,6 +417,18 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       for (final declarationOrBridge in library.declarations) {
         _populateLookupTablesForDeclaration(libraryIndex, declarationOrBridge);
       }
+      // Extensions declared in a tree-shaken library are removed from its
+      // `declarations` (their name is never referenced as an identifier), but
+      // they remain visible and callable — register the `E.member` namespace
+      // keys so explicit application and tear-offs resolve.
+      for (final ext in visibleExtensions[library] ?? const <EvalExtension>[]) {
+        if (ext.library != libraryIndex) continue;
+        _topLevelDeclarationsMap.putIfAbsent(libraryIndex, () => {});
+        for (final member in ext.members.whereType<MethodDeclaration>()) {
+          _topLevelDeclarationsMap[libraryIndex]![ext.memberKey(member)] =
+              DeclarationOrBridge(libraryIndex, declaration: member);
+        }
+      }
     }
 
     // Pass a mapping of library URI to integer index into the context
@@ -930,23 +942,10 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
 
     final declaration = declarationOrBridge.declaration!;
 
-    // Extensions declare no top-level name binding themselves, but their
-    // members resolve through the `E.member` namespace for explicit
-    // application (`E.m(recv, ...)`) and static access (`E.staticM()`).
+    // Extensions declare no top-level name binding themselves; their
+    // `E.member` namespace keys are registered from `visibleExtensions` in
+    // the caller (they survive tree-shaking of the declaration list).
     if (declaration is ExtensionDeclaration) {
-      final extName = declaration.name?.lexeme;
-      if (extName != null) {
-        for (final member in declaration.body.members.whereType<MethodDeclaration>()) {
-          final suffix = member.isGetter
-              ? '*g'
-              : member.isSetter
-              ? '*s'
-              : '';
-          _topLevelDeclarationsMap[libraryIndex]![
-                  '$extName.${member.name.lexeme}$suffix'] =
-              DeclarationOrBridge(libraryIndex, declaration: member);
-        }
-      }
       return;
     }
 

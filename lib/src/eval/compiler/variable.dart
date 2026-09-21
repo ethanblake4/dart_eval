@@ -549,6 +549,38 @@ class Variable {
       if (found != null) {
         return invokeExtensionGetter(ctx, this, found.$1, found.$2, found.$3);
       }
+      // An extension method read produces a bound tear-off; the receiver is
+      // carried through [implicitReceiver] for direct invocation.
+      final foundMethod = resolveExtensionMember(ctx, resolvedReceiver, name);
+      if (foundMethod != null) {
+        return Variable(
+          CoreTypes.function.ref(ctx),
+          methodOffset: DeferredOrOffset(
+            file: foundMethod.$1.library,
+            name: foundMethod.$1.memberKey(foundMethod.$2),
+          ),
+          methodReturnType: AlwaysReturnType.fromAnnotation(
+            ctx,
+            foundMethod.$1.library,
+            foundMethod.$2.returnType,
+            CoreTypes.dynamic.ref(ctx),
+            typeParameters: {
+              ...memberExtParams(ctx, foundMethod.$1, resolvedReceiver),
+              for (final param
+                  in foundMethod.$2.typeParameters?.typeParameters ??
+                      const <TypeParameter>[])
+                param.name.lexeme: TypeRef(
+                  foundMethod.$1.library,
+                  param.name.lexeme,
+                  resolved: true,
+                  typeParameterOwner:
+                      'tearoff:${foundMethod.$1.library}:${foundMethod.$2.name.lexeme}',
+                ),
+            },
+          ),
+          callingConvention: CallingConvention.static,
+        )..implicitReceiver = this;
+      }
       throw CompileError(
         'Member "$name" is not defined for type $resolvedReceiver',
         source,

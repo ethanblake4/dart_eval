@@ -8,7 +8,6 @@ import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/closure.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/equality.dart';
-import 'package:collection/collection.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
@@ -190,52 +189,37 @@ Variable compileMethodInvocation(
 
   var offset = method.methodOffset!;
   if (method.implicitReceiver != null) {
-    // A member of the enclosing extension invoked on `this`.
-    final ext = ctx.extensions.firstWhereOrNull(
-      (ext) => ext.declaration == ctx.currentExtension,
-    )!;
-    final member = ext.members
-        .whereType<MethodDeclaration>()
-        .firstWhereOrNull(
-          (m) =>
-              !m.isStatic &&
-              !m.isGetter &&
-              !m.isSetter &&
-              m.name.lexeme == e.methodName.name,
-        )!;
-    final result = _compileNonBridgeArgs(
-      ctx,
-      ext.library,
-      member,
-      e.argumentList,
-      before: [method.implicitReceiver!.boxIfNeeded(ctx)],
-      typeArguments: e.typeArguments,
-      source: e,
-    );
-    final s = ctx.svar('method_result');
-    ctx.pushOp(
-      Call(
-        DeferredOrOffset(file: ext.library, name: ext.memberKey(member)),
-        result.args.ssa,
-        result: s,
-        typeArguments: _runtimeTypeArguments(ctx, e),
-      ),
-    );
-    final returnType =
-        result.returnType?.type ??
-        method.methodReturnType
-            ?.toAlwaysReturnType(
-              ctx,
-              method.implicitReceiver!.type,
-              result.args.args.map((a) => a.type).toList(),
-              const {},
-            )
-            ?.type;
-    return Variable.of(
-      ctx,
-      s,
-      returnType?.copyWith(boxed: true) ?? CoreTypes.dynamic.ref(ctx),
-    );
+    // A bound extension-method tear-off invoked directly: `x.m(args)` lowers
+    // to `E.m(x, args)`. Resolve the member from the tear-off's own offset —
+    // this also covers `m(args)` inside the extension body where the receiver
+    // is `this`.
+    EvalExtension? ext;
+    MethodDeclaration? member;
+    for (final candidate in ctx.extensions) {
+      if (candidate.library != offset.file) continue;
+      for (final m in candidate.members.whereType<MethodDeclaration>()) {
+        if (!m.isStatic &&
+            !m.isGetter &&
+            !m.isSetter &&
+            candidate.memberKey(m) == offset.name) {
+          ext = candidate;
+          member = m;
+          break;
+        }
+      }
+      if (ext != null) break;
+    }
+    if (ext != null && member != null) {
+      final receiver = method.implicitReceiver!;
+      return _invokeExtensionMethod(
+        ctx,
+        receiver,
+        e,
+        ext,
+        member,
+        matchExtensionOn(ctx, receiver.type, ext) ?? const [],
+      );
+    }
   }
   if (offset.file == ctx.library &&
       offset.className != null &&
@@ -1329,11 +1313,10 @@ DeclarationOrBridge<ClassMember, BridgeMethodDef> resolveInstanceMethod(
   final dec0 =
       ctx.topLevelDeclarationsMap[instanceType.file]?[instanceType.name];
   if (dec0 == null) {
-    throw StateError(
+    throw CompileError(
       'Missing declaration for instance method $methodName on '
-      '${instanceType.name} (file ${instanceType.file}, '
-      'parameter ${instanceType.typeParameterOwner}:'
-      '${instanceType.typeParameterIndex}, key ${instanceType.semanticKey})',
+      '${instanceType.name}',
+      source,
     );
   }
   final bottomType0 = bottomType ?? instanceType;

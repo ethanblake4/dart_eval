@@ -162,6 +162,7 @@ Variable compileFunctionExpression(
 
   if (b.isAsynchronous) {
     setupAsyncFunction(ctx, returnType: bound?.functionType?.returnType.type);
+    ctx.asyncClosureReturnTypes.add(<TypeRef>[]);
   }
 
   StatementInfo? stInfo;
@@ -197,6 +198,22 @@ Variable compileFunctionExpression(
       ctx.endScope();
       ctx.pushOp(Return(null));
     }
+  }
+
+  if (b.isAsynchronous) {
+    // `async` reifies `Future<S>`; `S` is the body's inferred return type —
+    // `Null` when the body returns nothing (or only `return;`).
+    final returns = ctx.asyncClosureReturnTypes.removeLast();
+    final inferred =
+        inferredClosureReturnType ??
+        (returns.isEmpty
+            ? CoreTypes.nullType.ref(ctx)
+            : returns.every((t) => t == returns.first)
+            ? returns.first
+            : CoreTypes.dynamic.ref(ctx));
+    inferredClosureReturnType = CoreTypes.future.ref(ctx).copyWith(
+      specifiedTypeArgs: [inferred],
+    );
   }
 
   ctx.finishMethod();

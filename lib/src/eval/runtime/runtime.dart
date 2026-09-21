@@ -593,10 +593,14 @@ class Runtime {
   }
 
   /// Whether two runtime-local descriptor IDs denote the same Dart type.
+  /// Distinct descriptor rows with identical contents compare equal — the
+  /// compile-time dedupe key is finer than the serialized form (e.g. generic
+  /// function type aliases share one nominal row).
   bool runtimeTypesEqual(int id, Runtime otherRuntime, int otherId) {
     final imported = importRuntimeType(otherRuntime, otherId);
     if (id == imported) return true;
-    return false;
+    return _findRuntimeTypeDescriptor(_typeDescriptors[id]) ==
+        _findRuntimeTypeDescriptor(_typeDescriptors[imported]);
   }
 
   /// A program-independent hash for a runtime type descriptor.

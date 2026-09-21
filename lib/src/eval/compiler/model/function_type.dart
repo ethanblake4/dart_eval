@@ -189,8 +189,11 @@ class EvalFunctionType {
     String annotation(FunctionTypeAnnotation value) => value.type == null
         ? 'name:${value.name}'
         : 'type:${value.type!.semanticKey}';
+    // Positional parameter names aren't part of the type (`typedef void
+    // F3(int x)` equals `void Function(int)`); named parameters are already
+    // keyed by name through the map entry.
     String parameter(FunctionFormalParameter value) =>
-        '${value.name ?? ''}:${value.isRequired ? 1 : 0}:${annotation(value.type)}';
+        '${value.isRequired ? 1 : 0}:${annotation(value.type)}';
     final named = namedParameters.entries.toList()
       ..sort((a, b) => a.key.compareTo(b.key));
     return '(${normalParameters.map(parameter).join(',')})'

@@ -30,10 +30,12 @@ import '../../runtime/typed/typed_exception.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import '../helpers/default_value.dart';
 import '../helpers/fpl.dart';
+import '../errors.dart';
 import '../type.dart';
 import '../builtins.dart';
 import 'package:dart_eval/dart_eval_bridge.dart' show CoreTypes;
 import '../context.dart';
+import '../model/function_type.dart';
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'representation.dart';
 import 'primitive_optimization.dart';
@@ -329,6 +331,11 @@ class TypedBackend {
         for (var kind = 0; kind < 3; kind++)
           ...(memberGroups[kind] as Map).values.cast<int>(),
       };
+      final memberKinds = <int, (String, int)>{
+        for (var kind = 1; kind < 3; kind++)
+          for (final entry in (memberGroups[kind] as Map).entries)
+            entry.value as int: (entry.key as String, kind),
+      };
       for (final id in memberIds) {
         if (id < 0 ||
             _closures.any(
@@ -413,10 +420,21 @@ class TypedBackend {
                       const <TypeRef>[])
                 bound.runtimeTypeId(context),
             ],
-            runtimeTypeId:
-                (context.functionRuntimeTypes[id] ??
-                        CoreTypes.function.ref(context))
-                    .runtimeTypeId(context),
+            runtimeTypeId: switch (memberKinds[id]) {
+                  (final name, final kind) => _tearOffSignature(
+                    allocation,
+                    name,
+                    kind,
+                    context.functionRuntimeTypes[id] ??
+                        CoreTypes.function.ref(context),
+                    parameters,
+                    parameterTypes,
+                  ),
+                  _ =>
+                    context.functionRuntimeTypes[id] ??
+                        CoreTypes.function.ref(context),
+                }
+                .runtimeTypeId(context),
             hasEnvironment: false,
             boundReceiver: true,
           ),
@@ -756,6 +774,162 @@ class TypedBackend {
     // Keep bit-distinct constants such as -0.0 separate.
     doubles.add(value);
     return doubles.length - 1;
+  }
+
+  /// The reified signature of a bound member tear-off: parameters covariant in
+  /// the member's override closure — marked `covariant`, or declared with a
+  /// type mentioning a class type parameter — reify as `Object?`, matching the
+  /// VM (`C<int>().m` where `void m(T t)` is `(Object?) => void`).
+  TypeRef _tearOffSignature(
+    objects_ir.CreateClass allocation,
+    String memberName,
+    int kind,
+    TypeRef signature,
+    List<FormalParameter> parameters,
+    List<TypeRef> parameterTypes,
+  ) {
+    final function = signature.functionType;
+    if (function == null) return signature;
+    final positional = <int>{};
+    final named = <String>{};
+    _markCovariantParameters(parameters, parameterTypes, positional, named);
+    final declaringType =
+        context.visibleTypes[allocation.library]?[allocation.name];
+    if (declaringType != null) {
+      try {
+        _collectCovariantParameters(
+          declaringType.resolveTypeChain(context),
+          memberName,
+          kind,
+          positional,
+          named,
+          {},
+        );
+      } on CompileError {
+        // Unresolvable supertypes (e.g. bridges) contribute no covariance.
+      }
+    }
+    if (positional.isEmpty && named.isEmpty) return signature;
+    final object = CoreTypes.object.ref(context).copyWith(nullable: true);
+    FunctionFormalParameter erased(FunctionFormalParameter p) =>
+        FunctionFormalParameter(
+          p.name,
+          FunctionTypeAnnotation.type(object),
+          p.isRequired,
+        );
+    var index = 0;
+    final positionalParameters = [
+      for (final p in function.normalParameters)
+        positional.contains(index++) ? erased(p) : p,
+      for (final p in function.optionalParameters)
+        positional.contains(index++) ? erased(p) : p,
+    ];
+    return signature.copyWith(
+      functionType: EvalFunctionType(
+        positionalParameters.sublist(0, function.normalParameters.length),
+        positionalParameters.sublist(function.normalParameters.length),
+        {
+          for (final entry in function.namedParameters.entries)
+            entry.key:
+                named.contains(entry.key) ? erased(entry.value) : entry.value,
+        },
+        function.returnType,
+        function.generics,
+      ),
+    );
+  }
+
+  /// Marks [parameters]' covariant entries — positional indexes in
+  /// [positional], names in [named]. [types] are the resolved parameter types
+  /// aligned with [parameters] (positional then named) when available.
+  void _markCovariantParameters(
+    List<FormalParameter> parameters,
+    List<TypeRef>? types,
+    Set<int> positional,
+    Set<String> named,
+  ) {
+    var index = 0;
+    for (final parameter in parameters) {
+      var covariant = parameter.covariantKeyword != null;
+      if (!covariant &&
+          types != null &&
+          index < types.length &&
+          _hasClassTypeParameter(types[index])) {
+        covariant = true;
+      }
+      if (covariant) {
+        if (parameter.isNamed) {
+          named.add(parameter.name!.lexeme);
+        } else {
+          positional.add(index);
+        }
+      }
+      index++;
+    }
+  }
+
+  /// Unions [memberName]'s covariant parameters across [type]'s override
+  /// closure: each supertype declaration's own marks plus its supertypes'.
+  void _collectCovariantParameters(
+    TypeRef type,
+    String memberName,
+    int kind,
+    Set<int> positional,
+    Set<String> named,
+    Set<String> visited,
+  ) {
+    if (!visited.add('${type.file}:${type.name}')) return;
+    final key = kind == 1 ? '$memberName*s' : memberName;
+    final decl = context.instanceDeclarationsMap[type.file]?[type.name]?[key];
+    if (decl is MethodDeclaration) {
+      final id =
+          context.instanceDeclarationPositions[type.file]?[type.name]?[kind]
+              ?[memberName];
+      _markCovariantParameters(
+        decl.parameters?.parameters ?? const <FormalParameter>[],
+        id == null ? null : context.functionParameterTypes[id],
+        positional,
+        named,
+      );
+    }
+    for (final supertype in type.allSupertypes) {
+      try {
+        _collectCovariantParameters(
+          supertype.resolveTypeChain(context),
+          memberName,
+          kind,
+          positional,
+          named,
+          visited,
+        );
+      } on CompileError {
+        // Skip unresolvable supertypes.
+      }
+    }
+  }
+
+  /// Whether [type] mentions a class type parameter — a parameter declared
+  /// with such a type is implicitly covariant.
+  bool _hasClassTypeParameter(TypeRef type) {
+    if (type.isClassTypeParameter) return true;
+    if (type.specifiedTypeArgs.any(_hasClassTypeParameter) ||
+        type.recordFields.any((field) => _hasClassTypeParameter(field.type))) {
+      return true;
+    }
+    final function = type.functionType;
+    if (function == null) return false;
+    if ([
+      ...function.normalParameters,
+      ...function.optionalParameters,
+      ...function.namedParameters.values,
+    ].any((p) {
+      final annotation = p.type.type;
+      return annotation != null && _hasClassTypeParameter(annotation);
+    })) {
+      return true;
+    }
+    final returnType = function.returnType.type;
+    return returnType != null && _hasClassTypeParameter(returnType);
   }
 }
 
