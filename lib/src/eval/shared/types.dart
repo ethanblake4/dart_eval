@@ -169,6 +169,9 @@ class AsyncTypes {
     'StreamController',
   );
 
+  /// Bridge spec for [StreamIterator].
+  static const streamIterator = BridgeTypeSpec('dart:async', 'StreamIterator');
+
   /// Bridge spec for [StreamSink].
   static const streamSink = BridgeTypeSpec('dart:async', 'StreamSink');
 

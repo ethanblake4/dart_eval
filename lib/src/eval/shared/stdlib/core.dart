@@ -175,22 +175,22 @@ class DartCorePlugin implements EvalPlugin {
     $UnimplementedError.configureForRuntime(runtime);
     $UnsupportedError.configureForRuntime(runtime);
     runtime.registerBridgeFuncRegisters(
-      'dart:async',
+      'dart:core',
       'Stream.empty',
       $Stream.$empty,
     );
     runtime.registerBridgeFuncRegisters(
-      'dart:async',
+      'dart:core',
       'Stream.value',
       $Stream.$_value,
     );
     runtime.registerBridgeFuncRegisters(
-      'dart:async',
+      'dart:core',
       'Stream.fromIterable',
       $Stream.$fromIterable,
     );
     runtime.registerBridgeFuncRegisters(
-      'dart:async',
+      'dart:core',
       'Stream.periodic',
       $Stream.$periodic,
     );

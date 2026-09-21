@@ -825,7 +825,23 @@ Variable _invokeWithTarget(
       before: [],
       typeParameters: receiverTypeParameters,
     );
-    _inferBridgeTypeParameters(fd, argsPair.args, bridgeTypeParameters);
+    // Static calls on generic bridge classes (e.g. `Stream.fromIterable`)
+    // infer the class's own type parameters — `T` in `Iterable<T>` — from
+    // the argument types, which then resolve `returns:` annotations.
+    final classGenericNames =
+        isStatic
+            ? switch (ctx.topLevelDeclarationsMap[staticType!
+                .file]?[staticType.name]?.bridge) {
+                BridgeClassDef b => b.type.generics.keys.toSet(),
+                _ => const <String>{},
+              }
+            : const <String>{};
+    _inferBridgeTypeParameters(
+      fd,
+      argsPair.args,
+      bridgeTypeParameters,
+      inferableNames: classGenericNames,
+    );
     mReturnType =
         bridgeFunctionReturnType(
           ctx,
@@ -1030,11 +1046,14 @@ Map<String, TypeRef> _bridgeClassTypeArguments(
 void _inferBridgeTypeParameters(
   BridgeFunctionDef function,
   List<Variable> arguments,
-  Map<String, TypeRef> inferred,
-) {
+  Map<String, TypeRef> inferred, {
+  Set<String> inferableNames = const {},
+}) {
   void infer(BridgeTypeRef formal, TypeRef actual) {
     final reference = formal.ref;
-    if (reference != null && function.generics.containsKey(reference)) {
+    if (reference != null &&
+        (function.generics.containsKey(reference) ||
+            inferableNames.contains(reference))) {
       inferred[reference] = actual;
       return;
     }

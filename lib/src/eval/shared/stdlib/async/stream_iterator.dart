@@ -40,21 +40,15 @@ import 'package:dart_eval/stdlib/async.dart'
         $StreamView,
         $StreamController;
 
-/// dart_eval wrapper binding for [Completer]
-class $Completer<T> implements $Instance {
+/// dart_eval wrapper binding for [StreamIterator]
+class $StreamIterator<T> implements $Instance {
   /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
       'dart:async',
-      'Completer.',
-      $Completer.$new,
-    );
-
-    runtime.registerBridgeFuncRegisters(
-      'dart:async',
-      'Completer.sync',
-      $Completer.$sync,
+      'StreamIterator.',
+      $StreamIterator.$new,
     );
   }
 
@@ -63,13 +57,13 @@ class $Completer<T> implements $Instance {
     registry.defineBridgeClass($declaration);
   }
 
-  /// Compile-time type specification of [$Completer]
-  static const $spec = BridgeTypeSpec('dart:async', 'Completer');
+  /// Compile-time type specification of [$StreamIterator]
+  static const $spec = BridgeTypeSpec('dart:async', 'StreamIterator');
 
-  /// Compile-time type declaration of [$Completer]
+  /// Compile-time type declaration of [$StreamIterator]
   static const $type = BridgeTypeRef($spec);
 
-  /// Compile-time class declaration of [$Completer]
+  /// Compile-time class declaration of [$StreamIterator]
   static const $declaration = BridgeClassDef(
     BridgeClassType(
       $type,
@@ -82,70 +76,28 @@ class $Completer<T> implements $Instance {
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation($type),
           namedParams: [],
-          params: [],
-        ),
-        isFactory: true,
-      ),
-
-      'sync': BridgeConstructorDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation($type),
-          namedParams: [],
-          params: [],
+          params: [
+            BridgeParameter(
+              'stream',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.stream, [
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+                ]),
+              ),
+              false,
+            ),
+          ],
         ),
         isFactory: true,
       ),
     },
 
     methods: {
-      'complete': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
-          namedParams: [],
-          params: [
-            BridgeParameter(
-              'value',
-              BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.object, [
-                  BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
-                ]),
-                nullable: true,
-              ),
-              true,
-            ),
-          ],
-        ),
-      ),
-
-      'completeError': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
-          namedParams: [],
-          params: [
-            BridgeParameter(
-              'error',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object, [])),
-              false,
-            ),
-
-            BridgeParameter(
-              'stackTrace',
-              BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.stackTrace, []),
-                nullable: true,
-              ),
-              true,
-            ),
-          ],
-        ),
-      ),
-    },
-    getters: {
-      'future': BridgeMethodDef(
+      'moveNext': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(
             BridgeTypeRef(CoreTypes.future, [
-              BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
             ]),
           ),
           namedParams: [],
@@ -153,9 +105,22 @@ class $Completer<T> implements $Instance {
         ),
       ),
 
-      'isCompleted': BridgeMethodDef(
+      'cancel': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.future, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
+            ]),
+          ),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+    },
+    getters: {
+      'current': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
           namedParams: [],
           params: [],
         ),
@@ -167,26 +132,21 @@ class $Completer<T> implements $Instance {
     bridge: false,
   );
 
-  /// Wrapper for the [Completer.new] constructor
+  /// Wrapper for the [StreamIterator.new] constructor
   static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
-    return $Completer.wrap(Completer());
-  }
-
-  /// Wrapper for the [Completer.sync] constructor
-  static $Value? $sync(Runtime runtime, Object? r, Object? s, Object? c) {
-    return $Completer.wrap(Completer.sync());
+    return $StreamIterator.wrap(StreamIterator((r as $Value?)!.$value));
   }
 
   final $Instance _superclass;
 
   @override
-  final Completer<T> $value;
+  final StreamIterator<T> $value;
 
   @override
-  Completer get $reified => $value;
+  StreamIterator get $reified => $value;
 
-  /// Wrap a [Completer] in a [$Completer]
-  $Completer.wrap(this.$value) : _superclass = $Object($value);
+  /// Wrap a [StreamIterator] in a [$StreamIterator]
+  $StreamIterator.wrap(this.$value) : _superclass = $Object($value);
 
   @override
   int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
@@ -194,50 +154,44 @@ class $Completer<T> implements $Instance {
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
-      case 'future':
-        final _future = $value.future;
-        return $Future.wrap(
-          _future.then((e) => runtime.wrapAlways(e, recursive: true)),
-        );
-      case 'isCompleted':
-        final _isCompleted = $value.isCompleted;
-        return $bool(_isCompleted);
-      case 'complete':
-        return __complete;
+      case 'current':
+        final _current = $value.current;
+        return runtime.wrapAlways(_current, recursive: true);
+      case 'moveNext':
+        return __moveNext;
 
-      case 'completeError':
-        return __completeError;
+      case 'cancel':
+        return __cancel;
     }
     return _superclass.$getProperty(runtime, identifier);
   }
 
-  static const $Function __complete = $Function(_complete);
-  static $Value? _complete(
+  static const $Function __moveNext = $Function(_moveNext);
+  static $Value? _moveNext(
     Runtime runtime,
     $Value? target,
     Object? r,
     Object? s,
     Object? c,
   ) {
-    final self = target! as $Completer;
-    self.$value.complete((r is $Value ? r : null)?.$value);
-    return null;
+    final self = target! as $StreamIterator;
+    final result = self.$value.moveNext();
+    return $Future.wrap(result.then((e) => $bool(e)));
   }
 
-  static const $Function __completeError = $Function(_completeError);
-  static $Value? _completeError(
+  static const $Function __cancel = $Function(_cancel);
+  static $Value? _cancel(
     Runtime runtime,
     $Value? target,
     Object? r,
     Object? s,
     Object? c,
   ) {
-    final self = target! as $Completer;
-    self.$value.completeError(
-      (r as $Value?)!.$reified,
-      (s is $Value ? s : null)?.$value,
+    final self = target! as $StreamIterator;
+    final result = self.$value.cancel();
+    return $Future.wrap(
+      result.then((e) => runtime.wrapAlways(e, recursive: true)),
     );
-    return null;
   }
 
   @override

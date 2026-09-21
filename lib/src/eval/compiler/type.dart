@@ -1369,6 +1369,10 @@ class TypeRef {
       return true;
     }
 
+    if (this == CoreTypes.never.ref(ctx)) {
+      // `Never` is the bottom type: assignable to every type.
+      return true;
+    }
     if (this == CoreTypes.nullType.ref(ctx)) {
       return slot.nullable || slot == CoreTypes.nullType.ref(ctx);
     }

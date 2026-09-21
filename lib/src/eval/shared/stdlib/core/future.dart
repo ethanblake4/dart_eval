@@ -71,6 +71,14 @@ class $Future<T> implements Future<T>, $Instance {
               BridgeTypeAnnotation($Duration.$type),
               false,
             ),
+            BridgeParameter(
+              'computation',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.function),
+                nullable: true,
+              ),
+              true,
+            ),
           ],
           namedParams: [],
         ),
@@ -266,7 +274,15 @@ class $Future<T> implements Future<T>, $Instance {
 }
 
 $Value? _futureDelayed(Runtime runtime, Object? r, Object? s, Object? c) {
-  return $Future.wrap(Future.delayed((r as $Value).$value));
+  final computation = s as EvalFunction?;
+  return $Future.wrap(
+    Future.delayed(
+      (r as $Value).$value,
+      computation == null
+          ? null
+          : () => computation.call(runtime, null, null, null, 0)?.$value,
+    ),
+  );
 }
 
 /// Eval objects ([TypedInstance]) have no host value — the future completes

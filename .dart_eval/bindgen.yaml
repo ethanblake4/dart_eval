@@ -156,6 +156,8 @@ libraries:
         file: stream_subscription.dart
       StreamSink:
         file: stream_sink.dart
+      StreamIterator:
+        file: stream_iterator.dart
       StreamTransformer:
         file: stream_transformer.dart
       StreamView:

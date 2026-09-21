@@ -16,6 +16,7 @@ import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 
 import 'dart:async';
+
 import 'package:dart_eval/stdlib/async.dart'
     hide
         $Completer,
@@ -23,6 +24,7 @@ import 'package:dart_eval/stdlib/async.dart'
         $Zone,
         $StreamSubscription,
         $StreamSink,
+        $StreamIterator,
         $StreamTransformer,
         $StreamView,
         $StreamController;
@@ -33,6 +35,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $Zone,
         $StreamSubscription,
         $StreamSink,
+        $StreamIterator,
         $StreamTransformer,
         $StreamView,
         $StreamController;

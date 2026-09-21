@@ -16,6 +16,7 @@ import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 
 import 'dart:collection';
+
 import 'package:dart_eval/stdlib/core.dart'
     hide
         $LinkedHashMap,
@@ -26,6 +27,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $LinkedHashSet,
         $DoubleLinkedQueue,
         $DoubleLinkedQueueEntry;
+
 import 'queue.dart';
 
 /// dart_eval wrapper binding for [ListQueue]

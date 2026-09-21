@@ -107,14 +107,75 @@ Variable compileInstanceCreation(
   if (dec0.isBridge) {
     final bridge = dec0.bridge;
     final fnDescriptor = (bridge as BridgeConstructorDef).functionDescriptor;
+    final classBridge =
+        ctx.topLevelDeclarationsMap[staticType.file]![staticType.name]?.bridge;
+    final genericNames =
+        classBridge is BridgeClassDef
+            ? classBridge.type.generics.keys.toList()
+            : const <String>[];
+    Map<String, TypeRef> argTypeParameters = const {};
+    if (genericNames.isNotEmpty &&
+        instantiatedType.specifiedTypeArgs.isEmpty) {
+      // Parameter annotations compile permissively (`T` → dynamic); the real
+      // bindings are inferred from the argument types below.
+      argTypeParameters = {
+        for (final name in genericNames) name: CoreTypes.dynamic.ref(ctx),
+      };
+    }
     arguments = compileArgumentListWithBridge(
       ctx,
       e.argumentList,
       fnDescriptor,
+      typeParameters: argTypeParameters,
     );
 
-    //_args = argsPair.first;
-    //_namedArgs = argsPair.second;
+    if (genericNames.isNotEmpty &&
+        instantiatedType.specifiedTypeArgs.isEmpty) {
+      final ownerKey = 'class:${staticType.file}:${staticType.name}';
+      final paramRefs = {
+        for (var i = 0; i < genericNames.length; i++)
+          genericNames[i]: TypeRef(
+            staticType.file,
+            genericNames[i],
+            resolved: true,
+            typeParameterOwner: ownerKey,
+            typeParameterIndex: i,
+          ),
+      };
+      final substitutions = <(String, int), TypeRef>{};
+      // Bridge parameters carry no named flag; named args ride at the tail.
+      final positionalParams = fnDescriptor.params;
+      for (
+        var i = 0;
+        i < arguments.args.length && i < positionalParams.length;
+        i++
+      ) {
+        final pattern = TypeRef.fromBridgeAnnotation(
+          ctx,
+          positionalParams[i].type,
+          typeParameters: paramRefs,
+        );
+        final concrete =
+            findSupertypeInstantiation(
+              ctx,
+              pattern,
+              arguments.args[i].type,
+            ) ??
+            arguments.args[i].type;
+        collectTypeParameterSubstitutions(
+          ctx,
+          pattern,
+          concrete,
+          substitutions,
+        );
+      }
+      instantiatedType = instantiatedType.copyWith(
+        specifiedTypeArgs: [
+          for (var i = 0; i < genericNames.length; i++)
+            substitutions[(ownerKey, i)] ?? CoreTypes.dynamic.ref(ctx),
+        ],
+      );
+    }
   } else {
     final dec = dec0.declaration!;
     final fpl = (dec as ConstructorDeclaration).parameters.parameters;

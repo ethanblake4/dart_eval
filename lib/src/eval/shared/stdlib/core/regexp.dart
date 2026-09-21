@@ -45,6 +45,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $RegExp,
         $RegExpMatch,
         $StringSink;
+
 import 'pattern.dart';
 
 /// dart_eval wrapper binding for [RegExp]

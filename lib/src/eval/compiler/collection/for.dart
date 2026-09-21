@@ -8,6 +8,7 @@ import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
 import 'package:dart_eval/src/eval/compiler/macros/loop.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
+import 'package:dart_eval/src/eval/compiler/statement/for.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/statement/variable_declaration.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -37,6 +38,13 @@ List<TypeRef> compileForElement(
 
   if (parts is ForEachParts) {
     final iterable = compileExpression(parts.iterable, ctx).boxIfNeeded(ctx);
+    if (e.awaitKeyword != null) {
+      compileAwaitForLoop(ctx, e, parts, iterable, null, (ctx, ert) {
+        potentialReturnTypes.addAll(compileBody(e.body));
+        return StatementInfo();
+      });
+      return potentialReturnTypes;
+    }
     final itype = iterable.type;
     if (!itype.isAssignableTo(ctx, CoreTypes.iterable.ref(ctx))) {
       throw CompileError(

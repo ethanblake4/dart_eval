@@ -559,4 +559,43 @@ final class TypedClosure extends EvalFunction {
           : const [],
     );
   }
+
+  /// Materialize this closure as a host Dart [Function] so bridge signatures
+  /// like `void Function()` can consume it. Only positional-argument shapes
+  /// up to five parameters are representable: a Dart closure with named
+  /// parameters cannot be synthesized dynamically.
+  @override
+  Object get $reified {
+    if (descriptor.namedNames.isNotEmpty) {
+      throw UnimplementedError(
+        'dart_eval cannot reify a closure with named parameters',
+      );
+    }
+    Object? run(List<Object?> args) => TypedInterop.exportExternal(
+      invoke(
+        args.length,
+        args.isEmpty ? null : args[0],
+        switch (args.length) {
+          0 || 1 => null,
+          2 => args[1],
+          _ => args.sublist(1),
+        },
+        runtime: runtime,
+      ),
+      runtime: runtime,
+    );
+    return switch (descriptor.positionalCount) {
+      0 => () => run(const []),
+      1 => (Object? a) => run([a]),
+      2 => (Object? a, Object? b) => run([a, b]),
+      3 => (Object? a, Object? b, Object? c) => run([a, b, c]),
+      4 => (Object? a, Object? b, Object? c, Object? d) => run([a, b, c, d]),
+      5 => (Object? a, Object? b, Object? c, Object? d, Object? e) =>
+        run([a, b, c, d, e]),
+      _ => throw UnimplementedError(
+          'dart_eval cannot reify a closure with '
+          '${descriptor.positionalCount} positional parameters',
+        ),
+    };
+  }
 }
