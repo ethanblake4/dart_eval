@@ -494,27 +494,73 @@ class TypeRef {
           final bound = ctx
               .temporaryTypes[$class.file]![typeParams![i].name.lexeme]!
               .typeParameterBound;
-          substitutions[('class:${$class.file}:${$class.name}', i)] =
-              i < $class.specifiedTypeArgs.length
-                  ? $class.specifiedTypeArgs[i]
-                  : ((bound ?? CoreTypes.dynamic.ref(ctx))
-                      .substituteTypeParameters(substitutions));
+          substitutions[(
+            'class:${$class.file}:${$class.name}',
+            i,
+          )] = i < $class.specifiedTypeArgs.length
+              ? $class.specifiedTypeArgs[i]
+              : ((bound ?? CoreTypes.dynamic.ref(ctx)).substituteTypeParameters(
+                  substitutions,
+                ));
         }
         if (substitutions.isEmpty) return resolved;
         return resolved.substituteTypeParameters(substitutions);
       }
+
       try {
-      if (forSet) {
-        if ($declarations.containsKey('$field*s')) {
-          final f = $declarations['$field*s'];
-          if (f is! MethodDeclaration) {
+        if (forSet) {
+          if ($declarations.containsKey('$field*s')) {
+            final f = $declarations['$field*s'];
+            if (f is! MethodDeclaration) {
+              throw CompileError(
+                'Cannot query setter type of F${$class.file}:${$class.name}.$field, which is not a method',
+                source,
+              );
+            }
+            final parameter = f.parameters!.parameters.first;
+            final annotation = parameter.type;
+            if (annotation == null) {
+              return null;
+            }
+            return substituteClassTypeArguments(
+              TypeRef.fromAnnotation(ctx, $class.file, annotation),
+            );
+          }
+        }
+        if ($declarations.containsKey(field)) {
+          final f = $declarations[field];
+          if (f is MethodDeclaration && !f.isGetter && !f.isSetter) {
+            return CoreTypes.function.ref(ctx);
+          }
+          if (f is! VariableDeclaration) {
             throw CompileError(
-              'Cannot query setter type of F${$class.file}:${$class.name}.$field, which is not a method',
+              'Cannot query field type of ${$class.name}.$field, which is not a field',
               source,
             );
           }
-          final parameter = f.parameters!.parameters.first;
-          final annotation = parameter.type;
+          final annotation = (f.parent as VariableDeclarationList).type;
+          if (annotation != null) {
+            return substituteClassTypeArguments(
+              TypeRef.fromAnnotation(ctx, $class.file, annotation),
+            ).copyWith(boxed: true);
+          }
+          if (ctx.inferredFieldTypes.containsKey($class.file) &&
+              ctx.inferredFieldTypes[$class.file]!.containsKey($class.name) &&
+              ctx.inferredFieldTypes[$class.file]![$class.name]!.containsKey(
+                field,
+              )) {
+            return ctx.inferredFieldTypes[$class.file]![$class.name]![field]!;
+          }
+          return null;
+        } else if (!forFieldFormal && $declarations.containsKey('$field*g')) {
+          final f = $declarations['$field*g'];
+          if (f is! MethodDeclaration) {
+            throw CompileError(
+              'Cannot query getter type of F${$class.file}:${$class.name}.$field, which is not a method',
+              source,
+            );
+          }
+          final annotation = f.returnType;
           if (annotation == null) {
             return null;
           }
@@ -522,48 +568,6 @@ class TypeRef {
             TypeRef.fromAnnotation(ctx, $class.file, annotation),
           );
         }
-      }
-      if ($declarations.containsKey(field)) {
-        final f = $declarations[field];
-        if (f is MethodDeclaration && !f.isGetter && !f.isSetter) {
-          return CoreTypes.function.ref(ctx);
-        }
-        if (f is! VariableDeclaration) {
-          throw CompileError(
-            'Cannot query field type of ${$class.name}.$field, which is not a field',
-            source,
-          );
-        }
-        final annotation = (f.parent as VariableDeclarationList).type;
-        if (annotation != null) {
-          return substituteClassTypeArguments(
-            TypeRef.fromAnnotation(ctx, $class.file, annotation),
-          ).copyWith(boxed: true);
-        }
-        if (ctx.inferredFieldTypes.containsKey($class.file) &&
-            ctx.inferredFieldTypes[$class.file]!.containsKey($class.name) &&
-            ctx.inferredFieldTypes[$class.file]![$class.name]!.containsKey(
-              field,
-            )) {
-          return ctx.inferredFieldTypes[$class.file]![$class.name]![field]!;
-        }
-        return null;
-      } else if (!forFieldFormal && $declarations.containsKey('$field*g')) {
-        final f = $declarations['$field*g'];
-        if (f is! MethodDeclaration) {
-          throw CompileError(
-            'Cannot query getter type of F${$class.file}:${$class.name}.$field, which is not a method',
-            source,
-          );
-        }
-        final annotation = f.returnType;
-        if (annotation == null) {
-          return null;
-        }
-        return substituteClassTypeArguments(
-          TypeRef.fromAnnotation(ctx, $class.file, annotation),
-        );
-      }
       } finally {
         ctx.temporaryTypes[$class.file] = previousTypes;
       }
@@ -1483,6 +1487,10 @@ class TypeRef {
   }
 }
 
+/// Normalizes a parsed constructor name: `.new` names the unnamed
+/// constructor, whose internal name is the empty string.
+String ctorNameOf(String? name) => name == 'new' ? '' : name ?? '';
+
 /// Splits an instance-creation's type head into the class-name key and the
 /// constructor selector. The analyzer represents `p.C()`, `p.C.n()`, and
 /// `C.n()` alike as `NamedType(importPrefix: first, name: second)` plus an
@@ -1494,12 +1502,10 @@ class TypeRef {
   NamedType type,
   String? trailingSelector,
 ) {
-  // `.new` names the unnamed constructor.
-  final ctorName = trailingSelector == 'new' ? '' : trailingSelector ?? '';
+  final ctorName = ctorNameOf(trailingSelector);
   final prefix = type.importPrefix;
   if (prefix != null &&
-      ctx.visibleDeclarations[library]?[prefix.name.lexeme]?.children !=
-          null) {
+      ctx.visibleDeclarations[library]?[prefix.name.lexeme]?.children != null) {
     // `prefix.C.new`: trailing selector already folded into [ctorName].
     return ('${prefix.name.lexeme}.${type.name.lexeme}', ctorName);
   }
@@ -1882,7 +1888,8 @@ TypeRef resolveTypeAlias(
   List<TypeAnnotation>? typeArgs,
   Map<String, TypeRef> callerTypeParameters = const {},
 }) {
-  final typeParameters = switch (alias) {
+  final typeParameters =
+      switch (alias) {
         GenericTypeAlias(:final typeParameters) => typeParameters,
         FunctionTypeAlias(:final typeParameters) => typeParameters,
         ClassTypeAlias(:final typeParameters) => typeParameters,
@@ -1894,9 +1901,7 @@ TypeRef resolveTypeAlias(
   // parameters stay abstract type parameters.
   final bindings = <String, TypeRef>{};
   for (var i = 0; i < typeParameters.length; i++) {
-    final arg = typeArgs == null || i >= typeArgs.length
-        ? null
-        : typeArgs[i];
+    final arg = typeArgs == null || i >= typeArgs.length ? null : typeArgs[i];
     bindings[typeParameters[i].name.lexeme] = arg == null
         ? TypeRef(
             library,

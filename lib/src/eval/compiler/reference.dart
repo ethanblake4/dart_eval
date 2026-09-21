@@ -430,7 +430,7 @@ class IdentifierReference implements Reference {
             );
           }
         }
-        final fqName = '${classType.name}.${name == 'new' ? '' : name}';
+        final fqName = '${classType.name}.${ctorNameOf(name)}';
         final member = ctx.topLevelDeclarationsMap[classType.file]![fqName];
         final memberDecl = member?.declaration;
         if (member != null &&

@@ -866,9 +866,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
           }
         }
       } else if (member is ConstructorDeclaration) {
-        final mName = member.name?.lexeme == 'new'
-            ? ''
-            : (member.name?.lexeme) ?? "";
+        final mName = ctorNameOf(member.name?.lexeme);
         _topLevelDeclarationsMap[libraryIndex]!['$name.$mName'] =
             DeclarationOrBridge(libraryIndex, declaration: member);
       } else {

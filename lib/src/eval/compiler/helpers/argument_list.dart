@@ -139,9 +139,7 @@ Variable compileOmittedArgument(
   if (useExpression) {
     variable = compileExpression(defaultExpr!, ctx, type);
   } else {
-    if (value is int &&
-        type.file == dartCoreFile &&
-        type.name == 'double') {
+    if (value is int && type.file == dartCoreFile && type.name == 'double') {
       value = value.toDouble();
     }
     variable = pushDefaultValue(ctx, value);
@@ -178,8 +176,9 @@ ArgumentListResult compileArgumentList(
     final targetRef = ctx.visibleTypes[decLibrary]![typeName];
     final targetDecl = targetRef == null
         ? null
-        : ctx.topLevelDeclarationsMap[targetRef
-            .file]!['${targetRef.name}.$ctorName']
+        : ctx
+              .topLevelDeclarationsMap[targetRef
+                  .file]!['${targetRef.name}.$ctorName']
               ?.declaration;
     if (targetDecl is ConstructorDeclaration) {
       decLibrary = targetRef!.file;
@@ -225,7 +224,12 @@ ArgumentListResult compileArgumentList(
       if (param.isRequired) {
         throw CompileError('Not enough positional arguments');
       } else {
-        final value = compileOmittedArgument(ctx, decLibrary, param, parameterHost);
+        final value = compileOmittedArgument(
+          ctx,
+          decLibrary,
+          param,
+          parameterHost,
+        );
         push.add(value);
         args.add(value);
       }
@@ -233,7 +237,12 @@ ArgumentListResult compileArgumentList(
       if (param.isRequired) {
         throw CompileError('Not enough positional arguments');
       } else {
-        final value = compileOmittedArgument(ctx, decLibrary, param, parameterHost);
+        final value = compileOmittedArgument(
+          ctx,
+          decLibrary,
+          param,
+          parameterHost,
+        );
         push.add(value);
         args.add(value);
       }
@@ -347,7 +356,12 @@ ArgumentListResult compileArgumentList(
       push.add(arg0);
       namedArgs[name] = arg0;
     } else {
-      final value = compileOmittedArgument(ctx, decLibrary, param0, parameterHost);
+      final value = compileOmittedArgument(
+        ctx,
+        decLibrary,
+        param0,
+        parameterHost,
+      );
       push.add(value);
       namedArgs[name] = value;
     }
@@ -400,7 +414,12 @@ ArgumentListResult compileSuperParams(
       if (param.isRequired) {
         throw CompileError('Not enough positional arguments');
       } else {
-        final value = compileOmittedArgument(ctx, ctx.library, param, parameterHost);
+        final value = compileOmittedArgument(
+          ctx,
+          ctx.library,
+          param,
+          parameterHost,
+        );
         push.add(value);
         args.add(value);
       }
@@ -414,7 +433,12 @@ ArgumentListResult compileSuperParams(
       push.add(V);
       namedArgs[name] = V;
     } else {
-      final value = compileOmittedArgument(ctx, ctx.library, n.value, parameterHost);
+      final value = compileOmittedArgument(
+        ctx,
+        ctx.library,
+        n.value,
+        parameterHost,
+      );
       push.add(value);
       namedArgs[name] = value;
     }

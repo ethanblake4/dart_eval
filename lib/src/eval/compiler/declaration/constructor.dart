@@ -31,7 +31,7 @@ void compileConstructorDeclaration(
   List<FieldDeclaration> fields,
 ) {
   final parentName = declarationName(parent);
-  final dName = d.name?.lexeme == "new" ? "" : (d.name?.lexeme) ?? "";
+  final dName = ctorNameOf(d.name?.lexeme);
   final n = '$parentName.$dName';
   final isEnum = parent is EnumDeclaration;
 
@@ -230,7 +230,8 @@ void compileConstructorDeclaration(
         // The callee binds the target's parameter layout, so forwarding is
         // a pass-through of each local in declaration order.
         final argSsa = <SSA>[];
-        for (final p in ctorDecl?.parameters.parameters ?? const <FormalParameter>[]) {
+        for (final p
+            in ctorDecl?.parameters.parameters ?? const <FormalParameter>[]) {
           final (paramType, _) = getFormalParameterType(
             ctx,
             p,
@@ -320,8 +321,7 @@ void compileConstructorDeclaration(
 
   // Handle redirecting constructor
   if ($redirectingInitializer != null) {
-    final ctorName0 = $redirectingInitializer.constructorName?.name;
-    final name = ctorName0 == 'new' ? '' : ctorName0 ?? '';
+    final name = ctorNameOf($redirectingInitializer.constructorName?.name);
     final dec0 = resolveStaticMethod(ctx, clsType, name);
     final dec = dec0.declaration!;
     final fpl = (dec as ConstructorDeclaration).parameters.parameters;
@@ -360,8 +360,7 @@ void compileConstructorDeclaration(
   DeclarationOrBridge? extendsDecl;
   ImportPrefixReference? prefix;
 
-  final ctorName1 = $superInitializer?.constructorName?.name;
-    final constructorName = ctorName1 == 'new' ? '' : ctorName1 ?? '';
+  final constructorName = ctorNameOf($superInitializer?.constructorName?.name);
 
   if ($extends == null) {
     $super = BuiltinValue().push(ctx);
@@ -644,6 +643,18 @@ void _setupEnum(CompilerContext ctx, EnumDeclaration parent, SSA inst) {
   ctx.pushOp(SetPropertyStatic(inst, 1, SSA('arg_1')));
 }
 
+/// Whether the class declares any constructor: constructor entries share the
+/// `'$className.'` key prefix with static members, so filter by declaration
+/// kind rather than the key alone.
+bool _hasDeclaredConstructor(
+  Map<String, DeclarationOrBridge> members,
+  String className,
+) => members.keys.any(
+  (k) =>
+      k.startsWith('$className.') &&
+      members[k]!.declaration is ConstructorDeclaration,
+);
+
 /// Whether [bridge] is the `dart:core` `Object` wrapper — the one wrapper a
 /// class may name in an `extends` clause, where it means the same thing as no
 /// superclass at all.
@@ -702,7 +713,7 @@ Variable _invokeSuperConstructor(
   final constructor0 = superCtors['${extendsType.name}.$constructorName'];
   if (constructor0 == null &&
       !(constructorName.isEmpty &&
-          !superCtors.keys.any((k) => k.startsWith('${extendsType.name}.')))) {
+          !_hasDeclaredConstructor(superCtors, extendsType.name))) {
     // An unnamed super constructor on a class that declares none is the
     // implicit default constructor — it has no declaration entry.
     throw CompileError(
@@ -858,15 +869,12 @@ void _emitConstructorReturn(
   final targetType = TypeRef.fromAnnotation(ctx, ctx.library, redirected.type);
   final targetRef =
       ctx.visibleTypes[ctx.library]![typeName] ??
-      (throw CompileError(
-        'Redirecting factory target $typeName not found',
-        d,
-      ));
+      (throw CompileError('Redirecting factory target $typeName not found', d));
   final targetCtors = ctx.topLevelDeclarationsMap[targetRef.file]!;
   final targetCtor = targetCtors['${targetRef.name}.$ctorName'];
   if (targetCtor == null &&
       !(ctorName.isEmpty &&
-          !targetCtors.keys.any((k) => k.startsWith('${targetRef.name}.')))) {
+          !_hasDeclaredConstructor(targetCtors, targetRef.name))) {
     // An unnamed target with no declared constructors resolves to the class's
     // implicit default constructor, which has no declaration entry.
     throw CompileError(

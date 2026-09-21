@@ -205,7 +205,8 @@ Variable compileMethodInvocation(
       );
     }
     aliasType = resolved;
-    dec0 = ctx.topLevelDeclarationsMap[resolved.file]!['${resolved.name}.'] ??
+    dec0 =
+        ctx.topLevelDeclarationsMap[resolved.file]!['${resolved.name}.'] ??
         (throw CompileError(
           'Class "${resolved.name}" does not have a default constructor',
           e,
@@ -330,7 +331,8 @@ Variable compileMethodInvocation(
         result: result,
         // Factories have no receiver, so the class's instantiated type
         // arguments are delivered through the callable-type-argument channel.
-        typeArguments: declaration is ConstructorDeclaration &&
+        typeArguments:
+            declaration is ConstructorDeclaration &&
                 declaration.factoryKeyword != null
             ? [
                 for (final arg
@@ -464,8 +466,7 @@ Variable _invokeWithTarget(
   ArgumentListResult argsPair;
 
   // `C.new(...)` invokes the unnamed constructor.
-  final staticMemberName =
-      e.methodName.name == 'new' ? '' : e.methodName.name;
+  final staticMemberName = ctorNameOf(e.methodName.name);
 
   if (L.type == CoreTypes.type.ref(ctx) && L.concreteTypes.length == 1) {
     // Static method
@@ -633,17 +634,11 @@ Variable _invokeWithTarget(
   } else if (L.concreteTypes.length == 1 &&
       dec0?.isBridge == false &&
       (e.target is SuperExpression ||
-          (!_hasBridgeSuperclass(ctx, L.type) &&
-              !ctx.subclassedTypes.contains(
-                '${L.concreteTypes.single.file}:${L.concreteTypes.single.name}',
-              ) &&
-              (ctx.instanceDeclarationPositions[L.concreteTypes.single.file]?[L
-                              .concreteTypes
-                              .single
-                              .name]?[2]
-                          as Map?)
-                      ?.containsKey(e.methodName.name) ==
-                  true))) {
+          _isDirectlyCallable(
+            ctx,
+            L.concreteTypes.single,
+            e.methodName.name,
+          ))) {
     final actualType = L.concreteTypes[0];
     final offset = DeferredOrOffset(
       file: actualType.file,
@@ -819,6 +814,20 @@ bool _hasBridgeSuperclass(CompilerContext ctx, TypeRef type) {
     if (bridge is BridgeClassDef && bridge.bridge) return true;
   }
   return false;
+}
+
+/// Whether a call to [method] on a receiver statically known to be [type] can
+/// use a fixed offset: the method must be declared on [type] itself and [type]
+/// must be neither bridged nor subclassed anywhere in the program (a subclass
+/// could override the method, requiring virtual dispatch).
+bool _isDirectlyCallable(CompilerContext ctx, TypeRef type, String method) {
+  if (_hasBridgeSuperclass(ctx, type) ||
+      ctx.subclassedTypes.contains('${type.file}:${type.name}')) {
+    return false;
+  }
+  final methods =
+      ctx.instanceDeclarationPositions[type.file]?[type.name]?[2] as Map?;
+  return methods?.containsKey(method) == true;
 }
 
 /// Resolves [methodName] on [instanceType] to its declaration or bridge. The
@@ -1036,15 +1045,15 @@ _ResolvedArgs _compileNonBridgeArgs(
         final bound = classParams[i].bound;
         resolveGenerics[classParams[i].name.lexeme] =
             explicitArgs != null && i < explicitArgs.length
-                ? TypeRef.fromAnnotation(ctx, sourceLib, explicitArgs[i])
-                : bound == null
-                ? CoreTypes.dynamic.ref(ctx)
-                : TypeRef.fromAnnotation(
-                    ctx,
-                    sourceLib,
-                    bound,
-                    typeParameters: resolveGenerics,
-                  );
+            ? TypeRef.fromAnnotation(ctx, sourceLib, explicitArgs[i])
+            : bound == null
+            ? CoreTypes.dynamic.ref(ctx)
+            : TypeRef.fromAnnotation(
+                ctx,
+                sourceLib,
+                bound,
+                typeParameters: resolveGenerics,
+              );
       }
     }
   }
