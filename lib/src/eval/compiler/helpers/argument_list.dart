@@ -195,6 +195,11 @@ ArgumentListResult compileArgumentList(
   bool inferGenerics = true,
   List<String> superParams = const [],
   AstNode? source,
+  // Explicit extension application (`E.m(receiver, ...)`) leads the
+  // argument list with the receiver, which has no declared formal — the
+  // receiver is compiled separately and passed via [before], so indexing
+  // into the argument list starts past it.
+  int argIndexOffset = 0,
 }) {
   // A redirecting factory (`factory F(...) = T.g`) exposes the redirect
   // target's signature to callers: argument binding, conversion, and omitted
@@ -312,9 +317,9 @@ ArgumentListResult compileArgumentList(
       i++;
       continue;
     }
-    final arg = argumentList.arguments.length <= i
+    final arg = argumentList.arguments.length <= i + argIndexOffset
         ? null
-        : argumentList.arguments[i];
+        : argumentList.arguments[i + argIndexOffset];
     if (arg is NamedArgument) {
       if (param.isRequired) {
         throw CompileError('Not enough positional arguments');

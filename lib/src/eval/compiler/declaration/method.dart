@@ -24,27 +24,39 @@ int compileMethodDeclaration(
   MethodDeclaration d,
   CompilerContext ctx,
   Declaration parent, {
-  // For extension members: the extension's registration name and the type
-  // bound to `#this`. The member keeps instance-parameter layout (arg_0 is
-  // the receiver) but registers like a static member.
+  // For extension members: the extension's registration name. The member
+  // keeps instance-parameter layout (arg_0 is the receiver) but registers
+  // like a static member.
   String? extensionName,
-  TypeRef? extensionReceiverType,
 }) {
-  final isExtensionMember = extensionReceiverType != null;
+  final isExtensionMember = extensionName != null;
   final b = d.body;
   final parentName = extensionName ?? declarationName(parent);
   final methodName = d.name.lexeme;
   final pos = ctx.beginFunction('$parentName.$methodName()');
   final previousTypes = {...?ctx.temporaryTypes[ctx.library]};
+  // An extension member's callable type parameters are the extension's own
+  // parameters followed by the method's — call sites pass the resolved `on`
+  // bindings first, then the method's type arguments.
+  // Static extension members cannot reference the extension's type
+  // parameters — they are not in scope for them.
+  final extensionTypeParameters = switch (parent) {
+    ExtensionDeclaration(:final typeParameters) when !d.isStatic =>
+      typeParameters?.typeParameters ?? const <TypeParameter>[],
+    _ => const <TypeParameter>[],
+  };
+  final methodTypeParameters =
+      d.typeParameters?.typeParameters ?? const <TypeParameter>[];
   TypeRef.loadTemporaryTypes(
     ctx,
-    d.typeParameters?.typeParameters,
+    [...extensionTypeParameters, ...methodTypeParameters],
     owner: 'method:${ctx.library}:$parentName.$methodName:$pos',
   );
-  final typeParameters =
-      d.typeParameters?.typeParameters ?? const <TypeParameter>[];
   ctx.functionTypeParameterBounds[pos] = [
-    for (final parameter in typeParameters)
+    for (final parameter in [
+      ...extensionTypeParameters,
+      ...methodTypeParameters,
+    ])
       ctx
               .temporaryTypes[ctx.library]![parameter.name.lexeme]!
               .typeParameterBound ??
@@ -56,27 +68,57 @@ int compileMethodDeclaration(
     d.parameters,
     d.returnType,
     d.typeParameters,
-    memberTypeParameters: switch (ctx.currentClass) {
-      final host? => classTypeParameterRefs(
-        ctx.library,
-        ctx.currentClassName!,
-        classLikeClauses(host).$4,
-      ),
-      _ => const {},
+    memberTypeParameters: {
+      ...switch (ctx.currentClass) {
+        final host? => classTypeParameterRefs(
+          ctx.library,
+          ctx.currentClassName!,
+          classLikeClauses(host).$4,
+        ),
+        _ => const <String, TypeRef>{},
+      },
+      for (var i = 0; i < extensionTypeParameters.length; i++)
+        extensionTypeParameters[i].name.lexeme:
+            ctx.temporaryTypes[ctx.library]![extensionTypeParameters[i]
+                .name
+                .lexeme]!,
     },
   );
 
   ctx.beginScope();
-  final hasReceiver = !d.isStatic || isExtensionMember;
+  final hasReceiver = !d.isStatic;
   ctx.currentExtension = parent is ExtensionDeclaration ? parent : null;
   if (hasReceiver) {
+    // Re-resolve the extension's `on` clause now that its parameters share
+    // this member's type-parameter keyspace, so `#this`'s declared type and
+    // the body's `T` references identify the same parameter.
+    final receiverType = switch (parent) {
+      ExtensionDeclaration(:final onClause) =>
+        onClause == null
+            ? null
+            : () {
+                try {
+                  return TypeRef.fromAnnotation(
+                    ctx,
+                    ctx.library,
+                    onClause.extendedType,
+                  );
+                } catch (_) {
+                  return null;
+                }
+              }(),
+      _ => null,
+    };
     ctx.pushOp(Parameter(SSA('arg_0'), 0));
     ctx.setLocal(
       '#this',
       Variable.of(
         ctx,
         SSA('arg_0'),
-        extensionReceiverType?.copyWith(boxed: true) ?? TypeRef.$this(ctx)!,
+        receiverType?.copyWith(boxed: true) ??
+            (isExtensionMember
+                ? CoreTypes.dynamic.ref(ctx)
+                : TypeRef.$this(ctx)!),
       ),
     );
   }

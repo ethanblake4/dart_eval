@@ -757,17 +757,14 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       /// (arg_0 is the receiver) but register under `E.member` keys so call
       /// sites emit static calls with the receiver as the first argument.
       for (final ext in _ctx.extensions) {
-        final onType = ext.resolveOnType(_ctx);
-        if (onType == null) continue;
         _ctx.library = ext.library;
         for (final member in ext.members) {
-          if (member is! MethodDeclaration || member.isStatic) continue;
+          if (member is! MethodDeclaration) continue;
           compileMethodDeclaration(
             member,
             _ctx,
             ext.declaration,
             extensionName: ext.name,
-            extensionReceiverType: onType,
           );
           _ctx.finishMethod();
         }
@@ -933,9 +930,23 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
 
     final declaration = declarationOrBridge.declaration!;
 
-    // Extensions declare no top-level name binding (their members register
-    // under `E.member` keys during the extension compile pass).
+    // Extensions declare no top-level name binding themselves, but their
+    // members resolve through the `E.member` namespace for explicit
+    // application (`E.m(recv, ...)`) and static access (`E.staticM()`).
     if (declaration is ExtensionDeclaration) {
+      final extName = declaration.name?.lexeme;
+      if (extName != null) {
+        for (final member in declaration.body.members.whereType<MethodDeclaration>()) {
+          final suffix = member.isGetter
+              ? '*g'
+              : member.isSetter
+              ? '*s'
+              : '';
+          _topLevelDeclarationsMap[libraryIndex]![
+                  '$extName.${member.name.lexeme}$suffix'] =
+              DeclarationOrBridge(libraryIndex, declaration: member);
+        }
+      }
       return;
     }
 

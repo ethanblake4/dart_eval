@@ -175,7 +175,13 @@ class IdentifierReference implements Reference {
   }) {
     if (object != null) {
       if (object!.type == CoreTypes.type.ref(ctx)) {
-        return object!.concreteTypes[0].resolveTypeChain(ctx);
+        final concrete = object!.concreteTypes[0];
+        if (_extensionOf(ctx, concrete) != null) {
+          // `E.member` — a tear-off (or getter invocation) through the
+          // extension namespace; precise typing isn't needed here.
+          return CoreTypes.function.ref(ctx);
+        }
+        return concrete.resolveTypeChain(ctx);
       }
       return TypeRef.lookupFieldType(
             ctx,
@@ -476,6 +482,28 @@ class IdentifierReference implements Reference {
   Variable getValue(CompilerContext ctx, [AstNode? source]) {
     if (object != null) {
       if (object!.type == CoreTypes.type.ref(ctx)) {
+        final ext = _extensionOf(ctx, object!.concreteTypes[0]);
+        if (ext != null) {
+          // `E.member` through the extension namespace: the function (or
+          // getter) is a static callable registered under its member key.
+          final member = ext.members.whereType<MethodDeclaration>().firstWhereOrNull(
+            (m) => m.name.lexeme == name,
+          );
+          if (member == null) {
+            throw CompileError(
+              'Extension member not found: ${ext.name}.$name',
+              source,
+            );
+          }
+          return Variable(
+            CoreTypes.function.ref(ctx),
+            methodOffset: DeferredOrOffset(
+              file: ext.library,
+              name: ext.memberKey(member),
+            ),
+            callingConvention: CallingConvention.static,
+          );
+        }
         final classType = object!.concreteTypes[0].resolveTypeChain(ctx);
         if (classType.isTypeParameter) {
           // `T.member` is an instance access on T's runtime `Type` object,
@@ -570,7 +598,13 @@ class IdentifierReference implements Reference {
           if (member is! MethodDeclaration || member.isStatic) continue;
           if (member.name.lexeme != name) continue;
           if (member.isGetter) {
-            return invokeExtensionGetter(ctx, $this, ext, member);
+            return invokeExtensionGetter(
+              ctx,
+              $this,
+              ext,
+              member,
+              matchExtensionOn(ctx, $this.type, ext) ?? const [],
+            );
           }
           if (member.isSetter) break;
           return Variable(
@@ -1065,6 +1099,16 @@ class IndexedReference implements Reference {
   }
 }
 
+/// The [EvalExtension] an `E` namespace literal names, or null. Extensions
+/// have no runtime type — the pseudo-TypeRef exists purely for compile-time
+/// member lookup.
+EvalExtension? _extensionOf(CompilerContext ctx, TypeRef type) {
+  for (final ext in ctx.extensions) {
+    if (ext.library == type.file && ext.name == type.name) return ext;
+  }
+  return null;
+}
+
 Variable _declarationToVariable(
   DeclarationOrBridge decOrBridge,
   String name,
@@ -1106,6 +1150,22 @@ Variable _declarationToVariable(
 
   if (decl is VariableDeclaration) {
     return _loadGlobalVariable(ctx, decOrBridge.sourceLib, decl.name.lexeme);
+  }
+
+  if (decl is ExtensionDeclaration) {
+    // `E` as an expression is the extension's namespace: `E.m(recv, ...)`
+    // (explicit application) and `E.staticM(...)` resolve through it. The
+    // pseudo-type `E` exists only in the declarations map, never as a class.
+    final extType = TypeRef(decOrBridge.sourceLib, declarationName(decl));
+    return Variable(
+      CoreTypes.type.ref(ctx),
+      concreteTypes: [extType],
+      methodOffset: DeferredOrOffset(
+        file: decOrBridge.sourceLib,
+        name: '${declarationName(decl)}.',
+      ),
+      callingConvention: CallingConvention.static,
+    );
   }
 
   if (decl is! FunctionDeclaration && decl is! ConstructorDeclaration) {

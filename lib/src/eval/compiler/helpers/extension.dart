@@ -31,10 +31,38 @@ class EvalExtension {
     return '$name.${member.name.lexeme}$suffix';
   }
 
-  /// The `on` type, or null when it can't be resolved (e.g. it depends on
-  /// the extension's own type parameters, which aren't supported yet).
+  /// The `on` type, or null when it can't be resolved. For generic
+  /// extensions this is the *pattern* — type parameters appear as
+  /// type-parameter TypeRefs keyed by `extension:library:name` — to be bound
+  /// per call site by [matchExtensionOn].
   TypeRef? resolveOnType(CompilerContext ctx) {
-    if (declaration.typeParameters != null) return null;
+    final tps = declaration.typeParameters?.typeParameters;
+    if (tps == null || tps.isEmpty) {
+      try {
+        return TypeRef.fromAnnotation(
+          ctx,
+          library,
+          declaration.onClause!.extendedType,
+        );
+      } catch (_) {
+        return null;
+      }
+    }
+    // Seed the extension's own parameters as visible type parameters so the
+    // `on` annotation resolves into a pattern; restore the scope afterwards.
+    final temps = ctx.temporaryTypes[library] ??= {};
+    final saved = <String, TypeRef?>{};
+    for (var i = 0; i < tps.length; i++) {
+      final param = tps[i];
+      saved[param.name.lexeme] = temps[param.name.lexeme];
+      temps[param.name.lexeme] = TypeRef(
+        library,
+        param.name.lexeme,
+        resolved: true,
+        typeParameterOwner: 'extension:$library:$name',
+        typeParameterIndex: i,
+      );
+    }
     try {
       return TypeRef.fromAnnotation(
         ctx,
@@ -43,15 +71,99 @@ class EvalExtension {
       );
     } catch (_) {
       return null;
+    } finally {
+      for (final entry in saved.entries) {
+        if (entry.value == null) {
+          temps.remove(entry.key);
+        } else {
+          temps[entry.key] = entry.value!;
+        }
+      }
     }
   }
+}
+
+/// Binds [pattern] (an extension `on` clause, possibly containing the
+/// extension's type parameters) against [actual] or one of its instantiated
+/// supertypes, writing bindings into [bound] indexed by parameter position.
+/// Returns false when no supertype matches or a parameter is bound
+/// inconsistently.
+bool _unifyOnPattern(
+  CompilerContext ctx,
+  TypeRef pattern,
+  TypeRef actual,
+  List<TypeRef?> bound,
+) {
+  if (pattern.isTypeParameter) {
+    final index = pattern.typeParameterIndex!;
+    final previous = bound[index];
+    if (previous == null) {
+      bound[index] = actual;
+      return true;
+    }
+    return previous == actual ||
+        previous.isAssignableTo(ctx, actual) ||
+        actual.isAssignableTo(ctx, previous);
+  }
+  final candidates = [
+    actual,
+    ...actual
+        .resolveTypeChain(ctx)
+        .allSupertypes
+        .map(
+          (s) =>
+              s.substituteTypeParameters(actual.appliedTypeArguments(ctx)),
+        ),
+  ];
+  for (final candidate in candidates) {
+    if (candidate.file != pattern.file || candidate.name != pattern.name) {
+      continue;
+    }
+    final args = pattern.specifiedTypeArgs;
+    final actualArgs = candidate.specifiedTypeArgs;
+    var ok = true;
+    for (var i = 0; i < args.length && i < actualArgs.length; i++) {
+      if (!_unifyOnPattern(ctx, args[i], actualArgs[i], bound)) ok = false;
+    }
+    if (ok) return true;
+  }
+  return false;
+}
+
+/// Matches [receiverType] against [ext]'s `on` clause. Returns null when the
+/// extension does not apply, else the resolved bindings for the extension's
+/// type parameters (empty for non-generic extensions).
+List<TypeRef>? matchExtensionOn(
+  CompilerContext ctx,
+  TypeRef receiverType,
+  EvalExtension ext,
+) {
+  final onType = ext.resolveOnType(ctx);
+  if (onType == null) return null;
+  final tps = ext.declaration.typeParameters?.typeParameters;
+  if (tps == null || tps.isEmpty) {
+    return receiverType.isAssignableTo(ctx, onType)
+        ? const <TypeRef>[]
+        : null;
+  }
+  final bound = List<TypeRef?>.filled(tps.length, null);
+  if (!_unifyOnPattern(ctx, onType, receiverType, bound)) return null;
+  // Unbound parameters (not constrained by the pattern) take their declared
+  // bound, or dynamic when unbounded.
+  return [
+    for (var i = 0; i < tps.length; i++)
+      bound[i] ??
+          (tps[i].bound == null
+              ? CoreTypes.dynamic.ref(ctx)
+              : TypeRef.fromAnnotation(ctx, ext.library, tps[i].bound!)),
+  ];
 }
 
 /// Finds the most specific extension member applicable to [receiverType]
 /// named [memberName], or null when none apply. Ambiguity between equally
 /// specific candidates reports the first — full specificity ordering is not
 /// implemented.
-(EvalExtension, MethodDeclaration)? resolveExtensionMember(
+(EvalExtension, MethodDeclaration, List<TypeRef>)? resolveExtensionMember(
   CompilerContext ctx,
   TypeRef receiverType,
   String memberName, {
@@ -61,10 +173,12 @@ class EvalExtension {
   EvalExtension? bestExt;
   MethodDeclaration? best;
   TypeRef? bestOnType;
+  List<TypeRef>? bestBindings;
   for (final ext in ctx.visibleExtensions[ctx.library] ?? const []) {
     final onType = ext.resolveOnType(ctx);
     if (onType == null) continue;
-    if (!receiverType.isAssignableTo(ctx, onType)) continue;
+    final bindings = matchExtensionOn(ctx, receiverType, ext);
+    if (bindings == null) continue;
     for (final member in ext.members) {
       if (member is! MethodDeclaration || member.isStatic) continue;
       if (member.name.lexeme != memberName) continue;
@@ -73,10 +187,46 @@ class EvalExtension {
         bestExt = ext;
         best = member;
         bestOnType = onType;
+        bestBindings = bindings;
       }
     }
   }
-  return best == null ? null : (bestExt!, best);
+  return best == null ? null : (bestExt!, best, bestBindings!);
+}
+
+/// Runtime type-argument ids for an invocation of [member]: the extension's
+/// own [bindings] first, then one entry per method type parameter taken from
+/// [resolveGenerics] (explicit or inferred) or its declared bound. Returns
+/// null when every slot resolves trivially — an empty `typeArguments` list
+/// means the callee's parameters default to their bounds.
+List<int>? extensionCallTypeArguments(
+  CompilerContext ctx,
+  EvalExtension ext,
+  MethodDeclaration member,
+  List<TypeRef> bindings,
+  Map<String, TypeRef> resolveGenerics,
+) {
+  final methodParams =
+      member.typeParameters?.typeParameters ?? const <TypeParameter>[];
+  if (bindings.length + methodParams.length == 0) return null;
+  final ids = <int>[];
+  for (final bound in bindings) {
+    ids.add(bound.runtimeTypeId(ctx));
+  }
+  for (final param in methodParams) {
+    final resolved =
+        resolveGenerics[param.name.lexeme] ??
+        (param.bound == null
+            ? CoreTypes.dynamic.ref(ctx)
+            : TypeRef.fromAnnotation(
+                ctx,
+                ext.library,
+                param.bound!,
+                typeParameters: resolveGenerics,
+              ));
+    ids.add(resolved.runtimeTypeId(ctx));
+  }
+  return ids;
 }
 
 /// The extension declaring [member], or null.
@@ -88,19 +238,25 @@ EvalExtension? extensionOfMember(CompilerContext ctx, MethodDeclaration member) 
 }
 
 /// Emits a call to an extension getter: `E.name*g(receiver)` is a static
-/// call whose only argument is the receiver.
+/// call whose only argument is the receiver. [bindings] holds the resolved
+/// `on` bindings for generic extensions (empty otherwise).
 Variable invokeExtensionGetter(
   CompilerContext ctx,
   Variable receiver,
   EvalExtension ext,
-  MethodDeclaration member,
-) {
+  MethodDeclaration member, [
+  List<TypeRef> bindings = const [],
+]) {
   final s = ctx.svar('method_result');
   ctx.pushOp(
     Call(
       DeferredOrOffset(file: ext.library, name: ext.memberKey(member)),
       [receiver.boxIfNeeded(ctx).ssa],
       result: s,
+      typeArguments: bindings.isEmpty
+          ? const []
+          : extensionCallTypeArguments(ctx, ext, member, bindings, const {}) ??
+              const [],
     ),
   );
   final returnType =

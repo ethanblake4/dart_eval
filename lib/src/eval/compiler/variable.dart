@@ -547,7 +547,7 @@ class Variable {
         getter: true,
       );
       if (found != null) {
-        return invokeExtensionGetter(ctx, this, found.$1, found.$2);
+        return invokeExtensionGetter(ctx, this, found.$1, found.$2, found.$3);
       }
       throw CompileError(
         'Member "$name" is not defined for type $resolvedReceiver',

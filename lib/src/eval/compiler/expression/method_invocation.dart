@@ -675,6 +675,12 @@ Variable _invokeWithTarget(
     staticType = L.concreteTypes[0];
     if (ctx.topLevelDeclarationsMap[staticType.file]?['${staticType.name}.$staticMemberName'] ==
         null) {
+      // A member invoked on a `Type` literal may still be an extension
+      // member on `Type` — `C.expectStaticType<Exactly<Type>>()`.
+      final found = resolveExtensionMember(ctx, L.type, e.methodName.name);
+      if (found != null) {
+        return _invokeExtensionMethod(ctx, L, e, found.$1, found.$2, found.$3);
+      }
       // Not a static member of the class — it's an instance method of the
       // `Type` object itself (`Foo.toString()`, `Foo.hashCode`, ...).
       final args = [
@@ -701,6 +707,80 @@ Variable _invokeWithTarget(
       ).result;
     }
     isStatic = true;
+    // `E.m(receiver, ...)` — explicit application of an instance extension
+    // member through the namespace. The receiver is the first argument and
+    // binds the extension's `on` type parameters.
+    final memberDecl = dec0.declaration;
+    if (memberDecl is MethodDeclaration &&
+        !memberDecl.isStatic &&
+        !memberDecl.isGetter &&
+        !memberDecl.isSetter) {
+      final memberExt = extensionOfMember(ctx, memberDecl);
+      if (memberExt != null) {
+        final positional = e.argumentList.arguments;
+        if (positional.isEmpty || positional.first is NamedArgument) {
+          throw CompileError(
+            'Extension ${memberExt.name} requires a receiver argument',
+            e,
+          );
+        }
+        final receiver = compileExpression(
+          positional.first.argumentExpression,
+          ctx,
+        );
+        final bindings = matchExtensionOn(ctx, receiver.type, memberExt);
+        if (bindings == null) {
+          throw CompileError(
+            '${receiver.type} is not assignable to the `on` clause of '
+            'extension ${memberExt.name}',
+            e,
+          );
+        }
+        final extParams =
+            memberExt.declaration.typeParameters?.typeParameters ??
+            const <TypeParameter>[];
+        final result = _compileNonBridgeArgs(
+          ctx,
+          memberExt.library,
+          memberDecl,
+          e.argumentList,
+          before: [receiver.boxIfNeeded(ctx)],
+          typeArguments: e.typeArguments,
+          seedGenerics: {
+            for (var i = 0; i < bindings.length && i < extParams.length; i++)
+              extParams[i].name.lexeme: bindings[i],
+          },
+          argIndexOffset: 1,
+          source: e,
+        );
+        final s = ctx.svar('method_result');
+        ctx.pushOp(
+          Call(
+            DeferredOrOffset(
+              file: memberExt.library,
+              name: memberExt.memberKey(memberDecl),
+            ),
+            result.args.ssa,
+            result: s,
+            typeArguments:
+                extensionCallTypeArguments(
+                  ctx,
+                  memberExt,
+                  memberDecl,
+                  bindings,
+                  result.resolveGenerics,
+                ) ??
+                _runtimeTypeArguments(ctx, e),
+          ),
+        );
+        return Variable.of(
+          ctx,
+          s,
+          result.returnType?.type?.copyWith(boxed: true) ??
+              CoreTypes.dynamic.ref(ctx),
+        );
+      }
+    }
   } else if (L.type == CoreTypes.function.ref(ctx) &&
       e.methodName.name == 'call') {
     // `fn.call(...)`: Function has no declared `call` member; the call is the
@@ -723,34 +803,7 @@ Variable _invokeWithTarget(
         e.methodName.name,
       );
       if (found == null) rethrow;
-      final (ext, member) = found;
-      final result = _compileNonBridgeArgs(
-        ctx,
-        ext.library,
-        member,
-        e.argumentList,
-        before: [L.boxIfNeeded(ctx)],
-        typeArguments: e.typeArguments,
-        source: e,
-      );
-      final s = ctx.svar('method_result');
-      ctx.pushOp(
-        Call(
-          DeferredOrOffset(
-            file: ext.library,
-            name: ext.memberKey(member),
-          ),
-          result.args.ssa,
-          result: s,
-          typeArguments: _runtimeTypeArguments(ctx, e),
-        ),
-      );
-      return Variable.of(
-        ctx,
-        s,
-        result.returnType?.type?.copyWith(boxed: true) ??
-            CoreTypes.dynamic.ref(ctx),
-      );
+      return _invokeExtensionMethod(ctx, L, e, found.$1, found.$2, found.$3);
     }
     final member = dec0.declaration;
     final isFieldOrGetter =
@@ -1028,6 +1081,59 @@ void _inferBridgeTypeParameters(
   ) {
     infer(function.params[index].type.type, arguments[index].type);
   }
+}
+
+/// Emits a call to a resolved extension member: `E.m(receiver, args...)` —
+/// the receiver prepended to the argument vector, the extension's `on`
+/// bindings plus the method's resolved type arguments passed in the type
+/// environment.
+Variable _invokeExtensionMethod(
+  CompilerContext ctx,
+  Variable receiver,
+  MethodInvocation call,
+  EvalExtension ext,
+  MethodDeclaration member,
+  List<TypeRef> bindings,
+) {
+  final extParams =
+      ext.declaration.typeParameters?.typeParameters ??
+      const <TypeParameter>[];
+  final result = _compileNonBridgeArgs(
+    ctx,
+    ext.library,
+    member,
+    call.argumentList,
+    before: [receiver.boxIfNeeded(ctx)],
+    typeArguments: call.typeArguments,
+    seedGenerics: {
+      for (var i = 0; i < bindings.length && i < extParams.length; i++)
+        extParams[i].name.lexeme: bindings[i],
+    },
+    source: call,
+  );
+  final s = ctx.svar('method_result');
+  ctx.pushOp(
+    Call(
+      DeferredOrOffset(file: ext.library, name: ext.memberKey(member)),
+      result.args.ssa,
+      result: s,
+      typeArguments:
+          extensionCallTypeArguments(
+            ctx,
+            ext,
+            member,
+            bindings,
+            result.resolveGenerics,
+          ) ??
+          _runtimeTypeArguments(ctx, call),
+    ),
+  );
+  return Variable.of(
+    ctx,
+    s,
+    result.returnType?.type?.copyWith(boxed: true) ??
+        CoreTypes.dynamic.ref(ctx),
+  );
 }
 
 List<int> _runtimeTypeArguments(CompilerContext ctx, MethodInvocation call) =>
@@ -1460,6 +1566,9 @@ _ResolvedArgs _compileNonBridgeArgs(
   TypeArgumentList? typeArguments,
   AstNode? source,
   Map<String, TypeRef> seedGenerics = const {},
+  // Skips this many leading positional arguments (explicit extension
+  // application `E.m(receiver, ...)` carries the receiver in the list).
+  int argIndexOffset = 0,
 }) {
   final (fpl, typeParams, returnAnnotation) = _invocationSignature(dec);
   final isCallableDecl = dec is FunctionDeclaration || dec is MethodDeclaration;
@@ -1524,6 +1633,7 @@ _ResolvedArgs _compileNonBridgeArgs(
     dec,
     before: before,
     source: source,
+    argIndexOffset: argIndexOffset,
     resolveGenerics: resolveGenerics,
     // Only function/method declarations take explicit type arguments at the
     // call site; constructor calls infer regardless (e.g. List<int>() still
