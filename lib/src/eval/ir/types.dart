@@ -86,6 +86,36 @@ final class LoadConstantType extends Operation {
   }
 }
 
+/// Loads a `Type` object for a type parameter, resolved against the frame's
+/// type environment at runtime. [typeId] is the runtime descriptor index of
+/// the type parameter reference.
+final class LoadTypeParameter extends Operation {
+  final SSA result;
+  final int typeId;
+
+  LoadTypeParameter(this.result, this.typeId);
+
+  @override
+  SSA? get writesTo => result;
+
+  @override
+  String toString() => '$result = loadtypeparameter $typeId';
+
+  @override
+  bool operator ==(Object other) =>
+      other is LoadTypeParameter &&
+      result == other.result &&
+      typeId == other.typeId;
+
+  @override
+  int get hashCode => result.hashCode ^ typeId.hashCode;
+
+  @override
+  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
+    return LoadTypeParameter(writesTo ?? result, typeId);
+  }
+}
+
 final class LoadRuntimeType extends Operation {
   final SSA result;
   final SSA object;

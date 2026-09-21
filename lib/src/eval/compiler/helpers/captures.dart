@@ -26,7 +26,8 @@ class CaptureAnalysis extends RecursiveAstVisitor<void> {
   }
 
   void _declare(String name, AstNode declaration) {
-    if (_functions.isNotEmpty) {
+    // `_` is a wildcard: it never binds, so it is never declared.
+    if (_functions.isNotEmpty && name != '_') {
       _scopes.last[name] = (declaration, _functions.last);
     }
   }

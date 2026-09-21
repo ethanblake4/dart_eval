@@ -601,6 +601,20 @@ List<Instruction> specification() {
     immediate: 'typeId',
   );
   add(
+    'rLoadTypeParameter',
+    '''r = \$TypeImpl(
+            runtime!.resolveTypeParameterInEnvironment(
+              index,
+              frame.typeEnvironmentOwnerType(runtime),
+              frame.effectiveTypeArguments,
+            ),
+            runtime,
+          );''',
+    output: 6,
+    immediate: 'typeId',
+    mayThrow: true,
+  );
+  add(
     'rAssertType',
     '''if (runtime != null) {
           if (!runtime.isTypedValueTypeInCallableEnvironment(

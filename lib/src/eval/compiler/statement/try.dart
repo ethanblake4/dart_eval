@@ -211,19 +211,22 @@ void _bindException(
   TypeRef type,
 ) {
   // Assigning to a catch parameter must not replace the value of `rethrow`.
-  ctx.setLocal(
-    clause.exceptionParameter!.name.lexeme,
-    Variable.ssa(
-      ctx,
-      Assign(ctx.svar('catch_parameter'), exception.readBinding(ctx).ssa),
-      type,
-    ),
-  );
+  // A `_` catch parameter is a wildcard: non-binding.
+  if (clause.exceptionParameter!.name.lexeme != '_') {
+    ctx.setLocal(
+      clause.exceptionParameter!.name.lexeme,
+      Variable.ssa(
+        ctx,
+        Assign(ctx.svar('catch_parameter'), exception.readBinding(ctx).ssa),
+        type,
+      ),
+    );
+  }
 }
 
 void _bindStackTrace(CompilerContext ctx, CatchClause clause) {
   final parameter = clause.stackTraceParameter;
-  if (parameter != null) {
+  if (parameter != null && parameter.name.lexeme != '_') {
     ctx.setLocal(
       parameter.name.lexeme,
       Variable.ssa(

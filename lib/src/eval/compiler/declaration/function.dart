@@ -88,7 +88,10 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
     }
     vRep = Variable.of(ctx, SSA('arg_$i'), type.typeAcrossFunctionBoundary);
 
-    ctx.setLocal(p.name!.lexeme, vRep.captureBinding(ctx, p));
+    // `_` parameters are wildcards: non-binding and repeatable.
+    if (p.name!.lexeme != '_') {
+      ctx.setLocal(p.name!.lexeme, vRep.captureBinding(ctx, p));
+    }
     parameterRepresentations.add(representationForType(vRep.type));
 
     i++;

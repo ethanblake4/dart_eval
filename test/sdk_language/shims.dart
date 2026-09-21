@@ -298,6 +298,11 @@ class Expect {
 }
 
 bool _identical(dynamic a, dynamic b) => identical(a, b);
+
+/// Mirrors the real `package:expect` null-safety detection: under sound
+/// null safety `List<Null>` is not a `List<Object>`.
+bool get hasUnsoundNullSafety => const <Null>[] is List<Object>;
+bool get hasSoundNullSafety => !hasUnsoundNullSafety;
 ''';
 
 /// `package:expect/async_helper.dart` — the real file manages a zone-based

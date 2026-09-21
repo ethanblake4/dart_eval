@@ -222,7 +222,8 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
           exceptions.CaughtException() ||
           exceptions.CaughtStackTrace() ||
           async.BeginAsync() ||
-          types.LoadConstantType():
+          types.LoadConstantType() ||
+          types.LoadTypeParameter():
         output(operation, object);
       case primitives.MaybeBoxNull() || bridge.PrepareBridgeArgument():
         inputs(operation, object);

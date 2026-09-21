@@ -204,7 +204,9 @@ class TypedProgram {
             'Incompatible typed export parameter representation',
           );
         }
-        if (parameter.name.isEmpty || !parameterNames.add(parameter.name)) {
+        // `_` is a wildcard parameter: it is non-binding and may repeat.
+        if (parameter.name.isEmpty ||
+            (parameter.name != '_' && !parameterNames.add(parameter.name))) {
           throw const FormatException(
             'Invalid or duplicate typed parameter name',
           );

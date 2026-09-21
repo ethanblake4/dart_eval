@@ -11,6 +11,7 @@ import 'dart:io';
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/model/source.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_instance.dart';
 
 import '../test/sdk_language/sdk_language.dart';
 
@@ -89,6 +90,24 @@ void main(List<String> args) async {
 
 String _signature(Object e, StackTrace st) {
   var s = e.toString();
+  // TypedInstance is an eval'd exception escaping uncaught — unwrap it to the
+  // eval class name + message so real root causes cluster instead of every
+  // uncaught throw sharing one signature.
+  if (e is TypedInstance) {
+    final cls = e.program.classes[e.classId].name;
+    var detail = '';
+    for (final v in e.values) {
+      if (v != null) {
+        detail = ' ${v.toString()}';
+        break;
+      }
+    }
+    s = '$cls:$detail'
+        .replaceAll(RegExp(r'package:sdk_language/[^\s,)]+'), '<src>')
+        .replaceAll(RegExp(r'\b\d+\b'), 'N');
+    if (s.length > 160) s = s.substring(0, 160);
+    return s;
+  }
   // Normalize paths/numbers so identical root causes cluster.
   s = s.replaceAll(RegExp(r'package:sdk_language/[^\s,)]+'), '<src>');
   s = s.replaceAll(RegExp(r"'[^']{20,}'"), "'…'");

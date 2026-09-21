@@ -77,6 +77,11 @@ StatementInfo compileStatement(
       return compilePatternVariableDeclarationStatement(s, ctx);
     } else if (s is FunctionDeclarationStatement) {
       final decl = s.functionDeclaration;
+      if (decl.name.lexeme == '_') {
+        // A local `_` function is a wildcard: compile it, bind nothing.
+        compileFunctionExpression(decl.functionExpression, ctx);
+        return StatementInfo();
+      }
       final captured = capturesFor(decl).captured.contains(decl);
       if (captured) {
         final placeholder = BuiltinValue()

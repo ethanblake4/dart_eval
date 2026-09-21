@@ -191,6 +191,13 @@ class IdentifierReference implements Reference {
       }
     }
 
+    final typeParameter = ctx.temporaryTypes[ctx.library]?[name];
+    if (typeParameter != null &&
+        typeParameter.isTypeParameter &&
+        name != '_') {
+      return CoreTypes.type.ref(ctx);
+    }
+
     final declarationValue = _lookupVisibleValue(ctx, name, source);
     final decl = declarationValue.declaration!;
 
@@ -573,6 +580,23 @@ class IdentifierReference implements Reference {
           );
         }
       }
+    }
+
+    // A type parameter in scope evaluates to its bound `Type` object.
+    // (`_` is a wildcard type parameter: non-binding.)
+    final typeParameter = ctx.temporaryTypes[ctx.library]?[name];
+    if (typeParameter != null &&
+        typeParameter.isTypeParameter &&
+        name != '_') {
+      return Variable.ssa(
+        ctx,
+        LoadTypeParameter(
+          ctx.svar('type'),
+          typeParameter.runtimeTypeId(ctx),
+        ),
+        CoreTypes.type.ref(ctx),
+        concreteTypes: [typeParameter],
+      );
     }
 
     final declaration =

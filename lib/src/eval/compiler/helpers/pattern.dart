@@ -197,7 +197,9 @@ Variable patternMatchAndBind(
           patternContext == PatternBindContext.declareFinal ||
           (patternContext == PatternBindContext.matching &&
               pat is DeclaredVariablePattern);
-      if (declare && ctx.locals.last.containsKey(variableName)) {
+      if (declare &&
+          variableName != '_' &&
+          ctx.locals.last.containsKey(variableName)) {
         throw CompileError(
           'Cannot declare variable $variableName'
           ' multiple times in the same scope',
@@ -208,7 +210,8 @@ Variable patternMatchAndBind(
           (pat is DeclaredVariablePattern &&
               pat.keyword != null &&
               pat.keyword!.keyword == Keyword.FINAL);
-      // If the variable is already in scope, we need to copy it to a new stack slot
+      // A `_` pattern variable is a wildcard: it matches but binds nothing.
+      final bindsVariable = variableName != '_';
       if (V.name != null) {
         if (!(V.type.isUnboxedAcrossFunctionBoundaries)) {
           V = V.boxIfNeeded(ctx);
@@ -219,9 +222,11 @@ Variable patternMatchAndBind(
           V.type,
           isFinal: isFinal,
         );
-        ctx.setLocal(variableName, v);
+        if (bindsVariable) ctx.setLocal(variableName, v);
       } else {
-        ctx.setLocal(variableName, V.copyWith(isFinal: isFinal));
+        if (bindsVariable) {
+          ctx.setLocal(variableName, V.copyWith(isFinal: isFinal));
+        }
       }
 
       if (pat is DeclaredVariablePattern) {

@@ -84,10 +84,13 @@ int compileMethodDeclaration(
       ).copyWith(boxed: true);
     }
 
-    ctx.setLocal(
-      p.name!.lexeme,
-      Variable.of(ctx, SSA('arg_$i'), type).captureBinding(ctx, p),
-    );
+    // `_` parameters are wildcards: non-binding and repeatable.
+    if (p.name!.lexeme != '_') {
+      ctx.setLocal(
+        p.name!.lexeme,
+        Variable.of(ctx, SSA('arg_$i'), type).captureBinding(ctx, p),
+      );
+    }
 
     i++;
   }

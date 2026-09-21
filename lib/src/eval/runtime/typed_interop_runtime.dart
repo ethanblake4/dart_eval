@@ -562,6 +562,27 @@ extension TypedRuntimeInterop on Runtime {
     return true;
   }
 
+  /// Resolves a type parameter descriptor to the concrete runtime type id it
+  /// is bound to in the current callable environment, falling back to the
+  /// parameter's bound when it cannot be resolved.
+  int resolveTypeParameterInEnvironment(
+    int type,
+    int? actualOwnerType,
+    List<int> callableTypeArguments,
+  ) {
+    final resolved = _resolveTypeParameter(
+      type,
+      actualOwnerType,
+      callableTypeArguments,
+    );
+    if (resolved != null) return resolved;
+    final descriptor = _typeDescriptors[type];
+    return descriptor.length == 6 &&
+            descriptor[2] == RuntimeTypeDescriptorTag.typeParameter
+        ? descriptor[5]
+        : type;
+  }
+
   int? _resolveTypeParameter(
     int type,
     int? actualOwnerType, [

@@ -1,4 +1,7 @@
 import 'package:dart_eval/src/eval/runtime/exception.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_closure.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_instance.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/base.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/object.dart';
@@ -60,6 +63,10 @@ abstract class EvalFunction implements $Instance, EvalCallable {
         return $Function((runtime, target, r, s, c) => $bool(this == r));
       case 'hashCode':
         return $int(hashCode);
+      case 'toString':
+        return $Function(
+          (runtime, target, r, s, c) => $String(toString()),
+        );
       default:
         throw EvalUnknownPropertyException(identifier);
     }
@@ -95,10 +102,152 @@ class $Function extends EvalFunction {
   static const $declaration = BridgeClassDef(
     BridgeClassType(BridgeTypeRef(CoreTypes.function)),
     constructors: {},
+    methods: {
+      'apply': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
+          params: [
+            BridgeParameter(
+              'function',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
+              false,
+            ),
+            BridgeParameter(
+              'positionalArguments',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.list, [
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
+                ]),
+              ),
+              false,
+            ),
+            BridgeParameter(
+              'namedArguments',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.map, [
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.symbol)),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
+                ]),
+              ),
+              true,
+            ),
+          ],
+        ),
+        isStatic: true,
+      ),
+    },
     wrap: true,
   );
 
   final EvalCallableFunc func;
+
+  /// `Function.apply(function, positionalArguments, [namedArguments])`.
+  static $Value? $apply(
+    Runtime runtime,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final positional = switch (s) {
+      $Value v => (v.$value as List).cast<Object?>(),
+      _ => (s as List).cast<Object?>(),
+    };
+    // `c` is the argument-count integer when fewer than three arguments were
+    // supplied (the namedArguments parameter omitted).
+    final namedArg = switch (c) {
+      $Value v => v.$value as Map?,
+      Map m => m,
+      _ => null,
+    };
+    final namedMap = <String, Object?>{};
+    if (namedArg != null) {
+      for (final entry in namedArg.entries) {
+        final key = entry.key;
+        namedMap[_symbolName(key is $Value ? key.$value : key)] =
+            entry.value;
+      }
+    }
+    return _apply(runtime, r, positional, namedMap);
+  }
+
+  /// Symbol's only string view is `Symbol("name")`; the SDK's Symbol has no
+  /// public name getter.
+  static String _symbolName(Object? symbol) {
+    if (symbol is Symbol) {
+      final str = symbol.toString();
+      const prefix = 'Symbol("';
+      if (str.startsWith(prefix) && str.endsWith('")')) {
+        return str.substring(prefix.length, str.length - 2);
+      }
+      return str;
+    }
+    return symbol.toString();
+  }
+
+  static $Value? _apply(
+    Runtime runtime,
+    Object? fn,
+    List<Object?> positional,
+    Map<String, Object?> named,
+  ) {
+    final namedNames = named.keys.toList();
+    final args = [...positional, ...named.values];
+    final first = args.isEmpty ? null : args[0];
+    final rest = args.length <= 1
+        ? null
+        : args.length == 2
+        ? args[1]
+        : args.sublist(1);
+    if (fn is TypedClosure) {
+      return fn.invoke(
+        positional.length,
+        first,
+        rest,
+        namedNames: namedNames,
+        runtime: runtime,
+      );
+    }
+    if (fn is TypedInstance) {
+      return fn.invoke(
+        'call',
+        positional.length,
+        first,
+        rest,
+        namedNames: namedNames,
+        runtime: runtime,
+      );
+    }
+    if (fn is EvalCallable) {
+      return fn.call(
+        runtime,
+        null,
+        first,
+        args.length > 1 ? args[1] : null,
+        args.length < 3 ? args.length : args.sublist(2),
+      );
+    }
+    if (fn is Function) {
+      return TypedInterop.boxExternal(
+        Function.apply(
+          fn,
+          positional.map((e) => e is $Value ? e.$value : e).toList(),
+          named.isEmpty
+              ? null
+              : {
+                  for (final e in named.entries)
+                    Symbol(e.key): e.value is $Value
+                        ? (e.value as $Value).$value
+                        : e.value,
+                },
+        ),
+        runtime: runtime,
+      );
+    }
+    throw NoSuchMethodError.withInvocation(
+      fn,
+      Invocation.method(const Symbol('call'), positional),
+    );
+  }
 
   @override
   get $value => func;

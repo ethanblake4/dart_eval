@@ -1686,6 +1686,11 @@ class _LoweringSession {
             [],
             immediate: typeId,
           ),
+          types_ir.LoadTypeParameter(:final typeId) => make(
+            ['rLoadTypeParameter'],
+            [],
+            immediate: typeId,
+          ),
           types_ir.LoadRuntimeType(:final object) => make(
             ['rRuntimeType'],
             [object],

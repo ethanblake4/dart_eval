@@ -764,6 +764,17 @@ abstract final class TypedMachine {
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           r = $TypeImpl(index, runtime);
           continue dispatch;
+        case TypedOp.rLoadTypeParameter:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          r = $TypeImpl(
+            runtime!.resolveTypeParameterInEnvironment(
+              index,
+              frame.typeEnvironmentOwnerType(runtime),
+              frame.effectiveTypeArguments,
+            ),
+            runtime,
+          );
+          continue dispatch;
         case TypedOp.rAssertType:
           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
           if (runtime != null) {

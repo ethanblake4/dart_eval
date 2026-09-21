@@ -29,7 +29,10 @@ void compileVariableDeclarationList(
   }
 
   for (final li in l.variables) {
-    if (ctx.locals.last.containsKey(li.name.lexeme)) {
+    // A local `_` is a wildcard: non-binding and repeatable in one scope.
+    // (Top-level and member `_` declarations are still binding.)
+    final isWildcard = li.name.lexeme == '_';
+    if (ctx.locals.last.containsKey(li.name.lexeme) && !isWildcard) {
       throw CompileError(
         'Cannot declare variable ${li.name.lexeme}'
         ' multiple times in the same scope',
@@ -56,6 +59,10 @@ void compileVariableDeclarationList(
       if (!((type ?? res.type).isUnboxedAcrossFunctionBoundaries)) {
         res = res.boxIfNeeded(ctx);
       }
+      if (isWildcard) {
+        // Evaluate for side effects only; the wildcard binds nothing.
+        continue;
+      }
       final local = res.copyWith(
         name: ctx.svar(li.name.lexeme).name,
         type: (type ?? res.type).copyWith(boxed: res.boxed),
@@ -65,6 +72,7 @@ void compileVariableDeclarationList(
       ctx.pushOp(Assign(local.ssa, res.ssa));
       ctx.setLocal(li.name.lexeme, local.captureBinding(ctx, li));
     } else {
+      if (isWildcard) continue;
       ctx.setLocal(
         li.name.lexeme,
         BuiltinValue()
