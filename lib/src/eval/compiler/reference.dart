@@ -15,12 +15,14 @@ import 'package:dart_eval/src/eval/ir/types.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/ir/bridge.dart';
+import 'package:collection/collection.dart';
 import 'package:dart_eval/src/eval/ir/collection.dart';
 import 'package:dart_eval/src/eval/ir/globals.dart';
 import 'package:dart_eval/src/eval/ir/memory.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/compiler/expression/identifier.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 
@@ -487,6 +489,40 @@ class IdentifierReference implements Reference {
       return local.readBinding(ctx);
     }
 
+    // Inside an extension body, the extension's own members shadow both
+    // outer scopes and the receiver's members.
+    final currentExtension = ctx.currentExtension;
+    if (currentExtension is ExtensionDeclaration) {
+      final ext = ctx.extensions.firstWhereOrNull(
+        (e) => e.declaration == currentExtension,
+      );
+      final $this = ctx.lookupLocal('#this');
+      if (ext != null && $this != null) {
+        for (final member in ext.members) {
+          if (member is! MethodDeclaration || member.isStatic) continue;
+          if (member.name.lexeme != name) continue;
+          if (member.isGetter) {
+            return invokeExtensionGetter(ctx, $this, ext, member);
+          }
+          if (member.isSetter) break;
+          return Variable(
+            CoreTypes.function.ref(ctx),
+            methodOffset: DeferredOrOffset(
+              file: ext.library,
+              name: ext.memberKey(member),
+            ),
+            methodReturnType: AlwaysReturnType.fromAnnotation(
+              ctx,
+              ext.library,
+              member.returnType,
+              CoreTypes.dynamic.ref(ctx),
+            ),
+            callingConvention: CallingConvention.static,
+          )..implicitReceiver = $this;
+        }
+      }
+    }
+
     // Next, the instance (if available)
     if (ctx.currentClass != null) {
       final instanceDeclaration = resolveInstanceDeclaration(
@@ -642,16 +678,32 @@ class IdentifierReference implements Reference {
 
     final declaration =
         ctx.visibleDeclarations[ctx.library]![name] ??
-        ctx.visibleDeclarations[ctx.library]![name.split('.')[0]] ??
+        ctx.visibleDeclarations[ctx.library]![name.split('.')[0]];
+
+    // A bare identifier inside an extension body can denote a member of the
+    // receiver — lowest precedence, after globals.
+    if (declaration == null && currentExtension != null) {
+      final $this = ctx.lookupLocal('#this');
+      if ($this != null) {
+        try {
+          return $this.getProperty(ctx, name);
+        } on CompileError {
+          // Not a member of the `on` type either.
+        }
+      }
+    }
+
+    final activeDeclaration =
+        declaration ??
         (throw CompileError('Could not find declaration "$name"', source));
 
     // Prefix children are keyed by declaration name ('B'), so a prefixed
     // member reference 'p.B.ctor' resolves 'B' here; [_declarationToVariable]
     // handles the member suffix via _refName.
     final split = name.split('.');
-    final children = declaration.children;
-    final viaPrefix = declaration.declaration == null;
-    final activeDec = declaration.declaration ??
+    final children = activeDeclaration.children;
+    final viaPrefix = activeDeclaration.declaration == null;
+    final activeDec = activeDeclaration.declaration ??
         (split.length > 1 && children != null ? children[split[1]] : null) ??
         (throw PrefixError());
 

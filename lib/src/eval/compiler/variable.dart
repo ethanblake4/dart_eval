@@ -23,6 +23,7 @@ import 'package:dart_eval/src/eval/ir/types.dart';
 
 import 'errors.dart';
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 
 /// A compiler value with an SSA identity, language type and calling convention.
 class Variable {
@@ -105,6 +106,11 @@ class Variable {
   final ReturnType? methodReturnType;
   final bool isFinal;
   final CallingConvention callingConvention;
+
+  /// The receiver to prepend as the first argument when this variable is
+  /// invoked as a function — set on references to a member of the enclosing
+  /// extension inside its own body.
+  Variable? implicitReceiver;
 
   bool get boxed => type.boxed;
 
@@ -317,6 +323,7 @@ class Variable {
       ..frameIndex = frameIndex ?? this.frameIndex
       ..localName = localName
       ..captureCell = captureCell
+      ..implicitReceiver = implicitReceiver
       ..exceptionSlot = exceptionSlot
       ..captureCellSlot = captureCellSlot;
   }
@@ -431,6 +438,16 @@ class Variable {
     if (resolvedField == null &&
         resolvedReceiver != CoreTypes.dynamic.ref(ctx) &&
         member == null) {
+      // An extension getter may apply.
+      final found = resolveExtensionMember(
+        ctx,
+        resolvedReceiver,
+        name,
+        getter: true,
+      );
+      if (found != null) {
+        return invokeExtensionGetter(ctx, this, found.$1, found.$2);
+      }
       throw CompileError(
         'Member "$name" is not defined for type $resolvedReceiver',
         source,

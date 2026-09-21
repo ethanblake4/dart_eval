@@ -1,3 +1,4 @@
+import 'package:dart_eval/src/eval/ir/memory.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
@@ -8,15 +9,17 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 
 Variable compileThisExpression(ThisExpression e, CompilerContext ctx) {
-  if (ctx.currentClass == null) {
+  // Extensions may use `this` for the receiver without a class context.
+  if (ctx.lookupLocal('#this') == null) {
     throw CompileError("Cannot use 'this' outside of a class context");
   }
   final receiver = ctx.lookupLocal('#this')!;
-  return Variable.ssa(
-    ctx,
-    LoadThis(ctx.svar('this'), receiver.ssa),
-    receiver.type,
-  );
+  // In an extension, `this` is the receiver value itself; LoadThis only
+  // exists to resolve the dispatch root of a class instance.
+  final operation = ctx.currentExtension == null
+      ? LoadThis(ctx.svar('this'), receiver.ssa)
+      : Assign(ctx.svar('this'), receiver.ssa);
+  return Variable.ssa(ctx, operation, receiver.type);
 }
 
 Variable compileSuperExpression(SuperExpression e, CompilerContext ctx) {

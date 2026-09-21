@@ -8,6 +8,8 @@ import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/closure.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/equality.dart';
+import 'package:collection/collection.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
@@ -187,6 +189,54 @@ Variable compileMethodInvocation(
   }
 
   var offset = method.methodOffset!;
+  if (method.implicitReceiver != null) {
+    // A member of the enclosing extension invoked on `this`.
+    final ext = ctx.extensions.firstWhereOrNull(
+      (ext) => ext.declaration == ctx.currentExtension,
+    )!;
+    final member = ext.members
+        .whereType<MethodDeclaration>()
+        .firstWhereOrNull(
+          (m) =>
+              !m.isStatic &&
+              !m.isGetter &&
+              !m.isSetter &&
+              m.name.lexeme == e.methodName.name,
+        )!;
+    final result = _compileNonBridgeArgs(
+      ctx,
+      ext.library,
+      member,
+      e.argumentList,
+      before: [method.implicitReceiver!.boxIfNeeded(ctx)],
+      typeArguments: e.typeArguments,
+      source: e,
+    );
+    final s = ctx.svar('method_result');
+    ctx.pushOp(
+      Call(
+        DeferredOrOffset(file: ext.library, name: ext.memberKey(member)),
+        result.args.ssa,
+        result: s,
+        typeArguments: _runtimeTypeArguments(ctx, e),
+      ),
+    );
+    final returnType =
+        result.returnType?.type ??
+        method.methodReturnType
+            ?.toAlwaysReturnType(
+              ctx,
+              method.implicitReceiver!.type,
+              result.args.args.map((a) => a.type).toList(),
+              const {},
+            )
+            ?.type;
+    return Variable.of(
+      ctx,
+      s,
+      returnType?.copyWith(boxed: true) ?? CoreTypes.dynamic.ref(ctx),
+    );
+  }
   if (offset.file == ctx.library &&
       offset.className != null &&
       offset.className == ctx.currentClassName) {
@@ -655,7 +705,45 @@ Variable _invokeWithTarget(
       typeArguments: e.typeArguments?.arguments.toList(),
     ).result;
   } else if (L.type != CoreTypes.dynamic.ref(ctx)) {
-    dec0 = resolveInstanceMethod(ctx, L.type, e.methodName.name, e);
+    try {
+      dec0 = resolveInstanceMethod(ctx, L.type, e.methodName.name, e);
+    } on CompileError {
+      // No such instance member: an extension method may apply.
+      final found = resolveExtensionMember(
+        ctx,
+        L.type,
+        e.methodName.name,
+      );
+      if (found == null) rethrow;
+      final (ext, member) = found;
+      final result = _compileNonBridgeArgs(
+        ctx,
+        ext.library,
+        member,
+        e.argumentList,
+        before: [L.boxIfNeeded(ctx)],
+        typeArguments: e.typeArguments,
+        source: e,
+      );
+      final s = ctx.svar('method_result');
+      ctx.pushOp(
+        Call(
+          DeferredOrOffset(
+            file: ext.library,
+            name: ext.memberKey(member),
+          ),
+          result.args.ssa,
+          result: s,
+          typeArguments: _runtimeTypeArguments(ctx, e),
+        ),
+      );
+      return Variable.of(
+        ctx,
+        s,
+        result.returnType?.type?.copyWith(boxed: true) ??
+            CoreTypes.dynamic.ref(ctx),
+      );
+    }
     final member = dec0.declaration;
     final isFieldOrGetter =
         member is FieldDeclaration ||

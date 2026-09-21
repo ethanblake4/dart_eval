@@ -10,6 +10,8 @@ import 'package:dart_eval/src/eval/compiler/optimizer/validate.dart';
 import 'package:dart_eval/src/eval/compiler/optimizer/ssa.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/field.dart';
+import 'package:dart_eval/src/eval/compiler/declaration/method.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'package:dart_eval/src/eval/compiler/model/diagnostic_mode.dart';
 import 'package:dart_eval/src/eval/compiler/model/override_spec.dart';
 import 'package:dart_eval/src/eval/compiler/model/library.dart';
@@ -399,12 +401,13 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     }
 
     // Resolve the export and import relationship of the libraries
-    final visibleDeclarations = _resolveImportsAndExports(
-      reachableLibraries,
-      discoveredIdentifiers,
-      computedEntrypoints,
-      libraryIndexMap,
-    );
+    final (visibleDeclarations, visibleExtensions) =
+        _resolveImportsAndExports(
+          reachableLibraries,
+          discoveredIdentifiers,
+          computedEntrypoints,
+          libraryIndexMap,
+        );
 
     // Populate lookup tables [_topLevelDeclarationsMap],
     // [_instanceDeclarationsMap], and [_topLevelGlobalIndices], and generate
@@ -506,6 +509,13 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     _ctx.instanceDeclarationsMap = _instanceDeclarationsMap;
     _ctx.visibleDeclarations = visibleDeclarationsByIndex;
     _ctx.visibleTypes = visibleTypesByIndex;
+    _ctx.visibleExtensions = {
+      for (final lib in reachableLibraries)
+        libraryIndexMap[lib]!: visibleExtensions[lib] ?? const [],
+    };
+    _ctx.extensions = [
+      for (final lib in reachableLibraries) ...?visibleExtensions[lib],
+    ];
 
     // Fold `with`-clause mixin members into each applying class's instance
     // map (own members win; a later mixin shadows an earlier one), and give a
@@ -723,6 +733,26 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
           _ctx.finishMethod();
         });
       });
+
+      /// Compile extension members. They keep instance-parameter layout
+      /// (arg_0 is the receiver) but register under `E.member` keys so call
+      /// sites emit static calls with the receiver as the first argument.
+      for (final ext in _ctx.extensions) {
+        final onType = ext.resolveOnType(_ctx);
+        if (onType == null) continue;
+        _ctx.library = ext.library;
+        for (final member in ext.members) {
+          if (member is! MethodDeclaration || member.isStatic) continue;
+          compileMethodDeclaration(
+            member,
+            _ctx,
+            ext.declaration,
+            extensionName: ext.name,
+            extensionReceiverType: onType,
+          );
+          _ctx.finishMethod();
+        }
+      }
     } on CompileError catch (e, stk) {
       Error.throwWithStackTrace(e.copyWithContext(_ctx), stk);
     }
@@ -768,7 +798,10 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
                     .topLevelDeclarationPositions[_ctx.libraryMap[library]]
                     ?.keys ??
                 const <String>[])
-          (library, name),
+          if (!(_ctx.extensionMemberFunctions[_ctx.libraryMap[library]]
+                  ?.contains(name) ??
+              false))
+            (library, name),
     ]);
     // Backend metadata can introduce instantiated parameter and collection
     // types. Build both tables in an index loop: resolving one descriptor can
@@ -880,6 +913,12 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     }
 
     final declaration = declarationOrBridge.declaration!;
+
+    // Extensions declare no top-level name binding (their members register
+    // under `E.member` keys during the extension compile pass).
+    if (declaration is ExtensionDeclaration) {
+      return;
+    }
 
     if (declaration is TopLevelVariableDeclaration) {
       for (final variable in declaration.variables.variables) {
@@ -1149,7 +1188,8 @@ List<Library> _buildLibraries(Iterable<DartCompilationUnit> units) {
 /// itself, as well as the declarations of the libraries it imports, including
 /// declarations exported by another imported library. A graph is used to
 /// resolve long export chains.
-Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
+(Map<Library, Map<String, DeclarationOrPrefix>>, Map<Library, List<EvalExtension>>)
+_resolveImportsAndExports(
   Iterable<Library> libraries,
   Map<Library, Map<String, Set<String>>> usedIdentifiers,
   Set<Uri> entrypoints,
@@ -1175,6 +1215,22 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
   final crawler = CachedFastCrawler(exportGraph.edges);
 
   final result = <Library, Map<String, DeclarationOrPrefix>>{};
+  final visibleExtensions = <Library, List<EvalExtension>>{};
+  var extCounter = 0;
+  final extensionsByLib = <Library, List<EvalExtension>>{};
+  List<EvalExtension> extensionsOf(Library lib) => extensionsByLib.putIfAbsent(
+    lib,
+    () => [
+      for (final d in lib.declarations)
+        if (!d.isBridge && d.declaration is ExtensionDeclaration)
+          EvalExtension(
+            libraryIds[lib]!,
+            d.declaration as ExtensionDeclaration,
+            (d.declaration as ExtensionDeclaration).name?.lexeme ??
+                '#ext${extCounter++}',
+          ),
+    ],
+  );
   final usedDeclarationsForLibrary = <int, Set<String>>{};
 
   final worklist = <Library>[];
@@ -1217,6 +1273,10 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
     importedDeclarationsMap[l] = {
       l: DeclarationOrBridge.expand(l.declarations),
     };
+    for (final ext in extensionsOf(l)) {
+      final list = visibleExtensions[l] ??= [];
+      if (!list.contains(ext)) list.add(ext);
+    }
 
     /// Iterate over the library's imports including the implicit import of
     /// dart:core.
@@ -1295,6 +1355,10 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
         }
 
         visibleDeclarations.addAll(result);
+        for (final ext in extensionsOf(lib)) {
+          final list = visibleExtensions[l] ??= [];
+          if (!list.contains(ext)) list.add(ext);
+        }
       }
 
       if (import.prefix != null) {
@@ -1403,7 +1467,7 @@ Map<Library, Map<String, DeclarationOrPrefix>> _resolveImportsAndExports(
     });*/
   }
 
-  return result;
+  return (result, visibleExtensions);
 }
 
 bool _combinatorListAccepts(

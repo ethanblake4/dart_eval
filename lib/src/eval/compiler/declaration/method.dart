@@ -23,10 +23,16 @@ import 'package:dart_eval/src/eval/compiler/backend/representation.dart'
 int compileMethodDeclaration(
   MethodDeclaration d,
   CompilerContext ctx,
-  Declaration parent,
-) {
+  Declaration parent, {
+  // For extension members: the extension's registration name and the type
+  // bound to `#this`. The member keeps instance-parameter layout (arg_0 is
+  // the receiver) but registers like a static member.
+  String? extensionName,
+  TypeRef? extensionReceiverType,
+}) {
+  final isExtensionMember = extensionReceiverType != null;
   final b = d.body;
-  final parentName = declarationName(parent);
+  final parentName = extensionName ?? declarationName(parent);
   final methodName = d.name.lexeme;
   final pos = ctx.beginFunction('$parentName.$methodName()');
   final previousTypes = {...?ctx.temporaryTypes[ctx.library]};
@@ -61,13 +67,22 @@ int compileMethodDeclaration(
   );
 
   ctx.beginScope();
-  if (!d.isStatic) {
+  final hasReceiver = !d.isStatic || isExtensionMember;
+  ctx.currentExtension = parent is ExtensionDeclaration ? parent : null;
+  if (hasReceiver) {
     ctx.pushOp(Parameter(SSA('arg_0'), 0));
-    ctx.setLocal('#this', Variable.of(ctx, SSA('arg_0'), TypeRef.$this(ctx)!));
+    ctx.setLocal(
+      '#this',
+      Variable.of(
+        ctx,
+        SSA('arg_0'),
+        extensionReceiverType?.copyWith(boxed: true) ?? TypeRef.$this(ctx)!,
+      ),
+    );
   }
   final resolvedParams = d.parameters == null
       ? <FormalParameter>[]
-      : resolveFPLDefaults(ctx, d.parameters, !d.isStatic, allowUnboxed: false);
+      : resolveFPLDefaults(ctx, d.parameters, hasReceiver, allowUnboxed: false);
 
   if (b.isAsynchronous) {
     setupAsyncFunction(
@@ -78,7 +93,7 @@ int compileMethodDeclaration(
     );
   }
 
-  var i = d.isStatic ? 0 : 1;
+  var i = hasReceiver ? 1 : 0;
 
   for (final p in resolvedParams) {
     var type = CoreTypes.dynamic.ref(ctx);
@@ -117,7 +132,7 @@ int compileMethodDeclaration(
       (returnType?.isUnboxedAcrossFunctionBoundaries ?? false);
   ctx.functionSignatures[pos] = MachineFunctionSignature(
     List.filled(
-      resolvedParams.length + (d.isStatic ? 0 : 1),
+      resolvedParams.length + (hasReceiver ? 1 : 0),
       MachineRepresentation.object,
     ),
     returnType == CoreTypes.voidType.ref(ctx) && !b.isAsynchronous
@@ -167,9 +182,26 @@ int compileMethodDeclaration(
   ctx.endScope();
   ctx.temporaryTypes[ctx.library] = previousTypes;
 
-  if (d.isStatic) {
-    ctx.topLevelDeclarationPositions[ctx.library]!['$parentName.$methodName'] =
-        pos;
+  if (d.isStatic || isExtensionMember) {
+    // Extension members register like statics; getters and setters take
+    // `*g`/`*s` suffixes matching the instance-member key convention.
+    final suffix = isExtensionMember
+        ? (d.isGetter
+              ? '*g'
+              : d.isSetter
+              ? '*s'
+              : '')
+        : '';
+    final key = '$parentName.$methodName$suffix';
+    ctx.topLevelDeclarationPositions
+        .putIfAbsent(ctx.library, () => {})[key] = pos;
+    if (isExtensionMember) {
+      // Extension members take a receiver argument that isn't part of their
+      // declared signature, so they can't be called as entrypoint exports.
+      ctx.extensionMemberFunctions
+          .putIfAbsent(ctx.library, () => {})
+          .add(key);
+    }
   } else {
     final mapIndex = d.isGetter
         ? 0

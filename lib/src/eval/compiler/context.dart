@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/src/eval/compiler/constant_pool.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'package:dart_eval/src/eval/compiler/model/label.dart';
 import 'package:dart_eval/src/eval/compiler/model/override_spec.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -177,6 +178,11 @@ class CompilerContext with ScopeContext {
 
   Declaration? currentClass;
 
+  /// The extension whose member is being compiled, if any. Extension
+  /// members are instance-like (they have a receiver) but [currentClass]
+  /// stays null since the `on` type isn't a declared class member scope.
+  Declaration? currentExtension;
+
   /// The library of the enclosing class being compiled. During folded mixin
   /// member compilation, [library] is the member's own library (so bare
   /// identifiers resolve there) while this stays the applying class's, which
@@ -240,6 +246,21 @@ class CompilerContext with ScopeContext {
   Map<int, Map<String, int>> topLevelGlobalIndices = {};
   Map<int, Map<String, Map<String, int>>> enumValueIndices = {};
   Map<int, int> runtimeGlobalInitializerMap = {};
+
+  /// Every `extension` declaration in the program, with its defining
+  /// library and the name its members are registered under. Populated
+  /// during the declaration pass; members compile eagerly like class
+  /// methods.
+  List<EvalExtension> extensions = [];
+
+  /// Extension member keys in [topLevelDeclarationPositions], per library.
+  /// They're callable via [Call]/[DeferredOrOffset] but not as exports,
+  /// since they take a receiver argument absent from the declared signature.
+  Map<int, Set<String>> extensionMemberFunctions = {};
+
+  /// Extensions visible at call sites in each library (the library's own
+  /// plus those of its transitive imports).
+  Map<int, List<EvalExtension>> visibleExtensions = {};
   Map<int, Map<String, TypeRef>> topLevelVariableInferredTypes = {};
   Map<TypeRef, int> typeRefIndexMap = {};
   Map<String, int> runtimeTypeDescriptorIds = {};
@@ -368,6 +389,7 @@ String declarationName(Declaration d) => switch (d) {
   EnumDeclaration() => d.namePart.typeName.lexeme,
   MixinDeclaration() => d.name.lexeme,
   ClassTypeAlias() => d.name.lexeme,
+  ExtensionDeclaration() => d.name?.lexeme ?? '',
   ExtensionTypeDeclaration() => d.namePart.typeName.lexeme,
   FunctionDeclaration() => d.name.lexeme,
   TypeAlias() => d.name.lexeme,

@@ -253,7 +253,7 @@ class $Set<E> implements Set<E>, $Instance {
   );
 
   static $Value? __$Set$from(Runtime runtime, Object? r, Object? s, Object? c) {
-    final other = (r as $Value?)?.$value as Set;
+    final other = (r as $Value?)?.$value as Iterable;
 
     return $Set.wrap(Set.from(other));
   }

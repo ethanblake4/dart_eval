@@ -42,7 +42,8 @@ StatementInfo doReturn(
     var value0 = value;
     final unboxedResult =
         expected.isUnboxedAcrossFunctionBoundaries &&
-        (ctx.currentClass == null || skipClassBoxing);
+        ((ctx.currentClass == null && ctx.currentExtension == null) ||
+            skipClassBoxing);
     value0 = convertForAssignment(
       ctx,
       value0,
@@ -59,7 +60,8 @@ StatementInfo doReturn(
         // about the expected return type.
         // We skip this if the skipClassBoxing flag is set, which is used
         // for operators as they can be statically guaranteed to return an unboxed type.
-        (ctx.currentClass == null || skipClassBoxing)) {
+        ((ctx.currentClass == null && ctx.currentExtension == null) ||
+            skipClassBoxing)) {
       value0 = value0.unboxIfNeeded(ctx);
     } else {
       value0 = value0.boxIfNeeded(ctx);
