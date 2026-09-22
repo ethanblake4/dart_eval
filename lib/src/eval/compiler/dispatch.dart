@@ -1,5 +1,11 @@
+import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/visitor.dart';
+import 'package:control_flow_graph/control_flow_graph.dart' show SSA;
+import 'package:dart_eval/src/eval/bridge/declaration/class.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
+import 'package:dart_eval/src/eval/compiler/variable.dart';
+import 'package:dart_eval/src/eval/ir/objects.dart';
 
 /// Compile-time only data describing how to perform a static-dispatch function call (e.g. when the exact function
 /// to be called is known at compile time)
@@ -64,4 +70,127 @@ class DeferredOrOffset {
   @override
   int get hashCode =>
       offset.hashCode ^ className.hashCode ^ file.hashCode ^ name.hashCode;
+}
+
+/// Whether any class in [type]'s superclass chain is bridged. Bridged
+/// ancestors provide members natively, so resolving a call to an evaluated
+/// class on the chain would skip the real (native) implementation.
+bool hasBridgeSuperclass(CompilerContext ctx, TypeRef type) {
+  for (final parent in type.resolveTypeChain(ctx).extendsChain) {
+    final bridge =
+        ctx.topLevelDeclarationsMap[parent.file]?[parent.name]?.bridge;
+    if (bridge is BridgeClassDef && bridge.bridge) return true;
+  }
+  return false;
+}
+
+/// The class at-or-above [type] (in superclass order) that declares instance
+/// member [member] of [kind] (0 = getter, 1 = setter, 2 = method) — i.e. the
+/// implementation a call resolves to. Null when [member] is only reachable
+/// through a bridged ancestor or isn't declared on the chain at all.
+TypeRef? memberOwner(
+  CompilerContext ctx,
+  TypeRef type,
+  String member, {
+  int kind = 2,
+}) {
+  if (hasBridgeSuperclass(ctx, type)) {
+    return null;
+  }
+  final resolved = type.resolveTypeChain(ctx);
+  for (final link in [resolved, ...resolved.extendsChain]) {
+    final positions =
+        ctx.instanceDeclarationPositions[link.file]?[link.name]?[kind]
+            as Map?;
+    if (positions != null &&
+        (positions.containsKey(member) ||
+            (member.startsWith('_') &&
+                positions.containsKey(
+                  '${ctx.libraryUri(link.file)}::$member',
+                )))) {
+      return link;
+    }
+  }
+  return null;
+}
+
+/// Like [memberOwner], but for a receiver statically typed [type] that may
+/// hold a subclass instance: a fixed target exists only while no descendant
+/// of [type] redeclares [member] (a subclassed class is fine as long as the
+/// member isn't overridden).
+TypeRef? directMemberOwner(
+  CompilerContext ctx,
+  TypeRef type,
+  String member, {
+  int kind = 2,
+}) {
+  if (ctx.memberOverriddenInSubclass(type.file, type.name, member)) {
+    return null;
+  }
+  return memberOwner(ctx, type, member, kind: kind);
+}
+
+/// The SSA of [receiver]'s inheritance-chain link owned by [owner], emitting
+/// a LoadSuper hop per level. [from] is the receiver's static type and
+/// [owner] a link found on its chain (e.g. via [memberOwner]). Method and
+/// accessor bodies take `this` as the declaring class's link — the same
+/// binding [TypedDispatch.resolve] performs — so direct calls must hand them
+/// that link rather than the dispatch root.
+SSA ownerLinkSsa(
+  CompilerContext ctx,
+  SSA receiver,
+  TypeRef from,
+  TypeRef owner,
+) {
+  final resolved = from.resolveTypeChain(ctx);
+  final links = [resolved, ...resolved.extendsChain];
+  var ssa = receiver;
+  for (var i = 0; i < links.length; i++) {
+    final link = links[i];
+    if (link.file == owner.file && link.name == owner.name) return ssa;
+    if (i + 1 >= links.length) return receiver; // owner isn't on the chain
+    final parent = links[i + 1];
+    ssa = Variable.ssa(
+      ctx,
+      LoadSuper(ctx.svar('super'), ssa),
+      parent,
+      concreteTypes: [parent],
+    ).ssa;
+  }
+  return ssa;
+}
+
+/// Whether calling [name] of [kind] (0 = getter, 1 = setter, 2 = method)
+/// declared on [owner] requires `this` to be bound to the declaring link.
+/// Bodies that never touch `super` only access members through the dispatch
+/// root, so they run correctly on any link of the object — a synthesized
+/// field accessor always needs its link since its index is link-relative.
+bool memberNeedsOwnerLink(
+  CompilerContext ctx,
+  TypeRef owner,
+  String name, {
+  int kind = 2,
+}) {
+  String declKey(String base) => switch (kind) {
+    0 => '$base*g',
+    1 => '$base*s',
+    _ => base,
+  };
+  final decls = ctx.instanceDeclarationsMap[owner.file]?[owner.name];
+  var decl = decls?[declKey(name)];
+  if (decl == null && name.startsWith('_')) {
+    decl = decls?[declKey('${ctx.libraryUri(owner.file)}::$name')];
+  }
+  if (decl is! MethodDeclaration) return true;
+  var usesSuper = false;
+  decl.body.accept(_SuperSeeker(() => usesSuper = true));
+  return usesSuper;
+}
+
+class _SuperSeeker extends RecursiveAstVisitor<void> {
+  _SuperSeeker(this.onSuper);
+  final void Function() onSuper;
+
+  @override
+  void visitSuperExpression(SuperExpression node) => onSuper();
 }

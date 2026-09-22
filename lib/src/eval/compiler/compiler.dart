@@ -686,8 +686,26 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
             continue;
           }
           final ancestorKey = '${resolved.file}:${resolved.name}';
-          _ctx.subclassedTypes.add(ancestorKey);
           (_ctx.subclassEdges[selfKey] ??= []).add(ancestorKey);
+          // `with M` folds M's members into this class, so a descendant
+          // that applies M redeclares those members even though they aren't
+          // written in its body — record them as declared here so
+          // memberOverriddenInSubclass sees the override.
+          final ancestor = _ctx
+              .topLevelDeclarationsMap[resolved.file]?[resolved.name]
+              ?.declaration;
+          final members = _ctx.declaredInstanceMembers[selfKey];
+          if (ancestor is MixinDeclaration && members != null) {
+            for (final m in ancestor.body.members) {
+              if (m is MethodDeclaration && !m.isStatic) {
+                members.add(_ctx.memberNameKey(m.name.lexeme));
+              } else if (m is FieldDeclaration && !m.isStatic) {
+                for (final v in m.fields.variables) {
+                  members.add(_ctx.memberNameKey(v.name.lexeme));
+                }
+              }
+            }
+          }
         }
       }
     });

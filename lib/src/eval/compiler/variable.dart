@@ -662,53 +662,121 @@ class Variable {
     }
     final receiver = boxIfNeeded(ctx);
     final exact = exactType;
-    if (exact != null && resolvedField != null) {
-      // An own field on a value allocated exactly as this type: the field
-      // load itself runs inline — no getter call, no dynamic lookup.
-      final index =
-          ctx.instanceGetterIndices[exact.file]?[exact.name]?[name];
-      if (index != null) {
+    if (exact != null && !hasBridgeSuperclass(ctx, exact)) {
+      // Storage for an inherited field lives on its declaring class's link,
+      // reached from the receiver by LoadSuper hops. First locate the owning
+      // link, then emit the hops.
+      final links = [
+        exact,
+        ...exact.resolveTypeChain(ctx).extendsChain,
+      ];
+      var depth = -1;
+      int? fieldIndex;
+      for (var i = 0; i < links.length; i++) {
+        final link = links[i];
+        final index =
+            ctx.instanceGetterIndices[link.file]?[link.name]?[name];
+        if (index != null) {
+          fieldIndex = index;
+          depth = i;
+          break;
+        }
+        final key = name.startsWith('_')
+            ? '${ctx.libraryUri(link.file)}::$name'
+            : name;
+        if ((ctx.instanceDeclarationPositions[link.file]?[link.name]?[0]
+                as Map?)
+                ?.containsKey(key) ==
+            true) {
+          depth = i;
+          break;
+        }
+      }
+      if (depth >= 0) {
+        final link = links[depth];
+        // Field members resolve to their [VariableDeclaration]; real
+        // accessors resolve to [MethodDeclaration]. Field storage is
+        // link-relative so it always needs the declaring link; a real
+        // accessor needs it only when its body uses `super`.
         final decl = resolveInstanceDeclaration(
           ctx,
-          exact.file,
-          exact.name,
+          link.file,
+          link.name,
           name,
-          instantiated: exact,
+          instantiated: link,
         )?.$2
             .declaration;
-        final isLate = decl is FieldDeclaration && decl.fields.isLate;
+        final fieldDecl =
+            decl is VariableDeclaration
+                ? decl.parent?.parent
+                : null;
+        final needsLink =
+            fieldIndex != null ||
+            memberNeedsOwnerLink(ctx, link, name, kind: 0);
+        var linkSsa = receiver.ssa;
+        if (needsLink) {
+          for (var i = 0; i < depth; i++) {
+            final parent = links[i + 1];
+            linkSsa = Variable.ssa(
+              ctx,
+              LoadSuper(ctx.svar('super'), linkSsa),
+              parent,
+              concreteTypes: [parent],
+            ).ssa;
+          }
+        }
+        if (fieldIndex != null) {
+          final isLate =
+              fieldDecl is FieldDeclaration && fieldDecl.fields.isLate;
+          return Variable.ssa(
+            ctx,
+            LoadPropertyStatic(
+              ctx.svar(name),
+              linkSsa,
+              fieldIndex,
+              isLate: isLate,
+            ),
+            fieldType,
+          );
+        }
+        final key = name.startsWith('_')
+            ? '${ctx.libraryUri(link.file)}::$name'
+            : name;
         return Variable.ssa(
           ctx,
-          LoadPropertyStatic(
-            ctx.svar(name),
-            receiver.ssa,
-            index,
-            isLate: isLate,
+          Call(
+            DeferredOrOffset(
+              file: link.file,
+              className: link.name,
+              methodType: 0,
+              name: key,
+            ),
+            [linkSsa],
+            result: ctx.svar(name),
+            typeEnvironmentReceiver: receiver.ssa,
           ),
           fieldType,
         );
       }
     }
-    // A getter declared on the exact allocation type runs a fixed-offset
-    // call. Inexact receivers can't use it: the getter indexes the
-    // receiver's own storage directly, which only the allocation-typed
-    // node lays out correctly.
-    if (exact != null) {
-      final ownerType = exact;
-      final key = name.startsWith('_')
-          ? '${ctx.libraryUri(ownerType.file)}::$name'
-          : name;
-      if ((ctx.instanceDeclarationPositions[ownerType.file]?[ownerType
-                  .name]?[0]
-              as Map?)
-              ?.containsKey(key) ==
-          true) {
+    if (exact == null &&
+        concreteTypes.length == 1 &&
+        !hasBridgeSuperclass(ctx, concreteTypes.first)) {
+      // The receiver may hold a subclass: a getter can be called directly on
+      // the dispatch root only when it isn't overridden and its body never
+      // touches `super` (so any link works as `this`).
+      final owner = directMemberOwner(ctx, concreteTypes.first, name, kind: 0);
+      if (owner != null &&
+          !memberNeedsOwnerLink(ctx, owner, name, kind: 0)) {
+        final key = name.startsWith('_')
+            ? '${ctx.libraryUri(owner.file)}::$name'
+            : name;
         return Variable.ssa(
           ctx,
           Call(
             DeferredOrOffset(
-              file: ownerType.file,
-              className: ownerType.name,
+              file: owner.file,
+              className: owner.name,
               methodType: 0,
               name: key,
             ),

@@ -938,70 +938,86 @@ Variable _invokeWithTarget(
         ),
       );
     }
-  } else if (dec0?.isBridge == false &&
-      switch ((
-        e.target is SuperExpression,
-        L.exactType,
-        L.concreteTypes.length == 1 ? L.concreteTypes.single : null,
-      )) {
-        // super.m() statically targets the declaring superclass.
-        (true, _, _?) => true,
-        // An allocation-site exact type can't be a subclass instance, so it
-        // dispatches directly even when the class is subclassed elsewhere.
-        (false, final exactType?, _) => _isDirectlyCallableExact(
-            ctx,
-            exactType,
-            e.methodName.name,
-          ),
-        (false, null, final concreteType?) => _isDirectlyCallable(
-            ctx,
-            concreteType,
-            e.methodName.name,
-          ),
-        _ => false,
-      }) {
-    final actualType = e.target is SuperExpression
-        ? L.concreteTypes[0]
-        : L.exactType ?? L.concreteTypes[0];
-    final offset = DeferredOrOffset(
-      file: actualType.file,
-      className: actualType.name,
-      methodType: 2,
-      name: e.methodName.name,
-    );
-    ctx.pushOp(
-      Call(
-        offset,
-        argsPair.ssa,
-        result: result,
-        typeEnvironmentReceiver: L.boxIfNeeded(ctx).ssa,
-        typeArguments: _runtimeTypeArguments(ctx, e),
-      ),
-    );
   } else {
-    ctx.pushOp(
-      InvokeDynamic(
-        result,
-        L.boxIfNeeded(ctx).ssa,
-        e.methodName.name,
-        dec0?.isBridge == true ? argsPair.ssa : argsPair.ssa.skip(1).toList(),
-        // Bridge methods use their legacy padded positional ABI. Evaluated
-        // methods keep source-level positional and named call metadata.
-        positionalCount: dec0?.isBridge == true
-            ? argsPair.ssa.length
-            : argsPair.args.length,
-        namedNames: dec0?.isBridge == true
-            ? const []
-            : argsPair.namedArgs.keys.toList(),
-        callerLibrary: ctx.library,
-        typeArguments:
-            e.typeArguments?.arguments
-                .map((type) => TypeRef.fromAnnotation(ctx, ctx.library, type))
-                .map((type) => type.runtimeTypeId(ctx))
-                .toList() ??
-            const [],
-      ),
-    );
+    // The fixed target for a direct call: the nearest class at-or-above
+    // the receiver's known type declaring the method. Only an allocation-
+    // exact receiver (or `super`, whose link is already positioned) can
+    // direct-dispatch: the callee takes its declaring class's link as
+    // `this`, which requires a statically-known hop distance.
+    final linkType = switch ((e.target is SuperExpression, L.exactType)) {
+      (true, _) => L.concreteTypes.first,
+      (false, final exactType?) => exactType,
+      _ => null,
+    };
+    final name = e.methodName.name;
+    var directOwner =
+        dec0?.isBridge == false && linkType != null
+            ? memberOwner(ctx, linkType, name)
+            : null;
+    if (directOwner == null &&
+        dec0?.isBridge == false &&
+        e.target is! SuperExpression &&
+        L.exactType == null &&
+        L.concreteTypes.length == 1) {
+      // The receiver may hold a subclass: the fixed target must not be
+      // overridden by any descendant of its static type.
+      directOwner = directMemberOwner(ctx, L.concreteTypes.first, name);
+    }
+    // A callee needs `this` bound to its declaring link only when its body
+    // uses `super`; otherwise any link — including the dispatch root —
+    // works, which also allows devirtualizing non-exact receivers.
+    final needsLink =
+        directOwner != null &&
+        memberNeedsOwnerLink(ctx, directOwner, name);
+    if (directOwner != null && (linkType != null || !needsLink)) {
+      final offset = DeferredOrOffset(
+        file: directOwner.file,
+        className: directOwner.name,
+        methodType: 2,
+        name: name,
+      );
+      ctx.pushOp(
+        Call(
+          offset,
+          [
+            if (linkType != null && needsLink)
+              ownerLinkSsa(ctx, argsPair.ssa.first, linkType, directOwner)
+            else
+              argsPair.ssa.first,
+            ...argsPair.ssa.skip(1),
+          ],
+          result: result,
+          typeEnvironmentReceiver: L.boxIfNeeded(ctx).ssa,
+          typeArguments: _runtimeTypeArguments(ctx, e),
+        ),
+      );
+    } else {
+      ctx.pushOp(
+        InvokeDynamic(
+          result,
+          L.boxIfNeeded(ctx).ssa,
+          e.methodName.name,
+          dec0?.isBridge == true
+              ? argsPair.ssa
+              : argsPair.ssa.skip(1).toList(),
+          // Bridge methods use their legacy padded positional ABI. Evaluated
+          // methods keep source-level positional and named call metadata.
+          positionalCount: dec0?.isBridge == true
+              ? argsPair.ssa.length
+              : argsPair.args.length,
+          namedNames: dec0?.isBridge == true
+              ? const []
+              : argsPair.namedArgs.keys.toList(),
+          callerLibrary: ctx.library,
+          typeArguments:
+              e.typeArguments?.arguments
+                  .map((type) => TypeRef.fromAnnotation(ctx, ctx.library, type))
+                  .map((type) => type.runtimeTypeId(ctx))
+                  .toList() ??
+              const [],
+        ),
+      );
+    }
   }
 
   mReturnType ??= AlwaysReturnType.fromInstanceMethodOrBuiltin(
@@ -1268,39 +1284,6 @@ TypeRef? _resolveAppliedInterface(
   );
 }
 
-
-bool _hasBridgeSuperclass(CompilerContext ctx, TypeRef type) {
-  for (final parent in type.resolveTypeChain(ctx).extendsChain) {
-    final bridge =
-        ctx.topLevelDeclarationsMap[parent.file]?[parent.name]?.bridge;
-    if (bridge is BridgeClassDef && bridge.bridge) return true;
-  }
-  return false;
-}
-
-/// Whether a call to [method] on a receiver statically known to be [type] can
-/// use a fixed offset: the method must be declared on [type] itself, [type]
-/// must be unbridged, and no descendant of [type] may redeclare [method]
-/// (a subclassed class is fine as long as the member isn't overridden).
-bool _isDirectlyCallable(CompilerContext ctx, TypeRef type, String method) {
-  if (_hasBridgeSuperclass(ctx, type) ||
-      ctx.memberOverriddenInSubclass(type.file, type.name, method)) {
-    return false;
-  }
-  return _isDirectlyCallableExact(ctx, type, method);
-}
-
-/// Like [_isDirectlyCallable], but for a receiver known to be *exactly* [type]
-/// (e.g. a literal or a fresh constructor result). Subclasses elsewhere can't
-/// change which implementation runs, so the subclass check is skipped.
-bool _isDirectlyCallableExact(CompilerContext ctx, TypeRef type, String method) {
-  if (_hasBridgeSuperclass(ctx, type)) {
-    return false;
-  }
-  final methods =
-      ctx.instanceDeclarationPositions[type.file]?[type.name]?[2] as Map?;
-  return methods?.containsKey(method) == true;
-}
 
 /// Resolves [methodName] on [instanceType] to its declaration or bridge. The
 /// declaration is normally a [MethodDeclaration]; when [methodName] names a

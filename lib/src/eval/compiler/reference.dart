@@ -294,66 +294,134 @@ class IdentifierReference implements Reference {
             'of type $fieldType',
       );
       final exact = object!.exactType;
-      final setterKey = name.startsWith('_')
-          ? '${ctx.libraryUri(exact?.file ?? ctx.library)}::$name'
-          : name;
-      final fieldIndex = exact == null
-          ? null
-          : ctx.instanceGetterIndices[exact.file]?[exact.name]?[name];
-      if (exact != null &&
-          fieldIndex != null &&
-          (ctx.instanceDeclarationPositions[exact.file]?[exact.name]?[1]
-                  as Map?)
-              ?.containsKey(setterKey) ==
-              true) {
-        final decl = resolveInstanceDeclaration(
-          ctx,
-          exact.file,
-          exact.name,
-          name,
-          instantiated: exact,
-        )?.$2
-            .declaration;
-        final isLateFinal =
-            decl is FieldDeclaration &&
-            decl.fields.isLate &&
-            decl.fields.variables.any(
-              (v) => v.name.lexeme == name && (v.isFinal || v.isConst),
+      if (exact != null && !hasBridgeSuperclass(ctx, exact)) {
+        // Storage for an inherited field lives on its declaring class's
+        // link, reached from the receiver by LoadSuper hops.
+        final links = [
+          exact,
+          ...exact.resolveTypeChain(ctx).extendsChain,
+        ];
+        var depth = -1;
+        int? fieldIndex;
+        for (var i = 0; i < links.length; i++) {
+          final link = links[i];
+          final key = name.startsWith('_')
+              ? '${ctx.libraryUri(link.file)}::$name'
+              : name;
+          final hasSetter =
+              (ctx.instanceDeclarationPositions[link.file]?[link.name]?[1]
+                      as Map?)
+                  ?.containsKey(key) ==
+              true;
+          final index =
+              ctx.instanceGetterIndices[link.file]?[link.name]?[name];
+          if (hasSetter && index != null) {
+            fieldIndex = index;
+            depth = i;
+            break;
+          }
+          if (hasSetter) {
+            depth = i;
+            break;
+          }
+        }
+        if (depth >= 0) {
+          final link = links[depth];
+          final decl = resolveInstanceDeclaration(
+            ctx,
+            link.file,
+            link.name,
+            name,
+            instantiated: link,
+          )?.$2
+              .declaration;
+          // Field storage is link-relative so it always needs the declaring
+          // link; a real setter needs it only when its body uses `super`.
+          final fieldDecl =
+              decl is VariableDeclaration ? decl.parent?.parent : null;
+          final needsLink =
+              fieldIndex != null ||
+              memberNeedsOwnerLink(ctx, link, name, kind: 1);
+          var linkSsa = object!.ssa;
+          if (needsLink) {
+            for (var i = 0; i < depth; i++) {
+              final parent = links[i + 1];
+              linkSsa = Variable.ssa(
+                ctx,
+                LoadSuper(ctx.svar('super'), linkSsa),
+                parent,
+                concreteTypes: [parent],
+              ).ssa;
+            }
+          }
+          if (fieldIndex != null) {
+            final isLateFinal =
+                fieldDecl is FieldDeclaration &&
+                fieldDecl.fields.isLate &&
+                fieldDecl.fields.variables.any(
+                  (v) => v.name.lexeme == name && (v.isFinal || v.isConst),
+                );
+            ctx.pushOp(
+              SetPropertyStatic(
+                linkSsa,
+                fieldIndex,
+                val.ssa,
+                isLateFinal: isLateFinal,
+              ),
             );
-        ctx.pushOp(
-          SetPropertyStatic(
-            object!.ssa,
-            fieldIndex,
-            val.ssa,
-            isLateFinal: isLateFinal,
-          ),
-        );
-        return val;
-      }
-      // Same restriction as field reads: a synthesized setter indexes the
-      // receiver's own storage, so only an exact allocation type is safe.
-      final ownerType = exact;
-      final key = setterKey;
-      if (ownerType != null &&
-          (ctx.instanceDeclarationPositions[ownerType.file]?[ownerType
-                      .name]?[1]
-                  as Map?)
-              ?.containsKey(key) ==
-              true) {
-        ctx.pushOp(
-          Call(
-            DeferredOrOffset(
-              file: ownerType.file,
-              className: ownerType.name,
-              methodType: 1,
-              name: key,
+            return val;
+          }
+          final key = name.startsWith('_')
+              ? '${ctx.libraryUri(link.file)}::$name'
+              : name;
+          ctx.pushOp(
+            Call(
+              DeferredOrOffset(
+                file: link.file,
+                className: link.name,
+                methodType: 1,
+                name: key,
+              ),
+              [linkSsa, val.ssa],
+              result: ctx.svar(name),
+              typeEnvironmentReceiver: object!.ssa,
             ),
-            [object!.ssa, val.ssa],
-            result: ctx.svar(name),
-            typeEnvironmentReceiver: object!.ssa,
-          ),
+          );
+          return val;
+        }
+      }
+      if (exact == null &&
+          object!.concreteTypes.length == 1 &&
+          !hasBridgeSuperclass(ctx, object!.concreteTypes.first)) {
+        // The receiver may hold a subclass: a setter can be called directly
+        // on the dispatch root only when it isn't overridden and its body
+        // never touches `super` (so any link works as `this`).
+        final owner = directMemberOwner(
+          ctx,
+          object!.concreteTypes.first,
+          name,
+          kind: 1,
         );
-        return val;
+        if (owner != null &&
+            !memberNeedsOwnerLink(ctx, owner, name, kind: 1)) {
+          final key = name.startsWith('_')
+              ? '${ctx.libraryUri(owner.file)}::$name'
+              : name;
+          ctx.pushOp(
+            Call(
+              DeferredOrOffset(
+                file: owner.file,
+                className: owner.name,
+                methodType: 1,
+                name: key,
+              ),
+              [object!.ssa, val.ssa],
+              result: ctx.svar(name),
+              typeEnvironmentReceiver: object!.ssa,
+            ),
+          );
+          return val;
+        }
       }
       final op = SetPropertyDynamic(
         object!.ssa,
@@ -870,11 +938,12 @@ class IdentifierReference implements Reference {
   @override
   StaticDispatch? getStaticDispatch(CompilerContext ctx, [AstNode? source]) {
     if (object != null) {
-      if (object!.concreteTypes.length == 1) {
+      final exact = object!.exactType;
+      final actualType =
+          exact ??
+          (object!.concreteTypes.length == 1 ? object!.concreteTypes[0] : null);
+      if (actualType != null) {
         // If we know the concrete type of the object, we can easily optimize to a static call
-        final actualType = object!.concreteTypes[0];
-        DeferredOrOffset offset;
-
         final returnType = AlwaysReturnType.fromInstanceMethod(
           ctx,
           actualType,
@@ -882,26 +951,32 @@ class IdentifierReference implements Reference {
           CoreTypes.dynamic.ref(ctx),
         );
 
-        final methodsMap =
-            ctx.instanceDeclarationPositions[actualType.file]![actualType
-                .name]![2];
-        if (methodsMap.containsKey(name) &&
-            !ctx.memberOverriddenInSubclass(
-              actualType.file,
-              actualType.name,
-              name,
-            )) {
-          offset = DeferredOrOffset(
-            file: actualType.file,
-            offset: methodsMap[name],
+        // The statically-fixed target is the nearest class at-or-above the
+        // receiver type declaring the method. An exact allocation type needs
+        // no override check; a merely-declared type does.
+        for (final link in [
+          actualType,
+          ...actualType.resolveTypeChain(ctx).extendsChain,
+        ]) {
+          final methodsMap =
+              ctx.instanceDeclarationPositions[link.file]?[link.name]?[2];
+          if (methodsMap?.containsKey(name) != true) continue;
+          if (exact == null &&
+              ctx.memberOverriddenInSubclass(
+                actualType.file,
+                actualType.name,
+                name,
+              )) {
+            return null;
+          }
+          return StaticDispatch(
+            DeferredOrOffset(file: link.file, offset: methodsMap![name]),
+            returnType,
           );
-        } else {
-          // An inherited method needs the owner's field view as its receiver.
-          // Dynamic dispatch resolves that view as well as the method offset.
-          return null;
         }
-
-        return StaticDispatch(offset, returnType);
+        // An inherited method needs the owner's field view as its receiver.
+        // Dynamic dispatch resolves that view as well as the method offset.
+        return null;
       }
       return null;
     }

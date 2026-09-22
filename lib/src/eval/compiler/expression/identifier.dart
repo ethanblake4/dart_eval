@@ -104,6 +104,11 @@ Reference compilePrefixedIdentifierAsReference(
     final setter = ctx.instanceDeclarationsMap[library]![$class]?['$name*s'];
     if (getter != null || setter != null) {
       final $type = ctx.visibleTypes[library]![$class]!;
+      if (getter == null) {
+        // Setter-only member: no [GetSet] since its declaration slot is the
+        // getter's — surface the setter directly instead.
+        return ($type, DeclarationOrBridge(-1, declaration: setter as MethodDeclaration));
+      }
       final getset = GetSet(
         -1,
         declaration: getter as MethodDeclaration,

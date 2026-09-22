@@ -290,12 +290,6 @@ class CompilerContext with ScopeContext {
   Map<int, Map<String, int>> bridgeStaticFunctionIndices = {};
   Map<int, Map<String, List>> instanceDeclarationPositions = {};
 
-  /// `'$file:$name'` keys of every class or mixin named as a superinterface
-  /// (extends/implements/with/on) somewhere in the compiled program. Members
-  /// declared on these types must be invoked dynamically since a subclass may
-  /// override them.
-  Set<String> subclassedTypes = {};
-
   /// Direct superinterface edges: descendant 'file:class' → ancestor keys.
   Map<String, List<String>> subclassEdges = {};
 
