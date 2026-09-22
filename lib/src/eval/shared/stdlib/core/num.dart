@@ -459,10 +459,9 @@ class $num<T extends num> implements $Instance {
     switch (identifier) {
       case '+':
         return __plus;
-      case '-':
-        return __minus;
       // The nullary minus operator's canonical member name is `unary-`;
       // __minus already handles a zero-argument call as unary negation.
+      case '-':
       case 'unary-':
         return __minus;
       case '*':

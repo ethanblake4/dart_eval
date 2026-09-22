@@ -539,7 +539,7 @@ class IdentifierReference implements Reference {
                   ctx,
                   ext.library,
                   member.parameters!.parameters.first,
-                  typeParameters: memberExtParams(ctx, ext, object!.type),
+                  typeParameters: extBindingsMap(ext, bindings),
                 );
           final arg = paramType == null
               ? value.boxIfNeeded(ctx)

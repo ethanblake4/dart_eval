@@ -601,7 +601,7 @@ class Variable {
           ctx,
           foundMethod.$1,
           foundMethod.$2,
-          memberExtParams(ctx, foundMethod.$1, resolvedReceiver),
+          extBindingsMap(foundMethod.$1, foundMethod.$3),
         );
       }
       throw CompileError(

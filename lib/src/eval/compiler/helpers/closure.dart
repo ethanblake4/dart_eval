@@ -2,7 +2,6 @@ import '../../ir/memory.dart' show Assign;
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
-import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
@@ -96,13 +95,7 @@ InvokeResult invokeClosure(
       ctx,
       CoreTypes.function.ref(ctx),
     )) {
-      var hasInstanceCall = true;
-      try {
-        resolveInstanceMethod(ctx, callableVar.type, 'call');
-      } on CompileError {
-        hasInstanceCall = false;
-      }
-      if (!hasInstanceCall &&
+      if (!hasInstanceMethod(ctx, callableVar.type, 'call') &&
           resolveExtensionMember(
                 ctx,
                 callableVar.type,

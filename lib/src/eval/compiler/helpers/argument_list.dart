@@ -1,5 +1,4 @@
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:collection/collection.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/fpl.dart';
@@ -150,8 +149,18 @@ Variable compileOmittedArgument(
   );
   final type = declaredType ?? CoreTypes.dynamic.ref(ctx);
   // Scalar defaults push as native constants; anything else (tear-offs, const
-  // objects) compiles the constant expression normally.
-  final defaultExpr = parameter.defaultClause?.value;
+  // objects) compiles the constant expression normally. Super formals inherit
+  // their default from the bound super-constructor parameter, evaluated in
+  // the super constructor's library.
+  var defaultExpr = parameter.defaultClause?.value;
+  if (defaultExpr == null &&
+      parameter is SuperFormalParameter &&
+      host is ConstructorDeclaration) {
+    final inherited = superFormalDefault(ctx, library, parameter, host);
+    if (inherited != null) {
+      (defaultExpr, library) = inherited;
+    }
+  }
   Object? value;
   var useExpression = false;
   if (defaultExpr == null) {
@@ -436,25 +445,14 @@ ArgumentListResult compileArgumentList(
       continue;
     }
     final param = param0;
-    var paramType = CoreTypes.dynamic.ref(ctx);
-    TypeAnnotation? typeAnnotation;
-    if (param is RegularFormalParameter) {
-      typeAnnotation = param.type;
-      if (typeAnnotation != null) {
-        paramType = TypeRef.fromAnnotation(
-          ctx,
-          decLibrary,
-          typeAnnotation,
-          typeParameters: paramTypeParameters,
-        );
-      }
-    } else if (param is FieldFormalParameter) {
-      paramType = resolveFieldFormalType(ctx, decLibrary, param, parameterHost);
-    } else if (param is SuperFormalParameter) {
-      paramType = resolveSuperFormalType(ctx, decLibrary, param, parameterHost);
-    } else {
-      throw CompileError('Unknown formal type ${param.runtimeType}');
-    }
+    var (paramType, typeAnnotation) = getFormalParameterType(
+      ctx,
+      param,
+      decLibrary,
+      parameterHost,
+      typeParameters: paramTypeParameters,
+    );
+    paramType ??= CoreTypes.dynamic.ref(ctx);
     if (ctorClassParamSubs.isNotEmpty) {
       paramType = paramType.substituteTypeParameters(ctorClassParamSubs);
     }
@@ -605,7 +603,7 @@ ArgumentListResult compileSuperParams(
       } else {
         final value = compileOmittedArgument(
           ctx,
-          ctx.library,
+          decLibrary,
           param,
           parameterHost,
         );
@@ -631,7 +629,7 @@ ArgumentListResult compileSuperParams(
     } else {
       final value = compileOmittedArgument(
         ctx,
-        ctx.library,
+        decLibrary,
         n.value,
         parameterHost,
       );
@@ -898,76 +896,38 @@ TypeRef resolveSuperFormalType(
   if (parameterHost is! ConstructorDeclaration) {
     throw CompileError('Super formals can only occur in constructors');
   }
-  var superConstructorName = '';
-  final lastInit = parameterHost.initializers.isEmpty
-      ? null
-      : parameterHost.initializers.last;
-  if (lastInit is SuperConstructorInvocation) {
-    superConstructorName = lastInit.constructorName?.name ?? '';
-  }
-  final $class = parameterHost.parent!.parent as ClassDeclaration;
-  final type = TypeRef.lookupDeclaration(ctx, decLibrary, $class);
-  final $super =
-      type.resolveTypeChain(ctx).extendsType ??
-      (throw CompileError(
-        'Class $type has no super class, so cannot use super formals',
-        param,
-      ));
-  final superCstr =
-      ctx.topLevelDeclarationsMap[$super
-          .file]!['${$super.name}.$superConstructorName']!;
-  // Positional super parameters bind the super constructor's positional
-  // parameters in order — their names are independent of the callee's.
-  final positionalIndex = param.isNamed
-      ? -1
-      : parameterHost.parameters.parameters
-          .where((p) => p is SuperFormalParameter && p.isPositional)
-          .toList()
-          .indexOf(param);
+  final (superCstr, target) = superFormalTarget(
+    ctx,
+    decLibrary,
+    param,
+    parameterHost,
+  );
   if (superCstr.isBridge) {
-    final fd = (superCstr.bridge as BridgeConstructorDef).functionDescriptor;
-    if (positionalIndex >= 0) {
-      if (positionalIndex < fd.params.length) {
-        return TypeRef.fromBridgeAnnotation(
-          ctx,
-          fd.params[positionalIndex].type,
-        );
-      }
-    } else {
-      for (final bridgeParam in fd.namedParams) {
-        if (bridgeParam.name == param.name.lexeme) {
-          return TypeRef.fromBridgeAnnotation(ctx, bridgeParam.type);
-        }
-      }
+    if (target is BridgeParameter) {
+      return TypeRef.fromBridgeAnnotation(ctx, target.type);
     }
-  } else {
-    final cstr = superCstr.declaration as ConstructorDeclaration;
-    final cstrPositional = cstr.parameters.parameters
-        .where((p) => p.isPositional)
-        .toList();
-    final param0 = positionalIndex >= 0
-        ? (positionalIndex < cstrPositional.length
-              ? cstrPositional[positionalIndex]
-              : null)
-        : cstr.parameters.parameters
-              .where((p) => p.name?.lexeme == param.name.lexeme)
-              .firstOrNull;
-    if (param0 is RegularFormalParameter) {
-      final type0 = param0.type;
-      if (type0 == null) {
-        return CoreTypes.dynamic.ref(ctx);
-      }
-      return TypeRef.fromAnnotation(ctx, $super.file, type0);
-    } else if (param0 is FieldFormalParameter) {
-      return resolveFieldFormalType(ctx, decLibrary, param0, cstr);
-    } else if (param0 is SuperFormalParameter) {
-      return resolveSuperFormalType(ctx, decLibrary, param0, cstr);
-    } else if (param0 != null) {
-      throw CompileError(
-        'Unknown parameter type ${param0.runtimeType}',
-        param0,
-      );
+  } else if (target is RegularFormalParameter) {
+    final type0 = target.type;
+    if (type0 == null) {
+      return CoreTypes.dynamic.ref(ctx);
     }
+    return TypeRef.fromAnnotation(ctx, superCstr.sourceLib, type0);
+  } else if (target is FieldFormalParameter) {
+    return resolveFieldFormalType(
+      ctx,
+      decLibrary,
+      target,
+      superCstr.declaration as ConstructorDeclaration,
+    );
+  } else if (target is SuperFormalParameter) {
+    return resolveSuperFormalType(
+      ctx,
+      decLibrary,
+      target,
+      superCstr.declaration as ConstructorDeclaration,
+    );
+  } else if (target != null) {
+    throw CompileError('Unknown parameter type ${target.runtimeType}', param);
   }
 
   throw CompileError(
@@ -976,3 +936,4 @@ TypeRef resolveSuperFormalType(
     decLibrary,
   );
 }
+

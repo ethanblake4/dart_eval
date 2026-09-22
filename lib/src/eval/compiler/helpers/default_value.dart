@@ -1,5 +1,9 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:collection/collection.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/bridge/declaration.dart' show DeclarationOrBridge;
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
+import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/representation.dart';
 
@@ -101,6 +105,100 @@ Object? evaluateDefaultValue(
   }
 }
 
+/// The super-constructor parameter that super formal [param] binds to —
+/// the nth positional parameter for positional super formals (their local
+/// names need not match the callee's), the same-named one for named formals —
+/// along with the super-constructor declaration owning it. The target is a
+/// [FormalParameter] for eval constructors and a [BridgeParameter] for bridge
+/// constructors; null when the super constructor has no such parameter.
+(DeclarationOrBridge<Declaration, BridgeDeclaration>, Object?)
+superFormalTarget(
+  CompilerContext ctx,
+  int decLibrary,
+  SuperFormalParameter param,
+  ConstructorDeclaration parameterHost,
+) {
+  var superConstructorName = '';
+  final lastInit = parameterHost.initializers.isEmpty
+      ? null
+      : parameterHost.initializers.last;
+  if (lastInit is SuperConstructorInvocation) {
+    superConstructorName = lastInit.constructorName?.name ?? '';
+  }
+  final $class = parameterHost.parent!.parent as ClassDeclaration;
+  final type = TypeRef.lookupDeclaration(ctx, decLibrary, $class);
+  final $super =
+      type.resolveTypeChain(ctx).extendsType ??
+      (throw CompileError(
+        'Class $type has no super class, so cannot use super formals',
+        param,
+      ));
+  final superCstr =
+      ctx.topLevelDeclarationsMap[$super
+          .file]!['${$super.name}.$superConstructorName']!;
+  final positionalIndex = param.isNamed
+      ? -1
+      : parameterHost.parameters.parameters
+          .where((p) => p is SuperFormalParameter && p.isPositional)
+          .toList()
+          .indexOf(param);
+  if (superCstr.isBridge) {
+    final fd = (superCstr.bridge as BridgeConstructorDef).functionDescriptor;
+    if (positionalIndex >= 0) {
+      return (superCstr, fd.params.elementAtOrNull(positionalIndex));
+    }
+    for (final bridgeParam in fd.namedParams) {
+      if (bridgeParam.name == param.name.lexeme) {
+        return (superCstr, bridgeParam);
+      }
+    }
+    return (superCstr, null);
+  }
+  final cstr = superCstr.declaration as ConstructorDeclaration;
+  final cstrPositional = cstr.parameters.parameters
+      .where((p) => p.isPositional)
+      .toList();
+  return (
+    superCstr,
+    positionalIndex >= 0
+        ? cstrPositional.elementAtOrNull(positionalIndex)
+        : cstr.parameters.parameters
+              .where((p) => p.name?.lexeme == param.name.lexeme)
+              .firstOrNull,
+  );
+}
+
+/// The default expression a `super` parameter inherits from the
+/// super-constructor parameter it binds (super formals never declare their
+/// own), along with the library the expression resolves in — the super
+/// constructor's, not the caller's. Null when the target has no default.
+(Expression?, int)? superFormalDefault(
+  CompilerContext ctx,
+  int decLibrary,
+  SuperFormalParameter param,
+  ConstructorDeclaration parameterHost,
+) {
+  final (superCstr, target) = superFormalTarget(
+    ctx,
+    decLibrary,
+    param,
+    parameterHost,
+  );
+  return switch (target) {
+    FormalParameter(:final defaultClause?) => (
+      defaultClause.value,
+      superCstr.sourceLib,
+    ),
+    SuperFormalParameter target => superFormalDefault(
+      ctx,
+      superCstr.sourceLib,
+      target,
+      superCstr.declaration as ConstructorDeclaration,
+    ),
+    _ => null,
+  };
+}
+
 Variable pushDefaultValue(CompilerContext ctx, Object? value) =>
     switch (value) {
       null => BuiltinValue(),
@@ -121,7 +219,18 @@ Variable pushDefaultValue(CompilerContext ctx, Object? value) =>
   int library,
   FormalParameter parameter,
 ) {
-  final expression = parameter.defaultClause?.value;
+  var expression = parameter.defaultClause?.value;
+  if (expression == null && parameter is SuperFormalParameter) {
+    // Super formals never declare their own default — they inherit the
+    // super-constructor parameter's, which resolves in that library.
+    final host = parameter.parent?.parent;
+    if (host is ConstructorDeclaration) {
+      final inherited = superFormalDefault(ctx, library, parameter, host);
+      if (inherited != null) {
+        (expression, library) = inherited;
+      }
+    }
+  }
   if (expression == null) return (null, -1);
   try {
     return (evaluateDefaultValue(ctx, library, expression), -1);

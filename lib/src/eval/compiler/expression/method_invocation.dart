@@ -105,13 +105,7 @@ Variable compileMethodInvocation(
     // (an implicit `.call` invocation, e.g. `c1(1)` on `C1 c1`). An extension
     // `call` member applies statically; otherwise dispatch dynamically so
     // objects without `call` raise NoSuchMethodError at runtime.
-    var hasInstanceCall = true;
-    try {
-      resolveInstanceMethod(ctx, method.type, 'call');
-    } on CompileError {
-      hasInstanceCall = false;
-    }
-    if (!hasInstanceCall &&
+    if (!hasInstanceMethod(ctx, method.type, 'call') &&
         resolveExtensionMember(
           ctx,
           method.type,
@@ -1519,6 +1513,22 @@ DeclarationOrBridge<ClassMember, BridgeMethodDef> resolveInstanceMethod(
       source,
       bottomType0,
     );
+  }
+}
+
+/// Whether [instanceType] declares or inherits an instance member named
+/// [methodName] — probes [resolveInstanceMethod] so callers can fall back to
+/// extension members when instance lookup fails.
+bool hasInstanceMethod(
+  CompilerContext ctx,
+  TypeRef instanceType,
+  String methodName,
+) {
+  try {
+    resolveInstanceMethod(ctx, instanceType, methodName);
+    return true;
+  } on CompileError {
+    return false;
   }
 }
 

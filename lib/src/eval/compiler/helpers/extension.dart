@@ -108,21 +108,29 @@ Map<String, TypeRef> extBindingsMap(EvalExtension ext, List<TypeRef> bindings) {
   };
 }
 
-/// The instance member of [ext] named [name] of the given kind, or null.
-MethodDeclaration? extensionMember(
+MethodDeclaration? _extensionMember(
   EvalExtension ext,
   String name, {
+  required bool isStatic,
   bool getter = false,
   bool setter = false,
 }) {
   for (final member in ext.members) {
-    if (member is! MethodDeclaration || member.isStatic) continue;
+    if (member is! MethodDeclaration || member.isStatic != isStatic) continue;
     if (member.name.lexeme != name) continue;
     if (member.isGetter != getter || member.isSetter != setter) continue;
     return member;
   }
   return null;
 }
+
+/// The instance member of [ext] named [name] of the given kind, or null.
+MethodDeclaration? extensionMember(
+  EvalExtension ext,
+  String name, {
+  bool getter = false,
+  bool setter = false,
+}) => _extensionMember(ext, name, isStatic: false, getter: getter, setter: setter);
 
 /// The static member of [ext] named [name] of the given kind, or null.
 /// Static members are only reachable inside the extension's own body (as
@@ -132,15 +140,7 @@ MethodDeclaration? extensionStaticMember(
   String name, {
   bool getter = false,
   bool setter = false,
-}) {
-  for (final member in ext.members) {
-    if (member is! MethodDeclaration || !member.isStatic) continue;
-    if (member.name.lexeme != name) continue;
-    if (member.isGetter != getter || member.isSetter != setter) continue;
-    return member;
-  }
-  return null;
-}
+}) => _extensionMember(ext, name, isStatic: true, getter: getter, setter: setter);
 
 /// The variable of a static field of [ext] named [name], or null.
 /// Static extension fields behave like library-level `E.name` globals.

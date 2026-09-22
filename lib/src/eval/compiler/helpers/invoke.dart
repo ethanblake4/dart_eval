@@ -324,13 +324,7 @@ extension Invoke on Variable {
       // A member the class doesn't declare may be an extension method (e.g.
       // `operator []=` defined in `extension on T`). Instance members win —
       // the extension only applies when instance lookup fails.
-      var hasInstanceMember = true;
-      try {
-        resolveInstanceMethod(ctx, type, method);
-      } on CompileError {
-        hasInstanceMember = false;
-      }
-      if (!hasInstanceMember) {
+      if (!hasInstanceMethod(ctx, type, method)) {
         // `unary-` maps to the extension member `-` of positional arity 0.
         final found = resolveExtensionMember(
           ctx,
@@ -340,7 +334,7 @@ extension Invoke on Variable {
         );
         if (found != null) {
           final (ext, member, bindings) = found;
-          return invokeExt(ext, member, bindings, memberExtParams(ctx, ext, type));
+          return invokeExt(ext, member, bindings, extBindingsMap(ext, bindings));
         }
       }
     }
