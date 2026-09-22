@@ -560,7 +560,6 @@ expect_fail:
   - path: 'inference_update_2/promotion_narrows_interface_test.dart'
   - path: 'inference_update_2/scrutinee_promotion_if_case_test.dart'
   - path: 'inference_update_2/scrutinee_promotion_switch_test.dart'
-  - path: 'inference_update_2/super_this_distinction_generic_test.dart'
   - path: 'inference_update_2/super_this_distinction_test.dart'
   - path: 'inference_update_2/top_level_type_inference_test.dart'
   - path: 'inference_update_3/conditional_expression_disabled_test.dart'

@@ -107,7 +107,7 @@ void compileConstructorDeclaration(
     decLibrary: redirectTarget?.$2.file,
   );
 
-  final superParams = <String>[];
+  final superParams = (positional: <String>[], named: <String>{});
   final parameterRepresentations = <MachineRepresentation>[
     if (isEnum) ...[MachineRepresentation.object, MachineRepresentation.object],
   ];
@@ -164,7 +164,11 @@ void compileConstructorDeclaration(
         SSA('arg_$i'),
         type.typeAcrossFunctionBoundary,
       ).boxIfNeeded(ctx);
-      superParams.add(p.name.lexeme);
+      if (p.isNamed) {
+        superParams.named.add(p.name.lexeme);
+      } else {
+        superParams.positional.add(p.name.lexeme);
+      }
     } else {
       var type = CoreTypes.dynamic.ref(ctx);
       if (p.type != null) {
@@ -911,7 +915,7 @@ Variable _invokeSuperConstructor(
   required ImportPrefixReference? prefix,
   required String constructorName,
   SuperConstructorInvocation? superInitializer,
-  List<String> superParams = const [],
+  SuperParams superParams = const (positional: [], named: {}),
 }) {
   extendsType ??= TypeRef.lookupDeclaration(
     ctx,
@@ -964,6 +968,7 @@ Variable _invokeSuperConstructor(
             ctx,
             constructor.parameters.parameters,
             constructor,
+            decLibrary: extendsDecl.sourceLib,
             superParams: superParams,
           );
     ssa.addAll(argres.ssa);
@@ -1001,7 +1006,7 @@ List<SSA> _bridgeSuperArgs(
   DeclarationOrBridge extendsDecl,
   String constructorName, {
   SuperConstructorInvocation? superInitializer,
-  List<String> superParams = const [],
+  SuperParams superParams = const (positional: [], named: {}),
 }) {
   final bridge = extendsDecl.bridge! as BridgeClassDef;
   final constructor = bridge.constructors[constructorName]!;
@@ -1011,7 +1016,7 @@ List<SSA> _bridgeSuperArgs(
           superInitializer.argumentList,
           constructor.functionDescriptor,
         ).ssa
-      : superParams.isNotEmpty
+      : superParams.positional.isNotEmpty || superParams.named.isNotEmpty
       ? compileSuperParamsWithBridge(
           ctx,
           constructor.functionDescriptor,

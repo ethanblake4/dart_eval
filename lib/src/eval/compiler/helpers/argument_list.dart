@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:collection/collection.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/fpl.dart';
@@ -193,7 +194,7 @@ ArgumentListResult compileArgumentList(
   List<Variable> before = const [],
   Map<String, TypeRef> resolveGenerics = const {},
   bool inferGenerics = true,
-  List<String> superParams = const [],
+  SuperParams superParams = const (positional: [], named: {}),
   AstNode? source,
   // Explicit extension application (`E.m(receiver, ...)`) leads the
   // argument list with the receiver, which has no declared formal — the
@@ -309,9 +310,20 @@ ArgumentListResult compileArgumentList(
   final resolveGenericsMap = <String, Set<TypeRef>>{};
 
   for (final param in positional) {
-    // First check super params. Super params do not contain an expression.
-    if (superParams.contains(param.name!.lexeme)) {
-      final V = ctx.lookupLocal(param.name!.lexeme)!;
+    // First check super params. Super params do not contain an expression;
+    // positional ones bind to the callee's positional parameters in order.
+    if (i < superParams.positional.length) {
+      final V = _forwardedSuperParam(
+        ctx,
+        param,
+        parameterHost,
+        decLibrary,
+        superParams.positional[i],
+        typeParameters: paramTypeParameters,
+        ctorClassParamSubs: ctorClassParamSubs,
+        genericParameterNames: {...resolveGenerics.keys, ...ctorClassParamNames},
+        source: source,
+      );
       push.add(V);
       args.add(V);
       i++;
@@ -406,8 +418,18 @@ ArgumentListResult compileArgumentList(
   for (final n in named.entries) {
     final name = n.key;
     final param0 = n.value;
-    if (superParams.contains(name)) {
-      final V = ctx.lookupLocal(name)!;
+    if (superParams.named.contains(name)) {
+      final V = _forwardedSuperParam(
+        ctx,
+        param0,
+        parameterHost,
+        decLibrary,
+        name,
+        typeParameters: paramTypeParameters,
+        ctorClassParamSubs: ctorClassParamSubs,
+        genericParameterNames: {...resolveGenerics.keys, ...ctorClassParamNames},
+        source: source,
+      );
       push.add(V);
       namedArgs[name] = V;
 
@@ -491,12 +513,59 @@ ArgumentListResult compileArgumentList(
   return ArgumentListResult(ssa, args, namedArgs);
 }
 
+/// A constructor's `super` parameters split for forwarding: positional super
+/// parameters bind the superclass constructor's positional parameters in
+/// order (their local names need not match the callee's), named ones by name.
+typedef SuperParams = ({List<String> positional, Set<String> named});
+
+/// The value a `super` parameter forwards to the callee: the caller's local
+/// [localName] coerced to the callee [param]'s boundary representation.
+/// Locals may have been boxed for field storage while the callee takes them
+/// unboxed, or vice versa — without the coercion the SSA keeps the wrong
+/// representation.
+Variable _forwardedSuperParam(
+  CompilerContext ctx,
+  FormalParameter param,
+  Declaration parameterHost,
+  int decLibrary,
+  String localName, {
+  Map<String, TypeRef> typeParameters = const {},
+  Map<(String, int), TypeRef> ctorClassParamSubs = const {},
+  Set<String> genericParameterNames = const {},
+  AstNode? source,
+}) {
+  var (paramType, typeAnnotation) = getFormalParameterType(
+    ctx,
+    param,
+    decLibrary,
+    parameterHost,
+    typeParameters: typeParameters,
+  );
+  paramType ??= CoreTypes.dynamic.ref(ctx);
+  if (ctorClassParamSubs.isNotEmpty) {
+    paramType = paramType.substituteTypeParameters(ctorClassParamSubs);
+  }
+  final genericParameter =
+      typeAnnotation is NamedType &&
+      genericParameterNames.contains(typeAnnotation.name.lexeme);
+  return coerceArgumentForParameter(
+    ctx,
+    ctx.lookupLocal(localName)!,
+    paramType,
+    param,
+    parameterHost,
+    genericParameter: genericParameter,
+    source: source,
+  );
+}
+
 ArgumentListResult compileSuperParams(
   CompilerContext ctx,
   List<FormalParameter> fpl,
   Declaration parameterHost, {
+  required int decLibrary,
   List<Variable> before = const [],
-  List<String> superParams = const [],
+  SuperParams superParams = const (positional: [], named: {}),
   AstNode? source,
 }) {
   final ssa = <SSA>[];
@@ -515,10 +584,19 @@ ArgumentListResult compileSuperParams(
     }
   }
 
+  var positionalSuperIndex = 0;
   for (final param in positional) {
-    // First check super params. Super params do not contain an expression.
-    if (superParams.contains(param.name!.lexeme)) {
-      final V = ctx.lookupLocal(param.name!.lexeme)!;
+    // First check super params. Super params do not contain an expression;
+    // positional ones bind to the callee's positional parameters in order.
+    if (positionalSuperIndex < superParams.positional.length) {
+      final V = _forwardedSuperParam(
+        ctx,
+        param,
+        parameterHost,
+        decLibrary,
+        superParams.positional[positionalSuperIndex++],
+        source: source,
+      );
       push.add(V);
       args.add(V);
     } else {
@@ -539,8 +617,15 @@ ArgumentListResult compileSuperParams(
 
   for (final n in named.entries) {
     final name = n.key;
-    if (superParams.contains(name)) {
-      final V = ctx.lookupLocal(name)!;
+    if (superParams.named.contains(name)) {
+      final V = _forwardedSuperParam(
+        ctx,
+        n.value,
+        parameterHost,
+        decLibrary,
+        name,
+        source: source,
+      );
       push.add(V);
       namedArgs[name] = V;
     } else {
@@ -563,7 +648,7 @@ ArgumentListResult compileSuperParamsWithBridge(
   CompilerContext ctx,
   BridgeFunctionDef function, {
   List<Variable> before = const [],
-  List<String> superParams = const [],
+  SuperParams superParams = const (positional: [], named: {}),
 }) {
   final ssa = <SSA>[];
   final args = <Variable>[];
@@ -571,11 +656,16 @@ ArgumentListResult compileSuperParamsWithBridge(
   final namedArgs = <String, Variable>{};
 
   Variable? $null;
+  var positionalSuperIndex = 0;
 
   for (final param in function.params) {
-    // First check super params. Super params do not contain an expression.
-    if (superParams.contains(param.name)) {
-      final V = ctx.lookupLocal(param.name)!;
+    // First check super params. Super params do not contain an expression;
+    // positional ones bind to the callee's positional parameters in order.
+    if (positionalSuperIndex < superParams.positional.length) {
+      final V = _providedBridgeArgument(
+        ctx,
+        ctx.lookupLocal(superParams.positional[positionalSuperIndex++])!,
+      );
       push.add(V);
       args.add(V);
     } else {
@@ -589,8 +679,8 @@ ArgumentListResult compileSuperParamsWithBridge(
   }
 
   for (final param in function.namedParams) {
-    if (superParams.contains(param.name)) {
-      final V = ctx.lookupLocal(param.name)!;
+    if (superParams.named.contains(param.name)) {
+      final V = _providedBridgeArgument(ctx, ctx.lookupLocal(param.name)!);
       push.add(V);
       namedArgs[param.name] = V;
     } else {
@@ -648,7 +738,7 @@ ArgumentListResult compileArgumentListWithBridge(
   ArgumentList argumentList,
   BridgeFunctionDef function, {
   List<Variable> before = const [],
-  List<String> superParams = const [],
+  SuperParams superParams = const (positional: [], named: {}),
   Map<String, TypeRef> typeParameters = const {},
 }) {
   final ssa = <SSA>[];
@@ -659,14 +749,19 @@ ArgumentListResult compileArgumentListWithBridge(
 
   var i = 0;
   Variable? $null;
+  var positionalSuperIndex = 0;
 
   for (final param in function.params) {
-    if (superParams.contains(param.name)) {
-      final V = _providedBridgeArgument(ctx, ctx.lookupLocal(param.name)!);
+    if (positionalSuperIndex < superParams.positional.length) {
+      final V = _providedBridgeArgument(
+        ctx,
+        ctx.lookupLocal(superParams.positional[positionalSuperIndex])!,
+      );
       push.add(V);
       args.add(V);
 
       i++;
+      positionalSuperIndex++;
       continue;
     }
     if (param.optional && argumentList.arguments.length <= i) {
@@ -722,7 +817,7 @@ ArgumentListResult compileArgumentListWithBridge(
   }
 
   for (final param in function.namedParams) {
-    if (superParams.contains(param.name)) {
+    if (superParams.named.contains(param.name)) {
       final V = _providedBridgeArgument(ctx, ctx.lookupLocal(param.name)!);
       push.add(V);
       namedArgs[param.name] = V;
@@ -821,36 +916,57 @@ TypeRef resolveSuperFormalType(
   final superCstr =
       ctx.topLevelDeclarationsMap[$super
           .file]!['${$super.name}.$superConstructorName']!;
+  // Positional super parameters bind the super constructor's positional
+  // parameters in order — their names are independent of the callee's.
+  final positionalIndex = param.isNamed
+      ? -1
+      : parameterHost.parameters.parameters
+          .where((p) => p is SuperFormalParameter && p.isPositional)
+          .toList()
+          .indexOf(param);
   if (superCstr.isBridge) {
     final fd = (superCstr.bridge as BridgeConstructorDef).functionDescriptor;
-    for (final bridgeParam in (param.isNamed ? fd.namedParams : fd.params)) {
-      if (bridgeParam.name == param.name.lexeme) {
-        return TypeRef.fromBridgeAnnotation(ctx, bridgeParam.type);
+    if (positionalIndex >= 0) {
+      if (positionalIndex < fd.params.length) {
+        return TypeRef.fromBridgeAnnotation(
+          ctx,
+          fd.params[positionalIndex].type,
+        );
+      }
+    } else {
+      for (final bridgeParam in fd.namedParams) {
+        if (bridgeParam.name == param.name.lexeme) {
+          return TypeRef.fromBridgeAnnotation(ctx, bridgeParam.type);
+        }
       }
     }
   } else {
     final cstr = superCstr.declaration as ConstructorDeclaration;
-    for (final cstrParam in cstr.parameters.parameters) {
-      var param0 = cstrParam;
-      if (param0.name?.lexeme != param.name.lexeme) {
-        continue;
+    final cstrPositional = cstr.parameters.parameters
+        .where((p) => p.isPositional)
+        .toList();
+    final param0 = positionalIndex >= 0
+        ? (positionalIndex < cstrPositional.length
+              ? cstrPositional[positionalIndex]
+              : null)
+        : cstr.parameters.parameters
+              .where((p) => p.name?.lexeme == param.name.lexeme)
+              .firstOrNull;
+    if (param0 is RegularFormalParameter) {
+      final type0 = param0.type;
+      if (type0 == null) {
+        return CoreTypes.dynamic.ref(ctx);
       }
-      if (param0 is RegularFormalParameter) {
-        final type0 = param0.type;
-        if (type0 == null) {
-          return CoreTypes.dynamic.ref(ctx);
-        }
-        return TypeRef.fromAnnotation(ctx, $super.file, type0);
-      } else if (param0 is FieldFormalParameter) {
-        return resolveFieldFormalType(ctx, decLibrary, param0, cstr);
-      } else if (param0 is SuperFormalParameter) {
-        return resolveSuperFormalType(ctx, decLibrary, param0, cstr);
-      } else {
-        throw CompileError(
-          'Unknown parameter type ${param0.runtimeType}',
-          param0,
-        );
-      }
+      return TypeRef.fromAnnotation(ctx, $super.file, type0);
+    } else if (param0 is FieldFormalParameter) {
+      return resolveFieldFormalType(ctx, decLibrary, param0, cstr);
+    } else if (param0 is SuperFormalParameter) {
+      return resolveSuperFormalType(ctx, decLibrary, param0, cstr);
+    } else if (param0 != null) {
+      throw CompileError(
+        'Unknown parameter type ${param0.runtimeType}',
+        param0,
+      );
     }
   }
 
