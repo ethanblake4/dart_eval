@@ -62,7 +62,7 @@ Variable compileSwitchExpression(
         );
         final guard = currentCase.guardedPattern.whenClause;
         if (guard != null) {
-          final guardExpr = compileExpression(guard.expression, ctx);
+          final guardExpr = compileExpression(guard.expression, ctx, CoreTypes.bool.ref(ctx));
           return matches.invoke(ctx, '&&', [guardExpr]).result;
         }
         return matches;

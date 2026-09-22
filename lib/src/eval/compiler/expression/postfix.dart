@@ -12,7 +12,11 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/types.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 
-Variable compilePostfixExpression(PostfixExpression e, CompilerContext ctx) {
+Variable compilePostfixExpression(
+  PostfixExpression e,
+  CompilerContext ctx, [
+  TypeRef? bound,
+]) {
   Variable assertNonNull(Variable v) {
     if (v.type.nullable ||
         v.type.resolveTypeChain(ctx) == CoreTypes.dynamic.ref(ctx)) {
@@ -29,7 +33,7 @@ Variable compilePostfixExpression(PostfixExpression e, CompilerContext ctx) {
     // only when the receiver is non-null — the whole expression is null
     // otherwise.
     final operand = e.operand;
-    final L = compileExpression(operand, ctx);
+    final L = compileExpression(operand, ctx, bound);
     if (isNullShorted(operand)) {
       return emitNullGuard(ctx, L, assertNonNull, source: e);
     }

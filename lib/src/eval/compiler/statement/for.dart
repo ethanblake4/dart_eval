@@ -22,7 +22,11 @@ StatementInfo compileForStatement(
   final parts = s.forLoopParts;
 
   if (parts is ForEachParts) {
-    final iterable = compileExpression(parts.iterable, ctx).boxIfNeeded(ctx);
+    final iterable = compileExpression(
+      parts.iterable,
+      ctx,
+      forEachIterableBound(ctx, parts, await_: s.awaitKeyword != null),
+    ).boxIfNeeded(ctx);
     if (s.awaitKeyword != null) {
       return compileAwaitForLoop(
         ctx,
@@ -70,6 +74,27 @@ StatementInfo compileForStatement(
         compileExpressionAndDiscardResult(u, ctx);
       }
     },
+  );
+}
+
+/// The context type for the iterable expression of `for (v in it)`:
+/// `Iterable<T>` — or `Stream<T>` for `await for` — where `T` is the loop
+/// variable's declared type (`dynamic` for `var`), so `.member` shorthands
+/// and untyped collection literals in the iterable position resolve.
+TypeRef forEachIterableBound(
+  CompilerContext ctx,
+  ForEachParts parts, {
+  bool await_ = false,
+}) {
+  final elementType = switch (parts) {
+    ForEachPartsWithDeclaration p when p.loopVariable.type != null =>
+      TypeRef.fromAnnotation(ctx, ctx.library, p.loopVariable.type!),
+    ForEachPartsWithIdentifier p =>
+      compileExpressionAsReference(p.identifier, ctx).resolveType(ctx),
+    _ => null,
+  };
+  return (await_ ? CoreTypes.stream : CoreTypes.iterable).ref(ctx).copyWith(
+    specifiedTypeArgs: [elementType ?? CoreTypes.dynamic.ref(ctx)],
   );
 }
 

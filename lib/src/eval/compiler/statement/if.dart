@@ -8,6 +8,7 @@ import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/memory.dart';
+import 'package:dart_eval/src/eval/shared/types.dart';
 
 StatementInfo compileIfStatement(
   IfStatement s,
@@ -57,7 +58,7 @@ StatementInfo _compileIfCaseStatement(
       );
       final guard = caseClause.guardedPattern.whenClause;
       if (guard != null) {
-        final guardExpr = compileExpression(guard.expression, ctx);
+        final guardExpr = compileExpression(guard.expression, ctx, CoreTypes.bool.ref(ctx));
         matches = matches.invoke(ctx, '&&', [guardExpr]).result;
       }
       return matches;

@@ -1,8 +1,10 @@
-// Usage: dart run /tmp/run_one.dart <relpath> -- compile+run one sdk test, print the error
+// Usage: dart run tool/run_one.dart <relpath> -- compile+run one sdk_language
+// test (e.g. 'dot_shorthands/simple/call_test.dart'), print PASSED or the
+// compile/runtime error with a truncated stack. The test's kind and any
+// unsupported reason print to stderr first.
 import 'dart:io';
 import 'package:dart_eval/dart_eval.dart';
-import 'package:dart_eval/src/eval/compiler/errors.dart';
-import '/home/ubuntu/repos/dart-eval/test/sdk_language/sdk_language.dart';
+import '../test/sdk_language/sdk_language.dart';
 
 void main(List<String> args) async {
   final suite = await SdkSuite.load();
@@ -18,6 +20,15 @@ void main(List<String> args) async {
     print('PASSED');
   } catch (e, st) {
     print('ERROR: $e');
+    if (e is TypedInstance) {
+      // Eval-land exceptions carry their receiver's field values inline —
+      // dump them so a thrown condition (e.g. Expect._fail) shows its state.
+      final tp = e.program;
+      print('eval class: ${tp.classes[e.classId].name}');
+      for (var i = 0; i < e.values.length; i++) {
+        print('  value[$i]: ${e.values[i]}');
+      }
+    }
     print(st.toString().split('\n').take(12).join('\n'));
   }
 }

@@ -60,8 +60,11 @@ StatementInfo doReturn(
   } else {
     final expected = expectedReturnType.type ?? CoreTypes.dynamic.ref(ctx);
     var value0 = value;
+    // Closures declare an `object` result slot in their function signature,
+    // so their returns stay boxed even when the type could travel unboxed.
     final unboxedResult =
         expected.isUnboxedAcrossFunctionBoundaries &&
+        ctx.closureDepth == 0 &&
         ((ctx.currentClass == null && ctx.currentExtension == null) ||
             skipClassBoxing);
     value0 = convertForAssignment(
@@ -73,15 +76,7 @@ StatementInfo doReturn(
           : MachineRepresentation.object,
       description: 'Cannot return ${value0.type} (expected: $expected)',
     );
-    if (expected.isUnboxedAcrossFunctionBoundaries &&
-        // Return types must be boxed when returning from instance methods, even if
-        // the return type can be unboxed across function boundaries, because
-        // the method may be called in a dynamic context where we have no information
-        // about the expected return type.
-        // We skip this if the skipClassBoxing flag is set, which is used
-        // for operators as they can be statically guaranteed to return an unboxed type.
-        ((ctx.currentClass == null && ctx.currentExtension == null) ||
-            skipClassBoxing)) {
+    if (unboxedResult) {
       value0 = value0.unboxIfNeeded(ctx);
     } else {
       value0 = value0.boxIfNeeded(ctx);

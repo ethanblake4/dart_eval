@@ -9,6 +9,7 @@ import 'package:dart_eval/src/eval/compiler/expression/await.dart';
 import 'package:dart_eval/src/eval/compiler/expression/binary.dart';
 import 'package:dart_eval/src/eval/compiler/expression/cascade.dart';
 import 'package:dart_eval/src/eval/compiler/expression/conditional.dart';
+import 'package:dart_eval/src/eval/compiler/expression/dot_shorthand.dart';
 import 'package:dart_eval/src/eval/compiler/expression/funcexpr_invocation.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function_reference.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
@@ -49,20 +50,26 @@ Variable compileExpression(Expression e, CompilerContext ctx, [TypeRef? bound]) 
     return value;
   } else if (e is MethodInvocation) {
     return compileMethodInvocation(ctx, e, bound: bound);
+  } else if (e is DotShorthandPropertyAccess) {
+    return compileDotShorthandPropertyAccess(ctx, e, bound);
+  } else if (e is DotShorthandConstructorInvocation) {
+    return compileDotShorthandConstructorInvocation(ctx, e, bound);
+  } else if (e is DotShorthandInvocation) {
+    return compileDotShorthandInvocation(ctx, e, bound);
   } else if (e is BinaryExpression) {
     return compileBinaryExpression(ctx, e, bound);
   } else if (e is PrefixExpression) {
     return compilePrefixExpression(ctx, e, bound);
   } else if (e is PropertyAccess) {
-    return compilePropertyAccess(e, ctx);
+    return compilePropertyAccess(e, ctx, bound);
   } else if (e is ThisExpression) {
     return compileThisExpression(e, ctx);
   } else if (e is SuperExpression) {
     return compileSuperExpression(e, ctx);
   } else if (e is PostfixExpression) {
-    return compilePostfixExpression(e, ctx);
+    return compilePostfixExpression(e, ctx, bound);
   } else if (e is IndexExpression) {
-    return compileIndexExpression(e, ctx);
+    return compileIndexExpression(e, ctx, bound);
   } else if (e is FunctionExpression) {
     return compileFunctionExpression(e, ctx, bound);
   } else if (e is FunctionExpressionInvocation) {
@@ -72,11 +79,11 @@ Variable compileExpression(Expression e, CompilerContext ctx, [TypeRef? bound]) 
   } else if (e is InstanceCreationExpression) {
     return compileInstanceCreation(ctx, e, bound);
   } else if (e is ParenthesizedExpression) {
-    return compileParenthesizedExpression(e, ctx);
+    return compileParenthesizedExpression(e, ctx, bound);
   } else if (e is ThrowExpression) {
     return compileThrowExpression(ctx, e);
   } else if (e is ConditionalExpression) {
-    return compileConditionalExpression(ctx, e);
+    return compileConditionalExpression(ctx, e, bound);
   } else if (e is SwitchExpression) {
     return compileSwitchExpression(ctx, e, bound);
   } else if (e is IsExpression) {

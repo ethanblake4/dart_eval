@@ -27,7 +27,9 @@ void compileEnumDeclaration(CompilerContext ctx, EnumDeclaration d) {
   ];
   ctx.instanceGetterIndices[ctx.library]![clsName] = {};
   final (constructors, fields, methods) = partitionClassMembers(d.body.members);
-  if (constructors.isEmpty) {
+  // Enum values materialize through the generative constructor, which is
+  // implicit when the enum declares none (factories don't count).
+  if (!constructors.any((c) => c.factoryKeyword == null)) {
     ctx.currentClass = d;
     compileDefaultConstructor(ctx, d, fields);
   }

@@ -71,7 +71,12 @@ Variable compilePrefixExpression(
     return _handleDoubleOperands(e, ctx, V);
   }
 
-  final V = compileExpression(e.operand, ctx, bound);
+  // `!e`'s operand has context type bool regardless of the outer bound.
+  final V = compileExpression(
+    e.operand,
+    ctx,
+    method == '!' ? CoreTypes.bool.ref(ctx) : bound,
+  );
   final isDynamic = V.type.resolveTypeChain(ctx) == CoreTypes.dynamic.ref(ctx);
 
   if (method == '!' && !isDynamic && V.type != CoreTypes.bool.ref(ctx)) {

@@ -217,8 +217,11 @@ Variable pushDefaultValue(CompilerContext ctx, Object? value) =>
 (Object? value, int thunkIndex) compileParameterDefault(
   CompilerContext ctx,
   int library,
-  FormalParameter parameter,
-) {
+  FormalParameter parameter, {
+  /// The parameter's declared type — the default expression's context
+  /// type (e.g. the `Color` in `f([Color c = .red])`).
+  TypeRef? bound,
+}) {
   var expression = parameter.defaultClause?.value;
   if (expression == null && parameter is SuperFormalParameter) {
     // Super formals never declare their own default — they inherit the
@@ -235,7 +238,7 @@ Variable pushDefaultValue(CompilerContext ctx, Object? value) =>
   try {
     return (evaluateDefaultValue(ctx, library, expression), -1);
   } on CompileError {
-    return (null, _compileDefaultThunk(ctx, expression));
+    return (null, _compileDefaultThunk(ctx, expression, bound));
   }
 }
 
@@ -243,7 +246,11 @@ Variable pushDefaultValue(CompilerContext ctx, Object? value) =>
 /// returns the new function's index. Identical expressions share one thunk
 /// per compilation. Defaults are compile-time constants, so the thunk never
 /// references enclosing locals.
-int _compileDefaultThunk(CompilerContext ctx, Expression expression) {
+int _compileDefaultThunk(
+  CompilerContext ctx,
+  Expression expression, [
+  TypeRef? bound,
+]) {
   final cached = ctx.defaultThunkCache[expression];
   if (cached != null) return cached;
 
@@ -271,7 +278,7 @@ int _compileDefaultThunk(CompilerContext ctx, Expression expression) {
       [],
       MachineRepresentation.object,
     );
-    final value = compileExpression(expression, ctx).boxIfNeeded(ctx);
+    final value = compileExpression(expression, ctx, bound).boxIfNeeded(ctx);
     ctx.pushOp(Return(value.ssa));
     ctx.endScope();
     ctx.finishMethod();

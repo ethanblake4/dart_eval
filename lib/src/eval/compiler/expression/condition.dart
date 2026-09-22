@@ -57,7 +57,13 @@ BasicBlockBuilder compileCondition(
         return;
       }
     }
-    final compiledValue = compileExpression(expression, ctx);
+    // Conditions see `bool` as their context type — a `.m()` shorthand in
+    // condition position resolves against it.
+    final compiledValue = compileExpression(
+      expression,
+      ctx,
+      CoreTypes.bool.ref(ctx),
+    );
     enforceConditionType(ctx, compiledValue, expression);
     final value = convertForAssignment(
       ctx,

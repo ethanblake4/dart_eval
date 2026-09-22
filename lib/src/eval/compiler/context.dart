@@ -401,6 +401,11 @@ class CompilerContext with ScopeContext {
 
   final List<String> caughtExceptionTargets = [];
   int exceptionDepth = 0;
+
+  /// Nonzero while compiling a function-expression (closure) body. Closures
+  /// are dynamically callable, so their results must be boxed at the
+  /// boundary even when the return type is unboxable for named functions.
+  int closureDepth = 0;
   int globalIndex = 0;
   String? version;
   String? funcLabel;

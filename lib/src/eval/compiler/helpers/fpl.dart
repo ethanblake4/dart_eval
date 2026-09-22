@@ -70,7 +70,25 @@ List<FormalParameter> resolveFPLDefaults(
   // while this function is still being compiled — closures, call sites, and
   // exports all share the cached indices afterwards.
   for (final param in [...positional, ...named]) {
-    compileParameterDefault(ctx, ctx.library, param);
+    // The declared parameter type is the default value's context type.
+    var bound = param.type == null
+        ? null
+        : formalParameterAnnotationType(
+            ctx,
+            decLibrary ?? ctx.library,
+            param,
+            typeParameters: typeParameters,
+          );
+    if (bound == null && parameterHost != null) {
+      bound = getFormalParameterType(
+        ctx,
+        param,
+        decLibrary ?? ctx.library,
+        parameterHost,
+        typeParameters: typeParameters,
+      ).$1;
+    }
+    compileParameterDefault(ctx, ctx.library, param, bound: bound);
   }
   final declaredTypes = <TypeRef>[];
 

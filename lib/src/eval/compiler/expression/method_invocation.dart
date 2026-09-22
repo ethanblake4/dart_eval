@@ -20,6 +20,7 @@ import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
 
 import '../reference.dart';
+import 'dot_shorthand.dart';
 import 'expression.dart';
 import 'identifier.dart';
 import 'null_aware.dart';
@@ -35,7 +36,13 @@ Variable compileMethodInvocation(
     L = ctx.cascadeTarget;
   } else if (e.target != null) {
     try {
-      L = compileExpression(e.target!, ctx);
+      L = compileExpression(
+        e.target!,
+        ctx,
+        // `.member().rest()` — the chain's context type reaches the
+        // leading shorthand through its selector targets.
+        containsLeadingShorthand(e.target!) ? bound : null,
+      );
       if (e.target is SuperExpression) {
         final (receiver, dispatched) = _resolveSuperReceiver(ctx, e, L);
         if (dispatched != null) return dispatched;
@@ -57,11 +64,11 @@ Variable compileMethodInvocation(
       return emitNullGuard(
         ctx,
         L,
-        (t) => _invokeWithTarget(ctx, t, e),
+        (t) => _invokeWithTarget(ctx, t, e, bound: bound),
         source: e,
       );
     }
-    return _invokeWithTarget(ctx, L, e);
+    return _invokeWithTarget(ctx, L, e, bound: bound);
   }
   final method = isPrefix
       ? compilePrefixedIdentifier(
@@ -145,7 +152,7 @@ Variable compileMethodInvocation(
       offset.className != null &&
       offset.className == ctx.currentClassName) {
     final $this = ctx.lookupLocal('#this')!;
-    return _invokeWithTarget(ctx, $this, e);
+    return _invokeWithTarget(ctx, $this, e, bound: bound);
   }
 
   // `name` can resolve to a class rather than a callable (e.g. `List()`) —
@@ -290,7 +297,7 @@ Variable compileMethodInvocation(
     final dec = dec0.declaration!;
     isConstructor = dec is ConstructorDeclaration;
 
-    final result = _compileNonBridgeArgs(
+    final result = compileNonBridgeArgs(
       ctx,
       offset.file!,
       dec,
@@ -308,7 +315,22 @@ Variable compileMethodInvocation(
     // Upward inference for constructors: the class type arguments inferred
     // from the argument list (or the parameters' bounds), in declaration order.
     if (isConstructor && result.classTypeParameters != null) {
-      inferredCtorArgs = [
+      // Downward inference wins: a context type naming the constructed
+      // class pins its type arguments (`A<int> get g => A(1)`).
+      final boundChain = bound?.resolveTypeChain(ctx);
+      final ctorDecl = dec.parent?.parent;
+      final ctorClassName =
+          ctorDecl is Declaration ? declarationName(ctorDecl) : null;
+      if (boundChain != null &&
+          e.typeArguments == null &&
+          boundChain.name == ctorClassName) {
+        final contextArgs = boundChain.specifiedTypeArgs;
+        if (contextArgs.isNotEmpty &&
+            contextArgs.every((t) => !t.isTypeParameter)) {
+          inferredCtorArgs = contextArgs;
+        }
+      }
+      inferredCtorArgs ??= [
         for (final param in result.classTypeParameters!)
           result.resolveGenerics[param.name.lexeme] ??
               CoreTypes.dynamic.ref(ctx),
@@ -621,8 +643,9 @@ Variable _applyExtension(
 Variable _invokeWithTarget(
   CompilerContext ctx,
   Variable L,
-  MethodInvocation e,
-) {
+  MethodInvocation e, {
+  TypeRef? bound,
+}) {
   // `E(x).m(...)` — explicit application pins member resolution to E.
   if (L.boundExtension case final bound?) {
     final member = extensionMember(bound.ext, e.methodName.name);
@@ -748,7 +771,7 @@ Variable _invokeWithTarget(
         final extParams =
             memberExt.declaration.typeParameters?.typeParameters ??
             const <TypeParameter>[];
-        final result = _compileNonBridgeArgs(
+        final result = compileNonBridgeArgs(
           ctx,
           memberExt.library,
           memberDecl,
@@ -982,7 +1005,7 @@ Variable _invokeWithTarget(
     argsPair = compileArgumentListWithDynamic(ctx, e.argumentList, before: [L]);
   } else {
     final dec = dec0!.declaration!;
-    final result = _compileNonBridgeArgs(
+    final result = compileNonBridgeArgs(
       ctx,
       dec0.sourceLib,
       dec,
@@ -993,6 +1016,7 @@ Variable _invokeWithTarget(
       seedGenerics: !isStatic && dec is MethodDeclaration
           ? classTypeArguments(ctx, L.type, dec0.sourceLib, dec)
           : const {},
+      returnContext: bound,
     );
     argsPair = result.args;
     mReturnType = result.returnType;
@@ -1026,6 +1050,15 @@ Variable _invokeWithTarget(
       );
       final callArguments = [...argsPair.ssa];
       final declaration = dec0.declaration;
+      // Enum constructors carry two synthetic leading parameters (index,
+      // name); direct calls — only factories are reachable — bind them null.
+      if (declaration is ConstructorDeclaration &&
+          declaration.parent?.parent is EnumDeclaration) {
+        callArguments.insertAll(0, [
+          BuiltinValue().push(ctx).ssa,
+          BuiltinValue().push(ctx).ssa,
+        ]);
+      }
       if (declaration is ConstructorDeclaration &&
           declaration.factoryKeyword == null) {
         callArguments.add(pushRuntimeTypeId(ctx, staticType));
@@ -1221,7 +1254,7 @@ Variable _invokeExtensionMethod(
   final extParams =
       ext.declaration.typeParameters?.typeParameters ??
       const <TypeParameter>[];
-  final result = _compileNonBridgeArgs(
+  final result = compileNonBridgeArgs(
     ctx,
     ext.library,
     member,
@@ -1645,9 +1678,9 @@ _invocationSignature(Declaration dec) => switch (dec) {
   _ => throw CompileError('Invalid declaration type ${dec.runtimeType}'),
 };
 
-/// The result of [_compileNonBridgeArgs].
-class _ResolvedArgs {
-  _ResolvedArgs(
+/// The result of [compileNonBridgeArgs].
+class ResolvedArgs {
+  ResolvedArgs(
     this.args,
     this.returnType,
     this.boxedBySubstitution,
@@ -1680,7 +1713,7 @@ class _ResolvedArgs {
 /// resolving generic type parameters at the call site. [seedGenerics] provides
 /// receiver-class type arguments (for instance calls); [typeArguments] are the
 /// call's explicit type arguments, whose presence disables inference.
-_ResolvedArgs _compileNonBridgeArgs(
+ResolvedArgs compileNonBridgeArgs(
   CompilerContext ctx,
   int sourceLib,
   Declaration dec,
@@ -1692,6 +1725,10 @@ _ResolvedArgs _compileNonBridgeArgs(
   // Skips this many leading positional arguments (explicit extension
   // application `E.m(receiver, ...)` carries the receiver in the list).
   int argIndexOffset = 0,
+  /// The expression's context type. Method type parameters left unconstrained
+  /// by argument inference are bound from the declared return type matched
+  /// against it (`x.cast()` under `C<bool>` binds `U` to `bool`).
+  TypeRef? returnContext,
 }) {
   final (fpl, typeParams, returnAnnotation) = _invocationSignature(dec);
   final isCallableDecl = dec is FunctionDeclaration || dec is MethodDeclaration;
@@ -1748,6 +1785,9 @@ _ResolvedArgs _compileNonBridgeArgs(
     boxedBySubstitution = true;
   }
 
+  // Snapshot the pre-inference bindings: entries still identical after the
+  // argument list compiles were never constrained by the arguments.
+  final unboundGenerics = Map<String, TypeRef>.of(resolveGenerics);
   final argsPair = compileArgumentList(
     ctx,
     argumentList,
@@ -1764,6 +1804,43 @@ _ResolvedArgs _compileNonBridgeArgs(
     inferGenerics: !isCallableDecl || typeArguments == null,
   );
 
+  // Downward inference: parameters untouched by argument inference bind
+  // from the declared return type matched against the context type.
+  if (returnContext != null &&
+      typeArguments == null &&
+      typeParams != null &&
+      returnAnnotation != null) {
+    final placeholders = <String, TypeRef>{
+      for (var i = 0; i < typeParams.length; i++)
+        typeParams[i].name.lexeme: TypeRef(
+          sourceLib,
+          typeParams[i].name.lexeme,
+          resolved: true,
+          typeParameterOwner: 'call:$sourceLib',
+          typeParameterIndex: i,
+        ),
+    };
+    final pattern = TypeRef.fromAnnotation(
+      ctx,
+      sourceLib,
+      returnAnnotation,
+      typeParameters: placeholders,
+    );
+    final substitutions = <(String, int), TypeRef>{};
+    collectTypeParameterSubstitutions(
+      ctx,
+      pattern,
+      returnContext,
+      substitutions,
+    );
+    for (var i = 0; i < typeParams.length; i++) {
+      final name = typeParams[i].name.lexeme;
+      if (!identical(resolveGenerics[name], unboundGenerics[name])) continue;
+      final bound = substitutions[('call:$sourceLib', i)];
+      if (bound != null) resolveGenerics[name] = bound;
+    }
+  }
+
   AlwaysReturnType? returnType;
   if (returnAnnotation != null && resolveGenerics.isNotEmpty) {
     final resolvedReturn = TypeRef.fromAnnotation(
@@ -1777,7 +1854,7 @@ _ResolvedArgs _compileNonBridgeArgs(
       returnAnnotation.question != null,
     );
   }
-  return _ResolvedArgs(
+  return ResolvedArgs(
     argsPair,
     returnType,
     boxedBySubstitution,

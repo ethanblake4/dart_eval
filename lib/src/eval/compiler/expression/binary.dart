@@ -50,7 +50,16 @@ Variable compileBinaryExpression(
   final method =
       binaryOpMap[e.operator.type] ??
       (throw CompileError('Unknown binary operator ${e.operator.type}'));
-  var L = compileExpression(e.leftOperand, ctx, boundType);
+  var L = compileExpression(
+    e.leftOperand,
+    ctx,
+    // `&&`/`||` operands have `bool` as their context type on both sides.
+    switch (e.operator.type) {
+      TokenType.AMPERSAND_AMPERSAND ||
+      TokenType.BAR_BAR => CoreTypes.bool.ref(ctx),
+      _ => boundType,
+    },
+  );
 
   switch (e.operator.type) {
     case TokenType.AMPERSAND_AMPERSAND:
@@ -62,13 +71,20 @@ Variable compileBinaryExpression(
         e.leftOperand,
         e.rightOperand,
         method,
+        boundType: boundType,
       );
   }
 
   // Evaluating the right operand can assign or change the representation of a
   // local used by the left operand. Preserve its already evaluated value.
   L = Variable.ssa(ctx, Assign(ctx.svar('binary_left'), L.ssa), L.type);
-  var R = compileExpression(e.rightOperand, ctx, boundType);
+  // For `==`/`!=` the right operand's context type is the left operand's
+  // static type (e.g. `.foo` shorthands resolve against it).
+  final rightBound = switch (e.operator.type) {
+    TokenType.EQ_EQ || TokenType.BANG_EQ => L.type,
+    _ => boundType,
+  };
+  var R = compileExpression(e.rightOperand, ctx, rightBound);
 
   return L.invoke(ctx, method, [R]).result;
 }
@@ -78,8 +94,9 @@ Variable _compileShortCircuit(
   Variable L,
   Expression left,
   Expression right,
-  String operator,
-) {
+  String operator, {
+  TypeRef? boundType,
+}) {
   late TypeRef rightType;
   var outVar = BuiltinValue().push(ctx);
   L = L.boxIfNeeded(ctx);
@@ -116,7 +133,12 @@ Variable _compileShortCircuit(
       if (operator == '&&' || operator == '||') {
         applyConditionPromotions(ctx, left, operator == '&&');
       }
-      var R = compileExpression(right, ctx);
+      // `x ?? .y` gives the RHS the join context (outer bound, else the
+      // non-nullable LHS type); `x && .y`/`||` give it `bool`.
+      final rightBound = operator == '??'
+          ? boundType ?? L.type.copyWith(nullable: false)
+          : CoreTypes.bool.ref(ctx);
+      var R = compileExpression(right, ctx, rightBound);
       if (operator != '??') {
         R = convertForAssignment(
           ctx,

@@ -10,9 +10,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:dart_eval/dart_eval.dart';
-import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/model/source.dart';
-import 'package:dart_eval/src/eval/runtime/typed/typed_instance.dart';
 
 import '../test/sdk_language/sdk_language.dart';
 

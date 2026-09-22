@@ -174,12 +174,28 @@ Variable compileFunctionExpression(
   );
   final b = e.body;
 
+  // The closure body's context type is the bound function type's return
+  // type — `Color Function() f = () => .red` resolves `.red` under `Color`.
+  // Local function declarations (`Color f() => ...`) carry the return type
+  // on their parent declaration instead.
+  final declaredReturnType = switch (e.parent) {
+    FunctionDeclaration(:final returnType?) => TypeRef.fromAnnotation(
+      ctx,
+      ctx.library,
+      returnType,
+    ),
+    _ => null,
+  };
+  final boundReturnType =
+      bound?.resolveTypeChain(ctx).functionType?.returnType.type ??
+      declaredReturnType;
+
   // Block-bodied closures collect the static type of each `return` so the
   // closure's return type can be inferred (`asyncClosureReturnTypes` serves
   // sync closures too despite the name).
   final collectsReturns = b.isAsynchronous || b is BlockFunctionBody;
   if (b.isAsynchronous) {
-    setupAsyncFunction(ctx, returnType: bound?.functionType?.returnType.type);
+    setupAsyncFunction(ctx, returnType: boundReturnType);
   }
   if (collectsReturns) {
     ctx.asyncClosureReturnTypes.add(<TypeRef>[]);
@@ -187,27 +203,31 @@ Variable compileFunctionExpression(
 
   StatementInfo? stInfo;
   TypeRef? inferredClosureReturnType;
-  if (b is BlockFunctionBody) {
-    stInfo = compileBlock(
-      b.block,
-      /*AlwaysReturnType.fromAnnotation(ctx, ctx.library, d.returnType, CoreTypes.dynamic.ref(ctx))*/
-      AlwaysReturnType(CoreTypes.dynamic.ref(ctx), false),
-      ctx,
-      name: '(closure)',
-    );
-  } else if (b is ExpressionFunctionBody) {
-    ctx.beginScope();
-    final V = compileExpression(b.expression, ctx);
-    inferredClosureReturnType = V.type;
-    stInfo = doReturn(
-      ctx,
-      AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true),
-      V,
-      isAsync: b.isAsynchronous,
-    );
-    ctx.endScope();
-  } else {
-    throw CompileError('Unsupported function body type: ${b.runtimeType}');
+  ctx.closureDepth++;
+  try {
+    if (b is BlockFunctionBody) {
+      stInfo = compileBlock(
+        b.block,
+        AlwaysReturnType(boundReturnType ?? CoreTypes.dynamic.ref(ctx), false),
+        ctx,
+        name: '(closure)',
+      );
+    } else if (b is ExpressionFunctionBody) {
+      ctx.beginScope();
+      final V = compileExpression(b.expression, ctx, boundReturnType);
+      inferredClosureReturnType = V.type;
+      stInfo = doReturn(
+        ctx,
+        AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true),
+        V,
+        isAsync: b.isAsynchronous,
+      );
+      ctx.endScope();
+    } else {
+      throw CompileError('Unsupported function body type: ${b.runtimeType}');
+    }
+  } finally {
+    ctx.closureDepth--;
   }
 
   if (!(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {

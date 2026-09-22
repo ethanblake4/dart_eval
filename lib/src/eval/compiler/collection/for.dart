@@ -8,6 +8,7 @@ import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/statement/variable_declaration.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
+import 'package:dart_eval/src/eval/shared/types.dart';
 
 List<TypeRef> compileForElementForList(
   ForElement e,
@@ -19,20 +20,32 @@ List<TypeRef> compileForElementForList(
       e,
       ctx,
       (element) => compileListElement(element, list, ctx, box),
+      iterableBound: CoreTypes.iterable.ref(ctx).copyWith(
+        specifiedTypeArgs: [list.type.specifiedTypeArgs.first],
+      ),
     );
 
 /// Compiles a collection `for` element, dispatching its body through
 /// [compileBody] and returning every type it may produce.
+/// [iterableBound] is the context type for a `for-in` iterable (the
+/// collection's `Iterable<elementType>`); null uses the loop variable's
+/// declared type, or `Iterable<dynamic>` for `var`.
 List<TypeRef> compileForElement(
   ForElement e,
   CompilerContext ctx,
-  List<TypeRef> Function(CollectionElement) compileBody,
-) {
+  List<TypeRef> Function(CollectionElement) compileBody, {
+  TypeRef? iterableBound,
+}) {
   final potentialReturnTypes = <TypeRef>[];
   final parts = e.forLoopParts;
 
   if (parts is ForEachParts) {
-    final iterable = compileExpression(parts.iterable, ctx).boxIfNeeded(ctx);
+    final iterable = compileExpression(
+      parts.iterable,
+      ctx,
+      iterableBound ??
+          forEachIterableBound(ctx, parts, await_: e.awaitKeyword != null),
+    ).boxIfNeeded(ctx);
     if (e.awaitKeyword != null) {
       compileAwaitForLoop(ctx, e, parts, iterable, null, (ctx, ert) {
         potentialReturnTypes.addAll(compileBody(e.body));

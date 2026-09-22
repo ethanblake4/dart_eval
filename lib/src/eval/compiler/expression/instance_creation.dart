@@ -72,6 +72,30 @@ Variable compileInstanceCreation(
     }
   }
 
+  return compileInstanceOf(
+    ctx,
+    staticType: staticType,
+    instantiatedType: instantiatedType,
+    name: name,
+    argumentList: e.argumentList,
+    isConst: e.isConst,
+    source: e,
+  );
+}
+
+/// Emits the `staticType.name(...)` constructor invocation shared by
+/// `InstanceCreationExpression` and the `.name(...)` dot shorthand.
+/// [staticType] is the declaring class; [instantiatedType] carries the
+/// applied type arguments delivered to the callee.
+Variable compileInstanceOf(
+  CompilerContext ctx, {
+  required TypeRef staticType,
+  required TypeRef instantiatedType,
+  required String name,
+  required ArgumentList argumentList,
+  required bool isConst,
+  required AstNode source,
+}) {
   // A class that declares no constructors gets a synthesized `Name.` body
   // taking only the runtime-type argument, with no lookup-table entry.
   if (name.isEmpty &&
@@ -92,7 +116,7 @@ Variable compileInstanceCreation(
         result: result,
       ),
     );
-    if (e.isConst) {
+    if (isConst) {
       result = pushInternConst(ctx, result, instantiatedType);
     }
     return Variable.of(
@@ -116,7 +140,7 @@ Variable compileInstanceCreation(
       BridgeConstructorDef d => d.functionDescriptor,
       BridgeMethodDef d => d.functionDescriptor,
       _ => throw CompileError(
-          'Cannot invoke $staticType.$name as a constructor', e),
+          'Cannot invoke $staticType.$name as a constructor', source),
     };
     final classBridge =
         ctx.topLevelDeclarationsMap[staticType.file]![staticType.name]?.bridge;
@@ -135,7 +159,7 @@ Variable compileInstanceCreation(
     }
     arguments = compileArgumentListWithBridge(
       ctx,
-      e.argumentList,
+      argumentList,
       fnDescriptor,
       typeParameters: argTypeParameters,
     );
@@ -227,11 +251,11 @@ Variable compileInstanceCreation(
 
     arguments = compileArgumentList(
       ctx,
-      e.argumentList,
+      argumentList,
       staticType.file,
       fpl,
       dec,
-      source: e,
+      source: source,
       resolveGenerics: seedGenerics,
     );
     //_args = argsPair.first;
@@ -272,6 +296,15 @@ Variable compileInstanceCreation(
       name,
     );
     final callArguments = [...arguments.ssa];
+    // Enum constructors carry two synthetic leading parameters (index,
+    // name) bound by the enum's own value materialization; direct calls —
+    // only factories are reachable — bind them to null.
+    if (constructor.parent?.parent is EnumDeclaration) {
+      callArguments.insertAll(0, [
+        BuiltinValue().push(ctx).ssa,
+        BuiltinValue().push(ctx).ssa,
+      ]);
+    }
     if (constructor.factoryKeyword == null) {
       callArguments.add(pushRuntimeTypeId(ctx, instantiatedType));
     }
@@ -291,7 +324,7 @@ Variable compileInstanceCreation(
       ),
     );
   }
-  if (e.isConst) {
+  if (isConst) {
     result = pushInternConst(ctx, result, instantiatedType);
   }
   return Variable.of(

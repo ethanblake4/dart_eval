@@ -16,7 +16,9 @@ Variable compileConditionalExpression(
   TypeRef? boundType,
 ]) {
   final output = BuiltinValue().push(ctx).boxIfNeeded(ctx);
-  final types = <TypeRef>{?boundType};
+  // The bound constrains the branches but never joins the result type:
+  // `t ? c : c` under `Function` is still `C` (the branches' join).
+  final types = <TypeRef>{};
 
   macroBranch(
     ctx,

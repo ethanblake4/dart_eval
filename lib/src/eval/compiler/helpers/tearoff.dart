@@ -137,6 +137,7 @@ extension TearOff on Variable {
         ctx,
         offset.file ?? ctx.library,
         parameter,
+        bound: parameterType(parameter),
       );
       return (
         value is int &&

@@ -138,7 +138,9 @@ Variable patternMatchAndBind(
 }) {
   switch (pattern) {
     case ConstantPattern pat:
-      final constant = compileExpression(pat.expression, ctx);
+      // The pattern's context type is the matched value's type — this is
+      // what lets `case .blue:` resolve the shorthand.
+      final constant = compileExpression(pat.expression, ctx, V.type);
       return V.invoke(ctx, '==', [constant]).result;
     case RecordPattern pat:
       var positionalFields = 1;
@@ -299,7 +301,7 @@ Variable patternMatchAndBind(
         patternContext: patternContext,
       );
     case RelationalPattern pat:
-      final operand = compileExpression(pat.operand, ctx);
+      final operand = compileExpression(pat.operand, ctx, V.type);
       final operator =
           binaryOpMap[pat.operator.type] ??
           (throw CompileError(

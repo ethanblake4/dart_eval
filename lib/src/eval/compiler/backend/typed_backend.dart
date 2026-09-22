@@ -370,6 +370,12 @@ class TypedBackend {
             context,
             allocation.library,
             p,
+            // The declared type gives default expressions their context
+            // type (`[C c = .zero]`); a type that references the callee's
+            // own type parameters can't resolve here — leave it unbound.
+            bound: p.type == null
+                ? null
+                : _tryAnnotationType(context, allocation.library, p.type!),
           );
           final annotation = p.type;
           return (
@@ -2469,4 +2475,18 @@ class _FunctionCode {
   final List<TypedArgumentKind> argumentKinds;
   final int outgoing;
   final TypedArgumentKind? resultKind;
+}
+
+/// [TypeRef.fromAnnotation] that tolerates annotations referencing the
+/// callee's own type parameters, which aren't resolvable at emit time.
+TypeRef? _tryAnnotationType(
+  CompilerContext ctx,
+  int library,
+  TypeAnnotation annotation,
+) {
+  try {
+    return TypeRef.fromAnnotation(ctx, library, annotation);
+  } on CompileError {
+    return null;
+  }
 }

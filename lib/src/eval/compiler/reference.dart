@@ -1418,6 +1418,22 @@ class IdentifierReference implements Reference {
         );
       }
 
+      // A bare identifier inside an enum member can name one of the enum's
+      // own values (`static _E get getter => e1`) — they live in
+      // enumValueIndices rather than the declaration maps.
+      final currentDecl = ctx.memberDeclaringClass ?? ctx.currentClass;
+      if (currentDecl is EnumDeclaration) {
+        final enumType = TypeRef(ctx.library, declarationName(currentDecl));
+        final gIndex = ctx.enumValueIndices[ctx.library]?[enumType.name]?[name];
+        if (gIndex != null) {
+          return Variable.ssa(
+            ctx,
+            LoadGlobal(ctx.svar(name), gIndex),
+            enumType,
+          );
+        }
+      }
+
       final staticDeclaration = resolveScopedStaticDeclaration(ctx, name);
 
       if (staticDeclaration != null && staticDeclaration.$1.declaration != null) {

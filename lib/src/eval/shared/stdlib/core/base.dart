@@ -120,6 +120,49 @@ class $bool implements $Instance {
         ),
         isStatic: true,
       ),
+      'parse': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+          params: [
+            BridgeParameter(
+              'source',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              false,
+            ),
+          ],
+          namedParams: [
+            BridgeParameter(
+              'caseSensitive',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+              true,
+            ),
+          ],
+        ),
+        isStatic: true,
+      ),
+      'tryParse': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.bool),
+            nullable: true,
+          ),
+          params: [
+            BridgeParameter(
+              'source',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              false,
+            ),
+          ],
+          namedParams: [
+            BridgeParameter(
+              'caseSensitive',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+              true,
+            ),
+          ],
+        ),
+        isStatic: true,
+      ),
       '&&': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
@@ -240,6 +283,25 @@ class $bool implements $Instance {
     Object? c,
   ) {
     return $bool(bool.hasEnvironment((r as $Value?)!.$value));
+  }
+
+  /// Wrapper for the [bool.parse] static method
+  static $Value? $parse(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $bool(
+      bool.parse(
+        (r as $Value?)!.$value,
+        caseSensitive: (s as $Value?)?.$value ?? true,
+      ),
+    );
+  }
+
+  /// Wrapper for the [bool.tryParse] static method
+  static $Value? $tryParse(Runtime runtime, Object? r, Object? s, Object? c) {
+    final result = bool.tryParse(
+      (r as $Value?)!.$value,
+      caseSensitive: (s as $Value?)?.$value ?? true,
+    );
+    return result == null ? const $null() : $bool(result);
   }
 
   static const $Function __and = $Function(_and);
