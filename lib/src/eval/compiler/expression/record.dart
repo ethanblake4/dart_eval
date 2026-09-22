@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:collection/collection.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
@@ -12,7 +13,11 @@ Variable compileRecordLiteral(
   CompilerContext ctx, [
   TypeRef? bound,
 ]) {
-  final fields = <String, int>{};
+  // Field names in layout order (index i holds the name of field i). A
+  // list is used rather than a name-to-index map because the constant
+  // pool dedupes maps by unordered deep equality, which would collide
+  // layouts that differ only in field order.
+  final fieldNames = List<String>.filled(l.fields.length, '');
 
   if (bound != null && !bound.name.startsWith('@record')) bound = null;
 
@@ -38,85 +43,107 @@ Variable compileRecordLiteral(
       l,
     );
   }
-  var processingNamed = false;
+  // Bound record fields list positionals first, then named — while the
+  // literal lists them in source order. Named fields match by name;
+  // positional fields match by their ordinal among positionals.
+  final boundPositionalFields = <RecordParameterType>[
+    if (boundRecordFields != null)
+      for (final f in boundRecordFields)
+        if (!f.isNamed) f,
+  ];
+  RecordParameterType? namedBound(String name) =>
+      boundRecordFields
+          ?.where((f) => f.isNamed && f.name == name)
+          .firstOrNull;
+
+  // The bound only provides each field's inference context — the literal's
+  // static type is built from the field expressions' own types. When the
+  // field isn't assignable to its context but has a `call` member, the spec
+  // inserts an implicit `.call` tear-off coercion (e.g. `C() => int` under a
+  // `_ Function()` context yields the `int Function()` tear-off).
+  Variable compileField(Expression expression, TypeRef? fieldBound) {
+    final value = compileExpression(
+      expression,
+      ctx,
+      fieldBound,
+    ).boxIfNeeded(ctx);
+    if (fieldBound == null || value.type.isAssignableTo(ctx, fieldBound)) {
+      return value;
+    }
+    final bound0 = fieldBound.resolveTypeChain(ctx);
+    if (bound0.functionType == null &&
+        bound0 != CoreTypes.function.ref(ctx)) {
+      return value;
+    }
+    try {
+      final call = value.getProperty(ctx, 'call');
+      if (call.type.resolveTypeChain(ctx).functionType == null) {
+        return value;
+      }
+      return call.boxIfNeeded(ctx);
+    } on CompileError {
+      return value;
+    }
+  }
+
   for (var i = 0; i < l.fields.length; i++) {
     final field = l.fields[i];
     if (field is RecordLiteralNamedField) {
       final name = field.name.lexeme;
-      final fieldBound = boundRecordFields == null
-          ? null
-          : boundRecordFields[i];
-      final value = compileExpression(
+      final value = compileField(
         field.fieldExpression,
-        ctx,
-        fieldBound?.type,
-      ).boxIfNeeded(ctx);
-      if (fieldBound != null &&
-          (!fieldBound.isNamed ||
-              fieldBound.name != name ||
-              !value.type.isAssignableTo(ctx, fieldBound.type))) {
-        throw CompileError(
-          'A value of type $name: ${value.type} is not assignable to $fieldBound',
-          field,
-        );
-      } else if (boundRecordFields == null) {
-        inferredRecordFields.add(RecordParameterType(name, value.type, true));
-        if (i > 0) {
-          inferredTypeName.write(',');
-        }
-        if (!processingNamed) {
-          inferredTypeName.write('{');
-          processingNamed = true;
-        }
-        inferredTypeName.write('$name:${value.type}');
-      }
+        namedBound(name)?.type,
+      );
+      inferredRecordFields.add(RecordParameterType(name, value.type, true));
       ctx.pushOp(ListAppend(fieldList.ssa, value.ssa));
-      fields[name] = i;
+      fieldNames[i] = name;
     } else {
       // Positional field
       final fieldBound = boundRecordFields == null
           ? null
-          : boundRecordFields[i];
-      final value = compileExpression(
-        field.fieldExpression,
-        ctx,
-        fieldBound?.type,
-      ).boxIfNeeded(ctx);
+          : boundPositionalFields.elementAtOrNull(positionalFields - 1);
+      final value = compileField(field.fieldExpression, fieldBound?.type);
       final name = '\$${positionalFields++}';
-      if (fieldBound != null &&
-          (fieldBound.isNamed ||
-              !value.type.isAssignableTo(ctx, fieldBound.type))) {
-        throw CompileError(
-          'A value of type ${value.type} is not assignable to $fieldBound',
-          field,
-        );
-      } else if (boundRecordFields == null) {
-        inferredRecordFields.add(RecordParameterType(name, value.type, false));
-        if (i > 0) {
-          inferredTypeName.write(',');
-        }
-        inferredTypeName.write('${value.type}');
-      }
+      inferredRecordFields.add(RecordParameterType(name, value.type, false));
       ctx.pushOp(ListAppend(fieldList.ssa, value.ssa));
-      fields[name] = i;
+      fieldNames[i] = name;
     }
   }
 
-  if (processingNamed) {
+  // Canonical type name: positionals first, then named fields sorted.
+  final sortedNamed = inferredRecordFields
+      .where((f) => f.isNamed)
+      .sortedBy((f) => f.name ?? '');
+  for (final f in inferredRecordFields) {
+    if (f.isNamed) continue;
+    if (inferredTypeName.length > '@record<'.length) {
+      inferredTypeName.write(',');
+    }
+    inferredTypeName.write('${f.type}');
+  }
+  if (sortedNamed.isNotEmpty) {
+    if (inferredTypeName.length > '@record<'.length) {
+      inferredTypeName.write(',');
+    }
+    inferredTypeName.write('{');
+    for (var i = 0; i < sortedNamed.length; i++) {
+      inferredTypeName.write('${sortedNamed[i].name}:${sortedNamed[i].type}');
+      if (i < sortedNamed.length - 1) inferredTypeName.write(',');
+    }
     inferredTypeName.write('}');
   }
-
   inferredTypeName.write('>');
 
-  final type =
-      bound?.copyWith(boxed: true) ??
-      TypeRef(
+  // The literal's static type is built from each field's inferred type —
+  // the bound only provided the inference context (`(T,)` infers its own
+  // field types and then unifies T with them).
+  final type = TypeRef(
         ctx.library,
         inferredTypeName.toString(),
         extendsType: CoreTypes.record.ref(ctx),
         recordFields: inferredRecordFields,
       );
-  final constIndex = ctx.constantPool.addOrGet(fields);
+  final constIndex = ctx.constantPool.addOrGet(fieldNames);
   return Variable.ssa(
     ctx,
     NewRecord(

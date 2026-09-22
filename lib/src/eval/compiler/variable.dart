@@ -518,26 +518,44 @@ class Variable {
         );
       }
     }
+    final resolvedReceiver = resolveThroughTypeParameters(ctx, type);
     if (name == 'runtimeType') {
-      if (concreteTypes.isNotEmpty) {
-        final concrete = concreteTypes[0];
-        final typeId = concrete.runtimeTypeId(ctx);
-        final operation = concrete.requiresTypeEnvironment
-            ? LoadTypeParameter(ctx.svar('var_type'), typeId)
-            : LoadConstantType(ctx.svar('var_type'), typeId);
+      // `runtimeType` is overridable like any other getter — only
+      // intrinsify it when the receiver's class doesn't declare it and
+      // no descendant overrides it (otherwise dispatch normally).
+      final declaredLocally = ctx
+              .instanceDeclarationPositions[resolvedReceiver
+                  .file]?[resolvedReceiver.name]?[0]
+              ?.containsKey('runtimeType') ??
+          false;
+      final overridable = declaredLocally ||
+          memberOwner(ctx, resolvedReceiver, 'runtimeType', kind: 0) !=
+              null ||
+          ctx.memberOverriddenInSubclass(
+            resolvedReceiver.file,
+            resolvedReceiver.name,
+            'runtimeType',
+          );
+      if (!overridable) {
+        if (concreteTypes.isNotEmpty) {
+          final concrete = concreteTypes[0];
+          final typeId = concrete.runtimeTypeId(ctx);
+          final operation = concrete.requiresTypeEnvironment
+              ? LoadTypeParameter(ctx.svar('var_type'), typeId)
+              : LoadConstantType(ctx.svar('var_type'), typeId);
+          return Variable.ssa(
+            ctx,
+            operation,
+            CoreTypes.type.ref(ctx),
+          );
+        }
         return Variable.ssa(
           ctx,
-          operation,
+          LoadRuntimeType(ctx.svar('runtime_type'), ssa),
           CoreTypes.type.ref(ctx),
         );
       }
-      return Variable.ssa(
-        ctx,
-        LoadRuntimeType(ctx.svar('runtime_type'), ssa),
-        CoreTypes.type.ref(ctx),
-      );
     }
-    final resolvedReceiver = resolveThroughTypeParameters(ctx, type);
     // Explicit application `E(x)` pins member resolution to E's members.
     if (boundExtension case final bound?) {
       final getter = extensionMember(bound.ext, name, getter: true);

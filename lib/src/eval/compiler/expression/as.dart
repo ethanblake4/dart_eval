@@ -26,6 +26,17 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
   }
 
   V = V.boxIfNeeded(ctx);
+  // `x as T` promotes x's flow type to T only when T refines x's current
+  // type — casting to a wider or unrelated type (dynamic, Object) leaves
+  // the variable's type unchanged.
+  final promotes = slot.isAssignableTo(
+    ctx,
+    V.type,
+    forceAllowDynamic: false,
+  );
+  Variable update(Variable v, TypeRef type) => promotes
+      ? v.copyWithUpdate(ctx, type: type)
+      : v.copyWith(type: type);
   final typeId = slot.runtimeTypeId(ctx);
   if (slot.nullable) {
     macroBranch(
@@ -51,7 +62,7 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
   } else {
     ctx.pushOp(AssertType(V.ssa, typeId));
   }
-  V = V.copyWithUpdate(ctx, type: slot.copyWith(boxed: true));
+  V = update(V, slot.copyWith(boxed: true));
 
   // If the type changes between num and int/double, unbox/box
   if (slot == CoreTypes.num.ref(ctx)) {
@@ -63,7 +74,7 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
 
   // For all other types, just inform the compiler
   // (todo) Mixins may need different behavior
-  V = V.copyWithUpdate(ctx, type: slot.copyWith(boxed: V.type.boxed));
+  V = update(V, slot.copyWith(boxed: V.type.boxed));
 
   // `this as T` promotes the receiver itself — store the promoted view on
   // the `#this` local so later `this` reads see it (anonymous-method

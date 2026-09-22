@@ -371,7 +371,20 @@ final class TypedClosure extends EvalFunction {
     final count = positionalCount + namedNames.length;
     if (!descriptor.accepts(positionalCount, namedNames) ||
         !acceptsTypeArguments(typeArguments)) {
-      throw ArgumentError('Invalid closure positional argument count');
+      // Calling a closure with an unsatisfiable signature is a
+      // noSuchMethod on its `call` member.
+      final values = TypedInterop.argList(count, first, rest);
+      throw NoSuchMethodError.withInvocation(
+        this,
+        Invocation.method(
+          Symbol('call'),
+          values.sublist(0, positionalCount),
+          {
+            for (var i = 0; i < namedNames.length; i++)
+              Symbol(namedNames[i]): values[positionalCount + i],
+          },
+        ),
+      );
     }
     final context = this.runtime ?? runtime;
     final effectiveTypeArguments =

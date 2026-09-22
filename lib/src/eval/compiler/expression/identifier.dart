@@ -54,7 +54,9 @@ Reference compilePrefixedIdentifierAsReference(
     return ($type, DeclarationOrBridge(-1, declaration: dec));
   }
 
-  final $classDec = ctx.topLevelDeclarationsMap[library]![$class]!;
+  // Structural types (records, function types) have no declaration.
+  final $classDec = ctx.topLevelDeclarationsMap[library]![$class];
+  if ($classDec == null) return null;
 
   if ($classDec.isBridge) {
     final bridge = $classDec.bridge as BridgeClassDef;

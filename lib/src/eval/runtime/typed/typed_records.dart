@@ -17,20 +17,30 @@ abstract final class TypedRecords {
     var layout = layouts[index];
     if (layout == null) {
       final descriptor = runtime.typedConstant(index) as List;
+      // Field names are stored as an ordered list (index i is the name of
+      // field i); the map is rebuilt here for property lookups.
+      final names =
+          runtime.typedConstant(descriptor[0] as int) as List<Object?>;
       layout = (
-        Map<String, int>.unmodifiable(
-          runtime.typedConstant(descriptor[0] as int) as Map,
-        ),
+        Map<String, int>.unmodifiable({
+          for (var i = 0; i < names.length; i++) names[i] as String: i,
+        }),
         descriptor[1] as int,
       );
       layouts[index] = layout;
     }
-    final runtimeTypeId = runtime.resolveTypedEnvironmentType(
+    final resolvedTemplate = runtime.resolveTypedEnvironmentType(
       layout.$2,
       actualOwnerType: actualOwnerType,
       callableTypeArguments: callableTypeArguments,
     );
-    return $Record(fields as List<Object?>, layout.$1, runtimeTypeId, runtime);
+    final fieldList = fields as List<Object?>;
+    return $Record(
+      fieldList,
+      layout.$1,
+      runtime.reifyRecordType(resolvedTemplate, fieldList, layout.$1),
+      runtime,
+    );
   }
 
   @pragma('vm:never-inline')

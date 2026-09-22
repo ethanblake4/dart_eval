@@ -63,6 +63,13 @@ Variable compileFunctionExpression(
       freeNames.add('#this');
     }
   }
+  if (ctx.currentExtension != null && ctx.lookupLocal('#this') != null) {
+    // Inside an extension body any unresolved name may be an instance
+    // member of the extension itself, which is invoked on `#this`.
+    if ((analysis.unresolved[e] ?? const <String>{}).isNotEmpty) {
+      freeNames.add('#this');
+    }
+  }
   for (final name in freeNames) {
     final binding = ctx.lookupLocal(name);
     if (binding != null) captures[name] = binding;

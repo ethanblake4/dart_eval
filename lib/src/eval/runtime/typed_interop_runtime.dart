@@ -204,6 +204,50 @@ extension TypedRuntimeInterop on Runtime {
     return null;
   }
 
+  /// A record's runtime type is determined by the *runtime* types of its
+  /// fields, not the literal's static type — e.g. `(baseVar,)` where `baseVar`
+  /// holds an `A` reports `(A,)` even though it is statically `(Base,)`.
+  /// [template] is the literal's declared record descriptor: it supplies the
+  /// field-name constants and shape while each field type slot is replaced by
+  /// the value's own runtime type. Since field value types are always
+  /// subtypes of the declared field types, [template] is a supertype of the
+  /// result and is copied into its supertype set.
+  @pragma('vm:never-inline')
+  int reifyRecordType(
+    int template,
+    List<Object?> fields,
+    Map<String, int> mapping,
+  ) {
+    final templateDescriptor = _typeDescriptors[template];
+    final positional = templateDescriptor[3], named = templateDescriptor[4];
+    final descriptor = List<int>.of(templateDescriptor);
+    descriptor[1] = 0;
+    for (var i = 0; i < positional; i++) {
+      descriptor[5 + i] = _recordFieldType(fields[mapping['\$${i + 1}']!]);
+    }
+    final namedOffset = 5 + positional;
+    for (var i = 0; i < named; i++) {
+      final nameIndex = templateDescriptor[namedOffset + i * 2];
+      descriptor[namedOffset + i * 2] = nameIndex;
+      descriptor[namedOffset + i * 2 + 1] = _recordFieldType(
+        fields[mapping[_constantPool[nameIndex] as String]!],
+      );
+    }
+    final existing = _findRuntimeTypeDescriptor(descriptor);
+    if (existing >= 0) return existing;
+    return _internResolvedType(
+      descriptor,
+      template,
+      null,
+      const [],
+      <int, int>{},
+    );
+  }
+
+  int _recordFieldType(Object? field) =>
+      (field as $Value?)?.$getRuntimeType(this) ??
+      lookupType(CoreTypes.nullType);
+
   @pragma('vm:never-inline')
   bool isTypedValueTypeInClassEnvironment(
     Object? value,
@@ -834,7 +878,20 @@ extension TypedRuntimeInterop on Runtime {
         ) ??
         target[3];
     final targetReturn = _typeDescriptors[targetReturnId];
+    // In component positions dynamic and void are permissive — a `dynamic`
+    // return satisfies any target return type, and a `void` target accepts
+    // any source return.
+    final sourceReturnId =
+        _resolveTypeParameter(
+          source[3],
+          actualOwnerType,
+          callableTypeArguments,
+        ) ??
+        source[3];
+    final sourceReturn = _typeDescriptors[sourceReturnId];
     if (targetReturn[0] != _typedTypeId(CoreTypes.voidType) &&
+        sourceReturn[0] != _typedTypeId(CoreTypes.dynamic) &&
+        sourceReturn[0] != _typedTypeId(CoreTypes.voidType) &&
         !_isTypedDescriptorSubtypeInEnvironment(
           source[3],
           target[3],

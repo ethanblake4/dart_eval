@@ -1,3 +1,5 @@
+import 'package:collection/collection.dart';
+
 import '../../ir/string.dart';
 import '../../ir/collection.dart' as collection;
 import 'dart:typed_data';
@@ -671,8 +673,10 @@ class TypedBackend {
       nullable: type.nullable || type.name == 'dynamic' || type.name == 'Null',
       typeName: type.name,
       typeLibrary: context.libraryMap.entries
-          .firstWhere((entry) => entry.value == type.file)
-          .key,
+              .firstWhereOrNull((entry) => entry.value == type.file)
+              ?.key ??
+          // Structural types (records, function types) carry file: -1.
+          '',
       runtimeTypeId: type.runtimeTypeId(context),
       defaultValue: defaultValue,
       defaultThunk: defaultThunk < 0 ? -1 : indices[defaultThunk]!,

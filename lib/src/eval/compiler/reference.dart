@@ -272,7 +272,9 @@ class IdentifierReference implements Reference {
     // Locals
     final local = ctx.lookupLocal(name);
     if (local != null) {
-      return local.type;
+      // The write context of an assignment is the variable's declared
+      // type — a promoted type doesn't narrow what may be stored into it.
+      return forSet ? local.declaredType : local.type;
     }
 
     // Inside an anonymous-method body, member names resolve on the
@@ -818,13 +820,18 @@ class IdentifierReference implements Reference {
         return stored;
       }
       ctx.pushOp(Assign(local.ssa, stored.ssa));
+      // Assignment keeps the promoted type only when the stored value
+      // still conforms to it; otherwise the variable is demoted to its
+      // declared type (a `dynamic` local stays dynamic).
+      final storedType = stored.type;
+      final localType = local.declaredType == CoreTypes.dynamic.ref(ctx)
+          ? local.declaredType
+          : storedType.isAssignableTo(ctx, local.type)
+              ? local.type
+              : local.declaredType;
       local.copyWithUpdate(
         ctx,
-        type:
-            (local.declaredType == CoreTypes.dynamic.ref(ctx)
-                    ? local.declaredType
-                    : stored.type)
-                .copyWith(boxed: local.boxed),
+        type: localType.copyWith(boxed: local.boxed),
         concreteTypes: stored.concreteTypes,
       ).exactType = stored.exactType;
       return stored;
@@ -1052,7 +1059,8 @@ class IdentifierReference implements Reference {
   @override
   Variable getValue(CompilerContext ctx, [AstNode? source]) {
     if (object != null) {
-      if (object!.type == CoreTypes.type.ref(ctx)) {
+      if (object!.type == CoreTypes.type.ref(ctx) &&
+          object!.concreteTypes.isNotEmpty) {
         final ext = extensionForType(ctx, object!.concreteTypes[0]);
         if (ext != null) {
           // `E.member` through the extension namespace: the function (or
@@ -1839,17 +1847,8 @@ class IndexedReference implements Reference {
       CoreTypes.map.ref(ctx),
       forceAllowDynamic: false,
     )) {
-      if (_variable.type.specifiedTypeArgs.isNotEmpty &&
-          !_index.type.isAssignableTo(
-            ctx,
-            _variable.type.specifiedTypeArgs[0],
-          )) {
-        throw CompileError(
-          'TypeError: Cannot use variable of type ${_index.type} as index to map of type '
-          '<${_variable.type.specifiedTypeArgs[0]}, ${_variable.type.specifiedTypeArgs[1]}>',
-        );
-      }
-
+      // `Map.[]` takes `Object?` — any index type is allowed at compile
+      // time; a miss returns null rather than throwing.
       final map = _variable.unboxIfNeeded(ctx);
       _index =
           (_variable.type.specifiedTypeArgs.isEmpty ||

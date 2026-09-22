@@ -176,6 +176,49 @@ bool _unifyOnPattern(
         previous.isAssignableTo(ctx, actual) ||
         actual.isAssignableTo(ctx, previous);
   }
+  // Record `on` patterns are structural: same positional count and named
+  // field set, with each field type unified to bind the extension's type
+  // parameters. Records have no width subtyping, so the shapes must match
+  // exactly.
+  if (pattern.recordFields.isNotEmpty) {
+    if (actual.recordFields.isEmpty) return false;
+    final patternPositional = [
+      for (final f in pattern.recordFields)
+        if (!f.isNamed) f,
+    ];
+    final actualPositional = [
+      for (final f in actual.recordFields)
+        if (!f.isNamed) f,
+    ];
+    if (patternPositional.length != actualPositional.length) return false;
+    final patternNamed = {
+      for (final f in pattern.recordFields)
+        if (f.isNamed) f.name!: f,
+    };
+    final actualNamed = {
+      for (final f in actual.recordFields)
+        if (f.isNamed) f.name!: f,
+    };
+    if (patternNamed.length != actualNamed.length) return false;
+    for (var i = 0; i < patternPositional.length; i++) {
+      if (!_unifyOnPattern(
+        ctx,
+        patternPositional[i].type,
+        actualPositional[i].type,
+        bound,
+      )) {
+        return false;
+      }
+    }
+    for (final entry in patternNamed.entries) {
+      final actualField = actualNamed[entry.key];
+      if (actualField == null ||
+          !_unifyOnPattern(ctx, entry.value.type, actualField.type, bound)) {
+        return false;
+      }
+    }
+    return true;
+  }
   final candidates = [
     actual,
     ...actual

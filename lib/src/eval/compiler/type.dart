@@ -627,7 +627,23 @@ class TypeRef {
         ctx.temporaryTypes[$class.file] = previousTypes;
       }
     }
-    final dec = ctx.topLevelDeclarationsMap[$class.file]![$class.name]!;
+    final dec0 = ctx.topLevelDeclarationsMap[$class.file]?[$class.name];
+    if (dec0 == null) {
+      // Structural types (records, function types) have no declaration of
+      // their own; their members come from the nominal supertype.
+      final extendsType = $class.extendsType;
+      if (extendsType == null) return null;
+      return TypeRef.lookupFieldType(
+        ctx,
+        extendsType,
+        field,
+        forFieldFormal: forFieldFormal,
+        forSet: forSet,
+        source: source,
+        substitutions: substitutions,
+      );
+    }
+    final dec = dec0;
 
     if (dec.isBridge) {
       final bridge = dec.bridge!;
@@ -1450,6 +1466,65 @@ class TypeRef {
     }
 
     final generics = overrideGenerics ?? specifiedTypeArgs;
+
+    // Records are structural: `hasSameDeclarationAs` alone would require
+    // identical field types. A record is assignable when both sides have the
+    // same shape and every field type is assignable positionally/by name.
+    if (name.startsWith('@record') && slot.name.startsWith('@record')) {
+      if (nullable && !slot.nullable) return false;
+      final sourcePositional = <RecordParameterType>[];
+      final slotPositional = <RecordParameterType>[];
+      final sourceNamed = <String, RecordParameterType>{};
+      final slotNamed = <String>{};
+      for (final field in recordFields) {
+        if (field.isNamed) {
+          sourceNamed[field.name!] = field;
+        } else {
+          sourcePositional.add(field);
+        }
+      }
+      for (final field in slot.recordFields) {
+        if (field.isNamed) {
+          slotNamed.add(field.name!);
+        } else {
+          slotPositional.add(field);
+        }
+      }
+      bool fieldAssignable(TypeRef source, TypeRef target) =>
+          source.isAssignableTo(
+            ctx,
+            target,
+            forceAllowDynamic: forceAllowDynamic,
+          ) ||
+          // A `dynamic` field coerces by implicit downcast.
+          source.resolveTypeChain(ctx) == CoreTypes.dynamic.ref(ctx);
+      if (sourcePositional.length != slotPositional.length) return false;
+      for (var i = 0; i < sourcePositional.length; i++) {
+        if (!fieldAssignable(
+          sourcePositional[i].type,
+          slotPositional[i].type,
+        )) {
+          return false;
+        }
+      }
+      for (final slotField in slot.recordFields) {
+        if (!slotField.isNamed) continue;
+        final sourceField = sourceNamed[slotField.name];
+        if (sourceField == null ||
+            !fieldAssignable(sourceField.type, slotField.type)) {
+          return false;
+        }
+      }
+      return sourceNamed.length == slotNamed.length;
+    }
+
+    // A record's only nominal supertype is Record (itself <: Object), so it
+    // is assignable wherever Record is.
+    if (recordFields.isNotEmpty) {
+      return CoreTypes.record
+          .ref(ctx)
+          .isAssignableTo(ctx, slot, forceAllowDynamic: forceAllowDynamic);
+    }
 
     if (hasSameDeclarationAs(slot) &&
         (!nullable || slot.nullable || this == CoreTypes.nullType.ref(ctx))) {

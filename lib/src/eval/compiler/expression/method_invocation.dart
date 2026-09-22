@@ -794,6 +794,21 @@ Variable _invokeWithTarget(
     // invocation itself, typed by the callee's own signature.
     return _invokeValue(ctx, L, e);
   } else if (L.type != CoreTypes.dynamic.ref(ctx)) {
+    // `record.field(args)` on a named record field invokes the field's
+    // value — a property read followed by an implicit `.call`, matching
+    // the field/getter path below.
+    if (L.type.recordFields.any((f) => f.isNamed && f.name == e.methodName.name)) {
+      final (prePositional, preNamed) = _compileCallArgs(ctx, e);
+      final property = L.getProperty(ctx, e.methodName.name);
+      return invokeClosure(
+        ctx,
+        null,
+        property,
+        null,
+        positional: prePositional,
+        named: preNamed,
+      ).result;
+    }
     try {
       dec0 = resolveInstanceMethod(ctx, L.type, e.methodName.name, e);
     } on CompileError {
@@ -1403,6 +1418,18 @@ DeclarationOrBridge<ClassMember, BridgeMethodDef> resolveInstanceMethod(
   final dec0 =
       ctx.topLevelDeclarationsMap[instanceType.file]?[instanceType.name];
   if (dec0 == null) {
+    // Structural types (records, function types) have no declaration of
+    // their own; their members come from the nominal supertype.
+    final extendsType = instanceType.extendsType;
+    if (extendsType != null) {
+      return resolveInstanceMethod(
+        ctx,
+        extendsType,
+        methodName,
+        source,
+        bottomType ?? instanceType,
+      );
+    }
     throw CompileError(
       'Missing declaration for instance method $methodName on '
       '${instanceType.name}',
