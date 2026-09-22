@@ -532,12 +532,7 @@ class Variable {
         CoreTypes.type.ref(ctx),
       );
     }
-    var resolvedReceiver = type.resolveTypeChain(ctx);
-    if (resolvedReceiver.isTypeParameter) {
-      resolvedReceiver = resolvedReceiver.typeParameterBound
-              ?.resolveTypeChain(ctx) ??
-          resolvedReceiver;
-    }
+    final resolvedReceiver = resolveThroughTypeParameters(ctx, type);
     final resolvedField = TypeRef.lookupFieldType(
       ctx,
       resolvedReceiver,

@@ -57,13 +57,22 @@ Variable? _implicitCallTearOff(
   AstNode? source,
 ) {
   if (value.type.nullable) return null;
-  if (target.functionType == null &&
-      target != CoreTypes.function.ref(ctx)) {
+  // Type parameters coerce against their bound (`context<void Function()>(x)`
+  // passes `T` as the target).
+  final effectiveTarget = target.isTypeParameter
+      ? (target.typeParameterBound ?? CoreTypes.dynamic.ref(ctx))
+      : target;
+  if (effectiveTarget.functionType == null &&
+      effectiveTarget != CoreTypes.function.ref(ctx)) {
     return null;
   }
   try {
     final tearOff = value.getProperty(ctx, 'call', source: source);
-    if (tearOff.type.isAssignableTo(ctx, target, forceAllowDynamic: false)) {
+    if (tearOff.type.isAssignableTo(
+      ctx,
+      effectiveTarget,
+      forceAllowDynamic: false,
+    )) {
       return tearOff.copyWith(declaredType: target);
     }
   } on CompileError {

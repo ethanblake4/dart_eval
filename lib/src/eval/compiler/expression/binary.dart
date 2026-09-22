@@ -135,11 +135,16 @@ Variable _compileShortCircuit(
     },
   );
 
+  // For `??` the result is the join of the non-null LHS type and the RHS —
+  // a `Null`-typed LHS contributes nothing (`Null ?? C` is `C`, not `C?`).
+  final lhsType = L.type == CoreTypes.nullType.ref(ctx)
+      ? null
+      : L.type.copyWith(nullable: false);
   final outType = operator == '??'
-      ? TypeRef.commonBaseType(ctx, {
-          L.type.copyWith(nullable: false),
-          rightType,
-        }).copyWith(boxed: true)
+      ? (lhsType == null
+                ? rightType
+                : TypeRef.commonBaseType(ctx, {lhsType, rightType}))
+            .copyWith(boxed: true)
       : CoreTypes.bool.ref(ctx).copyWith(boxed: true);
 
   return outVar.copyWith(type: outType);

@@ -10,6 +10,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
+import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
 import 'package:dart_eval/src/eval/ir/primitives.dart';
@@ -299,12 +300,31 @@ class IdentifierReference implements Reference {
       return CoreTypes.type.ref(ctx);
     }
 
-    final declarationValue = _lookupVisibleValue(
-      ctx,
-      name,
-      source,
-      forSet: forSet,
-    );
+    DeclarationOrBridge? declarationValue;
+    try {
+      declarationValue = _lookupVisibleValue(
+        ctx,
+        name,
+        source,
+        forSet: forSet,
+      );
+    } on CompileError {
+      // Inside an extension body a bare identifier can name a member of the
+      // `on` type through the implicit receiver.
+      final $this =
+          ctx.currentExtension == null ? null : ctx.lookupLocal('#this');
+      final memberType = $this == null
+          ? null
+          : TypeRef.lookupFieldType(
+              ctx,
+              $this.type,
+              name,
+              forSet: forSet,
+              source: source,
+            );
+      if (memberType == null) rethrow;
+      return memberType;
+    }
     final decl = declarationValue.declaration!;
 
     if (decl is VariableDeclaration) {
@@ -347,39 +367,32 @@ class IdentifierReference implements Reference {
             .topLevelDeclarationsMap[classType.file]?['${classType.name}.$name*s']
             ?.declaration;
         if (setter is MethodDeclaration && setter.isSetter) {
-          ctx.pushOp(
-            Call(
-              DeferredOrOffset(
-                file: classType.file,
-                name: '${classType.name}.$name*s',
-              ),
-              [
-                _setterArgument(
-                  ctx,
-                  value,
-                  classType.file,
-                  setter.parameters,
-                  isMethod: true,
-                ).ssa,
-              ],
-              result: ctx.svar('setter_result'),
+          return _invokeSetter(
+            ctx,
+            DeferredOrOffset(
+              file: classType.file,
+              name: '${classType.name}.$name*s',
             ),
+            value,
+            classType.file,
+            setter.parameters,
+            isMethod: true,
+            source: source,
           );
-          return value;
         }
         final fqName = '${classType.name}.$name';
         return storeGlobalBinding(ctx, classType.file, fqName, value, source);
       }
       object = object!.boxIfNeeded(ctx, source);
+      final declaredFieldType = TypeRef.lookupFieldType(
+        ctx,
+        object!.type,
+        name,
+        forSet: true,
+        source: source,
+      );
       final fieldType =
-          TypeRef.lookupFieldType(
-            ctx,
-            object!.type,
-            name,
-            forSet: true,
-            source: source,
-          ) ??
-          CoreTypes.dynamic.ref(ctx);
+          declaredFieldType ?? CoreTypes.dynamic.ref(ctx);
       final val = convertForAssignment(
         ctx,
         value,
@@ -521,6 +534,59 @@ class IdentifierReference implements Reference {
           return val;
         }
       }
+      if (declaredFieldType == null) {
+        // No instance member by this name: an extension setter may apply
+        // (`e.name = v` where `set name` lives in `extension on T`).
+        final extSetter = resolveExtensionMember(
+          ctx,
+          object!.type,
+          name,
+          setter: true,
+        );
+        if (extSetter != null) {
+          final (ext, member, bindings) = extSetter;
+          final paramType =
+              member.parameters?.parameters.firstOrNull?.type == null
+              ? null
+              : formalParameterAnnotationType(
+                  ctx,
+                  ext.library,
+                  member.parameters!.parameters.first,
+                  typeParameters: memberExtParams(ctx, ext, object!.type),
+                );
+          final arg = paramType == null
+              ? value.boxIfNeeded(ctx)
+              : convertForAssignment(
+                  ctx,
+                  value,
+                  paramType,
+                  representation: MachineRepresentation.object,
+                  source: source,
+                );
+          ctx.pushOp(
+            Call(
+              DeferredOrOffset(
+                file: ext.library,
+                name: ext.memberKey(member),
+              ),
+              [object!.boxIfNeeded(ctx).ssa, arg.ssa],
+              result: ctx.svar('setter_result'),
+              typeArguments:
+                  extensionCallTypeArguments(
+                    ctx,
+                    ext,
+                    member,
+                    bindings,
+                    const {},
+                  ) ??
+                  const [],
+            ),
+          );
+          // The assignment's value is the value as converted for the
+          // setter's parameter — e.g. an implicit `.call` tear-off.
+          return arg;
+        }
+      }
       final op = SetPropertyDynamic(
         object!.ssa,
         name,
@@ -604,6 +670,48 @@ class IdentifierReference implements Reference {
       );
     }
 
+    // Inside an extension body, unqualified assignments first target the
+    // extension's own setters, then members of the `on` type — both through
+    // the implicit receiver.
+    final currentExtension = ctx.currentExtension;
+    if (anonymousReceiver == null && currentExtension is ExtensionDeclaration) {
+      final ext = ctx.extensions.firstWhereOrNull(
+        (e) => e.declaration == currentExtension,
+      );
+      final $this = ctx.lookupLocal('#this');
+      if (ext != null && $this != null) {
+        for (final member in ext.members) {
+          if (member is! MethodDeclaration ||
+              member.isStatic ||
+              member.name.lexeme != name) {
+            continue;
+          }
+          if (member.isSetter) {
+            ctx.pushOp(
+              Call(
+                DeferredOrOffset(
+                  file: ext.library,
+                  name: ext.memberKey(member),
+                ),
+                [$this.boxIfNeeded(ctx).ssa, value.boxIfNeeded(ctx).ssa],
+                result: ctx.svar('setter_result'),
+              ),
+            );
+            return value;
+          }
+          // A same-named non-setter member shadows the `on` type's members.
+          break;
+        }
+        if (_hasReceiverMember(ctx, $this, name, forSet: true)) {
+          return IdentifierReference($this, name).setValue(
+            ctx,
+            value,
+            source,
+          );
+        }
+      }
+    }
+
     // Instance
     if (anonymousReceiver == null && ctx.currentClass != null) {
       final instanceDeclaration = resolveInstanceDeclaration(
@@ -658,27 +766,20 @@ class IdentifierReference implements Reference {
         );
       }
       if (declaration is MethodDeclaration && declaration.isSetter) {
-        ctx.pushOp(
-          Call(
-            DeferredOrOffset.lookupStatic(
-              ctx,
-              staticDeclaration!.$2,
-              staticDeclaration.$3,
-              '$name*s',
-            ),
-            [
-              _setterArgument(
-                ctx,
-                value,
-                staticDeclaration.$2,
-                declaration.parameters,
-                isMethod: true,
-              ).ssa,
-            ],
-            result: ctx.svar('setter_result'),
+        return _invokeSetter(
+          ctx,
+          DeferredOrOffset.lookupStatic(
+            ctx,
+            staticDeclaration!.$2,
+            staticDeclaration.$3,
+            '$name*s',
           ),
+          value,
+          staticDeclaration.$2,
+          declaration.parameters,
+          isMethod: true,
+          source: source,
         );
-        return value;
       }
     }
 
@@ -701,25 +802,18 @@ class IdentifierReference implements Reference {
     }
 
     if (decl is FunctionDeclaration && decl.isSetter) {
-      ctx.pushOp(
-        Call(
-          DeferredOrOffset(
-            file: declarationValue.sourceLib,
-            name: '${decl.name.lexeme}*s',
-          ),
-          [
-            _setterArgument(
-              ctx,
-              value,
-              declarationValue.sourceLib,
-              decl.functionExpression.parameters,
-              isMethod: false,
-            ).ssa,
-          ],
-          result: ctx.svar('setter_result'),
+      return _invokeSetter(
+        ctx,
+        DeferredOrOffset(
+          file: declarationValue.sourceLib,
+          name: '${decl.name.lexeme}*s',
         ),
+        value,
+        declarationValue.sourceLib,
+        decl.functionExpression.parameters,
+        isMethod: false,
+        source: source,
       );
-      return value;
     }
 
     throw CompileError(
@@ -752,6 +846,36 @@ class IdentifierReference implements Reference {
               'Extension member not found: ${ext.name}.$name',
               source,
             );
+          }
+          if (member.isGetter || member.isSetter) {
+            // `E.m` where m is a static accessor: evaluating the expression
+            // invokes it (accessors can't be torn off).
+            if (member.isSetter) {
+              throw CompileError(
+                'Cannot read extension setter ${ext.name}.$name',
+                source,
+              );
+            }
+            final s = ctx.svar('getter_result');
+            ctx.pushOp(
+              Call(
+                DeferredOrOffset(
+                  file: ext.library,
+                  name: ext.memberKey(member),
+                ),
+                const [],
+                result: s,
+              ),
+            );
+            final returnType =
+                AlwaysReturnType.fromAnnotation(
+                  ctx,
+                  ext.library,
+                  member.returnType,
+                  CoreTypes.dynamic.ref(ctx),
+                ).type ??
+                CoreTypes.dynamic.ref(ctx);
+            return Variable.of(ctx, s, returnType.copyWith(boxed: true));
           }
           return Variable(
             CoreTypes.function.ref(ctx),
@@ -1276,25 +1400,18 @@ class PrefixedIdentifierReference implements Reference {
       );
     }
     if (decl is FunctionDeclaration && decl.isSetter) {
-      ctx.pushOp(
-        Call(
-          DeferredOrOffset(
-            file: child.sourceLib,
-            name: '${decl.name.lexeme}*s',
-          ),
-          [
-            _setterArgument(
-              ctx,
-              value,
-              child.sourceLib,
-              decl.functionExpression.parameters,
-              isMethod: false,
-            ).ssa,
-          ],
-          result: ctx.svar('setter_result'),
+      return _invokeSetter(
+        ctx,
+        DeferredOrOffset(
+          file: child.sourceLib,
+          name: '${decl.name.lexeme}*s',
         ),
+        value,
+        child.sourceLib,
+        decl.functionExpression.parameters,
+        isMethod: false,
+        source: source,
       );
-      return value;
     }
     throw CompileError(
       'Cannot find value to set: $prefix.$identifier',
@@ -1457,7 +1574,43 @@ class IndexedReference implements Reference {
       return result.args[1];
     }
 
-    final result = _variable.invoke(ctx, '[]=', [_index, value]);
+    // Coerce the value against the `[]=` signature — the implicit `.call`
+    // tear-off applies when the parameter is a function type. A missing
+    // instance member means an extension `[]=` may apply (handled inside
+    // [Variable.invoke]).
+    TypeRef? valueType;
+    try {
+      final decl0 = resolveInstanceMethod(
+        ctx,
+        _variable.type,
+        '[]=',
+        source,
+      );
+      final decl = decl0.declaration;
+      if (decl is MethodDeclaration) {
+        final param = decl.parameters?.parameters.elementAtOrNull(1);
+        if (param?.type != null) {
+          valueType = formalParameterAnnotationType(
+            ctx,
+            decl0.sourceLib,
+            param!,
+          );
+        }
+      }
+    } on CompileError {
+      valueType = null;
+    }
+    final converted = valueType == null
+        ? value
+        : convertForAssignment(
+            ctx,
+            value,
+            valueType,
+            representation: MachineRepresentation.object,
+            source: source,
+          );
+
+    final result = _variable.invoke(ctx, '[]=', [_index, converted]);
     _variable = result.target!;
     _index = result.args[0];
     return result.args[1];
@@ -1787,6 +1940,40 @@ TypeRef? _setterValueType(
   return formalParameterAnnotationType(ctx, file, param);
 }
 
+/// Emits a `Call` to a setter taking [value] as its argument. The value is
+/// first converted to the setter's declared parameter type (which can apply
+/// coercions like the implicit `.call` tear-off), then adapted to the
+/// parameter's representation across the call boundary. Returns the converted
+/// variable — the assignment expression's value.
+Variable _invokeSetter(
+  CompilerContext ctx,
+  DeferredOrOffset offset,
+  Variable value,
+  int file,
+  FormalParameterList? parameters, {
+  required bool isMethod,
+  AstNode? source,
+}) {
+  final paramType = _setterValueType(ctx, file, parameters);
+  final converted = paramType == null
+      ? value
+      : convertForAssignment(
+          ctx,
+          value,
+          paramType,
+          representation: isMethod
+              ? MachineRepresentation.object
+              : representationForType(paramType.typeAcrossFunctionBoundary),
+          source: source,
+        );
+  ctx.pushOp(
+    Call(offset, [
+      _setterArgument(ctx, converted, file, parameters, isMethod: isMethod).ssa,
+    ], result: ctx.svar('setter_result')),
+  );
+  return converted;
+}
+
 /// Adapts [value] to the physical representation a setter's `value` parameter
 /// travels in across the call boundary. A direct `Call` constrains argument
 /// representations to the callee signature, so the caller must emit the
@@ -1823,12 +2010,7 @@ bool _hasReceiverMember(
   bool forSet = false,
   AstNode? source,
 }) {
-  var resolvedReceiver = receiver.type.resolveTypeChain(ctx);
-  if (resolvedReceiver.isTypeParameter) {
-    resolvedReceiver =
-        resolvedReceiver.typeParameterBound?.resolveTypeChain(ctx) ??
-        resolvedReceiver;
-  }
+  final resolvedReceiver = resolveThroughTypeParameters(ctx, receiver.type);
   if (resolvedReceiver == CoreTypes.dynamic.ref(ctx)) return true;
   if (TypeRef.lookupFieldType(
         ctx,

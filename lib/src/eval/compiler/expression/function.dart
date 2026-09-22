@@ -228,7 +228,7 @@ Variable compileFunctionExpression(
             : TypeRef.commonBaseType(ctx, returns.toSet()));
     inferredClosureReturnType = b.isAsynchronous
         ? CoreTypes.future.ref(ctx).copyWith(
-            specifiedTypeArgs: [inferred],
+            specifiedTypeArgs: [flattenType(ctx, inferred)],
           )
         : inferred;
   }

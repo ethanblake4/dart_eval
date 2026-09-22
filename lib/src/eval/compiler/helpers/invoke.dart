@@ -4,7 +4,12 @@ import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
+import 'package:dart_eval/src/eval/compiler/dispatch.dart';
+import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/closure.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
+import 'package:dart_eval/src/eval/compiler/model/function_type.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
@@ -218,6 +223,79 @@ extension Invoke on Variable {
       }
     }
     var receiver = this;
+    if ((namedArgs == null || namedArgs.isEmpty) &&
+        type != CoreTypes.dynamic.ref(ctx)) {
+      // A member the class doesn't declare may be an extension method (e.g.
+      // `operator []=` defined in `extension on T`). Instance members win —
+      // the extension only applies when instance lookup fails.
+      var hasInstanceMember = true;
+      try {
+        resolveInstanceMethod(ctx, type, method);
+      } on CompileError {
+        hasInstanceMember = false;
+      }
+      if (!hasInstanceMember) {
+        final found = resolveExtensionMember(ctx, type, method);
+        if (found != null) {
+          final (ext, member, bindings) = found;
+          final typeParams = memberExtParams(ctx, ext, type);
+          final formals = member.parameters?.parameters ?? const [];
+          final convertedArgs = [
+            for (var i = 0; i < args.length; i++)
+              i < formals.length && formals[i].type != null
+                  ? convertForAssignment(
+                      ctx,
+                      args[i],
+                      formalParameterAnnotationType(
+                        ctx,
+                        ext.library,
+                        formals[i],
+                        typeParameters: typeParams,
+                      ),
+                      representation: MachineRepresentation.object,
+                    )
+                  : args[i],
+          ];
+          final target = ctx.svar('method_result');
+          ctx.pushOp(
+            Call(
+              DeferredOrOffset(
+                file: ext.library,
+                name: ext.memberKey(member),
+              ),
+              [
+                receiver.boxIfNeeded(ctx).ssa,
+                for (final a in convertedArgs) a.boxIfNeeded(ctx).ssa,
+              ],
+              result: target,
+              typeArguments:
+                  extensionCallTypeArguments(
+                    ctx,
+                    ext,
+                    member,
+                    bindings,
+                    const {},
+                  ) ??
+                  const [],
+            ),
+          );
+          final returnType =
+              AlwaysReturnType.fromAnnotation(
+                ctx,
+                ext.library,
+                member.returnType,
+                CoreTypes.dynamic.ref(ctx),
+                typeParameters: memberExtParams(ctx, ext, type),
+              ).type ??
+              CoreTypes.dynamic.ref(ctx);
+          return InvokeResult(
+            receiver,
+            Variable.of(ctx, target, returnType.copyWith(boxed: true)),
+            convertedArgs,
+          );
+        }
+      }
+    }
     final values = [...args];
     final equality = (method == '==' || method == '!=') && values.length == 1;
     if (equality &&

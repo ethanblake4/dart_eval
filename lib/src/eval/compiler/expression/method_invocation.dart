@@ -18,6 +18,7 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'package:control_flow_graph/control_flow_graph.dart' show SSA;
 import 'package:dart_eval/src/eval/ir/bridge.dart';
+import 'package:dart_eval/src/eval/ir/collection.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
 import 'package:dart_eval/src/eval/ir/memory.dart';
@@ -84,8 +85,19 @@ Variable compileMethodInvocation(
           L = Variable.of(ctx, L!.ssa, appType, concreteTypes: [appType]);
           found = true;
         }
-        var owner = L!.type.resolveTypeChain(ctx);
+        final superStart = L!.type;
+        var owner = superStart.resolveTypeChain(ctx);
+        // Search the superclass chain for a concrete member without emitting
+        // `loadsuper` ops yet — a failed walk must not leave dead loads that
+        // execute on a null receiver.
+        final superTypes = <TypeRef>[];
         while (!found) {
+          // `Object.noSuchMethod` exists on every class but is implicit — it
+          // is not present in bridge/declaration metadata.
+          if (memberName == 'noSuchMethod') {
+            found = true;
+            break;
+          }
           // Abstract re-declarations have no body — skip them like runtime
           // dispatch does; the implementation lives deeper in the chain.
           if (concreteMemberDecl(ctx, owner, memberName, kind: 2) != null ||
@@ -103,18 +115,22 @@ Variable compileMethodInvocation(
           final parent = owner.extendsType;
           if (parent == null) break;
           owner = parent.resolveTypeChain(ctx);
-          L = Variable.ssa(
-            ctx,
-            LoadSuper(ctx.svar('super'), L!.ssa),
-            owner,
-            concreteTypes: [owner],
-          );
+          superTypes.add(owner);
         }
-        if (!found) {
-          throw CompileError(
-            'Superclass has no member "$memberName"',
-            e,
-          );
+        if (found) {
+          for (final superType in superTypes) {
+            L = Variable.ssa(
+              ctx,
+              LoadSuper(ctx.svar('super'), L!.ssa),
+              superType,
+              concreteTypes: [superType],
+            );
+          }
+        } else {
+          // No concrete member exists above `this` (only abstract or none
+          // at all): `super.m(args)` dispatches to `noSuchMethod` on the
+          // real receiver with an Invocation describing the call.
+          return _invokeSuperNoSuchMethod(ctx, e, superStart);
         }
       }
     } on PrefixError {
@@ -785,20 +801,72 @@ Variable _invokeWithTarget(
     try {
       dec0 = resolveInstanceMethod(ctx, L.type, e.methodName.name, e);
     } on CompileError {
-      // No such instance member: an extension method may apply.
-      final found = resolveExtensionMember(
+      // No such instance member: an extension member may apply.
+      final found = resolveExtensionMember(ctx, L.type, e.methodName.name);
+      if (found != null) {
+        return _invokeExtensionMethod(
+          ctx,
+          L,
+          e,
+          found.$1,
+          found.$2,
+          found.$3,
+        );
+      }
+      final foundGetter = resolveExtensionMember(
         ctx,
         L.type,
         e.methodName.name,
+        getter: true,
       );
-      if (found == null) rethrow;
-      return _invokeExtensionMethod(ctx, L, e, found.$1, found.$2, found.$3);
+      if (foundGetter == null &&
+          e.methodName.name == 'noSuchMethod') {
+        // `Object.noSuchMethod` is implicit — absent from all declaration
+        // metadata. Dispatch dynamically.
+        final (positional, named) = _compileCallArgs(ctx, e);
+        return L.invoke(
+          ctx,
+          'noSuchMethod',
+          positional,
+          namedArgs: named,
+        ).result;
+      }
+      if (foundGetter == null) rethrow;
+      // `recv.m(args)` where extension member m is a getter — a
+      // function-expression invocation: the getter's value is read first,
+      // then the arguments evaluate.
+      final getterValue = invokeExtensionGetter(
+        ctx,
+        L,
+        foundGetter.$1,
+        foundGetter.$2,
+        foundGetter.$3,
+      );
+      return invokeClosure(
+        ctx,
+        null,
+        getterValue,
+        e.argumentList,
+        typeArguments: e.typeArguments?.arguments.toList(),
+      ).result;
     }
     final member = dec0.declaration;
     final isFieldOrGetter =
         member is FieldDeclaration ||
         (member is MethodDeclaration && member.isGetter);
     if (isFieldOrGetter) {
+      if (e.target is SuperExpression) {
+        // `super.m(args)` is a function-expression invocation: the member
+        // value is read before the arguments evaluate.
+        final property = L.getProperty(ctx, e.methodName.name);
+        return invokeClosure(
+          ctx,
+          null,
+          property,
+          e.argumentList,
+          typeArguments: e.typeArguments?.arguments.toList(),
+        ).result;
+      }
       // `receiver.field(...)` / `receiver.getter(...)`: the member's *value* is
       // invoked, not a method — property read then implicit `.call`. The
       // arguments evaluate before the member read (method-invocation order).
@@ -1657,6 +1725,109 @@ _ResolvedArgs _compileNonBridgeArgs(
     resolveGenerics,
     classParams,
   );
+}
+
+/// `super.m(args)` where no concrete `m` exists above `this` dispatches to
+/// `noSuchMethod` on the real receiver with an Invocation describing the
+/// call — the semantics for abstract super-members.
+Variable _invokeSuperNoSuchMethod(
+  CompilerContext ctx,
+  MethodInvocation e,
+  TypeRef superStart,
+) {
+  final coreLib = ctx.libraryMap['dart:core']!;
+  final bridge = ctx.bridgeStaticFunctionIndices[coreLib]!;
+
+  Variable symbolFor(String name) {
+    final arg = BuiltinValue(stringval: name).push(ctx).boxIfNeeded(ctx);
+    return Variable.ssa(
+      ctx,
+      InvokeExternal(ctx.svar('sym'), bridge['Symbol.']!, [arg.ssa]),
+      CoreTypes.symbol.ref(ctx),
+    );
+  }
+
+  final $this = ctx.lookupLocal('#this')!;
+
+  // If the nearest declared member is an abstract getter, `super.m(args)`
+  // is a function-expression invocation: fetch the getter's value via
+  // noSuchMethod, then invoke it.
+  var owner = superStart.resolveTypeChain(ctx);
+  while (true) {
+    final decls = ctx.instanceDeclarationsMap[owner.file]?[owner.name];
+    if (decls != null && decls.containsKey('${e.methodName.name}*g')) {
+      final invocation = Variable.ssa(
+        ctx,
+        InvokeExternal(ctx.svar('inv'), bridge['Invocation.getter']!, [
+          symbolFor(e.methodName.name).ssa,
+        ]),
+        CoreTypes.invocation.ref(ctx),
+      );
+      final getterValue = $this.invoke(ctx, 'noSuchMethod', [
+        invocation,
+      ]).result;
+      return invokeClosure(
+        ctx,
+        null,
+        getterValue,
+        e.argumentList,
+        typeArguments: e.typeArguments?.arguments.toList(),
+      ).result;
+    }
+    final parent = owner.extendsType;
+    if (parent == null) break;
+    owner = parent.resolveTypeChain(ctx);
+  }
+
+  final (positional, named) = _compileCallArgs(ctx, e);
+  final listType = CoreTypes.list.ref(ctx).copyWith(
+    specifiedTypeArgs: [CoreTypes.dynamic.ref(ctx).copyWith(boxed: true)],
+  );
+  final list = Variable.ssa(
+    ctx,
+    NewList(ctx.svar('list')),
+    listType.copyWith(boxed: false),
+  );
+  for (final arg in positional) {
+    ctx.pushOp(ListAppend(list.ssa, arg.boxIfNeeded(ctx).ssa));
+  }
+  final invArgs = [
+    symbolFor(e.methodName.name).ssa,
+    list.boxIfNeeded(ctx).ssa,
+  ];
+  if (named.isNotEmpty) {
+    final mapType = CoreTypes.map.ref(ctx).copyWith(
+      specifiedTypeArgs: [
+        CoreTypes.symbol.ref(ctx).copyWith(boxed: true),
+        CoreTypes.dynamic.ref(ctx).copyWith(boxed: true),
+      ],
+    );
+    final map = Variable.ssa(
+      ctx,
+      NewMap(ctx.svar('map')),
+      mapType.copyWith(boxed: false),
+    );
+    for (final entry in named.entries) {
+      ctx.pushOp(
+        MapSet(
+          map.ssa,
+          symbolFor(entry.key).ssa,
+          entry.value.boxIfNeeded(ctx).ssa,
+        ),
+      );
+    }
+    invArgs.add(map.boxIfNeeded(ctx).ssa);
+  }
+  final invocation = Variable.ssa(
+    ctx,
+    InvokeExternal(
+      ctx.svar('inv'),
+      bridge['Invocation.method']!,
+      invArgs,
+    ),
+    CoreTypes.invocation.ref(ctx),
+  );
+  return $this.invoke(ctx, 'noSuchMethod', [invocation]).result;
 }
 
 /// Compiles a call's argument list into positional/named variable pairs. Used

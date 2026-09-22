@@ -1396,11 +1396,15 @@ class TypeRef {
 
     if (hasSameDeclarationAs(slot) &&
         (!nullable || slot.nullable || this == CoreTypes.nullType.ref(ctx))) {
-      if (slot.specifiedTypeArgs.isNotEmpty &&
+      if (slot.specifiedTypeArgs.isNotEmpty && generics.isNotEmpty &&
           generics.length != slot.specifiedTypeArgs.length) {
         return false;
       }
-      for (var i = 0; i < slot.specifiedTypeArgs.length; i++) {
+      // A raw generic (`Future` for `Future<C>`) acts like `Future<dynamic>`:
+      // its missing arguments are assignable both ways.
+      for (var i = 0;
+          i < slot.specifiedTypeArgs.length && i < generics.length;
+          i++) {
         if (!generics[i].isAssignableTo(
           ctx,
           slot.specifiedTypeArgs[i],
@@ -1635,6 +1639,20 @@ class TypeRef {
       final param = typeParams[index];
       final bound = param.bound;
       if (bound != null) {
+        temps[param.name.lexeme] = temps[param.name.lexeme]!.copyWith(
+          typeParameterBound: TypeRef.fromAnnotation(ctx, lib, bound),
+        );
+      }
+    }
+    // A bound naming another parameter declared later (`T extends U,
+    // U extends C`) captures U's still-unbound ref in the first pass —
+    // re-resolve now that every bound is populated.
+    for (var index = 0; index < typeParams.length; index++) {
+      final param = typeParams[index];
+      final bound = param.bound;
+      if (bound != null &&
+          temps[param.name.lexeme]!.typeParameterBound?.isTypeParameter ==
+              true) {
         temps[param.name.lexeme] = temps[param.name.lexeme]!.copyWith(
           typeParameterBound: TypeRef.fromAnnotation(ctx, lib, bound),
         );
@@ -2064,6 +2082,10 @@ class AlwaysReturnType implements ReturnType {
       );
     }
 
+    if (method == 'noSuchMethod') {
+      // `Object.noSuchMethod` is implicit — absent from declaration metadata.
+      return AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
+    }
     final m = resolveInstanceMethod(ctx, lookupType, method);
     if (m.isBridge) {
       final fd = (m.bridge as BridgeMethodDef).functionDescriptor;
@@ -2327,6 +2349,57 @@ TypeRef? findSupertypeInstantiation(
     }
   }
   return null;
+}
+
+/// Fully unwraps a type-parameter chain (`T extends U, U extends C`) to the
+/// outermost non-parameter bound, or `dynamic` when unbounded.
+TypeRef resolveThroughTypeParameters(
+  CompilerContext ctx,
+  TypeRef type,
+) {
+  var t = type.resolveTypeChain(ctx);
+  final seen = <String>{};
+  while (t.isTypeParameter && seen.add(t.semanticKey)) {
+    final bound = t.typeParameterBound;
+    if (bound == null) {
+      return CoreTypes.dynamic.ref(ctx);
+    }
+    t = bound.resolveTypeChain(ctx);
+  }
+  return t;
+}
+
+/// The `flatten` function from the async spec: the value type `T` such that
+/// `await`/`async` treat a `FutureOr<T>`/`Future<T>`-shaped value as `T`.
+/// `FutureOr` peels to its argument; a type implementing `Future<S>` peels
+/// to `S`, recursively. Self-referential futures (`F implements Future<F>`)
+/// return themselves.
+TypeRef flattenType(CompilerContext ctx, TypeRef type) {
+  var t = type.resolveTypeChain(ctx);
+  var nullable = type.nullable;
+  final seen = <String>{};
+  while (seen.add(t.semanticKey)) {
+    if (t.name == 'FutureOr' && t.specifiedTypeArgs.isNotEmpty) {
+      nullable = nullable || t.nullable;
+      t = t.specifiedTypeArgs.first.resolveTypeChain(ctx);
+      continue;
+    }
+    final instantiation = findSupertypeInstantiation(
+      ctx,
+      CoreTypes.future.ref(ctx),
+      t,
+    );
+    if (instantiation == null) {
+      return t.copyWith(nullable: t.nullable || nullable);
+    }
+    nullable = nullable || t.nullable;
+    t =
+        (instantiation.specifiedTypeArgs.isEmpty
+                ? CoreTypes.dynamic.ref(ctx)
+                : instantiation.specifiedTypeArgs.first)
+            .resolveTypeChain(ctx);
+  }
+  return t.copyWith(nullable: t.nullable || nullable);
 }
 
 /// Resolves a `typedef` use to the type it aliases. Function-type aliases

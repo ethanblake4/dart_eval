@@ -27,11 +27,7 @@ Variable compileAwaitExpression(AwaitExpression e, CompilerContext ctx) {
   final isFuture = type
       .copyWith(nullable: false)
       .isAssignableTo(ctx, CoreTypes.future.ref(ctx));
-  final resultType = isFuture
-      ? type.specifiedTypeArgs.isNotEmpty
-            ? type.specifiedTypeArgs.first
-            : CoreTypes.dynamic.ref(ctx)
-      : type;
+  final resultType = isFuture ? flattenType(ctx, type) : type;
 
   return Variable.ssa(
     ctx,
