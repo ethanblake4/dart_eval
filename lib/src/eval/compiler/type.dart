@@ -2043,9 +2043,7 @@ class AlwaysReturnType implements ReturnType {
     List<TypeRef> typeArgs = const [],
     bool $static = false,
   }) {
-    final lookupType = type.isTypeParameter
-        ? type.typeParameterBound ?? CoreTypes.dynamic.ref(ctx)
-        : type;
+    final lookupType = resolveThroughTypeParameters(ctx, type);
     if (lookupType == CoreTypes.dynamic.ref(ctx)) {
       return AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
     }

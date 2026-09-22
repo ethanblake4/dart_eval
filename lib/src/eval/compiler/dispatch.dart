@@ -179,6 +179,14 @@ bool memberNeedsOwnerLink(
   return usesSuper;
 }
 
+/// The `instanceDeclarationsMap` key for member [name] of [kind]
+/// (0 = getter → `name*g`, 1 = setter → `name*s`, 2 = method → `name`).
+String memberKey(String name, [int kind = 2]) => switch (kind) {
+  0 => '$name*g',
+  1 => '$name*s',
+  _ => name,
+};
+
 /// The declaration of instance member [name] of [kind] (0 = getter,
 /// 1 = setter, 2 = method) on [link]. Abstract declarations return null —
 /// they register positions but have no body, so an abstract override is
@@ -189,15 +197,10 @@ Declaration? concreteMemberDecl(
   String name, {
   int kind = 2,
 }) {
-  String key(String base) => switch (kind) {
-    0 => '$base*g',
-    1 => '$base*s',
-    _ => base,
-  };
   final decls = ctx.instanceDeclarationsMap[link.file]?[link.name];
-  var decl = decls?[key(name)];
+  var decl = decls?[memberKey(name, kind)];
   if (decl == null && name.startsWith('_')) {
-    decl = decls?[key('${ctx.libraryUri(link.file)}::$name')];
+    decl = decls?[memberKey('${ctx.libraryUri(link.file)}::$name', kind)];
   }
   if (decl is MethodDeclaration && !decl.isComplete) return null;
   return decl;
