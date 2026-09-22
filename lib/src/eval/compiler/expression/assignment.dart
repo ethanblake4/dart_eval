@@ -20,16 +20,11 @@ Variable compileAssignmentExpression(
     ctx,
     cascadeTarget: cascadeTarget,
   );
-  final R = compileExpression(
-    e.rightHandSide,
-    ctx,
-    L.resolveType(ctx, forSet: true),
-  );
+  TypeRef? setterType() => L.resolveType(ctx, forSet: true);
 
   if (e.operator.type == TokenType.EQ) {
-    final set = R.type != L.resolveType(ctx, forSet: true)
-        ? R.boxIfNeeded(ctx)
-        : R;
+    final R = compileExpression(e.rightHandSide, ctx, setterType());
+    final set = R.type != setterType() ? R.boxIfNeeded(ctx) : R;
     return L.setValue(ctx, set);
   } else if (e.operator.type.binaryOperatorOfCompoundAssignment ==
       TokenType.QUESTION_QUESTION) {
@@ -43,9 +38,10 @@ Variable compileAssignmentExpression(
         ]).result;
       },
       thenBranch: (ctx, rt) {
-        final set = R.type != L.resolveType(ctx, forSet: true)
-            ? R.boxIfNeeded(ctx)
-            : R;
+        // The RHS is evaluated only inside the branch — `x ??= e` must not
+        // evaluate `e` when `x` is non-null.
+        final R = compileExpression(e.rightHandSide, ctx, setterType());
+        final set = R.type != setterType() ? R.boxIfNeeded(ctx) : R;
         result = L.setValue(ctx, set);
         return StatementInfo();
       },
@@ -53,7 +49,9 @@ Variable compileAssignmentExpression(
     return result;
   } else {
     final method = e.operator.type.binaryOperatorOfCompoundAssignment!.lexeme;
+    // Dart evaluates the read of L (the getter / index call) before the RHS.
     final V = L.getValue(ctx);
+    final R = compileExpression(e.rightHandSide, ctx, setterType());
     var res = V.invoke(ctx, method, [R]).result;
     // Dart's compound-assignment rules retain the implicit downcast when the
     // right operand is dynamic. The operator's declared return type alone

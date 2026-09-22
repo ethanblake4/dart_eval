@@ -681,6 +681,8 @@ Variable _invokeWithTarget(
     final memberDecl0 = dec0.declaration;
     if (memberDecl0 is FieldDeclaration ||
         (memberDecl0 is MethodDeclaration && memberDecl0.isGetter)) {
+      // `C.getter(args)` is a function-expression invocation: the member
+      // value is read first, then the arguments evaluate.
       final fieldValue = IdentifierReference(
         L,
         staticMemberName,
@@ -798,13 +800,17 @@ Variable _invokeWithTarget(
         (member is MethodDeclaration && member.isGetter);
     if (isFieldOrGetter) {
       // `receiver.field(...)` / `receiver.getter(...)`: the member's *value* is
-      // invoked, not a method — property read then implicit `.call`.
+      // invoked, not a method — property read then implicit `.call`. The
+      // arguments evaluate before the member read (method-invocation order).
+      final (prePositional, preNamed) = _compileCallArgs(ctx, e);
       final property = L.getProperty(ctx, e.methodName.name);
       return invokeClosure(
         ctx,
         null,
         property,
-        e.argumentList,
+        null,
+        positional: prePositional,
+        named: preNamed,
         typeArguments: e.typeArguments?.arguments.toList(),
       ).result;
     }
@@ -1651,4 +1657,26 @@ _ResolvedArgs _compileNonBridgeArgs(
     resolveGenerics,
     classParams,
   );
+}
+
+/// Compiles a call's argument list into positional/named variable pairs. Used
+/// when the callee is a member *value* (field or getter) whose read must be
+/// sequenced after the arguments per method-invocation evaluation order.
+(List<Variable>, Map<String, Variable>) _compileCallArgs(
+  CompilerContext ctx,
+  MethodInvocation e,
+) {
+  final positional = <Variable>[];
+  final named = <String, Variable>{};
+  for (final arg in e.argumentList.arguments) {
+    if (arg is NamedArgument) {
+      named[arg.name.lexeme] = compileExpression(
+        arg.argumentExpression,
+        ctx,
+      );
+    } else {
+      positional.add(compileExpression(arg.argumentExpression, ctx));
+    }
+  }
+  return (positional, named);
 }
