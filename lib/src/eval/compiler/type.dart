@@ -197,49 +197,39 @@ class TypeRef {
     if (typeAnnotation is RecordTypeAnnotation) {
       final fields = <RecordParameterType>[];
 
-      var name = '@record<';
       var positionalFields = 1;
-      for (var i = 0; i < typeAnnotation.positionalFields.length; i++) {
-        final field = typeAnnotation.positionalFields[i];
-        final fType = TypeRef.fromAnnotation(
-          ctx,
-          library,
-          field.type,
-          typeParameters: typeParameters,
-        );
+      for (final field in typeAnnotation.positionalFields) {
         fields.add(
-          RecordParameterType('\$${positionalFields++}', fType, false),
+          RecordParameterType(
+            '\$${positionalFields++}',
+            TypeRef.fromAnnotation(
+              ctx,
+              library,
+              field.type,
+              typeParameters: typeParameters,
+            ),
+            false,
+          ),
         );
-        name += '$fType';
-        if (i < typeAnnotation.positionalFields.length - 1) {
-          name += ',';
-        }
       }
 
-      final namedFields =
-          typeAnnotation.namedFields?.fields ??
-          <RecordTypeAnnotationNamedField>[];
-      if (namedFields.isNotEmpty) {
-        name += ',{';
-      }
-      for (var i = 0; i < namedFields.length; i++) {
-        final field = namedFields[i];
-        final fType = TypeRef.fromAnnotation(
-          ctx,
-          library,
-          field.type,
-          typeParameters: typeParameters,
+      for (final field
+          in typeAnnotation.namedFields?.fields ??
+              <RecordTypeAnnotationNamedField>[]) {
+        fields.add(
+          RecordParameterType(
+            field.name.lexeme,
+            TypeRef.fromAnnotation(
+              ctx,
+              library,
+              field.type,
+              typeParameters: typeParameters,
+            ),
+            true,
+          ),
         );
-        fields.add(RecordParameterType(field.name.lexeme, fType, true));
-        name += '${field.name.lexeme}:$fType';
-        if (i < namedFields.length - 1) {
-          name += ',';
-        }
       }
-      if (namedFields.isNotEmpty) {
-        name += '}';
-      }
-      name += '>';
+      final name = recordTypeName(fields);
       return TypeRef(
         -1,
         name,
@@ -1171,6 +1161,43 @@ class TypeRef {
 
   String get _runtimeDescriptorKey => semanticKey;
 
+  /// The canonical `@record` type name for [fields]: positionals in order,
+  /// then named fields sorted by name — the single identity shared by every
+  /// record producer so `(int, {b: B, a: A})` and `(int, {a: A, b: B})` are
+  /// the same type.
+  static String recordTypeName(List<RecordParameterType> fields) {
+    final name = StringBuffer('@record<');
+    var first = true;
+    void comma() {
+      if (first) {
+        first = false;
+      } else {
+        name.write(',');
+      }
+    }
+
+    for (final field in fields) {
+      if (field.isNamed) continue;
+      comma();
+      name.write('${field.type}');
+    }
+    final named = [
+      for (final field in fields)
+        if (field.isNamed) field,
+    ]..sort((a, b) => a.name!.compareTo(b.name!));
+    if (named.isNotEmpty) {
+      comma();
+      name.write('{');
+      for (var i = 0; i < named.length; i++) {
+        if (i > 0) name.write(',');
+        name.write('${named[i].name}:${named[i].type}');
+      }
+      name.write('}');
+    }
+    name.write('>');
+    return name.toString();
+  }
+
   List<int> runtimeDescriptor(CompilerContext ctx) {
     if (isTypeParameter) {
       final ownerType = isClassTypeParameter
@@ -1200,9 +1227,8 @@ class TypeRef {
       ];
     }
     if (recordFields.isNotEmpty) {
-      final positional = recordFields.where((field) => !field.isNamed).toList();
-      final named = recordFields.where((field) => field.isNamed).toList()
-        ..sort((a, b) => a.name!.compareTo(b.name!));
+      final positional = recordPositionalFields;
+      final named = recordNamedFields;
       return [
         CoreTypes.record.ref(ctx).runtimeTypeId(ctx),
         nullable ? 1 : 0,
@@ -1340,8 +1366,19 @@ class TypeRef {
             other.isTypeParameter &&
             typeParameterOwner == other.typeParameterOwner &&
             typeParameterIndex == other.typeParameterIndex
-      : (file == other.file || name.startsWith('@record')) &&
-            name == other.name;
+      : (file == other.file || isRecord) && name == other.name;
+
+  /// Records have no declaration — the canonical `@record` name is the only
+  /// identity ([recordFields] may be empty for the `()` record).
+  bool get isRecord => name.startsWith('@record');
+
+  /// Positional record fields in declaration order — [recordFields] lists
+  /// fields in source order, which may interleave positional and named.
+  List<RecordParameterType> get recordPositionalFields =>
+      recordFields.positionalFields;
+
+  /// Named record fields sorted by name (the canonical/descriptor order).
+  List<RecordParameterType> get recordNamedFields => recordFields.namedFields;
 
   bool get isTypeParameter => typeParameterIndex != null;
 
@@ -1470,7 +1507,7 @@ class TypeRef {
     // Records are structural: `hasSameDeclarationAs` alone would require
     // identical field types. A record is assignable when both sides have the
     // same shape and every field type is assignable positionally/by name.
-    if (name.startsWith('@record') && slot.name.startsWith('@record')) {
+    if (isRecord && slot.isRecord) {
       if (nullable && !slot.nullable) return false;
       final sourcePositional = <RecordParameterType>[];
       final slotPositional = <RecordParameterType>[];
@@ -1520,7 +1557,7 @@ class TypeRef {
 
     // A record's only nominal supertype is Record (itself <: Object), so it
     // is assignable wherever Record is.
-    if (recordFields.isNotEmpty) {
+    if (isRecord) {
       return CoreTypes.record
           .ref(ctx)
           .isAssignableTo(ctx, slot, forceAllowDynamic: forceAllowDynamic);
@@ -1760,13 +1797,12 @@ class TypeRef {
           (isTypeParameter || other.isTypeParameter
               ? typeParameterOwner == other.typeParameterOwner &&
                     typeParameterIndex == other.typeParameterIndex
-              : (file == other.file || name.startsWith('@record')) &&
-                    name == other.name);
+              : (file == other.file || isRecord) && name == other.name);
 
   @override
   int get hashCode => isTypeParameter
       ? Object.hash(typeParameterOwner, typeParameterIndex)
-      : name.startsWith('@record')
+      : isRecord
       ? name.hashCode
       : file.hashCode ^ name.hashCode;
 
@@ -1971,6 +2007,21 @@ class RecordParameterType {
   String toString() {
     return '$name: ${type.toString()}';
   }
+}
+
+extension RecordParameterTypeList on List<RecordParameterType> {
+  /// Positional fields in declaration order — a record's field list may
+  /// interleave positional and named entries in source order.
+  List<RecordParameterType> get positionalFields => [
+    for (final field in this)
+      if (!field.isNamed) field,
+  ];
+
+  /// Named fields sorted by name (the canonical/descriptor order).
+  List<RecordParameterType> get namedFields => [
+    for (final field in this)
+      if (field.isNamed) field,
+  ]..sort((a, b) => a.name!.compareTo(b.name!));
 }
 
 /// Computes the [ReturnType] of a bridged function descriptor, including

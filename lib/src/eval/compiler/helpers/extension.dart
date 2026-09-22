@@ -182,22 +182,14 @@ bool _unifyOnPattern(
   // exactly.
   if (pattern.recordFields.isNotEmpty) {
     if (actual.recordFields.isEmpty) return false;
-    final patternPositional = [
-      for (final f in pattern.recordFields)
-        if (!f.isNamed) f,
-    ];
-    final actualPositional = [
-      for (final f in actual.recordFields)
-        if (!f.isNamed) f,
-    ];
+    final patternPositional = pattern.recordPositionalFields;
+    final actualPositional = actual.recordPositionalFields;
     if (patternPositional.length != actualPositional.length) return false;
     final patternNamed = {
-      for (final f in pattern.recordFields)
-        if (f.isNamed) f.name!: f,
+      for (final f in pattern.recordNamedFields) f.name!: f,
     };
     final actualNamed = {
-      for (final f in actual.recordFields)
-        if (f.isNamed) f.name!: f,
+      for (final f in actual.recordNamedFields) f.name!: f,
     };
     if (patternNamed.length != actualNamed.length) return false;
     for (var i = 0; i < patternPositional.length; i++) {

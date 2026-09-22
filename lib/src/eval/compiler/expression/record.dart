@@ -19,7 +19,7 @@ Variable compileRecordLiteral(
   // layouts that differ only in field order.
   final fieldNames = List<String>.filled(l.fields.length, '');
 
-  if (bound != null && !bound.name.startsWith('@record')) bound = null;
+  if (bound != null && !bound.isRecord) bound = null;
 
   if (!(bound?.isAssignableTo(ctx, CoreTypes.record.ref(ctx)) ?? true)) {
     throw CompileError('Incompatible record type', l);
@@ -35,7 +35,7 @@ Variable compileRecordLiteral(
 
   final boundRecordFields = bound?.recordFields;
   final inferredRecordFields = <RecordParameterType>[];
-  var inferredTypeName = StringBuffer('@record<');
+
   if (boundRecordFields != null &&
       l.fields.length != boundRecordFields.length) {
     throw CompileError(
@@ -46,11 +46,8 @@ Variable compileRecordLiteral(
   // Bound record fields list positionals first, then named — while the
   // literal lists them in source order. Named fields match by name;
   // positional fields match by their ordinal among positionals.
-  final boundPositionalFields = <RecordParameterType>[
-    if (boundRecordFields != null)
-      for (final f in boundRecordFields)
-        if (!f.isNamed) f,
-  ];
+  final boundPositionalFields =
+      boundRecordFields?.positionalFields ?? const [];
   RecordParameterType? namedBound(String name) =>
       boundRecordFields
           ?.where((f) => f.isNamed && f.name == name)
@@ -110,39 +107,15 @@ Variable compileRecordLiteral(
     }
   }
 
-  // Canonical type name: positionals first, then named fields sorted.
-  final sortedNamed = inferredRecordFields
-      .where((f) => f.isNamed)
-      .sortedBy((f) => f.name ?? '');
-  for (final f in inferredRecordFields) {
-    if (f.isNamed) continue;
-    if (inferredTypeName.length > '@record<'.length) {
-      inferredTypeName.write(',');
-    }
-    inferredTypeName.write('${f.type}');
-  }
-  if (sortedNamed.isNotEmpty) {
-    if (inferredTypeName.length > '@record<'.length) {
-      inferredTypeName.write(',');
-    }
-    inferredTypeName.write('{');
-    for (var i = 0; i < sortedNamed.length; i++) {
-      inferredTypeName.write('${sortedNamed[i].name}:${sortedNamed[i].type}');
-      if (i < sortedNamed.length - 1) inferredTypeName.write(',');
-    }
-    inferredTypeName.write('}');
-  }
-  inferredTypeName.write('>');
-
   // The literal's static type is built from each field's inferred type —
   // the bound only provided the inference context (`(T,)` infers its own
   // field types and then unifies T with them).
   final type = TypeRef(
-        ctx.library,
-        inferredTypeName.toString(),
-        extendsType: CoreTypes.record.ref(ctx),
-        recordFields: inferredRecordFields,
-      );
+    ctx.library,
+    TypeRef.recordTypeName(inferredRecordFields),
+    extendsType: CoreTypes.record.ref(ctx),
+    recordFields: inferredRecordFields,
+  );
   final constIndex = ctx.constantPool.addOrGet(fieldNames);
   return Variable.ssa(
     ctx,

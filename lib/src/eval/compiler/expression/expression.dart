@@ -1,6 +1,5 @@
 // ignore_for_file: experimental_member_use
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:analyzer/dart/ast/token.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/as.dart';
@@ -128,13 +127,7 @@ Variable? compileExpressionAndDiscardResult(
   if (canReference(e)) {
     // A null-shorted receiver can't be expressed lazily as a Reference —
     // compile eagerly so the chain's null check guards the member access.
-    final shorted =
-        e is IndexExpression &&
-            (e.question != null || isNullShorted(e.target)) ||
-        e is PropertyAccess &&
-            (e.operator.type == TokenType.QUESTION_PERIOD ||
-                isNullShorted(e.target));
-    if (shorted) {
+    if (isNullShortedSelector(e)) {
       return compileExpression(e, ctx, bound);
     }
     return compileExpressionAsReference(e, ctx).getValue(ctx, e);

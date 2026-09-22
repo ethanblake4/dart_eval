@@ -222,8 +222,10 @@ extension TypedRuntimeInterop on Runtime {
     final positional = templateDescriptor[3], named = templateDescriptor[4];
     final descriptor = List<int>.of(templateDescriptor);
     descriptor[1] = 0;
+    // Positional fields are stored first (record literals are
+    // positionals-before-named by grammar), so index == ordinal.
     for (var i = 0; i < positional; i++) {
-      descriptor[5 + i] = _recordFieldType(fields[mapping['\$${i + 1}']!]);
+      descriptor[5 + i] = _recordFieldType(fields[i]);
     }
     final namedOffset = 5 + positional;
     for (var i = 0; i < named; i++) {

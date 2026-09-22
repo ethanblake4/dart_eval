@@ -39,8 +39,7 @@ Variable compilePostfixExpression(PostfixExpression e, CompilerContext ctx) {
   // `e1?[e2]++`, `a?.b++`: a null target nulls the whole expression; the
   // index, increment, and store are all skipped.
   final operand = e.operand;
-  if (operand is IndexExpression &&
-      (operand.question != null || isNullShorted(operand.target))) {
+  if (operand is IndexExpression && isNullShortedSelector(operand)) {
     final target = operand.isCascaded
         ? ctx.cascadeTarget!
         : compileExpression(operand.realTarget, ctx);
@@ -55,9 +54,7 @@ Variable compilePostfixExpression(PostfixExpression e, CompilerContext ctx) {
       source: e,
     );
   }
-  if (operand is PropertyAccess &&
-      (operand.operator.type == TokenType.QUESTION_PERIOD ||
-          isNullShorted(operand.target))) {
+  if (operand is PropertyAccess && isNullShortedSelector(operand)) {
     final target = operand.isCascaded
         ? ctx.cascadeTarget!
         : compileExpression(operand.realTarget, ctx);

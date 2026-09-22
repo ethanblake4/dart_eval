@@ -42,6 +42,20 @@ bool isNullShorted(Expression? e) {
   return false;
 }
 
+/// Whether [e] is an `?.`-guarded selector: a `?.`/`?[` access, or an
+/// ordinary member access (`a.b`, `a[i]`, `a.m()`) whose own receiver sits
+/// on a null-shorted chain (`a?.b.c` nulls the `.c` too).
+bool isNullShortedSelector(Expression e) => switch (e) {
+  IndexExpression() => e.question != null || isNullShorted(e.target),
+  PropertyAccess() =>
+    e.operator.type == TokenType.QUESTION_PERIOD ||
+        isNullShorted(e.target),
+  MethodInvocation() =>
+    e.operator?.type == TokenType.QUESTION_PERIOD ||
+        isNullShorted(e.target),
+  _ => false,
+};
+
 /// Emits `target == null ? null : body(target)` — the shared shape of every
 /// null-aware selector (`?.`, `?[`, `!` on a shorted chain, and continuations
 /// like `.c` in `a?.b.c`). When [target] is statically known-null the branch

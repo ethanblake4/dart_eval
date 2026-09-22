@@ -21,7 +21,7 @@ Variable compileIndexExpression(IndexExpression e, CompilerContext ctx) {
   // `e1?[e2]` and continuations on a null-shorted chain (`a?.b[0]`): a null
   // target nulls the whole expression — the index is compiled inside the
   // non-null branch so it is not evaluated when the target is null.
-  if (e.question != null || isNullShorted(e.target)) {
+  if (isNullShortedSelector(e)) {
     final target = e.isCascaded
         ? ctx.cascadeTarget!
         : compileExpression(e.realTarget, ctx);

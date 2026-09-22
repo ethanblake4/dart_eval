@@ -21,8 +21,7 @@ Variable compileAssignmentExpression(
   // null-shorted chain (`a?.b.c = e`): a null target nulls the whole
   // expression and skips evaluating the index, the RHS, and the store.
   final lhs = e.leftHandSide;
-  if (lhs is IndexExpression &&
-      (lhs.question != null || isNullShorted(lhs.target))) {
+  if (lhs is IndexExpression && isNullShortedSelector(lhs)) {
     final target = lhs.isCascaded
         ? ctx.cascadeTarget!
         : compileExpression(lhs.realTarget, ctx);
@@ -37,9 +36,7 @@ Variable compileAssignmentExpression(
       source: e,
     );
   }
-  if (lhs is PropertyAccess &&
-      (lhs.operator.type == TokenType.QUESTION_PERIOD ||
-          isNullShorted(lhs.target))) {
+  if (lhs is PropertyAccess && isNullShortedSelector(lhs)) {
     final target = compileExpression(lhs.realTarget, ctx);
     return emitNullGuard(
       ctx,

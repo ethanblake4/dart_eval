@@ -36,8 +36,7 @@ Variable compilePrefixExpression(
   if ([TokenType.PLUS_PLUS, TokenType.MINUS_MINUS].contains(e.operator.type)) {
     // `++a?.b`, `++a?[i]`: a null target nulls the whole expression.
     final operand = e.operand;
-    if (operand is IndexExpression &&
-        (operand.question != null || isNullShorted(operand.target))) {
+    if (operand is IndexExpression && isNullShortedSelector(operand)) {
       final target = operand.isCascaded
           ? ctx.cascadeTarget!
           : compileExpression(operand.realTarget, ctx);
@@ -52,9 +51,7 @@ Variable compilePrefixExpression(
         source: e,
       );
     }
-    if (operand is PropertyAccess &&
-        (operand.operator.type == TokenType.QUESTION_PERIOD ||
-            isNullShorted(operand.target))) {
+    if (operand is PropertyAccess && isNullShortedSelector(operand)) {
       final target = operand.isCascaded
           ? ctx.cascadeTarget!
           : compileExpression(operand.realTarget, ctx);

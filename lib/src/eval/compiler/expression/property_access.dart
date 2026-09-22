@@ -1,14 +1,11 @@
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:analyzer/dart/ast/token.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-
-import 'package:dart_eval/src/eval/compiler/expression/null_aware.dart';
-import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
-
-import 'package:dart_eval/src/eval/compiler/variable.dart';
+import 'package:dart_eval/src/eval/compiler/expression/null_aware.dart';
+import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
+import 'package:dart_eval/src/eval/compiler/variable.dart';
 
 
 Variable compilePropertyAccess(PropertyAccess pa, CompilerContext ctx) {
@@ -23,8 +20,7 @@ Variable compilePropertyAccess(PropertyAccess pa, CompilerContext ctx) {
 
   // `a?.b` and selectors continuing a null-shorted chain (`a?.b.c`): a null
   // receiver nulls the whole expression.
-  if (pa.operator.type == TokenType.QUESTION_PERIOD ||
-      isNullShorted(pa.target)) {
+  if (isNullShortedSelector(pa)) {
     return emitNullGuard(
       ctx,
       L,
