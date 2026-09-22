@@ -5,6 +5,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
+import 'package:dart_eval/src/eval/compiler/expression/null_aware.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
@@ -33,9 +34,43 @@ Variable compilePrefixExpression(
       (throw CompileError('Unknown unary operator ${e.operator.type}'));
 
   if ([TokenType.PLUS_PLUS, TokenType.MINUS_MINUS].contains(e.operator.type)) {
+    // `++a?.b`, `++a?[i]`: a null target nulls the whole expression.
+    final operand = e.operand;
+    if (operand is IndexExpression &&
+        (operand.question != null || isNullShorted(operand.target))) {
+      final target = operand.isCascaded
+          ? ctx.cascadeTarget!
+          : compileExpression(operand.realTarget, ctx);
+      return emitNullGuard(
+        ctx,
+        target,
+        (t) => _handleDoubleOperands(
+          e,
+          ctx,
+          IndexedReference(t, compileExpression(operand.index, ctx)),
+        ),
+        source: e,
+      );
+    }
+    if (operand is PropertyAccess &&
+        (operand.operator.type == TokenType.QUESTION_PERIOD ||
+            isNullShorted(operand.target))) {
+      final target = operand.isCascaded
+          ? ctx.cascadeTarget!
+          : compileExpression(operand.realTarget, ctx);
+      return emitNullGuard(
+        ctx,
+        target,
+        (t) => _handleDoubleOperands(
+          e,
+          ctx,
+          IdentifierReference(t, operand.propertyName.name),
+        ),
+        source: e,
+      );
+    }
     final V = compileExpressionAsReference(e.operand, ctx);
-    final L = V.getValue(ctx);
-    return _handleDoubleOperands(e, ctx, V, L);
+    return _handleDoubleOperands(e, ctx, V);
   }
 
   final V = compileExpression(e.operand, ctx, bound);
@@ -89,8 +124,8 @@ Variable _handleDoubleOperands(
   PrefixExpression e,
   CompilerContext ctx,
   Reference V,
-  Variable L,
 ) {
+  final L = V.getValue(ctx);
   final l = Variable.ssa(ctx, Assign(ctx.svar('operand'), L.ssa), L.type);
 
   final result = l.invoke(ctx, _opMap[e.operator.type]!, [

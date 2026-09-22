@@ -11,6 +11,19 @@ import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart'
     show MachineRepresentation, representationForType;
 
+/// Marks the current block as unreachable past this point — used when an
+/// expression's value is Never-typed. When the expression already emitted a
+/// terminator (`throw`) the block is closed and nothing more is needed; when
+/// it merely carries the Never type (a call or getter declared `Never`) its
+/// own ops ran but left the block open, so an unreachable Return is emitted
+/// to keep the block properly terminated.
+StatementInfo markNeverTerminates(CompilerContext ctx) {
+  if (!ctx.blockEndsControlFlow) {
+    ctx.pushOp(Return(null));
+  }
+  return StatementInfo(willAlwaysThrow: true);
+}
+
 StatementInfo doReturn(
   CompilerContext ctx,
   AlwaysReturnType expectedReturnType,
@@ -18,9 +31,16 @@ StatementInfo doReturn(
   bool isAsync = false,
   bool skipClassBoxing = false,
 }) {
-  // A Never-typed value means the expression already terminated the block
-  // (e.g. `() => throw e`); nothing follows a terminator, so just mark it.
+  // A Never-typed value cannot produce a result — return it anyway so a
+  // `=> f()` where `f` returns `Never` still terminates the block.
   if (value != null && value.type == CoreTypes.never.ref(ctx)) {
+    if (!ctx.blockEndsControlFlow) {
+      final isVoid =
+          expectedReturnType.type == CoreTypes.voidType.ref(ctx);
+      ctx.pushOp(
+        Return(isVoid ? null : value.boxIfNeeded(ctx).ssa),
+      );
+    }
     return StatementInfo(willAlwaysThrow: true);
   }
   if (isAsync) return doAsyncReturn(ctx, expectedReturnType, value);

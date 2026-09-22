@@ -222,6 +222,11 @@ class CompilerContext with ScopeContext {
   /// accepts class instances).
   Variable? anonymousThisReceiver;
 
+  /// The receiver of the cascade currently being compiled (`a` in
+  /// `a..b..c`). Cascaded selectors (`..b`, `..c`) read it regardless of
+  /// how deeply nested they are in their section's expression tree.
+  Variable? cascadeTarget;
+
   /// Active anonymous-method invocations whose block bodies may contain
   /// `return`: each maps the invocation node to its exit block and result
   /// local (see `compileReturn` in statement/return.dart).

@@ -1,4 +1,5 @@
 import '../helpers/captures.dart';
+import '../helpers/return.dart';
 import '../builtins.dart';
 import '../reference.dart';
 import 'package:analyzer/dart/ast/ast.dart';
@@ -45,7 +46,7 @@ StatementInfo compileStatement(
     } else if (s is ExpressionStatement) {
       final V = compileExpressionAndDiscardResult(s.expression, ctx);
       if (V != null && V.type == CoreTypes.never.ref(ctx)) {
-        return StatementInfo(willAlwaysThrow: true);
+        return markNeverTerminates(ctx);
       }
       return StatementInfo();
     } else if (s is ReturnStatement) {

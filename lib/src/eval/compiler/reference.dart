@@ -1712,10 +1712,51 @@ class IndexedReference implements Reference {
           ? _variable.type.specifiedTypeArgs[1]
           : CoreTypes.dynamic.ref(ctx);
     }
-    // A write's contextual type must not execute the indexed getter. Dynamic
-    // receivers and custom operators are checked by their invocation path.
-    if (forSet) return CoreTypes.dynamic.ref(ctx);
+    // A write's contextual type must not execute the indexed getter. For a
+    // custom `[]=` the write type is the operator's value parameter —
+    // callers use it as the RHS's context type (e.g. `a?[i] ??= e`).
+    if (forSet) return _setterValueType(ctx, source) ?? CoreTypes.dynamic.ref(ctx);
     return getValue(ctx).type;
+  }
+
+  /// The declared value-parameter type of the receiver's `[]=` operator, or
+  /// null when it cannot be resolved (dynamic receivers, missing member).
+  TypeRef? _setterValueType(CompilerContext ctx, [AstNode? source]) {
+    try {
+      final decl0 = resolveInstanceMethod(
+        ctx,
+        _variable.type,
+        '[]=',
+        source,
+      );
+      final decl = decl0.declaration;
+      if (decl is MethodDeclaration) {
+        final param = decl.parameters?.parameters.elementAtOrNull(1);
+        if (param?.type == null) return null;
+        // Bind the receiver class's own type parameters to its type
+        // arguments so a `WriteType` annotation resolves concretely.
+        final host = ctx
+            .topLevelDeclarationsMap[decl0.sourceLib]?[_variable.type.name]
+            ?.declaration;
+        final params = host == null
+            ? null
+            : classLikeClauses(host).$4?.typeParameters;
+        final args = _variable.type.specifiedTypeArgs;
+        final bindings = <String, TypeRef>{
+          for (var i = 0; i < (params?.length ?? 0) && i < args.length; i++)
+            params![i].name.lexeme: args[i],
+        };
+        return formalParameterAnnotationType(
+          ctx,
+          decl0.sourceLib,
+          param!,
+          typeParameters: bindings,
+        );
+      }
+    } on CompileError {
+      return null;
+    }
+    return null;
   }
 
   @override
@@ -1838,28 +1879,7 @@ class IndexedReference implements Reference {
     // tear-off applies when the parameter is a function type. A missing
     // instance member means an extension `[]=` may apply (handled inside
     // [Variable.invoke]).
-    TypeRef? valueType;
-    try {
-      final decl0 = resolveInstanceMethod(
-        ctx,
-        _variable.type,
-        '[]=',
-        source,
-      );
-      final decl = decl0.declaration;
-      if (decl is MethodDeclaration) {
-        final param = decl.parameters?.parameters.elementAtOrNull(1);
-        if (param?.type != null) {
-          valueType = formalParameterAnnotationType(
-            ctx,
-            decl0.sourceLib,
-            param!,
-          );
-        }
-      }
-    } on CompileError {
-      valueType = null;
-    }
+    final valueType = _setterValueType(ctx, source);
     final converted = valueType == null
         ? value
         : convertForAssignment(

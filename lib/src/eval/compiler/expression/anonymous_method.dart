@@ -7,6 +7,7 @@ import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/model/label.dart';
+import 'package:dart_eval/src/eval/compiler/expression/null_aware.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
@@ -20,16 +21,18 @@ import 'package:dart_eval/src/eval/ir/flow.dart';
 Variable compileAnonymousMethodInvocation(
   AnonymousMethodInvocation e,
   CompilerContext ctx, {
-  Variable? cascadeTarget,
   TypeRef? boundType,
 }) {
-  final receiver = (cascadeTarget ?? compileExpression(e.realTarget, ctx))
+  final receiver = (e.isCascaded
+          ? ctx.cascadeTarget!
+          : compileExpression(e.realTarget, ctx))
       .boxIfNeeded(ctx);
 
-  if (!e.isCascaded && e.isNullAware) {
-    // `target?.=> ...` — a null receiver produces null without running.
-    // Assigns straight to [output] like a `?:` so the result picks up the
-    // common base type of both branches.
+  if (!e.isCascaded && (e.isNullAware || isNullShorted(e.target))) {
+    // `target?.=> ...` and anonymous invocations continuing a null-shorted
+    // chain: a null receiver produces null without running. Assigns straight
+    // to [output] like a `?:` so the result picks up the common base type of
+    // both branches.
     final output = BuiltinValue().push(ctx).boxIfNeeded(ctx);
     final nullResult = BuiltinValue().push(ctx).boxIfNeeded(ctx);
     final types = <TypeRef>{CoreTypes.nullType.ref(ctx)};
@@ -65,9 +68,10 @@ Variable _runBody(
 ) {
   final previousAnonymousThis = ctx.anonymousThisReceiver;
   ctx.beginScope();
-  // `?.` filters the null case out before the body runs — `this` and the
-  // parameter bind the non-nullable receiver type.
-  final boundReceiver = e.isNullAware
+  // A null-aware invocation filters the null case out before the body runs —
+  // `this` and the parameter bind the non-nullable receiver type.
+  final boundReceiver =
+      (e.isNullAware || (!e.isCascaded && isNullShorted(e.target)))
       ? receiver.copyWith(type: receiver.type.copyWith(nullable: false))
       : receiver;
   ctx.anonymousThisReceiver = boundReceiver;

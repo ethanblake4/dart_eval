@@ -7,12 +7,9 @@ import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/closure.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/equality.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
-import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
-import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
@@ -21,21 +18,22 @@ import 'package:dart_eval/src/eval/ir/bridge.dart';
 import 'package:dart_eval/src/eval/ir/collection.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
-import 'package:dart_eval/src/eval/ir/memory.dart';
 
 import '../reference.dart';
 import 'expression.dart';
 import 'identifier.dart';
+import 'null_aware.dart';
 
 Variable compileMethodInvocation(
   CompilerContext ctx,
   MethodInvocation e, {
-  Variable? cascadeTarget,
   TypeRef? bound,
 }) {
-  Variable? L = cascadeTarget;
+  Variable? L;
   var isPrefix = false;
-  if (e.target != null && cascadeTarget == null) {
+  if (e.isCascaded) {
+    L = ctx.cascadeTarget;
+  } else if (e.target != null) {
     try {
       L = compileExpression(e.target!, ctx);
       if (e.target is SuperExpression) {
@@ -52,26 +50,17 @@ Variable compileMethodInvocation(
   bool? genericReturnBoxed;
 
   if (L != null) {
-    if (e.operator?.type == TokenType.QUESTION_PERIOD) {
-      var out = BuiltinValue().push(ctx).boxIfNeeded(ctx);
-      if (L.concreteTypes.length == 1 &&
-          L.concreteTypes[0] == CoreTypes.nullType.ref(ctx)) {
-        return out;
-      }
-      macroBranch(
+    // `a?.m()` and calls continuing a null-shorted chain (`a?.b.m()`): a
+    // null receiver nulls the whole expression — argument evaluation is
+    // skipped.
+    if (e.operator?.type == TokenType.QUESTION_PERIOD ||
+        isNullShorted(e.target)) {
+      return emitNullGuard(
         ctx,
-        null,
-        condition: (ctx) {
-          return checkNotEqual(ctx, L!, out);
-        },
-        thenBranch: (ctx, rt) {
-          final V = _invokeWithTarget(ctx, L!, e);
-          out = out.copyWith(type: V.type.copyWith(nullable: true));
-          ctx.pushOp(Assign(out.ssa, V.boxIfNeeded(ctx).ssa));
-          return StatementInfo();
-        },
+        L,
+        (t) => _invokeWithTarget(ctx, t, e),
+        source: e,
       );
-      return out;
     }
     return _invokeWithTarget(ctx, L, e);
   }

@@ -30,12 +30,20 @@ Variable compileCascadeExpression(
   final target = compileExpression(e.target, ctx, bound).boxIfNeeded(ctx);
 
   void compileSections() {
-    for (final s in e.cascadeSections) {
-      if (s is MethodInvocation) {
-        compileMethodInvocation(ctx, s, cascadeTarget: target);
-      } else {
-        compileExpressionAndDiscardResult(s, ctx, cascadeTarget: target);
+    // Cascaded selectors (`..x` anywhere inside a section) read the target
+    // from the ambient context. Nested cascades save/restore it.
+    final previousCascadeTarget = ctx.cascadeTarget;
+    ctx.cascadeTarget = target;
+    try {
+      for (final s in e.cascadeSections) {
+        if (s is MethodInvocation) {
+          compileMethodInvocation(ctx, s);
+        } else {
+          compileExpressionAndDiscardResult(s, ctx);
+        }
       }
+    } finally {
+      ctx.cascadeTarget = previousCascadeTarget;
     }
   }
 

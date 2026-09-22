@@ -6,6 +6,7 @@ import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/assert.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/return.dart';
 
 StatementInfo compileAssertStatement(
   AssertStatement s,
@@ -20,7 +21,7 @@ StatementInfo compileAssertStatement(
   // A Never-typed message already threw while evaluating (e.g.
   // `assert(cond, throw e)`), so the assert itself always diverges.
   if (msg.type == CoreTypes.never.ref(ctx)) {
-    return StatementInfo(willAlwaysThrow: true);
+    return markNeverTerminates(ctx);
   }
 
   doAssert(ctx, cond, msg);

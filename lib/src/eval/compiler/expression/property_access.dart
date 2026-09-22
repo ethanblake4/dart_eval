@@ -1,49 +1,36 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/compiler/builtins.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/equality.dart';
-import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
+
+import 'package:dart_eval/src/eval/compiler/expression/null_aware.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
-import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
+
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 
-import 'package:dart_eval/src/eval/ir/memory.dart';
 
-Variable compilePropertyAccess(
-  PropertyAccess pa,
-  CompilerContext ctx, {
-  Variable? cascadeTarget,
-}) {
-  final L = cascadeTarget ?? compileExpression(pa.realTarget, ctx);
+Variable compilePropertyAccess(PropertyAccess pa, CompilerContext ctx) {
+  // A cascaded selector (`..x`) reads its receiver from the ambient cascade
+  // target; its own `target` is null.
+  final L = pa.isCascaded
+      ? ctx.cascadeTarget!
+      : compileExpression(pa.realTarget, ctx);
   if (pa.realTarget is SuperExpression) {
     return SuperPropertyReference(L, pa.propertyName.name).getValue(ctx, pa);
   }
 
-  if (pa.operator.type == TokenType.QUESTION_PERIOD) {
-    var out = BuiltinValue().push(ctx).boxIfNeeded(ctx);
-    if (L.concreteTypes.length == 1 &&
-        L.concreteTypes[0] == CoreTypes.nullType.ref(ctx)) {
-      return out;
-    }
-    macroBranch(
+  // `a?.b` and selectors continuing a null-shorted chain (`a?.b.c`): a null
+  // receiver nulls the whole expression.
+  if (pa.operator.type == TokenType.QUESTION_PERIOD ||
+      isNullShorted(pa.target)) {
+    return emitNullGuard(
       ctx,
-      null,
-      condition: (ctx) {
-        return checkNotEqual(ctx, L, out);
-      },
-      thenBranch: (ctx, rt) {
-        final V = L.getProperty(ctx, pa.propertyName.name).boxIfNeeded(ctx);
-        out = out.copyWith(type: V.type.copyWith(nullable: true));
-        ctx.pushOp(Assign(out.ssa, V.ssa));
-        return StatementInfo();
-      },
+      L,
+      (t) => t.getProperty(ctx, pa.propertyName.name),
       source: pa,
     );
-    return out;
   }
 
   // `p.C.member` parses as PropertyAccess over the class identifier — static
@@ -57,10 +44,11 @@ Variable compilePropertyAccess(
 
 Reference compilePropertyAccessAsReference(
   PropertyAccess pa,
-  CompilerContext ctx, {
-  Variable? cascadeTarget,
-}) {
-  final L = cascadeTarget ?? compileExpression(pa.realTarget, ctx);
+  CompilerContext ctx,
+) {
+  final L = pa.isCascaded
+      ? ctx.cascadeTarget!
+      : compileExpression(pa.realTarget, ctx);
   if (pa.realTarget is SuperExpression) {
     return SuperPropertyReference(L, pa.propertyName.name);
   }

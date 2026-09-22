@@ -1,5 +1,6 @@
 // ignore_for_file: experimental_member_use
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/token.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/as.dart';
@@ -17,6 +18,7 @@ import 'package:dart_eval/src/eval/compiler/expression/index.dart';
 import 'package:dart_eval/src/eval/compiler/expression/instance_creation.dart';
 import 'package:dart_eval/src/eval/compiler/expression/is.dart';
 import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
+import 'package:dart_eval/src/eval/compiler/expression/null_aware.dart';
 import 'package:dart_eval/src/eval/compiler/expression/keywords.dart';
 import 'package:dart_eval/src/eval/compiler/expression/literal.dart';
 import 'package:dart_eval/src/eval/compiler/expression/parenthesized.dart';
@@ -33,16 +35,11 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 
-Variable compileExpression(
-  Expression e,
-  CompilerContext ctx, [
-  TypeRef? bound,
-  Variable? cascadeTarget,
-]) {
+Variable compileExpression(Expression e, CompilerContext ctx, [TypeRef? bound]) {
   if (e is Literal) {
     return parseLiteral(e, ctx, bound);
   } else if (e is AssignmentExpression) {
-    return compileAssignmentExpression(e, ctx, cascadeTarget: cascadeTarget);
+    return compileAssignmentExpression(e, ctx);
   } else if (e is Identifier) {
     final value = compileIdentifier(e, ctx);
     if (value.name == null &&
@@ -102,25 +99,13 @@ Variable compileExpression(
   throw CompileError('Unknown expression type ${e.runtimeType}');
 }
 
-Reference compileExpressionAsReference(
-  Expression e,
-  CompilerContext ctx, {
-  Variable? cascadeTarget,
-}) {
+Reference compileExpressionAsReference(Expression e, CompilerContext ctx) {
   if (e is Identifier) {
     return compileIdentifierAsReference(e, ctx);
   } else if (e is IndexExpression) {
-    return compileIndexExpressionAsReference(
-      e,
-      ctx,
-      cascadeTarget: cascadeTarget,
-    );
+    return compileIndexExpressionAsReference(e, ctx);
   } else if (e is PropertyAccess) {
-    return compilePropertyAccessAsReference(
-      e,
-      ctx,
-      cascadeTarget: cascadeTarget,
-    );
+    return compilePropertyAccessAsReference(e, ctx);
   }
 
   throw NotReferencableError(
@@ -136,22 +121,24 @@ Variable? compileExpressionAndDiscardResult(
   Expression e,
   CompilerContext ctx, {
   TypeRef? bound,
-  Variable? cascadeTarget,
 }) {
   if (e is AnonymousMethodInvocation) {
-    return compileAnonymousMethodInvocation(
-      e,
-      ctx,
-      cascadeTarget: cascadeTarget,
-    );
+    return compileAnonymousMethodInvocation(e, ctx);
   }
   if (canReference(e)) {
-    return compileExpressionAsReference(
-      e,
-      ctx,
-      cascadeTarget: cascadeTarget,
-    ).getValue(ctx, e);
+    // A null-shorted receiver can't be expressed lazily as a Reference —
+    // compile eagerly so the chain's null check guards the member access.
+    final shorted =
+        e is IndexExpression &&
+            (e.question != null || isNullShorted(e.target)) ||
+        e is PropertyAccess &&
+            (e.operator.type == TokenType.QUESTION_PERIOD ||
+                isNullShorted(e.target));
+    if (shorted) {
+      return compileExpression(e, ctx, bound);
+    }
+    return compileExpressionAsReference(e, ctx).getValue(ctx, e);
   } else {
-    return compileExpression(e, ctx, bound, cascadeTarget);
+    return compileExpression(e, ctx, bound);
   }
 }
