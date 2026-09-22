@@ -23,12 +23,16 @@ InvokeResult invokeClosure(
   final callable = dispatch == null
       ? (closureRef?.getValue(ctx) ?? closureVar!)
       : null;
-  final closure = callable == null
+  // The callable sits in object position at the call boundary — box
+  // unboxed results into a fresh slot (e.g. `only()` where `only` is
+  // an `int` getter); boxing in place would double-define the SSA.
+  final callableBoxed = callable?.boxIntoFreshSlot(ctx);
+  final closure = callableBoxed == null
       ? null
       : Variable.ssa(
           ctx,
-          Assign(ctx.svar('closure_target'), callable.ssa),
-          callable.type,
+          Assign(ctx.svar('closure_target'), callableBoxed.ssa),
+          callableBoxed.type,
         );
   Variable snapshot(Variable argument) => Variable.ssa(
     ctx,

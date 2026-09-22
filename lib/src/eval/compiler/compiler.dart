@@ -979,7 +979,13 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       return;
     }
 
-    final name = declarationName(declaration);
+    // Top-level accessors use the `*g`/`*s` suffix (same keying as class
+    // members) so a getter and setter of the same name don't collide.
+    final name = switch (declaration) {
+      FunctionDeclaration d when d.isGetter => '${declarationName(d)}*g',
+      FunctionDeclaration d when d.isSetter => '${declarationName(d)}*s',
+      _ => declarationName(declaration),
+    };
     _declareTopLevel(
       libraryIndex,
       name,
@@ -1021,6 +1027,13 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       if (member is MethodDeclaration) {
         var mName = member.name.lexeme;
         if (member.isStatic) {
+          // Static accessors register under `*g`/`*s` like instance members
+          // so a getter and setter of the same name don't collide.
+          if (member.isGetter) {
+            mName += '*g';
+          } else if (member.isSetter) {
+            mName += '*s';
+          }
           _topLevelDeclarationsMap[libraryIndex]!['$name.$mName'] =
               DeclarationOrBridge(libraryIndex, declaration: member);
         } else {
@@ -1392,7 +1405,13 @@ _resolveImportsAndExports(
               result.add(declaration..$2.sourceLib = libId);
             }
           }
-          if (isEntrypoint && ids!.contains(declaration.$1)) {
+          // Accessor keys (`x*g`/`x*s`) match a body referencing the base
+          // name `x` — both accessor directions keep each other alive.
+          final declName = declaration.$1;
+          final baseName = (declName.endsWith('*g') || declName.endsWith('*s'))
+              ? declName.substring(0, declName.length - 2)
+              : declName;
+          if (isEntrypoint && ids!.contains(baseName)) {
             usedDeclarationsForLibrary[libId] ??= {'main'};
             usedDeclarationsForLibrary[libId]!.add(declaration.$1);
             if (!worklist.contains(lib)) {
@@ -1523,6 +1542,10 @@ bool _combinatorListAccepts(
   bool rejectInvalid,
 ) {
   if (name.startsWith('_')) return false;
+  // `show x`/`hide x` apply to both `x*g` and `x*s` — compare base names.
+  if (name.endsWith('*g') || name.endsWith('*s')) {
+    name = name.substring(0, name.length - 2);
+  }
   if (combinators.isEmpty) {
     return true;
   }

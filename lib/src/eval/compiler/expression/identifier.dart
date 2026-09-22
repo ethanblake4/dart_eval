@@ -264,13 +264,22 @@ class GetSet extends DeclarationOrBridge<MethodDeclaration, BridgeMethodDef> {
   DeclarationOrBridge<MethodDeclaration, BridgeMethodDef>? setter;
 }
 
+/// Resolves [name] as a static member of [$class] in [library]. Static
+/// accessors register under `*g`/`*s` keys: [forSet] checks the setter key
+/// first (writes), otherwise the getter key (reads), then the plain name
+/// (methods and static fields).
 DeclarationOrBridge<Declaration, BridgeDeclaration>? resolveStaticDeclaration(
   CompilerContext ctx,
   int library,
   String $class,
-  String name,
-) {
-  return ctx.topLevelDeclarationsMap[library]!['${$class}.$name'];
+  String name, {
+  bool forSet = false,
+}) {
+  final map = ctx.topLevelDeclarationsMap[library]!;
+  return (forSet
+          ? map['${$class}.$name*s']
+          : map['${$class}.$name*g']) ??
+      map['${$class}.$name'];
 }
 
 /// Looks up [name] as a static member of the enclosing class, then of each
@@ -280,11 +289,21 @@ DeclarationOrBridge<Declaration, BridgeDeclaration>? resolveStaticDeclaration(
 /// declaration plus the library and owner name under which its global/static
 /// key was registered, or null.
 (DeclarationOrBridge<Declaration, BridgeDeclaration>, int, String)?
-resolveScopedStaticDeclaration(CompilerContext ctx, String name) {
+resolveScopedStaticDeclaration(
+  CompilerContext ctx,
+  String name, {
+  bool forSet = false,
+}) {
   final current = ctx.memberDeclaringClass ?? ctx.currentClass;
   if (current == null) return null;
   final className = declarationName(current);
-  final own = resolveStaticDeclaration(ctx, ctx.library, className, name);
+  final own = resolveStaticDeclaration(
+    ctx,
+    ctx.library,
+    className,
+    name,
+    forSet: forSet,
+  );
   if (own != null) return (own, ctx.library, className);
   final seen = <Declaration>{current};
   final queue = <Declaration>[current];
@@ -297,7 +316,13 @@ resolveScopedStaticDeclaration(CompilerContext ctx, String name) {
           : '${prefix.name.lexeme}.${mixinType.name.lexeme}';
       final ref = ctx.visibleTypes[ctx.library]?[mixinName];
       if (ref == null) continue;
-      final found = resolveStaticDeclaration(ctx, ref.file, ref.name, name);
+      final found = resolveStaticDeclaration(
+        ctx,
+        ref.file,
+        ref.name,
+        name,
+        forSet: forSet,
+      );
       if (found != null) return (found, ref.file, ref.name);
       final mixinDecl =
           ctx.topLevelDeclarationsMap[ref.file]?[ref.name]?.declaration;

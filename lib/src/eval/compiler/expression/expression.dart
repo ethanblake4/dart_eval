@@ -37,11 +37,12 @@ Variable compileExpression(
   Expression e,
   CompilerContext ctx, [
   TypeRef? bound,
+  Variable? cascadeTarget,
 ]) {
   if (e is Literal) {
     return parseLiteral(e, ctx, bound);
   } else if (e is AssignmentExpression) {
-    return compileAssignmentExpression(e, ctx);
+    return compileAssignmentExpression(e, ctx, cascadeTarget: cascadeTarget);
   } else if (e is Identifier) {
     final value = compileIdentifier(e, ctx);
     if (value.name == null &&
@@ -151,6 +152,6 @@ Variable? compileExpressionAndDiscardResult(
       cascadeTarget: cascadeTarget,
     ).getValue(ctx, e);
   } else {
-    return compileExpression(e, ctx, bound);
+    return compileExpression(e, ctx, bound, cascadeTarget);
   }
 }

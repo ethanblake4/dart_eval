@@ -44,7 +44,11 @@ class DeclarationOrBridge<T extends Declaration, R extends BridgeDeclaration> {
     } else if (declaration is EnumDeclaration) {
       return [declaration.namePart.typeName.lexeme];
     } else if (declaration is FunctionDeclaration) {
-      return [declaration.name.toString()];
+      // Accessors carry the `*g`/`*s` suffix (same keying as class members).
+      final base = declaration.name.toString();
+      if (declaration.isGetter) return ['$base*g'];
+      if (declaration.isSetter) return ['$base*s'];
+      return [base];
     } else if (declaration is TopLevelVariableDeclaration) {
       /// Top-level variable declaration
       return declaration.variables.variables.map((v) => v.name.lexeme).toList();
@@ -126,7 +130,17 @@ class DeclarationOrBridge<T extends Declaration, R extends BridgeDeclaration> {
         } else if (declaration is FunctionDeclaration) {
           final dName = declaration.name.toString();
 
-          yield (dName, d);
+          // Accessors key under `*g`/`*s` like class members so a getter and
+          // setter of the same name (across imports or in one library) don't
+          // collide.
+          yield (
+            declaration.isGetter
+                ? '$dName*g'
+                : declaration.isSetter
+                ? '$dName*s'
+                : dName,
+            d,
+          );
         } else {
           // Typedefs, mixins, extension types, etc. contribute no members.
           for (final name in nameOf(d)) {

@@ -72,7 +72,10 @@ Variable compileMethodInvocation(
               ctx.instanceDeclarationsMap[mixinRef
                   .file]?[mixinRef.name]?['$memberName*g'];
           if (memberDecl == null) continue;
-          _checkConcreteSuperMember(memberDecl, memberName, e);
+          // Abstract mixin members defer to the next mixin or superclass.
+          if (memberDecl is MethodDeclaration && !memberDecl.isComplete) {
+            continue;
+          }
           final appType = TypeRef.lookupDeclaration(
             ctx,
             lib,
@@ -83,16 +86,10 @@ Variable compileMethodInvocation(
         }
         var owner = L!.type.resolveTypeChain(ctx);
         while (!found) {
-          final members =
-              ctx.instanceDeclarationsMap[owner.file]?[owner.name];
-          if (members != null &&
-              (members.containsKey(memberName) ||
-                  members.containsKey('$memberName*g'))) {
-            _checkConcreteSuperMember(
-              members[memberName] ?? members['$memberName*g'],
-              memberName,
-              e,
-            );
+          // Abstract re-declarations have no body — skip them like runtime
+          // dispatch does; the implementation lives deeper in the chain.
+          if (concreteMemberDecl(ctx, owner, memberName, kind: 2) != null ||
+              concreteMemberDecl(ctx, owner, memberName, kind: 0) != null) {
             found = true;
             break;
           }
@@ -658,7 +655,10 @@ Variable _invokeWithTarget(
     // Static method
     staticType = L.concreteTypes[0];
     if (ctx.topLevelDeclarationsMap[staticType.file]?['${staticType.name}.$staticMemberName'] ==
-        null) {
+            null &&
+        ctx.topLevelDeclarationsMap[staticType
+                .file]?['${staticType.name}.$staticMemberName*g'] ==
+            null) {
       // A member invoked on a `Type` literal may still be an extension
       // member on `Type` — `C.expectStaticType<Exactly<Type>>()`.
       final found = resolveExtensionMember(ctx, L.type, e.methodName.name);
@@ -675,9 +675,12 @@ Variable _invokeWithTarget(
       return L.invoke(ctx, e.methodName.name, args).result;
     }
     dec0 = resolveStaticMethod(ctx, staticType, staticMemberName);
-    // `C.field(args)` where `field` holds a closure reads the field and
-    // invokes its value rather than calling a function named `C.field`.
-    if (dec0.declaration is FieldDeclaration) {
+    // `C.field(args)` where `field` holds a closure, or `C.x(args)` where
+    // `x` is a static getter, reads the member value and invokes its result
+    // rather than calling a function named `C.field`/`C.x`.
+    final memberDecl0 = dec0.declaration;
+    if (memberDecl0 is FieldDeclaration ||
+        (memberDecl0 is MethodDeclaration && memberDecl0.isGetter)) {
       final fieldValue = IdentifierReference(
         L,
         staticMemberName,
@@ -1470,7 +1473,9 @@ DeclarationOrBridge<ClassMember, BridgeDeclaration> resolveStaticMethod(
 ) {
   final method =
       ctx.topLevelDeclarationsMap[classType
-          .file]!['${classType.name}.$methodName'];
+          .file]!['${classType.name}.$methodName'] ??
+      ctx.topLevelDeclarationsMap[classType
+          .file]!['${classType.name}.$methodName*g'];
   if (method != null) {
     if (method.declaration != null) {
       final member = method.declaration!;
@@ -1646,19 +1651,4 @@ _ResolvedArgs _compileNonBridgeArgs(
     resolveGenerics,
     classParams,
   );
-}
-
-/// `super.<name>` must dispatch to a concrete implementation: an abstract
-/// declaration in the searched layer is a compile-time error.
-void _checkConcreteSuperMember(
-  Declaration? member,
-  String memberName,
-  AstNode source,
-) {
-  if (member is MethodDeclaration && member.body is EmptyFunctionBody) {
-    throw CompileError(
-      'Super-invoked member "$memberName" has no concrete implementation',
-      source,
-    );
-  }
 }

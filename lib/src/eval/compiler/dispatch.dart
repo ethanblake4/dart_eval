@@ -107,7 +107,8 @@ TypeRef? memberOwner(
             (member.startsWith('_') &&
                 positions.containsKey(
                   '${ctx.libraryUri(link.file)}::$member',
-                )))) {
+                ))) &&
+        concreteMemberDecl(ctx, link, member, kind: kind) != null) {
       return link;
     }
   }
@@ -171,20 +172,35 @@ bool memberNeedsOwnerLink(
   String name, {
   int kind = 2,
 }) {
-  String declKey(String base) => switch (kind) {
-    0 => '$base*g',
-    1 => '$base*s',
-    _ => base,
-  };
-  final decls = ctx.instanceDeclarationsMap[owner.file]?[owner.name];
-  var decl = decls?[declKey(name)];
-  if (decl == null && name.startsWith('_')) {
-    decl = decls?[declKey('${ctx.libraryUri(owner.file)}::$name')];
-  }
+  final decl = concreteMemberDecl(ctx, owner, name, kind: kind);
   if (decl is! MethodDeclaration) return true;
   var usesSuper = false;
   decl.body.accept(_SuperSeeker(() => usesSuper = true));
   return usesSuper;
+}
+
+/// The declaration of instance member [name] of [kind] (0 = getter,
+/// 1 = setter, 2 = method) on [link]. Abstract declarations return null —
+/// they register positions but have no body, so an abstract override is
+/// skipped in dispatch and the implementation lives deeper in the chain.
+Declaration? concreteMemberDecl(
+  CompilerContext ctx,
+  TypeRef link,
+  String name, {
+  int kind = 2,
+}) {
+  String key(String base) => switch (kind) {
+    0 => '$base*g',
+    1 => '$base*s',
+    _ => base,
+  };
+  final decls = ctx.instanceDeclarationsMap[link.file]?[link.name];
+  var decl = decls?[key(name)];
+  if (decl == null && name.startsWith('_')) {
+    decl = decls?[key('${ctx.libraryUri(link.file)}::$name')];
+  }
+  if (decl is MethodDeclaration && !decl.isComplete) return null;
+  return decl;
 }
 
 class _SuperSeeker extends RecursiveAstVisitor<void> {

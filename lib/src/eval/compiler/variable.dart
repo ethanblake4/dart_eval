@@ -687,7 +687,8 @@ class Variable {
         if ((ctx.instanceDeclarationPositions[link.file]?[link.name]?[0]
                 as Map?)
                 ?.containsKey(key) ==
-            true) {
+            true &&
+            concreteMemberDecl(ctx, link, name, kind: 0) != null) {
           depth = i;
           break;
         }

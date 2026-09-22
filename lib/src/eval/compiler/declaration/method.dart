@@ -225,14 +225,13 @@ int compileMethodDeclaration(
   ctx.temporaryTypes[ctx.library] = previousTypes;
 
   if (d.isStatic || isExtensionMember) {
-    // Extension members register like statics; getters and setters take
-    // `*g`/`*s` suffixes matching the instance-member key convention.
-    final suffix = isExtensionMember
-        ? (d.isGetter
-              ? '*g'
-              : d.isSetter
-              ? '*s'
-              : '')
+    // Extension members and class statics register in the top-level
+    // positions map; getters and setters take `*g`/`*s` suffixes matching
+    // the instance-member key convention so a pair can't collide.
+    final suffix = d.isGetter
+        ? '*g'
+        : d.isSetter
+        ? '*s'
         : '';
     final key = '$parentName.$methodName$suffix';
     ctx.topLevelDeclarationPositions

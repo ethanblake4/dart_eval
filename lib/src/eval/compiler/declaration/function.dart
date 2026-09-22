@@ -23,7 +23,14 @@ import 'package:dart_eval/src/eval/compiler/backend/representation.dart'
 
 void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   final pos = ctx.beginFunction('${d.name.lexeme}()');
-  ctx.topLevelDeclarationPositions[ctx.library]![d.name.lexeme] = pos;
+  // Top-level accessors register under `*g`/`*s` like class members, so a
+  // getter and setter of the same name don't collide.
+  ctx.topLevelDeclarationPositions[ctx.library]![
+      d.isGetter
+          ? '${d.name.lexeme}*g'
+          : d.isSetter
+          ? '${d.name.lexeme}*s'
+          : d.name.lexeme] = pos;
 
   final overrideAnno = d.metadata.firstWhereOrNull(
     (element) => element.name.name == 'RuntimeOverride',

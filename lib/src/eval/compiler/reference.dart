@@ -1,8 +1,10 @@
 import 'helpers/global.dart';
 import 'helpers/conversion.dart';
+import 'model/function_type.dart';
 import '../ir/closures.dart';
 import '../ir/exception.dart';
-import 'backend/representation.dart' show MachineRepresentation;
+import 'backend/representation.dart'
+    show MachineRepresentation, representationForType;
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
@@ -61,11 +63,14 @@ class SuperPropertyReference extends IdentifierReference {
       );
     }
     var type = receiver.type.resolveTypeChain(ctx);
+    final kind = forSet ? 1 : 0;
     while (true) {
-      final declarations = ctx.instanceDeclarationsMap[type.file]?[type.name];
-      if (declarations == null ||
-          declarations.containsKey(name) ||
-          declarations.containsKey('$name*${forSet ? 's' : 'g'}')) {
+      // Abstract re-declarations have no body — skip them like runtime
+      // dispatch does; the concrete implementation lives deeper.
+      final hit =
+          concreteMemberDecl(ctx, type, name, kind: 2) != null ||
+          concreteMemberDecl(ctx, type, name, kind: kind) != null;
+      if (hit) {
         return receiver;
       }
       final parent = type.extendsType;
@@ -181,7 +186,34 @@ class IdentifierReference implements Reference {
           // extension namespace; precise typing isn't needed here.
           return CoreTypes.function.ref(ctx);
         }
-        return concrete.resolveTypeChain(ctx);
+        final concreteType = concrete.resolveTypeChain(ctx);
+        // Static accessors (`C.x*g`/`C.x*s`) report the value type —
+        // the getter's return type or the setter's parameter type — so
+        // compound-assignment and boxing decisions see the real member.
+        final accessor = ctx
+            .topLevelDeclarationsMap[concreteType
+                .file]?['${concreteType.name}.$name${forSet ? '*s' : '*g'}']
+            ?.declaration;
+        if (accessor is MethodDeclaration) {
+          if (accessor.isSetter && forSet) {
+            return _setterValueType(
+                  ctx,
+                  concreteType.file,
+                  accessor.parameters,
+                ) ??
+                CoreTypes.dynamic.ref(ctx);
+          }
+          if (accessor.isGetter && !forSet) {
+            return accessor.returnType != null
+                ? TypeRef.fromAnnotation(
+                    ctx,
+                    concreteType.file,
+                    accessor.returnType!,
+                  )
+                : CoreTypes.dynamic.ref(ctx);
+          }
+        }
+        return concreteType;
       }
       return TypeRef.lookupFieldType(
             ctx,
@@ -231,12 +263,29 @@ class IdentifierReference implements Reference {
       );
       if (fieldType != null) return fieldType;
 
-      final staticDeclaration = resolveScopedStaticDeclaration(ctx, name);
+      final staticDeclaration = resolveScopedStaticDeclaration(
+        ctx,
+        name,
+        forSet: forSet,
+      );
 
       if (staticDeclaration != null && staticDeclaration.$1.declaration != null) {
         final (staticDecl, scopeFile, scopeName) = staticDeclaration;
         final staticDec = staticDecl.declaration!;
         if (staticDec is MethodDeclaration) {
+          if (staticDec.isGetter && !forSet) {
+            return staticDec.returnType != null
+                ? TypeRef.fromAnnotation(
+                    ctx,
+                    scopeFile,
+                    staticDec.returnType!,
+                  )
+                : CoreTypes.dynamic.ref(ctx);
+          }
+          if (staticDec.isSetter && forSet) {
+            return _setterValueType(ctx, scopeFile, staticDec.parameters) ??
+                CoreTypes.dynamic.ref(ctx);
+          }
           return CoreTypes.function.ref(ctx);
         } else if (staticDec is VariableDeclaration) {
           final name = '$scopeName.${staticDec.name.lexeme}';
@@ -250,7 +299,12 @@ class IdentifierReference implements Reference {
       return CoreTypes.type.ref(ctx);
     }
 
-    final declarationValue = _lookupVisibleValue(ctx, name, source);
+    final declarationValue = _lookupVisibleValue(
+      ctx,
+      name,
+      source,
+      forSet: forSet,
+    );
     final decl = declarationValue.declaration!;
 
     if (decl is VariableDeclaration) {
@@ -259,6 +313,23 @@ class IdentifierReference implements Reference {
         declarationValue.sourceLib,
         decl.name.lexeme,
       );
+    }
+    if (decl is FunctionDeclaration && decl.isGetter && !forSet) {
+      return decl.returnType != null
+          ? TypeRef.fromAnnotation(
+              ctx,
+              declarationValue.sourceLib,
+              decl.returnType!,
+            )
+          : CoreTypes.dynamic.ref(ctx);
+    }
+    if (decl is FunctionDeclaration && decl.isSetter && forSet) {
+      return _setterValueType(
+            ctx,
+            declarationValue.sourceLib,
+            decl.functionExpression.parameters,
+          ) ??
+          CoreTypes.dynamic.ref(ctx);
     }
 
     return CoreTypes.type.ref(ctx);
@@ -270,6 +341,32 @@ class IdentifierReference implements Reference {
       // If the object is a class name, access static fields
       if (object!.type == CoreTypes.type.ref(ctx)) {
         final classType = object!.concreteTypes[0].resolveTypeChain(ctx);
+        // A static setter (`C.x*s`) takes precedence over a static field
+        // global of the same base name.
+        final setter = ctx
+            .topLevelDeclarationsMap[classType.file]?['${classType.name}.$name*s']
+            ?.declaration;
+        if (setter is MethodDeclaration && setter.isSetter) {
+          ctx.pushOp(
+            Call(
+              DeferredOrOffset(
+                file: classType.file,
+                name: '${classType.name}.$name*s',
+              ),
+              [
+                _setterArgument(
+                  ctx,
+                  value,
+                  classType.file,
+                  setter.parameters,
+                  isMethod: true,
+                ).ssa,
+              ],
+              result: ctx.svar('setter_result'),
+            ),
+          );
+          return value;
+        }
         final fqName = '${classType.name}.$name';
         return storeGlobalBinding(ctx, classType.file, fqName, value, source);
       }
@@ -312,7 +409,8 @@ class IdentifierReference implements Reference {
               (ctx.instanceDeclarationPositions[link.file]?[link.name]?[1]
                       as Map?)
                   ?.containsKey(key) ==
-              true;
+              true &&
+              concreteMemberDecl(ctx, link, name, kind: 1) != null;
           final index =
               ctx.instanceGetterIndices[link.file]?[link.name]?[name];
           if (hasSetter && index != null) {
@@ -544,7 +642,11 @@ class IdentifierReference implements Reference {
     }
 
     if (ctx.currentClass != null) {
-      final staticDeclaration = resolveScopedStaticDeclaration(ctx, name);
+      final staticDeclaration = resolveScopedStaticDeclaration(
+        ctx,
+        name,
+        forSet: true,
+      );
       final declaration = staticDeclaration?.$1.declaration;
       if (declaration is VariableDeclaration) {
         return storeGlobalBinding(
@@ -555,9 +657,37 @@ class IdentifierReference implements Reference {
           source,
         );
       }
+      if (declaration is MethodDeclaration && declaration.isSetter) {
+        ctx.pushOp(
+          Call(
+            DeferredOrOffset.lookupStatic(
+              ctx,
+              staticDeclaration!.$2,
+              staticDeclaration.$3,
+              '$name*s',
+            ),
+            [
+              _setterArgument(
+                ctx,
+                value,
+                staticDeclaration.$2,
+                declaration.parameters,
+                isMethod: true,
+              ).ssa,
+            ],
+            result: ctx.svar('setter_result'),
+          ),
+        );
+        return value;
+      }
     }
 
-    final declarationValue = _lookupVisibleValue(ctx, name, source);
+    final declarationValue = _lookupVisibleValue(
+      ctx,
+      name,
+      source,
+      forSet: true,
+    );
     final decl = declarationValue.declaration!;
 
     if (decl is VariableDeclaration) {
@@ -568,6 +698,28 @@ class IdentifierReference implements Reference {
         value,
         source,
       );
+    }
+
+    if (decl is FunctionDeclaration && decl.isSetter) {
+      ctx.pushOp(
+        Call(
+          DeferredOrOffset(
+            file: declarationValue.sourceLib,
+            name: '${decl.name.lexeme}*s',
+          ),
+          [
+            _setterArgument(
+              ctx,
+              value,
+              declarationValue.sourceLib,
+              decl.functionExpression.parameters,
+              isMethod: false,
+            ).ssa,
+          ],
+          result: ctx.svar('setter_result'),
+        ),
+      );
+      return value;
     }
 
     throw CompileError(
@@ -658,7 +810,12 @@ class IdentifierReference implements Reference {
           }
         }
         final fqName = '${classType.name}.${ctorNameOf(name)}';
-        final member = ctx.topLevelDeclarationsMap[classType.file]![fqName];
+        // Static accessors register under `*g`/`*s` keys — a getter
+        // reference invokes it.
+        final getterMember = ctx
+            .topLevelDeclarationsMap[classType.file]?['$fqName*g'];
+        final member =
+            getterMember ?? ctx.topLevelDeclarationsMap[classType.file]![fqName];
         final memberDecl = member?.declaration;
         if (member != null &&
             !member.isBridge &&
@@ -669,15 +826,22 @@ class IdentifierReference implements Reference {
               source,
             );
           }
-          // Static method tear-off.
-          return Variable(
+          final memberOffset = DeferredOrOffset(
+            file: classType.file,
+            name: memberDecl is MethodDeclaration && memberDecl.isGetter
+                ? '$fqName*g'
+                : fqName,
+          );
+          final fn = Variable(
             CoreTypes.function.ref(ctx),
-            methodOffset: DeferredOrOffset(
-              file: classType.file,
-              name: fqName,
-            ),
+            methodOffset: memberOffset,
             callingConvention: CallingConvention.static,
           );
+          if (memberDecl is MethodDeclaration && memberDecl.isGetter) {
+            return fn.invoke(ctx, null, []).result;
+          }
+          // Static method tear-off.
+          return fn;
         }
         return _loadGlobalVariable(ctx, classType.file, fqName, name);
       }
@@ -860,6 +1024,20 @@ class IdentifierReference implements Reference {
         final (staticDecl, scopeFile, scopeName) = staticDeclaration;
         final staticDec = staticDecl.declaration!;
         if (staticDec is MethodDeclaration) {
+          // Static accessors live under `*g`/`*s` keys; a getter reference
+          // invokes it (the member's value, not its tear-off).
+          if (staticDec.isGetter) {
+            final fn = Variable(
+              CoreTypes.function.ref(ctx),
+              methodOffset: DeferredOrOffset.lookupStatic(
+                ctx,
+                scopeFile,
+                scopeName,
+                '$name*g',
+              ),
+            );
+            return fn.invoke(ctx, null, []).result;
+          }
           return Variable(
             CoreTypes.function.ref(ctx),
             methodOffset: DeferredOrOffset.lookupStatic(
@@ -898,6 +1076,7 @@ class IdentifierReference implements Reference {
 
     final declaration =
         ctx.visibleDeclarations[ctx.library]![name] ??
+        ctx.visibleDeclarations[ctx.library]!['$name*g'] ??
         ctx.visibleDeclarations[ctx.library]![name.split('.')[0]];
 
     // A bare identifier inside an extension body can denote a member of the
@@ -924,7 +1103,9 @@ class IdentifierReference implements Reference {
     final children = activeDeclaration.children;
     final viaPrefix = activeDeclaration.declaration == null;
     final activeDec = activeDeclaration.declaration ??
-        (split.length > 1 && children != null ? children[split[1]] : null) ??
+        (split.length > 1 && children != null
+            ? (children['${split[1]}*g'] ?? children[split[1]])
+            : null) ??
         (throw PrefixError());
 
     return _declarationToVariable(
@@ -996,8 +1177,18 @@ class IdentifierReference implements Reference {
       return null;
     }
 
-    final declaration = ctx.visibleDeclarations[ctx.library]![name]!;
-    final decOrBridge = declaration.declaration!;
+    final declaration =
+        ctx.visibleDeclarations[ctx.library]![name] ??
+        ctx.visibleDeclarations[ctx.library]![name.split('.')[0]];
+    final decOrBridge = declaration?.declaration;
+    if (decOrBridge == null) return null;
+    final topDecl = decOrBridge.declaration;
+    // `x()` where `x` is a getter must call the getter's *result*, not the
+    // getter itself — no direct dispatch.
+    if (topDecl is FunctionDeclaration &&
+        (topDecl.isGetter || topDecl.isSetter)) {
+      return null;
+    }
     return _declarationToStaticDispatch(decOrBridge, name, ctx, source);
   }
 }
@@ -1018,7 +1209,9 @@ class PrefixedIdentifierReference implements Reference {
       throw CompileError('Cannot use a declaration as a prefix', source);
     }
     final children = dec.children!;
-    final child = children[identifier] ??
+    final child =
+        children['$identifier*g'] ??
+        children[identifier] ??
         (throw CompileError(
           "'$identifier' isn't defined for the prefix '$prefix'",
           source,
@@ -1035,7 +1228,9 @@ class PrefixedIdentifierReference implements Reference {
       throw CompileError('Cannot use a declaration as a prefix', source);
     }
     final children = dec.children!;
-    final child = children[identifier] ??
+    final child =
+        children['$identifier*g'] ??
+        children[identifier] ??
         (throw CompileError(
           "'$identifier' isn't defined for the prefix '$prefix'",
           source,
@@ -1054,7 +1249,57 @@ class PrefixedIdentifierReference implements Reference {
 
   @override
   Variable setValue(CompilerContext ctx, Variable value, [AstNode? source]) {
-    throw CompileError('Cannot set value on prefixed identifier', source);
+    final dec =
+        ctx.visibleDeclarations[ctx.library]![prefix] ??
+        (throw CompileError('Cannot find prefix $prefix', source));
+    if (dec.declaration != null) {
+      throw CompileError('Cannot use a declaration as a prefix', source);
+    }
+    final children = dec.children!;
+    // Accessors register under `*s` — writes look there before the plain
+    // name (top-level variables).
+    final child =
+        children['$identifier*s'] ??
+        children[identifier] ??
+        (throw CompileError(
+          "'$identifier' isn't defined for the prefix '$prefix'",
+          source,
+        ));
+    final decl = child.declaration;
+    if (decl is VariableDeclaration) {
+      return storeGlobalBinding(
+        ctx,
+        child.sourceLib,
+        decl.name.lexeme,
+        value,
+        source,
+      );
+    }
+    if (decl is FunctionDeclaration && decl.isSetter) {
+      ctx.pushOp(
+        Call(
+          DeferredOrOffset(
+            file: child.sourceLib,
+            name: '${decl.name.lexeme}*s',
+          ),
+          [
+            _setterArgument(
+              ctx,
+              value,
+              child.sourceLib,
+              decl.functionExpression.parameters,
+              isMethod: false,
+            ).ssa,
+          ],
+          result: ctx.svar('setter_result'),
+        ),
+      );
+      return value;
+    }
+    throw CompileError(
+      'Cannot find value to set: $prefix.$identifier',
+      source,
+    );
   }
 }
 
@@ -1327,7 +1572,18 @@ Variable _declarationToVariable(
     returnType = CoreTypes.dynamic.ref(ctx);
   }
 
-  final offset = DeferredOrOffset(file: decOrBridge.sourceLib, name: name);
+  // Accessors compile under `*g`/`*s` keys — use the accessor's own key so
+  // deferred resolution finds the right function entry.
+  final offset = DeferredOrOffset(
+    file: decOrBridge.sourceLib,
+    name: decl is FunctionDeclaration
+        ? (decl.isGetter
+            ? '${decl.name.lexeme}*g'
+            : decl.isSetter
+            ? '${decl.name.lexeme}*s'
+            : name)
+        : name,
+  );
 
   final fn = Variable(
     decl is FunctionDeclaration
@@ -1393,7 +1649,18 @@ StaticDispatch? _declarationToStaticDispatch(
     returnType = CoreTypes.dynamic.ref(ctx);
   }
 
-  final offset = DeferredOrOffset(file: decOrBridge.sourceLib, name: name);
+  // Accessors compile under `*g`/`*s` keys — use the accessor's own key so
+  // deferred resolution finds the right function entry.
+  final offset = DeferredOrOffset(
+    file: decOrBridge.sourceLib,
+    name: decl is FunctionDeclaration
+        ? (decl.isGetter
+            ? '${decl.name.lexeme}*g'
+            : decl.isSetter
+            ? '${decl.name.lexeme}*s'
+            : name)
+        : name,
+  );
 
   return StaticDispatch(offset, AlwaysReturnType(returnType, nullable));
 }
@@ -1469,12 +1736,80 @@ TypeRef? _resolveInstanceFieldType(
 DeclarationOrBridge _lookupVisibleValue(
   CompilerContext ctx,
   String name,
-  AstNode? source,
+  AstNode? source, {
+  bool forSet = false,
+}) {
+  final visible = ctx.visibleDeclarations[ctx.library]!;
+  Map<String, DeclarationOrBridge>? children;
+  var key = name;
+  // `prefix.member` — descend into the prefix's children.
+  if (name.contains('.')) {
+    final split = name.split('.');
+    final prefixEntry = visible[split[0]];
+    if (prefixEntry != null &&
+        prefixEntry.declaration == null &&
+        prefixEntry.children != null) {
+      children = prefixEntry.children;
+      key = split.sublist(1).join('.');
+    }
+  }
+  // Top-level accessors register under `*g`/`*s` — reads prefer the getter
+  // key, writes the setter key, falling back to the plain name (variables,
+  // functions, classes).
+  DeclarationOrBridge? found;
+  if (children != null) {
+    found = forSet
+        ? children['$key*s'] ?? children[key]
+        : children['$key*g'] ?? children[key];
+  } else {
+    found = forSet
+        ? visible['$key*s']?.declaration ?? visible[key]?.declaration
+        : visible['$key*g']?.declaration ?? visible[key]?.declaration;
+  }
+  if (found == null) {
+    if (children == null && visible[key] != null) {
+      throw PrefixError();
+    }
+    throw CompileError('Could not find declaration "$name"', source);
+  }
+  return found;
+}
+
+/// The declared type of a setter's `value` parameter, or null when the
+/// parameter list is empty or untyped.
+TypeRef? _setterValueType(
+  CompilerContext ctx,
+  int file,
+  FormalParameterList? parameters,
 ) {
-  final declaration =
-      ctx.visibleDeclarations[ctx.library]![name] ??
-      (throw CompileError('Could not find declaration "$name"', source));
-  return declaration.declaration ?? (throw PrefixError());
+  final param = parameters?.parameters.firstOrNull;
+  if (param == null || param.type == null) return null;
+  return formalParameterAnnotationType(ctx, file, param);
+}
+
+/// Adapts [value] to the physical representation a setter's `value` parameter
+/// travels in across the call boundary. A direct `Call` constrains argument
+/// representations to the callee signature, so the caller must emit the
+/// conversion itself. Method parameters are always boxed (bridge interop);
+/// top-level function parameters travel in their boundary representation
+/// (unboxed `int`/`double`/`bool`, boxed otherwise).
+Variable _setterArgument(
+  CompilerContext ctx,
+  Variable value,
+  int file,
+  FormalParameterList? parameters, {
+  required bool isMethod,
+}) {
+  if (isMethod) {
+    return value.boxIntoFreshSlot(ctx);
+  }
+  final paramType = _setterValueType(ctx, file, parameters);
+  final rep = representationForType(
+    (paramType ?? CoreTypes.dynamic.ref(ctx)).typeAcrossFunctionBoundary,
+  );
+  return rep == MachineRepresentation.object
+      ? value.boxIntoFreshSlot(ctx)
+      : value.unboxIfNeeded(ctx, false);
 }
 
 /// Whether [name] resolves to a field, method, or extension member of

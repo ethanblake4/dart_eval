@@ -12,9 +12,14 @@ import 'package:dart_eval/src/eval/shared/types.dart';
 
 Variable compileAssignmentExpression(
   AssignmentExpression e,
-  CompilerContext ctx,
-) {
-  final L = compileExpressionAsReference(e.leftHandSide, ctx);
+  CompilerContext ctx, {
+  Variable? cascadeTarget,
+}) {
+  final L = compileExpressionAsReference(
+    e.leftHandSide,
+    ctx,
+    cascadeTarget: cascadeTarget,
+  );
   final R = compileExpression(
     e.rightHandSide,
     ctx,
@@ -38,7 +43,10 @@ Variable compileAssignmentExpression(
         ]).result;
       },
       thenBranch: (ctx, rt) {
-        result = L.setValue(ctx, R.boxIfNeeded(ctx));
+        final set = R.type != L.resolveType(ctx, forSet: true)
+            ? R.boxIfNeeded(ctx)
+            : R;
+        result = L.setValue(ctx, set);
         return StatementInfo();
       },
     );
