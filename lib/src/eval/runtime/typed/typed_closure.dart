@@ -167,8 +167,7 @@ final class TypedClosure extends EvalFunction {
       if (site.namedNames[i] != descriptor.namedNames[i]) return null;
     }
     if (site.trusted &&
-        (runtime == null ||
-            !runtime.hasCovariantParameterChecks(descriptor))) {
+        (runtime == null || !descriptor.needsCovariantParameterChecks)) {
       receiver._checkTypeArguments(typeArguments, runtime);
     } else {
       receiver.checkExactArguments(
@@ -462,8 +461,7 @@ final class TypedClosure extends EvalFunction {
     // Trusted sites skip the argument check — except bound method tear-offs
     // whose erased (covariant) parameters hide the callee's real contract.
     if (!trusted ||
-        (context != null &&
-            context.hasCovariantParameterChecks(descriptor))) {
+        (context != null && descriptor.needsCovariantParameterChecks)) {
       final ownerType = _checkedOwnerType(context);
       for (var i = 0; i < descriptor.parameterTypeIds.length; i++) {
         _checkArgument(

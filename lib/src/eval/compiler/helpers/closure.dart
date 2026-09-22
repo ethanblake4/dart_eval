@@ -26,7 +26,11 @@ InvokeResult invokeClosure(
   // The callable sits in object position at the call boundary — box
   // unboxed results into a fresh slot (e.g. `only()` where `only` is
   // an `int` getter); boxing in place would double-define the SSA.
-  final callableBoxed = callable?.boxIntoFreshSlot(ctx);
+  final callableBoxed = callable == null
+      ? null
+      : callable.boxed
+      ? callable
+      : callable.boxIntoFreshSlot(ctx);
   final closure = callableBoxed == null
       ? null
       : Variable.ssa(
@@ -34,11 +38,16 @@ InvokeResult invokeClosure(
           Assign(ctx.svar('closure_target'), callableBoxed.ssa),
           callableBoxed.type,
         );
-  Variable snapshot(Variable argument) => Variable.ssa(
-    ctx,
-    Assign(ctx.svar('closure_argument'), argument.ssa),
-    argument.type,
-  ).boxIfNeeded(ctx);
+  // Arguments bound to the call read from a fresh slot so boxing never
+  // rewrites the SSA an unboxed local still uses; already-boxed values pass
+  // straight through.
+  Variable snapshot(Variable argument) => argument.boxed
+      ? argument
+      : Variable.ssa(
+            ctx,
+            Assign(ctx.svar('closure_argument'), argument.ssa),
+            argument.type,
+          ).boxIfNeeded(ctx);
   final positionalArgs = [
     for (final argument in positional ?? <Variable>[]) snapshot(argument),
   ];

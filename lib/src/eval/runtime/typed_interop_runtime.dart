@@ -359,15 +359,6 @@ extension TypedRuntimeInterop on Runtime {
     );
   }
 
-  /// Whether a bound method tear-off declares runtime-checked parameters.
-  /// Method parameters are covariant — a tear-off may be invoked through a
-  /// static signature whose parameters are wider than the callee's own, so a
-  /// trusted call site cannot see the real contract and such closures must
-  /// run their per-argument checks even on trusted calls.
-  bool hasCovariantParameterChecks(TypedClosureDescriptor descriptor) =>
-      descriptor.boundReceiver &&
-      descriptor.parameterTypeIds.any((id) => id >= 0);
-
   bool _requiresTypeEnvironment(int type) {
     final descriptor = _typeDescriptors[type];
     if (descriptor.length == 2) return false;

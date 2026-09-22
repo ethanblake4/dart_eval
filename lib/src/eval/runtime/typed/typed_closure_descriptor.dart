@@ -29,7 +29,9 @@ final class TypedClosureDescriptor {
              : parameterTypeParameterIndices,
        ),
        parameterNullable = List.unmodifiable(parameterNullable),
-       typeParameterBounds = List.unmodifiable(typeParameterBounds);
+       typeParameterBounds = List.unmodifiable(typeParameterBounds),
+       needsCovariantParameterChecks =
+           boundReceiver && parameterTypeIds.any((id) => id >= 0);
 
   final int functionId, captureCount, positionalCount, requiredPositional;
   final List<String> namedNames, requiredNamed;
@@ -44,6 +46,14 @@ final class TypedClosureDescriptor {
   final List<int> typeParameterBounds;
   final bool hasEnvironment, boundReceiver;
   final int runtimeTypeId;
+
+  /// Whether this is a bound-method tear-off with runtime-checked
+  /// parameters. Method parameters are covariant — a tear-off may be invoked
+  /// through a static signature wider than the callee's own — so a trusted
+  /// call site cannot see the real contract and such closures must run their
+  /// per-argument checks even on trusted calls.
+  final bool needsCovariantParameterChecks;
+
   int get argumentCount => positionalCount + namedNames.length;
 
   bool accepts(int positionalArguments, Iterable<String> namedArguments) {
