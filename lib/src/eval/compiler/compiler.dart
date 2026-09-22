@@ -407,6 +407,8 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
           discoveredIdentifiers,
           computedEntrypoints,
           libraryIndexMap,
+          _ctx,
+          () => _bridgeStaticFunctionIdx++,
         );
 
     // Populate lookup tables [_topLevelDeclarationsMap],
@@ -1254,6 +1256,8 @@ _resolveImportsAndExports(
   Map<Library, Map<String, Set<String>>> usedIdentifiers,
   Set<Uri> entrypoints,
   Map<Library, int> libraryIds,
+  CompilerContext ctx,
+  int Function() allocateBridgeIndex,
 ) {
   /// URI-Library mapping
   final uriMap = {for (final l in libraries) l.uri: l};
@@ -1435,6 +1439,14 @@ _resolveImportsAndExports(
         (dop.children ??= {}).addAll({
           for (final d in visibleDeclarations) d.$1: d.$2,
         });
+        if (import.deferred) {
+          (ctx.deferredPrefixes[libraryIds[l]!] ??= {}).add(import.prefix!);
+          // The prefix's implicit `loadLibrary` member is served by a fixed
+          // dart:core bridge returning a `() -> Future<Null>` closure.
+          ctx.bridgeStaticFunctionIndices
+              .putIfAbsent(libraryIds[uriMap[dartCoreUri]!]!, () => {})
+              .putIfAbsent('deferred_loadLibrary', allocateBridgeIndex);
+        }
       } else {
         visibleDeclarationsLib.addAll({
           for (final d in visibleDeclarations)
@@ -1488,7 +1500,10 @@ _resolveImportsAndExports(
         }
         processedImports.add(iid);
         final lib = uriMap[import.uri]!;
-        final decs = result[library]?.entries.toList();
+        // Scan the imported library's declarations: for a prefixed import the
+        // member names live in the prefix's children, not the importer's own
+        // decl list — scanning `result[library]` would never find `p.member`.
+        final decs = result[lib]?.entries.toList();
         if (decs == null) continue;
         for (final declaration in decs) {
           if (ids.contains(declaration.key)) {
@@ -1605,8 +1620,14 @@ class _Import {
   final Uri uri;
   final String? prefix;
   final List<Combinator> combinators;
+  final bool deferred;
 
-  _Import(this.uri, this.prefix, [this.combinators = const []]);
+  _Import(
+    this.uri,
+    this.prefix, [
+    this.combinators = const [],
+    this.deferred = false,
+  ]);
 
   factory _Import.resolve(
     ImportDirective import,
@@ -1619,6 +1640,7 @@ class _Import {
       base.resolveUri(uri),
       import.prefix?.name,
       import.combinators,
+      import.deferredKeyword != null,
     );
   }
 }

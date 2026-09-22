@@ -172,6 +172,63 @@ class $Future<T> implements Future<T>, $Instance {
           namedParams: [],
         ),
       ),
+      'timeout': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future)),
+          params: [
+            BridgeParameter(
+              'timeLimit',
+              BridgeTypeAnnotation($Duration.$type),
+              false,
+            ),
+          ],
+          namedParams: [
+            BridgeParameter(
+              'onTimeout',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.function),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+        ),
+      ),
+      'whenComplete': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future)),
+          params: [
+            BridgeParameter(
+              'action',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
+              false,
+            ),
+          ],
+          namedParams: [],
+        ),
+      ),
+      'catchError': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future)),
+          params: [
+            BridgeParameter(
+              'onError',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
+              false,
+            ),
+          ],
+          namedParams: [
+            BridgeParameter(
+              'test',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.function),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+        ),
+      ),
     },
     getters: {},
     setters: {},
@@ -200,6 +257,12 @@ class $Future<T> implements Future<T>, $Instance {
         return __then;
       case 'asStream':
         return __asStream;
+      case 'timeout':
+        return __timeout;
+      case 'whenComplete':
+        return __whenComplete;
+      case 'catchError':
+        return __catchError;
       default:
         return _superclass.$getProperty(runtime, identifier);
     }
@@ -256,6 +319,79 @@ class $Future<T> implements Future<T>, $Instance {
     Object? c,
   ) {
     return $Stream.wrap((target as $Future).$value.asStream());
+  }
+
+  static const $Function __timeout = $Function(_timeout);
+
+  static $Value? _timeout(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final $t = target as $Future;
+    final timeLimit = (r as $Value).$value as Duration;
+    final onTimeout = s as EvalFunction?;
+    FutureOr<dynamic> onTimeoutCb() =>
+        onTimeout!.call(runtime, target, null, null, 0)?.$value;
+    return $Future.wrap(
+      $t.$value.timeout(
+        timeLimit,
+        onTimeout: onTimeout == null ? null : onTimeoutCb,
+      ),
+    );
+  }
+
+  static const $Function __whenComplete = $Function(_whenComplete);
+
+  static $Value? _whenComplete(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final action = r as EvalFunction;
+    return $Future.wrap(
+      (target as $Future).$value.whenComplete(() {
+        action.call(runtime, target, null, null, 0);
+      }),
+    );
+  }
+
+  static const $Function __catchError = $Function(_catchError);
+
+  static $Value? _catchError(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final $t = target as $Future;
+    final onError = r as EvalFunction;
+    final test = s as EvalFunction?;
+    FutureOr<dynamic> onErrorCb(Object error, StackTrace stackTrace) =>
+        onError
+            .call(
+              runtime,
+              target,
+              runtime.wrap(error),
+              runtime.wrap(stackTrace),
+              2,
+            )
+            ?.$value;
+    bool testCb(Object error) =>
+        test!.call(runtime, target, runtime.wrap(error), null, 1)?.$value
+            as bool? ??
+        false;
+    return $Future.wrap(
+      $t.$value.catchError(
+        onErrorCb,
+        test: test == null ? null : testCb,
+      ),
+    );
   }
 
   @override

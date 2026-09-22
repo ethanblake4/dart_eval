@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async/stream.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/base.dart';
@@ -195,5 +197,17 @@ class DartCorePlugin implements EvalPlugin {
       'Stream.periodic',
       $Stream.$periodic,
     );
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'deferred_loadLibrary',
+      _deferredLoadLibrary,
+    );
   }
 }
+
+/// Deferred import prefixes expose `loadLibrary` as an implicit member. Since
+/// all libraries are compiled eagerly, it returns a completed future.
+$Value? _deferredLoadLibrary(Runtime runtime, Object? r, Object? s, Object? c) =>
+    $Closure(
+      (runtime, target, r, s, c) => $Future.wrap(Future<Null>.value(null)),
+    );

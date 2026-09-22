@@ -286,6 +286,10 @@ class CompilerContext with ScopeContext {
   final asyncClosureReturnTypes = <List<TypeRef>>[];
   Map<int, Map<String, TypeRef>> temporaryTypes = {};
   Map<int, Map<String, DeclarationOrPrefix>> visibleDeclarations = {};
+
+  /// Import prefixes declared `deferred` in each library (library index →
+  /// prefix names). Such prefixes expose a synthetic `loadLibrary` member.
+  Map<int, Set<String>> deferredPrefixes = {};
   Map<int, Map<String, int>> topLevelDeclarationPositions = {};
   Map<int, Map<String, int>> bridgeStaticFunctionIndices = {};
   Map<int, Map<String, List>> instanceDeclarationPositions = {};

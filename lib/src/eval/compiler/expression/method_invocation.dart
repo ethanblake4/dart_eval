@@ -141,13 +141,13 @@ Variable compileMethodInvocation(
 
   // `name` can resolve to a class rather than a callable (e.g. `List()`) —
   // then the callable declaration lives under the offset's `name.ctor` key.
-  var dec0 = ctx.topLevelDeclarationsMap[offset.file]![e.methodName.name];
+  var dec0 = ctx.topLevelDeclarationsMap[offset.file]?[e.methodName.name];
   if (dec0 == null ||
       (!dec0.isBridge &&
           (dec0.declaration! is ClassDeclaration ||
               dec0.declaration! is ClassTypeAlias))) {
     dec0 =
-        ctx.topLevelDeclarationsMap[offset.file]![offset.name ??
+        ctx.topLevelDeclarationsMap[offset.file]?[offset.name ??
             '${e.methodName.name}.'];
     if (dec0 == null) {
       // Call to default constructor

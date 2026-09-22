@@ -1226,6 +1226,10 @@ class IdentifierReference implements Reference {
     final split = name.split('.');
     final children = activeDeclaration.children;
     final viaPrefix = activeDeclaration.declaration == null;
+    if (viaPrefix && split.length > 1 && split[1] == 'loadLibrary') {
+      final stub = _deferredLoadLibrary(ctx, split[0]);
+      if (stub != null) return stub;
+    }
     final activeDec = activeDeclaration.declaration ??
         (split.length > 1 && children != null
             ? (children['${split[1]}*g'] ?? children[split[1]])
@@ -1317,7 +1321,32 @@ class IdentifierReference implements Reference {
   }
 }
 
-/// A [Reference] with a prefixed String identifier, for accessing prefixed imports.
+/// A deferred import prefix exposes an implicit `loadLibrary` member. Since
+/// all libraries are compiled eagerly, it resolves to a stub closure
+/// returning an already-completed `Future<Null>` — and it shadows any
+/// `loadLibrary` declared by the imported library itself.
+Variable? _deferredLoadLibrary(CompilerContext ctx, String prefix) {
+  if (!(ctx.deferredPrefixes[ctx.library]?.contains(prefix) ?? false)) {
+    return null;
+  }
+  final idx = ctx.bridgeStaticFunctionIndices[ctx
+      .libraryMap['dart:core']]?['deferred_loadLibrary'];
+  if (idx == null) return null;
+  return Variable.ssa(
+    ctx,
+    InvokeExternal(ctx.svar('loadLibrary'), idx, []),
+    CoreTypes.function.ref(ctx),
+    methodReturnType: AlwaysReturnType(
+      CoreTypes.future.ref(ctx).copyWith(
+        specifiedTypeArgs: [CoreTypes.nullType.ref(ctx)],
+      ),
+      false,
+    ),
+  );
+}
+
+/// A [Reference] with a prefixed String identifier, for accessing prefixed
+/// imports.
 class PrefixedIdentifierReference implements Reference {
   final String prefix;
   final String identifier;
@@ -1352,6 +1381,10 @@ class PrefixedIdentifierReference implements Reference {
       throw CompileError('Cannot use a declaration as a prefix', source);
     }
     final children = dec.children!;
+    if (identifier == 'loadLibrary') {
+      final stub = _deferredLoadLibrary(ctx, prefix);
+      if (stub != null) return stub;
+    }
     final child =
         children['$identifier*g'] ??
         children[identifier] ??
