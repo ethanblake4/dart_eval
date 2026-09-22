@@ -260,7 +260,7 @@ extension TypedRuntimeInterop on Runtime {
     final existing = _findRuntimeTypeDescriptor(descriptor);
     final typeId = existing >= 0
         ? existing
-        : _internResolvedType(descriptor, template, null, const [], const {});
+        : _internResolvedType(descriptor, template, null, const [], {});
     bucket.add((List.of(fieldIds), typeId));
     fieldIds.length = 0;
     return typeId;

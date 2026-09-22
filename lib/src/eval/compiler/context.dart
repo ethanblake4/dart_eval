@@ -376,6 +376,7 @@ class CompilerContext with ScopeContext {
   Map<int, Map<String, TypeRef>> topLevelVariableInferredTypes = {};
   Map<TypeRef, int> typeRefIndexMap = {};
   Map<String, int> runtimeTypeDescriptorIds = {};
+  final Map<(int, bool), TypeRef> bridgeTypeRefCache = {};
   Map<String, int> libraryMap = {};
   List<TypeRef> runtimeTypeList = [];
   List<String> typeNames = [];

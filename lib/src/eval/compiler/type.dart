@@ -330,12 +330,12 @@ class TypeRef {
     final cacheId = typeReference.cacheId;
     if (cacheId != null) {
       final t = ctx.runtimeTypeList[cacheId];
-      if (staticSource) {
-        return t.isUnboxedAcrossFunctionBoundaries
-            ? t.copyWith(boxed: false)
-            : t.copyWith(boxed: true);
-      }
-      return t.copyWith(boxed: true);
+      return ctx.bridgeTypeRefCache.putIfAbsent(
+        (cacheId, staticSource),
+        () => t.copyWith(
+          boxed: !staticSource || !t.isUnboxedAcrossFunctionBoundaries,
+        ),
+      );
     }
     final spec = typeReference.spec;
     if (spec != null) {
@@ -769,17 +769,16 @@ class TypeRef {
         'Your type hierarchy is probably recursive (caught while resolving $this)',
       );
     }
+    if (resolved && specifiedTypeArgs.isEmpty) return this;
     final stack0 = {...stack, this};
     final rg = recursionGuard + 1;
-    final resolvedSpecifiedTypeArgs = specifiedTypeArgs
-        .map(
-          (e) => stack.contains(e)
-              ? e
-              : e.resolveTypeChain(ctx, recursionGuard: rg, stack: stack0),
-        )
-        .toList();
+    final resolvedSpecifiedTypeArgs = specifiedTypeArgs.isEmpty
+        ? specifiedTypeArgs
+        : _resolveSpecifiedTypeArgs(ctx, stack0, rg);
     if (resolved) {
-      return copyWith(specifiedTypeArgs: resolvedSpecifiedTypeArgs);
+      return identical(resolvedSpecifiedTypeArgs, specifiedTypeArgs)
+          ? this
+          : copyWith(specifiedTypeArgs: resolvedSpecifiedTypeArgs);
     }
 
     if (recordFields.isNotEmpty) {
@@ -1104,11 +1103,34 @@ class TypeRef {
     return resolvedRef;
   }
 
+  /// Resolves each type argument, returning [specifiedTypeArgs] unchanged when
+  /// every argument resolves to itself so callers can skip copying.
+  List<TypeRef> _resolveSpecifiedTypeArgs(
+    CompilerContext ctx,
+    Set<TypeRef> stack,
+    int recursionGuard,
+  ) {
+    List<TypeRef>? out;
+    for (var i = 0; i < specifiedTypeArgs.length; i++) {
+      final e = specifiedTypeArgs[i];
+      final r = stack.contains(e)
+          ? e
+          : e.resolveTypeChain(
+              ctx,
+              recursionGuard: recursionGuard,
+              stack: stack,
+            );
+      if (out == null && !identical(r, e)) {
+        out = [...specifiedTypeArgs];
+      }
+      if (out != null) out[i] = r;
+    }
+    return out ?? specifiedTypeArgs;
+  }
+
   Set<int> getRuntimeIndices(CompilerContext ctx) {
-    final indices = {
-      runtimeTypeId(ctx),
-      ctx.typeRefIndexMap[this] ?? runtimeTypeId(ctx),
-    };
+    final selfId = runtimeTypeId(ctx);
+    final indices = {selfId, ctx.typeRefIndexMap[this] ?? selfId};
     // Supertypes are declared in each supertype's own parameter keyspace; map
     // them back through the supertype's applied arguments as we walk.
     final seen = {semanticKey};
@@ -1120,10 +1142,9 @@ class TypeRef {
     while (worklist.isNotEmpty) {
       final supertype = worklist.removeLast();
       if (!seen.add(supertype.semanticKey)) continue;
-      indices.add(supertype.runtimeTypeId(ctx));
-      indices.add(
-        ctx.typeRefIndexMap[supertype] ?? supertype.runtimeTypeId(ctx),
-      );
+      final supertypeId = supertype.runtimeTypeId(ctx);
+      indices.add(supertypeId);
+      indices.add(ctx.typeRefIndexMap[supertype] ?? supertypeId);
       final substitutions = supertype.appliedTypeArguments(ctx);
       for (final next in supertype.allSupertypes) {
         worklist.add(next.substituteTypeParameters(substitutions));
@@ -1277,10 +1298,11 @@ class TypeRef {
   }
 
   int runtimeTypeId(CompilerContext ctx) {
-    final existing = ctx.runtimeTypeDescriptorIds[_runtimeDescriptorKey];
+    final key = _runtimeDescriptorKey;
+    final existing = ctx.runtimeTypeDescriptorIds[key];
     if (existing != null) return existing;
     final id = ctx.runtimeTypeList.length;
-    ctx.runtimeTypeDescriptorIds[_runtimeDescriptorKey] = id;
+    ctx.runtimeTypeDescriptorIds[key] = id;
     ctx.runtimeTypeList.add(this);
     ctx.typeNames.add(name);
     return id;
