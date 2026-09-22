@@ -223,7 +223,17 @@ final class NewRecord extends Operation {
   final int fieldIndices;
   final int typeId;
 
-  NewRecord(this.target, this.fields, this.fieldIndices, this.typeId);
+  /// Whether the runtime type must be reified from the field values. Skipped
+  /// when every field has a fixed runtime type ([TypeRef.hasFixedRuntimeType]).
+  final bool reify;
+
+  NewRecord(
+    this.target,
+    this.fields,
+    this.fieldIndices,
+    this.typeId, {
+    this.reify = true,
+  });
 
   @override
   SSA get writesTo => target;
@@ -237,6 +247,7 @@ final class NewRecord extends Operation {
     readsFrom?.single ?? fields,
     fieldIndices,
     typeId,
+    reify: reify,
   );
 
   @override

@@ -426,6 +426,14 @@ class Runtime {
   /// content hashes mapped to candidate row ids.
   final _descriptorIndex = <int, List<int>>{};
   int _indexedDescriptors = 0;
+
+  /// Scratch list for field runtime-type ids gathered during
+  /// `reifyRecordType`; reused across calls and always emptied afterwards.
+  final _recordFieldTypeIds = <int>[];
+
+  /// Reified record types keyed by `Object.hash(template, field type ids)`.
+  /// Bucketed entries carry the gathered field ids for verification.
+  final _reifiedRecordTypes = <int, List<(List<int>, int)>>{};
   late final Map<int, Map<String, int>> typeIds;
   late final Map<int, Map<String, int>> _externalFunctionMap;
   late final Map<int, Map<String, Map<String, int>>> _bridgeEnumMappings;

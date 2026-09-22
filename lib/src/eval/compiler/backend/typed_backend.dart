@@ -1905,6 +1905,7 @@ class _LoweringSession {
             :final fields,
             :final fieldIndices,
             :final typeId,
+            :final reify,
           ) =>
             make(
               ['rCreateRecord'],
@@ -1912,6 +1913,7 @@ class _LoweringSession {
               immediate: b.context.constantPool.addOrGet([
                 fieldIndices,
                 typeId,
+                if (reify) 1 else 0,
               ]),
             ),
           types_ir.LoadConstantType(:final typeId) => make(

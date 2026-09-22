@@ -1372,6 +1372,26 @@ class TypeRef {
   /// identity ([recordFields] may be empty for the `()` record).
   bool get isRecord => name.startsWith('@record');
 
+  /// Whether every value of this type reports exactly this runtime type:
+  /// leaf classes that cannot be subclassed (`int`, `double`, `bool`,
+  /// `String`, `Null`) and records built entirely of them. Nullable and
+  /// subclassable types can hold values whose runtime type is narrower.
+  /// Used to skip record-type reification when it can never change the
+  /// declared record type.
+  bool hasFixedRuntimeType(CompilerContext ctx) {
+    if (nullable) return false;
+    if (isRecord) {
+      return recordFields.every(
+        (f) => f.type.resolveTypeChain(ctx).hasFixedRuntimeType(ctx),
+      );
+    }
+    return this == CoreTypes.int.ref(ctx) ||
+        this == CoreTypes.double.ref(ctx) ||
+        this == CoreTypes.bool.ref(ctx) ||
+        this == CoreTypes.string.ref(ctx) ||
+        this == CoreTypes.nullType.ref(ctx);
+  }
+
   /// Positional record fields in declaration order — [recordFields] lists
   /// fields in source order, which may interleave positional and named.
   List<RecordParameterType> get recordPositionalFields =>

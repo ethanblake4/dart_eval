@@ -124,6 +124,9 @@ Variable compileRecordLiteral(
       fieldList.ssa,
       constIndex,
       type.runtimeTypeId(ctx),
+      reify: inferredRecordFields.any(
+        (f) => !f.type.resolveTypeChain(ctx).hasFixedRuntimeType(ctx),
+      ),
     ),
     type,
   );

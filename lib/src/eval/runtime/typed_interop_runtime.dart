@@ -220,30 +220,58 @@ extension TypedRuntimeInterop on Runtime {
   ) {
     final templateDescriptor = _typeDescriptors[template];
     final positional = templateDescriptor[3], named = templateDescriptor[4];
-    final descriptor = List<int>.of(templateDescriptor);
-    descriptor[1] = 0;
+    final namedOffset = 5 + positional;
+    final fieldIds = _recordFieldTypeIds..length = 0;
+    var matchesTemplate = templateDescriptor[1] == 0;
     // Positional fields are stored first (record literals are
     // positionals-before-named by grammar), so index == ordinal.
     for (var i = 0; i < positional; i++) {
-      descriptor[5 + i] = _recordFieldType(fields[i]);
+      final fieldType = _recordFieldType(fields[i]);
+      fieldIds.add(fieldType);
+      matchesTemplate &= fieldType == templateDescriptor[5 + i];
     }
-    final namedOffset = 5 + positional;
     for (var i = 0; i < named; i++) {
       final nameIndex = templateDescriptor[namedOffset + i * 2];
-      descriptor[namedOffset + i * 2] = nameIndex;
-      descriptor[namedOffset + i * 2 + 1] = _recordFieldType(
+      final fieldType = _recordFieldType(
         fields[mapping[_constantPool[nameIndex] as String]!],
       );
+      fieldIds.add(fieldType);
+      matchesTemplate &= fieldType == templateDescriptor[namedOffset + i * 2 + 1];
+    }
+    // Every field's runtime type equals its declared type and the template
+    // is non-nullable: the record's runtime type IS the template.
+    if (matchesTemplate) return template;
+    final key = Object.hash(template, Object.hashAll(fieldIds));
+    final bucket = _reifiedRecordTypes.putIfAbsent(key, () => []);
+    for (final (cachedIds, cachedType) in bucket) {
+      if (_recordTypeIdsEqual(cachedIds, fieldIds)) {
+        fieldIds.length = 0;
+        return cachedType;
+      }
+    }
+    final descriptor = List<int>.of(templateDescriptor);
+    descriptor[1] = 0;
+    for (var i = 0; i < positional; i++) {
+      descriptor[5 + i] = fieldIds[i];
+    }
+    for (var i = 0; i < named; i++) {
+      descriptor[namedOffset + i * 2 + 1] = fieldIds[positional + i];
     }
     final existing = _findRuntimeTypeDescriptor(descriptor);
-    if (existing >= 0) return existing;
-    return _internResolvedType(
-      descriptor,
-      template,
-      null,
-      const [],
-      <int, int>{},
-    );
+    final typeId = existing >= 0
+        ? existing
+        : _internResolvedType(descriptor, template, null, const [], const {});
+    bucket.add((List.of(fieldIds), typeId));
+    fieldIds.length = 0;
+    return typeId;
+  }
+
+  static bool _recordTypeIdsEqual(List<int> a, List<int> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
   }
 
   int _recordFieldType(Object? field) =>

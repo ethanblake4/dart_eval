@@ -3,7 +3,8 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 /// Field layouts belong to the program and are shared by all its records.
 abstract final class TypedRecords {
-  static final _layouts = Expando<Map<int, (Map<String, int>, int)>>();
+  static final _layouts =
+      Expando<Map<int, (Map<String, int>, int, bool)>>();
 
   @pragma('vm:never-inline')
   static $Record create(
@@ -26,6 +27,9 @@ abstract final class TypedRecords {
           for (var i = 0; i < names.length; i++) names[i] as String: i,
         }),
         descriptor[1] as int,
+        // A third element marks the record's field types as fixed — the
+        // declared record type is already the runtime type.
+        descriptor.length > 2 && descriptor[2] == 0,
       );
       layouts[index] = layout;
     }
@@ -38,7 +42,9 @@ abstract final class TypedRecords {
     return $Record(
       fieldList,
       layout.$1,
-      runtime.reifyRecordType(resolvedTemplate, fieldList, layout.$1),
+      layout.$3
+          ? resolvedTemplate
+          : runtime.reifyRecordType(resolvedTemplate, fieldList, layout.$1),
       runtime,
     );
   }
