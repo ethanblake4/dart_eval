@@ -70,7 +70,13 @@ class $null implements $Value {
 
 /// dart_eval [$Instance] representation of a [bool]
 class $bool implements $Instance {
-  $bool(this.$value) : _superclass = $Object($value);
+  /// Wrap a [bool] in a [$bool]. Only two instances exist.
+  factory $bool(bool value) => value ? _true : _false;
+
+  $bool._(this.$value) : _superclass = $Object($value);
+
+  static final $bool _true = $bool._(true);
+  static final $bool _false = $bool._(false);
 
   static const $declaration = BridgeClassDef(
     BridgeClassType(

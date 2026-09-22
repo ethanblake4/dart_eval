@@ -61,6 +61,8 @@ final class TypedClosureDescriptor {
         positionalArguments > positionalCount) {
       return false;
     }
+    // Skip the Set allocation for the common positional-only call.
+    if (namedArguments.isEmpty) return requiredNamed.isEmpty;
     final supplied = namedArguments.toSet();
     if (supplied.length != namedArguments.length ||
         supplied.any((name) => !namedNames.contains(name)) ||

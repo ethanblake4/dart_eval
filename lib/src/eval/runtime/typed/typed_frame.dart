@@ -244,15 +244,7 @@ class TypedFrame {
 
   /// Reuse a frame for repeated calls at the same depth. Recursive invocations
   /// still have distinct storage, and every run owns its entire frame chain.
-  @pragma('vm:never-inline')
-  TypedFrame enterStatic(
-    TypedProgram program,
-    int index,
-    int pc, {
-    Object? typeEnvironmentReceiver,
-    List<int> typeArguments = const [],
-  }) {
-    final callee = program.functions[index];
+  TypedFrame _childFor(TypedFunction callee) {
     var child = _child;
     if (child == null) {
       child = _child = TypedFrame(callee, this);
@@ -263,6 +255,18 @@ class TypedFrame {
         child = _child = TypedFrame(callee, this);
       }
     }
+    return child;
+  }
+
+  @pragma('vm:never-inline')
+  TypedFrame enterStatic(
+    TypedProgram program,
+    int index,
+    int pc, {
+    Object? typeEnvironmentReceiver,
+    List<int> typeArguments = const [],
+  }) {
+    final child = _childFor(program.functions[index]);
     child.returnPc = pc;
     child.environment = const [];
     child.typeEnvironmentReceiver = typeEnvironmentReceiver;
@@ -281,16 +285,7 @@ class TypedFrame {
     Object? typeEnvironmentReceiver,
     List<int> typeArguments = const [],
   }) {
-    var child = _child;
-    if (child == null) {
-      child = _child = TypedFrame(callee, this);
-    } else if (!identical(child.function, callee)) {
-      if (child._child == null) {
-        child._retarget(callee);
-      } else {
-        child = _child = TypedFrame(callee, this);
-      }
-    }
+    final child = _childFor(callee);
     child.returnPc = pc;
     child.environment = const [];
     child.typeEnvironmentReceiver = typeEnvironmentReceiver;
@@ -313,16 +308,7 @@ class TypedFrame {
     List<int> lexicalTypeArguments = const [],
   }) {
     // Keep the cached-frame path in one Dart call, just like ordinary calls.
-    var child = _child;
-    if (child == null) {
-      child = _child = TypedFrame(callee, this);
-    } else if (!identical(child.function, callee)) {
-      if (child._child == null) {
-        child._retarget(callee);
-      } else {
-        child = _child = TypedFrame(callee, this);
-      }
-    }
+    final child = _childFor(callee);
     child.returnPc = pc;
     child.environment = captures;
     child.typeEnvironmentReceiver = typeEnvironmentReceiver;

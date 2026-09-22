@@ -966,8 +966,16 @@ class $num<T extends num> implements $Instance {
 
 /// dart_eval wrapper for [int]
 class $int extends $num<int> {
-  /// Wrap an [int] in a [$int].
-  $int(super.$value);
+  /// Wrap an [int] in a [$int]. Small integers share canonical instances,
+  /// matching the VM's `identical` behavior for smi-range values.
+  factory $int(int value) =>
+      value >= -128 && value <= 127 ? _cache[value + 128] : $int._(value);
+
+  $int._(super.$value);
+
+  static final List<$int> _cache = [
+    for (var i = -128; i <= 127; i++) $int._(i),
+  ];
 
   static const $declaration = BridgeClassDef(
     BridgeClassType(
