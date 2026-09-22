@@ -1,7 +1,9 @@
+// ignore_for_file: experimental_member_use
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/as.dart';
+import 'package:dart_eval/src/eval/compiler/expression/anonymous_method.dart';
 import 'package:dart_eval/src/eval/compiler/expression/assignment.dart';
 import 'package:dart_eval/src/eval/compiler/expression/await.dart';
 import 'package:dart_eval/src/eval/compiler/expression/binary.dart';
@@ -83,7 +85,7 @@ Variable compileExpression(
   } else if (e is IsExpression) {
     return compileIsExpression(e, ctx);
   } else if (e is CascadeExpression) {
-    return compileCascadeExpression(e, ctx);
+    return compileCascadeExpression(e, ctx, bound);
   } else if (e is AsExpression) {
     return compileAsExpression(e, ctx);
   } else if (e is RethrowExpression) {
@@ -92,6 +94,8 @@ Variable compileExpression(
     return compilePatternAssignment(ctx, e);
   } else if (e is FunctionReference) {
     return compileFunctionReference(e, ctx);
+  } else if (e is AnonymousMethodInvocation) {
+    return compileAnonymousMethodInvocation(e, ctx, boundType: bound);
   }
 
   throw CompileError('Unknown expression type ${e.runtimeType}');
@@ -133,6 +137,13 @@ Variable? compileExpressionAndDiscardResult(
   TypeRef? bound,
   Variable? cascadeTarget,
 }) {
+  if (e is AnonymousMethodInvocation) {
+    return compileAnonymousMethodInvocation(
+      e,
+      ctx,
+      cascadeTarget: cascadeTarget,
+    );
+  }
   if (canReference(e)) {
     return compileExpressionAsReference(
       e,

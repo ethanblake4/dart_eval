@@ -9,16 +9,36 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 
 Variable compileThisExpression(ThisExpression e, CompilerContext ctx) {
+  // In an anonymous-method body `this` is the anonymous receiver itself.
+  // It is read through the `#this` local so that closures nested in the
+  // body capture it like any other enclosing local.
+  final anonymousReceiver = ctx.anonymousThisReceiver;
+  final anonymousThis =
+      anonymousReceiver == null ? null : ctx.lookupLocal('#this');
+  if (anonymousThis != null) {
+    return Variable.ssa(
+      ctx,
+      Assign(ctx.svar('this'), anonymousThis.ssa),
+      anonymousThis.type,
+    );
+  }
+  if (anonymousReceiver != null) {
+    return Variable.ssa(
+      ctx,
+      Assign(ctx.svar('this'), anonymousReceiver.ssa),
+      anonymousReceiver.type,
+    );
+  }
   // Extensions may use `this` for the receiver without a class context.
   if (ctx.lookupLocal('#this') == null) {
     throw CompileError("Cannot use 'this' outside of a class context");
   }
   final receiver = ctx.lookupLocal('#this')!;
-  // In an extension, `this` is the receiver value itself; LoadThis only
-  // exists to resolve the dispatch root of a class instance.
-  final operation = ctx.currentExtension == null
-      ? LoadThis(ctx.svar('this'), receiver.ssa)
-      : Assign(ctx.svar('this'), receiver.ssa);
+  // In an extension or anonymous-method body, `this` is the receiver value
+  // itself; LoadThis only exists to resolve the dispatch root of a class
+  // instance.
+  final operation =
+      ctx.currentExtension == null ? LoadThis(ctx.svar('this'), receiver.ssa) : Assign(ctx.svar('this'), receiver.ssa);
   return Variable.ssa(ctx, operation, receiver.type);
 }
 

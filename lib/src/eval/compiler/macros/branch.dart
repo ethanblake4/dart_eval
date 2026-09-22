@@ -8,8 +8,29 @@ import 'package:dart_eval/src/eval/compiler/expression/condition.dart';
 import 'package:dart_eval/src/eval/compiler/macros/macro.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
+import 'package:dart_eval/src/eval/compiler/builtins.dart';
+import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
+import 'package:dart_eval/src/eval/ir/logic.dart';
+import 'package:dart_eval/src/eval/ir/objects.dart';
+
+/// Emits `value != null` as an unboxed-bool condition suitable for
+/// [macroBranch]'s `condition` closure.
+Variable compileNonNullCondition(CompilerContext ctx, Variable value) {
+  final boolType = CoreTypes.bool.ref(ctx).copyWith(boxed: false);
+  final nullConst = BuiltinValue().push(ctx).boxIfNeeded(ctx);
+  final eq = Variable.ssa(
+    ctx,
+    DynamicEquals(ctx.svar('nonnull_eq'), value.ssa, nullConst.ssa),
+    boolType,
+  );
+  return Variable.ssa(
+    ctx,
+    LogicalNot(ctx.svar('nonnull_ne'), eq.ssa),
+    boolType,
+  );
+}
 
 StatementInfo macroBranch(
   CompilerContext ctx,

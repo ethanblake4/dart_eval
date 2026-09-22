@@ -138,6 +138,42 @@ class $bool implements $Instance {
           ],
         ),
       ),
+      '&': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+              false,
+            ),
+          ],
+        ),
+      ),
+      '|': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+              false,
+            ),
+          ],
+        ),
+      ),
+      '^': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+              false,
+            ),
+          ],
+        ),
+      ),
       '!': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
@@ -160,6 +196,12 @@ class $bool implements $Instance {
         return __and;
       case '||':
         return __or;
+      case '&':
+        return __bitAnd;
+      case '|':
+        return __bitOr;
+      case '^':
+        return __bitXor;
       case '!':
         return __not;
     }
@@ -218,6 +260,45 @@ class $bool implements $Instance {
   ) {
     final other = (r as $Value?);
     return $bool(target!.$value || other!.$value);
+  }
+
+  static const $Function __bitAnd = $Function(_bitAnd);
+
+  static $Value? _bitAnd(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final other = (r as $Value?);
+    return $bool(target!.$value & other!.$value);
+  }
+
+  static const $Function __bitOr = $Function(_bitOr);
+
+  static $Value? _bitOr(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final other = (r as $Value?);
+    return $bool(target!.$value | other!.$value);
+  }
+
+  static const $Function __bitXor = $Function(_bitXor);
+
+  static $Value? _bitXor(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final other = (r as $Value?);
+    return $bool(target!.$value ^ other!.$value);
   }
 
   static const $Function __not = $Function(_not);

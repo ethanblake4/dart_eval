@@ -120,7 +120,9 @@ CompilationUnit _parse(String source, DiagnosticMode diagnosticMode) {
     throwIfDiagnostics: false,
     // Enable experiments the compiler can parse but doesn't fully implement,
     // so tests exercising the syntax fail on semantics, not on parsing.
-    featureSet: FeatureSet.latestLanguageVersion(flags: ['variance']),
+    featureSet: FeatureSet.latestLanguageVersion(
+      flags: ['variance', 'anonymous-methods'],
+    ),
   );
   if (d.errors.isNotEmpty) {
     for (final error in d.errors) {

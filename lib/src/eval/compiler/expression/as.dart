@@ -63,5 +63,19 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
 
   // For all other types, just inform the compiler
   // (todo) Mixins may need different behavior
-  return V.copyWithUpdate(ctx, type: slot.copyWith(boxed: V.type.boxed));
+  V = V.copyWithUpdate(ctx, type: slot.copyWith(boxed: V.type.boxed));
+
+  // `this as T` promotes the receiver itself — store the promoted view on
+  // the `#this` local so later `this` reads see it (anonymous-method
+  // receivers, extension receivers, and class `this` all live there).
+  if (e.expression is ThisExpression) {
+    final localThis = ctx.lookupLocal('#this');
+    final frame = localThis?.frameIndex;
+    if (localThis != null && frame != null) {
+      ctx.locals[frame]['#this'] = V
+        ..localName = '#this'
+        ..frameIndex = frame;
+    }
+  }
+  return V;
 }

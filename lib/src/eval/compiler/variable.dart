@@ -267,7 +267,25 @@ class Variable {
 
     if (type == CoreTypes.dynamic.ref(ctx) ||
         type == CoreTypes.object.ref(ctx)) {
-      return copyWith(
+      if (representation != MachineRepresentation.object) {
+        // Physically unboxed under an Object/dynamic type — e.g. a promotion
+        // whose type view was reverted. The boxed flag alone can't capture
+        // that, so emit a real box op for the physical representation.
+        switch (representation) {
+          case MachineRepresentation.integer:
+            ctx.pushOp(BoxInt(ssa, ssa));
+          case MachineRepresentation.boolean:
+            ctx.pushOp(BoxBool(ssa, ssa));
+          case MachineRepresentation.doublePrecision:
+            ctx.pushOp(BoxDouble(ssa, ssa));
+          case MachineRepresentation.string:
+            ctx.pushOp(BoxString(ssa, ssa));
+          default:
+            break;
+        }
+      }
+      return copyWithUpdate(
+        ctx,
         type: type.copyWith(boxed: true),
         representation: MachineRepresentation.object,
       );

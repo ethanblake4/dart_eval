@@ -288,6 +288,7 @@ Variable invokeExtensionGetter(
         ext.library,
         member.returnType,
         CoreTypes.dynamic.ref(ctx),
+        typeParameters: memberExtParams(ctx, ext, receiver.type),
       ).type ??
       CoreTypes.dynamic.ref(ctx);
   return Variable.of(ctx, s, returnType.copyWith(boxed: true));

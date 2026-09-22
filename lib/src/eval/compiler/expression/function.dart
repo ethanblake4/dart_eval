@@ -56,6 +56,13 @@ Variable compileFunctionExpression(
       }
     }
   }
+  if (ctx.anonymousThisReceiver != null && ctx.lookupLocal('#this') != null) {
+    // Inside an anonymous-method body any unresolved name may be a member
+    // of the anonymous receiver, which lives in `#this`.
+    if ((analysis.unresolved[e] ?? const <String>{}).isNotEmpty) {
+      freeNames.add('#this');
+    }
+  }
   for (final name in freeNames) {
     final binding = ctx.lookupLocal(name);
     if (binding != null) captures[name] = binding;
@@ -160,8 +167,14 @@ Variable compileFunctionExpression(
   );
   final b = e.body;
 
+  // Block-bodied closures collect the static type of each `return` so the
+  // closure's return type can be inferred (`asyncClosureReturnTypes` serves
+  // sync closures too despite the name).
+  final collectsReturns = b.isAsynchronous || b is BlockFunctionBody;
   if (b.isAsynchronous) {
     setupAsyncFunction(ctx, returnType: bound?.functionType?.returnType.type);
+  }
+  if (collectsReturns) {
     ctx.asyncClosureReturnTypes.add(<TypeRef>[]);
   }
 
@@ -198,11 +211,13 @@ Variable compileFunctionExpression(
       ctx.endScope();
       ctx.pushOp(Return(null));
     }
+    // Implicit fall-through contributes `Null` to the inferred return type.
+    if (collectsReturns) {
+      ctx.asyncClosureReturnTypes.last.add(CoreTypes.nullType.ref(ctx));
+    }
   }
 
-  if (b.isAsynchronous) {
-    // `async` reifies `Future<S>`; `S` is the body's inferred return type —
-    // `Null` when the body returns nothing (or only `return;`).
+  if (collectsReturns) {
     final returns = ctx.asyncClosureReturnTypes.removeLast();
     final inferred =
         inferredClosureReturnType ??
@@ -210,10 +225,12 @@ Variable compileFunctionExpression(
             ? CoreTypes.nullType.ref(ctx)
             : returns.every((t) => t == returns.first)
             ? returns.first
-            : CoreTypes.dynamic.ref(ctx));
-    inferredClosureReturnType = CoreTypes.future.ref(ctx).copyWith(
-      specifiedTypeArgs: [inferred],
-    );
+            : TypeRef.commonBaseType(ctx, returns.toSet()));
+    inferredClosureReturnType = b.isAsynchronous
+        ? CoreTypes.future.ref(ctx).copyWith(
+            specifiedTypeArgs: [inferred],
+          )
+        : inferred;
   }
 
   ctx.finishMethod();

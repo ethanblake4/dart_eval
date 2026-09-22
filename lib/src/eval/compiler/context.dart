@@ -216,6 +216,17 @@ class CompilerContext with ScopeContext {
   /// stays null since the `on` type isn't a declared class member scope.
   Declaration? currentExtension;
 
+  /// While compiling an anonymous-method body (`target.=> expr`), the
+  /// receiver the body's `this` resolves to. Like an extension receiver,
+  /// this is a plain local — `this` must not emit `LoadThis` (which only
+  /// accepts class instances).
+  Variable? anonymousThisReceiver;
+
+  /// Active anonymous-method invocations whose block bodies may contain
+  /// `return`: each maps the invocation node to its exit block and result
+  /// local (see `compileReturn` in statement/return.dart).
+  final List<AnonymousMethodReturn> anonymousMethodReturns = [];
+
   /// The library of the enclosing class being compiled. During folded mixin
   /// member compilation, [library] is the member's own library (so bare
   /// identifiers resolve there) while this stays the applying class's, which

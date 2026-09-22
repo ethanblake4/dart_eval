@@ -199,8 +199,30 @@ class IdentifierReference implements Reference {
       return local.type;
     }
 
+    // Inside an anonymous-method body, member names resolve on the
+    // anonymous receiver rather than the enclosing class. The receiver is
+    // read through the `#this` local so nested closures capture it.
+    final anonymousReceiver = ctx.anonymousThisReceiver;
+    final receiverVar =
+        anonymousReceiver == null
+            ? null
+            : ctx.lookupLocal('#this') ?? anonymousReceiver;
+    if (receiverVar != null &&
+        _hasReceiverMember(ctx, receiverVar, name, forSet: forSet)) {
+      final fieldType = TypeRef.lookupFieldType(
+        ctx,
+        receiverVar.type,
+        name,
+        forSet: forSet,
+        source: source,
+      );
+      if (fieldType != null) return fieldType;
+      // Methods produce tear-offs when referenced without a call.
+      return CoreTypes.function.ref(ctx);
+    }
+
     // Instance
-    if (ctx.currentClass != null) {
+    if (anonymousReceiver == null && ctx.currentClass != null) {
       final fieldType = _resolveInstanceFieldType(
         ctx,
         name,
@@ -400,8 +422,24 @@ class IdentifierReference implements Reference {
       return stored;
     }
 
+    // Inside an anonymous-method body, unqualified assignments target
+    // the anonymous receiver — the enclosing class scope does not apply.
+    final anonymousReceiver = ctx.anonymousThisReceiver;
+    final receiverVar =
+        anonymousReceiver == null
+            ? null
+            : ctx.lookupLocal('#this') ?? anonymousReceiver;
+    if (receiverVar != null &&
+        _hasReceiverMember(ctx, receiverVar, name, forSet: true)) {
+      return IdentifierReference(receiverVar, name).setValue(
+        ctx,
+        value,
+        source,
+      );
+    }
+
     // Instance
-    if (ctx.currentClass != null) {
+    if (anonymousReceiver == null && ctx.currentClass != null) {
       final instanceDeclaration = resolveInstanceDeclaration(
         ctx,
         ctx.enclosingLibrary ?? ctx.library,
@@ -625,8 +663,20 @@ class IdentifierReference implements Reference {
       }
     }
 
+    // Inside an anonymous-method body, unqualified names resolve against
+    // the anonymous receiver — the enclosing class scope does not apply.
+    final anonymousReceiver = ctx.anonymousThisReceiver;
+    final receiverVar =
+        anonymousReceiver == null
+            ? null
+            : ctx.lookupLocal('#this') ?? anonymousReceiver;
+    if (receiverVar != null &&
+        _hasReceiverMember(ctx, receiverVar, name)) {
+      return IdentifierReference(receiverVar, name).getValue(ctx, source);
+    }
+
     // Next, the instance (if available)
-    if (ctx.currentClass != null) {
+    if (anonymousReceiver == null && ctx.currentClass != null) {
       final instanceDeclaration = resolveInstanceDeclaration(
         ctx,
         ctx.enclosingLibrary ?? ctx.library,
@@ -1350,4 +1400,53 @@ DeclarationOrBridge _lookupVisibleValue(
       ctx.visibleDeclarations[ctx.library]![name] ??
       (throw CompileError('Could not find declaration "$name"', source));
   return declaration.declaration ?? (throw PrefixError());
+}
+
+/// Whether [name] resolves to a field, method, or extension member of
+/// [receiver]'s static type. Anonymous-method bodies use this to scope
+/// unqualified names to the receiver without emitting a speculative
+/// dispatch — a dynamic receiver always counts as having the member.
+bool _hasReceiverMember(
+  CompilerContext ctx,
+  Variable receiver,
+  String name, {
+  bool forSet = false,
+  AstNode? source,
+}) {
+  var resolvedReceiver = receiver.type.resolveTypeChain(ctx);
+  if (resolvedReceiver.isTypeParameter) {
+    resolvedReceiver =
+        resolvedReceiver.typeParameterBound?.resolveTypeChain(ctx) ??
+        resolvedReceiver;
+  }
+  if (resolvedReceiver == CoreTypes.dynamic.ref(ctx)) return true;
+  if (TypeRef.lookupFieldType(
+        ctx,
+        resolvedReceiver,
+        name,
+        forSet: forSet,
+        source: source,
+      ) !=
+      null) {
+    return true;
+  }
+  if (resolveInstanceDeclaration(
+        ctx,
+        resolvedReceiver.file,
+        resolvedReceiver.name,
+        name,
+        instantiated: resolvedReceiver,
+      ) !=
+      null) {
+    return true;
+  }
+  return resolveExtensionMember(
+            ctx,
+            resolvedReceiver,
+            name,
+            getter: !forSet,
+            setter: forSet,
+          ) !=
+          null ||
+      resolveExtensionMember(ctx, resolvedReceiver, name) != null;
 }
