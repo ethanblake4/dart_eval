@@ -1337,6 +1337,9 @@ _resolveImportsAndExports(
           declaration: d.$2..sourceLib = libraryIds[l]!,
         ),
     };
+    // Names declared in the library itself — a same-named import does not
+    // overwrite them (top-level declarations shadow imported names).
+    final ownDeclarationNames = visibleDeclarationsLib.keys.toSet();
 
     final dartCoreUri = Uri.parse('dart:core');
     final isDartCore = l.uri == dartCoreUri;
@@ -1449,6 +1452,13 @@ _resolveImportsAndExports(
 
         visibleDeclarations.addAll(result);
         for (final ext in extensionsOf(lib)) {
+          // Import combinators apply to extensions too — an unnamed
+          // extension's synthetic '#extN' name never matches a
+          // show/hide entry, matching the spec (unnamed extensions
+          // cannot be hidden and are excluded by `show`).
+          if (!_combinatorListAccepts(import.combinators, ext.name, true)) {
+            continue;
+          }
           final list = visibleExtensions[l] ??= [];
           if (!list.contains(ext)) list.add(ext);
         }
@@ -1471,10 +1481,18 @@ _resolveImportsAndExports(
               .putIfAbsent('deferred_loadLibrary', allocateBridgeIndex);
         }
       } else {
-        visibleDeclarationsLib.addAll({
-          for (final d in visibleDeclarations)
-            d.$1: DeclarationOrPrefix(declaration: d.$2),
-        });
+        for (final d in visibleDeclarations) {
+          // Local declarations shadow imported names, and the implicit
+          // dart:core import (processed last) yields to explicit imports.
+          if (visibleDeclarationsLib.containsKey(d.$1) &&
+              (ownDeclarationNames.contains(d.$1) ||
+                  import.uri == dartCoreUri)) {
+            continue;
+          }
+          visibleDeclarationsLib[d.$1] = DeclarationOrPrefix(
+            declaration: d.$2,
+          );
+        }
       }
     }
 
