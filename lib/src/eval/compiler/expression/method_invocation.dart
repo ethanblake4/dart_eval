@@ -83,6 +83,16 @@ Variable compileMethodInvocation(
         )
       : compileIdentifier(e.methodName, ctx);
 
+  // `E(receiver)` — explicit extension application: the callee is the
+  // extension's namespace type literal, so pin member resolution to `E`.
+  if (method.type == CoreTypes.type.ref(ctx) &&
+      method.concreteTypes.length == 1) {
+    final ext = extensionForType(ctx, method.concreteTypes[0]);
+    if (ext != null) {
+      return _applyExtension(ctx, e, ext);
+    }
+  }
+
   if (method.type == CoreTypes.dynamic.ref(ctx) ||
       method.callingConvention == CallingConvention.dynamic ||
       (method.type == CoreTypes.function.ref(ctx) &&
@@ -548,11 +558,101 @@ bool _annotationUsesTypeParameters(
   );
 }
 
+/// Compiles `E(receiver)` — explicit extension application. The receiver
+/// keeps its own type but carries a [BoundExtension] so member lookups on
+/// the result resolve only within [ext].
+Variable _applyExtension(
+  CompilerContext ctx,
+  MethodInvocation e,
+  EvalExtension ext,
+) {
+  final args = e.argumentList.arguments;
+  if (args.length != 1 || args.first is NamedArgument) {
+    throw CompileError(
+      'Extension application ${ext.name}(...) requires exactly one '
+      'positional argument',
+      e,
+    );
+  }
+  final receiver = compileExpression(
+    args.first.argumentExpression,
+    ctx,
+  ).boxIfNeeded(ctx);
+  final extParams =
+      ext.declaration.typeParameters?.typeParameters ?? const <TypeParameter>[];
+  final List<TypeRef> bindings;
+  if (e.typeArguments != null) {
+    final tas = e.typeArguments!.arguments;
+    if (tas.length != extParams.length) {
+      throw CompileError(
+        'Extension ${ext.name} takes ${extParams.length} type arguments',
+        e,
+      );
+    }
+    bindings = [
+      for (final ta in tas) TypeRef.fromAnnotation(ctx, ext.library, ta),
+    ];
+  } else {
+    // `E(c)?.m` applies `on C` to a nullable `C?` receiver; the `?.` guard
+    // (or a later runtime null check) makes that legal.
+    final receiverType = receiver.type.copyWith(nullable: false);
+    bindings =
+        matchExtensionOn(ctx, receiverType, ext) ??
+        (throw CompileError(
+          'Extension ${ext.name} does not apply to ${receiver.type}',
+          e,
+        ));
+  }
+  // The application result shares the receiver's SSA but is a distinct
+  // value — dropping `localName` keeps `updated()` from re-resolving the
+  // bound wrapper back to the unbound local.
+  return receiver.copyWith()
+    ..localName = null
+    ..boundExtension = BoundExtension(ext, bindings);
+}
+
 Variable _invokeWithTarget(
   CompilerContext ctx,
   Variable L,
   MethodInvocation e,
 ) {
+  // `E(x).m(...)` — explicit application pins member resolution to E.
+  if (L.boundExtension case final bound?) {
+    final member = extensionMember(bound.ext, e.methodName.name);
+    if (member == null) {
+      // `E(x).g(...)`: the getter's result is the call target.
+      final getter = extensionMember(
+        bound.ext,
+        e.methodName.name,
+        getter: true,
+      );
+      if (getter != null) {
+        return _invokeValue(
+          ctx,
+          invokeExtensionGetter(
+            ctx,
+            L,
+            bound.ext,
+            getter,
+            bound.onBindings,
+          ),
+          e,
+        );
+      }
+      throw CompileError(
+        'Extension ${bound.ext.name} has no member ${e.methodName.name}',
+        e,
+      );
+    }
+    return _invokeExtensionMethod(
+      ctx,
+      L,
+      e,
+      bound.ext,
+      member,
+      bound.onBindings,
+    );
+  }
   AlwaysReturnType? mReturnType;
   final bridgeTypeParameters = <String, TypeRef>{};
 

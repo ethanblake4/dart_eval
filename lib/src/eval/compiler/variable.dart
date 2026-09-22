@@ -137,6 +137,10 @@ class Variable {
   /// extension inside its own body.
   Variable? implicitReceiver;
 
+  /// Non-null when this value came from explicit extension application
+  /// `E(x)`: member lookups on it resolve only within that extension.
+  BoundExtension? boundExtension;
+
   bool get boxed => type.boxed;
 
   /// Returns this variable with the allocation proofs that do not survive a
@@ -443,6 +447,7 @@ class Variable {
       ..localName = localName
       ..captureCell = captureCell
       ..implicitReceiver = implicitReceiver
+      ..boundExtension = boundExtension
       ..exceptionSlot = exceptionSlot
       ..captureCellSlot = captureCellSlot;
   }
@@ -533,6 +538,32 @@ class Variable {
       );
     }
     final resolvedReceiver = resolveThroughTypeParameters(ctx, type);
+    // Explicit application `E(x)` pins member resolution to E's members.
+    if (boundExtension case final bound?) {
+      final getter = extensionMember(bound.ext, name, getter: true);
+      if (getter != null) {
+        return invokeExtensionGetter(
+          ctx,
+          this,
+          bound.ext,
+          getter,
+          bound.onBindings,
+        );
+      }
+      final member = extensionMember(bound.ext, name);
+      if (member == null) {
+        throw CompileError(
+          'Extension ${bound.ext.name} has no member $name',
+          source,
+        );
+      }
+      return _extensionMethodTearOff(
+        ctx,
+        bound.ext,
+        member,
+        extBindingsMap(bound.ext, bound.onBindings),
+      );
+    }
     final resolvedField = TypeRef.lookupFieldType(
       ctx,
       resolvedReceiver,
@@ -566,33 +597,12 @@ class Variable {
       // carried through [implicitReceiver] for direct invocation.
       final foundMethod = resolveExtensionMember(ctx, resolvedReceiver, name);
       if (foundMethod != null) {
-        return Variable(
-          CoreTypes.function.ref(ctx),
-          methodOffset: DeferredOrOffset(
-            file: foundMethod.$1.library,
-            name: foundMethod.$1.memberKey(foundMethod.$2),
-          ),
-          methodReturnType: AlwaysReturnType.fromAnnotation(
-            ctx,
-            foundMethod.$1.library,
-            foundMethod.$2.returnType,
-            CoreTypes.dynamic.ref(ctx),
-            typeParameters: {
-              ...memberExtParams(ctx, foundMethod.$1, resolvedReceiver),
-              for (final param
-                  in foundMethod.$2.typeParameters?.typeParameters ??
-                      const <TypeParameter>[])
-                param.name.lexeme: TypeRef(
-                  foundMethod.$1.library,
-                  param.name.lexeme,
-                  resolved: true,
-                  typeParameterOwner:
-                      'tearoff:${foundMethod.$1.library}:${foundMethod.$2.name.lexeme}',
-                ),
-            },
-          ),
-          callingConvention: CallingConvention.static,
-        )..implicitReceiver = this;
+        return _extensionMethodTearOff(
+          ctx,
+          foundMethod.$1,
+          foundMethod.$2,
+          memberExtParams(ctx, foundMethod.$1, resolvedReceiver),
+        );
       }
       throw CompileError(
         'Member "$name" is not defined for type $resolvedReceiver',
@@ -798,6 +808,44 @@ class Variable {
           ? CallingConvention.dynamic
           : CallingConvention.static,
     );
+  }
+
+  /// A bound tear-off of extension [member]: the receiver travels via
+  /// [implicitReceiver] so a direct invocation prepends it as the first
+  /// argument.
+  Variable _extensionMethodTearOff(
+    CompilerContext ctx,
+    EvalExtension ext,
+    MethodDeclaration member,
+    Map<String, TypeRef> typeParameters,
+  ) {
+    return Variable(
+      CoreTypes.function.ref(ctx),
+      methodOffset: DeferredOrOffset(
+        file: ext.library,
+        name: ext.memberKey(member),
+      ),
+      methodReturnType: AlwaysReturnType.fromAnnotation(
+        ctx,
+        ext.library,
+        member.returnType,
+        CoreTypes.dynamic.ref(ctx),
+        typeParameters: {
+          ...typeParameters,
+          for (final param
+              in member.typeParameters?.typeParameters ??
+                  const <TypeParameter>[])
+            param.name.lexeme: TypeRef(
+              ext.library,
+              param.name.lexeme,
+              resolved: true,
+              typeParameterOwner:
+                  'tearoff:${ext.library}:${member.name.lexeme}',
+            ),
+        },
+      ),
+      callingConvention: CallingConvention.static,
+    )..implicitReceiver = this;
   }
 
   static List<Variable> boxUnboxMultiple(

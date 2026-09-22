@@ -430,6 +430,17 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
           _topLevelDeclarationsMap[libraryIndex]![ext.memberKey(member)] =
               DeclarationOrBridge(libraryIndex, declaration: member);
         }
+        for (final field in ext.members.whereType<FieldDeclaration>()) {
+          if (!field.isStatic) continue;
+          for (final variable in field.fields.variables) {
+            _declareGlobal(
+              libraryIndex,
+              '${ext.name}.${variable.name.lexeme}',
+              DeclarationOrBridge(libraryIndex, declaration: variable),
+              variable,
+            );
+          }
+        }
       }
     }
 
@@ -791,6 +802,14 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       for (final ext in _ctx.extensions) {
         _ctx.library = ext.library;
         for (final member in ext.members) {
+          if (member is FieldDeclaration) {
+            if (!member.isStatic) continue;
+            _ctx.currentExtension = ext.declaration;
+            compileFieldDeclaration(-1, member, _ctx, ext.declaration);
+            _ctx.currentExtension = null;
+            _ctx.finishMethod();
+            continue;
+          }
           if (member is! MethodDeclaration) continue;
           compileMethodDeclaration(
             member,

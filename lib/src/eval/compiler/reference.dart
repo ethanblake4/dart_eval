@@ -182,7 +182,7 @@ class IdentifierReference implements Reference {
     if (object != null) {
       if (object!.type == CoreTypes.type.ref(ctx)) {
         final concrete = object!.concreteTypes[0];
-        if (_extensionOf(ctx, concrete) != null) {
+        if (extensionForType(ctx, concrete) != null) {
           // `E.member` — a tear-off (or getter invocation) through the
           // extension namespace; precise typing isn't needed here.
           return CoreTypes.function.ref(ctx);
@@ -300,6 +300,65 @@ class IdentifierReference implements Reference {
       return CoreTypes.type.ref(ctx);
     }
 
+    // A bare identifier inside an extension body or instance method can
+    // denote a member of the implicit receiver. The members that outrank
+    // globals are the extension's own members, and — in a class method —
+    // the members the enclosing class itself declares; inherited members
+    // and members of other extensions only apply after globals miss.
+    final $this =
+        (ctx.currentExtension == null && ctx.currentClass == null)
+        ? null
+        : ctx.lookupLocal('#this');
+    final currentExtension = ctx.currentExtension;
+    if (currentExtension is ExtensionDeclaration) {
+      final ext = ctx.extensions.firstWhereOrNull(
+        (e) => e.declaration == currentExtension,
+      );
+      if (ext != null) {
+        final member = extensionMember(
+              ext,
+              name,
+              getter: !forSet,
+              setter: forSet,
+            ) ??
+            extensionStaticMember(
+              ext,
+              name,
+              getter: !forSet,
+              setter: forSet,
+            );
+        if (member != null) {
+          if (forSet) {
+            return _setterValueType(ctx, ext.library, member.parameters) ??
+                CoreTypes.dynamic.ref(ctx);
+          }
+          return AlwaysReturnType.fromAnnotation(
+                ctx,
+                ext.library,
+                member.returnType,
+                CoreTypes.dynamic.ref(ctx),
+              ).type ??
+              CoreTypes.dynamic.ref(ctx);
+        }
+        if (extensionStaticField(ext, name) != null) {
+          return resolveGlobalType(ctx, ext.library, '${ext.name}.$name');
+        }
+      }
+    } else if ($this != null &&
+        ctx.currentClass != null &&
+        ctx.instanceDeclarationsMap[ctx.enclosingLibrary ??
+                ctx.library]?[ctx.currentClassName!]?[name] !=
+            null) {
+      final memberType = TypeRef.lookupFieldType(
+        ctx,
+        $this.type,
+        name,
+        forSet: forSet,
+        source: source,
+      );
+      if (memberType != null) return memberType;
+    }
+
     DeclarationOrBridge? declarationValue;
     try {
       declarationValue = _lookupVisibleValue(
@@ -309,21 +368,43 @@ class IdentifierReference implements Reference {
         forSet: forSet,
       );
     } on CompileError {
-      // Inside an extension body a bare identifier can name a member of the
-      // `on` type through the implicit receiver.
-      final $this =
-          ctx.currentExtension == null ? null : ctx.lookupLocal('#this');
-      final memberType = $this == null
-          ? null
-          : TypeRef.lookupFieldType(
-              ctx,
-              $this.type,
-              name,
-              forSet: forSet,
-              source: source,
-            );
-      if (memberType == null) rethrow;
-      return memberType;
+      // `this.` members apply after globals miss: instance members
+      // (inherited included), then members of applicable extensions.
+      if ($this != null) {
+        final memberType = TypeRef.lookupFieldType(
+          ctx,
+          $this.type,
+          name,
+          forSet: forSet,
+          source: source,
+        );
+        if (memberType != null) return memberType;
+        final extMember = resolveExtensionMember(
+          ctx,
+          $this.type,
+          name,
+          getter: !forSet,
+          setter: forSet,
+        );
+        if (extMember != null) {
+          if (forSet) {
+            return _setterValueType(
+                  ctx,
+                  extMember.$1.library,
+                  extMember.$2.parameters,
+                ) ??
+                CoreTypes.dynamic.ref(ctx);
+          }
+          return AlwaysReturnType.fromAnnotation(
+                ctx,
+                extMember.$1.library,
+                extMember.$2.returnType,
+                CoreTypes.dynamic.ref(ctx),
+              ).type ??
+              CoreTypes.dynamic.ref(ctx);
+        }
+      }
+      rethrow;
     }
     final decl = declarationValue.declaration!;
 
@@ -384,6 +465,54 @@ class IdentifierReference implements Reference {
         return storeGlobalBinding(ctx, classType.file, fqName, value, source);
       }
       object = object!.boxIfNeeded(ctx, source);
+      // Explicit application `E(x).s = v` pins member resolution to E.
+      if (object!.boundExtension case final bound?) {
+        final member = extensionMember(bound.ext, name, setter: true);
+        if (member == null) {
+          throw CompileError(
+            'Extension ${bound.ext.name} has no setter $name',
+            source,
+          );
+        }
+        final paramType =
+            member.parameters?.parameters.firstOrNull?.type == null
+            ? null
+            : formalParameterAnnotationType(
+                ctx,
+                bound.ext.library,
+                member.parameters!.parameters.first,
+                typeParameters: extBindingsMap(bound.ext, bound.onBindings),
+              );
+        final arg = paramType == null
+            ? value.boxIfNeeded(ctx)
+            : convertForAssignment(
+                ctx,
+                value,
+                paramType,
+                representation: MachineRepresentation.object,
+                source: source,
+              );
+        ctx.pushOp(
+          Call(
+            DeferredOrOffset(
+              file: bound.ext.library,
+              name: bound.ext.memberKey(member),
+            ),
+            [object!.ssa, arg.ssa],
+            result: ctx.svar('setter_result'),
+            typeArguments:
+                extensionCallTypeArguments(
+                  ctx,
+                  bound.ext,
+                  member,
+                  bound.onBindings,
+                  const {},
+                ) ??
+                const [],
+          ),
+        );
+        return arg;
+      }
       final declaredFieldType = TypeRef.lookupFieldType(
         ctx,
         object!.type,
@@ -391,6 +520,63 @@ class IdentifierReference implements Reference {
         forSet: true,
         source: source,
       );
+      if (declaredFieldType == null &&
+          !_hasInstanceMember(ctx, object!.type, name, forSet: true)) {
+        // No instance member by this name: an extension setter may apply
+        // (`e.name = v` where `set name` lives in `extension on T`).
+        final extSetter = resolveExtensionMember(
+          ctx,
+          object!.type,
+          name,
+          setter: true,
+        );
+        if (extSetter != null) {
+          final (ext, member, bindings) = extSetter;
+          final paramType =
+              member.parameters?.parameters.firstOrNull?.type == null
+              ? null
+              : formalParameterAnnotationType(
+                  ctx,
+                  ext.library,
+                  member.parameters!.parameters.first,
+                  typeParameters: memberExtParams(ctx, ext, object!.type),
+                );
+          final arg = paramType == null
+              ? value.boxIfNeeded(ctx)
+              : convertForAssignment(
+                  ctx,
+                  value,
+                  paramType,
+                  representation: MachineRepresentation.object,
+                  source: source,
+                  description:
+                      'Cannot assign ${value.type} to setter '
+                      '${ext.name}.$name on ${object!.type}',
+                );
+          ctx.pushOp(
+            Call(
+              DeferredOrOffset(
+                file: ext.library,
+                name: ext.memberKey(member),
+              ),
+              [object!.boxIfNeeded(ctx).ssa, arg.ssa],
+              result: ctx.svar('setter_result'),
+              typeArguments:
+                  extensionCallTypeArguments(
+                    ctx,
+                    ext,
+                    member,
+                    bindings,
+                    const {},
+                  ) ??
+                  const [],
+            ),
+          );
+          // The assignment's value is the value as converted for the
+          // setter's parameter — e.g. an implicit `.call` tear-off.
+          return arg;
+        }
+      }
       final fieldType =
           declaredFieldType ?? CoreTypes.dynamic.ref(ctx);
       final val = convertForAssignment(
@@ -534,59 +720,6 @@ class IdentifierReference implements Reference {
           return val;
         }
       }
-      if (declaredFieldType == null) {
-        // No instance member by this name: an extension setter may apply
-        // (`e.name = v` where `set name` lives in `extension on T`).
-        final extSetter = resolveExtensionMember(
-          ctx,
-          object!.type,
-          name,
-          setter: true,
-        );
-        if (extSetter != null) {
-          final (ext, member, bindings) = extSetter;
-          final paramType =
-              member.parameters?.parameters.firstOrNull?.type == null
-              ? null
-              : formalParameterAnnotationType(
-                  ctx,
-                  ext.library,
-                  member.parameters!.parameters.first,
-                  typeParameters: memberExtParams(ctx, ext, object!.type),
-                );
-          final arg = paramType == null
-              ? value.boxIfNeeded(ctx)
-              : convertForAssignment(
-                  ctx,
-                  value,
-                  paramType,
-                  representation: MachineRepresentation.object,
-                  source: source,
-                );
-          ctx.pushOp(
-            Call(
-              DeferredOrOffset(
-                file: ext.library,
-                name: ext.memberKey(member),
-              ),
-              [object!.boxIfNeeded(ctx).ssa, arg.ssa],
-              result: ctx.svar('setter_result'),
-              typeArguments:
-                  extensionCallTypeArguments(
-                    ctx,
-                    ext,
-                    member,
-                    bindings,
-                    const {},
-                  ) ??
-                  const [],
-            ),
-          );
-          // The assignment's value is the value as converted for the
-          // setter's parameter — e.g. an implicit `.call` tear-off.
-          return arg;
-        }
-      }
       final op = SetPropertyDynamic(
         object!.ssa,
         name,
@@ -671,48 +804,67 @@ class IdentifierReference implements Reference {
     }
 
     // Inside an extension body, unqualified assignments first target the
-    // extension's own setters, then members of the `on` type — both through
-    // the implicit receiver.
+    // extension's own setters. In either an extension body or an instance
+    // method, remaining names resolve through the implicit receiver —
+    // instance members and other applicable extensions (`this.name = v`).
     final currentExtension = ctx.currentExtension;
-    if (anonymousReceiver == null && currentExtension is ExtensionDeclaration) {
-      final ext = ctx.extensions.firstWhereOrNull(
-        (e) => e.declaration == currentExtension,
-      );
+    if (anonymousReceiver == null &&
+        (currentExtension is ExtensionDeclaration ||
+            ctx.currentClass != null)) {
       final $this = ctx.lookupLocal('#this');
-      if (ext != null && $this != null) {
-        for (final member in ext.members) {
-          if (member is! MethodDeclaration ||
-              member.isStatic ||
-              member.name.lexeme != name) {
-            continue;
-          }
-          if (member.isSetter) {
-            ctx.pushOp(
-              Call(
-                DeferredOrOffset(
-                  file: ext.library,
-                  name: ext.memberKey(member),
+      if (currentExtension is ExtensionDeclaration) {
+        final ext = ctx.extensions.firstWhereOrNull(
+          (e) => e.declaration == currentExtension,
+        );
+        if (ext != null) {
+          for (final member in ext.members) {
+            if (member is FieldDeclaration) {
+              if (member.isStatic &&
+                  member.fields.variables.any(
+                    (v) => v.name.lexeme == name,
+                  )) {
+                return storeGlobalBinding(
+                  ctx,
+                  ext.library,
+                  '${ext.name}.$name',
+                  value,
+                  source,
+                );
+              }
+              continue;
+            }
+            if (member is! MethodDeclaration ||
+                member.name.lexeme != name) {
+              continue;
+            }
+            if (member.isSetter) {
+              // Box into fresh slots: `value` flows on as the assignment
+              // result and must keep its unboxed representation.
+              final boxedValue = value.boxIntoFreshSlot(ctx);
+              // Static members take no receiver argument.
+              final args = member.isStatic || $this == null
+                  ? [boxedValue.ssa]
+                  : [$this.boxIfNeeded(ctx).ssa, boxedValue.ssa];
+              ctx.pushOp(
+                Call(
+                  DeferredOrOffset(
+                    file: ext.library,
+                    name: ext.memberKey(member),
+                  ),
+                  args,
+                  result: ctx.svar('setter_result'),
                 ),
-                [$this.boxIfNeeded(ctx).ssa, value.boxIfNeeded(ctx).ssa],
-                result: ctx.svar('setter_result'),
-              ),
-            );
-            return value;
+              );
+              return value;
+            }
+            // A same-named non-setter member shadows the `on` type's members.
+            break;
           }
-          // A same-named non-setter member shadows the `on` type's members.
-          break;
-        }
-        if (_hasReceiverMember(ctx, $this, name, forSet: true)) {
-          return IdentifierReference($this, name).setValue(
-            ctx,
-            value,
-            source,
-          );
         }
       }
     }
 
-    // Instance
+    // Instance — declared on the enclosing class only, as for getValue.
     if (anonymousReceiver == null && ctx.currentClass != null) {
       final instanceDeclaration = resolveInstanceDeclaration(
         ctx,
@@ -720,7 +872,10 @@ class IdentifierReference implements Reference {
         ctx.currentClassName!,
         name,
       );
-      if (instanceDeclaration != null) {
+      if (instanceDeclaration != null &&
+          instanceDeclaration.$1.name == ctx.currentClassName &&
+          instanceDeclaration.$1.file ==
+              (ctx.enclosingLibrary ?? ctx.library)) {
         final fieldType = _resolveInstanceFieldType(
           ctx,
           name,
@@ -783,12 +938,33 @@ class IdentifierReference implements Reference {
       }
     }
 
-    final declarationValue = _lookupVisibleValue(
-      ctx,
-      name,
-      source,
-      forSet: true,
-    );
+    // Otherwise a global or import — or, in an extension body/instance
+    // method, an extension member applied through the implicit `this`
+    // (`this.name = v`), which only applies after globals miss.
+    DeclarationOrBridge? declarationValue;
+    try {
+      declarationValue = _lookupVisibleValue(
+        ctx,
+        name,
+        source,
+        forSet: true,
+      );
+    } on CompileError {
+      if (anonymousReceiver == null &&
+          (currentExtension is ExtensionDeclaration ||
+              ctx.currentClass != null)) {
+        final $this = ctx.lookupLocal('#this');
+        if ($this != null &&
+            _hasReceiverMember(ctx, $this, name, forSet: true)) {
+          return IdentifierReference($this, name).setValue(
+            ctx,
+            value,
+            source,
+          );
+        }
+      }
+      rethrow;
+    }
     final decl = declarationValue.declaration!;
 
     if (decl is VariableDeclaration) {
@@ -834,7 +1010,7 @@ class IdentifierReference implements Reference {
   Variable getValue(CompilerContext ctx, [AstNode? source]) {
     if (object != null) {
       if (object!.type == CoreTypes.type.ref(ctx)) {
-        final ext = _extensionOf(ctx, object!.concreteTypes[0]);
+        final ext = extensionForType(ctx, object!.concreteTypes[0]);
         if (ext != null) {
           // `E.member` through the extension namespace: the function (or
           // getter) is a static callable registered under its member key.
@@ -987,10 +1163,54 @@ class IdentifierReference implements Reference {
         (e) => e.declaration == currentExtension,
       );
       final $this = ctx.lookupLocal('#this');
-      if (ext != null && $this != null) {
+      if (ext != null) {
         for (final member in ext.members) {
-          if (member is! MethodDeclaration || member.isStatic) continue;
-          if (member.name.lexeme != name) continue;
+          if (member is FieldDeclaration) {
+            if (member.isStatic &&
+                member.fields.variables.any((v) => v.name.lexeme == name)) {
+              return _loadGlobalVariable(
+                ctx,
+                ext.library,
+                '${ext.name}.$name',
+              );
+            }
+            continue;
+          }
+          if (member is! MethodDeclaration ||
+              member.name.lexeme != name) {
+            continue;
+          }
+          if (member.isStatic) {
+            // Static members resolve through the extension's namespace —
+            // no receiver.
+            final offset = DeferredOrOffset(
+              file: ext.library,
+              name: ext.memberKey(member),
+            );
+            if (member.isGetter) {
+              final resvar = ctx.svar('call_result');
+              ctx.pushOp(Call(offset, const [], result: resvar));
+              return Variable.of(
+                ctx,
+                resvar,
+                (AlwaysReturnType.fromAnnotation(
+                          ctx,
+                          ext.library,
+                          member.returnType,
+                          CoreTypes.dynamic.ref(ctx),
+                        ).type ??
+                        CoreTypes.dynamic.ref(ctx))
+                    .copyWith(boxed: true),
+              );
+            }
+            if (member.isSetter) break;
+            return Variable(
+              CoreTypes.function.ref(ctx),
+              methodOffset: offset,
+              callingConvention: CallingConvention.static,
+            );
+          }
+          if ($this == null) break;
           if (member.isGetter) {
             return invokeExtensionGetter(
               ctx,
@@ -1031,7 +1251,9 @@ class IdentifierReference implements Reference {
       return IdentifierReference(receiverVar, name).getValue(ctx, source);
     }
 
-    // Next, the instance (if available)
+    // Next, the instance (if available). Unqualified names only reach
+    // members the enclosing class itself declares; inherited members lose
+    // to globals and resolve through `this` after globals miss.
     if (anonymousReceiver == null && ctx.currentClass != null) {
       final instanceDeclaration = resolveInstanceDeclaration(
         ctx,
@@ -1039,7 +1261,10 @@ class IdentifierReference implements Reference {
         ctx.currentClassName!,
         name,
       );
-      if (instanceDeclaration != null) {
+      if (instanceDeclaration != null &&
+          instanceDeclaration.$1.name == ctx.currentClassName &&
+          instanceDeclaration.$1.file ==
+              (ctx.enclosingLibrary ?? ctx.library)) {
         final $type = instanceDeclaration.$1;
         final decOrBridge = instanceDeclaration.$2;
 
@@ -1203,15 +1428,17 @@ class IdentifierReference implements Reference {
         ctx.visibleDeclarations[ctx.library]!['$name*g'] ??
         ctx.visibleDeclarations[ctx.library]![name.split('.')[0]];
 
-    // A bare identifier inside an extension body can denote a member of the
-    // receiver — lowest precedence, after globals.
-    if (declaration == null && currentExtension != null) {
+    // A bare identifier inside an extension body or instance method can
+    // denote a member of the receiver — lowest precedence, after globals.
+    // `this.m` lookup also applies extension members of the receiver type.
+    if (declaration == null &&
+        (currentExtension != null || ctx.currentClass != null)) {
       final $this = ctx.lookupLocal('#this');
       if ($this != null) {
         try {
           return $this.getProperty(ctx, name);
         } on CompileError {
-          // Not a member of the `on` type either.
+          // Not a member of the receiver type either.
         }
       }
     }
@@ -1655,15 +1882,6 @@ class IndexedReference implements Reference {
   }
 }
 
-/// The [EvalExtension] an `E` namespace literal names, or null. Extensions
-/// have no runtime type — the pseudo-TypeRef exists purely for compile-time
-/// member lookup.
-EvalExtension? _extensionOf(CompilerContext ctx, TypeRef type) {
-  for (final ext in ctx.extensions) {
-    if (ext.library == type.file && ext.name == type.name) return ext;
-  }
-  return null;
-}
 
 Variable _declarationToVariable(
   DeclarationOrBridge decOrBridge,
@@ -2036,6 +2254,31 @@ Variable _setterArgument(
 /// [receiver]'s static type. Anonymous-method bodies use this to scope
 /// unqualified names to the receiver without emitting a speculative
 /// dispatch — a dynamic receiver always counts as having the member.
+/// Whether [type] or one of its supertypes declares a member named [name].
+/// Setters and getters register under `name*s`/`name*g` keys, so each kind is
+/// probed separately when [forSet] selects one.
+bool _hasInstanceMember(
+  CompilerContext ctx,
+  TypeRef type,
+  String name, {
+  bool forSet = false,
+}) {
+  final keys = forSet ? [name, '$name*s'] : [name, '$name*g'];
+  for (final key in keys) {
+    if (resolveInstanceDeclaration(
+          ctx,
+          type.file,
+          type.name,
+          key,
+          instantiated: type,
+        ) !=
+        null) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool _hasReceiverMember(
   CompilerContext ctx,
   Variable receiver,
@@ -2055,14 +2298,7 @@ bool _hasReceiverMember(
       null) {
     return true;
   }
-  if (resolveInstanceDeclaration(
-        ctx,
-        resolvedReceiver.file,
-        resolvedReceiver.name,
-        name,
-        instantiated: resolvedReceiver,
-      ) !=
-      null) {
+  if (_hasInstanceMember(ctx, resolvedReceiver, name, forSet: forSet)) {
     return true;
   }
   return resolveExtensionMember(

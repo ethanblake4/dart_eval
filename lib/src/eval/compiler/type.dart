@@ -1090,7 +1090,15 @@ class TypeRef {
   /// members and supertypes declared in its parameter keyspace can be
   /// resolved through it.
   Map<(String, int), TypeRef> appliedTypeArguments(CompilerContext ctx) {
-    if (genericParams.isEmpty) return const {};
+    if (genericParams.isEmpty) {
+      // Refs constructed without resolved parameter declarations still map
+      // their positional arguments into the class's parameter namespace.
+      if (specifiedTypeArgs.isEmpty) return const {};
+      return {
+        for (var i = 0; i < specifiedTypeArgs.length; i++)
+          ('class:$file:$name', i): specifiedTypeArgs[i],
+      };
+    }
     return {
       for (var i = 0; i < genericParams.length; i++)
         ('class:$file:$name', i): i < specifiedTypeArgs.length

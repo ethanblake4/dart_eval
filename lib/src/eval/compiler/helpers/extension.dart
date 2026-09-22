@@ -83,6 +83,83 @@ class EvalExtension {
   }
 }
 
+/// The binding produced by explicit extension application `E(receiver)`:
+/// member lookups on the value resolve only within [ext], with
+/// [onBindings] holding the resolved `on` type-parameter bindings.
+class BoundExtension {
+  const BoundExtension(this.ext, this.onBindings);
+
+  final EvalExtension ext;
+  final List<TypeRef> onBindings;
+}
+
+/// The extension declaring namespace [type] names, or null. Type literals
+/// produced for `extension E` declarations carry a pseudo-type whose
+/// (file, name) pair identifies the extension.
+EvalExtension? extensionForType(CompilerContext ctx, TypeRef type) {
+  for (final ext in ctx.extensions) {
+    if (ext.library == type.file && ext.name == type.name) return ext;
+  }
+  return null;
+}
+
+/// Maps [ext]'s `on` type-parameter names to resolved [bindings] for use as
+/// the `typeParameters:` argument of annotation resolvers.
+Map<String, TypeRef> extBindingsMap(EvalExtension ext, List<TypeRef> bindings) {
+  final params =
+      ext.declaration.typeParameters?.typeParameters ?? const <TypeParameter>[];
+  return {
+    for (var i = 0; i < params.length && i < bindings.length; i++)
+      params[i].name.lexeme: bindings[i],
+  };
+}
+
+/// The instance member of [ext] named [name] of the given kind, or null.
+MethodDeclaration? extensionMember(
+  EvalExtension ext,
+  String name, {
+  bool getter = false,
+  bool setter = false,
+}) {
+  for (final member in ext.members) {
+    if (member is! MethodDeclaration || member.isStatic) continue;
+    if (member.name.lexeme != name) continue;
+    if (member.isGetter != getter || member.isSetter != setter) continue;
+    return member;
+  }
+  return null;
+}
+
+/// The static member of [ext] named [name] of the given kind, or null.
+/// Static members are only reachable inside the extension's own body (as
+/// unqualified names) or through the `E.` namespace — never via a receiver.
+MethodDeclaration? extensionStaticMember(
+  EvalExtension ext,
+  String name, {
+  bool getter = false,
+  bool setter = false,
+}) {
+  for (final member in ext.members) {
+    if (member is! MethodDeclaration || !member.isStatic) continue;
+    if (member.name.lexeme != name) continue;
+    if (member.isGetter != getter || member.isSetter != setter) continue;
+    return member;
+  }
+  return null;
+}
+
+/// The variable of a static field of [ext] named [name], or null.
+/// Static extension fields behave like library-level `E.name` globals.
+VariableDeclaration? extensionStaticField(EvalExtension ext, String name) {
+  for (final member in ext.members) {
+    if (member is! FieldDeclaration || !member.isStatic) continue;
+    for (final variable in member.fields.variables) {
+      if (variable.name.lexeme == name) return variable;
+    }
+  }
+  return null;
+}
+
 /// Binds [pattern] (an extension `on` clause, possibly containing the
 /// extension's type parameters) against [actual] or one of its instantiated
 /// supertypes, writing bindings into [bound] indexed by parameter position.
@@ -159,10 +236,27 @@ List<TypeRef>? matchExtensionOn(
   ];
 }
 
+/// [ext]'s `on` type with [bindings] substituted for its type parameters —
+/// the instantiated type the receiver was matched against, used to order
+/// candidates by specificity.
+TypeRef _instantiateOnType(
+  EvalExtension ext,
+  TypeRef onType,
+  List<TypeRef> bindings,
+) {
+  if (bindings.isEmpty) return onType;
+  return onType.substituteTypeParameters({
+    for (var i = 0; i < bindings.length; i++)
+      ('extension:${ext.library}:${ext.name}', i): bindings[i],
+  });
+}
+
 /// Finds the most specific extension member applicable to [receiverType]
-/// named [memberName], or null when none apply. Ambiguity between equally
-/// specific candidates reports the first — full specificity ordering is not
-/// implemented.
+/// named [memberName], or null when none apply. Specificity compares each
+/// candidate's `on` type after substituting the bindings inferred for the
+/// receiver — `on SubTarget<Object>` loses to `on T` bound to
+/// `SubTarget<int>`. Ambiguity between equally specific candidates reports
+/// the last seen.
 (EvalExtension, MethodDeclaration, List<TypeRef>)? resolveExtensionMember(
   CompilerContext ctx,
   TypeRef receiverType,
@@ -179,14 +273,23 @@ List<TypeRef>? matchExtensionOn(
     if (onType == null) continue;
     final bindings = matchExtensionOn(ctx, receiverType, ext);
     if (bindings == null) continue;
+    final instantiatedOn = _instantiateOnType(ext, onType, bindings);
     for (final member in ext.members) {
       if (member is! MethodDeclaration || member.isStatic) continue;
       if (member.name.lexeme != memberName) continue;
       if (member.isGetter != getter || member.isSetter != setter) continue;
-      if (best == null || onType.isAssignableTo(ctx, bestOnType!)) {
+      var wins = best == null;
+      if (!wins) {
+        final forward = instantiatedOn.isAssignableTo(ctx, bestOnType!);
+        final reverse = bestOnType.isAssignableTo(ctx, instantiatedOn);
+        // Equal-specificity tie: an `on T` variable pattern loses to a
+        // concrete on-type (`on Target<T>` beats `on T` bound to Target<num>).
+        wins = forward && (!reverse || !onType.isTypeParameter);
+      }
+      if (wins) {
         bestExt = ext;
         best = member;
-        bestOnType = onType;
+        bestOnType = instantiatedOn;
         bestBindings = bindings;
       }
     }
