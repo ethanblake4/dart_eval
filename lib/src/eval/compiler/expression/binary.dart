@@ -127,7 +127,9 @@ Variable _compileShortCircuit(
           description: 'Operands of $operator must be boolean',
         );
       } else {
-        R = R.boxIfNeeded(ctx);
+        // Fresh slot: an unboxed local must keep its primitive
+        // representation on the path where this branch doesn't run.
+        R = R.boxIntoFreshSlot(ctx);
       }
       rightType = R.type;
       ctx.pushOp(Assign(outVar.ssa, R.ssa));

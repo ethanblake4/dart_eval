@@ -195,7 +195,12 @@ int compileMethodDeclaration(
     );
   } else if (b is ExpressionFunctionBody) {
     ctx.beginScope();
-    final V = compileExpression(b.expression, ctx);
+    // An async body's context type is the *flattened* return type: in
+    // `Future<List<int>> f() async => []` the literal sees `List<int>`.
+    final bound = b.isAsynchronous && returnType != null
+        ? flattenType(ctx, returnType)
+        : returnType;
+    final V = compileExpression(b.expression, ctx, bound);
     stInfo = doReturn(
       ctx,
       expectedReturnType,

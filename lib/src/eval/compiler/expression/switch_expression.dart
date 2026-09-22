@@ -68,8 +68,10 @@ Variable compileSwitchExpression(
         return matches;
       },
       thenBranch: (ctx, _) {
+        // Box into a fresh slot so an unboxed local's SSA keeps its primitive
+        // representation on paths where the arm doesn't run.
         final value = compileExpression(currentCase.expression, ctx, bound)
-            .boxIfNeeded(ctx);
+            .boxIntoFreshSlot(ctx);
         resultTypes.add(value.type);
         ctx.pushOp(Assign(resultSsa, value.ssa));
         return StatementInfo();

@@ -10,6 +10,7 @@ import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
+import 'package:dart_eval/src/eval/ir/memory.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
 
 Variable compileAssignmentExpression(
@@ -68,12 +69,19 @@ Variable _assignWithReference(
     return L.setValue(ctx, set);
   } else if (e.operator.type.binaryOperatorOfCompoundAssignment ==
       TokenType.QUESTION_QUESTION) {
-    late Variable result;
+    // The expression's value merges the stored value (then) with the
+    // already-read value (else); both must be assigned into a shared slot so
+    // the phi sees one representation, and the getter must be read exactly
+    // once (in the condition).
+    var out = BuiltinValue().push(ctx).boxIfNeeded(ctx);
+    Variable? readValue;
+    TypeRef? storedType;
     macroBranch(
       ctx,
       null,
       condition: (ctx) {
-        return L.getValue(ctx).invoke(ctx, '==', [
+        readValue = L.getValue(ctx);
+        return readValue!.invoke(ctx, '==', [
           BuiltinValue().push(ctx),
         ]).result;
       },
@@ -81,12 +89,40 @@ Variable _assignWithReference(
         // The RHS is evaluated only inside the branch — `x ??= e` must not
         // evaluate `e` when `x` is non-null.
         final R = compileExpression(e.rightHandSide, ctx, setterType());
-        final set = R.type != setterType() ? R.boxIfNeeded(ctx) : R;
-        result = L.setValue(ctx, set);
+        final set = R.type != setterType() ? R.boxIntoFreshSlot(ctx) : R;
+        final V = L.setValue(ctx, set).boxIntoFreshSlot(ctx);
+        // T2' is the RHS expression's type after coercion to the write
+        // context: R's own type when it already conforms, else the type the
+        // conversion produced (e.g. a `.call` tear-off coerced to Function).
+        final writeType = setterType();
+        storedType = writeType != null &&
+                !R.type.isAssignableTo(
+                  ctx,
+                  writeType,
+                  forceAllowDynamic: false,
+                )
+            ? V.type
+            : R.type;
+        ctx.pushOp(Assign(out.ssa, V.ssa));
+        return StatementInfo();
+      },
+      elseBranch: (ctx, rt) {
+        final V = readValue!.boxIntoFreshSlot(ctx);
+        ctx.pushOp(Assign(out.ssa, V.ssa));
         return StatementInfo();
       },
     );
-    return result;
+    // Per spec, `e1 ??= e2` has type UP(NonNull(T1), T2'): the join of the
+    // non-null read type and the stored type — `int? ??= double` is `num`.
+    final joined = TypeRef.commonBaseType(ctx, {
+      readValue!.type.copyWith(nullable: false),
+      storedType ?? readValue!.type,
+    });
+    return out.copyWith(
+      type: joined.copyWith(
+        nullable: storedType?.nullable ?? readValue!.type.nullable,
+      ),
+    );
   } else {
     final method = e.operator.type.binaryOperatorOfCompoundAssignment!.lexeme;
     // Dart evaluates the read of L (the getter / index call) before the RHS.

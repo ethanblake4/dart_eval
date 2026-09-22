@@ -53,7 +53,7 @@ void compileFieldDeclaration(
                 '${V.type} does not conform to type $type',
           );
         } else {
-          type = V.type;
+          type = widenedInferredType(ctx, V.type);
         }
         V = storageType.boxed ? V.boxIfNeeded(ctx) : V.unboxIfNeeded(ctx);
         type = storageType;

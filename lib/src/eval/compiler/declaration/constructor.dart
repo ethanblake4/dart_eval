@@ -747,8 +747,8 @@ Map<String, Variable> _evalUnusedFieldInitializers(
       }
       ctx.inferredFieldTypes
           .putIfAbsent(ctx.library, () => {})
-          .putIfAbsent(ctx.currentClassName!, () => {})[field.name.lexeme] = V
-          .type;
+          .putIfAbsent(ctx.currentClassName!, () => {})[field.name.lexeme] =
+          widenedInferredType(ctx, V.type);
       evaluated[field.name.lexeme] = V;
     }
   }
@@ -815,7 +815,7 @@ void _compileUnusedFields(
               .putIfAbsent(ctx.library, () => {})
               .putIfAbsent(ctx.currentClassName!, () => {})[field
                   .name
-                  .lexeme] = v0.type;
+                  .lexeme] = widenedInferredType(ctx, v0.type);
           ctx.pushOp(SetPropertyStatic(inst, fieldIdx0, v0.ssa));
         }
       }

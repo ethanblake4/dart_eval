@@ -25,13 +25,16 @@ Variable compileConditionalExpression(
     thenBranch: (ctx, rt) {
       final v = compileExpression(e.thenExpression, ctx, boundType);
       types.add(v.type);
-      ctx.pushOp(Assign(output.ssa, v.boxIfNeeded(ctx).ssa));
+      // Box into a fresh slot: boxing in place would re-version the source
+      // variable with an object representation, leaving the outer phi that
+      // merges it across scopes with mixed representations.
+      ctx.pushOp(Assign(output.ssa, v.boxIntoFreshSlot(ctx).ssa));
       return StatementInfo();
     },
     elseBranch: (ctx, rt) {
       final v = compileExpression(e.elseExpression, ctx, boundType);
       types.add(v.type);
-      ctx.pushOp(Assign(output.ssa, v.boxIfNeeded(ctx).ssa));
+      ctx.pushOp(Assign(output.ssa, v.boxIntoFreshSlot(ctx).ssa));
       return StatementInfo();
     },
     resolveStateToThen: true,

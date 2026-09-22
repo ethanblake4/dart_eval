@@ -874,6 +874,24 @@ Variable _invokeWithTarget(
     isStatic = false;
   } else {
     isStatic = false;
+    // Extension resolution is static, so it still applies to a dynamic
+    // receiver (`on T` binds T=dynamic) — `d.expectStaticType<...>()`.
+    final found = resolveExtensionMember(
+      ctx,
+      L.type,
+      e.methodName.name,
+      arity: _positionalArity(e),
+    );
+    if (found != null) {
+      return _invokeExtensionMethod(
+        ctx,
+        L,
+        e,
+        found.$1,
+        found.$2,
+        found.$3,
+      );
+    }
   }
 
   if (dec0?.isBridge == true) {
@@ -956,7 +974,7 @@ Variable _invokeWithTarget(
       typeArguments: e.typeArguments,
       source: e,
       seedGenerics: !isStatic && dec is MethodDeclaration
-          ? _classTypeArguments(ctx, L.type, dec0.sourceLib, dec)
+          ? classTypeArguments(ctx, L.type, dec0.sourceLib, dec)
           : const {},
     );
     argsPair = result.args;
@@ -1228,7 +1246,11 @@ List<int> _runtimeTypeArguments(CompilerContext ctx, MethodInvocation call) =>
         .toList() ??
     const [];
 
-Map<String, TypeRef> _classTypeArguments(
+/// Maps the declaring class's type parameters to [receiver]'s applied
+/// arguments by walking the supertype graph to [method]'s owner — so a param
+/// annotated `WriteType` on `Indexable` resolves to `Function?` when the
+/// receiver is `Test5 extends Indexable<Function?, Function?>`.
+Map<String, TypeRef> classTypeArguments(
   CompilerContext ctx,
   TypeRef receiver,
   int ownerLibrary,

@@ -36,12 +36,20 @@ StatementInfo compileReturn(
 
   final expression = s.expression;
 
+  // An async body's context type is the *flattened* return type: in
+  // `Future<List<int>> f() async => []` the literal sees `List<int>`.
+  final boundType = anonymousReturn?.boundType ??
+      (e is FunctionBody &&
+              e.isAsynchronous &&
+              expectedReturnType?.type != null
+          ? flattenType(ctx, expectedReturnType!.type!)
+          : expectedReturnType?.type);
   final value = expression == null
       ? null
       : compileExpression(
           s.expression!,
           ctx,
-          anonymousReturn?.boundType ?? expectedReturnType?.type,
+          boundType,
         );
 
   // `return` inside an anonymous-method body returns from the invocation,

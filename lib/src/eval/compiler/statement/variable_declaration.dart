@@ -65,8 +65,9 @@ void compileVariableDeclarationList(
       }
       final local = res.copyWith(
         name: ctx.svar(li.name.lexeme).name,
-        type: (type ?? res.type).copyWith(boxed: res.boxed),
-        declaredType: type ?? res.type,
+        type: (type ?? widenedInferredType(ctx, res.type))
+            .copyWith(boxed: res.boxed),
+        declaredType: type ?? widenedInferredType(ctx, res.type),
         isFinal: l.isFinal || l.isConst,
       );
       ctx.pushOp(Assign(local.ssa, res.ssa));

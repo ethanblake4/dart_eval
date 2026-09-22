@@ -393,8 +393,17 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
         if (d != null) {
           d.visitChildren(treeShaker);
         }
-        for (final name in names) {
-          discoveredIdentifiers[lib]![name] = treeShaker.ctx.identifiers;
+        // Declarations with no name (e.g. unnamed `extension on T`) still
+        // reference identifiers from their member bodies — attribute them to
+        // a synthetic key so those references keep the targets alive.
+        if (names.isEmpty) {
+          (discoveredIdentifiers[lib]!['#'] ??= {}).addAll(
+            treeShaker.ctx.identifiers,
+          );
+        } else {
+          for (final name in names) {
+            discoveredIdentifiers[lib]![name] = treeShaker.ctx.identifiers;
+          }
         }
         treeShaker.ctx.identifiers = {};
       }

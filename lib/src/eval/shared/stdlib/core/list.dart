@@ -71,7 +71,9 @@ class $List<E> implements List<E>, $Instance {
   static const $declaration = BridgeClassDef(
     BridgeClassType(
       $type,
-      $extends: BridgeTypeRef(CoreTypes.iterable),
+      $extends: BridgeTypeRef(CoreTypes.iterable, [
+        BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+      ]),
       generics: {'E': BridgeGenericParam()},
     ),
     constructors: {

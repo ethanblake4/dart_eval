@@ -173,6 +173,43 @@ class IdentifierReference implements Reference {
   Variable? object;
   final String name;
 
+  /// The static type an extension accessor named [name] on [object]
+  /// contributes — the setter's parameter type or the getter's return type —
+  /// or null when no extension member applies.
+  TypeRef? _extensionMemberType(
+    CompilerContext ctx, {
+    required bool forSet,
+  }) {
+    final found = resolveExtensionMember(
+      ctx,
+      object!.type,
+      name,
+      getter: !forSet,
+      setter: forSet,
+    );
+    if (found == null) return null;
+    final (ext, member, bindings) = found;
+    final typeParams = extBindingsMap(ext, bindings);
+    if (forSet) {
+      final param = member.parameters?.parameters.firstOrNull;
+      if (param?.type == null) return null;
+      return formalParameterAnnotationType(
+        ctx,
+        ext.library,
+        param!,
+        typeParameters: typeParams,
+      );
+    }
+    return member.returnType == null
+        ? null
+        : TypeRef.fromAnnotation(
+            ctx,
+            ext.library,
+            member.returnType!,
+            typeParameters: typeParams,
+          );
+  }
+
   @override
   TypeRef resolveType(
     CompilerContext ctx, {
@@ -216,14 +253,20 @@ class IdentifierReference implements Reference {
         }
         return concreteType;
       }
-      return TypeRef.lookupFieldType(
-            ctx,
-            object!.type,
-            name,
-            forSet: forSet,
-            source: source,
-          ) ??
-          CoreTypes.dynamic.ref(ctx);
+      var fieldType = TypeRef.lookupFieldType(
+        ctx,
+        object!.type,
+        name,
+        forSet: forSet,
+        source: source,
+      );
+      // Extension accessors apply when the receiver's interface has no
+      // member of the matching kind — same gate as [setValue].
+      if (fieldType == null &&
+          !_hasInstanceMember(ctx, object!.type, name, forSet: forSet)) {
+        fieldType = _extensionMemberType(ctx, forSet: forSet);
+      }
+      return fieldType ?? CoreTypes.dynamic.ref(ctx);
     }
 
     // Locals
@@ -1733,30 +1776,34 @@ class IndexedReference implements Reference {
       if (decl is MethodDeclaration) {
         final param = decl.parameters?.parameters.elementAtOrNull(1);
         if (param?.type == null) return null;
-        // Bind the receiver class's own type parameters to its type
-        // arguments so a `WriteType` annotation resolves concretely.
-        final host = ctx
-            .topLevelDeclarationsMap[decl0.sourceLib]?[_variable.type.name]
-            ?.declaration;
-        final params = host == null
-            ? null
-            : classLikeClauses(host).$4?.typeParameters;
-        final args = _variable.type.specifiedTypeArgs;
-        final bindings = <String, TypeRef>{
-          for (var i = 0; i < (params?.length ?? 0) && i < args.length; i++)
-            params![i].name.lexeme: args[i],
-        };
+        // Bind the declaring class's type parameters through the receiver's
+        // supertype chain so a `WriteType` annotation resolves concretely.
         return formalParameterAnnotationType(
           ctx,
           decl0.sourceLib,
           param!,
-          typeParameters: bindings,
+          typeParameters: classTypeArguments(
+            ctx,
+            _variable.type,
+            decl0.sourceLib,
+            decl,
+          ),
         );
       }
     } on CompileError {
-      return null;
+      // An extension `[]=` may apply instead.
     }
-    return null;
+    final found = resolveExtensionMember(ctx, _variable.type, '[]=');
+    if (found == null) return null;
+    final (ext, member, bindings) = found;
+    final param = member.parameters?.parameters.elementAtOrNull(1);
+    if (param?.type == null) return null;
+    return formalParameterAnnotationType(
+      ctx,
+      ext.library,
+      param!,
+      typeParameters: extBindingsMap(ext, bindings),
+    );
   }
 
   @override

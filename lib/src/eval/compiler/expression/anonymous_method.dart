@@ -43,7 +43,7 @@ Variable compileAnonymousMethodInvocation(
       thenBranch: (ctx, _) {
         final v = _runBody(e, ctx, receiver, boundType);
         types.add(v.type);
-        ctx.pushOp(Assign(output.ssa, v.boxIfNeeded(ctx).ssa));
+        ctx.pushOp(Assign(output.ssa, v.boxIntoFreshSlot(ctx).ssa));
         return StatementInfo();
       },
       elseBranch: (ctx, _) {

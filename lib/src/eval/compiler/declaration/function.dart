@@ -148,7 +148,14 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
     stInfo = doReturn(
       ctx,
       expectedReturnType,
-      compileExpression(b.expression, ctx, expectedReturnType.type),
+      compileExpression(
+        b.expression,
+        ctx,
+        // An async body's context type is the *flattened* return type.
+        b.isAsynchronous && expectedReturnType.type != null
+            ? flattenType(ctx, expectedReturnType.type!)
+            : expectedReturnType.type,
+      ),
       isAsync: b.isAsynchronous,
     );
     stInfo = StatementInfo(willAlwaysReturn: true);

@@ -31,7 +31,7 @@ void compileTopLevelVariableDeclaration(
     if (specifiedType != null) {
       type = TypeRef.fromAnnotation(ctx, ctx.library, specifiedType);
     } else {
-      type = V.type;
+      type = widenedInferredType(ctx, V.type);
     }
     V = convertForAssignment(
       ctx,

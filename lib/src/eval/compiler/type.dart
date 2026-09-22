@@ -156,7 +156,22 @@ class TypeRef {
     if (sorted.isEmpty) {
       return CoreTypes.dynamic.ref(ctx).copyWith(nullable: makeNullable);
     }
-    return makeNullable ? sorted[0].copyWith(nullable: true) : sorted[0];
+    // Among the shallowest common supertypes, pick the one that is a subtype
+    // of all the others (e.g. `num` over `Object`). When several are
+    // incomparable (a class `implements B1, B2` with both shared), pick the
+    // last inserted — `getTypeChain` walks `implementsType.reversed`, so the
+    // last candidate is the first-declared interface.
+    final minLayer = layer[sorted[0]]!;
+    final candidates = sorted
+        .where((t) => layer[t] == minLayer)
+        .toList(growable: false);
+    final best = candidates.firstWhere(
+      (c) => candidates.every(
+        (o) => c == o || c.isAssignableTo(ctx, o, forceAllowDynamic: false),
+      ),
+      orElse: () => candidates.last,
+    );
+    return makeNullable ? best.copyWith(nullable: true) : best;
   }
 
   /// Create a [TypeRef] from a [TypeAnnotation] and library ID.
@@ -284,10 +299,15 @@ class TypeRef {
       }
       return unspecifiedType.copyWith(
         specifiedTypeArgs: resolved,
-        nullable: typeAnnotation.question != null,
+        nullable:
+            typeAnnotation.question != null || unspecifiedType.nullable,
       );
     }
-    return unspecifiedType.copyWith(nullable: typeAnnotation.question != null);
+    // A bare type-parameter reference keeps the nullability of its bound
+    // value — `T` is nullable when T resolves to `String?`.
+    return unspecifiedType.copyWith(
+      nullable: typeAnnotation.question != null || unspecifiedType.nullable,
+    );
   }
 
   /// Create a [TypeRef] from a [BridgeTypeAnnotation].
@@ -798,12 +818,48 @@ class TypeRef {
         final br = declaration.bridge as BridgeClassDef;
         final type = br.type;
 
+        for (final $g in type.generics.entries) {
+          final gExtends = $g.value.$extends;
+          final type0 = gExtends == null
+              ? null
+              : TypeRef.fromBridgeTypeRef(ctx, gExtends);
+          generics.add(
+            GenericParam(
+              $g.key,
+              type0?.resolveTypeChain(
+                ctx,
+                recursionGuard: rg,
+                stack: stack0,
+                source: source,
+              ),
+            ),
+          );
+        }
+
+        // The resolved supertypes are cached on the declaration, shared by
+        // every instantiation (`List<int>` and `List<double>` alike), so
+        // type-parameter refs must stay parameterized — they are substituted
+        // with the applied arguments at each use site.
+        final ownTypeParams = <String, TypeRef>{
+          for (var i = 0; i < generics.length; i++)
+            generics[i].name: TypeRef(
+              file,
+              generics[i].name,
+              resolved: true,
+              typeParameterOwner: 'class:$file:$name',
+              typeParameterIndex: i,
+              typeParameterBound:
+                  generics[i].extendsType ?? CoreTypes.dynamic.ref(ctx),
+            ),
+        };
+
         if (type.$extends != null) {
           $super =
               TypeRef.fromBridgeTypeRef(
                 ctx,
                 type.$extends!,
                 specifiedType: this,
+                typeParameters: ownTypeParams,
               ).resolveTypeChain(
                 ctx,
                 recursionGuard: rg,
@@ -823,6 +879,7 @@ class TypeRef {
               ctx,
               $i,
               specifiedType: this,
+              typeParameters: ownTypeParams,
             ).resolveTypeChain(
               ctx,
               recursionGuard: rg,
@@ -838,29 +895,12 @@ class TypeRef {
               ctx,
               $i,
               specifiedType: this,
+              typeParameters: ownTypeParams,
             ).resolveTypeChain(
               ctx,
               recursionGuard: rg,
               stack: stack0,
               source: source,
-            ),
-          );
-        }
-
-        for (final $g in type.generics.entries) {
-          final gExtends = $g.value.$extends;
-          final type0 = gExtends == null
-              ? null
-              : TypeRef.fromBridgeTypeRef(ctx, gExtends);
-          generics.add(
-            GenericParam(
-              $g.key,
-              type0?.resolveTypeChain(
-                ctx,
-                recursionGuard: rg,
-                stack: stack0,
-                source: source,
-              ),
             ),
           );
         }
@@ -1216,15 +1256,24 @@ class TypeRef {
   ];
 
   List<List<TypeRef>> getTypeChain(CompilerContext ctx) {
-    final l1extends = extendsType;
+    // `extends`/`implements`/`with` entries are declared in this class's type
+    // parameter namespace (`class C<T> implements B<T>`), so substitute this
+    // instance's arguments into them before walking their own chains —
+    // otherwise `C1<int>` and `C2<int>` see `B<C1.T>` and `B<C2.T>` as
+    // unrelated types.
+    final substitutions = appliedTypeArguments(ctx);
+    TypeRef applied(TypeRef t) =>
+        substitutions.isEmpty ? t : t.substituteTypeParameters(substitutions);
+
+    final l1extends = extendsType == null ? null : applied(extendsType!);
     final l2extends =
-        extendsType?.resolveTypeChain(ctx).getTypeChain(ctx) ?? [];
+        l1extends?.resolveTypeChain(ctx).getTypeChain(ctx) ?? [];
     final chain = <List<TypeRef>>[
       if (l1extends != null && l2extends.isEmpty) [l1extends],
       ...l2extends,
     ];
 
-    for (final imp in implementsType.reversed) {
+    for (final imp in implementsType.reversed.map(applied)) {
       if (chain.isEmpty) {
         chain.add([]);
       }
@@ -1238,7 +1287,7 @@ class TypeRef {
       }
     }
 
-    for (final w in withType.reversed) {
+    for (final w in withType.reversed.map(applied)) {
       if (chain.isEmpty) {
         chain.add([]);
       }
@@ -1505,6 +1554,51 @@ class TypeRef {
       resolved: resolved ?? this.resolved,
       nullable: nullable ?? this.nullable,
     );
+  }
+
+  /// Replaces every free type-parameter reference inside this type with its
+  /// declared bound (or `dynamic` when unbounded). Callers use this when a
+  /// type leaves the scope that gave those parameters meaning — an
+  /// unconstrained `T` is not a usable type for the caller.
+  TypeRef lowerTypeParameters(CompilerContext ctx) {
+    final substitutions = <(String, int), TypeRef>{};
+    void collect(TypeRef t) {
+      if (t.isTypeParameter) {
+        substitutions.putIfAbsent(
+          (t.typeParameterOwner!, t.typeParameterIndex!),
+          () => t.typeParameterBound ?? CoreTypes.dynamic.ref(ctx),
+        );
+        return;
+      }
+      for (final argument in t.specifiedTypeArgs) {
+        collect(argument);
+      }
+      for (final field in t.recordFields) {
+        collect(field.type);
+      }
+      final signature = t.functionType;
+      if (signature != null) {
+        final returnType = signature.returnType.type;
+        if (returnType != null) collect(returnType);
+        for (final parameter in signature.normalParameters) {
+          final parameterType = parameter.type.type;
+          if (parameterType != null) collect(parameterType);
+        }
+        for (final parameter in signature.optionalParameters) {
+          final parameterType = parameter.type.type;
+          if (parameterType != null) collect(parameterType);
+        }
+        for (final parameter in signature.namedParameters.values) {
+          final parameterType = parameter.type.type;
+          if (parameterType != null) collect(parameterType);
+        }
+      }
+    }
+
+    collect(this);
+    return substitutions.isEmpty
+        ? this
+        : substituteTypeParameters(substitutions);
   }
 
   /// Replaces retained type-parameter references anywhere inside this type.
@@ -2133,7 +2227,21 @@ class AlwaysReturnType implements ReturnType {
     Map<String, TypeRef?> namedArgTypes, {
     List<TypeRef> typeArgs = const [],
   }) {
-    return this;
+    var resolved = type;
+    if (resolved == null) return this;
+    // Class-scoped parameter references take their bindings from the
+    // receiver (e.g. `List<int>.first` resolves `E` to `int`).
+    final targetSubs = targetType?.appliedTypeArguments(ctx);
+    if (targetSubs != null && targetSubs.isNotEmpty) {
+      resolved = resolved.substituteTypeParameters(targetSubs);
+    }
+    // Any remaining free parameters are callee-scoped and were never bound
+    // at this call site — an unconstrained `T` is meaningless to the caller,
+    // so lower each to its declared bound (or `dynamic`).
+    final lowered = resolved.lowerTypeParameters(ctx);
+    return identical(lowered, resolved)
+        ? this
+        : AlwaysReturnType(lowered, nullable);
   }
 }
 
@@ -2794,3 +2902,11 @@ TypeRef? bridgedTypeArgument(CompilerContext ctx, TypeRef type, String ref) {
   }
   return null;
 }
+
+/// Dart's "no declared type" inference widens a `Null`-typed initializer to
+/// `dynamic` (`var x = null`, `var f = null`): an uninhabited declared type
+/// would reject every later assignment.
+TypeRef widenedInferredType(CompilerContext ctx, TypeRef type) =>
+    type.resolveTypeChain(ctx) == CoreTypes.nullType.ref(ctx)
+        ? CoreTypes.dynamic.ref(ctx)
+        : type;
