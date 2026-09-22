@@ -1099,34 +1099,34 @@ class $DateTime implements $Instance {
         final _weekday = $value.weekday;
         return $int(_weekday);
       case 'compareTo':
-        return __compareTo;
+        return $Closure(__compareTo.func, this);
 
       case 'isBefore':
-        return __isBefore;
+        return $Closure(__isBefore.func, this);
 
       case 'isAfter':
-        return __isAfter;
+        return $Closure(__isAfter.func, this);
 
       case 'isAtSameMomentAs':
-        return __isAtSameMomentAs;
+        return $Closure(__isAtSameMomentAs.func, this);
 
       case 'toLocal':
-        return __toLocal;
+        return $Closure(__toLocal.func, this);
 
       case 'toUtc':
-        return __toUtc;
+        return $Closure(__toUtc.func, this);
 
       case 'toIso8601String':
-        return __toIso8601String;
+        return $Closure(__toIso8601String.func, this);
 
       case 'add':
-        return __add;
+        return $Closure(__add.func, this);
 
       case 'subtract':
-        return __subtract;
+        return $Closure(__subtract.func, this);
 
       case 'difference':
-        return __difference;
+        return $Closure(__difference.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }

@@ -2035,6 +2035,13 @@ class _LoweringSession {
             ],
             [object],
           ),
+          objects_ir.InternConst(:final value, :final typeId) => make(
+            [
+              for (final r in ['R', 'S', 'C']) 'eInternConst$r',
+            ],
+            [value],
+            immediate: typeId,
+          ),
           cfg.Assign(:final target, :final source) => cfg.Assign(
             value(target),
             value(source),
@@ -2077,6 +2084,10 @@ class _LoweringSession {
           ),
           alu.Increment(:final source) => make(
             ['aIncrement', 'bIncrement'],
+            [source],
+          ),
+          alu.Negate(:final source) => make(
+            ['aNegate', 'bNegate', 'fNegate', 'gNegate'],
             [source],
           ),
           logic.LogicalNot(:final source) => make(['eNot'], [source]),

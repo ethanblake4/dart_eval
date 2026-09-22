@@ -25,6 +25,7 @@ import 'package:dart_eval/src/eval/ir/types.dart';
 import 'errors.dart';
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
 
 /// A compiler value with an SSA identity, language type and calling convention.
 class Variable {
@@ -38,6 +39,7 @@ class Variable {
     this.concreteTypes = const [],
     this.exactType,
     this.isConstInt = false,
+    this.isConst = false,
     CallingConvention? callingConvention,
   }) : declaredType = declaredType ?? type,
        representation = representation ?? representationForType(type),
@@ -59,6 +61,7 @@ class Variable {
     List<TypeRef> concreteTypes = const [],
     TypeRef? exactType,
     bool isConstInt = false,
+    bool isConst = false,
     CallingConvention callingConvention = CallingConvention.static,
   }) {
     ctx.pushOp(op);
@@ -72,6 +75,7 @@ class Variable {
       concreteTypes: concreteTypes,
       exactType: exactType,
       isConstInt: isConstInt,
+      isConst: isConst,
       callingConvention: callingConvention,
     )..name = op.writesTo!.name;
   }
@@ -88,6 +92,7 @@ class Variable {
     List<TypeRef> concreteTypes = const [],
     TypeRef? exactType,
     bool isConstInt = false,
+    bool isConst = false,
     CallingConvention callingConvention = CallingConvention.static,
   }) {
     return Variable(
@@ -100,6 +105,7 @@ class Variable {
       concreteTypes: concreteTypes,
       exactType: exactType,
       isConstInt: isConstInt,
+      isConst: isConst,
       callingConvention: callingConvention,
     )..name = ssa.name;
   }
@@ -127,6 +133,13 @@ class Variable {
   /// by [copyWith]/[widened], so it is dropped as soon as the value is bound
   /// or transformed.
   final bool isConstInt;
+
+  /// Whether this value is the result of a compile-time-constant
+  /// expression — a literal or a `const`-declared binding. Used to
+  /// recognize potentially-constant subexpressions (e.g. a string
+  /// interpolation whose operands are all consts, which the host VM
+  /// canonicalizes even outside a `const` context).
+  final bool isConst;
   final DeferredOrOffset? methodOffset;
   final ReturnType? methodReturnType;
   final bool isFinal;
@@ -425,6 +438,7 @@ class Variable {
     DeferredOrOffset? methodOffset,
     ReturnType? methodReturnType,
     bool? isFinal,
+    bool? isConst,
     String? name,
     int? frameIndex,
     List<TypeRef>? concreteTypes,
@@ -437,6 +451,7 @@ class Variable {
         representation: representation ?? this.representation,
         methodOffset: methodOffset ?? this.methodOffset,
         isFinal: isFinal ?? this.isFinal,
+        isConst: isConst ?? this.isConst,
         methodReturnType: methodReturnType ?? this.methodReturnType,
         concreteTypes: concreteTypes ?? this.concreteTypes,
         exactType: exactType ?? this.exactType,
@@ -494,6 +509,11 @@ class Variable {
   }
 
   Variable getProperty(CompilerContext ctx, String name, {AstNode? source}) {
+    // A bare function reference has no SSA value; materialize the tear-off
+    // first so members like `hashCode`/`runtimeType` resolve on it.
+    if (this.name == null && methodOffset != null) {
+      return tearOff(ctx).getProperty(ctx, name, source: source);
+    }
     if (name == 'length' && !type.nullable) {
       final isString = type.isAssignableTo(
         ctx,

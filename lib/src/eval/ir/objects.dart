@@ -397,3 +397,40 @@ final class InvokeDynamic extends Operation {
     );
   }
 }
+
+/// Canonicalizes a `const`-context value: [value] is replaced by the
+/// canonical instance equal to it, or becomes the canonical instance.
+/// Collections are made unmodifiable on first intern.
+final class InternConst extends Operation {
+  final SSA target;
+  final SSA value;
+  final int typeId;
+
+  InternConst(this.target, this.value, {required this.typeId});
+
+  @override
+  Set<SSA> get readsFrom => {value};
+
+  @override
+  SSA? get writesTo => target;
+
+  @override
+  String toString() => '$target = internconst $value type=$typeId';
+
+  @override
+  bool operator ==(Object other) =>
+      other is InternConst &&
+      target == other.target &&
+      value == other.value &&
+      typeId == other.typeId;
+
+  @override
+  int get hashCode => target.hashCode ^ value.hashCode ^ typeId.hashCode;
+
+  @override
+  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) => InternConst(
+    writesTo ?? target,
+    readsFrom?.first ?? value,
+    typeId: typeId,
+  );
+}

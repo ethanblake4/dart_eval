@@ -1080,103 +1080,103 @@ class $Queue<E> implements $Instance {
         final _single = $value.single;
         return runtime.wrapAlways(_single, recursive: true);
       case 'cast':
-        return __cast;
+        return $Closure(__cast.func, this);
 
       case 'followedBy':
-        return __followedBy;
+        return $Closure(__followedBy.func, this);
 
       case 'map':
-        return __map;
+        return $Closure(__map.func, this);
 
       case 'where':
-        return __where;
+        return $Closure(__where.func, this);
 
       case 'whereType':
-        return __whereType;
+        return $Closure(__whereType.func, this);
 
       case 'expand':
-        return __expand;
+        return $Closure(__expand.func, this);
 
       case 'contains':
-        return __contains;
+        return $Closure(__contains.func, this);
 
       case 'forEach':
-        return __forEach;
+        return $Closure(__forEach.func, this);
 
       case 'reduce':
-        return __reduce;
+        return $Closure(__reduce.func, this);
 
       case 'fold':
-        return __fold;
+        return $Closure(__fold.func, this);
 
       case 'every':
-        return __every;
+        return $Closure(__every.func, this);
 
       case 'join':
-        return __join;
+        return $Closure(__join.func, this);
 
       case 'any':
-        return __any;
+        return $Closure(__any.func, this);
 
       case 'toList':
-        return __toList;
+        return $Closure(__toList.func, this);
 
       case 'toSet':
-        return __toSet;
+        return $Closure(__toSet.func, this);
 
       case 'take':
-        return __take;
+        return $Closure(__take.func, this);
 
       case 'takeWhile':
-        return __takeWhile;
+        return $Closure(__takeWhile.func, this);
 
       case 'skip':
-        return __skip;
+        return $Closure(__skip.func, this);
 
       case 'skipWhile':
-        return __skipWhile;
+        return $Closure(__skipWhile.func, this);
 
       case 'firstWhere':
-        return __firstWhere;
+        return $Closure(__firstWhere.func, this);
 
       case 'lastWhere':
-        return __lastWhere;
+        return $Closure(__lastWhere.func, this);
 
       case 'singleWhere':
-        return __singleWhere;
+        return $Closure(__singleWhere.func, this);
 
       case 'elementAt':
-        return __elementAt;
+        return $Closure(__elementAt.func, this);
 
       case 'removeFirst':
-        return __removeFirst;
+        return $Closure(__removeFirst.func, this);
 
       case 'removeLast':
-        return __removeLast;
+        return $Closure(__removeLast.func, this);
 
       case 'addFirst':
-        return __addFirst;
+        return $Closure(__addFirst.func, this);
 
       case 'addLast':
-        return __addLast;
+        return $Closure(__addLast.func, this);
 
       case 'add':
-        return __add;
+        return $Closure(__add.func, this);
 
       case 'remove':
-        return __remove;
+        return $Closure(__remove.func, this);
 
       case 'addAll':
-        return __addAll;
+        return $Closure(__addAll.func, this);
 
       case 'removeWhere':
-        return __removeWhere;
+        return $Closure(__removeWhere.func, this);
 
       case 'retainWhere':
-        return __retainWhere;
+        return $Closure(__retainWhere.func, this);
 
       case 'clear':
-        return __clear;
+        return $Closure(__clear.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }

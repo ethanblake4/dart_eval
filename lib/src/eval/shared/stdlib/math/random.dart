@@ -142,13 +142,13 @@ class $Random implements $Instance {
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case 'nextInt':
-        return __nextInt;
+        return $Closure(__nextInt.func, this);
 
       case 'nextDouble':
-        return __nextDouble;
+        return $Closure(__nextDouble.func, this);
 
       case 'nextBool':
-        return __nextBool;
+        return $Closure(__nextBool.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }

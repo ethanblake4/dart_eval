@@ -321,16 +321,16 @@ class $Encoding implements $Instance {
         final _name = $value.name;
         return $String(_name);
       case 'encode':
-        return __encode;
+        return $Closure(__encode.func, this);
 
       case 'decode':
-        return __decode;
+        return $Closure(__decode.func, this);
 
       case 'fuse':
-        return __fuse;
+        return $Closure(__fuse.func, this);
 
       case 'decodeStream':
-        return __decodeStream;
+        return $Closure(__decodeStream.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }

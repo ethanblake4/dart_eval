@@ -221,19 +221,19 @@ class $Point<T extends num> implements $Instance {
         final _magnitude = $value.magnitude;
         return $double(_magnitude);
       case '+':
-        return __operatorPlus;
+        return $Closure(__operatorPlus.func, this);
 
       case '-':
-        return __operatorMinus;
+        return $Closure(__operatorMinus.func, this);
 
       case '*':
-        return __operatorMul;
+        return $Closure(__operatorMul.func, this);
 
       case 'distanceTo':
-        return __distanceTo;
+        return $Closure(__distanceTo.func, this);
 
       case 'squaredDistanceTo':
-        return __squaredDistanceTo;
+        return $Closure(__squaredDistanceTo.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }

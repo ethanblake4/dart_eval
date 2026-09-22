@@ -167,7 +167,7 @@ class $Comparable<T> implements $Instance {
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case 'compareTo':
-        return __compareTo;
+        return $Closure(__compareTo.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }

@@ -601,16 +601,16 @@ class $StreamController<T> implements $Instance {
         final _hasListener = $value.hasListener;
         return $bool(_hasListener);
       case 'addStream':
-        return __addStream;
+        return $Closure(__addStream.func, this);
 
       case 'close':
-        return __close;
+        return $Closure(__close.func, this);
 
       case 'add':
-        return __add;
+        return $Closure(__add.func, this);
 
       case 'addError':
-        return __addError;
+        return $Closure(__addError.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }

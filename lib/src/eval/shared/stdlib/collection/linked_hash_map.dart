@@ -992,49 +992,49 @@ class $LinkedHashMap<K, V> implements $Instance {
         final _isNotEmpty = $value.isNotEmpty;
         return $bool(_isNotEmpty);
       case 'cast':
-        return __cast;
+        return $Closure(__cast.func, this);
 
       case 'containsValue':
-        return __containsValue;
+        return $Closure(__containsValue.func, this);
 
       case 'containsKey':
-        return __containsKey;
+        return $Closure(__containsKey.func, this);
 
       case '[]':
-        return __operatorIndexGet;
+        return $Closure(__operatorIndexGet.func, this);
 
       case '[]=':
-        return __operatorIndexSet;
+        return $Closure(__operatorIndexSet.func, this);
 
       case 'map':
-        return __map;
+        return $Closure(__map.func, this);
 
       case 'addEntries':
-        return __addEntries;
+        return $Closure(__addEntries.func, this);
 
       case 'update':
-        return __update;
+        return $Closure(__update.func, this);
 
       case 'updateAll':
-        return __updateAll;
+        return $Closure(__updateAll.func, this);
 
       case 'removeWhere':
-        return __removeWhere;
+        return $Closure(__removeWhere.func, this);
 
       case 'putIfAbsent':
-        return __putIfAbsent;
+        return $Closure(__putIfAbsent.func, this);
 
       case 'addAll':
-        return __addAll;
+        return $Closure(__addAll.func, this);
 
       case 'remove':
-        return __remove;
+        return $Closure(__remove.func, this);
 
       case 'clear':
-        return __clear;
+        return $Closure(__clear.func, this);
 
       case 'forEach':
-        return __forEach;
+        return $Closure(__forEach.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }

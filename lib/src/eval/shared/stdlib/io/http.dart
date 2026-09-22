@@ -177,17 +177,17 @@ class $HttpClient implements $Instance {
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case 'get':
-        return __get;
+        return $Closure(__get.func, this);
       case 'post':
-        return __post;
+        return $Closure(__post.func, this);
       case 'put':
-        return __put;
+        return $Closure(__put.func, this);
       case 'getUrl':
-        return __getUrl;
+        return $Closure(__getUrl.func, this);
       case 'postUrl':
-        return __postUrl;
+        return $Closure(__postUrl.func, this);
       case 'putUrl':
-        return __putUrl;
+        return $Closure(__putUrl.func, this);
       default:
         return _superclass.$getProperty(runtime, identifier);
     }
@@ -356,7 +356,7 @@ class $HttpClientRequest implements $Instance {
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case 'close':
-        return __close;
+        return $Closure(__close.func, this);
       default:
         return _superclass.$getProperty(runtime, identifier);
     }

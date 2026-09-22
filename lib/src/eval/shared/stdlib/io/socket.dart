@@ -112,7 +112,7 @@ class $InternetAddressType implements $Instance {
       case 'name':
         return $String($value.name);
       case 'toString':
-        return __$toString;
+        return $Closure(__$toString.func, this);
       default:
         return _superclass.$getProperty(runtime, identifier);
     }
@@ -523,7 +523,7 @@ class $InternetAddress implements InternetAddress, $Instance {
       case 'isMulticast':
         return $bool($value.isMulticast);
       case 'reverse':
-        return __$reverse;
+        return $Closure(__$reverse.func, this);
       default:
         return _superclass.$getProperty(runtime, identifier);
     }

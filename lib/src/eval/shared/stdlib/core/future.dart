@@ -254,15 +254,15 @@ class $Future<T> implements Future<T>, $Instance {
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case 'then':
-        return __then;
+        return $Closure(__then.func, this);
       case 'asStream':
-        return __asStream;
+        return $Closure(__asStream.func, this);
       case 'timeout':
-        return __timeout;
+        return $Closure(__timeout.func, this);
       case 'whenComplete':
-        return __whenComplete;
+        return $Closure(__whenComplete.func, this);
       case 'catchError':
-        return __catchError;
+        return $Closure(__catchError.func, this);
       default:
         return _superclass.$getProperty(runtime, identifier);
     }

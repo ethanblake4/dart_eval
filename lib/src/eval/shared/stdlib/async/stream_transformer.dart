@@ -467,10 +467,10 @@ class $StreamTransformer<S, T> implements $Instance {
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case 'bind':
-        return __bind;
+        return $Closure(__bind.func, this);
 
       case 'cast':
-        return __cast;
+        return $Closure(__cast.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }

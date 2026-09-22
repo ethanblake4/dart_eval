@@ -267,25 +267,25 @@ class $Set<E> implements Set<E>, $Instance {
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case 'toString':
-        return __toString;
+        return $Closure(__toString.func, this);
       case 'add':
-        return __add;
+        return $Closure(__add.func, this);
       case 'addAll':
-        return __addAll;
+        return $Closure(__addAll.func, this);
       case 'contains':
-        return __contains;
+        return $Closure(__contains.func, this);
       case 'remove':
-        return __remove;
+        return $Closure(__remove.func, this);
       case 'clear':
-        return __clear;
+        return $Closure(__clear.func, this);
       case 'lookup':
-        return __lookup;
+        return $Closure(__lookup.func, this);
       case 'intersection':
-        return __intersection;
+        return $Closure(__intersection.func, this);
       case 'union':
-        return __union;
+        return $Closure(__union.func, this);
       case 'difference':
-        return __difference;
+        return $Closure(__difference.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }

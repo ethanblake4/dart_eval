@@ -205,6 +205,12 @@ abstract final class TypedMachine {
         case TypedOp.bBitNot:
           b = ~b;
           continue dispatch;
+        case TypedOp.fNegate:
+          f = -f;
+          continue dispatch;
+        case TypedOp.gNegate:
+          g = -g;
+          continue dispatch;
         case TypedOp.eEqAB:
           e = a == b;
           continue dispatch;
@@ -904,6 +910,45 @@ abstract final class TypedMachine {
             runtimeTypeId: runtimeTypeId,
             runtime: runtime,
           );
+          continue dispatch;
+        case TypedOp.eInternConstR:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          r = runtime == null
+              ? r
+              : runtime.internConst(
+                  r,
+                  runtime.resolveTypedEnvironmentType(
+                    index,
+                    actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+                    callableTypeArguments: frame.effectiveTypeArguments,
+                  ),
+                );
+          continue dispatch;
+        case TypedOp.eInternConstS:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          r = runtime == null
+              ? s
+              : runtime.internConst(
+                  s,
+                  runtime.resolveTypedEnvironmentType(
+                    index,
+                    actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+                    callableTypeArguments: frame.effectiveTypeArguments,
+                  ),
+                );
+          continue dispatch;
+        case TypedOp.eInternConstC:
+          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+          r = runtime == null
+              ? c
+              : runtime.internConst(
+                  c,
+                  runtime.resolveTypedEnvironmentType(
+                    index,
+                    actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+                    callableTypeArguments: frame.effectiveTypeArguments,
+                  ),
+                );
           continue dispatch;
         case TypedOp.aListLengthR:
           a = (r as List).length;

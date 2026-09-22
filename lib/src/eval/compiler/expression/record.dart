@@ -3,6 +3,7 @@ import 'package:collection/collection.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/const.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/collection.dart';
@@ -117,7 +118,7 @@ Variable compileRecordLiteral(
     recordFields: inferredRecordFields,
   );
   final constIndex = ctx.constantPool.addOrGet(fieldNames);
-  return Variable.ssa(
+  final record = Variable.ssa(
     ctx,
     NewRecord(
       ctx.svar('record'),
@@ -130,4 +131,5 @@ Variable compileRecordLiteral(
     ),
     type,
   );
+  return l.isConst ? internConst(ctx, record, type) : record;
 }

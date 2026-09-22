@@ -986,76 +986,76 @@ class $Zone implements $Instance {
         final _errorZone = $value.errorZone;
         return $Zone.wrap(_errorZone);
       case 'handleUncaughtError':
-        return __handleUncaughtError;
+        return $Closure(__handleUncaughtError.func, this);
 
       case 'inSameErrorZone':
-        return __inSameErrorZone;
+        return $Closure(__inSameErrorZone.func, this);
 
       case 'fork':
-        return __fork;
+        return $Closure(__fork.func, this);
 
       case 'run':
-        return __run;
+        return $Closure(__run.func, this);
 
       case 'runUnary':
-        return __runUnary;
+        return $Closure(__runUnary.func, this);
 
       case 'runBinary':
-        return __runBinary;
+        return $Closure(__runBinary.func, this);
 
       case 'runGuarded':
-        return __runGuarded;
+        return $Closure(__runGuarded.func, this);
 
       case 'runUnaryGuarded':
-        return __runUnaryGuarded;
+        return $Closure(__runUnaryGuarded.func, this);
 
       case 'runBinaryGuarded':
-        return __runBinaryGuarded;
+        return $Closure(__runBinaryGuarded.func, this);
 
       case 'registerCallback':
-        return __registerCallback;
+        return $Closure(__registerCallback.func, this);
 
       case 'registerUnaryCallback':
-        return __registerUnaryCallback;
+        return $Closure(__registerUnaryCallback.func, this);
 
       case 'registerBinaryCallback':
-        return __registerBinaryCallback;
+        return $Closure(__registerBinaryCallback.func, this);
 
       case 'bindCallback':
-        return __bindCallback;
+        return $Closure(__bindCallback.func, this);
 
       case 'bindUnaryCallback':
-        return __bindUnaryCallback;
+        return $Closure(__bindUnaryCallback.func, this);
 
       case 'bindBinaryCallback':
-        return __bindBinaryCallback;
+        return $Closure(__bindBinaryCallback.func, this);
 
       case 'bindCallbackGuarded':
-        return __bindCallbackGuarded;
+        return $Closure(__bindCallbackGuarded.func, this);
 
       case 'bindUnaryCallbackGuarded':
-        return __bindUnaryCallbackGuarded;
+        return $Closure(__bindUnaryCallbackGuarded.func, this);
 
       case 'bindBinaryCallbackGuarded':
-        return __bindBinaryCallbackGuarded;
+        return $Closure(__bindBinaryCallbackGuarded.func, this);
 
       case 'errorCallback':
-        return __errorCallback;
+        return $Closure(__errorCallback.func, this);
 
       case 'scheduleMicrotask':
-        return __scheduleMicrotask;
+        return $Closure(__scheduleMicrotask.func, this);
 
       case 'createTimer':
-        return __createTimer;
+        return $Closure(__createTimer.func, this);
 
       case 'createPeriodicTimer':
-        return __createPeriodicTimer;
+        return $Closure(__createPeriodicTimer.func, this);
 
       case 'print':
-        return __print;
+        return $Closure(__print.func, this);
 
       case '[]':
-        return __operatorIndexGet;
+        return $Closure(__operatorIndexGet.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }

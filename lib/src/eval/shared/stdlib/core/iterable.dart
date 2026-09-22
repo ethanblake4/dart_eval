@@ -812,7 +812,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
       case 'iterator':
         return $Iterator.wrap($value.iterator);
       case 'toString':
-        return __toString;
+        return $Closure(__toString.func, this);
       case 'length':
         return $int($value.length);
       case 'isEmpty':
@@ -826,51 +826,51 @@ class $Iterable<E> implements Iterable<E>, $Instance {
       case 'single':
         return $value.single as $Value?;
       case 'cast':
-        return __$cast;
+        return $Closure(__$cast.func, this);
       case 'followedBy':
-        return __$followedBy;
+        return $Closure(__$followedBy.func, this);
       case 'map':
-        return __$map;
+        return $Closure(__$map.func, this);
       case 'where':
-        return __$where;
+        return $Closure(__$where.func, this);
       case 'whereType':
-        return __$whereType;
+        return $Closure(__$whereType.func, this);
       case 'expand':
-        return __$expand;
+        return $Closure(__$expand.func, this);
       case 'contains':
-        return __$contains;
+        return $Closure(__$contains.func, this);
       case 'forEach':
-        return __$forEach;
+        return $Closure(__$forEach.func, this);
       case 'reduce':
-        return __$reduce;
+        return $Closure(__$reduce.func, this);
       case 'fold':
-        return __$fold;
+        return $Closure(__$fold.func, this);
       case 'every':
-        return __$every;
+        return $Closure(__$every.func, this);
       case 'join':
-        return __$join;
+        return $Closure(__$join.func, this);
       case 'any':
-        return __$any;
+        return $Closure(__$any.func, this);
       case 'toList':
-        return __$toList;
+        return $Closure(__$toList.func, this);
       case 'toSet':
-        return __$toSet;
+        return $Closure(__$toSet.func, this);
       case 'take':
-        return __$take;
+        return $Closure(__$take.func, this);
       case 'takeWhile':
-        return __$takeWhile;
+        return $Closure(__$takeWhile.func, this);
       case 'skip':
-        return __$skip;
+        return $Closure(__$skip.func, this);
       case 'skipWhile':
-        return __$skipWhile;
+        return $Closure(__$skipWhile.func, this);
       case 'firstWhere':
-        return __$firstWhere;
+        return $Closure(__$firstWhere.func, this);
       case 'lastWhere':
-        return __$lastWhere;
+        return $Closure(__$lastWhere.func, this);
       case 'singleWhere':
-        return __$singleWhere;
+        return $Closure(__$singleWhere.func, this);
       case 'elementAt':
-        return __$elementAt;
+        return $Closure(__$elementAt.func, this);
       default:
         return _superclass.$getProperty(runtime, identifier);
     }

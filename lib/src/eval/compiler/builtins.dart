@@ -46,6 +46,7 @@ class BuiltinValue {
         concreteTypes: [type],
         exactType: type,
         isConstInt: true,
+        isConst: true,
       );
     } else if (type == BuiltinValueType.doubleType) {
       final type = CoreTypes.double.ref(ctx).copyWith(boxed: false);
@@ -55,6 +56,7 @@ class BuiltinValue {
         type,
         concreteTypes: [type],
         exactType: type,
+        isConst: true,
       );
     } else if (type == BuiltinValueType.stringType) {
       final type = CoreTypes.string.ref(ctx).copyWith(boxed: false);
@@ -64,6 +66,7 @@ class BuiltinValue {
         type,
         concreteTypes: [type],
         exactType: type,
+        isConst: true,
       );
     } else if (type == BuiltinValueType.boolType) {
       final type = CoreTypes.bool.ref(ctx).copyWith(boxed: false);
@@ -73,10 +76,11 @@ class BuiltinValue {
         type,
         concreteTypes: [type],
         exactType: type,
+        isConst: true,
       );
     } else if (type == BuiltinValueType.nullType) {
       final type = CoreTypes.nullType.ref(ctx).copyWith(boxed: false);
-      return Variable.ssa(ctx, LoadNull(target), type, concreteTypes: [type]);
+      return Variable.ssa(ctx, LoadNull(target), type, concreteTypes: [type], isConst: true);
     } else {
       throw CompileError('Cannot push unknown builtin value type $type');
     }

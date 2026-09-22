@@ -199,17 +199,17 @@ class $bool implements $Instance {
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case '&&':
-        return __and;
+        return $Closure(__and.func, this);
       case '||':
-        return __or;
+        return $Closure(__or.func, this);
       case '&':
-        return __bitAnd;
+        return $Closure(__bitAnd.func, this);
       case '|':
-        return __bitOr;
+        return $Closure(__bitOr.func, this);
       case '^':
-        return __bitXor;
+        return $Closure(__bitXor.func, this);
       case '!':
-        return __not;
+        return $Closure(__not.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }
@@ -814,49 +814,49 @@ class $String implements $Instance {
       case 'isNotEmpty':
         return $bool($value.isNotEmpty);
       case '+':
-        return __concat;
+        return $Closure(__concat.func, this);
       case '[]':
-        return __index;
+        return $Closure(__index.func, this);
       case 'codeUnitAt':
-        return __codeUnitAt;
+        return $Closure(__codeUnitAt.func, this);
       case 'codeUnits':
         return wrapList<int>($value.codeUnits, (e) => $int(e));
       case 'compareTo':
-        return __compareTo;
+        return $Closure(__compareTo.func, this);
       case 'contains':
-        return __contains;
+        return $Closure(__contains.func, this);
       case 'endsWith':
-        return __endsWith;
+        return $Closure(__endsWith.func, this);
       case 'indexOf':
-        return __indexOf;
+        return $Closure(__indexOf.func, this);
       case 'lastIndexOf':
-        return __lastIndexOf;
+        return $Closure(__lastIndexOf.func, this);
       case 'padLeft':
-        return __padLeft;
+        return $Closure(__padLeft.func, this);
       case 'padRight':
-        return __padRight;
+        return $Closure(__padRight.func, this);
       case 'replaceAll':
-        return __replaceAll;
+        return $Closure(__replaceAll.func, this);
       case 'replaceFirst':
-        return __replaceFirst;
+        return $Closure(__replaceFirst.func, this);
       case 'replaceRange':
-        return __replaceRange;
+        return $Closure(__replaceRange.func, this);
       case 'startsWith':
-        return __startsWith;
+        return $Closure(__startsWith.func, this);
       case 'split':
-        return __split;
+        return $Closure(__split.func, this);
       case 'substring':
-        return __substring;
+        return $Closure(__substring.func, this);
       case 'toLowerCase':
-        return __toLowerCase;
+        return $Closure(__toLowerCase.func, this);
       case 'toUpperCase':
-        return __toUpperCase;
+        return $Closure(__toUpperCase.func, this);
       case 'trim':
-        return __trim;
+        return $Closure(__trim.func, this);
       case 'trimLeft':
-        return __trimLeft;
+        return $Closure(__trimLeft.func, this);
       case 'trimRight':
-        return __trimRight;
+        return $Closure(__trimRight.func, this);
     }
 
     return _superclass.$getProperty(runtime, identifier);

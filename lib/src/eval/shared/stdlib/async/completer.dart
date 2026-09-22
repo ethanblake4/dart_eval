@@ -203,10 +203,10 @@ class $Completer<T> implements $Instance {
         final _isCompleted = $value.isCompleted;
         return $bool(_isCompleted);
       case 'complete':
-        return __complete;
+        return $Closure(__complete.func, this);
 
       case 'completeError':
-        return __completeError;
+        return $Closure(__completeError.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }

@@ -458,61 +458,61 @@ class $num<T extends num> implements $Instance {
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case '+':
-        return __plus;
+        return $Closure(__plus.func, this);
       // The nullary minus operator's canonical member name is `unary-`;
       // __minus already handles a zero-argument call as unary negation.
       case '-':
       case 'unary-':
-        return __minus;
+        return $Closure(__minus.func, this);
       case '*':
-        return __mul;
+        return $Closure(__mul.func, this);
       case '/':
-        return __div;
+        return $Closure(__div.func, this);
 
       case '%':
-        return __mod;
+        return $Closure(__mod.func, this);
       case '<':
-        return __lt;
+        return $Closure(__lt.func, this);
       case '>':
-        return __gt;
+        return $Closure(__gt.func, this);
       case '<=':
-        return __lteq;
+        return $Closure(__lteq.func, this);
       case '>=':
-        return __gteq;
+        return $Closure(__gteq.func, this);
       case 'compareTo':
-        return __compareTo;
+        return $Closure(__compareTo.func, this);
       case 'toInt':
-        return __toInt;
+        return $Closure(__toInt.func, this);
       case 'toDouble':
-        return __toDouble;
+        return $Closure(__toDouble.func, this);
       case 'ceil':
-        return __ceil;
+        return $Closure(__ceil.func, this);
       case 'abs':
-        return __abs;
+        return $Closure(__abs.func, this);
       case 'floor':
-        return __floor;
+        return $Closure(__floor.func, this);
       case 'round':
-        return __round;
+        return $Closure(__round.func, this);
       case 'truncate':
-        return __truncate;
+        return $Closure(__truncate.func, this);
       case 'clamp':
-        return __clamp;
+        return $Closure(__clamp.func, this);
       case 'remainder':
-        return __remainder;
+        return $Closure(__remainder.func, this);
       case 'toStringAsFixed':
-        return __toStringAsFixed;
+        return $Closure(__toStringAsFixed.func, this);
       case 'toStringAsExponential':
-        return __toStringAsExponential;
+        return $Closure(__toStringAsExponential.func, this);
       case 'toStringAsPrecision':
-        return __toStringAsPrecision;
+        return $Closure(__toStringAsPrecision.func, this);
       case 'ceilToDouble':
-        return __ceilToDouble;
+        return $Closure(__ceilToDouble.func, this);
       case 'floorToDouble':
-        return __floorToDouble;
+        return $Closure(__floorToDouble.func, this);
       case 'roundToDouble':
-        return __roundToDouble;
+        return $Closure(__roundToDouble.func, this);
       case 'truncateToDouble':
-        return __truncateToDouble;
+        return $Closure(__truncateToDouble.func, this);
       case 'isNaN':
         return $bool($value.isNaN);
       case 'isInfinite':
@@ -1426,35 +1426,35 @@ class $int extends $num<int> {
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case 'toRadixString':
-        return __toRadixString;
+        return $Closure(__toRadixString.func, this);
       case '|':
-        return __bitwiseOr;
+        return $Closure(__bitwiseOr.func, this);
       case '&':
-        return __bitwiseAnd;
+        return $Closure(__bitwiseAnd.func, this);
       case '<<':
-        return __shiftLeft;
+        return $Closure(__shiftLeft.func, this);
       case '>>':
-        return __shiftRight;
+        return $Closure(__shiftRight.func, this);
       case '>>>':
-        return __unsignedShiftRight;
+        return $Closure(__unsignedShiftRight.func, this);
       case '^':
-        return __bitwiseXor;
+        return $Closure(__bitwiseXor.func, this);
       case '~':
-        return __bitwiseNot;
+        return $Closure(__bitwiseNot.func, this);
       case '~/':
-        return __truncatediv;
+        return $Closure(__truncatediv.func, this);
       case 'abs':
-        return __absInt;
+        return $Closure(__absInt.func, this);
       case 'gcd':
-        return __gcd;
+        return $Closure(__gcd.func, this);
       case 'modPow':
-        return __modPow;
+        return $Closure(__modPow.func, this);
       case 'modInverse':
-        return __modInverse;
+        return $Closure(__modInverse.func, this);
       case 'toSigned':
-        return __toSigned;
+        return $Closure(__toSigned.func, this);
       case 'toUnsigned':
-        return __toUnsigned;
+        return $Closure(__toUnsigned.func, this);
       case 'isEven':
         return $bool($value.isEven);
       case 'isOdd':

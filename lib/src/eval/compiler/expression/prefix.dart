@@ -1,3 +1,4 @@
+import 'package:dart_eval/src/eval/ir/alu.dart';
 import 'package:dart_eval/src/eval/ir/memory.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
@@ -99,11 +100,20 @@ Variable compilePrefixExpression(
   if (isDynamic) return V.invoke(ctx, member, []).result;
 
   // `~x` and `-x` on user types call the nullary operators `~` and `-`
-  // directly; the `0 - x` rewrite only applies to native ints/doubles.
-  if (method == '~' ||
-      (method == '-' &&
-          V.type != CoreTypes.int.ref(ctx) &&
-          V.type != CoreTypes.double.ref(ctx))) {
+  // directly; native ints/doubles negate in place (`-(0.0)` is `-0.0`,
+  // which a `0 - x` rewrite would lose).
+  if (method == '-' &&
+      (V.type == CoreTypes.int.ref(ctx) ||
+          V.type == CoreTypes.double.ref(ctx))) {
+    final operand = V.unboxIfNeeded(ctx, false);
+    return Variable.ssa(
+      ctx,
+      Negate(ctx.svar('numeric_result'), operand.ssa),
+      operand.type,
+      representation: operand.representation,
+    );
+  }
+  if (method == '~' || method == '-') {
     return V.invoke(ctx, member, []).result;
   }
 

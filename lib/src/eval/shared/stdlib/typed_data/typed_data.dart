@@ -438,49 +438,49 @@ class $ByteBuffer implements $Instance {
         final _lengthInBytes = $value.lengthInBytes;
         return $int(_lengthInBytes);
       case 'asUint8List':
-        return __asUint8List;
+        return $Closure(__asUint8List.func, this);
 
       case 'asInt8List':
-        return __asInt8List;
+        return $Closure(__asInt8List.func, this);
 
       case 'asUint8ClampedList':
-        return __asUint8ClampedList;
+        return $Closure(__asUint8ClampedList.func, this);
 
       case 'asUint16List':
-        return __asUint16List;
+        return $Closure(__asUint16List.func, this);
 
       case 'asInt16List':
-        return __asInt16List;
+        return $Closure(__asInt16List.func, this);
 
       case 'asUint32List':
-        return __asUint32List;
+        return $Closure(__asUint32List.func, this);
 
       case 'asInt32List':
-        return __asInt32List;
+        return $Closure(__asInt32List.func, this);
 
       case 'asUint64List':
-        return __asUint64List;
+        return $Closure(__asUint64List.func, this);
 
       case 'asInt64List':
-        return __asInt64List;
+        return $Closure(__asInt64List.func, this);
 
       case 'asInt32x4List':
-        return __asInt32x4List;
+        return $Closure(__asInt32x4List.func, this);
 
       case 'asFloat32List':
-        return __asFloat32List;
+        return $Closure(__asFloat32List.func, this);
 
       case 'asFloat64List':
-        return __asFloat64List;
+        return $Closure(__asFloat64List.func, this);
 
       case 'asFloat32x4List':
-        return __asFloat32x4List;
+        return $Closure(__asFloat32x4List.func, this);
 
       case 'asFloat64x2List':
-        return __asFloat64x2List;
+        return $Closure(__asFloat64x2List.func, this);
 
       case 'asByteData':
-        return __asByteData;
+        return $Closure(__asByteData.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }
@@ -1515,67 +1515,67 @@ class $ByteData implements $Instance {
         final _buffer = $value.buffer;
         return $ByteBuffer.wrap(_buffer);
       case 'asUnmodifiableView':
-        return __asUnmodifiableView;
+        return $Closure(__asUnmodifiableView.func, this);
 
       case 'getInt8':
-        return __getInt8;
+        return $Closure(__getInt8.func, this);
 
       case 'setInt8':
-        return __setInt8;
+        return $Closure(__setInt8.func, this);
 
       case 'getUint8':
-        return __getUint8;
+        return $Closure(__getUint8.func, this);
 
       case 'setUint8':
-        return __setUint8;
+        return $Closure(__setUint8.func, this);
 
       case 'getInt16':
-        return __getInt16;
+        return $Closure(__getInt16.func, this);
 
       case 'setInt16':
-        return __setInt16;
+        return $Closure(__setInt16.func, this);
 
       case 'getUint16':
-        return __getUint16;
+        return $Closure(__getUint16.func, this);
 
       case 'setUint16':
-        return __setUint16;
+        return $Closure(__setUint16.func, this);
 
       case 'getInt32':
-        return __getInt32;
+        return $Closure(__getInt32.func, this);
 
       case 'setInt32':
-        return __setInt32;
+        return $Closure(__setInt32.func, this);
 
       case 'getUint32':
-        return __getUint32;
+        return $Closure(__getUint32.func, this);
 
       case 'setUint32':
-        return __setUint32;
+        return $Closure(__setUint32.func, this);
 
       case 'getInt64':
-        return __getInt64;
+        return $Closure(__getInt64.func, this);
 
       case 'setInt64':
-        return __setInt64;
+        return $Closure(__setInt64.func, this);
 
       case 'getUint64':
-        return __getUint64;
+        return $Closure(__getUint64.func, this);
 
       case 'setUint64':
-        return __setUint64;
+        return $Closure(__setUint64.func, this);
 
       case 'getFloat32':
-        return __getFloat32;
+        return $Closure(__getFloat32.func, this);
 
       case 'setFloat32':
-        return __setFloat32;
+        return $Closure(__setFloat32.func, this);
 
       case 'getFloat64':
-        return __getFloat64;
+        return $Closure(__getFloat64.func, this);
 
       case 'setFloat64':
-        return __setFloat64;
+        return $Closure(__setFloat64.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }
@@ -3685,157 +3685,157 @@ class $Uint8List implements $Instance {
         final _buffer = $value.buffer;
         return $ByteBuffer.wrap(_buffer);
       case 'cast':
-        return __cast;
+        return $Closure(__cast.func, this);
 
       case 'followedBy':
-        return __followedBy;
+        return $Closure(__followedBy.func, this);
 
       case 'map':
-        return __map;
+        return $Closure(__map.func, this);
 
       case 'where':
-        return __where;
+        return $Closure(__where.func, this);
 
       case 'whereType':
-        return __whereType;
+        return $Closure(__whereType.func, this);
 
       case 'expand':
-        return __expand;
+        return $Closure(__expand.func, this);
 
       case 'contains':
-        return __contains;
+        return $Closure(__contains.func, this);
 
       case 'forEach':
-        return __forEach;
+        return $Closure(__forEach.func, this);
 
       case 'reduce':
-        return __reduce;
+        return $Closure(__reduce.func, this);
 
       case 'fold':
-        return __fold;
+        return $Closure(__fold.func, this);
 
       case 'every':
-        return __every;
+        return $Closure(__every.func, this);
 
       case 'join':
-        return __join;
+        return $Closure(__join.func, this);
 
       case 'any':
-        return __any;
+        return $Closure(__any.func, this);
 
       case 'toList':
-        return __toList;
+        return $Closure(__toList.func, this);
 
       case 'toSet':
-        return __toSet;
+        return $Closure(__toSet.func, this);
 
       case 'take':
-        return __take;
+        return $Closure(__take.func, this);
 
       case 'takeWhile':
-        return __takeWhile;
+        return $Closure(__takeWhile.func, this);
 
       case 'skip':
-        return __skip;
+        return $Closure(__skip.func, this);
 
       case 'skipWhile':
-        return __skipWhile;
+        return $Closure(__skipWhile.func, this);
 
       case 'firstWhere':
-        return __firstWhere;
+        return $Closure(__firstWhere.func, this);
 
       case 'lastWhere':
-        return __lastWhere;
+        return $Closure(__lastWhere.func, this);
 
       case 'singleWhere':
-        return __singleWhere;
+        return $Closure(__singleWhere.func, this);
 
       case 'elementAt':
-        return __elementAt;
+        return $Closure(__elementAt.func, this);
 
       case '[]':
-        return __operatorIndexGet;
+        return $Closure(__operatorIndexGet.func, this);
 
       case '[]=':
-        return __operatorIndexSet;
+        return $Closure(__operatorIndexSet.func, this);
 
       case 'add':
-        return __add;
+        return $Closure(__add.func, this);
 
       case 'addAll':
-        return __addAll;
+        return $Closure(__addAll.func, this);
 
       case 'sort':
-        return __sort;
+        return $Closure(__sort.func, this);
 
       case 'shuffle':
-        return __shuffle;
+        return $Closure(__shuffle.func, this);
 
       case 'indexOf':
-        return __indexOf;
+        return $Closure(__indexOf.func, this);
 
       case 'indexWhere':
-        return __indexWhere;
+        return $Closure(__indexWhere.func, this);
 
       case 'lastIndexWhere':
-        return __lastIndexWhere;
+        return $Closure(__lastIndexWhere.func, this);
 
       case 'lastIndexOf':
-        return __lastIndexOf;
+        return $Closure(__lastIndexOf.func, this);
 
       case 'clear':
-        return __clear;
+        return $Closure(__clear.func, this);
 
       case 'insert':
-        return __insert;
+        return $Closure(__insert.func, this);
 
       case 'insertAll':
-        return __insertAll;
+        return $Closure(__insertAll.func, this);
 
       case 'setAll':
-        return __setAll;
+        return $Closure(__setAll.func, this);
 
       case 'remove':
-        return __remove;
+        return $Closure(__remove.func, this);
 
       case 'removeAt':
-        return __removeAt;
+        return $Closure(__removeAt.func, this);
 
       case 'removeLast':
-        return __removeLast;
+        return $Closure(__removeLast.func, this);
 
       case 'removeWhere':
-        return __removeWhere;
+        return $Closure(__removeWhere.func, this);
 
       case 'retainWhere':
-        return __retainWhere;
+        return $Closure(__retainWhere.func, this);
 
       case '+':
-        return __operatorPlus;
+        return $Closure(__operatorPlus.func, this);
 
       case 'sublist':
-        return __sublist;
+        return $Closure(__sublist.func, this);
 
       case 'getRange':
-        return __getRange;
+        return $Closure(__getRange.func, this);
 
       case 'setRange':
-        return __setRange;
+        return $Closure(__setRange.func, this);
 
       case 'removeRange':
-        return __removeRange;
+        return $Closure(__removeRange.func, this);
 
       case 'fillRange':
-        return __fillRange;
+        return $Closure(__fillRange.func, this);
 
       case 'replaceRange':
-        return __replaceRange;
+        return $Closure(__replaceRange.func, this);
 
       case 'asMap':
-        return __asMap;
+        return $Closure(__asMap.func, this);
 
       case 'asUnmodifiableView':
-        return __asUnmodifiableView;
+        return $Closure(__asUnmodifiableView.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }

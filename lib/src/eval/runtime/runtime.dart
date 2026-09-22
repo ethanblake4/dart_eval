@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:typed_data';
 
 import 'package:dart_eval/dart_eval.dart';
@@ -15,6 +16,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/typed_data.dart';
 import 'package:dart_eval/src/eval/shared/runtime_type_descriptor.dart';
 import 'package:dart_eval/stdlib/core.dart';
 
+import 'record.dart';
 import 'typed/typed_export_adapter.dart';
 import 'typed/typed_frame.dart';
 import 'typed/typed_interop.dart';
@@ -120,6 +122,11 @@ class Runtime {
     _bridgeEnumMappings = program.enumMappings;
     overrideMap = program.overrideMap;
     _constantPool = [...program.constantPool];
+    // Pooled string literals are the canonical instances: interned const
+    // strings resolve to them so `identical()` behaves like the host VM.
+    for (final constant in _constantPool) {
+      if (constant is String) _constInternedStrings[constant] ??= constant;
+    }
   }
 
   void _load() {
@@ -398,6 +405,16 @@ class Runtime {
   late final List<({String library, String name})?> _typeIdentities;
   final _nominalTypeIds = <({String library, String name}), int>{};
   final _importedRuntimeTypes = <Runtime, Map<int, int>>{};
+
+  /// Canonical `const` values, bucketed by hash of (typeId, key parts).
+  /// Each entry records the key parts and whether they compare loosely
+  /// (host `==`) instead of by identity.
+  final _constIntern = <int, List<(List<Object?>, Object?, bool)>>{};
+
+  /// Canonical `String` instances for interned const keys: equal const
+  /// strings built at different sites share a key part, mirroring the
+  /// host VM's canonicalization of const strings.
+  final _constInternedStrings = <String, String>{};
 
   /// Rows below this index belong to the loaded program and share its
   /// supertype sets. Interned rows at or above it are always runtime-private.

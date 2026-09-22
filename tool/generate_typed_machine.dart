@@ -191,6 +191,10 @@ List<Instruction> specification() {
     add('${name}Negate', '$name = -$name;', inputs: [target], output: target);
     add('${name}BitNot', '$name = ~$name;', inputs: [target], output: target);
   }
+  for (final target in [2, 3]) {
+    final name = names[target];
+    add('${name}Negate', '$name = -$name;', inputs: [target], output: target);
+  }
   for (final output in [4]) {
     final result = names[output];
     for (final entry in {
@@ -786,6 +790,26 @@ List<Instruction> specification() {
     immediate: 'typeId',
     mayThrow: true,
   );
+  for (final register in [6, 7, 8]) {
+    final name = names[register];
+    add(
+      'eInternConst${name.toUpperCase()}',
+      '''r = runtime == null
+              ? $name
+              : runtime.internConst(
+                  $name,
+                  runtime.resolveTypedEnvironmentType(
+                    index,
+                    actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+                    callableTypeArguments: frame.effectiveTypeArguments,
+                  ),
+                );''',
+      inputs: [register],
+      output: 6,
+      immediate: 'typeId',
+      mayThrow: true,
+    );
+  }
   add(
     'aListLengthR',
     'a = (r as List).length;',

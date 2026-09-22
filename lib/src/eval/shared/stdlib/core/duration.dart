@@ -727,34 +727,34 @@ class $Duration implements $Instance {
         final _isNegative = $value.isNegative;
         return $bool(_isNegative);
       case 'compareTo':
-        return __compareTo;
+        return $Closure(__compareTo.func, this);
 
       case '+':
-        return __operatorPlus;
+        return $Closure(__operatorPlus.func, this);
 
       case '-':
-        return __operatorMinus;
+        return $Closure(__operatorMinus.func, this);
 
       case '*':
-        return __operatorMul;
+        return $Closure(__operatorMul.func, this);
 
       case '~/':
-        return __operatorIntDiv;
+        return $Closure(__operatorIntDiv.func, this);
 
       case '<':
-        return __operatorLt;
+        return $Closure(__operatorLt.func, this);
 
       case '>':
-        return __operatorGt;
+        return $Closure(__operatorGt.func, this);
 
       case '<=':
-        return __operatorLte;
+        return $Closure(__operatorLte.func, this);
 
       case '>=':
-        return __operatorGte;
+        return $Closure(__operatorGte.func, this);
 
       case 'abs':
-        return __abs;
+        return $Closure(__abs.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }

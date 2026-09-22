@@ -175,16 +175,16 @@ class $StringSink implements $Instance {
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case 'write':
-        return __write;
+        return $Closure(__write.func, this);
 
       case 'writeAll':
-        return __writeAll;
+        return $Closure(__writeAll.func, this);
 
       case 'writeln':
-        return __writeln;
+        return $Closure(__writeln.func, this);
 
       case 'writeCharCode':
-        return __writeCharCode;
+        return $Closure(__writeCharCode.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }

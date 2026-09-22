@@ -206,13 +206,13 @@ class $Stopwatch implements $Instance {
         final _isRunning = $value.isRunning;
         return $bool(_isRunning);
       case 'start':
-        return __start;
+        return $Closure(__start.func, this);
 
       case 'stop':
-        return __stop;
+        return $Closure(__stop.func, this);
 
       case 'reset':
-        return __reset;
+        return $Closure(__reset.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }

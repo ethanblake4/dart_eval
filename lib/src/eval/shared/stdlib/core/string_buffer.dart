@@ -243,19 +243,19 @@ class $StringBuffer implements $Instance {
         final _isNotEmpty = $value.isNotEmpty;
         return $bool(_isNotEmpty);
       case 'write':
-        return __write;
+        return $Closure(__write.func, this);
 
       case 'writeAll':
-        return __writeAll;
+        return $Closure(__writeAll.func, this);
 
       case 'writeln':
-        return __writeln;
+        return $Closure(__writeln.func, this);
 
       case 'writeCharCode':
-        return __writeCharCode;
+        return $Closure(__writeCharCode.func, this);
 
       case 'clear':
-        return __clear;
+        return $Closure(__clear.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }

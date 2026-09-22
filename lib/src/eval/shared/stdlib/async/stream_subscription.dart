@@ -244,25 +244,25 @@ class $StreamSubscription<T> implements $Instance {
         final _isPaused = $value.isPaused;
         return $bool(_isPaused);
       case 'cancel':
-        return __cancel;
+        return $Closure(__cancel.func, this);
 
       case 'onData':
-        return __onData;
+        return $Closure(__onData.func, this);
 
       case 'onError':
-        return __onError;
+        return $Closure(__onError.func, this);
 
       case 'onDone':
-        return __onDone;
+        return $Closure(__onDone.func, this);
 
       case 'pause':
-        return __pause;
+        return $Closure(__pause.func, this);
 
       case 'resume':
-        return __resume;
+        return $Closure(__resume.func, this);
 
       case 'asFuture':
-        return __asFuture;
+        return $Closure(__asFuture.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }

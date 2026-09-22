@@ -6,6 +6,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/const.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -101,7 +102,7 @@ Variable compileSetOrMapLiteral(
                   ? CoreTypes.dynamic.ref(ctx)
                   : TypeRef.commonBaseType(ctx, values)))
           .copyWith(boxed: true);
-  return collection.copyWith(
+  final result = collection.copyWith(
     type: collection.type.copyWith(
       specifiedTypeArgs: [
         infer(explicitKey, keyTypes),
@@ -109,6 +110,7 @@ Variable compileSetOrMapLiteral(
       ],
     ),
   );
+  return literal.isConst ? internConst(ctx, result, result.type) : result;
 }
 
 (List<TypeRef>, List<TypeRef>) _compileElement(

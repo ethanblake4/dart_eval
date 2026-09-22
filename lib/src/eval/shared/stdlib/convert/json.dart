@@ -462,13 +462,13 @@ class $JsonCodec implements $Instance {
         final _inverted = $value.inverted;
         return $Codec.wrap(_inverted);
       case 'encode':
-        return __encode;
+        return $Closure(__encode.func, this);
 
       case 'decode':
-        return __decode;
+        return $Closure(__decode.func, this);
 
       case 'fuse':
-        return __fuse;
+        return $Closure(__fuse.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }
@@ -874,19 +874,19 @@ class $JsonEncoder implements $Instance {
         final _indent = $value.indent;
         return _indent == null ? const $null() : $String(_indent);
       case 'bind':
-        return __bind;
+        return $Closure(__bind.func, this);
 
       case 'cast':
-        return __cast;
+        return $Closure(__cast.func, this);
 
       case 'convert':
-        return __convert;
+        return $Closure(__convert.func, this);
 
       case 'fuse':
-        return __fuse;
+        return $Closure(__fuse.func, this);
 
       case 'startChunkedConversion':
-        return __startChunkedConversion;
+        return $Closure(__startChunkedConversion.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }
@@ -1212,19 +1212,19 @@ class $JsonDecoder implements $Instance {
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case 'bind':
-        return __bind;
+        return $Closure(__bind.func, this);
 
       case 'cast':
-        return __cast;
+        return $Closure(__cast.func, this);
 
       case 'convert':
-        return __convert;
+        return $Closure(__convert.func, this);
 
       case 'fuse':
-        return __fuse;
+        return $Closure(__fuse.func, this);
 
       case 'startChunkedConversion':
-        return __startChunkedConversion;
+        return $Closure(__startChunkedConversion.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }

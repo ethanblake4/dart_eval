@@ -1453,25 +1453,25 @@ class $Uri implements $Instance {
         final _data = $value.data;
         return _data == null ? const $null() : $Object(_data);
       case 'isScheme':
-        return __isScheme;
+        return $Closure(__isScheme.func, this);
 
       case 'toFilePath':
-        return __toFilePath;
+        return $Closure(__toFilePath.func, this);
 
       case 'replace':
-        return __replace;
+        return $Closure(__replace.func, this);
 
       case 'removeFragment':
-        return __removeFragment;
+        return $Closure(__removeFragment.func, this);
 
       case 'resolve':
-        return __resolve;
+        return $Closure(__resolve.func, this);
 
       case 'resolveUri':
-        return __resolveUri;
+        return $Closure(__resolveUri.func, this);
 
       case 'normalizePath':
-        return __normalizePath;
+        return $Closure(__normalizePath.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }

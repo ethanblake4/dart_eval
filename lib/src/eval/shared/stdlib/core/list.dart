@@ -1160,65 +1160,65 @@ class $List<E> implements List<E>, $Instance {
       case 'length':
         return $int($value.length);
       case 'toString':
-        return __toString;
+        return $Closure(__toString.func, this);
       case 'reversed':
         return $Iterable.wrap($value.reversed);
       case 'cast':
-        return __$cast;
+        return $Closure(__$cast.func, this);
       case '[]':
-        return __$indexGet;
+        return $Closure(__$indexGet.func, this);
       case '[]=':
-        return __$indexSet;
+        return $Closure(__$indexSet.func, this);
       case 'add':
-        return __$add;
+        return $Closure(__$add.func, this);
       case 'addAll':
-        return __$addAll;
+        return $Closure(__$addAll.func, this);
       case 'sort':
-        return __$sort;
+        return $Closure(__$sort.func, this);
       case 'shuffle':
-        return __$shuffle;
+        return $Closure(__$shuffle.func, this);
       case 'indexOf':
-        return __$indexOf;
+        return $Closure(__$indexOf.func, this);
       case 'indexWhere':
-        return __$indexWhere;
+        return $Closure(__$indexWhere.func, this);
       case 'lastIndexWhere':
-        return __$lastIndexWhere;
+        return $Closure(__$lastIndexWhere.func, this);
       case 'lastIndexOf':
-        return __$lastIndexOf;
+        return $Closure(__$lastIndexOf.func, this);
       case 'clear':
-        return __$clear;
+        return $Closure(__$clear.func, this);
       case 'insert':
-        return __$insert;
+        return $Closure(__$insert.func, this);
       case 'insertAll':
-        return __$insertAll;
+        return $Closure(__$insertAll.func, this);
       case 'setAll':
-        return __$setAll;
+        return $Closure(__$setAll.func, this);
       case 'remove':
-        return __$remove;
+        return $Closure(__$remove.func, this);
       case 'removeAt':
-        return __$removeAt;
+        return $Closure(__$removeAt.func, this);
       case 'removeLast':
-        return __$removeLast;
+        return $Closure(__$removeLast.func, this);
       case 'removeWhere':
-        return __$removeWhere;
+        return $Closure(__$removeWhere.func, this);
       case 'retainWhere':
-        return __$retainWhere;
+        return $Closure(__$retainWhere.func, this);
       case '+':
-        return __$combine;
+        return $Closure(__$combine.func, this);
       case 'sublist':
-        return __$sublist;
+        return $Closure(__$sublist.func, this);
       case 'getRange':
-        return __$getRange;
+        return $Closure(__$getRange.func, this);
       case 'setRange':
-        return __$setRange;
+        return $Closure(__$setRange.func, this);
       case 'removeRange':
-        return __$removeRange;
+        return $Closure(__$removeRange.func, this);
       case 'fillRange':
-        return __$fillRange;
+        return $Closure(__$fillRange.func, this);
       case 'replaceRange':
-        return __$replaceRange;
+        return $Closure(__$replaceRange.func, this);
       case 'asMap':
-        return __$asMap;
+        return $Closure(__$asMap.func, this);
       default:
         return _superclass.$getProperty(runtime, identifier);
     }

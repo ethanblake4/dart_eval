@@ -199,13 +199,13 @@ class $Codec<S, T> implements $Instance {
         final _inverted = $value.inverted;
         return $Codec.wrap(_inverted);
       case 'encode':
-        return __encode;
+        return $Closure(__encode.func, this);
 
       case 'decode':
-        return __decode;
+        return $Closure(__decode.func, this);
 
       case 'fuse':
-        return __fuse;
+        return $Closure(__fuse.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }

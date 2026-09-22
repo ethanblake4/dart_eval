@@ -311,29 +311,29 @@ class $Map<K, V> implements Map<K, V>, $Instance {
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case '[]':
-        return __indexGet;
+        return $Closure(__indexGet.func, this);
       case '[]=':
-        return __indexSet;
+        return $Closure(__indexSet.func, this);
       case 'addAll':
-        return __addAll;
+        return $Closure(__addAll.func, this);
       case 'cast':
-        return __cast;
+        return $Closure(__cast.func, this);
       case 'length':
         return $int($value.length);
       case 'toString':
-        return __toString;
+        return $Closure(__toString.func, this);
       case 'clear':
-        return __clear;
+        return $Closure(__clear.func, this);
       case 'containsKey':
-        return __containsKey;
+        return $Closure(__containsKey.func, this);
       case 'containsValue':
-        return __containsValue;
+        return $Closure(__containsValue.func, this);
       case 'putIfAbsent':
-        return __putIfAbsent;
+        return $Closure(__putIfAbsent.func, this);
       case 'forEach':
-        return __forEach;
+        return $Closure(__forEach.func, this);
       case 'remove':
-        return __remove;
+        return $Closure(__remove.func, this);
       case 'entries':
         return $Iterable.wrap(entries.map((e) => $MapEntry.wrap(e)));
       case 'isEmpty':

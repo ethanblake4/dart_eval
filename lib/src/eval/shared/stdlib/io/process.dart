@@ -273,7 +273,7 @@ class $ProcessStartMode implements $Instance {
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case 'toString':
-        return __toString;
+        return $Closure(__toString.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }
@@ -716,7 +716,7 @@ class $Process implements $Instance {
         final pid = $value.pid;
         return $int(pid);
       case 'kill':
-        return __kill;
+        return $Closure(__kill.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }
@@ -1493,10 +1493,10 @@ class $ProcessSignal implements $Instance {
         final name = $value.name;
         return $String(name);
       case 'toString':
-        return __toString;
+        return $Closure(__toString.func, this);
 
       case 'watch':
-        return __watch;
+        return $Closure(__watch.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }

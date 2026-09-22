@@ -158,10 +158,10 @@ class $StreamIterator<T> implements $Instance {
         final _current = $value.current;
         return runtime.wrapAlways(_current, recursive: true);
       case 'moveNext':
-        return __moveNext;
+        return $Closure(__moveNext.func, this);
 
       case 'cancel':
-        return __cancel;
+        return $Closure(__cancel.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }

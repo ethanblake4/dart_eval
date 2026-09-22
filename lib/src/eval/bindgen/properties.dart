@@ -125,10 +125,10 @@ String propertyGetters(
         return ${s.expr ?? 'null'};''';
   }).join('\n')}${methods0.map((e) => '''
       case '${ctx.memberConfig(e.name!, 'method')?.rename ?? e.name}':
-        return __${operatorForArity(ctx.memberConfig(e.name!, 'method')?.rename ?? e.name!, e.formalParameters.length).name};
+        return \$Closure(__${operatorForArity(ctx.memberConfig(e.name!, 'method')?.rename ?? e.name!, e.formalParameters.length).name}.func, this);
       ''').join('\n')}${syntheticMethods.map((s) => '''
       case '${s.name}':
-        return __${operatorForArity(s.name, s.params.length).name};
+        return \$Closure(__${operatorForArity(s.name, s.params.length).name}.func, this);
       ''').join('\n')}\n}';
 }
 

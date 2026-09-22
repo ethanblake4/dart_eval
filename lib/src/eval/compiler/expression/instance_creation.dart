@@ -5,6 +5,7 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/const.dart';
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -78,7 +79,7 @@ Variable compileInstanceCreation(
               .file]!['${staticType.name}.$name'] ==
           null &&
       _hasImplicitDefaultConstructor(ctx, staticType)) {
-    final result = ctx.svar('instance');
+    var result = ctx.svar('instance');
     ctx.pushOp(
       Call(
         DeferredOrOffset.lookupStatic(
@@ -91,6 +92,9 @@ Variable compileInstanceCreation(
         result: result,
       ),
     );
+    if (e.isConst) {
+      result = pushInternConst(ctx, result, instantiatedType);
+    }
     return Variable.of(
       ctx,
       result,
@@ -106,7 +110,14 @@ Variable compileInstanceCreation(
 
   if (dec0.isBridge) {
     final bridge = dec0.bridge;
-    final fnDescriptor = (bridge as BridgeConstructorDef).functionDescriptor;
+    // Const factories are also exposed as static methods on some bindings
+    // (e.g. `bool.hasEnvironment`); both defs carry a functionDescriptor.
+    final fnDescriptor = switch (bridge) {
+      BridgeConstructorDef d => d.functionDescriptor,
+      BridgeMethodDef d => d.functionDescriptor,
+      _ => throw CompileError(
+          'Cannot invoke $staticType.$name as a constructor', e),
+    };
     final classBridge =
         ctx.topLevelDeclarationsMap[staticType.file]![staticType.name]?.bridge;
     final genericNames =
@@ -227,7 +238,7 @@ Variable compileInstanceCreation(
     //_namedArgs = argsPair.second;
   }
 
-  final result = ctx.svar('instance');
+  var result = ctx.svar('instance');
   // A factory may return any subtype — the result is not exactly the
   // declared class.
   final isFactory = !dec0.isBridge &&
@@ -279,6 +290,9 @@ Variable compileInstanceCreation(
             : const [],
       ),
     );
+  }
+  if (e.isConst) {
+    result = pushInternConst(ctx, result, instantiatedType);
   }
   return Variable.of(
     ctx,

@@ -10,6 +10,106 @@ extension TypedRuntimeInterop on Runtime {
 
   Object? typedConstant(int index) => _constantPool[index];
 
+  /// Canonicalizes a `const`-context [value]: returns the existing interned
+  /// instance whose type and key parts match, or installs [value] as the
+  /// canonical one. Interned collections become unmodifiable — a `const`
+  /// collection is always frozen.
+  ///
+  /// Key parts compare by identity for evaluated objects, records, and
+  /// collections (nested `const` values intern bottom-up, so identity is
+  /// sound), and loosely by `==` for opaque host values. Boxed scalars are
+  /// normalized to their payload so `const A(1)` and `const A(1)` share a
+  /// key even though each field holds a distinct wrapper.
+  Object? internConst(Object? value, int typeId) {
+    var v = value;
+    final List<Object?> key;
+    var loose = false;
+    switch (v) {
+      case TypedInstance():
+        final parts = <Object?>[];
+        Object? level = v;
+        while (level is TypedInstance) {
+          parts.addAll(level.values);
+          level = level.superclass;
+        }
+        key = [for (final part in parts) _constKeyPart(part)];
+      case $Record():
+        key = [for (final part in v.fields) _constKeyPart(part)];
+      case List<Object?>():
+        v = List<Object?>.unmodifiable(v);
+        key = [for (final part in v) _constKeyPart(part)];
+      case Map():
+        v = UnmodifiableMapView(v);
+        key = [
+          for (final entry in v.entries) ...[
+            _constKeyPart(entry.key),
+            _constKeyPart(entry.value),
+          ],
+        ];
+      case Set():
+        v = UnmodifiableSetView(v);
+        key = [for (final part in v) _constKeyPart(part)];
+      case String():
+        // Const strings canonicalize by content: a pooled literal and an
+        // interned runtime string of equal content are identical.
+        return _constInternedStrings[v] ??= v;
+      case $String():
+        v = $String(_constInternedStrings[v.$value] ??= v.$value);
+        loose = true;
+        key = [v.$value];
+      default:
+        loose = true;
+        key = [v];
+    }
+    final hash = loose
+        ? typeId
+        : Object.hashAll([
+            typeId,
+            for (final part in key) identityHashCode(part),
+          ]);
+    final bucket = _constIntern.putIfAbsent(hash, () => []);
+    for (final (existingKey, existing, existingLoose) in bucket) {
+      if (existingLoose != loose || existingKey.length != key.length) {
+        continue;
+      }
+      var equal = true;
+      for (var i = 0; i < key.length; i++) {
+        final match = loose
+            ? _constLooseEquals(existingKey[i], key[i])
+            : identical(existingKey[i], key[i]);
+        if (!match) {
+          equal = false;
+          break;
+        }
+      }
+      if (equal) return existing;
+    }
+    bucket.add((key, v, loose));
+    return v;
+  }
+
+  /// Normalizes a key part: boxed scalars compare by payload, strings by
+  /// canonical instance (equal const strings are identical in the host),
+  /// everything else by identity (nested consts are already canonicalized).
+  Object? _constKeyPart(Object? part) => switch (part) {
+    $int p => p.$value,
+    $double p => p.$value,
+    $bool p => p.$value,
+    $String p => _constKeyPart(p.$value),
+    $null() => null,
+    String p => _constInternedStrings[p] ??= p,
+    _ => part,
+  };
+
+  /// Loose key equality for opaque values: host `==`, except that two
+  /// bare `$Object` wrappers — host objects whose fields are invisible to
+  /// the evaluator — canonicalize within the same type id.
+  bool _constLooseEquals(Object? left, Object? right) =>
+      left is $Value && right is $Value
+      ? (left.runtimeType == $Object && right.runtimeType == $Object) ||
+            TypedInterop.equals(this, left, right)
+      : left == right;
+
   /// Prepare bridge registrations and runtime-owned globals at a VM entry.
   @pragma('vm:never-inline')
   void prepareTypedRuntime() => _setup();

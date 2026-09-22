@@ -200,11 +200,11 @@ class $Object implements $Instance {
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case '==':
-        return __equals;
+        return $Closure(__equals.func, this);
       case '!=':
-        return __not_equals;
+        return $Closure(__not_equals.func, this);
       case 'toString':
-        return __toString;
+        return $Closure(__toString.func, this);
       case 'hashCode':
         return $int($value.hashCode);
     }

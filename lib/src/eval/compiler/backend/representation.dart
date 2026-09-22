@@ -137,6 +137,9 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
         equalities.add([target, source]);
       case cfg.PhiNode(:final target, :final sources):
         equalities.add([target, ...sources]);
+      case alu.Negate(:final target, :final source):
+        // `-x` keeps the operand's representation — int or double.
+        equalities.add([target, source]);
       case alu.IntAdd() || alu.IntSub() || alu.Increment():
         inputs(operation, integer);
         output(operation, integer);
@@ -232,7 +235,9 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
           types.LoadConstantType() ||
           types.LoadTypeParameter():
         output(operation, object);
-      case primitives.MaybeBoxNull() || bridge.PrepareBridgeArgument():
+      case primitives.MaybeBoxNull() ||
+          bridge.PrepareBridgeArgument() ||
+          objects.InternConst():
         inputs(operation, object);
         output(operation, object);
       case primitives.BoxList() ||

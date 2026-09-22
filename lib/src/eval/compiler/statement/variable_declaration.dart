@@ -69,6 +69,7 @@ void compileVariableDeclarationList(
             .copyWith(boxed: res.boxed),
         declaredType: type ?? widenedInferredType(ctx, res.type),
         isFinal: l.isFinal || l.isConst,
+        isConst: l.isConst,
       );
       ctx.pushOp(Assign(local.ssa, res.ssa));
       ctx.setLocal(li.name.lexeme, local.captureBinding(ctx, li));

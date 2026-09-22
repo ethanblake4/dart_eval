@@ -673,25 +673,27 @@ void compileDefaultConstructor(
   return (indices: fieldIndices, count: fieldIdx0);
 }
 
-/// Applies initializer conversion to a field initializer value (int →
-/// double widening) and rejects values that don't conform to the declared
-/// field type, then boxes for the object field store.
-Variable _convertFieldInitializer(
+/// Compiles a field initializer with the declared type as inference context
+/// and applies initializer conversion (int → double widening, conformance
+/// checks), then boxes for the object field store.
+Variable _compileFieldInitializer(
   CompilerContext ctx,
   FieldDeclaration fd,
   VariableDeclaration field,
-  Variable V,
 ) {
   final annotation = fd.fields.type;
-  if (annotation == null) return V.boxIfNeeded(ctx);
+  if (annotation == null) {
+    return compileExpression(field.initializer!, ctx).boxIfNeeded(ctx);
+  }
   final declared = TypeRef.fromAnnotation(ctx, ctx.library, annotation);
+  final value = compileExpression(field.initializer!, ctx, declared);
   return convertInitializer(
     ctx,
-    V,
+    value,
     declared,
     source: field.initializer,
-    description: "A value of type '${V.type}' can't be assigned to a field "
-        'of type $declared',
+    description: "A value of type '${value.type}' can't be assigned to a "
+        'field of type $declared',
   ).boxIfNeeded(ctx);
 }
 
@@ -735,12 +737,7 @@ Map<String, Variable> _evalUnusedFieldInitializers(
       }
       final Variable V;
       try {
-        V = _convertFieldInitializer(
-          ctx,
-          fd,
-          field,
-          compileExpression(field.initializer!, ctx),
-        );
+        V = _compileFieldInitializer(ctx, fd, field);
       } finally {
         ctx.library = prevLibrary;
         ctx.memberDeclaringClass = null;
@@ -801,12 +798,7 @@ void _compileUnusedFields(
           }
           final Variable v0;
           try {
-            v0 = _convertFieldInitializer(
-              ctx,
-              fd,
-              field,
-              compileExpression(field.initializer!, ctx),
-            );
+            v0 = _compileFieldInitializer(ctx, fd, field);
           } finally {
             ctx.library = prevLibrary;
             ctx.memberDeclaringClass = null;

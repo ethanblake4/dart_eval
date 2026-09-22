@@ -188,10 +188,10 @@ class $ChunkedConversionSink<T> implements $Instance {
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case 'add':
-        return __add;
+        return $Closure(__add.func, this);
 
       case 'close':
-        return __close;
+        return $Closure(__close.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }

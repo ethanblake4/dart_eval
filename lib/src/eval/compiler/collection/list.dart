@@ -12,6 +12,7 @@ import 'package:dart_eval/src/eval/compiler/collection/if.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/const.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -77,7 +78,7 @@ Variable compileListLiteral(
   ctx.endScope();
 
   if (listSpecifiedType == null) {
-    return list.copyWith(
+    list = list.copyWith(
       type: CoreTypes.list
           .ref(ctx)
           .copyWith(
@@ -91,7 +92,7 @@ Variable compileListLiteral(
     );
   }
 
-  return list;
+  return l.isConst ? internConst(ctx, list, list.type) : list;
 }
 
 Variable boxListContents(CompilerContext ctx, Variable list) {

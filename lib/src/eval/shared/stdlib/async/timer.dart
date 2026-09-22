@@ -245,7 +245,7 @@ class $Timer implements $Instance {
         final _isActive = $value.isActive;
         return $bool(_isActive);
       case 'cancel':
-        return __cancel;
+        return $Closure(__cancel.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }

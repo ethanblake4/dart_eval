@@ -424,3 +424,34 @@ final class LessThan extends Operation {
     return LessThan(writesTo ?? target, newReadsFrom[0], newReadsFrom[1]);
   }
 }
+
+final class Negate extends Operation {
+  @override
+  bool get isPure => true;
+
+  final SSA target;
+  final SSA source;
+
+  Negate(this.target, this.source);
+
+  @override
+  Set<SSA> get readsFrom => {source};
+
+  @override
+  SSA? get writesTo => target;
+
+  @override
+  String toString() => '$target = -$source';
+
+  @override
+  bool operator ==(Object other) =>
+      other is Negate && target == other.target && source == other.source;
+
+  @override
+  int get hashCode => target.hashCode ^ source.hashCode;
+
+  @override
+  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
+    return Negate(writesTo ?? target, readsFrom?.single ?? source);
+  }
+}

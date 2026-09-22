@@ -341,19 +341,19 @@ class $RegExp implements $Instance {
         final _isDotAll = $value.isDotAll;
         return $bool(_isDotAll);
       case 'allMatches':
-        return __allMatches;
+        return $Closure(__allMatches.func, this);
 
       case 'matchAsPrefix':
-        return __matchAsPrefix;
+        return $Closure(__matchAsPrefix.func, this);
 
       case 'firstMatch':
-        return __firstMatch;
+        return $Closure(__firstMatch.func, this);
 
       case 'hasMatch':
-        return __hasMatch;
+        return $Closure(__hasMatch.func, this);
 
       case 'stringMatch':
-        return __stringMatch;
+        return $Closure(__stringMatch.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }
@@ -643,16 +643,16 @@ class $RegExpMatch implements $Instance {
         final _groupNames = $value.groupNames;
         return $Iterable.wrap((_groupNames).map((e) => $String(e)));
       case 'group':
-        return __group;
+        return $Closure(__group.func, this);
 
       case '[]':
-        return __operatorIndexGet;
+        return $Closure(__operatorIndexGet.func, this);
 
       case 'groups':
-        return __groups;
+        return $Closure(__groups.func, this);
 
       case 'namedGroup':
-        return __namedGroup;
+        return $Closure(__namedGroup.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }

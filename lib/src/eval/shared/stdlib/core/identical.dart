@@ -38,7 +38,11 @@ void configureIdenticalForRuntime(Runtime runtime) {
   runtime.registerBridgeFuncRegisters('dart:core', 'identical', _identical);
 }
 
-Object? _hostObject($Value? v) => v is TypedInstance ? v : v?.$value;
+Object? _hostObject($Value? v) =>
+    // Evaluated objects and closures have no host counterpart; their
+    // identity is the wrapper itself (interned canonicalization makes
+    // equal consts/tear-offs share it).
+    v is TypedInstance || v is EvalFunction ? v : v?.$value;
 
 $Value? _identical(Runtime runtime, Object? r, Object? s, Object? c) {
   // $TypeImpl has no host Type instance to unwrap; type identity is

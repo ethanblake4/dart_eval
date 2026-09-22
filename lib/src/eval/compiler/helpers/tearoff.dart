@@ -1,3 +1,4 @@
+import 'const.dart';
 import 'default_value.dart';
 import 'extension.dart';
 import 'package:analyzer/dart/ast/ast.dart';
@@ -187,7 +188,7 @@ extension TearOff on Variable {
     }
     final positionalDefaults = positional.map(parameterDefault).toList();
     final namedDefaults = named.map(parameterDefault).toList();
-    return Variable.ssa(
+    final created = Variable.ssa(
       ctx,
       CreateClosure(
         ctx.svar('tearoff'),
@@ -234,5 +235,8 @@ extension TearOff on Variable {
       methodOffset: offset,
       callingConvention: CallingConvention.dynamic,
     );
+    // A captureless tear-off is a constant: the VM canonicalizes them, so
+    // `identical(main, main)` is true.
+    return captures.isEmpty ? internConst(ctx, created, functionType) : created;
   }
 }

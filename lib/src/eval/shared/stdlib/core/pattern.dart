@@ -150,10 +150,10 @@ class $Pattern implements $Instance {
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case 'allMatches':
-        return __allMatches;
+        return $Closure(__allMatches.func, this);
 
       case 'matchAsPrefix':
-        return __matchAsPrefix;
+        return $Closure(__matchAsPrefix.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }
@@ -367,13 +367,13 @@ class $Match implements $Instance {
         final _pattern = $value.pattern;
         return $Pattern.wrap(_pattern);
       case 'group':
-        return __group;
+        return $Closure(__group.func, this);
 
       case '[]':
-        return __operatorIndexGet;
+        return $Closure(__operatorIndexGet.func, this);
 
       case 'groups':
-        return __groups;
+        return $Closure(__groups.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }

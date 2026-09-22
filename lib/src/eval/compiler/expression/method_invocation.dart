@@ -6,6 +6,7 @@ import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/closure.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/const.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
@@ -370,7 +371,7 @@ Variable compileMethodInvocation(
     effectiveCallArgs.add(pushRuntimeTypeId(ctx, instantiatedReturnType!));
   }
 
-  final result = ctx.svar('call');
+  var result = ctx.svar('call');
   if (dec0.isBridge) {
     final bridge = dec0.bridge!;
     if (bridge is BridgeClassDef && !bridge.wrap) {
@@ -421,6 +422,9 @@ Variable compileMethodInvocation(
   final generativeCtor =
       declaration is ConstructorDeclaration &&
       declaration.factoryKeyword == null;
+  if (isConstructor && e.inConstantContext) {
+    result = pushInternConst(ctx, result, instantiatedReturnType!);
+  }
   final v = Variable.of(
     ctx,
     result,
@@ -1002,7 +1006,7 @@ Variable _invokeWithTarget(
     (key, value) => MapEntry(key, value.type),
   );
 
-  final result = ctx.svar('method_result');
+  var result = ctx.svar('method_result');
   if (isStatic) {
     if (dec0!.isBridge) {
       ctx.pushOp(
@@ -1034,6 +1038,9 @@ Variable _invokeWithTarget(
           typeArguments: _runtimeTypeArguments(ctx, e),
         ),
       );
+      if (declaration is ConstructorDeclaration && e.inConstantContext) {
+        result = pushInternConst(ctx, result, staticType);
+      }
     }
   } else {
     // The fixed target for a direct call: the nearest class at-or-above
