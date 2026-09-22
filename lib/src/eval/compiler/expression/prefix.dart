@@ -60,7 +60,11 @@ Variable compilePrefixExpression(
     return boolean.invoke(ctx, method, []).result;
   }
 
-  if (isDynamic) return V.invoke(ctx, method, []).result;
+  // Nullary `operator -` is keyed `unary-` in member tables, matching the
+  // analyzer's element name.
+  final member = method == '-' ? 'unary-' : method;
+
+  if (isDynamic) return V.invoke(ctx, member, []).result;
 
   // `~x` and `-x` on user types call the nullary operators `~` and `-`
   // directly; the `0 - x` rewrite only applies to native ints/doubles.
@@ -68,7 +72,7 @@ Variable compilePrefixExpression(
       (method == '-' &&
           V.type != CoreTypes.int.ref(ctx) &&
           V.type != CoreTypes.double.ref(ctx))) {
-    return V.invoke(ctx, method, []).result;
+    return V.invoke(ctx, member, []).result;
   }
 
   return _zeroForType(V.type, ctx).push(ctx).invoke(ctx, method, [V]).result;

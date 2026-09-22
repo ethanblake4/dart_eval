@@ -4,6 +4,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/async.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/fpl.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/return.dart';
@@ -228,12 +229,13 @@ int compileMethodDeclaration(
     // Extension members and class statics register in the top-level
     // positions map; getters and setters take `*g`/`*s` suffixes matching
     // the instance-member key convention so a pair can't collide.
-    final suffix = d.isGetter
-        ? '*g'
-        : d.isSetter
-        ? '*s'
-        : '';
-    final key = '$parentName.$methodName$suffix';
+    final key = isExtensionMember
+        ? extensionMemberKey(parentName, d)
+        : '$parentName.$methodName${d.isGetter
+            ? '*g'
+            : d.isSetter
+            ? '*s'
+            : ''}';
     ctx.topLevelDeclarationPositions
         .putIfAbsent(ctx.library, () => {})[key] = pos;
     if (isExtensionMember) {
@@ -251,8 +253,8 @@ int compileMethodDeclaration(
         : 2;
     ctx.instanceDeclarationPositions[ctx
             .enclosingLibrary ??
-                ctx.library]![parentName]![mapIndex][ctx.memberNameKey(methodName)] =
-        pos;
+                ctx.library]![parentName]![mapIndex][
+            ctx.instanceMethodKey(methodName, positionalArityOf(d))] = pos;
   }
 
   return pos;

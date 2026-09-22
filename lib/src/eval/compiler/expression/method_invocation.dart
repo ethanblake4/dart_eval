@@ -102,9 +102,26 @@ Variable compileMethodInvocation(
 
   if (method.methodOffset == null) {
     // The receiver isn't a known function — it may still be a callable object
-    // (an implicit `.call` invocation, e.g. `c1(1)` on `C1 c1`). Dispatch
-    // dynamically: objects without a `call` method raise NoSuchMethodError at
-    // runtime, matching Dart semantics.
+    // (an implicit `.call` invocation, e.g. `c1(1)` on `C1 c1`). An extension
+    // `call` member applies statically; otherwise dispatch dynamically so
+    // objects without `call` raise NoSuchMethodError at runtime.
+    var hasInstanceCall = true;
+    try {
+      resolveInstanceMethod(ctx, method.type, 'call');
+    } on CompileError {
+      hasInstanceCall = false;
+    }
+    if (!hasInstanceCall &&
+        resolveExtensionMember(
+          ctx,
+          method.type,
+          'call',
+          arity: _positionalArity(e),
+        ) !=
+            null) {
+      final (positional, named) = _compileCallArgs(ctx, e);
+      return method.invoke(ctx, 'call', positional, namedArgs: named).result;
+    }
     return _invokeValue(ctx, method, e);
   }
 
@@ -558,6 +575,11 @@ bool _annotationUsesTypeParameters(
   );
 }
 
+/// Positional argument count of a method invocation, for disambiguating
+/// extension members that differ only by arity (`operator -`).
+int _positionalArity(MethodInvocation e) =>
+    e.argumentList.arguments.where((a) => a is! NamedArgument).length;
+
 /// Compiles `E(receiver)` — explicit extension application. The receiver
 /// keeps its own type but carries a [BoundExtension] so member lookups on
 /// the result resolve only within [ext].
@@ -675,7 +697,12 @@ Variable _invokeWithTarget(
             null) {
       // A member invoked on a `Type` literal may still be an extension
       // member on `Type` — `C.expectStaticType<Exactly<Type>>()`.
-      final found = resolveExtensionMember(ctx, L.type, e.methodName.name);
+      final found = resolveExtensionMember(
+        ctx,
+        L.type,
+        e.methodName.name,
+        arity: _positionalArity(e),
+      );
       if (found != null) {
         return _invokeExtensionMethod(ctx, L, e, found.$1, found.$2, found.$3);
       }
@@ -788,7 +815,12 @@ Variable _invokeWithTarget(
       dec0 = resolveInstanceMethod(ctx, L.type, e.methodName.name, e);
     } on CompileError {
       // No such instance member: an extension member may apply.
-      final found = resolveExtensionMember(ctx, L.type, e.methodName.name);
+      final found = resolveExtensionMember(
+        ctx,
+        L.type,
+        e.methodName.name,
+        arity: _positionalArity(e),
+      );
       if (found != null) {
         return _invokeExtensionMethod(
           ctx,

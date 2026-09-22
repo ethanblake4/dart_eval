@@ -2,6 +2,10 @@ import '../../ir/memory.dart' show Assign;
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
+import 'package:dart_eval/src/eval/compiler/errors.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
+import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -85,10 +89,39 @@ InvokeResult invokeClosure(
       ),
     );
   } else {
+    // `x(...)` where `x` isn't a function is an implicit `x.call(...)` — an
+    // extension `call` member applies statically before the dynamic fallback.
+    final callableVar = closure!;
+    if (!callableVar.type.isAssignableTo(
+      ctx,
+      CoreTypes.function.ref(ctx),
+    )) {
+      var hasInstanceCall = true;
+      try {
+        resolveInstanceMethod(ctx, callableVar.type, 'call');
+      } on CompileError {
+        hasInstanceCall = false;
+      }
+      if (!hasInstanceCall &&
+          resolveExtensionMember(
+                ctx,
+                callableVar.type,
+                'call',
+                arity: positionalArgs.length,
+              ) !=
+              null) {
+        return callableVar.invoke(
+          ctx,
+          'call',
+          positionalArgs,
+          namedArgs: namedArgs,
+        );
+      }
+    }
     ctx.pushOp(
       InvokeClosure(
         target,
-        closure!.ssa,
+        callableVar.ssa,
         positionalSsa,
         namedSsa,
         typeArguments: runtimeTypeArguments,

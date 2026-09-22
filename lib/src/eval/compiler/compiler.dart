@@ -676,7 +676,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
           _ctx.declaredInstanceMembers['$libraryIndex:$name'] = {
             for (final m in members)
               if (m is MethodDeclaration && !m.isStatic)
-                _ctx.memberNameKey(m.name.lexeme)
+                _ctx.instanceMethodKey(m.name.lexeme, positionalArityOf(m))
               else if (m is FieldDeclaration && !m.isStatic)
                 for (final v in m.fields.variables)
                   _ctx.memberNameKey(v.name.lexeme),
@@ -711,7 +711,9 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
           if (ancestor is MixinDeclaration && members != null) {
             for (final m in ancestor.body.members) {
               if (m is MethodDeclaration && !m.isStatic) {
-                members.add(_ctx.memberNameKey(m.name.lexeme));
+                members.add(
+                  _ctx.instanceMethodKey(m.name.lexeme, positionalArityOf(m)),
+                );
               } else if (m is FieldDeclaration && !m.isStatic) {
                 for (final v in m.fields.variables) {
                   members.add(_ctx.memberNameKey(v.name.lexeme));
@@ -1062,6 +1064,8 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
             mName += '*g';
           } else if (member.isSetter) {
             mName += '*s';
+          } else if (mName == '-' && positionalArityOf(member) == 0) {
+            mName = 'unary-';
           }
           instanceDeclarations[mName] = member;
         }

@@ -9,6 +9,7 @@ import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/closure.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'package:dart_eval/src/eval/compiler/model/function_type.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
@@ -250,6 +251,24 @@ extension Invoke on Variable {
                   )
                 : args[i],
         ];
+        // Pad omitted optional positionals with their declared defaults —
+        // extension members are static calls, so the full declared argument
+        // vector is always passed.
+        final positionalFormals =
+            formals.where((f) => f.isPositional).toList();
+        for (var i = convertedArgs.length;
+            i < positionalFormals.length;
+            i++) {
+          convertedArgs.add(
+            compileOmittedArgument(
+              ctx,
+              ext.library,
+              positionalFormals[i],
+              member,
+              typeParameters: typeParams,
+            ),
+          );
+        }
         final target = ctx.svar('method_result');
         ctx.pushOp(
           Call(
@@ -312,7 +331,13 @@ extension Invoke on Variable {
         hasInstanceMember = false;
       }
       if (!hasInstanceMember) {
-        final found = resolveExtensionMember(ctx, type, method);
+        // `unary-` maps to the extension member `-` of positional arity 0.
+        final found = resolveExtensionMember(
+          ctx,
+          type,
+          method == 'unary-' ? '-' : method,
+          arity: args.length,
+        );
         if (found != null) {
           final (ext, member, bindings) = found;
           return invokeExt(ext, member, bindings, memberExtParams(ctx, ext, type));
@@ -413,6 +438,12 @@ extension Invoke on Variable {
     Map<String, Variable>? namedArgs,
   ) {
     if (!type.isAssignableTo(ctx, CoreTypes.function.ref(ctx))) {
+      // `x(...)` on a non-function is an implicit `x.call(...)`, which may
+      // resolve to an extension `call` member.
+      if (resolveExtensionMember(ctx, type, 'call', arity: args.length) !=
+          null) {
+        return invoke(ctx, 'call', args, namedArgs: namedArgs);
+      }
       throw CompileError(
         'Cannot invoke variable of type $type as it is not a function',
       );

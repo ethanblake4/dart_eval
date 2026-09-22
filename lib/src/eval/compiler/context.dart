@@ -253,6 +253,12 @@ class CompilerContext with ScopeContext {
     return '${libraryUri(library)}::$name';
   }
 
+  /// `operator -` is the only arity-overloadable operator: the nullary form
+  /// is keyed `unary-` (the analyzer's element name) so it can't collide
+  /// with binary `-` in member tables and runtime descriptors.
+  String instanceMethodKey(String name, int positionalArity) =>
+      memberNameKey(name == '-' && positionalArity == 0 ? 'unary-' : name);
+
   String? get currentClassName {
     final currentClass = this.currentClass;
     if (currentClass == null) return null;

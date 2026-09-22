@@ -98,6 +98,12 @@ class $num<T extends num> implements $Instance {
           ),
         ),
       ),
+      'unary-': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+          params: [],
+        ),
+      ),
       '/': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
@@ -454,6 +460,10 @@ class $num<T extends num> implements $Instance {
       case '+':
         return __plus;
       case '-':
+        return __minus;
+      // The nullary minus operator's canonical member name is `unary-`;
+      // __minus already handles a zero-argument call as unary negation.
+      case 'unary-':
         return __minus;
       case '*':
         return __mul;
@@ -1418,6 +1428,8 @@ class $int extends $num<int> {
         return __shiftLeft;
       case '>>':
         return __shiftRight;
+      case '>>>':
+        return __unsignedShiftRight;
       case '^':
         return __bitwiseXor;
       case '~':
@@ -1527,6 +1539,27 @@ class $int extends $num<int> {
   ) {
     final other = (r as $Value?);
     final evalResult = target!.$value >> other!.$value;
+
+    if (evalResult is int) {
+      return $int(evalResult);
+    }
+
+    throw UnimplementedError();
+  }
+
+  static const $Function __unsignedShiftRight = $Function(
+    _unsignedShiftRight,
+  );
+
+  static $Value? _unsignedShiftRight(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final other = (r as $Value?);
+    final evalResult = target!.$value >>> other!.$value;
 
     if (evalResult is int) {
       return $int(evalResult);

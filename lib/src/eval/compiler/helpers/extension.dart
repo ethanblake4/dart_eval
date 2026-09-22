@@ -22,14 +22,8 @@ class EvalExtension {
   };
 
   /// Member registration key in `topLevelDeclarationPositions`.
-  String memberKey(MethodDeclaration member) {
-    final suffix = member.isGetter
-        ? '*g'
-        : member.isSetter
-        ? '*s'
-        : '';
-    return '$name.${member.name.lexeme}$suffix';
-  }
+  String memberKey(MethodDeclaration member) =>
+      extensionMemberKey(name, member);
 
   /// The `on` type, or null when it can't be resolved. For generic
   /// extensions this is the *pattern* — type parameters appear as
@@ -263,6 +257,7 @@ TypeRef _instantiateOnType(
   String memberName, {
   bool getter = false,
   bool setter = false,
+  int? arity,
 }) {
   EvalExtension? bestExt;
   MethodDeclaration? best;
@@ -278,6 +273,7 @@ TypeRef _instantiateOnType(
       if (member is! MethodDeclaration || member.isStatic) continue;
       if (member.name.lexeme != memberName) continue;
       if (member.isGetter != getter || member.isSetter != setter) continue;
+      if (arity != null && !_acceptsArity(member, arity)) continue;
       var wins = best == null;
       if (!wins) {
         final forward = instantiatedOn.isAssignableTo(ctx, bestOnType!);
@@ -295,6 +291,34 @@ TypeRef _instantiateOnType(
     }
   }
   return best == null ? null : (bestExt!, best, bestBindings!);
+}
+
+/// Member registration key for [member] of the extension named [extName].
+/// `operator -` is the only arity-overloadable operator — unary and binary
+/// forms can coexist in one extension — so it is keyed by positional arity.
+String extensionMemberKey(String extName, MethodDeclaration member) {
+  final suffix = member.isGetter
+      ? '*g'
+      : member.isSetter
+      ? '*s'
+      : member.name.lexeme == '-'
+      ? ':${positionalArityOf(member)}'
+      : '';
+  return '$extName.${member.name.lexeme}$suffix';
+}
+
+/// Total positional parameter count (required + optional) of [member].
+int positionalArityOf(MethodDeclaration member) =>
+    member.parameters?.parameters.where((p) => p.isPositional).length ?? 0;
+
+/// Whether [member]'s parameter list can be invoked with [arity] positional
+/// arguments: between its required and total positional parameter count.
+bool _acceptsArity(MethodDeclaration member, int arity) {
+  final positional =
+      member.parameters?.parameters.where((p) => p.isPositional).toList() ??
+      const [];
+  final required = positional.where((p) => p.isRequired).length;
+  return arity >= required && arity <= positional.length;
 }
 
 /// Runtime type-argument ids for an invocation of [member]: the extension's
