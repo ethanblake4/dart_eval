@@ -198,8 +198,10 @@ class TypedBackend {
   TypedBackend(this.context);
   final CompilerContext context;
   final integers = <int>[];
+  final _integerIndices = <int, int>{};
   final doubles = <double>[];
   final objects = <Object?>[];
+  final _objectIndices = <Object?, int>{};
   final _classIndices = <(int, String), int>{};
   final _callSites = <TypedCallSite>[];
   final _closures = <TypedClosureDescriptor>[];
@@ -232,13 +234,14 @@ class TypedBackend {
   TypedProgram compileEntrypoints(Iterable<(String, String)> entrypoints) {
     final roots = entrypoints.toList();
     final reachable = <int>[];
+    final seen = <int>{};
     for (final (library, function) in roots) {
       final libraryId = context.libraryMap[library];
       final id = context.topLevelDeclarationPositions[libraryId]?[function];
       if (id == null) {
         throw ArgumentError('Unknown entrypoint $library::$function');
       }
-      if (!reachable.contains(id)) reachable.add(id);
+      if (seen.add(id)) reachable.add(id);
     }
     if (reachable.isEmpty) {
       throw ArgumentError('No typed entrypoints were found');
@@ -254,7 +257,7 @@ class TypedBackend {
           in context.functionParameters[functionId] ??
               const <FormalParameter>[]) {
         final thunk = context.defaultThunkCache[param.defaultClause?.value];
-        if (thunk != null && !reachable.contains(thunk)) {
+        if (thunk != null && seen.add(thunk)) {
           reachable.add(thunk);
         }
       }
@@ -266,10 +269,10 @@ class TypedBackend {
               closures.CreateClosure(:final target) => target,
               _ => throw StateError('Unreachable callable'),
             });
-            if (!reachable.contains(callee)) reachable.add(callee);
+            if (seen.add(callee)) reachable.add(callee);
             if (op is closures.CreateClosure) {
               for (final thunk in op.defaultThunks) {
-                if (thunk >= 0 && !reachable.contains(thunk)) {
+                if (thunk >= 0 && seen.add(thunk)) {
                   reachable.add(thunk);
                 }
               }
@@ -282,7 +285,7 @@ class TypedBackend {
             };
             final initializer = context.runtimeGlobalInitializerMap[index];
             reachableGlobals.add(index);
-            if (initializer != null && !reachable.contains(initializer)) {
+            if (initializer != null && seen.add(initializer)) {
               reachable.add(initializer);
             }
           } else if (op is objects_ir.CreateClass) {
@@ -294,7 +297,7 @@ class TypedBackend {
                 context.instanceDeclarationPositions[op.library]![op.name]!;
             for (var kind = 0; kind < 3; kind++) {
               for (final target in (members[kind] as Map).values.cast<int>()) {
-                if (target >= 0 && !reachable.contains(target)) {
+                if (target >= 0 && seen.add(target)) {
                   reachable.add(target);
                 }
               }
@@ -324,6 +327,13 @@ class TypedBackend {
     final compiled = [
       for (final functionId in reachable) _compileFunction(functionId, indices),
     ];
+    // Function indices that already own a bound-receiver descriptor — a
+    // member whose entry here would duplicate it is skipped once per set
+    // rather than scanning `_closures` per member.
+    final boundReceiverIds = <int>{
+      for (final d in _closures)
+        if (d.boundReceiver) d.functionId,
+    };
     for (final allocation in classAllocations) {
       final memberGroups = context
           .instanceDeclarationPositions[allocation.library]![allocation.name]!;
@@ -337,10 +347,7 @@ class TypedBackend {
             entry.value as int: (entry.key as String, kind),
       };
       for (final id in memberIds) {
-        if (id < 0 ||
-            _closures.any(
-              (d) => d.functionId == indices[id] && d.boundReceiver,
-            )) {
+        if (id < 0 || boundReceiverIds.contains(indices[id])) {
           continue;
         }
         final parameters =
@@ -375,6 +382,7 @@ class TypedBackend {
         final positionalDefaults = positional.map(defaultValue).toList();
         final namedDefaults = named.map(defaultValue).toList();
 
+        boundReceiverIds.add(indices[id]!);
         _closures.add(
           TypedClosureDescriptor(
             indices[id]!,
@@ -717,17 +725,21 @@ class TypedBackend {
   }
 
   int _object(Object? value) {
-    final old = objects.indexOf(value);
-    if (old >= 0) return old;
+    final cached = _objectIndices[value];
+    if (cached != null) return cached;
+    final index = objects.length;
     objects.add(value);
-    return objects.length - 1;
+    _objectIndices[value] = index;
+    return index;
   }
 
   int _integer(int value) {
-    final old = integers.indexOf(value);
-    if (old >= 0) return old;
+    final cached = _integerIndices[value];
+    if (cached != null) return cached;
+    final index = integers.length;
     integers.add(value);
-    return integers.length - 1;
+    _integerIndices[value] = index;
+    return index;
   }
 
   List<String> _numericNames(
@@ -942,7 +954,9 @@ class _LoweringSession {
     firstRegion = b._exceptionRegions.length;
     firstCompletion = b._completionJumps.length;
 
-    sourceGraph = b.context.ssaFunctionGraphs[id]!.clone();
+    // Skip the clone's SSA reindex: optimizePrimitives and lower() mutate the
+    // copy before emit() rebuilds SSA metadata itself.
+    sourceGraph = b.context.ssaFunctionGraphs[id]!.clone(refresh: false);
     optimizePrimitives(sourceGraph);
     representations = analyzeRepresentations(
       sourceGraph,
@@ -993,7 +1007,9 @@ class _LoweringSession {
         if (proven) addedNativeList |= nativeLists.add(target);
       }
     }
-    graph = sourceGraph.clone();
+    // sourceGraph is not referenced after construction; adopt it as the
+    // working graph instead of paying for a second deep copy.
+    graph = sourceGraph;
 
     for (final blockId in graph.graph.vertices) {
       for (final op in graph[blockId]!.code.whereType<exceptions.EnterTry>()) {
@@ -2238,7 +2254,6 @@ class _LoweringSession {
         return _Bytes(code, op.immediate, op.otherTarget);
       },
     );
-    graph.refreshSSA();
     graph.removePhiNodes(
       cfg.Assign.new,
       onSplitEdge: (pred, old, replacement) {
@@ -2309,6 +2324,7 @@ class _LoweringSession {
         onJump: (target, _) => _Bytes(TypedOp.jump, target),
       ),
     );
+
     // Expand the second edge before relaxation so both branch distances use
     // the final instruction positions. Every branch starts short and can only
     // widen, guaranteeing that this layout process terminates.

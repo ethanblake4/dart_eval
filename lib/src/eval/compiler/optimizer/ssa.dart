@@ -30,7 +30,9 @@ ControlFlowGraph copyGraph(ControlFlowGraph source) {
 ControlFlowGraph buildSSA(ControlFlowGraph source) {
   final graph = copyGraph(source);
   graph.insertPhiNodes();
-  graph.computeSemiPrunedSSA();
+  // copyGraph already gave every operand its own SSA instance, so renaming
+  // can mutate versions in place without an extra deep-copy pass.
+  graph.computeSemiPrunedSSA(copyOperands: false);
   validateSSA(graph);
   graph.removeUnusedDefines();
   validateSSA(graph);
