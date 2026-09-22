@@ -7,7 +7,7 @@ import 'package:dart_eval/src/eval/compiler/util/graph.dart';
 class CompilationUnitGraph implements Graph<int> {
   final Map<int, DartCompilationUnit> compilationUnits;
   final Map<String, int> uriMap;
-  final Map<String, int> libraryIdMap;
+  final Map<String, List<int>> libraryIdMap;
 
   CompilationUnitGraph(this.compilationUnits, this.uriMap, this.libraryIdMap);
 
@@ -22,7 +22,7 @@ class CompilationUnitGraph implements Graph<int> {
     }
 
     for (final part in cu.parts) {
-      final id = uriMap[part.uri.stringValue!];
+      final id = uriMap[cu.uri.resolve(part.uri.stringValue!).toString()];
       if (id != null && compilationUnits.containsKey(id)) {
         yield id;
       }
@@ -33,14 +33,24 @@ class CompilationUnitGraph implements Graph<int> {
       final uriStr = partOf.uri?.stringValue,
           libId = partOf.libraryName?.toString();
       if (uriStr != null) {
-        final id = uriMap[uriStr];
+        final id = uriMap[cu.uri.resolve(uriStr).toString()];
         if (id != null && compilationUnits.containsKey(id)) {
           yield id;
         }
-      } else {
-        final id = libraryIdMap[libId];
-        if (id != null && compilationUnits.containsKey(id)) {
-          yield id;
+      } else if (libId != null) {
+        // Multiple libraries can share a name (e.g. a test file and an
+        // imported library); the `part of` edge belongs to the library that
+        // lists this unit in its own `part` directives.
+        for (final id in libraryIdMap[libId] ?? const <int>[]) {
+          final lib = compilationUnits[id];
+          if (lib == null) continue;
+          for (final part in lib.parts) {
+            final partId =
+                uriMap[lib.uri.resolve(part.uri.stringValue!).toString()];
+            if (partId == vertex) {
+              yield id;
+            }
+          }
         }
       }
     }

@@ -214,8 +214,20 @@ class SdkSuite {
       return SdkTest(relPath, TestKind.unsupported, 'missing file');
     }
     final source = file.readAsStringSync();
-    // Helpers imported by tests (no main) aren't tests themselves.
-    if (!RegExp(r'\bmain\s*\(').hasMatch(source)) {
+    // Helpers imported by tests (no main) aren't tests themselves. A part
+    // file may define main() — scan `part` targets relative to the test.
+    var hasMain = RegExp(r'\bmain\s*\(').hasMatch(source);
+    if (!hasMain) {
+      for (final m in RegExp(r'''part\s+['"]([^'"]+)['"]''').allMatches(source)) {
+        final partFile = File(p.join(p.dirname(file.path), m.group(1)!));
+        if (partFile.existsSync() &&
+            RegExp(r'\bmain\s*\(').hasMatch(partFile.readAsStringSync())) {
+          hasMain = true;
+          break;
+        }
+      }
+    }
+    if (!hasMain) {
       return SdkTest(relPath, TestKind.unsupported, 'no main()');
     }
     if (_negativePattern.hasMatch(source)) {

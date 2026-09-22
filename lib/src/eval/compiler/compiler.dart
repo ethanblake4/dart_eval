@@ -1206,7 +1206,7 @@ List<Library> _buildLibraries(Iterable<DartCompilationUnit> units) {
   final uriMap = <String, int>{};
 
   /// Library name to ID mapping
-  final libraryIdMap = <String, int>{};
+  final libraryIdMap = <String, List<int>>{};
 
   for (final unit in units) {
     /// Establish a mapping relationship
@@ -1214,7 +1214,7 @@ List<Library> _buildLibraries(Iterable<DartCompilationUnit> units) {
     uriMap[unit.uri.toString()] = i;
     if (unit.library != null && unit.library!.name != null) {
       /// Library instruction for source files that start with "library *****"
-      libraryIdMap[unit.library!.name!.toString()] = i;
+      (libraryIdMap[unit.library!.name!.toString()] ??= []).add(i);
     }
     i++;
   }
