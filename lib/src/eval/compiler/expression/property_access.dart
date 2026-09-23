@@ -6,6 +6,7 @@ import 'package:dart_eval/src/eval/compiler/expression/null_aware.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
+import '../invocation/accessors.dart';
 
 Variable compilePropertyAccess(
   PropertyAccess pa,
@@ -33,7 +34,7 @@ Variable compilePropertyAccess(
     return emitNullGuard(
       ctx,
       L,
-      (t) => t.getProperty(ctx, pa.propertyName.name),
+      (t) => GetTarget.read(ctx, t, pa.propertyName.name),
       source: pa,
     );
   }
@@ -44,7 +45,7 @@ Variable compilePropertyAccess(
     return IdentifierReference(L, pa.propertyName.name).getValue(ctx, pa);
   }
 
-  return L.getProperty(ctx, pa.propertyName.name);
+  return GetTarget.read(ctx, L, pa.propertyName.name);
 }
 
 Reference compilePropertyAccessAsReference(

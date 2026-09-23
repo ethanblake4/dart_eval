@@ -15,6 +15,7 @@ import 'package:dart_eval/src/eval/ir/collection.dart';
 import 'package:dart_eval/src/eval/ir/logic.dart';
 import 'package:dart_eval/src/eval/ir/memory.dart';
 import '../values/value_rep.dart';
+import '../invocation/accessors.dart';
 
 /// Iterates a spread source once, placing iterator creation inside the null guard.
 List<TypeRef> compileCollectionSpread(
@@ -55,25 +56,25 @@ List<TypeRef> compileCollectionSpread(
     final nonNull = collection
         .copyWith(type: collection.type.copyWith(nullable: false))
         .boxIfNeeded(ctx);
-    final iterable = isMap ? nonNull.getProperty(ctx, 'entries') : nonNull;
-    final iterator = iterable.getProperty(ctx, 'iterator');
+    final iterable = isMap ? GetTarget.read(ctx, nonNull, 'entries') : nonNull;
+    final iterator = GetTarget.read(ctx, iterable, 'iterator');
     return macroLoop(
       ctx,
       null,
       condition: (ctx) => iterator.invoke(ctx, 'moveNext', []).result,
       body: (ctx, _) {
-        final current = iterator.getProperty(ctx, 'current');
+        final current = GetTarget.read(ctx, iterator, 'current');
         if (isMap) {
           final key = convertForAssignment(
             ctx,
-            current.getProperty(ctx, 'key'),
+            GetTarget.read(ctx, current, 'key'),
             target.type.typeArguments[0],
             representation: box ? MachineRepresentation.object : null,
             source: element,
           );
           final value = convertForAssignment(
             ctx,
-            current.getProperty(ctx, 'value'),
+            GetTarget.read(ctx, current, 'value'),
             target.type.typeArguments[1],
             representation: box ? MachineRepresentation.object : null,
             source: element,

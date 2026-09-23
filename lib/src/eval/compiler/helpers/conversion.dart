@@ -13,6 +13,7 @@ import 'package:dart_eval/src/eval/ir/memory.dart';
 import 'package:dart_eval/src/eval/ir/numeric.dart';
 import 'package:dart_eval/src/eval/ir/types.dart';
 import '../values/abi.dart';
+import '../invocation/accessors.dart';
 
 /// Converts a field/variable initializer value for a slot of type [target].
 /// Rejects statically-invalid initializers and emits the `int → double`
@@ -78,7 +79,7 @@ Variable? _implicitCallTearOff(
     return null;
   }
   try {
-    final tearOff = value.getProperty(ctx, 'call', source: source);
+    final tearOff = GetTarget.read(ctx, value, 'call', source: source);
     if (tearOff.type.isAssignableTo(
       ctx,
       effectiveTarget,

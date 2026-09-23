@@ -31,6 +31,7 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'values/abi.dart';
 import 'member/member_name.dart';
+import 'invocation/accessors.dart';
 
 part 'denotation.dart';
 
@@ -213,7 +214,7 @@ class IdentifierReference implements Reference {
       // Extension accessors apply when the receiver's interface has no
       // member of the matching kind — same gate as [setValue].
       if (fieldType == null &&
-          !_hasInstanceMember(ctx, object!.type, name, forSet: forSet)) {
+          !hasInstanceMember(ctx, object!.type, name, forSet: forSet)) {
         fieldType = _extensionMemberType(ctx, forSet: forSet);
       }
       return fieldType ?? CoreTypes.dynamic.ref(ctx);
@@ -1182,7 +1183,7 @@ Variable _setterArgument(
 /// Whether [type] or one of its supertypes declares a member named [name].
 /// Setters and getters register under `name*s`/`name*g` keys, so each kind is
 /// probed separately when [forSet] selects one.
-bool _hasInstanceMember(
+bool hasInstanceMember(
   CompilerContext ctx,
   TypeRef type,
   String name, {
@@ -1223,7 +1224,7 @@ bool _hasReceiverMember(
       null) {
     return true;
   }
-  if (_hasInstanceMember(ctx, resolvedReceiver, name, forSet: forSet)) {
+  if (hasInstanceMember(ctx, resolvedReceiver, name, forSet: forSet)) {
     return true;
   }
   return resolveExtensionMember(

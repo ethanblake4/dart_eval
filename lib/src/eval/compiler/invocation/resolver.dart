@@ -27,6 +27,7 @@ import '../values/abi.dart';
 import 'binder.dart';
 import 'bound_call.dart';
 import 'call.dart';
+import 'accessors.dart';
 import 'devirtualizer.dart';
 import 'intrinsics.dart';
 import 'targets.dart';
@@ -308,7 +309,7 @@ final class CallResolver {
       if (receiverType is RecordTypeRef &&
           receiverType.named.containsKey(e.methodName.name)) {
         final target = MemberValueCall(
-          read: (ctx) => L.getProperty(ctx, e.methodName.name),
+          read: (ctx) => GetTarget.read(ctx, L, e.methodName.name),
         );
         final bound = ArgumentBinder(
           ctx,
@@ -367,14 +368,14 @@ final class CallResolver {
           // value is read before the arguments evaluate.
           return invokeValue(
             callSite(),
-            callee: L.getProperty(ctx, e.methodName.name),
+            callee: GetTarget.read(ctx, L, e.methodName.name),
           );
         }
         // `receiver.field(...)` / `receiver.getter(...)`: the member's
         // *value* is invoked, not a method — property read then implicit
         // `.call`. The arguments evaluate before the member read.
         final target = MemberValueCall(
-          read: (ctx) => L.getProperty(ctx, e.methodName.name),
+          read: (ctx) => GetTarget.read(ctx, L, e.methodName.name),
         );
         final bound = ArgumentBinder(
           ctx,

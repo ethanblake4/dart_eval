@@ -411,7 +411,7 @@ final class InstanceMemberDenotation extends Denotation {
     // Extension accessors apply when the receiver's interface has no member
     // of the matching kind.
     if (fieldType == null &&
-        !_hasInstanceMember(ctx, object.type, name, forSet: forSet)) {
+        !hasInstanceMember(ctx, object.type, name, forSet: forSet)) {
       fieldType = _extensionMemberType(ctx, object, forSet: forSet);
     }
     return fieldType;
@@ -614,23 +614,13 @@ final class InstanceMemberDenotation extends Denotation {
             .topLevelDeclarationsMap[owner.type.file]?[owner.type.name]
             ?.isBridge ??
         false) {
-      return owner.getProperty(ctx, name, source: source);
+      return GetTarget.read(ctx, owner, name, source: source);
     }
-    return Variable.ssa(
-      ctx,
-      Call(
-        DeferredOrOffset(
-          file: owner.type.file,
-          className: owner.type.name,
-          name: name,
-          methodType: MemberKind.getter,
-        ),
-        [owner.ssa],
-        result: ctx.svar(name),
-      ),
+    return SuperGetterCall(
+      owner,
+      name,
       readType(ctx, source: source),
-      rep: ValueRep.boxed,
-    );
+    ).emit(ctx);
   }
 
   /// `super.name = v` — write through the owning layer's setter; a bridged
@@ -641,33 +631,13 @@ final class InstanceMemberDenotation extends Denotation {
             .topLevelDeclarationsMap[owner.type.file]?[owner.type.name]
             ?.isBridge ??
         false) {
-      return InstanceMemberDenotation(
-        ValueReceiver(owner),
-        name,
-      ).write(ctx, value, source: source);
+      return SetTarget.write(ctx, owner, name, value, source: source);
     }
-    final type = writeType(ctx, source: source);
-    final boxed = convertForAssignment(
-      ctx,
-      value,
-      type,
-      representation: MachineRepresentation.object,
-      source: source,
-      description: 'Cannot assign ${value.type} to super.$name of type $type',
-    );
-    ctx.pushOp(
-      Call(
-        DeferredOrOffset(
-          file: owner.type.file,
-          className: owner.type.name,
-          name: name,
-          methodType: MemberKind.setter,
-        ),
-        [owner.ssa, boxed.ssa],
-        result: ctx.svar('super_set'),
-      ),
-    );
-    return boxed;
+    return SuperSetterCall(
+      owner,
+      name,
+      writeType(ctx, source: source),
+    ).emit(ctx, value);
   }
 
   @override
@@ -687,7 +657,7 @@ final class InstanceMemberDenotation extends Denotation {
     if (object == null) {
       throw CompileError('Cannot access instance member $name', source);
     }
-    return object.boxIfNeeded(ctx, source).getProperty(ctx, name);
+    return GetTarget.read(ctx, object.boxIfNeeded(ctx, source), name);
   }
 
   @override
@@ -712,228 +682,16 @@ final class InstanceMemberDenotation extends Denotation {
         forSet: true,
         source: source,
       )!;
-      final stored = convertForAssignment(
+      return SetTarget.writeDeclared(
         ctx,
+        object,
+        name,
         value,
         fieldType,
-        representation: MachineRepresentation.object,
         source: source,
-        description:
-            'Cannot assign value of type ${value.type} to field "$name" '
-            'of type $fieldType',
       );
-      ctx.pushOp(
-        SetPropertyDynamic(
-          object.ssa,
-          name,
-          stored.ssa,
-          callerLibrary: ctx.library,
-        ),
-      );
-      return stored;
     }
-    object = object.boxIfNeeded(ctx, source);
-    final declaredFieldType = TypeRef.lookupFieldType(
-      ctx,
-      object.type,
-      name,
-      forSet: true,
-      source: source,
-    );
-    if (declaredFieldType == null &&
-        !_hasInstanceMember(ctx, object.type, name, forSet: true)) {
-      // No instance member by this name: an extension setter may apply
-      // (`e.name = v` where `set name` lives in `extension on T`).
-      final extSetter = resolveExtensionMember(
-        ctx,
-        object.type,
-        name,
-        setter: true,
-      );
-      if (extSetter != null) {
-        final (ext, member, bindings) = extSetter;
-        final paramType =
-            member.parameters?.parameters.firstOrNull?.type == null
-            ? null
-            : formalParameterAnnotationType(
-                ctx,
-                ext.library,
-                member.parameters!.parameters.first,
-                typeParameters: extBindingsMap(ext, bindings),
-              );
-        final arg = paramType == null
-            ? value.boxIfNeeded(ctx)
-            : convertForAssignment(
-                ctx,
-                value,
-                paramType,
-                representation: MachineRepresentation.object,
-                source: source,
-                description:
-                    'Cannot assign ${value.type} to setter '
-                    '${ext.name}.$name on ${object.type}',
-              );
-        ctx.pushOp(
-          Call(
-            DeferredOrOffset(file: ext.library, name: ext.memberKey(member)),
-            [object.boxIfNeeded(ctx).ssa, arg.ssa],
-            result: ctx.svar('setter_result'),
-            typeArguments:
-                extensionCallTypeArguments(ctx, ext, member, bindings, const {}) ??
-                const [],
-          ),
-        );
-        // The assignment's value is the value as converted for the
-        // setter's parameter — e.g. an implicit `.call` tear-off.
-        return arg;
-      }
-    }
-    final fieldType = declaredFieldType ?? CoreTypes.dynamic.ref(ctx);
-    final val = convertForAssignment(
-      ctx,
-      value,
-      fieldType,
-      representation: MachineRepresentation.object,
-      source: source,
-      description:
-          'Cannot assign value of type ${value.type} to field "$name" '
-          'of type $fieldType',
-    );
-    final exact = object.exactType;
-    if (exact != null && !hasBridgeSuperclass(ctx, exact)) {
-      // Storage for an inherited field lives on its declaring class's
-      // link, reached from the receiver by LoadSuper hops.
-      final links = [exact, ...ctx.typeSystem.superclassChain(exact)];
-      var depth = -1;
-      int? fieldIndex;
-      for (var i = 0; i < links.length; i++) {
-        final link = links[i];
-        final key = name.startsWith('_')
-            ? '${ctx.libraryUri(link.file)}::$name'
-            : name;
-        final hasSetter =
-            (ctx.instanceDeclarationPositions[link.file]?[link.name]?[1]
-                        as Map?)
-                    ?.containsKey(key) ==
-                true &&
-            concreteMemberDecl(ctx, link, name, kind: 1) != null;
-        final index = ctx.instanceGetterIndices[link.file]?[link.name]?[name];
-        if (hasSetter && index != null) {
-          fieldIndex = index;
-          depth = i;
-          break;
-        }
-        if (hasSetter) {
-          depth = i;
-          break;
-        }
-      }
-      if (depth >= 0) {
-        final link = links[depth];
-        final decl = resolveInstanceDeclaration(
-          ctx,
-          link.file,
-          link.name,
-          name,
-          instantiated: link,
-        )?.$2.declaration;
-        // Field storage is link-relative so it always needs the declaring
-        // link; a real setter needs it only when its body uses `super`.
-        final fieldDecl = decl is VariableDeclaration
-            ? decl.parent?.parent
-            : null;
-        final needsLink =
-            fieldIndex != null ||
-            memberNeedsOwnerLink(ctx, link, name, kind: 1);
-        var linkSsa = object.ssa;
-        if (needsLink) {
-          for (var i = 0; i < depth; i++) {
-            final parent = links[i + 1];
-            linkSsa = Variable.ssa(
-              ctx,
-              LoadSuper(ctx.svar('super'), linkSsa),
-              parent,
-              concreteTypes: [parent],
-            ).ssa;
-          }
-        }
-        if (fieldIndex != null) {
-          final isLateFinal =
-              fieldDecl is FieldDeclaration &&
-              fieldDecl.fields.isLate &&
-              fieldDecl.fields.variables.any(
-                (v) => v.name.lexeme == name && (v.isFinal || v.isConst),
-              );
-          ctx.pushOp(
-            SetPropertyStatic(
-              linkSsa,
-              fieldIndex,
-              val.ssa,
-              isLateFinal: isLateFinal,
-            ),
-          );
-          return val;
-        }
-        final key = name.startsWith('_')
-            ? '${ctx.libraryUri(link.file)}::$name'
-            : name;
-        ctx.pushOp(
-          Call(
-            DeferredOrOffset(
-              file: link.file,
-              className: link.name,
-              methodType: MemberKind.setter,
-              name: key,
-            ),
-            [linkSsa, val.ssa],
-            result: ctx.svar(name),
-            typeEnvironmentReceiver: object.ssa,
-          ),
-        );
-        return val;
-      }
-    }
-    if (exact == null &&
-        object.concreteTypes.length == 1 &&
-        !hasBridgeSuperclass(ctx, object.concreteTypes.first)) {
-      // The receiver may hold a subclass: a setter can be called directly
-      // on the dispatch root only when it isn't overridden and its body
-      // never touches `super` (so any link works as `this`).
-      final owner = directMemberOwner(
-        ctx,
-        object.concreteTypes.first,
-        name,
-        kind: 1,
-      );
-      if (owner != null && !memberNeedsOwnerLink(ctx, owner, name, kind: 1)) {
-        final key = name.startsWith('_')
-            ? '${ctx.libraryUri(owner.file)}::$name'
-            : name;
-        ctx.pushOp(
-          Call(
-            DeferredOrOffset(
-              file: owner.file,
-              className: owner.name,
-              methodType: MemberKind.setter,
-              name: key,
-            ),
-            [object.ssa, val.ssa],
-            result: ctx.svar(name),
-            typeEnvironmentReceiver: object.ssa,
-          ),
-        );
-        return val;
-      }
-    }
-    ctx.pushOp(
-      SetPropertyDynamic(
-        object.ssa,
-        name,
-        val.ssa,
-        callerLibrary: ctx.library,
-      ),
-    );
-    return val;
+    return SetTarget.write(ctx, object, name, value, source: source);
   }
 
   @override

@@ -13,6 +13,7 @@ import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import '../values/abi.dart';
+import '../invocation/accessors.dart';
 
 enum PatternBindContext { none, declare, declareFinal, matching }
 
@@ -149,7 +150,7 @@ Variable patternMatchAndBind(
         final fieldResult = patternMatchAndBind(
           ctx,
           field.pattern,
-          V.getProperty(ctx, fieldName),
+          GetTarget.read(ctx, V, fieldName),
           patternContext: patternContext,
         );
         if (result == null) {
@@ -276,7 +277,7 @@ Variable patternMatchAndBind(
         if (propName == null) {
           throw CompileError('Object pattern field requires a name', field);
         }
-        final fieldValue = V.getProperty(ctx, propName);
+        final fieldValue = GetTarget.read(ctx, V, propName);
         final fieldResult = patternMatchAndBind(
           ctx,
           field.pattern,

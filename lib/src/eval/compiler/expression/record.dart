@@ -8,6 +8,7 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/collection.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
+import '../invocation/accessors.dart';
 
 Variable compileRecordLiteral(
   RecordLiteral l,
@@ -70,7 +71,7 @@ Variable compileRecordLiteral(
       return value;
     }
     try {
-      final call = value.getProperty(ctx, 'call');
+      final call = GetTarget.read(ctx, value, 'call');
       if (call.type is! FunctionTypeRef) {
         return value;
       }

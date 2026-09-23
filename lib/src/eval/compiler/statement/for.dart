@@ -14,6 +14,7 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/async.dart';
 import 'package:dart_eval/src/eval/ir/bridge.dart';
 import '../values/value_rep.dart';
+import '../invocation/accessors.dart';
 
 StatementInfo compileForStatement(
   ForStatement s,
@@ -127,7 +128,7 @@ StatementInfo compileForEachLoop(
       ? CoreTypes.dynamic.ref(ctx)
       : itype.typeArguments[0];
 
-  var iterator = iterable.getProperty(ctx, 'iterator');
+  var iterator = GetTarget.read(ctx, iterable, 'iterator');
   late Reference loopVariable;
 
   return macroLoop(
@@ -195,7 +196,7 @@ StatementInfo compileForEachLoop(
       if (parts is ForEachPartsWithDeclaration) {
         ctx.lookupBinding(parts.loopVariable.name.lexeme)!.renewCaptureCell(ctx);
       }
-      loopVariable.setValue(ctx, iterator.getProperty(ctx, 'current'));
+      loopVariable.setValue(ctx, GetTarget.read(ctx, iterator, 'current'));
     },
     updateBeforeBody: true,
   );
@@ -322,7 +323,7 @@ StatementInfo compileAwaitForLoop(
       if (parts is ForEachPartsWithDeclaration) {
         ctx.lookupBinding(parts.loopVariable.name.lexeme)!.renewCaptureCell(ctx);
       }
-      loopVariable.setValue(ctx, iterator.getProperty(ctx, 'current'));
+      loopVariable.setValue(ctx, GetTarget.read(ctx, iterator, 'current'));
     },
     updateBeforeBody: true,
     after: (ctx) {
