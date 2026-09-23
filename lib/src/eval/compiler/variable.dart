@@ -821,7 +821,7 @@ class Variable {
             DeferredOrOffset(
               file: link.file,
               className: link.name,
-              methodType: 0,
+              methodType: MemberKind.getter,
               name: key,
             ),
             [linkSsa],
@@ -850,7 +850,7 @@ class Variable {
             DeferredOrOffset(
               file: owner.file,
               className: owner.name,
-              methodType: 0,
+              methodType: MemberKind.getter,
               name: key,
             ),
             [receiver.ssa],

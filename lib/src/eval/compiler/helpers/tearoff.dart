@@ -182,9 +182,7 @@ extension TearOff on Variable {
     if (declaration is MethodDeclaration && !declaration.isStatic) {
       final receiver = implicitReceiver != null
           ? implicitReceiver!.boxIfNeeded(ctx).ssa
-          : offset.targetName == null
-          ? ctx.lookupBinding('#this')?.read(ctx).ssa
-          : SSA(offset.targetName!);
+          : ctx.lookupBinding('#this')?.read(ctx).ssa;
       if (receiver == null) {
         throw CompileError('Missing receiver for method tearoff');
       }

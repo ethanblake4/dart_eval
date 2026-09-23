@@ -714,7 +714,8 @@ class TypedBackend {
       if (members != null) {
         final kind = target.methodType;
         if (kind != null) {
-          id = (members[kind] as Map)[target.name] as int?;
+          id =
+              (members[kind.positionIndex] as Map)[target.name] as int?;
         } else {
           for (var kind = 0; kind < 3; kind++) {
             id ??= (members[kind] as Map)[target.name] as int?;

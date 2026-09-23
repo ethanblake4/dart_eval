@@ -1109,7 +1109,7 @@ Variable _invokeWithTarget(
       final offset = DeferredOrOffset(
         file: directOwner.file,
         className: directOwner.name,
-        methodType: 2,
+methodType: MemberKind.method,
         name: name,
       );
       ctx.pushOp(

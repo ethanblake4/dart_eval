@@ -273,8 +273,7 @@ final class SourceMember extends Member {
                 file: library,
                 name: '${_decl.name}.$key',
                 className: _decl.name,
-                methodType: name.kind.positionIndex,
-                targetName: key,
+                methodType: name.kind,
               );
       case MethodDeclaration m:
         final memberName = ctx.memberNameOf(m.name.lexeme, memberKind(m));
@@ -297,8 +296,7 @@ final class SourceMember extends Member {
                 file: library,
                 name: '${_decl.name}.${memberName.key}',
                 className: _decl.name,
-                methodType: memberName.kind.positionIndex,
-                targetName: memberName.nameKey,
+                methodType: memberName.kind,
               );
       default:
         return null;

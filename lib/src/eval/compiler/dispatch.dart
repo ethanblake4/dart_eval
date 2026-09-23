@@ -26,15 +26,13 @@ class DeferredOrOffset {
     this.name,
     this.className,
     this.methodType,
-    this.targetName,
   }) : assert(offset != null || name != null);
 
   final int? offset;
   final int? file;
   final String? className;
-  final int? methodType;
+  final MemberKind? methodType;
   final String? name;
-  final String? targetName;
 
   factory DeferredOrOffset.lookupStatic(
     CompilerContext ctx,
@@ -67,11 +65,16 @@ class DeferredOrOffset {
       other.offset == offset &&
       other.file == file &&
       other.className == className &&
+      other.methodType == methodType &&
       other.name == name;
 
   @override
   int get hashCode =>
-      offset.hashCode ^ className.hashCode ^ file.hashCode ^ name.hashCode;
+      offset.hashCode ^
+      className.hashCode ^
+      methodType.hashCode ^
+      file.hashCode ^
+      name.hashCode;
 }
 
 /// Whether any class in [type]'s superclass chain is bridged. Bridged

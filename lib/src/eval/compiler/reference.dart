@@ -1,6 +1,7 @@
 import 'helpers/global.dart';
 import 'package:dart_eval/src/eval/compiler/variable/binding.dart';
 import 'helpers/conversion.dart';
+import 'helpers/tearoff.dart';
 import 'model/function_type.dart';
 import '../ir/closures.dart';
 import '../ir/exception.dart';
@@ -13,7 +14,6 @@ import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
 import 'package:dart_eval/src/eval/ir/primitives.dart';
 import 'package:dart_eval/src/eval/ir/types.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';

@@ -490,10 +490,9 @@ final class InstanceMemberDenotation extends Denotation {
             file: ctx.library,
             className: ctx.currentClassName!,
             name: refName,
-            targetName: $this.name,
           ),
           callingConvention: CallingConvention.static,
-        );
+        )..implicitReceiver = $this;
       }
     }
 
@@ -582,16 +581,16 @@ final class InstanceMemberDenotation extends Denotation {
     if (memberDecl is MethodDeclaration &&
         !memberDecl.isGetter &&
         !memberDecl.isSetter) {
-      return Variable(
-        CoreTypes.function.ref(ctx),
-        methodOffset: DeferredOrOffset(
-          file: owner.type.file,
-          className: owner.type.name,
-          name: name,
-          targetName: owner.ssa.name,
-        ),
-        callingConvention: CallingConvention.static,
-      ).tearOff(ctx);
+      return (Variable(
+            CoreTypes.function.ref(ctx),
+            methodOffset: DeferredOrOffset(
+              file: owner.type.file,
+              className: owner.type.name,
+              name: name,
+            ),
+            callingConvention: CallingConvention.static,
+          )..implicitReceiver = owner)
+          .tearOff(ctx);
     }
     if (ctx
             .topLevelDeclarationsMap[owner.type.file]?[owner.type.name]
@@ -606,7 +605,7 @@ final class InstanceMemberDenotation extends Denotation {
           file: owner.type.file,
           className: owner.type.name,
           name: name,
-          methodType: 0,
+          methodType: MemberKind.getter,
         ),
         [owner.ssa],
         result: ctx.svar(name),
@@ -644,7 +643,7 @@ final class InstanceMemberDenotation extends Denotation {
           file: owner.type.file,
           className: owner.type.name,
           name: name,
-          methodType: 1,
+          methodType: MemberKind.setter,
         ),
         [owner.ssa, boxed.ssa],
         result: ctx.svar('super_set'),
@@ -865,7 +864,7 @@ final class InstanceMemberDenotation extends Denotation {
             DeferredOrOffset(
               file: link.file,
               className: link.name,
-              methodType: 1,
+              methodType: MemberKind.setter,
               name: key,
             ),
             [linkSsa, val.ssa],
@@ -897,7 +896,7 @@ final class InstanceMemberDenotation extends Denotation {
             DeferredOrOffset(
               file: owner.file,
               className: owner.name,
-              methodType: 1,
+              methodType: MemberKind.setter,
               name: key,
             ),
             [object.ssa, val.ssa],
@@ -1897,8 +1896,7 @@ bool _staticDispatchEquals(StaticDispatch? a, StaticDispatch? b) {
       x.file == y.file &&
       x.name == y.name &&
       x.className == y.className &&
-      x.methodType == y.methodType &&
-      x.targetName == y.targetName;
+      x.methodType == y.methodType;
   TypeRef? rt(ReturnType r) =>
       r is AlwaysReturnType ? r.type : null;
   return offsetEq(a.offset, b.offset) &&
