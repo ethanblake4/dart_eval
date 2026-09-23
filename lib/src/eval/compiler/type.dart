@@ -10,6 +10,7 @@ import 'types/function_type.dart';
 import 'types/substitution.dart';
 import 'types/type_decl.dart';
 import 'types/type_parameter.dart';
+import 'member/member_name.dart';
 
 export 'types/substitution.dart';
 export 'types/type_decl.dart';
@@ -422,8 +423,8 @@ sealed class TypeRef {
           }
 
           if (forSet) {
-            if ($declarations.containsKey('$field*s')) {
-              final f = $declarations['$field*s'];
+            if ($declarations.containsKey(MemberName.setter(field).key)) {
+              final f = $declarations[MemberName.setter(field).key];
               if (f is! MethodDeclaration) {
                 throw CompileError(
                   'Cannot query setter type of F${$class.file}:${$class.name}.$field, which is not a method',
@@ -466,8 +467,8 @@ sealed class TypeRef {
             }
             return null;
           }
-          if (!forFieldFormal && $declarations.containsKey('$field*g')) {
-            final f = $declarations['$field*g'];
+          if (!forFieldFormal && $declarations.containsKey(MemberName.getter(field).key)) {
+            final f = $declarations[MemberName.getter(field).key];
             if (f is! MethodDeclaration) {
               throw CompileError(
                 'Cannot query getter type of F${$class.file}:${$class.name}.$field, which is not a method',
@@ -937,8 +938,8 @@ TypeRef? superMixinMemberOwner(CompilerContext ctx, String name) {
     final declarations = ctx.instanceDeclarationsMap[ref.file]?[ref.name];
     if (declarations == null) continue;
     if (declarations.containsKey(name) ||
-        declarations.containsKey('$name*g') ||
-        declarations.containsKey('$name*s')) {
+        declarations.containsKey(MemberName.getter(name).key) ||
+        declarations.containsKey(MemberName.setter(name).key)) {
       return TypeRef.lookupDeclaration(ctx, ctx.library, hostDecl);
     }
   }

@@ -19,6 +19,7 @@ import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/function.dart';
 import 'package:dart_eval/src/eval/ir/representation.dart';
 import '../values/abi.dart';
+import '../member/member_name.dart';
 
 int compileMethodDeclaration(
   MethodDeclaration d,
@@ -257,11 +258,14 @@ int compileMethodDeclaration(
     // the instance-member key convention so a pair can't collide.
     final key = isExtensionMember
         ? extensionMemberKey(parentName, d)
-        : '$parentName.$methodName${d.isGetter
-              ? '*g'
-              : d.isSetter
-              ? '*s'
-              : ''}';
+        : '$parentName.${MemberName(
+            methodName,
+            d.isGetter
+                ? MemberKind.getter
+                : d.isSetter
+                ? MemberKind.setter
+                : MemberKind.method,
+          ).key}';
     ctx.topLevelDeclarationPositions.putIfAbsent(ctx.library, () => {})[key] =
         pos;
     if (isExtensionMember) {

@@ -3,6 +3,7 @@ import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:control_flow_graph/control_flow_graph.dart' show SSA;
 import 'package:dart_eval/src/eval/bridge/declaration/class.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
+import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
@@ -104,7 +105,11 @@ TypeRef? memberOwner(
         (positions.containsKey(member) ||
             (member.startsWith('_') &&
                 positions.containsKey(
-                  '${ctx.libraryUri(link.file)}::$member',
+                  MemberName(
+                    member,
+                    MemberKind.method,
+                    privateLibraryUri: ctx.libraryUri(link.file),
+                  ).nameKey,
                 ))) &&
         concreteMemberDecl(ctx, link, member, kind: kind) != null) {
       return link;
@@ -176,12 +181,12 @@ bool memberNeedsOwnerLink(
   return usesSuper;
 }
 
-/// The `instanceDeclarationsMap` key for member [name] of [kind]
-/// (0 = getter → `name*g`, 1 = setter → `name*s`, 2 = method → `name`).
-String memberKey(String name, [int kind = 2]) => switch (kind) {
-  0 => '$name*g',
-  1 => '$name*s',
-  _ => name,
+/// Maps the legacy integer member kind (0 = getter, 1 = setter,
+/// 2 = method) to its [MemberKind].
+MemberKind memberKindOf(int kind) => switch (kind) {
+  0 => MemberKind.getter,
+  1 => MemberKind.setter,
+  _ => MemberKind.method,
 };
 
 /// The declaration of instance member [name] of [kind] (0 = getter,
@@ -195,9 +200,12 @@ Declaration? concreteMemberDecl(
   int kind = 2,
 }) {
   final decls = ctx.instanceDeclarationsMap[link.file]?[link.name];
-  var decl = decls?[memberKey(name, kind)];
+  var decl = decls?[MemberName(name, memberKindOf(kind)).key];
   if (decl == null && name.startsWith('_')) {
-    decl = decls?[memberKey('${ctx.libraryUri(link.file)}::$name', kind)];
+    decl = decls?[MemberName(
+      '${ctx.libraryUri(link.file)}::$name',
+      memberKindOf(kind),
+    ).key];
   }
   if (decl is MethodDeclaration && !decl.isComplete) return null;
   return decl;

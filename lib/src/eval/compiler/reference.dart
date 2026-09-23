@@ -28,6 +28,7 @@ import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'values/abi.dart';
+import 'member/member_name.dart';
 
 /// A compile-time datum that can be - at the very least - converted to a [Variable] in the
 /// future if needed. May also contain information about how to modify its value.
@@ -229,7 +230,7 @@ class IdentifierReference implements Reference {
         // compound-assignment and boxing decisions see the real member.
         final accessor = ctx
             .topLevelDeclarationsMap[concreteType
-                .file]?['${concreteType.name}.$name${forSet ? '*s' : '*g'}']
+                .file]?['${concreteType.name}.${MemberName(name, forSet ? MemberKind.setter : MemberKind.getter).key}']
             ?.declaration;
         if (accessor is MethodDeclaration) {
           if (accessor.isSetter && forSet) {
@@ -471,14 +472,14 @@ class IdentifierReference implements Reference {
         // global of the same base name.
         final setter = ctx
             .topLevelDeclarationsMap[classType
-                .file]?['${classType.name}.$name*s']
+                .file]?['${classType.name}.${MemberName.setter(name).key}']
             ?.declaration;
         if (setter is MethodDeclaration && setter.isSetter) {
           return _invokeSetter(
             ctx,
             DeferredOrOffset(
               file: classType.file,
-              name: '${classType.name}.$name*s',
+              name: '${classType.name}.${MemberName.setter(name).key}',
             ),
             value,
             classType.file,
@@ -947,7 +948,7 @@ class IdentifierReference implements Reference {
             ctx,
             staticDeclaration!.$2,
             staticDeclaration.$3,
-            '$name*s',
+            MemberName.setter(name).key,
           ),
           value,
           staticDeclaration.$2,
@@ -993,7 +994,7 @@ class IdentifierReference implements Reference {
         ctx,
         DeferredOrOffset(
           file: declarationValue.sourceLib,
-          name: '${decl.name.lexeme}*s',
+          name: MemberName.setter(decl.name.lexeme).key,
         ),
         value,
         declarationValue.sourceLib,
@@ -1109,7 +1110,7 @@ class IdentifierReference implements Reference {
                 InvokeExternal(
                   ctx.svar(name),
                   ctx.bridgeStaticFunctionIndices[classType
-                      .file]!['${classType.name}.$name*g']!,
+                      .file]!['${classType.name}.${MemberName.getter(name).key}']!,
                   [],
                 ),
                 type,
@@ -1127,7 +1128,7 @@ class IdentifierReference implements Reference {
         // Static accessors register under `*g`/`*s` keys — a getter
         // reference invokes it.
         final getterMember =
-            ctx.topLevelDeclarationsMap[classType.file]?['$fqName*g'];
+            ctx.topLevelDeclarationsMap[classType.file]?[MemberName.getter(fqName).key];
         final member =
             getterMember ??
             ctx.topLevelDeclarationsMap[classType.file]![fqName];
@@ -1144,7 +1145,7 @@ class IdentifierReference implements Reference {
           final memberOffset = DeferredOrOffset(
             file: classType.file,
             name: memberDecl is MethodDeclaration && memberDecl.isGetter
-                ? '$fqName*g'
+                ? MemberName.getter(fqName).key
                 : fqName,
           );
           final fn = Variable(
@@ -1416,7 +1417,7 @@ class IdentifierReference implements Reference {
                 ctx,
                 scopeFile,
                 scopeName,
-                '$name*g',
+                MemberName.getter(name).key,
               ),
             );
             return fn.invoke(ctx, null, []).result;
@@ -1459,7 +1460,7 @@ class IdentifierReference implements Reference {
 
     final declaration =
         ctx.visibleDeclarations[ctx.library]![name] ??
-        ctx.visibleDeclarations[ctx.library]!['$name*g'] ??
+        ctx.visibleDeclarations[ctx.library]![MemberName.getter(name).key] ??
         ctx.visibleDeclarations[ctx.library]![name.split('.')[0]];
 
     // A bare identifier inside an extension body or instance method can
@@ -1494,7 +1495,7 @@ class IdentifierReference implements Reference {
     final activeDec =
         activeDeclaration.declaration ??
         (split.length > 1 && children != null
-            ? (children['${split[1]}*g'] ?? children[split[1]])
+            ? (children[MemberName.getter(split[1]).key] ?? children[split[1]])
             : null) ??
         (throw PrefixError());
 
@@ -1626,7 +1627,7 @@ class PrefixedIdentifierReference implements Reference {
     }
     final children = dec.children!;
     final child =
-        children['$identifier*g'] ??
+        children[MemberName.getter(identifier).key] ??
         children[identifier] ??
         (throw CompileError(
           "'$identifier' isn't defined for the prefix '$prefix'",
@@ -1649,7 +1650,7 @@ class PrefixedIdentifierReference implements Reference {
       if (stub != null) return stub;
     }
     final child =
-        children['$identifier*g'] ??
+        children[MemberName.getter(identifier).key] ??
         children[identifier] ??
         (throw CompileError(
           "'$identifier' isn't defined for the prefix '$prefix'",
@@ -1679,7 +1680,7 @@ class PrefixedIdentifierReference implements Reference {
     // Accessors register under `*s` — writes look there before the plain
     // name (top-level variables).
     final child =
-        children['$identifier*s'] ??
+        children[MemberName.setter(identifier).key] ??
         children[identifier] ??
         (throw CompileError(
           "'$identifier' isn't defined for the prefix '$prefix'",
@@ -1698,7 +1699,7 @@ class PrefixedIdentifierReference implements Reference {
     if (decl is FunctionDeclaration && decl.isSetter) {
       return _invokeSetter(
         ctx,
-        DeferredOrOffset(file: child.sourceLib, name: '${decl.name.lexeme}*s'),
+        DeferredOrOffset(file: child.sourceLib, name: MemberName.setter(decl.name.lexeme).key),
         value,
         child.sourceLib,
         decl.functionExpression.parameters,
@@ -2014,9 +2015,9 @@ Variable _declarationToVariable(
     file: decOrBridge.sourceLib,
     name: decl is FunctionDeclaration
         ? (decl.isGetter
-              ? '${decl.name.lexeme}*g'
+              ? MemberName.getter(decl.name.lexeme).key
               : decl.isSetter
-              ? '${decl.name.lexeme}*s'
+              ? MemberName.setter(decl.name.lexeme).key
               : name)
         : name,
   );
@@ -2091,9 +2092,9 @@ StaticDispatch? _declarationToStaticDispatch(
     file: decOrBridge.sourceLib,
     name: decl is FunctionDeclaration
         ? (decl.isGetter
-              ? '${decl.name.lexeme}*g'
+              ? MemberName.getter(decl.name.lexeme).key
               : decl.isSetter
-              ? '${decl.name.lexeme}*s'
+              ? MemberName.setter(decl.name.lexeme).key
               : name)
         : name,
   );
@@ -2196,12 +2197,12 @@ DeclarationOrBridge _lookupVisibleValue(
   DeclarationOrBridge? found;
   if (children != null) {
     found = forSet
-        ? children['$key*s'] ?? children[key]
-        : children['$key*g'] ?? children[key];
+        ? children[MemberName.setter(key).key] ?? children[key]
+        : children[MemberName.getter(key).key] ?? children[key];
   } else {
     found = forSet
-        ? visible['$key*s']?.declaration ?? visible[key]?.declaration
-        : visible['$key*g']?.declaration ?? visible[key]?.declaration;
+        ? visible[MemberName.setter(key).key]?.declaration ?? visible[key]?.declaration
+        : visible[MemberName.getter(key).key]?.declaration ?? visible[key]?.declaration;
   }
   if (found == null) {
     if (children == null && visible[key] != null) {
@@ -2296,7 +2297,7 @@ bool _hasInstanceMember(
   String name, {
   bool forSet = false,
 }) {
-  final keys = forSet ? [name, '$name*s'] : [name, '$name*g'];
+  final keys = forSet ? [name, MemberName.setter(name).key] : [name, MemberName.getter(name).key];
   for (final key in keys) {
     if (resolveInstanceDeclaration(
           ctx,

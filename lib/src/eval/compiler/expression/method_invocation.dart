@@ -25,6 +25,7 @@ import 'expression.dart';
 import 'identifier.dart';
 import 'null_aware.dart';
 import '../values/abi.dart';
+import '../member/member_name.dart';
 
 Variable compileMethodInvocation(
   CompilerContext ctx,
@@ -719,7 +720,7 @@ Variable _invokeWithTarget(
                 .file]?['${staticType.name}.$staticMemberName'] ==
             null &&
         ctx.topLevelDeclarationsMap[staticType
-                .file]?['${staticType.name}.$staticMemberName*g'] ==
+                .file]?['${staticType.name}.${MemberName.getter(staticMemberName).key}'] ==
             null) {
       // A member invoked on a `Type` literal may still be an extension
       // member on `Type` — `C.expectStaticType<Exactly<Type>>()`.
@@ -1892,10 +1893,8 @@ ResolvedArgs compileNonBridgeArgs(
     final memberDecl =
         ctx.instanceDeclarationsMap[mixinRef.file]?[mixinRef
             .name]?[memberName] ??
-        ctx.instanceDeclarationsMap[mixinRef.file]?[mixinRef.name]?[memberKey(
-          memberName,
-          0,
-        )];
+        ctx.instanceDeclarationsMap[mixinRef.file]?[mixinRef
+            .name]?[MemberName.getter(memberName).key];
     if (memberDecl == null) continue;
     // Abstract mixin members defer to the next mixin or superclass.
     if (memberDecl is MethodDeclaration && !memberDecl.isComplete) {
@@ -1931,7 +1930,7 @@ ResolvedArgs compileNonBridgeArgs(
     if (abstractGetter == null) {
       final decls = ctx.instanceDeclarationsMap[owner.file]?[owner.name];
       if (decls != null) {
-        if (decls.containsKey(memberKey(memberName, 0))) {
+        if (decls.containsKey(MemberName.getter(memberName).key)) {
           abstractGetter = true;
         } else if (decls.containsKey(memberName)) {
           abstractGetter = false;

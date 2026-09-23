@@ -6,6 +6,7 @@ import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
+import '../member/member_name.dart';
 
 Variable compileIdentifier(Identifier id, CompilerContext ctx) {
   return compileIdentifierAsReference(id, ctx).getValue(ctx, id);
@@ -102,8 +103,8 @@ Reference compilePrefixedIdentifierAsReference(
 
     return null;
   } else {
-    final getter = ctx.instanceDeclarationsMap[library]![$class]?['$name*g'];
-    final setter = ctx.instanceDeclarationsMap[library]![$class]?['$name*s'];
+    final getter = ctx.instanceDeclarationsMap[library]![$class]?[MemberName.getter(name).key];
+    final setter = ctx.instanceDeclarationsMap[library]![$class]?[MemberName.setter(name).key];
     if (getter != null || setter != null) {
       final $type = ctx.visibleTypes[library]![$class]!;
       if (getter == null) {
@@ -284,7 +285,7 @@ DeclarationOrBridge<Declaration, BridgeDeclaration>? resolveStaticDeclaration(
   bool forSet = false,
 }) {
   final map = ctx.topLevelDeclarationsMap[library]!;
-  return (forSet ? map['${$class}.$name*s'] : map['${$class}.$name*g']) ??
+  return (forSet ? map['${$class}.${MemberName.setter(name).key}'] : map['${$class}.${MemberName.getter(name).key}']) ??
       map['${$class}.$name'];
 }
 

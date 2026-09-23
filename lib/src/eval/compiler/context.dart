@@ -12,6 +12,7 @@ import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/representation.dart';
 import 'package:dart_eval/src/eval/ir/exception.dart';
+import 'member/member_name.dart';
 
 abstract class AbstractScopeContext {
   List<Map<String, Variable>> get locals;
@@ -241,22 +242,32 @@ class CompilerContext with ScopeContext {
   String libraryUri(int index) =>
       libraryMap.entries.firstWhere((e) => e.value == index).key;
 
-  /// The member-table key for [name] as written in the current library. A
+  /// The [MemberName] for [name] as written in the current library. A
   /// private member folded in from a different library keeps its origin
   /// library as part of the key so runtime privacy checks scope it correctly.
-  String memberNameKey(String name) {
-    final enclosing = enclosingLibrary;
-    if (!name.startsWith('_') || enclosing == null || enclosing == library) {
-      return name;
-    }
-    return '${libraryUri(library)}::$name';
-  }
+  MemberName memberNameOf(String name, MemberKind kind) => MemberName(
+    name,
+    kind,
+    privateLibraryUri:
+        name.startsWith('_') &&
+            enclosingLibrary != null &&
+            enclosingLibrary != library
+        ? libraryUri(library)
+        : null,
+  );
+
+  /// The member-table key for [name] as written in the current library.
+  String memberNameKey(String name) =>
+      memberNameOf(name, MemberKind.method).nameKey;
 
   /// `operator -` is the only arity-overloadable operator: the nullary form
   /// is keyed `unary-` (the analyzer's element name) so it can't collide
   /// with binary `-` in member tables and runtime descriptors.
   String instanceMethodKey(String name, int positionalArity) =>
-      memberNameKey(name == '-' && positionalArity == 0 ? 'unary-' : name);
+      memberNameOf(
+        name == '-' && positionalArity == 0 ? 'unary-' : name,
+        MemberKind.method,
+      ).nameKey;
 
   String? get currentClassName {
     final currentClass = this.currentClass;

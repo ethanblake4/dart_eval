@@ -34,6 +34,7 @@ import 'package:directed_graph/directed_graph.dart';
 
 import 'context.dart';
 import 'errors.dart';
+import 'member/member_name.dart';
 
 /// Compiles Dart source code into EVC bytecode, outputting a [Program].
 ///
@@ -1012,8 +1013,8 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     // Top-level accessors use the `*g`/`*s` suffix (same keying as class
     // members) so a getter and setter of the same name don't collide.
     final name = switch (declaration) {
-      FunctionDeclaration d when d.isGetter => '${declarationName(d)}*g',
-      FunctionDeclaration d when d.isSetter => '${declarationName(d)}*s',
+      FunctionDeclaration d when d.isGetter => MemberName.getter(declarationName(d)).key,
+      FunctionDeclaration d when d.isSetter => MemberName.setter(declarationName(d)).key,
       _ => declarationName(declaration),
     };
     _declareTopLevel(
@@ -1055,26 +1056,25 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
 
     for (final member in members) {
       if (member is MethodDeclaration) {
-        var mName = member.name.lexeme;
+        final memberName = member.isStatic
+            ? MemberName(
+                member.name.lexeme,
+                member.isGetter
+                    ? MemberKind.getter
+                    : member.isSetter
+                    ? MemberKind.setter
+                    : MemberKind.method,
+              )
+            : member.isGetter
+            ? MemberName.getter(member.name.lexeme)
+            : member.isSetter
+            ? MemberName.setter(member.name.lexeme)
+            : MemberName.method(member.name.lexeme, positionalArityOf(member));
         if (member.isStatic) {
-          // Static accessors register under `*g`/`*s` like instance members
-          // so a getter and setter of the same name don't collide.
-          if (member.isGetter) {
-            mName += '*g';
-          } else if (member.isSetter) {
-            mName += '*s';
-          }
-          _topLevelDeclarationsMap[libraryIndex]!['$name.$mName'] =
+          _topLevelDeclarationsMap[libraryIndex]!['$name.${memberName.key}'] =
               DeclarationOrBridge(libraryIndex, declaration: member);
         } else {
-          if (member.isGetter) {
-            mName += '*g';
-          } else if (member.isSetter) {
-            mName += '*s';
-          } else if (mName == '-' && positionalArityOf(member) == 0) {
-            mName = 'unary-';
-          }
-          instanceDeclarations[mName] = member;
+          instanceDeclarations[memberName.key] = member;
         }
       } else if (member is FieldDeclaration) {
         for (final field in member.fields.variables) {
@@ -1180,15 +1180,15 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       if (method.isStatic) _assignBridgeIndex(lib, '${type.name}.$name');
     });
     classDef.getters.forEach((name, getter) {
-      if (getter.isStatic) _assignBridgeIndex(lib, '${type.name}.$name*g');
+      if (getter.isStatic) _assignBridgeIndex(lib, '${type.name}.${MemberName.getter(name).key}');
     });
     classDef.setters.forEach((name, setter) {
-      if (setter.isStatic) _assignBridgeIndex(lib, '${type.name}.$name*s');
+      if (setter.isStatic) _assignBridgeIndex(lib, '${type.name}.${MemberName.setter(name).key}');
     });
     classDef.fields.forEach((name, field) {
       if (field.isStatic) {
-        _assignBridgeIndex(lib, '${type.name}.$name*g');
-        _assignBridgeIndex(lib, '${type.name}.$name*s');
+        _assignBridgeIndex(lib, '${type.name}.${MemberName.getter(name).key}');
+        _assignBridgeIndex(lib, '${type.name}.${MemberName.setter(name).key}');
       }
     });
   }

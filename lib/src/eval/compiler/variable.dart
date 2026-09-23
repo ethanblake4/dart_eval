@@ -25,6 +25,7 @@ import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
 import 'values/abi.dart';
+import 'member/member_name.dart';
 
 /// A compiler value with an SSA identity, language type and calling convention.
 class Variable {
@@ -762,7 +763,11 @@ class Variable {
           break;
         }
         final key = name.startsWith('_')
-            ? '${ctx.libraryUri(link.file)}::$name'
+            ? MemberName(
+                name,
+                MemberKind.method,
+                privateLibraryUri: ctx.libraryUri(link.file),
+              ).nameKey
             : name;
         if ((ctx.instanceDeclarationPositions[link.file]?[link.name]?[0]
                         as Map?)
@@ -820,7 +825,11 @@ class Variable {
           );
         }
         final key = name.startsWith('_')
-            ? '${ctx.libraryUri(link.file)}::$name'
+            ? MemberName(
+                name,
+                MemberKind.method,
+                privateLibraryUri: ctx.libraryUri(link.file),
+              ).nameKey
             : name;
         return Variable.ssa(
           ctx,

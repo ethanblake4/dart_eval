@@ -8,6 +8,7 @@ import 'package:dart_eval/src/eval/compiler/declaration/method.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/identifier.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
+import '../member/member_name.dart';
 
 void compileClassDeclaration(CompilerContext ctx, ClassDeclaration d) {
   return ctx.withTypeParameters(
@@ -541,9 +542,9 @@ DeclarationOrBridge? _superMemberOf(
   TypeRef superRef,
 ) {
   final key = decl.isGetter
-      ? '${decl.name.lexeme}*g'
+      ? MemberName.getter(decl.name.lexeme).key
       : decl.isSetter
-      ? '${decl.name.lexeme}*s'
+      ? MemberName.setter(decl.name.lexeme).key
       : decl.name.lexeme;
   try {
     final result = resolveInstanceDeclaration(

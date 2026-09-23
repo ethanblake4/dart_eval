@@ -39,6 +39,7 @@ import '../context.dart';
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'representation.dart';
 import 'primitive_optimization.dart';
+import '../member/member_name.dart';
 
 bool _sameList<T>(List<T> left, List<T> right) {
   if (left.length != right.length) return false;
@@ -896,7 +897,7 @@ class TypedBackend {
     Set<String> visited,
   ) {
     if (!visited.add('${type.file}:${type.name}')) return;
-    final key = kind == 1 ? '$memberName*s' : memberName;
+    final key = MemberName(memberName, memberKindOf(kind)).key;
     final decl = context.instanceDeclarationsMap[type.file]?[type.name]?[key];
     if (decl is MethodDeclaration) {
       final id =

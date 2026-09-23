@@ -19,15 +19,16 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/representation.dart';
 import '../values/abi.dart';
+import '../member/member_name.dart';
 
 void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   final pos = ctx.beginFunction('${d.name.lexeme}()');
   // Top-level accessors register under `*g`/`*s` like class members, so a
   // getter and setter of the same name don't collide.
   ctx.topLevelDeclarationPositions[ctx.library]![d.isGetter
-          ? '${d.name.lexeme}*g'
+          ? MemberName.getter(d.name.lexeme).key
           : d.isSetter
-          ? '${d.name.lexeme}*s'
+          ? MemberName.setter(d.name.lexeme).key
           : d.name.lexeme] =
       pos;
 
