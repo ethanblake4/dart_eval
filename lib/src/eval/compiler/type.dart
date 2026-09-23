@@ -1276,7 +1276,7 @@ ReturnType bridgeFunctionReturnType(
   return ParameterTypeDependentReturnType(
     {
       for (final c in dep.cases)
-        TypeRef.fromBridgeTypeRef(ctx, c.when): toReturnType(c.then),
+        TypeRef.fromBridgeTypeRef(ctx, c.when).decl!: toReturnType(c.then),
     },
     paramIndex: dep.paramIndex,
     paramName: dep.paramName,
@@ -1581,7 +1581,7 @@ class ParameterTypeDependentReturnType implements ReturnType {
 
   final int? paramIndex;
   final String? paramName;
-  final Map<TypeRef, AlwaysReturnType> map;
+  final Map<TypeDecl, AlwaysReturnType> map;
   final AlwaysReturnType? fallback;
 
   @override
@@ -1594,9 +1594,9 @@ class ParameterTypeDependentReturnType implements ReturnType {
   }) {
     AlwaysReturnType? resolvedType;
     if (paramIndex != null && paramIndex! < argTypes.length) {
-      resolvedType = map[argTypes[paramIndex!]];
+      resolvedType = map[argTypes[paramIndex!]?.decl];
     } else if (paramName != null) {
-      resolvedType = map[namedArgTypes[paramName]];
+      resolvedType = map[namedArgTypes[paramName]?.decl];
     }
 
     if (resolvedType == null) {
