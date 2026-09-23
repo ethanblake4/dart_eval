@@ -66,21 +66,19 @@ TypeRef patternTypeBound(
       }
       return result;
     case RecordPattern pat:
-      final recordFields = <RecordParameterType>[];
-      var positionalFields = 1;
-      for (final field in pat.fields) {
-        recordFields.add(
-          RecordParameterType(
-            field.name?.name?.lexeme ?? '\$${positionalFields++}',
-            patternTypeBound(ctx, field.pattern, source: source),
-            field.name != null,
-          ),
-        );
+      final positional = <TypeRef>[];
+      final named = <String, TypeRef>{};
+      for (var i = 0; i < pat.fields.length; i++) {
+        final field = pat.fields[i];
+        final type = patternTypeBound(ctx, field.pattern, source: source);
+        if (field.name == null) {
+          positional.add(type);
+        } else {
+          named[field.effectiveName ?? '\$${i + 1}'] = type;
+        }
       }
 
-      final result = CoreTypes.record
-          .ref(ctx)
-          .copyWith(recordFields: recordFields);
+      final result = RecordTypeRef(positional, named);
 
       if (bound != null && !result.isAssignableTo(ctx, bound)) {
         throw CompileError(

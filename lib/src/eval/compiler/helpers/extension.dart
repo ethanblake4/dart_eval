@@ -173,21 +173,19 @@ bool _unifyOnPattern(
   // field set, with each field type unified to bind the extension's type
   // parameters. Records have no width subtyping, so the shapes must match
   // exactly.
-  if (pattern.recordFields.isNotEmpty) {
-    if (actual.recordFields.isEmpty) return false;
-    final patternPositional = pattern.recordPositionalFields;
-    final actualPositional = actual.recordPositionalFields;
+  if (pattern is RecordTypeRef) {
+    if (actual is! RecordTypeRef) return false;
+    final patternPositional = pattern.positional;
+    final actualPositional = actual.positional;
     if (patternPositional.length != actualPositional.length) return false;
-    final patternNamed = {
-      for (final f in pattern.recordNamedFields) f.name!: f,
-    };
-    final actualNamed = {for (final f in actual.recordNamedFields) f.name!: f};
+    final patternNamed = pattern.named;
+    final actualNamed = actual.named;
     if (patternNamed.length != actualNamed.length) return false;
     for (var i = 0; i < patternPositional.length; i++) {
       if (!_unifyOnPattern(
         ctx,
-        patternPositional[i].type,
-        actualPositional[i].type,
+        patternPositional[i],
+        actualPositional[i],
         bound,
       )) {
         return false;
@@ -196,7 +194,7 @@ bool _unifyOnPattern(
     for (final entry in patternNamed.entries) {
       final actualField = actualNamed[entry.key];
       if (actualField == null ||
-          !_unifyOnPattern(ctx, entry.value.type, actualField.type, bound)) {
+          !_unifyOnPattern(ctx, entry.value, actualField, bound)) {
         return false;
       }
     }

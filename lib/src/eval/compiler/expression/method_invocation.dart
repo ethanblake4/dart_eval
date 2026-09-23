@@ -839,9 +839,9 @@ Variable _invokeWithTarget(
     // `record.field(args)` on a named record field invokes the field's
     // value — a property read followed by an implicit `.call`, matching
     // the field/getter path below.
-    if (L.type.recordFields.any(
-      (f) => f.isNamed && f.name == e.methodName.name,
-    )) {
+    final receiverType = L.type;
+    if (receiverType is RecordTypeRef &&
+        receiverType.named.containsKey(e.methodName.name)) {
       final (prePositional, preNamed) = _compileCallArgs(ctx, e);
       final property = L.getProperty(ctx, e.methodName.name);
       return invokeClosure(

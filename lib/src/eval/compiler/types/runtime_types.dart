@@ -80,19 +80,17 @@ final class RuntimeTypes {
         ),
       ];
     }
-    if (type.recordFields.isNotEmpty) {
-      final positional = type.recordPositionalFields;
-      final named = type.recordNamedFields;
+    if (type is RecordTypeRef) {
       return [
         idOf(CoreTypes.record.ref(_ctx)),
         type.nullable ? 1 : 0,
         RuntimeTypeDescriptorTag.record,
-        positional.length,
-        named.length,
-        for (final field in positional) idOf(field.type),
-        for (final field in named) ...[
-          _ctx.constantPool.addOrGet(field.name!),
-          idOf(field.type),
+        type.positional.length,
+        type.named.length,
+        for (final field in type.positional) idOf(field),
+        for (final field in type.named.entries) ...[
+          _ctx.constantPool.addOrGet(field.key),
+          idOf(field.value),
         ],
       ];
     }

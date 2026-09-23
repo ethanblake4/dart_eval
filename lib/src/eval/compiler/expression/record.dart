@@ -34,22 +34,22 @@ Variable compileRecordLiteral(
 
   var positionalFields = 1;
 
-  final boundRecordFields = bound?.recordFields;
-  final inferredRecordFields = <RecordParameterType>[];
+  final boundRecord = bound is RecordTypeRef ? bound : null;
+  final inferredPositional = <TypeRef>[];
+  final inferredNamed = <String, TypeRef>{};
 
-  if (boundRecordFields != null &&
-      l.fields.length != boundRecordFields.length) {
+  if (boundRecord != null &&
+      l.fields.length !=
+          boundRecord.positional.length + boundRecord.named.length) {
     throw CompileError(
-      'Record literal has ${l.fields.length} fields, expected ${boundRecordFields.length} from type bound',
+      'Record literal has ${l.fields.length} fields, expected ${boundRecord.positional.length + boundRecord.named.length} from type bound',
       l,
     );
   }
   // Bound record fields list positionals first, then named — while the
   // literal lists them in source order. Named fields match by name;
   // positional fields match by their ordinal among positionals.
-  final boundPositionalFields = boundRecordFields?.positionalFields ?? const [];
-  RecordParameterType? namedBound(String name) =>
-      boundRecordFields?.where((f) => f.isNamed && f.name == name).firstOrNull;
+  TypeRef? namedBound(String name) => boundRecord?.named[name];
 
   // The bound only provides each field's inference context — the literal's
   // static type is built from the field expressions' own types. When the
@@ -84,18 +84,18 @@ Variable compileRecordLiteral(
     final field = l.fields[i];
     if (field is RecordLiteralNamedField) {
       final name = field.name.lexeme;
-      final value = compileField(field.fieldExpression, namedBound(name)?.type);
-      inferredRecordFields.add(RecordParameterType(name, value.type, true));
+      final value = compileField(field.fieldExpression, namedBound(name));
+      inferredNamed[name] = value.type;
       ctx.pushOp(ListAppend(fieldList.ssa, value.ssa));
       fieldNames[i] = name;
     } else {
       // Positional field
-      final fieldBound = boundRecordFields == null
-          ? null
-          : boundPositionalFields.elementAtOrNull(positionalFields - 1);
-      final value = compileField(field.fieldExpression, fieldBound?.type);
+      final fieldBound = boundRecord?.positional.elementAtOrNull(
+        positionalFields - 1,
+      );
+      final value = compileField(field.fieldExpression, fieldBound);
       final name = '\$${positionalFields++}';
-      inferredRecordFields.add(RecordParameterType(name, value.type, false));
+      inferredPositional.add(value.type);
       ctx.pushOp(ListAppend(fieldList.ssa, value.ssa));
       fieldNames[i] = name;
     }
@@ -104,11 +104,7 @@ Variable compileRecordLiteral(
   // The literal's static type is built from each field's inferred type —
   // the bound only provided the inference context (`(T,)` infers its own
   // field types and then unifies T with them).
-  final type = TypeRef(
-    ctx.library,
-    TypeRef.recordTypeName(inferredRecordFields),
-    recordFields: inferredRecordFields,
-  );
+  final type = RecordTypeRef(inferredPositional, inferredNamed);
   final constIndex = ctx.constantPool.addOrGet(fieldNames);
   final record = Variable.ssa(
     ctx,
@@ -117,7 +113,10 @@ Variable compileRecordLiteral(
       fieldList.ssa,
       constIndex,
       ctx.runtimeTypes.idOf(type),
-      reify: inferredRecordFields.any((f) => !f.type.hasFixedRuntimeType(ctx)),
+      reify: [
+        ...inferredPositional,
+        ...inferredNamed.values,
+      ].any((t) => !t.hasFixedRuntimeType(ctx)),
     ),
     type,
   );

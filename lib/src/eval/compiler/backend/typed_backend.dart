@@ -936,8 +936,12 @@ class TypedBackend {
   /// with such a type is implicitly covariant.
   bool _hasClassTypeParameter(TypeRef type) {
     if (type.isClassTypeParameter) return true;
-    if (type.specifiedTypeArgs.any(_hasClassTypeParameter) ||
-        type.recordFields.any((field) => _hasClassTypeParameter(field.type))) {
+    if (type.specifiedTypeArgs.any(_hasClassTypeParameter)) {
+      return true;
+    }
+    if (type is RecordTypeRef &&
+        (type.positional.any(_hasClassTypeParameter) ||
+            type.named.values.any(_hasClassTypeParameter))) {
       return true;
     }
     final function = type.functionType;

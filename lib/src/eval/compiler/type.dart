@@ -6,6 +6,7 @@ import 'package:dart_eval/src/eval/compiler/model/function_type.dart';
 
 import 'context.dart';
 import 'errors.dart';
+import 'types/record_type.dart';
 import 'types/substitution.dart';
 import 'types/type_decl.dart';
 import 'types/type_parameter.dart';
@@ -16,6 +17,7 @@ export 'types/type_system.dart';
 export 'types/runtime_types.dart';
 export 'types/type_scope.dart';
 export 'types/type_parameter.dart';
+export 'types/record_type.dart';
 
 /// The action required to assign a value to a typed slot.
 enum AssignmentConversion {
@@ -102,45 +104,29 @@ class TypeRef {
           );
     }
     if (typeAnnotation is RecordTypeAnnotation) {
-      final fields = <RecordParameterType>[];
-
-      var positionalFields = 1;
-      for (final field in typeAnnotation.positionalFields) {
-        fields.add(
-          RecordParameterType(
-            '\$${positionalFields++}',
-            TypeRef.fromAnnotation(
-              ctx,
-              library,
-              field.type,
-              typeParameters: typeParameters,
-            ),
-            false,
+      final positional = <TypeRef>[
+        for (final field in typeAnnotation.positionalFields)
+          TypeRef.fromAnnotation(
+            ctx,
+            library,
+            field.type,
+            typeParameters: typeParameters,
           ),
-        );
-      }
-
-      for (final field
-          in typeAnnotation.namedFields?.fields ??
-              <RecordTypeAnnotationNamedField>[]) {
-        fields.add(
-          RecordParameterType(
-            field.name.lexeme,
-            TypeRef.fromAnnotation(
-              ctx,
-              library,
-              field.type,
-              typeParameters: typeParameters,
-            ),
-            true,
+      ];
+      final named = <String, TypeRef>{
+        for (final field
+            in typeAnnotation.namedFields?.fields ??
+                <RecordTypeAnnotationNamedField>[])
+          field.name.lexeme: TypeRef.fromAnnotation(
+            ctx,
+            library,
+            field.type,
+            typeParameters: typeParameters,
           ),
-        );
-      }
-      final name = recordTypeName(fields);
-      return TypeRef(
-        -1,
-        name,
-        recordFields: fields,
+      };
+      return RecordTypeRef(
+        positional,
+        named,
         nullable: typeAnnotation.question != null,
       );
     }
@@ -399,12 +385,16 @@ class TypeRef {
       );
     }
 
-    if ($class.recordFields.isNotEmpty) {
-      final field0 = $class.recordFields.firstWhereOrNull(
-        (f) => f.name == field,
-      );
-      if (field0 != null) {
-        return field0.type;
+    if ($class is RecordTypeRef) {
+      final named0 = $class.named[field];
+      if (named0 != null) {
+        return named0;
+      }
+      if (field.startsWith('\$')) {
+        final index = int.tryParse(field.substring(1));
+        if (index != null && index >= 1 && index <= $class.positional.length) {
+          return $class.positional[index - 1];
+        }
       }
     }
     if (ctx.instanceDeclarationsMap[$class.file]!.containsKey($class.name)) {
@@ -697,7 +687,7 @@ class TypeRef {
 
   /// Records have no declaration — the canonical `@record` name is the only
   /// identity ([recordFields] may be empty for the `()` record).
-  bool get isRecord => name.startsWith('@record');
+  bool get isRecord => this is RecordTypeRef;
 
   /// Whether every value of this type reports exactly this runtime type:
   /// leaf classes that cannot be subclassed (`int`, `double`, `bool`,
@@ -707,8 +697,10 @@ class TypeRef {
   /// declared record type.
   bool hasFixedRuntimeType(CompilerContext ctx) {
     if (nullable) return false;
-    if (isRecord) {
-      return recordFields.every((f) => f.type.hasFixedRuntimeType(ctx));
+    final self = this;
+    if (self is RecordTypeRef) {
+      return self.positional.every((t) => t.hasFixedRuntimeType(ctx)) &&
+          self.named.values.every((t) => t.hasFixedRuntimeType(ctx));
     }
     return isSpec(CoreTypes.int) ||
         isSpec(CoreTypes.double) ||
@@ -811,6 +803,14 @@ class TypeRef {
     TypeRef? typeParameterBound,
     bool? nullable,
   }) {
+    final self = this;
+    if (self is RecordTypeRef && recordFields == null) {
+      return RecordTypeRef(
+        self.positional,
+        self.named,
+        nullable: nullable ?? self.nullable,
+      );
+    }
     return TypeRef(
       file ?? this.file,
       name ?? this.name,
@@ -867,6 +867,20 @@ class TypeRef {
       value.isRequired,
     );
 
+    final self = this;
+    if (self is RecordTypeRef) {
+      return RecordTypeRef(
+        [
+          for (final type in self.positional)
+            type.substituteTypeParameters(substitutions),
+        ],
+        {
+          for (final entry in self.named.entries)
+            entry.key: entry.value.substituteTypeParameters(substitutions),
+        },
+        nullable: self.nullable,
+      );
+    }
     final signature = functionType;
     return copyWith(
       specifiedTypeArgs: [
