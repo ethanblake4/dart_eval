@@ -575,10 +575,15 @@ DirectCall? _declarationToDirectCall(
   TypeRef? returnType;
   var nullable = true;
   if (decl is FunctionDeclaration && decl.returnType != null) {
-    returnType = TypeRef.fromAnnotation(
-      ctx,
+    returnType = ctx.withTypeParameters<TypeRef>(
       decOrBridge.sourceLib,
-      decl.returnType!,
+      null,
+      decl.functionExpression.typeParameters?.typeParameters,
+      () => TypeRef.fromAnnotation(
+        ctx,
+        decOrBridge.sourceLib,
+        decl.returnType!,
+      ),
     );
     nullable = decl.returnType!.question != null;
   } else if (decl is ConstructorDeclaration) {
