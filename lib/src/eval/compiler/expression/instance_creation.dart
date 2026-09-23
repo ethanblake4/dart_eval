@@ -3,12 +3,12 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/compiler/invocation/bound_call.dart';
+import '../invocation/binder.dart';
 import 'package:dart_eval/src/eval/compiler/invocation/targets.dart';
 
 Variable compileInstanceCreation(
@@ -126,7 +126,7 @@ Variable compileInstanceOf(
 
   final dec0 = resolveStaticMethod(ctx, staticType, name);
 
-  final ArgumentListResult arguments;
+  final BoundCall arguments;
 
   if (dec0.isBridge) {
     final bridge = dec0.bridge;
@@ -153,8 +153,7 @@ Variable compileInstanceOf(
         for (final name in genericNames) name: CoreTypes.dynamic.ref(ctx),
       };
     }
-    arguments = compileArgumentListWithBridge(
-      ctx,
+    arguments = ArgumentBinder(ctx).bindBridgeVector(
       argumentList,
       fnDescriptor,
       typeParameters: argTypeParameters,
@@ -181,7 +180,7 @@ Variable compileInstanceOf(
       final positionalParams = fnDescriptor.params;
       for (
         var i = 0;
-        i < arguments.args.length && i < positionalParams.length;
+        i < arguments.positionalValues.length && i < positionalParams.length;
         i++
       ) {
         final pattern = TypeRef.fromBridgeAnnotation(
@@ -190,8 +189,8 @@ Variable compileInstanceOf(
           typeParameters: paramRefs,
         );
         final concrete =
-            ctx.typeSystem.asInstanceOf(arguments.args[i].type, pattern.decl) ??
-            arguments.args[i].type;
+            ctx.typeSystem.asInstanceOf(arguments.positionalValues[i].type, pattern.decl) ??
+            arguments.positionalValues[i].type;
         ctx.typeSystem.unify(pattern, concrete, substitutions);
       }
       instantiatedType = instantiatedType.copyWith(
@@ -238,8 +237,7 @@ Variable compileInstanceOf(
       }
     }
 
-    arguments = compileArgumentList(
-      ctx,
+    arguments = ArgumentBinder(ctx).bindParameterList(
       argumentList,
       staticType.file,
       fpl,
@@ -281,7 +279,7 @@ Variable compileInstanceOf(
       positional: const [],
       named: const [],
       returnType: instantiatedType,
-      vectorOverride: arguments.ssa,
+      vectorOverride: arguments.vector(),
     ),
   );
 }

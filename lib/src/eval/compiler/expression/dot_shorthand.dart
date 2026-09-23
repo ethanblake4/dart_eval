@@ -1,12 +1,11 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import '../invocation/binder.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/expression/instance_creation.dart';
-import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -150,8 +149,7 @@ Variable _invokeShorthandMember(
   // A non-bridge static method — bounded argument compilation plus a direct
   // Call, the same path `C.member(...)` takes.
   if (decl is MethodDeclaration && decl.isStatic) {
-    final result = compileNonBridgeArgs(
-      ctx,
+    final result = ArgumentBinder(ctx).bindDeclaration(
       member!.sourceLib,
       decl,
       argumentList,
@@ -163,7 +161,7 @@ Variable _invokeShorthandMember(
     ctx.pushOp(
       Call(
         DeferredOrOffset.lookupStatic(ctx, type.file, type.name, memberName),
-        [...result.args.ssa],
+        [...result.vector()],
         result: s,
         typeArguments:
             typeArguments?.arguments
@@ -176,14 +174,13 @@ Variable _invokeShorthandMember(
     return Variable.of(
       ctx,
       s,
-      result.returnType?.type ?? CoreTypes.dynamic.ref(ctx),
+      result.declaredReturn?.type ?? CoreTypes.dynamic.ref(ctx),
       rep: ValueRep.boxed,
     );
   }
   if (member != null && member.isBridge && member.bridge is BridgeMethodDef) {
     final fd = (member.bridge as BridgeMethodDef).functionDescriptor;
-    final arguments = compileArgumentListWithBridge(
-      ctx,
+    final arguments = ArgumentBinder(ctx).bindBridgeVector(
       argumentList,
       fd,
       typeParameters: const {},
@@ -193,7 +190,7 @@ Variable _invokeShorthandMember(
       InvokeExternal(
         result,
         ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.$name']!,
-        arguments.ssa,
+        arguments.vector(),
       ),
     );
     final returnType =
@@ -201,8 +198,8 @@ Variable _invokeShorthandMember(
             .toAlwaysReturnType(
               ctx,
               type,
-              arguments.args.map((a) => a.type).toList(),
-              arguments.namedArgs.map((k, v) => MapEntry(k, v.type)),
+              arguments.positionalValues.map((a) => a.type).toList(),
+              arguments.namedValues.map((k, v) => MapEntry(k, v.type)),
               typeArgs:
                   typeArguments?.arguments
                       .map((t) => TypeRef.fromAnnotation(ctx, ctx.library, t))

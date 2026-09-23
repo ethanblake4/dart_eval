@@ -169,7 +169,7 @@ final class CallResolver {
     final bool isStatic;
     TypeRef? staticType;
 
-    ArgumentListResult argsPair;
+    BoundCall argsPair;
 
     // `C.new(...)` invokes the unnamed constructor.
     final staticMemberName = ctorNameOf(e.methodName.name);
@@ -253,8 +253,7 @@ final class CallResolver {
           final extParams =
               memberExt.declaration.typeParameters?.typeParameters ??
               const <TypeParameter>[];
-          final result = compileNonBridgeArgs(
-            ctx,
+          final result = ArgumentBinder(ctx).bindDeclaration(
             memberExt.library,
             memberDecl,
             e.argumentList,
@@ -274,7 +273,7 @@ final class CallResolver {
                 file: memberExt.library,
                 name: memberExt.memberKey(memberDecl),
               ),
-              result.args.ssa,
+              result.vector(),
               result: s,
               typeArguments:
                   extensionCallTypeArguments(
@@ -282,7 +281,7 @@ final class CallResolver {
                     memberExt,
                     memberDecl,
                     bindings,
-                    result.resolveGenerics,
+                    result.typeArguments,
                   ) ??
                   runtimeTypeArguments(ctx, e),
             ),
@@ -290,7 +289,7 @@ final class CallResolver {
           return Variable.of(
             ctx,
             s,
-            result.returnType?.type ?? CoreTypes.dynamic.ref(ctx),
+            result.declaredReturn?.type ?? CoreTypes.dynamic.ref(ctx),
             rep: ValueRep.boxed,
           );
         }
@@ -407,8 +406,7 @@ final class CallResolver {
       final receiverTypeParameters = isStatic
           ? const <String, TypeRef>{}
           : _bridgeClassTypeArguments(ctx, L.type, dec0.sourceLib);
-      argsPair = compileArgumentListWithBridge(
-        ctx,
+      argsPair = ArgumentBinder(ctx).bindBridgeVector(
         e.argumentList,
         fd,
         before: [],
@@ -427,7 +425,7 @@ final class CallResolver {
           : const <String>{};
       _inferBridgeTypeParameters(
         fd,
-        argsPair.args,
+        argsPair.positionalValues,
         bridgeTypeParameters,
         inferableNames: classGenericNames,
       );
@@ -440,8 +438,8 @@ final class CallResolver {
           ).toAlwaysReturnType(
             ctx,
             isStatic ? staticType : L.type,
-            argsPair.args.map((a) => a.type).toList(),
-            argsPair.namedArgs.map((k, v) => MapEntry(k, v.type)),
+            argsPair.positionalValues.map((a) => a.type).toList(),
+            argsPair.namedValues.map((k, v) => MapEntry(k, v.type)),
             typeArgs:
                 e.typeArguments?.arguments
                     .map((t) => TypeRef.fromAnnotation(ctx, ctx.library, t))
@@ -454,9 +452,9 @@ final class CallResolver {
       // null placeholders so generated wrappers keep the legacy flattened
       // ABI. The declared return type (including inferred generics and
       // parameter-type dependencies) still applies to the result.
-      if (!isStatic && e.typeArguments == null && argsPair.namedArgs.isEmpty) {
+      if (!isStatic && e.typeArguments == null && argsPair.namedValues.isEmpty) {
         final invokeResult =
-            invokeOperator(L, e.methodName.name, argsPair.args).result;
+            invokeOperator(L, e.methodName.name, argsPair.positionalValues).result;
         final preciseType = mReturnType?.type;
         if (preciseType != null) {
           return invokeResult.copyWith(type: preciseType);
@@ -464,11 +462,10 @@ final class CallResolver {
         return invokeResult;
       }
     } else if (L.type.isSpec(CoreTypes.dynamic)) {
-      argsPair = compileArgumentListWithDynamic(ctx, e.argumentList, before: [L]);
+      argsPair = ArgumentBinder(ctx).bindDynamicVector( e.argumentList, before: [L]);
     } else {
       final dec = dec0!.declaration!;
-      final result = compileNonBridgeArgs(
-        ctx,
+      final result = ArgumentBinder(ctx).bindDeclaration(
         dec0.sourceLib,
         dec,
         e.argumentList,
@@ -480,12 +477,12 @@ final class CallResolver {
             : const {},
         returnContext: bound,
       );
-      argsPair = result.args;
-      mReturnType = result.returnType;
+      argsPair = result;
+      mReturnType = result.declaredReturn;
     }
 
-    final argTypes = argsPair.args.map((e) => e.type).toList();
-    final namedArgTypes = argsPair.namedArgs.map(
+    final argTypes = argsPair.positionalValues.map((e) => e.type).toList();
+    final namedArgTypes = argsPair.namedValues.map(
       (key, value) => MapEntry(key, value.type),
     );
     mReturnType ??= AlwaysReturnType.fromInstanceMethodOrBuiltin(
@@ -506,7 +503,7 @@ final class CallResolver {
             result,
             ctx.bridgeStaticFunctionIndices[staticType!
                 .file]!['${staticType.name}.$staticMemberName']!,
-            argsPair.ssa,
+            argsPair.vector(),
           ),
         );
       } else {
@@ -516,7 +513,7 @@ final class CallResolver {
           staticType.name,
           staticMemberName,
         );
-        final callArguments = [...argsPair.ssa];
+        final callArguments = [...argsPair.vector()];
         final declaration = dec0.declaration;
         // Enum constructors carry two synthetic leading parameters (index,
         // name); direct calls — only factories are reachable — bind them null.
@@ -548,9 +545,9 @@ final class CallResolver {
 
     final boundCall = BoundCall(
       receiver: L,
-      positional: [for (final arg in argsPair.args) BoundArgument(arg)],
+      positional: [for (final arg in argsPair.positionalValues) BoundArgument(arg)],
       named: [
-        for (final entry in argsPair.namedArgs.entries)
+        for (final entry in argsPair.namedValues.entries)
           (entry.key, BoundArgument(entry.value)),
       ],
       runtimeTypeArguments: runtimeTypeArguments(ctx, e),
@@ -561,8 +558,8 @@ final class CallResolver {
       vectorOverride:
           dec0?.isBridge == true || L.type.isSpec(CoreTypes.dynamic)
           ? (dec0?.isBridge == true
-                ? argsPair.ssa
-                : argsPair.ssa.skip(1).toList())
+                ? argsPair.vector()
+                : argsPair.vector().skip(1).toList())
           : null,
     );
     if (dec0?.isBridge == true) {
@@ -1092,33 +1089,31 @@ final class CallResolver {
                 )))
           : (bridge as BridgeFunctionDeclaration).function;
 
-      final argsPair = compileArgumentListWithBridge(
-        ctx,
+      final argsPair = ArgumentBinder(ctx).bindBridgeVector(
         e.argumentList,
         fnDescriptor,
       );
 
-      args = argsPair.args;
-      namedArgs = argsPair.namedArgs;
-      callArgs = argsPair.ssa;
+      args = argsPair.positionalValues;
+      namedArgs = argsPair.namedValues;
+      callArgs = argsPair.vector();
       isConstructor = bridge is BridgeClassDef;
     } else {
       final dec = dec0.declaration!;
       isConstructor = dec is ConstructorDeclaration;
 
-      final result = compileNonBridgeArgs(
-        ctx,
+      final result = ArgumentBinder(ctx).bindDeclaration(
         offset.file!,
         dec,
         e.argumentList,
         typeArguments: e.typeArguments,
         source: e,
       );
-      mReturnType = result.returnType;
-      genericReturnBoxed = result.boxedBySubstitution;
-      args = result.args.args;
-      namedArgs = result.args.namedArgs;
-      callArgs = result.args.ssa;
+      mReturnType = result.declaredReturn;
+      genericReturnBoxed = result.genericReturnBoxed;
+      args = result.positionalValues;
+      namedArgs = result.namedValues;
+      callArgs = result.vector();
 
       // Upward inference for constructors: the class type arguments inferred
       // from the argument list (or the parameters' bounds), in declaration
@@ -1142,7 +1137,7 @@ final class CallResolver {
         }
         inferredCtorArgs ??= [
           for (final param in result.classTypeParameters!)
-            result.resolveGenerics[param.name.lexeme] ??
+            result.typeArguments[param.name.lexeme] ??
                 CoreTypes.dynamic.ref(ctx),
         ];
         if (aliasType != null && e.typeArguments == null) {

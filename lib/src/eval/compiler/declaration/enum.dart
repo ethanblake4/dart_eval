@@ -1,4 +1,5 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
+import '../invocation/binder.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
@@ -145,15 +146,14 @@ void _compileEnumValue(
   final dec = cstr?.declaration;
   if (constant.arguments != null && dec != null) {
     final fpl = (dec as ConstructorDeclaration).parameters.parameters;
-    final result = compileArgumentList(
-      ctx,
+    final result = ArgumentBinder(ctx).bindParameterList(
       constant.arguments!.argumentList,
       ctx.library,
       fpl,
       dec,
       source: constant,
     );
-    arguments.addAll(result.ssa);
+    arguments.addAll(result.vector());
   }
   arguments.add(pushRuntimeTypeId(ctx, type));
 

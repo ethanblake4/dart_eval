@@ -6,6 +6,7 @@ import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/assert.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
+import '../invocation/binder.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
@@ -347,8 +348,7 @@ void compileConstructorDeclaration(
     final dec = dec0.declaration!;
     final fpl = (dec as ConstructorDeclaration).parameters.parameters;
 
-    final result = compileArgumentList(
-      ctx,
+    final result = ArgumentBinder(ctx).bindParameterList(
       $redirectingInitializer.argumentList,
       clsType.file,
       fpl,
@@ -365,7 +365,7 @@ void compileConstructorDeclaration(
     final V = Variable.ssa(
       ctx,
       Call(offset, [
-        ...result.ssa,
+        ...result.vector(),
         runtimeTypeArgument!,
       ], result: ctx.svar('redirected')),
       clsType,
@@ -945,8 +945,7 @@ Variable _invokeSuperConstructor(
     // `super()` and the implicit super call bind the callee's declared
     // defaults; only an implicit target takes no arguments at all.
     final argres = superInitializer != null
-        ? compileArgumentList(
-            ctx,
+        ? ArgumentBinder(ctx).bindParameterList(
             superInitializer.argumentList,
             extendsDecl.sourceLib,
             constructor.parameters.parameters,
@@ -957,17 +956,16 @@ Variable _invokeSuperConstructor(
             resolveGenerics: _superclassGenerics(ctx, extendsDecl, extendsType),
             source: superInitializer,
           )
-        : compileSuperParams(
-            ctx,
+        : ArgumentBinder(ctx).bindSuperParams(
             constructor.parameters.parameters,
             constructor,
             decLibrary: extendsDecl.sourceLib,
             superParams: superParams,
           );
-    ssa.addAll(argres.ssa);
-    argTypes.addAll(argres.args.map((e) => e.type));
+    ssa.addAll(argres.vector());
+    argTypes.addAll(argres.positionalValues.map((e) => e.type));
     namedArgTypes.addAll(
-      argres.namedArgs.map((key, value) => MapEntry(key, value.type)),
+      argres.namedValues.map((key, value) => MapEntry(key, value.type)),
     );
   }
 
@@ -1001,17 +999,15 @@ List<SSA> _bridgeSuperArgs(
   final bridge = extendsDecl.bridge! as BridgeClassDef;
   final constructor = bridge.constructors[constructorName]!;
   return superInitializer != null
-      ? compileArgumentListWithBridge(
-          ctx,
+      ? ArgumentBinder(ctx).bindBridgeVector(
           superInitializer.argumentList,
           constructor.functionDescriptor,
-        ).ssa
+        ).vector()
       : superParams.positional.isNotEmpty || superParams.named.isNotEmpty
-      ? compileSuperParamsWithBridge(
-          ctx,
+      ? ArgumentBinder(ctx).bindSuperParamsBridge(
           constructor.functionDescriptor,
           superParams: superParams,
-        ).ssa
+        ).vector()
       : <SSA>[];
 }
 
