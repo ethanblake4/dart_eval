@@ -257,45 +257,20 @@ final class MemberLookup {
     TypeRef type,
     MemberName name,
   ) {
-    if (hasBridgeSuperclass(ctx, type)) {
-      return null;
-    }
-    for (final link in [type, ...ctx.typeSystem.superclassChain(type)]) {
-      // `memberOwner` only counts members that are actually compiled —
-      // registration in `instanceDeclarationPositions` happens when the
-      // body is compiled, and the body must be non-abstract.
-      final positions =
-          ctx.instanceDeclarationPositions[link.file]?[link.name]
-              ?[name.kind.positionIndex] as Map?;
-      final positionsHit = positions != null &&
-          (positions.containsKey(name.name) ||
-              (name.name.startsWith('_') &&
-                  positions.containsKey(
-                    '${ctx.libraryUri(link.file)}::${name.name}',
-                  )));
-      if (!positionsHit) continue;
-      final decl = ctx.types.find(link.file, link.name);
-      if (decl is! SourceTypeDecl) continue;
-      final member = decl.declaredMember(
-        MemberName(
-          name.name,
-          name.kind,
-          privateLibraryUri: name.name.startsWith('_')
-              ? ctx.libraryUri(link.file)
-              : null,
-        ),
-        forImplementation: true,
-      );
-      if (member != null && !member.isAbstract) {
-        return member;
-      }
-    }
-    return null;
+    return _implementationAt(type, name)?.$2;
   }
 
   /// The declaring [TypeDecl] whose [implementation] supplies [name] —
   /// what the legacy `memberOwner` returned as a [TypeRef].
   TypeRef? implementationOwner(TypeRef type, MemberName name) {
+    return _implementationAt(type, name)?.$1;
+  }
+
+  /// The first link in [type]'s chain concretely implementing [name],
+  /// with the member itself. `memberOwner` only counts members that are
+  /// actually compiled — registration in `instanceDeclarationPositions`
+  /// happens when the body is compiled.
+  (TypeRef, Member)? _implementationAt(TypeRef type, MemberName name) {
     if (hasBridgeSuperclass(ctx, type)) {
       return null;
     }
@@ -310,24 +285,31 @@ final class MemberLookup {
                     '${ctx.libraryUri(link.file)}::${name.name}',
                   )));
       if (!positionsHit) continue;
-      final decl = ctx.types.find(link.file, link.name);
-      if (decl is! SourceTypeDecl) continue;
-      final member = decl.declaredMember(
-        MemberName(
-          name.name,
-          name.kind,
-          privateLibraryUri: name.name.startsWith('_')
-              ? ctx.libraryUri(link.file)
-              : null,
-        ),
-        forImplementation: true,
-      );
-      if (member != null && !member.isAbstract) {
-        return link;
-      }
+      final member = concreteMemberOn(link, name);
+      if (member != null) return (link, member);
     }
     return null;
   }
+
+  /// The member [link] concretely declares as [name] —
+  /// `concreteMemberDecl`'s single-link probe: no chain walk, no
+  /// interface fallback slots, abstract declarations excluded.
+  Member? concreteMemberOn(TypeRef link, MemberName name) {
+    final decl = ctx.types.find(link.file, link.name);
+    if (decl is! SourceTypeDecl) return null;
+    return decl.declaredMember(_linkName(name, link),
+        forImplementation: true);
+  }
+
+  /// [name] qualified with [link]'s library: a private member folded in
+  /// from another library is stored under `uri::_name`.
+  MemberName _linkName(MemberName name, TypeRef link) => MemberName(
+        name.name,
+        name.kind,
+        privateLibraryUri: name.name.startsWith('_')
+            ? name.privateLibraryUri ?? ctx.libraryUri(link.file)
+            : null,
+      );
 
   /// Like [implementation], but for a receiver statically typed [type]
   /// that may hold a subclass instance: a fixed target exists only while

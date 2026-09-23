@@ -478,8 +478,16 @@ final class InstanceMemberDenotation extends Denotation {
       // Abstract re-declarations have no body — skip them like runtime
       // dispatch does; the concrete implementation lives deeper.
       final hit =
-          concreteMemberDecl(ctx, type, name, kind: 2) != null ||
-          concreteMemberDecl(ctx, type, name, kind: kind) != null;
+          ctx.memberLookup.concreteMemberOn(
+                type,
+                MemberName(name, MemberKind.method),
+              ) !=
+              null ||
+          ctx.memberLookup.concreteMemberOn(
+                type,
+                MemberName(name, memberKindOf(kind)),
+              ) !=
+              null;
       if (hit) {
         return owner;
       }

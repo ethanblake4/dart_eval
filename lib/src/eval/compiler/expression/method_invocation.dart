@@ -765,8 +765,16 @@ List<int> runtimeTypeArguments(CompilerContext ctx, MethodInvocation call) =>
     }
     // Abstract re-declarations have no body — skip them like runtime
     // dispatch does; the implementation lives deeper in the chain.
-    if (concreteMemberDecl(ctx, owner, memberName, kind: 2) != null ||
-        concreteMemberDecl(ctx, owner, memberName, kind: 0) != null) {
+    if (ctx.memberLookup.concreteMemberOn(
+              owner,
+              MemberName(memberName, MemberKind.method),
+            ) !=
+            null ||
+        ctx.memberLookup.concreteMemberOn(
+              owner,
+              MemberName(memberName, MemberKind.getter),
+            ) !=
+            null) {
       found = true;
       break;
     }

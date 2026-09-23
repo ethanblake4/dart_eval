@@ -79,7 +79,7 @@ sealed class GetTarget {
           false;
       final overridable =
           declaredLocally ||
-          memberOwner(ctx, resolvedReceiver, 'runtimeType', kind: 0) != null ||
+          ctx.memberLookup.implementationOwner(resolvedReceiver, MemberName.getter('runtimeType')) != null ||
           ctx.memberOverriddenInSubclass(
             resolvedReceiver.file,
             resolvedReceiver.name,
@@ -244,7 +244,7 @@ sealed class GetTarget {
                             .name]?[0] as Map?)
                     ?.containsKey(key) ==
                 true &&
-            concreteMemberDecl(ctx, link, name, kind: 0) != null) {
+            ctx.memberLookup.concreteMemberOn(link, MemberName(name, MemberKind.getter)) != null) {
           depth = i;
           break;
         }
@@ -267,7 +267,7 @@ sealed class GetTarget {
             : null;
         final needsLink =
             fieldIndex != null ||
-            memberNeedsOwnerLink(ctx, link, name, kind: 0);
+            ctx.memberLookup.needsOwnerLink(link, MemberName(name, MemberKind.getter));
         if (fieldIndex != null) {
           final isLate =
               fieldDecl is FieldDeclaration && fieldDecl.fields.isLate;
@@ -304,14 +304,12 @@ sealed class GetTarget {
       // The receiver may hold a subclass: a getter can be called directly
       // on the dispatch root only when it isn't overridden and its body
       // never touches `super` (so any link works as `this`).
-      final owner = directMemberOwner(
-        ctx,
+      final owner = ctx.memberLookup.directImplementationOwner(
         receiver.concreteTypes.first,
-        name,
-        kind: 0,
+        MemberName(name, MemberKind.getter),
       );
       if (owner != null &&
-          !memberNeedsOwnerLink(ctx, owner, name, kind: 0)) {
+          !ctx.memberLookup.needsOwnerLink(owner, MemberName(name, MemberKind.getter))) {
         final key = name.startsWith('_')
             ? '${ctx.libraryUri(owner.file)}::$name'
             : name;
@@ -707,7 +705,7 @@ sealed class SetTarget {
                             .name]?[1] as Map?)
                     ?.containsKey(key) ==
                 true &&
-            concreteMemberDecl(ctx, link, name, kind: 1) != null;
+            ctx.memberLookup.concreteMemberOn(link, MemberName(name, MemberKind.setter)) != null;
         final index = ctx.instanceGetterIndices[link.file]?[link
             .name]?[name];
         if (hasSetter && index != null) {
@@ -736,7 +734,7 @@ sealed class SetTarget {
             : null;
         final needsLink =
             fieldIndex != null ||
-            memberNeedsOwnerLink(ctx, link, name, kind: 1);
+            ctx.memberLookup.needsOwnerLink(link, MemberName(name, MemberKind.setter));
         if (fieldIndex != null) {
           final isLateFinal =
               fieldDecl is FieldDeclaration &&
@@ -773,14 +771,12 @@ sealed class SetTarget {
       // The receiver may hold a subclass: a setter can be called directly
       // on the dispatch root only when it isn't overridden and its body
       // never touches `super` (so any link works as `this`).
-      final owner = directMemberOwner(
-        ctx,
+      final owner = ctx.memberLookup.directImplementationOwner(
         boxed.concreteTypes.first,
-        name,
-        kind: 1,
+        MemberName(name, MemberKind.setter),
       );
       if (owner != null &&
-          !memberNeedsOwnerLink(ctx, owner, name, kind: 1)) {
+          !ctx.memberLookup.needsOwnerLink(owner, MemberName(name, MemberKind.setter))) {
         final key = name.startsWith('_')
             ? '${ctx.libraryUri(owner.file)}::$name'
             : name;

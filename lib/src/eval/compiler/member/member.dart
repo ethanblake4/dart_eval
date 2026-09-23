@@ -24,10 +24,13 @@ final class TypeDeclMemberOwner extends MemberOwner {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) || other is TypeDeclMemberOwner;
+      identical(this, other) ||
+      other is TypeDeclMemberOwner &&
+          decl.libraryUri == other.decl.libraryUri &&
+          decl.name == other.decl.name;
 
   @override
-  int get hashCode => decl.hashCode;
+  int get hashCode => Object.hash(decl.libraryUri, decl.name);
 
   @override
   String toString() => 'memberOwner(${decl.libraryUri}:${decl.name})';
@@ -110,6 +113,11 @@ final class SourceMember extends Member {
 
   /// For field accessors, the particular variable this member is for.
   final VariableDeclaration? variable;
+
+  /// The raw declaration-map entry — the [VariableDeclaration] for fields,
+  /// the AST node otherwise. This is what legacy `concreteMemberDecl`
+  /// returned.
+  Declaration get sourceDeclaration => variable ?? node as Declaration;
 
   /// The declaring library — where annotations and defaults resolve.
   final int library;
@@ -453,7 +461,13 @@ extension TypeDeclMembers on TypeDecl {
         case MemberKind.constructor:
           found = null;
       }
-      return self.sourceMemberOf(found, name);
+      final member = self.sourceMemberOf(found, name);
+      // `concreteMemberDecl` filters abstract declarations — a
+      // body-less re-declaration never supplies the implementation.
+      if (forImplementation && (member?.isAbstract ?? false)) {
+        return null;
+      }
+      return member;
     }
     final classDef = (self as BridgeTypeDecl).classDef;
     final enumDef = self.enumDef;

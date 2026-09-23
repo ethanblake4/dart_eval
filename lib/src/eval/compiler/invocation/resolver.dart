@@ -4,6 +4,7 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
+import 'package:dart_eval/src/eval/compiler/member/member.dart';
 import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/const.dart';
@@ -522,14 +523,13 @@ final class CallResolver {
         var bindingLib = dec0.sourceLib;
         Declaration bindingDec = dec;
         if (refined is StaticCall && refined.declaringLink != null) {
-          final found = concreteMemberDecl(
-            ctx,
+          final member = ctx.memberLookup.concreteMemberOn(
             refined.declaringLink!,
-            e.methodName.name,
+            MemberName(e.methodName.name, MemberKind.method),
           );
-          if (found != null) {
+          if (member is SourceMember) {
             bindingLib = refined.offset.file ?? dec0.sourceLib;
-            bindingDec = found;
+            bindingDec = member.sourceDeclaration;
           }
         }
         argsPair = ArgumentBinder(ctx).bindDeclaration(
