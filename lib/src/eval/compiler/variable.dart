@@ -11,7 +11,7 @@ import 'package:dart_eval/src/eval/compiler/variable/binding.dart';
 import 'package:dart_eval/src/eval/ir/primitives.dart';
 
 import 'errors.dart';
-import 'package:dart_eval/src/eval/compiler/dispatch.dart';
+import 'invocation/deferred.dart';
 import 'values/abi.dart';
 
 /// A compiler value with an SSA identity, language type and calling convention.

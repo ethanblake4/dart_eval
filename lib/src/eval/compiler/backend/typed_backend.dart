@@ -36,7 +36,7 @@ import '../errors.dart';
 import '../type.dart';
 import 'package:dart_eval/dart_eval_bridge.dart' show CoreTypes;
 import '../context.dart';
-import 'package:dart_eval/src/eval/compiler/dispatch.dart';
+import '../invocation/deferred.dart';
 import 'representation.dart';
 import 'primitive_optimization.dart';
 import '../member/member_name.dart';

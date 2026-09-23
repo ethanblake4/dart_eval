@@ -12,10 +12,9 @@ import 'backend/representation.dart' show MachineRepresentation;
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
-import 'package:dart_eval/src/eval/compiler/dispatch.dart';
+import 'invocation/deferred.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
-import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/ir/primitives.dart';
 import 'package:dart_eval/src/eval/ir/types.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
@@ -255,30 +254,24 @@ class IndexedReference implements Reference {
   /// null when it cannot be resolved (dynamic receivers, missing member).
   TypeRef? _setterValueType(CompilerContext ctx, [AstNode? source]) {
     try {
-      final resolved = ctx.memberLookup
-          .interfaceMember(
-            _variable.type,
-            MemberName.method('[]='),
-            source: source,
-            superclassFirst: true,
-          )
-          .member;
-      final decl = resolved is SourceMember ? resolved.node : null;
-      if (decl is MethodDeclaration && resolved is SourceMember) {
+      final resolved = ctx.memberLookup.interfaceMember(
+        _variable.type,
+        MemberName.method('[]='),
+        source: source,
+        superclassFirst: true,
+      );
+      final member = resolved.member;
+      final decl = member is SourceMember ? member.node : null;
+      if (decl is MethodDeclaration) {
         final param = decl.parameters?.parameters.elementAtOrNull(1);
         if (param?.type == null) return null;
         // Bind the declaring class's type parameters through the receiver's
         // supertype chain so a `WriteType` annotation resolves concretely.
         return formalParameterAnnotationType(
           ctx,
-          resolved.library,
+          resolved.viewedAs.file,
           param!,
-          typeParameters: classTypeArguments(
-            ctx,
-            _variable.type,
-            resolved.library,
-            decl,
-          ),
+          typeParameters: resolved.ownerTypeArguments,
         );
       }
     } on CompileError {

@@ -1,6 +1,6 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:collection/collection.dart';
-import 'package:dart_eval/src/eval/compiler/dispatch.dart';
+import '../compiler/invocation/deferred.dart';
 import 'operands.dart';
 
 final class Return extends Operation {

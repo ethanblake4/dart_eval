@@ -4,7 +4,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
-import 'package:dart_eval/src/eval/compiler/dispatch.dart';
+import '../invocation/deferred.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
@@ -124,132 +124,6 @@ TypeRef instantiateConstructorType(
     ],
   );
 }
-
-/// Maps the declaring class's type parameters to [receiver]'s applied
-/// arguments by walking the supertype graph to [method]'s owner — so a param
-/// annotated `WriteType` on `Indexable` resolves to `Function?` when the
-/// receiver is `Test5 extends Indexable<Function?, Function?>`.
-Map<String, TypeRef> classTypeArguments(
-  CompilerContext ctx,
-  TypeRef receiver,
-  int ownerLibrary,
-  MethodDeclaration method,
-) {
-  final owner = method.parent?.parent;
-  if (owner is! ClassDeclaration && owner is! MixinDeclaration) {
-    return const {};
-  }
-  // Worklist over supertypes: extends, `with` applications, and implements
-  // edges each carry the substitutions accumulated along their own path.
-  final worklist = <(TypeRef, Substitution)>[(receiver, Substitution.empty)];
-  final seen = <String>{};
-  while (worklist.isNotEmpty) {
-    final (current, substitutions) = worklist.removeLast();
-    if (!seen.add('${current.file}:${current.name}')) continue;
-    if (owner is ClassDeclaration &&
-        current.file == ownerLibrary &&
-        current.name == owner.namePart.typeName.lexeme) {
-      final parameters =
-          owner.namePart.typeParameters?.typeParameters ?? const [];
-      return {
-        for (var index = 0; index < parameters.length; index++)
-          parameters[index].name.lexeme:
-              index < current.typeArguments.length
-              ? current.typeArguments[index]
-              : CoreTypes.dynamic.ref(ctx),
-      };
-    }
-    final decl =
-        ctx.topLevelDeclarationsMap[current.file]?[current.name]?.declaration;
-    if (decl == null) continue;
-    // Fold the current type's arguments into the substitution map so a
-    // `with M<T>` clause resolves `T` to the receiver-provided argument.
-    final levelParams =
-        current.decl?.typeParameters ?? const <TypeParameterDef>[];
-    final nextSubstitutions = substitutions.extend(
-      Substitution.of({
-        for (var index = 0; index < levelParams.length; index++)
-          levelParams[index]:
-              index < current.typeArguments.length
-                  ? current.typeArguments[index]
-                  : levelParams[index].bound ?? CoreTypes.dynamic.ref(ctx),
-      }),
-    );
-    if (owner is MixinDeclaration) {
-      // The folded method's owner is a mixin: find the `with M<args>` entry
-      // on the current class (or on a mixin it applies) and map the mixin's
-      // parameters to its applied arguments.
-      final applied = findMixinApplication(
-        ctx,
-        decl,
-        current.file,
-        current.name,
-        owner,
-        ownerLibrary,
-        nextSubstitutions,
-      );
-      if (applied != null) {
-        return applied;
-      }
-    }
-    final parent = ctx.typeSystem.superclassOf(current);
-    if (parent != null && !sameDeclaration(parent, current)) {
-      worklist.add((
-        parent.substituteTypeParameters(nextSubstitutions),
-        nextSubstitutions,
-      ));
-    }
-    final (_, mixinTypes, interfaceTypes, _) = classLikeClauses(decl);
-    for (final supertype in [...mixinTypes, ...interfaceTypes]) {
-      final resolved2 = _resolveAppliedInterface(
-        ctx,
-        current,
-        decl,
-        supertype,
-        nextSubstitutions,
-      );
-      if (resolved2 != null) worklist.add((resolved2, nextSubstitutions));
-    }
-  }
-  return const {};
-}
-
-/// Resolves an `implements`/`on` entry of [decl] (on receiver [current]) to
-/// a concrete [TypeRef]: bare arguments naming one of [current]'s type
-/// parameters become parameter references, then [substitutions] maps those
-/// to the receiver-provided arguments.
-TypeRef? _resolveAppliedInterface(
-  CompilerContext ctx,
-  TypeRef current,
-  Declaration decl,
-  NamedType interface,
-  Substitution substitutions,
-) {
-  final prefix = interface.importPrefix;
-  final name = prefix == null
-      ? interface.name.lexeme
-      : '${prefix.name.lexeme}.${interface.name.lexeme}';
-  final base = ctx.visibleTypes[current.file]?[name];
-  if (base == null) return null;
-  final args = interface.typeArguments?.arguments;
-  if (args == null) return base;
-  final classParams = classLikeClauses(decl).$4?.typeParameters;
-  return base.copyWith(
-    typeArguments: [
-      for (var i = 0; i < args.length; i++)
-        (resolveAppliedTypeArgument(
-                  ctx,
-                  current.file,
-                  current.name,
-                  classParams,
-                  args[i],
-                ) ??
-                TypeRef.fromAnnotation(ctx, current.file, args[i]))
-            .substituteTypeParameters(substitutions),
-    ],
-  );
-}
-
 
 /// Compiles a call's argument list into positional/named variable pairs. Used
 /// when the callee is a member *value* (field or getter) whose read must be

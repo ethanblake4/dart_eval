@@ -10,7 +10,8 @@ import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/const.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/fpl.dart';
-import 'package:dart_eval/src/eval/compiler/dispatch.dart';
+import '../member/resolved_member.dart';
+import 'deferred.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
@@ -170,7 +171,7 @@ final class CallResolver {
     AlwaysReturnType? mReturnType;
     final bridgeTypeParameters = <String, TypeRef>{};
 
-    Member? resolved;
+    ResolvedMember? resolved;
     final bool isStatic;
     TypeRef? staticType;
 
@@ -213,11 +214,17 @@ final class CallResolver {
         ];
         return invokeOperator(L, e.methodName.name, args).result;
       }
-      resolved = ctx.memberLookup.staticMember(
+      final staticMember = ctx.memberLookup.staticMember(
         staticType,
         staticMemberName,
         MemberKind.method,
       );
+      resolved = staticMember == null
+          ? null
+          : ResolvedMember(
+              staticMember,
+              staticMember.ownerDecl?.thisType ?? staticType,
+            );
       if (resolved == null) {
         throw CompileError(
           'Cannot find static method $staticType.$staticMemberName',
@@ -227,8 +234,9 @@ final class CallResolver {
       // `C.field(args)` where `field` holds a closure, or `C.x(args)` where
       // `x` is a static getter, reads the member value and invokes its result
       // rather than calling a function named `C.field`/`C.x`.
-      final memberDecl0 =
-          resolved is SourceMember ? resolved.node : null;
+      final memberDecl0 = resolved.member is SourceMember
+          ? (resolved.member as SourceMember).node
+          : null;
       if (memberDecl0 is FieldDeclaration ||
           (memberDecl0 is MethodDeclaration && memberDecl0.isGetter)) {
         // `C.getter(args)` is a function-expression invocation: the member
@@ -245,8 +253,9 @@ final class CallResolver {
       // `E.m(receiver, ...)` — explicit application of an instance extension
       // member through the namespace. The receiver is the first argument and
       // binds the extension's `on` type parameters.
-      final memberDecl =
-          resolved is SourceMember ? resolved.node : null;
+      final memberDecl = resolved.member is SourceMember
+          ? (resolved.member as SourceMember).node
+          : null;
       if (memberDecl is MethodDeclaration &&
           !memberDecl.isStatic &&
           !memberDecl.isGetter &&
@@ -349,14 +358,12 @@ final class CallResolver {
         return target.emit(ctx, bound);
       }
       try {
-        resolved = ctx.memberLookup
-            .interfaceMember(
+        resolved = ctx.memberLookup.interfaceMember(
           L.type,
           ctx.memberNameOf(e.methodName.name, MemberKind.method),
           source: e,
           superclassFirst: true,
-        )
-            .member;
+        );
       } on CompileError {
         // No such instance member: an extension member may apply.
         final found = resolveExtensionMember(
@@ -400,8 +407,9 @@ final class CallResolver {
           ),
         );
       }
-      final memberNode =
-          resolved is SourceMember ? resolved.node : null;
+      final memberNode = resolved.member is SourceMember
+          ? (resolved.member as SourceMember).node
+          : null;
       final isFieldOrGetter =
           memberNode is FieldDeclaration ||
           (memberNode is MethodDeclaration && memberNode.isGetter);
@@ -441,14 +449,15 @@ final class CallResolver {
       }
     }
 
-    if (resolved is BridgeMember) {
-      final br = resolved.def;
+    final resolvedMember = resolved?.member;
+    if (resolvedMember is BridgeMember) {
+      final br = resolvedMember.def;
       final fd = br is BridgeMethodDef
           ? br.functionDescriptor
           : (br as BridgeConstructorDef).functionDescriptor;
       final receiverTypeParameters = isStatic
           ? const <String, TypeRef>{}
-          : _bridgeClassTypeArguments(ctx, L.type, resolved.ownerDecl!.library);
+          : _bridgeClassTypeArguments(ctx, L.type, resolvedMember.ownerDecl!.library);
       argsPair = ArgumentBinder(ctx).bindBridgeVector(
         e.argumentList,
         fd,
@@ -507,8 +516,8 @@ final class CallResolver {
     } else if (L.type.isSpec(CoreTypes.dynamic)) {
       argsPair = ArgumentBinder(ctx).bindDynamicVector( e.argumentList, before: [L]);
     } else {
-      final dec = (resolved as SourceMember).node as Declaration;
-      final memberLibrary = resolved.library;
+      final dec = (resolved!.member as SourceMember).node as Declaration;
+      final memberLibrary = resolved.member.ownerDecl!.library;
       // Instance calls compile supplied arguments against the resolved
       // signature — context types and coercion apply — but only a call
       // proven static fills omitted arguments. A call that stays virtual
@@ -532,7 +541,7 @@ final class CallResolver {
           typeArguments: e.typeArguments,
           source: e,
           seedGenerics: dec is MethodDeclaration
-              ? classTypeArguments(ctx, L.type, memberLibrary, dec)
+              ? resolved.ownerTypeArguments
               : const {},
           returnContext: bound,
           options: BindingOptions.source,
@@ -546,6 +555,8 @@ final class CallResolver {
         // override carries its own defaults.
         var bindingLib = memberLibrary;
         Declaration bindingDec = dec;
+        var bindingMember = resolved.member;
+        var bindingView = resolved.viewedAs;
         if (refined is StaticCall && refined.declaringLink != null) {
           final member = ctx.memberLookup.concreteMemberOn(
             refined.declaringLink!,
@@ -554,6 +565,8 @@ final class CallResolver {
           if (member is SourceMember) {
             bindingLib = refined.offset.file ?? memberLibrary;
             bindingDec = member.sourceDeclaration;
+            bindingMember = member;
+            bindingView = refined.declaringLink!;
           }
         }
         argsPair = ArgumentBinder(ctx).bindDeclaration(
@@ -563,7 +576,10 @@ final class CallResolver {
           typeArguments: e.typeArguments,
           source: e,
           seedGenerics: !isStatic && bindingDec is MethodDeclaration
-              ? classTypeArguments(ctx, L.type, bindingLib, bindingDec)
+              ? ownerTypeArgumentsOf(
+                  bindingMember.ownerDecl,
+                  bindingView,
+                )
               : const {},
           returnContext: bound,
           options: BindingOptions.source,
@@ -588,7 +604,7 @@ final class CallResolver {
 
     if (isStatic) {
       var result = ctx.svar('method_result');
-      if (resolved is BridgeMember) {
+      if (resolved?.member is BridgeMember) {
         ctx.pushOp(
           InvokeExternal(
             result,
@@ -605,8 +621,9 @@ final class CallResolver {
           staticMemberName,
         );
         final callArguments = [...argsPair.vector()];
-        final declaration =
-            resolved is SourceMember ? resolved.node : null;
+        final declaration = resolved?.member is SourceMember
+            ? (resolved!.member as SourceMember).node
+            : null;
         // Enum constructors carry two synthetic leading parameters (index,
         // name); direct calls — only factories are reachable — bind them null.
         if (declaration is ConstructorDeclaration &&
@@ -654,13 +671,13 @@ final class CallResolver {
       // positional-then-named (source order / padded ABI) — carry the raw
       // vector.
       vectorOverride:
-          resolved is BridgeMember || L.type.isSpec(CoreTypes.dynamic)
-          ? (resolved is BridgeMember
+          resolved?.member is BridgeMember || L.type.isSpec(CoreTypes.dynamic)
+          ? (resolvedMember is BridgeMember
                 ? argsPair.vector()
                 : argsPair.vector().skip(1).toList())
           : null,
     );
-    if (resolved is BridgeMember) {
+    if (resolvedMember is BridgeMember) {
       return BridgeCall(
         receiver: L,
         name: e.methodName.name,

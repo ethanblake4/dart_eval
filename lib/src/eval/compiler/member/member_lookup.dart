@@ -2,7 +2,6 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
-import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/member/member.dart';
 import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
@@ -527,4 +526,16 @@ class _SuperSeeker extends RecursiveAstVisitor<void> {
 
   @override
   void visitSuperExpression(SuperExpression node) => onSuper();
+}
+
+/// Whether any class in [type]'s superclass chain is bridged. Bridged
+/// ancestors provide members natively, so resolving a call to an evaluated
+/// class on the chain would skip the real (native) implementation.
+bool hasBridgeSuperclass(CompilerContext ctx, TypeRef type) {
+  for (final parent in ctx.typeSystem.superclassChain(type)) {
+    final bridge =
+        ctx.topLevelDeclarationsMap[parent.file]?[parent.name]?.bridge;
+    if (bridge is BridgeClassDef && bridge.bridge) return true;
+  }
+  return false;
 }

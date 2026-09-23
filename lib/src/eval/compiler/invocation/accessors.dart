@@ -5,7 +5,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart'
     show MachineRepresentation;
 import 'package:dart_eval/src/eval/compiler/context.dart';
-import 'package:dart_eval/src/eval/compiler/dispatch.dart';
+import 'deferred.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
@@ -13,6 +13,7 @@ import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import '../member/member.dart';
+import '../member/member_lookup.dart' show hasBridgeSuperclass;
 import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/model/function_type.dart'
     show declaredFunctionType, formalParameterAnnotationType;

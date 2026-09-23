@@ -1,6 +1,6 @@
 import '../../ir/string.dart';
 import 'package:control_flow_graph/control_flow_graph.dart' as cfg;
-import 'package:dart_eval/src/eval/compiler/dispatch.dart';
+import '../invocation/deferred.dart';
 import '../type.dart';
 import '../../ir/alu.dart' as alu;
 import '../../ir/async.dart' as async;

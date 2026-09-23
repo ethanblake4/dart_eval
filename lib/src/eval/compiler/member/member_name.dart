@@ -66,3 +66,11 @@ final class MemberName {
   @override
   String toString() => 'MemberName($key)';
 }
+
+/// Maps the legacy integer member kind (0 = getter, 1 = setter,
+/// 2 = method) to its [MemberKind].
+MemberKind memberKindOf(int kind) => switch (kind) {
+  0 => MemberKind.getter,
+  1 => MemberKind.setter,
+  _ => MemberKind.method,
+};

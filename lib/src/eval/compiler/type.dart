@@ -667,11 +667,9 @@ TypeRef? superMixinMemberOwner(CompilerContext ctx, String name) {
       );
     }
     if (ref == null) continue;
-    final declarations = ctx.instanceDeclarationsMap[ref.file]?[ref.name];
-    if (declarations == null) continue;
-    if (declarations.containsKey(name) ||
-        declarations.containsKey(MemberName.getter(name).key) ||
-        declarations.containsKey(MemberName.setter(name).key)) {
+    final mixinDecl = ctx.types.find(ref.file, ref.name);
+    if (mixinDecl == null) continue;
+    if (ctx.memberLookup.declaredAccessor(mixinDecl, name) != null) {
       return TypeRef.lookupDeclaration(ctx, ctx.library, hostDecl);
     }
   }

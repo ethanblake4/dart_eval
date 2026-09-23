@@ -3,7 +3,7 @@ import '../invocation/bound_call.dart';
 import '../invocation/binder.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
-import 'package:dart_eval/src/eval/compiler/dispatch.dart';
+import '../invocation/deferred.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/instance_creation.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
