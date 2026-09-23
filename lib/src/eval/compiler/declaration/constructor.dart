@@ -192,7 +192,7 @@ void compileConstructorDeclaration(
       );
     }
 
-    ctx.setLocal(p.name!.lexeme, vrep.captureBinding(ctx, p));
+    ctx.setLocal(p.name!.lexeme, vrep).captureBinding(ctx, p);
 
     i++;
   }
@@ -1169,8 +1169,8 @@ void compileAliasForwardingConstructor(
         SSA('arg_$i'),
         type,
         rep: Abi.parameter(type, CallableKind.initializer),
-      ).captureBinding(ctx, p),
-    );
+      ),
+    ).captureBinding(ctx, p);
     i++;
   }
   // Generative callees receive the runtime type as a trailing int argument.

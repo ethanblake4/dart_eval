@@ -110,7 +110,7 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
 
         // `_` parameters are wildcards: non-binding and repeatable.
         if (p.name!.lexeme != '_') {
-          ctx.setLocal(p.name!.lexeme, vRep.captureBinding(ctx, p));
+          ctx.setLocal(p.name!.lexeme, vRep).captureBinding(ctx, p);
         }
         parameterRepresentations.add(vRep.rep.bank);
 

@@ -70,21 +70,22 @@ void compileVariableDeclarationList(
         isConst: l.isConst,
       );
       ctx.pushOp(Assign(local.ssa, res.ssa));
-      ctx.setLocal(li.name.lexeme, local.captureBinding(ctx, li));
+      ctx.setLocal(li.name.lexeme, local).captureBinding(ctx, li);
     } else {
       if (isWildcard) continue;
-      ctx.setLocal(
-        li.name.lexeme,
-        BuiltinValue()
-            .push(ctx)
-            .boxIfNeeded(ctx)
-            .copyWith(
-              type: type ?? CoreTypes.dynamic.ref(ctx),
-              declaredType: type ?? CoreTypes.dynamic.ref(ctx),
-              representation: MachineRepresentation.object,
-            )
-            .captureBinding(ctx, li),
-      );
+      ctx
+          .setLocal(
+            li.name.lexeme,
+            BuiltinValue()
+                .push(ctx)
+                .boxIfNeeded(ctx)
+                .copyWith(
+                  type: type ?? CoreTypes.dynamic.ref(ctx),
+                  declaredType: type ?? CoreTypes.dynamic.ref(ctx),
+                  representation: MachineRepresentation.object,
+                ),
+          )
+          .captureBinding(ctx, li);
     }
   }
 }

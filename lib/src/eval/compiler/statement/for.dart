@@ -68,7 +68,7 @@ StatementInfo compileForStatement(
     update: (ctx) {
       if (parts is ForPartsWithDeclarations) {
         for (final variable in parts.variables.variables) {
-          ctx.lookupLocal(variable.name.lexeme)!.renewCaptureCell(ctx);
+          ctx.lookupBinding(variable.name.lexeme)!.renewCaptureCell(ctx);
         }
       }
       for (final u in parts.updaters) {
@@ -162,17 +162,18 @@ StatementInfo compileForEachLoop(
         final bindingType = parts.loopVariable.type == null
             ? elementType
             : declaredType;
-        ctx.setLocal(
-          name,
-          BuiltinValue()
-              .push(ctx)
-              .copyWith(
-                type: elementType,
-                declaredType: bindingType,
-                rep: ValueRep.boxed,
-              )
-              .captureBinding(ctx, parts.loopVariable),
-        );
+        ctx
+            .setLocal(
+              name,
+              BuiltinValue()
+                  .push(ctx)
+                  .copyWith(
+                    type: elementType,
+                    declaredType: bindingType,
+                    rep: ValueRep.boxed,
+                  ),
+            )
+            .captureBinding(ctx, parts.loopVariable);
         loopVariable = IdentifierReference(null, name);
       } else if (parts is ForEachPartsWithIdentifier) {
         loopVariable = compileExpressionAsReference(parts.identifier, ctx);
@@ -192,7 +193,7 @@ StatementInfo compileForEachLoop(
     assignedNamesScan: assignedNamesScan,
     update: (ctx) {
       if (parts is ForEachPartsWithDeclaration) {
-        ctx.lookupLocal(parts.loopVariable.name.lexeme)!.renewCaptureCell(ctx);
+        ctx.lookupBinding(parts.loopVariable.name.lexeme)!.renewCaptureCell(ctx);
       }
       loopVariable.setValue(ctx, iterator.getProperty(ctx, 'current'));
     },
@@ -277,17 +278,18 @@ StatementInfo compileAwaitForLoop(
         final bindingType = parts.loopVariable.type == null
             ? elementType
             : declaredType;
-        ctx.setLocal(
-          name,
-          BuiltinValue()
-              .push(ctx)
-              .copyWith(
-                type: elementType,
-                declaredType: bindingType,
-                rep: ValueRep.boxed,
-              )
-              .captureBinding(ctx, parts.loopVariable),
-        );
+        ctx
+            .setLocal(
+              name,
+              BuiltinValue()
+                  .push(ctx)
+                  .copyWith(
+                    type: elementType,
+                    declaredType: bindingType,
+                    rep: ValueRep.boxed,
+                  ),
+            )
+            .captureBinding(ctx, parts.loopVariable);
         loopVariable = IdentifierReference(null, name);
       } else if (parts is ForEachPartsWithIdentifier) {
         loopVariable = compileExpressionAsReference(parts.identifier, ctx);
@@ -318,7 +320,7 @@ StatementInfo compileAwaitForLoop(
     assignedNamesScan: [node],
     update: (ctx) {
       if (parts is ForEachPartsWithDeclaration) {
-        ctx.lookupLocal(parts.loopVariable.name.lexeme)!.renewCaptureCell(ctx);
+        ctx.lookupBinding(parts.loopVariable.name.lexeme)!.renewCaptureCell(ctx);
       }
       loopVariable.setValue(ctx, iterator.getProperty(ctx, 'current'));
     },

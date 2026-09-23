@@ -93,7 +93,7 @@ StatementInfo compileStatement(
               type: CoreTypes.function.ref(ctx),
               declaredType: CoreTypes.function.ref(ctx),
             );
-        ctx.setLocal(decl.name.lexeme, placeholder.captureBinding(ctx, decl));
+        ctx.setLocal(decl.name.lexeme, placeholder).captureBinding(ctx, decl);
       }
       final variable = compileFunctionExpression(decl.functionExpression, ctx);
       if (captured) {

@@ -5,7 +5,6 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/compiler/variable/binding.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
@@ -78,16 +77,7 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
   // the `#this` local so later `this` reads see it (anonymous-method
   // receivers, extension receivers, and class `this` all live there).
   if (e.expression is ThisExpression) {
-    final localThis = ctx.lookupLocal('#this');
-    final frame = localThis?.frameIndex;
-    if (localThis != null && frame != null) {
-      ctx.locals[frame]['#this'] = LocalBinding(
-        '#this',
-        V
-          ..localName = '#this'
-          ..frameIndex = frame,
-      );
-    }
+    ctx.lookupBinding('#this')?.rebind(V);
   }
   return V;
 }

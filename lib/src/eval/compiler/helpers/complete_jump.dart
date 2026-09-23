@@ -1,4 +1,5 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
+import 'package:dart_eval/src/eval/compiler/variable/binding.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/ir/exception.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
@@ -11,10 +12,10 @@ void completeJump(
   final trampoline = BasicBlock<Operation>([
     for (final scope in ctx.locals)
       for (final binding in scope.values)
-        if (binding.current.captureCellSlot case final slot?)
-          LoadExceptionSlot(binding.current.captureCell!, slot)
-        else if (binding.current.exceptionSlot case final slot?)
-          LoadExceptionSlot(binding.current.ssa, slot),
+        if (binding.storage case ExceptionSlotStorage(:final slot, :final cell))
+          cell == null
+              ? LoadExceptionSlot(binding.current.ssa, slot)
+              : LoadExceptionSlot(cell, slot),
     Jump(target.label!),
   ], label: ctx.label('jump_completion'));
   ctx.pushOp(CompleteJump(trampoline.label!, targetDepth));

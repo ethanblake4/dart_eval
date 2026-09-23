@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/src/eval/compiler/variable/binding.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/statement/block.dart';
@@ -36,21 +37,21 @@ StatementInfo compileTryStatement(
     for (final entry in ctx.locals[frame].entries.toList()) {
       final binding = entry.value;
       final current = binding.current;
-      if (current.captureCell != null) {
+      if (binding.captureCell case final cell?) {
         final slot = ExceptionSlot(
           ctx.svar('handler_cell').name,
           MachineRepresentation.object,
         );
         captureSlots[(frame, entry.key)] = slot;
-        ctx.pushOp(StoreExceptionSlot(slot, current.captureCell!));
-        binding.rebind(current.copyWith()..captureCellSlot = slot);
-      } else if (current.exceptionSlot == null) {
+        ctx.pushOp(StoreExceptionSlot(slot, cell));
+        binding.storeInExceptionSlot(slot);
+      } else if (binding.storage is! ExceptionSlotStorage) {
         final slot = ExceptionSlot(
           ctx.svar('handler_local').name,
           current.representation,
         );
         ctx.pushOp(StoreExceptionSlot(slot, current.ssa));
-        binding.rebind(current.copyWith()..exceptionSlot = slot);
+        binding.storeInExceptionSlot(slot);
       }
     }
   }
@@ -64,9 +65,12 @@ StatementInfo compileTryStatement(
         final cellSlot = captureSlots[(frame, entry.key)];
         final slot =
             cellSlot ??
-            initialState.locals[frame][entry.key]!.current.exceptionSlot;
+            switch (initialState.locals[frame][entry.key]!.storage) {
+              ExceptionSlotStorage s => s.slot,
+              _ => null,
+            };
         if (slot == null) continue;
-        final loaded = cellSlot == null ? current.ssa : current.captureCell!;
+        final loaded = cellSlot == null ? current.ssa : entry.value.captureCell!;
         ctx.pushOp(LoadExceptionSlot(loaded, slot));
       }
     }
@@ -221,7 +225,7 @@ void _bindException(
       clause.exceptionParameter!.name.lexeme,
       Variable.ssa(
         ctx,
-        Assign(ctx.svar('catch_parameter'), exception.readBinding(ctx).ssa),
+        Assign(ctx.svar('catch_parameter'), (exception.binding?.read(ctx) ?? exception).ssa),
         type,
         rep: ValueRep.boxed,
       ),

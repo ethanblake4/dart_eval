@@ -1,5 +1,6 @@
 import 'identifier.dart' show resolveInstanceDeclaration;
 import '../helpers/captures.dart';
+import 'package:dart_eval/src/eval/compiler/variable/binding.dart';
 import '../helpers/default_value.dart';
 import '../../ir/function.dart' as function_ir;
 import '../../ir/representation.dart';
@@ -114,18 +115,22 @@ Variable compileFunctionExpression(
       for (final capture in captures.entries) {
         final loaded = ctx.svar('capture');
         ctx.pushOp(LoadCapture(loaded, captureIndex++));
-        final binding = Variable.of(
-          ctx,
-          loaded,
-          capture.value.type,
-          representation: capture.value.representation,
-          rep: capture.value.rep,
-          isFinal: capture.value.isFinal,
-          callingConvention: capture.value.callingConvention,
-          methodReturnType: capture.value.methodReturnType,
+        final lb = ctx.setLocal(
+          capture.key,
+          Variable.of(
+            ctx,
+            loaded,
+            capture.value.type,
+            representation: capture.value.representation,
+            rep: capture.value.rep,
+            isFinal: capture.value.isFinal,
+            callingConvention: capture.value.callingConvention,
+            methodReturnType: capture.value.methodReturnType,
+          ),
         );
-        if (capture.value.captureCell != null) binding.captureCell = loaded;
-        ctx.setLocal(capture.key, binding);
+        if (capture.value.binding?.captureCell != null) {
+          lb.storage = CaptureCellStorage(loaded);
+        }
       }
       final resolvedParams = resolveFPLDefaults(
         ctx,
@@ -172,7 +177,7 @@ Variable compileFunctionExpression(
 
         // `_` parameters are wildcards: non-binding and repeatable.
         if (p.name!.lexeme != '_') {
-          ctx.setLocal(p.name!.lexeme, vRep.captureBinding(ctx, p));
+          ctx.setLocal(p.name!.lexeme, vRep).captureBinding(ctx, p);
         }
 
         i++;
@@ -384,7 +389,7 @@ Variable compileFunctionExpression(
     CreateClosure(
       ctx.svar('closure'),
       target,
-      captures.values.map((v) => v.captureCell ?? v.ssa).toList(),
+      captures.values.map((v) => v.binding?.captureCell ?? v.ssa).toList(),
       requiredPositional: requiredPositionalArgCount,
       positionalCount: positional.length,
       namedNames: sortedNamedArgNames,

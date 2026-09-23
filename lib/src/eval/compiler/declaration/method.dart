@@ -167,8 +167,8 @@ int compileMethodDeclaration(
               SSA('arg_$i'),
               type,
               rep: Abi.parameter(type, CallableKind.method),
-            ).captureBinding(ctx, p),
-          );
+            ),
+          ).captureBinding(ctx, p);
         }
 
         i++;

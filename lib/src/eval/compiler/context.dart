@@ -37,16 +37,19 @@ mixin ScopeContext on Object implements AbstractScopeContext {
     return null;
   }
 
-  Variable setLocal(String name, Variable v, {int? frame}) {
+  /// Declares or replaces the binding for [name] in [frame] (default:
+  /// innermost) and returns it — [LocalBinding.read] materializes the
+  /// value for reads; `setValue` writes through the binding's storage.
+  LocalBinding setLocal(String name, Variable v, {int? frame}) {
     final f = frame ?? locals.length - 1;
-    final binding = locals[f][name];
-    if (binding != null) {
-      binding.rebind(v..frameIndex = f..localName = name);
-      return binding.current;
+    final existing = locals[f][name];
+    if (existing != null) {
+      existing.rebind(v);
+      return existing;
     }
-    final nb = LocalBinding(name, v..frameIndex = f..localName = name);
+    final nb = LocalBinding(name, v, frameIndex: f);
     locals[f][name] = nb;
-    return nb.current;
+    return nb;
   }
 
   Variable? lookupLocal(String name) => lookupBinding(name)?.current;
@@ -83,7 +86,7 @@ mixin ScopeContext on Object implements AbstractScopeContext {
       for (final scope in initial.locals)
         {
           for (final entry in scope.entries)
-            entry.key: LocalBinding.snapshot(entry.key, entry.value.current),
+            entry.key: LocalBinding.snapshot(entry.value),
         },
     ];
   }
@@ -551,7 +554,7 @@ class ContextSaveState with ScopeContext {
       for (final scope in context.locals)
         {
           for (final entry in scope.entries)
-            entry.key: LocalBinding.snapshot(entry.key, entry.value.current),
+            entry.key: LocalBinding.snapshot(entry.value),
         },
     ];
   }

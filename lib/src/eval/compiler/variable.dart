@@ -1,9 +1,6 @@
 import '../ir/string.dart';
-import '../ir/closures.dart';
 import 'backend/representation.dart'
     show MachineRepresentation, representationForType;
-import 'helpers/captures.dart';
-import '../ir/exception.dart';
 import '../ir/flow.dart' show Call;
 import '../ir/collection.dart' show ListLength;
 import 'package:analyzer/dart/ast/ast.dart';
@@ -213,12 +210,8 @@ class Variable {
         callingConvention: callingConvention,
       )
       ..name = name
-      ..frameIndex = frameIndex
-      ..localName = localName
-      ..captureCell = captureCell
-      ..implicitReceiver = implicitReceiver
-      ..exceptionSlot = exceptionSlot
-      ..captureCellSlot = captureCellSlot;
+      ..binding = binding
+      ..implicitReceiver = implicitReceiver;
   }
 
   /// Widens this variable's allocation proofs for a control-flow join.
@@ -254,66 +247,17 @@ class Variable {
         callingConvention: callingConvention,
       )
       ..name = name
-      ..frameIndex = frameIndex
-      ..localName = localName
-      ..captureCell = captureCell
-      ..implicitReceiver = implicitReceiver
-      ..exceptionSlot = exceptionSlot
-      ..captureCellSlot = captureCellSlot;
+      ..binding = binding
+      ..implicitReceiver = implicitReceiver;
   }
 
   String? name;
-
-  /// Source binding name, independent of the SSA temporary name.
-  String? localName;
-  int? frameIndex;
 
   /// The [LocalBinding] this value is the current value of, if any —
   /// in-place boxing/unboxing of a bound local must rebind through it
   /// rather than writing back through `ctx.locals`.
   LocalBinding? binding;
-  SSA? captureCell;
-  ExceptionSlot? exceptionSlot;
-  ExceptionSlot? captureCellSlot;
 
-  Variable captureBinding(CompilerContext ctx, AstNode declaration) {
-    if (!capturesFor(declaration).captured.contains(declaration)) return this;
-    final cell = ctx.svar('cell');
-    ctx.pushOp(NewCaptureCell(cell, ssa, representation));
-    // Captured variables can be reassigned by any closure invocation, so
-    // their allocation proofs are dropped.
-    return widened()..captureCell = cell;
-  }
-
-  Variable readBinding(CompilerContext ctx) => exceptionSlot != null
-      ? Variable.ssa(
-          ctx,
-          LoadExceptionSlot(ctx.svar('protected'), exceptionSlot!),
-          type,
-          declaredType: declaredType,
-          representation: representation,
-          isFinal: isFinal,
-          callingConvention: callingConvention,
-          methodReturnType: methodReturnType,
-        )
-      : captureCell == null
-      ? this
-      : Variable.ssa(
-          ctx,
-          ReadCaptureCell(ctx.svar('captured'), captureCell!, representation),
-          type,
-          declaredType: declaredType,
-          representation: representation,
-          isFinal: isFinal,
-          callingConvention: callingConvention,
-          methodReturnType: methodReturnType,
-        );
-
-  void renewCaptureCell(CompilerContext ctx) {
-    if (captureCell == null) return;
-    final previous = readBinding(ctx);
-    ctx.pushOp(NewCaptureCell(captureCell!, previous.ssa, representation));
-  }
 
   SSA get ssa => SSA(name!);
 
@@ -498,8 +442,9 @@ class Variable {
   /// Iterates over all frames and returns the first found one.
   /// If not found, returns this instance.
   Variable updated(ScopeContext ctx) {
-    if (localName == null) return this;
-    return ctx.lookupLocal(localName!) ?? this;
+    final b = binding;
+    if (b == null) return this;
+    return ctx.lookupLocal(b.name) ?? this;
   }
 
   /// Makes a copy of the variable with some fields updated.
@@ -540,13 +485,9 @@ class Variable {
         callingConvention: callingConvention ?? this.callingConvention,
       )
       ..name = name ?? this.name
-      ..frameIndex = frameIndex ?? this.frameIndex
-      ..localName = localName
-      ..captureCell = captureCell
+      ..binding = binding
       ..implicitReceiver = implicitReceiver
-      ..boundExtension = boundExtension
-      ..exceptionSlot = exceptionSlot
-      ..captureCellSlot = captureCellSlot;
+      ..boundExtension = boundExtension;
   }
 
   /// Makes a copy of the variable with some fields updated, and also
@@ -577,19 +518,27 @@ class Variable {
       facts: facts,
     );
 
-    if (uV.localName != null && uV.frameIndex != null && ctx != null) {
-      ctx.locals[uV.frameIndex!][uV.localName!]?.rebind(uV);
+    if (ctx != null) {
+      final b = uV.binding;
+      // The back-reference can point at a binding a save/restore cycle has
+      // since replaced in the locals map — rebind whichever binding
+      // actually occupies the slot.
+      if (b != null) {
+        final live =
+            b.frameIndex >= 0 && b.frameIndex < ctx.locals.length
+            ? ctx.locals[b.frameIndex][b.name] ?? b
+            : b;
+        live.rebind(uV);
+      }
     }
-
     return uV;
   }
 
   void inferType(CompilerContext ctx, TypeRef type) {
-    if (localName != null &&
-        frameIndex != null &&
-        ctx.typeInferenceSaveStates.isNotEmpty) {
+    final b = binding;
+    if (b != null && ctx.typeInferenceSaveStates.isNotEmpty) {
       final locals = ctx.typeInferenceSaveStates.last.locals;
-      locals[frameIndex!][localName!]?.promote(type);
+      locals[b.frameIndex][b.name]?.promote(type);
     }
   }
 
@@ -994,7 +943,7 @@ class Variable {
     final varName = name == null ? 'unnamed' : '"$name"';
     return 'Variable{$varName, $type, '
         '${methodOffset == null ? '' : 'method: $methodReturnType $methodOffset, '}'
-        '${boxed ? 'boxed' : 'unboxed'}, F[$frameIndex]}';
+        '${boxed ? 'boxed' : 'unboxed'}, F[${binding?.frameIndex}]}';
   }
 }
 

@@ -658,10 +658,10 @@ Variable _applyExtension(
         ));
   }
   // The application result shares the receiver's SSA but is a distinct
-  // value — dropping `localName` keeps `updated()` from re-resolving the
+  // value — dropping `binding` keeps `updated()` from re-resolving the
   // bound wrapper back to the unbound local.
   return receiver.copyWith()
-    ..localName = null
+    ..binding = null
     ..boundExtension = BoundExtension(ext, bindings);
 }
 

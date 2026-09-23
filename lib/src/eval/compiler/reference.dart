@@ -1,4 +1,5 @@
 import 'helpers/global.dart';
+import 'package:dart_eval/src/eval/compiler/variable/binding.dart';
 import 'helpers/conversion.dart';
 import 'model/function_type.dart';
 import '../ir/closures.dart';
@@ -772,26 +773,32 @@ class IdentifierReference implements Reference {
       final stored = local.representation == MachineRepresentation.object
           ? value.boxIfNeeded(ctx)
           : value.unboxIfNeeded(ctx, false);
-      if (local.exceptionSlot != null) {
-        ctx.pushOp(StoreExceptionSlot(local.exceptionSlot!, stored.ssa));
-        // Slot reads after a handler edge can observe a value written before
-        // the exception — allocation proofs can't be trusted across it.
-        ctx.locals[local.frameIndex!][local.localName!]
-            ?.rebind(local.widened());
+      final storage = local.binding?.storage;
+      // A binding whose cell is preserved in an exception slot still
+      // receives writes through the cell — only the cell itself is
+      // restore-loaded by the trampoline.
+      if (storage is ExceptionSlotStorage && storage.cell != null) {
+        ctx.pushOp(
+          WriteCaptureCell(storage.cell!, stored.ssa, local.representation),
+        );
+        local.binding?.rebind(local.widened());
         return stored;
       }
-      if (local.captureCell != null) {
+      if (storage is ExceptionSlotStorage) {
+        ctx.pushOp(StoreExceptionSlot(storage.slot, stored.ssa));
+        // Slot reads after a handler edge can observe a value written before
+        // the exception — allocation proofs can't be trusted across it.
+        local.binding?.rebind(local.widened());
+        return stored;
+      }
+      final cell = local.binding?.captureCell;
+      if (cell != null) {
         ctx.pushOp(
-          WriteCaptureCell(
-            local.captureCell!,
-            stored.ssa,
-            local.representation,
-          ),
+          WriteCaptureCell(cell, stored.ssa, local.representation),
         );
         // The cell can also be written by a closure invocation — allocation
         // proofs can't be trusted across it.
-        ctx.locals[local.frameIndex!][local.localName!]
-            ?.rebind(local.widened());
+        local.binding?.rebind(local.widened());
         return stored;
       }
       ctx.pushOp(Assign(local.ssa, stored.ssa));
@@ -1168,9 +1175,9 @@ class IdentifierReference implements Reference {
     }
 
     // First look at locals
-    final local = ctx.lookupLocal(name);
+    final local = ctx.lookupBinding(name);
     if (local != null) {
-      return local.readBinding(ctx);
+      return local.read(ctx);
     }
 
     // Inside an extension body, the extension's own members shadow both
