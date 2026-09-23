@@ -618,7 +618,7 @@ sealed class TypeRef {
   bool get isDartCore => decl?.isDartCore ?? false;
 
   /// Records have no declaration — the canonical `@record` name is the only
-  /// identity ([recordFields] may be empty for the `()` record).
+  /// identity.
   bool get isRecord => this is RecordTypeRef;
 
   /// An interface `Function` type with no resolved signature — a bare
@@ -1083,7 +1083,7 @@ final class TypeParameterTypeRef extends TypeRef {
 }
 
 /// A record type — `(<T...>, {name: T...})`. The canonical `@record`
-/// name and the legacy `recordFields` list are derived from
+/// name is derived from
 /// [positional]/[named] at construction so unported readers keep working.
 final class RecordTypeRef extends TypeRef {
   factory RecordTypeRef(
