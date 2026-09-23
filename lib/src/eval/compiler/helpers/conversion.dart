@@ -40,7 +40,7 @@ Variable convertInitializer(
         ctx,
         value,
         target,
-        representation: Abi.unboxedAcrossCalls(target).bank,
+        representation: Abi.storageSlot(target).bank,
         source: source,
       );
     case AssignmentConversion.none:
@@ -52,7 +52,7 @@ Variable convertInitializer(
               ctx,
               value,
               target,
-              representation: Abi.unboxedAcrossCalls(target).bank,
+              representation: Abi.storageSlot(target).bank,
               source: source,
             );
   }
@@ -168,10 +168,21 @@ Variable convertForAssignment(
   }
 
   final targetRepresentation = representation ?? representationForType(target);
+  final targetRep = repForType(target, targetRepresentation);
   if (conversion == AssignmentConversion.none) {
-    converted = targetRepresentation == MachineRepresentation.object
+    // Unbox to the slot's bank, not the value's own natural rep: a
+    // dynamic-typed value landing in a String slot must come out in the
+    // string bank, not nativeObject.
+    converted = targetRep == ValueRep.boxed
         ? converted.boxIfNeeded(ctx, source)
-        : converted.unboxIfNeeded(ctx, false);
+        : converted.boxed
+            ? converted.toRep(
+              ctx,
+              targetRep,
+              into: ctx.svar('unboxed'),
+              source: source,
+            )
+            : converted;
     return converted.copyWith(
       declaredType: target,
       representation: targetRepresentation,
@@ -183,6 +194,11 @@ Variable convertForAssignment(
     declaredType: target,
     representation: MachineRepresentation.object,
   );
-  if (targetRepresentation == MachineRepresentation.object) return converted;
-  return converted.unboxIfNeeded(ctx, false);
+  if (targetRep == ValueRep.boxed) return converted;
+  return converted.toRep(
+    ctx,
+    targetRep,
+    into: ctx.svar('unboxed'),
+    source: source,
+  );
 }

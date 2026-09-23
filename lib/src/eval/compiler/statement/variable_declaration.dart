@@ -56,7 +56,9 @@ void compileVariableDeclarationList(
         );
       }
       if (Abi.unboxedAcrossCalls(type ?? res.type).isBoxed) {
-        res = res.boxIfNeeded(ctx);
+        // Box into a fresh slot: the producer's SSA keeps its unboxed rep
+        // (in-place boxing would redefine it).
+        res = res.boxIntoFreshSlot(ctx);
       }
       if (isWildcard) {
         // Evaluate for side effects only; the wildcard binds nothing.

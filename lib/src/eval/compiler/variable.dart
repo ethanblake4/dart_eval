@@ -303,7 +303,16 @@ class Variable {
         facts: facts.copyWith(isConst: false),
       );
     }
-    final dest = into ?? ssa;
+    // A bound local converts in place: the binding's SSA name is its
+    // stable identity across edges — moving it to a conversion's temp
+    // name would leave the old name with a single def and no phi. An
+    // unbound temp gets a fresh slot: in-place redefinition of a temp
+    // name constrains one SSA version to two representations.
+    final dest =
+        into ??
+        (binding != null
+            ? ssa
+            : ctx.svar(target == ValueRep.boxed ? 'boxed' : 'unboxed'));
     if (target == ValueRep.boxed) {
       _emitBox(ctx, dest, source);
     } else if (rep == ValueRep.boxed) {
@@ -376,6 +385,15 @@ class Variable {
     // The conversion already recomputed the value-level facts (a boxed
     // literal int is still a constant int) — keep them rather than
     // re-deriving through copyWith.
+    if (binding == null) {
+      return copyWith(
+        name: converted.name,
+        type: converted.type,
+        representation: converted.representation,
+        rep: converted.rep,
+        facts: converted.facts,
+      );
+    }
     return copyWithUpdate(
       ctx,
       type: converted.type,
@@ -425,17 +443,24 @@ class Variable {
     final converted = toRep(
       ctx,
       unboxedRepOf(type),
-      into: update ? null : ctx.svar('unboxed'),
+      into: update && binding != null ? null : ctx.svar('unboxed'),
     );
-    return update
-        ? copyWithUpdate(
-            ctx,
-            type: converted.type,
-            representation: converted.representation,
-            rep: converted.rep,
-            facts: converted.facts,
-          )
-        : converted;
+    if (!update || binding == null) {
+      return copyWith(
+        name: converted.name,
+        type: converted.type,
+        representation: converted.representation,
+        rep: converted.rep,
+        facts: converted.facts,
+      );
+    }
+    return copyWithUpdate(
+      ctx,
+      type: converted.type,
+      representation: converted.representation,
+      rep: converted.rep,
+      facts: converted.facts,
+    );
   }
 
   /// Emits [Assign] copying this value into a fresh SSA slot, preserving its

@@ -25,7 +25,7 @@ import 'targets.dart';
 
 /// Maps a [CallSite]'s argument shape onto a [CallTarget]'s signature:
 /// match, seed the substitution, compile and coerce, solve inference, fill
-/// omitted arguments per the target's [BindingPolicy].
+/// omitted arguments per the target's policy.
 final class ArgumentBinder {
   const ArgumentBinder(this.ctx);
 

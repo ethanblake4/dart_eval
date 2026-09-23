@@ -23,7 +23,7 @@ void compileTopLevelVariableDeclaration(
     ctx.beginScope();
     ctx.functionSignatures[pos] = MachineFunctionSignature(
       [],
-      Abi.unboxedAcrossCalls(storageType).bank,
+      Abi.storageSlot(storageType).bank,
     );
     var V = compileExpression(initializer, ctx, storageType);
     TypeRef type;
@@ -37,7 +37,7 @@ void compileTopLevelVariableDeclaration(
       ctx,
       V,
       type,
-      representation: Abi.unboxedAcrossCalls(storageType).bank,
+      representation: Abi.storageSlot(storageType).bank,
       source: v,
       description:
           'Variable $varName of inferred type ${V.type} does not conform to '

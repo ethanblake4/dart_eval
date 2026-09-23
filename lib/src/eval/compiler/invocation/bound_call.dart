@@ -3,19 +3,6 @@ import 'package:control_flow_graph/control_flow_graph.dart' show SSA;
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 
-/// How the binder treats arguments the caller did not supply.
-enum BindingPolicy {
-  /// Full typed vector; omitted parameters get compiled defaults.
-  callerFillsDefaults,
-
-  /// Supplied arguments only; the runtime binds names and defaults.
-  calleeBinds,
-
-  /// Flattened positional vector; named arguments in declaration order
-  /// with shared null placeholders.
-  bridgeVector,
-}
-
 /// Whether a member *value* call evaluates the read or the arguments first.
 enum EvalOrder { argumentsFirst, readFirst }
 

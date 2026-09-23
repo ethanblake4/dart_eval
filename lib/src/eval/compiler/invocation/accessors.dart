@@ -1,6 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:collection/collection.dart';
-import 'package:control_flow_graph/control_flow_graph.dart' show SSA;
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart'
     show MachineRepresentation;
@@ -45,9 +44,9 @@ sealed class GetTarget {
     bool isSuperReceiver = false,
   }) {
     // A bare function reference has no SSA value; materialize the tear-off
-    // first so members like `hashCode`/`runtimeType` resolve on it.
+    // during emission so members like `hashCode`/`runtimeType` resolve on it.
     if (receiver.unmaterializedCallable != null) {
-      return resolve(ctx, receiver.tearOff(ctx), name, source: source);
+      return MaterializingGet(receiver, name, source: source);
     }
     if (name == 'length' && !receiver.type.nullable) {
       final isString = receiver.type.isAssignableTo(
@@ -61,8 +60,7 @@ sealed class GetTarget {
           receiver.rep == ValueRep.nativeList &&
           receiver.type.isSpec(CoreTypes.list);
       if (isString || isList) {
-        return IntrinsicGet(receiver.unboxIfNeeded(ctx, false), name,
-            string: isString);
+        return IntrinsicGet(receiver, name, string: isString, unbox: true);
       }
     }
     final resolvedReceiver = ctx.typeSystem.throughTypeParameters(
@@ -211,7 +209,6 @@ sealed class GetTarget {
       fieldType = resolvedField ?? CoreTypes.dynamic.ref(ctx);
       methodSignature = null;
     }
-    final boxed = receiver.boxIfNeeded(ctx);
     final exact = receiver.exactType;
     if (exact != null && !hasBridgeSuperclass(ctx, exact)) {
       // Storage for an inherited field lives on its declaring class's
@@ -267,7 +264,7 @@ sealed class GetTarget {
           final isLate =
               fieldDecl is FieldDeclaration && fieldDecl.fields.isLate;
           return FieldSlotGet(
-            boxed,
+            receiver,
             name,
             hops: needsLink ? links.sublist(1, depth + 1) : const [],
             index: fieldIndex,
@@ -283,13 +280,12 @@ sealed class GetTarget {
               ).nameKey
             : name;
         return DirectGetterCall(
-          boxed,
+          receiver,
           hops: needsLink ? links.sublist(1, depth + 1) : const [],
           file: link.file,
           className: link.name,
           nameKey: key,
           fieldType: fieldType,
-          typeEnvironmentReceiver: boxed.ssa,
         );
       }
     }
@@ -309,18 +305,17 @@ sealed class GetTarget {
             ? '${ctx.libraryUri(owner.file)}::$name'
             : name;
         return DirectGetterCall(
-          boxed,
+          receiver,
           hops: const [],
           file: owner.file,
           className: owner.name,
           nameKey: key,
           fieldType: fieldType,
-          typeEnvironmentReceiver: boxed.ssa,
         );
       }
     }
     return DynamicGet(
-      boxed,
+      receiver,
       name,
       fieldType: fieldType,
       methodSignature: methodSignature,
@@ -351,6 +346,22 @@ sealed class GetTarget {
   Variable emit(CompilerContext ctx);
 }
 
+/// The receiver is an unmaterialized callable (`f.name` where `f` is a
+/// function reference): materialize the tear-off during emission, then
+/// resolve the member on the materialized value.
+final class MaterializingGet extends GetTarget {
+  const MaterializingGet(this.receiver, this.name, {this.source});
+
+  final Variable receiver;
+  final String name;
+  final AstNode? source;
+
+  @override
+  Variable emit(CompilerContext ctx) =>
+      GetTarget.resolve(ctx, receiver.tearOff(ctx), name, source: source)
+          .emit(ctx);
+}
+
 /// A `String.length`, native-`List.length`, or `runtimeType` read.
 final class IntrinsicGet extends GetTarget {
   const IntrinsicGet(
@@ -359,10 +370,14 @@ final class IntrinsicGet extends GetTarget {
     this.string = false,
     this.constantType,
     this.loadRuntime = false,
+    this.unbox = false,
   });
 
-  /// The (already unboxed, for lengths) receiver.
+  /// The receiver — unboxed during emission when [unbox] is set.
   final Variable receiver;
+
+  /// Whether [emit] unboxes the receiver first (native `length` reads).
+  final bool unbox;
 
   /// The member name — `length` or `runtimeType`.
   final String name;
@@ -378,32 +393,35 @@ final class IntrinsicGet extends GetTarget {
   final bool loadRuntime;
 
   @override
-  Variable emit(CompilerContext ctx) => switch (name) {
-    'length' => Variable.ssa(
-        ctx,
-        string
-            ? StringOperation(
-                ctx.svar('string_length'),
-                StringOperator.length,
-                receiver.ssa,
-              )
-            : ListLength(ctx.svar('list_length'), receiver.ssa),
-        CoreTypes.int.ref(ctx),
-        rep: ValueRep.int,
-      ),
-    _ when constantType != null => Variable.ssa(
-        ctx,
-        constantType!.$2
-            ? LoadTypeParameter(ctx.svar('var_type'), constantType!.$1)
-            : LoadConstantType(ctx.svar('var_type'), constantType!.$1),
-        CoreTypes.type.ref(ctx),
-      ),
-    _ => Variable.ssa(
-        ctx,
-        LoadRuntimeType(ctx.svar('runtime_type'), receiver.ssa),
-        CoreTypes.type.ref(ctx),
-      ),
-  };
+  Variable emit(CompilerContext ctx) {
+    final recv = unbox ? receiver.unboxIfNeeded(ctx, false) : receiver;
+    return switch (name) {
+      'length' => Variable.ssa(
+          ctx,
+          string
+              ? StringOperation(
+                  ctx.svar('string_length'),
+                  StringOperator.length,
+                  recv.ssa,
+                )
+              : ListLength(ctx.svar('list_length'), recv.ssa),
+          CoreTypes.int.ref(ctx),
+          rep: ValueRep.int,
+        ),
+      _ when constantType != null => Variable.ssa(
+          ctx,
+          constantType!.$2
+              ? LoadTypeParameter(ctx.svar('var_type'), constantType!.$1)
+              : LoadConstantType(ctx.svar('var_type'), constantType!.$1),
+          CoreTypes.type.ref(ctx),
+        ),
+      _ => Variable.ssa(
+          ctx,
+          LoadRuntimeType(ctx.svar('runtime_type'), recv.ssa),
+          CoreTypes.type.ref(ctx),
+        ),
+    };
+  }
 }
 
 /// A field-slot read on a link reached by LoadSuper hops.
@@ -417,7 +435,7 @@ final class FieldSlotGet extends GetTarget {
     required this.fieldType,
   });
 
-  /// The already-boxed receiver the hop chain starts from.
+  /// The receiver the hop chain starts from; boxed during emission.
   final Variable receiver;
   final String name;
 
@@ -431,7 +449,7 @@ final class FieldSlotGet extends GetTarget {
 
   @override
   Variable emit(CompilerContext ctx) {
-    var linkSsa = receiver.ssa;
+    var linkSsa = receiver.boxIfNeeded(ctx).ssa;
     for (final parent in hops) {
       linkSsa = Variable.ssa(
         ctx,
@@ -463,10 +481,10 @@ final class DirectGetterCall extends GetTarget {
     required this.className,
     required this.nameKey,
     required this.fieldType,
-    this.typeEnvironmentReceiver,
   });
 
-  /// The already-boxed receiver the hop chain starts from.
+  /// The receiver the hop chain starts from; boxed during emission and
+  /// reused as the type-environment receiver.
   final Variable receiver;
 
   /// The links to hop through before the call.
@@ -477,13 +495,10 @@ final class DirectGetterCall extends GetTarget {
   final String nameKey;
   final TypeRef fieldType;
 
-  /// The receiver used for the type environment, when the callee's body
-  /// may dispatch through generic type parameters.
-  final SSA? typeEnvironmentReceiver;
-
   @override
   Variable emit(CompilerContext ctx) {
-    var linkSsa = receiver.ssa;
+    final boxed = receiver.boxIfNeeded(ctx);
+    var linkSsa = boxed.ssa;
     for (final parent in hops) {
       linkSsa = Variable.ssa(
         ctx,
@@ -503,7 +518,7 @@ final class DirectGetterCall extends GetTarget {
         ),
         [linkSsa],
         result: ctx.svar(nameKey),
-        typeEnvironmentReceiver: typeEnvironmentReceiver,
+        typeEnvironmentReceiver: boxed.ssa,
       ),
       fieldType,
       rep: ValueRep.boxed,
@@ -613,7 +628,7 @@ final class DynamicGet extends GetTarget {
     this.isSuperReceiver = false,
   });
 
-  /// The already-boxed receiver.
+  /// The receiver; boxed during emission.
   final Variable receiver;
   final String name;
   final TypeRef fieldType;
@@ -632,7 +647,7 @@ final class DynamicGet extends GetTarget {
     ctx,
     LoadPropertyDynamic(
       ctx.svar(name),
-      receiver.ssa,
+      receiver.boxIfNeeded(ctx).ssa,
       name,
       callerLibrary: ctx.library,
       superReceiver: isSuperReceiver,
@@ -661,31 +676,30 @@ sealed class SetTarget {
     AstNode? source,
     bool isSuperReceiver = false,
   }) {
-    final boxed = object.boxIfNeeded(ctx, source);
     final declaredFieldType = ctx.memberLookup.fieldType(
       
-      boxed.type,
+      object.type,
       name,
       forSet: true,
       source: source,
     );
     if (declaredFieldType == null &&
-        !hasInstanceMember(ctx, boxed.type, name, forSet: true)) {
+        !hasInstanceMember(ctx, object.type, name, forSet: true)) {
       // No instance member by this name: an extension setter may apply
       // (`e.name = v` where `set name` lives in `extension on T`).
       final extSetter = resolveExtensionMember(
         ctx,
-        boxed.type,
+        object.type,
         name,
         setter: true,
       );
       if (extSetter != null) {
         final (ext, member, bindings) = extSetter;
-        return ExtensionSetterCall(boxed, ext, member, bindings, name);
+        return ExtensionSetterCall(object, ext, member, bindings, name);
       }
     }
     final fieldType = declaredFieldType ?? CoreTypes.dynamic.ref(ctx);
-    final exact = boxed.exactType;
+    final exact = object.exactType;
     if (exact != null && !hasBridgeSuperclass(ctx, exact)) {
       // Storage for an inherited field lives on its declaring class's
       // link, reached from the receiver by LoadSuper hops.
@@ -743,7 +757,7 @@ sealed class SetTarget {
                 (v) => v.name.lexeme == name && (v.isFinal || v.isConst),
               );
           return FieldSlotSet(
-            boxed,
+            object,
             hops: needsLink ? links.sublist(1, depth + 1) : const [],
             index: fieldIndex,
             isLateFinal: isLateFinal,
@@ -755,7 +769,7 @@ sealed class SetTarget {
             ? '${ctx.libraryUri(link.file)}::$name'
             : name;
         return DirectSetterCall(
-          boxed,
+          object,
           hops: needsLink ? links.sublist(1, depth + 1) : const [],
           file: link.file,
           className: link.name,
@@ -766,13 +780,13 @@ sealed class SetTarget {
       }
     }
     if (exact == null &&
-        boxed.concreteTypes.length == 1 &&
-        !hasBridgeSuperclass(ctx, boxed.concreteTypes.first)) {
+        object.concreteTypes.length == 1 &&
+        !hasBridgeSuperclass(ctx, object.concreteTypes.first)) {
       // The receiver may hold a subclass: a setter can be called directly
       // on the dispatch root only when it isn't overridden and its body
       // never touches `super` (so any link works as `this`).
       final owner = ctx.memberLookup.directImplementationOwner(
-        boxed.concreteTypes.first,
+        object.concreteTypes.first,
         MemberName(name, MemberKind.setter),
       );
       if (owner != null &&
@@ -781,7 +795,7 @@ sealed class SetTarget {
             ? '${ctx.libraryUri(owner.file)}::$name'
             : name;
         return DirectSetterCall(
-          boxed,
+          object,
           hops: const [],
           file: owner.file,
           className: owner.name,
@@ -791,7 +805,7 @@ sealed class SetTarget {
         );
       }
     }
-    return DynamicSet(boxed, name, fieldType, isSuperReceiver: isSuperReceiver);
+    return DynamicSet(object, name, fieldType, isSuperReceiver: isSuperReceiver);
   }
 
   /// `this.name = v` where `name` is declared on the enclosing class —
@@ -851,7 +865,7 @@ final class FieldSlotSet extends SetTarget {
     required this.name,
   });
 
-  /// The already-boxed receiver the hop chain starts from.
+  /// The receiver the hop chain starts from; boxed during emission.
   final Variable object;
   final List<TypeRef> hops;
   final int index;
@@ -862,7 +876,7 @@ final class FieldSlotSet extends SetTarget {
   @override
   Variable emit(CompilerContext ctx, Variable value) {
     final val = _convertForMember(ctx, value, fieldType, name);
-    var linkSsa = object.ssa;
+    var linkSsa = object.boxIfNeeded(ctx).ssa;
     for (final parent in hops) {
       linkSsa = Variable.ssa(
         ctx,
@@ -890,7 +904,8 @@ final class DirectSetterCall extends SetTarget {
     required this.name,
   });
 
-  /// The already-boxed receiver the hop chain starts from.
+  /// The receiver the hop chain starts from; boxed during emission and
+  /// reused as the call's type-environment receiver.
   final Variable object;
   final List<TypeRef> hops;
   final int file;
@@ -902,7 +917,8 @@ final class DirectSetterCall extends SetTarget {
   @override
   Variable emit(CompilerContext ctx, Variable value) {
     final val = _convertForMember(ctx, value, fieldType, name);
-    var linkSsa = object.ssa;
+    final boxed = object.boxIfNeeded(ctx);
+    var linkSsa = boxed.ssa;
     for (final parent in hops) {
       linkSsa = Variable.ssa(
         ctx,
@@ -921,7 +937,7 @@ final class DirectSetterCall extends SetTarget {
         ),
         [linkSsa, val.ssa],
         result: ctx.svar(name),
-        typeEnvironmentReceiver: object.ssa,
+        typeEnvironmentReceiver: boxed.ssa,
       ),
     );
     return val;
@@ -972,7 +988,7 @@ final class ExtensionSetterCall extends SetTarget {
     this.name,
   );
 
-  /// The already-boxed receiver.
+  /// The receiver; boxed during emission.
   final Variable object;
   final EvalExtension ext;
   final MethodDeclaration member;
@@ -1026,7 +1042,7 @@ final class DynamicSet extends SetTarget {
     this.isSuperReceiver = false,
   });
 
-  /// The already-boxed receiver.
+  /// The receiver; boxed during emission.
   final Variable object;
   final String name;
   final TypeRef fieldType;
@@ -1040,7 +1056,7 @@ final class DynamicSet extends SetTarget {
     final val = _convertForMember(ctx, value, fieldType, name);
     ctx.pushOp(
       SetPropertyDynamic(
-        object.ssa,
+        object.boxIfNeeded(ctx).ssa,
         name,
         val.ssa,
         callerLibrary: ctx.library,

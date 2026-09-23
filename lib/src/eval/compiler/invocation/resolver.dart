@@ -524,6 +524,7 @@ final class CallResolver {
               VirtualCall(
                 receiver: L,
                 name: e.methodName.name,
+                member: resolved.member,
                 isSuperReceiver: e.target is SuperExpression,
               ),
             );
@@ -677,6 +678,7 @@ final class CallResolver {
         receiver: L,
         name: e.methodName.name,
         isSuperReceiver: e.target is SuperExpression,
+        member: resolvedMember,
       ).emit(ctx, boundCall);
     }
     if (L.type.isSpec(CoreTypes.dynamic)) {
@@ -690,6 +692,7 @@ final class CallResolver {
           VirtualCall(
             receiver: L,
             name: e.methodName.name,
+            member: resolvedMember,
             isSuperReceiver: e.target is SuperExpression,
           ),
         )

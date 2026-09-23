@@ -626,7 +626,7 @@ Variable _loadGlobalVariable(
     ctx,
     LoadGlobal(ctx.svar(valueName ?? globalName), gIndex),
     type,
-    rep: Abi.unboxedAcrossCalls(type),
+    rep: Abi.storageSlot(type),
   );
 }
 

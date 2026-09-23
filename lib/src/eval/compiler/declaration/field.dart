@@ -39,7 +39,7 @@ void compileFieldDeclaration(
         ctx.beginScope();
         ctx.functionSignatures[pos] = MachineFunctionSignature(
           [],
-          Abi.unboxedAcrossCalls(storageType).bank,
+          Abi.storageSlot(storageType).bank,
         );
         var V = compileExpression(initializer, ctx, type);
         if (type != null) {
@@ -55,7 +55,7 @@ void compileFieldDeclaration(
         } else {
           type = widenedInferredType(ctx, V.type);
         }
-        V = Abi.unboxedAcrossCalls(storageType).isBoxed
+        V = Abi.storageSlot(storageType).isBoxed
             ? V.boxIfNeeded(ctx)
             : V.unboxIfNeeded(ctx);
         type = storageType;

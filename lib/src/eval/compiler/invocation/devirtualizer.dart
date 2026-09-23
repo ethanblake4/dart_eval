@@ -1,8 +1,4 @@
 import 'package:dart_eval/src/eval/compiler/context.dart';
-import 'package:control_flow_graph/control_flow_graph.dart' show SSA;
-import 'package:dart_eval/src/eval/compiler/type.dart';
-import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/ir/objects.dart';
 import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 import 'deferred.dart';
 import 'targets.dart';
@@ -57,7 +53,7 @@ final class Devirtualizer {
         ),
         receiver: L,
         ownerLink: linkType != null && needsLink
-            ? ownerLinkSsa(ctx, L.ssa, linkType, directOwner)
+            ? (linkType, directOwner)
             : null,
         typeEnvironmentReceiver: L,
         declaringLink: directOwner,
@@ -67,32 +63,3 @@ final class Devirtualizer {
   }
 }
 
-/// The SSA of [receiver]'s inheritance-chain link owned by [owner], emitting
-/// a LoadSuper hop per level. [from] is the receiver's static type and
-/// [owner] a link found on its chain (e.g. via
-/// [MemberLookup.implementationOwner]). Method and accessor bodies take
-/// `this` as the declaring class's link — the same binding
-/// [TypedDispatch.resolve] performs — so direct calls must hand them that
-/// link rather than the dispatch root.
-SSA ownerLinkSsa(
-  CompilerContext ctx,
-  SSA receiver,
-  TypeRef from,
-  TypeRef owner,
-) {
-  final links = [from, ...ctx.typeSystem.superclassChain(from)];
-  var ssa = receiver;
-  for (var i = 0; i < links.length; i++) {
-    final link = links[i];
-    if (link.file == owner.file && link.name == owner.name) return ssa;
-    if (i + 1 >= links.length) return receiver; // owner isn't on the chain
-    final parent = links[i + 1];
-    ssa = Variable.ssa(
-      ctx,
-      LoadSuper(ctx.svar('super'), ssa),
-      parent,
-      concreteTypes: [parent],
-    ).ssa;
-  }
-  return ssa;
-}

@@ -77,7 +77,7 @@ TypeRef _record(CompilerContext ctx, int library, String name, TypeRef type) {
   ctx.topLevelVariableInferredTypes[library]![name] = type;
   final index = ctx.topLevelGlobalIndices[library]?[name];
   if (index != null) {
-    ctx.globalRepresentations[index] = Abi.unboxedAcrossCalls(type).bank;
+    ctx.globalRepresentations[index] = Abi.storageSlot(type).bank;
     ctx.globalNames[index] = name;
   }
   return type;
@@ -372,7 +372,7 @@ Variable storeGlobalBinding(
     ctx,
     value,
     type,
-    representation: Abi.unboxedAcrossCalls(type).bank,
+    representation: Abi.storageSlot(type).bank,
     source: source,
     description: 'Cannot assign ${value.type} to global $name of type $type',
   );

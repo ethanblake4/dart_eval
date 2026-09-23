@@ -1,3 +1,5 @@
+import 'package:dart_eval/src/eval/compiler/backend/representation.dart'
+    show representationForType;
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/values/value_rep.dart';
 
@@ -88,18 +90,16 @@ abstract final class Abi {
     }
   }
 
+  /// The rep a local, global, or field storage slot of [type] takes:
+  /// scalar banks for scalars — including `String`, which storage unboxes
+  /// even though call boundaries keep it boxed — and boxed object storage
+  /// for everything else.
+  static ValueRep storageSlot(TypeRef type) =>
+      repForType(type, representationForType(type));
+
   /// Field storage is always boxed.
   static const fieldStorage = ValueRep.boxed;
 
   /// Collection elements are always boxed.
   static const collectionElement = ValueRep.boxed;
-}
-
-/// The full ABI of one callable: the rep of each parameter slot and of the
-/// result. `null` result means the callable returns no value (`void`).
-class CallableAbi {
-  const CallableAbi(this.parameters, this.result);
-
-  final List<ValueRep> parameters;
-  final ValueRep? result;
 }

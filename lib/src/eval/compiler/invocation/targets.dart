@@ -22,16 +22,15 @@ import 'binder.dart';
 import 'resolver.dart';
 import 'bound_call.dart';
 
-/// What is called — the resolver's output. [signature] is null for
-/// [DynamicCall]; [emit] produces the IR ops and the result value.
+/// What is called — the resolver's output: a value holding only the
+/// information resolution established (offsets, resolved members,
+/// receivers). [emit] produces the IR ops and the result value; binding
+/// runs before it, so `emit` never does member lookup. [signature] is
+/// statically known on most targets and `null` for dynamic ones.
 sealed class CallTarget {
   const CallTarget();
 
   CallSignature? get signature;
-
-  BindingPolicy get policy;
-
-  CallableAbi get abi;
 
   Variable emit(CompilerContext ctx, BoundCall call);
 }
@@ -62,9 +61,10 @@ final class StaticCall extends CallTarget {
   /// and devirtualized methods).
   final Variable? receiver;
 
-  /// For devirtualized calls whose body uses `super`: the SSA holding the
-  /// receiver's link positioned at the declaring owner.
-  final SSA? ownerLink;
+  /// For devirtualized calls whose body uses `super`: the receiver link
+  /// [StaticCall.emit] positions at the declaring owner — `(from, owner)`
+  /// chain links — emitted as `LoadSuper` hops at emission time.
+  final (TypeRef from, TypeRef owner)? ownerLink;
 
   /// A boxed receiver carried for runtime generic checks.
   final Variable? typeEnvironmentReceiver;
@@ -73,19 +73,17 @@ final class StaticCall extends CallTarget {
   final CallSignature? signature;
 
   @override
-  BindingPolicy get policy => BindingPolicy.callerFillsDefaults;
-
-  @override
-  CallableAbi get abi => const CallableAbi(<ValueRep>[], ValueRep.boxed);
-
-  @override
   Variable emit(CompilerContext ctx, BoundCall call) {
     final s = ctx.svar('method_result');
+    final link = ownerLink;
     ctx.pushOp(
       Call(
         offset,
         [
-          if (receiver != null) ownerLink ?? receiver!.ssa,
+          if (receiver != null)
+            link != null
+                ? ownerLinkSsa(ctx, receiver!.ssa, link.$1, link.$2)
+                : receiver!.ssa,
           ...call.vector(),
         ],
         result: s,
@@ -110,14 +108,10 @@ final class ClosureCall extends CallTarget {
   /// reference-typed callee.
   final DirectCall? known;
 
+  /// The known target's signature, else the callee's own callable
+  /// signature (a tear-off's `methodSignature`).
   @override
-  CallSignature? get signature => null;
-
-  @override
-  BindingPolicy get policy => BindingPolicy.calleeBinds;
-
-  @override
-  CallableAbi get abi => const CallableAbi(<ValueRep>[], ValueRep.boxed);
+  CallSignature? get signature => known?.signature ?? callee?.methodSignature;
 
   @override
   Variable emit(CompilerContext ctx, BoundCall call) {
@@ -211,12 +205,6 @@ final class ConstructorCall extends CallTarget {
   CallSignature? get signature => null;
 
   @override
-  BindingPolicy get policy => BindingPolicy.callerFillsDefaults;
-
-  @override
-  CallableAbi get abi => const CallableAbi(<ValueRep>[], ValueRep.boxed);
-
-  @override
   Variable emit(CompilerContext ctx, BoundCall call) {
     var result = ctx.svar('instance');
     if (externalIndex != null) {
@@ -284,28 +272,31 @@ final class ConstructorCall extends CallTarget {
 }
 
 /// An instance member invoked through the receiver's static type.
+/// [member] is the interface member resolution found for [name] — the
+/// signature supplied arguments are checked against; the runtime still
+/// picks the override.
 final class VirtualCall extends CallTarget {
   const VirtualCall({
     required this.receiver,
     required this.name,
+    this.member,
     this.isSuperReceiver = false,
   });
 
   final Variable receiver;
   final String name;
 
+  /// The interface member resolved on the receiver's static type — null
+  /// only when no declaration could be found (an untyped `noSuchMethod`
+  /// dispatch remains possible).
+  final Member? member;
+
   /// `super.m(...)`: the receiver's link is positioned above the current
   /// layer, so devirtualization uses the link rather than `exactType`.
   final bool isSuperReceiver;
 
   @override
-  CallSignature? get signature => null;
-
-  @override
-  BindingPolicy get policy => BindingPolicy.callerFillsDefaults;
-
-  @override
-  CallableAbi get abi => const CallableAbi(<ValueRep>[], ValueRep.boxed);
+  CallSignature? get signature => member?.signature;
 
   @override
   Variable emit(CompilerContext ctx, BoundCall call) {
@@ -334,6 +325,7 @@ final class BridgeCall extends CallTarget {
     this.name = '',
     this.externalIndex,
     this.isSuperReceiver = false,
+    this.member,
   });
 
   /// The receiver for an instance bridge member; null for statics.
@@ -349,14 +341,11 @@ final class BridgeCall extends CallTarget {
   /// from the root would re-enter the override this call sits beneath.
   final bool isSuperReceiver;
 
-  @override
-  CallSignature? get signature => null;
+  /// The resolved bridge member, when the call resolved statically.
+  final Member? member;
 
   @override
-  BindingPolicy get policy => BindingPolicy.bridgeVector;
-
-  @override
-  CallableAbi get abi => const CallableAbi(<ValueRep>[], ValueRep.boxed);
+  CallSignature? get signature => member?.signature;
 
   @override
   Variable emit(CompilerContext ctx, BoundCall call) {
@@ -385,6 +374,36 @@ final class BridgeCall extends CallTarget {
   }
 }
 
+/// The SSA of [receiver]'s inheritance-chain link owned by [owner], emitting
+/// a `LoadSuper` hop per level. [from] is the receiver's static type and
+/// [owner] a link found on its chain (e.g. via
+/// [MemberLookup.implementationOwner]). Method and accessor bodies take
+/// `this` as the declaring class's link — the same binding
+/// `TypedDispatch.resolve` performs — so direct calls must hand them that
+/// link rather than the dispatch root.
+SSA ownerLinkSsa(
+  CompilerContext ctx,
+  SSA receiver,
+  TypeRef from,
+  TypeRef owner,
+) {
+  final links = [from, ...ctx.typeSystem.superclassChain(from)];
+  var ssa = receiver;
+  for (var i = 0; i < links.length; i++) {
+    final link = links[i];
+    if (link.file == owner.file && link.name == owner.name) return ssa;
+    if (i + 1 >= links.length) return receiver; // owner isn't on the chain
+    final parent = links[i + 1];
+    ssa = Variable.ssa(
+      ctx,
+      LoadSuper(ctx.svar('super'), ssa),
+      parent,
+      concreteTypes: [parent],
+    ).ssa;
+  }
+  return ssa;
+}
+
 /// A `dynamic` receiver: all arguments boxed, tear-offs materialized, no
 /// signature.
 final class DynamicCall extends CallTarget {
@@ -395,12 +414,6 @@ final class DynamicCall extends CallTarget {
 
   @override
   CallSignature? get signature => null;
-
-  @override
-  BindingPolicy get policy => BindingPolicy.calleeBinds;
-
-  @override
-  CallableAbi get abi => const CallableAbi(<ValueRep>[], ValueRep.boxed);
 
   @override
   Variable emit(CompilerContext ctx, BoundCall call) {
@@ -433,12 +446,6 @@ final class EqualityCall extends CallTarget {
   CallSignature? get signature => null;
 
   @override
-  BindingPolicy get policy => BindingPolicy.calleeBinds;
-
-  @override
-  CallableAbi get abi => const CallableAbi(<ValueRep>[], ValueRep.boxed);
-
-  @override
   Variable emit(CompilerContext ctx, BoundCall call) {
     // Operands arrive materialized (torn off) — the resolver performs the
     // unmaterialized-reference checks first, and `tearOff` keeps the method
@@ -467,12 +474,6 @@ final class MemberValueCall extends CallTarget {
 
   @override
   CallSignature? get signature => null;
-
-  @override
-  BindingPolicy get policy => BindingPolicy.calleeBinds;
-
-  @override
-  CallableAbi get abi => const CallableAbi(<ValueRep>[], ValueRep.boxed);
 
   @override
   Variable emit(CompilerContext ctx, BoundCall call) {
@@ -504,12 +505,6 @@ final class NoSuchMethodCall extends CallTarget {
 
   @override
   CallSignature? get signature => null;
-
-  @override
-  BindingPolicy get policy => BindingPolicy.calleeBinds;
-
-  @override
-  CallableAbi get abi => const CallableAbi(<ValueRep>[], ValueRep.boxed);
 
   Variable _symbolFor(CompilerContext ctx, String member) {
     final bridge =
