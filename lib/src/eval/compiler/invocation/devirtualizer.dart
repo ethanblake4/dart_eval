@@ -16,9 +16,11 @@ final class Devirtualizer {
 
   CallTarget refine(VirtualCall target) {
     final L = target.receiver;
+    // A nullable receiver may be null — a direct call would skip the
+    // runtime's null dispatch (e.g. interpolated toString on null).
     final linkType = switch ((target.isSuperReceiver, L.exactType)) {
       (true, _) => L.concreteTypes.first,
-      (false, final exactType?) => exactType,
+      (false, final exactType?) when !L.type.nullable => exactType,
       _ => null,
     };
     final name = target.name;
@@ -28,6 +30,9 @@ final class Devirtualizer {
     if (directOwner == null &&
         !target.isSuperReceiver &&
         L.exactType == null &&
+        // A nullable receiver may be null — a direct call would skip the
+        // runtime's null dispatch (e.g. interpolated toString on null).
+        !L.type.nullable &&
         L.concreteTypes.length == 1) {
       // The receiver may hold a subclass: the fixed target must not be
       // overridden by any descendant of its static type.

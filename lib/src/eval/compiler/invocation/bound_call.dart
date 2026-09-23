@@ -14,10 +14,6 @@ enum BindingPolicy {
   /// Flattened positional vector; named arguments in declaration order
   /// with shared null placeholders.
   bridgeVector,
-
-  /// Box everything, no coercion — today's operator path. Removed in
-  /// phase 7.
-  untypedLegacy,
 }
 
 /// Whether a member *value* call evaluates the read or the arguments first.

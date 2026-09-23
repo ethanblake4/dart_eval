@@ -8,6 +8,7 @@ import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/const.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/fpl.dart';
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
@@ -635,9 +636,9 @@ final class CallResolver {
   }
 
   /// `a + b`, `a[i]`, `!x`, `a == b`, `it.moveNext()` — the operator and
-  /// legacy dynamic-dispatch entry point, keeping `untypedLegacy` operand
-  /// handling until phase 7: [Intrinsics] first, then extension members,
-  /// then [EqualityCall]/[VirtualCall] on the boxed operand vector.
+  /// legacy dynamic-dispatch entry point: [Intrinsics] first, then
+  /// extension members, then [EqualityCall]/[VirtualCall] on the operand
+  /// vector bound to the declared operator signature.
   OperatorResult invokeOperator(
     Variable receiver,
     String? method,
@@ -762,7 +763,7 @@ final class CallResolver {
           )?.type ??
           CoreTypes.dynamic.ref(ctx);
     }
-    final boundCall = BoundCall(
+    var boundCall = BoundCall(
       receiver: recv,
       positional: [for (final arg in prepared) BoundArgument(arg)],
       named: [
@@ -771,7 +772,57 @@ final class CallResolver {
       ],
       returnType: returnType,
     );
-    final result = VirtualCall(receiver: recv, name: method).emit(ctx, boundCall);
+    // Typed binding: a declared operator coerces its operands to the
+    // declared signature (e.g. `int.+` takes num) instead of the legacy
+    // box-everything vector.
+    if (!isBareCall && !recv.type.isSpec(CoreTypes.dynamic)) {
+      try {
+        final opDec = resolveInstanceMethod(ctx, recv.type, method);
+        if (!opDec.isBridge && opDec.declaration is MethodDeclaration) {
+          final opDecl = opDec.declaration! as MethodDeclaration;
+          final opParams =
+              opDecl.parameters?.parameters ?? const <FormalParameter>[];
+          final typedPositional = <BoundArgument>[];
+          var pi = 0;
+          for (final param in opParams) {
+            if (param.isNamed || pi >= prepared.length) break;
+            var (paramType, _) = getFormalParameterType(
+              ctx,
+              param,
+              opDec.sourceLib,
+              opDecl,
+            );
+            paramType ??= CoreTypes.dynamic.ref(ctx);
+            typedPositional.add(
+              BoundArgument(
+                coerceArgumentForParameter(
+                  ctx,
+                  prepared[pi],
+                  paramType,
+                  param,
+                  opDecl,
+                ),
+              ),
+            );
+            pi++;
+          }
+          for (; pi < prepared.length; pi++) {
+            typedPositional.add(BoundArgument(prepared[pi]));
+          }
+          boundCall = BoundCall(
+            receiver: recv,
+            positional: typedPositional,
+            named: boundCall.named,
+            returnType: returnType,
+          );
+        }
+      } on CompileError {
+        // No resolvable declaration — the untyped dispatch applies.
+      }
+    }
+    final result = Devirtualizer(ctx)
+        .refine(VirtualCall(receiver: recv, name: method))
+        .emit(ctx, boundCall);
     return (target: recv, result: result, args: prepared, namedArgs: namedArgs ?? {});
   }
 
