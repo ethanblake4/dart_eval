@@ -1,3 +1,4 @@
+import 'package:dart_eval/src/eval/compiler/member/member.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
@@ -48,6 +49,51 @@ Reference compilePrefixedIdentifierAsReference(
   String name, {
   TypeRef? instantiated,
 }) {
+  final result = _resolveInstanceDeclarationImpl(
+    ctx,
+    library,
+    $class,
+    name,
+    instantiated: instantiated,
+  );
+  assert(() {
+    final owner = result?.$1;
+    final decl = result?.$2;
+    if (owner == null || decl == null) return true;
+    final probeKind = decl is GetSet || decl is! MethodDeclaration
+        ? MemberKind.getter
+        : MemberKind.method;
+    final resolved = ctx.memberLookup.tryInterfaceMember(
+      owner,
+      ctx.memberNameOf(name, probeKind),
+    );
+    if (resolved == null) return true;
+    final member = resolved.member;
+    final newNode = member is SourceMember
+        ? (member.isField ? (member.variable ?? member.node) : member.node)
+        : member is BridgeMember
+        ? member.def
+        : null;
+    final oldNode = decl is GetSet
+        ? (decl.declaration ?? decl.bridge)
+        : decl.declaration ?? decl.bridge;
+    assert(
+      newNode == null || identical(newNode, oldNode),
+      'MemberLookup.interfaceMember disagreed with '
+      'resolveInstanceDeclaration on $owner.$name: new=$newNode old=$oldNode',
+    );
+    return true;
+  }());
+  return result;
+}
+
+(TypeRef, DeclarationOrBridge)? _resolveInstanceDeclarationImpl(
+  CompilerContext ctx,
+  int library,
+  String $class,
+  String name, {
+  TypeRef? instantiated,
+}) {
   final dec = ctx.instanceDeclarationsMap[library]![$class]?[name];
 
   if (dec != null) {
@@ -92,7 +138,7 @@ Reference compilePrefixedIdentifierAsReference(
       if (type.file < 0) {
         return null;
       }
-      return resolveInstanceDeclaration(
+      return _resolveInstanceDeclarationImpl(
         ctx,
         type.file,
         type.name,
@@ -142,7 +188,7 @@ Reference compilePrefixedIdentifierAsReference(
         typeParameters: hostBindings,
       );
       if (mixinType == null) continue;
-      final result = resolveInstanceDeclaration(
+      final result = _resolveInstanceDeclarationImpl(
         ctx,
         mixinType.file,
         mixinType.name,
@@ -163,7 +209,7 @@ Reference compilePrefixedIdentifierAsReference(
       typeParameters: hostBindings,
     );
     if (extendsType != null) {
-      final result = resolveInstanceDeclaration(
+      final result = _resolveInstanceDeclarationImpl(
         ctx,
         extendsType.file,
         extendsType.name,
@@ -185,7 +231,7 @@ Reference compilePrefixedIdentifierAsReference(
       typeParameters: hostBindings,
     );
     if (ifaceType == null) continue;
-    final result = resolveInstanceDeclaration(
+    final result = _resolveInstanceDeclarationImpl(
       ctx,
       ifaceType.file,
       ifaceType.name,
@@ -198,7 +244,7 @@ Reference compilePrefixedIdentifierAsReference(
   final $type = ctx.visibleTypes[library]![$class]!;
   final objectType = CoreTypes.object.ref(ctx);
   if ($type != objectType) {
-    return resolveInstanceDeclaration(
+    return _resolveInstanceDeclarationImpl(
       ctx,
       objectType.file,
       'Object',
@@ -285,8 +331,29 @@ DeclarationOrBridge<Declaration, BridgeDeclaration>? resolveStaticDeclaration(
   bool forSet = false,
 }) {
   final map = ctx.topLevelDeclarationsMap[library]!;
-  return (forSet ? map['${$class}.${MemberName.setter(name).key}'] : map['${$class}.${MemberName.getter(name).key}']) ??
+  final found = (forSet ? map['${$class}.${MemberName.setter(name).key}'] : map['${$class}.${MemberName.getter(name).key}']) ??
       map['${$class}.$name'];
+  assert(() {
+    final decl = ctx.types.find(library, $class);
+    if (decl == null) return true;
+    final member = decl.staticMember(
+      name,
+      forSet ? MemberKind.setter : MemberKind.getter,
+    );
+    final newNode = member is SourceMember
+        ? (member.isField ? (member.variable ?? member.node) : member.node)
+        : member is BridgeMember
+        ? member.def
+        : null;
+    final oldNode = found?.declaration ?? found?.bridge;
+    assert(
+      found == null || identical(newNode, oldNode),
+      'TypeDecl.staticMember disagreed with resolveStaticDeclaration on '
+      '${$class}.$name: new=$newNode old=$oldNode',
+    );
+    return true;
+  }());
+  return found;
 }
 
 /// Looks up [name] as a static member of the enclosing class, then of each

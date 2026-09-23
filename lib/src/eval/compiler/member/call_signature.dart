@@ -172,13 +172,16 @@ final class CallSignature {
 
   /// The signature of a bridge function — `params`/`namedParams` become
   /// [ParameterSpec]s; `returnTypeDependency` becomes [returnOverride].
+  /// Bridge annotations resolve their `E`/`K`/`V` refs against [owner]
+  /// (the declaring type's `thisType`) — the owner's generic space.
   factory CallSignature.bridge(
     CompilerContext ctx,
     BridgeFunctionDef def, {
     required TypeRef returnFallback,
+    TypeRef? owner,
   }) {
     TypeRef resolve(BridgeTypeAnnotation t) =>
-        TypeRef.fromBridgeAnnotation(ctx, t);
+        TypeRef.fromBridgeAnnotation(ctx, t, specifiedType: owner);
     final dependency = def.returnTypeDependency;
     return CallSignature(
       positional: [

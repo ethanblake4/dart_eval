@@ -19,6 +19,7 @@ import 'package:dart_eval/src/eval/ir/collection.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
 
+import '../member/member.dart';
 import '../reference.dart';
 import 'dot_shorthand.dart';
 import 'expression.dart';
@@ -1428,6 +1429,47 @@ DeclarationOrBridge<ClassMember, BridgeMethodDef> resolveInstanceMethod(
   AstNode? source,
   TypeRef? bottomType,
 ]) {
+  final result = _resolveInstanceMethodImpl(
+    ctx,
+    instanceType,
+    methodName,
+    source,
+    bottomType,
+  );
+  assert(() {
+    final resolved = ctx.memberLookup.interfaceMember(
+      instanceType,
+      ctx.memberNameOf(methodName, MemberKind.method),
+      superclassFirst: true,
+      source: source,
+      bottomType: bottomType,
+    );
+    final member = resolved.member;
+    final oldDecl = result.declaration;
+    final oldBridge = result.bridge;
+    final newNode = member is SourceMember
+        ? member.node
+        : member is BridgeMember
+        ? member.def
+        : null;
+    final oldNode = oldDecl ?? oldBridge;
+    assert(
+      identical(newNode, oldNode),
+      'MemberLookup.interfaceMember disagreed with resolveInstanceMethod '
+      'on $instanceType.$methodName: new=$newNode old=$oldNode',
+    );
+    return true;
+  }());
+  return result;
+}
+
+DeclarationOrBridge<ClassMember, BridgeMethodDef> _resolveInstanceMethodImpl(
+  CompilerContext ctx,
+  TypeRef instanceType,
+  String methodName, [
+  AstNode? source,
+  TypeRef? bottomType,
+]) {
   if (instanceType.isTypeParameter) {
     final bound = (instanceType as TypeParameterTypeRef).parameter.bound ??
         CoreTypes.dynamic.ref(ctx);
@@ -1437,7 +1479,7 @@ DeclarationOrBridge<ClassMember, BridgeMethodDef> resolveInstanceMethod(
         source,
       );
     }
-    return resolveInstanceMethod(
+    return _resolveInstanceMethodImpl(
       ctx,
       bound,
       methodName,
@@ -1452,7 +1494,7 @@ DeclarationOrBridge<ClassMember, BridgeMethodDef> resolveInstanceMethod(
     // their own; their members come from the nominal supertype.
     final extendsType = ctx.typeSystem.superclassOf(instanceType);
     if (extendsType != null) {
-      return resolveInstanceMethod(
+      return _resolveInstanceMethodImpl(
         ctx,
         extendsType,
         methodName,
@@ -1487,7 +1529,7 @@ DeclarationOrBridge<ClassMember, BridgeMethodDef> resolveInstanceMethod(
               $extendsBridgeType!,
               specifiedType: bottomType0,
             );
-      return resolveInstanceMethod(
+      return _resolveInstanceMethodImpl(
         ctx,
         $extendsType,
         methodName,
@@ -1517,7 +1559,7 @@ DeclarationOrBridge<ClassMember, BridgeMethodDef> resolveInstanceMethod(
   } else if (dec0.declaration is EnumDeclaration) {
     // Enum declarations resolve undeclared members through the Enum bridge
     // declaration (and transitively Object).
-    return resolveInstanceMethod(
+    return _resolveInstanceMethodImpl(
       ctx,
       CoreTypes.enumType.ref(ctx),
       methodName,
@@ -1574,7 +1616,7 @@ DeclarationOrBridge<ClassMember, BridgeMethodDef> resolveInstanceMethod(
       );
       if (result != null) return result;
     }
-    return resolveInstanceMethod(
+    return _resolveInstanceMethodImpl(
       ctx,
       CoreTypes.object.ref(ctx),
       methodName,
@@ -1610,7 +1652,7 @@ DeclarationOrBridge<ClassMember, BridgeMethodDef>? _tryResolveInstanceMethod(
   TypeRef bottomType0,
 ) {
   try {
-    return resolveInstanceMethod(
+    return _resolveInstanceMethodImpl(
       ctx,
       instanceType,
       methodName,
@@ -1636,13 +1678,50 @@ DeclarationOrBridge<ClassMember, BridgeDeclaration> resolveStaticMethod(
   if (method != null) {
     if (method.declaration != null) {
       final member = method.declaration!;
+      final oldMember = member is VariableDeclaration
+          ? member.parent!.parent as ClassMember
+          : member as ClassMember;
+      assert(() {
+        final decl =
+            classType.decl ?? ctx.types.find(classType.file, classType.name);
+        // Extensions have no TypeDecl — `E.member` keys live in the
+        // static namespace but extension application is handled elsewhere.
+        if (decl == null) return true;
+        final newMember = decl.staticMember(methodName, MemberKind.method) ??
+            decl.staticMember(methodName, MemberKind.getter);
+        final newNode = newMember is SourceMember
+            ? newMember.node
+            : newMember is BridgeMember
+            ? newMember.def
+            : null;
+        assert(
+          identical(newNode, oldMember),
+          'TypeDecl.staticMember disagreed with resolveStaticMethod on '
+          '$classType.$methodName: new=$newNode old=$oldMember',
+        );
+        return true;
+      }());
       return DeclarationOrBridge(
         classType.file,
-        declaration: member is VariableDeclaration
-            ? member.parent!.parent as ClassMember
-            : member as ClassMember,
+        declaration: oldMember,
       );
     } else {
+      assert(() {
+        final decl =
+            classType.decl ?? ctx.types.find(classType.file, classType.name);
+        // Extensions have no TypeDecl — `E.member` keys live in the
+        // static namespace but extension application is handled elsewhere.
+        if (decl == null) return true;
+        final newMember = decl.staticMember(methodName, MemberKind.method) ??
+            decl.staticMember(methodName, MemberKind.getter);
+        final newNode = newMember is BridgeMember ? newMember.def : null;
+        assert(
+          identical(newNode, method.bridge),
+          'TypeDecl.staticMember disagreed with resolveStaticMethod on '
+          '$classType.$methodName: new=$newNode old=${method.bridge}',
+        );
+        return true;
+      }());
       return DeclarationOrBridge(classType.file, bridge: method.bridge!);
     }
   }

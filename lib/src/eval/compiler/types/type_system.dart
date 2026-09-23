@@ -25,7 +25,7 @@ final class TypeSystem {
   TypeRef? superclassOf(TypeRef type) {
     if (type.isTypeParameter) return null;
     if (type.isRecord) return CoreTypes.record.ref(_ctx);
-    final decl = type.decl;
+    final decl = type.decl ?? _ctx.types.find(type.file, type.name);
     if (decl == null) return null;
     final superclass = decl.supertypes.superclass;
     if (superclass == null) return null;
@@ -37,7 +37,7 @@ final class TypeSystem {
 
   /// The `implements` interfaces of [type], instantiated.
   List<TypeRef> interfacesOf(TypeRef type) {
-    final decl = type.decl;
+    final decl = type.decl ?? _ctx.types.find(type.file, type.name);
     if (decl == null || type.isTypeParameter || type.isRecord) {
       return const [];
     }
@@ -50,7 +50,7 @@ final class TypeSystem {
 
   /// The `with` mixins of [type], instantiated.
   List<TypeRef> mixinsOf(TypeRef type) {
-    final decl = type.decl;
+    final decl = type.decl ?? _ctx.types.find(type.file, type.name);
     if (decl == null || type.isTypeParameter || type.isRecord) {
       return const [];
     }
@@ -110,7 +110,14 @@ final class TypeSystem {
     while (queue.isNotEmpty) {
       final current = queue.removeLast();
       if (!seen.add(current)) continue;
-      if (identical(current.decl, target)) return current;
+      final currentDecl = current.decl ??
+          _ctx.types.find(current.file, current.name);
+      if (currentDecl != null &&
+          (identical(currentDecl, target) ||
+              (currentDecl.library == target.library &&
+                  currentDecl.name == target.name))) {
+        return current;
+      }
       queue.addAll(directSupertypes(current));
     }
     return null;

@@ -3,6 +3,7 @@ import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:control_flow_graph/control_flow_graph.dart' show SSA;
 import 'package:dart_eval/src/eval/bridge/declaration/class.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
+import 'package:dart_eval/src/eval/compiler/member/member.dart';
 import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
@@ -112,9 +113,33 @@ TypeRef? memberOwner(
                   ).nameKey,
                 ))) &&
         concreteMemberDecl(ctx, link, member, kind: kind) != null) {
+      assert(() {
+        final owner = ctx.memberLookup.implementationOwner(
+          type,
+          MemberName(member, memberKindOf(kind)),
+        );
+        assert(
+          owner != null && owner.file == link.file && owner.name == link.name,
+          'MemberLookup.implementationOwner disagreed with memberOwner on '
+          '$type.$member (kind $kind): new=$owner old=$link',
+        );
+        return true;
+      }());
       return link;
     }
   }
+  assert(() {
+    final owner = ctx.memberLookup.implementationOwner(
+      type,
+      MemberName(member, memberKindOf(kind)),
+    );
+    assert(
+      owner == null,
+      'MemberLookup.implementationOwner disagreed with memberOwner on '
+      '$type.$member (kind $kind): new=$owner old=null',
+    );
+    return true;
+  }());
   return null;
 }
 
@@ -178,6 +203,18 @@ bool memberNeedsOwnerLink(
   if (decl is! MethodDeclaration) return true;
   var usesSuper = false;
   decl.body.accept(_SuperSeeker(() => usesSuper = true));
+  assert(() {
+    final needed = ctx.memberLookup.needsOwnerLink(
+      owner,
+      MemberName(name, memberKindOf(kind)),
+    );
+    assert(
+      needed == usesSuper,
+      'MemberLookup.needsOwnerLink disagreed on $owner.$name (kind $kind): '
+      'new=$needed old=$usesSuper',
+    );
+    return true;
+  }());
   return usesSuper;
 }
 
@@ -208,6 +245,27 @@ Declaration? concreteMemberDecl(
     ).key];
   }
   if (decl is MethodDeclaration && !decl.isComplete) return null;
+  assert(() {
+    final linkDecl = ctx.types.find(link.file, link.name);
+    final member = linkDecl?.declaredMember(
+      MemberName(
+        name,
+        memberKindOf(kind),
+        privateLibraryUri:
+            name.startsWith('_') ? ctx.libraryUri(link.file) : null,
+      ),
+      forImplementation: true,
+    );
+    final newNode = member is SourceMember
+        ? (member.isField ? (member.variable ?? member.node) : member.node)
+        : null;
+    assert(
+      identical(newNode, decl) || (decl == null && newNode == null),
+      'TypeDecl.declaredMember disagreed with concreteMemberDecl on '
+      '$link.$name (kind $kind): new=$newNode old=$decl',
+    );
+    return true;
+  }());
   return decl;
 }
 

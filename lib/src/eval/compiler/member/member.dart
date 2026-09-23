@@ -165,7 +165,7 @@ final class SourceMember extends Member {
         );
       case FieldDeclaration f:
         final fieldName = variable?.name.lexeme ?? name.name;
-        final resolved = _fieldType(ctx, f);
+        final resolved = _fieldType(ctx, f) ?? CoreTypes.dynamic.ref(ctx);
         if (name.kind == MemberKind.setter) {
           return CallSignature(
             positional: [
@@ -220,9 +220,25 @@ final class SourceMember extends Member {
     }
   }
 
-  TypeRef _fieldType(CompilerContext ctx, FieldDeclaration f) {
+  /// The field's declared or inferred type, or null when it has neither —
+  /// mirrors `lookupFieldType`'s null for unannotated fields.
+  TypeRef? get fieldType {
+    final f = node;
+    if (f is! FieldDeclaration || variable == null) return null;
+    return _fieldType(_decl.ctx, f);
+  }
+
+  TypeRef? _fieldType(CompilerContext ctx, FieldDeclaration f) {
     final annotation = f.fields.type;
-    if (annotation == null) return CoreTypes.dynamic.ref(ctx);
+    if (annotation == null) {
+      // `lookupFieldType` returned null here rather than dynamic — a field
+      // with neither an annotation nor an inferred entry is left
+      // unresolved (callers degrade to dynamic themselves).
+      final inferred =
+          ctx.inferredFieldTypes[library]?[_decl.name]?[name.name];
+      if (inferred == null) return null;
+      return inferred;
+    }
     return TypeRef.fromAnnotation(
       ctx,
       library,
@@ -337,15 +353,21 @@ final class BridgeMember extends Member {
           ctx,
           m.functionDescriptor,
           returnFallback: CoreTypes.dynamic.ref(ctx),
+          owner: _decl.thisType,
         );
       case BridgeConstructorDef c:
         return CallSignature.bridge(
           ctx,
           c.functionDescriptor,
           returnFallback: _decl.thisType,
+          owner: _decl.thisType,
         );
       case BridgeFieldDef f:
-        final resolved = TypeRef.fromBridgeAnnotation(ctx, f.type);
+        final resolved = TypeRef.fromBridgeAnnotation(
+          ctx,
+          f.type,
+          specifiedType: _decl.thisType,
+        );
         if (name.kind == MemberKind.setter) {
           return CallSignature(
             positional: [
@@ -379,137 +401,189 @@ extension TypeDeclMembers on TypeDecl {
   /// The [MemberOwner] for members this declaration declares.
   TypeDeclMemberOwner get memberOwner => TypeDeclMemberOwner(this);
 
-  List<ClassMember> get _ownSourceMembers {
-    final self = this;
-    if (self is! SourceTypeDecl) return const [];
-    return switch (self.node) {
-      ClassDeclaration c => c.body.members,
-      MixinDeclaration m => m.body.members,
-      EnumDeclaration e => e.body.members,
-      _ => const <ClassMember>[],
-    };
-  }
-
-  MemberName _ownName(String lexeme, MemberKind kind) => MemberName(
-    lexeme,
-    kind,
-    privateLibraryUri: lexeme.startsWith('_') ? libraryUri : null,
-  );
-
   /// The member named [name] declared directly on this type — fields
   /// resolve to their accessor members (`getter`/`setter`), so asking for
-  /// a field's setter returns the setter member.
-  Member? declaredMember(MemberName name) {
+  /// a field's setter returns the setter member. Instance-map keys:
+  /// methods at `name@arity`, fields at the bare `name`, getters `name*g`,
+  /// setters `name*s` (private members use raw names — the map is already
+  /// class-scoped). Interface lookups fall back to the field/getter slots
+  /// (`x.m()` on a function-typed field or getter result resolves that
+  /// member — it dispatches `.call`); [forImplementation] mirrors
+  /// `concreteMemberDecl` — a single key, no fallback.
+  Member? declaredMember(MemberName name, {bool forImplementation = false}) {
     final self = this;
     if (self is SourceTypeDecl) {
-      for (final member in _ownSourceMembers) {
-        switch (member) {
-          case MethodDeclaration m when !m.isStatic:
-            if (_ownName(m.name.lexeme, memberKind(m)).nameKey ==
-                name.nameKey) {
-              return SourceMember(
-                owner: memberOwner,
-                name: name,
-                node: m,
-                library: library,
-              );
-            }
-          case FieldDeclaration f when !f.isStatic:
-            for (final variable in f.fields.variables) {
-              final lexeme = variable.name.lexeme;
-              if (_ownName(lexeme, MemberKind.getter).nameKey ==
-                      name.nameKey &&
-                  (name.kind != MemberKind.setter || !variable.isFinal)) {
-                return SourceMember(
-                  owner: memberOwner,
-                  name: name,
-                  node: f,
-                  library: library,
-                  variable: variable,
-                );
+      final map = ctx.instanceDeclarationsMap[library]?[this.name];
+      // Position tables qualify private names as `uri::_x`; the instance
+      // map stores the raw `_x` — probe both spellings.
+      Object? probe(String key) {
+        final found = map?[key];
+        if (found != null) return found;
+        final sep = key.lastIndexOf('::');
+        return sep < 0 ? null : map?[key.substring(sep + 2)];
+      }
+      Object? found;
+      switch (name.kind) {
+        case MemberKind.method:
+          found = probe(name.nameKey);
+          if (found == null && !forImplementation) {
+            final prefix = '${name.name}@';
+            for (final entry in map?.entries ??
+                const Iterable<MapEntry<String, Declaration>>.empty()) {
+              if (entry.key.startsWith(prefix)) {
+                found = entry.value;
+                break;
               }
             }
-          case _:
-        }
+          }
+          if (found == null && !forImplementation) {
+            found = probe(MemberName.getter(name.name).key);
+          }
+        case MemberKind.getter:
+          found = probe(MemberName(name.name, MemberKind.getter,
+                  privateLibraryUri: name.privateLibraryUri)
+              .key);
+          if (found == null && !forImplementation) {
+            found = probe(name.nameKey);
+          }
+        case MemberKind.setter:
+          // `x*s` only — a field's setter slot is resolved through the
+          // GetSet machinery, not the member map.
+          found = probe(MemberName(name.name, MemberKind.setter,
+                  privateLibraryUri: name.privateLibraryUri)
+              .key);
+        case MemberKind.constructor:
+          found = null;
       }
-      return null;
+      return self.sourceMemberOf(found, name);
     }
     final classDef = (self as BridgeTypeDecl).classDef;
     final enumDef = self.enumDef;
-    final methods = classDef?.methods ?? enumDef?.methods ?? const {};
-    final getters = classDef?.getters ?? enumDef?.getters ?? const {};
-    final setters = classDef?.setters ?? enumDef?.setters ?? const {};
-    final fields = classDef?.fields ?? enumDef?.fields ?? const {};
     switch (name.kind) {
       case MemberKind.method:
-        final def = methods[name.name];
-        if (def == null || def.isStatic) return null;
-        return BridgeMember(owner: memberOwner, name: name, def: def);
-      case MemberKind.getter:
-        final def = getters[name.name];
-        if (def != null && !def.isStatic) {
-          return BridgeMember(owner: memberOwner, name: name, def: def);
+        final def = classDef?.methods[name.name] ?? enumDef?.methods[name.name];
+        if (def == null || def.isStatic) {
+          if (forImplementation) return null;
+          final getter = classDef?.getters[name.name] ?? enumDef?.getters[name.name];
+          if (getter == null || getter.isStatic) return null;
+          return BridgeMember(
+            owner: memberOwner,
+            name: MemberName.getter(name.name),
+            def: getter,
+          );
         }
-        final field = fields[name.name];
-        if (field == null || field.isStatic) return null;
-        return BridgeMember(owner: memberOwner, name: name, def: field);
-      case MemberKind.setter:
-        final def = setters[name.name];
-        if (def != null && !def.isStatic) {
-          return BridgeMember(owner: memberOwner, name: name, def: def);
+        return BridgeMember(
+          owner: memberOwner,
+          name: MemberName(name.name, name.kind),
+          def: def,
+        );
+      case MemberKind.getter || MemberKind.setter:
+        final def = (name.kind == MemberKind.getter
+                ? classDef?.getters[name.name] ?? enumDef?.getters[name.name]
+                : classDef?.setters[name.name] ?? enumDef?.setters[name.name]) ??
+            classDef?.fields[name.name] ??
+            enumDef?.fields[name.name];
+        if (def == null) return null;
+        if ((def is BridgeMethodDef && def.isStatic) ||
+            (def is BridgeFieldDef && def.isStatic)) {
+          return null;
         }
-        final field = fields[name.name];
-        if (field == null || field.isStatic) return null;
-        return BridgeMember(owner: memberOwner, name: name, def: field);
+        return BridgeMember(
+          owner: memberOwner,
+          name: name,
+          def: def,
+        );
       case MemberKind.constructor:
+        return null;
+    }
+  }
+
+  /// Wraps a declaration-map child ([MethodDeclaration],
+  /// [VariableDeclaration], [ConstructorDeclaration], or null) as a
+  /// [SourceMember] of this type — fields carry their
+  /// [VariableDeclaration] in `member.variable` and their wrapper
+  /// ([FieldDeclaration]/[TopLevelVariableDeclaration]) in `member.node`.
+  Member? sourceMemberOf(Object? declaration, MemberName name) {
+    if (this is! SourceTypeDecl) return null;
+    switch (declaration) {
+      case MethodDeclaration m:
+        return SourceMember(
+          owner: memberOwner,
+          name: name,
+          node: m,
+          library: library,
+        );
+      case VariableDeclaration v:
+        return SourceMember(
+          owner: memberOwner,
+          name: name,
+          node: v.parent!.parent!,
+          library: library,
+          variable: v,
+        );
+      case ConstructorDeclaration c:
+        // `Class.ctor` entries share the static-member namespace.
+        return SourceMember(
+          owner: memberOwner,
+          name: name,
+          node: c,
+          library: library,
+        );
+      case _:
         return null;
     }
   }
 
   /// A static member by name — `method` covers static methods; `getter`
   /// and `setter` cover static getters, setters, and field accessors.
+  /// A `method` lookup also probes the getter key, matching
+  /// `resolveStaticMethod`'s `'$name*g'` fallback.
   Member? staticMember(String name, MemberKind kind) {
     final self = this;
     if (self is SourceTypeDecl) {
-      for (final member in _ownSourceMembers) {
-        switch (member) {
-          case MethodDeclaration m when m.isStatic:
-            final memberName = _ownName(m.name.lexeme, memberKind(m));
-            if (memberName.name == name && memberName.kind == kind) {
-              return SourceMember(
-                owner: memberOwner,
-                name: memberName,
-                node: m,
-                library: library,
-              );
-            }
-          case FieldDeclaration f when f.isStatic:
-            for (final variable in f.fields.variables) {
-              if (variable.name.lexeme != name) continue;
-              if (kind == MemberKind.setter && variable.isFinal) continue;
-              return SourceMember(
-                owner: memberOwner,
-                name: _ownName(name, kind),
-                node: f,
-                library: library,
-                variable: variable,
-              );
-            }
-          case _:
-        }
+      final map = ctx.topLevelDeclarationsMap[library];
+      final prefix = '${this.name}.';
+      final memberName = MemberName(name, kind);
+      final entry = switch (kind) {
+            MemberKind.method =>
+              map?['$prefix$name'] ?? map?['$prefix$name*g'],
+            MemberKind.getter || MemberKind.setter =>
+              map?['$prefix${memberName.key}'],
+            MemberKind.constructor => null,
+          } ??
+          map?['$prefix$name'];
+      if (entry == null) return null;
+      final declaration = entry.declaration;
+      if (declaration != null) {
+        return sourceMemberOf(
+          declaration,
+          declaration is VariableDeclaration ? memberName : memberName,
+        );
       }
-      return null;
+      final bridge = entry.bridge;
+      return bridge == null
+          ? null
+          : BridgeMember(owner: memberOwner, name: memberName, def: bridge);
     }
     final classDef = (self as BridgeTypeDecl).classDef;
     final enumDef = self.enumDef;
     switch (kind) {
       case MemberKind.method:
         final def = classDef?.methods[name] ?? enumDef?.methods[name];
-        if (def == null || !def.isStatic) return null;
+        if (def != null && def.isStatic) {
+          return BridgeMember(
+            owner: memberOwner,
+            name: MemberName(name, kind),
+            def: def,
+          );
+        }
+        // Named constructors share the `Class.name` static namespace.
+        final ctor = classDef?.constructors[name];
+        if (ctor == null) return null;
         return BridgeMember(
           owner: memberOwner,
           name: MemberName(name, kind),
-          def: def,
+          def: ctor,
         );
       case MemberKind.getter || MemberKind.setter:
         final def =
@@ -541,8 +615,16 @@ extension TypeDeclMembers on TypeDecl {
   Member? constructor(String name, ConstructorKind kind) {
     final self = this;
     if (self is SourceTypeDecl) {
-      for (final member in _ownSourceMembers) {
+      final members = switch (self.node) {
+        ClassDeclaration c => c.body.members,
+        MixinDeclaration m => m.body.members,
+        EnumDeclaration e => e.body.members,
+        _ => const <ClassMember>[],
+      };
+      var hasCtor = false;
+      for (final member in members) {
         if (member is! ConstructorDeclaration) continue;
+        hasCtor = true;
         final isFactory = member.factoryKeyword != null;
         if (isFactory != (kind == ConstructorKind.factory)) continue;
         if ((member.name?.lexeme ?? '') == name) {
@@ -560,7 +642,7 @@ extension TypeDeclMembers on TypeDecl {
       if (name == '' &&
           kind == ConstructorKind.generative &&
           self.node is ClassDeclaration &&
-          !_ownSourceMembers.any((m) => m is ConstructorDeclaration)) {
+          !hasCtor) {
         return SourceMember(
           owner: memberOwner,
           name: MemberName('${this.name}.', MemberKind.constructor),

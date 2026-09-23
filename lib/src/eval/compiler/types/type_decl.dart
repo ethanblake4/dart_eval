@@ -394,8 +394,40 @@ final class TypeDeclRegistry {
       _decls.putIfAbsent(decl.library, () => {})[decl.name] = decl;
 
   /// The declaration declared in [library] under [name] — the declaring
-  /// library only, no visibility.
-  TypeDecl? find(int library, String name) => _decls[library]?[name];
+  /// library only, no visibility. On first use the decl is materialized
+  /// from `topLevelDeclarationsMap` and registered so it stays canonical —
+  /// member lookup needs decls for types that were never registered as
+  /// use-site [TypeRef]s.
+  TypeDecl? find(int library, String name) {
+    final registered = _decls[library]?[name];
+    if (registered != null) return registered;
+    final entry = _ctx.topLevelDeclarationsMap[library]?[name];
+    if (entry == null) return null;
+    final TypeDecl decl;
+    if (entry.isBridge) {
+      final bridge = entry.bridge;
+      decl = BridgeTypeDecl(
+        _ctx,
+        library,
+        _ctx.libraryUri(library),
+        name,
+        classDef: bridge is BridgeClassDef ? bridge : null,
+        enumDef: bridge is BridgeEnumDef ? bridge : null,
+      );
+    } else {
+      final node = entry.declaration;
+      if (node == null) return null;
+      decl = SourceTypeDecl(
+        _ctx,
+        library,
+        _ctx.libraryUri(library),
+        name,
+        node,
+      );
+    }
+    register(decl);
+    return decl;
+  }
 
   /// The declaration [spec] names (spec's library URI must be part of the
   /// compilation). Resolves through the spec library's visible types so a

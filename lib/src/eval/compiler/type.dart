@@ -351,6 +351,45 @@ sealed class TypeRef {
     AstNode? source,
     Substitution substitutions = Substitution.empty,
   }) {
+    final result = _lookupFieldTypeImpl(
+      ctx,
+      $class,
+      field,
+      forFieldFormal: forFieldFormal,
+      forSet: forSet,
+      source: source,
+      substitutions: substitutions,
+    );
+    assert(() {
+      final expected = ctx.memberLookup.fieldType(
+        $class,
+        field,
+        forFieldFormal: forFieldFormal,
+        forSet: forSet,
+        source: source,
+        substitutions: substitutions,
+      );
+      assert(
+        expected == result,
+        'MemberLookup.fieldType disagreed with lookupFieldType on '
+        '${$class}.$field (forSet=$forSet forFieldFormal=$forFieldFormal): '
+        'new=${expected?.name}${expected?.typeArguments}<nullable:${expected?.nullable}> '
+        'old=${result?.name}${result?.typeArguments}<nullable:${result?.nullable}>',
+      );
+      return true;
+    }());
+    return result;
+  }
+
+  static TypeRef? _lookupFieldTypeImpl(
+    CompilerContext ctx,
+    TypeRef $class,
+    String field, {
+    bool forFieldFormal = false,
+    bool forSet = false,
+    AstNode? source,
+    Substitution substitutions = Substitution.empty,
+  }) {
     if ($class.isSpec(CoreTypes.dynamic)) {
       return null;
     }
@@ -358,7 +397,7 @@ sealed class TypeRef {
     if ($class.isTypeParameter) {
       final bound = ($class as TypeParameterTypeRef).parameter.bound;
       if (bound == null) return null;
-      return TypeRef.lookupFieldType(
+      return TypeRef._lookupFieldTypeImpl(
         ctx,
         bound,
         field,
@@ -495,7 +534,7 @@ sealed class TypeRef {
       // their own; their members come from the nominal supertype.
       final extendsType = ctx.typeSystem.superclassOf($class);
       if (extendsType == null) return null;
-      return TypeRef.lookupFieldType(
+      return TypeRef._lookupFieldTypeImpl(
         ctx,
         extendsType,
         field,
@@ -1276,7 +1315,10 @@ ReturnType bridgeFunctionReturnType(
   return ParameterTypeDependentReturnType(
     {
       for (final c in dep.cases)
-        TypeRef.fromBridgeTypeRef(ctx, c.when).decl!: toReturnType(c.then),
+        (() {
+          final when = TypeRef.fromBridgeTypeRef(ctx, c.when);
+          return when.decl ?? when;
+        })(): toReturnType(c.then),
     },
     paramIndex: dep.paramIndex,
     paramName: dep.paramName,
@@ -1581,7 +1623,7 @@ class ParameterTypeDependentReturnType implements ReturnType {
 
   final int? paramIndex;
   final String? paramName;
-  final Map<TypeDecl, AlwaysReturnType> map;
+  final Map<Object, AlwaysReturnType> map;
   final AlwaysReturnType? fallback;
 
   @override
@@ -1594,9 +1636,11 @@ class ParameterTypeDependentReturnType implements ReturnType {
   }) {
     AlwaysReturnType? resolvedType;
     if (paramIndex != null && paramIndex! < argTypes.length) {
-      resolvedType = map[argTypes[paramIndex!]?.decl];
+      final watched = argTypes[paramIndex!];
+      resolvedType = map[watched?.decl ?? watched];
     } else if (paramName != null) {
-      resolvedType = map[namedArgTypes[paramName]?.decl];
+      final watched = namedArgTypes[paramName];
+      resolvedType = map[watched?.decl ?? watched];
     }
 
     if (resolvedType == null) {

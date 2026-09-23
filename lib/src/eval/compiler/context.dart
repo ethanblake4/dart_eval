@@ -12,6 +12,7 @@ import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/representation.dart';
 import 'package:dart_eval/src/eval/ir/exception.dart';
+import 'member/member_lookup.dart';
 import 'member/member_name.dart';
 
 abstract class AbstractScopeContext {
@@ -426,6 +427,7 @@ class CompilerContext with ScopeContext {
   Map<int, Map<String, TypeRef>> topLevelVariableInferredTypes = {};
   late final TypeDeclRegistry types = TypeDeclRegistry(this);
   late final TypeSystem typeSystem = TypeSystem(this);
+  late final MemberLookup memberLookup = MemberLookup(this);
   late final RuntimeTypes runtimeTypes = RuntimeTypes(this);
   final Map<int, TypeRef> bridgeTypeRefCache = {};
   Map<String, int> libraryMap = {};

@@ -1119,14 +1119,17 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
         return TypeRef.fromBridgeTypeRef(_ctx, type);
       }
       final spec = type.spec!;
-      final decl = BridgeTypeDecl(
-        _ctx,
-        libraryIndex,
-        _ctx.libraryUri(libraryIndex),
-        spec.name,
-        classDef: bridge is BridgeClassDef ? bridge : null,
-        enumDef: bridge is BridgeEnumDef ? bridge : null,
-      );
+      // `types.find` may have already materialized the decl for member
+      // lookup — keep one canonical decl per (library, name).
+      final decl = _ctx.types.find(libraryIndex, spec.name) ??
+          BridgeTypeDecl(
+            _ctx,
+            libraryIndex,
+            _ctx.libraryUri(libraryIndex),
+            spec.name,
+            classDef: bridge is BridgeClassDef ? bridge : null,
+            enumDef: bridge is BridgeEnumDef ? bridge : null,
+          );
       _ctx.types.register(decl);
       return _registerTypeRef(libraryIndex, spec.name, decl);
     } else {
@@ -1138,13 +1141,14 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
         return null;
       }
       final name = declarationName(declaration);
-      final decl = SourceTypeDecl(
-        _ctx,
-        libraryIndex,
-        _ctx.libraryUri(libraryIndex),
-        name,
-        declaration,
-      );
+      final decl = _ctx.types.find(libraryIndex, name) ??
+          SourceTypeDecl(
+            _ctx,
+            libraryIndex,
+            _ctx.libraryUri(libraryIndex),
+            name,
+            declaration,
+          );
       _ctx.types.register(decl);
       return _registerTypeRef(libraryIndex, name, decl);
     }
