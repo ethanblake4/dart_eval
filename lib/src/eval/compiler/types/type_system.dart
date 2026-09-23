@@ -130,7 +130,7 @@ final class TypeSystem {
   void unify(
     TypeRef pattern,
     TypeRef concrete,
-    Substitution substitutions,
+    Map<TypeParameterDef, TypeRef> substitutions,
   ) {
     if (pattern.isTypeParameter) {
       substitutions[(pattern as TypeParameterTypeRef).parameter] = concrete;
@@ -178,7 +178,7 @@ final class TypeSystem {
   void _unifyViaSupertypes(
     TypeRef pattern,
     TypeRef concrete,
-    Substitution substitutions,
+    Map<TypeParameterDef, TypeRef> substitutions,
   ) {
     final queue = <TypeRef>[pattern];
     final seen = <TypeRef>{};
@@ -236,11 +236,11 @@ final class TypeSystem {
   /// those parameters meaning — an unconstrained `T` is not a usable type
   /// for the caller.
   TypeRef lowerTypeParameters(TypeRef type) {
-    final substitutions = Substitution.wrap(<TypeParameterDef, TypeRef>{});
+    final bindings = <TypeParameterDef, TypeRef>{};
     void collect(TypeRef t) {
       if (t.isTypeParameter) {
         final parameter = (t as TypeParameterTypeRef).parameter;
-        substitutions.bindings.putIfAbsent(
+        bindings.putIfAbsent(
           parameter,
           () => parameter.bound ?? CoreTypes.dynamic.ref(_ctx),
         );
@@ -269,9 +269,9 @@ final class TypeSystem {
     }
 
     collect(type);
-    return substitutions.isEmpty
+    return bindings.isEmpty
         ? type
-        : type.substituteTypeParameters(substitutions);
+        : type.substituteTypeParameters(Substitution.of(bindings));
   }
 
   /// Fully unwraps a type-parameter chain (`T extends U, U extends C`) to

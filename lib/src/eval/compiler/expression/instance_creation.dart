@@ -183,7 +183,7 @@ Variable compileInstanceOf(
             file: staticType.file,
           ),
       };
-      final substitutions = Substitution.wrap(<TypeParameterDef, TypeRef>{});
+      final bindings = <TypeParameterDef, TypeRef>{};
       // Bridge parameters carry no named flag; named args ride at the tail.
       final positionalParams = fnDescriptor.params;
       for (
@@ -199,12 +199,12 @@ Variable compileInstanceOf(
         final concrete =
             ctx.typeSystem.asInstanceOf(arguments.positionalValues[i].type, pattern.decl) ??
             arguments.positionalValues[i].type;
-        ctx.typeSystem.unify(pattern, concrete, substitutions);
+        ctx.typeSystem.unify(pattern, concrete, bindings);
       }
       instantiatedType = (instantiatedType as InterfaceTypeRef).copyWith(
         arguments: [
           for (var i = 0; i < genericNames.length; i++)
-            substitutions[paramRefs[genericNames[i]]!.parameter] ??
+            bindings[paramRefs[genericNames[i]]!.parameter] ??
                 CoreTypes.dynamic.ref(ctx),
         ],
       );

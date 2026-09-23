@@ -246,7 +246,7 @@ BoundCall bindParameterList(
       ),
     );
   }
-  final ctorClassParamSubs = Substitution.wrap(<TypeParameterDef, TypeRef>{
+  final ctorClassParamSubs = Substitution.of(<TypeParameterDef, TypeRef>{
     for (final param in ctorClassParams)
       (ctorClassParamRefs[param.name.lexeme]! as TypeParameterTypeRef)
           .parameter: ?resolveGenerics[param.name.lexeme],
@@ -322,10 +322,10 @@ BoundCall bindParameterList(
       // supplied type — `List<X>` against `List<int>` binds X to int —
       // recording each bound generic name for the common-base solve.
       {
-        final substitutions = Substitution.wrap(<TypeParameterDef, TypeRef>{});
-        ctx.typeSystem.unify(unifyPattern, arg0.type, substitutions);
+        final bindings = <TypeParameterDef, TypeRef>{};
+        ctx.typeSystem.unify(unifyPattern, arg0.type, bindings);
         for (final e in unifyDefs.entries) {
-          final bound = substitutions[e.value];
+          final bound = bindings[e.value];
           if (bound != null) {
             resolveGenericsMap[e.key] ??= {};
             resolveGenericsMap[e.key]!.add(bound);
@@ -1169,12 +1169,12 @@ BoundCall bindDeclaration(
       returnAnnotation,
       typeParameters: placeholders,
     );
-    final substitutions = Substitution.wrap(<TypeParameterDef, TypeRef>{});
-    ctx.typeSystem.unify(pattern, returnContext, substitutions);
+    final bindings = <TypeParameterDef, TypeRef>{};
+    ctx.typeSystem.unify(pattern, returnContext, bindings);
     for (var i = 0; i < typeParams.length; i++) {
       final name = typeParams[i].name.lexeme;
       if (!identical(resolveGenerics[name], unboundGenerics[name])) continue;
-      final bound = substitutions[(placeholders[name]! as TypeParameterTypeRef).parameter];
+      final bound = bindings[(placeholders[name]! as TypeParameterTypeRef).parameter];
       if (bound != null) resolveGenerics[name] = bound;
     }
   }

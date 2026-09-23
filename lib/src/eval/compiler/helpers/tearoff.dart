@@ -203,13 +203,13 @@ extension TearOff on Variable {
         functionType is FunctionTypeRef &&
         functionType.signature.typeParameters.isNotEmpty) {
       final signature = functionType.signature;
-      final substitutions = Substitution.wrap(<TypeParameterDef, TypeRef>{});
-      ctx.typeSystem.unify(functionType, boundContext, substitutions);
+      final bindings = <TypeParameterDef, TypeRef>{};
+      ctx.typeSystem.unify(functionType, boundContext, bindings);
       var fullyBound = true;
       boundCallableTypeArguments = [
         for (final def in signature.typeParameters)
           () {
-            final bound = substitutions[def];
+            final bound = bindings[def];
             if (bound == null || bound.isTypeParameter) {
               fullyBound = false;
               return ctx.runtimeTypes.idOf(
@@ -220,22 +220,23 @@ extension TearOff on Variable {
           }(),
       ];
       if (fullyBound) {
+        final substitution = Substitution.of(bindings);
         materializedType = FunctionTypeRef(
           FunctionSignature(
             positional: [
               for (final t in signature.positional)
-                t.substituteTypeParameters(substitutions),
+                t.substituteTypeParameters(substitution),
             ],
             requiredPositional: signature.requiredPositional,
             named: {
               for (final e in signature.named.entries)
                 e.key: (
-                  type: e.value.type.substituteTypeParameters(substitutions),
+                  type: e.value.type.substituteTypeParameters(substitution),
                   required: e.value.required,
                 ),
             },
             returnType: signature.returnType.substituteTypeParameters(
-              substitutions,
+              substitution,
             ),
           ),
           decl: functionType.decl,

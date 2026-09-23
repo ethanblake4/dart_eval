@@ -322,21 +322,23 @@ _mixinMembers(
       // (`mixin class D<U> = X with M<U>`): fold those recursively after
       // loading the decl's own type parameters for argument resolution.
       ClassDeclaration c when c.withClause != null => () {
-        TypeRef.loadTemporaryTypes(
-          ctx,
-          c.namePart.typeParameters?.typeParameters,
-          library: ctx.library,
-          owner: TypeParameterOwner(
+        // The applied class's own parameters scope over its `with` clause:
+        // `class D<U> = X with M<U>` resolves `M`'s arguments against U.
+        // A pushed frame keeps the seed scoped to this fold.
+        final (f0, m0, l0) = ctx.withTypeParameters(
+          ctx.library,
+          TypeParameterOwner(
             TypeParameterOwnerKind.classLike,
             ctx.library,
             c.namePart.typeName.lexeme,
           ),
-        );
-        final (f0, m0, l0) = _mixinMembers(
-          ctx,
-          c.withClause!.mixinTypes,
-          c,
-          visited,
+          c.namePart.typeParameters?.typeParameters,
+          () => _mixinMembers(
+            ctx,
+            c.withClause!.mixinTypes,
+            c,
+            visited,
+          ),
         );
         memberLibraries.addAll(l0);
         final (_, cf, cm) = partitionClassMembers(c.body.members);
@@ -346,21 +348,20 @@ _mixinMembers(
       // A class type alias used as a mixin (`with C` where `C = S with M`)
       // contributes the alias's own folded mixin members.
       ClassTypeAlias a => () {
-        TypeRef.loadTemporaryTypes(
-          ctx,
-          a.typeParameters?.typeParameters,
-          library: ctx.library,
-          owner: TypeParameterOwner(
+        final (f, m, l) = ctx.withTypeParameters(
+          ctx.library,
+          TypeParameterOwner(
             TypeParameterOwnerKind.classLike,
             ctx.library,
             a.name.lexeme,
           ),
-        );
-        final (f, m, l) = _mixinMembers(
-          ctx,
-          a.withClause.mixinTypes,
-          a,
-          visited,
+          a.typeParameters?.typeParameters,
+          () => _mixinMembers(
+            ctx,
+            a.withClause.mixinTypes,
+            a,
+            visited,
+          ),
         );
         memberLibraries.addAll(l);
         return (<ConstructorDeclaration>[], f, m);

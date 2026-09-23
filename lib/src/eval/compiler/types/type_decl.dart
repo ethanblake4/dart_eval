@@ -184,7 +184,7 @@ sealed class TypeDecl {
       mixinDeclRef.name,
       mixinDecl.typeParameters,
     );
-    final substitutions = Substitution.wrap(<TypeParameterDef, TypeRef>{});
+    final bindings = <TypeParameterDef, TypeRef>{};
     for (final constraint in mixinDecl.onClause!.superclassConstraints) {
       final pattern = TypeRef.fromAnnotation(
         ctx,
@@ -195,18 +195,19 @@ sealed class TypeDecl {
       for (final sup in chainSoFar) {
         final found = ctx.typeSystem.asInstanceOf(sup, pattern.decl);
         if (found != null) {
-          ctx.typeSystem.unify(pattern, found, substitutions);
+          ctx.typeSystem.unify(pattern, found, bindings);
         }
       }
     }
-    if (substitutions.isEmpty) return mixin;
+    if (bindings.isEmpty) return mixin;
+    final substitution = Substitution.of(bindings);
     final mixinParams2 = mixinDeclRef.typeParameters;
     return (mixin as InterfaceTypeRef).copyWith(
       arguments: [
         for (var i = 0; i < mixinParams2.length; i++)
-          substitutions[mixinParams2[i]] ??
+          bindings[mixinParams2[i]] ??
               mixinParams2[i].bound?.substituteTypeParameters(
-                substitutions,
+                substitution,
               ) ??
               CoreTypes.dynamic.ref(ctx),
       ],

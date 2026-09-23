@@ -10,13 +10,11 @@ final class Substitution {
 
   static const empty = Substitution._({});
 
+  /// An immutable substitution over a copy of [bindings] — accumulation
+  /// into a shared map happens on a plain `Map<TypeParameterDef, TypeRef>`
+  /// (e.g. `TypeSystem.unify`), then crosses the boundary here.
   factory Substitution.of(Map<TypeParameterDef, TypeRef> bindings) =>
-      Substitution._({...bindings});
-
-  /// Wraps [bindings] without copying — unify and call-site builders keep
-  /// mutating the shared map through [bindings].
-  factory Substitution.wrap(Map<TypeParameterDef, TypeRef> bindings) =>
-      Substitution._(bindings);
+      Substitution._(Map.unmodifiable(bindings));
 
   /// The declaration's parameters mapped to [type]'s arguments. Missing
   /// arguments use the bound, or `dynamic` when unbounded — the rule
@@ -51,9 +49,6 @@ final class Substitution {
   final Map<TypeParameterDef, TypeRef> bindings;
 
   TypeRef? operator [](TypeParameterDef parameter) => bindings[parameter];
-
-  void operator []=(TypeParameterDef parameter, TypeRef type) =>
-      bindings[parameter] = type;
 
   bool get isEmpty => bindings.isEmpty;
   bool get isNotEmpty => bindings.isNotEmpty;

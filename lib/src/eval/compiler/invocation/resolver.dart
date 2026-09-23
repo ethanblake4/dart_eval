@@ -1146,9 +1146,7 @@ final class CallResolver {
               boundChain.file == resolved.file &&
               boundChain.name == resolved.name &&
               boundChain.typeArguments.isNotEmpty) {
-            final substitutions = Substitution.wrap(
-              <TypeParameterDef, TypeRef>{},
-            );
+            final bindings = <TypeParameterDef, TypeRef>{};
             for (
               var i = 0;
               i < resolved.typeArguments.length &&
@@ -1158,11 +1156,13 @@ final class CallResolver {
               ctx.typeSystem.unify(
                 resolved.typeArguments[i],
                 boundChain.typeArguments[i],
-                substitutions,
+                bindings,
               );
             }
-            if (substitutions.isNotEmpty) {
-              resolved = resolved.substituteTypeParameters(substitutions);
+            if (bindings.isNotEmpty) {
+              resolved = resolved.substituteTypeParameters(
+                Substitution.of(bindings),
+              );
             }
           }
           aliasType = resolved;
@@ -1320,9 +1320,7 @@ final class CallResolver {
           // The alias's instantiated arguments were left as parameter
           // references for inference; bind them from what the constructor's
           // arguments gave.
-          final substitutions = Substitution.wrap(
-            <TypeParameterDef, TypeRef>{},
-          );
+          final bindings = <TypeParameterDef, TypeRef>{};
           final aliasArgs = aliasType.typeArguments;
           for (
             var i = 0;
@@ -1332,11 +1330,13 @@ final class CallResolver {
             ctx.typeSystem.unify(
               aliasArgs[i],
               inferredCtorArgs[i],
-              substitutions,
+              bindings,
             );
           }
-          if (substitutions.isNotEmpty) {
-            aliasType = aliasType.substituteTypeParameters(substitutions);
+          if (bindings.isNotEmpty) {
+            aliasType = aliasType.substituteTypeParameters(
+              Substitution.of(bindings),
+            );
           }
         }
       }
