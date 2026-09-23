@@ -17,12 +17,18 @@ import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'package:dart_eval/src/eval/ir/bridge.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:control_flow_graph/control_flow_graph.dart' show SSA;
+import 'package:dart_eval/src/eval/compiler/expression/function.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
+import 'package:dart_eval/src/eval/compiler/model/function_type.dart';
+import 'package:dart_eval/src/eval/ir/representation.dart';
 import '../builtins.dart';
 import '../values/abi.dart';
 import 'binder.dart';
 import 'bound_call.dart';
 import 'call.dart';
 import 'devirtualizer.dart';
+import 'intrinsics.dart';
 import 'targets.dart';
 
 
@@ -578,6 +584,294 @@ final class CallResolver {
       ),
     );
     return target.emit(ctx, boundCall);
+  }
+
+  /// `a + b`, `a[i]`, `!x`, `a == b`, `it.moveNext()` — the operator and
+  /// legacy dynamic-dispatch entry point, keeping `untypedLegacy` operand
+  /// handling until phase 7: [Intrinsics] first, then extension members,
+  /// then [EqualityCall]/[VirtualCall] on the boxed operand vector.
+  InvokeResult invokeOperator(
+    Variable receiver,
+    String? method,
+    List<Variable> args, {
+    Map<String, Variable>? namedArgs,
+  }) {
+    if (method == null) {
+      return invokeFunctionValue(receiver, args, namedArgs);
+    }
+    if (namedArgs == null || namedArgs.isEmpty) {
+      final intrinsic = Intrinsics(ctx).tryEmit(receiver, method, args);
+      if (intrinsic != null) return intrinsic;
+    }
+    var recv = receiver;
+    if ((namedArgs == null || namedArgs.isEmpty) &&
+        !recv.type.isSpec(CoreTypes.dynamic)) {
+      // `E(x).m(...)` — explicit application pins member resolution to E.
+      final bound = recv.boundExtension;
+      if (bound != null) {
+        final member = extensionMember(bound.ext, method);
+        if (member == null) {
+          throw CompileError(
+            'Extension ${bound.ext.name} has no member $method',
+          );
+        }
+        return _invokeExtensionOperator(
+          recv,
+          bound.ext,
+          member,
+          bound.onBindings,
+          extBindingsMap(bound.ext, bound.onBindings),
+          args,
+        );
+      }
+      // A member the class doesn't declare may be an extension method (e.g.
+      // `operator []=` defined in `extension on T`). Instance members win —
+      // the extension only applies when instance lookup fails.
+      if (!hasInstanceMethod(ctx, recv.type, method)) {
+        // `unary-` maps to the extension member `-` of positional arity 0.
+        final found = resolveExtensionMember(
+          ctx,
+          recv.type,
+          method == 'unary-' ? '-' : method,
+          arity: args.length,
+        );
+        if (found != null) {
+          final (ext, member, bindings) = found;
+          return _invokeExtensionOperator(
+            recv,
+            ext,
+            member,
+            bindings,
+            extBindingsMap(ext, bindings),
+            args,
+          );
+        }
+      }
+    }
+    final values = [...args];
+    final equality = (method == '==' || method == '!=') && values.length == 1;
+    if (equality &&
+        recv.name == null &&
+        recv.methodOffset != null &&
+        values.single.name == null &&
+        values.single.methodOffset != null) {
+      // Two unmaterialized references to the same function are identical.
+      final equal = recv.methodOffset == values.single.methodOffset;
+      return InvokeResult(
+        recv,
+        BuiltinValue(boolval: method == '!=' ? !equal : equal).push(ctx),
+        values,
+      );
+    }
+    if (recv.name == null && recv.methodOffset != null) {
+      recv = recv.tearOff(ctx);
+    }
+    for (var i = 0; i < values.length; i++) {
+      if (values[i].name == null && values[i].methodOffset != null) {
+        values[i] = values[i].tearOff(ctx);
+      }
+    }
+    final boxed = Variable.boxUnboxMultiple(ctx, [recv, ...values], true);
+    recv = boxed.first;
+    final prepared = boxed.sublist(1);
+    if (equality) {
+      final result = EqualityCall(
+        left: recv,
+        right: prepared.single,
+        negated: method == '!=',
+      ).emit(
+        ctx,
+        BoundCall(
+          positional: const [],
+          named: const [],
+          returnType: CoreTypes.bool.ref(ctx),
+        ),
+      );
+      return InvokeResult(recv, result, prepared);
+    }
+    final argTypes = prepared.map((arg) => arg.type).toList();
+    final namedArgTypes =
+        namedArgs?.map((key, arg) => MapEntry(key, arg.type)) ?? {};
+    // The '.call' member on a bare Function-typed receiver can't resolve an
+    // instance method; the callee's own signature carries the result type.
+    final isBareCall = recv.type.isFunctionLike && method == 'call';
+    final TypeRef returnType;
+    if (isBareCall) {
+      returnType =
+          resolveCallResultType(
+            ctx,
+            callee: recv,
+            dispatch: null,
+            argTypes: argTypes,
+            namedArgTypes: namedArgTypes,
+          ) ??
+          CoreTypes.dynamic.ref(ctx);
+    } else {
+      returnType =
+          AlwaysReturnType.fromInstanceMethodOrBuiltin(
+            ctx,
+            recv.type,
+            method,
+            argTypes,
+            namedArgTypes,
+          )?.type ??
+          CoreTypes.dynamic.ref(ctx);
+    }
+    final boundCall = BoundCall(
+      receiver: recv,
+      positional: [for (final arg in prepared) BoundArgument(arg)],
+      named: [
+        for (final entry in (namedArgs ?? const <String, Variable>{}).entries)
+          (entry.key, BoundArgument(entry.value.boxIfNeeded(ctx))),
+      ],
+      returnType: returnType,
+    );
+    final result = VirtualCall(receiver: recv, name: method).emit(ctx, boundCall);
+    return InvokeResult(
+      recv,
+      result,
+      prepared,
+      namedArgs: namedArgs ?? {},
+    );
+  }
+
+  /// `f(args)` where `f` is a function-typed value — or a non-function
+  /// whose implicit `.call` may resolve to an extension member.
+  InvokeResult invokeFunctionValue(
+    Variable callee,
+    List<Variable> args,
+    Map<String, Variable>? namedArgs,
+  ) {
+    if (!callee.type.isAssignableTo(ctx, CoreTypes.function.ref(ctx))) {
+      // `x(...)` on a non-function is an implicit `x.call(...)`, which may
+      // resolve to an extension `call` member.
+      if (resolveExtensionMember(ctx, callee.type, 'call', arity: args.length) !=
+          null) {
+        return invokeOperator(callee, 'call', args, namedArgs: namedArgs);
+      }
+      throw CompileError(
+        'Cannot invoke variable of type ${callee.type} as it is not a function',
+      );
+    }
+    if (callee.callingConvention == CallingConvention.dynamic ||
+        callee.methodOffset == null) {
+      final (result, bound) = invokeValueWithArgs(
+        CallSite(shape: CallShape.values(args, namedArgs)),
+        callee: callee,
+      );
+      return InvokeResult(
+        null,
+        result,
+        [for (final a in bound.positional) a.value],
+        namedArgs: {for (final e in bound.named) e.$1: e.$2.value},
+      );
+    }
+    final target = ctx.svar('call_result');
+    final returnType =
+        callee.methodReturnType
+            ?.toAlwaysReturnType(
+              ctx,
+              callee.type,
+              args.map((arg) => arg.type).toList(),
+              namedArgs?.map((key, arg) => MapEntry(key, arg.type)) ?? {},
+            )
+            ?.type ??
+        CoreTypes.dynamic.ref(ctx);
+    ctx.pushOp(
+      Call(callee.methodOffset!, [
+        ...args.map((arg) => arg.ssa),
+        ...?namedArgs?.values.map((arg) => arg.ssa),
+      ], result: target),
+    );
+    return InvokeResult(
+      callee,
+      Variable.of(
+        ctx,
+        target,
+        returnType,
+        rep: Abi.unboxedAcrossCalls(returnType),
+      ),
+      args,
+      namedArgs: namedArgs ?? {},
+    );
+  }
+
+  /// Emits a static `Call` to an extension member resolved on the operator
+  /// path — receiver first, then the converted and default-filled args.
+  InvokeResult _invokeExtensionOperator(
+    Variable receiver,
+    EvalExtension ext,
+    MethodDeclaration member,
+    List<TypeRef> bindings,
+    Map<String, TypeRef> typeParams,
+    List<Variable> args,
+  ) {
+    final formals = member.parameters?.parameters ?? const [];
+    final convertedArgs = [
+      for (var i = 0; i < args.length; i++)
+        i < formals.length && formals[i].type != null
+            ? convertForAssignment(
+                ctx,
+                args[i],
+                formalParameterAnnotationType(
+                  ctx,
+                  ext.library,
+                  formals[i],
+                  typeParameters: typeParams,
+                ),
+                representation: MachineRepresentation.object,
+              )
+            : args[i],
+    ];
+    // Pad omitted optional positionals with their declared defaults —
+    // extension members are static calls, so the full declared argument
+    // vector is always passed.
+    final positionalFormals = formals.where((f) => f.isPositional).toList();
+    for (var i = convertedArgs.length; i < positionalFormals.length; i++) {
+      convertedArgs.add(
+        compileOmittedArgument(
+          ctx,
+          ext.library,
+          positionalFormals[i],
+          member,
+          typeParameters: typeParams,
+        ),
+      );
+    }
+    final target = ctx.svar('method_result');
+    ctx.pushOp(
+      Call(
+        DeferredOrOffset(file: ext.library, name: ext.memberKey(member)),
+        [
+          receiver.boxIfNeeded(ctx).ssa,
+          for (final a in convertedArgs) a.boxIfNeeded(ctx).ssa,
+        ],
+        result: target,
+        typeArguments:
+            extensionCallTypeArguments(
+              ctx,
+              ext,
+              member,
+              bindings,
+              const {},
+            ) ??
+            const [],
+      ),
+    );
+    final returnType =
+        AlwaysReturnType.fromAnnotation(
+          ctx,
+          ext.library,
+          member.returnType,
+          CoreTypes.dynamic.ref(ctx),
+          typeParameters: typeParams,
+        ).type ??
+        CoreTypes.dynamic.ref(ctx);
+    return InvokeResult(
+      receiver,
+      Variable.of(ctx, target, returnType, rep: ValueRep.boxed),
+      convertedArgs,
+    );
   }
 
   /// `f(args)` / `p.f(args)` — a call whose callee is a bare or

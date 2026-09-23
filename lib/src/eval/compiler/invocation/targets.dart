@@ -8,6 +8,7 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/bridge.dart';
 import 'package:dart_eval/src/eval/ir/closures.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
+import 'package:dart_eval/src/eval/ir/logic.dart';
 import 'package:dart_eval/src/eval/ir/memory.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
 import '../values/abi.dart';
@@ -327,8 +328,19 @@ final class EqualityCall extends CallTarget {
 
   @override
   Variable emit(CompilerContext ctx, BoundCall call) {
-    // Filled in with the operator migration (step 4).
-    throw UnimplementedError('EqualityCall.emit');
+    // Operands arrive materialized (torn off) — the resolver performs the
+    // unmaterialized-reference checks first, and `tearOff` keeps the method
+    // offset so re-checking here would create a second closure.
+    final boxed = Variable.boxUnboxMultiple(ctx, [left, right], true);
+    var result = ctx.svar('equals_result');
+    ctx.pushOp(DynamicEquals(result, boxed.first.ssa, boxed.last.ssa));
+    if (negated) {
+      final negated = ctx.svar('not_equal_result');
+      ctx.pushOp(LogicalNot(negated, result));
+      result = negated;
+    }
+    final boolType = call.returnType;
+    return Variable.of(ctx, result, boolType, rep: unboxedRepOf(boolType));
   }
 }
 
