@@ -81,7 +81,7 @@ sealed class TypeDecl {
 
   /// The raw `C` reference for this declaration — no arguments, no
   /// nullability — what `spec.ref(ctx)` returns.
-  late final TypeRef rawType = TypeRef(library, name, decl: this);
+  late final InterfaceTypeRef rawType = InterfaceTypeRef(this);
 
   /// A [TypeRef] for this declaration's [index]th type parameter — the
   /// shared key (`class:library:name`, index) clause types and member
@@ -90,8 +90,10 @@ sealed class TypeDecl {
       TypeParameterTypeRef(typeParameters[index], file: library);
 
   /// `C<args...>` — the raw declaration instantiated with [arguments].
-  TypeRef instantiate(List<TypeRef> arguments, {bool nullable = false}) =>
-      rawType.copyWith(specifiedTypeArgs: arguments, nullable: nullable);
+  InterfaceTypeRef instantiate(
+    List<TypeRef> arguments, {
+    bool nullable = false,
+  }) => InterfaceTypeRef(this, arguments: arguments, nullable: nullable);
 
   /// A bridged class whose instances are host objects; always false for
   /// source declarations. Used by `hasBridgeSuperclass`.
@@ -145,7 +147,7 @@ sealed class TypeDecl {
     }
     final ownTypeParams = this.ownTypeParams;
     return type.copyWith(
-      specifiedTypeArgs: [
+      typeArguments: [
         for (final arg in clauseName.typeArguments?.arguments ?? const [])
           TypeRef.fromAnnotation(
             ctx,
@@ -166,7 +168,7 @@ sealed class TypeDecl {
     List<TypeRef> chainSoFar,
   ) {
     if (clauseName.typeArguments != null ||
-        mixin.specifiedTypeArgs.isNotEmpty) {
+        mixin.typeArguments.isNotEmpty) {
       return mixin;
     }
     final mixinDeclRef = mixin.decl;
@@ -200,7 +202,7 @@ sealed class TypeDecl {
     if (substitutions.isEmpty) return mixin;
     final mixinParams2 = mixinDeclRef.typeParameters;
     return mixin.copyWith(
-      specifiedTypeArgs: [
+      typeArguments: [
         for (var i = 0; i < mixinParams2.length; i++)
           substitutions[mixinParams2[i]] ??
               mixinParams2[i].bound?.substituteTypeParameters(

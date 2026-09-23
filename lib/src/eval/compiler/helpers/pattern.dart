@@ -57,7 +57,7 @@ TypeRef patternTypeBound(
 
       final result = CoreTypes.list
           .ref(ctx)
-          .copyWith(specifiedTypeArgs: [?specifiedTypeArg]);
+          .copyWith(typeArguments: [?specifiedTypeArg]);
       if (bound != null && !result.isAssignableTo(ctx, bound)) {
         throw CompileError(
           'List pattern type $result is not assignable to bound type $bound',

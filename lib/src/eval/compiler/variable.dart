@@ -715,7 +715,7 @@ class Variable {
       final hostParams = methodHost is Declaration
           ? classLikeClauses(methodHost).$4?.typeParameters ?? const []
           : const <TypeParameter>[];
-      final hostArgs = member!.$1.specifiedTypeArgs;
+      final hostArgs = member!.$1.typeArguments;
       fieldType = declaredFunctionType(
         ctx,
         resolvedReceiver.file,
@@ -911,7 +911,7 @@ class Variable {
           for (final param
               in member.typeParameters?.typeParameters ??
                   const <TypeParameter>[])
-            param.name.lexeme: TypeRef(
+            param.name.lexeme: TypeRef.unresolved(
               ext.library,
               param.name.lexeme,
               typeParameterOwner: TypeParameterOwner(

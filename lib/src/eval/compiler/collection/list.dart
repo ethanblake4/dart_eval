@@ -30,11 +30,11 @@ Variable compileListLiteral(
   final elements = l.elements;
 
   TypeRef? boundType;
-  if (bound != null && bound.specifiedTypeArgs.isNotEmpty) {
-    if (bound.specifiedTypeArgs.length > 1) {
+  if (bound != null && bound.typeArguments.isNotEmpty) {
+    if (bound.typeArguments.length > 1) {
       throw CompileError('Lists can only have one type argument');
     }
-    boundType = bound.specifiedTypeArgs.first;
+    boundType = bound.typeArguments.first;
   }
   TypeRef? listSpecifiedType;
   final typeArgs = l.typeArguments;
@@ -57,7 +57,7 @@ Variable compileListLiteral(
   final listType = CoreTypes.list
       .ref(ctx)
       .copyWith(
-        specifiedTypeArgs: [listSpecifiedType ?? CoreTypes.dynamic.ref(ctx)],
+        typeArguments: [listSpecifiedType ?? CoreTypes.dynamic.ref(ctx)],
       );
   var list = Variable.ssa(
     ctx,
@@ -79,7 +79,7 @@ Variable compileListLiteral(
       type: CoreTypes.list
           .ref(ctx)
           .copyWith(
-            specifiedTypeArgs: [
+            typeArguments: [
               resultTypes.isEmpty
                   ? CoreTypes.dynamic.ref(ctx)
                   : TypeRef.commonBaseType(ctx, resultTypes.toSet()),
@@ -92,11 +92,11 @@ Variable compileListLiteral(
 }
 
 Variable boxListContents(CompilerContext ctx, Variable list) {
-  final elementType = list.type.specifiedTypeArgs.first;
+  final elementType = list.type.typeArguments.first;
   final newList = Variable.ssa(
     ctx,
     NewList(ctx.svar('boxed_elements')),
-    list.type.copyWith(specifiedTypeArgs: [elementType]),
+    list.type.copyWith(typeArguments: [elementType]),
     rep: ValueRep.nativeList,
   );
   final index = BuiltinValue(intval: 0).push(ctx);
@@ -140,7 +140,7 @@ List<TypeRef> compileListElement(
   CompilerContext ctx,
   bool box,
 ) {
-  final listType = list.type.specifiedTypeArgs[0];
+  final listType = list.type.typeArguments[0];
   if (e is Expression) {
     var result = compileExpression(e, ctx, listType);
     result = convertForAssignment(

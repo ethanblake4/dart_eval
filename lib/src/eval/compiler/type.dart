@@ -7,7 +7,6 @@ import 'package:dart_eval/src/eval/compiler/model/function_type.dart';
 import 'context.dart';
 import 'errors.dart';
 import 'types/function_type.dart';
-import 'types/record_type.dart';
 import 'types/substitution.dart';
 import 'types/type_decl.dart';
 import 'types/type_parameter.dart';
@@ -18,7 +17,6 @@ export 'types/type_system.dart';
 export 'types/runtime_types.dart';
 export 'types/type_scope.dart';
 export 'types/type_parameter.dart';
-export 'types/record_type.dart';
 export 'types/function_type.dart';
 
 /// The action required to assign a value to a typed slot.
@@ -36,16 +34,16 @@ enum AssignmentConversion {
   intToDouble,
 }
 
-/// Reference to a type in the compiler. A nominal reference is just a
-/// [file] + [name] pair with a [decl]; the declaration owns the resolved
-/// structure (supertypes, type parameters) through
-/// [CompilerContext.typeSystem].
-class TypeRef {
+/// Reference to a type in the compiler — a sealed hierarchy of immutable
+/// type values: [InterfaceTypeRef] (nominal `C<T...>`),
+/// [TypeParameterTypeRef], [FunctionTypeRef], and [RecordTypeRef]. The
+/// declaration a nominal type names owns its resolved structure
+/// (supertypes, type parameters) through [CompilerContext.typeSystem].
+sealed class TypeRef {
   const TypeRef(
     this.file,
     this.name, {
     this.decl,
-    this.specifiedTypeArgs = const [],
     this.recordFields = const [],
     this.typeParameterOwner,
     this.typeParameterIndex,
@@ -60,7 +58,12 @@ class TypeRef {
   /// The declaration this type names — null for type parameters, records,
   /// and the extension namespace pseudo-type.
   final TypeDecl? decl;
-  final List<TypeRef> specifiedTypeArgs;
+
+  /// Interim bridge for type arguments: [InterfaceTypeRef.arguments] on
+  /// interface types, empty everywhere else. Migrated readers take
+  /// `arguments`; this accessor is deleted at the end of phase 3.
+  List<TypeRef> get typeArguments => const [];
+
   final List<RecordParameterType> recordFields;
   final String? typeParameterOwner;
   final int? typeParameterIndex;
@@ -78,6 +81,29 @@ class TypeRef {
       parameter == null ? _typeParameterBound : parameter!.bound;
 
   final bool nullable;
+
+  /// A decl-less nominal — the extension namespace pseudo-type and other
+  /// legacy encodings not yet re-homed onto a [TypeDecl]. Interim factory
+  /// for the migration; removed with [_UnresolvedTypeRef].
+  factory TypeRef.unresolved(
+    int file,
+    String name, {
+    String? typeParameterOwner,
+    int? typeParameterIndex,
+    TypeParameterDef? parameter,
+    TypeRef? typeParameterBound,
+    List<RecordParameterType> recordFields = const [],
+    bool nullable = false,
+  }) => _UnresolvedTypeRef(
+    file,
+    name,
+    recordFields: recordFields,
+    typeParameterOwner: typeParameterOwner,
+    typeParameterIndex: typeParameterIndex,
+    parameter: parameter,
+    typeParameterBound: typeParameterBound,
+    nullable: nullable,
+  );
 
   /// Given a set of [TypeRef]s, find their closest common ancestor type.
   factory TypeRef.commonBaseType(CompilerContext ctx, Set<TypeRef> types) =>
@@ -173,7 +199,7 @@ class TypeRef {
         );
       }
       return unspecifiedType.copyWith(
-        specifiedTypeArgs: resolved,
+        typeArguments: resolved,
         nullable: typeAnnotation.question != null || unspecifiedType.nullable,
       );
     }
@@ -215,9 +241,9 @@ class TypeRef {
     }
     final spec = typeReference.spec;
     if (spec != null) {
-      final specifiedTypeArgs = <TypeRef>[];
+      final arguments = <TypeRef>[];
       for (final arg in typeReference.typeArgs) {
-        specifiedTypeArgs.add(
+        arguments.add(
           TypeRef.fromBridgeAnnotation(
             ctx,
             arg,
@@ -234,7 +260,7 @@ class TypeRef {
           (throw CompileError(
             'Bridge: cannot find type ${spec.name} in library ${spec.library}',
           ));
-      return typeSpec.copyWith(specifiedTypeArgs: specifiedTypeArgs);
+      return typeSpec.copyWith(typeArguments: arguments);
     }
     final ref = typeReference.ref;
     if (ref != null) {
@@ -266,8 +292,8 @@ class TypeRef {
         (key) => key == ref,
       );
       if (genericIndex >= 0 &&
-          genericIndex < specifiedType.specifiedTypeArgs.length) {
-        return specifiedType.specifiedTypeArgs[genericIndex];
+          genericIndex < specifiedType.typeArguments.length) {
+        return specifiedType.typeArguments[genericIndex];
       }
       final generic = dec.type.generics[ref];
       if (generic == null) return CoreTypes.dynamic.ref(ctx);
@@ -284,11 +310,11 @@ class TypeRef {
             ].firstWhereOrNull(
               (candidate) =>
                   candidate.hasSameDeclarationAs(specifiedType!) &&
-                  genericIndex < candidate.specifiedTypeArgs.length,
+                  genericIndex < candidate.typeArguments.length,
             );
         if (instantiatedType != null) {
           final resolvedDeclaredType =
-              instantiatedType.specifiedTypeArgs[genericIndex];
+              instantiatedType.typeArguments[genericIndex];
           if (!resolvedDeclaredType.isAssignableTo(ctx, boundType)) {
             throw CompileError(
               "Type argument $resolvedDeclaredType does not conform to type parameter $ref's"
@@ -334,7 +360,7 @@ class TypeRef {
       final params = classLikeClauses(currentClass).$4;
       final refs = classTypeParameterRefs(ref.file, ref.name, params);
       if (refs.isNotEmpty) {
-        return ref.copyWith(specifiedTypeArgs: refs.values.toList());
+        return ref.copyWith(typeArguments: refs.values.toList());
       }
     }
     return ref;
@@ -419,8 +445,8 @@ class TypeRef {
               final paramRef = ctx
                   .typeScopes[$class.file]![typeParams![i].name.lexeme]!;
               final bound = paramRef.typeParameterBound;
-              final arg = i < $class.specifiedTypeArgs.length
-                  ? $class.specifiedTypeArgs[i]
+              final arg = i < $class.typeArguments.length
+                  ? $class.typeArguments[i]
                   : (bound ?? CoreTypes.dynamic.ref(ctx));
               localBindings[paramRef.parameter!] = arg
                   .substituteTypeParameters(substitutions);
@@ -622,7 +648,7 @@ class TypeRef {
   String get semanticKey {
     final self = this;
     return '${isTypeParameter ? 'parameter:$typeParameterOwner:$typeParameterIndex' : '$file:$name'}${nullable ? '?' : ''}'
-        '${specifiedTypeArgs.isEmpty ? '' : '<${specifiedTypeArgs.map((type) => type.semanticKey).join(',')}>'}'
+        '${typeArguments.isEmpty ? '' : '<${typeArguments.map((type) => type.semanticKey).join(',')}>'}'
         '${recordFields.isEmpty ? '' : ':record:${recordFields.map((field) => '${field.isNamed ? 'n' : 'p'}:${field.name}:${field.type.semanticKey}').join(',')}'}'
         '${self is FunctionTypeRef ? ':fn:${self.signature.semanticKey()}' : ''}';
   }
@@ -734,7 +760,7 @@ class TypeRef {
   /// so its id must be resolved against the active type environment.
   bool get requiresTypeEnvironment =>
       isTypeParameter ||
-      specifiedTypeArgs.any((arg) => arg.requiresTypeEnvironment);
+      typeArguments.any((arg) => arg.requiresTypeEnvironment);
 
   /// Semantic type equality for language checks. Unlike [operator ==], this
   /// includes nullability, type arguments, record fields, and function shape.
@@ -743,14 +769,14 @@ class TypeRef {
     final right = other;
     if (!left.hasSameDeclarationAs(right) ||
         left.nullable != right.nullable ||
-        left.specifiedTypeArgs.length != right.specifiedTypeArgs.length ||
+        left.typeArguments.length != right.typeArguments.length ||
         left.recordFields.length != right.recordFields.length) {
       return false;
     }
-    for (var i = 0; i < left.specifiedTypeArgs.length; i++) {
-      if (!left.specifiedTypeArgs[i].isSameSemanticType(
+    for (var i = 0; i < left.typeArguments.length; i++) {
+      if (!left.typeArguments[i].isSameSemanticType(
         ctx,
-        right.specifiedTypeArgs[i],
+        right.typeArguments[i],
       )) {
         return false;
       }
@@ -803,7 +829,7 @@ class TypeRef {
     int? file,
     String? name,
     TypeDecl? decl,
-    List<TypeRef>? specifiedTypeArgs,
+    List<TypeRef>? typeArguments,
     List<RecordParameterType>? recordFields,
     String? typeParameterOwner,
     int? typeParameterIndex,
@@ -812,30 +838,49 @@ class TypeRef {
     bool? nullable,
   }) {
     final self = this;
-    if (self is RecordTypeRef && recordFields == null) {
+    if (self is RecordTypeRef) {
+      final fields = recordFields ?? self.recordFields;
       return RecordTypeRef(
-        self.positional,
-        self.named,
+        [for (final field in fields) if (!field.isNamed) field.type],
+        {
+          for (final field in fields)
+            if (field.isNamed) field.name!: field.type,
+        },
         nullable: nullable ?? self.nullable,
+      );
+    }
+    if (self is TypeParameterTypeRef) {
+      return TypeParameterTypeRef(
+        parameter ?? self.parameter!,
+        nullable: nullable ?? self.nullable,
+        file: file ?? self.file,
       );
     }
     if (self is FunctionTypeRef) {
       return FunctionTypeRef(
         self.signature,
-        decl: self.decl!,
+        decl: decl ?? self.decl!,
         nullable: nullable ?? self.nullable,
       );
     }
-    return TypeRef(
-      file ?? this.file,
-      name ?? this.name,
-      decl: decl ?? this.decl,
-      specifiedTypeArgs: specifiedTypeArgs ?? this.specifiedTypeArgs,
-      typeParameterOwner: typeParameterOwner ?? this.typeParameterOwner,
-      typeParameterIndex: typeParameterIndex ?? this.typeParameterIndex,
-      parameter: parameter ?? this.parameter,
-      typeParameterBound: typeParameterBound ?? this.typeParameterBound,
-      recordFields: recordFields ?? this.recordFields,
+    final selfDecl = decl ?? self.decl;
+    if (selfDecl == null) {
+      // Decl-less nominals (the extension namespace pseudo-type) keep the
+      // legacy grab-bag fields until the migration removes them.
+      return _UnresolvedTypeRef(
+        file ?? this.file,
+        name ?? this.name,
+        typeParameterOwner: typeParameterOwner ?? this.typeParameterOwner,
+        typeParameterIndex: typeParameterIndex ?? this.typeParameterIndex,
+        parameter: parameter ?? this.parameter,
+        typeParameterBound: typeParameterBound ?? this.typeParameterBound,
+        recordFields: recordFields ?? this.recordFields,
+        nullable: nullable ?? this.nullable,
+      );
+    }
+    return InterfaceTypeRef(
+      selfDecl,
+      arguments: typeArguments ?? this.typeArguments,
       nullable: nullable ?? this.nullable,
     );
   }
@@ -858,7 +903,7 @@ class TypeRef {
       }
       return this;
     }
-    if (specifiedTypeArgs.isEmpty &&
+    if (typeArguments.isEmpty &&
         recordFields.isEmpty &&
         this is! FunctionTypeRef) {
       return this;
@@ -906,8 +951,8 @@ class TypeRef {
       );
     }
     return copyWith(
-      specifiedTypeArgs: [
-        for (final argument in specifiedTypeArgs)
+      typeArguments: [
+        for (final argument in typeArguments)
           argument.substituteTypeParameters(substitutions),
       ],
       recordFields: [
@@ -1106,6 +1151,124 @@ String ctorNameOf(String? name) => name == 'new' ? '' : name ?? '';
   return (type.name.lexeme, ctorName);
 }
 
+/// A nominal type — `C<T...>` over its [TypeDecl]. `dynamic`, `void`,
+/// `Never`, `Null`, `Object`, `Function`, and `Record` are interface
+/// types over their `dart:core` declarations too; dedicated subclasses
+/// would force a rewrite of every check for no gain.
+final class InterfaceTypeRef extends TypeRef {
+  InterfaceTypeRef(
+    TypeDecl decl, {
+    List<TypeRef> arguments = const [],
+    super.nullable = false,
+  }) : arguments = List.unmodifiable(arguments),
+       super(decl.library, decl.name, decl: decl);
+
+  /// Empty means a raw use — `Future` acts as `Future<dynamic>` in both
+  /// directions of assignability, exactly as the legacy empty
+  /// `specifiedTypeArgs` did.
+  final List<TypeRef> arguments;
+
+  @override
+  List<TypeRef> get typeArguments => arguments;
+}
+
+/// A type-parameter reference — `T` inside the scope that declared it.
+/// The shared [TypeParameterDef] is the identity; [typeParameterBound]
+/// reads the def's bound so copies stay live as bounds resolve.
+final class TypeParameterTypeRef extends TypeRef {
+  TypeParameterTypeRef(TypeParameterDef parameter, {super.nullable, int? file})
+    : super(
+        file ?? parameter.owner.library,
+        parameter.name,
+        typeParameterOwner: parameter.owner.key,
+        typeParameterIndex: parameter.index,
+        parameter: parameter,
+      );
+}
+
+/// A record type — `(<T...>, {name: T...})`. The canonical `@record`
+/// name and the legacy `recordFields` list are derived from
+/// [positional]/[named] at construction so unported readers keep working.
+final class RecordTypeRef extends TypeRef {
+  factory RecordTypeRef(
+    List<TypeRef> positional,
+    Map<String, TypeRef> named, {
+    bool nullable = false,
+  }) {
+    final sorted = _sortedByName(named);
+    final fields = <RecordParameterType>[
+      for (var i = 0; i < positional.length; i++)
+        RecordParameterType('\$${i + 1}', positional[i], false),
+      for (final entry in sorted.entries)
+        RecordParameterType(entry.key, entry.value, true),
+    ];
+    return RecordTypeRef._(
+      List.unmodifiable(positional),
+      Map.unmodifiable(sorted),
+      TypeRef.recordTypeName(fields),
+      fields,
+      nullable: nullable,
+    );
+  }
+
+  const RecordTypeRef._(
+    this.positional,
+    this.named,
+    String name,
+    List<RecordParameterType> fields, {
+    super.nullable,
+  }) : super(-1, name, recordFields: fields);
+
+  /// Positional fields in declaration order.
+  final List<TypeRef> positional;
+
+  /// Named fields in canonical (name-sorted) order.
+  final Map<String, TypeRef> named;
+
+  static Map<String, TypeRef> _sortedByName(Map<String, TypeRef> named) {
+    final entries = named.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+    return {for (final entry in entries) entry.key: entry.value};
+  }
+}
+
+/// A function type — `R Function<P...>(positional..., {name: T...})`.
+/// The `Function` declaration stays attached so supertypes
+/// (`Function <: Object`) resolve as before.
+final class FunctionTypeRef extends TypeRef {
+  FunctionTypeRef(
+    this.signature, {
+    required TypeDecl decl,
+    super.nullable = false,
+  }) : super(decl.library, decl.name, decl: decl);
+
+  final FunctionSignature signature;
+
+  /// Migration compatibility: function types were `Function` refs with an
+  /// attached signature, so `isSpec(CoreTypes.function)` stays true until
+  /// every `Function` check is classified as `isBareFunction` or
+  /// `isFunctionLike` and this override is removed.
+  @override
+  bool isSpec(BridgeTypeSpec spec) =>
+      spec.name == 'Function' && spec.library == 'dart:core';
+}
+
+/// Interim member of the sealed set: a decl-less nominal — the extension
+/// namespace pseudo-type and legacy encodings still using the grab-bag
+/// fields. Removed once every construction resolves a [TypeDecl].
+final class _UnresolvedTypeRef extends TypeRef {
+  const _UnresolvedTypeRef(
+    super.file,
+    super.name, {
+    super.recordFields,
+    super.typeParameterOwner,
+    super.typeParameterIndex,
+    super.parameter,
+    super.typeParameterBound,
+    super.nullable,
+  });
+}
+
 class RecordParameterType {
   const RecordParameterType(this.name, this.type, this.isNamed);
 
@@ -1241,7 +1404,7 @@ AlwaysReturnType _memberReturnAnnotation(
           receiverType,
           ctx.types.find(hostFile, hostName),
         );
-  if (declaringType == null || declaringType.specifiedTypeArgs.isEmpty) {
+  if (declaringType == null || declaringType.typeArguments.isEmpty) {
     return rt;
   }
   final hostDecl = declaringType.decl;
@@ -1256,7 +1419,7 @@ AlwaysReturnType _memberReturnAnnotation(
                 ),
                 i,
                 '',
-              )): declaringType.specifiedTypeArgs[i],
+              )): declaringType.typeArguments[i],
   });
   return AlwaysReturnType(rt.type!.substituteTypeParameters(subs), rt.nullable);
 }
@@ -1503,7 +1666,7 @@ class TargetTypeArgDependentReturnType implements ReturnType {
     Map<String, TypeRef?> namedArgTypes, {
     List<TypeRef> typeArgs = const [],
   }) {
-    return AlwaysReturnType(targetType!.specifiedTypeArgs[typeArgIndex], false);
+    return AlwaysReturnType(targetType!.typeArguments[typeArgIndex], false);
   }
 }
 
@@ -1749,7 +1912,7 @@ TypeRef? resolveAppliedTypeArgument(
       final nestedArgs = arg.typeArguments?.arguments;
       if (nestedArgs == null) return base;
       return base.copyWith(
-        specifiedTypeArgs: [
+        typeArguments: [
           for (final nested in nestedArgs)
             resolveAppliedTypeArgument(
                   ctx,

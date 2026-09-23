@@ -15,7 +15,7 @@ Variable compileFunctionReference(FunctionReference e, CompilerContext ctx) {
     final typeArgs = e.typeArguments;
     if (typeArgs != null && typeArgs.arguments.isNotEmpty) {
       final parameterized = baseType.copyWith(
-        specifiedTypeArgs: [
+        typeArguments: [
           for (final arg in typeArgs.arguments)
             TypeRef.fromAnnotation(ctx, ctx.library, arg),
         ],

@@ -215,7 +215,7 @@ Map<String, TypeRef> _hostParamBindings(
   TypeRef? instantiated,
 ) {
   final params = classLikeClauses(dec).$4?.typeParameters;
-  final args = instantiated?.specifiedTypeArgs;
+  final args = instantiated?.typeArguments;
   if (params == null || args == null || args.isEmpty) return const {};
   return {
     for (var i = 0; i < params.length && i < args.length; i++)
@@ -242,7 +242,7 @@ TypeRef? clauseNamedType(
     final args = clause.typeArguments?.arguments;
     if (args == null) return type;
     return type.copyWith(
-      specifiedTypeArgs: [
+      typeArguments: [
         for (final arg in args)
           TypeRef.fromAnnotation(
             ctx,

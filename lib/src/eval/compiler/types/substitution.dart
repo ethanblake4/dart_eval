@@ -25,9 +25,9 @@ final class Substitution {
     final decl = type.decl;
     final params = decl?.typeParameters ?? const <TypeParameterDef>[];
     if (params.isEmpty) {
-      if (type.specifiedTypeArgs.isEmpty) return empty;
+      if (type.typeArguments.isEmpty) return empty;
       return Substitution._({
-        for (var i = 0; i < type.specifiedTypeArgs.length; i++)
+        for (var i = 0; i < type.typeArguments.length; i++)
           TypeParameterDef(
             TypeParameterOwner(
               TypeParameterOwnerKind.classLike,
@@ -36,14 +36,14 @@ final class Substitution {
             ),
             i,
             '',
-          ): type.specifiedTypeArgs[i],
+          ): type.typeArguments[i],
       });
     }
     return Substitution._({
       for (var i = 0; i < params.length; i++)
         params[i]:
-            i < type.specifiedTypeArgs.length
-                ? type.specifiedTypeArgs[i]
+            i < type.typeArguments.length
+                ? type.typeArguments[i]
                 : (params[i].bound ?? CoreTypes.dynamic.ref(decl!.ctx)),
     });
   }

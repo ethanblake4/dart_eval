@@ -287,7 +287,7 @@ void compileConstructorDeclaration(
             // type arguments go through the callable-type-argument channel.
             typeArguments: ctorDecl?.factoryKeyword != null
                 ? [
-                    for (final arg in targetType.specifiedTypeArgs)
+                    for (final arg in targetType.typeArguments)
                       ctx.runtimeTypes.idOf(arg),
                   ]
                 : const [],
@@ -1078,7 +1078,7 @@ void _emitConstructorReturn(
   final typeArgs = redirected.type.typeArguments;
   if (typeArgs != null) {
     targetType = targetRef.copyWith(
-      specifiedTypeArgs: [
+      typeArguments: [
         for (final arg in typeArgs.arguments)
           TypeRef.fromAnnotation(ctx, ctx.library, arg),
       ],
@@ -1271,7 +1271,7 @@ Map<String, TypeRef> _superclassGenerics(
   DeclarationOrBridge extendsDecl,
   TypeRef? extendsType,
 ) {
-  final args = extendsType?.specifiedTypeArgs;
+  final args = extendsType?.typeArguments;
   if (args == null || args.isEmpty) return const {};
   final params =
       classLikeClauses(extendsDecl.declaration).$4?.typeParameters ??

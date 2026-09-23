@@ -155,13 +155,4 @@ List<TypeParameterDef> declareTypeParameters(
 /// A [TypeRef] that names a type parameter. The [TypeRef.parameter] def is
 /// shared by every reference to the same `(owner, index)`, so a bound
 /// resolved after seeding is visible through every copy.
-final class TypeParameterTypeRef extends TypeRef {
-  TypeParameterTypeRef(TypeParameterDef parameter, {super.nullable, int? file})
-    : super(
-        file ?? parameter.owner.library,
-        parameter.name,
-        typeParameterOwner: parameter.owner.key,
-        typeParameterIndex: parameter.index,
-        parameter: parameter,
-      );
-}
+

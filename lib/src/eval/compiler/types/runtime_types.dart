@@ -125,7 +125,7 @@ final class RuntimeTypes {
     return [
       indexMap[type] ?? idOf(type),
       type.nullable ? 1 : 0,
-      for (final argument in type.specifiedTypeArgs) idOf(argument),
+      for (final argument in type.typeArguments) idOf(argument),
     ];
   }
 }

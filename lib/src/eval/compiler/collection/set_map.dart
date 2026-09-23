@@ -27,7 +27,7 @@ Variable compileSetOrMapLiteral(
   final resolvedBound = bound;
   TypeRef? boundKey, boundValue;
   if (resolvedBound != null) {
-    final boundArgs = resolvedBound.specifiedTypeArgs;
+    final boundArgs = resolvedBound.typeArguments;
     if (resolvedBound.hasSameDeclarationAs(CoreTypes.map.ref(ctx)) &&
         boundArgs.length == 2) {
       boundKey = boundArgs[0];
@@ -72,7 +72,7 @@ Variable compileSetOrMapLiteral(
   final target = ctx.svar(isMap ? 'map' : 'set');
   final collectionType = (isMap ? CoreTypes.map : CoreTypes.set).ref(ctx);
   final exactCollectionType = collectionType.copyWith(
-    specifiedTypeArgs: [
+    typeArguments: [
       explicitKey ?? CoreTypes.dynamic.ref(ctx),
       if (isMap) explicitValue ?? CoreTypes.dynamic.ref(ctx),
     ],
@@ -104,7 +104,7 @@ Variable compileSetOrMapLiteral(
           : TypeRef.commonBaseType(ctx, values));
   final result = collection.copyWith(
     type: collection.type.copyWith(
-      specifiedTypeArgs: [
+      typeArguments: [
         infer(explicitKey, keyTypes),
         if (isMap) infer(explicitValue, valueTypes),
       ],

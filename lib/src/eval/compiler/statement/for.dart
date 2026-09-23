@@ -98,7 +98,7 @@ TypeRef forEachIterableBound(
   };
   return (await_ ? CoreTypes.stream : CoreTypes.iterable)
       .ref(ctx)
-      .copyWith(specifiedTypeArgs: [elementType ?? CoreTypes.dynamic.ref(ctx)]);
+      .copyWith(typeArguments: [elementType ?? CoreTypes.dynamic.ref(ctx)]);
 }
 
 /// Compiles the non-`await` form of `for (v in iterable)`: iterable type
@@ -123,9 +123,9 @@ StatementInfo compileForEachLoop(
     );
   }
 
-  final elementType = itype.specifiedTypeArgs.isEmpty
+  final elementType = itype.typeArguments.isEmpty
       ? CoreTypes.dynamic.ref(ctx)
-      : itype.specifiedTypeArgs[0];
+      : itype.typeArguments[0];
 
   var iterator = iterable.getProperty(ctx, 'iterator');
   late Reference loopVariable;
@@ -155,7 +155,7 @@ StatementInfo compileForEachLoop(
         iterator = iterator.copyWith(
           type: CoreTypes.iterator
               .ref(ctx)
-              .copyWith(specifiedTypeArgs: [elementType]),
+              .copyWith(typeArguments: [elementType]),
         );
 
         final name = parts.loopVariable.name.lexeme;
@@ -235,9 +235,9 @@ StatementInfo compileAwaitForLoop(
       ctx,
     );
   }
-  final elementType = itype.specifiedTypeArgs.isEmpty
+  final elementType = itype.typeArguments.isEmpty
       ? CoreTypes.dynamic.ref(ctx)
-      : itype.specifiedTypeArgs[0];
+      : itype.typeArguments[0];
   final itType = AsyncTypes.streamIterator.ref(ctx);
   final externalId =
       ctx.bridgeStaticFunctionIndices[itType.file]!['StreamIterator.']!;
@@ -246,7 +246,7 @@ StatementInfo compileAwaitForLoop(
   final iterator = Variable.of(
     ctx,
     ssa,
-    itType.copyWith(specifiedTypeArgs: [elementType]),
+    itType.copyWith(typeArguments: [elementType]),
     rep: ValueRep.boxed,
   );
   final completer = ctx.lookupLocal('#completer')!;

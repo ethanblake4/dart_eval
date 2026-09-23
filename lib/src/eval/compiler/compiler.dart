@@ -1154,7 +1154,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
   /// tables — the same three writes the old `TypeRef.cache` performed, in
   /// the same order.
   TypeRef _registerTypeRef(int libraryIndex, String name, TypeDecl decl) {
-    final type = TypeRef(libraryIndex, name, decl: decl);
+    final type = InterfaceTypeRef(decl);
     _ctx.runtimeTypes.indexMap[type] = _ctx.runtimeTypes.names.length;
     _ctx.runtimeTypes.descriptorIds[type.semanticKey] =
         _ctx.runtimeTypes.names.length;

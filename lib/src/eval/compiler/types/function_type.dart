@@ -1,28 +1,4 @@
-import 'package:dart_eval/dart_eval_bridge.dart' show BridgeTypeSpec;
-
 import '../type.dart';
-
-/// A function type — `R Function<P...>(positional..., {name: T...})`.
-/// Replaces the legacy `EvalFunctionType` attached to a `Function`
-/// interface ref. The `Function` declaration stays attached so
-/// supertypes (`Function <: Object`) resolve as before.
-final class FunctionTypeRef extends TypeRef {
-  FunctionTypeRef(
-    this.signature, {
-    required TypeDecl decl,
-    super.nullable = false,
-  }) : super(decl.library, decl.name, decl: decl);
-
-  final FunctionSignature signature;
-
-  /// Migration compatibility: function types were `Function` refs with an
-  /// attached signature, so `isSpec(CoreTypes.function)` stays true until
-  /// every `Function` check is classified as `isBareFunction` or
-  /// `isFunctionLike` and this override is removed.
-  @override
-  bool isSpec(BridgeTypeSpec spec) =>
-      spec.name == 'Function' && spec.library == 'dart:core';
-}
 
 /// The structural shape of a function type: positional parameter types
 /// (required first), named parameter types, return type, and the

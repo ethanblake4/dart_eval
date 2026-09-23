@@ -222,19 +222,19 @@ Variable compileMethodInvocation(
         boundChain != null &&
         boundChain.file == resolved.file &&
         boundChain.name == resolved.name &&
-        boundChain.specifiedTypeArgs.isNotEmpty) {
+        boundChain.typeArguments.isNotEmpty) {
       final substitutions = Substitution.wrap(
         <TypeParameterDef, TypeRef>{},
       );
       for (
         var i = 0;
-        i < resolved.specifiedTypeArgs.length &&
-            i < boundChain.specifiedTypeArgs.length;
+        i < resolved.typeArguments.length &&
+            i < boundChain.typeArguments.length;
         i++
       ) {
         ctx.typeSystem.unify(
-          resolved.specifiedTypeArgs[i],
-          boundChain.specifiedTypeArgs[i],
+          resolved.typeArguments[i],
+          boundChain.typeArguments[i],
           substitutions,
         );
       }
@@ -326,7 +326,7 @@ Variable compileMethodInvocation(
       if (boundChain != null &&
           e.typeArguments == null &&
           boundChain.name == ctorClassName) {
-        final contextArgs = boundChain.specifiedTypeArgs;
+        final contextArgs = boundChain.typeArguments;
         if (contextArgs.isNotEmpty &&
             contextArgs.every((t) => !t.isTypeParameter)) {
           inferredCtorArgs = contextArgs;
@@ -343,7 +343,7 @@ Variable compileMethodInvocation(
         final substitutions = Substitution.wrap(
           <TypeParameterDef, TypeRef>{},
         );
-        final aliasArgs = aliasType.specifiedTypeArgs;
+        final aliasArgs = aliasType.typeArguments;
         for (
           var i = 0;
           i < aliasArgs.length && i < inferredCtorArgs.length;
@@ -440,7 +440,7 @@ Variable compileMethodInvocation(
                 declaration.factoryKeyword != null
             ? [
                 for (final arg
-                    in instantiatedReturnType?.specifiedTypeArgs ??
+                    in instantiatedReturnType?.typeArguments ??
                         const <TypeRef>[])
                   ctx.runtimeTypes.idOf(arg),
               ]
@@ -483,9 +483,9 @@ TypeRef _instantiateConstructorType(
   final arguments = invocation.typeArguments?.arguments;
   if (arguments == null || arguments.isEmpty) {
     if (inferredArgs == null) return base;
-    final baseArgs = base.specifiedTypeArgs;
+    final baseArgs = base.typeArguments;
     if (baseArgs.isEmpty || baseArgs.every((a) => a.isTypeParameter)) {
-      return base.copyWith(specifiedTypeArgs: inferredArgs);
+      return base.copyWith(typeArguments: inferredArgs);
     }
     return base.substituteTypeParameters(
       Substitution.of({
@@ -504,7 +504,7 @@ TypeRef _instantiateConstructorType(
     );
   }
   return base.copyWith(
-    specifiedTypeArgs: [
+    typeArguments: [
       for (final argument in arguments)
         TypeRef.fromAnnotation(ctx, ctx.library, argument),
     ],
@@ -1185,10 +1185,10 @@ Map<String, TypeRef> _bridgeClassTypeArguments(
   return {
     for (
       var index = 0;
-      index < names.length && index < resolved.specifiedTypeArgs.length;
+      index < names.length && index < resolved.typeArguments.length;
       index++
     )
-      names[index]: resolved.specifiedTypeArgs[index],
+      names[index]: resolved.typeArguments[index],
   };
 }
 
@@ -1213,7 +1213,7 @@ void _inferBridgeTypeParameters(
       return;
     }
     final formalArguments = formal.typeArgs;
-    final actualArguments = actual.specifiedTypeArgs;
+    final actualArguments = actual.typeArguments;
     for (
       var index = 0;
       index < formalArguments.length && index < actualArguments.length;
@@ -1320,8 +1320,8 @@ Map<String, TypeRef> classTypeArguments(
       return {
         for (var index = 0; index < parameters.length; index++)
           parameters[index].name.lexeme:
-              index < current.specifiedTypeArgs.length
-              ? current.specifiedTypeArgs[index]
+              index < current.typeArguments.length
+              ? current.typeArguments[index]
               : CoreTypes.dynamic.ref(ctx),
       };
     }
@@ -1336,8 +1336,8 @@ Map<String, TypeRef> classTypeArguments(
       Substitution.of({
         for (var index = 0; index < levelParams.length; index++)
           levelParams[index]:
-              index < current.specifiedTypeArgs.length
-                  ? current.specifiedTypeArgs[index]
+              index < current.typeArguments.length
+                  ? current.typeArguments[index]
                   : levelParams[index].bound ?? CoreTypes.dynamic.ref(ctx),
       }),
     );
@@ -1401,7 +1401,7 @@ TypeRef? _resolveAppliedInterface(
   if (args == null) return base;
   final classParams = classLikeClauses(decl).$4?.typeParameters;
   return base.copyWith(
-    specifiedTypeArgs: [
+    typeArguments: [
       for (var i = 0; i < args.length; i++)
         (resolveAppliedTypeArgument(
                   ctx,
@@ -2002,7 +2002,7 @@ Variable _invokeSuperNoSuchMethod(
   final (positional, named) = _compileCallArgs(ctx, e);
   final listType = CoreTypes.list
       .ref(ctx)
-      .copyWith(specifiedTypeArgs: [CoreTypes.dynamic.ref(ctx)]);
+      .copyWith(typeArguments: [CoreTypes.dynamic.ref(ctx)]);
   final list = Variable.ssa(
     ctx,
     NewList(ctx.svar('list')),
@@ -2017,7 +2017,7 @@ Variable _invokeSuperNoSuchMethod(
     final mapType = CoreTypes.map
         .ref(ctx)
         .copyWith(
-          specifiedTypeArgs: [
+          typeArguments: [
             CoreTypes.symbol.ref(ctx),
             CoreTypes.dynamic.ref(ctx),
           ],

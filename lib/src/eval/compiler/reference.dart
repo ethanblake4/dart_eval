@@ -1602,7 +1602,7 @@ Variable? _deferredLoadLibrary(CompilerContext ctx, String prefix) {
     methodReturnType: AlwaysReturnType(
       CoreTypes.future
           .ref(ctx)
-          .copyWith(specifiedTypeArgs: [CoreTypes.nullType.ref(ctx)]),
+          .copyWith(typeArguments: [CoreTypes.nullType.ref(ctx)]),
       false,
     ),
   );
@@ -1729,8 +1729,8 @@ class IndexedReference implements Reference {
       CoreTypes.list.ref(ctx),
       forceAllowDynamic: false,
     )) {
-      return _variable.type.specifiedTypeArgs.isNotEmpty
-          ? _variable.type.specifiedTypeArgs[0]
+      return _variable.type.typeArguments.isNotEmpty
+          ? _variable.type.typeArguments[0]
           : CoreTypes.dynamic.ref(ctx);
     }
     if (_variable.type.isAssignableTo(
@@ -1738,8 +1738,8 @@ class IndexedReference implements Reference {
       CoreTypes.map.ref(ctx),
       forceAllowDynamic: false,
     )) {
-      return _variable.type.specifiedTypeArgs.length >= 2
-          ? _variable.type.specifiedTypeArgs[1]
+      return _variable.type.typeArguments.length >= 2
+          ? _variable.type.typeArguments[1]
           : CoreTypes.dynamic.ref(ctx);
     }
     // A write's contextual type must not execute the indexed getter. For a
@@ -1808,8 +1808,8 @@ class IndexedReference implements Reference {
 
       final list = _variable.unboxIfNeeded(ctx);
       _index = _index.unboxIfNeeded(ctx);
-      final listElementType = _variable.type.specifiedTypeArgs.isNotEmpty
-          ? _variable.type.specifiedTypeArgs[0]
+      final listElementType = _variable.type.typeArguments.isNotEmpty
+          ? _variable.type.typeArguments[0]
           : CoreTypes.dynamic.ref(ctx);
       return Variable.ssa(
         ctx,
@@ -1831,9 +1831,9 @@ class IndexedReference implements Reference {
       // key travels boxed and a miss must produce a boxed null.
       _index = _index.boxIfNeeded(ctx, source);
 
-      final mapType = _variable.type.specifiedTypeArgs.length < 2
+      final mapType = _variable.type.typeArguments.length < 2
           ? CoreTypes.dynamic.ref(ctx)
-          : _variable.type.specifiedTypeArgs[1];
+          : _variable.type.typeArguments[1];
 
       final mapResult = Variable.ssa(
         ctx,
@@ -1874,9 +1874,9 @@ class IndexedReference implements Reference {
         );
       }
 
-      final elementType = _variable.type.specifiedTypeArgs.isEmpty
+      final elementType = _variable.type.typeArguments.isEmpty
           ? CoreTypes.dynamic.ref(ctx)
-          : _variable.type.specifiedTypeArgs[0];
+          : _variable.type.typeArguments[0];
       final formattedValue = convertForAssignment(
         ctx,
         value,
@@ -1967,7 +1967,7 @@ Variable _declarationToVariable(
     // `E` as an expression is the extension's namespace: `E.m(recv, ...)`
     // (explicit application) and `E.staticM(...)` resolve through it. The
     // pseudo-type `E` exists only in the declarations map, never as a class.
-    final extType = TypeRef(decOrBridge.sourceLib, declarationName(decl));
+    final extType = TypeRef.unresolved(decOrBridge.sourceLib, declarationName(decl));
     return Variable(
       CoreTypes.type.ref(ctx),
       concreteTypes: [extType],

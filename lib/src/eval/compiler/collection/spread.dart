@@ -28,7 +28,7 @@ List<TypeRef> compileCollectionSpread(
 }) {
   final collection = source ?? compileExpression(element.expression, ctx);
   if (element.isNullAware && collection.type.isSpec(CoreTypes.nullType)) {
-    return target.type.specifiedTypeArgs;
+    return target.type.typeArguments;
   }
   final sourceType = collection.type.copyWith(nullable: false);
   final requiredType = (isMap ? CoreTypes.map : CoreTypes.iterable).ref(ctx);
@@ -38,15 +38,15 @@ List<TypeRef> compileCollectionSpread(
       element,
     );
   }
-  final sourceArgs = sourceType.specifiedTypeArgs;
+  final sourceArgs = sourceType.typeArguments;
   final types = [
     for (var i = 0; i < (isMap ? 2 : 1); i++)
       sourceArgs.length > i ? sourceArgs[i] : CoreTypes.dynamic.ref(ctx),
   ];
   for (var i = 0; i < types.length; i++) {
-    if (!types[i].isAssignableTo(ctx, target.type.specifiedTypeArgs[i])) {
+    if (!types[i].isAssignableTo(ctx, target.type.typeArguments[i])) {
       throw CompileError(
-        'Spread element type ${types[i]} is not assignable to ${target.type.specifiedTypeArgs[i]}',
+        'Spread element type ${types[i]} is not assignable to ${target.type.typeArguments[i]}',
         element,
       );
     }
@@ -67,14 +67,14 @@ List<TypeRef> compileCollectionSpread(
           final key = convertForAssignment(
             ctx,
             current.getProperty(ctx, 'key'),
-            target.type.specifiedTypeArgs[0],
+            target.type.typeArguments[0],
             representation: box ? MachineRepresentation.object : null,
             source: element,
           );
           final value = convertForAssignment(
             ctx,
             current.getProperty(ctx, 'value'),
-            target.type.specifiedTypeArgs[1],
+            target.type.typeArguments[1],
             representation: box ? MachineRepresentation.object : null,
             source: element,
           );
@@ -83,7 +83,7 @@ List<TypeRef> compileCollectionSpread(
           final value = convertForAssignment(
             ctx,
             current,
-            target.type.specifiedTypeArgs[0],
+            target.type.typeArguments[0],
             representation: box ? MachineRepresentation.object : null,
             source: element,
           );

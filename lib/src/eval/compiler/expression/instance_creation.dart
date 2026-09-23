@@ -48,14 +48,14 @@ Variable compileInstanceCreation(
           nullable: type.question != null,
           typeArgs: type.typeArguments?.arguments,
         ).copyWith(
-          specifiedTypeArgs: [
-            if (type.typeArguments == null) ...staticType.specifiedTypeArgs,
+          typeArguments: [
+            if (type.typeArguments == null) ...staticType.typeArguments,
           ],
         );
   }
   if (type.typeArguments != null) {
     instantiatedType = instantiatedType.copyWith(
-      specifiedTypeArgs: [
+      typeArguments: [
         for (final arg in type.typeArguments!.arguments)
           TypeRef.fromAnnotation(ctx, ctx.library, arg),
       ],
@@ -66,9 +66,9 @@ Variable compileInstanceCreation(
     final boundChain = bound;
     if (boundChain.file == staticType.file &&
         boundChain.name == staticType.name &&
-        boundChain.specifiedTypeArgs.isNotEmpty) {
+        boundChain.typeArguments.isNotEmpty) {
       instantiatedType = instantiatedType.copyWith(
-        specifiedTypeArgs: boundChain.specifiedTypeArgs,
+        typeArguments: boundChain.typeArguments,
       );
     }
   }
@@ -152,7 +152,7 @@ Variable compileInstanceOf(
         ? classBridge.type.generics.keys.toList()
         : const <String>[];
     Map<String, TypeRef> argTypeParameters = const {};
-    if (genericNames.isNotEmpty && instantiatedType.specifiedTypeArgs.isEmpty) {
+    if (genericNames.isNotEmpty && instantiatedType.typeArguments.isEmpty) {
       // Parameter annotations compile permissively (`T` → dynamic); the real
       // bindings are inferred from the argument types below.
       argTypeParameters = {
@@ -166,7 +166,7 @@ Variable compileInstanceOf(
       typeParameters: argTypeParameters,
     );
 
-    if (genericNames.isNotEmpty && instantiatedType.specifiedTypeArgs.isEmpty) {
+    if (genericNames.isNotEmpty && instantiatedType.typeArguments.isEmpty) {
       final paramRefs = {
         for (var i = 0; i < genericNames.length; i++)
           genericNames[i]: TypeParameterTypeRef(
@@ -201,7 +201,7 @@ Variable compileInstanceOf(
         ctx.typeSystem.unify(pattern, concrete, substitutions);
       }
       instantiatedType = instantiatedType.copyWith(
-        specifiedTypeArgs: [
+        typeArguments: [
           for (var i = 0; i < genericNames.length; i++)
             substitutions[paramRefs[genericNames[i]]!.parameter!] ??
                 CoreTypes.dynamic.ref(ctx),
@@ -227,8 +227,8 @@ Variable compileInstanceOf(
           resolvedChain.file == dec0.sourceLib &&
               ctorDecl != null &&
               resolvedChain.name == declarationName(ctorDecl as Declaration)
-          ? resolvedChain.specifiedTypeArgs
-          : instantiatedType.specifiedTypeArgs;
+          ? resolvedChain.typeArguments
+          : instantiatedType.typeArguments;
       for (var i = 0; i < classTypeParams.length; i++) {
         final bound = classTypeParams[i].bound;
         seedGenerics[classTypeParams[i].name.lexeme] = i < appliedArgs.length
@@ -313,7 +313,7 @@ Variable compileInstanceOf(
         // arguments are delivered through the callable-type-argument channel.
         typeArguments: constructor.factoryKeyword != null
             ? [
-                for (final arg in instantiatedType.specifiedTypeArgs)
+                for (final arg in instantiatedType.typeArguments)
                   ctx.runtimeTypes.idOf(arg),
               ]
             : const [],

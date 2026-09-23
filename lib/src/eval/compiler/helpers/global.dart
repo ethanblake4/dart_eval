@@ -119,7 +119,7 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
     final type = expression.constructorName.type;
     if (type.typeArguments == null) return resolved;
     return resolved.copyWith(
-      specifiedTypeArgs: [
+      typeArguments: [
         for (final arg in type.typeArguments!.arguments)
           TypeRef.fromAnnotation(ctx, library, arg),
       ],
@@ -174,8 +174,8 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
           CoreTypes.future.ref(ctx),
           forceAllowDynamic: false,
         ) &&
-        inner.specifiedTypeArgs.isNotEmpty) {
-      return inner.specifiedTypeArgs.first;
+        inner.typeArguments.isNotEmpty) {
+      return inner.typeArguments.first;
     }
     return inner;
   }
@@ -195,7 +195,7 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
   if (expression is ThrowExpression) return CoreTypes.never.ref(ctx);
   if (expression is IndexExpression) {
     final target = _infer(ctx, library, expression.target);
-    final args = target.specifiedTypeArgs;
+    final args = target.typeArguments;
     if (target.isAssignableTo(
           ctx,
           CoreTypes.list.ref(ctx),
@@ -323,7 +323,7 @@ TypeRef _collectionType(
   if (elementTypes == null || elementTypes.isEmpty) return core.ref(ctx);
   return core
       .ref(ctx)
-      .copyWith(specifiedTypeArgs: [TypeRef.commonBaseType(ctx, elementTypes)]);
+      .copyWith(typeArguments: [TypeRef.commonBaseType(ctx, elementTypes)]);
 }
 
 /// The type of a map literal: bare `Map` when the entry types are unknown,
@@ -345,7 +345,7 @@ TypeRef _mapType(
   return CoreTypes.map
       .ref(ctx)
       .copyWith(
-        specifiedTypeArgs: [
+        typeArguments: [
           TypeRef.commonBaseType(ctx, keyTypes),
           TypeRef.commonBaseType(ctx, valueTypes),
         ],

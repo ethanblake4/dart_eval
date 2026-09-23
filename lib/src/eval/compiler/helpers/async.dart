@@ -20,14 +20,14 @@ StatementInfo doAsyncReturn(
   final completer = ctx.lookupLocal('#completer')!.ssa;
   final boxed = value?.boxIfNeeded(ctx);
   if (boxed != null) {
-    final arguments = expectedReturnType.type?.specifiedTypeArgs;
+    final arguments = expectedReturnType.type?.typeArguments;
     final expected = arguments == null || arguments.isEmpty
         ? CoreTypes.dynamic.ref(ctx)
         : arguments.first;
     var compatible = boxed.type.isAssignableTo(ctx, expected);
     if (!compatible &&
         boxed.type.isAssignableTo(ctx, CoreTypes.future.ref(ctx))) {
-      final arguments = boxed.type.specifiedTypeArgs;
+      final arguments = boxed.type.typeArguments;
       final payload = arguments.isEmpty
           ? CoreTypes.dynamic.ref(ctx)
           : arguments.first;
@@ -68,7 +68,7 @@ void setupAsyncFunction(CompilerContext ctx, {TypeRef? returnType}) {
   final runtimeType =
       returnType != null && returnType.hasSameDeclarationAs(future)
       ? returnType
-      : future.copyWith(specifiedTypeArgs: [CoreTypes.dynamic.ref(ctx)]);
+      : future.copyWith(typeArguments: [CoreTypes.dynamic.ref(ctx)]);
   ctx.setLocal(
     '#completer',
     Variable.ssa(

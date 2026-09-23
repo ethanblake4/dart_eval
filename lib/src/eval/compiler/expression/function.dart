@@ -269,7 +269,7 @@ Variable compileFunctionExpression(
             ? CoreTypes.future
                   .ref(ctx)
                   .copyWith(
-                    specifiedTypeArgs: [ctx.typeSystem.flatten(inferred)],
+                    typeArguments: [ctx.typeSystem.flatten(inferred)],
                   )
             : inferred;
       }
