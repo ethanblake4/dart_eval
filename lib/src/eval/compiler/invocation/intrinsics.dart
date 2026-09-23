@@ -13,14 +13,14 @@ import '../values/value_rep.dart';
 
 /// Fast paths consulted before member resolution on the operator and index
 /// paths — a hit emits a dedicated ALU/string op instead of a call, and the
-/// returned [InvokeResult] carries the unboxed operand values compound
+/// returned [OperatorResult] carries the unboxed operand values compound
 /// assignments write back.
 final class Intrinsics {
   const Intrinsics(this.ctx);
 
   final CompilerContext ctx;
 
-  InvokeResult? tryEmit(Variable receiver, String method, List<Variable> args) {
+  OperatorResult? tryEmit(Variable receiver, String method, List<Variable> args) {
     final type = receiver.type;
     final boolType = CoreTypes.bool.ref(ctx);
     if (args.length == 1 &&

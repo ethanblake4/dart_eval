@@ -593,7 +593,7 @@ final class CallResolver {
   /// legacy dynamic-dispatch entry point, keeping `untypedLegacy` operand
   /// handling until phase 7: [Intrinsics] first, then extension members,
   /// then [EqualityCall]/[VirtualCall] on the boxed operand vector.
-  InvokeResult invokeOperator(
+  OperatorResult invokeOperator(
     Variable receiver,
     String? method,
     List<Variable> args, {
@@ -732,7 +732,7 @@ final class CallResolver {
 
   /// `f(args)` where `f` is a function-typed value — or a non-function
   /// whose implicit `.call` may resolve to an extension member.
-  InvokeResult invokeFunctionValue(
+  OperatorResult invokeFunctionValue(
     Variable callee,
     List<Variable> args,
     Map<String, Variable>? namedArgs,
@@ -783,7 +783,7 @@ final class CallResolver {
 
   /// Emits a static `Call` to an extension member resolved on the operator
   /// path — receiver first, then the converted and default-filled args.
-  InvokeResult _invokeExtensionOperator(
+  OperatorResult _invokeExtensionOperator(
     Variable receiver,
     EvalExtension ext,
     MethodDeclaration member,

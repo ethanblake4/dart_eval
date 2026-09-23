@@ -584,7 +584,7 @@ class Variable {
 
 /// The operator call's reified results: [result], the post-coercion
 /// receiver [target] for writeback, and the prepared operand [args].
-typedef InvokeResult = ({
+typedef OperatorResult = ({
   Variable? target,
   Variable result,
   List<Variable> args,
