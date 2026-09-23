@@ -43,16 +43,10 @@ Variable compileIndexExpression(
     return emitNullGuard(
       ctx,
       target,
-      (t) => IndexedReference(
-        t,
-        compileExpression(e.index, ctx),
-      ).getValue(ctx, e),
+      (t) =>
+          IndexedReference(t, compileExpression(e.index, ctx)).getValue(ctx, e),
       source: e,
     );
   }
-  return compileIndexExpressionAsReference(
-    e,
-    ctx,
-    bound: bound,
-  ).getValue(ctx);
+  return compileIndexExpressionAsReference(e, ctx, bound: bound).getValue(ctx);
 }

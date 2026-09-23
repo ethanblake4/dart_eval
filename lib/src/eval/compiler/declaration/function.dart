@@ -24,12 +24,12 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   final pos = ctx.beginFunction('${d.name.lexeme}()');
   // Top-level accessors register under `*g`/`*s` like class members, so a
   // getter and setter of the same name don't collide.
-  ctx.topLevelDeclarationPositions[ctx.library]![
-      d.isGetter
+  ctx.topLevelDeclarationPositions[ctx.library]![d.isGetter
           ? '${d.name.lexeme}*g'
           : d.isSetter
           ? '${d.name.lexeme}*s'
-          : d.name.lexeme] = pos;
+          : d.name.lexeme] =
+      pos;
 
   final overrideAnno = d.metadata.firstWhereOrNull(
     (element) => element.name.name == 'RuntimeOverride',
@@ -129,7 +129,9 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   final returnType = expectedReturnType.type;
   ctx.functionSignatures[pos] = MachineFunctionSignature(
     parameterRepresentations,
-    returnType == CoreTypes.voidType.ref(ctx) && !b.isAsynchronous
+    returnType != null &&
+            returnType.isSpec(CoreTypes.voidType) &&
+            !b.isAsynchronous
         ? null
         : Abi.result(
             returnType ?? CoreTypes.dynamic.ref(ctx),

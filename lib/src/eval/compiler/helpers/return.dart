@@ -34,18 +34,20 @@ StatementInfo doReturn(
 }) {
   // A Never-typed value cannot produce a result — return it anyway so a
   // `=> f()` where `f` returns `Never` still terminates the block.
-  if (value != null && value.type == CoreTypes.never.ref(ctx)) {
+  if (value != null && value.type.isSpec(CoreTypes.never)) {
     if (!ctx.blockEndsControlFlow) {
       final isVoid =
-          expectedReturnType.type == CoreTypes.voidType.ref(ctx);
-      ctx.pushOp(
-        Return(isVoid ? null : value.boxIfNeeded(ctx).ssa),
-      );
+          expectedReturnType.type != null &&
+          expectedReturnType.type!.isSpec(CoreTypes.voidType);
+      ctx.pushOp(Return(isVoid ? null : value.boxIfNeeded(ctx).ssa));
     }
     return StatementInfo(willAlwaysThrow: true);
   }
   if (isAsync) return doAsyncReturn(ctx, expectedReturnType, value);
-  if (expectedReturnType.type == CoreTypes.voidType.ref(ctx)) value = null;
+  if (expectedReturnType.type != null &&
+      expectedReturnType.type!.isSpec(CoreTypes.voidType)) {
+    value = null;
+  }
   if (value == null) {
     if (ctx.exceptionDepth > 0) {
       final continuation = BasicBlock<Operation>([

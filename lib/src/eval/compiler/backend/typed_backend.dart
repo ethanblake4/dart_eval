@@ -34,7 +34,6 @@ import '../helpers/default_value.dart';
 import '../helpers/fpl.dart';
 import '../errors.dart';
 import '../type.dart';
-import '../builtins.dart';
 import 'package:dart_eval/dart_eval_bridge.dart' show CoreTypes;
 import '../context.dart';
 import '../model/function_type.dart';
@@ -387,6 +386,7 @@ class TypedBackend {
             thunk,
           );
         }
+
         final positionalDefaults = positional.map(defaultValue).toList();
         final namedDefaults = named.map(defaultValue).toList();
 
@@ -416,8 +416,8 @@ class TypedBackend {
             ],
             parameterTypeIds: [
               for (final type in parameterTypes)
-                type == CoreTypes.dynamic.ref(context) ||
-                        type == CoreTypes.voidType.ref(context)
+                type.isSpec(CoreTypes.dynamic) ||
+                        type.isSpec(CoreTypes.voidType)
                     ? -1
                     : type.runtimeTypeId(context),
             ],
@@ -437,20 +437,19 @@ class TypedBackend {
                 bound.runtimeTypeId(context),
             ],
             runtimeTypeId: switch (memberKinds[id]) {
-                  (final name, final kind) => _tearOffSignature(
-                    allocation,
-                    name,
-                    kind,
-                    context.functionRuntimeTypes[id] ??
-                        CoreTypes.function.ref(context),
-                    parameters,
-                    parameterTypes,
-                  ),
-                  _ =>
-                    context.functionRuntimeTypes[id] ??
-                        CoreTypes.function.ref(context),
-                }
-                .runtimeTypeId(context),
+              (final name, final kind) => _tearOffSignature(
+                allocation,
+                name,
+                kind,
+                context.functionRuntimeTypes[id] ??
+                    CoreTypes.function.ref(context),
+                parameters,
+                parameterTypes,
+              ),
+              _ =>
+                context.functionRuntimeTypes[id] ??
+                    CoreTypes.function.ref(context),
+            }.runtimeTypeId(context),
             hasEnvironment: false,
             boundReceiver: true,
           ),
@@ -551,8 +550,8 @@ class TypedBackend {
       // The export name's prefix is the owning class — for a class type
       // alias's forwarding constructor `C.n` that's the alias `C`, not the
       // class declaring the target constructor `S.n`.
-      final owner = declarations[name.substring(0, name.lastIndexOf('.'))]
-              ?.declaration ??
+      final owner =
+          declarations[name.substring(0, name.lastIndexOf('.'))]?.declaration ??
           declaration.parent?.parent;
       return owner is Declaration ? owner : null;
     }
@@ -590,8 +589,9 @@ class TypedBackend {
       final redirectRef = context.visibleTypes[libraryId]![redirectTypeName];
       final redirectDecl = redirectRef == null
           ? null
-          : context.topLevelDeclarationsMap[redirectRef
-              .file]!['${redirectRef.name}.$redirectCtorName']
+          : context
+                .topLevelDeclarationsMap[redirectRef
+                    .file]!['${redirectRef.name}.$redirectCtorName']
                 ?.declaration;
       if (redirectDecl is ConstructorDeclaration) {
         parameterHost = redirectDecl;
@@ -621,7 +621,7 @@ class TypedBackend {
     try {
       final isGenerativeConstructor =
           (constructorOwner is ClassDeclaration ||
-                  constructorOwner is ClassTypeAlias) &&
+              constructorOwner is ClassTypeAlias) &&
           (declaration is! ConstructorDeclaration ||
               declaration.factoryKeyword == null);
       return TypedExport(
@@ -668,9 +668,7 @@ class TypedBackend {
       library,
       parameter,
     );
-    if (defaultValue is int &&
-        type.file == dartCoreFile &&
-        type.name == 'double') {
+    if (defaultValue is int && type.isSpec(CoreTypes.double)) {
       defaultValue = defaultValue.toDouble();
     }
     return TypedExportParameter(
@@ -678,7 +676,8 @@ class TypedBackend {
       isRequired: parameter.isRequired,
       nullable: type.nullable || type.name == 'dynamic' || type.name == 'Null',
       typeName: type.name,
-      typeLibrary: context.libraryMap.entries
+      typeLibrary:
+          context.libraryMap.entries
               .firstWhereOrNull((entry) => entry.value == type.file)
               ?.key ??
           // Structural types (records, function types) carry file: -1.
@@ -852,8 +851,9 @@ class TypedBackend {
         positionalParameters.sublist(function.normalParameters.length),
         {
           for (final entry in function.namedParameters.entries)
-            entry.key:
-                named.contains(entry.key) ? erased(entry.value) : entry.value,
+            entry.key: named.contains(entry.key)
+                ? erased(entry.value)
+                : entry.value,
         },
         function.returnType,
         function.generics,
@@ -905,8 +905,8 @@ class TypedBackend {
     final decl = context.instanceDeclarationsMap[type.file]?[type.name]?[key];
     if (decl is MethodDeclaration) {
       final id =
-          context.instanceDeclarationPositions[type.file]?[type.name]?[kind]
-              ?[memberName];
+          context.instanceDeclarationPositions[type.file]?[type
+              .name]?[kind]?[memberName];
       _markCovariantParameters(
         decl.parameters?.parameters ?? const <FormalParameter>[],
         id == null ? null : context.functionParameterTypes[id],
@@ -1199,13 +1199,15 @@ class _LoweringSession {
             : op.namedDefaults,
         defaultThunks: op.defaultThunks.every((t) => t < 0)
             ? const []
-            : [for (final t in op.defaultThunks) t < 0 ? -1 : functionIndices[t]!],
+            : [
+                for (final t in op.defaultThunks)
+                  t < 0 ? -1 : functionIndices[t]!,
+              ],
         parameterTypeIds: [
           for (final type
               in b.context.functionParameterTypes[sourceFunctionId] ??
                   const <TypeRef>[])
-            type == CoreTypes.dynamic.ref(b.context) ||
-                    type == CoreTypes.voidType.ref(b.context)
+            type.isSpec(CoreTypes.dynamic) || type.isSpec(CoreTypes.voidType)
                 ? -1
                 : type.runtimeTypeId(b.context),
         ],

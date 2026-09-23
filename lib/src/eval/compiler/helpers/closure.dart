@@ -48,10 +48,10 @@ InvokeResult invokeClosure(
   Variable snapshot(Variable argument) => argument.boxed
       ? argument
       : Variable.ssa(
-            ctx,
-            Assign(ctx.svar('closure_argument'), argument.ssa),
-            argument.type,
-          ).boxIfNeeded(ctx);
+          ctx,
+          Assign(ctx.svar('closure_argument'), argument.ssa),
+          argument.type,
+        ).boxIfNeeded(ctx);
   final positionalArgs = [
     for (final argument in positional ?? <Variable>[]) snapshot(argument),
   ];
@@ -92,10 +92,7 @@ InvokeResult invokeClosure(
     // `x(...)` where `x` isn't a function is an implicit `x.call(...)` — an
     // extension `call` member applies statically before the dynamic fallback.
     final callableVar = closure!;
-    if (!callableVar.type.isAssignableTo(
-      ctx,
-      CoreTypes.function.ref(ctx),
-    )) {
+    if (!callableVar.type.isAssignableTo(ctx, CoreTypes.function.ref(ctx))) {
       if (!hasInstanceMethod(ctx, callableVar.type, 'call') &&
           resolveExtensionMember(
                 ctx,
@@ -139,12 +136,7 @@ InvokeResult invokeClosure(
       CoreTypes.dynamic.ref(ctx);
   return InvokeResult(
     null,
-    Variable.of(
-      ctx,
-      target,
-      resultType,
-      rep: ValueRep.boxed,
-    ),
+    Variable.of(ctx, target, resultType, rep: ValueRep.boxed),
     positionalArgs,
     namedArgs: namedArgs,
   );
@@ -207,7 +199,7 @@ bool _closureArgumentsProven(
     if (i >= positional.length) return false;
     final paramType = positional[i].type.type;
     if (paramType == null ||
-        paramType == CoreTypes.dynamic.ref(ctx) ||
+        paramType.isSpec(CoreTypes.dynamic) ||
         positionalArgs[i].type
                 .resolveTypeChain(ctx)
                 .assignmentConversionTo(ctx, paramType) !=
@@ -218,7 +210,7 @@ bool _closureArgumentsProven(
   for (final entry in namedArgs.entries) {
     final paramType = signature.namedParameters[entry.key]?.type.type;
     if (paramType == null ||
-        paramType == CoreTypes.dynamic.ref(ctx) ||
+        paramType.isSpec(CoreTypes.dynamic) ||
         entry.value.type
                 .resolveTypeChain(ctx)
                 .assignmentConversionTo(ctx, paramType) !=

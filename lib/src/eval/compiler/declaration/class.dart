@@ -46,17 +46,16 @@ void compileClassDeclaration(CompilerContext ctx, ClassDeclaration d) {
   if (constructors.isEmpty) {
     ctx.currentClass = d;
     final $extends = classLikeClauses(d).$1;
-    final superRef =
-        $extends == null ? null : _resolveSuperclass(ctx, $extends);
-    if ($extends == null ||
-        _superclassHasUnnamedConstructor(ctx, superRef)) {
-      compileDefaultConstructor(
-        ctx,
-        d,
-        [...mixinFields, ...fields],
-        memberLibraries: memberLibraries,
-      );
-    } else if (ctx.topLevelDeclarationsMap[superRef!.file]?[superRef.name]
+    final superRef = $extends == null
+        ? null
+        : _resolveSuperclass(ctx, $extends);
+    if ($extends == null || _superclassHasUnnamedConstructor(ctx, superRef)) {
+      compileDefaultConstructor(ctx, d, [
+        ...mixinFields,
+        ...fields,
+      ], memberLibraries: memberLibraries);
+    } else if (ctx
+            .topLevelDeclarationsMap[superRef!.file]?[superRef.name]
             ?.declaration !=
         null) {
       throw CompileError(
@@ -125,8 +124,7 @@ void compileClassTypeAlias(CompilerContext ctx, ClassTypeAlias d) {
     for (final entry in superCtors.entries)
       if (entry.key.startsWith('${superRef.name}.') &&
           entry.value.declaration is ConstructorDeclaration &&
-          (entry.value.declaration! as ConstructorDeclaration)
-                  .factoryKeyword ==
+          (entry.value.declaration! as ConstructorDeclaration).factoryKeyword ==
               null)
         entry,
   ];
@@ -135,11 +133,11 @@ void compileClassTypeAlias(CompilerContext ctx, ClassTypeAlias d) {
     // The superclass has an implicit unnamed constructor, so `C.` is the
     // synthesized default body forwarding to it.
     compileDefaultConstructor(
-        ctx,
-        d,
-        mixinFields,
-        memberLibraries: memberLibraries,
-      );
+      ctx,
+      d,
+      mixinFields,
+      memberLibraries: memberLibraries,
+    );
   }
   compileClassMembers(
     ctx,
@@ -151,9 +149,7 @@ void compileClassTypeAlias(CompilerContext ctx, ClassTypeAlias d) {
   );
   // Forwarding constructors: `C.n(...)` for each `S.n(...)` on the superclass.
   for (final entry in superCtorEntries) {
-    final ctorName = entry.key.substring(
-      superRef.name.length + 1,
-    );
+    final ctorName = entry.key.substring(superRef.name.length + 1);
     if (ctx.topLevelDeclarationPositions[ctx.library]!.containsKey(
       '$clsName.$ctorName',
     )) {
@@ -180,7 +176,8 @@ TypeRef _resolveSuperclass(CompilerContext ctx, NamedType superclass) {
   final name = prefix == null
       ? superclass.name.lexeme
       : '${prefix.name.lexeme}.${superclass.name.lexeme}';
-  final resolved = ctx.visibleTypes[ctx.library]![name] ??
+  final resolved =
+      ctx.visibleTypes[ctx.library]![name] ??
       (ctx.typeAliases[ctx.library]?[name] is TypeAlias
           ? resolveTypeAlias(
               ctx,
@@ -244,8 +241,7 @@ _mixinMembers(
   if (mixinTypes == null) return (fields, methods, memberLibraries);
   for (final mixinType in mixinTypes) {
     final ref = TypeRef.fromAnnotation(ctx, ctx.library, mixinType);
-    final decl =
-        ctx.topLevelDeclarationsMap[ref.file]![ref.name]?.declaration;
+    final decl = ctx.topLevelDeclarationsMap[ref.file]![ref.name]?.declaration;
     final declKey = '${ref.file}:${ref.name}';
     if (!visited.add(declKey)) {
       throw CompileError(
@@ -261,7 +257,8 @@ _mixinMembers(
     // B's T.
     final mixinParams = switch (decl) {
       MixinDeclaration(:final typeParameters) => typeParameters?.typeParameters,
-      ClassDeclaration(:final namePart) => namePart.typeParameters?.typeParameters,
+      ClassDeclaration(:final namePart) =>
+        namePart.typeParameters?.typeParameters,
       _ => null,
     };
     if (mixinParams != null && mixinParams.isNotEmpty) {
@@ -284,7 +281,8 @@ _mixinMembers(
         final param = mixinParams[i];
         if (temps.containsKey(param.name.lexeme)) continue;
         final bound = param.bound;
-        temps[param.name.lexeme] = (args != null && i < args.length
+        temps[param.name.lexeme] =
+            (args != null && i < args.length
                 ? resolveAppliedTypeArgument(
                     ctx,
                     ctx.library,
@@ -303,7 +301,7 @@ _mixinMembers(
     final (
       List<ConstructorDeclaration> mixinCtors,
       List<FieldDeclaration> mixinFields,
-      List<MethodDeclaration> mixinMethods
+      List<MethodDeclaration> mixinMethods,
     ) = switch (decl) {
       MixinDeclaration m => partitionClassMembers(m.body.members),
       // A `class` or class type alias used in `with` may itself apply mixins
@@ -543,9 +541,7 @@ DeclarationOrBridge? _superMemberOf(
     if (member is GetSet) {
       if (decl.isSetter) return member.setter;
       final g = member.declaration;
-      return g == null
-          ? null
-          : DeclarationOrBridge(memberFile, declaration: g);
+      return g == null ? null : DeclarationOrBridge(memberFile, declaration: g);
     }
     return DeclarationOrBridge(
       memberFile,
@@ -637,7 +633,9 @@ _MemberSig? _memberSig(
     return (
       positional: pos,
       named: named,
-      returnType: setter ? null : _annotationType(ctx, declLib, decl.returnType),
+      returnType: setter
+          ? null
+          : _annotationType(ctx, declLib, decl.returnType),
     );
   }
   if (decl is FieldDeclaration) {

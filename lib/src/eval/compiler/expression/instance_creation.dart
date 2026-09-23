@@ -33,25 +33,25 @@ Variable compileInstanceCreation(
   }
 
   var staticType = $resolved.concreteTypes.first;
-  var instantiatedType = staticType.copyWith(
-    nullable: type.question != null,
-  );
+  var instantiatedType = staticType.copyWith(nullable: type.question != null);
   // A typedef instantiation (`P1()` where `P1 = B2<int>`) constructs the
   // aliased type directly — typedefs register no constructors of their own.
-  final aliasDecl = ctx.topLevelDeclarationsMap[staticType
-          .file]![staticType.name]
+  final aliasDecl = ctx
+      .topLevelDeclarationsMap[staticType.file]![staticType.name]
       ?.declaration;
   if (aliasDecl is TypeAlias && aliasDecl is! ClassTypeAlias) {
-    instantiatedType = staticType = resolveTypeAlias(
-      ctx,
-      staticType.file,
-      aliasDecl,
-      nullable: type.question != null,
-      typeArgs: type.typeArguments?.arguments,
-    ).copyWith(specifiedTypeArgs: [
-      if (type.typeArguments == null)
-        ...staticType.specifiedTypeArgs,
-    ]);
+    instantiatedType = staticType =
+        resolveTypeAlias(
+          ctx,
+          staticType.file,
+          aliasDecl,
+          nullable: type.question != null,
+          typeArgs: type.typeArguments?.arguments,
+        ).copyWith(
+          specifiedTypeArgs: [
+            if (type.typeArguments == null) ...staticType.specifiedTypeArgs,
+          ],
+        );
   }
   if (type.typeArguments != null) {
     instantiatedType = instantiatedType.copyWith(
@@ -142,17 +142,17 @@ Variable compileInstanceOf(
       BridgeConstructorDef d => d.functionDescriptor,
       BridgeMethodDef d => d.functionDescriptor,
       _ => throw CompileError(
-          'Cannot invoke $staticType.$name as a constructor', source),
+        'Cannot invoke $staticType.$name as a constructor',
+        source,
+      ),
     };
     final classBridge =
         ctx.topLevelDeclarationsMap[staticType.file]![staticType.name]?.bridge;
-    final genericNames =
-        classBridge is BridgeClassDef
-            ? classBridge.type.generics.keys.toList()
-            : const <String>[];
+    final genericNames = classBridge is BridgeClassDef
+        ? classBridge.type.generics.keys.toList()
+        : const <String>[];
     Map<String, TypeRef> argTypeParameters = const {};
-    if (genericNames.isNotEmpty &&
-        instantiatedType.specifiedTypeArgs.isEmpty) {
+    if (genericNames.isNotEmpty && instantiatedType.specifiedTypeArgs.isEmpty) {
       // Parameter annotations compile permissively (`T` → dynamic); the real
       // bindings are inferred from the argument types below.
       argTypeParameters = {
@@ -166,8 +166,7 @@ Variable compileInstanceOf(
       typeParameters: argTypeParameters,
     );
 
-    if (genericNames.isNotEmpty &&
-        instantiatedType.specifiedTypeArgs.isEmpty) {
+    if (genericNames.isNotEmpty && instantiatedType.specifiedTypeArgs.isEmpty) {
       final ownerKey = 'class:${staticType.file}:${staticType.name}';
       final paramRefs = {
         for (var i = 0; i < genericNames.length; i++)
@@ -193,11 +192,7 @@ Variable compileInstanceOf(
           typeParameters: paramRefs,
         );
         final concrete =
-            findSupertypeInstantiation(
-              ctx,
-              pattern,
-              arguments.args[i].type,
-            ) ??
+            findSupertypeInstantiation(ctx, pattern, arguments.args[i].type) ??
             arguments.args[i].type;
         collectTypeParameterSubstitutions(
           ctx,
@@ -231,23 +226,21 @@ Variable compileInstanceOf(
       final appliedArgs =
           resolvedChain.file == dec0.sourceLib &&
               ctorDecl != null &&
-              resolvedChain.name ==
-                  declarationName(ctorDecl as Declaration)
+              resolvedChain.name == declarationName(ctorDecl as Declaration)
           ? resolvedChain.specifiedTypeArgs
           : instantiatedType.specifiedTypeArgs;
       for (var i = 0; i < classTypeParams.length; i++) {
         final bound = classTypeParams[i].bound;
-        seedGenerics[classTypeParams[i].name.lexeme] =
-            i < appliedArgs.length
-                ? appliedArgs[i]
-                : bound == null
-                ? CoreTypes.dynamic.ref(ctx)
-                : TypeRef.fromAnnotation(
-                    ctx,
-                    dec0.sourceLib,
-                    bound,
-                    typeParameters: seedGenerics,
-                  );
+        seedGenerics[classTypeParams[i].name.lexeme] = i < appliedArgs.length
+            ? appliedArgs[i]
+            : bound == null
+            ? CoreTypes.dynamic.ref(ctx)
+            : TypeRef.fromAnnotation(
+                ctx,
+                dec0.sourceLib,
+                bound,
+                typeParameters: seedGenerics,
+              );
       }
     }
 
@@ -267,7 +260,8 @@ Variable compileInstanceOf(
   var result = ctx.svar('instance');
   // A factory may return any subtype — the result is not exactly the
   // declared class.
-  final isFactory = !dec0.isBridge &&
+  final isFactory =
+      !dec0.isBridge &&
       (dec0.declaration! as ConstructorDeclaration).factoryKeyword != null;
   if (dec0.isBridge) {
     final classBridge =

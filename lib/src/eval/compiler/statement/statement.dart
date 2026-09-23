@@ -45,7 +45,7 @@ StatementInfo compileStatement(
       return compileVariableDeclarationStatement(s, ctx);
     } else if (s is ExpressionStatement) {
       final V = compileExpressionAndDiscardResult(s.expression, ctx);
-      if (V != null && V.type == CoreTypes.never.ref(ctx)) {
+      if (V != null && V.type.isSpec(CoreTypes.never)) {
         return markNeverTerminates(ctx);
       }
       return StatementInfo();

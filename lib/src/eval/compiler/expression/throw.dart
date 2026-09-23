@@ -16,7 +16,7 @@ Variable compileThrowExpression(CompilerContext ctx, ThrowExpression e) {
   ctx.pushOp(LoadNull(dead));
   // A nested throw already terminated the block; emitting a second Throw
   // lands it in detached dead code.
-  if (V.type != CoreTypes.never.ref(ctx)) {
+  if (!V.type.isSpec(CoreTypes.never)) {
     ctx.pushOp(Throw(V.boxIfNeeded(ctx).ssa));
   }
   return Variable.of(ctx, dead, CoreTypes.never.ref(ctx));

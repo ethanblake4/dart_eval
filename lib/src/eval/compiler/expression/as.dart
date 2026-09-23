@@ -22,7 +22,7 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
   }
 
   // Special case: if casting null to a nullable type, allow it
-  if (V.type == CoreTypes.nullType.ref(ctx) && slot.nullable) {
+  if (V.type.isSpec(CoreTypes.nullType) && slot.nullable) {
     return V.copyWithUpdate(ctx, type: slot);
   }
 
@@ -30,14 +30,9 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
   // `x as T` promotes x's flow type to T only when T refines x's current
   // type — casting to a wider or unrelated type (dynamic, Object) leaves
   // the variable's type unchanged.
-  final promotes = slot.isAssignableTo(
-    ctx,
-    V.type,
-    forceAllowDynamic: false,
-  );
-  Variable update(Variable v, TypeRef type) => promotes
-      ? v.copyWithUpdate(ctx, type: type)
-      : v.copyWith(type: type);
+  final promotes = slot.isAssignableTo(ctx, V.type, forceAllowDynamic: false);
+  Variable update(Variable v, TypeRef type) =>
+      promotes ? v.copyWithUpdate(ctx, type: type) : v.copyWith(type: type);
   final typeId = slot.runtimeTypeId(ctx);
   if (slot.nullable) {
     macroBranch(
@@ -67,10 +62,10 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
   V = update(V, slot);
 
   // If the type changes between num and int/double, unbox/box
-  if (slot == CoreTypes.num.ref(ctx)) {
+  if (slot.isSpec(CoreTypes.num)) {
     V = V.boxIfNeeded(ctx);
   } else if (!slot.nullable &&
-      (slot == CoreTypes.int.ref(ctx) || slot == CoreTypes.double.ref(ctx))) {
+      (slot.isSpec(CoreTypes.int) || slot.isSpec(CoreTypes.double))) {
     V = V.unboxIfNeeded(ctx);
   }
 

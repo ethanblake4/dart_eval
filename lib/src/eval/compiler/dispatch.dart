@@ -100,8 +100,7 @@ TypeRef? memberOwner(
   final resolved = type.resolveTypeChain(ctx);
   for (final link in [resolved, ...resolved.extendsChain]) {
     final positions =
-        ctx.instanceDeclarationPositions[link.file]?[link.name]?[kind]
-            as Map?;
+        ctx.instanceDeclarationPositions[link.file]?[link.name]?[kind] as Map?;
     if (positions != null &&
         (positions.containsKey(member) ||
             (member.startsWith('_') &&

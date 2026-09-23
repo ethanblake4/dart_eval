@@ -52,7 +52,11 @@ StatementInfo _compileIfCaseStatement(
       );
       final guard = caseClause.guardedPattern.whenClause;
       if (guard != null) {
-        final guardExpr = compileExpression(guard.expression, ctx, CoreTypes.bool.ref(ctx));
+        final guardExpr = compileExpression(
+          guard.expression,
+          ctx,
+          CoreTypes.bool.ref(ctx),
+        );
         matches = matches.invoke(ctx, '&&', [guardExpr]).result;
       }
       return matches;

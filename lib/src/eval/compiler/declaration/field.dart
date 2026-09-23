@@ -91,11 +91,11 @@ void compileFieldDeclaration(
         ),
       );
       ctx.pushOp(Return(value));
-      ctx.instanceDeclarationPositions[ctx
-              .enclosingLibrary ??
+      ctx.instanceDeclarationPositions[ctx.enclosingLibrary ??
               ctx.library]![parentName]![0][ctx.memberNameKey(fieldName)] =
           pos;
-      ctx.instanceGetterIndices[ctx.enclosingLibrary ?? ctx.library]![parentName]![fieldName] =
+      ctx.instanceGetterIndices[ctx.enclosingLibrary ??
+              ctx.library]![parentName]![fieldName] =
           fieldIndex0;
 
       if (!(field.isFinal || field.isConst) ||
@@ -119,8 +119,7 @@ void compileFieldDeclaration(
           ),
         );
         ctx.pushOp(Return(value));
-        ctx.instanceDeclarationPositions[ctx
-                .enclosingLibrary ??
+        ctx.instanceDeclarationPositions[ctx.enclosingLibrary ??
                 ctx.library]![parentName]![1][ctx.memberNameKey(fieldName)] =
             setterPos;
       }

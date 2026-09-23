@@ -155,7 +155,8 @@ class EvalFunctionType {
     final required = <FunctionFormalParameter>[];
     final optional = <FunctionFormalParameter>[];
     final named = <String, FunctionFormalParameter>{};
-    for (final parameter in parameterList?.parameters ?? const <FormalParameter>[]) {
+    for (final parameter
+        in parameterList?.parameters ?? const <FormalParameter>[]) {
       final model = FunctionFormalParameter(
         parameter.name?.lexeme,
         resolve(parameter.type),

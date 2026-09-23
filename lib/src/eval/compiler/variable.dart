@@ -9,7 +9,6 @@ import '../ir/collection.dart' show ListLength;
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/expression/identifier.dart'
@@ -46,14 +45,15 @@ class Variable {
        declaredType = declaredType ?? type,
        representation =
            representation ?? rep?.bank ?? representationForType(type),
-       rep = rep ??
+       rep =
+           rep ??
            repForType(
              type,
              representation ?? rep?.bank ?? representationForType(type),
            ),
        callingConvention =
            callingConvention ??
-           ((type == TypeRef(dartCoreFile, 'Function') && methodOffset == null)
+           ((type.isSpec(CoreTypes.function) && methodOffset == null)
                ? CallingConvention.dynamic
                : CallingConvention.static);
 
@@ -212,8 +212,7 @@ class Variable {
       concrete = concrete.isEmpty || other.concreteTypes.isEmpty
           ? const []
           : {...concrete, ...other.concreteTypes}.toList();
-      if (other.methodOffset != mOffset ||
-          other.methodReturnType != mReturn) {
+      if (other.methodOffset != mOffset || other.methodReturnType != mReturn) {
         mOffset = null;
         mReturn = null;
       }
@@ -354,9 +353,7 @@ class Variable {
       case ValueRep.nativeList:
         // Collection elements are always boxed (Abi.collectionElement), so a
         // native list's contents never need re-boxing on the way out.
-        ctx.pushOp(
-          BoxList(dest, ssa, runtimeTypeId: type.runtimeTypeId(ctx)),
-        );
+        ctx.pushOp(BoxList(dest, ssa, runtimeTypeId: type.runtimeTypeId(ctx)));
       case ValueRep.nativeMap:
         ctx.pushOp(BoxMap(dest, ssa, runtimeTypeId: type.runtimeTypeId(ctx)));
       case ValueRep.nativeSet:
@@ -404,8 +401,7 @@ class Variable {
       );
     }
     if (rep == ValueRep.nativeObject &&
-        (type == CoreTypes.dynamic.ref(ctx) ||
-            type == CoreTypes.object.ref(ctx))) {
+        (type.isSpec(CoreTypes.dynamic) || type.isSpec(CoreTypes.object))) {
       return copyWith(rep: ValueRep.boxed);
     }
     return toRep(ctx, ValueRep.boxed, into: ctx.svar('boxed'), source: source);
@@ -421,9 +417,9 @@ class Variable {
     // that wrapper avoids treating a representation-preserving move as unboxing
     // and then wrapping it a second time when the value leaves this function.
     if (!boxed ||
-        type == CoreTypes.list.ref(ctx) ||
-        type == CoreTypes.map.ref(ctx) ||
-        type == CoreTypes.set.ref(ctx)) {
+        type.isSpec(CoreTypes.list) ||
+        type.isSpec(CoreTypes.map) ||
+        type.isSpec(CoreTypes.set)) {
       return this;
     }
     final converted = toRep(
@@ -462,10 +458,7 @@ class Variable {
   /// the same physical representation. Used by promotion and `as` casts —
   /// the representation never changes when only the type view narrows.
   Variable withType(TypeRef type, {ValueRep? rep}) {
-    return copyWith(
-      type: type,
-      rep: rep ?? this.rep,
-    );
+    return copyWith(type: type, rep: rep ?? this.rep);
   }
 
   /// Returns a variable with the same name from the context locals.
@@ -572,8 +565,7 @@ class Variable {
       );
       // A declared List may be an evaluated class with an overridden getter.
       // Only a natively-held core List proves native storage at this point.
-      final isList = rep == ValueRep.nativeList &&
-          type == CoreTypes.list.ref(ctx);
+      final isList = rep == ValueRep.nativeList && type.isSpec(CoreTypes.list);
       if (isString || isList) {
         final receiver = unboxIfNeeded(ctx, false);
         return Variable.ssa(
@@ -595,14 +587,15 @@ class Variable {
       // `runtimeType` is overridable like any other getter — only
       // intrinsify it when the receiver's class doesn't declare it and
       // no descendant overrides it (otherwise dispatch normally).
-      final declaredLocally = ctx
+      final declaredLocally =
+          ctx
               .instanceDeclarationPositions[resolvedReceiver
                   .file]?[resolvedReceiver.name]?[0]
               ?.containsKey('runtimeType') ??
           false;
-      final overridable = declaredLocally ||
-          memberOwner(ctx, resolvedReceiver, 'runtimeType', kind: 0) !=
-              null ||
+      final overridable =
+          declaredLocally ||
+          memberOwner(ctx, resolvedReceiver, 'runtimeType', kind: 0) != null ||
           ctx.memberOverriddenInSubclass(
             resolvedReceiver.file,
             resolvedReceiver.name,
@@ -615,11 +608,7 @@ class Variable {
           final operation = concrete.requiresTypeEnvironment
               ? LoadTypeParameter(ctx.svar('var_type'), typeId)
               : LoadConstantType(ctx.svar('var_type'), typeId);
-          return Variable.ssa(
-            ctx,
-            operation,
-            CoreTypes.type.ref(ctx),
-          );
+          return Variable.ssa(ctx, operation, CoreTypes.type.ref(ctx));
         }
         return Variable.ssa(
           ctx,
@@ -661,7 +650,7 @@ class Variable {
       source: source,
     );
     final member =
-        resolvedField == null && resolvedReceiver != CoreTypes.dynamic.ref(ctx)
+        resolvedField == null && !resolvedReceiver.isSpec(CoreTypes.dynamic)
         ? resolveInstanceDeclaration(
             ctx,
             resolvedReceiver.file,
@@ -671,7 +660,7 @@ class Variable {
           )
         : null;
     if (resolvedField == null &&
-        resolvedReceiver != CoreTypes.dynamic.ref(ctx) &&
+        !resolvedReceiver.isSpec(CoreTypes.dynamic) &&
         member == null) {
       // An extension getter may apply.
       final found = resolveExtensionMember(
@@ -717,10 +706,9 @@ class Variable {
       // The declaring class's type parameters bind to its instantiated view
       // (`member.$1`) — `b.remove` on `B extends A<int>` sees `T: int`.
       final methodHost = method.parent?.parent;
-      final hostParams =
-          methodHost is Declaration
-              ? classLikeClauses(methodHost).$4?.typeParameters ?? const []
-              : const <TypeParameter>[];
+      final hostParams = methodHost is Declaration
+          ? classLikeClauses(methodHost).$4?.typeParameters ?? const []
+          : const <TypeParameter>[];
       final hostArgs = member!.$1.specifiedTypeArgs;
       fieldType = declaredFunctionType(
         ctx,
@@ -729,11 +717,7 @@ class Variable {
         method.returnType,
         method.typeParameters,
         memberTypeParameters: {
-          for (
-            var i = 0;
-            i < hostParams.length && i < hostArgs.length;
-            i++
-          )
+          for (var i = 0; i < hostParams.length && i < hostArgs.length; i++)
             hostParams[i].name.lexeme: hostArgs[i],
         },
       );
@@ -761,16 +745,12 @@ class Variable {
       // Storage for an inherited field lives on its declaring class's link,
       // reached from the receiver by LoadSuper hops. First locate the owning
       // link, then emit the hops.
-      final links = [
-        exact,
-        ...exact.resolveTypeChain(ctx).extendsChain,
-      ];
+      final links = [exact, ...exact.resolveTypeChain(ctx).extendsChain];
       var depth = -1;
       int? fieldIndex;
       for (var i = 0; i < links.length; i++) {
         final link = links[i];
-        final index =
-            ctx.instanceGetterIndices[link.file]?[link.name]?[name];
+        final index = ctx.instanceGetterIndices[link.file]?[link.name]?[name];
         if (index != null) {
           fieldIndex = index;
           depth = i;
@@ -780,9 +760,9 @@ class Variable {
             ? '${ctx.libraryUri(link.file)}::$name'
             : name;
         if ((ctx.instanceDeclarationPositions[link.file]?[link.name]?[0]
-                as Map?)
-                ?.containsKey(key) ==
-            true &&
+                        as Map?)
+                    ?.containsKey(key) ==
+                true &&
             concreteMemberDecl(ctx, link, name, kind: 0) != null) {
           depth = i;
           break;
@@ -800,12 +780,10 @@ class Variable {
           link.name,
           name,
           instantiated: link,
-        )?.$2
-            .declaration;
-        final fieldDecl =
-            decl is VariableDeclaration
-                ? decl.parent?.parent
-                : null;
+        )?.$2.declaration;
+        final fieldDecl = decl is VariableDeclaration
+            ? decl.parent?.parent
+            : null;
         final needsLink =
             fieldIndex != null ||
             memberNeedsOwnerLink(ctx, link, name, kind: 0);
@@ -864,8 +842,7 @@ class Variable {
       // the dispatch root only when it isn't overridden and its body never
       // touches `super` (so any link works as `this`).
       final owner = directMemberOwner(ctx, concreteTypes.first, name, kind: 0);
-      if (owner != null &&
-          !memberNeedsOwnerLink(ctx, owner, name, kind: 0)) {
+      if (owner != null && !memberNeedsOwnerLink(ctx, owner, name, kind: 0)) {
         final key = name.startsWith('_')
             ? '${ctx.libraryUri(owner.file)}::$name'
             : name;

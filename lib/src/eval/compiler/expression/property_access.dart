@@ -8,7 +8,6 @@ import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 
-
 Variable compilePropertyAccess(
   PropertyAccess pa,
   CompilerContext ctx, [
@@ -42,7 +41,7 @@ Variable compilePropertyAccess(
 
   // `p.C.member` parses as PropertyAccess over the class identifier — static
   // member access lives in IdentifierReference, same as MethodInvocation.
-  if (L.type == CoreTypes.type.ref(ctx) && L.concreteTypes.length == 1) {
+  if (L.type.isSpec(CoreTypes.type) && L.concreteTypes.length == 1) {
     return IdentifierReference(L, pa.propertyName.name).getValue(ctx, pa);
   }
 

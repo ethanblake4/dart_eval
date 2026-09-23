@@ -47,11 +47,10 @@ int compileMethodDeclaration(
   };
   final methodTypeParameters =
       d.typeParameters?.typeParameters ?? const <TypeParameter>[];
-  TypeRef.loadTemporaryTypes(
-    ctx,
-    [...extensionTypeParameters, ...methodTypeParameters],
-    owner: 'method:${ctx.library}:$parentName.$methodName:$pos',
-  );
+  TypeRef.loadTemporaryTypes(ctx, [
+    ...extensionTypeParameters,
+    ...methodTypeParameters,
+  ], owner: 'method:${ctx.library}:$parentName.$methodName:$pos');
   ctx.functionTypeParameterBounds[pos] = [
     for (final parameter in [
       ...extensionTypeParameters,
@@ -180,7 +179,9 @@ int compileMethodDeclaration(
       resolvedParams.length + (hasReceiver ? 1 : 0),
       MachineRepresentation.object,
     ),
-    returnType == CoreTypes.voidType.ref(ctx) && !b.isAsynchronous
+    returnType != null &&
+            returnType.isSpec(CoreTypes.voidType) &&
+            !b.isAsynchronous
         ? null
         : unboxedOperatorReturn
         ? Abi.result(
@@ -243,18 +244,16 @@ int compileMethodDeclaration(
     final key = isExtensionMember
         ? extensionMemberKey(parentName, d)
         : '$parentName.$methodName${d.isGetter
-            ? '*g'
-            : d.isSetter
-            ? '*s'
-            : ''}';
-    ctx.topLevelDeclarationPositions
-        .putIfAbsent(ctx.library, () => {})[key] = pos;
+              ? '*g'
+              : d.isSetter
+              ? '*s'
+              : ''}';
+    ctx.topLevelDeclarationPositions.putIfAbsent(ctx.library, () => {})[key] =
+        pos;
     if (isExtensionMember) {
       // Extension members take a receiver argument that isn't part of their
       // declared signature, so they can't be called as entrypoint exports.
-      ctx.extensionMemberFunctions
-          .putIfAbsent(ctx.library, () => {})
-          .add(key);
+      ctx.extensionMemberFunctions.putIfAbsent(ctx.library, () => {}).add(key);
     }
   } else {
     final mapIndex = d.isGetter
@@ -262,10 +261,12 @@ int compileMethodDeclaration(
         : d.isSetter
         ? 1
         : 2;
-    ctx.instanceDeclarationPositions[ctx
-            .enclosingLibrary ??
-                ctx.library]![parentName]![mapIndex][
-            ctx.instanceMethodKey(methodName, positionalArityOf(d))] = pos;
+    ctx.instanceDeclarationPositions[ctx.enclosingLibrary ??
+            ctx.library]![parentName]![mapIndex][ctx.instanceMethodKey(
+          methodName,
+          positionalArityOf(d),
+        )] =
+        pos;
   }
 
   return pos;

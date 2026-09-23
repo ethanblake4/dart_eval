@@ -19,7 +19,7 @@ BuiltinValue parseConstLiteral(
   TypeRef? bound,
 ]) {
   if (l is IntegerLiteral) {
-    if (bound != null && bound == CoreTypes.double.ref(ctx)) {
+    if (bound != null && bound.isSpec(CoreTypes.double)) {
       return BuiltinValue(doubleval: l.value!.toDouble());
     }
     return BuiltinValue(intval: l.value);

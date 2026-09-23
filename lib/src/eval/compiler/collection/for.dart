@@ -15,15 +15,14 @@ List<TypeRef> compileForElementForList(
   Variable list,
   CompilerContext ctx,
   bool box,
-) =>
-    compileForElement(
-      e,
-      ctx,
-      (element) => compileListElement(element, list, ctx, box),
-      iterableBound: CoreTypes.iterable.ref(ctx).copyWith(
-        specifiedTypeArgs: [list.type.specifiedTypeArgs.first],
-      ),
-    );
+) => compileForElement(
+  e,
+  ctx,
+  (element) => compileListElement(element, list, ctx, box),
+  iterableBound: CoreTypes.iterable
+      .ref(ctx)
+      .copyWith(specifiedTypeArgs: [list.type.specifiedTypeArgs.first]),
+);
 
 /// Compiles a collection `for` element, dispatching its body through
 /// [compileBody] and returning every type it may produce.

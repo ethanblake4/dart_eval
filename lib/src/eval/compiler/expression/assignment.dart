@@ -78,9 +78,7 @@ Variable _assignWithReference(
       null,
       condition: (ctx) {
         readValue = L.getValue(ctx);
-        return readValue!.invoke(ctx, '==', [
-          BuiltinValue().push(ctx),
-        ]).result;
+        return readValue!.invoke(ctx, '==', [BuiltinValue().push(ctx)]).result;
       },
       thenBranch: (ctx, rt) {
         // The RHS is evaluated only inside the branch — `x ??= e` must not
@@ -92,12 +90,9 @@ Variable _assignWithReference(
         // context: R's own type when it already conforms, else the type the
         // conversion produced (e.g. a `.call` tear-off coerced to Function).
         final writeType = setterType();
-        storedType = writeType != null &&
-                !R.type.isAssignableTo(
-                  ctx,
-                  writeType,
-                  forceAllowDynamic: false,
-                )
+        storedType =
+            writeType != null &&
+                !R.type.isAssignableTo(ctx, writeType, forceAllowDynamic: false)
             ? V.type
             : R.type;
         ctx.pushOp(Assign(out.ssa, V.ssa));
@@ -130,7 +125,7 @@ Variable _assignWithReference(
     // right operand is dynamic. The operator's declared return type alone
     // (for example num from int.+) must not turn that valid runtime check into
     // a static rejection.
-    if (R.type.resolveTypeChain(ctx) == CoreTypes.dynamic.ref(ctx)) {
+    if (R.type.resolveTypeChain(ctx).isSpec(CoreTypes.dynamic)) {
       res = res.copyWith(type: CoreTypes.dynamic.ref(ctx));
     }
     final set = res.type != L.resolveType(ctx, forSet: true)

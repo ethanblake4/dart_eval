@@ -1,7 +1,6 @@
 import '../../ir/string.dart';
 import 'package:control_flow_graph/control_flow_graph.dart' as cfg;
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
-import '../builtins.dart' show dartCoreFile;
 import '../type.dart';
 import '../../ir/alu.dart' as alu;
 import '../../ir/async.dart' as async;
@@ -23,7 +22,7 @@ import '../../ir/types.dart' as types;
 export '../../ir/representation.dart';
 
 MachineRepresentation representationForType(TypeRef type) {
-  if (type.nullable || type.file != dartCoreFile) {
+  if (type.nullable || !type.isDartCore) {
     return MachineRepresentation.object;
   }
   return switch (type.name) {

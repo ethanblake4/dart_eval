@@ -59,14 +59,14 @@ Variable compileSetOrMapLiteral(
               ? resolvedBound?.hasSameDeclarationAs(CoreTypes.set.ref(ctx)) !=
                     true
               : literal.elements.first is MapLiteralEntry ||
-                  (firstSpread?.type
-                          .copyWith(nullable: false)
-                          .isAssignableTo(
-                            ctx,
-                            CoreTypes.map.ref(ctx),
-                            forceAllowDynamic: false,
-                          ) ??
-                      false)));
+                    (firstSpread?.type
+                            .copyWith(nullable: false)
+                            .isAssignableTo(
+                              ctx,
+                              CoreTypes.map.ref(ctx),
+                              forceAllowDynamic: false,
+                            ) ??
+                        false)));
   final keyTypes = <TypeRef>{};
   final valueTypes = <TypeRef>{};
   final target = ctx.svar(isMap ? 'map' : 'set');
@@ -137,21 +137,17 @@ Variable compileSetOrMapLiteral(
     keys.add(types.first);
     if (isMap) values.add(types[1]);
   } else if (element is IfElement) {
-    final types = compileIfElement(
-      element,
-      ctx,
-      (e) {
-        final (k, v) = _compileElement(
-          e,
-          collection,
-          ctx,
-          isMap: isMap,
-          explicitKey: explicitKey,
-          explicitValue: explicitValue,
-        );
-        return isMap ? [...k, ...v] : k;
-      },
-    );
+    final types = compileIfElement(element, ctx, (e) {
+      final (k, v) = _compileElement(
+        e,
+        collection,
+        ctx,
+        isMap: isMap,
+        explicitKey: explicitKey,
+        explicitValue: explicitValue,
+      );
+      return isMap ? [...k, ...v] : k;
+    });
     if (isMap) {
       for (var i = 0; i + 1 < types.length; i += 2) {
         keys.add(types[i]);
@@ -161,21 +157,17 @@ Variable compileSetOrMapLiteral(
       keys.addAll(types);
     }
   } else if (element is ForElement) {
-    final types = compileForElement(
-      element,
-      ctx,
-      (e) {
-        final (k, v) = _compileElement(
-          e,
-          collection,
-          ctx,
-          isMap: isMap,
-          explicitKey: explicitKey,
-          explicitValue: explicitValue,
-        );
-        return isMap ? [...k, ...v] : k;
-      },
-    );
+    final types = compileForElement(element, ctx, (e) {
+      final (k, v) = _compileElement(
+        e,
+        collection,
+        ctx,
+        isMap: isMap,
+        explicitKey: explicitKey,
+        explicitValue: explicitValue,
+      );
+      return isMap ? [...k, ...v] : k;
+    });
     if (isMap) {
       for (var i = 0; i + 1 < types.length; i += 2) {
         keys.add(types[i]);

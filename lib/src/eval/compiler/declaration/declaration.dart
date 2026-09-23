@@ -131,4 +131,3 @@ void compileClassMembers(
     }
   }
 }
-

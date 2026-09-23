@@ -102,11 +102,8 @@ void enforceConditionType(
       .assignmentConversionTo(ctx, CoreTypes.bool.ref(ctx));
   if (conversion == AssignmentConversion.invalid ||
       (conversion == AssignmentConversion.runtimeCheck &&
-          value.type != CoreTypes.dynamic.ref(ctx))) {
-    throw CompileError(
-      "Conditions must have a static type of 'bool'",
-      source,
-    );
+          !value.type.isSpec(CoreTypes.dynamic))) {
+    throw CompileError("Conditions must have a static type of 'bool'", source);
   }
 }
 

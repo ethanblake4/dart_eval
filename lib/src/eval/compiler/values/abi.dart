@@ -1,4 +1,3 @@
-import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/values/value_rep.dart';
 
@@ -35,7 +34,7 @@ abstract final class Abi {
   /// stays boxed at call boundaries.)
   static ValueRep unboxedAcrossCalls(TypeRef type) {
     if (type.nullable || type.isTypeParameter) return ValueRep.boxed;
-    if (type.file != dartCoreFile) return ValueRep.boxed;
+    if (!type.isDartCore) return ValueRep.boxed;
     return switch (type.name) {
       'int' => ValueRep.int,
       'double' => ValueRep.double,
@@ -48,7 +47,11 @@ abstract final class Abi {
   /// declared on a [kind] callable. [erased] marks parameters whose
   /// annotation names a type parameter of the enclosing declaration —
   /// those take the erased-object (boxed) ABI even on scalars.
-  static ValueRep parameter(TypeRef type, CallableKind kind, {bool erased = false}) {
+  static ValueRep parameter(
+    TypeRef type,
+    CallableKind kind, {
+    bool erased = false,
+  }) {
     if (erased) return ValueRep.boxed;
     switch (kind) {
       case CallableKind.function:

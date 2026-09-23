@@ -57,9 +57,7 @@ Variable compileListLiteral(
   final listType = CoreTypes.list
       .ref(ctx)
       .copyWith(
-        specifiedTypeArgs: [
-          listSpecifiedType ?? CoreTypes.dynamic.ref(ctx),
-        ],
+        specifiedTypeArgs: [listSpecifiedType ?? CoreTypes.dynamic.ref(ctx)],
       );
   var list = Variable.ssa(
     ctx,
@@ -98,9 +96,7 @@ Variable boxListContents(CompilerContext ctx, Variable list) {
   final newList = Variable.ssa(
     ctx,
     NewList(ctx.svar('boxed_elements')),
-    list.type.copyWith(
-      specifiedTypeArgs: [elementType],
-    ),
+    list.type.copyWith(specifiedTypeArgs: [elementType]),
     rep: ValueRep.nativeList,
   );
   final index = BuiltinValue(intval: 0).push(ctx);

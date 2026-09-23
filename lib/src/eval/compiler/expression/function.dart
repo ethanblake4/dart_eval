@@ -262,9 +262,9 @@ Variable compileFunctionExpression(
             ? returns.first
             : TypeRef.commonBaseType(ctx, returns.toSet()));
     inferredClosureReturnType = b.isAsynchronous
-        ? CoreTypes.future.ref(ctx).copyWith(
-            specifiedTypeArgs: [flattenType(ctx, inferred)],
-          )
+        ? CoreTypes.future
+              .ref(ctx)
+              .copyWith(specifiedTypeArgs: [flattenType(ctx, inferred)])
         : inferred;
   }
 
@@ -296,16 +296,15 @@ Variable compileFunctionExpression(
       .toList();
 
   (Object?, int) parameterDefault(FormalParameter parameter) {
-    final (value, thunk) = compileParameterDefault(
-      ctx,
-      ctx.library,
-      parameter,
-    );
+    final (value, thunk) = compileParameterDefault(ctx, ctx.library, parameter);
     final annotation = parameter.type;
     if (value is int &&
         annotation != null &&
-        TypeRef.fromAnnotation(ctx, ctx.library, annotation) ==
-            CoreTypes.double.ref(ctx)) {
+        TypeRef.fromAnnotation(
+          ctx,
+          ctx.library,
+          annotation,
+        ).isSpec(CoreTypes.double)) {
       return (value.toDouble(), thunk);
     }
     return (value, thunk);
@@ -368,7 +367,7 @@ Variable compileFunctionExpression(
   if (signature != null &&
       inferredClosureReturnType != null &&
       (signature.returnType.type == null ||
-          signature.returnType.type == CoreTypes.dynamic.ref(ctx))) {
+          signature.returnType.type!.isSpec(CoreTypes.dynamic))) {
     closureType = closureType.copyWith(
       functionType: EvalFunctionType(
         signature.normalParameters,

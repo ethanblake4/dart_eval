@@ -132,12 +132,8 @@ extension Invoke on Variable {
         Variable.ssa(
           ctx,
           operation,
-          method == '+' || method == '-'
-              ? CoreTypes.int.ref(ctx)
-              : boolType,
-          rep: method == '+' || method == '-'
-              ? ValueRep.int
-              : ValueRep.bool,
+          method == '+' || method == '-' ? CoreTypes.int.ref(ctx) : boolType,
+          rep: method == '+' || method == '-' ? ValueRep.int : ValueRep.bool,
         ),
         [right],
       );
@@ -186,7 +182,7 @@ extension Invoke on Variable {
                 CoreTypes.double.ref(ctx),
                 forceAllowDynamic: false,
               ) ||
-              t == CoreTypes.int.ref(ctx));
+              t.isSpec(CoreTypes.int));
       final doubleOperands =
           isDoubleOperand(type) && isDoubleOperand(args.single.type);
       final integerOperation = integerOperands && method != '/';
@@ -200,7 +196,7 @@ extension Invoke on Variable {
             : MachineRepresentation.doublePrecision;
         Variable widen(Variable v) =>
             operandRepresentation == MachineRepresentation.doublePrecision &&
-                v.type == CoreTypes.int.ref(ctx)
+                v.type.isSpec(CoreTypes.int)
             ? Variable.ssa(
                 ctx,
                 IntToDouble(ctx.svar('widen'), v.ssa),
@@ -238,7 +234,7 @@ extension Invoke on Variable {
     }
     var receiver = this;
     if ((namedArgs == null || namedArgs.isEmpty) &&
-        type != CoreTypes.dynamic.ref(ctx)) {
+        !type.isSpec(CoreTypes.dynamic)) {
       // Emits a static call `E.m(receiver, args...)` for an extension member.
       InvokeResult invokeExt(
         EvalExtension ext,
@@ -266,11 +262,8 @@ extension Invoke on Variable {
         // Pad omitted optional positionals with their declared defaults —
         // extension members are static calls, so the full declared argument
         // vector is always passed.
-        final positionalFormals =
-            formals.where((f) => f.isPositional).toList();
-        for (var i = convertedArgs.length;
-            i < positionalFormals.length;
-            i++) {
+        final positionalFormals = formals.where((f) => f.isPositional).toList();
+        for (var i = convertedArgs.length; i < positionalFormals.length; i++) {
           convertedArgs.add(
             compileOmittedArgument(
               ctx,
@@ -312,12 +305,7 @@ extension Invoke on Variable {
             CoreTypes.dynamic.ref(ctx);
         return InvokeResult(
           receiver,
-          Variable.of(
-            ctx,
-            target,
-            returnType,
-            rep: ValueRep.boxed,
-          ),
+          Variable.of(ctx, target, returnType, rep: ValueRep.boxed),
           convertedArgs,
         );
       }
@@ -351,7 +339,12 @@ extension Invoke on Variable {
         );
         if (found != null) {
           final (ext, member, bindings) = found;
-          return invokeExt(ext, member, bindings, extBindingsMap(ext, bindings));
+          return invokeExt(
+            ext,
+            member,
+            bindings,
+            extBindingsMap(ext, bindings),
+          );
         }
       }
     }
@@ -410,7 +403,7 @@ extension Invoke on Variable {
     // The '.call' member on a bare Function-typed receiver can't resolve an
     // instance method; the callee's own signature carries the result type.
     final isBareCall =
-        receiver.type == CoreTypes.function.ref(ctx) && method == 'call';
+        receiver.type.isSpec(CoreTypes.function) && method == 'call';
     final TypeRef returnType;
     if (equality) {
       returnType = boolType;

@@ -93,7 +93,11 @@ StatementInfo _compileSwitchCases(
         final guard = currentCase.guardedPattern.whenClause;
         if (guard != null) {
           // If there's a guard, we need to compile it and check if it matches
-          final guardExpr = compileExpression(guard.expression, ctx, CoreTypes.bool.ref(ctx));
+          final guardExpr = compileExpression(
+            guard.expression,
+            ctx,
+            CoreTypes.bool.ref(ctx),
+          );
           return matches.invoke(ctx, '&&', [guardExpr]).result;
         }
         return matches;

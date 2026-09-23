@@ -163,7 +163,7 @@ Variable _compileShortCircuit(
 
   // For `??` the result is the join of the non-null LHS type and the RHS —
   // a `Null`-typed LHS contributes nothing (`Null ?? C` is `C`, not `C?`).
-  final lhsType = L.type == CoreTypes.nullType.ref(ctx)
+  final lhsType = L.type.isSpec(CoreTypes.nullType)
       ? null
       : L.type.copyWith(nullable: false);
   final outType = operator == '??'

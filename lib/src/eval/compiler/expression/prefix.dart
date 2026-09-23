@@ -76,9 +76,9 @@ Variable compilePrefixExpression(
     ctx,
     method == '!' ? CoreTypes.bool.ref(ctx) : bound,
   );
-  final isDynamic = V.type.resolveTypeChain(ctx) == CoreTypes.dynamic.ref(ctx);
+  final isDynamic = V.type.resolveTypeChain(ctx).isSpec(CoreTypes.dynamic);
 
-  if (method == '!' && !isDynamic && V.type != CoreTypes.bool.ref(ctx)) {
+  if (method == '!' && !isDynamic && !V.type.isSpec(CoreTypes.bool)) {
     throw CompileError(
       'Unary prefix "!" is currently only supported for bools (type: ${V.type})',
       e,
@@ -107,8 +107,7 @@ Variable compilePrefixExpression(
   // directly; native ints/doubles negate in place (`-(0.0)` is `-0.0`,
   // which a `0 - x` rewrite would lose).
   if (method == '-' &&
-      (V.type == CoreTypes.int.ref(ctx) ||
-          V.type == CoreTypes.double.ref(ctx))) {
+      (V.type.isSpec(CoreTypes.int) || V.type.isSpec(CoreTypes.double))) {
     final operand = V.unboxIfNeeded(ctx, false);
     return Variable.ssa(
       ctx,
@@ -125,7 +124,7 @@ Variable compilePrefixExpression(
 }
 
 BuiltinValue _zeroForType(TypeRef type, CompilerContext ctx) =>
-    type == CoreTypes.int.ref(ctx)
+    type.isSpec(CoreTypes.int)
     ? BuiltinValue(intval: 0)
     : BuiltinValue(doubleval: 0.0);
 

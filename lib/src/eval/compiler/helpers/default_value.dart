@@ -1,7 +1,8 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:collection/collection.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/bridge/declaration.dart' show DeclarationOrBridge;
+import 'package:dart_eval/src/eval/bridge/declaration.dart'
+    show DeclarationOrBridge;
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
@@ -139,9 +140,9 @@ superFormalTarget(
   final positionalIndex = param.isNamed
       ? -1
       : parameterHost.parameters.parameters
-          .where((p) => p is SuperFormalParameter && p.isPositional)
-          .toList()
-          .indexOf(param);
+            .where((p) => p is SuperFormalParameter && p.isPositional)
+            .toList()
+            .indexOf(param);
   if (superCstr.isBridge) {
     final fd = (superCstr.bridge as BridgeConstructorDef).functionDescriptor;
     if (positionalIndex >= 0) {
@@ -218,6 +219,7 @@ Variable pushDefaultValue(CompilerContext ctx, Object? value) =>
   CompilerContext ctx,
   int library,
   FormalParameter parameter, {
+
   /// The parameter's declared type — the default expression's context
   /// type (e.g. the `Color` in `f([Color c = .red])`).
   TypeRef? bound,

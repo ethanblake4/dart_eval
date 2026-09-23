@@ -48,11 +48,9 @@ bool isNullShorted(Expression? e) {
 bool isNullShortedSelector(Expression e) => switch (e) {
   IndexExpression() => e.question != null || isNullShorted(e.target),
   PropertyAccess() =>
-    e.operator.type == TokenType.QUESTION_PERIOD ||
-        isNullShorted(e.target),
+    e.operator.type == TokenType.QUESTION_PERIOD || isNullShorted(e.target),
   MethodInvocation() =>
-    e.operator?.type == TokenType.QUESTION_PERIOD ||
-        isNullShorted(e.target),
+    e.operator?.type == TokenType.QUESTION_PERIOD || isNullShorted(e.target),
   _ => false,
 };
 
@@ -70,7 +68,7 @@ Variable emitNullGuard(
   // A `Null`-typed target is statically always null — the branch is dead.
   // (concreteTypes isn't consulted: `[null]` also propagates onto copies
   // that have since been reassigned.)
-  if (target.type == CoreTypes.nullType.ref(ctx)) {
+  if (target.type.isSpec(CoreTypes.nullType)) {
     return out;
   }
   macroBranch(

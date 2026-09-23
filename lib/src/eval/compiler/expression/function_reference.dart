@@ -10,7 +10,7 @@ import 'package:dart_eval/src/eval/ir/types.dart';
 Variable compileFunctionReference(FunctionReference e, CompilerContext ctx) {
   final inner = compileExpression(e.function, ctx);
 
-  if (inner.type == CoreTypes.type.ref(ctx) && inner.concreteTypes.isNotEmpty) {
+  if (inner.type.isSpec(CoreTypes.type) && inner.concreteTypes.isNotEmpty) {
     final baseType = inner.concreteTypes[0];
     final typeArgs = e.typeArguments;
     if (typeArgs != null && typeArgs.arguments.isNotEmpty) {

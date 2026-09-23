@@ -131,7 +131,13 @@ MethodDeclaration? extensionMember(
   String name, {
   bool getter = false,
   bool setter = false,
-}) => _extensionMember(ext, name, isStatic: false, getter: getter, setter: setter);
+}) => _extensionMember(
+  ext,
+  name,
+  isStatic: false,
+  getter: getter,
+  setter: setter,
+);
 
 /// The static member of [ext] named [name] of the given kind, or null.
 /// Static members are only reachable inside the extension's own body (as
@@ -141,7 +147,8 @@ MethodDeclaration? extensionStaticMember(
   String name, {
   bool getter = false,
   bool setter = false,
-}) => _extensionMember(ext, name, isStatic: true, getter: getter, setter: setter);
+}) =>
+    _extensionMember(ext, name, isStatic: true, getter: getter, setter: setter);
 
 /// The variable of a static field of [ext] named [name], or null.
 /// Static extension fields behave like library-level `E.name` globals.
@@ -189,9 +196,7 @@ bool _unifyOnPattern(
     final patternNamed = {
       for (final f in pattern.recordNamedFields) f.name!: f,
     };
-    final actualNamed = {
-      for (final f in actual.recordNamedFields) f.name!: f,
-    };
+    final actualNamed = {for (final f in actual.recordNamedFields) f.name!: f};
     if (patternNamed.length != actualNamed.length) return false;
     for (var i = 0; i < patternPositional.length; i++) {
       if (!_unifyOnPattern(
@@ -218,8 +223,7 @@ bool _unifyOnPattern(
         .resolveTypeChain(ctx)
         .allSupertypes
         .map(
-          (s) =>
-              s.substituteTypeParameters(actual.appliedTypeArguments(ctx)),
+          (s) => s.substituteTypeParameters(actual.appliedTypeArguments(ctx)),
         ),
   ];
   for (final candidate in candidates) {
@@ -249,9 +253,7 @@ List<TypeRef>? matchExtensionOn(
   if (onType == null) return null;
   final tps = ext.declaration.typeParameters?.typeParameters;
   if (tps == null || tps.isEmpty) {
-    return receiverType.isAssignableTo(ctx, onType)
-        ? const <TypeRef>[]
-        : null;
+    return receiverType.isAssignableTo(ctx, onType) ? const <TypeRef>[] : null;
   }
   final bound = List<TypeRef?>.filled(tps.length, null);
   if (!_unifyOnPattern(ctx, onType, receiverType, bound)) return null;
@@ -393,7 +395,10 @@ List<int>? extensionCallTypeArguments(
 }
 
 /// The extension declaring [member], or null.
-EvalExtension? extensionOfMember(CompilerContext ctx, MethodDeclaration member) {
+EvalExtension? extensionOfMember(
+  CompilerContext ctx,
+  MethodDeclaration member,
+) {
   for (final ext in ctx.extensions) {
     if (ext.members.contains(member)) return ext;
   }
@@ -414,12 +419,11 @@ Map<String, TypeRef> memberExtParams(
   final bindings = matchExtensionOn(ctx, receiverType, ext) ?? const [];
   return {
     for (var i = 0; i < params.length; i++)
-      params[i].name.lexeme:
-          i < bindings.length
-              ? bindings[i]
-              : (params[i].bound == null
-                  ? CoreTypes.dynamic.ref(ctx)
-                  : TypeRef.fromAnnotation(ctx, ext.library, params[i].bound!)),
+      params[i].name.lexeme: i < bindings.length
+          ? bindings[i]
+          : (params[i].bound == null
+                ? CoreTypes.dynamic.ref(ctx)
+                : TypeRef.fromAnnotation(ctx, ext.library, params[i].bound!)),
   };
 }
 
@@ -442,7 +446,7 @@ Variable invokeExtensionGetter(
       typeArguments: bindings.isEmpty
           ? const []
           : extensionCallTypeArguments(ctx, ext, member, bindings, const {}) ??
-              const [],
+                const [],
     ),
   );
   final returnType =

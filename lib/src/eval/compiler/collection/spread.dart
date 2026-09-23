@@ -27,7 +27,7 @@ List<TypeRef> compileCollectionSpread(
   Variable? source,
 }) {
   final collection = source ?? compileExpression(element.expression, ctx);
-  if (element.isNullAware && collection.type == CoreTypes.nullType.ref(ctx)) {
+  if (element.isNullAware && collection.type.isSpec(CoreTypes.nullType)) {
     return target.type.specifiedTypeArgs;
   }
   final sourceType = collection.type

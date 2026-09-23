@@ -76,7 +76,7 @@ Variable? _implicitCallTearOff(
       ? (target.typeParameterBound ?? CoreTypes.dynamic.ref(ctx))
       : target;
   if (effectiveTarget.functionType == null &&
-      effectiveTarget != CoreTypes.function.ref(ctx)) {
+      !effectiveTarget.isSpec(CoreTypes.function)) {
     return null;
   }
   try {
@@ -111,8 +111,7 @@ Variable convertForAssignment(
   // int → double only applies to integer literals and compile-time constant
   // int expressions — never to an int-typed variable (which is a CE in Dart).
   if (conversion == AssignmentConversion.invalid ||
-      (conversion == AssignmentConversion.intToDouble &&
-          !value.isConstInt)) {
+      (conversion == AssignmentConversion.intToDouble && !value.isConstInt)) {
     return _implicitCallTearOff(ctx, value, target, source) ??
         (throw CompileError(
           description ?? 'Cannot assign ${value.type} to $target',

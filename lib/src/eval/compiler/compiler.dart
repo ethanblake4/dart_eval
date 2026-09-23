@@ -3,7 +3,6 @@ import 'package:collection/collection.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/backend/typed_backend.dart';
-import 'package:dart_eval/src/eval/compiler/builtins.dart' show dartCoreFile;
 import 'package:dart_eval/src/eval/ir/representation.dart';
 import 'package:dart_eval/src/eval/runtime/typed/typed_program.dart';
 import 'package:dart_eval/src/eval/compiler/optimizer/validate.dart';
@@ -410,15 +409,14 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     }
 
     // Resolve the export and import relationship of the libraries
-    final (visibleDeclarations, visibleExtensions) =
-        _resolveImportsAndExports(
-          reachableLibraries,
-          discoveredIdentifiers,
-          computedEntrypoints,
-          libraryIndexMap,
-          _ctx,
-          () => _bridgeStaticFunctionIdx++,
-        );
+    final (visibleDeclarations, visibleExtensions) = _resolveImportsAndExports(
+      reachableLibraries,
+      discoveredIdentifiers,
+      computedEntrypoints,
+      libraryIndexMap,
+      _ctx,
+      () => _bridgeStaticFunctionIdx++,
+    );
 
     // Populate lookup tables [_topLevelDeclarationsMap],
     // [_instanceDeclarationsMap], and [_topLevelGlobalIndices], and generate
@@ -581,13 +579,19 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
             continue;
           }
           _instanceDeclarationsMap[ref.file]?[ref.name]?.forEach(
-            (mName, member) =>
-                classMembers?.putIfAbsent(mName, () => member),
+            (mName, member) => classMembers?.putIfAbsent(mName, () => member),
           );
           // Seed the mixin's type parameters with the application's type
           // arguments so `T`-annotated signatures in the folded members
           // resolve to concrete types (or the class's own parameters).
-          _seedMixinTypeParams(_ctx, libraryIndex, clsName, dec, mixinType, ref);
+          _seedMixinTypeParams(
+            _ctx,
+            libraryIndex,
+            clsName,
+            dec,
+            mixinType,
+            ref,
+          );
         }
         if (dec is ClassTypeAlias && superclass != null) {
           final prefix = superclass.importPrefix;
@@ -607,9 +611,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
                   entry,
             ];
             for (final entry in superCtors) {
-              final ctorName = entry.key.substring(
-                superRef.name.length + 1,
-              );
+              final ctorName = entry.key.substring(superRef.name.length + 1);
               _topLevelDeclarationsMap[libraryIndex]!.putIfAbsent(
                 '$clsName.$ctorName',
                 () => entry.value,
@@ -619,8 +621,6 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
         }
       }
     }
-
-    dartCoreFile = CoreTypes.int.ref(_ctx).file;
 
     for (final library in reachableLibraries) {
       final libraryIndex = libraryIndexMap[library]!;
@@ -676,8 +676,8 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
         if (declaration is ClassDeclaration ||
             declaration is MixinDeclaration ||
             declaration is EnumDeclaration) {
-          final members = (declaration as dynamic).body.members
-              as List<ClassMember>;
+          final members =
+              (declaration as dynamic).body.members as List<ClassMember>;
           _ctx.declaredInstanceMembers['$libraryIndex:$name'] = {
             for (final m in members)
               if (m is MethodDeclaration && !m.isStatic)
@@ -1295,7 +1295,10 @@ List<Library> _buildLibraries(Iterable<DartCompilationUnit> units) {
 /// itself, as well as the declarations of the libraries it imports, including
 /// declarations exported by another imported library. A graph is used to
 /// resolve long export chains.
-(Map<Library, Map<String, DeclarationOrPrefix>>, Map<Library, List<EvalExtension>>)
+(
+  Map<Library, Map<String, DeclarationOrPrefix>>,
+  Map<Library, List<EvalExtension>>,
+)
 _resolveImportsAndExports(
   Iterable<Library> libraries,
   Map<Library, Map<String, Set<String>>> usedIdentifiers,
@@ -1511,9 +1514,7 @@ _resolveImportsAndExports(
                   import.uri == dartCoreUri)) {
             continue;
           }
-          visibleDeclarationsLib[d.$1] = DeclarationOrPrefix(
-            declaration: d.$2,
-          );
+          visibleDeclarationsLib[d.$1] = DeclarationOrPrefix(declaration: d.$2);
         }
       }
     }
@@ -1555,9 +1556,9 @@ _resolveImportsAndExports(
 
       for (final import in importsWithImplicitSelf) {
         // The scan of this import's declarations is specific to [dec]: each
-      // used declaration contributes its own identifier set, so dedupe per
-      // (library, import, dec) rather than per (library, import).
-      final iid = '${library.uri}:${import.uri}:$dec';
+        // used declaration contributes its own identifier set, so dedupe per
+        // (library, import, dec) rather than per (library, import).
+        final iid = '${library.uri}:${import.uri}:$dec';
         if (processedImports.contains(iid)) {
           continue;
         }
@@ -1737,7 +1738,6 @@ Iterable<NamedType> superinterfacesOf(AstNode? declaration) sync* {
       yield* implementsClause?.interfaces ?? const Iterable.empty();
   }
 }
-
 
 /// Seeds the mixin's type parameters into [ctx.temporaryTypes] so signatures
 /// of its folded members resolve `T`-style annotations to the application's

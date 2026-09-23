@@ -15,7 +15,7 @@ import '../values/abi.dart';
 
 extension TearOff on Variable {
   Variable tearOff(CompilerContext ctx) {
-    if (type != CoreTypes.function.ref(ctx) || methodOffset == null) {
+    if (!type.isSpec(CoreTypes.function) || methodOffset == null) {
       throw CompileError('Cannot tear off non-function or unresolved function');
     }
     final offset = methodOffset!;
@@ -85,8 +85,7 @@ extension TearOff on Variable {
     };
     // An extension member's host is the extension; its type parameters bind
     // to the `on` bindings of the tear-off receiver, not the enclosing class.
-    final memberExt =
-        declaration is MethodDeclaration && !declaration.isStatic
+    final memberExt = declaration is MethodDeclaration && !declaration.isStatic
         ? extensionOfMember(ctx, declaration)
         : null;
     final memberParams = <String, TypeRef>{
@@ -101,13 +100,12 @@ extension TearOff on Variable {
     };
     final ownTypeParams =
         (switch (declaration) {
-                  MethodDeclaration() => declaration.typeParameters,
-                  FunctionDeclaration() =>
-                    declaration.functionExpression.typeParameters,
-                  _ => null,
-                })
-                ?.typeParameters ??
-            const <TypeParameter>[];
+          MethodDeclaration() => declaration.typeParameters,
+          FunctionDeclaration() =>
+            declaration.functionExpression.typeParameters,
+          _ => null,
+        })?.typeParameters ??
+        const <TypeParameter>[];
     for (var i = 0; i < ownTypeParams.length; i++) {
       final param = ownTypeParams[i];
       memberParams[param.name.lexeme] = TypeRef(
@@ -141,8 +139,7 @@ extension TearOff on Variable {
         bound: parameterType(parameter),
       );
       return (
-        value is int &&
-                parameterType(parameter) == CoreTypes.double.ref(ctx)
+        value is int && parameterType(parameter).isSpec(CoreTypes.double)
             ? value.toDouble()
             : value,
         thunk,

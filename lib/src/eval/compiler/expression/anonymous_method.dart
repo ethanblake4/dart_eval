@@ -23,10 +23,9 @@ Variable compileAnonymousMethodInvocation(
   CompilerContext ctx, {
   TypeRef? boundType,
 }) {
-  final receiver = (e.isCascaded
-          ? ctx.cascadeTarget!
-          : compileExpression(e.realTarget, ctx))
-      .boxIfNeeded(ctx);
+  final receiver =
+      (e.isCascaded ? ctx.cascadeTarget! : compileExpression(e.realTarget, ctx))
+          .boxIfNeeded(ctx);
 
   if (!e.isCascaded && (e.isNullAware || isNullShorted(e.target))) {
     // `target?.=> ...` and anonymous invocations continuing a null-shorted
@@ -52,9 +51,7 @@ Variable compileAnonymousMethodInvocation(
       },
       source: e,
     );
-    return output.copyWith(
-      type: TypeRef.commonBaseType(ctx, types),
-    );
+    return output.copyWith(type: TypeRef.commonBaseType(ctx, types));
   }
 
   return _runBody(e, ctx, receiver, boundType);
@@ -151,9 +148,9 @@ Variable _runBody(
     }
     ctx.builder.float(exit);
     ctx.builder = BasicBlockBuilder(ctx.activeGraph, [exit], parent);
-    result = ctx.lookupLocal(resultName)!.copyWith(
-      type: TypeRef.commonBaseType(ctx, returnTarget.types),
-    );
+    result = ctx
+        .lookupLocal(resultName)!
+        .copyWith(type: TypeRef.commonBaseType(ctx, returnTarget.types));
   }
   ctx.anonymousThisReceiver = previousAnonymousThis;
   ctx.endScope();

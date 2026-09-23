@@ -47,12 +47,9 @@ Variable compileRecordLiteral(
   // Bound record fields list positionals first, then named — while the
   // literal lists them in source order. Named fields match by name;
   // positional fields match by their ordinal among positionals.
-  final boundPositionalFields =
-      boundRecordFields?.positionalFields ?? const [];
+  final boundPositionalFields = boundRecordFields?.positionalFields ?? const [];
   RecordParameterType? namedBound(String name) =>
-      boundRecordFields
-          ?.where((f) => f.isNamed && f.name == name)
-          .firstOrNull;
+      boundRecordFields?.where((f) => f.isNamed && f.name == name).firstOrNull;
 
   // The bound only provides each field's inference context — the literal's
   // static type is built from the field expressions' own types. When the
@@ -69,8 +66,7 @@ Variable compileRecordLiteral(
       return value;
     }
     final bound0 = fieldBound.resolveTypeChain(ctx);
-    if (bound0.functionType == null &&
-        bound0 != CoreTypes.function.ref(ctx)) {
+    if (bound0.functionType == null && !bound0.isSpec(CoreTypes.function)) {
       return value;
     }
     try {
@@ -88,10 +84,7 @@ Variable compileRecordLiteral(
     final field = l.fields[i];
     if (field is RecordLiteralNamedField) {
       final name = field.name.lexeme;
-      final value = compileField(
-        field.fieldExpression,
-        namedBound(name)?.type,
-      );
+      final value = compileField(field.fieldExpression, namedBound(name)?.type);
       inferredRecordFields.add(RecordParameterType(name, value.type, true));
       ctx.pushOp(ListAppend(fieldList.ssa, value.ssa));
       fieldNames[i] = name;

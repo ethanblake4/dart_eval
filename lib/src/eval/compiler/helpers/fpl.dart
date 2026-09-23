@@ -120,9 +120,7 @@ List<FormalParameter> resolveFPLDefaults(
       declaredType,
       allowUnboxed ? CallableKind.function : CallableKind.method,
     );
-    ctx.pushOp(
-      Parameter(argument, paramIndex, representation: paramRep.bank),
-    );
+    ctx.pushOp(Parameter(argument, paramIndex, representation: paramRep.bank));
     // Callers bind omitted arguments before entering typed registers. Null is
     // an actual argument value and must never act as a missing-value sentinel.
     normalized.add(param);

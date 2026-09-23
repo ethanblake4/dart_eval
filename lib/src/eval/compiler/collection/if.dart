@@ -11,12 +11,11 @@ List<TypeRef> compileIfElementForList(
   Variable list,
   CompilerContext ctx,
   bool box,
-) =>
-    compileIfElement(
-      e,
-      ctx,
-      (element) => compileListElement(element, list, ctx, box),
-    );
+) => compileIfElement(
+  e,
+  ctx,
+  (element) => compileListElement(element, list, ctx, box),
+);
 
 /// Compiles a collection `if` element, dispatching its then/else elements
 /// through [compileBody] and returning every type they may produce.

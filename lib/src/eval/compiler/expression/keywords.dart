@@ -13,8 +13,9 @@ Variable compileThisExpression(ThisExpression e, CompilerContext ctx) {
   // It is read through the `#this` local so that closures nested in the
   // body capture it like any other enclosing local.
   final anonymousReceiver = ctx.anonymousThisReceiver;
-  final anonymousThis =
-      anonymousReceiver == null ? null : ctx.lookupLocal('#this');
+  final anonymousThis = anonymousReceiver == null
+      ? null
+      : ctx.lookupLocal('#this');
   if (anonymousThis != null) {
     return Variable.ssa(
       ctx,
@@ -39,8 +40,9 @@ Variable compileThisExpression(ThisExpression e, CompilerContext ctx) {
   // In an extension or anonymous-method body, `this` is the receiver value
   // itself; LoadThis only exists to resolve the dispatch root of a class
   // instance.
-  final operation =
-      ctx.currentExtension == null ? LoadThis(ctx.svar('this'), receiver.ssa) : Assign(ctx.svar('this'), receiver.ssa);
+  final operation = ctx.currentExtension == null
+      ? LoadThis(ctx.svar('this'), receiver.ssa)
+      : Assign(ctx.svar('this'), receiver.ssa);
   return Variable.ssa(ctx, operation, receiver.type, rep: receiver.rep);
 }
 

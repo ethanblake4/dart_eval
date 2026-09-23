@@ -51,11 +51,7 @@ TypeRef resolveGlobalType(CompilerContext ctx, int library, String name) {
         }
       }
       if (variable == null && owner is EnumDeclaration) {
-        final type = TypeRef.lookupDeclaration(
-          ctx,
-          library,
-          owner,
-        );
+        final type = TypeRef.lookupDeclaration(ctx, library, owner);
         return _record(ctx, library, name, type);
       }
     }
@@ -97,8 +93,7 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
   if (expression is PrefixExpression) {
     if (expression.operator.lexeme == '!') return CoreTypes.bool.ref(ctx);
     final operand = _infer(ctx, library, expression.operand);
-    if (expression.operator.lexeme == '~' &&
-        operand == CoreTypes.int.ref(ctx)) {
+    if (expression.operator.lexeme == '~' && operand.isSpec(CoreTypes.int)) {
       return CoreTypes.int.ref(ctx);
     }
     if (expression.operator.lexeme == '-' &&
@@ -241,7 +236,7 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
   }
   if (expression is PropertyAccess && expression.target != null) {
     final receiver = _infer(ctx, library, expression.target!);
-    if (receiver != CoreTypes.dynamic.ref(ctx)) {
+    if (!receiver.isSpec(CoreTypes.dynamic)) {
       try {
         return TypeRef.lookupFieldType(
               ctx,
@@ -282,7 +277,7 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
       library,
       expression.target!,
     ).resolveTypeChain(ctx);
-    if (receiver != CoreTypes.dynamic.ref(ctx)) {
+    if (!receiver.isSpec(CoreTypes.dynamic)) {
       try {
         return AlwaysReturnType.fromInstanceMethodOrBuiltin(
               ctx,

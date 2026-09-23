@@ -90,13 +90,15 @@ TypeRef forEachIterableBound(
   final elementType = switch (parts) {
     ForEachPartsWithDeclaration p when p.loopVariable.type != null =>
       TypeRef.fromAnnotation(ctx, ctx.library, p.loopVariable.type!),
-    ForEachPartsWithIdentifier p =>
-      compileExpressionAsReference(p.identifier, ctx).resolveType(ctx),
+    ForEachPartsWithIdentifier p => compileExpressionAsReference(
+      p.identifier,
+      ctx,
+    ).resolveType(ctx),
     _ => null,
   };
-  return (await_ ? CoreTypes.stream : CoreTypes.iterable).ref(ctx).copyWith(
-    specifiedTypeArgs: [elementType ?? CoreTypes.dynamic.ref(ctx)],
-  );
+  return (await_ ? CoreTypes.stream : CoreTypes.iterable)
+      .ref(ctx)
+      .copyWith(specifiedTypeArgs: [elementType ?? CoreTypes.dynamic.ref(ctx)]);
 }
 
 /// Compiles the non-`await` form of `for (v in iterable)`: iterable type
@@ -135,7 +137,11 @@ StatementInfo compileForEachLoop(
       if (parts is ForEachPartsWithDeclaration) {
         final declaredType = parts.loopVariable.type == null
             ? CoreTypes.dynamic.ref(ctx)
-            : TypeRef.fromAnnotation(ctx, ctx.library, parts.loopVariable.type!);
+            : TypeRef.fromAnnotation(
+                ctx,
+                ctx.library,
+                parts.loopVariable.type!,
+              );
         if (parts.loopVariable.type != null &&
             !elementType.isAssignableTo(ctx, declaredType)) {
           throw CompileError(
@@ -147,9 +153,9 @@ StatementInfo compileForEachLoop(
         }
 
         iterator = iterator.copyWith(
-          type: CoreTypes.iterator.ref(ctx).copyWith(
-            specifiedTypeArgs: [elementType],
-          ),
+          type: CoreTypes.iterator
+              .ref(ctx)
+              .copyWith(specifiedTypeArgs: [elementType]),
         );
 
         final name = parts.loopVariable.name.lexeme;
@@ -218,10 +224,7 @@ StatementInfo compileAwaitForLoop(
     }
   }
   if (!enclosing.isAsynchronous) {
-    throw CompileError(
-      'await for can only be used in an async function',
-      node,
-    );
+    throw CompileError('await for can only be used in an async function', node);
   }
   final itype = stream.type;
   if (!itype.isAssignableTo(ctx, CoreTypes.stream.ref(ctx))) {
@@ -315,9 +318,7 @@ StatementInfo compileAwaitForLoop(
     assignedNamesScan: [node],
     update: (ctx) {
       if (parts is ForEachPartsWithDeclaration) {
-        ctx
-            .lookupLocal(parts.loopVariable.name.lexeme)!
-            .renewCaptureCell(ctx);
+        ctx.lookupLocal(parts.loopVariable.name.lexeme)!.renewCaptureCell(ctx);
       }
       loopVariable.setValue(ctx, iterator.getProperty(ctx, 'current'));
     },

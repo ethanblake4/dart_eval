@@ -20,7 +20,7 @@ StatementInfo compileAssertStatement(
 
   // A Never-typed message already threw while evaluating (e.g.
   // `assert(cond, throw e)`), so the assert itself always diverges.
-  if (msg.type == CoreTypes.never.ref(ctx)) {
+  if (msg.type.isSpec(CoreTypes.never)) {
     return markNeverTerminates(ctx);
   }
 

@@ -21,8 +21,8 @@ import '../../ir/types.dart' show ResolveTypeId;
 Variable _providedBridgeArgument(CompilerContext ctx, Variable argument) {
   final type = argument.type;
   if (!type.nullable &&
-      type != CoreTypes.nullType.ref(ctx) &&
-      type != CoreTypes.dynamic.ref(ctx)) {
+      !type.isSpec(CoreTypes.nullType) &&
+      !type.isSpec(CoreTypes.dynamic)) {
     return argument;
   }
   return Variable.ssa(
@@ -79,7 +79,7 @@ Variable coerceArgumentForParameter(
       ? arg0.boxIfNeeded(ctx)
       : arg0.unboxIfNeeded(ctx);
 
-  if (arg0.type == CoreTypes.function.ref(ctx) &&
+  if (arg0.type.isSpec(CoreTypes.function) &&
       arg0.name == null &&
       arg0.methodOffset != null) {
     arg0 = arg0.tearOff(ctx);
@@ -183,7 +183,7 @@ Variable compileOmittedArgument(
       ctx.library = previousLibrary;
     }
   } else {
-    if (value is int && type.file == dartCoreFile && type.name == 'double') {
+    if (value is int && type.isSpec(CoreTypes.double)) {
       value = value.toDouble();
     }
     variable = pushDefaultValue(ctx, value);
@@ -260,12 +260,12 @@ ArgumentListResult compileArgumentList(
   // no seed (e.g. an alias constructor whose own class has no parameters).
   final ctorClassParams =
       parameterHost is ConstructorDeclaration &&
-              parameterHost.parent?.parent is Declaration
-          ? classLikeClauses(
-                  parameterHost.parent!.parent! as Declaration,
-                ).$4?.typeParameters ??
-              const <TypeParameter>[]
-          : const <TypeParameter>[];
+          parameterHost.parent?.parent is Declaration
+      ? classLikeClauses(
+              parameterHost.parent!.parent! as Declaration,
+            ).$4?.typeParameters ??
+            const <TypeParameter>[]
+      : const <TypeParameter>[];
   final ctorClassParamNames = <String>{
     for (final p in ctorClassParams) p.name.lexeme,
   };
@@ -329,7 +329,10 @@ ArgumentListResult compileArgumentList(
         superParams.positional[i],
         typeParameters: paramTypeParameters,
         ctorClassParamSubs: ctorClassParamSubs,
-        genericParameterNames: {...resolveGenerics.keys, ...ctorClassParamNames},
+        genericParameterNames: {
+          ...resolveGenerics.keys,
+          ...ctorClassParamNames,
+        },
         source: source,
       );
       push.add(V);
@@ -435,7 +438,10 @@ ArgumentListResult compileArgumentList(
         name,
         typeParameters: paramTypeParameters,
         ctorClassParamSubs: ctorClassParamSubs,
-        genericParameterNames: {...resolveGenerics.keys, ...ctorClassParamNames},
+        genericParameterNames: {
+          ...resolveGenerics.keys,
+          ...ctorClassParamNames,
+        },
         source: source,
       );
       push.add(V);
@@ -709,7 +715,7 @@ ArgumentListResult compileArgumentListWithDynamic(
 
     final expression = arg.argumentExpression;
     var arg0 = compileExpression(expression, ctx);
-    if (arg0.type == CoreTypes.function.ref(ctx) &&
+    if (arg0.type.isSpec(CoreTypes.function) &&
         arg0.name == null &&
         arg0.methodOffset != null) {
       arg0 = arg0.tearOff(ctx);
@@ -788,7 +794,7 @@ ArgumentListResult compileArgumentListWithBridge(
 
       var arg0 = compileExpression(arg.argumentExpression, ctx, paramType);
       arg0 = arg0.boxIfNeeded(ctx);
-      if (arg0.type == CoreTypes.function.ref(ctx) &&
+      if (arg0.type.isSpec(CoreTypes.function) &&
           arg0.name == null &&
           arg0.methodOffset != null) {
         arg0 = arg0.tearOff(ctx);
@@ -831,15 +837,14 @@ ArgumentListResult compileArgumentListWithBridge(
         ctx,
         paramType,
       ).boxIfNeeded(ctx);
-      if (arg0.type == CoreTypes.function.ref(ctx) &&
+      if (arg0.type.isSpec(CoreTypes.function) &&
           arg0.name == null &&
           arg0.methodOffset != null) {
         arg0 = arg0.tearOff(ctx);
       }
-      if (arg0.type.resolveTypeChain(ctx).assignmentConversionTo(
-            ctx,
-            paramType,
-          ) ==
+      if (arg0.type
+              .resolveTypeChain(ctx)
+              .assignmentConversionTo(ctx, paramType) ==
           AssignmentConversion.invalid) {
         throw CompileError(
           'Cannot assign argument of type ${arg0.type} to parameter of type $paramType',
@@ -935,4 +940,3 @@ TypeRef resolveSuperFormalType(
     decLibrary,
   );
 }
-

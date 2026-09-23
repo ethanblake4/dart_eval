@@ -81,18 +81,16 @@ Variable compileMethodInvocation(
 
   // `E(receiver)` — explicit extension application: the callee is the
   // extension's namespace type literal, so pin member resolution to `E`.
-  if (method.type == CoreTypes.type.ref(ctx) &&
-      method.concreteTypes.length == 1) {
+  if (method.type.isSpec(CoreTypes.type) && method.concreteTypes.length == 1) {
     final ext = extensionForType(ctx, method.concreteTypes[0]);
     if (ext != null) {
       return _applyExtension(ctx, e, ext);
     }
   }
 
-  if (method.type == CoreTypes.dynamic.ref(ctx) ||
+  if (method.type.isSpec(CoreTypes.dynamic) ||
       method.callingConvention == CallingConvention.dynamic ||
-      (method.type == CoreTypes.function.ref(ctx) &&
-          method.methodOffset == null)) {
+      (method.type.isSpec(CoreTypes.function) && method.methodOffset == null)) {
     return _invokeValue(ctx, method, e);
   }
 
@@ -103,11 +101,11 @@ Variable compileMethodInvocation(
     // objects without `call` raise NoSuchMethodError at runtime.
     if (!hasInstanceMethod(ctx, method.type, 'call') &&
         resolveExtensionMember(
-          ctx,
-          method.type,
-          'call',
-          arity: _positionalArity(e),
-        ) !=
+              ctx,
+              method.type,
+              'call',
+              arity: _positionalArity(e),
+            ) !=
             null) {
       final (positional, named) = _compileCallArgs(ctx, e);
       return method.invoke(ctx, 'call', positional, namedArgs: named).result;
@@ -177,13 +175,15 @@ Variable compileMethodInvocation(
             {},
           ) ??
           AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
-      final declaredReturnType =
-          mReturnType.type ?? CoreTypes.dynamic.ref(ctx);
+      final declaredReturnType = mReturnType.type ?? CoreTypes.dynamic.ref(ctx);
       final resultRep = L != null
           ? ValueRep.boxed
           : Abi.unboxedAcrossCalls(declaredReturnType);
-      final instantiatedType =
-          _instantiateConstructorType(ctx, e, declaredReturnType);
+      final instantiatedType = _instantiateConstructorType(
+        ctx,
+        e,
+        declaredReturnType,
+      );
       ctx.pushOp(
         Call(offset, [
           pushRuntimeTypeId(ctx, instantiatedType),
@@ -224,10 +224,12 @@ Variable compileMethodInvocation(
         boundChain.name == resolved.name &&
         boundChain.specifiedTypeArgs.isNotEmpty) {
       final substitutions = <(String, int), TypeRef>{};
-      for (var i = 0;
-          i < resolved.specifiedTypeArgs.length &&
-              i < boundChain.specifiedTypeArgs.length;
-          i++) {
+      for (
+        var i = 0;
+        i < resolved.specifiedTypeArgs.length &&
+            i < boundChain.specifiedTypeArgs.length;
+        i++
+      ) {
         collectTypeParameterSubstitutions(
           ctx,
           resolved.specifiedTypeArgs[i],
@@ -247,11 +249,7 @@ Variable compileMethodInvocation(
       // synthesized `resolved.` body with just the runtime-type argument.
       final callResult = ctx.svar('constructor');
       ctx.pushOp(
-        Call(
-          offset,
-          [pushRuntimeTypeId(ctx, resolved)],
-          result: callResult,
-        ),
+        Call(offset, [pushRuntimeTypeId(ctx, resolved)], result: callResult),
       );
       return Variable.of(
         ctx,
@@ -321,8 +319,9 @@ Variable compileMethodInvocation(
       // class pins its type arguments (`A<int> get g => A(1)`).
       final boundChain = bound?.resolveTypeChain(ctx);
       final ctorDecl = dec.parent?.parent;
-      final ctorClassName =
-          ctorDecl is Declaration ? declarationName(ctorDecl) : null;
+      final ctorClassName = ctorDecl is Declaration
+          ? declarationName(ctorDecl)
+          : null;
       if (boundChain != null &&
           e.typeArguments == null &&
           boundChain.name == ctorClassName) {
@@ -342,7 +341,11 @@ Variable compileMethodInvocation(
         // for inference; bind them from what the constructor's arguments gave.
         final substitutions = <(String, int), TypeRef>{};
         final aliasArgs = aliasType.specifiedTypeArgs;
-        for (var i = 0; i < aliasArgs.length && i < inferredCtorArgs.length; i++) {
+        for (
+          var i = 0;
+          i < aliasArgs.length && i < inferredCtorArgs.length;
+          i++
+        ) {
           collectTypeParameterSubstitutions(
             ctx,
             aliasArgs[i],
@@ -365,8 +368,8 @@ Variable compileMethodInvocation(
   TypeRef? thisType;
   if (ctx.currentClass != null) {
     thisType =
-        ctx.visibleTypes[ctx.enclosingLibrary ?? ctx.library]![ctx
-            .currentClassName!]!;
+        ctx.visibleTypes[ctx.enclosingLibrary ??
+            ctx.library]![ctx.currentClassName!]!;
   }
 
   mReturnType ??=
@@ -378,18 +381,17 @@ Variable compileMethodInvocation(
       ) ??
       AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
   final returnType = mReturnType.type;
-  final resultRep = dec0.isBridge ||
+  final resultRep =
+      dec0.isBridge ||
           (genericReturnBoxed ??
               Abi.unboxedAcrossCalls(
                 mReturnType.type ?? CoreTypes.dynamic.ref(ctx),
               ).isBoxed)
       ? ValueRep.boxed
-      : Abi.unboxedAcrossCalls(
-          mReturnType.type ?? CoreTypes.dynamic.ref(ctx),
-        );
+      : Abi.unboxedAcrossCalls(mReturnType.type ?? CoreTypes.dynamic.ref(ctx));
   final instantiatedReturnType = isConstructor && returnType != null
       ? (aliasType ??
-          _instantiateConstructorType(ctx, e, returnType, inferredCtorArgs))
+            _instantiateConstructorType(ctx, e, returnType, inferredCtorArgs))
       : returnType;
   final declaration = dec0.isBridge ? null : dec0.declaration;
   final effectiveCallArgs = [...callArgs];
@@ -557,8 +559,8 @@ void _resolveInvocationGenerics(
     final substitutedBound = bound.substituteTypeParameters({
       ('call:$declarationLibrary', index): argument,
     });
-    if (argument != CoreTypes.dynamic.ref(ctx) &&
-        substitutedBound != CoreTypes.dynamic.ref(ctx) &&
+    if (!argument.isSpec(CoreTypes.dynamic) &&
+        !substitutedBound.isSpec(CoreTypes.dynamic) &&
         !argument.isAssignableTo(
           ctx,
           substitutedBound,
@@ -666,13 +668,7 @@ Variable _invokeWithTarget(
       if (getter != null) {
         return _invokeValue(
           ctx,
-          invokeExtensionGetter(
-            ctx,
-            L,
-            bound.ext,
-            getter,
-            bound.onBindings,
-          ),
+          invokeExtensionGetter(ctx, L, bound.ext, getter, bound.onBindings),
           e,
         );
       }
@@ -702,10 +698,11 @@ Variable _invokeWithTarget(
   // `C.new(...)` invokes the unnamed constructor.
   final staticMemberName = ctorNameOf(e.methodName.name);
 
-  if (L.type == CoreTypes.type.ref(ctx) && L.concreteTypes.length == 1) {
+  if (L.type.isSpec(CoreTypes.type) && L.concreteTypes.length == 1) {
     // Static method
     staticType = L.concreteTypes[0];
-    if (ctx.topLevelDeclarationsMap[staticType.file]?['${staticType.name}.$staticMemberName'] ==
+    if (ctx.topLevelDeclarationsMap[staticType
+                .file]?['${staticType.name}.$staticMemberName'] ==
             null &&
         ctx.topLevelDeclarationsMap[staticType
                 .file]?['${staticType.name}.$staticMemberName*g'] ==
@@ -820,16 +817,17 @@ Variable _invokeWithTarget(
         );
       }
     }
-  } else if (L.type == CoreTypes.function.ref(ctx) &&
-      e.methodName.name == 'call') {
+  } else if (L.type.isSpec(CoreTypes.function) && e.methodName.name == 'call') {
     // `fn.call(...)`: Function has no declared `call` member; the call is the
     // invocation itself, typed by the callee's own signature.
     return _invokeValue(ctx, L, e);
-  } else if (L.type != CoreTypes.dynamic.ref(ctx)) {
+  } else if (!L.type.isSpec(CoreTypes.dynamic)) {
     // `record.field(args)` on a named record field invokes the field's
     // value — a property read followed by an implicit `.call`, matching
     // the field/getter path below.
-    if (L.type.recordFields.any((f) => f.isNamed && f.name == e.methodName.name)) {
+    if (L.type.recordFields.any(
+      (f) => f.isNamed && f.name == e.methodName.name,
+    )) {
       final (prePositional, preNamed) = _compileCallArgs(ctx, e);
       final property = L.getProperty(ctx, e.methodName.name);
       return invokeClosure(
@@ -852,14 +850,7 @@ Variable _invokeWithTarget(
         arity: _positionalArity(e),
       );
       if (found != null) {
-        return _invokeExtensionMethod(
-          ctx,
-          L,
-          e,
-          found.$1,
-          found.$2,
-          found.$3,
-        );
+        return _invokeExtensionMethod(ctx, L, e, found.$1, found.$2, found.$3);
       }
       final foundGetter = resolveExtensionMember(
         ctx,
@@ -867,17 +858,13 @@ Variable _invokeWithTarget(
         e.methodName.name,
         getter: true,
       );
-      if (foundGetter == null &&
-          e.methodName.name == 'noSuchMethod') {
+      if (foundGetter == null && e.methodName.name == 'noSuchMethod') {
         // `Object.noSuchMethod` is implicit — absent from all declaration
         // metadata. Dispatch dynamically.
         final (positional, named) = _compileCallArgs(ctx, e);
-        return L.invoke(
-          ctx,
-          'noSuchMethod',
-          positional,
-          namedArgs: named,
-        ).result;
+        return L
+            .invoke(ctx, 'noSuchMethod', positional, namedArgs: named)
+            .result;
       }
       if (foundGetter == null) rethrow;
       // `recv.m(args)` where extension member m is a getter — a
@@ -930,14 +917,7 @@ Variable _invokeWithTarget(
       arity: _positionalArity(e),
     );
     if (found != null) {
-      return _invokeExtensionMethod(
-        ctx,
-        L,
-        e,
-        found.$1,
-        found.$2,
-        found.$3,
-      );
+      return _invokeExtensionMethod(ctx, L, e, found.$1, found.$2, found.$3);
     }
   }
 
@@ -959,14 +939,14 @@ Variable _invokeWithTarget(
     // Static calls on generic bridge classes (e.g. `Stream.fromIterable`)
     // infer the class's own type parameters — `T` in `Iterable<T>` — from
     // the argument types, which then resolve `returns:` annotations.
-    final classGenericNames =
-        isStatic
-            ? switch (ctx.topLevelDeclarationsMap[staticType!
-                .file]?[staticType.name]?.bridge) {
-                BridgeClassDef b => b.type.generics.keys.toSet(),
-                _ => const <String>{},
-              }
-            : const <String>{};
+    final classGenericNames = isStatic
+        ? switch (ctx
+              .topLevelDeclarationsMap[staticType!.file]?[staticType.name]
+              ?.bridge) {
+            BridgeClassDef b => b.type.generics.keys.toSet(),
+            _ => const <String>{},
+          }
+        : const <String>{};
     _inferBridgeTypeParameters(
       fd,
       argsPair.args,
@@ -1006,7 +986,7 @@ Variable _invokeWithTarget(
       }
       return invokeResult;
     }
-  } else if (L.type == CoreTypes.dynamic.ref(ctx)) {
+  } else if (L.type.isSpec(CoreTypes.dynamic)) {
     argsPair = compileArgumentListWithDynamic(ctx, e.argumentList, before: [L]);
   } else {
     final dec = dec0!.declaration!;
@@ -1092,10 +1072,9 @@ Variable _invokeWithTarget(
       _ => null,
     };
     final name = e.methodName.name;
-    var directOwner =
-        dec0?.isBridge == false && linkType != null
-            ? memberOwner(ctx, linkType, name)
-            : null;
+    var directOwner = dec0?.isBridge == false && linkType != null
+        ? memberOwner(ctx, linkType, name)
+        : null;
     if (directOwner == null &&
         dec0?.isBridge == false &&
         e.target is! SuperExpression &&
@@ -1109,8 +1088,7 @@ Variable _invokeWithTarget(
     // uses `super`; otherwise any link — including the dispatch root —
     // works, which also allows devirtualizing non-exact receivers.
     final needsLink =
-        directOwner != null &&
-        memberNeedsOwnerLink(ctx, directOwner, name);
+        directOwner != null && memberNeedsOwnerLink(ctx, directOwner, name);
     if (directOwner != null && (linkType != null || !needsLink)) {
       final offset = DeferredOrOffset(
         file: directOwner.file,
@@ -1139,9 +1117,7 @@ Variable _invokeWithTarget(
           result,
           L.boxIfNeeded(ctx).ssa,
           e.methodName.name,
-          dec0?.isBridge == true
-              ? argsPair.ssa
-              : argsPair.ssa.skip(1).toList(),
+          dec0?.isBridge == true ? argsPair.ssa : argsPair.ssa.skip(1).toList(),
           // Bridge methods use their legacy padded positional ABI. Evaluated
           // methods keep source-level positional and named call metadata.
           positionalCount: dec0?.isBridge == true
@@ -1258,8 +1234,7 @@ Variable _invokeExtensionMethod(
   List<TypeRef> bindings,
 ) {
   final extParams =
-      ext.declaration.typeParameters?.typeParameters ??
-      const <TypeParameter>[];
+      ext.declaration.typeParameters?.typeParameters ?? const <TypeParameter>[];
   final result = compileNonBridgeArgs(
     ctx,
     ext.library,
@@ -1431,7 +1406,6 @@ TypeRef? _resolveAppliedInterface(
   );
 }
 
-
 /// Resolves [methodName] on [instanceType] to its declaration or bridge. The
 /// declaration is normally a [MethodDeclaration]; when [methodName] names a
 /// *field* holding a callable (invoked via implicit `.call`), it is the
@@ -1445,7 +1419,7 @@ DeclarationOrBridge<ClassMember, BridgeMethodDef> resolveInstanceMethod(
 ]) {
   if (instanceType.isTypeParameter) {
     final bound = instanceType.typeParameterBound ?? CoreTypes.dynamic.ref(ctx);
-    if (bound == CoreTypes.dynamic.ref(ctx)) {
+    if (bound.isSpec(CoreTypes.dynamic)) {
       throw CompileError(
         'Cannot resolve $methodName on unbounded type parameter $instanceType',
         source,
@@ -1616,8 +1590,7 @@ bool hasInstanceMethod(
 
 /// [resolveInstanceMethod], returning null when [instanceType] and its chain
 /// lack [methodName] instead of throwing.
-DeclarationOrBridge<ClassMember, BridgeMethodDef>?
-_tryResolveInstanceMethod(
+DeclarationOrBridge<ClassMember, BridgeMethodDef>? _tryResolveInstanceMethod(
   CompilerContext ctx,
   TypeRef instanceType,
   String methodName,
@@ -1653,10 +1626,9 @@ DeclarationOrBridge<ClassMember, BridgeDeclaration> resolveStaticMethod(
       final member = method.declaration!;
       return DeclarationOrBridge(
         classType.file,
-        declaration:
-            member is VariableDeclaration
-                ? member.parent!.parent as ClassMember
-                : member as ClassMember,
+        declaration: member is VariableDeclaration
+            ? member.parent!.parent as ClassMember
+            : member as ClassMember,
       );
     } else {
       return DeclarationOrBridge(classType.file, bridge: method.bridge!);
@@ -1731,6 +1703,7 @@ ResolvedArgs compileNonBridgeArgs(
   // Skips this many leading positional arguments (explicit extension
   // application `E.m(receiver, ...)` carries the receiver in the list).
   int argIndexOffset = 0,
+
   /// The expression's context type. Method type parameters left unconstrained
   /// by argument inference are bound from the declared return type matched
   /// against it (`x.cast()` under `C<bool>` binds `U` to `bool`).
@@ -1750,9 +1723,8 @@ ResolvedArgs compileNonBridgeArgs(
           node is ClassTypeAlias,
     );
     classParams = switch (owner) {
-      ClassDeclaration() ||
-      MixinDeclaration() ||
-      ClassTypeAlias() => classLikeClauses(owner as Declaration).$4?.typeParameters,
+      ClassDeclaration() || MixinDeclaration() || ClassTypeAlias() =>
+        classLikeClauses(owner as Declaration).$4?.typeParameters,
       _ => null,
     };
     if (classParams != null) {
@@ -1869,7 +1841,6 @@ ResolvedArgs compileNonBridgeArgs(
   );
 }
 
-
 /// Resolves the receiver for a `super.m(args)` call: finds the nearest
 /// concrete member above `this` — mixin-clause members first (below the
 /// member's own layer), then the superclass chain — and returns the
@@ -1910,11 +1881,13 @@ ResolvedArgs compileNonBridgeArgs(
   for (var j = stop - 1; !found && j >= 0; j--) {
     final mixinRef = clauseNamedType(ctx, lib, withClause[j]);
     if (mixinRef == null) continue;
-    final memberDecl = ctx
-            .instanceDeclarationsMap[mixinRef.file]?[mixinRef.name]
-                ?[memberName] ??
-        ctx.instanceDeclarationsMap[mixinRef
-            .file]?[mixinRef.name]?[memberKey(memberName, 0)];
+    final memberDecl =
+        ctx.instanceDeclarationsMap[mixinRef.file]?[mixinRef
+            .name]?[memberName] ??
+        ctx.instanceDeclarationsMap[mixinRef.file]?[mixinRef.name]?[memberKey(
+          memberName,
+          0,
+        )];
     if (memberDecl == null) continue;
     // Abstract mixin members defer to the next mixin or superclass.
     if (memberDecl is MethodDeclaration && !memberDecl.isComplete) {
@@ -1971,10 +1944,7 @@ ResolvedArgs compileNonBridgeArgs(
     superTypes.add(owner);
   }
   if (!found) {
-    return (
-      L,
-      _invokeSuperNoSuchMethod(ctx, e, abstractGetter ?? false),
-    );
+    return (L, _invokeSuperNoSuchMethod(ctx, e, abstractGetter ?? false));
   }
   for (final superType in superTypes) {
     L = Variable.ssa(
@@ -2019,16 +1989,14 @@ Variable _invokeSuperNoSuchMethod(
       ]),
       CoreTypes.invocation.ref(ctx),
     );
-    final getterValue = $this.invoke(ctx, 'noSuchMethod', [
-      invocation,
-    ]).result;
+    final getterValue = $this.invoke(ctx, 'noSuchMethod', [invocation]).result;
     return _invokeValue(ctx, getterValue, e);
   }
 
   final (positional, named) = _compileCallArgs(ctx, e);
-  final listType = CoreTypes.list.ref(ctx).copyWith(
-    specifiedTypeArgs: [CoreTypes.dynamic.ref(ctx)],
-  );
+  final listType = CoreTypes.list
+      .ref(ctx)
+      .copyWith(specifiedTypeArgs: [CoreTypes.dynamic.ref(ctx)]);
   final list = Variable.ssa(
     ctx,
     NewList(ctx.svar('list')),
@@ -2038,17 +2006,16 @@ Variable _invokeSuperNoSuchMethod(
   for (final arg in positional) {
     ctx.pushOp(ListAppend(list.ssa, arg.boxIfNeeded(ctx).ssa));
   }
-  final invArgs = [
-    symbolFor(e.methodName.name).ssa,
-    list.boxIfNeeded(ctx).ssa,
-  ];
+  final invArgs = [symbolFor(e.methodName.name).ssa, list.boxIfNeeded(ctx).ssa];
   if (named.isNotEmpty) {
-    final mapType = CoreTypes.map.ref(ctx).copyWith(
-      specifiedTypeArgs: [
-        CoreTypes.symbol.ref(ctx),
-        CoreTypes.dynamic.ref(ctx),
-      ],
-    );
+    final mapType = CoreTypes.map
+        .ref(ctx)
+        .copyWith(
+          specifiedTypeArgs: [
+            CoreTypes.symbol.ref(ctx),
+            CoreTypes.dynamic.ref(ctx),
+          ],
+        );
     final map = Variable.ssa(
       ctx,
       NewMap(ctx.svar('map')),
@@ -2068,11 +2035,7 @@ Variable _invokeSuperNoSuchMethod(
   }
   final invocation = Variable.ssa(
     ctx,
-    InvokeExternal(
-      ctx.svar('inv'),
-      bridge['Invocation.method']!,
-      invArgs,
-    ),
+    InvokeExternal(ctx.svar('inv'), bridge['Invocation.method']!, invArgs),
     CoreTypes.invocation.ref(ctx),
   );
   return $this.invoke(ctx, 'noSuchMethod', [invocation]).result;
@@ -2102,10 +2065,7 @@ Variable _invokeValue(CompilerContext ctx, Variable value, MethodInvocation e) {
   final named = <String, Variable>{};
   for (final arg in e.argumentList.arguments) {
     if (arg is NamedArgument) {
-      named[arg.name.lexeme] = compileExpression(
-        arg.argumentExpression,
-        ctx,
-      );
+      named[arg.name.lexeme] = compileExpression(arg.argumentExpression, ctx);
     } else {
       positional.add(compileExpression(arg.argumentExpression, ctx));
     }

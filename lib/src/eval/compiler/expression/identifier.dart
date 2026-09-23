@@ -109,7 +109,10 @@ Reference compilePrefixedIdentifierAsReference(
       if (getter == null) {
         // Setter-only member: no [GetSet] since its declaration slot is the
         // getter's — surface the setter directly instead.
-        return ($type, DeclarationOrBridge(-1, declaration: setter as MethodDeclaration));
+        return (
+          $type,
+          DeclarationOrBridge(-1, declaration: setter as MethodDeclaration),
+        );
       }
       final getset = GetSet(
         -1,
@@ -207,7 +210,10 @@ Reference compilePrefixedIdentifierAsReference(
 
 /// Binds a class declaration's type parameters to the [instantiated]
 /// receiver's type arguments, for resolving its supertype clauses.
-Map<String, TypeRef> _hostParamBindings(Declaration dec, TypeRef? instantiated) {
+Map<String, TypeRef> _hostParamBindings(
+  Declaration dec,
+  TypeRef? instantiated,
+) {
   final params = classLikeClauses(dec).$4?.typeParameters;
   final args = instantiated?.specifiedTypeArgs;
   if (params == null || args == null || args.isEmpty) return const {};
@@ -278,9 +284,7 @@ DeclarationOrBridge<Declaration, BridgeDeclaration>? resolveStaticDeclaration(
   bool forSet = false,
 }) {
   final map = ctx.topLevelDeclarationsMap[library]!;
-  return (forSet
-          ? map['${$class}.$name*s']
-          : map['${$class}.$name*g']) ??
+  return (forSet ? map['${$class}.$name*s'] : map['${$class}.$name*g']) ??
       map['${$class}.$name'];
 }
 

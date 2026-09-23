@@ -32,7 +32,7 @@ TypeRef _shorthandContextType(
     type = type.specifiedTypeArgs.first.resolveTypeChain(ctx);
   }
   type = type.copyWith(nullable: false);
-  if (type.isTypeParameter || type == CoreTypes.dynamic.ref(ctx)) {
+  if (type.isTypeParameter || type.isSpec(CoreTypes.dynamic)) {
     throw CompileError(
       'Dot shorthand requires a concrete context type, got $type',
       source,
@@ -130,11 +130,12 @@ Variable _invokeShorthandMember(
   TypeRef? bound,
 ) {
   final name = ctorNameOf(memberName);
-  final member =
-      ctx.topLevelDeclarationsMap[type.file]?['${type.name}.$name'];
+  final member = ctx.topLevelDeclarationsMap[type.file]?['${type.name}.$name'];
   final decl = member?.declaration;
   if (decl is ConstructorDeclaration ||
-      (member != null && member.isBridge && member.bridge is BridgeConstructorDef)) {
+      (member != null &&
+          member.isBridge &&
+          member.bridge is BridgeConstructorDef)) {
     return compileInstanceOf(
       ctx,
       staticType: type,
@@ -190,34 +191,26 @@ Variable _invokeShorthandMember(
     ctx.pushOp(
       InvokeExternal(
         result,
-        ctx.bridgeStaticFunctionIndices[type
-            .file]!['${type.name}.$name']!,
+        ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.$name']!,
         arguments.ssa,
       ),
     );
     final returnType =
-        bridgeFunctionReturnType(
-          ctx,
-          fd,
-          specifiedType: type,
-        ).toAlwaysReturnType(
-          ctx,
-          type,
-          arguments.args.map((a) => a.type).toList(),
-          arguments.namedArgs.map((k, v) => MapEntry(k, v.type)),
-          typeArgs:
-              typeArguments?.arguments
-                  .map((t) => TypeRef.fromAnnotation(ctx, ctx.library, t))
-                  .toList() ??
-              const [],
-        )?.type ??
+        bridgeFunctionReturnType(ctx, fd, specifiedType: type)
+            .toAlwaysReturnType(
+              ctx,
+              type,
+              arguments.args.map((a) => a.type).toList(),
+              arguments.namedArgs.map((k, v) => MapEntry(k, v.type)),
+              typeArgs:
+                  typeArguments?.arguments
+                      .map((t) => TypeRef.fromAnnotation(ctx, ctx.library, t))
+                      .toList() ??
+                  const [],
+            )
+            ?.type ??
         CoreTypes.dynamic.ref(ctx);
-    return Variable.of(
-      ctx,
-      result,
-      returnType,
-      rep: ValueRep.boxed,
-    );
+    return Variable.of(ctx, result, returnType, rep: ValueRep.boxed);
   }
   // A static method, a static field/getter holding a callable, or a named
   // constructor of a class without declared ctors — resolve the member value

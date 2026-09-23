@@ -43,7 +43,5 @@ Variable compileConditionalExpression(
     source: e,
   );
 
-  return output.copyWith(
-    type: TypeRef.commonBaseType(ctx, types),
-  );
+  return output.copyWith(type: TypeRef.commonBaseType(ctx, types));
 }

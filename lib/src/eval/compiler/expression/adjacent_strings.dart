@@ -21,11 +21,11 @@ Variable compileAdjacentStrings(CompilerContext ctx, AdjacentStrings str) {
   for (final string in str.strings) {
     final V = parseLiteral(string, ctx);
     // An interpolation element that throws produces no value.
-    if (V.type == CoreTypes.never.ref(ctx)) {
+    if (V.type.isSpec(CoreTypes.never)) {
       continue;
     }
     Variable vStr;
-    if (V.type == CoreTypes.string.ref(ctx)) {
+    if (V.type.isSpec(CoreTypes.string)) {
       vStr = V;
     } else {
       vStr = V.invoke(ctx, 'toString', []).result;

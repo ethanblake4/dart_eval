@@ -7,8 +7,6 @@ import 'package:dart_eval/src/eval/compiler/values/value_rep.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/memory.dart';
 
-var dartCoreFile = -1;
-
 class BuiltinValue {
   BuiltinValue({
     this.intval,
@@ -103,5 +101,3 @@ class BuiltinValue {
 }
 
 enum BuiltinValueType { intType, stringType, doubleType, boolType, nullType }
-
-

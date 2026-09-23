@@ -25,12 +25,12 @@ Variable compileStringInterpolation(
       final V = compileExpression(element.expression, ctx);
       // A `throw` inside an interpolation produces no value; the throw
       // already dominates control flow so nothing further is emitted.
-      if (V.type == CoreTypes.never.ref(ctx)) {
+      if (V.type.isSpec(CoreTypes.never)) {
         continue;
       }
       if (!V.isConst) allConst = false;
       Variable vStr;
-      if (V.type == CoreTypes.string.ref(ctx)) {
+      if (V.type.isSpec(CoreTypes.string)) {
         vStr = V;
       } else {
         vStr = V.invoke(ctx, 'toString', []).result;

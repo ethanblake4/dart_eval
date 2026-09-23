@@ -23,8 +23,8 @@ StatementInfo compileReturn(
   while (e != null) {
     if (e is AnonymousMethodInvocation &&
         (anonymousReturn = ctx.anonymousMethodReturns
-            .where((t) => identical(t.node, e))
-            .firstOrNull) !=
+                .where((t) => identical(t.node, e))
+                .firstOrNull) !=
             null) {
       break;
     }
@@ -38,19 +38,14 @@ StatementInfo compileReturn(
 
   // An async body's context type is the *flattened* return type: in
   // `Future<List<int>> f() async => []` the literal sees `List<int>`.
-  final boundType = anonymousReturn?.boundType ??
-      (e is FunctionBody &&
-              e.isAsynchronous &&
-              expectedReturnType?.type != null
+  final boundType =
+      anonymousReturn?.boundType ??
+      (e is FunctionBody && e.isAsynchronous && expectedReturnType?.type != null
           ? flattenType(ctx, expectedReturnType!.type!)
           : expectedReturnType?.type);
   final value = expression == null
       ? null
-      : compileExpression(
-          s.expression!,
-          ctx,
-          boundType,
-        );
+      : compileExpression(s.expression!, ctx, boundType);
 
   // `return` inside an anonymous-method body returns from the invocation,
   // not the enclosing function: store the value and jump to the body's end.

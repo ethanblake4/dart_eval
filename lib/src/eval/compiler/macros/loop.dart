@@ -94,10 +94,7 @@ StatementInfo macroLoop(
   // falls through. Emit these blocks independently of the body's exit flags.
   if (updateBlock?.id != null) {
     ctx.restoreState(initialState);
-    ctx.mergeBranchState([
-      ?bodyExitState,
-      ...edgeStates,
-    ]);
+    ctx.mergeBranchState([?bodyExitState, ...edgeStates]);
     ctx.builder = BasicBlockBuilder(ctx.activeGraph, [updateBlock!], parent);
     update!.call(ctx);
     ctx.resolveBranchStateDiscontinuity(initialState);
@@ -107,10 +104,7 @@ StatementInfo macroLoop(
   }
   if (alwaysLoopOnce && header.id != null) {
     ctx.restoreState(initialState);
-    ctx.mergeBranchState([
-      ?bodyExitState,
-      ...edgeStates,
-    ]);
+    ctx.mergeBranchState([?bodyExitState, ...edgeStates]);
     ctx.builder = BasicBlockBuilder(ctx.activeGraph, [header], parent);
     if (conditionExpression != null) {
       compileCondition(conditionExpression, ctx, bodyBlock, exit);
@@ -130,10 +124,7 @@ StatementInfo macroLoop(
   ctx.builder.float(exit);
   ctx.builder = BasicBlockBuilder(ctx.activeGraph, [exit], parent);
   ctx.restoreState(initialState);
-  ctx.mergeBranchState([
-    ?bodyExitState,
-    ...edgeStates,
-  ]);
+  ctx.mergeBranchState([?bodyExitState, ...edgeStates]);
   after?.call(ctx);
   ctx.endScope();
   return alwaysLoopOnce

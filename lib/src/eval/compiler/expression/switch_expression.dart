@@ -37,8 +37,7 @@ Variable compileSwitchExpression(
       doAssert(
         ctx,
         BuiltinValue(boolval: false).push(ctx),
-        BuiltinValue(stringval: 'non-exhaustive switch expression')
-            .push(ctx),
+        BuiltinValue(stringval: 'non-exhaustive switch expression').push(ctx),
       );
       return StatementInfo(willAlwaysThrow: true);
     }
@@ -55,7 +54,11 @@ Variable compileSwitchExpression(
         );
         final guard = currentCase.guardedPattern.whenClause;
         if (guard != null) {
-          final guardExpr = compileExpression(guard.expression, ctx, CoreTypes.bool.ref(ctx));
+          final guardExpr = compileExpression(
+            guard.expression,
+            ctx,
+            CoreTypes.bool.ref(ctx),
+          );
           return matches.invoke(ctx, '&&', [guardExpr]).result;
         }
         return matches;
@@ -63,8 +66,11 @@ Variable compileSwitchExpression(
       thenBranch: (ctx, _) {
         // Box into a fresh slot so an unboxed local's SSA keeps its primitive
         // representation on paths where the arm doesn't run.
-        final value = compileExpression(currentCase.expression, ctx, bound)
-            .boxIntoFreshSlot(ctx);
+        final value = compileExpression(
+          currentCase.expression,
+          ctx,
+          bound,
+        ).boxIntoFreshSlot(ctx);
         resultTypes.add(value.type);
         ctx.pushOp(Assign(resultSsa, value.ssa));
         return StatementInfo();
@@ -81,10 +87,5 @@ Variable compileSwitchExpression(
       : resultTypes.length == 1
       ? resultTypes.first
       : TypeRef.commonBaseType(ctx, resultTypes.toSet());
-  return Variable.of(
-    ctx,
-    resultSsa,
-    resultType,
-    rep: ValueRep.boxed,
-  );
+  return Variable.of(ctx, resultSsa, resultType, rep: ValueRep.boxed);
 }

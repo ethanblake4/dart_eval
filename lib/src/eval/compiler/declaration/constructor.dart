@@ -464,7 +464,8 @@ void compileConstructorDeclaration(
         init.fieldName.name,
         source: init,
       );
-      final fieldIndex = fieldIndices[init.fieldName.name] ??
+      final fieldIndex =
+          fieldIndices[init.fieldName.name] ??
           (throw CompileError(
             'Undefined field ${init.fieldName.name} in initializer',
             init,
@@ -480,7 +481,7 @@ void compileConstructorDeclaration(
       final msg = init.message != null
           ? compileExpression(init.message!, ctx)
           : BuiltinValue().push(ctx);
-      if (msg.type != CoreTypes.never.ref(ctx)) {
+      if (!msg.type.isSpec(CoreTypes.never)) {
         doAssert(ctx, cond, msg);
       }
     } else {
@@ -699,7 +700,8 @@ Variable _compileFieldInitializer(
     value,
     declared,
     source: field.initializer,
-    description: "A value of type '${value.type}' can't be assigned to a "
+    description:
+        "A value of type '${value.type}' can't be assigned to a "
         'field of type $declared',
   ).boxIfNeeded(ctx);
 }
@@ -719,8 +721,7 @@ Map<String, Variable> _evalUnusedFieldInitializers(
   final evaluated = <String, Variable>{};
   for (final fd in fields) {
     for (final field in fd.fields.variables) {
-      if (usedNames.contains(field.name.lexeme) ||
-          field.initializer == null) {
+      if (usedNames.contains(field.name.lexeme) || field.initializer == null) {
         continue;
       }
       // A folded mixin field's initializer resolves in the mixin's library
@@ -734,13 +735,7 @@ Map<String, Variable> _evalUnusedFieldInitializers(
           ? memberOwner
           : null;
       if (memberLibrary != null && parent != null) {
-        seedFoldedMemberTypeParams(
-          ctx,
-          parent,
-          fd,
-          memberLibrary,
-          prevLibrary,
-        );
+        seedFoldedMemberTypeParams(ctx, parent, fd, memberLibrary, prevLibrary);
       }
       final Variable V;
       try {
@@ -750,8 +745,8 @@ Map<String, Variable> _evalUnusedFieldInitializers(
         ctx.memberDeclaringClass = null;
       }
       ctx.inferredFieldTypes
-          .putIfAbsent(ctx.library, () => {})
-          .putIfAbsent(ctx.currentClassName!, () => {})[field.name.lexeme] =
+              .putIfAbsent(ctx.library, () => {})
+              .putIfAbsent(ctx.currentClassName!, () => {})[field.name.lexeme] =
           widenedInferredType(ctx, V.type);
       evaluated[field.name.lexeme] = V;
     }
@@ -812,9 +807,13 @@ void _compileUnusedFields(
           }
           ctx.inferredFieldTypes
               .putIfAbsent(ctx.library, () => {})
-              .putIfAbsent(ctx.currentClassName!, () => {})[field
-                  .name
-                  .lexeme] = widenedInferredType(ctx, v0.type);
+              .putIfAbsent(
+                ctx.currentClassName!,
+                () => {},
+              )[field.name.lexeme] = widenedInferredType(
+            ctx,
+            v0.type,
+          );
           ctx.pushOp(SetPropertyStatic(inst, fieldIdx0, v0.ssa));
         }
       }
@@ -853,8 +852,7 @@ bool _hasDeclaredConstructor(
 bool _isObjectWrapper(CompilerContext ctx, BridgeDeclaration bridge) =>
     bridge is BridgeClassDef &&
     !bridge.bridge &&
-    TypeRef.fromBridgeTypeRef(ctx, bridge.type.type) ==
-        CoreTypes.object.ref(ctx);
+    TypeRef.fromBridgeTypeRef(ctx, bridge.type.type).isSpec(CoreTypes.object);
 
 /// Resolves a class's `extends` clause to the superclass's declaration and the
 /// import prefix (if any) it was named through.
@@ -956,11 +954,7 @@ Variable _invokeSuperConstructor(
             superParams: superParams,
             // `extends A<int>` — the superclass's parameters bind to the
             // clause's arguments so `T z` checks against `int`.
-            resolveGenerics: _superclassGenerics(
-              ctx,
-              extendsDecl,
-              extendsType,
-            ),
+            resolveGenerics: _superclassGenerics(ctx, extendsDecl, extendsType),
             source: superInitializer,
           )
         : compileSuperParams(
@@ -990,10 +984,7 @@ Variable _invokeSuperConstructor(
   final superRuntimeType = pushRuntimeTypeId(ctx, extendsType);
   return Variable.ssa(
     ctx,
-    Call(methodOffset, [
-      ...ssa,
-      superRuntimeType,
-    ], result: ctx.svar('super')),
+    Call(methodOffset, [...ssa, superRuntimeType], result: ctx.svar('super')),
     mReturnType.type ?? CoreTypes.dynamic.ref(ctx),
   );
 }
@@ -1167,7 +1158,8 @@ void compileAliasForwardingConstructor(
       targetDecl,
       typeParameters: calleeTypeParameters,
     );
-    final type = fieldOrDeclType ??
+    final type =
+        fieldOrDeclType ??
         ctx.functionParameterTypes[ctx.currentFunctionId!]![i];
     parameterRepresentations.add(
       Abi.parameter(type, CallableKind.initializer).bank,

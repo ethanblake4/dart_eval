@@ -276,10 +276,7 @@ Variable patternMatchAndBind(
                 ? (field.pattern as VariablePattern).name.lexeme
                 : null);
         if (propName == null) {
-          throw CompileError(
-            'Object pattern field requires a name',
-            field,
-          );
+          throw CompileError('Object pattern field requires a name', field);
         }
         final fieldValue = V.getProperty(ctx, propName);
         final fieldResult = patternMatchAndBind(

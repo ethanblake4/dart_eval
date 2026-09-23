@@ -89,9 +89,10 @@ class SuperPropertyReference extends IdentifierReference {
   Variable getValue(CompilerContext ctx, [AstNode? source]) {
     final receiver = _owner(ctx, false);
     // A method member read is a tear-off bound to the super receiver.
-    final memberDecl = ctx
-        .instanceDeclarationsMap[receiver.type.file]?[receiver.type.name]
-            ?[name];
+    final memberDecl =
+        ctx.instanceDeclarationsMap[receiver.type.file]?[receiver
+            .type
+            .name]?[name];
     if (memberDecl is MethodDeclaration &&
         !memberDecl.isGetter &&
         !memberDecl.isSetter) {
@@ -177,10 +178,7 @@ class IdentifierReference implements Reference {
   /// The static type an extension accessor named [name] on [object]
   /// contributes — the setter's parameter type or the getter's return type —
   /// or null when no extension member applies.
-  TypeRef? _extensionMemberType(
-    CompilerContext ctx, {
-    required bool forSet,
-  }) {
+  TypeRef? _extensionMemberType(CompilerContext ctx, {required bool forSet}) {
     final found = resolveExtensionMember(
       ctx,
       object!.type,
@@ -218,7 +216,7 @@ class IdentifierReference implements Reference {
     AstNode? source,
   }) {
     if (object != null) {
-      if (object!.type == CoreTypes.type.ref(ctx)) {
+      if (object!.type.isSpec(CoreTypes.type)) {
         final concrete = object!.concreteTypes[0];
         if (extensionForType(ctx, concrete) != null) {
           // `E.member` — a tear-off (or getter invocation) through the
@@ -282,10 +280,9 @@ class IdentifierReference implements Reference {
     // anonymous receiver rather than the enclosing class. The receiver is
     // read through the `#this` local so nested closures capture it.
     final anonymousReceiver = ctx.anonymousThisReceiver;
-    final receiverVar =
-        anonymousReceiver == null
-            ? null
-            : ctx.lookupLocal('#this') ?? anonymousReceiver;
+    final receiverVar = anonymousReceiver == null
+        ? null
+        : ctx.lookupLocal('#this') ?? anonymousReceiver;
     if (receiverVar != null &&
         _hasReceiverMember(ctx, receiverVar, name, forSet: forSet)) {
       final fieldType = TypeRef.lookupFieldType(
@@ -316,17 +313,14 @@ class IdentifierReference implements Reference {
         forSet: forSet,
       );
 
-      if (staticDeclaration != null && staticDeclaration.$1.declaration != null) {
+      if (staticDeclaration != null &&
+          staticDeclaration.$1.declaration != null) {
         final (staticDecl, scopeFile, scopeName) = staticDeclaration;
         final staticDec = staticDecl.declaration!;
         if (staticDec is MethodDeclaration) {
           if (staticDec.isGetter && !forSet) {
             return staticDec.returnType != null
-                ? TypeRef.fromAnnotation(
-                    ctx,
-                    scopeFile,
-                    staticDec.returnType!,
-                  )
+                ? TypeRef.fromAnnotation(ctx, scopeFile, staticDec.returnType!)
                 : CoreTypes.dynamic.ref(ctx);
           }
           if (staticDec.isSetter && forSet) {
@@ -351,8 +345,7 @@ class IdentifierReference implements Reference {
     // globals are the extension's own members, and — in a class method —
     // the members the enclosing class itself declares; inherited members
     // and members of other extensions only apply after globals miss.
-    final $this =
-        (ctx.currentExtension == null && ctx.currentClass == null)
+    final $this = (ctx.currentExtension == null && ctx.currentClass == null)
         ? null
         : ctx.lookupLocal('#this');
     final currentExtension = ctx.currentExtension;
@@ -361,18 +354,9 @@ class IdentifierReference implements Reference {
         (e) => e.declaration == currentExtension,
       );
       if (ext != null) {
-        final member = extensionMember(
-              ext,
-              name,
-              getter: !forSet,
-              setter: forSet,
-            ) ??
-            extensionStaticMember(
-              ext,
-              name,
-              getter: !forSet,
-              setter: forSet,
-            );
+        final member =
+            extensionMember(ext, name, getter: !forSet, setter: forSet) ??
+            extensionStaticMember(ext, name, getter: !forSet, setter: forSet);
         if (member != null) {
           if (forSet) {
             return _setterValueType(ctx, ext.library, member.parameters) ??
@@ -407,12 +391,7 @@ class IdentifierReference implements Reference {
 
     DeclarationOrBridge? declarationValue;
     try {
-      declarationValue = _lookupVisibleValue(
-        ctx,
-        name,
-        source,
-        forSet: forSet,
-      );
+      declarationValue = _lookupVisibleValue(ctx, name, source, forSet: forSet);
     } on CompileError {
       // `this.` members apply after globals miss: instance members
       // (inherited included), then members of applicable extensions.
@@ -486,12 +465,13 @@ class IdentifierReference implements Reference {
   Variable setValue(CompilerContext ctx, Variable value, [AstNode? source]) {
     if (object != null) {
       // If the object is a class name, access static fields
-      if (object!.type == CoreTypes.type.ref(ctx)) {
+      if (object!.type.isSpec(CoreTypes.type)) {
         final classType = object!.concreteTypes[0].resolveTypeChain(ctx);
         // A static setter (`C.x*s`) takes precedence over a static field
         // global of the same base name.
         final setter = ctx
-            .topLevelDeclarationsMap[classType.file]?['${classType.name}.$name*s']
+            .topLevelDeclarationsMap[classType
+                .file]?['${classType.name}.$name*s']
             ?.declaration;
         if (setter is MethodDeclaration && setter.isSetter) {
           return _invokeSetter(
@@ -601,10 +581,7 @@ class IdentifierReference implements Reference {
                 );
           ctx.pushOp(
             Call(
-              DeferredOrOffset(
-                file: ext.library,
-                name: ext.memberKey(member),
-              ),
+              DeferredOrOffset(file: ext.library, name: ext.memberKey(member)),
               [object!.boxIfNeeded(ctx).ssa, arg.ssa],
               result: ctx.svar('setter_result'),
               typeArguments:
@@ -623,8 +600,7 @@ class IdentifierReference implements Reference {
           return arg;
         }
       }
-      final fieldType =
-          declaredFieldType ?? CoreTypes.dynamic.ref(ctx);
+      final fieldType = declaredFieldType ?? CoreTypes.dynamic.ref(ctx);
       final val = convertForAssignment(
         ctx,
         value,
@@ -639,10 +615,7 @@ class IdentifierReference implements Reference {
       if (exact != null && !hasBridgeSuperclass(ctx, exact)) {
         // Storage for an inherited field lives on its declaring class's
         // link, reached from the receiver by LoadSuper hops.
-        final links = [
-          exact,
-          ...exact.resolveTypeChain(ctx).extendsChain,
-        ];
+        final links = [exact, ...exact.resolveTypeChain(ctx).extendsChain];
         var depth = -1;
         int? fieldIndex;
         for (var i = 0; i < links.length; i++) {
@@ -652,12 +625,11 @@ class IdentifierReference implements Reference {
               : name;
           final hasSetter =
               (ctx.instanceDeclarationPositions[link.file]?[link.name]?[1]
-                      as Map?)
-                  ?.containsKey(key) ==
-              true &&
+                          as Map?)
+                      ?.containsKey(key) ==
+                  true &&
               concreteMemberDecl(ctx, link, name, kind: 1) != null;
-          final index =
-              ctx.instanceGetterIndices[link.file]?[link.name]?[name];
+          final index = ctx.instanceGetterIndices[link.file]?[link.name]?[name];
           if (hasSetter && index != null) {
             fieldIndex = index;
             depth = i;
@@ -676,12 +648,12 @@ class IdentifierReference implements Reference {
             link.name,
             name,
             instantiated: link,
-          )?.$2
-              .declaration;
+          )?.$2.declaration;
           // Field storage is link-relative so it always needs the declaring
           // link; a real setter needs it only when its body uses `super`.
-          final fieldDecl =
-              decl is VariableDeclaration ? decl.parent?.parent : null;
+          final fieldDecl = decl is VariableDeclaration
+              ? decl.parent?.parent
+              : null;
           final needsLink =
               fieldIndex != null ||
               memberNeedsOwnerLink(ctx, link, name, kind: 1);
@@ -745,8 +717,7 @@ class IdentifierReference implements Reference {
           name,
           kind: 1,
         );
-        if (owner != null &&
-            !memberNeedsOwnerLink(ctx, owner, name, kind: 1)) {
+        if (owner != null && !memberNeedsOwnerLink(ctx, owner, name, kind: 1)) {
           final key = name.startsWith('_')
               ? '${ctx.libraryUri(owner.file)}::$name'
               : name;
@@ -825,33 +796,34 @@ class IdentifierReference implements Reference {
       // still conforms to it; otherwise the variable is demoted to its
       // declared type (a `dynamic` local stays dynamic).
       final storedType = stored.type;
-      final localType = local.declaredType == CoreTypes.dynamic.ref(ctx)
+      final localType = local.declaredType.isSpec(CoreTypes.dynamic)
           ? local.declaredType
           : storedType.isAssignableTo(ctx, local.type)
-              ? local.type
-              : local.declaredType;
-      local.copyWithUpdate(
-        ctx,
-        type: localType,
-        concreteTypes: stored.concreteTypes,
-      ).exactType = stored.exactType;
+          ? local.type
+          : local.declaredType;
+      local
+              .copyWithUpdate(
+                ctx,
+                type: localType,
+                concreteTypes: stored.concreteTypes,
+              )
+              .exactType =
+          stored.exactType;
       return stored;
     }
 
     // Inside an anonymous-method body, unqualified assignments target
     // the anonymous receiver — the enclosing class scope does not apply.
     final anonymousReceiver = ctx.anonymousThisReceiver;
-    final receiverVar =
-        anonymousReceiver == null
-            ? null
-            : ctx.lookupLocal('#this') ?? anonymousReceiver;
+    final receiverVar = anonymousReceiver == null
+        ? null
+        : ctx.lookupLocal('#this') ?? anonymousReceiver;
     if (receiverVar != null &&
         _hasReceiverMember(ctx, receiverVar, name, forSet: true)) {
-      return IdentifierReference(receiverVar, name).setValue(
-        ctx,
-        value,
-        source,
-      );
+      return IdentifierReference(
+        receiverVar,
+        name,
+      ).setValue(ctx, value, source);
     }
 
     // Inside an extension body, unqualified assignments first target the
@@ -871,9 +843,7 @@ class IdentifierReference implements Reference {
           for (final member in ext.members) {
             if (member is FieldDeclaration) {
               if (member.isStatic &&
-                  member.fields.variables.any(
-                    (v) => v.name.lexeme == name,
-                  )) {
+                  member.fields.variables.any((v) => v.name.lexeme == name)) {
                 return storeGlobalBinding(
                   ctx,
                   ext.library,
@@ -884,8 +854,7 @@ class IdentifierReference implements Reference {
               }
               continue;
             }
-            if (member is! MethodDeclaration ||
-                member.name.lexeme != name) {
+            if (member is! MethodDeclaration || member.name.lexeme != name) {
               continue;
             }
             if (member.isSetter) {
@@ -994,12 +963,7 @@ class IdentifierReference implements Reference {
     // (`this.name = v`), which only applies after globals miss.
     DeclarationOrBridge? declarationValue;
     try {
-      declarationValue = _lookupVisibleValue(
-        ctx,
-        name,
-        source,
-        forSet: true,
-      );
+      declarationValue = _lookupVisibleValue(ctx, name, source, forSet: true);
     } on CompileError {
       if (anonymousReceiver == null &&
           (currentExtension is ExtensionDeclaration ||
@@ -1007,11 +971,7 @@ class IdentifierReference implements Reference {
         final $this = ctx.lookupLocal('#this');
         if ($this != null &&
             _hasReceiverMember(ctx, $this, name, forSet: true)) {
-          return IdentifierReference($this, name).setValue(
-            ctx,
-            value,
-            source,
-          );
+          return IdentifierReference($this, name).setValue(ctx, value, source);
         }
       }
       rethrow;
@@ -1060,15 +1020,15 @@ class IdentifierReference implements Reference {
   @override
   Variable getValue(CompilerContext ctx, [AstNode? source]) {
     if (object != null) {
-      if (object!.type == CoreTypes.type.ref(ctx) &&
+      if (object!.type.isSpec(CoreTypes.type) &&
           object!.concreteTypes.isNotEmpty) {
         final ext = extensionForType(ctx, object!.concreteTypes[0]);
         if (ext != null) {
           // `E.member` through the extension namespace: the function (or
           // getter) is a static callable registered under its member key.
-          final member = ext.members.whereType<MethodDeclaration>().firstWhereOrNull(
-            (m) => m.name.lexeme == name,
-          );
+          final member = ext.members
+              .whereType<MethodDeclaration>()
+              .firstWhereOrNull((m) => m.name.lexeme == name);
           if (member == null) {
             throw CompileError(
               'Extension member not found: ${ext.name}.$name',
@@ -1103,12 +1063,7 @@ class IdentifierReference implements Reference {
                   CoreTypes.dynamic.ref(ctx),
                 ).type ??
                 CoreTypes.dynamic.ref(ctx);
-            return Variable.of(
-              ctx,
-              s,
-              returnType,
-              rep: ValueRep.boxed,
-            );
+            return Variable.of(ctx, s, returnType, rep: ValueRep.boxed);
           }
           return Variable(
             CoreTypes.function.ref(ctx),
@@ -1126,7 +1081,8 @@ class IdentifierReference implements Reference {
           object = object!.boxIfNeeded(ctx, source);
           return object!.getProperty(ctx, name);
         }
-        if (classType.extendsType == CoreTypes.enumType.ref(ctx)) {
+        if (classType.extendsType != null &&
+            classType.extendsType!.isSpec(CoreTypes.enumType)) {
           final type = classType;
           final gIndex =
               ctx.enumValueIndices[classType.file]?[type.name]?[name];
@@ -1170,10 +1126,11 @@ class IdentifierReference implements Reference {
         final fqName = '${classType.name}.${ctorNameOf(name)}';
         // Static accessors register under `*g`/`*s` keys — a getter
         // reference invokes it.
-        final getterMember = ctx
-            .topLevelDeclarationsMap[classType.file]?['$fqName*g'];
+        final getterMember =
+            ctx.topLevelDeclarationsMap[classType.file]?['$fqName*g'];
         final member =
-            getterMember ?? ctx.topLevelDeclarationsMap[classType.file]![fqName];
+            getterMember ??
+            ctx.topLevelDeclarationsMap[classType.file]![fqName];
         final memberDecl = member?.declaration;
         if (member != null &&
             !member.isBridge &&
@@ -1226,16 +1183,11 @@ class IdentifierReference implements Reference {
           if (member is FieldDeclaration) {
             if (member.isStatic &&
                 member.fields.variables.any((v) => v.name.lexeme == name)) {
-              return _loadGlobalVariable(
-                ctx,
-                ext.library,
-                '${ext.name}.$name',
-              );
+              return _loadGlobalVariable(ctx, ext.library, '${ext.name}.$name');
             }
             continue;
           }
-          if (member is! MethodDeclaration ||
-              member.name.lexeme != name) {
+          if (member is! MethodDeclaration || member.name.lexeme != name) {
             continue;
           }
           if (member.isStatic) {
@@ -1252,12 +1204,12 @@ class IdentifierReference implements Reference {
                 ctx,
                 resvar,
                 (AlwaysReturnType.fromAnnotation(
-                          ctx,
-                          ext.library,
-                          member.returnType,
-                          CoreTypes.dynamic.ref(ctx),
-                        ).type ??
-                        CoreTypes.dynamic.ref(ctx)),
+                      ctx,
+                      ext.library,
+                      member.returnType,
+                      CoreTypes.dynamic.ref(ctx),
+                    ).type ??
+                    CoreTypes.dynamic.ref(ctx)),
                 rep: ValueRep.boxed,
               );
             }
@@ -1300,12 +1252,10 @@ class IdentifierReference implements Reference {
     // Inside an anonymous-method body, unqualified names resolve against
     // the anonymous receiver — the enclosing class scope does not apply.
     final anonymousReceiver = ctx.anonymousThisReceiver;
-    final receiverVar =
-        anonymousReceiver == null
-            ? null
-            : ctx.lookupLocal('#this') ?? anonymousReceiver;
-    if (receiverVar != null &&
-        _hasReceiverMember(ctx, receiverVar, name)) {
+    final receiverVar = anonymousReceiver == null
+        ? null
+        : ctx.lookupLocal('#this') ?? anonymousReceiver;
+    if (receiverVar != null && _hasReceiverMember(ctx, receiverVar, name)) {
       return IdentifierReference(receiverVar, name).getValue(ctx, source);
     }
 
@@ -1326,7 +1276,8 @@ class IdentifierReference implements Reference {
         final $type = instanceDeclaration.$1;
         final decOrBridge = instanceDeclaration.$2;
 
-        final $this = ctx.lookupLocal('#this') ??
+        final $this =
+            ctx.lookupLocal('#this') ??
             (throw CompileError(
               'Cannot access instance member $name in a static context',
             ));
@@ -1433,7 +1384,11 @@ class IdentifierReference implements Reference {
       // enumValueIndices rather than the declaration maps.
       final currentDecl = ctx.memberDeclaringClass ?? ctx.currentClass;
       if (currentDecl is EnumDeclaration) {
-        final enumType = TypeRef.lookupDeclaration(ctx, ctx.library, currentDecl);
+        final enumType = TypeRef.lookupDeclaration(
+          ctx,
+          ctx.library,
+          currentDecl,
+        );
         final gIndex = ctx.enumValueIndices[ctx.library]?[enumType.name]?[name];
         if (gIndex != null) {
           return Variable.ssa(
@@ -1447,7 +1402,8 @@ class IdentifierReference implements Reference {
 
       final staticDeclaration = resolveScopedStaticDeclaration(ctx, name);
 
-      if (staticDeclaration != null && staticDeclaration.$1.declaration != null) {
+      if (staticDeclaration != null &&
+          staticDeclaration.$1.declaration != null) {
         final (staticDecl, scopeFile, scopeName) = staticDeclaration;
         final staticDec = staticDecl.declaration!;
         if (staticDec is MethodDeclaration) {
@@ -1492,10 +1448,7 @@ class IdentifierReference implements Reference {
     if (typeParameter != null && name != '_') {
       return Variable.ssa(
         ctx,
-        LoadTypeParameter(
-          ctx.svar('type'),
-          typeParameter.runtimeTypeId(ctx),
-        ),
+        LoadTypeParameter(ctx.svar('type'), typeParameter.runtimeTypeId(ctx)),
         CoreTypes.type.ref(ctx),
         concreteTypes: [typeParameter],
       );
@@ -1535,7 +1488,8 @@ class IdentifierReference implements Reference {
       final stub = _deferredLoadLibrary(ctx, split[0]);
       if (stub != null) return stub;
     }
-    final activeDec = activeDeclaration.declaration ??
+    final activeDec =
+        activeDeclaration.declaration ??
         (split.length > 1 && children != null
             ? (children['${split[1]}*g'] ?? children[split[1]])
             : null) ??
@@ -1634,17 +1588,18 @@ Variable? _deferredLoadLibrary(CompilerContext ctx, String prefix) {
   if (!(ctx.deferredPrefixes[ctx.library]?.contains(prefix) ?? false)) {
     return null;
   }
-  final idx = ctx.bridgeStaticFunctionIndices[ctx
-      .libraryMap['dart:core']]?['deferred_loadLibrary'];
+  final idx =
+      ctx.bridgeStaticFunctionIndices[ctx
+          .libraryMap['dart:core']]?['deferred_loadLibrary'];
   if (idx == null) return null;
   return Variable.ssa(
     ctx,
     InvokeExternal(ctx.svar('loadLibrary'), idx, []),
     CoreTypes.function.ref(ctx),
     methodReturnType: AlwaysReturnType(
-      CoreTypes.future.ref(ctx).copyWith(
-        specifiedTypeArgs: [CoreTypes.nullType.ref(ctx)],
-      ),
+      CoreTypes.future
+          .ref(ctx)
+          .copyWith(specifiedTypeArgs: [CoreTypes.nullType.ref(ctx)]),
       false,
     ),
   );
@@ -1740,10 +1695,7 @@ class PrefixedIdentifierReference implements Reference {
     if (decl is FunctionDeclaration && decl.isSetter) {
       return _invokeSetter(
         ctx,
-        DeferredOrOffset(
-          file: child.sourceLib,
-          name: '${decl.name.lexeme}*s',
-        ),
+        DeferredOrOffset(file: child.sourceLib, name: '${decl.name.lexeme}*s'),
         value,
         child.sourceLib,
         decl.functionExpression.parameters,
@@ -1751,10 +1703,7 @@ class PrefixedIdentifierReference implements Reference {
         source: source,
       );
     }
-    throw CompileError(
-      'Cannot find value to set: $prefix.$identifier',
-      source,
-    );
+    throw CompileError('Cannot find value to set: $prefix.$identifier', source);
   }
 }
 
@@ -1793,7 +1742,9 @@ class IndexedReference implements Reference {
     // A write's contextual type must not execute the indexed getter. For a
     // custom `[]=` the write type is the operator's value parameter —
     // callers use it as the RHS's context type (e.g. `a?[i] ??= e`).
-    if (forSet) return _setterValueType(ctx, source) ?? CoreTypes.dynamic.ref(ctx);
+    if (forSet) {
+      return _setterValueType(ctx, source) ?? CoreTypes.dynamic.ref(ctx);
+    }
     return getValue(ctx).type;
   }
 
@@ -1801,12 +1752,7 @@ class IndexedReference implements Reference {
   /// null when it cannot be resolved (dynamic receivers, missing member).
   TypeRef? _setterValueType(CompilerContext ctx, [AstNode? source]) {
     try {
-      final decl0 = resolveInstanceMethod(
-        ctx,
-        _variable.type,
-        '[]=',
-        source,
-      );
+      final decl0 = resolveInstanceMethod(ctx, _variable.type, '[]=', source);
       final decl = decl0.declaration;
       if (decl is MethodDeclaration) {
         final param = decl.parameters?.parameters.elementAtOrNull(1);
@@ -1971,7 +1917,6 @@ class IndexedReference implements Reference {
   }
 }
 
-
 Variable _declarationToVariable(
   DeclarationOrBridge decOrBridge,
   String name,
@@ -2071,10 +2016,10 @@ Variable _declarationToVariable(
     file: decOrBridge.sourceLib,
     name: decl is FunctionDeclaration
         ? (decl.isGetter
-            ? '${decl.name.lexeme}*g'
-            : decl.isSetter
-            ? '${decl.name.lexeme}*s'
-            : name)
+              ? '${decl.name.lexeme}*g'
+              : decl.isSetter
+              ? '${decl.name.lexeme}*s'
+              : name)
         : name,
   );
 
@@ -2148,10 +2093,10 @@ StaticDispatch? _declarationToStaticDispatch(
     file: decOrBridge.sourceLib,
     name: decl is FunctionDeclaration
         ? (decl.isGetter
-            ? '${decl.name.lexeme}*g'
-            : decl.isSetter
-            ? '${decl.name.lexeme}*s'
-            : name)
+              ? '${decl.name.lexeme}*g'
+              : decl.isSetter
+              ? '${decl.name.lexeme}*s'
+              : name)
         : name,
   );
 
@@ -2377,7 +2322,7 @@ bool _hasReceiverMember(
   AstNode? source,
 }) {
   final resolvedReceiver = resolveThroughTypeParameters(ctx, receiver.type);
-  if (resolvedReceiver == CoreTypes.dynamic.ref(ctx)) return true;
+  if (resolvedReceiver.isSpec(CoreTypes.dynamic)) return true;
   if (TypeRef.lookupFieldType(
         ctx,
         resolvedReceiver,

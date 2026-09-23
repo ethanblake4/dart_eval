@@ -35,7 +35,11 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 
-Variable compileExpression(Expression e, CompilerContext ctx, [TypeRef? bound]) {
+Variable compileExpression(
+  Expression e,
+  CompilerContext ctx, [
+  TypeRef? bound,
+]) {
   if (e is Literal) {
     return parseLiteral(e, ctx, bound);
   } else if (e is AssignmentExpression) {
@@ -44,7 +48,7 @@ Variable compileExpression(Expression e, CompilerContext ctx, [TypeRef? bound]) 
     final value = compileIdentifier(e, ctx);
     if (value.name == null &&
         value.methodOffset != null &&
-        value.type == CoreTypes.function.ref(ctx)) {
+        value.type.isSpec(CoreTypes.function)) {
       return value.tearOff(ctx);
     }
     return value;
