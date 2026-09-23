@@ -2,7 +2,6 @@ import 'helpers/global.dart';
 import 'package:dart_eval/src/eval/compiler/variable/binding.dart';
 import 'helpers/conversion.dart';
 import 'helpers/tearoff.dart';
-import 'model/function_type.dart';
 import 'member/call_signature.dart';
 import 'member/member.dart';
 import 'member/member_name.dart';
@@ -267,8 +266,7 @@ class IndexedReference implements Reference {
         if (param?.type == null) return null;
         // Bind the declaring class's type parameters through the receiver's
         // supertype chain so a `WriteType` annotation resolves concretely.
-        return formalParameterAnnotationType(
-          ctx,
+        return ctx.typeFactory.formalParameterAnnotationType(
           resolved.viewedAs.file,
           param!,
           typeParameters: resolved.ownerTypeArguments,
@@ -282,8 +280,7 @@ class IndexedReference implements Reference {
     final (ext, member, bindings) = found;
     final param = member.parameters?.parameters.elementAtOrNull(1);
     if (param?.type == null) return null;
-    return formalParameterAnnotationType(
-      ctx,
+    return ctx.typeFactory.formalParameterAnnotationType(
       ext.library,
       param!,
       typeParameters: extBindingsMap(ext, bindings),
@@ -487,7 +484,7 @@ Variable _declarationToVariable(
 
   if (decl is! FunctionDeclaration && decl is! ConstructorDeclaration) {
     final type = decl is TypeAlias && decl is! ClassTypeAlias
-        ? resolveTypeAlias(ctx, decOrBridge.sourceLib, decl)
+        ? ctx.typeFactory.resolveTypeAlias( decOrBridge.sourceLib, decl)
         : TypeRef.lookupDeclaration(ctx, decOrBridge.sourceLib, decl);
     return _typeLiteral(ctx, type, '${declarationName(decl)}.');
   }
@@ -734,7 +731,7 @@ TypeRef? _setterValueType(
 ) {
   final param = parameters?.parameters.firstOrNull;
   if (param == null || param.type == null) return null;
-  return formalParameterAnnotationType(ctx, file, param);
+  return ctx.typeFactory.formalParameterAnnotationType( file, param);
 }
 
 /// Emits a `Call` to a setter taking [value] as its argument. The value is

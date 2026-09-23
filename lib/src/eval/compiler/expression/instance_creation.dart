@@ -40,8 +40,7 @@ Variable compileInstanceCreation(
       ?.declaration;
   if (aliasDecl is TypeAlias && aliasDecl is! ClassTypeAlias) {
     instantiatedType = staticType =
-        (resolveTypeAlias(
-              ctx,
+        (ctx.typeFactory.resolveTypeAlias(
               staticType.file,
               aliasDecl,
               nullable: type.question != null,

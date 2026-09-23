@@ -15,8 +15,6 @@ import '../member/call_signature.dart';
 import '../member/member.dart';
 import '../member/member_lookup.dart' show hasBridgeSuperclass;
 import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
-import 'package:dart_eval/src/eval/compiler/model/function_type.dart'
-    show declaredFunctionType, formalParameterAnnotationType;
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/collection.dart';
@@ -190,8 +188,7 @@ sealed class GetTarget {
           ? classLikeClauses(methodHost).$4?.typeParameters ?? const []
           : const <TypeParameter>[];
       final hostArgs = member!.viewedAs.typeArguments;
-      fieldType = declaredFunctionType(
-        ctx,
+      fieldType = ctx.typeFactory.declaredFunctionType(
         resolvedReceiver.file,
         method.parameters,
         method.returnType,
@@ -1011,8 +1008,7 @@ final class ExtensionSetterCall extends SetTarget {
     final paramType =
         member.parameters?.parameters.firstOrNull?.type == null
         ? null
-        : formalParameterAnnotationType(
-            ctx,
+        : ctx.typeFactory.formalParameterAnnotationType(
             ext.library,
             member.parameters!.parameters.first,
             typeParameters: extBindingsMap(ext, bindings),

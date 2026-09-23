@@ -53,7 +53,7 @@ void compileFieldDeclaration(
                 '${V.type} does not conform to type $type',
           );
         } else {
-          type = widenedInferredType(ctx, V.type);
+          type = ctx.typeFactory.widenedInferredType( V.type);
         }
         V = Abi.storageSlot(storageType).isBoxed
             ? V.boxIfNeeded(ctx)

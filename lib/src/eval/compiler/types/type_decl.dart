@@ -139,7 +139,7 @@ sealed class TypeDecl {
     if (type == null) {
       final alias = ctx.typeAliases[library]?[name];
       if (alias != null) {
-        type = resolveTypeAlias(ctx, library, alias);
+        type = ctx.typeFactory.resolveTypeAlias( library, alias);
       }
     }
     if (type == null) {

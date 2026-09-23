@@ -76,8 +76,7 @@ TypeRef? clauseNamedType(
   }
   final alias = ctx.typeAliases[library]?[name];
   if (alias is TypeAlias) {
-    return resolveTypeAlias(
-      ctx,
+    return ctx.typeFactory.resolveTypeAlias(
       library,
       alias,
       typeArgs: clause.typeArguments?.arguments,

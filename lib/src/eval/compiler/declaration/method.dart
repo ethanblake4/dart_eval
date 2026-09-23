@@ -8,7 +8,6 @@ import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/fpl.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/return.dart';
-import 'package:dart_eval/src/eval/compiler/model/function_type.dart';
 
 import 'package:dart_eval/src/eval/compiler/statement/block.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
@@ -69,8 +68,7 @@ int compileMethodDeclaration(
                   .bound ??
               CoreTypes.dynamic.ref(ctx),
       ];
-      ctx.functionRuntimeTypes[pos] = declaredFunctionType(
-        ctx,
+      ctx.functionRuntimeTypes[pos] = ctx.typeFactory.declaredFunctionType(
         ctx.library,
         d.parameters,
         d.returnType,
@@ -160,7 +158,7 @@ int compileMethodDeclaration(
       for (final p in resolvedParams) {
         TypeRef type = CoreTypes.dynamic.ref(ctx);
         if (p.type != null) {
-          type = formalParameterAnnotationType(ctx, ctx.library, p);
+          type = ctx.typeFactory.formalParameterAnnotationType( ctx.library, p);
         }
 
         // `_` parameters are wildcards: non-binding and repeatable.

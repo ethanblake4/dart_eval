@@ -1,7 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:collection/collection.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/compiler/model/function_type.dart';
 
 import 'context.dart';
 import 'errors.dart';
@@ -11,6 +10,7 @@ import 'types/type_decl.dart';
 import 'types/type_parameter.dart';
 
 export 'types/substitution.dart';
+export 'types/type_factory.dart';
 export 'types/type_decl.dart';
 export 'types/type_system.dart';
 export 'types/runtime_types.dart';
@@ -48,112 +48,22 @@ sealed class TypeRef {
       ctx.typeSystem.leastUpperBound(types);
 
   /// Create a [TypeRef] from a [TypeAnnotation] and library ID.
+  /// Thin forwarder onto [TypeFactory]; resolution lives there.
   factory TypeRef.fromAnnotation(
     CompilerContext ctx,
     int library,
     TypeAnnotation typeAnnotation, {
     Map<String, TypeRef> typeParameters = const {},
   }) {
-    if (typeAnnotation is GenericFunctionType) {
-      return functionTypeFromAnnotation(
-        ctx,
-        library,
-        typeAnnotation,
-        typeParameters: typeParameters,
-      );
-    }
-    if (typeAnnotation is RecordTypeAnnotation) {
-      final positional = <TypeRef>[
-        for (final field in typeAnnotation.positionalFields)
-          TypeRef.fromAnnotation(
-            ctx,
-            library,
-            field.type,
-            typeParameters: typeParameters,
-          ),
-      ];
-      final named = <String, TypeRef>{
-        for (final field
-            in typeAnnotation.namedFields?.fields ??
-                <RecordTypeAnnotationNamedField>[])
-          field.name.lexeme: TypeRef.fromAnnotation(
-            ctx,
-            library,
-            field.type,
-            typeParameters: typeParameters,
-          ),
-      };
-      return RecordTypeRef(
-        positional,
-        named,
-        nullable: typeAnnotation.question != null,
-      );
-    }
-    typeAnnotation as NamedType;
-    final prefix = typeAnnotation.importPrefix;
-    final n = prefix == null
-        ? typeAnnotation.name.stringValue ?? typeAnnotation.name.value()
-        : '${prefix.name.lexeme}.${typeAnnotation.name.lexeme}';
-    final unspecifiedType =
-        typeParameters[n] ??
-        ctx.typeScopes[library]?[n] ??
-        ctx.visibleTypes[library]?[n];
-    if (unspecifiedType == null) {
-      final alias = ctx.typeAliases[library]?[n];
-      if (alias != null) {
-        return resolveTypeAlias(
-          ctx,
-          library,
-          alias,
-          nullable: typeAnnotation.question != null,
-          typeArgs: typeAnnotation.typeArguments?.arguments,
-          callerTypeParameters: typeParameters,
-        );
-      }
-      // `FutureOr<T>` is a union type (`Future<T> | T`), which this compiler
-      // cannot represent; it degrades to `dynamic` so `is`/`as` and
-      // assignability checks remain permissive in both directions.
-      if (n == 'FutureOr') {
-        return CoreTypes.dynamic.ref(ctx);
-      }
-      throw CompileError(
-        'Unknown type $n',
-        typeAnnotation.parent,
-        library,
-        ctx,
-      );
-    }
-    final typeArgs = typeAnnotation.typeArguments;
-    if (typeArgs != null) {
-      final resolved = <TypeRef>[];
-      for (final arg in typeArgs.arguments) {
-        resolved.add(
-          TypeRef.fromAnnotation(
-            ctx,
-            library,
-            arg,
-            typeParameters: typeParameters,
-          ),
-        );
-      }
-      final nullability =
-          typeAnnotation.question != null || unspecifiedType.nullable;
-      return switch (unspecifiedType) {
-        InterfaceTypeRef() => unspecifiedType.copyWith(
-          arguments: resolved,
-          nullable: nullability,
-        ),
-        _ => unspecifiedType.withNullable(nullability),
-      };
-    }
-    // A bare type-parameter reference keeps the nullability of its bound
-    // value — `T` is nullable when T resolves to `String?`.
-    return unspecifiedType.withNullable(
-      typeAnnotation.question != null || unspecifiedType.nullable,
+    return ctx.typeFactory.fromAnnotation(
+      library,
+      typeAnnotation,
+      typeParameters: typeParameters,
     );
   }
 
   /// Create a [TypeRef] from a [BridgeTypeAnnotation].
+  /// Thin forwarder onto [TypeFactory]; resolution lives there.
   factory TypeRef.fromBridgeAnnotation(
     CompilerContext ctx,
     BridgeTypeAnnotation typeAnnotation, {
@@ -161,13 +71,12 @@ sealed class TypeRef {
     TypeRef? specifiedType,
     Map<String, TypeRef> typeParameters = const {},
   }) {
-    return TypeRef.fromBridgeTypeRef(
-      ctx,
-      typeAnnotation.type,
+    return ctx.typeFactory.fromBridgeAnnotation(
+      typeAnnotation,
       specifyingType: specifyingType,
       specifiedType: specifiedType,
       typeParameters: typeParameters,
-    ).withNullable(typeAnnotation.nullable);
+    );
   }
 
   factory TypeRef.fromBridgeTypeRef(
@@ -177,114 +86,11 @@ sealed class TypeRef {
     TypeRef? specifiedType,
     Map<String, TypeRef> typeParameters = const {},
   }) {
-    final cacheId = typeReference.cacheId;
-    if (cacheId != null) {
-      final t = ctx.runtimeTypes.list[cacheId];
-      return ctx.bridgeTypeRefCache.putIfAbsent(cacheId, () => t);
-    }
-    final spec = typeReference.spec;
-    if (spec != null) {
-      final arguments = <TypeRef>[];
-      for (final arg in typeReference.typeArgs) {
-        arguments.add(
-          TypeRef.fromBridgeAnnotation(
-            ctx,
-            arg,
-            specifiedType: specifiedType,
-            typeParameters: typeParameters,
-          ),
-        );
-      }
-      final lib =
-          ctx.libraryMap[spec.library] ??
-          (throw CompileError('Bridge: cannot find library ${spec.library}'));
-      final typeSpec =
-          ctx.visibleTypes[lib]![spec.name] ??
-          (throw CompileError(
-            'Bridge: cannot find type ${spec.name} in library ${spec.library}',
-          ));
-      return (typeSpec as InterfaceTypeRef).copyWith(
-        arguments: arguments,
-      );
-    }
-    final ref = typeReference.ref;
-    if (ref != null) {
-      final typeParameter = typeParameters[ref];
-      if (typeParameter != null) return typeParameter;
-      specifiedType ??= ctx.visibleTypes[ctx.library]![ctx.currentClassName];
-
-      if (specifiedType == null) {
-        return CoreTypes.dynamic.ref(ctx);
-      }
-
-      final declaration =
-          ctx.topLevelDeclarationsMap[specifiedType.file]![specifiedType.name]!;
-      if (!declaration.isBridge) {
-        // `ref` is declared on a bridge type, but [specifiedType] is a plain
-        // class — resolve through a bridged ancestor in its chain (e.g. a
-        // Dart class extending `List<T>`), else degrade to dynamic.
-        return ctx.typeSystem.bridgedTypeArgument(specifiedType, ref) ??
-            CoreTypes.dynamic.ref(ctx);
-      }
-      final dec = declaration.bridge!;
-      if (dec is! BridgeClassDef) {
-        throw CompileError(
-          'Trying to resolve bridged generic type $ref on $specifiedType, which is not a bridge class',
-        );
-      }
-
-      final genericIndex = dec.type.generics.keys.toList().indexWhere(
-        (key) => key == ref,
-      );
-      if (genericIndex >= 0 &&
-          genericIndex < specifiedType.typeArguments.length) {
-        return specifiedType.typeArguments[genericIndex];
-      }
-      final generic = dec.type.generics[ref];
-      if (generic == null) return CoreTypes.dynamic.ref(ctx);
-      final $extends = generic.$extends;
-      final boundType = $extends == null
-          ? CoreTypes.dynamic.ref(ctx)
-          : TypeRef.fromBridgeTypeRef(ctx, $extends);
-
-      if (specifyingType != null && genericIndex >= 0) {
-        final instantiatedType =
-            [
-              specifyingType,
-              ...ctx.typeSystem.superclassChain(specifyingType),
-            ].firstWhereOrNull(
-              (candidate) =>
-                  sameDeclaration(candidate, specifiedType!) &&
-                  genericIndex < candidate.typeArguments.length,
-            );
-        if (instantiatedType != null) {
-          final resolvedDeclaredType =
-              instantiatedType.typeArguments[genericIndex];
-          if (!resolvedDeclaredType.isAssignableTo(ctx, boundType)) {
-            throw CompileError(
-              "Type argument $resolvedDeclaredType does not conform to type parameter $ref's"
-              "bound ($boundType)",
-            );
-          }
-          return resolvedDeclaredType;
-        }
-      }
-
-      return boundType;
-    }
-    final gft = typeReference.gft;
-    if (gft != null) {
-      return FunctionTypeRef(
-        functionSignatureFromBridgeFunctionDef(
-          ctx,
-          gft,
-          typeParameters: typeParameters,
-        ),
-        decl: ctx.types.bySpec(CoreTypes.function),
-      );
-    }
-    throw CompileError(
-      'No support for looking up types by other bridge annotation types',
+    return ctx.typeFactory.fromBridgeTypeRef(
+      typeReference,
+      specifyingType: specifyingType,
+      specifiedType: specifiedType,
+      typeParameters: typeParameters,
     );
   }
 
@@ -547,8 +353,7 @@ TypeRef? superMixinMemberOwner(CompilerContext ctx, String name) {
     var ref = ctx.visibleTypes[ctx.library]![mixinName];
     final alias = ctx.typeAliases[ctx.library]?[mixinName];
     if (ref == null && alias != null) {
-      ref = resolveTypeAlias(
-        ctx,
+      ref = ctx.typeFactory.resolveTypeAlias(
         ctx.library,
         alias,
         typeArgs: mixinType.typeArguments?.arguments,
@@ -1069,371 +874,3 @@ extension Refify on BridgeTypeSpec {
 /// named-type aliases (`typedef X = List<int>`) resolve recursively. Type
 /// parameters on the alias are bound (and substituted by any supplied type
 /// arguments) while the underlying annotation resolves.
-TypeRef resolveTypeAlias(
-  CompilerContext ctx,
-  int library,
-  TypeAlias alias, {
-  bool nullable = false,
-  List<TypeAnnotation>? typeArgs,
-  Map<String, TypeRef> callerTypeParameters = const {},
-  bool rawParams = false,
-}) {
-  // Resolve supplied type arguments first — they are finite annotations that
-  // may legally mention this same alias (`Fcov<Fcov<Never>>`). Only the
-  // alias's own body resolution is guarded against recursion.
-  final argRefs = typeArgs == null
-      ? null
-      : [
-          for (final arg in typeArgs)
-            TypeRef.fromAnnotation(
-              ctx,
-              library,
-              arg,
-              typeParameters: callerTypeParameters,
-            ),
-        ];
-  if (!ctx.resolvingTypeAliases.add(alias)) {
-    throw CompileError(
-      'Type alias ${alias.name.lexeme} references itself recursively',
-      alias,
-      library,
-      ctx,
-    );
-  }
-  try {
-    return _resolveTypeAlias(
-      ctx,
-      library,
-      alias,
-      nullable: nullable,
-      argRefs: argRefs,
-      callerTypeParameters: callerTypeParameters,
-      rawParams: rawParams,
-    );
-  } finally {
-    ctx.resolvingTypeAliases.remove(alias);
-  }
-}
-
-TypeRef _resolveTypeAlias(
-  CompilerContext ctx,
-  int library,
-  TypeAlias alias, {
-  bool nullable = false,
-  List<TypeRef>? argRefs,
-  Map<String, TypeRef> callerTypeParameters = const {},
-  bool rawParams = false,
-}) {
-  final typeParameters =
-      switch (alias) {
-        GenericTypeAlias(:final typeParameters) => typeParameters,
-        FunctionTypeAlias(:final typeParameters) => typeParameters,
-        ClassTypeAlias(:final typeParameters) => typeParameters,
-        _ => null,
-      }?.typeParameters ??
-      const <TypeParameter>[];
-  // Bind the alias's own type parameters inside its body. With concrete
-  // arguments, substitute them. Without arguments the alias instantiates to
-  // bounds (`typedef TB<T extends C> = T` referenced bare is `TB<C>`); with
-  // [rawParams] the parameters stay abstract type-parameter references so a
-  // caller performing downward inference can substitute them itself. The body
-  // resolves against the alias's own file — it may name types private to that
-  // library.
-  final declLibrary = ctx.typeAliasFiles[alias] ?? library;
-  final aliasOwner = TypeParameterOwner(
-    TypeParameterOwnerKind.typeAlias,
-    declLibrary,
-    alias.name.lexeme,
-  );
-  final bindings = <String, TypeRef>{};
-  for (var i = 0; i < typeParameters.length; i++) {
-    final param = typeParameters[i];
-    final arg = argRefs == null || i >= argRefs.length ? null : argRefs[i];
-    final bound = param.bound;
-    if (arg != null) {
-      bindings[param.name.lexeme] = arg;
-    } else if (rawParams) {
-      bindings[param.name.lexeme] = TypeParameterTypeRef(
-        TypeParameterDef(aliasOwner, i, param.name.lexeme),
-        file: declLibrary,
-      );
-    } else if (bound == null) {
-      bindings[param.name.lexeme] = CoreTypes.dynamic.ref(ctx);
-    } else {
-      // A recursive bound (`X extends A<X>`) sees the parameter itself.
-      bindings[param.name.lexeme] = TypeParameterTypeRef(
-        TypeParameterDef(aliasOwner, i, param.name.lexeme),
-        file: declLibrary,
-      );
-      bindings[param.name.lexeme] = TypeRef.fromAnnotation(
-        ctx,
-        declLibrary,
-        bound,
-        typeParameters: bindings,
-      );
-    }
-  }
-
-  final TypeRef target;
-  if (alias is GenericTypeAlias) {
-    final functionType = alias.functionType;
-    target = functionType == null
-        ? TypeRef.fromAnnotation(
-            ctx,
-            declLibrary,
-            alias.type,
-            typeParameters: bindings,
-          )
-        : functionTypeFromAnnotation(
-            ctx,
-            declLibrary,
-            functionType,
-            typeParameters: bindings,
-          );
-  } else if (alias is FunctionTypeAlias) {
-    // Legacy `typedef R f(P...)` syntax declares the signature inline. The
-    // alias's parameters become the signature's own generics only under
-    // [rawParams] (downward inference); otherwise [bindings] instantiate
-    // them so the result is a plain function type.
-    target = FunctionTypeRef(
-      functionSignatureFromParts(
-        ctx,
-        declLibrary,
-        returnType: alias.returnType,
-        typeParameterList: rawParams ? alias.typeParameters : null,
-        parameterList: alias.parameters,
-        owner: TypeParameterOwner(
-          TypeParameterOwnerKind.typeAlias,
-          declLibrary,
-          alias.name.lexeme,
-        ),
-        typeParameters: bindings,
-      ),
-      decl: ctx.types.bySpec(CoreTypes.function),
-    );
-  } else {
-    target = CoreTypes.function.ref(ctx);
-  }
-  return target.withNullable(nullable || target.nullable);
-}
-
-/// Resolves a type argument in a `with`/`extends` application: a bare name
-/// matching one of [classParams] resolves to that parameter's [TypeRef];
-/// other named types resolve their arguments recursively (so `List<U>`
-/// resolves when `U` is a parameter of the applying class). Concrete
-/// arguments resolve normally. Returns null when the argument resolves to
-/// none of these.
-TypeRef? resolveAppliedTypeArgument(
-  CompilerContext ctx,
-  int libraryIndex,
-  String ownerClassName,
-  List<TypeParameter>? classParams,
-  TypeAnnotation arg,
-) {
-  if (arg is NamedType) {
-    if (arg.importPrefix == null) {
-      final index = (classParams ?? const <TypeParameter>[]).indexWhere(
-        (p) => p.name.lexeme == arg.name.lexeme,
-      );
-      if (index >= 0) {
-        final bound = classParams![index].bound;
-        final parameter = ctx.typeParameterDefs.key(
-          TypeParameterOwner(
-            TypeParameterOwnerKind.classLike,
-            libraryIndex,
-            ownerClassName,
-          ),
-          index,
-          arg.name.lexeme,
-        );
-        parameter.bound = bound == null
-            ? CoreTypes.dynamic.ref(ctx)
-            : TypeRef.fromAnnotation(ctx, libraryIndex, bound);
-        return TypeParameterTypeRef(parameter);
-      }
-    }
-    final prefix = arg.importPrefix;
-    final name = prefix == null
-        ? arg.name.lexeme
-        : '${prefix.name.lexeme}.${arg.name.lexeme}';
-    final base = ctx.visibleTypes[libraryIndex]?[name];
-    if (base != null) {
-      final nestedArgs = arg.typeArguments?.arguments;
-      if (nestedArgs == null) return base;
-      return (base as InterfaceTypeRef).copyWith(
-        arguments: [
-          for (final nested in nestedArgs)
-            resolveAppliedTypeArgument(
-                  ctx,
-                  libraryIndex,
-                  ownerClassName,
-                  classParams,
-                  nested,
-                ) ??
-                CoreTypes.dynamic.ref(ctx),
-        ],
-      );
-    }
-  }
-  try {
-    return TypeRef.fromAnnotation(ctx, libraryIndex, arg);
-  } on CompileError {
-    return null;
-  }
-}
-
-/// Finds an application of [mixinOwner] in [decl]'s `with` clause, including
-/// through entries that are themselves mixin applications (`class C = S with
-/// M`, `mixin class`). Returns the mixin's parameter names mapped to their
-/// effective types under [substitutions], or null when [mixinOwner] is not
-/// applied anywhere in the clause.
-Map<String, TypeRef>? findMixinApplication(
-  CompilerContext ctx,
-  Declaration decl,
-  int declFile,
-  String declName,
-  Declaration mixinOwner,
-  int ownerLibrary,
-  Substitution substitutions,
-) {
-  for (final mixinType in classLikeClauses(decl).$2) {
-    final prefix = mixinType.importPrefix;
-    final mixinName = prefix == null
-        ? mixinType.name.lexeme
-        : '${prefix.name.lexeme}.${mixinType.name.lexeme}';
-    final ref = ctx.visibleTypes[declFile]?[mixinName];
-    if (ref == null) continue;
-    final mixinDecl =
-        ctx.topLevelDeclarationsMap[ref.file]?[ref.name]?.declaration;
-    final mixinParams =
-        switch (mixinDecl) {
-          MixinDeclaration m => m.typeParameters?.typeParameters,
-          ClassDeclaration c => c.namePart.typeParameters?.typeParameters,
-          ClassTypeAlias a => a.typeParameters?.typeParameters,
-          _ => null,
-        } ??
-        const <TypeParameter>[];
-    final appliedArgs = mixinType.typeArguments?.arguments;
-    final classParams = classLikeClauses(decl).$4?.typeParameters;
-    // Each parameter's effective type under the substitutions accumulated so
-    // far (bounds apply when the application omits an argument).
-    final applied = <String, TypeRef>{
-      for (var i = 0; i < mixinParams.length; i++)
-        mixinParams[i].name.lexeme:
-            resolveAppliedMixinArg(
-              ctx,
-              declFile,
-              declName,
-              classParams,
-              appliedArgs != null && i < appliedArgs.length
-                  ? appliedArgs[i]
-                  : null,
-              substitutions,
-            ) ??
-            substitutedParamBound(ctx, declFile, mixinParams[i], substitutions),
-    };
-    if (identical(mixinDecl, mixinOwner)) {
-      return applied;
-    }
-    if (mixinDecl is ClassDeclaration || mixinDecl is ClassTypeAlias) {
-      final inner = findMixinApplication(
-        ctx,
-        mixinDecl!,
-        ref.file,
-        ref.name,
-        mixinOwner,
-        ownerLibrary,
-        Substitution.of({
-          ...substitutions.bindings,
-          for (var i = 0; i < mixinParams.length; i++)
-            (ref.decl?.typeParameters[i] ??
-                    ctx.typeParameterDefs.key(
-                      TypeParameterOwner(
-                        TypeParameterOwnerKind.classLike,
-                        ref.file,
-                        ref.name,
-                      ),
-                      i,
-                      '',
-                    )): applied[mixinParams[i].name.lexeme]!,
-        }),
-      );
-      if (inner != null) return inner;
-    }
-  }
-  return null;
-}
-
-/// Resolves a type argument in a `with` clause entry: a bare name matching
-/// one of the applying class's own type parameters resolves to that
-/// parameter; other named types resolve with their arguments resolved
-/// recursively (so `List<U>` resolves when `U` is the alias's parameter).
-/// [substitutions] are applied to the result.
-TypeRef? resolveAppliedMixinArg(
-  CompilerContext ctx,
-  int declFile,
-  String declName,
-  List<TypeParameter>? classParams,
-  TypeAnnotation? arg,
-  Substitution substitutions,
-) {
-  if (arg == null) return null;
-  return resolveAppliedTypeArgument(
-    ctx,
-    declFile,
-    declName,
-    classParams,
-    arg,
-  )?.substituteTypeParameters(substitutions);
-}
-
-/// The bound of a mixin type parameter, substituted through [substitutions].
-TypeRef substitutedParamBound(
-  CompilerContext ctx,
-  int file,
-  TypeParameter param,
-  Substitution substitutions,
-) {
-  final bound = param.bound;
-  return bound == null
-      ? CoreTypes.dynamic.ref(ctx)
-      : TypeRef.fromAnnotation(
-          ctx,
-          file,
-          bound,
-        ).substituteTypeParameters(substitutions);
-}
-
-/// For [member] folded into [applier] from a mixin or mixin-class (possibly
-/// through a chain of mixin applications), seeds [CompilerContext.typeScopes] in the
-/// member's declaring library so its type parameters resolve to the applied
-/// arguments, expressed in [applier]'s own type parameters.
-void seedFoldedMemberTypeParams(
-  CompilerContext ctx,
-  Declaration applier,
-  ClassMember member,
-  int memberLibrary,
-  int applierLibrary,
-) {
-  final owner = member.parent?.parent;
-  if (owner is! Declaration || identical(owner, applier)) {
-    return;
-  }
-  final applied = findMixinApplication(
-    ctx,
-    applier,
-    applierLibrary,
-    declarationName(applier),
-    owner,
-    memberLibrary,
-    Substitution.empty,
-  );
-  if (applied == null) return;
-  ctx.typeParameterScope(memberLibrary).addAll(applied);
-}
-
-/// Dart's "no declared type" inference widens a `Null`-typed initializer to
-/// `dynamic` (`var x = null`, `var f = null`): an uninhabited declared type
-/// would reject every later assignment.
-TypeRef widenedInferredType(CompilerContext ctx, TypeRef type) =>
-    type.isSpec(CoreTypes.nullType) ? CoreTypes.dynamic.ref(ctx) : type;

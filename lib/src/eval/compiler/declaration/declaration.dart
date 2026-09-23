@@ -10,7 +10,6 @@ import 'package:dart_eval/src/eval/compiler/declaration/function.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/method.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/variable.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
-import 'package:dart_eval/src/eval/compiler/type.dart';
 
 int? compileDeclaration(
   Declaration d,
@@ -105,8 +104,7 @@ void compileClassMembers(
     // this application's arguments so `T` in its body resolves against the
     // applying class's type environment.
     if (memberLibrary != null) {
-      seedFoldedMemberTypeParams(
-        ctx,
+      ctx.typeFactory.seedFoldedMemberTypeParams(
         parent,
         m,
         memberLibrary,

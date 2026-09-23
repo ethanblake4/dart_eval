@@ -747,7 +747,7 @@ Map<String, Variable> _evalUnusedFieldInitializers(
           ? memberOwner
           : null;
       if (memberLibrary != null && parent != null) {
-        seedFoldedMemberTypeParams(ctx, parent, fd, memberLibrary, prevLibrary);
+        ctx.typeFactory.seedFoldedMemberTypeParams( parent, fd, memberLibrary, prevLibrary);
       }
       final Variable V;
       try {
@@ -759,7 +759,7 @@ Map<String, Variable> _evalUnusedFieldInitializers(
       ctx.inferredFieldTypes
               .putIfAbsent(ctx.library, () => {})
               .putIfAbsent(ctx.currentClassName!, () => {})[field.name.lexeme] =
-          widenedInferredType(ctx, V.type);
+          ctx.typeFactory.widenedInferredType( V.type);
       evaluated[field.name.lexeme] = V;
     }
   }
@@ -802,8 +802,7 @@ void _compileUnusedFields(
               ? memberOwner
               : null;
           if (memberLibrary != null && parent != null) {
-            seedFoldedMemberTypeParams(
-              ctx,
+            ctx.typeFactory.seedFoldedMemberTypeParams(
               parent,
               fd,
               memberLibrary,
@@ -822,8 +821,7 @@ void _compileUnusedFields(
               .putIfAbsent(
                 ctx.currentClassName!,
                 () => {},
-              )[field.name.lexeme] = widenedInferredType(
-            ctx,
+              )[field.name.lexeme] = ctx.typeFactory.widenedInferredType(
             v0.type,
           );
           ctx.pushOp(SetPropertyStatic(inst, fieldIdx0, v0.ssa));
@@ -890,8 +888,7 @@ bool _isObjectWrapper(CompilerContext ctx, BridgeDeclaration bridge) =>
   // to its own file, so keep the resolved [TypeRef] for the caller.
   final extendsDeclAst = extendsDecl.declaration;
   if (extendsDeclAst is TypeAlias && extendsDeclAst is! ClassTypeAlias) {
-    final resolved = resolveTypeAlias(
-      ctx,
+    final resolved = ctx.typeFactory.resolveTypeAlias(
       ctx.library,
       extendsDeclAst,
       typeArgs: $extends.typeArguments?.arguments,

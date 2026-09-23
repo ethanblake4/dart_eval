@@ -1791,8 +1791,7 @@ void _seedMixinTypeParams(
   for (var i = 0; i < mixinParams.length; i++) {
     TypeRef? argRef;
     if (mixinArgs != null && i < mixinArgs.length) {
-      argRef = resolveAppliedTypeArgument(
-        ctx,
+      argRef = ctx.typeFactory.resolveAppliedTypeArgument(
         libraryIndex,
         clsName,
         classParams,

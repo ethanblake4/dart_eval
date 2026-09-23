@@ -193,8 +193,7 @@ TypeRef _resolveSuperclass(CompilerContext ctx, NamedType superclass) {
   final resolved =
       ctx.visibleTypes[ctx.library]![name] ??
       (ctx.typeAliases[ctx.library]?[name] is TypeAlias
-          ? resolveTypeAlias(
-              ctx,
+          ? ctx.typeFactory.resolveTypeAlias(
               ctx.library,
               ctx.typeAliases[ctx.library]![name]!,
               typeArgs: superclass.typeArguments?.arguments,
@@ -297,8 +296,7 @@ _mixinMembers(
         final bound = param.bound;
         temps[param.name.lexeme] =
             (args != null && i < args.length
-                ? resolveAppliedTypeArgument(
-                    ctx,
+                ? ctx.typeFactory.resolveAppliedTypeArgument(
                     ctx.library,
                     ownerName,
                     ownerParams,

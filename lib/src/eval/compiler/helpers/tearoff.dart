@@ -7,7 +7,6 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
-import 'package:dart_eval/src/eval/compiler/model/function_type.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/closures.dart';
@@ -130,8 +129,7 @@ extension TearOff on Variable {
       final annotation = parameter.type;
       return annotation == null
           ? CoreTypes.dynamic.ref(ctx)
-          : formalParameterAnnotationType(
-              ctx,
+          : ctx.typeFactory.formalParameterAnnotationType(
               offset.file ?? ctx.library,
               parameter,
               typeParameters: memberParams,
@@ -154,8 +152,7 @@ extension TearOff on Variable {
     }
 
     final functionType = switch (declaration) {
-      MethodDeclaration() => declaredFunctionType(
-        ctx,
+      MethodDeclaration() => ctx.typeFactory.declaredFunctionType(
         offset.file ?? ctx.library,
         declaration.parameters,
         declaration.returnType,
@@ -167,8 +164,7 @@ extension TearOff on Variable {
           offset.name ?? '',
         ),
       ),
-      FunctionDeclaration() => declaredFunctionType(
-        ctx,
+      FunctionDeclaration() => ctx.typeFactory.declaredFunctionType(
         offset.file ?? ctx.library,
         declaration.functionExpression.parameters,
         declaration.returnType,
@@ -180,8 +176,7 @@ extension TearOff on Variable {
           offset.name ?? '',
         ),
       ),
-      ConstructorDeclaration() => declaredFunctionType(
-        ctx,
+      ConstructorDeclaration() => ctx.typeFactory.declaredFunctionType(
         offset.file ?? ctx.library,
         declaration.parameters,
         null,

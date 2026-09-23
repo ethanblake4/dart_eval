@@ -17,7 +17,6 @@ import '../member/call_signature.dart';
 import '../member/member.dart';
 import '../member/member_name.dart';
 import '../helpers/argument_list.dart';
-import '../model/function_type.dart';
 import '../../ir/bridge.dart' show PrepareBridgeArgument;
 import 'bound_call.dart';
 import 'call.dart';
@@ -295,8 +294,7 @@ BoundCall bindParameterList(
         unifyPlaceholders[name] =
             TypeParameterTypeRef(def, file: decLibrary);
       }
-      unifyPattern = formalParameterAnnotationType(
-        ctx,
+      unifyPattern = ctx.typeFactory.formalParameterAnnotationType(
         decLibrary,
         param,
         typeParameters: {...paramTypeParameters, ...unifyPlaceholders},

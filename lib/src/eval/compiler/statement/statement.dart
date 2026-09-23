@@ -1,5 +1,4 @@
 import '../helpers/captures.dart';
-import '../model/function_type.dart';
 import '../helpers/return.dart';
 import '../builtins.dart';
 import '../reference.dart';
@@ -91,8 +90,7 @@ StatementInfo compileStatement(
         // The self-referencing binding carries the declared signature so
         // recursive calls resolve the real return type (`sum(n - 1)` in an
         // `int sum(int n)` body is `int`, not `dynamic`).
-        final signature = declaredFunctionType(
-          ctx,
+        final signature = ctx.typeFactory.declaredFunctionType(
           ctx.library,
           decl.functionExpression.parameters,
           decl.returnType,

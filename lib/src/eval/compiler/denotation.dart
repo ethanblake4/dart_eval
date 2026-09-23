@@ -438,8 +438,7 @@ final class InstanceMemberDenotation extends Denotation {
     if (forSet) {
       final param = member.parameters?.parameters.firstOrNull;
       if (param?.type == null) return null;
-      return formalParameterAnnotationType(
-        ctx,
+      return ctx.typeFactory.formalParameterAnnotationType(
         ext.library,
         param!,
         typeParameters: typeParams,
@@ -834,8 +833,7 @@ final class ExtensionMemberDenotation extends Denotation {
       final paramType =
           member.parameters?.parameters.firstOrNull?.type == null
           ? null
-          : formalParameterAnnotationType(
-              ctx,
+          : ctx.typeFactory.formalParameterAnnotationType(
               ext.library,
               member.parameters!.parameters.first,
               typeParameters: extBindingsMap(ext, onBindings),
@@ -1109,7 +1107,7 @@ Denotation _denotationOf(
     return ExtensionNamespaceDenotation(ext, name);
   }
   final type = decl is TypeAlias && decl is! ClassTypeAlias
-      ? resolveTypeAlias(ctx, decOrBridge.sourceLib, decl)
+      ? ctx.typeFactory.resolveTypeAlias( decOrBridge.sourceLib, decl)
       : TypeRef.lookupDeclaration(ctx, decOrBridge.sourceLib, decl);
   return TypeLiteralDenotation(type, '${declarationName(decl)}.', declaration: decl);
 }

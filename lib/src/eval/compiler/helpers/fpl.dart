@@ -6,7 +6,6 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/default_value.dart';
-import 'package:dart_eval/src/eval/compiler/model/function_type.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/src/eval/ir/function.dart';
@@ -72,8 +71,7 @@ List<FormalParameter> resolveFPLDefaults(
     // The declared parameter type is the default value's context type.
     var bound = param.type == null
         ? null
-        : formalParameterAnnotationType(
-            ctx,
+        : ctx.typeFactory.formalParameterAnnotationType(
             decLibrary ?? ctx.library,
             param,
             typeParameters: typeParameters,
@@ -96,8 +94,7 @@ List<FormalParameter> resolveFPLDefaults(
     final annotation = param.type;
     var declaredType = annotation == null
         ? CoreTypes.dynamic.ref(ctx)
-        : formalParameterAnnotationType(
-            ctx,
+        : ctx.typeFactory.formalParameterAnnotationType(
             decLibrary ?? ctx.library,
             param,
             typeParameters: typeParameters,
@@ -142,8 +139,7 @@ List<FormalParameter> resolveFPLDefaults(
     return type == null
         ? (null, null)
         : (
-            formalParameterAnnotationType(
-              ctx,
+            ctx.typeFactory.formalParameterAnnotationType(
               decLibrary,
               param,
               typeParameters: typeParameters,

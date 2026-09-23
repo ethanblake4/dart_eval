@@ -23,7 +23,6 @@ import 'package:control_flow_graph/control_flow_graph.dart' show SSA;
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
-import 'package:dart_eval/src/eval/compiler/model/function_type.dart';
 import 'package:dart_eval/src/eval/ir/representation.dart';
 import '../builtins.dart';
 import '../values/abi.dart';
@@ -966,8 +965,7 @@ final class CallResolver {
             ? convertForAssignment(
                 ctx,
                 args[i],
-                formalParameterAnnotationType(
-                  ctx,
+                ctx.typeFactory.formalParameterAnnotationType(
                   ext.library,
                   formals[i],
                   typeParameters: typeParams,
@@ -1131,8 +1129,7 @@ final class CallResolver {
         final ext = extensionForType(ctx, type);
         if (ext != null) return applyExtension(ctx, e, ext);
         if (declaration is TypeAlias && declaration is! ClassTypeAlias) {
-          var resolved = resolveTypeAlias(
-            ctx,
+          var resolved = ctx.typeFactory.resolveTypeAlias(
             ctx.library,
             declaration,
             typeArgs: e.typeArguments?.arguments.toList(),

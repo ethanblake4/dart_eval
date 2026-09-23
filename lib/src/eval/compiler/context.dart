@@ -333,6 +333,10 @@ class CompilerContext with ScopeContext {
   /// created in exactly one place, so bounds resolve on shared defs.
   final typeParameterDefs = TypeParameterDefs();
 
+  /// Annotation→[TypeRef] resolution — the home of `fromAnnotation`,
+  /// `fromBridgeTypeRef`, alias expansion, and function-type construction.
+  late final typeFactory = TypeFactory(this);
+
   /// The mutable entries of [library]'s innermost type-parameter frame,
   /// creating a base frame on first use. Direct seeds (mixin application
   /// arguments, folded member bindings) write here — they live until the
