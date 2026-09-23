@@ -138,8 +138,8 @@ void compileConstructorDeclaration(
         type0 = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
       }
       if (redirectTargetDecl == null) {
-        type0 ??= TypeRef.lookupFieldType(
-          ctx,
+        type0 ??= ctx.memberLookup.fieldType(
+          
           TypeRef.lookupDeclaration(ctx, ctx.library, parent),
           p.name.lexeme,
           source: p,
@@ -466,8 +466,8 @@ void compileConstructorDeclaration(
 
   for (final init in otherInitializers) {
     if (init is ConstructorFieldInitializer) {
-      final fType = TypeRef.lookupFieldType(
-        ctx,
+      final fType = ctx.memberLookup.fieldType(
+        
         TypeRef.lookupDeclaration(ctx, ctx.library, parent),
         init.fieldName.name,
         source: init,

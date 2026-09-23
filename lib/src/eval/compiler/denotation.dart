@@ -405,8 +405,8 @@ final class InstanceMemberDenotation extends Denotation {
       _ => ctx.lookupLocal('#this'),
     };
     if (object == null) return null;
-    var fieldType = TypeRef.lookupFieldType(
-      ctx,
+    var fieldType = ctx.memberLookup.fieldType(
+      
       object.type,
       name,
       forSet: forSet,
@@ -588,7 +588,7 @@ final class InstanceMemberDenotation extends Denotation {
     return Variable.of(
       ctx,
       resvar,
-      TypeRef.lookupFieldType(ctx, $type, name, source: source) ??
+      ctx.memberLookup.fieldType( $type, name, source: source) ??
           CoreTypes.dynamic.ref(ctx),
       rep: ValueRep.boxed,
     );

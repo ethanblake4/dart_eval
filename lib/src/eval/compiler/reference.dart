@@ -671,8 +671,8 @@ TypeRef? _resolveInstanceFieldType(
     name,
   );
   if (instanceDeclaration == null) return null;
-  return TypeRef.lookupFieldType(
-        ctx,
+  return ctx.memberLookup.fieldType(
+        
         instanceDeclaration.$1,
         name,
         forSet: forSet,
@@ -835,8 +835,8 @@ bool _hasReceiverMember(
 }) {
   final resolvedReceiver = ctx.typeSystem.throughTypeParameters(receiver.type);
   if (resolvedReceiver.isSpec(CoreTypes.dynamic)) return true;
-  if (TypeRef.lookupFieldType(
-        ctx,
+  if (ctx.memberLookup.fieldType(
+        
         resolvedReceiver,
         name,
         forSet: forSet,

@@ -121,8 +121,8 @@ sealed class GetTarget {
         extBindingsMap(bound.ext, bound.onBindings),
       );
     }
-    final resolvedField = TypeRef.lookupFieldType(
-      ctx,
+    final resolvedField = ctx.memberLookup.fieldType(
+      
       resolvedReceiver,
       name,
       source: source,
@@ -667,8 +667,8 @@ sealed class SetTarget {
     bool isSuperReceiver = false,
   }) {
     final boxed = object.boxIfNeeded(ctx, source);
-    final declaredFieldType = TypeRef.lookupFieldType(
-      ctx,
+    final declaredFieldType = ctx.memberLookup.fieldType(
+      
       boxed.type,
       name,
       forSet: true,

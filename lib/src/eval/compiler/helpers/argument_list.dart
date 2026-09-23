@@ -180,8 +180,8 @@ TypeRef resolveFieldFormalType(
     throw CompileError('Field formals can only occur in constructors');
   }
   final $class = parameterHost.parent!.parent as Declaration;
-  return TypeRef.lookupFieldType(
-        ctx,
+  return ctx.memberLookup.fieldType(
+        
         TypeRef.lookupDeclaration(ctx, decLibrary, $class),
         param.name.lexeme,
         forFieldFormal: true,
