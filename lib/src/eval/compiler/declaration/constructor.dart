@@ -288,7 +288,7 @@ void compileConstructorDeclaration(
             typeArguments: ctorDecl?.factoryKeyword != null
                 ? [
                     for (final arg in targetType.specifiedTypeArgs)
-                      arg.runtimeTypeId(ctx),
+                      ctx.runtimeTypes.idOf(arg),
                   ]
                 : const [],
           ),
@@ -1047,11 +1047,9 @@ void _emitConstructorReturn(
           .sourceLib]!['${$extends!.name.lexeme}.$constructorName']!,
       inst,
       args,
-      runtimeTypeId: TypeRef.fromAnnotation(
-        ctx,
-        ctx.library,
-        $extends,
-      ).runtimeTypeId(ctx),
+      runtimeTypeId: ctx.runtimeTypes.idOf(
+        TypeRef.fromAnnotation(ctx, ctx.library, $extends),
+      ),
     ),
   );
   ctx.pushOp(ParentBridgeSuperShim($super, bridgeInst));

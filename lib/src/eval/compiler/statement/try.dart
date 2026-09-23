@@ -174,7 +174,7 @@ StatementInfo _compileCatchClause(
         IsType(
           ctx.svar('is_exception_type'),
           exceptionVar.ssa,
-          slot.runtimeTypeId(ctx),
+          ctx.runtimeTypes.idOf(slot),
           false,
         ),
         CoreTypes.bool.ref(ctx),

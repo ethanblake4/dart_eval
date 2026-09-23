@@ -90,7 +90,7 @@ Variable coerceArgumentForParameter(
 /// Pushes an integer carrying [type]'s runtime type id, resolving embedded
 /// type parameters against the frame's type environment at runtime.
 SSA pushRuntimeTypeId(CompilerContext ctx, TypeRef type) {
-  final typeId = type.runtimeTypeId(ctx);
+  final typeId = ctx.runtimeTypes.idOf(type);
   if (!type.requiresTypeEnvironment) {
     return BuiltinValue(intval: typeId).push(ctx).ssa;
   }
@@ -841,9 +841,7 @@ ArgumentListResult compileArgumentListWithBridge(
           arg0.methodOffset != null) {
         arg0 = arg0.tearOff(ctx);
       }
-      if (arg0.type
-              
-              .assignmentConversionTo(ctx, paramType) ==
+      if (arg0.type.assignmentConversionTo(ctx, paramType) ==
           AssignmentConversion.invalid) {
         throw CompileError(
           'Cannot assign argument of type ${arg0.type} to parameter of type $paramType',

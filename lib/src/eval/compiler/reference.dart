@@ -1448,7 +1448,10 @@ class IdentifierReference implements Reference {
     if (typeParameter != null && name != '_') {
       return Variable.ssa(
         ctx,
-        LoadTypeParameter(ctx.svar('type'), typeParameter.runtimeTypeId(ctx)),
+        LoadTypeParameter(
+          ctx.svar('type'),
+          ctx.runtimeTypes.idOf(typeParameter),
+        ),
         CoreTypes.type.ref(ctx),
         concreteTypes: [typeParameter],
       );
@@ -2130,7 +2133,7 @@ Variable _typeLiteral(
   TypeRef type,
   String constructorKey,
 ) {
-  final typeId = type.runtimeTypeId(ctx);
+  final typeId = ctx.runtimeTypes.idOf(type);
   final operation = type.requiresTypeEnvironment
       ? LoadTypeParameter(ctx.svar('type'), typeId)
       : LoadConstantType(ctx.svar('type'), typeId);

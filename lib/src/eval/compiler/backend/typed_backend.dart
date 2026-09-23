@@ -419,7 +419,7 @@ class TypedBackend {
                 type.isSpec(CoreTypes.dynamic) ||
                         type.isSpec(CoreTypes.voidType)
                     ? -1
-                    : type.runtimeTypeId(context),
+                    : context.runtimeTypes.idOf(type),
             ],
             parameterTypeParameterIndices: [
               for (final type in parameterTypes)
@@ -434,9 +434,9 @@ class TypedBackend {
               for (final bound
                   in context.functionTypeParameterBounds[id] ??
                       const <TypeRef>[])
-                bound.runtimeTypeId(context),
+                context.runtimeTypes.idOf(bound),
             ],
-            runtimeTypeId: switch (memberKinds[id]) {
+            runtimeTypeId: context.runtimeTypes.idOf(switch (memberKinds[id]) {
               (final name, final kind) => _tearOffSignature(
                 allocation,
                 name,
@@ -449,7 +449,7 @@ class TypedBackend {
               _ =>
                 context.functionRuntimeTypes[id] ??
                     CoreTypes.function.ref(context),
-            }.runtimeTypeId(context),
+            }),
             hasEnvironment: false,
             boundReceiver: true,
           ),
@@ -629,11 +629,13 @@ class TypedBackend {
         name,
         indices[functionId]!,
         generativeConstructorRuntimeTypeId: isGenerativeConstructor
-            ? TypeRef.lookupDeclaration(
-                context,
-                libraryId,
-                constructorOwner!,
-              ).runtimeTypeId(context)
+            ? context.runtimeTypes.idOf(
+                TypeRef.lookupDeclaration(
+                  context,
+                  libraryId,
+                  constructorOwner!,
+                ),
+              )
             : -1,
         parameters: [
           for (final parameter in parameters)
@@ -682,7 +684,7 @@ class TypedBackend {
               ?.key ??
           // Structural types (records, function types) carry file: -1.
           '',
-      runtimeTypeId: type.runtimeTypeId(context),
+      runtimeTypeId: context.runtimeTypes.idOf(type),
       defaultValue: defaultValue,
       defaultThunk: defaultThunk < 0 ? -1 : indices[defaultThunk]!,
     );
@@ -1209,7 +1211,7 @@ class _LoweringSession {
                   const <TypeRef>[])
             type.isSpec(CoreTypes.dynamic) || type.isSpec(CoreTypes.voidType)
                 ? -1
-                : type.runtimeTypeId(b.context),
+                : b.context.runtimeTypes.idOf(type),
         ],
         parameterTypeParameterIndices: [
           for (final type
@@ -1229,10 +1231,10 @@ class _LoweringSession {
           for (final bound
               in b.context.functionTypeParameterBounds[sourceFunctionId] ??
                   const <TypeRef>[])
-            bound.runtimeTypeId(b.context),
+            b.context.runtimeTypes.idOf(bound),
         ],
         runtimeTypeId: op.runtimeTypeId < 0
-            ? CoreTypes.function.ref(b.context).runtimeTypeId(b.context)
+            ? b.context.runtimeTypes.idOf(CoreTypes.function.ref(b.context))
             : op.runtimeTypeId,
       ),
     );

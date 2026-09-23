@@ -224,7 +224,7 @@ extension TearOff on Variable {
                   !Abi.unboxedAcrossCalls(parameterType(param)).isBoxed,
             )
             .toList(),
-        runtimeTypeId: functionType.runtimeTypeId(ctx),
+        runtimeTypeId: ctx.runtimeTypes.idOf(functionType),
       ),
       functionType,
       methodReturnType:

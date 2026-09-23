@@ -33,7 +33,7 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
   final promotes = slot.isAssignableTo(ctx, V.type, forceAllowDynamic: false);
   Variable update(Variable v, TypeRef type) =>
       promotes ? v.copyWithUpdate(ctx, type: type) : v.copyWith(type: type);
-  final typeId = slot.runtimeTypeId(ctx);
+  final typeId = ctx.runtimeTypes.idOf(slot);
   if (slot.nullable) {
     macroBranch(
       ctx,

@@ -370,14 +370,9 @@ class CompilerContext with ScopeContext {
   Map<int, Map<String, TypeRef>> topLevelVariableInferredTypes = {};
   late final TypeDeclRegistry types = TypeDeclRegistry(this);
   late final TypeSystem typeSystem = TypeSystem(this);
-  Map<TypeRef, int> typeRefIndexMap = {};
-  Map<String, int> runtimeTypeDescriptorIds = {};
+  late final RuntimeTypes runtimeTypes = RuntimeTypes(this);
   final Map<int, TypeRef> bridgeTypeRefCache = {};
   Map<String, int> libraryMap = {};
-  List<TypeRef> runtimeTypeList = [];
-  List<String> typeNames = [];
-  List<Set<int>> typeTypes = [];
-  List<List<int>> runtimeTypeDescriptors = [];
   List<ContextSaveState> typeInferenceSaveStates = [];
   List<ContextSaveState> typeUninferenceSaveStates = [];
   List<CompilerLabel> labels = [];

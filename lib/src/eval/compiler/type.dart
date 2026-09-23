@@ -3,7 +3,6 @@ import 'package:collection/collection.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/compiler/model/function_type.dart';
-import 'package:dart_eval/src/eval/shared/runtime_type_descriptor.dart';
 
 import 'context.dart';
 import 'errors.dart';
@@ -11,6 +10,7 @@ import 'types/type_decl.dart';
 
 export 'types/type_decl.dart';
 export 'types/type_system.dart';
+export 'types/runtime_types.dart';
 
 /// The action required to assign a value to a typed slot.
 enum AssignmentConversion {
@@ -211,7 +211,7 @@ class TypeRef {
   }) {
     final cacheId = typeReference.cacheId;
     if (cacheId != null) {
-      final t = ctx.runtimeTypeList[cacheId];
+      final t = ctx.runtimeTypes.list[cacheId];
       return ctx.bridgeTypeRefCache.putIfAbsent(cacheId, () => t);
     }
     final spec = typeReference.spec;
@@ -608,16 +608,11 @@ class TypeRef {
     }
   }
 
-  Set<int> getRuntimeIndices(CompilerContext ctx) =>
-      ctx.typeSystem.supertypeIds(this);
-
   String get semanticKey =>
       '${isTypeParameter ? 'parameter:$typeParameterOwner:$typeParameterIndex' : '$file:$name'}${nullable ? '?' : ''}'
       '${specifiedTypeArgs.isEmpty ? '' : '<${specifiedTypeArgs.map((type) => type.semanticKey).join(',')}>'}'
       '${recordFields.isEmpty ? '' : ':record:${recordFields.map((field) => '${field.isNamed ? 'n' : 'p'}:${field.name}:${field.type.semanticKey}').join(',')}'}'
       '${functionType == null ? '' : ':fn:${functionType!.semanticKey()}'}';
-
-  String get _runtimeDescriptorKey => semanticKey;
 
   /// The canonical `@record` type name for [fields]: positionals in order,
   /// then named fields sorted by name — the single identity shared by every
@@ -656,95 +651,6 @@ class TypeRef {
     return name.toString();
   }
 
-  List<int> runtimeDescriptor(CompilerContext ctx) {
-    if (isTypeParameter) {
-      final ownerType = isClassTypeParameter
-          ? () {
-              final owner = typeParameterOwner!.split(':');
-              final ownerLibrary = int.parse(owner[1]);
-              return ctx.visibleTypes[ownerLibrary]![owner[2]]!.runtimeTypeId(
-                ctx,
-              );
-            }()
-          : RuntimeTypeDescriptorTag.callableTypeParameterOwner;
-      return [
-        CoreTypes.dynamic.ref(ctx).runtimeTypeId(ctx),
-        nullable ? 1 : 0,
-        RuntimeTypeDescriptorTag.typeParameter,
-        ownerType,
-        typeParameterIndex!,
-        // F-bounds reference the parameter itself (`T extends Foo<T>`); erase
-        // the self-reference to dynamic — descriptors can't be cyclic.
-        (typeParameterBound ?? CoreTypes.dynamic.ref(ctx))
-            .substituteTypeParameters({
-              (typeParameterOwner!, typeParameterIndex!): CoreTypes.dynamic.ref(
-                ctx,
-              ),
-            })
-            .runtimeTypeId(ctx),
-      ];
-    }
-    if (recordFields.isNotEmpty) {
-      final positional = recordPositionalFields;
-      final named = recordNamedFields;
-      return [
-        CoreTypes.record.ref(ctx).runtimeTypeId(ctx),
-        nullable ? 1 : 0,
-        RuntimeTypeDescriptorTag.record,
-        positional.length,
-        named.length,
-        for (final field in positional) field.type.runtimeTypeId(ctx),
-        for (final field in named) ...[
-          ctx.constantPool.addOrGet(field.name!),
-          field.type.runtimeTypeId(ctx),
-        ],
-      ];
-    }
-    final signature = functionType;
-    if (signature != null && signature.generics.isEmpty) {
-      TypeRef resolve(FunctionTypeAnnotation annotation) =>
-          annotation.type ?? CoreTypes.dynamic.ref(ctx);
-      final positional = [
-        ...signature.normalParameters,
-        ...signature.optionalParameters,
-      ];
-      final named = signature.namedParameters.entries.toList()
-        ..sort((a, b) => a.key.compareTo(b.key));
-      return [
-        CoreTypes.function.ref(ctx).runtimeTypeId(ctx),
-        nullable ? 1 : 0,
-        RuntimeTypeDescriptorTag.function,
-        resolve(signature.returnType).runtimeTypeId(ctx),
-        signature.normalParameters.length,
-        positional.length,
-        named.length,
-        for (final parameter in positional)
-          resolve(parameter.type).runtimeTypeId(ctx),
-        for (final entry in named) ...[
-          ctx.constantPool.addOrGet(entry.key),
-          entry.value.isRequired ? 1 : 0,
-          resolve(entry.value.type).runtimeTypeId(ctx),
-        ],
-      ];
-    }
-    return [
-      ctx.typeRefIndexMap[this] ?? runtimeTypeId(ctx),
-      nullable ? 1 : 0,
-      for (final argument in specifiedTypeArgs) argument.runtimeTypeId(ctx),
-    ];
-  }
-
-  int runtimeTypeId(CompilerContext ctx) {
-    final key = _runtimeDescriptorKey;
-    final existing = ctx.runtimeTypeDescriptorIds[key];
-    if (existing != null) return existing;
-    final id = ctx.runtimeTypeList.length;
-    ctx.runtimeTypeDescriptorIds[key] = id;
-    ctx.runtimeTypeList.add(this);
-    ctx.typeNames.add(name);
-    return id;
-  }
-
   /// Whether two references name the same declaration. This intentionally
   /// ignores type arguments, nullability, and representation details.
   bool hasSameDeclarationAs(TypeRef other) =>
@@ -775,9 +681,7 @@ class TypeRef {
   bool hasFixedRuntimeType(CompilerContext ctx) {
     if (nullable) return false;
     if (isRecord) {
-      return recordFields.every(
-        (f) => f.type.hasFixedRuntimeType(ctx),
-      );
+      return recordFields.every((f) => f.type.hasFixedRuntimeType(ctx));
     }
     return isSpec(CoreTypes.int) ||
         isSpec(CoreTypes.double) ||
@@ -843,8 +747,7 @@ class TypeRef {
   AssignmentConversion assignmentConversionTo(
     CompilerContext ctx,
     TypeRef slot,
-  ) =>
-      ctx.typeSystem.assignmentConversion(this, slot);
+  ) => ctx.typeSystem.assignmentConversion(this, slot);
 
   /// Checks whether a value of this type can be assigned to the
   /// field of the type [slot]. This is the main check for assignments,
@@ -861,13 +764,12 @@ class TypeRef {
     TypeRef slot, {
     List<TypeRef>? overrideGenerics,
     bool forceAllowDynamic = true,
-  }) =>
-      ctx.typeSystem.isAssignable(
-        this,
-        slot,
-        overrideGenerics: overrideGenerics,
-        forceAllowDynamic: forceAllowDynamic,
-      );
+  }) => ctx.typeSystem.isAssignable(
+    this,
+    slot,
+    overrideGenerics: overrideGenerics,
+    forceAllowDynamic: forceAllowDynamic,
+  );
 
   TypeRef copyWith({
     int? file,

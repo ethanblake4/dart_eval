@@ -17,11 +17,10 @@ Variable compilePostfixExpression(
   TypeRef? bound,
 ]) {
   Variable assertNonNull(Variable v) {
-    if (v.type.nullable ||
-        v.type.isSpec(CoreTypes.dynamic)) {
+    if (v.type.nullable || v.type.isSpec(CoreTypes.dynamic)) {
       final boxed = v.boxIfNeeded(ctx, e.operand);
       ctx.pushOp(
-        AssertType(boxed.ssa, CoreTypes.object.ref(ctx).runtimeTypeId(ctx)),
+        AssertType(boxed.ssa, ctx.runtimeTypes.idOf(CoreTypes.object.ref(ctx))),
       );
     }
     return v.copyWith(type: v.type.copyWith(nullable: false));

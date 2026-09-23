@@ -353,11 +353,17 @@ class Variable {
       case ValueRep.nativeList:
         // Collection elements are always boxed (Abi.collectionElement), so a
         // native list's contents never need re-boxing on the way out.
-        ctx.pushOp(BoxList(dest, ssa, runtimeTypeId: type.runtimeTypeId(ctx)));
+        ctx.pushOp(
+          BoxList(dest, ssa, runtimeTypeId: ctx.runtimeTypes.idOf(type)),
+        );
       case ValueRep.nativeMap:
-        ctx.pushOp(BoxMap(dest, ssa, runtimeTypeId: type.runtimeTypeId(ctx)));
+        ctx.pushOp(
+          BoxMap(dest, ssa, runtimeTypeId: ctx.runtimeTypes.idOf(type)),
+        );
       case ValueRep.nativeSet:
-        ctx.pushOp(BoxSet(dest, ssa, runtimeTypeId: type.runtimeTypeId(ctx)));
+        ctx.pushOp(
+          BoxSet(dest, ssa, runtimeTypeId: ctx.runtimeTypes.idOf(type)),
+        );
       case ValueRep.nativeObject:
         // The object bank is already the uniform representation, so boxing
         // is a relabel. A distinct [dest] slot still needs a definition.
@@ -604,7 +610,7 @@ class Variable {
       if (!overridable) {
         if (concreteTypes.isNotEmpty) {
           final concrete = concreteTypes[0];
-          final typeId = concrete.runtimeTypeId(ctx);
+          final typeId = ctx.runtimeTypes.idOf(concrete);
           final operation = concrete.requiresTypeEnvironment
               ? LoadTypeParameter(ctx.svar('var_type'), typeId)
               : LoadConstantType(ctx.svar('var_type'), typeId);
@@ -735,8 +741,7 @@ class Variable {
         specifiedType: resolvedReceiver,
       );
     } else {
-      fieldType =
-          resolvedField ?? CoreTypes.dynamic.ref(ctx);
+      fieldType = resolvedField ?? CoreTypes.dynamic.ref(ctx);
       methodReturnType = null;
     }
     final receiver = boxIfNeeded(ctx);

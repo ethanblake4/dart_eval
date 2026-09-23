@@ -411,7 +411,7 @@ Variable compileMethodInvocation(
           ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.']!,
           subclass.ssa,
           effectiveCallArgs,
-          runtimeTypeId: type.runtimeTypeId(ctx),
+          runtimeTypeId: ctx.runtimeTypes.idOf(type),
         ),
       );
     } else {
@@ -438,7 +438,7 @@ Variable compileMethodInvocation(
                 for (final arg
                     in instantiatedReturnType?.specifiedTypeArgs ??
                         const <TypeRef>[])
-                  arg.runtimeTypeId(ctx),
+                  ctx.runtimeTypes.idOf(arg),
               ]
             : isConstructor
             ? const []
@@ -485,8 +485,7 @@ TypeRef _instantiateConstructorType(
     }
     return base.substituteTypeParameters({
       for (var i = 0; i < inferredArgs.length; i++)
-        ('class:${base.file}:${base.name}', i):
-            inferredArgs[i],
+        ('class:${base.file}:${base.name}', i): inferredArgs[i],
     });
   }
   return base.copyWith(
@@ -1127,7 +1126,7 @@ Variable _invokeWithTarget(
           typeArguments:
               e.typeArguments?.arguments
                   .map((type) => TypeRef.fromAnnotation(ctx, ctx.library, type))
-                  .map((type) => type.runtimeTypeId(ctx))
+                  .map((type) => ctx.runtimeTypes.idOf(type))
                   .toList() ??
               const [],
         ),
@@ -1273,7 +1272,7 @@ Variable _invokeExtensionMethod(
 List<int> _runtimeTypeArguments(CompilerContext ctx, MethodInvocation call) =>
     call.typeArguments?.arguments
         .map((type) => TypeRef.fromAnnotation(ctx, ctx.library, type))
-        .map((type) => type.runtimeTypeId(ctx))
+        .map((type) => ctx.runtimeTypes.idOf(type))
         .toList() ??
     const [];
 
@@ -1800,11 +1799,7 @@ ResolvedArgs compileNonBridgeArgs(
       typeParameters: placeholders,
     );
     final substitutions = <(String, int), TypeRef>{};
-    ctx.typeSystem.unify(
-      pattern,
-      returnContext,
-      substitutions,
-    );
+    ctx.typeSystem.unify(pattern, returnContext, substitutions);
     for (var i = 0; i < typeParams.length; i++) {
       final name = typeParams[i].name.lexeme;
       if (!identical(resolveGenerics[name], unboundGenerics[name])) continue;

@@ -75,7 +75,7 @@ void setupAsyncFunction(CompilerContext ctx, {TypeRef? returnType}) {
       ctx,
       BeginAsync(
         ctx.svar('#completer'),
-        runtimeTypeId: runtimeType.runtimeTypeId(ctx),
+        runtimeTypeId: ctx.runtimeTypes.idOf(runtimeType),
       ),
       AsyncTypes.completer.ref(ctx),
     ),

@@ -216,10 +216,7 @@ bool _unifyOnPattern(
     }
     return true;
   }
-  final candidates = [
-    actual,
-    ...ctx.typeSystem.directSupertypes(actual),
-  ];
+  final candidates = [actual, ...ctx.typeSystem.directSupertypes(actual)];
   for (final candidate in candidates) {
     if (candidate.file != pattern.file || candidate.name != pattern.name) {
       continue;
@@ -370,7 +367,7 @@ List<int>? extensionCallTypeArguments(
   if (bindings.length + methodParams.length == 0) return null;
   final ids = <int>[];
   for (final bound in bindings) {
-    ids.add(bound.runtimeTypeId(ctx));
+    ids.add(ctx.runtimeTypes.idOf(bound));
   }
   for (final param in methodParams) {
     final resolved =
@@ -383,7 +380,7 @@ List<int>? extensionCallTypeArguments(
                 param.bound!,
                 typeParameters: resolveGenerics,
               ));
-    ids.add(resolved.runtimeTypeId(ctx));
+    ids.add(ctx.runtimeTypes.idOf(resolved));
   }
   return ids;
 }

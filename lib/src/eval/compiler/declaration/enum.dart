@@ -17,7 +17,7 @@ import 'package:dart_eval/src/eval/ir/string.dart';
 
 void compileEnumDeclaration(CompilerContext ctx, EnumDeclaration d) {
   final type = TypeRef.lookupDeclaration(ctx, ctx.library, d);
-  final $runtimeType = ctx.typeRefIndexMap[type];
+  final $runtimeType = ctx.runtimeTypes.indexMap[type];
   final clsName = d.namePart.typeName.lexeme;
   ctx.instanceDeclarationPositions[ctx.library]![clsName] = [
     {},

@@ -20,7 +20,7 @@ Variable compileFunctionReference(FunctionReference e, CompilerContext ctx) {
             TypeRef.fromAnnotation(ctx, ctx.library, arg),
         ],
       );
-      final typeId = parameterized.runtimeTypeId(ctx);
+      final typeId = ctx.runtimeTypes.idOf(parameterized);
       final operation = parameterized.requiresTypeEnvironment
           ? LoadTypeParameter(ctx.svar('type'), typeId)
           : LoadConstantType(ctx.svar('type'), typeId);

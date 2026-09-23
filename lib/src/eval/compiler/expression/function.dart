@@ -195,8 +195,7 @@ Variable compileFunctionExpression(
     _ => null,
   };
   final boundReturnType =
-      bound?.functionType?.returnType.type ??
-      declaredReturnType;
+      bound?.functionType?.returnType.type ?? declaredReturnType;
 
   // Block-bodied closures collect the static type of each `return` so the
   // closure's return type can be inferred (`asyncClosureReturnTypes` serves
@@ -399,7 +398,7 @@ Variable compileFunctionExpression(
         for (final parameter in sortedNamedArgs)
           if (parameter.isRequired) parameter.name!.lexeme,
       ],
-      runtimeTypeId: closureType.runtimeTypeId(ctx),
+      runtimeTypeId: ctx.runtimeTypes.idOf(closureType),
     ),
     closureType,
     methodReturnType: AlwaysReturnType(

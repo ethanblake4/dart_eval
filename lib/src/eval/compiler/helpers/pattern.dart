@@ -292,7 +292,7 @@ Variable patternMatchAndBind(
       final slot = TypeRef.fromAnnotation(ctx, ctx.library, pat.type);
       // AssertType needs an object operand; box into a fresh slot.
       final boxed = V.boxed ? V : V.boxIntoFreshSlot(ctx);
-      ctx.pushOp(AssertType(boxed.ssa, slot.runtimeTypeId(ctx)));
+      ctx.pushOp(AssertType(boxed.ssa, ctx.runtimeTypes.idOf(slot)));
       return patternMatchAndBind(
         ctx,
         pat.pattern,
@@ -339,7 +339,7 @@ Variable _typeTest(CompilerContext ctx, TypeAnnotation? patType, Variable V) {
     IsType(
       ctx.svar('pattern_type'),
       operand.ssa,
-      slot.runtimeTypeId(ctx),
+      ctx.runtimeTypes.idOf(slot),
       false,
     ),
     CoreTypes.bool.ref(ctx),

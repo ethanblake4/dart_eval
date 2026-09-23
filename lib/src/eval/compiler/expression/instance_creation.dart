@@ -191,16 +191,9 @@ Variable compileInstanceOf(
           typeParameters: paramRefs,
         );
         final concrete =
-            ctx.typeSystem.asInstanceOf(
-              arguments.args[i].type,
-              pattern.decl,
-            ) ??
+            ctx.typeSystem.asInstanceOf(arguments.args[i].type, pattern.decl) ??
             arguments.args[i].type;
-        ctx.typeSystem.unify(
-          pattern,
-          concrete,
-          substitutions,
-        );
+        ctx.typeSystem.unify(pattern, concrete, substitutions);
       }
       instantiatedType = instantiatedType.copyWith(
         specifiedTypeArgs: [
@@ -278,7 +271,7 @@ Variable compileInstanceOf(
           externalId,
           subclass.ssa,
           arguments.ssa,
-          runtimeTypeId: staticType.runtimeTypeId(ctx),
+          runtimeTypeId: ctx.runtimeTypes.idOf(staticType),
         ),
       );
     } else {
@@ -315,7 +308,7 @@ Variable compileInstanceOf(
         typeArguments: constructor.factoryKeyword != null
             ? [
                 for (final arg in instantiatedType.specifiedTypeArgs)
-                  arg.runtimeTypeId(ctx),
+                  ctx.runtimeTypes.idOf(arg),
               ]
             : const [],
       ),

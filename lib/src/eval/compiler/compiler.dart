@@ -492,7 +492,9 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
             res['$name.$childName'] = cached;
             if (child.isBridge) {
               final bridge = child.bridge!;
-              final type0 = BridgeTypeRef.type(_ctx.typeRefIndexMap[cached]);
+              final type0 = BridgeTypeRef.type(
+                _ctx.runtimeTypes.indexMap[cached],
+              );
               if (bridge is BridgeClassDef) {
                 child.bridge = bridge.copyWith(
                   type: bridge.type.copyWith(type: type0),
@@ -522,7 +524,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
         if (type == null) continue;
         if (declarationOrBridge.isBridge) {
           final bridge = declarationOrBridge.bridge!;
-          final type0 = BridgeTypeRef.type(_ctx.typeRefIndexMap[type]);
+          final type0 = BridgeTypeRef.type(_ctx.runtimeTypes.indexMap[type]);
           if (bridge is BridgeClassDef) {
             declarationOrBridge.bridge = bridge.copyWith(
               type: bridge.type.copyWith(type: type0),
@@ -860,7 +862,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
   Program _emitProgram() {
     final typeIds = <int, Map<String, int>>{};
 
-    for (final t in _ctx.typeRefIndexMap.entries) {
+    for (final t in _ctx.runtimeTypes.indexMap.entries) {
       final type = t.key;
       typeIds.putIfAbsent(type.file, () => {})[type.name] = t.value;
     }
@@ -880,19 +882,19 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     // Backend metadata can introduce instantiated parameter and collection
     // types. Build both tables in an index loop: resolving one descriptor can
     // discover its type arguments or supertypes and append more descriptors.
-    _ctx.typeTypes.clear();
-    _ctx.runtimeTypeDescriptors.clear();
-    for (var i = 0; i < _ctx.runtimeTypeList.length; i++) {
-      final type = _ctx.runtimeTypeList[i];
-      _ctx.typeTypes.add(type.getRuntimeIndices(_ctx));
-      _ctx.runtimeTypeDescriptors.add(type.runtimeDescriptor(_ctx));
+    _ctx.runtimeTypes.typeSets.clear();
+    _ctx.runtimeTypes.descriptors.clear();
+    for (var i = 0; i < _ctx.runtimeTypes.list.length; i++) {
+      final type = _ctx.runtimeTypes.list[i];
+      _ctx.runtimeTypes.typeSets.add(_ctx.runtimeTypes.supertypeIds(type));
+      _ctx.runtimeTypes.descriptors.add(_ctx.runtimeTypes.descriptorOf(type));
     }
     int relocate(int id) =>
         backend.functionIndices[id] ??
         (throw StateError('No bytecode for function $id'));
     return Program(
       typeIds,
-      _ctx.typeTypes,
+      _ctx.runtimeTypes.typeSets,
       typed,
       _ctx.libraryMap,
       _ctx.bridgeStaticFunctionIndices,
@@ -906,7 +908,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
               entry.value.versionConstraint,
             ),
       },
-      typeDescriptors: _ctx.runtimeTypeDescriptors,
+      typeDescriptors: _ctx.runtimeTypes.descriptors,
     );
   }
 
@@ -1153,10 +1155,11 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
   /// the same order.
   TypeRef _registerTypeRef(int libraryIndex, String name, TypeDecl decl) {
     final type = TypeRef(libraryIndex, name, decl: decl);
-    _ctx.typeRefIndexMap[type] = _ctx.typeNames.length;
-    _ctx.runtimeTypeDescriptorIds[type.semanticKey] = _ctx.typeNames.length;
-    _ctx.runtimeTypeList.add(type);
-    _ctx.typeNames.add(name);
+    _ctx.runtimeTypes.indexMap[type] = _ctx.runtimeTypes.names.length;
+    _ctx.runtimeTypes.descriptorIds[type.semanticKey] =
+        _ctx.runtimeTypes.names.length;
+    _ctx.runtimeTypes.list.add(type);
+    _ctx.runtimeTypes.names.add(name);
     return type;
   }
 

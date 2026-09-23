@@ -10,7 +10,7 @@ import 'package:dart_eval/src/eval/ir/objects.dart';
 /// key's type component.
 SSA pushInternConst(CompilerContext ctx, SSA value, TypeRef type) {
   final target = ctx.svar('interned');
-  ctx.pushOp(InternConst(target, value, typeId: type.runtimeTypeId(ctx)));
+  ctx.pushOp(InternConst(target, value, typeId: ctx.runtimeTypes.idOf(type)));
   return target;
 }
 

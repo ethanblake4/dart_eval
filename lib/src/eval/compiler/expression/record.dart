@@ -116,10 +116,8 @@ Variable compileRecordLiteral(
       ctx.svar('record'),
       fieldList.ssa,
       constIndex,
-      type.runtimeTypeId(ctx),
-      reify: inferredRecordFields.any(
-        (f) => !f.type.hasFixedRuntimeType(ctx),
-      ),
+      ctx.runtimeTypes.idOf(type),
+      reify: inferredRecordFields.any((f) => !f.type.hasFixedRuntimeType(ctx)),
     ),
     type,
   );

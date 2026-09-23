@@ -167,7 +167,7 @@ Variable _invokeShorthandMember(
         typeArguments:
             typeArguments?.arguments
                 .map((t) => TypeRef.fromAnnotation(ctx, ctx.library, t))
-                .map((t) => t.runtimeTypeId(ctx))
+                .map((t) => ctx.runtimeTypes.idOf(t))
                 .toList() ??
             const [],
       ),

@@ -29,10 +29,12 @@ final class TypeSystem {
     }
     return {
       for (var i = 0; i < params.length; i++)
-        ('class:${type.file}:${type.name}', i):
-            i < type.specifiedTypeArgs.length
-                ? type.specifiedTypeArgs[i]
-                : (params[i].extendsType ?? CoreTypes.dynamic.ref(_ctx)),
+        (
+          'class:${type.file}:${type.name}',
+          i,
+        ): i < type.specifiedTypeArgs.length
+            ? type.specifiedTypeArgs[i]
+            : (params[i].extendsType ?? CoreTypes.dynamic.ref(_ctx)),
     };
   }
 
@@ -112,8 +114,7 @@ final class TypeSystem {
     if (target == null) return null;
     var current0 = type;
     if (current0.isTypeParameter) {
-      current0 =
-          current0.typeParameterBound ?? CoreTypes.dynamic.ref(_ctx);
+      current0 = current0.typeParameterBound ?? CoreTypes.dynamic.ref(_ctx);
     }
     if (current0.isRecord) {
       current0 = CoreTypes.record.ref(_ctx);
@@ -142,7 +143,10 @@ final class TypeSystem {
     Map<(String, int), TypeRef> substitutions,
   ) {
     if (pattern.isTypeParameter) {
-      substitutions[(pattern.typeParameterOwner!, pattern.typeParameterIndex!)] =
+      substitutions[(
+            pattern.typeParameterOwner!,
+            pattern.typeParameterIndex!,
+          )] =
           concrete;
       return;
     }
@@ -184,11 +188,7 @@ final class TypeSystem {
           // arguments positionally instead.
           final pArgs = pattern.specifiedTypeArgs;
           for (var i = 0; i < pArgs.length; i++) {
-            unify(
-              pArgs[i],
-              concrete.specifiedTypeArgs[i],
-              substitutions,
-            );
+            unify(pArgs[i], concrete.specifiedTypeArgs[i], substitutions);
           }
         } else {
           unify(current, concrete, substitutions);
@@ -203,16 +203,16 @@ final class TypeSystem {
   /// for: its own id plus every declared supertype's, walked with
   /// substitutions applied at each hop.
   Set<int> supertypeIds(TypeRef type) {
-    final selfId = type.runtimeTypeId(_ctx);
-    final indices = {selfId, _ctx.typeRefIndexMap[type] ?? selfId};
+    final selfId = _ctx.runtimeTypes.idOf(type);
+    final indices = {selfId, _ctx.runtimeTypes.indexMap[type] ?? selfId};
     final seen = {type.semanticKey};
     final worklist = directSupertypes(type);
     while (worklist.isNotEmpty) {
       final supertype = worklist.removeLast();
       if (!seen.add(supertype.semanticKey)) continue;
-      final supertypeId = supertype.runtimeTypeId(_ctx);
+      final supertypeId = _ctx.runtimeTypes.idOf(supertype);
       indices.add(supertypeId);
-      indices.add(_ctx.typeRefIndexMap[supertype] ?? supertypeId);
+      indices.add(_ctx.runtimeTypes.indexMap[supertype] ?? supertypeId);
       worklist.addAll(directSupertypes(supertype));
     }
     return indices;
@@ -227,10 +227,10 @@ final class TypeSystem {
     final substitutions = <(String, int), TypeRef>{};
     void collect(TypeRef t) {
       if (t.isTypeParameter) {
-        substitutions.putIfAbsent(
-          (t.typeParameterOwner!, t.typeParameterIndex!),
-          () => t.typeParameterBound ?? CoreTypes.dynamic.ref(_ctx),
-        );
+        substitutions.putIfAbsent((
+          t.typeParameterOwner!,
+          t.typeParameterIndex!,
+        ), () => t.typeParameterBound ?? CoreTypes.dynamic.ref(_ctx));
         return;
       }
       for (final argument in t.specifiedTypeArgs) {
@@ -584,7 +584,11 @@ final class TypeSystem {
       }
       // A raw generic (`Future` for `Future<C>`) acts like
       // `Future<dynamic>`: its missing arguments are assignable both ways.
-      for (var i = 0; i < to.specifiedTypeArgs.length && i < generics.length; i++) {
+      for (
+        var i = 0;
+        i < to.specifiedTypeArgs.length && i < generics.length;
+        i++
+      ) {
         if (!isAssignable(
           generics[i],
           to.specifiedTypeArgs[i],

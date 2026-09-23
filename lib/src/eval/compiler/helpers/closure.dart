@@ -76,7 +76,7 @@ InvokeResult invokeClosure(
   final runtimeTypeArguments =
       typeArguments
           ?.map((type) => TypeRef.fromAnnotation(ctx, ctx.library, type))
-          .map((type) => type.runtimeTypeId(ctx))
+          .map((type) => ctx.runtimeTypes.idOf(type))
           .toList() ??
       const <int>[];
   if (dispatch != null) {
@@ -168,11 +168,7 @@ TypeRef? resolveCallResultType(
     );
     if (resolved != null && resolved.type != voidType) return resolved.type;
   }
-  final declared = callee?.type
-      
-      .functionType
-      ?.returnType
-      .type;
+  final declared = callee?.type.functionType?.returnType.type;
   return declared == voidType ? null : declared;
 }
 
@@ -200,9 +196,7 @@ bool _closureArgumentsProven(
     final paramType = positional[i].type.type;
     if (paramType == null ||
         paramType.isSpec(CoreTypes.dynamic) ||
-        positionalArgs[i].type
-                
-                .assignmentConversionTo(ctx, paramType) !=
+        positionalArgs[i].type.assignmentConversionTo(ctx, paramType) !=
             AssignmentConversion.none) {
       return false;
     }
@@ -211,9 +205,7 @@ bool _closureArgumentsProven(
     final paramType = signature.namedParameters[entry.key]?.type.type;
     if (paramType == null ||
         paramType.isSpec(CoreTypes.dynamic) ||
-        entry.value.type
-                
-                .assignmentConversionTo(ctx, paramType) !=
+        entry.value.type.assignmentConversionTo(ctx, paramType) !=
             AssignmentConversion.none) {
       return false;
     }

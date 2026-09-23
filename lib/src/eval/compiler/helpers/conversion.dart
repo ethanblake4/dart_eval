@@ -26,9 +26,7 @@ Variable convertInitializer(
   AstNode? source,
   String? description,
 }) {
-  final conversion = value.type
-      
-      .assignmentConversionTo(ctx, target);
+  final conversion = value.type.assignmentConversionTo(ctx, target);
   switch (conversion) {
     case AssignmentConversion.invalid:
       return _implicitCallTearOff(ctx, value, target, source) ??
@@ -105,9 +103,7 @@ Variable convertForAssignment(
   AstNode? source,
   String? description,
 }) {
-  final conversion = value.type
-      
-      .assignmentConversionTo(ctx, target);
+  final conversion = value.type.assignmentConversionTo(ctx, target);
   // int → double only applies to integer literals and compile-time constant
   // int expressions — never to an int-typed variable (which is a CE in Dart).
   if (conversion == AssignmentConversion.invalid ||
@@ -142,7 +138,7 @@ Variable convertForAssignment(
   }
   if (conversion == AssignmentConversion.runtimeCheck) {
     converted = converted.boxIfNeeded(ctx, source);
-    final typeId = target.runtimeTypeId(ctx);
+    final typeId = ctx.runtimeTypes.idOf(target);
     if (target.nullable) {
       macroBranch(
         ctx,
