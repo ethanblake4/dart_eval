@@ -1433,7 +1433,7 @@ class IdentifierReference implements Reference {
       // enumValueIndices rather than the declaration maps.
       final currentDecl = ctx.memberDeclaringClass ?? ctx.currentClass;
       if (currentDecl is EnumDeclaration) {
-        final enumType = TypeRef(ctx.library, declarationName(currentDecl));
+        final enumType = TypeRef.lookupDeclaration(ctx, ctx.library, currentDecl);
         final gIndex = ctx.enumValueIndices[ctx.library]?[enumType.name]?[name];
         if (gIndex != null) {
           return Variable.ssa(

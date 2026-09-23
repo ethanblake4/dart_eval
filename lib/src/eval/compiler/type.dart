@@ -8,6 +8,9 @@ import 'package:dart_eval/src/eval/shared/runtime_type_descriptor.dart';
 import 'builtins.dart';
 import 'context.dart';
 import 'errors.dart';
+import 'types/type_decl.dart';
+
+export 'types/type_decl.dart';
 
 /// The action required to assign a value to a typed slot.
 enum AssignmentConversion {
@@ -32,6 +35,7 @@ class TypeRef {
   const TypeRef(
     this.file,
     this.name, {
+    this.decl,
     this.extendsType,
     this.implementsType = const [],
     this.withType = const [],
@@ -52,6 +56,10 @@ class TypeRef {
 
   final int file;
   final String name;
+
+  /// The declaration this type names — null for type parameters, records,
+  /// and the extension namespace pseudo-type.
+  final TypeDecl? decl;
   final TypeRef? extendsType;
   final List<TypeRef> implementsType;
   final List<TypeRef> withType;
@@ -75,7 +83,10 @@ class TypeRef {
   }) {
     final cache = _caches[ctx] ??= _TypeRefCache();
     final fileCache = cache.types.putIfAbsent(file, () => {});
-    final $type = fileCache.putIfAbsent(name, () => TypeRef(file, name));
+    final $type = fileCache.putIfAbsent(
+      name,
+      () => TypeRef(file, name, decl: ctx.types.find(file, name)),
+    );
     if (fileRef != null) {
       cache.visibleLibraries.putIfAbsent($type, () => []).add(fileRef);
     }
@@ -1363,6 +1374,10 @@ class TypeRef {
             typeParameterIndex == other.typeParameterIndex
       : (file == other.file || isRecord) && name == other.name;
 
+  /// Whether this type names the declaration [spec] refers to. Nullability
+  /// and type arguments are ignored, matching today's nominal `==`.
+  bool isSpec(BridgeTypeSpec spec) => decl?.isSpec(spec) ?? false;
+
   /// Records have no declaration — the canonical `@record` name is the only
   /// identity ([recordFields] may be empty for the `()` record).
   bool get isRecord => name.startsWith('@record');
@@ -1650,6 +1665,7 @@ class TypeRef {
   TypeRef copyWith({
     int? file,
     String? name,
+    TypeDecl? decl,
     TypeRef? extendsType,
     List<TypeRef>? implementsType,
     List<TypeRef>? withType,
@@ -1666,6 +1682,7 @@ class TypeRef {
     return TypeRef(
       file ?? this.file,
       name ?? this.name,
+      decl: decl ?? this.decl,
       extendsType: extendsType ?? this.extendsType,
       implementsType: implementsType ?? this.implementsType,
       withType: withType ?? this.withType,
@@ -2483,7 +2500,9 @@ extension Refify on BridgeTypeSpec {
     CompilerContext ctx, [
     List<BridgeTypeAnnotation> typeArgs = const [],
   ]) {
-    final res = TypeRef.fromBridgeTypeRef(ctx, BridgeTypeRef(this, typeArgs));
+    final res = ctx.types.bySpec(this).instantiate([
+      for (final arg in typeArgs) TypeRef.fromBridgeAnnotation(ctx, arg),
+    ]);
     if (library == 'dart:core') {
       dartCoreFile = res.file;
     }

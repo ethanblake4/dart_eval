@@ -1117,6 +1117,15 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
         return TypeRef.fromBridgeTypeRef(_ctx, type);
       }
       final spec = type.spec!;
+      _ctx.types.register(
+        BridgeTypeDecl(
+          libraryIndex,
+          _ctx.libraryUri(libraryIndex),
+          spec.name,
+          classDef: bridge is BridgeClassDef ? bridge : null,
+          enumDef: bridge is BridgeEnumDef ? bridge : null,
+        ),
+      );
       return TypeRef.cache(
         _ctx,
         libraryIndex,
@@ -1132,6 +1141,14 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
         return null;
       }
       final name = declarationName(declaration);
+      _ctx.types.register(
+        SourceTypeDecl(
+          libraryIndex,
+          _ctx.libraryUri(libraryIndex),
+          name,
+          declaration,
+        ),
+      );
       return TypeRef.cache(_ctx, libraryIndex, name, fileRef: libraryIndex);
     }
   }
