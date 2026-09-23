@@ -296,7 +296,6 @@ final class CallResolver {
             },
             argIndexOffset: 1,
             source: e,
-          options: BindingOptions.source,
 );
 
 
@@ -544,7 +543,6 @@ final class CallResolver {
               ? resolved.ownerTypeArguments
               : const {},
           returnContext: bound,
-          options: BindingOptions.source,
           fillOmitted: false,
         );
         mReturnType = argsPair.declaredReturn;
@@ -582,7 +580,6 @@ final class CallResolver {
                 )
               : const {},
           returnContext: bound,
-          options: BindingOptions.source,
         );
         mReturnType = argsPair.declaredReturn;
       }
@@ -1285,7 +1282,6 @@ final class CallResolver {
         e.argumentList,
         typeArguments: e.typeArguments,
         source: e,
-      options: BindingOptions.source,
 );
 
 

@@ -35,7 +35,6 @@ final class ArgumentBinder {
     CallTarget target,
     CallSite site, {
     required Variable? callee,
-    BindingOptions options = BindingOptions.legacy,
   }) {
     // The callee is materialized before any argument compiles — an
     // argument may redefine the SSA slot the callee expression read
@@ -155,7 +154,6 @@ BoundCall bindParameterList(
   // receiver is compiled separately and passed via [before], so indexing
   // into the argument list starts past it.
   int argIndexOffset = 0,
-  BindingOptions options = BindingOptions.legacy,
   /// When false, unsupplied optional positional and named parameters are
   /// left for the callee to bind (`calleeBinds`) — used for calls that stay
   /// virtual, where the dispatch target's own defaults apply at runtime.
@@ -283,7 +281,6 @@ BoundCall bindParameterList(
     final unifyPlaceholders = <String, TypeRef>{};
     final unifyDefs = <String, TypeParameterDef>{};
     if (inferGenerics &&
-        options.inference == InferenceMode.unify &&
         typeAnnotation != null &&
         resolveGenerics.isNotEmpty) {
       var i = 0;
@@ -365,59 +362,35 @@ BoundCall bindParameterList(
       }
       matchNamed[name] = arg.argumentExpression;
       argIndexToNamed[a] = name;
-      if (!options.allowNamedBeforePositional) {
-        // Legacy: a named argument also occupies a positional-param slot.
-        positionalCursor++;
-      }
     } else {
-      final p = options.allowNamedBeforePositional
-          ? positionalCursor
-          : a - argIndexOffset;
+      final p = positionalCursor;
       positionalCursor++;
       if (p >= positional.length) {
-        if (options.allowNamedBeforePositional) {
-          throw CompileError(
-            'Too many positional arguments: ${positional.length} expected, '
-            'but ${p + 1} found.',
-          );
-        }
-        continue;
+        throw CompileError(
+          'Too many positional arguments: ${positional.length} expected, '
+          'but ${p + 1} found.',
+        );
       }
       matchPositional[p] = arg.argumentExpression;
       argIndexToPositional[a] = p;
     }
   }
 
-  // **Compile** supplied arguments — source order under `NamedOrder.source`,
-  // declaration order under `legacy` (positionals, then named).
+  // **Compile** supplied arguments in source order — a named argument
+  // interleaves with positionals.
   final compiledPositional = List<Variable?>.filled(positional.length, null);
   final compiledNamed = <String, Variable>{};
-  if (options.namedOrder == NamedOrder.source) {
-    for (var a = argIndexOffset; a < rawArguments.length; a++) {
-      final pi = argIndexToPositional[a];
-      if (pi != null) {
-        compiledPositional[pi] = compileMatched(
-          positional[pi],
-          matchPositional[pi]!,
-        );
-      } else {
-        final name = argIndexToNamed[a];
-        if (name != null) {
-          compiledNamed[name] = compileMatched(named[name]!, matchNamed[name]!);
-        }
-      }
-    }
-  } else {
-    for (var pi = 0; pi < positional.length; pi++) {
-      final expr = matchPositional[pi];
-      if (expr != null) {
-        compiledPositional[pi] = compileMatched(positional[pi], expr);
-      }
-    }
-    for (final n in named.entries) {
-      final expr = matchNamed[n.key];
-      if (expr != null) {
-        compiledNamed[n.key] = compileMatched(n.value, expr);
+  for (var a = argIndexOffset; a < rawArguments.length; a++) {
+    final pi = argIndexToPositional[a];
+    if (pi != null) {
+      compiledPositional[pi] = compileMatched(
+        positional[pi],
+        matchPositional[pi]!,
+      );
+    } else {
+      final name = argIndexToNamed[a];
+      if (name != null) {
+        compiledNamed[name] = compileMatched(named[name]!, matchNamed[name]!);
       }
     }
   }
@@ -1097,7 +1070,6 @@ BoundCall bindDeclaration(
   /// by argument inference are bound from the declared return type matched
   /// against it (`x.cast()` under `C<bool>` binds `U` to `bool`).
   TypeRef? returnContext,
-  BindingOptions options = BindingOptions.legacy,
   /// See [bindParameterList.fillOmitted].
   bool fillOmitted = true,
 }) {
@@ -1167,7 +1139,6 @@ BoundCall bindDeclaration(
     source: source,
     argIndexOffset: argIndexOffset,
     resolveGenerics: resolveGenerics,
-    options: options,
     // Only function/method declarations take explicit type arguments at the
     // call site; constructor calls infer regardless (e.g. List<int>() still
     // infers the constructor's own generics).

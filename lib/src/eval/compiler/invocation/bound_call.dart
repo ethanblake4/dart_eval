@@ -19,37 +19,6 @@ enum BindingPolicy {
 /// Whether a member *value* call evaluates the read or the arguments first.
 enum EvalOrder { argumentsFirst, readFirst }
 
-/// Binder configuration. `legacy` reproduces today's behavior; phase 7's
-/// semantic changes flip individual options.
-final class BindingOptions {
-  const BindingOptions({
-    required this.namedOrder,
-    required this.allowNamedBeforePositional,
-    required this.inference,
-  });
-
-  static const legacy = BindingOptions(
-    namedOrder: NamedOrder.declaration,
-    allowNamedBeforePositional: false,
-    inference: InferenceMode.legacy,
-  );
-
-  /// Dart's rules: named arguments evaluate and bind in source order and
-  /// may appear before positional ones.
-  static const source = BindingOptions(
-    namedOrder: NamedOrder.source,
-    allowNamedBeforePositional: true,
-    inference: InferenceMode.unify,
-  );
-
-  final NamedOrder namedOrder;
-  final bool allowNamedBeforePositional;
-  final InferenceMode inference;
-}
-
-enum NamedOrder { declaration, source }
-
-enum InferenceMode { legacy, unify }
 
 /// A matched, compiled, and coerced argument.
 final class BoundArgument {

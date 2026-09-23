@@ -250,7 +250,6 @@ Variable compileInstanceOf(
       dec,
       source: source,
       resolveGenerics: seedGenerics,
-    options: BindingOptions.source,
 );
 
 

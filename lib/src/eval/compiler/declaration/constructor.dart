@@ -1,5 +1,4 @@
 import 'package:analyzer/dart/ast/ast.dart';
-import '../invocation/bound_call.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
@@ -361,7 +360,6 @@ void compileConstructorDeclaration(
       fpl,
       dec,
       source: $redirectingInitializer.argumentList,
-    options: BindingOptions.source,
 );
 
 
@@ -969,7 +967,6 @@ Variable _invokeSuperConstructor(
             // clause's arguments so `T z` checks against `int`.
             resolveGenerics: _superclassGenerics(ctx, extendsDecl, extendsType),
             source: superInitializer,
-          options: BindingOptions.source,
 )
 
 

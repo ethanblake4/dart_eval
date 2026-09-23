@@ -1,7 +1,6 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
 import '../invocation/binder.dart';
 import 'package:analyzer/dart/ast/ast.dart';
-import '../invocation/bound_call.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/constructor.dart';
@@ -153,7 +152,6 @@ void _compileEnumValue(
       fpl,
       dec,
       source: constant,
-    options: BindingOptions.source,
 );
 
 
