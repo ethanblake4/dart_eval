@@ -8,11 +8,10 @@ import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/default_value.dart';
 import 'package:dart_eval/src/eval/compiler/model/function_type.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
-import 'package:dart_eval/src/eval/compiler/backend/representation.dart'
-    show representationForType;
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/src/eval/ir/function.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
+import '../values/abi.dart';
 
 /// Normalizes a formal parameter list into dart_eval's calling convention —
 /// positional parameters first (sorted named parameters last when [sortNamed]),
@@ -117,19 +116,12 @@ List<FormalParameter> resolveFPLDefaults(
           declaredType;
     }
     declaredTypes.add(declaredType);
-    final type = !allowUnboxed
-        ? declaredType.copyWith(boxed: true)
-        : declaredType;
+    final paramRep = Abi.parameter(
+      declaredType,
+      allowUnboxed ? CallableKind.function : CallableKind.method,
+    );
     ctx.pushOp(
-      Parameter(
-        argument,
-        paramIndex,
-        representation: representationForType(
-          type.copyWith(
-            boxed: !allowUnboxed || !type.isUnboxedAcrossFunctionBoundaries,
-          ),
-        ),
-      ),
+      Parameter(argument, paramIndex, representation: paramRep.bank),
     );
     // Callers bind omitted arguments before entering typed registers. Null is
     // an actual argument value and must never act as a missing-value sentinel.

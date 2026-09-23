@@ -24,6 +24,7 @@ import 'dot_shorthand.dart';
 import 'expression.dart';
 import 'identifier.dart';
 import 'null_aware.dart';
+import '../values/abi.dart';
 
 Variable compileMethodInvocation(
   CompilerContext ctx,
@@ -176,13 +177,13 @@ Variable compileMethodInvocation(
             {},
           ) ??
           AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
-      final returnType = (mReturnType.type ?? CoreTypes.dynamic.ref(ctx))
-          .copyWith(
-            boxed:
-                L != null ||
-                !(mReturnType.type?.isUnboxedAcrossFunctionBoundaries ?? false),
-          );
-      final instantiatedType = _instantiateConstructorType(ctx, e, returnType);
+      final declaredReturnType =
+          mReturnType.type ?? CoreTypes.dynamic.ref(ctx);
+      final resultRep = L != null
+          ? ValueRep.boxed
+          : Abi.unboxedAcrossCalls(declaredReturnType);
+      final instantiatedType =
+          _instantiateConstructorType(ctx, e, declaredReturnType);
       ctx.pushOp(
         Call(offset, [
           pushRuntimeTypeId(ctx, instantiatedType),
@@ -192,6 +193,7 @@ Variable compileMethodInvocation(
         ctx,
         result,
         instantiatedType,
+        rep: resultRep,
         concreteTypes: [instantiatedType],
         exactType: instantiatedType,
       );
@@ -244,7 +246,6 @@ Variable compileMethodInvocation(
       // The aliased class has an implicit default constructor — call the
       // synthesized `resolved.` body with just the runtime-type argument.
       final callResult = ctx.svar('constructor');
-      final boxed = resolved.copyWith(boxed: true);
       ctx.pushOp(
         Call(
           offset,
@@ -255,9 +256,10 @@ Variable compileMethodInvocation(
       return Variable.of(
         ctx,
         callResult,
-        boxed,
-        concreteTypes: [boxed],
-        exactType: boxed,
+        resolved,
+        rep: ValueRep.boxed,
+        concreteTypes: [resolved],
+        exactType: resolved,
       );
     }
   }
@@ -375,12 +377,16 @@ Variable compileMethodInvocation(
         namedArgTypes,
       ) ??
       AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
-  final returnType = mReturnType.type?.copyWith(
-    boxed:
-        dec0.isBridge ||
-        (genericReturnBoxed ??
-            !(mReturnType.type?.isUnboxedAcrossFunctionBoundaries ?? false)),
-  );
+  final returnType = mReturnType.type;
+  final resultRep = dec0.isBridge ||
+          (genericReturnBoxed ??
+              Abi.unboxedAcrossCalls(
+                mReturnType.type ?? CoreTypes.dynamic.ref(ctx),
+              ).isBoxed)
+      ? ValueRep.boxed
+      : Abi.unboxedAcrossCalls(
+          mReturnType.type ?? CoreTypes.dynamic.ref(ctx),
+        );
   final instantiatedReturnType = isConstructor && returnType != null
       ? (aliasType ??
           _instantiateConstructorType(ctx, e, returnType, inferredCtorArgs))
@@ -451,6 +457,7 @@ Variable compileMethodInvocation(
     ctx,
     result,
     instantiatedReturnType ?? CoreTypes.dynamic.ref(ctx),
+    rep: resultRep,
     concreteTypes: [
       if (isConstructor && instantiatedReturnType != null)
         instantiatedReturnType,
@@ -808,8 +815,8 @@ Variable _invokeWithTarget(
         return Variable.of(
           ctx,
           s,
-          result.returnType?.type?.copyWith(boxed: true) ??
-              CoreTypes.dynamic.ref(ctx),
+          result.returnType?.type ?? CoreTypes.dynamic.ref(ctx),
+          rep: ValueRep.boxed,
         );
       }
     }
@@ -995,9 +1002,7 @@ Variable _invokeWithTarget(
           .result;
       final preciseType = mReturnType?.type;
       if (preciseType != null) {
-        return invokeResult.copyWith(
-          type: preciseType.copyWith(boxed: invokeResult.type.boxed),
-        );
+        return invokeResult.copyWith(type: preciseType);
       }
       return invokeResult;
     }
@@ -1169,7 +1174,8 @@ Variable _invokeWithTarget(
   final v = Variable.of(
     ctx,
     result,
-    mReturnType?.type?.copyWith(boxed: true) ?? CoreTypes.dynamic.ref(ctx),
+    mReturnType?.type ?? CoreTypes.dynamic.ref(ctx),
+    rep: ValueRep.boxed,
   );
 
   return v;
@@ -1287,8 +1293,8 @@ Variable _invokeExtensionMethod(
   return Variable.of(
     ctx,
     s,
-    result.returnType?.type?.copyWith(boxed: true) ??
-        CoreTypes.dynamic.ref(ctx),
+    result.returnType?.type ?? CoreTypes.dynamic.ref(ctx),
+    rep: ValueRep.boxed,
   );
 }
 
@@ -2021,12 +2027,13 @@ Variable _invokeSuperNoSuchMethod(
 
   final (positional, named) = _compileCallArgs(ctx, e);
   final listType = CoreTypes.list.ref(ctx).copyWith(
-    specifiedTypeArgs: [CoreTypes.dynamic.ref(ctx).copyWith(boxed: true)],
+    specifiedTypeArgs: [CoreTypes.dynamic.ref(ctx)],
   );
   final list = Variable.ssa(
     ctx,
     NewList(ctx.svar('list')),
-    listType.copyWith(boxed: false),
+    listType,
+    rep: ValueRep.nativeList,
   );
   for (final arg in positional) {
     ctx.pushOp(ListAppend(list.ssa, arg.boxIfNeeded(ctx).ssa));
@@ -2038,14 +2045,15 @@ Variable _invokeSuperNoSuchMethod(
   if (named.isNotEmpty) {
     final mapType = CoreTypes.map.ref(ctx).copyWith(
       specifiedTypeArgs: [
-        CoreTypes.symbol.ref(ctx).copyWith(boxed: true),
-        CoreTypes.dynamic.ref(ctx).copyWith(boxed: true),
+        CoreTypes.symbol.ref(ctx),
+        CoreTypes.dynamic.ref(ctx),
       ],
     );
     final map = Variable.ssa(
       ctx,
       NewMap(ctx.svar('map')),
-      mapType.copyWith(boxed: false),
+      mapType,
+      rep: ValueRep.nativeMap,
     );
     for (final entry in named.entries) {
       ctx.pushOp(

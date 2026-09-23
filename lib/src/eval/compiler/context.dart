@@ -125,14 +125,8 @@ mixin ScopeContext on Object implements AbstractScopeContext {
 
       otherLocalsMap.forEach((key, value) {
         final myLocal = myLocalsMap[key]!;
-        if (!myLocal.boxed && value.boxed) {
-          locals[i][key] = myLocal.copyWith(
-            type: myLocal.type.copyWith(boxed: true),
-          );
-        } else if (myLocal.boxed && !value.boxed) {
-          locals[i][key] = myLocal.copyWith(
-            type: myLocal.type.copyWith(boxed: false),
-          );
+        if (myLocal.rep != value.rep) {
+          locals[i][key] = myLocal.copyWith(rep: value.rep);
         }
       });
     }
@@ -376,7 +370,7 @@ class CompilerContext with ScopeContext {
   Map<int, Map<String, TypeRef>> topLevelVariableInferredTypes = {};
   Map<TypeRef, int> typeRefIndexMap = {};
   Map<String, int> runtimeTypeDescriptorIds = {};
-  final Map<(int, bool), TypeRef> bridgeTypeRefCache = {};
+  final Map<int, TypeRef> bridgeTypeRefCache = {};
   Map<String, int> libraryMap = {};
   List<TypeRef> runtimeTypeList = [];
   List<String> typeNames = [];
@@ -483,9 +477,7 @@ class CompilerContext with ScopeContext {
         final myLocal = myLocalsMap[key];
         if (myLocal != null &&
             !myLocal.type.isSameSemanticType(this, value.type)) {
-          locals[i][key] = myLocal.copyWith(
-            type: value.type.copyWith(boxed: myLocal.boxed),
-          );
+          locals[i][key] = myLocal.copyWith(type: value.type);
         }
       });
     }

@@ -21,11 +21,7 @@ StatementInfo compileSwitchStatement(
   final expression = compileExpression(s.expression, ctx);
   // Evaluate once. Cases may change their operand representation without
   // rewriting the source binding or the value inspected by later cases.
-  final switchExpr = Variable.ssa(
-    ctx,
-    Assign(ctx.svar('switch_value'), expression.ssa),
-    expression.type,
-  );
+  final switchExpr = expression.copyIntoFreshSlot(ctx, 'switch_value');
 
   final endBlock = BasicBlock<Operation>([], label: ctx.label('switch_end'));
   final initialState = ctx.saveState();
@@ -83,11 +79,7 @@ StatementInfo _compileSwitchCases(
     ctx,
     expectedReturnType,
     condition: (ctx) {
-      final subject = Variable.ssa(
-        ctx,
-        Assign(ctx.svar('case_value'), switchExpr.ssa),
-        switchExpr.type,
-      );
+      final subject = switchExpr.copyIntoFreshSlot(ctx, 'case_value');
       if (currentCase is SwitchCase) {
         final caseVar = compileExpression(currentCase.expression, ctx);
         _checkPrimitiveEquality(ctx, caseVar, currentCase.expression);

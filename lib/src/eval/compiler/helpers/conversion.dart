@@ -12,6 +12,7 @@ import 'package:dart_eval/src/eval/ir/logic.dart';
 import 'package:dart_eval/src/eval/ir/memory.dart';
 import 'package:dart_eval/src/eval/ir/numeric.dart';
 import 'package:dart_eval/src/eval/ir/types.dart';
+import '../values/abi.dart';
 
 /// Converts a field/variable initializer value for a slot of type [target].
 /// Rejects statically-invalid initializers and emits the `int → double`
@@ -36,13 +37,25 @@ Variable convertInitializer(
             source,
           ));
     case AssignmentConversion.intToDouble:
-      return convertForAssignment(ctx, value, target, source: source);
+      return convertForAssignment(
+        ctx,
+        value,
+        target,
+        representation: Abi.unboxedAcrossCalls(target).bank,
+        source: source,
+      );
     case AssignmentConversion.none:
       return value;
     case AssignmentConversion.runtimeCheck:
       return target.functionType != null
           ? value
-          : convertForAssignment(ctx, value, target, source: source);
+          : convertForAssignment(
+              ctx,
+              value,
+              target,
+              representation: Abi.unboxedAcrossCalls(target).bank,
+              source: source,
+            );
   }
 }
 
@@ -118,9 +131,9 @@ Variable convertForAssignment(
     var widened = Variable.ssa(
       ctx,
       IntToDouble(ctx.svar('toDouble'), intVar.ssa),
-      CoreTypes.double.ref(ctx).copyWith(boxed: false),
+      CoreTypes.double.ref(ctx),
+      rep: ValueRep.double,
       declaredType: target,
-      representation: MachineRepresentation.doublePrecision,
     );
     if ((representation ?? representationForType(target)) ==
         MachineRepresentation.object) {
@@ -139,7 +152,8 @@ Variable convertForAssignment(
           final isNull = Variable.ssa(
             ctx,
             IsNull(ctx.svar('conversion_null'), converted.ssa),
-            CoreTypes.bool.ref(ctx).copyWith(boxed: false),
+            CoreTypes.bool.ref(ctx),
+            rep: ValueRep.bool,
           );
           return Variable.ssa(
             ctx,
@@ -168,7 +182,8 @@ Variable convertForAssignment(
     );
   }
   converted = converted.copyWith(
-    type: target.copyWith(boxed: true),
+    type: target,
+    rep: ValueRep.boxed,
     declaredType: target,
     representation: MachineRepresentation.object,
   );

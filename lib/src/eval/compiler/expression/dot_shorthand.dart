@@ -14,6 +14,7 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/bridge.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
+import '../values/value_rep.dart';
 
 /// Resolves the context type a `.member` shorthand selects: the bound type
 /// with nullability stripped and `FutureOr` unwrapped. Throws when the
@@ -173,8 +174,8 @@ Variable _invokeShorthandMember(
     return Variable.of(
       ctx,
       s,
-      result.returnType?.type?.copyWith(boxed: true) ??
-          CoreTypes.dynamic.ref(ctx),
+      result.returnType?.type ?? CoreTypes.dynamic.ref(ctx),
+      rep: ValueRep.boxed,
     );
   }
   if (member != null && member.isBridge && member.bridge is BridgeMethodDef) {
@@ -211,7 +212,12 @@ Variable _invokeShorthandMember(
               const [],
         )?.type ??
         CoreTypes.dynamic.ref(ctx);
-    return Variable.of(ctx, result, returnType.copyWith(boxed: true));
+    return Variable.of(
+      ctx,
+      result,
+      returnType,
+      rep: ValueRep.boxed,
+    );
   }
   // A static method, a static field/getter holding a callable, or a named
   // constructor of a class without declared ctors — resolve the member value

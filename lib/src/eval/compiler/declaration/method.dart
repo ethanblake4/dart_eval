@@ -18,8 +18,7 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/function.dart';
 import 'package:dart_eval/src/eval/ir/representation.dart';
-import 'package:dart_eval/src/eval/compiler/backend/representation.dart'
-    show representationForType;
+import '../values/abi.dart';
 
 int compileMethodDeclaration(
   MethodDeclaration d,
@@ -116,10 +115,11 @@ int compileMethodDeclaration(
       Variable.of(
         ctx,
         SSA('arg_0'),
-        receiverType?.copyWith(boxed: true) ??
+        receiverType ??
             (isExtensionMember
                 ? CoreTypes.dynamic.ref(ctx)
                 : TypeRef.$this(ctx)!),
+        rep: ValueRep.boxed,
       ),
     );
   }
@@ -141,20 +141,21 @@ int compileMethodDeclaration(
   for (final p in resolvedParams) {
     var type = CoreTypes.dynamic.ref(ctx);
     if (p.type != null) {
-      // Method args are always boxed to allow for bridge interop to have a
-      // consistent interface
-      type = formalParameterAnnotationType(
-        ctx,
-        ctx.library,
-        p,
-      ).copyWith(boxed: true);
+      type = formalParameterAnnotationType(ctx, ctx.library, p);
     }
 
     // `_` parameters are wildcards: non-binding and repeatable.
     if (p.name!.lexeme != '_') {
       ctx.setLocal(
         p.name!.lexeme,
-        Variable.of(ctx, SSA('arg_$i'), type).captureBinding(ctx, p),
+        // Method args are always boxed to allow for bridge interop to have
+        // a consistent interface
+        Variable.of(
+          ctx,
+          SSA('arg_$i'),
+          type,
+          rep: Abi.parameter(type, CallableKind.method),
+        ).captureBinding(ctx, p),
       );
     }
 
@@ -172,7 +173,8 @@ int compileMethodDeclaration(
       b is ExpressionFunctionBody &&
       !b.isAsynchronous &&
       (methodName == '==' || methodName == '!=') &&
-      (returnType?.isUnboxedAcrossFunctionBoundaries ?? false);
+      returnType != null &&
+      !Abi.unboxedAcrossCalls(returnType).isBoxed;
   ctx.functionSignatures[pos] = MachineFunctionSignature(
     List.filled(
       resolvedParams.length + (hasReceiver ? 1 : 0),
@@ -181,7 +183,11 @@ int compileMethodDeclaration(
     returnType == CoreTypes.voidType.ref(ctx) && !b.isAsynchronous
         ? null
         : unboxedOperatorReturn
-        ? representationForType(returnType!.copyWith(boxed: false))
+        ? Abi.result(
+            returnType,
+            CallableKind.method,
+            unboxedBoolResult: true,
+          ).bank
         : MachineRepresentation.object,
   );
 

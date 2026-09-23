@@ -10,6 +10,7 @@ import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/ir/memory.dart';
 import 'package:dart_eval/src/eval/ir/logic.dart';
+import '../values/value_rep.dart';
 
 Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
   var V = compileExpression(e.expression, ctx);
@@ -46,7 +47,8 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
         final isNull = Variable.ssa(
           ctx,
           IsNull(ctx.svar('cast_null'), V.ssa),
-          CoreTypes.bool.ref(ctx).copyWith(boxed: false),
+          CoreTypes.bool.ref(ctx),
+          rep: ValueRep.bool,
         );
         return Variable.ssa(
           ctx,
@@ -62,7 +64,7 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
   } else {
     ctx.pushOp(AssertType(V.ssa, typeId));
   }
-  V = update(V, slot.copyWith(boxed: true));
+  V = update(V, slot);
 
   // If the type changes between num and int/double, unbox/box
   if (slot == CoreTypes.num.ref(ctx)) {
@@ -74,7 +76,7 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
 
   // For all other types, just inform the compiler
   // (todo) Mixins may need different behavior
-  V = update(V, slot.copyWith(boxed: V.type.boxed));
+  V = update(V, slot);
 
   // `this as T` promotes the receiver itself — store the promoted view on
   // the `#this` local so later `this` reads see it (anonymous-method

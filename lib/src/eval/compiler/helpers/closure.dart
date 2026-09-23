@@ -12,6 +12,7 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/closures.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
+import '../values/value_rep.dart';
 
 InvokeResult invokeClosure(
   CompilerContext ctx,
@@ -138,7 +139,12 @@ InvokeResult invokeClosure(
       CoreTypes.dynamic.ref(ctx);
   return InvokeResult(
     null,
-    Variable.of(ctx, target, resultType.copyWith(boxed: true)),
+    Variable.of(
+      ctx,
+      target,
+      resultType,
+      rep: ValueRep.boxed,
+    ),
     positionalArgs,
     namedArgs: namedArgs,
   );

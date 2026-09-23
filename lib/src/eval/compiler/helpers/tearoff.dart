@@ -11,6 +11,7 @@ import 'package:dart_eval/src/eval/compiler/model/function_type.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/closures.dart';
+import '../values/abi.dart';
 
 extension TearOff on Variable {
   Variable tearOff(CompilerContext ctx) {
@@ -217,14 +218,14 @@ extension TearOff on Variable {
             .map(
               (param) =>
                   declaration is FunctionDeclaration &&
-                  parameterType(param).isUnboxedAcrossFunctionBoundaries,
+                  !Abi.unboxedAcrossCalls(parameterType(param)).isBoxed,
             )
             .toList(),
         namedUnboxed: named
             .map(
               (param) =>
                   declaration is FunctionDeclaration &&
-                  parameterType(param).isUnboxedAcrossFunctionBoundaries,
+                  !Abi.unboxedAcrossCalls(parameterType(param)).isBoxed,
             )
             .toList(),
         runtimeTypeId: functionType.runtimeTypeId(ctx),

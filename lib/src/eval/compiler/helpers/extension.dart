@@ -5,6 +5,7 @@ import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
+import '../values/value_rep.dart';
 
 /// An `extension` declaration with the library it was declared in and the
 /// name used to register its members (`E.foo`), synthesized when unnamed.
@@ -453,5 +454,5 @@ Variable invokeExtensionGetter(
         typeParameters: memberExtParams(ctx, ext, receiver.type),
       ).type ??
       CoreTypes.dynamic.ref(ctx);
-  return Variable.of(ctx, s, returnType.copyWith(boxed: true));
+  return Variable.of(ctx, s, returnType, rep: ValueRep.boxed);
 }

@@ -5,6 +5,7 @@ import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
+import '../values/value_rep.dart';
 
 Variable checkNotEqual(CompilerContext ctx, Variable L, Variable R) {
   final cond = Variable.ssa(
@@ -14,12 +15,14 @@ Variable checkNotEqual(CompilerContext ctx, Variable L, Variable R) {
       L.boxIfNeeded(ctx).ssa,
       R.boxIfNeeded(ctx).ssa,
     ),
-    CoreTypes.bool.ref(ctx).copyWith(boxed: false),
+    CoreTypes.bool.ref(ctx),
+    rep: ValueRep.bool,
   );
   return Variable.ssa(
     ctx,
     LogicalNot(ctx.svar('not_equal'), cond.ssa),
-    CoreTypes.bool.ref(ctx).copyWith(boxed: false),
+    CoreTypes.bool.ref(ctx),
+    rep: ValueRep.bool,
   );
 }
 

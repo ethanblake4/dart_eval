@@ -131,9 +131,7 @@ Variable _assignWithReference(
     // (for example num from int.+) must not turn that valid runtime check into
     // a static rejection.
     if (R.type.resolveTypeChain(ctx) == CoreTypes.dynamic.ref(ctx)) {
-      res = res.copyWith(
-        type: CoreTypes.dynamic.ref(ctx).copyWith(boxed: true),
-      );
+      res = res.copyWith(type: CoreTypes.dynamic.ref(ctx));
     }
     final set = res.type != L.resolveType(ctx, forSet: true)
         ? res.boxIfNeeded(ctx)

@@ -12,6 +12,7 @@ import 'package:dart_eval/src/eval/shared/types.dart';
 
 import '../variable.dart';
 import '../backend/representation.dart';
+import '../values/value_rep.dart';
 
 StatementInfo compileTryStatement(
   TryStatement s,
@@ -46,7 +47,7 @@ StatementInfo compileTryStatement(
       } else if (binding.exceptionSlot == null) {
         final slot = ExceptionSlot(
           ctx.svar('handler_local').name,
-          representationForType(binding.type),
+          binding.representation,
         );
         ctx.pushOp(StoreExceptionSlot(slot, binding.ssa));
         ctx.locals[frame][entry.key] = binding.copyWith()..exceptionSlot = slot;
@@ -176,7 +177,8 @@ StatementInfo _compileCatchClause(
           slot.runtimeTypeId(ctx),
           false,
         ),
-        CoreTypes.bool.ref(ctx).copyWith(boxed: false),
+        CoreTypes.bool.ref(ctx),
+        rep: ValueRep.bool,
       );
     },
     thenBranch: (ctx, expectedReturnType) {
@@ -219,6 +221,7 @@ void _bindException(
         ctx,
         Assign(ctx.svar('catch_parameter'), exception.readBinding(ctx).ssa),
         type,
+        rep: ValueRep.boxed,
       ),
     );
   }
@@ -233,6 +236,7 @@ void _bindStackTrace(CompilerContext ctx, CatchClause clause) {
         ctx,
         CaughtStackTrace(ctx.svar('stack_trace')),
         CoreTypes.stackTrace.ref(ctx),
+        rep: ValueRep.boxed,
       ),
     );
   }

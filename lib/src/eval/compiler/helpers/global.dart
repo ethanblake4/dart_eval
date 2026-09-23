@@ -3,10 +3,10 @@ import '../variable.dart';
 import '../errors.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import '../backend/representation.dart' show representationForType;
 import 'conversion.dart';
 import '../context.dart';
 import '../type.dart';
+import '../values/abi.dart';
 
 final _resolving = Expando<Set<(int, String)>>();
 
@@ -55,7 +55,7 @@ TypeRef resolveGlobalType(CompilerContext ctx, int library, String name) {
           ctx,
           library,
           owner,
-        ).copyWith(boxed: true);
+        );
         return _record(ctx, library, name, type);
       }
     }
@@ -70,7 +70,7 @@ TypeRef resolveGlobalType(CompilerContext ctx, int library, String name) {
     final type = annotation == null
         ? _infer(ctx, library, variable?.initializer)
         : TypeRef.fromAnnotation(ctx, library, annotation);
-    return _record(ctx, library, name, type.typeAcrossFunctionBoundary);
+    return _record(ctx, library, name, type);
   } finally {
     active.remove(key);
   }
@@ -80,7 +80,7 @@ TypeRef _record(CompilerContext ctx, int library, String name, TypeRef type) {
   ctx.topLevelVariableInferredTypes[library]![name] = type;
   final index = ctx.topLevelGlobalIndices[library]?[name];
   if (index != null) {
-    ctx.globalRepresentations[index] = representationForType(type);
+    ctx.globalRepresentations[index] = Abi.unboxedAcrossCalls(type).bank;
     ctx.globalNames[index] = name;
   }
   return type;
@@ -388,7 +388,7 @@ Variable storeGlobalBinding(
     ctx,
     value,
     type,
-    representation: representationForType(type),
+    representation: Abi.unboxedAcrossCalls(type).bank,
     source: source,
     description: 'Cannot assign ${value.type} to global $name of type $type',
   );

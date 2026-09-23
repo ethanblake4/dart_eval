@@ -1,4 +1,3 @@
-import 'package:dart_eval/src/eval/ir/memory.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
@@ -83,7 +82,7 @@ Variable _postfixOnReference(
   Reference V,
 ) {
   final L = V.getValue(ctx);
-  final out = Variable.ssa(ctx, Assign(ctx.svar('operand'), L.ssa), L.type);
+  final out = L.copyIntoFreshSlot(ctx, 'operand');
 
   const opMap = {TokenType.PLUS_PLUS: '+', TokenType.MINUS_MINUS: '-'};
 

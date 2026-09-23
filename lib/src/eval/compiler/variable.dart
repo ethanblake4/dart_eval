@@ -10,7 +10,6 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
-import 'package:dart_eval/src/eval/compiler/collection/list.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/expression/identifier.dart'
@@ -26,13 +25,15 @@ import 'errors.dart';
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
+import 'values/abi.dart';
 
 /// A compiler value with an SSA identity, language type and calling convention.
 class Variable {
   Variable(
-    this.type, {
+    TypeRef type, {
     TypeRef? declaredType,
     MachineRepresentation? representation,
+    ValueRep? rep,
     this.methodOffset,
     this.methodReturnType,
     this.isFinal = false,
@@ -41,8 +42,15 @@ class Variable {
     this.isConstInt = false,
     this.isConst = false,
     CallingConvention? callingConvention,
-  }) : declaredType = declaredType ?? type,
-       representation = representation ?? representationForType(type),
+  }) : type = type,
+       declaredType = declaredType ?? type,
+       representation =
+           representation ?? rep?.bank ?? representationForType(type),
+       rep = rep ??
+           repForType(
+             type,
+             representation ?? rep?.bank ?? representationForType(type),
+           ),
        callingConvention =
            callingConvention ??
            ((type == TypeRef(dartCoreFile, 'Function') && methodOffset == null)
@@ -55,6 +63,7 @@ class Variable {
     TypeRef type, {
     TypeRef? declaredType,
     MachineRepresentation? representation,
+    ValueRep? rep,
     DeferredOrOffset? methodOffset,
     ReturnType? methodReturnType,
     bool isFinal = false,
@@ -69,6 +78,7 @@ class Variable {
       type,
       declaredType: declaredType,
       representation: representation,
+      rep: rep,
       methodOffset: methodOffset,
       methodReturnType: methodReturnType,
       isFinal: isFinal,
@@ -86,6 +96,7 @@ class Variable {
     TypeRef type, {
     TypeRef? declaredType,
     MachineRepresentation? representation,
+    ValueRep? rep,
     DeferredOrOffset? methodOffset,
     ReturnType? methodReturnType,
     bool isFinal = false,
@@ -99,6 +110,7 @@ class Variable {
       type,
       declaredType: declaredType,
       representation: representation,
+      rep: rep,
       methodOffset: methodOffset,
       methodReturnType: methodReturnType,
       isFinal: isFinal,
@@ -118,6 +130,10 @@ class Variable {
 
   /// Physical representation of this SSA value.
   final MachineRepresentation representation;
+
+  /// Which value representation the SSA slot holds. Owns the boxing
+  /// decision that used to live on `TypeRef.boxed`.
+  final ValueRep rep;
   final List<TypeRef> concreteTypes;
 
   /// The exact runtime type of the value, when it is provably exactly this
@@ -154,7 +170,7 @@ class Variable {
   /// `E(x)`: member lookups on it resolve only within that extension.
   BoundExtension? boundExtension;
 
-  bool get boxed => type.boxed;
+  bool get boxed => rep.isBoxed;
 
   /// Returns this variable with the allocation proofs that do not survive a
   /// value change dropped: [exactType], [concreteTypes], and method tear-off
@@ -164,6 +180,7 @@ class Variable {
         type,
         declaredType: declaredType,
         representation: representation,
+        rep: rep,
         isFinal: isFinal,
         callingConvention: callingConvention,
       )
@@ -206,6 +223,7 @@ class Variable {
         type,
         declaredType: declaredType,
         representation: representation,
+        rep: rep,
         methodOffset: mOffset,
         methodReturnType: mReturn,
         isFinal: isFinal,
@@ -272,48 +290,101 @@ class Variable {
 
   SSA get ssa => SSA(name!);
 
+  /// Converts this value to [target] rep.
+  ///
+  /// Emits the needed op into [into] (a fresh SSA leaving this slot
+  /// intact) or into this SSA in place when [into] is null. A same-rep
+  /// conversion is a no-op unless [into] is given, which emits an [Assign].
+  Variable toRep(
+    CompilerContext ctx,
+    ValueRep target, {
+    SSA? into,
+    AstNode? source,
+  }) {
+    if (rep == target) {
+      if (into == null) return this;
+      return Variable.ssa(
+        ctx,
+        Assign(into, ssa),
+        type,
+        rep: target,
+        methodReturnType: methodReturnType,
+        concreteTypes: concreteTypes,
+        exactType: exactType,
+      );
+    }
+    final dest = into ?? ssa;
+    if (target == ValueRep.boxed) {
+      _emitBox(ctx, dest, source);
+    } else if (rep == ValueRep.boxed) {
+      ctx.pushOp(Unbox(dest, ssa, target.bank));
+    } else {
+      throw CompileError('Cannot convert $rep to $target', source);
+    }
+    return Variable.of(
+      ctx,
+      dest,
+      type,
+      rep: target,
+      declaredType: declaredType,
+      methodReturnType: methodReturnType,
+      concreteTypes: concreteTypes,
+      exactType: exactType,
+    );
+  }
+
+  /// Emits the op that wraps this non-boxed value into its `$Value` at
+  /// [dest]. `Object`/`dynamic` in the object bank are relabels — the
+  /// object bank is the uniform representation and the raw reference is
+  /// already a valid boxed value; other unboxable types emit their op;
+  /// the rest have no boxing path and throw (same as the old
+  /// `Cannot box` CompileError).
+  void _emitBox(CompilerContext ctx, SSA dest, AstNode? source) {
+    switch (rep) {
+      case ValueRep.int:
+        ctx.pushOp(BoxInt(dest, ssa));
+      case ValueRep.double:
+        ctx.pushOp(BoxDouble(dest, ssa));
+      case ValueRep.bool:
+        ctx.pushOp(BoxBool(dest, ssa));
+      case ValueRep.string:
+        ctx.pushOp(BoxString(dest, ssa));
+      case ValueRep.nativeNull:
+        ctx.pushOp(BoxNull(dest));
+      case ValueRep.nativeList:
+        // Collection elements are always boxed (Abi.collectionElement), so a
+        // native list's contents never need re-boxing on the way out.
+        ctx.pushOp(
+          BoxList(dest, ssa, runtimeTypeId: type.runtimeTypeId(ctx)),
+        );
+      case ValueRep.nativeMap:
+        ctx.pushOp(BoxMap(dest, ssa, runtimeTypeId: type.runtimeTypeId(ctx)));
+      case ValueRep.nativeSet:
+        ctx.pushOp(BoxSet(dest, ssa, runtimeTypeId: type.runtimeTypeId(ctx)));
+      case ValueRep.nativeObject:
+        // The object bank is already the uniform representation, so boxing
+        // is a relabel. A distinct [dest] slot still needs a definition.
+        if (dest != ssa) ctx.pushOp(Assign(dest, ssa));
+      case ValueRep.boxed:
+        break;
+    }
+  }
+
   /// Boxes the variable, if it isn't yet. Does nothing with a dynamic
   /// type. Pushes a proper operator to box this value on the frame, and
   /// returns this instance with the type marked as boxed.
   Variable boxIfNeeded(ScopeContext ctx, [AstNode? source]) {
-    if (boxed) {
-      return this;
-    }
-
-    ctx as CompilerContext;
-
-    if (type == CoreTypes.dynamic.ref(ctx) ||
-        type == CoreTypes.object.ref(ctx)) {
-      if (representation != MachineRepresentation.object) {
-        // Physically unboxed under an Object/dynamic type — e.g. a promotion
-        // whose type view was reverted. The boxed flag alone can't capture
-        // that, so emit a real box op for the physical representation.
-        switch (representation) {
-          case MachineRepresentation.integer:
-            ctx.pushOp(BoxInt(ssa, ssa));
-          case MachineRepresentation.boolean:
-            ctx.pushOp(BoxBool(ssa, ssa));
-          case MachineRepresentation.doublePrecision:
-            ctx.pushOp(BoxDouble(ssa, ssa));
-          case MachineRepresentation.string:
-            ctx.pushOp(BoxString(ssa, ssa));
-          default:
-            break;
-        }
-      }
-      return copyWithUpdate(
-        ctx,
-        type: type.copyWith(boxed: true),
-        representation: MachineRepresentation.object,
-      );
-    }
-
-    _emitBoxOp(ctx, ssa, this, source);
-
+    if (boxed) return this;
+    final converted = toRep(
+      ctx as CompilerContext,
+      ValueRep.boxed,
+      source: source,
+    );
     return copyWithUpdate(
       ctx,
-      type: type.copyWith(boxed: true),
-      representation: MachineRepresentation.object,
+      type: converted.type,
+      representation: converted.representation,
+      rep: converted.rep,
     );
   }
 
@@ -332,57 +403,12 @@ class Variable {
         exactType: exactType,
       );
     }
-    if (type == CoreTypes.dynamic.ref(ctx) ||
-        type == CoreTypes.object.ref(ctx)) {
-      return copyWith(type: type.copyWith(boxed: true));
+    if (rep == ValueRep.nativeObject &&
+        (type == CoreTypes.dynamic.ref(ctx) ||
+            type == CoreTypes.object.ref(ctx))) {
+      return copyWith(rep: ValueRep.boxed);
     }
-    final result = ctx.svar('boxed');
-    _emitBoxOp(ctx, result, this, source);
-    return Variable.of(
-      ctx,
-      result,
-      type.copyWith(boxed: true),
-      methodReturnType: methodReturnType,
-      concreteTypes: concreteTypes,
-      exactType: exactType,
-    );
-  }
-
-  void _emitBoxOp(
-    CompilerContext ctx,
-    SSA result,
-    Variable V,
-    AstNode? source,
-  ) {
-    Variable v2 = V;
-    final source_ = V.ssa;
-
-    if (type == CoreTypes.int.ref(ctx)) {
-      ctx.pushOp(BoxInt(result, source_));
-    } else if (type == CoreTypes.num.ref(ctx)) {
-      ctx.pushOp(BoxNum(result, source_));
-    } else if (type == CoreTypes.double.ref(ctx)) {
-      ctx.pushOp(BoxDouble(result, source_));
-    } else if (type == CoreTypes.bool.ref(ctx)) {
-      ctx.pushOp(BoxBool(result, source_));
-    } else if (type == CoreTypes.list.ref(ctx)) {
-      if (!type.specifiedTypeArgs[0].boxed) {
-        v2 = boxListContents(ctx, V);
-      }
-      ctx.pushOp(
-        BoxList(result, v2.ssa, runtimeTypeId: type.runtimeTypeId(ctx)),
-      );
-    } else if (type == CoreTypes.map.ref(ctx)) {
-      ctx.pushOp(BoxMap(result, source_, runtimeTypeId: type.runtimeTypeId(ctx)));
-    } else if (type == CoreTypes.set.ref(ctx)) {
-      ctx.pushOp(BoxSet(result, source_, runtimeTypeId: type.runtimeTypeId(ctx)));
-    } else if (type == CoreTypes.string.ref(ctx)) {
-      ctx.pushOp(BoxString(result, source_));
-    } else if (type == CoreTypes.nullType.ref(ctx)) {
-      ctx.pushOp(BoxNull(result));
-    } else {
-      throw CompileError('Cannot box $type', source);
-    }
+    return toRep(ctx, ValueRep.boxed, into: ctx.svar('boxed'), source: source);
   }
 
   /// Unboxes this variable, if it isn't yet. Unlike [boxIfNeeded],
@@ -400,26 +426,46 @@ class Variable {
         type == CoreTypes.set.ref(ctx)) {
       return this;
     }
-    final target = update ? ssa : ctx.svar('unboxed');
-    final targetRepresentation = representationForType(
-      type.copyWith(boxed: false),
+    final converted = toRep(
+      ctx,
+      unboxedRepOf(type),
+      into: update ? null : ctx.svar('unboxed'),
     );
-    ctx.pushOp(Unbox(target, ssa, targetRepresentation));
     return update
         ? copyWithUpdate(
             ctx,
-            type: type.copyWith(boxed: false),
-            representation: targetRepresentation,
+            type: converted.type,
+            representation: converted.representation,
+            rep: converted.rep,
           )
-        : Variable.of(
-            ctx,
-            target,
-            type.copyWith(boxed: false),
-            declaredType: declaredType,
-            representation: targetRepresentation,
-            concreteTypes: concreteTypes,
-            exactType: exactType,
-          );
+        : converted;
+  }
+
+  /// Emits [Assign] copying this value into a fresh SSA slot, preserving its
+  /// type, representation and facts. Used when evaluating a following
+  /// operand may change a local's slot or representation. The copy is
+  /// detached from this variable's binding — boxing/unboxing it must not
+  /// rewrite the binding it was copied from.
+  Variable copyIntoFreshSlot(CompilerContext ctx, String svar) {
+    return Variable.ssa(
+      ctx,
+      Assign(ctx.svar(svar), ssa),
+      type,
+      rep: rep,
+      methodReturnType: methodReturnType,
+      concreteTypes: concreteTypes,
+      exactType: exactType,
+    );
+  }
+
+  /// Returns a copy of this variable whose static type is [type], keeping
+  /// the same physical representation. Used by promotion and `as` casts —
+  /// the representation never changes when only the type view narrows.
+  Variable withType(TypeRef type, {ValueRep? rep}) {
+    return copyWith(
+      type: type,
+      rep: rep ?? this.rep,
+    );
   }
 
   /// Returns a variable with the same name from the context locals.
@@ -435,6 +481,7 @@ class Variable {
     TypeRef? type,
     TypeRef? declaredType,
     MachineRepresentation? representation,
+    ValueRep? rep,
     DeferredOrOffset? methodOffset,
     ReturnType? methodReturnType,
     bool? isFinal,
@@ -449,6 +496,7 @@ class Variable {
         type ?? this.type,
         declaredType: declaredType ?? this.declaredType,
         representation: representation ?? this.representation,
+        rep: rep ?? this.rep,
         methodOffset: methodOffset ?? this.methodOffset,
         isFinal: isFinal ?? this.isFinal,
         isConst: isConst ?? this.isConst,
@@ -474,6 +522,7 @@ class Variable {
     TypeRef? type,
     TypeRef? declaredType,
     MachineRepresentation? representation,
+    ValueRep? rep,
     DeferredOrOffset? methodOffset,
     ReturnType? methodReturnType,
     String? name,
@@ -484,6 +533,7 @@ class Variable {
       type: type,
       declaredType: declaredType,
       representation: representation,
+      rep: rep,
       methodOffset: methodOffset,
       methodReturnType: methodReturnType,
       name: name,
@@ -521,8 +571,9 @@ class Variable {
         forceAllowDynamic: false,
       );
       // A declared List may be an evaluated class with an overridden getter.
-      // Only an unboxed core List proves native storage at this point.
-      final isList = !type.boxed && type == CoreTypes.list.ref(ctx);
+      // Only a natively-held core List proves native storage at this point.
+      final isList = rep == ValueRep.nativeList &&
+          type == CoreTypes.list.ref(ctx);
       if (isString || isList) {
         final receiver = unboxIfNeeded(ctx, false);
         return Variable.ssa(
@@ -534,7 +585,8 @@ class Variable {
                   receiver.ssa,
                 )
               : ListLength(ctx.svar('list_length'), receiver.ssa),
-          CoreTypes.int.ref(ctx).copyWith(boxed: false),
+          CoreTypes.int.ref(ctx),
+          rep: ValueRep.int,
         );
       }
     }
@@ -781,6 +833,7 @@ class Variable {
               isLate: isLate,
             ),
             fieldType,
+            rep: ValueRep.boxed,
           );
         }
         final key = name.startsWith('_')
@@ -800,6 +853,7 @@ class Variable {
             typeEnvironmentReceiver: receiver.ssa,
           ),
           fieldType,
+          rep: ValueRep.boxed,
         );
       }
     }
@@ -829,6 +883,7 @@ class Variable {
             typeEnvironmentReceiver: receiver.ssa,
           ),
           fieldType,
+          rep: ValueRep.boxed,
         );
       }
     }
@@ -841,6 +896,7 @@ class Variable {
         callerLibrary: ctx.library,
       ),
       fieldType,
+      rep: ValueRep.boxed,
       methodReturnType: methodReturnType,
       callingConvention: isDeclaredMethod || isBridgeMethod
           ? CallingConvention.dynamic

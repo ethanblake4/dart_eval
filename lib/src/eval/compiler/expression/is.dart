@@ -6,6 +6,7 @@ import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
+import '../values/value_rep.dart';
 
 Variable compileIsExpression(IsExpression e, CompilerContext ctx) {
   var V = compileExpression(e.expression, ctx);
@@ -27,6 +28,7 @@ Variable compileIsExpression(IsExpression e, CompilerContext ctx) {
   return Variable.ssa(
     ctx,
     IsType(ctx.svar('is_type'), V.ssa, slot.runtimeTypeId(ctx), not),
-    CoreTypes.bool.ref(ctx).copyWith(boxed: false),
+    CoreTypes.bool.ref(ctx),
+    rep: ValueRep.bool,
   );
 }

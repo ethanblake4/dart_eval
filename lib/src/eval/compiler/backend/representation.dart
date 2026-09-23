@@ -23,7 +23,7 @@ import '../../ir/types.dart' as types;
 export '../../ir/representation.dart';
 
 MachineRepresentation representationForType(TypeRef type) {
-  if (type.boxed || type.nullable || type.file != dartCoreFile) {
+  if (type.nullable || type.file != dartCoreFile) {
     return MachineRepresentation.object;
   }
   return switch (type.name) {

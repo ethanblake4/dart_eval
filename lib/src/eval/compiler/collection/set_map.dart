@@ -12,6 +12,7 @@ import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/collection.dart';
+import '../values/value_rep.dart';
 
 /// Compiles `{...}` into a Set or Map literal. [bound] is the context type
 /// (e.g. a declared field or parameter type): in Dart it drives literal
@@ -71,7 +72,6 @@ Variable compileSetOrMapLiteral(
   final target = ctx.svar(isMap ? 'map' : 'set');
   final collectionType = (isMap ? CoreTypes.map : CoreTypes.set).ref(ctx);
   final exactCollectionType = collectionType.copyWith(
-    boxed: false,
     specifiedTypeArgs: [
       explicitKey ?? CoreTypes.dynamic.ref(ctx),
       if (isMap) explicitValue ?? CoreTypes.dynamic.ref(ctx),
@@ -81,6 +81,7 @@ Variable compileSetOrMapLiteral(
     ctx,
     isMap ? NewMap(target) : NewSet(target),
     exactCollectionType,
+    rep: isMap ? ValueRep.nativeMap : ValueRep.nativeSet,
     exactType: exactCollectionType,
   );
   for (final element in literal.elements) {
@@ -97,11 +98,10 @@ Variable compileSetOrMapLiteral(
     valueTypes.addAll(values);
   }
   TypeRef infer(TypeRef? explicit, Set<TypeRef> values) =>
-      (explicit ??
-              (values.isEmpty
-                  ? CoreTypes.dynamic.ref(ctx)
-                  : TypeRef.commonBaseType(ctx, values)))
-          .copyWith(boxed: true);
+      explicit ??
+      (values.isEmpty
+          ? CoreTypes.dynamic.ref(ctx)
+          : TypeRef.commonBaseType(ctx, values));
   final result = collection.copyWith(
     type: collection.type.copyWith(
       specifiedTypeArgs: [

@@ -3,8 +3,7 @@ import 'helpers/conversion.dart';
 import 'model/function_type.dart';
 import '../ir/closures.dart';
 import '../ir/exception.dart';
-import 'backend/representation.dart'
-    show MachineRepresentation, representationForType;
+import 'backend/representation.dart' show MachineRepresentation;
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
@@ -28,6 +27,7 @@ import 'package:dart_eval/src/eval/compiler/expression/identifier.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
+import 'values/abi.dart';
 
 /// A compile-time datum that can be - at the very least - converted to a [Variable] in the
 /// future if needed. May also contain information about how to modify its value.
@@ -124,7 +124,8 @@ class SuperPropertyReference extends IdentifierReference {
         [receiver.ssa],
         result: ctx.svar(name),
       ),
-      resolveType(ctx, source: source).copyWith(boxed: true),
+      resolveType(ctx, source: source),
+      rep: ValueRep.boxed,
     );
   }
 
@@ -831,7 +832,7 @@ class IdentifierReference implements Reference {
               : local.declaredType;
       local.copyWithUpdate(
         ctx,
-        type: localType.copyWith(boxed: local.boxed),
+        type: localType,
         concreteTypes: stored.concreteTypes,
       ).exactType = stored.exactType;
       return stored;
@@ -1102,7 +1103,12 @@ class IdentifierReference implements Reference {
                   CoreTypes.dynamic.ref(ctx),
                 ).type ??
                 CoreTypes.dynamic.ref(ctx);
-            return Variable.of(ctx, s, returnType.copyWith(boxed: true));
+            return Variable.of(
+              ctx,
+              s,
+              returnType,
+              rep: ValueRep.boxed,
+            );
           }
           return Variable(
             CoreTypes.function.ref(ctx),
@@ -1151,6 +1157,7 @@ class IdentifierReference implements Reference {
                   [],
                 ),
                 type,
+                rep: ValueRep.boxed,
               );
             }
 
@@ -1250,8 +1257,8 @@ class IdentifierReference implements Reference {
                           member.returnType,
                           CoreTypes.dynamic.ref(ctx),
                         ).type ??
-                        CoreTypes.dynamic.ref(ctx))
-                    .copyWith(boxed: true),
+                        CoreTypes.dynamic.ref(ctx)),
+                rep: ValueRep.boxed,
               );
             }
             if (member.isSetter) break;
@@ -1369,6 +1376,7 @@ class IdentifierReference implements Reference {
                 specifiedType: $type,
                 specifyingType: $this.type,
               ),
+              rep: ValueRep.boxed,
               methodOffset: DeferredOrOffset(
                 file: ctx.library,
                 className: ctx.currentClassName!,
@@ -1397,6 +1405,7 @@ class IdentifierReference implements Reference {
                 specifiedType: $type,
                 specifyingType: $this.type,
               ),
+              rep: ValueRep.boxed,
               methodOffset: DeferredOrOffset(
                 file: ctx.library,
                 className: ctx.currentClassName!,
@@ -1415,6 +1424,7 @@ class IdentifierReference implements Reference {
           resvar,
           TypeRef.lookupFieldType(ctx, $type, name, source: source) ??
               CoreTypes.dynamic.ref(ctx),
+          rep: ValueRep.boxed,
         );
       }
 
@@ -1430,6 +1440,7 @@ class IdentifierReference implements Reference {
             ctx,
             LoadGlobal(ctx.svar(name), gIndex),
             enumType,
+            rep: ValueRep.boxed,
           );
         }
       }
@@ -1854,7 +1865,8 @@ class IndexedReference implements Reference {
       return Variable.ssa(
         ctx,
         IndexList(ctx.svar('list'), list.ssa, _index.ssa),
-        listElementType.copyWith(boxed: true),
+        listElementType,
+        rep: ValueRep.boxed,
       );
     }
 
@@ -1866,11 +1878,9 @@ class IndexedReference implements Reference {
       // `Map.[]` takes `Object?` — any index type is allowed at compile
       // time; a miss returns null rather than throwing.
       final map = _variable.unboxIfNeeded(ctx);
-      _index =
-          (_variable.type.specifiedTypeArgs.isEmpty ||
-              _variable.type.specifiedTypeArgs[0].boxed)
-          ? _index.boxIfNeeded(ctx, source)
-          : _index.unboxIfNeeded(ctx);
+      // Collection elements are always boxed (Abi.collectionElement), so the
+      // key travels boxed and a miss must produce a boxed null.
+      _index = _index.boxIfNeeded(ctx, source);
 
       final mapType = _variable.type.specifiedTypeArgs.length < 2
           ? CoreTypes.dynamic.ref(ctx)
@@ -1880,18 +1890,15 @@ class IndexedReference implements Reference {
         ctx,
         IndexMap(ctx.svar('map'), map.ssa, _index.ssa),
         mapType,
+        rep: ValueRep.boxed,
       );
 
-      if (_variable.type.specifiedTypeArgs.isEmpty ||
-          _variable.type.specifiedTypeArgs[1].boxed) {
-        return Variable.ssa(
-          ctx,
-          MaybeBoxNull(ctx.svar('map'), mapResult.ssa),
-          mapType,
-        );
-      }
-
-      return mapResult;
+      return Variable.ssa(
+        ctx,
+        MaybeBoxNull(ctx.svar('map'), mapResult.ssa),
+        mapType,
+        rep: ValueRep.boxed,
+      );
     }
 
     final result = _variable.invoke(ctx, '[]', [_index]);
@@ -2166,6 +2173,7 @@ Variable _loadGlobalVariable(
     ctx,
     LoadGlobal(ctx.svar(valueName ?? globalName), gIndex),
     type,
+    rep: Abi.unboxedAcrossCalls(type),
   );
 }
 
@@ -2296,7 +2304,7 @@ Variable _invokeSetter(
           paramType,
           representation: isMethod
               ? MachineRepresentation.object
-              : representationForType(paramType.typeAcrossFunctionBoundary),
+              : Abi.unboxedAcrossCalls(paramType).bank,
           source: source,
         );
   ctx.pushOp(
@@ -2324,9 +2332,9 @@ Variable _setterArgument(
     return value.boxIntoFreshSlot(ctx);
   }
   final paramType = _setterValueType(ctx, file, parameters);
-  final rep = representationForType(
-    (paramType ?? CoreTypes.dynamic.ref(ctx)).typeAcrossFunctionBoundary,
-  );
+  final rep = Abi.unboxedAcrossCalls(
+    paramType ?? CoreTypes.dynamic.ref(ctx),
+  ).bank;
   return rep == MachineRepresentation.object
       ? value.boxIntoFreshSlot(ctx)
       : value.unboxIfNeeded(ctx, false);

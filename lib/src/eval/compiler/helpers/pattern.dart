@@ -12,6 +12,7 @@ import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
+import '../values/abi.dart';
 
 enum PatternBindContext { none, declare, declareFinal, matching }
 
@@ -215,13 +216,14 @@ Variable patternMatchAndBind(
       // A `_` pattern variable is a wildcard: it matches but binds nothing.
       final bindsVariable = variableName != '_';
       if (V.name != null) {
-        if (!(V.type.isUnboxedAcrossFunctionBoundaries)) {
+        if (Abi.unboxedAcrossCalls(V.type).isBoxed) {
           V = V.boxIfNeeded(ctx);
         }
         final v = Variable.ssa(
           ctx,
           Assign(ctx.svar(variableName), V.ssa),
           V.type,
+          rep: V.rep,
           isFinal: isFinal,
         );
         if (bindsVariable) ctx.setLocal(variableName, v);
@@ -343,6 +345,7 @@ Variable _typeTest(CompilerContext ctx, TypeAnnotation? patType, Variable V) {
       slot.runtimeTypeId(ctx),
       false,
     ),
-    CoreTypes.bool.ref(ctx).copyWith(boxed: false),
+    CoreTypes.bool.ref(ctx),
+    rep: ValueRep.bool,
   );
 }

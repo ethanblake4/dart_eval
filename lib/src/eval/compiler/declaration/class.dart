@@ -656,7 +656,7 @@ _MemberSig? _memberSig(
     final fn = bridge.functionDescriptor;
     TypeRef? bt(BridgeTypeAnnotation a) {
       try {
-        return TypeRef.fromBridgeAnnotation(ctx, a, staticSource: false);
+        return TypeRef.fromBridgeAnnotation(ctx, a);
       } on CompileError {
         return null;
       }

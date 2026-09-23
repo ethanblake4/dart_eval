@@ -1,5 +1,4 @@
 import 'package:dart_eval/src/eval/ir/alu.dart';
-import 'package:dart_eval/src/eval/ir/memory.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
@@ -138,7 +137,7 @@ Variable _handleDoubleOperands(
   Reference V,
 ) {
   final L = V.getValue(ctx);
-  final l = Variable.ssa(ctx, Assign(ctx.svar('operand'), L.ssa), L.type);
+  final l = L.copyIntoFreshSlot(ctx, 'operand');
 
   final result = l.invoke(ctx, _opMap[e.operator.type]!, [
     _incrementValue().push(ctx),

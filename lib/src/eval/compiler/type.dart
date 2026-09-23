@@ -43,7 +43,6 @@ class TypeRef {
     this.typeParameterOwner,
     this.typeParameterIndex,
     this.typeParameterBound,
-    this.boxed = true,
     this.nullable = false,
   });
 
@@ -64,7 +63,6 @@ class TypeRef {
   final int? typeParameterIndex;
   final TypeRef? typeParameterBound;
   final bool resolved;
-  final bool boxed;
   final bool nullable;
 
   /// Create and cache a [TypeRef] given a [file] and [name].
@@ -236,7 +234,6 @@ class TypeRef {
         recordFields: fields,
         extendsType: CoreTypes.record.ref(ctx),
         resolved: true,
-        boxed: false,
         nullable: typeAnnotation.question != null,
       );
     }
@@ -307,12 +304,10 @@ class TypeRef {
     TypeRef? specifyingType,
     TypeRef? specifiedType,
     Map<String, TypeRef> typeParameters = const {},
-    bool staticSource = true,
   }) {
     return TypeRef.fromBridgeTypeRef(
       ctx,
       typeAnnotation.type,
-      staticSource: staticSource,
       specifyingType: specifyingType,
       specifiedType: specifiedType,
       typeParameters: typeParameters,
@@ -322,7 +317,6 @@ class TypeRef {
   factory TypeRef.fromBridgeTypeRef(
     CompilerContext ctx,
     BridgeTypeRef typeReference, {
-    bool staticSource = true,
     TypeRef? specifyingType,
     TypeRef? specifiedType,
     Map<String, TypeRef> typeParameters = const {},
@@ -330,12 +324,7 @@ class TypeRef {
     final cacheId = typeReference.cacheId;
     if (cacheId != null) {
       final t = ctx.runtimeTypeList[cacheId];
-      return ctx.bridgeTypeRefCache.putIfAbsent(
-        (cacheId, staticSource),
-        () => t.copyWith(
-          boxed: !staticSource || !t.isUnboxedAcrossFunctionBoundaries,
-        ),
-      );
+      return ctx.bridgeTypeRefCache.putIfAbsent(cacheId, () => t);
     }
     final spec = typeReference.spec;
     if (spec != null) {
@@ -345,7 +334,6 @@ class TypeRef {
           TypeRef.fromBridgeAnnotation(
             ctx,
             arg,
-            staticSource: staticSource,
             specifiedType: specifiedType,
             typeParameters: typeParameters,
           ),
@@ -359,10 +347,7 @@ class TypeRef {
           (throw CompileError(
             'Bridge: cannot find type ${spec.name} in library ${spec.library}',
           ));
-      return typeSpec.copyWith(
-        specifiedTypeArgs: specifiedTypeArgs,
-        boxed: true,
-      );
+      return typeSpec.copyWith(specifiedTypeArgs: specifiedTypeArgs);
     }
     final ref = typeReference.ref;
     if (ref != null) {
@@ -514,7 +499,7 @@ class TypeRef {
         (f) => f.name == field,
       );
       if (field0 != null) {
-        return field0.type.copyWith(boxed: true);
+        return field0.type;
       }
     }
     if (ctx.instanceDeclarationsMap[$class.file]!.containsKey($class.name)) {
@@ -587,7 +572,7 @@ class TypeRef {
           if (annotation != null) {
             return substituteClassTypeArguments(
               TypeRef.fromAnnotation(ctx, $class.file, annotation),
-            ).copyWith(boxed: true);
+            );
           }
           if (ctx.inferredFieldTypes.containsKey($class.file) &&
               ctx.inferredFieldTypes[$class.file]!.containsKey($class.name) &&
@@ -786,7 +771,6 @@ class TypeRef {
         resolved: true,
         extendsType: CoreTypes.record.ref(ctx),
         specifiedTypeArgs: resolvedSpecifiedTypeArgs,
-        boxed: false,
       );
     }
 
@@ -794,7 +778,6 @@ class TypeRef {
     final $cached = cache.types[file]![name]!;
     if ($cached.resolved) {
       return $cached.copyWith(
-        boxed: boxed,
         functionType: functionType,
         specifiedTypeArgs: resolvedSpecifiedTypeArgs,
         nullable: nullable,
@@ -1086,7 +1069,6 @@ class TypeRef {
       implementsType: $implements,
       genericParams: generics,
       resolved: true,
-      boxed: boxed,
       specifiedTypeArgs: resolvedSpecifiedTypeArgs,
       nullable: nullable,
     );
@@ -1097,7 +1079,7 @@ class TypeRef {
 
     final fileCache = cache.types[file]!;
     if (fileCache[name] == null || !fileCache[name]!.resolved) {
-      fileCache[name] = resolvedRef.copyWith(boxed: true, nullable: false);
+      fileCache[name] = resolvedRef.copyWith(nullable: false);
     }
 
     return resolvedRef;
@@ -1370,15 +1352,6 @@ class TypeRef {
       ...chain,
     ];
   }
-
-  bool get isUnboxedAcrossFunctionBoundaries =>
-      unboxedAcrossFunctionBoundaries.contains(this) && !nullable;
-
-  /// This type as it is stored when passed across a function boundary: boxed
-  /// unless it is one of the types that can travel unboxed (e.g. non-nullable
-  /// `int`, `double`, `bool`).
-  TypeRef get typeAcrossFunctionBoundary =>
-      copyWith(boxed: !isUnboxedAcrossFunctionBoundaries);
 
   /// Whether two references name the same declaration. This intentionally
   /// ignores type arguments, nullability, and representation details.
@@ -1687,7 +1660,6 @@ class TypeRef {
     String? typeParameterOwner,
     int? typeParameterIndex,
     TypeRef? typeParameterBound,
-    bool? boxed,
     bool? resolved,
     bool? nullable,
   }) {
@@ -1704,7 +1676,6 @@ class TypeRef {
       typeParameterIndex: typeParameterIndex ?? this.typeParameterIndex,
       typeParameterBound: typeParameterBound ?? this.typeParameterBound,
       recordFields: recordFields ?? this.recordFields,
-      boxed: boxed ?? this.boxed,
       resolved: resolved ?? this.resolved,
       nullable: nullable ?? this.nullable,
     );

@@ -12,6 +12,7 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/bridge.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
+import '../values/value_rep.dart';
 
 Variable compileInstanceCreation(
   CompilerContext ctx,
@@ -122,7 +123,8 @@ Variable compileInstanceOf(
     return Variable.of(
       ctx,
       result,
-      instantiatedType.copyWith(boxed: true),
+      instantiatedType,
+      rep: ValueRep.boxed,
       concreteTypes: [instantiatedType],
       exactType: instantiatedType,
     );
@@ -330,7 +332,8 @@ Variable compileInstanceOf(
   return Variable.of(
     ctx,
     result,
-    instantiatedType.copyWith(boxed: true),
+    instantiatedType,
+    rep: ValueRep.boxed,
     concreteTypes: [instantiatedType],
     exactType: isFactory ? null : instantiatedType,
   );

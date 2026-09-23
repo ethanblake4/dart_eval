@@ -1,6 +1,5 @@
 import '../helpers/conversion.dart';
 import '../helpers/global.dart';
-import '../backend/representation.dart' show representationForType;
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
@@ -11,6 +10,7 @@ import 'package:dart_eval/src/eval/ir/objects.dart';
 import 'package:dart_eval/src/eval/ir/function.dart';
 import 'package:dart_eval/src/eval/ir/representation.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
+import '../values/abi.dart';
 
 void compileFieldDeclaration(
   int fieldIndex,
@@ -39,7 +39,7 @@ void compileFieldDeclaration(
         ctx.beginScope();
         ctx.functionSignatures[pos] = MachineFunctionSignature(
           [],
-          representationForType(storageType),
+          Abi.unboxedAcrossCalls(storageType).bank,
         );
         var V = compileExpression(initializer, ctx, type);
         if (type != null) {
@@ -55,7 +55,9 @@ void compileFieldDeclaration(
         } else {
           type = widenedInferredType(ctx, V.type);
         }
-        V = storageType.boxed ? V.boxIfNeeded(ctx) : V.unboxIfNeeded(ctx);
+        V = Abi.unboxedAcrossCalls(storageType).isBoxed
+            ? V.boxIfNeeded(ctx)
+            : V.unboxIfNeeded(ctx);
         type = storageType;
         final name = '$parentName.$fieldName';
         final index = ctx.topLevelGlobalIndices[ctx.library]![name]!;

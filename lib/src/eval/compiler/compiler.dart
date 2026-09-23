@@ -2,8 +2,8 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:collection/collection.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/backend/typed_backend.dart';
+import 'package:dart_eval/src/eval/compiler/builtins.dart' show dartCoreFile;
 import 'package:dart_eval/src/eval/ir/representation.dart';
 import 'package:dart_eval/src/eval/runtime/typed/typed_program.dart';
 import 'package:dart_eval/src/eval/compiler/optimizer/validate.dart';
@@ -620,11 +620,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       }
     }
 
-    unboxedAcrossFunctionBoundaries = {
-      CoreTypes.int.ref(_ctx),
-      CoreTypes.double.ref(_ctx),
-      CoreTypes.bool.ref(_ctx),
-    };
+    dartCoreFile = CoreTypes.int.ref(_ctx).file;
 
     for (final library in reachableLibraries) {
       final libraryIndex = libraryIndexMap[library]!;

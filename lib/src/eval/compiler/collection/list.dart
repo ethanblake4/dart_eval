@@ -18,6 +18,7 @@ import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/collection.dart';
+import '../values/value_rep.dart';
 
 const _boxListElements = true;
 
@@ -57,16 +58,14 @@ Variable compileListLiteral(
       .ref(ctx)
       .copyWith(
         specifiedTypeArgs: [
-          (listSpecifiedType ?? CoreTypes.dynamic.ref(ctx)).copyWith(
-            boxed: _boxListElements,
-          ),
+          listSpecifiedType ?? CoreTypes.dynamic.ref(ctx),
         ],
-        boxed: false,
       );
   var list = Variable.ssa(
     ctx,
     NewList(ctx.svar('list')),
     listType,
+    rep: ValueRep.nativeList,
     exactType: listType,
   );
 
@@ -82,7 +81,6 @@ Variable compileListLiteral(
       type: CoreTypes.list
           .ref(ctx)
           .copyWith(
-            boxed: false,
             specifiedTypeArgs: [
               resultTypes.isEmpty
                   ? CoreTypes.dynamic.ref(ctx)
@@ -101,16 +99,17 @@ Variable boxListContents(CompilerContext ctx, Variable list) {
     ctx,
     NewList(ctx.svar('boxed_elements')),
     list.type.copyWith(
-      boxed: false,
-      specifiedTypeArgs: [elementType.copyWith(boxed: true)],
+      specifiedTypeArgs: [elementType],
     ),
+    rep: ValueRep.nativeList,
   );
   final index = BuiltinValue(intval: 0).push(ctx);
   final one = BuiltinValue(intval: 1).push(ctx);
   final length = Variable.ssa(
     ctx,
     IterableLength(ctx.svar('length'), list.ssa),
-    CoreTypes.int.ref(ctx).copyWith(boxed: false),
+    CoreTypes.int.ref(ctx),
+    rep: ValueRep.int,
   );
   macroLoop(
     ctx,
@@ -118,7 +117,8 @@ Variable boxListContents(CompilerContext ctx, Variable list) {
     condition: (ctx) => Variable.ssa(
       ctx,
       IntLessThan(ctx.svar('in_bounds'), index.ssa, length.ssa),
-      CoreTypes.bool.ref(ctx).copyWith(boxed: false),
+      CoreTypes.bool.ref(ctx),
+      rep: ValueRep.bool,
     ),
     body: (ctx, _) {
       final element = Variable.ssa(

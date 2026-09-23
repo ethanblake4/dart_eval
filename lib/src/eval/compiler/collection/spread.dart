@@ -14,6 +14,7 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/collection.dart';
 import 'package:dart_eval/src/eval/ir/logic.dart';
 import 'package:dart_eval/src/eval/ir/memory.dart';
+import '../values/value_rep.dart';
 
 /// Iterates a spread source once, placing iterator creation inside the null guard.
 List<TypeRef> compileCollectionSpread(
@@ -107,7 +108,8 @@ List<TypeRef> compileCollectionSpread(
         final nullTest = Variable.ssa(
           ctx,
           IsNull(ctx.svar('spread_is_null'), collection.ssa),
-          CoreTypes.bool.ref(ctx).copyWith(boxed: false),
+          CoreTypes.bool.ref(ctx),
+          rep: ValueRep.bool,
         );
         return Variable.ssa(
           ctx,
@@ -126,7 +128,7 @@ List<TypeRef> compileCollectionSpread(
     }
     append(ctx, null);
   }
-  return types.map((type) => type.copyWith(boxed: box || type.boxed)).toList();
+  return types;
 }
 
 List<TypeRef> compileSpreadElementForList(

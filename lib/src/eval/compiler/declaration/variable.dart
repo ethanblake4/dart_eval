@@ -1,13 +1,13 @@
 import '../builtins.dart';
 import '../helpers/global.dart';
 import '../helpers/conversion.dart';
-import '../backend/representation.dart' show representationForType;
 import '../../ir/representation.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
+import '../values/abi.dart';
 
 void compileTopLevelVariableDeclaration(
   VariableDeclaration v,
@@ -23,7 +23,7 @@ void compileTopLevelVariableDeclaration(
     ctx.beginScope();
     ctx.functionSignatures[pos] = MachineFunctionSignature(
       [],
-      representationForType(storageType),
+      Abi.unboxedAcrossCalls(storageType).bank,
     );
     var V = compileExpression(initializer, ctx, storageType);
     TypeRef type;
@@ -37,7 +37,7 @@ void compileTopLevelVariableDeclaration(
       ctx,
       V,
       type,
-      representation: representationForType(storageType),
+      representation: Abi.unboxedAcrossCalls(storageType).bank,
       source: v,
       description:
           'Variable $varName of inferred type ${V.type} does not conform to '

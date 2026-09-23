@@ -13,6 +13,7 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/async.dart';
 import 'package:dart_eval/src/eval/ir/bridge.dart';
+import '../values/value_rep.dart';
 
 StatementInfo compileForStatement(
   ForStatement s,
@@ -147,7 +148,7 @@ StatementInfo compileForEachLoop(
 
         iterator = iterator.copyWith(
           type: CoreTypes.iterator.ref(ctx).copyWith(
-            specifiedTypeArgs: [elementType.copyWith(boxed: true)],
+            specifiedTypeArgs: [elementType],
           ),
         );
 
@@ -159,7 +160,11 @@ StatementInfo compileForEachLoop(
           name,
           BuiltinValue()
               .push(ctx)
-              .copyWith(type: elementType, declaredType: bindingType)
+              .copyWith(
+                type: elementType,
+                declaredType: bindingType,
+                rep: ValueRep.boxed,
+              )
               .captureBinding(ctx, parts.loopVariable),
         );
         loopVariable = IdentifierReference(null, name);
@@ -238,7 +243,8 @@ StatementInfo compileAwaitForLoop(
   final iterator = Variable.of(
     ctx,
     ssa,
-    itType.copyWith(specifiedTypeArgs: [elementType], boxed: true),
+    itType.copyWith(specifiedTypeArgs: [elementType]),
+    rep: ValueRep.boxed,
   );
   final completer = ctx.lookupLocal('#completer')!;
   late Reference loopVariable;
@@ -272,7 +278,11 @@ StatementInfo compileAwaitForLoop(
           name,
           BuiltinValue()
               .push(ctx)
-              .copyWith(type: elementType, declaredType: bindingType)
+              .copyWith(
+                type: elementType,
+                declaredType: bindingType,
+                rep: ValueRep.boxed,
+              )
               .captureBinding(ctx, parts.loopVariable),
         );
         loopVariable = IdentifierReference(null, name);

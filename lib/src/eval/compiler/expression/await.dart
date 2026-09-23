@@ -6,6 +6,7 @@ import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
+import '../values/value_rep.dart';
 
 Variable compileAwaitExpression(AwaitExpression e, CompilerContext ctx) {
   AstNode? e0 = e;
@@ -33,8 +34,8 @@ Variable compileAwaitExpression(AwaitExpression e, CompilerContext ctx) {
     ctx,
     Await(ctx.svar('await_result'), completer.ssa, subject.ssa),
     resultType.copyWith(
-      boxed: true,
       nullable: resultType.nullable || isFuture && type.nullable,
     ),
+    rep: ValueRep.boxed,
   );
 }

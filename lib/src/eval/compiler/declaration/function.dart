@@ -18,8 +18,7 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/representation.dart';
-import 'package:dart_eval/src/eval/compiler/backend/representation.dart'
-    show representationForType;
+import '../values/abi.dart';
 
 void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   final pos = ctx.beginFunction('${d.name.lexeme}()');
@@ -94,13 +93,18 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
     if (p.type != null) {
       type = formalParameterAnnotationType(ctx, ctx.library, p);
     }
-    vRep = Variable.of(ctx, SSA('arg_$i'), type.typeAcrossFunctionBoundary);
+    vRep = Variable.of(
+      ctx,
+      SSA('arg_$i'),
+      type,
+      rep: Abi.parameter(type, CallableKind.function),
+    );
 
     // `_` parameters are wildcards: non-binding and repeatable.
     if (p.name!.lexeme != '_') {
       ctx.setLocal(p.name!.lexeme, vRep.captureBinding(ctx, p));
     }
-    parameterRepresentations.add(representationForType(vRep.type));
+    parameterRepresentations.add(vRep.rep.bank);
 
     i++;
   }
@@ -127,13 +131,11 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
     parameterRepresentations,
     returnType == CoreTypes.voidType.ref(ctx) && !b.isAsynchronous
         ? null
-        : representationForType(
-            (returnType ?? CoreTypes.dynamic.ref(ctx)).copyWith(
-              boxed:
-                  b.isAsynchronous ||
-                  !(returnType?.isUnboxedAcrossFunctionBoundaries ?? false),
-            ),
-          ),
+        : Abi.result(
+            returnType ?? CoreTypes.dynamic.ref(ctx),
+            CallableKind.function,
+            isAsync: b.isAsynchronous,
+          ).bank,
   );
   StatementInfo? stInfo;
   if (b is BlockFunctionBody) {

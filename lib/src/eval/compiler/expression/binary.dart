@@ -16,6 +16,7 @@ import 'package:dart_eval/src/eval/ir/logic.dart';
 
 import '../errors.dart';
 import 'expression.dart';
+import '../values/value_rep.dart';
 
 final binaryOpMap = {
   TokenType.PLUS: '+',
@@ -77,7 +78,7 @@ Variable compileBinaryExpression(
 
   // Evaluating the right operand can assign or change the representation of a
   // local used by the left operand. Preserve its already evaluated value.
-  L = Variable.ssa(ctx, Assign(ctx.svar('binary_left'), L.ssa), L.type);
+  L = L.copyIntoFreshSlot(ctx, 'binary_left');
   // For `==`/`!=` the right operand's context type is the left operand's
   // static type (e.g. `.foo` shorthands resolve against it).
   final rightBound = switch (e.operator.type) {
@@ -98,7 +99,7 @@ Variable _compileShortCircuit(
   TypeRef? boundType,
 }) {
   late TypeRef rightType;
-  var outVar = BuiltinValue().push(ctx);
+  var outVar = BuiltinValue().push(ctx).boxIntoFreshSlot(ctx);
   L = L.boxIfNeeded(ctx);
   ctx.pushOp(Assign(outVar.ssa, L.ssa));
 
@@ -110,7 +111,8 @@ Variable _compileShortCircuit(
         return Variable.ssa(
           ctx,
           IsNull(ctx.svar('short_circuit_test'), L.ssa),
-          CoreTypes.bool.ref(ctx).copyWith(boxed: false),
+          CoreTypes.bool.ref(ctx),
+          rep: ValueRep.bool,
         );
       }
       final value = convertForAssignment(
@@ -165,11 +167,10 @@ Variable _compileShortCircuit(
       ? null
       : L.type.copyWith(nullable: false);
   final outType = operator == '??'
-      ? (lhsType == null
-                ? rightType
-                : TypeRef.commonBaseType(ctx, {lhsType, rightType}))
-            .copyWith(boxed: true)
-      : CoreTypes.bool.ref(ctx).copyWith(boxed: true);
+      ? lhsType == null
+            ? rightType
+            : TypeRef.commonBaseType(ctx, {lhsType, rightType})
+      : CoreTypes.bool.ref(ctx);
 
   return outVar.copyWith(type: outType);
 }

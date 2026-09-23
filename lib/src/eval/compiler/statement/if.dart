@@ -6,8 +6,6 @@ import 'package:dart_eval/src/eval/compiler/helpers/pattern.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
-import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/ir/memory.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
 
 StatementInfo compileIfStatement(
@@ -42,11 +40,7 @@ StatementInfo _compileIfCaseStatement(
 ) {
   final elseStatement = s.elseStatement;
   final subject = compileExpression(s.expression, ctx);
-  final caseValue = Variable.ssa(
-    ctx,
-    Assign(ctx.svar('case_value'), subject.ssa),
-    subject.type,
-  );
+  final caseValue = subject.copyIntoFreshSlot(ctx, 'case_value');
   return macroBranch(
     ctx,
     expectedReturnType,

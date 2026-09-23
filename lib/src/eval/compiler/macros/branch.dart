@@ -14,21 +14,24 @@ import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/logic.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
+import '../values/value_rep.dart';
 
 /// Emits `value != null` as an unboxed-bool condition suitable for
 /// [macroBranch]'s `condition` closure.
 Variable compileNonNullCondition(CompilerContext ctx, Variable value) {
-  final boolType = CoreTypes.bool.ref(ctx).copyWith(boxed: false);
+  final boolType = CoreTypes.bool.ref(ctx);
   final nullConst = BuiltinValue().push(ctx).boxIfNeeded(ctx);
   final eq = Variable.ssa(
     ctx,
     DynamicEquals(ctx.svar('nonnull_eq'), value.ssa, nullConst.ssa),
     boolType,
+    rep: ValueRep.bool,
   );
   return Variable.ssa(
     ctx,
     LogicalNot(ctx.svar('nonnull_ne'), eq.ssa),
     boolType,
+    rep: ValueRep.bool,
   );
 }
 

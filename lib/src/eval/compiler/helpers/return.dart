@@ -8,8 +8,9 @@ import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'async.dart';
 import 'package:dart_eval/src/eval/ir/exception.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
+import '../values/abi.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart'
-    show MachineRepresentation, representationForType;
+    show MachineRepresentation;
 
 /// Marks the current block as unreachable past this point — used when an
 /// expression's value is Never-typed. When the expression already emitted a
@@ -63,7 +64,7 @@ StatementInfo doReturn(
     // Closures declare an `object` result slot in their function signature,
     // so their returns stay boxed even when the type could travel unboxed.
     final unboxedResult =
-        expected.isUnboxedAcrossFunctionBoundaries &&
+        !Abi.unboxedAcrossCalls(expected).isBoxed &&
         ctx.closureDepth == 0 &&
         ((ctx.currentClass == null && ctx.currentExtension == null) ||
             skipClassBoxing);
@@ -72,7 +73,7 @@ StatementInfo doReturn(
       value0,
       expected,
       representation: unboxedResult
-          ? representationForType(expected.copyWith(boxed: false))
+          ? Abi.unboxedAcrossCalls(expected).bank
           : MachineRepresentation.object,
       description: 'Cannot return ${value0.type} (expected: $expected)',
     );
@@ -87,7 +88,7 @@ StatementInfo doReturn(
       final slot = ExceptionSlot(
         ctx.svar('completion_slot').name,
         ctx.functionSignatures[ctx.currentFunctionId]?.result ??
-            representationForType(value0.type),
+            value0.representation,
       );
       final continuation = BasicBlock<Operation>([
         LoadExceptionSlot(ctx.svar('completion_value'), slot),

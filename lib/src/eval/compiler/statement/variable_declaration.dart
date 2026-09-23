@@ -10,6 +10,7 @@ import 'package:dart_eval/src/eval/ir/memory.dart';
 import '../errors.dart';
 import '../type.dart';
 import 'statement.dart';
+import '../values/abi.dart';
 
 StatementInfo compileVariableDeclarationStatement(
   VariableDeclarationStatement s,
@@ -47,16 +48,14 @@ void compileVariableDeclarationList(
           ctx,
           res,
           type,
-          representation: type.isUnboxedAcrossFunctionBoundaries
-              ? representationForType(type.copyWith(boxed: false))
-              : MachineRepresentation.object,
+          representation: Abi.unboxedAcrossCalls(type).bank,
           source: li,
           description:
               'Type mismatch: variable "${li.name.lexeme}" is specified as '
               'type $type, but is initialized to ${res.type}',
         );
       }
-      if (!((type ?? res.type).isUnboxedAcrossFunctionBoundaries)) {
+      if (Abi.unboxedAcrossCalls(type ?? res.type).isBoxed) {
         res = res.boxIfNeeded(ctx);
       }
       if (isWildcard) {
@@ -65,8 +64,7 @@ void compileVariableDeclarationList(
       }
       final local = res.copyWith(
         name: ctx.svar(li.name.lexeme).name,
-        type: (type ?? widenedInferredType(ctx, res.type))
-            .copyWith(boxed: res.boxed),
+        type: type ?? widenedInferredType(ctx, res.type),
         declaredType: type ?? widenedInferredType(ctx, res.type),
         isFinal: l.isFinal || l.isConst,
         isConst: l.isConst,

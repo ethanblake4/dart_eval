@@ -22,6 +22,7 @@ import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/logic.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
+import '../values/abi.dart';
 
 extension Invoke on Variable {
   InvokeResult invoke(
@@ -31,7 +32,7 @@ extension Invoke on Variable {
     Map<String, Variable>? namedArgs,
   }) {
     if (method == null) return _invokeAsFunction(ctx, args, namedArgs);
-    final boolType = CoreTypes.bool.ref(ctx).copyWith(boxed: false);
+    final boolType = CoreTypes.bool.ref(ctx);
     if ((namedArgs == null || namedArgs.isEmpty) &&
         args.length == 1 &&
         type.isAssignableTo(
@@ -73,8 +74,10 @@ extension Invoke on Variable {
           (operator == StringOperator.codeUnitAt
                   ? CoreTypes.int
                   : CoreTypes.string)
-              .ref(ctx)
-              .copyWith(boxed: false),
+              .ref(ctx),
+          rep: operator == StringOperator.codeUnitAt
+              ? ValueRep.int
+              : ValueRep.string,
         ),
         [argument],
       );
@@ -93,6 +96,7 @@ extension Invoke on Variable {
           ctx,
           LogicalNot(ctx.svar('not_result'), receiver.ssa),
           boolType,
+          rep: ValueRep.bool,
         ),
         [],
       );
@@ -129,8 +133,11 @@ extension Invoke on Variable {
           ctx,
           operation,
           method == '+' || method == '-'
-              ? CoreTypes.int.ref(ctx).copyWith(boxed: false)
+              ? CoreTypes.int.ref(ctx)
               : boolType,
+          rep: method == '+' || method == '-'
+              ? ValueRep.int
+              : ValueRep.bool,
         ),
         [right],
       );
@@ -197,8 +204,8 @@ extension Invoke on Variable {
             ? Variable.ssa(
                 ctx,
                 IntToDouble(ctx.svar('widen'), v.ssa),
-                CoreTypes.double.ref(ctx).copyWith(boxed: false),
-                representation: MachineRepresentation.doublePrecision,
+                CoreTypes.double.ref(ctx),
+                rep: ValueRep.double,
               )
             : v;
         final receiver = widen(unboxIfNeeded(ctx));
@@ -219,7 +226,12 @@ extension Invoke on Variable {
             : CoreTypes.double.ref(ctx);
         return InvokeResult(
           receiver,
-          Variable.ssa(ctx, operation, resultType.copyWith(boxed: false)),
+          Variable.ssa(
+            ctx,
+            operation,
+            resultType,
+            rep: unboxedRepOf(resultType),
+          ),
           [right],
         );
       }
@@ -300,7 +312,12 @@ extension Invoke on Variable {
             CoreTypes.dynamic.ref(ctx);
         return InvokeResult(
           receiver,
-          Variable.of(ctx, target, returnType.copyWith(boxed: true)),
+          Variable.of(
+            ctx,
+            target,
+            returnType,
+            rep: ValueRep.boxed,
+          ),
           convertedArgs,
         );
       }
@@ -420,7 +437,12 @@ extension Invoke on Variable {
     }
     return InvokeResult(
       receiver,
-      Variable.of(ctx, result, returnType.copyWith(boxed: !equality)),
+      Variable.of(
+        ctx,
+        result,
+        returnType,
+        rep: equality ? unboxedRepOf(returnType) : ValueRep.boxed,
+      ),
       prepared,
       namedArgs: namedArgs ?? {},
     );
@@ -475,9 +497,8 @@ extension Invoke on Variable {
       Variable.of(
         ctx,
         target,
-        returnType.copyWith(
-          boxed: !returnType.isUnboxedAcrossFunctionBoundaries,
-        ),
+        returnType,
+        rep: Abi.unboxedAcrossCalls(returnType),
       ),
       args,
       namedArgs: namedArgs ?? {},

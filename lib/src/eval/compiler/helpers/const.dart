@@ -15,11 +15,14 @@ SSA pushInternConst(CompilerContext ctx, SSA value, TypeRef type) {
 }
 
 /// [pushInternConst] for a [Variable], preserving its binding metadata.
+/// Interning canonicalizes the runtime object in place — the interned slot
+/// keeps whatever physical representation the input already has.
 Variable internConst(CompilerContext ctx, Variable value, TypeRef type) =>
     Variable.of(
       ctx,
       pushInternConst(ctx, value.ssa, type),
       value.type,
+      rep: value.rep,
       declaredType: value.declaredType,
       concreteTypes: value.concreteTypes,
       exactType: value.exactType,

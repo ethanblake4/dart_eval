@@ -8,7 +8,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:crypto/crypto.dart';
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/model/source.dart';
@@ -77,7 +76,12 @@ String _mark(Object? value) =>
 String _compile(Compiler compiler, List<DartSource> sources) {
   try {
     final program = compiler.compileSources(sources);
-    return sha1.convert(program.write()).toString();
+    // FNV-1a over the serialized program: stable across runs, dependency-free.
+    var hash = 0xcbf29ce484222325;
+    for (final byte in program.write()) {
+      hash = (hash ^ byte) * 0x100000001b3 & 0xFFFFFFFFFFFFFFFF;
+    }
+    return hash.toRadixString(16);
   } on CompileError {
     return '#COMPILE_ERROR';
   } catch (e) {

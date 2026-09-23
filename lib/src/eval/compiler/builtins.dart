@@ -3,6 +3,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
+import 'package:dart_eval/src/eval/compiler/values/value_rep.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/memory.dart';
 
@@ -38,49 +39,60 @@ class BuiltinValue {
 
   Variable _push(CompilerContext ctx, SSA target) {
     if (type == BuiltinValueType.intType) {
-      final type = CoreTypes.int.ref(ctx).copyWith(boxed: false);
+      final type = CoreTypes.int.ref(ctx);
       return Variable.ssa(
         ctx,
         LoadInt(target, intval!),
         type,
+        rep: ValueRep.int,
         concreteTypes: [type],
         exactType: type,
         isConstInt: true,
         isConst: true,
       );
     } else if (type == BuiltinValueType.doubleType) {
-      final type = CoreTypes.double.ref(ctx).copyWith(boxed: false);
+      final type = CoreTypes.double.ref(ctx);
       return Variable.ssa(
         ctx,
         LoadDouble(target, doubleval!),
         type,
+        rep: ValueRep.double,
         concreteTypes: [type],
         exactType: type,
         isConst: true,
       );
     } else if (type == BuiltinValueType.stringType) {
-      final type = CoreTypes.string.ref(ctx).copyWith(boxed: false);
+      final type = CoreTypes.string.ref(ctx);
       return Variable.ssa(
         ctx,
         LoadString(target, stringval!),
         type,
+        rep: ValueRep.string,
         concreteTypes: [type],
         exactType: type,
         isConst: true,
       );
     } else if (type == BuiltinValueType.boolType) {
-      final type = CoreTypes.bool.ref(ctx).copyWith(boxed: false);
+      final type = CoreTypes.bool.ref(ctx);
       return Variable.ssa(
         ctx,
         LoadBool(target, boolval!),
         type,
+        rep: ValueRep.bool,
         concreteTypes: [type],
         exactType: type,
         isConst: true,
       );
     } else if (type == BuiltinValueType.nullType) {
-      final type = CoreTypes.nullType.ref(ctx).copyWith(boxed: false);
-      return Variable.ssa(ctx, LoadNull(target), type, concreteTypes: [type], isConst: true);
+      final type = CoreTypes.nullType.ref(ctx);
+      return Variable.ssa(
+        ctx,
+        LoadNull(target),
+        type,
+        rep: ValueRep.nativeNull,
+        concreteTypes: [type],
+        isConst: true,
+      );
     } else {
       throw CompileError('Cannot push unknown builtin value type $type');
     }
@@ -92,4 +104,4 @@ class BuiltinValue {
 
 enum BuiltinValueType { intType, stringType, doubleType, boolType, nullType }
 
-late Set<TypeRef> unboxedAcrossFunctionBoundaries;
+

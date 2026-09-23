@@ -11,6 +11,7 @@ import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/memory.dart';
+import '../values/value_rep.dart';
 
 /// Compiles a `switch (e) { pattern => expr, ... }` expression: evaluates the
 /// subject once, pattern-matches each case in order, and assigns the winning
@@ -24,11 +25,7 @@ Variable compileSwitchExpression(
   // Evaluate once. Each case copies the subject into its own slot so
   // pattern-matching can freely box/unbox that copy without constraining
   // the shared subject's representation.
-  final switchExpr = Variable.ssa(
-    ctx,
-    Assign(ctx.svar('switch_value'), expression.ssa),
-    expression.type,
-  );
+  final switchExpr = expression.copyIntoFreshSlot(ctx, 'switch_value');
 
   final resultSsa = ctx.svar('switch_result');
   final resultTypes = <TypeRef>[];
@@ -50,11 +47,7 @@ Variable compileSwitchExpression(
       ctx,
       null,
       condition: (ctx) {
-        final subject = Variable.ssa(
-          ctx,
-          Assign(ctx.svar('case_value'), switchExpr.ssa),
-          switchExpr.type,
-        );
+        final subject = switchExpr.copyIntoFreshSlot(ctx, 'case_value');
         final matches = patternMatchAndBind(
           ctx,
           currentCase.guardedPattern.pattern,
@@ -91,6 +84,7 @@ Variable compileSwitchExpression(
   return Variable.of(
     ctx,
     resultSsa,
-    resultType.copyWith(boxed: true),
+    resultType,
+    rep: ValueRep.boxed,
   );
 }

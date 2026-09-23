@@ -14,6 +14,7 @@ import '../errors.dart';
 import '../type.dart';
 
 import '../variable.dart';
+import '../values/abi.dart';
 import '../../ir/bridge.dart' show PrepareBridgeArgument;
 import '../../ir/types.dart' show ResolveTypeId;
 
@@ -56,29 +57,27 @@ Variable coerceArgumentForParameter(
   bool genericParameter = false,
   AstNode? source,
 }) {
+  final paramRep = Abi.parameter(
+    paramType,
+    parameterHost is MethodDeclaration
+        ? CallableKind.method
+        : CallableKind.function,
+    erased: genericParameter,
+  );
   arg0 = convertForAssignment(
     ctx,
     arg0,
     paramType,
-    representation:
-        parameterHost is MethodDeclaration ||
-            genericParameter ||
-            !paramType.isUnboxedAcrossFunctionBoundaries
-        ? MachineRepresentation.object
-        : representationForType(paramType.copyWith(boxed: false)),
+    representation: paramRep.bank,
     source: source ?? parameterHost,
     description:
         'Cannot assign argument of type ${arg0.type.toStringClear(ctx, paramType)} '
         'to parameter "${param.name!.lexeme}" of type '
         '${paramType.toStringClear(ctx, arg0.type)}',
   );
-  if (parameterHost is MethodDeclaration ||
-      genericParameter ||
-      !paramType.isUnboxedAcrossFunctionBoundaries) {
-    arg0 = arg0.boxIfNeeded(ctx);
-  } else if (paramType.isUnboxedAcrossFunctionBoundaries) {
-    arg0 = arg0.unboxIfNeeded(ctx);
-  }
+  arg0 = paramRep == ValueRep.boxed
+      ? arg0.boxIfNeeded(ctx)
+      : arg0.unboxIfNeeded(ctx);
 
   if (arg0.type == CoreTypes.function.ref(ctx) &&
       arg0.name == null &&
@@ -189,7 +188,7 @@ Variable compileOmittedArgument(
     }
     variable = pushDefaultValue(ctx, value);
   }
-  return host is MethodDeclaration || !type.isUnboxedAcrossFunctionBoundaries
+  return host is MethodDeclaration || Abi.unboxedAcrossCalls(type).isBoxed
       ? variable.boxIfNeeded(ctx)
       : variable.unboxIfNeeded(ctx);
 }

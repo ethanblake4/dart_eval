@@ -20,6 +20,7 @@ Variable compileThisExpression(ThisExpression e, CompilerContext ctx) {
       ctx,
       Assign(ctx.svar('this'), anonymousThis.ssa),
       anonymousThis.type,
+      rep: anonymousThis.rep,
     );
   }
   if (anonymousReceiver != null) {
@@ -27,6 +28,7 @@ Variable compileThisExpression(ThisExpression e, CompilerContext ctx) {
       ctx,
       Assign(ctx.svar('this'), anonymousReceiver.ssa),
       anonymousReceiver.type,
+      rep: anonymousReceiver.rep,
     );
   }
   // Extensions may use `this` for the receiver without a class context.
@@ -39,7 +41,7 @@ Variable compileThisExpression(ThisExpression e, CompilerContext ctx) {
   // instance.
   final operation =
       ctx.currentExtension == null ? LoadThis(ctx.svar('this'), receiver.ssa) : Assign(ctx.svar('this'), receiver.ssa);
-  return Variable.ssa(ctx, operation, receiver.type);
+  return Variable.ssa(ctx, operation, receiver.type, rep: receiver.rep);
 }
 
 Variable compileSuperExpression(SuperExpression e, CompilerContext ctx) {

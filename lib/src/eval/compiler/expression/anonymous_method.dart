@@ -53,7 +53,7 @@ Variable compileAnonymousMethodInvocation(
       source: e,
     );
     return output.copyWith(
-      type: TypeRef.commonBaseType(ctx, types).copyWith(boxed: true),
+      type: TypeRef.commonBaseType(ctx, types),
     );
   }
 
@@ -152,9 +152,7 @@ Variable _runBody(
     ctx.builder.float(exit);
     ctx.builder = BasicBlockBuilder(ctx.activeGraph, [exit], parent);
     result = ctx.lookupLocal(resultName)!.copyWith(
-      type: TypeRef.commonBaseType(ctx, returnTarget.types).copyWith(
-        boxed: true,
-      ),
+      type: TypeRef.commonBaseType(ctx, returnTarget.types),
     );
   }
   ctx.anonymousThisReceiver = previousAnonymousThis;

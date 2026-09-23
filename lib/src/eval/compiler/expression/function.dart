@@ -23,6 +23,7 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/closures.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
+import '../values/abi.dart';
 
 enum CallingConvention { static, dynamic }
 
@@ -111,6 +112,8 @@ Variable compileFunctionExpression(
       ctx,
       loaded,
       capture.value.type,
+      representation: capture.value.representation,
+      rep: capture.value.rep,
       isFinal: capture.value.isFinal,
       callingConvention: capture.value.callingConvention,
       methodReturnType: capture.value.methodReturnType,
@@ -158,7 +161,12 @@ Variable compileFunctionExpression(
         type = fType.type!;
       }
     }
-    vRep = Variable.of(ctx, SSA('arg_${i + 1}'), type.copyWith(boxed: true));
+    vRep = Variable.of(
+      ctx,
+      SSA('arg_${i + 1}'),
+      type,
+      rep: Abi.parameter(type, CallableKind.closure),
+    );
 
     // `_` parameters are wildcards: non-binding and repeatable.
     if (p.name!.lexeme != '_') {
@@ -355,7 +363,7 @@ Variable compileFunctionExpression(
                     ),
                   )
             : CoreTypes.function.ref(ctx)
-      : bound!.copyWith(boxed: true, nullable: false);
+      : bound!.copyWith(nullable: false);
   final signature = closureType.functionType;
   if (signature != null &&
       inferredClosureReturnType != null &&

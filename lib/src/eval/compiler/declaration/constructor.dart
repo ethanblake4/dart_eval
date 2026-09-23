@@ -24,6 +24,7 @@ import 'package:dart_eval/src/eval/ir/function.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 
 import '../variable.dart';
+import '../values/abi.dart';
 
 void compileConstructorDeclaration(
   CompilerContext ctx,
@@ -144,25 +145,27 @@ void compileConstructorDeclaration(
       }
       type0 ??= CoreTypes.dynamic.ref(ctx);
       parameterRepresentations.add(
-        representationForType(type0.typeAcrossFunctionBoundary),
+        Abi.parameter(type0, CallableKind.initializer).bank,
       );
 
       vrep = Variable.of(
         ctx,
         SSA('arg_$i'),
-        type0.typeAcrossFunctionBoundary,
+        type0,
+        rep: Abi.parameter(type0, CallableKind.initializer),
       ).boxIfNeeded(ctx);
 
       fieldFormalNames.add(p.name.lexeme);
     } else if (p is SuperFormalParameter) {
       final type = resolveSuperFormalType(ctx, ctx.library, p, d);
       parameterRepresentations.add(
-        representationForType(type.typeAcrossFunctionBoundary),
+        Abi.parameter(type, CallableKind.initializer).bank,
       );
       vrep = Variable.of(
         ctx,
         SSA('arg_$i'),
-        type.typeAcrossFunctionBoundary,
+        type,
+        rep: Abi.parameter(type, CallableKind.initializer),
       ).boxIfNeeded(ctx);
       if (p.isNamed) {
         superParams.named.add(p.name.lexeme);
@@ -178,11 +181,15 @@ void compileConstructorDeclaration(
           p.type!,
         );
       }
-      type = type.copyWith(
-        boxed: !unboxedAcrossFunctionBoundaries.contains(type),
+      vrep = Variable.of(
+        ctx,
+        SSA('arg_$i'),
+        type,
+        rep: Abi.parameter(type, CallableKind.constructor),
       );
-      vrep = Variable.of(ctx, SSA('arg_$i'), type);
-      parameterRepresentations.add(representationForType(type));
+      parameterRepresentations.add(
+        Abi.parameter(type, CallableKind.constructor).bank,
+      );
     }
 
     ctx.setLocal(p.name!.lexeme, vrep.captureBinding(ctx, p));
@@ -1163,14 +1170,15 @@ void compileAliasForwardingConstructor(
     final type = fieldOrDeclType ??
         ctx.functionParameterTypes[ctx.currentFunctionId!]![i];
     parameterRepresentations.add(
-      representationForType(type.typeAcrossFunctionBoundary),
+      Abi.parameter(type, CallableKind.initializer).bank,
     );
     ctx.setLocal(
       p.name!.lexeme,
       Variable.of(
         ctx,
         SSA('arg_$i'),
-        type.typeAcrossFunctionBoundary,
+        type,
+        rep: Abi.parameter(type, CallableKind.initializer),
       ).captureBinding(ctx, p),
     );
     i++;
