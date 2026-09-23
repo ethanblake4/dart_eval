@@ -892,8 +892,9 @@ void _resolveInvocationGenerics(
   List<TypeParameter>? parameters,
   List<TypeAnnotation>? explicitArguments,
   Map<String, TypeRef> resolved,
-  AstNode source,
-) {
+  AstNode source, {
+  required Declaration dec,
+}) {
   if (parameters == null || parameters.isEmpty) {
     if (explicitArguments?.isNotEmpty ?? false) {
       throw CompileError('Function does not declare type parameters', source);
@@ -909,11 +910,26 @@ void _resolveInvocationGenerics(
     );
   }
   // Seed every parameter name before resolving bounds so F-bounds can
-  // self-reference (`f<T extends Foo<T>>(...)`).
+  // self-reference (`f<T extends Foo<T>>(...)`). The owner carries the
+  // callee's identity — call-site placeholders for `foo<T>` and `bar<U>`
+  // in the same library are distinct parameters.
   final callOwner = TypeParameterOwner(
     TypeParameterOwnerKind.callSite,
     declarationLibrary,
-    '',
+    switch (dec) {
+      MethodDeclaration() => () {
+        final host = dec.parent?.parent;
+        return host is Declaration
+            ? '${declarationName(host)}.${dec.name.lexeme}'
+            : dec.name.lexeme;
+      }(),
+      _ => (dec as FunctionDeclaration).name.lexeme,
+    },
+    switch (dec) {
+      FunctionDeclaration() => dec.functionExpression.offset,
+      MethodDeclaration() => dec.offset,
+      _ => null,
+    },
   );
   for (var index = 0; index < parameters.length; index++) {
     final name = parameters[index].name.lexeme;
@@ -1067,6 +1083,7 @@ BoundCall bindDeclaration(
       typeArguments?.arguments.toList(),
       resolveGenerics,
       source!,
+      dec: dec,
     );
   }
 

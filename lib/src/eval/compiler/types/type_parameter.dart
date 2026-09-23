@@ -64,7 +64,7 @@ final class TypeParameterOwner {
     TypeParameterOwnerKind.closure =>
       'function:$library:<anonymous>:$position',
     TypeParameterOwnerKind.scope => 'function:$position',
-    TypeParameterOwnerKind.callSite => 'call:$library',
+    TypeParameterOwnerKind.callSite => 'call:$library:$name:$position',
     TypeParameterOwnerKind.tearOff => 'tearoff:$library:$name',
     TypeParameterOwnerKind.extension => 'extension:$library:$name',
     TypeParameterOwnerKind.typeAlias => 'typeAlias:$library:$name',
