@@ -101,7 +101,7 @@ final class TypeSystem {
     if (current0.isRecord) {
       current0 = CoreTypes.record.ref(_ctx);
     }
-    if (current0.decl == null && current0.functionType != null) {
+    if (current0 is FunctionTypeRef) {
       current0 = CoreTypes.function.ref(_ctx);
     }
     final queue = <TypeRef>[current0];
@@ -221,21 +221,13 @@ final class TypeSystem {
       for (final field in t.recordFields) {
         collect(field.type);
       }
-      final signature = t.functionType;
-      if (signature != null) {
-        final returnType = signature.returnType.type;
-        if (returnType != null) collect(returnType);
-        for (final parameter in signature.normalParameters) {
-          final parameterType = parameter.type.type;
-          if (parameterType != null) collect(parameterType);
+      if (t is FunctionTypeRef) {
+        collect(t.signature.returnType);
+        for (final parameter in t.signature.positional) {
+          collect(parameter);
         }
-        for (final parameter in signature.optionalParameters) {
-          final parameterType = parameter.type.type;
-          if (parameterType != null) collect(parameterType);
-        }
-        for (final parameter in signature.namedParameters.values) {
-          final parameterType = parameter.type.type;
-          if (parameterType != null) collect(parameterType);
+        for (final parameter in t.signature.named.values) {
+          collect(parameter.type);
         }
       }
     }

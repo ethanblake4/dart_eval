@@ -168,7 +168,9 @@ TypeRef? resolveCallResultType(
     );
     if (resolved != null && resolved.type != voidType) return resolved.type;
   }
-  final declared = callee?.type.functionType?.returnType.type;
+  final calleeType = callee?.type;
+  final declared =
+      calleeType is FunctionTypeRef ? calleeType.signature.returnType : null;
   return declared == voidType ? null : declared;
 }
 
@@ -185,27 +187,23 @@ bool _closureArgumentsProven(
   List<Variable> positionalArgs,
   Map<String, Variable> namedArgs,
 ) {
-  final signature = closureType.functionType;
-  if (signature == null) return false;
-  final positional = [
-    ...signature.normalParameters,
-    ...signature.optionalParameters,
-  ];
+  if (closureType is! FunctionTypeRef) return false;
+  final signature = closureType.signature;
+  final positional = signature.positional;
   for (var i = 0; i < positionalArgs.length; i++) {
     if (i >= positional.length) return false;
-    final paramType = positional[i].type.type;
-    if (paramType == null ||
-        paramType.isSpec(CoreTypes.dynamic) ||
+    final paramType = positional[i];
+    if (paramType.isSpec(CoreTypes.dynamic) ||
         positionalArgs[i].type.assignmentConversionTo(ctx, paramType) !=
             AssignmentConversion.none) {
       return false;
     }
   }
   for (final entry in namedArgs.entries) {
-    final paramType = signature.namedParameters[entry.key]?.type.type;
-    if (paramType == null ||
-        paramType.isSpec(CoreTypes.dynamic) ||
-        entry.value.type.assignmentConversionTo(ctx, paramType) !=
+    final parameter = signature.named[entry.key];
+    if (parameter == null ||
+        parameter.type.isSpec(CoreTypes.dynamic) ||
+        entry.value.type.assignmentConversionTo(ctx, parameter.type) !=
             AssignmentConversion.none) {
       return false;
     }

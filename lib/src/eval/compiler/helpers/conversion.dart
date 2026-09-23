@@ -45,7 +45,7 @@ Variable convertInitializer(
     case AssignmentConversion.none:
       return value;
     case AssignmentConversion.runtimeCheck:
-      return target.functionType != null
+      return target is FunctionTypeRef
           ? value
           : convertForAssignment(
               ctx,
@@ -73,8 +73,7 @@ Variable? _implicitCallTearOff(
   final effectiveTarget = target.isTypeParameter
       ? (target.typeParameterBound ?? CoreTypes.dynamic.ref(ctx))
       : target;
-  if (effectiveTarget.functionType == null &&
-      !effectiveTarget.isSpec(CoreTypes.function)) {
+  if (!effectiveTarget.isFunctionLike) {
     return null;
   }
   try {

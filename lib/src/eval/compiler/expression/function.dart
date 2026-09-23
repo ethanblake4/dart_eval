@@ -13,7 +13,6 @@ import 'package:dart_eval/src/eval/compiler/helpers/async.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/fpl.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/return.dart';
-import 'package:dart_eval/src/eval/compiler/model/function_type.dart';
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 
 import 'package:dart_eval/src/eval/compiler/statement/block.dart';
@@ -135,24 +134,17 @@ Variable compileFunctionExpression(
         parameterOffset: 1,
       );
 
-      List<FunctionFormalParameter> boundNormalParams = [];
-      List<FunctionFormalParameter> boundOptionalParams = [];
-      List<FunctionFormalParameter> boundNamedParams = [];
-      if (bound != null) {
-        final functionType = bound.functionType;
-        if (functionType != null) {
-          boundNormalParams = functionType.normalParameters;
-          boundOptionalParams = functionType.optionalParameters;
-          boundNamedParams = functionType.namedParameters.entries
-              .map((e) => e.value)
-              .sorted((a, b) => a.name!.compareTo(b.name!));
-        }
+      var boundPositionalParams = const <TypeRef>[];
+      var boundNamedParams = const <TypeRef>[];
+      if (bound is FunctionTypeRef) {
+        boundPositionalParams = bound.signature.positional;
+        boundNamedParams = [
+          for (final entry in bound.signature.named.entries.sorted(
+            (a, b) => a.key.compareTo(b.key),
+          ))
+            entry.value.type,
+        ];
       }
-
-      final boundPositionalParams = [
-        ...boundNormalParams,
-        ...boundOptionalParams,
-      ];
       final inorderBoundParams = [
         ...boundPositionalParams,
         ...boundNamedParams,
@@ -167,10 +159,7 @@ Variable compileFunctionExpression(
         if (p.type != null) {
           type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
         } else if (i < inorderBoundParams.length) {
-          final fType = inorderBoundParams[i].type;
-          if (fType.type != null) {
-            type = fType.type!;
-          }
+          type = inorderBoundParams[i];
         }
         vRep = Variable.of(
           ctx,
@@ -205,8 +194,9 @@ Variable compileFunctionExpression(
         ),
         _ => null,
       };
+      final boundSignature = bound is FunctionTypeRef ? bound.signature : null;
       final boundReturnType =
-          bound?.functionType?.returnType.type ?? declaredReturnType;
+          boundSignature?.returnType ?? declaredReturnType;
 
       // Block-bodied closures collect the static type of each `return` so the
       // closure's return type can be inferred (`asyncClosureReturnTypes` serves
@@ -331,69 +321,59 @@ Variable compileFunctionExpression(
   // A function literal's own type is never nullable, even when its context
   // type is (for example when assigned to `void Function(int)?`). Reifying
   // the context's nullability would poison every later subtype check.
-  FunctionTypeAnnotation literalParameterType(FormalParameter parameter) {
+  TypeRef literalParameterType(FormalParameter parameter) {
     final annotation = parameter.type;
-    return FunctionTypeAnnotation.type(
-      annotation == null
-          ? CoreTypes.dynamic.ref(ctx)
-          : TypeRef.fromAnnotation(ctx, ctx.library, annotation),
-    );
+    return annotation == null
+        ? CoreTypes.dynamic.ref(ctx)
+        : TypeRef.fromAnnotation(ctx, ctx.library, annotation);
   }
 
-  var closureType = bound?.functionType == null
+  var closureType = bound is! FunctionTypeRef
       ? e.typeParameters == null
-            ? CoreTypes.function
-                  .ref(ctx)
-                  .copyWith(
-                    functionType: EvalFunctionType(
-                      [
-                        for (final p in positional)
-                          if (p.isRequired)
-                            FunctionFormalParameter(
-                              p.name?.lexeme,
-                              literalParameterType(p),
-                              true,
-                            ),
-                      ],
-                      [
-                        for (final p in positional)
-                          if (!p.isRequired)
-                            FunctionFormalParameter(
-                              p.name?.lexeme,
-                              literalParameterType(p),
-                              false,
-                            ),
-                      ],
-                      {
-                        for (final p in sortedNamedArgs)
-                          p.name!.lexeme: FunctionFormalParameter(
-                            p.name!.lexeme,
-                            literalParameterType(p),
-                            p.isRequired,
-                          ),
-                      },
-                      FunctionTypeAnnotation.type(
-                        inferredClosureReturnType ?? CoreTypes.dynamic.ref(ctx),
+            ? FunctionTypeRef(
+                FunctionSignature(
+                  positional: [
+                    for (final p in positional)
+                      if (p.isRequired) literalParameterType(p),
+                    for (final p in positional)
+                      if (!p.isRequired) literalParameterType(p),
+                  ],
+                  requiredPositional: requiredPositionalArgCount,
+                  named: {
+                    for (final p in sortedNamedArgs)
+                      p.name!.lexeme: (
+                        type: literalParameterType(p),
+                        required: p.isRequired,
                       ),
-                      const <FunctionGenericParam>[],
-                    ),
-                  )
+                  },
+                  returnType:
+                      inferredClosureReturnType ?? CoreTypes.dynamic.ref(ctx),
+                ),
+                decl: ctx.types.bySpec(CoreTypes.function),
+              )
             : CoreTypes.function.ref(ctx)
-      : bound!.copyWith(nullable: false);
-  final signature = closureType.functionType;
-  if (signature != null &&
-      inferredClosureReturnType != null &&
-      (signature.returnType.type == null ||
-          signature.returnType.type!.isSpec(CoreTypes.dynamic))) {
-    closureType = closureType.copyWith(
-      functionType: EvalFunctionType(
-        signature.normalParameters,
-        signature.optionalParameters,
-        signature.namedParameters,
-        FunctionTypeAnnotation.type(inferredClosureReturnType),
-        signature.generics,
-      ),
-    );
+      : bound.copyWith(nullable: false);
+  if (closureType is FunctionTypeRef && inferredClosureReturnType != null) {
+    // Replace a placeholder return — `dynamic`, or a type parameter (a
+    // bridge `S Function(E)` gives the closure a param-typed return) —
+    // with the inferred type.
+    final signature = closureType.signature;
+    final shouldInfer =
+        signature.returnType.isSpec(CoreTypes.dynamic) ||
+        signature.returnType.isTypeParameter;
+    if (shouldInfer) {
+      closureType = FunctionTypeRef(
+        FunctionSignature(
+          typeParameters: signature.typeParameters,
+          positional: signature.positional,
+          requiredPositional: signature.requiredPositional,
+          named: signature.named,
+          returnType: inferredClosureReturnType!,
+        ),
+        decl: closureType.decl!,
+        nullable: closureType.nullable,
+      );
+    }
   }
   final positionalDefaults = positional.map(parameterDefault).toList();
   final namedDefaults = sortedNamedArgs.map(parameterDefault).toList();

@@ -66,12 +66,12 @@ Variable compileRecordLiteral(
       return value;
     }
     final bound0 = fieldBound;
-    if (bound0.functionType == null && !bound0.isSpec(CoreTypes.function)) {
+    if (!bound0.isFunctionLike) {
       return value;
     }
     try {
       final call = value.getProperty(ctx, 'call');
-      if (call.type.functionType == null) {
+      if (call.type is! FunctionTypeRef) {
         return value;
       }
       return call.boxIfNeeded(ctx);

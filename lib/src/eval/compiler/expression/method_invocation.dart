@@ -90,7 +90,7 @@ Variable compileMethodInvocation(
 
   if (method.type.isSpec(CoreTypes.dynamic) ||
       method.callingConvention == CallingConvention.dynamic ||
-      (method.type.isSpec(CoreTypes.function) && method.methodOffset == null)) {
+      (method.type.isFunctionLike && method.methodOffset == null)) {
     return _invokeValue(ctx, method, e);
   }
 
@@ -831,7 +831,7 @@ Variable _invokeWithTarget(
         );
       }
     }
-  } else if (L.type.isSpec(CoreTypes.function) && e.methodName.name == 'call') {
+  } else if (L.type.isFunctionLike && e.methodName.name == 'call') {
     // `fn.call(...)`: Function has no declared `call` member; the call is the
     // invocation itself, typed by the callee's own signature.
     return _invokeValue(ctx, L, e);
@@ -1207,12 +1207,9 @@ void _inferBridgeTypeParameters(
       return;
     }
     final genericFunction = formal.gft;
-    final actualFunction = actual.functionType;
+    final actualFunction = actual is FunctionTypeRef ? actual.signature : null;
     if (genericFunction != null && actualFunction != null) {
-      final actualReturn = actualFunction.returnType.type;
-      if (actualReturn != null) {
-        infer(genericFunction.returns.type, actualReturn);
-      }
+      infer(genericFunction.returns.type, actualFunction.returnType);
       return;
     }
     final formalArguments = formal.typeArgs;

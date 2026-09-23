@@ -53,7 +53,7 @@ class Variable {
            ),
        callingConvention =
            callingConvention ??
-           ((type.isSpec(CoreTypes.function) && methodOffset == null)
+           ((type.isFunctionLike && methodOffset == null)
                ? CallingConvention.dynamic
                : CallingConvention.static);
 

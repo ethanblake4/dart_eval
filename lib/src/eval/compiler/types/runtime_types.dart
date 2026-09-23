@@ -1,5 +1,4 @@
 import 'package:dart_eval/dart_eval_bridge.dart' show CoreTypes;
-import 'package:dart_eval/src/eval/compiler/model/function_type.dart';
 import 'package:dart_eval/src/eval/shared/runtime_type_descriptor.dart';
 
 import '../context.dart';
@@ -94,30 +93,33 @@ final class RuntimeTypes {
         ],
       ];
     }
-    final signature = type.functionType;
-    if (signature != null && signature.generics.isEmpty) {
-      TypeRef resolve(FunctionTypeAnnotation annotation) =>
-          annotation.type ?? CoreTypes.dynamic.ref(_ctx);
-      final positional = [
-        ...signature.normalParameters,
-        ...signature.optionalParameters,
-      ];
-      final named = signature.namedParameters.entries.toList()
+    final signature = type is FunctionTypeRef ? type.signature : null;
+    if (signature != null && signature.typeParameters.isEmpty) {
+      final named = signature.named.entries.toList()
         ..sort((a, b) => a.key.compareTo(b.key));
       return [
         idOf(CoreTypes.function.ref(_ctx)),
         type.nullable ? 1 : 0,
         RuntimeTypeDescriptorTag.function,
-        idOf(resolve(signature.returnType)),
-        signature.normalParameters.length,
-        positional.length,
+        idOf(signature.returnType),
+        signature.requiredPositional,
+        signature.positional.length,
         named.length,
-        for (final parameter in positional) idOf(resolve(parameter.type)),
+        for (final parameter in signature.positional) idOf(parameter),
         for (final entry in named) ...[
           _ctx.constantPool.addOrGet(entry.key),
-          entry.value.isRequired ? 1 : 0,
-          idOf(resolve(entry.value.type)),
+          entry.value.required ? 1 : 0,
+          idOf(entry.value.type),
         ],
+      ];
+    }
+    if (type is FunctionTypeRef) {
+      // Generic function types collapse to `Function` at runtime — the old
+      // nominal lookup hit the `Function` declaration because equality was
+      // class-blind; subclass-aware equality needs the same fallthrough.
+      return [
+        idOf(CoreTypes.function.ref(_ctx)),
+        type.nullable ? 1 : 0,
       ];
     }
     return [

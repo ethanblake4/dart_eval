@@ -15,7 +15,7 @@ import '../values/abi.dart';
 
 extension TearOff on Variable {
   Variable tearOff(CompilerContext ctx) {
-    if (!type.isSpec(CoreTypes.function) || methodOffset == null) {
+    if (!type.isFunctionLike || methodOffset == null) {
       throw CompileError('Cannot tear off non-function or unresolved function');
     }
     final offset = methodOffset!;

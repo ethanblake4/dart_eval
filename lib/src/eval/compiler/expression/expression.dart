@@ -33,7 +33,6 @@ import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
-import 'package:dart_eval/dart_eval_bridge.dart';
 
 Variable compileExpression(
   Expression e,
@@ -48,7 +47,7 @@ Variable compileExpression(
     final value = compileIdentifier(e, ctx);
     if (value.name == null &&
         value.methodOffset != null &&
-        value.type.isSpec(CoreTypes.function)) {
+        value.type.isFunctionLike) {
       return value.tearOff(ctx);
     }
     return value;

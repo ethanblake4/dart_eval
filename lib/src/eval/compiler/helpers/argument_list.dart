@@ -79,7 +79,7 @@ Variable coerceArgumentForParameter(
       ? arg0.boxIfNeeded(ctx)
       : arg0.unboxIfNeeded(ctx);
 
-  if (arg0.type.isSpec(CoreTypes.function) &&
+  if (arg0.type.isFunctionLike &&
       arg0.name == null &&
       arg0.methodOffset != null) {
     arg0 = arg0.tearOff(ctx);
@@ -703,7 +703,7 @@ ArgumentListResult compileArgumentListWithDynamic(
 
     final expression = arg.argumentExpression;
     var arg0 = compileExpression(expression, ctx);
-    if (arg0.type.isSpec(CoreTypes.function) &&
+    if (arg0.type.isFunctionLike &&
         arg0.name == null &&
         arg0.methodOffset != null) {
       arg0 = arg0.tearOff(ctx);
@@ -782,7 +782,7 @@ ArgumentListResult compileArgumentListWithBridge(
 
       var arg0 = compileExpression(arg.argumentExpression, ctx, paramType);
       arg0 = arg0.boxIfNeeded(ctx);
-      if (arg0.type.isSpec(CoreTypes.function) &&
+      if (arg0.type.isFunctionLike &&
           arg0.name == null &&
           arg0.methodOffset != null) {
         arg0 = arg0.tearOff(ctx);
@@ -825,7 +825,7 @@ ArgumentListResult compileArgumentListWithBridge(
         ctx,
         paramType,
       ).boxIfNeeded(ctx);
-      if (arg0.type.isSpec(CoreTypes.function) &&
+      if (arg0.type.isFunctionLike &&
           arg0.name == null &&
           arg0.methodOffset != null) {
         arg0 = arg0.tearOff(ctx);

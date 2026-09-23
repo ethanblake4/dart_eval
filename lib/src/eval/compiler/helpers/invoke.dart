@@ -403,7 +403,7 @@ extension Invoke on Variable {
     // The '.call' member on a bare Function-typed receiver can't resolve an
     // instance method; the callee's own signature carries the result type.
     final isBareCall =
-        receiver.type.isSpec(CoreTypes.function) && method == 'call';
+        receiver.type.isFunctionLike && method == 'call';
     final TypeRef returnType;
     if (equality) {
       returnType = boolType;

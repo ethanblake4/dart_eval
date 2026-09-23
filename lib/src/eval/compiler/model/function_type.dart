@@ -3,85 +3,169 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 
-/// Represents either a real [TypeRef] or an unresolved type name e.g. "T"
-class FunctionTypeAnnotation {
-  final TypeRef? type;
-  final String? name;
+/// Builds a [FunctionSignature] from a bridge function definition. Bridge
+/// generic names that are not in scope become [TypeParameterTypeRef]s
+/// owned by the signature itself.
+FunctionSignature functionSignatureFromBridgeFunctionDef(
+  CompilerContext ctx,
+  BridgeFunctionDef def, {
+  Map<String, TypeRef> typeParameters = const {},
+}) {
+  final owner = TypeParameterOwner(
+    TypeParameterOwnerKind.functionTypeAnnotation,
+    -1,
+    '',
+    def.hashCode,
+  );
+  final genericEntries = def.generics.entries.toList();
+  final ownDefs = <TypeParameterDef>[
+    for (final (index, entry) in genericEntries.indexed)
+      TypeParameterDef(owner, index, entry.key),
+  ];
+  for (final (index, entry) in genericEntries.indexed) {
+    final bound = entry.value.$extends;
+    ownDefs[index].bound = bound == null
+        ? null
+        : TypeRef.fromBridgeTypeRef(ctx, bound);
+  }
+  final scope = <String, TypeRef>{
+    ...typeParameters,
+    for (final def0 in ownDefs) def0.name: TypeParameterTypeRef(def0),
+  };
+  // Forward-referenced names outside the declared generics still need a
+  // def — hand out fresh indices beyond the declared range, cached so the
+  // same name maps to the same parameter within this signature.
+  final extraDefs = <String, TypeParameterDef>{};
+  TypeParameterDef extraDef(String name) =>
+      extraDefs[name] ??= TypeParameterDef(
+        owner,
+        ownDefs.length + extraDefs.length,
+        name,
+      );
 
-  const FunctionTypeAnnotation.type(this.type) : name = null;
-
-  const FunctionTypeAnnotation.name(this.name) : type = null;
-
-  factory FunctionTypeAnnotation.fromBridgeAnnotation(
-    CompilerContext ctx,
-    BridgeTypeAnnotation annotation, {
-    Map<String, TypeRef> typeParameters = const {},
-  }) {
+  TypeRef resolve(BridgeTypeAnnotation annotation) {
     final type = annotation.type;
     if (type.ref != null) {
-      final resolved = typeParameters[type.ref];
+      final resolved = scope[type.ref];
       if (resolved != null) {
-        return FunctionTypeAnnotation.type(
-          resolved.copyWith(nullable: annotation.nullable),
-        );
+        return resolved.copyWith(nullable: annotation.nullable);
       }
-      return FunctionTypeAnnotation.name(type.ref!);
+      return TypeParameterTypeRef(extraDef(type.ref!));
+    }
+    return TypeRef.fromBridgeAnnotation(
+      ctx,
+      annotation,
+      typeParameters: scope,
+    );
+  }
+
+  final positional = <TypeRef>[];
+  var requiredPositional = 0;
+  final named = <String, ({TypeRef type, bool required})>{};
+  for (final param in def.params) {
+    final type = resolve(param.type);
+    if (param.optional) {
+      positional.add(type);
     } else {
-      return FunctionTypeAnnotation.type(
-        TypeRef.fromBridgeAnnotation(
-          ctx,
-          annotation,
-          typeParameters: typeParameters,
-        ),
-      );
+      positional.insert(requiredPositional, type);
+      requiredPositional++;
     }
   }
-
-  factory FunctionTypeAnnotation.fromBridgeTypeRef(
-    CompilerContext ctx,
-    BridgeTypeRef ref,
-  ) {
-    return FunctionTypeAnnotation.type(TypeRef.fromBridgeTypeRef(ctx, ref));
+  for (final param in def.namedParams) {
+    named[param.name] = (
+      type: resolve(param.type),
+      required: !param.optional,
+    );
   }
-}
-
-class FunctionFormalParameter {
-  final String? name;
-  final FunctionTypeAnnotation type;
-  final bool isRequired;
-
-  const FunctionFormalParameter(this.name, this.type, this.isRequired);
-}
-
-class FunctionGenericParam {
-  final String name;
-  final FunctionTypeAnnotation? bound;
-
-  const FunctionGenericParam(this.name, {this.bound});
-}
-
-class EvalFunctionType {
-  final List<FunctionFormalParameter> normalParameters;
-  final List<FunctionFormalParameter> optionalParameters;
-  final Map<String, FunctionFormalParameter> namedParameters;
-  final FunctionTypeAnnotation returnType;
-  final List<FunctionGenericParam> generics;
-
-  const EvalFunctionType(
-    this.normalParameters,
-    this.optionalParameters,
-    this.namedParameters,
-    this.returnType,
-    this.generics,
+  return FunctionSignature(
+    typeParameters: ownDefs,
+    positional: positional,
+    requiredPositional: requiredPositional,
+    named: named,
+    returnType: resolve(def.returns),
   );
+}
 
-  factory EvalFunctionType.fromAnnotation(
-    CompilerContext ctx,
-    int library,
-    GenericFunctionType annotation, {
-    Map<String, TypeRef> typeParameters = const {},
-  }) {
-    return EvalFunctionType.fromParts(
+/// Shared builder for a function type from its parts — a
+/// [GenericFunctionType] annotation, or the legacy function-typed formal
+/// parameter syntax `R f<P>(args)` whose parts live on a
+/// [FunctionTypedFormalParameterSuffix]. [owner] keys the type's own
+/// parameters so re-resolving the same source stays canonical.
+FunctionSignature functionSignatureFromParts(
+  CompilerContext ctx,
+  int library, {
+  required TypeAnnotation? returnType,
+  required TypeParameterList? typeParameterList,
+  required FormalParameterList? parameterList,
+  required TypeParameterOwner owner,
+  Map<String, TypeRef> typeParameters = const {},
+}) {
+  // The function type's own type parameters (`Function<A>(A x)`) are
+  // resolvable inside its bounds, parameters, and return type, and shadow
+  // outer type parameters. Bounds resolve in a second pass so F-bounds
+  // (`T extends Foo<T>`) self-reference the already-seeded parameter.
+  final ownParams =
+      typeParameterList?.typeParameters ?? const <TypeParameter>[];
+  final allTypeParams = <String, TypeRef>{...typeParameters};
+  final ownDefs = declareTypeParameters(owner, ownParams, allTypeParams, (
+    bound,
+  ) {
+    return TypeRef.fromAnnotation(
+      ctx,
+      library,
+      bound,
+      typeParameters: allTypeParams,
+    );
+  });
+
+  TypeRef resolve(TypeAnnotation? type) => type == null
+      ? CoreTypes.dynamic.ref(ctx)
+      : TypeRef.fromAnnotation(
+          ctx,
+          library,
+          type,
+          typeParameters: allTypeParams,
+        );
+
+  final parameters =
+      parameterList?.parameters ?? const <FormalParameter>[];
+  final positional = <TypeRef>[
+    for (final parameter in parameters)
+      if (parameter.isPositional && parameter.isRequired)
+        resolve(parameter.type),
+    for (final parameter in parameters)
+      if (parameter.isPositional && !parameter.isRequired)
+        resolve(parameter.type),
+  ];
+  final requiredPositional = parameters
+      .where((p) => p.isPositional && p.isRequired)
+      .length;
+  final named = <String, ({TypeRef type, bool required})>{
+    for (final parameter in parameters)
+      if (parameter.isNamed)
+        parameter.name!.lexeme: (
+          type: resolve(parameter.type),
+          required: parameter.isRequired,
+        ),
+  };
+  return FunctionSignature(
+    typeParameters: ownDefs,
+    positional: positional,
+    requiredPositional: requiredPositional,
+    named: named,
+    returnType: resolve(returnType),
+  );
+}
+
+/// Builds the function type declared by a [GenericFunctionType] annotation.
+FunctionTypeRef functionTypeFromAnnotation(
+  CompilerContext ctx,
+  int library,
+  GenericFunctionType annotation, {
+  Map<String, TypeRef> typeParameters = const {},
+}) {
+  return FunctionTypeRef(
+    functionSignatureFromParts(
       ctx,
       library,
       returnType: annotation.returnType,
@@ -94,170 +178,10 @@ class EvalFunctionType {
         annotation.offset,
       ),
       typeParameters: typeParameters,
-    );
-  }
-
-  /// Shared builder for a function type from its parts — a
-  /// [GenericFunctionType] annotation, or the legacy function-typed formal
-  /// parameter syntax `R f<P>(args)` whose parts live on a
-  /// [FunctionTypedFormalParameterSuffix]. [owner] keys the type's own
-  /// parameters so re-resolving the same source stays canonical.
-  factory EvalFunctionType.fromParts(
-    CompilerContext ctx,
-    int library, {
-    required TypeAnnotation? returnType,
-    required TypeParameterList? typeParameterList,
-    required FormalParameterList? parameterList,
-    required TypeParameterOwner owner,
-    Map<String, TypeRef> typeParameters = const {},
-  }) {
-    // The function type's own type parameters (`Function<A>(A x)`) are
-    // resolvable inside its bounds, parameters, and return type, and shadow
-    // outer type parameters. Bounds resolve in a second pass so F-bounds
-    // (`T extends Foo<T>`) self-reference the already-seeded parameter.
-    final ownParams =
-        typeParameterList?.typeParameters ?? const <TypeParameter>[];
-    final allTypeParams = <String, TypeRef>{...typeParameters};
-    declareTypeParameters(owner, ownParams, allTypeParams, (bound) {
-      return TypeRef.fromAnnotation(
-        ctx,
-        library,
-        bound,
-        typeParameters: allTypeParams,
-      );
-    });
-
-    FunctionTypeAnnotation resolve(TypeAnnotation? type) =>
-        FunctionTypeAnnotation.type(
-          type == null
-              ? CoreTypes.dynamic.ref(ctx)
-              : TypeRef.fromAnnotation(
-                  ctx,
-                  library,
-                  type,
-                  typeParameters: allTypeParams,
-                ),
-        );
-
-    final required = <FunctionFormalParameter>[];
-    final optional = <FunctionFormalParameter>[];
-    final named = <String, FunctionFormalParameter>{};
-    for (final parameter
-        in parameterList?.parameters ?? const <FormalParameter>[]) {
-      final model = FunctionFormalParameter(
-        parameter.name?.lexeme,
-        resolve(parameter.type),
-        parameter.isRequired,
-      );
-      if (parameter.isNamed) {
-        named[parameter.name!.lexeme] = model;
-      } else if (parameter.isRequired) {
-        required.add(model);
-      } else {
-        optional.add(model);
-      }
-    }
-    final generics = [
-      for (final parameter in ownParams)
-        FunctionGenericParam(
-          parameter.name.lexeme,
-          bound: parameter.bound == null ? null : resolve(parameter.bound),
-        ),
-    ];
-    return EvalFunctionType(
-      required,
-      optional,
-      named,
-      resolve(returnType),
-      generics,
-    );
-  }
-
-  String semanticKey() {
-    String annotation(FunctionTypeAnnotation value) => value.type == null
-        ? 'name:${value.name}'
-        : 'type:${value.type!.semanticKey}';
-    // Positional parameter names aren't part of the type (`typedef void
-    // F3(int x)` equals `void Function(int)`); named parameters are already
-    // keyed by name through the map entry.
-    String parameter(FunctionFormalParameter value) =>
-        '${value.isRequired ? 1 : 0}:${annotation(value.type)}';
-    final named = namedParameters.entries.toList()
-      ..sort((a, b) => a.key.compareTo(b.key));
-    return '(${normalParameters.map(parameter).join(',')})'
-        '[${optionalParameters.map(parameter).join(',')}]'
-        '{${named.map((entry) => '${entry.key}=${parameter(entry.value)}').join(',')}}'
-        '->${annotation(returnType)}'
-        '<${generics.map((value) => value.name).join(',')}>';
-  }
-
-  factory EvalFunctionType.fromBridgeFunctionDef(
-    CompilerContext ctx,
-    BridgeFunctionDef def, {
-    Map<String, TypeRef> typeParameters = const {},
-  }) {
-    final fReturnType = FunctionTypeAnnotation.fromBridgeAnnotation(
-      ctx,
-      def.returns,
-      typeParameters: typeParameters,
-    );
-
-    final fNormalParameters = <FunctionFormalParameter>[];
-    final fOptionalParameters = <FunctionFormalParameter>[];
-    final fNamedParameters = <String, FunctionFormalParameter>{};
-
-    for (final param in def.params) {
-      final fType = FunctionTypeAnnotation.fromBridgeAnnotation(
-        ctx,
-        param.type,
-        typeParameters: typeParameters,
-      );
-      final fParam = FunctionFormalParameter(
-        param.name,
-        fType,
-        !param.optional,
-      );
-      if (param.optional) {
-        fOptionalParameters.add(fParam);
-      } else {
-        fNormalParameters.add(fParam);
-      }
-    }
-
-    for (final param in def.namedParams) {
-      final fType = FunctionTypeAnnotation.fromBridgeAnnotation(
-        ctx,
-        param.type,
-        typeParameters: typeParameters,
-      );
-      final fParam = FunctionFormalParameter(
-        param.name,
-        fType,
-        !param.optional,
-      );
-      fNamedParameters[param.name] = fParam;
-    }
-
-    final fGenerics = def.generics.entries.map(
-      (entry) => FunctionGenericParam(
-        entry.key,
-        bound: entry.value.$extends != null
-            ? FunctionTypeAnnotation.fromBridgeTypeRef(
-                ctx,
-                entry.value.$extends!,
-              )
-            : null,
-      ),
-    );
-
-    return EvalFunctionType(
-      fNormalParameters,
-      fOptionalParameters,
-      fNamedParameters,
-      fReturnType,
-      fGenerics.toList(),
-    );
-  }
+    ),
+    decl: ctx.types.bySpec(CoreTypes.function),
+    nullable: annotation.question != null,
+  );
 }
 
 /// Builds the structural callable type declared by a function or method.
@@ -288,43 +212,38 @@ TypeRef declaredFunctionType(
   }
 
   final all = parameters?.parameters ?? const <FormalParameter>[];
-  final positional = all.where((parameter) => parameter.isPositional);
-  final named = all.where((parameter) => parameter.isNamed);
-  FunctionFormalParameter model(FormalParameter parameter) =>
-      FunctionFormalParameter(
-        parameter.name?.lexeme,
-        FunctionTypeAnnotation.type(parameterType(parameter)),
-        parameter.isRequired,
-      );
-  return CoreTypes.function
-      .ref(ctx)
-      .copyWith(
-        functionType: EvalFunctionType(
-          [
-            for (final parameter in positional)
-              if (parameter.isRequired) model(parameter),
-          ],
-          [
-            for (final parameter in positional)
-              if (!parameter.isRequired) model(parameter),
-          ],
-          {
-            for (final parameter in named)
-              parameter.name!.lexeme: model(parameter),
-          },
-          FunctionTypeAnnotation.type(
-            returnType == null
-                ? CoreTypes.dynamic.ref(ctx)
-                : TypeRef.fromAnnotation(
-                    ctx,
-                    library,
-                    returnType,
-                    typeParameters: memberTypeParameters,
-                  ),
-          ),
-          const [],
-        ),
-      );
+  return FunctionTypeRef(
+    FunctionSignature(
+      positional: [
+        for (final parameter in all)
+          if (parameter.isPositional && parameter.isRequired)
+            parameterType(parameter),
+        for (final parameter in all)
+          if (parameter.isPositional && !parameter.isRequired)
+            parameterType(parameter),
+      ],
+      requiredPositional: all
+          .where((p) => p.isPositional && p.isRequired)
+          .length,
+      named: {
+        for (final parameter in all)
+          if (parameter.isNamed)
+            parameter.name!.lexeme: (
+              type: parameterType(parameter),
+              required: parameter.isRequired,
+            ),
+      },
+      returnType: returnType == null
+          ? CoreTypes.dynamic.ref(ctx)
+          : TypeRef.fromAnnotation(
+              ctx,
+              library,
+              returnType,
+              typeParameters: memberTypeParameters,
+            ),
+    ),
+    decl: ctx.types.bySpec(CoreTypes.function),
+  );
 }
 
 /// The declared type of a formal parameter's type annotation. Legacy
@@ -349,23 +268,22 @@ TypeRef formalParameterAnnotationType(
       typeParameters: typeParameters,
     );
   }
-  return CoreTypes.function
-      .ref(ctx)
-      .copyWith(
-        functionType: EvalFunctionType.fromParts(
-          ctx,
-          library,
-          returnType: annotation,
-          typeParameterList: suffix.typeParameters,
-          parameterList: suffix.formalParameters,
-          owner: TypeParameterOwner(
-            TypeParameterOwnerKind.functionTypedParameter,
-            library,
-            '',
-            suffix.offset,
-          ),
-          typeParameters: typeParameters,
-        ),
-        nullable: suffix.question != null,
-      );
+  return FunctionTypeRef(
+    functionSignatureFromParts(
+      ctx,
+      library,
+      returnType: annotation,
+      typeParameterList: suffix.typeParameters,
+      parameterList: suffix.formalParameters,
+      owner: TypeParameterOwner(
+        TypeParameterOwnerKind.functionTypedParameter,
+        library,
+        '',
+        suffix.offset,
+      ),
+      typeParameters: typeParameters,
+    ),
+    decl: ctx.types.bySpec(CoreTypes.function),
+    nullable: suffix.question != null,
+  );
 }

@@ -6,6 +6,7 @@ import 'package:dart_eval/src/eval/compiler/model/function_type.dart';
 
 import 'context.dart';
 import 'errors.dart';
+import 'types/function_type.dart';
 import 'types/record_type.dart';
 import 'types/substitution.dart';
 import 'types/type_decl.dart';
@@ -18,6 +19,7 @@ export 'types/runtime_types.dart';
 export 'types/type_scope.dart';
 export 'types/type_parameter.dart';
 export 'types/record_type.dart';
+export 'types/function_type.dart';
 
 /// The action required to assign a value to a typed slot.
 enum AssignmentConversion {
@@ -45,7 +47,6 @@ class TypeRef {
     this.decl,
     this.specifiedTypeArgs = const [],
     this.recordFields = const [],
-    this.functionType,
     this.typeParameterOwner,
     this.typeParameterIndex,
     this.parameter,
@@ -61,7 +62,6 @@ class TypeRef {
   final TypeDecl? decl;
   final List<TypeRef> specifiedTypeArgs;
   final List<RecordParameterType> recordFields;
-  final EvalFunctionType? functionType;
   final String? typeParameterOwner;
   final int? typeParameterIndex;
 
@@ -91,17 +91,12 @@ class TypeRef {
     Map<String, TypeRef> typeParameters = const {},
   }) {
     if (typeAnnotation is GenericFunctionType) {
-      return CoreTypes.function
-          .ref(ctx)
-          .copyWith(
-            functionType: EvalFunctionType.fromAnnotation(
-              ctx,
-              library,
-              typeAnnotation,
-              typeParameters: typeParameters,
-            ),
-            nullable: typeAnnotation.question != null,
-          );
+      return functionTypeFromAnnotation(
+        ctx,
+        library,
+        typeAnnotation,
+        typeParameters: typeParameters,
+      );
     }
     if (typeAnnotation is RecordTypeAnnotation) {
       final positional = <TypeRef>[
@@ -308,15 +303,14 @@ class TypeRef {
     }
     final gft = typeReference.gft;
     if (gft != null) {
-      return CoreTypes.function
-          .ref(ctx)
-          .copyWith(
-            functionType: EvalFunctionType.fromBridgeFunctionDef(
-              ctx,
-              gft,
-              typeParameters: typeParameters,
-            ),
-          );
+      return FunctionTypeRef(
+        functionSignatureFromBridgeFunctionDef(
+          ctx,
+          gft,
+          typeParameters: typeParameters,
+        ),
+        decl: ctx.types.bySpec(CoreTypes.function),
+      );
     }
     throw CompileError(
       'No support for looking up types by other bridge annotation types',
@@ -625,11 +619,13 @@ class TypeRef {
     }
   }
 
-  String get semanticKey =>
-      '${isTypeParameter ? 'parameter:$typeParameterOwner:$typeParameterIndex' : '$file:$name'}${nullable ? '?' : ''}'
-      '${specifiedTypeArgs.isEmpty ? '' : '<${specifiedTypeArgs.map((type) => type.semanticKey).join(',')}>'}'
-      '${recordFields.isEmpty ? '' : ':record:${recordFields.map((field) => '${field.isNamed ? 'n' : 'p'}:${field.name}:${field.type.semanticKey}').join(',')}'}'
-      '${functionType == null ? '' : ':fn:${functionType!.semanticKey()}'}';
+  String get semanticKey {
+    final self = this;
+    return '${isTypeParameter ? 'parameter:$typeParameterOwner:$typeParameterIndex' : '$file:$name'}${nullable ? '?' : ''}'
+        '${specifiedTypeArgs.isEmpty ? '' : '<${specifiedTypeArgs.map((type) => type.semanticKey).join(',')}>'}'
+        '${recordFields.isEmpty ? '' : ':record:${recordFields.map((field) => '${field.isNamed ? 'n' : 'p'}:${field.name}:${field.type.semanticKey}').join(',')}'}'
+        '${self is FunctionTypeRef ? ':fn:${self.signature.semanticKey()}' : ''}';
+  }
 
   /// The canonical `@record` type name for [fields]: positionals in order,
   /// then named fields sorted by name — the single identity shared by every
@@ -688,6 +684,18 @@ class TypeRef {
   /// Records have no declaration — the canonical `@record` name is the only
   /// identity ([recordFields] may be empty for the `()` record).
   bool get isRecord => this is RecordTypeRef;
+
+  /// An interface `Function` type with no resolved signature — a bare
+  /// `Function` annotation or a generic callable whose signature wasn't
+  /// lowered. Distinct from [isFunctionLike], which also covers
+  /// [FunctionTypeRef]s.
+  bool get isBareFunction =>
+      isSpec(CoreTypes.function) && this is! FunctionTypeRef;
+
+  /// Anything callable-as-`Function`: a bare `Function` interface type or
+  /// a structural [FunctionTypeRef].
+  bool get isFunctionLike =>
+      isSpec(CoreTypes.function) || this is FunctionTypeRef;
 
   /// Whether every value of this type reports exactly this runtime type:
   /// leaf classes that cannot be subclassed (`int`, `double`, `bool`,
@@ -755,10 +763,11 @@ class TypeRef {
         return false;
       }
     }
-    // Function types are currently represented by their analyzer model. Do not
-    // accidentally equate a structural function type with plain Function.
-    return left.functionType?.semanticKey() ==
-        right.functionType?.semanticKey();
+    // Function types are compared by signature; a structural function type
+    // never equals plain `Function`.
+    final leftSignature = left is FunctionTypeRef ? left.signature : null;
+    final rightSignature = right is FunctionTypeRef ? right.signature : null;
+    return leftSignature?.semanticKey() == rightSignature?.semanticKey();
   }
 
   /// Classifies Dart assignment compatibility of a [this] value into a
@@ -796,7 +805,6 @@ class TypeRef {
     TypeDecl? decl,
     List<TypeRef>? specifiedTypeArgs,
     List<RecordParameterType>? recordFields,
-    EvalFunctionType? functionType,
     String? typeParameterOwner,
     int? typeParameterIndex,
     TypeParameterDef? parameter,
@@ -811,12 +819,18 @@ class TypeRef {
         nullable: nullable ?? self.nullable,
       );
     }
+    if (self is FunctionTypeRef) {
+      return FunctionTypeRef(
+        self.signature,
+        decl: self.decl!,
+        nullable: nullable ?? self.nullable,
+      );
+    }
     return TypeRef(
       file ?? this.file,
       name ?? this.name,
       decl: decl ?? this.decl,
       specifiedTypeArgs: specifiedTypeArgs ?? this.specifiedTypeArgs,
-      functionType: functionType ?? this.functionType,
       typeParameterOwner: typeParameterOwner ?? this.typeParameterOwner,
       typeParameterIndex: typeParameterIndex ?? this.typeParameterIndex,
       parameter: parameter ?? this.parameter,
@@ -846,26 +860,9 @@ class TypeRef {
     }
     if (specifiedTypeArgs.isEmpty &&
         recordFields.isEmpty &&
-        functionType == null) {
+        this is! FunctionTypeRef) {
       return this;
     }
-
-    FunctionTypeAnnotation substituteAnnotation(FunctionTypeAnnotation value) {
-      final type = value.type;
-      return type == null
-          ? value
-          : FunctionTypeAnnotation.type(
-              type.substituteTypeParameters(substitutions),
-            );
-    }
-
-    FunctionFormalParameter substituteParameter(
-      FunctionFormalParameter value,
-    ) => FunctionFormalParameter(
-      value.name,
-      substituteAnnotation(value.type),
-      value.isRequired,
-    );
 
     final self = this;
     if (self is RecordTypeRef) {
@@ -881,7 +878,33 @@ class TypeRef {
         nullable: self.nullable,
       );
     }
-    final signature = functionType;
+    if (self is FunctionTypeRef) {
+      // The signature's own type parameters are not substituted; refs to
+      // them simply miss the outer substitution map.
+      final signature = self.signature;
+      return FunctionTypeRef(
+        FunctionSignature(
+          typeParameters: signature.typeParameters,
+          positional: [
+            for (final type in signature.positional)
+              type.substituteTypeParameters(substitutions),
+          ],
+          requiredPositional: signature.requiredPositional,
+          named: {
+            for (final entry in signature.named.entries)
+              entry.key: (
+                type: entry.value.type.substituteTypeParameters(substitutions),
+                required: entry.value.required,
+              ),
+          },
+          returnType: signature.returnType.substituteTypeParameters(
+            substitutions,
+          ),
+        ),
+        decl: self.decl!,
+        nullable: self.nullable,
+      );
+    }
     return copyWith(
       specifiedTypeArgs: [
         for (final argument in specifiedTypeArgs)
@@ -895,32 +918,6 @@ class TypeRef {
             field.isNamed,
           ),
       ],
-      functionType: signature == null
-          ? null
-          : EvalFunctionType(
-              [
-                for (final parameter in signature.normalParameters)
-                  substituteParameter(parameter),
-              ],
-              [
-                for (final parameter in signature.optionalParameters)
-                  substituteParameter(parameter),
-              ],
-              {
-                for (final entry in signature.namedParameters.entries)
-                  entry.key: substituteParameter(entry.value),
-              },
-              substituteAnnotation(signature.returnType),
-              [
-                for (final generic in signature.generics)
-                  FunctionGenericParam(
-                    generic.name,
-                    bound: generic.bound == null
-                        ? null
-                        : substituteAnnotation(generic.bound!),
-                  ),
-              ],
-            ),
     );
   }
 
@@ -1675,38 +1672,33 @@ TypeRef _resolveTypeAlias(
             alias.type,
             typeParameters: bindings,
           )
-        : CoreTypes.function
-              .ref(ctx)
-              .copyWith(
-                functionType: EvalFunctionType.fromAnnotation(
-                  ctx,
-                  declLibrary,
-                  functionType,
-                  typeParameters: bindings,
-                ),
-              );
+        : functionTypeFromAnnotation(
+            ctx,
+            declLibrary,
+            functionType,
+            typeParameters: bindings,
+          );
   } else if (alias is FunctionTypeAlias) {
     // Legacy `typedef R f(P...)` syntax declares the signature inline. The
     // alias's parameters become the signature's own generics only under
     // [rawParams] (downward inference); otherwise [bindings] instantiate
     // them so the result is a plain function type.
-    target = CoreTypes.function
-        .ref(ctx)
-        .copyWith(
-          functionType: EvalFunctionType.fromParts(
-            ctx,
-            declLibrary,
-            returnType: alias.returnType,
-            typeParameterList: rawParams ? alias.typeParameters : null,
-            parameterList: alias.parameters,
-            owner: TypeParameterOwner(
-              TypeParameterOwnerKind.typeAlias,
-              declLibrary,
-              alias.name.lexeme,
-            ),
-            typeParameters: bindings,
-          ),
-        );
+    target = FunctionTypeRef(
+      functionSignatureFromParts(
+        ctx,
+        declLibrary,
+        returnType: alias.returnType,
+        typeParameterList: rawParams ? alias.typeParameters : null,
+        parameterList: alias.parameters,
+        owner: TypeParameterOwner(
+          TypeParameterOwnerKind.typeAlias,
+          declLibrary,
+          alias.name.lexeme,
+        ),
+        typeParameters: bindings,
+      ),
+      decl: ctx.types.bySpec(CoreTypes.function),
+    );
   } else {
     target = CoreTypes.function.ref(ctx);
   }

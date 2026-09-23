@@ -36,7 +36,6 @@ import '../errors.dart';
 import '../type.dart';
 import 'package:dart_eval/dart_eval_bridge.dart' show CoreTypes;
 import '../context.dart';
-import '../model/function_type.dart';
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'representation.dart';
 import 'primitive_optimization.dart';
@@ -811,8 +810,8 @@ class TypedBackend {
     List<FormalParameter> parameters,
     List<TypeRef> parameterTypes,
   ) {
-    final function = signature.functionType;
-    if (function == null) return signature;
+    if (signature is! FunctionTypeRef) return signature;
+    final function = signature.signature;
     final positional = <int>{};
     final named = <String>{};
     _markCovariantParameters(parameters, parameterTypes, positional, named);
@@ -834,32 +833,25 @@ class TypedBackend {
     }
     if (positional.isEmpty && named.isEmpty) return signature;
     final object = CoreTypes.object.ref(context).copyWith(nullable: true);
-    FunctionFormalParameter erased(FunctionFormalParameter p) =>
-        FunctionFormalParameter(
-          p.name,
-          FunctionTypeAnnotation.type(object),
-          p.isRequired,
-        );
     var index = 0;
-    final positionalParameters = [
-      for (final p in function.normalParameters)
-        positional.contains(index++) ? erased(p) : p,
-      for (final p in function.optionalParameters)
-        positional.contains(index++) ? erased(p) : p,
-    ];
-    return signature.copyWith(
-      functionType: EvalFunctionType(
-        positionalParameters.sublist(0, function.normalParameters.length),
-        positionalParameters.sublist(function.normalParameters.length),
-        {
-          for (final entry in function.namedParameters.entries)
+    return FunctionTypeRef(
+      FunctionSignature(
+        typeParameters: function.typeParameters,
+        positional: [
+          for (final type in function.positional)
+            positional.contains(index++) ? object : type,
+        ],
+        requiredPositional: function.requiredPositional,
+        named: {
+          for (final entry in function.named.entries)
             entry.key: named.contains(entry.key)
-                ? erased(entry.value)
+                ? (type: object, required: entry.value.required)
                 : entry.value,
         },
-        function.returnType,
-        function.generics,
+        returnType: function.returnType,
       ),
+      decl: signature.decl!,
+      nullable: signature.nullable,
     );
   }
 
@@ -944,20 +936,15 @@ class TypedBackend {
             type.named.values.any(_hasClassTypeParameter))) {
       return true;
     }
-    final function = type.functionType;
-    if (function == null) return false;
+    if (type is! FunctionTypeRef) return false;
+    final function = type.signature;
     if ([
-      ...function.normalParameters,
-      ...function.optionalParameters,
-      ...function.namedParameters.values,
-    ].any((p) {
-      final annotation = p.type.type;
-      return annotation != null && _hasClassTypeParameter(annotation);
-    })) {
+      ...function.positional,
+      for (final parameter in function.named.values) parameter.type,
+    ].any(_hasClassTypeParameter)) {
       return true;
     }
-    final returnType = function.returnType.type;
-    return returnType != null && _hasClassTypeParameter(returnType);
+    return _hasClassTypeParameter(function.returnType);
   }
 }
 
