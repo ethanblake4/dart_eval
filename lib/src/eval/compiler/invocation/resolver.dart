@@ -470,20 +470,39 @@ final class CallResolver {
       argsPair = ArgumentBinder(ctx).bindDynamicVector( e.argumentList, before: [L]);
     } else {
       final dec = dec0!.declaration!;
-      final result = ArgumentBinder(ctx).bindDeclaration(
-        dec0.sourceLib,
-        dec,
-        e.argumentList,
-        before: [if (!isStatic) L],
-        typeArguments: e.typeArguments,
-        source: e,
-        seedGenerics: !isStatic && dec is MethodDeclaration
-            ? classTypeArguments(ctx, L.type, dec0.sourceLib, dec)
-            : const {},
-        returnContext: bound,
-      );
-      argsPair = result;
-      mReturnType = result.declaredReturn;
+      // Instance calls bind supplied arguments only (`calleeBinds`): the
+      // runtime binds names and defaults for evaluated methods. Refinement
+      // runs first — a devirtualized StaticCall still needs the declared
+      // vector.
+      final refined = isStatic
+          ? null
+          : Devirtualizer(ctx).refine(
+              VirtualCall(
+                receiver: L,
+                name: e.methodName.name,
+                isSuperReceiver: e.target is SuperExpression,
+              ),
+            );
+      if (refined is VirtualCall) {
+        argsPair = ArgumentBinder(
+          ctx,
+        ).bindSuppliedOnly(refined, callSite(), callee: null);
+      } else {
+        final result = ArgumentBinder(ctx).bindDeclaration(
+          dec0.sourceLib,
+          dec,
+          e.argumentList,
+          before: [if (!isStatic) L],
+          typeArguments: e.typeArguments,
+          source: e,
+          seedGenerics: !isStatic && dec is MethodDeclaration
+              ? classTypeArguments(ctx, L.type, dec0.sourceLib, dec)
+              : const {},
+          returnContext: bound,
+        );
+        argsPair = result;
+        mReturnType = result.declaredReturn;
+      }
     }
 
     final argTypes = argsPair.positionalValues.map((e) => e.type).toList();
@@ -579,14 +598,15 @@ final class CallResolver {
         name: e.methodName.name,
       ).emit(ctx, boundCall);
     }
-    final target = Devirtualizer(ctx).refine(
-      VirtualCall(
-        receiver: L,
-        name: e.methodName.name,
-        isSuperReceiver: e.target is SuperExpression,
-      ),
-    );
-    return target.emit(ctx, boundCall);
+    return Devirtualizer(ctx)
+        .refine(
+          VirtualCall(
+            receiver: L,
+            name: e.methodName.name,
+            isSuperReceiver: e.target is SuperExpression,
+          ),
+        )
+        .emit(ctx, boundCall);
   }
 
   /// `a + b`, `a[i]`, `!x`, `a == b`, `it.moveNext()` — the operator and
