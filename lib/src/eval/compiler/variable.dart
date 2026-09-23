@@ -16,6 +16,7 @@ import 'package:dart_eval/src/eval/compiler/expression/identifier.dart'
 import 'package:dart_eval/src/eval/compiler/model/function_type.dart'
     show declaredFunctionType;
 import 'package:dart_eval/src/eval/compiler/type.dart';
+import 'package:dart_eval/src/eval/compiler/variable/value_facts.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
 import 'package:dart_eval/src/eval/ir/primitives.dart';
 import 'package:dart_eval/src/eval/ir/types.dart';
@@ -37,10 +38,11 @@ class Variable {
     this.methodOffset,
     this.methodReturnType,
     this.isFinal = false,
-    this.concreteTypes = const [],
-    this.exactType,
-    this.isConstInt = false,
-    this.isConst = false,
+    List<TypeRef> concreteTypes = const [],
+    TypeRef? exactType,
+    bool isConstInt = false,
+    bool isConst = false,
+    ValueFacts? facts,
     CallingConvention? callingConvention,
   }) : type = type,
        declaredType = declaredType ?? type,
@@ -52,11 +54,28 @@ class Variable {
              type,
              representation ?? rep?.bank ?? representationForType(type),
            ),
+       facts =
+           facts ??
+           ValueFacts(
+             exact: exactType,
+             possibleClasses: concreteTypes,
+             isConst: isConst,
+             isConstInt: isConstInt,
+           ),
        callingConvention =
            callingConvention ??
            ((type.isFunctionLike && methodOffset == null)
                ? CallingConvention.dynamic
-               : CallingConvention.static);
+               : CallingConvention.static) {
+    assert(
+      facts == null ||
+          (concreteTypes.isEmpty &&
+              exactType == null &&
+              !isConst &&
+              !isConstInt),
+      'pass facts or the legacy fact fields, not both',
+    );
+  }
 
   factory Variable.ssa(
     CompilerContext ctx,
@@ -72,6 +91,7 @@ class Variable {
     TypeRef? exactType,
     bool isConstInt = false,
     bool isConst = false,
+    ValueFacts? facts,
     CallingConvention callingConvention = CallingConvention.static,
   }) {
     ctx.pushOp(op);
@@ -87,6 +107,7 @@ class Variable {
       exactType: exactType,
       isConstInt: isConstInt,
       isConst: isConst,
+      facts: facts,
       callingConvention: callingConvention,
     )..name = op.writesTo!.name;
   }
@@ -105,6 +126,7 @@ class Variable {
     TypeRef? exactType,
     bool isConstInt = false,
     bool isConst = false,
+    ValueFacts? facts,
     CallingConvention callingConvention = CallingConvention.static,
   }) {
     return Variable(
@@ -119,6 +141,7 @@ class Variable {
       exactType: exactType,
       isConstInt: isConstInt,
       isConst: isConst,
+      facts: facts,
       callingConvention: callingConvention,
     )..name = ssa.name;
   }
@@ -135,28 +158,30 @@ class Variable {
   /// Which value representation the SSA slot holds. Owns the boxing
   /// decision that used to live on `TypeRef.boxed`.
   final ValueRep rep;
-  final List<TypeRef> concreteTypes;
+  /// Compile-time facts known about this value: provable runtime types
+  /// ([ValueFacts.exact], [ValueFacts.possibleClasses]) and constness.
+  /// Mutable: reassignment replaces (not merges) the allocation proofs.
+  ValueFacts facts;
 
-  /// The exact runtime type of the value, when it is provably exactly this
-  /// type (set at allocation sites: literals, constructor calls). Unlike
-  /// [concreteTypes], an exact type can never be a subclass instance, so it
-  /// justifies devirtualization even for classes that are subclassed.
-  /// Not final: reassignment must replace (not merge) the allocation type.
-  TypeRef? exactType;
+  /// The possible runtime classes of the value; empty means unknown.
+  List<TypeRef> get concreteTypes => facts.possibleClasses;
 
-  /// Whether this value is an integer literal or compile-time constant int
-  /// expression. Dart's `int → double` coercion applies only to such
-  /// expressions (`double d = 5`), never to int-typed variables. Not carried
-  /// by [copyWith]/[widened], so it is dropped as soon as the value is bound
-  /// or transformed.
-  final bool isConstInt;
+  /// The exact runtime type of the value, when provable — an exact type
+  /// can never be a subclass instance, so it justifies devirtualization
+  /// even for classes that are subclassed.
+  TypeRef? get exactType => facts.exact;
+  set exactType(TypeRef? v) => facts = facts.copyWith(exact: v);
 
-  /// Whether this value is the result of a compile-time-constant
-  /// expression — a literal or a `const`-declared binding. Used to
-  /// recognize potentially-constant subexpressions (e.g. a string
-  /// interpolation whose operands are all consts, which the host VM
-  /// canonicalizes even outside a `const` context).
-  final bool isConst;
+  /// For a `Type`-typed value, the type it denotes.
+  TypeRef? get denotedType => facts.denotedType;
+
+  /// Whether this value is a compile-time-constant int expression —
+  /// enables the `int → double` literal coercion. Dropped as soon as the
+  /// value is bound or transformed.
+  bool get isConstInt => facts.isConstInt;
+
+  /// Whether this value is a compile-time-constant expression.
+  bool get isConst => facts.isConst;
   final DeferredOrOffset? methodOffset;
   final ReturnType? methodReturnType;
   final bool isFinal;
@@ -183,6 +208,7 @@ class Variable {
         representation: representation,
         rep: rep,
         isFinal: isFinal,
+        facts: facts.cleared(),
         callingConvention: callingConvention,
       )
       ..name = name
@@ -201,18 +227,14 @@ class Variable {
   /// unknown); method tear-off info is dropped when it differs. Returns
   /// `this` when every edge holds this same variable.
   Variable joinedWith(Iterable<Variable> incoming) {
-    var exact = exactType;
-    var concrete = concreteTypes;
+    var merged = facts;
     var mOffset = methodOffset;
     var mReturn = methodReturnType;
     var changed = false;
     for (final other in incoming) {
       if (identical(other, this)) continue;
       changed = true;
-      if (other.exactType != exact) exact = null;
-      concrete = concrete.isEmpty || other.concreteTypes.isEmpty
-          ? const []
-          : {...concrete, ...other.concreteTypes}.toList();
+      merged = merged.join(other.facts);
       if (other.methodOffset != mOffset || other.methodReturnType != mReturn) {
         mOffset = null;
         mReturn = null;
@@ -227,8 +249,7 @@ class Variable {
         methodOffset: mOffset,
         methodReturnType: mReturn,
         isFinal: isFinal,
-        concreteTypes: concrete,
-        exactType: exact,
+        facts: merged,
         callingConvention: callingConvention,
       )
       ..name = name
@@ -309,8 +330,7 @@ class Variable {
         type,
         rep: target,
         methodReturnType: methodReturnType,
-        concreteTypes: concreteTypes,
-        exactType: exactType,
+        facts: facts.copyWith(isConst: false, isConstInt: false),
       );
     }
     final dest = into ?? ssa;
@@ -328,8 +348,7 @@ class Variable {
       rep: target,
       declaredType: declaredType,
       methodReturnType: methodReturnType,
-      concreteTypes: concreteTypes,
-      exactType: exactType,
+      facts: facts.copyWith(isConst: false, isConstInt: false),
     );
   }
 
@@ -403,8 +422,7 @@ class Variable {
         Assign(ctx.svar('box_copy'), ssa),
         type,
         methodReturnType: methodReturnType,
-        concreteTypes: concreteTypes,
-        exactType: exactType,
+        facts: facts.copyWith(isConst: false, isConstInt: false),
       );
     }
     if (rep == ValueRep.nativeObject &&
@@ -456,8 +474,7 @@ class Variable {
       type,
       rep: rep,
       methodReturnType: methodReturnType,
-      concreteTypes: concreteTypes,
-      exactType: exactType,
+      facts: facts.copyWith(isConst: false, isConstInt: false),
     );
   }
 
@@ -467,6 +484,9 @@ class Variable {
   Variable withType(TypeRef type, {ValueRep? rep}) {
     return copyWith(type: type, rep: rep ?? this.rep);
   }
+
+  /// Returns a copy of this variable carrying [facts] instead of its own.
+  Variable withFacts(ValueFacts facts) => copyWith(facts: facts);
 
   /// Returns a variable with the same name from the context locals.
   /// Iterates over all frames and returns the first found one.
@@ -490,8 +510,18 @@ class Variable {
     int? frameIndex,
     List<TypeRef>? concreteTypes,
     TypeRef? exactType,
+    ValueFacts? facts,
     CallingConvention? callingConvention,
   }) {
+    final newFacts = facts ??
+        this.facts.copyWith(
+          possibleClasses: concreteTypes,
+          exact: exactType,
+          isConst: isConst,
+          // The literal-int marker only applies to the literal expression
+          // itself; any copy drops it.
+          isConstInt: false,
+        );
     return Variable(
         type ?? this.type,
         declaredType: declaredType ?? this.declaredType,
@@ -499,10 +529,8 @@ class Variable {
         rep: rep ?? this.rep,
         methodOffset: methodOffset ?? this.methodOffset,
         isFinal: isFinal ?? this.isFinal,
-        isConst: isConst ?? this.isConst,
         methodReturnType: methodReturnType ?? this.methodReturnType,
-        concreteTypes: concreteTypes ?? this.concreteTypes,
-        exactType: exactType ?? this.exactType,
+        facts: newFacts,
         callingConvention: callingConvention ?? this.callingConvention,
       )
       ..name = name ?? this.name
@@ -528,6 +556,7 @@ class Variable {
     String? name,
     int? frameIndex,
     List<TypeRef>? concreteTypes,
+    ValueFacts? facts,
   }) {
     var uV = copyWith(
       type: type,
@@ -539,6 +568,7 @@ class Variable {
       name: name,
       frameIndex: frameIndex,
       concreteTypes: concreteTypes,
+      facts: facts,
     );
 
     if (uV.localName != null && uV.frameIndex != null && ctx != null) {
