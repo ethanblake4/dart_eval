@@ -1058,7 +1058,7 @@ final class ExtensionNamespaceDenotation extends Denotation {
     // `E` as an expression is the extension's namespace: `E.m(recv, ...)`
     // (explicit application) and `E.staticM(...)` resolve through it. The
     // pseudo-type `E` exists only in the declarations map, never as a class.
-    final extType = TypeRef.unresolved(ext.library, ext.name);
+    final extType = ExtensionNamespaceTypeRef(ext.library, ext.name);
     return Variable(
       CoreTypes.type.ref(ctx),
       concreteTypes: [extType],
@@ -1609,7 +1609,7 @@ Receiver compileReceiver(CompilerContext ctx, Expression target) {
         t.read(ctx, source: target),
       ),
       ExtensionNamespaceDenotation e => TypeLiteralReceiver(
-        TypeRef.unresolved(e.ext.library, e.ext.name),
+        ExtensionNamespaceTypeRef(e.ext.library, e.ext.name),
         e.read(ctx, source: target),
       ),
       _ => ValueReceiver(denotation.read(ctx, source: target)),
@@ -1628,7 +1628,7 @@ Receiver compileReceiver(CompilerContext ctx, Expression target) {
         t.read(ctx, source: target),
       ),
       ExtensionNamespaceDenotation e => TypeLiteralReceiver(
-        TypeRef.unresolved(e.ext.library, e.ext.name),
+        ExtensionNamespaceTypeRef(e.ext.library, e.ext.name),
         e.read(ctx, source: target),
       ),
       _ => ValueReceiver(denotation.read(ctx, source: target)),

@@ -61,12 +61,6 @@ sealed class TypeRef {
 
   final bool nullable;
 
-  /// A decl-less nominal — the extension namespace pseudo-type and other
-  /// legacy encodings not yet re-homed onto a [TypeDecl]. Interim factory
-  /// for the migration; removed with [_UnresolvedTypeRef].
-  factory TypeRef.unresolved(int file, String name) =>
-      _UnresolvedTypeRef(file, name, nullable: false);
-
   /// Given a set of [TypeRef]s, find their closest common ancestor type.
   factory TypeRef.commonBaseType(CompilerContext ctx, Set<TypeRef> types) =>
       ctx.typeSystem.leastUpperBound(types);
@@ -461,10 +455,11 @@ sealed class TypeRef {
         nullable: nullable ?? self.nullable,
       );
     }
-    return _UnresolvedTypeRef(
-      self.file,
-      self.name,
-      nullable: nullable ?? self.nullable,
+    final unresolved = self as ExtensionNamespaceTypeRef;
+    return ExtensionNamespaceTypeRef(
+      unresolved.library,
+      unresolved.extensionName,
+      nullable: nullable ?? unresolved.nullable,
     );
   }
 
@@ -766,7 +761,16 @@ bool sameDeclaration(TypeRef a, TypeRef b) {
         b is TypeParameterTypeRef &&
         a.parameter == b.parameter;
   }
-  return (a.file == b.file || a.isRecord) && a.name == b.name;
+  final da = a.decl;
+  final db = b.decl;
+  if (da != null && db != null) {
+    return _sameDecl(da, db);
+  }
+  // Decl-less shapes match by canonical name within the same library —
+  // records by shape, extension namespaces by (library, name).
+  return a.runtimeType == b.runtimeType &&
+      a.file == b.file &&
+      a.name == b.name;
 }
 
 bool _listEquals<T>(List<T> a, List<T> b) {
@@ -951,17 +955,27 @@ final class FunctionTypeRef extends TypeRef {
   late final int hashCode = Object.hash(signature, nullable);
 }
 
-/// Interim member of the sealed set: a decl-less nominal — the extension
-/// namespace pseudo-type and legacy encodings still using the grab-bag
-/// fields. Removed once every construction resolves a [TypeDecl].
-final class _UnresolvedTypeRef extends TypeRef {
-  _UnresolvedTypeRef(this.file, this.name, {super.nullable = false});
+/// The pseudo-type of an extension's namespace value — `E` used as an
+/// expression (`E.m(recv)` explicit application, `E.staticM`). Not a value
+/// type: it exists only to route member resolution and equality through
+/// the extension's namespace.
+final class ExtensionNamespaceTypeRef extends TypeRef {
+  ExtensionNamespaceTypeRef(this.library, this.extensionName, {
+    super.nullable = false,
+  });
+
+  /// The library declaring the extension.
+  final int library;
+
+  /// The extension's registration name — synthesized for unnamed
+  /// extensions.
+  final String extensionName;
 
   @override
-  final int file;
+  int get file => library;
 
   @override
-  final String name;
+  String get name => extensionName;
 
   @override
   TypeDecl? get decl => null;
@@ -969,13 +983,13 @@ final class _UnresolvedTypeRef extends TypeRef {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is _UnresolvedTypeRef &&
+      other is ExtensionNamespaceTypeRef &&
           nullable == other.nullable &&
-          file == other.file &&
-          name == other.name;
+          library == other.library &&
+          extensionName == other.extensionName;
 
   @override
-  late final int hashCode = Object.hash(file, name, nullable);
+  late final int hashCode = Object.hash(library, extensionName, nullable);
 }
 
 

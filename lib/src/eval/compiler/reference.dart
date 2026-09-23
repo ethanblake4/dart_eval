@@ -469,7 +469,10 @@ Variable _declarationToVariable(
     // `E` as an expression is the extension's namespace: `E.m(recv, ...)`
     // (explicit application) and `E.staticM(...)` resolve through it. The
     // pseudo-type `E` exists only in the declarations map, never as a class.
-    final extType = TypeRef.unresolved(decOrBridge.sourceLib, declarationName(decl));
+    final extType = ExtensionNamespaceTypeRef(
+      decOrBridge.sourceLib,
+      declarationName(decl),
+    );
     return Variable(
       CoreTypes.type.ref(ctx),
       concreteTypes: [extType],
