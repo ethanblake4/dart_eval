@@ -1255,6 +1255,7 @@ class _LoweringSession {
       callerLibrary,
       typeArguments,
       kind,
+      superDispatch,
     ) = switch (op) {
       objects_ir.InvokeDynamic(
         :final object,
@@ -1264,6 +1265,7 @@ class _LoweringSession {
         :final namedNames,
         :final callerLibrary,
         :final typeArguments,
+        :final superReceiver,
       ) =>
         (
           object,
@@ -1276,11 +1278,13 @@ class _LoweringSession {
               .key,
           typeArguments,
           TypedMemberKind.method,
+          superReceiver,
         ),
       objects_ir.LoadPropertyDynamic(
         :final object,
         :final name,
         :final callerLibrary,
+        :final superReceiver,
       ) =>
         (
           object,
@@ -1295,12 +1299,14 @@ class _LoweringSession {
                     .key,
           const <int>[],
           TypedMemberKind.getter,
+          superReceiver,
         ),
       objects_ir.SetPropertyDynamic(
         :final object,
         :final name,
         :final variable,
         :final callerLibrary,
+        :final superReceiver,
       ) =>
         (
           object,
@@ -1315,6 +1321,7 @@ class _LoweringSession {
                     .key,
           const <int>[],
           TypedMemberKind.setter,
+          superReceiver,
         ),
       _ => throw StateError('Unreachable member operation'),
     };
@@ -1332,7 +1339,8 @@ class _LoweringSession {
           _sameList(site.namedNames, namedNames) &&
           site.callerLibrary == callerLibrary &&
           _sameList(site.typeArguments, typeArguments) &&
-          site.kind == kind,
+          site.kind == kind &&
+          site.superDispatch == superDispatch,
     );
     if (siteIndex < 0) {
       siteIndex = b._callSites.length;
@@ -1345,6 +1353,7 @@ class _LoweringSession {
           callerLibrary: callerLibrary,
           typeArguments: typeArguments,
           kind: kind,
+          superDispatch: superDispatch,
         ),
       );
     }

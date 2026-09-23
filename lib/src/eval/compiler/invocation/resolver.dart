@@ -639,6 +639,7 @@ final class CallResolver {
       return BridgeCall(
         receiver: L,
         name: e.methodName.name,
+        isSuperReceiver: e.target is SuperExpression,
       ).emit(ctx, boundCall);
     }
     if (L.type.isSpec(CoreTypes.dynamic)) {

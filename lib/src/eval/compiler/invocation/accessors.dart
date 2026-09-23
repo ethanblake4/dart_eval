@@ -41,6 +41,7 @@ sealed class GetTarget {
     String name, {
     AstNode? source,
     BoundExtension? extensionPin,
+    bool isSuperReceiver = false,
   }) {
     // A bare function reference has no SSA value; materialize the tear-off
     // first so members like `hashCode`/`runtimeType` resolve on it.
@@ -333,6 +334,7 @@ sealed class GetTarget {
       callingConvention: isDeclaredMethod || isBridgeMethod
           ? CallingConvention.dynamic
           : CallingConvention.static,
+      isSuperReceiver: isSuperReceiver,
     );
   }
 
@@ -343,12 +345,14 @@ sealed class GetTarget {
     String name, {
     AstNode? source,
     BoundExtension? extensionPin,
+    bool isSuperReceiver = false,
   }) => resolve(
     ctx,
     receiver,
     name,
     source: source,
     extensionPin: extensionPin,
+    isSuperReceiver: isSuperReceiver,
   ).emit(ctx);
 
   Variable emit(CompilerContext ctx);
@@ -611,6 +615,7 @@ final class DynamicGet extends GetTarget {
     required this.fieldType,
     this.methodReturnType,
     this.callingConvention = CallingConvention.static,
+    this.isSuperReceiver = false,
   });
 
   /// The already-boxed receiver.
@@ -623,6 +628,10 @@ final class DynamicGet extends GetTarget {
   final ReturnType? methodReturnType;
   final CallingConvention callingConvention;
 
+  /// `super.name` read: the receiver is a mid-chain link, so the runtime
+  /// resolves the member at-or-below that link, not at the dispatch root.
+  final bool isSuperReceiver;
+
   @override
   Variable emit(CompilerContext ctx) => Variable.ssa(
     ctx,
@@ -631,6 +640,7 @@ final class DynamicGet extends GetTarget {
       receiver.ssa,
       name,
       callerLibrary: ctx.library,
+      superReceiver: isSuperReceiver,
     ),
     fieldType,
     rep: ValueRep.boxed,
@@ -654,6 +664,7 @@ sealed class SetTarget {
     Variable object,
     String name, {
     AstNode? source,
+    bool isSuperReceiver = false,
   }) {
     final boxed = object.boxIfNeeded(ctx, source);
     final declaredFieldType = TypeRef.lookupFieldType(
@@ -784,7 +795,7 @@ sealed class SetTarget {
         );
       }
     }
-    return DynamicSet(boxed, name, fieldType);
+    return DynamicSet(boxed, name, fieldType, isSuperReceiver: isSuperReceiver);
   }
 
   /// `this.name = v` where `name` is declared on the enclosing class —
@@ -805,7 +816,14 @@ sealed class SetTarget {
     String name,
     Variable value, {
     AstNode? source,
-  }) => resolve(ctx, object, name, source: source).emit(ctx, value);
+    bool isSuperReceiver = false,
+  }) => resolve(
+    ctx,
+    object,
+    name,
+    source: source,
+    isSuperReceiver: isSuperReceiver,
+  ).emit(ctx, value);
 
   Variable emit(CompilerContext ctx, Variable value);
 }
@@ -1005,12 +1023,21 @@ final class ExtensionSetterCall extends SetTarget {
 
 /// The dynamic member write — `SetPropertyDynamic`.
 final class DynamicSet extends SetTarget {
-  const DynamicSet(this.object, this.name, this.fieldType);
+  const DynamicSet(
+    this.object,
+    this.name,
+    this.fieldType, {
+    this.isSuperReceiver = false,
+  });
 
   /// The already-boxed receiver.
   final Variable object;
   final String name;
   final TypeRef fieldType;
+
+  /// `super.name = v`: the receiver is a mid-chain link, so the runtime
+  /// resolves the member at-or-below that link, not at the dispatch root.
+  final bool isSuperReceiver;
 
   @override
   Variable emit(CompilerContext ctx, Variable value) {
@@ -1021,6 +1048,7 @@ final class DynamicSet extends SetTarget {
         name,
         val.ssa,
         callerLibrary: ctx.library,
+        superReceiver: isSuperReceiver,
       ),
     );
     return val;

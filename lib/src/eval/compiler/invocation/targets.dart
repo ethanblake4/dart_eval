@@ -320,6 +320,7 @@ final class VirtualCall extends CallTarget {
         namedNames: [for (final entry in call.named) entry.$1],
         callerLibrary: ctx.library,
         typeArguments: call.runtimeTypeArguments,
+        superReceiver: isSuperReceiver,
       ),
     );
     return Variable.of(ctx, s, call.returnType, rep: ValueRep.boxed);
@@ -328,7 +329,12 @@ final class VirtualCall extends CallTarget {
 
 /// A bridge function, constructor, or member.
 final class BridgeCall extends CallTarget {
-  const BridgeCall({this.receiver, this.name = '', this.externalIndex});
+  const BridgeCall({
+    this.receiver,
+    this.name = '',
+    this.externalIndex,
+    this.isSuperReceiver = false,
+  });
 
   /// The receiver for an instance bridge member; null for statics.
   final Variable? receiver;
@@ -337,6 +343,11 @@ final class BridgeCall extends CallTarget {
   /// `bridgeStaticFunctionIndices` index for static calls; null emits an
   /// `InvokeDynamic` for an instance member instead.
   final int? externalIndex;
+
+  /// `super.m()` on a bridge member: the receiver is a mid-chain link, so
+  /// the runtime resolves the member at-or-below it — dispatching by name
+  /// from the root would re-enter the override this call sits beneath.
+  final bool isSuperReceiver;
 
   @override
   CallSignature? get signature => null;
@@ -366,6 +377,7 @@ final class BridgeCall extends CallTarget {
           namedNames: const [],
           callerLibrary: ctx.library,
           typeArguments: call.runtimeTypeArguments,
+          superReceiver: isSuperReceiver,
         ),
       );
     }

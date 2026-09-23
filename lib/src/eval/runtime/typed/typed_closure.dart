@@ -395,24 +395,17 @@ final class TypedClosure extends EvalFunction {
     bool trusted = false,
   }) {
     final descriptor = this.descriptor;
-    final count = positionalCount + namedNames.length;
     if (!descriptor.accepts(positionalCount, namedNames) ||
         !acceptsTypeArguments(typeArguments)) {
-      // Calling a closure with an unsatisfiable signature is a
-      // noSuchMethod on its `call` member.
-      final values = TypedInterop.argList(count, first, rest);
-      throw NoSuchMethodError.withInvocation(
-        this,
-        Invocation.method(
-          Symbol('call'),
-          values.sublist(0, positionalCount),
-          {
-            for (var i = 0; i < namedNames.length; i++)
-              Symbol(namedNames[i]): values[positionalCount + i],
-          },
-        ),
+      // A host-side invoke that cannot satisfy the signature is a
+      // programmer error. In-eval dispatch paths pre-check the same
+      // conditions and reject the call as a noSuchMethod on `call`.
+      throw ArgumentError(
+        'TypedClosure has no call method accepting arguments '
+        '($positionalCount positionals, named: ${namedNames.join(',')})',
       );
     }
+    final count = positionalCount + namedNames.length;
     final context = this.runtime ?? runtime;
     final effectiveTypeArguments =
         this.runtime != null &&

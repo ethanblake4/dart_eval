@@ -621,7 +621,13 @@ final class InstanceMemberDenotation extends Denotation {
             .topLevelDeclarationsMap[owner.type.file]?[owner.type.name]
             ?.isBridge ??
         false) {
-      return GetTarget.read(ctx, owner, name, source: source);
+      return GetTarget.read(
+        ctx,
+        owner,
+        name,
+        source: source,
+        isSuperReceiver: true,
+      );
     }
     return SuperGetterCall(
       owner,
@@ -638,7 +644,14 @@ final class InstanceMemberDenotation extends Denotation {
             .topLevelDeclarationsMap[owner.type.file]?[owner.type.name]
             ?.isBridge ??
         false) {
-      return SetTarget.write(ctx, owner, name, value, source: source);
+      return SetTarget.write(
+        ctx,
+        owner,
+        name,
+        value,
+        source: source,
+        isSuperReceiver: true,
+      );
     }
     return SuperSetterCall(
       owner,

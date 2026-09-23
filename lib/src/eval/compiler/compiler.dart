@@ -1554,8 +1554,9 @@ _resolveImportsAndExports(
       final selfList = result[library]?.entries.toList() ?? [];
       while (selfList.isNotEmpty) {
         final declaration = selfList.removeLast();
-        if (usedSelf.contains(declaration.key) ||
-            !ids.contains(declaration.key)) {
+        // Accessor keys (`x*g`/`x*s`) match a body referencing `x`.
+        final declBase = _accessorBaseName(declaration.key);
+        if (usedSelf.contains(declaration.key) || !ids.contains(declBase)) {
           continue;
         }
         final s = usedIdentifiers[library]![declaration.key];
@@ -1584,7 +1585,7 @@ _resolveImportsAndExports(
         final decs = result[lib]?.entries.toList();
         if (decs == null) continue;
         for (final declaration in decs) {
-          if (ids.contains(declaration.key)) {
+          if (ids.contains(_accessorBaseName(declaration.key))) {
             final applyLib =
                 declaration.value.declaration?.sourceLib ?? libraryIds[lib]!;
             applyUsedDeclarations[applyLib] ??= {'main'};
@@ -1627,6 +1628,13 @@ _resolveImportsAndExports(
   }
 
   return (result, visibleExtensions);
+}
+
+String _accessorBaseName(String name) {
+  if (name.endsWith('*g') || name.endsWith('*s')) {
+    return name.substring(0, name.length - 2);
+  }
+  return name;
 }
 
 bool _combinatorListAccepts(

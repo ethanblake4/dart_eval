@@ -169,12 +169,14 @@ final class LoadPropertyDynamic extends Operation {
   final SSA object;
   final String name;
   final int callerLibrary;
+  final bool superReceiver;
 
   LoadPropertyDynamic(
     this.target,
     this.object,
     this.name, {
     this.callerLibrary = -1,
+    this.superReceiver = false,
   });
 
   @override
@@ -192,7 +194,8 @@ final class LoadPropertyDynamic extends Operation {
       target == other.target &&
       object == other.object &&
       name == other.name &&
-      callerLibrary == other.callerLibrary;
+      callerLibrary == other.callerLibrary &&
+      superReceiver == other.superReceiver;
 
   @override
   int get hashCode => target.hashCode ^ object.hashCode ^ name.hashCode;
@@ -204,6 +207,7 @@ final class LoadPropertyDynamic extends Operation {
       readsFrom?.first ?? object,
       name,
       callerLibrary: callerLibrary,
+      superReceiver: superReceiver,
     );
   }
 }
@@ -213,12 +217,14 @@ final class SetPropertyDynamic extends Operation {
   final String name;
   final SSA variable;
   final int callerLibrary;
+  final bool superReceiver;
 
   SetPropertyDynamic(
     this.object,
     this.name,
     this.variable, {
     this.callerLibrary = -1,
+    this.superReceiver = false,
   });
 
   @override
@@ -236,7 +242,8 @@ final class SetPropertyDynamic extends Operation {
       variable == other.variable &&
       object == other.object &&
       name == other.name &&
-      callerLibrary == other.callerLibrary;
+      callerLibrary == other.callerLibrary &&
+      superReceiver == other.superReceiver;
 
   @override
   int get hashCode => variable.hashCode ^ object.hashCode ^ name.hashCode;
@@ -248,6 +255,7 @@ final class SetPropertyDynamic extends Operation {
       name,
       readsFrom?.last ?? variable,
       callerLibrary: callerLibrary,
+      superReceiver: superReceiver,
     );
   }
 }
@@ -342,6 +350,10 @@ final class InvokeDynamic extends Operation {
   final int callerLibrary;
   final List<int> typeArguments;
 
+  /// `super.m(...)`: the receiver is a mid-chain link and the member
+  /// resolves at-or-below it rather than at the dispatch root.
+  final bool superReceiver;
+
   InvokeDynamic(
     this.target,
     this.object,
@@ -351,6 +363,7 @@ final class InvokeDynamic extends Operation {
     this.namedNames = const [],
     this.callerLibrary = -1,
     this.typeArguments = const [],
+    this.superReceiver = false,
   }) : positionalCount = positionalCount ?? args.length;
 
   @override
@@ -372,7 +385,8 @@ final class InvokeDynamic extends Operation {
       positionalCount == other.positionalCount &&
       namedNames == other.namedNames &&
       callerLibrary == other.callerLibrary &&
-      typeArguments == other.typeArguments;
+      typeArguments == other.typeArguments &&
+      superReceiver == other.superReceiver;
 
   @override
   int get hashCode =>
@@ -380,7 +394,8 @@ final class InvokeDynamic extends Operation {
       object.hashCode ^
       name.hashCode ^
       object.hashCode ^
-      args.hashCode;
+      args.hashCode ^
+      superReceiver.hashCode;
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
@@ -394,6 +409,7 @@ final class InvokeDynamic extends Operation {
       namedNames: namedNames,
       callerLibrary: callerLibrary,
       typeArguments: typeArguments,
+      superReceiver: superReceiver,
     );
   }
 }

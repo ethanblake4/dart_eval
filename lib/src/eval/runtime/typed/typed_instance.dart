@@ -100,17 +100,23 @@ final class TypedInstance implements $Instance {
   }
 
   /// Cache resolution separately from register argument transfer and frame entry.
+  ///
+  /// A virtual call resolves from the dispatch root (the outermost
+  /// override). A `super` dispatch instead resolves from the receiver's
+  /// own chain link — the member visible at-or-below that link — and
+  /// each link's cache holds its own "resolved from here" answer.
   TypedMember? resolve(
     TypedMemberKind kind,
     String name, {
     String callerLibrary = '',
+    bool superDispatch = false,
   }) {
-    final root = dispatchRoot;
-    final cache = root._members[kind] ??= {};
+    final start = superDispatch ? this : dispatchRoot;
+    final cache = start._members[kind] ??= {};
     final cacheKey = name.startsWith('_') ? '$callerLibrary::$name' : name;
     final cached = cache[cacheKey];
     if (cached != null || cache.containsKey(cacheKey)) return cached;
-    var owner = root;
+    var owner = start;
     while (true) {
       final members = switch (kind) {
         TypedMemberKind.method => owner.descriptor.methods,
@@ -145,11 +151,13 @@ final class TypedInstance implements $Instance {
     String callerLibrary = '',
     List<int> typeArguments = const [],
     Runtime? runtime,
+    bool superDispatch = false,
   }) {
     final member = resolve(
       TypedMemberKind.method,
       name,
       callerLibrary: callerLibrary,
+      superDispatch: superDispatch,
     );
     if (member != null) {
       if (!member.accepts(positionalCount, namedNames) ||
@@ -180,11 +188,13 @@ final class TypedInstance implements $Instance {
       TypedMemberKind.getter,
       name,
       callerLibrary: callerLibrary,
+      superDispatch: superDispatch,
     );
     if (getter != null) {
       final callable = getter.invoke(0, null, null, runtime: runtime);
       if (callable is TypedClosure) {
-        if (!callable.acceptsTypeArguments(typeArguments)) {
+        if (!callable.descriptor.accepts(positionalCount, namedNames) ||
+            !callable.acceptsTypeArguments(typeArguments)) {
           return _noSuchMethod(
             _typedMethodInvocation(
               name,
@@ -325,11 +335,13 @@ final class TypedInstance implements $Instance {
     String identifier, {
     String callerLibrary = '',
     Runtime? runtime,
+    bool superDispatch = false,
   }) {
     final getter = resolve(
       TypedMemberKind.getter,
       identifier,
       callerLibrary: callerLibrary,
+      superDispatch: superDispatch,
     );
     if (getter != null) {
       return getter.invoke(0, null, null, runtime: runtime);
@@ -338,6 +350,7 @@ final class TypedInstance implements $Instance {
       TypedMemberKind.method,
       identifier,
       callerLibrary: callerLibrary,
+      superDispatch: superDispatch,
     );
     if (method != null) return method;
     var parent = superclass;
@@ -371,11 +384,13 @@ final class TypedInstance implements $Instance {
     $Value? value, {
     String callerLibrary = '',
     Runtime? runtime,
+    bool superDispatch = false,
   }) {
     final setter = resolve(
       TypedMemberKind.setter,
       identifier,
       callerLibrary: callerLibrary,
+      superDispatch: superDispatch,
     );
     if (setter != null) {
       setter.invokeClosure(1, value, null, runtime: runtime);
