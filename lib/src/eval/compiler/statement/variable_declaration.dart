@@ -83,7 +83,11 @@ void compileVariableDeclarationList(
                   type: type ?? CoreTypes.dynamic.ref(ctx),
                   declaredType: type ?? CoreTypes.dynamic.ref(ctx),
                   representation: MachineRepresentation.object,
+                  isFinal: l.isFinal || l.isConst,
                 ),
+            // An uninitialized `final`/`const` binding accepts its first
+            // write through the initialized flag, not allocation facts.
+            initialized: !(l.isFinal || l.isConst),
           )
           .captureBinding(ctx, li);
     }

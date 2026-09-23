@@ -103,7 +103,7 @@ final class LocalDenotation extends Denotation {
   @override
   Variable write(CompilerContext ctx, Variable value, {AstNode? source}) {
     final local = binding.current;
-    if (local.isFinal && local.concreteTypes.isNotEmpty) {
+    if (local.isFinal && binding.initialized) {
       throw CompileError(
         'Cannot modify value of final variable ${binding.name}',
         source,
@@ -124,6 +124,9 @@ final class LocalDenotation extends Denotation {
     final stored = local.representation == MachineRepresentation.object
         ? value.boxIfNeeded(ctx)
         : value.unboxIfNeeded(ctx, false);
+    if (local.isFinal) {
+      binding.initialized = true;
+    }
     final storage = binding.storage;
     // A binding whose cell is preserved in an exception slot still
     // receives writes through the cell — only the cell itself is

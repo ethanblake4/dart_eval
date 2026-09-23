@@ -36,9 +36,13 @@ final class ExceptionSlotStorage extends BindingStorage {
 /// promotion, and in-place boxing; the [current] variable is a snapshot
 /// with a back-reference to this binding.
 final class LocalBinding {
-  LocalBinding(this.name, Variable current, {this.frameIndex = -1})
-    : storage = SsaStorage(),
-      _current = current {
+  LocalBinding(
+    this.name,
+    Variable current, {
+    this.frameIndex = -1,
+    this.initialized = true,
+  }) : storage = SsaStorage(),
+       _current = current {
     current.binding = this;
   }
 
@@ -53,12 +57,14 @@ final class LocalBinding {
       binding.frameIndex,
     );
     snapshot.storage = binding.storage;
+    snapshot.initialized = binding.initialized;
     snapshot._current.binding = snapshot;
     return snapshot;
   }
 
   LocalBinding._raw(this.name, this._current, this.frameIndex)
-    : storage = SsaStorage();
+    : storage = SsaStorage(),
+      initialized = true;
 
   final String name;
 
@@ -77,6 +83,11 @@ final class LocalBinding {
 
   /// Whether reassignment of this binding is forbidden.
   bool get isFinal => _current.isFinal;
+
+  /// Whether the binding has received its first value. Only meaningful
+  /// alongside [isFinal]: an uninitialized `final` binding accepts exactly
+  /// one write, which flips this to true.
+  bool initialized;
 
   /// The capture cell SSA, when the binding is cell-captured.
   SSA? get captureCell => switch (storage) {

@@ -40,14 +40,24 @@ mixin ScopeContext on Object implements AbstractScopeContext {
   /// Declares or replaces the binding for [name] in [frame] (default:
   /// innermost) and returns it — [LocalBinding.read] materializes the
   /// value for reads; `setValue` writes through the binding's storage.
-  LocalBinding setLocal(String name, Variable v, {int? frame}) {
+  LocalBinding setLocal(
+    String name,
+    Variable v, {
+    int? frame,
+    bool initialized = true,
+  }) {
     final f = frame ?? locals.length - 1;
     final existing = locals[f][name];
     if (existing != null) {
       existing.rebind(v);
       return existing;
     }
-    final nb = LocalBinding(name, v, frameIndex: f);
+    final nb = LocalBinding(
+      name,
+      v,
+      frameIndex: f,
+      initialized: initialized,
+    );
     locals[f][name] = nb;
     return nb;
   }
