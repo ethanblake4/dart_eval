@@ -231,11 +231,14 @@ extension TearOff on Variable {
         runtimeTypeId: ctx.runtimeTypes.idOf(functionType),
       ),
       functionType,
-      methodReturnType:
-          methodReturnType ??
-          AlwaysReturnType(CoreTypes.dynamic.ref(ctx), false),
-      methodOffset: offset,
-      callingConvention: CallingConvention.dynamic,
+      callable: CallableValue(
+        offset: offset,
+        returnType:
+            methodReturnType ??
+            AlwaysReturnType(CoreTypes.dynamic.ref(ctx), false),
+        convention: CallingConvention.dynamic,
+        materialized: true,
+      ),
     );
     // A captureless tear-off is a constant: the VM canonicalizes them, so
     // `identical(main, main)` is true.

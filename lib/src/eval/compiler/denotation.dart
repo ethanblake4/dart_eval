@@ -71,9 +71,10 @@ final class PrefixReceiver extends Receiver {
   final PrefixDenotation prefix;
 }
 
-/// Classifies a receiver value for member access.
-Receiver receiverOf(CompilerContext ctx, Variable v) {
-  if (v.boundExtension case final bound?) {
+/// Classifies a receiver value for member access. [pin] is the
+/// explicit-application pin `E(receiver)` imposes on member resolution.
+Receiver receiverOf(CompilerContext ctx, Variable v, {BoundExtension? pin}) {
+  if (pin case final bound?) {
     return ExtensionApplicationReceiver(bound.ext, bound.onBindings, v);
   }
   if (v.type.isSpec(CoreTypes.type) && v.concreteTypes.length == 1) {
@@ -323,7 +324,7 @@ final class StaticMemberDenotation extends Denotation {
   Variable read(CompilerContext ctx, {AstNode? source}) {
     final fn = Variable(
       CoreTypes.function.ref(ctx),
-      methodOffset: _offset(ctx),
+      callable: CallableValue(offset: _offset(ctx)),
     );
     if (member.isGetter) {
       // A getter reference invokes it (the member's value, not its
@@ -504,13 +505,15 @@ final class InstanceMemberDenotation extends Denotation {
           !declaration.isSetter) {
         return Variable(
           CoreTypes.function.ref(ctx),
-          methodOffset: DeferredOrOffset(
-            file: ctx.library,
-            className: ctx.currentClassName!,
-            name: refName,
+          callable: CallableValue(
+            offset: DeferredOrOffset(
+              file: ctx.library,
+              className: ctx.currentClassName!,
+              name: refName,
+            ),
+            implicitReceiver: $this,
           ),
-          callingConvention: CallingConvention.static,
-        )..implicitReceiver = $this;
+        );
       }
     }
 
@@ -537,22 +540,22 @@ final class InstanceMemberDenotation extends Denotation {
             specifyingType: $this.type,
           ),
           rep: ValueRep.boxed,
-          methodOffset: DeferredOrOffset(
+          callable: CallableValue(offset: DeferredOrOffset(
             file: ctx.library,
             className: ctx.currentClassName!,
             name: refName,
-          ),
+          )),
         );
       }
       final bridge = decOrBridge.bridge!;
       if (bridge is BridgeMethodDef) {
         return Variable(
           CoreTypes.function.ref(ctx),
-          methodOffset: DeferredOrOffset(
+          callable: CallableValue(offset: DeferredOrOffset(
             file: ctx.library,
             className: ctx.currentClassName!,
             name: name,
-          ),
+          )),
         );
       }
       if (bridge is BridgeFieldDef) {
@@ -566,11 +569,11 @@ final class InstanceMemberDenotation extends Denotation {
             specifyingType: $this.type,
           ),
           rep: ValueRep.boxed,
-          methodOffset: DeferredOrOffset(
+          callable: CallableValue(offset: DeferredOrOffset(
             file: ctx.library,
             className: ctx.currentClassName!,
             name: refName,
-          ),
+          )),
         );
       }
       throw CompileError(
@@ -599,16 +602,17 @@ final class InstanceMemberDenotation extends Denotation {
     if (memberDecl is MethodDeclaration &&
         !memberDecl.isGetter &&
         !memberDecl.isSetter) {
-      return (Variable(
-            CoreTypes.function.ref(ctx),
-            methodOffset: DeferredOrOffset(
-              file: owner.type.file,
-              className: owner.type.name,
-              name: name,
-            ),
-            callingConvention: CallingConvention.static,
-          )..implicitReceiver = owner)
-          .tearOff(ctx);
+      return Variable(
+        CoreTypes.function.ref(ctx),
+        callable: CallableValue(
+          offset: DeferredOrOffset(
+            file: owner.type.file,
+            className: owner.type.name,
+            name: name,
+          ),
+          implicitReceiver: owner,
+        ),
+      ).tearOff(ctx);
     }
     if (ctx
             .topLevelDeclarationsMap[owner.type.file]?[owner.type.name]
@@ -824,8 +828,7 @@ final class ExtensionMemberDenotation extends Denotation {
       }
       return Variable(
         CoreTypes.function.ref(ctx),
-        methodOffset: offset,
-        callingConvention: CallingConvention.static,
+        callable: CallableValue(offset: offset),
       );
     }
     if (member.isGetter) {
@@ -847,15 +850,17 @@ final class ExtensionMemberDenotation extends Denotation {
     }
     return Variable(
       CoreTypes.function.ref(ctx),
-      methodOffset: offset,
-      methodReturnType: AlwaysReturnType.fromAnnotation(
-        ctx,
-        ext.library,
-        member.returnType,
-        CoreTypes.dynamic.ref(ctx),
+      callable: CallableValue(
+        offset: offset,
+        returnType: AlwaysReturnType.fromAnnotation(
+          ctx,
+          ext.library,
+          member.returnType,
+          CoreTypes.dynamic.ref(ctx),
+        ),
+        implicitReceiver: recv,
       ),
-      callingConvention: CallingConvention.static,
-    )..implicitReceiver = recv;
+    );
   }
 
   @override
@@ -999,11 +1004,17 @@ final class PrefixDenotation extends Denotation {
 
   @override
   TypeRef readType(CompilerContext ctx, {AstNode? source}) =>
-      throw const PrefixError();
+      throw CompileError(
+        'Import prefix "$prefix" is not a type',
+        source,
+      );
 
   @override
   Variable read(CompilerContext ctx, {AstNode? source}) =>
-      throw const PrefixError();
+      throw CompileError(
+        'Import prefix "$prefix" is not a value',
+        source,
+      );
 
   @override
   Variable write(CompilerContext ctx, Variable value, {AstNode? source}) =>
@@ -1095,11 +1106,12 @@ final class ExtensionNamespaceDenotation extends Denotation {
     return Variable(
       CoreTypes.type.ref(ctx),
       concreteTypes: [extType],
-      methodOffset: DeferredOrOffset(
-        file: ext.library,
-        name: '${ext.name}.',
+      callable: CallableValue(
+        offset: DeferredOrOffset(
+          file: ext.library,
+          name: '${ext.name}.',
+        ),
       ),
-      callingConvention: CallingConvention.static,
     );
   }
 
@@ -1576,8 +1588,7 @@ final class _TypeMemberDenotation extends Denotation {
       );
       final fn = Variable(
         CoreTypes.function.ref(ctx),
-        methodOffset: memberOffset,
-        callingConvention: CallingConvention.static,
+        callable: CallableValue(offset: memberOffset),
       );
       if (memberDecl is MethodDeclaration && memberDecl.isGetter) {
         return CallResolver(ctx).invokeOperator(fn, null, []).result;

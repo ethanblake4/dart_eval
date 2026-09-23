@@ -12,25 +12,53 @@ import 'package:dart_eval/src/eval/ir/primitives.dart';
 
 import 'errors.dart';
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'values/abi.dart';
 
 /// A compiler value with an SSA identity, language type and calling convention.
+/// Compile-time metadata for a [Variable] denoting a statically known
+/// function: the link-time [offset], the declared [returnType], the
+/// [convention] used to reach it, and — for extension-method tear-offs —
+/// the [implicitReceiver] prepended as the first argument. An offset-less
+/// instance carries only signature hints (a dynamic member value whose type
+/// is `Function`).
+final class CallableValue {
+  const CallableValue({
+    this.offset,
+    this.returnType,
+    this.convention = CallingConvention.static,
+    this.implicitReceiver,
+    this.materialized = false,
+  });
+
+  /// The known function's link target — null when only signature hints are
+  /// carried (e.g. a dynamic `Function`-typed member read).
+  final DeferredOrOffset? offset;
+  final ReturnType? returnType;
+  final CallingConvention convention;
+
+  /// The receiver to prepend as the first argument when this reference is
+  /// materialized or invoked — set on references to a member of the
+  /// enclosing extension inside its own body.
+  final Variable? implicitReceiver;
+
+  /// True once the reference's tear-off has been materialized into a
+  /// closure value — unmaterialized references lack it.
+  final bool materialized;
+}
+
 class Variable {
   Variable(
     TypeRef type, {
     TypeRef? declaredType,
     MachineRepresentation? representation,
     ValueRep? rep,
-    this.methodOffset,
-    this.methodReturnType,
+    this.callable,
     this.isFinal = false,
     List<TypeRef> concreteTypes = const [],
     TypeRef? exactType,
     bool isConstInt = false,
     bool isConst = false,
     ValueFacts? facts,
-    CallingConvention? callingConvention,
   }) : type = type,
        declaredType = declaredType ?? type,
        representation =
@@ -48,12 +76,7 @@ class Variable {
              possibleClasses: concreteTypes,
              isConst: isConst,
              isConstInt: isConstInt,
-           ),
-       callingConvention =
-           callingConvention ??
-           ((type.isFunctionLike && methodOffset == null)
-               ? CallingConvention.dynamic
-               : CallingConvention.static) {
+           ) {
     assert(
       facts == null ||
           (concreteTypes.isEmpty &&
@@ -71,15 +94,13 @@ class Variable {
     TypeRef? declaredType,
     MachineRepresentation? representation,
     ValueRep? rep,
-    DeferredOrOffset? methodOffset,
-    ReturnType? methodReturnType,
+    CallableValue? callable,
     bool isFinal = false,
     List<TypeRef> concreteTypes = const [],
     TypeRef? exactType,
     bool isConstInt = false,
     bool isConst = false,
     ValueFacts? facts,
-    CallingConvention callingConvention = CallingConvention.static,
   }) {
     ctx.pushOp(op);
     return Variable(
@@ -87,15 +108,13 @@ class Variable {
       declaredType: declaredType,
       representation: representation,
       rep: rep,
-      methodOffset: methodOffset,
-      methodReturnType: methodReturnType,
+      callable: callable,
       isFinal: isFinal,
       concreteTypes: concreteTypes,
       exactType: exactType,
       isConstInt: isConstInt,
       isConst: isConst,
       facts: facts,
-      callingConvention: callingConvention,
     )..name = op.writesTo!.name;
   }
 
@@ -106,30 +125,26 @@ class Variable {
     TypeRef? declaredType,
     MachineRepresentation? representation,
     ValueRep? rep,
-    DeferredOrOffset? methodOffset,
-    ReturnType? methodReturnType,
+    CallableValue? callable,
     bool isFinal = false,
     List<TypeRef> concreteTypes = const [],
     TypeRef? exactType,
     bool isConstInt = false,
     bool isConst = false,
     ValueFacts? facts,
-    CallingConvention callingConvention = CallingConvention.static,
   }) {
     return Variable(
       type,
       declaredType: declaredType,
       representation: representation,
       rep: rep,
-      methodOffset: methodOffset,
-      methodReturnType: methodReturnType,
+      callable: callable,
       isFinal: isFinal,
       concreteTypes: concreteTypes,
       exactType: exactType,
       isConstInt: isConstInt,
       isConst: isConst,
       facts: facts,
-      callingConvention: callingConvention,
     )..name = ssa.name;
   }
 
@@ -169,19 +184,36 @@ class Variable {
 
   /// Whether this value is a compile-time-constant expression.
   bool get isConst => facts.isConst;
-  final DeferredOrOffset? methodOffset;
-  final ReturnType? methodReturnType;
+  /// Compile-known function this value denotes, if any — an unmaterialized
+  /// function reference when [CallableValue.materialized] is false.
+  final CallableValue? callable;
   final bool isFinal;
-  final CallingConvention callingConvention;
 
-  /// The receiver to prepend as the first argument when this variable is
-  /// invoked as a function — set on references to a member of the enclosing
-  /// extension inside its own body.
-  Variable? implicitReceiver;
+  /// The dispatch convention for invoking this value as a function:
+  /// [CallableValue.convention] when callable metadata exists, otherwise
+  /// dynamic for function-typed values and static for the rest.
+  CallingConvention get callingConvention =>
+      callable?.convention ??
+      (type.isFunctionLike
+          ? CallingConvention.dynamic
+          : CallingConvention.static);
 
-  /// Non-null when this value came from explicit extension application
-  /// `E(x)`: member lookups on it resolve only within that extension.
-  BoundExtension? boundExtension;
+  /// Convenience accessors into [callable] for the sites that only read.
+  DeferredOrOffset? get methodOffset => callable?.offset;
+  ReturnType? get methodReturnType => callable?.returnType;
+  Variable? get implicitReceiver => callable?.implicitReceiver;
+
+  /// Non-null when this value is an unmaterialized function reference
+  /// (compile-known target whose closure has not been built). Requires the
+  /// variable to lack an SSA slot — SSA-backed values carrying a callable
+  /// (type literals, method tear-offs after materialization) are already
+  /// runtime values.
+  CallableValue? get unmaterializedCallable {
+    final c = callable;
+    return c != null && c.offset != null && !c.materialized && name == null
+        ? c
+        : null;
+  }
 
   bool get boxed => rep.isBoxed;
 
@@ -196,11 +228,9 @@ class Variable {
         rep: rep,
         isFinal: isFinal,
         facts: facts.cleared(),
-        callingConvention: callingConvention,
       )
       ..name = name
-      ..binding = binding
-      ..implicitReceiver = implicitReceiver;
+      ..binding = binding;
   }
 
   /// Widens this variable's allocation proofs for a control-flow join.
@@ -211,16 +241,15 @@ class Variable {
   /// `this` when every edge holds this same variable.
   Variable joinedWith(Iterable<Variable> incoming) {
     var merged = facts;
-    var mOffset = methodOffset;
-    var mReturn = methodReturnType;
+    var c = callable;
     var changed = false;
     for (final other in incoming) {
       if (identical(other, this)) continue;
       changed = true;
       merged = merged.join(other.facts);
-      if (other.methodOffset != mOffset || other.methodReturnType != mReturn) {
-        mOffset = null;
-        mReturn = null;
+      if (other.callable?.offset != c?.offset ||
+          other.callable?.returnType != c?.returnType) {
+        c = null;
       }
     }
     if (!changed) return this;
@@ -229,15 +258,12 @@ class Variable {
         declaredType: declaredType,
         representation: representation,
         rep: rep,
-        methodOffset: mOffset,
-        methodReturnType: mReturn,
+        callable: c,
         isFinal: isFinal,
         facts: merged,
-        callingConvention: callingConvention,
       )
       ..name = name
-      ..binding = binding
-      ..implicitReceiver = implicitReceiver;
+      ..binding = binding;
   }
 
   String? name;
@@ -268,7 +294,7 @@ class Variable {
         Assign(into, ssa),
         type,
         rep: target,
-        methodReturnType: methodReturnType,
+        callable: callable,
         facts: facts.copyWith(isConst: false, isConstInt: false),
       );
     }
@@ -286,7 +312,7 @@ class Variable {
       type,
       rep: target,
       declaredType: declaredType,
-      methodReturnType: methodReturnType,
+      callable: callable,
       facts: facts.copyWith(isConst: false, isConstInt: false),
     );
   }
@@ -360,7 +386,7 @@ class Variable {
         ctx,
         Assign(ctx.svar('box_copy'), ssa),
         type,
-        methodReturnType: methodReturnType,
+        callable: callable,
         facts: facts.copyWith(isConst: false, isConstInt: false),
       );
     }
@@ -412,7 +438,7 @@ class Variable {
       Assign(ctx.svar(svar), ssa),
       type,
       rep: rep,
-      methodReturnType: methodReturnType,
+      callable: callable,
       facts: facts.copyWith(isConst: false, isConstInt: false),
     );
   }
@@ -442,8 +468,7 @@ class Variable {
     TypeRef? declaredType,
     MachineRepresentation? representation,
     ValueRep? rep,
-    DeferredOrOffset? methodOffset,
-    ReturnType? methodReturnType,
+    CallableValue? callable,
     bool? isFinal,
     bool? isConst,
     String? name,
@@ -451,7 +476,6 @@ class Variable {
     List<TypeRef>? concreteTypes,
     TypeRef? exactType,
     ValueFacts? facts,
-    CallingConvention? callingConvention,
   }) {
     final newFacts = facts ??
         this.facts.copyWith(
@@ -467,16 +491,12 @@ class Variable {
         declaredType: declaredType ?? this.declaredType,
         representation: representation ?? this.representation,
         rep: rep ?? this.rep,
-        methodOffset: methodOffset ?? this.methodOffset,
+        callable: callable ?? this.callable,
         isFinal: isFinal ?? this.isFinal,
-        methodReturnType: methodReturnType ?? this.methodReturnType,
         facts: newFacts,
-        callingConvention: callingConvention ?? this.callingConvention,
       )
       ..name = name ?? this.name
-      ..binding = binding
-      ..implicitReceiver = implicitReceiver
-      ..boundExtension = boundExtension;
+      ..binding = binding;
   }
 
   /// Makes a copy of the variable with some fields updated, and also
@@ -487,8 +507,7 @@ class Variable {
     TypeRef? declaredType,
     MachineRepresentation? representation,
     ValueRep? rep,
-    DeferredOrOffset? methodOffset,
-    ReturnType? methodReturnType,
+    CallableValue? callable,
     String? name,
     int? frameIndex,
     List<TypeRef>? concreteTypes,
@@ -499,8 +518,7 @@ class Variable {
       declaredType: declaredType,
       representation: representation,
       rep: rep,
-      methodOffset: methodOffset,
-      methodReturnType: methodReturnType,
+      callable: callable,
       name: name,
       frameIndex: frameIndex,
       concreteTypes: concreteTypes,
@@ -559,7 +577,7 @@ class Variable {
   String toString() {
     final varName = name == null ? 'unnamed' : '"$name"';
     return 'Variable{$varName, $type, '
-        '${methodOffset == null ? '' : 'method: $methodReturnType $methodOffset, '}'
+        '${callable == null ? '' : 'method: ${callable!.returnType} ${callable!.offset}, '}'
         '${boxed ? 'boxed' : 'unboxed'}, F[${binding?.frameIndex}]}';
   }
 }

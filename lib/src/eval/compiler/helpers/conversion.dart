@@ -119,7 +119,7 @@ Variable convertForAssignment(
   var converted = value;
   // Bound method tear-offs (e.g. `x.m<T>` used as a value) have no SSA slot
   // until materialized as a closure value.
-  if (converted.name == null && converted.methodOffset != null) {
+  if (converted.unmaterializedCallable != null) {
     converted = converted.tearOff(ctx);
   }
   if (conversion == AssignmentConversion.intToDouble) {

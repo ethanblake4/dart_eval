@@ -102,8 +102,7 @@ final class LocalBinding {
       declaredType: _current.declaredType,
       representation: _current.representation,
       isFinal: _current.isFinal,
-      callingConvention: _current.callingConvention,
-      methodReturnType: _current.methodReturnType,
+      callable: _current.callable,
     ),
     ExceptionSlotStorage s => _readCell(ctx, s.cell!),
     CaptureCellStorage s => _readCell(ctx, s.cell),
@@ -117,8 +116,7 @@ final class LocalBinding {
     declaredType: _current.declaredType,
     representation: _current.representation,
     isFinal: _current.isFinal,
-    callingConvention: _current.callingConvention,
-    methodReturnType: _current.methodReturnType,
+    callable: _current.callable,
   );
 
   /// Moves the binding's storage behind a capture cell when [declaration]

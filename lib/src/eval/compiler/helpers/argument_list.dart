@@ -53,8 +53,7 @@ Variable coerceArgumentForParameter(
       : arg0.unboxIfNeeded(ctx);
 
   if (arg0.type.isFunctionLike &&
-      arg0.name == null &&
-      arg0.methodOffset != null) {
+      arg0.unmaterializedCallable != null) {
     arg0 = arg0.tearOff(ctx);
   }
   return arg0;

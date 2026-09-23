@@ -2,6 +2,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
+import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
@@ -441,4 +442,41 @@ Variable invokeExtensionGetter(
       ).type ??
       CoreTypes.dynamic.ref(ctx);
   return Variable.of(ctx, s, returnType, rep: ValueRep.boxed);
+}
+
+/// Computes the pin for explicit extension application `E(receiver)`:
+/// resolved `on` type-parameter bindings from the invocation's type
+/// arguments, or inferred against [receiverType].
+BoundExtension boundExtensionFor(
+  CompilerContext ctx,
+  MethodInvocation e,
+  EvalExtension ext,
+  TypeRef receiverType,
+) {
+  final extParams =
+      ext.declaration.typeParameters?.typeParameters ?? const <TypeParameter>[];
+  final List<TypeRef> bindings;
+  if (e.typeArguments != null) {
+    final tas = e.typeArguments!.arguments;
+    if (tas.length != extParams.length) {
+      throw CompileError(
+        'Extension ${ext.name} takes ${extParams.length} type arguments',
+        e,
+      );
+    }
+    bindings = [
+      for (final ta in tas) TypeRef.fromAnnotation(ctx, ext.library, ta),
+    ];
+  } else {
+    // `E(c)?.m` applies `on C` to a nullable `C?` receiver; the `?.` guard
+    // (or a later runtime null check) makes that legal.
+    final nonNull = receiverType.copyWith(nullable: false);
+    bindings =
+        matchExtensionOn(ctx, nonNull, ext) ??
+        (throw CompileError(
+          'Extension ${ext.name} does not apply to $receiverType',
+          e,
+        ));
+  }
+  return BoundExtension(ext, bindings);
 }

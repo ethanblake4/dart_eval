@@ -13,6 +13,7 @@ import 'package:dart_eval/src/eval/ir/objects.dart';
 import '../member/member.dart';
 import 'dot_shorthand.dart';
 import 'expression.dart';
+import '../reference.dart';
 import 'identifier.dart';
 import 'null_aware.dart';
 import '../values/abi.dart';
@@ -32,7 +33,18 @@ Variable compileMethodInvocation(
   if (e.isCascaded) {
     L = ctx.cascadeTarget;
   } else if (e.target != null) {
-    try {
+    // `p.m(...)` — the target compiles to an import prefix, which has no
+    // runtime value; detect it syntactically instead of catching an error.
+    if (e.target case SimpleIdentifier target) {
+      final d = IdentifierReference(
+        null,
+        target.name,
+      ).denotation(ctx, source: e);
+      if (d is PrefixDenotation) {
+        isPrefix = true;
+      }
+    }
+    if (!isPrefix) {
       L = compileExpression(
         e.target!,
         ctx,
@@ -45,8 +57,6 @@ Variable compileMethodInvocation(
         if (dispatched != null) return dispatched;
         L = receiver;
       }
-    } on PrefixError {
-      isPrefix = true;
     }
   }
 
@@ -594,37 +604,11 @@ Variable applyExtension(
     args.first.argumentExpression,
     ctx,
   ).boxIfNeeded(ctx);
-  final extParams =
-      ext.declaration.typeParameters?.typeParameters ?? const <TypeParameter>[];
-  final List<TypeRef> bindings;
-  if (e.typeArguments != null) {
-    final tas = e.typeArguments!.arguments;
-    if (tas.length != extParams.length) {
-      throw CompileError(
-        'Extension ${ext.name} takes ${extParams.length} type arguments',
-        e,
-      );
-    }
-    bindings = [
-      for (final ta in tas) TypeRef.fromAnnotation(ctx, ext.library, ta),
-    ];
-  } else {
-    // `E(c)?.m` applies `on C` to a nullable `C?` receiver; the `?.` guard
-    // (or a later runtime null check) makes that legal.
-    final receiverType = receiver.type.copyWith(nullable: false);
-    bindings =
-        matchExtensionOn(ctx, receiverType, ext) ??
-        (throw CompileError(
-          'Extension ${ext.name} does not apply to ${receiver.type}',
-          e,
-        ));
-  }
+  boundExtensionFor(ctx, e, ext, receiver.type); // validates `on` bindings
   // The application result shares the receiver's SSA but is a distinct
   // value — dropping `binding` keeps `updated()` from re-resolving the
   // bound wrapper back to the unbound local.
-  return receiver.copyWith()
-    ..binding = null
-    ..boundExtension = BoundExtension(ext, bindings);
+  return receiver.copyWith()..binding = null;
 }
 
 /// `receiver.m(args)` — delegates to [CallResolver.invokeMethod]; the

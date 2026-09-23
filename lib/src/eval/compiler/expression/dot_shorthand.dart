@@ -4,7 +4,6 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
-import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/expression/instance_creation.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
@@ -64,7 +63,6 @@ bool containsLeadingShorthand(Expression e) => switch (e) {
 Variable _typeNamespace(CompilerContext ctx, TypeRef type) => Variable(
   CoreTypes.type.ref(ctx),
   concreteTypes: [type],
-  callingConvention: CallingConvention.static,
 );
 
 /// `.member` — a static member (enum value, static field, getter, method
@@ -231,7 +229,7 @@ Variable _invokeShorthandMember(
   ).getValue(ctx, source);
   // A static method resolves lazily (no SSA value) — materialize its
   // tear-off so it can be invoked like any other function value.
-  if (fn.name == null && fn.methodOffset != null) {
+  if (fn.unmaterializedCallable != null) {
     fn = fn.tearOff(ctx);
   }
   return CallResolver(ctx).invokeValue(

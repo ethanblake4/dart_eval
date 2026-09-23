@@ -40,10 +40,11 @@ sealed class GetTarget {
     Variable receiver,
     String name, {
     AstNode? source,
+    BoundExtension? extensionPin,
   }) {
     // A bare function reference has no SSA value; materialize the tear-off
     // first so members like `hashCode`/`runtimeType` resolve on it.
-    if (receiver.name == null && receiver.methodOffset != null) {
+    if (receiver.unmaterializedCallable != null) {
       return resolve(ctx, receiver.tearOff(ctx), name, source: source);
     }
     if (name == 'length' && !receiver.type.nullable) {
@@ -99,7 +100,7 @@ sealed class GetTarget {
       }
     }
     // Explicit application `E(x)` pins member resolution to E's members.
-    if (receiver.boundExtension case final bound?) {
+    if (extensionPin case final bound?) {
       final getter = extensionMember(bound.ext, name, getter: true);
       if (getter != null) {
         return ExtensionGetterCall(receiver, bound.ext, getter,
@@ -341,7 +342,14 @@ sealed class GetTarget {
     Variable receiver,
     String name, {
     AstNode? source,
-  }) => resolve(ctx, receiver, name, source: source).emit(ctx);
+    BoundExtension? extensionPin,
+  }) => resolve(
+    ctx,
+    receiver,
+    name,
+    source: source,
+    extensionPin: extensionPin,
+  ).emit(ctx);
 
   Variable emit(CompilerContext ctx);
 }
@@ -571,25 +579,27 @@ final class ExtensionMethodTearOff extends GetTarget {
   Variable emit(CompilerContext ctx) {
     return Variable(
       CoreTypes.function.ref(ctx),
-      methodOffset: DeferredOrOffset(
-        file: ext.library,
-        name: ext.memberKey(member),
+      callable: CallableValue(
+        offset: DeferredOrOffset(
+          file: ext.library,
+          name: ext.memberKey(member),
+        ),
+        returnType: AlwaysReturnType.fromAnnotation(
+          ctx,
+          ext.library,
+          member.returnType,
+          CoreTypes.dynamic.ref(ctx),
+          typeParameters: {
+            ...typeParameters,
+            for (final param
+                in member.typeParameters?.typeParameters ??
+                    const <TypeParameter>[])
+              param.name.lexeme: TypeRef.unresolved(ext.library, param.name.lexeme),
+          },
+        ),
+        implicitReceiver: receiver,
       ),
-      methodReturnType: AlwaysReturnType.fromAnnotation(
-        ctx,
-        ext.library,
-        member.returnType,
-        CoreTypes.dynamic.ref(ctx),
-        typeParameters: {
-          ...typeParameters,
-          for (final param
-              in member.typeParameters?.typeParameters ??
-                  const <TypeParameter>[])
-            param.name.lexeme: TypeRef.unresolved(ext.library, param.name.lexeme),
-        },
-      ),
-      callingConvention: CallingConvention.static,
-    )..implicitReceiver = receiver;
+    );
   }
 }
 
@@ -624,8 +634,10 @@ final class DynamicGet extends GetTarget {
     ),
     fieldType,
     rep: ValueRep.boxed,
-    methodReturnType: methodReturnType,
-    callingConvention: callingConvention,
+    callable: CallableValue(
+      returnType: methodReturnType,
+      convention: callingConvention,
+    ),
   );
 }
 

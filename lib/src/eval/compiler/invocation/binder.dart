@@ -646,8 +646,7 @@ BoundCall bindDynamicVector(
     final expression = arg.argumentExpression;
     var arg0 = compileExpression(expression, ctx);
     if (arg0.type.isFunctionLike &&
-        arg0.name == null &&
-        arg0.methodOffset != null) {
+        arg0.unmaterializedCallable != null) {
       arg0 = arg0.tearOff(ctx);
     }
     // Dynamic calls use canonical object values for every argument. Their
@@ -731,8 +730,7 @@ BoundCall bindBridgeVector(
       var arg0 = compileExpression(arg.argumentExpression, ctx, paramType);
       arg0 = arg0.boxIfNeeded(ctx);
       if (arg0.type.isFunctionLike &&
-          arg0.name == null &&
-          arg0.methodOffset != null) {
+          arg0.unmaterializedCallable != null) {
         arg0 = arg0.tearOff(ctx);
       }
       // Bridge argument conversion lives on the runtime side of the typed
@@ -774,8 +772,7 @@ BoundCall bindBridgeVector(
         paramType,
       ).boxIfNeeded(ctx);
       if (arg0.type.isFunctionLike &&
-          arg0.name == null &&
-          arg0.methodOffset != null) {
+          arg0.unmaterializedCallable != null) {
         arg0 = arg0.tearOff(ctx);
       }
       if (arg0.type.assignmentConversionTo(ctx, paramType) ==

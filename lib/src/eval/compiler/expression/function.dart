@@ -124,8 +124,7 @@ Variable compileFunctionExpression(
             representation: capture.value.representation,
             rep: capture.value.rep,
             isFinal: capture.value.isFinal,
-            callingConvention: capture.value.callingConvention,
-            methodReturnType: capture.value.methodReturnType,
+            callable: capture.value.callable,
           ),
         );
         if (capture.value.binding?.captureCell != null) {
@@ -406,11 +405,14 @@ Variable compileFunctionExpression(
       runtimeTypeId: ctx.runtimeTypes.idOf(closureType),
     ),
     closureType,
-    methodReturnType: AlwaysReturnType(
-      inferredClosureReturnType ?? CoreTypes.dynamic.ref(ctx),
-      false,
+    callable: CallableValue(
+      offset: target,
+      returnType: AlwaysReturnType(
+        inferredClosureReturnType ?? CoreTypes.dynamic.ref(ctx),
+        false,
+      ),
+      convention: CallingConvention.dynamic,
+      materialized: true,
     ),
-    methodOffset: target,
-    callingConvention: CallingConvention.dynamic,
   );
 }

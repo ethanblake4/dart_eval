@@ -41,11 +41,21 @@ Variable compilePropertyAccess(
 
   // `p.C.member` parses as PropertyAccess over the class identifier — static
   // member access lives in IdentifierReference, same as MethodInvocation.
-  if (receiverOf(ctx, L) is TypeLiteralReceiver) {
-    return IdentifierReference(L, pa.propertyName.name).getValue(ctx, pa);
+  final pin = extensionPinOf(ctx, pa.realTarget, L.type);
+  if (receiverOf(ctx, L, pin: pin) is TypeLiteralReceiver) {
+    return IdentifierReference(
+      L,
+      pa.propertyName.name,
+      pin: pin,
+    ).getValue(ctx, pa);
   }
 
-  return GetTarget.read(ctx, L, pa.propertyName.name);
+  return GetTarget.read(
+    ctx,
+    L,
+    pa.propertyName.name,
+    extensionPin: pin,
+  );
 }
 
 Reference compilePropertyAccessAsReference(
@@ -58,5 +68,9 @@ Reference compilePropertyAccessAsReference(
   if (pa.realTarget is SuperExpression) {
     return SuperPropertyReference(L, pa.propertyName.name);
   }
-  return IdentifierReference(L, pa.propertyName.name);
+  return IdentifierReference(
+    L,
+    pa.propertyName.name,
+    pin: extensionPinOf(ctx, pa.realTarget, L.type),
+  );
 }

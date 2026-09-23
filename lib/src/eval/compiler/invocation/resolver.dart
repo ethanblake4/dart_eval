@@ -127,7 +127,7 @@ final class CallResolver {
     );
 
     // `E(x).m(...)` — explicit application pins member resolution to E.
-    if (L.boundExtension case final boundExt?) {
+    if (extensionPinOf(ctx, e.target, L.type) case final boundExt?) {
       final member = extensionMember(boundExt.ext, e.methodName.name);
       if (member == null) {
         // `E(x).g(...)`: the getter's result is the call target.
@@ -174,7 +174,12 @@ final class CallResolver {
     // `C.new(...)` invokes the unnamed constructor.
     final staticMemberName = ctorNameOf(e.methodName.name);
 
-    if (receiverOf(ctx, L) case TypeLiteralReceiver(:final type)) {
+    if (receiverOf(
+          ctx,
+          L,
+          pin: extensionPinOf(ctx, e.target, L.type),
+        )
+        case TypeLiteralReceiver(:final type)) {
       // Static method
       staticType = type;
       if (ctx.topLevelDeclarationsMap[staticType
@@ -593,6 +598,7 @@ final class CallResolver {
     String? method,
     List<Variable> args, {
     Map<String, Variable>? namedArgs,
+    BoundExtension? extensionPin,
   }) {
     if (method == null) {
       return invokeFunctionValue(receiver, args, namedArgs);
@@ -605,7 +611,9 @@ final class CallResolver {
     if ((namedArgs == null || namedArgs.isEmpty) &&
         !recv.type.isSpec(CoreTypes.dynamic)) {
       // `E(x).m(...)` — explicit application pins member resolution to E.
-      final bound = recv.boundExtension;
+      // Operators are never extension members, so a pinned receiver can
+      // only reach this path dead — the probe is preserved for parity.
+      final bound = extensionPin;
       if (bound != null) {
         final member = extensionMember(bound.ext, method);
         if (member == null) {
@@ -649,19 +657,17 @@ final class CallResolver {
     final values = [...args];
     final equality = (method == '==' || method == '!=') && values.length == 1;
     if (equality &&
-        recv.name == null &&
-        recv.methodOffset != null &&
-        values.single.name == null &&
-        values.single.methodOffset != null) {
+        recv.unmaterializedCallable != null &&
+        values.single.unmaterializedCallable != null) {
       // Two unmaterialized references to the same function are identical.
       final equal = recv.methodOffset == values.single.methodOffset;
       return (target: recv, result: BuiltinValue(boolval: method == '!=' ? !equal : equal).push(ctx), args: values, namedArgs: const {});
     }
-    if (recv.name == null && recv.methodOffset != null) {
+    if (recv.unmaterializedCallable != null) {
       recv = recv.tearOff(ctx);
     }
     for (var i = 0; i < values.length; i++) {
-      if (values[i].name == null && values[i].methodOffset != null) {
+      if (values[i].unmaterializedCallable != null) {
         values[i] = values[i].tearOff(ctx);
       }
     }

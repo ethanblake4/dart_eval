@@ -73,10 +73,14 @@ class SuperPropertyReference extends IdentifierReference {
 
 /// A local, instance, or top-level reference with an optional target object.
 class IdentifierReference implements Reference {
-  IdentifierReference(this.object, this.name);
+  IdentifierReference(this.object, this.name, {this.pin});
 
   Variable? object;
   final String name;
+
+  /// For member access on an `E(receiver)` value: the explicit-application
+  /// pin restricting member resolution to the extension.
+  final BoundExtension? pin;
 
   /// The denotation this reference resolves to — computed per call since
   /// resolution depends on the scope at the use site (the plan's
@@ -91,7 +95,7 @@ class IdentifierReference implements Reference {
     if (object != null) {
       return resolveMemberAccess(
         ctx,
-        receiverOf(ctx, object),
+        receiverOf(ctx, object, pin: pin),
         name,
         forSet: forSet,
         source: source,
@@ -142,11 +146,13 @@ Variable? _deferredLoadLibrary(CompilerContext ctx, String prefix) {
     ctx,
     InvokeExternal(ctx.svar('loadLibrary'), idx, []),
     CoreTypes.function.ref(ctx),
-    methodReturnType: AlwaysReturnType(
-      CoreTypes.future
-          .ref(ctx)
-          .copyWith(typeArguments: [CoreTypes.nullType.ref(ctx)]),
-      false,
+    callable: CallableValue(
+      returnType: AlwaysReturnType(
+        CoreTypes.future
+            .ref(ctx)
+            .copyWith(typeArguments: [CoreTypes.nullType.ref(ctx)]),
+        false,
+      ),
     ),
   );
 }
@@ -438,8 +444,10 @@ Variable _declarationToVariable(
       );
       return Variable(
         CoreTypes.function.ref(ctx),
-        methodReturnType: AlwaysReturnType(returnType, false),
-        methodOffset: DeferredOrOffset(file: decOrBridge.sourceLib, name: name),
+        callable: CallableValue(
+          offset: DeferredOrOffset(file: decOrBridge.sourceLib, name: name),
+          returnType: AlwaysReturnType(returnType, false),
+        ),
       );
     }
 
@@ -463,11 +471,12 @@ Variable _declarationToVariable(
     return Variable(
       CoreTypes.type.ref(ctx),
       concreteTypes: [extType],
-      methodOffset: DeferredOrOffset(
-        file: decOrBridge.sourceLib,
-        name: '${declarationName(decl)}.',
+      callable: CallableValue(
+        offset: DeferredOrOffset(
+          file: decOrBridge.sourceLib,
+          name: '${declarationName(decl)}.',
+        ),
       ),
-      callingConvention: CallingConvention.static,
     );
   }
 
@@ -518,8 +527,10 @@ Variable _declarationToVariable(
         ? CoreTypes.function.ref(ctx)
         : CoreTypes.type.ref(ctx),
     concreteTypes: [returnType],
-    methodOffset: offset,
-    methodReturnType: AlwaysReturnType(returnType, nullable),
+    callable: CallableValue(
+      offset: offset,
+      returnType: AlwaysReturnType(returnType, nullable),
+    ),
   );
 
   if (decl is FunctionDeclaration && decl.isGetter) {
@@ -633,8 +644,10 @@ Variable _typeLiteral(
     operation,
     CoreTypes.type.ref(ctx),
     concreteTypes: [type],
-    methodOffset: DeferredOrOffset(file: type.file, name: constructorKey),
-    methodReturnType: AlwaysReturnType(type, false),
+    callable: CallableValue(
+      offset: DeferredOrOffset(file: type.file, name: constructorKey),
+      returnType: AlwaysReturnType(type, false),
+    ),
   );
 }
 
@@ -664,7 +677,7 @@ TypeRef? _resolveInstanceFieldType(
 }
 
 /// Resolves [name] to a top-level declaration visible in the current library.
-/// Throws [PrefixError] when the name resolves to an import prefix rather than
+/// Throws a [CompileError] when the name resolves to an import prefix rather than
 /// a concrete declaration.
 DeclarationOrBridge _lookupVisibleValue(
   CompilerContext ctx,
@@ -701,7 +714,7 @@ DeclarationOrBridge _lookupVisibleValue(
   }
   if (found == null) {
     if (children == null && visible[key] != null) {
-      throw PrefixError();
+      throw CompileError('"$name" is an import prefix, not a declaration', source);
     }
     throw CompileError('Could not find declaration "$name"', source);
   }
@@ -839,4 +852,29 @@ bool _hasReceiverMember(
           ) !=
           null ||
       resolveExtensionMember(ctx, resolvedReceiver, name) != null;
+}
+
+/// Re-derives the [BoundExtension] pin an `E(x)` target expression would
+/// carry — explicit extension application is syntactic, so the pin lives at
+/// the member-access site rather than on the compiled value. [receiverType]
+/// is the compiled `E(x)` value's type, used to resolve the `on` bindings.
+BoundExtension? extensionPinOf(
+  CompilerContext ctx,
+  Expression? target,
+  TypeRef receiverType,
+) {
+  if (target is! MethodInvocation) return null;
+  // `E(x)` always names the extension as a bare identifier; a member-call
+  // target like `recv.m(...)` fails the lexical lookup and is not a pin.
+  final Denotation d;
+  try {
+    d = IdentifierReference(
+      null,
+      target.methodName.name,
+    ).denotation(ctx, source: target);
+  } on CompileError {
+    return null;
+  }
+  if (d is! ExtensionNamespaceDenotation) return null;
+  return boundExtensionFor(ctx, target, d.ext, receiverType);
 }
