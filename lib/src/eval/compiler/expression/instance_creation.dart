@@ -203,7 +203,7 @@ Variable compileInstanceOf(
       instantiatedType = instantiatedType.copyWith(
         typeArguments: [
           for (var i = 0; i < genericNames.length; i++)
-            substitutions[paramRefs[genericNames[i]]!.parameter!] ??
+            substitutions[paramRefs[genericNames[i]]!.parameter] ??
                 CoreTypes.dynamic.ref(ctx),
         ],
       );

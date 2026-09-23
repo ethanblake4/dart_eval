@@ -518,7 +518,7 @@ class CompilerContext with ScopeContext {
       savedLocalsMap.forEach((key, value) {
         final myLocal = myLocalsMap[key];
         if (myLocal != null &&
-            !myLocal.type.isSameSemanticType(this, value.type)) {
+            myLocal.type != value.type) {
           locals[i][key] = myLocal.copyWith(type: value.type);
         }
       });

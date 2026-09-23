@@ -914,11 +914,6 @@ class Variable {
             param.name.lexeme: TypeRef.unresolved(
               ext.library,
               param.name.lexeme,
-              typeParameterOwner: TypeParameterOwner(
-                TypeParameterOwnerKind.tearOff,
-                ext.library,
-                member.name.lexeme,
-              ).key,
             ),
         },
       ),

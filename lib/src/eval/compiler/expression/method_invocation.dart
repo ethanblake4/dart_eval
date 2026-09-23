@@ -571,7 +571,7 @@ void _resolveInvocationGenerics(
     // The bound may self-reference (`T extends Generator<T>`); substitute
     // the actual argument before checking assignability.
     final substitutedBound = bound.substituteTypeParameters(
-      Substitution.of({resolved[name]!.parameter!: argument}),
+      Substitution.of({(resolved[name]! as TypeParameterTypeRef).parameter: argument}),
     );
     if (!argument.isSpec(CoreTypes.dynamic) &&
         !substitutedBound.isSpec(CoreTypes.dynamic) &&
@@ -1359,7 +1359,7 @@ Map<String, TypeRef> classTypeArguments(
       }
     }
     final parent = ctx.typeSystem.superclassOf(current);
-    if (parent != null && !parent.hasSameDeclarationAs(current)) {
+    if (parent != null && !sameDeclaration(parent, current)) {
       worklist.add((
         parent.substituteTypeParameters(nextSubstitutions),
         nextSubstitutions,
@@ -1428,7 +1428,8 @@ DeclarationOrBridge<ClassMember, BridgeMethodDef> resolveInstanceMethod(
   TypeRef? bottomType,
 ]) {
   if (instanceType.isTypeParameter) {
-    final bound = instanceType.typeParameterBound ?? CoreTypes.dynamic.ref(ctx);
+    final bound = (instanceType as TypeParameterTypeRef).parameter.bound ??
+        CoreTypes.dynamic.ref(ctx);
     if (bound.isSpec(CoreTypes.dynamic)) {
       throw CompileError(
         'Cannot resolve $methodName on unbounded type parameter $instanceType',
@@ -1821,7 +1822,7 @@ ResolvedArgs compileNonBridgeArgs(
     for (var i = 0; i < typeParams.length; i++) {
       final name = typeParams[i].name.lexeme;
       if (!identical(resolveGenerics[name], unboundGenerics[name])) continue;
-      final bound = substitutions[placeholders[name]!.parameter!];
+      final bound = substitutions[(placeholders[name]! as TypeParameterTypeRef).parameter];
       if (bound != null) resolveGenerics[name] = bound;
     }
   }

@@ -422,8 +422,9 @@ class TypedBackend {
             ],
             parameterTypeParameterIndices: [
               for (final type in parameterTypes)
-                type.parameter?.owner.isClassLike == true
-                    ? type.typeParameterIndex!
+                type is TypeParameterTypeRef &&
+                        type.parameter.owner.isClassLike
+                    ? type.parameter.index
                     : -1,
             ],
             parameterNullable: [
@@ -850,7 +851,7 @@ class TypedBackend {
         },
         returnType: function.returnType,
       ),
-      decl: signature.decl!,
+      decl: signature.decl,
       nullable: signature.nullable,
     );
   }
@@ -1208,8 +1209,8 @@ class _LoweringSession {
           for (final type
               in b.context.functionParameterTypes[sourceFunctionId] ??
                   const <TypeRef>[])
-            type.parameter?.owner.isClassLike == true
-                ? type.typeParameterIndex!
+            type is TypeParameterTypeRef && type.parameter.owner.isClassLike
+                ? type.parameter.index
                 : -1,
         ],
         parameterNullable: [

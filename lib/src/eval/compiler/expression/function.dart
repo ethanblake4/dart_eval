@@ -92,9 +92,11 @@ Variable compileFunctionExpression(
     () {
       ctx.functionTypeParameterBounds[fnOffset] = [
         for (final parameter in typeParameters)
-          ctx
-                  .typeScopes[ctx.library]![parameter.name.lexeme]!
-                  .typeParameterBound ??
+          (ctx
+                      .typeScopes[ctx.library]![parameter.name.lexeme]!
+                  as TypeParameterTypeRef)
+                  .parameter
+                  .bound ??
               CoreTypes.dynamic.ref(ctx),
       ];
 
@@ -370,7 +372,7 @@ Variable compileFunctionExpression(
           named: signature.named,
           returnType: inferredClosureReturnType!,
         ),
-        decl: closureType.decl!,
+        decl: closureType.decl,
         nullable: closureType.nullable,
       );
     }

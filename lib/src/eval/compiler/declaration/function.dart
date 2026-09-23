@@ -75,9 +75,11 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
     () {
       ctx.functionTypeParameterBounds[pos] = [
         for (final parameter in typeParameters)
-          ctx
-                  .typeScopes[ctx.library]![parameter.name.lexeme]!
-                  .typeParameterBound ??
+          (ctx
+                      .typeScopes[ctx.library]![parameter.name.lexeme]!
+                  as TypeParameterTypeRef)
+                  .parameter
+                  .bound ??
               CoreTypes.dynamic.ref(ctx),
       ];
 

@@ -493,7 +493,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
             if (child.isBridge) {
               final bridge = child.bridge!;
               final type0 = BridgeTypeRef.type(
-                _ctx.runtimeTypes.indexMap[cached],
+                _ctx.runtimeTypes.indexMap[cached.decl!],
               );
               if (bridge is BridgeClassDef) {
                 child.bridge = bridge.copyWith(
@@ -524,7 +524,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
         if (type == null) continue;
         if (declarationOrBridge.isBridge) {
           final bridge = declarationOrBridge.bridge!;
-          final type0 = BridgeTypeRef.type(_ctx.runtimeTypes.indexMap[type]);
+          final type0 = BridgeTypeRef.type(_ctx.runtimeTypes.indexMap[type.decl!]);
           if (bridge is BridgeClassDef) {
             declarationOrBridge.bridge = bridge.copyWith(
               type: bridge.type.copyWith(type: type0),
@@ -864,7 +864,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
 
     for (final t in _ctx.runtimeTypes.indexMap.entries) {
       final type = t.key;
-      typeIds.putIfAbsent(type.file, () => {})[type.name] = t.value;
+      typeIds.putIfAbsent(type.library, () => {})[type.name] = t.value;
     }
     final backend = TypedBackend(_ctx);
     final typed = backend.compileEntrypoints([
@@ -1155,8 +1155,8 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
   /// the same order.
   TypeRef _registerTypeRef(int libraryIndex, String name, TypeDecl decl) {
     final type = InterfaceTypeRef(decl);
-    _ctx.runtimeTypes.indexMap[type] = _ctx.runtimeTypes.names.length;
-    _ctx.runtimeTypes.descriptorIds[type.semanticKey] =
+    _ctx.runtimeTypes.indexMap[decl] = _ctx.runtimeTypes.names.length;
+    _ctx.runtimeTypes.descriptorIds[type] =
         _ctx.runtimeTypes.names.length;
     _ctx.runtimeTypes.list.add(type);
     _ctx.runtimeTypes.names.add(name);

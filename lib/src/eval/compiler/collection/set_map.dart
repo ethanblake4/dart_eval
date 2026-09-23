@@ -28,11 +28,11 @@ Variable compileSetOrMapLiteral(
   TypeRef? boundKey, boundValue;
   if (resolvedBound != null) {
     final boundArgs = resolvedBound.typeArguments;
-    if (resolvedBound.hasSameDeclarationAs(CoreTypes.map.ref(ctx)) &&
+    if (sameDeclaration(resolvedBound, CoreTypes.map.ref(ctx)) &&
         boundArgs.length == 2) {
       boundKey = boundArgs[0];
       boundValue = boundArgs[1];
-    } else if (resolvedBound.hasSameDeclarationAs(CoreTypes.set.ref(ctx)) &&
+    } else if (sameDeclaration(resolvedBound, CoreTypes.set.ref(ctx)) &&
         boundArgs.length == 1) {
       boundKey = boundArgs[0];
     }
@@ -56,8 +56,8 @@ Variable compileSetOrMapLiteral(
           (literal.elements.isEmpty
               // A bare `{}` is a Set only when the context says Set;
               // otherwise it is a Map.
-              ? resolvedBound?.hasSameDeclarationAs(CoreTypes.set.ref(ctx)) !=
-                    true
+              ? resolvedBound == null ||
+                  !sameDeclaration(resolvedBound, CoreTypes.set.ref(ctx))
               : literal.elements.first is MapLiteralEntry ||
                     (firstSpread?.type
                             .copyWith(nullable: false)

@@ -1,3 +1,5 @@
+import 'package:collection/collection.dart';
+
 import '../type.dart';
 
 /// The structural shape of a function type: positional parameter types
@@ -28,18 +30,25 @@ final class FunctionSignature {
 
   final TypeRef returnType;
 
-  /// Temporary structural key — equality on the signature's shape as the
-  /// legacy `EvalFunctionType.semanticKey` produced it. Deleted when
-  /// [TypeRef] equality flips structural in step 5.
-  String semanticKey() {
-    String parameter(int index) =>
-        '${index < requiredPositional ? 1 : 0}:${positional[index].semanticKey}';
-    final sortedNamed = named.entries.toList()
-      ..sort((a, b) => a.key.compareTo(b.key));
-    return '(${[for (var i = 0; i < requiredPositional; i++) parameter(i)].join(',')})'
-        '[${[for (var i = requiredPositional; i < positional.length; i++) parameter(i)].join(',')}]'
-        '{${sortedNamed.map((entry) => '${entry.key}=${entry.value.required ? 1 : 0}:${entry.value.type.semanticKey}').join(',')}}'
-        '->${returnType.semanticKey}'
-        '<${typeParameters.map((value) => value.name).join(',')}>';
-  }
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is FunctionSignature &&
+          requiredPositional == other.requiredPositional &&
+          returnType == other.returnType &&
+          const ListEquality<TypeParameterDef>().equals(typeParameters, other.typeParameters) &&
+          const ListEquality<TypeRef>().equals(positional, other.positional) &&
+          const MapEquality<String, ({TypeRef type, bool required})>()
+          .equals(named, other.named);
+
+  @override
+  int get hashCode => Object.hash(
+    requiredPositional,
+    returnType,
+    Object.hashAll(typeParameters),
+    Object.hashAll(positional),
+    Object.hashAllUnordered(
+      named.entries.map((e) => Object.hash(e.key, e.value)),
+    ),
+  );
 }

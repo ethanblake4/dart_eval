@@ -21,7 +21,7 @@ void compileClassDeclaration(CompilerContext ctx, ClassDeclaration d) {
     () {
       final $runtimeType = ctx
           .runtimeTypes
-          .indexMap[TypeRef.lookupDeclaration(ctx, ctx.library, d)];
+          .indexMap[TypeRef.lookupDeclaration(ctx, ctx.library, d).decl!];
       final clsName = d.namePart.typeName.lexeme;
       ctx.instanceDeclarationPositions[ctx.library]![clsName] = [
         {},
@@ -103,7 +103,7 @@ void compileClassTypeAlias(CompilerContext ctx, ClassTypeAlias d) {
     () {
       final $runtimeType = ctx
           .runtimeTypes
-          .indexMap[TypeRef.lookupDeclaration(ctx, ctx.library, d)];
+          .indexMap[TypeRef.lookupDeclaration(ctx, ctx.library, d).decl!];
       final clsName = d.name.lexeme;
       ctx.instanceDeclarationPositions[ctx.library]![clsName] = [
         {},
@@ -209,7 +209,7 @@ TypeRef _resolveSuperclass(CompilerContext ctx, NamedType superclass) {
 /// [compileClassDeclaration]), so this only registers its name.
 void compileMixinDeclaration(CompilerContext ctx, MixinDeclaration d) {
   final $runtimeType =
-      ctx.runtimeTypes.indexMap[TypeRef.lookupDeclaration(ctx, ctx.library, d)];
+      ctx.runtimeTypes.indexMap[TypeRef.lookupDeclaration(ctx, ctx.library, d).decl!];
   final clsName = d.name.lexeme;
   ctx.instanceDeclarationPositions[ctx.library]![clsName] = [
     {},

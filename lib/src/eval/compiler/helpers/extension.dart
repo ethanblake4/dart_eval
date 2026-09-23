@@ -159,7 +159,7 @@ bool _unifyOnPattern(
   List<TypeRef?> bound,
 ) {
   if (pattern.isTypeParameter) {
-    final index = pattern.typeParameterIndex!;
+    final index = (pattern as TypeParameterTypeRef).parameter.index;
     final previous = bound[index];
     if (previous == null) {
       bound[index] = actual;

@@ -13,11 +13,13 @@ final class RuntimeTypes {
 
   final CompilerContext _ctx;
 
-  /// Registered declaration refs → their index in the type table.
-  final Map<TypeRef, int> indexMap = {};
+  /// Registered declarations → their index in the type table.
+  final Map<TypeDecl, int> indexMap = {};
 
-  /// Semantic key → descriptor id, allocated on first use.
-  final Map<String, int> descriptorIds = {};
+  /// Type → descriptor id, allocated on first use. The [TypeRef] value
+  /// itself is the key: structural `==` decides identity, so structurally
+  /// equal types share one id.
+  final Map<TypeRef, int> descriptorIds = {};
 
   /// Types in descriptor-id order (a type's id is its position here).
   final List<TypeRef> list = [];
@@ -31,15 +33,13 @@ final class RuntimeTypes {
   /// Descriptor lists (parallel to [list]) — filled at emit.
   final List<List<int>> descriptors = [];
 
-  /// Allocates (or fetches) the descriptor id for [type]. The semantic key
-  /// — declaration, arguments, records, signature, nullability — decides
-  /// identity, so structurally equal types share one id.
+  /// Allocates (or fetches) the descriptor id for [type]. Structural type
+  /// equality decides identity, so structurally equal types share one id.
   int idOf(TypeRef type) {
-    final key = type.semanticKey;
-    final existing = descriptorIds[key];
+    final existing = descriptorIds[type];
     if (existing != null) return existing;
     final id = list.length;
-    descriptorIds[key] = id;
+    descriptorIds[type] = id;
     list.add(type);
     names.add(type.name);
     return id;
@@ -47,7 +47,7 @@ final class RuntimeTypes {
 
   /// The registered index for [decl]'s declaration ref — the nominal table
   /// key, distinct from [idOf] which also covers structural types.
-  int? declarationIndex(TypeDecl decl) => indexMap[decl.rawType];
+  int? declarationIndex(TypeDecl decl) => indexMap[decl];
 
   /// Every runtime type index a value of [type] may report `is`/`as`
   /// success for: its own id plus every declared supertype's, walked with
@@ -58,7 +58,7 @@ final class RuntimeTypes {
   /// tag?, ...]` in the order the runtime decoder expects.
   List<int> descriptorOf(TypeRef type) {
     if (type.isTypeParameter) {
-      final parameter = type.parameter!;
+      final parameter = (type as TypeParameterTypeRef).parameter;
       final owner = parameter.owner;
       final ownerType = owner.isClassLike
           ? idOf(_ctx.visibleTypes[owner.library]![owner.name]!)
@@ -123,7 +123,7 @@ final class RuntimeTypes {
       ];
     }
     return [
-      indexMap[type] ?? idOf(type),
+      (type is InterfaceTypeRef ? indexMap[type.decl] : null) ?? idOf(type),
       type.nullable ? 1 : 0,
       for (final argument in type.typeArguments) idOf(argument),
     ];

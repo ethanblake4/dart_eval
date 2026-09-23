@@ -61,9 +61,11 @@ int compileMethodDeclaration(
           ...extensionTypeParameters,
           ...methodTypeParameters,
         ])
-          ctx
-                  .typeScopes[ctx.library]![parameter.name.lexeme]!
-                  .typeParameterBound ??
+          (ctx
+                      .typeScopes[ctx.library]![parameter.name.lexeme]!
+                  as TypeParameterTypeRef)
+                  .parameter
+                  .bound ??
               CoreTypes.dynamic.ref(ctx),
       ];
       ctx.functionRuntimeTypes[pos] = declaredFunctionType(

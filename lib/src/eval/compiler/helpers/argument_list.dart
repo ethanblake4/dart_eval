@@ -297,9 +297,8 @@ ArgumentListResult compileArgumentList(
   }
   final ctorClassParamSubs = Substitution.wrap(<TypeParameterDef, TypeRef>{
     for (final param in ctorClassParams)
-      ctorClassParamRefs[param.name.lexeme]!.parameter!: ?resolveGenerics[param
-          .name
-          .lexeme],
+      (ctorClassParamRefs[param.name.lexeme]! as TypeParameterTypeRef)
+          .parameter: ?resolveGenerics[param.name.lexeme],
   });
   final paramTypeParameters = {...ctorClassParamRefs, ...resolveGenerics};
 

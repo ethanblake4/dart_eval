@@ -66,7 +66,7 @@ StatementInfo doAsyncReturn(
 void setupAsyncFunction(CompilerContext ctx, {TypeRef? returnType}) {
   final future = CoreTypes.future.ref(ctx);
   final runtimeType =
-      returnType != null && returnType.hasSameDeclarationAs(future)
+      returnType != null && sameDeclaration(returnType, future)
       ? returnType
       : future.copyWith(typeArguments: [CoreTypes.dynamic.ref(ctx)]);
   ctx.setLocal(

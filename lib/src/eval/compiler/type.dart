@@ -40,70 +40,33 @@ enum AssignmentConversion {
 /// declaration a nominal type names owns its resolved structure
 /// (supertypes, type parameters) through [CompilerContext.typeSystem].
 sealed class TypeRef {
-  const TypeRef(
-    this.file,
-    this.name, {
-    this.decl,
-    this.recordFields = const [],
-    this.typeParameterOwner,
-    this.typeParameterIndex,
-    this.parameter,
-    TypeRef? typeParameterBound,
-    this.nullable = false,
-  }) : _typeParameterBound = typeParameterBound;
+  const TypeRef({required this.nullable});
 
-  final int file;
-  final String name;
+  /// The declaring library of the named type — the declaration's library
+  /// for interface/function types, the owner library for type parameters,
+  /// -1 for records, and the caller's for decl-less nominals.
+  int get file;
+
+  /// The simple name — the declaration's name, the parameter's name for
+  /// type parameters, or the canonical `@record` name for records.
+  String get name;
 
   /// The declaration this type names — null for type parameters, records,
-  /// and the extension namespace pseudo-type.
-  final TypeDecl? decl;
+  /// and decl-less nominals.
+  TypeDecl? get decl;
 
   /// Interim bridge for type arguments: [InterfaceTypeRef.arguments] on
   /// interface types, empty everywhere else. Migrated readers take
-  /// `arguments`; this accessor is deleted at the end of phase 3.
+  /// `arguments`; this accessor is removed when every use classifies.
   List<TypeRef> get typeArguments => const [];
-
-  final List<RecordParameterType> recordFields;
-  final String? typeParameterOwner;
-  final int? typeParameterIndex;
-
-  /// The shared [TypeParameterDef] backing this type-parameter reference —
-  /// non-null exactly for type parameters. Preserved through [copyWith], so
-  /// [typeParameterBound] stays live as the def's bound resolves.
-  final TypeParameterDef? parameter;
-
-  final TypeRef? _typeParameterBound;
-
-  /// The parameter's declared bound. Def-backed refs read the def's bound
-  /// (which resolves after seeding), so copies see the same value.
-  TypeRef? get typeParameterBound =>
-      parameter == null ? _typeParameterBound : parameter!.bound;
 
   final bool nullable;
 
   /// A decl-less nominal — the extension namespace pseudo-type and other
   /// legacy encodings not yet re-homed onto a [TypeDecl]. Interim factory
   /// for the migration; removed with [_UnresolvedTypeRef].
-  factory TypeRef.unresolved(
-    int file,
-    String name, {
-    String? typeParameterOwner,
-    int? typeParameterIndex,
-    TypeParameterDef? parameter,
-    TypeRef? typeParameterBound,
-    List<RecordParameterType> recordFields = const [],
-    bool nullable = false,
-  }) => _UnresolvedTypeRef(
-    file,
-    name,
-    recordFields: recordFields,
-    typeParameterOwner: typeParameterOwner,
-    typeParameterIndex: typeParameterIndex,
-    parameter: parameter,
-    typeParameterBound: typeParameterBound,
-    nullable: nullable,
-  );
+  factory TypeRef.unresolved(int file, String name) =>
+      _UnresolvedTypeRef(file, name, nullable: false);
 
   /// Given a set of [TypeRef]s, find their closest common ancestor type.
   factory TypeRef.commonBaseType(CompilerContext ctx, Set<TypeRef> types) =>
@@ -309,7 +272,7 @@ sealed class TypeRef {
               ...ctx.typeSystem.superclassChain(specifyingType),
             ].firstWhereOrNull(
               (candidate) =>
-                  candidate.hasSameDeclarationAs(specifiedType!) &&
+                  sameDeclaration(candidate, specifiedType!) &&
                   genericIndex < candidate.typeArguments.length,
             );
         if (instantiatedType != null) {
@@ -392,7 +355,7 @@ sealed class TypeRef {
     }
 
     if ($class.isTypeParameter) {
-      final bound = $class.typeParameterBound;
+      final bound = ($class as TypeParameterTypeRef).parameter.bound;
       if (bound == null) return null;
       return TypeRef.lookupFieldType(
         ctx,
@@ -443,12 +406,13 @@ sealed class TypeRef {
             };
             for (var i = 0; i < (typeParams?.length ?? 0); i++) {
               final paramRef = ctx
-                  .typeScopes[$class.file]![typeParams![i].name.lexeme]!;
-              final bound = paramRef.typeParameterBound;
+                  .typeScopes[$class.file]![typeParams![i].name.lexeme]!
+                  as TypeParameterTypeRef;
+              final bound = paramRef.parameter.bound;
               final arg = i < $class.typeArguments.length
                   ? $class.typeArguments[i]
                   : (bound ?? CoreTypes.dynamic.ref(ctx));
-              localBindings[paramRef.parameter!] = arg
+              localBindings[paramRef.parameter] = arg
                   .substituteTypeParameters(substitutions);
             }
             if (localBindings.isEmpty) return resolved;
@@ -645,60 +609,6 @@ sealed class TypeRef {
     }
   }
 
-  String get semanticKey {
-    final self = this;
-    return '${isTypeParameter ? 'parameter:$typeParameterOwner:$typeParameterIndex' : '$file:$name'}${nullable ? '?' : ''}'
-        '${typeArguments.isEmpty ? '' : '<${typeArguments.map((type) => type.semanticKey).join(',')}>'}'
-        '${recordFields.isEmpty ? '' : ':record:${recordFields.map((field) => '${field.isNamed ? 'n' : 'p'}:${field.name}:${field.type.semanticKey}').join(',')}'}'
-        '${self is FunctionTypeRef ? ':fn:${self.signature.semanticKey()}' : ''}';
-  }
-
-  /// The canonical `@record` type name for [fields]: positionals in order,
-  /// then named fields sorted by name — the single identity shared by every
-  /// record producer so `(int, {b: B, a: A})` and `(int, {a: A, b: B})` are
-  /// the same type.
-  static String recordTypeName(List<RecordParameterType> fields) {
-    final name = StringBuffer('@record<');
-    var first = true;
-    void comma() {
-      if (first) {
-        first = false;
-      } else {
-        name.write(',');
-      }
-    }
-
-    for (final field in fields) {
-      if (field.isNamed) continue;
-      comma();
-      name.write('${field.type}');
-    }
-    final named = [
-      for (final field in fields)
-        if (field.isNamed) field,
-    ]..sort((a, b) => a.name!.compareTo(b.name!));
-    if (named.isNotEmpty) {
-      comma();
-      name.write('{');
-      for (var i = 0; i < named.length; i++) {
-        if (i > 0) name.write(',');
-        name.write('${named[i].name}:${named[i].type}');
-      }
-      name.write('}');
-    }
-    name.write('>');
-    return name.toString();
-  }
-
-  /// Whether two references name the same declaration. This intentionally
-  /// ignores type arguments, nullability, and representation details.
-  bool hasSameDeclarationAs(TypeRef other) =>
-      isTypeParameter || other.isTypeParameter
-      ? isTypeParameter &&
-            other.isTypeParameter &&
-            typeParameterOwner == other.typeParameterOwner &&
-            typeParameterIndex == other.typeParameterIndex
-      : (file == other.file || isRecord) && name == other.name;
 
   /// Whether this type names the declaration [spec] refers to. Nullability
   /// and type arguments are ignored, matching today's nominal `==`.
@@ -716,12 +626,11 @@ sealed class TypeRef {
   /// lowered. Distinct from [isFunctionLike], which also covers
   /// [FunctionTypeRef]s.
   bool get isBareFunction =>
-      isSpec(CoreTypes.function) && this is! FunctionTypeRef;
+      this is InterfaceTypeRef && isSpec(CoreTypes.function);
 
   /// Anything callable-as-`Function`: a bare `Function` interface type or
   /// a structural [FunctionTypeRef].
-  bool get isFunctionLike =>
-      isSpec(CoreTypes.function) || this is FunctionTypeRef;
+  bool get isFunctionLike => isBareFunction || this is FunctionTypeRef;
 
   /// Whether every value of this type reports exactly this runtime type:
   /// leaf classes that cannot be subclassed (`int`, `double`, `bool`,
@@ -743,18 +652,13 @@ sealed class TypeRef {
         isSpec(CoreTypes.nullType);
   }
 
-  /// Positional record fields in declaration order — [recordFields] lists
-  /// fields in source order, which may interleave positional and named.
-  List<RecordParameterType> get recordPositionalFields =>
-      recordFields.positionalFields;
 
-  /// Named record fields sorted by name (the canonical/descriptor order).
-  List<RecordParameterType> get recordNamedFields => recordFields.namedFields;
+  bool get isTypeParameter => this is TypeParameterTypeRef;
 
-  bool get isTypeParameter => typeParameterIndex != null;
-
-  bool get isClassTypeParameter =>
-      isTypeParameter && typeParameterOwner!.startsWith('class:');
+  bool get isClassTypeParameter {
+    final self = this;
+    return self is TypeParameterTypeRef && self.parameter.owner.isClassLike;
+  }
 
   /// Whether the runtime descriptor for this type embeds a type parameter,
   /// so its id must be resolved against the active type environment.
@@ -762,39 +666,6 @@ sealed class TypeRef {
       isTypeParameter ||
       typeArguments.any((arg) => arg.requiresTypeEnvironment);
 
-  /// Semantic type equality for language checks. Unlike [operator ==], this
-  /// includes nullability, type arguments, record fields, and function shape.
-  bool isSameSemanticType(CompilerContext ctx, TypeRef other) {
-    final left = this;
-    final right = other;
-    if (!left.hasSameDeclarationAs(right) ||
-        left.nullable != right.nullable ||
-        left.typeArguments.length != right.typeArguments.length ||
-        left.recordFields.length != right.recordFields.length) {
-      return false;
-    }
-    for (var i = 0; i < left.typeArguments.length; i++) {
-      if (!left.typeArguments[i].isSameSemanticType(
-        ctx,
-        right.typeArguments[i],
-      )) {
-        return false;
-      }
-    }
-    for (var i = 0; i < left.recordFields.length; i++) {
-      final a = left.recordFields[i], b = right.recordFields[i];
-      if (a.name != b.name ||
-          a.isNamed != b.isNamed ||
-          !a.type.isSameSemanticType(ctx, b.type)) {
-        return false;
-      }
-    }
-    // Function types are compared by signature; a structural function type
-    // never equals plain `Function`.
-    final leftSignature = left is FunctionTypeRef ? left.signature : null;
-    final rightSignature = right is FunctionTypeRef ? right.signature : null;
-    return leftSignature?.semanticKey() == rightSignature?.semanticKey();
-  }
 
   /// Classifies Dart assignment compatibility of a [this] value into a
   /// [slot] without conflating `dynamic` with a subtype proof.
@@ -826,62 +697,43 @@ sealed class TypeRef {
   );
 
   TypeRef copyWith({
-    int? file,
-    String? name,
     TypeDecl? decl,
     List<TypeRef>? typeArguments,
-    List<RecordParameterType>? recordFields,
-    String? typeParameterOwner,
-    int? typeParameterIndex,
-    TypeParameterDef? parameter,
-    TypeRef? typeParameterBound,
     bool? nullable,
   }) {
     final self = this;
     if (self is RecordTypeRef) {
-      final fields = recordFields ?? self.recordFields;
       return RecordTypeRef(
-        [for (final field in fields) if (!field.isNamed) field.type],
-        {
-          for (final field in fields)
-            if (field.isNamed) field.name!: field.type,
-        },
+        self.positional,
+        self.named,
         nullable: nullable ?? self.nullable,
       );
     }
     if (self is TypeParameterTypeRef) {
       return TypeParameterTypeRef(
-        parameter ?? self.parameter!,
+        self.parameter,
         nullable: nullable ?? self.nullable,
-        file: file ?? self.file,
+        file: self._file,
       );
     }
     if (self is FunctionTypeRef) {
       return FunctionTypeRef(
         self.signature,
-        decl: decl ?? self.decl!,
+        decl: decl ?? self.decl,
         nullable: nullable ?? self.nullable,
       );
     }
-    final selfDecl = decl ?? self.decl;
-    if (selfDecl == null) {
-      // Decl-less nominals (the extension namespace pseudo-type) keep the
-      // legacy grab-bag fields until the migration removes them.
-      return _UnresolvedTypeRef(
-        file ?? this.file,
-        name ?? this.name,
-        typeParameterOwner: typeParameterOwner ?? this.typeParameterOwner,
-        typeParameterIndex: typeParameterIndex ?? this.typeParameterIndex,
-        parameter: parameter ?? this.parameter,
-        typeParameterBound: typeParameterBound ?? this.typeParameterBound,
-        recordFields: recordFields ?? this.recordFields,
-        nullable: nullable ?? this.nullable,
+    if (self is InterfaceTypeRef) {
+      return InterfaceTypeRef(
+        decl ?? self.decl,
+        arguments: typeArguments ?? self.arguments,
+        nullable: nullable ?? self.nullable,
       );
     }
-    return InterfaceTypeRef(
-      selfDecl,
-      arguments: typeArguments ?? this.typeArguments,
-      nullable: nullable ?? this.nullable,
+    return _UnresolvedTypeRef(
+      self.file,
+      self.name,
+      nullable: nullable ?? self.nullable,
     );
   }
 
@@ -894,22 +746,20 @@ sealed class TypeRef {
 
   /// Replaces retained type-parameter references anywhere inside this type.
   TypeRef substituteTypeParameters(Substitution substitutions) {
-    if (isTypeParameter) {
-      final replacement = parameter == null
-          ? null
-          : substitutions[parameter!];
+    final self = this;
+    if (self is TypeParameterTypeRef) {
+      final replacement = substitutions[self.parameter];
       if (replacement != null) {
         return replacement.copyWith(nullable: nullable || replacement.nullable);
       }
       return this;
     }
     if (typeArguments.isEmpty &&
-        recordFields.isEmpty &&
-        this is! FunctionTypeRef) {
+        self is! RecordTypeRef &&
+        self is! FunctionTypeRef) {
       return this;
     }
 
-    final self = this;
     if (self is RecordTypeRef) {
       return RecordTypeRef(
         [
@@ -946,7 +796,7 @@ sealed class TypeRef {
             substitutions,
           ),
         ),
-        decl: self.decl!,
+        decl: self.decl,
         nullable: self.nullable,
       );
     }
@@ -955,33 +805,9 @@ sealed class TypeRef {
         for (final argument in typeArguments)
           argument.substituteTypeParameters(substitutions),
       ],
-      recordFields: [
-        for (final field in recordFields)
-          RecordParameterType(
-            field.name,
-            field.type.substituteTypeParameters(substitutions),
-            field.isNamed,
-          ),
-      ],
     );
   }
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is TypeRef &&
-          runtimeType == other.runtimeType &&
-          (isTypeParameter || other.isTypeParameter
-              ? typeParameterOwner == other.typeParameterOwner &&
-                    typeParameterIndex == other.typeParameterIndex
-              : (file == other.file || isRecord) && name == other.name);
-
-  @override
-  int get hashCode => isTypeParameter
-      ? Object.hash(typeParameterOwner, typeParameterIndex)
-      : isRecord
-      ? name.hashCode
-      : file.hashCode ^ name.hashCode;
 
   @override
   String toString() {
@@ -1157,11 +983,13 @@ String ctorNameOf(String? name) => name == 'new' ? '' : name ?? '';
 /// would force a rewrite of every check for no gain.
 final class InterfaceTypeRef extends TypeRef {
   InterfaceTypeRef(
-    TypeDecl decl, {
+    this.decl, {
     List<TypeRef> arguments = const [],
     super.nullable = false,
-  }) : arguments = List.unmodifiable(arguments),
-       super(decl.library, decl.name, decl: decl);
+  }) : arguments = List.unmodifiable(arguments);
+
+  @override
+  final TypeDecl decl;
 
   /// Empty means a raw use — `Future` acts as `Future<dynamic>` in both
   /// directions of assignability, exactly as the legacy empty
@@ -1169,21 +997,89 @@ final class InterfaceTypeRef extends TypeRef {
   final List<TypeRef> arguments;
 
   @override
+  int get file => decl.library;
+
+  @override
+  String get name => decl.name;
+
+  @override
   List<TypeRef> get typeArguments => arguments;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is InterfaceTypeRef &&
+          nullable == other.nullable &&
+          _sameDecl(decl, other.decl) &&
+          _listEquals(arguments, other.arguments);
+
+  @override
+  late final int hashCode = Object.hash(
+    decl.library,
+    decl.name,
+    nullable,
+    Object.hashAll(arguments),
+  );
+}
+
+/// Whether two declarations name the same nominal type — the registry
+/// shares instances, so identity is the fast path; library + name is the
+/// ground truth.
+bool _sameDecl(TypeDecl a, TypeDecl b) =>
+    identical(a, b) || (a.library == b.library && a.name == b.name);
+
+/// Whether two types name the same declaration — nominal identity only,
+/// ignoring nullability and arguments. This is what the legacy `==` and
+/// `hasSameDeclarationAs` meant for non-parameter types.
+bool sameDeclaration(TypeRef a, TypeRef b) {
+  if (a.isTypeParameter || b.isTypeParameter) {
+    return a is TypeParameterTypeRef &&
+        b is TypeParameterTypeRef &&
+        a.parameter == b.parameter;
+  }
+  return (a.file == b.file || a.isRecord) && a.name == b.name;
+}
+
+bool _listEquals<T>(List<T> a, List<T> b) {
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
 }
 
 /// A type-parameter reference — `T` inside the scope that declared it.
 /// The shared [TypeParameterDef] is the identity; [typeParameterBound]
 /// reads the def's bound so copies stay live as bounds resolve.
 final class TypeParameterTypeRef extends TypeRef {
-  TypeParameterTypeRef(TypeParameterDef parameter, {super.nullable, int? file})
-    : super(
-        file ?? parameter.owner.library,
-        parameter.name,
-        typeParameterOwner: parameter.owner.key,
-        typeParameterIndex: parameter.index,
-        parameter: parameter,
-      );
+  TypeParameterTypeRef(this.parameter, {super.nullable = false, int? file})
+    : _file = file;
+
+  /// The declared parameter — its owner and index are the identity, its
+  /// bound resolves on the def after seeding.
+  final TypeParameterDef parameter;
+
+  /// An explicit library override — the owner library otherwise.
+  final int? _file;
+
+  @override
+  int get file => _file ?? parameter.owner.library;
+
+  @override
+  String get name => parameter.name;
+
+  @override
+  TypeDecl? get decl => null;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TypeParameterTypeRef &&
+          nullable == other.nullable &&
+          parameter == other.parameter;
+
+  @override
+  late final int hashCode = Object.hash(parameter, nullable);
 }
 
 /// A record type — `(<T...>, {name: T...})`. The canonical `@record`
@@ -1196,28 +1092,20 @@ final class RecordTypeRef extends TypeRef {
     bool nullable = false,
   }) {
     final sorted = _sortedByName(named);
-    final fields = <RecordParameterType>[
-      for (var i = 0; i < positional.length; i++)
-        RecordParameterType('\$${i + 1}', positional[i], false),
-      for (final entry in sorted.entries)
-        RecordParameterType(entry.key, entry.value, true),
-    ];
     return RecordTypeRef._(
       List.unmodifiable(positional),
       Map.unmodifiable(sorted),
-      TypeRef.recordTypeName(fields),
-      fields,
+      _canonicalName(positional, sorted),
       nullable: nullable,
     );
   }
 
-  const RecordTypeRef._(
+  RecordTypeRef._(
     this.positional,
     this.named,
-    String name,
-    List<RecordParameterType> fields, {
-    super.nullable,
-  }) : super(-1, name, recordFields: fields);
+    this.name, {
+    super.nullable = false,
+  });
 
   /// Positional fields in declaration order.
   final List<TypeRef> positional;
@@ -1225,11 +1113,81 @@ final class RecordTypeRef extends TypeRef {
   /// Named fields in canonical (name-sorted) order.
   final Map<String, TypeRef> named;
 
+  @override
+  final String name;
+
+  @override
+  int get file => -1;
+
+  @override
+  TypeDecl? get decl => null;
+
+  /// The canonical `@record` name: positionals in order, then named
+  /// fields sorted — the single identity every record producer shares.
+  static String _canonicalName(
+    List<TypeRef> positional,
+    Map<String, TypeRef> named,
+  ) {
+    final name = StringBuffer('@record<');
+    var first = true;
+    void comma() {
+      if (first) {
+        first = false;
+      } else {
+        name.write(',');
+      }
+    }
+
+    for (final field in positional) {
+      comma();
+      name.write('$field');
+    }
+    if (named.isNotEmpty) {
+      comma();
+      name.write('{');
+      var i = 0;
+      for (final entry in named.entries) {
+        if (i > 0) name.write(',');
+        name.write('${entry.key}:${entry.value}');
+        i++;
+      }
+      name.write('}');
+    }
+    name.write('>');
+    return name.toString();
+  }
+
   static Map<String, TypeRef> _sortedByName(Map<String, TypeRef> named) {
     final entries = named.entries.toList()
       ..sort((a, b) => a.key.compareTo(b.key));
     return {for (final entry in entries) entry.key: entry.value};
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RecordTypeRef &&
+          nullable == other.nullable &&
+          _listEquals(positional, other.positional) &&
+          _mapEquals(named, other.named);
+
+  @override
+  late final int hashCode = Object.hash(
+    name,
+    nullable,
+    Object.hashAll(positional),
+    Object.hashAll(named.entries),
+  );
+}
+
+bool _mapEquals<K, V>(Map<K, V> a, Map<K, V> b) {
+  if (a.length != b.length) return false;
+  for (final entry in a.entries) {
+    if (!b.containsKey(entry.key) || b[entry.key] != entry.value) {
+      return false;
+    }
+  }
+  return true;
 }
 
 /// A function type — `R Function<P...>(positional..., {name: T...})`.
@@ -1238,63 +1196,57 @@ final class RecordTypeRef extends TypeRef {
 final class FunctionTypeRef extends TypeRef {
   FunctionTypeRef(
     this.signature, {
-    required TypeDecl decl,
+    required this.decl,
     super.nullable = false,
-  }) : super(decl.library, decl.name, decl: decl);
+  });
 
   final FunctionSignature signature;
 
-  /// Migration compatibility: function types were `Function` refs with an
-  /// attached signature, so `isSpec(CoreTypes.function)` stays true until
-  /// every `Function` check is classified as `isBareFunction` or
-  /// `isFunctionLike` and this override is removed.
   @override
-  bool isSpec(BridgeTypeSpec spec) =>
-      spec.name == 'Function' && spec.library == 'dart:core';
+  final TypeDecl decl;
+
+  @override
+  int get file => decl.library;
+
+  @override
+  String get name => decl.name;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is FunctionTypeRef &&
+          nullable == other.nullable &&
+          signature == other.signature;
+
+  @override
+  late final int hashCode = Object.hash(signature, nullable);
 }
 
 /// Interim member of the sealed set: a decl-less nominal — the extension
 /// namespace pseudo-type and legacy encodings still using the grab-bag
 /// fields. Removed once every construction resolves a [TypeDecl].
 final class _UnresolvedTypeRef extends TypeRef {
-  const _UnresolvedTypeRef(
-    super.file,
-    super.name, {
-    super.recordFields,
-    super.typeParameterOwner,
-    super.typeParameterIndex,
-    super.parameter,
-    super.typeParameterBound,
-    super.nullable,
-  });
-}
-
-class RecordParameterType {
-  const RecordParameterType(this.name, this.type, this.isNamed);
-
-  final String? name;
-  final TypeRef type;
-  final bool isNamed;
+  _UnresolvedTypeRef(this.file, this.name, {super.nullable = false});
 
   @override
-  String toString() {
-    return '$name: ${type.toString()}';
-  }
-}
+  final int file;
 
-extension RecordParameterTypeList on List<RecordParameterType> {
-  /// Positional fields in declaration order — a record's field list may
-  /// interleave positional and named entries in source order.
-  List<RecordParameterType> get positionalFields => [
-    for (final field in this)
-      if (!field.isNamed) field,
-  ];
+  @override
+  final String name;
 
-  /// Named fields sorted by name (the canonical/descriptor order).
-  List<RecordParameterType> get namedFields => [
-    for (final field in this)
-      if (field.isNamed) field,
-  ]..sort((a, b) => a.name!.compareTo(b.name!));
+  @override
+  TypeDecl? get decl => null;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is _UnresolvedTypeRef &&
+          nullable == other.nullable &&
+          file == other.file &&
+          name == other.name;
+
+  @override
+  late final int hashCode = Object.hash(file, name, nullable);
 }
 
 /// Computes the [ReturnType] of a bridged function descriptor, including

@@ -71,7 +71,8 @@ Variable? _implicitCallTearOff(
   // Type parameters coerce against their bound (`context<void Function()>(x)`
   // passes `T` as the target).
   final effectiveTarget = target.isTypeParameter
-      ? (target.typeParameterBound ?? CoreTypes.dynamic.ref(ctx))
+      ? ((target as TypeParameterTypeRef).parameter.bound ??
+            CoreTypes.dynamic.ref(ctx))
       : target;
   if (!effectiveTarget.isFunctionLike) {
     return null;

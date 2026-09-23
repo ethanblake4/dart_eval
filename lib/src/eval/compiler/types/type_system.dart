@@ -96,7 +96,8 @@ final class TypeSystem {
     if (target == null) return null;
     var current0 = type;
     if (current0.isTypeParameter) {
-      current0 = current0.typeParameterBound ?? CoreTypes.dynamic.ref(_ctx);
+      current0 = (current0 as TypeParameterTypeRef).parameter.bound ??
+          CoreTypes.dynamic.ref(_ctx);
     }
     if (current0.isRecord) {
       current0 = CoreTypes.record.ref(_ctx);
@@ -105,10 +106,10 @@ final class TypeSystem {
       current0 = CoreTypes.function.ref(_ctx);
     }
     final queue = <TypeRef>[current0];
-    final seen = <String>{};
+    final seen = <TypeRef>{};
     while (queue.isNotEmpty) {
       final current = queue.removeLast();
-      if (!seen.add(current.semanticKey)) continue;
+      if (!seen.add(current)) continue;
       if (identical(current.decl, target)) return current;
       queue.addAll(directSupertypes(current));
     }
@@ -125,9 +126,7 @@ final class TypeSystem {
     Substitution substitutions,
   ) {
     if (pattern.isTypeParameter) {
-      if (pattern.parameter != null) {
-        substitutions[pattern.parameter!] = concrete;
-      }
+      substitutions[(pattern as TypeParameterTypeRef).parameter] = concrete;
       return;
     }
     if (!identical(pattern.decl, concrete.decl)) {
@@ -155,10 +154,10 @@ final class TypeSystem {
     Substitution substitutions,
   ) {
     final queue = <TypeRef>[pattern];
-    final seen = <String>{};
+    final seen = <TypeRef>{};
     while (queue.isNotEmpty) {
       final current = queue.removeLast();
-      if (!seen.add(current.semanticKey)) continue;
+      if (!seen.add(current)) continue;
       if (identical(current.decl, concrete.decl)) {
         if (current.typeArguments.isEmpty &&
             !identical(current, pattern) &&
@@ -184,15 +183,21 @@ final class TypeSystem {
   /// substitutions applied at each hop.
   Set<int> supertypeIds(TypeRef type) {
     final selfId = _ctx.runtimeTypes.idOf(type);
-    final indices = {selfId, _ctx.runtimeTypes.indexMap[type] ?? selfId};
-    final seen = {type.semanticKey};
+    final indices = {
+      selfId,
+      if (type is InterfaceTypeRef)
+        _ctx.runtimeTypes.indexMap[type.decl] ?? selfId,
+    };
+    final seen = {type};
     final worklist = directSupertypes(type);
     while (worklist.isNotEmpty) {
       final supertype = worklist.removeLast();
-      if (!seen.add(supertype.semanticKey)) continue;
+      if (!seen.add(supertype)) continue;
       final supertypeId = _ctx.runtimeTypes.idOf(supertype);
       indices.add(supertypeId);
-      indices.add(_ctx.runtimeTypes.indexMap[supertype] ?? supertypeId);
+      if (supertype is InterfaceTypeRef) {
+        indices.add(_ctx.runtimeTypes.indexMap[supertype.decl] ?? supertypeId);
+      }
       worklist.addAll(directSupertypes(supertype));
     }
     return indices;
@@ -207,19 +212,23 @@ final class TypeSystem {
     final substitutions = Substitution.wrap(<TypeParameterDef, TypeRef>{});
     void collect(TypeRef t) {
       if (t.isTypeParameter) {
-        final parameter = t.parameter;
-        if (parameter == null) return;
+        final parameter = (t as TypeParameterTypeRef).parameter;
         substitutions.bindings.putIfAbsent(
           parameter,
-          () => t.typeParameterBound ?? CoreTypes.dynamic.ref(_ctx),
+          () => parameter.bound ?? CoreTypes.dynamic.ref(_ctx),
         );
         return;
       }
       for (final argument in t.typeArguments) {
         collect(argument);
       }
-      for (final field in t.recordFields) {
-        collect(field.type);
+      if (t is RecordTypeRef) {
+        for (final field in t.positional) {
+          collect(field);
+        }
+        for (final field in t.named.values) {
+          collect(field);
+        }
       }
       if (t is FunctionTypeRef) {
         collect(t.signature.returnType);
@@ -242,9 +251,9 @@ final class TypeSystem {
   /// the outermost non-parameter bound, or `dynamic` when unbounded.
   TypeRef throughTypeParameters(TypeRef type) {
     var t = type;
-    final seen = <String>{};
-    while (t.isTypeParameter && seen.add(t.semanticKey)) {
-      final bound = t.typeParameterBound;
+    final seen = <TypeRef>{};
+    while (t.isTypeParameter && seen.add(t)) {
+      final bound = (t as TypeParameterTypeRef).parameter.bound;
       if (bound == null) {
         return CoreTypes.dynamic.ref(_ctx);
       }
@@ -261,9 +270,9 @@ final class TypeSystem {
   TypeRef flatten(TypeRef type) {
     var t = type;
     var nullable = type.nullable;
-    final seen = <String>{};
+    final seen = <TypeRef>{};
     final futureDecl = _ctx.types.bySpec(CoreTypes.future);
-    while (seen.add(t.semanticKey)) {
+    while (seen.add(t)) {
       if (t.name == 'FutureOr' && t.typeArguments.isNotEmpty) {
         nullable = nullable || t.nullable;
         t = t.typeArguments.first;
@@ -340,8 +349,12 @@ final class TypeSystem {
       }
     }
 
-    final refCount = <TypeRef, int>{};
-    final layer = <TypeRef, int>{};
+    // Count common supertypes by declaration (A.4): `List<int>` and
+    // `List<String>` must meet at `List`. Decl-less types (records, type
+    // parameters) key themselves — the legacy nominal identity.
+    final refCount = <Object, int>{};
+    final layer = <Object, int>{};
+    final firstSeen = <Object, TypeRef>{};
     var i = 0;
 
     var passes = 0;
@@ -357,12 +370,14 @@ final class TypeSystem {
         }
         final types0 = chain[i];
         for (final type in types0) {
-          if (refCount[type] == null) {
-            refCount[type] = 1;
-            layer[type] = i;
+          final key = type.decl ?? type;
+          if (refCount[key] == null) {
+            refCount[key] = 1;
+            layer[key] = i;
+            firstSeen[key] = type;
           } else {
-            refCount[type] = refCount[type]! + 1;
-            layer[type] = layer[type]! + i;
+            refCount[key] = refCount[key]! + 1;
+            layer[key] = layer[key]! + i;
           }
         }
       }
@@ -388,11 +403,13 @@ final class TypeSystem {
         .toList(growable: false);
     final best = candidates.firstWhere(
       (c) => candidates.every(
-        (o) => c == o || isAssignable(c, o, forceAllowDynamic: false),
+        (o) => c == o ||
+            isAssignable(firstSeen[c]!, firstSeen[o]!, forceAllowDynamic: false),
       ),
       orElse: () => candidates.last,
     );
-    return best.copyWith(nullable: best.nullable || makeNullable);
+    final bestType = firstSeen[best]!;
+    return bestType.copyWith(nullable: bestType.nullable || makeNullable);
   }
 
   /// The declaration-shaped chain for [type]: `[this]`, then layers of
@@ -477,12 +494,17 @@ final class TypeSystem {
     if (from.nullable && !to.nullable) return false;
 
     if (from.isTypeParameter) {
-      // Same parameter: identical owner and index.
-      if (from == to) return true;
+      // Same parameter — the nullability gate above already handled the
+      // `E` → `E?` direction; `==` would also reject it on nullability.
+      if (from is TypeParameterTypeRef &&
+          to is TypeParameterTypeRef &&
+          from.parameter == to.parameter) {
+        return true;
+      }
       // A type parameter is assignable to [to] iff its declared bound is.
       // An unbounded parameter (`<T>`) has the implicit bound `Object?`.
       return isAssignable(
-        from.typeParameterBound ??
+        (from as TypeParameterTypeRef).parameter.bound ??
             CoreTypes.object.ref(_ctx).copyWith(nullable: true),
         to,
         forceAllowDynamic: forceAllowDynamic,
@@ -495,48 +517,26 @@ final class TypeSystem {
     // identical field types. A record is assignable when both sides have
     // the same shape and every field type is assignable positionally/by
     // name.
-    if (from.isRecord && to.isRecord) {
+    if (from is RecordTypeRef && to is RecordTypeRef) {
       if (from.nullable && !to.nullable) return false;
-      final sourcePositional = <RecordParameterType>[];
-      final slotPositional = <RecordParameterType>[];
-      final sourceNamed = <String, RecordParameterType>{};
-      final slotNamed = <String>{};
-      for (final field in from.recordFields) {
-        if (field.isNamed) {
-          sourceNamed[field.name!] = field;
-        } else {
-          sourcePositional.add(field);
-        }
-      }
-      for (final field in to.recordFields) {
-        if (field.isNamed) {
-          slotNamed.add(field.name!);
-        } else {
-          slotPositional.add(field);
-        }
-      }
       bool fieldAssignable(TypeRef source, TypeRef target) =>
           isAssignable(source, target, forceAllowDynamic: forceAllowDynamic) ||
           // A `dynamic` field coerces by implicit downcast.
           source.isSpec(CoreTypes.dynamic);
-      if (sourcePositional.length != slotPositional.length) return false;
-      for (var i = 0; i < sourcePositional.length; i++) {
-        if (!fieldAssignable(
-          sourcePositional[i].type,
-          slotPositional[i].type,
-        )) {
+      if (from.positional.length != to.positional.length) return false;
+      for (var i = 0; i < from.positional.length; i++) {
+        if (!fieldAssignable(from.positional[i], to.positional[i])) {
           return false;
         }
       }
-      for (final slotField in to.recordFields) {
-        if (!slotField.isNamed) continue;
-        final sourceField = sourceNamed[slotField.name];
+      for (final entry in to.named.entries) {
+        final sourceField = from.named[entry.key];
         if (sourceField == null ||
-            !fieldAssignable(sourceField.type, slotField.type)) {
+            !fieldAssignable(sourceField, entry.value)) {
           return false;
         }
       }
-      return sourceNamed.length == slotNamed.length;
+      return from.named.length == to.named.length;
     }
 
     // A record's only nominal supertype is Record (itself <: Object), so it
@@ -549,7 +549,7 @@ final class TypeSystem {
       );
     }
 
-    if (from.hasSameDeclarationAs(to) &&
+    if (sameDeclaration(from, to) &&
         (!from.nullable || to.nullable || from.isSpec(CoreTypes.nullType))) {
       if (to.typeArguments.isNotEmpty &&
           generics.isNotEmpty &&
@@ -585,12 +585,12 @@ final class TypeSystem {
           ? generics
           : [
               for (final argument in type.typeArguments)
-                if (argument.isTypeParameter &&
-                    argument.typeParameterIndex! < generics.length)
-                  generics[argument.typeParameterIndex!].copyWith(
+                if (argument is TypeParameterTypeRef &&
+                    argument.parameter.index < generics.length)
+                  generics[argument.parameter.index].copyWith(
                     nullable:
                         argument.nullable ||
-                        generics[argument.typeParameterIndex!].nullable,
+                        generics[argument.parameter.index].nullable,
                   )
                 else
                   argument,
